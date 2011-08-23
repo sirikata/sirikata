@@ -455,6 +455,8 @@ system.__presence_constructor__.prototype.__getType = function()
 
      var orig_getOrientation = presence.prototype.getOrientation;
      var orig_setOrientation = presence.prototype.setOrientation;
+     var orig_getOrientationVel = presence.prototype.getOrientationVel;
+     var orig_setOrientationVel = presence.prototype.setOrientationVel;
 
      presence.prototype.getOrientation = function() {
          // Provide orientation without model orientation
@@ -464,6 +466,22 @@ system.__presence_constructor__.prototype.__getType = function()
      presence.prototype.setOrientation = function(v) {
          // Multiply in additional transformation
          orig_setOrientation.apply(this, [v.mul(this.modelOrientation)]);
+     };
+
+     presence.prototype.getOrientationVel = function() {
+         var oVel = orig_getOrientationVel.apply(this);
+         var axis = oVel.axis();
+         var speed = oVel.length();
+         return new util.Quaternion(this.modelOrientation * axis, 1) * speed;
+     };
+
+     presence.prototype.setOrientationVel = function(v) {
+         var axis = v.axis();
+         var speed = v.length();
+         orig_setOrientationVel.apply(this, [new util.Quaternion(
+                                                 this.modelOrientation.inv() * axis,
+                                                 1
+                                             ) * speed]);
      };
 
 })();
