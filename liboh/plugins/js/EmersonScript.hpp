@@ -359,7 +359,6 @@ private:
 
 
     std::map< SpaceObjectReference ,ODP::Port* >mMessagingPortMap;
-    ODP::Port* mCreateEntityPort;
 
 
     void callbackUnconnected(ProxyObjectPtr proxy, HostedObject::PresenceToken token);

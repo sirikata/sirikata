@@ -85,7 +85,6 @@ EmersonScript::EmersonScript(HostedObjectPtr ho, const String& args, const Strin
    mHandlingEvent(false),
    mResetting(false),
    mKilling(false),
-   mCreateEntityPort(NULL),
    presenceToken(HostedObject::DEFAULT_PRESENCE_TOKEN +1),
    emHttpPtr(EmersonHttpManager::construct<EmersonHttpManager> (ho->context()))
 {
@@ -407,9 +406,6 @@ void EmersonScript::onConnected(SessionEventProviderPtr from, const SpaceObjectR
         msgPort->receive( std::tr1::bind(&EmersonScript::handleScriptCommUnreliable, this, _1, _2, _3));
     }
 
-    if (!mCreateEntityPort)
-        mCreateEntityPort = mParent->bindODPPort(space_id,obj_refer, Services::CREATE_ENTITY);
-
     //set up reliable messages for the connected presence
     EmersonMessagingManager::presenceConnected(name);
 
@@ -709,7 +705,7 @@ bool EmersonScript::handleScriptCommRead(const SpaceObjectReference& src, const 
     bool isJSMsg   = jsMsg.ParseFromString(payload);
     if (! isJSMsg)
         isJSMsg = jsMsg.ParseFromArray(payload.data(),payload.size());
-    
+
     bool isJSField = false;
     if (!isJSMsg)
     {
@@ -722,7 +718,7 @@ bool EmersonScript::handleScriptCommRead(const SpaceObjectReference& src, const 
     //a jsfieldval, then return false;
     if (!(isJSMsg || isJSField))
         return false;
-    
+
 
     if (isStopped()) {
         JSLOG(warn, "Ignoring message after shutdown request.");
