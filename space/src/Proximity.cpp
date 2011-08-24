@@ -51,7 +51,10 @@
 namespace Sirikata {
 
 static SolidAngle NoUpdateSolidAngle = SolidAngle(0.f);
-static uint32 NoMaxResults = 0;
+// Note that this is different from sentinals indicating infinite
+// results. Instead, this indicates that we shouldn't even request the update,
+// leaving it as is, because we don't actually have a new value.
+static uint32 NoUpdateMaxResults = ((uint32)INT_MAX)+1;
 
 static BoundingBox3f aggregateBBoxes(const BoundingBoxList& bboxes) {
     BoundingBox3f bbox = bboxes[0];
@@ -149,7 +152,7 @@ Proximity::Proximity(SpaceContext* ctx, LocationService* locservice, SpaceNetwor
             std::tr1::bind(&Proximity::handlerShouldHandleObject, this, server_static_objects, false, _1, _2, _3, _4, _5)
         );
     }
-    if (server_handler_type == "dist") mServerDistance = true;
+    if (server_handler_type == "dist" || server_handler_type == "rtreedist") mServerDistance = true;
 
     // Object Queries
     String object_handler_type = GetOptionValue<String>(OPT_PROX_OBJECT_QUERY_HANDLER_TYPE);
@@ -167,7 +170,7 @@ Proximity::Proximity(SpaceContext* ctx, LocationService* locservice, SpaceNetwor
             std::tr1::bind(&Proximity::handlerShouldHandleObject, this, object_static_objects, true, _1, _2, _3, _4, _5)
         );
     }
-    if (object_handler_type == "dist") mObjectDistance = true;
+    if (object_handler_type == "dist" || object_handler_type == "rtreedist") mObjectDistance = true;
 
     mLocService->addListener(this, false);
 
@@ -268,7 +271,7 @@ void Proximity::handleObjectProximityMessage(const UUID& objid, void* buffer, ui
     if (!prox_update.has_query_angle()) return;
 
     SolidAngle query_angle(prox_update.query_angle());
-    uint32 query_max_results = (prox_update.has_query_max_count() ? prox_update.query_max_count() : NoMaxResults);
+    uint32 query_max_results = (prox_update.has_query_max_count() ? prox_update.query_max_count() : NoUpdateMaxResults);
     updateQuery(objid, mLocService->location(objid), mLocService->bounds(objid), query_angle, query_max_results);
 }
 
@@ -349,7 +352,7 @@ void Proximity::receiveMessage(Message* msg) {
             Sirikata::Protocol::TimedMotionVector msg_loc = prox_query_msg.location();
             TimedMotionVector3f qloc(msg_loc.t(), MotionVector3f(msg_loc.position(), msg_loc.velocity()));
             SolidAngle minangle(prox_query_msg.min_angle());
-            uint32 query_max_results = (prox_query_msg.has_max_count() ? prox_query_msg.max_count() : NoMaxResults);
+            uint32 query_max_results = (prox_query_msg.has_max_count() ? prox_query_msg.max_count() : NoUpdateMaxResults);
 
             updateQuery(source_server, qloc, prox_query_msg.bounds(), minangle, query_max_results);
         }
@@ -429,7 +432,7 @@ void Proximity::receiveMigrationData(const UUID& obj, ServerID source_server, Se
     }
 
     SolidAngle obj_query_angle(migr_data.min_angle());
-    uint32 obj_query_max_results = (migr_data.has_max_count() ? migr_data.max_count() : NoMaxResults);
+    uint32 obj_query_max_results = (migr_data.has_max_count() ? migr_data.max_count() : ObjectProxSimulationTraits::InfiniteResults);
     addQuery(obj, obj_query_angle, obj_query_max_results);
 }
 
@@ -605,7 +608,7 @@ void Proximity::updateQuery(UUID obj, const TimedMotionVector3f& loc, const Boun
         }
     }
 
-    if (max_results != NoMaxResults) {
+    if (max_results != NoUpdateMaxResults) {
         // Update the main thread's record
         mObjectQueryMaxCounts[obj] = max_results;
 
@@ -643,7 +646,7 @@ void Proximity::removeQuery(UUID obj) {
             if (it->second < minangle) minangle = it->second;
         uint32 maxcount = 1;
         for(ObjectQueryMaxCountMap::iterator it = mObjectQueryMaxCounts.begin(); it != mObjectQueryMaxCounts.end(); it++)
-            if (it->second == NoMaxResults || (maxcount > NoMaxResults && it->second > maxcount))
+            if (it->second == ObjectProxSimulationTraits::InfiniteResults || (maxcount > ObjectProxSimulationTraits::InfiniteResults && it->second > maxcount))
                 maxcount = it->second;
 
         // NOTE: Even if this condition is satisfied, we could only be increasing
@@ -896,14 +899,14 @@ void Proximity::localObjectRemoved(const UUID& uuid, bool agg) {
     removeObjectSize(uuid);
 }
 void Proximity::localLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval) {
-    updateQuery(uuid, newval, mLocService->bounds(uuid), NoUpdateSolidAngle, NoMaxResults);
+    updateQuery(uuid, newval, mLocService->bounds(uuid), NoUpdateSolidAngle, NoUpdateMaxResults);
     if (mSeparateDynamicObjects)
         checkObjectClass(true, uuid, newval);
 }
 void Proximity::localOrientationUpdated(const UUID& uuid, bool agg, const TimedMotionQuaternion& newval) {
 }
 void Proximity::localBoundsUpdated(const UUID& uuid, bool agg, const BoundingSphere3f& newval) {
-    updateQuery(uuid, mLocService->location(uuid), newval, NoUpdateSolidAngle, NoMaxResults);
+    updateQuery(uuid, mLocService->location(uuid), newval, NoUpdateSolidAngle, NoUpdateMaxResults);
     updateObjectSize(uuid, newval.radius());
 }
 void Proximity::localMeshUpdated(const UUID& uuid, bool agg, const String& newval) {
@@ -1205,6 +1208,8 @@ void Proximity::handleUpdateServerQuery(const ServerID& server, const TimedMotio
             Query* q = mServerDistance ?
                 mServerQueryHandler[i]->registerQuery(loc, region, ms, SolidAngle::Min, mDistanceQueryDistance) :
                 mServerQueryHandler[i]->registerQuery(loc, region, ms, angle) ;
+            if (max_results != NoUpdateMaxResults && max_results > 0)
+                q->maxResults(max_results);
             q->setEventListener(this);
             mServerQueries[i][server] = q;
             mInvertedServerQueries[q] = server;
@@ -1217,6 +1222,8 @@ void Proximity::handleUpdateServerQuery(const ServerID& server, const TimedMotio
             q->region( region );
             q->maxSize( ms );
             q->angle(angle);
+            if (max_results != NoUpdateMaxResults && max_results > 0)
+                q->maxResults(max_results);
         }
     }
 }
@@ -1295,6 +1302,8 @@ void Proximity::handleUpdateObjectQuery(const UUID& object, const TimedMotionVec
                 Query* q = mObjectDistance ?
                     mObjectQueryHandler[i]->registerQuery(loc, region, ms, SolidAngle::Min, mDistanceQueryDistance) :
                     mObjectQueryHandler[i]->registerQuery(loc, region, ms, angle);
+                if (max_results != NoUpdateMaxResults && max_results > 0)
+                    q->maxResults(max_results);
                 q->setEventListener(this);
                 mObjectQueries[i][object] = q;
                 mInvertedObjectQueries[q] = object;
@@ -1307,6 +1316,8 @@ void Proximity::handleUpdateObjectQuery(const UUID& object, const TimedMotionVec
             query->maxSize( ms );
             if (angle != NoUpdateSolidAngle)
                 query->angle(angle);
+            if (max_results != NoUpdateMaxResults && max_results > 0)
+                query->maxResults(max_results);
         }
     }
 }

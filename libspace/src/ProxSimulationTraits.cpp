@@ -38,4 +38,6 @@ namespace Sirikata {
 
 const ProxSimulationTraits::realType ProxSimulationTraits::InfiniteRadius = FLT_MAX;
 
+const ProxSimulationTraits::intType ProxSimulationTraits::InfiniteResults = INT_MAX;
+
 } // namespace Sirikata
