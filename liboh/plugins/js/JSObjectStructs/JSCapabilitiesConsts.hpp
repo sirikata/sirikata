@@ -10,7 +10,10 @@ namespace JS{
 class JSPresenceStruct;
 
 /** Sister file in em, is in scripts/std/shim/capabilities.em.  Make change to
- * this file, means I should make change to that file.*/
+ * this file, means I should make change to that file.  Similaraly, any changes
+ * to capabilities should also be registered in JSSystemStruct.cpp's
+ * struct_createContext
+*/
 struct Capabilities
 {
     typedef int CapNum;

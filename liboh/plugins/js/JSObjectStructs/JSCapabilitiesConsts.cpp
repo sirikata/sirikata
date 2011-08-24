@@ -19,8 +19,7 @@ bool Capabilities::presenceSpecificCap(Caps checkingCap)
 {
     if ((checkingCap == SEND_MESSAGE)   || (checkingCap == RECEIVE_MESSAGE) ||
         (checkingCap == PROX_CALLBACKS) || (checkingCap == PROX_QUERIES)    ||
-        (checkingCap == CREATE_SANDBOX) || (checkingCap == MOVEMENT)        ||
-        (checkingCap == MESH))
+        (checkingCap == MOVEMENT)       || (checkingCap == MESH))
     {
         return true;
     }
@@ -40,9 +39,11 @@ bool Capabilities::givesCap(CapNum capabilitiesNum, Caps checkingCap,
     //if capability is not granted to that sandbox.
 
     if (onPres == NULL)
+    {
         JSLOG(error, "Error in checking whether given a capability.  "  <<\
             "Checking a presence-specific capability, but provided no " <<\
-            "presence to check against.");
+            "presence to check against.  Cap: " << checkingCap);
+    }
     
     //ctxPres can be null when executing from root context
     if ((ctxPres == NULL) || (onPres == NULL))

@@ -9,10 +9,13 @@
 #include "JSPositionListener.hpp"
 #include "JSPresenceStruct.hpp"
 #include "../JSLogging.hpp"
-
+#include "../JSObjectScript.hpp"
 
 namespace Sirikata{
 namespace JS{
+
+
+
 
 
 JSSystemStruct::JSSystemStruct ( JSContextStruct* jscont, Capabilities::CapNum capNum)
@@ -223,21 +226,37 @@ v8::Handle<v8::Value> JSSystemStruct::struct_createContext(JSPresenceStruct* jsp
 {
     //prevents scripter from escalating capabilities beyond those that he/she
     //already has
-    INLINE_CAPABILITY_STRIP(permNum,SEND_MESSAGE);
-    INLINE_CAPABILITY_STRIP(permNum,RECEIVE_MESSAGE);
-    INLINE_CAPABILITY_STRIP(permNum,IMPORT);
-    INLINE_CAPABILITY_STRIP(permNum,CREATE_PRESENCE);
-    INLINE_CAPABILITY_STRIP(permNum,CREATE_ENTITY);
-    INLINE_CAPABILITY_STRIP(permNum,EVAL);
-    INLINE_CAPABILITY_STRIP(permNum,PROX_CALLBACKS);
-    INLINE_CAPABILITY_STRIP(permNum,PROX_QUERIES);
-    INLINE_CAPABILITY_STRIP(permNum,CREATE_SANDBOX);
-    INLINE_CAPABILITY_STRIP(permNum,GUI);
-    INLINE_CAPABILITY_STRIP(permNum,HTTP);
 
+    stripCapEscalation(permNum,Capabilities::SEND_MESSAGE,jspres,"SEND_MESSAGE");
+    stripCapEscalation(permNum,Capabilities::RECEIVE_MESSAGE,jspres,"RECEIVE_MESSAGE");
+    stripCapEscalation(permNum,Capabilities::IMPORT,jspres,"IMPORT");
+    stripCapEscalation(permNum,Capabilities::CREATE_PRESENCE,jspres,"CREATE_PRESENCE");
+    stripCapEscalation(permNum,Capabilities::CREATE_ENTITY,jspres,"CREATE_ENTITY");
+    stripCapEscalation(permNum,Capabilities::EVAL,jspres,"EVAL");
+    stripCapEscalation(permNum,Capabilities::PROX_CALLBACKS,jspres,"PROX_CALLBACKS");
+    stripCapEscalation(permNum,Capabilities::PROX_QUERIES,jspres,"PROX_QUERIES");
+    stripCapEscalation(permNum,Capabilities::CREATE_SANDBOX,jspres,"CREATE_SANDBOX");
+    stripCapEscalation(permNum,Capabilities::GUI,jspres,"GUI");
+    stripCapEscalation(permNum,Capabilities::HTTP,jspres,"HTTP");
+    stripCapEscalation(permNum,Capabilities::MOVEMENT,jspres,"MOVEMENT");
+    stripCapEscalation(permNum,Capabilities::MESH, jspres,"MESH");
     
     return associatedContext->struct_createContext(jspres,canSendTo,permNum);
 }
+
+
+
+void JSSystemStruct::stripCapEscalation(Capabilities::CapNum& permNum, Capabilities::Caps capRequesting, JSPresenceStruct* jspres, const String& capRequestingName)
+{
+    if (! associatedContext->jsObjScript->checkCurCtxtHasCapability(jspres,capRequesting))
+    {
+        /*means trying to set this capability when don't have it in the base*/
+        /*sandbox.  We should strip it.*/
+        JSLOG(info,"Trying to exceed capability " + capRequestingName + " when creating sandbox.  Stripping this capability");
+        permNum -= capRequesting;
+    }
+}
+
 
 
 

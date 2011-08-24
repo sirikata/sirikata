@@ -130,38 +130,26 @@ struct JSSystemStruct
     Capabilities::CapNum getCapNum();
     
 private:
+
+   /**
+      @param {Capabilities::CapNum} The requested amount of capabilities.
+      @param {Capabilities::Caps} capRequesting Capability that scripter is
+      requesting to imbue into new sandbox.
+      
+      @param {JSPresenceStruct} jspres Default presence for new sandbox.
+   
+      If scripter is trying to request capabilities that the initial sandbox he/she
+      is creating does not have, strips those capabilities.
+   */
+    void stripCapEscalation(Capabilities::CapNum& permNum, Capabilities::Caps capRequesting, JSPresenceStruct* jspres, const String& capRequestingName);
+    
+    
     //associated data
     JSContextStruct* associatedContext;
     uint32 mCapNum;
-
 };
 
 
-/**
-   @param {uint32} permNum the uint32 corresponding to the capability level that the
-   sandbox is requesting.
-   @param capName the name of the static const uint32 associated with each
-   capability in JSCapabilitiesConsts.  These are the capabilities that we are
-   testing to see if scripter may be trying to exceed permissions for.
-   @param localCapName Should agree with capName.  Ie if capName is EVAL,
-   localCapName should be canEval.
-
-   If scripter is trying to request capabilities that the initial sandbox he/she
-   is creating does not have, strips those capabilities.
- */
-#define INLINE_CAPABILITY_STRIP(permNum,capName)                        \
-    {                                                                   \
-    if (! Capabilities::givesCap(mCapNum, Capabilities::capName)) \
-        {                                                               \
-            if (Capabilities::givesCap(permNum,Capabilities::capName))  \
-            {                                                           \
-                /*means trying to set this capability when don't have it in the base*/ \
-                /*sandbox.  We should strip it.*/                       \
-                JSLOG(info,"Trying to exceed capability " #capName " when creating sandbox.  Stripping this capability"); \
-                permNum -= Capabilities::capName;                       \
-            }                                                           \
-        }                                                               \
-    }
 
 
 #define INLINE_SYSTEM_CONV_ERROR(toConvert,whereError,whichArg,whereWriteTo)   \
