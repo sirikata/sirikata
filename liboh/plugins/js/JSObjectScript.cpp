@@ -425,6 +425,8 @@ void JSObjectScript::setRestoreScriptCallback(JSContextStruct* jscont, v8::Persi
     postCallbackChecks();
 }
 
+
+
 //can instantly finish the clear operation in JSObjectScript because not in the
 //midst of handling any events that might invalidate iterators.
 void JSObjectScript::registerContextForClear(JSContextStruct* jscont)
@@ -850,6 +852,23 @@ v8::Handle<v8::Value> JSObjectScript::invokeCallback(JSContextStruct* ctx, v8::H
     return retval;
 }
 
+
+bool JSObjectScript::checkCurCtxtHasCapability(JSPresenceStruct* jspres, uint32 whatCap)
+{
+    if (mEvalContextStack.empty())
+        return false;
+
+    //only way that this context won't have capability is if jspres is context's
+    //associated presence.  If it is, check that context has capability.
+    JSContextStruct* jscont = mEvalContextStack.top().jscont;
+    if ((jspres == jscont->getAssociatedPresenceStruct()) &&
+        (! Capabilities::givesCap(jscont->getCapNum(),whatCap)))
+    {
+        return false;
+    }
+
+    return true;
+}
 
 /*
   executeInSandbox takes in a context, that you want to execute the function

@@ -120,6 +120,13 @@ void JSContextStruct::httpSuccess(v8::Persistent<v8::Function> cb,EmersonHttpMan
 }
 
 
+uint32 JSContextStruct::getCapNum()
+{
+    return mSystem->getCapNum();
+}
+
+
+
 v8::Handle<v8::Value> JSContextStruct::getAssociatedPresence()
 {
     if (associatedPresence == NULL)

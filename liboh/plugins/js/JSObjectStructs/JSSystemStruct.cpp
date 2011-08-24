@@ -17,23 +17,14 @@ namespace JS{
 
 JSSystemStruct::JSSystemStruct ( JSContextStruct* jscont, uint32 capNum)
  : associatedContext(jscont),
-   canSend(capNum & Capabilities::SEND_MESSAGE),
-   canRecv(capNum & Capabilities::RECEIVE_MESSAGE),
-   canImport(capNum & Capabilities::IMPORT),
-   canCreatePres(capNum & Capabilities::CREATE_PRESENCE),
-   canCreateEnt(capNum & Capabilities::CREATE_ENTITY),
-   canEval(capNum & Capabilities::EVAL),
-   canProxCallback(capNum & Capabilities::PROX_CALLBACKS),
-   canProxChangeQuery(capNum & Capabilities::PROX_QUERIES),
-   canCreateSandbox(capNum & Capabilities::CREATE_SANDBOX),
-   canGui(capNum & Capabilities::GUI),
-   canHttp(capNum & Capabilities::HTTP)
+   mCapNum(capNum)
 {
 }
 
+
 v8::Handle<v8::Value> JSSystemStruct::struct_evalInGlobal(const String& native_contents, ScriptOrigin* sOrigin)
 {
-    if (!canEval)
+    if (!Capabilities::givesCap(mCapNum, Capabilities::EVAL))
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  You do not have the capability tocall eval in global directly.")));
 
     return associatedContext->struct_evalInGlobal(native_contents,sOrigin);
@@ -125,7 +116,7 @@ v8::Handle<v8::Value> JSSystemStruct::killEntity()
 
 v8::Handle<v8::Value> JSSystemStruct::restorePresence(PresStructRestoreParams& psrp)
 {
-    if (! canCreatePres)
+    if (!Capabilities::givesCap(mCapNum, Capabilities::CREATE_PRESENCE))
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  You do not have the capability to create presences.")));
 
     return associatedContext->restorePresence(psrp);
@@ -151,7 +142,7 @@ v8::Handle<v8::Value> JSSystemStruct::checkHeadless()
 v8::Handle<v8::Value> JSSystemStruct::struct_require(const String& toRequireFrom,bool isJS)
 {
     //require uses the same capability as import
-    if (! canImport)
+    if (!Capabilities::givesCap(mCapNum, Capabilities::IMPORT))
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  You do not have the capability to require.")));
 
     return associatedContext->struct_require(toRequireFrom,isJS);
@@ -159,7 +150,7 @@ v8::Handle<v8::Value> JSSystemStruct::struct_require(const String& toRequireFrom
 
 v8::Handle<v8::Value> JSSystemStruct::struct_import(const String& toImportFrom,bool isJS)
 {
-    if (! canImport)
+    if (!Capabilities::givesCap(mCapNum, Capabilities::IMPORT))
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  You do not have the capability to import.")));
 
     return associatedContext->struct_import(toImportFrom,isJS);
@@ -167,7 +158,7 @@ v8::Handle<v8::Value> JSSystemStruct::struct_import(const String& toImportFrom,b
 
 v8::Handle<v8::Value> JSSystemStruct::struct_canImport()
 {
-    return v8::Boolean::New(canImport);
+    return v8::Boolean::New(Capabilities::givesCap(mCapNum, Capabilities::IMPORT));
 }
 
 
@@ -179,7 +170,7 @@ v8::Handle<v8::Value> JSSystemStruct::sendMessageNoErrorHandler(JSPresenceStruct
     {
         if (getContext()->getAssociatedPresenceStruct()->getSporef() == jspres->getSporef())
         {
-            if (!canSend)
+            if(!Capabilities::givesCap(mCapNum, Capabilities::SEND_MESSAGE));
                 return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  You do not have the capability to send messages.")));
         }
     }
@@ -209,16 +200,16 @@ JSContextStruct* JSSystemStruct::getContext()
 
 v8::Handle<v8::Value> JSSystemStruct::struct_canCreatePres()
 {
-    return v8::Boolean::New(canCreatePres);
+    return v8::Boolean::New(Capabilities::givesCap(mCapNum, Capabilities::CREATE_PRESENCE));
 }
 v8::Handle<v8::Value> JSSystemStruct::struct_canCreateEnt()
 {
-    return v8::Boolean::New(canCreateEnt);
+    return v8::Boolean::New(Capabilities::givesCap(mCapNum, Capabilities::CREATE_ENTITY));
 }
 
 v8::Handle<v8::Value> JSSystemStruct::struct_canEval()
 {
-    return v8::Boolean::New(canEval);
+    return v8::Boolean::New(Capabilities::givesCap(mCapNum, Capabilities::EVAL));
 }
 
 
@@ -232,18 +223,19 @@ v8::Handle<v8::Value> JSSystemStruct::struct_createContext(JSPresenceStruct* jsp
 {
     //prevents scripter from escalating capabilities beyond those that he/she
     //already has
-    INLINE_CAPABILITY_STRIP(permNum,SEND_MESSAGE,canSend);
-    INLINE_CAPABILITY_STRIP(permNum,RECEIVE_MESSAGE,canRecv);
-    INLINE_CAPABILITY_STRIP(permNum,IMPORT,canImport);
-    INLINE_CAPABILITY_STRIP(permNum,CREATE_PRESENCE,canCreatePres);
-    INLINE_CAPABILITY_STRIP(permNum,CREATE_ENTITY,canCreateEnt);
-    INLINE_CAPABILITY_STRIP(permNum,EVAL,canEval);
-    INLINE_CAPABILITY_STRIP(permNum,PROX_CALLBACKS,canProxCallback);
-    INLINE_CAPABILITY_STRIP(permNum,PROX_QUERIES,canProxChangeQuery);
-    INLINE_CAPABILITY_STRIP(permNum,CREATE_SANDBOX,canCreateSandbox);
-    INLINE_CAPABILITY_STRIP(permNum,GUI,canGui);
-    INLINE_CAPABILITY_STRIP(permNum,HTTP,canHttp);
+    INLINE_CAPABILITY_STRIP(permNum,SEND_MESSAGE);
+    INLINE_CAPABILITY_STRIP(permNum,RECEIVE_MESSAGE);
+    INLINE_CAPABILITY_STRIP(permNum,IMPORT);
+    INLINE_CAPABILITY_STRIP(permNum,CREATE_PRESENCE);
+    INLINE_CAPABILITY_STRIP(permNum,CREATE_ENTITY);
+    INLINE_CAPABILITY_STRIP(permNum,EVAL);
+    INLINE_CAPABILITY_STRIP(permNum,PROX_CALLBACKS);
+    INLINE_CAPABILITY_STRIP(permNum,PROX_QUERIES);
+    INLINE_CAPABILITY_STRIP(permNum,CREATE_SANDBOX);
+    INLINE_CAPABILITY_STRIP(permNum,GUI);
+    INLINE_CAPABILITY_STRIP(permNum,HTTP);
 
+    
     return associatedContext->struct_createContext(jspres,canSendTo,permNum);
 }
 
@@ -300,7 +292,7 @@ v8::Handle<v8::Value> JSSystemStruct::struct_createTimeout(double period,v8::Per
 //if do not have the capability, throws an error.
 v8::Handle<v8::Value> JSSystemStruct::struct_createEntity(EntityCreateInfo& eci)
 {
-    if (! canCreateEnt)
+    if(!Capabilities::givesCap(mCapNum, Capabilities::CREATE_ENTITY));
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  You do not have the capability to create entities.")));
 
     return associatedContext->struct_createEntity(eci);
@@ -312,29 +304,24 @@ v8::Handle<v8::Value> JSSystemStruct::struct_createEntity(EntityCreateInfo& eci)
 
 v8::Handle<v8::Value> JSSystemStruct::struct_canSendMessage()
 {
-    return v8::Boolean::New(canSend);
+    return v8::Boolean::New(Capabilities::givesCap(mCapNum, Capabilities::SEND_MESSAGE));
 }
 
 v8::Handle<v8::Value> JSSystemStruct::struct_canRecvMessage()
 {
-    return v8::Boolean::New(canRecv);
+    return v8::Boolean::New(Capabilities::givesCap(mCapNum, Capabilities::RECEIVE_MESSAGE));
 }
 
 v8::Handle<v8::Value> JSSystemStruct::struct_canProxCallback()
 {
-    return v8::Boolean::New(canProxCallback);
+    return v8::Boolean::New(Capabilities::givesCap(mCapNum, Capabilities::PROX_CALLBACKS));
 }
 
 v8::Handle<v8::Value> JSSystemStruct::struct_canProxChangeQuery()
 {
-    return v8::Boolean::New(canProxChangeQuery);
+    return v8::Boolean::New(Capabilities::givesCap(mCapNum, Capabilities::PROX_QUERIES));
 }
 
-
-v8::Handle<v8::Value> JSSystemStruct::struct_getPosition()
-{
-    return associatedContext->struct_getAssociatedPresPosition();
-}
 
 v8::Handle<v8::Value> JSSystemStruct::struct_print(const String& msg)
 {
@@ -379,6 +366,11 @@ JSSystemStruct* JSSystemStruct::decodeSystemStruct(v8::Handle<v8::Value> toDecod
         errorMessage += "Error in decode of JSSystemStruct.  Internal field of object given cannot be casted to a JSSystemStruct.";
 
     return returner;
+}
+
+uint32 JSSystemStruct::getCapNum()
+{
+    return mCapNum;
 }
 
 

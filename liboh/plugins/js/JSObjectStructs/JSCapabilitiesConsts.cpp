@@ -8,7 +8,13 @@ namespace JS{
 
 uint32 Capabilities::getFullCapabilities()
 {
-    return SEND_MESSAGE|RECEIVE_MESSAGE|IMPORT|CREATE_PRESENCE|CREATE_ENTITY|EVAL|PROX_CALLBACKS|PROX_QUERIES|CREATE_SANDBOX|GUI|HTTP;
+    return SEND_MESSAGE|RECEIVE_MESSAGE|IMPORT|CREATE_PRESENCE|CREATE_ENTITY|EVAL|PROX_CALLBACKS|PROX_QUERIES|CREATE_SANDBOX|GUI|HTTP|MOVEMENT|MESH;
+}
+
+
+bool Capabilities::givesCap(uint32 capabilitiesNum, uint32 checkingCap)
+{
+    return (capabilitiesNum & checkingCap);
 }
 
 } //end namespace js

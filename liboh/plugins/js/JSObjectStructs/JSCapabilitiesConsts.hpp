@@ -22,8 +22,14 @@ struct Capabilities
     const static uint32 CREATE_SANDBOX  = 256;
     const static uint32 GUI             = 512;
     const static uint32 HTTP            = 1024;
-
+    const static uint32 MOVEMENT        = 2048;
+    const static uint32 MESH            = 4096;
+    
     static uint32 getFullCapabilities();
+
+    //returns true if capabilitiesNum permits checkingCap to occur
+    static bool givesCap(uint32 capabilitiesNum, uint32 checkingCap);
+
 };
 
 

@@ -25,7 +25,8 @@ util.Capabilities.PROX_QUERIES     = 128;
 util.Capabilities.CREATE_SANDBOX   = 256;
 util.Capabilities.GUI              = 512;
 util.Capabilities.HTTP             = 1024;
-
+util.Capabilities.MOVEMENT         = 2048;
+util.Capabilities.MESH             = 4096;
 
 
 

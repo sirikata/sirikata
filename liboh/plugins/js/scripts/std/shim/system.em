@@ -1189,16 +1189,6 @@ function PresenceEntry(sporef, presObj)
           return baseSystem.canEval.apply(baseSystem, arguments);
       };
 
-      /** @function
-       @description Returns the position of the default presence this script or sandbox is associated with
-       @type util.Vec3
-       @return vector corresponding to position of default presence sandbox is associated with.
-       @throws {Exception} Calling from root sandbox, or calling on a sandbox for which you do not have capabilities to query for position throws an exception.
-       */
-      system.getPosition = function()
-      {
-          return baseSystem.getPosition.apply(baseSystem, arguments);
-      };
 
       /** @function
        @description Gives the version of Emerson run by the entity host

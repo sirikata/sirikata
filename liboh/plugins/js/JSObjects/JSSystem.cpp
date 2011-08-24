@@ -999,21 +999,6 @@ v8::Handle<v8::Value> root_getVersion(const v8::Arguments& args)
     return v8::String::New( JSSystemNames::EMERSON_VERSION);
 }
 
-/**
-   @return Vec3 corresponding to position of default presence sandbox is
-   associated with.  Calling from root sandbox, or calling on a sandbox for
-   which you do not have capabilities to query for position throws an exception.
- */
-v8::Handle<v8::Value> root_getPosition(const v8::Arguments& args)
-{
-    String errorMessage = "Error decoding the system object from root_getPosition.  ";
-    JSSystemStruct* jsfake  = JSSystemStruct::decodeSystemStruct(args.This(),errorMessage);
-
-    if (jsfake == NULL)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
-
-    return jsfake->struct_getPosition();
-}
 
 
 /**

@@ -67,7 +67,7 @@ v8::Handle<v8::Value> root_jsimport(const v8::Arguments& args);
 v8::Handle<v8::Value> commonImport(const v8::Arguments& args, bool isJS);
 v8::Handle<v8::Value> root_jsrequire(const v8::Arguments& args);
 v8::Handle<v8::Value> commonRequire(const v8::Arguments& args,bool isJS);
-v8::Handle<v8::Value> root_getPosition(const v8::Arguments& args);
+
 
 v8::Handle<v8::Value> root_event(const v8::Arguments& args);
 v8::Handle<v8::Value> root_timeout(const v8::Arguments& args);

@@ -234,6 +234,10 @@ struct JSContextStruct : public JSSuspendable, public Liveness
     v8::Persistent<v8::Function> sandboxMessageCallback;
     v8::Persistent<v8::Function> presenceMessageCallback;
 
+    //returns associated capabilities number
+    uint32 getCapNum();
+
+    
 private:
     uint32 mContextID;
 

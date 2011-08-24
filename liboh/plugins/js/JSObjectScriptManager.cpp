@@ -279,8 +279,6 @@ void JSObjectScriptManager::createSystemTemplate()
 
     mSystemTemplate->Set(v8::String::New("restorePresence"), v8::FunctionTemplate::New(JSSystem::root_restorePresence));
 
-
-    mSystemTemplate->Set(v8::String::New("getPosition"), v8::FunctionTemplate::New(JSSystem::root_getPosition));
     mSystemTemplate->Set(v8::String::New("getVersion"),v8::FunctionTemplate::New(JSSystem::root_getVersion));
 
     mSystemTemplate->Set(v8::String::New("killEntity"), v8::FunctionTemplate::New(JSSystem::root_killEntity));

@@ -127,6 +127,11 @@ public:
 
     v8::Handle<v8::Value> setRestoreScript(JSContextStruct* jscont, const String& script, v8::Handle<v8::Function> cb);
 
+    /**
+       Returns true if context eval stack is not empty and if the top context on
+       the stack has capability whatCap for presence jspres.  Returns false otherwise.
+     */
+    bool checkCurCtxtHasCapability(JSPresenceStruct* jspres, uint32 whatCap);
 
     /**
        We want to ensure that no sandboxes have while(1) loops.  Roughly, the

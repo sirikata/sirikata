@@ -82,7 +82,7 @@ struct JSSystemStruct
 
     v8::Handle<v8::Value> restorePresence(PresStructRestoreParams& psrp);
 
-    v8::Handle<v8::Value> struct_getPosition();
+
     v8::Handle<v8::Value> debug_fileWrite(const String& strToWrite,const String& filename);
     v8::Handle<v8::Value> debug_fileRead(const String& filename);
 
@@ -127,10 +127,12 @@ struct JSSystemStruct
     v8::Handle<v8::Value> struct_reset(const std::map<SpaceObjectReference, std::vector<SpaceObjectReference> > & proxResSet);
 
 
+    uint32 getCapNum();
+    
 private:
     //associated data
     JSContextStruct* associatedContext;
-    bool canSend, canRecv, canImport, canCreatePres,canCreateEnt,canEval,canProxCallback,canProxChangeQuery,canCreateSandbox,canGui,canHttp;
+    uint32 mCapNum;
 
 };
 
@@ -147,11 +149,11 @@ private:
    If scripter is trying to request capabilities that the initial sandbox he/she
    is creating does not have, strips those capabilities.
  */
-#define INLINE_CAPABILITY_STRIP(permNum,capName,localCapName)           \
+#define INLINE_CAPABILITY_STRIP(permNum,capName)                        \
     {                                                                   \
-        if (! localCapName)                                             \
+    if (! Capabilities::givesCap(mCapNum, Capabilities::capName)) \
         {                                                               \
-            if (permNum & Capabilities::capName)                        \
+            if (Capabilities::givesCap(permNum,Capabilities::capName))  \
             {                                                           \
                 /*means trying to set this capability when don't have it in the base*/ \
                 /*sandbox.  We should strip it.*/                       \

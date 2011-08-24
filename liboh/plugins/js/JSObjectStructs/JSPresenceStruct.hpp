@@ -9,6 +9,8 @@
 #include "JSPositionListener.hpp"
 #include <sirikata/core/util/Nullable.hpp>
 #include "../JSObjects/JSObjectsUtils.hpp"
+#include "JSCapabilitiesConsts.hpp"
+
 namespace Sirikata {
 namespace JS {
 
@@ -152,6 +154,7 @@ struct JSPresenceStruct : public JSPositionListener,
     v8::Handle<v8::Value>  setQueryCount(uint32 new_qc);
 
 
+    
     v8::Handle<v8::Value>  setOrientationVelFunction(Quaternion newOrientationVel);
     v8::Handle<v8::Value>  struct_setVelocity(const Vector3f& newVel);
     v8::Handle<v8::Value>  struct_setPosition(Vector3f newPos);
@@ -215,6 +218,13 @@ private:
         return v8::ThrowException(v8::Exception::Error(v8::String::New(errorMessage.c_str()))); \
     }
 
+//returns a v8 exception if the current context we're executing from does not
+//have the capability (whatCap) to preform operation on this JSPresenceStruct.
+#define INLINE_CHECK_CAPABILITY_ERROR(whatCap,where)                    \
+{                                                                       \
+    if (! mContext->jsObjScript->checkCurCtxtHasCapability(this, whatCap))        \
+        V8_EXCEPTION_CSTR("Error in " #where " you do not have the capability for " #whatCap " on this presence."); \
+}
 
 #define INLINE_CHECK_IS_CONNECTED_ERROR(where)                          \
     if (! isConnected)                                                  \
