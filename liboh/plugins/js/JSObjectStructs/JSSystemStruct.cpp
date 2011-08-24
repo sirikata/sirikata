@@ -39,6 +39,11 @@ v8::Handle<v8::Value> JSSystemStruct::struct_evalInGlobal(const String& native_c
     return associatedContext->struct_evalInGlobal(native_contents,sOrigin);
 }
 
+v8::Handle<v8::Value> JSSystemStruct::getAssociatedPresence()
+{
+    return associatedContext->getAssociatedPresence();
+}
+
 
 v8::Handle<v8::Value> JSSystemStruct::storageBeginTransaction() {
     return associatedContext->storageBeginTransaction();

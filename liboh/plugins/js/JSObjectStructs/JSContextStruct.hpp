@@ -188,7 +188,8 @@ struct JSContextStruct : public JSSuspendable, public Liveness
     v8::Handle<v8::Value> proxRemovedHandlerCallallback(v8::Handle<v8::Function>cb);
 
 
-
+    v8::Handle<v8::Value> getAssociatedPresence();
+    
     JSPresenceStruct* getAssociatedPresenceStruct()
     {
         return associatedPresence;

@@ -471,6 +471,7 @@ function PresenceEntry(sporef, presObj)
 
       system.__behindSelf = undefined;
 
+     
       system.__setBehindSelf = function(toSetTo)
       {
           this.__behindSelf = toSetTo;
@@ -483,7 +484,13 @@ function PresenceEntry(sporef, presObj)
       system.__defineSetter__("self", function(val){
                             });
 
+     //if this sandbox is associated with a given presence, then loads that
+     //presence by default into self.
+     if (typeof(baseSystem.getAssociatedPresence()) !== 'undefined')
+         system.__setBehindSelf(baseSystem.getAssociatedPresence());
 
+
+     
      /** @function
       @throws __killEntity__  (If kill entity command is successful)
       @throws Exception (If do not execute kill entity from root context).

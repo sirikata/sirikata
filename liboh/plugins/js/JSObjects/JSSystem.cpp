@@ -89,6 +89,19 @@ v8::Handle<v8::Value> sendMessage(const v8::Arguments&args, bool reliable)
 }
 
 
+//returns wrapped presence struct that's associated with system's context
+//if system's context is not associated with a presence struct (ie, it's the
+//root context), then return undefined.
+v8::Handle<v8::Value> getAssociatedPresence(const v8::Arguments& args)
+{
+    v8::HandleScope handle_scope;
+    if (args.Length() != 0)
+        V8_EXCEPTION_CSTR("Error getting associated presence.  Requires 0 args to be passed.");
+
+    INLINE_SYSTEM_CONV_ERROR(args.This(),getAssociatedPresence,this,jssys);
+    return handle_scope.Close(jssys->getAssociatedPresence());
+}
+
 
 v8::Handle<v8::Value> evalInGlobal(const v8::Arguments& args)
 {

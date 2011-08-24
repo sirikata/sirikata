@@ -120,6 +120,19 @@ void JSContextStruct::httpSuccess(v8::Persistent<v8::Function> cb,EmersonHttpMan
 }
 
 
+v8::Handle<v8::Value> JSContextStruct::getAssociatedPresence()
+{
+    if (associatedPresence == NULL)
+        return v8::Undefined();
+
+    EmersonScript* emerScript = dynamic_cast<EmersonScript*>(jsObjScript);
+    if (emerScript != NULL)
+        return emerScript->wrapPresence(associatedPresence, &mContext);
+
+    return v8::Undefined();
+}
+
+
 v8::Handle<v8::Value> JSContextStruct::sendSandbox(const String& msgToSend, JSContextStruct* destination)
 {
     CHECK_EMERSON_SCRIPT_ERROR(emerScript,sendSandbox,jsObjScript);

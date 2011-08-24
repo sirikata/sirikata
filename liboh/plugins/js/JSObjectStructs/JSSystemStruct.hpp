@@ -39,11 +39,11 @@ struct JSSystemStruct
     v8::Handle<v8::Value> struct_canImport();
 
     v8::Handle<v8::Value> checkResources();
-    
     v8::Handle<v8::Value> struct_evalInGlobal(const String& native_contents, ScriptOrigin* sOrigin);
-    
     v8::Handle<v8::Value> checkHeadless();
 
+    v8::Handle<v8::Value> getAssociatedPresence();
+    
     v8::Handle<v8::Value> storageBeginTransaction();
     v8::Handle<v8::Value> storageCommit(v8::Handle<v8::Function> cb);
     v8::Handle<v8::Value> storageWrite(const OH::Storage::Key& key, const String& toWrite, v8::Handle<v8::Function> cb);
