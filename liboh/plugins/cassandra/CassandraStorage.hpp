@@ -51,10 +51,10 @@ public:
     virtual void stop();
 
     virtual void beginTransaction(const Bucket& bucket);
-    virtual void commitTransaction(const Bucket& bucket, const CommitCallback& cb = 0, const String& timestamp="@");
-    virtual bool erase(const Bucket& bucket, const Key& key, const CommitCallback& cb = 0, const String& timestamp="@");
-    virtual bool write(const Bucket& bucket, const Key& key, const String& value, const CommitCallback& cb = 0, const String& timestamp="@");
-    virtual bool read(const Bucket& bucket, const Key& key, const CommitCallback& cb = 0, const String& timestamp="@");
+    virtual void commitTransaction(const Bucket& bucket, const CommitCallback& cb = 0, const String& timestamp="current");
+    virtual bool erase(const Bucket& bucket, const Key& key, const CommitCallback& cb = 0, const String& timestamp="current");
+    virtual bool write(const Bucket& bucket, const Key& key, const String& value, const CommitCallback& cb = 0, const String& timestamp="current");
+    virtual bool read(const Bucket& bucket, const Key& key, const CommitCallback& cb = 0, const String& timestamp="current");
 
 private:
 
@@ -86,8 +86,8 @@ private:
 
         StorageAction& operator=(const StorageAction& rhs);
 
-        // Executes this action: push to list and wait for commitment
-        void execute(const Bucket& bucket, Columns* columns, Keys* eraseKeys, Keys* readKeys, const String& timestamp="@");
+        // Executes this action: push action to lists and wait for commitment
+        void execute(const Bucket& bucket, Columns* columns, Keys* eraseKeys, Keys* readKeys, const String& timestamp);
 
         // Bucket is implicit, passed into execute
         Type type;
@@ -108,18 +108,18 @@ private:
 
     // Executes a commit. Runs in a separate thread, so the transaction is
     // passed in directly
-    void executeCommit(const Bucket& bucket, Transaction* trans, CommitCallback cb, const String& timestamp="@");
+    void executeCommit(const Bucket& bucket, Transaction* trans, CommitCallback cb, const String& timestamp);
 
     // Complete a commit back in the main thread, cleaning it up and dispatching the callback
     void completeCommit(Transaction* trans, CommitCallback cb, bool success, ReadSet* rs);
 
     // Call libcassandra methods to commit transcation
-    bool CassandraCommit(CassandraDBPtr db, const Bucket& bucket, Columns* columns, Keys* eraseKeys, Keys* readKeys, ReadSet* rs, const String& timestamp="@");
+    bool CassandraCommit(CassandraDBPtr db, const Bucket& bucket, Columns* columns, Keys* eraseKeys, Keys* readKeys, ReadSet* rs, const String& timestamp);
 
 
     ObjectHostContext* mContext;
     BucketTransactions mTransactions;
-    String mDBHost;              //host name or ip address for Cassandra server
+    String mDBHost;              //host name of Cassandra server
     int mDBPort;
     CassandraDBPtr mDB;
 
