@@ -24,7 +24,7 @@
 namespace Sirikata {
 namespace JS {
 
-JSContextStruct::JSContextStruct(JSObjectScript* parent, JSPresenceStruct* whichPresence, SpaceObjectReference home,uint32 capNum,v8::Handle<v8::ObjectTemplate> contGlobTempl, uint32 contextID,JSContextStruct* parentContext)
+JSContextStruct::JSContextStruct(JSObjectScript* parent, JSPresenceStruct* whichPresence, SpaceObjectReference home,Capabilities::CapNum capNum,v8::Handle<v8::ObjectTemplate> contGlobTempl, uint32 contextID,JSContextStruct* parentContext)
  : JSSuspendable(),
    jsObjScript(parent),
    mContext(v8::Context::New(NULL, contGlobTempl)),
@@ -120,7 +120,7 @@ void JSContextStruct::httpSuccess(v8::Persistent<v8::Function> cb,EmersonHttpMan
 }
 
 
-uint32 JSContextStruct::getCapNum()
+Capabilities::CapNum JSContextStruct::getCapNum()
 {
     return mSystem->getCapNum();
 }
@@ -906,7 +906,7 @@ v8::Handle<v8::Value> JSContextStruct::struct_createTimeout(double period,v8::Pe
 
 
 
-v8::Handle<v8::Value> JSContextStruct::struct_createContext(JSPresenceStruct* presStruct,const SpaceObjectReference& canSendTo,uint32 capNum)
+v8::Handle<v8::Value> JSContextStruct::struct_createContext(JSPresenceStruct* presStruct,const SpaceObjectReference& canSendTo,Capabilities::CapNum capNum)
 {
     if (presStruct == NULL)
         presStruct = associatedPresence;

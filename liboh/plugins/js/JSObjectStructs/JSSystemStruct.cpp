@@ -15,7 +15,7 @@ namespace Sirikata{
 namespace JS{
 
 
-JSSystemStruct::JSSystemStruct ( JSContextStruct* jscont, uint32 capNum)
+JSSystemStruct::JSSystemStruct ( JSContextStruct* jscont, Capabilities::CapNum capNum)
  : associatedContext(jscont),
    mCapNum(capNum)
 {
@@ -219,7 +219,7 @@ v8::Handle<v8::Value> JSSystemStruct::struct_canEval()
 //new context will have at most as many permissions as parent context.
 //note: if presStruct is null, just means use the one that is associated with
 //this system's context
-v8::Handle<v8::Value> JSSystemStruct::struct_createContext(JSPresenceStruct* jspres,const SpaceObjectReference& canSendTo, uint32 permNum)
+v8::Handle<v8::Value> JSSystemStruct::struct_createContext(JSPresenceStruct* jspres,const SpaceObjectReference& canSendTo, Capabilities::CapNum permNum)
 {
     //prevents scripter from escalating capabilities beyond those that he/she
     //already has
@@ -368,7 +368,7 @@ JSSystemStruct* JSSystemStruct::decodeSystemStruct(v8::Handle<v8::Value> toDecod
     return returner;
 }
 
-uint32 JSSystemStruct::getCapNum()
+Capabilities::CapNum JSSystemStruct::getCapNum()
 {
     return mCapNum;
 }

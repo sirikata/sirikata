@@ -23,7 +23,7 @@ class JSEventHandlerStruct;
 //to check without having to dig through a lot of other code.
 struct JSSystemStruct
 {
-    JSSystemStruct(JSContextStruct* jscont, uint32 capNum);
+    JSSystemStruct(JSContextStruct* jscont, Capabilities::CapNum capNum);
     ~JSSystemStruct();
 
     static JSSystemStruct* decodeSystemStruct(v8::Handle<v8::Value> toDecode ,std::string& errorMessage);
@@ -100,7 +100,7 @@ struct JSSystemStruct
     //if do not have the capability, throws an error.
     v8::Handle<v8::Value> struct_createEntity(EntityCreateInfo& eci);
 
-    v8::Handle<v8::Value> struct_createContext(JSPresenceStruct* jspres,const SpaceObjectReference& canSendTo, uint32 permNum);
+    v8::Handle<v8::Value> struct_createContext(JSPresenceStruct* jspres,const SpaceObjectReference& canSendTo, Capabilities::CapNum permNum);
 
     JSContextStruct* getContext();
 
@@ -127,7 +127,7 @@ struct JSSystemStruct
     v8::Handle<v8::Value> struct_reset(const std::map<SpaceObjectReference, std::vector<SpaceObjectReference> > & proxResSet);
 
 
-    uint32 getCapNum();
+    Capabilities::CapNum getCapNum();
     
 private:
     //associated data
