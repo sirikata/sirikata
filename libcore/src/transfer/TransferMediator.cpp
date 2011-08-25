@@ -1,6 +1,7 @@
 #include <sirikata/core/util/Standard.hh>
 
 #include <sirikata/core/transfer/TransferMediator.hpp>
+#include <sirikata/core/transfer/MaxPriorityAggregation.hpp>
 #include <stdio.h>
 
 using namespace std;
@@ -28,7 +29,12 @@ void TransferMediator::destroy() {
 TransferMediator::TransferMediator() {
     mCleanup = false;
     mNumOutstanding = 0;
+    mAggregationAlgorithm = new MaxPriorityAggregation();
     mThread = new Thread(std::tr1::bind(&TransferMediator::mediatorThread, this));
+}
+
+TransferMediator::~TransferMediator() {
+    delete mAggregationAlgorithm;
 }
 
 void TransferMediator::mediatorThread() {
@@ -132,7 +138,7 @@ void TransferMediator::checkQueue() {
  */
 
 void TransferMediator::AggregateRequest::updateAggregatePriority() {
-    TransferRequest::PriorityType newPriority = SimplePriorityAggregation::aggregate(mTransferReqs);
+    TransferRequest::PriorityType newPriority = TransferMediator::getSingleton().mAggregationAlgorithm->aggregate(mTransferReqs);
     mPriority = newPriority;
 }
 

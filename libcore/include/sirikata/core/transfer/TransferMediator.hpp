@@ -34,8 +34,7 @@
 #ifndef SIRIKATA_TransferMediator_HPP__
 #define SIRIKATA_TransferMediator_HPP__
 
-#include "SimplePriorityAggregation.hpp"
-
+#include <sirikata/core/transfer/TransferPool.hpp>
 #include <map>
 #include <vector>
 #include <boost/multi_index_container.hpp>
@@ -188,6 +187,9 @@ class SIRIKATA_EXPORT TransferMediator
 	//TransferMediator's worker thread
 	Thread* mThread;
 
+    // Algorithm used to aggregate priorities of requests
+    PriorityAggregationAlgorithm* mAggregationAlgorithm;
+
     //Main thread that handles the input pools
     void mediatorThread();
 
@@ -202,6 +204,7 @@ public:
 	static void destroy();
 
 	TransferMediator();
+	~TransferMediator();
 
 	/*
 	 * Used to register a client that has a pool of requests it needs serviced by the transfer mediator
