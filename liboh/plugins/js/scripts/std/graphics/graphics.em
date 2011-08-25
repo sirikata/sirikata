@@ -52,13 +52,38 @@ function() {
      *  The callback passed in is invoked when Ogre has finished
      *  initializing.
      */
-    std.graphics.Graphics = function(pres, name, cb, reset_cb) {
+    std.graphics.Graphics = function(pres, name, cb, reset_cb,reInitialize) {
+
+        if (typeof(reInitialize) === 'unefined')
+            reInitialize = false;
+        
+        system.print('\n\nDEBUG into graphics constructor\n\n');
+
+        system.print('\n\nDEBUG continuing with graphics install\n\n');
+        
         this.presence = pres;
-        this._simulator = pres.runSimulation(name);
-        this.inputHandler = new std.graphics.InputHandler(this);
         this._cameraMode = 'first';
-        this._setOnReady(cb, reset_cb);
-        this._animationInfo = new std.graphics.AnimationInfo(pres, this);
+
+        if (!reInitialize)
+//        if (!this._isReady())
+        {
+            system.print('\n\nIn first part of cal\n\n');
+            this._simulator = pres.runSimulation(name);
+            this.inputHandler = new std.graphics.InputHandler(this);
+            this._setOnReady(cb, reset_cb);
+            this._animationInfo = new std.graphics.AnimationInfo(pres, this);
+        }
+        else
+        {
+            system.print('\n\nDEBUG: not doing anything useful on ready\n\n');
+            this._simulator = pres.runSimulation(name);
+            this.inputHandler = new std.graphics.InputHandler(this);
+            this._animationInfo = new std.graphics.AnimationInfo(pres, this);
+            this._handleOnReady(cb,true);
+            return;
+        }
+
+
     };
 
     std.graphics.Graphics.prototype.invoke = function() {
@@ -66,14 +91,29 @@ function() {
         return this._simulator.invoke.apply(this._simulator, arguments);
     };
 
-    std.graphics.Graphics.prototype._handleOnReady = function(cb) {
+    /**
+     @returns true if already have a viewer for this presence.  false otherwise.
+     */
+    std.graphics.Graphics.prototype._isReady = function()
+    {
+        return this.invoke('isReady');
+    };
+    
+    std.graphics.Graphics.prototype._handleOnReady = function(cb,alreadyInitialized)
+    {
+        //means that the c++ ogre code called this function, and that it had
+        //not already been initialized before calling.
+        if (typeof(alreadyInitialized) === 'undefined')
+            alreadyInitialized = false;
+        
         // Reinitialize camera mode
         this.invoke('onTick', std.core.bind(this._onTick, this));
-        if (cb) cb(this);
+        if (cb) cb(this,alreadyInitialized);
     };
 
     /** Set the callback to invoke when the system is ready for rendering. */
     std.graphics.Graphics.prototype._setOnReady = function(cb, reset_cb) {
+        system.print('\n\nDEBUG in _setOnReady of graphics\n\n');
         this.invoke('onReady',
                     std.core.bind(this._handleOnReady, this, cb),
                     std.core.bind(this._handleOnReady, this, reset_cb)

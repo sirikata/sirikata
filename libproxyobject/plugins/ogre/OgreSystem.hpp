@@ -213,10 +213,11 @@ public:
     boost::any addModuleToUI(std::vector<boost::any>& params);
     boost::any addTextModuleToUI(std::vector<boost::any>& params);
 
-    // Set an input handler function which will be invoked for input
+    // Add an input handler function which will be invoked for input
     // events, e.g. mouse and keyboard
-    boost::any setInputHandler(std::vector<boost::any>& params);
-
+    boost::any addInputHandler(std::vector<boost::any>& params);
+    boost::any removeInputHandler(std::vector<boost::any>& params);
+    
     boost::any pick(std::vector<boost::any>& params);
     boost::any bbox(std::vector<boost::any>& params);
     boost::any visible(std::vector<boost::any>& params);
@@ -237,7 +238,8 @@ public:
 
     boost::any startAnimation(std::vector<boost::any>& params);
     boost::any stopAnimation(std::vector<boost::any>& params);
-
+    boost::any isReady(std::vector<boost::any>& params);
+    
     ~OgreSystem();
 
 private:
@@ -247,7 +249,7 @@ private:
     typedef std::tr1::unordered_map<SpaceObjectReference, ProxyEntity*, SpaceObjectReference::Hasher> EntityMap;
     EntityMap mEntityMap;
     String currentMat;
-
+    bool mReady;
 };
 
 

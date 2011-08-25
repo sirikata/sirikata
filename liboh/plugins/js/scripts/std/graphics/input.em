@@ -50,7 +50,7 @@ function() {
      *   handler.onButtonPressed = function() { .... }
      */
     std.graphics.InputHandler = function(sim) {
-        sim.invoke("setInputHandler", std.core.bind(this._handle, this) );
+        sim.invoke("addInputHandler", std.core.bind(this._handle, this) );
         this._mapping = {
             'button-pressed': 'onButtonPressed',
             'button-repeat': 'onButtonRepeated',

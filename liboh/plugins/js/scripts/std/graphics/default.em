@@ -59,25 +59,35 @@ function() {
      *  the presence and which underlying graphics system to use, but
      *  this class takes care of defining all other UI and interaction.
      */
-    std.graphics.DefaultGraphics = function(pres, name, cb) {
+    std.graphics.DefaultGraphics = function(pres, name, cb,reInitialize) {
+        system.print('\n\nGot into default graphics constructor\n\n');
         this._pres = pres;
-        this._simulator = new std.graphics.Graphics(pres, name, std.core.bind(this.finishedGraphicsInit, this, cb), std.core.bind(this.finishedGraphicsUIReset, this));
+        this._simulator = new std.graphics.Graphics(pres, name, std.core.bind(this.finishedGraphicsInit, this, cb), std.core.bind(this.finishedGraphicsUIReset, this),reInitialize);
     };
-    std.graphics.DefaultGraphics.prototype.finishedGraphicsInit = function(cb, gfx) {
-        // assert(gfx == this._simulator);
+    std.graphics.DefaultGraphics.prototype.finishedGraphicsInit = function(cb, gfx, alreadyInitialized) {
+
+        system.print('\n\nDEBUG: Finished graphics init called\n\n');
         this._camera = new std.graphics.DefaultCamera(this._simulator, system.self);
 
         this._selected = null;
         this._loadingUIs = 0;
+        
+        if (! alreadyInitialized)
+        {
+            var ui_finish_cb = std.core.bind(this.finishedUIInit, this, cb);
+            this._loadingUIs++; this._scripter = new std.script.Scripter(this, ui_finish_cb);
+            this._loadingUIs++; this._chat = new std.graphics.Chat(this._pres, this._simulator, ui_finish_cb);
+            this._loadingUIs++; this._physics = new std.graphics.PhysicsProperties(this._simulator, ui_finish_cb);
+            this._loadingUIs++; this._propertybox = new std.propertybox.PropertyBox(this, ui_finish_cb);
+            this._loadingUIs++; this._presenceList = new std.graphics.PresenceList(this._pres, this._simulator, this._scripter, ui_finish_cb);
+            this._loadingUIs++; this._setMesh = new std.graphics.SetMesh(this._simulator, ui_finish_cb);
+            this._loadingUIs++; this._ezui = new std.ezui.EZUI(this, ui_finish_cb);                
+        }
+        else
+        {
+            this.finishedUIInit(cb,true);
+        }
 
-        var ui_finish_cb = std.core.bind(this.finishedUIInit, this, cb);
-        this._loadingUIs++; this._scripter = new std.script.Scripter(this, ui_finish_cb);
-        this._loadingUIs++; this._chat = new std.graphics.Chat(this._pres, this._simulator, ui_finish_cb);
-        this._loadingUIs++; this._physics = new std.graphics.PhysicsProperties(this._simulator, ui_finish_cb);
-        this._loadingUIs++; this._propertybox = new std.propertybox.PropertyBox(this, ui_finish_cb);
-        this._loadingUIs++; this._presenceList = new std.graphics.PresenceList(this._pres, this._simulator, this._scripter, ui_finish_cb);
-        this._loadingUIs++; this._setMesh = new std.graphics.SetMesh(this._simulator, ui_finish_cb);
-        this._loadingUIs++; this._ezui = new std.ezui.EZUI(this, ui_finish_cb);
     };
     std.graphics.DefaultGraphics.prototype.finishedGraphicsUIReset = function(gfx) {
         this._camera.reinit();
@@ -91,10 +101,26 @@ function() {
         this._loadingUIs++; this._setMesh.onReset(ui_finish_cb);
         this._loadingUIs++; this._ezui.onReset(ui_finish_cb);
     };
-    std.graphics.DefaultGraphics.prototype.finishedUIInit = function(cb) {
+
+
+    /**
+     alreadyInitialized is true or undefined.  If true, means that we
+     already had a graphics viewer completely initialized before going
+     through this initialization process.  If undefined, means that we
+     are doing initialization for the first time.
+     */
+    std.graphics.DefaultGraphics.prototype.finishedUIInit = function(cb,alreadyInitialized) {
         this._loadingUIs--;
         if (this._loadingUIs > 0) return;
 
+        if (typeof(alreadyInitialized) == 'undefined')
+            alreadyInitialized = false;
+
+
+        //lkjs;
+        if (alreadyInitialized)
+            return;
+        
         this._simulator.hideLoadScreen();
 
         this._moverot = new std.movement.MoveAndRotate(this._pres, std.core.bind(this.updateCameraOffset, this), 'rotation');

@@ -60,7 +60,8 @@ OgreSystem::OgreSystem(Context* ctx)
    mPrimaryCamera(NULL),
    mOverlayCamera(NULL),
    mOnReadyCallback(NULL),
-   mOnResetReadyCallback(NULL)
+   mOnResetReadyCallback(NULL),
+   mReady(false)
 {
     increfcount();
     mCubeMap=NULL;
@@ -225,6 +226,8 @@ void OgreSystem::handleUIReady() {
     // if all conditions are met.
     if (mOnReadyCallback != NULL) mOnReadyCallback->invoke();
     mMouseHandler->uiReady();
+
+    mReady= true;
 }
 
 void OgreSystem::handleUIResetReady() {
@@ -574,6 +577,7 @@ boost::any OgreSystem::invoke(vector<boost::any>& params)
     string name = Invokable::anyAsString(params[0]);
     SILOG(ogre,detailed,"Invoking the function " << name);
 
+
     if(name == "onReady")
         return setOnReady(params);
     else if(name == "evalInUI")
@@ -588,8 +592,10 @@ boost::any OgreSystem::invoke(vector<boost::any>& params)
         return addTextModuleToUI(params);
     else if(name == "createWindowHTML")
         return createWindowHTML(params);
-    else if(name == "setInputHandler")
-        return setInputHandler(params);
+    else if(name == "addInputHandler")
+        return addInputHandler(params);
+    else if (name == "removeInputHandler")
+        return removeInputHandler(params);
     else if(name == "quit")
         quit();
     else if (name == "suspend")
@@ -634,10 +640,20 @@ boost::any OgreSystem::invoke(vector<boost::any>& params)
         return stopAnimation(params);
     else if (name == "setInheritScale")
         return setInheritScale(params);
+    else if (name == "isReady")
+        return isReady(params);
     else
         return OgreRenderer::invoke(params);
 
     return boost::any();
+}
+
+boost::any OgreSystem::isReady(std::vector<boost::any>& params)
+{
+    if (params.size() != 0)
+        return boost::any();
+
+    return Invokable::asAny(mReady);
 }
 
 boost::any OgreSystem::setOnReady(std::vector<boost::any>& params) {
@@ -752,14 +768,26 @@ boost::any OgreSystem::createWindowHTML(vector<boost::any>& params) {
     return createWindow(window_name, true, false, html_script, width, height);
 }
 
-boost::any OgreSystem::setInputHandler(vector<boost::any>& params) {
+boost::any OgreSystem::addInputHandler(std::vector<boost::any>& params) {
     if (params.size() < 2) return boost::any();
     if (!Invokable::anyIsInvokable(params[1])) return boost::any();
 
     Invokable* handler = Invokable::anyAsInvokable(params[1]);
-    mMouseHandler->setDelegate(handler);
+    mMouseHandler->addDelegate(handler);
     return boost::any();
 }
+
+
+boost::any OgreSystem::removeInputHandler(std::vector<boost::any>& params)
+{
+    if (params.size() < 2) return boost::any();
+    if (!Invokable::anyIsInvokable(params[1])) return boost::any();
+
+    Invokable* handler = Invokable::anyAsInvokable(params[1]);
+    mMouseHandler->removeDelegate(handler);
+    return boost::any();
+}
+
 
 boost::any OgreSystem::pick(vector<boost::any>& params) {
     if (params.size() < 3) return boost::any();
