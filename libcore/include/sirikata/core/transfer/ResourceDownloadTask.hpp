@@ -97,6 +97,7 @@ protected:
     bool mStarted;
     const URI mURI;
     TransferPoolPtr mTransferPool;
+    TransferRequestPtr mCurrentRequest;
     Range mRange;
     SparseData mMergeData;
     double mPriority;
