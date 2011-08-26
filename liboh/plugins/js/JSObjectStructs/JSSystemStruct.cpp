@@ -173,7 +173,7 @@ v8::Handle<v8::Value> JSSystemStruct::sendMessageNoErrorHandler(JSPresenceStruct
     {
         if (getContext()->getAssociatedPresenceStruct()->getSporef() == jspres->getSporef())
         {
-            if(!Capabilities::givesCap(mCapNum, Capabilities::SEND_MESSAGE));
+            if(!Capabilities::givesCap(mCapNum, Capabilities::SEND_MESSAGE))
                 return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  You do not have the capability to send messages.")));
         }
     }
@@ -311,7 +311,7 @@ v8::Handle<v8::Value> JSSystemStruct::struct_createTimeout(double period,v8::Per
 //if do not have the capability, throws an error.
 v8::Handle<v8::Value> JSSystemStruct::struct_createEntity(EntityCreateInfo& eci)
 {
-    if(!Capabilities::givesCap(mCapNum, Capabilities::CREATE_ENTITY));
+    if(!Capabilities::givesCap(mCapNum, Capabilities::CREATE_ENTITY))
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  You do not have the capability to create entities.")));
 
     return associatedContext->struct_createEntity(eci);
