@@ -59,21 +59,20 @@ function() {
      *  the presence and which underlying graphics system to use, but
      *  this class takes care of defining all other UI and interaction.
      */
-    std.graphics.DefaultGraphics = function(pres, name, cb,reInitialize) {
+    std.graphics.DefaultGraphics = function(pres, name, cb) {
         this._pres = pres;
-        if (typeof(reInitialize) == 'undefined')
-            this._alreadyInitialized = false;
-        else
-            this._alreadyInitialized = reInitialize;
             
-        this._simulator = new std.graphics.Graphics(pres, name, std.core.bind(this.finishedGraphicsInit, this, cb), std.core.bind(this.finishedGraphicsUIReset, this),this._alreadyInitialized);
+        this._simulator = new std.graphics.Graphics(pres, name, std.core.bind(this.finishedGraphicsInit, this, cb), std.core.bind(this.finishedGraphicsUIReset, this));
     };
-    std.graphics.DefaultGraphics.prototype.finishedGraphicsInit = function(cb, gfx) {
+
+    
+    std.graphics.DefaultGraphics.prototype.finishedGraphicsInit = function(cb, gfx, alreadyInitialized) {
         this._camera = new std.graphics.DefaultCamera(this._simulator, system.self);
 
         this._selected = null;
         this._loadingUIs = 0;
-        
+
+        this._alreadyInitialized = alreadyInitialized;
         if (! this._alreadyInitialized)
         {
             var ui_finish_cb = std.core.bind(this.finishedUIInit, this, cb);

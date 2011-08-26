@@ -649,9 +649,6 @@ boost::any OgreSystem::invoke(vector<boost::any>& params)
 
 boost::any OgreSystem::isReady(std::vector<boost::any>& params)
 {
-    if (params.size() != 0)
-        return boost::any();
-
     return Invokable::asAny(mReady);
 }
 

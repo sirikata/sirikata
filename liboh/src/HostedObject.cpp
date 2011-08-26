@@ -423,12 +423,9 @@ void HostedObject::connect(
 bool HostedObject::addSimListeners(PerPresenceData& pd, const String& simName,TimeSteppedSimulation*& sim)
 {
     if (pd.sims.find(simName) != pd.sims.end()) {
-        std::cout<<"\n\n\nDEBUG: Sim already existed\n\n";
         sim = pd.sims[simName];
         return false;
     }
-
-    std::cout<<"\n\nDEBUG: Sim did not already exist\n\n";
 
     HO_LOG(info,String("[OH] Initializing ") + simName);
     sim = SimulationFactory::getSingleton().getConstructor ( simName ) ( mContext, getSharedPtr(), pd.id(), getObjectHost()->getSimOptions(simName));
