@@ -67,7 +67,7 @@ AggregateManager::AggregateManager( LocationService* loc) :
     mIOWork = new Network::IOWork(mAggregationService, "Aggregation Work");
 
     static char x = '1';
-    mTransferPool = mTransferMediator->registerClient("SpaceAggregator_"+x);
+    mTransferPool = mTransferMediator->registerClient<Transfer::SimpleTransferPool>("SpaceAggregator_"+x);
     x++;
 
     // Start the processing thread

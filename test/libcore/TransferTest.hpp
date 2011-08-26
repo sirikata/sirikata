@@ -764,7 +764,7 @@ public:
 		using std::tr1::placeholders::_1;
 
 		//Register with the transfer mediator!
-		mTransferPool = mTransferMediator.registerClient(mClientID);
+		mTransferPool = mTransferMediator.registerClient<Transfer::SimpleTransferPool>(mClientID);
 
         for(std::vector<std::tr1::shared_ptr<RequestVerifier> >::iterator it = mReqList.begin(); it != mReqList.end(); it++) {
             float pri = rand()/(float(RAND_MAX)+1);

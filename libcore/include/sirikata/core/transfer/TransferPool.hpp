@@ -252,21 +252,93 @@ public:
 
 };
 
-/*
- * Pools requests for objects to enter the transfer mediator
+/** Pools are the conduits for requests to get into the
+ *  TransferMediator for processing. Pools interact carefully with the
+ *  TransferMediator, which has stricter rules (e.g. only one
+ *  outstanding request for a resource at a time with a single
+ *  priority), but provide more convenient interfaces to the
+ *  user. Implementations might do very little, almost directly
+ *  passing requests on, or might provide an additional layer of
+ *  aggregation of requests and multiplexing of callbacks.  This
+ *  intermediate layer allows individual requests to remain simple
+ *  but provides a layer for coordination (e.g. for aggregation).
  */
 class TransferPool {
+public:
+    virtual ~TransferPool() {}
 
+    /// Returns client identifier
+    inline const std::string& getClientID() const {
+        return mClientID;
+    }
+
+    /// Puts a request into the pool
+    virtual void addRequest(TransferRequestPtr req) = 0;
+    /// Updates priority of a request in the pool
+    virtual void updatePriority(TransferRequestPtr req, TransferRequest::PriorityType p) = 0;
+    /// Updates priority of a request in the pool
+    virtual void deleteRequest(TransferRequestPtr req) = 0;
+
+protected:
+    // Friend in TransferMediator so it can construct, call getRequest
     friend class TransferMediator;
 
+    TransferPool(const std::string& clientID)
+     : mClientID(clientID)
+    {}
+
+    virtual TransferRequestPtr getRequest() = 0;
+
+    // Utility methods because they require being friended by
+    // TransferRequest but that doesn't extend to subclasses
+    void setRequestClientID(TransferRequestPtr req) {
+        req->setClientID(mClientID);
+    }
+    void setRequestPriority(TransferRequestPtr req, TransferRequest::PriorityType p) {
+        req->setPriority(p);
+    }
+    void setRequestDeletion(TransferRequestPtr req) {
+        req->setDeletion();
+    }
+
+    const std::string mClientID;
+};
+typedef std::tr1::shared_ptr<TransferPool> TransferPoolPtr;
+
+/** Simplest implementation of TransferPool. The user *must only have
+ *  one outstanding request for any given resource at a time*.
+ */
+class SimpleTransferPool : public TransferPool {
+public:
+    virtual ~SimpleTransferPool() {}
+
+    //Puts a request into the pool
+    virtual void addRequest(TransferRequestPtr req) {
+        setRequestClientID(req);
+        mDeltaQueue.push(req);
+    }
+
+    //Updates priority of a request in the pool
+    virtual void updatePriority(TransferRequestPtr req, TransferRequest::PriorityType p) {
+        setRequestPriority(req, p);
+        mDeltaQueue.push(req);
+    }
+
+    //Updates priority of a request in the pool
+    inline void deleteRequest(TransferRequestPtr req) {
+        setRequestDeletion(req);
+        mDeltaQueue.push(req);
+    }
+
 private:
+    // Friend in TransferMediator so it can construct, call getRequest
+    friend class TransferMediator;
 
-	const std::string mClientID;
-	ThreadSafeQueue<std::tr1::shared_ptr<TransferRequest> > mDeltaQueue;
+    ThreadSafeQueue<TransferRequestPtr> mDeltaQueue;
 
-    TransferPool(const std::string &clientID)
-        : mClientID(clientID) {
-
+    SimpleTransferPool(const std::string &clientID)
+     : TransferPool(clientID)
+    {
     }
 
     //Returns an item from the pool. Blocks if pool is empty.
@@ -275,35 +347,7 @@ private:
         mDeltaQueue.blockingPop(retval);
         return retval;
     }
-
-public:
-
-	//Returns client identifier
-	inline const std::string& getClientID() const {
-		return mClientID;
-	}
-
-	//Puts a request into the pool
-	inline void addRequest(std::tr1::shared_ptr<TransferRequest> req) {
-		if(req != NULL) req->setClientID(mClientID);
-		mDeltaQueue.push(req);
-	}
-
-    //Updates priority of a request in the pool
-    inline void updatePriority(std::tr1::shared_ptr<TransferRequest> req, TransferRequest::PriorityType p) {
-        req->setPriority(p);
-        mDeltaQueue.push(req);
-    }
-
-    //Updates priority of a request in the pool
-    inline void deleteRequest(std::tr1::shared_ptr<TransferRequest> req) {
-        req->setDeletion();
-        mDeltaQueue.push(req);
-    }
-
 };
-
-typedef std::tr1::shared_ptr<TransferPool> TransferPoolPtr;
 
 }
 }

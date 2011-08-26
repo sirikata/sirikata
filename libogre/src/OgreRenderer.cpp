@@ -378,7 +378,7 @@ bool OgreRenderer::initialize(const String& options, bool with_berkelium) {
             sRoot->initialise(doAutoWindow,windowTitle->as<String>());
             mRenderWindow = (doAutoWindow?sRoot->getAutoCreatedWindow():NULL);
 	    mOgreOwnedRenderWindow = (mRenderWindow != NULL);
-            mTransferPool = Transfer::TransferMediator::getSingleton().registerClient("OgreGraphics");
+            mTransferPool = Transfer::TransferMediator::getSingleton().registerClient<Transfer::SimpleTransferPool>("OgreGraphics");
 
             mCDNArchivePlugin = new CDNArchivePlugin;
             sRoot->installPlugin(&*mCDNArchivePlugin);

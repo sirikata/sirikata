@@ -138,7 +138,7 @@ BulletPhysicsService::BulletPhysicsService(SpaceContext* ctx, LocationUpdatePoli
     }
 
     mTransferMediator = &(Transfer::TransferMediator::getSingleton());
-    mTransferPool = mTransferMediator->registerClient("BulletPhysics");
+    mTransferPool = mTransferMediator->registerClient<Transfer::SimpleTransferPool>("BulletPhysics");
 
     BULLETLOG(detailed, "Service Loaded");
 }

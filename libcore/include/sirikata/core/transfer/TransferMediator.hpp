@@ -199,21 +199,28 @@ class SIRIKATA_EXPORT TransferMediator
     //Check our internal queue to see what request to process next
     void checkQueue();
 
+    void registerPool(TransferPoolPtr pool);
 public:
-	static TransferMediator& getSingleton();
-	static void destroy();
+    static TransferMediator& getSingleton();
+    static void destroy();
 
-	TransferMediator();
-	~TransferMediator();
+    TransferMediator();
+    ~TransferMediator();
 
-	/*
-	 * Used to register a client that has a pool of requests it needs serviced by the transfer mediator
-	 * @param clientID	Should be a string that uniquely identifies the client
-	 */
-	std::tr1::shared_ptr<TransferPool> registerClient(const std::string clientID);
+    /** Used to register a client that has a pool of requests it needs
+     *  serviced by the transfer mediator
+     *
+     *  @param clientID Should be a string that uniquely identifies the client
+     */
+    template<typename PoolType>
+    std::tr1::shared_ptr<PoolType> registerClient(const std::string& clientID) {
+        std::tr1::shared_ptr<PoolType> ret(new PoolType(clientID));
+        registerPool(ret);
+        return ret;
+    }
 
-	//Call when system should be shut down
-	void cleanup();
+    //Call when system should be shut down
+    void cleanup();
 };
 
 }

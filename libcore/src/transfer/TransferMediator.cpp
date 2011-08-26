@@ -51,21 +51,17 @@ void TransferMediator::mediatorThread() {
     }
 }
 
-std::tr1::shared_ptr<TransferPool> TransferMediator::registerClient(const std::string clientID) {
-    std::tr1::shared_ptr<TransferPool> ret(new TransferPool(clientID));
-
+void TransferMediator::registerPool(TransferPoolPtr pool) {
     //Lock exclusive to access map
     boost::upgrade_lock<boost::shared_mutex> lock(mPoolMutex);
     boost::upgrade_to_unique_lock<boost::shared_mutex> uniqueLock(lock);
 
     //ensure client id doesnt already exist, they should be unique
-    PoolType::iterator findClientId = mPools.find(clientID);
+    PoolType::iterator findClientId = mPools.find(pool->getClientID());
     assert(findClientId == mPools.end());
 
-    std::tr1::shared_ptr<PoolWorker> worker(new PoolWorker(ret));
-    mPools.insert(PoolType::value_type(clientID, worker));
-
-    return ret;
+    std::tr1::shared_ptr<PoolWorker> worker(new PoolWorker(pool));
+    mPools.insert(PoolType::value_type(pool->getClientID(), worker));
 }
 
 void TransferMediator::cleanup() {

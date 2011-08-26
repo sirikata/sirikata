@@ -82,7 +82,7 @@ JSObjectScriptManager::JSObjectScriptManager(ObjectHostContext* ctx, const Sirik
 {
     // In emheadless we run without an ObjectHostContext
     if (mContext != NULL) {
-        mTransferPool = Transfer::TransferMediator::getSingleton().registerClient("JSObjectScriptManager");
+        mTransferPool = Transfer::TransferMediator::getSingleton().registerClient<Transfer::SimpleTransferPool>("JSObjectScriptManager");
 
         mParsingIOService = Network::IOServiceFactory::makeIOService();
         mParsingWork = new Network::IOWork(*mParsingIOService, "JSObjectScriptManager Mesh Parsing");
@@ -233,7 +233,7 @@ void JSObjectScriptManager::createSystemTemplate()
     mSystemTemplate->Set(v8::String::New("print"), v8::FunctionTemplate::New(JSSystem::root_print));
 
     mSystemTemplate->Set(v8::String::New("getAssociatedPresence"), v8::FunctionTemplate::New(JSSystem::getAssociatedPresence));
-    
+
 
     mSystemTemplate->Set(v8::String::New("__evalInGlobal"), v8::FunctionTemplate::New(JSSystem::evalInGlobal));
     mSystemTemplate->Set(v8::String::New("sendSandbox"), v8::FunctionTemplate::New(JSSystem::root_sendSandbox));
