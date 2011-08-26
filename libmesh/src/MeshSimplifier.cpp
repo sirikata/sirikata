@@ -42,9 +42,13 @@
 #endif
 #include <math.h>
 
+
+
 namespace Sirikata {
 
 namespace Mesh {
+
+#define SIMPLIFIER_INVALID_VECTOR Vector3f(-1000000,-1000000,-1000000)
 
 /* Code from an Intel matrix inversion optimization report
    (ftp://download.intel.com/design/pentiumiii/sml/24504301.pdf) */
@@ -156,6 +160,22 @@ Vector3f applyTransform(const Matrix4x4f& transform, const Vector3f& v) {
   Vector4f jth_vertex_4f = transform*Vector4f(v.x, v.y, v.z, 1.0f);
   return Vector3f(jth_vertex_4f.x, jth_vertex_4f.y, jth_vertex_4f.z);
 }
+
+class IndexedFaceContainer {
+public:
+
+
+  bool valid;
+  uint32 idx1; 
+  uint32 idx2;
+  uint32 idx3;
+
+  IndexedFaceContainer(uint32 i, uint32 j, uint32 k) : 
+    valid(true), idx1(i), idx2(j), idx3(k)
+  {
+  }
+
+};
 
 class FaceContainer {
 public:
@@ -323,324 +343,475 @@ bool custom_isnan (double data) {
     return std::isnan(data);
 #endif
 }
-void computeCosts(std::tr1::unordered_set<Vector3f, Vector3f::Hasher>& positionVectors,
-                  std::tr1::unordered_map<Vector3f, std::tr1::unordered_set<Vector3f, Vector3f::Hasher>, Vector3f::Hasher >& neighborVertices,
+
+void computeCosts(Mesh::MeshdataPtr agg_mesh,
+                  std::tr1::unordered_map<uint32, std::tr1::unordered_map<Vector3f, Matrix4x4f, Vector3f::Hasher> >& submeshPositionQs, 
+                  std::set<GeomPairContainer>& vertexPairs, 
                   std::tr1::unordered_map<GeomPairContainer, float, GeomPairContainer::Hasher>& pairPriorities,
-                  std::tr1::unordered_map<Vector3f, Matrix4x4f, Vector3f::Hasher>& positionQs,
-                  std::tr1::unordered_map<Vector3f, std::tr1::unordered_map<Vector3f, std::vector<GeomPairContainer>, Vector3f::Hasher >, Vector3f::Hasher>& overallPositionPairs,
-                  std::tr1::unordered_map<Vector3f, Vector3f, Vector3f::Hasher>& overallPositionMapping,
-                  std::set<GeomPairContainer>& vertexPairs)
+                  std::tr1::unordered_map<uint32, std::tr1::unordered_map<uint32, std::tr1::unordered_set<uint32> > >& submeshNeighborVertices,
+                  std::tr1::unordered_map<uint32, std::tr1::unordered_map<uint32, std::vector<uint32> > >& vertexToFacesMap                  
+                 )
 {
-  std::tr1::unordered_set<GeomPairContainer, GeomPairContainer::Hasher> pairPrioritiesSeen;
+  for (uint32 i = 0; i < agg_mesh->geometry.size(); i++) {
 
-  for (std::tr1::unordered_set<Vector3f, Vector3f::Hasher>::iterator it = positionVectors.begin();
-       it != positionVectors.end(); it++)
-  {
-    Vector3f origPosition = *it;
-    Vector3f position = origPosition;
+    SubMeshGeometry& curGeometry = agg_mesh->geometry[i];
+    std::tr1::unordered_map<Vector3f, Matrix4x4f, Vector3f::Hasher>& positionQs = submeshPositionQs[i];
+    std::tr1::unordered_map<uint32, std::tr1::unordered_set<uint32> >& neighborVertices = submeshNeighborVertices[i];
+    std::tr1::unordered_map<uint32, std::vector<uint32> >& submeshVertexToFacesMap = vertexToFacesMap[i];
 
-    while (overallPositionMapping.find(position) != overallPositionMapping.end()) {
-      if (overallPositionMapping[position] == position) break;
+    for (uint32 j = 0; j < curGeometry.positions.size(); j++) {
+      if (neighborVertices.find(j) == neighborVertices.end()) continue;       
 
-      position = overallPositionMapping[position];
-    }
+      bool j_edgeVertex = (submeshVertexToFacesMap[j].size() == 1);      
 
-    std::tr1::unordered_set<Vector3f, Vector3f::Hasher>& neighbors = neighborVertices[position];
+      const Vector3f& position = curGeometry.positions[j];
 
-    for ( std::tr1::unordered_set<Vector3f>::iterator n_it = neighbors.begin(); n_it != neighbors.end(); n_it++) {
-      Vector3f origNeighborPosition = *n_it;
-      Vector3f neighborPosition = origNeighborPosition;
+      std::tr1::unordered_set<uint32>& neighbors = neighborVertices[j];
 
-      while (overallPositionMapping.find(neighborPosition) != overallPositionMapping.end()) {
-        if (overallPositionMapping[neighborPosition] == neighborPosition) break;
+      for (std::tr1::unordered_set<uint32>::iterator neighbor_it = neighbors.begin(); neighbor_it != neighbors.end(); neighbor_it++) {
+        uint32 neighbor = *neighbor_it;
 
-        neighborPosition = overallPositionMapping[neighborPosition];
-      }
+        bool neighbor_edgeVertex = (submeshVertexToFacesMap[neighbor].size() == 1);
 
-      if (position == neighborPosition) continue;
+        double cost = 0;
+        if (j_edgeVertex || neighbor_edgeVertex) {
+          cost = 1e15;
+        }
+        else {
+          const Vector3f& neighborPosition = curGeometry.positions[neighbor];
+          
+          Matrix4x4f Q = positionQs[position] + positionQs[neighborPosition];
 
-      Matrix4x4f Q = positionQs[position] + positionQs[neighborPosition];
-      Vector4f vbar4f (neighborPosition.x, neighborPosition.y, neighborPosition.z, 1);
-      float cost = (vbar4f.dot(  Q * vbar4f )) ;
-      cost = (cost < 0.0) ? -cost : cost;
-      cost = ((cost <= 1e-12 || custom_isnan(cost) ) ? 1e15:cost);
+          Vector4f vbar4f (neighborPosition.x, neighborPosition.y, neighborPosition.z, 1);
 
-      std::vector<GeomPairContainer>& opp =  overallPositionPairs[origPosition][origNeighborPosition];
+          cost = (vbar4f.dot(  Q * vbar4f ));
+          cost = (cost < 0.0) ? -cost : cost;
+          assert( !custom_isnan(cost) );
 
-      for (std::vector<GeomPairContainer>::iterator s_it = opp.begin(); s_it != opp.end();s_it++) {
-            GeomPairContainer gpc(s_it->mGeomIdx, s_it->mVertexIdx1, s_it->mVertexIdx2 );
-            gpc.mCost = pairPriorities[gpc];
+          if (cost < 1e-2 && (position-neighborPosition).length() > cost * 1e2) {
+            cost = (position-neighborPosition).length();
+          }
+        }
 
-            if ( vertexPairs.find(gpc) == vertexPairs.end()) continue;
+        /* From here to the end of this innermost loop, it takes almost 5 seconds */
+        GeomPairContainer gpc(i, j, neighbor);
+        gpc.mCost = pairPriorities[gpc];
+        vertexPairs.erase(gpc);
 
-            vertexPairs.erase(gpc);
+        gpc.mCost += cost;        
 
-            if (pairPrioritiesSeen.count(gpc) == 0) {
-              pairPriorities[gpc] = 0;
-              pairPrioritiesSeen.insert(gpc);
-            }
-
-            gpc.mCost = pairPriorities[gpc];
-
-            gpc.mCost += cost;
-
-            pairPriorities[gpc] = gpc.mCost;
-            vertexPairs.insert(gpc);
+        pairPriorities[gpc] = gpc.mCost;
+        vertexPairs.insert(gpc);
       }
     }
   }
 }
 
-void MeshSimplifier::simplify(Mesh::MeshdataPtr agg_mesh, int32 numVerticesLeft) {
+inline uint32  findMappedVertex(std::tr1::unordered_map<int, int>& vertexMapping, uint32 idx) {
+  uint32 startIdx = idx;
+
+  int countIter = 0;
+  while (vertexMapping.find(idx) != vertexMapping.end()) {
+    countIter++;
+    if ((int)idx == vertexMapping[idx]) {
+      break;
+    }      
+    idx = vertexMapping[idx];
+  }
+
+  if (countIter > 1) {
+    vertexMapping[startIdx] = idx;
+  }
+
+  return idx;
+}
+
+void computeCosts(Mesh::MeshdataPtr agg_mesh, uint32 geomIdx, uint32 sourcePositionIdx, uint32 targetPositionIdx,
+                  std::tr1::unordered_map<int, int>& vertexMapping,
+                  std::tr1::unordered_map<uint32, std::tr1::unordered_map<Vector3f, Matrix4x4f, Vector3f::Hasher> >& submeshPositionQs,
+                  std::set<GeomPairContainer>& vertexPairs,
+                  std::tr1::unordered_map<GeomPairContainer, float, GeomPairContainer::Hasher>& pairPriorities,
+                  std::tr1::unordered_map<uint32, std::tr1::unordered_map<uint32, std::tr1::unordered_set<uint32> > >& submeshNeighborVertices,
+                  std::tr1::unordered_map<uint32, std::tr1::unordered_map<uint32, std::vector<uint32> > >& vertexToFacesMap)
+{
+  std::tr1::unordered_set<GeomPairContainer, GeomPairContainer::Hasher> pairPrioritiesSeen;  
+
+  SubMeshGeometry& curGeometry = agg_mesh->geometry[geomIdx];
+  std::tr1::unordered_map<Vector3f, Matrix4x4f, Vector3f::Hasher>& positionQs = submeshPositionQs[geomIdx];
+  std::tr1::unordered_map<uint32, std::tr1::unordered_set<uint32> >& neighborVertices = submeshNeighborVertices[geomIdx];  
+  std::tr1::unordered_map<uint32, std::vector<uint32> >& submeshVertexToFacesMap = vertexToFacesMap[geomIdx];
+
+  targetPositionIdx = findMappedVertex(vertexMapping, targetPositionIdx);  
+
+  const Vector3f& position = curGeometry.positions[targetPositionIdx];
+
+  std::tr1::unordered_set<uint32>& neighbors = neighborVertices[targetPositionIdx];
+
+  bool is_edgeVertex = (submeshVertexToFacesMap[geomIdx].size() == 1); 
+
+  for (std::tr1::unordered_set<uint32>::iterator neighbor_it = neighbors.begin(); neighbor_it != neighbors.end(); neighbor_it++) {
+    uint32 neighborIdx = *neighbor_it;
+
+    neighborIdx = findMappedVertex(vertexMapping, neighborIdx);    
+
+    if (neighborIdx == targetPositionIdx) continue;
+
+    bool neighbor_edgeVertex = (submeshVertexToFacesMap[neighborIdx].size() == 1);
+
+    float cost = 0;
+    if (is_edgeVertex || neighbor_edgeVertex) {
+      cost = 1e15;
+    }
+    else {
+      const Vector3f& neighborPosition = curGeometry.positions[neighborIdx];
+      
+      Matrix4x4f Q = positionQs[position] + positionQs[neighborPosition];
+      
+      Vector4f vbar4f (neighborPosition.x, neighborPosition.y, neighborPosition.z, 1);
+      cost = (vbar4f.dot(  Q * vbar4f )) ;            
+
+      cost = (cost < 0.0) ? -cost : cost;
+      assert( !custom_isnan(cost) );
+
+      if (cost < 1e-2 && (position-neighborPosition).length() > cost * 1e2) {
+        cost = (position-neighborPosition).length();
+      }
+    }
+
+    GeomPairContainer gpc(geomIdx, sourcePositionIdx, neighborIdx);
+    gpc.mCost = pairPriorities[gpc];
+    vertexPairs.erase(gpc);       
+    
+    gpc = GeomPairContainer(geomIdx, targetPositionIdx, neighborIdx);
+    
+    gpc.mCost = pairPriorities[gpc];    
+    vertexPairs.erase(gpc);
+
+    float prevCost = gpc.mCost;
+
+    if (pairPrioritiesSeen.count(gpc) == 0) {      
+      pairPriorities[gpc] = 0;
+      pairPrioritiesSeen.insert(gpc);
+    }
+
+    gpc.mCost = pairPriorities[gpc];
+
+    gpc.mCost += cost;
+
+    pairPriorities[gpc] = gpc.mCost;
+    vertexPairs.insert(gpc);
+  }
+}
+
+void MeshSimplifier::simplify(Mesh::MeshdataPtr agg_mesh, int32 numFacesLeft) {
   Sirikata::Time curTime = Sirikata::Timer::now();
 
-  std::tr1::unordered_map<GeomPairContainer, float, GeomPairContainer::Hasher> pairPriorities;
-  //Maps a position to its Q value
-  std::tr1::unordered_map<Vector3f, Matrix4x4f, Vector3f::Hasher> positionQs;
-  std::tr1::unordered_map<GeomContainer, std::tr1::unordered_set<Vector3f, Vector3f::Hasher>, GeomContainer::Hasher> geometryIndexToPositionsMap;
-  std::tr1::unordered_map<Vector3f, std::tr1::unordered_set<GeomContainer, GeomContainer::Hasher>, Vector3f::Hasher> positionToGeomsMap;
-
-  std::tr1::unordered_set<Vector3f, Vector3f::Hasher> positionVectors;
-
-  std::tr1::unordered_set<FaceContainer, FaceContainer::Hasher> faceSet;
-
-  std::tr1::unordered_map<uint32, std::tr1::unordered_map<Vector3f, std::tr1::unordered_set<uint32>, Vector3f::Hasher > > duplicateGeomVectors;
-
-  std::tr1::unordered_map<Vector3f, std::tr1::unordered_set<Vector3f, Vector3f::Hasher>, Vector3f::Hasher> neighborVertices;
-
-  Meshdata::GeometryInstanceIterator geoinst_it = agg_mesh->getGeometryInstanceIterator();
+  std::tr1::unordered_map<uint32, uint32> submeshInstanceCount;
+  
+  int countFaces = 0;  
   uint32 geoinst_idx;
   Matrix4x4f geoinst_pos_xform;
-
-  uint32 totalVertices = 0;
+  Meshdata::GeometryInstanceIterator geoinst_it = agg_mesh->getGeometryInstanceIterator();
 
   std::set<GeomPairContainer> vertexPairs;
+  std::tr1::unordered_map<GeomPairContainer, float, GeomPairContainer::Hasher> pairPriorities;
 
-  std::tr1::unordered_set<Vector3f, Vector3f::Hasher> removedPositions;
+  std::tr1::unordered_map<uint32, std::tr1::unordered_map<Vector3f, Matrix4x4f, Vector3f::Hasher> > submeshPositionQs;
 
-  //stores mapping of vertices collapsed to other vertices
-  std::tr1::unordered_map<Vector3f, Vector3f, Vector3f::Hasher> overallPositionMapping;
+  std::tr1::unordered_map<uint32, std::tr1::unordered_map<uint32, std::tr1::unordered_set<uint32> > > submeshNeighborVertices;
 
-  //maps pairs of points in the overall mesh to a list of point pairs in the underlying submesh geometries.
-  std::tr1::unordered_map<Vector3f, std::tr1::unordered_map<Vector3f, std::vector<GeomPairContainer>, Vector3f::Hasher >, Vector3f::Hasher> overallPositionPairs;
-
-  //Calculate the Qs for each vertex
-  while( geoinst_it.next(&geoinst_idx, &geoinst_pos_xform) ) {
-
-    const GeometryInstance& geomInstance = agg_mesh->instances[geoinst_idx];
-    SubMeshGeometry& curGeometry = agg_mesh->geometry[geomInstance.geometryIndex];
-    int i = geomInstance.geometryIndex;
-
+  /* Make every index in prims specification point to the earliest occurrence of the corresponding position vector */
+  for (uint32 i = 0; i < agg_mesh->geometry.size(); i++) {
+    SubMeshGeometry& curGeometry = agg_mesh->geometry[i];    
+    
+    std::tr1::unordered_map<Vector3f, uint32, Vector3f::Hasher> firstPositionMap;
+    
+    std::tr1::unordered_set<uint32> deletedIndices;
     for (uint32 j = 0; j < curGeometry.primitives.size(); j++) {
-      if (curGeometry.primitives[j].primitiveType != SubMeshGeometry::Primitive::TRIANGLES) continue;
+      SubMeshGeometry::Primitive& primitive = curGeometry.primitives[j];
 
-      for (uint32 k = 0; k+2 < curGeometry.primitives[j].indices.size(); k+=3) {
+      for (uint32 k = 0; k+2 < primitive.indices.size(); k+=3) {
+        unsigned short idx = primitive.indices[k];
+        unsigned short idx2 = primitive.indices[k+1];
+        unsigned short idx3 = primitive.indices[k+2];
+        
+        Vector3f& pos1 = curGeometry.positions[idx];
+        Vector3f& pos2 = curGeometry.positions[idx2];
+        Vector3f& pos3 = curGeometry.positions[idx3];
 
-        unsigned short idx = curGeometry.primitives[j].indices[k];
-        unsigned short idx2 = curGeometry.primitives[j].indices[k+1];
-        unsigned short idx3 = curGeometry.primitives[j].indices[k+2];
+        if (firstPositionMap.find(pos1) == firstPositionMap.end()) {
+          firstPositionMap[pos1] = idx;
+        }
+        else {       
+          if (idx != firstPositionMap[pos1]) {
+            primitive.indices[k] = firstPositionMap[pos1];
+            deletedIndices.insert(idx);
+          }
+        }
 
-        Vector3f pos1 = applyTransform(geoinst_pos_xform, curGeometry.positions[idx]);
-        Vector3f pos2 = applyTransform(geoinst_pos_xform, curGeometry.positions[idx2]);
-        Vector3f pos3 = applyTransform(geoinst_pos_xform, curGeometry.positions[idx3]);
+        if (firstPositionMap.find(pos2) == firstPositionMap.end()) {
+          firstPositionMap[pos2] = idx2;
+        }
+        else {
+           if (idx2 != firstPositionMap[pos2]) {              
+             primitive.indices[k+1] = firstPositionMap[pos2];
+             deletedIndices.insert(idx2);
+           }
+        }
 
-        duplicateGeomVectors[i][ curGeometry.positions[idx]  ].insert(idx);
-        duplicateGeomVectors[i][ curGeometry.positions[idx2] ].insert(idx2);
-        duplicateGeomVectors[i][ curGeometry.positions[idx3] ].insert(idx3);
+        if (firstPositionMap.find(pos3) == firstPositionMap.end()) {
+          firstPositionMap[pos3] = idx3;
+        }
+        else {          
+          if (idx3 != firstPositionMap[pos3]) {
+            primitive.indices[k+2] = firstPositionMap[pos3];
+            deletedIndices.insert(idx3);
+          }
+        }        
+      }
+    }
 
-        /*** AVOID TAKING THE SAME FACE INTO CONSIDERATION REPEATEDLY   **/
-        FaceContainer face(pos1,pos2,pos3);
-        if (faceSet.find(face) != faceSet.end()) {
+    for (std::tr1::unordered_set<uint32>::iterator it = deletedIndices.begin();
+          it != deletedIndices.end(); it++)
+    {
+      curGeometry.positions[*it] = SIMPLIFIER_INVALID_VECTOR;
+    }
+  }
+  
+  std::tr1::unordered_map<uint32, std::vector<IndexedFaceContainer> > geomFacesList;
+  std::tr1::unordered_map<uint32, std::tr1::unordered_map<uint32, std::vector<uint32> > > vertexToFacesMap;  
+
+  /* Identify the non-unique faces in the geometry. Insert the vertex pairs */
+  for (uint32 i = 0; i < agg_mesh->geometry.size(); i++) {
+    SubMeshGeometry& curGeometry = agg_mesh->geometry[i];
+    
+    std::tr1::unordered_map<uint32, std::tr1::unordered_set<uint32> >& neighborVertices = submeshNeighborVertices[i];
+    std::tr1::unordered_map<uint32, std::vector<uint32> >& geomsVertexToFacesMap = vertexToFacesMap[i];
+    std::vector<IndexedFaceContainer>& facesList = geomFacesList[i];    
+
+    std::tr1::unordered_map<Vector3f, Matrix4x4f, Vector3f::Hasher>& positionQs = submeshPositionQs[i];
+
+    std::tr1::unordered_set<FaceContainer, FaceContainer::Hasher> duplicateFaces;
+    for (uint32 j = 0; j < curGeometry.primitives.size(); j++) {
+        SubMeshGeometry::Primitive& primitive = curGeometry.primitives[j];
+
+        for (uint32 k = 0; k+2 < primitive.indices.size(); k+=3) {
+          unsigned short idx = primitive.indices[k];
+          unsigned short idx2 = primitive.indices[k+1];
+          unsigned short idx3 = primitive.indices[k+2];    
+
+          if (idx == idx2 || idx == idx3 || idx2 == idx3)
+            continue;
+
+          Vector3f& pos1 = curGeometry.positions[idx];
+          Vector3f& pos2 = curGeometry.positions[idx2];
+          Vector3f& pos3 = curGeometry.positions[idx3];
+
+          FaceContainer origface(pos1, pos2, pos3);
+
+          if (duplicateFaces.find(origface) != duplicateFaces.end()) {            
+            primitive.indices[k] = USHRT_MAX;
+            primitive.indices[k+1] = USHRT_MAX;
+            primitive.indices[k+2] = USHRT_MAX;            
+
+            continue;
+          }
+
+          GeomPairContainer gpc1(i, idx, idx2);
+          GeomPairContainer gpc2(i, idx2, idx3);
+          GeomPairContainer gpc3(i, idx, idx3);          
+
+          neighborVertices[idx].insert(idx2);
+          neighborVertices[idx].insert(idx3);
+          neighborVertices[idx2].insert(idx);
+          neighborVertices[idx2].insert(idx3);
+          neighborVertices[idx3].insert(idx);
+          neighborVertices[idx3].insert(idx2);
+
+          vertexPairs.insert(gpc1);
+          pairPriorities[gpc1] = 0;
+
+          vertexPairs.insert(gpc2);
+          pairPriorities[gpc2] = 0;
+
+          vertexPairs.insert(gpc3);
+          pairPriorities[gpc3] = 0;
+
+          duplicateFaces.insert(origface);
+
+          IndexedFaceContainer ifc(idx, idx2, idx3);
+          uint32 faceIndex = facesList.size();
+          facesList.push_back(ifc);
+
+          geomsVertexToFacesMap[idx].push_back(faceIndex);
+          geomsVertexToFacesMap[idx2].push_back(faceIndex);
+          geomsVertexToFacesMap[idx3].push_back(faceIndex);
+        }
+    }
+  }
+ 
+
+  //Find the list of instances associated with each submesh 
+  countFaces = 0;
+
+  while( geoinst_it.next(&geoinst_idx, &geoinst_pos_xform) ) {
+    const GeometryInstance& geomInstance = agg_mesh->instances[geoinst_idx];
+    Matrix4x4f geoinst_pos_xform_transpose = geoinst_pos_xform.transpose();
+   
+    int geomIdx = geomInstance.geometryIndex;    
+    submeshInstanceCount[geomIdx]++;    
+        
+    SubMeshGeometry& curGeometry = agg_mesh->geometry[geomIdx];
+    std::tr1::unordered_map<Vector3f, Matrix4x4f, Vector3f::Hasher>& positionQs = submeshPositionQs[geomIdx];
+    
+    for (uint32 j = 0; j < curGeometry.primitives.size(); j++) {
+      SubMeshGeometry::Primitive& primitive = curGeometry.primitives[j];
+
+      for (uint32 k = 0; k+2 < primitive.indices.size(); k+=3) {
+        unsigned short idx = primitive.indices[k];
+        unsigned short idx2 = primitive.indices[k+1];
+        unsigned short idx3 = primitive.indices[k+2];        
+
+        if (idx == USHRT_MAX && idx2 == USHRT_MAX && idx3 == USHRT_MAX) {
           continue;
         }
-        faceSet.insert(FaceContainer(pos1,pos2,pos3));
-        /** END DUPLICATE FACE AVOIDANCE **/
 
-        GeomPairContainer gpc1(i, idx, idx2);
-        GeomPairContainer gpc2(i, idx2, idx3);
-        GeomPairContainer gpc3(i, idx, idx3);
+        if (idx == idx2 || idx == idx3 || idx2 == idx3) continue;
 
-        vertexPairs.insert(gpc1);
-        pairPriorities[gpc1] = 0;
-        overallPositionPairs[pos1][pos2].push_back(gpc1);
+        Vector3f& orig_pos1 =  curGeometry.positions[idx];
+        Vector3f& orig_pos2 =  curGeometry.positions[idx2];
+        Vector3f& orig_pos3 = curGeometry.positions[idx3];
 
-        vertexPairs.insert(gpc2);
-        pairPriorities[gpc2] = 0;
-        overallPositionPairs[pos2][pos3].push_back(gpc2);
+        Vector3f pos1 = geoinst_pos_xform * orig_pos1;
+        Vector3f pos2 = geoinst_pos_xform * orig_pos2;
+        Vector3f pos3 = geoinst_pos_xform * orig_pos3;        
+        
+        float A = pos1.y*(pos2.z - pos3.z) + pos2.y*(pos3.z - pos1.z) + pos3.y*(pos1.z - pos2.z);
+        float B = pos1.z*(pos2.x - pos3.x) + pos2.z*(pos3.x - pos1.x) + pos3.z*(pos1.x - pos2.x);
+        float C = pos1.x*(pos2.y - pos3.y) + pos2.x*(pos3.y - pos1.y) + pos3.x*(pos1.y - pos2.y);
+        float D = -1 *( pos1.x*(pos2.y*pos3.z - pos3.y*pos2.z) + 
+                         pos2.x*(pos3.y*pos1.z - pos1.y*pos3.z) + 
+                         pos3.x*(pos1.y*pos2.z - pos2.y*pos1.z) );
+        
+        float normalizer = sqrtf(A*A+B*B+C*C);
 
-        vertexPairs.insert(gpc3);
-        pairPriorities[gpc3] = 0;
-        overallPositionPairs[pos1][pos3].push_back(gpc3);
+        if (normalizer > -0.000001 && normalizer < 0.000001) {
+          A = B = C = D = 0;
+        }
+        else {
+          //normalize...
+          A /= normalizer;
+          B /= normalizer;
+          C /= normalizer;
+          D /= normalizer;
+        }
+        
+        Matrix4x4f Qmat ( Vector4f(A*A, A*B, A*C, A*D),
+                          Vector4f(A*B, B*B, B*C, B*D),
+                          Vector4f(A*C, B*C, C*C, C*D),
+                          Vector4f(A*D, B*D, C*D, D*D), Matrix4x4f::ROWS() );
 
-        neighborVertices[pos1].insert(pos2);
-        neighborVertices[pos1].insert(pos3);
-        neighborVertices[pos2].insert(pos1);
-        neighborVertices[pos2].insert(pos3);
-        neighborVertices[pos3].insert(pos1);
-        neighborVertices[pos3].insert(pos2);
+        Qmat = geoinst_pos_xform_transpose * Qmat * geoinst_pos_xform; //2 seconds on the large scene for this mult        
 
-        GeomContainer gc1(i, idx);
-        GeomContainer gc2(i, idx2);
-        GeomContainer gc3(i, idx3);
+        positionQs[orig_pos1] += Qmat;
+        positionQs[orig_pos2] += Qmat;
+        positionQs[orig_pos3] += Qmat;        
 
-        geometryIndexToPositionsMap[gc1].insert(  pos1  );
-        geometryIndexToPositionsMap[gc2].insert(  pos2  );
-        geometryIndexToPositionsMap[gc3].insert(  pos3  );
-
-        positionVectors.insert(pos1);
-        positionVectors.insert(pos2);
-        positionVectors.insert(pos3);
-
-        positionToGeomsMap[pos1].insert( gc1 );
-        positionToGeomsMap[pos2].insert( gc2 );
-        positionToGeomsMap[pos3].insert( gc3 );
-
-        double A = pos1.y*(pos2.z - pos3.z) + pos2.y*(pos3.z - pos1.z) + pos3.y*(pos1.z - pos2.z);
-        double B = pos1.z*(pos2.x - pos3.x) + pos2.z*(pos3.x - pos1.x) + pos3.z*(pos1.x - pos2.x);
-        double C = pos1.x*(pos2.y - pos3.y) + pos2.x*(pos3.y - pos1.y) + pos3.x*(pos1.y - pos2.y);
-        double D = -1 *( pos1.x*(pos2.y*pos3.z - pos3.y*pos2.z) + pos2.x*(pos3.y*pos1.z - pos1.y*pos3.z) + pos3.x*(pos1.y*pos2.z - pos2.y*pos1.z) );
-
-        double normalizer = sqrt(A*A+B*B+C*C);
-
-        //normalize...
-        A /= normalizer;
-        B /= normalizer;
-        C /= normalizer;
-        D /= normalizer;
-
-        Matrix4x4f mat ( Vector4f(A*A, A*B, A*C, A*D),
-                         Vector4f(A*B, B*B, B*C, B*D),
-                         Vector4f(A*C, B*C, C*C, C*D),
-                         Vector4f(A*D, B*D, C*D, D*D), Matrix4x4f::ROWS() );
-
-        positionQs[pos1] += mat;
-        positionQs[pos2] += mat;
-        positionQs[pos3] += mat;
+        countFaces++;
       }
     }
   }
 
-  std::cout << vertexPairs.size () << " : vertexPairs.size\n";
-
-  totalVertices = positionQs.size();
-  std::cout <<  agg_mesh->uri << " : agg_mesh->uri, " << totalVertices << " : totalVertices;\n";
-  if ((int32)totalVertices <= numVerticesLeft) return;
-
-  computeCosts(positionVectors, neighborVertices, pairPriorities, positionQs,  overallPositionPairs, overallPositionMapping, vertexPairs);
-
-  //Remove the least cost pair from the list of vertex pairs. Replace it with a new vertex.
-  //Modify all triangles that had either of the two vertices to point to the new vertex.
+  computeCosts(agg_mesh, submeshPositionQs, vertexPairs, pairPriorities, submeshNeighborVertices, vertexToFacesMap);
+  
   std::tr1::unordered_map<int, std::tr1::unordered_map<int,int>  > vertexMapping1;
 
-  while ((int32)(totalVertices - removedPositions.size()) > numVerticesLeft && vertexPairs.size() > 0) {
-   // std::cout << vertexPairs.size() <<  " : vertexPairs.size\n";
-    //std::cout << (totalVertices - removedPositions.size()) << " : totalVertices - removedPositions.size()\n";
+  printf("countFaces=%d\n", countFaces);
+  printf("numFacesLeft %i\n",  numFacesLeft);
 
-    GeomPairContainer top = *(vertexPairs.begin());
+  //Do the actual edge collapses.
+  while (countFaces > numFacesLeft && vertexPairs.size() > 0) {    
+    GeomPairContainer top = *(vertexPairs.begin());  
+    
+    int i = top.mGeomIdx;  
+    
+    uint32 targetIdx = top.mVertexIdx1;
+    uint32 sourceIdx = top.mVertexIdx2;    
 
-    SubMeshGeometry& curGeometry = agg_mesh->geometry[top.mGeomIdx];
-    int i = top.mGeomIdx;
+    SubMeshGeometry& curGeometry = agg_mesh->geometry[i];
     std::tr1::unordered_map<int, int>& vertexMapping = vertexMapping1[i];
 
-    uint32 idx = top.mVertexIdx1;
-    uint32 idx2 = top.mVertexIdx2;
+    targetIdx = findMappedVertex(vertexMapping, targetIdx);
+    sourceIdx = findMappedVertex(vertexMapping, sourceIdx);
 
-    while (vertexMapping.find(idx) != vertexMapping.end()) {
-        if ((int32)idx == vertexMapping[idx]) {
-        break;
+    Vector3f& pos1 = curGeometry.positions[targetIdx];
+    Vector3f& pos2 = curGeometry.positions[sourceIdx];   
+    
+    //Collapse vertex at sourceIdx into targetIdx.
+    if (targetIdx != sourceIdx && pos1 != pos2) {
+      vertexMapping[sourceIdx] = targetIdx;        
+
+      std::tr1::unordered_map<uint32, std::vector<uint32> >& geomsVertexToFacesMap = vertexToFacesMap[i];
+      std::vector<uint32>& ifcVector = geomsVertexToFacesMap[sourceIdx];
+      std::vector<IndexedFaceContainer>& facesList = geomFacesList[i];
+
+      //count how many faces get invalidated and degenerate because of this edge collapse.
+      for (uint32 ifcVectorIdx = 0; ifcVectorIdx < ifcVector.size(); ifcVectorIdx++) {
+        uint32 faceIndex = ifcVector[ifcVectorIdx];
+        IndexedFaceContainer& ifc = facesList[faceIndex];
+
+        if (!ifc.valid) continue;
+        
+        unsigned short vidx = ifc.idx1;
+        unsigned short vidx2 = ifc.idx2;
+        unsigned short vidx3 = ifc.idx3;
+
+        vidx = findMappedVertex(vertexMapping, vidx);
+        vidx2 = findMappedVertex(vertexMapping, vidx2);
+        vidx3 = findMappedVertex(vertexMapping, vidx3);
+        
+        if (vidx == vidx2 || vidx2 == vidx3 || vidx == vidx3) {
+          //degenerate face; invalidate it.
+          countFaces -= submeshInstanceCount[i];
+          ifc.valid = false;          
+        }
+        else {
+          //add this face to the neighbors of the target vertex.
+          geomsVertexToFacesMap[targetIdx].push_back(faceIndex);
+        }
       }
-      idx = vertexMapping[idx];
-    }
-    while (vertexMapping.find(idx2) != vertexMapping.end()) {
-      if ((int32)idx2 == vertexMapping[idx2]) {
-        break;
-      }
-      idx2 = vertexMapping[idx2];
-    }
+      //done invalidating degenerate faces.
 
-    Vector3f& pos1 = curGeometry.positions[idx];
-    Vector3f& pos2 = curGeometry.positions[idx2];
-
-    if (idx != idx2 && pos1 != pos2) {
-      Vector3f posToReplace = pos2;
-
-      std::tr1::unordered_set<uint32> duplicateGeomSet = duplicateGeomVectors[i][pos2];
-      /** REMOVE ALL POSITION VERTICES THAT ARE DUPLICATES OF THE VERTEX AT THIS SUB_MESH_GEOMETRY IDX  **/
-      for (std::tr1::unordered_set<uint32>::iterator it = duplicateGeomSet.begin();
-           it != duplicateGeomSet.end(); it++)
+      //Now update the neighbors of the target vertex and its quadric matrix.
+      std::tr1::unordered_set<uint32>& neighborVertices2 =  submeshNeighborVertices[i][sourceIdx];
+      std::tr1::unordered_set<uint32>& neighborVertices1 =  submeshNeighborVertices[i][targetIdx];
+      std::tr1::unordered_map<Vector3f, Matrix4x4f, Vector3f::Hasher>& positionQs = submeshPositionQs[i];
+      for (std::tr1::unordered_set<uint32>::iterator neighbor_it = neighborVertices2.begin();
+           neighbor_it != neighborVertices2.end(); neighbor_it++)
       {
-        uint32 curct = *it;
-        while (vertexMapping.find(curct) != vertexMapping.end()) {
-          if ((int32)curct == vertexMapping[curct]) {
-            break;
-          }
-          curct = vertexMapping[curct];
-        }
-
-        Vector3f& posct = curGeometry.positions[curct] ;
-
-        if (posct == posToReplace) {
-          posct.x = (pos1.x);
-          posct.y = (pos1.y);
-          posct.z = (pos1.z);
-
-          vertexMapping[curct] = idx;
-
-          GeomContainer geomContainer(i, curct);
-
-          std::tr1::unordered_set<Vector3f, Vector3f::Hasher>& posList = geometryIndexToPositionsMap[geomContainer];
-
-          GeomContainer geomContainer2(i, idx);
-          std::tr1::unordered_set<Vector3f, Vector3f::Hasher>& targetPosList = geometryIndexToPositionsMap[geomContainer2];
-
-          std::tr1::unordered_set<Vector3f, Vector3f::Hasher>::iterator it = posList.begin();
-
-          for ( ; it != posList.end(); it++) {
-            std::tr1::unordered_set<GeomContainer, GeomContainer::Hasher>& idxesSet = positionToGeomsMap[*it];
-            idxesSet.erase(geomContainer);
-
-            if (idxesSet.size() == 0) {
-              // Removed position vertex *it
-              removedPositions.insert(*it);
-
-              std::tr1::unordered_set<Vector3f, Vector3f::Hasher>& neighbors = neighborVertices[*it];
-
-              Vector3f newNeighbor;
-              bool newNeighborValid = false;
-              for ( std::tr1::unordered_set<Vector3f>::iterator n_it = neighbors.begin();
-                    n_it != neighbors.end(); n_it++)
-              {
-                if (targetPosList.find(*n_it) != targetPosList.end()) {
-                  newNeighbor = *n_it;
-                  positionQs[newNeighbor] += positionQs[*it];
-                  overallPositionMapping[*it] = newNeighbor;
-                  newNeighborValid = true;
-
-                  break;
-                }
-              }
-
-              if (newNeighborValid) {
-                computeCosts(neighborVertices[*it], neighborVertices, pairPriorities, positionQs,  overallPositionPairs, overallPositionMapping, vertexPairs);
-                computeCosts(neighborVertices[newNeighbor], neighborVertices, pairPriorities, positionQs, overallPositionPairs,overallPositionMapping, vertexPairs);
-              }
-            }
-          }
+        uint32 neighborIdx = *neighbor_it;
+        
+        if (neighborIdx != targetIdx) {
+          neighborVertices1.insert(neighborIdx);          
         }
       }
-      /** END REMOVE ... **/
+
+      positionQs[ pos1 ] += positionQs[pos2];
+
+      //Finally recompute the costs of the neighbors.
+      computeCosts(agg_mesh, i, sourceIdx, targetIdx, vertexMapping, submeshPositionQs, vertexPairs, pairPriorities, submeshNeighborVertices, 
+                  vertexToFacesMap);
     }
 
     vertexPairs.erase(top);
     pairPriorities.erase(top);
   }
 
-  int remainingVertices = 0;
 
   //remove unused vertices; get new mapping from previous vertex indices to new vertex indices in vertexMapping2;
   std::tr1::unordered_map<int, std::tr1::unordered_map<int,int> > vertexMapping2;
 
-  //Remove vertices no longer used in the simplified mesh
+  //Remove vertices no longer used in the simplified mesh.
   for (uint32 i = 0; i < agg_mesh->geometry.size(); i++) {
     SubMeshGeometry& curGeometry = agg_mesh->geometry[i];
     std::tr1::unordered_map<int, int>& vertexMapping = vertexMapping1[i];
@@ -648,7 +819,7 @@ void MeshSimplifier::simplify(Mesh::MeshdataPtr agg_mesh, int32 numVerticesLeft)
 
     std::vector<Sirikata::Vector3f> positions;
     std::vector<Sirikata::Vector3f> normals;
-    std::vector<SubMeshGeometry::TextureSet>texUVs;    
+    std::vector<SubMeshGeometry::TextureSet>texUVs;
 
     for (uint32 j = 0; j < curGeometry.texUVs.size(); j++) {
       SubMeshGeometry::TextureSet ts;
@@ -660,6 +831,10 @@ void MeshSimplifier::simplify(Mesh::MeshdataPtr agg_mesh, int32 numVerticesLeft)
     
     for (uint32 j = 0 ; j < curGeometry.positions.size() ; j++) {
       if (vertexMapping.find(j) == vertexMapping.end()) {
+
+        if (curGeometry.positions[j] == SIMPLIFIER_INVALID_VECTOR) {
+          continue;
+        }
         
         if (vector3fSet.find(curGeometry.positions[j]) != vector3fSet.end()) {
           oldToNewMap[j] = vector3fSet[ curGeometry.positions[j] ]; 
@@ -670,14 +845,13 @@ void MeshSimplifier::simplify(Mesh::MeshdataPtr agg_mesh, int32 numVerticesLeft)
 
         vector3fSet[ curGeometry.positions[j] ] = positions.size();
 
-        positions.push_back(curGeometry.positions[j]);
+        positions.push_back(curGeometry.positions[j]);    
 
         if (j < curGeometry.normals.size())
           normals.push_back(curGeometry.normals[j]);
 
-        
         for (uint32 k = 0; k < curGeometry.texUVs.size(); k++) {
-          unsigned int stride = curGeometry.texUVs[k].stride;   
+          unsigned int stride = curGeometry.texUVs[k].stride;
           if (stride*j < curGeometry.texUVs[k].uvs.size()) {
             uint32 idx = stride * j;
             while ( idx++ < stride*j+stride)
@@ -691,11 +865,11 @@ void MeshSimplifier::simplify(Mesh::MeshdataPtr agg_mesh, int32 numVerticesLeft)
     curGeometry.normals = normals;
     curGeometry.texUVs = texUVs;
   }
-  
 
   //Now adjust the primitives to point to the new indexes of the submesh geometry vertices.
   std::tr1::unordered_map<uint32, std::tr1::unordered_map<uint32, std::vector<unsigned short> > > newIndices;
-
+  
+  //First create new indices from all the non-degenerate faces.
   for (uint32 i = 0; i < agg_mesh->geometry.size(); i++) {
     SubMeshGeometry& curGeometry = agg_mesh->geometry[i];
 
@@ -713,123 +887,31 @@ void MeshSimplifier::simplify(Mesh::MeshdataPtr agg_mesh, int32 numVerticesLeft)
         unsigned short idx2 = curGeometry.primitives[j].indices[k+1];
         unsigned short idx3 = curGeometry.primitives[j].indices[k+2];
 
-        while  (vertexMapping.find(idx) != vertexMapping.end()) {
-          if (idx == vertexMapping[idx]) {
-            break;
-          }
-
-          idx = vertexMapping[idx];
+        if (idx == USHRT_MAX && idx2 == USHRT_MAX && idx3 == USHRT_MAX) {          
+          continue;
         }
-        while (vertexMapping.find(idx2) != vertexMapping.end()) {
-          if (idx2 == vertexMapping[idx2]) {
-            break;
-          }
-
-          idx2 = vertexMapping[idx2];
-        }
-        while (vertexMapping.find(idx3) != vertexMapping.end()) {
-          if (idx3 == vertexMapping[idx3]) {
-            break;
-          }
-
-          idx3 = vertexMapping[idx3];
-        }
-
+        
+        idx = findMappedVertex(vertexMapping, idx);
+        idx2 = findMappedVertex(vertexMapping, idx2);
+        idx3 = findMappedVertex(vertexMapping, idx3);
+        
         if (idx != idx2 && idx2 != idx3 && idx != idx3) {
           indices.push_back(oldToNewMap[idx]);
           indices.push_back(oldToNewMap[idx2]);
-          indices.push_back(oldToNewMap[idx3]);
+          indices.push_back(oldToNewMap[idx3]);                
         }
       }
     }
   }
-
+  
+  //Now set the new indices.
   for (uint32 i = 0; i < agg_mesh->geometry.size(); i++) {
     SubMeshGeometry& curGeometry = agg_mesh->geometry[i];
 
     for (uint32 j = 0 ; j < curGeometry.primitives.size() ; j++) {
       curGeometry.primitives[j].indices = newIndices[i][j];
-    }
+    }    
   }
-
-  /// recalculate normals.
-  /*
-  std::tr1::unordered_map<GeomContainer, float, GeomContainer::Hasher> vertexFaceCount;
-  for (uint32 i = 0; i < agg_mesh->geometry.size(); i++) {
-    SubMeshGeometry& curGeometry = agg_mesh->geometry[i];
-
-    for (uint32 j = 0; j < curGeometry.primitives.size(); j++) {
-      if (curGeometry.primitives[j].primitiveType != SubMeshGeometry::Primitive::TRIANGLES) continue;
-
-      for (uint32 k = 0; k+2 < curGeometry.primitives[j].indices.size(); k+=3) {
-
-        unsigned short idx = curGeometry.primitives[j].indices[k];
-        unsigned short idx2 = curGeometry.primitives[j].indices[k+1];
-        unsigned short idx3 = curGeometry.primitives[j].indices[k+2];
-
-        Vector3f& pos1 = curGeometry.positions[idx];
-        Vector3f& pos2 =  curGeometry.positions[idx2];
-        Vector3f& pos3 = curGeometry.positions[idx3];
-
-        vertexFaceCount[GeomContainer(i,idx)]++;
-        vertexFaceCount[GeomContainer(i,idx2)]++;
-        vertexFaceCount[GeomContainer(i,idx3)]++;
-
-        float normx = (pos1.z-pos2.z)*(pos3.y-pos2.y)-(pos1.y-pos2.y)*(pos3.z-pos2.z);
-        float normy = (pos1.x-pos2.x)*(pos3.z-pos2.z)-(pos1.z-pos2.z)*(pos3.x-pos2.x);
-        float normz = (pos1.y-pos2.y)*(pos3.x-pos2.x)-(pos1.x-pos2.x)*(pos3.y-pos2.y);
-        float normlength = sqrt((normx*normx)+(normy*normy)+(normz*normz));
-        normx /= normlength;
-        normy /= normlength;
-        normz /= normlength;
-
-        Vector3f normal(normx, normy, normz);
-        curGeometry.normals[idx] += normal;
-        curGeometry.normals[idx2] += normal;
-        curGeometry.normals[idx3] += normal;
-
-
-      }
-    }
-
-    for (uint32 j = 0; j < curGeometry.normals.size(); j++) {
-      curGeometry.normals[j] /= vertexFaceCount[GeomContainer(i,j)];
-    }
-  }
-  */
-
-  /** Count the remaining vertices and spit out the answer... just to be sure */
-  std::tr1::unordered_set<Vector3f, Vector3f::Hasher> pq;
-  geoinst_it = agg_mesh->getGeometryInstanceIterator();
-  while( geoinst_it.next(&geoinst_idx, &geoinst_pos_xform) ) {
-    const GeometryInstance& geomInstance = agg_mesh->instances[geoinst_idx];
-    SubMeshGeometry& curGeometry = agg_mesh->geometry[geomInstance.geometryIndex];
-
-    for (uint32 j = 0; j < curGeometry.primitives.size(); j++) {
-
-      if (curGeometry.primitives[j].primitiveType != SubMeshGeometry::Primitive::TRIANGLES) continue;
-
-      for (uint32 k = 0; k+2 < curGeometry.primitives[j].indices.size(); k+=3) {
-
-        unsigned short idx = curGeometry.primitives[j].indices[k];
-        unsigned short idx2 = curGeometry.primitives[j].indices[k+1];
-        unsigned short idx3 = curGeometry.primitives[j].indices[k+2];
-
-        Vector3f pos1 = applyTransform(geoinst_pos_xform, curGeometry.positions[idx]);
-        Vector3f pos2 = applyTransform(geoinst_pos_xform, curGeometry.positions[idx2]);
-        Vector3f pos3 = applyTransform(geoinst_pos_xform, curGeometry.positions[idx3]);
-
-        pq.insert(pos1);
-        pq.insert(pos2);
-        pq.insert(pos3);
-      }
-    }
-  }
-  remainingVertices = pq.size();
-
-  std::cout << (Timer::now() - curTime).toMilliseconds() <<" : time taken\n";
-
-  std::cout << remainingVertices << " : remainingVertices\n";
 }
 
 }
