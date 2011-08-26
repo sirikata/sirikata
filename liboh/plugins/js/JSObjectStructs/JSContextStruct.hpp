@@ -14,6 +14,7 @@
 #include <sirikata/core/util/Liveness.hpp>
 #include "../EmersonHttpManager.hpp"
 #include "../JSVisibleManager.hpp"
+#include "JSCapabilitiesConsts.hpp"
 
 namespace Sirikata {
 namespace JS {
@@ -31,7 +32,7 @@ struct PresStructRestoreParams;
 
 struct JSContextStruct : public JSSuspendable, public Liveness
 {
-    JSContextStruct(JSObjectScript* parent, JSPresenceStruct* whichPresence, SpaceObjectReference home,uint32 capNum,v8::Handle<v8::ObjectTemplate> contGlobTempl, uint32 contextID,JSContextStruct* parentContext);
+    JSContextStruct(JSObjectScript* parent, JSPresenceStruct* whichPresence, SpaceObjectReference home,Capabilities::CapNum capNum,v8::Handle<v8::ObjectTemplate> contGlobTempl, uint32 contextID,JSContextStruct* parentContext);
     ~JSContextStruct();
 
     //looks in current context and returns the current context as pointer to
@@ -152,10 +153,10 @@ struct JSContextStruct : public JSSuspendable, public Liveness
        @param {SpaceObjectReference} canSendTo The sporef associated with the
        May be SpaceObjectReference::null.  Used for the sendHome call.
 
-       @param {uint32} capNum Capabilities granted to knew sandbox.
+       @param {Capabilities::CapNum} capNum Capabilities granted to knew sandbox.
 
      */
-    v8::Handle<v8::Value> struct_createContext(JSPresenceStruct* jspres,const SpaceObjectReference& canSendTo,uint32 capNum);
+    v8::Handle<v8::Value> struct_createContext(JSPresenceStruct* jspres,const SpaceObjectReference& canSendTo,Capabilities::CapNum capNum);
 
     // Trigger an event handler
     v8::Handle<v8::Value> struct_event(v8::Persistent<v8::Function>& cb);
@@ -235,7 +236,7 @@ struct JSContextStruct : public JSSuspendable, public Liveness
     v8::Persistent<v8::Function> presenceMessageCallback;
 
     //returns associated capabilities number
-    uint32 getCapNum();
+    Capabilities::CapNum getCapNum();
 
     
 private:

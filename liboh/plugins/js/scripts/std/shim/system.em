@@ -484,10 +484,6 @@ function PresenceEntry(sporef, presObj)
       system.__defineSetter__("self", function(val){
                             });
 
-     //if this sandbox is associated with a given presence, then loads that
-     //presence by default into self.
-     if (typeof(baseSystem.getAssociatedPresence()) !== 'undefined')
-         system.__setBehindSelf(baseSystem.getAssociatedPresence());
 
 
      
@@ -1454,7 +1450,17 @@ function PresenceEntry(sporef, presObj)
       system.onPresenceDisconnected(undefined);
 
      //populates self with basic system object.
-     system.addToSelfMap(null);
+
+
+     //if this sandbox is associated with a given presence, then loads that
+     //presence by default into self.
+     if (typeof(baseSystem.getAssociatedPresence()) !== 'undefined')
+     {
+             system.addToSelfMap(baseSystem.getAssociatedPresence());
+             system.__setBehindSelf(baseSystem.getAssociatedPresence());             
+     }
+     else
+         system.addToSelfMap(null);
 
 
      // FIXME this shouldn't be in system, but its the only place we

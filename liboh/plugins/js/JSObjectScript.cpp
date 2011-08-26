@@ -853,21 +853,22 @@ v8::Handle<v8::Value> JSObjectScript::invokeCallback(JSContextStruct* ctx, v8::H
 }
 
 
-bool JSObjectScript::checkCurCtxtHasCapability(JSPresenceStruct* jspres, uint32 whatCap)
+bool JSObjectScript::checkCurCtxtHasCapability(JSPresenceStruct* jspres, Capabilities::Caps whatCap)
 {
     if (mEvalContextStack.empty())
         return false;
 
+
     //only way that this context won't have capability is if jspres is context's
     //associated presence.  If it is, check that context has capability.
     JSContextStruct* jscont = mEvalContextStack.top().jscont;
-    if ((jspres == jscont->getAssociatedPresenceStruct()) &&
-        (! Capabilities::givesCap(jscont->getCapNum(),whatCap)))
+    if (Capabilities::givesCap(jscont->getCapNum(), whatCap,
+            jscont->getAssociatedPresenceStruct(), jspres))
     {
-        return false;
+        return true;
     }
 
-    return true;
+    return false;
 }
 
 /*

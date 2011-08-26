@@ -434,8 +434,9 @@ v8::Persistent<v8::Object>  JSPresenceStruct::toVisible()
 v8::Handle<v8::Value>JSPresenceStruct::runSimulation(String simname)
 {
     v8::HandleScope scope;
+    INLINE_CHECK_CAPABILITY_ERROR(Capabilities::GUI, runSimulation);
+    
     JSInvokableObject::JSInvokableObjectInt* invokableObj = mParent->runSimulation(getSporef(),simname);
-
     v8::Local<v8::Object> tmpObj = mParent->manager()->mInvokableObjectTemplate->NewInstance();
     tmpObj->SetInternalField(JSSIMOBJECT_JSOBJSCRIPT_FIELD,External::New(mParent));
     tmpObj->SetInternalField(JSSIMOBJECT_SIMULATION_FIELD,External::New(invokableObj));

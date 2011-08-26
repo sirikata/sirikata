@@ -40,6 +40,7 @@
 #include <sirikata/ogre/task/EventManager.hpp>
 #include <sirikata/core/transfer/DiskManager.hpp>
 #include <sirikata/ogre/input/InputEvents.hpp>
+#include <map>
 
 namespace Sirikata {
 
@@ -60,7 +61,8 @@ public:
     // Invoked when the main UI components are ready
     void uiReady();
 
-    void setDelegate(Invokable* del);
+    void addDelegate(Invokable* del);
+    void removeDelegate(Invokable* del);
 
     // FIXME no reason for this to be in this class.
     SpaceObjectReference pick(Vector2f p, int direction, const SpaceObjectReference& ignore, Vector3f* hitPointOut=NULL);
@@ -110,7 +112,9 @@ private:
     typedef std::multimap<Sirikata::Input::InputDevice*, Task::SubscriptionId> DeviceSubMap;
     DeviceSubMap mDeviceSubscriptions;
 
-    Invokable* mDelegate;
+    //key and value are same.
+    std::map<Invokable*,Invokable*> mDelegates;
+
 
     int mWhichRayObject;
 

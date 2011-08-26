@@ -53,12 +53,29 @@ function() {
      *  initializing.
      */
     std.graphics.Graphics = function(pres, name, cb, reset_cb) {
+
+        if (typeof(reInitialize) === 'unefined')
+            reInitialize = false;
+        
         this.presence = pres;
-        this._simulator = pres.runSimulation(name);
-        this.inputHandler = new std.graphics.InputHandler(this);
         this._cameraMode = 'first';
-        this._setOnReady(cb, reset_cb);
-        this._animationInfo = new std.graphics.AnimationInfo(pres, this);
+        this._simulator = pres.runSimulation(name);
+
+        //if (!reInitialize)
+        if (!this._isReady())
+        {
+            this.inputHandler = new std.graphics.InputHandler(this);
+            this._setOnReady(cb, reset_cb);
+            this._animationInfo = new std.graphics.AnimationInfo(pres, this);
+        }
+        else
+        {
+            this.inputHandler = new std.graphics.InputHandler(this);
+            this._animationInfo = new std.graphics.AnimationInfo(pres, this);
+            system.event(std.core.bind(this._handleOnReady,this,cb,true));
+        }
+
+
     };
 
     std.graphics.Graphics.prototype.invoke = function() {
@@ -66,16 +83,31 @@ function() {
         return this._simulator.invoke.apply(this._simulator, arguments);
     };
 
-    std.graphics.Graphics.prototype._handleOnReady = function(cb) {
+    /**
+     @returns true if already have a viewer for this presence.  false otherwise.
+     */
+    std.graphics.Graphics.prototype._isReady = function()
+    {
+        return this.invoke('isReady');
+    };
+
+
+    /**
+     @param {boolean} alreadyInitialized is whether a viewer was already created for this
+     presence, or whether its the first one brought up.  (True if a
+     viewer had already been created, false otherwise.)
+     */
+    std.graphics.Graphics.prototype._handleOnReady = function(cb,alreadyInitialized)
+    {
         // Reinitialize camera mode
         this.invoke('onTick', std.core.bind(this._onTick, this));
-        if (cb) cb(this);
+        if (cb) cb(this,alreadyInitialized);
     };
 
     /** Set the callback to invoke when the system is ready for rendering. */
     std.graphics.Graphics.prototype._setOnReady = function(cb, reset_cb) {
         this.invoke('onReady',
-                    std.core.bind(this._handleOnReady, this, cb),
+                    std.core.bind(this._handleOnReady, this, cb,false),
                     std.core.bind(this._handleOnReady, this, reset_cb)
                    );
     };

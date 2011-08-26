@@ -109,9 +109,9 @@ TimeSteppedSimulation* HostedObject::runSimulation(const SpaceObjectReference& s
     }
 
     PerPresenceData& pd =  psd_it->second;
-    addSimListeners(pd,simName,sim);
-
-    if (sim != NULL)
+    bool newSimListener = addSimListeners(pd,simName,sim);
+    
+    if ((sim != NULL) && (newSimListener))
     {
         HO_LOG(detailed, "Adding simulation to context");
         mContext->add(sim);
@@ -419,11 +419,12 @@ void HostedObject::connect(
 
 
 
-void HostedObject::addSimListeners(PerPresenceData& pd, const String& simName,TimeSteppedSimulation*& sim)
+//returns true if sim gets an already-existing listener.  false otherwise
+bool HostedObject::addSimListeners(PerPresenceData& pd, const String& simName,TimeSteppedSimulation*& sim)
 {
     if (pd.sims.find(simName) != pd.sims.end()) {
         sim = pd.sims[simName];
-        return;
+        return false;
     }
 
     HO_LOG(info,String("[OH] Initializing ") + simName);
@@ -441,6 +442,7 @@ void HostedObject::addSimListeners(PerPresenceData& pd, const String& simName,Ti
         mObjectHost->addListener(sim);
         HO_LOG(info,String("Successfully initialized ") + simName);
     }
+    return true;
 }
 
 
