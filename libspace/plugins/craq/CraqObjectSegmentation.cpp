@@ -49,7 +49,9 @@
 #include <stdlib.h>
 #include <algorithm>
 #include <boost/thread/mutex.hpp>
-
+#ifdef _WIN32
+#pragma warning (disable:4355)//this within constructor initializer
+#endif
 namespace Sirikata
 {
 

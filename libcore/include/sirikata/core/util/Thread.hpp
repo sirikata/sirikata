@@ -57,12 +57,15 @@ public:
 
     explicit Thread(ThreadMainFunc f)
      : mImpl(
+#if SIRIKATA_PLATFORM != SIRIKATA_WINDOWS
          std::tr1::bind(
              &Thread::initThread, this, f
-#if SIRIKATA_PLATFORM != SIRIKATA_WINDOWS
              , Thread::getProfilerData()
-#endif
          )
+
+#else
+     f
+#endif
        )
     {
     }
@@ -124,10 +127,6 @@ private:
 
     void initThread(ThreadMainFunc f, ProfilerData pd) {
         setProfilerData(pd);
-        f();
-    }
-#else
-    void initThread(ThreadMainFunc f) {
         f();
     }
 #endif

@@ -32,7 +32,9 @@
 
 #include "MigrationMonitor.hpp"
 #include <sirikata/core/network/IOStrandImpl.hpp>
-
+#ifdef _WIN32
+#pragma warning (disable:4355)//this within constructor initializer
+#endif
 namespace Sirikata {
 
 MigrationMonitor::MigrationMonitor(SpaceContext* ctx, LocationService* locservice, CoordinateSegmentation* cseg, MigrationCallback cb)

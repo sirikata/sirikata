@@ -32,6 +32,9 @@
 
 #include "FairServerMessageReceiver.hpp"
 #include <sirikata/core/network/IOStrandImpl.hpp>
+#ifdef _WIN32
+#pragma warning (disable:4355)//this within constructor initializer
+#endif
 
 namespace Sirikata {
 

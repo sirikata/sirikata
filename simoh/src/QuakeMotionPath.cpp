@@ -40,10 +40,10 @@
 #ifndef PI
 #define PI 3.14159f
 #endif
-
+#ifndef _WIN32
 #define FLT_MIN -1e30f
 #define FLT_MAX 1e30f
-
+#endif
 namespace Sirikata {
 
 std::map<const char*, uint32> QuakeMotionPath::mObjectsInFile;
