@@ -212,9 +212,9 @@ public:
      *
      *  @param clientID Should be a string that uniquely identifies the client
      */
-    template<typename PoolType>
-    std::tr1::shared_ptr<PoolType> registerClient(const std::string& clientID) {
-        std::tr1::shared_ptr<PoolType> ret(new PoolType(clientID));
+    template<typename TPoolType>
+    std::tr1::shared_ptr<TPoolType> registerClient(const std::string& clientID) {
+        std::tr1::shared_ptr<TPoolType> ret(new TPoolType(clientID));
         registerPool(ret);
         return ret;
     }
