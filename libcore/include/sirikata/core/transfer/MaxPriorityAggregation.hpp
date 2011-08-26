@@ -46,24 +46,32 @@ class MaxPriorityAggregation : public PriorityAggregationAlgorithm {
 
 public:
 
-	//Return an aggregated priority given the list of priorities
-	virtual TransferRequest::PriorityType aggregate(
-	        std::map<std::string, std::tr1::shared_ptr<TransferRequest> > & l) const {
+    //Return an aggregated priority given the list of priorities
+    virtual TransferRequest::PriorityType aggregate(
+        const std::map<std::string, TransferRequestPtr > & l) const {
 
-		//don't feel like making compare func for max_element so just manual laziness
-	    std::map<std::string, std::tr1::shared_ptr<TransferRequest> >::iterator findMax = l.begin();
-		TransferRequest::PriorityType max = findMax->second->getPriority();
-		findMax++;
-		while(findMax != l.end()) {
-			if(findMax->second->getPriority() > max) {
-				max = findMax->second->getPriority();
-			}
-			findMax++;
-		}
+        //don't feel like making compare func for max_element so just manual laziness
+        std::map<std::string, TransferRequestPtr>::const_iterator findMax = l.begin();
+        TransferRequest::PriorityType max = findMax->second->getPriority();
+        findMax++;
+        while(findMax != l.end()) {
+            if(findMax->second->getPriority() > max) {
+                max = findMax->second->getPriority();
+            }
+            findMax++;
+        }
 
-		return max;
-	}
+        return max;
+    }
 
+    virtual TransferRequest::PriorityType aggregate(
+        const std::vector<TransferRequestPtr>& l) const {
+        TransferRequest::PriorityType max = (*l.begin())->getPriority();
+        for(std::vector<TransferRequestPtr>::const_iterator it = ++(l.begin()); it != l.end(); it++) {
+            if ((*it)->getPriority() > max) max = (*it)->getPriority();
+        }
+        return max;
+    }
 };
 
 }

@@ -101,6 +101,13 @@ void ChunkRequest::notifyCaller(std::tr1::shared_ptr<TransferRequest> from) {
     SILOG(transfer, detailed, "done ChunkRequest notifyCaller");
 }
 
+void ChunkRequest::notifyCaller(std::tr1::shared_ptr<TransferRequest> from, DenseDataPtr data) {
+    std::tr1::shared_ptr<ChunkRequest> fromC =
+      std::tr1::static_pointer_cast<ChunkRequest, TransferRequest>(from);
+    HttpManager::getSingleton().postCallback(std::tr1::bind(mCallback, fromC, data));
+    SILOG(transfer, detailed, "done ChunkRequest notifyCaller");
+}
+
 
 } // namespace Transfer
 } // namespace Sirikata

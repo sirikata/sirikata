@@ -60,6 +60,8 @@
 #include <sirikata/mesh/ModelsSystemFactory.hpp>
 #include <sirikata/mesh/CompositeFilter.hpp>
 
+#include <sirikata/core/transfer/AggregatedTransferPool.hpp>
+
 namespace Sirikata {
 namespace JS {
 
@@ -82,7 +84,7 @@ JSObjectScriptManager::JSObjectScriptManager(ObjectHostContext* ctx, const Sirik
 {
     // In emheadless we run without an ObjectHostContext
     if (mContext != NULL) {
-        mTransferPool = Transfer::TransferMediator::getSingleton().registerClient<Transfer::SimpleTransferPool>("JSObjectScriptManager");
+        mTransferPool = Transfer::TransferMediator::getSingleton().registerClient<Transfer::AggregatedTransferPool>("JSObjectScriptManager");
 
         mParsingIOService = Network::IOServiceFactory::makeIOService();
         mParsingWork = new Network::IOWork(*mParsingIOService, "JSObjectScriptManager Mesh Parsing");

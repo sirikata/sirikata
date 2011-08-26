@@ -43,6 +43,7 @@
 #include <sirikata/core/network/IOWork.hpp>
 #include <sirikata/core/options/Options.hpp>
 #include <sirikata/core/util/DynamicLibrary.hpp>
+#include <sirikata/core/transfer/AggregatedTransferPool.hpp>
 
 #include <sirikata/ogre/resourceManager/CDNArchivePlugin.hpp>
 
@@ -378,7 +379,7 @@ bool OgreRenderer::initialize(const String& options, bool with_berkelium) {
             sRoot->initialise(doAutoWindow,windowTitle->as<String>());
             mRenderWindow = (doAutoWindow?sRoot->getAutoCreatedWindow():NULL);
 	    mOgreOwnedRenderWindow = (mRenderWindow != NULL);
-            mTransferPool = Transfer::TransferMediator::getSingleton().registerClient<Transfer::SimpleTransferPool>("OgreGraphics");
+            mTransferPool = Transfer::TransferMediator::getSingleton().registerClient<Transfer::AggregatedTransferPool>("OgreGraphics");
 
             mCDNArchivePlugin = new CDNArchivePlugin;
             sRoot->installPlugin(&*mCDNArchivePlugin);

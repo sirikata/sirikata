@@ -38,6 +38,7 @@
 #include <sirikata/core/network/IOStrandImpl.hpp>
 #include <sirikata/core/network/IOWork.hpp>
 
+#include <sirikata/core/transfer/AggregatedTransferPool.hpp>
 
 #if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
 #define snprintf _snprintf
@@ -67,7 +68,7 @@ AggregateManager::AggregateManager( LocationService* loc) :
     mIOWork = new Network::IOWork(mAggregationService, "Aggregation Work");
 
     static char x = '1';
-    mTransferPool = mTransferMediator->registerClient<Transfer::SimpleTransferPool>("SpaceAggregator_"+x);
+    mTransferPool = mTransferMediator->registerClient<Transfer::AggregatedTransferPool>("SpaceAggregator_"+x);
     x++;
 
     // Start the processing thread

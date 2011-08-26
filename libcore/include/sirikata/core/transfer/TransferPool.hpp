@@ -47,6 +47,9 @@
 namespace Sirikata {
 namespace Transfer {
 
+class TransferRequest;
+typedef std::tr1::shared_ptr<TransferRequest> TransferRequestPtr;
+
 /*
  * Base class for a request going into the transfer pool to set
  * the priority of a request
@@ -103,8 +106,6 @@ protected:
 
 };
 
-typedef std::tr1::shared_ptr<TransferRequest> TransferRequestPtr;
-
 /*
  * Handles requests for metadata of a file when all you have is the URI
  */
@@ -143,6 +144,11 @@ public:
         std::tr1::shared_ptr<MetadataRequest> fromC =
                 std::tr1::static_pointer_cast<MetadataRequest, TransferRequest>(from);
         mCallback(fromC, fromC->mRemoteFileMetadata);
+    }
+    inline void notifyCaller(TransferRequestPtr from, RemoteFileMetadataPtr data) {
+        std::tr1::shared_ptr<MetadataRequest> fromC =
+                std::tr1::static_pointer_cast<MetadataRequest, TransferRequest>(from);
+        mCallback(fromC, data);
     }
 
     inline bool operator==(const MetadataRequest& other) const {
@@ -223,6 +229,7 @@ public:
     void execute_finished(std::tr1::shared_ptr<const DenseData> response, ExecuteFinished cb);
 
     void notifyCaller(std::tr1::shared_ptr<TransferRequest> from);
+    void notifyCaller(std::tr1::shared_ptr<TransferRequest> from, DenseDataPtr data);
 
 protected:
     std::tr1::shared_ptr<RemoteFileMetadata> mMetadata;
@@ -243,13 +250,15 @@ class PriorityAggregationAlgorithm {
 
 public:
 
-	//Return an aggregated priority given the list of priorities
-	virtual TransferRequest::PriorityType aggregate(
-	        std::map<std::string, std::tr1::shared_ptr<TransferRequest> > &) const = 0;
+    //Return an aggregated priority given the list of priorities
+    virtual TransferRequest::PriorityType aggregate(
+        const std::map<std::string, TransferRequestPtr> &) const = 0;
 
-	virtual ~PriorityAggregationAlgorithm() {
-	}
+    virtual TransferRequest::PriorityType aggregate(
+        const std::vector<TransferRequestPtr>&) const = 0;
 
+    virtual ~PriorityAggregationAlgorithm() {
+    }
 };
 
 /** Pools are the conduits for requests to get into the
