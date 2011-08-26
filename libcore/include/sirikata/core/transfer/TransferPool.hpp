@@ -70,7 +70,12 @@ public:
 	    return mDeletionRequest;
 	}
 
-	//Return a unique identifier for the request
+	/// Get an identifier for the data referred to by this
+	/// TransferRequest. The identifier is not unique for each
+	/// TransferRequest. Instead, it identifies the asset data: if two
+	/// identifiers are equal, they refer to the same data. (Two different
+	/// identifiers may *ultimately* refer to the same data because two
+	/// names could point to the same underlying hash).
 	virtual const std::string& getIdentifier() const = 0;
 
 	inline const std::string& getClientID() const {
@@ -121,17 +126,11 @@ public:
      mURI(uri), mCallback(cb) {
         mPriority = priority;
         mDeletionRequest = false;
-
-        const time_t seconds = time(NULL);
-        int random = rand();
-
-        std::stringstream out;
-        out<<uri.toString()<<seconds<<random;
-        mUniqueID = out.str();
+        mID = uri.toString();
     }
 
     inline const std::string &getIdentifier() const {
-        return mUniqueID;
+        return mID;
     }
 
     inline const URI& getURI() {
@@ -152,16 +151,16 @@ public:
     }
 
     inline bool operator==(const MetadataRequest& other) const {
-        return mUniqueID == other.mUniqueID;
+        return mID == other.mID;
     }
     inline bool operator<(const MetadataRequest& other) const {
-        return mUniqueID < other.mUniqueID;
+        return mID < other.mID;
     }
 
 protected:
 
     const URI mURI;
-    std::string mUniqueID;
+    std::string mID;
     MetadataCallback mCallback;
     std::tr1::shared_ptr<RemoteFileMetadata> mRemoteFileMetadata;
 
@@ -169,12 +168,8 @@ protected:
         mURI(uri) {
         mPriority = priority;
         mDeletionRequest = false;
-        const time_t seconds = time(NULL);
-        int random = rand();
 
-        std::stringstream out;
-        out<<uri.toString()<<seconds<<random;
-        mUniqueID = out.str();
+        mID = uri.toString();
     }
 
 
@@ -201,20 +196,14 @@ public:
 
 	ChunkRequest(const URI &uri, const RemoteFileMetadata &metadata, const Chunk &chunk,
 	        PriorityType priority, ChunkCallback cb)
-		: MetadataRequest(uri, priority),
-		  mMetadata(std::tr1::shared_ptr<RemoteFileMetadata>(new RemoteFileMetadata(metadata))),
-		  mChunk(std::tr1::shared_ptr<Chunk>(new Chunk(chunk))),
-		  mCallback(cb) {
-
-	        mDeletionRequest = false;
-            const time_t seconds = time(NULL);
-            int random = rand();
-
-            std::stringstream out;
-            out<<uri.toString()<<seconds<<random;
-            mUniqueID = out.str();
-
-	}
+            : MetadataRequest(uri, priority),
+            mMetadata(std::tr1::shared_ptr<RemoteFileMetadata>(new RemoteFileMetadata(metadata))),
+            mChunk(std::tr1::shared_ptr<Chunk>(new Chunk(chunk))),
+            mCallback(cb)
+            {
+                mDeletionRequest = false;
+                mID = chunk.getHash().toString();
+            }
 
 	inline const RemoteFileMetadata& getMetadata() {
 		return *mMetadata;
@@ -233,11 +222,9 @@ public:
 
 protected:
     std::tr1::shared_ptr<RemoteFileMetadata> mMetadata;
-    std::string mUniqueID;
     std::tr1::shared_ptr<Chunk> mChunk;
     std::tr1::shared_ptr<const DenseData> mDenseData;
     ChunkCallback mCallback;
-
 };
 
 typedef std::tr1::shared_ptr<ChunkRequest> ChunkRequestPtr;
