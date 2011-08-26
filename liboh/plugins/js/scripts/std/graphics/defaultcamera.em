@@ -14,6 +14,7 @@ function() {
                 this._mode = 'first';
 
                 this._sim = sim;
+                
                 this._sim.onTick(std.core.bind(this.onTick, this));
 
                 this._offset = <0, 0, 0>;

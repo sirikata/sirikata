@@ -226,7 +226,6 @@ void OgreSystem::handleUIReady() {
     // if all conditions are met.
     if (mOnReadyCallback != NULL) mOnReadyCallback->invoke();
     mMouseHandler->uiReady();
-
     mReady= true;
 }
 

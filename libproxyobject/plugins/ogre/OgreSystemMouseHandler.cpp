@@ -739,6 +739,7 @@ void OgreSystemMouseHandler::delegateEvent(InputEventPtr inputev) {
     std::vector<boost::any> args;
     args.push_back(Invokable::asAny(event_data));
 
+    
     for (std::map<Invokable*, Invokable*>::iterator delIter = mDelegates.begin();
          delIter != mDelegates.end(); ++delIter)
     {

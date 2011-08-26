@@ -57,30 +57,22 @@ function() {
         if (typeof(reInitialize) === 'unefined')
             reInitialize = false;
         
-        system.print('\n\nDEBUG into graphics constructor\n\n');
-
-        system.print('\n\nDEBUG continuing with graphics install\n\n');
-        
         this.presence = pres;
         this._cameraMode = 'first';
+        this._simulator = pres.runSimulation(name);
 
         if (!reInitialize)
-//        if (!this._isReady())
+        //if (!this._isReady())
         {
-            system.print('\n\nIn first part of cal\n\n');
-            this._simulator = pres.runSimulation(name);
             this.inputHandler = new std.graphics.InputHandler(this);
             this._setOnReady(cb, reset_cb);
             this._animationInfo = new std.graphics.AnimationInfo(pres, this);
         }
         else
         {
-            system.print('\n\nDEBUG: not doing anything useful on ready\n\n');
-            this._simulator = pres.runSimulation(name);
             this.inputHandler = new std.graphics.InputHandler(this);
             this._animationInfo = new std.graphics.AnimationInfo(pres, this);
-            this._handleOnReady(cb,true);
-            return;
+            system.event(std.core.bind(this._handleOnReady,this,cb,true));
         }
 
 
@@ -113,7 +105,6 @@ function() {
 
     /** Set the callback to invoke when the system is ready for rendering. */
     std.graphics.Graphics.prototype._setOnReady = function(cb, reset_cb) {
-        system.print('\n\nDEBUG in _setOnReady of graphics\n\n');
         this.invoke('onReady',
                     std.core.bind(this._handleOnReady, this, cb),
                     std.core.bind(this._handleOnReady, this, reset_cb)
