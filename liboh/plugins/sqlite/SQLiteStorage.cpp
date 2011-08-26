@@ -197,12 +197,12 @@ void SQLiteStorage::initDB() {
     sqlite3_stmt* table_create_stmt;
 
     rc = sqlite3_prepare_v2(db->db(), table_create.c_str(), -1, &table_create_stmt, (const char**)&remain);
-    !SQLite::check_sql_error(db->db(), rc, NULL, "Error preparing table create statement");
+    SQLite::check_sql_error(db->db(), rc, NULL, "Error preparing table create statement");
 
     rc = sqlite3_step(table_create_stmt);
-    !SQLite::check_sql_error(db->db(), rc, NULL, "Error executing table create statement");
+    SQLite::check_sql_error(db->db(), rc, NULL, "Error executing table create statement");
     rc = sqlite3_finalize(table_create_stmt);
-    !SQLite::check_sql_error(db->db(), rc, NULL, "Error finalizing table create statement");
+    SQLite::check_sql_error(db->db(), rc, NULL, "Error finalizing table create statement");
 
     mDB = db;
 }
