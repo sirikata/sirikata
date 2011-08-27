@@ -214,6 +214,10 @@ private:
     // Final callback in session initiation -- we have all the info and now just have to return it to the object
     void openConnectionStartSession(const SpaceObjectReference& sporef_uuid, SpaceNodeConnection* conn);
 
+    // Timeout handler for initial session message -- checks if the connection
+    // succeeded and, if necessary, retries
+    void checkConnectedAndRetry(const SpaceObjectReference& sporef_uuid, ServerID connTo);
+
 
     /** Object session migration. */
 
@@ -289,6 +293,8 @@ private:
             StreamCreatedCallback stream_created_cb, DisconnectedCallback disconnected_cb
         );
 
+        bool exists(const SpaceObjectReference& sporef_objid);
+
         // Mark the object as connecting to the given server
         ConnectingInfo& connectingTo(const SpaceObjectReference& obj, ServerID connecting_to);
 
@@ -320,6 +326,8 @@ private:
         // the server currently being connected to, not just one where a session has been
         // established
         ServerID getConnectedServer(const SpaceObjectReference& sporef_obj_id, bool allow_connecting = false);
+
+        ServerID getConnectingToServer(const SpaceObjectReference& sporef_obj_id);
 
         //UUID getInternalID(const ObjectReference& space_objid) const;
 

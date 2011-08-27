@@ -142,6 +142,7 @@ private:
     void handleConnect(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, const Sirikata::Protocol::Object::ObjectMessage& container, const Sirikata::Protocol::Session::Connect& connect_msg);
     void handleConnectAuthResponse(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, const UUID& obj_id, const Sirikata::Protocol::Session::Connect& connect_msg, bool authenticated);
 
+    void sendConnectSuccess(const UUID& obj_id);
     void sendConnectError(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, const UUID& obj_id);
 
     // Handle connection ack message from object

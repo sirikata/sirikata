@@ -480,7 +480,14 @@ void Server::sendConnectError(const ObjectHostConnectionManager::ConnectionID& o
 // Handle Connect message from object
 void Server::handleConnect(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, const Sirikata::Protocol::Object::ObjectMessage& container, const Sirikata::Protocol::Session::Connect& connect_msg) {
     UUID obj_id = container.source_object();
-    assert( !isObjectConnected(obj_id) );
+
+    // Because of unreliable messaging, we might get a double connect request
+    // (if we got the initial request but the response was dropped). In that
+    // case, just send them another one and ignore this request.
+    if (isObjectConnected(obj_id)) {
+        sendConnectSuccess(obj_id);
+        return;
+    }
 
     // If the requested location isn't on this server, redirect
     // Note: on connections, we always ignore the specified time and just use
@@ -602,6 +609,24 @@ void Server::finishAddObject(const UUID& obj_id)
     // Stage the connection with the forwarder, but don't enable it until an ack is received
     mForwarder->addObjectConnection(obj_id, conn);
 
+    sendConnectSuccess(obj_id);
+
+    //    mStoredConnectionData.erase(storedConIter);
+  }
+  else
+  {
+      SILOG(space,error,"No stored connection data for object " << obj_id.toString());
+  }
+}
+
+void Server::sendConnectSuccess(const UUID& obj_id) {
+    ObjectConnection* conn = mObjects[obj_id];
+
+    TimedMotionVector3f loc = mLocationService->location(obj_id);
+    TimedMotionQuaternion orient = mLocationService->orientation(obj_id);
+    BoundingSphere3f bnds = mLocationService->bounds(obj_id);
+    String obj_mesh = mLocationService->mesh(obj_id);
+
     // Send reply back indicating that the connection was successful
     Sirikata::Protocol::Session::Container response_container;
     Sirikata::Protocol::Session::IConnectResponse response = response_container.mutable_connect_response();
@@ -616,8 +641,7 @@ void Server::finishAddObject(const UUID& obj_id)
     resp_orient.set_position( orient.position() );
     resp_orient.set_velocity( orient.velocity() );
     response.set_bounds(bnds);
-		if(sc.conn_msg.has_mesh())
-		  response.set_mesh(obj_mesh);
+    response.set_mesh(obj_mesh);
 
     Sirikata::Protocol::Object::ObjectMessage* obj_response = createObjectMessage(
         mContext->id(),
@@ -627,13 +651,6 @@ void Server::finishAddObject(const UUID& obj_id)
     );
     // Sent directly via object host connection manager because ObjectConnection isn't enabled yet
     sendSessionMessageWithRetry(conn->connID(), obj_response, Duration::seconds(0.05));
-
-    //    mStoredConnectionData.erase(storedConIter);
-  }
-  else
-  {
-      SILOG(space,error,"No stored connection data for object " << obj_id.toString());
-  }
 }
 
 // Handle Migrate message from object

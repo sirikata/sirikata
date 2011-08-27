@@ -104,10 +104,15 @@ void SessionManager::ObjectConnections::add(
     //mInternalIDs[sporef_objid] = sporef_objid.object();
 }
 
+bool SessionManager::ObjectConnections::exists(const SpaceObjectReference& sporef_objid) {
+    return mObjectInfo.find(sporef_objid) != mObjectInfo.end();
+}
+
 SessionManager::ConnectingInfo& SessionManager::ObjectConnections::connectingTo(const SpaceObjectReference& sporef_objid, ServerID connecting_to) {
     mObjectInfo[sporef_objid].connectingTo = connecting_to;
     return mObjectInfo[sporef_objid].connectingInfo;
 }
+
 
 void SessionManager::ObjectConnections::startMigration(const SpaceObjectReference& sporef_objid, ServerID migrating_to) {
     mObjectInfo[sporef_objid].migratingTo = migrating_to;
@@ -253,6 +258,9 @@ ServerID SessionManager::ObjectConnections::getConnectedServer(const SpaceObject
     return dest_server;
 }
 
+ServerID SessionManager::ObjectConnections::getConnectingToServer(const SpaceObjectReference& sporef_obj_id) {
+    return mObjectInfo[sporef_obj_id].connectingTo;
+}
 
 void SessionManager::ObjectConnections::invokeDeferredCallbacks() {
     for(DeferredCallbackList::iterator it = mDeferredCallbacks.begin(); it != mDeferredCallbacks.end(); it++)
@@ -363,6 +371,7 @@ void SessionManager::connect(
     );
 
     // Get a connection to request
+    SESSION_LOG(detailed, "Connection starting for " << sporef_objid);
     getAnySpaceConnection(
         std::tr1::bind(&SessionManager::openConnectionStartSession, this, sporef_objid, _1)
     );
@@ -420,6 +429,7 @@ void SessionManager::openConnectionStartSession(const SpaceObjectReference& spor
         return;
     }
 
+    SESSION_LOG(detailed, "Base connection to space server obtained, initiating session " << sporef_uuid);
     // Send connection msg, store callback info so it can be called when we get a response later in a service call
     ConnectingInfo ci = mObjectConnections.connectingTo(sporef_uuid, conn->server());
 
@@ -460,6 +470,25 @@ void SessionManager::openConnectionStartSession(const SpaceObjectReference& spor
             conn->server()
             )) {
         mContext->mainStrand->post(Duration::seconds(0.05),std::tr1::bind(&SessionManager::retryOpenConnection,this,sporef_uuid,conn->server()));
+    }
+    else {
+        // Setup a retry in case something gets dropped -- must check status and
+        // retries entire connection process
+        mContext->mainStrand->post(
+            Duration::seconds(3),
+            std::tr1::bind(&SessionManager::checkConnectedAndRetry, this, sporef_uuid, conn->server())
+        );
+    }
+}
+
+void SessionManager::checkConnectedAndRetry(const SpaceObjectReference& sporef_uuid, ServerID connTo) {
+    // The object could have connected and disconnected quickly -- we need to
+    // verify it's really still trying to connect
+    if (mObjectConnections.exists(sporef_uuid) && mObjectConnections.getConnectingToServer(sporef_uuid) == connTo) {
+        getSpaceConnection(
+            connTo,
+            std::tr1::bind(&SessionManager::openConnectionStartSession, this, sporef_uuid, std::tr1::placeholders::_1)
+        );
     }
 }
 
@@ -820,10 +849,15 @@ void SessionManager::handleSessionMessage(Sirikata::Protocol::Object::ObjectMess
         if (conn_resp.has_version())
             logVersionInfo(conn_resp.version());
 
-        //UUID obj = msg->dest_object();
-
         if (conn_resp.response() == Sirikata::Protocol::Session::ConnectResponse::Success)
         {
+            // To handle unreliability, we may get extra copies of the reply. If
+            // we're already connected, ignore this.
+            if (mObjectConnections.getConnectedServer(sporef_obj) != NullServerID) {
+                delete msg;
+                return;
+            }
+
             TimedMotionVector3f loc(
                 conn_resp.loc().t(),
                 MotionVector3f(conn_resp.loc().position(), conn_resp.loc().velocity())
