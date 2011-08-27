@@ -38,6 +38,7 @@
 #include <sirikata/core/transfer/URI.hpp>
 
 #include <sirikata/core/transfer/TransferPool.hpp>
+#include <sirikata/core/transfer/AggregatedTransferPool.hpp>
 #include <sirikata/core/transfer/RemoteFileMetadata.hpp>
 #include <sirikata/core/transfer/TransferMediator.hpp>
 
@@ -764,7 +765,7 @@ public:
 		using std::tr1::placeholders::_1;
 
 		//Register with the transfer mediator!
-		mTransferPool = mTransferMediator.registerClient<Transfer::SimpleTransferPool>(mClientID);
+		mTransferPool = mTransferMediator.registerClient<Transfer::AggregatedTransferPool>(mClientID);
 
         for(std::vector<std::tr1::shared_ptr<RequestVerifier> >::iterator it = mReqList.begin(); it != mReqList.end(); it++) {
             float pri = rand()/(float(RAND_MAX)+1);
