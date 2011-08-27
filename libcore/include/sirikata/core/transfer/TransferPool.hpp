@@ -310,7 +310,8 @@ public:
 
     //Puts a request into the pool
     virtual void addRequest(TransferRequestPtr req) {
-        setRequestClientID(req);
+        if (req)
+            setRequestClientID(req);
         mDeltaQueue.push(req);
     }
 

@@ -30,6 +30,11 @@ public:
 
     //Puts a request into the pool
     virtual void addRequest(TransferRequestPtr req) {
+        if (!req) {
+            mDeltaQueue.push(req);
+            return;
+        }
+
         boost::unique_lock<boost::mutex> lock(mMutex);
 
         RequestDataMap::iterator it = mRequestData.find(req->getIdentifier());
