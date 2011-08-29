@@ -150,6 +150,15 @@ def registerTests():
                                duration=10);
     testArray.append(storageTest);
     
+
+    #sandboxTest: tests onPresenceConnected, all sandbox and capabilities calls, timeout, killEntity
+    sandboxTestInfo = CSVConstructorInfo(script_type="js",
+                                         script_contents="system.import('unitTests/emTests/sandboxTest.em');");
+    sandboxTest     = csvTest.CSVTest("sandboxTest",
+                               touches=['onPresenceConnected', 'capabilities', 'sandbox', 'timeout', 'killEntity'],
+                               entityConstructorInfo=[sandboxTestInfo],
+                               duration=7);
+    testArray.append(sandboxTest);
     
 
     global manager
