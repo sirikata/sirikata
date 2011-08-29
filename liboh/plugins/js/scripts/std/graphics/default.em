@@ -45,7 +45,7 @@ system.require('std/graphics/propertybox.em');
 system.require('std/graphics/presenceList.em');
 system.require('std/graphics/setMesh.em');
 system.require('std/graphics/axes.em');
-system.require('std/graphics/ezuiViewer.em');
+system.require('std/graphics/flatlandViewer.em');
 
 (
 function() {
@@ -82,7 +82,7 @@ function() {
             this._loadingUIs++; this._propertybox = new std.propertybox.PropertyBox(this, ui_finish_cb);
             this._loadingUIs++; this._presenceList = new std.graphics.PresenceList(this._pres, this._simulator, this._scripter, ui_finish_cb);
             this._loadingUIs++; this._setMesh = new std.graphics.SetMesh(this._simulator, ui_finish_cb);
-            this._loadingUIs++; this._ezui = new std.ezui.EZUI(this, ui_finish_cb);                
+            this._loadingUIs++; this._flatland = new std.fl.FL(this, ui_finish_cb);                
         }
         else
             this.finishedUIInit(cb);
@@ -99,7 +99,7 @@ function() {
         this._loadingUIs++; this._propertybox.onReset(ui_finish_cb);
         this._loadingUIs++; this._presenceList.onReset(ui_finish_cb);
         this._loadingUIs++; this._setMesh.onReset(ui_finish_cb);
-        this._loadingUIs++; this._ezui.onReset(ui_finish_cb);
+        this._loadingUIs++; this._flatland.onReset(ui_finish_cb);
     };
 
 
@@ -143,8 +143,8 @@ function() {
             this._binding.addAction('togglePhysicsProperties', std.core.bind(this._physics.toggle, this._physics));
             this._binding.addAction('togglePresenceList', std.core.bind(this._presenceList.toggle, this._presenceList));
             this._binding.addAction('toggleSetMesh', std.core.bind(this._setMesh.toggle, this._setMesh));
-            this._binding.addFloat2Action('showEZUI', std.core.bind(this.showEZUI, this));
-            this._binding.addAction('hideEZUI', std.core.bind(this.hideEZUI, this));
+            this._binding.addFloat2Action('showFlatland', std.core.bind(this.showFlatland, this));
+            this._binding.addAction('hideFlatland', std.core.bind(this.hideFlatland, this));
 
             this._binding.addAction('toggleCameraMode', std.core.bind(this.toggleCameraMode, this));
 
@@ -250,7 +250,7 @@ function() {
                                         { key: ['mouse-drag', 1, '*'], action: 'forwardMouseDragToDragger' },
                                         { key: ['mouse-release', 1, '*'], action: 'forwardMouseReleaseToDragger' },
                                         { key: ['mouse-release', 1, '*'], action: 'stopDrag' },
-                                        { key: ['mouse-press', 3, 'none'], action: 'showEZUI' },
+                                        { key: ['mouse-press', 3, 'none'], action: 'showFlatland' },
                                         { key: ['mouse-press', 3, 'none' ], action: 'startFreeRotate' },
                                         { key: ['mouse-drag', 3, 'none'], action: 'freeRotateDrag' },
                                         { key: ['mouse-release', 3, 'none'], action: 'freeRotateRelease' }
@@ -562,14 +562,14 @@ function() {
     };
 
 
-    std.graphics.DefaultGraphics.prototype.showEZUI = function (x, y) {
+    std.graphics.DefaultGraphics.prototype.showFlatland = function (x, y) {
         var ignore_self = this._camera.mode() == 'first';
         var clicked = this._simulator.pick(x, y, ignore_self);
-        this._ezui.show(clicked, x, y);
+        this._flatland.show(clicked, x, y);
     };
 
-    std.graphics.DefaultGraphics.prototype.hideEZUI = function () {
-        this._ezui.hide();
+    std.graphics.DefaultGraphics.prototype.hideFlatland = function () {
+        this._flatland.hide();
     };
 
 })();
