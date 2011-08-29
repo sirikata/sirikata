@@ -93,10 +93,13 @@ util.Quaternion.prototype.dot = function(rhs) {
 util.Quaternion.prototype.equal = function(rhs){
     if (rhs == null)
         return false;
-
-    
     return ((this.x === rhs.x) && (this.y === rhs.y) && (this.z === rhs.z) && (this.w === rhs.w));
 };
+
+util.Quaternion.prototype.notEqual = function(rhs){
+    return (! this.equal(rhs));
+};
+
 
 
 /**
