@@ -111,6 +111,7 @@ Forwarder::Forwarder(SpaceContext* ctx)
                  Duration::milliseconds((int64)10)),
              mReceivedMessages(Sirikata::SizedResourceMonitor(GetOptionValue<uint32>(FORWARDER_RECEIVE_QUEUE_SIZE)))
 {
+    mNullServerIDOSegCallback=std::tr1::bind(&Forwarder::routeObjectMessageToServerNoReturn, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2,std::tr1::placeholders:: _3, NullServerID);
     mOutgoingMessages = new ForwarderServiceQueue(mContext->id(), GetOptionValue<uint32>(FORWARDER_SEND_QUEUE_SIZE), (ForwarderServiceQueue::Listener*)this);
 
     // Fill in the rest of the context
@@ -485,7 +486,7 @@ bool Forwarder::forward(Sirikata::Protocol::Object::ObjectMessage* msg, ServerID
 
     bool accepted = mOSegLookups->lookup(
         msg,
-        std::tr1::bind(&Forwarder::routeObjectMessageToServerNoReturn, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2,std::tr1::placeholders:: _3, forwardFrom)
+        (forwardFrom==NullServerID?mNullServerIDOSegCallback:std::tr1::bind(&Forwarder::routeObjectMessageToServerNoReturn, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2,std::tr1::placeholders:: _3, forwardFrom))
     );
 
     return accepted;

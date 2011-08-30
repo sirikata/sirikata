@@ -151,6 +151,15 @@ class SIRIKATA_EXPORT BaseDatagramLayer
         bdl->listenOn(listeningEndPoint);
     }
 
+    static void stopListening(EndPoint<EndPointType>& listeningEndPoint) {
+        EndPointType endPointID = listeningEndPoint.endPoint;
+
+        BaseDatagramLayerPtr bdl = sDatagramLayerMap[endPointID];
+        bdl->unlisten(listeningEndPoint);
+
+        sDatagramLayerMap.erase(endPointID);
+    }
+
     void listenOn(EndPoint<EndPointType>& listeningEndPoint, ODP::MessageHandler cb) {
         ODP::Port* port = allocatePort(listeningEndPoint);
         port->receive(cb);
@@ -164,7 +173,7 @@ class SIRIKATA_EXPORT BaseDatagramLayer
         mAllocatedPorts.erase(it);
     }
 
-    void send(EndPoint<EndPointType>* src, EndPoint<EndPointType>* dest, void* data, int len) {
+    void send(EndPoint<EndPointType>* src, EndPoint<EndPointType>* dest, void* data, int len) {        
         boost::mutex::scoped_lock lock(mMutex);
 
         ODP::Port* port = getOrAllocatePort(*src);
@@ -641,8 +650,22 @@ private:
     return true;
   }
 
+  static bool unlisten(EndPoint<EndPointType> listeningEndPoint) {  
+    BaseDatagramLayer<EndPointType>::stopListening(listeningEndPoint);
+
+    boost::mutex::scoped_lock lock(sStaticMembersLock.getMutex());    
+
+    sListeningConnectionsCallbackMap.erase(listeningEndPoint);
+
+    return true;
+  }
+
   void listenStream(uint16 port, StreamReturnCallbackFunction scb) {
     mListeningStreamsCallbackMap[port] = scb;
+  }
+
+  void unlistenStream(uint16 port) {
+    mListeningStreamsCallbackMap.erase(port);
   }
 
   /* Creates a stream on top of this connection. The function also queues
@@ -1047,131 +1070,131 @@ private:
       //This is in contrast to the case where the connection got connected, but
       //the connection's root stream was unable to do so.
 
-      boost::mutex::scoped_lock lock(sStaticMembersLock.getMutex());
-      ConnectionReturnCallbackFunction cb = NULL;
-      if (sConnectionReturnCallbackMap.find(conn->localEndPoint()) != sConnectionReturnCallbackMap.end()) {
-        cb = sConnectionReturnCallbackMap[conn->localEndPoint()];
-      }
+       boost::mutex::scoped_lock lock(sStaticMembersLock.getMutex());
+       ConnectionReturnCallbackFunction cb = NULL;
+       if (sConnectionReturnCallbackMap.find(conn->localEndPoint()) != sConnectionReturnCallbackMap.end()) {
+         cb = sConnectionReturnCallbackMap[conn->localEndPoint()];
+       }
 
 
-      std::tr1::shared_ptr<Connection>  failed_conn = conn;
+       std::tr1::shared_ptr<Connection>  failed_conn = conn;
 
-      sConnectionReturnCallbackMap.erase(conn->localEndPoint());
-      sConnectionMap.erase(conn->localEndPoint());
+       sConnectionReturnCallbackMap.erase(conn->localEndPoint());
+       sConnectionMap.erase(conn->localEndPoint());
 
-      lock.unlock();
+       lock.unlock();
 
 
-      if (connState == CONNECTION_PENDING_CONNECT && cb ) {
-        cb(SST_IMPL_FAILURE, failed_conn);
-      }
+       if (connState == CONNECTION_PENDING_CONNECT && cb ) {
+         cb(SST_IMPL_FAILURE, failed_conn);
+       }
 
-      conn->mState = CONNECTION_DISCONNECTED;
-    }
-  }
-  // This version should only be called by the destructor!
-  void finalCleanup() {
-    if (mState != CONNECTION_DISCONNECTED) {
-        mDatagramLayer->unlisten(mLocalEndPoint);
+       conn->mState = CONNECTION_DISCONNECTED;
+     }
+   }
+   // This version should only be called by the destructor!
+   void finalCleanup() {
+     if (mState != CONNECTION_DISCONNECTED) {
+         mDatagramLayer->unlisten(mLocalEndPoint);
 
-        close(true);
-        mState = CONNECTION_DISCONNECTED;
-    }
+         close(true);
+         mState = CONNECTION_DISCONNECTED;
+     }
 
-    releaseChannel(mLocalChannelID);
-  }
+     releaseChannel(mLocalChannelID);
+   }
 
-  static void closeConnections() {
-      // We have to be careful with this function. Because it is going to free
-      // the connections, we have to make sure not to let them get freed where
-      // the deleter will modify sConnectionMap while we're still modifying it.
-      //
-      // Our approach is to just pick out the first connection, make a copy of
-      // its shared_ptr to make sure it doesn't get freed until we want it to,
-      // remove it from sConnectionMap, and then get rid of the shared_ptr to
-      // allow the connection to be freed.
-      //
-      // Note that we don't lock sStaticMembers lock. At this point, that
-      // shouldn't be a problem since we should be the only thread still
-      // modifying this data. If we did lock it, we'd deadlock since the
-      // destructor will also, indirectly, lock it.
-      while(!sConnectionMap.empty()) {
-          ConnectionPtr saved = sConnectionMap.begin()->second;
-          sConnectionMap.erase(sConnectionMap.begin());
-          saved.reset();
-      }
-  }
+   static void closeConnections() {
+       // We have to be careful with this function. Because it is going to free
+       // the connections, we have to make sure not to let them get freed where
+       // the deleter will modify sConnectionMap while we're still modifying it.
+       //
+       // Our approach is to just pick out the first connection, make a copy of
+       // its shared_ptr to make sure it doesn't get freed until we want it to,
+       // remove it from sConnectionMap, and then get rid of the shared_ptr to
+       // allow the connection to be freed.
+       //
+       // Note that we don't lock sStaticMembers lock. At this point, that
+       // shouldn't be a problem since we should be the only thread still
+       // modifying this data. If we did lock it, we'd deadlock since the
+       // destructor will also, indirectly, lock it.
+       while(!sConnectionMap.empty()) {
+           ConnectionPtr saved = sConnectionMap.begin()->second;
+           sConnectionMap.erase(sConnectionMap.begin());
+           saved.reset();
+       }
+   }
 
-  static void handleReceive(EndPoint<EndPointType> remoteEndPoint,
-                            EndPoint<EndPointType> localEndPoint, void* recv_buffer, int len)
-  {
-    char* data = (char*) recv_buffer;
-    std::string str = std::string(data, len);
+   static void handleReceive(EndPoint<EndPointType> remoteEndPoint,
+                             EndPoint<EndPointType> localEndPoint, void* recv_buffer, int len)
+   {
+     char* data = (char*) recv_buffer;
+     std::string str = std::string(data, len);
 
-    Sirikata::Protocol::SST::SSTChannelHeader* received_msg = new Sirikata::Protocol::SST::SSTChannelHeader();
-    bool parsed = parsePBJMessage(received_msg, str);
+     Sirikata::Protocol::SST::SSTChannelHeader* received_msg = new Sirikata::Protocol::SST::SSTChannelHeader();
+     bool parsed = parsePBJMessage(received_msg, str);
 
-    uint8 channelID = received_msg->channel_id();
+     uint8 channelID = received_msg->channel_id();
 
-    boost::mutex::scoped_lock lock(sStaticMembersLock.getMutex());
+     boost::mutex::scoped_lock lock(sStaticMembersLock.getMutex());
 
-    if (sConnectionMap.find(localEndPoint) != sConnectionMap.end()) {
-      if (channelID == 0) {
-	/*Someone's already connected at this port. Either don't reply or
-	  send back a request rejected message. */
+     if (sConnectionMap.find(localEndPoint) != sConnectionMap.end()) {
+       if (channelID == 0) {
+ 	/*Someone's already connected at this port. Either don't reply or
+ 	  send back a request rejected message. */
 
-	std::cout << "Someone's already connected at this port on object " << localEndPoint.endPoint.toString() << "\n";
-	return;
-      }
-      std::tr1::shared_ptr<Connection<EndPointType> > conn = sConnectionMap[localEndPoint];
+ 	std::cout << "Someone's already connected at this port on object " << localEndPoint.endPoint.toString() << "\n";
+ 	return;
+       }
+       std::tr1::shared_ptr<Connection<EndPointType> > conn = sConnectionMap[localEndPoint];
 
-      conn->receiveMessage(data, len);
-    }
-    else if (channelID == 0) {
-      /* it's a new channel request negotiation protocol
-	 packet ; allocate a new channel.*/
+       conn->receiveMessage(data, len);
+     }
+     else if (channelID == 0) {
+       /* it's a new channel request negotiation protocol
+ 	 packet ; allocate a new channel.*/
 
-      if (sListeningConnectionsCallbackMap.find(localEndPoint) != sListeningConnectionsCallbackMap.end()) {
-        uint16* received_payload = (uint16*) received_msg->payload().data();
+       if (sListeningConnectionsCallbackMap.find(localEndPoint) != sListeningConnectionsCallbackMap.end()) {
+         uint16* received_payload = (uint16*) received_msg->payload().data();
 
-        uint16 payload[2];
+         uint16 payload[2];
 
-        uint16 availableChannel = getAvailableChannel();
-        payload[0] = htons(availableChannel);
-        uint16 availablePort = availableChannel; //availableChannel is picked from the same 16-bit
-                                                 //address space and has to be unique. So why not use
-                                                 //use it to identify the port as well...
-        payload[1] = htons(availablePort);
+         uint16 availableChannel = getAvailableChannel();
+         payload[0] = htons(availableChannel);
+         uint16 availablePort = availableChannel; //availableChannel is picked from the same 16-bit
+                                                  //address space and has to be unique. So why not use
+                                                  //use it to identify the port as well...
+         payload[1] = htons(availablePort);
 
-        EndPoint<EndPointType> newLocalEndPoint(localEndPoint.endPoint, availablePort);
-        std::tr1::shared_ptr<Connection>  conn =
-                   std::tr1::shared_ptr<Connection>(
-				    new Connection(newLocalEndPoint, remoteEndPoint));
+         EndPoint<EndPointType> newLocalEndPoint(localEndPoint.endPoint, availablePort);
+         std::tr1::shared_ptr<Connection>  conn =
+                    std::tr1::shared_ptr<Connection>(
+ 				    new Connection(newLocalEndPoint, remoteEndPoint));
 
-	conn->listenStream(newLocalEndPoint.port, sListeningConnectionsCallbackMap[localEndPoint]);
-        conn->mWeakThis = conn;
-        sConnectionMap[newLocalEndPoint] = conn;
+ 	 conn->listenStream(newLocalEndPoint.port, sListeningConnectionsCallbackMap[localEndPoint]);
+         conn->mWeakThis = conn;
+         sConnectionMap[newLocalEndPoint] = conn;
 
-        conn->setLocalChannelID(availableChannel);
-        conn->setRemoteChannelID(ntohs(received_payload[0]));
-        conn->setState(CONNECTION_PENDING_RECEIVE_CONNECT);
+         conn->setLocalChannelID(availableChannel);
+         conn->setRemoteChannelID(ntohs(received_payload[0]));
+         conn->setState(CONNECTION_PENDING_RECEIVE_CONNECT);
 
-        conn->sendData(payload, sizeof(payload), false);
-      }
-      else {
-        std::cout << "No one listening on this connection\n";
-      }
-    }
+         conn->sendData(payload, sizeof(payload), false);
+       }
+       else {
+         std::cout << "No one listening on this connection\n";
+       }
+     }
 
-    delete received_msg;
-  }
+     delete received_msg;
+   }
 
-public:
+ public:
 
-  virtual ~Connection() {
-      // Make sure we've fully cleaned up
-      finalCleanup();
-  }
+   virtual ~Connection() {
+       // Make sure we've fully cleaned up
+       finalCleanup();
+   }
 
 
 
@@ -1452,6 +1475,10 @@ public:
     return Connection<EndPointType>::listen(cb, listeningEndPoint);
   }
 
+  static bool unlisten(EndPoint <EndPointType> listeningEndPoint) {
+    return Connection<EndPointType>::unlisten(listeningEndPoint);
+  }
+
   /*
     Start listening for child streams on the specified port. A remote stream
     can only create child streams under this stream if this stream is listening
@@ -1468,6 +1495,12 @@ public:
     conn->listenStream(port, scb);
   }
 
+  void unlistenSubstream(uint16 port) {
+    std::tr1::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
+    
+    if (conn)
+      conn->unlistenStream(port);
+  }
 
   /* Writes data bytes to the stream. If not all bytes can be transmitted
      immediately, they are queued locally until ready to transmit.

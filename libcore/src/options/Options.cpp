@@ -230,7 +230,10 @@ public:
         }
     }
     ~Stash() {
+#ifndef _WIN32
+        //the way windows does destruction order, this is a highly dangerous operation, modifying lists during arbitrarily ordered shutdown
         purgeUnused();
+#endif
     }
 };
 class HolderStash:public Stash<Any::Holder>, public AutoSingleton<HolderStash> {};

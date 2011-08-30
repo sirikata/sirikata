@@ -62,6 +62,9 @@
 #include <sirikata/oh/PersistedObjectSet.hpp>
 #include <sirikata/oh/ObjectFactory.hpp>
 
+#include <sirikata/mesh/Filter.hpp>
+#include <sirikata/mesh/ModelsSystemFactory.hpp>
+#include <sirikata/oh/ObjectScriptManagerFactory.hpp>
 #ifdef __GNUC__
 #include <fenv.h>
 #endif
@@ -190,8 +193,9 @@ int main (int argc, char** argv) {
 
     ctx->cleanup();
     trace->prepareShutdown();
-
-
+    Mesh::FilterFactory::destroy();
+    ModelsSystemFactory::destroy();
+    ObjectScriptManagerFactory::destroy();
     delete oh;
     //delete pd;
 

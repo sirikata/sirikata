@@ -64,8 +64,8 @@
 #include "caches/CacheLRUOriginal.hpp"
 
 #include <sirikata/space/SpaceContext.hpp>
-
-
+#include <sirikata/mesh/Filter.hpp>
+#include <sirikata/mesh/ModelsSystemFactory.hpp>
 int main(int argc, char** argv) {
 
     using namespace Sirikata;
@@ -275,7 +275,10 @@ int main(int argc, char** argv) {
 
     gTrace->prepareShutdown();
     prox->shutdown();
-
+    Mesh::FilterFactory::destroy();
+    ModelsSystemFactory::destroy();
+    LocationServiceFactory::destroy();
+    LocationUpdatePolicyFactory::destroy();
     delete server;
     delete sq;
     delete server_message_receiver;

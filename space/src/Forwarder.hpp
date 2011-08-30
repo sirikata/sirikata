@@ -107,7 +107,7 @@ private:
     };
     typedef std::tr1::unordered_map<UUID, UniqueObjConn, UUID::Hasher> ObjectConnectionMap;
     ObjectConnectionMap mObjectConnections;
-
+    OSegLookupQueue::LookupCallback mNullServerIDOSegCallback;
     typedef std::vector<ServerID> ListServersUpdate;
     typedef std::tr1::unordered_map<UUID,ListServersUpdate, UUID::Hasher> ObjectServerUpdateMap;
     ObjectServerUpdateMap mServersToUpdate; // Map of object id -> servers which should be notified of new result

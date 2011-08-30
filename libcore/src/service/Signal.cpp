@@ -38,6 +38,9 @@
 #if SIRIKATA_PLATFORM == PLATFORM_LINUX
 #include <signal.h>
 #else
+#if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+#include <signal.h>
+#endif
 // Currently we don't handle signals on other platforms.
 #endif
 
@@ -49,24 +52,29 @@ typedef std::map<HandlerID, Handler> SignalHandlerMap;
 SignalHandlerMap sSignalHandlers;
 int32 sNextHandlerID = 0;
 
-#if SIRIKATA_PLATFORM == PLATFORM_LINUX
+//#if SIRIKATA_PLATFORM == PLATFORM_LINUX
 void handle_signal(int signum) {
     // Reregister
     signal(signum, handle_signal);
     // Invoke handlers
     Type sigtype;
+    bool validSignal=false;
     switch(signum) {
-      case SIGINT: sigtype = INT; break;
-      case SIGHUP: sigtype = HUP; break;
-      case SIGABRT: sigtype = ABORT; break;
-      case SIGTERM: sigtype = TERM; break;
-      case SIGKILL: sigtype = KILL; break;
+      case SIGINT: sigtype = INT; validSignal=true; break;
+#ifndef _WIN32
+      case SIGHUP: sigtype = HUP; validSignal=true; break;
+      case SIGABRT: sigtype = ABORT; validSignal=true; break;
+#endif
+      case SIGTERM: sigtype = TERM; validSignal=true; break;
+#ifndef _WIN32
+      case SIGKILL: sigtype = KILL; validSignal=true; break;
+#endif
       default: break;
     }
-    for(SignalHandlerMap::iterator it = sSignalHandlers.begin(); it != sSignalHandlers.end(); it++)
+    for(SignalHandlerMap::iterator it = sSignalHandlers.begin(); validSignal && it != sSignalHandlers.end(); it++)
         it->second(sigtype);
 }
-#endif
+//#endif
 
 }
 
@@ -76,15 +84,19 @@ HandlerID registerHandler(Handler handler) {
     HandlerID id = sNextHandlerID++;
     sSignalHandlers[id] = handler;
 
-#if SIRIKATA_PLATFORM == PLATFORM_LINUX
+//#if SIRIKATA_PLATFORM == PLATFORM_LINUX
     if (was_empty) {
         signal(SIGINT, handle_signal);
+#ifndef _WIN32
         signal(SIGHUP, handle_signal);
+#endif
         signal(SIGABRT, handle_signal);
         signal(SIGTERM, handle_signal);
+#ifndef _WIN32
         signal(SIGKILL, handle_signal);
-    }
 #endif
+    }
+//#endif
 
     return id;
 }

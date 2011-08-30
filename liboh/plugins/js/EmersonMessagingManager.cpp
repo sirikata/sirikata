@@ -18,16 +18,11 @@ EmersonMessagingManager::EmersonMessagingManager(Context* ctx)
 
 EmersonMessagingManager::~EmersonMessagingManager()
 {
-    // Close all streams, clear out listeners
-    // FIXME Unfortunately, while this is what we *should* do, none of it is
-    // currently safe because of #392. When it is, we can fill this in and get
-    // rid of some liveness tokens.
-    /*
+    // Close all streams, clear out listeners    
     for(PresenceStreamMap::iterator pres_it = mStreams.begin(); pres_it != mStreams.end(); pres_it++) {
         // Stop listening for new streams
         const SpaceObjectReference& pres_id = pres_it->first;
-        SSTStream::listen(
-            0,
+        SSTStream::unlisten(            
             EndPoint<SpaceObjectReference>(pres_id,OBJECT_SCRIPT_COMMUNICATION_PORT)
         );
 
@@ -35,11 +30,10 @@ EmersonMessagingManager::~EmersonMessagingManager()
         StreamMap& pres_streams = pres_it->second;
         for(StreamMap::iterator it = pres_streams.begin(); it != pres_streams.end(); it++) {
             SSTStreamPtr stream = it->second;
-            stream->listenSubstream(OBJECT_SCRIPT_COMMUNICATION_PORT, 0);
+            stream->unlistenSubstream(OBJECT_SCRIPT_COMMUNICATION_PORT);
             stream->close(false);
         }
     }
-    */
 
     mStreams.clear();
 }
