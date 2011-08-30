@@ -228,6 +228,10 @@ bool Server::isObjectConnected(const UUID& object_id) const {
     return (mObjects.find(object_id) != mObjects.end());
 }
 
+bool Server::isObjectConnecting(const UUID& object_id) const {
+    return (mStoredConnectionData.find(object_id) != mStoredConnectionData.end());
+}
+
 void Server::sendSessionMessageWithRetry(const ObjectHostConnectionManager::ConnectionID& conn, Sirikata::Protocol::Object::ObjectMessage* msg, const Duration& retry_rate) {
     bool sent = mObjectHostConnectionManager->send( conn, msg );
     if (!sent) {
@@ -481,14 +485,6 @@ void Server::sendConnectError(const ObjectHostConnectionManager::ConnectionID& o
 void Server::handleConnect(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, const Sirikata::Protocol::Object::ObjectMessage& container, const Sirikata::Protocol::Session::Connect& connect_msg) {
     UUID obj_id = container.source_object();
 
-    // Because of unreliable messaging, we might get a double connect request
-    // (if we got the initial request but the response was dropped). In that
-    // case, just send them another one and ignore this request.
-    if (isObjectConnected(obj_id)) {
-        sendConnectSuccess(obj_id);
-        return;
-    }
-
     // If the requested location isn't on this server, redirect
     // Note: on connections, we always ignore the specified time and just use
     // our local time.  The client is aware of this and handles it properly.
@@ -556,7 +552,28 @@ void Server::handleConnectAuthResponse(const ObjectHostConnectionManager::Connec
         return;
     }
 
-    //update our oseg to show that we know that we have this object now.
+    // Because of unreliable messaging, we might get a double connect request
+    // (if we got the initial request but the response was dropped). In that
+    // case, just send them another one and ignore this
+    // request. Alternatively, someone might just be trying to use the
+    // same object ID.
+    if (isObjectConnected(obj_id) || isObjectConnecting(obj_id)) {
+        // Decide whether this is a conflict or a retry
+        ObjectConnection* existing_conn = mObjects[obj_id];
+        if (existing_conn->connID() == oh_conn_id) {
+            // retry, tell them they're fine.
+            sendConnectSuccess(oh_conn_id, obj_id);
+        }
+        else {
+            // conflict, fail the new connection leaving existing alone
+            sendConnectError(oh_conn_id, obj_id);
+        }
+        return;
+    }
+
+    // Update our oseg to show that we know that we have this object now. Also
+    // mark it as connecting (by storing in mStoredConnectionData) so any
+    // additional connection attempts will fail.
     StoredConnection sc;
     sc.conn_id = oh_conn_id;
     sc.conn_msg = connect_msg;
@@ -609,7 +626,7 @@ void Server::finishAddObject(const UUID& obj_id)
     // Stage the connection with the forwarder, but don't enable it until an ack is received
     mForwarder->addObjectConnection(obj_id, conn);
 
-    sendConnectSuccess(obj_id);
+    sendConnectSuccess(conn->connID(), obj_id);
 
     //    mStoredConnectionData.erase(storedConIter);
   }
@@ -619,9 +636,7 @@ void Server::finishAddObject(const UUID& obj_id)
   }
 }
 
-void Server::sendConnectSuccess(const UUID& obj_id) {
-    ObjectConnection* conn = mObjects[obj_id];
-
+void Server::sendConnectSuccess(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, const UUID& obj_id) {
     TimedMotionVector3f loc = mLocationService->location(obj_id);
     TimedMotionQuaternion orient = mLocationService->orientation(obj_id);
     BoundingSphere3f bnds = mLocationService->bounds(obj_id);
@@ -650,7 +665,7 @@ void Server::sendConnectSuccess(const UUID& obj_id) {
         serializePBJMessage(response_container)
     );
     // Sent directly via object host connection manager because ObjectConnection isn't enabled yet
-    sendSessionMessageWithRetry(conn->connID(), obj_response, Duration::seconds(0.05));
+    sendSessionMessageWithRetry(oh_conn_id, obj_response, Duration::seconds(0.05));
 }
 
 // Handle Migrate message from object

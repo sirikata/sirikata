@@ -118,6 +118,8 @@ private:
 
     // Checks if an object is connected to this server
     bool isObjectConnected(const UUID& object_id) const;
+    // Checks if an object is current connecting to this server (post authentication)
+    bool isObjectConnecting(const UUID& object_id) const;
 
     // Callback which handles messages from object hosts -- mostly just does sanity checking
     // before using the forwarder to do routing.  Operates in the
@@ -142,7 +144,7 @@ private:
     void handleConnect(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, const Sirikata::Protocol::Object::ObjectMessage& container, const Sirikata::Protocol::Session::Connect& connect_msg);
     void handleConnectAuthResponse(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, const UUID& obj_id, const Sirikata::Protocol::Session::Connect& connect_msg, bool authenticated);
 
-    void sendConnectSuccess(const UUID& obj_id);
+    void sendConnectSuccess(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, const UUID& obj_id);
     void sendConnectError(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, const UUID& obj_id);
 
     // Handle connection ack message from object
