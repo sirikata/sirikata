@@ -95,6 +95,14 @@ int main (int argc, char** argv) {
     plugins.loadList( GetOptionValue<String>(OPT_PLUGINS) );
     plugins.loadList( GetOptionValue<String>(OPT_OH_PLUGINS) );
 
+    // Fill defaults after plugin loading to ensure plugin-added
+    // options get their defaults.
+    FillMissingOptionDefaults();
+    // Rerun original parse to make sure any newly added options are
+    // properly parsed.
+    ParseOptions(argc, argv, OPT_CONFIG_FILE);
+
+    ReportVersion(); // After options so log goes to the right place
 
     String time_server = GetOptionValue<String>("time-server");
     NTPTimeSync sync;

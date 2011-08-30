@@ -57,6 +57,9 @@
 
 namespace Sirikata {
 
+/// Report version information to the log
+SIRIKATA_FUNCTION_EXPORT void ReportVersion();
+
 SIRIKATA_FUNCTION_EXPORT void InitOptions();
 SIRIKATA_FUNCTION_EXPORT void ParseOptions(int argc, char** argv);
 SIRIKATA_FUNCTION_EXPORT void ParseOptionsFile(const String& fname, bool required=true);
@@ -69,6 +72,9 @@ SIRIKATA_FUNCTION_EXPORT void ParseOptions(int argc, char** argv, const String& 
 
 // Parses empty options to get options properly initialized
 SIRIKATA_FUNCTION_EXPORT void FakeParseOptions();
+
+/// Fills in
+SIRIKATA_FUNCTION_EXPORT void FillMissingOptionDefaults();
 
 // Be careful with GetOption.  Using it and ->as() directly can be dangerous
 // because some types are defined per-library and won't dynamic_cast properly.

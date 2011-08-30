@@ -301,6 +301,23 @@ public:
         }
         return true;
     }
+    // Fill in options, but only if they are missing. This is useful
+    // for parsing options but not overwriting anything. Very
+    // useful for just 'parsing' an empty string and getting back
+    // defaults, only filling in missing values (which can happen if
+    // you add options after the first parsing).
+    static bool update_missing_options(std::map<std::string,OptionValue*>&names, boost::program_options::options_description &options_description, const boost::program_options::variables_map& options) {
+        for (std::map<std::string,OptionValue*>::iterator i=names.begin(),ie=names.end();
+             i!=ie;
+             ++i) {
+            if (options.count(i->first) && i->second->mValue.empty()) {
+                const simple_string* s=boost::any_cast<simple_string>(&options[i->first].value());
+                assert(s!=NULL);
+                HolderStash::getSingleton().hideUntilQuit(i->first,i->second->mValue.newAndDoNotFree(i->second->mParser(*s)));
+            }
+        }
+        return true;
+    }
 };
 bool OptionSet::initializationSet(OptionValue* thus, const OptionValue&other) {
     if (thus->mParser==NULL){
@@ -342,7 +359,8 @@ OptionSet::~OptionSet() {
         ValueStash::getSingleton().hideUntilQuit(i->first,i->second);
     }
 }
-void OptionSet::parse(int argc, const char * const *argv, bool use_defaults){
+
+void OptionSet::parse(int argc, const char * const *argv, bool use_defaults, bool missing_only) {
     if (argc>1)
         mParsingStage=PARSED_UNBLANK_OPTIONS;
     boost::program_options::options_description options;
@@ -352,19 +370,29 @@ void OptionSet::parse(int argc, const char * const *argv, bool use_defaults){
         OptionRegistration::register_options(mNames,options);
     }
     options.add_options()("help","Print available options");
+    boost::program_options::parsed_options parsed =
+        boost::program_options::command_line_parser(argc, const_cast<char**>(argv))
+        .options(options)
+        .allow_unregistered()
+        .style(boost::program_options::command_line_style::default_style ^ boost::program_options::command_line_style::allow_guessing)
+        .run();
     boost::program_options::store(
-        parse_command_line(argc, const_cast<char**>(argv), options, (boost::program_options::command_line_style::default_style ^ boost::program_options::command_line_style::allow_guessing)),
+        parsed,
         output
     );
     bool dienow=false;
     {
         boost::unique_lock<boost::mutex> lock(OptionRegistration::OptionSetMutex());
-        dienow=!OptionRegistration::update_options(mNames,options,output, use_defaults);
+        if (missing_only)
+            dienow=!OptionRegistration::update_missing_options(mNames, options, output);
+        else
+            dienow=!OptionRegistration::update_options(mNames, options, output, use_defaults);
     }
     if (dienow)
         exit(0);
 }
-void OptionSet::parseFile(const std::string& file, bool required, bool use_defaults) {
+
+void OptionSet::parseFile(const std::string& file, bool required, bool use_defaults, bool missing_only) {
     mParsingStage=PARSED_UNBLANK_OPTIONS;
     boost::program_options::options_description options;
     boost::program_options::variables_map output;
@@ -383,12 +411,16 @@ void OptionSet::parseFile(const std::string& file, bool required, bool use_defau
     bool dienow=false;
     {
         boost::unique_lock<boost::mutex> lock(OptionRegistration::OptionSetMutex());
-        dienow=!OptionRegistration::update_options(mNames,options,output, use_defaults);
+        if (missing_only)
+            dienow=!OptionRegistration::update_missing_options(mNames, options, output);
+        else
+            dienow=!OptionRegistration::update_options(mNames, options, output, use_defaults);
     }
     if (dienow)
         exit(0);
 }
-void OptionSet::parse(const std::string&args, bool use_defaults){
+
+void OptionSet::parse(const std::string&args, bool use_defaults, bool missing_only){
     if (args.size())
         mParsingStage=PARSED_UNBLANK_OPTIONS;
     boost::program_options::options_description options;
@@ -402,6 +434,7 @@ void OptionSet::parse(const std::string&args, bool use_defaults){
     boost::program_options::store(
         boost::program_options::command_line_parser(args_vec)
         .options(options)
+        .allow_unregistered()
         .style(boost::program_options::command_line_style::default_style ^ boost::program_options::command_line_style::allow_guessing)
         .run(),
         output
@@ -409,11 +442,21 @@ void OptionSet::parse(const std::string&args, bool use_defaults){
     bool dienow=false;
     {
         boost::unique_lock<boost::mutex> lock(OptionRegistration::OptionSetMutex());
-        dienow=!OptionRegistration::update_options(mNames,options,output, use_defaults);
+        if (missing_only)
+            dienow=!OptionRegistration::update_missing_options(mNames, options, output);
+        else
+            dienow=!OptionRegistration::update_options(mNames, options, output, use_defaults);
     }
     if (dienow)
         exit(0);
 }
+
+void OptionSet::fillMissingDefaults() {
+    // Parse nothing and force only overwriting defaults
+    parse("", true, true);
+}
+
+
 OptionSet* OptionSet::getOptionsNoLock(const std::string&s, const void * context){
     std::map<StringVoid,OptionSet*>::iterator i=optionSets()->find(StringVoid(s,context));
     if (i==optionSets()->end()){

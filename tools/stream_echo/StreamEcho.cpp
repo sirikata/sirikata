@@ -130,6 +130,15 @@ int main(int argc, char** argv) {
     PluginManager plugins;
     plugins.loadList( GetOptionValue<String>(OPT_PLUGINS) );
 
+    // Fill defaults after plugin loading to ensure plugin-added
+    // options get their defaults.
+    FillMissingOptionDefaults();
+    // Rerun original parse to make sure any newly added options are
+    // properly parsed.
+    ParseOptions(argc, argv);
+
+    ReportVersion(); // After options so log goes to the right place
+
     Network::IOService* ios = Network::IOServiceFactory::makeIOService();
     Network::IOStrand* iostrand = ios->createStrand();
 
