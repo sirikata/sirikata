@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "AggregateManager.hpp"
+#include <sirikata/space/AggregateManager.hpp>
 
 #include <sirikata/mesh/ModelsSystemFactory.hpp>
 

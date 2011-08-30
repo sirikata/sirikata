@@ -45,7 +45,7 @@
 
 #include <sirikata/space/LocationService.hpp>
 
-#include "Proximity.hpp"
+#include <sirikata/space/Proximity.hpp>
 #include "Server.hpp"
 
 #include "Options.hpp"
@@ -227,7 +227,9 @@ int main(int argc, char** argv) {
     forwarder->initialize(oseg, sq, server_message_receiver, loc_service);
 
 
-    Proximity* prox = new Proximity(space_context, loc_service, gNetwork);
+    std::string prox_type = GetOptionValue<String>(OPT_PROX);
+    std::string prox_options = GetOptionValue<String>(OPT_PROX_OPTIONS);
+    Proximity* prox = ProximityFactory::getSingleton().getConstructor(prox_type)(space_context, loc_service, gNetwork, prox_options);
 
 
     Server* server = new Server(space_context, auth, forwarder, loc_service, cseg, prox, oseg, server_id_map->lookupExternal(space_context->id()));

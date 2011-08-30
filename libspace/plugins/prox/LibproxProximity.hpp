@@ -1,5 +1,5 @@
 /*  Sirikata
- *  Proximity.hpp
+ *  LibproxProximity.hpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,44 +30,36 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_PROXIMITY_HPP_
-#define _SIRIKATA_PROXIMITY_HPP_
+#ifndef _SIRIKATA_LIBPROX_PROXIMITY_HPP_
+#define _SIRIKATA_LIBPROX_PROXIMITY_HPP_
 
+#include <sirikata/space/Proximity.hpp>
 #include <sirikata/space/ProxSimulationTraits.hpp>
 #include "CBRLocationServiceCache.hpp"
-#include <sirikata/space/CoordinateSegmentation.hpp>
-#include "MigrationDataClient.hpp"
 #include <prox/QueryHandler.hpp>
 #include <prox/LocationUpdateListener.hpp>
 #include <prox/AggregateListener.hpp>
-#include <sirikata/core/service/PollingService.hpp>
 
 #include <sirikata/core/network/SSTImpl.hpp>
 #include <sirikata/core/queue/ThreadSafeQueue.hpp>
 
 #include <sirikata/space/PintoServerQuerier.hpp>
 
-#include "AggregateManager.hpp"
 
-#include <sirikata/space/SpaceNetwork.hpp>
 
 namespace Sirikata {
 
 class LocationService;
 class ProximityInputEvent;
 class ProximityOutputEvent;
+class AggregateManager;
 
-class Proximity :
+class LibproxProximity : public Proximity,
         Prox::QueryEventListener<ObjectProxSimulationTraits>,
         LocationServiceListener,
-        CoordinateSegmentation::Listener,
         MessageRecipient,
-        MigrationDataClient,
-        public PollingService,
         PintoServerQuerierListener,
-        Prox::AggregateListener<ObjectProxSimulationTraits>,
-        public ObjectSessionListener,
-        SpaceNetworkConnectionListener
+        Prox::AggregateListener<ObjectProxSimulationTraits>
 {
 private:
     typedef Prox::QueryHandler<ObjectProxSimulationTraits> ProxQueryHandler;
@@ -76,8 +68,8 @@ public:
     typedef Prox::Query<ObjectProxSimulationTraits> Query;
     typedef Prox::QueryEvent<ObjectProxSimulationTraits> QueryEvent;
 
-    Proximity(SpaceContext* ctx, LocationService* locservice, SpaceNetwork* net);
-    ~Proximity();
+    LibproxProximity(SpaceContext* ctx, LocationService* locservice, SpaceNetwork* net);
+    ~LibproxProximity();
 
     // Initialize prox.  Must be called after everything else (specifically message router) is set up since it
     // needs to send messages.
@@ -91,8 +83,8 @@ public:
     virtual void sessionClosed(ObjectSession* session);
 
     // Objects
-    void addQuery(UUID obj, SolidAngle sa, uint32 max_results);
-    void removeQuery(UUID obj);
+    virtual void addQuery(UUID obj, SolidAngle sa, uint32 max_results);
+    virtual void removeQuery(UUID obj);
 
     // QueryEventListener Interface
     void queryHasEvents(Query* query);
@@ -278,8 +270,6 @@ private:
     typedef std::tr1::unordered_map<ServerID, ObjectSetPtr> ServerQueryResultSet;
 
 
-    SpaceContext* mContext;
-
     PintoServerQuerier* mServerQuerier;
 
     // To support a static/dynamic split but also support mixing them for
@@ -291,9 +281,6 @@ private:
     int mObjectClassIndex[NUM_OBJECT_CLASSES];
 
     // MAIN Thread - Should only be accessed in methods used by the main thread
-
-    LocationService* mLocService;
-    CoordinateSegmentation* mCSeg;
 
     Router<Message*>* mProxServerMessageService;
 
@@ -383,8 +370,8 @@ private:
 
     AggregateManager* mAggregateManager;
 
-}; //class Proximity
+}; //class LibproxProximity
 
 } // namespace Sirikata
 
-#endif //_SIRIKATA_PROXIMITY_HPP_
+#endif //_SIRIKATA_LIBPROX_PROXIMITY_HPP_

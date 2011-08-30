@@ -32,7 +32,7 @@
 
 #include <sirikata/space/SpaceNetwork.hpp>
 #include "Server.hpp"
-#include "Proximity.hpp"
+#include <sirikata/space/Proximity.hpp>
 #include <sirikata/space/CoordinateSegmentation.hpp>
 #include <sirikata/space/ServerMessage.hpp>
 #include <sirikata/core/trace/Trace.hpp>
@@ -98,8 +98,8 @@ Server::Server(SpaceContext* ctx, Authenticator* auth, Forwarder* forwarder, Loc
     mContext->mCSeg = mCSeg;
     mContext->mObjectSessionManager = this;
 
-    this->addListener((ObjectSessionListener*)mLocationService);
-    this->addListener((ObjectSessionListener*)mProximity);
+    this->addListener(static_cast<ObjectSessionListener*>(mLocationService));
+    this->addListener(static_cast<ObjectSessionListener*>(mProximity));
 
     mTimeSyncServer = new TimeSyncServer(mContext);
 

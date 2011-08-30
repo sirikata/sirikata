@@ -34,7 +34,7 @@
 #ifndef _AGGREGATE_MANAGER_HPP
 #define _AGGREGATE_MANAGER_HPP
 
-#include <sirikata/core/util/Platform.hpp>
+#include <sirikata/space/Platform.hpp>
 #include <sirikata/core/util/UUID.hpp>
 #include <sirikata/core/transfer/TransferData.hpp>
 #include <sirikata/core/transfer/RemoteFileMetadata.hpp>
@@ -52,15 +52,15 @@
 
 namespace Sirikata {
 
-class AggregateManager {
+class SIRIKATA_SPACE_EXPORT AggregateManager {
 private:
 
-  Thread* mAggregationThread;    
-  
+  Thread* mAggregationThread;
+
   Network::IOService* mAggregationService;
   Network::IOStrand* mAggregationStrand;
   Network::IOWork* mIOWork;
- 
+
   LocationService* mLoc;
   ModelsSystem* mModelsSystem;
   Sirikata::Mesh::MeshSimplifier mMeshSimplifier;
@@ -116,7 +116,7 @@ private:
   void updateChildrenTreeLevel(const UUID& uuid, uint16 treeLevel);
   void addDirtyAggregates(UUID uuid);
 
-  void generateMeshesFromQueue(Time postTime); 
+  void generateMeshesFromQueue(Time postTime);
   void generateAggregateMeshAsyncIgnoreErrors(const UUID uuid, Time postTime, bool generateSiblings = true);
   bool generateAggregateMeshAsync(const UUID uuid, Time postTime, bool generateSiblings = true);
   void aggregationThreadMain();
