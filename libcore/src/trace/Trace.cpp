@@ -116,18 +116,17 @@ void Trace::writeRecord(uint16 type_hint, BatchedBuffer::IOVec* data_orig, uint3
 }
 
 
-std::ostream&Drops::output(std::ostream&output) {
+void Drops::output() {
+    SILOG(drops, debug, "Summary of drop data:");
     for (int i=0;i<NUM_DROPS;++i) {
         if (d[i]&&n[i]) {
-            output<<n[i]<<':'<<d[i]<<'\n';
+            SILOG(drops, debug, n[i] << ':' << d[i]);
         }
     }
-    return output;
 }
 
 Trace::~Trace() {
-    std::cout<<"Summary of drop data:\n";
-    drops.output(std::cout)<<"EOF\n";
+    drops.output();
 }
 
 

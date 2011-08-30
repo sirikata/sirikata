@@ -57,7 +57,7 @@
 #include <sirikata/core/odp/DelegatePort.hpp>
 #include <sirikata/core/util/KnownServices.hpp>
 
-#define SPACE_LOG(lvl,msg) SILOG(space, lvl, "[SPACE] " << msg)
+#define SPACE_LOG(lvl,msg) SILOG(space, lvl, msg)
 
 namespace Sirikata
 {
@@ -155,7 +155,7 @@ Server::~Server()
 
     mForwarder->unregisterMessageRecipient(SERVER_PORT_MIGRATION, this);
 
-    printf("mObjects.size=%d\n", (uint32)mObjects.size());
+    SPACE_LOG(debug, "mObjects.size=" << mObjects.size());
 
     for(ObjectConnectionMap::iterator it = mObjects.begin(); it != mObjects.end(); it++) {
         UUID obj_id = it->first;
@@ -1157,7 +1157,7 @@ void Server::killObjectConnection(const UUID& obj_id)
     }
     else
     {
-      std::cout<<"\n\nObject:  "<<obj_id.toString()<<"  has already re-migrated\n\n";
+        SPACE_LOG(error, "Object " << obj_id.toString() << " has already re-migrated");
     }
 
     //log the event's completion.
