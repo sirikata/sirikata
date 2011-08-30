@@ -46,18 +46,14 @@
 #include <sirikata/space/PintoServerQuerier.hpp>
 
 
-
 namespace Sirikata {
 
-class LocationService;
 class ProximityInputEvent;
 class ProximityOutputEvent;
 class AggregateManager;
 
 class LibproxProximity : public Proximity,
         Prox::QueryEventListener<ObjectProxSimulationTraits>,
-        LocationServiceListener,
-        MessageRecipient,
         PintoServerQuerierListener,
         Prox::AggregateListener<ObjectProxSimulationTraits>
 {

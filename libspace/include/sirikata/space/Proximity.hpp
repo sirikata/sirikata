@@ -39,6 +39,7 @@
 
 #include <sirikata/core/service/PollingService.hpp>
 
+#include <sirikata/space/LocationService.hpp>
 #include <sirikata/space/CoordinateSegmentation.hpp>
 #include <sirikata/space/MigrationDataClient.hpp>
 #include <sirikata/space/SpaceNetwork.hpp>
@@ -47,7 +48,6 @@
 
 namespace Sirikata {
 
-class LocationService;
 class ProximityInputEvent;
 class ProximityOutputEvent;
 
@@ -56,7 +56,9 @@ class SIRIKATA_SPACE_EXPORT Proximity :
         MigrationDataClient,
         CoordinateSegmentation::Listener,
         SpaceNetworkConnectionListener,
-        public ObjectSessionListener
+        public ObjectSessionListener,
+        protected LocationServiceListener,
+        protected MessageRecipient
 {
   public:
     Proximity(SpaceContext* ctx, LocationService* locservice, SpaceNetwork* net, const Duration& poll_freq);
@@ -90,6 +92,25 @@ class SIRIKATA_SPACE_EXPORT Proximity :
     // ObjectSessionListener Interface
     virtual void newSession(ObjectSession* session) = 0;
     virtual void sessionClosed(ObjectSession* session) = 0;
+
+    // LocationServiceListener Interface
+    virtual void localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics) = 0;
+    virtual void localObjectRemoved(const UUID& uuid, bool agg) = 0;
+    virtual void localLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval) = 0;
+    virtual void localOrientationUpdated(const UUID& uuid, bool agg, const TimedMotionQuaternion& newval) = 0;
+    virtual void localBoundsUpdated(const UUID& uuid, bool agg, const BoundingSphere3f& newval) = 0;
+    virtual void localMeshUpdated(const UUID& uuid, bool agg, const String& newval) = 0;
+    virtual void localPhysicsUpdated(const UUID& uuid, bool agg, const String& newval) = 0;
+    virtual void replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics) = 0;
+    virtual void replicaObjectRemoved(const UUID& uuid) = 0;
+    virtual void replicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) = 0;
+    virtual void replicaOrientationUpdated(const UUID& uuid, const TimedMotionQuaternion& newval) = 0;
+    virtual void replicaBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) = 0;
+    virtual void replicaMeshUpdated(const UUID& uuid, const String& newval) = 0;
+    virtual void replicaPhysicsUpdated(const UUID& uuid, const String& newval) = 0;
+
+    // MessageRecipient Interface
+    virtual void receiveMessage(Message* msg) = 0;
 
   protected:
     SpaceContext* mContext;

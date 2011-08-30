@@ -169,10 +169,6 @@ LibproxProximity::LibproxProximity(SpaceContext* ctx, LocationService* locservic
     }
     if (object_handler_type == "dist" || object_handler_type == "rtreedist") mObjectDistance = true;
 
-    mLocService->addListener(this, false);
-
-    mContext->serverDispatcher()->registerMessageRecipient(SERVER_PORT_PROX, this);
-
     mProxServerMessageService = mContext->serverRouter()->createServerMessageService("proximity");
 
     // Start the processing thread
@@ -181,8 +177,6 @@ LibproxProximity::LibproxProximity(SpaceContext* ctx, LocationService* locservic
 
 LibproxProximity::~LibproxProximity() {
     delete mProxServerMessageService;
-
-    mContext->serverDispatcher()->unregisterMessageRecipient(SERVER_PORT_PROX, this);
 
     for(int i = 0; i < NUM_OBJECT_CLASSES; i++) {
         delete mObjectQueryHandler[i];

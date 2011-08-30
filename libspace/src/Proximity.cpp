@@ -27,9 +27,13 @@ Proximity::Proximity(SpaceContext* ctx, LocationService* locservice, SpaceNetwor
    mCSeg(NULL)
 {
     net->addListener(this);
+    mLocService->addListener(this, false);
+    mContext->serverDispatcher()->registerMessageRecipient(SERVER_PORT_PROX, this);
 }
 
 Proximity::~Proximity() {
+    mContext->serverDispatcher()->unregisterMessageRecipient(SERVER_PORT_PROX, this);
+    mLocService->removeListener(this);
 }
 
 void Proximity::initialize(CoordinateSegmentation* cseg) {
