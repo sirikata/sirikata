@@ -6,7 +6,7 @@ if (typeof(std) === "undefined") /** @namespace */ std = {};
  *
  * APIs:
  *   set(key,value)      : Write element to memory
- *   copy(map)           : Write all elements in a given associate array to this map (in memory)
+ *   copy(map)           : Write all elements in given associative array to this map (in memory)
  *                           e.g. M = {'a':'x','b':'y'};  X.copy(M); 
  *   get(key)            : Read element with given key from memory, return the value
  *   get(key,cb)         : Read element with given key from memory first, if not exists, read
@@ -19,7 +19,7 @@ if (typeof(std) === "undefined") /** @namespace */ std = {};
  *   restore(cb)         : Restore all elements from backend to memory. Callback: cb(success)
  *   reset(cb)           : Clear content in both memory and backend. Callback: cb(success)
  *   name()              : Return name of the map
- *   data()              : Return all elements in memory, as an associate array
+ *   data()              : Return all elements in memory, as an associative array
  *   keys()              : Return all keys in both memory and backend, as an array.
  *   size()              : Return number of elements in memory and backend
  *   empty()             : Return true if map is emty   
