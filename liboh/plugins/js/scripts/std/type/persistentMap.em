@@ -2,7 +2,7 @@ if (typeof(std) === "undefined") /** @namespace */ std = {};
 
 /* Map data structure
  * Constructor:
- *   e.g. X = new std.persistentMap('mapTest'); 
+ *   e.g. X = new std.persistentMap('mapTest', function(exist){...}); 
  *
  * APIs:
  *   set(key,value)     : Write element to memory
@@ -27,16 +27,16 @@ if (typeof(std) === "undefined") /** @namespace */ std = {};
  *   isResident(key)    : Return true if the key is resident in memory, false otherwise
  */
 
-std.persistentMap = function(name) 
+std.persistentMap = function(name, cb) 
 {
     this._type = 'map';
     this._name = name;
     this._mapName = keyName(this._type,this._name);
-    this._dirtyKeys = {};
     this._data = {};
     this._keys = {};
+    this._dirtyKeys = {};
     this._keys_list = {};
-    this._init(function(success){});
+    this._init(cb);
 };
 
 std.persistentMap.prototype._init = function(cb)
@@ -44,19 +44,19 @@ std.persistentMap.prototype._init = function(cb)
     system.storageRead(this._mapName, std.core.bind(this._initCommit, this, cb));
 };
 
-std.persistentMap.prototype._initCommit = function(cb, success, val)
+std.persistentMap.prototype._initCommit = function(cb, exist, val)
 {
-    if (!success)
+    if (!exist)
         system.print('This is a new map')
     else {
         this._keys = StringtoKeys(val[this._mapName]);
         this._keys_list = this._keys;
         system.print('Map exist, restore keys')
     }
-    cb(success);
+    cb(exist);
 };
 
-std.persistentMap.prototype.set = function(key,value)
+std.persistentMap.prototype.set = function(key, value)
 {
     this._data[key]=value;
     this._dirtyKeys[key] = 1;
