@@ -54,6 +54,10 @@ v8::Handle<v8::Value> JSSystemStruct::storageWrite(const OH::Storage::Key& key, 
 
 v8::Handle<v8::Value> JSSystemStruct::httpRequest(Sirikata::Network::Address addr, Transfer::HttpManager::HTTP_METHOD method, String request, v8::Persistent<v8::Function> cb)
 {
+    //first checks whether have capability to issue http request
+    if(! checkCurCtxtHasCapability(NULL,Capabilities::HTTP))
+        V8_EXCEPTION_CSTR("Error: you do not have the capability to issue an http commad.");
+    
     return associatedContext->httpRequest(addr,method,request,cb);
 }
 
@@ -219,9 +223,13 @@ v8::Handle<v8::Value> JSSystemStruct::struct_canEval()
 //this system's context
 v8::Handle<v8::Value> JSSystemStruct::struct_createContext(JSPresenceStruct* jspres,const SpaceObjectReference& canSendTo, Capabilities::CapNum permNum)
 {
+    //first checks whether have capability to create a context.
+    if(! checkCurCtxtHasCapability(NULL,Capabilities::CREATE_SANDBOX))
+        V8_EXCEPTION_CSTR("Error: you do not have the capability to create a sandbox");
+    
+    
     //prevents scripter from escalating capabilities beyond those that he/she
     //already has
-
     stripCapEscalation(permNum,Capabilities::SEND_MESSAGE,jspres,"SEND_MESSAGE");
     stripCapEscalation(permNum,Capabilities::RECEIVE_MESSAGE,jspres,"RECEIVE_MESSAGE");
     stripCapEscalation(permNum,Capabilities::IMPORT,jspres,"IMPORT");

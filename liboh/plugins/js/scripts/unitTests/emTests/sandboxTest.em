@@ -291,16 +291,23 @@ function testTryExceedCaps()
             //should still be able to read position, orientation, velocities, mesh, query angle.
             try
             {
+                system.print('\nBefore checking what is readable.\n');
                 system.self.getPosition();
+                system.print('\nPosition\n');
                 system.self.getOrientation();
+                system.print('\nOrientation\n');
                 system.self.getVelocity();
-                system.self.getOrientationVelocity();
+                system.print('\nVelocity\n');
+                system.self.getOrientationVel();
+                system.print('\nOrientationVel\n');
                 system.self.getMesh();
+                system.print('\ngetMesh\n');
                 system.self.getQueryAngle();
+                system.print('\ngetQueryAngle\n');
             }
             catch(excep)
             {
-                mTest.fail('Error in testTryExceedCaps.  Should have been able to read position, orientation, velocities, mesh, and query angle, but could\'t.');
+                mTest.fail("Error in testTryExceedCaps.  Should have been able to read position, orientation, velocities, mesh, and query angle, but couldn\'t.");
             }
         });
 }
