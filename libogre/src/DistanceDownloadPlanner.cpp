@@ -137,9 +137,13 @@ void DistanceDownloadPlanner::addNewObject(ProxyObjectPtr p, Entity *mesh) {
 void DistanceDownloadPlanner::updateObject(ProxyObjectPtr p) {
     Object* r = findObject(p->getObjectReference().toString());
     URI last_file = r->file;
-    r->file = p->getMesh();
+    URI new_file = p->getMesh();
+    if (new_file != last_file && r->loaded) {
+        unrequestAssetForObject(r);
+    }
+    r->file = new_file;
     r->priority = calculatePriority(p);
-    if (r->file != last_file && r->loaded) {
+    if (new_file != last_file && r->loaded) {
         requestAssetForObject(r);
     }
 }
