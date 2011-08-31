@@ -277,8 +277,11 @@ void DistanceDownloadPlanner::poll()
     }
 }
 
-void DistanceDownloadPlanner::stop()
-{
+void DistanceDownloadPlanner::stop() {
+    for(AssetMap::iterator it = mAssets.begin(); it != mAssets.end(); it++) {
+        Asset* asset = it->second;
+        delete asset;
+    }
 }
 
 void DistanceDownloadPlanner::requestAssetForResource(Resource* forResource) {
