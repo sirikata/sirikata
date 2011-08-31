@@ -129,7 +129,8 @@ public:
 
     /**
        Returns true if context eval stack is not empty and if the top context on
-       the stack has capability whatCap for presence jspres.  Returns false otherwise.
+       the stack allows operation associated with whatCap on jspres.  Returns
+       false otherwise.
      */
     bool checkCurCtxtHasCapability(JSPresenceStruct* jspres, Capabilities::Caps whatCap);
 

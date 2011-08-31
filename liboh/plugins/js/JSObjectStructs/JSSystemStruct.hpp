@@ -143,6 +143,12 @@ private:
    */
     void stripCapEscalation(Capabilities::CapNum& permNum, Capabilities::Caps capRequesting, JSPresenceStruct* jspres, const String& capRequestingName);
     
+
+    //returns true if you have capability to perform the operation associated with
+    //capRequesting on jspres, false otherwise.  Note: pass null to jspres if
+    //requesting a capability not associated with a presence.  (See list of
+    //these in JSCapabilitiesConsts.hpp.)
+    bool checkCurCtxtHasCapability(JSPresenceStruct* jspres, Capabilities::Caps capRequesting);
     
     //associated data
     JSContextStruct* associatedContext;

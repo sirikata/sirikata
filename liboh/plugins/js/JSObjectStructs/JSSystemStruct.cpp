@@ -167,21 +167,16 @@ v8::Handle<v8::Value> JSSystemStruct::struct_canImport()
 
 v8::Handle<v8::Value> JSSystemStruct::sendMessageNoErrorHandler(JSPresenceStruct* jspres, const String& serialized_message,JSPositionListener* jspl,bool reliable)
 {
-
-    //checking capability for this presence
-    if(getContext()->getAssociatedPresenceStruct() != NULL)
-    {
-        if (getContext()->getAssociatedPresenceStruct()->getSporef() == jspres->getSporef())
-        {
-            if(!Capabilities::givesCap(mCapNum, Capabilities::SEND_MESSAGE))
-                return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  You do not have the capability to send messages.")));
-        }
-    }
+    if (! checkCurCtxtHasCapability(jspres, Capabilities::SEND_MESSAGE))
+        V8_EXCEPTION_CSTR("Error.  You do not have the capability to send messages.");
 
     return associatedContext->sendMessageNoErrorHandler(jspres,serialized_message,jspl,reliable);
 }
 
-
+bool JSSystemStruct::checkCurCtxtHasCapability(JSPresenceStruct* jspres, Capabilities::Caps capRequesting)
+{
+    return associatedContext->jsObjScript->checkCurCtxtHasCapability(jspres,capRequesting);
+}
 
 
 v8::Handle<v8::Value> JSSystemStruct::setSandboxMessageCallback(v8::Persistent<v8::Function> callback)
@@ -248,7 +243,7 @@ v8::Handle<v8::Value> JSSystemStruct::struct_createContext(JSPresenceStruct* jsp
 
 void JSSystemStruct::stripCapEscalation(Capabilities::CapNum& permNum, Capabilities::Caps capRequesting, JSPresenceStruct* jspres, const String& capRequestingName)
 {
-    if (! associatedContext->jsObjScript->checkCurCtxtHasCapability(jspres,capRequesting))
+    if (! checkCurCtxtHasCapability(jspres,capRequesting))
     {
         /*means trying to set this capability when don't have it in the base*/
         /*sandbox.  We should strip it.*/
