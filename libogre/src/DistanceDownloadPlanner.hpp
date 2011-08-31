@@ -61,27 +61,27 @@ public:
     virtual void stop();
 
 protected:
-    struct Resource;
+    struct Object;
 
-    void addResource(Resource* r);
-    Resource* findResource(const String& sporef);
-    void removeResource(const String& sporef);
+    void addObject(Object* r);
+    Object* findObject(const String& sporef);
+    void removeObject(const String& sporef);
 
     virtual double calculatePriority(ProxyObjectPtr proxy);
 
-    void checkShouldLoadNewResource(Resource* r);
+    void checkShouldLoadNewObject(Object* r);
 
     // Checks if changes just due to budgets are possible,
     // e.g. regardless of priorities, we have waiting objects and free
     // spots for them.
     bool budgetRequiresChange() const;
 
-    void loadResource(Resource* r);
-    void unloadResource(Resource* r);
+    void loadObject(Object* r);
+    void unloadObject(Object* r);
 
-    struct Resource {
-        Resource(Graphics::Entity *m, const Transfer::URI& mesh_uri, ProxyObjectPtr _proxy = ProxyObjectPtr());
-        virtual ~Resource(){}
+    struct Object {
+        Object(Graphics::Entity *m, const Transfer::URI& mesh_uri, ProxyObjectPtr _proxy = ProxyObjectPtr());
+        virtual ~Object(){}
 
         const String& id() const { return name; }
 
@@ -94,50 +94,50 @@ protected:
 
         class Hasher {
         public:
-            size_t operator() (const Resource& r) const {
+            size_t operator() (const Object& r) const {
                 return std::tr1::hash<String>()(r.name);
             }
         };
 
         struct MaxHeapComparator {
-            bool operator()(Resource* lhs, Resource* rhs) {
+            bool operator()(Object* lhs, Object* rhs) {
                 return lhs->priority < rhs->priority;
             }
         };
         struct MinHeapComparator {
-            bool operator()(Resource* lhs, Resource* rhs) {
+            bool operator()(Object* lhs, Object* rhs) {
                 return lhs->priority > rhs->priority;
             }
         };
 
     };
 
-    typedef std::tr1::unordered_set<String> ResourceSet;
-    typedef std::tr1::unordered_map<String, Resource*> ResourceMap;
+    typedef std::tr1::unordered_set<String> ObjectSet;
+    typedef std::tr1::unordered_map<String, Object*> ObjectMap;
     // The full list
-    ResourceMap mResources;
+    ObjectMap mObjects;
     // Loading has started for these
-    ResourceMap mLoadedResources;
+    ObjectMap mLoadedObjects;
     // Waiting to be important enough to load
-    ResourceMap mWaitingResources;
+    ObjectMap mWaitingObjects;
 
-    // Heap storage for Resources. Choice between min/max heap is at call time.
-    typedef std::vector<Resource*> ResourceHeap;
+    // Heap storage for Objects. Choice between min/max heap is at call time.
+    typedef std::vector<Object*> ObjectHeap;
 
 
     typedef std::vector<WebView*> WebMaterialList;
 
     // Assets represent a single graphical asset that needs to be downloaded
     // from the CDN and loaded into memory. Since a single asset can be loaded
-    // many times by different 'Resources' (i.e. objects in the world) we track
+    // many times by different 'Objects' (i.e. objects in the world) we track
     // them separately and make sure we only issue single requests for them.
     struct Asset {
         Transfer::URI uri;
         AssetDownloadTaskPtr downloadTask;
-        // Resources that want this asset to be loaded and are waiting for it
-        ResourceSet waitingResources;
-        // Resources that are using this asset
-        ResourceSet usingResources;
+        // Objects that want this asset to be loaded and are waiting for it
+        ObjectSet waitingObjects;
+        // Objects that are using this asset
+        ObjectSet usingObjects;
         // Filled in by the loader with the name of the asset that's actually
         // used when creating an instance (unique name for mesh, billboard
         // texture, etc).
@@ -158,8 +158,8 @@ protected:
     // resource/asset pair and gets it loaded. Some paths will terminate early
     // since multiple resources that share an asset can share many of these
     // steps.
-    void requestAssetForResource(Resource*);
-    void downloadAsset(Asset* asset, Resource* forResource);
+    void requestAssetForObject(Object*);
+    void downloadAsset(Asset* asset, Object* forObject);
     void loadAsset(Transfer::URI asset_uri);
     void finishLoadAsset(Asset* asset, bool success);
 
@@ -169,7 +169,7 @@ protected:
 
     // Removes the resource's need for the asset, potentially allowing it to be
     // unloaded.
-    void unrequestAssetForResource(Resource*);
+    void unrequestAssetForObject(Object*);
 
     // Helper to check if it's safe to remove an asset and does so if
     // possible. Properly handles current

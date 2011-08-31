@@ -63,7 +63,7 @@ using namespace Sirikata::Graphics;
 namespace Sirikata {
 namespace Graphics {
 
-DistanceDownloadPlanner::Resource::Resource(Graphics::Entity *m, const Transfer::URI& mesh_uri, ProxyObjectPtr _proxy)
+DistanceDownloadPlanner::Object::Object(Graphics::Entity *m, const Transfer::URI& mesh_uri, ProxyObjectPtr _proxy)
 : file(mesh_uri),
   mesh(m),
   name(m->id()),
@@ -99,55 +99,55 @@ DistanceDownloadPlanner::~DistanceDownloadPlanner()
     }
 }
 
-void DistanceDownloadPlanner::addResource(Resource* r) {
-    mResources[r->name] = r;
-    mWaitingResources[r->name] = r;
-    checkShouldLoadNewResource(r);
+void DistanceDownloadPlanner::addObject(Object* r) {
+    mObjects[r->name] = r;
+    mWaitingObjects[r->name] = r;
+    checkShouldLoadNewObject(r);
 }
 
-DistanceDownloadPlanner::Resource* DistanceDownloadPlanner::findResource(const String& name) {
-    ResourceMap::iterator it = mResources.find(name);
-    return (it != mResources.end() ? it->second : NULL);
+DistanceDownloadPlanner::Object* DistanceDownloadPlanner::findObject(const String& name) {
+    ObjectMap::iterator it = mObjects.find(name);
+    return (it != mObjects.end() ? it->second : NULL);
 }
 
-void DistanceDownloadPlanner::removeResource(const String& name) {
-    ResourceMap::iterator it = mResources.find(name);
-    if (it != mResources.end()) {
-        ResourceMap::iterator loaded_it = mLoadedResources.find(name);
-        if (loaded_it != mLoadedResources.end()) mLoadedResources.erase(loaded_it);
+void DistanceDownloadPlanner::removeObject(const String& name) {
+    ObjectMap::iterator it = mObjects.find(name);
+    if (it != mObjects.end()) {
+        ObjectMap::iterator loaded_it = mLoadedObjects.find(name);
+        if (loaded_it != mLoadedObjects.end()) mLoadedObjects.erase(loaded_it);
 
-        ResourceMap::iterator waiting_it = mWaitingResources.find(name);
-        if (waiting_it != mWaitingResources.end()) mWaitingResources.erase(waiting_it);
+        ObjectMap::iterator waiting_it = mWaitingObjects.find(name);
+        if (waiting_it != mWaitingObjects.end()) mWaitingObjects.erase(waiting_it);
 
         delete it->second;
-        mResources.erase(it);
+        mObjects.erase(it);
     }
 }
 
 void DistanceDownloadPlanner::addNewObject(Entity *ent, const Transfer::URI& mesh) {
-    addResource(new Resource(ent, mesh));
+    addObject(new Object(ent, mesh));
 }
 
 void DistanceDownloadPlanner::addNewObject(ProxyObjectPtr p, Entity *mesh) {
-    addResource(new Resource(mesh, p->getMesh(), p));
+    addObject(new Object(mesh, p->getMesh(), p));
 }
 
 void DistanceDownloadPlanner::updateObject(ProxyObjectPtr p) {
-    Resource* r = findResource(p->getObjectReference().toString());
+    Object* r = findObject(p->getObjectReference().toString());
     URI last_file = r->file;
     r->file = p->getMesh();
     r->priority = calculatePriority(p);
     if (r->file != last_file && r->loaded) {
-        requestAssetForResource(r);
+        requestAssetForObject(r);
     }
 }
 
 void DistanceDownloadPlanner::removeObject(ProxyObjectPtr p) {
-    removeResource(p->getObjectReference().toString());
+    removeObject(p->getObjectReference().toString());
 }
 
 void DistanceDownloadPlanner::removeObject(Graphics::Entity* mesh) {
-    removeResource(mesh->id());
+    removeObject(mesh->id());
 }
 
 
@@ -169,32 +169,32 @@ double DistanceDownloadPlanner::calculatePriority(ProxyObjectPtr proxy)
     return priority;
 }
 
-void DistanceDownloadPlanner::checkShouldLoadNewResource(Resource* r) {
-    if ((int32)mLoadedResources.size() < mMaxLoaded)
-        loadResource(r);
+void DistanceDownloadPlanner::checkShouldLoadNewObject(Object* r) {
+    if ((int32)mLoadedObjects.size() < mMaxLoaded)
+        loadObject(r);
 }
 
 bool DistanceDownloadPlanner::budgetRequiresChange() const {
     return
-        ((int32)mLoadedResources.size() < mMaxLoaded && !mWaitingResources.empty()) ||
-        ((int32)mLoadedResources.size() > mMaxLoaded && !mLoadedResources.empty());
+        ((int32)mLoadedObjects.size() < mMaxLoaded && !mWaitingObjects.empty()) ||
+        ((int32)mLoadedObjects.size() > mMaxLoaded && !mLoadedObjects.empty());
 
 }
 
-void DistanceDownloadPlanner::loadResource(Resource* r) {
-    mWaitingResources.erase(r->name);
-    mLoadedResources[r->name] = r;
+void DistanceDownloadPlanner::loadObject(Object* r) {
+    mWaitingObjects.erase(r->name);
+    mLoadedObjects[r->name] = r;
 
     r->loaded = true;
-    requestAssetForResource(r);
+    requestAssetForObject(r);
 }
 
-void DistanceDownloadPlanner::unloadResource(Resource* r) {
-    mLoadedResources.erase(r->name);
-    mWaitingResources[r->name] = r;
+void DistanceDownloadPlanner::unloadObject(Object* r) {
+    mLoadedObjects.erase(r->name);
+    mWaitingObjects[r->name] = r;
 
     r->loaded = false;
-    unrequestAssetForResource(r);
+    unrequestAssetForObject(r);
 }
 
 void DistanceDownloadPlanner::poll()
@@ -204,8 +204,8 @@ void DistanceDownloadPlanner::poll()
     // Update priorities, tracking the largest undisplayed priority and the
     // smallest displayed priority to decide if we're going to have to swap.
     float32 mMinLoadedPriority = 1000000, mMaxWaitingPriority = 0;
-    for (ResourceMap::iterator it = mResources.begin(); it != mResources.end(); it++) {
-        Resource* r = it->second;
+    for (ObjectMap::iterator it = mObjects.begin(); it != mObjects.end(); it++) {
+        Object* r = it->second;
         r->priority = calculatePriority(r->proxy);
 
         if (r->loaded)
@@ -222,49 +222,49 @@ void DistanceDownloadPlanner::poll()
     // allowed increased, objects left the scene, etc) then we also
     // run this, which will safely add if we're under budget.
     if (mMinLoadedPriority < mMaxWaitingPriority || budgetRequiresChange()) {
-        std::vector<Resource*> loaded_resource_heap;
-        std::vector<Resource*> waiting_resource_heap;
+        std::vector<Object*> loaded_resource_heap;
+        std::vector<Object*> waiting_resource_heap;
 
-        for (ResourceMap::iterator it = mResources.begin(); it != mResources.end(); it++) {
-            Resource* r = it->second;
+        for (ObjectMap::iterator it = mObjects.begin(); it != mObjects.end(); it++) {
+            Object* r = it->second;
             if (r->loaded)
                 loaded_resource_heap.push_back(r);
             else
                 waiting_resource_heap.push_back(r);
         }
-        std::make_heap(loaded_resource_heap.begin(), loaded_resource_heap.end(), Resource::MinHeapComparator());
-        std::make_heap(waiting_resource_heap.begin(), waiting_resource_heap.end(), Resource::MaxHeapComparator());
+        std::make_heap(loaded_resource_heap.begin(), loaded_resource_heap.end(), Object::MinHeapComparator());
+        std::make_heap(waiting_resource_heap.begin(), waiting_resource_heap.end(), Object::MaxHeapComparator());
 
         while(true) {
-            if ((int32)mLoadedResources.size() < mMaxLoaded && !waiting_resource_heap.empty()) {
+            if ((int32)mLoadedObjects.size() < mMaxLoaded && !waiting_resource_heap.empty()) {
                 // If we're under budget, just add to top waiting items
-                Resource* max_waiting = waiting_resource_heap.front();
-                std::pop_heap(waiting_resource_heap.begin(), waiting_resource_heap.end(), Resource::MaxHeapComparator());
+                Object* max_waiting = waiting_resource_heap.front();
+                std::pop_heap(waiting_resource_heap.begin(), waiting_resource_heap.end(), Object::MaxHeapComparator());
                 waiting_resource_heap.pop_back();
 
-                loadResource(max_waiting);
+                loadObject(max_waiting);
             }
-            else if ((int32)mLoadedResources.size() > mMaxLoaded && !loaded_resource_heap.empty()) {
+            else if ((int32)mLoadedObjects.size() > mMaxLoaded && !loaded_resource_heap.empty()) {
                 // Otherwise, extract the min and check if we can continue
-                Resource* min_loaded = loaded_resource_heap.front();
-                std::pop_heap(loaded_resource_heap.begin(), loaded_resource_heap.end(), Resource::MinHeapComparator());
+                Object* min_loaded = loaded_resource_heap.front();
+                std::pop_heap(loaded_resource_heap.begin(), loaded_resource_heap.end(), Object::MinHeapComparator());
                 loaded_resource_heap.pop_back();
 
-                unloadResource(min_loaded);
+                unloadObject(min_loaded);
             }
             else if (!waiting_resource_heap.empty() && !loaded_resource_heap.empty()) {
                 // They're equal, we're (potentially) exchanging
-                Resource* max_waiting = waiting_resource_heap.front();
-                std::pop_heap(waiting_resource_heap.begin(), waiting_resource_heap.end(), Resource::MaxHeapComparator());
+                Object* max_waiting = waiting_resource_heap.front();
+                std::pop_heap(waiting_resource_heap.begin(), waiting_resource_heap.end(), Object::MaxHeapComparator());
                 waiting_resource_heap.pop_back();
 
-                Resource* min_loaded = loaded_resource_heap.front();
-                std::pop_heap(loaded_resource_heap.begin(), loaded_resource_heap.end(), Resource::MinHeapComparator());
+                Object* min_loaded = loaded_resource_heap.front();
+                std::pop_heap(loaded_resource_heap.begin(), loaded_resource_heap.end(), Object::MinHeapComparator());
                 loaded_resource_heap.pop_back();
 
                 if (min_loaded->priority < max_waiting->priority) {
-                    unloadResource(min_loaded);
-                    loadResource(max_waiting);
+                    unloadObject(min_loaded);
+                    loadObject(max_waiting);
                 }
                 else {
                     break;
@@ -284,18 +284,18 @@ void DistanceDownloadPlanner::stop() {
     }
 }
 
-void DistanceDownloadPlanner::requestAssetForResource(Resource* forResource) {
-    if (forResource->file.empty()) {
-        forResource->mesh->loadEmpty();
+void DistanceDownloadPlanner::requestAssetForObject(Object* forObject) {
+    if (forObject->file.empty()) {
+        forObject->mesh->loadEmpty();
         return;
     }
 
     Asset* asset = NULL;
     // First make sure we have an Asset for this
-    AssetMap::iterator asset_it = mAssets.find(forResource->file);
+    AssetMap::iterator asset_it = mAssets.find(forObject->file);
     if (asset_it == mAssets.end()) {
-        asset = new Asset(forResource->file);
-        mAssets.insert( AssetMap::value_type(forResource->file, asset) );
+        asset = new Asset(forObject->file);
+        mAssets.insert( AssetMap::value_type(forObject->file, asset) );
     }
     else {
         asset = asset_it->second;
@@ -303,20 +303,20 @@ void DistanceDownloadPlanner::requestAssetForResource(Resource* forResource) {
 
     // If we're already setup for this asset, just leave things alone
     // FIXME priorities...
-    if (asset->waitingResources.find(forResource->id()) != asset->waitingResources.end()) return;
+    if (asset->waitingObjects.find(forObject->id()) != asset->waitingObjects.end()) return;
 
-    asset->waitingResources.insert(forResource->id());
+    asset->waitingObjects.insert(forObject->id());
 
-    // Another Resource might have already requested downloading
+    // Another Object might have already requested downloading
     // FIXME update priority
     if (!asset->downloadTask)
-        downloadAsset(asset, forResource);
+        downloadAsset(asset, forObject);
 }
 
-void DistanceDownloadPlanner::downloadAsset(Asset* asset, Resource* forResource) {
+void DistanceDownloadPlanner::downloadAsset(Asset* asset, Object* forObject) {
     asset->downloadTask =
         AssetDownloadTask::construct(
-            asset->uri, getScene(), forResource->priority,
+            asset->uri, getScene(), forObject->priority,
             mContext->mainStrand->wrap(
                 std::tr1::bind(&DistanceDownloadPlanner::loadAsset, this, asset->uri)
             ));
@@ -360,15 +360,15 @@ void DistanceDownloadPlanner::loadAsset(Transfer::URI asset_uri) {
 }
 
 void DistanceDownloadPlanner::finishLoadAsset(Asset* asset, bool success) {
-    // We need to notify all Resources (objects) waiting for this to load that
+    // We need to notify all Objects (objects) waiting for this to load that
     // it finished (or failed)
-    for(ResourceSet::iterator it = asset->waitingResources.begin(); it != asset->waitingResources.end(); it++) {
+    for(ObjectSet::iterator it = asset->waitingObjects.begin(); it != asset->waitingObjects.end(); it++) {
         const String& resource_id = *it;
         // It may not even need it anymore if its not in the set of objects we
         // currently wnat loaded anymore (or not even exist anymore)
-        ResourceMap::iterator rit = mResources.find(resource_id);
-        if (rit == mResources.end()) continue;
-        Resource* resource = rit->second;
+        ObjectMap::iterator rit = mObjects.find(resource_id);
+        if (rit == mObjects.end()) continue;
+        Object* resource = rit->second;
         if (resource->loaded == false) continue;
         // It may even have switched meshes by now.
         if (resource->file != asset->uri) continue;
@@ -389,10 +389,10 @@ void DistanceDownloadPlanner::finishLoadAsset(Asset* asset, bool success) {
             }
         }
 
-        asset->usingResources.insert(resource_id);
+        asset->usingObjects.insert(resource_id);
     }
     asset->downloadTask.reset();
-    asset->waitingResources.clear();
+    asset->waitingObjects.clear();
 
     checkRemoveAsset(asset);
 }
@@ -650,28 +650,28 @@ void DistanceDownloadPlanner::loadDependentTextures(Asset* asset, bool usingDefa
     }
 }
 
-void DistanceDownloadPlanner::unrequestAssetForResource(Resource* forResource) {
-    assert(mAssets.find(forResource->file) != mAssets.end());
-    Asset* asset = mAssets[forResource->file];
+void DistanceDownloadPlanner::unrequestAssetForObject(Object* forObject) {
+    assert(mAssets.find(forObject->file) != mAssets.end());
+    Asset* asset = mAssets[forObject->file];
 
     // Make sure we're not displaying it anymore
-    forResource->mesh->unload();
+    forObject->mesh->unload();
 
     // Clear the need for it
-    ResourceSet::iterator rit;
-    rit = asset->waitingResources.find(forResource->name);
-    if (rit != asset->waitingResources.end())
-        asset->waitingResources.erase(rit);
-    rit = asset->usingResources.find(forResource->name);
-    if (rit != asset->usingResources.end())
-        asset->usingResources.erase(rit);
+    ObjectSet::iterator rit;
+    rit = asset->waitingObjects.find(forObject->name);
+    if (rit != asset->waitingObjects.end())
+        asset->waitingObjects.erase(rit);
+    rit = asset->usingObjects.find(forObject->name);
+    if (rit != asset->usingObjects.end())
+        asset->usingObjects.erase(rit);
 
     // If nobody needs it anymore, clear it out.
     checkRemoveAsset(asset);
 }
 
 void DistanceDownloadPlanner::checkRemoveAsset(Asset* asset) {
-    if (asset->waitingResources.empty() && asset->usingResources.empty()) {
+    if (asset->waitingObjects.empty() && asset->usingObjects.empty()) {
         // We need to be careful if a download is in progress.
         if (asset->downloadTask) return;
 
