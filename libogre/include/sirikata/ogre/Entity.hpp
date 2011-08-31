@@ -118,7 +118,6 @@ public:
     // These should be overridden to allow this class to learn about the
     // properties of this Entity or override the basic behavior of Entity.
     virtual BoundingSphere3f bounds() = 0;
-    virtual float32 priority() = 0;
     virtual void tick(const Time& t, const Duration& deltaTime);
     // Check if the object is dynamic, i.e. needs updates every frame. The
     // Entity base class is only non-static during animations. Be sure to

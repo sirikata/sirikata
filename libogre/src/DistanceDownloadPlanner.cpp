@@ -136,7 +136,7 @@ void DistanceDownloadPlanner::updateObject(ProxyObjectPtr p) {
     Resource* r = findResource(p->getObjectReference().toString());
     URI last_file = r->file;
     r->file = p->getMesh();
-    p->priority = calculatePriority(p);
+    r->priority = calculatePriority(p);
     if (r->file != last_file && r->loaded) {
         requestAssetForResource(r);
     }
