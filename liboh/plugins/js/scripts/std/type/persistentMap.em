@@ -2,30 +2,32 @@ if (typeof(std) === "undefined") /** @namespace */ std = {};
 
 /* Map data structure
  * Constructor:
- *   e.g. X = new std.map('mapTest'); 
+ *   e.g. X = new std.persistentMap('mapTest'); 
  *
  * APIs:
- *   set(key,value)      : Write element to memory
- *   copy(map)           : Write all elements in given associative array to this map (in memory)
- *                           e.g. M = {'a':'x','b':'y'};  X.copy(M); 
- *   get(key)            : Read element with given key from memory, return the value
- *   get(key,cb)         : Read element with given key from memory first, if not exists, read
- *                         from backend storage then. Callback: cb(success, value)   
- *   erase(key)          : Erase element from memory
- *   clear()             : Clear content in memory
- *   flush(cb)           : Flush changes to backend storage. Callback: cb(success)
- *   retrieve(keys,cb)   : Retrieve elements with given list of keys from backend to memory
- *                         Callback: cb(success)
- *   restore(cb)         : Restore all elements from backend to memory. Callback: cb(success)
- *   reset(cb)           : Clear content in both memory and backend. Callback: cb(success)
- *   name()              : Return name of the map
- *   data()              : Return all elements in memory, as an associative array
- *   keys()              : Return all keys in both memory and backend, as an array.
- *   size()              : Return number of elements in memory and backend
- *   empty()             : Return true if map is emty   
+ *   set(key,value)     : Write element to memory
+ *   copy(map)          : Write all elements in given associative array to this map (in memory)
+ *                          e.g. M = {'a':'x','b':'y'};  X.copy(M); 
+ *   get(key)           : Read element with given key from memory, return the value
+ *   get(key,cb)        : Read element with given key from memory first, if not exists, read
+ *                        from backend storage then. Callback: cb(success, value)   
+ *   erase(key)         : Erase element from memory
+ *   clear()            : Clear content in memory
+ *   flush(cb)          : Flush changes to backend storage. Callback: cb(success)
+ *   retrieve(keys,cb)  : Retrieve elements with given list of keys from backend to memory
+ *                        Callback: cb(success)
+ *   restore(cb)        : Restore all elements from backend to memory. Callback: cb(success)
+ *   reset(cb)          : Clear content in both memory and backend. Callback: cb(success)
+ *   name()             : Return name of the map
+ *   data()             : Return all elements in memory, as an associative array
+ *   keys()             : Return all keys in both memory and backend, as an array.
+ *   size()             : Return number of elements in memory and backend
+ *   empty()            : Return true if map is emty, false otherwise   
+ *   contains(key)      : Return true if the map contains the key, false otherwise
+ *   isResident(key)    : Return true if the key is resident in memory, false otherwise
  */
 
-std.map = function(name) 
+std.persistentMap = function(name) 
 {
     this._type = 'map';
     this._name = name;
@@ -37,12 +39,12 @@ std.map = function(name)
     this._init(function(success){});
 };
 
-std.map.prototype._init = function(cb)
+std.persistentMap.prototype._init = function(cb)
 {
     system.storageRead(this._mapName, std.core.bind(this._initCommit, this, cb));
 };
 
-std.map.prototype._initCommit = function(cb, success, val)
+std.persistentMap.prototype._initCommit = function(cb, success, val)
 {
     if (!success)
         system.print('This is a new map')
@@ -54,20 +56,20 @@ std.map.prototype._initCommit = function(cb, success, val)
     cb(success);
 };
 
-std.map.prototype.set = function(key,value)
+std.persistentMap.prototype.set = function(key,value)
 {
     this._data[key]=value;
     this._dirtyKeys[key] = 1;
     this._keys[key] = 1;
 };
 
-std.map.prototype.copy = function(map)
+std.persistentMap.prototype.copy = function(map)
 {
     for(key in map)
         this.set(key, map[key]);
 }
 
-std.map.prototype.get = function()
+std.persistentMap.prototype.get = function()
 {
     if (arguments.length == 1) {
         key = arguments[0];
@@ -87,7 +89,7 @@ std.map.prototype.get = function()
     }
 };
 
-std.map.prototype._getCommit = function(key, cb, success, val)
+std.persistentMap.prototype._getCommit = function(key, cb, success, val)
 {
     if(!success)
         system.print('key does not exist');
@@ -96,7 +98,7 @@ std.map.prototype._getCommit = function(key, cb, success, val)
     cb(success, this._data[key]);
 };
 
-std.map.prototype.erase = function(key)
+std.persistentMap.prototype.erase = function(key)
 {
     delete this._data[key];
     delete this._keys[key];
@@ -106,13 +108,13 @@ std.map.prototype.erase = function(key)
         delete this._dirtyKeys[key];
 };
 
-std.map.prototype.clear = function()
+std.persistentMap.prototype.clear = function()
 {
     for (key in this._data)
         this.erase(key);
 };
 
-std.map.prototype.flush = function(cb)
+std.persistentMap.prototype.flush = function(cb)
 {
     system.storageBeginTransaction();
     for (key in this._dirtyKeys) {
@@ -125,7 +127,7 @@ std.map.prototype.flush = function(cb)
     system.storageCommit(std.core.bind(this._flushCommit, this, cb));
 };
 
-std.map.prototype._flushCommit = function(cb, success)
+std.persistentMap.prototype._flushCommit = function(cb, success)
 {
     if (!success)
         system.print('Flush fails');
@@ -136,7 +138,7 @@ std.map.prototype._flushCommit = function(cb, success)
     cb(success);
 };
 
-std.map.prototype.retrieve = function(keys, cb)
+std.persistentMap.prototype.retrieve = function(keys, cb)
 {
     system.storageBeginTransaction();
     for(i=0; i<keys.length; i++)
@@ -144,7 +146,7 @@ std.map.prototype.retrieve = function(keys, cb)
     system.storageCommit(std.core.bind(this._retrieveCommit, this, keys, cb));
 };
 
-std.map.prototype._retrieveCommit = function(keys, cb, success, val)
+std.persistentMap.prototype._retrieveCommit = function(keys, cb, success, val)
 {
     if(!success)
         system.print('Retrieve fails');
@@ -154,12 +156,12 @@ std.map.prototype._retrieveCommit = function(keys, cb, success, val)
     cb(success);
 };
 
-std.map.prototype.restore = function(cb)
+std.persistentMap.prototype.restore = function(cb)
 {
     system.storageRead(this._mapName, std.core.bind(this._restore, this, cb));
 };
 
-std.map.prototype._restore = function(cb, success, val) 
+std.persistentMap.prototype._restore = function(cb, success, val) 
 {
     if (!success) {
         system.print('Map does not exist');
@@ -183,7 +185,7 @@ std.map.prototype._restore = function(cb, success, val)
     }
 };
 
-std.map.prototype._restoreCommit = function(cb, success, val)
+std.persistentMap.prototype._restoreCommit = function(cb, success, val)
 {
     if (!success)
         system.print('Restore fails');
@@ -196,7 +198,7 @@ std.map.prototype._restoreCommit = function(cb, success, val)
     cb(success);
 };
 
-std.map.prototype.reset = function(cb)
+std.persistentMap.prototype.reset = function(cb)
 {
     system.storageBeginTransaction();
     system.storageErase(this._mapName);
@@ -208,7 +210,7 @@ std.map.prototype.reset = function(cb)
     system.storageCommit(std.core.bind(this._resetCommit, this, cb));
 };
 
-std.map.prototype._resetCommit = function(cb, success) 
+std.persistentMap.prototype._resetCommit = function(cb, success) 
 {
     if (!success)
         system.print('reset fails');
@@ -222,32 +224,48 @@ std.map.prototype._resetCommit = function(cb, success)
     cb(success);
 };
 
-std.map.prototype.type = function ()
+std.persistentMap.prototype.contains = function(key)
+{
+    if (key in this._keys)
+        return true;
+    else
+        return false;
+};
+
+std.persistentMap.prototype.isResident = function(key)
+{
+    if (key in this._data)
+        return true;
+    else
+        return false;
+};
+
+std.persistentMap.prototype.type = function()
 {
     return this._type;
 };
 
-std.map.prototype.name = function()
+std.persistentMap.prototype.name = function()
 {
     return this._name;
 };
 
-std.map.prototype.data = function()
+std.persistentMap.prototype.data = function()
 {
     return this._data;
 };
 
-std.map.prototype.dirtyKeys = function()
+std.persistentMap.prototype.dirtyKeys = function()
 {
     return KeystoList(this._dirtyKeys);
 };
 
-std.map.prototype.keys = function()
+std.persistentMap.prototype.keys = function()
 {
     return KeystoList(this._keys);
 };
 
-std.map.prototype.size = function()
+std.persistentMap.prototype.size = function()
 {
     size = 0;
     for (key in this._keys)
@@ -255,12 +273,12 @@ std.map.prototype.size = function()
     return size;
 };
 
-std.map.prototype.empty = function()
+std.persistentMap.prototype.empty = function()
 {
     for (key in this._keys)
         return false;
     return true;
-}
+};
 
 var keyName = function(name, subname) {
     return name + ':' + subname;
