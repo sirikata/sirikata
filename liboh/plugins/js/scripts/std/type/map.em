@@ -6,20 +6,20 @@ if (typeof(std) === "undefined") /** @namespace */ std = {};
  *
  * APIs:
  *   set(key,value)      : Write element to memory
- *   copy(map)           : Write all elements in given map to this map (in memory)
+ *   copy(map)           : Write all elements in a given associate array to this map (in memory)
  *                           e.g. M = {'a':'x','b':'y'};  X.copy(M); 
  *   get(key)            : Read element with given key from memory, return the value
  *   get(key,cb)         : Read element with given key from memory first, if not exists, read
  *                         from backend storage then. Callback: cb(success, value)   
  *   erase(key)          : Erase element from memory
  *   clear()             : Clear content in memory
- *   flush(cb)           : Flush changes in memory to backend storage. Callback: cb(success)
+ *   flush(cb)           : Flush changes to backend storage. Callback: cb(success)
  *   retrieve(keys,cb)   : Retrieve elements with given list of keys from backend to memory
  *                         Callback: cb(success)
  *   restore(cb)         : Restore all elements from backend to memory. Callback: cb(success)
  *   reset(cb)           : Clear content in both memory and backend. Callback: cb(success)
  *   name()              : Return name of the map
- *   data()              : Return all elements in memory, as format: {'a':'x','b':'y'}
+ *   data()              : Return all elements in memory, as an associate array
  *   keys()              : Return all keys in both memory and backend, as an array.
  *   size()              : Return number of elements in memory and backend
  *   empty()             : Return true if map is emty   
