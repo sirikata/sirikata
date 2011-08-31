@@ -194,7 +194,7 @@ void DistanceDownloadPlanner::unloadResource(Resource* r) {
     mWaitingResources[r->name] = r;
 
     r->loaded = false;
-    r->mesh->unload();
+    unrequestAssetForResource(r);
 }
 
 void DistanceDownloadPlanner::poll()
@@ -381,18 +381,20 @@ void DistanceDownloadPlanner::finishLoadAsset(Asset* asset, bool success) {
             Mesh::MeshdataPtr mdptr( std::tr1::dynamic_pointer_cast<Mesh::Meshdata>(asset->downloadTask->asset()) );
             if (mdptr) {
                 resource->mesh->loadMesh(mdptr, asset->ogreAssetName, asset->animations);
-                continue;
             }
 
             Mesh::BillboardPtr bbptr( std::tr1::dynamic_pointer_cast<Mesh::Billboard>(asset->downloadTask->asset()) );
             if (bbptr) {
                 resource->mesh->loadBillboard(bbptr, asset->ogreAssetName);
-                continue;
             }
         }
+
+        asset->usingResources.insert(resource_id);
     }
     asset->downloadTask.reset();
     asset->waitingResources.clear();
+
+    checkRemoveAsset(asset);
 }
 
 namespace {
@@ -645,6 +647,36 @@ void DistanceDownloadPlanner::loadDependentTextures(Asset* asset, bool usingDefa
                 asset->webMaterials.push_back(web_mat);
             }
         }
+    }
+}
+
+void DistanceDownloadPlanner::unrequestAssetForResource(Resource* forResource) {
+    assert(mAssets.find(forResource->file) != mAssets.end());
+    Asset* asset = mAssets[forResource->file];
+
+    // Make sure we're not displaying it anymore
+    forResource->mesh->unload();
+
+    // Clear the need for it
+    ResourceSet::iterator rit;
+    rit = asset->waitingResources.find(forResource->name);
+    if (rit != asset->waitingResources.end())
+        asset->waitingResources.erase(rit);
+    rit = asset->usingResources.find(forResource->name);
+    if (rit != asset->usingResources.end())
+        asset->usingResources.erase(rit);
+
+    // If nobody needs it anymore, clear it out.
+    checkRemoveAsset(asset);
+}
+
+void DistanceDownloadPlanner::checkRemoveAsset(Asset* asset) {
+    if (asset->waitingResources.empty() && asset->usingResources.empty()) {
+        // We need to be careful if a download is in progress.
+        if (asset->downloadTask) return;
+
+        mAssets.erase(asset->uri);
+        delete asset;
     }
 }
 

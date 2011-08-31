@@ -134,8 +134,10 @@ protected:
     struct Asset {
         Transfer::URI uri;
         AssetDownloadTaskPtr downloadTask;
-        // Resources that want this asset to be loaded
+        // Resources that want this asset to be loaded and are waiting for it
         ResourceSet waitingResources;
+        // Resources that are using this asset
+        ResourceSet usingResources;
         // Filled in by the loader with the name of the asset that's actually
         // used when creating an instance (unique name for mesh, billboard
         // texture, etc).
@@ -164,6 +166,14 @@ protected:
     void loadMeshdata(Asset* asset, const Mesh::MeshdataPtr& mdptr, bool usingDefault);
     void loadBillboard(Asset* asset, const Mesh::BillboardPtr& bbptr, bool usingDefault);
     void loadDependentTextures(Asset* asset, bool usingDefault);
+
+    // Removes the resource's need for the asset, potentially allowing it to be
+    // unloaded.
+    void unrequestAssetForResource(Resource*);
+
+    // Helper to check if it's safe to remove an asset and does so if
+    // possible. Properly handles current
+    void checkRemoveAsset(Asset* asset);
 
     bool mActiveCDNArchive;
     unsigned int mCDNArchive;
