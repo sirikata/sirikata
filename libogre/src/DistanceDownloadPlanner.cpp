@@ -55,6 +55,8 @@
 
 #include <FreeImage.h>
 
+#define DLPLANNER_LOG(lvl,msg) SILOG(dlplanner, lvl, msg);
+
 using namespace std;
 using namespace Sirikata;
 using namespace Sirikata::Transfer;
@@ -185,6 +187,9 @@ void DistanceDownloadPlanner::loadObject(Object* r) {
     mWaitingObjects.erase(r->name);
     mLoadedObjects[r->name] = r;
 
+    // After operation to get updated stats
+    DLPLANNER_LOG(detailed, "Loading object " << r->name << " (" << r->file << "), " << mLoadedObjects.size() << " loaded, " << mWaitingObjects.size() << " waiting");
+
     r->loaded = true;
     requestAssetForObject(r);
 }
@@ -192,6 +197,9 @@ void DistanceDownloadPlanner::loadObject(Object* r) {
 void DistanceDownloadPlanner::unloadObject(Object* r) {
     mLoadedObjects.erase(r->name);
     mWaitingObjects[r->name] = r;
+
+    // After operation to get updated stats
+    DLPLANNER_LOG(detailed, "Unloading object " << r->name << " (" << r->file << "), " << mLoadedObjects.size() << " loaded, " << mWaitingObjects.size() << " waiting");
 
     r->loaded = false;
     unrequestAssetForObject(r);
@@ -285,6 +293,8 @@ void DistanceDownloadPlanner::stop() {
 }
 
 void DistanceDownloadPlanner::requestAssetForObject(Object* forObject) {
+    DLPLANNER_LOG(detailed, "Requesting " << forObject->file << " for " << forObject->name);
+
     if (forObject->file.empty()) {
         forObject->mesh->loadEmpty();
         return;
@@ -314,6 +324,7 @@ void DistanceDownloadPlanner::requestAssetForObject(Object* forObject) {
 }
 
 void DistanceDownloadPlanner::downloadAsset(Asset* asset, Object* forObject) {
+    DLPLANNER_LOG(detailed, "Starting download of " << asset->uri);
     asset->downloadTask =
         AssetDownloadTask::construct(
             asset->uri, getScene(), forObject->priority,
@@ -325,6 +336,8 @@ void DistanceDownloadPlanner::downloadAsset(Asset* asset, Object* forObject) {
 void DistanceDownloadPlanner::loadAsset(Transfer::URI asset_uri) {
     if (mAssets.find(asset_uri) == mAssets.end()) return;
     Asset* asset = mAssets[asset_uri];
+
+    DLPLANNER_LOG(detailed, "Loading asset " << asset->uri);
 
     //get the mesh data and check that it is valid.
     bool usingDefault = false;
@@ -364,6 +377,9 @@ void DistanceDownloadPlanner::finishLoadAsset(Asset* asset, bool success) {
     // it finished (or failed)
     for(ObjectSet::iterator it = asset->waitingObjects.begin(); it != asset->waitingObjects.end(); it++) {
         const String& resource_id = *it;
+
+        DLPLANNER_LOG(detailed, "Using asset " << asset->uri << " for " << resource_id);
+
         // It may not even need it anymore if its not in the set of objects we
         // currently wnat loaded anymore (or not even exist anymore)
         ObjectMap::iterator rit = mObjects.find(resource_id);
@@ -651,6 +667,8 @@ void DistanceDownloadPlanner::loadDependentTextures(Asset* asset, bool usingDefa
 }
 
 void DistanceDownloadPlanner::unrequestAssetForObject(Object* forObject) {
+    DLPLANNER_LOG(detailed, "Unrequesting " << forObject->file << " for " << forObject->name);
+
     assert(mAssets.find(forObject->file) != mAssets.end());
     Asset* asset = mAssets[forObject->file];
 
@@ -674,6 +692,8 @@ void DistanceDownloadPlanner::checkRemoveAsset(Asset* asset) {
     if (asset->waitingObjects.empty() && asset->usingObjects.empty()) {
         // We need to be careful if a download is in progress.
         if (asset->downloadTask) return;
+
+        DLPLANNER_LOG(detailed, "Destroying unused asset " << asset->uri);
 
         mAssets.erase(asset->uri);
         delete asset;
