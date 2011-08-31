@@ -148,6 +148,9 @@ public:
     ///removes the camera from the list of attached cameras.
     virtual void detachCamera(Camera*);
 
+    void addObject(Entity* ent, const Transfer::URI& mesh);
+    void removeObject(Entity* ent);
+
     typedef std::tr1::function<void(Mesh::VisualPtr)> ParseMeshCallback;
     /** Tries to parse a mesh. Can handle different types of meshes and tries to
      *  find the right parser using magic numbers.  If it is unable to find the

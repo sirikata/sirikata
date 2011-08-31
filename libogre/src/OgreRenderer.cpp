@@ -267,8 +267,6 @@ OgreRenderer::OgreRenderer(Context* ctx)
    mDownloadPlanner(NULL),
    mNextFrameScreenshotFile("")
 {
-    mDownloadPlanner = new SAngleDownloadPlanner(mContext);
-
     try {
         // These have to be consistent with any other simulations -- e.g. the
         // space bullet plugin and scripting plugins that expose mesh data
@@ -505,6 +503,8 @@ bool OgreRenderer::initialize(const String& options, bool with_berkelium) {
     mSceneManager->setShadowFarDistance(shadowFarDistance->as<float32>());
     mSceneManager->setAmbientLight(Ogre::ColourValue(1.0,1.0,1.0,1.0));
     sActiveOgreScenes.push_back(this);
+
+    mDownloadPlanner = new SAngleDownloadPlanner(mContext, this);
 
     if (with_berkelium)
         new WebViewManager(0, mInputManager, getBerkeliumBinaryDir(mSearchPaths), getOgreResourcesDir(mSearchPaths));
@@ -954,6 +954,14 @@ void OgreRenderer::attachCamera(const String &renderTargetName, Camera* entity) 
 void OgreRenderer::detachCamera(Camera* entity) {
     if (mAttachedCameras.find(entity) == mAttachedCameras.end()) return;
     mAttachedCameras.erase(entity);
+}
+
+void OgreRenderer::addObject(Entity* ent, const Transfer::URI& mesh) {
+    mDownloadPlanner->addNewObject(ent, mesh);
+}
+
+void OgreRenderer::removeObject(Entity* ent) {
+    mDownloadPlanner->removeObject(ent);
 }
 
 void OgreRenderer::parseMesh(const Transfer::URI& orig_uri, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data, ParseMeshCallback cb) {

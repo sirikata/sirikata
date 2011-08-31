@@ -47,8 +47,10 @@ using namespace Sirikata::Graphics;
 namespace Sirikata {
 namespace Graphics {
 
-ResourceDownloadPlanner::ResourceDownloadPlanner(Context *c)
+ResourceDownloadPlanner::ResourceDownloadPlanner(Context *c, OgreRenderer* renderer)
  : PollingService(c->mainStrand, Duration::seconds(frequency), c, "Resource Download Planner Poll"),
+   mContext(c),
+   mScene(renderer),
    mMaxLoaded(2500)
 {
     c->add(this);
@@ -60,6 +62,9 @@ ResourceDownloadPlanner::~ResourceDownloadPlanner()
 
 }
 
+void ResourceDownloadPlanner::addNewObject(Graphics::Entity *ent, const Transfer::URI& mesh) {
+}
+
 void ResourceDownloadPlanner::addNewObject(ProxyObjectPtr p, Entity *mesh)
 {
 
@@ -69,6 +74,13 @@ void ResourceDownloadPlanner::updateObject(ProxyObjectPtr p)
 {
 
 }
+
+void ResourceDownloadPlanner::removeObject(ProxyObjectPtr p) {
+}
+
+void ResourceDownloadPlanner::removeObject(Graphics::Entity* mesh) {
+}
+
 
 void ResourceDownloadPlanner::setCamera(Camera *entity)
 {

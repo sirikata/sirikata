@@ -127,7 +127,7 @@ int main(int argc, char** argv) {
     MeshViewEntity* ent = new MeshViewEntity(renderer, GetOptionValue<String>("screenshot"));
     ent->setOgrePosition(Vector3d(0, 0, 0));
     ent->setOgreOrientation(Quaternion::identity());
-    ent->display(Transfer::URI(GetOptionValue<String>("mesh")));
+    renderer->addObject(ent, Transfer::URI(GetOptionValue<String>("mesh")));
 
     ctx->add(ctx);
     ctx->add(renderer);

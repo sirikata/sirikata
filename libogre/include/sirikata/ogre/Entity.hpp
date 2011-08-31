@@ -42,8 +42,6 @@
 #include <sirikata/core/transfer/URI.hpp>
 #include <sirikata/core/transfer/TransferData.hpp>
 
-#include <sirikata/ogre/resourceManager/AssetDownloadTask.hpp>
-
 #include <sirikata/core/util/ListenerProvider.hpp>
 #include <sirikata/core/util/Liveness.hpp>
 
@@ -55,7 +53,6 @@ namespace Graphics {
 
 class OgreRenderer;
 class Entity;
-class WebView;
 
 class SIRIKATA_OGRE_EXPORT EntityListener {
   public:
@@ -80,19 +77,8 @@ protected:
     ReplacedMaterialMap mReplacedMaterials;
     TextureBindingsMap mTextureBindings;
 
-    TextureBindingsMapPtr mTextureFingerprints;
-
     typedef std::vector<Ogre::Light*> LightList;
     LightList mLights;
-
-    Transfer::URI mURI;
-    String mURIString;
-
-    bool mActiveCDNArchive;
-    unsigned int mCDNArchive;
-
-    typedef std::vector<WebView*> WebMaterialList;
-    WebMaterialList mWebMaterials;
 
     // We need to track this because Ogre doesn't seem to do the right
     // thing if you toggle visibility with cascading, then later add
@@ -104,35 +90,14 @@ protected:
     String mInitialAnimationName;
 
 
-    AssetDownloadTaskPtr mAssetDownload;
-
     std::set<String> mAnimationList;
     bool mMeshLoaded;
 
     void fixTextures();
 
-    void createMesh(Liveness::Token alive);
-    // Utility to compute full hash of the content of a visual. This is needed
-    // because the hash of some date (e.g. a collada file) may be the same, but
-    // some textures may differ (the relative names are the same, but the data
-    // the absolute names point to differs).
-    SHA256 computeVisualHash(const Mesh::VisualPtr& visptr, AssetDownloadTaskPtr assetDownload);
-    void loadDependentTextures(AssetDownloadTaskPtr assetDownload, bool usingDefault);
-    void createMeshdata(const Mesh::MeshdataPtr& mdptr, bool usingDefault, AssetDownloadTaskPtr assetDownload);
-    void createBillboard(const Mesh::BillboardPtr& bbptr, bool usingDefault, AssetDownloadTaskPtr assetDownload);
-
     void init(Ogre::MovableObject *obj);
 
-    /** Load the mesh and use it for this entity
-     *  \param meshname the name (ID) of the mesh to use for this entity
-     */
-    void loadMesh(const String& meshname);
-    /** Load the billboard and use it for this entity
-     *  \param bbname the name (ID) of the billboard to use for this entity
-     */
-    void loadBillboard(Mesh::BillboardPtr bboard, const String& bbname);
-
-    void unloadEntity();
+    void beginLoad();
     void unloadMesh();
     void unloadBillboard();
 
@@ -203,18 +168,22 @@ public:
     void bindTexture(const std::string &textureName, const String& objId);
     void unbindTexture(const std::string &textureName);
 
-    // Trigger a download, load, & display of the given mesh.
-    void display(Transfer::URI const& newMesh);
-    // Fully 'undisplay', i.e. hide & unload the mesh.
-    void undisplay();
+    /** 'Load' an empty mesh, i.e. hide the object because it has no mesh. */
+    void loadEmpty();
+    /** Load the mesh and use it for this entity
+     *  \param meshname the name (ID) of the mesh to use for this entity
+     */
+    void loadMesh(Mesh::MeshdataPtr meshdata, const String& meshname, const std::set<String>& animations);
+    /** Load the billboard and use it for this entity
+     *  \param bbname the name (ID) of the billboard to use for this entity
+     */
+    void loadBillboard(Mesh::BillboardPtr bboard, const String& bbtexname);
+    /** Notify this entity (and it's listeners in turn) that loading of the
+     *  asset it depends on has failed.
+     */
+    void loadFailed();
 
-
-    protected:
-
-    // If a mesh had already been downloaded (by us or someone else), we have
-    // the hash, *and* the object still exists, we should be able to just add it
-    // to the scene.
-    bool tryInstantiateExistingMesh(const String& meshname);
+    void unload();
 };
 typedef std::tr1::shared_ptr<Entity> EntityPtr;
 

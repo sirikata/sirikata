@@ -36,8 +36,8 @@
 namespace Sirikata {
 namespace Graphics {
 
-SAngleDownloadPlanner::SAngleDownloadPlanner(Context* c)
- : DistanceDownloadPlanner(c)
+SAngleDownloadPlanner::SAngleDownloadPlanner(Context* c, OgreRenderer* renderer)
+ : DistanceDownloadPlanner(c, renderer)
 {
 
 }

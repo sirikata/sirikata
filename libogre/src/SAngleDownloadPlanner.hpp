@@ -41,7 +41,7 @@ namespace Graphics {
 class SAngleDownloadPlanner : public DistanceDownloadPlanner
 {
 public:
-    SAngleDownloadPlanner(Context *c);
+    SAngleDownloadPlanner(Context *c, OgreRenderer* renderer);
     ~SAngleDownloadPlanner();
 
 protected:

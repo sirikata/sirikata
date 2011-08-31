@@ -70,6 +70,8 @@ public:
 
     void windowResized();
 
+    OgreRenderer* getScene() { return mScene; }
+
     Ogre::Viewport* getViewport() {
         return mViewport;
     }

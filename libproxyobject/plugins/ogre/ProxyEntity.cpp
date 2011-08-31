@@ -133,7 +133,7 @@ void ProxyEntity::invalidated(ProxyObjectPtr ptr, bool permanent) {
 }
 
 void ProxyEntity::handleDestroyTimeout() {
-    unloadEntity();
+    unload();
 }
 
 void ProxyEntity::destroyed(ProxyObjectPtr ptr) {
