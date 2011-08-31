@@ -43,18 +43,18 @@ namespace Sirikata {
 static void InitPluginOptions() {
     Sirikata::InitializeClassOptions ico("cassandrastorage",NULL,
         new Sirikata::OptionValue("host", "localhost", Sirikata::OptionValueType<String>(), "Host name of Cassandra server"),
-        new Sirikata::OptionValue("port", "10051", Sirikata::OptionValueType<int32>(), "Port number"),
+        new Sirikata::OptionValue("port", "9160", Sirikata::OptionValueType<int32>(), "Port number"),
         NULL);
 
     Sirikata::InitializeClassOptions icop("cassandrapersistedset",NULL,
         new Sirikata::OptionValue("host", "localhost", Sirikata::OptionValueType<String>(), "Host name of Cassandra server"),
-        new Sirikata::OptionValue("port", "10051", Sirikata::OptionValueType<int32>(), "Port number"),
+        new Sirikata::OptionValue("port", "9160", Sirikata::OptionValueType<int32>(), "Port number"),
         new Sirikata::OptionValue("ohid", "0", Sirikata::OptionValueType<String>(), "Object Host ID"),
         NULL);
 
     Sirikata::InitializeClassOptions icof("cassandrafactory",NULL,
         new Sirikata::OptionValue("host", "localhost", Sirikata::OptionValueType<String>(), "Host name of Cassandra server"),
-        new Sirikata::OptionValue("port", "10051", Sirikata::OptionValueType<int32>(), "Port number"),
+        new Sirikata::OptionValue("port", "9160", Sirikata::OptionValueType<int32>(), "Port number"),
         new Sirikata::OptionValue("ohid", "default", Sirikata::OptionValueType<String>(), "Object Host ID"),
         NULL);
 }
