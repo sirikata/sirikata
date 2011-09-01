@@ -694,7 +694,16 @@ void SessionManager::setupSpaceConnection(ServerID server, SpaceNodeConnection::
 
     // Lookup the server's address
     Address4* addr = mServerIDMap->lookupExternal(server);
+    if (addr == NULL)
+    {
+        SESSION_LOG(error,"No record of server " << server<<\
+            " in SessionManager.cpp's serveridmap.  "\
+            "Aborting space setup operation.");
+        cb(NULL);
+        return;
+    }
     Address addy(convertAddress4ToSirikata(*addr));
+
 
     SpaceNodeConnection* conn = new SpaceNodeConnection(
         mContext,
