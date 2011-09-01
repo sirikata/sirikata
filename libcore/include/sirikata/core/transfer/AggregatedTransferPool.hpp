@@ -86,7 +86,14 @@ public:
         boost::unique_lock<boost::mutex> lock(mMutex);
 
         RequestDataMap::iterator it = mRequestData.find(req->getIdentifier());
-        assert(it != mRequestData.end());
+        // We want
+        //assert(it != mRequestData.end());
+        // but threading and the fact that callbacks are posted across
+        // strands means we might end up cleaning out a request and
+        // then very soon after get an updatePriority request, and
+        // then the callback is made which would make the request by
+        // the client invalid.
+        if (it == mRequestData.end()) return;
 
         // Update priority of individual request
         setRequestPriority(req, p);
@@ -100,7 +107,10 @@ public:
         boost::unique_lock<boost::mutex> lock(mMutex);
 
         RequestDataMap::iterator it = mRequestData.find(req->getIdentifier());
-        assert(it != mRequestData.end());
+        // We want
+        //assert(it != mRequestData.end());
+        // but can't assume it, see note in updatePriority
+        if (it == mRequestData.end()) return;
 
         // Remove from the list of input requests
         for(TransferRequestList::iterator in_it = it->second.inputRequests.begin();
