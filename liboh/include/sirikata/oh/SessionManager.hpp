@@ -329,6 +329,8 @@ private:
 
         ServerID getConnectingToServer(const SpaceObjectReference& sporef_obj_id);
 
+        ServerID getMigratingToServer(const SpaceObjectReference& sporef_obj_id);
+        
         //UUID getInternalID(const ObjectReference& space_objid) const;
 
         // We have to defer some callbacks sometimes for time

@@ -506,7 +506,6 @@ void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectRef
 
 void HostedObject::handleMigrated(const SpaceID& space, const ObjectReference& obj, ServerID server)
 {
-    
     // When we switch space servers, the ProxyObject's sequence
     // numbers will no longer match because this information isn't
     // moved with the object. Since we shouldn't get more updates from
