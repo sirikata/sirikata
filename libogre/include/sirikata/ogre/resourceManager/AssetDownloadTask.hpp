@@ -94,6 +94,8 @@ private:
     // asset) failing to download.
     void failDownload();
 
+    void cancelNoLock();
+
     // Get the URL for an asset, deciding automatically whether it
     // needs to be relative or absolute
     Transfer::URI getURL(const Transfer::URI& orig, const String& given_url);

@@ -86,6 +86,10 @@ void AssetDownloadTask::updatePriority(float64 priority) {
 
 void AssetDownloadTask::cancel() {
     boost::mutex::scoped_lock lok(mDependentDownloadMutex);
+    cancelNoLock();
+}
+
+void AssetDownloadTask::cancelNoLock() {
     for(ActiveDownloadMap::iterator it = mActiveDownloads.begin(); it != mActiveDownloads.end(); it++)
         it->second->cancel();
     mActiveDownloads.clear();
@@ -282,7 +286,7 @@ void AssetDownloadTask::textureDownloaded(std::tr1::shared_ptr<ChunkRequest> req
 
 void AssetDownloadTask::failDownload() {
     // Cancel will stop the current download process.
-    cancel();
+    cancelNoLock();
 
     // In this case, since it wasn't user requested, we also clear any parsed
     // data (e.g. if we failed on a texture download) and trigger a callback to
