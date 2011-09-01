@@ -89,7 +89,7 @@ void TransferMediator::execute_finished(std::tr1::shared_ptr<TransferRequest> re
     for(std::map<std::string, std::tr1::shared_ptr<TransferRequest> >::const_iterator
             it = allReqs.begin(); it != allReqs.end(); it++) {
         SILOG(transfer, detailed, "Notifying a caller that TransferRequest is complete");
-        it->second->notifyCaller(req);
+        it->second->notifyCaller(it->second, req);
     }
 
     mAggregateList.erase(findID);

@@ -181,7 +181,7 @@ private:
             in_it != inputRequests.end();
             in_it++) {
             MetadataRequestPtr metadata_req = std::tr1::dynamic_pointer_cast<MetadataRequest>(*in_it);
-            metadata_req->notifyCaller(req, response);
+            metadata_req->notifyCaller(metadata_req, req, response);
         }
     }
     void handleChunk(const String input_identifier, ChunkRequestPtr req, DenseDataPtr response) {
@@ -216,7 +216,7 @@ private:
             in_it != inputRequests.end();
             in_it++) {
             ChunkRequestPtr chunk_req = std::tr1::dynamic_pointer_cast<ChunkRequest>(*in_it);
-            chunk_req->notifyCaller(req, response);
+            chunk_req->notifyCaller(chunk_req, req, response);
         }
     }
 
