@@ -559,15 +559,23 @@ void Server::handleConnectAuthResponse(const ObjectHostConnectionManager::Connec
     // same object ID.
     if (isObjectConnected(obj_id) || isObjectConnecting(obj_id)) {
         // Decide whether this is a conflict or a retry
-        ObjectConnection* existing_conn = mObjects[obj_id];
-        if (existing_conn->connID() == oh_conn_id) {
+
+        if  //was already connected and it was the same oh sending msg
+            ((isObjectConnected(obj_id) &&
+            (mObjects[obj_id]->connID() == oh_conn_id)) ||
+            // or was connecting and was the same oh sending message
+            (isObjectConnecting(obj_id) &&
+                mStoredConnectionData[obj_id].conn_id == oh_conn_id))
+        {
             // retry, tell them they're fine.
             sendConnectSuccess(oh_conn_id, obj_id);
         }
-        else {
+        else
+        {
             // conflict, fail the new connection leaving existing alone
             sendConnectError(oh_conn_id, obj_id);
         }
+        
         return;
     }
 
