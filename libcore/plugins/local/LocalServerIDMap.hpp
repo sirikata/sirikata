@@ -55,6 +55,9 @@ public:
 
     virtual ServerID* lookupExternal(const Address4& pos);
     virtual Address4* lookupExternal(const ServerID& obj_id);
+
+    virtual void __debugPrintInternalIDMap(std::ostream& toPrintFrom);
+    virtual void __debugPrintExternalIDMap(std::ostream& toPrintFrom);
 };
 
 } // namespace Sirikata

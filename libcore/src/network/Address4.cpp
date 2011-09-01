@@ -69,4 +69,17 @@ Address convertAddress4ToSirikata(const Address4&addy) {
     return Address(hostname.str(),port.str());
 }
 
+String Address4::toString() const
+{
+    return convertAddress4ToSirikata(*this).toString();
+}
+
+std::ostream& operator<<(std::ostream& outter, const Address4& addr)
+{
+    outter<<addr.toString();
+    return outter;
+}
+
+
+
 }

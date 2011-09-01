@@ -85,4 +85,19 @@ Address4 *TabularServerIDMap::lookupExternal(const ServerID& server_id){
     return NULL;
 }
 
+void TabularServerIDMap::__debugPrintInternalIDMap(std::ostream& toPrintFrom)
+{
+    std::tr1::unordered_map<ServerID, Address4>::iterator internalIter = mInternalIDMap.begin();
+    for ( ; internalIter != mInternalIDMap.end(); ++internalIter)
+        toPrintFrom<<internalIter->first<<"\t"<<internalIter->second<<"\n";
+    toPrintFrom.flush();
 }
+void TabularServerIDMap::__debugPrintExternalIDMap(std::ostream& toPrintFrom)
+{
+    std::tr1::unordered_map<ServerID, Address4>::iterator externalIter = mExternalIDMap.begin();
+    for ( ; externalIter != mExternalIDMap.end(); ++externalIter)
+        toPrintFrom<<externalIter->first<<"\t"<<externalIter->second<<"\n";
+    toPrintFrom.flush();
+}
+
+}//end namespace sirikata

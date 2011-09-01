@@ -506,6 +506,7 @@ void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectRef
 
 void HostedObject::handleMigrated(const SpaceID& space, const ObjectReference& obj, ServerID server)
 {
+    
     // When we switch space servers, the ProxyObject's sequence
     // numbers will no longer match because this information isn't
     // moved with the object. Since we shouldn't get more updates from
@@ -626,6 +627,7 @@ void HostedObject::handleProximitySubstream(const SpaceObjectReference& spaceobj
 }
 
 void HostedObject::handleLocationSubstreamRead(const SpaceObjectReference& spaceobj, SSTStreamPtr s, std::stringstream* prevdata, uint8* buffer, int length) {
+    
     prevdata->write((const char*)buffer, length);
     if (handleLocationMessage(spaceobj, prevdata->str())) {
         // FIXME we should be getting a callback on stream close instead of

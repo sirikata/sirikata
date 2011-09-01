@@ -34,6 +34,7 @@
 #include "LocalServerIDMap.hpp"
 #include <boost/lexical_cast.hpp>
 
+
 namespace Sirikata {
 
 
@@ -68,5 +69,15 @@ Address4 *LocalServerIDMap::lookupExternal(const ServerID& server_id) {
     }
     return &mAddress;
 }
+
+void LocalServerIDMap::__debugPrintInternalIDMap(std::ostream& toPrintFrom)
+{
+    toPrintFrom<<mID<<"\t"<<mAddress<<"\n";
+}
+void LocalServerIDMap::__debugPrintExternalIDMap(std::ostream& toPrintFrom)
+{
+    __debugPrintInternalIDMap(toPrintFrom);
+}
+
 
 }
