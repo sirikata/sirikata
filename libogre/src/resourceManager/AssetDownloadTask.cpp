@@ -77,7 +77,15 @@ Transfer::URI AssetDownloadTask::getURL(const Transfer::URI& orig, const String&
     return Transfer::URI(given_url);
 }
 
+void AssetDownloadTask::updatePriority(float64 priority) {
+    boost::mutex::scoped_lock lok(mDependentDownloadMutex);
+    mPriority = priority;
+    for(ActiveDownloadMap::iterator it = mActiveDownloads.begin(); it != mActiveDownloads.end(); it++)
+        it->second->updatePriority(priority);
+}
+
 void AssetDownloadTask::cancel() {
+    boost::mutex::scoped_lock lok(mDependentDownloadMutex);
     for(ActiveDownloadMap::iterator it = mActiveDownloads.begin(); it != mActiveDownloads.end(); it++)
         it->second->cancel();
     mActiveDownloads.clear();
@@ -86,6 +94,7 @@ void AssetDownloadTask::cancel() {
 void AssetDownloadTask::downloadAssetFile() {
     assert( !mAssetURI.empty() );
 
+    boost::mutex::scoped_lock lok(mDependentDownloadMutex);
     ResourceDownloadTaskPtr dl = ResourceDownloadTask::construct(
         mAssetURI, mScene->transferPool(),
         mPriority,
@@ -103,6 +112,8 @@ void AssetDownloadTask::weakAssetFileDownloaded(std::tr1::weak_ptr<AssetDownload
 }
 
 void AssetDownloadTask::assetFileDownloaded(std::tr1::shared_ptr<ChunkRequest> request, std::tr1::shared_ptr<const DenseData> response) {
+    boost::mutex::scoped_lock lok(mDependentDownloadMutex);
+
     // Clear from the active download list
     assert(mActiveDownloads.size() == 1);
     mActiveDownloads.erase(mAssetURI);
@@ -212,6 +223,8 @@ void AssetDownloadTask::handleAssetParsed(Mesh::VisualPtr vis) {
 }
 
 void AssetDownloadTask::addDependentDownload(const Transfer::URI& depUrl) {
+    boost::mutex::scoped_lock lok(mDependentDownloadMutex);
+
     // Sometimes we get duplicate references, so make sure we're not already
     // working on this one.
     if (mActiveDownloads.find(depUrl) != mActiveDownloads.end()) return;
@@ -225,6 +238,8 @@ void AssetDownloadTask::addDependentDownload(const Transfer::URI& depUrl) {
 }
 
 void AssetDownloadTask::startDependentDownloads() {
+    boost::mutex::scoped_lock lok(mDependentDownloadMutex);
+
     // Copy since we could get callbacks as soon as we start the downloads
     ActiveDownloadMap downloads_copy(mActiveDownloads);
     for(ActiveDownloadMap::iterator it = downloads_copy.begin(); it != downloads_copy.end(); it++)

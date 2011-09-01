@@ -156,6 +156,13 @@ protected:
     typedef std::tr1::unordered_map<Transfer::URI, Asset*, Transfer::URI::Hasher> AssetMap;
     AssetMap mAssets;
 
+    // Because we aggregate all Asset requests so we only generate one
+    // AssetDownloadTask, we need to aggregate some priorities
+    // ourselves. Aggregation will still also be performed by other parts of the
+    // system on a per-Resource basis (TransferPool for multiple requests by
+    // different Assets, TransferMediator for requests across multiple Pools).
+    Transfer::PriorityAggregationAlgorithm* mAggregationAlgorithm;
+
     // These are a sequence of async operations that take a URI for a
     // resource/asset pair and gets it loaded. Some paths will terminate early
     // since multiple resources that share an asset can share many of these
@@ -172,6 +179,9 @@ protected:
     // Helper, notifies when resource has finished loading allowing us
     // to figure out when the entire asset has loaded
     void handleLoadedResource(Asset* asset);
+
+    // Update the priority for an asset from all it's requestors
+    void updateAssetPriority(Asset* asset);
 
     // Removes the resource's need for the asset, potentially allowing it to be
     // unloaded.

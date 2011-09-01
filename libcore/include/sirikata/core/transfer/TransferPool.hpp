@@ -237,6 +237,9 @@ typedef std::tr1::shared_ptr<ChunkRequest> ChunkRequestPtr;
 class PriorityAggregationAlgorithm {
 
 public:
+    // Return an aggregated priority given a list of priorities
+    virtual TransferRequest::PriorityType aggregate(
+        const std::vector<TransferRequest::PriorityType> &) const = 0;
 
     //Return an aggregated priority given the list of priorities
     virtual TransferRequest::PriorityType aggregate(

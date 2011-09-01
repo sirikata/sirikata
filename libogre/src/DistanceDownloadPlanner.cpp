@@ -39,6 +39,8 @@
 
 #include <sirikata/core/network/IOStrandImpl.hpp>
 
+#include <sirikata/core/transfer/MaxPriorityAggregation.hpp>
+
 #include <sirikata/ogre/OgreRenderer.hpp>
 #include <sirikata/ogre/OgreHeaders.hpp>
 #include <sirikata/ogre/resourceManager/CDNArchive.hpp>
@@ -83,12 +85,15 @@ DistanceDownloadPlanner::Asset::~Asset() {
 DistanceDownloadPlanner::DistanceDownloadPlanner(Context* c, OgreRenderer* renderer)
  : ResourceDownloadPlanner(c, renderer)
 {
+    mAggregationAlgorithm = new Transfer::MaxPriorityAggregation();
+
     mCDNArchive = CDNArchiveFactory::getSingleton().addArchive();
     mActiveCDNArchive = true;
 }
 
 DistanceDownloadPlanner::~DistanceDownloadPlanner()
 {
+    delete mAggregationAlgorithm;
     if (mActiveCDNArchive) {
         CDNArchiveFactory::getSingleton().removeArchive(mCDNArchive);
         mActiveCDNArchive=false;
@@ -96,6 +101,7 @@ DistanceDownloadPlanner::~DistanceDownloadPlanner()
 }
 
 void DistanceDownloadPlanner::addObject(Object* r) {
+    calculatePriority(r->proxy);
     mObjects[r->name] = r;
     mWaitingObjects[r->name] = r;
     checkShouldLoadNewObject(r);
@@ -281,6 +287,13 @@ void DistanceDownloadPlanner::poll()
             }
         }
     }
+
+    // Finally, now that we've settled on the set of Objects that are being
+    // loaded, update the per-Asset priorities for currently loading assets
+    for(AssetMap::iterator it = mAssets.begin(); it != mAssets.end(); it++) {
+        Asset* asset = it->second;
+        updateAssetPriority(asset);
+    }
 }
 
 void DistanceDownloadPlanner::stop() {
@@ -309,16 +322,15 @@ void DistanceDownloadPlanner::requestAssetForObject(Object* forObject) {
         asset = asset_it->second;
     }
 
-    // If we're already setup for this asset, just leave things alone
-    // FIXME priorities...
-    if (asset->waitingObjects.find(forObject->id()) != asset->waitingObjects.end()) return;
-
+    assert(asset->waitingObjects.find(forObject->id()) == asset->waitingObjects.end());
     asset->waitingObjects.insert(forObject->id());
 
-    // Another Object might have already requested downloading
-    // FIXME update priority
+    // Another Object might have already requested downloading. If it did, we
+    // don't need to request anything and polling will update the priorities.
     if (!asset->downloadTask)
         downloadAsset(asset, forObject);
+    else
+        updateAssetPriority(asset);
 }
 
 void DistanceDownloadPlanner::downloadAsset(Asset* asset, Object* forObject) {
@@ -371,6 +383,7 @@ void DistanceDownloadPlanner::loadAsset(Transfer::URI asset_uri) {
 }
 
 void DistanceDownloadPlanner::finishLoadAsset(Asset* asset, bool success) {
+    DLPLANNER_LOG(detailed, "Finishing load of asset " << asset->uri << " (priority " << asset->downloadTask->priority() << ")");
     // We need to notify all Objects (objects) waiting for this to load that
     // it finished (or failed)
     for(ObjectSet::iterator it = asset->waitingObjects.begin(); it != asset->waitingObjects.end(); it++) {
@@ -622,6 +635,22 @@ void DistanceDownloadPlanner::handleLoadedResource(Asset* asset) {
     }
 }
 
+void DistanceDownloadPlanner::updateAssetPriority(Asset* asset) {
+    // We only care about updating priorities when we're still downloading
+    // the asset.
+    if (!asset->downloadTask) return;
+
+    std::vector<TransferRequest::PriorityType> priorities;
+    for(ObjectSet::iterator obj_it = asset->waitingObjects.begin(); obj_it != asset->waitingObjects.end(); obj_it++) {
+        String objid = *obj_it;
+        assert(mObjects.find(objid) != mObjects.end());
+        Object* obj = mObjects[objid];
+
+        priorities.push_back(obj->priority);
+    }
+    if (!priorities.empty())
+        asset->downloadTask->updatePriority( mAggregationAlgorithm->aggregate(priorities) );
+}
 
 void DistanceDownloadPlanner::unrequestAssetForObject(Object* forObject) {
     if (forObject->file.empty()) return;
@@ -643,6 +672,8 @@ void DistanceDownloadPlanner::unrequestAssetForObject(Object* forObject) {
     if (rit != asset->usingObjects.end())
         asset->usingObjects.erase(rit);
 
+    // If somebody is still using it, update priority
+    updateAssetPriority(asset);
     // If nobody needs it anymore, clear it out.
     checkRemoveAsset(asset);
 }

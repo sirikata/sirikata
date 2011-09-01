@@ -56,6 +56,12 @@ ResourceDownloadTask::~ResourceDownloadTask()
     cancel();
 }
 
+void ResourceDownloadTask::updatePriority(float64 priority) {
+    mPriority = priority;
+    if (mCurrentRequest)
+        mTransferPool->updatePriority(mCurrentRequest, priority);
+}
+
 void ResourceDownloadTask::cancel() {
     // Delete request and ensure we won't perform the callback even if it's in
     // the process of finishing
