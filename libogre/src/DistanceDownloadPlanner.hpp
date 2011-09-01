@@ -148,6 +148,8 @@ protected:
 
         WebMaterialList webMaterials;
 
+        uint16 loadingResources;
+
         Asset(const Transfer::URI& name);
         ~Asset();
     };
@@ -166,6 +168,10 @@ protected:
     void loadMeshdata(Asset* asset, const Mesh::MeshdataPtr& mdptr, bool usingDefault);
     void loadBillboard(Asset* asset, const Mesh::BillboardPtr& bbptr, bool usingDefault);
     void loadDependentTextures(Asset* asset, bool usingDefault);
+
+    // Helper, notifies when resource has finished loading allowing us
+    // to figure out when the entire asset has loaded
+    void handleLoadedResource(Asset* asset);
 
     // Removes the resource's need for the asset, potentially allowing it to be
     // unloaded.

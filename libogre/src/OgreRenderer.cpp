@@ -59,7 +59,7 @@
 //#include </Developer/SDKs/MacOSX10.4u.sdk/System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/HIToolbox.framework/Versions/A/Headers/HIView.h>
 #include <sirikata/ogre/WebViewManager.hpp>
 
-
+#include "ResourceLoader.hpp"
 #include "DistanceDownloadPlanner.hpp"
 #include "SAngleDownloadPlanner.hpp"
 
@@ -504,6 +504,7 @@ bool OgreRenderer::initialize(const String& options, bool with_berkelium) {
     mSceneManager->setAmbientLight(Ogre::ColourValue(1.0,1.0,1.0,1.0));
     sActiveOgreScenes.push_back(this);
 
+    mResourceLoader = new ResourceLoader();
     mDownloadPlanner = new SAngleDownloadPlanner(mContext, this);
 
     if (with_berkelium)
@@ -821,6 +822,8 @@ void OgreRenderer::preFrame(Task::LocalTime currentTime, Duration frameTime) {
     Time cur_time = mContext->simTime();
     for (iter = mMovingEntities.begin(); iter != mMovingEntities.end(); iter++)
         (*iter)->tick(cur_time, frameTime);
+
+    mResourceLoader->tick();
 }
 
 void OgreRenderer::postFrame(Task::LocalTime current, Duration frameTime) {

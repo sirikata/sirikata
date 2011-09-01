@@ -42,14 +42,7 @@
 #include <sirikata/ogre/OgreRenderer.hpp>
 #include <sirikata/ogre/OgreHeaders.hpp>
 #include <sirikata/ogre/resourceManager/CDNArchive.hpp>
-
-#include <OgreMeshManager.h>
-#include <OgreMaterialManager.h>
-#include <OgreSkeletonManager.h>
-
-#include "ManualMaterialLoader.hpp"
-#include "ManualSkeletonLoader.hpp"
-#include "ManualMeshLoader.hpp"
+#include "ResourceLoader.hpp"
 
 #include <sirikata/ogre/WebViewManager.hpp>
 
@@ -75,7 +68,8 @@ DistanceDownloadPlanner::Object::Object(Graphics::Entity *m, const Transfer::URI
 {}
 
 DistanceDownloadPlanner::Asset::Asset(const Transfer::URI& name)
- : uri(name)
+ : uri(name),
+   loadingResources(0)
 {
     textureFingerprints = TextureBindingsMapPtr(new TextureBindingsMap());
 }
@@ -338,6 +332,8 @@ void DistanceDownloadPlanner::downloadAsset(Asset* asset, Object* forObject) {
 }
 
 void DistanceDownloadPlanner::loadAsset(Transfer::URI asset_uri) {
+    DLPLANNER_LOG(detailed, "Finished downloading " << asset_uri);
+
     if (mAssets.find(asset_uri) == mAssets.end()) return;
     Asset* asset = mAssets[asset_uri];
 
@@ -359,14 +355,12 @@ void DistanceDownloadPlanner::loadAsset(Transfer::URI asset_uri) {
     Mesh::MeshdataPtr mdptr( std::tr1::dynamic_pointer_cast<Mesh::Meshdata>(visptr) );
     if (mdptr) {
         loadMeshdata(asset, mdptr, usingDefault);
-        finishLoadAsset(asset, true);
         return;
     }
 
     Mesh::BillboardPtr bbptr( std::tr1::dynamic_pointer_cast<Mesh::Billboard>(visptr) );
     if (bbptr) {
         loadBillboard(asset, bbptr, usingDefault);
-        finishLoadAsset(asset, true);
         return;
     }
 
@@ -466,71 +460,41 @@ void DistanceDownloadPlanner::loadMeshdata(Asset* asset, const Mesh::MeshdataPtr
     String meshname = computeVisualHash(mdptr, assetDownload).toString();
     asset->ogreAssetName = meshname;
 
-    // If we already have it, just load the existing one
-    if (ogreHasMesh(meshname)) return;
+    // Note that we don't check if the mesh exists here. Even if it does, we
+    // still submit everything for loading so it can be ref counted by
+    // ResourceLoader.
 
     loadDependentTextures(asset, usingDefault);
 
     if (!mdptr->instances.empty()) {
-        Ogre::MaterialManager& matm = Ogre::MaterialManager::getSingleton();
         int index=0;
         for (Mesh::MaterialEffectInfoList::const_iterator mat=mdptr->materials.begin(),mate=mdptr->materials.end();mat!=mate;++mat,++index) {
             std::string matname = ogreMaterialName(meshname, index);
-            Ogre::MaterialPtr matPtr=matm.getByName(matname);
-            if (matPtr.isNull()) {
-                Ogre::ManualResourceLoader * reload;
-                matPtr = matm.create(
-                    matname, Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME, true,
-                    (reload=new ManualMaterialLoader (mdptr, matname, *mat, asset->uri, asset->textureFingerprints))
-                );
-
-                reload->prepareResource(&*matPtr);
-                reload->loadResource(&*matPtr);
-            }
+            getScene()->getResourceLoader()->loadMaterial(
+                matname, mdptr, *mat, asset->uri, asset->textureFingerprints,
+                std::tr1::bind(&DistanceDownloadPlanner::handleLoadedResource, this, asset)
+            );
+            asset->loadingResources++;
         }
 
-        // Skeleton
-        Ogre::SkeletonPtr skel(NULL);
+        // Skeleton. Make sure this is submitted first so that the mesh loading
+        // can find it by name.
+        String skelname = "";
         if (!mdptr->joints.empty()) {
-
-            Ogre::SkeletonManager& skel_mgr = Ogre::SkeletonManager::getSingleton();
-            Ogre::ManualResourceLoader *reload;
-            skel = Ogre::SkeletonPtr(skel_mgr.create(ogreSkeletonName(meshname),Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME, true,
-                                                     (reload=new ManualSkeletonLoader(mdptr, asset->animations))));
-            reload->prepareResource(&*skel);
-            reload->loadResource(&*skel);
-
-            if (! ((ManualSkeletonLoader*)reload)->wasSkeletonLoaded()) {
-              skel.setNull();
-            }
+            skelname = ogreSkeletonName(meshname);
+            getScene()->getResourceLoader()->loadSkeleton(
+                skelname, mdptr, asset->animations,
+                std::tr1::bind(&DistanceDownloadPlanner::handleLoadedResource, this, asset)
+            );
+            asset->loadingResources++;
         }
-
 
         // Mesh
-        {
-            Ogre::MeshManager& mm = Ogre::MeshManager::getSingleton();
-            /// FIXME: set bounds, bounding radius here
-            Ogre::ManualResourceLoader *reload;
-            Ogre::MeshPtr mo (mm.createManual(meshname,Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,(reload=
-#ifdef _WIN32
-#ifdef NDEBUG
-			OGRE_NEW
-#else
-			new
-#endif
-#else
-			OGRE_NEW
-#endif
-                        ManualMeshLoader(mdptr, meshname))));
-            reload->prepareResource(&*mo);
-            reload->loadResource(&*mo);
-
-            if (!skel.isNull())
-                mo->_notifySkeleton(skel);
-
-
-            bool check = mm.resourceExists(meshname);
-        }
+        getScene()->getResourceLoader()->loadMesh(
+            meshname, mdptr, skelname,
+            std::tr1::bind(&DistanceDownloadPlanner::handleLoadedResource, this, asset)
+        );
+        asset->loadingResources++;
     }
 
     // Lights
@@ -582,42 +546,13 @@ void DistanceDownloadPlanner::loadBillboard(Asset* asset, const Mesh::BillboardP
     loadDependentTextures(asset, usingDefault);
 
     // Load the single material
-    Ogre::MaterialManager& matm = Ogre::MaterialManager::getSingleton();
-
     std::string matname = ogreMaterialName(bbname, 0);
     asset->ogreAssetName = matname;
-    Ogre::MaterialPtr matPtr = matm.getByName(matname);
-    if (matPtr.isNull()) {
-        Ogre::ManualResourceLoader* reload;
-
-        // We need to fill in a MaterialEffectInfo because the loader we're
-        // using only knows how to process them for Meshdatas right now
-        Mesh::MaterialEffectInfo matinfo;
-        matinfo.shininess = 0.0f;
-        matinfo.reflectivity = 1.0f;
-        matinfo.textures.push_back(Mesh::MaterialEffectInfo::Texture());
-        Mesh::MaterialEffectInfo::Texture& tex = matinfo.textures.back();
-        tex.uri = bbptr->image;
-        tex.color = Vector4f(1.f, 1.f, 1.f, 1.f);
-        tex.texCoord = 0;
-        tex.affecting = Mesh::MaterialEffectInfo::Texture::AMBIENT;
-        tex.samplerType = Mesh::MaterialEffectInfo::Texture::SAMPLER_TYPE_2D;
-        tex.minFilter = Mesh::MaterialEffectInfo::Texture::SAMPLER_FILTER_LINEAR_MIPMAP_LINEAR;
-        tex.magFilter = Mesh::MaterialEffectInfo::Texture::SAMPLER_FILTER_LINEAR_MIPMAP_LINEAR;
-        tex.wrapS = Mesh::MaterialEffectInfo::Texture::WRAP_MODE_NONE;
-        tex.wrapT = Mesh::MaterialEffectInfo::Texture::WRAP_MODE_NONE;
-        tex.wrapU = Mesh::MaterialEffectInfo::Texture::WRAP_MODE_NONE;
-        tex.mipBias = 0.0f;
-        tex.maxMipLevel = 20;
-
-        matPtr = matm.create(
-            matname, Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME, true,
-            (reload = new ManualMaterialLoader (bbptr, matname, matinfo, asset->uri, asset->textureFingerprints))
-        );
-
-        reload->prepareResource(&*matPtr);
-        reload->loadResource(&*matPtr);
-    }
+    getScene()->getResourceLoader()->loadBillboardMaterial(
+        matname, bbptr->image, asset->uri, asset->textureFingerprints,
+        std::tr1::bind(&DistanceDownloadPlanner::handleLoadedResource, this, asset)
+    );
+    asset->loadingResources++;
 
     // The BillboardSet that actually gets rendered is like an Ogre::Entity,
     // load it in a similar way. There is no equivalent of the Ogre::Mesh -- we
@@ -654,6 +589,15 @@ void DistanceDownloadPlanner::loadDependentTextures(Asset* asset, bool usingDefa
             FreeImage_CloseMemory(mem_img_data);
             if (fif != FIF_UNKNOWN) {
                 CDNArchiveFactory::getSingleton().addArchiveData(mCDNArchive,id,SparseData(tex_data.response));
+                // Submit for loading. This would happen automatically, but
+                // submitting it here blocks loading of the mesh before the
+                // textures are all loaded and allows the textures to be loaded
+                // across many frames
+                getScene()->getResourceLoader()->loadTexture(
+                    id,
+                    std::tr1::bind(&DistanceDownloadPlanner::handleLoadedResource, this, asset)
+                );
+                asset->loadingResources++;
             }
             else if (tex_data.request->getURI().scheme() == "http") {
                 // Or, if its an http URL, we can try displaying it in a webview
@@ -670,7 +614,18 @@ void DistanceDownloadPlanner::loadDependentTextures(Asset* asset, bool usingDefa
     }
 }
 
+
+void DistanceDownloadPlanner::handleLoadedResource(Asset* asset) {
+    asset->loadingResources--;
+    if (asset->loadingResources == 0) {
+        finishLoadAsset(asset, true);
+    }
+}
+
+
 void DistanceDownloadPlanner::unrequestAssetForObject(Object* forObject) {
+    if (forObject->file.empty()) return;
+
     DLPLANNER_LOG(detailed, "Unrequesting " << forObject->file << " for " << forObject->name);
 
     assert(mAssets.find(forObject->file) != mAssets.end());

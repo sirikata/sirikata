@@ -49,6 +49,7 @@ ManualMaterialLoader::ManualMaterialLoader(
     TextureBindingsMapPtr textureFingerprints)
  : mTextureFingerprints(textureFingerprints)
 {
+    // mVisualPtr keeps mMat pointer valid
     mVisualPtr = visptr;
     mName = name;
     mMat=&mat;

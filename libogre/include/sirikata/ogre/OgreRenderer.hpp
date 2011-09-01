@@ -58,6 +58,7 @@ namespace Graphics {
 class Camera;
 class Entity;
 
+class ResourceLoader;
 class CDNArchivePlugin;
 class ResourceDownloadPlanner;
 
@@ -108,6 +109,10 @@ public:
 
     SDLInputManager *getInputManager() {
         return mInputManager;
+    }
+
+    ResourceLoader* getResourceLoader() const {
+        return mResourceLoader;
     }
 
     // TimeSteppedQueryableSimulation Interface
@@ -258,7 +263,7 @@ public:
 
     Transfer::TransferPoolPtr mTransferPool;
 
-
+    ResourceLoader* mResourceLoader;
     ResourceDownloadPlanner* mDownloadPlanner;
 
     typedef std::tr1::unordered_map<String,Entity*> SceneEntitiesMap;
