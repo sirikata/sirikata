@@ -487,6 +487,7 @@ void DistanceDownloadPlanner::loadMeshdata(Asset* asset, const Mesh::MeshdataPtr
                 matname, mdptr, *mat, asset->uri, asset->textureFingerprints,
                 std::tr1::bind(&DistanceDownloadPlanner::handleLoadedResource, this, asset)
             );
+            asset->loadedResources.push_back(matname);
             asset->loadingResources++;
         }
 
@@ -499,6 +500,7 @@ void DistanceDownloadPlanner::loadMeshdata(Asset* asset, const Mesh::MeshdataPtr
                 skelname, mdptr, asset->animations,
                 std::tr1::bind(&DistanceDownloadPlanner::handleLoadedResource, this, asset)
             );
+            asset->loadedResources.push_back(skelname);
             asset->loadingResources++;
         }
 
@@ -507,6 +509,7 @@ void DistanceDownloadPlanner::loadMeshdata(Asset* asset, const Mesh::MeshdataPtr
             meshname, mdptr, skelname,
             std::tr1::bind(&DistanceDownloadPlanner::handleLoadedResource, this, asset)
         );
+        asset->loadedResources.push_back(meshname);
         asset->loadingResources++;
     }
 
@@ -565,6 +568,7 @@ void DistanceDownloadPlanner::loadBillboard(Asset* asset, const Mesh::BillboardP
         matname, bbptr->image, asset->uri, asset->textureFingerprints,
         std::tr1::bind(&DistanceDownloadPlanner::handleLoadedResource, this, asset)
     );
+    asset->loadedResources.push_back(matname);
     asset->loadingResources++;
 
     // The BillboardSet that actually gets rendered is like an Ogre::Entity,
@@ -610,6 +614,7 @@ void DistanceDownloadPlanner::loadDependentTextures(Asset* asset, bool usingDefa
                     id,
                     std::tr1::bind(&DistanceDownloadPlanner::handleLoadedResource, this, asset)
                 );
+                asset->loadedResources.push_back(id);
                 asset->loadingResources++;
             }
             else if (tex_data.request->getURI().scheme() == "http") {
@@ -685,6 +690,14 @@ void DistanceDownloadPlanner::checkRemoveAsset(Asset* asset) {
 
         DLPLANNER_LOG(detailed, "Destroying unused asset " << asset->uri);
 
+        // Tell ResourceLoader we no longer need the data. Go
+        // backwards so that dependencies get resolved properly.
+        for(Asset::ResourceNameList::reverse_iterator rit = asset->loadedResources.rbegin();
+            rit != asset->loadedResources.rend(); rit++) {
+            getScene()->getResourceLoader()->unloadResource(*rit);
+        }
+
+        // And really erase it
         mAssets.erase(asset->uri);
         delete asset;
     }

@@ -46,20 +46,25 @@ public:
 
     void loadMaterial(const String& name, Mesh::MeshdataPtr mesh, const Mesh::MaterialEffectInfo& mat, const Transfer::URI& uri, TextureBindingsMapPtr textureFingerprints, LoadedCallback cb);
     void loadBillboardMaterial(const String& name, const String& texuri, const Transfer::URI& uri, TextureBindingsMapPtr textureFingerprints, LoadedCallback cb);
-    void unloadMaterial(const String& name);
 
     void loadSkeleton(const String& name, Mesh::MeshdataPtr mesh, const std::set<String>& animationList, LoadedCallback cb);
-    void unloadSkeleton(const String& name);
 
     void loadMesh(const String& name, Mesh::MeshdataPtr mesh, const String& skeletonName, LoadedCallback cb);
-    void unloadMesh(const String& name);
 
     void loadTexture(const String& name, LoadedCallback cb);
-    void unloadTexture(const String& name);
+
+    void unloadResource(const String& name);
 
     void tick();
 
 private:
+    enum ResourceType {
+        ResourceTypeMaterial,
+        ResourceTypeTexture,
+        ResourceTypeSkeleton,
+        ResourceTypeMesh
+    };
+
     void loadMaterialWork(const String& name, Mesh::MeshdataPtr mesh, const Mesh::MaterialEffectInfo& mat, const Transfer::URI& uri, TextureBindingsMapPtr textureFingerprints, LoadedCallback cb);
 
     void loadBillboardMaterialWork(const String& name, const String& texuri, const Transfer::URI& uri, TextureBindingsMapPtr textureFingerprints, LoadedCallback cb);
@@ -70,6 +75,15 @@ private:
 
     void loadTextureWork(const String& name, LoadedCallback cb);
 
+    void unloadResourceWork(const String& name, ResourceType type);
+
+    // Refcounting utilities:
+    // Increment or start refcount at 1
+    void incRefCount(const String& name, ResourceType type);
+    // Decrement and possibly request unloading
+    void decRefCount(const String& name);
+
+
     const Duration mPerFrameTime;
     TimeProfiler::Stage* mProfilerStage;
 
@@ -77,6 +91,31 @@ private:
     // passed our time threshold.
     typedef std::tr1::function<void()> Task;
     std::queue<Task> mTasks;
+
+    // Track ref counts for each object. To simplify management for
+    // the users of this class, we track the type.
+    struct ResourceData {
+        ResourceData(ResourceType t)
+         : type(t), refcount(1)
+        {}
+
+        ResourceType type;
+        int32 refcount;
+    };
+    typedef std::map<String, ResourceData> RefCountMap;
+    RefCountMap mRefCounts;
+
+
+    // Ogre currently has a problem with removing materials
+    // (specifically some internal state about Passes isn't properly
+    // marked as dirty), which apparently has something to do with
+    // multiple render systems (we have at least the main one and one
+    // for overlays). When we remove a material we need to reset
+    // render queues to force things back to a clean state.
+    // (See http://www.ogre3d.org/forums/viewtopic.php?p=282082)
+    bool mNeedRenderQueuesReset;
+    void resetRenderQueues();
+
 };
 
 } // namespace Graphics

@@ -15,13 +15,20 @@
 #include <OgreMaterialManager.h>
 #include <OgreTextureManager.h>
 
+#include <OgreRoot.h>
+#include <OgreSceneManager.h>
+#include <OgrePass.h>
+
 #include <sirikata/core/util/Time.hpp>
+
+#define OGRERL_LOG(lvl, msg) SILOG(ogre-resource-loader, lvl, msg)
 
 namespace Sirikata {
 namespace Graphics {
 
 ResourceLoader::ResourceLoader(Context* ctx, const Duration& per_frame_time)
- : mPerFrameTime(per_frame_time)
+ : mPerFrameTime(per_frame_time),
+   mNeedRenderQueuesReset(false)
 {
     mProfilerStage = ctx->profiler->addStage("Ogre Resource Loader");
 }
@@ -31,6 +38,7 @@ ResourceLoader::~ResourceLoader() {
 }
 
 void ResourceLoader::loadMaterial(const String& name, Mesh::MeshdataPtr mesh, const Mesh::MaterialEffectInfo& mat, const Transfer::URI& uri, TextureBindingsMapPtr textureFingerprints, LoadedCallback cb) {
+    incRefCount(name, ResourceTypeMaterial);
     mTasks.push( std::tr1::bind(&ResourceLoader::loadMaterialWork, this, name, mesh, mat, uri, textureFingerprints, cb) );
 }
 
@@ -51,6 +59,7 @@ void ResourceLoader::loadMaterialWork(const String& name, Mesh::MeshdataPtr mesh
 }
 
 void ResourceLoader::loadBillboardMaterial(const String& name, const String& texuri, const Transfer::URI& uri, TextureBindingsMapPtr textureFingerprints, LoadedCallback cb) {
+    incRefCount(name, ResourceTypeMaterial);
     mTasks.push( std::tr1::bind(&ResourceLoader::loadBillboardMaterialWork, this, name, texuri, uri, textureFingerprints, cb) );
 }
 
@@ -92,11 +101,10 @@ void ResourceLoader::loadBillboardMaterialWork(const String& name, const String&
     cb();
 }
 
-void ResourceLoader::unloadMaterial(const String& name) {
-}
 
 
 void ResourceLoader::loadSkeleton(const String& name, Mesh::MeshdataPtr mesh, const std::set<String>& animationList, LoadedCallback cb) {
+    incRefCount(name, ResourceTypeSkeleton);
     mTasks.push( std::tr1::bind(&ResourceLoader::loadSkeletonWork, this, name, mesh, animationList, cb) );
 }
 
@@ -113,11 +121,9 @@ void ResourceLoader::loadSkeletonWork(const String& name, Mesh::MeshdataPtr mesh
     cb();
 }
 
-void ResourceLoader::unloadSkeleton(const String& name) {
-}
-
 
 void ResourceLoader::loadMesh(const String& name, Mesh::MeshdataPtr mesh, const String& skeletonName, LoadedCallback cb) {
+    incRefCount(name, ResourceTypeMesh);
     mTasks.push( std::tr1::bind(&ResourceLoader::loadMeshWork, this, name, mesh, skeletonName, cb) );
 }
 
@@ -151,11 +157,9 @@ void ResourceLoader::loadMeshWork(const String& name, Mesh::MeshdataPtr mesh, co
     cb();
 }
 
-void ResourceLoader::unloadMesh(const String& name) {
-}
-
 
 void ResourceLoader::loadTexture(const String& name, LoadedCallback cb) {
+    incRefCount(name, ResourceTypeTexture);
     mTasks.push( std::tr1::bind(&ResourceLoader::loadTextureWork, this, name, cb) );
 }
 
@@ -165,8 +169,63 @@ void ResourceLoader::loadTextureWork(const String& name, LoadedCallback cb) {
     cb();
 }
 
-void ResourceLoader::unloadTexture(const String& name) {
+void ResourceLoader::unloadResource(const String& name) {
+    decRefCount(name);
 }
+
+void ResourceLoader::incRefCount(const String& name, ResourceType type) {
+    RefCountMap::iterator it = mRefCounts.find(name);
+    if (it == mRefCounts.end())
+        mRefCounts.insert( RefCountMap::value_type(name, ResourceData(type)) );
+    else
+        it->second.refcount++;
+}
+
+void ResourceLoader::decRefCount(const String& name) {
+    RefCountMap::iterator it = mRefCounts.find(name);
+    assert(it != mRefCounts.end());
+    it->second.refcount--;
+    if (it->second.refcount == 0) {
+        // Schedule unloading. This is performed as a task because
+        // loading may not have actually occurred yet -- despite
+        // refcount > 0 it may still be sitting in the task
+        // queue. This way we guarantee ordering.
+        OGRERL_LOG(detailed, "Unloading " << name);
+        mTasks.push( std::tr1::bind(&ResourceLoader::unloadResourceWork, this, name, it->second.type) );
+        mRefCounts.erase(it);
+    }
+}
+
+void ResourceLoader::unloadResourceWork(const String& name, ResourceType type) {
+    switch(type) {
+      case ResourceTypeMaterial:
+          {
+              Ogre::MaterialManager& matm = Ogre::MaterialManager::getSingleton();
+              matm.remove(name);
+              mNeedRenderQueuesReset = true;
+          }
+        break;
+      case ResourceTypeTexture:
+          {
+              Ogre::TextureManager& texm = Ogre::TextureManager::getSingleton();
+              texm.remove(name);
+          }
+        break;
+      case ResourceTypeSkeleton:
+          {
+              Ogre::SkeletonManager& skelm = Ogre::SkeletonManager::getSingleton();
+              skelm.remove(name);
+          }
+        break;
+      case ResourceTypeMesh:
+          {
+              Ogre::MeshManager& meshm = Ogre::MeshManager::getSingleton();
+              meshm.remove(name);
+          }
+        break;
+    }
+}
+
 
 void ResourceLoader::tick() {
     if (mTasks.empty()) return;
@@ -184,7 +243,26 @@ void ResourceLoader::tick() {
         if (end - start > mPerFrameTime) break;
     }
 
+    if (mNeedRenderQueuesReset)
+        resetRenderQueues();
+
     mProfilerStage->finished();
+}
+
+void ResourceLoader::resetRenderQueues() {
+    Ogre::Root& root = Ogre::Root::getSingleton();
+    Ogre::SceneManagerEnumerator::SceneManagerIterator scenesIter = root.getSceneManagerIterator();
+    while (scenesIter.hasMoreElements()) {
+        Ogre::SceneManager* pScene = scenesIter.getNext();
+        if (pScene) {
+            Ogre::RenderQueue* pQueue = pScene->getRenderQueue();
+            if (pQueue) {
+                pQueue->clear(true);
+            }
+        }
+    }
+    Ogre::Pass::processPendingPassUpdates();
+    mNeedRenderQueuesReset = false;
 }
 
 } // namespace Graphics
