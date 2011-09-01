@@ -566,7 +566,6 @@ bool Forwarder::routeObjectMessageToServer(Sirikata::Protocol::Object::ObjectMes
       TIMESTAMP(obj_msg, Trace::DROPPED_AT_SPACE_ENQUEUED);
       TRACE_DROP(DROPPED_AT_SPACE_ENQUEUED);
   }
-  delete obj_msg;
 
   // Note that this is done *after* the real message is sent since it is an optimization and
   // we don't want it blocking useful traffic
@@ -576,12 +575,6 @@ bool Forwarder::routeObjectMessageToServer(Sirikata::Protocol::Object::ObjectMes
       // FIXME we used to kind of keep track of sending the same OSeg cache fix to a server multiple
       // times, but it really only applied for the rate of lookups/migrations.  We should a) determine
       // if this is actually a problem and b) if it is, take a more principled approach to solving it.
-#ifdef CRAQ_DEBUG
-      std::cout<<"\n\n bftm debug Sending an oseg cache update message at time:  "<<mContext->simTime().raw()<<"\n";
-      std::cout<<"\t for object:  "<<obj_id.toString()<<"\n";
-      std::cout<<"\t to server:   "<<mServersToUpdate[obj_id][s]<<"\n";
-      std::cout<<"\t obj on:      "<<dest_serv<<"\n\n";
-#endif
 
       Sirikata::Protocol::OSeg::UpdateOSegMessage contents;
       contents.set_servid_sending_update(mContext->id());
@@ -600,7 +593,7 @@ bool Forwarder::routeObjectMessageToServer(Sirikata::Protocol::Object::ObjectMes
       // Ignore the success of this send.  If it failed the remote ends cache
       // will just continue to be incorrect, but forwarding will cover the error
   }
-
+  delete obj_msg;
   return send_success;
 }
 
