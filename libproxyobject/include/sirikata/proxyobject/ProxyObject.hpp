@@ -165,8 +165,6 @@ public:
         return mParent.get();
     }
 
-    double priority;
-
 
     ///Returns the unique identification for this object and the space to which it is connected that gives it said name
     inline const SpaceObjectReference&getObjectReference() const{

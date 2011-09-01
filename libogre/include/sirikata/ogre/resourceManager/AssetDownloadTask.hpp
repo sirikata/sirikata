@@ -67,7 +67,9 @@ public:
 
     Mesh::VisualPtr asset() const { return mAsset; }
     const Dependencies& dependencies() const { return mDependencies; }
+    float64 priority() const { return mPriority; }
 
+    void updatePriority(float64 priority);
     void cancel();
 private:
     void downloadAssetFile();
@@ -92,14 +94,15 @@ private:
     // asset) failing to download.
     void failDownload();
 
+    void cancelNoLock();
+
     // Get the URL for an asset, deciding automatically whether it
     // needs to be relative or absolute
     Transfer::URI getURL(const Transfer::URI& orig, const String& given_url);
 
     Graphics::OgreRenderer *const mScene;
     Transfer::URI mAssetURI;
-    double mPriority; // FIXME this should really be a function or functor to
-                      // get priority so it can be kept up to date
+    double mPriority;
     FinishedCallback mCB;
 
     Mesh::VisualPtr mAsset;

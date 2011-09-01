@@ -94,17 +94,40 @@ void ChunkRequest::execute_finished(std::tr1::shared_ptr<const DenseData> respon
     SILOG(transfer, detailed, "done ChunkRequest execute_finished");
 }
 
-void ChunkRequest::notifyCaller(std::tr1::shared_ptr<TransferRequest> from) {
-    std::tr1::shared_ptr<ChunkRequest> fromC =
-      std::tr1::static_pointer_cast<ChunkRequest, TransferRequest>(from);
-    HttpManager::getSingleton().postCallback(std::tr1::bind(mCallback, fromC, fromC->mDenseData));
-    SILOG(transfer, detailed, "done ChunkRequest notifyCaller");
+void ChunkRequest::notifyCaller(TransferRequestPtr me, TransferRequestPtr from) {
+    ChunkRequestPtr fromC =
+        std::tr1::static_pointer_cast<ChunkRequest, TransferRequest>(from);
+    notifyCaller(me, from, fromC->mDenseData);
 }
 
-void ChunkRequest::notifyCaller(std::tr1::shared_ptr<TransferRequest> from, DenseDataPtr data) {
-    std::tr1::shared_ptr<ChunkRequest> fromC =
-      std::tr1::static_pointer_cast<ChunkRequest, TransferRequest>(from);
-    HttpManager::getSingleton().postCallback(std::tr1::bind(mCallback, fromC, data));
+void ChunkRequest::notifyCaller(TransferRequestPtr me, TransferRequestPtr from, DenseDataPtr data) {
+    ChunkRequestPtr meC =
+        std::tr1::static_pointer_cast<ChunkRequest, TransferRequest>(me);
+    ChunkRequestPtr fromC =
+        std::tr1::static_pointer_cast<ChunkRequest, TransferRequest>(from);
+
+    // We need to be careful about what we pass to the
+    // callback. Currently, the only accessible information that
+    // wouldn't be in our own object but is in the request we're
+    // generating the callback from is the file metadata. Other things
+    // (e.g. the response data) are internal only.
+    if (meC->mURI == fromC->mURI) {
+        meC->mMetadata = fromC->mMetadata;
+    }
+    else {
+        // Replace the RemoteFileMetadata, but overwrite the requested URL
+        // with the one from this request.
+        RemoteFileMetadataPtr frommd = fromC->mMetadata;
+        meC->mMetadata = RemoteFileMetadataPtr(
+            new RemoteFileMetadata(
+                frommd->getFingerprint(), frommd->getURI(), frommd->getSize(),
+                frommd->getChunkList(), frommd->getHeaders()
+            )
+        );
+    }
+
+    // To pass back the original request, we need to copy data over
+    HttpManager::getSingleton().postCallback(std::tr1::bind(mCallback, meC, data));
     SILOG(transfer, detailed, "done ChunkRequest notifyCaller");
 }
 

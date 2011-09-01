@@ -192,6 +192,11 @@ int main (int argc, char** argv) {
     ctx->run(1);
 
     ctx->cleanup();
+
+    if (GetOptionValue<bool>(PROFILE)) {
+        ctx->profiler->report();
+    }
+
     trace->prepareShutdown();
     Mesh::FilterFactory::destroy();
     ModelsSystemFactory::destroy();

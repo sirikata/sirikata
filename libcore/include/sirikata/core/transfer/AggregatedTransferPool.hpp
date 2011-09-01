@@ -86,7 +86,14 @@ public:
         boost::unique_lock<boost::mutex> lock(mMutex);
 
         RequestDataMap::iterator it = mRequestData.find(req->getIdentifier());
-        assert(it != mRequestData.end());
+        // We want
+        //assert(it != mRequestData.end());
+        // but threading and the fact that callbacks are posted across
+        // strands means we might end up cleaning out a request and
+        // then very soon after get an updatePriority request, and
+        // then the callback is made which would make the request by
+        // the client invalid.
+        if (it == mRequestData.end()) return;
 
         // Update priority of individual request
         setRequestPriority(req, p);
@@ -100,7 +107,10 @@ public:
         boost::unique_lock<boost::mutex> lock(mMutex);
 
         RequestDataMap::iterator it = mRequestData.find(req->getIdentifier());
-        assert(it != mRequestData.end());
+        // We want
+        //assert(it != mRequestData.end());
+        // but can't assume it, see note in updatePriority
+        if (it == mRequestData.end()) return;
 
         // Remove from the list of input requests
         for(TransferRequestList::iterator in_it = it->second.inputRequests.begin();
@@ -181,7 +191,7 @@ private:
             in_it != inputRequests.end();
             in_it++) {
             MetadataRequestPtr metadata_req = std::tr1::dynamic_pointer_cast<MetadataRequest>(*in_it);
-            metadata_req->notifyCaller(req, response);
+            metadata_req->notifyCaller(metadata_req, req, response);
         }
     }
     void handleChunk(const String input_identifier, ChunkRequestPtr req, DenseDataPtr response) {
@@ -216,7 +226,7 @@ private:
             in_it != inputRequests.end();
             in_it++) {
             ChunkRequestPtr chunk_req = std::tr1::dynamic_pointer_cast<ChunkRequest>(*in_it);
-            chunk_req->notifyCaller(req, response);
+            chunk_req->notifyCaller(chunk_req, req, response);
         }
     }
 

@@ -77,6 +77,7 @@ public:
         return mStarted;
     }
 
+    void updatePriority(float64 priority);
     void cancel();
 protected:
     ResourceDownloadTask(const URI& uri, TransferPoolPtr transfer_pool, double priority, DownloadCallback cb);

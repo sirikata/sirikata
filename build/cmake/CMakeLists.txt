@@ -1194,6 +1194,7 @@ SET(LIBOGRE_SOURCES
   ${LIBOGRE_SOURCE_DIR}/ManualMaterialLoader.cpp
   ${LIBOGRE_SOURCE_DIR}/ManualSkeletonLoader.cpp
   ${LIBOGRE_SOURCE_DIR}/ManualMeshLoader.cpp
+  ${LIBOGRE_SOURCE_DIR}/ResourceLoader.cpp
   ${LIBOGRE_SOURCE_DIR}/Entity.cpp
   ${LIBOGRE_SOURCE_DIR}/ResourceDownloadPlanner.cpp
   ${LIBOGRE_SOURCE_DIR}/DistanceDownloadPlanner.cpp

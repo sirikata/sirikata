@@ -84,7 +84,7 @@ public:
 
 	virtual void execute(std::tr1::shared_ptr<TransferRequest> req, ExecuteFinished cb) = 0;
 
-    virtual void notifyCaller(std::tr1::shared_ptr<TransferRequest>) = 0;
+    virtual void notifyCaller(TransferRequestPtr me, TransferRequestPtr from) = 0;
 
 	virtual ~TransferRequest() {}
 
@@ -111,10 +111,11 @@ protected:
 
 };
 
+class MetadataRequest;
+typedef std::tr1::shared_ptr<MetadataRequest> MetadataRequestPtr;
 /*
  * Handles requests for metadata of a file when all you have is the URI
  */
-
 class SIRIKATA_EXPORT MetadataRequest: public TransferRequest {
 
 public:
@@ -139,15 +140,17 @@ public:
 
     void execute(std::tr1::shared_ptr<TransferRequest> req, ExecuteFinished cb);
 
-    inline void notifyCaller(std::tr1::shared_ptr<TransferRequest> from) {
+    inline void notifyCaller(TransferRequestPtr me, TransferRequestPtr from) {
+        std::tr1::shared_ptr<MetadataRequest> meC =
+            std::tr1::static_pointer_cast<MetadataRequest, TransferRequest>(me);
         std::tr1::shared_ptr<MetadataRequest> fromC =
-                std::tr1::static_pointer_cast<MetadataRequest, TransferRequest>(from);
-        mCallback(fromC, fromC->mRemoteFileMetadata);
+            std::tr1::static_pointer_cast<MetadataRequest, TransferRequest>(from);
+        mCallback(meC, fromC->mRemoteFileMetadata);
     }
-    inline void notifyCaller(TransferRequestPtr from, RemoteFileMetadataPtr data) {
+    inline void notifyCaller(MetadataRequestPtr me, TransferRequestPtr from, RemoteFileMetadataPtr data) {
         std::tr1::shared_ptr<MetadataRequest> fromC =
                 std::tr1::static_pointer_cast<MetadataRequest, TransferRequest>(from);
-        mCallback(fromC, data);
+        mCallback(me, data);
     }
 
     inline bool operator==(const MetadataRequest& other) const {
@@ -180,8 +183,6 @@ protected:
     }
 
 };
-
-typedef std::tr1::shared_ptr<MetadataRequest> MetadataRequestPtr;
 
 
 /*
@@ -217,8 +218,8 @@ public:
 
     void execute_finished(std::tr1::shared_ptr<const DenseData> response, ExecuteFinished cb);
 
-    void notifyCaller(std::tr1::shared_ptr<TransferRequest> from);
-    void notifyCaller(std::tr1::shared_ptr<TransferRequest> from, DenseDataPtr data);
+    void notifyCaller(TransferRequestPtr me, TransferRequestPtr from);
+    void notifyCaller(TransferRequestPtr me, TransferRequestPtr from, DenseDataPtr data);
 
 protected:
     std::tr1::shared_ptr<RemoteFileMetadata> mMetadata;
@@ -236,6 +237,9 @@ typedef std::tr1::shared_ptr<ChunkRequest> ChunkRequestPtr;
 class PriorityAggregationAlgorithm {
 
 public:
+    // Return an aggregated priority given a list of priorities
+    virtual TransferRequest::PriorityType aggregate(
+        const std::vector<TransferRequest::PriorityType> &) const = 0;
 
     //Return an aggregated priority given the list of priorities
     virtual TransferRequest::PriorityType aggregate(

@@ -47,12 +47,14 @@ class Entity;
 class SIRIKATA_OGRE_EXPORT ResourceDownloadPlanner : public PollingService
 {
 public:
-    ResourceDownloadPlanner(Context* c);
+    ResourceDownloadPlanner(Context* c, OgreRenderer* renderer);
     ~ResourceDownloadPlanner();
 
+    virtual void addNewObject(Graphics::Entity *ent, const Transfer::URI& mesh);
     virtual void addNewObject(ProxyObjectPtr p, Graphics::Entity *mesh);
     virtual void updateObject(ProxyObjectPtr p);
-    virtual void removeObject(ProxyObjectPtr p) = 0;
+    virtual void removeObject(ProxyObjectPtr p);
+    virtual void removeObject(Graphics::Entity* mesh);
     virtual void setCamera(Graphics::Camera *entity);
 
     //PollingService interface
@@ -60,7 +62,11 @@ public:
     virtual void stop();
 
     virtual void setMaxObjects(int32 new_max);
+
+    OgreRenderer* getScene() const { return mScene; }
 protected:
+    Context* mContext;
+    OgreRenderer* mScene;
     Graphics::Camera *camera;
     int32 mMaxLoaded;
 };

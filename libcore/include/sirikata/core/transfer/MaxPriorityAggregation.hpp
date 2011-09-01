@@ -46,6 +46,15 @@ class MaxPriorityAggregation : public PriorityAggregationAlgorithm {
 
 public:
 
+    virtual TransferRequest::PriorityType aggregate(
+        const std::vector<TransferRequest::PriorityType>& l) const {
+        TransferRequest::PriorityType max = (*l.begin());
+        for (std::vector<TransferRequest::PriorityType>::const_iterator it = ++(l.begin()); it != l.end(); it++) {
+            if ((*it) > max) max = *it;
+        }
+        return max;
+    }
+
     //Return an aggregated priority given the list of priorities
     virtual TransferRequest::PriorityType aggregate(
         const std::map<std::string, TransferRequestPtr > & l) const {
