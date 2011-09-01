@@ -7,6 +7,8 @@
 
 #include <sirikata/mesh/Meshdata.hpp>
 #include <sirikata/core/transfer/URI.hpp>
+#include <sirikata/core/util/Time.hpp>
+#include <sirikata/core/service/Context.hpp>
 #include "ManualMaterialLoader.hpp"
 
 namespace Sirikata {
@@ -33,7 +35,14 @@ class ResourceLoader {
 public:
     typedef std::tr1::function<void()> LoadedCallback;
 
-    ResourceLoader();
+    /** Create a ResourceLoader.
+     *  \param per_frame_time maximum amount of time to spend loading
+     *  resources. This isn't a guarantee, rather a best
+     *  effort. Single resource loading tasks that exceed this time
+     *  can't be avoided.
+     */
+    ResourceLoader(Context* ctx, const Duration& per_frame_time);
+    ~ResourceLoader();
 
     void loadMaterial(const String& name, Mesh::MeshdataPtr mesh, const Mesh::MaterialEffectInfo& mat, const Transfer::URI& uri, TextureBindingsMapPtr textureFingerprints, LoadedCallback cb);
     void loadBillboardMaterial(const String& name, const String& texuri, const Transfer::URI& uri, TextureBindingsMapPtr textureFingerprints, LoadedCallback cb);
@@ -60,6 +69,9 @@ private:
     void loadMeshWork(const String& name, Mesh::MeshdataPtr mesh, const String& skeletonName, LoadedCallback cb);
 
     void loadTextureWork(const String& name, LoadedCallback cb);
+
+    const Duration mPerFrameTime;
+    TimeProfiler::Stage* mProfilerStage;
 
     // This is just a task queue where tick() makes sure we stop when we've
     // passed our time threshold.

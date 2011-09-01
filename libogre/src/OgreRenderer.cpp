@@ -298,6 +298,7 @@ bool OgreRenderer::initialize(const String& options, bool with_berkelium) {
     OptionValue*createWindow;
     OptionValue*ogreSceneManager;
     OptionValue*windowTitle;
+    OptionValue* frameLoadDuration;
     OptionValue*shadowTechnique;
     OptionValue*shadowFarDistance;
     OptionValue*renderBufferAutoMipmap;
@@ -325,6 +326,7 @@ bool OgreRenderer::initialize(const String& options, bool with_berkelium) {
                            mWindowDepth=new OptionValue("colordepth","8a",OgrePixelFormatParser(),"Pixel color depth"),
                            renderBufferAutoMipmap=new OptionValue("rendertargetautomipmap","false",OptionValueType<bool>(),"If the render target needs auto mipmaps generated"),
                            mFrameDuration=new OptionValue("fps","30",FrequencyType(),"Target framerate"),
+                           frameLoadDuration=new OptionValue("load-duration","1ms",OptionValueType<Duration>(),"Amount of time to spend loading resources per frame. Keep low to maintain good frame rates."),
                            shadowTechnique=new OptionValue("shadows","none",ShadowType(),"Shadow Style=[none,texture_additive,texture_modulative,stencil_additive,stencil_modulaive]"),
                            shadowFarDistance=new OptionValue("shadowfar","1000",OptionValueType<float32>(),"The distance away a shadowcaster may hide the light"),
                            mParallaxSteps=new OptionValue("parallax-steps","1.0",OptionValueType<float>(),"Multiplies the per-material parallax steps by this constant (default 1.0)"),
@@ -504,7 +506,7 @@ bool OgreRenderer::initialize(const String& options, bool with_berkelium) {
     mSceneManager->setAmbientLight(Ogre::ColourValue(1.0,1.0,1.0,1.0));
     sActiveOgreScenes.push_back(this);
 
-    mResourceLoader = new ResourceLoader();
+    mResourceLoader = new ResourceLoader(mContext, frameLoadDuration->as<Duration>());
     mDownloadPlanner = new SAngleDownloadPlanner(mContext, this);
 
     if (with_berkelium)

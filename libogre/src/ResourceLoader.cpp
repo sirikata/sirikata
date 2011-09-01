@@ -20,7 +20,14 @@
 namespace Sirikata {
 namespace Graphics {
 
-ResourceLoader::ResourceLoader() {
+ResourceLoader::ResourceLoader(Context* ctx, const Duration& per_frame_time)
+ : mPerFrameTime(per_frame_time)
+{
+    mProfilerStage = ctx->profiler->addStage("Ogre Resource Loader");
+}
+
+ResourceLoader::~ResourceLoader() {
+    delete mProfilerStage;
 }
 
 void ResourceLoader::loadMaterial(const String& name, Mesh::MeshdataPtr mesh, const Mesh::MaterialEffectInfo& mat, const Transfer::URI& uri, TextureBindingsMapPtr textureFingerprints, LoadedCallback cb) {
@@ -162,8 +169,11 @@ void ResourceLoader::unloadTexture(const String& name) {
 }
 
 void ResourceLoader::tick() {
+    if (mTasks.empty()) return;
+
+    mProfilerStage->started();
+
     static Duration null_offset = Duration::zero();
-    static Duration max_time = Duration::milliseconds((int64)5);
     Time start = Time::now(null_offset);
 
     while(!mTasks.empty()) {
@@ -171,8 +181,10 @@ void ResourceLoader::tick() {
         mTasks.pop();
 
         Time end = Time::now(null_offset);
-        if (end - start > max_time) break;
+        if (end - start > mPerFrameTime) break;
     }
+
+    mProfilerStage->finished();
 }
 
 } // namespace Graphics
