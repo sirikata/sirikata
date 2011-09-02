@@ -56,4 +56,4 @@ public:
 };
 
 const String CassandraStressTest::dbhost("localhost");
-const String CassandraStressTest::dbport("10051");
+const String CassandraStressTest::dbport("9160");

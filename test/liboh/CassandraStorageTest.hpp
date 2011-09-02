@@ -61,7 +61,11 @@ public:
 
     void testAtmoicWrite() {_base.testAtmoicWrite(); }
     void testAtmoicWriteErase() {_base.testAtmoicWriteErase(); }
+
+    void testRangeRead() {_base.testRangeRead(); }
+    void testCount() {_base.testCount(); }
+    //void testRangeErase() {_base.testRangeErase(); }
 };
 
 const String CassandraStorageTest::dbhost("localhost");
-const String CassandraStorageTest::dbport("10051");
+const String CassandraStorageTest::dbport("9160");

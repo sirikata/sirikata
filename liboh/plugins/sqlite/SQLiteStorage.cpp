@@ -371,7 +371,6 @@ bool SQLiteStorage::erase(const Bucket& bucket, const Key& key, const CommitCall
     return true;
 }
 
-
 bool SQLiteStorage::write(const Bucket& bucket, const Key& key, const String& strToWrite, const CommitCallback& cb, const String& timestamp) {
     bool is_new = false;
     Transaction* trans = getTransaction(bucket, &is_new);
@@ -401,10 +400,21 @@ bool SQLiteStorage::read(const Bucket& bucket, const Key& key, const CommitCallb
     {
         commitTransaction(bucket, cb);
     }
-//    std::cout<<"--------------"<<std::endl;
+
     return true;
 }
 
+bool SQLiteStorage::rangeRead(const Bucket& bucket, const Key& start, const Key& finish, const CommitCallback& cb, const String& timestamp) {
+	return true;
+}
+
+bool SQLiteStorage::rangeErase(const Bucket& bucket, const Key& start, const Key& finish, const CommitCallback& cb, const String& timestamp) {
+	return true;
+}
+
+bool SQLiteStorage::count(const Bucket& bucket, const Key& start, const Key& finish, const CountCallback& cb, const String& timestamp) {
+	return true;
+}
 
 } //end namespace OH
 } //end namespace Sirikata

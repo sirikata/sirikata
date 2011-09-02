@@ -55,12 +55,20 @@ public:
     virtual bool erase(const Bucket& bucket, const Key& key, const CommitCallback& cb = 0, const String& timestamp="current");
     virtual bool write(const Bucket& bucket, const Key& key, const String& value, const CommitCallback& cb = 0, const String& timestamp="current");
     virtual bool read(const Bucket& bucket, const Key& key, const CommitCallback& cb = 0, const String& timestamp="current");
+    virtual bool rangeRead(const Bucket& bucket, const Key& start, const Key& finish, const CommitCallback& cb = 0, const String& timestamp="current");
+    virtual bool rangeErase(const Bucket& bucket, const Key& start, const Key& finish, const CommitCallback& cb = 0, const String& timestamp="current");
+    virtual bool count(const Bucket& bucket, const Key& start, const Key& finish, const CountCallback& cb = 0, const String& timestamp="current");
+
 
 private:
 
     typedef std::vector<String> Keys;
     typedef org::apache::cassandra::Column Column;
     typedef std::vector<Column> Columns;
+    typedef org::apache::cassandra::SliceRange SliceRange;
+    typedef org::apache::cassandra::ColumnParent ColumnParent;
+    typedef org::apache::cassandra::SlicePredicate SlicePredicate;
+
 
     typedef std::tr1::tuple<String,   //column family
                             String,   //row key
@@ -109,13 +117,14 @@ private:
     // Executes a commit. Runs in a separate thread, so the transaction is
     // passed in directly
     void executeCommit(const Bucket& bucket, Transaction* trans, CommitCallback cb, const String& timestamp);
+    void executeCount(const Bucket& bucket, ColumnParent parent, SlicePredicate predicate, CountCallback cb, const String& timestamp);
 
     // Complete a commit back in the main thread, cleaning it up and dispatching the callback
     void completeCommit(Transaction* trans, CommitCallback cb, bool success, ReadSet* rs);
+    void completeCount(CountCallback cb, bool success, int32_t count);
 
     // Call libcassandra methods to commit transcation
     bool CassandraCommit(CassandraDBPtr db, const Bucket& bucket, Columns* columns, Keys* eraseKeys, Keys* readKeys, ReadSet* rs, const String& timestamp);
-
 
     ObjectHostContext* mContext;
     BucketTransactions mTransactions;

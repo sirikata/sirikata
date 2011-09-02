@@ -217,7 +217,6 @@ bool FileStorage::erase(const Bucket& bucket, const Key& key, const CommitCallba
     return true;
 }
 
-
 bool FileStorage::write(const Bucket& bucket, const Key& key, const String& strToWrite, const CommitCallback& cb, const String& timestamp)
 {
     if (!boost::filesystem::exists(getStoragePath(bucket)))
@@ -232,7 +231,6 @@ bool FileStorage::write(const Bucket& bucket, const Key& key, const String& strT
 
     return true;
 }
-
 
 bool FileStorage::clearOutstanding(const Bucket& bucket)
 {
@@ -266,6 +264,18 @@ bool FileStorage::read(const Bucket& bucket, const Key& key, const CommitCallbac
         commitTransaction(bucket, cb);
 
     return true;
+}
+
+bool FileStorage::rangeRead(const Bucket& bucket, const Key& start, const Key& finish, const CommitCallback& cb, const String& timestamp) {
+	return true;
+}
+
+bool FileStorage::rangeErase(const Bucket& bucket, const Key& start, const Key& finish, const CommitCallback& cb, const String& timestamp) {
+	return true;
+}
+
+bool FileStorage::count(const Bucket& bucket, const Key& start, const Key& finish, const CountCallback& cb, const String& timestamp) {
+	return true;
 }
 
 

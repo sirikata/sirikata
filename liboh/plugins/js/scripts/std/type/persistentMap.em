@@ -51,7 +51,7 @@ std.persistentMap.prototype._initCommit = function(cb, exist, val)
     else {
         this._keys = StringtoKeys(val[this._mapName]);
         this._keys_list = this._keys;
-        system.print('Map exist, restore keys')
+        system.print('Map exists, restore keys')
     }
     cb(exist);
 };

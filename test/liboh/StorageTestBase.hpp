@@ -35,6 +35,7 @@
 
 #include <cxxtest/TestSuite.h>
 #include <sirikata/oh/Storage.hpp>
+#include <sirikata/cassandra/Cassandra.hpp>
 
 class StorageTestBase
 {
@@ -153,6 +154,20 @@ public:
         _cond.notify_one();
     }
 
+    void checkReadCountValueImpl(bool expected_success, int32_t expected_count, bool success, int32_t count) {
+        TS_ASSERT_EQUALS(expected_success, success);
+        if (!success || !expected_success) return;
+
+        TS_ASSERT_EQUALS(expected_count, count);
+        if (!count || !expected_count) return;
+    }
+
+    void checkCountValue(bool expected_success, int32_t expected_count, bool success, int32_t count) {
+        boost::unique_lock<boost::mutex> lock(_mutex);
+        checkReadCountValueImpl(expected_success, expected_count, success, count);
+        _cond.notify_one();
+    }
+
     void waitForTransaction() {
         boost::unique_lock<boost::mutex> lock(_mutex);
         _cond.wait(lock);
@@ -210,9 +225,6 @@ public:
         );
         waitForTransaction();
     }
-
-
-
 
     void testMultiWrite() {
         using std::tr1::placeholders::_1;
@@ -387,6 +399,58 @@ public:
 
         _storage->read(_buckets[0], "k",
             std::tr1::bind(&StorageTestBase::checkReadValues, this, true, rs2, _1, _2)
+        );
+        waitForTransaction();
+    }
+
+    void testRangeRead() {
+        using std::tr1::placeholders::_1;
+        using std::tr1::placeholders::_2;
+
+        _storage->beginTransaction(_buckets[0]);
+        _storage->write(_buckets[0], "map:name:a", "abcde");
+        _storage->write(_buckets[0], "map:name:f", "fghij");
+        _storage->write(_buckets[0], "map:name:k", "klmno");
+        _storage->commitTransaction(_buckets[0],
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, true, ReadSet(), _1, _2)
+        );
+        waitForTransaction();
+
+        ReadSet rs;
+        rs["map:name:a"] = "abcde";
+        rs["map:name:f"] = "fghij";
+        rs["map:name:k"] = "klmno";
+
+        _storage->rangeRead(_buckets[0],"map:name", "map:name@",
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, true, rs, _1, _2)
+        );
+        waitForTransaction();
+    }
+
+    void testCount() {
+    	// NOTE: Depends on above write
+        using std::tr1::placeholders::_1;
+        using std::tr1::placeholders::_2;
+        int32_t count = 3;
+    	_storage->count(_buckets[0],"map:name", "map:name@",
+    		std::tr1::bind(&StorageTestBase::checkCountValue, this, true, count, _1, _2)
+    	);
+
+    	waitForTransaction();
+    }
+
+    void testRangeErase() {
+    	// NOTE: Depends on above write
+        using std::tr1::placeholders::_1;
+        using std::tr1::placeholders::_2;
+
+    	_storage->rangeErase(_buckets[0],"map:name", "map:name@",
+    		std::tr1::bind(&StorageTestBase::checkReadValues, this, true, ReadSet(), _1, _2)
+    	);
+    	waitForTransaction();
+
+        _storage->rangeRead(_buckets[0],"map:name", "map:name@",
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, false, ReadSet(), _1, _2)
         );
         waitForTransaction();
     }
