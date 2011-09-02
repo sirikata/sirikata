@@ -863,7 +863,7 @@ void CraqObjectSegmentation::handleMigrateMessageAck(const Sirikata::Protocol::O
                                                          awhere->second.msgAdded->m_objradius())));//need to add obj_id
 
       UUID written_obj = awhere->second.msgAdded->m_objid();
-      mWriteListener->osegWriteFinished(written_obj);
+      mWriteListener->osegAddNewFinished(written_obj, OSegWriteListener::SUCCESS);
     }
 
     delete trackedSetResult;

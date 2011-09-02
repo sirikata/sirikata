@@ -116,24 +116,43 @@ void globalRedisLookupObjectReadFinished(redisAsyncContext* c, void* _reply, voi
         freeReplyObject(reply);
 }
 
+
 void globalRedisAddNewObjectWriteFinished(redisAsyncContext* c, void* _reply, void* privdata) {
     redisReply *reply = (redisReply*)_reply;
     RedisObjectOperationInfo* wi = (RedisObjectOperationInfo*)privdata;
 
-    if (reply == NULL) {
+
+    if (reply == NULL)
+    {
         REDISOSEG_LOG(error, "Unknown redis error when writing new object " << wi->obj.toString());
+        wi->oseg->finishWriteNewObject(wi->obj, OSegWriteListener::UNKNOWN_ERROR);
     }
-    else if (reply->type == REDIS_REPLY_ERROR) {
+    else if (reply->type == REDIS_REPLY_ERROR)
+    {
         REDISOSEG_LOG(error, "Redis error when writing new object " << wi->obj.toString() << ": " << String(reply->str, reply->len));
+        wi->oseg->finishWriteNewObject(wi->obj,OSegWriteListener::UNKNOWN_ERROR);
     }
-    else if (reply->type == REDIS_REPLY_STATUS) {
-        if (String(reply->str, reply->len) == String("OK"))
-            wi->oseg->finishWriteNewObject(wi->obj);
+    else if (reply->type == REDIS_REPLY_INTEGER)
+    {
+        if (reply->integer == 1)
+        {
+            wi->oseg->finishWriteNewObject(wi->obj, OSegWriteListener::SUCCESS);
+        }
+        else if (reply->integer == 0)
+        {
+            REDISOSEG_LOG(error, "Redis error when writing new object " << wi->obj.toString() << ": " << reply->integer<< " likely already registered.");
+            wi->oseg->finishWriteNewObject(wi->obj,OSegWriteListener::OBJ_ALREADY_REGISTERED);
+        }
         else
-            REDISOSEG_LOG(error, "Redis error when writing new object " << wi->obj.toString() << ": " << String(reply->str, reply->len));
+        {
+            REDISOSEG_LOG(error, "Redis error when writing new object " << wi->obj.toString() << ": " << reply->integer<< " unknown error.");
+            wi->oseg->finishWriteNewObject(wi->obj,OSegWriteListener::UNKNOWN_ERROR);
+        }
     }
-    else {
+    else
+    {
         REDISOSEG_LOG(error, "Unexpected redis reply type when writing new object " << wi->obj.toString() << ": " << reply->type);
+        wi->oseg->finishWriteNewObject(wi->obj,OSegWriteListener::UNKNOWN_ERROR);
     }
 
     delete wi;
@@ -398,17 +417,23 @@ void RedisObjectSegmentation::addNewObject(const UUID& obj_id, float radius) {
     std::ostringstream os;
     os << mContext->id() << ":" << radius;
     String valstr = os.str();
-    REDISOSEG_LOG(insane, "SET " << obj_id.toString() << " " << valstr);
+    REDISOSEG_LOG(insane, "SETNX " << obj_id.toString() << " " << valstr);
     ensureConnected();
-    redisAsyncCommand(mRedisContext, globalRedisAddNewObjectWriteFinished, wi, "SET %s%s %b", mRedisPrefix.c_str(), obj_id.toString().c_str(), valstr.c_str(), valstr.size());
+    redisAsyncCommand(mRedisContext, globalRedisAddNewObjectWriteFinished, wi, "SETNX %s%s %b", mRedisPrefix.c_str(), obj_id.toString().c_str(), valstr.c_str(), valstr.size());
 }
 
-void RedisObjectSegmentation::finishWriteNewObject(const UUID& obj_id) {
-    REDISOSEG_LOG(detailed, "Finished writing OSEG entry for object " << obj_id.toString());
+void RedisObjectSegmentation::finishWriteNewObject(const UUID& obj_id, OSegWriteListener::OSegAddNewStatus status)
+{
+    REDISOSEG_LOG(detailed, "Finished writing OSEG entry for object "\
+        << obj_id.toString()<<" with status "<<status);
+    
     if (mStopping) return;
 
-    mCache->insert(obj_id, mOSeg[obj_id]);
-    mWriteListener->osegWriteFinished(obj_id);
+    //only insert into cache if write was successful.
+    if (status == OSegWriteListener::SUCCESS)
+        mCache->insert(obj_id, mOSeg[obj_id]);
+    
+    mWriteListener->osegAddNewFinished(obj_id, status);
 }
 
 void RedisObjectSegmentation::addMigratedObject(const UUID& obj_id, float radius, ServerID idServerAckTo, bool generateAck) {

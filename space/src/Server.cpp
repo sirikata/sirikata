@@ -562,7 +562,7 @@ void Server::handleConnectAuthResponse(const ObjectHostConnectionManager::Connec
 
         if  //was already connected and it was the same oh sending msg
             ((isObjectConnected(obj_id) &&
-            (mObjects[obj_id]->connID() == oh_conn_id)) ||
+                (mObjects[obj_id]->connID() == oh_conn_id)) ||
             // or was connecting and was the same oh sending message
             (isObjectConnecting(obj_id) &&
                 mStoredConnectionData[obj_id].conn_id == oh_conn_id))
@@ -590,53 +590,58 @@ void Server::handleConnectAuthResponse(const ObjectHostConnectionManager::Connec
     mOSeg->addNewObject(obj_id,connect_msg.bounds().radius());
 }
 
-void Server::finishAddObject(const UUID& obj_id)
+void Server::finishAddObject(const UUID& obj_id, OSegAddNewStatus status)
 {
   StoredConnectionMap::iterator storedConIter = mStoredConnectionData.find(obj_id);
   if (storedConIter != mStoredConnectionData.end())
   {
-    StoredConnection sc = mStoredConnectionData[obj_id];
+      StoredConnection sc = mStoredConnectionData[obj_id];
+      if (status == OSegWriteListener::SUCCESS)
+      {
+          // Note: we always use local time for connections. The client
+          // accounts for by using the values we return in the response
+          // instead of the original values sent with the connection
+          // request.
+          Time local_t = mContext->simTime();
+          TimedMotionVector3f loc( local_t, MotionVector3f(sc.conn_msg.loc().position(), sc.conn_msg.loc().velocity()) );
+          TimedMotionQuaternion orient(
+              local_t,
+              MotionQuaternion( sc.conn_msg.orientation().position(), sc.conn_msg.orientation().velocity() )
+          );
+          BoundingSphere3f bnds = sc.conn_msg.bounds();
+          // Create and store the connection
+          ObjectConnection* conn = new ObjectConnection(obj_id, mObjectHostConnectionManager, sc.conn_id);
+          mObjects[obj_id] = conn;
+          mContext->timeSeries->report(mTimeSeriesObjects, mObjects.size());
 
-    // Note: we always use local time for connections. The client
-    // accounts for by using the values we return in the response
-    // instead of the original values sent with the connection
-    // request.
-    Time local_t = mContext->simTime();
-    TimedMotionVector3f loc( local_t, MotionVector3f(sc.conn_msg.loc().position(), sc.conn_msg.loc().velocity()) );
-    TimedMotionQuaternion orient(
-        local_t,
-        MotionQuaternion( sc.conn_msg.orientation().position(), sc.conn_msg.orientation().velocity() )
-    );
-    BoundingSphere3f bnds = sc.conn_msg.bounds();
-    // Create and store the connection
-    ObjectConnection* conn = new ObjectConnection(obj_id, mObjectHostConnectionManager, sc.conn_id);
-    mObjects[obj_id] = conn;
-    mContext->timeSeries->report(mTimeSeriesObjects, mObjects.size());
+          //TODO: assumes each server process is assigned only one region... perhaps we should enforce this constraint
+          //for cleaner semantics?
+          mCSeg->reportLoad(mContext->id(), mCSeg->serverRegion(mContext->id())[0] , mObjects.size()  );
 
-    //TODO: assumes each server process is assigned only one region... perhaps we should enforce this constraint
-    //for cleaner semantics?
-    mCSeg->reportLoad(mContext->id(), mCSeg->serverRegion(mContext->id())[0] , mObjects.size()  );
+          mLocalForwarder->addActiveConnection(conn);
 
-    mLocalForwarder->addActiveConnection(conn);
+          // Add object as local object to LocationService
+          String obj_mesh = sc.conn_msg.has_mesh() ? sc.conn_msg.mesh() : "";
+          String obj_phy = sc.conn_msg.has_physics() ? sc.conn_msg.physics() : "";
+          mLocationService->addLocalObject(obj_id, loc, orient, bnds, obj_mesh, obj_phy);
 
-    // Add object as local object to LocationService
-    String obj_mesh = sc.conn_msg.has_mesh() ? sc.conn_msg.mesh() : "";
-    String obj_phy = sc.conn_msg.has_physics() ? sc.conn_msg.physics() : "";
-    mLocationService->addLocalObject(obj_id, loc, orient, bnds, obj_mesh, obj_phy);
+          // Register proximity query
+          uint32 query_max_results = 0;
+          if (sc.conn_msg.has_query_max_count() && sc.conn_msg.query_max_count() > 0)
+              query_max_results = sc.conn_msg.query_max_count();
+          if (sc.conn_msg.has_query_angle())
+              mProximity->addQuery(obj_id, SolidAngle(sc.conn_msg.query_angle()), query_max_results);
 
-    // Register proximity query
-    uint32 query_max_results = 0;
-    if (sc.conn_msg.has_query_max_count() && sc.conn_msg.query_max_count() > 0)
-        query_max_results = sc.conn_msg.query_max_count();
-    if (sc.conn_msg.has_query_angle())
-        mProximity->addQuery(obj_id, SolidAngle(sc.conn_msg.query_angle()), query_max_results);
+          // Stage the connection with the forwarder, but don't enable it until an ack is received
+          mForwarder->addObjectConnection(obj_id, conn);
 
-    // Stage the connection with the forwarder, but don't enable it until an ack is received
-    mForwarder->addObjectConnection(obj_id, conn);
-
-    sendConnectSuccess(conn->connID(), obj_id);
-
-    //    mStoredConnectionData.erase(storedConIter);
+          sendConnectSuccess(conn->connID(), obj_id);
+      }
+      else
+      {
+          sendConnectError(sc.conn_id , obj_id);
+      }
+      mStoredConnectionData.erase(storedConIter);
   }
   else
   {
@@ -736,11 +741,11 @@ void Server::handleDisconnect(const UUID& obj_id, ObjectConnection* conn) {
     delete conn;
 }
 
-void Server::osegWriteFinished(const UUID& id) {
+void Server::osegAddNewFinished(const UUID& id, OSegAddNewStatus status) {
     // Indicates an update to OSeg finished, meaning a migration can
     // continue.
     mContext->mainStrand->post(
-        std::tr1::bind(&Server::finishAddObject, this, id)
+        std::tr1::bind(&Server::finishAddObject, this, id, status)
                                );
 }
 
