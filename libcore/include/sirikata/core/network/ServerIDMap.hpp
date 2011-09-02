@@ -59,12 +59,6 @@ public:
      */
     virtual ServerID* lookupExternal(const Address4& pos) = 0;
     virtual Address4* lookupExternal(const ServerID& obj_id) = 0;
-
-    /**
-       For debugging: prints contents of map.
-     */
-    virtual void __debugPrintInternalIDMap(std::ostream& toPrintFrom) = 0;
-    virtual void __debugPrintExternalIDMap(std::ostream& toPrintFrom) = 0;
 };
 
 class SIRIKATA_EXPORT ServerIDMapFactory
