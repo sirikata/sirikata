@@ -156,8 +156,6 @@ public:
     TimeProfiler* profiler;
 
     Trace::TimeSeries* timeSeries;
-
-    static Context* mainContextPtr;
 protected:
 
     // Main Lifetime Management

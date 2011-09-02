@@ -138,7 +138,6 @@ int main (int argc, char** argv) {
     Time start_time = Timer::now(); // Just for stats in ObjectHostContext.
     Duration duration = Duration::zero(); // Indicates to run forever.
     ObjectHostContext* ctx = new ObjectHostContext("cppoh", oh_id, ios, mainStrand, trace, start_time, duration);
-    Context::mainContextPtr = ctx;
 
     String timeseries_type = GetOptionValue<String>(OPT_TRACE_TIMESERIES);
     String timeseries_options = GetOptionValue<String>(OPT_TRACE_TIMESERIES_OPTIONS);
