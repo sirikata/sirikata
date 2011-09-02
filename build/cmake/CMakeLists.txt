@@ -1558,7 +1558,6 @@ ${TEST_LIBCORE_SOURCE_DIR}/AtomicTest.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/ExtrapolationTest.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/FactoryTest.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/FairQueueTest.hpp
-${TEST_LIBCORE_SOURCE_DIR}/ListenerTest.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/Matrix3Test.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/OptionValueListTest.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/OptionTest.hpp
