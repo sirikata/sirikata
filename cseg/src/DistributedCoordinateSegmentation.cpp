@@ -219,8 +219,8 @@ DistributedCoordinateSegmentation::DistributedCoordinateSegmentation(CSegContext
     startAccepting();
   }
 
-  Address4* addy = sidmap->lookupInternal(ctx->id());
-  uint16 cseg_server_ll_port = addy->getPort()+10000;
+  Address4 addy = sidmap->lookupInternal(ctx->id());
+  uint16 cseg_server_ll_port = addy.getPort()+10000;
   mLLTreeAcceptor = boost::shared_ptr<tcp::acceptor>(new tcp::acceptor(mLLIOService,tcp::endpoint(tcp::v4(), cseg_server_ll_port)));
 
   startAcceptingLLRequests();
@@ -948,13 +948,13 @@ SocketContainer DistributedCoordinateSegmentation::getSocketToCSEGServer(ServerI
   //Get a new socket
   tcp::resolver resolver(mIOService);
 
-  Address4* addy = mSidMap->lookupInternal(server_id);
+  Address4 addy = mSidMap->lookupInternal(server_id);
   struct in_addr ip_addr;
-  ip_addr.s_addr = addy->ip;
+  ip_addr.s_addr = addy.ip;
 
   char* addr = inet_ntoa(ip_addr);
   char port_str[20];
-  sprintf(port_str,"%d", (addy->port+10000));
+  sprintf(port_str,"%d", (addy.port+10000));
 
   tcp::resolver::query query(tcp::v4(), addr, port_str);
 

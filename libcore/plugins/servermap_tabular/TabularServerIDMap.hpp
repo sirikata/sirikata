@@ -50,11 +50,11 @@ public:
     TabularServerIDMap(std::istream&filestream);
     virtual ~TabularServerIDMap() {}
 
-    virtual ServerID* lookupInternal(const Address4& pos);
-    virtual Address4* lookupInternal(const ServerID& obj_id);
+    virtual ServerID lookupInternal(const Address4& pos);
+    virtual Address4 lookupInternal(const ServerID& obj_id);
 
-    virtual ServerID* lookupExternal(const Address4& pos);
-    virtual Address4* lookupExternal(const ServerID& obj_id);
+    virtual ServerID lookupExternal(const Address4& pos);
+    virtual Address4 lookupExternal(const ServerID& obj_id);
 };
 
 } // namespace Sirikata

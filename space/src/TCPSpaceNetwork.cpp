@@ -588,8 +588,8 @@ TCPSpaceNetwork::TCPSendStream* TCPSpaceNetwork::openConnection(const ServerID& 
     using std::tr1::placeholders::_1;
     using std::tr1::placeholders::_2;
 
-    Address4* addr = mServerIDMap->lookupInternal(dest);
-    if (addr == NULL) {
+    Address4 addr = mServerIDMap->lookupInternal(dest);
+    if (addr == Address4::Null) {
         TCPNET_LOG(error,"Tried to open connection to non-existent server " << dest << ". Probably running in single-server mode.");
         return NULL;
     }
@@ -597,7 +597,7 @@ TCPSpaceNetwork::TCPSendStream* TCPSpaceNetwork::openConnection(const ServerID& 
     TCPNET_LOG(info,"Initiating new connection to " << dest);
     TCPSendStream* send_stream = getNewSendStream(dest);
 
-    RemoteStreamPtr remote = getNewOutgoingStream(dest, *addr, RemoteStream::Us);
+    RemoteStreamPtr remote = getNewOutgoingStream(dest, addr, RemoteStream::Us);
     if (remote == RemoteStreamPtr()) {
         TCPNET_LOG(info,"Skipped connecting to " << dest << ", connection already present.");
         return send_stream;
@@ -612,7 +612,7 @@ TCPSpaceNetwork::TCPSendStream* TCPSpaceNetwork::openConnection(const ServerID& 
     Sirikata::Network::Stream::ConnectionCallback connCallback(std::tr1::bind(&TCPSpaceNetwork::connectionCallback, this, weak_remote, _1, _2));
     Sirikata::Network::Stream::ReceivedCallback br(std::tr1::bind(&TCPSpaceNetwork::bytesReceivedCallback, this, weak_remote, ind_recv_stream, _1, _2));
     Sirikata::Network::Stream::ReadySendCallback readySendCallback(std::tr1::bind(&TCPSpaceNetwork::readySendCallback, this, weak_remote));
-    remote->stream->connect(convertAddress4ToSirikata(*addr),
+    remote->stream->connect(convertAddress4ToSirikata(addr),
                             sscb,
                             connCallback,
                             br,
@@ -747,13 +747,13 @@ void TCPSpaceNetwork::listen(const ServerID& as_server, ReceiveListener* receive
 
     TCPNET_LOG(info,"Listening for remote space servers.");
 
-    Address4* listen_addr = mServerIDMap->lookupInternal(as_server);
-    if (listen_addr == NULL) {
+    Address4 listen_addr = mServerIDMap->lookupInternal(as_server);
+    if (listen_addr == Address4::Null) {
         // No listen address is available for this server.  Probably just means
         // we're only running one server so no listening address has been specified.
         return;
     }
-    mListenAddress = *listen_addr;
+    mListenAddress = listen_addr;
 
     Address listenAddress(convertAddress4ToSirikata(mListenAddress));
     mListener->listen(

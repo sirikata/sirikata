@@ -49,16 +49,18 @@ public:
     virtual ~ServerIDMap() {}
 
     /** Lookup for internal addresses, i.e. those used for space server
-     *  to space server communication.
+     *  to space server communication. Returns NullServerID or Address4::Null if
+     *  the server can't be found.
      */
-    virtual ServerID* lookupInternal(const Address4& pos) = 0;
-    virtual Address4* lookupInternal(const ServerID& obj_id) = 0;
+    virtual ServerID lookupInternal(const Address4& pos) = 0;
+    virtual Address4 lookupInternal(const ServerID& obj_id) = 0;
 
     /** Lookup for external addresses, i.e. those used for object host
-     *  to space server communication.
+     *  to space server communication. Returns NullServerID or Address4::Null if
+     *  the server can't be found.
      */
-    virtual ServerID* lookupExternal(const Address4& pos) = 0;
-    virtual Address4* lookupExternal(const ServerID& obj_id) = 0;
+    virtual ServerID lookupExternal(const Address4& pos) = 0;
+    virtual Address4 lookupExternal(const ServerID& obj_id) = 0;
 };
 
 class SIRIKATA_EXPORT ServerIDMapFactory

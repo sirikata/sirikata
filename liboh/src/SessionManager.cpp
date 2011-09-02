@@ -504,7 +504,7 @@ void SessionManager::migrate(const SpaceObjectReference& sporef_obj_id, ServerID
     using std::tr1::placeholders::_1;
 
     SESSION_LOG(detailed,"Starting migration of " << sporef_obj_id << " to " << sid);
-    
+
     //forcibly close the SST connection for this object to its current previous
     //space server
     //ObjectReference objref(sporef_obj_id.object());
@@ -703,8 +703,8 @@ void SessionManager::setupSpaceConnection(ServerID server, SpaceNodeConnection::
     using std::tr1::placeholders::_2;
 
     // Lookup the server's address
-    Address4* addr = mServerIDMap->lookupExternal(server);
-    if (addr == NULL)
+    Address4 addr = mServerIDMap->lookupExternal(server);
+    if (addr == Address4::Null)
     {
         SESSION_LOG(error,"No record of server " << server<<\
             " in SessionManager.cpp's serveridmap.  "\
@@ -712,7 +712,7 @@ void SessionManager::setupSpaceConnection(ServerID server, SpaceNodeConnection::
         cb(NULL);
         return;
     }
-    Address addy(convertAddress4ToSirikata(*addr));
+    Address addy(convertAddress4ToSirikata(addr));
 
 
 
@@ -879,7 +879,7 @@ void SessionManager::handleSessionMessage(Sirikata::Protocol::Object::ObjectMess
                 return;
             }
 
-            
+
             TimedMotionVector3f loc(
                 conn_resp.loc().t(),
                 MotionVector3f(conn_resp.loc().position(), conn_resp.loc().velocity())
@@ -989,13 +989,13 @@ void SessionManager::spaceConnectCallback(int err, SSTStreamPtr s, SpaceObjectRe
     using std::tr1::placeholders::_2;
 
     SESSION_LOG(detailed, "SST object-space connect callback for " << spaceobj.toString() << " : " << err);
-    
+
     if (err != SST_IMPL_SUCCESS)
     {
-        
+
         SESSION_LOG(detailed,"Error connecting stream from oh to space.  "\
             "Error code: "<<err<<".  Retrying.");
-        
+
         // retry creating an SST stream from the space server to object 'obj'.
         SSTStream::connectStream(
             SSTEndpoint(spaceobj, 0), // Local port is random

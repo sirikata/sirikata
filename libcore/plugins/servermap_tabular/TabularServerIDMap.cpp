@@ -63,26 +63,26 @@ TabularServerIDMap::TabularServerIDMap(std::istream&filestream) {
     }
 }
 
-ServerID *TabularServerIDMap::lookupInternal(const Address4& address){
+ServerID TabularServerIDMap::lookupInternal(const Address4& address){
     if (mInternalAddressMap.find(address)!=mInternalAddressMap.end())
-        return &mInternalAddressMap.find(address)->second;
-    return NULL;
+        return mInternalAddressMap.find(address)->second;
+    return NullServerID;
 }
-Address4 *TabularServerIDMap::lookupInternal(const ServerID& server_id){
+Address4 TabularServerIDMap::lookupInternal(const ServerID& server_id){
     if (mInternalIDMap.find(server_id)!=mInternalIDMap.end())
-        return &mInternalIDMap.find(server_id)->second;
-    return NULL;
+        return mInternalIDMap.find(server_id)->second;
+    return Address4::Null;
 }
 
-ServerID *TabularServerIDMap::lookupExternal(const Address4& address){
+ServerID TabularServerIDMap::lookupExternal(const Address4& address){
     if (mExternalAddressMap.find(address)!=mExternalAddressMap.end())
-        return &mExternalAddressMap.find(address)->second;
-    return NULL;
+        return mExternalAddressMap.find(address)->second;
+    return NullServerID;
 }
-Address4 *TabularServerIDMap::lookupExternal(const ServerID& server_id){
+Address4 TabularServerIDMap::lookupExternal(const ServerID& server_id){
     if (mExternalIDMap.find(server_id)!=mExternalIDMap.end())
-        return &mExternalIDMap.find(server_id)->second;
-    return NULL;
+        return mExternalIDMap.find(server_id)->second;
+    return Address4::Null;
 }
 
 }//end namespace sirikata
