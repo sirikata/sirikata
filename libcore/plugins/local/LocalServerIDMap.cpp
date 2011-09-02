@@ -38,8 +38,9 @@
 namespace Sirikata {
 
 
-LocalServerIDMap::LocalServerIDMap(const String& server_host, uint16 server_port)
- : mID(ServerID(1)),
+LocalServerIDMap::LocalServerIDMap(Context* ctx, const String& server_host, uint16 server_port)
+ : ServerIDMap(ctx),
+   mID(ServerID(1)),
    mAddress(Network::Address(server_host, boost::lexical_cast<String>(server_port)))
 {
 }

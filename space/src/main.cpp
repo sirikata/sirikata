@@ -137,7 +137,7 @@ int main(int argc, char** argv) {
     String servermap_type = GetOptionValue<String>("servermap");
     String servermap_options = GetOptionValue<String>("servermap-options");
     ServerIDMap * server_id_map =
-        ServerIDMapFactory::getSingleton().getConstructor(servermap_type)(servermap_options);
+        ServerIDMapFactory::getSingleton().getConstructor(servermap_type)(space_context, servermap_options);
 
     gNetwork->setServerIDMap(server_id_map);
 

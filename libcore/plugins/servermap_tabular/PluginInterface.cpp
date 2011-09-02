@@ -45,14 +45,14 @@ static void InitPluginOptions() {
         NULL);
 }
 
-static ServerIDMap* createTabularServerIDMap(const String& args) {
+static ServerIDMap* createTabularServerIDMap(Context* ctx, const String& args) {
     OptionSet* optionsSet = OptionSet::getOptions("servermap_tabular",NULL);
     optionsSet->parse(args);
 
     String filehandle = optionsSet->referenceOption("filename")->as<String>();
     std::ifstream ipConfigFileHandle(filehandle.c_str());
 
-    return new TabularServerIDMap(ipConfigFileHandle);
+    return new TabularServerIDMap(ctx, ipConfigFileHandle);
 }
 
 } // namespace Sirikata
@@ -62,9 +62,10 @@ SIRIKATA_PLUGIN_EXPORT_C void init() {
     if (servermap_tabular_plugin_refcount==0) {
         InitPluginOptions();
         using std::tr1::placeholders::_1;
+        using std::tr1::placeholders::_2;
         ServerIDMapFactory::getSingleton()
             .registerConstructor("tabular",
-                std::tr1::bind(&createTabularServerIDMap, _1));
+                std::tr1::bind(&createTabularServerIDMap, _1, _2));
     }
     servermap_tabular_plugin_refcount++;
 }

@@ -36,7 +36,9 @@
 namespace Sirikata {
 
 
-TabularServerIDMap::TabularServerIDMap(std::istream&filestream) {
+TabularServerIDMap::TabularServerIDMap(Context* ctx, std::istream&filestream)
+ : ServerIDMap(ctx)
+{
     int count=1;
     while(!filestream.bad() && !filestream.fail() && !filestream.eof()) {
         char ip[1025];

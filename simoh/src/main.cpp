@@ -81,11 +81,6 @@ int main(int argc, char** argv) {
     String trace_file = GetPerServerFile(STATS_OH_TRACE_FILE, oh_id);
     Trace::Trace* gTrace = new Trace::Trace(trace_file);
 
-    String servermap_type = GetOptionValue<String>("servermap");
-    String servermap_options = GetOptionValue<String>("servermap-options");
-    ServerIDMap * server_id_map =
-        ServerIDMapFactory::getSingleton().getConstructor(servermap_type)(servermap_options);
-
     MaxDistUpdatePredicate::maxDist = GetOptionValue<float64>(MAX_EXTRAPOLATOR_DIST);
 
     BoundingBox3f region = GetOptionValue<BoundingBox3f>("region");
@@ -105,6 +100,11 @@ int main(int argc, char** argv) {
     Network::IOStrand* mainStrand = ios->createStrand();
 
     ObjectHostContext* ctx = new ObjectHostContext("simoh", oh_id, ios, mainStrand, gTrace, start_time, duration);
+
+    String servermap_type = GetOptionValue<String>("servermap");
+    String servermap_options = GetOptionValue<String>("servermap-options");
+    ServerIDMap * server_id_map =
+        ServerIDMapFactory::getSingleton().getConstructor(servermap_type)(ctx, servermap_options);
 
     String timeseries_type = GetOptionValue<String>(OPT_TRACE_TIMESERIES);
     String timeseries_options = GetOptionValue<String>(OPT_TRACE_TIMESERIES_OPTIONS);

@@ -47,7 +47,7 @@ class LocalServerIDMap : public ServerIDMap {
     ServerID mID;
     Address4 mAddress;
 public:
-    LocalServerIDMap(const String& server_host, uint16 server_port);
+    LocalServerIDMap(Context* ctx, const String& server_host, uint16 server_port);
     virtual ~LocalServerIDMap() {}
 
     virtual ServerID lookupInternal(const Address4& pos);

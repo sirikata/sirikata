@@ -36,7 +36,7 @@
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/network/Address4.hpp>
 #include <sirikata/core/util/Factory.hpp>
-#include <fstream>
+#include <sirikata/core/service/Context.hpp>
 
 namespace Sirikata {
 
@@ -44,7 +44,8 @@ namespace Sirikata {
  */
 class SIRIKATA_EXPORT ServerIDMap {
 public:
-    ServerIDMap()
+    ServerIDMap(Context* ctx)
+        : mContext(ctx)
     {}
     virtual ~ServerIDMap() {}
 
@@ -61,11 +62,14 @@ public:
      */
     virtual ServerID lookupExternal(const Address4& pos) = 0;
     virtual Address4 lookupExternal(const ServerID& obj_id) = 0;
+
+  protected:
+    Context* mContext;
 };
 
 class SIRIKATA_EXPORT ServerIDMapFactory
     : public AutoSingleton<ServerIDMapFactory>,
-      public Factory1<ServerIDMap*, const String &>
+      public Factory2<ServerIDMap*, Context*, const String &>
 {
   public:
     static ServerIDMapFactory& getSingleton();

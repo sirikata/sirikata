@@ -47,7 +47,7 @@ class TabularServerIDMap : public ServerIDMap {
     std::tr1::unordered_map<ServerID,Address4> mExternalIDMap;
     std::tr1::unordered_map<Address4,ServerID,Address4::Hasher> mExternalAddressMap;
 public:
-    TabularServerIDMap(std::istream&filestream);
+    TabularServerIDMap(Context* ctx, std::istream&filestream);
     virtual ~TabularServerIDMap() {}
 
     virtual ServerID lookupInternal(const Address4& pos);
