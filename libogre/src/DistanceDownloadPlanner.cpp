@@ -116,16 +116,19 @@ DistanceDownloadPlanner::Object* DistanceDownloadPlanner::findObject(const Strin
 void DistanceDownloadPlanner::removeObject(const String& name) {
     ObjectMap::iterator it = mObjects.find(name);
     if (it != mObjects.end()) {
-        ObjectMap::iterator loaded_it = mLoadedObjects.find(name);
-        if (loaded_it != mLoadedObjects.end()) mLoadedObjects.erase(loaded_it);
+        Object* r = it->second;
 
+        // Make sure we've unloaded it
+        if (r->loaded)
+            unloadObject(r);
+
+        // It should definitely be in waiting objects now
         ObjectMap::iterator waiting_it = mWaitingObjects.find(name);
         if (waiting_it != mWaitingObjects.end()) mWaitingObjects.erase(waiting_it);
 
-        Object* r = it->second;
-        mObjects.erase(it);
-
+        // Log and cleanup
         DLPLANNER_LOG(detailed, "Removing object " << r->name << " (" << r->file << "), " << mLoadedObjects.size() << " loaded, " << mWaitingObjects.size() << " waiting");
+        mObjects.erase(it);
         delete r;
     }
 }
