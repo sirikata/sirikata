@@ -104,6 +104,7 @@ void DistanceDownloadPlanner::addObject(Object* r) {
     calculatePriority(r->proxy);
     mObjects[r->name] = r;
     mWaitingObjects[r->name] = r;
+    DLPLANNER_LOG(detailed, "Adding object " << r->name << " (" << r->file << "), " << mLoadedObjects.size() << " loaded, " << mWaitingObjects.size() << " waiting");
     checkShouldLoadNewObject(r);
 }
 
@@ -121,8 +122,11 @@ void DistanceDownloadPlanner::removeObject(const String& name) {
         ObjectMap::iterator waiting_it = mWaitingObjects.find(name);
         if (waiting_it != mWaitingObjects.end()) mWaitingObjects.erase(waiting_it);
 
-        delete it->second;
+        Object* r = it->second;
         mObjects.erase(it);
+
+        DLPLANNER_LOG(detailed, "Removing object " << r->name << " (" << r->file << "), " << mLoadedObjects.size() << " loaded, " << mWaitingObjects.size() << " waiting");
+        delete r;
     }
 }
 
@@ -176,8 +180,10 @@ double DistanceDownloadPlanner::calculatePriority(ProxyObjectPtr proxy)
 }
 
 void DistanceDownloadPlanner::checkShouldLoadNewObject(Object* r) {
-    if ((int32)mLoadedObjects.size() < mMaxLoaded)
+    if ((int32)mLoadedObjects.size() < mMaxLoaded) {
+        DLPLANNER_LOG(detailed, "Loading " << r->name << " immediately because we are under budget");
         loadObject(r);
+    }
 }
 
 bool DistanceDownloadPlanner::budgetRequiresChange() const {
@@ -254,6 +260,7 @@ void DistanceDownloadPlanner::poll()
                 std::pop_heap(waiting_resource_heap.begin(), waiting_resource_heap.end(), Object::MaxHeapComparator());
                 waiting_resource_heap.pop_back();
 
+                DLPLANNER_LOG(detailed, "Adding object " << max_waiting->name);
                 loadObject(max_waiting);
             }
             else if ((int32)mLoadedObjects.size() > mMaxLoaded && !loaded_resource_heap.empty()) {
@@ -262,6 +269,7 @@ void DistanceDownloadPlanner::poll()
                 std::pop_heap(loaded_resource_heap.begin(), loaded_resource_heap.end(), Object::MinHeapComparator());
                 loaded_resource_heap.pop_back();
 
+                DLPLANNER_LOG(detailed, "Removing object " << min_loaded->name);
                 unloadObject(min_loaded);
             }
             else if (!waiting_resource_heap.empty() && !loaded_resource_heap.empty()) {
@@ -275,6 +283,7 @@ void DistanceDownloadPlanner::poll()
                 loaded_resource_heap.pop_back();
 
                 if (min_loaded->priority < max_waiting->priority) {
+                    DLPLANNER_LOG(detailed, "Swapping object " << max_waiting->name << " for " << min_loaded->name);
                     unloadObject(min_loaded);
                     loadObject(max_waiting);
                 }
