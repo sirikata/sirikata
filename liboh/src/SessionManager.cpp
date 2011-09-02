@@ -700,10 +700,24 @@ void SessionManager::setupSpaceConnection(ServerID server, SpaceNodeConnection::
     Sirikata::SerializationCheck::Scoped sc(&mSerialization);
 
     using std::tr1::placeholders::_1;
-    using std::tr1::placeholders::_2;
 
     // Lookup the server's address
-    Address4 addr = mServerIDMap->lookupExternal(server);
+    mServerIDMap->lookupExternal(
+        server,
+        mContext->mainStrand->wrap(
+            std::tr1::bind(&SessionManager::finishSetupSpaceConnection, this,
+                server, cb, _1
+            )
+        )
+    );
+}
+
+void SessionManager::finishSetupSpaceConnection(ServerID server, SpaceNodeConnection::GotSpaceConnectionCallback cb, Address4 addr) {
+    Sirikata::SerializationCheck::Scoped sc(&mSerialization);
+
+    using std::tr1::placeholders::_1;
+    using std::tr1::placeholders::_2;
+
     if (addr == Address4::Null)
     {
         SESSION_LOG(error,"No record of server " << server<<\
@@ -713,8 +727,6 @@ void SessionManager::setupSpaceConnection(ServerID server, SpaceNodeConnection::
         return;
     }
     Address addy(convertAddress4ToSirikata(addr));
-
-
 
     SpaceNodeConnection* conn = new SpaceNodeConnection(
         mContext,
