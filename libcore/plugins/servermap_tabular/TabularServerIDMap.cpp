@@ -76,6 +76,14 @@ Address4 TabularServerIDMap::lookupInternal(const ServerID& server_id){
     return Address4::Null;
 }
 
+void TabularServerIDMap::lookupInternal(const Address4& addr, ServerIDLookupCallback cb) {
+    mContext->ioService->post(std::tr1::bind(cb, lookupInternal(addr)));
+}
+
+void TabularServerIDMap::lookupInternal(const ServerID& sid, Address4LookupCallback cb) {
+    mContext->ioService->post(std::tr1::bind(cb, lookupInternal(sid)));
+}
+
 ServerID TabularServerIDMap::lookupExternal(const Address4& address){
     if (mExternalAddressMap.find(address)!=mExternalAddressMap.end())
         return mExternalAddressMap.find(address)->second;
@@ -85,6 +93,14 @@ Address4 TabularServerIDMap::lookupExternal(const ServerID& server_id){
     if (mExternalIDMap.find(server_id)!=mExternalIDMap.end())
         return mExternalIDMap.find(server_id)->second;
     return Address4::Null;
+}
+
+void TabularServerIDMap::lookupExternal(const Address4& addr, ServerIDLookupCallback cb) {
+    mContext->ioService->post(std::tr1::bind(cb, lookupExternal(addr)));
+}
+
+void TabularServerIDMap::lookupExternal(const ServerID& sid, Address4LookupCallback cb) {
+    mContext->ioService->post(std::tr1::bind(cb, lookupExternal(sid)));
 }
 
 }//end namespace sirikata

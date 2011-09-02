@@ -55,6 +55,14 @@ Address4 LocalServerIDMap::lookupInternal(const ServerID& server_id) {
     return Address4::Null;
 }
 
+void LocalServerIDMap::lookupInternal(const Address4& addr, ServerIDLookupCallback cb) {
+    mContext->ioService->post(std::tr1::bind(cb, lookupInternal(addr)));
+}
+
+void LocalServerIDMap::lookupInternal(const ServerID& sid, Address4LookupCallback cb) {
+    mContext->ioService->post(std::tr1::bind(cb, lookupInternal(sid)));
+}
+
 ServerID LocalServerIDMap::lookupExternal(const Address4& address) {
     if (address != mAddress) {
         SILOG(local_serverid_map,detailed,"[LocalServerIDMap] External address lookup does not match known address.");
@@ -69,6 +77,14 @@ Address4 LocalServerIDMap::lookupExternal(const ServerID& server_id) {
         return Address4::Null;
     }
     return mAddress;
+}
+
+void LocalServerIDMap::lookupExternal(const Address4& addr, ServerIDLookupCallback cb) {
+    mContext->ioService->post(std::tr1::bind(cb, lookupExternal(addr)));
+}
+
+void LocalServerIDMap::lookupExternal(const ServerID& sid, Address4LookupCallback cb) {
+    mContext->ioService->post(std::tr1::bind(cb, lookupExternal(sid)));
 }
 
 }
