@@ -38,6 +38,10 @@
 
 #include <boost/thread/locks.hpp>
 
+#if SIRIKATA_PLATFORM == SIRIKATA_WINDOWS
+#include <io.h>
+#endif
+
 
 namespace Sirikata {
 namespace Trace {
@@ -90,8 +94,9 @@ void Trace::storageThread(const String& filename) {
     data.store(of);
     fflush(of);
 
-// FIXME #91
-#if SIRIKATA_PLATFORM != SIRIKATA_WINDOWS
+#if SIRIKATA_PLATFORM == SIRIKATA_WINDOWS
+    FlushFileBuffers((HANDLE) _get_osfhandle(_fileno(of)));
+#else
     fsync(fileno(of));
 #endif
     fclose(of);
