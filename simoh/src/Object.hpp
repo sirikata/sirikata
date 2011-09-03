@@ -106,7 +106,7 @@ struct MaxDistUpdatePredicate {
 class Object : public Service {
 public:
     /** Standard constructor. */
-    Object(ObjectFactory* obj_factory, const UUID& id, MotionPath* motion, const BoundingSphere3f& bnds, bool regQuery, SolidAngle queryAngle, const ObjectHostContext* ctx);
+    Object(ObjectFactory* obj_factory, const UUID& id, MotionPath* motion, const BoundingSphere3f& bnds, bool regQuery, SolidAngle queryAngle, ObjectHostContext* ctx);
 
     ~Object();
 
@@ -179,7 +179,7 @@ private:
     // THREAD SAFE:
     // These are thread safe (they don't change after initialization)
     const UUID mID;
-    const ObjectHostContext* const mContext;
+    ObjectHostContext*  mContext;
     ObjectFactory* const mObjectFactory;
 
     // LOCK PROTECTED:

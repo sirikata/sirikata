@@ -11,6 +11,7 @@
 #include <string>
 #include <sstream>
 #include <sirikata/core/util/Liveness.hpp>
+#include <sirikata/oh/ObjectHostContext.hpp>
 
 namespace Sirikata{
 namespace JS{
@@ -24,7 +25,7 @@ typedef SSTStream::Ptr SSTStreamPtr;
 class EmersonMessagingManager : public virtual Liveness
 {
 public:
-    EmersonMessagingManager(Context* ctx);
+    EmersonMessagingManager(ObjectHostContext* ctx);
     virtual ~EmersonMessagingManager();
 
     //EmersonScript must know what to do with messages that we receive.
@@ -71,7 +72,7 @@ private:
     void writeData(Liveness::Token alive, SSTStreamPtr streamPtr, const String& msg, const SpaceObjectReference& sender, const SpaceObjectReference& receiver);
 
 
-    Context* mMainContext;
+    ObjectHostContext* mMainContext;
 
     //map of existing presences.  value doesn't matter, just want a quick way of
     //checking if particular presences are connected.

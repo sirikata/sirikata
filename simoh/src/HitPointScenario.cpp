@@ -122,9 +122,9 @@ public:
             ++offset;
             int port = parent->mListenPort+offset;
             SILOG(hitpoint,error,"Listen/Connecting "<<mID.toString()<<" to "<<mParent->object->uuid().toString());
-            SSTStream::listen(std::tr1::bind(&DamagableObject::ReceiveDamage::login,this,_1,_2),
+            mContext->mContext->sstConnMgr()->listen(std::tr1::bind(&DamagableObject::ReceiveDamage::login,this,_1,_2),
                 SSTEndpoint(SpaceObjectReference(SpaceID::null(), ObjectReference(mID)), parent->mListenPort));
-            SSTStream::connectStream(
+            mContext->mContext->sstConnMgr()->connectStream(
                 SSTEndpoint(SpaceObjectReference(SpaceID::null(), ObjectReference(mParent->object->uuid())), port),
                 SSTEndpoint(SpaceObjectReference(SpaceID::null(), ObjectReference(mID)), parent->mListenPort),
                 std::tr1::bind(&DamagableObject::ReceiveDamage::connectionCallback,this,port,_1,_2));
@@ -133,7 +133,7 @@ public:
         void connectionCallback(int port, int err, SSTStreamPtr s) {
             if (err != 0 ) {
                 SILOG(hitpoint,error,"Failed to connect two objects...Retry"<<mParent->object->uuid().toString()<<" - "<<mID.toString());
-                SSTStream::connectStream(
+                mContext->mContext->sstConnMgr()->connectStream(
                     SSTEndpoint(SpaceObjectReference(SpaceID::null(), ObjectReference(mParent->object->uuid())), port),
                     SSTEndpoint(SpaceObjectReference(SpaceID::null(), ObjectReference(mID)), mParent->mListenPort),
                     std::tr1::bind(&DamagableObject::ReceiveDamage::connectionCallback,this,port,_1,_2));

@@ -132,7 +132,7 @@ Server::Server(SpaceContext* ctx, Authenticator* auth, Forwarder* forwarder, Loc
     using std::tr1::placeholders::_1;
     using std::tr1::placeholders::_2;
 
-    Stream<SpaceObjectReference>::listen(
+    mContext->sstConnectionManager()->listen(
         std::tr1::bind(&Server::newStream, this, _1, _2),
         EndPoint<SpaceObjectReference>(SpaceObjectReference(SpaceID::null(), ObjectReference::spaceServiceID()), OBJECT_SPACE_PORT)
     );

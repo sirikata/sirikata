@@ -109,7 +109,75 @@ class Connection;
 template <class EndPointType>
 class Stream;
 
-class  SSTConnectionManager;
+template <typename EndPointType>
+class SIRIKATA_EXPORT BaseDatagramLayer;
+
+typedef std::tr1::function< void(int, std::tr1::shared_ptr< Connection<SpaceObjectReference> > ) > ConnectionReturnCallbackFunction;
+typedef std::tr1::function< void(int, std::tr1::shared_ptr< Stream<SpaceObjectReference> >) >  StreamReturnCallbackFunction;
+
+typedef std::tr1::function< void (int, void*) >  DatagramSendDoneCallback;
+
+typedef std::tr1::function<void (uint8*, int) >  ReadDatagramCallback;
+
+typedef std::tr1::function<void (uint8*, int) > ReadCallback;
+
+typedef UUID USID;
+
+typedef uint16 LSID;
+
+template <class EndPointType>
+class SSTConnectionVariables {
+public:
+
+  typedef std::tr1::shared_ptr<BaseDatagramLayer<EndPointType> > BaseDatagramLayerPtr;    
+
+  /* Returns -1 if no channel is available. Otherwise returns the lowest
+     available channel. */
+    int getAvailableChannel() {
+      //TODO: faster implementation.
+      for (uint32 i = sAvailableChannels.size() - 1; i>0; i--) {
+        if (!sAvailableChannels.test(i)) {
+          sAvailableChannels.set(i, 1);
+          return i;
+        }
+      }
+      
+      return 0;
+    }
+
+    void releaseChannel(uint16 channel) {
+      assert(channel > 0);
+
+      sAvailableChannels.set(channel, 0);
+    }
+
+    BaseDatagramLayerPtr getDatagramLayer(EndPointType endPoint) 
+    {
+        if (sDatagramLayerMap.find(endPoint) != sDatagramLayerMap.end()) {
+            return sDatagramLayerMap[endPoint];
+        }
+
+        return BaseDatagramLayerPtr();
+    }
+
+    std::map<EndPointType, BaseDatagramLayerPtr > sDatagramLayerMap;
+
+    typedef std::map<EndPoint<EndPointType>, StreamReturnCallbackFunction> StreamReturnCallbackMap;
+    StreamReturnCallbackMap mStreamReturnCallbackMap;
+
+    typedef std::map<EndPoint<EndPointType>, std::tr1::shared_ptr<Connection<EndPointType> > >  ConnectionMap;
+    ConnectionMap sConnectionMap;
+
+    std::bitset<65536> sAvailableChannels;
+
+    typedef std::map<EndPoint<EndPointType>, ConnectionReturnCallbackFunction>  ConnectionReturnCallbackMap;  
+    ConnectionReturnCallbackMap sConnectionReturnCallbackMap;
+
+    StreamReturnCallbackMap  sListeningConnectionsCallbackMap;
+    Mutex sStaticMembersLock;
+
+};
+
 
 template <typename EndPointType>
 class SIRIKATA_EXPORT BaseDatagramLayer
@@ -118,46 +186,52 @@ class SIRIKATA_EXPORT BaseDatagramLayer
     typedef std::tr1::shared_ptr<BaseDatagramLayer<EndPointType> > Ptr;
     typedef Ptr BaseDatagramLayerPtr;
 
-    static BaseDatagramLayerPtr getDatagramLayer(EndPointType endPoint) {
-        if (sDatagramLayerMap.find(endPoint) != sDatagramLayerMap.end()) {
-            return sDatagramLayerMap[endPoint];
+    static BaseDatagramLayerPtr getDatagramLayer(SSTConnectionVariables<EndPointType>* sstConnVars,
+                                                 EndPointType endPoint) 
+    {
+        std::map<EndPointType, BaseDatagramLayerPtr >& datagramLayerMap = sstConnVars->sDatagramLayerMap;
+        if (datagramLayerMap.find(endPoint) != datagramLayerMap.end()) {
+            return datagramLayerMap[endPoint];
         }
 
         return BaseDatagramLayerPtr();
     }
 
     static BaseDatagramLayerPtr createDatagramLayer(
+        SSTConnectionVariables<EndPointType>* sstConnVars,
         EndPointType endPoint,
         const Context* ctx,
         ODP::Service* odp)
     {
-        if (sDatagramLayerMap.find(endPoint) != sDatagramLayerMap.end()) {
-            return sDatagramLayerMap[endPoint];
+        std::map<EndPointType, BaseDatagramLayerPtr >& datagramLayerMap = sstConnVars->sDatagramLayerMap;
+        if (datagramLayerMap.find(endPoint) != datagramLayerMap.end()) {
+            return datagramLayerMap[endPoint];
         }
 
         BaseDatagramLayerPtr datagramLayer(
-            new BaseDatagramLayer(ctx, odp)
+                                           new BaseDatagramLayer(sstConnVars, ctx, odp)
         );
 
-        sDatagramLayerMap[endPoint] = datagramLayer;
+        datagramLayerMap[endPoint] = datagramLayer;
 
         return datagramLayer;
     }
 
-    static void listen(EndPoint<EndPointType>& listeningEndPoint) {
+    static void listen(SSTConnectionVariables<EndPointType>* sstConnVars, EndPoint<EndPointType>& listeningEndPoint) {
         EndPointType endPointID = listeningEndPoint.endPoint;
 
-        BaseDatagramLayerPtr bdl = sDatagramLayerMap[endPointID];
+        BaseDatagramLayerPtr bdl = sstConnVars->sDatagramLayerMap[endPointID];
         bdl->listenOn(listeningEndPoint);
     }
 
-    static void stopListening(EndPoint<EndPointType>& listeningEndPoint) {
+    static void stopListening(SSTConnectionVariables<EndPointType>* sstConnVars, EndPoint<EndPointType>& listeningEndPoint) {
         EndPointType endPointID = listeningEndPoint.endPoint;
+        std::map<EndPointType, BaseDatagramLayerPtr >& datagramLayerMap = sstConnVars->sDatagramLayerMap;
 
-        BaseDatagramLayerPtr bdl = sDatagramLayerMap[endPointID];
+        BaseDatagramLayerPtr bdl = datagramLayerMap[endPointID];
         bdl->unlisten(listeningEndPoint);
 
-        sDatagramLayerMap.erase(endPointID);
+        datagramLayerMap.erase(endPointID);
     }
 
     void listenOn(EndPoint<EndPointType>& listeningEndPoint, ODP::MessageHandler cb) {
@@ -193,9 +267,10 @@ class SIRIKATA_EXPORT BaseDatagramLayer
     }
 
   private:
-    BaseDatagramLayer(const Context* ctx, ODP::Service* odpservice)
+    BaseDatagramLayer(SSTConnectionVariables<EndPointType>* sstConnVars, const Context* ctx, ODP::Service* odpservice)
         : mContext(ctx),
-        mODP(odpservice)
+          mODP(odpservice),
+          mSSTConnVars(sstConnVars)
         {
         }
 
@@ -234,6 +309,7 @@ class SIRIKATA_EXPORT BaseDatagramLayer
 
     void receiveMessage(const ODP::Endpoint &src, const ODP::Endpoint &dst, MemoryReference payload) {
         Connection<EndPointType>::handleReceive(
+            mSSTConnVars, 
             EndPoint<EndPointType> (SpaceObjectReference(src.space(), src.object()), src.port()),
             EndPoint<EndPointType> (SpaceObjectReference(dst.space(), dst.object()), dst.port()),
             (void*) payload.data(), payload.size()
@@ -249,7 +325,7 @@ class SIRIKATA_EXPORT BaseDatagramLayer
 
     boost::mutex mMutex;
 
-    static std::map<EndPointType, BaseDatagramLayerPtr > sDatagramLayerMap;
+    SSTConnectionVariables<EndPointType>* mSSTConnVars;
 };
 
 #if SIRIKATA_PLATFORM == SIRIKATA_WINDOWS
@@ -257,20 +333,6 @@ class SIRIKATA_EXPORT BaseDatagramLayer
 SIRIKATA_EXPORT_TEMPLATE template class SIRIKATA_EXPORT BaseDatagramLayer<SpaceObjectReference>;
 #endif
 
-//typedef std::tr1::function< void(int, std::tr1::shared_ptr< Connection<UUID> > ) > ConnectionReturnCallbackFunction;
-//typedef std::tr1::function< void(int, std::tr1::shared_ptr< Stream<UUID> >) >  StreamReturnCallbackFunction;
-typedef std::tr1::function< void(int, std::tr1::shared_ptr< Connection<SpaceObjectReference> > ) > ConnectionReturnCallbackFunction;
-typedef std::tr1::function< void(int, std::tr1::shared_ptr< Stream<SpaceObjectReference> >) >  StreamReturnCallbackFunction;
-
-typedef std::tr1::function< void (int, void*) >  DatagramSendDoneCallback;
-
-typedef std::tr1::function<void (uint8*, int) >  ReadDatagramCallback;
-
-typedef std::tr1::function<void (uint8*, int) > ReadCallback;
-
-typedef UUID USID;
-
-typedef uint16 LSID;
 
 #define SST_IMPL_SUCCESS 0
 #define SST_IMPL_FAILURE -1
@@ -321,22 +383,13 @@ private:
   friend class BaseDatagramLayer<EndPointType>;
 
   typedef std::map<EndPoint<EndPointType>, std::tr1::shared_ptr<Connection> >  ConnectionMap;
-  typedef std::map<EndPoint<EndPointType>, ConnectionReturnCallbackFunction>  ConnectionReturnCallbackMap;
-  typedef std::map<EndPoint<EndPointType>, StreamReturnCallbackFunction>   StreamReturnCallbackMap;
-
-
-  static ConnectionMap sConnectionMap;
-  static std::bitset<65536> sAvailableChannels;
-
-  static ConnectionReturnCallbackMap sConnectionReturnCallbackMap;
-  static StreamReturnCallbackMap  sListeningConnectionsCallbackMap;
-
-  static Mutex sStaticMembersLock;
-
+  typedef std::map<EndPoint<EndPointType>, ConnectionReturnCallbackFunction>  ConnectionReturnCallbackMap;  
+  typedef std::map<EndPoint<EndPointType>, StreamReturnCallbackFunction> StreamReturnCallbackMap;
+  
   EndPoint<EndPointType> mLocalEndPoint;
   EndPoint<EndPointType> mRemoteEndPoint;
 
-
+  SSTConnectionVariables<EndPointType>* mSSTConnVars;
   BaseDatagramLayerPtr mDatagramLayer;
 
   int mState;
@@ -381,9 +434,11 @@ private:
 
 private:
 
-  Connection(EndPoint<EndPointType> localEndPoint,
+  Connection(SSTConnectionVariables<EndPointType>* sstConnVars, 
+             EndPoint<EndPointType> localEndPoint,
              EndPoint<EndPointType> remoteEndPoint)
     : mLocalEndPoint(localEndPoint), mRemoteEndPoint(remoteEndPoint),
+      mSSTConnVars(sstConnVars),
       mState(CONNECTION_DISCONNECTED),
       mRemoteChannelID(0), mLocalChannelID(1), mTransmitSequenceNumber(1),
       mLastReceivedSequenceNumber(1),
@@ -394,7 +449,7 @@ private:
       mNumInitialRetransmissionAttempts(0),
       inSendingMode(true), numSegmentsSent(0)
   {
-      mDatagramLayer = BaseDatagramLayer<EndPointType>::getDatagramLayer(localEndPoint.endPoint);
+      mDatagramLayer = sstConnVars->getDatagramLayer(localEndPoint.endPoint);
       mDatagramLayer->listenOn(
           localEndPoint,
           std::tr1::bind(
@@ -418,25 +473,7 @@ private:
     return mDatagramLayer->context();
   }
 
-  /* Returns -1 if no channel is available. Otherwise returns the lowest
-     available channel. */
-  static int getAvailableChannel() {
-    //TODO: faster implementation.
-    for (uint32 i = sAvailableChannels.size() - 1; i>0; i--) {
-      if (!sAvailableChannels.test(i)) {
-	sAvailableChannels.set(i, 1);
-	return i;
-      }
-    }
-
-    return 0;
-  }
-
-  static void releaseChannel(uint16 channel) {
-    assert(channel > 0);
-
-    sAvailableChannels.set(channel, 0);
-  }
+  
 
   bool inSendingMode; uint16 numSegmentsSent;
 
@@ -501,7 +538,6 @@ private:
 
           if (mState == CONNECTION_PENDING_CONNECT) {
             mNumInitialRetransmissionAttempts++;
-
           }
 
 	  segment->mTransmitTime = curTime;
@@ -597,30 +633,32 @@ private:
      is already using the same local endpoint; true otherwise.
   */
 
-  static bool createConnection(EndPoint <EndPointType> localEndPoint,
+  static bool createConnection(SSTConnectionVariables<EndPointType>* sstConnVars,
+                               EndPoint <EndPointType> localEndPoint,
 			       EndPoint <EndPointType> remoteEndPoint,
                                ConnectionReturnCallbackFunction cb,
 			       StreamReturnCallbackFunction scb)
 
   {
-    boost::mutex::scoped_lock lock(sStaticMembersLock.getMutex());
+    boost::mutex::scoped_lock lock(sstConnVars->sStaticMembersLock.getMutex());
 
-    if (sConnectionMap.find(localEndPoint) != sConnectionMap.end()) {
+    ConnectionMap& connectionMap = sstConnVars->sConnectionMap;
+    if (connectionMap.find(localEndPoint) != connectionMap.end()) {
       std::cout << "sConnectionMap.find failed for " << localEndPoint.endPoint.toString() << "\n";
 
       return false;
     }
 
-    uint16 availableChannel = getAvailableChannel();
+    uint16 availableChannel = sstConnVars->getAvailableChannel();
 
     if (availableChannel == 0)
       return false;
 
     std::tr1::shared_ptr<Connection>  conn =  std::tr1::shared_ptr<Connection> (
-                    new Connection(localEndPoint, remoteEndPoint));
+                       new Connection(sstConnVars, localEndPoint, remoteEndPoint));
 
-    sConnectionMap[localEndPoint] = conn;
-    sConnectionReturnCallbackMap[localEndPoint] = cb;
+    connectionMap[localEndPoint] = conn;
+    sstConnVars->sConnectionReturnCallbackMap[localEndPoint] = cb;
 
     lock.unlock();
 
@@ -636,26 +674,28 @@ private:
     return true;
   }
 
-  static bool listen(StreamReturnCallbackFunction cb, EndPoint<EndPointType> listeningEndPoint) {
-    BaseDatagramLayer<EndPointType>::listen(listeningEndPoint);
+  static bool listen(SSTConnectionVariables<EndPointType>* sstConnVars, StreamReturnCallbackFunction cb, EndPoint<EndPointType> listeningEndPoint) {
+    BaseDatagramLayer<EndPointType>::listen(sstConnVars, listeningEndPoint);
 
-    boost::mutex::scoped_lock lock(sStaticMembersLock.getMutex());
+    boost::mutex::scoped_lock lock(sstConnVars->sStaticMembersLock.getMutex());
 
-    if (sListeningConnectionsCallbackMap.find(listeningEndPoint) != sListeningConnectionsCallbackMap.end()){
+    StreamReturnCallbackMap& listeningConnectionsCallbackMap = sstConnVars->sListeningConnectionsCallbackMap;
+
+    if (listeningConnectionsCallbackMap.find(listeningEndPoint) != listeningConnectionsCallbackMap.end()){
       return false;
     }
 
-    sListeningConnectionsCallbackMap[listeningEndPoint] = cb;
+    listeningConnectionsCallbackMap[listeningEndPoint] = cb;
 
     return true;
   }
 
-  static bool unlisten(EndPoint<EndPointType> listeningEndPoint) {  
-    BaseDatagramLayer<EndPointType>::stopListening(listeningEndPoint);
+  static bool unlisten(SSTConnectionVariables<EndPointType>* sstConnVars, EndPoint<EndPointType> listeningEndPoint) {  
+    BaseDatagramLayer<EndPointType>::stopListening(sstConnVars, listeningEndPoint);
 
-    boost::mutex::scoped_lock lock(sStaticMembersLock.getMutex());    
+    boost::mutex::scoped_lock lock(sstConnVars->sStaticMembersLock.getMutex());    
 
-    sListeningConnectionsCallbackMap.erase(listeningEndPoint);
+    sstConnVars->sListeningConnectionsCallbackMap.erase(listeningEndPoint);
 
     return true;
   }
@@ -706,7 +746,7 @@ private:
 
     std::tr1::shared_ptr<Stream<EndPointType> > stream =
       std::tr1::shared_ptr<Stream<EndPointType> >
-      ( new Stream<EndPointType>(parentLSID, mWeakThis, local_port, remote_port,  usid, lsid, cb) );
+      ( new Stream<EndPointType>(parentLSID, mWeakThis, local_port, remote_port,  usid, lsid, cb, mSSTConnVars) );
     stream->mWeakThis = stream;
     int numBytesBuffered = stream->init(initial_data, length, false, 0);
 
@@ -865,7 +905,7 @@ private:
 				     received_stream_msg->dest_port(),
 				     received_stream_msg->src_port(),
 				     usid, newLSID,
-				     NULL));
+				     NULL, mSSTConnVars));
         stream->mWeakThis = stream;
         stream->init(NULL, 0, true, incomingLsid);
 
@@ -1025,16 +1065,19 @@ private:
 
       sendData( received_payload, 0, false );
 
-      boost::mutex::scoped_lock lock(sStaticMembersLock.getMutex());
+      boost::mutex::scoped_lock lock(mSSTConnVars->sStaticMembersLock.getMutex());      
 
-      if (sConnectionReturnCallbackMap.find(mLocalEndPoint) != sConnectionReturnCallbackMap.end())
+      ConnectionReturnCallbackMap& connectionReturnCallbackMap = mSSTConnVars->sConnectionReturnCallbackMap;
+      ConnectionMap& connectionMap = mSSTConnVars->sConnectionMap;
+
+      if (connectionReturnCallbackMap.find(mLocalEndPoint) != connectionReturnCallbackMap.end())
       {
-        if (sConnectionMap.find(mLocalEndPoint) != sConnectionMap.end()) {
-          std::tr1::shared_ptr<Connection> conn = sConnectionMap[mLocalEndPoint];
+        if (connectionMap.find(mLocalEndPoint) != connectionMap.end()) {
+          std::tr1::shared_ptr<Connection> conn = connectionMap[mLocalEndPoint];
 
-          sConnectionReturnCallbackMap[mLocalEndPoint] (SST_IMPL_SUCCESS, conn);
+          connectionReturnCallbackMap[mLocalEndPoint] (SST_IMPL_SUCCESS, conn);
         }
-        sConnectionReturnCallbackMap.erase(mLocalEndPoint);
+        connectionReturnCallbackMap.erase(mLocalEndPoint);
       }
     }
     else if (mState == CONNECTION_PENDING_RECEIVE_CONNECT) {
@@ -1070,17 +1113,19 @@ private:
       //This is in contrast to the case where the connection got connected, but
       //the connection's root stream was unable to do so.
 
-       boost::mutex::scoped_lock lock(sStaticMembersLock.getMutex());
+       boost::mutex::scoped_lock lock(conn->mSSTConnVars->sStaticMembersLock.getMutex());
        ConnectionReturnCallbackFunction cb = NULL;
-       if (sConnectionReturnCallbackMap.find(conn->localEndPoint()) != sConnectionReturnCallbackMap.end()) {
-         cb = sConnectionReturnCallbackMap[conn->localEndPoint()];
+       
+       ConnectionReturnCallbackMap& connectionReturnCallbackMap = conn->mSSTConnVars->sConnectionReturnCallbackMap;
+       if (connectionReturnCallbackMap.find(conn->localEndPoint()) != connectionReturnCallbackMap.end()) {
+         cb = connectionReturnCallbackMap[conn->localEndPoint()];
        }
 
 
        std::tr1::shared_ptr<Connection>  failed_conn = conn;
 
-       sConnectionReturnCallbackMap.erase(conn->localEndPoint());
-       sConnectionMap.erase(conn->localEndPoint());
+       connectionReturnCallbackMap.erase(conn->localEndPoint());
+       conn->mSSTConnVars->sConnectionMap.erase(conn->localEndPoint());
 
        lock.unlock();
 
@@ -1092,6 +1137,7 @@ private:
        conn->mState = CONNECTION_DISCONNECTED;
      }
    }
+
    // This version should only be called by the destructor!
    void finalCleanup() {
      if (mState != CONNECTION_DISCONNECTED) {
@@ -1101,10 +1147,10 @@ private:
          mState = CONNECTION_DISCONNECTED;
      }
 
-     releaseChannel(mLocalChannelID);
+     mSSTConnVars->releaseChannel(mLocalChannelID);
    }
 
-   static void closeConnections() {
+   static void closeConnections(SSTConnectionVariables<EndPointType>* sstConnVars) {
        // We have to be careful with this function. Because it is going to free
        // the connections, we have to make sure not to let them get freed where
        // the deleter will modify sConnectionMap while we're still modifying it.
@@ -1118,14 +1164,17 @@ private:
        // shouldn't be a problem since we should be the only thread still
        // modifying this data. If we did lock it, we'd deadlock since the
        // destructor will also, indirectly, lock it.
-       while(!sConnectionMap.empty()) {
-           ConnectionPtr saved = sConnectionMap.begin()->second;
-           sConnectionMap.erase(sConnectionMap.begin());
+       while(!sstConnVars->sConnectionMap.empty()) {
+           ConnectionMap& connectionMap = sstConnVars->sConnectionMap;           
+
+           ConnectionPtr saved = connectionMap.begin()->second;
+           connectionMap.erase(connectionMap.begin());
            saved.reset();
        }
    }
 
-   static void handleReceive(EndPoint<EndPointType> remoteEndPoint,
+   static void handleReceive(SSTConnectionVariables<EndPointType>* sstConnVars,
+                             EndPoint<EndPointType> remoteEndPoint,
                              EndPoint<EndPointType> localEndPoint, void* recv_buffer, int len)
    {
      char* data = (char*) recv_buffer;
@@ -1136,9 +1185,10 @@ private:
 
      uint8 channelID = received_msg->channel_id();
 
-     boost::mutex::scoped_lock lock(sStaticMembersLock.getMutex());
+     boost::mutex::scoped_lock lock(sstConnVars->sStaticMembersLock.getMutex());     
 
-     if (sConnectionMap.find(localEndPoint) != sConnectionMap.end()) {
+     ConnectionMap& connectionMap = sstConnVars->sConnectionMap;
+     if (connectionMap.find(localEndPoint) != connectionMap.end()) {
        if (channelID == 0) {
  	/*Someone's already connected at this port. Either don't reply or
  	  send back a request rejected message. */
@@ -1146,7 +1196,7 @@ private:
  	std::cout << "Someone's already connected at this port on object " << localEndPoint.endPoint.toString() << "\n";
  	return;
        }
-       std::tr1::shared_ptr<Connection<EndPointType> > conn = sConnectionMap[localEndPoint];
+       std::tr1::shared_ptr<Connection<EndPointType> > conn = connectionMap[localEndPoint];
 
        conn->receiveMessage(data, len);
      }
@@ -1154,12 +1204,13 @@ private:
        /* it's a new channel request negotiation protocol
  	 packet ; allocate a new channel.*/
 
-       if (sListeningConnectionsCallbackMap.find(localEndPoint) != sListeningConnectionsCallbackMap.end()) {
+       StreamReturnCallbackMap& listeningConnectionsCallbackMap = sstConnVars->sListeningConnectionsCallbackMap;
+       if (listeningConnectionsCallbackMap.find(localEndPoint) != listeningConnectionsCallbackMap.end()) {
          uint16* received_payload = (uint16*) received_msg->payload().data();
 
          uint16 payload[2];
 
-         uint16 availableChannel = getAvailableChannel();
+         uint16 availableChannel = sstConnVars->getAvailableChannel();
          payload[0] = htons(availableChannel);
          uint16 availablePort = availableChannel; //availableChannel is picked from the same 16-bit
                                                   //address space and has to be unique. So why not use
@@ -1169,11 +1220,11 @@ private:
          EndPoint<EndPointType> newLocalEndPoint(localEndPoint.endPoint, availablePort);
          std::tr1::shared_ptr<Connection>  conn =
                     std::tr1::shared_ptr<Connection>(
- 				    new Connection(newLocalEndPoint, remoteEndPoint));
+                         new Connection(sstConnVars, newLocalEndPoint, remoteEndPoint));
 
- 	 conn->listenStream(newLocalEndPoint.port, sListeningConnectionsCallbackMap[localEndPoint]);
+ 	 conn->listenStream(newLocalEndPoint.port, listeningConnectionsCallbackMap[localEndPoint]);
          conn->mWeakThis = conn;
-         sConnectionMap[newLocalEndPoint] = conn;
+         connectionMap[newLocalEndPoint] = conn;
 
          conn->setLocalChannelID(availableChannel);
          conn->setRemoteChannelID(ntohs(received_payload[0]));
@@ -1344,8 +1395,8 @@ private:
     /* (mState != CONNECTION_DISCONNECTED) implies close() wasnt called
        through the destructor. */
     if (force && mState != CONNECTION_DISCONNECTED) {
-      boost::mutex::scoped_lock lock(sStaticMembersLock.getMutex());
-      sConnectionMap.erase(mLocalEndPoint);
+      boost::mutex::scoped_lock lock(mSSTConnVars->sStaticMembersLock.getMutex());
+      mSSTConnVars->sConnectionMap.erase(mLocalEndPoint);
     }
 
     if (force) {
@@ -1416,6 +1467,8 @@ public:
     typedef Connection<EndPointType> ConnectionType;
     typedef EndPoint<EndPointType> EndpointType;
 
+    typedef std::map<EndPoint<EndPointType>, StreamReturnCallbackFunction> StreamReturnCallbackMap;
+
    enum StreamStates {
        DISCONNECTED = 1,
        CONNECTED=2,
@@ -1438,27 +1491,30 @@ public:
 
   bool connected() { return mConnected; }
 
-  static bool connectStream(EndPoint <EndPointType> localEndPoint,
+  static bool connectStream(SSTConnectionVariables<EndPointType>* sstConnVars,
+                            EndPoint <EndPointType> localEndPoint,
 			    EndPoint <EndPointType> remoteEndPoint,
 			    StreamReturnCallbackFunction cb)
   {
       if (localEndPoint.port == 0) {
-          typename BaseDatagramLayer<EndPointType>::Ptr bdl = BaseDatagramLayer<EndPointType>::getDatagramLayer(localEndPoint.endPoint);
+          typename BaseDatagramLayer<EndPointType>::Ptr bdl = sstConnVars->getDatagramLayer(localEndPoint.endPoint);
           if (!bdl) return false;
           localEndPoint.port = bdl->getUnusedPort(localEndPoint.endPoint);
       }
 
-    if (mStreamReturnCallbackMap.find(localEndPoint) != mStreamReturnCallbackMap.end()) {
-      return false;
-    }
+      StreamReturnCallbackMap& streamReturnCallbackMap = sstConnVars->mStreamReturnCallbackMap;
+      if (streamReturnCallbackMap.find(localEndPoint) != streamReturnCallbackMap.end()) {
+        return false;
+      }
 
-    mStreamReturnCallbackMap[localEndPoint] = cb;
+      streamReturnCallbackMap[localEndPoint] = cb;
+      
 
-
-    bool result = Connection<EndPointType>::createConnection(localEndPoint,
-							     remoteEndPoint,
-							     connectionCreated, cb);
-    return result;
+      bool result = Connection<EndPointType>::createConnection(sstConnVars,
+                                                               localEndPoint,
+                                                               remoteEndPoint,
+                                                               connectionCreated, cb);
+      return result;
   }
 
   /*
@@ -1471,12 +1527,12 @@ public:
     @return false, if its not possible to listen to this endpoint (e.g. if listen
             has already been called on this endpoint); true otherwise.
   */
-  static bool listen(StreamReturnCallbackFunction cb, EndPoint <EndPointType> listeningEndPoint) {
-    return Connection<EndPointType>::listen(cb, listeningEndPoint);
+  static bool listen(SSTConnectionVariables<EndPointType>* sstConnVars, StreamReturnCallbackFunction cb, EndPoint <EndPointType> listeningEndPoint) {
+    return Connection<EndPointType>::listen(sstConnVars, cb, listeningEndPoint);
   }
 
-  static bool unlisten(EndPoint <EndPointType> listeningEndPoint) {
-    return Connection<EndPointType>::unlisten(listeningEndPoint);
+  static bool unlisten(SSTConnectionVariables<EndPointType>* sstConnVars, EndPoint <EndPointType> listeningEndPoint) {
+    return Connection<EndPointType>::unlisten(sstConnVars, listeningEndPoint);
   }
 
   /*
@@ -1736,7 +1792,7 @@ public:
 private:
   Stream(LSID parentLSID, std::tr1::weak_ptr<Connection<EndPointType> > conn,
 	 uint16 local_port, uint16 remote_port,
-	 USID usid, LSID lsid, StreamReturnCallbackFunction cb)
+	 USID usid, LSID lsid, StreamReturnCallbackFunction cb, SSTConnectionVariables<EndPointType>* sstConnVars)
     :
     mState(NOT_FINISHED_CONSTRUCTING__CALL_INIT),
     mLocalPort(local_port),
@@ -1758,9 +1814,10 @@ private:
     mNextByteExpected(0),
     mLastContiguousByteReceived(-1),
     mLastSendTime(Time::null()),
-    mStreamReturnCallback(cb),
+    mStreamReturnCallback(cb),    
     mConnected (false),
-    MAX_INIT_RETRANSMISSIONS(5)
+    MAX_INIT_RETRANSMISSIONS(5),
+    mSSTConnVars(sstConnVars)
   {
     mInitialData = NULL;
     mInitialDataLength = 0;
@@ -1836,22 +1893,23 @@ private:
   }
 
   static void connectionCreated( int errCode, std::tr1::shared_ptr<Connection<EndPointType> > c) {
-    assert(mStreamReturnCallbackMap.find(c->localEndPoint()) != mStreamReturnCallbackMap.end());
+    StreamReturnCallbackMap& streamReturnCallbackMap = c->mSSTConnVars->mStreamReturnCallbackMap;
+    assert(streamReturnCallbackMap.find(c->localEndPoint()) != streamReturnCallbackMap.end());
 
     if (errCode != SST_IMPL_SUCCESS) {
 
-      StreamReturnCallbackFunction cb = mStreamReturnCallbackMap[c->localEndPoint()];
-      mStreamReturnCallbackMap.erase(c->localEndPoint());
+      StreamReturnCallbackFunction cb = streamReturnCallbackMap[c->localEndPoint()];
+      streamReturnCallbackMap.erase(c->localEndPoint());
 
       cb(SST_IMPL_FAILURE, StreamPtr() );
 
       return;
     }
 
-    c->stream(mStreamReturnCallbackMap[c->localEndPoint()], NULL , 0,
+    c->stream(streamReturnCallbackMap[c->localEndPoint()], NULL , 0,
 	      c->localEndPoint().port, c->remoteEndPoint().port);
 
-    mStreamReturnCallbackMap.erase(c->localEndPoint());
+    streamReturnCallbackMap.erase(c->localEndPoint());
   }
 
   void serviceStreamNoReturn(std::tr1::shared_ptr<Stream<EndPointType> > strm, std::tr1::shared_ptr<Connection<EndPointType> > conn) {
@@ -1864,7 +1922,7 @@ private:
      the underlying connection. */
 
   bool serviceStream(std::tr1::shared_ptr<Stream<EndPointType> > strm, std::tr1::shared_ptr<Connection<EndPointType> > conn) {
-      assert(strm.get() == this);
+    assert(strm.get() == this);
 
     const Time curTime = Timer::now();
 
@@ -1887,7 +1945,7 @@ private:
         std::tr1::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
         assert(conn);
 
-        mStreamReturnCallbackMap.erase(conn->localEndPoint());
+        mSSTConnVars->mStreamReturnCallbackMap.erase(conn->localEndPoint());
 
 	// If this is the root stream that failed to connect, close the
 	// connection associated with it as well.
@@ -2337,11 +2395,7 @@ private:
   boost::recursive_mutex mReceiveBufferMutex;
 
   ReadCallback mReadCallback;
-  StreamReturnCallbackFunction mStreamReturnCallback;
-
-
-  typedef std::map<EndPoint<EndPointType>, StreamReturnCallbackFunction> StreamReturnCallbackMap;
-  static StreamReturnCallbackMap mStreamReturnCallbackMap;
+  StreamReturnCallbackFunction mStreamReturnCallback; 
 
   friend class Connection<EndPointType>;
 
@@ -2351,7 +2405,8 @@ private:
   uint16 mInitialDataLength;
   uint8 mNumInitRetransmissions;
   uint8 MAX_INIT_RETRANSMISSIONS;
-
+ 
+  SSTConnectionVariables<EndPointType>* mSSTConnVars;
 
   std::tr1::weak_ptr<Stream<EndPointType> > mWeakThis;
 };
@@ -2360,18 +2415,62 @@ private:
 SIRIKATA_EXPORT_TEMPLATE template class SIRIKATA_EXPORT Stream<SpaceObjectReference>;
 #endif
 
+
+/** 
+ Manages SST Connections. All calls creating new top-level streams, listening on endpoints, 
+ or creating the underlying datagram layer go through here. This class maintains the data structures
+ needed by every new SST Stream or Connection.
+
+ This class is only instantiated once per process (usually in main()) and is then
+ accessible through SpaceContext and ObjectHostContext.
+ */
 class SSTConnectionManager : public Service {
 public:
-    virtual void start() {
-    }
-    virtual void stop() {
-        Connection<SpaceObjectReference>::closeConnections();
-    }
+  typedef std::tr1::shared_ptr<BaseDatagramLayer<SpaceObjectReference> > BaseDatagramLayerPtr;    
+    
+  virtual void start() {
+  }
+  
+  virtual void stop() {
+    Connection<SpaceObjectReference>::closeConnections(&mSSTConnVars);
+  }
+  
+  ~SSTConnectionManager() {
+    Connection<SpaceObjectReference>::closeConnections(&mSSTConnVars);
+  }
+  
+  bool connectStream(EndPoint <SpaceObjectReference> localEndPoint,
+                     EndPoint <SpaceObjectReference> remoteEndPoint,
+                     StreamReturnCallbackFunction cb)
+  {
+    return Stream<SpaceObjectReference>::connectStream(&mSSTConnVars, localEndPoint, remoteEndPoint, cb);
+  }
 
-    ~SSTConnectionManager() {
-        Connection<SpaceObjectReference>::closeConnections();
-    }
+  BaseDatagramLayerPtr createDatagramLayer(
+                                           SpaceObjectReference endPoint,
+                                           const Context* ctx,
+                                           ODP::Service* odp) 
+  {
+    return BaseDatagramLayer<SpaceObjectReference>::createDatagramLayer(&mSSTConnVars, endPoint, ctx, odp);
+  }
+
+  BaseDatagramLayerPtr getDatagramLayer(SpaceObjectReference endPoint) {
+    return mSSTConnVars.getDatagramLayer(endPoint);
+  }
+
+  bool listen(StreamReturnCallbackFunction cb, EndPoint <SpaceObjectReference> listeningEndPoint) {
+    return Stream<SpaceObjectReference>::listen(&mSSTConnVars, cb, listeningEndPoint);
+  }
+
+
+  bool unlisten( EndPoint <SpaceObjectReference> listeningEndPoint) {
+    return Stream<SpaceObjectReference>::unlisten(&mSSTConnVars, listeningEndPoint);
+  }
+
+  //Storage class for SST's global variables.
+  SSTConnectionVariables<SpaceObjectReference> mSSTConnVars;
 };
+
 
 
 }

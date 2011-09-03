@@ -35,12 +35,13 @@
 
 namespace Sirikata {
 
-ObjectHostContext::ObjectHostContext(const String& name, ObjectHostID _id, Network::IOService* ios, Network::IOStrand* strand, Trace::Trace* _trace, const Time& epoch, const Duration& simlen)
+ObjectHostContext::ObjectHostContext(const String& name, ObjectHostID _id, SSTConnectionManager* sstConnMgr, Network::IOService* ios, Network::IOStrand* strand, Trace::Trace* _trace, const Time& epoch, const Duration& simlen)
  : Context("Object Host", ios, strand, _trace, epoch, simlen),
    id(_id),
    objectHost(NULL),
    mName(name),
-   mOHTrace(new OHTrace(_trace))
+   mOHTrace(new OHTrace(_trace)),
+   mSSTConnMgr(sstConnMgr)
 {
 }
 

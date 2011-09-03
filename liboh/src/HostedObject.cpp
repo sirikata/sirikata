@@ -456,7 +456,7 @@ void HostedObject::handleConnected(const SpaceID& space, const ObjectReference& 
 
     // FIXME this never gets cleaned out on disconnect
     mSSTDatagramLayers.push_back(
-        BaseDatagramLayerType::createDatagramLayer(
+            mContext->sstConnMgr()->createDatagramLayer(
             SpaceObjectReference(space, obj),
             mContext, mDelegateODPService
         )

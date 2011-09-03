@@ -135,16 +135,15 @@ int main (int argc, char** argv) {
     Network::IOService* ios = Network::IOServiceFactory::makeIOService();
     Network::IOStrand* mainStrand = ios->createStrand();
 
+    SSTConnectionManager* sstConnMgr = new SSTConnectionManager();
+
     Time start_time = Timer::now(); // Just for stats in ObjectHostContext.
     Duration duration = Duration::zero(); // Indicates to run forever.
-    ObjectHostContext* ctx = new ObjectHostContext("cppoh", oh_id, ios, mainStrand, trace, start_time, duration);
+    ObjectHostContext* ctx = new ObjectHostContext("cppoh", oh_id, sstConnMgr, ios, mainStrand, trace, start_time, duration);
 
     String timeseries_type = GetOptionValue<String>(OPT_TRACE_TIMESERIES);
     String timeseries_options = GetOptionValue<String>(OPT_TRACE_TIMESERIES_OPTIONS);
-    Trace::TimeSeries* time_series = Trace::TimeSeriesFactory::getSingleton().getConstructor(timeseries_type)(ctx, timeseries_options);
-
-
-    SSTConnectionManager* sstConnMgr = new SSTConnectionManager();
+    Trace::TimeSeries* time_series = Trace::TimeSeriesFactory::getSingleton().getConstructor(timeseries_type)(ctx, timeseries_options);    
 
     SpaceID mainSpace(GetOptionValue<UUID>(OPT_MAIN_SPACE));
 
@@ -156,7 +155,7 @@ int main (int argc, char** argv) {
     // ServerIDMap for the main space. We need a better way of handling multiple
     // spaces.
     oh->addServerIDMap(mainSpace, server_id_map);
-
+    
     String objstorage_type = GetOptionValue<String>(OPT_OBJECT_STORAGE);
     String objstorage_options = GetOptionValue<String>(OPT_OBJECT_STORAGE_OPTS);
     OH::Storage* obj_storage =
@@ -167,7 +166,7 @@ int main (int argc, char** argv) {
     String objpersistentset_options = GetOptionValue<String>(OPT_OH_PERSISTENT_SET_OPTS);
     OH::PersistedObjectSet* obj_persistent_set =
         OH::PersistedObjectSetFactory::getSingleton().getConstructor(objpersistentset_type)(ctx, objpersistentset_options);
-    oh->setPersistentSet(obj_persistent_set);
+        oh->setPersistentSet(obj_persistent_set);
 
     String objfactory_type = GetOptionValue<String>(OPT_OBJECT_FACTORY);
     String objfactory_options = GetOptionValue<String>(OPT_OBJECT_FACTORY_OPTS);
@@ -175,9 +174,10 @@ int main (int argc, char** argv) {
 
 
     ///////////Go go go!! start of simulation/////////////////////
-    ctx->add(ctx);
+    ctx->add(ctx);    
     ctx->add(obj_storage);
     ctx->add(obj_persistent_set);
+
     ctx->add(oh);
     ctx->add(sstConnMgr);
 
@@ -203,8 +203,10 @@ int main (int argc, char** argv) {
     delete oh;
     //delete pd;
 
+    
     delete obj_storage;
     delete obj_persistent_set;
+
 
     SimulationFactory::destroy();
 

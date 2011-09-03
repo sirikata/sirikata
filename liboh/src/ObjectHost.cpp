@@ -53,11 +53,12 @@
 namespace Sirikata {
 
 ObjectHost::ObjectHost(ObjectHostContext* ctx, Network::IOService *ioServ, const String&options)
- : mContext(ctx),
+ : mContext(ctx),   
    mStorage(NULL),
    mPersistentSet(NULL),
    mActiveHostedObjects(0)
 {
+    mContext->objectHost = this;
     mScriptPlugins=new PluginManager;
     OptionValue *protocolOptions;
     OptionValue *scriptManagers;

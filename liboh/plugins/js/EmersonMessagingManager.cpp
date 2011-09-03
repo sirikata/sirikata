@@ -11,7 +11,7 @@ namespace Sirikata{
 namespace JS{
 
 
-EmersonMessagingManager::EmersonMessagingManager(Context* ctx)
+EmersonMessagingManager::EmersonMessagingManager(ObjectHostContext* ctx)
  : mMainContext(ctx)
 {
 }
@@ -22,7 +22,7 @@ EmersonMessagingManager::~EmersonMessagingManager()
     for(PresenceStreamMap::iterator pres_it = mStreams.begin(); pres_it != mStreams.end(); pres_it++) {
         // Stop listening for new streams
         const SpaceObjectReference& pres_id = pres_it->first;
-        SSTStream::unlisten(            
+        mMainContext->sstConnMgr()->unlisten(            
             EndPoint<SpaceObjectReference>(pres_id,OBJECT_SCRIPT_COMMUNICATION_PORT)
         );
 
@@ -43,7 +43,7 @@ void EmersonMessagingManager::presenceConnected(const SpaceObjectReference& conn
     allPres[connPresSporef] = true;
 
     //create a listener for scripting messages to presence with sporef connPresSporef.
-    SSTStream::listen(
+    mMainContext->sstConnMgr()->listen(
         std::tr1::bind(&EmersonMessagingManager::createScriptCommListenerStreamCB,this,
             livenessToken(), connPresSporef,_1,_2
         ),
@@ -176,7 +176,7 @@ bool EmersonMessagingManager::sendScriptCommMessageReliable(const SpaceObjectRef
     }
 
     // Otherwise, start the process of connecting
-    returner = SSTStream::connectStream(
+    returner = mMainContext->sstConnMgr()->connectStream(
         EndPoint<SpaceObjectReference>(sender,0), //local port is random
 
         //send to receiver's script comm port
@@ -201,7 +201,7 @@ void EmersonMessagingManager::scriptCommWriteStreamConnectedCB(Liveness::Token a
     //if connection failure, just try to re-connect.
     if (err != SST_IMPL_SUCCESS)
     {
-        SSTStream::connectStream(
+      mMainContext->sstConnMgr()->connectStream(
             EndPoint<SpaceObjectReference>(sender,0), //local port is random
             EndPoint<SpaceObjectReference>(receiver,OBJECT_SCRIPT_COMMUNICATION_PORT), //send to
                                                                     //receiver's

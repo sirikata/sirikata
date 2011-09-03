@@ -955,7 +955,7 @@ void SessionManager::handleObjectFullyConnected(const SpaceID& space, const Obje
     conn_info.queryMaxResults   = ci.queryMaxResults;
     real_cb(space, obj, conn_info);
 
-    SSTStream::connectStream(
+    mContext->sstConnMgr()->connectStream(
         SSTEndpoint(spaceobj, 0), // Local port is random
         SSTEndpoint(SpaceObjectReference(space, ObjectReference::spaceServiceID()), OBJECT_SPACE_PORT),
         std::tr1::bind( &SessionManager::spaceConnectCallback, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2, spaceobj, Connected)
@@ -967,8 +967,7 @@ void SessionManager::handleObjectFullyMigrated(const SpaceID& space, const Objec
 
     real_cb(space, obj, server);
 
-
-    SSTStream::connectStream(
+    mContext->sstConnMgr()->connectStream(
         SSTEndpoint(spaceobj, 0), // Local port is random
         SSTEndpoint(SpaceObjectReference(space, ObjectReference::spaceServiceID()), OBJECT_SPACE_PORT),
         std::tr1::bind( &SessionManager::spaceConnectCallback, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2, spaceobj, Migrated)
@@ -997,7 +996,7 @@ void SessionManager::spaceConnectCallback(int err, SSTStreamPtr s, SpaceObjectRe
             "Error code: "<<err<<".  Retrying.");
         
         // retry creating an SST stream from the space server to object 'obj'.
-        SSTStream::connectStream(
+      mContext->sstConnMgr()->connectStream(
             SSTEndpoint(spaceobj, 0), // Local port is random
             SSTEndpoint(SpaceObjectReference(spaceobj.space(), ObjectReference::spaceServiceID()), OBJECT_SPACE_PORT),
             std::tr1::bind( &SessionManager::spaceConnectCallback, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2, spaceobj, after)

@@ -111,8 +111,9 @@ int main(int argc, char** argv) {
     Network::IOService* ios = Network::IOServiceFactory::makeIOService();
     Network::IOStrand* mainStrand = ios->createStrand();
 
+    SSTConnectionManager* sstConnMgr = new SSTConnectionManager();
 
-    SpaceContext* space_context = new SpaceContext("space", server_id, ios, mainStrand, start_time, gTrace, duration);
+    SpaceContext* space_context = new SpaceContext("space", server_id, sstConnMgr, ios, mainStrand, start_time, gTrace, duration);
 
     String timeseries_type = GetOptionValue<String>(OPT_TRACE_TIMESERIES);
     String timeseries_options = GetOptionValue<String>(OPT_TRACE_TIMESERIES_OPTIONS);
@@ -251,7 +252,6 @@ int main(int argc, char** argv) {
     }
 
     ///////////Go go go!! start of simulation/////////////////////
-    SSTConnectionManager* sstConnMgr = new SSTConnectionManager();
 
     space_context->add(space_context);
     space_context->add(auth);

@@ -161,7 +161,7 @@ void Forwarder::initialize(ObjectSegmentation* oseg, ServerMessageQueue* smq, Se
 
 void Forwarder::setODPService(ODP::DelegateService* odp) {
     mDelegateODPService = odp;
-    mSSTDatagramLayer = BaseDatagramLayer<SpaceObjectReference>::createDatagramLayer(
+    mSSTDatagramLayer = mContext->sstConnectionManager()->createDatagramLayer(
         SpaceObjectReference(SpaceID::null(), ObjectReference::spaceServiceID()), mContext, odp
     );
 }
