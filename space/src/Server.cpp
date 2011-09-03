@@ -559,7 +559,6 @@ void Server::handleConnectAuthResponse(const ObjectHostConnectionManager::Connec
     // same object ID.
     if (isObjectConnected(obj_id) || isObjectConnecting(obj_id)) {
         // Decide whether this is a conflict or a retry
-
         if  //was already connected and it was the same oh sending msg
             ((isObjectConnected(obj_id) &&
                 (mObjects[obj_id]->connID() == oh_conn_id)) ||

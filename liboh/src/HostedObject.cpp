@@ -356,7 +356,7 @@ void HostedObject::initializeScript(const String& script_type, const String& arg
     }
 }
 
-void HostedObject::connect(
+bool HostedObject::connect(
         const SpaceID&spaceID,
         const Location&startingLocation,
         const BoundingSphere3f &meshBounds,
@@ -365,13 +365,13 @@ void HostedObject::connect(
         const UUID&object_uuid_evidence,
         PresenceToken token)
 {
-    connect(spaceID, startingLocation, meshBounds, mesh, phy, SolidAngle::Max, 0, object_uuid_evidence,ObjectReference::null(),token);
+    return connect(spaceID, startingLocation, meshBounds, mesh, phy, SolidAngle::Max, 0, object_uuid_evidence,ObjectReference::null(),token);
 }
 
 
 
 
-void HostedObject::connect(
+bool HostedObject::connect(
         const SpaceID&spaceID,
         const Location&startingLocation,
         const BoundingSphere3f &meshBounds,
@@ -385,22 +385,20 @@ void HostedObject::connect(
 {
     if (stopped()) {
         HO_LOG(warn,"Ignoring HostedObject connection request after system stop requested.");
-        return;
+        return false;
     }
 
     if (spaceID == SpaceID::null())
-        return;
+        return false;
 
     ObjectReference oref = (orefID == ObjectReference::null()) ? ObjectReference(UUID::random()) : orefID;
 
     SpaceObjectReference connectingSporef (spaceID,oref);
-    mObjectHost->registerHostedObject(connectingSporef,getSharedPtr());
-
 
     // Note: we always use Time::null() here.  The server will fill in the
     // appropriate value.  When we get the callback, we can fix this up.
     Time approx_server_time = Time::null();
-    mObjectHost->connect(
+    if (mObjectHost->connect(
         connectingSporef, spaceID,
         TimedMotionVector3f(approx_server_time, MotionVector3f( Vector3f(startingLocation.getPosition()), startingLocation.getVelocity()) ),
         TimedMotionQuaternion(approx_server_time,MotionQuaternion(startingLocation.getOrientation().normal(),Quaternion(startingLocation.getAxisOfRotation(),startingLocation.getAngularSpeed()))),  //normalize orientations
@@ -413,7 +411,12 @@ void HostedObject::connect(
         std::tr1::bind(&HostedObject::handleMigrated, this, _1, _2, _3),
         std::tr1::bind(&HostedObject::handleStreamCreated, this, _1, _2, token),
         std::tr1::bind(&HostedObject::handleDisconnected, this, _1, _2)
-    );
+        )) {
+        mObjectHost->registerHostedObject(connectingSporef,getSharedPtr());
+        return true;
+    }else {
+        return false;
+    }
 }
 
 

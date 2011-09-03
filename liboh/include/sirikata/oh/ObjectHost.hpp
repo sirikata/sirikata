@@ -166,8 +166,10 @@ public:
 
     // Primary HostedObject API
 
-    /** Connect the object to the space with the given starting parameters. */
-    void connect(
+    /** Connect the object to the space with the given starting parameters. 
+    * returns true if the connection was initiated and no other objects are using this ID to connect
+    */
+    bool connect(
         const SpaceObjectReference& sporef, const SpaceID& space,
         const TimedMotionVector3f& loc,
         const TimedMotionQuaternion& orient,

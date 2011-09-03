@@ -197,7 +197,7 @@ SpaceID ObjectHost::getDefaultSpace()
 
 // Primary HostedObject API
 
-void ObjectHost::connect(
+bool ObjectHost::connect(
     const SpaceObjectReference& sporef, const SpaceID& space,
     const TimedMotionVector3f& loc,
     const TimedMotionQuaternion& orient,
@@ -215,8 +215,9 @@ void ObjectHost::connect(
     bool with_query = init_sa != SolidAngle::Max;
 
     Sirikata::SerializationCheck::Scoped sc(&mSessionSerialization);
-
-    mSessionManagers[space]->connect(
+    SessionManager *sm = mSessionManagers[space];
+    
+    return sm->connect(
         sporef, loc, orient, bnds, with_query, init_sa, init_max_results, mesh, phy,
         std::tr1::bind(&ObjectHost::wrappedConnectedCallback, this, _1, _2, _3, connected_cb),
         migrated_cb,

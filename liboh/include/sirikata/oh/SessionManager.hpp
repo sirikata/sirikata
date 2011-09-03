@@ -112,8 +112,10 @@ class SIRIKATA_OH_EXPORT SessionManager : public Service, private ODP::DelegateS
 
     // NOTE: The public interface is only safe to access from the main strand.
 
-    /** Connect the object to the space with the given starting parameters. */
-    void connect(
+    /** Connect the object to the space with the given starting parameters. 
+    * \returns true if no other objects on this OH are trying to connect with this ID
+    */
+    bool connect(
         const SpaceObjectReference& sporef_objid,
         const TimedMotionVector3f& init_loc,
         const TimedMotionQuaternion& init_orient,

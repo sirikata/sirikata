@@ -237,7 +237,7 @@ public:
         listeners.  Provides token to these listeners so they can distinguish
         which presence may have connected, etc.
     */
-    void connect(
+    bool connect(
         const SpaceID&spaceID,
         const Location&startingLocation,
         const BoundingSphere3f &meshBounds,
@@ -246,7 +246,7 @@ public:
         const UUID&object_uuid_evidence,
         PresenceToken token = DEFAULT_PRESENCE_TOKEN);
 
-    void connect(
+    bool connect(
         const SpaceID&spaceID,
         const Location&startingLocation,
         const BoundingSphere3f &meshBounds,
