@@ -37,11 +37,17 @@
 
 
 namespace Sirikata {
+namespace {
+void nop() {
+
+}
+}
 
 OrphanLocUpdateManager::OrphanLocUpdateManager(Context* ctx, Network::IOStrand* strand, const Duration& timeout)
  : PollingService(strand, timeout, ctx, "OrphanLocUpdateManager"),
    mContext(ctx),
-   mTimeout(timeout)
+   mTimeout(timeout),
+   mFinalCallback(&nop)
 {
 }
 
@@ -122,7 +128,9 @@ OrphanLocUpdateManager::UpdateInfoList OrphanLocUpdateManager::getOrphanUpdates(
     mUpdates.erase(it);
     return results;
 }
-
+void OrphanLocUpdateManager::setFinalCallback(const std::tr1::function<void()>& cb) {
+    mFinalCallback=cb;
+}
 void OrphanLocUpdateManager::poll() {
     Time now = mContext->simTime();
     // Scan through all updates looking for outdated ones
@@ -143,6 +151,8 @@ void OrphanLocUpdateManager::poll() {
             mUpdates.erase(it);
         it = next_it;
     }
+    mFinalCallback();
+    mFinalCallback=&nop;
 }
 
 } // namespace Sirikata

@@ -133,6 +133,7 @@ HostedObject::~HostedObject() {
         delete mPresenceData;
 
     getObjectHost()->hostedObjectDestroyed(id());
+    stop();
 }
 
 const UUID& HostedObject::id() const {
@@ -148,9 +149,13 @@ void HostedObject::stop() {
     if (mObjectScript)
         mObjectScript->stop();
 }
-
 bool HostedObject::stopped() const {
     return (mContext->stopped() || destroyed);
+}
+namespace {
+void nop (const HostedObjectPtr&) {
+
+}
 }
 
 void HostedObject::destroy(bool need_self) {
@@ -169,7 +174,10 @@ void HostedObject::destroy(bool need_self) {
         delete mObjectScript;
         mObjectScript=NULL;
     }
-
+    if (need_self) {
+        mOrphanLocUpdates.setFinalCallback(std::tr1::bind(&nop,self_ptr));
+    }
+    mOrphanLocUpdates.stop();
     for (PresenceDataMap::iterator iter = mPresenceData->begin(); iter != mPresenceData->end(); ++iter)
         mObjectHost->unregisterHostedObject(iter->first);
 

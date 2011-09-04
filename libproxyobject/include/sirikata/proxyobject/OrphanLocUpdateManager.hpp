@@ -84,8 +84,8 @@ public:
     /** Gets all orphan updates for a given object. */
     UpdateInfoList getOrphanUpdates(const SpaceObjectReference& obj);
 
-
-
+    void setFinalCallback(const std::tr1::function<void()>&);
+    
     //When we get a prox removal, we take all the data that was stored in the
     //corresponding proxy object and put it into an OrphanedProxData
     struct OrphanedProxData
@@ -130,7 +130,7 @@ public:
         Time expiresAt;
     };
 
-    
+     
 private:
     virtual void poll();
     
@@ -140,6 +140,8 @@ private:
     Context* mContext;
     Duration mTimeout;
     ObjectUpdateMap mUpdates;
+    /** This function gets called and cleared each time the poller is called */
+    std::tr1::function<void()> mFinalCallback;
 }; // class OrphanLocUpdateManager
 
 
