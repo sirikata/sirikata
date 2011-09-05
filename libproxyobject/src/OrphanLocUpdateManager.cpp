@@ -37,18 +37,14 @@
 
 
 namespace Sirikata {
-namespace {
-void nop() {
-
-}
-}
 
 OrphanLocUpdateManager::OrphanLocUpdateManager(Context* ctx, Network::IOStrand* strand, const Duration& timeout)
  : PollingService(strand, timeout, ctx, "OrphanLocUpdateManager"),
    mContext(ctx),
    mTimeout(timeout),
-   mFinalCallback(&nop)
+   mFinalCallback(NULL)
 {
+
 }
 
 OrphanLocUpdateManager::~OrphanLocUpdateManager() {
@@ -129,7 +125,7 @@ OrphanLocUpdateManager::UpdateInfoList OrphanLocUpdateManager::getOrphanUpdates(
     return results;
 }
 void OrphanLocUpdateManager::setFinalCallback(const std::tr1::function<void()>& cb) {
-    mFinalCallback=cb;
+    mFinalCallback=new std::tr1::function<void()>(cb);
 }
 void OrphanLocUpdateManager::poll() {
     Time now = mContext->simTime();
@@ -151,8 +147,12 @@ void OrphanLocUpdateManager::poll() {
             mUpdates.erase(it);
         it = next_it;
     }
-    mFinalCallback();
-    mFinalCallback=&nop;
+    if (mFinalCallback) {
+        std::tr1::function<void()> finalCallbackCopy(*mFinalCallback);
+        mContext->mainStrand->post(finalCallbackCopy);
+        delete mFinalCallback;
+        mFinalCallback=NULL;
+    }
 }
 
 } // namespace Sirikata
