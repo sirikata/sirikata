@@ -188,8 +188,9 @@ ServerID SessionManager::ObjectConnections::handleConnectSuccess(const SpaceObje
 
 void SessionManager::ObjectConnections::handleConnectError(const SpaceObjectReference& sporef_objid) {
     mObjectInfo[sporef_objid].connectingTo = NullServerID;
-    ConnectingInfo ci;
-    mObjectInfo[sporef_objid].connectedCB(parent->mSpace, sporef_objid.object(), NullServerID, ci);
+    //ConnectingInfo ci;
+    //mObjectInfo[sporef_objid].connectedCB(parent->mSpace, sporef_objid.object(), NullServerID, ci);
+    mObjectInfo[sporef_objid].disconnectedCB(sporef_objid, Disconnect::LoginDenied);
 }
 
 void SessionManager::ObjectConnections::handleConnectStream(const SpaceObjectReference& sporef_objid, ConnectionEvent after, bool do_cb) {

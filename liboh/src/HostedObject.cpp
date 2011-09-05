@@ -464,7 +464,12 @@ void HostedObject::handleConnected(const SpaceID& space, const ObjectReference& 
         HO_LOG(detailed,"Ignoring connection success after system stop requested.");
         return;
     }
+    if (info.server == NullServerID)
+    {
+        HO_LOG(warning,"Earlier failure to connect object:" << obj << " to space " << space);
+        return;
 
+    }
     // FIXME this never gets cleaned out on disconnect
     mSSTDatagramLayers.push_back(
             mContext->sstConnMgr()->createDatagramLayer(
