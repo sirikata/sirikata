@@ -80,8 +80,10 @@ std.persistentMap.prototype.get = function()
         cb = arguments[1];
         if(key in this._data)
             cb(true, this._data[key]);
-        else
+        else if(key in this._key)
             system.storageRead(keyName(this._mapName, key), std.core.bind(this._getCommit, this, key, cb));
+        else
+            cb(false, '');
     }
     else {
         system.print('API *get* usage: get(key) or get(key, cb)');
