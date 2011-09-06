@@ -48,6 +48,7 @@ public:
     void tearDown() {_base.tearDown(); }
 
     void testSetupTeardown() {_base.testSetupTeardown(); }
+
     void testSingleWrite() {_base.testSingleWrite(); }
     void testSingleRead() {_base.testSingleRead(); }
     void testSingleInvalidRead() {_base.testSingleInvalidRead(); }
@@ -64,7 +65,7 @@ public:
 
     void testRangeRead() {_base.testRangeRead(); }
     void testCount() {_base.testCount(); }
-    //void testRangeErase() {_base.testRangeErase(); }
+    void testRangeErase() {_base.testRangeErase(); }
 };
 
 const String CassandraStorageTest::dbhost("localhost");

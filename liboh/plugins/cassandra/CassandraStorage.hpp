@@ -117,10 +117,15 @@ private:
     // Executes a commit. Runs in a separate thread, so the transaction is
     // passed in directly
     void executeCommit(const Bucket& bucket, Transaction* trans, CommitCallback cb, const String& timestamp);
-    void executeCount(const Bucket& bucket, ColumnParent parent, SlicePredicate predicate, CountCallback cb, const String& timestamp);
+
+    void executeCount(const Bucket& bucket, ColumnParent& parent, SlicePredicate& predicate, CountCallback cb, const String& timestamp);
+    void executeRangeRead(const Bucket& bucket, SliceRange& range, CommitCallback cb, const String& timestamp);
+    void executeRangeErase_p1(const Bucket& bucket, SliceRange& range, CommitCallback cb, const String& timestamp);
+    void executeRangeErase_p2(const Bucket& bucket, CommitCallback cb, ReadSet* rs, const String& timestamp);
 
     // Complete a commit back in the main thread, cleaning it up and dispatching the callback
     void completeCommit(Transaction* trans, CommitCallback cb, bool success, ReadSet* rs);
+    void completeRange(CommitCallback cb, bool success, ReadSet* rs);
     void completeCount(CountCallback cb, bool success, int32_t count);
 
     // Call libcassandra methods to commit transcation

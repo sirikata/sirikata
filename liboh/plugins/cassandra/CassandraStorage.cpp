@@ -212,7 +212,6 @@ void CassandraStorage::executeCommit(const Bucket& bucket, Transaction* trans, C
 // Complete a commit back in the main thread, cleaning it up and dispatching
 // the callback
 void CassandraStorage::completeCommit(Transaction* trans, CommitCallback cb, bool success, ReadSet* rs) {
-
     delete trans;
     if (cb) cb(success, rs);
 }
@@ -264,15 +263,16 @@ bool CassandraStorage::read(const Bucket& bucket, const Key& key, const CommitCa
 }
 
 bool CassandraStorage::rangeRead(const Bucket& bucket, const Key& start, const Key& finish, const CommitCallback& cb, const String& timestamp) {
-    bool is_new = false;
-    Transaction* trans = getTransaction(bucket, &is_new);
-
-    ReadSet* rs = new ReadSet;
     SliceRange range;
     range.start = start;
     range.finish = finish;
     range.count = 100000; // currently, set large enough to read all the data
+    mIOService->post(std::tr1::bind(&CassandraStorage::executeRangeRead, this, bucket, range, cb, timestamp));
+    return true;
+}
 
+void CassandraStorage::executeRangeRead(const Bucket& bucket, SliceRange& range, CommitCallback cb, const String& timestamp) {
+	ReadSet* rs = new ReadSet;
     bool success = true;
     try {
     	*rs = mDB->db()->getColumnsValues(bucket.rawHexData(),CF_NAME, timestamp, range);
@@ -280,14 +280,50 @@ bool CassandraStorage::rangeRead(const Bucket& bucket, const Key& start, const K
     catch(...){
        	success = false;
     }
+    if (rs->size()==0)
+    	success = false;
 
-    mContext->mainStrand->post(std::tr1::bind(&CassandraStorage::completeCommit, this, trans, cb, success, rs));
-    return true;
+    mContext->mainStrand->post(std::tr1::bind(&CassandraStorage::completeRange, this, cb, success, rs));
+}
+
+void CassandraStorage::completeRange(CommitCallback cb, bool success, ReadSet* rs) {
+    if (cb) cb(success, rs);
 }
 
 bool CassandraStorage::rangeErase(const Bucket& bucket, const Key& start, const Key& finish, const CommitCallback& cb, const String& timestamp) {
-    // TODO Ranged deletion is not supported in Cassandra yet
+    // TODO Ranged deletion is not supported in Cassandra yet. Current implementation is inefficient
+    SliceRange range;
+    range.start = start;
+    range.finish = finish;
+    range.count = 100000; // currently, set large enough to read all the data
+
+    mIOService->post(std::tr1::bind(&CassandraStorage::executeRangeErase_p1, this, bucket, range, cb, timestamp));
+
     return true;
+}
+
+void CassandraStorage::executeRangeErase_p1(const Bucket& bucket, SliceRange& range, CommitCallback cb, const String& timestamp) {
+	ReadSet* rs = new ReadSet;
+    bool success = true;
+    try {
+    	*rs = mDB->db()->getColumnsValues(bucket.rawHexData(), CF_NAME, timestamp, range);
+    }
+    catch(...){
+       	success = false;
+    }
+    if (!success)
+    	mContext->mainStrand->post(std::tr1::bind(&CassandraStorage::completeRange, this, cb, success, rs));
+    else
+    	mIOService->post(std::tr1::bind(&CassandraStorage::executeRangeErase_p2, this, bucket, cb, rs, timestamp));
+}
+
+void CassandraStorage::executeRangeErase_p2(const Bucket& bucket, CommitCallback cb, ReadSet* rs, const String& timestamp) {
+	beginTransaction(bucket);
+    for(ReadSet::iterator it = (*rs).begin(); it != (*rs).end(); it++) {
+        String key = it->first;
+        erase(bucket, key);
+    }
+    mIOService->post(std::tr1::bind(&CassandraStorage::commitTransaction, this, bucket, cb, timestamp));
 }
 
 bool CassandraStorage::count(const Bucket& bucket, const Key& start, const Key& finish, const CountCallback& cb, const String& timestamp) {
@@ -305,14 +341,12 @@ bool CassandraStorage::count(const Bucket& bucket, const Key& start, const Key& 
     predicate.__isset.slice_range=true;
     predicate.slice_range=range;
 
-    mIOService->post(
-        std::tr1::bind(&CassandraStorage::executeCount, this, bucket, col_parent, predicate, cb, timestamp)
-    );
+    mIOService->post(std::tr1::bind(&CassandraStorage::executeCount, this, bucket, col_parent, predicate, cb, timestamp));
 
     return true;
 }
 
-void CassandraStorage::executeCount(const Bucket& bucket, ColumnParent parent, SlicePredicate predicate, CountCallback cb, const String& timestamp)
+void CassandraStorage::executeCount(const Bucket& bucket, ColumnParent& parent, SlicePredicate& predicate, CountCallback cb, const String& timestamp)
 {
     bool success = true;
     int32_t count = 0;

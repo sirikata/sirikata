@@ -414,7 +414,6 @@ public:
         _storage->commitTransaction(_buckets[0],
             std::tr1::bind(&StorageTestBase::checkReadValues, this, true, ReadSet(), _1, _2)
         );
-        waitForTransaction();
 
         ReadSet rs;
         rs["map:name:a"] = "abcde";
