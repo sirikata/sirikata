@@ -251,6 +251,9 @@ void JSObjectScriptManager::createSystemTemplate()
     mSystemTemplate->Set(v8::String::New("storageErase"), v8::FunctionTemplate::New(JSSystem::storageErase));
     mSystemTemplate->Set(v8::String::New("storageWrite"),v8::FunctionTemplate::New(JSSystem::storageWrite));
     mSystemTemplate->Set(v8::String::New("storageRead"),v8::FunctionTemplate::New(JSSystem::storageRead));
+    mSystemTemplate->Set(v8::String::New("storageRangeRead"),v8::FunctionTemplate::New(JSSystem::storageRangeRead));
+    mSystemTemplate->Set(v8::String::New("storageRangeErase"),v8::FunctionTemplate::New(JSSystem::storageRangeErase));
+    mSystemTemplate->Set(v8::String::New("storageCount"),v8::FunctionTemplate::New(JSSystem::storageCount));
 
     mSystemTemplate->Set(v8::String::New("setSandboxMessageCallback"),v8::FunctionTemplate::New(JSSystem::setSandboxMessageCallback));
     mSystemTemplate->Set(v8::String::New("setPresenceMessageCallback"),v8::FunctionTemplate::New(JSSystem::setPresenceMessageCallback));

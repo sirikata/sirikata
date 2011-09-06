@@ -57,6 +57,9 @@ v8::Handle<v8::Value> storageCommit(const v8::Arguments& args);
 v8::Handle<v8::Value> storageWrite(const v8::Arguments& args);
 v8::Handle<v8::Value> storageRead(const v8::Arguments& args);
 v8::Handle<v8::Value> storageErase(const v8::Arguments& args);
+v8::Handle<v8::Value> storageRangeRead(const v8::Arguments& args);
+v8::Handle<v8::Value> storageRangeErase(const v8::Arguments& args);
+v8::Handle<v8::Value> storageCount(const v8::Arguments& args);
 //end storage functions
 
 v8::Handle<v8::Value> setRestoreScript(const v8::Arguments& args);

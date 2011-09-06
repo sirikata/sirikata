@@ -374,6 +374,66 @@ v8::Handle<v8::Value> storageRead(const v8::Arguments& args)
     return jsfake->storageRead(key, cb);
 }
 
+v8::Handle<v8::Value> storageRangeRead(const v8::Arguments& args)
+{
+    if (args.Length() != 3)
+        return v8::ThrowException ( v8::Exception::Error(v8::String::New("Error calling storageRangeRead.  Require 3 arguments: a start key (string), a finish key (string), and a callback")));
+
+    INLINE_STR_CONV_ERROR(args[0],storageRangeRead,1,start);
+    INLINE_STR_CONV_ERROR(args[1],storageRangeRead,2,finish);
+
+    v8::Handle<v8::Function> cb = maybeDecodeCallbackArgument(args, 2);
+
+    //decode system object
+    String errorMessage = "Error decoding error message when storageRangeReading";
+    JSSystemStruct* jsfake  = JSSystemStruct::decodeSystemStruct(args.This(), errorMessage);
+
+    if (jsfake == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
+
+    return jsfake->storageRangeRead(start, finish, cb);
+}
+
+v8::Handle<v8::Value> storageRangeErase(const v8::Arguments& args)
+{
+    if (args.Length() != 3)
+        return v8::ThrowException ( v8::Exception::Error(v8::String::New("Error calling storageRangeErase.  Require 3 arguments: a start key (string), a finish key (string), and a callback")));
+
+    INLINE_STR_CONV_ERROR(args[0],storageRangeErase,1,start);
+    INLINE_STR_CONV_ERROR(args[1],storageRangeErase,2,finish);
+
+    v8::Handle<v8::Function> cb = maybeDecodeCallbackArgument(args, 2);
+
+    //decode system object
+    String errorMessage = "Error decoding error message when storageRangeErasing";
+    JSSystemStruct* jsfake  = JSSystemStruct::decodeSystemStruct(args.This(), errorMessage);
+
+    if (jsfake == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
+
+    return jsfake->storageRangeErase(start, finish, cb);
+}
+
+v8::Handle<v8::Value> storageCount(const v8::Arguments& args)
+{
+    if (args.Length() != 3)
+        return v8::ThrowException ( v8::Exception::Error(v8::String::New("Error calling storageCount.  Require 3 arguments: a start key (string), a finish key (string), and a callback")));
+
+    INLINE_STR_CONV_ERROR(args[0],storageCount,1,start);
+    INLINE_STR_CONV_ERROR(args[1],storageCount,2,finish);
+
+    v8::Handle<v8::Function> cb = maybeDecodeCallbackArgument(args, 2);
+
+    //decode system object
+    String errorMessage = "Error decoding error message when storageCounting";
+    JSSystemStruct* jsfake  = JSSystemStruct::decodeSystemStruct(args.This(), errorMessage);
+
+    if (jsfake == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
+
+    return jsfake->storageCount(start, finish, cb);
+}
+
 v8::Handle<v8::Value> setRestoreScript(const v8::Arguments& args) {
     if (args.Length() != 1 && args.Length() != 2)
         return v8::ThrowException ( v8::Exception::Error(v8::String::New("Error calling setRestoreScript. Require 1 or 2 arguments: an script (string or function) and optional callback")));

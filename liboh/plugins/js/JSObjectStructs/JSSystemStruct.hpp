@@ -49,6 +49,9 @@ struct JSSystemStruct
     v8::Handle<v8::Value> storageWrite(const OH::Storage::Key& key, const String& toWrite, v8::Handle<v8::Function> cb);
     v8::Handle<v8::Value> storageErase(const OH::Storage::Key& key, v8::Handle<v8::Function> cb);
     v8::Handle<v8::Value> storageRead(const OH::Storage::Key& key, v8::Handle<v8::Function> cb);
+    v8::Handle<v8::Value> storageRangeRead(const OH::Storage::Key& start, const OH::Storage::Key& finish, v8::Handle<v8::Function> cb);
+    v8::Handle<v8::Value> storageRangeErase(const OH::Storage::Key& start, const OH::Storage::Key& finish, v8::Handle<v8::Function> cb);
+    v8::Handle<v8::Value> storageCount(const OH::Storage::Key& start, const OH::Storage::Key& finish, v8::Handle<v8::Function> cb);
 
 
     v8::Handle<v8::Value> setRestoreScript(const String& key, v8::Handle<v8::Function> cb);

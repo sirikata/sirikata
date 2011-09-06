@@ -366,6 +366,65 @@ function PresenceEntry(sporef, presObj)
              return baseSystem.storageErase.apply(baseSystem, arguments);
      };
 
+
+     /**
+      @param {String} readKeyStart. Specifies start of the range of keys in 
+      the backend storage system to read data from.
+      @param {String} readKeyFinish. Specifies end of the range of keys in 
+      the backend storage system to read data from.
+
+      @param {function} cb Callback to execute when read finishes.  Takes two
+      arguments: 1) bool (true if read succeeded, false if read failed); 2) If
+      read succeeded, the value of the field read in (if read failed, undefined).
+
+      */
+     system.storageRangeRead = function()
+     {
+         if (arguments.length == 3 && typeof(arguments[2] === 'function'))
+             return baseSystem.storageRangeRead.apply(baseSystem, [ arguments[0], arguments[1], system.wrapCallbackForSelf(arguments[2]) ]);
+         else
+             return baseSystem.storageRangeRead.apply(baseSystem, arguments);
+     };
+
+
+     /**
+      @param {String} eraseKeyStart. Specifies start of the range of keys in 
+      the backend storage system to remove.
+      @param {String} eraseKeyFinish. Specifies end of the range of keys in 
+      the backend storage system to remove.
+
+      @param {function} cb Callback to execute when remove finishes.  Takes a
+      single argument: bool (true if remov is successful, false otherwise).
+
+      */
+     system.storageRangeErase = function()
+     {
+         if (arguments.length == 3 && typeof(arguments[2] === 'function'))
+             return baseSystem.storageRangeErase.apply(baseSystem, [ arguments[0], arguments[1], system.wrapCallbackForSelf(arguments[2]) ]);
+         else
+             return baseSystem.storageRangeErase.apply(baseSystem, arguments);
+     };
+
+
+     /**
+      @param {String} countKeyStart. Specifies start of the range of keys in 
+      the backend storage system to count.
+      @param {String} countKeyFinish. Specifies end of the range of keys in 
+      the backend storage system to count.
+
+      @param {function} cb Callback to execute when count finishes.  Takes two
+      arguments: 1) bool (true if read succeeded, false if read failed); 2) If
+      count succeeded, the int32_t value of the field read in (if count failed, undefined).
+
+      */
+     system.storageCount = function()
+     {
+         if (arguments.length == 3 && typeof(arguments[2] === 'function'))
+             return baseSystem.storageCount.apply(baseSystem, [ arguments[0], arguments[1], system.wrapCallbackForSelf(arguments[2]) ]);
+         else
+             return baseSystem.storageCount.apply(baseSystem, arguments);
+     };
+
      
      /**
       @ignore
