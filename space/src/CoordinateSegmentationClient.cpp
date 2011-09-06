@@ -33,6 +33,7 @@
 #include "CoordinateSegmentationClient.hpp"
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/network/IOServiceFactory.hpp>
+#include <sirikata/core/network/IOStrandImpl.hpp>
 
 #include <algorithm>
 #include <boost/tokenizer.hpp>
@@ -73,13 +74,18 @@ CoordinateSegmentationClient::CoordinateSegmentationClient(SpaceContext* ctx, co
 {
   mTopLevelRegion.mBoundingBox = BoundingBox3f( Vector3f(0,0,0), Vector3f(0,0,0));
 
-  Address4 addy = mSidMap->lookupInternal(mContext->id());
+  mSidMap->lookupInternal(
+      mContext->id(),
+      mContext->mainStrand->wrap(
+          std::tr1::bind(&CoordinateSegmentationClient::handleSelfLookup, this, _1)
+      )
+  );
+}
 
-  mAcceptor = boost::shared_ptr<TCPListener>(new TCPListener(*mIOService,boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), addy.port+10000)));
-
-  startAccepting();
-
-  sendSegmentationListenMessage();
+void CoordinateSegmentationClient::handleSelfLookup(Address4 my_addr) {
+    mAcceptor = boost::shared_ptr<TCPListener>(new TCPListener(*mIOService,boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), my_addr.port+10000)));
+    startAccepting();
+    sendSegmentationListenMessage(my_addr);
 }
 
 void CoordinateSegmentationClient::startAccepting() {
@@ -130,19 +136,17 @@ CoordinateSegmentationClient::~CoordinateSegmentationClient() {
 
 }
 
-void CoordinateSegmentationClient::sendSegmentationListenMessage() {
-  Address4 addy = mSidMap->lookupInternal(mContext->id());
-
+void CoordinateSegmentationClient::sendSegmentationListenMessage(const Address4& my_addr) {
   Sirikata::Protocol::CSeg::CSegMessage csegMessage;
 
-  csegMessage.mutable_segmentation_listen_message().set_port(addy.port+10000);
+  csegMessage.mutable_segmentation_listen_message().set_port(my_addr.port+10000);
 
   struct in_addr ip_addr;
-  ip_addr.s_addr = addy.ip;
+  ip_addr.s_addr = my_addr.ip;
   char* addr = inet_ntoa(ip_addr);
 
   csegMessage.mutable_segmentation_listen_message().set_host(std::string(addr));
-  printf("host=%s, port=%d\n", addr, addy.port+10000);
+  printf("host=%s, port=%d\n", addr, my_addr.port+10000);
 
   boost::mutex::scoped_lock scopedLock(mMutex);
   boost::shared_ptr<TCPSocket> socket = getLeasedSocket();
