@@ -419,10 +419,10 @@ bool HostedObject::connect(
         phy,
         queryAngle,
         queryMaxResults,
-        std::tr1::bind(&HostedObject::handleConnected, this, _1, _2, _3),
-        std::tr1::bind(&HostedObject::handleMigrated, this, _1, _2, _3),
-        std::tr1::bind(&HostedObject::handleStreamCreated, this, _1, _2, token),
-        std::tr1::bind(&HostedObject::handleDisconnected, this, _1, _2)
+        std::tr1::bind(&HostedObject::handleConnected, getWeakPtr(), _1, _2, _3),
+        std::tr1::bind(&HostedObject::handleMigrated, getWeakPtr(), _1, _2, _3),
+        std::tr1::bind(&HostedObject::handleStreamCreated, getWeakPtr(), _1, _2, token),
+        std::tr1::bind(&HostedObject::handleDisconnected, getWeakPtr(), _1, _2)
         )) {
         mObjectHost->registerHostedObject(connectingSporef,getSharedPtr());
         return true;
@@ -462,9 +462,10 @@ bool HostedObject::addSimListeners(PerPresenceData& pd, const String& simName,Ti
 
 
 
-void HostedObject::handleConnected(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info)
+void HostedObject::handleConnected(const HostedObjectWPtr& weakSelf, const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info)
 {
-    if (stopped()) {
+    HostedObjectPtr self(weakSelf.lock());
+    if ((!self)||self->stopped()) {
         HO_LOG(detailed,"Ignoring connection success after system stop requested.");
         return;
     }
@@ -475,64 +476,69 @@ void HostedObject::handleConnected(const SpaceID& space, const ObjectReference& 
 
     }
     // FIXME this never gets cleaned out on disconnect
-    mSSTDatagramLayers.push_back(
-            mContext->sstConnMgr()->createDatagramLayer(
+    self->mSSTDatagramLayers.push_back(
+            self->mContext->sstConnMgr()->createDatagramLayer(
             SpaceObjectReference(space, obj),
-            mContext, mDelegateODPService
+            self->mContext, self->mDelegateODPService
         )
     );
 
     // We have to manually do what mContext->mainStrand->wrap( ... ) should be
     // doing because it can't handle > 5 arguments.
-    mContext->mainStrand->post(
-        std::tr1::bind(&HostedObject::handleConnectedIndirect, this, space, obj, info)
+    self->mContext->mainStrand->post(
+        std::tr1::bind(&HostedObject::handleConnectedIndirect, weakSelf, space, obj, info)
     );
 }
 
 
-void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info)
+void HostedObject::handleConnectedIndirect(const HostedObjectWPtr& weakSelf, const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info)
 {
     if (info.server == NullServerID)
     {
         HO_LOG(warning,"Failed to connect object:" << obj << " to space " << space);
         return;
     }
-
+    HostedObjectPtr self(weakSelf.lock());
+    if (!self)
+        return;
     SpaceObjectReference self_objref(space, obj);
-    if(mPresenceData->find(self_objref) == mPresenceData->end())
+    if(self->mPresenceData->find(self_objref) == self->mPresenceData->end())
     {
-        mPresenceData->insert(
-            PresenceDataMap::value_type(self_objref,PerPresenceData(this, space, obj, info.queryAngle, info.queryMaxResults))
+        self->mPresenceData->insert(
+            PresenceDataMap::value_type(self_objref,PerPresenceData(self.get(), space, obj, info.queryAngle, info.queryMaxResults))
         );
     }
 
     // Convert back to local time
-    TimedMotionVector3f local_loc(localTime(space, info.loc.updateTime()), info.loc.value());
-    TimedMotionQuaternion local_orient(localTime(space, info.orient.updateTime()), info.orient.value());
-    ProxyObjectPtr self_proxy = createProxy(self_objref, self_objref, Transfer::URI(info.mesh), local_loc, local_orient, info.bnds, info.physics,info.queryAngle, info.queryMaxResults, 0);
+    TimedMotionVector3f local_loc(self->localTime(space, info.loc.updateTime()), info.loc.value());
+    TimedMotionQuaternion local_orient(self->localTime(space, info.orient.updateTime()), info.orient.value());
+    ProxyObjectPtr self_proxy = self->createProxy(self_objref, self_objref, Transfer::URI(info.mesh), local_loc, local_orient, info.bnds, info.physics,info.queryAngle, info.queryMaxResults, 0);
 
     // Use to initialize PerSpaceData
-    PresenceDataMap::iterator psd_it = mPresenceData->find(self_objref);
+    PresenceDataMap::iterator psd_it = self->mPresenceData->find(self_objref);
     PerPresenceData& psd = psd_it->second;
-    initializePerPresenceData(psd, self_proxy);
+    self->initializePerPresenceData(psd, self_proxy);
 
 
     //bind an odp port to listen for the begin scripting signal.  if have
     //receive the scripting signal for the first time, that means that we create
     //a JSObjectScript for this hostedobject
-    bindODPPort(space,obj,Services::LISTEN_FOR_SCRIPT_BEGIN);
+    self->bindODPPort(space,obj,Services::LISTEN_FOR_SCRIPT_BEGIN);
     HO_LOG(detailed,"Connected object " << obj << " to space " << space << " waiting on notice");
 }
 
-void HostedObject::handleMigrated(const SpaceID& space, const ObjectReference& obj, ServerID server)
+void HostedObject::handleMigrated(const HostedObjectWPtr& weakSelf, const SpaceID& space, const ObjectReference& obj, ServerID server)
 {
+    HostedObjectPtr self(weakSelf.lock());
+    if (!self)
+        return;
     // When we switch space servers, the ProxyObject's sequence
     // numbers will no longer match because this information isn't
     // moved with the object. Since we shouldn't get more updates from
     // the original server, we reset all the ProxyObjects *owned* by
     // this object to have seqno = 0 so they will start fresh for the
     // new space server.
-    ProxyManagerPtr proxy_manager = getProxyManager(space, obj);
+    ProxyManagerPtr proxy_manager = self->getProxyManager(space, obj);
     if (!proxy_manager) {
         HO_LOG(error, "Got migrated message but don't have a ProxyManager for the object.");
         return;
@@ -547,23 +553,26 @@ void HostedObject::handleMigrated(const SpaceID& space, const ObjectReference& o
 
 
 
-void HostedObject::handleStreamCreated(const SpaceObjectReference& spaceobj, SessionManager::ConnectionEvent after, PresenceToken token) {
+void HostedObject::handleStreamCreated(const HostedObjectWPtr& weakSelf, const SpaceObjectReference& spaceobj, SessionManager::ConnectionEvent after, PresenceToken token) {
     HO_LOG(detailed,"Handling new SST stream from space server for " << spaceobj);
-    SSTStreamPtr sstStream = mObjectHost->getSpaceStream(spaceobj.space(), spaceobj.object());
+    HostedObjectPtr self(weakSelf.lock());
+    if (!self)
+        return;
+    SSTStreamPtr sstStream = self->mObjectHost->getSpaceStream(spaceobj.space(), spaceobj.object());
 
     if (sstStream != SSTStreamPtr() ) {
         sstStream->listenSubstream(OBJECT_PORT_LOCATION,
-            std::tr1::bind(&HostedObject::handleLocationSubstream, this, spaceobj, _1, _2)
+            std::tr1::bind(&HostedObject::handleLocationSubstream, weakSelf, spaceobj, _1, _2)
         );
         sstStream->listenSubstream(OBJECT_PORT_PROXIMITY,
-            std::tr1::bind(&HostedObject::handleProximitySubstream, this, spaceobj, _1, _2)
+            std::tr1::bind(&HostedObject::handleProximitySubstream, weakSelf, spaceobj, _1, _2)
         );
     }
     HO_LOG(detailed,"Notifying of connected object " << spaceobj.object() << " to space " << spaceobj.space());
     if (after == SessionManager::Connected)
-        notify(&SessionEventListener::onConnected, getSharedPtr(), spaceobj, token);
+        self->notify(&SessionEventListener::onConnected, self, spaceobj, token);
     else if (after == SessionManager::Migrated)
-        notify(&SessionEventListener::onMigrated, getSharedPtr(), spaceobj, token);
+        self->notify(&SessionEventListener::onMigrated, self, spaceobj, token);
 }
 
 
@@ -597,22 +606,23 @@ void HostedObject::disconnectFromSpace(const SpaceID &spaceID, const ObjectRefer
     }
 }
 
-void HostedObject::handleDisconnected(const SpaceObjectReference& spaceobj, Disconnect::Code cc) {
-    if (stopped()) {
+void HostedObject::handleDisconnected(const HostedObjectWPtr& weakSelf, const SpaceObjectReference& spaceobj, Disconnect::Code cc) {
+    HostedObjectPtr self(weakSelf.lock());
+    if ((!self)||self->stopped()) {
         HO_LOG(detailed,"Ignoring disconnection callback after system stop requested.");
         return;
     }
 
-    notify(&SessionEventListener::onDisconnected, getSharedPtr(), spaceobj);
+    self->notify(&SessionEventListener::onDisconnected, self, spaceobj);
 
     // Only invoke disconnectFromSpace if we weren't already aware of the
     // disconnection, i.e. if the disconnect was due to the space and we haven't
     // cleaned up yet.
     if (cc == Disconnect::Forced)
-        disconnectFromSpace(spaceobj.space(), spaceobj.object());
+        self->disconnectFromSpace(spaceobj.space(), spaceobj.object());
     if (cc == Disconnect::LoginDenied) {
-        assert(mPresenceData->find(spaceobj)==mPresenceData->end());
-        mObjectHost->unregisterHostedObject(spaceobj, this);
+        assert(self->mPresenceData->find(spaceobj)==self->mPresenceData->end());
+        self->mObjectHost->unregisterHostedObject(spaceobj, self.get());
     }
 }
 
@@ -640,19 +650,26 @@ void HostedObject::receiveMessage(const SpaceID& space, const Protocol::Object::
 
 
 
-void HostedObject::handleLocationSubstream(const SpaceObjectReference& spaceobj, int err, SSTStreamPtr s) {
-    s->registerReadCallback( std::tr1::bind(&HostedObject::handleLocationSubstreamRead, this, spaceobj, s, new std::stringstream(), _1, _2) );
+void HostedObject::handleLocationSubstream(const HostedObjectWPtr& weakSelf, const SpaceObjectReference& spaceobj, int err, SSTStreamPtr s) {
+    s->registerReadCallback( std::tr1::bind(&HostedObject::handleLocationSubstreamRead, weakSelf, spaceobj, s, new std::stringstream(), _1, _2) );
 }
 
-void HostedObject::handleProximitySubstream(const SpaceObjectReference& spaceobj, int err, SSTStreamPtr s) {
+void HostedObject::handleProximitySubstream(const HostedObjectWPtr& weakSelf, const SpaceObjectReference& spaceobj, int err, SSTStreamPtr s) {
     String* prevdata = new String();
-    s->registerReadCallback( std::tr1::bind(&HostedObject::handleProximitySubstreamRead, this, spaceobj, s, prevdata, _1, _2) );
+    s->registerReadCallback( std::tr1::bind(&HostedObject::handleProximitySubstreamRead, weakSelf, spaceobj, s, prevdata, _1, _2) );
 }
 
-void HostedObject::handleLocationSubstreamRead(const SpaceObjectReference& spaceobj, SSTStreamPtr s, std::stringstream* prevdata, uint8* buffer, int length) {
-    
+void HostedObject::handleLocationSubstreamRead(const HostedObjectWPtr& weakSelf, const SpaceObjectReference& spaceobj, SSTStreamPtr s, std::stringstream* prevdata, uint8* buffer, int length) {
+    HostedObjectPtr self(weakSelf.lock());
+    if (!self)
+        return;
+    if (self->stopped()) {
+        HO_LOG(detailed,"Ignoring location update after system stop requested.");
+        return;
+    }
+
     prevdata->write((const char*)buffer, length);
-    if (handleLocationMessage(spaceobj, prevdata->str())) {
+    if (self->handleLocationMessage(spaceobj, prevdata->str())) {
         // FIXME we should be getting a callback on stream close instead of
         // relying on this parsing as an indicator
         delete prevdata;
@@ -663,7 +680,15 @@ void HostedObject::handleLocationSubstreamRead(const SpaceObjectReference& space
     }
 }
 
-void HostedObject::handleProximitySubstreamRead(const SpaceObjectReference& spaceobj, SSTStreamPtr s, String* prevdata, uint8* buffer, int length) {
+void HostedObject::handleProximitySubstreamRead(const HostedObjectWPtr& weakSelf, const SpaceObjectReference& spaceobj, SSTStreamPtr s, String* prevdata, uint8* buffer, int length) {
+    HostedObjectPtr self(weakSelf.lock());
+    if (!self)
+        return;
+    if (self->stopped()) {
+        HO_LOG(detailed,"Ignoring proximity update after system stop requested.");
+        return;
+    }
+
     prevdata->append((const char*)buffer, length);
 
     while(true) {
@@ -673,7 +698,7 @@ void HostedObject::handleProximitySubstreamRead(const SpaceObjectReference& spac
         if (msg.empty()) return;
 
         // Otherwise, try to handle it
-        handleProximityMessage(spaceobj, msg);
+        self->handleProximityMessage(spaceobj, msg);
     }
 
     // FIXME we should be getting a callback on stream close so we can clean up!
@@ -767,10 +792,7 @@ void HostedObject::processLocationUpdate(const SpaceID& space, ProxyObjectPtr pr
 }
 
 bool HostedObject::handleLocationMessage(const SpaceObjectReference& spaceobj, const std::string& payload) {
-    if (stopped()) {
-        HO_LOG(detailed,"Ignoring location update after system stop requested.");
-        return false;
-    }
+    HostedObject* self=this;
 
     Sirikata::Protocol::Frame frame;
     bool parse_success = frame.ParseFromString(payload);
@@ -780,7 +802,7 @@ bool HostedObject::handleLocationMessage(const SpaceObjectReference& spaceobj, c
 
     SpaceID space = spaceobj.space();
     ObjectReference oref = spaceobj.object();
-    ProxyManagerPtr proxy_manager = getProxyManager(space, oref);
+    ProxyManagerPtr proxy_manager = self->getProxyManager(space, oref);
 
     if (!proxy_manager)
     {
@@ -790,7 +812,7 @@ bool HostedObject::handleLocationMessage(const SpaceObjectReference& spaceobj, c
     for(int32 idx = 0; idx < contents.update_size(); idx++) {
         Sirikata::Protocol::Loc::LocationUpdate update = contents.update(idx);
 
-        ProxyManagerPtr proxy_manager = getProxyManager(spaceobj.space(), spaceobj.object());
+        ProxyManagerPtr proxy_manager = self->getProxyManager(spaceobj.space(), spaceobj.object());
         if (!proxy_manager)
             HO_LOG(warn,"Hosted Object received a message for a presence without a proximity manager.");
 
@@ -798,11 +820,11 @@ bool HostedObject::handleLocationMessage(const SpaceObjectReference& spaceobj, c
         ProxyObjectPtr proxy_obj = proxy_manager->getProxyObject(observed);
 
         if (!proxy_obj) {
-            mOrphanLocUpdates.addOrphanUpdate(observed, update);
+            self->mOrphanLocUpdates.addOrphanUpdate(observed, update);
             continue;
         }
 
-        processLocationUpdate(spaceobj, proxy_obj, update);
+        self->processLocationUpdate(spaceobj, proxy_obj, update);
     }
 
     return true;
@@ -810,11 +832,7 @@ bool HostedObject::handleLocationMessage(const SpaceObjectReference& spaceobj, c
 
 bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, const std::string& payload)
 {
-    if (stopped()) {
-        HO_LOG(detailed,"Ignoring proximity update after system stop requested.");
-        return false;
-    }
-
+    HostedObject* self=this;
     Sirikata::Protocol::Prox::ProximityResults contents;
     bool parse_success = contents.ParseFromString(payload);
     if (!parse_success)
@@ -829,7 +847,7 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
 
             SpaceObjectReference proximateID(spaceobj.space(), ObjectReference(addition.object()));
 
-            TimedMotionVector3f loc(localTime(space, addition.location().t()), MotionVector3f(addition.location().position(), addition.location().velocity()));
+            TimedMotionVector3f loc(self->localTime(space, addition.location().t()), MotionVector3f(addition.location().position(), addition.location().velocity()));
 
             CONTEXT_OHTRACE(prox,
                 spaceobj.object().getAsUUID(),
@@ -846,7 +864,7 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
 
             uint64 proxyAddSeqNo = addition.seqno();
 
-            ProxyManagerPtr proxy_manager = getProxyManager(spaceobj.space(),spaceobj.object());
+            ProxyManagerPtr proxy_manager = self->getProxyManager(spaceobj.space(),spaceobj.object());
             if (!proxy_manager)
             {
                 return true;
@@ -858,7 +876,7 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
                 if (addition.has_mesh()) meshuri = Transfer::URI(addition.mesh());
 
                 // FIXME use weak_ptr instead of raw
-                proxy_obj = createProxy(proximateID, spaceobj, meshuri, loc, orient, bnds, phy,SolidAngle::Max, 0, proxyAddSeqNo);
+                proxy_obj = self->createProxy(proximateID, spaceobj, meshuri, loc, orient, bnds, phy,SolidAngle::Max, 0, proxyAddSeqNo);
             }
             else {
                 // We need to handle optional values properly -- they
@@ -866,7 +884,7 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
                 String* mesh_ptr = (addition.has_mesh() ? &mesh : NULL);
                 String* phy_ptr = (addition.has_physics() ? &phy : NULL);
 
-                processLocationUpdate(space, proxy_obj, proxyAddSeqNo, false, &loc, &orient, &bnds, mesh_ptr, phy_ptr);
+                self->processLocationUpdate(space, proxy_obj, proxyAddSeqNo, false, &loc, &orient, &bnds, mesh_ptr, phy_ptr);
             }
 
             // Always mark the object as valid (either revalidated, or just
@@ -875,31 +893,31 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
 
 
             // Notify of any out of order loc updates
-            OrphanLocUpdateManager::UpdateInfoList orphan_updates = mOrphanLocUpdates.getOrphanUpdates(proximateID);
+            OrphanLocUpdateManager::UpdateInfoList orphan_updates = self->mOrphanLocUpdates.getOrphanUpdates(proximateID);
             for(OrphanLocUpdateManager::UpdateInfoList::iterator orphan_it = orphan_updates.begin(); orphan_it != orphan_updates.end(); orphan_it++)
             {
                 if (orphan_it->value != NULL)
                 {
-                    processLocationUpdate(spaceobj,proxy_obj, *(orphan_it->value));
+                    self->processLocationUpdate(spaceobj,proxy_obj, *(orphan_it->value));
                     delete orphan_it->value;
                 }
                 else
                 {
-                    processOrphanedProxyData(spaceobj,proxy_obj,orphan_it->opd);
+                    self->processOrphanedProxyData(spaceobj,proxy_obj,orphan_it->opd);
                     delete orphan_it->opd;
                 }
             }
 
             //tells the object script that something that was close has come
             //into view
-            if(mObjectScript)
-                mObjectScript->notifyProximate(proxy_obj,spaceobj);
+            if(self->mObjectScript)
+                self->mObjectScript->notifyProximate(proxy_obj,spaceobj);
         }
 
         for(int32 ridx = 0; ridx < update.removal_size(); ridx++) {
             Sirikata::Protocol::Prox::ObjectRemoval removal = update.removal(ridx);
 
-            ProxyManagerPtr proxy_manager = getProxyManager(spaceobj.space(), spaceobj.object());
+            ProxyManagerPtr proxy_manager = self->getProxyManager(spaceobj.space(), spaceobj.object());
 
             if (!proxy_manager)
                 continue;
@@ -908,7 +926,7 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
                 ObjectReference(removal.object()));
             bool permanent = (removal.has_type() && (removal.type() == Sirikata::Protocol::Prox::ObjectRemoval::Permanent));
 
-            if (mPresenceData->find(removed_obj_ref) != mPresenceData->end()) {
+            if (self->mPresenceData->find(removed_obj_ref) != self->mPresenceData->end()) {
                 SILOG(oh,detailed,"Ignoring self removal from proximity results.");
             }
             else {
@@ -927,12 +945,12 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
                     //little extra time in case get a re-addition proxy message, and
                     //the loc messages that had already been processed for proxy_obj
                     //arrived before the removal.
-                    mOrphanLocUpdates.addUpdateFromExisting(removed_obj_ref, proxy_obj);
+                    self->mOrphanLocUpdates.addUpdateFromExisting(removed_obj_ref, proxy_obj);
 
                     proxy_manager->destroyObject(proxy_obj);
 
-                    if (mObjectScript)
-                        mObjectScript->notifyProximateGone(proxy_obj,spaceobj);
+                    if (self->mObjectScript)
+                        self->mObjectScript->notifyProximateGone(proxy_obj,spaceobj);
 
                     proxy_obj->invalidate(permanent);
                 }
