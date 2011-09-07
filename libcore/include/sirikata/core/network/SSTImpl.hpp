@@ -432,6 +432,8 @@ private:
 
   google::protobuf::LogSilencer logSilencer;
 
+  bool mInSendingMode;
+
 private:
 
   Connection(SSTConnectionVariables<EndPointType>* sstConnVars, 
@@ -447,7 +449,7 @@ private:
       MAX_QUEUED_SEGMENTS(3000),
       CC_ALPHA(0.8), mLastTransmitTime(Time::null()),
       mNumInitialRetransmissionAttempts(0),
-      inSendingMode(true), numSegmentsSent(0)
+      mInSendingMode(true)
   {
       mDatagramLayer = sstConnVars->getDatagramLayer(localEndPoint.endPoint);
       mDatagramLayer->listenOn(
@@ -459,6 +461,18 @@ private:
               std::tr1::placeholders::_3
           )
       );
+
+      
+  }
+
+  void checkIfAlive(std::tr1::shared_ptr<Connection<EndPointType> > conn) {    
+    if (mOutgoingSubstreamMap.size() == 0 && mIncomingSubstreamMap.size() == 0) {
+      close(true);
+      return;
+    }
+
+    getContext()->mainStrand->post(Duration::seconds(300),
+                                   std::tr1::bind(&Connection<EndPointType>::checkIfAlive, this, conn) );
   }
 
   void sendSSTChannelPacket(Sirikata::Protocol::SST::SSTChannelHeader& sstMsg) {
@@ -475,13 +489,11 @@ private:
 
   
 
-  bool inSendingMode; uint16 numSegmentsSent;
-
   void serviceConnectionNoReturn(std::tr1::shared_ptr<Connection<EndPointType> > conn) {
       serviceConnection(conn);
   }
   bool serviceConnection(std::tr1::shared_ptr<Connection<EndPointType> > conn) {
-    const Time curTime = Timer::now();
+    const Time curTime = Timer::now();    
 
     if (mState == CONNECTION_PENDING_CONNECT) {
       mOutstandingSegments.clear();
@@ -491,12 +503,12 @@ private:
     // from 1 for now. Still need to implement slow start.
     if (mState == CONNECTION_DISCONNECTED) {
       std::tr1::shared_ptr<Connection<EndPointType> > thus (mWeakThis.lock());
-        if (thus) {
-          cleanup(thus);
-        }else {
-            SILOG(sst,error,"FATAL: disconnected lost weak pointer for Connection<EndPointType> too early to call cleanup on it");
-        }
-        return false;
+      if (thus) {
+        cleanup(thus);
+      }else {
+        SILOG(sst,error,"FATAL: disconnected lost weak pointer for Connection<EndPointType> too early to call cleanup on it");
+      }
+      return false;
     }
     else if (mState == CONNECTION_PENDING_DISCONNECT) {
       boost::mutex::scoped_lock lock(mQueueMutex);
@@ -513,10 +525,8 @@ private:
       }
     }
 
-    if (inSendingMode) {
-      boost::mutex::scoped_lock lock(mQueueMutex);
-
-      numSegmentsSent = 0;
+    if (mInSendingMode) {
+      boost::mutex::scoped_lock lock(mQueueMutex);      
 
       for (int i = 0; (!mQueuedSegments.empty()) && mOutstandingSegments.size() <= mCwnd; i++) {
 	  std::tr1::shared_ptr<ChannelSegment> segment = mQueuedSegments.front();
@@ -541,21 +551,17 @@ private:
           }
 
 	  segment->mTransmitTime = curTime;
-	  mOutstandingSegments.push_back(segment);
-
-	  numSegmentsSent++;
+	  mOutstandingSegments.push_back(segment);	  
 
 	  mLastTransmitTime = curTime;
 
-
           if (mState != CONNECTION_PENDING_CONNECT || mNumInitialRetransmissionAttempts > 3) {
-
-            inSendingMode = false;
+            mInSendingMode = false;
             mQueuedSegments.pop_front();
-          }
+          }          
       }
 
-      if (!inSendingMode || mState == CONNECTION_PENDING_CONNECT) {
+      if (!mInSendingMode || mState == CONNECTION_PENDING_CONNECT) {
         getContext()->mainStrand->post(Duration::microseconds(mRTOMicroseconds),
                                        std::tr1::bind(&Connection<EndPointType>::serviceConnectionNoReturn, this, mWeakThis.lock()) );
       }
@@ -582,7 +588,7 @@ private:
         mOutstandingSegments.clear();
       }
 
-      inSendingMode = true;
+      mInSendingMode = true;
 
       getContext()->mainStrand->post(Duration::microseconds(1),
                                      std::tr1::bind(&Connection<EndPointType>::serviceConnectionNoReturn, this, mWeakThis.lock()) );
@@ -656,13 +662,13 @@ private:
 
     std::tr1::shared_ptr<Connection>  conn =  std::tr1::shared_ptr<Connection> (
                        new Connection(sstConnVars, localEndPoint, remoteEndPoint));
-
+    
     connectionMap[localEndPoint] = conn;
     sstConnVars->sConnectionReturnCallbackMap[localEndPoint] = cb;
 
     lock.unlock();
 
-    conn->mWeakThis = conn;
+    conn->setWeakThis(conn);
     conn->setState(CONNECTION_PENDING_CONNECT);
 
     uint16 payload[1];
@@ -788,7 +794,7 @@ private:
                                    new ChannelSegment(data, length, mTransmitSequenceNumber, mLastReceivedSequenceNumber) ) );
         pushedIntoQueue = true;
 
-        if (inSendingMode) {
+        if (mInSendingMode) {
           getContext()->mainStrand->post(Duration::milliseconds(1.0),
                                          std::tr1::bind(&Connection::serviceConnectionNoReturn, this, mWeakThis.lock()) );
         }
@@ -818,6 +824,13 @@ private:
     this->mRemoteChannelID = channelID;
   }
 
+  void setWeakThis( std::tr1::shared_ptr<Connection>  conn) {
+    mWeakThis = conn;
+
+    getContext()->mainStrand->post(Duration::seconds(300),
+                                   std::tr1::bind(&Connection<EndPointType>::checkIfAlive, this, conn) );
+  }
+
   USID createNewUSID() {
     uint8 raw_uuid[UUID::static_size];
     for(uint32 ui = 0; ui < UUID::static_size; ui++)
@@ -844,7 +857,7 @@ private:
             (1.0-CC_ALPHA) * (segment->mAckTime - segment->mTransmitTime).toMicroseconds();
         }
 
-        inSendingMode = true;
+        mInSendingMode = true;
 
         getContext()->mainStrand->post(
                                      std::tr1::bind(&Connection<EndPointType>::serviceConnectionNoReturn, this, mWeakThis.lock()) );
@@ -1099,6 +1112,10 @@ private:
   void eraseDisconnectedStream(Stream<EndPointType>* s) {
     mOutgoingSubstreamMap.erase(s->getLSID());
     mIncomingSubstreamMap.erase(s->getRemoteLSID());
+
+    if (mOutgoingSubstreamMap.size() == 0 && mIncomingSubstreamMap.size() == 0) {
+      close(true);
+    }
   }
 
 
@@ -1121,7 +1138,6 @@ private:
          cb = connectionReturnCallbackMap[conn->localEndPoint()];
        }
 
-
        std::tr1::shared_ptr<Connection>  failed_conn = conn;
 
        connectionReturnCallbackMap.erase(conn->localEndPoint());
@@ -1141,6 +1157,7 @@ private:
    // This version should only be called by the destructor!
    void finalCleanup() {
      if (mState != CONNECTION_DISCONNECTED) {
+
          mDatagramLayer->unlisten(mLocalEndPoint);
 
          close(true);
@@ -1223,7 +1240,7 @@ private:
                          new Connection(sstConnVars, newLocalEndPoint, remoteEndPoint));
 
  	 conn->listenStream(newLocalEndPoint.port, listeningConnectionsCallbackMap[localEndPoint]);
-         conn->mWeakThis = conn;
+         conn->setWeakThis(conn);
          connectionMap[newLocalEndPoint] = conn;
 
          conn->setLocalChannelID(availableChannel);
@@ -1246,7 +1263,6 @@ private:
        // Make sure we've fully cleaned up
        finalCleanup();
    }
-
 
 
   /* Sends the specified data buffer using best-effort datagrams on the
@@ -1442,14 +1458,15 @@ public:
   Time mTransmitTime;
   Time mAckTime;
 
-
   StreamBuffer(const uint8* data, uint32 len, uint64 offset) :
     mTransmitTime(Time::null()), mAckTime(Time::null())
   {
-    assert(len > 0);
+    mBuffer = new uint8[len+1];
 
-    mBuffer = new uint8[len];
-    memcpy(mBuffer,data,len);
+    if (len > 0) {
+      memcpy(mBuffer,data,len);
+    }
+
     mBufferLength = len;
     mOffset = offset;
   }
@@ -1479,7 +1496,7 @@ public:
 
 
 
-  virtual ~Stream() {
+   virtual ~Stream() {
     close(true);
 
     delete [] mInitialData;
@@ -1507,9 +1524,8 @@ public:
         return false;
       }
 
-      streamReturnCallbackMap[localEndPoint] = cb;
+      streamReturnCallbackMap[localEndPoint] = cb;      
       
-
       bool result = Connection<EndPointType>::createConnection(sstConnVars,
                                                                localEndPoint,
                                                                remoteEndPoint,
@@ -1814,6 +1830,7 @@ private:
     mNextByteExpected(0),
     mLastContiguousByteReceived(-1),
     mLastSendTime(Time::null()),
+    mLastReceiveTime(Time::null()),
     mStreamReturnCallback(cb),    
     mConnected (false),
     MAX_INIT_RETRANSMISSIONS(5),
@@ -1874,6 +1891,13 @@ private:
       }
     }
 
+    /** Post a keep-alive task...  **/
+    std::tr1::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
+    if (conn) {
+      getContext()->mainStrand->post(Duration::seconds(60),
+                                     std::tr1::bind(&Stream<EndPointType>::sendKeepAlive, this, mWeakThis.lock(), conn) );
+    }
+
     return numBytesBuffered;
   }
 
@@ -1890,6 +1914,20 @@ private:
     }
 
     return mContext;
+  }
+
+  void sendKeepAlive(std::tr1::shared_ptr<Stream<EndPointType> > strm, std::tr1::shared_ptr<Connection<EndPointType> > conn) {
+    if (mState == DISCONNECTED || mState == PENDING_DISCONNECT) {
+      close(true);
+      return;
+    }
+
+    uint8 buf[1];
+
+    write(buf, 0);
+
+    getContext()->mainStrand->post(Duration::seconds(60),
+                                   std::tr1::bind(&Stream<EndPointType>::sendKeepAlive, this, strm, conn) );
   }
 
   static void connectionCreated( int errCode, std::tr1::shared_ptr<Connection<EndPointType> > c) {
@@ -1925,6 +1963,12 @@ private:
     assert(strm.get() == this);
 
     const Time curTime = Timer::now();
+
+    if ( (curTime - mLastReceiveTime).toSeconds() > 300 && mLastReceiveTime != Time::null())
+    {
+      close(true);
+      return true;
+    }
 
     if (mState != CONNECTED && mState != DISCONNECTED && mState != PENDING_DISCONNECT) {
 
@@ -2122,6 +2166,9 @@ private:
   void receiveData( Sirikata::Protocol::SST::SSTStreamHeader* streamMsg,
 		    const void* buffer, uint64 offset, uint32 len )
   {
+    const Time curTime = Timer::now();
+    mLastReceiveTime = curTime;    
+
     if (streamMsg->type() == streamMsg->REPLY) {
       mConnected = true;
     }
@@ -2174,7 +2221,6 @@ private:
       }
     }
 
-
     //handle any ACKS that might be included in the message...
     boost::mutex::scoped_lock lock(mQueueMutex);
 
@@ -2182,7 +2228,7 @@ private:
       uint64 dataOffset = mChannelToBufferMap[offset]->mOffset;
       mNumOutstandingBytes -= mChannelToBufferMap[offset]->mBufferLength;
 
-      mChannelToBufferMap[offset]->mAckTime = Timer::now();
+      mChannelToBufferMap[offset]->mAckTime = curTime;
 
       updateRTO(mChannelToBufferMap[offset]->mTransmitTime, mChannelToBufferMap[offset]->mAckTime);
 
@@ -2389,6 +2435,7 @@ private:
   int64 mNextByteExpected;
   int64 mLastContiguousByteReceived;
   Time mLastSendTime;
+  Time mLastReceiveTime;
 
   uint8* mReceiveBuffer;
   uint8* mReceiveBitmap;

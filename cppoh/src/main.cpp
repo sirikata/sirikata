@@ -210,7 +210,7 @@ int main (int argc, char** argv) {
 
     SimulationFactory::destroy();
 
-    delete sstConnMgr;
+    
 
     delete ctx;
     delete time_series;
@@ -221,6 +221,8 @@ int main (int argc, char** argv) {
 
     delete mainStrand;
     Network::IOServiceFactory::destroyIOService(ios);
+
+    delete sstConnMgr;
 
     plugins.gc();
     sync.stop();

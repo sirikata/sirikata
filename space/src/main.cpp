@@ -319,8 +319,7 @@ int main(int argc, char** argv) {
     delete cseg;
     delete oseg;
     delete oseg_cache;
-    delete loc_service;
-    delete sstConnMgr;
+    delete loc_service;    
     delete forwarder;
 
     delete gNetwork;
@@ -341,6 +340,7 @@ int main(int argc, char** argv) {
 
     Network::IOServiceFactory::destroyIOService(ios);
 
+    delete sstConnMgr;
 
     sync.stop();
 
