@@ -59,6 +59,10 @@ public:
     void testMultiInvalidRead() {_base.testMultiInvalidRead(); }
     void testMultiSomeInvalidRead() {_base.testMultiSomeInvalidRead(); }
     void testMultiErase() {_base.testMultiErase(); }
+
+    void testRangeRead() {_base.testRangeRead(); }
+    void testCount() {_base.testCount(); }
+    void testRangeErase() {_base.testRangeErase(); }
 };
 
 const String SQLiteStorageTest::dbfile("test.db");

@@ -103,9 +103,17 @@ private:
     // Executes a commit. Runs in a separate thread, so the transaction is
     // passed in directly
     void executeCommit(const Bucket& bucket, Transaction* trans, CommitCallback cb);
+
+    void executeRangeRead(const String value_query, const Key& start, const Key& finish, CommitCallback cb);
+    void executeRangeErase(const String value_delete, const Key& start, const Key& finish, CommitCallback cb);
+    void executeCount(const String value_count, const Key& start, const Key& finish, CountCallback cb);
+
     // Complete a commit back in the main thread, cleaning it up and dispatching
     // the callback
     void completeCommit(const Bucket& bucket, Transaction* trans, CommitCallback cb, bool success, ReadSet* rs);
+
+    void completeRange(CommitCallback cb, bool success, ReadSet* rs);
+    void completeCount(CountCallback cb, bool success, int32_t count);
 
     // A few helper methods that wrap sql operations.
     bool sqlBeginTransaction();
