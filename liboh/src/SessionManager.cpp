@@ -242,15 +242,24 @@ void SessionManager::ObjectConnections::handleUnderlyingDisconnect(ServerID sid,
     }
 }
 void SessionManager::ObjectConnections::disconnectWithCode(const SpaceObjectReference& sporef, const SpaceObjectReference& connectedAs, Disconnect::Code code) {
+    ///DO NOT reorder this copy. connectedAs may come from a MFD item (eg remove(sporef will invalidate connectedAs) )
     SpaceObjectReference tmp_sporef=connectedAs==SpaceObjectReference::null()?sporef:connectedAs;
-    DisconnectedCallback disconFunc=mObjectInfo[sporef].disconnectedCB;
-    remove(sporef);
-    if (disconFunc)
-        disconFunc(tmp_sporef, code);
-    parent->mObjectDisconnectedCallback(sporef, code);
+    //end DO NOT reorder :-) everything after this point should be ok.
+    if (mObjectInfo.find(sporef)!=mObjectInfo.end()) {
+        DisconnectedCallback disconFunc=mObjectInfo[sporef].disconnectedCB;
+        remove(sporef);
+        if (disconFunc)
+            disconFunc(tmp_sporef, code);
+        else
+            SILOG(oh,error,"Disconnection callback for "<<sporef.toString()<<" is null");
+        parent->mObjectDisconnectedCallback(sporef, code);
+    }
 }
 void SessionManager::ObjectConnections::gracefulDisconnect(const SpaceObjectReference& sporef) {
-    disconnectWithCode(sporef,mObjectInfo[sporef].connectedAs, Disconnect::Requested);
+    ObjectInfoMap::iterator wherei=mObjectInfo.find(sporef);
+    if (wherei!=mObjectInfo.end()) {
+        disconnectWithCode(sporef,wherei->second.connectedAs, Disconnect::Requested);
+    }
 }
 
 ServerID SessionManager::ObjectConnections::getConnectedServer(const SpaceObjectReference& sporef_obj_id, bool allow_connecting) {
