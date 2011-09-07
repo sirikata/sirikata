@@ -140,8 +140,6 @@ private:
     Context* mContext;
     Duration mTimeout;
     ObjectUpdateMap mUpdates;
-    /** This function gets called and cleared each time the poller is called */
-    std::tr1::function<void()> *mFinalCallback;
 }; // class OrphanLocUpdateManager
 
 
