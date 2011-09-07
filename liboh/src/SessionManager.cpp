@@ -245,7 +245,8 @@ void SessionManager::ObjectConnections::disconnectWithCode(const SpaceObjectRefe
     SpaceObjectReference tmp_sporef=connectedAs==SpaceObjectReference::null()?sporef:connectedAs;
     DisconnectedCallback disconFunc=mObjectInfo[sporef].disconnectedCB;
     remove(sporef);
-    disconFunc(tmp_sporef, code);
+    if (disconFunc)
+        disconFunc(tmp_sporef, code);
     parent->mObjectDisconnectedCallback(sporef, code);
 }
 void SessionManager::ObjectConnections::gracefulDisconnect(const SpaceObjectReference& sporef) {
