@@ -1346,7 +1346,15 @@ void LibproxProximity::handleDisconnectedObject(const UUID& object) {
 }
 
 bool LibproxProximity::handlerShouldHandleObject(bool is_static_handler, bool is_global_handler, const UUID& obj_id, bool is_local, const TimedMotionVector3f& pos, const BoundingSphere3f& region, float maxSize) {
-    // We just need to decide whether the query handler should handle the object.
+    // We just need to decide whether the query handler should handle
+    // the object. We need to consider local vs. replica and static
+    // vs. dynamic.  All must 'vote' for handling the object for us to
+    // say it should be handled, so as soon as we find a negative
+    // response we can return false.
+
+    // First classify by local vs. replica. Only say no on a local
+    // handler looking at a replica.
+    if (!is_local && !is_global_handler) return false;
 
     // If we're not doing the static/dynamic split, then this is a non-issue
     if (!mSeparateDynamicObjects) return true;
