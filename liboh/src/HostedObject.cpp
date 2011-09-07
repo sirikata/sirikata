@@ -610,6 +610,10 @@ void HostedObject::handleDisconnected(const SpaceObjectReference& spaceobj, Disc
     // cleaned up yet.
     if (cc == Disconnect::Forced)
         disconnectFromSpace(spaceobj.space(), spaceobj.object());
+    if (cc == Disconnect::LoginDenied) {
+        assert(mPresenceData->find(spaceobj)==mPresenceData->end());
+        mObjectHost->unregisterHostedObject(spaceobj, this);
+    }
 }
 
 
