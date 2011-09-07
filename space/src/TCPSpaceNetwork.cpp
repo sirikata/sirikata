@@ -33,6 +33,7 @@
 #include "TCPSpaceNetwork.hpp"
 #include <sirikata/core/network/IOService.hpp>
 #include <sirikata/core/network/IOStrand.hpp>
+#include <sirikata/core/network/IOStrandImpl.hpp>
 #include <sirikata/core/network/IOWork.hpp>
 #include <sirikata/core/network/StreamFactory.hpp>
 #include <sirikata/core/network/StreamListenerFactory.hpp>
@@ -584,23 +585,37 @@ void TCPSpaceNetwork::sendServerIntro(const RemoteStreamPtr& out_stream) {
 
 // Connection Strand
 
-TCPSpaceNetwork::TCPSendStream* TCPSpaceNetwork::openConnection(const ServerID& dest) {
+TCPSpaceNetwork::TCPSendStream* TCPSpaceNetwork::openConnection(Network::IOStrand* strand, const ServerID& dest) {
     using std::tr1::placeholders::_1;
     using std::tr1::placeholders::_2;
 
-    Address4 addr = mServerIDMap->lookupInternal(dest);
+    mServerIDMap->lookupInternal(
+        dest,
+        strand->wrap(
+            std::tr1::bind(&TCPSpaceNetwork::finishOpenConnection, this, dest, _1)
+        )
+    );
+
+    // Get and return the send stream even if the lookup fails. It's unlikely to
+    // fail and this keeps the rest of the code looking synchronous. A few
+    // packets can get dropped/get backed up in a queue if we fail the first
+    // fewe send requests.
+    TCPSendStream* send_stream = getNewSendStream(dest);
+    return send_stream;
+}
+
+void TCPSpaceNetwork::finishOpenConnection(const ServerID& dest, Address4 addr) {
     if (addr == Address4::Null) {
         TCPNET_LOG(error,"Tried to open connection to non-existent server " << dest << ". Probably running in single-server mode.");
-        return NULL;
+        return;
     }
 
     TCPNET_LOG(info,"Initiating new connection to " << dest);
-    TCPSendStream* send_stream = getNewSendStream(dest);
 
     RemoteStreamPtr remote = getNewOutgoingStream(dest, addr, RemoteStream::Us);
     if (remote == RemoteStreamPtr()) {
         TCPNET_LOG(info,"Skipped connecting to " << dest << ", connection already present.");
-        return send_stream;
+        return;
     }
 
     RemoteStreamWPtr weak_remote(remote);
@@ -620,7 +635,7 @@ TCPSpaceNetwork::TCPSendStream* TCPSpaceNetwork::openConnection(const ServerID& 
 
     // Note: Initial connection header is sent upon successful connection
 
-    return send_stream;
+    return;
 }
 
 TCPSpaceNetwork::TCPReceiveStream* TCPSpaceNetwork::handleConnectedStream(RemoteStreamPtr remote_stream) {
@@ -741,19 +756,29 @@ void TCPSpaceNetwork::setSendListener(SendListener* sl) {
 
 void TCPSpaceNetwork::listen(const ServerID& as_server, ReceiveListener* receive_listener) {
     using std::tr1::placeholders::_1;
-    using std::tr1::placeholders::_2;
 
     mReceiveListener = receive_listener;
 
     TCPNET_LOG(info,"Listening for remote space servers.");
 
-    Address4 listen_addr = mServerIDMap->lookupInternal(as_server);
-    if (listen_addr == Address4::Null) {
+    mServerIDMap->lookupInternal(
+        as_server,
+        mContext->mainStrand->wrap(
+            std::tr1::bind(&TCPSpaceNetwork::finishListen, this, _1, receive_listener)
+        )
+    );
+}
+
+void TCPSpaceNetwork::finishListen(Address4 addr, ReceiveListener* receive_listener) {
+    using std::tr1::placeholders::_1;
+    using std::tr1::placeholders::_2;
+
+    if (addr == Address4::Null) {
         // No listen address is available for this server.  Probably just means
         // we're only running one server so no listening address has been specified.
         return;
     }
-    mListenAddress = listen_addr;
+    mListenAddress = addr;
 
     Address listenAddress(convertAddress4ToSirikata(mListenAddress));
     mListener->listen(
@@ -762,8 +787,8 @@ void TCPSpaceNetwork::listen(const ServerID& as_server, ReceiveListener* receive
                       );
 }
 
-SpaceNetwork::SendStream* TCPSpaceNetwork::connect(const ServerID& addr) {
-    return openConnection(addr);
+SpaceNetwork::SendStream* TCPSpaceNetwork::connect(Network::IOStrand* strand, const ServerID& addr) {
+    return openConnection(strand, addr);
 }
 
 } // namespace Sirikata

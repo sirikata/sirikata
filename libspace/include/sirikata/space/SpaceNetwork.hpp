@@ -124,7 +124,7 @@ public:
     virtual void setSendListener(SendListener* sl) = 0;
 
     virtual void listen (const ServerID& addr, ReceiveListener* receive_listener)=0;
-    virtual SendStream* connect(const ServerID& addr) = 0;
+    virtual SendStream* connect(Network::IOStrand* strand, const ServerID& addr) = 0;
 
     // ServerIDMap -- used for converting received server ID to a (ip,port) pair.  We have to do
     // this because the remote side might just report 127.0.0.1 + its port.  FIXME We'd like to
