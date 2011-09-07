@@ -94,7 +94,9 @@ class SIRIKATA_EXPORT ObjectReference : public TotallyOrdered<ObjectReference>{
     UUID getAsUUID() const {
         return mID;
     }
-
+    bool isNull() const{
+        return mID.isNull();
+    }
     bool operator==(const ObjectReference& rhs) const{
         return mID==rhs.mID;
     }

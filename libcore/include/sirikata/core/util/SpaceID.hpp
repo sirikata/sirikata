@@ -60,6 +60,10 @@ class SIRIKATA_EXPORT SpaceID : public TotallyOrdered<SpaceID>{
         static SpaceID retval(UUID::null());
         return retval;
     }
+    bool isNull() const{
+        return mID.isNull();
+    }
+
     /** Get a reserved SpaceID which is a sentinal to match any other SpaceID. */
     static const SpaceID &any() {
         static SpaceID retval(UUID::max());
