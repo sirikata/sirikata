@@ -324,6 +324,7 @@ private:
         // Handle a graceful disconnection, notifying other objects
         void gracefulDisconnect(const SpaceObjectReference& sporef);
 
+        void disconnectWithCode(const SpaceObjectReference& sporef, const SpaceObjectReference& connectedAs, Disconnect::Code code);
         // Lookup the server the object is connected to.  With allow_connecting, allows using
         // the server currently being connected to, not just one where a session has been
         // established

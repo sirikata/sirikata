@@ -215,6 +215,8 @@ bool ObjectHost::connect(
     bool with_query = init_sa != SolidAngle::Max;
 
     Sirikata::SerializationCheck::Scoped sc(&mSessionSerialization);
+    if (mHostedObjects.find(sporef)!=mHostedObjects.end())
+        return false;
     SessionManager *sm = mSessionManagers[space];
     
     return sm->connect(
@@ -268,14 +270,21 @@ bool ObjectHost::send(SpaceObjectReference& sporef_src, const SpaceID& space, co
 
 void ObjectHost::registerHostedObject(const SpaceObjectReference &sporef_uuid, const HostedObjectPtr& obj)
 {
-    mHostedObjects.insert(HostedObjectMap::value_type(sporef_uuid, obj));
+    HostedObjectMap::iterator iter = mHostedObjects.find(sporef_uuid);
+    if (iter != mHostedObjects.end()) {
+        SILOG(oh,error,"Two objects having the same internal name in the mHostedObjects map on connect"<<sporef_uuid.toString());
+    }
+    mHostedObjects[sporef_uuid]=obj;
 }
-void ObjectHost::unregisterHostedObject(const SpaceObjectReference& sporef_uuid)
+void ObjectHost::unregisterHostedObject(const SpaceObjectReference& sporef_uuid, HostedObject* key_obj)
 {
     HostedObjectMap::iterator iter = mHostedObjects.find(sporef_uuid);
     if (iter != mHostedObjects.end()) {
         HostedObjectPtr obj (iter->second);
-        mHostedObjects.erase(iter);
+        if (obj.get()==key_obj)
+            mHostedObjects.erase(iter);
+        else
+            SILOG(oh,error,"Two objects having the same internal name in the mHostedObjects map on disconnect "<<sporef_uuid.toString());
     }
 }
 

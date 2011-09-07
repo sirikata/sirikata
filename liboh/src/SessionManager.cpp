@@ -70,6 +70,7 @@ SessionManager::ObjectConnections::ObjectInfo::ObjectInfo()
  : connectingTo(0),
    connectedTo(0),
    migratingTo(0),
+   connectedAs(SpaceObjectReference::null()),
    migratedCB(0)
 {
 }
@@ -186,11 +187,11 @@ ServerID SessionManager::ObjectConnections::handleConnectSuccess(const SpaceObje
     }
 }
 
-void SessionManager::ObjectConnections::handleConnectError(const SpaceObjectReference& sporef_objid) {
-    mObjectInfo[sporef_objid].connectingTo = NullServerID;
+void SessionManager::ObjectConnections::handleConnectError(const SpaceObjectReference& sporef) {
+    mObjectInfo[sporef].connectingTo = NullServerID;
     //ConnectingInfo ci;
     //mObjectInfo[sporef_objid].connectedCB(parent->mSpace, sporef_objid.object(), NullServerID, ci);
-    mObjectInfo[sporef_objid].disconnectedCB(sporef_objid, Disconnect::LoginDenied);
+    disconnectWithCode(sporef,sporef,Disconnect::LoginDenied);
 }
 
 void SessionManager::ObjectConnections::handleConnectStream(const SpaceObjectReference& sporef_objid, ConnectionEvent after, bool do_cb) {
@@ -237,14 +238,18 @@ void SessionManager::ObjectConnections::handleUnderlyingDisconnect(ServerID sid,
     for(SporefVector::const_iterator sporef_obj_it = sporef_objects.begin(); sporef_obj_it != sporef_objects.end(); sporef_obj_it++) {
         SpaceObjectReference sporef_obj = *sporef_obj_it;
         assert(mObjectInfo.find(sporef_obj) != mObjectInfo.end());
-        mObjectInfo[sporef_obj].disconnectedCB(mObjectInfo[sporef_obj].connectedAs, Disconnect::Forced);
-        parent->mObjectDisconnectedCallback(sporef_obj, Disconnect::Forced);
+        disconnectWithCode(sporef_obj,mObjectInfo[sporef_obj].connectedAs, Disconnect::Forced);
     }
 }
-
+void SessionManager::ObjectConnections::disconnectWithCode(const SpaceObjectReference& sporef, const SpaceObjectReference& connectedAs, Disconnect::Code code) {
+    SpaceObjectReference tmp_sporef=connectedAs==SpaceObjectReference::null()?sporef:connectedAs;
+    DisconnectedCallback disconFunc=mObjectInfo[sporef].disconnectedCB;
+    remove(sporef);
+    disconFunc(tmp_sporef, code);
+    parent->mObjectDisconnectedCallback(sporef, code);
+}
 void SessionManager::ObjectConnections::gracefulDisconnect(const SpaceObjectReference& sporef) {
-    mObjectInfo[sporef].disconnectedCB(mObjectInfo[sporef].connectedAs, Disconnect::Requested);
-    parent->mObjectDisconnectedCallback(sporef, Disconnect::Requested);
+    disconnectWithCode(sporef,mObjectInfo[sporef].connectedAs, Disconnect::Requested);
 }
 
 ServerID SessionManager::ObjectConnections::getConnectedServer(const SpaceObjectReference& sporef_obj_id, bool allow_connecting) {
@@ -406,7 +411,6 @@ void SessionManager::disconnect(const SpaceObjectReference& sporef_objid) {
 
     // Notify of disconnect (requested), then remove
     mObjectConnections.gracefulDisconnect(sporef_objid);
-    mObjectConnections.remove(sporef_objid);
 }
 
 Duration SessionManager::serverTimeOffset() const {
