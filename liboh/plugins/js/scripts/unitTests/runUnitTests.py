@@ -159,6 +159,18 @@ def registerTests():
                                entityConstructorInfo=[sandboxTestInfo],
                                duration=7);
     testArray.append(sandboxTest);
+
+    #messagingTest: tests onPresenceConnected, message syntax, onPresenceConnected, createPresence,
+    #                     system.presences, serialization and deserialization (for messages),
+    #                     msg.makeReply.
+    messagingTestInfo = CSVConstructorInfo(script_type="js",
+                                         script_contents="system.import('unitTests/emTests/messagingTest.em');");
+    messagingTest     = csvTest.CSVTest("messagingTest",
+                                        touches=['onPresenceConnected', 'message syntax', 'createPresence',
+                                                 'system.presences', 'serialization', 'deserialization','makeReply'],
+                                        entityConstructorInfo=[messagingTestInfo],
+                                        duration=15);
+    testArray.append(messagingTest);
     
 
     global manager
