@@ -36,6 +36,7 @@
 #include <sirikata/core/network/NTPTimeSync.hpp>
 
 #include <sirikata/core/network/IOServiceFactory.hpp>
+#include <sirikata/core/network/IOStrandImpl.hpp>
 
 #include <sirikata/space/Authenticator.hpp>
 
@@ -66,6 +67,24 @@
 #include <sirikata/space/SpaceContext.hpp>
 #include <sirikata/mesh/Filter.hpp>
 #include <sirikata/mesh/ModelsSystemFactory.hpp>
+
+namespace {
+using namespace Sirikata;
+void createServer(Server** server_out, SpaceContext* space_context, Authenticator* auth, Forwarder* forwarder, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, ObjectSegmentation* oseg, Address4 addr) {
+    if (addr == Address4::Null) {
+        SILOG(space, fatal, "The requested server ID isn't in ServerIDMap");
+        space_context->shutdown();
+    }
+
+    Server* server = new Server(space_context, auth, forwarder, loc_service, cseg, prox, oseg, addr);
+    prox->initialize(cseg);
+    space_context->add(prox);
+    space_context->add(server);
+
+    *server_out = server;
+}
+}
+
 int main(int argc, char** argv) {
 
     using namespace Sirikata;
@@ -96,7 +115,6 @@ int main(int argc, char** argv) {
     if (time_server.size() > 0)
         sync.start(time_server);
 
-
     ServerID server_id = GetOptionValue<ServerID>("id");
     String trace_file = GetPerServerFile(STATS_TRACE_FILE, server_id);
     Sirikata::Trace::Trace* gTrace = new Trace::Trace(trace_file);
@@ -114,6 +132,14 @@ int main(int argc, char** argv) {
     SSTConnectionManager* sstConnMgr = new SSTConnectionManager();
 
     SpaceContext* space_context = new SpaceContext("space", server_id, sstConnMgr, ios, mainStrand, start_time, gTrace, duration);
+
+    String servermap_type = GetOptionValue<String>("servermap");
+    String servermap_options = GetOptionValue<String>("servermap-options");
+    ServerIDMap * server_id_map =
+        ServerIDMapFactory::getSingleton().getConstructor(servermap_type)(space_context, servermap_options);
+
+    space_context->add(space_context);
+
 
     String timeseries_type = GetOptionValue<String>(OPT_TRACE_TIMESERIES);
     String timeseries_options = GetOptionValue<String>(OPT_TRACE_TIMESERIES_OPTIONS);
@@ -134,11 +160,6 @@ int main(int argc, char** argv) {
     String auth_opts = GetOptionValue<String>(SPACE_OPT_AUTH_OPTIONS);
     Authenticator* auth =
         AuthenticatorFactory::getSingleton().getConstructor(auth_type)(space_context, auth_opts);
-
-    String servermap_type = GetOptionValue<String>("servermap");
-    String servermap_options = GetOptionValue<String>("servermap-options");
-    ServerIDMap * server_id_map =
-        ServerIDMapFactory::getSingleton().getConstructor(servermap_type)(servermap_options);
 
     gNetwork->setServerIDMap(server_id_map);
 
@@ -232,10 +253,20 @@ int main(int argc, char** argv) {
     std::string prox_options = GetOptionValue<String>(OPT_PROX_OPTIONS);
     Proximity* prox = ProximityFactory::getSingleton().getConstructor(prox_type)(space_context, loc_service, gNetwork, prox_options);
 
-
-    Server* server = new Server(space_context, auth, forwarder, loc_service, cseg, prox, oseg, server_id_map->lookupExternal(space_context->id()));
-
-      prox->initialize(cseg);
+    // We need to do an async lookup, and to finish it the server needs to be
+    // running. But we can't create the server until we have the address from
+    // this lookup. We isolate as little as possible into this callback --
+    // creating the server, finishing prox initialization, and getting them both
+    // registered. We pass storage for the Server to the callback so we can
+    // handle cleaning it up ourselves.
+    using std::tr1::placeholders::_1;
+    Server* server = NULL;
+    server_id_map->lookupExternal(
+        space_context->id(),
+        space_context->mainStrand->wrap(
+            std::tr1::bind( &createServer, &server, space_context, auth, forwarder, loc_service, cseg, prox, oseg, _1)
+        )
+    );
 
     // If we're one of the initial nodes, we'll have to wait until we hit the start time
     {
@@ -253,13 +284,11 @@ int main(int argc, char** argv) {
 
     ///////////Go go go!! start of simulation/////////////////////
 
-    space_context->add(space_context);
+
     space_context->add(auth);
     space_context->add(gNetwork);
     space_context->add(cseg);
     space_context->add(loc_service);
-    space_context->add(prox);
-    space_context->add(server);
     space_context->add(oseg);
     space_context->add(loadMonitor);
     space_context->add(sstConnMgr);

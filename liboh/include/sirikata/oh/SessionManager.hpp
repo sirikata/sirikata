@@ -43,6 +43,7 @@
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/odp/DelegateService.hpp>
 #include <sirikata/core/sync/TimeSyncClient.hpp>
+#include <sirikata/core/network/Address4.hpp>
 
 #include <sirikata/oh/DisconnectCodes.hpp>
 
@@ -204,6 +205,7 @@ private:
 
     // Set up a space connection to the given server
     void setupSpaceConnection(ServerID server, SpaceNodeConnection::GotSpaceConnectionCallback cb);
+    void finishSetupSpaceConnection(ServerID server, SpaceNodeConnection::GotSpaceConnectionCallback cb, Address4 addr);
 
     // Handle a connection event, i.e. the socket either successfully connected or failed
     void handleSpaceConnection(const Sirikata::Network::Stream::ConnectionStatus status,
@@ -333,7 +335,7 @@ private:
         ServerID getConnectingToServer(const SpaceObjectReference& sporef_obj_id);
 
         ServerID getMigratingToServer(const SpaceObjectReference& sporef_obj_id);
-        
+
         //UUID getInternalID(const ObjectReference& space_objid) const;
 
         // We have to defer some callbacks sometimes for time

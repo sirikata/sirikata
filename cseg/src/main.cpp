@@ -98,7 +98,7 @@ int main(int argc, char** argv) {
     String servermap_type = GetOptionValue<String>("servermap");
     String servermap_options = GetOptionValue<String>("cseg-servermap-options");
     ServerIDMap * server_id_map =
-        ServerIDMapFactory::getSingleton().getConstructor(servermap_type)(servermap_options);
+        ServerIDMapFactory::getSingleton().getConstructor(servermap_type)(cseg_context, servermap_options);
 
     DistributedCoordinateSegmentation* cseg = new DistributedCoordinateSegmentation(cseg_context, region, layout, max_space_servers, server_id_map);
 

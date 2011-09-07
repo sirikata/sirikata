@@ -46,14 +46,14 @@ static void InitPluginOptions() {
         NULL);
 }
 
-static ServerIDMap* createLocalServerIDMap(const String& args) {
+static ServerIDMap* createLocalServerIDMap(Context* ctx, const String& args) {
     OptionSet* optionsSet = OptionSet::getOptions("local",NULL);
     optionsSet->parse(args);
 
     String server_host = optionsSet->referenceOption("host")->as<String>();
     uint16 server_port = optionsSet->referenceOption("port")->as<uint16>();
 
-    return new LocalServerIDMap(server_host, server_port);
+    return new LocalServerIDMap(ctx, server_host, server_port);
 }
 
 } // namespace Sirikata
@@ -63,9 +63,10 @@ SIRIKATA_PLUGIN_EXPORT_C void init() {
     if (local_plugin_refcount==0) {
         InitPluginOptions();
         using std::tr1::placeholders::_1;
+        using std::tr1::placeholders::_2;
         ServerIDMapFactory::getSingleton()
             .registerConstructor("local",
-                std::tr1::bind(&createLocalServerIDMap, _1));
+                std::tr1::bind(&createLocalServerIDMap, _1, _2));
     }
     local_plugin_refcount++;
 }

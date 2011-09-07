@@ -78,7 +78,7 @@ void logVersionInfo(Sirikata::Protocol::Session::VersionInfo vers_info) {
 } // namespace
 
 
-Server::Server(SpaceContext* ctx, Authenticator* auth, Forwarder* forwarder, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, ObjectSegmentation* oseg, Address4* oh_listen_addr)
+Server::Server(SpaceContext* ctx, Authenticator* auth, Forwarder* forwarder, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, ObjectSegmentation* oseg, Address4 oh_listen_addr)
  : ODP::DelegateService( std::tr1::bind(&Server::createDelegateODPPort, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2, std::tr1::placeholders::_3) ),
    mContext(ctx),
    mAuthenticator(auth),
@@ -118,7 +118,7 @@ Server::Server(SpaceContext* ctx, Authenticator* auth, Forwarder* forwarder, Loc
       );
 
     mObjectHostConnectionManager = new ObjectHostConnectionManager(
-        mContext, *oh_listen_addr,
+        mContext, oh_listen_addr,
         std::tr1::bind(&Server::handleObjectHostMessage, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2),
         mContext->mainStrand->wrap(std::tr1::bind(&Server::handleObjectHostConnectionClosed, this, std::tr1::placeholders::_1))
     );
@@ -574,7 +574,7 @@ void Server::handleConnectAuthResponse(const ObjectHostConnectionManager::Connec
             // conflict, fail the new connection leaving existing alone
             sendConnectError(oh_conn_id, obj_id);
         }
-        
+
         return;
     }
 

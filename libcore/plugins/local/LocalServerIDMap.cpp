@@ -38,46 +38,53 @@
 namespace Sirikata {
 
 
-LocalServerIDMap::LocalServerIDMap(const String& server_host, uint16 server_port)
- : mID(ServerID(1)),
+LocalServerIDMap::LocalServerIDMap(Context* ctx, const String& server_host, uint16 server_port)
+ : ServerIDMap(ctx),
+   mID(ServerID(1)),
    mAddress(Network::Address(server_host, boost::lexical_cast<String>(server_port)))
 {
 }
 
-ServerID *LocalServerIDMap::lookupInternal(const Address4& address) {
+ServerID LocalServerIDMap::lookupInternal(const Address4& address) {
     SILOG(local_serverid_map,detailed,"[LocalServerIDMap] Tried to look up internal address in LocalServerIDMap.");
-    return NULL;
+    return NullServerID;
 }
 
-Address4 *LocalServerIDMap::lookupInternal(const ServerID& server_id) {
+Address4 LocalServerIDMap::lookupInternal(const ServerID& server_id) {
     SILOG(local_serverid_map,detailed,"[LocalServerIDMap] Tried to look up internal address in LocalServerIDMap.");
-    return NULL;
+    return Address4::Null;
 }
 
-ServerID *LocalServerIDMap::lookupExternal(const Address4& address) {
+void LocalServerIDMap::lookupInternal(const Address4& addr, ServerIDLookupCallback cb) {
+    mContext->ioService->post(std::tr1::bind(cb, lookupInternal(addr)));
+}
+
+void LocalServerIDMap::lookupInternal(const ServerID& sid, Address4LookupCallback cb) {
+    mContext->ioService->post(std::tr1::bind(cb, lookupInternal(sid)));
+}
+
+ServerID LocalServerIDMap::lookupExternal(const Address4& address) {
     if (address != mAddress) {
         SILOG(local_serverid_map,detailed,"[LocalServerIDMap] External address lookup does not match known address.");
-        return NULL;
+        return NullServerID;
     }
-    return &mID;
+    return mID;
 }
 
-Address4 *LocalServerIDMap::lookupExternal(const ServerID& server_id) {
+Address4 LocalServerIDMap::lookupExternal(const ServerID& server_id) {
     if (server_id != mID) {
         SILOG(local_serverid_map,detailed,"[LocalServerIDMap] External server lookup does not match known ServerID.");
-        return NULL;
+        return Address4::Null;
     }
-    return &mAddress;
+    return mAddress;
 }
 
-void LocalServerIDMap::__debugPrintInternalIDMap(std::ostream& toPrintFrom)
-{
-    toPrintFrom<<mID<<"\t"<<mAddress<<"\n";
-}
-void LocalServerIDMap::__debugPrintExternalIDMap(std::ostream& toPrintFrom)
-{
-    __debugPrintInternalIDMap(toPrintFrom);
+void LocalServerIDMap::lookupExternal(const Address4& addr, ServerIDLookupCallback cb) {
+    mContext->ioService->post(std::tr1::bind(cb, lookupExternal(addr)));
 }
 
+void LocalServerIDMap::lookupExternal(const ServerID& sid, Address4LookupCallback cb) {
+    mContext->ioService->post(std::tr1::bind(cb, lookupExternal(sid)));
+}
 
 }

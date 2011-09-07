@@ -64,7 +64,7 @@ void ServerMessageQueue::connect(const ServerID& dest) {
 
     SpaceNetwork::SendStream** where=&mSendStreams[dest];
     if (*where==NULL) {
-        *where= mNetwork->connect(dest);
+        *where = mNetwork->connect(mSenderStrand, dest);
     }
 }
 

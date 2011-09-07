@@ -46,18 +46,20 @@ class TabularServerIDMap : public ServerIDMap {
 
     std::tr1::unordered_map<ServerID,Address4> mExternalIDMap;
     std::tr1::unordered_map<Address4,ServerID,Address4::Hasher> mExternalAddressMap;
+
 public:
-    TabularServerIDMap(std::istream&filestream);
+    TabularServerIDMap(Context* ctx, std::istream&filestream);
     virtual ~TabularServerIDMap() {}
 
-    virtual ServerID* lookupInternal(const Address4& pos);
-    virtual Address4* lookupInternal(const ServerID& obj_id);
+    virtual ServerID lookupInternal(const Address4& pos);
+    virtual Address4 lookupInternal(const ServerID& obj_id);
+    virtual void lookupInternal(const Address4& addr, ServerIDLookupCallback cb);
+    virtual void lookupInternal(const ServerID& sid, Address4LookupCallback cb);
 
-    virtual ServerID* lookupExternal(const Address4& pos);
-    virtual Address4* lookupExternal(const ServerID& obj_id);
-
-    virtual void __debugPrintInternalIDMap(std::ostream& toPrintFrom);
-    virtual void __debugPrintExternalIDMap(std::ostream& toPrintFrom);
+    virtual ServerID lookupExternal(const Address4& pos);
+    virtual Address4 lookupExternal(const ServerID& obj_id);
+    virtual void lookupExternal(const Address4& addr, ServerIDLookupCallback cb);
+    virtual void lookupExternal(const ServerID& sid, Address4LookupCallback cb);
 };
 
 } // namespace Sirikata

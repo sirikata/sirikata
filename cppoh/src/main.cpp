@@ -125,11 +125,6 @@ int main (int argc, char** argv) {
     String trace_file = GetPerServerFile(STATS_OH_TRACE_FILE, oh_id);
     Trace::Trace* trace = new Trace::Trace(trace_file);
 
-    String servermap_type = GetOptionValue<String>("servermap");
-    String servermap_options = GetOptionValue<String>("servermap-options");
-    ServerIDMap * server_id_map =
-        ServerIDMapFactory::getSingleton().getConstructor(servermap_type)(servermap_options);
-
     srand( GetOptionValue<uint32>("rand-seed") );
 
     Network::IOService* ios = Network::IOServiceFactory::makeIOService();
@@ -140,6 +135,11 @@ int main (int argc, char** argv) {
     Time start_time = Timer::now(); // Just for stats in ObjectHostContext.
     Duration duration = Duration::zero(); // Indicates to run forever.
     ObjectHostContext* ctx = new ObjectHostContext("cppoh", oh_id, sstConnMgr, ios, mainStrand, trace, start_time, duration);
+
+    String servermap_type = GetOptionValue<String>("servermap");
+    String servermap_options = GetOptionValue<String>("servermap-options");
+    ServerIDMap * server_id_map =
+        ServerIDMapFactory::getSingleton().getConstructor(servermap_type)(ctx, servermap_options);
 
     String timeseries_type = GetOptionValue<String>(OPT_TRACE_TIMESERIES);
     String timeseries_options = GetOptionValue<String>(OPT_TRACE_TIMESERIES_OPTIONS);
