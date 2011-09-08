@@ -40,7 +40,6 @@
 #include <sirikata/core/util/Time.hpp>
 
 namespace Sirikata {
-
 class Context;
 
 /** Poller allows you to generate a callback periodically without having
@@ -73,7 +72,7 @@ public:
     virtual void stop();
 private:
     void setupNextTimeout(const Duration& user_time);
-    void handleExec();
+    void handleExec(const Network::IOTimerWPtr& timer);
 
     Network::IOStrand* mStrand;
     Network::IOTimerPtr mTimer;

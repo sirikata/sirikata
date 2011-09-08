@@ -49,7 +49,7 @@ private:
   double invert(Matrix4x4f& inv, const Matrix4x4f& orig);
 
   typedef struct QSlimStruct {
-    float mCost;
+    double mCost;
     int mGeomIdx, mIdx1, mIdx2;
 
 
@@ -76,7 +76,7 @@ private:
 
 public:
 
-  void simplify(Mesh::MeshdataPtr agg_mesh, int32 numVerticesLeft);
+  void simplify(Mesh::MeshdataPtr agg_mesh, int32 numFacesLeft);
 
 
 };

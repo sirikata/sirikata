@@ -62,6 +62,9 @@
 #include <sirikata/oh/PersistedObjectSet.hpp>
 #include <sirikata/oh/ObjectFactory.hpp>
 
+#include <sirikata/mesh/Filter.hpp>
+#include <sirikata/mesh/ModelsSystemFactory.hpp>
+#include <sirikata/oh/ObjectScriptManagerFactory.hpp>
 #ifdef __GNUC__
 #include <fenv.h>
 #endif
@@ -95,6 +98,14 @@ int main (int argc, char** argv) {
     plugins.loadList( GetOptionValue<String>(OPT_PLUGINS) );
     plugins.loadList( GetOptionValue<String>(OPT_OH_PLUGINS) );
 
+    // Fill defaults after plugin loading to ensure plugin-added
+    // options get their defaults.
+    FillMissingOptionDefaults();
+    // Rerun original parse to make sure any newly added options are
+    // properly parsed.
+    ParseOptions(argc, argv, OPT_CONFIG_FILE);
+
+    ReportVersion(); // After options so log goes to the right place
 
     String time_server = GetOptionValue<String>("time-server");
     NTPTimeSync sync;
@@ -114,27 +125,25 @@ int main (int argc, char** argv) {
     String trace_file = GetPerServerFile(STATS_OH_TRACE_FILE, oh_id);
     Trace::Trace* trace = new Trace::Trace(trace_file);
 
-    String servermap_type = GetOptionValue<String>("servermap");
-    String servermap_options = GetOptionValue<String>("servermap-options");
-    ServerIDMap * server_id_map =
-        ServerIDMapFactory::getSingleton().getConstructor(servermap_type)(servermap_options);
-
     srand( GetOptionValue<uint32>("rand-seed") );
 
     Network::IOService* ios = Network::IOServiceFactory::makeIOService();
     Network::IOStrand* mainStrand = ios->createStrand();
 
+    SSTConnectionManager* sstConnMgr = new SSTConnectionManager();
+
     Time start_time = Timer::now(); // Just for stats in ObjectHostContext.
     Duration duration = Duration::zero(); // Indicates to run forever.
-    ObjectHostContext* ctx = new ObjectHostContext("cppoh", oh_id, ios, mainStrand, trace, start_time, duration);
-    Context::mainContextPtr = ctx;
+    ObjectHostContext* ctx = new ObjectHostContext("cppoh", oh_id, sstConnMgr, ios, mainStrand, trace, start_time, duration);
+
+    String servermap_type = GetOptionValue<String>("servermap");
+    String servermap_options = GetOptionValue<String>("servermap-options");
+    ServerIDMap * server_id_map =
+        ServerIDMapFactory::getSingleton().getConstructor(servermap_type)(ctx, servermap_options);
 
     String timeseries_type = GetOptionValue<String>(OPT_TRACE_TIMESERIES);
     String timeseries_options = GetOptionValue<String>(OPT_TRACE_TIMESERIES_OPTIONS);
-    Trace::TimeSeries* time_series = Trace::TimeSeriesFactory::getSingleton().getConstructor(timeseries_type)(ctx, timeseries_options);
-
-
-    SSTConnectionManager* sstConnMgr = new SSTConnectionManager();
+    Trace::TimeSeries* time_series = Trace::TimeSeriesFactory::getSingleton().getConstructor(timeseries_type)(ctx, timeseries_options);    
 
     SpaceID mainSpace(GetOptionValue<UUID>(OPT_MAIN_SPACE));
 
@@ -146,7 +155,7 @@ int main (int argc, char** argv) {
     // ServerIDMap for the main space. We need a better way of handling multiple
     // spaces.
     oh->addServerIDMap(mainSpace, server_id_map);
-
+    
     String objstorage_type = GetOptionValue<String>(OPT_OBJECT_STORAGE);
     String objstorage_options = GetOptionValue<String>(OPT_OBJECT_STORAGE_OPTS);
     OH::Storage* obj_storage =
@@ -157,7 +166,7 @@ int main (int argc, char** argv) {
     String objpersistentset_options = GetOptionValue<String>(OPT_OH_PERSISTENT_SET_OPTS);
     OH::PersistedObjectSet* obj_persistent_set =
         OH::PersistedObjectSetFactory::getSingleton().getConstructor(objpersistentset_type)(ctx, objpersistentset_options);
-    oh->setPersistentSet(obj_persistent_set);
+        oh->setPersistentSet(obj_persistent_set);
 
     String objfactory_type = GetOptionValue<String>(OPT_OBJECT_FACTORY);
     String objfactory_options = GetOptionValue<String>(OPT_OBJECT_FACTORY_OPTS);
@@ -165,9 +174,10 @@ int main (int argc, char** argv) {
 
 
     ///////////Go go go!! start of simulation/////////////////////
-    ctx->add(ctx);
+    ctx->add(ctx);    
     ctx->add(obj_storage);
     ctx->add(obj_persistent_set);
+
     ctx->add(oh);
     ctx->add(sstConnMgr);
 
@@ -181,18 +191,26 @@ int main (int argc, char** argv) {
     ctx->run(1);
 
     ctx->cleanup();
+
+    if (GetOptionValue<bool>(PROFILE)) {
+        ctx->profiler->report();
+    }
+
     trace->prepareShutdown();
-
-
+    Mesh::FilterFactory::destroy();
+    ModelsSystemFactory::destroy();
+    ObjectScriptManagerFactory::destroy();
     delete oh;
     //delete pd;
 
+    
     delete obj_storage;
     delete obj_persistent_set;
 
+
     SimulationFactory::destroy();
 
-    delete sstConnMgr;
+    
 
     delete ctx;
     delete time_series;
@@ -203,6 +221,8 @@ int main (int argc, char** argv) {
 
     delete mainStrand;
     Network::IOServiceFactory::destroyIOService(ios);
+
+    delete sstConnMgr;
 
     plugins.gc();
     sync.stop();

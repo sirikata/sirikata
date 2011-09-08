@@ -124,6 +124,10 @@ util.Vec3.prototype.equal = function(rhs){
     return ((this.x === rhs.x) && (this.y === rhs.y) && (this.z === rhs.z));
 };
 
+util.Vec3.prototype.notEqual = function(rhs){
+    return (! this.equal(rhs));
+};
+
 
 /** @function 
   @param rhs a Vec3

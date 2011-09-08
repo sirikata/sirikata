@@ -656,16 +656,12 @@ motion.LookForward = motion.Orientation.extend(/** @lends motion.LookForward# */
         self.up = up || motion.defaultUp;
 		
 		var useAccel = function(p) {
-			if(!('accel' in p))
+            if(!('accel' in p) || p.velocity.lengthSquared() < 1e-08)
 				return;
 			
 			var omega = p.velocity.cross(p.accel).
 					div(p.velocity.lengthSquared());
-                    // TODO: the model orientation adjustment should really be in
-                    // std/shim/presence.em -- one shouldn't need to take into account
-                    // model orientation when setting ovel
-                    return <p.modelOrientation.inv() * p.orientation.inv() *
-                        omega.normal(); 1> * omega.length();
+            return <p.orientation.inv() * omega.normal(); 1> * omega.length();
 		};
 		this.oVelController = new motion.OrientationVel(presence, useAccel,
 				period);

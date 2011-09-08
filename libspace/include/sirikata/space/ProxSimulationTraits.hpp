@@ -43,6 +43,7 @@ namespace Sirikata {
 
 class SIRIKATA_SPACE_EXPORT ProxSimulationTraits {
 public:
+    typedef uint32 intType;
     typedef float32 realType;
 
     typedef Vector3f Vector3Type;
@@ -56,6 +57,7 @@ public:
     typedef Duration DurationType;
 
     const static realType InfiniteRadius;
+    const static intType InfiniteResults;
 }; // class ProxSimulationTraits
 
 class SIRIKATA_SPACE_EXPORT ObjectProxSimulationTraits : public ProxSimulationTraits {

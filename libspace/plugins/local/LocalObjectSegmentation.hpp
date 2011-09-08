@@ -60,6 +60,8 @@ private:
     OSegCache* mCache;
 
     typedef std::tr1::unordered_map<UUID, OSegEntry, UUID::Hasher> OSegMap;
+    typedef OSegMap::iterator OSegMapIter;
+    typedef OSegMap::const_iterator OSegMapCIter;
     OSegMap mOSeg;
 };
 

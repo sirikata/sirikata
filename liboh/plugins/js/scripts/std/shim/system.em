@@ -530,6 +530,7 @@ function PresenceEntry(sporef, presObj)
 
       system.__behindSelf = undefined;
 
+     
       system.__setBehindSelf = function(toSetTo)
       {
           this.__behindSelf = toSetTo;
@@ -543,6 +544,8 @@ function PresenceEntry(sporef, presObj)
                             });
 
 
+
+     
      /** @function
       @throws __killEntity__  (If kill entity command is successful)
       @throws Exception (If do not execute kill entity from root context).
@@ -1205,13 +1208,16 @@ function PresenceEntry(sporef, presObj)
       @param {vec3} suspendedVelocity,
       @param {quaternion} suspendedOrientationVelocity,
       @param {float} solidAngleQuery
+      @param {uint32} queryMaxResults
       */
-     system.restorePresence = function(sporef,pos,vel,posTime,orient,orientVel,orientTime,mesh,physics,scale,isCleared,contextId,isConnected,connCB,isSuspended,suspendedVelocity,suspendedOrientationVelocity,solidAngleQuery)
+     system.restorePresence = function(sporef,pos,vel,posTime,orient,orientVel,orientTime,mesh,physics,scale,isCleared,contextId,isConnected,connCB,isSuspended,suspendedVelocity,suspendedOrientationVelocity,solidAngleQuery,queryMaxResults)
      {
          if (connCB != null)
              connCB = this.__wrapPresConnCB(connCB);
 
-         return baseSystem.restorePresence(sporef,pos,vel,posTime,orient,orientVel,orientTime,mesh,physics,scale,isCleared,contextId,isConnected,connCB,isSuspended,suspendedVelocity,suspendedOrientationVelocity,solidAngleQuery);
+         if (queryMaxResults === undefined) queryMaxResults = 1000000;
+
+         return baseSystem.restorePresence(sporef,pos,vel,posTime,orient,orientVel,orientTime,mesh,physics,scale,isCleared,contextId,isConnected,connCB,isSuspended,suspendedVelocity,suspendedOrientationVelocity,solidAngleQuery,queryMaxResults);
      };
       
       /** @deprecated Use createPresence */
@@ -1238,16 +1244,6 @@ function PresenceEntry(sporef, presObj)
           return baseSystem.canEval.apply(baseSystem, arguments);
       };
 
-      /** @function
-       @description Returns the position of the default presence this script or sandbox is associated with
-       @type util.Vec3
-       @return vector corresponding to position of default presence sandbox is associated with.
-       @throws {Exception} Calling from root sandbox, or calling on a sandbox for which you do not have capabilities to query for position throws an exception.
-       */
-      system.getPosition = function()
-      {
-          return baseSystem.getPosition.apply(baseSystem, arguments);
-      };
 
       /** @function
        @description Gives the version of Emerson run by the entity host
@@ -1513,7 +1509,17 @@ function PresenceEntry(sporef, presObj)
       system.onPresenceDisconnected(undefined);
 
      //populates self with basic system object.
-     system.addToSelfMap(null);
+
+
+     //if this sandbox is associated with a given presence, then loads that
+     //presence by default into self.
+     if (typeof(baseSystem.getAssociatedPresence()) !== 'undefined')
+     {
+             system.addToSelfMap(baseSystem.getAssociatedPresence());
+             system.__setBehindSelf(baseSystem.getAssociatedPresence());             
+     }
+     else
+         system.addToSelfMap(null);
 
 
      // FIXME this shouldn't be in system, but its the only place we

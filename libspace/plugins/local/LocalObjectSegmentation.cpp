@@ -59,9 +59,15 @@ OSegEntry LocalObjectSegmentation::lookup(const UUID& obj_id) {
     return it->second;
 }
 
-void LocalObjectSegmentation::addNewObject(const UUID& obj_id, float radius) {
-    mOSeg[obj_id] = OSegEntry(mContext->id(), radius);
-    mWriteListener->osegWriteFinished(obj_id);
+void LocalObjectSegmentation::addNewObject(const UUID& obj_id, float radius)
+{
+    OSegWriteListener::OSegAddNewStatus status = OSegWriteListener::SUCCESS;
+    if (mOSeg.find(obj_id) != mOSeg.end())
+        status = OSegWriteListener::OBJ_ALREADY_REGISTERED;
+    else
+        mOSeg[obj_id] = OSegEntry(mContext->id(), radius);
+    
+    mWriteListener->osegAddNewFinished(obj_id, status);
 }
 
 void LocalObjectSegmentation::addMigratedObject(const UUID& obj_id, float radius, ServerID idServerAckTo, bool) {

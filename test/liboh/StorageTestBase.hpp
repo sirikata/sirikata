@@ -55,6 +55,7 @@ protected:
 
     // Helpers for getting event loop setup/torn down
     Trace::Trace* _trace;
+    SSTConnectionManager* _sstConnMgr;
     Network::IOService* _ios;
     Network::IOStrand* _mainStrand;
     Network::IOWork* _work;
@@ -74,6 +75,7 @@ public:
        _args(args),
        _storage(NULL),
        _trace(NULL),
+       _sstConnMgr(NULL),
        _mainStrand(NULL),
        _work(NULL),
        _ctx(NULL)
@@ -93,7 +95,9 @@ public:
         _work = new Network::IOWork(*_ios, "StorageTest");
         Time start_time = Timer::now(); // Just for stats in ObjectHostContext.
         Duration duration = Duration::zero(); // Indicates to run forever.
-        _ctx = new ObjectHostContext("test", oh_id, _ios, _mainStrand, _trace, start_time, duration);
+        _sstConnMgr = new SSTConnectionManager();
+
+        _ctx = new ObjectHostContext("test", oh_id, _sstConnMgr, _ios, _mainStrand, _trace, start_time, duration);
 
         _storage = OH::StorageFactory::getSingleton().getConstructor(_type)(_ctx, _args);
 
@@ -123,6 +127,9 @@ public:
         _trace->shutdown();
         delete _trace;
         _trace = NULL;
+
+        delete _sstConnMgr;
+        _sstConnMgr = NULL;
 
         delete _mainStrand;
         _mainStrand = NULL;

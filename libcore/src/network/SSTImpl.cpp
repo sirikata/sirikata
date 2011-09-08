@@ -45,41 +45,10 @@
 
 namespace Sirikata {
 
-/*
-typedef BaseDatagramLayer<Sirikata::UUID> UUIDBaseDatagramLayer;
-typedef std::tr1::shared_ptr<UUIDBaseDatagramLayer> UUIDBaseDatagramLayerPtr;
-
-template <>  std::map<Sirikata::UUID, UUIDBaseDatagramLayerPtr> UUIDBaseDatagramLayer::sDatagramLayerMap = std::map<Sirikata::UUID, UUIDBaseDatagramLayerPtr> ();
-
-template <> std::map<EndPoint<Sirikata::UUID>  , boost::shared_ptr< Connection<Sirikata::UUID> > > Connection<Sirikata::UUID>::sConnectionMap = std::map<EndPoint<Sirikata::UUID>  , boost::shared_ptr< Connection<Sirikata::UUID> > > ();
+typedef std::tr1::shared_ptr<BaseDatagramLayer<SpaceObjectReference> > BaseDatagramLayerPtr;    
+  
 
 
-template <> std::map<EndPoint<Sirikata::UUID>  , ConnectionReturnCallbackFunction > Connection<Sirikata::UUID>::sConnectionReturnCallbackMap = std::map<EndPoint<Sirikata::UUID>  , ConnectionReturnCallbackFunction > ();
 
-template <> std::map<EndPoint<Sirikata::UUID>  , StreamReturnCallbackFunction > Connection<Sirikata::UUID>::sListeningConnectionsCallbackMap = std::map<EndPoint<Sirikata::UUID>  , StreamReturnCallbackFunction > ();
-
-template <> std::bitset<65536> Connection<Sirikata::UUID>::sAvailableChannels = std::bitset<65536> ();
-
-template <> std::map<EndPoint<Sirikata::UUID>  , StreamReturnCallbackFunction > Stream<Sirikata::UUID>::mStreamReturnCallbackMap = std::map<EndPoint<Sirikata::UUID>  , StreamReturnCallbackFunction > ();
-
-template <> Mutex Connection<Sirikata::UUID>::sStaticMembersLock = Mutex();
-*/
-
-typedef BaseDatagramLayer<SpaceObjectReference> SpaceObjectReferenceBaseDatagramLayer;
-typedef std::tr1::shared_ptr<SpaceObjectReferenceBaseDatagramLayer> SpaceObjectReferenceBaseDatagramLayerPtr;
-
-template <>  std::map<SpaceObjectReference, SpaceObjectReferenceBaseDatagramLayerPtr> SpaceObjectReferenceBaseDatagramLayer::sDatagramLayerMap = std::map<SpaceObjectReference, SpaceObjectReferenceBaseDatagramLayerPtr> ();
-
-template <> std::map<EndPoint<SpaceObjectReference>  , std::tr1::shared_ptr< Connection<SpaceObjectReference> > > Connection<SpaceObjectReference>::sConnectionMap = std::map<EndPoint<SpaceObjectReference>  , std::tr1::shared_ptr< Connection<SpaceObjectReference> > > ();
-
-
-template <> std::map<EndPoint<SpaceObjectReference>  , ConnectionReturnCallbackFunction > Connection<SpaceObjectReference>::sConnectionReturnCallbackMap = std::map<EndPoint<SpaceObjectReference>  , ConnectionReturnCallbackFunction > ();
-
-template <> std::map<EndPoint<SpaceObjectReference>  , StreamReturnCallbackFunction > Connection<SpaceObjectReference>::sListeningConnectionsCallbackMap = std::map<EndPoint<SpaceObjectReference>  , StreamReturnCallbackFunction > ();
-
-template <> std::bitset<65536> Connection<SpaceObjectReference>::sAvailableChannels = std::bitset<65536> ();
-
-template <> std::map<EndPoint<SpaceObjectReference>  , StreamReturnCallbackFunction > Stream<SpaceObjectReference>::mStreamReturnCallbackMap = std::map<EndPoint<SpaceObjectReference>  , StreamReturnCallbackFunction > ();
-template <> Mutex Connection<SpaceObjectReference>::sStaticMembersLock = Mutex();
 
 }

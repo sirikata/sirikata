@@ -67,6 +67,10 @@ namespace ODP {
  *  Note that combinations which have an object specified but not match any space
  *  are not checked.  This combination generally doesn't make sense since an
  *  object reference won't be valid across spaces.
+ *
+ *  Once allocated, a Port is owned by the allocator: if the Service it was
+ *  allocated from is destroyed, the user is responsible for not using the Port
+ *  any more, and is always responsible for deleting the Port.
  */
 class SIRIKATA_EXPORT Port {
 public:

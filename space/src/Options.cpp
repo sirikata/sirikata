@@ -41,7 +41,7 @@ void InitSpaceOptions() {
 
         .addOption(new OptionValue(OPT_CONFIG_FILE,"space.cfg",Sirikata::OptionValueType<String>(),"Configuration file to load."))
 
-        .addOption(new OptionValue(OPT_SPACE_PLUGINS,"weight-exp,weight-sqr,weight-const,space-null,space-local,space-standard,colladamodels,mesh-billboard,common-filters,space-bulletphysics",Sirikata::OptionValueType<String>(),"Plugin list to load."))
+        .addOption(new OptionValue(OPT_SPACE_PLUGINS,"weight-exp,weight-sqr,weight-const,space-null,space-local,space-standard,space-prox,colladamodels,mesh-billboard,common-filters,space-bulletphysics",Sirikata::OptionValueType<String>(),"Plugin list to load."))
 
         .addOption(new OptionValue("spacestreamlib","tcpsst",Sirikata::OptionValueType<String>(),"Which library to use to communicate with the object host"))
         .addOption(new OptionValue("spacestreamoptions","--send-buffer-size=32768 --parallel-sockets=1 --no-delay=true",Sirikata::OptionValueType<String>(),"TCPSST stream options such as how many bytes to collect for sending during an ongoing asynchronous send call."))
@@ -86,20 +86,9 @@ void InitSpaceOptions() {
         .addOption(new OptionValue(LOC_UPDATE, "always", Sirikata::OptionValueType<String>(), "Type of location service to run."))
         .addOption(new OptionValue(LOC_UPDATE_OPTIONS, "", Sirikata::OptionValueType<String>(), "Options to pass to Loc constructor."))
 
-        .addOption(new OptionValue(PROX_MAX_PER_RESULT, "5", Sirikata::OptionValueType<uint32>(), "Maximum number of changes to report in each result message."))
 
-        .addOption(new OptionValue(OPT_PROX_SPLIT_DYNAMIC, "false", Sirikata::OptionValueType<bool>(), "If true, separate query handlers will be used for static and dynamic objects."))
-
-        .addOption(new OptionValue(OPT_PROX_QUERY_RANGE, "100", Sirikata::OptionValueType<float32>(), "The range of queries when using range queries instead of solid angle queries."))
-
-        .addOption(new OptionValue(OPT_PROX_SERVER_QUERY_HANDLER_TYPE, "rtreecut", Sirikata::OptionValueType<String>(), "Type of libprox query handler to use for queries from servers."))
-        .addOption(new OptionValue(OPT_PROX_SERVER_QUERY_HANDLER_OPTIONS, "", Sirikata::OptionValueType<String>(), "Options for the query handler."))
-
-        .addOption(new OptionValue(OPT_PROX_OBJECT_QUERY_HANDLER_TYPE, "rtreecut", Sirikata::OptionValueType<String>(), "Type of libprox query handler to use for queries from servers."))
-        .addOption(new OptionValue(OPT_PROX_OBJECT_QUERY_HANDLER_OPTIONS, "", Sirikata::OptionValueType<String>(), "Options for the query handler."))
-
-        .addOption(new OptionValue(OPT_PINTO,"local",Sirikata::OptionValueType<String>(),"Specifies which type of Pinto to use."))
-        .addOption(new OptionValue(OPT_PINTO_OPTIONS,"",Sirikata::OptionValueType<String>(),"Specifies arguments to Pinto."))
+        .addOption(new OptionValue(OPT_PROX, "libprox", Sirikata::OptionValueType<String>(), "Type of Proximity query processor to instantiate."))
+        .addOption(new OptionValue(OPT_PROX_OPTIONS, "", Sirikata::OptionValueType<String>(), "Arguments to pass to Proximity query processor. Note that many common options are already provided (type of top-level service, type of server-to-server and object-to-server handlers, etc) so they do not need to be passed through."))
 
       .addOption(new OptionValue("route-object-message-buffer", "64", Sirikata::OptionValueType<size_t>(), "size of the buffer between network and main strand for space server message routing"))
 

@@ -50,6 +50,7 @@ tokens
     QUATERNION;
     QUATERNION_AXISANGLE;
     NOOP;
+    STATEMENT_BLOCK;
     DOLLAR_EXPRESSION; //used to grab object by reference instead of value in when statements.
     TRY;
     THROW;
@@ -145,8 +146,9 @@ program
 	: a=LTERM*  sourceElements? LTERM* EOF -> ^(PROG sourceElements?) // omitting LTERM and EOF
 	;
 
+
 sourceElements
-	: sourceElement (LTERM* sourceElement)* -> sourceElement+  // omitting the LTERM 
+        : sourceElement (LTERM* sourceElement)* -> sourceElement+  // omitting the LTERM 
 	;
 	
 sourceElement
@@ -174,11 +176,10 @@ functionBody
 
 // statements
 statement
-	: noOpStatement
-        | (switchStatement) => switchStatement
+        : (switchStatement) => switchStatement
+	| emptyStatement
         | statementBlock
 	| variableStatement
-	| emptyStatement
 	| expressionStatement
 	| ifStatement
 	| iterationStatement
@@ -191,17 +192,16 @@ statement
 	;
 	
 statementBlock
-        : '{' LTERM* '}'   -> ^(NOOP)
-	| '{' LTERM* (statementList->statementList) LTERM* '}' 
+	: '{' LTERM* statementList? LTERM* '}' -> ^(STATEMENT_BLOCK statementList?)
 	; 
-
-noOpStatement
-        : ';' -> ^(NOOP)
-        ;
         
+emptyStatement
+        : LTERM* ';' -> ^( NOOP )
+	;
+
         
 statementList
-	: (LTERM* statement)+ -> ^(SLIST statement+)
+	: statement (LTERM* statement)* -> ^(SLIST statement+ )
 	;
 	
 variableStatement
@@ -232,9 +232,6 @@ initialiserNoIn
 	: '=' LTERM* expressionNoIn -> expressionNoIn
 	;
 	
-emptyStatement
-        : LTERM* ';'
-	;
 	
 expressionStatement
 	: expression (LTERM | ';') -> expression
@@ -342,6 +339,7 @@ catchBlock
         : 'catch' LTERM* '(' LTERM* Identifier LTERM* ')' LTERM* statementBlock -> ^(CATCH Identifier statementBlock )
         ;
 
+        
 finallyBlock
         : 'finally' LTERM*  statementBlock  -> ^(FINALLY statementBlock)
         ;

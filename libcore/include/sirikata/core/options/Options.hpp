@@ -98,9 +98,13 @@ public:
 
     OptionSet();
     ~OptionSet();
-    void parse(const std::string&, bool use_defaults = true);
-    void parse(int, const char * const *, bool use_defaults = true);
-    void parseFile(const std::string&, bool required, bool use_defaults = true);
+    void parse(const std::string&, bool use_defaults = true, bool missing_only = false);
+    void parse(int, const char * const *, bool use_defaults = true, bool missing_only = false);
+    void parseFile(const std::string&, bool required, bool use_defaults = true, bool missing_only = false);
+    /// Fills in defaults for any options that didn't already have values filled
+    /// in. Useful if you add options and need to fill in defaults but can't
+    /// parse with defaults since that would overwrite already-parsed options.
+    void fillMissingDefaults();
     void addOption(OptionValue*v);
     OptionValue* referenceOption(const std::string &option, OptionValue**pointer = NULL);
     static OptionValue* referenceOption(const std::string& module, const std::string &option, OptionValue**pointer=NULL);

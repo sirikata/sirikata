@@ -55,6 +55,15 @@ int main(int argc, char** argv) {
     plugins.loadList( GetOptionValue<String>(OPT_PLUGINS));
     plugins.loadList( GetOptionValue<String>(OPT_CSEG_PLUGINS));
 
+    // Fill defaults after plugin loading to ensure plugin-added
+    // options get their defaults.
+    FillMissingOptionDefaults();
+    // Rerun original parse to make sure any newly added options are
+    // properly parsed.
+    ParseOptions(argc, argv);
+
+    ReportVersion(); // After options so log goes to the right place
+
     ServerID server_id = GetOptionValue<ServerID>("cseg-id");
     String trace_file = GetPerServerFile(STATS_TRACE_FILE, server_id);
     Trace::Trace* trace = new Trace::Trace(trace_file);
@@ -89,7 +98,7 @@ int main(int argc, char** argv) {
     String servermap_type = GetOptionValue<String>("servermap");
     String servermap_options = GetOptionValue<String>("cseg-servermap-options");
     ServerIDMap * server_id_map =
-        ServerIDMapFactory::getSingleton().getConstructor(servermap_type)(servermap_options);
+        ServerIDMapFactory::getSingleton().getConstructor(servermap_type)(cseg_context, servermap_options);
 
     DistributedCoordinateSegmentation* cseg = new DistributedCoordinateSegmentation(cseg_context, region, layout, max_space_servers, server_id_map);
 

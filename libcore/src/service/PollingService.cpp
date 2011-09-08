@@ -33,7 +33,9 @@
 #include <sirikata/core/util/Standard.hh>
 #include <sirikata/core/service/PollingService.hpp>
 #include <sirikata/core/service/Context.hpp>
-
+#ifdef _WIN32
+#pragma warning (disable:4355)
+#endif
 namespace Sirikata {
 
 PollingService::PollingService(Network::IOStrand* str, const Duration& max_rate, Context* ctx, const String& name, bool accurate)

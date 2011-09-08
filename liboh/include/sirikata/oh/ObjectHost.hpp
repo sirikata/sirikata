@@ -99,6 +99,7 @@ public:
         String mesh;
         String physics;
         SolidAngle queryAngle;
+        uint32 queryMaxResults;
     };
 
     //use this function to request the object host to send a disconnect message
@@ -165,8 +166,10 @@ public:
 
     // Primary HostedObject API
 
-    /** Connect the object to the space with the given starting parameters. */
-    void connect(
+    /** Connect the object to the space with the given starting parameters. 
+    * returns true if the connection was initiated and no other objects are using this ID to connect
+    */
+    bool connect(
         const SpaceObjectReference& sporef, const SpaceID& space,
         const TimedMotionVector3f& loc,
         const TimedMotionQuaternion& orient,
@@ -174,6 +177,7 @@ public:
         const String& mesh,
         const String& physics,
         const SolidAngle& init_sa,
+        uint32 init_max_results,
         ConnectedCallback connected_cb,
         MigratedCallback migrated_cb, StreamCreatedCallback stream_created_cb,
         DisconnectedCallback disconnected_cb
@@ -205,7 +209,7 @@ public:
     */
     void registerHostedObject(const SpaceObjectReference &sporef_uuid, const HostedObjectPtr& obj);
     /// Unregister a private UUID. Done automatically by ~HostedObject.
-    void unregisterHostedObject(const SpaceObjectReference& sporef_uuid);
+    void unregisterHostedObject(const SpaceObjectReference& sporef_uuid, HostedObject *obj);
     /* Notify the ObjectHost that . Only called by HostedObject. */
     void hostedObjectDestroyed(const UUID& objid);
 

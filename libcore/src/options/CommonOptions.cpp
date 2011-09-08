@@ -37,6 +37,14 @@
 
 namespace Sirikata {
 
+void ReportVersion() {
+    bool do_version = GetOptionValue<bool>("version");
+    if (!do_version) return;
+    SILOG(core,info,"Sirikata started at " << Timer::nowAsString());
+    SILOG(core,info,"Sirikata version " << SIRIKATA_VERSION << " (git #" << SIRIKATA_GIT_REVISION << ")");
+}
+
+
 void InitOptions() {
     InitializeClassOptions::module(SIRIKATA_OPTIONS_MODULE)
         .addOption( reinterpret_cast<Sirikata::OptionValue*>(Sirikata_Logging_OptionValue_defaultLevel) )
@@ -105,13 +113,6 @@ void setLogOutput() {
     Sirikata::Logging::SirikataLogStream = &std::cerr;
 }
 
-void reportVersion() {
-    bool do_version = GetOptionValue<bool>("version");
-    if (!do_version) return;
-    SILOG(core,info,"Sirikata started at " << Timer::nowAsString());
-    SILOG(core,info,"Sirikata version " << SIRIKATA_VERSION << " (git #" << SIRIKATA_GIT_REVISION << ")");
-}
-
 }
 
 void FakeParseOptions() {
@@ -124,14 +125,12 @@ void ParseOptions(int argc, char** argv) {
     OptionSet* options = OptionSet::getOptions(SIRIKATA_OPTIONS_MODULE,NULL);
     options->parse(argc, argv);
     setLogOutput();
-    reportVersion();
 }
 
 void ParseOptionsFile(const String& fname, bool required) {
     OptionSet* options = OptionSet::getOptions(SIRIKATA_OPTIONS_MODULE,NULL);
     options->parseFile(fname, required);
     setLogOutput();
-    reportVersion();
 }
 
 void ParseOptions(int argc, char** argv, const String& config_file_option) {
@@ -153,7 +152,14 @@ void ParseOptions(int argc, char** argv, const String& config_file_option) {
     options->parse(argc, argv, false);
 
     setLogOutput();
-    reportVersion();
+}
+
+void FillMissingOptionDefaults() {
+    OptionSet* options = OptionSet::getOptions(SIRIKATA_OPTIONS_MODULE,NULL);
+
+    // Parse command line once to make sure we have the right config
+    // file. On this pass, use defaults so everything gets filled in.
+    options->fillMissingDefaults();
 }
 
 OptionValue* GetOption(const char* name) {

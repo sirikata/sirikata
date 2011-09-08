@@ -53,13 +53,21 @@ ResourceDownloadTask::ResourceDownloadTask(const Transfer::URI &uri, TransferPoo
 
 ResourceDownloadTask::~ResourceDownloadTask()
 {
-//FIXME: How do we unsubscribe from an active download?!?!?!
+    cancel();
+}
+
+void ResourceDownloadTask::updatePriority(float64 priority) {
+    mPriority = priority;
+    if (mCurrentRequest)
+        mTransferPool->updatePriority(mCurrentRequest, priority);
 }
 
 void ResourceDownloadTask::cancel() {
-    // FIXME This should fully cancel, but for now its sufficient to just not
-    // perform the callback.
+    // Delete request and ensure we won't perform the callback even if it's in
+    // the process of finishing
     cb = 0;
+    if (mCurrentRequest)
+        mTransferPool->deleteRequest(mCurrentRequest);
 }
 
 void ResourceDownloadTask::mergeData(const Transfer::SparseData &dataToMerge) {
@@ -80,6 +88,9 @@ void ResourceDownloadTask::chunkFinishedWeak(ResourceDownloadTaskWPtr thiswptr, 
 void ResourceDownloadTask::chunkFinished(ChunkRequestPtr request,
     std::tr1::shared_ptr<const DenseData> response)
 {
+    // Let the request get cleaned up.
+    mCurrentRequest.reset();
+
     // Nothing to do with no callback
     if (!cb) return;
 
@@ -104,11 +115,11 @@ void ResourceDownloadTask::metadataFinished(MetadataRequestPtr request,
     //TODO: Support files with more than 1 chunk
     assert(response->getChunkList().size() == 1);
 
-    TransferRequestPtr req(new Transfer::ChunkRequest(mURI, *response,
-                                                      response->getChunkList().front(), mPriority,
-                                                      std::tr1::bind(&ResourceDownloadTask::chunkFinishedWeak, getWeakPtr(), _1, _2)));
+    mCurrentRequest = TransferRequestPtr(new Transfer::ChunkRequest(mURI, *response,
+            response->getChunkList().front(), mPriority,
+            std::tr1::bind(&ResourceDownloadTask::chunkFinishedWeak, getWeakPtr(), _1, _2)));
 
-    mTransferPool->addRequest(req);
+    mTransferPool->addRequest(mCurrentRequest);
   }
   else {
       SILOG(ogre,error,"Failed metadata download");
@@ -118,13 +129,13 @@ void ResourceDownloadTask::metadataFinished(MetadataRequestPtr request,
 
 void ResourceDownloadTask::start()
 {
-  mStarted = true;
+    mStarted = true;
 
-  TransferRequestPtr req(
-      new MetadataRequest(mURI, mPriority,
-          std::tr1::bind(&ResourceDownloadTask::metadataFinishedWeak, getWeakPtr(), _1, _2)));
-
- mTransferPool->addRequest(req);
+    assert(!mCurrentRequest);
+    mCurrentRequest = TransferRequestPtr(
+        new MetadataRequest(mURI, mPriority,
+            std::tr1::bind(&ResourceDownloadTask::metadataFinishedWeak, getWeakPtr(), _1, _2)));
+    mTransferPool->addRequest(mCurrentRequest);
 }
 
 } // namespace Transfer

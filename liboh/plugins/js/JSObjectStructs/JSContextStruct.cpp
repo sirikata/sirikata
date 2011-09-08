@@ -24,7 +24,7 @@
 namespace Sirikata {
 namespace JS {
 
-JSContextStruct::JSContextStruct(JSObjectScript* parent, JSPresenceStruct* whichPresence, SpaceObjectReference home,uint32 capNum,v8::Handle<v8::ObjectTemplate> contGlobTempl, uint32 contextID,JSContextStruct* parentContext)
+JSContextStruct::JSContextStruct(JSObjectScript* parent, JSPresenceStruct* whichPresence, SpaceObjectReference home,Capabilities::CapNum capNum,v8::Handle<v8::ObjectTemplate> contGlobTempl, uint32 contextID,JSContextStruct* parentContext)
  : JSSuspendable(),
    jsObjScript(parent),
    mContext(v8::Context::New(NULL, contGlobTempl)),
@@ -117,6 +117,26 @@ void JSContextStruct::httpSuccess(v8::Persistent<v8::Function> cb,EmersonHttpMan
     v8::Handle<v8::Value> argv[2] = { v8::Boolean::New(true), httpObj};
     jsObjScript->invokeCallback(this,cb, 2, argv);
     jsObjScript->postCallbackChecks();
+}
+
+
+Capabilities::CapNum JSContextStruct::getCapNum()
+{
+    return mSystem->getCapNum();
+}
+
+
+
+v8::Handle<v8::Value> JSContextStruct::getAssociatedPresence()
+{
+    if (associatedPresence == NULL)
+        return v8::Undefined();
+
+    EmersonScript* emerScript = dynamic_cast<EmersonScript*>(jsObjScript);
+    if (emerScript != NULL)
+        return emerScript->wrapPresence(associatedPresence, &mContext);
+
+    return v8::Undefined();
 }
 
 
@@ -306,8 +326,7 @@ void JSContextStruct::createContextObjects()
 
     //Always load the shim layer.
     //import shim
-    jsObjScript->import("std/shim.em",this,false);
-
+    jsObjScript->shimImportAndEvalScript(this,"");
 }
 
 v8::Handle<v8::Value>  JSContextStruct::checkHeadless()
@@ -381,14 +400,14 @@ v8::Handle<v8::Value> JSContextStruct::sendMessageNoErrorHandler(JSPresenceStruc
 //contents of.
 v8::Handle<v8::Value>  JSContextStruct::struct_import(const String& toImportFrom,bool isJS)
 {
-    return jsObjScript->import(toImportFrom,this,isJS);
+    return jsObjScript->import(toImportFrom,isJS);
 }
 
 //string argument is the filename that we're trying to open and execute
 //contents of.
 v8::Handle<v8::Value>  JSContextStruct::struct_require(const String& toRequireFrom,bool isJS)
 {
-    return jsObjScript->require(toRequireFrom,this,isJS);
+    return jsObjScript->require(toRequireFrom,isJS);
 }
 
 //if receiver is one of my presences, or it is the system presence that I
@@ -546,10 +565,9 @@ v8::Handle<v8::Value> JSContextStruct::struct_rootReset()
     v8::HandleScope handle_scope;
     mContext = v8::Context::New(NULL, mContGlobTempl);
     createContextObjects();
-
-    //re-exec mScript
-    v8::ScriptOrigin origin(v8::String::New("(reset_script)"));
-    jsObjScript->internalEval(mContext,mScript,&origin , true);
+    
+    //import shim and eval mScript
+    jsObjScript->shimImportAndEvalScript(this,mScript);
 
 
     //re-load presences
@@ -869,7 +887,7 @@ v8::Handle<v8::Value> JSContextStruct::struct_executeScript(v8::Handle<v8::Funct
     for (int s=1; s < args.Length(); ++s)
         argv[s-1] = args[s];
 
-    v8::Handle<v8::Value> returner =  jsObjScript->executeInSandbox(mContext,funcToCall, argc,argv);
+    v8::Handle<v8::Value> returner =  jsObjScript->executeInSandbox(this,funcToCall, argc,argv);
 
     delete argv; //free additional memory.
     return returner;
@@ -903,7 +921,7 @@ v8::Handle<v8::Value> JSContextStruct::struct_createTimeout(double period,v8::Pe
 
 
 
-v8::Handle<v8::Value> JSContextStruct::struct_createContext(JSPresenceStruct* presStruct,const SpaceObjectReference& canSendTo,uint32 capNum)
+v8::Handle<v8::Value> JSContextStruct::struct_createContext(JSPresenceStruct* presStruct,const SpaceObjectReference& canSendTo,Capabilities::CapNum capNum)
 {
     if (presStruct == NULL)
         presStruct = associatedPresence;

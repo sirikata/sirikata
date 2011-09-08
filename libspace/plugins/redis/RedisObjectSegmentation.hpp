@@ -71,7 +71,7 @@ public:
     // then invoke these to complete operations.
     void finishReadObject(const UUID& obj_id, const String& data_str);
     void failReadObject(const UUID& obj_id);
-    void finishWriteNewObject(const UUID& obj_id);
+    void finishWriteNewObject(const UUID& obj_id, OSegWriteListener::OSegAddNewStatus);
     void finishWriteMigratedObject(const UUID& obj_id, ServerID ackTo);
 
 private:

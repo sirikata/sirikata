@@ -32,7 +32,7 @@
 
 #include <sirikata/space/SpaceNetwork.hpp>
 #include "Server.hpp"
-#include "Proximity.hpp"
+#include <sirikata/space/Proximity.hpp>
 #include <sirikata/space/CoordinateSegmentation.hpp>
 #include <sirikata/space/ServerMessage.hpp>
 #include <sirikata/core/trace/Trace.hpp>
@@ -57,7 +57,7 @@
 #include <sirikata/core/odp/DelegatePort.hpp>
 #include <sirikata/core/util/KnownServices.hpp>
 
-#define SPACE_LOG(lvl,msg) SILOG(space, lvl, "[SPACE] " << msg)
+#define SPACE_LOG(lvl,msg) SILOG(space, lvl, msg)
 
 namespace Sirikata
 {
@@ -78,7 +78,7 @@ void logVersionInfo(Sirikata::Protocol::Session::VersionInfo vers_info) {
 } // namespace
 
 
-Server::Server(SpaceContext* ctx, Authenticator* auth, Forwarder* forwarder, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, ObjectSegmentation* oseg, Address4* oh_listen_addr)
+Server::Server(SpaceContext* ctx, Authenticator* auth, Forwarder* forwarder, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, ObjectSegmentation* oseg, Address4 oh_listen_addr)
  : ODP::DelegateService( std::tr1::bind(&Server::createDelegateODPPort, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2, std::tr1::placeholders::_3) ),
    mContext(ctx),
    mAuthenticator(auth),
@@ -98,8 +98,8 @@ Server::Server(SpaceContext* ctx, Authenticator* auth, Forwarder* forwarder, Loc
     mContext->mCSeg = mCSeg;
     mContext->mObjectSessionManager = this;
 
-    this->addListener((ObjectSessionListener*)mLocationService);
-    this->addListener((ObjectSessionListener*)mProximity);
+    this->addListener(static_cast<ObjectSessionListener*>(mLocationService));
+    this->addListener(static_cast<ObjectSessionListener*>(mProximity));
 
     mTimeSyncServer = new TimeSyncServer(mContext);
 
@@ -118,7 +118,7 @@ Server::Server(SpaceContext* ctx, Authenticator* auth, Forwarder* forwarder, Loc
       );
 
     mObjectHostConnectionManager = new ObjectHostConnectionManager(
-        mContext, *oh_listen_addr,
+        mContext, oh_listen_addr,
         std::tr1::bind(&Server::handleObjectHostMessage, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2),
         mContext->mainStrand->wrap(std::tr1::bind(&Server::handleObjectHostConnectionClosed, this, std::tr1::placeholders::_1))
     );
@@ -132,7 +132,7 @@ Server::Server(SpaceContext* ctx, Authenticator* auth, Forwarder* forwarder, Loc
     using std::tr1::placeholders::_1;
     using std::tr1::placeholders::_2;
 
-    Stream<SpaceObjectReference>::listen(
+    mContext->sstConnectionManager()->listen(
         std::tr1::bind(&Server::newStream, this, _1, _2),
         EndPoint<SpaceObjectReference>(SpaceObjectReference(SpaceID::null(), ObjectReference::spaceServiceID()), OBJECT_SPACE_PORT)
     );
@@ -155,7 +155,7 @@ Server::~Server()
 
     mForwarder->unregisterMessageRecipient(SERVER_PORT_MIGRATION, this);
 
-    printf("mObjects.size=%d\n", (uint32)mObjects.size());
+    SPACE_LOG(debug, "mObjects.size=" << mObjects.size());
 
     for(ObjectConnectionMap::iterator it = mObjects.begin(); it != mObjects.end(); it++) {
         UUID obj_id = it->first;
@@ -226,6 +226,10 @@ ObjectSession* Server::getSession(const ObjectReference& objid) const {
 
 bool Server::isObjectConnected(const UUID& object_id) const {
     return (mObjects.find(object_id) != mObjects.end());
+}
+
+bool Server::isObjectConnecting(const UUID& object_id) const {
+    return (mStoredConnectionData.find(object_id) != mStoredConnectionData.end());
 }
 
 void Server::sendSessionMessageWithRetry(const ObjectHostConnectionManager::ConnectionID& conn, Sirikata::Protocol::Object::ObjectMessage* msg, const Duration& retry_rate) {
@@ -480,7 +484,6 @@ void Server::sendConnectError(const ObjectHostConnectionManager::ConnectionID& o
 // Handle Connect message from object
 void Server::handleConnect(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, const Sirikata::Protocol::Object::ObjectMessage& container, const Sirikata::Protocol::Session::Connect& connect_msg) {
     UUID obj_id = container.source_object();
-    assert( !isObjectConnected(obj_id) );
 
     // If the requested location isn't on this server, redirect
     // Note: on connections, we always ignore the specified time and just use
@@ -549,7 +552,35 @@ void Server::handleConnectAuthResponse(const ObjectHostConnectionManager::Connec
         return;
     }
 
-    //update our oseg to show that we know that we have this object now.
+    // Because of unreliable messaging, we might get a double connect request
+    // (if we got the initial request but the response was dropped). In that
+    // case, just send them another one and ignore this
+    // request. Alternatively, someone might just be trying to use the
+    // same object ID.
+    if (isObjectConnected(obj_id) || isObjectConnecting(obj_id)) {
+        // Decide whether this is a conflict or a retry
+        if  //was already connected and it was the same oh sending msg
+            ((isObjectConnected(obj_id) &&
+                (mObjects[obj_id]->connID() == oh_conn_id)) ||
+            // or was connecting and was the same oh sending message
+            (isObjectConnecting(obj_id) &&
+                mStoredConnectionData[obj_id].conn_id == oh_conn_id))
+        {
+            // retry, tell them they're fine.
+            sendConnectSuccess(oh_conn_id, obj_id);
+        }
+        else
+        {
+            // conflict, fail the new connection leaving existing alone
+            sendConnectError(oh_conn_id, obj_id);
+        }
+
+        return;
+    }
+
+    // Update our oseg to show that we know that we have this object now. Also
+    // mark it as connecting (by storing in mStoredConnectionData) so any
+    // additional connection attempts will fail.
     StoredConnection sc;
     sc.conn_id = oh_conn_id;
     sc.conn_msg = connect_msg;
@@ -558,46 +589,70 @@ void Server::handleConnectAuthResponse(const ObjectHostConnectionManager::Connec
     mOSeg->addNewObject(obj_id,connect_msg.bounds().radius());
 }
 
-void Server::finishAddObject(const UUID& obj_id)
+void Server::finishAddObject(const UUID& obj_id, OSegAddNewStatus status)
 {
   StoredConnectionMap::iterator storedConIter = mStoredConnectionData.find(obj_id);
   if (storedConIter != mStoredConnectionData.end())
   {
-    StoredConnection sc = mStoredConnectionData[obj_id];
+      StoredConnection sc = mStoredConnectionData[obj_id];
+      if (status == OSegWriteListener::SUCCESS)
+      {
+          // Note: we always use local time for connections. The client
+          // accounts for by using the values we return in the response
+          // instead of the original values sent with the connection
+          // request.
+          Time local_t = mContext->simTime();
+          TimedMotionVector3f loc( local_t, MotionVector3f(sc.conn_msg.loc().position(), sc.conn_msg.loc().velocity()) );
+          TimedMotionQuaternion orient(
+              local_t,
+              MotionQuaternion( sc.conn_msg.orientation().position(), sc.conn_msg.orientation().velocity() )
+          );
+          BoundingSphere3f bnds = sc.conn_msg.bounds();
+          // Create and store the connection
+          ObjectConnection* conn = new ObjectConnection(obj_id, mObjectHostConnectionManager, sc.conn_id);
+          mObjects[obj_id] = conn;
+          mContext->timeSeries->report(mTimeSeriesObjects, mObjects.size());
 
-    // Note: we always use local time for connections. The client
-    // accounts for by using the values we return in the response
-    // instead of the original values sent with the connection
-    // request.
-    Time local_t = mContext->simTime();
-    TimedMotionVector3f loc( local_t, MotionVector3f(sc.conn_msg.loc().position(), sc.conn_msg.loc().velocity()) );
-    TimedMotionQuaternion orient(
-        local_t,
-        MotionQuaternion( sc.conn_msg.orientation().position(), sc.conn_msg.orientation().velocity() )
-    );
-    BoundingSphere3f bnds = sc.conn_msg.bounds();
-    // Create and store the connection
-    ObjectConnection* conn = new ObjectConnection(obj_id, mObjectHostConnectionManager, sc.conn_id);
-    mObjects[obj_id] = conn;
-    mContext->timeSeries->report(mTimeSeriesObjects, mObjects.size());
+          //TODO: assumes each server process is assigned only one region... perhaps we should enforce this constraint
+          //for cleaner semantics?
+          mCSeg->reportLoad(mContext->id(), mCSeg->serverRegion(mContext->id())[0] , mObjects.size()  );
 
-    //TODO: assumes each server process is assigned only one region... perhaps we should enforce this constraint
-    //for cleaner semantics?
-    mCSeg->reportLoad(mContext->id(), mCSeg->serverRegion(mContext->id())[0] , mObjects.size()  );
+          mLocalForwarder->addActiveConnection(conn);
 
-    mLocalForwarder->addActiveConnection(conn);
+          // Add object as local object to LocationService
+          String obj_mesh = sc.conn_msg.has_mesh() ? sc.conn_msg.mesh() : "";
+          String obj_phy = sc.conn_msg.has_physics() ? sc.conn_msg.physics() : "";
+          mLocationService->addLocalObject(obj_id, loc, orient, bnds, obj_mesh, obj_phy);
 
-    // Add object as local object to LocationService
-    String obj_mesh = sc.conn_msg.has_mesh() ? sc.conn_msg.mesh() : "";
-    String obj_phy = sc.conn_msg.has_physics() ? sc.conn_msg.physics() : "";
-    mLocationService->addLocalObject(obj_id, loc, orient, bnds, obj_mesh, obj_phy);
+          // Register proximity query
+          uint32 query_max_results = 0;
+          if (sc.conn_msg.has_query_max_count() && sc.conn_msg.query_max_count() > 0)
+              query_max_results = sc.conn_msg.query_max_count();
+          if (sc.conn_msg.has_query_angle())
+              mProximity->addQuery(obj_id, SolidAngle(sc.conn_msg.query_angle()), query_max_results);
 
-    // Register proximity query
-    if (sc.conn_msg.has_query_angle())
-        mProximity->addQuery(obj_id, SolidAngle(sc.conn_msg.query_angle()));
+          // Stage the connection with the forwarder, but don't enable it until an ack is received
+          mForwarder->addObjectConnection(obj_id, conn);
 
-    // Stage the connection with the forwarder, but don't enable it until an ack is received
-    mForwarder->addObjectConnection(obj_id, conn);
+          sendConnectSuccess(conn->connID(), obj_id);
+      }
+      else
+      {
+          sendConnectError(sc.conn_id , obj_id);
+      }
+      mStoredConnectionData.erase(storedConIter);
+  }
+  else
+  {
+      SILOG(space,error,"No stored connection data for object " << obj_id.toString());
+  }
+}
+
+void Server::sendConnectSuccess(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, const UUID& obj_id) {
+    TimedMotionVector3f loc = mLocationService->location(obj_id);
+    TimedMotionQuaternion orient = mLocationService->orientation(obj_id);
+    BoundingSphere3f bnds = mLocationService->bounds(obj_id);
+    String obj_mesh = mLocationService->mesh(obj_id);
 
     // Send reply back indicating that the connection was successful
     Sirikata::Protocol::Session::Container response_container;
@@ -613,8 +668,7 @@ void Server::finishAddObject(const UUID& obj_id)
     resp_orient.set_position( orient.position() );
     resp_orient.set_velocity( orient.velocity() );
     response.set_bounds(bnds);
-		if(sc.conn_msg.has_mesh())
-		  response.set_mesh(obj_mesh);
+    response.set_mesh(obj_mesh);
 
     Sirikata::Protocol::Object::ObjectMessage* obj_response = createObjectMessage(
         mContext->id(),
@@ -623,14 +677,7 @@ void Server::finishAddObject(const UUID& obj_id)
         serializePBJMessage(response_container)
     );
     // Sent directly via object host connection manager because ObjectConnection isn't enabled yet
-    sendSessionMessageWithRetry(conn->connID(), obj_response, Duration::seconds(0.05));
-
-    //    mStoredConnectionData.erase(storedConIter);
-  }
-  else
-  {
-      SILOG(space,error,"No stored connection data for object " << obj_id.toString());
-  }
+    sendSessionMessageWithRetry(oh_conn_id, obj_response, Duration::seconds(0.05));
 }
 
 // Handle Migrate message from object
@@ -693,11 +740,11 @@ void Server::handleDisconnect(const UUID& obj_id, ObjectConnection* conn) {
     delete conn;
 }
 
-void Server::osegWriteFinished(const UUID& id) {
+void Server::osegAddNewFinished(const UUID& id, OSegAddNewStatus status) {
     // Indicates an update to OSeg finished, meaning a migration can
     // continue.
     mContext->mainStrand->post(
-        std::tr1::bind(&Server::finishAddObject, this, id)
+        std::tr1::bind(&Server::finishAddObject, this, id, status)
                                );
 }
 
@@ -1137,7 +1184,7 @@ void Server::killObjectConnection(const UUID& obj_id)
     }
     else
     {
-      std::cout<<"\n\nObject:  "<<obj_id.toString()<<"  has already re-migrated\n\n";
+        SPACE_LOG(error, "Object " << obj_id.toString() << " has already re-migrated");
     }
 
     //log the event's completion.

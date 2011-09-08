@@ -23,7 +23,7 @@ class JSEventHandlerStruct;
 //to check without having to dig through a lot of other code.
 struct JSSystemStruct
 {
-    JSSystemStruct(JSContextStruct* jscont, uint32 capNum);
+    JSSystemStruct(JSContextStruct* jscont, Capabilities::CapNum capNum);
     ~JSSystemStruct();
 
     static JSSystemStruct* decodeSystemStruct(v8::Handle<v8::Value> toDecode ,std::string& errorMessage);
@@ -39,11 +39,11 @@ struct JSSystemStruct
     v8::Handle<v8::Value> struct_canImport();
 
     v8::Handle<v8::Value> checkResources();
-    
     v8::Handle<v8::Value> struct_evalInGlobal(const String& native_contents, ScriptOrigin* sOrigin);
-    
     v8::Handle<v8::Value> checkHeadless();
 
+    v8::Handle<v8::Value> getAssociatedPresence();
+    
     v8::Handle<v8::Value> storageBeginTransaction();
     v8::Handle<v8::Value> storageCommit(v8::Handle<v8::Function> cb);
     v8::Handle<v8::Value> storageWrite(const OH::Storage::Key& key, const String& toWrite, v8::Handle<v8::Function> cb);
@@ -85,7 +85,7 @@ struct JSSystemStruct
 
     v8::Handle<v8::Value> restorePresence(PresStructRestoreParams& psrp);
 
-    v8::Handle<v8::Value> struct_getPosition();
+
     v8::Handle<v8::Value> debug_fileWrite(const String& strToWrite,const String& filename);
     v8::Handle<v8::Value> debug_fileRead(const String& filename);
 
@@ -103,7 +103,7 @@ struct JSSystemStruct
     //if do not have the capability, throws an error.
     v8::Handle<v8::Value> struct_createEntity(EntityCreateInfo& eci);
 
-    v8::Handle<v8::Value> struct_createContext(JSPresenceStruct* jspres,const SpaceObjectReference& canSendTo, uint32 permNum);
+    v8::Handle<v8::Value> struct_createContext(JSPresenceStruct* jspres,const SpaceObjectReference& canSendTo, Capabilities::CapNum permNum);
 
     JSContextStruct* getContext();
 
@@ -130,39 +130,35 @@ struct JSSystemStruct
     v8::Handle<v8::Value> struct_reset(const std::map<SpaceObjectReference, std::vector<SpaceObjectReference> > & proxResSet);
 
 
+    Capabilities::CapNum getCapNum();
+    
 private:
+
+   /**
+      @param {Capabilities::CapNum} The requested amount of capabilities.
+      @param {Capabilities::Caps} capRequesting Capability that scripter is
+      requesting to imbue into new sandbox.
+      
+      @param {JSPresenceStruct} jspres Default presence for new sandbox.
+   
+      If scripter is trying to request capabilities that the initial sandbox he/she
+      is creating does not have, strips those capabilities.
+   */
+    void stripCapEscalation(Capabilities::CapNum& permNum, Capabilities::Caps capRequesting, JSPresenceStruct* jspres, const String& capRequestingName);
+    
+
+    //returns true if you have capability to perform the operation associated with
+    //capRequesting on jspres, false otherwise.  Note: pass null to jspres if
+    //requesting a capability not associated with a presence.  (See list of
+    //these in JSCapabilitiesConsts.hpp.)
+    bool checkCurCtxtHasCapability(JSPresenceStruct* jspres, Capabilities::Caps capRequesting);
+    
     //associated data
     JSContextStruct* associatedContext;
-    bool canSend, canRecv, canImport, canCreatePres,canCreateEnt,canEval,canProxCallback,canProxChangeQuery,canCreateSandbox,canGui,canHttp;
-
+    uint32 mCapNum;
 };
 
 
-/**
-   @param {uint32} permNum the uint32 corresponding to the capability level that the
-   sandbox is requesting.
-   @param capName the name of the static const uint32 associated with each
-   capability in JSCapabilitiesConsts.  These are the capabilities that we are
-   testing to see if scripter may be trying to exceed permissions for.
-   @param localCapName Should agree with capName.  Ie if capName is EVAL,
-   localCapName should be canEval.
-
-   If scripter is trying to request capabilities that the initial sandbox he/she
-   is creating does not have, strips those capabilities.
- */
-#define INLINE_CAPABILITY_STRIP(permNum,capName,localCapName)           \
-    {                                                                   \
-        if (! localCapName)                                             \
-        {                                                               \
-            if (permNum & Capabilities::capName)                        \
-            {                                                           \
-                /*means trying to set this capability when don't have it in the base*/ \
-                /*sandbox.  We should strip it.*/                       \
-                JSLOG(info,"Trying to exceed capability " #capName " when creating sandbox.  Stripping this capability"); \
-                permNum -= Capabilities::capName;                       \
-            }                                                           \
-        }                                                               \
-    }
 
 
 #define INLINE_SYSTEM_CONV_ERROR(toConvert,whereError,whichArg,whereWriteTo)   \

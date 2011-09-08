@@ -100,6 +100,15 @@ int main(int argc, char** argv) {
     // FIXME this should be an option
     plugins.loadList( "colladamodels,mesh-billboard,common-filters,nvtt" );
 
+    // Fill defaults after plugin loading to ensure plugin-added
+    // options get their defaults.
+    FillMissingOptionDefaults();
+    // Rerun original parse to make sure any newly added options are
+    // properly parsed.
+    ParseOptions(argc, argv);
+
+    ReportVersion(); // After options so log goes to the right place
+
     Network::IOService* ios = Network::IOServiceFactory::makeIOService();
     Network::IOStrand* iostrand = ios->createStrand();
 
@@ -118,7 +127,7 @@ int main(int argc, char** argv) {
     MeshViewEntity* ent = new MeshViewEntity(renderer, GetOptionValue<String>("screenshot"));
     ent->setOgrePosition(Vector3d(0, 0, 0));
     ent->setOgreOrientation(Quaternion::identity());
-    ent->display(Transfer::URI(GetOptionValue<String>("mesh")));
+    renderer->addObject(ent, Transfer::URI(GetOptionValue<String>("mesh")));
 
     ctx->add(ctx);
     ctx->add(renderer);

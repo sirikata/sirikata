@@ -75,8 +75,9 @@ public:
 
     /** Update query parameters with the server.
      *  \param min_angle the smallest query angle requested
+     *  \param max_count the maximum number of results to return
      */
-    virtual void updateQuery(const SolidAngle& min_angle) = 0;
+    virtual void updateQuery(const SolidAngle& min_angle, uint32 max_count) = 0;
 
 }; // PintoServerQuerier
 

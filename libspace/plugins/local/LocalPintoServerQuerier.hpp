@@ -50,7 +50,7 @@ public:
     }
     virtual void updateLargestObject(float max_radius) {
     }
-    virtual void updateQuery(const SolidAngle& min_angle) {
+    virtual void updateQuery(const SolidAngle& min_angle, uint32 max_count) {
     }
 }; // PintoServerQuerier
 

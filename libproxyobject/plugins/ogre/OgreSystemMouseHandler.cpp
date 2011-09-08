@@ -476,7 +476,6 @@ EventResponse OgreSystemMouseHandler::deviceListener(EventPtr evbase) {
 OgreSystemMouseHandler::OgreSystemMouseHandler(OgreSystem *parent)
  : mUIWidgetView(NULL),
    mParent(parent),
-   mDelegate(NULL),
    mWhichRayObject(0),
    mLastCameraTime(Task::LocalTime::now()),
    mLastFpsTime(Task::LocalTime::now()),
@@ -533,8 +532,17 @@ OgreSystemMouseHandler::~OgreSystemMouseHandler() {
     }
 }
 
-void OgreSystemMouseHandler::setDelegate(Invokable* del) {
-    mDelegate = del;
+void OgreSystemMouseHandler::addDelegate(Invokable* del) {
+    mDelegates[del] = del;
+}
+
+void OgreSystemMouseHandler::removeDelegate(Invokable* del)
+{
+    std::map<Invokable*,Invokable*>::iterator delIter = mDelegates.find(del);
+    if (delIter != mDelegates.end())
+        mDelegates.erase(delIter);
+    else
+        SILOG(input,error,"Error in OgreSystemMouseHandler::removeDelegate.  Attempting to remove delegate that does not exist.");
 }
 
 void OgreSystemMouseHandler::uiReady() {
@@ -571,7 +579,8 @@ void fillModifiers(Invokable::Dict& event_data, Input::Modifier m) {
 }
 
 void OgreSystemMouseHandler::delegateEvent(InputEventPtr inputev) {
-    if (mDelegate == NULL) return;
+    if (mDelegates.empty())
+        return;
 
     Invokable::Dict event_data;
     {
@@ -729,7 +738,13 @@ void OgreSystemMouseHandler::delegateEvent(InputEventPtr inputev) {
 
     std::vector<boost::any> args;
     args.push_back(Invokable::asAny(event_data));
-    mDelegate->invoke(args);
+
+    
+    for (std::map<Invokable*, Invokable*>::iterator delIter = mDelegates.begin();
+         delIter != mDelegates.end(); ++delIter)
+    {
+        delIter->first->invoke(args);
+    }
 }
 
 

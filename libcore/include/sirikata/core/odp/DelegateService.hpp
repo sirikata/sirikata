@@ -48,6 +48,12 @@ class DelegatePort;
  *  This class works in conjunction with the DelegatePort class.  In order to
  *  function properly, your port creation function must return a DelegatePort
  *  (or subclass).
+ *
+ *  To ease memory management, the DelegateService notifies DelegatePorts when
+ *  they have become invalid (e.g. the DelegateService is being deleted). As the
+ *  Port is owned by the allocator, it remains valid memory (it is not deleted)
+ *  but it will no longer function normally, producing warnings that it has been
+ *  invalidated.
  */
 class SIRIKATA_EXPORT DelegateService : public Service {
 public:

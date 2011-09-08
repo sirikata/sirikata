@@ -79,10 +79,6 @@ BoundingSphere3f ProxyEntity::bounds() {
     return getProxy().getBounds();
 }
 
-float32 ProxyEntity::priority() {
-    return mProxy->priority;
-}
-
 void ProxyEntity::tick(const Time& t, const Duration& deltaTime) {
     // Update location from proxy as well as doing normal updates
     Entity::tick(t, deltaTime);
@@ -133,7 +129,7 @@ void ProxyEntity::invalidated(ProxyObjectPtr ptr, bool permanent) {
 }
 
 void ProxyEntity::handleDestroyTimeout() {
-    unloadEntity();
+    unload();
 }
 
 void ProxyEntity::destroyed(ProxyObjectPtr ptr) {

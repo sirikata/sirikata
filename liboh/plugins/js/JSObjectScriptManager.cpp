@@ -60,6 +60,8 @@
 #include <sirikata/mesh/ModelsSystemFactory.hpp>
 #include <sirikata/mesh/CompositeFilter.hpp>
 
+#include <sirikata/core/transfer/AggregatedTransferPool.hpp>
+
 namespace Sirikata {
 namespace JS {
 
@@ -82,7 +84,7 @@ JSObjectScriptManager::JSObjectScriptManager(ObjectHostContext* ctx, const Sirik
 {
     // In emheadless we run without an ObjectHostContext
     if (mContext != NULL) {
-        mTransferPool = Transfer::TransferMediator::getSingleton().registerClient("JSObjectScriptManager");
+        mTransferPool = Transfer::TransferMediator::getSingleton().registerClient<Transfer::AggregatedTransferPool>("JSObjectScriptManager");
 
         mParsingIOService = Network::IOServiceFactory::makeIOService();
         mParsingWork = new Network::IOWork(*mParsingIOService, "JSObjectScriptManager Mesh Parsing");
@@ -232,6 +234,8 @@ void JSObjectScriptManager::createSystemTemplate()
     mSystemTemplate->Set(v8::String::New("timeout"), v8::FunctionTemplate::New(JSSystem::root_timeout));
     mSystemTemplate->Set(v8::String::New("print"), v8::FunctionTemplate::New(JSSystem::root_print));
 
+    mSystemTemplate->Set(v8::String::New("getAssociatedPresence"), v8::FunctionTemplate::New(JSSystem::getAssociatedPresence));
+
 
     mSystemTemplate->Set(v8::String::New("__evalInGlobal"), v8::FunctionTemplate::New(JSSystem::evalInGlobal));
     mSystemTemplate->Set(v8::String::New("sendSandbox"), v8::FunctionTemplate::New(JSSystem::root_sendSandbox));
@@ -241,7 +245,7 @@ void JSObjectScriptManager::createSystemTemplate()
 
     mSystemTemplate->Set(v8::String::New("sendMessage"), v8::FunctionTemplate::New(JSSystem::sendMessageReliable));
     mSystemTemplate->Set(v8::String::New("sendMessageUnreliable"),v8::FunctionTemplate::New(JSSystem::sendMessageUnreliable));
-    
+
     mSystemTemplate->Set(v8::String::New("import"), v8::FunctionTemplate::New(JSSystem::root_import));
 
     mSystemTemplate->Set(v8::String::New("http"), v8::FunctionTemplate::New(JSSystem::root_http));
@@ -280,8 +284,6 @@ void JSObjectScriptManager::createSystemTemplate()
 
     mSystemTemplate->Set(v8::String::New("restorePresence"), v8::FunctionTemplate::New(JSSystem::root_restorePresence));
 
-
-    mSystemTemplate->Set(v8::String::New("getPosition"), v8::FunctionTemplate::New(JSSystem::root_getPosition));
     mSystemTemplate->Set(v8::String::New("getVersion"),v8::FunctionTemplate::New(JSSystem::root_getVersion));
 
     mSystemTemplate->Set(v8::String::New("killEntity"), v8::FunctionTemplate::New(JSSystem::root_killEntity));
@@ -474,6 +476,8 @@ void JSObjectScriptManager::createPresenceTemplate()
   // Query angle
   proto_t->Set(v8::String::New("setQueryAngle"),v8::FunctionTemplate::New(JSPresence::setQueryAngle));
   proto_t->Set(v8::String::New("getQueryAngle"), v8::FunctionTemplate::New(JSPresence::getQueryAngle));
+  proto_t->Set(v8::String::New("setQueryCount"),v8::FunctionTemplate::New(JSPresence::setQueryCount));
+  proto_t->Set(v8::String::New("getQueryCount"), v8::FunctionTemplate::New(JSPresence::getQueryCount));
 
   //set up graphics
   proto_t->Set(v8::String::New("_runSimulation"),v8::FunctionTemplate::New(JSPresence::runSimulation));

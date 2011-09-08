@@ -58,6 +58,7 @@ namespace Graphics {
 class Camera;
 class Entity;
 
+class ResourceLoader;
 class CDNArchivePlugin;
 class ResourceDownloadPlanner;
 
@@ -110,6 +111,10 @@ public:
         return mInputManager;
     }
 
+    ResourceLoader* getResourceLoader() const {
+        return mResourceLoader;
+    }
+
     // TimeSteppedQueryableSimulation Interface
     virtual bool queryRay(const Vector3d&position,
         const Vector3f&direction,
@@ -147,6 +152,9 @@ public:
     virtual void attachCamera(const String& renderTargetName, Camera*);
     ///removes the camera from the list of attached cameras.
     virtual void detachCamera(Camera*);
+
+    void addObject(Entity* ent, const Transfer::URI& mesh);
+    void removeObject(Entity* ent);
 
     typedef std::tr1::function<void(Mesh::VisualPtr)> ParseMeshCallback;
     /** Tries to parse a mesh. Can handle different types of meshes and tries to
@@ -255,7 +263,7 @@ public:
 
     Transfer::TransferPoolPtr mTransferPool;
 
-
+    ResourceLoader* mResourceLoader;
     ResourceDownloadPlanner* mDownloadPlanner;
 
     typedef std::tr1::unordered_map<String,Entity*> SceneEntitiesMap;

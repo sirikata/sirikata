@@ -34,7 +34,8 @@
 #include <sirikata/core/options/Options.hpp>
 
 #include <prox/BruteForceQueryHandler.hpp>
-#include <prox/RTreeQueryHandler.hpp>
+#include <prox/RTreeAngleQueryHandler.hpp>
+#include <prox/RTreeDistanceQueryHandler.hpp>
 #include <prox/RTreeCutQueryHandler.hpp>
 #include <prox/RebuildingQueryHandler.hpp>
 
@@ -70,15 +71,14 @@ Prox::QueryHandler<SimulationTraits>* QueryHandlerFactory(const String& type, co
             Prox::BruteForceQueryHandler<SimulationTraits>::Constructor(), rebuild_batch_size->unsafeAs<uint32>()
         );
     }
-    else if (type == "dist") { // We just use brute force and special case the
-                               // queries in Proximity
-        return new Prox::RebuildingQueryHandler<SimulationTraits>(
-            Prox::BruteForceQueryHandler<SimulationTraits>::Constructor(), rebuild_batch_size->unsafeAs<uint32>()
-        );
-    }
     else if (type == "rtree") {
         return new Prox::RebuildingQueryHandler<SimulationTraits>(
-            Prox::RTreeQueryHandler<SimulationTraits>::Constructor(branching->unsafeAs<uint32>()), rebuild_batch_size->unsafeAs<uint32>()
+            Prox::RTreeAngleQueryHandler<SimulationTraits>::Constructor(branching->unsafeAs<uint32>()), rebuild_batch_size->unsafeAs<uint32>()
+        );
+    }
+    else if (type == "rtreedist" || type == "dist") {
+        return new Prox::RebuildingQueryHandler<SimulationTraits>(
+            Prox::RTreeDistanceQueryHandler<SimulationTraits>::Constructor(branching->unsafeAs<uint32>()), rebuild_batch_size->unsafeAs<uint32>()
         );
     }
     else if (type == "rtreecut") {

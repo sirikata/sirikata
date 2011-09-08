@@ -33,17 +33,15 @@
 #include <boost/lexical_cast.hpp>
 #include <sirikata/ogre/Entity.hpp>
 #include <sirikata/ogre/OgreRenderer.hpp>
-#include <sirikata/ogre/resourceManager/CDNArchive.hpp>
 #include <sirikata/ogre/OgreHeaders.hpp>
 #include <sirikata/ogre/Lights.hpp>
-#include <sirikata/core/network/IOStrandImpl.hpp>
 #include <sirikata/core/transfer/URL.hpp>
 #include <sirikata/ogre/Util.hpp>
-#include <sirikata/ogre/WebViewManager.hpp>
-#include <FreeImage.h>
-#include "ManualMaterialLoader.hpp"
-#include "ManualSkeletonLoader.hpp"
-#include "ManualMeshLoader.hpp"
+#include <OgreEntity.h>
+#include <OgreSubEntity.h>
+#include <OgreBillboardSet.h>
+#include <OgreAnimationState.h>
+#include <OgreMeshManager.h>
 
 using namespace Sirikata::Transfer;
 
@@ -54,13 +52,6 @@ using namespace Sirikata::Mesh;
 
 
 EntityListener::~EntityListener() {
-}
-
-
-static void fixOgreURI(String &uri) {
-    for (String::iterator i=uri.begin();i!=uri.end();++i) {
-        if(*i=='.') *i='{';
-    }
 }
 
 class ReplaceTexture {
@@ -125,8 +116,6 @@ Entity::Entity(OgreRenderer *scene, const String& name)
    mInitialAnimationName(""),
    mMeshLoaded(false)
 {
-    mTextureFingerprints = TextureBindingsMapPtr(new TextureBindingsMap());
-
     mSceneNode->setInheritScale(false);
     addToScene(NULL);
 
@@ -135,10 +124,7 @@ Entity::Entity(OgreRenderer *scene, const String& name)
 
     assert (successful == true);
 
-    mCDNArchive=CDNArchiveFactory::getSingleton().addArchive();
-    mActiveCDNArchive=true;
-
-    unloadEntity();
+    unload();
 }
 
 Entity::~Entity() {
@@ -168,11 +154,6 @@ Entity::~Entity() {
      */
     mSceneNode->removeAllChildren();
     mScene->getSceneManager()->destroySceneNode(mSceneNode);
-
-    if (mActiveCDNArchive) {
-        CDNArchiveFactory::getSingleton().removeArchive(mCDNArchive);
-        mActiveCDNArchive=false;
-    }
 }
 
 std::string Entity::ogreMeshName(const String& name) {
@@ -389,8 +370,49 @@ void Entity::unbindTexture(const std::string &textureName) {
 	fixTextures();
 }
 
-void Entity::loadMesh(const String& meshname)
+namespace {
+
+// If a mesh had already been downloaded (by us or someone else), we have
+// the hash, *and* the object still exists, we should be able to just add it
+// to the scene.
+bool ogreHasAsset(const String& meshname) {
+    Ogre::MeshPtr mp = Ogre::MeshManager::getSingleton().getByName(meshname);
+    return !mp.isNull();
+}
+
+}
+
+void Entity::beginLoad() {
+    // first reset any animations.
+    setAnimation("");
+
+    setDynamic(isMobile());
+    if (mCurrentAnimation) {
+      mCurrentAnimation->setEnabled(false);
+      mCurrentAnimation = NULL;
+    }
+    mAnimationList.clear();
+
+    // Clear out any old data if we have any left
+    unload();
+}
+
+void Entity::loadEmpty() {
+    beginLoad();
+    mMeshLoaded = false;
+}
+
+void Entity::loadMesh(Mesh::MeshdataPtr meshdata, const String& meshname, const std::set<String>& animations)
 {
+    beginLoad();
+
+    mAnimationList = animations;
+
+    if (!ogreHasAsset(meshname)) {
+        SILOG(ogre, error, "Requested load of asset that hasn't been loaded into Ogre (" << meshname << ")");
+        return;
+    }
+
     Ogre::Entity* new_entity = NULL;
     try {
       try {
@@ -435,16 +457,20 @@ void Entity::loadMesh(const String& meshname)
       setAnimation(mInitialAnimationName);
       mInitialAnimationName = "";
     }
+
+    notify(&EntityListener::entityLoaded, this, true);
 }
 
-void Entity::loadBillboard(Mesh::BillboardPtr bboard, const String& meshname)
+void Entity::loadBillboard(Mesh::BillboardPtr bboard, const String& bbtexname)
 {
+    beginLoad();
+
     // With the material in place, create the Billboard(Set)
     Ogre::BillboardSet* new_bbs = NULL;
     try {
       try {
           new_bbs = getScene()->getSceneManager()->createBillboardSet(ogreMovableName(), 1);
-          std::string matname = ogreMaterialName(meshname, 0);
+          std::string matname = bbtexname;
           new_bbs->setMaterialName(matname);
           if (bboard->facing == Mesh::Billboard::FACING_FIXED)
               new_bbs->setBillboardType(Ogre::BBT_PERPENDICULAR_COMMON);
@@ -462,7 +488,7 @@ void Entity::loadBillboard(Mesh::BillboardPtr bboard, const String& meshname)
         throw;
       }
     } catch (...) {
-        SILOG(ogre,error,"Failed to load billboard "<< meshname << " (id "<<id()<<")!");
+        SILOG(ogre,error,"Failed to load billboard "<< bbtexname << " (id "<<id()<<")!");
         return;
     }
 
@@ -470,9 +496,16 @@ void Entity::loadBillboard(Mesh::BillboardPtr bboard, const String& meshname)
 
     init(new_bbs);
     fixTextures();
+
+    notify(&EntityListener::entityLoaded, this, true);
 }
 
-void Entity::unloadEntity() {
+void Entity::loadFailed() {
+    notify(&EntityListener::entityLoaded, this, false);
+}
+
+
+void Entity::unload() {
     if (getOgreEntity()) unloadMesh();
     else if (getOgreBillboard()) unloadBillboard();
 }
@@ -487,9 +520,6 @@ void Entity::unloadMesh() {
     // Even though these are common in both, we only want to do them if we had
     // an entity.
     mReplacedMaterials.clear();
-    for(WebMaterialList::iterator it = mWebMaterials.begin(); it != mWebMaterials.end(); it++)
-        WebViewManager::getSingleton().destroyWebView(*it);
-    mWebMaterials.clear();
 
     mMeshLoaded = false;
 }
@@ -504,326 +534,10 @@ void Entity::unloadBillboard() {
     // Even though these are common in both, we only want to do them if we had
     // an entity.
     mReplacedMaterials.clear();
-    for(WebMaterialList::iterator it = mWebMaterials.begin(); it != mWebMaterials.end(); it++)
-        WebViewManager::getSingleton().destroyWebView(*it);
-    mWebMaterials.clear();
 }
 
 void Entity::setSelected(bool selected) {
       mSceneNode->showBoundingBox(selected);
-}
-
-void Entity::undisplay() {
-    unloadEntity();
-}
-
-void Entity::display(Transfer::URI const& meshFile)
-{
-    if (meshFile.empty()) {
-        unloadEntity();
-        return;
-    }
-
-    // If it's the same mesh *and* we still have it around or are working on it, just leave it alone
-    if (mURI == meshFile && (mAssetDownload || mOgreObject))
-        return;
-
-    mMeshLoaded = false;
-
-    // Otherwise, start the download process
-    mURI = meshFile;
-    mURIString = meshFile.toString();
-
-    SILOG(ogre,detailed,"Loading " << mURIString << "...");
-    mAssetDownload =
-        AssetDownloadTask::construct(
-            mURI, getScene(), this->priority(),
-            mScene->context()->mainStrand->wrap(
-                std::tr1::bind(&Entity::createMesh, this, livenessToken())
-            ));
-}
-
-bool Entity::tryInstantiateExistingMesh(const String& meshname) {
-    Ogre::MeshPtr mp = Ogre::MeshManager::getSingleton().getByName(meshname);
-    if (!mp.isNull()) {
-        loadMesh(meshname);
-        return true;
-    }
-    return false;
-}
-
-
-void Entity::createMesh(Liveness::Token alive) {
-    if (!alive) return;
-
-    // first reset any animations.
-    setAnimation("");
-
-    setDynamic(isMobile());
-    if (mCurrentAnimation) {
-      mCurrentAnimation->setEnabled(false);
-      mCurrentAnimation = NULL;
-    }
-    mAnimationList.clear();
-
-    //get the mesh data and check that it is valid.
-    bool usingDefault = false;
-    VisualPtr visptr = mAssetDownload->asset();
-
-    AssetDownloadTaskPtr assetDownload(mAssetDownload);
-    mAssetDownload=AssetDownloadTaskPtr();
-
-    if (!visptr) {
-        usingDefault = true;
-        visptr = mScene->defaultMesh();
-        if (!visptr) {
-            notify(&EntityListener::entityLoaded, this, false);
-            return;
-        }
-    }
-
-    // Clear out any old data if we have any left
-    unloadEntity();
-
-    MeshdataPtr mdptr( std::tr1::dynamic_pointer_cast<Meshdata>(visptr) );
-    if (mdptr) {
-        createMeshdata(mdptr, usingDefault, assetDownload);
-        notify(&EntityListener::entityLoaded, this, true);
-        return;
-    }
-
-    BillboardPtr bbptr( std::tr1::dynamic_pointer_cast<Billboard>(visptr) );
-    if (bbptr) {
-        createBillboard(bbptr, usingDefault, assetDownload);
-        notify(&EntityListener::entityLoaded, this, true);
-        return;
-    }
-
-    // If we got here, we don't know how to load it
-    SILOG(ogre, error, "Entity::createMesh failed because it doesn't know how to load " << visptr->type());
-    notify(&EntityListener::entityLoaded, this, false);
-}
-
-SHA256 Entity::computeVisualHash(const Mesh::VisualPtr& visptr, AssetDownloadTaskPtr assetDownload) {
-    // To compute a hash of the entire visual, we just combine the hashes of the
-    // original and all the dependent resources, then hash the result. The
-    // approach right now uses strings and could do somethiing like xor'ing
-    // everything instead, but this is easy and shouldn't happen all that often.
-    String data = visptr->hash.toString();
-
-    for(AssetDownloadTask::Dependencies::const_iterator tex_it = assetDownload->dependencies().begin(); tex_it != assetDownload->dependencies().end(); tex_it++) {
-        const AssetDownloadTask::ResourceData& tex_data = tex_it->second;
-        data += tex_data.request->getMetadata().getFingerprint().toString();
-    }
-
-    return SHA256::computeDigest(data);
-}
-
-void Entity::loadDependentTextures(AssetDownloadTaskPtr assetDownload, bool usingDefault) {
-    if (!usingDefault) { // we currently assume no dependencies for default
-        for(AssetDownloadTask::Dependencies::const_iterator tex_it = assetDownload->dependencies().begin(); tex_it != assetDownload->dependencies().end(); tex_it++) {
-            const AssetDownloadTask::ResourceData& tex_data = tex_it->second;
-            if (mActiveCDNArchive && mTextureFingerprints->find(tex_data.request->getURI().toString()) == mTextureFingerprints->end() ) {
-                String id = tex_data.request->getURI().toString() + tex_data.request->getMetadata().getFingerprint().toString();
-                fixOgreURI(id);
-
-                (*mTextureFingerprints)[tex_data.request->getURI().toString()] = id;
-
-                // This could be a regular texture or a . If its ever a static
-                // image, we want to decode it directly...
-                FIMEMORY* mem_img_data = FreeImage_OpenMemory((BYTE*)tex_data.response->data(), tex_data.response->size());
-                FREE_IMAGE_FORMAT fif = FreeImage_GetFileTypeFromMemory(mem_img_data);
-                FreeImage_CloseMemory(mem_img_data);
-                if (fif != FIF_UNKNOWN) {
-                    CDNArchiveFactory::getSingleton().addArchiveData(mCDNArchive,id,SparseData(tex_data.response));
-                }
-                else if (tex_data.request->getURI().scheme() == "http") {
-                    // Or, if its an http URL, we can try displaying it in a webview
-                    OGRE_LOG(detailed,"Using webview for " << id << ": " << tex_data.request->getURI());
-                    WebView* web_mat = WebViewManager::getSingleton().createWebViewMaterial(
-                        mScene->context(),
-                        id,
-                        512, 512 // Completely arbitrary...
-                    );
-                    web_mat->loadURL(tex_data.request->getURI().toString());
-                    mWebMaterials.push_back(web_mat);
-                }
-            }
-        }
-    }
-}
-
-void Entity::createMeshdata(const MeshdataPtr& mdptr, bool usingDefault, AssetDownloadTaskPtr assetDownload) {
-    //Extract any animations from the new mesh.
-    for (uint32 i=0;  i < mdptr->nodes.size(); i++) {
-      Sirikata::Mesh::Node& node = mdptr->nodes[i];
-
-      for (std::map<String, Sirikata::Mesh::TransformationKeyFrames>::iterator it = node.animations.begin();
-           it != node.animations.end(); it++)
-        {
-          mAnimationList.insert(it->first);
-        }
-    }
-
-
-    SHA256 sha = mdptr->hash;
-    String hash = sha.convertToHexString();
-    String meshname = computeVisualHash(mdptr, assetDownload).toString();
-
-    // If we already have it, just load the existing one
-    if (tryInstantiateExistingMesh(meshname)) return;
-
-    loadDependentTextures(assetDownload, usingDefault);
-
-    if (!mdptr->instances.empty()) {
-        Ogre::MaterialManager& matm = Ogre::MaterialManager::getSingleton();
-        int index=0;
-        for (MaterialEffectInfoList::const_iterator mat=mdptr->materials.begin(),mate=mdptr->materials.end();mat!=mate;++mat,++index) {
-            std::string matname = ogreMaterialName(meshname, index);
-            Ogre::MaterialPtr matPtr=matm.getByName(matname);
-            if (matPtr.isNull()) {
-                Ogre::ManualResourceLoader * reload;
-                matPtr = matm.create(
-                    matname, Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME, true,
-                    (reload=new ManualMaterialLoader (mdptr, matname, *mat, mURI, mTextureFingerprints))
-                );
-
-                reload->prepareResource(&*matPtr);
-                reload->loadResource(&*matPtr);
-            }
-        }
-
-        // Skeleton
-        Ogre::SkeletonPtr skel(NULL);
-        if (!mdptr->joints.empty()) {
-
-            Ogre::SkeletonManager& skel_mgr = Ogre::SkeletonManager::getSingleton();
-            Ogre::ManualResourceLoader *reload;
-            skel = Ogre::SkeletonPtr(skel_mgr.create(ogreSkeletonName(meshname),Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME, true,
-                                                     (reload=new ManualSkeletonLoader(mdptr, mAnimationList))));
-            reload->prepareResource(&*skel);
-            reload->loadResource(&*skel);
-
-            if (! ((ManualSkeletonLoader*)reload)->wasSkeletonLoaded()) {
-              skel.setNull();
-            }
-        }
-
-
-        // Mesh
-        {
-            Ogre::MeshManager& mm = Ogre::MeshManager::getSingleton();
-            /// FIXME: set bounds, bounding radius here
-            Ogre::ManualResourceLoader *reload;
-            Ogre::MeshPtr mo (mm.createManual(meshname,Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,(reload=
-#ifdef _WIN32
-#ifdef NDEBUG
-			OGRE_NEW
-#else
-			new
-#endif
-#else
-			OGRE_NEW
-#endif
-                        ManualMeshLoader(mdptr, meshname))));
-            reload->prepareResource(&*mo);
-            reload->loadResource(&*mo);
-
-            if (!skel.isNull())
-                mo->_notifySkeleton(skel);
-
-
-            bool check = mm.resourceExists(meshname);
-        }
-
-        loadMesh(meshname);
-    }
-
-    // Lights
-    int light_idx = 0;
-    Meshdata::LightInstanceIterator lightinst_it = mdptr->getLightInstanceIterator();
-    uint32 lightinst_idx;
-    Matrix4x4f pos_xform;
-    while( lightinst_it.next(&lightinst_idx, &pos_xform) ) {
-        const LightInstance& lightinst = mdptr->lightInstances[lightinst_idx];
-
-        // Get the instanced submesh
-        if(lightinst.lightIndex >= (int)mdptr->lights.size()){
-            SILOG(ogre,error, "bad light index %d for lights only sized %d\n"<<lightinst.lightIndex<<"/"<<(int)mdptr->lights.size());
-            continue;
-        }
-        const LightInfo& sublight = mdptr->lights[lightinst.lightIndex];
-
-        String lightname = ogreLightName(mName, meshname, light_idx++);
-        Ogre::Light* light = constructOgreLight(getScene()->getSceneManager(), lightname, sublight);
-        if (!light->isAttached()) {
-            mLights.push_back(light);
-
-            // Lights just assume local position at the origin. We just need to
-            // transform appropriately.
-            Vector4f v_xform = pos_xform * Vector4f(0.f, 0.f, 0.f, 1.f);
-            // The light has an extra scene node to handle the specific transformation
-            Ogre::SceneNode* xformnode = mScene->getSceneManager()->createSceneNode();
-            xformnode->translate(v_xform[0], v_xform[1], v_xform[2]);
-            // Rotation needs to b handled by extracting rotation information.
-            Quaternion qrot(pos_xform.extract3x3());
-            xformnode->rotate(toOgre(qrot));
-            xformnode->attachObject(light);
-
-            mSceneNode->addChild(xformnode);
-            //light->setDebugDisplayEnabled(true);
-        }
-    }
-}
-
-void Entity::createBillboard(const BillboardPtr& bbptr, bool usingDefault, AssetDownloadTaskPtr assetDownload) {
-    SHA256 sha = bbptr->hash;
-    String hash = sha.convertToHexString();
-    String bbname = computeVisualHash(bbptr, assetDownload).toString();
-
-    loadDependentTextures(assetDownload, usingDefault);
-
-    // Load the single material
-    Ogre::MaterialManager& matm = Ogre::MaterialManager::getSingleton();
-
-    std::string matname = ogreMaterialName(bbname, 0);
-    Ogre::MaterialPtr matPtr = matm.getByName(matname);
-    if (matPtr.isNull()) {
-        Ogre::ManualResourceLoader* reload;
-
-        // We need to fill in a MaterialEffectInfo because the loader we're
-        // using only knows how to process them for Meshdatas right now
-        MaterialEffectInfo matinfo;
-        matinfo.shininess = 0.0f;
-        matinfo.reflectivity = 1.0f;
-        matinfo.textures.push_back(MaterialEffectInfo::Texture());
-        MaterialEffectInfo::Texture& tex = matinfo.textures.back();
-        tex.uri = bbptr->image;
-        tex.color = Vector4f(1.f, 1.f, 1.f, 1.f);
-        tex.texCoord = 0;
-        tex.affecting = MaterialEffectInfo::Texture::AMBIENT;
-        tex.samplerType = MaterialEffectInfo::Texture::SAMPLER_TYPE_2D;
-        tex.minFilter = MaterialEffectInfo::Texture::SAMPLER_FILTER_LINEAR_MIPMAP_LINEAR;
-        tex.magFilter = MaterialEffectInfo::Texture::SAMPLER_FILTER_LINEAR_MIPMAP_LINEAR;
-        tex.wrapS = MaterialEffectInfo::Texture::WRAP_MODE_NONE;
-        tex.wrapT = MaterialEffectInfo::Texture::WRAP_MODE_NONE;
-        tex.wrapU = MaterialEffectInfo::Texture::WRAP_MODE_NONE;
-        tex.mipBias = 0.0f;
-        tex.maxMipLevel = 20;
-
-        matPtr = matm.create(
-            matname, Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME, true,
-            (reload = new ManualMaterialLoader (bbptr, matname, matinfo, mURI, mTextureFingerprints))
-        );
-
-        reload->prepareResource(&*matPtr);
-        reload->loadResource(&*matPtr);
-    }
-
-    // The BillboardSet that actually gets rendered is like an Ogre::Entity,
-    // load it in a similar way. There is no equivalent of the Ogre::Mesh -- we
-    // only need to load up the material
-    loadBillboard(bbptr, bbname);
 }
 
 const std::vector<String> Entity::getAnimationList() {

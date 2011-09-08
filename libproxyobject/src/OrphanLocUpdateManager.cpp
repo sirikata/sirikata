@@ -43,6 +43,7 @@ OrphanLocUpdateManager::OrphanLocUpdateManager(Context* ctx, Network::IOStrand* 
    mContext(ctx),
    mTimeout(timeout)
 {
+
 }
 
 OrphanLocUpdateManager::~OrphanLocUpdateManager() {
@@ -122,7 +123,6 @@ OrphanLocUpdateManager::UpdateInfoList OrphanLocUpdateManager::getOrphanUpdates(
     mUpdates.erase(it);
     return results;
 }
-
 void OrphanLocUpdateManager::poll() {
     Time now = mContext->simTime();
     // Scan through all updates looking for outdated ones

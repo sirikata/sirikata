@@ -55,8 +55,10 @@ enum Ports{
                                 //attached to the HostedObject.  Currently, ogre
                                 //mouse events send this signal to the
                                 //HostedObject.
+    /* DEPRECATED
     CREATE_ENTITY=14,           //The HostedObject listens to this port for
                                 //messages to spawn a new entity
+                                */
     OBJECT_CONNECTIONS=16383
 };
 }

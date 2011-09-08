@@ -19,7 +19,7 @@ v8::Handle<v8::Value> sendMessageReliable (const v8::Arguments& args);
 v8::Handle<v8::Value> sendMessageUnreliable(const v8::Arguments& args);
 v8::Handle<v8::Value> sendMessage(const v8::Arguments&args, bool reliable);
 
-
+v8::Handle<v8::Value> getAssociatedPresence(const v8::Arguments& args);
 v8::Handle<v8::Value> root_canSendMessage(const v8::Arguments& args);
 v8::Handle<v8::Value> root_canRecvMessage(const v8::Arguments& args);
 v8::Handle<v8::Value> root_canProxCallback(const v8::Arguments& args);
@@ -70,7 +70,7 @@ v8::Handle<v8::Value> root_jsimport(const v8::Arguments& args);
 v8::Handle<v8::Value> commonImport(const v8::Arguments& args, bool isJS);
 v8::Handle<v8::Value> root_jsrequire(const v8::Arguments& args);
 v8::Handle<v8::Value> commonRequire(const v8::Arguments& args,bool isJS);
-v8::Handle<v8::Value> root_getPosition(const v8::Arguments& args);
+
 
 v8::Handle<v8::Value> root_event(const v8::Arguments& args);
 v8::Handle<v8::Value> root_timeout(const v8::Arguments& args);

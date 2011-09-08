@@ -11,23 +11,18 @@ namespace Sirikata{
 namespace JS{
 
 
-EmersonMessagingManager::EmersonMessagingManager(Context* ctx)
+EmersonMessagingManager::EmersonMessagingManager(ObjectHostContext* ctx)
  : mMainContext(ctx)
 {
 }
 
 EmersonMessagingManager::~EmersonMessagingManager()
 {
-    // Close all streams, clear out listeners
-    // FIXME Unfortunately, while this is what we *should* do, none of it is
-    // currently safe because of #392. When it is, we can fill this in and get
-    // rid of some liveness tokens.
-    /*
+    // Close all streams, clear out listeners    
     for(PresenceStreamMap::iterator pres_it = mStreams.begin(); pres_it != mStreams.end(); pres_it++) {
         // Stop listening for new streams
         const SpaceObjectReference& pres_id = pres_it->first;
-        SSTStream::listen(
-            0,
+        mMainContext->sstConnMgr()->unlisten(            
             EndPoint<SpaceObjectReference>(pres_id,OBJECT_SCRIPT_COMMUNICATION_PORT)
         );
 
@@ -35,11 +30,10 @@ EmersonMessagingManager::~EmersonMessagingManager()
         StreamMap& pres_streams = pres_it->second;
         for(StreamMap::iterator it = pres_streams.begin(); it != pres_streams.end(); it++) {
             SSTStreamPtr stream = it->second;
-            stream->listenSubstream(OBJECT_SCRIPT_COMMUNICATION_PORT, 0);
+            stream->unlistenSubstream(OBJECT_SCRIPT_COMMUNICATION_PORT);
             stream->close(false);
         }
     }
-    */
 
     mStreams.clear();
 }
@@ -49,7 +43,7 @@ void EmersonMessagingManager::presenceConnected(const SpaceObjectReference& conn
     allPres[connPresSporef] = true;
 
     //create a listener for scripting messages to presence with sporef connPresSporef.
-    SSTStream::listen(
+    mMainContext->sstConnMgr()->listen(
         std::tr1::bind(&EmersonMessagingManager::createScriptCommListenerStreamCB,this,
             livenessToken(), connPresSporef,_1,_2
         ),
@@ -182,7 +176,7 @@ bool EmersonMessagingManager::sendScriptCommMessageReliable(const SpaceObjectRef
     }
 
     // Otherwise, start the process of connecting
-    returner = SSTStream::connectStream(
+    returner = mMainContext->sstConnMgr()->connectStream(
         EndPoint<SpaceObjectReference>(sender,0), //local port is random
 
         //send to receiver's script comm port
@@ -207,7 +201,7 @@ void EmersonMessagingManager::scriptCommWriteStreamConnectedCB(Liveness::Token a
     //if connection failure, just try to re-connect.
     if (err != SST_IMPL_SUCCESS)
     {
-        SSTStream::connectStream(
+      mMainContext->sstConnMgr()->connectStream(
             EndPoint<SpaceObjectReference>(sender,0), //local port is random
             EndPoint<SpaceObjectReference>(receiver,OBJECT_SCRIPT_COMMUNICATION_PORT), //send to
                                                                     //receiver's

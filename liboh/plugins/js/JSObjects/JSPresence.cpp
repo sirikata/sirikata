@@ -228,6 +228,8 @@ Handle<v8::Value> setMesh(const v8::Arguments& args)
  */
 v8::Handle<v8::Value>runSimulation(const v8::Arguments& args)
 {
+    v8::HandleScope handle_scope;
+    
     if (args.Length() != 1)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("ERROR: You need to specify exactly one argument to the runSimulation function. (It should probably be 'ogregraphics'.)\n\n")) );
 
@@ -244,7 +246,7 @@ v8::Handle<v8::Value>runSimulation(const v8::Arguments& args)
     if (! decodeStrSuccessful)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(strDecodeErrorMessage.c_str(), strDecodeErrorMessage.length())) );
 
-    return mStruct->runSimulation(simname);
+    return handle_scope.Close(mStruct->runSimulation(simname));
 }
 
 
@@ -532,6 +534,37 @@ v8::Handle<v8::Value>  getQueryAngle(const v8::Arguments& args)
     return mStruct->struct_getQueryAngle();
 }
 
+
+v8::Handle<v8::Value> setQueryCount(const v8::Arguments& args)
+{
+    if (args.Length() != 1)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("ERROR: You need to specify exactly one argument to setQueryCount.")) );
+
+    String errorMessage = "Error in setQueryCount while decoding presence.  ";
+    JSPresenceStruct* mStruct = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
+
+    if (mStruct == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
+
+    if (!NumericValidate(args[0]))
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in setQueryCount function. Wrong argument: require a number for query count.")) );
+    uint32 new_qa = NumericExtract(args[0]);
+
+    return mStruct->setQueryCount(new_qa);
+}
+
+
+v8::Handle<v8::Value> getQueryCount(const v8::Arguments& args)
+{
+    String errorMessage = "Error in getQueryCount while decoding presence.  ";
+    JSPresenceStruct* mStruct = JSPresenceStruct::decodePresenceStruct(args.This(), errorMessage);
+
+    if (mStruct == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
+
+    return mStruct->struct_getQueryCount();
+}
+
 /**
    @return A number indicating the scale of the presence.
 
@@ -738,11 +771,11 @@ v8::Handle<v8::Value> getAnimationList(const v8::Arguments& args)
 {
   String errorMessage = "Error in getAnimationList while decoding presence.  ";
   JSPresenceStruct* mStruct = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
-  
+
   if (mStruct == NULL)
     return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
-  
-  return mStruct->struct_getAnimationList();  
+
+  return mStruct->struct_getAnimationList();
 }
 
 

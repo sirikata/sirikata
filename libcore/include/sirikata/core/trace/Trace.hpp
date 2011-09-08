@@ -63,7 +63,7 @@ struct Drops {
         memset(d,0,NUM_DROPS*sizeof(uint64));
         memset(n,0,NUM_DROPS*sizeof(const char*));
     }
-    std::ostream&output(std::ostream&output);
+    void output();
 };
 
 #define ProximityTag 0

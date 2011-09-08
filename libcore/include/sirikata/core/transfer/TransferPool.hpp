@@ -47,6 +47,9 @@
 namespace Sirikata {
 namespace Transfer {
 
+class TransferRequest;
+typedef std::tr1::shared_ptr<TransferRequest> TransferRequestPtr;
+
 /*
  * Base class for a request going into the transfer pool to set
  * the priority of a request
@@ -67,7 +70,12 @@ public:
 	    return mDeletionRequest;
 	}
 
-	//Return a unique identifier for the request
+	/// Get an identifier for the data referred to by this
+	/// TransferRequest. The identifier is not unique for each
+	/// TransferRequest. Instead, it identifies the asset data: if two
+	/// identifiers are equal, they refer to the same data. (Two different
+	/// identifiers may *ultimately* refer to the same data because two
+	/// names could point to the same underlying hash).
 	virtual const std::string& getIdentifier() const = 0;
 
 	inline const std::string& getClientID() const {
@@ -76,7 +84,7 @@ public:
 
 	virtual void execute(std::tr1::shared_ptr<TransferRequest> req, ExecuteFinished cb) = 0;
 
-    virtual void notifyCaller(std::tr1::shared_ptr<TransferRequest>) = 0;
+    virtual void notifyCaller(TransferRequestPtr me, TransferRequestPtr from) = 0;
 
 	virtual ~TransferRequest() {}
 
@@ -103,12 +111,11 @@ protected:
 
 };
 
-typedef std::tr1::shared_ptr<TransferRequest> TransferRequestPtr;
-
+class MetadataRequest;
+typedef std::tr1::shared_ptr<MetadataRequest> MetadataRequestPtr;
 /*
  * Handles requests for metadata of a file when all you have is the URI
  */
-
 class SIRIKATA_EXPORT MetadataRequest: public TransferRequest {
 
 public:
@@ -120,17 +127,11 @@ public:
      mURI(uri), mCallback(cb) {
         mPriority = priority;
         mDeletionRequest = false;
-
-        const time_t seconds = time(NULL);
-        int random = rand();
-
-        std::stringstream out;
-        out<<uri.toString()<<seconds<<random;
-        mUniqueID = out.str();
+        mID = uri.toString();
     }
 
     inline const std::string &getIdentifier() const {
-        return mUniqueID;
+        return mID;
     }
 
     inline const URI& getURI() {
@@ -139,23 +140,30 @@ public:
 
     void execute(std::tr1::shared_ptr<TransferRequest> req, ExecuteFinished cb);
 
-    inline void notifyCaller(std::tr1::shared_ptr<TransferRequest> from) {
+    inline void notifyCaller(TransferRequestPtr me, TransferRequestPtr from) {
+        std::tr1::shared_ptr<MetadataRequest> meC =
+            std::tr1::static_pointer_cast<MetadataRequest, TransferRequest>(me);
+        std::tr1::shared_ptr<MetadataRequest> fromC =
+            std::tr1::static_pointer_cast<MetadataRequest, TransferRequest>(from);
+        mCallback(meC, fromC->mRemoteFileMetadata);
+    }
+    inline void notifyCaller(MetadataRequestPtr me, TransferRequestPtr from, RemoteFileMetadataPtr data) {
         std::tr1::shared_ptr<MetadataRequest> fromC =
                 std::tr1::static_pointer_cast<MetadataRequest, TransferRequest>(from);
-        mCallback(fromC, fromC->mRemoteFileMetadata);
+        mCallback(me, data);
     }
 
     inline bool operator==(const MetadataRequest& other) const {
-        return mUniqueID == other.mUniqueID;
+        return mID == other.mID;
     }
     inline bool operator<(const MetadataRequest& other) const {
-        return mUniqueID < other.mUniqueID;
+        return mID < other.mID;
     }
 
 protected:
 
     const URI mURI;
-    std::string mUniqueID;
+    std::string mID;
     MetadataCallback mCallback;
     std::tr1::shared_ptr<RemoteFileMetadata> mRemoteFileMetadata;
 
@@ -163,12 +171,8 @@ protected:
         mURI(uri) {
         mPriority = priority;
         mDeletionRequest = false;
-        const time_t seconds = time(NULL);
-        int random = rand();
 
-        std::stringstream out;
-        out<<uri.toString()<<seconds<<random;
-        mUniqueID = out.str();
+        mID = uri.toString();
     }
 
 
@@ -179,8 +183,6 @@ protected:
     }
 
 };
-
-typedef std::tr1::shared_ptr<MetadataRequest> MetadataRequestPtr;
 
 
 /*
@@ -195,20 +197,14 @@ public:
 
 	ChunkRequest(const URI &uri, const RemoteFileMetadata &metadata, const Chunk &chunk,
 	        PriorityType priority, ChunkCallback cb)
-		: MetadataRequest(uri, priority),
-		  mMetadata(std::tr1::shared_ptr<RemoteFileMetadata>(new RemoteFileMetadata(metadata))),
-		  mChunk(std::tr1::shared_ptr<Chunk>(new Chunk(chunk))),
-		  mCallback(cb) {
-
-	        mDeletionRequest = false;
-            const time_t seconds = time(NULL);
-            int random = rand();
-
-            std::stringstream out;
-            out<<uri.toString()<<seconds<<random;
-            mUniqueID = out.str();
-
-	}
+            : MetadataRequest(uri, priority),
+            mMetadata(std::tr1::shared_ptr<RemoteFileMetadata>(new RemoteFileMetadata(metadata))),
+            mChunk(std::tr1::shared_ptr<Chunk>(new Chunk(chunk))),
+            mCallback(cb)
+            {
+                mDeletionRequest = false;
+                mID = chunk.getHash().toString();
+            }
 
 	inline const RemoteFileMetadata& getMetadata() {
 		return *mMetadata;
@@ -222,15 +218,14 @@ public:
 
     void execute_finished(std::tr1::shared_ptr<const DenseData> response, ExecuteFinished cb);
 
-    void notifyCaller(std::tr1::shared_ptr<TransferRequest> from);
+    void notifyCaller(TransferRequestPtr me, TransferRequestPtr from);
+    void notifyCaller(TransferRequestPtr me, TransferRequestPtr from, DenseDataPtr data);
 
 protected:
     std::tr1::shared_ptr<RemoteFileMetadata> mMetadata;
-    std::string mUniqueID;
     std::tr1::shared_ptr<Chunk> mChunk;
     std::tr1::shared_ptr<const DenseData> mDenseData;
     ChunkCallback mCallback;
-
 };
 
 typedef std::tr1::shared_ptr<ChunkRequest> ChunkRequestPtr;
@@ -242,31 +237,109 @@ typedef std::tr1::shared_ptr<ChunkRequest> ChunkRequestPtr;
 class PriorityAggregationAlgorithm {
 
 public:
+    // Return an aggregated priority given a list of priorities
+    virtual TransferRequest::PriorityType aggregate(
+        const std::vector<TransferRequest::PriorityType> &) const = 0;
 
-	//Return an aggregated priority given the list of priorities
-	virtual TransferRequest::PriorityType aggregate(
-	        std::map<std::string, std::tr1::shared_ptr<TransferRequest> > &) const = 0;
+    //Return an aggregated priority given the list of priorities
+    virtual TransferRequest::PriorityType aggregate(
+        const std::map<std::string, TransferRequestPtr> &) const = 0;
 
-	virtual ~PriorityAggregationAlgorithm() {
-	}
+    virtual TransferRequest::PriorityType aggregate(
+        const std::vector<TransferRequestPtr>&) const = 0;
 
+    virtual ~PriorityAggregationAlgorithm() {
+    }
 };
 
-/*
- * Pools requests for objects to enter the transfer mediator
+/** Pools are the conduits for requests to get into the
+ *  TransferMediator for processing. Pools interact carefully with the
+ *  TransferMediator, which has stricter rules (e.g. only one
+ *  outstanding request for a resource at a time with a single
+ *  priority), but provide more convenient interfaces to the
+ *  user. Implementations might do very little, almost directly
+ *  passing requests on, or might provide an additional layer of
+ *  aggregation of requests and multiplexing of callbacks.  This
+ *  intermediate layer allows individual requests to remain simple
+ *  but provides a layer for coordination (e.g. for aggregation).
  */
 class TransferPool {
+public:
+    virtual ~TransferPool() {}
 
+    /// Returns client identifier
+    inline const std::string& getClientID() const {
+        return mClientID;
+    }
+
+    /// Puts a request into the pool
+    virtual void addRequest(TransferRequestPtr req) = 0;
+    /// Updates priority of a request in the pool
+    virtual void updatePriority(TransferRequestPtr req, TransferRequest::PriorityType p) = 0;
+    /// Updates priority of a request in the pool
+    virtual void deleteRequest(TransferRequestPtr req) = 0;
+
+protected:
+    // Friend in TransferMediator so it can construct, call getRequest
     friend class TransferMediator;
 
+    TransferPool(const std::string& clientID)
+     : mClientID(clientID)
+    {}
+
+    virtual TransferRequestPtr getRequest() = 0;
+
+    // Utility methods because they require being friended by
+    // TransferRequest but that doesn't extend to subclasses
+    void setRequestClientID(TransferRequestPtr req) {
+        req->setClientID(mClientID);
+    }
+    void setRequestPriority(TransferRequestPtr req, TransferRequest::PriorityType p) {
+        req->setPriority(p);
+    }
+    void setRequestDeletion(TransferRequestPtr req) {
+        req->setDeletion();
+    }
+
+    const std::string mClientID;
+};
+typedef std::tr1::shared_ptr<TransferPool> TransferPoolPtr;
+
+/** Simplest implementation of TransferPool. The user *must only have
+ *  one outstanding request for any given resource at a time*.
+ */
+class SimpleTransferPool : public TransferPool {
+public:
+    virtual ~SimpleTransferPool() {}
+
+    //Puts a request into the pool
+    virtual void addRequest(TransferRequestPtr req) {
+        if (req)
+            setRequestClientID(req);
+        mDeltaQueue.push(req);
+    }
+
+    //Updates priority of a request in the pool
+    virtual void updatePriority(TransferRequestPtr req, TransferRequest::PriorityType p) {
+        setRequestPriority(req, p);
+        mDeltaQueue.push(req);
+    }
+
+    //Updates priority of a request in the pool
+    inline void deleteRequest(TransferRequestPtr req) {
+        setRequestDeletion(req);
+        mDeltaQueue.push(req);
+    }
+
 private:
+    // Friend in TransferMediator so it can construct, call getRequest
+    friend class TransferMediator;
 
-	const std::string mClientID;
-	ThreadSafeQueue<std::tr1::shared_ptr<TransferRequest> > mDeltaQueue;
+    ThreadSafeQueue<TransferRequestPtr> mDeltaQueue;
 
-    TransferPool(const std::string &clientID)
-        : mClientID(clientID) {
-
+    SimpleTransferPool(const std::string &clientID)
+     : TransferPool(clientID)
+    {
     }
 
     //Returns an item from the pool. Blocks if pool is empty.
@@ -275,35 +348,7 @@ private:
         mDeltaQueue.blockingPop(retval);
         return retval;
     }
-
-public:
-
-	//Returns client identifier
-	inline const std::string& getClientID() const {
-		return mClientID;
-	}
-
-	//Puts a request into the pool
-	inline void addRequest(std::tr1::shared_ptr<TransferRequest> req) {
-		if(req != NULL) req->setClientID(mClientID);
-		mDeltaQueue.push(req);
-	}
-
-    //Updates priority of a request in the pool
-    inline void updatePriority(std::tr1::shared_ptr<TransferRequest> req, TransferRequest::PriorityType p) {
-        req->setPriority(p);
-        mDeltaQueue.push(req);
-    }
-
-    //Updates priority of a request in the pool
-    inline void deleteRequest(std::tr1::shared_ptr<TransferRequest> req) {
-        req->setDeletion();
-        mDeltaQueue.push(req);
-    }
-
 };
-
-typedef std::tr1::shared_ptr<TransferPool> TransferPoolPtr;
 
 }
 }

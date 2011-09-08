@@ -141,6 +141,7 @@ v8::Handle<v8::Value> JSPresenceStruct::getAllData()
     returner->Set(v8::String::New("suspendedVelocity"),CreateJSResult(curContext,mSuspendedVelocity));
 
     returner->Set(v8::String::New("solidAngleQuery"),struct_getQueryAngle());
+    returner->Set(v8::String::New("queryCount"),struct_getQueryCount());
 
 
 
@@ -272,17 +273,52 @@ void JSPresenceStruct::clearPreviousConnectedCB()
     hasConnectedCallback = false;
 }
 
-v8::Handle<v8::Value> JSPresenceStruct::setOrientationFunction(Quaternion newOrientation)
-{
-    INLINE_CHECK_IS_CONNECTED_ERROR("setOrientation");
-    mParent->setOrientationFunction(getSporef(),newOrientation);
-    return v8::Undefined();
-}
 
 v8::Handle<v8::Value> JSPresenceStruct::setOrientationVelFunction(Quaternion newOrientationVel)
 {
     INLINE_CHECK_IS_CONNECTED_ERROR("setOrientationVel");
+    INLINE_CHECK_CAPABILITY_ERROR(Capabilities::MOVEMENT,setOrientationVel);
     mParent->setOrientationVelFunction(getSporef(),newOrientationVel);
+    return v8::Undefined();
+}
+v8::Handle<v8::Value> JSPresenceStruct::struct_setVelocity(const Vector3f& newVel)
+{
+    INLINE_CHECK_IS_CONNECTED_ERROR("setVelocity");
+    INLINE_CHECK_CAPABILITY_ERROR(Capabilities::MOVEMENT,setVelocity);
+    mParent->setVelocityFunction(getSporef(),newVel);
+    return v8::Undefined();
+}
+
+v8::Handle<v8::Value> JSPresenceStruct::struct_setPosition(Vector3f newPos)
+{
+    INLINE_CHECK_IS_CONNECTED_ERROR("setPosition");
+    INLINE_CHECK_CAPABILITY_ERROR(Capabilities::MOVEMENT,setPosition);
+    mParent->setPositionFunction(getSporef(), newPos);
+    return v8::Undefined();
+}
+
+v8::Handle<v8::Value> JSPresenceStruct::setOrientationFunction(Quaternion newOrientation)
+{
+    INLINE_CHECK_IS_CONNECTED_ERROR("setOrientation");
+    INLINE_CHECK_CAPABILITY_ERROR(Capabilities::MOVEMENT,setPosition);
+    mParent->setOrientationFunction(getSporef(),newOrientation);
+    return v8::Undefined();
+}
+
+
+v8::Handle<v8::Value> JSPresenceStruct::setVisualScaleFunction(float new_scale)
+{
+    INLINE_CHECK_IS_CONNECTED_ERROR("setScale");
+    INLINE_CHECK_CAPABILITY_ERROR(Capabilities::MESH,setScale);
+    mParent->setVisualScaleFunction(getSporef(), new_scale);
+    return v8::Undefined();
+}
+
+v8::Handle<v8::Value>JSPresenceStruct::setVisualFunction(String urilocation)
+{
+    INLINE_CHECK_IS_CONNECTED_ERROR("setMesh");
+    INLINE_CHECK_CAPABILITY_ERROR(Capabilities::MESH,setMesh);
+    mParent->setVisualFunction(getSporef(), urilocation);
     return v8::Undefined();
 }
 
@@ -304,25 +340,35 @@ v8::Handle<v8::Value> JSPresenceStruct::struct_getQueryAngle()
 v8::Handle<v8::Value> JSPresenceStruct::setQueryAngleFunction(SolidAngle new_qa)
 {
     INLINE_CHECK_IS_CONNECTED_ERROR("setQueryAngle");
+    INLINE_CHECK_CAPABILITY_ERROR(Capabilities::PROX_QUERIES,setQueryAngle);
     mParent->setQueryAngleFunction(getSporef(), new_qa);
     mQuery = new_qa;
     return v8::Undefined();
 }
 
-v8::Handle<v8::Value> JSPresenceStruct::setVisualScaleFunction(float new_scale)
+//FIXME: should store query count locally instead of requiring a request through
+//EmersonScript to hosted object.
+uint32 JSPresenceStruct::getQueryCount()
 {
-    INLINE_CHECK_IS_CONNECTED_ERROR("setScale");
-    mParent->setVisualScaleFunction(getSporef(), new_scale);
+    return mParent->getQueryCount(getSporef());
+}
+
+v8::Handle<v8::Value> JSPresenceStruct::struct_getQueryCount()
+{
+    INLINE_CHECK_IS_CONNECTED_ERROR("getQueryCount");
+    return v8::Integer::New(getQueryCount());
+}
+
+v8::Handle<v8::Value> JSPresenceStruct::setQueryCount(uint32 new_qc)
+{
+    INLINE_CHECK_IS_CONNECTED_ERROR("setQueryCount");
+    mParent->setQueryCount(getSporef(), new_qc);
     return v8::Undefined();
 }
 
 
-v8::Handle<v8::Value> JSPresenceStruct::struct_setPosition(Vector3f newPos)
-{
-    INLINE_CHECK_IS_CONNECTED_ERROR("setPosition");
-    mParent->setPositionFunction(getSporef(), newPos);
-    return v8::Undefined();
-}
+
+
 
 
 v8::Handle<v8::Value> JSPresenceStruct::getPhysicsFunction() {
@@ -373,13 +419,6 @@ void JSPresenceStruct::handleDisconnectedCallback() {
 
 
 
-v8::Handle<v8::Value>JSPresenceStruct::setVisualFunction(String urilocation)
-{
-    INLINE_CHECK_IS_CONNECTED_ERROR("setMesh");
-    mParent->setVisualFunction(getSporef(), urilocation);
-    return v8::Undefined();
-}
-
 
 //returns this presence as a visible object.
 v8::Persistent<v8::Object>  JSPresenceStruct::toVisible()
@@ -395,13 +434,14 @@ v8::Persistent<v8::Object>  JSPresenceStruct::toVisible()
 v8::Handle<v8::Value>JSPresenceStruct::runSimulation(String simname)
 {
     v8::HandleScope scope;
+    INLINE_CHECK_CAPABILITY_ERROR(Capabilities::GUI, runSimulation);
+    
     JSInvokableObject::JSInvokableObjectInt* invokableObj = mParent->runSimulation(getSporef(),simname);
-
     v8::Local<v8::Object> tmpObj = mParent->manager()->mInvokableObjectTemplate->NewInstance();
     tmpObj->SetInternalField(JSSIMOBJECT_JSOBJSCRIPT_FIELD,External::New(mParent));
     tmpObj->SetInternalField(JSSIMOBJECT_SIMULATION_FIELD,External::New(invokableObj));
     tmpObj->SetInternalField(TYPEID_FIELD, External::New(new String(JSSIMOBJECT_TYPEID_STRING)));
-    return tmpObj;
+    return scope.Close(tmpObj);
 }
 
 
@@ -413,12 +453,6 @@ void JSPresenceStruct::addAssociatedContext(JSContextStruct* toAdd)
 }
 
 
-v8::Handle<v8::Value> JSPresenceStruct::struct_setVelocity(const Vector3f& newVel)
-{
-    INLINE_CHECK_IS_CONNECTED_ERROR("setVelocity");
-    mParent->setVelocityFunction(getSporef(),newVel);
-    return v8::Undefined();
-}
 
 
 JSPresenceStruct* JSPresenceStruct::decodePresenceStruct(v8::Handle<v8::Value> toDecode ,String& errorMessage)

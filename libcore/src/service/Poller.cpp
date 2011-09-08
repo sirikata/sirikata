@@ -33,7 +33,9 @@
 #include <sirikata/core/util/Standard.hh>
 #include <sirikata/core/service/Poller.hpp>
 #include <sirikata/core/network/IOStrandImpl.hpp>
-
+#ifdef _WIN32
+#pragma warning (disable:4355)//this within constructor initializer
+#endif
 namespace Sirikata {
 
 Poller::Poller(Network::IOStrand* str, const Network::IOCallback& cb, const Duration& max_rate, bool accurate)
@@ -42,9 +44,10 @@ Poller::Poller(Network::IOStrand* str, const Network::IOCallback& cb, const Dura
    mMaxRate(max_rate),
    mAccurate(accurate),
    mUnschedule(false),
-   mCB( mStrand->wrap(std::tr1::bind(&Poller::handleExec, this)) ),
    mUserCB(cb)
 {
+    Network::IOTimerWPtr wtimer(mTimer->shared_from_this());
+    mCB= mStrand->wrap(std::tr1::bind(&Poller::handleExec, this, wtimer));
     mTimer->setCallback(mCB);
 }
 
@@ -73,7 +76,9 @@ void Poller::stop() {
     mUnschedule = true;
 }
 
-void Poller::handleExec() {
+void Poller::handleExec(const Network::IOTimerWPtr &wthis) {
+    if (!wthis.lock())
+        return;//deleted already
     static Duration null_offset = Duration::zero();
     Time start = mAccurate ? Time::now(null_offset) : Time::null();
 

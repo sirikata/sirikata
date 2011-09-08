@@ -189,6 +189,8 @@ public:
 
     void setQueryAngleFunction(const SpaceObjectReference sporef, const SolidAngle& sa);
     SolidAngle getQueryAngle(const SpaceObjectReference sporef);
+    void setQueryCount(const SpaceObjectReference sporef, const uint32 count);
+    uint32 getQueryCount(const SpaceObjectReference sporef);
 
 
     v8::Handle<v8::Value> getPhysicsFunction(const SpaceObjectReference sporef);
@@ -217,8 +219,8 @@ public:
     //wraps the c++ presence structure in a v8 object.
     v8::Local<v8::Object> wrapPresence(JSPresenceStruct* presToWrap, v8::Persistent<v8::Context>* ctxToWrapIn);
 
-
-
+    //If a simulation for presence with sporef, sporef, and name simname already
+    //exist, just return an object corresponding to those.
     Sirikata::JS::JSInvokableObject::JSInvokableObjectInt* runSimulation(const SpaceObjectReference& sporef, const String& simname);
 
     /**
@@ -357,9 +359,8 @@ private:
     //debugging code to output the sporefs of all the presences that I have in mPresences
     void printMPresences();
 
-
-    std::map< SpaceObjectReference ,ODP::Port* >mMessagingPortMap;
-    ODP::Port* mCreateEntityPort;
+    typedef std::map<SpaceObjectReference, ODP::Port*> MessagingPortMap;
+    MessagingPortMap mMessagingPortMap;
 
 
     void callbackUnconnected(ProxyObjectPtr proxy, HostedObject::PresenceToken token);

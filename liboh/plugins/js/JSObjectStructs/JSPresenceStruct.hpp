@@ -9,6 +9,8 @@
 #include "JSPositionListener.hpp"
 #include <sirikata/core/util/Nullable.hpp>
 #include "../JSObjects/JSObjectsUtils.hpp"
+#include "JSCapabilitiesConsts.hpp"
+
 namespace Sirikata {
 namespace JS {
 
@@ -32,7 +34,8 @@ struct PresStructRestoreParams
         const bool& _isSuspended,
         const Nullable<Vector3f>& _suspendedVelocity,
         const Nullable<Quaternion>& _suspendedOrientationVelocity,
-        const SolidAngle& _query)
+        const SolidAngle& _query,
+        uint32 max_results)
      :     sporef(_sporef),
            positionTime(_positionTime),
            position(_position),
@@ -50,7 +53,8 @@ struct PresStructRestoreParams
            isSuspended(_isSuspended),
            suspendedVelocity(_suspendedVelocity),
            suspendedOrientationVelocity(_suspendedOrientationVelocity),
-           query(_query)
+           query(_query),
+           queryMaxResults(max_results)
     {
     }
 
@@ -72,6 +76,7 @@ struct PresStructRestoreParams
     Nullable<Vector3f> suspendedVelocity;
     Nullable<Quaternion> suspendedOrientationVelocity;
     SolidAngle query;
+    uint32 queryMaxResults;
 };
 
 
@@ -144,6 +149,12 @@ struct JSPresenceStruct : public JSPositionListener,
     SolidAngle getQueryAngle();
     v8::Handle<v8::Value>  struct_getQueryAngle();
     v8::Handle<v8::Value>  setQueryAngleFunction(SolidAngle new_qa);
+    uint32 getQueryCount();
+    v8::Handle<v8::Value>  struct_getQueryCount();
+    v8::Handle<v8::Value>  setQueryCount(uint32 new_qc);
+
+
+    
     v8::Handle<v8::Value>  setOrientationVelFunction(Quaternion newOrientationVel);
     v8::Handle<v8::Value>  struct_setVelocity(const Vector3f& newVel);
     v8::Handle<v8::Value>  struct_setPosition(Vector3f newPos);
@@ -207,6 +218,13 @@ private:
         return v8::ThrowException(v8::Exception::Error(v8::String::New(errorMessage.c_str()))); \
     }
 
+//returns a v8 exception if the current context we're executing from does not
+//have the capability (whatCap) to preform operation on this JSPresenceStruct.
+#define INLINE_CHECK_CAPABILITY_ERROR(whatCap,where)                    \
+{                                                                       \
+    if (! mContext->jsObjScript->checkCurCtxtHasCapability(this, whatCap))        \
+        V8_EXCEPTION_CSTR("Error in " #where " you do not have the capability for " #whatCap " on this presence."); \
+}
 
 #define INLINE_CHECK_IS_CONNECTED_ERROR(where)                          \
     if (! isConnected)                                                  \

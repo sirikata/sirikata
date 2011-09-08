@@ -24,7 +24,8 @@ public:
     ObjectHostProxyManagerPtr proxyManager;
     bool validSpaceObjRef;
     SolidAngle queryAngle;
-    
+    uint32 queryMaxResults;
+
     // Outstanding requests for loc updates.
     enum LocField {
         LOC_FIELD_NONE = 0,
@@ -46,8 +47,8 @@ public:
     typedef std::map<String, TimeSteppedSimulation*> SimulationMap;
     SimulationMap sims;
 
-    PerPresenceData(HostedObject* _parent, const SpaceID& _space, const ObjectReference& _oref,const SolidAngle& qAngle);
-    PerPresenceData(HostedObject* _parent, const SpaceID& _space,const SolidAngle& qAngle);
+    PerPresenceData(HostedObject* _parent, const SpaceID& _space, const ObjectReference& _oref,const SolidAngle& qAngle, uint32 qMaxResults);
+    PerPresenceData(HostedObject* _parent, const SpaceID& _space,const SolidAngle& qAngle, uint32 qMaxResults);
     ~PerPresenceData();
 
     void populateSpaceObjRef(const SpaceObjectReference& sporef);

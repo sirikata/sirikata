@@ -80,7 +80,7 @@ class ObjectHostConnectionManager;
 class Server : public MessageRecipient, public Service, public OSegWriteListener, public ODP::DelegateService, ObjectSessionManager
 {
 public:
-    Server(SpaceContext* ctx, Authenticator* auth, Forwarder* forwarder, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, ObjectSegmentation* oseg, Address4* oh_listen_addr);
+    Server(SpaceContext* ctx, Authenticator* auth, Forwarder* forwarder, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, ObjectSegmentation* oseg, Address4 oh_listen_addr);
     ~Server();
 
     virtual void receiveMessage(Message* msg);
@@ -90,9 +90,10 @@ private:
     void stop();
 
     // OSegWriteListener Interface
-    virtual void osegWriteFinished(const UUID& id);
     virtual void osegMigrationAcknowledged(const UUID& id);
-
+    virtual void osegAddNewFinished(const UUID& id, OSegAddNewStatus status);
+    
+    
     // ODP::DelegateService dependencies
     ODP::DelegatePort* createDelegateODPPort(DelegateService*, const SpaceObjectReference& sor, ODP::PortID port);
     bool delegateODPPortSend(const ODP::Endpoint& source_ep, const ODP::Endpoint& dest_ep, MemoryReference payload);
@@ -118,6 +119,8 @@ private:
 
     // Checks if an object is connected to this server
     bool isObjectConnected(const UUID& object_id) const;
+    // Checks if an object is current connecting to this server (post authentication)
+    bool isObjectConnecting(const UUID& object_id) const;
 
     // Callback which handles messages from object hosts -- mostly just does sanity checking
     // before using the forwarder to do routing.  Operates in the
@@ -142,6 +145,7 @@ private:
     void handleConnect(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, const Sirikata::Protocol::Object::ObjectMessage& container, const Sirikata::Protocol::Session::Connect& connect_msg);
     void handleConnectAuthResponse(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, const UUID& obj_id, const Sirikata::Protocol::Session::Connect& connect_msg, bool authenticated);
 
+    void sendConnectSuccess(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, const UUID& obj_id);
     void sendConnectError(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, const UUID& obj_id);
 
     // Handle connection ack message from object
@@ -159,7 +163,7 @@ private:
     //finally deletes any object connections to obj_id
     void killObjectConnection(const UUID& obj_id);
 
-    void finishAddObject(const UUID& obj_id);
+    void finishAddObject(const UUID& obj_id, OSegAddNewStatus status);
 
     bool checkAlreadyMigrating(const UUID& obj_id);
     void processAlreadyMigrating(const UUID& obj_id);

@@ -42,6 +42,11 @@ namespace ODP {
 /** ODP::Service is the interface provided by classes that are able to send ODP
  *  messages. ODP::Service mainly handles management of ODP::Ports, which in
  *  turn allow sending and receiving of ODP messages.
+ *
+ *  A Service allocates Ports and (behind the scenes) handles requests on the
+ *  Ports, but once allocated the Port is owned by the allocator. The allocator
+ *  is responsible for deleting all allocated Ports, even if the Service that
+ *  generated them was destroyed.
  */
 class SIRIKATA_EXPORT Service {
 public:

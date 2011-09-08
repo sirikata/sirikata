@@ -102,7 +102,15 @@ class OSegWriteListener {
 public:
     virtual ~OSegWriteListener() {}
 
-    virtual void osegWriteFinished(const UUID& id) = 0;
+    
+    enum OSegAddNewStatus
+    {
+        SUCCESS,
+        OBJ_ALREADY_REGISTERED,
+        UNKNOWN_ERROR
+    };
+
+    virtual void osegAddNewFinished(const UUID& id, OSegAddNewStatus) = 0;
     virtual void osegMigrationAcknowledged(const UUID& id) = 0;
 }; // class OSegMembershipListener
 
@@ -156,6 +164,7 @@ public:
           mWriteListener = listener;
       }
 
+      
     virtual OSegEntry lookup(const UUID& obj_id) = 0;
     virtual OSegEntry cacheLookup(const UUID& obj_id) = 0;
     virtual void migrateObject(const UUID& obj_id, const OSegEntry& new_server_id) = 0;

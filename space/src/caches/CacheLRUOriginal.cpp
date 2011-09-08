@@ -41,7 +41,7 @@
 #include <boost/thread/mutex.hpp>
 #include <sirikata/core/options/CommonOptions.hpp>
 
-
+#define OSEGLRU_LOG(lvl,msg) SILOG(oseglru, lvl, msg)
 
 namespace Sirikata
 {
@@ -61,11 +61,8 @@ namespace Sirikata
 
   CacheLRUOriginal::~CacheLRUOriginal()
   {
-
-    std::cout<<"\n\n  insertMilliseconds:  "<<insertMilliseconds<<"  numInserted:   "<<numInserted<<"    avg: "<<((double)insertMilliseconds)/((double) numInserted)<<"\n\n";
-
-    std::cout<<"\n\n maintainDur:  "<<maintainDur<<"   numMaintained  "<<numMaintained<<"  avg: "<<((double)maintainDur)/((double)numMaintained)<<"\n\n";
-
+      OSEGLRU_LOG(debug, "insertMilliseconds: " << insertMilliseconds << "  numInserted: " << numInserted << "    avg: " << ((double)insertMilliseconds)/((double) numInserted));
+      OSEGLRU_LOG(debug, "maintainDur:  " << maintainDur << "   numMaintained  " << numMaintained <<"  avg: " << ((double)maintainDur)/((double)numMaintained));
   }
 
 
@@ -85,9 +82,8 @@ namespace Sirikata
         IDRecordMap::iterator idRecMapIterator =  idRecMap.find(tMapIter->second->obj_id);
         if (idRecMapIterator == idRecMap.end())
         {
-          printf("\n\nInconsistent ids\n\n");
-          fflush(stdout);
-          assert(false);
+            OSEGLRU_LOG(fatal, "Inconsistent ids");
+            assert(false);
         }
         delete idRecMapIterator->second;
         idRecMap.erase(idRecMapIterator);
@@ -154,9 +150,8 @@ namespace Sirikata
 
       if (! found)
       {
-        printf("\n\n Issues with maintaining craq cache correctly \n\n");
-        fflush(stdout);
-        assert(false);
+          OSEGLRU_LOG(fatal, "Issues with maintaining craq cache correctly");
+          assert(false);
       }
     }
     else
@@ -220,8 +215,8 @@ namespace Sirikata
       TimeRecordMap::iterator timeIter = timeRecMap.find(iter->second->age);
       if (timeIter == timeRecMap.end())
       {
-        std::cout<<"\n\nProblem.  Time record and id record are out of sync\n\n";
-        assert(false);
+          OSEGLRU_LOG(fatal, "Problem.  Time record and id record are out of sync");
+          assert(false);
       }
 
       delete timeIter->second;

@@ -26,6 +26,7 @@ options
     #include <string.h>
     #include <antlr3.h>
     #include "Util.h"
+    #include <stdio.h>
     
     #define APP(s) \
         { \
@@ -118,7 +119,6 @@ program returns [pANTLR3_STRING return_str, int* emersonLines, int* jsLines, int
             }
             (
               sourceElements
-
             )?
          )
          {
@@ -131,12 +131,19 @@ program returns [pANTLR3_STRING return_str, int* emersonLines, int* jsLines, int
 
         
 sourceElements
-    :(sourceElement{APP("\n"); })+  // omitting the LT 
+    :(sourceElement
+      {
+          APP("\n");
+      }
+     )+  // omitting the LT 
     ;
 	
 sourceElement
     : functionDeclaration
-    | statement{ APP(";"); }
+    | statement
+      {
+         APP(";");
+      }
     ;
 	
 // functions
@@ -220,8 +227,8 @@ functionBody
 
 // statements
 statement
-    : noOpStatement
-    | switchStatement
+    : switchStatement
+    | emptyStatement
     | statementBlock
     | variableStatement
     | expressionStatement
@@ -235,29 +242,46 @@ statement
     | tryStatement
     ;   
 
-noOpStatement
-        : ^(NOOP
-          {
-          }
-        )
-        ;
+
     
 statementBlock
-	: {APP(" {\n "); } statementList {  
-            APP(" }\n");
-        }
+@after
+{
+        APP("}\n");
+}
+	: ^(STATEMENT_BLOCK
+            {
+                APP(" {\n ");
+            }
+
+            (statementList)?
+           )  
 	;
 	
 statementList
-	:  ^(
-            SLIST 
-            (statement
-                {
-			        APP("; \n");					  
-                }
-            )*
-	    );
-	
+	: ^(
+            SLIST
+            (
+               statement
+               {
+                  APP("; \n");					  
+               }
+            )+
+           )
+	 ;
+
+
+emptyStatement
+        : ^(
+            NOOP
+            {
+                //do nothing in noop.
+                //note: if delete this, antlr will throw an error.
+            }
+            )
+        ;
+
+         
 variableStatement
 	:  ^( 
             VARLIST
@@ -682,6 +706,7 @@ catchBlock
            )
         ;
 
+        
 finallyBlock
         : ^(FINALLY
             {

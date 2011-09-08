@@ -62,6 +62,15 @@ int main(int argc, char** argv) {
     plugins.loadList( GetOptionValue<String>(OPT_PLUGINS) );
     plugins.loadList( GetOptionValue<String>(OPT_OH_PLUGINS) );
 
+    // Fill defaults after plugin loading to ensure plugin-added
+    // options get their defaults.
+    FillMissingOptionDefaults();
+    // Rerun original parse to make sure any newly added options are
+    // properly parsed.
+    ParseOptions(argc, argv);
+
+    ReportVersion(); // After options so log goes to the right place
+
     std::string time_server=GetOptionValue<String>("time-server");
     NTPTimeSync sync;
     if (time_server.size() > 0)
@@ -71,11 +80,6 @@ int main(int argc, char** argv) {
     ObjectHostID oh_id = GetOptionValue<ObjectHostID>("ohid");
     String trace_file = GetPerServerFile(STATS_OH_TRACE_FILE, oh_id);
     Trace::Trace* gTrace = new Trace::Trace(trace_file);
-
-    String servermap_type = GetOptionValue<String>("servermap");
-    String servermap_options = GetOptionValue<String>("servermap-options");
-    ServerIDMap * server_id_map =
-        ServerIDMapFactory::getSingleton().getConstructor(servermap_type)(servermap_options);
 
     MaxDistUpdatePredicate::maxDist = GetOptionValue<float64>(MAX_EXTRAPOLATOR_DIST);
 
@@ -95,7 +99,14 @@ int main(int argc, char** argv) {
     Network::IOService* ios = Network::IOServiceFactory::makeIOService();
     Network::IOStrand* mainStrand = ios->createStrand();
 
-    ObjectHostContext* ctx = new ObjectHostContext("simoh", oh_id, ios, mainStrand, gTrace, start_time, duration);
+    SSTConnectionManager* sstConnMgr = new SSTConnectionManager();
+
+    ObjectHostContext* ctx = new ObjectHostContext("simoh", oh_id, sstConnMgr, ios, mainStrand, gTrace, start_time, duration);
+
+    String servermap_type = GetOptionValue<String>("servermap");
+    String servermap_options = GetOptionValue<String>("servermap-options");
+    ServerIDMap * server_id_map =
+        ServerIDMapFactory::getSingleton().getConstructor(servermap_type)(ctx, servermap_options);
 
     String timeseries_type = GetOptionValue<String>(OPT_TRACE_TIMESERIES);
     String timeseries_options = GetOptionValue<String>(OPT_TRACE_TIMESERIES_OPTIONS);
@@ -106,7 +117,7 @@ int main(int argc, char** argv) {
     ObjectHost* obj_host = new ObjectHost(ctx, gTrace, server_id_map);
     Scenario* scenario = ScenarioFactory::getSingleton().getConstructor(GetOptionValue<String>("scenario"))(GetOptionValue<String>("scenario-options"));
 
-    SSTConnectionManager* sstConnMgr = new SSTConnectionManager();
+    
 
     // If we're one of the initial nodes, we'll have to wait until we hit the start time
     {
@@ -138,12 +149,13 @@ int main(int argc, char** argv) {
 
     gTrace->prepareShutdown();
 
-    delete sstConnMgr;
+    
     delete server_id_map;
     delete obj_factory;
     delete scenario;
     delete obj_host;
     delete ctx;
+    delete sstConnMgr;
 
     delete time_series;
 

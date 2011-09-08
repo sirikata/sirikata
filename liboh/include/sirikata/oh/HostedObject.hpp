@@ -174,7 +174,7 @@ public:
     ///makes a new objects with objectName startingLocation mesh and connect to some interesting space
     void initializeScript(const String& script_type, const String& args, const String& script);
 
-    void addSimListeners(PerPresenceData& pd, const String& oh_sims,    TimeSteppedSimulation*& sim);
+    bool addSimListeners(PerPresenceData& pd, const String& oh_sims,    TimeSteppedSimulation*& sim);
 
 
 
@@ -237,7 +237,7 @@ public:
         listeners.  Provides token to these listeners so they can distinguish
         which presence may have connected, etc.
     */
-    void connect(
+    bool connect(
         const SpaceID&spaceID,
         const Location&startingLocation,
         const BoundingSphere3f &meshBounds,
@@ -246,13 +246,14 @@ public:
         const UUID&object_uuid_evidence,
         PresenceToken token = DEFAULT_PRESENCE_TOKEN);
 
-    void connect(
+    bool connect(
         const SpaceID&spaceID,
         const Location&startingLocation,
         const BoundingSphere3f &meshBounds,
         const String& mesh,
         const String& physics,
         const SolidAngle& queryAngle,
+        uint32 queryMaxResults,
         const UUID&object_uuid_evidence,
         const ObjectReference& orefID,
         PresenceToken token = DEFAULT_PRESENCE_TOKEN);
@@ -267,13 +268,13 @@ public:
     // connection callbacks manually.
 
 
-    void handleConnected(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info);
-    void handleConnectedIndirect(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info);
+    static void handleConnected(const HostedObjectWPtr &weakSelf, const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info);
+    static void handleConnectedIndirect(const HostedObjectWPtr &weakSelf, const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info);
 
-    bool handleEntityCreateMessage(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference bodyData);
-    void handleMigrated(const SpaceID& space, const ObjectReference& obj, ServerID server);
-    void handleStreamCreated(const SpaceObjectReference& spaceobj, SessionManager::ConnectionEvent after, PresenceToken token);
-    void handleDisconnected(const SpaceObjectReference& spaceobj, Disconnect::Code cc);
+//    static bool handleEntityCreateMessage(const HostedObjectWPtr &weakSelf, const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference bodyData);
+    static void handleMigrated(const HostedObjectWPtr &weakSelf, const SpaceID& space, const ObjectReference& obj, ServerID server);
+    static void handleStreamCreated(const HostedObjectWPtr &weakSelf, const SpaceObjectReference& spaceobj, SessionManager::ConnectionEvent after, PresenceToken token);
+    static void handleDisconnected(const HostedObjectWPtr &weakSelf, const SpaceObjectReference& spaceobj, Disconnect::Code cc);
 
   public:
     /// Disconnects from the given space by terminating the corresponding substream.
@@ -348,9 +349,10 @@ public:
     virtual const String& requestCurrentPhysics(const SpaceID& space,const ObjectReference& oref);
     virtual void requestPhysicsUpdate(const SpaceID& space, const ObjectReference& oref, const String& phy);
 
-    virtual void requestQueryUpdate(const SpaceID& space, const ObjectReference& oref, SolidAngle new_angle);
+    virtual void requestQueryUpdate(const SpaceID& space, const ObjectReference& oref, SolidAngle new_angle, uint32 new_max_results);
     virtual void requestQueryRemoval(const SpaceID& space, const ObjectReference& oref);
     virtual SolidAngle requestQueryAngle(const SpaceID& space, const ObjectReference& oref);
+    virtual uint32 requestQueryMaxResults(const SpaceID& space, const ObjectReference& oref);
 
 
 
@@ -360,11 +362,11 @@ public:
 
 
     // Handlers for substreams for space-managed updates
-    void handleLocationSubstream(const SpaceObjectReference& spaceobj, int err, SSTStreamPtr s);
-    void handleProximitySubstream(const SpaceObjectReference& spaceobj, int err, SSTStreamPtr s);
+    static void handleLocationSubstream(const HostedObjectWPtr &weakSelf, const SpaceObjectReference& spaceobj, int err, SSTStreamPtr s);
+    static void handleProximitySubstream(const HostedObjectWPtr &weakSelf, const SpaceObjectReference& spaceobj, int err, SSTStreamPtr s);
     // Handlers for substream read events for space-managed updates
-    void handleLocationSubstreamRead(const SpaceObjectReference& spaceobj, SSTStreamPtr s, std::stringstream* prevdata, uint8* buffer, int length);
-    void handleProximitySubstreamRead(const SpaceObjectReference& spaceobj, SSTStreamPtr s, String* prevdata, uint8* buffer, int length);
+    static void handleLocationSubstreamRead(const HostedObjectWPtr &weakSelf, const SpaceObjectReference& spaceobj, SSTStreamPtr s, std::stringstream* prevdata, uint8* buffer, int length);
+    static void handleProximitySubstreamRead(const HostedObjectWPtr &weakSelf, const SpaceObjectReference& spaceobj, SSTStreamPtr s, String* prevdata, uint8* buffer, int length);
 
     // Handlers for core space-managed updates
     void processLocationUpdate(const SpaceObjectReference& sporef, ProxyObjectPtr proxy_obj, const Sirikata::Protocol::Loc::LocationUpdate& update);
@@ -383,7 +385,7 @@ public:
 
     // Helper for creating the correct type of proxy
 
-    ProxyObjectPtr createProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri, TimedMotionVector3f& tmv, TimedMotionQuaternion& tmvq, const BoundingSphere3f& bounds, const String& physics,const SolidAngle& queryAngle,uint64 seqNo);
+    ProxyObjectPtr createProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri, TimedMotionVector3f& tmv, TimedMotionQuaternion& tmvq, const BoundingSphere3f& bounds, const String& physics,const SolidAngle& queryAngle, uint32 queryMaxResults, uint64 seqNo);
     ProxyObjectPtr createDummyProxy();
 
     // Helper for constructing and sending location update

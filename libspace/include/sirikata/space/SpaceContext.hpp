@@ -56,7 +56,7 @@ class CoordinateSegmentation;
  */
 class SIRIKATA_SPACE_EXPORT SpaceContext : public Context {
 public:
-    SpaceContext(const String& name, ServerID _id, Network::IOService* ios, Network::IOStrand* strand, const Time& epoch, Trace::Trace* _trace, const Duration& duration = Duration::zero());
+    SpaceContext(const String& name, ServerID _id, SSTConnectionManager* sstConnMgr, Network::IOService* ios, Network::IOStrand* strand, const Time& epoch, Trace::Trace* _trace, const Duration& duration = Duration::zero());
     ~SpaceContext();
 
     const String& name() { return mName; }
@@ -81,6 +81,10 @@ public:
         return mObjectSessionManager;
     }
 
+    SSTConnectionManager* sstConnectionManager() const {
+        return mSSTConnMgr;
+    }
+
     SpaceTrace* spacetrace() const { return mSpaceTrace; }
 
 private:
@@ -98,6 +102,8 @@ private:
     Sirikata::AtomicValue<CoordinateSegmentation*> mCSeg;
 
     Sirikata::AtomicValue<ObjectSessionManager*> mObjectSessionManager;
+
+    Sirikata::AtomicValue<SSTConnectionManager*> mSSTConnMgr;
 
     SpaceTrace* mSpaceTrace;
 }; // class SpaceContext

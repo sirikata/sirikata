@@ -36,6 +36,7 @@
 #include <sirikata/core/network/NTPTimeSync.hpp>
 
 #include <sirikata/core/network/IOServiceFactory.hpp>
+#include <sirikata/core/network/IOStrandImpl.hpp>
 
 #include <sirikata/space/Authenticator.hpp>
 
@@ -45,7 +46,7 @@
 
 #include <sirikata/space/LocationService.hpp>
 
-#include "Proximity.hpp"
+#include <sirikata/space/Proximity.hpp>
 #include "Server.hpp"
 
 #include "Options.hpp"
@@ -64,7 +65,25 @@
 #include "caches/CacheLRUOriginal.hpp"
 
 #include <sirikata/space/SpaceContext.hpp>
+#include <sirikata/mesh/Filter.hpp>
+#include <sirikata/mesh/ModelsSystemFactory.hpp>
 
+namespace {
+using namespace Sirikata;
+void createServer(Server** server_out, SpaceContext* space_context, Authenticator* auth, Forwarder* forwarder, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, ObjectSegmentation* oseg, Address4 addr) {
+    if (addr == Address4::Null) {
+        SILOG(space, fatal, "The requested server ID isn't in ServerIDMap");
+        space_context->shutdown();
+    }
+
+    Server* server = new Server(space_context, auth, forwarder, loc_service, cseg, prox, oseg, addr);
+    prox->initialize(cseg);
+    space_context->add(prox);
+    space_context->add(server);
+
+    *server_out = server;
+}
+}
 
 int main(int argc, char** argv) {
 
@@ -82,11 +101,19 @@ int main(int argc, char** argv) {
     plugins.loadList( GetOptionValue<String>(OPT_PLUGINS) );
     plugins.loadList( GetOptionValue<String>(OPT_SPACE_PLUGINS) );
 
+    // Fill defaults after plugin loading to ensure plugin-added
+    // options get their defaults.
+    FillMissingOptionDefaults();
+    // Rerun original parse to make sure any newly added options are
+    // properly parsed.
+    ParseOptions(argc, argv, OPT_CONFIG_FILE);
+
+    ReportVersion(); // After options so log goes to the right place
+
     std::string time_server=GetOptionValue<String>("time-server");
     NTPTimeSync sync;
     if (time_server.size() > 0)
         sync.start(time_server);
-
 
     ServerID server_id = GetOptionValue<ServerID>("id");
     String trace_file = GetPerServerFile(STATS_TRACE_FILE, server_id);
@@ -102,8 +129,17 @@ int main(int argc, char** argv) {
     Network::IOService* ios = Network::IOServiceFactory::makeIOService();
     Network::IOStrand* mainStrand = ios->createStrand();
 
+    SSTConnectionManager* sstConnMgr = new SSTConnectionManager();
 
-    SpaceContext* space_context = new SpaceContext("space", server_id, ios, mainStrand, start_time, gTrace, duration);
+    SpaceContext* space_context = new SpaceContext("space", server_id, sstConnMgr, ios, mainStrand, start_time, gTrace, duration);
+
+    String servermap_type = GetOptionValue<String>("servermap");
+    String servermap_options = GetOptionValue<String>("servermap-options");
+    ServerIDMap * server_id_map =
+        ServerIDMapFactory::getSingleton().getConstructor(servermap_type)(space_context, servermap_options);
+
+    space_context->add(space_context);
+
 
     String timeseries_type = GetOptionValue<String>(OPT_TRACE_TIMESERIES);
     String timeseries_options = GetOptionValue<String>(OPT_TRACE_TIMESERIES_OPTIONS);
@@ -124,11 +160,6 @@ int main(int argc, char** argv) {
     String auth_opts = GetOptionValue<String>(SPACE_OPT_AUTH_OPTIONS);
     Authenticator* auth =
         AuthenticatorFactory::getSingleton().getConstructor(auth_type)(space_context, auth_opts);
-
-    String servermap_type = GetOptionValue<String>("servermap");
-    String servermap_options = GetOptionValue<String>("servermap-options");
-    ServerIDMap * server_id_map =
-        ServerIDMapFactory::getSingleton().getConstructor(servermap_type)(servermap_options);
 
     gNetwork->setServerIDMap(server_id_map);
 
@@ -218,12 +249,24 @@ int main(int argc, char** argv) {
     forwarder->initialize(oseg, sq, server_message_receiver, loc_service);
 
 
-    Proximity* prox = new Proximity(space_context, loc_service, gNetwork);
+    std::string prox_type = GetOptionValue<String>(OPT_PROX);
+    std::string prox_options = GetOptionValue<String>(OPT_PROX_OPTIONS);
+    Proximity* prox = ProximityFactory::getSingleton().getConstructor(prox_type)(space_context, loc_service, gNetwork, prox_options);
 
-
-    Server* server = new Server(space_context, auth, forwarder, loc_service, cseg, prox, oseg, server_id_map->lookupExternal(space_context->id()));
-
-      prox->initialize(cseg);
+    // We need to do an async lookup, and to finish it the server needs to be
+    // running. But we can't create the server until we have the address from
+    // this lookup. We isolate as little as possible into this callback --
+    // creating the server, finishing prox initialization, and getting them both
+    // registered. We pass storage for the Server to the callback so we can
+    // handle cleaning it up ourselves.
+    using std::tr1::placeholders::_1;
+    Server* server = NULL;
+    server_id_map->lookupExternal(
+        space_context->id(),
+        space_context->mainStrand->wrap(
+            std::tr1::bind( &createServer, &server, space_context, auth, forwarder, loc_service, cseg, prox, oseg, _1)
+        )
+    );
 
     // If we're one of the initial nodes, we'll have to wait until we hit the start time
     {
@@ -240,15 +283,12 @@ int main(int argc, char** argv) {
     }
 
     ///////////Go go go!! start of simulation/////////////////////
-    SSTConnectionManager* sstConnMgr = new SSTConnectionManager();
 
-    space_context->add(space_context);
+
     space_context->add(auth);
     space_context->add(gNetwork);
     space_context->add(cseg);
     space_context->add(loc_service);
-    space_context->add(prox);
-    space_context->add(server);
     space_context->add(oseg);
     space_context->add(loadMonitor);
     space_context->add(sstConnMgr);
@@ -264,7 +304,10 @@ int main(int argc, char** argv) {
 
     gTrace->prepareShutdown();
     prox->shutdown();
-
+    Mesh::FilterFactory::destroy();
+    ModelsSystemFactory::destroy();
+    LocationServiceFactory::destroy();
+    LocationUpdatePolicyFactory::destroy();
     delete server;
     delete sq;
     delete server_message_receiver;
@@ -276,8 +319,7 @@ int main(int argc, char** argv) {
     delete cseg;
     delete oseg;
     delete oseg_cache;
-    delete loc_service;
-    delete sstConnMgr;
+    delete loc_service;    
     delete forwarder;
 
     delete gNetwork;
@@ -298,6 +340,7 @@ int main(int argc, char** argv) {
 
     Network::IOServiceFactory::destroyIOService(ios);
 
+    delete sstConnMgr;
 
     sync.stop();
 

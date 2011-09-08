@@ -1,5 +1,5 @@
 /*  Sirikata Transfer -- Content Transfer management system
- *  SimplePriorityAggregation.hpp
+ *  MaxPriorityAggregation.hpp
  *
  *  Copyright (c) 2010, Jeff Terrace
  *  All rights reserved.
@@ -31,8 +31,8 @@
  */
 /*  Created on: Jan 22th, 2010 */
 
-#ifndef SIRIKATA_SimplePriorityAggregation_HPP__
-#define SIRIKATA_SimplePriorityAggregation_HPP__
+#ifndef SIRIKATA_MaxPriorityAggregation_HPP__
+#define SIRIKATA_MaxPriorityAggregation_HPP__
 
 #include "TransferPool.hpp"
 
@@ -42,28 +42,45 @@ namespace Transfer {
 /*
  * Just take the highest priority. Stupid aggregation.
  */
-class SimplePriorityAggregation : TransferRequest {
+class MaxPriorityAggregation : public PriorityAggregationAlgorithm {
 
 public:
 
-	//Return an aggregated priority given the list of priorities
-	inline static TransferRequest::PriorityType aggregate(
-	        std::map<std::string, std::tr1::shared_ptr<TransferRequest> > & l) {
+    virtual TransferRequest::PriorityType aggregate(
+        const std::vector<TransferRequest::PriorityType>& l) const {
+        TransferRequest::PriorityType max = (*l.begin());
+        for (std::vector<TransferRequest::PriorityType>::const_iterator it = ++(l.begin()); it != l.end(); it++) {
+            if ((*it) > max) max = *it;
+        }
+        return max;
+    }
 
-		//don't feel like making compare func for max_element so just manual laziness
-	    std::map<std::string, std::tr1::shared_ptr<TransferRequest> >::iterator findMax = l.begin();
-		TransferRequest::PriorityType max = findMax->second->getPriority();
-		findMax++;
-		while(findMax != l.end()) {
-			if(findMax->second->getPriority() > max) {
-				max = findMax->second->getPriority();
-			}
-			findMax++;
-		}
+    //Return an aggregated priority given the list of priorities
+    virtual TransferRequest::PriorityType aggregate(
+        const std::map<std::string, TransferRequestPtr > & l) const {
 
-		return max;
-	}
+        //don't feel like making compare func for max_element so just manual laziness
+        std::map<std::string, TransferRequestPtr>::const_iterator findMax = l.begin();
+        TransferRequest::PriorityType max = findMax->second->getPriority();
+        findMax++;
+        while(findMax != l.end()) {
+            if(findMax->second->getPriority() > max) {
+                max = findMax->second->getPriority();
+            }
+            findMax++;
+        }
 
+        return max;
+    }
+
+    virtual TransferRequest::PriorityType aggregate(
+        const std::vector<TransferRequestPtr>& l) const {
+        TransferRequest::PriorityType max = (*l.begin())->getPriority();
+        for(std::vector<TransferRequestPtr>::const_iterator it = ++(l.begin()); it != l.end(); it++) {
+            if ((*it)->getPriority() > max) max = (*it)->getPriority();
+        }
+        return max;
+    }
 };
 
 }

@@ -1,6 +1,7 @@
 #include <sirikata/core/util/Standard.hh>
 
 #include <sirikata/core/transfer/TransferMediator.hpp>
+#include <sirikata/core/transfer/MaxPriorityAggregation.hpp>
 #include <stdio.h>
 
 using namespace std;
@@ -28,7 +29,12 @@ void TransferMediator::destroy() {
 TransferMediator::TransferMediator() {
     mCleanup = false;
     mNumOutstanding = 0;
+    mAggregationAlgorithm = new MaxPriorityAggregation();
     mThread = new Thread(std::tr1::bind(&TransferMediator::mediatorThread, this));
+}
+
+TransferMediator::~TransferMediator() {
+    delete mAggregationAlgorithm;
 }
 
 void TransferMediator::mediatorThread() {
@@ -45,21 +51,17 @@ void TransferMediator::mediatorThread() {
     }
 }
 
-std::tr1::shared_ptr<TransferPool> TransferMediator::registerClient(const std::string clientID) {
-    std::tr1::shared_ptr<TransferPool> ret(new TransferPool(clientID));
-
+void TransferMediator::registerPool(TransferPoolPtr pool) {
     //Lock exclusive to access map
     boost::upgrade_lock<boost::shared_mutex> lock(mPoolMutex);
     boost::upgrade_to_unique_lock<boost::shared_mutex> uniqueLock(lock);
 
     //ensure client id doesnt already exist, they should be unique
-    PoolType::iterator findClientId = mPools.find(clientID);
+    PoolType::iterator findClientId = mPools.find(pool->getClientID());
     assert(findClientId == mPools.end());
 
-    std::tr1::shared_ptr<PoolWorker> worker(new PoolWorker(ret));
-    mPools.insert(PoolType::value_type(clientID, worker));
-
-    return ret;
+    std::tr1::shared_ptr<PoolWorker> worker(new PoolWorker(pool));
+    mPools.insert(PoolType::value_type(pool->getClientID(), worker));
 }
 
 void TransferMediator::cleanup() {
@@ -87,7 +89,7 @@ void TransferMediator::execute_finished(std::tr1::shared_ptr<TransferRequest> re
     for(std::map<std::string, std::tr1::shared_ptr<TransferRequest> >::const_iterator
             it = allReqs.begin(); it != allReqs.end(); it++) {
         SILOG(transfer, detailed, "Notifying a caller that TransferRequest is complete");
-        it->second->notifyCaller(req);
+        it->second->notifyCaller(it->second, req);
     }
 
     mAggregateList.erase(findID);
@@ -132,7 +134,7 @@ void TransferMediator::checkQueue() {
  */
 
 void TransferMediator::AggregateRequest::updateAggregatePriority() {
-    TransferRequest::PriorityType newPriority = SimplePriorityAggregation::aggregate(mTransferReqs);
+    TransferRequest::PriorityType newPriority = TransferMediator::getSingleton().mAggregationAlgorithm->aggregate(mTransferReqs);
     mPriority = newPriority;
 }
 

@@ -135,6 +135,7 @@ void PintoManager::handleClientReceived(Sirikata::Network::Stream* stream, Chunk
         BoundingSphere3f default_region(BoundingSphere3f::null());
         float32 default_max = 0.f;
         SolidAngle default_min_angle(SolidAngle::Max);
+        // FIXME max_results
 
         mLocCache->addSpaceServer(cdata.server, default_loc, default_region, default_max);
 
@@ -167,6 +168,7 @@ void PintoManager::handleClientReceived(Sirikata::Network::Stream* stream, Chunk
     if (msg.has_query()) {
         PINTO_LOG(debug, "Received query update from " << cdata.server << ": " << msg.query().min_angle());
         cdata.query->angle( SolidAngle(msg.query().min_angle()) );
+        // FIXME max results
     }
 
     tick();

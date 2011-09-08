@@ -45,7 +45,7 @@ system.require('std/graphics/propertybox.em');
 system.require('std/graphics/presenceList.em');
 system.require('std/graphics/setMesh.em');
 system.require('std/graphics/axes.em');
-system.require('std/graphics/ezuiViewer.em');
+system.require('std/graphics/flatlandViewer.em');
 
 (
 function() {
@@ -61,24 +61,34 @@ function() {
      */
     std.graphics.DefaultGraphics = function(pres, name, cb) {
         this._pres = pres;
+            
         this._simulator = new std.graphics.Graphics(pres, name, std.core.bind(this.finishedGraphicsInit, this, cb), std.core.bind(this.finishedGraphicsUIReset, this));
     };
-    std.graphics.DefaultGraphics.prototype.finishedGraphicsInit = function(cb, gfx) {
-        // assert(gfx == this._simulator);
+
+    
+    std.graphics.DefaultGraphics.prototype.finishedGraphicsInit = function(cb, gfx, alreadyInitialized) {
         this._camera = new std.graphics.DefaultCamera(this._simulator, system.self);
 
         this._selected = null;
         this._loadingUIs = 0;
 
-        var ui_finish_cb = std.core.bind(this.finishedUIInit, this, cb);
-        this._loadingUIs++; this._scripter = new std.script.Scripter(this, ui_finish_cb);
-        this._loadingUIs++; this._chat = new std.graphics.Chat(this._pres, this._simulator, ui_finish_cb);
-        this._loadingUIs++; this._physics = new std.graphics.PhysicsProperties(this._simulator, ui_finish_cb);
-        this._loadingUIs++; this._propertybox = new std.propertybox.PropertyBox(this, ui_finish_cb);
-        this._loadingUIs++; this._presenceList = new std.graphics.PresenceList(this._pres, this._simulator, this._scripter, ui_finish_cb);
-        this._loadingUIs++; this._setMesh = new std.graphics.SetMesh(this._simulator, ui_finish_cb);
-        this._loadingUIs++; this._ezui = new std.ezui.EZUI(this, ui_finish_cb);
+        this._alreadyInitialized = alreadyInitialized;
+        if (! this._alreadyInitialized)
+        {
+            var ui_finish_cb = std.core.bind(this.finishedUIInit, this, cb);
+            this._loadingUIs++; this._scripter = new std.script.Scripter(this, ui_finish_cb);
+            this._loadingUIs++; this._chat = new std.graphics.Chat(this._pres, this._simulator, ui_finish_cb);
+            this._loadingUIs++; this._physics = new std.graphics.PhysicsProperties(this._simulator, ui_finish_cb);
+            this._loadingUIs++; this._propertybox = new std.propertybox.PropertyBox(this, ui_finish_cb);
+            this._loadingUIs++; this._presenceList = new std.graphics.PresenceList(this._pres, this._simulator, this._scripter, ui_finish_cb);
+            this._loadingUIs++; this._setMesh = new std.graphics.SetMesh(this._simulator, ui_finish_cb);
+            this._loadingUIs++; this._flatland = new std.fl.FL(this, ui_finish_cb);                
+        }
+        else
+            this.finishedUIInit(cb);
+
     };
+
     std.graphics.DefaultGraphics.prototype.finishedGraphicsUIReset = function(gfx) {
         this._camera.reinit();
 
@@ -89,13 +99,23 @@ function() {
         this._loadingUIs++; this._propertybox.onReset(ui_finish_cb);
         this._loadingUIs++; this._presenceList.onReset(ui_finish_cb);
         this._loadingUIs++; this._setMesh.onReset(ui_finish_cb);
-        this._loadingUIs++; this._ezui.onReset(ui_finish_cb);
+        this._loadingUIs++; this._flatland.onReset(ui_finish_cb);
     };
+
+
+    /**
+     this._alreadyInitialized is true or false.  If true, means that we
+     already had a graphics viewer completely initialized before going
+     through this initialization process.  If false, means that we
+     are doing initialization for the first time.
+     */
     std.graphics.DefaultGraphics.prototype.finishedUIInit = function(cb) {
         this._loadingUIs--;
         if (this._loadingUIs > 0) return;
 
-        this._simulator.hideLoadScreen();
+
+        if (! this._alreadyInitialized)
+            this._simulator.hideLoadScreen();
 
         this._moverot = new std.movement.MoveAndRotate(this._pres, std.core.bind(this.updateCameraOffset, this), 'rotation');
 
@@ -108,61 +128,63 @@ function() {
         this._binding = new std.graphics.InputBinding();
         this._simulator.inputHandler.onAnything = std.core.bind(this._binding.dispatch, this._binding);
 
-
-        this._binding.addAction('quit', std.core.bind(this._simulator.quit, this._simulator));
-        this._binding.addAction('screenshot', std.core.bind(this._simulator.screenshot, this._simulator));
-        this._binding.addAction('toggleSuspend', std.core.bind(this._simulator.toggleSuspend, this._simulator));
-        this._binding.addAction('scriptSelectedObject', std.core.bind(this.scriptSelectedObject, this));
-        this._binding.addAction('scriptSelf', std.core.bind(this.scriptSelf, this));
-        this._binding.addAction('togglePropertyBox', std.core.bind(this.togglePropertyBox, this));
-
-        this._binding.addAction('toggleChat', std.core.bind(this.toggleChat, this));
-
-        this._binding.addAction('togglePhysicsProperties', std.core.bind(this._physics.toggle, this._physics));
-        this._binding.addAction('togglePresenceList', std.core.bind(this._presenceList.toggle, this._presenceList));
-        this._binding.addAction('toggleSetMesh', std.core.bind(this._setMesh.toggle, this._setMesh));
-
-        this._binding.addAction('toggleCameraMode', std.core.bind(this.toggleCameraMode, this));
-
-        this._binding.addAction('actOnObject', std.core.bind(this.actOnObject, this));
-        this._binding.addAction('teleportToObj', std.core.bind(this.teleportToObj, this));
-
-        this._binding.addToggleAction('moveForward', std.core.bind(this.moveSelf, this, new util.Vec3(0, 0, -1)), 1, -1);
-        this._binding.addToggleAction('moveBackward', std.core.bind(this.moveSelf, this, new util.Vec3(0, 0, 1)), 1, -1);
-        this._binding.addToggleAction('moveLeft', std.core.bind(this.moveSelf, this, new util.Vec3(-1, 0, 0)), 1, -1);
-        this._binding.addToggleAction('moveRight', std.core.bind(this.moveSelf, this, new util.Vec3(1, 0, 0)), 1, -1);
-        this._binding.addToggleAction('moveUp', std.core.bind(this.moveSelf, this, new util.Vec3(0, 1, 0)), 1, -1);
-        this._binding.addToggleAction('moveDown', std.core.bind(this.moveSelf, this, new util.Vec3(0, -1, 0)), 1, -1);
-
-        this._binding.addToggleAction('rotateUp', std.core.bind(this.rotateSelf, this, new util.Vec3(1, 0, 0)), 1, -1);
-        this._binding.addToggleAction('rotateDown', std.core.bind(this.rotateSelf, this, new util.Vec3(-1, 0, 0)), 1, -1);
-        this._binding.addToggleAction('rotateLeft', std.core.bind(this.rotateSelf, this, new util.Vec3(0, 1, 0)), 1, -1);
-        this._binding.addToggleAction('rotateRight', std.core.bind(this.rotateSelf, this, new util.Vec3(0, -1, 0)), 1, -1);
-
         this._binding.addFloat2Action('pickObject', std.core.bind(this.pickObject, this));
-        this._binding.addFloat2Action('turnOffAxis', std.core.bind(this.turnOffAxis, this));
-        
-        this._binding.addAction('axesSnapLocal', std.core.bind(this.setAxesInheritOrient, this, true));
-        this._binding.addAction('axesSnapGlobal', std.core.bind(this.setAxesInheritOrient, this, false));
-        
-        this._binding.addAction('updatePhysicsProperties', std.core.bind(this.updatePhysicsProperties, this));
 
-        this._binding.addAction('startMoveDrag', std.core.bind(this.startDrag, this, this._draggers.move));
-        this._binding.addAction('startRotateDrag', std.core.bind(this.startDrag, this, this._draggers.rotate));
-        this._binding.addAction('startScaleDrag', std.core.bind(this.startDrag, this, this._draggers.scale));
-        this._binding.addAction('forwardMousePressToDragger', std.core.bind(this.forwardMousePressToDragger, this));
-        this._binding.addAction('forwardMouseDragToDragger', std.core.bind(this.forwardMouseDragToDragger, this));
-        this._binding.addAction('updatePropertyBox', std.core.bind(this.updatePropertyBox, this));
-        this._binding.addAction('forwardMouseReleaseToDragger', std.core.bind(this.forwardMouseReleaseToDragger, this));
-        this._binding.addAction('stopDrag', std.core.bind(this.stopDrag, this));
-        this._binding.addFloat2Action('showEZUI', std.core.bind(this.showEZUI, this));
-        this._binding.addAction('hideEZUI', std.core.bind(this.hideEZUI, this));
+        if (! this._alreadyInitialized)
+        {
+            this._binding.addAction('quit', std.core.bind(this._simulator.quit, this._simulator));
+            this._binding.addAction('screenshot', std.core.bind(this._simulator.screenshot, this._simulator));
+            this._binding.addAction('toggleSuspend', std.core.bind(this._simulator.toggleSuspend, this._simulator));
+            this._binding.addAction('scriptSelectedObject', std.core.bind(this.scriptSelectedObject, this));
+            this._binding.addAction('scriptSelf', std.core.bind(this.scriptSelf, this));
+            
+            this._binding.addAction('togglePropertyBox', std.core.bind(this.togglePropertyBox, this));
+            this._binding.addAction('toggleChat', std.core.bind(this.toggleChat, this));
+            this._binding.addAction('togglePhysicsProperties', std.core.bind(this._physics.toggle, this._physics));
+            this._binding.addAction('togglePresenceList', std.core.bind(this._presenceList.toggle, this._presenceList));
+            this._binding.addAction('toggleSetMesh', std.core.bind(this._setMesh.toggle, this._setMesh));
+            this._binding.addFloat2Action('showFlatland', std.core.bind(this.showFlatland, this));
+            this._binding.addAction('hideFlatland', std.core.bind(this.hideFlatland, this));
 
-        this._binding.addAction('startFreeRotate', std.core.bind(this.startFreeRotate, this));
-        this._binding.addAction('freeRotateDrag', std.core.bind(this.freeRotateDrag, this));
-        this._binding.addAction('freeRotateRelease', std.core.bind(this.freeRotateRelease, this));
-        this._binding.addAction('undo', std.core.bind(this.undo, this));
-        this._binding.addAction('redo', std.core.bind(this.redo, this));
+            this._binding.addAction('toggleCameraMode', std.core.bind(this.toggleCameraMode, this));
+
+            this._binding.addAction('actOnObject', std.core.bind(this.actOnObject, this));
+            this._binding.addAction('teleportToObj', std.core.bind(this.teleportToObj, this));
+
+            this._binding.addToggleAction('moveForward', std.core.bind(this.moveSelf, this, new util.Vec3(0, 0, -1)), 1, -1);
+            this._binding.addToggleAction('moveBackward', std.core.bind(this.moveSelf, this, new util.Vec3(0, 0, 1)), 1, -1);
+            this._binding.addToggleAction('moveLeft', std.core.bind(this.moveSelf, this, new util.Vec3(-1, 0, 0)), 1, -1);
+            this._binding.addToggleAction('moveRight', std.core.bind(this.moveSelf, this, new util.Vec3(1, 0, 0)), 1, -1);
+            this._binding.addToggleAction('moveUp', std.core.bind(this.moveSelf, this, new util.Vec3(0, 1, 0)), 1, -1);
+            this._binding.addToggleAction('moveDown', std.core.bind(this.moveSelf, this, new util.Vec3(0, -1, 0)), 1, -1);
+
+            this._binding.addToggleAction('rotateUp', std.core.bind(this.rotateSelf, this, new util.Vec3(1, 0, 0)), 1, -1);
+            this._binding.addToggleAction('rotateDown', std.core.bind(this.rotateSelf, this, new util.Vec3(-1, 0, 0)), 1, -1);
+            this._binding.addToggleAction('rotateLeft', std.core.bind(this.rotateSelf, this, new util.Vec3(0, 1, 0)), 1, -1);
+            this._binding.addToggleAction('rotateRight', std.core.bind(this.rotateSelf, this, new util.Vec3(0, -1, 0)), 1, -1);
+
+            this._binding.addFloat2Action('turnOffAxis', std.core.bind(this.turnOffAxis, this));
+        
+            this._binding.addAction('axesSnapLocal', std.core.bind(this.setAxesInheritOrient, this, true));
+            this._binding.addAction('axesSnapGlobal', std.core.bind(this.setAxesInheritOrient, this, false));
+        
+            this._binding.addAction('updatePhysicsProperties', std.core.bind(this.updatePhysicsProperties, this));
+
+            this._binding.addAction('startMoveDrag', std.core.bind(this.startDrag, this, this._draggers.move));
+            this._binding.addAction('startRotateDrag', std.core.bind(this.startDrag, this, this._draggers.rotate));
+            this._binding.addAction('startScaleDrag', std.core.bind(this.startDrag, this, this._draggers.scale));
+            this._binding.addAction('forwardMousePressToDragger', std.core.bind(this.forwardMousePressToDragger, this));
+            this._binding.addAction('forwardMouseDragToDragger', std.core.bind(this.forwardMouseDragToDragger, this));
+            this._binding.addAction('updatePropertyBox', std.core.bind(this.updatePropertyBox, this));
+            this._binding.addAction('forwardMouseReleaseToDragger', std.core.bind(this.forwardMouseReleaseToDragger, this));
+            this._binding.addAction('stopDrag', std.core.bind(this.stopDrag, this));
+
+            this._binding.addAction('startFreeRotate', std.core.bind(this.startFreeRotate, this));
+            this._binding.addAction('freeRotateDrag', std.core.bind(this.freeRotateDrag, this));
+            this._binding.addAction('freeRotateRelease', std.core.bind(this.freeRotateRelease, this));
+            this._binding.addAction('undo', std.core.bind(this.undo, this));
+            this._binding.addAction('redo', std.core.bind(this.redo, this));
+        }
 
         /** Bindings are an *ordered* list of keys and actions. Keys
          *  are a combination of the type of event, the primary key
@@ -174,68 +196,68 @@ function() {
          *  will always be triggered. There isn't support
          *  for matching combinations of modifiers.
          */
-        var bindings = [
-            { key: ['button-pressed', 'escape'], action: 'quit' },
-            { key: ['button-pressed', 'i'], action: 'screenshot' },
-            { key: ['button-pressed', 'm'], action: 'toggleSuspend' },
-            { key: ['button-pressed', 's', 'alt' ], action: 'scriptSelectedObject' },
-            { key: ['button-pressed', 's', 'ctrl' ], action: 'scriptSelf' },
+        var bindings = [{ key: ['mouse-press', 1 ], action: 'pickObject' },
+                        { key: ['mouse-click', 2], action: 'pickObject' }];
 
-            { key: ['button-pressed', 'c', 'ctrl' ], action: 'toggleChat' },
-            { key: ['button-pressed', 'p', 'ctrl' ], action: 'togglePhysicsProperties' },
-            { key: ['button-pressed', 'p', 'alt' ], action: 'togglePropertyBox' },
-            { key: ['button-pressed', 'l', 'ctrl' ], action: 'togglePresenceList' },
-            { key: ['button-pressed', 'j', 'ctrl' ], action: 'toggleSetMesh' },
+        if (!this._alreadyInitialized)
+        {
+            bindings = bindings.concat([{ key: ['button-pressed', 'escape'], action: 'quit' },
+                                        { key: ['button-pressed', 'i'], action: 'screenshot' },
+                                        { key: ['button-pressed', 'm'], action: 'toggleSuspend' },
+                                        { key: ['button-pressed', 's', 'alt' ], action: 'scriptSelectedObject' },
+                                        { key: ['button-pressed', 's', 'ctrl' ], action: 'scriptSelf' },
+                                        { key: ['button-pressed', 'c', 'ctrl' ], action: 'toggleChat' },
+                                        { key: ['button-pressed', 'p', 'ctrl' ], action: 'togglePhysicsProperties' },
+                                        { key: ['button-pressed', 'p', 'alt' ], action: 'togglePropertyBox' },
+                                        { key: ['button-pressed', 'l', 'ctrl' ], action: 'togglePresenceList' },
+                                        { key: ['button-pressed', 'j', 'ctrl' ], action: 'toggleSetMesh' },
             
-            { key: ['button-pressed', 'g', 'alt' ], action: 'axesSnapLocal' },
-            { key: ['button-pressed', 'g', 'ctrl' ], action: 'axesSnapGlobal' },
+                                        { key: ['button-pressed', 'g', 'alt' ], action: 'axesSnapLocal' },
+                                        { key: ['button-pressed', 'g', 'ctrl' ], action: 'axesSnapGlobal' },
+                                        
+                                        { key: ['button-pressed', 'z', 'ctrl' ], action: 'undo' },
+                                        { key: ['button-pressed', 'y', 'ctrl' ], action: 'redo' },
+                                        
+                                        { key: ['mouse-click', 1, 'shift'], action: 'turnOffAxis' },
+                                        { key: ['mouse-click', 2], action: 'scriptSelectedObject' },
+                                        { key: ['button-pressed', 'return'], action: 'actOnObject' },
+                                        { key: ['button-pressed', 't', 'ctrl' ], action: 'teleportToObj' },
 
-            { key: ['button-pressed', 'z', 'ctrl' ], action: 'undo' },
-            { key: ['button-pressed', 'y', 'ctrl' ], action: 'redo' },
+                                        { key: ['button-pressed', 'c' ], action: 'toggleCameraMode' },
 
-            { key: ['mouse-click', 1, 'shift'], action: 'turnOffAxis' },
-            { key: ['mouse-click', 2], action: 'pickObject' },
-            { key: ['mouse-click', 2], action: 'scriptSelectedObject' },
-            { key: ['button-pressed', 'return'], action: 'actOnObject' },
-            { key: ['button-pressed', 't', 'ctrl' ], action: 'teleportToObj' },
+                                        { key: ['button', 'w' ], action: 'moveForward' },
+                                        { key: ['button', 'up' ], action: 'moveForward' },
+                                        { key: ['button', 's' ], action: 'moveBackward' },
+                                        { key: ['button', 'down' ], action: 'moveBackward' },
+                                        { key: ['button', 'a' ], action: 'moveLeft' },
+                                        { key: ['button', 'd' ], action: 'moveRight' },
+                                        { key: ['button', 'q' ], action: 'moveUp' },
+                                        { key: ['button', 'z' ], action: 'moveDown' },
 
-            { key: ['button-pressed', 'c' ], action: 'toggleCameraMode' },
+                                        { key: ['button', 'up', 'shift' ], action: 'rotateUp' },
+                                        { key: ['button', 'down', 'shift' ], action: 'rotateDown' },
+                                        { key: ['button', 'left' ], action: 'rotateLeft' },
+                                        { key: ['button', 'right' ], action: 'rotateRight' },
 
-            { key: ['button', 'w' ], action: 'moveForward' },
-            { key: ['button', 'up' ], action: 'moveForward' },
-            { key: ['button', 's' ], action: 'moveBackward' },
-            { key: ['button', 'down' ], action: 'moveBackward' },
-            { key: ['button', 'a' ], action: 'moveLeft' },
-            { key: ['button', 'd' ], action: 'moveRight' },
-            { key: ['button', 'q' ], action: 'moveUp' },
-            { key: ['button', 'z' ], action: 'moveDown' },
+                                        { key: ['mouse-press', 1 ], action: 'updatePhysicsProperties' },
 
-            { key: ['button', 'up', 'shift' ], action: 'rotateUp' },
-            { key: ['button', 'down', 'shift' ], action: 'rotateDown' },
-            { key: ['button', 'left' ], action: 'rotateLeft' },
-            { key: ['button', 'right' ], action: 'rotateRight' },
-
-            { key: ['mouse-press', 1 ], action: 'pickObject' },
-
-            { key: ['mouse-press', 1 ], action: 'updatePhysicsProperties' },
-
-            // Note that the ordering of registration here is critical.
-            { key: ['mouse-press', 1, 'none' ], action: 'startMoveDrag' },
-            { key: ['mouse-press', 1, 'ctrl' ], action: 'startRotateDrag' },
-            { key: ['mouse-press', 1, 'alt' ], action: 'startScaleDrag' },
-            { key: ['mouse-press', 1, '*'], action: 'forwardMousePressToDragger' },
-            { key: ['mouse-press', 1, '*'], action: 'updatePropertyBox' },
-            { key: ['mouse-drag', 1, '*'], action: 'forwardMouseDragToDragger' },
-            { key: ['mouse-release', 1, '*'], action: 'forwardMouseReleaseToDragger' },
-            { key: ['mouse-release', 1, '*'], action: 'stopDrag' },
-            { key: ['mouse-press', 3, 'none'], action: 'showEZUI' },
-            { key: ['mouse-press', 3, 'none' ], action: 'startFreeRotate' },
-            { key: ['mouse-drag', 3, 'none'], action: 'freeRotateDrag' },
-            { key: ['mouse-release', 3, 'none'], action: 'freeRotateRelease' }
-        ];
+                                        // Note that the ordering of registration here is critical.
+                                        { key: ['mouse-press', 1, 'none' ], action: 'startMoveDrag' },
+                                        { key: ['mouse-press', 1, 'ctrl' ], action: 'startRotateDrag' },
+                                        { key: ['mouse-press', 1, 'alt' ], action: 'startScaleDrag' },
+                                        { key: ['mouse-press', 1, '*'], action: 'forwardMousePressToDragger' },
+                                        { key: ['mouse-press', 1, '*'], action: 'updatePropertyBox' },
+                                        { key: ['mouse-drag', 1, '*'], action: 'forwardMouseDragToDragger' },
+                                        { key: ['mouse-release', 1, '*'], action: 'forwardMouseReleaseToDragger' },
+                                        { key: ['mouse-release', 1, '*'], action: 'stopDrag' },
+                                        { key: ['mouse-press', 3, 'none'], action: 'showFlatland' },
+                                        { key: ['mouse-press', 3, 'none' ], action: 'startFreeRotate' },
+                                        { key: ['mouse-drag', 3, 'none'], action: 'freeRotateDrag' },
+                                        { key: ['mouse-release', 3, 'none'], action: 'freeRotateRelease' }
+                                       ]);
+        }
 
         this._binding.addBindings(bindings);
-
         std.graphics.axes.init(this._simulator);
         this._axesInheritOrient = true;
 
@@ -372,28 +394,39 @@ function() {
     };
 
     /** @function */
-    std.graphics.DefaultGraphics.prototype.pickObject = function(x, y) {
+    std.graphics.DefaultGraphics.prototype.pickObject = function(x, y)
+    {
         var ignore_self = this._camera.mode() == 'first';
         var clicked = this._simulator.pick(x, y, ignore_self);
         if (clicked) {
             if (this._selected) {
                 if (this._selected.toString() != clicked.toString()) {
-                    this._simulator.bbox(this._selected, false);
-                    std.graphics.axes.setVisibleAll(this._selected, false);
+                    if (!this._alreadyInitialized)
+                    {
+                        this._simulator.bbox(this._selected, false);
+                        std.graphics.axes.setVisibleAll(this._selected, false);                        
+                    }
                 } else {
                     return;
                 }
             }
-            
+
             this._selected = clicked;
-            this._simulator.bbox(this._selected, true);
-            std.graphics.axes.setInheritOrientAll(this._selected, this._axesInheritOrient);
-            std.graphics.axes.setVisibleAll(this._selected, true);
+            if (!this._alreadyInitialized)
+            {
+                this._simulator.bbox(this._selected, true);
+                std.graphics.axes.setInheritOrientAll(this._selected, this._axesInheritOrient);
+                std.graphics.axes.setVisibleAll(this._selected, true);
+            }
         } else if (this._selected) {
-            this._simulator.bbox(this._selected, false);
-            std.graphics.axes.setVisibleAll(this._selected, false);
+            if (!this._alreadyInitialized)
+            {
+                this._simulator.bbox(this._selected, false);
+                std.graphics.axes.setVisibleAll(this._selected, false);
+            }
             this._selected = null;
         }
+
     };
 
     /** @function */
@@ -445,6 +478,8 @@ function() {
         this._propertybox.HandleUpdateProperties(this._selected);
     };
 
+
+    
     /** @function */
     std.graphics.DefaultGraphics.prototype.updatePropertyBox = function(evt) {
         this._propertybox.HandleUpdateProperties(this._selected);
@@ -527,14 +562,14 @@ function() {
     };
 
 
-    std.graphics.DefaultGraphics.prototype.showEZUI = function (x, y) {
+    std.graphics.DefaultGraphics.prototype.showFlatland = function (x, y) {
         var ignore_self = this._camera.mode() == 'first';
         var clicked = this._simulator.pick(x, y, ignore_self);
-        this._ezui.show(clicked, x, y);
+        this._flatland.show(clicked, x, y);
     };
 
-    std.graphics.DefaultGraphics.prototype.hideEZUI = function () {
-        this._ezui.hide();
+    std.graphics.DefaultGraphics.prototype.hideFlatland = function () {
+        this._flatland.hide();
     };
 
 })();

@@ -52,7 +52,7 @@ namespace Sirikata {
 
 float64 MaxDistUpdatePredicate::maxDist = 3.0;
 
-Object::Object(ObjectFactory* obj_factory, const UUID& id, MotionPath* motion, const BoundingSphere3f& bnds, bool regQuery, SolidAngle queryAngle, const ObjectHostContext* ctx)
+Object::Object(ObjectFactory* obj_factory, const UUID& id, MotionPath* motion, const BoundingSphere3f& bnds, bool regQuery, SolidAngle queryAngle,  ObjectHostContext* ctx)
  : mID(id),
    mContext(ctx),
    mObjectFactory(obj_factory),
@@ -74,7 +74,7 @@ Object::Object(ObjectFactory* obj_factory, const UUID& id, MotionPath* motion, c
         )
     );
 
-    mSSTDatagramLayer = BaseDatagramLayerType::createDatagramLayer(SpaceObjectReference(SpaceID::null(), ObjectReference(id)), ctx, mDelegateODPService);
+    mSSTDatagramLayer = mContext->sstConnMgr()->createDatagramLayer(SpaceObjectReference(SpaceID::null(), ObjectReference(id)), ctx, mDelegateODPService);
 }
 
 Object::~Object() {
@@ -183,7 +183,7 @@ void Object::connect() {
     if (mRegisterQuery)
         mContext->objectHost->connect(
             this,
-            mQueryAngle,
+            mQueryAngle, 0,
             std::tr1::bind(&Object::handleSpaceConnection, this, _1, _2, _3),
             mContext->mainStrand->wrap( std::tr1::bind(&Object::handleSpaceMigration, this, _1, _2, _3) ),
 	    mContext->mainStrand->wrap( std::tr1::bind(&Object::handleSpaceStreamCreated, this) ),

@@ -85,7 +85,6 @@ EmersonScript::EmersonScript(HostedObjectPtr ho, const String& args, const Strin
    mHandlingEvent(false),
    mResetting(false),
    mKilling(false),
-   mCreateEntityPort(NULL),
    presenceToken(HostedObject::DEFAULT_PRESENCE_TOKEN +1),
    emHttpPtr(EmersonHttpManager::construct<EmersonHttpManager> (ho->context()))
 {
@@ -339,7 +338,6 @@ void  EmersonScript::notifyProximate(ProxyObjectPtr proximateObject, const Space
 JSInvokableObject::JSInvokableObjectInt* EmersonScript::runSimulation(const SpaceObjectReference& sporef, const String& simname)
 {
     TimeSteppedSimulation* sim = mParent->runSimulation(sporef,simname);
-
     return new JSInvokableObject::JSInvokableObjectInt(sim);
 }
 
@@ -406,9 +404,6 @@ void EmersonScript::onConnected(SessionEventProviderPtr from, const SpaceObjectR
         mMessagingPortMap[SpaceObjectReference(space_id,obj_refer)] = msgPort;
         msgPort->receive( std::tr1::bind(&EmersonScript::handleScriptCommUnreliable, this, _1, _2, _3));
     }
-
-    if (!mCreateEntityPort)
-        mCreateEntityPort = mParent->bindODPPort(space_id,obj_refer, Services::CREATE_ENTITY);
 
     //set up reliable messages for the connected presence
     EmersonMessagingManager::presenceConnected(name);
@@ -509,6 +504,7 @@ void EmersonScript::create_entity(EntityCreateInfo& eci)
         eci.mesh,
         eci.physics,
         eci.solid_angle,
+        eci.max_results,
         UUID::null(),
         ObjectReference::null()
     );
@@ -542,6 +538,13 @@ void EmersonScript::stop() {
     mParent->removeListener((SessionEventListener*)this);
 
     mPresences.clear();
+
+    // Delete messaging ports
+    for(MessagingPortMap::iterator messaging_it = mMessagingPortMap.begin();
+        messaging_it != mMessagingPortMap.end();
+        messaging_it++)
+        delete messaging_it->second;
+    mMessagingPortMap.clear();
 }
 
 bool EmersonScript::valid() const
@@ -602,7 +605,6 @@ v8::Handle<v8::Value> EmersonScript::create_timeout(double period,v8::Persistent
     //timer requires a handle to its persistent object so can handle cleanup
     //correctly.
     jstimer->setPersistentObject(returner);
-
 
     return handle_scope.Close(returner);
 }
@@ -709,7 +711,7 @@ bool EmersonScript::handleScriptCommRead(const SpaceObjectReference& src, const 
     bool isJSMsg   = jsMsg.ParseFromString(payload);
     if (! isJSMsg)
         isJSMsg = jsMsg.ParseFromArray(payload.data(),payload.size());
-    
+
     bool isJSField = false;
     if (!isJSMsg)
     {
@@ -722,7 +724,7 @@ bool EmersonScript::handleScriptCommRead(const SpaceObjectReference& src, const 
     //a jsfieldval, then return false;
     if (!(isJSMsg || isJSField))
         return false;
-    
+
 
     if (isStopped()) {
         JSLOG(warn, "Ignoring message after shutdown request.");
@@ -757,6 +759,8 @@ bool EmersonScript::handleScriptCommRead(const SpaceObjectReference& src, const 
             if (receiver->presenceMessageCallback.IsEmpty())
                 continue;
 
+            //stack maintenance
+            mEvalContextStack.push(EvalContext(receiver));
             v8::HandleScope handle_scope;
             v8::Context::Scope context_scope (receiver->mContext);
 
@@ -780,6 +784,9 @@ bool EmersonScript::handleScriptCommRead(const SpaceObjectReference& src, const 
             {
                 JSLOG(error, "Deserialization Failed!!");
                 mHandlingEvent =false;
+
+                //match removing the context that we appended to stack.
+                mEvalContextStack.pop();
                 return false;
             }
 
@@ -788,6 +795,9 @@ bool EmersonScript::handleScriptCommRead(const SpaceObjectReference& src, const 
             argv[1] = msgSender;
             argv[2] = v8::String::New (dst.toString().c_str(), dst.toString().size());
             invokeCallback(receiver,receiver->presenceMessageCallback,3,argv);
+
+            //match removing the context that we appended to stack.
+            mEvalContextStack.pop();
         }
     }
 
@@ -934,6 +944,13 @@ void EmersonScript::removePresenceData(const SpaceObjectReference& sporefToDelet
     PresenceMapIter pIter = mPresences.find(sporefToDelete);
     if (pIter != mPresences.end())
         mPresences.erase(pIter);
+
+    // Remove the ODP::Port used for unreliable messaging
+    MessagingPortMap::iterator messaging_it = mMessagingPortMap.find(sporefToDelete);
+    if (messaging_it != mMessagingPortMap.end()) {
+        delete messaging_it->second;
+        mMessagingPortMap.erase(messaging_it);
+    }
 }
 
 
@@ -1046,6 +1063,7 @@ v8::Handle<v8::Value> EmersonScript::restorePresence(PresStructRestoreParams& ps
             psrp.mesh,
             psrp.physics,
             psrp.query,
+            psrp.queryMaxResults,
             UUID::null(),
             psrp.sporef.object(),
             presToke
@@ -1058,7 +1076,6 @@ v8::Handle<v8::Value> EmersonScript::restorePresence(PresStructRestoreParams& ps
     v8::HandleScope handle_scope;
     return handle_scope.Close(wrapPresence(jspres,&(jsctx->mContext)));
 }
-
 
 
 
@@ -1136,10 +1153,13 @@ void EmersonScript::setPhysicsFunction(const SpaceObjectReference sporef, const 
 }
 
 
-//just sets the solid angle query for the object.
 void EmersonScript::setQueryAngleFunction(const SpaceObjectReference sporef, const SolidAngle& sa)
 {
-    mParent->requestQueryUpdate(sporef.space(), sporef.object(), sa);
+    mParent->requestQueryUpdate(
+        sporef.space(), sporef.object(),
+        sa,
+        mParent->requestQueryMaxResults(sporef.space(), sporef.object())
+    );
 }
 
 
@@ -1149,6 +1169,20 @@ SolidAngle EmersonScript::getQueryAngle(const SpaceObjectReference sporef)
     return returner;
 }
 
+
+void EmersonScript::setQueryCount(const SpaceObjectReference sporef, const uint32 count)
+{
+    mParent->requestQueryUpdate(
+        sporef.space(), sporef.object(),
+        mParent->requestQueryAngle(sporef.space(), sporef.object()),
+        count
+    );
+}
+
+uint32 EmersonScript::getQueryCount(const SpaceObjectReference sporef)
+{
+    return mParent->requestQueryMaxResults(sporef.space(),sporef.object());
+}
 
 } // namespace JS
 } // namespace Sirikata

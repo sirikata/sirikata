@@ -38,6 +38,7 @@
 #include <sirikata/core/transfer/URI.hpp>
 
 #include <sirikata/core/transfer/TransferPool.hpp>
+#include <sirikata/core/transfer/AggregatedTransferPool.hpp>
 #include <sirikata/core/transfer/RemoteFileMetadata.hpp>
 #include <sirikata/core/transfer/TransferMediator.hpp>
 
@@ -543,31 +544,34 @@ public:
     }
 
     void multi_request_finished(std::tr1::shared_ptr<Transfer::HttpManager::HttpResponse> response,
-            Transfer::HttpManager::ERR_TYPE error, const boost::system::error_code& boost_error) {
+        Transfer::HttpManager::ERR_TYPE error, const boost::system::error_code& boost_error) {
 
         SILOG(transfer, debug, "multi_request_finished callback");
 
-        if (error == Transfer::HttpManager::SUCCESS) {
-            TS_ASSERT(response);
-            if(response) {
-                TS_ASSERT(response->getHeaders().size() != 0);
-                std::map<std::string, std::string>::const_iterator it = response->getHeaders().find("Content-Length");
-                TS_ASSERT(it != response->getHeaders().end());
-                TS_ASSERT(response->getStatusCode() == 200);
-                TS_ASSERT(response->getData());
-                if (response->getData()) {
-                    TS_ASSERT(response->getData()->length() == (uint64)response->getContentLength());
-                    TS_ASSERT(response->getContentLength() == mHashTest1Size);
+        {
+            boost::unique_lock<boost::mutex> lock(mMutex);
+            if (error == Transfer::HttpManager::SUCCESS) {
+                TS_ASSERT(response);
+                if(response) {
+                    TS_ASSERT(response->getHeaders().size() != 0);
+                    std::map<std::string, std::string>::const_iterator it = response->getHeaders().find("Content-Length");
+                    TS_ASSERT(it != response->getHeaders().end());
+                    TS_ASSERT(response->getStatusCode() == 200);
+                    TS_ASSERT(response->getData());
+                    if (response->getData()) {
+                        TS_ASSERT(response->getData()->length() == (uint64)response->getContentLength());
+                        TS_ASSERT(response->getContentLength() == mHashTest1Size);
+                    }
                 }
+            } else if (error == Transfer::HttpManager::REQUEST_PARSING_FAILED) {
+                TS_FAIL("HTTP Request parsing failed");
+            } else if (error == Transfer::HttpManager::RESPONSE_PARSING_FAILED) {
+                TS_FAIL("HTTP Response parsing failed");
+            } else if (error == Transfer::HttpManager::BOOST_ERROR) {
+                TS_FAIL("HTTP request failed with a boost error: " + boost_error.message());
+            } else {
+                TS_FAIL("Got unknown response code from HttpManager");
             }
-        } else if (error == Transfer::HttpManager::REQUEST_PARSING_FAILED) {
-            TS_FAIL("HTTP Request parsing failed");
-        } else if (error == Transfer::HttpManager::RESPONSE_PARSING_FAILED) {
-            TS_FAIL("HTTP Response parsing failed");
-        } else if (error == Transfer::HttpManager::BOOST_ERROR) {
-            TS_FAIL("HTTP request failed with a boost error: " + boost_error.message());
-        } else {
-            TS_FAIL("Got unknown response code from HttpManager");
         }
 
         boost::unique_lock<boost::mutex> lock(mNumCbsMutex);
@@ -579,43 +583,51 @@ public:
     }
 
     void expect_request_failed(std::tr1::shared_ptr<Transfer::HttpManager::HttpResponse> response,
-            Transfer::HttpManager::ERR_TYPE error, const boost::system::error_code& boost_error) {
+        Transfer::HttpManager::ERR_TYPE error, const boost::system::error_code& boost_error) {
 
         std::tr1::shared_ptr<Transfer::HttpManager::HttpResponse> bad;
         mHttpResponse = bad;
 
-        if (error == Transfer::HttpManager::REQUEST_PARSING_FAILED) {
-            SILOG(transfer, debug, "parsing failed as it should have");
-            mHttpResponse = response;
-        } else if (error == Transfer::HttpManager::SUCCESS) {
-            TS_FAIL("HTTP Request succeeded when it should have failed");
-        } else if (error == Transfer::HttpManager::RESPONSE_PARSING_FAILED) {
-            TS_FAIL("HTTP Response parsing failed");
-        } else if (error == Transfer::HttpManager::BOOST_ERROR) {
-            TS_FAIL("HTTP request failed with a boost error: " + boost_error.message());
-        } else {
-            TS_FAIL("Got unknown response code from HttpManager");
+        {
+            boost::unique_lock<boost::mutex> lock(mMutex);
+
+            if (error == Transfer::HttpManager::REQUEST_PARSING_FAILED) {
+                SILOG(transfer, debug, "parsing failed as it should have");
+                mHttpResponse = response;
+            } else if (error == Transfer::HttpManager::SUCCESS) {
+                TS_FAIL("HTTP Request succeeded when it should have failed");
+            } else if (error == Transfer::HttpManager::RESPONSE_PARSING_FAILED) {
+                TS_FAIL("HTTP Response parsing failed");
+            } else if (error == Transfer::HttpManager::BOOST_ERROR) {
+                TS_FAIL("HTTP request failed with a boost error: " + boost_error.message());
+            } else {
+                TS_FAIL("Got unknown response code from HttpManager");
+            }
         }
 
         mDone.notify_all();
     }
 
     void request_finished(std::tr1::shared_ptr<Transfer::HttpManager::HttpResponse> response,
-            Transfer::HttpManager::ERR_TYPE error, const boost::system::error_code& boost_error) {
+        Transfer::HttpManager::ERR_TYPE error, const boost::system::error_code& boost_error) {
 
         std::tr1::shared_ptr<Transfer::HttpManager::HttpResponse> bad;
         mHttpResponse = bad;
 
-        if (error == Transfer::HttpManager::SUCCESS) {
-            mHttpResponse = response;
-        } else if (error == Transfer::HttpManager::REQUEST_PARSING_FAILED) {
-            TS_FAIL("HTTP Request parsing failed");
-        } else if (error == Transfer::HttpManager::RESPONSE_PARSING_FAILED) {
-            TS_FAIL("HTTP Response parsing failed");
-        } else if (error == Transfer::HttpManager::BOOST_ERROR) {
-            TS_FAIL("HTTP request failed with a boost error: " + boost_error.message());
-        } else {
-            TS_FAIL("Got unknown response code from HttpManager");
+        {
+            boost::unique_lock<boost::mutex> lock(mMutex);
+
+            if (error == Transfer::HttpManager::SUCCESS) {
+                mHttpResponse = response;
+            } else if (error == Transfer::HttpManager::REQUEST_PARSING_FAILED) {
+                TS_FAIL("HTTP Request parsing failed");
+            } else if (error == Transfer::HttpManager::RESPONSE_PARSING_FAILED) {
+                TS_FAIL("HTTP Response parsing failed");
+            } else if (error == Transfer::HttpManager::BOOST_ERROR) {
+                TS_FAIL("HTTP request failed with a boost error: " + boost_error.message());
+            } else {
+                TS_FAIL("Got unknown response code from HttpManager");
+            }
         }
 
         mDone.notify_all();
@@ -764,7 +776,7 @@ public:
 		using std::tr1::placeholders::_1;
 
 		//Register with the transfer mediator!
-		mTransferPool = mTransferMediator.registerClient(mClientID);
+		mTransferPool = mTransferMediator.registerClient<Transfer::AggregatedTransferPool>(mClientID);
 
         for(std::vector<std::tr1::shared_ptr<RequestVerifier> >::iterator it = mReqList.begin(); it != mReqList.end(); it++) {
             float pri = rand()/(float(RAND_MAX)+1);

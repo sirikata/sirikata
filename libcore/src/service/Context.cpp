@@ -39,8 +39,6 @@
 
 namespace Sirikata {
 
-Context* Context::mainContextPtr = NULL;
-
 Context::Context(const String& name, Network::IOService* ios, Network::IOStrand* strand, Trace::Trace* _trace, const Time& epoch, const Duration& simlen)
  : ioService(ios),
    mainStrand(strand),

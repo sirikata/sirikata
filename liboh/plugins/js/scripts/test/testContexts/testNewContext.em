@@ -4,26 +4,18 @@ system.import('test/testContexts/baseContextTest.em');
 
 x = 5;
 
-function toExecute(argPassedIn, argPassedIn2)
+function toExecute()
 {
-    x = 7;
-    argPassedIn2.print("Inside of toExecute\n");
-    var argAsString = argPassedIn.toString();
-    argPassedIn2.print("This was argPassedIn: " + argAsString + "\n");
-    argAsString = x.toString();
-    argPassedIn2.print("This is x: "+ argAsString + "\n");
+    if (typeof(x) == 'undefined')
+        x = 7;
+    else
+        system.print('\n\n\nError.  Did not receive undefined x.\n\n');
+    
+    system.print("\n\nInside of toExecute\n\n");
+    system.print("This is x: "+ x.toString() + "\n");
 };
 
-newContext.execute(toExecute,32,system);
-newContext.execute(toExecute,32,system);
-
-
-function printXOnce()
-{
-    var xAsString = x.toString();
-    system.print("This is x: " + xAsString + "\n" );
-}
-
+newContext.execute(toExecute);
 
 function printXMultiple()
 {

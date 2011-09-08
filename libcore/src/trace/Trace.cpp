@@ -38,6 +38,10 @@
 
 #include <boost/thread/locks.hpp>
 
+#if SIRIKATA_PLATFORM == SIRIKATA_WINDOWS
+#include <io.h>
+#endif
+
 
 namespace Sirikata {
 namespace Trace {
@@ -90,8 +94,9 @@ void Trace::storageThread(const String& filename) {
     data.store(of);
     fflush(of);
 
-// FIXME #91
-#if SIRIKATA_PLATFORM != SIRIKATA_WINDOWS
+#if SIRIKATA_PLATFORM == SIRIKATA_WINDOWS
+    FlushFileBuffers((HANDLE) _get_osfhandle(_fileno(of)));
+#else
     fsync(fileno(of));
 #endif
     fclose(of);
@@ -116,18 +121,17 @@ void Trace::writeRecord(uint16 type_hint, BatchedBuffer::IOVec* data_orig, uint3
 }
 
 
-std::ostream&Drops::output(std::ostream&output) {
+void Drops::output() {
+    SILOG(drops, debug, "Summary of drop data:");
     for (int i=0;i<NUM_DROPS;++i) {
         if (d[i]&&n[i]) {
-            output<<n[i]<<':'<<d[i]<<'\n';
+            SILOG(drops, debug, n[i] << ':' << d[i]);
         }
     }
-    return output;
 }
 
 Trace::~Trace() {
-    std::cout<<"Summary of drop data:\n";
-    drops.output(std::cout)<<"EOF\n";
+    drops.output();
 }
 
 

@@ -38,6 +38,7 @@ namespace Disconnect {
 
 enum Code {
     Requested,
+    LoginDenied,
     Forced
 };
 

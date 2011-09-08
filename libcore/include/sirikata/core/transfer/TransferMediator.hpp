@@ -34,8 +34,7 @@
 #ifndef SIRIKATA_TransferMediator_HPP__
 #define SIRIKATA_TransferMediator_HPP__
 
-#include "SimplePriorityAggregation.hpp"
-
+#include <sirikata/core/transfer/TransferPool.hpp>
 #include <map>
 #include <vector>
 #include <boost/multi_index_container.hpp>
@@ -188,6 +187,9 @@ class SIRIKATA_EXPORT TransferMediator
 	//TransferMediator's worker thread
 	Thread* mThread;
 
+    // Algorithm used to aggregate priorities of requests
+    PriorityAggregationAlgorithm* mAggregationAlgorithm;
+
     //Main thread that handles the input pools
     void mediatorThread();
 
@@ -197,20 +199,28 @@ class SIRIKATA_EXPORT TransferMediator
     //Check our internal queue to see what request to process next
     void checkQueue();
 
+    void registerPool(TransferPoolPtr pool);
 public:
-	static TransferMediator& getSingleton();
-	static void destroy();
+    static TransferMediator& getSingleton();
+    static void destroy();
 
-	TransferMediator();
+    TransferMediator();
+    ~TransferMediator();
 
-	/*
-	 * Used to register a client that has a pool of requests it needs serviced by the transfer mediator
-	 * @param clientID	Should be a string that uniquely identifies the client
-	 */
-	std::tr1::shared_ptr<TransferPool> registerClient(const std::string clientID);
+    /** Used to register a client that has a pool of requests it needs
+     *  serviced by the transfer mediator
+     *
+     *  @param clientID Should be a string that uniquely identifies the client
+     */
+    template<typename TPoolType>
+    std::tr1::shared_ptr<TPoolType> registerClient(const std::string& clientID) {
+        std::tr1::shared_ptr<TPoolType> ret(new TPoolType(clientID));
+        registerPool(ret);
+        return ret;
+    }
 
-	//Call when system should be shut down
-	void cleanup();
+    //Call when system should be shut down
+    void cleanup();
 };
 
 }

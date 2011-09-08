@@ -43,6 +43,7 @@
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/odp/DelegateService.hpp>
 #include <sirikata/core/sync/TimeSyncClient.hpp>
+#include <sirikata/core/network/Address4.hpp>
 
 #include <sirikata/oh/DisconnectCodes.hpp>
 
@@ -69,6 +70,7 @@ class SIRIKATA_OH_EXPORT SessionManager : public Service, private ODP::DelegateS
         String mesh;
         String physics;
         SolidAngle queryAngle;
+        uint32 queryMaxResults;
     };
 
     enum ConnectionEvent {
@@ -111,13 +113,16 @@ class SIRIKATA_OH_EXPORT SessionManager : public Service, private ODP::DelegateS
 
     // NOTE: The public interface is only safe to access from the main strand.
 
-    /** Connect the object to the space with the given starting parameters. */
-    void connect(
+    /** Connect the object to the space with the given starting parameters. 
+    * \returns true if no other objects on this OH are trying to connect with this ID
+    */
+    bool connect(
         const SpaceObjectReference& sporef_objid,
         const TimedMotionVector3f& init_loc,
         const TimedMotionQuaternion& init_orient,
         const BoundingSphere3f& init_bounds,
-        bool regquery, const SolidAngle& init_sa, const String& init_mesh, const String& init_phy,
+        bool regquery, const SolidAngle& init_sa, uint32 init_max_results,
+        const String& init_mesh, const String& init_phy,
         ConnectedCallback connect_cb, MigratedCallback migrate_cb,
         StreamCreatedCallback stream_cb, DisconnectedCallback disconnected_cb
     );
@@ -200,6 +205,7 @@ private:
 
     // Set up a space connection to the given server
     void setupSpaceConnection(ServerID server, SpaceNodeConnection::GotSpaceConnectionCallback cb);
+    void finishSetupSpaceConnection(ServerID server, SpaceNodeConnection::GotSpaceConnectionCallback cb, Address4 addr);
 
     // Handle a connection event, i.e. the socket either successfully connected or failed
     void handleSpaceConnection(const Sirikata::Network::Stream::ConnectionStatus status,
@@ -211,6 +217,10 @@ private:
 
     // Final callback in session initiation -- we have all the info and now just have to return it to the object
     void openConnectionStartSession(const SpaceObjectReference& sporef_uuid, SpaceNodeConnection* conn);
+
+    // Timeout handler for initial session message -- checks if the connection
+    // succeeded and, if necessary, retries
+    void checkConnectedAndRetry(const SpaceObjectReference& sporef_uuid, ServerID connTo);
 
 
     /** Object session migration. */
@@ -269,6 +279,7 @@ private:
         BoundingSphere3f bounds;
         bool regQuery;
         SolidAngle queryAngle;
+        uint32 queryMaxResults;
         String mesh;
         String physics;
     };
@@ -285,6 +296,8 @@ private:
             InternalConnectedCallback connect_cb, MigratedCallback migrate_cb,
             StreamCreatedCallback stream_created_cb, DisconnectedCallback disconnected_cb
         );
+
+        bool exists(const SpaceObjectReference& sporef_objid);
 
         // Mark the object as connecting to the given server
         ConnectingInfo& connectingTo(const SpaceObjectReference& obj, ServerID connecting_to);
@@ -313,10 +326,15 @@ private:
         // Handle a graceful disconnection, notifying other objects
         void gracefulDisconnect(const SpaceObjectReference& sporef);
 
+        void disconnectWithCode(const SpaceObjectReference& sporef, const SpaceObjectReference& connectedAs, Disconnect::Code code);
         // Lookup the server the object is connected to.  With allow_connecting, allows using
         // the server currently being connected to, not just one where a session has been
         // established
         ServerID getConnectedServer(const SpaceObjectReference& sporef_obj_id, bool allow_connecting = false);
+
+        ServerID getConnectingToServer(const SpaceObjectReference& sporef_obj_id);
+
+        ServerID getMigratingToServer(const SpaceObjectReference& sporef_obj_id);
 
         //UUID getInternalID(const ObjectReference& space_objid) const;
 

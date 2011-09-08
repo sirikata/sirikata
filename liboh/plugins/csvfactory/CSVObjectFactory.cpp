@@ -154,6 +154,7 @@ void CSVObjectFactory::generate(const String& timestamp)
     int scale_idx = -1;
     int objid_idx = -1;
     int solid_angle_idx = -1;
+    int max_results_idx = -1;
     int physics_opts_idx = -1;
 
     // For each line
@@ -193,6 +194,10 @@ void CSVObjectFactory::generate(const String& timestamp)
                 if(line_parts[idx] == "solid_angle")
                 {
                     solid_angle_idx = idx;
+                }
+                if(line_parts[idx] == "max_results")
+                {
+                    max_results_idx = idx;
                 }
                 if (line_parts[idx] == "physics") physics_opts_idx = idx;
             }
@@ -280,6 +285,8 @@ void CSVObjectFactory::generate(const String& timestamp)
                   }
                 }
 
+                uint32 max_results = (max_results_idx == -1) ? 0 :
+                    safeLexicalCast<uint32>(line_parts[max_results_idx], 0);
 
                 String physics_opts =
                     physics_opts_idx == -1 ?
@@ -315,6 +322,7 @@ void CSVObjectFactory::generate(const String& timestamp)
                 oci.bounds = BoundingSphere3f(Vector3f::nil(), scale);
                 oci.mesh = mesh;
                 oci.query_angle = query_angle;
+                oci.query_max_results = max_results;
                 oci.physics = physics_opts;
                 mIncompleteObjects.push(oci);
 
@@ -343,6 +351,7 @@ void CSVObjectFactory::connectObjects()
             mSpace,
             oci.loc, oci.bounds, oci.mesh, oci.physics,
             const_cast<SolidAngle&>(oci.query_angle),
+            oci.query_max_results,
             UUID::null(),
             ObjectReference::null()
         );

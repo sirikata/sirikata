@@ -56,6 +56,8 @@
 #include "JSObjectScriptManager.hpp"
 #include "EmersonHttpManager.hpp"
 #include <sirikata/core/util/Liveness.hpp>
+#include <stack>
+
 
 namespace Sirikata {
 namespace JS {
@@ -75,11 +77,10 @@ public:
     v8::Handle<v8::Value> debug_fileRead(const String& filename);
 
 
-    v8::Handle<v8::Value> executeInSandbox(v8::Persistent<v8::Context> &contExecIn, v8::Handle<v8::Function> funcToCall,int argc, v8::Handle<v8::Value>* argv);
+    v8::Handle<v8::Value> executeInSandbox(JSContextStruct* jscont, v8::Handle<v8::Function> funcToCall,int argc, v8::Handle<v8::Value>* argv);
 
 
     //this function returns a context with
-
     v8::Local<v8::Object> createContext(JSPresenceStruct* jspres,const SpaceObjectReference& canSendTo,uint32 capNum, JSContextStruct*& internalContextField, JSContextStruct* creator);
 
 
@@ -93,23 +94,31 @@ public:
     void print(const String& str);
 
 
-    /** Import a file, executing its contents in contextCtx's root object's
-     * scope. Pass in NULL to contextCtx to just execute in JSObjectScript's
-     * mContext's root object's scope
+    /** Import a file, executing its contents in scope of most recent evaluation
+     * stack frame.
+     * Should not call import directly unless we are positive that we are inside
+     * a valid mEvalContext.
      */
-    v8::Handle<v8::Value> import(const String& filename, JSContextStruct* jscs,bool isJS);
+    v8::Handle<v8::Value> import(const String& filename, bool isJS);
 
+    /**
+       Adds jscont to evalStack.  Imports shim files and evals toEval.
+       Pops jscont after this.
+     */
+    void shimImportAndEvalScript(JSContextStruct* jscont, const String& toEval);
+    
     /** Require a file, executing its contents in the root object's scope iff it
      *  has not yet been imported.
      */
-    v8::Handle<v8::Value> require(const String& filename,JSContextStruct* jscont,bool isJS);
-
+    v8::Handle<v8::Value> require(const String& filename,bool isJS);
 
     //JSContextStructs request the JSObjectScript to call finishClear on them
     //when doing so won't invalidate any iterators on the JSObjectScript.
     virtual void registerContextForClear(JSContextStruct* jscont);
 
 
+    //all need to have jscontext structs so that can put context struct on
+    //evaluation stack when call.
     v8::Handle<v8::Value> storageBeginTransaction(JSContextStruct* jscont);
     v8::Handle<v8::Value> storageCommit(JSContextStruct* jscont, v8::Handle<v8::Function> cb);
     v8::Handle<v8::Value> storageWrite(const OH::Storage::Key& key, const String& toWrite, v8::Handle<v8::Function> cb, JSContextStruct* jscont);
@@ -121,6 +130,12 @@ public:
 
     v8::Handle<v8::Value> setRestoreScript(JSContextStruct* jscont, const String& script, v8::Handle<v8::Function> cb);
 
+    /**
+       Returns true if context eval stack is not empty and if the top context on
+       the stack allows operation associated with whatCap on jspres.  Returns
+       false otherwise.
+     */
+    bool checkCurCtxtHasCapability(JSPresenceStruct* jspres, Capabilities::Caps whatCap);
 
     /**
        We want to ensure that no sandboxes have while(1) loops.  Roughly, the
@@ -147,22 +162,7 @@ public:
 
     JSObjectScriptManager* manager() const { return mManager; }
 
-    // is_emerson controls whether this is compiled as emerson or
-    // javascript code.
-    // \param return_exc if true, return the exception generated (or
-    //         empty handle for none) instead of the return value. The
-    //         return value is discarded. This prevents throwing an
-    //         exception (or rethrowing a caught exception), which is
-    //         necessary if there is no JS caller higher on the
-    //         stack. Otherwise, V8 gets stuck with an uncaught
-    //         exception and fails on future V8 calls.
-    v8::Handle<v8::Value> internalEval(v8::Persistent<v8::Context>ctx, const String& em_script_str, v8::ScriptOrigin* em_script_name, bool is_emerson, bool return_exc = false);
-    v8::Local<v8::Function> functionValue(const String& em_script_str);
 
-    // Print an exception "to" the script, i.e. using its system.print
-    // method. This is useful for callbacks which are executed directly from C++
-    // code but which should report errors to the user.
-    void printExceptionToScript(JSContextStruct* ctx, const String& exc);
 
     // A generic interface for invoking callback methods, used by other classes
     // that have JSObjectScript* (e.g. Invokable). Probably needs a version for
@@ -171,6 +171,12 @@ public:
     v8::Handle<v8::Value> invokeCallback(JSContextStruct* ctx, v8::Handle<v8::Function>& cb, int argc, v8::Handle<v8::Value> argv[]);
     v8::Handle<v8::Value> invokeCallback(JSContextStruct* ctx, v8::Handle<v8::Function>& cb);
 
+
+    //lkjs; note: will need to grab most recent context from stack.
+    v8::Local<v8::Function> functionValue(const String& em_script_str);
+
+
+    
     // Hook to invoke after a callback is invoked. Allows you to check for
     // conditions that may be set during the callback (kill requested, reset,
     // etc).
@@ -244,9 +250,10 @@ protected:
     // way the system defines actions (e.g. import searches the current script's
     // directory before trying other import paths).
     struct EvalContext {
-        EvalContext();
+        EvalContext(JSContextStruct* jsctx);
         EvalContext(const EvalContext& rhs);
-
+        EvalContext(const EvalContext& rhs, JSContextStruct* jsctx);
+        
         // Current directory the script being evaluated was in,
         // e.g. ../../liboh/plugins/js/scripts/std/movement
         boost::filesystem::path currentScriptDir;
@@ -263,6 +270,9 @@ protected:
         boost::filesystem::path getFullRelativeScriptDir() const;
 
         std::ostream* currentOutputStream;
+
+        //the associated jscontextstruct containing the evaluation context.
+        JSContextStruct* jscont;
     };
     // This is a helper which adds an EvalContext to the stack and ensures that
     // when it goes out of scope it is removed. This will almost always be the
@@ -279,6 +289,8 @@ protected:
 
     std::stack<EvalContext> mEvalContextStack;
 
+
+    
     //indexed by which context/sandbox you're in.
     typedef     std::map<uint32,std::set<String>  > ImportedFileMap;
     typedef ImportedFileMap::iterator ImportedFileMapIter;
@@ -291,22 +303,15 @@ protected:
     // Resolve a relative path for import to an absolute
     // path. "Returns" the full path of the file as well as the import
     // base path.
-    void resolveImport(const String& filename, boost::filesystem::path* full_file_out, boost::filesystem::path* base_path_out, JSContextStruct* jscs);
+    void resolveImport(const String& filename, boost::filesystem::path* full_file_out, boost::filesystem::path* base_path_out);
     // Perform an import on the absolute path filename. This performs no
     // resolution and *always* performs the import, even if the file has already
     // been imported.
-    v8::Handle<v8::Value> absoluteImport(const boost::filesystem::path& full_filename, const boost::filesystem::path& full_base_dir,JSContextStruct* jscs,bool isJS);
+    v8::Handle<v8::Value> absoluteImport(const boost::filesystem::path& full_filename, const boost::filesystem::path& full_base_dir,bool isJS);
 
 
     JSContextStruct* mContext;
 
-
-    v8::Handle<v8::Value> protectedEval(const String& em_script_str, v8::ScriptOrigin* em_script_name, const EvalContext& new_ctx, JSContextStruct* jscs, bool return_exc = false, bool isJS=false);
-
-
-    v8::Handle<v8::Value> ProtectedJSFunctionInContext(v8::Persistent<v8::Context> ctx, v8::Handle<v8::Object>* target, v8::Handle<v8::Function>& cb, int argc, v8::Handle<v8::Value> argv[]);
-    v8::Handle<v8::Value> executeJSFunctionInContext(v8::Persistent<v8::Context> ctx, v8::Handle<v8::Function> funcInCtx,int argc, v8::Handle<v8::Object>*target, v8::Handle<v8::Value> argv[]);
-    v8::Handle<v8::Value> compileFunctionInContext(v8::Persistent<v8::Context>ctx, v8::Handle<v8::Function>&cb);
 
 
     void  printStackFrame(std::stringstream&, v8::Local<v8::StackFrame>);
@@ -317,8 +322,7 @@ protected:
     JSObjectScriptManager* mManager;
     OH::Storage* mStorage;
     OH::PersistedObjectSet* mPersistedObjectSet;
-
-
+    
     void storageCommitCallback(JSContextStruct* jscont, v8::Persistent<v8::Function> cb, bool success, OH::Storage::ReadSet* rs);
     void storageCountCallback(JSContextStruct* jscont, v8::Persistent<v8::Function> cb, bool success, int32_t count);
 
@@ -335,6 +339,36 @@ protected:
      */
     bool stopCalled;
 
+
+    
+  private:
+    //should already be inside of a frame;
+    v8::Handle<v8::Value> compileFunctionInContext( v8::Handle<v8::Function>&cb);
+
+    // Print an exception "to" the script, i.e. using its system.print
+    // method. This is useful for callbacks which are executed directly from C++
+    // code but which should report errors to the user.
+    void printExceptionToScript(const String& exc);
+
+    v8::Handle<v8::Value> protectedEval(const String& em_script_str, v8::ScriptOrigin* em_script_name, const EvalContext& new_ctx, bool return_exc = false, bool isJS=false);
+
+
+    // is_emerson controls whether this is compiled as emerson or
+    // javascript code.
+    // \param return_exc if true, return the exception generated (or
+    //         empty handle for none) instead of the return value. The
+    //         return value is discarded. This prevents throwing an
+    //         exception (or rethrowing a caught exception), which is
+    //         necessary if there is no JS caller higher on the
+    //         stack. Otherwise, V8 gets stuck with an uncaught
+    //         exception and fails on future V8 calls.
+    v8::Handle<v8::Value> internalEval( const String& em_script_str, v8::ScriptOrigin* em_script_name, bool is_emerson, bool return_exc = false);
+    
+
+    //Takes the context from the top value of context stack and returns it.  If
+    //context stack is empty, prints error, and returns context associated with mContext.
+    v8::Handle<v8::Context> getCurrentV8Context();
+    
 };
 
 } // namespace JS

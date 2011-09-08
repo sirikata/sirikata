@@ -95,6 +95,9 @@ class SIRIKATA_EXPORT SpaceObjectReference : TotallyOrdered<SpaceObjectReference
             return uuid.hash();
         }
     };
+    bool isNull() const{
+        return mObject.isNull()&&mSpace.isNull();
+    }
 
     const ObjectReference&object() const {
         return mObject;

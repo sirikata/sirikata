@@ -53,11 +53,12 @@
 namespace Sirikata {
 
 ObjectHost::ObjectHost(ObjectHostContext* ctx, Network::IOService *ioServ, const String&options)
- : mContext(ctx),
+ : mContext(ctx),   
    mStorage(NULL),
    mPersistentSet(NULL),
    mActiveHostedObjects(0)
 {
+    mContext->objectHost = this;
     mScriptPlugins=new PluginManager;
     OptionValue *protocolOptions;
     OptionValue *scriptManagers;
@@ -196,7 +197,7 @@ SpaceID ObjectHost::getDefaultSpace()
 
 // Primary HostedObject API
 
-void ObjectHost::connect(
+bool ObjectHost::connect(
     const SpaceObjectReference& sporef, const SpaceID& space,
     const TimedMotionVector3f& loc,
     const TimedMotionQuaternion& orient,
@@ -204,6 +205,7 @@ void ObjectHost::connect(
     const String& mesh,
     const String& phy,
     const SolidAngle& init_sa,
+    uint32 init_max_results,
     ConnectedCallback connected_cb,
     MigratedCallback migrated_cb,
     StreamCreatedCallback stream_created_cb,
@@ -213,9 +215,12 @@ void ObjectHost::connect(
     bool with_query = init_sa != SolidAngle::Max;
 
     Sirikata::SerializationCheck::Scoped sc(&mSessionSerialization);
-
-    mSessionManagers[space]->connect(
-        sporef, loc, orient, bnds, with_query, init_sa, mesh, phy,
+    if (mHostedObjects.find(sporef)!=mHostedObjects.end())
+        return false;
+    SessionManager *sm = mSessionManagers[space];
+    
+    return sm->connect(
+        sporef, loc, orient, bnds, with_query, init_sa, init_max_results, mesh, phy,
         std::tr1::bind(&ObjectHost::wrappedConnectedCallback, this, _1, _2, _3, connected_cb),
         migrated_cb,
         stream_created_cb,
@@ -231,7 +236,8 @@ void ObjectHost::connect(
     info.bnds = ci.bounds;
     info.mesh = ci.mesh;
     info.physics = ci.physics;
-    info.queryAngle   = ci.queryAngle;
+    info.queryAngle = ci.queryAngle;
+    info.queryMaxResults = ci.queryMaxResults;
     cb(space, obj, info);
 }
 
@@ -264,14 +270,21 @@ bool ObjectHost::send(SpaceObjectReference& sporef_src, const SpaceID& space, co
 
 void ObjectHost::registerHostedObject(const SpaceObjectReference &sporef_uuid, const HostedObjectPtr& obj)
 {
-    mHostedObjects.insert(HostedObjectMap::value_type(sporef_uuid, obj));
+    HostedObjectMap::iterator iter = mHostedObjects.find(sporef_uuid);
+    if (iter != mHostedObjects.end()) {
+        SILOG(oh,error,"Two objects having the same internal name in the mHostedObjects map on connect"<<sporef_uuid.toString());
+    }
+    mHostedObjects[sporef_uuid]=obj;
 }
-void ObjectHost::unregisterHostedObject(const SpaceObjectReference& sporef_uuid)
+void ObjectHost::unregisterHostedObject(const SpaceObjectReference& sporef_uuid, HostedObject* key_obj)
 {
     HostedObjectMap::iterator iter = mHostedObjects.find(sporef_uuid);
     if (iter != mHostedObjects.end()) {
         HostedObjectPtr obj (iter->second);
-        mHostedObjects.erase(iter);
+        if (obj.get()==key_obj)
+            mHostedObjects.erase(iter);
+        else
+            SILOG(oh,error,"Two objects having the same internal name in the mHostedObjects map on disconnect "<<sporef_uuid.toString());
     }
 }
 

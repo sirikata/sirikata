@@ -37,6 +37,7 @@
 
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/network/Asio.hpp>
+#include <sirikata/core/network/Address4.hpp>
 #include <sirikata/space/CoordinateSegmentation.hpp>
 #include <sirikata/space/SegmentedRegion.hpp>
 
@@ -71,14 +72,14 @@ public:
 
 private:
     virtual void service();
-    
+
     void csegChangeMessage(Sirikata::Protocol::CSeg::ChangeMessage* ccMsg);
 
     void downloadUpdatedBSPTree();
-    
+
     bool mBSPTreeValid;
 
-    Trace::Trace* mTrace;    
+    Trace::Trace* mTrace;
 
     typedef struct LookupCacheEntry {
       LookupCacheEntry(ServerID sid, const BoundingBox3f& bbox) {
@@ -107,18 +108,20 @@ private:
     boost::shared_ptr<Network::TCPSocket> mLeasedSocket;
     Time mLeaseExpiryTime;
 
+    void handleSelfLookup(Address4 my_addr);
+
     void startAccepting();
     void accept_handler();
 
-    void sendSegmentationListenMessage();
+    void sendSegmentationListenMessage(const Address4& my_addr);
 
     boost::shared_ptr<Network::TCPSocket> getLeasedSocket();
 
-    void writeCSEGMessage(boost::shared_ptr<tcp::socket> socket, 
+    void writeCSEGMessage(boost::shared_ptr<tcp::socket> socket,
                           Sirikata::Protocol::CSeg::CSegMessage& csegMessage);
 
 
-    void readCSEGMessage(boost::shared_ptr<tcp::socket> socket, 
+    void readCSEGMessage(boost::shared_ptr<tcp::socket> socket,
                          Sirikata::Protocol::CSeg::CSegMessage& csegMessage);
 
 

@@ -17,7 +17,7 @@ class ManualSkeletonLoader : public Ogre::ManualResourceLoader {
 public:
     ManualSkeletonLoader(Mesh::MeshdataPtr meshdata, const std::set<String>& animationList);
 
-    static double invert(Matrix4x4f& inv, const Matrix4x4f& orig);
+    
     static bool getTRS(const Matrix4x4f& bsm, Ogre::Vector3& translate, Ogre::Quaternion& quaternion, Ogre::Vector3& scale);
 
     void prepareResource(Ogre::Resource*r) {}

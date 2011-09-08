@@ -205,7 +205,7 @@ INCLUDE(GitRevision)
 #  * Revisions also only have additions and are very minor.
 SET(SIRIKATA_VERSION_MAJOR "0" CACHE STRING "Sirikata's major version" FORCE)
 SET(SIRIKATA_VERSION_MINOR "0" CACHE STRING "Sirikata's minor version" FORCE)
-SET(SIRIKATA_VERSION_REVISION "15" CACHE STRING "Sirikata's revision version" FORCE)
+SET(SIRIKATA_VERSION_REVISION "16" CACHE STRING "Sirikata's revision version" FORCE)
 
 # These get translated into two settings: the VERSION and
 # SOVERSION. The SOVERSION includes just the major number so anything
@@ -1205,6 +1205,7 @@ SET(LIBOGRE_SOURCES
   ${LIBOGRE_SOURCE_DIR}/ManualMaterialLoader.cpp
   ${LIBOGRE_SOURCE_DIR}/ManualSkeletonLoader.cpp
   ${LIBOGRE_SOURCE_DIR}/ManualMeshLoader.cpp
+  ${LIBOGRE_SOURCE_DIR}/ResourceLoader.cpp
   ${LIBOGRE_SOURCE_DIR}/Entity.cpp
   ${LIBOGRE_SOURCE_DIR}/ResourceDownloadPlanner.cpp
   ${LIBOGRE_SOURCE_DIR}/DistanceDownloadPlanner.cpp
@@ -1227,8 +1228,10 @@ SET(LIBSPACE_SOURCES
   ${LIBSPACE_SOURCE_DIR}/SpaceNetwork.cpp
   ${LIBSPACE_SOURCE_DIR}/Trace.cpp
   ${LIBSPACE_SOURCE_DIR}/PintoServerQuerier.cpp
-  ${LIBSPACE_SOURCE_DIR}/ProxSimulationTraits.cpp
   ${LIBSPACE_SOURCE_DIR}/LocationService.cpp
+  ${LIBSPACE_SOURCE_DIR}/ProxSimulationTraits.cpp
+  ${LIBSPACE_SOURCE_DIR}/Proximity.cpp
+  ${LIBSPACE_SOURCE_DIR}/AggregateManager.cpp
   )
 
 SET(LIBMESH_SOURCES
@@ -1411,13 +1414,19 @@ SET(LIBSPACE_PLUGIN_BULLETPHYSICS_SOURCES
   ${LIBSPACE_PLUGIN_BULLETPHYSICS_DIR}/BulletPhysicsService.cpp
 )
 
+SET(LIBSPACE_PLUGIN_PROX_DIR ${LIBSPACE_PLUGIN_DIR}/prox)
+SET(LIBSPACE_PLUGIN_PROX_SOURCES
+  ${LIBSPACE_PLUGIN_PROX_DIR}/PluginInterface.cpp
+  ${LIBSPACE_PLUGIN_PROX_DIR}/CBRLocationServiceCache.cpp
+  ${LIBSPACE_PLUGIN_PROX_DIR}/LibproxProximity.cpp
+  )
+
+
 SET(CRASHREPORTER_SOURCES
   ${CRASHREPORTER_SOURCE_DIR}/main.cpp
 )
 
 SET(SPACE_SOURCES
-  ${SPACE_SOURCE_DIR}/AggregateManager.cpp
-  ${SPACE_SOURCE_DIR}/CBRLocationServiceCache.cpp
   ${SPACE_SOURCE_DIR}/CoordinateSegmentationClient.cpp
   ${SPACE_SOURCE_DIR}/caches/Complete_Cache.cpp
   ${SPACE_SOURCE_DIR}/caches/CacheRecords.cpp
@@ -1439,7 +1448,6 @@ SET(SPACE_SOURCES
   ${SPACE_SOURCE_DIR}/Options.cpp
   ${SPACE_SOURCE_DIR}/OSegHasher.cpp
   ${SPACE_SOURCE_DIR}/OSegLookupQueue.cpp
-  ${SPACE_SOURCE_DIR}/Proximity.cpp
   ${SPACE_SOURCE_DIR}/Server.cpp
   ${SPACE_SOURCE_DIR}/TCPSpaceNetwork.cpp
 #  ${SPACE_SOURCE_DIR}/Test.cpp
@@ -1567,7 +1575,6 @@ ${TEST_LIBCORE_SOURCE_DIR}/AtomicTest.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/ExtrapolationTest.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/FactoryTest.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/FairQueueTest.hpp
-${TEST_LIBCORE_SOURCE_DIR}/ListenerTest.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/Matrix3Test.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/OptionValueListTest.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/OptionTest.hpp
@@ -1916,6 +1923,15 @@ ADD_PLUGIN_TARGET(space-standard
 		    VERSION_INFO ${SIRIKATA_VERSION_SETTINGS}
 		    )
 SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} space-standard)
+
+ADD_PLUGIN_TARGET(space-prox
+                    SOURCES ${LIBSPACE_PLUGIN_PROX_SOURCES}
+                    TARGET_LDFLAGS ${sirikata_LDFLAGS}
+                    LIBRARIES ${SIRIKATA_CORE_LIB} ${SIRIKATA_SPACE_LIB}
+                    TARGET_LIBRARIES ${SIRIKATA_CORE_LIB} ${SIRIKATA_SPACE_LIB}
+		    VERSION_INFO ${SIRIKATA_VERSION_SETTINGS}
+		    )
+SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} space-prox)
 
 IF(OGRE_FOUND AND sdl_FOUND )
   IF(WIN32)#not sure why this needs to happen again

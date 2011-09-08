@@ -573,12 +573,12 @@ WARN_LOGFILE           =
 INPUT                  = doc \
                        libcore \
                        libmesh \
+                       libogre \
                        liboh \
                        libproxyobject \
                        libspace \
                        libsqlite \
                        cppoh \
-                       simoh \
                        space \
                        cseg \
                        pinto
@@ -614,9 +614,7 @@ RECURSIVE              = YES
 # excluded from the INPUT source files. This way you can easily exclude a
 # subdirectory from a directory tree whose root is specified with the INPUT tag.
 
-EXCLUDE                = libcore/test/ \
-                         liboh/plugins/js/emerson \
-                         liboh/plugins/js/
+EXCLUDE                = 
 
 # The EXCLUDE_SYMLINKS tag can be used select whether or not files or
 # directories that are symbolic links (a Unix filesystem feature) are excluded
@@ -631,7 +629,11 @@ EXCLUDE_SYMLINKS       = NO
 # for example use the pattern */test/*
 
 EXCLUDE_PATTERNS       = *.pb.* \
-                         *_protobuf.*
+                         *_protobuf.* \
+                         */EmersonLexer.* \
+                         */EmersonParser.* \
+                         */EmersonTree.* \
+                         */lexWhenPred/*
 
 # The EXCLUDE_SYMBOLS tag can be used to specify one or more symbol names
 # (namespaces, classes, functions, etc.) that should be excluded from the
@@ -642,11 +644,9 @@ EXCLUDE_PATTERNS       = *.pb.* \
 EXCLUDE_SYMBOLS        = Sirikata::Util* \
                          Sirikata::*::Protocol \
                          Sirikata::QuaternionImpl \
-                         Mid \
                          Ogre \
                          boost_* \
                          boost* \
-                         Awesomium \
                          COLLADA* \
                          sandbox \
                          _PBJ* \
@@ -657,7 +657,9 @@ EXCLUDE_SYMBOLS        = Sirikata::Util* \
                          Sirikata::Graphics::MangleTextureName \
                          Sirikata::KnownMessages \
                          Sirikata::Protocol \
-                         Sirikata::ThreadSafeQueueNS
+                         Sirikata::ThreadSafeQueueNS \
+                         Sirikata::decodeabet \
+                         xTest
 
 # The EXAMPLE_PATH tag can be used to specify one or more files or
 # directories that contain example code fragments that are included (see
@@ -1279,8 +1281,7 @@ SEARCH_INCLUDES        = YES
 # the preprocessor.
 
 INCLUDE_PATH           = libcore/src \
-                         liboh/include \
-                         libproxyobject/plugins/ogre/meruCompat
+                         liboh/include
 
 # You can use the INCLUDE_FILE_PATTERNS tag to specify one or more wildcard
 # patterns (like *.h and *.hpp) to filter out the header-files in the

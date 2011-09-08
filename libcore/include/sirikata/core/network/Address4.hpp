@@ -35,6 +35,7 @@
 
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/network/Address.hpp>
+#include <stdio.h>
 
 namespace Sirikata {
 
@@ -69,10 +70,13 @@ public:
         return port;
     }
 
+    String toString() const;
+    
     static Address4 Null;
 };
 
 Sirikata::Network::Address SIRIKATA_EXPORT convertAddress4ToSirikata(const Address4&addy);
+SIRIKATA_FUNCTION_EXPORT std::ostream &  operator<<(std::ostream & os, const Address4 & addr);
 
 inline size_t hash_value(const Address4&addy) {
     return std::tr1::hash<unsigned int>()(addy.ip)^std::tr1::hash<unsigned short>()(addy.port);

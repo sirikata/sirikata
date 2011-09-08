@@ -41,6 +41,8 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
 
+#include <sirikata/core/transfer/AggregatedTransferPool.hpp>
+
 #define BULLETLOG(lvl, msg) SILOG(BulletPhysics, lvl, msg)
 
 namespace Sirikata {
@@ -138,7 +140,7 @@ BulletPhysicsService::BulletPhysicsService(SpaceContext* ctx, LocationUpdatePoli
     }
 
     mTransferMediator = &(Transfer::TransferMediator::getSingleton());
-    mTransferPool = mTransferMediator->registerClient("BulletPhysics");
+    mTransferPool = mTransferMediator->registerClient<Transfer::AggregatedTransferPool>("BulletPhysics");
 
     BULLETLOG(detailed, "Service Loaded");
 }
