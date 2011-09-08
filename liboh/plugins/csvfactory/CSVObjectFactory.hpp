@@ -51,7 +51,7 @@ public:
     CSVObjectFactory(ObjectHostContext* ctx, ObjectHost* oh, const SpaceID& space, const String& filename, int32 max_objects, int32 connect_rate);
     virtual ~CSVObjectFactory() {}
 
-    virtual void generate(const String& timestamp="@");
+    virtual void generate(const String& timestamp="current");
 
 
     /**

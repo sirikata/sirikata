@@ -47,7 +47,7 @@ public:
     CassandraObjectFactory(ObjectHostContext* ctx, ObjectHost* oh, const SpaceID& space, const String& host, int port, const String& oh_id);
     virtual ~CassandraObjectFactory() {}
 
-    virtual void generate(const String& timestamp="@");
+    virtual void generate(const String& timestamp="current");
 
 private:
     typedef org::apache::cassandra::Column Column;

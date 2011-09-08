@@ -104,7 +104,6 @@ bool SQLiteStorage::StorageAction::execute(SQLiteDBPtr db, const Bucket& bucket,
                       }
                   }
               }
-
               rc = sqlite3_finalize(value_query_stmt);
               success = success && !SQLite::check_sql_error(db->db(), rc, NULL, "Error finalizing value query statement");
 
