@@ -178,6 +178,9 @@ private:
 
     // MAIN Thread: These are utility methods which should only be called from the main thread.
 
+    // Update stats server
+    void reportStats();
+
     // Update queries based on current state.
     void poll();
     // Utility for poll.  Queues a message for delivery, encoding it and putting
@@ -277,6 +280,11 @@ private:
     int mObjectClassIndex[NUM_OBJECT_CLASSES];
 
     // MAIN Thread - Should only be accessed in methods used by the main thread
+
+    // Stats
+    Poller mStatsPoller;
+    const String mTimeSeriesObjectQueryCountName;
+    const String mTimeSeriesServerQueryCountName;
 
     Router<Message*>* mProxServerMessageService;
 

@@ -90,6 +90,12 @@ const String& LibproxProximity::ObjectClassToString(ObjectClass c) {
 LibproxProximity::LibproxProximity(SpaceContext* ctx, LocationService* locservice, SpaceNetwork* net)
  : Proximity(ctx, locservice, net, Duration::milliseconds((int64)100)),
    mServerQuerier(NULL),
+   mStatsPoller(
+       ctx->mainStrand,
+       std::tr1::bind(&LibproxProximity::reportStats, this),
+       Duration::seconds((int64)1)),
+   mTimeSeriesObjectQueryCountName(String("space.server") + boost::lexical_cast<String>(ctx->id()) + ".prox.object_queries"),
+   mTimeSeriesServerQueryCountName(String("space.server") + boost::lexical_cast<String>(ctx->id()) + ".prox.server_queries"),
    mDistanceQueryDistance(0.f),
    mMaxObject(0.0f),
    mMinObjectQueryAngle(SolidAngle::Max),
@@ -206,6 +212,8 @@ void LibproxProximity::initialize(CoordinateSegmentation* cseg) {
     BoundingBoxList bboxes = mCSeg->serverRegion(mContext->id());
     BoundingBox3f bbox = aggregateBBoxes(bboxes);
     mServerQuerier->updateRegion(bbox);
+
+    mStatsPoller.start();
 }
 
 void LibproxProximity::shutdown() {
@@ -217,6 +225,8 @@ void LibproxProximity::shutdown() {
             mProxService->stop();
         mProxThread->join();
     }
+
+    mStatsPoller.stop();
 }
 
 void LibproxProximity::newSession(ObjectSession* session) {
@@ -799,6 +809,17 @@ void LibproxProximity::sendObjectResult(Sirikata::Protocol::Object::ObjectMessag
     // If writing isn't already in progress, start it up
     if (!prox_stream->writing)
         writeSomeObjectResults(prox_stream);
+}
+
+void LibproxProximity::reportStats() {
+    mContext->timeSeries->report(
+        mTimeSeriesServerQueryCountName,
+        mServerQueries[OBJECT_CLASS_STATIC].size()
+    );
+    mContext->timeSeries->report(
+        mTimeSeriesObjectQueryCountName,
+        mObjectQueries[OBJECT_CLASS_STATIC].size()
+    );
 }
 
 void LibproxProximity::poll() {
