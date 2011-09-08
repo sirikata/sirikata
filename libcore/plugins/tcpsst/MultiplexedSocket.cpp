@@ -292,7 +292,7 @@ void MultiplexedSocket::sendAllProtocolHeaders(const MultiplexedSocketPtr& thus,
 }
 ///erase all sockets and callbacks since the refcount is now zero;
 MultiplexedSocket::~MultiplexedSocket() {
-  SILOG(tcpsst,error,"DELETING STREAM "<<(size_t)this);
+  SILOG(tcpsst,detailed,"Deleting stream "<<(size_t)this);
     mNewSubstreamCallback=&Stream::ignoreSubstreamCallback;
     for (unsigned int i=0;i<(unsigned int)mSockets.size();++i){
         mSockets[i].shutdownAndClose();
