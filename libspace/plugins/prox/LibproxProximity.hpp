@@ -277,7 +277,6 @@ private:
     // the same one.
     bool mSeparateDynamicObjects;
     int mNumQueryHandlers;
-    int mObjectClassIndex[NUM_OBJECT_CLASSES];
 
     // MAIN Thread - Should only be accessed in methods used by the main thread
 

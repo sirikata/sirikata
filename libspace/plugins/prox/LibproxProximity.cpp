@@ -130,8 +130,6 @@ LibproxProximity::LibproxProximity(SpaceContext* ctx, LocationService* locservic
     // Deal with static/dynamic split
     mSeparateDynamicObjects = GetOptionValue<bool>(OPT_PROX_SPLIT_DYNAMIC);
     mNumQueryHandlers = (mSeparateDynamicObjects ? 2 : 1);
-    mObjectClassIndex[OBJECT_CLASS_STATIC] = 0;
-    mObjectClassIndex[OBJECT_CLASS_DYNAMIC] = (mSeparateDynamicObjects ? 1 : 0);
 
     // Generic query parameters
     mDistanceQueryDistance = GetOptionValue<float32>(OPT_PROX_QUERY_RANGE);
