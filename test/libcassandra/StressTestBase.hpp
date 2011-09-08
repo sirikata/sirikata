@@ -58,6 +58,7 @@ protected:
 
     // Helpers for getting event loop setup/torn down
     Trace::Trace* _trace;
+    SSTConnectionManager* _sstConnMgr;
     Network::IOService* _ios;
     Network::IOStrand* _mainStrand;
     Network::IOWork* _work;
@@ -70,7 +71,6 @@ protected:
     boost::condition_variable _cond;
 
 
-
 public:
     StressTestBase(String plugin, String type, String args)
      : _initialized(0),
@@ -80,6 +80,7 @@ public:
        _data(),
        _storage(NULL),
        _trace(NULL),
+       _sstConnMgr(NULL),
        _mainStrand(NULL),
        _work(NULL),
        _ctx(NULL)
@@ -99,7 +100,9 @@ public:
         _work = new Network::IOWork(*_ios, "StressTest");
         Time start_time = Timer::now(); // Just for stats in ObjectHostContext.
         Duration duration = Duration::zero(); // Indicates to run forever.
-        _ctx = new ObjectHostContext("test", oh_id, _ios, _mainStrand, _trace, start_time, duration);
+        _sstConnMgr = new SSTConnectionManager();
+
+        _ctx = new ObjectHostContext("test", oh_id, _sstConnMgr, _ios, _mainStrand, _trace, start_time, duration);
 
         _storage = OH::StorageFactory::getSingleton().getConstructor(_type)(_ctx, _args);
 
@@ -110,9 +113,6 @@ public:
         // threads, otherwise we'd block up this one.  We include 4 threads to
         // exercise support for multiple threads.
         _ctx->run(4, Context::AllNew);
-	
-	//std::cout<<_data.dataSet["3-100K"].size()<<std::endl;
-	//std::cout<<_data.dataSet["0-10"]<<std::endl;
     }
 
     void tearDown() {
