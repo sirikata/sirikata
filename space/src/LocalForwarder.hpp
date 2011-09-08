@@ -34,6 +34,8 @@
 #define _SIRIKATA_LOCAL_FORWARDER_HPP_
 
 #include <sirikata/core/util/Platform.hpp>
+#include <sirikata/core/service/PollingService.hpp>
+#include <sirikata/core/util/AtomicTypes.hpp>
 #include "ObjectConnection.hpp"
 
 namespace Sirikata {
@@ -43,7 +45,7 @@ namespace Sirikata {
  *  allow very fast forwarding of messages between objects connected to the same
  *  space server.
  */
-class LocalForwarder {
+class LocalForwarder : public PollingService {
   public:
     /** Create a LocalForwarder.
      *  \param ctx SpaceContext for this LocalForwarder to operate in
@@ -70,11 +72,19 @@ class LocalForwarder {
      */
     bool tryForward(Sirikata::Protocol::Object::ObjectMessage* msg);
   private:
+
+    virtual void poll();
+
     typedef std::tr1::unordered_map<UUID, ObjectConnection*, UUID::Hasher> ObjectConnectionMap;
 
     SpaceContext* mContext;
     ObjectConnectionMap mActiveConnections;
     boost::mutex mMutex;
+    // Stats, reported as x per second
+    const String mTimeSeriesForwardedName;
+    AtomicValue<uint32> mNumForwarded;
+    const String mTimeSeriesDroppedName;
+    AtomicValue<uint32> mNumDropped;
 };
 
 } // namespace Sirikata

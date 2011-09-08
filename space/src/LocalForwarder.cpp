@@ -37,8 +37,14 @@ namespace Sirikata {
 
 
 LocalForwarder::LocalForwarder(SpaceContext* ctx)
-        : mContext(ctx)
+ : PollingService(ctx->mainStrand, Duration::seconds((int64)1), ctx, "Local Forwarder"),
+   mContext(ctx),
+   mTimeSeriesForwardedName(String("space.server") + boost::lexical_cast<String>(ctx->id()) + ".forwarded.locally"),
+   mNumForwarded(0),
+   mTimeSeriesDroppedName(String("space.server") + boost::lexical_cast<String>(ctx->id()) + ".dropped.local_forwarder"),
+   mNumDropped(0)
 {
+    mContext->add(this);
 }
 
 void LocalForwarder::addActiveConnection(ObjectConnection* conn) {
@@ -92,14 +98,26 @@ bool LocalForwarder::tryForward(Sirikata::Protocol::Object::ObjectMessage* msg) 
 
     bool send_success = conn->send(msg);
     if (!send_success) {
+        mNumDropped++;
         TIMESTAMP_END(tstamp, Trace::DROPPED_AT_FORWARDED_LOCALLY);
         TRACE_DROP(DROPPED_AT_FORWARDED_LOCALLY);
         // FIXME do anything on failure?
         delete msg;
     }
+    else {
+        mNumForwarded++;
+    }
 
     // At this point we've handled it, regardless of send's success
     return true;
+}
+
+void LocalForwarder::poll() {
+    mContext->timeSeries->report(mTimeSeriesForwardedName, mNumForwarded);
+    mContext->timeSeries->report(mTimeSeriesDroppedName, mNumDropped);
+
+    mNumForwarded = 0;
+    mNumDropped = 0;
 }
 
 } // namespace Sirikata

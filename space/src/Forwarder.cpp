@@ -109,7 +109,15 @@ Forwarder::Forwarder(SpaceContext* ctx)
                  ctx->mainStrand,
                  std::tr1::bind(&Forwarder::updateServerWeights, this),
                  Duration::milliseconds((int64)10)),
-             mReceivedMessages(Sirikata::SizedResourceMonitor(GetOptionValue<uint32>(FORWARDER_RECEIVE_QUEUE_SIZE)))
+             mReceivedMessages(Sirikata::SizedResourceMonitor(GetOptionValue<uint32>(FORWARDER_RECEIVE_QUEUE_SIZE))),
+             mTimeSeriesPoller(
+                 ctx->mainStrand,
+                 std::tr1::bind(&Forwarder::reportStats, this),
+                 Duration::seconds((int64)1)),
+             mTimeSeriesForwardedPerSecondName(String("space.server") + boost::lexical_cast<String>(ctx->id()) + ".forwarded.remote"),
+             mForwardedPerSecond(0),
+             mTimeSeriesDroppedPerSecondName(String("space.server") + boost::lexical_cast<String>(ctx->id()) + ".dropped.forwarder"),
+             mDroppedPerSecond(0)
 {
     mNullServerIDOSegCallback=std::tr1::bind(&Forwarder::routeObjectMessageToServerNoReturn, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2,std::tr1::placeholders:: _3, NullServerID);
     mOutgoingMessages = new ForwarderServiceQueue(mContext->id(), GetOptionValue<uint32>(FORWARDER_SEND_QUEUE_SIZE), (ForwarderServiceQueue::Listener*)this);
@@ -183,10 +191,19 @@ void Forwarder::handleObjectMessageLoop(Sirikata::Protocol::Object::ObjectMessag
 // Service Implementation
 void Forwarder::start() {
     mServerWeightPoller.start();
+    mTimeSeriesPoller.start();
 }
 
 void Forwarder::stop() {
     mServerWeightPoller.stop();
+    mTimeSeriesPoller.stop();
+}
+
+void Forwarder::reportStats() {
+    mContext->timeSeries->report(mTimeSeriesForwardedPerSecondName, mForwardedPerSecond);
+    mForwardedPerSecond = 0;
+    mContext->timeSeries->report(mTimeSeriesDroppedPerSecondName, mDroppedPerSecond);
+    mDroppedPerSecond = 0;
 }
 
 // -- Object Connection Management - Object connections are available locally,
@@ -363,6 +380,7 @@ void Forwarder::routeObjectHostMessage(Sirikata::Protocol::Object::ObjectMessage
 
     bool forwarded = forward(obj_msg);
     if (!forwarded) {
+        mDroppedPerSecond++;
         TIMESTAMP(obj_msg, Trace::DROPPED_DURING_FORWARDING);
         TRACE_DROP(DROPPED_DURING_FORWARDING);
         delete obj_msg;
@@ -408,6 +426,7 @@ void Forwarder::receiveObjectRoutingMessage(Message* msg) {
     bool forward_success = forward(obj_msg, msg->source_server());
 
     if (!forward_success) {
+        mDroppedPerSecond++;
         TIMESTAMP(obj_msg, Trace::DROPPED_DURING_FORWARDING);
         TRACE_DROP(DROPPED_DURING_FORWARDING_ROUTING);
         delete obj_msg;
@@ -563,8 +582,12 @@ bool Forwarder::routeObjectMessageToServer(Sirikata::Protocol::Object::ObjectMes
   }
   bool send_success = flow_sched->push(obj_msg,source_object_data,dest_serv);
   if (!send_success) {
+      mDroppedPerSecond++;
       TIMESTAMP(obj_msg, Trace::DROPPED_AT_SPACE_ENQUEUED);
       TRACE_DROP(DROPPED_AT_SPACE_ENQUEUED);
+  }
+  else {
+      mForwardedPerSecond++;
   }
 
   // Note that this is done *after* the real message is sent since it is an optimization and

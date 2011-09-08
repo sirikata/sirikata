@@ -133,6 +133,12 @@ private:
     boost::mutex mReceivedMessagesMutex;
     Sirikata::SizedThreadSafeQueue<Message*> mReceivedMessages;
 
+    Poller mTimeSeriesPoller;
+    const String mTimeSeriesForwardedPerSecondName;
+    AtomicValue<uint32> mForwardedPerSecond;
+    const String mTimeSeriesDroppedPerSecondName;
+    AtomicValue<uint32> mDroppedPerSecond;
+
     // -- Boiler plate stuff - initialization, destruction, methods to satisfy interfaces
   public:
       Forwarder(SpaceContext* ctx);
@@ -148,6 +154,8 @@ private:
     void stop();
 
   private:
+    void reportStats();
+
     // Init method: adds an odp routing service to the ForwarderServiceQueue and
     // sets up the callback used to create new ODP input queues.
     void addODPServerMessageService(LocationService* loc);
