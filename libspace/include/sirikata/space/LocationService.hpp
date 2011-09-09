@@ -81,7 +81,7 @@ public:
  *  regular tick calls.  Based on this information it decides when to
  *  send updates to individual subscribers.
  */
-class SIRIKATA_SPACE_EXPORT LocationUpdatePolicy : public LocationServiceListener{
+class SIRIKATA_SPACE_EXPORT LocationUpdatePolicy : public LocationServiceListener, public Service {
 public:
     typedef Sirikata::AtomicValue<uint32> SeqNo;
     typedef std::tr1::shared_ptr<SeqNo> SeqNoPtr;
@@ -90,6 +90,9 @@ public:
     virtual ~LocationUpdatePolicy();
 
     virtual void initialize(LocationService* loc);
+
+    virtual void start() = 0;
+    virtual void stop() = 0;
 
     virtual void subscribe(ServerID remote, const UUID& uuid, LocationService* locservice, SeqNoPtr seqNo) = 0;
     virtual void unsubscribe(ServerID remote, const UUID& uuid) = 0;
@@ -125,7 +128,7 @@ protected:
 
 class SIRIKATA_SPACE_EXPORT LocationUpdatePolicyFactory
     : public AutoSingleton<LocationUpdatePolicyFactory>,
-      public Factory1<LocationUpdatePolicy*, const String&>
+      public Factory2<LocationUpdatePolicy*, SpaceContext*, const String&>
 {
   public:
     static LocationUpdatePolicyFactory& getSingleton();
@@ -227,6 +230,8 @@ public:
     }
 
 protected:
+    virtual void start();
+    virtual void stop();
     virtual void poll();
     virtual void service() = 0;
 

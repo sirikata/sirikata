@@ -50,8 +50,11 @@ void InitAlwaysLocationUpdatePolicyOptions();
  */
 class AlwaysLocationUpdatePolicy : public LocationUpdatePolicy {
 public:
-    AlwaysLocationUpdatePolicy(const String& args);
+    AlwaysLocationUpdatePolicy(SpaceContext* ctx, const String& args);
     virtual ~AlwaysLocationUpdatePolicy();
+
+    virtual void start();
+    virtual void stop();
 
     virtual void subscribe(ServerID remote, const UUID& uuid, LocationService* locservice, SeqNoPtr seqno);
     virtual void unsubscribe(ServerID remote, const UUID& uuid);
@@ -80,6 +83,8 @@ public:
     virtual void service();
 
 private:
+    void reportStats();
+
     typedef Stream<SpaceObjectReference>::Ptr SSTStreamPtr;
 
     void tryCreateChildStream(SSTStreamPtr parent_stream, std::string* msg, int count);
@@ -99,6 +104,7 @@ private:
     template<typename SubscriberType>
     struct SubscriberIndex {
         AlwaysLocationUpdatePolicy* parent;
+        AtomicValue<uint32>& sent_count;
 
         typedef std::set<UUID> UUIDSet;
         typedef std::set<SubscriberType> SubscriberSet;
@@ -120,8 +126,9 @@ private:
         typedef std::map<UUID, SubscriberSet*> ObjectSubscribersMap;
         ObjectSubscribersMap mObjectSubscribers;
 
-        SubscriberIndex(AlwaysLocationUpdatePolicy* p)
-         : parent(p)
+        SubscriberIndex(AlwaysLocationUpdatePolicy* p, AtomicValue<uint32>& _sent_count)
+         : parent(p),
+           sent_count(_sent_count)
         {
         }
 
@@ -330,6 +337,7 @@ private:
                         else {
                             bulk_update = Sirikata::Protocol::Loc::BulkLocationUpdate(); // clear it out
                             last_shipped = up_it;
+                            sent_count++;
                         }
                     }
                 }
@@ -339,6 +347,7 @@ private:
                     bool sent = parent->trySend(sid, bulk_update);
                     if (sent) {
                         last_shipped = sub_info->outstandingUpdates.end();
+                        sent_count++;
                     }
                 }
 
@@ -356,6 +365,12 @@ private:
         }
 
     };
+
+    Poller mStatsPoller;
+    const String mTimeSeriesServerUpdatesName;
+    AtomicValue<uint32> mServerUpdatesPerSecond;
+    const String mTimeSeriesObjectUpdatesName;
+    AtomicValue<uint32> mObjectUpdatesPerSecond;
 
     typedef SubscriberIndex<ServerID> ServerSubscriberIndex;
     ServerSubscriberIndex mServerSubscriptions;

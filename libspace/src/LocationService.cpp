@@ -156,6 +156,16 @@ void LocationService::handleLocationUpdateSubstreamRead(const UUID& source, SSTS
     }
 }
 
+void LocationService::start() {
+    PollingService::start();
+    mUpdatePolicy->start();
+}
+
+void LocationService::stop() {
+    mUpdatePolicy->stop();
+    PollingService::stop();
+}
+
 void LocationService::poll() {
     mProfiler->started();
     service();

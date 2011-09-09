@@ -183,7 +183,7 @@ int main(int argc, char** argv) {
     String loc_update_type = GetOptionValue<String>(LOC_UPDATE);
     String loc_update_opts = GetOptionValue<String>(LOC_UPDATE_OPTIONS);
     LocationUpdatePolicy* loc_update_policy =
-        LocationUpdatePolicyFactory::getSingleton().getConstructor(loc_update_type)(loc_update_opts);
+        LocationUpdatePolicyFactory::getSingleton().getConstructor(loc_update_type)(space_context, loc_update_opts);
 
     String loc_service_type = GetOptionValue<String>(LOC);
     String loc_service_opts = GetOptionValue<String>(LOC_OPTIONS);
@@ -319,7 +319,7 @@ int main(int argc, char** argv) {
     delete cseg;
     delete oseg;
     delete oseg_cache;
-    delete loc_service;    
+    delete loc_service;
     delete forwarder;
 
     delete gNetwork;

@@ -48,8 +48,8 @@ static LocationService* createStandardLoc(SpaceContext* ctx, LocationUpdatePolic
     return new StandardLocationService(ctx, update_policy);
 }
 
-static LocationUpdatePolicy* createAlwaysPolicy(const String& args) {
-    return new AlwaysLocationUpdatePolicy(args);
+static LocationUpdatePolicy* createAlwaysPolicy(SpaceContext* ctx, const String& args) {
+    return new AlwaysLocationUpdatePolicy(ctx, args);
 }
 
 } // namespace Sirikata
@@ -66,7 +66,7 @@ SIRIKATA_PLUGIN_EXPORT_C void init() {
                 std::tr1::bind(&createStandardLoc, _1, _2, _3));
         LocationUpdatePolicyFactory::getSingleton()
             .registerConstructor("always",
-                std::tr1::bind(&createAlwaysPolicy, _1));
+                std::tr1::bind(&createAlwaysPolicy, _1, _2));
     }
     space_standard_plugin_refcount++;
 }

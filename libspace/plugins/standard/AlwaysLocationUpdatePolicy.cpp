@@ -44,16 +44,47 @@ void InitAlwaysLocationUpdatePolicyOptions() {
         NULL);
 }
 
-AlwaysLocationUpdatePolicy::AlwaysLocationUpdatePolicy(const String& args)
+AlwaysLocationUpdatePolicy::AlwaysLocationUpdatePolicy(SpaceContext* ctx, const String& args)
  : LocationUpdatePolicy(),
-   mServerSubscriptions(this),
-   mObjectSubscriptions(this)
+   mServerSubscriptions(this, mServerUpdatesPerSecond),
+   mObjectSubscriptions(this, mObjectUpdatesPerSecond),
+   mStatsPoller(
+       ctx->mainStrand,
+       std::tr1::bind(&AlwaysLocationUpdatePolicy::reportStats, this),
+       Duration::seconds((int64)1)
+   ),
+   mTimeSeriesServerUpdatesName(String("space.server") + boost::lexical_cast<String>(ctx->id()) + ".loc.server_updates_per_second"),
+   mServerUpdatesPerSecond(0),
+   mTimeSeriesObjectUpdatesName(String("space.server") + boost::lexical_cast<String>(ctx->id()) + ".loc.object_updates_per_second"),
+   mObjectUpdatesPerSecond(0)
 {
     OptionSet* optionsSet = OptionSet::getOptions(ALWAYS_POLICY_OPTIONS,NULL);
     optionsSet->parse(args);
 }
 
 AlwaysLocationUpdatePolicy::~AlwaysLocationUpdatePolicy() {
+}
+
+void AlwaysLocationUpdatePolicy::start() {
+    mStatsPoller.start();
+}
+
+void AlwaysLocationUpdatePolicy::stop() {
+    mStatsPoller.stop();
+}
+
+void AlwaysLocationUpdatePolicy::reportStats() {
+    mLocService->context()->timeSeries->report(
+        mTimeSeriesServerUpdatesName,
+        mServerUpdatesPerSecond
+    );
+    mServerUpdatesPerSecond = 0;
+
+    mLocService->context()->timeSeries->report(
+        mTimeSeriesObjectUpdatesName,
+        mObjectUpdatesPerSecond
+    );
+    mObjectUpdatesPerSecond = 0;
 }
 
 void AlwaysLocationUpdatePolicy::subscribe(ServerID remote, const UUID& uuid, LocationService* locservice, SeqNoPtr seqnoPtr)
