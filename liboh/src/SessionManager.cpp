@@ -712,6 +712,13 @@ void SessionManager::getSpaceConnection(ServerID sid, SpaceNodeConnection::GotSp
         return;
     }
 
+    // Or if we are already working on getting one
+    ServerConnectionMap::iterator connecting_it = mConnectingConnections.find(sid);
+    if (connecting_it != mConnectingConnections.end()) {
+        connecting_it->second->addCallback(cb);
+        return;
+    }
+
     // Otherwise start it up
     setupSpaceConnection(sid, cb);
 }
@@ -721,33 +728,8 @@ void SessionManager::setupSpaceConnection(ServerID server, SpaceNodeConnection::
 
     using std::tr1::placeholders::_1;
 
-    // Lookup the server's address
-    mServerIDMap->lookupExternal(
-        server,
-        mContext->mainStrand->wrap(
-            std::tr1::bind(&SessionManager::finishSetupSpaceConnection, this,
-                server, cb, _1
-            )
-        )
-    );
-}
-
-void SessionManager::finishSetupSpaceConnection(ServerID server, SpaceNodeConnection::GotSpaceConnectionCallback cb, Address4 addr) {
-    Sirikata::SerializationCheck::Scoped sc(&mSerialization);
-
-    using std::tr1::placeholders::_1;
-    using std::tr1::placeholders::_2;
-
-    if (addr == Address4::Null)
-    {
-        SESSION_LOG(error,"No record of server " << server<<\
-            " in SessionManager.cpp's serveridmap.  "\
-            "Aborting space setup operation.");
-        cb(NULL);
-        return;
-    }
-    Address addy(convertAddress4ToSirikata(addr));
-
+    // Mark us as looking this up, store our callback
+    assert(mConnectingConnections.find(server) == mConnectingConnections.end());
     SpaceNodeConnection* conn = new SpaceNodeConnection(
         mContext,
         mIOStrand,
@@ -755,7 +737,6 @@ void SessionManager::finishSetupSpaceConnection(ServerID server, SpaceNodeConnec
         mStreamOptions,
         mSpace,
         server,
-        addy,
         mContext->mainStrand->wrap(
             std::tr1::bind(&SessionManager::handleSpaceConnection,
                 this,
@@ -765,9 +746,41 @@ void SessionManager::finishSetupSpaceConnection(ServerID server, SpaceNodeConnec
         std::tr1::bind(&SessionManager::scheduleHandleServerMessages, this, _1)
     );
     conn->addCallback(cb);
-    mConnections[server] = conn;
+    mConnectingConnections[server] = conn;
 
-    conn->connect();
+    // Lookup the server's address
+    mServerIDMap->lookupExternal(
+        server,
+        mContext->mainStrand->wrap(
+            std::tr1::bind(&SessionManager::finishSetupSpaceConnection, this,
+                server, _1
+            )
+        )
+    );
+}
+
+void SessionManager::finishSetupSpaceConnection(ServerID server, Address4 addr) {
+    Sirikata::SerializationCheck::Scoped sc(&mSerialization);
+
+    using std::tr1::placeholders::_1;
+    using std::tr1::placeholders::_2;
+
+    assert(mConnectingConnections.find(server) != mConnectingConnections.end());
+    SpaceNodeConnection* conn = mConnectingConnections[server];
+    mConnectingConnections.erase(server);
+
+    if (addr == Address4::Null)
+    {
+        SESSION_LOG(error,"No record of server " << server<<\
+            " in SessionManager.cpp's serveridmap.  "\
+            "Aborting space setup operation.");
+        conn->failConnection();
+        return;
+    }
+
+    Address addy(convertAddress4ToSirikata(addr));
+    mConnections[server] = conn;
+    conn->connect(addy);
     SESSION_LOG(detailed,"Trying to connect to " << addy.toString());
 }
 

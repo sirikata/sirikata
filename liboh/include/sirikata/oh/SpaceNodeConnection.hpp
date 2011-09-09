@@ -54,7 +54,7 @@ struct SIRIKATA_OH_EXPORT SpaceNodeConnection {
 
     typedef std::tr1::function<void(const Network::Stream::ConnectionStatus, const std::string&)> ConnectionEventCallback;
 
-    SpaceNodeConnection(ObjectHostContext* ctx, Network::IOStrand* ioStrand, TimeProfiler::Stage* handle_read_stage, OptionSet *streamOptions, const SpaceID& spaceid, ServerID sid, const Network::Address& addr, ConnectionEventCallback ccb, ReceiveCallback rcb);
+    SpaceNodeConnection(ObjectHostContext* ctx, Network::IOStrand* ioStrand, TimeProfiler::Stage* handle_read_stage, OptionSet *streamOptions, const SpaceID& spaceid, ServerID sid, ConnectionEventCallback ccb, ReceiveCallback rcb);
     ~SpaceNodeConnection();
 
     // Push a packet to be sent out
@@ -69,7 +69,8 @@ struct SIRIKATA_OH_EXPORT SpaceNodeConnection {
     const SpaceID& space() const { return mSpace; }
     const ServerID& server() const { return mServer; }
 
-    void connect();
+    void connect(const Network::Address& addr);
+    void failConnection();
 
     bool connecting() const { return mConnecting; }
 

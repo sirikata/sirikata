@@ -43,13 +43,13 @@ using namespace Sirikata::Network;
 
 namespace Sirikata {
 
-SpaceNodeConnection::SpaceNodeConnection(ObjectHostContext* ctx, Network::IOStrand* ioStrand, TimeProfiler::Stage* handle_read_stage, OptionSet *streamOptions, const SpaceID& spaceid, ServerID sid, const Network::Address& addr, ConnectionEventCallback ccb, ReceiveCallback rcb)
+SpaceNodeConnection::SpaceNodeConnection(ObjectHostContext* ctx, Network::IOStrand* ioStrand, TimeProfiler::Stage* handle_read_stage, OptionSet *streamOptions, const SpaceID& spaceid, ServerID sid, ConnectionEventCallback ccb, ReceiveCallback rcb)
  : mContext(ctx),
    mHandleReadStage(handle_read_stage),
    mSpace(spaceid),
    mServer(sid),
    socket(Sirikata::Network::StreamFactory::getSingleton().getConstructor(GetOptionValue<String>("ohstreamlib"))(ioStrand,streamOptions)),
-   mAddr(addr),
+   mAddr(Network::Address::null()),
    mConnecting(false),
    receive_queue(GetOptionValue<int32>("object-host-receive-buffer"), std::tr1::bind(&ObjectMessage::size, std::tr1::placeholders::_1)),
    mConnectCB(ccb),
@@ -130,7 +130,9 @@ void SpaceNodeConnection::handleRead(Chunk& chunk, const Sirikata::Network::Stre
     // No matter what, we've "handled" the data, either for real or by dropping.
 }
 
-void SpaceNodeConnection::connect() {
+void SpaceNodeConnection::connect(const Network::Address& addr) {
+    mAddr = addr;
+
     using std::tr1::placeholders::_1;
     using std::tr1::placeholders::_2;
 
@@ -152,6 +154,12 @@ void SpaceNodeConnection::handleConnectionEvent(
 
     invokeAndClearCallbacks( status == Network::Stream::Connected );
     mConnectCB(status, reason);
+}
+
+void SpaceNodeConnection::failConnection() {
+    mConnecting = false;
+
+    invokeAndClearCallbacks(false);
 }
 
 void SpaceNodeConnection::invokeAndClearCallbacks(bool connected) {

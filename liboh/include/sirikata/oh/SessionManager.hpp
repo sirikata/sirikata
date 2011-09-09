@@ -113,7 +113,7 @@ class SIRIKATA_OH_EXPORT SessionManager : public Service, private ODP::DelegateS
 
     // NOTE: The public interface is only safe to access from the main strand.
 
-    /** Connect the object to the space with the given starting parameters. 
+    /** Connect the object to the space with the given starting parameters.
     * \returns true if no other objects on this OH are trying to connect with this ID
     */
     bool connect(
@@ -205,7 +205,7 @@ private:
 
     // Set up a space connection to the given server
     void setupSpaceConnection(ServerID server, SpaceNodeConnection::GotSpaceConnectionCallback cb);
-    void finishSetupSpaceConnection(ServerID server, SpaceNodeConnection::GotSpaceConnectionCallback cb, Address4 addr);
+    void finishSetupSpaceConnection(ServerID server, Address4 addr);
 
     // Handle a connection event, i.e. the socket either successfully connected or failed
     void handleSpaceConnection(const Sirikata::Network::Stream::ConnectionStatus status,
@@ -270,7 +270,7 @@ private:
     // may access the SpaceNodeConnection*'s.
     typedef std::tr1::unordered_map<ServerID, SpaceNodeConnection*> ServerConnectionMap;
     ServerConnectionMap mConnections;
-
+    ServerConnectionMap mConnectingConnections;
 
     // Info associated with opening connections
     struct ConnectingInfo {
