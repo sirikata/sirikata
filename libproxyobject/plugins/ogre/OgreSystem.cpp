@@ -266,13 +266,17 @@ bool OgreSystem::translateToDisplayViewport(float32 x, float32 y, float32* ox, f
 }
 
 OgreSystem::~OgreSystem() {
+    decrefcount();
+    destroyMouseHandler();
+}
+
+void OgreSystem::stop() {
     if (mViewer) {
         ProxyManagerPtr proxyManager = mViewer->presence(mPresenceID);
         proxyManager->removeListener(this);
     }
 
-    decrefcount();
-    destroyMouseHandler();
+    OgreRenderer::stop();
 }
 
 void OgreSystem::onCreateProxy(ProxyObjectPtr p)

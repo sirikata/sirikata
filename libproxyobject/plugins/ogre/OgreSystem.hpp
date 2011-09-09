@@ -107,6 +107,9 @@ public:
     Camera *mPrimaryCamera;
     Camera* mOverlayCamera;
 
+    // Overrides for Service
+    virtual void stop();
+
     // For classes that only have access to OgreSystem and not a Context
     Time simTime();
 
@@ -217,7 +220,7 @@ public:
     // events, e.g. mouse and keyboard
     boost::any addInputHandler(std::vector<boost::any>& params);
     boost::any removeInputHandler(std::vector<boost::any>& params);
-    
+
     boost::any pick(std::vector<boost::any>& params);
     boost::any bbox(std::vector<boost::any>& params);
     boost::any visible(std::vector<boost::any>& params);
@@ -239,7 +242,7 @@ public:
     boost::any startAnimation(std::vector<boost::any>& params);
     boost::any stopAnimation(std::vector<boost::any>& params);
     boost::any isReady(std::vector<boost::any>& params);
-    
+
     ~OgreSystem();
 
 private:
