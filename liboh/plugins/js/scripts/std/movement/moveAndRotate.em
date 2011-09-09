@@ -63,6 +63,9 @@ std.movement.MoveAndRotate = system.Class.extend(
             else
                 this._update_type = this.UPDATE_TYPE_ALL;
 
+            this._handleSource = 0;
+            this._rotateCommands = [];
+
             this._localVel = pres.velocity;
             this._localOrientVel = pres.orientationVel;
 
@@ -92,9 +95,33 @@ std.movement.MoveAndRotate = system.Class.extend(
             this._startReeval(true);
         },
         rotate: function(axis, angle) {
-            var newVel = this._localOrientVel.mul(
-                new util.Quaternion(axis, angle)
-            );
+            var newDiffVel = new util.Quaternion(axis, angle);
+            var handle = {
+                'id' : this._handleSource++,
+                'vel' : newDiffVel
+            };
+            this._rotateCommands.push(handle);
+            var newVel = this._localOrientVel.mul(newDiffVel);
+            this._pres.orientationVel = newVel;
+            this._localOrientVel = newVel;
+            this._startReeval(true);
+            return handle;
+        },
+        cancelRotate: function(handle) {
+            // Remove
+            for(var i in this._rotateCommands) {
+                if (handle.id == this._rotateCommands[i].id) {
+                    this._rotateCommands.splice(i, 1);
+                    break;
+                }
+            }
+
+            // Recompute velocity
+            var newVel = new util.Quaternion();
+            for(var i in this._rotateCommands) {
+                newVel = newVel.mul(this._rotateCommands[i].vel);
+            }
+
             this._pres.orientationVel = newVel;
             this._localOrientVel = newVel;
             this._startReeval(true);

@@ -158,10 +158,10 @@ function() {
             this._binding.addToggleAction('moveUp', std.core.bind(this.moveSelf, this, new util.Vec3(0, 1, 0)), 1, -1);
             this._binding.addToggleAction('moveDown', std.core.bind(this.moveSelf, this, new util.Vec3(0, -1, 0)), 1, -1);
 
-            this._binding.addToggleAction('rotateUp', std.core.bind(this.rotateSelf, this, new util.Vec3(1, 0, 0)), 1, -1);
-            this._binding.addToggleAction('rotateDown', std.core.bind(this.rotateSelf, this, new util.Vec3(-1, 0, 0)), 1, -1);
-            this._binding.addToggleAction('rotateLeft', std.core.bind(this.rotateSelf, this, new util.Vec3(0, 1, 0)), 1, -1);
-            this._binding.addToggleAction('rotateRight', std.core.bind(this.rotateSelf, this, new util.Vec3(0, -1, 0)), 1, -1);
+            this._binding.addToggleAction('rotateUp', std.core.bind(this.rotateSelf, this, new util.Vec3(1, 0, 0), "_rotate_up_handle_"), true, false);
+            this._binding.addToggleAction('rotateDown', std.core.bind(this.rotateSelf, this, new util.Vec3(-1, 0, 0), "_rotate_down_handle_"), true, false);
+            this._binding.addToggleAction('rotateLeft', std.core.bind(this.rotateSelf, this, new util.Vec3(0, 1, 0), "_rotate_left_handle_"), true, false);
+            this._binding.addToggleAction('rotateRight', std.core.bind(this.rotateSelf, this, new util.Vec3(0, -1, 0), "_rotate_right_handle_"), true, false);
 
             this._binding.addFloat2Action('turnOffAxis', std.core.bind(this.turnOffAxis, this));
         
@@ -377,8 +377,14 @@ function() {
     };
 
     /** @function */
-    std.graphics.DefaultGraphics.prototype.rotateSelf = function(about, val) {
-        this._moverot.rotate(about, this.defaultRotationalVelocityScaling * val);
+    std.graphics.DefaultGraphics.prototype.rotateSelf = function(about, name, val) {
+        if (val) {
+            this[name] = this._moverot.rotate(about, this.defaultRotationalVelocityScaling);
+        }
+        else {
+            this._moverot.cancelRotate(this[name]);
+            delete this[name];
+        }
     };
 
     std.graphics.DefaultGraphics.prototype.turnOffAxis = function(x, y) {
