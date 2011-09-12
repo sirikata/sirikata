@@ -57,6 +57,8 @@ public:
 
     boost::shared_ptr<libcassandra::Cassandra> db() const;
 private:
+    void initSchema();
+
     boost::shared_ptr<libcassandra::Cassandra> client;
 };
 
@@ -99,4 +101,3 @@ private:
 } // namespace Sirikata
 
 #endif //_CASSANDRA_HPP_
-

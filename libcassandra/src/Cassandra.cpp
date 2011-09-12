@@ -41,7 +41,13 @@ namespace Sirikata {
 CassandraDB::CassandraDB(const String& host, int port) {
     libcassandra::CassandraFactory cf(host, port);
     client=boost::shared_ptr<libcassandra::Cassandra>(cf.create());
-    client->setKeyspace("sirikata");
+
+    try {
+        client->setKeyspace("sirikata");
+    }
+    catch (org::apache::cassandra::InvalidRequestException &ire) {
+        initSchema();
+    }
 }
 
 CassandraDB::~CassandraDB() {
@@ -49,6 +55,37 @@ CassandraDB::~CassandraDB() {
 
     boost::shared_ptr<libcassandra::Cassandra> CassandraDB::db() const {
     return client;
+}
+
+void CassandraDB::initSchema() {
+    try {
+        // create keyspace
+        libcassandra::KeyspaceDefinition ks_def;
+        ks_def.setName("sirikata");
+        client->createKeyspace(ks_def);
+        client->setKeyspace("sirikata");
+
+        libcassandra::ColumnFamilyDefinition cf_def_1;
+        cf_def_1.setName("persistence");
+        cf_def_1.setColumnType("Super");
+        cf_def_1.setKeyspaceName("sirikata");
+        client->createColumnFamily(cf_def_1);
+
+        libcassandra::ColumnFamilyDefinition cf_def_2;
+        cf_def_2.setName("objects");
+        cf_def_2.setColumnType("Super");
+        cf_def_2.setKeyspaceName("sirikata");
+        client->createColumnFamily(cf_def_2);
+    }
+    catch (org::apache::cassandra::NotFoundException &ire) {
+        SILOG(cassandra, error, "NotFoundException Caught");
+    }
+    catch (org::apache::cassandra::InvalidRequestException &ire) {
+        SILOG(cassandra, error, ire.why);
+    }
+    catch (...) {
+        SILOG(cassandra, error, "Other Exception Caught");
+    }
 }
 
 namespace {
