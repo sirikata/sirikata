@@ -68,7 +68,28 @@ struct JSContextStruct : public JSSuspendable, public Liveness
 
     v8::Handle<v8::Value> killEntity();
 
+    /**
+       @param {sporef} goneFrom The id of the local presence that the presence
+       represented by jsvis is no longer within query set of.
 
+       @param {JSVisibleStruct*} The struct associated with the external
+       presence that is no longer visible to goneFrom.
+
+       @param {bool} isGone True if the event is that a visible moved *out* of a
+       presence's result set.  False if the event is that a visible moved *into*
+       a presence's result set.
+       
+       Checks to see if this notification is applicable to fire.  Ie, if the
+       sandbox isn't suspended and if the notification is for its root presence
+       (and we have capability to fire for the root presence) or if the
+       notification is for one of the presences created in this sandbox.
+
+       If the above conditions are met, actually fires proximate event.
+     */
+    void proximateEvent(const SpaceObjectReference& goneFrom,
+        JSVisibleStruct* jsvis,bool isGone);
+
+    
     v8::Handle<v8::Value> storageBeginTransaction();
     v8::Handle<v8::Value> storageCommit(v8::Handle<v8::Function> cb);
     v8::Handle<v8::Value> storageWrite(const OH::Storage::Key& key, const String& toWrite, v8::Handle<v8::Function> cb);
@@ -176,7 +197,6 @@ struct JSContextStruct : public JSSuspendable, public Liveness
     void checkContextDisconnectCallback(JSPresenceStruct* jspres);
 
 
-    v8::Handle<v8::Value> clearConservePres(std::vector<JSPresenceStruct*>& jspresVec);
 
     //********data
     JSObjectScript* jsObjScript;
@@ -185,6 +205,7 @@ struct JSContextStruct : public JSSuspendable, public Liveness
     v8::Persistent<v8::Context> mContext;
 
     String getScript();
+    //sets proxAddedFunc and proxRemovedFunc, respectively
     v8::Handle<v8::Value> proxAddedHandlerCallallback(v8::Handle<v8::Function>cb);
     v8::Handle<v8::Value> proxRemovedHandlerCallallback(v8::Handle<v8::Function>cb);
 
@@ -240,6 +261,7 @@ struct JSContextStruct : public JSSuspendable, public Liveness
 
     
 private:
+    
     uint32 mContextID;
 
     //runs through suspendable map to check if have a presence in this sandbox
@@ -299,21 +321,47 @@ private:
     void flushQueuedSuspendablesToChange();
 
 
-    //working with presence wrappers: check if associatedPresence is null and throw exception if is.
-#define NullPresenceCheck(funcName)        \
-    String fname (funcName);               \
-    if (associatedPresence == NULL)        \
-    {                                      \
-        String errorMessage = "Error in " + fname + " of JSContextStruct.  Have no default presence to perform action with."; \
-        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str()))); \
+//working with presence wrappers: check if associatedPresence is null and throw
+//exception if is.
+#define NullPresenceCheck(funcName)                                     \
+    String fname (funcName);                                            \
+    if (associatedPresence == NULL)                                     \
+    {                                                                   \
+        String errorMessage = "Error in " + fname +                     \
+            " of JSContextStruct.  " +                                  \
+            "Have no default presence to perform action with.";         \
+                                                                        \
+        return v8::ThrowException( v8::Exception::Error(                \
+                v8::String::New(errorMessage.c_str())));                \
     }
 
-#define CHECK_EMERSON_SCRIPT_ERROR(emerScriptName,errorIn,whatToCast)             \
-    EmersonScript* emerScriptName = dynamic_cast<EmersonScript*> (whatToCast); \
-    if (emerScriptName == NULL)\
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  Must not be in headless mode to run " #errorIn  )));
+#define CHECK_EMERSON_SCRIPT_ERROR(emerScriptName,errorIn,whatToCast)   \
+    EmersonScript* emerScriptName =                                     \
+        dynamic_cast<EmersonScript*> (whatToCast);                      \
+    if (emerScriptName == NULL)                                         \
+    {                                                                   \
+        return v8::ThrowException(                                      \
+            v8::Exception::Error(v8::String::New(                       \
+                    "Error.  Must not be in headless mode to run "      \
+                    #errorIn                                            \
+                )));                                                    \
+    }
 
 
+#define CHECK_EMERSON_SCRIPT_RETURN(emerScriptName,errorIn,whatToCast)  \
+    EmersonScript* emerScriptName =                                     \
+        dynamic_cast<EmersonScript*> (whatToCast);                      \
+    if (emerScriptName == NULL)                                         \
+    {                                                                   \
+        JSLOG(error,"Error in " #errorIn ".  "  <<                      \
+            "Must not be in headless mode to run " #errorIn );          \
+                                                                        \
+        return;                                                         \
+    }
+
+
+
+    
 }; //end class
 
 

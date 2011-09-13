@@ -157,6 +157,19 @@ v8::Handle<v8::Value> JSContextStruct::sendSandbox(const String& msgToSend, JSCo
 }
 
 
+void JSContextStruct::proximateEvent(const SpaceObjectReference& goneFrom,
+    JSVisibleStruct* jsvis, bool isGone)
+{
+    CHECK_EMERSON_SCRIPT_RETURN(emerScript,notifyProximateGone,jsObjScript);
+    
+    if (((associatedPresence != NULL) &&
+        (associatedPresence->getSporef() == goneFrom)) ||
+        hasPresence(goneFrom))
+    {
+        emerScript->fireProxEvent(goneFrom, jsvis,this,isGone);
+    }
+}
+
 
 v8::Handle<v8::Value> JSContextStruct::struct_evalInGlobal(const String& native_contents, ScriptOrigin* sOrigin)
 {

@@ -187,38 +187,51 @@ void  EmersonScript::notifyProximateGone(ProxyObjectPtr proximateObject, const S
     JSLOG(detailed,"Notified that object "<<proximateObject->getObjectReference()<<" went out of query of "<<querier<<".  Mostly just ignoring it.");
 
 
-    PresenceMapIter iter = mPresences.find(querier);
-    if (iter == mPresences.end())
-    {
-        JSLOG(error,"Error.  Received a notification that a proximate object left query set for querier "<<querier<<".  However, querier has no associated presence in array.  Aborting now");
-        return;
-    }
-
-    if (mContext->proxRemovedFunc.IsEmpty())
-    {
-        JSLOG(info,"No proximity removal function");
-        return;
-    }
-
+    //FIXME: we aren't ever freeing this memory
+    //lkjs; what about freeing this memeory?;
     JSVisibleStruct* jsvis =  createVisStruct(proximateObject->getObjectReference());
 
-    v8::HandleScope handle_scope;
-    v8::Context::Scope context_scope(mContext->mContext);
+    std::map<uint32, JSContextStruct*>::iterator contIter;
+    for (contIter  =  mContStructMap.begin(); contIter != mContStructMap.end();
+         ++contIter)
+    {
+        contIter->second->proximateEvent(querier, jsvis,true);
+    }
+}
 
-    //jswrap the object
-    //should be in context from createVisibleObject call
-    v8::Handle<v8::Object> outOfRangeObject = createVisiblePersistent(jsvis,mContext->mContext);
+
+void EmersonScript::fireProxEvent(const SpaceObjectReference& localPresSporef,
+    JSVisibleStruct* jsvis, JSContextStruct* jscont, bool isGone)
+{
+    //this entire pre-amble is gross.
+    EvalContext& ctx = mEvalContextStack.top();
+    EvalContext new_ctx(ctx,jscont);
+    ScopedEvalContext sec(this,new_ctx);
+    v8::HandleScope handle_scope;
+    v8::Context::Scope context_scope(jscont->mContext);
+
+    //create an associated visible object in correct context
+    v8::Handle<v8::Object> visiblePres =
+        createVisiblePersistent(jsvis,jscont->mContext);
 
     TryCatch try_catch;
 
     int argc = 2;
-    String sporefVisTo = iter->first.toString();
-    v8::Handle<v8::Value> argv[2] = { outOfRangeObject, v8::String::New( sporefVisTo.c_str()  ) };
+    String sporefVisTo = localPresSporef.toString();
 
+
+    v8::Handle<v8::Value> argv[2] = {visiblePres,
+                                     v8::String::New( sporefVisTo.c_str()  ) };
+
+
+    
     //FIXME: Potential memory leak: when will removedProxObj's
     //SpaceObjectReference field be garbage collected and deleted?
     JSLOG(detailed,"Issuing user callback for proximate object gone.  Argument passed");
-    invokeCallback(mContext,mContext->proxRemovedFunc,argc,argv);
+    if (isGone)
+        invokeCallback(jscont,jscont->proxRemovedFunc,argc,argv);
+    else
+        invokeCallback(jscont,jscont->proxAddedFunc,argc,argv);
 
     if (try_catch.HasCaught()) {
         printException(try_catch);
@@ -226,6 +239,7 @@ void  EmersonScript::notifyProximateGone(ProxyObjectPtr proximateObject, const S
 
     postCallbackChecks();
 }
+
 
 v8::Persistent<v8::Object> EmersonScript::createVisiblePersistent(const SpaceObjectReference& visibleObj, JSProxyPtr addParams, v8::Handle<v8::Context> ctx)
 {
@@ -277,7 +291,6 @@ void EmersonScript::printMPresences()
 
 
 
-
 void EmersonScript::notifyProximate(JSVisibleStruct* proxVis, const SpaceObjectReference& proxTo)
 {
     if (isStopped()) {
@@ -285,42 +298,12 @@ void EmersonScript::notifyProximate(JSVisibleStruct* proxVis, const SpaceObjectR
         return;
     }
 
-    // Invoke user callback
-    PresenceMapIter iter = mPresences.find(proxTo);
-    if (iter == mPresences.end())
+    std::map<uint32, JSContextStruct*>::iterator contIter;
+    for (contIter  =  mContStructMap.begin(); contIter != mContStructMap.end();
+         ++contIter)
     {
-        JSLOG(error,"No presence associated with sporef "<<proxTo<<" exists in presence mapping when getting notifyProximate.  Taking no action.");
-        return;
+        contIter->second->proximateEvent(proxTo, proxVis,false);
     }
-
-    if (mContext->proxAddedFunc.IsEmpty())
-    {
-        JSLOG(detailed,"No prox added func to execute");
-        return;
-    }
-
-    v8::HandleScope handle_scope;
-    v8::Handle<v8::Object> newVisibleObj = createVisiblePersistent(proxVis, mContext->mContext);
-
-    v8::Context::Scope context_scope(mContext->mContext);
-    TryCatch try_catch;
-
-    int argc = 2;
-    String sporefVisTo = iter->first.toString();
-    v8::Handle<v8::Value> argv[2] = { newVisibleObj, v8::String::New( sporefVisTo.c_str()  ) };
-
-
-    //FIXME: Potential memory leak: when will newAddrObj's
-    //SpaceObjectReference field be garbage collected and deleted?
-    JSLOG(detailed,"Issuing user callback for proximate object.");
-    invokeCallback(mContext,mContext->proxAddedFunc, argc, argv);
-
-
-    if (try_catch.HasCaught()) {
-        printException(try_catch);
-    }
-
-    postCallbackChecks();
 }
 
 

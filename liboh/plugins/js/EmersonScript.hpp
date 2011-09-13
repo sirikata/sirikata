@@ -128,6 +128,25 @@ public:
     v8::Handle<v8::Value> restorePresence(PresStructRestoreParams& psrp,JSContextStruct* jsctx);
 
 
+    /**
+       @param {sporef} localPresSporef The space object reference for the
+       local presence for which a visible has either moved into its prox set or
+       out of its prox set.  
+
+       @param {JSVisibleStruct*} jsvis The visible struct associated with the
+       presence that moved into or out of local presence's prox set.
+
+       @param{bool} isGone True if trying to fire a proximity removal event,
+       false if trying to fire a proximity added event.
+
+       Enters context associated with jscontextStruct, and fires either its
+       onProxAdded or onProxRemoved callback function.
+     */
+    void fireProxEvent(const SpaceObjectReference& localPresSporef,
+        JSVisibleStruct* jsvis, JSContextStruct* jscont, bool isGone);
+
+
+    
 
     /** Returns true if this script is valid, i.e. if it was successfully loaded
      *  and initialized.
