@@ -160,6 +160,9 @@ v8::Handle<v8::Value> JSContextStruct::sendSandbox(const String& msgToSend, JSCo
 void JSContextStruct::proximateEvent(const SpaceObjectReference& goneFrom,
     JSVisibleStruct* jsvis, bool isGone)
 {
+    if (getIsSuspended() || getIsCleared())
+        return;
+    
     CHECK_EMERSON_SCRIPT_RETURN(emerScript,notifyProximateGone,jsObjScript);
     
     if (((associatedPresence != NULL) &&
