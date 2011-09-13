@@ -133,25 +133,25 @@ public:
 
   /* Returns -1 if no channel is available. Otherwise returns the lowest
      available channel. */
-    int getAvailableChannel() {
-      //TODO: faster implementation.
-      for (uint32 i = sAvailableChannels.size() - 1; i>0; i--) {
-        if (!sAvailableChannels.test(i)) {
-          sAvailableChannels.set(i, 1);
-          return i;
-        }
-      }
+    int getAvailableChannel(EndPointType& endPointType) {
+      BaseDatagramLayerPtr datagramLayer = getDatagramLayer(endPointType);
+      assert (datagramLayer != BaseDatagramLayerPtr());
+
+      return datagramLayer->getUnusedPort(endPointType);
+    }
+
+    void releaseChannel(EndPointType& ept, uint16 channel) {
       
-      return 0;
+      BaseDatagramLayerPtr datagramLayer = getDatagramLayer(ept);
+      if (datagramLayer != BaseDatagramLayerPtr()) {
+
+        EndPoint<EndPointType> ep(ept, channel);
+      
+        datagramLayer->deallocateChannel(ep);
+      }
     }
 
-    void releaseChannel(uint16 channel) {
-      assert(channel > 0);
-
-      sAvailableChannels.set(channel, 0);
-    }
-
-    BaseDatagramLayerPtr getDatagramLayer(EndPointType endPoint) 
+    BaseDatagramLayerPtr getDatagramLayer(EndPointType& endPoint) 
     {
         if (sDatagramLayerMap.find(endPoint) != sDatagramLayerMap.end()) {
             return sDatagramLayerMap[endPoint];
@@ -166,9 +166,7 @@ public:
     StreamReturnCallbackMap mStreamReturnCallbackMap;
 
     typedef std::map<EndPoint<EndPointType>, std::tr1::shared_ptr<Connection<EndPointType> > >  ConnectionMap;
-    ConnectionMap sConnectionMap;
-
-    std::bitset<65536> sAvailableChannels;
+    ConnectionMap sConnectionMap;    
 
     typedef std::map<EndPoint<EndPointType>, ConnectionReturnCallbackFunction>  ConnectionReturnCallbackMap;  
     ConnectionReturnCallbackMap sConnectionReturnCallbackMap;
@@ -245,6 +243,10 @@ class SIRIKATA_EXPORT BaseDatagramLayer
         if (it == mAllocatedPorts.end()) return;
         delete it->second;
         mAllocatedPorts.erase(it);
+    }
+
+    void deallocateChannel(EndPoint<EndPointType>& ep) {
+      unlisten(ep);
     }
 
     void send(EndPoint<EndPointType>* src, EndPoint<EndPointType>* dest, void* data, int len) {        
@@ -461,8 +463,6 @@ private:
               std::tr1::placeholders::_3
           )
       );
-
-      
   }
 
   void checkIfAlive(std::tr1::shared_ptr<Connection<EndPointType> > conn) {    
@@ -655,7 +655,7 @@ private:
       return false;
     }
 
-    uint16 availableChannel = sstConnVars->getAvailableChannel();
+    uint16 availableChannel = sstConnVars->getAvailableChannel(localEndPoint.endPoint);
 
     if (availableChannel == 0)
       return false;
@@ -1164,7 +1164,7 @@ private:
          mState = CONNECTION_DISCONNECTED;
      }
 
-     mSSTConnVars->releaseChannel(mLocalChannelID);
+     mSSTConnVars->releaseChannel(mLocalEndPoint.endPoint, mLocalChannelID);
    }
 
    static void closeConnections(SSTConnectionVariables<EndPointType>* sstConnVars) {
@@ -1227,7 +1227,7 @@ private:
 
          uint16 payload[2];
 
-         uint16 availableChannel = sstConnVars->getAvailableChannel();
+         uint16 availableChannel = sstConnVars->getAvailableChannel(localEndPoint.endPoint);
          payload[0] = htons(availableChannel);
          uint16 availablePort = availableChannel; //availableChannel is picked from the same 16-bit
                                                   //address space and has to be unique. So why not use
@@ -2508,7 +2508,6 @@ public:
   bool listen(StreamReturnCallbackFunction cb, EndPoint <SpaceObjectReference> listeningEndPoint) {
     return Stream<SpaceObjectReference>::listen(&mSSTConnVars, cb, listeningEndPoint);
   }
-
 
   bool unlisten( EndPoint <SpaceObjectReference> listeningEndPoint) {
     return Stream<SpaceObjectReference>::unlisten(&mSSTConnVars, listeningEndPoint);
