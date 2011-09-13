@@ -22,7 +22,7 @@ namespace Sirikata{
     }
 
 
-    PerPresenceData::PerPresenceData(HostedObject* _parent, const SpaceID& _space, const ObjectReference& _oref,const SolidAngle& qAngle, uint32 qMaxResults)
+    PerPresenceData::PerPresenceData(HostedObject* _parent, const SpaceID& _space, const ObjectReference& _oref,const SolidAngle& qAngle, uint32 qMaxResults, const HostedObject::BaseDatagramLayerPtr&layer)
      : parent(_parent),
        space(_space),
        object(_oref),
@@ -37,12 +37,13 @@ namespace Sirikata{
        queryAngle(qAngle),
        queryMaxResults(qMaxResults),
        updateFields(LOC_FIELD_NONE),
-       rerequestTimer( Network::IOTimer::create(_parent->context()->ioService) )
+       rerequestTimer( Network::IOTimer::create(_parent->context()->ioService) ),
+       mSSTDatagramLayers(layer)
     {
     }
 
 
-PerPresenceData::PerPresenceData(HostedObject* _parent, const SpaceID& _space,const SolidAngle& qAngle, uint32 qMaxResults)
+PerPresenceData::PerPresenceData(HostedObject* _parent, const SpaceID& _space,const SolidAngle& qAngle, uint32 qMaxResults, const HostedObject::BaseDatagramLayerPtr&layer)
      : parent(_parent),
        mUpdatedLocation(
             Duration::seconds(.1),
@@ -55,11 +56,14 @@ PerPresenceData::PerPresenceData(HostedObject* _parent, const SpaceID& _space,co
        queryAngle(qAngle),
        queryMaxResults(qMaxResults),
        updateFields(LOC_FIELD_NONE),
-       rerequestTimer( Network::IOTimer::create(_parent->context()->ioService) )
+       rerequestTimer( Network::IOTimer::create(_parent->context()->ioService) ),
+       mSSTDatagramLayers(layer)
     {
     }
 
 PerPresenceData::~PerPresenceData() {
+    if (mSSTDatagramLayers)
+        mSSTDatagramLayers->invalidate();
     // We no longer have this session, so none of the proxies are usable
     // anymore. We can't delete the ProxyManager, but we can clear it out and
     // trigger destruction events for the proxies it holds.

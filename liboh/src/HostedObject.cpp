@@ -72,7 +72,6 @@ HostedObject::HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID
    mID(_id),
    mObjectHost(parent),
    mObjectScript(NULL),
-   mPresenceData(new PresenceDataMap),
    mNextSubscriptionID(0),
    destroyed(false),
    mOrphanLocUpdates(ctx, ctx->mainStrand, Duration::seconds(10))
@@ -101,14 +100,14 @@ TimeSteppedSimulation* HostedObject::runSimulation(const SpaceObjectReference& s
 
     if (stopped()) return sim;
 
-    PresenceDataMap::iterator psd_it = mPresenceData->find(sporef);
-    if (psd_it == mPresenceData->end())
+    PresenceDataMap::iterator psd_it = mPresenceData.find(sporef);
+    if (psd_it == mPresenceData.end())
     {
         HO_LOG(error, "Error requesting to run a simulation for a presence that does not exist.");
         return NULL;
     }
 
-    PerPresenceData& pd =  psd_it->second;
+    PerPresenceData& pd =  *psd_it->second;
     bool newSimListener = addSimListeners(pd,simName,sim);
     
     if ((sim != NULL) && (newSimListener))
@@ -128,15 +127,13 @@ HostedObject::~HostedObject() {
     mContext->remove(&mOrphanLocUpdates);
 
     destroy(false);
+    for (PresenceDataMap::iterator i=mPresenceData.begin();i!=mPresenceData.end();++i) {
+        delete i->second;
+    }
 
-    if (mPresenceData != NULL)
-        delete mPresenceData;
     delete mDelegateODPService;
     getObjectHost()->hostedObjectDestroyed(id());
     stop();
-    for (size_t i=0;i<mSSTDatagramLayers.size();++i) {
-        mSSTDatagramLayers[i]->invalidate();
-    }
 }
 
 const UUID& HostedObject::id() const {
@@ -185,10 +182,10 @@ void HostedObject::destroy(bool need_self) {
     }
 
     mOrphanLocUpdates.stop();
-    for (PresenceDataMap::iterator iter = mPresenceData->begin(); iter != mPresenceData->end(); ++iter)
+    for (PresenceDataMap::iterator iter = mPresenceData.begin(); iter != mPresenceData.end(); ++iter)
         mObjectHost->unregisterHostedObject(iter->first,this);
 
-    mPresenceData->clear();
+    mPresenceData.clear();
 }
 
 Time HostedObject::spaceTime(const SpaceID& space, const Time& t) {
@@ -223,25 +220,25 @@ Time HostedObject::currentLocalTime() {
 ProxyManagerPtr HostedObject::getProxyManager(const SpaceID& space, const ObjectReference& oref)
 {
     SpaceObjectReference toFind(space,oref);
-    PresenceDataMap::const_iterator it = mPresenceData->find(toFind);
-    if (it == mPresenceData->end())
+    PresenceDataMap::const_iterator it = mPresenceData.find(toFind);
+    if (it == mPresenceData.end())
         return ProxyManagerPtr();
 
-    return it->second.proxyManager;
+    return it->second->proxyManager;
 }
 
 
 //returns all the spaceobjectreferences associated with the presence with id sporef
 void HostedObject::getProxySpaceObjRefs(const SpaceObjectReference& sporef,SpaceObjRefVec& ss) const
 {
-    PresenceDataMap::iterator smapIter = mPresenceData->find(sporef);
+    PresenceDataMap::const_iterator smapIter = mPresenceData.find(sporef);
 
-    if (smapIter != mPresenceData->end())
+    if (smapIter != mPresenceData.end())
     {
         //means that we actually did have a connection with this sporef
         //load the proxy objects the sporef'd connection has actually seen into
         //ss.
-        smapIter->second.proxyManager->getAllObjectReferences(ss);
+        smapIter->second->proxyManager->getAllObjectReferences(ss);
     }
 }
 
@@ -251,12 +248,10 @@ void HostedObject::getProxySpaceObjRefs(const SpaceObjectReference& sporef,Space
 //They are returned in ss.
 void HostedObject::getSpaceObjRefs(SpaceObjRefVec& ss) const
 {
-    // must be connected to at least one space
-    assert(mPresenceData != NULL);
 
     PresenceDataMap::const_iterator smapIter;
-    for (smapIter = mPresenceData->begin(); smapIter != mPresenceData->end(); ++smapIter)
-        ss.push_back(SpaceObjectReference(smapIter->second.space,smapIter->second.object));
+    for (smapIter = mPresenceData.begin(); smapIter != mPresenceData.end(); ++smapIter)
+        ss.push_back(SpaceObjectReference(smapIter->second->space,smapIter->second->object));
 }
 
 
@@ -264,11 +259,11 @@ void HostedObject::getSpaceObjRefs(SpaceObjRefVec& ss) const
 static ProxyObjectPtr nullPtr;
 const ProxyObjectPtr &HostedObject::getProxyConst(const SpaceID &space, const ObjectReference& oref) const
 {
-    PresenceDataMap::const_iterator iter = mPresenceData->find(SpaceObjectReference(space,oref));
-    if (iter == mPresenceData->end()) {
+    PresenceDataMap::const_iterator iter = mPresenceData.find(SpaceObjectReference(space,oref));
+    if (iter == mPresenceData.end()) {
         return nullPtr;
     }
-    return iter->second.mProxyObject;
+    return iter->second->mProxyObject;
 }
 
 
@@ -478,23 +473,20 @@ void HostedObject::handleConnected(const HostedObjectWPtr& weakSelf, const Space
         return;
 
     }
-    // FIXME this never gets cleaned out on disconnect
-    self->mSSTDatagramLayers.push_back(
-            self->mContext->sstConnMgr()->createDatagramLayer(
-            SpaceObjectReference(space, obj),
-            self->mContext, self->mDelegateODPService
-        )
-    );
+    BaseDatagramLayerPtr baseDatagramLayer (self->mContext->sstConnMgr()->createDatagramLayer(
+              SpaceObjectReference(space, obj),
+              self->mContext, self->mDelegateODPService
+           )   );
 
     // We have to manually do what mContext->mainStrand->wrap( ... ) should be
     // doing because it can't handle > 5 arguments.
     self->mContext->mainStrand->post(
-        std::tr1::bind(&HostedObject::handleConnectedIndirect, weakSelf, space, obj, info)
+        std::tr1::bind(&HostedObject::handleConnectedIndirect, weakSelf, space, obj, info, baseDatagramLayer)
     );
 }
 
 
-void HostedObject::handleConnectedIndirect(const HostedObjectWPtr& weakSelf, const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info)
+void HostedObject::handleConnectedIndirect(const HostedObjectWPtr& weakSelf, const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, const BaseDatagramLayerPtr& baseDatagramLayer)
 {
     if (info.server == NullServerID)
     {
@@ -505,10 +497,11 @@ void HostedObject::handleConnectedIndirect(const HostedObjectWPtr& weakSelf, con
     if (!self)
         return;
     SpaceObjectReference self_objref(space, obj);
-    if(self->mPresenceData->find(self_objref) == self->mPresenceData->end())
+    if(self->mPresenceData.find(self_objref) == self->mPresenceData.end())
     {
-        self->mPresenceData->insert(
-            PresenceDataMap::value_type(self_objref,PerPresenceData(self.get(), space, obj, info.queryAngle, info.queryMaxResults))
+        self->mPresenceData.insert(
+            PresenceDataMap::value_type(self_objref,new PerPresenceData(self.get(), space, obj, info.queryAngle, info.queryMaxResults, baseDatagramLayer
+            ))
         );
     }
 
@@ -518,8 +511,8 @@ void HostedObject::handleConnectedIndirect(const HostedObjectWPtr& weakSelf, con
     ProxyObjectPtr self_proxy = self->createProxy(self_objref, self_objref, Transfer::URI(info.mesh), local_loc, local_orient, info.bnds, info.physics,info.queryAngle, info.queryMaxResults, 0);
 
     // Use to initialize PerSpaceData
-    PresenceDataMap::iterator psd_it = self->mPresenceData->find(self_objref);
-    PerPresenceData& psd = psd_it->second;
+    PresenceDataMap::iterator psd_it = self->mPresenceData.find(self_objref);
+    PerPresenceData& psd = *psd_it->second;
     self->initializePerPresenceData(psd, self_proxy);
 
 
@@ -595,14 +588,14 @@ void HostedObject::disconnectFromSpace(const SpaceID &spaceID, const ObjectRefer
     SpaceObjectReference sporef(spaceID, oref);
 
     PresenceDataMap::iterator where;
-    where=mPresenceData->find(sporef);
-    if (where!=mPresenceData->end()) {
+    where=mPresenceData.find(sporef);
+    if (where!=mPresenceData.end()) {
         // Need to actually send a disconnection request to the space. Note that
         // this occurse *before* getting rid of the other data so callbacks
         // invoked as a result still work.
         mObjectHost->disconnectObject(spaceID,oref);
-
-        mPresenceData->erase(where);
+        delete where->second;
+        mPresenceData.erase(where);
         mObjectHost->unregisterHostedObject(sporef, this);
     } else {
         SILOG(cppoh,error,"Attempting to disconnect from space "<<spaceID<<" and object: "<< oref<<" when not connected to it...");
@@ -624,14 +617,8 @@ void HostedObject::handleDisconnected(const HostedObjectWPtr& weakSelf, const Sp
     if (cc == Disconnect::Forced)
         self->disconnectFromSpace(spaceobj.space(), spaceobj.object());
     if (cc == Disconnect::LoginDenied) {
-        assert(self->mPresenceData->find(spaceobj)==self->mPresenceData->end());
+        assert(self->mPresenceData.find(spaceobj)==self->mPresenceData.end());
         self->mObjectHost->unregisterHostedObject(spaceobj, self.get());
-    }
-    for (size_t i=0;i<self->mSSTDatagramLayers.size();++i) {
-        BaseDatagramLayerPtr pt=self->mSSTDatagramLayers[i];
-        if (pt.get()) {
-            SILOG(ho,error,"Trying to deallocate datagram");
-        }
     }
 }
 
@@ -935,7 +922,7 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
                 ObjectReference(removal.object()));
             bool permanent = (removal.has_type() && (removal.type() == Sirikata::Protocol::Prox::ObjectRemoval::Permanent));
 
-            if (self->mPresenceData->find(removed_obj_ref) != self->mPresenceData->end()) {
+            if (self->mPresenceData.find(removed_obj_ref) != self->mPresenceData.end()) {
                 SILOG(oh,detailed,"Ignoring self removal from proximity results.");
             }
             else {
@@ -987,7 +974,7 @@ ProxyObjectPtr HostedObject::createProxy(const SpaceObjectReference& objref, con
 
     if (!proxy_manager)
     {
-        mPresenceData->insert(PresenceDataMap::value_type( owner_objref, PerPresenceData(this, owner_objref.space(),owner_objref.object(), queryAngle, queryMaxResults)));
+        mPresenceData.insert(PresenceDataMap::value_type( owner_objref, new PerPresenceData(this, owner_objref.space(),owner_objref.object(), queryAngle, queryMaxResults, BaseDatagramLayerPtr())));
         proxy_manager = getProxyManager(owner_objref.space(), owner_objref.object());
     }
 
@@ -1030,13 +1017,13 @@ ProxyManagerPtr HostedObject::presence(const SpaceObjectReference& sor)
 }
 ProxyObjectPtr HostedObject::getDefaultProxyObject(const SpaceID& space)
 {
-    ObjectReference oref = mPresenceData->begin()->first.object();
+    ObjectReference oref = mPresenceData.begin()->first.object();
     return  getProxy(space, oref);
 }
 
 ProxyManagerPtr HostedObject::getDefaultProxyManager(const SpaceID& space)
 {
-    ObjectReference oref = mPresenceData->begin()->first.object();
+    ObjectReference oref = mPresenceData.begin()->first.object();
     return  getProxyManager(space, oref);
 }
 
@@ -1316,25 +1303,25 @@ const String& HostedObject::requestCurrentPhysics(const SpaceID& space,const Obj
 
 SolidAngle HostedObject::requestQueryAngle(const SpaceID& space, const ObjectReference& oref)
 {
-    PresenceDataMap::iterator iter = mPresenceData->find(SpaceObjectReference(space,oref));
-    if (iter == mPresenceData->end())
+    PresenceDataMap::iterator iter = mPresenceData.find(SpaceObjectReference(space,oref));
+    if (iter == mPresenceData.end())
     {
         SILOG(cppoh, error, "Error in cppoh, requesting solid angle for presence that doesn't exist in your presence map.  Returning max solid angle instead.");
         return SolidAngle::Max;
     }
-    return iter->second.queryAngle;
+    return iter->second->queryAngle;
 }
 
 
 uint32 HostedObject::requestQueryMaxResults(const SpaceID& space, const ObjectReference& oref)
 {
-    PresenceDataMap::iterator iter = mPresenceData->find(SpaceObjectReference(space,oref));
-    if (iter == mPresenceData->end())
+    PresenceDataMap::iterator iter = mPresenceData.find(SpaceObjectReference(space,oref));
+    if (iter == mPresenceData.end())
     {
         SILOG(cppoh, error, "Error in cppoh, requesting solid angle for presence that doesn't exist in your presence map.  Returning max solid angle instead.");
         return 0;
     }
-    return iter->second.queryMaxResults;
+    return iter->second->queryMaxResults;
 }
 
 void HostedObject::requestPhysicsUpdate(const SpaceID& space, const ObjectReference& oref, const String& phy)
@@ -1355,10 +1342,10 @@ void HostedObject::requestQueryUpdate(const SpaceID& space, const ObjectReferenc
     std::string payload = serializePBJMessage(request);
 
 
-    PresenceDataMap::iterator pdmIter = mPresenceData->find(SpaceObjectReference(space,oref));
-    if (pdmIter != mPresenceData->end()) {
-        pdmIter->second.queryAngle = new_angle;
-        pdmIter->second.queryMaxResults = new_max_results;
+    PresenceDataMap::iterator pdmIter = mPresenceData.find(SpaceObjectReference(space,oref));
+    if (pdmIter != mPresenceData.end()) {
+        pdmIter->second->queryAngle = new_angle;
+        pdmIter->second->queryMaxResults = new_max_results;
     }
     else {
         SILOG(cppoh,error,"Error in cppoh, requesting solid angle update for presence that doesn't exist in your presence map.");
@@ -1389,8 +1376,8 @@ void HostedObject::updateLocUpdateRequest(const SpaceID& space, const ObjectRefe
         return;
     }
 
-    assert(mPresenceData->find(SpaceObjectReference(space, oref)) != mPresenceData->end());
-    PerPresenceData& pd = (mPresenceData->find(SpaceObjectReference(space, oref)))->second;
+    assert(mPresenceData.find(SpaceObjectReference(space, oref)) != mPresenceData.end());
+    PerPresenceData& pd = *(mPresenceData.find(SpaceObjectReference(space, oref)))->second;
 
     if (loc != NULL) { pd.requestLocation = *loc; pd.updateFields |= PerPresenceData::LOC_FIELD_LOC; }
     if (orient != NULL) { pd.requestOrientation = *orient; pd.updateFields |= PerPresenceData::LOC_FIELD_ORIENTATION; }
@@ -1413,8 +1400,8 @@ void discardChildStream(int success, Stream<SpaceObjectReference>::Ptr sptr) {
 }
 
 void HostedObject::sendLocUpdateRequest(const SpaceID& space, const ObjectReference& oref) {
-    assert(mPresenceData->find(SpaceObjectReference(space, oref)) != mPresenceData->end());
-    PerPresenceData& pd = (mPresenceData->find(SpaceObjectReference(space, oref)))->second;
+    assert(mPresenceData.find(SpaceObjectReference(space, oref)) != mPresenceData.end());
+    PerPresenceData& pd = *(mPresenceData.find(SpaceObjectReference(space, oref)))->second;
 
     ProxyObjectPtr self_proxy = getProxy(space, oref);
 

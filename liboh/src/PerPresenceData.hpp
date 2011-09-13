@@ -25,7 +25,7 @@ public:
     bool validSpaceObjRef;
     SolidAngle queryAngle;
     uint32 queryMaxResults;
-
+    HostedObject::BaseDatagramLayerPtr mSSTDatagramLayers;
     // Outstanding requests for loc updates.
     enum LocField {
         LOC_FIELD_NONE = 0,
@@ -47,8 +47,8 @@ public:
     typedef std::map<String, TimeSteppedSimulation*> SimulationMap;
     SimulationMap sims;
 
-    PerPresenceData(HostedObject* _parent, const SpaceID& _space, const ObjectReference& _oref,const SolidAngle& qAngle, uint32 qMaxResults);
-    PerPresenceData(HostedObject* _parent, const SpaceID& _space,const SolidAngle& qAngle, uint32 qMaxResults);
+    PerPresenceData(HostedObject* _parent, const SpaceID& _space, const ObjectReference& _oref,const SolidAngle& qAngle, uint32 qMaxResults, const HostedObject::BaseDatagramLayerPtr& layer);
+    PerPresenceData(HostedObject* _parent, const SpaceID& _space,const SolidAngle& qAngle, uint32 qMaxResults, const HostedObject::BaseDatagramLayerPtr& layer);
     ~PerPresenceData();
 
     void populateSpaceObjRef(const SpaceObjectReference& sporef);

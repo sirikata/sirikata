@@ -89,8 +89,8 @@ protected:
 
     ObjectHost *mObjectHost;
     ObjectScript *mObjectScript;
-    typedef std::map<SpaceObjectReference, PerPresenceData> PresenceDataMap;
-    PresenceDataMap *mPresenceData;
+    typedef std::map<SpaceObjectReference, PerPresenceData*> PresenceDataMap;
+    PresenceDataMap mPresenceData;
 
     int mNextSubscriptionID;
     bool destroyed;
@@ -106,8 +106,6 @@ protected:
     typedef Connection<SpaceObjectReference> SSTConnection;
     typedef SSTConnection::Ptr SSTConnectionPtr;
 
-    // FIXME maintain a proper map here or put in per-presence data
-    std::vector<BaseDatagramLayerPtr> mSSTDatagramLayers;
 
     OrphanLocUpdateManager mOrphanLocUpdates;
 
@@ -269,7 +267,7 @@ public:
 
 
     static void handleConnected(const HostedObjectWPtr &weakSelf, const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info);
-    static void handleConnectedIndirect(const HostedObjectWPtr &weakSelf, const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info);
+    static void handleConnectedIndirect(const HostedObjectWPtr &weakSelf, const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, const BaseDatagramLayerPtr&);
 
 //    static bool handleEntityCreateMessage(const HostedObjectWPtr &weakSelf, const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference bodyData);
     static void handleMigrated(const HostedObjectWPtr &weakSelf, const SpaceID& space, const ObjectReference& obj, ServerID server);
