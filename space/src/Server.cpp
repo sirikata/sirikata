@@ -560,14 +560,20 @@ void Server::handleConnectAuthResponse(const ObjectHostConnectionManager::Connec
     if (isObjectConnected(obj_id) || isObjectConnecting(obj_id)) {
         // Decide whether this is a conflict or a retry
         if  //was already connected and it was the same oh sending msg
-            ((isObjectConnected(obj_id) &&
-                (mObjects[obj_id]->connID() == oh_conn_id)) ||
-            // or was connecting and was the same oh sending message
-            (isObjectConnecting(obj_id) &&
-                mStoredConnectionData[obj_id].conn_id == oh_conn_id))
+            (isObjectConnected(obj_id) &&
+                (mObjects[obj_id]->connID() == oh_conn_id))
         {
             // retry, tell them they're fine.
             sendConnectSuccess(oh_conn_id, obj_id);
+        }
+        else if
+            // or was connecting and was the same oh sending message
+            (isObjectConnecting(obj_id) &&
+                mStoredConnectionData[obj_id].conn_id == oh_conn_id)
+        {
+            // Do nothing, they're still working on the connection. We can't
+            // send success (they aren't fully connected yet) and we can't send
+            // failure (they might still succeed).
         }
         else
         {
