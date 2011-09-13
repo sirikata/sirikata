@@ -5,12 +5,14 @@ import multiprocessing
 import os
 import os.path
 import sys
+import time
 
 def main():
     parser = argparse.ArgumentParser(description = 'Spawn multiple copies of an object host on this machine',
                                      formatter_class = argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--num-procs', type=int, default=multiprocessing.cpu_count(),
                         help='Number of processes to run. Default is the number of CPUs available.')
+    parser.add_argument('--delay', type=int, default=0, help='Number of seconds to delay between spawning subprocesses')
     parser.add_argument('cppoh_path', help='path to cppoh')
     parser.add_argument('arguments', nargs='*', help='arguments to pass to cppoh')
     args = parser.parse_args()
@@ -27,6 +29,7 @@ def main():
     for i in range(args.num_procs):
         p = subprocess.Popen([args.cppoh_path] + args.arguments, cwd=workdir)
         subprocs.append(p)
+        time.sleep(args.delay)
     
     while True:
         numalive = 0
