@@ -207,7 +207,7 @@ class SIRIKATA_EXPORT BaseDatagramLayer
         }
 
         BaseDatagramLayerPtr datagramLayer(
-                                           new BaseDatagramLayer(sstConnVars, ctx, odp)
+                                           new BaseDatagramLayer(sstConnVars, ctx, odp, endPoint)
         );
 
         datagramLayerMap[endPoint] = datagramLayer;
@@ -267,13 +267,24 @@ class SIRIKATA_EXPORT BaseDatagramLayer
     uint32 getUnusedPort(const EndPointType& ep) {
         return mODP->unusedODPPort(ep);
     }
-
+    void invalidate() {
+        mODP=NULL;
+        std::map<EndPointType, BaseDatagramLayerPtr >& datagramLayerMap = mSSTConnVars->sDatagramLayerMap;
+        std::map<EndPointType, BaseDatagramLayerPtr >::iterator wherei=datagramLayerMap.find(mEndpoint);
+        if (wherei!=datagramLayerMap.end()) {
+            datagramLayerMap.erase(wherei);
+        }else {
+            SILOG(sst,error,"FATAL: Invalidating BaseDatagramLayer that's invalid");          
+        }
+    }
   private:
-    BaseDatagramLayer(SSTConnectionVariables<EndPointType>* sstConnVars, const Context* ctx, ODP::Service* odpservice)
+    BaseDatagramLayer(SSTConnectionVariables<EndPointType>* sstConnVars, const Context* ctx, ODP::Service* odpservice, const EndPointType&ep)
         : mContext(ctx),
           mODP(odpservice),
-          mSSTConnVars(sstConnVars)
+          mSSTConnVars(sstConnVars),
+          mEndpoint(ep)
         {
+            
         }
 
     ODP::Port* allocatePort(const EndPoint<EndPointType>& ep) {
@@ -328,6 +339,8 @@ class SIRIKATA_EXPORT BaseDatagramLayer
     boost::mutex mMutex;
 
     SSTConnectionVariables<EndPointType>* mSSTConnVars;
+    EndPointType mEndpoint;
+
 };
 
 #if SIRIKATA_PLATFORM == SIRIKATA_WINDOWS

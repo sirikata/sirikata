@@ -131,9 +131,12 @@ HostedObject::~HostedObject() {
 
     if (mPresenceData != NULL)
         delete mPresenceData;
-
+    delete mDelegateODPService;
     getObjectHost()->hostedObjectDestroyed(id());
     stop();
+    for (size_t i=0;i<mSSTDatagramLayers.size();++i) {
+        mSSTDatagramLayers[i]->invalidate();
+    }
 }
 
 const UUID& HostedObject::id() const {
@@ -623,6 +626,12 @@ void HostedObject::handleDisconnected(const HostedObjectWPtr& weakSelf, const Sp
     if (cc == Disconnect::LoginDenied) {
         assert(self->mPresenceData->find(spaceobj)==self->mPresenceData->end());
         self->mObjectHost->unregisterHostedObject(spaceobj, self.get());
+    }
+    for (size_t i=0;i<self->mSSTDatagramLayers.size();++i) {
+        BaseDatagramLayerPtr pt=self->mSSTDatagramLayers[i];
+        if (pt.get()) {
+            SILOG(ho,error,"Trying to deallocate datagram");
+        }
     }
 }
 
