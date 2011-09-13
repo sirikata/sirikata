@@ -270,7 +270,7 @@ class SIRIKATA_EXPORT BaseDatagramLayer
     void invalidate() {
         mODP=NULL;
         std::map<EndPointType, BaseDatagramLayerPtr >& datagramLayerMap = mSSTConnVars->sDatagramLayerMap;
-        std::map<EndPointType, BaseDatagramLayerPtr >::iterator wherei=datagramLayerMap.find(mEndpoint);
+        typename std::map<EndPointType, BaseDatagramLayerPtr >::iterator wherei  = datagramLayerMap.find(mEndpoint);
         if (wherei!=datagramLayerMap.end()) {
             datagramLayerMap.erase(wherei);
         }else {
