@@ -2188,8 +2188,14 @@ private:
     else if (streamMsg->type() == streamMsg->DATA || streamMsg->type() == streamMsg->INIT) {
       boost::recursive_mutex::scoped_lock lock(mReceiveBufferMutex);
 
-      assert ( pow(2.0, streamMsg->window()) - mNumOutstandingBytes > 0);
-      mTransmitWindowSize = pow(2.0, streamMsg->window()) - mNumOutstandingBytes;
+      int transmitWindowSize = pow(2.0, streamMsg->window()) - mNumOutstandingBytes;
+      if (transmitWindowSize >= 0) {
+        mTransmitWindowSize = transmitWindowSize;
+      }
+      else {                                      
+        mTransmitWindowSize = 0;
+      }
+
 
       /*std::cout << "offset=" << offset << " , mLastContiguousByteReceived=" << mLastContiguousByteReceived
         << " , mNextByteExpected=" << mNextByteExpected <<"\n";*/
