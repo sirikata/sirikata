@@ -32,6 +32,7 @@
 
 #include <cxxtest/TestSuite.h>
 #include "StorageTestBase.hpp"
+#include <sirikata/cassandra/Cassandra.hpp>
 
 class CassandraStorageTest : public CxxTest::TestSuite
 {

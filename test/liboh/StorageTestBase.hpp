@@ -35,7 +35,6 @@
 
 #include <cxxtest/TestSuite.h>
 #include <sirikata/oh/Storage.hpp>
-#include <sirikata/cassandra/Cassandra.hpp>
 
 class StorageTestBase
 {
