@@ -1575,7 +1575,10 @@ public:
   */
   void listenSubstream(uint16 port, StreamReturnCallbackFunction scb) {
     std::tr1::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
-    assert(conn);
+    if (!conn) {
+      scb(SST_IMPL_FAILURE, StreamPtr() );
+      return;
+    }
 
     conn->listenStream(port, scb);
   }
@@ -1786,8 +1789,11 @@ public:
 				 uint16 local_port, uint16 remote_port)
   {
     std::tr1::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
-    assert(conn);
-    return conn->stream(cb, data, length, local_port, remote_port, mLSID);
+    if (conn) {
+      return conn->stream(cb, data, length, local_port, remote_port, mLSID);
+    }
+
+    return -1;
   }
 
   /*
@@ -1796,10 +1802,7 @@ public:
     @return the local endpoint.
   */
   virtual EndPoint <EndPointType> localEndPoint()  {
-    std::tr1::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
-    assert(conn);
-
-    return EndPoint<EndPointType> (conn->localEndPoint().endPoint, mLocalPort);
+    return mLocalEndPoint;
   }
 
   /*
@@ -1808,10 +1811,7 @@ public:
     @return the remote endpoint.
   */
   virtual EndPoint <EndPointType> remoteEndPoint()  {
-    std::tr1::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
-    assert(conn);
-
-    return EndPoint<EndPointType> (conn->remoteEndPoint().endPoint, mRemotePort);
+    return mRemoteEndPoint;
   }
 
   virtual uint8 getState() {
@@ -1858,6 +1858,10 @@ private:
 
     mQueuedBuffers.clear();
     mCurrentQueueLength = 0;
+
+    std::tr1::shared_ptr<Connection<EndPointType> > locked_conn = mConnection.lock();
+    mRemoteEndPoint = EndPoint<EndPointType> (locked_conn->remoteEndPoint().endPoint, mRemotePort);
+    mLocalEndPoint = EndPoint<EndPointType> (locked_conn->localEndPoint().endPoint, mLocalPort);
 
     // Continues in init, when we have mWeakThis set
   }
@@ -2475,6 +2479,12 @@ private:
   SSTConnectionVariables<EndPointType>* mSSTConnVars;
 
   std::tr1::weak_ptr<Stream<EndPointType> > mWeakThis;
+
+  /** Store the endpoints here to avoid talking to mConnection. It's ok
+   to do this because the endpoints never change for an SST Stream.**/
+  EndPoint <EndPointType> mLocalEndPoint;
+  EndPoint <EndPointType> mRemoteEndPoint;
+    
 };
 #if SIRIKATA_PLATFORM == SIRIKATA_WINDOWS
 //SIRIKATA_EXPORT_TEMPLATE template class SIRIKATA_EXPORT Stream<Sirikata::UUID>;
