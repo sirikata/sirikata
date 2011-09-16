@@ -53,6 +53,7 @@ AlwaysLocationUpdatePolicy::AlwaysLocationUpdatePolicy(SpaceContext* ctx, const 
        std::tr1::bind(&AlwaysLocationUpdatePolicy::reportStats, this),
        Duration::seconds((int64)1)
    ),
+   mLastStatsTime(ctx->simTime()),
    mTimeSeriesServerUpdatesName(String("space.server") + boost::lexical_cast<String>(ctx->id()) + ".loc.server_updates_per_second"),
    mServerUpdatesPerSecond(0),
    mTimeSeriesObjectUpdatesName(String("space.server") + boost::lexical_cast<String>(ctx->id()) + ".loc.object_updates_per_second"),
@@ -74,15 +75,19 @@ void AlwaysLocationUpdatePolicy::stop() {
 }
 
 void AlwaysLocationUpdatePolicy::reportStats() {
+    Time tnow = mLocService->context()->recentSimTime();
+    float32 since_last_seconds = (tnow - mLastStatsTime).seconds();
+    mLastStatsTime = tnow;
+
     mLocService->context()->timeSeries->report(
         mTimeSeriesServerUpdatesName,
-        mServerUpdatesPerSecond
+        mServerUpdatesPerSecond.read() / since_last_seconds
     );
     mServerUpdatesPerSecond = 0;
 
     mLocService->context()->timeSeries->report(
         mTimeSeriesObjectUpdatesName,
-        mObjectUpdatesPerSecond
+        mObjectUpdatesPerSecond.read() / since_last_seconds
     );
     mObjectUpdatesPerSecond = 0;
 }

@@ -81,6 +81,7 @@ class LocalForwarder : public PollingService {
     ObjectConnectionMap mActiveConnections;
     boost::mutex mMutex;
     // Stats, reported as x per second
+    Time mLastStatsTime;
     const String mTimeSeriesForwardedName;
     AtomicValue<uint32> mNumForwarded;
     const String mTimeSeriesDroppedName;

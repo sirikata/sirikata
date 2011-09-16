@@ -367,6 +367,7 @@ private:
     };
 
     Poller mStatsPoller;
+    Time mLastStatsTime;
     const String mTimeSeriesServerUpdatesName;
     AtomicValue<uint32> mServerUpdatesPerSecond;
     const String mTimeSeriesObjectUpdatesName;

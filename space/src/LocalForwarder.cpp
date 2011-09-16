@@ -39,6 +39,7 @@ namespace Sirikata {
 LocalForwarder::LocalForwarder(SpaceContext* ctx)
  : PollingService(ctx->mainStrand, Duration::seconds((int64)1), ctx, "Local Forwarder"),
    mContext(ctx),
+   mLastStatsTime(ctx->simTime()),
    mTimeSeriesForwardedName(String("space.server") + boost::lexical_cast<String>(ctx->id()) + ".forwarded.locally"),
    mNumForwarded(0),
    mTimeSeriesDroppedName(String("space.server") + boost::lexical_cast<String>(ctx->id()) + ".dropped.local_forwarder"),
@@ -113,10 +114,20 @@ bool LocalForwarder::tryForward(Sirikata::Protocol::Object::ObjectMessage* msg) 
 }
 
 void LocalForwarder::poll() {
-    mContext->timeSeries->report(mTimeSeriesForwardedName, mNumForwarded);
-    mContext->timeSeries->report(mTimeSeriesDroppedName, mNumDropped);
+    Time tnow = mContext->recentSimTime();
+    float32 since_last_seconds = (tnow - mLastStatsTime).seconds();
+    mLastStatsTime = tnow;
 
+    mContext->timeSeries->report(
+        mTimeSeriesForwardedName,
+        mNumForwarded.read() / since_last_seconds
+    );
     mNumForwarded = 0;
+
+    mContext->timeSeries->report(
+        mTimeSeriesDroppedName,
+        mNumDropped.read() / since_last_seconds
+    );
     mNumDropped = 0;
 }
 

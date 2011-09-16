@@ -134,6 +134,7 @@ private:
     Sirikata::SizedThreadSafeQueue<Message*> mReceivedMessages;
 
     Poller mTimeSeriesPoller;
+    Time mLastStatsTime;
     const String mTimeSeriesForwardedPerSecondName;
     AtomicValue<uint32> mForwardedPerSecond;
     const String mTimeSeriesDroppedPerSecondName;

@@ -114,6 +114,7 @@ Forwarder::Forwarder(SpaceContext* ctx)
                  ctx->mainStrand,
                  std::tr1::bind(&Forwarder::reportStats, this),
                  Duration::seconds((int64)1)),
+             mLastStatsTime(ctx->simTime()),
              mTimeSeriesForwardedPerSecondName(String("space.server") + boost::lexical_cast<String>(ctx->id()) + ".forwarded.remote"),
              mForwardedPerSecond(0),
              mTimeSeriesDroppedPerSecondName(String("space.server") + boost::lexical_cast<String>(ctx->id()) + ".dropped.forwarder"),
@@ -200,9 +201,19 @@ void Forwarder::stop() {
 }
 
 void Forwarder::reportStats() {
-    mContext->timeSeries->report(mTimeSeriesForwardedPerSecondName, mForwardedPerSecond);
+    Time tnow = mContext->recentSimTime();
+    float32 since_last_seconds = (tnow - mLastStatsTime).seconds();
+    mLastStatsTime = tnow;
+
+    mContext->timeSeries->report(
+        mTimeSeriesForwardedPerSecondName,
+        mForwardedPerSecond.read() / since_last_seconds
+    );
     mForwardedPerSecond = 0;
-    mContext->timeSeries->report(mTimeSeriesDroppedPerSecondName, mDroppedPerSecond);
+    mContext->timeSeries->report(
+        mTimeSeriesDroppedPerSecondName,
+        mDroppedPerSecond.read() / since_last_seconds
+    );
     mDroppedPerSecond = 0;
 }
 
