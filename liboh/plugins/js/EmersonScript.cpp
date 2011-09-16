@@ -210,7 +210,7 @@ void EmersonScript::fireProxEvent(const SpaceObjectReference& localPresSporef,
 
     //create an associated visible object in correct context
     v8::Handle<v8::Object> visiblePres =
-        createVisiblePersistent(jsvis,jscont->mContext);
+        createVisiblePersistent(jsvis);
 
     TryCatch try_catch;
 
@@ -238,19 +238,17 @@ void EmersonScript::fireProxEvent(const SpaceObjectReference& localPresSporef,
     postCallbackChecks();
 }
 
-
-v8::Persistent<v8::Object> EmersonScript::createVisiblePersistent(const SpaceObjectReference& visibleObj, JSProxyPtr addParams, v8::Handle<v8::Context> ctx)
+//should already be in a context by the time this is called
+v8::Persistent<v8::Object> EmersonScript::createVisiblePersistent(const SpaceObjectReference& visibleObj, JSProxyPtr addParams)
 {
     JSVisibleStruct* jsvis = createVisStruct(visibleObj, addParams);
-    return createVisiblePersistent(jsvis,ctx);
+    return createVisiblePersistent(jsvis);
 }
 
-
-v8::Persistent<v8::Object> EmersonScript::createVisiblePersistent(JSVisibleStruct* jsvis, v8::Handle<v8::Context> ctxToCreateIn)
+//should already be in a context by the time this is called
+v8::Persistent<v8::Object> EmersonScript::createVisiblePersistent(JSVisibleStruct* jsvis)
 {
     v8::HandleScope handle_scope;
-    v8::Context::Scope context_scope(ctxToCreateIn);
-
     v8::Local<v8::Object> returner = mManager->mVisibleTemplate->GetFunction()->NewInstance();
     returner->SetInternalField(VISIBLE_JSVISIBLESTRUCT_FIELD,v8::External::New(jsvis));
     returner->SetInternalField(TYPEID_FIELD,v8::External::New(new String(VISIBLE_TYPEID_STRING)));
@@ -272,9 +270,11 @@ v8::Handle<v8::Value> EmersonScript::findVisible(const SpaceObjectReference& pro
     v8::Context::Scope context_scope(mContext->mContext);
 
     JSVisibleStruct* jsvis = createVisStruct(proximateObj);
-    v8::Persistent<v8::Object> returnerPers =createVisiblePersistent(jsvis, mContext->mContext);
+    v8::Persistent<v8::Object> returnerPers =createVisiblePersistent(jsvis);
     return returnerPers;
 }
+
+
 
 //debugging code to output the sporefs of all the presences that I have in mPresences
 void EmersonScript::printMPresences()
@@ -629,28 +629,6 @@ void EmersonScript::handlePresCallback( v8::Handle<v8::Function> funcToCall,JSCo
 
 
 
-
-
-/*
- * From the odp::endpoint & src and destination, checks if the corresponding
- * visible object already existed in the visible array.  If it does, return the
- * associated visible object.  If it doesn't, then return a new visible object
- * with stillVisible false associated with this object.
- */
-v8::Handle<v8::Object> EmersonScript::getMessageSender(const ODP::Endpoint& src)
-{
-    v8::HandleScope handle_scope;
-    SpaceObjectReference from(src.space(), src.object());
-
-    JSVisibleStruct* jsvis = createVisStruct(from);
-    v8::Persistent<v8::Object> returner =createVisiblePersistent(jsvis, mContext->mContext);
-
-    return handle_scope.Close(returner);
-}
-
-
-
-
 void EmersonScript::registerFixupSuspendable(JSSuspendable* jssusp, uint32 contID)
 {
     toFixup[contID].push_back(jssusp);
@@ -745,7 +723,7 @@ bool EmersonScript::handleScriptCommRead(const SpaceObjectReference& src, const 
             v8::HandleScope handle_scope;
             v8::Context::Scope context_scope (receiver->mContext);
 
-            v8::Handle<v8::Object> msgSender =createVisiblePersistent(SpaceObjectReference(src.space(),src.object()), JSProxyPtr() ,receiver->mContext);
+            v8::Handle<v8::Object> msgSender =createVisiblePersistent(SpaceObjectReference(src.space(),src.object()), JSProxyPtr());
 
             //try deserialization
             bool deserializeWorks =false;
@@ -943,7 +921,7 @@ void EmersonScript::removePresenceData(const SpaceObjectReference& sporefToDelet
 v8::Persistent<v8::Object> EmersonScript::presToVis(JSPresenceStruct* jspres, JSContextStruct* jscont)
 {
     JSVisibleStruct* jsvis = createVisStruct(jspres->getSporef());
-    return createVisiblePersistent(jsvis, jscont->mContext);
+    return createVisiblePersistent(jsvis);
 }
 
 

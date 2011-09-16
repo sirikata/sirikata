@@ -198,6 +198,19 @@ public:
     virtual void registerContextForClear(JSContextStruct* jscont);
 
 
+    /**
+       Creates a JSVisibleStruct and wraps it in a persistent v8 object that is
+       returned.
+
+       @param {SpaceObjectReference} visibleObj Will make a JSVisibleStruct out
+       of this spaceobjectreference.
+
+       @param {JSProxyData} addParams If don't have a proxy object in the world
+       with sporef visibleObj, will try to fill in JSVisibleStruct data with
+       these values (note: if NULL), fills in default values.
+     */
+    v8::Persistent<v8::Object> createVisiblePersistent(const SpaceObjectReference& visibleObj, JSProxyPtr addParams);
+    
     //handling basic datatypes for JSPresences
     void setVisualFunction(const SpaceObjectReference sporef, const std::string& newMeshString);
     void setPositionFunction(const SpaceObjectReference sporef, const Vector3f& posVec);
@@ -216,20 +229,6 @@ public:
     void setPhysicsFunction(const SpaceObjectReference sporef, const String& newPhysicsString);
 
     /****Methods that return V8 wrappers for c++ objects **/
-
-
-    /**
-       Creates a JSVisibleStruct and wraps it in a persistent v8 object that is
-       returned.
-
-       @param {SpaceObjectReference} visibleObj Will make a JSVisibleStruct out
-       of this spaceobjectreference.
-
-       @param {JSProxyData} addParams If don't have a proxy object in the world
-       with sporef visibleObj, will try to fill in JSVisibleStruct data with
-       these values (note: if NULL), fills in default values.
-     */
-    v8::Persistent<v8::Object> createVisiblePersistent(const SpaceObjectReference& visibleObj, JSProxyPtr addParams, v8::Handle<v8::Context> ctx);
 
 
     v8::Handle<v8::Value> findVisible(const SpaceObjectReference& proximateObj);
@@ -317,8 +316,11 @@ private:
      */
     void notifyProximate(JSVisibleStruct* proxVis, const SpaceObjectReference& proxTo);
 
+
+
+
     //wraps internal c++ jsvisiblestruct in a v8 object
-    v8::Persistent<v8::Object> createVisiblePersistent(JSVisibleStruct* jsvis, v8::Handle<v8::Context> ctxToCreateIn);
+    v8::Persistent<v8::Object> createVisiblePersistent(JSVisibleStruct* jsvis);
 
     //Called internally by script when guaranteed to be outside of handler
     //execution loop.
@@ -334,8 +336,6 @@ private:
      */
     bool handleScriptCommRead(const SpaceObjectReference& src, const SpaceObjectReference& dst, Sirikata::JS::Protocol::JSMessage js_msg);
 
-
-    v8::Handle<v8::Object> getMessageSender(const ODP::Endpoint& src);
 
     bool mHandlingEvent;
     bool mResetting;

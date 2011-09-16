@@ -94,9 +94,10 @@ public:
     //deprecated
     static std::string serializeObject(v8::Local<v8::Value> v8Val,int32 toStamp = 0);
     static std::string serializeMessage(v8::Local<v8::Value> v8Val, int32 toStamp=0);
-    
+
+    //both of these must be called from within a v8 context
     static v8::Handle<v8::Value> deserializeMessage( EmersonScript* emerScript, Sirikata::JS::Protocol::JSFieldValue jsfieldval,bool& deserializeSuccessful);
-    
+    //both of these must be called from within a v8 context
     static v8::Handle<v8::Object> deserializeObject( EmersonScript* emerScript, Sirikata::JS::Protocol::JSMessage jsmessage,bool& deserializeSuccessful);
 };
 

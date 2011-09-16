@@ -594,10 +594,21 @@ void JSSerializer::shallowCopyFields(v8::Handle<v8::Object> dst, v8::Handle<v8::
  */
 v8::Handle<v8::Object> JSSerializer::deserializeObject( EmersonScript* emerScript, Sirikata::JS::Protocol::JSMessage jsmessage,bool& deserializeSuccessful)
 {
+    
     v8::HandleScope handle_scope;
     ObjectMap labeledObjs;
     FixupMap  toFixUp;
 
+      //error if not in context, won't be able to create a new v8 object.
+      //should just abort here before seg faulting.
+      if (! v8::Context::InContext())
+      {
+          JSLOG(error, "Error when deserializing.  Am not inside a v8 context.  Aborting.");
+          return handle_scope.Close(v8::Object::New());
+      }
+
+
+    
     v8::Handle<v8::Object> deserializeTo;
     
     //if we're deserializing to a function, we need to know rigth off the bat,
@@ -627,6 +638,15 @@ v8::Handle<v8::Object> JSSerializer::deserializeObject( EmersonScript* emerScrip
 
 v8::Handle<v8::Value> JSSerializer::deserializeMessage(EmersonScript* emerScript,Sirikata::JS::Protocol::JSFieldValue jsfieldval, bool& deserializeSuccessful)
 {
+      //error if not in context, won't be able to create a new v8 object.
+      //should just abort here before seg faulting.
+      if (! v8::Context::InContext())
+      {
+          JSLOG(error, "Error when deserializing.  Am not inside a v8 context.  Aborting.");
+          return v8::Undefined();
+      }
+
+    
     v8::HandleScope handle_scope;
     ObjectMap labeledObjs;
     FixupMap toFixUp;
@@ -709,17 +729,8 @@ bool JSSerializer::deserializeObjectInternal( EmersonScript* emerScript, Sirikat
 
       }
 
-      //error if not in context, won't be able to create a new v8 object.
-      //should just abort here before seg faulting.
-      if (! v8::Context::InContext())
-      {
-          JSLOG(error, "Error deserializing visible object.  Am not inside a v8 context.  Aborting.");
-          return false;
-      }
-      v8::Handle<v8::Context> ctx = v8::Context::GetCurrent();
-
       //create the vis obj through objScript
-      deserializeTo = emerScript->createVisiblePersistent(visibleObj, JSProxyPtr(), ctx);
+      deserializeTo = emerScript->createVisiblePersistent(visibleObj, JSProxyPtr());
       return true;
     }
 

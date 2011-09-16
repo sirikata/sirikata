@@ -599,14 +599,6 @@ v8::Handle<v8::Value> root_createVisible(const v8::Arguments& args)
         return jssys->struct_create_vis(sporefVisWatching, JSProxyPtr());
 
 
-    // //decode second arg: sporef watching from
-    // SpaceObjectReference sporefVisWatchingFrom;
-    // errMsg = baseErrMsg + "Could not decode second argument.  ";
-    // sporefDecoded = decodeSporef(args[1],sporefVisWatchingFrom,errMsg);
-
-    // if (! sporefDecoded)
-    //     return v8::ThrowException( v8::Exception::Error(v8::String::New( errMsg.c_str())));
-
 
     //decode second-4th args: timed motion vector
     TimedMotionVector3f location;

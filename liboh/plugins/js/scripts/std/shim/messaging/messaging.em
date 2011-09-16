@@ -260,8 +260,11 @@ if (typeof(std.messaging) != 'undefined')
             else
                 return (new SenderMessageReceiver  ((new SenderMessagePair(system.self,lhs)),rhs));
         }
-
-        throw new Error('Error in sender syntax.  Require either that: 1) lhs must be senderReceiverPair and rhs must contain message handling code; or 2) lhs must be object and rhs must be visible.  Aborting.');
+        
+        throw new Error('Error in sender syntax.  Require either that: '  +
+                        '1) lhs must be senderReceiverPair and rhs must ' +
+                        'contain message handling code; or 2) lhs must '  +
+                        'be object and rhs must be visible.  Aborting.');
     };
 
 
