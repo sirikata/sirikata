@@ -160,7 +160,7 @@ public:
         _cond.notify_one();
     }
 
-    void checkReadCountValueImpl(bool expected_success, int32_t expected_count, bool success, int32_t count) {
+    void checkReadCountValueImpl(bool expected_success, int32 expected_count, bool success, int32 count) {
         TS_ASSERT_EQUALS(expected_success, success);
         if (!success || !expected_success) return;
 
@@ -168,7 +168,7 @@ public:
         if (!count || !expected_count) return;
     }
 
-    void checkCountValue(bool expected_success, int32_t expected_count, bool success, int32_t count) {
+    void checkCountValue(bool expected_success, int32 expected_count, bool success, int32 count) {
         boost::unique_lock<boost::mutex> lock(_mutex);
         checkReadCountValueImpl(expected_success, expected_count, success, count);
         _cond.notify_one();
@@ -436,7 +436,7 @@ public:
     	// NOTE: Depends on above write
         using std::tr1::placeholders::_1;
         using std::tr1::placeholders::_2;
-        int32_t count = 3;
+        int32 count = 3;
     	_storage->count(_buckets[0],"map:name", "map:name@",
     		std::tr1::bind(&StorageTestBase::checkCountValue, this, true, count, _1, _2)
     	);

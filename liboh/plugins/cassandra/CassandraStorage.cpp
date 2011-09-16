@@ -349,7 +349,7 @@ bool CassandraStorage::count(const Bucket& bucket, const Key& start, const Key& 
 void CassandraStorage::executeCount(const Bucket& bucket, ColumnParent& parent, SlicePredicate& predicate, CountCallback cb, const String& timestamp)
 {
     bool success = true;
-    int32_t count = 0;
+    int32 count = 0;
     try{
     	count = mDB->db()->getCount(bucket.rawHexData(), parent, predicate);
     }
@@ -358,7 +358,7 @@ void CassandraStorage::executeCount(const Bucket& bucket, ColumnParent& parent, 
     mContext->mainStrand->post(std::tr1::bind(&CassandraStorage::completeCount, this, cb, success, count));
 }
 
-void CassandraStorage::completeCount(CountCallback cb, bool success, int32_t count) {
+void CassandraStorage::completeCount(CountCallback cb, bool success, int32 count) {
     if (cb) cb(success, count);
 }
 

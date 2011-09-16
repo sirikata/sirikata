@@ -64,7 +64,7 @@ void JSSerializer::unmarkSerialized(ObjectVec& toUnmark)
 void JSSerializer::unmarkDeserialized(ObjectMap& objMap)
 {
     v8::Handle<v8::String> hiddenFieldName = v8::String::New(JSSERIALIZER_ROOT_OBJ_TOKEN);
-    
+
     for (ObjectMapIter mapIter = objMap.begin(); mapIter != objMap.end();
          ++mapIter)
     {
@@ -181,7 +181,7 @@ std::string JSSerializer::serializeObject(v8::Local<v8::Value> v8Val,int32 toSta
 
   std::string serialized_message;
   jsmessage.SerializeToString(&serialized_message);
-  
+
   unmarkSerialized(allObjs);
   return serialized_message;
 }
@@ -211,7 +211,7 @@ void debug_printSerializedFieldVal(Sirikata::JS::Protocol::JSFieldValue jsfieldv
         debug_printSerialized(jsfieldval.a_value(), prepend + ":" + name);
     if (jsfieldval.has_root_object())
         debug_printSerialized(jsfieldval.root_object(), prepend + ":" + name);
-            
+
     if (jsfieldval.has_s_value())
         std::cout<<" s_val:     "<<jsfieldval.s_value()<<"\n";
     if (jsfieldval.has_i_value())
@@ -229,7 +229,7 @@ void debug_printSerializedFieldVal(Sirikata::JS::Protocol::JSFieldValue jsfieldv
 
 std::vector<String> getPropertyNames(v8::Handle<v8::Object> obj) {
     std::vector<String> results;
-    
+
     v8::Local<v8::Array> properties = obj->GetPropertyNames();
     for(uint32 i = 0; i < properties->Length(); i++) {
         v8::Local<v8::Value> prop_name = properties->Get(i);
@@ -255,7 +255,7 @@ std::vector<String> getOwnPropertyNames(v8::Local<v8::Object> obj) {
     if (obj->Has(v8::String::New("prototype")))
         results.push_back("prototype");
 
-    
+
     v8::Handle<v8::Object> protoObj = v8::Local<v8::Object>::Cast(obj->GetPrototype());
     for(std::vector<String>::size_type i = 0; i < all_props.size(); i++)
     {
@@ -278,7 +278,7 @@ std::vector<String> getOwnPropertyNames(v8::Local<v8::Object> obj) {
 
     if (obj->Has(v8::String::New("constructor")))
         results.push_back("constructor");
-    
+
     results.push_back(JSSERIALIZER_PROTOTYPE_NAME);
     return results;
 }
@@ -313,7 +313,7 @@ void JSSerializer::serializeObjectInternal(v8::Local<v8::Value> v8Val, Sirikata:
             return;
     }
 
-    
+
     if(v8Obj->InternalFieldCount() > 0)
     {
         v8::Local<v8::Value> typeidVal = v8Obj->GetInternalField(TYPEID_FIELD);
@@ -349,14 +349,14 @@ void JSSerializer::serializeObjectInternal(v8::Local<v8::Value> v8Val, Sirikata:
     for( unsigned int i = 0; i < properties.size(); i++)
     {
         String prop_name = properties[i];
-        
+
         v8::Local<v8::Value> prop_val;
 
         if (properties[i] == JSSERIALIZER_PROTOTYPE_NAME)
             prop_val = v8Obj->GetPrototype();
         else
             prop_val = v8Obj->Get( v8::String::New(properties[i].c_str(), properties[i].size()) );
-        
+
         /* This is a little gross, but currently necessary. If something is
          * referring to native code, we shouldn't be shipping it. This means we
          * need to detect native code and drop the field. However, v8 doesn't
@@ -456,9 +456,9 @@ void JSSerializer::serializeFieldValueInternal(Sirikata::JS::Protocol::IJSFieldV
     else if(prop_val->IsObject())
     {
         v8::Local<v8::Object> v8obj = prop_val->ToObject();
-        
+
         v8::Local<v8::Value> hiddenValue = v8obj->GetHiddenValue(v8::String::New(JSSERIALIZER_TOKEN_FIELD_NAME));
-        
+
         if (hiddenValue.IsEmpty())
         {
             //check if it's the root object.
@@ -467,12 +467,12 @@ void JSSerializer::serializeFieldValueInternal(Sirikata::JS::Protocol::IJSFieldV
             if (prop_val->Equals(tmpObj->GetPrototype()))
             {
                 Sirikata::JS::Protocol::IJSMessage ijs_o = jsf_value.mutable_root_object();
-                serializeObjectInternal(v8obj, ijs_o, toStampWith,objVec);;                    
+                serializeObjectInternal(v8obj, ijs_o, toStampWith,objVec);;
             }
             else
             {
                 Sirikata::JS::Protocol::IJSMessage    ijs_o = jsf_value.mutable_o_value();
-                serializeObjectInternal(v8obj, ijs_o, toStampWith,objVec);;                    
+                serializeObjectInternal(v8obj, ijs_o, toStampWith,objVec);;
             }
         }
         else
@@ -485,7 +485,7 @@ void JSSerializer::serializeFieldValueInternal(Sirikata::JS::Protocol::IJSFieldV
     }
     else if(prop_val->IsInt32())
     {
-        int32_t i_value = prop_val->Int32Value();
+        int32 i_value = prop_val->Int32Value();
         jsf_value.set_i_value(i_value);
     }
     else if(prop_val->IsUint32())
@@ -567,7 +567,7 @@ void JSSerializer::setPrototype(v8::Handle<v8::Object> toSetProtoOf, v8::Handle<
 }
 
 
-//Copies all fields from src to dst.  Does not 
+//Copies all fields from src to dst.  Does not
 void JSSerializer::shallowCopyFields(v8::Handle<v8::Object> dst, v8::Handle<v8::Object> src)
 {
     std::vector<String> srcPropNames = getPropertyNames(src);
@@ -599,7 +599,7 @@ v8::Handle<v8::Object> JSSerializer::deserializeObject( EmersonScript* emerScrip
     FixupMap  toFixUp;
 
     v8::Handle<v8::Object> deserializeTo;
-    
+
     //if we're deserializing to a function, we need to know rigth off the bat,
     //and change toDeserializeTo to be a function.
     if (jsmessage.has_f_value())
@@ -613,7 +613,7 @@ v8::Handle<v8::Object> JSSerializer::deserializeObject( EmersonScript* emerScrip
     labeledObjs[jsmessage.msg_id()] = deserializeTo;
     if (! deserializeObjectInternal(emerScript, jsmessage,deserializeTo, labeledObjs,toFixUp))
         return handle_scope.Close(deserializeTo);
-    
+
     //return whether fixups worked or not.
     deserializeSuccessful = deserializePerformFixups(labeledObjs,toFixUp);
 
@@ -635,7 +635,7 @@ v8::Handle<v8::Value> JSSerializer::deserializeMessage(EmersonScript* emerScript
     v8::Handle<v8::Value> returner = deserializeFieldValue(emerScript,
         jsfieldval,labeledObjs,toFixUp,toLoopTo);
 
-    
+
     if (!returner.IsEmpty())
         deserializeSuccessful = deserializePerformFixups(labeledObjs, toFixUp);
     else
@@ -866,7 +866,7 @@ v8::Handle<v8::Value> JSSerializer::deserializeFieldValue(EmersonScript* emerScr
         toLoopTo = jsvalue.root_object().msg_id();
         //note: intentionally not setting val here: val is empty as a result.
     }
-    
+
     return val;
 }
 

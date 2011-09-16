@@ -106,7 +106,7 @@ public:
        Pops jscont after this.
      */
     void shimImportAndEvalScript(JSContextStruct* jscont, const String& toEval);
-    
+
     /** Require a file, executing its contents in the root object's scope iff it
      *  has not yet been imported.
      */
@@ -176,7 +176,7 @@ public:
     v8::Local<v8::Function> functionValue(const String& em_script_str);
 
 
-    
+
     // Hook to invoke after a callback is invoked. Allows you to check for
     // conditions that may be set during the callback (kill requested, reset,
     // etc).
@@ -195,13 +195,13 @@ public:
        compile, then returns syntax error.
      */
     v8::Handle<v8::Value> emersonCompileString(const String& toCompile);
-    
+
 
     /** Eval a string, executing its contents in the root object's scope. */
     v8::Handle<v8::Value> evalInGlobal(const String& contents, v8::ScriptOrigin* em_script_name,JSContextStruct* jscs);
- 
 
-    
+
+
 protected:
 
     // Object host internal identifier for the object associated with
@@ -253,7 +253,7 @@ protected:
         EvalContext(JSContextStruct* jsctx);
         EvalContext(const EvalContext& rhs);
         EvalContext(const EvalContext& rhs, JSContextStruct* jsctx);
-        
+
         // Current directory the script being evaluated was in,
         // e.g. ../../liboh/plugins/js/scripts/std/movement
         boost::filesystem::path currentScriptDir;
@@ -290,7 +290,7 @@ protected:
     std::stack<EvalContext> mEvalContextStack;
 
 
-    
+
     //indexed by which context/sandbox you're in.
     typedef     std::map<uint32,std::set<String>  > ImportedFileMap;
     typedef ImportedFileMap::iterator ImportedFileMapIter;
@@ -322,9 +322,9 @@ protected:
     JSObjectScriptManager* mManager;
     OH::Storage* mStorage;
     OH::PersistedObjectSet* mPersistedObjectSet;
-    
+
     void storageCommitCallback(JSContextStruct* jscont, v8::Persistent<v8::Function> cb, bool success, OH::Storage::ReadSet* rs);
-    void storageCountCallback(JSContextStruct* jscont, v8::Persistent<v8::Function> cb, bool success, int32_t count);
+    void storageCountCallback(JSContextStruct* jscont, v8::Persistent<v8::Function> cb, bool success, int32 count);
 
     void setRestoreScriptCallback(JSContextStruct* jscont, v8::Persistent<v8::Function> cb, bool success);
 
@@ -340,7 +340,7 @@ protected:
     bool stopCalled;
 
 
-    
+
   private:
     //should already be inside of a frame;
     v8::Handle<v8::Value> compileFunctionInContext( v8::Handle<v8::Function>&cb);
@@ -363,12 +363,12 @@ protected:
     //         stack. Otherwise, V8 gets stuck with an uncaught
     //         exception and fails on future V8 calls.
     v8::Handle<v8::Value> internalEval( const String& em_script_str, v8::ScriptOrigin* em_script_name, bool is_emerson, bool return_exc = false);
-    
+
 
     //Takes the context from the top value of context stack and returns it.  If
     //context stack is empty, prints error, and returns context associated with mContext.
     v8::Handle<v8::Context> getCurrentV8Context();
-    
+
 };
 
 } // namespace JS

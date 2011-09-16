@@ -113,7 +113,7 @@ private:
     void completeCommit(const Bucket& bucket, Transaction* trans, CommitCallback cb, bool success, ReadSet* rs);
 
     void completeRange(CommitCallback cb, bool success, ReadSet* rs);
-    void completeCount(CountCallback cb, bool success, int32_t count);
+    void completeCount(CountCallback cb, bool success, int32 count);
 
     // A few helper methods that wrap sql operations.
     bool sqlBeginTransaction();
@@ -121,7 +121,7 @@ private:
     bool sqlRollback();
 
 
-    
+
     ObjectHostContext* mContext;
     BucketTransactions mTransactions;
     String mDBFilename;

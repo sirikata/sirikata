@@ -126,7 +126,7 @@ private:
     // Complete a commit back in the main thread, cleaning it up and dispatching the callback
     void completeCommit(Transaction* trans, CommitCallback cb, bool success, ReadSet* rs);
     void completeRange(CommitCallback cb, bool success, ReadSet* rs);
-    void completeCount(CountCallback cb, bool success, int32_t count);
+    void completeCount(CountCallback cb, bool success, int32 count);
 
     // Call libcassandra methods to commit transcation
     bool CassandraCommit(CassandraDBPtr db, const Bucket& bucket, Columns* columns, Keys* eraseKeys, Keys* readKeys, ReadSet* rs, const String& timestamp);
@@ -146,4 +146,3 @@ private:
 }//end namespace Sirikata
 
 #endif //__SIRIKATA_OH_STORAGE_Cassandra_HPP__
-

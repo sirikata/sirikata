@@ -504,7 +504,7 @@ bool SQLiteStorage::count(const Bucket& bucket, const Key& start, const Key& fin
 void SQLiteStorage::executeCount(const String value_count, const Key& start, const Key& finish, CountCallback cb)
 {
 	bool success = true;
-	int32_t count = 0;
+	int32 count = 0;
 
 	int rc;
     char* remain;
@@ -531,7 +531,7 @@ void SQLiteStorage::executeCount(const String value_count, const Key& start, con
     mContext->mainStrand->post(std::tr1::bind(&SQLiteStorage::completeCount, this, cb, success, count));
 }
 
-void SQLiteStorage::completeCount(CountCallback cb, bool success, int32_t count) {
+void SQLiteStorage::completeCount(CountCallback cb, bool success, int32 count) {
     if (cb) cb(success, count);
 }
 

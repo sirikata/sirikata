@@ -81,7 +81,7 @@ public:
      *  requested). If non-empty, ownership transfers to the caller.
      */
     typedef std::tr1::function<void(bool success, ReadSet* rs)> CommitCallback;
-    typedef std::tr1::function<void(bool success, int32_t count)> CountCallback;
+    typedef std::tr1::function<void(bool success, int32 count)> CountCallback;
 
     virtual ~Storage() {};
 
