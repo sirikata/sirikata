@@ -42,7 +42,6 @@
 #include <sirikata/oh/HostedObject.hpp>
 #include <sirikata/core/network/IOServiceFactory.hpp>
 #include <sirikata/core/network/IOService.hpp>
-#include <sirikata/core/util/KnownServices.hpp>
 #include <time.h>
 #include <boost/thread.hpp>
 
@@ -143,7 +142,7 @@ int main (int argc, char** argv) {
 
     String timeseries_type = GetOptionValue<String>(OPT_TRACE_TIMESERIES);
     String timeseries_options = GetOptionValue<String>(OPT_TRACE_TIMESERIES_OPTIONS);
-    Trace::TimeSeries* time_series = Trace::TimeSeriesFactory::getSingleton().getConstructor(timeseries_type)(ctx, timeseries_options);    
+    Trace::TimeSeries* time_series = Trace::TimeSeriesFactory::getSingleton().getConstructor(timeseries_type)(ctx, timeseries_options);
 
     SpaceID mainSpace(GetOptionValue<UUID>(OPT_MAIN_SPACE));
 
@@ -155,7 +154,7 @@ int main (int argc, char** argv) {
     // ServerIDMap for the main space. We need a better way of handling multiple
     // spaces.
     oh->addServerIDMap(mainSpace, server_id_map);
-    
+
     String objstorage_type = GetOptionValue<String>(OPT_OBJECT_STORAGE);
     String objstorage_options = GetOptionValue<String>(OPT_OBJECT_STORAGE_OPTS);
     OH::Storage* obj_storage =
@@ -174,7 +173,7 @@ int main (int argc, char** argv) {
 
 
     ///////////Go go go!! start of simulation/////////////////////
-    ctx->add(ctx);    
+    ctx->add(ctx);
     ctx->add(obj_storage);
     ctx->add(obj_persistent_set);
 
@@ -203,14 +202,14 @@ int main (int argc, char** argv) {
     delete oh;
     //delete pd;
 
-    
+
     delete obj_storage;
     delete obj_persistent_set;
 
 
     SimulationFactory::destroy();
 
-    
+
 
     delete ctx;
     delete time_series;

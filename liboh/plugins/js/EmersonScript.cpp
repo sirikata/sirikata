@@ -33,9 +33,6 @@
 
 #include <sirikata/oh/Platform.hpp>
 
-#include <sirikata/core/util/KnownServices.hpp>
-
-
 #include "JSObjectScript.hpp"
 #include "EmersonScript.hpp"
 #include "JSObjectScriptManager.hpp"
@@ -76,6 +73,7 @@ using namespace std;
 namespace Sirikata {
 namespace JS {
 
+#define EMERSON_UNRELIABLE_COMMUNICATION_PORT 12
 
 EmersonScript::EmersonScript(HostedObjectPtr ho, const String& args, const String& script, JSObjectScriptManager* jMan)
  : JSObjectScript(jMan, ho->getObjectHost()->getStorage(), ho->getObjectHost()->getPersistedObjectSet(), ho->id()),
@@ -224,7 +222,7 @@ void EmersonScript::fireProxEvent(const SpaceObjectReference& localPresSporef,
                                      v8::String::New( sporefVisTo.c_str()  ) };
 
 
-    
+
     //FIXME: Potential memory leak: when will removedProxObj's
     //SpaceObjectReference field be garbage collected and deleted?
     JSLOG(detailed,"Issuing user callback for proximate object gone.  Argument passed");
@@ -381,7 +379,7 @@ void EmersonScript::onConnected(SessionEventProviderPtr from, const SpaceObjectR
     v8::HandleScope handle_scope;
 
     //register port for messaging
-    ODP::Port* msgPort = mParent->bindODPPort(space_id, obj_refer, Services::COMMUNICATION);
+    ODP::Port* msgPort = mParent->bindODPPort(space_id, obj_refer, EMERSON_UNRELIABLE_COMMUNICATION_PORT);
     if (msgPort != NULL)
     {
         mMessagingPortMap[SpaceObjectReference(space_id,obj_refer)] = msgPort;
@@ -546,7 +544,7 @@ void EmersonScript::sendMessageToEntityUnreliable(const SpaceObjectReference& sp
         return;
     }
 
-    ODP::Endpoint dest (sporef.space(),sporef.object(),Services::COMMUNICATION);
+    ODP::Endpoint dest (sporef.space(),sporef.object(),EMERSON_UNRELIABLE_COMMUNICATION_PORT);
     MemoryReference toSend(msgBody);
 
     iter->second->send(dest,toSend);

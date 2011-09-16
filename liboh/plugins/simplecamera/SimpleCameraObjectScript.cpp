@@ -33,9 +33,6 @@
 
 #include <sirikata/oh/Platform.hpp>
 
-#include <sirikata/core/util/KnownServices.hpp>
-
-
 #include "SimpleCameraObjectScript.hpp"
 
 namespace Sirikata {

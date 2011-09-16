@@ -10,6 +10,7 @@
 namespace Sirikata{
 namespace JS{
 
+#define EMERSON_RELIABLE_COMMUNICATION_PORT 5
 
 EmersonMessagingManager::EmersonMessagingManager(ObjectHostContext* ctx)
  : mMainContext(ctx)
@@ -18,19 +19,19 @@ EmersonMessagingManager::EmersonMessagingManager(ObjectHostContext* ctx)
 
 EmersonMessagingManager::~EmersonMessagingManager()
 {
-    // Close all streams, clear out listeners    
+    // Close all streams, clear out listeners
     for(PresenceStreamMap::iterator pres_it = mStreams.begin(); pres_it != mStreams.end(); pres_it++) {
         // Stop listening for new streams
         const SpaceObjectReference& pres_id = pres_it->first;
-        mMainContext->sstConnMgr()->unlisten(            
-            EndPoint<SpaceObjectReference>(pres_id,OBJECT_SCRIPT_COMMUNICATION_PORT)
+        mMainContext->sstConnMgr()->unlisten(
+            EndPoint<SpaceObjectReference>(pres_id,EMERSON_RELIABLE_COMMUNICATION_PORT)
         );
 
         // Stop listening for substreams on the streams we have, close them
         StreamMap& pres_streams = pres_it->second;
         for(StreamMap::iterator it = pres_streams.begin(); it != pres_streams.end(); it++) {
             SSTStreamPtr stream = it->second;
-            stream->unlistenSubstream(OBJECT_SCRIPT_COMMUNICATION_PORT);
+            stream->unlistenSubstream(EMERSON_RELIABLE_COMMUNICATION_PORT);
             stream->close(false);
         }
     }
@@ -47,7 +48,7 @@ void EmersonMessagingManager::presenceConnected(const SpaceObjectReference& conn
         std::tr1::bind(&EmersonMessagingManager::createScriptCommListenerStreamCB,this,
             livenessToken(), connPresSporef,_1,_2
         ),
-        EndPoint<SpaceObjectReference>(connPresSporef,OBJECT_SCRIPT_COMMUNICATION_PORT));
+        EndPoint<SpaceObjectReference>(connPresSporef,EMERSON_RELIABLE_COMMUNICATION_PORT));
 }
 
 void EmersonMessagingManager::presenceDisconnected(const SpaceObjectReference& disconnPresSporef)
@@ -69,7 +70,7 @@ void EmersonMessagingManager::setupNewStream(SSTStreamPtr sstStream) {
     // Listen for substreams, which is where we'll actually receive data. This
     // top level stream goes unused.
     sstStream->listenSubstream(
-        OBJECT_SCRIPT_COMMUNICATION_PORT,
+        EMERSON_RELIABLE_COMMUNICATION_PORT,
         std::tr1::bind(
             &EmersonMessagingManager::handleIncomingSubstream, this,
             livenessToken(), _1, _2
@@ -180,7 +181,7 @@ bool EmersonMessagingManager::sendScriptCommMessageReliable(const SpaceObjectRef
         EndPoint<SpaceObjectReference>(sender,0), //local port is random
 
         //send to receiver's script comm port
-        EndPoint<SpaceObjectReference>(receiver,OBJECT_SCRIPT_COMMUNICATION_PORT),
+        EndPoint<SpaceObjectReference>(receiver,EMERSON_RELIABLE_COMMUNICATION_PORT),
 
         //what to do when the connection is created.
         std::tr1::bind(
@@ -203,7 +204,7 @@ void EmersonMessagingManager::scriptCommWriteStreamConnectedCB(Liveness::Token a
     {
       mMainContext->sstConnMgr()->connectStream(
             EndPoint<SpaceObjectReference>(sender,0), //local port is random
-            EndPoint<SpaceObjectReference>(receiver,OBJECT_SCRIPT_COMMUNICATION_PORT), //send to
+            EndPoint<SpaceObjectReference>(receiver,EMERSON_RELIABLE_COMMUNICATION_PORT), //send to
                                                                     //receiver's
                                                                     //script
                                                                     //comm port
@@ -229,7 +230,7 @@ void EmersonMessagingManager::writeMessage(Liveness::Token alive, SSTStreamPtr s
     streamPtr->createChildStream(
         std::tr1::bind(&EmersonMessagingManager::writeMessageSubstream, this, alive, _1, _2, msg, sender, receiver),
         NULL, 0,
-        OBJECT_SCRIPT_COMMUNICATION_PORT, OBJECT_SCRIPT_COMMUNICATION_PORT
+        EMERSON_RELIABLE_COMMUNICATION_PORT, EMERSON_RELIABLE_COMMUNICATION_PORT
     );
 }
 

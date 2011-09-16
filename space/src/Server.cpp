@@ -55,7 +55,6 @@
 #include <sirikata/core/network/IOStrandImpl.hpp>
 
 #include <sirikata/core/odp/DelegatePort.hpp>
-#include <sirikata/core/util/KnownServices.hpp>
 
 #define SPACE_LOG(lvl,msg) SILOG(space, lvl, msg)
 

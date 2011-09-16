@@ -32,7 +32,6 @@
 
 #include <sirikata/oh/Platform.hpp>
 #include <sirikata/core/task/WorkQueue.hpp>
-#include <sirikata/core/util/KnownServices.hpp>
 #include <sirikata/core/network/Stream.hpp>
 #include <sirikata/core/util/SpaceObjectReference.hpp>
 #include <sirikata/oh/HostedObject.hpp>
@@ -109,7 +108,7 @@ TimeSteppedSimulation* HostedObject::runSimulation(const SpaceObjectReference& s
 
     PerPresenceData& pd =  *psd_it->second;
     bool newSimListener = addSimListeners(pd,simName,sim);
-    
+
     if ((sim != NULL) && (newSimListener))
     {
         HO_LOG(detailed, "Adding simulation to context");
@@ -515,11 +514,6 @@ void HostedObject::handleConnectedIndirect(const HostedObjectWPtr& weakSelf, con
     PerPresenceData& psd = *psd_it->second;
     self->initializePerPresenceData(psd, self_proxy);
 
-
-    //bind an odp port to listen for the begin scripting signal.  if have
-    //receive the scripting signal for the first time, that means that we create
-    //a JSObjectScript for this hostedobject
-    self->bindODPPort(space,obj,Services::LISTEN_FOR_SCRIPT_BEGIN);
     HO_LOG(detailed,"Connected object " << obj << " to space " << space << " waiting on notice");
 }
 

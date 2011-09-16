@@ -33,6 +33,7 @@
 #include <sirikata/core/util/Standard.hh>
 #include <sirikata/core/odp/DelegateService.hpp>
 #include <sirikata/core/odp/DelegatePort.hpp>
+#include <sirikata/core/network/ObjectMessage.hpp>
 
 namespace Sirikata {
 namespace ODP {
@@ -101,7 +102,7 @@ PortID DelegateService::unusedODPPort(const SpaceID& space, const ObjectReferenc
 PortID DelegateService::unusedODPPort(const SpaceObjectReference& sor) {
     // 10000 is completely arbitrary and probably too high...
     for(uint32 i = 0; i < 10000; i++) {
-        PortID port_id = rand() % 32767;
+        PortID port_id = (rand() % (OBJECT_PORT_SYSTEM_MAX-OBJECT_PORT_SYSTEM_RESERVED_MAX)) + (OBJECT_PORT_SYSTEM_RESERVED_MAX+1);
 
         // If we don't have a PortMap yet, then its definitely not allocated
         PortMap* pm = getPortMap(sor);

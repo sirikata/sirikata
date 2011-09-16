@@ -33,8 +33,6 @@
 
 #include <sirikata/oh/Platform.hpp>
 
-#include <sirikata/core/util/KnownServices.hpp>
-
 #include <fstream>
 #include "JSObjectScript.hpp"
 #include "JSLogging.hpp"
@@ -131,7 +129,7 @@ v8::Handle<v8::Value> ProtectedJSCallbackFull(v8::Handle<v8::Context> ctx, v8::H
     v8::Context::Scope context_scope(ctx);
 
     TryCatch try_catch;
-    
+
     Handle<Value> result;
     if (target != NULL && !(*target)->IsNull() && !(*target)->IsUndefined()) {
         result = cb->Call(*target, argc, argv);
@@ -237,7 +235,7 @@ void JSObjectScript::initialize(const String& args, const String& script,int32 m
     OptionSet* options = OptionSet::getOptions("jsobjectscript", this);
     options->parse(args);
 
-    
+
     v8::HandleScope handle_scope;
 
     SpaceObjectReference sporef = SpaceObjectReference::null();
@@ -760,7 +758,7 @@ v8::Handle<v8::Value> JSObjectScript::compileFunctionInContext(v8::Handle<v8::Fu
 {
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(getCurrentV8Context());
-    
+
     TryCatch try_catch;
 
     String errorMessage= "Cannot interpret callback function as string while executing in context.  ";
@@ -778,7 +776,7 @@ v8::Handle<v8::Value> JSObjectScript::compileFunctionInContext(v8::Handle<v8::Fu
     ScriptOrigin cb_origin = cb->GetScriptOrigin();
     v8::Handle<v8::Value> compileFuncResult = internalEval(v8Source, &cb_origin, false);
 
-    
+
     if (! compileFuncResult->IsFunction())
     {
         String errorMessage = "Uncaught exception: function passed in did not compile to a function";
@@ -835,7 +833,7 @@ v8::Handle<v8::Value> JSObjectScript::invokeCallback(JSContextStruct* ctx, v8::H
         mEvalContextStack.push(EvalContext(ctx));
     else
         mEvalContextStack.push(EvalContext(mEvalContextStack.top(),ctx));
-            
+
     ScopedEvalContext sec (this,EvalContext(ctx));
     String exc;
     preEvalOps();
@@ -879,7 +877,7 @@ bool JSObjectScript::checkCurCtxtHasCapability(JSPresenceStruct* jspres, Capabil
 v8::Handle<v8::Value>JSObjectScript::executeInSandbox(JSContextStruct* jscont, v8::Handle<v8::Function> funcToCall,int argc, v8::Handle<v8::Value>* argv)
 {
     ScopedEvalContext scopedContext(this,EvalContext(jscont));
-    
+
     JSLOG(insane, "executing script in alternate context");
     v8::Handle<v8::Value> compiledFunc = compileFunctionInContext(funcToCall);
     if (! compiledFunc->IsFunction())
@@ -965,9 +963,9 @@ v8::Handle<v8::Value> JSObjectScript::absoluteImport(const boost::filesystem::pa
         JSLOG(error, "Error in absolute import.  Not within a context to import from.  Aborting call");
         return v8::Undefined();
     }
-    
+
     JSContextStruct* jscont = mEvalContextStack.top().jscont;
-    
+
     //to prevent infinite cycles
     if (!checkResourcesCPP())
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  Detected a potential infinite loop in imports.  Aborting.")));
@@ -1048,7 +1046,7 @@ v8::Handle<v8::Value> JSObjectScript::import(const String& filename,  bool isJS)
 {
     JSLOG(detailed, "Importing: " << filename);
     v8::HandleScope handle_scope;
-    
+
     std::string* fileToFind= NULL;
 
     if (! isJS)
@@ -1084,9 +1082,9 @@ v8::Handle<v8::Value> JSObjectScript::require(const String& filename,bool isJS)
         JSLOG(error, "Error in require.  Not within a context to require from.  Aborting call");
         return v8::Undefined();
     }
-    
+
     JSContextStruct* jscont = mEvalContextStack.top().jscont;
-    
+
     JSLOG(detailed, "Requiring: " << filename);
     HandleScope handle_scope;
     std::string* fileToFind= NULL;
