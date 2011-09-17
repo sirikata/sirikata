@@ -1852,9 +1852,8 @@ private:
     mInitialData = NULL;
     mInitialDataLength = 0;
 
-    mReceiveBuffer = new uint8[mReceiveWindowSize];
-    mReceiveBitmap = new uint8[mReceiveWindowSize];
-    memset(mReceiveBitmap, 0, mReceiveWindowSize);
+    mReceiveBuffer = NULL;
+    mReceiveBitmap = NULL;
 
     mQueuedBuffers.clear();
     mCurrentQueueLength = 0;
@@ -1916,6 +1915,20 @@ private:
     }
 
     return numBytesBuffered;
+  }
+
+  uint8* receiveBuffer() {
+      if (mReceiveBuffer == NULL)
+          mReceiveBuffer = new uint8[mReceiveWindowSize];
+      return mReceiveBuffer;
+  }
+
+  uint8* receiveBitmap() {
+      if (mReceiveBitmap == NULL) {
+          mReceiveBitmap = new uint8[mReceiveWindowSize];
+          memset(mReceiveBitmap, 0, mReceiveWindowSize);
+      }
+      return mReceiveBitmap;
   }
 
   void initRemoteLSID(LSID remoteLSID) {
@@ -2155,13 +2168,19 @@ private:
   /* This function sends received data up to the application interface.
      mReceiveBufferMutex must be locked before calling this function. */
   void sendToApp(uint32 skipLength) {
-    uint32 readyBufferSize = skipLength;
+      // Special case: if we're not marking any data as skipped and we
+      // haven't allocated the receive bitmap yet, then we're not
+      // going to send anything anyway. Just ignore this call.
+      if (mReceiveBitmap == NULL && skipLength == 0)
+          return;
 
+    uint32 readyBufferSize = skipLength;
+    uint8* recv_bmap = receiveBitmap();
     for (uint32 i=skipLength; i < MAX_RECEIVE_WINDOW; i++) {
-      if (mReceiveBitmap[i] == 1) {
+        if (recv_bmap[i] == 1) {
 	readyBufferSize++;
       }
-      else if (mReceiveBitmap[i] == 0) {
+      else if (recv_bmap[i] == 0) {
 	break;
       }
     }
@@ -2169,16 +2188,18 @@ private:
     //pass data up to the app from 0 to readyBufferSize;
     //
     if (mReadCallback != NULL && readyBufferSize > 0) {
-      mReadCallback(mReceiveBuffer, readyBufferSize);
+        uint8* recv_buf = receiveBuffer();
+        mReadCallback(recv_buf, readyBufferSize);
 
       //now move the window forward...
       mLastContiguousByteReceived = mLastContiguousByteReceived + readyBufferSize;
       mNextByteExpected = mLastContiguousByteReceived + 1;
 
-      memmove(mReceiveBitmap, mReceiveBitmap + readyBufferSize, MAX_RECEIVE_WINDOW - readyBufferSize);
-      memset(mReceiveBitmap + (MAX_RECEIVE_WINDOW - readyBufferSize), 0, readyBufferSize);
+      uint8* recv_bmap = receiveBitmap();
+      memmove(recv_bmap, recv_bmap + readyBufferSize, MAX_RECEIVE_WINDOW - readyBufferSize);
+      memset(recv_bmap + (MAX_RECEIVE_WINDOW - readyBufferSize), 0, readyBufferSize);
 
-      memmove(mReceiveBuffer, mReceiveBuffer + readyBufferSize, MAX_RECEIVE_WINDOW - readyBufferSize);
+      memmove(recv_buf, recv_buf + readyBufferSize, MAX_RECEIVE_WINDOW - readyBufferSize);
 
       mReceiveWindowSize += readyBufferSize;
     }
@@ -2213,8 +2234,8 @@ private:
         if (offsetInBuffer + len <= MAX_RECEIVE_WINDOW) {
 	  mReceiveWindowSize -= len;
 
-	  memcpy(mReceiveBuffer+offsetInBuffer, buffer, len);
-	  memset(mReceiveBitmap+offsetInBuffer, 1, len);
+	  memcpy(receiveBuffer()+offsetInBuffer, buffer, len);
+	  memset(receiveBitmap()+offsetInBuffer, 1, len);
 
 	  sendToApp(len);
 
@@ -2236,8 +2257,8 @@ private:
 
           mReceiveWindowSize -= len;
 
-   	  memcpy(mReceiveBuffer+offsetInBuffer, buffer, len);
-	  memset(mReceiveBitmap+offsetInBuffer, 1, len);
+   	  memcpy(receiveBuffer()+offsetInBuffer, buffer, len);
+	  memset(receiveBitmap()+offsetInBuffer, 1, len);
 
           sendAckPacket();
 	}
