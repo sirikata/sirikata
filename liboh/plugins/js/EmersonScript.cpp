@@ -209,19 +209,16 @@ void EmersonScript::fireProxEvent(const SpaceObjectReference& localPresSporef,
     v8::Context::Scope context_scope(jscont->mContext);
 
     //create an associated visible object in correct context
-    v8::Handle<v8::Object> visiblePres =
-        createVisiblePersistent(jsvis);
+    v8::Local<v8::Object> visiblePres =
+        createVisibleWeakPersistent(jsvis);
 
     TryCatch try_catch;
 
     int argc = 2;
     String sporefVisTo = localPresSporef.toString();
 
-
     v8::Handle<v8::Value> argv[2] = {visiblePres,
                                      v8::String::New( sporefVisTo.c_str()  ) };
-
-
 
     //FIXME: Potential memory leak: when will removedProxObj's
     //SpaceObjectReference field be garbage collected and deleted?
@@ -234,19 +231,20 @@ void EmersonScript::fireProxEvent(const SpaceObjectReference& localPresSporef,
     if (try_catch.HasCaught()) {
         printException(try_catch);
     }
-
     postCallbackChecks();
+    
 }
 
 //should already be in a context by the time this is called
-v8::Persistent<v8::Object> EmersonScript::createVisiblePersistent(const SpaceObjectReference& visibleObj, JSProxyPtr addParams)
+v8::Local<v8::Object> EmersonScript::createVisibleWeakPersistent(const SpaceObjectReference& visibleObj, JSProxyPtr addParams)
 {
+    v8::HandleScope handle_scope;
     JSVisibleStruct* jsvis = createVisStruct(visibleObj, addParams);
-    return createVisiblePersistent(jsvis);
+    return handle_scope.Close(createVisibleWeakPersistent(jsvis));
 }
 
 //should already be in a context by the time this is called
-v8::Persistent<v8::Object> EmersonScript::createVisiblePersistent(JSVisibleStruct* jsvis)
+v8::Local<v8::Object> EmersonScript::createVisibleWeakPersistent(JSVisibleStruct* jsvis)
 {
     v8::HandleScope handle_scope;
     v8::Local<v8::Object> returner = mManager->mVisibleTemplate->GetFunction()->NewInstance();
@@ -254,8 +252,9 @@ v8::Persistent<v8::Object> EmersonScript::createVisiblePersistent(JSVisibleStruc
     returner->SetInternalField(TYPEID_FIELD,v8::External::New(new String(VISIBLE_TYPEID_STRING)));
 
     v8::Persistent<v8::Object> returnerPers = v8::Persistent<v8::Object>::New(returner);
+    
     returnerPers.MakeWeak(NULL,&JSVisibleStruct::visibleWeakReferenceCleanup);
-    return returnerPers;
+    return handle_scope.Close(returner);
 }
 
 
@@ -270,8 +269,8 @@ v8::Handle<v8::Value> EmersonScript::findVisible(const SpaceObjectReference& pro
     v8::Context::Scope context_scope(mContext->mContext);
 
     JSVisibleStruct* jsvis = createVisStruct(proximateObj);
-    v8::Persistent<v8::Object> returnerPers =createVisiblePersistent(jsvis);
-    return returnerPers;
+    v8::Local<v8::Object> returnerPers =createVisibleWeakPersistent(jsvis);
+    return handle_scope.Close(returnerPers);
 }
 
 
@@ -723,21 +722,26 @@ bool EmersonScript::handleScriptCommRead(const SpaceObjectReference& src, const 
             v8::HandleScope handle_scope;
             v8::Context::Scope context_scope (receiver->mContext);
 
-            v8::Handle<v8::Object> msgSender =createVisiblePersistent(SpaceObjectReference(src.space(),src.object()), JSProxyPtr());
+            v8::Local<v8::Object> msgSender =createVisibleWeakPersistent(
+                SpaceObjectReference(src.space(),src.object()), JSProxyPtr());
 
             //try deserialization
             bool deserializeWorks =false;
 
+            std::vector< v8::Persistent<v8::Object> > visiblesToMakeWeak;
+            
             v8::Handle<v8::Value> msgVal;
             if (isJSMsg)
             {
                 //try to decode as object.
-                msgVal = JSSerializer::deserializeObject( this, jsMsg,deserializeWorks);
+                msgVal = JSSerializer::deserializeObject( this, jsMsg,
+                    deserializeWorks);
             }
             else
             {
                 //try to decode as a value.
-                msgVal = JSSerializer::deserializeMessage(this,jsFieldVal,deserializeWorks);
+                msgVal = JSSerializer::deserializeMessage(this,jsFieldVal,
+                    deserializeWorks);
             }
             if (! deserializeWorks)
             {
@@ -918,10 +922,11 @@ void EmersonScript::removePresenceData(const SpaceObjectReference& sporefToDelet
 //don't already have a c++ visible object associated with it (if we do, use
 //that one), wraps that c++ object in v8, and returns it as a v8 object to
 //user
-v8::Persistent<v8::Object> EmersonScript::presToVis(JSPresenceStruct* jspres, JSContextStruct* jscont)
+v8::Local<v8::Object> EmersonScript::presToVis(JSPresenceStruct* jspres, JSContextStruct* jscont)
 {
     JSVisibleStruct* jsvis = createVisStruct(jspres->getSporef());
-    return createVisiblePersistent(jsvis);
+    v8::Local<v8::Object> returner = createVisibleWeakPersistent(jsvis);
+    return returner;
 }
 
 

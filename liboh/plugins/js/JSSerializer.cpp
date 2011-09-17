@@ -730,7 +730,7 @@ bool JSSerializer::deserializeObjectInternal( EmersonScript* emerScript, Sirikat
       }
 
       //create the vis obj through objScript
-      deserializeTo = emerScript->createVisiblePersistent(visibleObj, JSProxyPtr());
+      deserializeTo = emerScript->createVisibleWeakPersistent(visibleObj, JSProxyPtr());
       return true;
     }
 

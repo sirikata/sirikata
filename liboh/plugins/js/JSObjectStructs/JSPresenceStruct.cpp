@@ -421,7 +421,7 @@ void JSPresenceStruct::handleDisconnectedCallback() {
 
 
 //returns this presence as a visible object.
-v8::Persistent<v8::Object>  JSPresenceStruct::toVisible()
+v8::Local<v8::Object>  JSPresenceStruct::toVisible()
 {
     return mParent->presToVis(this,mContext);
 }

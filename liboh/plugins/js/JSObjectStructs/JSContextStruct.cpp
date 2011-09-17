@@ -342,8 +342,10 @@ v8::Handle<v8::Value>  JSContextStruct::checkHeadless()
 
 v8::Handle<v8::Value> JSContextStruct::struct_create_vis(const SpaceObjectReference& sporefWatching, JSProxyPtr addParams)
 {
+    v8::HandleScope handle_scope;
     CHECK_EMERSON_SCRIPT_ERROR(emerScript,create_vis,jsObjScript);
-    return emerScript->createVisiblePersistent(sporefWatching, addParams);
+    return handle_scope.Close(
+        emerScript->createVisibleWeakPersistent(sporefWatching, addParams));
 }
 
 

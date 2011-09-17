@@ -182,6 +182,7 @@ itself.  Requires no args
 */
 v8::Handle<v8::Value> toVisible(const v8::Arguments& args)
 {
+    v8::HandleScope handle_scope;
     if (args.Length() != 0)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("ERROR: calling presence's toVisible function should not take any args.")) );
 
@@ -191,7 +192,7 @@ v8::Handle<v8::Value> toVisible(const v8::Arguments& args)
     if (jspres == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str()) ));
 
-    return jspres->toVisible();
+    return handle_scope.Close(jspres->toVisible());
 }
 
 

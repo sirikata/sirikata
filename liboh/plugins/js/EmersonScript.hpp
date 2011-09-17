@@ -176,7 +176,7 @@ public:
     //don't already have a c++ visible object associated with it (if we do, use
     //that one), wraps that c++ object in v8, and returns it as a v8 object to
     //user
-    v8::Persistent<v8::Object> presToVis(JSPresenceStruct* jspres, JSContextStruct* jscont);
+    v8::Local<v8::Object> presToVis(JSPresenceStruct* jspres, JSContextStruct* jscont);
 
     // Create event handler
     v8::Handle<v8::Value> create_event(v8::Persistent<v8::Function>& cb, JSContextStruct* jscont);
@@ -209,7 +209,8 @@ public:
        with sporef visibleObj, will try to fill in JSVisibleStruct data with
        these values (note: if NULL), fills in default values.
      */
-    v8::Persistent<v8::Object> createVisiblePersistent(const SpaceObjectReference& visibleObj, JSProxyPtr addParams);
+    v8::Local<v8::Object> createVisibleWeakPersistent(
+        const SpaceObjectReference& visibleObj, JSProxyPtr addParams);
     
     //handling basic datatypes for JSPresences
     void setVisualFunction(const SpaceObjectReference sporef, const std::string& newMeshString);
@@ -320,7 +321,7 @@ private:
 
 
     //wraps internal c++ jsvisiblestruct in a v8 object
-    v8::Persistent<v8::Object> createVisiblePersistent(JSVisibleStruct* jsvis);
+    v8::Local<v8::Object> createVisibleWeakPersistent(JSVisibleStruct* jsvis);
 
     //Called internally by script when guaranteed to be outside of handler
     //execution loop.
