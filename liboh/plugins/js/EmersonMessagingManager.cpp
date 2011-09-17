@@ -87,8 +87,9 @@ void EmersonMessagingManager::setupNewStream(SSTStreamPtr sstStream) {
     StreamMap& pres_streams = mStreams[pres];
 
     StreamMap::iterator it = pres_streams.find(sender);
-    if (it == pres_streams.end() || !it->second->connected() || save_mine)
+    if (it == pres_streams.end() || !it->second->connected() || save_mine) {
         pres_streams[sender] = sstStream;
+    }
 }
 
 SSTStreamPtr EmersonMessagingManager::getStream(const SpaceObjectReference& pres, const SpaceObjectReference& remote) {
@@ -97,7 +98,9 @@ SSTStreamPtr EmersonMessagingManager::getStream(const SpaceObjectReference& pres
     StreamMap& pres_streams = pres_it->second;
 
     StreamMap::iterator it = pres_streams.find(remote);
-    if (it != pres_streams.end()) return it->second;
+    if (it != pres_streams.end()) {
+        return it->second;
+    }
     return SSTStreamPtr();
 }
 
@@ -165,14 +168,18 @@ void EmersonMessagingManager::handleScriptCommStreamRead(Liveness::Token alive, 
 
 ////////////////writing functions.
 
-bool EmersonMessagingManager::sendScriptCommMessageReliable(const SpaceObjectReference& sender, const SpaceObjectReference& receiver, const String& msg)
-{
+bool EmersonMessagingManager::sendScriptCommMessageReliable(const SpaceObjectReference& sender, const SpaceObjectReference& receiver, const String& msg) {
+    // arbitrary default # of retries
+    return sendScriptCommMessageReliable(sender, receiver, msg, 10);
+}
+
+bool EmersonMessagingManager::sendScriptCommMessageReliable(const SpaceObjectReference& sender, const SpaceObjectReference& receiver, const String& msg, int8 retries) {
     bool returner = false;
 
     // If we have a stream
     SSTStreamPtr streamPtr = getStream(sender, receiver);
     if (streamPtr) {
-        writeMessage(livenessToken(), streamPtr, msg, sender, receiver);
+        writeMessage(livenessToken(), streamPtr, msg, sender, receiver, retries);
         return true;
     }
 
@@ -187,7 +194,7 @@ bool EmersonMessagingManager::sendScriptCommMessageReliable(const SpaceObjectRef
         std::tr1::bind(
             &EmersonMessagingManager::scriptCommWriteStreamConnectedCB, this,
             livenessToken(),
-            msg, sender,receiver, _1, _2
+            msg, sender,receiver, _1, _2, retries
         )
     );
 
@@ -195,52 +202,43 @@ bool EmersonMessagingManager::sendScriptCommMessageReliable(const SpaceObjectRef
 }
 
 
-void EmersonMessagingManager::scriptCommWriteStreamConnectedCB(Liveness::Token alive, const String& msg, const SpaceObjectReference& sender, const SpaceObjectReference& receiver, int err, SSTStreamPtr streamPtr)
+void EmersonMessagingManager::scriptCommWriteStreamConnectedCB(Liveness::Token alive, const String& msg, const SpaceObjectReference& sender, const SpaceObjectReference& receiver, int err, SSTStreamPtr streamPtr, int8 retries)
 {
     if (!alive) return;
 
     //if connection failure, just try to re-connect.
     if (err != SST_IMPL_SUCCESS)
     {
-      mMainContext->sstConnMgr()->connectStream(
-            EndPoint<SpaceObjectReference>(sender,0), //local port is random
-            EndPoint<SpaceObjectReference>(receiver,EMERSON_RELIABLE_COMMUNICATION_PORT), //send to
-                                                                    //receiver's
-                                                                    //script
-                                                                    //comm port
-            std::tr1::bind(
-                &EmersonMessagingManager::scriptCommWriteStreamConnectedCB, this,
-                livenessToken(),
-                msg, sender, receiver, _1, _2
-            )  //what to do when the connection is created.
-        );
+        if (retries > 0)
+            sendScriptCommMessageReliable(sender, receiver, msg, retries--);
         return;
     }
 
     setupNewStream(streamPtr);
-    writeMessage(livenessToken(), streamPtr, msg, sender,receiver);
+    writeMessage(livenessToken(), streamPtr, msg, sender,receiver, retries);
 }
 
-void EmersonMessagingManager::writeMessage(Liveness::Token alive, SSTStreamPtr streamPtr, const String& msg, const SpaceObjectReference& sender, const SpaceObjectReference& receiver) {
+void EmersonMessagingManager::writeMessage(Liveness::Token alive, SSTStreamPtr streamPtr, const String& msg, const SpaceObjectReference& sender, const SpaceObjectReference& receiver, int8 retries) {
     if (!alive) return;
 
     // FIXME we're not pushing data directly here because it doesn't seem like
     // you can actually find out how much data was successfully pushed in. what
     // if we have a very large message?
     streamPtr->createChildStream(
-        std::tr1::bind(&EmersonMessagingManager::writeMessageSubstream, this, alive, _1, _2, msg, sender, receiver),
+        std::tr1::bind(&EmersonMessagingManager::writeMessageSubstream, this, alive, _1, _2, msg, sender, receiver, retries),
         NULL, 0,
         EMERSON_RELIABLE_COMMUNICATION_PORT, EMERSON_RELIABLE_COMMUNICATION_PORT
     );
 }
 
-void EmersonMessagingManager::writeMessageSubstream(Liveness::Token alive, int err, SSTStreamPtr subStreamPtr, const String& msg, const SpaceObjectReference& sender, const SpaceObjectReference& receiver) {
+void EmersonMessagingManager::writeMessageSubstream(Liveness::Token alive, int err, SSTStreamPtr subStreamPtr, const String& msg, const SpaceObjectReference& sender, const SpaceObjectReference& receiver, int8 retries) {
     if (!alive) return;
 
     if (err != SST_IMPL_SUCCESS) {
         // Try the whole process over, starting from scratch in case the stream
         // changed
-        sendScriptCommMessageReliable(sender, receiver, msg);
+        if (retries > 0)
+            sendScriptCommMessageReliable(sender, receiver, msg, retries--);
         return;
     }
 
