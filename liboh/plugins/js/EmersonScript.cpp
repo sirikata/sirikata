@@ -576,7 +576,13 @@ v8::Handle<v8::Value> EmersonScript::create_timeout(double period,v8::Persistent
     v8::HandleScope handle_scope;
 
     //create an object
-    v8::Persistent<v8::Object> returner = v8::Persistent<v8::Object>::New(mManager->mTimerTemplate->NewInstance());
+    v8::Local<v8::Object> localReturner = mManager->mTimerTemplate->NewInstance();
+
+    
+//    v8::Persistent<v8::Object> returner =
+//    v8::Persistent<v8::Object>::New(mManager->mTimerTemplate->NewInstance());
+    v8::Persistent<v8::Object> returner = v8::Persistent<v8::Object>::New(localReturner);
+    
     returner->SetInternalField(TIMER_JSTIMERSTRUCT_FIELD,External::New(jstimer));
     returner->SetInternalField(TYPEID_FIELD, External::New(new String("timer")));
 
@@ -585,8 +591,7 @@ v8::Handle<v8::Value> EmersonScript::create_timeout(double period,v8::Persistent
     //timer requires a handle to its persistent object so can handle cleanup
     //correctly.
     jstimer->setPersistentObject(returner);
-
-    return handle_scope.Close(returner);
+    return handle_scope.Close(localReturner);
 }
 
 v8::Handle<v8::Value> EmersonScript::create_timeout(double period, v8::Persistent<v8::Function>& cb,JSContextStruct* jscont)
