@@ -1919,14 +1919,14 @@ private:
 
   uint8* receiveBuffer() {
       if (mReceiveBuffer == NULL)
-          mReceiveBuffer = new uint8[mReceiveWindowSize];
+          mReceiveBuffer = new uint8[MAX_RECEIVE_WINDOW];
       return mReceiveBuffer;
   }
 
   uint8* receiveBitmap() {
       if (mReceiveBitmap == NULL) {
-          mReceiveBitmap = new uint8[mReceiveWindowSize];
-          memset(mReceiveBitmap, 0, mReceiveWindowSize);
+          mReceiveBitmap = new uint8[MAX_RECEIVE_WINDOW];
+          memset(mReceiveBitmap, 0, MAX_RECEIVE_WINDOW);
       }
       return mReceiveBitmap;
   }
