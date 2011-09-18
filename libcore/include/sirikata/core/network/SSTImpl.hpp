@@ -500,8 +500,6 @@ private:
     return mDatagramLayer->context();
   }
 
-
-
   void serviceConnectionNoReturn(std::tr1::shared_ptr<Connection<EndPointType> > conn) {
       serviceConnection(conn);
   }
@@ -568,14 +566,14 @@ private:
 
 	  mLastTransmitTime = curTime;
 
-          if (mState != CONNECTION_PENDING_CONNECT || mNumInitialRetransmissionAttempts > 3) {
+          if (mState != CONNECTION_PENDING_CONNECT || mNumInitialRetransmissionAttempts > 5) {
             mInSendingMode = false;
             mQueuedSegments.pop_front();
           }
       }
 
       if (!mInSendingMode || mState == CONNECTION_PENDING_CONNECT) {
-        getContext()->mainStrand->post(Duration::microseconds(mRTOMicroseconds),
+        getContext()->mainStrand->post(Duration::microseconds(mRTOMicroseconds*pow(2,mNumInitialRetransmissionAttempts)),
                                        std::tr1::bind(&Connection<EndPointType>::serviceConnectionNoReturn, this, mWeakThis.lock()) );
       }
     }
@@ -2379,7 +2377,7 @@ private:
 
     conn->sendData( buffer.data(), buffer.size(), false );
 
-    getContext()->mainStrand->post(Duration::microseconds(2*mStreamRTOMicroseconds),
+    getContext()->mainStrand->post(Duration::microseconds(pow(2,mNumInitRetransmissions)*mStreamRTOMicroseconds),
 
         std::tr1::bind(&Stream<EndPointType>::serviceStreamNoReturn, this, mWeakThis.lock(), conn) );
 
