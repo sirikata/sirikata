@@ -573,7 +573,7 @@ private:
       }
 
       if (!mInSendingMode || mState == CONNECTION_PENDING_CONNECT) {
-        getContext()->mainStrand->post(Duration::microseconds(mRTOMicroseconds*pow(2,mNumInitialRetransmissionAttempts)),
+        getContext()->mainStrand->post(Duration::microseconds(mRTOMicroseconds*pow(2.0,mNumInitialRetransmissionAttempts)),
                                        std::tr1::bind(&Connection<EndPointType>::serviceConnectionNoReturn, this, mWeakThis.lock()) );
       }
     }
@@ -2377,7 +2377,7 @@ private:
 
     conn->sendData( buffer.data(), buffer.size(), false );
 
-    getContext()->mainStrand->post(Duration::microseconds(pow(2,mNumInitRetransmissions)*mStreamRTOMicroseconds),
+    getContext()->mainStrand->post(Duration::microseconds(pow(2.0,mNumInitRetransmissions)*mStreamRTOMicroseconds),
 
         std::tr1::bind(&Stream<EndPointType>::serviceStreamNoReturn, this, mWeakThis.lock(), conn) );
 
