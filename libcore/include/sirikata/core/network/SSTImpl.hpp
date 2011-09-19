@@ -56,6 +56,8 @@
 
 #include "Protocol_SSTHeader.pbj.hpp"
 
+#define SST_LOG(lvl,msg) SILOG(sst,lvl,msg);
+
 namespace Sirikata {
 
 template <typename EndObjectType>
@@ -666,7 +668,7 @@ private:
 
     ConnectionMap& connectionMap = sstConnVars->sConnectionMap;
     if (connectionMap.find(localEndPoint) != connectionMap.end()) {
-      std::cout << "sConnectionMap.find failed for " << localEndPoint.endPoint.toString() << "\n";
+      SST_LOG(warn, "sConnectionMap.find failed for " << localEndPoint.endPoint.toString() << "\n");
 
       return false;
     }
@@ -958,7 +960,7 @@ private:
 			    received_stream_msg->payload().size() );
       }
       else {
-	std::cout << mLocalEndPoint.endPoint.toString()  << " not listening to streams at: " << received_stream_msg->dest_port() << "\n";
+	SST_LOG(warn, mLocalEndPoint.endPoint.toString()  << " not listening to streams at: " << received_stream_msg->dest_port() << "\n");
       }
     }
     else {
@@ -986,7 +988,7 @@ private:
 	}
       }
       else {
-	std::cout << "Received reply packet for unknown stream\n";
+	SST_LOG(detailed, "Received reply packet for unknown stream: " <<  initiatingLSID  <<"\n");
       }
     }
   }
@@ -1135,7 +1137,7 @@ private:
     return mRTOMicroseconds;
   }
 
-  void eraseDisconnectedStream(Stream<EndPointType>* s) {
+  void eraseDisconnectedStream(Stream<EndPointType>* s) {    
     mOutgoingSubstreamMap.erase(s->getLSID());
     mIncomingSubstreamMap.erase(s->getRemoteLSID());
 
@@ -1236,7 +1238,7 @@ private:
  	/*Someone's already connected at this port. Either don't reply or
  	  send back a request rejected message. */
 
- 	std::cout << "Someone's already connected at this port on object " << localEndPoint.endPoint.toString() << "\n";
+        SST_LOG(info, "Someone's already connected at this port on object " << localEndPoint.endPoint.toString() << "\n");
  	return;
        }
        std::tr1::shared_ptr<Connection<EndPointType> > conn = connectionMap[localEndPoint];
@@ -1276,7 +1278,7 @@ private:
          conn->sendData(payload, sizeof(payload), false);
        }
        else {
-         std::cout << "No one listening on this connection\n";
+         SST_LOG(warn, "No one listening on this connection\n");
        }
      }
 
@@ -1734,8 +1736,9 @@ public:
       mConnected = false;
       mState = DISCONNECTED;
 
-      if (conn)
+      if (conn) {
         conn->eraseDisconnectedStream(this);
+      }
 
       return true;
     }
@@ -2052,6 +2055,7 @@ private:
             mStreamReturnCallback = NULL;
         }
 
+        
         conn->eraseDisconnectedStream(this);
         mState = DISCONNECTED;
 
@@ -2089,6 +2093,7 @@ private:
 
             std::tr1::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
             assert(conn);
+            
             conn->eraseDisconnectedStream(this);
 
 	    return true;
@@ -2352,7 +2357,7 @@ private:
 
 
     if (sampleStartTime > sampleEndTime ) {
-      std::cout << "Bad sample\n";
+      SST_LOG(insane, "Bad sample\n");
       return;
     }
 
