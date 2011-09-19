@@ -428,6 +428,7 @@ private:
 
   std::deque< std::tr1::shared_ptr<ChannelSegment> > mQueuedSegments;
   std::deque< std::tr1::shared_ptr<ChannelSegment> > mOutstandingSegments;
+  boost::mutex mOutstandingSegmentsMutex;
 
   uint16 mCwnd;
   int64 mRTOMicroseconds; // RTO in microseconds
@@ -503,8 +504,12 @@ private:
   void serviceConnectionNoReturn(std::tr1::shared_ptr<Connection<EndPointType> > conn) {
       serviceConnection(conn);
   }
+
   bool serviceConnection(std::tr1::shared_ptr<Connection<EndPointType> > conn) {
-    const Time curTime = Timer::now();
+    const Time curTime = Timer::now();    
+    
+    boost::mutex::scoped_lock lock(mOutstandingSegmentsMutex);
+    
 
     if (mState == CONNECTION_PENDING_CONNECT) {
       mOutstandingSegments.clear();
@@ -851,35 +856,45 @@ private:
   }
 
   void markAcknowledgedPacket(uint64 receivedAckNum) {
+    boost::mutex::scoped_lock lock(mOutstandingSegmentsMutex);    
+    
     for (std::deque< std::tr1::shared_ptr<ChannelSegment> >::iterator it = mOutstandingSegments.begin();
          it != mOutstandingSegments.end(); it++)
     {
-      std::tr1::shared_ptr<ChannelSegment> segment = *it;
+        std::tr1::shared_ptr<ChannelSegment> segment = *it;
 
-      if (segment->mChannelSequenceNumber == receivedAckNum) {
-	segment->mAckTime = Timer::now();
+        if (!segment) {
+          mOutstandingSegments.erase(it);
+          it = mOutstandingSegments.begin();
+          continue;
+        }
 
-        if (mFirstRTO ) {
+        if (segment->mChannelSequenceNumber == receivedAckNum) {
+          segment->mAckTime = Timer::now();
+
+          if (mFirstRTO ) {
 	    mRTOMicroseconds = ((segment->mAckTime - segment->mTransmitTime).toMicroseconds()) ;
 	    mFirstRTO = false;
+          }
+          else {
+            mRTOMicroseconds = CC_ALPHA * mRTOMicroseconds +
+              (1.0-CC_ALPHA) * (segment->mAckTime - segment->mTransmitTime).toMicroseconds();
+          }
+
+          mInSendingMode = true;
+
+          if (mWeakThis.lock()) {
+            getContext()->mainStrand->post(
+                                         std::tr1::bind(&Connection<EndPointType>::serviceConnectionNoReturn, this, mWeakThis.lock()) );
+          }
+
+          if (rand() % mCwnd == 0)  {
+            mCwnd += 1;
+          }
+
+          mOutstandingSegments.erase(it);
+          break;
         }
-        else {
-          mRTOMicroseconds = CC_ALPHA * mRTOMicroseconds +
-            (1.0-CC_ALPHA) * (segment->mAckTime - segment->mTransmitTime).toMicroseconds();
-        }
-
-        mInSendingMode = true;
-
-        getContext()->mainStrand->post(
-                                     std::tr1::bind(&Connection<EndPointType>::serviceConnectionNoReturn, this, mWeakThis.lock()) );
-
-        if (rand() % mCwnd == 0)  {
-          mCwnd += 1;
-        }
-
-        mOutstandingSegments.erase(it);
-        break;
-      }
     }
   }
 
