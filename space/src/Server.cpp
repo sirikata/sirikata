@@ -429,7 +429,7 @@ void Server::handleSessionMessage(const ObjectHostConnectionManager::ConnectionI
     else if (session_msg.has_disconnect()) {
         ObjectConnectionMap::iterator it = mObjects.find(session_msg.disconnect().object());
         if (it != mObjects.end())
-            handleDisconnect(it->first, it->second);
+            handleDisconnect(session_msg.disconnect().object(), it->second);
     }
 
     // InitiateMigration messages
@@ -719,7 +719,9 @@ void Server::handleConnectAck(const ObjectHostConnectionManager::ConnectionID& o
     mForwarder->enableObjectConnection(obj_id);
 }
 
-void Server::handleDisconnect(const UUID& obj_id, ObjectConnection* conn) {
+// Note that the obj_id is intentionally not a const & so that we're sure it is
+// valid throughout this method.
+void Server::handleDisconnect(UUID obj_id, ObjectConnection* conn) {
     assert(conn->id() == obj_id);
 
     mOSeg->removeObject(obj_id);

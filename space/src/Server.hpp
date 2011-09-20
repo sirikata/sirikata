@@ -92,8 +92,8 @@ private:
     // OSegWriteListener Interface
     virtual void osegMigrationAcknowledged(const UUID& id);
     virtual void osegAddNewFinished(const UUID& id, OSegAddNewStatus status);
-    
-    
+
+
     // ODP::DelegateService dependencies
     ODP::DelegatePort* createDelegateODPPort(DelegateService*, const SpaceObjectReference& sor, ODP::PortID port);
     bool delegateODPPortSend(const ODP::Endpoint& source_ep, const ODP::Endpoint& dest_ep, MemoryReference payload);
@@ -158,7 +158,7 @@ private:
     void handleMigration(const UUID& obj_id);
 
     // Handle a disconnection
-    void handleDisconnect(const UUID& obj_id, ObjectConnection* conn);
+    void handleDisconnect(UUID obj_id, ObjectConnection* conn);
 
     //finally deletes any object connections to obj_id
     void killObjectConnection(const UUID& obj_id);
