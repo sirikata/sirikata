@@ -413,11 +413,17 @@ void SessionManager::disconnect(const SpaceObjectReference& sporef_objid) {
     disconnect_msg.set_object(sporef_objid.object().getAsUUID());
     disconnect_msg.set_reason("Quit");
 
-    send(sporef_objid, OBJECT_PORT_SESSION,
+    ServerID connected_to = mObjectConnections.getConnectedServer(sporef_objid);
+    assert(connected_to != NullServerID);
+
+    // We just need to make sure it gets on the queue, once its on the space
+    // server guarantees processing since it is a session message
+    sendRetryingMessage(
+        sporef_objid, OBJECT_PORT_SESSION,
         UUID::null(), OBJECT_PORT_SESSION,
-        serializePBJMessage(session_msg)
+        serializePBJMessage(session_msg),
+        connected_to, mContext->mainStrand, Duration::seconds(0.05)
     );
-    // FIXME do something on failure
 
     // Notify of disconnect (requested), then remove
     mObjectConnections.gracefulDisconnect(sporef_objid);
