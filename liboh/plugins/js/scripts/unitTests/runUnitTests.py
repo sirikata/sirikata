@@ -171,6 +171,15 @@ def registerTests():
                                         entityConstructorInfo=[messagingTestInfo],
                                         duration=15);
     testArray.append(messagingTest);
+
+
+    connectionLoadTestInfo = CSVConstructorInfo(script_type="js",
+                                                script_contents="system.import('unitTests/emTests/connectionLoadTest.em');");
+    connectionLoadTest     = csvTest.CSVTest("connectionLoadTest",
+                                             touches=['onPresenceConnected', 'onPresenceDisconnected'],
+                                             entityConstructorInfo=[connectionLoadTestInfo],
+                                             duration=40);
+    testArray.append(connectionLoadTest);
     
 
     global manager
