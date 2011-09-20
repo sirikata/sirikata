@@ -142,7 +142,14 @@ void Server::newStream(int err, Stream<SpaceObjectReference>::Ptr s) {
     return;
   }
 
+  // If we've lost the object's connection, we should just ignore this
   ObjectReference objid = s->remoteEndPoint().endPoint.object();
+  if (mObjects.find(objid.getAsUUID()) == mObjects.end()) {
+      s->close(false);
+      return;
+  }
+
+  // Otherwise, they have a complete session
   ObjectSession* new_obj_session = new ObjectSession(objid, s);
   mObjectSessions[objid] = new_obj_session;
   notify(&ObjectSessionListener::newSession, new_obj_session);
