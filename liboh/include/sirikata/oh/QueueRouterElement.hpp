@@ -73,6 +73,12 @@ public:
         return push(0, pkt);
     }
     virtual bool push(uint32 port, PacketType* pkt) {
+        return push(port, pkt, false);
+    }
+    bool push(PacketType* pkt, bool force) {
+        return push(0, pkt, force);
+    }
+    bool push(uint32 port, PacketType* pkt, bool force) {
         assert(pkt != NULL);
         assert(port == 0);
 
@@ -81,7 +87,7 @@ public:
         uint32 cur_size = mSize.read();
         uint32 new_size = cur_size + sz;
 
-        if (new_size > mMaxSize) {
+        if (new_size > mMaxSize && !force) {
             // drop
             return false;
         }

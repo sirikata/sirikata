@@ -110,7 +110,9 @@ void SpaceNodeConnection::handleRead(Chunk& chunk, const Sirikata::Network::Stre
     TIMESTAMP_END(tstamp, Trace::OH_NET_RECEIVED);
 
     // NOTE: We can't record drops here or we incur a lot of overhead in parsing...
-    bool pushed = receive_queue.push(msg);
+    // Session messages need to be reliable, we force them through
+    bool session_msg = (msg->dest_port() == OBJECT_PORT_SESSION);
+    bool pushed = receive_queue.push(msg, session_msg);
 
     if (pushed) {
         // handleConnectionRead() could be called from any thread/strand. Everything that is not
