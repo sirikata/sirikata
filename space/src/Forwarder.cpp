@@ -699,7 +699,7 @@ void Forwarder::serverMessageReceived(Message* msg) {
     }
 
     if (!push_success) {
-        SILOG(forwarder,fatal,"FATAL: Unhandled drop in Forwarder.");
+        SILOG(forwarder,debug,"Unhandled drop in Forwarder. Received messages queue is overflowing.");
         delete msg;
     }
 
