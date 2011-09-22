@@ -714,21 +714,25 @@ void LibproxProximity::requestProxSubstream(const UUID& objid, ProxStreamInfoPtr
 
     base_stream->createChildStream(
         mContext->mainStrand->wrap(
-            std::tr1::bind(&LibproxProximity::proxSubstreamCallback, this, _1, base_stream, _2, prox_stream)
+            std::tr1::bind(&LibproxProximity::proxSubstreamCallback, this, _1, objid, base_stream, _2, prox_stream)
         ),
         (void*)NULL, 0,
         OBJECT_PORT_PROXIMITY, OBJECT_PORT_PROXIMITY
     );
 }
 
-void LibproxProximity::proxSubstreamCallback(int x, ProxStreamPtr parent_stream, ProxStreamPtr substream, ProxStreamInfoPtr prox_stream_info) {
+void LibproxProximity::proxSubstreamCallback(int x, const UUID& objid, ProxStreamPtr parent_stream, ProxStreamPtr substream, ProxStreamInfoPtr prox_stream_info) {
     if (!substream) {
+        // If they disconnected, ignore
+        bool valid_session = (mContext->sessionManager()->getSession(ObjectReference(objid)) != NULL);
+        if (!valid_session) return;
+
         // Retry
         PROXLOG(warn,"Error opening Prox substream, retrying...");
 
         parent_stream->createChildStream(
             mContext->mainStrand->wrap(
-                std::tr1::bind(&LibproxProximity::proxSubstreamCallback, this, _1, parent_stream, _2, prox_stream_info)
+                std::tr1::bind(&LibproxProximity::proxSubstreamCallback, this, _1, objid, parent_stream, _2, prox_stream_info)
             ),
             (void*)NULL, 0,
             OBJECT_PORT_PROXIMITY, OBJECT_PORT_PROXIMITY
