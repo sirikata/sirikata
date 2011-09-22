@@ -488,9 +488,12 @@ void RedisObjectSegmentation::removeObject(const UUID& obj_id) {
 bool RedisObjectSegmentation::clearToMigrate(const UUID& obj_id) {
     if (mStopping) return false;
 
-    assert(mOSeg.find(obj_id) != mOSeg.end());
-    // FIXME should return false in some cases, like when it is already
-    // migrating to or from this server
+    // This can happen if the object is already migrating from this server. In
+    // that case, it shouldn't start migrating again.
+    // FIXME right now this *might* cover the case of an object that OSeg was
+    // notified is migrating to this server but not finished yet?
+    if (mOSeg.find(obj_id) == mOSeg.end()) return false;
+
     return true;
 }
 
