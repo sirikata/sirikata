@@ -470,6 +470,7 @@ private:
       mInSendingMode(true)
   {
       mDatagramLayer = sstConnVars->getDatagramLayer(localEndPoint.endPoint);
+
       mDatagramLayer->listenOn(
           localEndPoint,
           std::tr1::bind(
@@ -479,6 +480,7 @@ private:
               std::tr1::placeholders::_3
           )
       );
+
   }
 
   void checkIfAlive(std::tr1::shared_ptr<Connection<EndPointType> > conn) {
@@ -875,8 +877,8 @@ private:
           segment->mAckTime = Timer::now();
 
           if (mFirstRTO ) {
-	    mRTOMicroseconds = ((segment->mAckTime - segment->mTransmitTime).toMicroseconds()) ;
-	    mFirstRTO = false;
+	         mRTOMicroseconds = ((segment->mAckTime - segment->mTransmitTime).toMicroseconds()) ;
+	         mFirstRTO = false;
           }
           else {
             mRTOMicroseconds = CC_ALPHA * mRTOMicroseconds +
@@ -885,9 +887,10 @@ private:
 
           mInSendingMode = true;
 
-          if (mWeakThis.lock()) {
+          std::tr1::shared_ptr<Connection<EndPointType> > conn = mWeakThis.lock();
+          if (conn) {
             getContext()->mainStrand->post(
-                                         std::tr1::bind(&Connection<EndPointType>::serviceConnectionNoReturn, this, mWeakThis.lock()) );
+                                         std::tr1::bind(&Connection<EndPointType>::serviceConnectionNoReturn, this, conn) );
           }
 
           if (rand() % mCwnd == 0)  {
@@ -900,7 +903,8 @@ private:
     }
   }
 
-  void receiveODPMessage(const ODP::Endpoint &src, const ODP::Endpoint &dst, MemoryReference payload) {
+  void receiveODPMessage(const ODP::Endpoint &src, const ODP::Endpoint &dst, MemoryReference payload) 
+  {
     receiveMessage((void*) payload.data(), payload.size() );
   }
 
@@ -1184,10 +1188,9 @@ private:
 
    // This version should only be called by the destructor!
    void finalCleanup() {
+     mDatagramLayer->unlisten(mLocalEndPoint);
+
      if (mState != CONNECTION_DISCONNECTED) {
-
-         mDatagramLayer->unlisten(mLocalEndPoint);
-
          close(true);
          mState = CONNECTION_DISCONNECTED;
      }
@@ -1247,7 +1250,7 @@ private:
      }
      else if (channelID == 0) {
        /* it's a new channel request negotiation protocol
- 	 packet ; allocate a new channel.*/
+ 	        packet ; allocate a new channel.*/
 
        StreamReturnCallbackMap& listeningConnectionsCallbackMap = sstConnVars->sListeningConnectionsCallbackMap;
        if (listeningConnectionsCallbackMap.find(localEndPoint) != listeningConnectionsCallbackMap.end()) {
@@ -1267,7 +1270,7 @@ private:
                     std::tr1::shared_ptr<Connection>(
                          new Connection(sstConnVars, newLocalEndPoint, remoteEndPoint));
 
- 	 conn->listenStream(newLocalEndPoint.port, listeningConnectionsCallbackMap[localEndPoint]);
+ 	       conn->listenStream(newLocalEndPoint.port, listeningConnectionsCallbackMap[localEndPoint]);
          conn->setWeakThis(conn);
          connectionMap[newLocalEndPoint] = conn;
 
