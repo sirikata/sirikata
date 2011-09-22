@@ -42,8 +42,10 @@ function generatePresences(start_pres, on_pres_connected_callback_handle)
 function handleDisconnect() {
     numPresencesLeft--;
     system.print('Left: ' + numPresencesLeft + '\n');
-    if (numPresencesLeft == 0)
+    if (numPresencesLeft == 0) {
         mTest.success('All presences connected and disconnected');
+        system.killEntity();
+    }
 }
 system.onPresenceDisconnected(handleDisconnect);
 
