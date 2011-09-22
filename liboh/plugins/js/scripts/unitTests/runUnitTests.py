@@ -178,7 +178,7 @@ def registerTests():
     connectionLoadTest     = csvTest.CSVTest("connectionLoadTest",
                                              touches=['onPresenceConnected', 'onPresenceDisconnected'],
                                              entityConstructorInfo=[connectionLoadTestInfo],
-                                             duration=40);
+                                             duration=90);
     testArray.append(connectionLoadTest);
     
 
