@@ -87,8 +87,11 @@ private:
 
     typedef Stream<SpaceObjectReference>::Ptr SSTStreamPtr;
 
-    void tryCreateChildStream(SSTStreamPtr parent_stream, std::string* msg, int count);
-    void locSubstreamCallback(int x, SSTStreamPtr substream, SSTStreamPtr parent_substream, std::string* msg, int count);
+    void tryCreateChildStream(const UUID& dest, SSTStreamPtr parent_stream, std::string* msg, int count);
+    void locSubstreamCallback(int x, SSTStreamPtr substream, const UUID& dest, SSTStreamPtr parent_substream, std::string* msg, int count);
+
+    bool validSubscriber(const UUID& dest);
+    bool validSubscriber(const ServerID& dest);
 
     bool trySend(const UUID& dest, const Sirikata::Protocol::Loc::BulkLocationUpdate& blu);
     bool trySend(const ServerID& dest, const Sirikata::Protocol::Loc::BulkLocationUpdate& blu);
@@ -195,7 +198,6 @@ private:
             while(!subs->subscribedTo.empty()) {
                 UUID tmp=*(subs->subscribedTo.begin());
                 unsubscribe(remote, tmp);
-
             }
 
             // Might have outstanding updates, so leave it in place and
@@ -298,6 +300,18 @@ private:
             for(typename SubscriberMap::iterator server_it = mSubscriptions.begin(); server_it != mSubscriptions.end(); server_it++) {
                 SubscriberType sid = server_it->first;
                 SubscriberInfo* sub_info = server_it->second;
+
+                // We can end up with leftover updates after a subscriber has
+                // already disconnected. We need to ignore them if we're not
+                // even going to be able to send the messages.
+                if (!parent->validSubscriber(sid)) {
+                    sub_info->outstandingUpdates.clear();
+                    if (sub_info->subscribedTo.empty()) {
+                        delete sub_info;
+                        to_delete.push_back(sid);
+                    }
+                    continue;
+                }
 
                 Sirikata::Protocol::Loc::BulkLocationUpdate bulk_update;
 

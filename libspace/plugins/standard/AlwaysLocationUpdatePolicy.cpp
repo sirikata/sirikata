@@ -185,15 +185,20 @@ void AlwaysLocationUpdatePolicy::service() {
     mObjectSubscriptions.service();
 }
 
-void AlwaysLocationUpdatePolicy::tryCreateChildStream(SSTStreamPtr parent_stream, std::string* msg, int count) {
+void AlwaysLocationUpdatePolicy::tryCreateChildStream(const UUID& dest, SSTStreamPtr parent_stream, std::string* msg, int count) {
+    if (!validSubscriber(dest)) {
+        delete msg;
+        return;
+    }
+
     parent_stream->createChildStream(
-        std::tr1::bind(&AlwaysLocationUpdatePolicy::locSubstreamCallback, this, _1, _2, parent_stream, msg, count+1),
+        std::tr1::bind(&AlwaysLocationUpdatePolicy::locSubstreamCallback, this, _1, _2, dest, parent_stream, msg, count+1),
         (void*)msg->data(), msg->size(),
         OBJECT_PORT_LOCATION, OBJECT_PORT_LOCATION
     );
 }
 
-void AlwaysLocationUpdatePolicy::locSubstreamCallback(int x, SSTStreamPtr substream, SSTStreamPtr parent_stream, std::string* msg, int count) {
+void AlwaysLocationUpdatePolicy::locSubstreamCallback(int x, SSTStreamPtr substream, const UUID& dest, SSTStreamPtr parent_stream, std::string* msg, int count) {
     // If we got it, the data got sent and we can drop the stream
     if (substream) {
         delete msg;
@@ -204,12 +209,24 @@ void AlwaysLocationUpdatePolicy::locSubstreamCallback(int x, SSTStreamPtr substr
     // If we didn't get it and we haven't retried too many times, try
     // again. Otherwise, report error and give up.
     if (count < 5) {
-        tryCreateChildStream(parent_stream, msg, count);
+        tryCreateChildStream(dest, parent_stream, msg, count);
     }
     else {
         SILOG(always_loc,error,"Failed multiple times to open loc update substream.");
         delete msg;
     }
+}
+
+bool AlwaysLocationUpdatePolicy::validSubscriber(const UUID& dest) {
+    return (mLocService->context()->sessionManager()->getSession(ObjectReference(dest)) != NULL);
+}
+
+bool AlwaysLocationUpdatePolicy::validSubscriber(const ServerID& dest) {
+    // FIXME we might be able to do something based on active servers from the
+    // ServerIDMap, but right now we just assume other servers are always valid
+    // subscribers since we should always be able to connect to them and send
+    // updates.
+    return true;
 }
 
 bool AlwaysLocationUpdatePolicy::trySend(const UUID& dest, const Sirikata::Protocol::Loc::BulkLocationUpdate& blu)
@@ -222,7 +239,7 @@ bool AlwaysLocationUpdatePolicy::trySend(const UUID& dest, const Sirikata::Proto
       Sirikata::Protocol::Frame msg_frame;
       msg_frame.set_payload(bluMsg);
       std::string* framed_loc_msg = new std::string(serializePBJMessage(msg_frame));
-      tryCreateChildStream(locServiceStream, framed_loc_msg, 0);
+      tryCreateChildStream(dest, locServiceStream, framed_loc_msg, 0);
       sent = true;
   }
 
