@@ -12,7 +12,7 @@
 	url = git://github.com/sirikata/prox.git
 [submodule "externals/http-parser"]
 	path = externals/http-parser
-	url = git://github.com/ry/http-parser.git
+	url = git://github.com/joyent/http-parser.git
 [submodule "externals/sirikata-protocol"]
 	path = externals/sirikata-protocol
 	url = git://github.com/sirikata/sirikata-protocol.git
