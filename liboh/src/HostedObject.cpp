@@ -181,8 +181,17 @@ void HostedObject::destroy(bool need_self) {
     }
 
     mOrphanLocUpdates.stop();
-    for (PresenceDataMap::iterator iter = mPresenceData.begin(); iter != mPresenceData.end(); ++iter)
+    for (PresenceDataMap::iterator iter = mPresenceData.begin(); iter != mPresenceData.end(); ++iter) {
+        // Make sure we explicitly. Other paths don't necessarily do this,
+        // e.g. if the call to destroy happens between receiving a connection
+        // success and the actual creation of the stream from the space, leaving
+        // other components unaware that the connection has been made. Worst
+        // case, the object host/session manager ignore the request.
+        mObjectHost->disconnectObject(iter->first.space(),iter->first.object());
+        delete iter->second;
+        // And just clear the ref out from the ObjectHost
         mObjectHost->unregisterHostedObject(iter->first,this);
+    }
 
     mPresenceData.clear();
 }

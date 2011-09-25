@@ -406,15 +406,20 @@ bool SessionManager::connect(
 void SessionManager::disconnect(const SpaceObjectReference& sporef_objid) {
     Sirikata::SerializationCheck::Scoped sc(&mSerialization);
 
+    ServerID connected_to = mObjectConnections.getConnectedServer(sporef_objid);
+    // The caller may be conservative in calling disconnect, especially to make
+    // sure disconnections are actually forced (e.g. for safety in the case of a
+    // half-complete connection where the initial success is reported but
+    // streams aren't done yet).
+    if (connected_to == NullServerID)
+        return;
+
     // Construct and send disconnect message.  This has to happen first so we still have
     // connection information so we know where to send the disconnect
     Sirikata::Protocol::Session::Container session_msg;
     Sirikata::Protocol::Session::IDisconnect disconnect_msg = session_msg.mutable_disconnect();
     disconnect_msg.set_object(sporef_objid.object().getAsUUID());
     disconnect_msg.set_reason("Quit");
-
-    ServerID connected_to = mObjectConnections.getConnectedServer(sporef_objid);
-    assert(connected_to != NullServerID);
 
     // We just need to make sure it gets on the queue, once its on the space
     // server guarantees processing since it is a session message
