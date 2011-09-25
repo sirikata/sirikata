@@ -5,7 +5,7 @@ import multiprocessing
 import os
 import os.path
 import sys
-import time
+import datetime
 
 def main():
     parser = argparse.ArgumentParser(description = 'Spawn multiple copies of an object host on this machine',
@@ -26,23 +26,16 @@ def main():
     
     workdir = os.path.dirname(args.cppoh_path)
     subprocs = []
-    for i in range(args.num_procs):
-        p = subprocess.Popen([args.cppoh_path] + args.arguments, cwd=workdir)
-        subprocs.append(p)
-        time.sleep(args.delay)
-    
+    delay_timedelta = datetime.timedelta(seconds=args.delay)
+    last_creation = datetime.datetime.now() - delay_timedelta
     while True:
-        numalive = 0
-        numdead = 0
-        for p in subprocs:
-            retcode = p.poll()
-            if retcode is None:
-                numalive += 1
-            else:
-                numdead += 1
-        print 'Processes Alive: %d, Processes Dead: %d' % (numalive, numdead)
-        if numalive < 1:
-            break
+        subprocs = [p for p in subprocs if p.poll() is None]
+        print 'Processes Alive: %d out of %d' % (len(subprocs), args.num_procs)
+        if len(subprocs) < args.num_procs and datetime.datetime.now() - last_creation > delay_timedelta:
+            print 'Starting new subprocess'
+            last_creation = datetime.datetime.now()
+            p = subprocess.Popen([args.cppoh_path] + args.arguments, cwd=workdir)
+            subprocs.append(p)
         time.sleep(1)
     
 if __name__ == '__main__':
