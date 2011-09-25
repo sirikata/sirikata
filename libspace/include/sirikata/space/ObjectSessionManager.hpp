@@ -50,7 +50,8 @@ class SIRIKATA_SPACE_EXPORT ObjectSession {
     {}
     ~ObjectSession()
     {
-        mSSTStream->close(false);
+        // Force closure, there's no way to get data to the object anymore...
+        mSSTStream->close(true);
     }
 
     const ObjectReference& id() const { return mID; }
