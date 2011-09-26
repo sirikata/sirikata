@@ -435,8 +435,10 @@ void Server::handleSessionMessage(const ObjectHostConnectionManager::ConnectionI
     }
     else if (session_msg.has_disconnect()) {
         ObjectConnectionMap::iterator it = mObjects.find(session_msg.disconnect().object());
-        if (it != mObjects.end())
+        if (it != mObjects.end()) {
             handleDisconnect(session_msg.disconnect().object(), it->second);
+            mContext->timeSeries->report(mTimeSeriesObjects, mObjects.size());
+        }
     }
 
     // InitiateMigration messages
@@ -458,6 +460,7 @@ void Server::handleObjectHostConnectionClosed(const ObjectHostConnectionManager:
 
         handleDisconnect(obj_id, obj_conn);
     }
+    mContext->timeSeries->report(mTimeSeriesObjects, mObjects.size());
 }
 
 void Server::retryHandleConnect(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, Sirikata::Protocol::Object::ObjectMessage* obj_response) {
@@ -741,7 +744,7 @@ void Server::handleDisconnect(UUID obj_id, ObjectConnection* conn) {
     mForwarder->removeObjectConnection(obj_id);
 
     mObjects.erase(obj_id);
-    mContext->timeSeries->report(mTimeSeriesObjects, mObjects.size());
+    // Num objects is reported by the caller
 
     ObjectReference obj(obj_id);
     ObjectSessionMap::iterator session_it = mObjectSessions.find(obj);
