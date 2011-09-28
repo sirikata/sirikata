@@ -795,23 +795,6 @@ void Server::receiveMessage(Message* msg)
     }
 }
 
-
-void Server::retryObjectMessage(const UUID& obj_id, Sirikata::Protocol::Object::ObjectMessage* obj_response){
-    ObjectConnectionMap::iterator obj_map_it = mObjectsAwaitingMigration.find(obj_id);
-    if (obj_map_it == mObjectsAwaitingMigration.end())
-    {
-        return;
-    }
-
-    // Get the data from the two maps
-    ObjectConnection* obj_conn = obj_map_it->second;
-    if (!obj_conn->send( obj_response )) {
-        mContext->mainStrand->post(Duration::seconds(0.05),std::tr1::bind(&Server::retryObjectMessage,this,obj_id,obj_response));
-    }    else {
-
-    }
-}
-
 //handleMigration to this server.
 void Server::handleMigration(const UUID& obj_id)
 {

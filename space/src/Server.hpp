@@ -141,7 +141,6 @@ private:
     void handleSessionMessage(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, Sirikata::Protocol::Object::ObjectMessage* msg);
     // Handle Connect message from object
     void retryHandleConnect(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, Sirikata::Protocol::Object::ObjectMessage* );
-    void retryObjectMessage(const UUID& obj_id, Sirikata::Protocol::Object::ObjectMessage* );
     void handleConnect(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, const Sirikata::Protocol::Object::ObjectMessage& container, const Sirikata::Protocol::Session::Connect& connect_msg);
     void handleConnectAuthResponse(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, const UUID& obj_id, const Sirikata::Protocol::Session::Connect& connect_msg, bool authenticated);
 
