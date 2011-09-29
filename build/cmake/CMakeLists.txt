@@ -798,6 +798,13 @@ IF(CBR_TIMESTAMP_PACKETS)
   ADD_DEFINITIONS(-DCBR_TIMESTAMP_PACKETS)
 ENDIF()
 
+SET(PROFILE_OH_PACKET_RTT FALSE
+  CACHE BOOL "If enabled, computes RTTs for object messages in the object host. Only enable for tests against a single OH since packets are only cleared once they have been received."
+)
+IF(PROFILE_OH_PACKET_RTT)
+  ADD_DEFINITIONS(-DPROFILE_OH_PACKET_RTT)
+ENDIF()
+
 #variable which contains list of plugin targets we want to install
 SET(PLUGIN_INSTALL_LIST)
 

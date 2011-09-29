@@ -296,7 +296,8 @@ SessionManager::SessionManager(
     ObjectConnectedCallback conn_cb, ObjectMigratedCallback mig_cb,
     ObjectMessageHandlerCallback msg_cb, ObjectDisconnectedCallback disconn_cb
 )
- : ODP::DelegateService( std::tr1::bind(&SessionManager::createDelegateODPPort, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2,  std::tr1::placeholders::_3) ),
+ : PollingService(ctx->mainStrand, Duration::seconds(1.f), ctx, "Space Server"),
+   ODP::DelegateService( std::tr1::bind(&SessionManager::createDelegateODPPort, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2,  std::tr1::placeholders::_3) ),
    mContext( ctx ),
    mSpace(space),
    mIOStrand( ctx->ioService->createStrand() ),
@@ -307,7 +308,11 @@ SessionManager::SessionManager(
    mObjectDisconnectedCallback(disconn_cb),
    mObjectConnections(this),
    mTimeSyncClient(NULL),
-   mShuttingDown(false)
+   mShuttingDown(false),
+   mClearOutstandingCount(0),
+   mLatencySum(),
+   mLatencyCount(0),
+   mTimeSeriesOHRTT(String("oh.server") + boost::lexical_cast<String>(ctx->id) + ".rtt_latency")
 {
     mStreamOptions=Sirikata::Network::StreamFactory::getSingleton().getOptionParser(GetOptionValue<String>("ohstreamlib"))(GetOptionValue<String>("ohstreamoptions"));
 
@@ -333,9 +338,12 @@ SessionManager::~SessionManager() {
 }
 
 void SessionManager::start() {
+    PollingService::start();
 }
 
 void SessionManager::stop() {
+    PollingService::stop();
+
     mShuttingDown = true;
 
     // Stop processing of all connections
@@ -343,6 +351,27 @@ void SessionManager::stop() {
         SpaceNodeConnection* conn = it->second;
         conn->shutdown();
     }
+}
+
+void SessionManager::poll() {
+#ifdef PROFILE_OH_PACKET_RTT
+    mContext->timeSeries->report(
+        mTimeSeriesOHRTT,
+        (mLatencyCount > 0) ? mLatencySum.toMicroseconds() / mLatencyCount : 0.f
+    );
+
+    // Not perfect, and assumes we won't see > 5s latencies, but we
+    // need to clear it out periodically to make sure we don't eat up
+    // too much memory.
+    mClearOutstandingCount++;
+    if (mClearOutstandingCount == 5) {
+        mOutstandingPackets.clear();
+        mClearOutstandingCount = 0;
+    }
+
+    mLatencySum = Duration::microseconds(0);
+    mLatencyCount = 0;
+#endif
 }
 
 bool SessionManager::connect(
@@ -656,7 +685,13 @@ bool SessionManager::send(const SpaceObjectReference& sporef_src, const uint16 s
     ObjectMessage obj_msg;
     createObjectHostMessage(mContext->id, sporef_src, src_port, dest, dest_port, payload, &obj_msg);
     TIMESTAMP_CREATED((&obj_msg), Trace::CREATED);
-    return conn->push(obj_msg);
+    bool pushed = conn->push(obj_msg);
+#ifdef PROFILE_OH_PACKET_RTT
+    if (pushed) {
+        mOutstandingPackets[obj_msg.unique()] = mContext->simTime();
+    }
+#endif
+    return pushed;
 }
 
 void SessionManager::sendRetryingMessage(const SpaceObjectReference& sporef_src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload, ServerID dest_server, Network::IOStrand* strand, const Duration& rate) {
@@ -862,6 +897,16 @@ void SessionManager::handleServerMessages(SpaceNodeConnection* conn) {
             mHandleMessageProfiler->finished();
             return;
         }
+#ifdef PROFILE_OH_PACKET_RTT
+        OutstandingPacketMap::iterator out_it = mOutstandingPackets.find(msg->unique());
+        if (out_it != mOutstandingPackets.end()) {
+            Time start_t = out_it->second;
+            Time end_t = mContext->simTime();
+            mLatencySum += end_t - start_t;
+            mLatencyCount++;
+            mOutstandingPackets.erase(out_it);
+        }
+#endif
         handleServerMessage(msg);
     }
 

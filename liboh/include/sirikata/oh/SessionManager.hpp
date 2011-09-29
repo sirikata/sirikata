@@ -59,7 +59,7 @@ class ServerIDMap;
  *  Internally, SessionManager masquerades as an ODP::Service. This ODP::Service
  *  is only used for communication with the space server.
  */
-class SIRIKATA_OH_EXPORT SessionManager : public Service, private ODP::DelegateService {
+class SIRIKATA_OH_EXPORT SessionManager : public PollingService, private ODP::DelegateService {
   public:
 
     struct ConnectionInfo {
@@ -151,6 +151,8 @@ class SIRIKATA_OH_EXPORT SessionManager : public Service, private ODP::DelegateS
     // Service Implementation
     virtual void start();
     virtual void stop();
+    // PollingService Implementation
+    virtual void poll();
 
 private:
     // Implementation Note: mIOStrand is a bit misleading. All the "real" IO is isolated to that strand --
@@ -388,6 +390,17 @@ private:
     void spaceConnectCallback(int err, SSTStreamPtr s, SpaceObjectReference obj, ConnectionEvent after);
     std::map<ObjectReference, SSTStreamPtr> mObjectToSpaceStreams;
 
+#ifdef PROFILE_OH_PACKET_RTT
+    // Track outstanding packets for computing RTTs
+    typedef std::tr1::unordered_map<uint64, Time> OutstandingPacketMap;
+    OutstandingPacketMap mOutstandingPackets;
+    uint8 mClearOutstandingCount;
+    // And stats
+    Duration mLatencySum;
+    uint32 mLatencyCount;
+    // And some helpers for reporting
+    const String mTimeSeriesOHRTT;
+#endif
 }; // class SessionManager
 
 } // namespace Sirikata
