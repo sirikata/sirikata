@@ -48,7 +48,7 @@ class MessageLatencyFilters {
     const uint16* mDestPort;
 };
 
-void MessageLatencyAnalysis(const char* opt_name, const uint32 nservers, MessageLatencyFilters f, const String& stage_dump_file = "");
+void MessageLatencyAnalysis(const char* opt_name, const uint32 nservers, MessageLatencyFilters f, const String& stage_dump_file = "stage_samples.txt");
 
 } // namespace Sirikata
 
