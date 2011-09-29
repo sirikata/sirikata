@@ -308,11 +308,14 @@ SessionManager::SessionManager(
    mObjectDisconnectedCallback(disconn_cb),
    mObjectConnections(this),
    mTimeSyncClient(NULL),
-   mShuttingDown(false),
+   mShuttingDown(false)
+#ifdef PROFILE_OH_PACKET_RTT
+   ,
    mClearOutstandingCount(0),
    mLatencySum(),
    mLatencyCount(0),
    mTimeSeriesOHRTT(String("oh.server") + boost::lexical_cast<String>(ctx->id) + ".rtt_latency")
+#endif
 {
     mStreamOptions=Sirikata::Network::StreamFactory::getSingleton().getOptionParser(GetOptionValue<String>("ohstreamlib"))(GetOptionValue<String>("ohstreamoptions"));
 
