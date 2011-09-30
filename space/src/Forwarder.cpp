@@ -674,8 +674,10 @@ void Forwarder::serverMessageReceived(Message* msg) {
         // handling OH messages.  We should probably merge them....
 
         // Local
-        if (mLocalForwarder->tryForward(obj_msg))
+        if (mLocalForwarder->tryForward(obj_msg)) {
+            delete msg;
             return;
+        }
 
         // OSeg Cache
         // 4. Try to shortcut them main thread. Use forwarder to try to forward
