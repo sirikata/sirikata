@@ -72,6 +72,7 @@ class SIRIKATA_SPACE_EXPORT Proximity :
 
     // Objects
     virtual void addQuery(UUID obj, SolidAngle sa, uint32 max_results) = 0;
+    virtual void addQuery(UUID obj, const String& params) = 0;
     virtual void removeQuery(UUID obj) = 0;
 
     // PollingService Interface

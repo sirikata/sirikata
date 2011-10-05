@@ -53,7 +53,7 @@
 namespace Sirikata {
 
 ObjectHost::ObjectHost(ObjectHostContext* ctx, Network::IOService *ioServ, const String&options)
- : mContext(ctx),   
+ : mContext(ctx),
    mStorage(NULL),
    mPersistentSet(NULL),
    mActiveHostedObjects(0)
@@ -204,23 +204,20 @@ bool ObjectHost::connect(
     const BoundingSphere3f& bnds,
     const String& mesh,
     const String& phy,
-    const SolidAngle& init_sa,
-    uint32 init_max_results,
+    const String& query,
     ConnectedCallback connected_cb,
     MigratedCallback migrated_cb,
     StreamCreatedCallback stream_created_cb,
     DisconnectedCallback disconnected_cb
 )
 {
-    bool with_query = init_sa != SolidAngle::Max;
-
     Sirikata::SerializationCheck::Scoped sc(&mSessionSerialization);
     if (mHostedObjects.find(sporef)!=mHostedObjects.end())
         return false;
     SessionManager *sm = mSessionManagers[space];
-    
+
     return sm->connect(
-        sporef, loc, orient, bnds, with_query, init_sa, init_max_results, mesh, phy,
+        sporef, loc, orient, bnds, mesh, phy, query,
         std::tr1::bind(&ObjectHost::wrappedConnectedCallback, this, _1, _2, _3, connected_cb),
         migrated_cb,
         stream_created_cb,
@@ -228,7 +225,7 @@ bool ObjectHost::connect(
     );
 }
 
-  void ObjectHost::wrappedConnectedCallback(const SpaceID& space, const ObjectReference& obj, const SessionManager::ConnectionInfo& ci, ConnectedCallback cb) {
+void ObjectHost::wrappedConnectedCallback(const SpaceID& space, const ObjectReference& obj, const SessionManager::ConnectionInfo& ci, ConnectedCallback cb) {
     ConnectionInfo info;
     info.server = ci.server;
     info.loc = ci.loc;
@@ -236,8 +233,7 @@ bool ObjectHost::connect(
     info.bnds = ci.bounds;
     info.mesh = ci.mesh;
     info.physics = ci.physics;
-    info.queryAngle = ci.queryAngle;
-    info.queryMaxResults = ci.queryMaxResults;
+    info.query = ci.query;
     cb(space, obj, info);
 }
 

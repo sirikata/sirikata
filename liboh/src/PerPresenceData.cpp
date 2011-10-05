@@ -22,7 +22,7 @@ namespace Sirikata{
     }
 
 
-    PerPresenceData::PerPresenceData(HostedObject* _parent, const SpaceID& _space, const ObjectReference& _oref,const SolidAngle& qAngle, uint32 qMaxResults, const HostedObject::BaseDatagramLayerPtr&layer)
+PerPresenceData::PerPresenceData(HostedObject* _parent, const SpaceID& _space, const ObjectReference& _oref, const HostedObject::BaseDatagramLayerPtr&layer, const String& _query)
      : parent(_parent),
        space(_space),
        object(_oref),
@@ -34,8 +34,7 @@ namespace Sirikata{
             ProxyObject::UpdateNeeded()),
        proxyManager(new ObjectHostProxyManager(_space)),
        validSpaceObjRef(true),
-       queryAngle(qAngle),
-       queryMaxResults(qMaxResults),
+       query(_query),
        updateFields(LOC_FIELD_NONE),
        rerequestTimer( Network::IOTimer::create(_parent->context()->ioService) ),
        mSSTDatagramLayers(layer)
@@ -43,7 +42,7 @@ namespace Sirikata{
     }
 
 
-PerPresenceData::PerPresenceData(HostedObject* _parent, const SpaceID& _space,const SolidAngle& qAngle, uint32 qMaxResults, const HostedObject::BaseDatagramLayerPtr&layer)
+PerPresenceData::PerPresenceData(HostedObject* _parent, const SpaceID& _space, const HostedObject::BaseDatagramLayerPtr&layer, const String& _query)
      : parent(_parent),
        mUpdatedLocation(
             Duration::seconds(.1),
@@ -53,8 +52,7 @@ PerPresenceData::PerPresenceData(HostedObject* _parent, const SpaceID& _space,co
             ProxyObject::UpdateNeeded()),
        proxyManager(new ObjectHostProxyManager(_space)),
        validSpaceObjRef(false),
-       queryAngle(qAngle),
-       queryMaxResults(qMaxResults),
+       query(_query),
        updateFields(LOC_FIELD_NONE),
        rerequestTimer( Network::IOTimer::create(_parent->context()->ioService) ),
        mSSTDatagramLayers(layer)

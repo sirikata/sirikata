@@ -60,6 +60,11 @@
 #include "Protocol_Prox.pbj.hpp"
 
 
+// Property tree for old API for queries
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/json_parser.hpp>
+
+
 #define HO_LOG(lvl,msg) SILOG(ho,lvl,msg);
 
 namespace Sirikata {
@@ -386,8 +391,28 @@ bool HostedObject::connect(
     return connect(spaceID, startingLocation, meshBounds, mesh, phy, SolidAngle::Max, 0, object_uuid_evidence,ObjectReference::null(),token);
 }
 
+String HostedObject::encodeDefaultQuery(const SolidAngle& qangle, const uint32 max_count) {
+    // For old format, assume we just encode the query parameters assuming the
+    // standard, basic, solid angle query
 
-
+    String query;
+    using namespace boost::property_tree;
+    bool with_query = qangle != SolidAngle::Max;
+    if (with_query) {
+        try {
+            ptree pt;
+            pt.put("angle", qangle.asFloat());
+            pt.put("max_results", max_count);
+            std::stringstream data_json;
+            write_json(data_json, pt);
+            query = data_json.str();
+        }
+        catch(json_parser::json_parser_error exc) {
+            return false;
+        }
+    }
+    return query;
+}
 
 bool HostedObject::connect(
         const SpaceID&spaceID,
@@ -401,6 +426,25 @@ bool HostedObject::connect(
         const ObjectReference& orefID,
         PresenceToken token)
 {
+    DEPRECATED(ho);
+    return connect(
+        spaceID, startingLocation, meshBounds, mesh, phy,
+        encodeDefaultQuery(queryAngle, queryMaxResults),
+        object_uuid_evidence,
+        orefID, token
+    );
+}
+
+bool HostedObject::connect(
+        const SpaceID&spaceID,
+        const Location&startingLocation,
+        const BoundingSphere3f &meshBounds,
+        const String& mesh,
+        const String& physics,
+        const String& query,
+        const UUID&object_uuid_evidence,
+        const ObjectReference& orefID,
+        PresenceToken token) {
     if (stopped()) {
         HO_LOG(warn,"Ignoring HostedObject connection request after system stop requested.");
         return false;
@@ -422,9 +466,8 @@ bool HostedObject::connect(
         TimedMotionQuaternion(approx_server_time,MotionQuaternion(startingLocation.getOrientation().normal(),Quaternion(startingLocation.getAxisOfRotation(),startingLocation.getAngularSpeed()))),  //normalize orientations
         meshBounds,
         mesh,
-        phy,
-        queryAngle,
-        queryMaxResults,
+        physics,
+        query,
         std::tr1::bind(&HostedObject::handleConnected, getWeakPtr(), _1, _2, _3),
         std::tr1::bind(&HostedObject::handleMigrated, getWeakPtr(), _1, _2, _3),
         std::tr1::bind(&HostedObject::handleStreamCreated, getWeakPtr(), _1, _2, token),
@@ -508,15 +551,17 @@ void HostedObject::handleConnectedIndirect(const HostedObjectWPtr& weakSelf, con
     if(self->mPresenceData.find(self_objref) == self->mPresenceData.end())
     {
         self->mPresenceData.insert(
-            PresenceDataMap::value_type(self_objref,new PerPresenceData(self.get(), space, obj, info.queryAngle, info.queryMaxResults, baseDatagramLayer
-            ))
+            PresenceDataMap::value_type(
+                self_objref,
+                new PerPresenceData(self.get(), space, obj, baseDatagramLayer, info.query)
+            )
         );
     }
 
     // Convert back to local time
     TimedMotionVector3f local_loc(self->localTime(space, info.loc.updateTime()), info.loc.value());
     TimedMotionQuaternion local_orient(self->localTime(space, info.orient.updateTime()), info.orient.value());
-    ProxyObjectPtr self_proxy = self->createProxy(self_objref, self_objref, Transfer::URI(info.mesh), local_loc, local_orient, info.bnds, info.physics,info.queryAngle, info.queryMaxResults, 0);
+    ProxyObjectPtr self_proxy = self->createProxy(self_objref, self_objref, Transfer::URI(info.mesh), local_loc, local_orient, info.bnds, info.physics, info.query, 0);
 
     // Use to initialize PerSpaceData
     PresenceDataMap::iterator psd_it = self->mPresenceData.find(self_objref);
@@ -875,7 +920,7 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
                 if (addition.has_mesh()) meshuri = Transfer::URI(addition.mesh());
 
                 // FIXME use weak_ptr instead of raw
-                proxy_obj = self->createProxy(proximateID, spaceobj, meshuri, loc, orient, bnds, phy,SolidAngle::Max, 0, proxyAddSeqNo);
+                proxy_obj = self->createProxy(proximateID, spaceobj, meshuri, loc, orient, bnds, phy, "", proxyAddSeqNo);
             }
             else {
                 // We need to handle optional values properly -- they
@@ -971,13 +1016,18 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
 }
 
 
-ProxyObjectPtr HostedObject::createProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri, TimedMotionVector3f& tmv, TimedMotionQuaternion& tmq, const BoundingSphere3f& bs, const String& phy,const SolidAngle& queryAngle, uint32 queryMaxResults, uint64 seqNo)
+ProxyObjectPtr HostedObject::createProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri, TimedMotionVector3f& tmv, TimedMotionQuaternion& tmq, const BoundingSphere3f& bs, const String& phy, const String& query, uint64 seqNo)
 {
     ProxyManagerPtr proxy_manager = getProxyManager(owner_objref.space(), owner_objref.object());
 
     if (!proxy_manager)
     {
-        mPresenceData.insert(PresenceDataMap::value_type( owner_objref, new PerPresenceData(this, owner_objref.space(),owner_objref.object(), queryAngle, queryMaxResults, BaseDatagramLayerPtr())));
+        mPresenceData.insert(
+            PresenceDataMap::value_type(
+                owner_objref,
+                new PerPresenceData(this, owner_objref.space(),owner_objref.object(), BaseDatagramLayerPtr(), query)
+            )
+        );
         proxy_manager = getProxyManager(owner_objref.space(), owner_objref.object());
     }
 
@@ -1304,27 +1354,16 @@ const String& HostedObject::requestCurrentPhysics(const SpaceID& space,const Obj
 }
 
 
-SolidAngle HostedObject::requestQueryAngle(const SpaceID& space, const ObjectReference& oref)
+const String& HostedObject::requestQuery(const SpaceID& space, const ObjectReference& oref)
 {
     PresenceDataMap::iterator iter = mPresenceData.find(SpaceObjectReference(space,oref));
     if (iter == mPresenceData.end())
     {
         SILOG(cppoh, error, "Error in cppoh, requesting solid angle for presence that doesn't exist in your presence map.  Returning max solid angle instead.");
-        return SolidAngle::Max;
+        static String empty_query("");
+        return empty_query;
     }
-    return iter->second->queryAngle;
-}
-
-
-uint32 HostedObject::requestQueryMaxResults(const SpaceID& space, const ObjectReference& oref)
-{
-    PresenceDataMap::iterator iter = mPresenceData.find(SpaceObjectReference(space,oref));
-    if (iter == mPresenceData.end())
-    {
-        SILOG(cppoh, error, "Error in cppoh, requesting solid angle for presence that doesn't exist in your presence map.  Returning max solid angle instead.");
-        return 0;
-    }
-    return iter->second->queryMaxResults;
+    return iter->second->query;
 }
 
 void HostedObject::requestPhysicsUpdate(const SpaceID& space, const ObjectReference& oref, const String& phy)
@@ -1333,29 +1372,25 @@ void HostedObject::requestPhysicsUpdate(const SpaceID& space, const ObjectRefere
 }
 
 
-void HostedObject::requestQueryUpdate(const SpaceID& space, const ObjectReference& oref, SolidAngle new_angle, uint32 new_max_results) {
+void HostedObject::requestQueryUpdate(const SpaceID& space, const ObjectReference& oref, const String& new_query) {
     if (stopped()) {
         HO_LOG(detailed,"Ignoring query update request after system stop.");
         return;
     }
 
     Protocol::Prox::QueryRequest request;
-    request.set_query_angle(new_angle.asFloat());
-    request.set_query_max_count(new_max_results);
+    request.set_query_parameters(new_query);
     std::string payload = serializePBJMessage(request);
-
 
     PresenceDataMap::iterator pdmIter = mPresenceData.find(SpaceObjectReference(space,oref));
     if (pdmIter != mPresenceData.end()) {
-        pdmIter->second->queryAngle = new_angle;
-        pdmIter->second->queryMaxResults = new_max_results;
+        pdmIter->second->query = new_query;
     }
     else {
         SILOG(cppoh,error,"Error in cppoh, requesting solid angle update for presence that doesn't exist in your presence map.");
     }
 
     SSTStreamPtr spaceStream = mObjectHost->getSpaceStream(space, oref);
-    //SSTStreamPtr spaceStream = mObjectHost->getSpaceStream(space, getUUID());
     if (spaceStream != SSTStreamPtr()) {
         SSTConnectionPtr conn = spaceStream->connection().lock();
         assert(conn);
@@ -1368,8 +1403,13 @@ void HostedObject::requestQueryUpdate(const SpaceID& space, const ObjectReferenc
     }
 }
 
+void HostedObject::requestQueryUpdate(const SpaceID& space, const ObjectReference& oref, const SolidAngle& sa, uint32 max_count) {
+    DEPRECATED(ho);
+    requestQueryUpdate(space, oref, encodeDefaultQuery(sa, max_count));
+}
+
 void HostedObject::requestQueryRemoval(const SpaceID& space, const ObjectReference& oref) {
-    requestQueryUpdate(space, oref, SolidAngle::Max, 0);
+    requestQueryUpdate(space, oref, "");
 }
 
 void HostedObject::updateLocUpdateRequest(const SpaceID& space, const ObjectReference& oref, const TimedMotionVector3f* const loc, const TimedMotionQuaternion* const orient, const BoundingSphere3f* const bounds, const String* const mesh, const String* const phy) {

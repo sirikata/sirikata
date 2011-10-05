@@ -232,7 +232,7 @@ void EmersonScript::fireProxEvent(const SpaceObjectReference& localPresSporef,
         printException(try_catch);
     }
     postCallbackChecks();
-    
+
 }
 
 //should already be in a context by the time this is called
@@ -252,7 +252,7 @@ v8::Local<v8::Object> EmersonScript::createVisibleWeakPersistent(JSVisibleStruct
     returner->SetInternalField(TYPEID_FIELD,v8::External::New(new String(VISIBLE_TYPEID_STRING)));
 
     v8::Persistent<v8::Object> returnerPers = v8::Persistent<v8::Object>::New(returner);
-    
+
     returnerPers.MakeWeak(NULL,&JSVisibleStruct::visibleWeakReferenceCleanup);
     return handle_scope.Close(returner);
 }
@@ -578,11 +578,11 @@ v8::Handle<v8::Value> EmersonScript::create_timeout(double period,v8::Persistent
     //create an object
     v8::Local<v8::Object> localReturner = mManager->mTimerTemplate->NewInstance();
 
-    
+
 //    v8::Persistent<v8::Object> returner =
 //    v8::Persistent<v8::Object>::New(mManager->mTimerTemplate->NewInstance());
     v8::Persistent<v8::Object> returner = v8::Persistent<v8::Object>::New(localReturner);
-    
+
     returner->SetInternalField(TIMER_JSTIMERSTRUCT_FIELD,External::New(jstimer));
     returner->SetInternalField(TYPEID_FIELD, External::New(new String("timer")));
 
@@ -734,7 +734,7 @@ bool EmersonScript::handleScriptCommRead(const SpaceObjectReference& src, const 
             bool deserializeWorks =false;
 
             std::vector< v8::Persistent<v8::Object> > visiblesToMakeWeak;
-            
+
             v8::Handle<v8::Value> msgVal;
             if (isJSMsg)
             {
@@ -1122,35 +1122,18 @@ void EmersonScript::setPhysicsFunction(const SpaceObjectReference sporef, const 
 }
 
 
-void EmersonScript::setQueryAngleFunction(const SpaceObjectReference sporef, const SolidAngle& sa)
+void EmersonScript::setQueryFunction(const SpaceObjectReference sporef, const SolidAngle& sa, const uint32 max_count)
 {
     mParent->requestQueryUpdate(
         sporef.space(), sporef.object(),
         sa,
-        mParent->requestQueryMaxResults(sporef.space(), sporef.object())
+        max_count
     );
 }
 
 
-SolidAngle EmersonScript::getQueryAngle(const SpaceObjectReference sporef)
-{
-    SolidAngle returner = mParent->requestQueryAngle(sporef.space(),sporef.object());
-    return returner;
-}
-
-
-void EmersonScript::setQueryCount(const SpaceObjectReference sporef, const uint32 count)
-{
-    mParent->requestQueryUpdate(
-        sporef.space(), sporef.object(),
-        mParent->requestQueryAngle(sporef.space(), sporef.object()),
-        count
-    );
-}
-
-uint32 EmersonScript::getQueryCount(const SpaceObjectReference sporef)
-{
-    return mParent->requestQueryMaxResults(sporef.space(),sporef.object());
+const String& EmersonScript::getQuery(const SpaceObjectReference& sporef) const {
+    return mParent->requestQuery(sporef.space(),sporef.object());
 }
 
 } // namespace JS

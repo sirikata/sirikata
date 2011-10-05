@@ -380,8 +380,7 @@ void SessionManager::poll() {
 bool SessionManager::connect(
     const SpaceObjectReference& sporef_objid,
     const TimedMotionVector3f& init_loc, const TimedMotionQuaternion& init_orient, const BoundingSphere3f& init_bounds,
-    bool regQuery, const SolidAngle& init_sa, uint32 init_max_results,
-    const String& init_mesh, const String& init_phy,
+    const String& init_mesh, const String& init_phy, const String& init_query,
     ConnectedCallback connect_cb, MigratedCallback migrate_cb,
     StreamCreatedCallback stream_created_cb, DisconnectedCallback disconn_cb
 )
@@ -405,9 +404,7 @@ bool SessionManager::connect(
     ci.loc = init_loc;
     ci.orient = init_orient;
     ci.bounds = init_bounds;
-    ci.regQuery = regQuery;
-    ci.queryAngle = init_sa;
-    ci.queryMaxResults = init_max_results;
+    ci.query = init_query;
     ci.mesh = init_mesh;
     ci.physics = init_phy;
 
@@ -516,21 +513,14 @@ void SessionManager::openConnectionStartSession(const SpaceObjectReference& spor
     orient.set_velocity( ci.orient.velocity() );
     connect_msg.set_bounds( ci.bounds );
 
-
-    if (ci.regQuery) {
-        connect_msg.set_query_angle( ci.queryAngle.asFloat() );
-        if (ci.queryMaxResults > 0)
-            connect_msg.set_query_max_count( ci.queryMaxResults );
-    }
-
-
-
-
     if (ci.mesh.size() > 0)
         connect_msg.set_mesh( ci.mesh );
 
     if (ci.physics.size() > 0)
         connect_msg.set_physics( ci.physics );
+
+    if (ci.query.size() > 0)
+        connect_msg.set_query_parameters( ci.query );
 
     if (!send(sporef_uuid, OBJECT_PORT_SESSION,
               UUID::null(), OBJECT_PORT_SESSION,
@@ -1055,8 +1045,7 @@ void SessionManager::handleObjectFullyConnected(const SpaceID& space, const Obje
     conn_info.bounds = ci.bounds;
     conn_info.mesh = ci.mesh;
     conn_info.physics = ci.physics;
-    conn_info.queryAngle   = ci.queryAngle;
-    conn_info.queryMaxResults   = ci.queryMaxResults;
+    conn_info.query = ci.query;
     real_cb(space, obj, conn_info);
 
     mContext->sstConnMgr()->connectStream(

@@ -29,7 +29,9 @@ JSPresenceStruct::JSPresenceStruct(EmersonScript* parent, v8::Handle<v8::Functio
    mPresenceToken(presenceToken),
    mSuspendedVelocity(Vector3f::nil()),
    mSuspendedOrientationVelocity(Quaternion::identity()),
-   mContext(ctx)
+   mContext(ctx),
+   mQueryAngle(),
+   mQueryMaxCount(0)
 {
     mContext->struct_registerSuspendable(this);
 }
@@ -46,13 +48,15 @@ JSPresenceStruct::JSPresenceStruct(EmersonScript* parent, const SpaceObjectRefer
    mPresenceToken(presenceToken),
    mSuspendedVelocity(Vector3f::nil()),
    mSuspendedOrientationVelocity(Quaternion::identity()),
-   mContext(ctx)
+   mContext(ctx),
+   mQueryAngle(),
+   mQueryMaxCount(0)
 {
     mContext->struct_registerSuspendable(this);
 }
 
 //use this constructor when we are restoring a presence.
-JSPresenceStruct::JSPresenceStruct(EmersonScript* parent,PresStructRestoreParams& psrp,Vector3f center, HostedObject::PresenceToken presToken,JSContextStruct* jscont, const TimedMotionVector3f& tmv, const TimedMotionQuaternion& tmq)
+JSPresenceStruct::JSPresenceStruct(EmersonScript* parent, PresStructRestoreParams& psrp, Vector3f center, HostedObject::PresenceToken presToken,JSContextStruct* jscont, const TimedMotionVector3f& tmv, const TimedMotionQuaternion& tmq)
  : JSPositionListener(parent->getOrCreateProxyPtr(psrp.sporef)),
    JSSuspendable(),
    mParent(parent),
@@ -67,7 +71,8 @@ JSPresenceStruct::JSPresenceStruct(EmersonScript* parent,PresStructRestoreParams
     jpp->mBounds  = BoundingSphere3f( center  ,psrp.scale);
     jpp->mPhysics = psrp.physics;
 
-    mQuery        = psrp.query;
+    mQueryAngle = psrp.query;
+    mQueryMaxCount = psrp.queryMaxResults;
 
     if (!psrp.suspendedVelocity.isNull())
         mSuspendedVelocity = psrp.suspendedVelocity.getValue();
@@ -328,7 +333,7 @@ v8::Handle<v8::Value>JSPresenceStruct::setVisualFunction(String urilocation)
 //EmersonScript to hosted object.
 SolidAngle JSPresenceStruct::getQueryAngle()
 {
-    return mParent->getQueryAngle(getSporef());
+    return mQueryAngle;
 }
 
 v8::Handle<v8::Value> JSPresenceStruct::struct_getQueryAngle()
@@ -341,8 +346,8 @@ v8::Handle<v8::Value> JSPresenceStruct::setQueryAngleFunction(SolidAngle new_qa)
 {
     INLINE_CHECK_IS_CONNECTED_ERROR("setQueryAngle");
     INLINE_CHECK_CAPABILITY_ERROR(Capabilities::PROX_QUERIES,setQueryAngle);
-    mParent->setQueryAngleFunction(getSporef(), new_qa);
-    mQuery = new_qa;
+    mParent->setQueryFunction(getSporef(), new_qa, getQueryCount());
+    mQueryAngle = new_qa;
     return v8::Undefined();
 }
 
@@ -350,7 +355,7 @@ v8::Handle<v8::Value> JSPresenceStruct::setQueryAngleFunction(SolidAngle new_qa)
 //EmersonScript to hosted object.
 uint32 JSPresenceStruct::getQueryCount()
 {
-    return mParent->getQueryCount(getSporef());
+    return mQueryMaxCount;
 }
 
 v8::Handle<v8::Value> JSPresenceStruct::struct_getQueryCount()
@@ -362,7 +367,7 @@ v8::Handle<v8::Value> JSPresenceStruct::struct_getQueryCount()
 v8::Handle<v8::Value> JSPresenceStruct::setQueryCount(uint32 new_qc)
 {
     INLINE_CHECK_IS_CONNECTED_ERROR("setQueryCount");
-    mParent->setQueryCount(getSporef(), new_qc);
+    mParent->setQueryFunction(getSporef(), getQueryAngle(), new_qc);
     return v8::Undefined();
 }
 
@@ -435,7 +440,7 @@ v8::Handle<v8::Value>JSPresenceStruct::runSimulation(String simname)
 {
     v8::HandleScope scope;
     INLINE_CHECK_CAPABILITY_ERROR(Capabilities::GUI, runSimulation);
-    
+
     JSInvokableObject::JSInvokableObjectInt* invokableObj = mParent->runSimulation(getSporef(),simname);
     v8::Local<v8::Object> tmpObj = mParent->manager()->mInvokableObjectTemplate->NewInstance();
     tmpObj->SetInternalField(JSSIMOBJECT_JSOBJSCRIPT_FIELD,External::New(mParent));

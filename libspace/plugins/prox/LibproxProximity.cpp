@@ -48,6 +48,10 @@
 
 #include <sirikata/space/AggregateManager.hpp>
 
+// Property tree for old API for queries
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/json_parser.hpp>
+
 #define PROXLOG(level,msg) SILOG(prox,level,"[PROX] " << msg)
 
 namespace Sirikata {
@@ -73,6 +77,38 @@ static bool velocityIsStatic(const Vector3f& vel) {
         vel.y < .05f &&
         vel.z < .05f
     );
+}
+
+namespace {
+
+bool parseQueryRequest(const String& query, SolidAngle* qangle_out, uint32* max_results_out) {
+    if (query.empty())
+        return false;
+
+    using namespace boost::property_tree;
+    ptree pt;
+    try {
+        std::stringstream data_json(query);
+        read_json(data_json, pt);
+    }
+    catch(json_parser::json_parser_error exc) {
+        return false;
+    }
+
+
+    if (pt.find("angle") != pt.not_found())
+        *qangle_out = SolidAngle( pt.get<float32>("angle") );
+    else
+        *qangle_out = SolidAngle::Max;
+
+    if (pt.find("max_results") != pt.not_found())
+        *max_results_out = pt.get<uint32>("max_results");
+    else
+        *max_results_out = 0;
+
+    return true;
+}
+
 }
 
 const String& LibproxProximity::ObjectClassToString(ObjectClass c) {
@@ -267,11 +303,20 @@ void LibproxProximity::handleObjectProximityMessage(const UUID& objid, void* buf
         return;
     }
 
-    if (!prox_update.has_query_angle()) return;
+    // Need to support old style (angle + max count) and new style.
+    if (prox_update.has_query_parameters()) {
+        SolidAngle sa;
+        uint32 max_results;
+        if (parseQueryRequest(prox_update.query_parameters(), &sa, &max_results))
+            updateQuery(objid, mLocService->location(objid), mLocService->bounds(objid), sa, max_results);
+    }
+    else {
+        if (!prox_update.has_query_angle()) return;
 
-    SolidAngle query_angle(prox_update.query_angle());
-    uint32 query_max_results = (prox_update.has_query_max_count() ? prox_update.query_max_count() : NoUpdateMaxResults);
-    updateQuery(objid, mLocService->location(objid), mLocService->bounds(objid), query_angle, query_max_results);
+        SolidAngle query_angle(prox_update.query_angle());
+        uint32 query_max_results = (prox_update.has_query_max_count() ? prox_update.query_max_count() : NoUpdateMaxResults);
+        updateQuery(objid, mLocService->location(objid), mLocService->bounds(objid), query_angle, query_max_results);
+    }
 }
 
 // Setup all known servers for a server query update
@@ -587,6 +632,13 @@ void LibproxProximity::removeQuery(ServerID sid) {
 
 void LibproxProximity::addQuery(UUID obj, SolidAngle sa, uint32 max_results) {
     updateQuery(obj, mLocService->location(obj), mLocService->bounds(obj), sa, max_results);
+}
+
+void LibproxProximity::addQuery(UUID obj, const String& params) {
+    SolidAngle sa;
+    uint32 max_results;
+    if (parseQueryRequest(params, &sa, &max_results))
+        updateQuery(obj, mLocService->location(obj), mLocService->bounds(obj), sa, max_results);
 }
 
 void LibproxProximity::updateQuery(UUID obj, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, SolidAngle sa, uint32 max_results) {

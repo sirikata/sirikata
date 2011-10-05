@@ -131,7 +131,7 @@ public:
     /**
        @param {sporef} localPresSporef The space object reference for the
        local presence for which a visible has either moved into its prox set or
-       out of its prox set.  
+       out of its prox set.
 
        @param {JSVisibleStruct*} jsvis The visible struct associated with the
        presence that moved into or out of local presence's prox set.
@@ -146,7 +146,7 @@ public:
         JSVisibleStruct* jsvis, JSContextStruct* jscont, bool isGone);
 
 
-    
+
 
     /** Returns true if this script is valid, i.e. if it was successfully loaded
      *  and initialized.
@@ -211,7 +211,7 @@ public:
      */
     v8::Local<v8::Object> createVisibleWeakPersistent(
         const SpaceObjectReference& visibleObj, JSProxyPtr addParams);
-    
+
     //handling basic datatypes for JSPresences
     void setVisualFunction(const SpaceObjectReference sporef, const std::string& newMeshString);
     void setPositionFunction(const SpaceObjectReference sporef, const Vector3f& posVec);
@@ -220,11 +220,8 @@ public:
     void setVisualScaleFunction(const SpaceObjectReference sporef, float newScale);
     void setOrientationVelFunction(const SpaceObjectReference sporef, const Quaternion& quat);
 
-    void setQueryAngleFunction(const SpaceObjectReference sporef, const SolidAngle& sa);
-    SolidAngle getQueryAngle(const SpaceObjectReference sporef);
-    void setQueryCount(const SpaceObjectReference sporef, const uint32 count);
-    uint32 getQueryCount(const SpaceObjectReference sporef);
-
+    const String& getQuery(const SpaceObjectReference& sporef) const;
+    void setQueryFunction(const SpaceObjectReference sporef, const SolidAngle& sa, const uint32 count);
 
     v8::Handle<v8::Value> getPhysicsFunction(const SpaceObjectReference sporef);
     void setPhysicsFunction(const SpaceObjectReference sporef, const String& newPhysicsString);

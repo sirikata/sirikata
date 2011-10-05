@@ -151,7 +151,7 @@ struct JSPresenceStruct : public JSPositionListener,
     v8::Handle<v8::Value>  setQueryCount(uint32 new_qc);
 
 
-    
+
     v8::Handle<v8::Value>  setOrientationVelFunction(Quaternion newOrientationVel);
     v8::Handle<v8::Value>  struct_setVelocity(const Vector3f& newVel);
     v8::Handle<v8::Value>  struct_setPosition(Vector3f newPos);
@@ -201,7 +201,8 @@ private:
 
 
     JSContextStruct* mContext;
-    SolidAngle mQuery;
+    SolidAngle mQueryAngle;
+    uint32 mQueryMaxCount;
 
     ContextVector associatedContexts;
     void clearPreviousConnectedCB();

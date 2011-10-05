@@ -98,8 +98,7 @@ public:
         BoundingSphere3f bnds;
         String mesh;
         String physics;
-        SolidAngle queryAngle;
-        uint32 queryMaxResults;
+        String query;
     };
 
     //use this function to request the object host to send a disconnect message
@@ -166,8 +165,9 @@ public:
 
     // Primary HostedObject API
 
-    /** Connect the object to the space with the given starting parameters. 
-    * returns true if the connection was initiated and no other objects are using this ID to connect
+    /** Connect the object to the space with the given starting parameters.
+    *   returns true if the connection was initiated and no other objects are
+    *   using this ID to connect.
     */
     bool connect(
         const SpaceObjectReference& sporef, const SpaceID& space,
@@ -176,8 +176,7 @@ public:
         const BoundingSphere3f& bnds,
         const String& mesh,
         const String& physics,
-        const SolidAngle& init_sa,
-        uint32 init_max_results,
+        const String& query,
         ConnectedCallback connected_cb,
         MigratedCallback migrated_cb, StreamCreatedCallback stream_created_cb,
         DisconnectedCallback disconnected_cb

@@ -80,6 +80,7 @@ public:
 
     // Objects
     virtual void addQuery(UUID obj, SolidAngle sa, uint32 max_results);
+    virtual void addQuery(UUID obj, const String& params);
     virtual void removeQuery(UUID obj);
 
     // QueryEventListener Interface

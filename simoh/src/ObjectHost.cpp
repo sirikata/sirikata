@@ -39,6 +39,10 @@
 #include <sirikata/core/util/Random.hpp>
 #include <sirikata/core/options/CommonOptions.hpp>
 
+// Property tree for old API for queries
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/json_parser.hpp>
+
 #define OH_LOG(level,msg) SILOG(oh,level,msg)
 
 using namespace Sirikata;
@@ -97,8 +101,28 @@ void ObjectHost::connect(
 
     SpaceObjectReference sporef(SpaceID::null(),ObjectReference(obj->uuid()));
 
+    // We need to encode for new, generic format, assuming basic solid angle
+    // query processor
+    String query;
+
+    using namespace boost::property_tree;
+    bool with_query = init_sa != SolidAngle::Max;
+    if (with_query) {
+        try {
+            ptree pt;
+            pt.put("angle", init_sa.asFloat());
+            pt.put("max_results", init_max_results);
+            std::stringstream data_json;
+            write_json(data_json, pt);
+            query = data_json.str();
+        }
+        catch(json_parser::json_parser_error exc) {
+            return;
+        }
+    }
+
     mSessionManager.connect(
-        sporef, init_loc, init_orient, init_bounds, true, init_sa, init_max_results, "", "",
+        sporef, init_loc, init_orient, init_bounds, "", "", query,
 	std::tr1::bind(&ObjectHost::dispatchConnectedCallback, this, _1, _2, _3, connect_cb),
 	migrate_cb, stream_created_cb, disconnected_cb
     );
@@ -122,7 +146,7 @@ void ObjectHost::connect(
     SpaceObjectReference sporef(SpaceID::null(),ObjectReference(obj->uuid()));
 
     mSessionManager.connect(
-        sporef, init_loc, init_orient, init_bounds, false, SolidAngle::Max, 0, "", "",
+        sporef, init_loc, init_orient, init_bounds, "", "", "",
 	std::tr1::bind(&ObjectHost::dispatchConnectedCallback, this, _1, _2, _3, connect_cb),
         migrate_cb, stream_created_cb, disconnected_cb
     );

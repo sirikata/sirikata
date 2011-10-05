@@ -250,6 +250,18 @@ public:
         const BoundingSphere3f &meshBounds,
         const String& mesh,
         const String& physics,
+        const String& query,
+        const UUID&object_uuid_evidence,
+        const ObjectReference& orefID,
+        PresenceToken token = DEFAULT_PRESENCE_TOKEN);
+
+    /** \deprecated */
+    bool connect(
+        const SpaceID&spaceID,
+        const Location&startingLocation,
+        const BoundingSphere3f &meshBounds,
+        const String& mesh,
+        const String& physics,
         const SolidAngle& queryAngle,
         uint32 queryMaxResults,
         const UUID&object_uuid_evidence,
@@ -347,14 +359,22 @@ public:
     virtual const String& requestCurrentPhysics(const SpaceID& space,const ObjectReference& oref);
     virtual void requestPhysicsUpdate(const SpaceID& space, const ObjectReference& oref, const String& phy);
 
-    virtual void requestQueryUpdate(const SpaceID& space, const ObjectReference& oref, SolidAngle new_angle, uint32 new_max_results);
+    virtual void requestQueryUpdate(const SpaceID& space, const ObjectReference& oref, const String& new_query);
+    /** \deprecated */
+    virtual void requestQueryUpdate(const SpaceID& space, const ObjectReference& oref, const SolidAngle& sa, uint32 max_count);
+    // Shortcut for requestQueryUpdate("")
     virtual void requestQueryRemoval(const SpaceID& space, const ObjectReference& oref);
-    virtual SolidAngle requestQueryAngle(const SpaceID& space, const ObjectReference& oref);
-    virtual uint32 requestQueryMaxResults(const SpaceID& space, const ObjectReference& oref);
+    virtual const String& requestQuery(const SpaceID& space, const ObjectReference& oref);
 
 
 
   private:
+    /** \deprecated
+     *  Helper for encoding default, solid angle queries. Used to enable old,
+     *  deprecated API for setting queries.
+     */
+    String encodeDefaultQuery(const SolidAngle& qangle, const uint32 max_count);
+
     ODP::DelegatePort* createDelegateODPPort(ODP::DelegateService* parentService, const SpaceObjectReference& spaceobj, ODP::PortID port);
     bool delegateODPPortSend(const ODP::Endpoint& source_ep, const ODP::Endpoint& dest_ep, MemoryReference payload);
 
@@ -383,7 +403,7 @@ public:
 
     // Helper for creating the correct type of proxy
 
-    ProxyObjectPtr createProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri, TimedMotionVector3f& tmv, TimedMotionQuaternion& tmvq, const BoundingSphere3f& bounds, const String& physics,const SolidAngle& queryAngle, uint32 queryMaxResults, uint64 seqNo);
+    ProxyObjectPtr createProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri, TimedMotionVector3f& tmv, TimedMotionQuaternion& tmvq, const BoundingSphere3f& bounds, const String& physics, const String& query, uint64 seqNo);
     ProxyObjectPtr createDummyProxy();
 
     // Helper for constructing and sending location update

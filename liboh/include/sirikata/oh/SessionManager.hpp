@@ -69,8 +69,7 @@ class SIRIKATA_OH_EXPORT SessionManager : public PollingService, private ODP::De
         BoundingSphere3f bounds;
         String mesh;
         String physics;
-        SolidAngle queryAngle;
-        uint32 queryMaxResults;
+        String query;
     };
 
     enum ConnectionEvent {
@@ -121,8 +120,8 @@ class SIRIKATA_OH_EXPORT SessionManager : public PollingService, private ODP::De
         const TimedMotionVector3f& init_loc,
         const TimedMotionQuaternion& init_orient,
         const BoundingSphere3f& init_bounds,
-        bool regquery, const SolidAngle& init_sa, uint32 init_max_results,
         const String& init_mesh, const String& init_phy,
+        const String& init_query,
         ConnectedCallback connect_cb, MigratedCallback migrate_cb,
         StreamCreatedCallback stream_cb, DisconnectedCallback disconnected_cb
     );
@@ -279,11 +278,9 @@ private:
         TimedMotionVector3f loc;
         TimedMotionQuaternion orient;
         BoundingSphere3f bounds;
-        bool regQuery;
-        SolidAngle queryAngle;
-        uint32 queryMaxResults;
         String mesh;
         String physics;
+        String query;
     };
     typedef std::tr1::function<void(const SpaceID&, const ObjectReference&, ServerID, const ConnectingInfo& ci)> InternalConnectedCallback;
 
