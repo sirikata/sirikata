@@ -425,14 +425,14 @@ void RedisObjectSegmentation::addNewObject(const UUID& obj_id, float radius) {
 void RedisObjectSegmentation::finishWriteNewObject(const UUID& obj_id, OSegWriteListener::OSegAddNewStatus status)
 {
     REDISOSEG_LOG(detailed, "Finished writing OSEG entry for object "\
-        << obj_id.toString()<<" with status "<<status);
-    
+        << obj_id.toString() << " with status " << (int)status);
+
     if (mStopping) return;
 
     //only insert into cache if write was successful.
     if (status == OSegWriteListener::SUCCESS)
         mCache->insert(obj_id, mOSeg[obj_id]);
-    
+
     mWriteListener->osegAddNewFinished(obj_id, status);
 }
 

@@ -305,7 +305,7 @@ v8::Handle<v8::Value> root_http(const v8::Arguments& args)
     INLINE_STR_CONV_ERROR(args[0], http, 1,httpComm);
 
     //check if it's a get or post: first convert to lower case
-    for(int i=0; i < httpComm.size(); ++i)
+    for(uint32 i=0; i < httpComm.size(); ++i)
         httpComm[i] = std::tolower(httpComm[i]);
 
 

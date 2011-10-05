@@ -42,13 +42,13 @@ bool Capabilities::givesCap(CapNum capabilitiesNum, Caps checkingCap,
     {
         JSLOG(error, "Error in checking whether given a capability.  "  <<\
             "Checking a presence-specific capability, but provided no " <<\
-            "presence to check against.  Cap: " << checkingCap);
+            "presence to check against.  Cap: " << (int)checkingCap);
     }
-    
+
     //ctxPres can be null when executing from root context
     if ((ctxPres == NULL) || (onPres == NULL))
         return true;
-        
+
     if (ctxPres == onPres)
     {
         //check if given capability

@@ -217,7 +217,7 @@ void PrintFilter::printMeshdata(MeshdataPtr md) {
         }
     }
 
-    printf("Joints: %d instanced (%d in list)\n", md->getJointCount(), md->joints.size());
+    printf("Joints: %d instanced (%d in list)\n", md->getJointCount(), (int32)md->joints.size());
 
     // Compute the expected number of draw calls assuming no smart
     // transformation is occuring. This should be:

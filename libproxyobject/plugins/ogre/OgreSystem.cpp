@@ -57,10 +57,10 @@ namespace Graphics {
 
 OgreSystem::OgreSystem(Context* ctx)
  : OgreRenderer(ctx),
-   mPrimaryCamera(NULL),
-   mOverlayCamera(NULL),
    mOnReadyCallback(NULL),
    mOnResetReadyCallback(NULL),
+   mPrimaryCamera(NULL),
+   mOverlayCamera(NULL),
    mReady(false)
 {
     increfcount();

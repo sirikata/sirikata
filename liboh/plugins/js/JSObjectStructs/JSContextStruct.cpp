@@ -104,7 +104,7 @@ void JSContextStruct::httpSuccess(v8::Persistent<v8::Function> cb,EmersonHttpMan
     if (httpResp->getData())
     {
         const unsigned char* data = httpResp->getData()->data();
-        for (int s = 0;s < httpResp->getData()->length(); ++s)
+        for (uint32 s = 0;s < httpResp->getData()->length(); ++s)
         {
             dataStr.push_back((char)*data);
             // const char* dataPiece = (const char*) data;
@@ -162,9 +162,9 @@ void JSContextStruct::proximateEvent(const SpaceObjectReference& goneFrom,
 {
     if (getIsSuspended() || getIsCleared())
         return;
-    
+
     CHECK_EMERSON_SCRIPT_RETURN(emerScript,notifyProximateGone,jsObjScript);
-    
+
     if (((associatedPresence != NULL) &&
         (associatedPresence->getSporef() == goneFrom)) ||
         hasPresence(goneFrom))
@@ -394,7 +394,7 @@ v8::Handle<v8::Value> JSContextStruct::sendMessageNoErrorHandler(JSPresenceStruc
         else
             emerScript->sendMessageToEntityUnreliable(jspl->getSporef(),jspres->getSporef(),serialized_message);
     }
-    
+
     return v8::Undefined();
 }
 
@@ -438,7 +438,7 @@ v8::Handle<v8::Value> JSContextStruct::deserialize(const String& toDeserialize)
     v8::HandleScope handle_scope;
     CHECK_EMERSON_SCRIPT_ERROR(emerScript,deserialize,jsObjScript);
 
-    
+
     Sirikata::JS::Protocol::JSMessage js_msg;
     bool parsed = js_msg.ParseFromString(toDeserialize);
 
@@ -446,10 +446,10 @@ v8::Handle<v8::Value> JSContextStruct::deserialize(const String& toDeserialize)
     {
         bool deserializedSuccess;
         v8::Handle<v8::Object> obj = JSSerializer::deserializeObject(emerScript, js_msg,deserializedSuccess);
-    
+
         if (!deserializedSuccess)
             return v8::ThrowException( v8::Exception::Error(v8::String::New("Error could not deserialize object")));
-    
+
         return handle_scope.Close(obj);
     }
 
@@ -465,7 +465,7 @@ v8::Handle<v8::Value> JSContextStruct::deserialize(const String& toDeserialize)
 
     if (!deserializedSuccess)
             return v8::ThrowException( v8::Exception::Error(v8::String::New("Error could not deserialize object")));
-    
+
     return handle_scope.Close(returner);
 }
 
@@ -568,7 +568,7 @@ v8::Handle<v8::Value> JSContextStruct::struct_rootReset()
     v8::HandleScope handle_scope;
     mContext = v8::Context::New(NULL, mContGlobTempl);
     createContextObjects();
-    
+
     //import shim and eval mScript
     jsObjScript->shimImportAndEvalScript(this,mScript);
 

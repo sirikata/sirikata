@@ -21,8 +21,8 @@ namespace JS {
 JSPresenceStruct::JSPresenceStruct(EmersonScript* parent, v8::Handle<v8::Function> connectedCallback, JSContextStruct* ctx, HostedObject::PresenceToken presenceToken)
  : JSPositionListener(JSProxyPtr(new JSProxyData())),
    JSSuspendable(),
-   mParent(parent),
    mOnConnectedCallback(v8::Persistent<v8::Function>::New(connectedCallback)),
+   mParent(parent),
    mContID(ctx->getContextID()),
    isConnected(false),
    hasConnectedCallback(true),

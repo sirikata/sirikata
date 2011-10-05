@@ -35,9 +35,9 @@ PerPresenceData::PerPresenceData(HostedObject* _parent, const SpaceID& _space, c
        proxyManager(new ObjectHostProxyManager(_space)),
        validSpaceObjRef(true),
        query(_query),
+       mSSTDatagramLayers(layer),
        updateFields(LOC_FIELD_NONE),
-       rerequestTimer( Network::IOTimer::create(_parent->context()->ioService) ),
-       mSSTDatagramLayers(layer)
+       rerequestTimer( Network::IOTimer::create(_parent->context()->ioService) )
     {
     }
 
@@ -53,9 +53,9 @@ PerPresenceData::PerPresenceData(HostedObject* _parent, const SpaceID& _space, c
        proxyManager(new ObjectHostProxyManager(_space)),
        validSpaceObjRef(false),
        query(_query),
+       mSSTDatagramLayers(layer),
        updateFields(LOC_FIELD_NONE),
-       rerequestTimer( Network::IOTimer::create(_parent->context()->ioService) ),
-       mSSTDatagramLayers(layer)
+       rerequestTimer( Network::IOTimer::create(_parent->context()->ioService) )
     {
     }
 

@@ -257,7 +257,7 @@ void EmersonMessagingManager::writeData(Liveness::Token alive, SSTStreamPtr stre
     }
 
     //check if full message was written.
-    if(bytesWritten < msg.size())
+    if(bytesWritten < (int)msg.size())
     {
         //retry write infinitely
         String restToWrite = msg.substr(bytesWritten);

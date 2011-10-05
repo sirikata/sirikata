@@ -47,7 +47,7 @@ FilterDataPtr ComputeNormalsFilter::apply(FilterDataPtr input) {
                     }
 
                     // Compute triangle normals, add to each vertex
-                    for(int32 tri_idx = 0; tri_idx != prim_it->indices.size()/3; tri_idx++) {
+                    for(uint32 tri_idx = 0; tri_idx != prim_it->indices.size()/3; tri_idx++) {
                         Vector3f leg_a = submesh.positions[prim_it->indices[tri_idx*3+1]] - submesh.positions[prim_it->indices[tri_idx*3+0]];
                         Vector3f leg_b = submesh.positions[prim_it->indices[tri_idx*3+2]] - submesh.positions[prim_it->indices[tri_idx*3+0]];
 
@@ -61,7 +61,7 @@ FilterDataPtr ComputeNormalsFilter::apply(FilterDataPtr input) {
                 }
 
                 // Normalize each normal
-                for(int vidx = 0; vidx < submesh.normals.size(); vidx++)
+                for(uint32 vidx = 0; vidx < submesh.normals.size(); vidx++)
                     if (submesh.normals[vidx] != Vector3f(0,0,0)) submesh.normals[vidx].normalizeThis();
             }
 

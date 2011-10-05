@@ -46,8 +46,6 @@ void InitAlwaysLocationUpdatePolicyOptions() {
 
 AlwaysLocationUpdatePolicy::AlwaysLocationUpdatePolicy(SpaceContext* ctx, const String& args)
  : LocationUpdatePolicy(),
-   mServerSubscriptions(this, mServerUpdatesPerSecond),
-   mObjectSubscriptions(this, mObjectUpdatesPerSecond),
    mStatsPoller(
        ctx->mainStrand,
        std::tr1::bind(&AlwaysLocationUpdatePolicy::reportStats, this),
@@ -57,7 +55,9 @@ AlwaysLocationUpdatePolicy::AlwaysLocationUpdatePolicy(SpaceContext* ctx, const 
    mTimeSeriesServerUpdatesName(String("space.server") + boost::lexical_cast<String>(ctx->id()) + ".loc.server_updates_per_second"),
    mServerUpdatesPerSecond(0),
    mTimeSeriesObjectUpdatesName(String("space.server") + boost::lexical_cast<String>(ctx->id()) + ".loc.object_updates_per_second"),
-   mObjectUpdatesPerSecond(0)
+   mObjectUpdatesPerSecond(0),
+   mServerSubscriptions(this, mServerUpdatesPerSecond),
+   mObjectSubscriptions(this, mObjectUpdatesPerSecond)
 {
     OptionSet* optionsSet = OptionSet::getOptions(ALWAYS_POLICY_OPTIONS,NULL);
     optionsSet->parse(args);
