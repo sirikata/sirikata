@@ -255,7 +255,7 @@ public:
 
 
 OgreRenderer::OgreRenderer(Context* ctx)
- : TimeSteppedQueryableSimulation(ctx, Duration::seconds(1.f/60.f), "Ogre Graphics", true),
+ : TimeSteppedSimulation(ctx, Duration::seconds(1.f/60.f), "Ogre Graphics", true),
    mContext(ctx),
    mQuitRequested(false),
    mQuitRequestHandled(false),
@@ -325,7 +325,6 @@ bool OgreRenderer::initialize(const String& options, bool with_berkelium) {
                            mWindowHeight=new OptionValue("windowheight",SIRIKATA_OGRE_DEFAULT_WINDOW_HEIGHT,OptionValueType<uint32>(),"Window height"),
                            mWindowDepth=new OptionValue("colordepth","8a",OgrePixelFormatParser(),"Pixel color depth"),
                            renderBufferAutoMipmap=new OptionValue("rendertargetautomipmap","false",OptionValueType<bool>(),"If the render target needs auto mipmaps generated"),
-                           mFrameDuration=new OptionValue("fps","30",FrequencyType(),"Target framerate"),
                            frameLoadDuration=new OptionValue("load-duration","1ms",OptionValueType<Duration>(),"Amount of time to spend loading resources per frame. Keep low to maintain good frame rates."),
                            shadowTechnique=new OptionValue("shadows","none",ShadowType(),"Shadow Style=[none,texture_additive,texture_modulative,stencil_additive,stencil_modulaive]"),
                            shadowFarDistance=new OptionValue("shadowfar","1000",OptionValueType<float32>(),"The distance away a shadowcaster may hide the light"),
@@ -831,26 +830,8 @@ void OgreRenderer::preFrame(Task::LocalTime currentTime, Duration frameTime) {
 void OgreRenderer::postFrame(Task::LocalTime current, Duration frameTime) {
 }
 
-bool OgreRenderer::queryRay(const Vector3d&position,
-    const Vector3f&direction,
-    const double maxDistance,
-    ProxyObjectPtr ignore,
-    double &returnDistance,
-    Vector3f &returnNormal,
-    SpaceObjectReference &returnName) {
-    // FIXME underlying version uses ProxyEntities and the returnName doesn't
-    // make sense in this context. We should be able to provide *something* though.
-    return false;
-}
-
-// TimeSteppedSimulation Interface
-Duration OgreRenderer::desiredTickRate() const {
-    return mFrameDuration->as<Duration>();
-}
-
 void OgreRenderer::poll() {
     Task::LocalTime curFrameTime(Task::LocalTime::now());
-    Task::LocalTime finishTime(curFrameTime + desiredTickRate()); // arbitrary
 
     Duration frameTime=curFrameTime-mLastFrameTime;
     if (mRenderTarget==sRenderTarget) {
@@ -870,7 +851,7 @@ void OgreRenderer::poll() {
 
 void OgreRenderer::stop() {
     delete mParsingWork;
-    TimeSteppedQueryableSimulation::stop();
+    TimeSteppedSimulation::stop();
 }
 
 // Invokable Interface

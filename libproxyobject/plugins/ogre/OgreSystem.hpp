@@ -32,9 +32,11 @@
 
 #ifndef _SIRIKATA_OGRE_GRAPHICS_
 #define _SIRIKATA_OGRE_GRAPHICS_
+
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/util/Time.hpp>
 #include <sirikata/proxyobject/ProxyObject.hpp>
+#include <sirikata/proxyobject/ProxyCreationListener.hpp>
 #include <sirikata/ogre/OgreHeaders.hpp>
 #include <OgreResourceManager.h>
 #include <OgrePixelFormat.h>
@@ -65,7 +67,7 @@ struct IntersectResult;
 class OgreSystemMouseHandler;
 
 /** Represents one OGRE SceneManager, a single environment. */
-class OgreSystem: public OgreRenderer, protected SessionEventListener
+class OgreSystem: public OgreRenderer, protected SessionEventListener, public ProxyCreationListener
 {
     VWObjectPtr mViewer;
     SpaceObjectReference mPresenceID;
@@ -122,7 +124,7 @@ public:
         return mPrimaryCamera;
     }
 
-    static TimeSteppedQueryableSimulation* create(
+    static TimeSteppedSimulation* create(
         Context* ctx,
         VWObjectPtr obj,
         const SpaceObjectReference& presenceid,
@@ -173,13 +175,10 @@ public:
 
 
     // ProxyCreationListener
-    virtual void onCreateProxy(ProxyObjectPtr p); // MCB: interface from ProxyCreationListener
-    virtual void onDestroyProxy(ProxyObjectPtr p); // MCB: interface from
-                                                   // ProxyCreationListener
+    virtual void onCreateProxy(ProxyObjectPtr p);
+    virtual void onDestroyProxy(ProxyObjectPtr p);
 
 
-
-    // *******
 
     virtual void attachCamera(const String&renderTargetName,Camera*);
     virtual void detachCamera(Camera*);

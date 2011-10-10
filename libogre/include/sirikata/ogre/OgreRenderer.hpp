@@ -39,7 +39,7 @@
 #include <sirikata/mesh/Visual.hpp>
 #include <sirikata/core/service/Context.hpp>
 #include <sirikata/core/transfer/TransferMediator.hpp>
-#include <sirikata/proxyobject/TimeSteppedQueryableSimulation.hpp>
+#include <sirikata/proxyobject/TimeSteppedSimulation.hpp>
 #include <OgreWindowEventUtilities.h>
 
 namespace Sirikata {
@@ -65,7 +65,7 @@ class ResourceDownloadPlanner;
 using Input::SDLInputManager;
 
 /** Represents a SQLite database connection. */
-class SIRIKATA_OGRE_EXPORT OgreRenderer : public TimeSteppedQueryableSimulation, public Ogre::WindowEventListener {
+class SIRIKATA_OGRE_EXPORT OgreRenderer : public TimeSteppedSimulation, public Ogre::WindowEventListener {
 public:
     OgreRenderer(Context* ctx);
     virtual ~OgreRenderer();
@@ -115,22 +115,7 @@ public:
         return mResourceLoader;
     }
 
-    // TimeSteppedQueryableSimulation Interface
-    virtual bool queryRay(const Vector3d&position,
-        const Vector3f&direction,
-        const double maxDistance,
-        ProxyObjectPtr ignore,
-        double &returnDistance,
-        Vector3f &returnNormal,
-        SpaceObjectReference &returnName);
-
-    // ProxyCreationListener Interface
-    // FIXME we don't really want these here, but we are forced to have them by TimeSteppedQueryableSimulation
-    virtual void onCreateProxy(ProxyObjectPtr p) {}
-    virtual void onDestroyProxy(ProxyObjectPtr p) {}
-
     // TimeSteppedSimulation Interface
-    virtual Duration desiredTickRate() const;
     virtual void poll();
     virtual void stop();
 
@@ -257,7 +242,6 @@ public:
 
     String mResourcesDir;
 
-    // FIXME need to support multiple parsers, see #124
     ModelsSystem* mModelParser;
     Mesh::Filter* mModelFilter;
 

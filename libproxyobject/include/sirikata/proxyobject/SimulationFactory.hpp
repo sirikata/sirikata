@@ -34,15 +34,16 @@
 #define _SIRIKATA_SIMULATION_FACTORY_
 
 #include <sirikata/proxyobject/Platform.hpp>
+#include <sirikata/proxyobject/Defs.hpp>
 #include <sirikata/core/util/ListenerProvider.hpp>
-#include <sirikata/proxyobject/TimeSteppedQueryableSimulation.hpp>
+#include <sirikata/proxyobject/TimeSteppedSimulation.hpp>
 
 namespace Sirikata{
 
 ///Class to create graphics subsystems. FIXME: should this load a dll when a named factory is not found
 class SIRIKATA_PROXYOBJECT_EXPORT SimulationFactory
     : public AutoSingleton<SimulationFactory>,
-      public Factory4<TimeSteppedQueryableSimulation*,
+      public Factory4<TimeSteppedSimulation*,
                       Context*,
                       VWObjectPtr, // Object simulation is working within
                       const SpaceObjectReference&, // Presence the simulation is working within
