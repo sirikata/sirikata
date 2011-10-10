@@ -112,7 +112,7 @@ template <class EndPointType>
 class Stream;
 
 template <typename EndPointType>
-class SIRIKATA_EXPORT BaseDatagramLayer;
+class BaseDatagramLayer;
 
 typedef std::tr1::function< void(int, std::tr1::shared_ptr< Connection<SpaceObjectReference> > ) > ConnectionReturnCallbackFunction;
 typedef std::tr1::function< void(int, std::tr1::shared_ptr< Stream<SpaceObjectReference> >) >  StreamReturnCallbackFunction;
