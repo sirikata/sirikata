@@ -495,10 +495,8 @@ bool HostedObject::addSimListeners(PerPresenceData& pd, const String& simName,Ti
     sim = SimulationFactory::getSingleton().getConstructor ( simName ) ( mContext, getSharedPtr(), pd.id(), getObjectHost()->getSimOptions(simName));
     if (!sim)
     {
-        HO_LOG(error,String("Unable to load ") + simName + String(" plugin. The PATH environment variable is ignored, so make sure you have copied the DLLs from dependencies/ogre/bin/ into the current directory. Sorry about this!"));
-        std::cerr << "Press enter to continue" << std::endl;
-        fgetc(stdin);
-        exit(0);
+        HO_LOG(error, "Unable to load " << simName << " plugin.");
+        return true;
     }
     else
     {
