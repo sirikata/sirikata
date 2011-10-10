@@ -711,6 +711,10 @@ IF(CBR_TIMESTAMP_PACKETS)
   ADD_DEFINITIONS(-DCBR_TIMESTAMP_PACKETS)
 ENDIF()
 
+SET(TEST_CASSANDRA FALSE
+  CACHE BOOL "If enabled, include Cassandra tests. These tests require an external service (cassandra) and may require changing the test code to point at the correct cassandra server."
+)
+
 #variable which contains list of plugin targets we want to install
 SET(PLUGIN_INSTALL_LIST)
 
@@ -1597,7 +1601,7 @@ IF(SQLite3_FOUND)
     ${TEST_LIBOH_SOURCE_DIR}/SQLiteStorageTest.hpp)
 ENDIF()
 
-IF(LIBCASSANDRA_FOUND)
+IF(LIBCASSANDRA_FOUND AND TEST_CASSANDRA)
   SET(CXXTESTSources
     ${CXXTESTSources}
     ${TEST_LIBOH_SOURCE_DIR}/CassandraStorageTest.hpp
