@@ -35,9 +35,6 @@
 
 #include <sirikata/proxyobject/Platform.hpp>
 #include <sirikata/core/odp/Service.hpp>
-#include <sirikata/core/transfer/URI.hpp>
-#include <sirikata/core/util/MotionVector.hpp>
-#include <sirikata/core/util/MotionQuaternion.hpp>
 #include <sirikata/proxyobject/SessionEventListener.hpp>
 #include <sirikata/proxyobject/Defs.hpp>
 
@@ -60,33 +57,7 @@ public:
 
     /** Get the ProxyManager for the given presence. */
     virtual ProxyManagerPtr presence(const SpaceObjectReference& sor) { return ProxyManagerPtr(); };
-    /** Get the proxy version of this object. */
-    virtual ProxyObjectPtr self(const SpaceObjectReference& sor) { return ProxyObjectPtr(); };
 
-    // ODP::Service Interface
-    virtual ODP::Port* bindODPPort(const SpaceID& space, const ObjectReference& objref, ODP::PortID port) = 0;
-    virtual ODP::Port* bindODPPort(const SpaceObjectReference& sor, ODP::PortID port) = 0;
-    virtual ODP::Port* bindODPPort(const SpaceID& space, const ObjectReference& objref) = 0;
-    virtual ODP::Port* bindODPPort(const SpaceObjectReference& sor) = 0;
-    virtual ODP::PortID unusedODPPort(const SpaceID& space, const ObjectReference& objref) = 0;
-    virtual ODP::PortID unusedODPPort(const SpaceObjectReference& sor) = 0;
-    virtual void registerDefaultODPHandler(const ODP::MessageHandler& cb) = 0;
-
-    // Timing information
-    virtual Time spaceTime(const SpaceID& space, const Time& t) = 0;
-    virtual Time currentSpaceTime(const SpaceID& space) = 0;
-    virtual Time localTime(const SpaceID& space, const Time& t) = 0;
-    virtual Time currentLocalTime() = 0;
-
-
-    // Movement Interface
-    virtual void requestLocationUpdate(const SpaceID& space, const ObjectReference& oref, const TimedMotionVector3f& loc) = 0;
-    virtual void requestOrientationUpdate(const SpaceID& space, const ObjectReference& oref, const TimedMotionQuaternion& loc) = 0;
-    virtual void requestBoundsUpdate(const SpaceID& space, const ObjectReference& oref, const BoundingSphere3f& bounds) = 0;
-    virtual void requestMeshUpdate(const SpaceID& space, const ObjectReference& oref, const String& mesh) = 0;
-
-    virtual void requestQueryUpdate(const SpaceID& space, const ObjectReference& oref, SolidAngle new_angle) {};
-    virtual void requestQueryRemoval(const SpaceID& space, const ObjectReference& oref) {};
 }; // class VWObject
 
 } // namespace Sirikata
