@@ -65,13 +65,6 @@ IF(WIN32)
 ADD_DEFINITIONS(-D_CRT_SECURE_NO_WARNINGS -MP -D_WIN32_WINNT=0x0500 -D_SCL_SECURE_NO_WARNINGS -EHsc -DBOOST_ALL_DYN_LINK)
 SET(CMAKE_CXX_FLAGS "-D_CRT_SECURE_NO_WARNINGS -D_SCL_SECURE_NO_WARNINGS")
 #-fno-rtti
-SET(CMAKE_CXX_FLAGS_DEFAULT "-g -D_CRT_SECURE_NO_WARNINGS -D_SCL_SECURE_NO_WARNINGS" CACHE STRING
-    "Built cxxflags with default settings."
-    FORCE )
-SET( CMAKE_C_FLAGS_DEFAULT "-g -Wall -D_CRT_SECURE_NO_WARNINGS -D_SCL_SECURE_NO_WARNINGS" CACHE STRING
-    "Built cflags with default settings."
-    FORCE )
-
 ELSE()
 
 SET( CMAKE_C_FLAGS_RELEASE "-g2 -O3 -Wall -D_CRT_SECURE_NO_WARNINGS -D_SCL_SECURE_NO_WARNINGS" CACHE STRING
@@ -102,11 +95,25 @@ ENDIF()
 #-Wold-style-cast
 #-fno-rtti
 #-fno-rtti
-SET(CMAKE_CXX_FLAGS_DEFAULT "-g -Wall -Wno-unused-function -Wno-unused-variable -fvisibility=hidden" CACHE STRING
+SET(CMAKE_CXX_FLAGS "-Wall -Wno-unused-function -Wno-unused-variable -fvisibility=hidden -pthread" CACHE STRING
+    "cxxflags for all settings."
+    FORCE )
+SET( CMAKE_C_FLAGS "-Wall -Wno-unused-function -Wno-unused-variable -fvisibility=hidden -pthread" CACHE STRING
+    "cflags for all settings."
+    FORCE )
+
+SET(CMAKE_EXE_LINKER_FLAGS "-pthread" CACHE STRING
+    "exe ldflags for all settings."
+    FORCE )
+SET( CMAKE_SHARED_LINKER_FLAGS "-pthread" CACHE STRING
+    "shared ldflags for all settings."
+    FORCE )
+
+SET(CMAKE_CXX_FLAGS_DEFAULT "-g" CACHE STRING
     "Built cxxflags with default settings."
     FORCE )
-SET( CMAKE_C_FLAGS_DEFAULT "-g -Wall -Wno-unused-function -Wno-unused-variable -fvisibility=hidden" CACHE STRING
-    "Built cflags with default settings."
+SET(CMAKE_CXX_FLAGS_DEFAULT "-g" CACHE STRING
+    "Built cxxflags with default settings."
     FORCE )
 ENDIF()
 

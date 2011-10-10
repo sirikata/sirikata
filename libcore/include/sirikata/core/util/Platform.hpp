@@ -203,6 +203,7 @@
 #include <list>
 #include <queue>
 #include <deque>
+#include <stack>
 #include <set>
 #include <map>
 #include <algorithm>
