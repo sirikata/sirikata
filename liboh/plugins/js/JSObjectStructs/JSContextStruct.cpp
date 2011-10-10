@@ -210,6 +210,21 @@ v8::Handle<v8::Value> JSContextStruct::storageRead(const OH::Storage::Key& key, 
     return jsObjScript->storageRead(key,cb,this);
 }
 
+v8::Handle<v8::Value> JSContextStruct::storageRangeRead(const OH::Storage::Key& start, const OH::Storage::Key& finish, v8::Handle<v8::Function> cb)
+{
+    return jsObjScript->storageRangeRead(start,finish,cb,this);
+}
+
+v8::Handle<v8::Value> JSContextStruct::storageRangeErase(const OH::Storage::Key& start, const OH::Storage::Key& finish, v8::Handle<v8::Function> cb)
+{
+    return jsObjScript->storageRangeErase(start,finish,cb,this);
+}
+
+v8::Handle<v8::Value> JSContextStruct::storageCount(const OH::Storage::Key& start, const OH::Storage::Key& finish, v8::Handle<v8::Function> cb)
+{
+    return jsObjScript->storageCount(start,finish,cb,this);
+}
+
 
 v8::Handle<v8::Value> JSContextStruct::setRestoreScript(const String& key, v8::Handle<v8::Function> cb) {
     return jsObjScript->setRestoreScript(this, key, cb);

@@ -1,7 +1,7 @@
 /*  Sirikata
- *  SQLiteObjectFactory.hpp
+ *  Platform.hpp
  *
- *  Copyright (c) 2010, Ewen Cheslack-Postava
+ *  Copyright (c) 2011, Ewen Cheslack-Postava and Daniel Reiter Horn
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,44 +30,40 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_OH_SQLITE_OBJECT_FACTORY_HPP_
-#define _SIRIKATA_OH_SQLITE_OBJECT_FACTORY_HPP_
+#ifndef _SIRIKATA_CASSANDRA_PLATFORM_HPP_
+#define _SIRIKATA_CASSANDRA_PLATFORM_HPP_
 
-#include <sirikata/oh/ObjectFactory.hpp>
-#include <sirikata/oh/HostedObject.hpp>
-#include <sirikata/proxyobject/SimulationFactory.hpp>
+#include <sirikata/core/util/Platform.hpp>
 
-namespace Sirikata {
+#ifndef SIRIKATA_CASSANDRA_EXPORT
+# if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+#   if defined(STATIC_LINKED)
+#     define SIRIKATA_CASSANDRA_EXPORT
+#   else
+#     if defined(SIRIKATA_CASSANDRA_BUILD)
+#       define SIRIKATA_CASSANDRA_EXPORT __declspec(dllexport)
+#     else
+#       define SIRIKATA_CASSANDRA_EXPORT __declspec(dllimport)
+#     endif
+#   endif
+#   define SIRIKATA_CASSANDRA_PLUGIN_EXPORT __declspec(dllexport)
+# else
+#   if defined(__GNUC__) && __GNUC__ >= 4
+#     define SIRIKATA_CASSANDRA_EXPORT __attribute__ ((visibility("default")))
+#     define SIRIKATA_CASSANDRA_PLUGIN_EXPORT __attribute__ ((visibility("default")))
+#   else
+#     define SIRIKATA_CASSANDRA_EXPORT
+#     define SIRIKATA_CASSANDRA_PLUGIN_EXPORT
+#   endif
+# endif
+#endif
 
-/** SQLiteObjectFactory generates objects from an input SQLite file. */
-class SQLiteObjectFactory : public ObjectFactory {
-public:
-    typedef std::vector<String> StringList;
+#ifndef SIRIKATA_CASSANDRA_EXPORT_C
+# define SIRIKATA_CASSANDRA_EXPORT_C extern "C" SIRIKATA_CASSANDRA_EXPORT
+#endif
 
-    SQLiteObjectFactory(ObjectHostContext* ctx, ObjectHost* oh, const SpaceID& space, const String& filename);
-    virtual ~SQLiteObjectFactory() {}
+#ifndef SIRIKATA_CASSANDRA_PLUGIN_EXPORT_C
+# define SIRIKATA_CASSANDRA_PLUGIN_EXPORT_C extern "C" SIRIKATA_CASSANDRA_PLUGIN_EXPORT
+#endif
 
-    virtual void generate(const String& timestamp="current");
-
-private:
-    void connectObjects();
-
-    struct ObjectInfo {
-        UUID id;
-        String scriptType;
-        String scriptArgs;
-        String scriptContents;
-    };
-
-    ObjectHostContext* mContext;
-    ObjectHost* mOH;
-    SpaceID mSpace;
-    String mDBFilename;
-    int32 mConnectRate;
-    typedef std::queue<ObjectInfo> ObjectInfoQueue;
-    ObjectInfoQueue mIncompleteObjects;
-};
-
-} // namespace Sirikata
-
-#endif //_SIRIKATA_OH_SQLITE_OBJECT_FACTORY_HPP_
+#endif //_SIRIKATA_CASSANDRA_PLATFORM_HPP_

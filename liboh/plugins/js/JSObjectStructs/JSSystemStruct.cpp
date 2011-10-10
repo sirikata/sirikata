@@ -71,6 +71,21 @@ v8::Handle<v8::Value> JSSystemStruct::storageRead(const OH::Storage::Key& key, v
     return associatedContext->storageRead(key, cb);
 }
 
+v8::Handle<v8::Value> JSSystemStruct::storageRangeRead(const OH::Storage::Key& start, const OH::Storage::Key& finish, v8::Handle<v8::Function> cb)
+{
+    return associatedContext->storageRangeRead(start, finish, cb);
+}
+
+v8::Handle<v8::Value> JSSystemStruct::storageRangeErase(const OH::Storage::Key& start, const OH::Storage::Key& finish, v8::Handle<v8::Function> cb)
+{
+    return associatedContext->storageRangeErase(start, finish, cb);
+}
+
+v8::Handle<v8::Value> JSSystemStruct::storageCount(const OH::Storage::Key& start, const OH::Storage::Key& finish, v8::Handle<v8::Function> cb)
+{
+    return associatedContext->storageCount(start, finish, cb);
+}
+
 v8::Handle<v8::Value> JSSystemStruct::sendSandbox(const String& msgToSend, JSContextStruct* destination)
 {
     return associatedContext->sendSandbox(msgToSend,destination);

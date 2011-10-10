@@ -365,6 +365,26 @@ void JSObjectScript::storageCommitCallback(JSContextStruct* jscont, v8::Persiste
     postCallbackChecks();
 }
 
+void JSObjectScript::storageCountCallback(JSContextStruct* jscont, v8::Persistent<v8::Function> cb, bool success, int32 count) {
+    if (isStopped()) {
+        JSLOG(warn, "Ignoring storage commit callback after shutdown request.");
+        return;
+    }
+
+    v8::HandleScope handle_scope;
+    v8::Context::Scope context_scope(mContext->mContext);
+    TryCatch try_catch;
+
+    v8::Handle<v8::Boolean> js_success = v8::Boolean::New(success);
+    v8::Handle<v8::Integer> js_count = v8::Integer::New(count);
+
+    int argc = 2;
+    v8::Handle<v8::Value> argv[2] = { js_success, js_count };
+    invokeCallback(jscont, cb, argc, argv);
+    postCallbackChecks();
+}
+
+
 v8::Handle<v8::Value> JSObjectScript::storageErase(const OH::Storage::Key& key, v8::Handle<v8::Function> cb, JSContextStruct* jscont)
 {
     if (mStorage == NULL) return v8::ThrowException( v8::Exception::Error(v8::String::New("No persistent storage available.")) );
@@ -391,7 +411,6 @@ v8::Handle<v8::Value> JSObjectScript::storageWrite(const OH::Storage::Key& key, 
     return v8::Boolean::New(returner);
 }
 
-
 v8::Handle<v8::Value> JSObjectScript::storageRead(const OH::Storage::Key& key, v8::Handle<v8::Function> cb, JSContextStruct* jscont)
 {
     if (mStorage == NULL) return v8::ThrowException( v8::Exception::Error(v8::String::New("No persistent storage available.")) );
@@ -404,6 +423,46 @@ v8::Handle<v8::Value> JSObjectScript::storageRead(const OH::Storage::Key& key, v
     bool read_queue_success = mStorage->read(mInternalID, key, wrapped_cb);
     return v8::Boolean::New(read_queue_success);
 }
+
+v8::Handle<v8::Value> JSObjectScript::storageRangeRead(const OH::Storage::Key& start, const OH::Storage::Key& finish, v8::Handle<v8::Function> cb, JSContextStruct* jscont)
+{
+    if (mStorage == NULL) return v8::ThrowException( v8::Exception::Error(v8::String::New("No persistent storage available.")) );
+
+    OH::Storage::CommitCallback wrapped_cb = 0;
+    if (!cb.IsEmpty()) {
+        wrapped_cb = std::tr1::bind(&JSObjectScript::storageCommitCallback, this, jscont, v8::Persistent<v8::Function>::New(cb), _1, _2);
+    }
+
+    bool returner = mStorage->rangeRead(mInternalID, start, finish, wrapped_cb);
+    return v8::Boolean::New(returner);
+}
+
+v8::Handle<v8::Value> JSObjectScript::storageRangeErase(const OH::Storage::Key& start, const OH::Storage::Key& finish, v8::Handle<v8::Function> cb, JSContextStruct* jscont)
+{
+    if (mStorage == NULL) return v8::ThrowException( v8::Exception::Error(v8::String::New("No persistent storage available.")) );
+
+    OH::Storage::CommitCallback wrapped_cb = 0;
+    if (!cb.IsEmpty()) {
+        wrapped_cb = std::tr1::bind(&JSObjectScript::storageCommitCallback, this, jscont, v8::Persistent<v8::Function>::New(cb), _1, _2);
+    }
+
+    bool returner = mStorage->rangeErase(mInternalID, start, finish, wrapped_cb);
+    return v8::Boolean::New(returner);
+}
+
+v8::Handle<v8::Value> JSObjectScript::storageCount(const OH::Storage::Key& start, const OH::Storage::Key& finish, v8::Handle<v8::Function> cb, JSContextStruct* jscont)
+{
+    if (mStorage == NULL) return v8::ThrowException( v8::Exception::Error(v8::String::New("No persistent storage available.")) );
+
+    OH::Storage::CountCallback wrapped_cb = 0;
+    if (!cb.IsEmpty()) {
+        wrapped_cb = std::tr1::bind(&JSObjectScript::storageCountCallback, this, jscont, v8::Persistent<v8::Function>::New(cb), _1, _2);
+    }
+
+    bool returner = mStorage->count(mInternalID, start, finish, wrapped_cb);
+    return v8::Boolean::New(returner);
+}
+
 
 void JSObjectScript::setRestoreScriptCallback(JSContextStruct* jscont, v8::Persistent<v8::Function> cb, bool success) {
     if (isStopped()) {
@@ -1145,7 +1204,7 @@ v8::Local<v8::Function> JSObjectScript::functionValue(const String& js_script_st
 {
   v8::HandleScope handle_scope;
 
-  static int32_t counter;
+  static int32 counter;
   std::stringstream sstream;
   sstream <<  " __emerson_deserialized_function_" << counter << "__ = " << js_script_str << ";";
 

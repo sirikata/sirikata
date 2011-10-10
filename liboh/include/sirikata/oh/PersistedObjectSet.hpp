@@ -79,7 +79,7 @@ public:
      *         bootstrapping code which then loads data from storage
      *  \param cb callback to invoke when the operation completes
      */
-    virtual void requestPersistedObject(const UUID& internal_id, const String& script_type, const String& script_args, const String& script_contents, RequestCallback cb) = 0;
+    virtual void requestPersistedObject(const UUID& internal_id, const String& script_type, const String& script_args, const String& script_contents, RequestCallback cb, const String& timestamp="current") = 0;
 };
 
 

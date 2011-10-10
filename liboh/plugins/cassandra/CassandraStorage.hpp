@@ -1,5 +1,5 @@
 /*  Sirikata
- *  SQLiteStorage.hpp
+ *  CassandraStorage.hpp
  *
  *  Copyright (c) 2011, Stanford University
  *  All rights reserved.
@@ -30,28 +30,27 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __SIRIKATA_OH_STORAGE_SQLITE_HPP__
-#define __SIRIKATA_OH_STORAGE_SQLITE_HPP__
+#ifndef __SIRIKATA_OH_STORAGE_CASSANDRA_HPP__
+#define __SIRIKATA_OH_STORAGE_CASSANDRA_HPP__
 
 #include <sirikata/oh/Storage.hpp>
-#include <sirikata/sqlite/SQLite.hpp>
+#include <sirikata/cassandra/Cassandra.hpp>
 
 namespace Sirikata {
 namespace OH {
 
 class FileStorageEvent;
 
-class SQLiteStorage : public Storage
+class CassandraStorage : public Storage
 {
 public:
-    SQLiteStorage(ObjectHostContext* ctx, const String& dbpath);
-    ~SQLiteStorage();
+    CassandraStorage(ObjectHostContext* ctx, const String& host, int port);
+    ~CassandraStorage();
 
     virtual void start();
     virtual void stop();
 
     virtual void beginTransaction(const Bucket& bucket);
-
     virtual void commitTransaction(const Bucket& bucket, const CommitCallback& cb = 0, const String& timestamp="current");
     virtual bool erase(const Bucket& bucket, const Key& key, const CommitCallback& cb = 0, const String& timestamp="current");
     virtual bool write(const Bucket& bucket, const Key& key, const String& value, const CommitCallback& cb = 0, const String& timestamp="current");
@@ -60,7 +59,24 @@ public:
     virtual bool rangeErase(const Bucket& bucket, const Key& start, const Key& finish, const CommitCallback& cb = 0, const String& timestamp="current");
     virtual bool count(const Bucket& bucket, const Key& start, const Key& finish, const CountCallback& cb = 0, const String& timestamp="current");
 
+
 private:
+
+    typedef std::vector<String> Keys;
+    typedef org::apache::cassandra::Column Column;
+    typedef std::vector<Column> Columns;
+    typedef org::apache::cassandra::SliceRange SliceRange;
+    typedef org::apache::cassandra::ColumnParent ColumnParent;
+    typedef org::apache::cassandra::SlicePredicate SlicePredicate;
+
+
+    typedef std::tr1::tuple<String,   //column family
+                            String,   //row key
+                            String,   //super column name
+                            Columns,  //columns to write
+                            Keys      //keys to erase
+                          > batchTuple;
+
     // StorageActions are individual actions to take, i.e. read, write,
     // erase. We queue them up in a list and eventually fire them off in a
     // transaction.
@@ -78,8 +94,8 @@ private:
 
         StorageAction& operator=(const StorageAction& rhs);
 
-        // Executes this action. Assumes the owning SQLiteStorage has setup the transaction.
-        bool execute(SQLiteDBPtr db, const Bucket& bucket, ReadSet* rs);
+        // Executes this action: push action to lists and wait for commitment
+        void execute(const Bucket& bucket, Columns* columns, Keys* eraseKeys, Keys* readKeys, const String& timestamp);
 
         // Bucket is implicit, passed into execute
         Type type;
@@ -90,9 +106,7 @@ private:
     typedef std::vector<StorageAction> Transaction;
     typedef std::tr1::unordered_map<Bucket, Transaction*, Bucket::Hasher> BucketTransactions;
 
-    // Initializes the database. This is separate from the main initialization
-    // function because we need to make sure it executes in the right thread so
-    // all sqlite requests on the db ptr come from the same thread.
+    // Initializes the database.
     void initDB();
 
     // Gets the current transaction or creates one. Also can return whether the
@@ -102,33 +116,27 @@ private:
 
     // Executes a commit. Runs in a separate thread, so the transaction is
     // passed in directly
-    void executeCommit(const Bucket& bucket, Transaction* trans, CommitCallback cb);
+    void executeCommit(const Bucket& bucket, Transaction* trans, CommitCallback cb, const String& timestamp);
 
-    void executeRangeRead(const String value_query, const Key& start, const Key& finish, CommitCallback cb);
-    void executeRangeErase(const String value_delete, const Key& start, const Key& finish, CommitCallback cb);
-    void executeCount(const String value_count, const Key& start, const Key& finish, CountCallback cb);
+    void executeCount(const Bucket& bucket, ColumnParent& parent, SlicePredicate& predicate, CountCallback cb, const String& timestamp);
+    void executeRangeRead(const Bucket& bucket, SliceRange& range, CommitCallback cb, const String& timestamp);
+    void executeRangeErase_p1(const Bucket& bucket, SliceRange& range, CommitCallback cb, const String& timestamp);
+    void executeRangeErase_p2(const Bucket& bucket, CommitCallback cb, ReadSet* rs, const String& timestamp);
 
-    // Complete a commit back in the main thread, cleaning it up and dispatching
-    // the callback
-    void completeCommit(const Bucket& bucket, Transaction* trans, CommitCallback cb, bool success, ReadSet* rs);
-
+    // Complete a commit back in the main thread, cleaning it up and dispatching the callback
+    void completeCommit(Transaction* trans, CommitCallback cb, bool success, ReadSet* rs);
     void completeRange(CommitCallback cb, bool success, ReadSet* rs);
     void completeCount(CountCallback cb, bool success, int32 count);
 
-    // A few helper methods that wrap sql operations.
-    bool sqlBeginTransaction();
-    bool sqlCommit();
-    bool sqlRollback();
-
-
+    // Call libcassandra methods to commit transcation
+    bool CassandraCommit(CassandraDBPtr db, const Bucket& bucket, Columns* columns, Keys* eraseKeys, Keys* readKeys, ReadSet* rs, const String& timestamp);
 
     ObjectHostContext* mContext;
     BucketTransactions mTransactions;
-    String mDBFilename;
-    SQLiteDBPtr mDB;
+    String mDBHost;              //host name of Cassandra server
+    int mDBPort;
+    CassandraDBPtr mDB;
 
-    // FIXME because we don't have proper multithreaded support in cppoh, we
-    // need to allocate our own thread dedicated to IO
     Network::IOService* mIOService;
     Network::IOWork* mWork;
     Thread* mThread;
@@ -137,4 +145,4 @@ private:
 }//end namespace OH
 }//end namespace Sirikata
 
-#endif //__SIRIKATA_OH_STORAGE_SQLITE_HPP__
+#endif //__SIRIKATA_OH_STORAGE_Cassandra_HPP__

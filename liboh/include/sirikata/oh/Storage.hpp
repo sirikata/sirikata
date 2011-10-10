@@ -81,6 +81,7 @@ public:
      *  requested). If non-empty, ownership transfers to the caller.
      */
     typedef std::tr1::function<void(bool success, ReadSet* rs)> CommitCallback;
+    typedef std::tr1::function<void(bool success, int32 count)> CountCallback;
 
     virtual ~Storage() {};
 
@@ -90,16 +91,18 @@ public:
 
     /** Begin a transaction. */
     virtual void beginTransaction(const Bucket& bucket) = 0;
+
     /** Completes a transaction and requests that it be written to
        Flushes all outstanding events (writes and removes) from pending queue.
        Resets pending queue as well.
     */
-    virtual void commitTransaction(const Bucket& bucket, const CommitCallback& cb = 0) = 0;
+    virtual void commitTransaction(const Bucket& bucket, const CommitCallback& cb = 0, const String& timestamp="current") = 0;
 
    /**
       @param {Key} key the key to erase
       @param {CommitCallback} cb optional commit callback which is
                      invoked if this is a single operation transaction.
+      @param {String} timestamp the timestamp of the operation
       @return {bool} true if the erase is queued, false
                      otherwise. Does not indicated success of actual
                      erase operation.
@@ -107,8 +110,7 @@ public:
       Queues the item to be removed from the backend.  Does not actually delete
       until the flush operation is called.
    */
-    virtual bool erase(const Bucket& bucket, const Key& key, const CommitCallback& cb = 0) = 0;
-
+    virtual bool erase(const Bucket& bucket, const Key& key, const CommitCallback& cb = 0, const String& timestamp="current") = 0;
 
     /**
        Queues writes to the item named by entryName:itemName.  Writes
@@ -117,26 +119,65 @@ public:
        last when calling flush.
 
        @param {Key} key the key to erase
-       @param{String} value What should be written into that item
+       @param {String} value What should be written into that item
        @param {CommitCallback} cb optional commit callback which is
                       invoked if this is a single operation transaction.
+       @param {String} timestamp the timestamp of the operation
 
        @return {bool} true if the write is queued, false
                      otherwise. Does not indicated success of actual
                      write operation.
     */
-    virtual bool write(const Bucket& bucket, const Key& key, const String& value, const CommitCallback& cb = 0) = 0;
+    virtual bool write(const Bucket& bucket, const Key& key, const String& value, const CommitCallback& cb = 0, const String& timestamp="current") = 0;
 
     /**
-       @param {Key} key the key to erase
+       @param {Key} key the key to read
        @param {CommitCallback} cb optional commit callback which is
                       invoked if this is a single operation transaction.
+       @param {String} timestamp the timestamp of the operation
 
-       @return {bool} true if the erase is queued, false
+       @return {bool} true if the read is queued, false
                      otherwise. Does not indicated success of actual
-                     write operation.
+                     read operation.
      */
-    virtual bool read(const Bucket& bucket, const Key& key, const CommitCallback& cb = 0) = 0;
+    virtual bool read(const Bucket& bucket, const Key& key, const CommitCallback& cb = 0, const String& timestamp="current") = 0;
+
+    /**
+       @param {Key} from the start key of range of keys to read
+       @param {Key} finish the end key of range of keys to read
+       @param {CommitCallback} cb optional commit callback which is
+                      invoked if this is a single operation transaction.
+       @param {String} timestamp the timestamp of the operation
+
+       @return {bool} true if the read is queued, false
+                     otherwise. Does not indicated success of actual
+                     read operation.
+     */
+    virtual bool rangeRead(const Bucket& bucket, const Key& start, const Key& finish, const CommitCallback& cb = 0, const String& timestamp="current") = 0;
+
+    /**
+       @param {Key} from the start key of range of keys to erase
+       @param {Key} finish the end key of range of keys to erase
+       @param {CommitCallback} cb optional commit callback which is
+                      invoked if this is a single operation transaction.
+       @param {String} timestamp the timestamp of the operation
+
+       @return {bool} true if the read is queued, false
+                     otherwise. Does not indicated success of actual
+                     erase operation.
+     */
+    virtual bool rangeErase(const Bucket& bucket, const Key& start, const Key& finish, const CommitCallback& cb = 0, const String& timestamp="current") = 0;
+
+    /**
+       @param {Key} from the start key of range of keys to count
+       @param {Key} finish the end key of range of keys to count
+       @param {CommitCallback} cb optional commit callback which is
+                      invoked if this is a single operation transaction.
+       @param {String} timestamp the timestamp of the operation
+
+       @return {bool} true if operation is successful, false otherwise
+     */
+    virtual bool count(const Bucket& bucket, const Key& start, const Key& finish, const CountCallback& cb = 0, const String& timestamp="current") = 0;
 };
 
 

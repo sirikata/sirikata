@@ -52,7 +52,7 @@ class SIRIKATA_OH_EXPORT ObjectFactory {
     virtual ~ObjectFactory() {}
 
     /** Generate objects for the scene and connect them to the space. */
-    virtual void generate() = 0;
+    virtual void generate(const String& timestamp="current") = 0;
 };
 
 /** ObjectFactoryFactory creates ObjectFactories.  To create an ObjectFactory,

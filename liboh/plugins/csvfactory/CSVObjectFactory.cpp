@@ -133,7 +133,7 @@ CSVObjectFactory::StringList CSVObjectFactory::sepCommas(String line)
 
 
 
-void CSVObjectFactory::generate()
+void CSVObjectFactory::generate(const String& timestamp)
 {
     int count =0;
     std::ifstream fp(mFilename.c_str());

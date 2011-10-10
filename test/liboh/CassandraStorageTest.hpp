@@ -1,7 +1,7 @@
 /*  Sirikata
- *  SQLiteObjectFactory.hpp
+ *  CassandraStorageTest.hpp
  *
- *  Copyright (c) 2010, Ewen Cheslack-Postava
+ *  Copyright (c) 2011, Stanford University
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,44 +30,44 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_OH_SQLITE_OBJECT_FACTORY_HPP_
-#define _SIRIKATA_OH_SQLITE_OBJECT_FACTORY_HPP_
+#include <cxxtest/TestSuite.h>
+#include "StorageTestBase.hpp"
+#include <sirikata/cassandra/Cassandra.hpp>
 
-#include <sirikata/oh/ObjectFactory.hpp>
-#include <sirikata/oh/HostedObject.hpp>
-#include <sirikata/proxyobject/SimulationFactory.hpp>
-
-namespace Sirikata {
-
-/** SQLiteObjectFactory generates objects from an input SQLite file. */
-class SQLiteObjectFactory : public ObjectFactory {
+class CassandraStorageTest : public CxxTest::TestSuite
+{
+    static const String dbhost;
+    static const String dbport;
+    StorageTestBase _base;
 public:
-    typedef std::vector<String> StringList;
+    CassandraStorageTest()
+     : _base("oh-cassandra", "cassandra", String("--host=") + dbhost + String(" --port=") + dbport)
+    {
+    }
 
-    SQLiteObjectFactory(ObjectHostContext* ctx, ObjectHost* oh, const SpaceID& space, const String& filename);
-    virtual ~SQLiteObjectFactory() {}
+    void setUp() {_base.setUp(); }
+    void tearDown() {_base.tearDown(); }
 
-    virtual void generate(const String& timestamp="current");
+    void testSetupTeardown() {_base.testSetupTeardown(); }
 
-private:
-    void connectObjects();
+    void testSingleWrite() {_base.testSingleWrite(); }
+    void testSingleRead() {_base.testSingleRead(); }
+    void testSingleInvalidRead() {_base.testSingleInvalidRead(); }
+    void testSingleErase() {_base.testSingleErase(); }
 
-    struct ObjectInfo {
-        UUID id;
-        String scriptType;
-        String scriptArgs;
-        String scriptContents;
-    };
+    void testMultiWrite() {_base.testMultiWrite(); }
+    void testMultiRead() {_base.testMultiRead(); }
+    void testMultiInvalidRead() {_base.testMultiInvalidRead(); }
+    void testMultiSomeInvalidRead() {_base.testMultiSomeInvalidRead(); }
+    void testMultiErase() {_base.testMultiErase(); }
 
-    ObjectHostContext* mContext;
-    ObjectHost* mOH;
-    SpaceID mSpace;
-    String mDBFilename;
-    int32 mConnectRate;
-    typedef std::queue<ObjectInfo> ObjectInfoQueue;
-    ObjectInfoQueue mIncompleteObjects;
+    void testAtmoicWrite() {_base.testAtmoicWrite(); }
+    void testAtmoicWriteErase() {_base.testAtmoicWriteErase(); }
+
+    void testRangeRead() {_base.testRangeRead(); }
+    void testCount() {_base.testCount(); }
+    void testRangeErase() {_base.testRangeErase(); }
 };
 
-} // namespace Sirikata
-
-#endif //_SIRIKATA_OH_SQLITE_OBJECT_FACTORY_HPP_
+const String CassandraStorageTest::dbhost("localhost");
+const String CassandraStorageTest::dbport("9160");

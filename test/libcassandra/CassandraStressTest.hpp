@@ -1,7 +1,7 @@
 /*  Sirikata
- *  SQLiteObjectFactory.hpp
+ *  CassandraStressTest.hpp
  *
- *  Copyright (c) 2010, Ewen Cheslack-Postava
+ *  Copyright (c) 2011, Stanford University
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,44 +30,30 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_OH_SQLITE_OBJECT_FACTORY_HPP_
-#define _SIRIKATA_OH_SQLITE_OBJECT_FACTORY_HPP_
+#include <cxxtest/TestSuite.h>
+#include "StressTestBase.hpp"
 
-#include <sirikata/oh/ObjectFactory.hpp>
-#include <sirikata/oh/HostedObject.hpp>
-#include <sirikata/proxyobject/SimulationFactory.hpp>
 
-namespace Sirikata {
-
-/** SQLiteObjectFactory generates objects from an input SQLite file. */
-class SQLiteObjectFactory : public ObjectFactory {
+class CassandraStressTest : public CxxTest::TestSuite
+{
+    static const String dbhost;
+    static const String dbport;
+    StressTestBase _base;
 public:
-    typedef std::vector<String> StringList;
+    CassandraStressTest()
+      : _base("oh-cassandra", "cassandra", String("--host=") + dbhost + String(" --port=") + dbport)
+    {
+    }
 
-    SQLiteObjectFactory(ObjectHostContext* ctx, ObjectHost* oh, const SpaceID& space, const String& filename);
-    virtual ~SQLiteObjectFactory() {}
+    void setUp() {_base.setUp(); }
+    void tearDown() {_base.tearDown(); }
 
-    virtual void generate(const String& timestamp="current");
+    void testSetupTeardown() {_base.testSetupTeardown(); }
 
-private:
-    void connectObjects();
-
-    struct ObjectInfo {
-        UUID id;
-        String scriptType;
-        String scriptArgs;
-        String scriptContents;
-    };
-
-    ObjectHostContext* mContext;
-    ObjectHost* mOH;
-    SpaceID mSpace;
-    String mDBFilename;
-    int32 mConnectRate;
-    typedef std::queue<ObjectInfo> ObjectInfoQueue;
-    ObjectInfoQueue mIncompleteObjects;
+    //(dataLength, keyNum, bucketNum, rounds)
+    void testMultiRounds() {_base.testMultiRounds("10", 10, 10, 5); }
+  
 };
 
-} // namespace Sirikata
-
-#endif //_SIRIKATA_OH_SQLITE_OBJECT_FACTORY_HPP_
+const String CassandraStressTest::dbhost("localhost");
+const String CassandraStressTest::dbport("9160");

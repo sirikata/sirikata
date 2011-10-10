@@ -1,5 +1,5 @@
 /*  Sirikata
- *  SQLiteObjectFactory.hpp
+ *  CassandraObjectFactory.hpp
  *
  *  Copyright (c) 2010, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,26 +30,29 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_OH_SQLITE_OBJECT_FACTORY_HPP_
-#define _SIRIKATA_OH_SQLITE_OBJECT_FACTORY_HPP_
+#ifndef _SIRIKATA_OH_CASSANDRA_OBJECT_FACTORY_HPP_
+#define _SIRIKATA_OH_CASSANDRA_OBJECT_FACTORY_HPP_
 
 #include <sirikata/oh/ObjectFactory.hpp>
 #include <sirikata/oh/HostedObject.hpp>
 #include <sirikata/proxyobject/SimulationFactory.hpp>
+#include <libcassandra/cassandra.h>
 
 namespace Sirikata {
 
-/** SQLiteObjectFactory generates objects from an input SQLite file. */
-class SQLiteObjectFactory : public ObjectFactory {
+/** CassandraObjectFactory generates objects from an input Cassandra file. */
+class CassandraObjectFactory : public ObjectFactory {
 public:
-    typedef std::vector<String> StringList;
 
-    SQLiteObjectFactory(ObjectHostContext* ctx, ObjectHost* oh, const SpaceID& space, const String& filename);
-    virtual ~SQLiteObjectFactory() {}
+    CassandraObjectFactory(ObjectHostContext* ctx, ObjectHost* oh, const SpaceID& space, const String& host, int port, const String& oh_id);
+    virtual ~CassandraObjectFactory() {}
 
     virtual void generate(const String& timestamp="current");
 
 private:
+    typedef org::apache::cassandra::Column Column;
+    typedef org::apache::cassandra::SliceRange SliceRange;
+
     void connectObjects();
 
     struct ObjectInfo {
@@ -62,7 +65,9 @@ private:
     ObjectHostContext* mContext;
     ObjectHost* mOH;
     SpaceID mSpace;
-    String mDBFilename;
+    String mDBHost;
+    int mDBPort;
+    String mOHostID;  // Object host ID
     int32 mConnectRate;
     typedef std::queue<ObjectInfo> ObjectInfoQueue;
     ObjectInfoQueue mIncompleteObjects;
@@ -70,4 +75,4 @@ private:
 
 } // namespace Sirikata
 
-#endif //_SIRIKATA_OH_SQLITE_OBJECT_FACTORY_HPP_
+#endif //_SIRIKATA_OH_CASSANDRA_OBJECT_FACTORY_HPP_

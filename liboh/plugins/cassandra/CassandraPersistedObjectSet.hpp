@@ -1,5 +1,5 @@
 /*  Sirikata
- *  PersistedObjectSet.hpp
+ *  CassandraPersistedObjectSet.hpp
  *
  *  Copyright (c) 2010, Stanford University
  *  All rights reserved.
@@ -30,11 +30,11 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __SIRIKATA_OH_SQLITE_PERSISTED_OBJECT_SET_HPP__
-#define __SIRIKATA_OH_SQLITE_PERSISTED_OBJECT_SET_HPP__
+#ifndef __SIRIKATA_OH_CASSANDRA_PERSISTED_OBJECT_SET_HPP__
+#define __SIRIKATA_OH_CASSANDRA_PERSISTED_OBJECT_SET_HPP__
 
 #include <sirikata/oh/PersistedObjectSet.hpp>
-#include <sirikata/sqlite/SQLite.hpp>
+#include <sirikata/cassandra/Cassandra.hpp>
 
 namespace Sirikata {
 namespace OH {
@@ -48,15 +48,15 @@ namespace OH {
  *  access to storage), script type, and script (allowing the object to
  *  reconstruct itself) are stored.
  */
-class SQLitePersistedObjectSet : public PersistedObjectSet {
+class CassandraPersistedObjectSet : public PersistedObjectSet {
 public:
     /** RequestCallbacks are invoked when a request to change a persisted
      *  objects properties (or remove it from persistence) completes.
      */
     typedef std::tr1::function<void(bool success)> RequestCallback;
 
-    SQLitePersistedObjectSet(ObjectHostContext* ctx, const String& dbpath);
-    virtual ~SQLitePersistedObjectSet();
+    CassandraPersistedObjectSet(ObjectHostContext* ctx, const String& host, int port, const String& oh_id);
+    virtual ~CassandraPersistedObjectSet();
 
     /* Service Interface */
     virtual void start();
@@ -65,12 +65,15 @@ public:
     virtual void requestPersistedObject(const UUID& internal_id, const String& script_type, const String& script_args, const String& script_contents, RequestCallback cb, const String& timestamp="current");
 
 private:
+
     void initDB();
-    void performUpdate(const UUID& internal_id, const String& script_type, const String& script_args, const String& script_contents, RequestCallback cb);
+    void performUpdate(const UUID& internal_id, const String& script_type, const String& script_args, const String& script_contents, RequestCallback cb, const String& timestamp="current");
 
     ObjectHostContext* mContext;
-    String mDBFilename;
-    SQLiteDBPtr mDB;
+    String mDBHost;
+    int mDBPort;
+    String mOHostID;  // Object Host ID
+    CassandraDBPtr mDB;
 
     // FIXME because we don't have proper multithreaded support in cppoh, we
     // need to allocate our own thread dedicated to IO
@@ -82,4 +85,4 @@ private:
 } //end namespace OH
 } //end namespace Sirikata
 
-#endif //__SIRIKATA_OH_SQLITE_PERSISTED_OBJECT_SET_HPP__
+#endif //__SIRIKATA_OH_CASSANDRA_PERSISTED_OBJECT_SET_HPP__
