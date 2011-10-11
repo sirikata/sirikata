@@ -2,20 +2,50 @@
 
 import subprocess
 import sys
+import os.path
 
-EXCLUDES = [ 'dependencies', 'externals', 'scripts', 'build/cmake', 'build/Frameworks', '.git', 'doc', 'docs', 'libproxyobject/plugins/ogre/data/ace', 'libproxyobject/plugins/ogre/data/labjs' , 'libproxyobject/plugins/ogre/data/jquery_themes', 'libproxyobject/plugins/ogre/data/jquery_plugins' , 'libproxyobject/plugins/ogre/data/jquery', 'liboh/plugins/js/emerson/alt_regress', 'liboh/plugins/js/emerson/regression' ]
+# These are generic rules that should only match on the individual
+# directory name (rather than the entire path, e.g. bar in
+# /foo/bar). These should be used rarely since they can end up
+# accidentally block other directories (e.g. putting in 'scripts'
+# would block out both the top-level scripts directory and Emerson
+# scripts).
+RELATIVE_EXCLUDES = [
+    '.git'
+]
+
+# These are 'absolute' paths, w.r.t. the top Sirikata directory
+ABSOLUTE_EXCLUDES = [
+    'dependencies',
+    'externals',
+    'scripts',
+    'build/cmake',
+    'build/Frameworks',
+    'doc',
+    'docs',
+    'libproxyobject/plugins/ogre/data/ace',
+    'libproxyobject/plugins/ogre/data/labjs',
+    'libproxyobject/plugins/ogre/data/jquery_themes',
+    'libproxyobject/plugins/ogre/data/jquery_plugins',
+    'libproxyobject/plugins/ogre/data/jquery',
+    'liboh/plugins/js/emerson/alt_regress',
+    'liboh/plugins/js/emerson/regression'
+    ]
 
 if __name__ == "__main__":
     if (len (sys.argv) < 2):
-        print("\n\nIncorrect usage: add in what you're grepping for\n\n")
+        print("Usage: sgrep.py pattern")
 
-    relative_excludes = [ './' + ex for ex in EXCLUDES ]
-    EXCLUDES.extend(relative_excludes)
 
-    #cmd = ['grep','-R', sys.argv[1]]
-    cmd = ['grep','-R']
-    cmd += [ '--exclude-dir=' + e for e in EXCLUDES ]
+    sirikata_dir = os.path.abspath(os.path.dirname(__file__))
+
+    excludes = []
+    excludes += RELATIVE_EXCLUDES
+    excludes += [os.path.join(sirikata_dir, p) for p in ABSOLUTE_EXCLUDES]
+
+    cmd = ['grep', '-R']
+    cmd += [ '--exclude-dir=' + e for e in excludes ]
     cmd += sys.argv[1:]
-    cmd += [ '.' ]
+    cmd += [ sirikata_dir ]
 
     subprocess.call(cmd);
