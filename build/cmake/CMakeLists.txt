@@ -384,6 +384,15 @@ SET(Boost_FIND_REQUIRED TRUE)
 IF(WIN32)
   FIND_PACKAGE(Boost COMPONENTS system program_options thread filesystem date_time regex iostreams)
 ELSE(WIN32)
+  # There's an odd issue with linking boost on OSX -- other libraries can be
+  # linked dynamically and retain their full path, but the boost libraries have
+  # them stripped. This isn't a build issue, but is annoying at runtime as you
+  # have to set DYLD_LIBRARY_PATH. Instead, we just force it to use the static
+  # libraries.
+  IF(APPLE)
+    SET(Boost_USE_STATIC_LIBS ON)
+  ENDIF()
+
   FIND_PACKAGE(Boost COMPONENTS system)
 
   STRING(REPLACE "boost_system" "boost_program_options" Boost_PROGRAM_OPTIONS_LIBRARY ${Boost_SYSTEM_LIBRARY})
