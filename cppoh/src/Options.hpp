@@ -59,6 +59,8 @@
 #define OPT_OH_PERSISTENT_SET       "oh.persistentset"
 #define OPT_OH_PERSISTENT_SET_OPTS  "oh.persistentset.opts"
 
+#define OPT_OBJECT_QUERY_PROCESSOR       "oh.query-processor"
+#define OPT_OBJECT_QUERY_PROCESSOR_OPTS  "oh.query-processor.opts"
 
 namespace Sirikata {
 

@@ -44,7 +44,7 @@ void InitCPPOHOptions() {
 
         .addOption(new OptionValue(OPT_CONFIG_FILE,"cppoh.cfg",Sirikata::OptionValueType<String>(),"Configuration file to load."))
 
-        .addOption(new OptionValue(OPT_OH_PLUGINS,"weight-exp,weight-sqr,tcpsst,weight-const,ogregraphics,colladamodels,mesh-billboard,nvtt,common-filters,csvfactory,oh-file,oh-sqlite,scripting-js,simplecamera,oh-cassandra",Sirikata::OptionValueType<String>(),"Plugin list to load."))
+        .addOption(new OptionValue(OPT_OH_PLUGINS,"weight-exp,weight-sqr,tcpsst,weight-const,ogregraphics,colladamodels,mesh-billboard,nvtt,common-filters,csvfactory,oh-file,oh-sqlite,scripting-js,simplecamera,oh-cassandra,oh-simple-query",Sirikata::OptionValueType<String>(),"Plugin list to load."))
         .addOption(new OptionValue(OPT_OH_PLUGIN_SEARCH_PATHS,"",Sirikata::OptionValueType<String>(),"Colon separated list of paths to search for plugins."))
 
         .addOption(new OptionValue("ohid", "1", Sirikata::OptionValueType<ObjectHostID>(), "Object host ID for this server"))
@@ -68,6 +68,9 @@ void InitCPPOHOptions() {
 
         .addOption(new OptionValue(OPT_OH_PERSISTENT_SET,"sqlite",OptionValueType<String>(),"Type of storage to use to store the set of persistent objects, i.e. those to be restored when the object host restarts"))
         .addOption(new OptionValue(OPT_OH_PERSISTENT_SET_OPTS,"",OptionValueType<String>(),"Options to pass to persistent object set constructor"))
+
+        .addOption(new OptionValue(OPT_OBJECT_QUERY_PROCESSOR,"simple",OptionValueType<String>(),"Type of query processor to use for object queries."))
+        .addOption(new OptionValue(OPT_OBJECT_QUERY_PROCESSOR_OPTS,"",OptionValueType<String>(),"Options to the query processor used for object queries."))
 
         .addOption(new OptionValue(OPT_DEFAULT_SCRIPT_TYPE,"js",OptionValueType<String>(),"If a script is not specified, this type will be instantiated automatically at object creation. If left blank, no script will be started."))
         .addOption(new OptionValue(OPT_DEFAULT_SCRIPT_OPTIONS,"",OptionValueType<String>(),"If a script is not specified, these options will be passed to the default script type."))

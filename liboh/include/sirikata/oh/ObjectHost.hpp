@@ -63,6 +63,7 @@ typedef Provider< ConnectionEventListener* > ConnectionEventProvider;
 namespace OH {
 class Storage;
 class PersistedObjectSet;
+class ObjectQueryProcessor;
 }
 
 class SIRIKATA_OH_EXPORT ObjectHost : public ConnectionEventProvider, public Service {
@@ -75,6 +76,7 @@ class SIRIKATA_OH_EXPORT ObjectHost : public ConnectionEventProvider, public Ser
 
     OH::Storage* mStorage;
     OH::PersistedObjectSet* mPersistentSet;
+    OH::ObjectQueryProcessor* mQueryProcessor;
 
     SpaceSessionManagerMap mSessionManagers;
 
@@ -163,6 +165,10 @@ public:
     void setPersistentSet(OH::PersistedObjectSet* persistentset) { mPersistentSet = persistentset; }
     OH::PersistedObjectSet* getPersistedObjectSet() { return mPersistentSet; }
 
+    // Get and set the storage backend to use for queries.
+    void setQueryProcessor(OH::ObjectQueryProcessor* proc) { mQueryProcessor = proc; }
+    OH::ObjectQueryProcessor* getQueryProcessor() { return mQueryProcessor; }
+
     // Primary HostedObject API
 
     /** Connect the object to the space with the given starting parameters.
@@ -170,6 +176,7 @@ public:
     *   using this ID to connect.
     */
     bool connect(
+        HostedObjectPtr ho, // requestor, or can be NULL
         const SpaceObjectReference& sporef, const SpaceID& space,
         const TimedMotionVector3f& loc,
         const TimedMotionQuaternion& orient,
@@ -240,8 +247,11 @@ public:
     void handleObjectMessage(const SpaceObjectReference& sporef_internalID, const SpaceID& space, Sirikata::Protocol::Object::ObjectMessage* msg);
     void handleObjectDisconnected(const SpaceObjectReference& sporef_internalID, Disconnect::Code);
 
-    // Wrapper to convert callback to use ConnectionInfo
-    void wrappedConnectedCallback(const SpaceID& space, const ObjectReference& obj, const SessionManager::ConnectionInfo& ci, ConnectedCallback cb);
+    // Wrappers so we can forward events to interested parties. For Connected
+    // callback, also allows us to convert ConnectionInfo.
+    void wrappedConnectedCallback(HostedObjectWPtr ho_weak, const SpaceID& space, const ObjectReference& obj, const SessionManager::ConnectionInfo& ci, ConnectedCallback cb);
+    void wrappedStreamCreatedCallback(HostedObjectWPtr ho_weak, const SpaceObjectReference& sporef, SessionManager::ConnectionEvent after, StreamCreatedCallback cb);
+    void wrappedDisconnectedCallback(HostedObjectWPtr ho_weak, const SpaceObjectReference& sporef, Disconnect::Code cause, DisconnectedCallback);
 
     // Checks serialization of access to SessionManagers
     Sirikata::SerializationCheck mSessionSerialization;
