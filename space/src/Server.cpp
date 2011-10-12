@@ -235,7 +235,7 @@ bool Server::isObjectConnecting(const UUID& object_id) const {
     return (mStoredConnectionData.find(object_id) != mStoredConnectionData.end());
 }
 
-void Server::sendSessionMessageWithRetry(const ObjectHostConnectionManager::ConnectionID& conn, Sirikata::Protocol::Object::ObjectMessage* msg, const Duration& retry_rate) {
+void Server::sendSessionMessageWithRetry(const ObjectHostConnectionID& conn, Sirikata::Protocol::Object::ObjectMessage* msg, const Duration& retry_rate) {
     bool sent = mObjectHostConnectionManager->send( conn, msg );
     if (!sent) {
         mContext->mainStrand->post(
@@ -245,7 +245,7 @@ void Server::sendSessionMessageWithRetry(const ObjectHostConnectionManager::Conn
     }
 }
 
-bool Server::onObjectHostMessageReceived(const ObjectHostConnectionManager::ConnectionID& conn_id, Sirikata::Protocol::Object::ObjectMessage* obj_msg) {
+bool Server::onObjectHostMessageReceived(const ObjectHostConnectionID& conn_id, Sirikata::Protocol::Object::ObjectMessage* obj_msg) {
     static UUID spaceID = UUID::null();
 
     // Before admitting a message, we need to do some sanity checks.  Also, some types of messages get
@@ -363,7 +363,7 @@ void Server::handleObjectHostMessageRouting() {
 }
 
 bool Server::handleSingleObjectHostMessageRouting() {
-    ConnectionIDObjectMessagePair front(ObjectHostConnectionManager::ConnectionID(),NULL);
+    ConnectionIDObjectMessagePair front(ObjectHostConnectionID(),NULL);
     if (!mRouteObjectMessage.pop(front))
         return false;
 
@@ -402,7 +402,7 @@ bool Server::handleSingleObjectHostMessageRouting() {
 }
 
 // Handle Session messages from an object
-void Server::handleSessionMessage(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, Sirikata::Protocol::Object::ObjectMessage* msg) {
+void Server::handleSessionMessage(const ObjectHostConnectionID& oh_conn_id, Sirikata::Protocol::Object::ObjectMessage* msg) {
     Sirikata::Protocol::Session::Container session_msg;
     bool parse_success = session_msg.ParseFromString(msg->payload());
     if (!parse_success) {
@@ -445,11 +445,11 @@ void Server::handleSessionMessage(const ObjectHostConnectionManager::ConnectionI
     delete msg;
 }
 
-void Server::onObjectHostDisconnected(const ObjectHostConnectionManager::ConnectionID& oh_conn_id) {
+void Server::onObjectHostDisconnected(const ObjectHostConnectionID& oh_conn_id) {
     mContext->mainStrand->post( std::tr1::bind(&Server::handleObjectHostConnectionClosed, this, oh_conn_id) );
 }
 
-void Server::handleObjectHostConnectionClosed(const ObjectHostConnectionManager::ConnectionID& oh_conn_id) {
+void Server::handleObjectHostConnectionClosed(const ObjectHostConnectionID& oh_conn_id) {
     for(ObjectConnectionMap::iterator it = mObjects.begin(); it != mObjects.end(); ) {
         UUID obj_id = it->first;
         ObjectConnection* obj_conn = it->second;
@@ -464,7 +464,7 @@ void Server::handleObjectHostConnectionClosed(const ObjectHostConnectionManager:
     mContext->timeSeries->report(mTimeSeriesObjects, mObjects.size());
 }
 
-void Server::retryHandleConnect(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, Sirikata::Protocol::Object::ObjectMessage* obj_response) {
+void Server::retryHandleConnect(const ObjectHostConnectionID& oh_conn_id, Sirikata::Protocol::Object::ObjectMessage* obj_response) {
     if (!mObjectHostConnectionManager->send(oh_conn_id,obj_response)) {
         mContext->mainStrand->post(Duration::seconds(0.05),std::tr1::bind(&Server::retryHandleConnect,this,oh_conn_id,obj_response));
     }else {
@@ -472,7 +472,7 @@ void Server::retryHandleConnect(const ObjectHostConnectionManager::ConnectionID&
     }
 }
 
-void Server::sendConnectError(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, const UUID& obj_id) {
+void Server::sendConnectError(const ObjectHostConnectionID& oh_conn_id, const UUID& obj_id) {
     Sirikata::Protocol::Session::Container response_container;
     Sirikata::Protocol::Session::IConnectResponse response = response_container.mutable_connect_response();
     fillVersionInfo(response.mutable_version(), mContext);
@@ -492,7 +492,7 @@ void Server::sendConnectError(const ObjectHostConnectionManager::ConnectionID& o
 }
 
 // Handle Connect message from object
-void Server::handleConnect(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, const Sirikata::Protocol::Object::ObjectMessage& container, const Sirikata::Protocol::Session::Connect& connect_msg) {
+void Server::handleConnect(const ObjectHostConnectionID& oh_conn_id, const Sirikata::Protocol::Object::ObjectMessage& container, const Sirikata::Protocol::Session::Connect& connect_msg) {
     UUID obj_id = container.source_object();
 
     // If the requested location isn't on this server, redirect
@@ -556,7 +556,7 @@ void Server::handleConnect(const ObjectHostConnectionManager::ConnectionID& oh_c
     );
 }
 
-void Server::handleConnectAuthResponse(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, const UUID& obj_id, const Sirikata::Protocol::Session::Connect& connect_msg, bool authenticated) {
+void Server::handleConnectAuthResponse(const ObjectHostConnectionID& oh_conn_id, const UUID& obj_id, const Sirikata::Protocol::Session::Connect& connect_msg, bool authenticated) {
     if (!authenticated) {
         sendConnectError(oh_conn_id, obj_id);
         return;
@@ -674,7 +674,7 @@ void Server::finishAddObject(const UUID& obj_id, OSegAddNewStatus status)
   }
 }
 
-void Server::sendConnectSuccess(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, const UUID& obj_id) {
+void Server::sendConnectSuccess(const ObjectHostConnectionID& oh_conn_id, const UUID& obj_id) {
     TimedMotionVector3f loc = mLocationService->location(obj_id);
     TimedMotionQuaternion orient = mLocationService->orientation(obj_id);
     BoundingSphere3f bnds = mLocationService->bounds(obj_id);
@@ -708,7 +708,7 @@ void Server::sendConnectSuccess(const ObjectHostConnectionManager::ConnectionID&
 
 // Handle Migrate message from object
 //this is called by the receiving server.
-void Server::handleMigrate(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, const Sirikata::Protocol::Object::ObjectMessage& container, const Sirikata::Protocol::Session::Connect& migrate_msg)
+void Server::handleMigrate(const ObjectHostConnectionID& oh_conn_id, const Sirikata::Protocol::Object::ObjectMessage& container, const Sirikata::Protocol::Session::Connect& migrate_msg)
 {
     UUID obj_id = container.source_object();
 
@@ -733,7 +733,7 @@ void Server::handleMigrate(const ObjectHostConnectionManager::ConnectionID& oh_c
 
 }
 
-void Server::handleConnectAck(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, const Sirikata::Protocol::Object::ObjectMessage& container) {
+void Server::handleConnectAck(const ObjectHostConnectionID& oh_conn_id, const Sirikata::Protocol::Object::ObjectMessage& container) {
     UUID obj_id = container.source_object();
 
     // Allow the forwarder to send to ship messages to this connection

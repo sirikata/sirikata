@@ -42,52 +42,20 @@
 
 namespace Sirikata {
 
-ObjectHostConnectionManager::ConnectionID::ConnectionID()
-        : conn(NULL)
-{
-}
+class ObjectHostConnection {
+public:
+    ObjectHostConnection(Sirikata::Network::Stream* str)
+     : socket(str)
+    {}
+    ~ObjectHostConnection() {
+        delete socket;
+    }
 
-ObjectHostConnectionManager::ConnectionID::ConnectionID(ObjectHostConnection* _conn)
-        : conn(_conn)
-{
-}
-
-ObjectHostConnectionManager::ConnectionID::ConnectionID(const ConnectionID& rhs)
-        : conn(rhs.conn)
-{
-}
-
-ObjectHostConnectionManager::ConnectionID& ObjectHostConnectionManager::ConnectionID::operator=(const ConnectionID& rhs) {
-    conn = rhs.conn;
-    return *this;
-}
-
-bool ObjectHostConnectionManager::ConnectionID::operator==(const ConnectionID& rhs) const {
-    return (conn == rhs.conn);
-}
-
-bool ObjectHostConnectionManager::ConnectionID::operator!=(const ConnectionID& rhs) const {
-    return (conn != rhs.conn);
-}
-
+    Sirikata::Network::Stream* socket;
+};
 
 
 ObjectHostConnectionManager::Listener::~Listener() {
-}
-
-
-
-ObjectHostConnectionManager::ObjectHostConnection::ObjectHostConnection(Sirikata::Network::Stream* str)
-        : socket(str)
-{
-}
-
-ObjectHostConnectionManager::ObjectHostConnection::~ObjectHostConnection() {
-    delete socket;
-}
-
-ObjectHostConnectionManager::ConnectionID ObjectHostConnectionManager::ObjectHostConnection::conn_id() {
-    return ConnectionID(this);
 }
 
 
@@ -107,7 +75,7 @@ ObjectHostConnectionManager::~ObjectHostConnectionManager() {
 }
 
 
-bool ObjectHostConnectionManager::send(const ConnectionID& conn_id, Sirikata::Protocol::Object::ObjectMessage* msg) {
+bool ObjectHostConnectionManager::send(const ObjectHostConnectionID& conn_id, Sirikata::Protocol::Object::ObjectMessage* msg) {
     // If its not in the connection list we're probably chasing bad
     // pointers
     if (mContext->stopped()) {
@@ -136,6 +104,10 @@ bool ObjectHostConnectionManager::send(const ConnectionID& conn_id, Sirikata::Pr
         delete msg;
     }
     return sent;
+}
+
+ObjectHostConnectionID ObjectHostConnectionManager::conn_id(ObjectHostConnection* c) {
+    return ObjectHostConnectionID(c);
 }
 
 void ObjectHostConnectionManager::listen(const Address4& listen_addr) {
@@ -227,7 +199,7 @@ void ObjectHostConnectionManager::handleConnectionRead(ObjectHostConnection* con
 
     TIMESTAMP(obj_msg, Trace::HANDLE_OBJECT_HOST_MESSAGE);
 
-    mListener->onObjectHostMessageReceived(conn->conn_id(), obj_msg);
+    mListener->onObjectHostMessageReceived(conn_id(conn), obj_msg);
 
     // We either got it or dropped it, either way it was accepted.  Don't do
     // anything with pause parameter.
@@ -239,7 +211,7 @@ void ObjectHostConnectionManager::insertConnection(ObjectHostConnection* conn) {
 
 void ObjectHostConnectionManager::destroyConnection(ObjectHostConnection* conn) {
     if (mConnections.find(conn) == mConnections.end()) return;
-    mListener->onObjectHostDisconnected(conn->conn_id());
+    mListener->onObjectHostDisconnected(conn_id(conn));
     mConnections.erase(conn);
     delete conn;
 }

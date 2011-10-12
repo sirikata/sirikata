@@ -1357,6 +1357,7 @@ SET(LIBSPACE_SOURCES
   ${LIBSPACE_SOURCE_DIR}/ProxSimulationTraits.cpp
   ${LIBSPACE_SOURCE_DIR}/Proximity.cpp
   ${LIBSPACE_SOURCE_DIR}/AggregateManager.cpp
+  ${LIBSPACE_SOURCE_DIR}/ObjectHostConnectionID.cpp
   ${LIBSPACE_SOURCE_DIR}/ObjectHostConnectionManager.cpp
   )
 
