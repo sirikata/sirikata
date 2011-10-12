@@ -100,10 +100,6 @@ public:
         receiveFrom(Endpoint::any(), cb);
     }
 
-    enum {
-        OLD_HANDLER
-    };
-
     /** Register a handler for messages from the specified endpoint.
      *  \param from endpoint to dispatch messages from
      *  \param cb handler to invoke when messages are received
