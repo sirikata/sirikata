@@ -45,7 +45,6 @@
 #include <sirikata/space/ObjectSegmentation.hpp>
 
 #include "ObjectConnection.hpp"
-#include "ObjectHostConnectionManager.hpp"
 
 #include <sirikata/core/util/Random.hpp>
 

@@ -1357,6 +1357,7 @@ SET(LIBSPACE_SOURCES
   ${LIBSPACE_SOURCE_DIR}/ProxSimulationTraits.cpp
   ${LIBSPACE_SOURCE_DIR}/Proximity.cpp
   ${LIBSPACE_SOURCE_DIR}/AggregateManager.cpp
+  ${LIBSPACE_SOURCE_DIR}/ObjectHostConnectionManager.cpp
   )
 
 SET(LIBMESH_SOURCES
@@ -1570,7 +1571,6 @@ SET(SPACE_SOURCES
   ${SPACE_SOURCE_DIR}/LocalForwarder.cpp
   ${SPACE_SOURCE_DIR}/MigrationMonitor.cpp
   ${SPACE_SOURCE_DIR}/ObjectConnection.cpp
-  ${SPACE_SOURCE_DIR}/ObjectHostConnectionManager.cpp
   ${SPACE_SOURCE_DIR}/Options.cpp
   ${SPACE_SOURCE_DIR}/OSegHasher.cpp
   ${SPACE_SOURCE_DIR}/OSegLookupQueue.cpp

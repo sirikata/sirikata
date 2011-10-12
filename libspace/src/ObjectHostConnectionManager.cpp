@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "ObjectHostConnectionManager.hpp"
+#include <sirikata/space/ObjectHostConnectionManager.hpp>
 #include <sirikata/core/options/CommonOptions.hpp>
 #include <sirikata/space/ServerMessage.hpp>
 #include <sirikata/core/network/IOStrand.hpp>

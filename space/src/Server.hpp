@@ -37,7 +37,7 @@
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/space/SpaceContext.hpp>
 
-#include "ObjectHostConnectionManager.hpp"
+#include <sirikata/space/ObjectHostConnectionManager.hpp>
 #include <sirikata/core/service/Service.hpp>
 #include <sirikata/core/queue/SizedThreadSafeQueue.hpp>
 

@@ -48,7 +48,7 @@ namespace Sirikata {
  *  with object hosts.  It listens for connections, maintains per object
  *  connections, and handles shipping messages out to the network.
  */
-class ObjectHostConnectionManager {
+class SIRIKATA_SPACE_EXPORT ObjectHostConnectionManager {
     struct ObjectHostConnection;
 public:
     // Opaque wrapper around ObjectHostConnection*, which maps a connection held

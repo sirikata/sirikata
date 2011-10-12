@@ -35,7 +35,7 @@
 
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/space/ServerMessage.hpp>
-#include "ObjectHostConnectionManager.hpp"
+#include <sirikata/space/ObjectHostConnectionManager.hpp>
 
 namespace Sirikata {
 
