@@ -116,9 +116,7 @@ Server::Server(SpaceContext* ctx, Authenticator* auth, Forwarder* forwarder, Loc
       );
 
     mObjectHostConnectionManager = new ObjectHostConnectionManager(
-        mContext, oh_listen_addr,
-        std::tr1::bind(&Server::handleObjectHostMessage, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2),
-        mContext->mainStrand->wrap(std::tr1::bind(&Server::handleObjectHostConnectionClosed, this, std::tr1::placeholders::_1))
+        mContext, oh_listen_addr, this
     );
 
     mLocalForwarder = new LocalForwarder(mContext);
@@ -247,7 +245,7 @@ void Server::sendSessionMessageWithRetry(const ObjectHostConnectionManager::Conn
     }
 }
 
-bool Server::handleObjectHostMessage(const ObjectHostConnectionManager::ConnectionID& conn_id, Sirikata::Protocol::Object::ObjectMessage* obj_msg) {
+bool Server::onObjectHostMessageReceived(const ObjectHostConnectionManager::ConnectionID& conn_id, Sirikata::Protocol::Object::ObjectMessage* obj_msg) {
     static UUID spaceID = UUID::null();
 
     // Before admitting a message, we need to do some sanity checks.  Also, some types of messages get
@@ -445,6 +443,10 @@ void Server::handleSessionMessage(const ObjectHostConnectionManager::ConnectionI
     assert(!session_msg.has_init_migration());
 
     delete msg;
+}
+
+void Server::onObjectHostDisconnected(const ObjectHostConnectionManager::ConnectionID& oh_conn_id) {
+    mContext->mainStrand->post( std::tr1::bind(&Server::handleObjectHostConnectionClosed, this, oh_conn_id) );
 }
 
 void Server::handleObjectHostConnectionClosed(const ObjectHostConnectionManager::ConnectionID& oh_conn_id) {

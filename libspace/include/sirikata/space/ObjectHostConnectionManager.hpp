@@ -71,17 +71,15 @@ public:
         ObjectHostConnection* conn;
     };
 
+    class Listener {
+    public:
+        virtual ~Listener();
 
-    /** Callback generated when an object message is received over a connection.  This callback can be generated
-     *  from any strand -- use strand->wrap to ensure its handled in your strand.
-     */
-    typedef std::tr1::function<bool(ConnectionID, Sirikata::Protocol::Object::ObjectMessage*)> MessageReceivedCallback;
-    /** Callback generated when the underlying connection is closed, which will
-     *  trigger all objects on that connection to disconnect.
-     */
-    typedef std::tr1::function<void(ConnectionID)> ConnectionClosedCallback;
+        virtual bool onObjectHostMessageReceived(const ConnectionID& conn_id, Sirikata::Protocol::Object::ObjectMessage*) = 0;
+        virtual void onObjectHostDisconnected(const ConnectionID& conn_id) = 0;
+    };
 
-    ObjectHostConnectionManager(SpaceContext* ctx, const Address4& listen_addr, MessageReceivedCallback msg_cb, ConnectionClosedCallback closed_cb);
+    ObjectHostConnectionManager(SpaceContext* ctx, const Address4& listen_addr, Listener* listener);
     ~ObjectHostConnectionManager();
 
     /** NOTE: Must be used from within the main strand.  Currently this is required since we have the return value... */
@@ -109,9 +107,7 @@ private:
     typedef std::set<ObjectHostConnection*> ObjectHostConnectionSet;
     ObjectHostConnectionSet mConnections;
 
-    MessageReceivedCallback mMessageReceivedCallback;
-    ConnectionClosedCallback mConnectionClosedCallback;
-
+    Listener* mListener;
 
     /** Listen for and handle new connections. */
     void listen(const Address4& listen_addr); // sets up the acceptor, starts the listening cycle

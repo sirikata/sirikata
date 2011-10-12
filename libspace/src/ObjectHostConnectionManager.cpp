@@ -72,6 +72,10 @@ bool ObjectHostConnectionManager::ConnectionID::operator!=(const ConnectionID& r
 
 
 
+ObjectHostConnectionManager::Listener::~Listener() {
+}
+
+
 
 ObjectHostConnectionManager::ObjectHostConnection::ObjectHostConnection(Sirikata::Network::Stream* str)
         : socket(str)
@@ -87,13 +91,13 @@ ObjectHostConnectionManager::ConnectionID ObjectHostConnectionManager::ObjectHos
 }
 
 
-ObjectHostConnectionManager::ObjectHostConnectionManager(SpaceContext* ctx, const Address4& listen_addr, MessageReceivedCallback msg_cb, ConnectionClosedCallback closed_cb)
+ObjectHostConnectionManager::ObjectHostConnectionManager(SpaceContext* ctx, const Address4& listen_addr, Listener* listener)
  : mContext(ctx),
    mIOStrand( ctx->ioService->createStrand() ),
    mAcceptor(NULL),
-   mMessageReceivedCallback(msg_cb),
-   mConnectionClosedCallback(closed_cb)
+   mListener(listener)
 {
+    assert(mListener != NULL);
     listen(listen_addr);
 }
 
@@ -223,7 +227,7 @@ void ObjectHostConnectionManager::handleConnectionRead(ObjectHostConnection* con
 
     TIMESTAMP(obj_msg, Trace::HANDLE_OBJECT_HOST_MESSAGE);
 
-    mMessageReceivedCallback(conn->conn_id(), obj_msg);
+    mListener->onObjectHostMessageReceived(conn->conn_id(), obj_msg);
 
     // We either got it or dropped it, either way it was accepted.  Don't do
     // anything with pause parameter.
@@ -235,7 +239,7 @@ void ObjectHostConnectionManager::insertConnection(ObjectHostConnection* conn) {
 
 void ObjectHostConnectionManager::destroyConnection(ObjectHostConnection* conn) {
     if (mConnections.find(conn) == mConnections.end()) return;
-    mConnectionClosedCallback(conn->conn_id());
+    mListener->onObjectHostDisconnected(conn->conn_id());
     mConnections.erase(conn);
     delete conn;
 }
