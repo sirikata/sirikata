@@ -35,7 +35,7 @@
 
 #include <sirikata/core/service/Context.hpp>
 #include <sirikata/core/service/PollingService.hpp>
-#include <sirikata/core/odp/Service.hpp>
+#include <sirikata/core/ohdp/Service.hpp>
 
 namespace Sirikata {
 
@@ -48,8 +48,12 @@ class SIRIKATA_EXPORT TimeSyncClient : public PollingService {
 public:
     typedef std::tr1::function<void()> UpdatedCallback;
 
-    TimeSyncClient(Context* ctx, ODP::Port* odp_port, const ODP::Endpoint& sync_server, const Duration& polling_interval, UpdatedCallback cb = 0);
+    TimeSyncClient(Context* ctx, OHDP::Service* ohdp_service, const SpaceID& space, const Duration& polling_interval, UpdatedCallback cb = 0);
     ~TimeSyncClient();
+
+    // Manage the set of nodes to sync with
+    void addNode(const OHDP::NodeID& ss);
+    void removeNode(const OHDP::NodeID& ss);
 
     bool valid() const { return mHasBeenInitialized; }
     const Duration& offset() const { return mOffset; }
@@ -58,11 +62,14 @@ private:
 
     virtual void poll();
 
-    void handleSyncMessage(const ODP::Endpoint &src, const ODP::Endpoint &dst, MemoryReference payload);
+    void handleSyncMessage(const OHDP::Endpoint &src, const OHDP::Endpoint &dst, MemoryReference payload);
 
     Context* mContext;
-    ODP::Port* mPort;
-    ODP::Endpoint mSyncServer;
+    OHDP::Port* mPort;
+
+    typedef std::tr1::unordered_set<OHDP::NodeID, OHDP::NodeID::Hasher> SyncServerSet;
+    SyncServerSet mServers;
+
     uint8 mSeqno;
     Time mRequestTimes[256];
 
