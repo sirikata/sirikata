@@ -37,7 +37,6 @@
 #include <sirikata/proxyobject/VWObject.hpp>
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/odp/DelegateService.hpp>
-#include <sirikata/core/odp/DelegatePort.hpp>
 #include <sirikata/oh/ObjectScriptManager.hpp>
 
 #include <map>
@@ -323,7 +322,7 @@ public:
     virtual ODP::Port* bindODPPort(const SpaceObjectReference& sor);
     virtual ODP::PortID unusedODPPort(const SpaceID& space, const ObjectReference& objref);
     virtual ODP::PortID unusedODPPort(const SpaceObjectReference& sor);
-    virtual void registerDefaultODPHandler(const ODP::MessageHandler& cb);
+    virtual void registerDefaultODPHandler(const ODP::Service::MessageHandler& cb);
 
 
     // Movement Interface

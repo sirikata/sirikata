@@ -1189,9 +1189,10 @@ SET(SIRIKATA_CORE_SOURCES
 	${LIBCORE_SOURCE_DIR}/task/WorkQueue.cpp
 	${LIBCORE_SOURCE_DIR}/task/Time.cpp
 	${LIBCORE_SOURCE_DIR}/network/Asio.cpp
-        ${LIBCORE_SOURCE_DIR}/odp/Defs.cpp
+        ${LIBCORE_SOURCE_DIR}/xdp/Defs.cpp
         ${LIBCORE_SOURCE_DIR}/odp/DelegateService.cpp
-        ${LIBCORE_SOURCE_DIR}/odp/DelegatePort.cpp
+        ${LIBCORE_SOURCE_DIR}/ohdp/Defs.cpp
+        ${LIBCORE_SOURCE_DIR}/ohdp/DelegateService.cpp
    	${LIBCORE_SOURCE_DIR}/options/Options.cpp
    	${LIBCORE_SOURCE_DIR}/options/CommonOptions.cpp
         ${LIBCORE_SOURCE_DIR}/network/Address4.cpp

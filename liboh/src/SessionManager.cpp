@@ -35,7 +35,6 @@
 #include <sirikata/core/network/IOStrandImpl.hpp>
 #include <sirikata/core/network/StreamFactory.hpp>
 #include <sirikata/core/options/CommonOptions.hpp>
-#include <sirikata/core/odp/DelegatePort.hpp>
 #include <sirikata/core/util/SpaceObjectReference.hpp>
 #include "Protocol_Session.pbj.hpp"
 #include <sirikata/core/util/Platform.hpp>

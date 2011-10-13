@@ -44,7 +44,6 @@
 #include <sirikata/core/util/SimpleExtrapolator.hpp>
 
 #include <sirikata/core/odp/DelegateService.hpp>
-#include <sirikata/core/odp/DelegatePort.hpp>
 
 #include <boost/thread/shared_mutex.hpp>
 
@@ -172,7 +171,7 @@ private:
     virtual ODP::Port* bindODPPort(const SpaceObjectReference& sor, ODP::PortID port);
     virtual ODP::Port* bindODPPort(const SpaceID& space, const ObjectReference& objref);
     virtual ODP::Port* bindODPPort(const SpaceObjectReference& sor);
-    virtual void registerDefaultODPHandler(const ODP::MessageHandler& cb);
+    virtual void registerDefaultODPHandler(const ODP::Service::MessageHandler& cb);
     ODP::DelegatePort* createDelegateODPPort(ODP::DelegateService* parentService, const SpaceObjectReference& spaceobj, ODP::PortID port);
     bool delegateODPPortSend(const ODP::Endpoint& source_ep, const ODP::Endpoint& dest_ep, MemoryReference payload);
 

@@ -43,7 +43,6 @@
 #include <boost/date_time/posix_time/posix_time.hpp>
 
 #include <sirikata/core/odp/Service.hpp>
-#include <sirikata/core/odp/Port.hpp>
 #include <sirikata/core/util/Timer.hpp>
 #include <sirikata/core/service/PollingService.hpp>
 #include <sirikata/core/service/Context.hpp>
@@ -234,7 +233,7 @@ class SIRIKATA_EXPORT BaseDatagramLayer
         datagramLayerMap.erase(endPointID);
     }
 
-    void listenOn(EndPoint<EndPointType>& listeningEndPoint, ODP::MessageHandler cb) {
+    void listenOn(EndPoint<EndPointType>& listeningEndPoint, ODP::Service::MessageHandler cb) {
         ODP::Port* port = allocatePort(listeningEndPoint);
         port->receive(cb);
     }
@@ -510,10 +509,10 @@ private:
   }
 
   bool serviceConnection(std::tr1::shared_ptr<Connection<EndPointType> > conn) {
-    const Time curTime = Timer::now();    
-    
+    const Time curTime = Timer::now();
+
     boost::mutex::scoped_lock lock(mOutstandingSegmentsMutex);
-    
+
 
     if (mState == CONNECTION_PENDING_CONNECT) {
       mOutstandingSegments.clear();
@@ -860,8 +859,8 @@ private:
   }
 
   void markAcknowledgedPacket(uint64 receivedAckNum) {
-    boost::mutex::scoped_lock lock(mOutstandingSegmentsMutex);    
-    
+    boost::mutex::scoped_lock lock(mOutstandingSegmentsMutex);
+
     for (std::deque< std::tr1::shared_ptr<ChannelSegment> >::iterator it = mOutstandingSegments.begin();
          it != mOutstandingSegments.end(); it++)
     {
@@ -903,7 +902,7 @@ private:
     }
   }
 
-  void receiveODPMessage(const ODP::Endpoint &src, const ODP::Endpoint &dst, MemoryReference payload) 
+  void receiveODPMessage(const ODP::Endpoint &src, const ODP::Endpoint &dst, MemoryReference payload)
   {
     receiveMessage((void*) payload.data(), payload.size() );
   }
@@ -1141,7 +1140,7 @@ private:
     return mRTOMicroseconds;
   }
 
-  void eraseDisconnectedStream(Stream<EndPointType>* s) {    
+  void eraseDisconnectedStream(Stream<EndPointType>* s) {
     mOutgoingSubstreamMap.erase(s->getLSID());
     mIncomingSubstreamMap.erase(s->getRemoteLSID());
 
@@ -2058,7 +2057,7 @@ private:
             mStreamReturnCallback = NULL;
         }
 
-        
+
         conn->eraseDisconnectedStream(this);
         mState = DISCONNECTED;
 
@@ -2096,7 +2095,7 @@ private:
 
             std::tr1::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
             assert(conn);
-            
+
             conn->eraseDisconnectedStream(this);
 
 	    return true;

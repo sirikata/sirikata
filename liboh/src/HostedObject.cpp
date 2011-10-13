@@ -1077,7 +1077,7 @@ ODP::PortID HostedObject::unusedODPPort(const SpaceObjectReference& sor) {
     return mDelegateODPService->unusedODPPort(sor);
 }
 
-void HostedObject::registerDefaultODPHandler(const ODP::MessageHandler& cb) {
+void HostedObject::registerDefaultODPHandler(const ODP::Service::MessageHandler& cb) {
     if (stopped()) return;
     mDelegateODPService->registerDefaultODPHandler(cb);
 }

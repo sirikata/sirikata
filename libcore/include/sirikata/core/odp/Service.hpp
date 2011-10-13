@@ -34,10 +34,12 @@
 #define _SIRIKATA_ODP_SERVICE_HPP_
 
 #include <sirikata/core/odp/Defs.hpp>
-#include <sirikata/core/odp/Port.hpp>
+#include <sirikata/core/xdp/Port.hpp>
 
 namespace Sirikata {
 namespace ODP {
+
+typedef Sirikata::XDP::Port<Endpoint> Port;
 
 /** ODP::Service is the interface provided by classes that are able to send ODP
  *  messages. ODP::Service mainly handles management of ODP::Ports, which in
@@ -50,6 +52,8 @@ namespace ODP {
  */
 class SIRIKATA_EXPORT Service {
 public:
+    typedef Endpoint::MessageHandler MessageHandler;
+
     virtual ~Service() {}
 
     /** Bind an ODP port for use.

@@ -54,7 +54,7 @@ TimeSyncClient::TimeSyncClient(Context* ctx, ODP::Port* odp_port, const ODP::End
     // Set up listener for sync message responses
     mPort->receiveFrom(
         mSyncServer,
-        ODP::MessageHandler(
+        ODP::Service::MessageHandler(
             std::tr1::bind(&TimeSyncClient::handleSyncMessage, this, _1, _2, _3)
         )
     );

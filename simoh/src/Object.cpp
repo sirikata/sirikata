@@ -289,7 +289,7 @@ ODP::Port* Object::bindODPPort(const SpaceObjectReference& sor) {
     return mDelegateODPService->bindODPPort(sor);
 }
 
-void Object::registerDefaultODPHandler(const ODP::MessageHandler& cb) {
+void Object::registerDefaultODPHandler(const ODP::Service::MessageHandler& cb) {
     mDelegateODPService->registerDefaultODPHandler(cb);
 }
 

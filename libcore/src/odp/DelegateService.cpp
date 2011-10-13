@@ -32,7 +32,6 @@
 
 #include <sirikata/core/util/Standard.hh>
 #include <sirikata/core/odp/DelegateService.hpp>
-#include <sirikata/core/odp/DelegatePort.hpp>
 #include <sirikata/core/network/ObjectMessage.hpp>
 
 namespace Sirikata {
