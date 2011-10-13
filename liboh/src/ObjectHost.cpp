@@ -144,6 +144,9 @@ void ObjectHost::addServerIDMap(const SpaceID& space_id, ServerIDMap* sidmap) {
         std::tr1::bind(&ObjectHost::handleObjectMessage, this, _1, space_id, _2),
         std::tr1::bind(&ObjectHost::handleObjectDisconnected, this, _1, _2)
     );
+    smgr->registerDefaultOHDPHandler(
+        std::tr1::bind(&ObjectHost::handleDefaultOHDPMessageHandler, this, _1, _2, _3)
+    );
     mSessionManagers[space_id] = smgr;
     smgr->start();
 }
@@ -365,6 +368,36 @@ void ObjectHost::stop() {
             ho->stop();
         }
     }
+}
+
+OHDP::Port* ObjectHost::bindOHDPPort(const SpaceID& space, const OHDP::NodeID& node, OHDP::PortID port) {
+    SpaceSessionManagerMap::iterator iter = mSessionManagers.find(space);
+    if (iter == mSessionManagers.end())
+        return NULL;
+    return iter->second->bindOHDPPort(space, node, port);
+}
+
+OHDP::Port* ObjectHost::bindOHDPPort(const SpaceID& space, const OHDP::NodeID& node) {
+    SpaceSessionManagerMap::iterator iter = mSessionManagers.find(space);
+    if (iter == mSessionManagers.end())
+        return NULL;
+    return iter->second->bindOHDPPort(space, node);
+}
+
+OHDP::PortID ObjectHost::unusedOHDPPort(const SpaceID& space, const OHDP::NodeID& node) {
+    SpaceSessionManagerMap::iterator iter = mSessionManagers.find(space);
+    if (iter == mSessionManagers.end())
+        return OHDP::PortID::null();
+    return iter->second->unusedOHDPPort(space, node);
+}
+
+void ObjectHost::registerDefaultOHDPHandler(const OHDP::MessageHandler& cb) {
+    mDefaultOHDPMessageHandler = cb;
+}
+
+void ObjectHost::handleDefaultOHDPMessageHandler(const OHDP::Endpoint& src, const OHDP::Endpoint& dst, MemoryReference payload) {
+    if (mDefaultOHDPMessageHandler)
+        mDefaultOHDPMessageHandler(src, dst, payload);
 }
 
 ObjectScriptManager* ObjectHost::getScriptManager(const String& id) {

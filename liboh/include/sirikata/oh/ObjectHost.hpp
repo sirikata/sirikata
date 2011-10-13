@@ -41,6 +41,7 @@
 #include <sirikata/core/util/ListenerProvider.hpp>
 #include <sirikata/core/service/Service.hpp>
 #include <sirikata/oh/SessionManager.hpp>
+#include <sirikata/core/ohdp/Service.hpp>
 
 namespace Sirikata {
 class ProxyManager;
@@ -66,7 +67,7 @@ class PersistedObjectSet;
 class ObjectQueryProcessor;
 }
 
-class SIRIKATA_OH_EXPORT ObjectHost : public ConnectionEventProvider, public Service {
+class SIRIKATA_OH_EXPORT ObjectHost : public ConnectionEventProvider, public Service, public OHDP::Service {
 
     ObjectHostContext* mContext;
 
@@ -227,8 +228,15 @@ public:
     typedef SSTStream::Ptr SSTStreamPtr;
     SSTStreamPtr getSpaceStream(const SpaceID& space, const ObjectReference& internalID);
 
+    // Service Interface
     virtual void start();
     virtual void stop();
+
+    // OHDP::Service Interface
+    virtual OHDP::Port* bindOHDPPort(const SpaceID& space, const OHDP::NodeID& node, OHDP::PortID port);
+    virtual OHDP::Port* bindOHDPPort(const SpaceID& space, const OHDP::NodeID& node);
+    virtual OHDP::PortID unusedOHDPPort(const SpaceID& space, const OHDP::NodeID& node);
+    virtual void registerDefaultOHDPHandler(const MessageHandler& cb);
 
     PluginManager *getScriptPluginManager(){return mScriptPlugins;}
 
@@ -256,6 +264,9 @@ public:
     // Checks serialization of access to SessionManagers
     Sirikata::SerializationCheck mSessionSerialization;
 
+    void handleDefaultOHDPMessageHandler(const OHDP::Endpoint& src, const OHDP::Endpoint& dst, MemoryReference payload);
+
+    OHDP::MessageHandler mDefaultOHDPMessageHandler;
 }; // class ObjectHost
 
 } // namespace Sirikata

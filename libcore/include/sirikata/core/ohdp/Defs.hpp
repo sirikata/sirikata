@@ -101,6 +101,8 @@ private:
     Endpoint();
 }; // class Endpoint
 
+typedef Endpoint::MessageHandler MessageHandler;
+
 } // namespace OHDP
 } // namespace Sirikata
 

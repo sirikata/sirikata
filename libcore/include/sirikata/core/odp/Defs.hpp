@@ -88,6 +88,8 @@ private:
     Endpoint();
 }; // class Endpoint
 
+typedef Endpoint::MessageHandler MessageHandler;
+
 } // namespace ODP
 } // namespace Sirikata
 
