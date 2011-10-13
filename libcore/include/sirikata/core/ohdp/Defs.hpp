@@ -12,7 +12,7 @@ namespace OHDP {
 
 typedef Sirikata::XDP::PortID PortID;
 
-class NodeID {
+class SIRIKATA_EXPORT NodeID {
 public:
     NodeID();
     NodeID(uint32 rhs);
@@ -20,6 +20,10 @@ public:
 
     /** Get a null NodeID. Equivalent to NodeID(0). */
     static const NodeID& null();
+    /** Get a self NodeID, the one used for the local endpoint. Equivalent to
+     *  null, NodeID(0).
+     */
+    static const NodeID& self();
     /** Get a NodeID that matches any other NodeID. */
     static const NodeID& any();
 

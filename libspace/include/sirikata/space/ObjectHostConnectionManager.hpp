@@ -43,9 +43,18 @@
 
 namespace Sirikata {
 
-// Internal implementation for ObjectHostConnectionManager, made
-// public for the sake of ObjectHostConnectionID.
-class ObjectHostConnection;
+// Opaque connection class
+class ObjectHostConnection {
+private:
+    friend class ObjectHostConnectionManager;
+    friend class ObjectHostConnectionID;
+
+    ObjectHostConnection(ShortObjectHostConnectionID sid, Sirikata::Network::Stream* str);
+    ~ObjectHostConnection();
+
+    ShortObjectHostConnectionID short_id;
+    Sirikata::Network::Stream* socket;
+};
 
 /** ObjectHostConnectionManager handles the networking aspects of interacting
  *  with object hosts.  It listens for connections, maintains per object
@@ -57,8 +66,9 @@ public:
     public:
         virtual ~Listener();
 
-        virtual bool onObjectHostMessageReceived(const ObjectHostConnectionID& conn_id, Sirikata::Protocol::Object::ObjectMessage*) = 0;
-        virtual void onObjectHostDisconnected(const ObjectHostConnectionID& conn_id) = 0;
+        virtual void onObjectHostConnected(const ObjectHostConnectionID& conn_id, const ShortObjectHostConnectionID short_conn_id) = 0;
+        virtual bool onObjectHostMessageReceived(const ObjectHostConnectionID& conn_id, const ShortObjectHostConnectionID short_conn_id, Sirikata::Protocol::Object::ObjectMessage*) = 0;
+        virtual void onObjectHostDisconnected(const ObjectHostConnectionID& conn_id, const ShortObjectHostConnectionID short_conn_id) = 0;
     };
 
     ObjectHostConnectionManager(SpaceContext* ctx, const Address4& listen_addr, Listener* listener);
@@ -67,6 +77,9 @@ public:
     /** NOTE: Must be used from within the main strand.  Currently this is required since we have the return value... */
     WARN_UNUSED
     bool send(const ObjectHostConnectionID& conn_id, Sirikata::Protocol::Object::ObjectMessage* msg);
+
+    WARN_UNUSED
+    bool send(const ShortObjectHostConnectionID short_conn_id, Sirikata::Protocol::Object::ObjectMessage* msg);
 
     void shutdown();
 
@@ -80,6 +93,10 @@ private:
 
     typedef std::set<ObjectHostConnection*> ObjectHostConnectionSet;
     ObjectHostConnectionSet mConnections;
+
+    ShortObjectHostConnectionID mShortIDSource;
+    typedef std::tr1::unordered_map<ShortObjectHostConnectionID, ObjectHostConnection*> ShortIDConnectionMap;
+    ShortIDConnectionMap mShortConnections;
 
     Listener* mListener;
 
@@ -97,6 +114,7 @@ private:
     // Handle async reading callbacks for this connection
     void handleConnectionRead(ObjectHostConnection* conn, Sirikata::Network::Chunk& chunk, const Sirikata::Network::Stream::PauseReceiveCallback& pause);
 
+    bool sendHelper(ObjectHostConnection* conn, Sirikata::Protocol::Object::ObjectMessage* msg);
 
     // Utility methods which we can post to the main strand to ensure they operate safely.
     void insertConnection(ObjectHostConnection* conn);

@@ -65,6 +65,8 @@ TimeSyncClient::~TimeSyncClient() {
 }
 
 void TimeSyncClient::poll() {
+    SILOG(timesync, detailed, "Sending time sync message");
+
     // Send the next update request
     Sirikata::Protocol::TimeSync sync_msg;
     uint8 seqno = mSeqno++;
@@ -76,6 +78,8 @@ void TimeSyncClient::poll() {
 }
 
 void TimeSyncClient::handleSyncMessage(const ODP::Endpoint &src, const ODP::Endpoint &dst, MemoryReference payload) {
+    SILOG(timesync, detailed, "Received time sync reply");
+
     Sirikata::Protocol::TimeSync sync_msg;
     bool parse_success = sync_msg.ParseFromArray(payload.data(), payload.size());
     if (!parse_success) {

@@ -3,6 +3,7 @@
 // be found in the LICENSE file.
 
 #include <sirikata/space/ObjectHostConnectionID.hpp>
+#include <sirikata/space/ObjectHostConnectionManager.hpp>
 
 namespace Sirikata {
 
@@ -32,6 +33,10 @@ bool ObjectHostConnectionID::operator==(const ObjectHostConnectionID& rhs) const
 
 bool ObjectHostConnectionID::operator!=(const ObjectHostConnectionID& rhs) const {
     return (conn != rhs.conn);
+}
+
+ShortObjectHostConnectionID ObjectHostConnectionID::shortID() const {
+    return conn->short_id;
 }
 
 } // namespace Sirikata

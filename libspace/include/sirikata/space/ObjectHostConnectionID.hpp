@@ -12,6 +12,11 @@ namespace Sirikata {
 class ObjectHostConnection;
 class ObjectHostConnectionManager;
 
+// Short version of ObjectHostConnectionID. This requires a map lookup to
+// actually send data, but is useful as a non-opaque integral type for use as an
+// enpoint identifier in protocols.
+typedef uint32 ShortObjectHostConnectionID;
+
 /** Unique identifier for an object host connected to this space server. It is
  *  only valid on this server, is opaque, and *will* change, even if the same
  *  object host connects again.
@@ -29,6 +34,9 @@ public:
 
     bool operator==(const ObjectHostConnectionID& rhs) const;
     bool operator!=(const ObjectHostConnectionID& rhs) const;
+
+    // Implementation in ObjectHostConnectionManager.cpp
+    ShortObjectHostConnectionID shortID() const;
 private:
     friend class ObjectHostConnectionManager;
 

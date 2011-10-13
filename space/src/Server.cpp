@@ -76,6 +76,7 @@ void logVersionInfo(Sirikata::Protocol::Session::VersionInfo vers_info) {
 
 Server::Server(SpaceContext* ctx, Authenticator* auth, Forwarder* forwarder, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, ObjectSegmentation* oseg, Address4 oh_listen_addr)
  : ODP::DelegateService( std::tr1::bind(&Server::createDelegateODPPort, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2, std::tr1::placeholders::_3) ),
+   OHDP::DelegateService( std::tr1::bind(&Server::createDelegateOHDPPort, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2) ),
    mContext(ctx),
    mAuthenticator(auth),
    mLocationService(loc_service),
@@ -97,7 +98,7 @@ Server::Server(SpaceContext* ctx, Authenticator* auth, Forwarder* forwarder, Loc
     this->addListener(static_cast<ObjectSessionListener*>(mLocationService));
     this->addListener(static_cast<ObjectSessionListener*>(mProximity));
 
-    mTimeSyncServer = new TimeSyncServer(mContext);
+    mTimeSyncServer = new TimeSyncServer(mContext, this);
 
     mMigrateServerMessageService = mForwarder->createServerMessageService("migrate");
 
@@ -182,7 +183,7 @@ Server::~Server()
     delete mTimeSyncServer;
 }
 
-ODP::DelegatePort* Server::createDelegateODPPort(DelegateService*, const SpaceObjectReference& sor, ODP::PortID port) {
+ODP::DelegatePort* Server::createDelegateODPPort(ODP::DelegateService*, const SpaceObjectReference& sor, ODP::PortID port) {
     using std::tr1::placeholders::_1;
     using std::tr1::placeholders::_2;
 
@@ -219,6 +220,46 @@ bool Server::delegateODPPortSend(const ODP::Endpoint& source_ep, const ODP::Endp
     return send_success;
 }
 
+OHDP::DelegatePort* Server::createDelegateOHDPPort(OHDP::DelegateService*, const OHDP::Endpoint& ept) {
+    using std::tr1::placeholders::_1;
+    using std::tr1::placeholders::_2;
+
+    // FIXME sanity check the connection
+
+    return new OHDP::DelegatePort(
+        (OHDP::DelegateService*)this,
+        ept,
+        std::tr1::bind(
+            &Server::delegateOHDPPortSend, this, ept, _1, _2
+        )
+    );
+}
+
+bool Server::delegateOHDPPortSend(const OHDP::Endpoint& source_ep, const OHDP::Endpoint& dest_ep, MemoryReference payload) {
+    // Create new ObjectMessage. We use ObjectMessages, but the connection we
+    // send over actually determines most of these components. The space portion
+    // of the endpoint is ignored (the space uses SpaceID::null() internally)
+    // and the NodeIDs are irrelevant in the message (only used below to map to
+    // a connection).
+    Sirikata::Protocol::Object::ObjectMessage* msg =
+        createObjectMessage(
+            mContext->id(),
+            UUID::null(), source_ep.port(),
+            UUID::null(), dest_ep.port(),
+            String((char*)payload.data(), payload.size())
+        );
+
+    OHDP::NodeID nid = dest_ep.node();
+    uint32 nid_raw = nid;
+    bool send_success = mObjectHostConnectionManager->send(nid_raw, msg);
+
+    // If the send failed, we need to destroy the message.
+    if (!send_success)
+        delete msg;
+
+    return send_success;
+}
+
 ObjectSession* Server::getSession(const ObjectReference& objid) const {
     ObjectSessionMap::const_iterator it = mObjectSessions.find(objid);
     if (it == mObjectSessions.end()) return NULL;
@@ -243,7 +284,10 @@ void Server::sendSessionMessageWithRetry(const ObjectHostConnectionID& conn, Sir
     }
 }
 
-bool Server::onObjectHostMessageReceived(const ObjectHostConnectionID& conn_id, Sirikata::Protocol::Object::ObjectMessage* obj_msg) {
+void Server::onObjectHostConnected(const ObjectHostConnectionID& conn_id, const ShortObjectHostConnectionID short_conn_id) {
+}
+
+bool Server::onObjectHostMessageReceived(const ObjectHostConnectionID& conn_id, const ShortObjectHostConnectionID short_conn_id, Sirikata::Protocol::Object::ObjectMessage* obj_msg) {
     static UUID spaceID = UUID::null();
 
     // Before admitting a message, we need to do some sanity checks.  Also, some types of messages get
@@ -281,37 +325,6 @@ bool Server::onObjectHostMessageReceived(const ObjectHostConnectionID& conn_id, 
     if (mForwarder->tryCacheForward(obj_msg))
         return true;
 
-    // 1. If the source is the space, somebody is messing with us.  Only need to
-    // check this here since otherwise the other paths should fail.
-    bool space_source = (obj_msg->source_object() == spaceID);
-    if (space_source) {
-        SILOG(cbr,error,"Got message from object host claiming to be from space.");
-        delete obj_msg;
-        return true;
-    }
-
-    // If it is is TimeSync message, dispatch immediately
-    bool timesync_msg = (obj_msg->dest_port() == OBJECT_PORT_TIMESYNC);
-    if (timesync_msg)
-    {
-        bool space_dest = (obj_msg->dest_object() == spaceID);
-        if (space_dest) {
-            String response_payload = mTimeSyncServer->getResponse(MemoryReference(obj_msg->payload()));
-            if (!response_payload.empty()) {
-                Sirikata::Protocol::Object::ObjectMessage* sync_response = createObjectMessage(
-                    mContext->id(),
-                    UUID::null(), OBJECT_PORT_TIMESYNC,
-                    obj_msg->source_object(), OBJECT_PORT_TIMESYNC,
-                    response_payload
-                );
-                bool send_success = mObjectHostConnectionManager->send(conn_id, sync_response);
-                if (!send_success) delete sync_response;
-            }
-            delete obj_msg;
-            return true;
-        }
-    }
-
     // 5. Otherwise, we're going to have to ship this to the main thread, either
     // for handling session messages, messages to the space, or to make a
     // routing decision.
@@ -337,6 +350,10 @@ bool Server::onObjectHostMessageReceived(const ObjectHostConnectionID& conn_id, 
     // between local and remote, we don't want to slow the local
     // packets just because of a backup in routing.
     return true;
+}
+
+void Server::onObjectHostDisconnected(const ObjectHostConnectionID& oh_conn_id, const ShortObjectHostConnectionID short_conn_id) {
+    mContext->mainStrand->post( std::tr1::bind(&Server::handleObjectHostConnectionClosed, this, oh_conn_id) );
 }
 
 void Server::scheduleObjectHostMessageRouting() {
@@ -365,6 +382,39 @@ bool Server::handleSingleObjectHostMessageRouting() {
     if (!mRouteObjectMessage.pop(front))
         return false;
 
+    UUID source_object = front.obj_msg->source_object();
+
+    // OHDP (object host <-> space server communication) piggy backs on ODP
+    // messages so that we can use ODP messages as the basis for all
+    // communication between space servers object hosts. We need to detect
+    // messages that match this and dispatch the message.
+    static UUID ohdp_ID = UUID::null();
+    if (source_object == ohdp_ID) {
+        // Sanity check: if the destination isn't also null, then the message is
+        // non-sensical and we can just discard
+        UUID dest_object = front.obj_msg->dest_object();
+        if (dest_object != ohdp_ID) {
+            delete front.obj_msg;
+            return true;
+        }
+
+        // We need to translate identifiers. The space identifiers are ignored
+        // on the space server (only one space to deal with, unlike object
+        // hosts). The NodeID uses null() for the local (destination) endpoint
+        // and the short ID of the object host connection for the remote
+        // (source).
+        ShortObjectHostConnectionID ohdp_node_id = front.conn_id.shortID();
+
+        OHDP::DelegateService::deliver(
+            OHDP::Endpoint(SpaceID::null(), OHDP::NodeID(ohdp_node_id), front.obj_msg->source_port()),
+            OHDP::Endpoint(SpaceID::null(), OHDP::NodeID::null(), front.obj_msg->dest_port()),
+            MemoryReference(front.obj_msg->payload())
+        );
+        delete front.obj_msg;
+
+        return true;
+    }
+
     // If we don't have a connection for the source object, we can't do anything with it.
     // The object could be migrating and we get outdated packets.  Currently this can
     // happen because we need to maintain the connection long enough to deliver the init migration
@@ -372,7 +422,6 @@ bool Server::handleSingleObjectHostMessageRouting() {
     // connections and allow messages through.
     // NOTE that we check connecting objects as well since we need to get past this point to deliver
     // Session messages.
-    UUID source_object = front.obj_msg->source_object();
     bool source_connected =
         mObjects.find(source_object) != mObjects.end() ||
         mMigratingConnections.find(source_object) != mMigratingConnections.end();
@@ -441,10 +490,6 @@ void Server::handleSessionMessage(const ObjectHostConnectionID& oh_conn_id, Siri
     assert(!session_msg.has_init_migration());
 
     delete msg;
-}
-
-void Server::onObjectHostDisconnected(const ObjectHostConnectionID& oh_conn_id) {
-    mContext->mainStrand->post( std::tr1::bind(&Server::handleObjectHostConnectionClosed, this, oh_conn_id) );
 }
 
 void Server::handleObjectHostConnectionClosed(const ObjectHostConnectionID& oh_conn_id) {

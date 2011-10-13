@@ -39,6 +39,22 @@ public:
      */
     virtual Port* bindOHDPPort(const SpaceID& space, const NodeID& node, PortID port) = 0;
 
+    /** Convenience form of OHDP port binding since only NodeID::self() is ever
+     *  valid for binding a Port (the local endpoint in OHDP is always
+     *  NodeID::self() i.e. 0).
+     */
+    Port* bindOHDPPort(const SpaceID& space, PortID port) {
+        return bindOHDPPort(space, NodeID::self(), port);
+    }
+
+    /** Convenience form of OHDP port binding for when the SpaceID and NodeID
+     *  are ignored because there is only one choice (e.g. on the space, where
+     *  SpaceID is always null and NodeID is always self).
+     */
+    Port* bindOHDPPort(PortID port) {
+        return bindOHDPPort(SpaceID::null(), NodeID::self(), port);
+    }
+
     /** Bind a random, unused OHDP port for use.
      *  \param space the Space to communicate via
      *  \returns an OHDP Port object which can be used immediately, or, in

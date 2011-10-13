@@ -31,6 +31,10 @@ const NodeID& NodeID::null() {
     return null_port;
 }
 
+const NodeID& NodeID::self() {
+    return null();
+}
+
 const NodeID& NodeID::any() {
     static NodeID any_port(ANY_NODE_ID);
     return any_port;

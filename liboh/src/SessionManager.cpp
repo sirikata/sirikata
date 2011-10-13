@@ -842,7 +842,7 @@ void SessionManager::handleSpaceConnection(const Sirikata::Network::Stream::Conn
             // The object IDs and ports used are bogus since the space server just
             // ignores them
             mTimeSyncClient = new TimeSyncClient(
-                mContext, this->bindODPPort(mSpace, ObjectReference(UUID::random()), OBJECT_PORT_TIMESYNC),
+                mContext, this->bindODPPort(mSpace, ObjectReference(UUID::null()), OBJECT_PORT_TIMESYNC),
                 ODP::Endpoint(mSpace, ObjectReference::spaceServiceID(), OBJECT_PORT_TIMESYNC),
                 Duration::seconds(5),
                 std::tr1::bind(&SessionManager::timeSyncUpdated, this)
