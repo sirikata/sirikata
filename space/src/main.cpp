@@ -129,7 +129,7 @@ int main(int argc, char** argv) {
     Network::IOService* ios = Network::IOServiceFactory::makeIOService();
     Network::IOStrand* mainStrand = ios->createStrand();
 
-    SST::ConnectionManager* sstConnMgr = new SST::ConnectionManager();
+    ODPSST::ConnectionManager* sstConnMgr = new ODPSST::ConnectionManager();
 
     SpaceContext* space_context = new SpaceContext("space", server_id, sstConnMgr, ios, mainStrand, start_time, gTrace, duration);
 

@@ -99,7 +99,7 @@ int main(int argc, char** argv) {
     Network::IOService* ios = Network::IOServiceFactory::makeIOService();
     Network::IOStrand* mainStrand = ios->createStrand();
 
-    SST::ConnectionManager* sstConnMgr = new SST::ConnectionManager();
+    ODPSST::ConnectionManager* sstConnMgr = new ODPSST::ConnectionManager();
 
     ObjectHostContext* ctx = new ObjectHostContext("simoh", oh_id, sstConnMgr, ios, mainStrand, gTrace, start_time, duration);
 

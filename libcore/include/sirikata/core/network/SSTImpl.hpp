@@ -106,6 +106,9 @@ class Stream;
 template <typename EndPointType>
 class BaseDatagramLayer;
 
+template <typename EndPointType>
+class ConnectionManager;
+
 typedef std::tr1::function< void(int, std::tr1::shared_ptr< Connection<SpaceObjectReference> > ) > ConnectionReturnCallbackFunction;
 typedef std::tr1::function< void(int, std::tr1::shared_ptr< Stream<SpaceObjectReference> >) >  StreamReturnCallbackFunction;
 
@@ -337,11 +340,6 @@ class SIRIKATA_EXPORT BaseDatagramLayer
 
 };
 
-#if SIRIKATA_PLATFORM == SIRIKATA_WINDOWS
-SIRIKATA_EXPORT_TEMPLATE template class SIRIKATA_EXPORT BaseDatagramLayer<SpaceObjectReference>;
-#endif
-
-
 #define SST_IMPL_SUCCESS 0
 #define SST_IMPL_FAILURE -1
 
@@ -387,7 +385,7 @@ private:
     typedef std::tr1::shared_ptr<BaseDatagramLayerType> BaseDatagramLayerPtr;
 
   friend class Stream<EndPointType>;
-  friend class ConnectionManager;
+  friend class ConnectionManager<EndPointType>;
   friend class BaseDatagramLayer<EndPointType>;
 
   typedef std::map<EndPoint<EndPointType>, std::tr1::shared_ptr<Connection> >  ConnectionMap;
@@ -1465,9 +1463,7 @@ private:
   }
 
 };
-#if SIRIKATA_PLATFORM == SIRIKATA_WINDOWS
-SIRIKATA_EXPORT_TEMPLATE template class SIRIKATA_EXPORT Connection<SpaceObjectReference>;
-#endif
+
 
 class StreamBuffer{
 public:
@@ -2522,9 +2518,6 @@ private:
   EndPoint <EndPointType> mRemoteEndPoint;
 
 };
-#if SIRIKATA_PLATFORM == SIRIKATA_WINDOWS
-SIRIKATA_EXPORT_TEMPLATE template class SIRIKATA_EXPORT Stream<SpaceObjectReference>;
-#endif
 
 
 /**
@@ -2535,50 +2528,51 @@ SIRIKATA_EXPORT_TEMPLATE template class SIRIKATA_EXPORT Stream<SpaceObjectRefere
  This class is only instantiated once per process (usually in main()) and is then
  accessible through SpaceContext and ObjectHostContext.
  */
+template <class EndPointType>
 class ConnectionManager : public Service {
 public:
-  typedef std::tr1::shared_ptr<BaseDatagramLayer<SpaceObjectReference> > BaseDatagramLayerPtr;
+  typedef std::tr1::shared_ptr<BaseDatagramLayer<EndPointType> > BaseDatagramLayerPtr;
 
   virtual void start() {
   }
 
   virtual void stop() {
-    Connection<SpaceObjectReference>::closeConnections(&mSSTConnVars);
+    Connection<EndPointType>::closeConnections(&mSSTConnVars);
   }
 
   ~ConnectionManager() {
-    Connection<SpaceObjectReference>::closeConnections(&mSSTConnVars);
+    Connection<EndPointType>::closeConnections(&mSSTConnVars);
   }
 
-  bool connectStream(EndPoint <SpaceObjectReference> localEndPoint,
-                     EndPoint <SpaceObjectReference> remoteEndPoint,
+  bool connectStream(EndPoint <EndPointType> localEndPoint,
+                     EndPoint <EndPointType> remoteEndPoint,
                      StreamReturnCallbackFunction cb)
   {
-    return Stream<SpaceObjectReference>::connectStream(&mSSTConnVars, localEndPoint, remoteEndPoint, cb);
+    return Stream<EndPointType>::connectStream(&mSSTConnVars, localEndPoint, remoteEndPoint, cb);
   }
 
   BaseDatagramLayerPtr createDatagramLayer(
-                                           SpaceObjectReference endPoint,
+                                           EndPointType endPoint,
                                            const Context* ctx,
                                            ODP::Service* odp)
   {
-    return BaseDatagramLayer<SpaceObjectReference>::createDatagramLayer(&mSSTConnVars, endPoint, ctx, odp);
+    return BaseDatagramLayer<EndPointType>::createDatagramLayer(&mSSTConnVars, endPoint, ctx, odp);
   }
 
-  BaseDatagramLayerPtr getDatagramLayer(SpaceObjectReference endPoint) {
+  BaseDatagramLayerPtr getDatagramLayer(EndPointType endPoint) {
     return mSSTConnVars.getDatagramLayer(endPoint);
   }
 
-  bool listen(StreamReturnCallbackFunction cb, EndPoint <SpaceObjectReference> listeningEndPoint) {
-    return Stream<SpaceObjectReference>::listen(&mSSTConnVars, cb, listeningEndPoint);
+  bool listen(StreamReturnCallbackFunction cb, EndPoint <EndPointType> listeningEndPoint) {
+    return Stream<EndPointType>::listen(&mSSTConnVars, cb, listeningEndPoint);
   }
 
-  bool unlisten( EndPoint <SpaceObjectReference> listeningEndPoint) {
-    return Stream<SpaceObjectReference>::unlisten(&mSSTConnVars, listeningEndPoint);
+  bool unlisten( EndPoint <EndPointType> listeningEndPoint) {
+    return Stream<EndPointType>::unlisten(&mSSTConnVars, listeningEndPoint);
   }
 
   //Storage class for SST's global variables.
-  ConnectionVariables<SpaceObjectReference> mSSTConnVars;
+  ConnectionVariables<EndPointType> mSSTConnVars;
 };
 
 

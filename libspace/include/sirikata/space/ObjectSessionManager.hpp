@@ -34,14 +34,14 @@
 #define _SIRIKATA_SPACE_OBJECT_SESSION_MANAGER_HPP_
 
 #include <sirikata/space/Platform.hpp>
-#include <sirikata/core/network/SSTImpl.hpp>
+#include <sirikata/core/odp/SST.hpp>
 #include <sirikata/core/util/ListenerProvider.hpp>
 
 namespace Sirikata {
 
 class SIRIKATA_SPACE_EXPORT ObjectSession {
   public:
-    typedef SST::Stream<SpaceObjectReference> SSTStream;
+    typedef ODPSST::Stream SSTStream;
     typedef SSTStream::Ptr SSTStreamPtr;
 
     ObjectSession(ObjectReference& objid, SSTStreamPtr strm)

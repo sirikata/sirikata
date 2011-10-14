@@ -53,7 +53,7 @@
 #include <sirikata/core/network/ServerIDMap.hpp>
 #include <sirikata/core/network/NTPTimeSync.hpp>
 
-#include <sirikata/core/network/SSTImpl.hpp>
+#include <sirikata/core/odp/SST.hpp>
 
 #include <sirikata/oh/ObjectHostContext.hpp>
 
@@ -130,7 +130,7 @@ int main (int argc, char** argv) {
     Network::IOService* ios = Network::IOServiceFactory::makeIOService();
     Network::IOStrand* mainStrand = ios->createStrand();
 
-    SST::ConnectionManager* sstConnMgr = new SST::ConnectionManager();
+    ODPSST::ConnectionManager* sstConnMgr = new ODPSST::ConnectionManager();
 
     Time start_time = Timer::now(); // Just for stats in ObjectHostContext.
     Duration duration = Duration::zero(); // Indicates to run forever.
