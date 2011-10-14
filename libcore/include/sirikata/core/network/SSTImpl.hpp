@@ -109,14 +109,16 @@ class BaseDatagramLayer;
 template <typename EndPointType>
 class ConnectionManager;
 
-typedef std::tr1::function< void(int, std::tr1::shared_ptr< Connection<SpaceObjectReference> > ) > ConnectionReturnCallbackFunction;
-typedef std::tr1::function< void(int, std::tr1::shared_ptr< Stream<SpaceObjectReference> >) >  StreamReturnCallbackFunction;
+template <typename EndPointType>
+class CallbackTypes {
+public:
+    typedef std::tr1::function< void(int, std::tr1::shared_ptr< Connection<EndPointType> > ) > ConnectionReturnCallbackFunction;
+    typedef std::tr1::function< void(int, std::tr1::shared_ptr< Stream<EndPointType> >) >  StreamReturnCallbackFunction;
 
-typedef std::tr1::function< void (int, void*) >  DatagramSendDoneCallback;
-
-typedef std::tr1::function<void (uint8*, int) >  ReadDatagramCallback;
-
-typedef std::tr1::function<void (uint8*, int) > ReadCallback;
+    typedef std::tr1::function< void (int, void*) >  DatagramSendDoneCallback;
+    typedef std::tr1::function<void (uint8*, int) >  ReadDatagramCallback;
+    typedef std::tr1::function<void (uint8*, int) > ReadCallback;
+};
 
 typedef UUID USID;
 
@@ -126,7 +128,10 @@ template <class EndPointType>
 class ConnectionVariables {
 public:
 
-  typedef std::tr1::shared_ptr<BaseDatagramLayer<EndPointType> > BaseDatagramLayerPtr;
+    typedef std::tr1::shared_ptr<BaseDatagramLayer<EndPointType> > BaseDatagramLayerPtr;
+    typedef CallbackTypes<EndPointType> CBTypes;
+    typedef typename CBTypes::ConnectionReturnCallbackFunction ConnectionReturnCallbackFunction;
+    typedef typename CBTypes::StreamReturnCallbackFunction StreamReturnCallbackFunction;
 
   /* Returns -1 if no channel is available. Otherwise returns the lowest
      available channel. */
@@ -383,6 +388,12 @@ class SIRIKATA_EXPORT Connection {
 private:
     typedef BaseDatagramLayer<EndPointType> BaseDatagramLayerType;
     typedef std::tr1::shared_ptr<BaseDatagramLayerType> BaseDatagramLayerPtr;
+
+    typedef CallbackTypes<EndPointType> CBTypes;
+    typedef typename CBTypes::ConnectionReturnCallbackFunction ConnectionReturnCallbackFunction;
+    typedef typename CBTypes::StreamReturnCallbackFunction StreamReturnCallbackFunction;
+    typedef typename CBTypes::DatagramSendDoneCallback DatagramSendDoneCallback;
+    typedef typename CBTypes::ReadDatagramCallback ReadDatagramCallback;
 
   friend class Stream<EndPointType>;
   friend class ConnectionManager<EndPointType>;
@@ -1501,6 +1512,10 @@ public:
     typedef Connection<EndPointType> ConnectionType;
     typedef EndPoint<EndPointType> EndpointType;
 
+    typedef CallbackTypes<EndPointType> CBTypes;
+    typedef typename CBTypes::StreamReturnCallbackFunction StreamReturnCallbackFunction;
+    typedef typename CBTypes::ReadCallback ReadCallback;
+
     typedef std::map<EndPoint<EndPointType>, StreamReturnCallbackFunction> StreamReturnCallbackMap;
 
    enum StreamStates {
@@ -2532,6 +2547,9 @@ template <class EndPointType>
 class ConnectionManager : public Service {
 public:
   typedef std::tr1::shared_ptr<BaseDatagramLayer<EndPointType> > BaseDatagramLayerPtr;
+
+    typedef CallbackTypes<EndPointType> CBTypes;
+    typedef typename CBTypes::StreamReturnCallbackFunction StreamReturnCallbackFunction;
 
   virtual void start() {
   }
