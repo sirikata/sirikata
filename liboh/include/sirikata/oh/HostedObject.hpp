@@ -44,7 +44,7 @@
 #include <utility>
 
 #include <sirikata/core/network/ObjectMessage.hpp>
-#include <sirikata/core/network/SSTImpl.hpp>
+#include <sirikata/core/odp/SST.hpp>
 
 #include <sirikata/core/transfer/URI.hpp>
 

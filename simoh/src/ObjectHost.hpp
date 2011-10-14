@@ -38,7 +38,7 @@
 #include <sirikata/core/service/Service.hpp>
 #include <sirikata/core/service/TimeProfiler.hpp>
 #include <sirikata/core/network/ObjectMessage.hpp>
-#include <sirikata/core/network/SSTImpl.hpp>
+#include <sirikata/core/odp/SST.hpp>
 #include <sirikata/core/util/MotionVector.hpp>
 
 #include <sirikata/core/util/SerializationCheck.hpp>

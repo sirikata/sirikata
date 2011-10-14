@@ -6,6 +6,7 @@
 #define _SIRIKATA_LIBCORE_ODP_SST_HPP_
 
 #include <sirikata/core/network/SSTImpl.hpp>
+#include <sirikata/core/odp/Service.hpp>
 
 namespace Sirikata {
 
@@ -25,6 +26,178 @@ SIRIKATA_EXPORT_TEMPLATE template class SIRIKATA_EXPORT BaseDatagramLayer<SpaceO
 SIRIKATA_EXPORT_TEMPLATE template class SIRIKATA_EXPORT Connection<SpaceObjectReference>;
 SIRIKATA_EXPORT_TEMPLATE template class SIRIKATA_EXPORT Stream<SpaceObjectReference>;
 #endif
+
+template <>
+class SIRIKATA_EXPORT BaseDatagramLayer<SpaceObjectReference>
+{
+  private:
+    typedef SpaceObjectReference EndPointType;
+
+  public:
+    typedef std::tr1::shared_ptr<BaseDatagramLayer<EndPointType> > Ptr;
+    typedef Ptr BaseDatagramLayerPtr;
+
+    typedef std::tr1::function<void(void*, int)> DataCallback;
+
+    static BaseDatagramLayerPtr getDatagramLayer(ConnectionVariables<EndPointType>* sstConnVars,
+                                                 EndPointType endPoint)
+    {
+        std::map<EndPointType, BaseDatagramLayerPtr >& datagramLayerMap = sstConnVars->sDatagramLayerMap;
+        if (datagramLayerMap.find(endPoint) != datagramLayerMap.end()) {
+            return datagramLayerMap[endPoint];
+        }
+
+        return BaseDatagramLayerPtr();
+    }
+
+    static BaseDatagramLayerPtr createDatagramLayer(
+        ConnectionVariables<EndPointType>* sstConnVars,
+        EndPointType endPoint,
+        const Context* ctx,
+        ODP::Service* odp)
+    {
+        std::map<EndPointType, BaseDatagramLayerPtr >& datagramLayerMap = sstConnVars->sDatagramLayerMap;
+        if (datagramLayerMap.find(endPoint) != datagramLayerMap.end()) {
+            return datagramLayerMap[endPoint];
+        }
+
+        BaseDatagramLayerPtr datagramLayer(
+                                           new BaseDatagramLayer(sstConnVars, ctx, odp, endPoint)
+        );
+
+        datagramLayerMap[endPoint] = datagramLayer;
+
+        return datagramLayer;
+    }
+
+    static void stopListening(ConnectionVariables<EndPointType>* sstConnVars, EndPoint<EndPointType>& listeningEndPoint) {
+        EndPointType endPointID = listeningEndPoint.endPoint;
+        std::map<EndPointType, BaseDatagramLayerPtr >& datagramLayerMap = sstConnVars->sDatagramLayerMap;
+
+        BaseDatagramLayerPtr bdl = datagramLayerMap[endPointID];
+        bdl->unlisten(listeningEndPoint);
+
+        datagramLayerMap.erase(endPointID);
+    }
+
+    void listenOn(EndPoint<EndPointType>& listeningEndPoint, DataCallback cb) {
+        ODP::Port* port = allocatePort(listeningEndPoint);
+        port->receive(
+            std::tr1::bind(&BaseDatagramLayer<EndPointType>::receiveMessageToCallback, this,
+                std::tr1::placeholders::_1,
+                std::tr1::placeholders::_2,
+                std::tr1::placeholders::_3,
+                cb
+            )
+        );
+    }
+
+    void listenOn(const EndPoint<EndPointType>& listeningEndPoint) {
+        ODP::Port* port = allocatePort(listeningEndPoint);
+        port->receive(
+            std::tr1::bind(
+                &BaseDatagramLayer::receiveMessage, this,
+                std::tr1::placeholders::_1,
+                std::tr1::placeholders::_2,
+                std::tr1::placeholders::_3
+            )
+        );
+    }
+
+    void unlisten(EndPoint<EndPointType>& ep) {
+        // To stop listening, just destroy the corresponding port
+        PortMap::iterator it = mAllocatedPorts.find(ep);
+        if (it == mAllocatedPorts.end()) return;
+        delete it->second;
+        mAllocatedPorts.erase(it);
+    }
+
+    void send(EndPoint<EndPointType>* src, EndPoint<EndPointType>* dest, void* data, int len) {
+        boost::mutex::scoped_lock lock(mMutex);
+
+        ODP::Port* port = getOrAllocatePort(*src);
+
+        port->send(
+            ODP::Endpoint(dest->endPoint, dest->port),
+            MemoryReference(data, len)
+        );
+    }
+
+    const Context* context() {
+        return mContext;
+    }
+
+    uint32 getUnusedPort(const EndPointType& ep) {
+        return mODP->unusedODPPort(ep);
+    }
+    void invalidate() {
+        mODP=NULL;
+        std::map<EndPointType, BaseDatagramLayerPtr >& datagramLayerMap = mSSTConnVars->sDatagramLayerMap;
+        std::map<EndPointType, BaseDatagramLayerPtr >::iterator wherei  = datagramLayerMap.find(mEndpoint);
+        if (wherei!=datagramLayerMap.end()) {
+            datagramLayerMap.erase(wherei);
+        }else {
+            SILOG(sst,error,"FATAL: Invalidating BaseDatagramLayer that's invalid");
+        }
+    }
+  private:
+    BaseDatagramLayer(ConnectionVariables<EndPointType>* sstConnVars, const Context* ctx, ODP::Service* odpservice, const EndPointType&ep)
+        : mContext(ctx),
+          mODP(odpservice),
+          mSSTConnVars(sstConnVars),
+          mEndpoint(ep)
+        {
+
+        }
+
+    ODP::Port* allocatePort(const EndPoint<EndPointType>& ep) {
+        ODP::Port* port = mODP->bindODPPort(
+            ep.endPoint, ep.port
+        );
+        mAllocatedPorts[ep] = port;
+        return port;
+    }
+
+    ODP::Port* getPort(const EndPoint<EndPointType>& ep) {
+        PortMap::iterator it = mAllocatedPorts.find(ep);
+        if (it == mAllocatedPorts.end()) return NULL;
+        return it->second;
+    }
+
+    ODP::Port* getOrAllocatePort(const EndPoint<EndPointType>& ep) {
+        ODP::Port* result = getPort(ep);
+        if (result != NULL) return result;
+        result = allocatePort(ep);
+        return result;
+    }
+
+    void receiveMessage(const ODP::Endpoint &src, const ODP::Endpoint &dst, MemoryReference payload) {
+        Connection<EndPointType>::handleReceive(
+            mSSTConnVars,
+            EndPoint<EndPointType> (SpaceObjectReference(src.space(), src.object()), src.port()),
+            EndPoint<EndPointType> (SpaceObjectReference(dst.space(), dst.object()), dst.port()),
+            (void*) payload.data(), payload.size()
+        );
+    }
+
+    void receiveMessageToCallback(const ODP::Endpoint &src, const ODP::Endpoint &dst, MemoryReference payload, DataCallback cb) {
+        cb((void*) payload.data(), payload.size() );
+    }
+
+
+
+    const Context* mContext;
+    ODP::Service* mODP;
+
+    typedef std::map<EndPoint<EndPointType>, ODP::Port*> PortMap;
+    PortMap mAllocatedPorts;
+
+    boost::mutex mMutex;
+
+    ConnectionVariables<EndPointType>* mSSTConnVars;
+    EndPointType mEndpoint;
+};
+
 } // namespace SST
 
 } // namespace Sirikata

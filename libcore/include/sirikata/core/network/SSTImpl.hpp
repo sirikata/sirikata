@@ -36,7 +36,6 @@
 
 #include <sirikata/core/util/Platform.hpp>
 
-#include <sirikata/core/odp/Service.hpp>
 #include <sirikata/core/service/Service.hpp>
 #include <sirikata/core/util/Timer.hpp>
 #include <sirikata/core/service/Context.hpp>
@@ -149,7 +148,7 @@ public:
 
         EndPoint<EndPointType> ep(ept, channel);
 
-        datagramLayer->deallocateChannel(ep);
+        datagramLayer->unlisten(ep);
       }
     }
 
@@ -182,167 +181,88 @@ public:
 template <typename EndPointType>
 class SIRIKATA_EXPORT BaseDatagramLayer
 {
-  public:
+    // This class connects SST to the underlying datagram protocol. This isn't
+    // an implementation -- the implementation will vary significantly for each
+    // underlying datagram protocol -- but it does specify the interface. We
+    // keep all types private in this version so it is obvious when you are
+    // trying to incorrectly use this implementation instead of a real one.
+  private:
     typedef std::tr1::shared_ptr<BaseDatagramLayer<EndPointType> > Ptr;
     typedef Ptr BaseDatagramLayerPtr;
 
-    static BaseDatagramLayerPtr getDatagramLayer(ConnectionVariables<EndPointType>* sstConnVars,
-                                                 EndPointType endPoint)
-    {
-        std::map<EndPointType, BaseDatagramLayerPtr >& datagramLayerMap = sstConnVars->sDatagramLayerMap;
-        if (datagramLayerMap.find(endPoint) != datagramLayerMap.end()) {
-            return datagramLayerMap[endPoint];
-        }
+    typedef std::tr1::function<void(void*, int)> DataCallback;
 
-        return BaseDatagramLayerPtr();
-    }
-
+    /** Create a datagram layer. Required parameters are the
+     *  ConnectionVariables, Endpoint, and Context. Additional variables are
+     *  permitted (this is called via a templated function in
+     *  ConnectionManager).
+     *
+     *  Should insert into ConnectionVariable's datagram layer map; should also
+     *  reuse existing datagram layers.
+     */
     static BaseDatagramLayerPtr createDatagramLayer(
         ConnectionVariables<EndPointType>* sstConnVars,
         EndPointType endPoint,
         const Context* ctx,
-        ODP::Service* odp)
+        void* extra)
     {
-        std::map<EndPointType, BaseDatagramLayerPtr >& datagramLayerMap = sstConnVars->sDatagramLayerMap;
-        if (datagramLayerMap.find(endPoint) != datagramLayerMap.end()) {
-            return datagramLayerMap[endPoint];
-        }
-
-        BaseDatagramLayerPtr datagramLayer(
-                                           new BaseDatagramLayer(sstConnVars, ctx, odp, endPoint)
-        );
-
-        datagramLayerMap[endPoint] = datagramLayer;
-
-        return datagramLayer;
+        return BaseDatagramLayerPtr();
     }
 
-    static void listen(ConnectionVariables<EndPointType>* sstConnVars, EndPoint<EndPointType>& listeningEndPoint) {
-        EndPointType endPointID = listeningEndPoint.endPoint;
-
-        BaseDatagramLayerPtr bdl = sstConnVars->sDatagramLayerMap[endPointID];
-        bdl->listenOn(listeningEndPoint);
+    /** Get the datagram layer for the given endpoint, if it exists. */
+    static BaseDatagramLayerPtr getDatagramLayer(ConnectionVariables<EndPointType>* sstConnVars,
+                                                 EndPointType endPoint)
+    {
+        return BaseDatagramLayerPtr();
     }
 
-    static void stopListening(ConnectionVariables<EndPointType>* sstConnVars, EndPoint<EndPointType>& listeningEndPoint) {
-        EndPointType endPointID = listeningEndPoint.endPoint;
-        std::map<EndPointType, BaseDatagramLayerPtr >& datagramLayerMap = sstConnVars->sDatagramLayerMap;
-
-        BaseDatagramLayerPtr bdl = datagramLayerMap[endPointID];
-        bdl->unlisten(listeningEndPoint);
-
-        datagramLayerMap.erase(endPointID);
-    }
-
-    void listenOn(EndPoint<EndPointType>& listeningEndPoint, ODP::Service::MessageHandler cb) {
-        ODP::Port* port = allocatePort(listeningEndPoint);
-        port->receive(cb);
-    }
-
-    void unlisten(EndPoint<EndPointType>& ep) {
-        // To stop listening, just destroy the corresponding port
-        typename PortMap::iterator it = mAllocatedPorts.find(ep);
-        if (it == mAllocatedPorts.end()) return;
-        delete it->second;
-        mAllocatedPorts.erase(it);
-    }
-
-    void deallocateChannel(EndPoint<EndPointType>& ep) {
-      unlisten(ep);
-    }
-
-    void send(EndPoint<EndPointType>* src, EndPoint<EndPointType>* dest, void* data, int len) {
-        boost::mutex::scoped_lock lock(mMutex);
-
-        ODP::Port* port = getOrAllocatePort(*src);
-
-        port->send(
-            ODP::Endpoint(dest->endPoint, dest->port),
-            MemoryReference(data, len)
-        );
-    }
-
+    /** Get the Context for this datagram layer. */
     const Context* context() {
-        return mContext;
+        return NULL;
     }
 
+    /** Get a port that isn't currently in use. */
     uint32 getUnusedPort(const EndPointType& ep) {
-        return mODP->unusedODPPort(ep);
+        return 0;
     }
+
+    /** Stop listening to the specified endpoint and also remove from the
+     *  ConnectionVariables datagram layer map.
+     */
+    static void stopListening(ConnectionVariables<EndPointType>* sstConnVars, EndPoint<EndPointType>& listeningEndPoint) {
+    }
+
+    /** Listen to the specified endpoint and invoke the given callback when data
+     *  arrives.
+     */
+    void listenOn(EndPoint<EndPointType>& listeningEndPoint, DataCallback cb) {
+    }
+
+    /** Listen to the specified endpoint, invoking
+     *  Connection::handleReceive() when data arrives.
+     */
+    void listenOn(EndPoint<EndPointType>& listeningEndPoint) {
+    }
+
+    /** Send the given data from the given source port (possibly not allocated
+     *  yet) to the given destination. This is the core function for outbound
+     *  communication.
+     */
+    void send(EndPoint<EndPointType>* src, EndPoint<EndPointType>* dest, void* data, int len) {
+    }
+
+    /** Stop listening on the given endpoint. You can fully deallocate the
+     *  underlying resources for the endpoint.
+     */
+    void unlisten(EndPoint<EndPointType>& ep) {
+    }
+
+    /** Mark this BaseDatagramLayer as invalid, ensuring that no more writes to
+     *  the underlying datagram protocol will occur. Also remove this
+     *  BaseDatagramLayer from the ConnectionVariables.
+     */
     void invalidate() {
-        mODP=NULL;
-        std::map<EndPointType, BaseDatagramLayerPtr >& datagramLayerMap = mSSTConnVars->sDatagramLayerMap;
-        typename std::map<EndPointType, BaseDatagramLayerPtr >::iterator wherei  = datagramLayerMap.find(mEndpoint);
-        if (wherei!=datagramLayerMap.end()) {
-            datagramLayerMap.erase(wherei);
-        }else {
-            SILOG(sst,error,"FATAL: Invalidating BaseDatagramLayer that's invalid");
-        }
     }
-  private:
-    BaseDatagramLayer(ConnectionVariables<EndPointType>* sstConnVars, const Context* ctx, ODP::Service* odpservice, const EndPointType&ep)
-        : mContext(ctx),
-          mODP(odpservice),
-          mSSTConnVars(sstConnVars),
-          mEndpoint(ep)
-        {
-
-        }
-
-    ODP::Port* allocatePort(const EndPoint<EndPointType>& ep) {
-        ODP::Port* port = mODP->bindODPPort(
-            ep.endPoint, ep.port
-        );
-        mAllocatedPorts[ep] = port;
-        return port;
-    }
-
-    ODP::Port* getPort(const EndPoint<EndPointType>& ep) {
-        typename PortMap::iterator it = mAllocatedPorts.find(ep);
-        if (it == mAllocatedPorts.end()) return NULL;
-        return it->second;
-    }
-
-    ODP::Port* getOrAllocatePort(const EndPoint<EndPointType>& ep) {
-        ODP::Port* result = getPort(ep);
-        if (result != NULL) return result;
-        result = allocatePort(ep);
-        return result;
-    }
-
-    void listenOn(const EndPoint<EndPointType>& listeningEndPoint) {
-        ODP::Port* port = allocatePort(listeningEndPoint);
-        port->receive(
-            std::tr1::bind(
-                &BaseDatagramLayer::receiveMessage, this,
-                std::tr1::placeholders::_1,
-                std::tr1::placeholders::_2,
-                std::tr1::placeholders::_3
-            )
-        );
-    }
-
-    void receiveMessage(const ODP::Endpoint &src, const ODP::Endpoint &dst, MemoryReference payload) {
-        Connection<EndPointType>::handleReceive(
-            mSSTConnVars,
-            EndPoint<EndPointType> (SpaceObjectReference(src.space(), src.object()), src.port()),
-            EndPoint<EndPointType> (SpaceObjectReference(dst.space(), dst.object()), dst.port()),
-            (void*) payload.data(), payload.size()
-        );
-    }
-
-
-    const Context* mContext;
-    ODP::Service* mODP;
-
-    typedef std::map<EndPoint<EndPointType>, ODP::Port*> PortMap;
-    PortMap mAllocatedPorts;
-
-    boost::mutex mMutex;
-
-    ConnectionVariables<EndPointType>* mSSTConnVars;
-    EndPointType mEndpoint;
-
 };
 
 #define SST_IMPL_SUCCESS 0
@@ -474,10 +394,9 @@ private:
       mDatagramLayer->listenOn(
           localEndPoint,
           std::tr1::bind(
-              &Connection::receiveODPMessage, this,
+              &Connection::receiveMessage, this,
               std::tr1::placeholders::_1,
-              std::tr1::placeholders::_2,
-              std::tr1::placeholders::_3
+              std::tr1::placeholders::_2
           )
       );
 
@@ -701,7 +620,7 @@ private:
   }
 
   static bool listen(ConnectionVariables<EndPointType>* sstConnVars, StreamReturnCallbackFunction cb, EndPoint<EndPointType> listeningEndPoint) {
-    BaseDatagramLayer<EndPointType>::listen(sstConnVars, listeningEndPoint);
+      sstConnVars->getDatagramLayer(listeningEndPoint.endPoint)->listenOn(listeningEndPoint);
 
     boost::mutex::scoped_lock lock(sstConnVars->sStaticMembersLock.getMutex());
 
@@ -901,11 +820,6 @@ private:
           break;
         }
     }
-  }
-
-  void receiveODPMessage(const ODP::Endpoint &src, const ODP::Endpoint &dst, MemoryReference payload)
-  {
-    receiveMessage((void*) payload.data(), payload.size() );
   }
 
   void parsePacket(Sirikata::Protocol::SST::SSTChannelHeader* received_channel_msg )
@@ -2569,13 +2483,23 @@ public:
     return Stream<EndPointType>::connectStream(&mSSTConnVars, localEndPoint, remoteEndPoint, cb);
   }
 
-  BaseDatagramLayerPtr createDatagramLayer(
-                                           EndPointType endPoint,
-                                           const Context* ctx,
-                                           ODP::Service* odp)
-  {
-    return BaseDatagramLayer<EndPointType>::createDatagramLayer(&mSSTConnVars, endPoint, ctx, odp);
-  }
+    // The BaseDatagramLayer is really where the interaction with the underlying
+    // system happens, and different underlying protocols may require different
+    // parameters. These need to be instantiated by the client code anyway (to
+    // generate the interface), so we provide some templatized versions to allow
+    // a variable number of arguments.
+    template<typename A1>
+    BaseDatagramLayerPtr createDatagramLayer(EndPointType endPoint, Context* ctx, A1 a1) {
+        return BaseDatagramLayer<EndPointType>::createDatagramLayer(&mSSTConnVars, endPoint, ctx, a1);
+    }
+    template<typename A1, typename A2>
+    BaseDatagramLayerPtr createDatagramLayer(EndPointType endPoint, Context* ctx, A1 a1, A2 a2) {
+        return BaseDatagramLayer<EndPointType>::createDatagramLayer(&mSSTConnVars, endPoint, ctx, a1, a2);
+    }
+    template<typename A1, typename A2, typename A3>
+    BaseDatagramLayerPtr createDatagramLayer(EndPointType endPoint, Context* ctx, A1 a1, A2 a2, A3 a3) {
+        return BaseDatagramLayer<EndPointType>::createDatagramLayer(&mSSTConnVars, endPoint, ctx, a1, a2, a3);
+    }
 
   BaseDatagramLayerPtr getDatagramLayer(EndPointType endPoint) {
     return mSSTConnVars.getDatagramLayer(endPoint);

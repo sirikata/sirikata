@@ -36,7 +36,7 @@
 #include <sirikata/oh/ObjectHostContext.hpp>
 #include <sirikata/core/service/Service.hpp>
 #include <sirikata/oh/SpaceNodeConnection.hpp>
-#include <sirikata/core/network/SSTImpl.hpp>
+#include <sirikata/core/odp/SST.hpp>
 #include <sirikata/core/util/MotionVector.hpp>
 #include <sirikata/core/util/MotionQuaternion.hpp>
 #include <sirikata/core/util/SpaceObjectReference.hpp>

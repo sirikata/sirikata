@@ -39,11 +39,11 @@
 
 #include <sirikata/core/network/ObjectMessage.hpp>
 #include <sirikata/core/util/MotionPath.hpp>
-#include <sirikata/core/network/SSTImpl.hpp>
 
 #include <sirikata/core/util/SimpleExtrapolator.hpp>
 
 #include <sirikata/core/odp/DelegateService.hpp>
+#include <sirikata/core/odp/SST.hpp>
 
 #include <boost/thread/shared_mutex.hpp>
 
