@@ -42,12 +42,7 @@ class SIRIKATA_EXPORT BaseDatagramLayer<SpaceObjectReference>
     static BaseDatagramLayerPtr getDatagramLayer(ConnectionVariables<EndPointType>* sstConnVars,
                                                  EndPointType endPoint)
     {
-        std::map<EndPointType, BaseDatagramLayerPtr >& datagramLayerMap = sstConnVars->sDatagramLayerMap;
-        if (datagramLayerMap.find(endPoint) != datagramLayerMap.end()) {
-            return datagramLayerMap[endPoint];
-        }
-
-        return BaseDatagramLayerPtr();
+        return sstConnVars->getDatagramLayer(endPoint);
     }
 
     static BaseDatagramLayerPtr createDatagramLayer(
@@ -56,28 +51,23 @@ class SIRIKATA_EXPORT BaseDatagramLayer<SpaceObjectReference>
         const Context* ctx,
         ODP::Service* odp)
     {
-        std::map<EndPointType, BaseDatagramLayerPtr >& datagramLayerMap = sstConnVars->sDatagramLayerMap;
-        if (datagramLayerMap.find(endPoint) != datagramLayerMap.end()) {
-            return datagramLayerMap[endPoint];
-        }
+        BaseDatagramLayerPtr datagramLayer = getDatagramLayer(sstConnVars, endPoint);
+        if (datagramLayer) return datagramLayer;
 
-        BaseDatagramLayerPtr datagramLayer(
-                                           new BaseDatagramLayer(sstConnVars, ctx, odp, endPoint)
+        datagramLayer = BaseDatagramLayerPtr(
+            new BaseDatagramLayer(sstConnVars, ctx, odp, endPoint)
         );
-
-        datagramLayerMap[endPoint] = datagramLayer;
+        sstConnVars->addDatagramLayer(endPoint, datagramLayer);
 
         return datagramLayer;
     }
 
     static void stopListening(ConnectionVariables<EndPointType>* sstConnVars, EndPoint<EndPointType>& listeningEndPoint) {
         EndPointType endPointID = listeningEndPoint.endPoint;
-        std::map<EndPointType, BaseDatagramLayerPtr >& datagramLayerMap = sstConnVars->sDatagramLayerMap;
 
-        BaseDatagramLayerPtr bdl = datagramLayerMap[endPointID];
+        BaseDatagramLayerPtr bdl = sstConnVars->getDatagramLayer(endPointID);
+        sstConnVars->removeDatagramLayer(endPointID, true);
         bdl->unlisten(listeningEndPoint);
-
-        datagramLayerMap.erase(endPointID);
     }
 
     void listenOn(EndPoint<EndPointType>& listeningEndPoint, DataCallback cb) {
@@ -130,16 +120,12 @@ class SIRIKATA_EXPORT BaseDatagramLayer<SpaceObjectReference>
     uint32 getUnusedPort(const EndPointType& ep) {
         return mODP->unusedODPPort(ep);
     }
+
     void invalidate() {
-        mODP=NULL;
-        std::map<EndPointType, BaseDatagramLayerPtr >& datagramLayerMap = mSSTConnVars->sDatagramLayerMap;
-        std::map<EndPointType, BaseDatagramLayerPtr >::iterator wherei  = datagramLayerMap.find(mEndpoint);
-        if (wherei!=datagramLayerMap.end()) {
-            datagramLayerMap.erase(wherei);
-        }else {
-            SILOG(sst,error,"FATAL: Invalidating BaseDatagramLayer that's invalid");
-        }
+        mODP = NULL;
+        mSSTConnVars->removeDatagramLayer(mEndpoint, true);
     }
+
   private:
     BaseDatagramLayer(ConnectionVariables<EndPointType>* sstConnVars, const Context* ctx, ODP::Service* odpservice, const EndPointType&ep)
         : mContext(ctx),

@@ -161,8 +161,25 @@ public:
         return BaseDatagramLayerPtr();
     }
 
+    void addDatagramLayer(EndPointType& endPoint, BaseDatagramLayerPtr datagramLayer)
+    {
+        sDatagramLayerMap[endPoint] = datagramLayer;
+    }
+
+    void removeDatagramLayer(EndPointType& endPoint, bool warn = false)
+    {
+        typename std::map<EndPointType, BaseDatagramLayerPtr >::iterator wherei = sDatagramLayerMap.find(endPoint);
+        if (wherei != sDatagramLayerMap.end()) {
+            sDatagramLayerMap.erase(wherei);
+        } else if (warn) {
+            SILOG(sst,error,"FATAL: Invalidating BaseDatagramLayer that's invalid");
+        }
+    }
+
+private:
     std::map<EndPointType, BaseDatagramLayerPtr > sDatagramLayerMap;
 
+public:
     typedef std::map<EndPoint<EndPointType>, StreamReturnCallbackFunction> StreamReturnCallbackMap;
     StreamReturnCallbackMap mStreamReturnCallbackMap;
 
