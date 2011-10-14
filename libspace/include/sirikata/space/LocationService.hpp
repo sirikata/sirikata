@@ -223,9 +223,9 @@ public:
 
     virtual bool locationUpdate(UUID source, void* buffer, uint32 length) = 0;
 
-    Stream<SpaceObjectReference>::Ptr getObjectStream(const UUID& uuid) {
+    SST::Stream<SpaceObjectReference>::Ptr getObjectStream(const UUID& uuid) {
         ObjectSession* session = mContext->sessionManager()->getSession(ObjectReference(uuid));
-        if (session == NULL) return Stream<SpaceObjectReference>::Ptr();
+        if (session == NULL) return SST::Stream<SpaceObjectReference>::Ptr();
         return session->getStream();
     }
 
@@ -254,7 +254,7 @@ protected:
     // Helper for listening for datagrams
     void handleLocationUpdateDatagram(UUID source, void* buffer, uint32 length);
     // Helpers for listening to streams
-    typedef Stream<SpaceObjectReference> SSTStream;
+    typedef SST::Stream<SpaceObjectReference> SSTStream;
     typedef SSTStream::Ptr SSTStreamPtr;
     void handleLocationUpdateSubstream(const UUID& source, int err, SSTStreamPtr s);
     void handleLocationUpdateSubstreamRead(const UUID& source, SSTStreamPtr s, std::stringstream* prevdata, uint8* buffer, int length);

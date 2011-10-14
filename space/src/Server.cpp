@@ -129,11 +129,11 @@ Server::Server(SpaceContext* ctx, Authenticator* auth, Forwarder* forwarder, Loc
 
     mContext->sstConnectionManager()->listen(
         std::tr1::bind(&Server::newStream, this, _1, _2),
-        EndPoint<SpaceObjectReference>(SpaceObjectReference(SpaceID::null(), ObjectReference::spaceServiceID()), OBJECT_SPACE_PORT)
+        SST::EndPoint<SpaceObjectReference>(SpaceObjectReference(SpaceID::null(), ObjectReference::spaceServiceID()), OBJECT_SPACE_PORT)
     );
 }
 
-void Server::newStream(int err, Stream<SpaceObjectReference>::Ptr s) {
+void Server::newStream(int err, SST::Stream<SpaceObjectReference>::Ptr s) {
   if (err != SST_IMPL_SUCCESS){
     return;
   }

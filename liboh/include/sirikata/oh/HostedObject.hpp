@@ -120,12 +120,12 @@ private:
     HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID &_id);
 
 public:
-    typedef EndPoint<SpaceObjectReference> EndPointType;
-    typedef BaseDatagramLayer<SpaceObjectReference> BaseDatagramLayerType;
+    typedef SST::EndPoint<SpaceObjectReference> EndPointType;
+    typedef SST::BaseDatagramLayer<SpaceObjectReference> BaseDatagramLayerType;
     typedef BaseDatagramLayerType::Ptr BaseDatagramLayerPtr;
-    typedef Connection<SpaceObjectReference> SSTConnection;
+    typedef SST::Connection<SpaceObjectReference> SSTConnection;
     typedef SSTConnection::Ptr SSTConnectionPtr;
-    typedef Stream<SpaceObjectReference> SSTStream;
+    typedef SST::Stream<SpaceObjectReference> SSTStream;
     typedef SSTStream::Ptr SSTStreamPtr;
 
 /// Destructor: will only be called from shared_ptr::~shared_ptr.

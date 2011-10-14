@@ -185,7 +185,7 @@ private:
     bool checkAlreadyMigrating(const UUID& obj_id);
     void processAlreadyMigrating(const UUID& obj_id);
 
-    void newStream(int err, Stream<SpaceObjectReference>::Ptr s);
+    void newStream(int err, SST::Stream<SpaceObjectReference>::Ptr s);
 
     SpaceContext* mContext;
 

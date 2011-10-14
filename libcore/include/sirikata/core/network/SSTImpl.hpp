@@ -36,28 +36,21 @@
 
 #include <sirikata/core/util/Platform.hpp>
 
-#include <stdio.h>
-#include <stdlib.h>
-
-#include <boost/asio.hpp>
-#include <boost/date_time/posix_time/posix_time.hpp>
-
 #include <sirikata/core/odp/Service.hpp>
+#include <sirikata/core/service/Service.hpp>
 #include <sirikata/core/util/Timer.hpp>
-#include <sirikata/core/service/PollingService.hpp>
 #include <sirikata/core/service/Context.hpp>
 
-#include <bitset>
-
-#include <sirikata/core/util/SerializationCheck.hpp>
-
 #include <sirikata/core/network/Message.hpp>
-
 #include "Protocol_SSTHeader.pbj.hpp"
+
+#include <boost/lexical_cast.hpp>
+#include <boost/asio.hpp> //htons, ntohs
 
 #define SST_LOG(lvl,msg) SILOG(sst,lvl,msg);
 
 namespace Sirikata {
+namespace SST {
 
 template <typename EndObjectType>
 class EndPoint {
@@ -127,7 +120,7 @@ typedef UUID USID;
 typedef uint16 LSID;
 
 template <class EndPointType>
-class SSTConnectionVariables {
+class ConnectionVariables {
 public:
 
   typedef std::tr1::shared_ptr<BaseDatagramLayer<EndPointType> > BaseDatagramLayerPtr;
@@ -185,7 +178,7 @@ class SIRIKATA_EXPORT BaseDatagramLayer
     typedef std::tr1::shared_ptr<BaseDatagramLayer<EndPointType> > Ptr;
     typedef Ptr BaseDatagramLayerPtr;
 
-    static BaseDatagramLayerPtr getDatagramLayer(SSTConnectionVariables<EndPointType>* sstConnVars,
+    static BaseDatagramLayerPtr getDatagramLayer(ConnectionVariables<EndPointType>* sstConnVars,
                                                  EndPointType endPoint)
     {
         std::map<EndPointType, BaseDatagramLayerPtr >& datagramLayerMap = sstConnVars->sDatagramLayerMap;
@@ -197,7 +190,7 @@ class SIRIKATA_EXPORT BaseDatagramLayer
     }
 
     static BaseDatagramLayerPtr createDatagramLayer(
-        SSTConnectionVariables<EndPointType>* sstConnVars,
+        ConnectionVariables<EndPointType>* sstConnVars,
         EndPointType endPoint,
         const Context* ctx,
         ODP::Service* odp)
@@ -216,14 +209,14 @@ class SIRIKATA_EXPORT BaseDatagramLayer
         return datagramLayer;
     }
 
-    static void listen(SSTConnectionVariables<EndPointType>* sstConnVars, EndPoint<EndPointType>& listeningEndPoint) {
+    static void listen(ConnectionVariables<EndPointType>* sstConnVars, EndPoint<EndPointType>& listeningEndPoint) {
         EndPointType endPointID = listeningEndPoint.endPoint;
 
         BaseDatagramLayerPtr bdl = sstConnVars->sDatagramLayerMap[endPointID];
         bdl->listenOn(listeningEndPoint);
     }
 
-    static void stopListening(SSTConnectionVariables<EndPointType>* sstConnVars, EndPoint<EndPointType>& listeningEndPoint) {
+    static void stopListening(ConnectionVariables<EndPointType>* sstConnVars, EndPoint<EndPointType>& listeningEndPoint) {
         EndPointType endPointID = listeningEndPoint.endPoint;
         std::map<EndPointType, BaseDatagramLayerPtr >& datagramLayerMap = sstConnVars->sDatagramLayerMap;
 
@@ -279,7 +272,7 @@ class SIRIKATA_EXPORT BaseDatagramLayer
         }
     }
   private:
-    BaseDatagramLayer(SSTConnectionVariables<EndPointType>* sstConnVars, const Context* ctx, ODP::Service* odpservice, const EndPointType&ep)
+    BaseDatagramLayer(ConnectionVariables<EndPointType>* sstConnVars, const Context* ctx, ODP::Service* odpservice, const EndPointType&ep)
         : mContext(ctx),
           mODP(odpservice),
           mSSTConnVars(sstConnVars),
@@ -339,13 +332,12 @@ class SIRIKATA_EXPORT BaseDatagramLayer
 
     boost::mutex mMutex;
 
-    SSTConnectionVariables<EndPointType>* mSSTConnVars;
+    ConnectionVariables<EndPointType>* mSSTConnVars;
     EndPointType mEndpoint;
 
 };
 
 #if SIRIKATA_PLATFORM == SIRIKATA_WINDOWS
-//SIRIKATA_EXPORT_TEMPLATE template class SIRIKATA_EXPORT BaseDatagramLayer<Sirikata::UUID>;
 SIRIKATA_EXPORT_TEMPLATE template class SIRIKATA_EXPORT BaseDatagramLayer<SpaceObjectReference>;
 #endif
 
@@ -395,7 +387,7 @@ private:
     typedef std::tr1::shared_ptr<BaseDatagramLayerType> BaseDatagramLayerPtr;
 
   friend class Stream<EndPointType>;
-  friend class SSTConnectionManager;
+  friend class ConnectionManager;
   friend class BaseDatagramLayer<EndPointType>;
 
   typedef std::map<EndPoint<EndPointType>, std::tr1::shared_ptr<Connection> >  ConnectionMap;
@@ -405,7 +397,7 @@ private:
   EndPoint<EndPointType> mLocalEndPoint;
   EndPoint<EndPointType> mRemoteEndPoint;
 
-  SSTConnectionVariables<EndPointType>* mSSTConnVars;
+  ConnectionVariables<EndPointType>* mSSTConnVars;
   BaseDatagramLayerPtr mDatagramLayer;
 
   int mState;
@@ -453,7 +445,7 @@ private:
 
 private:
 
-  Connection(SSTConnectionVariables<EndPointType>* sstConnVars,
+  Connection(ConnectionVariables<EndPointType>* sstConnVars,
              EndPoint<EndPointType> localEndPoint,
              EndPoint<EndPointType> remoteEndPoint)
     : mLocalEndPoint(localEndPoint), mRemoteEndPoint(remoteEndPoint),
@@ -658,7 +650,7 @@ private:
      is already using the same local endpoint; true otherwise.
   */
 
-  static bool createConnection(SSTConnectionVariables<EndPointType>* sstConnVars,
+  static bool createConnection(ConnectionVariables<EndPointType>* sstConnVars,
                                EndPoint <EndPointType> localEndPoint,
 			       EndPoint <EndPointType> remoteEndPoint,
                                ConnectionReturnCallbackFunction cb,
@@ -699,7 +691,7 @@ private:
     return true;
   }
 
-  static bool listen(SSTConnectionVariables<EndPointType>* sstConnVars, StreamReturnCallbackFunction cb, EndPoint<EndPointType> listeningEndPoint) {
+  static bool listen(ConnectionVariables<EndPointType>* sstConnVars, StreamReturnCallbackFunction cb, EndPoint<EndPointType> listeningEndPoint) {
     BaseDatagramLayer<EndPointType>::listen(sstConnVars, listeningEndPoint);
 
     boost::mutex::scoped_lock lock(sstConnVars->sStaticMembersLock.getMutex());
@@ -715,7 +707,7 @@ private:
     return true;
   }
 
-  static bool unlisten(SSTConnectionVariables<EndPointType>* sstConnVars, EndPoint<EndPointType> listeningEndPoint) {
+  static bool unlisten(ConnectionVariables<EndPointType>* sstConnVars, EndPoint<EndPointType> listeningEndPoint) {
     BaseDatagramLayer<EndPointType>::stopListening(sstConnVars, listeningEndPoint);
 
     boost::mutex::scoped_lock lock(sstConnVars->sStaticMembersLock.getMutex());
@@ -1197,7 +1189,7 @@ private:
      mSSTConnVars->releaseChannel(mLocalEndPoint.endPoint, mLocalChannelID);
    }
 
-   static void closeConnections(SSTConnectionVariables<EndPointType>* sstConnVars) {
+   static void closeConnections(ConnectionVariables<EndPointType>* sstConnVars) {
        // We have to be careful with this function. Because it is going to free
        // the connections, we have to make sure not to let them get freed where
        // the deleter will modify sConnectionMap while we're still modifying it.
@@ -1220,7 +1212,7 @@ private:
        }
    }
 
-   static void handleReceive(SSTConnectionVariables<EndPointType>* sstConnVars,
+   static void handleReceive(ConnectionVariables<EndPointType>* sstConnVars,
                              EndPoint<EndPointType> remoteEndPoint,
                              EndPoint<EndPointType> localEndPoint, void* recv_buffer, int len)
    {
@@ -1474,7 +1466,6 @@ private:
 
 };
 #if SIRIKATA_PLATFORM == SIRIKATA_WINDOWS
-//SIRIKATA_EXPORT_TEMPLATE template class SIRIKATA_EXPORT Connection<Sirikata::UUID>;
 SIRIKATA_EXPORT_TEMPLATE template class SIRIKATA_EXPORT Connection<SpaceObjectReference>;
 #endif
 
@@ -1538,7 +1529,7 @@ public:
 
   bool connected() { return mConnected; }
 
-  static bool connectStream(SSTConnectionVariables<EndPointType>* sstConnVars,
+  static bool connectStream(ConnectionVariables<EndPointType>* sstConnVars,
                             EndPoint <EndPointType> localEndPoint,
 			    EndPoint <EndPointType> remoteEndPoint,
 			    StreamReturnCallbackFunction cb)
@@ -1573,11 +1564,11 @@ public:
     @return false, if its not possible to listen to this endpoint (e.g. if listen
             has already been called on this endpoint); true otherwise.
   */
-  static bool listen(SSTConnectionVariables<EndPointType>* sstConnVars, StreamReturnCallbackFunction cb, EndPoint <EndPointType> listeningEndPoint) {
+  static bool listen(ConnectionVariables<EndPointType>* sstConnVars, StreamReturnCallbackFunction cb, EndPoint <EndPointType> listeningEndPoint) {
     return Connection<EndPointType>::listen(sstConnVars, cb, listeningEndPoint);
   }
 
-  static bool unlisten(SSTConnectionVariables<EndPointType>* sstConnVars, EndPoint <EndPointType> listeningEndPoint) {
+  static bool unlisten(ConnectionVariables<EndPointType>* sstConnVars, EndPoint <EndPointType> listeningEndPoint) {
     return Connection<EndPointType>::unlisten(sstConnVars, listeningEndPoint);
   }
 
@@ -1839,7 +1830,7 @@ public:
 private:
   Stream(LSID parentLSID, std::tr1::weak_ptr<Connection<EndPointType> > conn,
 	 uint16 local_port, uint16 remote_port,
-	 USID usid, LSID lsid, StreamReturnCallbackFunction cb, SSTConnectionVariables<EndPointType>* sstConnVars)
+	 USID usid, LSID lsid, StreamReturnCallbackFunction cb, ConnectionVariables<EndPointType>* sstConnVars)
     :
     mState(NOT_FINISHED_CONSTRUCTING__CALL_INIT),
     mLocalPort(local_port),
@@ -2521,7 +2512,7 @@ private:
   uint8 mNumInitRetransmissions;
   uint8 MAX_INIT_RETRANSMISSIONS;
 
-  SSTConnectionVariables<EndPointType>* mSSTConnVars;
+  ConnectionVariables<EndPointType>* mSSTConnVars;
 
   std::tr1::weak_ptr<Stream<EndPointType> > mWeakThis;
 
@@ -2532,7 +2523,6 @@ private:
 
 };
 #if SIRIKATA_PLATFORM == SIRIKATA_WINDOWS
-//SIRIKATA_EXPORT_TEMPLATE template class SIRIKATA_EXPORT Stream<Sirikata::UUID>;
 SIRIKATA_EXPORT_TEMPLATE template class SIRIKATA_EXPORT Stream<SpaceObjectReference>;
 #endif
 
@@ -2545,7 +2535,7 @@ SIRIKATA_EXPORT_TEMPLATE template class SIRIKATA_EXPORT Stream<SpaceObjectRefere
  This class is only instantiated once per process (usually in main()) and is then
  accessible through SpaceContext and ObjectHostContext.
  */
-class SSTConnectionManager : public Service {
+class ConnectionManager : public Service {
 public:
   typedef std::tr1::shared_ptr<BaseDatagramLayer<SpaceObjectReference> > BaseDatagramLayerPtr;
 
@@ -2556,7 +2546,7 @@ public:
     Connection<SpaceObjectReference>::closeConnections(&mSSTConnVars);
   }
 
-  ~SSTConnectionManager() {
+  ~ConnectionManager() {
     Connection<SpaceObjectReference>::closeConnections(&mSSTConnVars);
   }
 
@@ -2588,11 +2578,12 @@ public:
   }
 
   //Storage class for SST's global variables.
-  SSTConnectionVariables<SpaceObjectReference> mSSTConnVars;
+  ConnectionVariables<SpaceObjectReference> mSSTConnVars;
 };
 
 
 
-}
+} // namespace SST
+} // namespace Sirikata
 
 #endif

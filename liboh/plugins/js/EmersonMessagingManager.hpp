@@ -18,7 +18,7 @@ namespace JS{
 
 class EmersonScript;
 
-typedef Stream<SpaceObjectReference> SSTStream;
+typedef SST::Stream<SpaceObjectReference> SSTStream;
 typedef SSTStream::Ptr SSTStreamPtr;
 
 // NOTE: virtual on Liveness because JSObjectScript also uses it

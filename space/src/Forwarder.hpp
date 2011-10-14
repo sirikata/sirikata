@@ -95,7 +95,7 @@ private:
     // forwarder is the one that actually intercepts messages
     ODP::DelegateService* mDelegateODPService;
     // And here we also maintain the core SST datagram layer for the server
-    BaseDatagramLayer<SpaceObjectReference>::Ptr mSSTDatagramLayer;
+    SST::BaseDatagramLayer<SpaceObjectReference>::Ptr mSSTDatagramLayer;
 
 
     // Object connections, identified by a separate unique ID to handle fast migrations

@@ -73,7 +73,7 @@ int main(int argc, char** argv) {
     Network::IOService* ios = Network::IOServiceFactory::makeIOService();
     Network::IOStrand* mainStrand = ios->createStrand();
 
-    SSTConnectionManager* sstConnMgr = new SSTConnectionManager();
+    SST::ConnectionManager* sstConnMgr = new SST::ConnectionManager();
 
     ObjectHostContext* ctx = new ObjectHostContext("genpack", ObjectHostID(1), sstConnMgr, ios, mainStrand, gTrace, start_time, duration);
     ObjectFactory* obj_factory = new ObjectFactory(ctx, region, duration);

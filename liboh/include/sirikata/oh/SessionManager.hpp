@@ -103,7 +103,7 @@ class SIRIKATA_OH_EXPORT SessionManager : public PollingService, public OHDP::De
     typedef std::tr1::function<void(const SpaceObjectReference&, Disconnect::Code)> ObjectDisconnectedCallback;
 
     // SST stream related typedefs
-    typedef Stream<SpaceObjectReference> SSTStream;
+    typedef SST::Stream<SpaceObjectReference> SSTStream;
     typedef SSTStream::Ptr SSTStreamPtr;
     typedef SSTStream::EndpointType SSTEndpoint;
 

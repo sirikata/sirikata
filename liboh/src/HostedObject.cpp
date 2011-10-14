@@ -1377,7 +1377,7 @@ void HostedObject::updateLocUpdateRequest(const SpaceID& space, const ObjectRefe
 
 
 namespace {
-void discardChildStream(int success, Stream<SpaceObjectReference>::Ptr sptr) {
+void discardChildStream(int success, SST::Stream<SpaceObjectReference>::Ptr sptr) {
     if (success != SST_IMPL_SUCCESS) return;
     sptr->close(false);
 }

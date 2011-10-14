@@ -41,7 +41,7 @@ namespace Sirikata {
 
 class SIRIKATA_SPACE_EXPORT ObjectSession {
   public:
-    typedef Stream<SpaceObjectReference> SSTStream;
+    typedef SST::Stream<SpaceObjectReference> SSTStream;
     typedef SSTStream::Ptr SSTStreamPtr;
 
     ObjectSession(ObjectReference& objid, SSTStreamPtr strm)

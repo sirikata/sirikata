@@ -94,8 +94,8 @@ public:
         UUID mID;
         DamagableObject *mParent;
 
-        typedef EndPoint<SpaceObjectReference> SSTEndpoint;
-        typedef Stream<SpaceObjectReference> SSTStream;
+        typedef SST::EndPoint<SpaceObjectReference> SSTEndpoint;
+        typedef SST::Stream<SpaceObjectReference> SSTStream;
         typedef SSTStream::Ptr SSTStreamPtr;
 
         SSTStreamPtr mSendStream;

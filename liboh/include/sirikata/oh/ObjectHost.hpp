@@ -224,7 +224,7 @@ public:
     HostedObjectPtr getHostedObject(const SpaceObjectReference &id) const;
 
     /** Lookup the SST stream for a particular object. */
-    typedef Stream<SpaceObjectReference> SSTStream;
+    typedef SST::Stream<SpaceObjectReference> SSTStream;
     typedef SSTStream::Ptr SSTStreamPtr;
     SSTStreamPtr getSpaceStream(const SpaceID& space, const ObjectReference& internalID);
 

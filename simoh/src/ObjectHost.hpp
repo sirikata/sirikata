@@ -104,7 +104,7 @@ public:
     // performed in main strand.
     bool ping(const Time& t, const UUID& src, const UUID&dest, double distance, uint32 payload_size);
 
-    Stream<SpaceObjectReference>::Ptr getSpaceStream(const UUID& objectID);
+    SST::Stream<SpaceObjectReference>::Ptr getSpaceStream(const UUID& objectID);
 
     ///Register to intercept all incoming messages on a given port
     bool registerService(uint64 port, const ObjectMessageCallback&cb);

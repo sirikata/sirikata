@@ -85,7 +85,7 @@ public:
 private:
     void reportStats();
 
-    typedef Stream<SpaceObjectReference>::Ptr SSTStreamPtr;
+    typedef SST::Stream<SpaceObjectReference>::Ptr SSTStreamPtr;
 
     void tryCreateChildStream(const UUID& dest, SSTStreamPtr parent_stream, std::string* msg, int count);
     void locSubstreamCallback(int x, SSTStreamPtr substream, const UUID& dest, SSTStreamPtr parent_substream, std::string* msg, int count);

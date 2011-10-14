@@ -130,7 +130,7 @@ int main (int argc, char** argv) {
     Network::IOService* ios = Network::IOServiceFactory::makeIOService();
     Network::IOStrand* mainStrand = ios->createStrand();
 
-    SSTConnectionManager* sstConnMgr = new SSTConnectionManager();
+    SST::ConnectionManager* sstConnMgr = new SST::ConnectionManager();
 
     Time start_time = Timer::now(); // Just for stats in ObjectHostContext.
     Duration duration = Duration::zero(); // Indicates to run forever.

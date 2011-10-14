@@ -126,12 +126,12 @@ public:
     bool connected();
     bool send(uint16 src_port, UUID dest, uint16 dest_port, std::string payload);
 private:
-    typedef EndPoint<SpaceObjectReference> EndPointType;
-    typedef BaseDatagramLayer<SpaceObjectReference> BaseDatagramLayerType;
+    typedef SST::EndPoint<SpaceObjectReference> EndPointType;
+    typedef SST::BaseDatagramLayer<SpaceObjectReference> BaseDatagramLayerType;
     typedef BaseDatagramLayerType::Ptr BaseDatagramLayerPtr;
-    typedef Stream<SpaceObjectReference> SSTStream;
+    typedef SST::Stream<SpaceObjectReference> SSTStream;
     typedef SSTStream::Ptr SSTStreamPtr;
-    typedef Connection<SpaceObjectReference> SSTConnection;
+    typedef SST::Connection<SpaceObjectReference> SSTConnection;
     typedef SSTConnection::Ptr SSTConnectionPtr;
 
     // Initiate a connection
