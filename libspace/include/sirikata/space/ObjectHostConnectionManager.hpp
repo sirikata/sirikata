@@ -62,7 +62,7 @@ private:
  */
 class SIRIKATA_SPACE_EXPORT ObjectHostConnectionManager {
 public:
-    class Listener {
+    class SIRIKATA_SPACE_EXPORT Listener {
     public:
         virtual ~Listener();
 
