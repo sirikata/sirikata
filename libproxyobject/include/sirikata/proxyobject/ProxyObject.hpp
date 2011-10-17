@@ -43,7 +43,6 @@
 #include "PositionListener.hpp"
 
 #include <sirikata/core/odp/Service.hpp>
-#include <sirikata/core/odp/Port.hpp>
 
 #include "VWObject.hpp"
 

@@ -24,7 +24,7 @@ EmersonMessagingManager::~EmersonMessagingManager()
         // Stop listening for new streams
         const SpaceObjectReference& pres_id = pres_it->first;
         mMainContext->sstConnMgr()->unlisten(
-            EndPoint<SpaceObjectReference>(pres_id,EMERSON_RELIABLE_COMMUNICATION_PORT)
+            SST::EndPoint<SpaceObjectReference>(pres_id,EMERSON_RELIABLE_COMMUNICATION_PORT)
         );
 
         // Stop listening for substreams on the streams we have, close them
@@ -48,7 +48,8 @@ void EmersonMessagingManager::presenceConnected(const SpaceObjectReference& conn
         std::tr1::bind(&EmersonMessagingManager::createScriptCommListenerStreamCB,this,
             livenessToken(), connPresSporef,_1,_2
         ),
-        EndPoint<SpaceObjectReference>(connPresSporef,EMERSON_RELIABLE_COMMUNICATION_PORT));
+        SST::EndPoint<SpaceObjectReference>(connPresSporef,EMERSON_RELIABLE_COMMUNICATION_PORT)
+    );
 }
 
 void EmersonMessagingManager::presenceDisconnected(const SpaceObjectReference& disconnPresSporef)
@@ -185,10 +186,10 @@ bool EmersonMessagingManager::sendScriptCommMessageReliable(const SpaceObjectRef
 
     // Otherwise, start the process of connecting
     returner = mMainContext->sstConnMgr()->connectStream(
-        EndPoint<SpaceObjectReference>(sender,0), //local port is random
+        SST::EndPoint<SpaceObjectReference>(sender,0), //local port is random
 
         //send to receiver's script comm port
-        EndPoint<SpaceObjectReference>(receiver,EMERSON_RELIABLE_COMMUNICATION_PORT),
+        SST::EndPoint<SpaceObjectReference>(receiver,EMERSON_RELIABLE_COMMUNICATION_PORT),
 
         //what to do when the connection is created.
         std::tr1::bind(

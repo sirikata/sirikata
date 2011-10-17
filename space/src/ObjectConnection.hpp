@@ -34,14 +34,10 @@
 #define _SIRIKATA_OBJECT_CONNECTION_HPP_
 
 #include <sirikata/core/util/Platform.hpp>
-#include <sirikata/space/ServerMessage.hpp>
-#include "ObjectHostConnectionManager.hpp"
+#include <sirikata/space/ObjectHostConnectionManager.hpp>
 
 namespace Sirikata {
 
-namespace Trace {
-class Trace;
-}
 class Server;
 
 /** Represents a connection a space has to an object.
@@ -50,7 +46,7 @@ class Server;
  */
 class ObjectConnection {
 public:
-    ObjectConnection(const UUID& _id, ObjectHostConnectionManager* conn_mgr, const ObjectHostConnectionManager::ConnectionID& conn_id);
+    ObjectConnection(const UUID& _id, ObjectHostConnectionManager* conn_mgr, const ObjectHostConnectionID& conn_id);
 
     // Get the UUID of the object associated with this connection.
     UUID id() const;
@@ -64,11 +60,11 @@ public:
 
 protected:
     friend class Server;
-    ObjectHostConnectionManager::ConnectionID connID() { return mOHConnection; };
+    ObjectHostConnectionID connID() { return mOHConnection; };
 private:
     UUID mID;
     ObjectHostConnectionManager* mConnectionManager;
-    ObjectHostConnectionManager::ConnectionID mOHConnection;
+    ObjectHostConnectionID mOHConnection;
     bool mEnabled;
 };
 

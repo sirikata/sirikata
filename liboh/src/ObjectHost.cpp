@@ -47,6 +47,7 @@
 #include <sirikata/proxyobject/ConnectionEventListener.hpp>
 #include <sirikata/core/util/SpaceObjectReference.hpp>
 #include <sirikata/core/service/Context.hpp>
+#include <sirikata/oh/ObjectQueryProcessor.hpp>
 
 #define OH_LOG(lvl,msg) SILOG(oh,lvl,msg)
 
@@ -56,6 +57,7 @@ ObjectHost::ObjectHost(ObjectHostContext* ctx, Network::IOService *ioServ, const
  : mContext(ctx),
    mStorage(NULL),
    mPersistentSet(NULL),
+   mQueryProcessor(NULL),
    mActiveHostedObjects(0)
 {
     mContext->objectHost = this;
@@ -142,6 +144,9 @@ void ObjectHost::addServerIDMap(const SpaceID& space_id, ServerIDMap* sidmap) {
         std::tr1::bind(&ObjectHost::handleObjectMessage, this, _1, space_id, _2),
         std::tr1::bind(&ObjectHost::handleObjectDisconnected, this, _1, _2)
     );
+    smgr->registerDefaultOHDPHandler(
+        std::tr1::bind(&ObjectHost::handleDefaultOHDPMessageHandler, this, _1, _2, _3)
+    );
     mSessionManagers[space_id] = smgr;
     smgr->start();
 }
@@ -198,6 +203,7 @@ SpaceID ObjectHost::getDefaultSpace()
 // Primary HostedObject API
 
 bool ObjectHost::connect(
+    HostedObjectPtr ho,
     const SpaceObjectReference& sporef, const SpaceID& space,
     const TimedMotionVector3f& loc,
     const TimedMotionQuaternion& orient,
@@ -218,14 +224,20 @@ bool ObjectHost::connect(
 
     return sm->connect(
         sporef, loc, orient, bnds, mesh, phy, query,
-        std::tr1::bind(&ObjectHost::wrappedConnectedCallback, this, _1, _2, _3, connected_cb),
+        std::tr1::bind(&ObjectHost::wrappedConnectedCallback, this, HostedObjectWPtr(ho), _1, _2, _3, connected_cb),
         migrated_cb,
-        stream_created_cb,
-        disconnected_cb
+        std::tr1::bind(&ObjectHost::wrappedStreamCreatedCallback, this, HostedObjectWPtr(ho), _1, _2, stream_created_cb),
+        std::tr1::bind(&ObjectHost::wrappedDisconnectedCallback, this, HostedObjectWPtr(ho), _1, _2, disconnected_cb)
     );
 }
 
-void ObjectHost::wrappedConnectedCallback(const SpaceID& space, const ObjectReference& obj, const SessionManager::ConnectionInfo& ci, ConnectedCallback cb) {
+void ObjectHost::wrappedConnectedCallback(HostedObjectWPtr ho_weak, const SpaceID& space, const ObjectReference& obj, const SessionManager::ConnectionInfo& ci, ConnectedCallback cb) {
+    if (mQueryProcessor != NULL) {
+        HostedObjectPtr ho(ho_weak);
+        if (ho)
+            mQueryProcessor->presenceConnected(ho, SpaceObjectReference(space, obj));
+    }
+
     ConnectionInfo info;
     info.server = ci.server;
     info.loc = ci.loc;
@@ -235,6 +247,28 @@ void ObjectHost::wrappedConnectedCallback(const SpaceID& space, const ObjectRefe
     info.physics = ci.physics;
     info.query = ci.query;
     cb(space, obj, info);
+}
+
+void ObjectHost::wrappedStreamCreatedCallback(HostedObjectWPtr ho_weak, const SpaceObjectReference& sporef, SessionManager::ConnectionEvent after, StreamCreatedCallback cb) {
+    if (mQueryProcessor != NULL) {
+        HostedObjectPtr ho(ho_weak);
+        if (ho) {
+            SSTStreamPtr strm = getSpaceStream(sporef.space(), sporef.object());
+            // This had better be OK here since we're just getting the callback
+            assert(strm);
+            mQueryProcessor->presenceConnectedStream(ho, sporef, strm);
+        }
+    }
+    cb(sporef, after);
+}
+
+void ObjectHost::wrappedDisconnectedCallback(HostedObjectWPtr ho_weak, const SpaceObjectReference& sporef, Disconnect::Code cause, DisconnectedCallback cb) {
+    if (mQueryProcessor != NULL) {
+        HostedObjectPtr ho(ho_weak);
+        if (ho)
+            mQueryProcessor->presenceDisconnected(ho, sporef);
+    }
+    cb(sporef, cause);
 }
 
 void ObjectHost::disconnect(SpaceObjectReference& sporef, const SpaceID& space) {
@@ -334,6 +368,36 @@ void ObjectHost::stop() {
             ho->stop();
         }
     }
+}
+
+OHDP::Port* ObjectHost::bindOHDPPort(const SpaceID& space, const OHDP::NodeID& node, OHDP::PortID port) {
+    SpaceSessionManagerMap::iterator iter = mSessionManagers.find(space);
+    if (iter == mSessionManagers.end())
+        return NULL;
+    return iter->second->bindOHDPPort(space, node, port);
+}
+
+OHDP::Port* ObjectHost::bindOHDPPort(const SpaceID& space, const OHDP::NodeID& node) {
+    SpaceSessionManagerMap::iterator iter = mSessionManagers.find(space);
+    if (iter == mSessionManagers.end())
+        return NULL;
+    return iter->second->bindOHDPPort(space, node);
+}
+
+OHDP::PortID ObjectHost::unusedOHDPPort(const SpaceID& space, const OHDP::NodeID& node) {
+    SpaceSessionManagerMap::iterator iter = mSessionManagers.find(space);
+    if (iter == mSessionManagers.end())
+        return OHDP::PortID::null();
+    return iter->second->unusedOHDPPort(space, node);
+}
+
+void ObjectHost::registerDefaultOHDPHandler(const OHDP::MessageHandler& cb) {
+    mDefaultOHDPMessageHandler = cb;
+}
+
+void ObjectHost::handleDefaultOHDPMessageHandler(const OHDP::Endpoint& src, const OHDP::Endpoint& dst, MemoryReference payload) {
+    if (mDefaultOHDPMessageHandler)
+        mDefaultOHDPMessageHandler(src, dst, payload);
 }
 
 ObjectScriptManager* ObjectHost::getScriptManager(const String& id) {

@@ -35,13 +35,13 @@
 
 #include <Protocol_TimeSync.pbj.hpp>
 #include <sirikata/core/network/Message.hpp> //serializePBJMessage
+#include <sirikata/core/network/ObjectMessage.hpp> // OBJECT_PORT_TIMESYNC
+
 namespace Sirikata {
 
-TimeSyncClient::TimeSyncClient(Context* ctx, ODP::Port* odp_port, const ODP::Endpoint& sync_server, const Duration& polling_interval, UpdatedCallback cb)
+TimeSyncClient::TimeSyncClient(Context* ctx, OHDP::Service* ohdp_service, const SpaceID& space, const Duration& polling_interval, UpdatedCallback cb)
  : PollingService(ctx->mainStrand, polling_interval, ctx, "TimeSync"),
    mContext(ctx),
-   mPort(odp_port),
-   mSyncServer(sync_server),
    mSeqno(0),
    mHasBeenInitialized(false),
    mOffset(Duration::zero()),
@@ -51,20 +51,40 @@ TimeSyncClient::TimeSyncClient(Context* ctx, ODP::Port* odp_port, const ODP::End
     using std::tr1::placeholders::_2;
     using std::tr1::placeholders::_3;
 
-    // Set up listener for sync message responses
-    mPort->receiveFrom(
-        mSyncServer,
-        ODP::MessageHandler(
+    mPort = ohdp_service->bindOHDPPort(space, OHDP::PortID(OBJECT_PORT_TIMESYNC));
+    if (mPort == NULL) {
+        SILOG(timesync,fatal,"Couldn't bind port " << OBJECT_PORT_TIMESYNC << " for TimeSyncClient, must already be in use...");
+    }
+    else {
+        SILOG(timesync, detailed, "Listening for time sync messages...");
+        // Set up listener for sync message responses
+        mPort->receive(
             std::tr1::bind(&TimeSyncClient::handleSyncMessage, this, _1, _2, _3)
-        )
-    );
+        );
+    }
 }
 
 TimeSyncClient::~TimeSyncClient() {
     delete mPort;
 }
 
+void TimeSyncClient::addNode(const OHDP::NodeID& ss) {
+    mServers.insert(ss);
+}
+
+void TimeSyncClient::removeNode(const OHDP::NodeID& ss) {
+    mServers.erase(ss);
+}
+
 void TimeSyncClient::poll() {
+    if (mServers.empty()) return;
+
+    SILOG(timesync, detailed, "Sending time sync message");
+
+    // We could choose any of the servers, just use the first one we have in our set
+    OHDP::NodeID nid = *(mServers.begin());
+    OHDP::Endpoint server_endpoint(mPort->endpoint().space(), nid, OBJECT_PORT_TIMESYNC);
+
     // Send the next update request
     Sirikata::Protocol::TimeSync sync_msg;
     uint8 seqno = mSeqno++;
@@ -72,10 +92,12 @@ void TimeSyncClient::poll() {
     mRequestTimes[seqno] = mContext->simTime();
 
     std::string serialized = serializePBJMessage(sync_msg);
-    mPort->send(mSyncServer, MemoryReference(serialized));
+    mPort->send(server_endpoint, MemoryReference(serialized));
 }
 
-void TimeSyncClient::handleSyncMessage(const ODP::Endpoint &src, const ODP::Endpoint &dst, MemoryReference payload) {
+void TimeSyncClient::handleSyncMessage(const OHDP::Endpoint &src, const OHDP::Endpoint &dst, MemoryReference payload) {
+    SILOG(timesync, detailed, "Received time sync reply");
+
     Sirikata::Protocol::TimeSync sync_msg;
     bool parse_success = sync_msg.ParseFromArray(payload.data(), payload.size());
     if (!parse_success) {

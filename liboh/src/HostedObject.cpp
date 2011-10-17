@@ -42,6 +42,7 @@
 #include <sirikata/core/options/Options.hpp>
 #include <sirikata/oh/ObjectScript.hpp>
 #include <sirikata/oh/ObjectScriptManagerFactory.hpp>
+#include <sirikata/oh/ObjectQueryProcessor.hpp>
 
 #include <sirikata/core/util/ThreadId.hpp>
 #include <sirikata/core/util/PluginManager.hpp>
@@ -52,13 +53,11 @@
 #include <list>
 #include <vector>
 #include <sirikata/proxyobject/SimulationFactory.hpp>
-#include <sirikata/core/network/Frame.hpp>
 #include "PerPresenceData.hpp"
 #include "Protocol_Frame.pbj.hpp"
 
 #include "Protocol_Loc.pbj.hpp"
 #include "Protocol_Prox.pbj.hpp"
-
 
 // Property tree for old API for queries
 #include <boost/property_tree/ptree.hpp>
@@ -461,6 +460,7 @@ bool HostedObject::connect(
     // appropriate value.  When we get the callback, we can fix this up.
     Time approx_server_time = Time::null();
     if (mObjectHost->connect(
+            getSharedPtr(),
         connectingSporef, spaceID,
         TimedMotionVector3f(approx_server_time, MotionVector3f( Vector3f(startingLocation.getPosition()), startingLocation.getVelocity()) ),
         TimedMotionQuaternion(approx_server_time,MotionQuaternion(startingLocation.getOrientation().normal(),Quaternion(startingLocation.getAxisOfRotation(),startingLocation.getAngularSpeed()))),  //normalize orientations
@@ -606,9 +606,6 @@ void HostedObject::handleStreamCreated(const HostedObjectWPtr& weakSelf, const S
         sstStream->listenSubstream(OBJECT_PORT_LOCATION,
             std::tr1::bind(&HostedObject::handleLocationSubstream, weakSelf, spaceobj, _1, _2)
         );
-        sstStream->listenSubstream(OBJECT_PORT_PROXIMITY,
-            std::tr1::bind(&HostedObject::handleProximitySubstream, weakSelf, spaceobj, _1, _2)
-        );
     }
     HO_LOG(detailed,"Notifying of connected object " << spaceobj.object() << " to space " << spaceobj.space());
     if (after == SessionManager::Connected)
@@ -696,11 +693,6 @@ void HostedObject::handleLocationSubstream(const HostedObjectWPtr& weakSelf, con
     s->registerReadCallback( std::tr1::bind(&HostedObject::handleLocationSubstreamRead, weakSelf, spaceobj, s, new std::stringstream(), _1, _2) );
 }
 
-void HostedObject::handleProximitySubstream(const HostedObjectWPtr& weakSelf, const SpaceObjectReference& spaceobj, int err, SSTStreamPtr s) {
-    String* prevdata = new String();
-    s->registerReadCallback( std::tr1::bind(&HostedObject::handleProximitySubstreamRead, weakSelf, spaceobj, s, prevdata, _1, _2) );
-}
-
 void HostedObject::handleLocationSubstreamRead(const HostedObjectWPtr& weakSelf, const SpaceObjectReference& spaceobj, SSTStreamPtr s, std::stringstream* prevdata, uint8* buffer, int length) {
     HostedObjectPtr self(weakSelf.lock());
     if (!self)
@@ -721,32 +713,6 @@ void HostedObject::handleLocationSubstreamRead(const HostedObjectWPtr& weakSelf,
         s->close(false);
     }
 }
-
-void HostedObject::handleProximitySubstreamRead(const HostedObjectWPtr& weakSelf, const SpaceObjectReference& spaceobj, SSTStreamPtr s, String* prevdata, uint8* buffer, int length) {
-    HostedObjectPtr self(weakSelf.lock());
-    if (!self)
-        return;
-    if (self->stopped()) {
-        HO_LOG(detailed,"Ignoring proximity update after system stop requested.");
-        return;
-    }
-
-    prevdata->append((const char*)buffer, length);
-
-    while(true) {
-        std::string msg = Network::Frame::parse(*prevdata);
-
-        // If we don't have a full message, just wait for more
-        if (msg.empty()) return;
-
-        // Otherwise, try to handle it
-        self->handleProximityMessage(spaceobj, msg);
-    }
-
-    // FIXME we should be getting a callback on stream close so we can clean up!
-    //s->registerReadCallback(0);
-}
-
 
 //not responsible for deleting opd.  gets deleted elsewhere.
 void HostedObject::processOrphanedProxyData(const SpaceObjectReference& sporef, ProxyObjectPtr proxy_obj,OrphanLocUpdateManager::OrphanedProxData* opd)
@@ -872,14 +838,8 @@ bool HostedObject::handleLocationMessage(const SpaceObjectReference& spaceobj, c
     return true;
 }
 
-bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, const std::string& payload)
-{
-    HostedObject* self=this;
-    Sirikata::Protocol::Prox::ProximityResults contents;
-    bool parse_success = contents.ParseFromString(payload);
-    if (!parse_success)
-        return false;
-
+void HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, const Sirikata::Protocol::Prox::ProximityResults& contents) {
+    HostedObject* self = this;
     SpaceID space = spaceobj.space();
     for(int32 idx = 0; idx < contents.update_size(); idx++) {
         Sirikata::Protocol::Prox::ProximityUpdate update = contents.update(idx);
@@ -909,7 +869,7 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
             ProxyManagerPtr proxy_manager = self->getProxyManager(spaceobj.space(),spaceobj.object());
             if (!proxy_manager)
             {
-                return true;
+                return;
             }
 
             ProxyObjectPtr proxy_obj = proxy_manager->getProxyObject(proximateID);
@@ -1007,10 +967,6 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
             );
         }
     }
-
-
-
-    return true;
 }
 
 
@@ -1121,7 +1077,7 @@ ODP::PortID HostedObject::unusedODPPort(const SpaceObjectReference& sor) {
     return mDelegateODPService->unusedODPPort(sor);
 }
 
-void HostedObject::registerDefaultODPHandler(const ODP::MessageHandler& cb) {
+void HostedObject::registerDefaultODPHandler(const ODP::Service::MessageHandler& cb) {
     if (stopped()) return;
     mDelegateODPService->registerDefaultODPHandler(cb);
 }
@@ -1376,11 +1332,8 @@ void HostedObject::requestQueryUpdate(const SpaceID& space, const ObjectReferenc
         return;
     }
 
-    Protocol::Prox::QueryRequest request;
-    request.set_query_parameters(new_query);
-    std::string payload = serializePBJMessage(request);
-
-    PresenceDataMap::iterator pdmIter = mPresenceData.find(SpaceObjectReference(space,oref));
+    SpaceObjectReference sporef(space,oref);
+    PresenceDataMap::iterator pdmIter = mPresenceData.find(sporef);
     if (pdmIter != mPresenceData.end()) {
         pdmIter->second->query = new_query;
     }
@@ -1388,17 +1341,7 @@ void HostedObject::requestQueryUpdate(const SpaceID& space, const ObjectReferenc
         SILOG(cppoh,error,"Error in cppoh, requesting solid angle update for presence that doesn't exist in your presence map.");
     }
 
-    SSTStreamPtr spaceStream = mObjectHost->getSpaceStream(space, oref);
-    if (spaceStream != SSTStreamPtr()) {
-        SSTConnectionPtr conn = spaceStream->connection().lock();
-        assert(conn);
-
-        conn->datagram(
-            (void*)payload.data(), payload.size(),
-            OBJECT_PORT_PROXIMITY, OBJECT_PORT_PROXIMITY,
-            NULL
-        );
-    }
+    mObjectHost->getQueryProcessor()->updateQuery(getSharedPtr(), sporef, new_query);
 }
 
 void HostedObject::requestQueryUpdate(const SpaceID& space, const ObjectReference& oref, const SolidAngle& sa, uint32 max_count) {
@@ -1434,7 +1377,7 @@ void HostedObject::updateLocUpdateRequest(const SpaceID& space, const ObjectRefe
 
 
 namespace {
-void discardChildStream(int success, Stream<SpaceObjectReference>::Ptr sptr) {
+void discardChildStream(int success, SST::Stream<SpaceObjectReference>::Ptr sptr) {
     if (success != SST_IMPL_SUCCESS) return;
     sptr->close(false);
 }

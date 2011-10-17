@@ -1189,9 +1189,10 @@ SET(SIRIKATA_CORE_SOURCES
 	${LIBCORE_SOURCE_DIR}/task/WorkQueue.cpp
 	${LIBCORE_SOURCE_DIR}/task/Time.cpp
 	${LIBCORE_SOURCE_DIR}/network/Asio.cpp
-        ${LIBCORE_SOURCE_DIR}/odp/Defs.cpp
+        ${LIBCORE_SOURCE_DIR}/xdp/Defs.cpp
         ${LIBCORE_SOURCE_DIR}/odp/DelegateService.cpp
-        ${LIBCORE_SOURCE_DIR}/odp/DelegatePort.cpp
+        ${LIBCORE_SOURCE_DIR}/ohdp/Defs.cpp
+        ${LIBCORE_SOURCE_DIR}/ohdp/DelegateService.cpp
    	${LIBCORE_SOURCE_DIR}/options/Options.cpp
    	${LIBCORE_SOURCE_DIR}/options/CommonOptions.cpp
         ${LIBCORE_SOURCE_DIR}/network/Address4.cpp
@@ -1208,7 +1209,6 @@ SET(SIRIKATA_CORE_SOURCES
         ${LIBCORE_SOURCE_DIR}/network/NTPTimeSync.cpp
         ${LIBCORE_SOURCE_DIR}/network/ServerIDMap.cpp
         ${LIBCORE_SOURCE_DIR}/network/ObjectMessage.cpp
-        ${LIBCORE_SOURCE_DIR}/network/SSTImpl.cpp
         ${LIBCORE_SOURCE_DIR}/network/PBJDebug.cpp
         ${LIBCORE_SOURCE_DIR}/network/Frame.cpp
         ${LIBCORE_SOURCE_DIR}/service/Signal.cpp
@@ -1357,6 +1357,8 @@ SET(LIBSPACE_SOURCES
   ${LIBSPACE_SOURCE_DIR}/ProxSimulationTraits.cpp
   ${LIBSPACE_SOURCE_DIR}/Proximity.cpp
   ${LIBSPACE_SOURCE_DIR}/AggregateManager.cpp
+  ${LIBSPACE_SOURCE_DIR}/ObjectHostConnectionID.cpp
+  ${LIBSPACE_SOURCE_DIR}/ObjectHostConnectionManager.cpp
   )
 
 SET(LIBMESH_SOURCES
@@ -1393,6 +1395,7 @@ SET(LIBOH_SOURCES
                   ${LIBOH_SOURCE_DIR}/Trace.cpp
                   ${LIBOH_SOURCE_DIR}/Storage.cpp
                   ${LIBOH_SOURCE_DIR}/PersistedObjectSet.cpp
+                  ${LIBOH_SOURCE_DIR}/ObjectQueryProcessor.cpp
                    )
 
 SET(LIBMESH_PLUGIN_COLLADAMODELS_DIR ${LIBMESH_PLUGIN_DIR}/collada)
@@ -1569,7 +1572,6 @@ SET(SPACE_SOURCES
   ${SPACE_SOURCE_DIR}/LocalForwarder.cpp
   ${SPACE_SOURCE_DIR}/MigrationMonitor.cpp
   ${SPACE_SOURCE_DIR}/ObjectConnection.cpp
-  ${SPACE_SOURCE_DIR}/ObjectHostConnectionManager.cpp
   ${SPACE_SOURCE_DIR}/Options.cpp
   ${SPACE_SOURCE_DIR}/OSegHasher.cpp
   ${SPACE_SOURCE_DIR}/OSegLookupQueue.cpp
@@ -2254,6 +2256,22 @@ IF(LIBCASSANDRA_FOUND)
     )
   SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} oh-cassandra)
 ENDIF()
+
+
+SET(LIBOH_PLUGIN_SIMPLE_DIR ${LIBOH_PLUGIN_DIR}/simple_query)
+SET(LIBOH_PLUGIN_SIMPLE_SOURCES
+ ${LIBOH_PLUGIN_SIMPLE_DIR}/SimpleObjectQueryProcessor.cpp
+ ${LIBOH_PLUGIN_SIMPLE_DIR}/PluginInterface.cpp
+    )
+ADD_PLUGIN_TARGET(oh-simple-query
+                    SOURCES ${LIBOH_PLUGIN_SIMPLE_SOURCES}
+                    TARGET_LDFLAGS ${sirikata_LDFLAGS}
+                    TARGET_LIBRARIES ${SIRIKATA_OH_LIB} ${SIRIKATA_CORE_LIB}
+                    LIBRARIES ${SIRIKATA_OH_LIB} ${SIRIKATA_CORE_LIB}
+		    VERSION_INFO ${SIRIKATA_VERSION_SETTINGS}
+		    )
+SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} oh-simple-query)
+
 
 # simplecamera plugin
 SET(LIBOH_PLUGIN_SIMPLECAMERA_DIR ${LIBOH_PLUGIN_DIR}/simplecamera)

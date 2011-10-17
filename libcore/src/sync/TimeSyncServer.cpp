@@ -35,30 +35,45 @@
 
 #include <Protocol_TimeSync.pbj.hpp>
 #include <sirikata/core/network/Message.hpp> //serializePBJMessage
+#include <sirikata/core/network/ObjectMessage.hpp> // OBJECT_PORT_TIMESYNC
+
 namespace Sirikata {
 
-TimeSyncServer::TimeSyncServer(Context* ctx)
+TimeSyncServer::TimeSyncServer(Context* ctx, OHDP::Service* ohdp)
  : mContext(ctx)
 {
+    mPort = ohdp->bindOHDPPort(OBJECT_PORT_TIMESYNC);
+    if (mPort == NULL) {
+        SILOG(timesync,fatal,"Couldn't bind port " << OBJECT_PORT_TIMESYNC << " for TimeSyncServer, must already be in use...");
+    }
+    else {
+        SILOG(timesync, detailed, "Listening for time sync messages...");
+        mPort->receive(
+            std::tr1::bind(&TimeSyncServer::handleMessage, this, _1, _2, _3)
+        );
+    }
 }
 
 TimeSyncServer::~TimeSyncServer() {
+    delete mPort;
 }
 
-String TimeSyncServer::getResponse(MemoryReference payload) {
+void TimeSyncServer::handleMessage(const OHDP::Endpoint& src, const OHDP::Endpoint& dst, MemoryReference payload) {
+    SILOG(timesync, detailed, "Received time sync message from remote node " << src.node());
+
     Sirikata::Protocol::TimeSync sync_msg;
     bool parse_success = sync_msg.ParseFromArray(payload.data(), payload.size());
     if (!parse_success) {
         LOG_INVALID_MESSAGE_BUFFER(sync, error, ((char*)payload.data()), payload.size());
-        return "";
+        return;
     }
 
     // Our only job is to take the existing message, fill in a timestamp, and
     // send it back.
     sync_msg.set_t(mContext->simTime());
-
     String resp = serializePBJMessage(sync_msg);
-    return resp;
+    mPort->send(src, MemoryReference(payload));
+    SILOG(timesync, detailed, "Sent time sync message reply to remote node " << src.node());
 }
 
 } // namespace Sirikata

@@ -35,58 +35,51 @@
 
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/space/SpaceContext.hpp>
-#include <sirikata/space/SpaceNetwork.hpp>
-#include <sirikata/space/ServerMessage.hpp>
 #include <sirikata/core/network/Address4.hpp>
 #include <sirikata/core/network/IOService.hpp>
 #include <sirikata/core/network/IOWork.hpp>
 #include <sirikata/core/network/StreamListener.hpp>
+#include <sirikata/space/ObjectHostConnectionID.hpp>
 
 namespace Sirikata {
+
+// Opaque connection class
+class ObjectHostConnection {
+private:
+    friend class ObjectHostConnectionManager;
+    friend class ObjectHostConnectionID;
+
+    ObjectHostConnection(ShortObjectHostConnectionID sid, Sirikata::Network::Stream* str);
+    ~ObjectHostConnection();
+
+    ShortObjectHostConnectionID short_id;
+    Sirikata::Network::Stream* socket;
+};
 
 /** ObjectHostConnectionManager handles the networking aspects of interacting
  *  with object hosts.  It listens for connections, maintains per object
  *  connections, and handles shipping messages out to the network.
  */
-class ObjectHostConnectionManager {
-    struct ObjectHostConnection;
+class SIRIKATA_SPACE_EXPORT ObjectHostConnectionManager {
 public:
-    // Opaque wrapper around ObjectHostConnection*, which maps a connection held
-    // by a user to an ObjectHostConnection that data can be sent over.  This
-    // provides zero overhead lookup but makes it opaque to outsiders.
-    class ConnectionID {
-      public:
-        ConnectionID();
-        ConnectionID(const ConnectionID& rhs);
-        ConnectionID& operator=(const ConnectionID& rhs);
+    class SIRIKATA_SPACE_EXPORT Listener {
+    public:
+        virtual ~Listener();
 
-        bool operator==(const ConnectionID& rhs) const;
-        bool operator!=(const ConnectionID& rhs) const;
-      private:
-        friend class ObjectHostConnectionManager;
-        friend class ObjectHostConnection;
-
-        ConnectionID(ObjectHostConnection* _conn);
-
-        ObjectHostConnection* conn;
+        virtual void onObjectHostConnected(const ObjectHostConnectionID& conn_id, const ShortObjectHostConnectionID short_conn_id) = 0;
+        virtual bool onObjectHostMessageReceived(const ObjectHostConnectionID& conn_id, const ShortObjectHostConnectionID short_conn_id, Sirikata::Protocol::Object::ObjectMessage*) = 0;
+        virtual void onObjectHostDisconnected(const ObjectHostConnectionID& conn_id, const ShortObjectHostConnectionID short_conn_id) = 0;
     };
 
-
-    /** Callback generated when an object message is received over a connection.  This callback can be generated
-     *  from any strand -- use strand->wrap to ensure its handled in your strand.
-     */
-    typedef std::tr1::function<bool(ConnectionID, Sirikata::Protocol::Object::ObjectMessage*)> MessageReceivedCallback;
-    /** Callback generated when the underlying connection is closed, which will
-     *  trigger all objects on that connection to disconnect.
-     */
-    typedef std::tr1::function<void(ConnectionID)> ConnectionClosedCallback;
-
-    ObjectHostConnectionManager(SpaceContext* ctx, const Address4& listen_addr, MessageReceivedCallback msg_cb, ConnectionClosedCallback closed_cb);
+    ObjectHostConnectionManager(SpaceContext* ctx, const Address4& listen_addr, Listener* listener);
     ~ObjectHostConnectionManager();
 
     /** NOTE: Must be used from within the main strand.  Currently this is required since we have the return value... */
     WARN_UNUSED
-    bool send(const ConnectionID& conn_id, Sirikata::Protocol::Object::ObjectMessage* msg);
+    bool send(const ObjectHostConnectionID& conn_id, Sirikata::Protocol::Object::ObjectMessage* msg);
+
+    WARN_UNUSED
+    bool send(const ShortObjectHostConnectionID short_conn_id, Sirikata::Protocol::Object::ObjectMessage* msg);
 
     void shutdown();
 
@@ -98,20 +91,16 @@ private:
     Network::IOStrand* mIOStrand;
     Sirikata::Network::StreamListener* mAcceptor;
 
-    struct ObjectHostConnection {
-        ObjectHostConnection(Sirikata::Network::Stream* str);
-        ~ObjectHostConnection();
-
-        ConnectionID conn_id();
-
-        Sirikata::Network::Stream* socket;
-    };
     typedef std::set<ObjectHostConnection*> ObjectHostConnectionSet;
     ObjectHostConnectionSet mConnections;
 
-    MessageReceivedCallback mMessageReceivedCallback;
-    ConnectionClosedCallback mConnectionClosedCallback;
+    ShortObjectHostConnectionID mShortIDSource;
+    typedef std::tr1::unordered_map<ShortObjectHostConnectionID, ObjectHostConnection*> ShortIDConnectionMap;
+    ShortIDConnectionMap mShortConnections;
 
+    Listener* mListener;
+
+    static ObjectHostConnectionID conn_id(ObjectHostConnection* c);
 
     /** Listen for and handle new connections. */
     void listen(const Address4& listen_addr); // sets up the acceptor, starts the listening cycle
@@ -125,6 +114,7 @@ private:
     // Handle async reading callbacks for this connection
     void handleConnectionRead(ObjectHostConnection* conn, Sirikata::Network::Chunk& chunk, const Sirikata::Network::Stream::PauseReceiveCallback& pause);
 
+    bool sendHelper(ObjectHostConnection* conn, Sirikata::Protocol::Object::ObjectMessage* msg);
 
     // Utility methods which we can post to the main strand to ensure they operate safely.
     void insertConnection(ObjectHostConnection* conn);

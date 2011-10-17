@@ -33,18 +33,16 @@
 #include <sirikata/space/SpaceContext.hpp>
 #include <sirikata/core/network/IOStrandImpl.hpp>
 
-
-
 namespace Sirikata {
 
-SpaceContext::SpaceContext(const String& name, ServerID _id, SSTConnectionManager* sstConnMgr, Network::IOService* ios, Network::IOStrand* strand, const Time& epoch, Trace::Trace* _trace, const Duration& duration)
+SpaceContext::SpaceContext(const String& name, ServerID _id, ODPSST::ConnectionManager* sstConnMgr, Network::IOService* ios, Network::IOStrand* strand, const Time& epoch, Trace::Trace* _trace, const Duration& duration)
  : Context("Space", ios, strand, _trace, epoch, duration),
    mName(name),
    mID(_id),
    mServerRouter(NULL),
    mServerDispatcher(NULL),
    mSSTConnMgr(sstConnMgr),
-   mSpaceTrace( new SpaceTrace(_trace) )   
+   mSpaceTrace( new SpaceTrace(_trace) )
 {
 }
 

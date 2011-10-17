@@ -34,7 +34,7 @@
 #define _SIRIKATA_CORE_SYNC_TIME_SYNC_SERVER_HPP_
 
 #include <sirikata/core/service/Context.hpp>
-#include <sirikata/core/odp/Service.hpp>
+#include <sirikata/core/ohdp/Service.hpp>
 
 namespace Sirikata {
 
@@ -45,12 +45,13 @@ namespace Sirikata {
  */
 class SIRIKATA_EXPORT TimeSyncServer {
 public:
-    TimeSyncServer(Context* ctx);
+    TimeSyncServer(Context* ctx, OHDP::Service* ohdp);
     ~TimeSyncServer();
-
-    String getResponse(MemoryReference payload);
 private:
+    void handleMessage(const OHDP::Endpoint& src, const OHDP::Endpoint& dst, MemoryReference payload);
+
     Context* mContext;
+    OHDP::Port* mPort;
 }; // class TimeSyncServer
 
 } // namespace Sirikata

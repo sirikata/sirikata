@@ -53,13 +53,14 @@
 #include <sirikata/core/network/ServerIDMap.hpp>
 #include <sirikata/core/network/NTPTimeSync.hpp>
 
-#include <sirikata/core/network/SSTImpl.hpp>
+#include <sirikata/core/odp/SST.hpp>
 
 #include <sirikata/oh/ObjectHostContext.hpp>
 
 #include <sirikata/oh/Storage.hpp>
 #include <sirikata/oh/PersistedObjectSet.hpp>
 #include <sirikata/oh/ObjectFactory.hpp>
+#include <sirikata/oh/ObjectQueryProcessor.hpp>
 
 #include <sirikata/mesh/Filter.hpp>
 #include <sirikata/mesh/ModelsSystemFactory.hpp>
@@ -129,7 +130,7 @@ int main (int argc, char** argv) {
     Network::IOService* ios = Network::IOServiceFactory::makeIOService();
     Network::IOStrand* mainStrand = ios->createStrand();
 
-    SSTConnectionManager* sstConnMgr = new SSTConnectionManager();
+    ODPSST::ConnectionManager* sstConnMgr = new ODPSST::ConnectionManager();
 
     Time start_time = Timer::now(); // Just for stats in ObjectHostContext.
     Duration duration = Duration::zero(); // Indicates to run forever.
@@ -171,11 +172,17 @@ int main (int argc, char** argv) {
     String objfactory_options = GetOptionValue<String>(OPT_OBJECT_FACTORY_OPTS);
     ObjectFactory* obj_factory = NULL;
 
+    String obj_query_type = GetOptionValue<String>(OPT_OBJECT_QUERY_PROCESSOR);
+    String obj_query_options = GetOptionValue<String>(OPT_OBJECT_QUERY_PROCESSOR_OPTS);
+    OH::ObjectQueryProcessor* obj_query_processor =
+        OH::ObjectQueryProcessorFactory::getSingleton().getConstructor(obj_query_type)(ctx, obj_query_options);
+    oh->setQueryProcessor(obj_query_processor);
 
     ///////////Go go go!! start of simulation/////////////////////
     ctx->add(ctx);
     ctx->add(obj_storage);
     ctx->add(obj_persistent_set);
+    ctx->add(obj_query_processor);
 
     ctx->add(oh);
     ctx->add(sstConnMgr);

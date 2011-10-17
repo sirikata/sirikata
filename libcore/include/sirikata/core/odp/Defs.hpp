@@ -35,121 +35,60 @@
 
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/util/SpaceObjectReference.hpp>
-
+#include <sirikata/core/xdp/Defs.hpp>
 
 namespace Sirikata {
 namespace ODP {
 
-class PortID;
+typedef Sirikata::XDP::PortID PortID;
+
 class Endpoint;
-
-/** Identifier for an ODP port. Under the hood this is simply a uint32, but this
- *  class provides additional features: null and any values, matching (which
- *  differs from equality), etc.  Because the format of PortID is fixed to
- *  uint32, the raw value is exposed directly -- a PortID can be be cast
- *  directly to a uint32.
- */
-class SIRIKATA_EXPORT PortID {
-public:
-    PortID();
-    PortID(uint32 rhs);
-    PortID(const PortID& rhs);
-
-    /** Get a null PortID. Equivalent to PortID(0). */
-    static const PortID& null();
-    /** Get a PortID that matches any other PortID. */
-    static const PortID& any();
-
-    PortID& operator=(const PortID& rhs);
-    PortID& operator=(uint32 rhs);
-
-    operator uint32() const;
-
-    bool operator==(const PortID& rhs) const;
-    bool operator!=(const PortID& rhs) const;
-    bool operator>(const PortID& rhs) const;
-    bool operator>=(const PortID& rhs) const;
-    bool operator<(const PortID& rhs) const;
-    bool operator<=(const PortID& rhs) const;
-
-    /** Returns true if the ports match, i.e. if they are equal or
-     *  one of them is any().
-     */
-    bool matches(const PortID& rhs) const;
-
-    class Hasher {
-    public:
-        size_t operator()(const PortID& p) const {
-            return std::tr1::hash<uint32>()(p.mValue);
-        }
-    };
-
-private:
-    uint32 mValue;
-};
-
-/** Function signature for an ODP message handler.  Takes a message header,
- *  containing the ODP routing information, and a MemoryReference containing the
- *  payload.
- */
-typedef std::tr1::function<void(const Endpoint& src, const Endpoint& dst, MemoryReference)> MessageHandler;
 
 /** A fully qualified ODP endpoint: SpaceID, ObjectReference, and PortID.
  *  Note that this does not have to be bound to unique values.  For instance,
  *  to specify coverage of all ports, PortID::any() could be used.  However,
  *  depending on context, the use of non-specific values may be invalid.
  */
-class SIRIKATA_EXPORT Endpoint {
+class SIRIKATA_EXPORT Endpoint : public Sirikata::XDP::Endpoint<ObjectReference> {
 public:
-    Endpoint(const SpaceID& space, const ObjectReference& obj, const PortID& port);
-    Endpoint(const SpaceObjectReference& space_obj, const PortID& port);
+    typedef Sirikata::XDP::Endpoint<ObjectReference> EndpointBase;
 
-    bool operator==(const Endpoint& rhs) const;
-    bool operator!=(const Endpoint& rhs) const;
-    bool operator>(const Endpoint& rhs) const;
-    bool operator>=(const Endpoint& rhs) const;
-    bool operator<(const Endpoint& rhs) const;
-    bool operator<=(const Endpoint& rhs) const;
-
-    /** Returns true if the endpoint matches this one, i.e. if all
-     *  components match, either precisely or because one of them is
-     *  any().
+    /** Function signature for an ODP message handler.  Takes a message header,
+     *  containing the ODP routing information, and a MemoryReference containing the
+     *  payload.
      */
-    bool matches(const Endpoint& rhs) const;
+    typedef std::tr1::function<void(const Endpoint& src, const Endpoint& dst, MemoryReference)> MessageHandler;
+
+
+    Endpoint(const SpaceID& space, const ObjectReference& obj, const PortID& port)
+        : EndpointBase(space, obj, port)
+    {}
+    Endpoint(const SpaceObjectReference& space_obj, const PortID& port)
+        : EndpointBase(space_obj.space(), space_obj.object(), port)
+    {}
+
 
     /** Get a null Endpoint, i.e. one where each component is null. */
-    static const Endpoint& null();
+    static const Endpoint& null() {
+        static Endpoint null_ep(SpaceID::null(), ObjectReference::null(), PortID::null());
+        return null_ep;
+    }
     /** Get an Endpoint that matches any other Endpoint, i.e. where each
      *  component is its respective any() value.
      */
-    static const Endpoint& any();
+    static const Endpoint& any() {
+        static Endpoint any_ep(SpaceID::any(), ObjectReference::any(), PortID::any());
+        return any_ep;
+    }
 
-    const SpaceID& space() const;
-    const ObjectReference& object() const;
+    const ObjectReference& object() const { return EndpointBase::id(); }
     SpaceObjectReference spaceObject() const { return SpaceObjectReference(space(), object()); }
-    const PortID& port() const;
 
-    String toString() const;
-
-    class Hasher {
-    public:
-        size_t operator()(const Endpoint& p) const {
-            return (
-                SpaceID::Hasher()(p.mSpace) ^
-                ObjectReference::Hasher()(p.mObject) ^
-                PortID::Hasher()(p.mPort)
-            );
-        }
-    };
 private:
     Endpoint();
-
-    SpaceID mSpace;
-    ObjectReference mObject;
-    PortID mPort;
 }; // class Endpoint
 
-SIRIKATA_FUNCTION_EXPORT std::ostream& operator<<(std::ostream& os, const Sirikata::ODP::Endpoint& ep);
+typedef Endpoint::MessageHandler MessageHandler;
 
 } // namespace ODP
 } // namespace Sirikata

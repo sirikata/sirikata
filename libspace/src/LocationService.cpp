@@ -99,9 +99,9 @@ void LocationService::newSession(ObjectSession* session) {
     using std::tr1::placeholders::_1;
     using std::tr1::placeholders::_2;
 
-    Stream<SpaceObjectReference>::Ptr strm = session->getStream();
+    SST::Stream<SpaceObjectReference>::Ptr strm = session->getStream();
 
-    Connection<SpaceObjectReference>::Ptr conn = strm->connection().lock();
+    SST::Connection<SpaceObjectReference>::Ptr conn = strm->connection().lock();
     assert(conn);
 
     SpaceObjectReference sourceObject = conn->remoteEndPoint().endPoint;

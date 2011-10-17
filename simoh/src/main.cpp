@@ -99,7 +99,7 @@ int main(int argc, char** argv) {
     Network::IOService* ios = Network::IOServiceFactory::makeIOService();
     Network::IOStrand* mainStrand = ios->createStrand();
 
-    SSTConnectionManager* sstConnMgr = new SSTConnectionManager();
+    ODPSST::ConnectionManager* sstConnMgr = new ODPSST::ConnectionManager();
 
     ObjectHostContext* ctx = new ObjectHostContext("simoh", oh_id, sstConnMgr, ios, mainStrand, gTrace, start_time, duration);
 
@@ -117,7 +117,7 @@ int main(int argc, char** argv) {
     ObjectHost* obj_host = new ObjectHost(ctx, gTrace, server_id_map);
     Scenario* scenario = ScenarioFactory::getSingleton().getConstructor(GetOptionValue<String>("scenario"))(GetOptionValue<String>("scenario-options"));
 
-    
+
 
     // If we're one of the initial nodes, we'll have to wait until we hit the start time
     {
@@ -149,7 +149,7 @@ int main(int argc, char** argv) {
 
     gTrace->prepareShutdown();
 
-    
+
     delete server_id_map;
     delete obj_factory;
     delete scenario;

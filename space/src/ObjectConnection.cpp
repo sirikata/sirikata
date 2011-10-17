@@ -31,12 +31,10 @@
  */
 
 #include "ObjectConnection.hpp"
-#include <sirikata/space/ServerMessage.hpp>
-#include <sirikata/core/trace/Trace.hpp>
 
 namespace Sirikata {
 
-ObjectConnection::ObjectConnection(const UUID& _id, ObjectHostConnectionManager* conn_mgr, const ObjectHostConnectionManager::ConnectionID& conn_id)
+ObjectConnection::ObjectConnection(const UUID& _id, ObjectHostConnectionManager* conn_mgr, const ObjectHostConnectionID& conn_id)
  : mID(_id),
    mConnectionManager(conn_mgr),
    mOHConnection(conn_id),

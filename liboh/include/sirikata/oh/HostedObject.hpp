@@ -37,7 +37,6 @@
 #include <sirikata/proxyobject/VWObject.hpp>
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/odp/DelegateService.hpp>
-#include <sirikata/core/odp/DelegatePort.hpp>
 #include <sirikata/oh/ObjectScriptManager.hpp>
 
 #include <map>
@@ -45,7 +44,7 @@
 #include <utility>
 
 #include <sirikata/core/network/ObjectMessage.hpp>
-#include <sirikata/core/network/SSTImpl.hpp>
+#include <sirikata/core/odp/SST.hpp>
 
 #include <sirikata/core/transfer/URI.hpp>
 
@@ -61,13 +60,15 @@ namespace Protocol {
 namespace Loc {
 class LocationUpdate;
 }
+namespace Prox {
+class ProximityResults;
+}
 }
 
 class ProxyObject;
 class ProxyObject;
 struct LightInfo;
 typedef std::tr1::shared_ptr<ProxyObject> ProxyObjectPtr;
-// ObjectHost_Sirikata.pbj.hpp
 
 class ObjectScript;
 class HostedObject;
@@ -97,16 +98,6 @@ protected:
 
     ODP::DelegateService* mDelegateODPService;
 
-
-    typedef EndPoint<SpaceObjectReference> EndPointType;
-    typedef BaseDatagramLayer<SpaceObjectReference> BaseDatagramLayerType;
-    typedef BaseDatagramLayerType::Ptr BaseDatagramLayerPtr;
-    typedef Stream<SpaceObjectReference> SSTStream;
-    typedef SSTStream::Ptr SSTStreamPtr;
-    typedef Connection<SpaceObjectReference> SSTConnection;
-    typedef SSTConnection::Ptr SSTConnectionPtr;
-
-
     OrphanLocUpdateManager mOrphanLocUpdates;
 
 //------- Constructors/Destructors
@@ -129,6 +120,14 @@ private:
     HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID &_id);
 
 public:
+    typedef SST::EndPoint<SpaceObjectReference> EndPointType;
+    typedef SST::BaseDatagramLayer<SpaceObjectReference> BaseDatagramLayerType;
+    typedef BaseDatagramLayerType::Ptr BaseDatagramLayerPtr;
+    typedef SST::Connection<SpaceObjectReference> SSTConnection;
+    typedef SSTConnection::Ptr SSTConnectionPtr;
+    typedef SST::Stream<SpaceObjectReference> SSTStream;
+    typedef SSTStream::Ptr SSTStreamPtr;
+
 /// Destructor: will only be called from shared_ptr::~shared_ptr.
     virtual ~HostedObject();
 
@@ -323,7 +322,7 @@ public:
     virtual ODP::Port* bindODPPort(const SpaceObjectReference& sor);
     virtual ODP::PortID unusedODPPort(const SpaceID& space, const ObjectReference& objref);
     virtual ODP::PortID unusedODPPort(const SpaceObjectReference& sor);
-    virtual void registerDefaultODPHandler(const ODP::MessageHandler& cb);
+    virtual void registerDefaultODPHandler(const ODP::Service::MessageHandler& cb);
 
 
     // Movement Interface
@@ -367,6 +366,9 @@ public:
     virtual const String& requestQuery(const SpaceID& space, const ObjectReference& oref);
 
 
+    // ObjectQuerier Interface
+    void handleProximityMessage(const SpaceObjectReference& spaceobj, const Sirikata::Protocol::Prox::ProximityResults& results);
+
 
   private:
     /** \deprecated
@@ -381,16 +383,13 @@ public:
 
     // Handlers for substreams for space-managed updates
     static void handleLocationSubstream(const HostedObjectWPtr &weakSelf, const SpaceObjectReference& spaceobj, int err, SSTStreamPtr s);
-    static void handleProximitySubstream(const HostedObjectWPtr &weakSelf, const SpaceObjectReference& spaceobj, int err, SSTStreamPtr s);
     // Handlers for substream read events for space-managed updates
     static void handleLocationSubstreamRead(const HostedObjectWPtr &weakSelf, const SpaceObjectReference& spaceobj, SSTStreamPtr s, std::stringstream* prevdata, uint8* buffer, int length);
-    static void handleProximitySubstreamRead(const HostedObjectWPtr &weakSelf, const SpaceObjectReference& spaceobj, SSTStreamPtr s, String* prevdata, uint8* buffer, int length);
 
     // Handlers for core space-managed updates
     void processLocationUpdate(const SpaceObjectReference& sporef, ProxyObjectPtr proxy_obj, const Sirikata::Protocol::Loc::LocationUpdate& update);
     void processLocationUpdate(const SpaceID& space, ProxyObjectPtr proxy_obj, uint64 seqno, bool predictive, TimedMotionVector3f* loc, TimedMotionQuaternion* orient, BoundingSphere3f* bounds, String* mesh, String* phy);
     bool handleLocationMessage(const SpaceObjectReference& spaceobj, const std::string& paylod);
-    bool handleProximityMessage(const SpaceObjectReference& spaceobj, const std::string& payload);
 
     /**
        Any time that we get a prox removal call, we first save the existing

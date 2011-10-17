@@ -36,29 +36,20 @@
 
 #include <sirikata/core/util/Platform.hpp>
 
-#include <stdio.h>
-#include <stdlib.h>
-
-#include <boost/asio.hpp>
-#include <boost/date_time/posix_time/posix_time.hpp>
-
-#include <sirikata/core/odp/Service.hpp>
-#include <sirikata/core/odp/Port.hpp>
+#include <sirikata/core/service/Service.hpp>
 #include <sirikata/core/util/Timer.hpp>
-#include <sirikata/core/service/PollingService.hpp>
 #include <sirikata/core/service/Context.hpp>
 
-#include <bitset>
-
-#include <sirikata/core/util/SerializationCheck.hpp>
-
 #include <sirikata/core/network/Message.hpp>
-
 #include "Protocol_SSTHeader.pbj.hpp"
+
+#include <boost/lexical_cast.hpp>
+#include <boost/asio.hpp> //htons, ntohs
 
 #define SST_LOG(lvl,msg) SILOG(sst,lvl,msg);
 
 namespace Sirikata {
+namespace SST {
 
 template <typename EndObjectType>
 class EndPoint {
@@ -114,24 +105,32 @@ class Stream;
 template <typename EndPointType>
 class BaseDatagramLayer;
 
-typedef std::tr1::function< void(int, std::tr1::shared_ptr< Connection<SpaceObjectReference> > ) > ConnectionReturnCallbackFunction;
-typedef std::tr1::function< void(int, std::tr1::shared_ptr< Stream<SpaceObjectReference> >) >  StreamReturnCallbackFunction;
+template <typename EndPointType>
+class ConnectionManager;
 
-typedef std::tr1::function< void (int, void*) >  DatagramSendDoneCallback;
+template <typename EndPointType>
+class CallbackTypes {
+public:
+    typedef std::tr1::function< void(int, std::tr1::shared_ptr< Connection<EndPointType> > ) > ConnectionReturnCallbackFunction;
+    typedef std::tr1::function< void(int, std::tr1::shared_ptr< Stream<EndPointType> >) >  StreamReturnCallbackFunction;
 
-typedef std::tr1::function<void (uint8*, int) >  ReadDatagramCallback;
-
-typedef std::tr1::function<void (uint8*, int) > ReadCallback;
+    typedef std::tr1::function< void (int, void*) >  DatagramSendDoneCallback;
+    typedef std::tr1::function<void (uint8*, int) >  ReadDatagramCallback;
+    typedef std::tr1::function<void (uint8*, int) > ReadCallback;
+};
 
 typedef UUID USID;
 
 typedef uint16 LSID;
 
 template <class EndPointType>
-class SSTConnectionVariables {
+class ConnectionVariables {
 public:
 
-  typedef std::tr1::shared_ptr<BaseDatagramLayer<EndPointType> > BaseDatagramLayerPtr;
+    typedef std::tr1::shared_ptr<BaseDatagramLayer<EndPointType> > BaseDatagramLayerPtr;
+    typedef CallbackTypes<EndPointType> CBTypes;
+    typedef typename CBTypes::ConnectionReturnCallbackFunction ConnectionReturnCallbackFunction;
+    typedef typename CBTypes::StreamReturnCallbackFunction StreamReturnCallbackFunction;
 
   /* Returns -1 if no channel is available. Otherwise returns the lowest
      available channel. */
@@ -149,7 +148,7 @@ public:
 
         EndPoint<EndPointType> ep(ept, channel);
 
-        datagramLayer->deallocateChannel(ep);
+        datagramLayer->unlisten(ep);
       }
     }
 
@@ -162,8 +161,25 @@ public:
         return BaseDatagramLayerPtr();
     }
 
+    void addDatagramLayer(EndPointType& endPoint, BaseDatagramLayerPtr datagramLayer)
+    {
+        sDatagramLayerMap[endPoint] = datagramLayer;
+    }
+
+    void removeDatagramLayer(EndPointType& endPoint, bool warn = false)
+    {
+        typename std::map<EndPointType, BaseDatagramLayerPtr >::iterator wherei = sDatagramLayerMap.find(endPoint);
+        if (wherei != sDatagramLayerMap.end()) {
+            sDatagramLayerMap.erase(wherei);
+        } else if (warn) {
+            SILOG(sst,error,"FATAL: Invalidating BaseDatagramLayer that's invalid");
+        }
+    }
+
+private:
     std::map<EndPointType, BaseDatagramLayerPtr > sDatagramLayerMap;
 
+public:
     typedef std::map<EndPoint<EndPointType>, StreamReturnCallbackFunction> StreamReturnCallbackMap;
     StreamReturnCallbackMap mStreamReturnCallbackMap;
 
@@ -182,174 +198,89 @@ public:
 template <typename EndPointType>
 class SIRIKATA_EXPORT BaseDatagramLayer
 {
-  public:
+    // This class connects SST to the underlying datagram protocol. This isn't
+    // an implementation -- the implementation will vary significantly for each
+    // underlying datagram protocol -- but it does specify the interface. We
+    // keep all types private in this version so it is obvious when you are
+    // trying to incorrectly use this implementation instead of a real one.
+  private:
     typedef std::tr1::shared_ptr<BaseDatagramLayer<EndPointType> > Ptr;
     typedef Ptr BaseDatagramLayerPtr;
 
-    static BaseDatagramLayerPtr getDatagramLayer(SSTConnectionVariables<EndPointType>* sstConnVars,
-                                                 EndPointType endPoint)
-    {
-        std::map<EndPointType, BaseDatagramLayerPtr >& datagramLayerMap = sstConnVars->sDatagramLayerMap;
-        if (datagramLayerMap.find(endPoint) != datagramLayerMap.end()) {
-            return datagramLayerMap[endPoint];
-        }
+    typedef std::tr1::function<void(void*, int)> DataCallback;
 
+    /** Create a datagram layer. Required parameters are the
+     *  ConnectionVariables, Endpoint, and Context. Additional variables are
+     *  permitted (this is called via a templated function in
+     *  ConnectionManager).
+     *
+     *  Should insert into ConnectionVariable's datagram layer map; should also
+     *  reuse existing datagram layers.
+     */
+    static BaseDatagramLayerPtr createDatagramLayer(
+        ConnectionVariables<EndPointType>* sstConnVars,
+        EndPointType endPoint,
+        const Context* ctx,
+        void* extra)
+    {
         return BaseDatagramLayerPtr();
     }
 
-    static BaseDatagramLayerPtr createDatagramLayer(
-        SSTConnectionVariables<EndPointType>* sstConnVars,
-        EndPointType endPoint,
-        const Context* ctx,
-        ODP::Service* odp)
+    /** Get the datagram layer for the given endpoint, if it exists. */
+    static BaseDatagramLayerPtr getDatagramLayer(ConnectionVariables<EndPointType>* sstConnVars,
+                                                 EndPointType endPoint)
     {
-        std::map<EndPointType, BaseDatagramLayerPtr >& datagramLayerMap = sstConnVars->sDatagramLayerMap;
-        if (datagramLayerMap.find(endPoint) != datagramLayerMap.end()) {
-            return datagramLayerMap[endPoint];
-        }
-
-        BaseDatagramLayerPtr datagramLayer(
-                                           new BaseDatagramLayer(sstConnVars, ctx, odp, endPoint)
-        );
-
-        datagramLayerMap[endPoint] = datagramLayer;
-
-        return datagramLayer;
+        return BaseDatagramLayerPtr();
     }
 
-    static void listen(SSTConnectionVariables<EndPointType>* sstConnVars, EndPoint<EndPointType>& listeningEndPoint) {
-        EndPointType endPointID = listeningEndPoint.endPoint;
-
-        BaseDatagramLayerPtr bdl = sstConnVars->sDatagramLayerMap[endPointID];
-        bdl->listenOn(listeningEndPoint);
-    }
-
-    static void stopListening(SSTConnectionVariables<EndPointType>* sstConnVars, EndPoint<EndPointType>& listeningEndPoint) {
-        EndPointType endPointID = listeningEndPoint.endPoint;
-        std::map<EndPointType, BaseDatagramLayerPtr >& datagramLayerMap = sstConnVars->sDatagramLayerMap;
-
-        BaseDatagramLayerPtr bdl = datagramLayerMap[endPointID];
-        bdl->unlisten(listeningEndPoint);
-
-        datagramLayerMap.erase(endPointID);
-    }
-
-    void listenOn(EndPoint<EndPointType>& listeningEndPoint, ODP::MessageHandler cb) {
-        ODP::Port* port = allocatePort(listeningEndPoint);
-        port->receive(cb);
-    }
-
-    void unlisten(EndPoint<EndPointType>& ep) {
-        // To stop listening, just destroy the corresponding port
-        typename PortMap::iterator it = mAllocatedPorts.find(ep);
-        if (it == mAllocatedPorts.end()) return;
-        delete it->second;
-        mAllocatedPorts.erase(it);
-    }
-
-    void deallocateChannel(EndPoint<EndPointType>& ep) {
-      unlisten(ep);
-    }
-
-    void send(EndPoint<EndPointType>* src, EndPoint<EndPointType>* dest, void* data, int len) {
-        boost::mutex::scoped_lock lock(mMutex);
-
-        ODP::Port* port = getOrAllocatePort(*src);
-
-        port->send(
-            ODP::Endpoint(dest->endPoint, dest->port),
-            MemoryReference(data, len)
-        );
-    }
-
+    /** Get the Context for this datagram layer. */
     const Context* context() {
-        return mContext;
+        return NULL;
     }
 
+    /** Get a port that isn't currently in use. */
     uint32 getUnusedPort(const EndPointType& ep) {
-        return mODP->unusedODPPort(ep);
+        return 0;
     }
+
+    /** Stop listening to the specified endpoint and also remove from the
+     *  ConnectionVariables datagram layer map.
+     */
+    static void stopListening(ConnectionVariables<EndPointType>* sstConnVars, EndPoint<EndPointType>& listeningEndPoint) {
+    }
+
+    /** Listen to the specified endpoint and invoke the given callback when data
+     *  arrives.
+     */
+    void listenOn(EndPoint<EndPointType>& listeningEndPoint, DataCallback cb) {
+    }
+
+    /** Listen to the specified endpoint, invoking
+     *  Connection::handleReceive() when data arrives.
+     */
+    void listenOn(EndPoint<EndPointType>& listeningEndPoint) {
+    }
+
+    /** Send the given data from the given source port (possibly not allocated
+     *  yet) to the given destination. This is the core function for outbound
+     *  communication.
+     */
+    void send(EndPoint<EndPointType>* src, EndPoint<EndPointType>* dest, void* data, int len) {
+    }
+
+    /** Stop listening on the given endpoint. You can fully deallocate the
+     *  underlying resources for the endpoint.
+     */
+    void unlisten(EndPoint<EndPointType>& ep) {
+    }
+
+    /** Mark this BaseDatagramLayer as invalid, ensuring that no more writes to
+     *  the underlying datagram protocol will occur. Also remove this
+     *  BaseDatagramLayer from the ConnectionVariables.
+     */
     void invalidate() {
-        mODP=NULL;
-        std::map<EndPointType, BaseDatagramLayerPtr >& datagramLayerMap = mSSTConnVars->sDatagramLayerMap;
-        typename std::map<EndPointType, BaseDatagramLayerPtr >::iterator wherei  = datagramLayerMap.find(mEndpoint);
-        if (wherei!=datagramLayerMap.end()) {
-            datagramLayerMap.erase(wherei);
-        }else {
-            SILOG(sst,error,"FATAL: Invalidating BaseDatagramLayer that's invalid");
-        }
     }
-  private:
-    BaseDatagramLayer(SSTConnectionVariables<EndPointType>* sstConnVars, const Context* ctx, ODP::Service* odpservice, const EndPointType&ep)
-        : mContext(ctx),
-          mODP(odpservice),
-          mSSTConnVars(sstConnVars),
-          mEndpoint(ep)
-        {
-
-        }
-
-    ODP::Port* allocatePort(const EndPoint<EndPointType>& ep) {
-        ODP::Port* port = mODP->bindODPPort(
-            ep.endPoint, ep.port
-        );
-        mAllocatedPorts[ep] = port;
-        return port;
-    }
-
-    ODP::Port* getPort(const EndPoint<EndPointType>& ep) {
-        typename PortMap::iterator it = mAllocatedPorts.find(ep);
-        if (it == mAllocatedPorts.end()) return NULL;
-        return it->second;
-    }
-
-    ODP::Port* getOrAllocatePort(const EndPoint<EndPointType>& ep) {
-        ODP::Port* result = getPort(ep);
-        if (result != NULL) return result;
-        result = allocatePort(ep);
-        return result;
-    }
-
-    void listenOn(const EndPoint<EndPointType>& listeningEndPoint) {
-        ODP::Port* port = allocatePort(listeningEndPoint);
-        port->receive(
-            std::tr1::bind(
-                &BaseDatagramLayer::receiveMessage, this,
-                std::tr1::placeholders::_1,
-                std::tr1::placeholders::_2,
-                std::tr1::placeholders::_3
-            )
-        );
-    }
-
-    void receiveMessage(const ODP::Endpoint &src, const ODP::Endpoint &dst, MemoryReference payload) {
-        Connection<EndPointType>::handleReceive(
-            mSSTConnVars,
-            EndPoint<EndPointType> (SpaceObjectReference(src.space(), src.object()), src.port()),
-            EndPoint<EndPointType> (SpaceObjectReference(dst.space(), dst.object()), dst.port()),
-            (void*) payload.data(), payload.size()
-        );
-    }
-
-
-    const Context* mContext;
-    ODP::Service* mODP;
-
-    typedef std::map<EndPoint<EndPointType>, ODP::Port*> PortMap;
-    PortMap mAllocatedPorts;
-
-    boost::mutex mMutex;
-
-    SSTConnectionVariables<EndPointType>* mSSTConnVars;
-    EndPointType mEndpoint;
-
 };
-
-#if SIRIKATA_PLATFORM == SIRIKATA_WINDOWS
-//SIRIKATA_EXPORT_TEMPLATE template class SIRIKATA_EXPORT BaseDatagramLayer<Sirikata::UUID>;
-SIRIKATA_EXPORT_TEMPLATE template class SIRIKATA_EXPORT BaseDatagramLayer<SpaceObjectReference>;
-#endif
-
 
 #define SST_IMPL_SUCCESS 0
 #define SST_IMPL_FAILURE -1
@@ -395,8 +326,14 @@ private:
     typedef BaseDatagramLayer<EndPointType> BaseDatagramLayerType;
     typedef std::tr1::shared_ptr<BaseDatagramLayerType> BaseDatagramLayerPtr;
 
+    typedef CallbackTypes<EndPointType> CBTypes;
+    typedef typename CBTypes::ConnectionReturnCallbackFunction ConnectionReturnCallbackFunction;
+    typedef typename CBTypes::StreamReturnCallbackFunction StreamReturnCallbackFunction;
+    typedef typename CBTypes::DatagramSendDoneCallback DatagramSendDoneCallback;
+    typedef typename CBTypes::ReadDatagramCallback ReadDatagramCallback;
+
   friend class Stream<EndPointType>;
-  friend class SSTConnectionManager;
+  friend class ConnectionManager<EndPointType>;
   friend class BaseDatagramLayer<EndPointType>;
 
   typedef std::map<EndPoint<EndPointType>, std::tr1::shared_ptr<Connection> >  ConnectionMap;
@@ -406,7 +343,7 @@ private:
   EndPoint<EndPointType> mLocalEndPoint;
   EndPoint<EndPointType> mRemoteEndPoint;
 
-  SSTConnectionVariables<EndPointType>* mSSTConnVars;
+  ConnectionVariables<EndPointType>* mSSTConnVars;
   BaseDatagramLayerPtr mDatagramLayer;
 
   int mState;
@@ -454,7 +391,7 @@ private:
 
 private:
 
-  Connection(SSTConnectionVariables<EndPointType>* sstConnVars,
+  Connection(ConnectionVariables<EndPointType>* sstConnVars,
              EndPoint<EndPointType> localEndPoint,
              EndPoint<EndPointType> remoteEndPoint)
     : mLocalEndPoint(localEndPoint), mRemoteEndPoint(remoteEndPoint),
@@ -474,10 +411,9 @@ private:
       mDatagramLayer->listenOn(
           localEndPoint,
           std::tr1::bind(
-              &Connection::receiveODPMessage, this,
+              &Connection::receiveMessage, this,
               std::tr1::placeholders::_1,
-              std::tr1::placeholders::_2,
-              std::tr1::placeholders::_3
+              std::tr1::placeholders::_2
           )
       );
 
@@ -510,10 +446,10 @@ private:
   }
 
   bool serviceConnection(std::tr1::shared_ptr<Connection<EndPointType> > conn) {
-    const Time curTime = Timer::now();    
-    
+    const Time curTime = Timer::now();
+
     boost::mutex::scoped_lock lock(mOutstandingSegmentsMutex);
-    
+
 
     if (mState == CONNECTION_PENDING_CONNECT) {
       mOutstandingSegments.clear();
@@ -659,7 +595,7 @@ private:
      is already using the same local endpoint; true otherwise.
   */
 
-  static bool createConnection(SSTConnectionVariables<EndPointType>* sstConnVars,
+  static bool createConnection(ConnectionVariables<EndPointType>* sstConnVars,
                                EndPoint <EndPointType> localEndPoint,
 			       EndPoint <EndPointType> remoteEndPoint,
                                ConnectionReturnCallbackFunction cb,
@@ -700,8 +636,8 @@ private:
     return true;
   }
 
-  static bool listen(SSTConnectionVariables<EndPointType>* sstConnVars, StreamReturnCallbackFunction cb, EndPoint<EndPointType> listeningEndPoint) {
-    BaseDatagramLayer<EndPointType>::listen(sstConnVars, listeningEndPoint);
+  static bool listen(ConnectionVariables<EndPointType>* sstConnVars, StreamReturnCallbackFunction cb, EndPoint<EndPointType> listeningEndPoint) {
+      sstConnVars->getDatagramLayer(listeningEndPoint.endPoint)->listenOn(listeningEndPoint);
 
     boost::mutex::scoped_lock lock(sstConnVars->sStaticMembersLock.getMutex());
 
@@ -716,7 +652,7 @@ private:
     return true;
   }
 
-  static bool unlisten(SSTConnectionVariables<EndPointType>* sstConnVars, EndPoint<EndPointType> listeningEndPoint) {
+  static bool unlisten(ConnectionVariables<EndPointType>* sstConnVars, EndPoint<EndPointType> listeningEndPoint) {
     BaseDatagramLayer<EndPointType>::stopListening(sstConnVars, listeningEndPoint);
 
     boost::mutex::scoped_lock lock(sstConnVars->sStaticMembersLock.getMutex());
@@ -860,8 +796,8 @@ private:
   }
 
   void markAcknowledgedPacket(uint64 receivedAckNum) {
-    boost::mutex::scoped_lock lock(mOutstandingSegmentsMutex);    
-    
+    boost::mutex::scoped_lock lock(mOutstandingSegmentsMutex);
+
     for (std::deque< std::tr1::shared_ptr<ChannelSegment> >::iterator it = mOutstandingSegments.begin();
          it != mOutstandingSegments.end(); it++)
     {
@@ -901,11 +837,6 @@ private:
           break;
         }
     }
-  }
-
-  void receiveODPMessage(const ODP::Endpoint &src, const ODP::Endpoint &dst, MemoryReference payload) 
-  {
-    receiveMessage((void*) payload.data(), payload.size() );
   }
 
   void parsePacket(Sirikata::Protocol::SST::SSTChannelHeader* received_channel_msg )
@@ -1141,7 +1072,7 @@ private:
     return mRTOMicroseconds;
   }
 
-  void eraseDisconnectedStream(Stream<EndPointType>* s) {    
+  void eraseDisconnectedStream(Stream<EndPointType>* s) {
     mOutgoingSubstreamMap.erase(s->getLSID());
     mIncomingSubstreamMap.erase(s->getRemoteLSID());
 
@@ -1198,7 +1129,7 @@ private:
      mSSTConnVars->releaseChannel(mLocalEndPoint.endPoint, mLocalChannelID);
    }
 
-   static void closeConnections(SSTConnectionVariables<EndPointType>* sstConnVars) {
+   static void closeConnections(ConnectionVariables<EndPointType>* sstConnVars) {
        // We have to be careful with this function. Because it is going to free
        // the connections, we have to make sure not to let them get freed where
        // the deleter will modify sConnectionMap while we're still modifying it.
@@ -1221,7 +1152,7 @@ private:
        }
    }
 
-   static void handleReceive(SSTConnectionVariables<EndPointType>* sstConnVars,
+   static void handleReceive(ConnectionVariables<EndPointType>* sstConnVars,
                              EndPoint<EndPointType> remoteEndPoint,
                              EndPoint<EndPointType> localEndPoint, void* recv_buffer, int len)
    {
@@ -1474,10 +1405,7 @@ private:
   }
 
 };
-#if SIRIKATA_PLATFORM == SIRIKATA_WINDOWS
-//SIRIKATA_EXPORT_TEMPLATE template class SIRIKATA_EXPORT Connection<Sirikata::UUID>;
-SIRIKATA_EXPORT_TEMPLATE template class SIRIKATA_EXPORT Connection<SpaceObjectReference>;
-#endif
+
 
 class StreamBuffer{
 public:
@@ -1515,6 +1443,10 @@ public:
     typedef Connection<EndPointType> ConnectionType;
     typedef EndPoint<EndPointType> EndpointType;
 
+    typedef CallbackTypes<EndPointType> CBTypes;
+    typedef typename CBTypes::StreamReturnCallbackFunction StreamReturnCallbackFunction;
+    typedef typename CBTypes::ReadCallback ReadCallback;
+
     typedef std::map<EndPoint<EndPointType>, StreamReturnCallbackFunction> StreamReturnCallbackMap;
 
    enum StreamStates {
@@ -1539,7 +1471,7 @@ public:
 
   bool connected() { return mConnected; }
 
-  static bool connectStream(SSTConnectionVariables<EndPointType>* sstConnVars,
+  static bool connectStream(ConnectionVariables<EndPointType>* sstConnVars,
                             EndPoint <EndPointType> localEndPoint,
 			    EndPoint <EndPointType> remoteEndPoint,
 			    StreamReturnCallbackFunction cb)
@@ -1574,11 +1506,11 @@ public:
     @return false, if its not possible to listen to this endpoint (e.g. if listen
             has already been called on this endpoint); true otherwise.
   */
-  static bool listen(SSTConnectionVariables<EndPointType>* sstConnVars, StreamReturnCallbackFunction cb, EndPoint <EndPointType> listeningEndPoint) {
+  static bool listen(ConnectionVariables<EndPointType>* sstConnVars, StreamReturnCallbackFunction cb, EndPoint <EndPointType> listeningEndPoint) {
     return Connection<EndPointType>::listen(sstConnVars, cb, listeningEndPoint);
   }
 
-  static bool unlisten(SSTConnectionVariables<EndPointType>* sstConnVars, EndPoint <EndPointType> listeningEndPoint) {
+  static bool unlisten(ConnectionVariables<EndPointType>* sstConnVars, EndPoint <EndPointType> listeningEndPoint) {
     return Connection<EndPointType>::unlisten(sstConnVars, listeningEndPoint);
   }
 
@@ -1840,7 +1772,7 @@ public:
 private:
   Stream(LSID parentLSID, std::tr1::weak_ptr<Connection<EndPointType> > conn,
 	 uint16 local_port, uint16 remote_port,
-	 USID usid, LSID lsid, StreamReturnCallbackFunction cb, SSTConnectionVariables<EndPointType>* sstConnVars)
+	 USID usid, LSID lsid, StreamReturnCallbackFunction cb, ConnectionVariables<EndPointType>* sstConnVars)
     :
     mState(NOT_FINISHED_CONSTRUCTING__CALL_INIT),
     mLocalPort(local_port),
@@ -2058,7 +1990,7 @@ private:
             mStreamReturnCallback = NULL;
         }
 
-        
+
         conn->eraseDisconnectedStream(this);
         mState = DISCONNECTED;
 
@@ -2096,7 +2028,7 @@ private:
 
             std::tr1::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
             assert(conn);
-            
+
             conn->eraseDisconnectedStream(this);
 
 	    return true;
@@ -2522,7 +2454,7 @@ private:
   uint8 mNumInitRetransmissions;
   uint8 MAX_INIT_RETRANSMISSIONS;
 
-  SSTConnectionVariables<EndPointType>* mSSTConnVars;
+  ConnectionVariables<EndPointType>* mSSTConnVars;
 
   std::tr1::weak_ptr<Stream<EndPointType> > mWeakThis;
 
@@ -2532,10 +2464,6 @@ private:
   EndPoint <EndPointType> mRemoteEndPoint;
 
 };
-#if SIRIKATA_PLATFORM == SIRIKATA_WINDOWS
-//SIRIKATA_EXPORT_TEMPLATE template class SIRIKATA_EXPORT Stream<Sirikata::UUID>;
-SIRIKATA_EXPORT_TEMPLATE template class SIRIKATA_EXPORT Stream<SpaceObjectReference>;
-#endif
 
 
 /**
@@ -2546,54 +2474,69 @@ SIRIKATA_EXPORT_TEMPLATE template class SIRIKATA_EXPORT Stream<SpaceObjectRefere
  This class is only instantiated once per process (usually in main()) and is then
  accessible through SpaceContext and ObjectHostContext.
  */
-class SSTConnectionManager : public Service {
+template <class EndPointType>
+class ConnectionManager : public Service {
 public:
-  typedef std::tr1::shared_ptr<BaseDatagramLayer<SpaceObjectReference> > BaseDatagramLayerPtr;
+  typedef std::tr1::shared_ptr<BaseDatagramLayer<EndPointType> > BaseDatagramLayerPtr;
+
+    typedef CallbackTypes<EndPointType> CBTypes;
+    typedef typename CBTypes::StreamReturnCallbackFunction StreamReturnCallbackFunction;
 
   virtual void start() {
   }
 
   virtual void stop() {
-    Connection<SpaceObjectReference>::closeConnections(&mSSTConnVars);
+    Connection<EndPointType>::closeConnections(&mSSTConnVars);
   }
 
-  ~SSTConnectionManager() {
-    Connection<SpaceObjectReference>::closeConnections(&mSSTConnVars);
+  ~ConnectionManager() {
+    Connection<EndPointType>::closeConnections(&mSSTConnVars);
   }
 
-  bool connectStream(EndPoint <SpaceObjectReference> localEndPoint,
-                     EndPoint <SpaceObjectReference> remoteEndPoint,
+  bool connectStream(EndPoint <EndPointType> localEndPoint,
+                     EndPoint <EndPointType> remoteEndPoint,
                      StreamReturnCallbackFunction cb)
   {
-    return Stream<SpaceObjectReference>::connectStream(&mSSTConnVars, localEndPoint, remoteEndPoint, cb);
+    return Stream<EndPointType>::connectStream(&mSSTConnVars, localEndPoint, remoteEndPoint, cb);
   }
 
-  BaseDatagramLayerPtr createDatagramLayer(
-                                           SpaceObjectReference endPoint,
-                                           const Context* ctx,
-                                           ODP::Service* odp)
-  {
-    return BaseDatagramLayer<SpaceObjectReference>::createDatagramLayer(&mSSTConnVars, endPoint, ctx, odp);
-  }
+    // The BaseDatagramLayer is really where the interaction with the underlying
+    // system happens, and different underlying protocols may require different
+    // parameters. These need to be instantiated by the client code anyway (to
+    // generate the interface), so we provide some templatized versions to allow
+    // a variable number of arguments.
+    template<typename A1>
+    BaseDatagramLayerPtr createDatagramLayer(EndPointType endPoint, Context* ctx, A1 a1) {
+        return BaseDatagramLayer<EndPointType>::createDatagramLayer(&mSSTConnVars, endPoint, ctx, a1);
+    }
+    template<typename A1, typename A2>
+    BaseDatagramLayerPtr createDatagramLayer(EndPointType endPoint, Context* ctx, A1 a1, A2 a2) {
+        return BaseDatagramLayer<EndPointType>::createDatagramLayer(&mSSTConnVars, endPoint, ctx, a1, a2);
+    }
+    template<typename A1, typename A2, typename A3>
+    BaseDatagramLayerPtr createDatagramLayer(EndPointType endPoint, Context* ctx, A1 a1, A2 a2, A3 a3) {
+        return BaseDatagramLayer<EndPointType>::createDatagramLayer(&mSSTConnVars, endPoint, ctx, a1, a2, a3);
+    }
 
-  BaseDatagramLayerPtr getDatagramLayer(SpaceObjectReference endPoint) {
+  BaseDatagramLayerPtr getDatagramLayer(EndPointType endPoint) {
     return mSSTConnVars.getDatagramLayer(endPoint);
   }
 
-  bool listen(StreamReturnCallbackFunction cb, EndPoint <SpaceObjectReference> listeningEndPoint) {
-    return Stream<SpaceObjectReference>::listen(&mSSTConnVars, cb, listeningEndPoint);
+  bool listen(StreamReturnCallbackFunction cb, EndPoint <EndPointType> listeningEndPoint) {
+    return Stream<EndPointType>::listen(&mSSTConnVars, cb, listeningEndPoint);
   }
 
-  bool unlisten( EndPoint <SpaceObjectReference> listeningEndPoint) {
-    return Stream<SpaceObjectReference>::unlisten(&mSSTConnVars, listeningEndPoint);
+  bool unlisten( EndPoint <EndPointType> listeningEndPoint) {
+    return Stream<EndPointType>::unlisten(&mSSTConnVars, listeningEndPoint);
   }
 
   //Storage class for SST's global variables.
-  SSTConnectionVariables<SpaceObjectReference> mSSTConnVars;
+  ConnectionVariables<EndPointType> mSSTConnVars;
 };
 
 
 
-}
+} // namespace SST
+} // namespace Sirikata
 
 #endif

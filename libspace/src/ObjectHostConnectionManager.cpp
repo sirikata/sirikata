@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "ObjectHostConnectionManager.hpp"
+#include <sirikata/space/ObjectHostConnectionManager.hpp>
 #include <sirikata/core/options/CommonOptions.hpp>
 #include <sirikata/space/ServerMessage.hpp>
 #include <sirikata/core/network/IOStrand.hpp>
@@ -42,58 +42,28 @@
 
 namespace Sirikata {
 
-ObjectHostConnectionManager::ConnectionID::ConnectionID()
-        : conn(NULL)
-{
-}
-
-ObjectHostConnectionManager::ConnectionID::ConnectionID(ObjectHostConnection* _conn)
-        : conn(_conn)
-{
-}
-
-ObjectHostConnectionManager::ConnectionID::ConnectionID(const ConnectionID& rhs)
-        : conn(rhs.conn)
-{
-}
-
-ObjectHostConnectionManager::ConnectionID& ObjectHostConnectionManager::ConnectionID::operator=(const ConnectionID& rhs) {
-    conn = rhs.conn;
-    return *this;
-}
-
-bool ObjectHostConnectionManager::ConnectionID::operator==(const ConnectionID& rhs) const {
-    return (conn == rhs.conn);
-}
-
-bool ObjectHostConnectionManager::ConnectionID::operator!=(const ConnectionID& rhs) const {
-    return (conn != rhs.conn);
-}
-
-
-
-
-ObjectHostConnectionManager::ObjectHostConnection::ObjectHostConnection(Sirikata::Network::Stream* str)
-        : socket(str)
-{
-}
-
-ObjectHostConnectionManager::ObjectHostConnection::~ObjectHostConnection() {
+ObjectHostConnection::ObjectHostConnection(ShortObjectHostConnectionID sid, Sirikata::Network::Stream* str)
+ : short_id(sid),
+   socket(str)
+{}
+ObjectHostConnection::~ObjectHostConnection() {
     delete socket;
 }
 
-ObjectHostConnectionManager::ConnectionID ObjectHostConnectionManager::ObjectHostConnection::conn_id() {
-    return ConnectionID(this);
+
+
+ObjectHostConnectionManager::Listener::~Listener() {
 }
 
 
-ObjectHostConnectionManager::ObjectHostConnectionManager(SpaceContext* ctx, const Address4& listen_addr, MessageReceivedCallback msg_cb, ConnectionClosedCallback closed_cb)
+ObjectHostConnectionManager::ObjectHostConnectionManager(SpaceContext* ctx, const Address4& listen_addr, Listener* listener)
  : mContext(ctx),
    mIOStrand( ctx->ioService->createStrand() ),
    mAcceptor(NULL),
-   mMessageReceivedCallback(msg_cb),
-   mConnectionClosedCallback(closed_cb)
+   mShortIDSource(1),
+   mListener(listener)
 {
+    assert(mListener != NULL);
     listen(listen_addr);
 }
 
@@ -103,7 +73,7 @@ ObjectHostConnectionManager::~ObjectHostConnectionManager() {
 }
 
 
-bool ObjectHostConnectionManager::send(const ConnectionID& conn_id, Sirikata::Protocol::Object::ObjectMessage* msg) {
+bool ObjectHostConnectionManager::send(const ObjectHostConnectionID& conn_id, Sirikata::Protocol::Object::ObjectMessage* msg) {
     // If its not in the connection list we're probably chasing bad
     // pointers
     if (mContext->stopped()) {
@@ -113,13 +83,33 @@ bool ObjectHostConnectionManager::send(const ConnectionID& conn_id, Sirikata::Pr
 
     ObjectHostConnection* conn = conn_id.conn;
 
-    if (conn == NULL) {
-        SPACE_LOG(error,"Tried to send over invalid connection.");
+    if (mConnections.find(conn) == mConnections.end()) {
+        SPACE_LOG(error,"Tried to send over out-of-date connection ID.");
         return false;
     }
 
-    if (mConnections.find(conn) == mConnections.end()) {
-        SPACE_LOG(error,"Tried to send over out-of-date connection ID.");
+    return sendHelper(conn, msg);
+}
+
+bool ObjectHostConnectionManager::send(const ShortObjectHostConnectionID short_conn_id, Sirikata::Protocol::Object::ObjectMessage* msg) {
+    if (mContext->stopped()) {
+        SPACE_LOG(fatal,"Trying to send after shutdown requested.");
+        return false;
+    }
+
+    ShortIDConnectionMap::iterator it = mShortConnections.find(short_conn_id);
+    if (it == mShortConnections.end()) {
+        SPACE_LOG(error,"Tried to send over out-of-date short connection ID.");
+        return false;
+    }
+    ObjectHostConnection* conn = it->second;
+
+    return sendHelper(conn, msg);
+}
+
+bool ObjectHostConnectionManager::sendHelper(ObjectHostConnection* conn, Sirikata::Protocol::Object::ObjectMessage* msg) {
+    if (conn == NULL) {
+        SPACE_LOG(error,"Tried to send over invalid connection.");
         return false;
     }
 
@@ -132,6 +122,11 @@ bool ObjectHostConnectionManager::send(const ConnectionID& conn_id, Sirikata::Pr
         delete msg;
     }
     return sent;
+}
+
+
+ObjectHostConnectionID ObjectHostConnectionManager::conn_id(ObjectHostConnection* c) {
+    return ObjectHostConnectionID(c);
 }
 
 void ObjectHostConnectionManager::listen(const Address4& listen_addr) {
@@ -182,7 +177,8 @@ void ObjectHostConnectionManager::handleNewConnection(Sirikata::Network::Stream*
     SPACE_LOG(debug,"New object host connection handled");
 
     // Add the new connection to our index, set read callbacks
-    ObjectHostConnection* conn = new ObjectHostConnection(str);
+    ShortObjectHostConnectionID short_id = mShortIDSource++;
+    ObjectHostConnection* conn = new ObjectHostConnection(short_id, str);
     set_callbacks(
         std::tr1::bind(&ObjectHostConnectionManager::handleConnectionEvent,
             this,
@@ -223,7 +219,7 @@ void ObjectHostConnectionManager::handleConnectionRead(ObjectHostConnection* con
 
     TIMESTAMP(obj_msg, Trace::HANDLE_OBJECT_HOST_MESSAGE);
 
-    mMessageReceivedCallback(conn->conn_id(), obj_msg);
+    mListener->onObjectHostMessageReceived(conn_id(conn), conn->short_id, obj_msg);
 
     // We either got it or dropped it, either way it was accepted.  Don't do
     // anything with pause parameter.
@@ -231,12 +227,15 @@ void ObjectHostConnectionManager::handleConnectionRead(ObjectHostConnection* con
 
 void ObjectHostConnectionManager::insertConnection(ObjectHostConnection* conn) {
     mConnections.insert(conn);
+    mShortConnections[conn->short_id] = conn;
+    mListener->onObjectHostConnected(conn_id(conn), conn->short_id);
 }
 
 void ObjectHostConnectionManager::destroyConnection(ObjectHostConnection* conn) {
     if (mConnections.find(conn) == mConnections.end()) return;
-    mConnectionClosedCallback(conn->conn_id());
+    mListener->onObjectHostDisconnected(conn_id(conn), conn->short_id);
     mConnections.erase(conn);
+    mShortConnections.erase(conn->short_id);
     delete conn;
 }
 

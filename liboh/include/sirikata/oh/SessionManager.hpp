@@ -36,12 +36,12 @@
 #include <sirikata/oh/ObjectHostContext.hpp>
 #include <sirikata/core/service/Service.hpp>
 #include <sirikata/oh/SpaceNodeConnection.hpp>
-#include <sirikata/core/network/SSTImpl.hpp>
+#include <sirikata/core/odp/SST.hpp>
 #include <sirikata/core/util/MotionVector.hpp>
 #include <sirikata/core/util/MotionQuaternion.hpp>
 #include <sirikata/core/util/SpaceObjectReference.hpp>
 #include <sirikata/core/util/Platform.hpp>
-#include <sirikata/core/odp/DelegateService.hpp>
+#include <sirikata/core/ohdp/DelegateService.hpp>
 #include <sirikata/core/sync/TimeSyncClient.hpp>
 #include <sirikata/core/network/Address4.hpp>
 
@@ -56,10 +56,11 @@ class ServerIDMap;
  * requests and open sessions, and also handles migrating connections between
  * space servers.
  *
- *  Internally, SessionManager masquerades as an ODP::Service. This ODP::Service
- *  is only used for communication with the space server.
+ *  SessionManager is also an OHDP::Service, allowing communication with
+ *  individual space servers (e.g. used internally for time sync). It is also
+ *  exposed so other services can communicate directly with space servers.
  */
-class SIRIKATA_OH_EXPORT SessionManager : public PollingService, private ODP::DelegateService {
+class SIRIKATA_OH_EXPORT SessionManager : public PollingService, public OHDP::DelegateService {
   public:
 
     struct ConnectionInfo {
@@ -102,7 +103,7 @@ class SIRIKATA_OH_EXPORT SessionManager : public PollingService, private ODP::De
     typedef std::tr1::function<void(const SpaceObjectReference&, Disconnect::Code)> ObjectDisconnectedCallback;
 
     // SST stream related typedefs
-    typedef Stream<SpaceObjectReference> SSTStream;
+    typedef SST::Stream<SpaceObjectReference> SSTStream;
     typedef SSTStream::Ptr SSTStreamPtr;
     typedef SSTStream::EndpointType SSTEndpoint;
 
@@ -178,7 +179,7 @@ private:
     void handleServerMessages(SpaceNodeConnection* conn);
     // Starting point for handling of all messages from the server -- either handled as a special case, such as
     // for session management, or dispatched to the object
-    void handleServerMessage(ObjectMessage* msg);
+    void handleServerMessage(ObjectMessage* msg, ServerID sid);
 
     // Handles session messages received from the server -- connection replies, migration requests, etc.
     void handleSessionMessage(Sirikata::Protocol::Object::ObjectMessage* msg);
@@ -236,9 +237,9 @@ private:
     /** Time Sync related utilities **/
 
 
-    // ODP::DelegateService dependencies
-    ODP::DelegatePort* createDelegateODPPort(DelegateService*, const SpaceObjectReference& sor, ODP::PortID port);
-    bool delegateODPPortSend(const ODP::Endpoint& source_ep, const ODP::Endpoint& dest_ep, MemoryReference payload);
+    // OHDP::DelegateService dependencies
+    OHDP::DelegatePort* createDelegateOHDPPort(OHDP::DelegateService*, const OHDP::Endpoint& ept);
+    bool delegateOHDPPortSend(const OHDP::Endpoint& source_ep, const OHDP::Endpoint& dest_ep, MemoryReference payload);
 
     void timeSyncUpdated();
 

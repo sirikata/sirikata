@@ -6,7 +6,7 @@
 #define __EMERSON_MESSAGING_MANAGER_HPP__
 
 #include <map>
-#include <sirikata/core/network/SSTImpl.hpp>
+#include <sirikata/core/odp/SST.hpp>
 #include <sirikata/core/network/ObjectMessage.hpp>
 #include <string>
 #include <sstream>
@@ -18,7 +18,7 @@ namespace JS{
 
 class EmersonScript;
 
-typedef Stream<SpaceObjectReference> SSTStream;
+typedef SST::Stream<SpaceObjectReference> SSTStream;
 typedef SSTStream::Ptr SSTStreamPtr;
 
 // NOTE: virtual on Liveness because JSObjectScript also uses it

@@ -138,7 +138,7 @@ private:
     };
     static const std::string& ObjectClassToString(ObjectClass c);
 
-    typedef Stream<SpaceObjectReference>::Ptr ProxStreamPtr;
+    typedef SST::Stream<SpaceObjectReference>::Ptr ProxStreamPtr;
 
     // ProxStreamInfo manages *most* of the state for sending data to
     // a client. This data is managed by the main thread, where
