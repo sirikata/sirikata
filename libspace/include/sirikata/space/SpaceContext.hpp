@@ -38,6 +38,7 @@
 #include <sirikata/core/util/SpaceObjectReference.hpp>
 #include <sirikata/space/Trace.hpp>
 #include <sirikata/space/ObjectSessionManager.hpp>
+#include <sirikata/core/ohdp/SST.hpp>
 
 namespace Sirikata {
 
@@ -56,7 +57,7 @@ class CoordinateSegmentation;
  */
 class SIRIKATA_SPACE_EXPORT SpaceContext : public Context {
 public:
-    SpaceContext(const String& name, ServerID _id, ODPSST::ConnectionManager* sstConnMgr, Network::IOService* ios, Network::IOStrand* strand, const Time& epoch, Trace::Trace* _trace, const Duration& duration = Duration::zero());
+    SpaceContext(const String& name, ServerID _id, ODPSST::ConnectionManager* sstConnMgr, OHDPSST::ConnectionManager* ohsstConnMgr, Network::IOService* ios, Network::IOStrand* strand, const Time& epoch, Trace::Trace* _trace, const Duration& duration = Duration::zero());
     ~SpaceContext();
 
     const String& name() { return mName; }
@@ -85,6 +86,10 @@ public:
         return mSSTConnMgr;
     }
 
+    OHDPSST::ConnectionManager* ohSSTConnectionManager() const {
+        return mOHSSTConnMgr;
+    }
+
     SpaceTrace* spacetrace() const { return mSpaceTrace; }
 
 private:
@@ -104,6 +109,8 @@ private:
     Sirikata::AtomicValue<ObjectSessionManager*> mObjectSessionManager;
 
     Sirikata::AtomicValue<ODPSST::ConnectionManager*> mSSTConnMgr;
+
+    Sirikata::AtomicValue<OHDPSST::ConnectionManager*> mOHSSTConnMgr;
 
     SpaceTrace* mSpaceTrace;
 }; // class SpaceContext

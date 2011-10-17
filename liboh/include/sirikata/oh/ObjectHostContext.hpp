@@ -36,6 +36,7 @@
 #include <sirikata/oh/Platform.hpp>
 #include <sirikata/core/service/Context.hpp>
 #include <sirikata/core/odp/SST.hpp>
+#include <sirikata/core/ohdp/SST.hpp>
 #include "Trace.hpp"
 
 namespace Sirikata {
@@ -44,7 +45,7 @@ class ObjectHost;
 
 class SIRIKATA_OH_EXPORT ObjectHostContext : public Context {
 public:
-    ObjectHostContext(const String& name, ObjectHostID _id, ODPSST::ConnectionManager* sstConnMgr, Network::IOService* ios, Network::IOStrand* strand, Trace::Trace* _trace, const Time& epoch, const Duration& simlen = Duration::zero());
+    ObjectHostContext(const String& name, ObjectHostID _id, ODPSST::ConnectionManager* sstConnMgr, OHDPSST::ConnectionManager* ohSstConnMgr, Network::IOService* ios, Network::IOStrand* strand, Trace::Trace* _trace, const Time& epoch, const Duration& simlen = Duration::zero());
     ~ObjectHostContext();
 
     ObjectHostID id;
@@ -52,12 +53,14 @@ public:
     OHTrace* ohtrace() const { return mOHTrace; }
     const String& name() { return mName; }
     ODPSST::ConnectionManager* sstConnMgr() { return mSSTConnMgr; }
+    OHDPSST::ConnectionManager* ohSSTConnMgr() { return mOHSSTConnMgr; }
 
 
 private:
     const String mName;
     OHTrace* mOHTrace;
     ODPSST::ConnectionManager* mSSTConnMgr;
+    OHDPSST::ConnectionManager* mOHSSTConnMgr;
 
 }; // class ObjectHostContext
 

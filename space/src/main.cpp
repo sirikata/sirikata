@@ -131,8 +131,9 @@ int main(int argc, char** argv) {
     Network::IOStrand* mainStrand = ios->createStrand();
 
     ODPSST::ConnectionManager* sstConnMgr = new ODPSST::ConnectionManager();
+    OHDPSST::ConnectionManager* ohSstConnMgr = new OHDPSST::ConnectionManager();
 
-    SpaceContext* space_context = new SpaceContext("space", server_id, sstConnMgr, ios, mainStrand, start_time, gTrace, duration);
+    SpaceContext* space_context = new SpaceContext("space", server_id, sstConnMgr, ohSstConnMgr, ios, mainStrand, start_time, gTrace, duration);
 
     String servermap_type = GetOptionValue<String>("servermap");
     String servermap_options = GetOptionValue<String>("servermap-options");
@@ -294,6 +295,7 @@ int main(int argc, char** argv) {
     space_context->add(oseg);
     space_context->add(loadMonitor);
     space_context->add(sstConnMgr);
+    space_context->add(ohSstConnMgr);
 
 
     space_context->run(2);
@@ -344,6 +346,7 @@ int main(int argc, char** argv) {
     Network::IOServiceFactory::destroyIOService(ios);
 
     delete sstConnMgr;
+    delete ohSstConnMgr;
 
     sync.stop();
 

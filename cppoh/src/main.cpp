@@ -131,10 +131,11 @@ int main (int argc, char** argv) {
     Network::IOStrand* mainStrand = ios->createStrand();
 
     ODPSST::ConnectionManager* sstConnMgr = new ODPSST::ConnectionManager();
+    OHDPSST::ConnectionManager* ohSstConnMgr = new OHDPSST::ConnectionManager();
 
     Time start_time = Timer::now(); // Just for stats in ObjectHostContext.
     Duration duration = Duration::zero(); // Indicates to run forever.
-    ObjectHostContext* ctx = new ObjectHostContext("cppoh", oh_id, sstConnMgr, ios, mainStrand, trace, start_time, duration);
+    ObjectHostContext* ctx = new ObjectHostContext("cppoh", oh_id, sstConnMgr, ohSstConnMgr, ios, mainStrand, trace, start_time, duration);
 
     String servermap_type = GetOptionValue<String>("servermap");
     String servermap_options = GetOptionValue<String>("servermap-options");
@@ -186,6 +187,7 @@ int main (int argc, char** argv) {
 
     ctx->add(oh);
     ctx->add(sstConnMgr);
+    ctx->add(ohSstConnMgr);
 
     if (!objfactory_type.empty())
     {
@@ -229,6 +231,7 @@ int main (int argc, char** argv) {
     Network::IOServiceFactory::destroyIOService(ios);
 
     delete sstConnMgr;
+    delete ohSstConnMgr;
 
     plugins.gc();
     sync.stop();

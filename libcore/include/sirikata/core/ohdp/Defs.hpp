@@ -39,15 +39,19 @@ public:
     bool operator<(const NodeID& rhs) const;
     bool operator<=(const NodeID& rhs) const;
 
+    String toString() const;
+
     /** Returns true if the ports match, i.e. if they are equal or
      *  one of them is any().
      */
     bool matches(const NodeID& rhs) const;
 
+    size_t hash() const { return std::tr1::hash<uint32>()(mValue); }
+
     class Hasher {
     public:
         size_t operator()(const NodeID& p) const {
-            return std::tr1::hash<uint32>()(p.mValue);
+            return p.hash();
         }
     };
 
@@ -56,6 +60,34 @@ private:
 };
 
 SIRIKATA_FUNCTION_EXPORT std::ostream& operator<<(std::ostream& os, const NodeID& rhs);
+
+/// Combination of SpaceID and NodeID.
+class SIRIKATA_EXPORT SpaceNodeID : public TotallyOrdered<SpaceNodeID> {
+public:
+    SpaceNodeID();
+    SpaceNodeID(const SpaceID& s, const NodeID& n);
+
+    const SpaceID& space() const { return mSpace; }
+    const NodeID& node() const { return mNode; }
+
+    /** Get a null SpaceNodeID. */
+    static const SpaceNodeID& null();
+
+    bool operator==(const SpaceNodeID& rhs) const;
+    bool operator<(const SpaceNodeID& rhs) const;
+
+    String toString() const;
+
+    class Hasher {
+    public:
+        size_t operator()(const SpaceNodeID& p) const;
+    };
+private:
+    SpaceID mSpace;
+    NodeID mNode;
+};
+
+SIRIKATA_FUNCTION_EXPORT std::ostream& operator<<(std::ostream& os, const SpaceNodeID& rhs);
 
 class Endpoint;
 
@@ -80,6 +112,9 @@ public:
 
     Endpoint(const SpaceID& space, const NodeID& node, const PortID& port)
         : EndpointBase(space, node, port)
+    {}
+    Endpoint(const SpaceNodeID& spacenode, const PortID& port)
+        : EndpointBase(spacenode.space(), spacenode.node(), port)
     {}
 
     /** Get a null Endpoint, i.e. one where each component is null. */

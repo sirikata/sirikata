@@ -4,6 +4,8 @@
 
 #include <sirikata/core/util/Standard.hh>
 #include <sirikata/core/ohdp/Defs.hpp>
+#include <boost/functional/hash.hpp>
+#include <boost/lexical_cast.hpp>
 
 namespace Sirikata {
 namespace OHDP {
@@ -79,6 +81,10 @@ bool NodeID::operator<=(const NodeID& rhs) const {
     return mValue <= rhs.mValue;
 }
 
+String NodeID::toString() const {
+    return boost::lexical_cast<String>(mValue);
+}
+
 bool NodeID::matches(const NodeID& rhs) const {
     return (
         mValue == rhs.mValue ||
@@ -90,6 +96,53 @@ std::ostream& operator<<(std::ostream& os, const NodeID& rhs) {
     os << (uint32)rhs;
     return os;
 }
+
+
+
+SpaceNodeID::SpaceNodeID()
+ : mSpace(SpaceID::null()),
+   mNode(NodeID::null())
+{
+}
+
+SpaceNodeID::SpaceNodeID(const SpaceID& s, const NodeID& n)
+ : mSpace(s),
+   mNode(n)
+{
+}
+
+const SpaceNodeID::SpaceNodeID& null() {
+    static SpaceNodeID n(SpaceID::null(), NodeID::null());
+    return n;
+}
+
+bool SpaceNodeID::operator==(const SpaceNodeID& rhs) const {
+    return (mSpace == rhs.mSpace && mNode == rhs.mNode);
+}
+
+bool SpaceNodeID::operator<(const SpaceNodeID& rhs) const {
+    return (
+        mSpace < rhs.mSpace ||
+        (mSpace == rhs.mSpace && mNode < rhs.mNode)
+    );
+}
+
+String SpaceNodeID::toString() const {
+    return mSpace.toString() + ":" + mNode.toString();
+}
+
+size_t SpaceNodeID::Hasher::operator()(const SpaceNodeID& p) const {
+    size_t seed = 0;
+    boost::hash_combine(seed, p.mSpace.hash());
+    boost::hash_combine(seed, p.mNode.hash());
+    return seed;
+}
+
+std::ostream& operator<<(std::ostream& os, const SpaceNodeID& rhs) {
+    os << rhs.space() << ":" << rhs.node();
+    return os;
+}
+
 
 } // namespace OHDP
 } // namespace Sirikata
