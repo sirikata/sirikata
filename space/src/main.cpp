@@ -47,6 +47,7 @@
 #include <sirikata/space/LocationService.hpp>
 
 #include <sirikata/space/Proximity.hpp>
+#include <sirikata/space/AggregateManager.hpp>
 #include "Server.hpp"
 
 #include "Options.hpp"
@@ -248,10 +249,11 @@ int main(int argc, char** argv) {
     // We have all the info to initialize the forwarder now
     forwarder->initialize(oseg, sq, server_message_receiver, loc_service);
 
+    AggregateManager* aggmgr = new AggregateManager(loc_service);
 
     std::string prox_type = GetOptionValue<String>(OPT_PROX);
     std::string prox_options = GetOptionValue<String>(OPT_PROX_OPTIONS);
-    Proximity* prox = ProximityFactory::getSingleton().getConstructor(prox_type)(space_context, loc_service, gNetwork, prox_options);
+    Proximity* prox = ProximityFactory::getSingleton().getConstructor(prox_type)(space_context, loc_service, gNetwork, aggmgr, prox_options);
 
     // We need to do an async lookup, and to finish it the server needs to be
     // running. But we can't create the server until we have the address from
@@ -312,6 +314,7 @@ int main(int argc, char** argv) {
     delete sq;
     delete server_message_receiver;
     delete prox;
+    delete aggmgr;
     delete server_id_map;
 
     delete loadMonitor;
