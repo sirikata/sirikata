@@ -21,11 +21,6 @@ typedef Sirikata::SST::ConnectionManager<SpaceObjectReference> ConnectionManager
 
 // SpaceObjectReference/ODP-specific implementation
 namespace SST {
-#if SIRIKATA_PLATFORM == SIRIKATA_WINDOWS
-SIRIKATA_EXPORT_TEMPLATE template class SIRIKATA_EXPORT BaseDatagramLayer<SpaceObjectReference>;
-SIRIKATA_EXPORT_TEMPLATE template class SIRIKATA_EXPORT Connection<SpaceObjectReference>;
-SIRIKATA_EXPORT_TEMPLATE template class SIRIKATA_EXPORT Stream<SpaceObjectReference>;
-#endif
 
 template <>
 class SIRIKATA_EXPORT BaseDatagramLayer<SpaceObjectReference>
@@ -183,6 +178,16 @@ class SIRIKATA_EXPORT BaseDatagramLayer<SpaceObjectReference>
     ConnectionVariables<EndPointType>* mSSTConnVars;
     EndPointType mEndpoint;
 };
+
+#if SIRIKATA_PLATFORM == SIRIKATA_WINDOWS
+  // These exports keep Windows happy by forcing the export of these
+  // types. BaseDatagramLayer is now excluded because it is explicitly
+  // specialized, which, for some reason, keeps things working
+  // properly.
+  //SIRIKATA_EXPORT_TEMPLATE template class SIRIKATA_EXPORT BaseDatagramLayer<SpaceObjectReference>;
+  SIRIKATA_EXPORT_TEMPLATE template class SIRIKATA_EXPORT Connection<SpaceObjectReference>;
+  SIRIKATA_EXPORT_TEMPLATE template class SIRIKATA_EXPORT Stream<SpaceObjectReference>;
+#endif
 
 } // namespace SST
 
