@@ -43,11 +43,12 @@ using namespace Sirikata::Network;
 
 namespace Sirikata {
 
-SpaceNodeConnection::SpaceNodeConnection(ObjectHostContext* ctx, Network::IOStrand* ioStrand, TimeProfiler::Stage* handle_read_stage, OptionSet *streamOptions, const SpaceID& spaceid, ServerID sid, ConnectionEventCallback ccb, ReceiveCallback rcb)
+SpaceNodeConnection::SpaceNodeConnection(ObjectHostContext* ctx, Network::IOStrand* ioStrand, TimeProfiler::Stage* handle_read_stage, OptionSet *streamOptions, const SpaceID& spaceid, ServerID sid, OHDP::Service* ohdp_service, ConnectionEventCallback ccb, ReceiveCallback rcb)
  : mContext(ctx),
    mHandleReadStage(handle_read_stage),
    mSpace(spaceid),
    mServer(sid),
+   mOHDPService(ohdp_service),
    socket(Sirikata::Network::StreamFactory::getSingleton().getConstructor(GetOptionValue<String>("ohstreamlib"))(ioStrand,streamOptions)),
    mAddr(Network::Address::null()),
    mConnecting(false),
@@ -152,10 +153,41 @@ void SpaceNodeConnection::handleConnectionEvent(
     const Network::Stream::ConnectionStatus status,
     const std::string&reason)
 {
-    mConnecting = false;
+    bool did_connect = status == Network::Stream::Connected;
+    if (!did_connect) {
+        mConnecting = false;
+        invokeAndClearCallbacks(did_connect);
+        mConnectCB(status, reason);
+    }
+    else {
+        OHDP::SpaceNodeID self_id(mSpace, OHDP::NodeID::self());
+        OHSSTBaseDatagramLayerPtr baseDatagramLayer =
+            mContext->ohSSTConnMgr()->createDatagramLayer(
+                self_id, mContext, mOHDPService
+            );
+        mContext->ohSSTConnMgr()->connectStream(
+            OHSSTEndpoint(self_id, 0), // Local port is random
+            OHSSTEndpoint(OHDP::SpaceNodeID(mSpace, OHDP::NodeID(mServer)), OBJECT_SPACE_PORT),
+            std::tr1::bind( &SpaceNodeConnection::handleStreamConnected, this,
+                status, reason,
+                std::tr1::placeholders::_1, std::tr1::placeholders::_2
+            )
+        );
+    }
+}
 
-    invokeAndClearCallbacks( status == Network::Stream::Connected );
-    mConnectCB(status, reason);
+void SpaceNodeConnection::handleStreamConnected(const Network::Stream::ConnectionStatus status, const std::string& reason, int err, OHSSTStreamPtr strm) {
+    mConnecting = false;
+    if (err != SST_IMPL_SUCCESS) {
+        SILOG(space-node-connection,error,"Failed to connect OHDP stream.");
+        invokeAndClearCallbacks(false);
+        mConnectCB(Network::Stream::ConnectionFailed, "Failed to connect OHDP stream.");
+    }
+    else {
+        mOHSSTStream = strm;
+        invokeAndClearCallbacks(true);
+        mConnectCB(status, reason);
+    }
 }
 
 void SpaceNodeConnection::failConnection() {

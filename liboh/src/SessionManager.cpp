@@ -776,6 +776,7 @@ void SessionManager::setupSpaceConnection(ServerID server, SpaceNodeConnection::
         mStreamOptions,
         mSpace,
         server,
+        static_cast<OHDP::Service*>(this),
         mContext->mainStrand->wrap(
             std::tr1::bind(&SessionManager::handleSpaceConnection,
                 this,
@@ -855,7 +856,6 @@ void SessionManager::handleSpaceConnection(const Sirikata::Network::Stream::Conn
         SESSION_LOG(error,"Failed to connect to server " << sid << ": " << reason);
         delete conn;
         mConnections.erase(sid);
-        mTimeSyncClient->removeNode(OHDP::NodeID(sid));
         return;
     }
     else if (status == Sirikata::Network::Stream::Disconnected) {
@@ -1039,6 +1039,8 @@ void SessionManager::handleSessionMessage(Sirikata::Protocol::Object::ObjectMess
 }
 
 void SessionManager::handleObjectFullyConnected(const SpaceID& space, const ObjectReference& obj, ServerID server, const ConnectingInfo& ci, ConnectedCallback real_cb) {
+    // Do the callback even if the connection failed so the object is notified.
+
     SpaceObjectReference spaceobj(space, obj);
 
     ConnectionInfo conn_info;
@@ -1050,6 +1052,10 @@ void SessionManager::handleObjectFullyConnected(const SpaceID& space, const Obje
     conn_info.physics = ci.physics;
     conn_info.query = ci.query;
     real_cb(space, obj, conn_info);
+
+    // But don't continue and try to do more work since we don't have a connection
+    if (server == NullServerID)
+        return;
 
     mContext->sstConnMgr()->connectStream(
         SSTEndpoint(spaceobj, 0), // Local port is random

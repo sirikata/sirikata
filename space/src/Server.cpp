@@ -127,10 +127,29 @@ Server::Server(SpaceContext* ctx, Authenticator* auth, Forwarder* forwarder, Loc
     using std::tr1::placeholders::_1;
     using std::tr1::placeholders::_2;
 
+    // Forwarder::setODPService creates the ODP SST datagram layer allowing us
+    // to listen for object connections
     mContext->sstConnectionManager()->listen(
         std::tr1::bind(&Server::newStream, this, _1, _2),
         SST::EndPoint<SpaceObjectReference>(SpaceObjectReference(SpaceID::null(), ObjectReference::spaceServiceID()), OBJECT_SPACE_PORT)
     );
+
+    // We create the OHDP SST datagram layer ourselves.
+    mOHSSTDatagramLayer = mContext->ohSSTConnectionManager()->createDatagramLayer(
+        OHDP::SpaceNodeID(SpaceID::null(), OHDP::NodeID::self()), mContext, static_cast<OHDP::Service*>(this)
+    );
+    // And can listen for connections
+    mContext->ohSSTConnectionManager()->listen(
+        std::tr1::bind(&Server::newOHStream, this, _1, _2),
+        OHDPSST::Endpoint(OHDP::SpaceNodeID(SpaceID::null(), OHDP::NodeID::self()), OBJECT_SPACE_PORT)
+    );
+}
+
+void Server::newOHStream(int err, OHDPSST::Stream::Ptr s) {
+    if (err != SST_IMPL_SUCCESS)
+        return;
+
+    SPACE_LOG(info, "New OHDP SST stream from " << s->remoteEndPoint().toString());
 }
 
 void Server::newStream(int err, SST::Stream<SpaceObjectReference>::Ptr s) {

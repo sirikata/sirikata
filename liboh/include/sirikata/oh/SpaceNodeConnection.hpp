@@ -49,12 +49,18 @@ namespace Sirikata {
 // Connections to servers
 struct SIRIKATA_OH_EXPORT SpaceNodeConnection {
   public:
+    typedef OHDPSST::Stream OHSSTStream;
+    typedef OHSSTStream::Ptr OHSSTStreamPtr;
+    typedef OHDPSST::Endpoint OHSSTEndpoint;
+    typedef OHDPSST::BaseDatagramLayer OHSSTBaseDatagramLayer;
+    typedef OHDPSST::BaseDatagramLayer::Ptr OHSSTBaseDatagramLayerPtr;
+
     typedef std::tr1::function<void(SpaceNodeConnection*)> GotSpaceConnectionCallback;
     typedef std::tr1::function<void(SpaceNodeConnection*)> ReceiveCallback;
 
     typedef std::tr1::function<void(const Network::Stream::ConnectionStatus, const std::string&)> ConnectionEventCallback;
 
-    SpaceNodeConnection(ObjectHostContext* ctx, Network::IOStrand* ioStrand, TimeProfiler::Stage* handle_read_stage, OptionSet *streamOptions, const SpaceID& spaceid, ServerID sid, ConnectionEventCallback ccb, ReceiveCallback rcb);
+    SpaceNodeConnection(ObjectHostContext* ctx, Network::IOStrand* ioStrand, TimeProfiler::Stage* handle_read_stage, OptionSet *streamOptions, const SpaceID& spaceid, ServerID sid, OHDP::Service* ohdp_service, ConnectionEventCallback ccb, ReceiveCallback rcb);
     ~SpaceNodeConnection();
 
     // Push a packet to be sent out
@@ -69,6 +75,8 @@ struct SIRIKATA_OH_EXPORT SpaceNodeConnection {
     const SpaceID& space() const { return mSpace; }
     const ServerID& server() const { return mServer; }
 
+    OHSSTStreamPtr stream() const { return mOHSSTStream; }
+
     void connect(const Network::Address& addr);
     void failConnection();
 
@@ -82,11 +90,15 @@ struct SIRIKATA_OH_EXPORT SpaceNodeConnection {
     TimeProfiler::Stage* mHandleReadStage;
     SpaceID mSpace;
     ServerID mServer;
+    OHDP::Service* mOHDPService;
     Network::Stream* socket;
     Network::Address mAddr;
 
     // Callback for connection event
     void handleConnectionEvent(const Network::Stream::ConnectionStatus status, const std::string&reason);
+
+    // Callback for stream connection event
+    void handleStreamConnected(const Network::Stream::ConnectionStatus status, const std::string& reason, int err, OHSSTStreamPtr strm);
 
     // Callback for when the connection receives data
     void handleRead(Sirikata::Network::Chunk& chunk, const Sirikata::Network::Stream::PauseReceiveCallback& pause);
@@ -101,6 +113,8 @@ struct SIRIKATA_OH_EXPORT SpaceNodeConnection {
 
     ConnectionEventCallback mConnectCB;
     ReceiveCallback mReceiveCB;
+
+    OHSSTStreamPtr mOHSSTStream;
 };
 
 } // namespace Sirikata

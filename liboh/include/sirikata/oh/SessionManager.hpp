@@ -106,6 +106,9 @@ class SIRIKATA_OH_EXPORT SessionManager : public PollingService, public OHDP::De
     typedef SST::Stream<SpaceObjectReference> SSTStream;
     typedef SSTStream::Ptr SSTStreamPtr;
     typedef SSTStream::EndpointType SSTEndpoint;
+    typedef OHDPSST::Stream OHSSTStream;
+    typedef OHSSTStream::Ptr OHSSTStreamPtr;
+    typedef OHDPSST::Endpoint OHSSTEndpoint;
 
 
     SessionManager(ObjectHostContext* ctx, const SpaceID& space, ServerIDMap* sidmap, ObjectConnectedCallback, ObjectMigratedCallback, ObjectMessageHandlerCallback, ObjectDisconnectedCallback);
@@ -144,6 +147,12 @@ class SIRIKATA_OH_EXPORT SessionManager : public PollingService, public OHDP::De
     // only be used to deal with session management.
     // If dest_server is NullServerID, then getConnectedServer is used to determine where to send the packet.
     // This is used to possibly exchange data between the main and IO strands, so it acquires locks.
+    //
+    // The allow_connecting flag should only be used internally and allows
+    // sending packets over a still-connecting session. This is only used to
+    // allow this to act as an OHDP::Service while still in the connecting phase
+    // (no callback from SpaceNodeConnection yet) so we can build OHDP::SST
+    // streams as part of the connection process.
     bool send(const SpaceObjectReference& sporef_objid, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload, ServerID dest_server = NullServerID);
 
     SSTStreamPtr getSpaceStream(const ObjectReference& objectID);

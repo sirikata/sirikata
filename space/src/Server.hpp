@@ -186,6 +186,7 @@ private:
     void processAlreadyMigrating(const UUID& obj_id);
 
     void newStream(int err, SST::Stream<SpaceObjectReference>::Ptr s);
+    void newOHStream(int err, OHDPSST::Stream::Ptr s);
 
     SpaceContext* mContext;
 
@@ -201,6 +202,8 @@ private:
     MigrationMonitor* mMigrationMonitor;
 
     Router<Message*>* mMigrateServerMessageService;
+
+    OHDPSST::BaseDatagramLayer::Ptr mOHSSTDatagramLayer;
 
     bool mMigrationSendRunning; // Indicates whether an event chain for sending outstanding migration messages is running.
                                 // Note that ideally this could be replaced by just using our own internal queue
