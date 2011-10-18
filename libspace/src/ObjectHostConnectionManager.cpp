@@ -44,10 +44,14 @@ namespace Sirikata {
 
 ObjectHostConnection::ObjectHostConnection(ShortObjectHostConnectionID sid, Sirikata::Network::Stream* str)
  : short_id(sid),
-   socket(str)
+   socket(str),
+   base_stream()
 {}
 ObjectHostConnection::~ObjectHostConnection() {
     delete socket;
+    // The stream won't be of any use anymore
+    if (base_stream)
+        base_stream->close(true);
 }
 
 
@@ -56,7 +60,7 @@ ObjectHostConnectionManager::Listener::~Listener() {
 }
 
 
-ObjectHostConnectionManager::ObjectHostConnectionManager(SpaceContext* ctx, const Address4& listen_addr, Listener* listener)
+ObjectHostConnectionManager::ObjectHostConnectionManager(SpaceContext* ctx, const Address4& listen_addr, OHDP::Service* ohdp_service, Listener* listener)
  : mContext(ctx),
    mIOStrand( ctx->ioService->createStrand() ),
    mAcceptor(NULL),
@@ -65,6 +69,17 @@ ObjectHostConnectionManager::ObjectHostConnectionManager(SpaceContext* ctx, cons
 {
     assert(mListener != NULL);
     listen(listen_addr);
+
+
+    // We create the OHDP SST datagram layer ourselves.
+    mOHSSTDatagramLayer = mContext->ohSSTConnectionManager()->createDatagramLayer(
+        OHDP::SpaceNodeID(SpaceID::null(), OHDP::NodeID::self()), mContext, ohdp_service
+    );
+    // And can listen for connections
+    mContext->ohSSTConnectionManager()->listen(
+        std::tr1::bind(&ObjectHostConnectionManager::newOHStream, this, _1, _2),
+        OHDPSST::Endpoint(OHDP::SpaceNodeID(SpaceID::null(), OHDP::NodeID::self()), OBJECT_SPACE_PORT)
+    );
 }
 
 ObjectHostConnectionManager::~ObjectHostConnectionManager() {
@@ -196,6 +211,25 @@ void ObjectHostConnectionManager::handleNewConnection(Sirikata::Network::Stream*
     );
 }
 
+void ObjectHostConnectionManager::newOHStream(int err, OHDPSST::Stream::Ptr strm) {
+    if (err != SST_IMPL_SUCCESS)
+        return;
+
+    ShortObjectHostConnectionID short_conn_id = strm->remoteEndPoint().endPoint.node();
+    SPACE_LOG(detailed, "New OHDP stream from " << short_conn_id << ", notifying of new OH session.");
+    ShortIDConnectionMap::iterator conn_it = mShortConnections.find(short_conn_id);
+    // We may have lost the connection while this stream was finishing forming
+    if (conn_it == mShortConnections.end()) {
+        strm->close(true);
+        return;
+    }
+
+    // Otherwise, we can add the stream to the connection and
+    ObjectHostConnection* conn = conn_it->second;
+    conn->base_stream = strm;
+    mListener->onObjectHostConnected(conn_id(conn), short_conn_id, strm);
+}
+
 void ObjectHostConnectionManager::handleConnectionEvent(ObjectHostConnection* conn, Sirikata::Network::Stream::ConnectionStatus status, const std::string& reason) {
     if (status == Network::Stream::Disconnected) {
         // Close out all associated connections
@@ -228,7 +262,7 @@ void ObjectHostConnectionManager::handleConnectionRead(ObjectHostConnection* con
 void ObjectHostConnectionManager::insertConnection(ObjectHostConnection* conn) {
     mConnections.insert(conn);
     mShortConnections[conn->short_id] = conn;
-    mListener->onObjectHostConnected(conn_id(conn), conn->short_id);
+    // onObjectHostConnected notification happens upon stream connection
 }
 
 void ObjectHostConnectionManager::destroyConnection(ObjectHostConnection* conn) {

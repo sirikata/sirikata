@@ -72,6 +72,8 @@ class ObjectSegmentation;
 class ObjectConnection;
 class ObjectHostConnectionManager;
 
+class ObjectHostSessionManager;
+
   /** Handles all the basic services provided for objects by a server,
    *  including routing and message delivery, proximity services, and
    *  object -> server mapping.  This is a singleton for each simulated
@@ -85,7 +87,7 @@ class Server :
         ObjectSessionManager, ObjectHostConnectionManager::Listener
 {
 public:
-    Server(SpaceContext* ctx, Authenticator* auth, Forwarder* forwarder, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, ObjectSegmentation* oseg, Address4 oh_listen_addr);
+    Server(SpaceContext* ctx, Authenticator* auth, Forwarder* forwarder, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, ObjectSegmentation* oseg, Address4 oh_listen_addr, ObjectHostSessionManager* oh_sess_mgr);
     ~Server();
 
     virtual void receiveMessage(Message* msg);
@@ -113,7 +115,7 @@ private:
 
     // ObjectHostConnectionManager::Listener Interface:
 
-    virtual void onObjectHostConnected(const ObjectHostConnectionID& conn_id, const ShortObjectHostConnectionID short_conn_id);
+    virtual void onObjectHostConnected(const ObjectHostConnectionID& conn_id, const ShortObjectHostConnectionID short_conn_id, OHDPSST::Stream::Ptr stream);
     // Callback which handles messages from object hosts -- mostly just does sanity checking
     // before using the forwarder to do routing.  Operates in the
     // network strand to allow for fast forwarding, see
@@ -186,7 +188,6 @@ private:
     void processAlreadyMigrating(const UUID& obj_id);
 
     void newStream(int err, SST::Stream<SpaceObjectReference>::Ptr s);
-    void newOHStream(int err, OHDPSST::Stream::Ptr s);
 
     SpaceContext* mContext;
 
@@ -200,10 +201,9 @@ private:
     LocalForwarder* mLocalForwarder;
     Forwarder* mForwarder;
     MigrationMonitor* mMigrationMonitor;
+    ObjectHostSessionManager* mOHSessionManager;
 
     Router<Message*>* mMigrateServerMessageService;
-
-    OHDPSST::BaseDatagramLayer::Ptr mOHSSTDatagramLayer;
 
     bool mMigrationSendRunning; // Indicates whether an event chain for sending outstanding migration messages is running.
                                 // Note that ideally this could be replaced by just using our own internal queue

@@ -40,6 +40,7 @@
 #include <sirikata/core/network/IOWork.hpp>
 #include <sirikata/core/network/StreamListener.hpp>
 #include <sirikata/space/ObjectHostConnectionID.hpp>
+#include <sirikata/core/ohdp/SST.hpp>
 
 namespace Sirikata {
 
@@ -54,6 +55,7 @@ private:
 
     ShortObjectHostConnectionID short_id;
     Sirikata::Network::Stream* socket;
+    OHDPSST::Stream::Ptr base_stream;
 };
 
 /** ObjectHostConnectionManager handles the networking aspects of interacting
@@ -66,12 +68,22 @@ public:
     public:
         virtual ~Listener();
 
-        virtual void onObjectHostConnected(const ObjectHostConnectionID& conn_id, const ShortObjectHostConnectionID short_conn_id) = 0;
+        // Note: Because we use forwarding performed by
+        // onObjectHostMessageReceived in routing messages to initialize SST,
+        // but the onObjectHostConnected callback waits for the SST connection
+        // to initialize, these callbacks *will not* be invoked in what you
+        // might consider to be the natural order.  They are grouped as they
+        // should be treated: onObjectHostMessageReceived is independent of the
+        // other two, and the connected/disconnected callbacks should be treated
+        // simply as a sort of session manaagement.
+
         virtual bool onObjectHostMessageReceived(const ObjectHostConnectionID& conn_id, const ShortObjectHostConnectionID short_conn_id, Sirikata::Protocol::Object::ObjectMessage*) = 0;
+
+        virtual void onObjectHostConnected(const ObjectHostConnectionID& conn_id, const ShortObjectHostConnectionID short_conn_id, OHDPSST::Stream::Ptr stream) = 0;
         virtual void onObjectHostDisconnected(const ObjectHostConnectionID& conn_id, const ShortObjectHostConnectionID short_conn_id) = 0;
     };
 
-    ObjectHostConnectionManager(SpaceContext* ctx, const Address4& listen_addr, Listener* listener);
+    ObjectHostConnectionManager(SpaceContext* ctx, const Address4& listen_addr, OHDP::Service* ohdp_service, Listener* listener);
     ~ObjectHostConnectionManager();
 
     /** NOTE: Must be used from within the main strand.  Currently this is required since we have the return value... */
@@ -100,6 +112,8 @@ private:
 
     Listener* mListener;
 
+    OHDPSST::BaseDatagramLayer::Ptr mOHSSTDatagramLayer;
+
     static ObjectHostConnectionID conn_id(ObjectHostConnection* c);
 
     /** Listen for and handle new connections. */
@@ -110,6 +124,8 @@ private:
 
     // Handle connection events for entire connections
     void handleConnectionEvent(ObjectHostConnection* conn, Sirikata::Network::Stream::ConnectionStatus status, const std::string& reason);
+
+    void newOHStream(int err, OHDPSST::Stream::Ptr s);
 
     // Handle async reading callbacks for this connection
     void handleConnectionRead(ObjectHostConnection* conn, Sirikata::Network::Chunk& chunk, const Sirikata::Network::Stream::PauseReceiveCallback& pause);
