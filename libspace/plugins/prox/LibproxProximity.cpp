@@ -490,20 +490,10 @@ void LibproxProximity::removeRelevantServer(ServerID sid) {
     mServersQueried.erase(sid);
 }
 
-void LibproxProximity::scheduleAggregateEventHandler() {
-    mContext->mainStrand->post(std::tr1::bind(&LibproxProximity::invokeAggregateEventHandler, this));
-}
-
-void LibproxProximity::invokeAggregateEventHandler() {
-    AggregateEventHandler evt;
-    if (!mAggregateEventHandlers.pop(evt)) return;
-    evt();
-}
-
 void LibproxProximity::aggregateCreated(ProxQueryHandler* handler, const UUID& objid) {
     // On addition, an "aggregate" will have no children, i.e. its zero sized.
 
-    mAggregateEventHandlers.push(
+    mContext->mainStrand->post(
         std::tr1::bind(
             &LocationService::addLocalAggregateObject, mLocService,
             objid,
@@ -514,9 +504,6 @@ void LibproxProximity::aggregateCreated(ProxQueryHandler* handler, const UUID& o
             ""
         )
     );
-
-    scheduleAggregateEventHandler();
-
 
     mAggregateManager->addAggregate(objid);
 }
@@ -539,14 +526,13 @@ void LibproxProximity::updateAggregateLoc(const UUID& objid, const BoundingSpher
 void LibproxProximity::aggregateChildAdded(ProxQueryHandler* handler, const UUID& objid, const UUID& child, const BoundingSphere3f& bnds) {
     if (!mLocService->contains(objid) || mLocService->bounds(objid) != bnds) {
       // Loc cares only about this chance to update state of aggregate
-      mAggregateEventHandlers.push(
+      mContext->mainStrand->post(
         std::tr1::bind(
             &LibproxProximity::updateAggregateLoc, this,
             objid, bnds
         )
       );
     }
-    scheduleAggregateEventHandler();
 
     mAggregateManager->addChild(objid, child);
 }
@@ -554,42 +540,38 @@ void LibproxProximity::aggregateChildAdded(ProxQueryHandler* handler, const UUID
 void LibproxProximity::aggregateChildRemoved(ProxQueryHandler* handler, const UUID& objid, const UUID& child, const BoundingSphere3f& bnds) {
     if (!mLocService->contains(objid) || mLocService->bounds(objid) != bnds) {
       // Loc cares only about this chance to update state of aggregate
-      mAggregateEventHandlers.push(
+      mContext->mainStrand->post(
         std::tr1::bind(
             &LibproxProximity::updateAggregateLoc, this,
             objid, bnds
         )
       );
     }
-    scheduleAggregateEventHandler();
 
     mAggregateManager->removeChild(objid, child);
 }
 
 void LibproxProximity::aggregateBoundsUpdated(ProxQueryHandler* handler, const UUID& objid, const BoundingSphere3f& bnds) {
   if (!mLocService->contains(objid) || mLocService->bounds(objid) != bnds) {
-    mAggregateEventHandlers.push(
+    mContext->mainStrand->post(
         std::tr1::bind(
             &LibproxProximity::updateAggregateLoc, this,
             objid, bnds
         )
     );
   }
-  scheduleAggregateEventHandler();
 
   if (mLocService->contains(objid) && mLocService->bounds(objid) != bnds)
     mAggregateManager->generateAggregateMesh(objid, Duration::seconds(300.0+rand()%300));
 }
 
 void LibproxProximity::aggregateDestroyed(ProxQueryHandler* handler, const UUID& objid) {
-    mAggregateEventHandlers.push(
+    mContext->mainStrand->post(
         std::tr1::bind(
             &LocationService::removeLocalAggregateObject, mLocService, objid
         )
     );
-    scheduleAggregateEventHandler();
     mAggregateManager->removeAggregate(objid);
-
 }
 
 void LibproxProximity::aggregateObserved(ProxQueryHandler* handler, const UUID& objid, uint32 nobservers) {

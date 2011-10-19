@@ -307,10 +307,6 @@ private:
     typedef std::tr1::unordered_map<UUID, ProxStreamInfoPtr, UUID::Hasher> ObjectProxStreamMap;
     ObjectProxStreamMap mObjectProxStreams;
 
-    typedef std::tr1::function<void()> AggregateEventHandler;
-    Sirikata::ThreadSafeQueue<AggregateEventHandler> mAggregateEventHandlers;
-    void scheduleAggregateEventHandler(); // Schedule main thread to handle events
-    void invokeAggregateEventHandler(); // Worker which invokes handler events
 
     // PROX Thread - Should only be accessed in methods used by the main thread
 
