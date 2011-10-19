@@ -73,16 +73,30 @@
 
 namespace {
 using namespace Sirikata;
-void createServer(Server** server_out, SpaceContext* space_context, Authenticator* auth, Forwarder* forwarder, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, ObjectSegmentation* oseg, Address4 addr, ObjectHostSessionManager* oh_sess_mgr, ObjectSessionManager* obj_sess_mgr) {
+
+// Some platforms can't bind as many variables as we want to use, so we need to
+// manually package them up.
+struct ServerData {
+    SpaceContext* space_context;
+    Authenticator* auth;
+    Forwarder* forwarder;
+    LocationService* loc_service;
+    CoordinateSegmentation* cseg;
+    Proximity* prox;
+    ObjectSegmentation* oseg;
+    ObjectHostSessionManager* oh_sess_mgr;
+    ObjectSessionManager* obj_sess_mgr;
+};
+void createServer(Server** server_out, ServerData sd, Address4 addr) {
     if (addr == Address4::Null) {
         SILOG(space, fatal, "The requested server ID isn't in ServerIDMap");
-        space_context->shutdown();
+        sd.space_context->shutdown();
     }
 
-    Server* server = new Server(space_context, auth, forwarder, loc_service, cseg, prox, oseg, addr, oh_sess_mgr, obj_sess_mgr);
-    prox->initialize(cseg);
-    space_context->add(prox);
-    space_context->add(server);
+    Server* server = new Server(sd.space_context, sd.auth, sd.forwarder, sd.loc_service, sd.cseg, sd.prox, sd.oseg, addr, sd.oh_sess_mgr, sd.obj_sess_mgr);
+    sd.prox->initialize(sd.cseg);
+    sd.space_context->add(sd.prox);
+    sd.space_context->add(server);
 
     *server_out = server;
 }
@@ -268,10 +282,20 @@ int main(int argc, char** argv) {
     // handle cleaning it up ourselves.
     using std::tr1::placeholders::_1;
     Server* server = NULL;
+    ServerData sd;
+    sd.space_context = space_context;
+    sd.auth = auth;
+    sd.forwarder = forwarder;
+    sd.loc_service = loc_service;
+    sd.cseg = cseg;
+    sd.prox = prox;
+    sd.oseg = oseg;
+    sd.oh_sess_mgr = oh_sess_mgr;
+    sd.obj_sess_mgr = obj_sess_mgr;
     server_id_map->lookupExternal(
         space_context->id(),
         space_context->mainStrand->wrap(
-            std::tr1::bind( &createServer, &server, space_context, auth, forwarder, loc_service, cseg, prox, oseg, _1, oh_sess_mgr, obj_sess_mgr)
+            std::tr1::bind( &createServer, &server, sd, _1)
         )
     );
 
