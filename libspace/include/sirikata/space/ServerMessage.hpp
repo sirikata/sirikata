@@ -43,6 +43,8 @@
 
 namespace Sirikata {
 
+class SpaceContext;
+
 typedef uint16 ServerMessagePort;
 
 // List of well known server ports.
@@ -137,6 +139,7 @@ public:
 /** Base class for a message dispatcher. */
 class SIRIKATA_SPACE_EXPORT ServerMessageDispatcher {
 public:
+    ServerMessageDispatcher(SpaceContext* ctx);
     virtual ~ServerMessageDispatcher() {}
 
     void registerMessageRecipient(ServerMessagePort type, MessageRecipient* recipient);
@@ -164,6 +167,7 @@ class Router {
 /** Base class for an object that can route messages to their destination. */
 class SIRIKATA_SPACE_EXPORT ServerMessageRouter {
 public:
+    ServerMessageRouter(SpaceContext* ctx);
     virtual ~ServerMessageRouter() {}
 
     virtual Router<Message*>* createServerMessageService(const String& name) = 0;

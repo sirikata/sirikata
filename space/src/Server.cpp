@@ -99,12 +99,6 @@ Server::Server(SpaceContext* ctx, Authenticator* auth, Forwarder* forwarder, Loc
     using std::tr1::placeholders::_1;
     using std::tr1::placeholders::_2;
 
-    mContext->mCSeg = mCSeg;
-    mContext->mObjectSessionManager = obj_sess_mgr;
-
-    obj_sess_mgr->addListener(static_cast<ObjectSessionListener*>(mLocationService));
-    obj_sess_mgr->addListener(static_cast<ObjectSessionListener*>(mProximity));
-
     mTimeSyncServer = new TimeSyncServer(mContext, this);
 
     mMigrateServerMessageService = mForwarder->createServerMessageService("migrate");

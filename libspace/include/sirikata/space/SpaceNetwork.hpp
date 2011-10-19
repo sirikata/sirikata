@@ -35,9 +35,9 @@
 
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/space/SpaceContext.hpp>
-#include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/network/Stream.hpp>
 #include <sirikata/core/service/Service.hpp>
+#include <sirikata/core/util/ListenerProvider.hpp>
 
 namespace Sirikata {
 

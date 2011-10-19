@@ -745,7 +745,7 @@ void LibproxProximity::requestProxSubstream(const UUID& objid, ProxStreamInfoPtr
     // the request is deferred, should eventually result in a stream.
     prox_stream->iostream_requested = true;
 
-    ObjectSession* session = mContext->sessionManager()->getSession(ObjectReference(objid));
+    ObjectSession* session = mContext->objectSessionManager()->getSession(ObjectReference(objid));
     ProxStreamPtr base_stream = session != NULL ? session->getStream() : ProxStreamPtr();
     if (!base_stream) {
         mContext->mainStrand->post(
@@ -767,7 +767,7 @@ void LibproxProximity::requestProxSubstream(const UUID& objid, ProxStreamInfoPtr
 void LibproxProximity::proxSubstreamCallback(int x, const UUID& objid, ProxStreamPtr parent_stream, ProxStreamPtr substream, ProxStreamInfoPtr prox_stream_info) {
     if (!substream) {
         // If they disconnected, ignore
-        bool valid_session = (mContext->sessionManager()->getSession(ObjectReference(objid)) != NULL);
+        bool valid_session = (mContext->objectSessionManager()->getSession(ObjectReference(objid)) != NULL);
         if (!valid_session) return;
 
         // Retry

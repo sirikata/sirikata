@@ -37,7 +37,7 @@
 #include <sirikata/core/service/Context.hpp>
 #include <sirikata/core/util/SpaceObjectReference.hpp>
 #include <sirikata/space/Trace.hpp>
-#include <sirikata/space/ObjectSessionManager.hpp>
+#include <sirikata/core/odp/SST.hpp>
 #include <sirikata/core/ohdp/SST.hpp>
 
 namespace Sirikata {
@@ -49,6 +49,10 @@ class Forwarder;
 class MockForwarder;
 
 class CoordinateSegmentation;
+
+class ObjectHostSessionManager;
+class ObjectSessionManager;
+
 
 /** SpaceContext holds a number of useful items that are effectively global
  *  for each space node and used throughout the system -- ServerID, time information,
@@ -78,8 +82,12 @@ public:
         return mCSeg.read();
     }
 
-    ObjectSessionManager* sessionManager() const {
+    ObjectSessionManager* objectSessionManager() const {
         return mObjectSessionManager;
+    }
+
+    ObjectHostSessionManager* ohSessionManager() const {
+        return mObjectHostSessionManager;
     }
 
     ODPSST::ConnectionManager* sstConnectionManager() const {
@@ -93,9 +101,12 @@ public:
     SpaceTrace* spacetrace() const { return mSpaceTrace; }
 
 private:
-    friend class Forwarder; // Allow forwarder to set mRouter and mDispatcher
-    friend class MockForwarder; // Same for mock forwarder
-    friend class Server;
+    // Allow these classes to set their corresponding fields in SpaceContext
+    friend class ServerMessageRouter;
+    friend class ServerMessageDispatcher;
+    friend class ObjectSessionManager;
+    friend class ObjectHostSessionManager;
+    friend class CoordinateSegmentation;
 
     const String mName;
 
@@ -106,6 +117,7 @@ private:
 
     Sirikata::AtomicValue<CoordinateSegmentation*> mCSeg;
 
+    Sirikata::AtomicValue<ObjectHostSessionManager*> mObjectHostSessionManager;
     Sirikata::AtomicValue<ObjectSessionManager*> mObjectSessionManager;
 
     Sirikata::AtomicValue<ODPSST::ConnectionManager*> mSSTConnMgr;

@@ -38,6 +38,7 @@ CoordinateSegmentation::CoordinateSegmentation(SpaceContext* ctx)
  : PollingService(ctx->mainStrand, Duration::milliseconds((int64)10)),
    mContext(ctx)
 {
+    mContext->mCSeg = this;
     mServiceStage = mContext->profiler->addStage("CSeg");
 }
 

@@ -86,6 +86,7 @@ LocationService::LocationService(SpaceContext* ctx, LocationUpdatePolicy* update
     mUpdatePolicy->initialize(this);
 
     mContext->serverDispatcher()->registerMessageRecipient(SERVER_PORT_LOCATION, this);
+    mContext->objectSessionManager()->addListener(this);
 }
 
 LocationService::~LocationService() {
@@ -93,6 +94,7 @@ LocationService::~LocationService() {
     delete mUpdatePolicy;
 
     mContext->serverDispatcher()->unregisterMessageRecipient(SERVER_PORT_LOCATION, this);
+    mContext->objectSessionManager()->removeListener(this);
 }
 
 void LocationService::newSession(ObjectSession* session) {

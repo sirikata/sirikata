@@ -44,6 +44,7 @@
 #include <sirikata/space/Platform.hpp>
 
 #include <sirikata/core/util/Factory.hpp>
+#include <sirikata/space/ObjectSessionManager.hpp>
 
 namespace Sirikata {
 
@@ -224,7 +225,7 @@ public:
     virtual bool locationUpdate(UUID source, void* buffer, uint32 length) = 0;
 
     SST::Stream<SpaceObjectReference>::Ptr getObjectStream(const UUID& uuid) {
-        ObjectSession* session = mContext->sessionManager()->getSession(ObjectReference(uuid));
+        ObjectSession* session = mContext->objectSessionManager()->getSession(ObjectReference(uuid));
         if (session == NULL) return SST::Stream<SpaceObjectReference>::Ptr();
         return session->getStream();
     }

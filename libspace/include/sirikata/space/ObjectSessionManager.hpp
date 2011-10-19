@@ -36,6 +36,7 @@
 #include <sirikata/space/Platform.hpp>
 #include <sirikata/core/odp/SST.hpp>
 #include <sirikata/core/util/ListenerProvider.hpp>
+#include <sirikata/space/SpaceContext.hpp>
 
 namespace Sirikata {
 
@@ -72,6 +73,9 @@ class SIRIKATA_SPACE_EXPORT ObjectSessionListener {
 
 class SIRIKATA_SPACE_EXPORT ObjectSessionManager : public Provider<ObjectSessionListener*> {
   public:
+    ObjectSessionManager(SpaceContext* ctx) {
+        ctx->mObjectSessionManager = this;
+    }
     virtual ~ObjectSessionManager() {}
 
     // Owner interface -- adds and removes sessions

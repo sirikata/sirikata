@@ -36,9 +36,11 @@ Proximity::Proximity(SpaceContext* ctx, LocationService* locservice, SpaceNetwor
     net->addListener(this);
     mLocService->addListener(this, false);
     mContext->serverDispatcher()->registerMessageRecipient(SERVER_PORT_PROX, this);
+    mContext->objectSessionManager()->addListener(this);
 }
 
 Proximity::~Proximity() {
+    mContext->objectSessionManager()->removeListener(this);
     mContext->serverDispatcher()->unregisterMessageRecipient(SERVER_PORT_PROX, this);
     mLocService->removeListener(this);
 }

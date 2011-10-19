@@ -8,6 +8,7 @@
 #include <sirikata/space/Platform.hpp>
 #include <sirikata/core/util/ListenerProvider.hpp>
 #include <sirikata/core/ohdp/SST.hpp>
+#include <sirikata/space/SpaceContext.hpp>
 
 namespace Sirikata {
 
@@ -28,6 +29,9 @@ class SIRIKATA_SPACE_EXPORT ObjectHostSessionListener {
  */
 class SIRIKATA_SPACE_EXPORT ObjectHostSessionManager : public Provider<ObjectHostSessionListener*> {
   public:
+    ObjectHostSessionManager(SpaceContext* ctx) {
+        ctx->mObjectHostSessionManager = this;
+    }
 
     void fireObjectHostSession(const OHDP::NodeID& id, OHDPSST::Stream::Ptr oh_stream) {
         notify(&ObjectHostSessionListener::onObjectHostSession, id, oh_stream);

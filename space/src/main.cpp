@@ -159,8 +159,8 @@ int main(int argc, char** argv) {
 
     srand( GetOptionValue<uint32>("rand-seed") );
 
-    ObjectHostSessionManager* oh_sess_mgr = new ObjectHostSessionManager();
-    ObjectSessionManager* obj_sess_mgr = new ObjectSessionManager();
+    ObjectHostSessionManager* oh_sess_mgr = new ObjectHostSessionManager(space_context);
+    ObjectSessionManager* obj_sess_mgr = new ObjectSessionManager(space_context);
 
     String auth_type = GetOptionValue<String>(SPACE_OPT_AUTH);
     String auth_opts = GetOptionValue<String>(SPACE_OPT_AUTH_OPTIONS);
