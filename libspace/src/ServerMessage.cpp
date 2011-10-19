@@ -31,6 +31,7 @@
  */
 
 #include <sirikata/space/ServerMessage.hpp>
+#include <sirikata/space/SpaceContext.hpp>
 
 namespace Sirikata {
 
@@ -127,6 +128,9 @@ uint32 Message::serializedSize() const {
 }
 
 
+ServerMessageDispatcher::ServerMessageDispatcher(SpaceContext* ctx) {
+    ctx->mServerDispatcher = this;
+}
 
 void ServerMessageDispatcher::registerMessageRecipient(ServerMessagePort type, MessageRecipient* recipient) {
     MessageRecipientMap::iterator it = mMessageRecipients.find(type);
@@ -165,6 +169,11 @@ void ServerMessageDispatcher::dispatchMessage(Message* msg) const {
 
     MessageRecipient* recipient = it->second;
     recipient->receiveMessage(msg);
+}
+
+
+ServerMessageRouter::ServerMessageRouter(SpaceContext* ctx) {
+    ctx->mServerRouter = this;
 }
 
 } // namespace Sirikata

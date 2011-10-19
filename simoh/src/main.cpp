@@ -100,8 +100,9 @@ int main(int argc, char** argv) {
     Network::IOStrand* mainStrand = ios->createStrand();
 
     ODPSST::ConnectionManager* sstConnMgr = new ODPSST::ConnectionManager();
+    OHDPSST::ConnectionManager* ohSSTConnMgr = new OHDPSST::ConnectionManager();
 
-    ObjectHostContext* ctx = new ObjectHostContext("simoh", oh_id, sstConnMgr, ios, mainStrand, gTrace, start_time, duration);
+    ObjectHostContext* ctx = new ObjectHostContext("simoh", oh_id, sstConnMgr, ohSSTConnMgr, ios, mainStrand, gTrace, start_time, duration);
 
     String servermap_type = GetOptionValue<String>("servermap");
     String servermap_options = GetOptionValue<String>("servermap-options");
@@ -139,6 +140,7 @@ int main(int argc, char** argv) {
     scenario->initialize(ctx);
     ctx->add(scenario);
     ctx->add(sstConnMgr);
+    ctx->add(ohSSTConnMgr);
     ctx->run(2);
 
     ctx->cleanup();
@@ -156,6 +158,7 @@ int main(int argc, char** argv) {
     delete obj_host;
     delete ctx;
     delete sstConnMgr;
+    delete ohSSTConnMgr;
 
     delete time_series;
 

@@ -20,18 +20,27 @@ void ProximityFactory::destroy() {
 
 
 
-Proximity::Proximity(SpaceContext* ctx, LocationService* locservice, SpaceNetwork* net, const Duration& poll_freq)
+Proximity::Proximity(SpaceContext* ctx, LocationService* locservice, SpaceNetwork* net, AggregateManager* aggmgr, const Duration& poll_freq)
  : PollingService(ctx->mainStrand, poll_freq),
    mContext(ctx),
    mLocService(locservice),
-   mCSeg(NULL)
+   mCSeg(NULL),
+   mAggregateManager(aggmgr),
+   mStatsPoller(
+       ctx->mainStrand,
+       std::tr1::bind(&Proximity::reportStats, this),
+       Duration::seconds((int64)1)),
+   mTimeSeriesObjectQueryCountName(String("space.server") + boost::lexical_cast<String>(ctx->id()) + ".prox.object_queries"),
+   mTimeSeriesServerQueryCountName(String("space.server") + boost::lexical_cast<String>(ctx->id()) + ".prox.server_queries")
 {
     net->addListener(this);
     mLocService->addListener(this, false);
     mContext->serverDispatcher()->registerMessageRecipient(SERVER_PORT_PROX, this);
+    mContext->objectSessionManager()->addListener(this);
 }
 
 Proximity::~Proximity() {
+    mContext->objectSessionManager()->removeListener(this);
     mContext->serverDispatcher()->unregisterMessageRecipient(SERVER_PORT_PROX, this);
     mLocService->removeListener(this);
 }
@@ -45,6 +54,17 @@ void Proximity::shutdown() {
 }
 
 void Proximity::poll() {
+}
+
+void Proximity::reportStats() {
+    mContext->timeSeries->report(
+        mTimeSeriesServerQueryCountName,
+        serverQueries()
+    );
+    mContext->timeSeries->report(
+        mTimeSeriesObjectQueryCountName,
+        objectQueries()
+    );
 }
 
 } // namespace Sirikata

@@ -1478,7 +1478,10 @@ public:
   {
       if (localEndPoint.port == 0) {
           typename BaseDatagramLayer<EndPointType>::Ptr bdl = sstConnVars->getDatagramLayer(localEndPoint.endPoint);
-          if (!bdl) return false;
+          if (!bdl) {
+              SST_LOG(error,"Tried to connect stream without calling createDatagramLayer for the endpoint.");
+              return false;
+          }
           localEndPoint.port = bdl->getUnusedPort(localEndPoint.endPoint);
       }
 

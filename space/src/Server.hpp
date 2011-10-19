@@ -52,7 +52,6 @@
 #include <sirikata/core/ohdp/DelegateService.hpp>
 
 #include <sirikata/core/sync/TimeSyncServer.hpp>
-#include <sirikata/space/ObjectSessionManager.hpp>
 
 
 namespace Sirikata
@@ -72,6 +71,9 @@ class ObjectSegmentation;
 class ObjectConnection;
 class ObjectHostConnectionManager;
 
+class ObjectHostSessionManager;
+class ObjectSessionManager;
+
   /** Handles all the basic services provided for objects by a server,
    *  including routing and message delivery, proximity services, and
    *  object -> server mapping.  This is a singleton for each simulated
@@ -82,10 +84,10 @@ class Server :
         public MessageRecipient, public Service,
         public OSegWriteListener,
         public ODP::DelegateService, public OHDP::DelegateService,
-        ObjectSessionManager, ObjectHostConnectionManager::Listener
+        ObjectHostConnectionManager::Listener
 {
 public:
-    Server(SpaceContext* ctx, Authenticator* auth, Forwarder* forwarder, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, ObjectSegmentation* oseg, Address4 oh_listen_addr);
+    Server(SpaceContext* ctx, Authenticator* auth, Forwarder* forwarder, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, ObjectSegmentation* oseg, Address4 oh_listen_addr, ObjectHostSessionManager* oh_sess_mgr, ObjectSessionManager* obj_sess_mgr);
     ~Server();
 
     virtual void receiveMessage(Message* msg);
@@ -107,13 +109,9 @@ private:
     OHDP::DelegatePort* createDelegateOHDPPort(OHDP::DelegateService*, const OHDP::Endpoint& ept);
     bool delegateOHDPPortSend(const OHDP::Endpoint& source_ep, const OHDP::Endpoint& dest_ep, MemoryReference payload);
 
-
-    // ObjectSessionManager Interface
-    virtual ObjectSession* getSession(const ObjectReference& objid) const;
-
     // ObjectHostConnectionManager::Listener Interface:
 
-    virtual void onObjectHostConnected(const ObjectHostConnectionID& conn_id, const ShortObjectHostConnectionID short_conn_id);
+    virtual void onObjectHostConnected(const ObjectHostConnectionID& conn_id, const ShortObjectHostConnectionID short_conn_id, OHDPSST::Stream::Ptr stream);
     // Callback which handles messages from object hosts -- mostly just does sanity checking
     // before using the forwarder to do routing.  Operates in the
     // network strand to allow for fast forwarding, see
@@ -199,6 +197,8 @@ private:
     LocalForwarder* mLocalForwarder;
     Forwarder* mForwarder;
     MigrationMonitor* mMigrationMonitor;
+    ObjectHostSessionManager* mOHSessionManager;
+    ObjectSessionManager* mObjectSessionManager;
 
     Router<Message*>* mMigrateServerMessageService;
 
@@ -217,9 +217,6 @@ private:
                                   // only still a map to handle migrations
                                   // properly
     ObjectConnectionMap mObjectsAwaitingMigration;
-
-    typedef std::tr1::unordered_map<ObjectReference, ObjectSession*, ObjectReference::Hasher> ObjectSessionMap;
-    ObjectSessionMap mObjectSessions;
 
 
     typedef std::tr1::unordered_map<UUID, Sirikata::Protocol::Migration::MigrationMessage*, UUID::Hasher> ObjectMigrationMap;

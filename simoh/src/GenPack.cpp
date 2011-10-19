@@ -74,8 +74,9 @@ int main(int argc, char** argv) {
     Network::IOStrand* mainStrand = ios->createStrand();
 
     ODPSST::ConnectionManager* sstConnMgr = new ODPSST::ConnectionManager();
+    OHDPSST::ConnectionManager* ohSSTConnMgr = new OHDPSST::ConnectionManager();
 
-    ObjectHostContext* ctx = new ObjectHostContext("genpack", ObjectHostID(1), sstConnMgr, ios, mainStrand, gTrace, start_time, duration);
+    ObjectHostContext* ctx = new ObjectHostContext("genpack", ObjectHostID(1), sstConnMgr, ohSSTConnMgr, ios, mainStrand, gTrace, start_time, duration);
     ObjectFactory* obj_factory = new ObjectFactory(ctx, region, duration);
 
     // Nothing actually runs here -- we only cared about getting the
@@ -86,6 +87,7 @@ int main(int argc, char** argv) {
     delete obj_factory;
     delete ctx;
     delete sstConnMgr;
+    delete ohSSTConnMgr;
 
     gTrace->shutdown();
     delete gTrace;

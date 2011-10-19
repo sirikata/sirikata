@@ -2,31 +2,31 @@
 // Use of this source code is governed by a BSD-style license that can
 // be found in the LICENSE file.
 
-#ifndef _SIRIKATA_LIBCORE_ODP_SST_HPP_
-#define _SIRIKATA_LIBCORE_ODP_SST_HPP_
+#ifndef _SIRIKATA_LIBCORE_OHDP_SST_HPP_
+#define _SIRIKATA_LIBCORE_OHDP_SST_HPP_
 
 #include <sirikata/core/network/SSTImpl.hpp>
-#include <sirikata/core/odp/Service.hpp>
+#include <sirikata/core/ohdp/Service.hpp>
 
 namespace Sirikata {
 
 // Convenience typedefs in a separate namespace
-namespace ODPSST {
-typedef Sirikata::SST::EndPoint<SpaceObjectReference> Endpoint;
-typedef Sirikata::SST::BaseDatagramLayer<SpaceObjectReference> BaseDatagramLayer;
-typedef Sirikata::SST::Connection<SpaceObjectReference> Connection;
-typedef Sirikata::SST::Stream<SpaceObjectReference> Stream;
-typedef Sirikata::SST::ConnectionManager<SpaceObjectReference> ConnectionManager;
-} // namespace ODPSST
+namespace OHDPSST {
+typedef Sirikata::SST::EndPoint<OHDP::SpaceNodeID> Endpoint;
+typedef Sirikata::SST::BaseDatagramLayer<OHDP::SpaceNodeID> BaseDatagramLayer;
+typedef Sirikata::SST::Connection<OHDP::SpaceNodeID> Connection;
+typedef Sirikata::SST::Stream<OHDP::SpaceNodeID> Stream;
+typedef Sirikata::SST::ConnectionManager<OHDP::SpaceNodeID> ConnectionManager;
+} // namespace OHDPSST
 
-// SpaceObjectReference/ODP-specific implementation
+// OHDP::SpaceNodeID/OHDP-specific implementation
 namespace SST {
 
 template <>
-class SIRIKATA_EXPORT BaseDatagramLayer<SpaceObjectReference>
+class SIRIKATA_EXPORT BaseDatagramLayer<OHDP::SpaceNodeID>
 {
   private:
-    typedef SpaceObjectReference EndPointType;
+    typedef OHDP::SpaceNodeID EndPointType;
 
   public:
     typedef std::tr1::shared_ptr<BaseDatagramLayer<EndPointType> > Ptr;
@@ -44,13 +44,13 @@ class SIRIKATA_EXPORT BaseDatagramLayer<SpaceObjectReference>
         ConnectionVariables<EndPointType>* sstConnVars,
         EndPointType endPoint,
         const Context* ctx,
-        ODP::Service* odp)
+        OHDP::Service* ohdp)
     {
         BaseDatagramLayerPtr datagramLayer = getDatagramLayer(sstConnVars, endPoint);
         if (datagramLayer) return datagramLayer;
 
         datagramLayer = BaseDatagramLayerPtr(
-            new BaseDatagramLayer(sstConnVars, ctx, odp, endPoint)
+            new BaseDatagramLayer(sstConnVars, ctx, ohdp, endPoint)
         );
         sstConnVars->addDatagramLayer(endPoint, datagramLayer);
 
@@ -66,7 +66,7 @@ class SIRIKATA_EXPORT BaseDatagramLayer<SpaceObjectReference>
     }
 
     void listenOn(EndPoint<EndPointType>& listeningEndPoint, DataCallback cb) {
-        ODP::Port* port = allocatePort(listeningEndPoint);
+        OHDP::Port* port = allocatePort(listeningEndPoint);
         port->receive(
             std::tr1::bind(&BaseDatagramLayer<EndPointType>::receiveMessageToCallback, this,
                 std::tr1::placeholders::_1,
@@ -78,7 +78,7 @@ class SIRIKATA_EXPORT BaseDatagramLayer<SpaceObjectReference>
     }
 
     void listenOn(const EndPoint<EndPointType>& listeningEndPoint) {
-        ODP::Port* port = allocatePort(listeningEndPoint);
+        OHDP::Port* port = allocatePort(listeningEndPoint);
         port->receive(
             std::tr1::bind(
                 &BaseDatagramLayer::receiveMessage, this,
@@ -100,10 +100,10 @@ class SIRIKATA_EXPORT BaseDatagramLayer<SpaceObjectReference>
     void send(EndPoint<EndPointType>* src, EndPoint<EndPointType>* dest, void* data, int len) {
         boost::mutex::scoped_lock lock(mMutex);
 
-        ODP::Port* port = getOrAllocatePort(*src);
+        OHDP::Port* port = getOrAllocatePort(*src);
 
         port->send(
-            ODP::Endpoint(dest->endPoint, dest->port),
+            OHDP::Endpoint(dest->endPoint, dest->port),
             MemoryReference(data, len)
         );
     }
@@ -113,64 +113,64 @@ class SIRIKATA_EXPORT BaseDatagramLayer<SpaceObjectReference>
     }
 
     uint32 getUnusedPort(const EndPointType& ep) {
-        return mODP->unusedODPPort(ep);
+        return mOHDP->unusedOHDPPort(ep.space(), ep.node());
     }
 
     void invalidate() {
-        mODP = NULL;
+        mOHDP = NULL;
         mSSTConnVars->removeDatagramLayer(mEndpoint, true);
     }
 
   private:
-    BaseDatagramLayer(ConnectionVariables<EndPointType>* sstConnVars, const Context* ctx, ODP::Service* odpservice, const EndPointType&ep)
+    BaseDatagramLayer(ConnectionVariables<EndPointType>* sstConnVars, const Context* ctx, OHDP::Service* ohdpservice, const EndPointType&ep)
         : mContext(ctx),
-          mODP(odpservice),
+          mOHDP(ohdpservice),
           mSSTConnVars(sstConnVars),
           mEndpoint(ep)
         {
 
         }
 
-    ODP::Port* allocatePort(const EndPoint<EndPointType>& ep) {
-        ODP::Port* port = mODP->bindODPPort(
-            ep.endPoint, ep.port
+    OHDP::Port* allocatePort(const EndPoint<EndPointType>& ep) {
+        OHDP::Port* port = mOHDP->bindOHDPPort(
+            ep.endPoint.space(), ep.endPoint.node(), ep.port
         );
         mAllocatedPorts[ep] = port;
         return port;
     }
 
-    ODP::Port* getPort(const EndPoint<EndPointType>& ep) {
+    OHDP::Port* getPort(const EndPoint<EndPointType>& ep) {
         PortMap::iterator it = mAllocatedPorts.find(ep);
         if (it == mAllocatedPorts.end()) return NULL;
         return it->second;
     }
 
-    ODP::Port* getOrAllocatePort(const EndPoint<EndPointType>& ep) {
-        ODP::Port* result = getPort(ep);
+    OHDP::Port* getOrAllocatePort(const EndPoint<EndPointType>& ep) {
+        OHDP::Port* result = getPort(ep);
         if (result != NULL) return result;
         result = allocatePort(ep);
         return result;
     }
 
-    void receiveMessage(const ODP::Endpoint &src, const ODP::Endpoint &dst, MemoryReference payload) {
+    void receiveMessage(const OHDP::Endpoint &src, const OHDP::Endpoint &dst, MemoryReference payload) {
         Connection<EndPointType>::handleReceive(
             mSSTConnVars,
-            EndPoint<EndPointType> (SpaceObjectReference(src.space(), src.object()), src.port()),
-            EndPoint<EndPointType> (SpaceObjectReference(dst.space(), dst.object()), dst.port()),
+            EndPoint<EndPointType> (OHDP::SpaceNodeID(src.space(), src.node()), src.port()),
+            EndPoint<EndPointType> (OHDP::SpaceNodeID(dst.space(), dst.node()), dst.port()),
             (void*) payload.data(), payload.size()
         );
     }
 
-    void receiveMessageToCallback(const ODP::Endpoint &src, const ODP::Endpoint &dst, MemoryReference payload, DataCallback cb) {
+    void receiveMessageToCallback(const OHDP::Endpoint &src, const OHDP::Endpoint &dst, MemoryReference payload, DataCallback cb) {
         cb((void*) payload.data(), payload.size() );
     }
 
 
 
     const Context* mContext;
-    ODP::Service* mODP;
+    OHDP::Service* mOHDP;
 
-    typedef std::map<EndPoint<EndPointType>, ODP::Port*> PortMap;
+    typedef std::map<EndPoint<EndPointType>, OHDP::Port*> PortMap;
     PortMap mAllocatedPorts;
 
     boost::mutex mMutex;
@@ -184,13 +184,13 @@ class SIRIKATA_EXPORT BaseDatagramLayer<SpaceObjectReference>
   // types. BaseDatagramLayer is now excluded because it is explicitly
   // specialized, which, for some reason, keeps things working
   // properly.
-  //SIRIKATA_EXPORT_TEMPLATE template class SIRIKATA_EXPORT BaseDatagramLayer<SpaceObjectReference>;
-  SIRIKATA_EXPORT_TEMPLATE template class SIRIKATA_EXPORT Connection<SpaceObjectReference>;
-  SIRIKATA_EXPORT_TEMPLATE template class SIRIKATA_EXPORT Stream<SpaceObjectReference>;
+  //SIRIKATA_EXPORT_TEMPLATE template class SIRIKATA_EXPORT BaseDatagramLayer<OHDP::SpaceNodeID>;
+  SIRIKATA_EXPORT_TEMPLATE template class SIRIKATA_EXPORT Connection<OHDP::SpaceNodeID>;
+  SIRIKATA_EXPORT_TEMPLATE template class SIRIKATA_EXPORT Stream<OHDP::SpaceNodeID>;
 #endif
 
 } // namespace SST
 
 } // namespace Sirikata
 
-#endif //_SIRIKATA_LIBCORE_ODP_SST_HPP_
+#endif //_SIRIKATA_LIBCORE_OHDP_SST_HPP_

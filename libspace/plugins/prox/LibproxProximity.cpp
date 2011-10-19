@@ -123,15 +123,9 @@ const String& LibproxProximity::ObjectClassToString(ObjectClass c) {
     }
 }
 
-LibproxProximity::LibproxProximity(SpaceContext* ctx, LocationService* locservice, SpaceNetwork* net)
- : Proximity(ctx, locservice, net, Duration::milliseconds((int64)100)),
+LibproxProximity::LibproxProximity(SpaceContext* ctx, LocationService* locservice, SpaceNetwork* net, AggregateManager* aggmgr)
+ : Proximity(ctx, locservice, net, aggmgr, Duration::milliseconds((int64)100)),
    mServerQuerier(NULL),
-   mStatsPoller(
-       ctx->mainStrand,
-       std::tr1::bind(&LibproxProximity::reportStats, this),
-       Duration::seconds((int64)1)),
-   mTimeSeriesObjectQueryCountName(String("space.server") + boost::lexical_cast<String>(ctx->id()) + ".prox.object_queries"),
-   mTimeSeriesServerQueryCountName(String("space.server") + boost::lexical_cast<String>(ctx->id()) + ".prox.server_queries"),
    mDistanceQueryDistance(0.f),
    mMaxObject(0.0f),
    mMinObjectQueryAngle(SolidAngle::Max),
@@ -150,7 +144,6 @@ LibproxProximity::LibproxProximity(SpaceContext* ctx, LocationService* locservic
     using std::tr1::placeholders::_3;
     using std::tr1::placeholders::_4;
     using std::tr1::placeholders::_5;
-    mAggregateManager = new AggregateManager(locservice);
 
     // Do some necessary initialization for the prox thread, needed to let main thread
     // objects know about it's strand/service
@@ -230,8 +223,6 @@ LibproxProximity::~LibproxProximity() {
     delete mProxStrand;
     Network::IOServiceFactory::destroyIOService(mProxService);
     mProxService = NULL;
-
-    delete mAggregateManager;
 
     delete mProxThread;
 }
@@ -754,7 +745,7 @@ void LibproxProximity::requestProxSubstream(const UUID& objid, ProxStreamInfoPtr
     // the request is deferred, should eventually result in a stream.
     prox_stream->iostream_requested = true;
 
-    ObjectSession* session = mContext->sessionManager()->getSession(ObjectReference(objid));
+    ObjectSession* session = mContext->objectSessionManager()->getSession(ObjectReference(objid));
     ProxStreamPtr base_stream = session != NULL ? session->getStream() : ProxStreamPtr();
     if (!base_stream) {
         mContext->mainStrand->post(
@@ -776,7 +767,7 @@ void LibproxProximity::requestProxSubstream(const UUID& objid, ProxStreamInfoPtr
 void LibproxProximity::proxSubstreamCallback(int x, const UUID& objid, ProxStreamPtr parent_stream, ProxStreamPtr substream, ProxStreamInfoPtr prox_stream_info) {
     if (!substream) {
         // If they disconnected, ignore
-        bool valid_session = (mContext->sessionManager()->getSession(ObjectReference(objid)) != NULL);
+        bool valid_session = (mContext->objectSessionManager()->getSession(ObjectReference(objid)) != NULL);
         if (!valid_session) return;
 
         // Retry
@@ -865,15 +856,12 @@ void LibproxProximity::sendObjectResult(Sirikata::Protocol::Object::ObjectMessag
         writeSomeObjectResults(prox_stream);
 }
 
-void LibproxProximity::reportStats() {
-    mContext->timeSeries->report(
-        mTimeSeriesServerQueryCountName,
-        mServerQueries[OBJECT_CLASS_STATIC].size()
-    );
-    mContext->timeSeries->report(
-        mTimeSeriesObjectQueryCountName,
-        mObjectQueries[OBJECT_CLASS_STATIC].size()
-    );
+int32 LibproxProximity::objectQueries() const {
+    return mObjectQueries[OBJECT_CLASS_STATIC].size();
+}
+
+int32 LibproxProximity::serverQueries() const {
+    return mServerQueries[OBJECT_CLASS_STATIC].size();
 }
 
 void LibproxProximity::poll() {

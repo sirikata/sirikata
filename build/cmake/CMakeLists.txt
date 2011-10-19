@@ -1191,8 +1191,10 @@ SET(SIRIKATA_CORE_SOURCES
 	${LIBCORE_SOURCE_DIR}/network/Asio.cpp
         ${LIBCORE_SOURCE_DIR}/xdp/Defs.cpp
         ${LIBCORE_SOURCE_DIR}/odp/DelegateService.cpp
+        ${LIBCORE_SOURCE_DIR}/odp/SST.cpp
         ${LIBCORE_SOURCE_DIR}/ohdp/Defs.cpp
         ${LIBCORE_SOURCE_DIR}/ohdp/DelegateService.cpp
+        ${LIBCORE_SOURCE_DIR}/ohdp/SST.cpp
    	${LIBCORE_SOURCE_DIR}/options/Options.cpp
    	${LIBCORE_SOURCE_DIR}/options/CommonOptions.cpp
         ${LIBCORE_SOURCE_DIR}/network/Address4.cpp

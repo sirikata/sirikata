@@ -50,7 +50,6 @@ namespace Sirikata {
 
 class ProximityInputEvent;
 class ProximityOutputEvent;
-class AggregateManager;
 
 class LibproxProximity : public Proximity,
         Prox::QueryEventListener<ObjectProxSimulationTraits>,
@@ -64,7 +63,7 @@ public:
     typedef Prox::Query<ObjectProxSimulationTraits> Query;
     typedef Prox::QueryEvent<ObjectProxSimulationTraits> QueryEvent;
 
-    LibproxProximity(SpaceContext* ctx, LocationService* locservice, SpaceNetwork* net);
+    LibproxProximity(SpaceContext* ctx, LocationService* locservice, SpaceNetwork* net, AggregateManager* aggmgr);
     ~LibproxProximity();
 
     // Initialize prox.  Must be called after everything else (specifically message router) is set up since it
@@ -178,9 +177,8 @@ private:
     void updateAggregateLoc(const UUID& objid, const BoundingSphere3f& bnds);
 
     // MAIN Thread: These are utility methods which should only be called from the main thread.
-
-    // Update stats server
-    void reportStats();
+    virtual int32 objectQueries() const;
+    virtual int32 serverQueries() const;
 
     // Update queries based on current state.
     void poll();
@@ -281,11 +279,6 @@ private:
 
     // MAIN Thread - Should only be accessed in methods used by the main thread
 
-    // Stats
-    Poller mStatsPoller;
-    const String mTimeSeriesObjectQueryCountName;
-    const String mTimeSeriesServerQueryCountName;
-
     Router<Message*>* mProxServerMessageService;
 
     // The distance to use when doing range queries instead of solid angle queries.
@@ -371,8 +364,6 @@ private:
     // Threads: Thread-safe data used for exchange between threads
     Sirikata::ThreadSafeQueue<Message*> mServerResults; // server query results that need to be sent
     Sirikata::ThreadSafeQueue<Sirikata::Protocol::Object::ObjectMessage*> mObjectResults; // object query results that need to be sent
-
-    AggregateManager* mAggregateManager;
 
 }; //class LibproxProximity
 

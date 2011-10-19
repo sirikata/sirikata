@@ -45,6 +45,8 @@
 #include <sirikata/space/ObjectSegmentation.hpp>
 
 #include "ObjectConnection.hpp"
+#include <sirikata/space/ObjectSessionManager.hpp>
+#include <sirikata/space/ObjectHostSession.hpp>
 
 #include <sirikata/core/util/Random.hpp>
 
@@ -74,7 +76,7 @@ void logVersionInfo(Sirikata::Protocol::Session::VersionInfo vers_info) {
 } // namespace
 
 
-Server::Server(SpaceContext* ctx, Authenticator* auth, Forwarder* forwarder, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, ObjectSegmentation* oseg, Address4 oh_listen_addr)
+Server::Server(SpaceContext* ctx, Authenticator* auth, Forwarder* forwarder, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, ObjectSegmentation* oseg, Address4 oh_listen_addr, ObjectHostSessionManager* oh_sess_mgr, ObjectSessionManager* obj_sess_mgr)
  : ODP::DelegateService( std::tr1::bind(&Server::createDelegateODPPort, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2, std::tr1::placeholders::_3) ),
    OHDP::DelegateService( std::tr1::bind(&Server::createDelegateOHDPPort, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2) ),
    mContext(ctx),
@@ -85,18 +87,17 @@ Server::Server(SpaceContext* ctx, Authenticator* auth, Forwarder* forwarder, Loc
    mOSeg(oseg),
    mLocalForwarder(NULL),
    mForwarder(forwarder),
-   mMigrationMonitor(),
+   mMigrationMonitor(NULL),
+   mOHSessionManager(oh_sess_mgr),
+   mObjectSessionManager(obj_sess_mgr),
    mMigrationSendRunning(false),
    mShutdownRequested(false),
    mObjectHostConnectionManager(NULL),
    mRouteObjectMessage(Sirikata::SizedResourceMonitor(GetOptionValue<size_t>("route-object-message-buffer"))),
    mTimeSeriesObjects(String("space.server") + boost::lexical_cast<String>(ctx->id()) + ".objects")
 {
-    mContext->mCSeg = mCSeg;
-    mContext->mObjectSessionManager = this;
-
-    this->addListener(static_cast<ObjectSessionListener*>(mLocationService));
-    this->addListener(static_cast<ObjectSessionListener*>(mProximity));
+    using std::tr1::placeholders::_1;
+    using std::tr1::placeholders::_2;
 
     mTimeSyncServer = new TimeSyncServer(mContext, this);
 
@@ -114,23 +115,24 @@ Server::Server(SpaceContext* ctx, Authenticator* auth, Forwarder* forwarder, Loc
           )
       );
 
+    // Forwarder::setODPService creates the ODP SST datagram layer allowing us
+    // to listen for object connections
+    mContext->sstConnectionManager()->listen(
+        std::tr1::bind(&Server::newStream, this, _1, _2),
+        SST::EndPoint<SpaceObjectReference>(SpaceObjectReference(SpaceID::null(), ObjectReference::spaceServiceID()), OBJECT_SPACE_PORT)
+    );
+    // ObjectHostConnectionManager takes care of listening for raw connections
+    // and setting up SST connections with them.
     mObjectHostConnectionManager = new ObjectHostConnectionManager(
-        mContext, oh_listen_addr, this
+        mContext, oh_listen_addr,
+        static_cast<OHDP::Service*>(this),
+        static_cast<ObjectHostConnectionManager::Listener*>(this)
     );
 
     mLocalForwarder = new LocalForwarder(mContext);
     mForwarder->setLocalForwarder(mLocalForwarder);
 
     mMigrationTimer.start();
-
-
-    using std::tr1::placeholders::_1;
-    using std::tr1::placeholders::_2;
-
-    mContext->sstConnectionManager()->listen(
-        std::tr1::bind(&Server::newStream, this, _1, _2),
-        SST::EndPoint<SpaceObjectReference>(SpaceObjectReference(SpaceID::null(), ObjectReference::spaceServiceID()), OBJECT_SPACE_PORT)
-    );
 }
 
 void Server::newStream(int err, SST::Stream<SpaceObjectReference>::Ptr s) {
@@ -147,8 +149,7 @@ void Server::newStream(int err, SST::Stream<SpaceObjectReference>::Ptr s) {
 
   // Otherwise, they have a complete session
   ObjectSession* new_obj_session = new ObjectSession(objid, s);
-  mObjectSessions[objid] = new_obj_session;
-  notify(&ObjectSessionListener::newSession, new_obj_session);
+  mObjectSessionManager->addSession(new_obj_session);
 }
 
 Server::~Server()
@@ -260,12 +261,6 @@ bool Server::delegateOHDPPortSend(const OHDP::Endpoint& source_ep, const OHDP::E
     return send_success;
 }
 
-ObjectSession* Server::getSession(const ObjectReference& objid) const {
-    ObjectSessionMap::const_iterator it = mObjectSessions.find(objid);
-    if (it == mObjectSessions.end()) return NULL;
-    return it->second;
-}
-
 bool Server::isObjectConnected(const UUID& object_id) const {
     return (mObjects.find(object_id) != mObjects.end());
 }
@@ -284,10 +279,9 @@ void Server::sendSessionMessageWithRetry(const ObjectHostConnectionID& conn, Sir
     }
 }
 
-void Server::onObjectHostConnected(const ObjectHostConnectionID& conn_id, const ShortObjectHostConnectionID short_conn_id) {
-}
-
 bool Server::onObjectHostMessageReceived(const ObjectHostConnectionID& conn_id, const ShortObjectHostConnectionID short_conn_id, Sirikata::Protocol::Object::ObjectMessage* obj_msg) {
+    // NOTE that we do forwarding even before the
+
     static UUID spaceID = UUID::null();
 
     // Before admitting a message, we need to do some sanity checks.  Also, some types of messages get
@@ -352,8 +346,14 @@ bool Server::onObjectHostMessageReceived(const ObjectHostConnectionID& conn_id, 
     return true;
 }
 
+void Server::onObjectHostConnected(const ObjectHostConnectionID& conn_id, const ShortObjectHostConnectionID short_conn_id, OHDPSST::Stream::Ptr stream) {
+    assert( short_conn_id == (ShortObjectHostConnectionID)stream->remoteEndPoint().endPoint.node() );
+    mOHSessionManager->fireObjectHostSession(stream->remoteEndPoint().endPoint.node(), stream);
+}
+
 void Server::onObjectHostDisconnected(const ObjectHostConnectionID& oh_conn_id, const ShortObjectHostConnectionID short_conn_id) {
     mContext->mainStrand->post( std::tr1::bind(&Server::handleObjectHostConnectionClosed, this, oh_conn_id) );
+    mOHSessionManager->fireObjectHostSessionEnded( OHDP::NodeID(short_conn_id) );
 }
 
 void Server::scheduleObjectHostMessageRouting() {
@@ -801,12 +801,7 @@ void Server::handleDisconnect(UUID obj_id, ObjectConnection* conn) {
     // Num objects is reported by the caller
 
     ObjectReference obj(obj_id);
-    ObjectSessionMap::iterator session_it = mObjectSessions.find(obj);
-    if (session_it != mObjectSessions.end()) {
-        notify(&ObjectSessionListener::sessionClosed, session_it->second);
-        delete session_it->second;
-        mObjectSessions.erase(session_it);
-    }
+    mObjectSessionManager->removeSession(obj);
 
     delete conn;
 }
@@ -1061,12 +1056,7 @@ void Server::handleMigrationEvent(const UUID& obj_id) {
             mContext->timeSeries->report(mTimeSeriesObjects, mObjects.size());
             ObjectReference obj(obj_id);
 
-            ObjectSessionMap::iterator session_it = mObjectSessions.find(obj);
-            if (session_it != mObjectSessions.end()) {
-                notify(&ObjectSessionListener::sessionClosed, session_it->second);
-                delete session_it->second;
-                mObjectSessions.erase(session_it);
-            }
+            mObjectSessionManager->removeSession(obj);
         }
     }
 

@@ -38,6 +38,8 @@
 #include <sirikata/core/network/IOServiceFactory.hpp>
 #include <sirikata/core/network/IOStrandImpl.hpp>
 
+#include <sirikata/space/ObjectHostSession.hpp>
+#include <sirikata/space/ObjectSessionManager.hpp>
 #include <sirikata/space/Authenticator.hpp>
 
 #include <sirikata/space/SpaceNetwork.hpp>
@@ -47,6 +49,7 @@
 #include <sirikata/space/LocationService.hpp>
 
 #include <sirikata/space/Proximity.hpp>
+#include <sirikata/space/AggregateManager.hpp>
 #include "Server.hpp"
 
 #include "Options.hpp"
@@ -70,13 +73,13 @@
 
 namespace {
 using namespace Sirikata;
-void createServer(Server** server_out, SpaceContext* space_context, Authenticator* auth, Forwarder* forwarder, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, ObjectSegmentation* oseg, Address4 addr) {
+void createServer(Server** server_out, SpaceContext* space_context, Authenticator* auth, Forwarder* forwarder, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, ObjectSegmentation* oseg, Address4 addr, ObjectHostSessionManager* oh_sess_mgr, ObjectSessionManager* obj_sess_mgr) {
     if (addr == Address4::Null) {
         SILOG(space, fatal, "The requested server ID isn't in ServerIDMap");
         space_context->shutdown();
     }
 
-    Server* server = new Server(space_context, auth, forwarder, loc_service, cseg, prox, oseg, addr);
+    Server* server = new Server(space_context, auth, forwarder, loc_service, cseg, prox, oseg, addr, oh_sess_mgr, obj_sess_mgr);
     prox->initialize(cseg);
     space_context->add(prox);
     space_context->add(server);
@@ -130,8 +133,9 @@ int main(int argc, char** argv) {
     Network::IOStrand* mainStrand = ios->createStrand();
 
     ODPSST::ConnectionManager* sstConnMgr = new ODPSST::ConnectionManager();
+    OHDPSST::ConnectionManager* ohSstConnMgr = new OHDPSST::ConnectionManager();
 
-    SpaceContext* space_context = new SpaceContext("space", server_id, sstConnMgr, ios, mainStrand, start_time, gTrace, duration);
+    SpaceContext* space_context = new SpaceContext("space", server_id, sstConnMgr, ohSstConnMgr, ios, mainStrand, start_time, gTrace, duration);
 
     String servermap_type = GetOptionValue<String>("servermap");
     String servermap_options = GetOptionValue<String>("servermap-options");
@@ -153,8 +157,10 @@ int main(int argc, char** argv) {
     BoundingBox3f region = GetOptionValue<BoundingBox3f>("region");
     Vector3ui32 layout = GetOptionValue<Vector3ui32>("layout");
 
-
     srand( GetOptionValue<uint32>("rand-seed") );
+
+    ObjectHostSessionManager* oh_sess_mgr = new ObjectHostSessionManager(space_context);
+    ObjectSessionManager* obj_sess_mgr = new ObjectSessionManager(space_context);
 
     String auth_type = GetOptionValue<String>(SPACE_OPT_AUTH);
     String auth_opts = GetOptionValue<String>(SPACE_OPT_AUTH_OPTIONS);
@@ -248,10 +254,11 @@ int main(int argc, char** argv) {
     // We have all the info to initialize the forwarder now
     forwarder->initialize(oseg, sq, server_message_receiver, loc_service);
 
+    AggregateManager* aggmgr = new AggregateManager(loc_service);
 
     std::string prox_type = GetOptionValue<String>(OPT_PROX);
     std::string prox_options = GetOptionValue<String>(OPT_PROX_OPTIONS);
-    Proximity* prox = ProximityFactory::getSingleton().getConstructor(prox_type)(space_context, loc_service, gNetwork, prox_options);
+    Proximity* prox = ProximityFactory::getSingleton().getConstructor(prox_type)(space_context, loc_service, gNetwork, aggmgr, prox_options);
 
     // We need to do an async lookup, and to finish it the server needs to be
     // running. But we can't create the server until we have the address from
@@ -264,7 +271,7 @@ int main(int argc, char** argv) {
     server_id_map->lookupExternal(
         space_context->id(),
         space_context->mainStrand->wrap(
-            std::tr1::bind( &createServer, &server, space_context, auth, forwarder, loc_service, cseg, prox, oseg, _1)
+            std::tr1::bind( &createServer, &server, space_context, auth, forwarder, loc_service, cseg, prox, oseg, _1, oh_sess_mgr, obj_sess_mgr)
         )
     );
 
@@ -292,6 +299,7 @@ int main(int argc, char** argv) {
     space_context->add(oseg);
     space_context->add(loadMonitor);
     space_context->add(sstConnMgr);
+    space_context->add(ohSstConnMgr);
 
 
     space_context->run(2);
@@ -312,6 +320,7 @@ int main(int argc, char** argv) {
     delete sq;
     delete server_message_receiver;
     delete prox;
+    delete aggmgr;
     delete server_id_map;
 
     delete loadMonitor;
@@ -321,6 +330,9 @@ int main(int argc, char** argv) {
     delete oseg_cache;
     delete loc_service;
     delete forwarder;
+
+    delete obj_sess_mgr;
+    delete oh_sess_mgr;
 
     delete gNetwork;
     gNetwork=NULL;
@@ -341,6 +353,7 @@ int main(int argc, char** argv) {
     Network::IOServiceFactory::destroyIOService(ios);
 
     delete sstConnMgr;
+    delete ohSstConnMgr;
 
     sync.stop();
 

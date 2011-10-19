@@ -50,6 +50,7 @@ namespace Sirikata {
 
 class ProximityInputEvent;
 class ProximityOutputEvent;
+class AggregateManager;
 
 class SIRIKATA_SPACE_EXPORT Proximity :
         public PollingService,
@@ -61,7 +62,7 @@ class SIRIKATA_SPACE_EXPORT Proximity :
         protected MessageRecipient
 {
   public:
-    Proximity(SpaceContext* ctx, LocationService* locservice, SpaceNetwork* net, const Duration& poll_freq);
+    Proximity(SpaceContext* ctx, LocationService* locservice, SpaceNetwork* net, AggregateManager* aggmgr, const Duration& poll_freq);
     virtual ~Proximity();
 
     // Initialize prox.  Must be called after everything else (specifically message router) is set up since it
@@ -114,6 +115,18 @@ class SIRIKATA_SPACE_EXPORT Proximity :
     virtual void receiveMessage(Message* msg) = 0;
 
   protected:
+
+    // MAIN Thread
+
+    // Update stats server
+    void reportStats();
+
+    virtual int32 objectQueries() const = 0;
+    virtual int32 serverQueries() const = 0;
+
+    // Fields
+    // Thread safe:
+
     SpaceContext* mContext;
 
     // NOTE: MAIN Thread access only unless you know the methods are
@@ -122,12 +135,19 @@ class SIRIKATA_SPACE_EXPORT Proximity :
     LocationService* mLocService;
     CoordinateSegmentation* mCSeg;
 
+    AggregateManager* mAggregateManager;
+
+    // Stats
+    Poller mStatsPoller;
+    const String mTimeSeriesObjectQueryCountName;
+    const String mTimeSeriesServerQueryCountName;
+
 }; //class Proximity
 
 
 class SIRIKATA_SPACE_EXPORT ProximityFactory
     : public AutoSingleton<ProximityFactory>,
-      public Factory4<Proximity*, SpaceContext*, LocationService*, SpaceNetwork*, const String&>
+      public Factory5<Proximity*, SpaceContext*, LocationService*, SpaceNetwork*, AggregateManager*, const String&>
 {
   public:
     static ProximityFactory& getSingleton();

@@ -218,7 +218,7 @@ void AlwaysLocationUpdatePolicy::locSubstreamCallback(int x, SSTStreamPtr substr
 }
 
 bool AlwaysLocationUpdatePolicy::validSubscriber(const UUID& dest) {
-    return (mLocService->context()->sessionManager()->getSession(ObjectReference(dest)) != NULL);
+    return (mLocService->context()->objectSessionManager()->getSession(ObjectReference(dest)) != NULL);
 }
 
 bool AlwaysLocationUpdatePolicy::validSubscriber(const ServerID& dest) {

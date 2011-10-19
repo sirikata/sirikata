@@ -55,6 +55,7 @@ protected:
     // Helpers for getting event loop setup/torn down
     Trace::Trace* _trace;
     ODPSST::ConnectionManager* _sstConnMgr;
+    OHDPSST::ConnectionManager* _ohSSTConnMgr;
     Network::IOService* _ios;
     Network::IOStrand* _mainStrand;
     Network::IOWork* _work;
@@ -75,6 +76,7 @@ public:
        _storage(NULL),
        _trace(NULL),
        _sstConnMgr(NULL),
+       _ohSSTConnMgr(NULL),
        _mainStrand(NULL),
        _work(NULL),
        _ctx(NULL)
@@ -95,8 +97,9 @@ public:
         Time start_time = Timer::now(); // Just for stats in ObjectHostContext.
         Duration duration = Duration::zero(); // Indicates to run forever.
         _sstConnMgr = new ODPSST::ConnectionManager();
+        _ohSSTConnMgr = new OHDPSST::ConnectionManager();
 
-        _ctx = new ObjectHostContext("test", oh_id, _sstConnMgr, _ios, _mainStrand, _trace, start_time, duration);
+        _ctx = new ObjectHostContext("test", oh_id, _sstConnMgr, _ohSSTConnMgr, _ios, _mainStrand, _trace, start_time, duration);
 
         _storage = OH::StorageFactory::getSingleton().getConstructor(_type)(_ctx, _args);
 
@@ -129,6 +132,9 @@ public:
 
         delete _sstConnMgr;
         _sstConnMgr = NULL;
+
+        delete _ohSSTConnMgr;
+        _ohSSTConnMgr = NULL;
 
         delete _mainStrand;
         _mainStrand = NULL;

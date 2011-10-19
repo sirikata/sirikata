@@ -97,7 +97,9 @@ class ForwarderServerMessageRouter : public Router<Message*> {
     Constructor for Forwarder
   */
 Forwarder::Forwarder(SpaceContext* ctx)
-        :    mContext(ctx),
+ : ServerMessageDispatcher(ctx),
+   ServerMessageRouter(ctx),
+   mContext(ctx),
              mOutgoingMessages(NULL),
              mServerMessageQueue(NULL),
              mServerMessageReceiver(NULL),
@@ -122,10 +124,6 @@ Forwarder::Forwarder(SpaceContext* ctx)
 {
     mNullServerIDOSegCallback=std::tr1::bind(&Forwarder::routeObjectMessageToServerNoReturn, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2,std::tr1::placeholders:: _3, NullServerID);
     mOutgoingMessages = new ForwarderServiceQueue(mContext->id(), GetOptionValue<uint32>(FORWARDER_SEND_QUEUE_SIZE), (ForwarderServiceQueue::Listener*)this);
-
-    // Fill in the rest of the context
-    mContext->mServerRouter = this;
-    mContext->mServerDispatcher = this;
 
     // Messages destined for objects are subscribed to here so we can easily pick them
     // out and decide whether they can be delivered directly or need forwarding
