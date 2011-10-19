@@ -84,9 +84,6 @@ public:
  */
 class SIRIKATA_SPACE_EXPORT LocationUpdatePolicy : public LocationServiceListener, public Service {
 public:
-    typedef Sirikata::AtomicValue<uint32> SeqNo;
-    typedef std::tr1::shared_ptr<SeqNo> SeqNoPtr;
-
     LocationUpdatePolicy();
     virtual ~LocationUpdatePolicy();
 
@@ -142,9 +139,6 @@ class SIRIKATA_SPACE_EXPORT LocationUpdatePolicyFactory
  */
 class SIRIKATA_SPACE_EXPORT LocationService : public MessageRecipient, public PollingService, public ObjectSessionListener {
 public:
-    typedef LocationUpdatePolicy::SeqNo SeqNo;
-    typedef LocationUpdatePolicy::SeqNoPtr SeqNoPtr;
-
     enum TrackingType {
         NotTracking,
         Local,

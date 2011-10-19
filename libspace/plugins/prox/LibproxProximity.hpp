@@ -168,10 +168,6 @@ private:
 
 
 
-    typedef Sirikata::AtomicValue<uint32> SeqNo;
-    typedef std::tr1::shared_ptr<SeqNo> SeqNoPtr;
-
-
     void handleObjectProximityMessage(const UUID& objid, void* buffer, uint32 length);
 
     void updateAggregateLoc(const UUID& objid, const BoundingSphere3f& bnds);

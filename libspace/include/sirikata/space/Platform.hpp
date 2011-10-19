@@ -66,4 +66,17 @@
 # define SIRIKATA_SPACE_PLUGIN_EXPORT_C extern "C" SIRIKATA_SPACE_PLUGIN_EXPORT
 #endif
 
+// Additional definitions useful throughout libspace
+#include <sirikata/core/util/AtomicTypes.hpp>
+
+namespace Sirikata {
+
+// SeqNos are useful in protocols communicating with the object host
+// to provide ordering, especially when multiple threaded components
+// need to coordinate state updates.
+typedef Sirikata::AtomicValue<uint32> SeqNo;
+typedef std::tr1::shared_ptr<SeqNo> SeqNoPtr;
+
+} // namespace Sirikata
+
 #endif //_SIRIKATA_SPACE_PLATFORM_HPP_

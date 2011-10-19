@@ -1212,7 +1212,7 @@ void LibproxProximity::generateObjectQueryEvents(Query* query) {
 }
 
 
-LibproxProximity::SeqNoPtr LibproxProximity::getOrCreateSeqNoInfo(const ServerID server_id)
+SeqNoPtr LibproxProximity::getOrCreateSeqNoInfo(const ServerID server_id)
 {
     // server_id == querier
     ServerSeqNoInfoMap::iterator proxSeqNoIt = mServerSeqNos.find(server_id);
@@ -1230,7 +1230,7 @@ void LibproxProximity::eraseSeqNoInfo(const ServerID server_id)
 }
 
 
-LibproxProximity::SeqNoPtr LibproxProximity::getOrCreateSeqNoInfo(const UUID& obj_id)
+SeqNoPtr LibproxProximity::getOrCreateSeqNoInfo(const UUID& obj_id)
 {
     // obj_id == querier
     ObjectSeqNoInfoMap::iterator proxSeqNoIt = mObjectSeqNos.find(obj_id);
