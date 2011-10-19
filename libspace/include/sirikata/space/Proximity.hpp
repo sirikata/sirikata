@@ -96,20 +96,7 @@ class SIRIKATA_SPACE_EXPORT Proximity :
     virtual void sessionClosed(ObjectSession* session) = 0;
 
     // LocationServiceListener Interface
-    virtual void localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics) = 0;
-    virtual void localObjectRemoved(const UUID& uuid, bool agg) = 0;
-    virtual void localLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval) = 0;
-    virtual void localOrientationUpdated(const UUID& uuid, bool agg, const TimedMotionQuaternion& newval) = 0;
-    virtual void localBoundsUpdated(const UUID& uuid, bool agg, const BoundingSphere3f& newval) = 0;
-    virtual void localMeshUpdated(const UUID& uuid, bool agg, const String& newval) = 0;
-    virtual void localPhysicsUpdated(const UUID& uuid, bool agg, const String& newval) = 0;
-    virtual void replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics) = 0;
-    virtual void replicaObjectRemoved(const UUID& uuid) = 0;
-    virtual void replicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) = 0;
-    virtual void replicaOrientationUpdated(const UUID& uuid, const TimedMotionQuaternion& newval) = 0;
-    virtual void replicaBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) = 0;
-    virtual void replicaMeshUpdated(const UUID& uuid, const String& newval) = 0;
-    virtual void replicaPhysicsUpdated(const UUID& uuid, const String& newval) = 0;
+    // Implement as necessary, some updates may be ignored
 
     // MessageRecipient Interface
     virtual void receiveMessage(Message* msg) = 0;

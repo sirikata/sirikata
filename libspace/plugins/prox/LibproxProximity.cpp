@@ -959,31 +959,13 @@ void LibproxProximity::localLocationUpdated(const UUID& uuid, bool agg, const Ti
     if (mSeparateDynamicObjects)
         checkObjectClass(true, uuid, newval);
 }
-void LibproxProximity::localOrientationUpdated(const UUID& uuid, bool agg, const TimedMotionQuaternion& newval) {
-}
 void LibproxProximity::localBoundsUpdated(const UUID& uuid, bool agg, const BoundingSphere3f& newval) {
     updateQuery(uuid, mLocService->location(uuid), newval, NoUpdateSolidAngle, NoUpdateMaxResults);
     updateObjectSize(uuid, newval.radius());
 }
-void LibproxProximity::localMeshUpdated(const UUID& uuid, bool agg, const String& newval) {
-}
-void LibproxProximity::localPhysicsUpdated(const UUID& uuid, bool agg, const String& newval) {
-}
-void LibproxProximity::replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics) {
-}
-void LibproxProximity::replicaObjectRemoved(const UUID& uuid) {
-}
 void LibproxProximity::replicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) {
     if (mSeparateDynamicObjects)
         checkObjectClass(false, uuid, newval);
-}
-void LibproxProximity::replicaOrientationUpdated(const UUID& uuid, const TimedMotionQuaternion& newval) {
-}
-void LibproxProximity::replicaBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) {
-}
-void LibproxProximity::replicaMeshUpdated(const UUID& uuid, const String& newval) {
-}
-void LibproxProximity::replicaPhysicsUpdated(const UUID& uuid, const String& newval) {
 }
 
 void LibproxProximity::updatedSegmentation(CoordinateSegmentation* cseg, const std::vector<SegmentationInfo>& new_seg) {
