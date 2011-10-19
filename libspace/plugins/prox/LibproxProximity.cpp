@@ -130,25 +130,22 @@ LibproxProximity::LibproxProximity(SpaceContext* ctx, LocationService* locservic
    mMaxObject(0.0f),
    mMinObjectQueryAngle(SolidAngle::Max),
    mMaxMaxCount(1),
-   mProxThread(NULL),
-   mProxService(NULL),
-   mProxStrand(NULL),
+   mProxStrand(ctx->ioService->createStrand()),
    mLocCache(NULL),
    mServerQueries(),
    mServerDistance(false),
+   mServerHandlerPoller(mProxStrand, std::tr1::bind(&LibproxProximity::tickQueryHandler, this, mServerQueryHandler), Duration::milliseconds((int64)100)),
    mObjectQueries(),
-   mObjectDistance(false)
+   mObjectDistance(false),
+   mObjectHandlerPoller(mProxStrand, std::tr1::bind(&LibproxProximity::tickQueryHandler, this, mObjectQueryHandler), Duration::milliseconds((int64)100)),
+   mStaticRebuilderPoller(mProxStrand, std::tr1::bind(&LibproxProximity::rebuildHandler, this, OBJECT_CLASS_STATIC), Duration::seconds(3600.f)),
+   mDynamicRebuilderPoller(mProxStrand, std::tr1::bind(&LibproxProximity::rebuildHandler, this, OBJECT_CLASS_DYNAMIC), Duration::seconds(3600.f))
 {
     using std::tr1::placeholders::_1;
     using std::tr1::placeholders::_2;
     using std::tr1::placeholders::_3;
     using std::tr1::placeholders::_4;
     using std::tr1::placeholders::_5;
-
-    // Do some necessary initialization for the prox thread, needed to let main thread
-    // objects know about it's strand/service
-    mProxService = Network::IOServiceFactory::makeIOService();
-    mProxStrand = mProxService->createStrand();
 
     // Server Querier (discover other servers)
     String pinto_type = GetOptionValue<String>(OPT_PINTO);
@@ -203,9 +200,6 @@ LibproxProximity::LibproxProximity(SpaceContext* ctx, LocationService* locservic
     if (object_handler_type == "dist" || object_handler_type == "rtreedist") mObjectDistance = true;
 
     mProxServerMessageService = mContext->serverRouter()->createServerMessageService("proximity");
-
-    // Start the processing thread
-    mProxThread = new Thread( std::tr1::bind(&LibproxProximity::proxThreadMain, this) );
 }
 
 LibproxProximity::~LibproxProximity() {
@@ -221,10 +215,6 @@ LibproxProximity::~LibproxProximity() {
     delete mServerQuerier;
 
     delete mProxStrand;
-    Network::IOServiceFactory::destroyIOService(mProxService);
-    mProxService = NULL;
-
-    delete mProxThread;
 }
 
 
@@ -238,20 +228,19 @@ void LibproxProximity::initialize(CoordinateSegmentation* cseg) {
     BoundingBox3f bbox = aggregateBBoxes(bboxes);
     mServerQuerier->updateRegion(bbox);
 
-    mStatsPoller.start();
+    mServerHandlerPoller.start();
+    mObjectHandlerPoller.start();
+    mStaticRebuilderPoller.start();
+    mDynamicRebuilderPoller.start();
 }
 
 void LibproxProximity::shutdown() {
     Proximity::shutdown();
 
-    // Shut down the main processing thread
-    if (mProxThread != NULL) {
-        if (mProxService != NULL)
-            mProxService->stop();
-        mProxThread->join();
-    }
-
-    mStatsPoller.stop();
+    mServerHandlerPoller.stop();
+    mObjectHandlerPoller.stop();
+    mStaticRebuilderPoller.stop();
+    mDynamicRebuilderPoller.stop();
 }
 
 void LibproxProximity::newSession(ObjectSession* session) {
@@ -958,24 +947,6 @@ void LibproxProximity::updatedSegmentation(CoordinateSegmentation* cseg, const s
 
 
 // PROX Thread: Everything after this should only be called from within the prox thread.
-
-// The main loop for the prox processing thread
-void LibproxProximity::proxThreadMain() {
-    Duration max_rate = Duration::milliseconds((int64)100);
-
-    Poller mServerHandlerPoller(mProxStrand, std::tr1::bind(&LibproxProximity::tickQueryHandler, this, mServerQueryHandler), max_rate);
-    Poller mObjectHandlerPoller(mProxStrand, std::tr1::bind(&LibproxProximity::tickQueryHandler, this, mObjectQueryHandler), max_rate);
-
-    Poller staticRebuilder(mProxStrand, std::tr1::bind(&LibproxProximity::rebuildHandler, this, OBJECT_CLASS_STATIC), Duration::seconds(3600.f));
-    Poller dynamicRebuilder(mProxStrand, std::tr1::bind(&LibproxProximity::rebuildHandler, this, OBJECT_CLASS_DYNAMIC), Duration::seconds(3600.f));
-
-    mServerHandlerPoller.start();
-    mObjectHandlerPoller.start();
-    staticRebuilder.start();
-    dynamicRebuilder.start();
-
-    mProxService->run();
-}
 
 void LibproxProximity::tickQueryHandler(ProxQueryHandler* qh[NUM_OBJECT_CLASSES]) {
     Time simT = mContext->simTime();

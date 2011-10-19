@@ -212,8 +212,7 @@ private:
 
 
     // PROX Thread: These are utility methods which should only be called from the prox thread.
-    // The main loop for the prox processing thread
-    void proxThreadMain();
+
     // Handle various query events from the main thread
     void handleUpdateServerQuery(const ServerID& server, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const SolidAngle& angle, uint32 max_results);
     void handleRemoveServerQuery(const ServerID& server);
@@ -313,8 +312,6 @@ private:
     void tickQueryHandler(ProxQueryHandler* qh[NUM_OBJECT_CLASSES]);
     void rebuildHandler(ObjectClass objtype);
 
-    Thread* mProxThread;
-    Network::IOService* mProxService;
     Network::IOStrand* mProxStrand;
 
     CBRLocationServiceCache* mLocCache;
@@ -328,6 +325,7 @@ private:
     // Results from queries to other servers, so we know what we need to remove
     // on forceful disconnection
     ServerQueryResultSet mServerQueryResults;
+    Poller mServerHandlerPoller;
 
     // These track all objects being reported to this server and
     // answer queries for objects connected to this server.
@@ -335,6 +333,11 @@ private:
     InvertedObjectQueryMap mInvertedObjectQueries;
     ProxQueryHandler* mObjectQueryHandler[NUM_OBJECT_CLASSES];
     bool mObjectDistance; // Using distance queries
+    Poller mObjectHandlerPoller;
+
+    // Pollers that trigger rebuilding of query data structures
+    Poller mStaticRebuilderPoller;
+    Poller mDynamicRebuilderPoller;
 
     // Track SeqNo info for each querier
     typedef std::tr1::unordered_map<ServerID, SeqNoPtr> ServerSeqNoInfoMap;

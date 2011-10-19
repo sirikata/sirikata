@@ -48,9 +48,12 @@ Proximity::~Proximity() {
 void Proximity::initialize(CoordinateSegmentation* cseg) {
     mCSeg = cseg;
     mCSeg->addListener(this);
+
+    mStatsPoller.start();
 }
 
 void Proximity::shutdown() {
+    mStatsPoller.stop();
 }
 
 void Proximity::poll() {

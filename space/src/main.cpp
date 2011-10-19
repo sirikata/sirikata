@@ -326,7 +326,7 @@ int main(int argc, char** argv) {
     space_context->add(ohSstConnMgr);
 
 
-    space_context->run(2);
+    space_context->run(3);
 
     space_context->cleanup();
 
