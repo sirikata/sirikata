@@ -56,11 +56,11 @@ public:
     virtual void start();
     virtual void stop();
 
-    virtual void subscribe(ServerID remote, const UUID& uuid, LocationService* locservice, SeqNoPtr seqno);
+    virtual void subscribe(ServerID remote, const UUID& uuid, SeqNoPtr seqno);
     virtual void unsubscribe(ServerID remote, const UUID& uuid);
     virtual void unsubscribe(ServerID remote);
 
-    virtual void subscribe(const UUID& remote, const UUID& uuid, LocationService* locservice);
+    virtual void subscribe(const UUID& remote, const UUID& uuid);
     virtual void unsubscribe(const UUID& remote, const UUID& uuid);
     virtual void unsubscribe(const UUID& remote);
 
@@ -145,7 +145,7 @@ private:
             mObjectSubscribers.clear();
         }
 
-        void subscribe(const SubscriberType& remote, const UUID& uuid, LocationService* locservice, SeqNoPtr seqnoPtr) {
+        void subscribe(const SubscriberType& remote, const UUID& uuid, SeqNoPtr seqnoPtr) {
             // Add object to server's subscription list
             typename SubscriberMap::iterator sub_it = mSubscriptions.find(remote);
             if (sub_it == mSubscriptions.end()) {
@@ -169,7 +169,7 @@ private:
             // in asynchronously from Proximity, so its possible the data sent
             // with the origin subscription is out of date by the time this
             // subscription occurs. Forcing an extra update handles this case.
-            propertyUpdatedForSubscriber(uuid, locservice, remote, NULL);
+            propertyUpdatedForSubscriber(uuid, parent->mLocService, remote, NULL);
         }
 
         void unsubscribe(const SubscriberType& remote, const UUID& uuid) {

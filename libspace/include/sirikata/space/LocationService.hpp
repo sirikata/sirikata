@@ -92,11 +92,11 @@ public:
     virtual void start() = 0;
     virtual void stop() = 0;
 
-    virtual void subscribe(ServerID remote, const UUID& uuid, LocationService* locservice, SeqNoPtr seqNo) = 0;
+    virtual void subscribe(ServerID remote, const UUID& uuid, SeqNoPtr seqNo) = 0;
     virtual void unsubscribe(ServerID remote, const UUID& uuid) = 0;
     virtual void unsubscribe(ServerID remote) = 0;
 
-    virtual void subscribe(const UUID& remote, const UUID& uuid, LocationService* locservice) = 0;
+    virtual void subscribe(const UUID& remote, const UUID& uuid) = 0;
     virtual void unsubscribe(const UUID& remote, const UUID& uuid) = 0;
     virtual void unsubscribe(const UUID& remote) = 0;
 
