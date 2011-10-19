@@ -60,7 +60,7 @@ public:
     virtual void unsubscribe(ServerID remote, const UUID& uuid);
     virtual void unsubscribe(ServerID remote);
 
-    virtual void subscribe(const UUID& remote, const UUID& uuid, LocationService* locservice, SeqNoPtr seqno);
+    virtual void subscribe(const UUID& remote, const UUID& uuid, LocationService* locservice);
     virtual void unsubscribe(const UUID& remote, const UUID& uuid);
     virtual void unsubscribe(const UUID& remote);
 

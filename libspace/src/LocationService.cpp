@@ -204,8 +204,8 @@ void LocationService::unsubscribe(ServerID remote) {
 }
 
 
-void LocationService::subscribe(const UUID& remote, const UUID& uuid, SeqNoPtr seqnoptr) {
-    mUpdatePolicy->subscribe(remote, uuid, this,seqnoptr);
+void LocationService::subscribe(const UUID& remote, const UUID& uuid) {
+    mUpdatePolicy->subscribe(remote, uuid, this);
 }
 
 void LocationService::unsubscribe(const UUID& remote, const UUID& uuid) {

@@ -633,9 +633,11 @@ void LibproxProximity::addQuery(UUID obj, const String& params) {
 }
 
 void LibproxProximity::updateQuery(UUID obj, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, SolidAngle sa, uint32 max_results) {
+    SeqNoPtr obj_seqno = mContext->objectSessionManager()->getSession(ObjectReference(obj))->getSeqNoPtr();
+
     // Update the prox thread
     mProxStrand->post(
-        std::tr1::bind(&LibproxProximity::handleUpdateObjectQuery, this, obj, loc, bounds, sa, max_results)
+        std::tr1::bind(&LibproxProximity::handleUpdateObjectQuery, this, obj, loc, bounds, sa, max_results, obj_seqno)
     );
 
     bool update_remote_queries = false;
@@ -900,13 +902,13 @@ void LibproxProximity::poll() {
 
 // Note that we pass through seqPtr from the prox thread because it is
 // stored in ProxStreamInfo, and those are Prox-thread-only structs.
-void LibproxProximity::handleAddObjectLocSubscription(const UUID& subscriber, const UUID& observed, SeqNoPtr seqPtr) {
+void LibproxProximity::handleAddObjectLocSubscription(const UUID& subscriber, const UUID& observed) {
     // We check the cache when we get the request, but also check it here since
     // the observed object may have been removed between the request to add this
     // subscription and its actual execution.
     if (!mLocService->contains(observed)) return;
 
-    mLocService->subscribe(subscriber, observed, seqPtr);
+    mLocService->subscribe(subscriber, observed);
 }
 
 void LibproxProximity::handleRemoveObjectLocSubscription(const UUID& subscriber, const UUID& observed) {
@@ -1125,7 +1127,7 @@ void LibproxProximity::generateObjectQueryEvents(Query* query) {
     uint32 max_count = GetOptionValue<uint32>(PROX_MAX_PER_RESULT);
 
     UUID query_id = mInvertedObjectQueries[query];
-    SeqNoPtr seqNoPtr = getOrCreateSeqNoInfo(query_id);
+    SeqNoPtr seqNoPtr = getSeqNoInfo(query_id);
 
     QueryEventList evts;
     query->popEvents(evts);
@@ -1145,7 +1147,7 @@ void LibproxProximity::generateObjectQueryEvents(Query* query) {
                     count++;
 
                     mContext->mainStrand->post(
-                        std::tr1::bind(&LibproxProximity::handleAddObjectLocSubscription, this, query_id, objid, seqNoPtr)
+                        std::tr1::bind(&LibproxProximity::handleAddObjectLocSubscription, this, query_id, objid)
                     );
 
                     Sirikata::Protocol::Prox::IObjectAddition addition = event_results.add_addition();
@@ -1230,12 +1232,11 @@ void LibproxProximity::eraseSeqNoInfo(const ServerID server_id)
 }
 
 
-SeqNoPtr LibproxProximity::getOrCreateSeqNoInfo(const UUID& obj_id)
+SeqNoPtr LibproxProximity::getSeqNoInfo(const UUID& obj_id)
 {
     // obj_id == querier
     ObjectSeqNoInfoMap::iterator proxSeqNoIt = mObjectSeqNos.find(obj_id);
-    if (proxSeqNoIt == mObjectSeqNos.end())
-        proxSeqNoIt = mObjectSeqNos.insert( ObjectSeqNoInfoMap::value_type(obj_id, SeqNoPtr(new SeqNo())) ).first;
+    assert(proxSeqNoIt != mObjectSeqNos.end());
     return proxSeqNoIt->second;
 }
 
@@ -1337,11 +1338,14 @@ void LibproxProximity::handleDisconnectedServer(ServerID sid) {
         mLocService->removeReplicaObject(t, *it);
 }
 
-void LibproxProximity::handleUpdateObjectQuery(const UUID& object, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const SolidAngle& angle, uint32 max_results) {
+void LibproxProximity::handleUpdateObjectQuery(const UUID& object, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const SolidAngle& angle, uint32 max_results, SeqNoPtr seqno) {
     BoundingSphere3f region(bounds.center(), 0);
     float ms = bounds.radius();
 
     PROXLOG(detailed,"Update object query from " << object.toString() << ", min angle " << angle.asFloat() << ", max results " << max_results);
+
+    if (mObjectSeqNos.find(object) == mObjectSeqNos.end())
+        mObjectSeqNos.insert( ObjectSeqNoInfoMap::value_type(object, seqno) );
 
     for(int i = 0; i < NUM_OBJECT_CLASSES; i++) {
         if (mObjectQueryHandler[i] == NULL) continue;

@@ -96,7 +96,7 @@ public:
     virtual void unsubscribe(ServerID remote, const UUID& uuid) = 0;
     virtual void unsubscribe(ServerID remote) = 0;
 
-    virtual void subscribe(const UUID& remote, const UUID& uuid, LocationService* locservice, SeqNoPtr seqNo) = 0;
+    virtual void subscribe(const UUID& remote, const UUID& uuid, LocationService* locservice) = 0;
     virtual void unsubscribe(const UUID& remote, const UUID& uuid) = 0;
     virtual void unsubscribe(const UUID& remote) = 0;
 
@@ -207,7 +207,7 @@ public:
 
 
     /** Subscriptions for local objects. */
-    virtual void subscribe(const UUID& remote, const UUID& uuid, SeqNoPtr seq_no_ptr);
+    virtual void subscribe(const UUID& remote, const UUID& uuid);
     virtual void unsubscribe(const UUID& remote, const UUID& uuid);
     /** Unsubscripe the given server from all its location subscriptions. */
     virtual void unsubscribe(const UUID& remote);

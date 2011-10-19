@@ -212,7 +212,7 @@ private:
 
 
     // Handle various events in the main thread that are triggered in the prox thread
-    void handleAddObjectLocSubscription(const UUID& subscriber, const UUID& observed, SeqNoPtr seqPtr);
+    void handleAddObjectLocSubscription(const UUID& subscriber, const UUID& observed);
     void handleRemoveObjectLocSubscription(const UUID& subscriber, const UUID& observed);
     void handleRemoveAllObjectLocSubscription(const UUID& subscriber);
     void handleAddServerLocSubscription(const ServerID& subscriber, const UUID& observed, SeqNoPtr seqPtr);
@@ -229,7 +229,7 @@ private:
     void handleConnectedServer(ServerID sid);
     void handleDisconnectedServer(ServerID sid);
 
-    void handleUpdateObjectQuery(const UUID& object, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const SolidAngle& angle, uint32 max_results);
+    void handleUpdateObjectQuery(const UUID& object, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const SolidAngle& angle, uint32 max_results, SeqNoPtr seqno);
     void handleRemoveObjectQuery(const UUID& object, bool notify_main_thread);
     void handleDisconnectedObject(const UUID& object);
 
@@ -251,7 +251,7 @@ private:
      */
     SeqNoPtr getOrCreateSeqNoInfo(const ServerID server_id);
     void eraseSeqNoInfo(const ServerID server_id);
-    SeqNoPtr getOrCreateSeqNoInfo(const UUID& obj_id);
+    SeqNoPtr getSeqNoInfo(const UUID& obj_id);
     void eraseSeqNoInfo(const UUID& obj_id);
 
     typedef std::set<UUID> ObjectSet;

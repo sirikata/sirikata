@@ -105,8 +105,8 @@ void AlwaysLocationUpdatePolicy::unsubscribe(ServerID remote) {
     mServerSubscriptions.unsubscribe(remote);
 }
 
-void AlwaysLocationUpdatePolicy::subscribe(const UUID& remote, const UUID& uuid, LocationService* locservice, SeqNoPtr seqno) {
-    mObjectSubscriptions.subscribe(remote, uuid, locservice,seqno);
+void AlwaysLocationUpdatePolicy::subscribe(const UUID& remote, const UUID& uuid, LocationService* locservice) {
+    mObjectSubscriptions.subscribe(remote, uuid, locservice, locservice->context()->objectSessionManager()->getSession(ObjectReference(remote))->getSeqNoPtr());
 }
 
 void AlwaysLocationUpdatePolicy::unsubscribe(const UUID& remote, const UUID& uuid) {
