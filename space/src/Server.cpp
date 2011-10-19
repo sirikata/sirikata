@@ -45,6 +45,7 @@
 #include <sirikata/space/ObjectSegmentation.hpp>
 
 #include "ObjectConnection.hpp"
+#include <sirikata/space/ObjectSessionManager.hpp>
 #include <sirikata/space/ObjectHostSession.hpp>
 
 #include <sirikata/core/util/Random.hpp>
@@ -75,7 +76,7 @@ void logVersionInfo(Sirikata::Protocol::Session::VersionInfo vers_info) {
 } // namespace
 
 
-Server::Server(SpaceContext* ctx, Authenticator* auth, Forwarder* forwarder, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, ObjectSegmentation* oseg, Address4 oh_listen_addr, ObjectHostSessionManager* oh_sess_mgr)
+Server::Server(SpaceContext* ctx, Authenticator* auth, Forwarder* forwarder, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, ObjectSegmentation* oseg, Address4 oh_listen_addr, ObjectHostSessionManager* oh_sess_mgr, ObjectSessionManager* obj_sess_mgr)
  : ODP::DelegateService( std::tr1::bind(&Server::createDelegateODPPort, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2, std::tr1::placeholders::_3) ),
    OHDP::DelegateService( std::tr1::bind(&Server::createDelegateOHDPPort, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2) ),
    mContext(ctx),
@@ -88,6 +89,7 @@ Server::Server(SpaceContext* ctx, Authenticator* auth, Forwarder* forwarder, Loc
    mForwarder(forwarder),
    mMigrationMonitor(NULL),
    mOHSessionManager(oh_sess_mgr),
+   mObjectSessionManager(obj_sess_mgr),
    mMigrationSendRunning(false),
    mShutdownRequested(false),
    mObjectHostConnectionManager(NULL),
@@ -98,10 +100,10 @@ Server::Server(SpaceContext* ctx, Authenticator* auth, Forwarder* forwarder, Loc
     using std::tr1::placeholders::_2;
 
     mContext->mCSeg = mCSeg;
-    mContext->mObjectSessionManager = this;
+    mContext->mObjectSessionManager = obj_sess_mgr;
 
-    this->addListener(static_cast<ObjectSessionListener*>(mLocationService));
-    this->addListener(static_cast<ObjectSessionListener*>(mProximity));
+    obj_sess_mgr->addListener(static_cast<ObjectSessionListener*>(mLocationService));
+    obj_sess_mgr->addListener(static_cast<ObjectSessionListener*>(mProximity));
 
     mTimeSyncServer = new TimeSyncServer(mContext, this);
 
@@ -153,8 +155,7 @@ void Server::newStream(int err, SST::Stream<SpaceObjectReference>::Ptr s) {
 
   // Otherwise, they have a complete session
   ObjectSession* new_obj_session = new ObjectSession(objid, s);
-  mObjectSessions[objid] = new_obj_session;
-  notify(&ObjectSessionListener::newSession, new_obj_session);
+  mObjectSessionManager->addSession(new_obj_session);
 }
 
 Server::~Server()
@@ -264,12 +265,6 @@ bool Server::delegateOHDPPortSend(const OHDP::Endpoint& source_ep, const OHDP::E
         delete msg;
 
     return send_success;
-}
-
-ObjectSession* Server::getSession(const ObjectReference& objid) const {
-    ObjectSessionMap::const_iterator it = mObjectSessions.find(objid);
-    if (it == mObjectSessions.end()) return NULL;
-    return it->second;
 }
 
 bool Server::isObjectConnected(const UUID& object_id) const {
@@ -812,12 +807,7 @@ void Server::handleDisconnect(UUID obj_id, ObjectConnection* conn) {
     // Num objects is reported by the caller
 
     ObjectReference obj(obj_id);
-    ObjectSessionMap::iterator session_it = mObjectSessions.find(obj);
-    if (session_it != mObjectSessions.end()) {
-        notify(&ObjectSessionListener::sessionClosed, session_it->second);
-        delete session_it->second;
-        mObjectSessions.erase(session_it);
-    }
+    mObjectSessionManager->removeSession(obj);
 
     delete conn;
 }
@@ -1072,12 +1062,7 @@ void Server::handleMigrationEvent(const UUID& obj_id) {
             mContext->timeSeries->report(mTimeSeriesObjects, mObjects.size());
             ObjectReference obj(obj_id);
 
-            ObjectSessionMap::iterator session_it = mObjectSessions.find(obj);
-            if (session_it != mObjectSessions.end()) {
-                notify(&ObjectSessionListener::sessionClosed, session_it->second);
-                delete session_it->second;
-                mObjectSessions.erase(session_it);
-            }
+            mObjectSessionManager->removeSession(obj);
         }
     }
 

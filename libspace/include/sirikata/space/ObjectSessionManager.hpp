@@ -72,8 +72,33 @@ class SIRIKATA_SPACE_EXPORT ObjectSessionListener {
 
 class SIRIKATA_SPACE_EXPORT ObjectSessionManager : public Provider<ObjectSessionListener*> {
   public:
-    virtual ObjectSession* getSession(const ObjectReference& objid) const = 0;
     virtual ~ObjectSessionManager() {}
+
+    // Owner interface -- adds and removes sessions
+    void addSession(ObjectSession* session) {
+        mObjectSessions[session->id()] = session;
+        notify(&ObjectSessionListener::newSession, session);
+    }
+    void removeSession(const ObjectReference& obj) {
+        ObjectSessionMap::iterator session_it = mObjectSessions.find(obj);
+        if (session_it != mObjectSessions.end()) {
+            notify(&ObjectSessionListener::sessionClosed, session_it->second);
+            delete session_it->second;
+            mObjectSessions.erase(session_it);
+        }
+    }
+
+    // User interface
+
+    ObjectSession* getSession(const ObjectReference& objid) const {
+        ObjectSessionMap::const_iterator it = mObjectSessions.find(objid);
+        if (it == mObjectSessions.end()) return NULL;
+        return it->second;
+    }
+
+  private:
+    typedef std::tr1::unordered_map<ObjectReference, ObjectSession*, ObjectReference::Hasher> ObjectSessionMap;
+    ObjectSessionMap mObjectSessions;
 };
 
 } // namespace Sirikata

@@ -52,7 +52,6 @@
 #include <sirikata/core/ohdp/DelegateService.hpp>
 
 #include <sirikata/core/sync/TimeSyncServer.hpp>
-#include <sirikata/space/ObjectSessionManager.hpp>
 
 
 namespace Sirikata
@@ -73,6 +72,7 @@ class ObjectConnection;
 class ObjectHostConnectionManager;
 
 class ObjectHostSessionManager;
+class ObjectSessionManager;
 
   /** Handles all the basic services provided for objects by a server,
    *  including routing and message delivery, proximity services, and
@@ -84,10 +84,10 @@ class Server :
         public MessageRecipient, public Service,
         public OSegWriteListener,
         public ODP::DelegateService, public OHDP::DelegateService,
-        ObjectSessionManager, ObjectHostConnectionManager::Listener
+        ObjectHostConnectionManager::Listener
 {
 public:
-    Server(SpaceContext* ctx, Authenticator* auth, Forwarder* forwarder, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, ObjectSegmentation* oseg, Address4 oh_listen_addr, ObjectHostSessionManager* oh_sess_mgr);
+    Server(SpaceContext* ctx, Authenticator* auth, Forwarder* forwarder, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, ObjectSegmentation* oseg, Address4 oh_listen_addr, ObjectHostSessionManager* oh_sess_mgr, ObjectSessionManager* obj_sess_mgr);
     ~Server();
 
     virtual void receiveMessage(Message* msg);
@@ -108,10 +108,6 @@ private:
     // OHDP::DelegateService dependencies
     OHDP::DelegatePort* createDelegateOHDPPort(OHDP::DelegateService*, const OHDP::Endpoint& ept);
     bool delegateOHDPPortSend(const OHDP::Endpoint& source_ep, const OHDP::Endpoint& dest_ep, MemoryReference payload);
-
-
-    // ObjectSessionManager Interface
-    virtual ObjectSession* getSession(const ObjectReference& objid) const;
 
     // ObjectHostConnectionManager::Listener Interface:
 
@@ -202,6 +198,7 @@ private:
     Forwarder* mForwarder;
     MigrationMonitor* mMigrationMonitor;
     ObjectHostSessionManager* mOHSessionManager;
+    ObjectSessionManager* mObjectSessionManager;
 
     Router<Message*>* mMigrateServerMessageService;
 
@@ -220,9 +217,6 @@ private:
                                   // only still a map to handle migrations
                                   // properly
     ObjectConnectionMap mObjectsAwaitingMigration;
-
-    typedef std::tr1::unordered_map<ObjectReference, ObjectSession*, ObjectReference::Hasher> ObjectSessionMap;
-    ObjectSessionMap mObjectSessions;
 
 
     typedef std::tr1::unordered_map<UUID, Sirikata::Protocol::Migration::MigrationMessage*, UUID::Hasher> ObjectMigrationMap;
