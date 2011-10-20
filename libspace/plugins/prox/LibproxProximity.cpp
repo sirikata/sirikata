@@ -220,28 +220,20 @@ LibproxProximity::~LibproxProximity() {
 
 // MAIN Thread Methods: The following should only be called from the main thread.
 
-void LibproxProximity::initialize() {
-    Proximity::initialize();
+void LibproxProximity::start() {
+    Proximity::start();
 
     // Always initialize with CSeg's current size
     BoundingBoxList bboxes = mCSeg->serverRegion(mContext->id());
     BoundingBox3f bbox = aggregateBBoxes(bboxes);
     mServerQuerier->updateRegion(bbox);
 
-    mServerHandlerPoller.start();
-    mObjectHandlerPoller.start();
-    mStaticRebuilderPoller.start();
-    mDynamicRebuilderPoller.start();
+    mContext->add(&mServerHandlerPoller);
+    mContext->add(&mObjectHandlerPoller);
+    mContext->add(&mStaticRebuilderPoller);
+    mContext->add(&mDynamicRebuilderPoller);
 }
 
-void LibproxProximity::shutdown() {
-    Proximity::shutdown();
-
-    mServerHandlerPoller.stop();
-    mObjectHandlerPoller.stop();
-    mStaticRebuilderPoller.stop();
-    mDynamicRebuilderPoller.stop();
-}
 
 void LibproxProximity::newSession(ObjectSession* session) {
     using std::tr1::placeholders::_1;

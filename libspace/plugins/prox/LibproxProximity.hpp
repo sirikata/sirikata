@@ -66,12 +66,8 @@ public:
     LibproxProximity(SpaceContext* ctx, LocationService* locservice, CoordinateSegmentation* cseg, SpaceNetwork* net, AggregateManager* aggmgr);
     ~LibproxProximity();
 
-    // Initialize prox.  Must be called after everything else (specifically message router) is set up since it
-    // needs to send messages.
-    void initialize();
-
-    // Shutdown the proximity thread.
-    void shutdown();
+    // Service Interface overrides
+    virtual void start();
 
     // ObjectSessionListener Interface
     virtual void newSession(ObjectSession* session);

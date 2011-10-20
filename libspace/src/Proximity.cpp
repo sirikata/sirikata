@@ -46,12 +46,13 @@ Proximity::~Proximity() {
     mLocService->removeListener(this);
 }
 
-void Proximity::initialize() {
-    mStatsPoller.start();
+void Proximity::start() {
+    PollingService::start();
+    mContext->add(&mStatsPoller);
 }
 
-void Proximity::shutdown() {
-    mStatsPoller.stop();
+void Proximity::stop() {
+    PollingService::stop();
 }
 
 void Proximity::poll() {

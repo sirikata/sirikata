@@ -65,11 +65,9 @@ class SIRIKATA_SPACE_EXPORT Proximity :
     Proximity(SpaceContext* ctx, LocationService* locservice, CoordinateSegmentation* cseg, SpaceNetwork* net, AggregateManager* aggmgr, const Duration& poll_freq);
     virtual ~Proximity();
 
-    // Initialize prox.  Must be called after everything else (specifically message router) is set up since it
-    // needs to send messages.
-    virtual void initialize();
-    // Shutdown the proximity thread.
-    virtual void shutdown();
+    // Service Interface overrides
+    virtual void start();
+    virtual void stop();
 
     // Objects
     virtual void addQuery(UUID obj, SolidAngle sa, uint32 max_results) = 0;

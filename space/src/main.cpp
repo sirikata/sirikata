@@ -94,8 +94,6 @@ void createServer(Server** server_out, ServerData sd, Address4 addr) {
     }
 
     Server* server = new Server(sd.space_context, sd.auth, sd.forwarder, sd.loc_service, sd.cseg, sd.prox, sd.oseg, addr, sd.oh_sess_mgr, sd.obj_sess_mgr);
-    sd.prox->initialize();
-    sd.space_context->add(sd.prox);
     sd.space_context->add(server);
 
     *server_out = server;
@@ -324,7 +322,7 @@ int main(int argc, char** argv) {
     space_context->add(loadMonitor);
     space_context->add(sstConnMgr);
     space_context->add(ohSstConnMgr);
-
+    space_context->add(prox);
 
     space_context->run(3);
 
@@ -335,7 +333,6 @@ int main(int argc, char** argv) {
     }
 
     gTrace->prepareShutdown();
-    prox->shutdown();
     Mesh::FilterFactory::destroy();
     ModelsSystemFactory::destroy();
     LocationServiceFactory::destroy();
