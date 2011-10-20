@@ -44,6 +44,9 @@
 #endif
 #endif // HAVE_BREAKPAD
 
+#include <sirikata/core/util/Paths.hpp>
+#include <boost/filesystem.hpp>
+
 namespace Sirikata {
 namespace Breakpad {
 
@@ -53,6 +56,39 @@ namespace Breakpad {
 // that these are worth just completely separating. Each just needs to setup the
 // exception handler. Currently, all should set it up to save minidumps to the
 // current directory.
+
+namespace {
+
+// Get the path to the crash reporter based on this binary's location. The
+// returned string can be precomputed, so you can prime this during safe
+// execution (initialization) so no more work will be done after the crash
+// occurs.
+const String& getCrashReporterPath() {
+    static String cr_full_path = "";
+
+    if (!cr_full_path.empty()) return cr_full_path;
+
+    String reporter_name =
+#if SIRIKATA_DEBUG
+      "crashreporter_d"
+#else
+      "crashreporter"
+#endif
+        ;
+#if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+    reporter_name = reporter_name + ".exe";
+#endif
+
+    String exe_path = Path::Get(Path::DIR_EXE);
+    if (exe_path.empty())
+        cr_full_path = reporter_name;
+    else
+        cr_full_path = ( boost::filesystem::path(exe_path) / reporter_name ).string();
+
+    return cr_full_path;
+}
+
+}
 
 #if SIRIKATA_PLATFORM  == PLATFORM_WINDOWS
 namespace {
@@ -99,24 +135,16 @@ bool finishedDump(const wchar_t* dump_path,
 #else
     if (breakpad_url.empty()) return succeeded;
 
-    const char* reporter_name =
-#if SIRIKATA_DEBUG
-      "crashreporter_d.exe"
-#else
-      "crashreporter.exe"
-#endif
-      ;
-
     STARTUPINFO info={sizeof(info)};
     PROCESS_INFORMATION processInfo;
     std::string cmd =
-        reporter_name + std::string(" ") +
+        getCrashReporterPath() + std::string(" ") +
         breakpad_url + std::string(" ") +
         wchar_to_string(dump_path) + std::string(" ") +
         wchar_to_string(minidump_id) + std::string(" ") +
         std::string(SIRIKATA_VERSION) + std::string(" ") +
         std::string(SIRIKATA_GIT_REVISION);
-    CreateProcess(reporter_name, (LPSTR)cmd.c_str(), NULL, NULL, TRUE, 0, NULL, NULL, &info, &processInfo);
+    CreateProcess(getCrashReporterPath().c_str(), (LPSTR)cmd.c_str(), NULL, NULL, TRUE, 0, NULL, NULL, &info, &processInfo);
 
     return succeeded;
 #endif // SIRIKATA_DEBUG
@@ -132,6 +160,9 @@ void init() {
     // This is needed for CRT to not show dialog for invalid param
     // failures and instead let the code handle it.
     _CrtSetReportMode(_CRT_ASSERT, 0);
+
+    // Prime the location of the crashreporter binary
+    getCrashReporterPath();
 
     breakpad_url = GetOptionValue<String>(OPT_CRASHREPORT_URL);
 
@@ -149,22 +180,16 @@ void init() {
 
 
     // Try to run the external minidump processing server
-    const char* reporter_name =
-#if SIRIKATA_DEBUG
-      "crashreporter_d.exe"
-#else
-      "crashreporter.exe"
-#endif
-      ;
+
     STARTUPINFO info={sizeof(info)};
     PROCESS_INFORMATION processInfo;
     wchar_t* w_dump_path = L".\\";
     std::string cmd =
-        reporter_name + std::string(" ") +
+        getCrashReporterPath() + std::string(" ") +
         breakpad_url + std::string(" ") +
         wchar_to_string(w_dump_path);
     std::cout << "Dump process: " << cmd << std::endl;
-    CreateProcess(reporter_name, (LPSTR)cmd.c_str(), NULL, NULL, TRUE, 0, NULL, NULL, &info, &processInfo);
+    CreateProcess(getCrashReporterPath().c_str(), (LPSTR)cmd.c_str(), NULL, NULL, TRUE, 0, NULL, NULL, &info, &processInfo);
     // FIXME better way to make sure the reporter gets a chance to
     // start up?
     Sleep(250);
@@ -211,17 +236,10 @@ bool finishedDump(const char* dump_path,
     pid_t pID = fork();
 
     if (pID == 0) {
-        const char* reporter_name =
-#if SIRIKATA_DEBUG
-            "crashreporter_d"
-#else
-            "crashreporter"
-#endif
-            ;
 
-        execlp(reporter_name, reporter_name, breakpad_url.c_str(), dump_path, minidump_id, SIRIKATA_VERSION, SIRIKATA_GIT_REVISION, (char*)NULL);
+        execlp(getCrashReporterPath().c_str(), getCrashReporterPath().c_str(), breakpad_url.c_str(), dump_path, minidump_id, SIRIKATA_VERSION, SIRIKATA_GIT_REVISION, (char*)NULL);
         // If crashreporter not in path, try current directory
-        execl(reporter_name, reporter_name, breakpad_url.c_str(), dump_path, minidump_id, SIRIKATA_VERSION, SIRIKATA_GIT_REVISION, (char*)NULL);
+        execl(getCrashReporterPath().c_str(), getCrashReporterPath().c_str(), breakpad_url.c_str(), dump_path, minidump_id, SIRIKATA_VERSION, SIRIKATA_GIT_REVISION, (char*)NULL);
     }
     else if (pID < 0) {
         printf("Failed to fork crashreporter\n");
@@ -234,6 +252,9 @@ bool finishedDump(const char* dump_path,
 
 void init() {
     if (breakpad_handler != NULL) return;
+
+    // Prime the location of the crashreporter binary
+    getCrashReporterPath();
 
     breakpad_url = GetOptionValue<String>(OPT_CRASHREPORT_URL);
 
