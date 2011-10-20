@@ -32,6 +32,7 @@
 
 #include <sirikata/core/util/Standard.hh>
 #include <sirikata/core/util/DynamicLibrary.hpp>
+#include <sirikata/core/util/Paths.hpp>
 
 #include <boost/filesystem.hpp>
 
@@ -42,60 +43,23 @@
 #  include <dlfcn.h>
 #endif
 
-#if SIRIKATA_PLATFORM == PLATFORM_MAC
-#include <mach-o/dyld.h>
-#endif
-
 namespace Sirikata {
 
 static std::vector<String> DL_search_paths;
-
-String DynamicLibrary::GetExecutablePath() {
-#if SIRIKATA_PLATFORM == PLATFORM_MAC
-    // Executable path can have relative references ("..") depending on
-    // how the app was launched.
-    uint32_t executable_length = 0;
-    _NSGetExecutablePath(NULL, &executable_length);
-    std::string executable_path(executable_length, '\0');
-    char* executable_path_c = (char*)executable_path.c_str();
-    int rv = _NSGetExecutablePath(executable_path_c, &executable_length);
-    assert(rv == 0);
-    if ((rv != 0) || (executable_path.empty()))
-        return "";
-    boost::filesystem::path exe_path(executable_path);
-    return exe_path.parent_path().string();
-#elif SIRIKATA_PLATFORM == PLATFORM_LINUX
-    // boost::filesystem can't chase symlinks, do it manually
-    const char* selfExe = "/proc/self/exe";
-#define SIRIKATA_DL_PATH_MAX 1024
-    char bin_dir[SIRIKATA_DL_PATH_MAX + 1];
-    int bin_dir_size = readlink(selfExe, bin_dir, SIRIKATA_DL_PATH_MAX);
-    if (bin_dir_size < 0 || bin_dir_size > SIRIKATA_DL_PATH_MAX) {
-        SILOG(core,fatal,"Couldn't read self symlink to setup dynamic loading paths.");
-        return "";
-    }
-    bin_dir[bin_dir_size] = 0;
-    boost::filesystem::path exe_path(String(bin_dir, bin_dir_size));
-    return exe_path.parent_path().string();
-#undef SIRIKATA_DL_PATH_MAX
-#else
-    return "";
-#endif
-}
 
 void DynamicLibrary::Initialize() {
     using namespace boost::filesystem;
 #if SIRIKATA_PLATFORM == PLATFORM_MAC
     // On mac, we might be in a .app, specifically at .app/Contents. To load the
     // libs we need, we add .app/Contents/MacOS to the LD_LIBRARY_PATH
-    path to_macos_dir = boost::filesystem::complete(path(".")) / path("MacOS");
+    path to_macos_dir = path(Path::Get(Path::DIR_CURRENT)) / path("MacOS");
     if (exists(to_macos_dir) && is_directory(to_macos_dir))
         AddLoadPath(to_macos_dir.string());
 #endif
 
     // On all platforms, allow plugins to load from within the same
     // directory as the executable
-    String exe_path = GetExecutablePath();
+    String exe_path = Path::Get(Path::DIR_EXE);
     if (!exe_path.empty())
         AddLoadPath(exe_path);
 }

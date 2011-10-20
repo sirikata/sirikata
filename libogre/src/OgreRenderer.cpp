@@ -49,6 +49,7 @@
 
 #include <sirikata/ogre/input/SDLInputManager.hpp>
 
+#include <sirikata/core/util/Paths.hpp>
 #include <boost/filesystem.hpp>
 
 #include "OgreRoot.h"
@@ -570,7 +571,7 @@ bool OgreRenderer::loadBuiltinPlugins () {
     bool retval = true;
     String exeDir = mOgreRootDir->as<String>();
     if (exeDir.empty())
-        exeDir = DynamicLibrary::GetExecutablePath();
+        exeDir = Path::Get(Path::DIR_EXE);
 
 #ifdef __APPLE__
     retval = ogreLoadPlugin("RenderSystem_GL", exeDir);
