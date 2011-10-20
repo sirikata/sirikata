@@ -62,12 +62,12 @@ class SIRIKATA_SPACE_EXPORT Proximity :
         protected MessageRecipient
 {
   public:
-    Proximity(SpaceContext* ctx, LocationService* locservice, SpaceNetwork* net, AggregateManager* aggmgr, const Duration& poll_freq);
+    Proximity(SpaceContext* ctx, LocationService* locservice, CoordinateSegmentation* cseg, SpaceNetwork* net, AggregateManager* aggmgr, const Duration& poll_freq);
     virtual ~Proximity();
 
     // Initialize prox.  Must be called after everything else (specifically message router) is set up since it
     // needs to send messages.
-    virtual void initialize(CoordinateSegmentation* cseg);
+    virtual void initialize();
     // Shutdown the proximity thread.
     virtual void shutdown();
 
@@ -134,7 +134,7 @@ class SIRIKATA_SPACE_EXPORT Proximity :
 
 class SIRIKATA_SPACE_EXPORT ProximityFactory
     : public AutoSingleton<ProximityFactory>,
-      public Factory5<Proximity*, SpaceContext*, LocationService*, SpaceNetwork*, AggregateManager*, const String&>
+      public Factory6<Proximity*, SpaceContext*, LocationService*, CoordinateSegmentation*, SpaceNetwork*, AggregateManager*, const String&>
 {
   public:
     static ProximityFactory& getSingleton();

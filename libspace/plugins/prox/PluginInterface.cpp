@@ -64,11 +64,11 @@ static void InitPluginOptions() {
         ;
 }
 
-static Proximity* createProx(SpaceContext* ctx, LocationService* locservice, SpaceNetwork* net, AggregateManager* aggmgr, const String& args) {
+static Proximity* createProx(SpaceContext* ctx, LocationService* locservice, CoordinateSegmentation* cseg, SpaceNetwork* net, AggregateManager* aggmgr, const String& args) {
     // This implementation doesn't currently parse any options -- the command
     // line parsing takes acer of it for us since we insert options into the
     // main option set.
-    return new LibproxProximity(ctx, locservice, net, aggmgr);
+    return new LibproxProximity(ctx, locservice, cseg, net, aggmgr);
 }
 
 void registerConstructor(const String& name) {
@@ -85,9 +85,10 @@ SIRIKATA_PLUGIN_EXPORT_C void init() {
         using std::tr1::placeholders::_3;
         using std::tr1::placeholders::_4;
         using std::tr1::placeholders::_5;
+        using std::tr1::placeholders::_6;
         ProximityFactory::getSingleton()
             .registerConstructor("libprox",
-                std::tr1::bind(&createProx, _1, _2, _3, _4, _5));
+                std::tr1::bind(&createProx, _1, _2, _3, _4, _5, _6));
     }
     space_prox_plugin_refcount++;
 }

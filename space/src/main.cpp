@@ -94,7 +94,7 @@ void createServer(Server** server_out, ServerData sd, Address4 addr) {
     }
 
     Server* server = new Server(sd.space_context, sd.auth, sd.forwarder, sd.loc_service, sd.cseg, sd.prox, sd.oseg, addr, sd.oh_sess_mgr, sd.obj_sess_mgr);
-    sd.prox->initialize(sd.cseg);
+    sd.prox->initialize();
     sd.space_context->add(sd.prox);
     sd.space_context->add(server);
 
@@ -272,7 +272,7 @@ int main(int argc, char** argv) {
 
     std::string prox_type = GetOptionValue<String>(OPT_PROX);
     std::string prox_options = GetOptionValue<String>(OPT_PROX_OPTIONS);
-    Proximity* prox = ProximityFactory::getSingleton().getConstructor(prox_type)(space_context, loc_service, gNetwork, aggmgr, prox_options);
+    Proximity* prox = ProximityFactory::getSingleton().getConstructor(prox_type)(space_context, loc_service, cseg, gNetwork, aggmgr, prox_options);
 
     // We need to do an async lookup, and to finish it the server needs to be
     // running. But we can't create the server until we have the address from

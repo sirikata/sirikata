@@ -63,12 +63,12 @@ public:
     typedef Prox::Query<ObjectProxSimulationTraits> Query;
     typedef Prox::QueryEvent<ObjectProxSimulationTraits> QueryEvent;
 
-    LibproxProximity(SpaceContext* ctx, LocationService* locservice, SpaceNetwork* net, AggregateManager* aggmgr);
+    LibproxProximity(SpaceContext* ctx, LocationService* locservice, CoordinateSegmentation* cseg, SpaceNetwork* net, AggregateManager* aggmgr);
     ~LibproxProximity();
 
     // Initialize prox.  Must be called after everything else (specifically message router) is set up since it
     // needs to send messages.
-    void initialize(CoordinateSegmentation* cseg);
+    void initialize();
 
     // Shutdown the proximity thread.
     void shutdown();

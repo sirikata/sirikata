@@ -123,8 +123,8 @@ const String& LibproxProximity::ObjectClassToString(ObjectClass c) {
     }
 }
 
-LibproxProximity::LibproxProximity(SpaceContext* ctx, LocationService* locservice, SpaceNetwork* net, AggregateManager* aggmgr)
- : Proximity(ctx, locservice, net, aggmgr, Duration::milliseconds((int64)100)),
+LibproxProximity::LibproxProximity(SpaceContext* ctx, LocationService* locservice, CoordinateSegmentation* cseg, SpaceNetwork* net, AggregateManager* aggmgr)
+ : Proximity(ctx, locservice, cseg, net, aggmgr, Duration::milliseconds((int64)100)),
    mServerQuerier(NULL),
    mDistanceQueryDistance(0.f),
    mMaxObject(0.0f),
@@ -220,8 +220,8 @@ LibproxProximity::~LibproxProximity() {
 
 // MAIN Thread Methods: The following should only be called from the main thread.
 
-void LibproxProximity::initialize(CoordinateSegmentation* cseg) {
-    Proximity::initialize(cseg);
+void LibproxProximity::initialize() {
+    Proximity::initialize();
 
     // Always initialize with CSeg's current size
     BoundingBoxList bboxes = mCSeg->serverRegion(mContext->id());
