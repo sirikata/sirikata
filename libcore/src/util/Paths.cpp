@@ -10,6 +10,10 @@
 #include <mach-o/dyld.h>
 #endif
 
+#if SIRIKATA_PLATFORM == PLATFORM_MAC || SIRIKATA_PLATFORM == PLATFORM_LINUX
+#include <unistd.h>
+#endif
+
 #ifndef MAX_PATH
 #define MAX_PATH 1024
 #endif
@@ -91,6 +95,26 @@ String Get(Key key) {
 
       default:
         return "";
+    }
+}
+
+bool Set(Key key, const String& path) {
+    switch(key) {
+
+      case DIR_CURRENT:
+          {
+#if SIRIKATA_PLATFORM == PLATFORM_MAC || SIRIKATA_PLATFORM == PLATFORM_LINUX
+              int ret = chdir(path.c_str());
+              return !ret;
+#elif SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+              BOOL ret = ::SetCurrentDirectory(path.c_str());
+              return ret != 0;
+#endif
+          }
+          break;
+      default:
+        return false;
+        break;
     }
 }
 

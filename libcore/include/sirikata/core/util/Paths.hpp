@@ -25,6 +25,7 @@ enum Key {
 };
 
 SIRIKATA_FUNCTION_EXPORT String Get(Key key);
+SIRIKATA_FUNCTION_EXPORT bool Set(Key key, const String& path);
 
 } // namespace Path
 } // namespace Sirikata
