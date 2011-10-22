@@ -49,7 +49,7 @@ String getExecutablePath(String name) {
 }
 
 
-#if SIRIKATA_PLATFORM == PLATFORM_LINUX
+#if SIRIKATA_PLATFORM == PLATFORM_LINUX || SIRIKATA_PLATFORM == PLATFORM_MAC
 void execCommand(const char* file, const char* const argv[]) {
     pid_t pID = fork();
 
@@ -220,7 +220,7 @@ void finishLaunchURI(Transfer::ChunkRequestPtr req, Transfer::DenseDataPtr data,
     // something like app.data = url for archive) which will require
     // additional downloading, but for now we just invoke the command
     // here.
-#if SIRIKATA_PLATFORM == PLATFORM_LINUX
+#if SIRIKATA_PLATFORM == PLATFORM_LINUX || SIRIKATA_PLATFORM == PLATFORM_MAC
     String appExe = getExecutablePath(binary);
     binaryArgs.insert(binaryArgs.begin(), appExe);
     const char** execArgs = new const char*[binaryArgs.size()+1];
@@ -228,8 +228,6 @@ void finishLaunchURI(Transfer::ChunkRequestPtr req, Transfer::DenseDataPtr data,
         execArgs[i] = binaryArgs[i].c_str();
     execArgs[binaryArgs.size()] = NULL;
     execCommand(appExe.c_str(), execArgs);
-#elif SIRIKATA_PLATFORM == PLATFORM_MAC
-    // FIXME
 #elif SIRIKATA_PLATFORM == PLATFORM_WINDOWS
     // FIXME
 #endif

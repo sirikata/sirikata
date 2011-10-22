@@ -2580,6 +2580,17 @@ TARGET_LINK_LIBRARIES(slauncher
   ${Boost_LIBRARIES}
   ${SIRIKATA_CORE_LIB}
   )
+IF(APPLE)
+  ADD_CUSTOM_COMMAND(
+    TARGET slauncher
+    POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+    ${SLAUNCHER_SOURCE_DIR}/slauncher_helper.app
+    ${BUILD_DIR}/slauncher_helper.app
+    VERBATIM
+    )
+ENDIF()
+
 
 IF(BUILD_BENCH)
   ADD_EXECUTABLE(${BENCH_BINARY} ${BENCH_SOURCES})
