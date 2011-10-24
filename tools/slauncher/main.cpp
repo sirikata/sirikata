@@ -34,16 +34,20 @@ void InitLauncherOptions() {
         ;
 }
 
-
-String getExecutablePath(String name) {
-    String exe_dir = Path::Get(Path::DIR_EXE);
-
+String getExecutableName(String name) {
 #if SIRIKATA_DEBUG
     name = name + "_d";
 #endif
 #if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
     name = name + ".exe";
 #endif
+    return name;
+}
+
+String getExecutablePath(String name) {
+    String exe_dir = Path::Get(Path::DIR_EXE);
+
+    name = getExecutableName(name);
 #if SIRIKATA_PLATFORM == PLATFORM_MAC
     if (name == "cppoh" || name == "cppoh_d")
         name = name + ".app/Contents/MacOS/" + name;
@@ -66,6 +70,27 @@ void execCommand(const char* file, const char* const argv[]) {
 }
 #endif
 
+#if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+/* Set a registry key. Only creates the key if subkey == NULL. To set the default value, use subkey == "". */
+bool setRegKey(HKEY base, const char* key, const char* subkey = NULL, const char* value = NULL) {
+    HKEY hkey;
+    DWORD disp;
+    int status = 0;
+
+    RegOpenKeyEx(base, key, 0, KEY_ALL_ACCESS, &hkey);
+    if (!hkey)
+        status = RegCreateKeyEx(base, key, 0, NULL, REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &hkey, &disp);
+    if (!status && (subkey != NULL && value != NULL)) RegSetValueEx(hkey, subkey, 0, REG_SZ, (const BYTE *)value, strlen(value)+1);
+    RegCloseKey(hkey);
+    return (status == 0);
+}
+/* Delete a registry key. */
+bool deleteRegKey(HKEY base, const char* key) {
+    int status = 0;
+    status = RegDeleteKey(base, key);
+    return (status == 0);
+}
+#endif
 
 // ### Registration ###
 
@@ -95,9 +120,25 @@ bool registerURIHandler() {
     execCommand("gconftool-2", enabled_argv);
 
 #elif SIRIKATA_PLATFORM == PLATFORM_WINDOWS
-    // FIXME
-    LAUNCHER_LOG(error, "URI handler registration not supported on this platform.");
-    return false;
+    String exe_name = getExecutableName("slauncher");
+    // See http://msdn.microsoft.com/en-us/library/aa767914.aspx for an explanation of what these registry keys do.
+    // NOTE: YOU MUST RUN THIS AS ADMINISTRATOR. It'll fail to add the keys if you don't.
+    String icon_path = exe_name + ",1";
+    String cmd = "\"" + exe_file + "\"" + " " + "\"" + "--uri=%1" + "\"";
+    // Apparently windows doesn't like the Unix-style separators in its registry settings
+    for(int i = 0; i < cmd.size(); i++)
+        if (cmd[i] == '/') cmd[i] = '\\';
+    bool success =
+        setRegKey(HKEY_CLASSES_ROOT, "sirikata") &&
+        setRegKey(HKEY_CLASSES_ROOT, "sirikata", "", "URL:Sirikata Protocol") &&
+        setRegKey(HKEY_CLASSES_ROOT, "sirikata", "URL Protocol", "") &&
+        setRegKey(HKEY_CLASSES_ROOT, "sirikata\\Default Icon", "", icon_path.c_str()) &&
+        setRegKey(HKEY_CLASSES_ROOT, "sirikata\\shell") &&
+        setRegKey(HKEY_CLASSES_ROOT, "sirikata\\shell\\open") &&
+        setRegKey(HKEY_CLASSES_ROOT, "sirikata\\shell\\open\\command", "", cmd.c_str());
+    if (!success)
+        LAUNCHER_LOG(error, "Failed to register handler in system registry.");
+    return success;
 #elif SIRIKATA_PLATFORM == PLATFORM_MAC
     // FIXME
     LAUNCHER_LOG(error, "URI handler registration not supported on this platform.");
@@ -117,7 +158,14 @@ bool unregisterURIHandler() {
     const char* const enabled_argv[] = { "gconftool-2", "-t", "bool", "-s", "/desktop/gnome/url-handlers/sirikata/enabled", "false", NULL};
     execCommand("gconftool-2", enabled_argv);
 #elif SIRIKATA_PLATFORM == PLATFORM_WINDOWS
-    // FIXME
+    bool success = 
+        deleteRegKey(HKEY_CLASSES_ROOT, "sirikata\\shell\\open\\command") &&
+        deleteRegKey(HKEY_CLASSES_ROOT, "sirikata\\shell\\open") &&
+        deleteRegKey(HKEY_CLASSES_ROOT, "sirikata\\shell") &&
+        deleteRegKey(HKEY_CLASSES_ROOT, "sirikata\\Default Icon") &&
+        deleteRegKey(HKEY_CLASSES_ROOT, "sirikata");
+    LAUNCHER_LOG(error, "Failed to unregister handler in system registry.");
+    return success;
 #elif SIRIKATA_PLATFORM == PLATFORM_MAC
     // FIXME
 #endif
@@ -225,21 +273,38 @@ void finishLaunchURI(Transfer::ChunkRequestPtr req, Transfer::DenseDataPtr data,
     // additional downloading, but for now we just invoke the command
     // here.
 #if SIRIKATA_PLATFORM == PLATFORM_LINUX || SIRIKATA_PLATFORM == PLATFORM_MAC
+    // FIXME -- set current dir to bin dir, but should set it to something app-specific
+    Path::Set(Path::DIR_CURRENT, Path::Get(Path::DIR_EXE));
+
     String appExe = getExecutablePath(binary);
     binaryArgs.insert(binaryArgs.begin(), appExe);
     const char** execArgs = new const char*[binaryArgs.size()+1];
     for(uint32 i = 0; i < binaryArgs.size(); i++)
         execArgs[i] = binaryArgs[i].c_str();
     execArgs[binaryArgs.size()] = NULL;
-    // FIXME -- currently we set to the bin directory as that's a sane default,
-    // but we should customize for the current config, e.g. to a location where
-    // app-specific data is synced and isolated from other apps
-    Path::Set(Path::DIR_CURRENT, Path::Get(Path::DIR_EXE));
     execCommand(appExe.c_str(), execArgs);
 #elif SIRIKATA_PLATFORM == PLATFORM_WINDOWS
-    // FIXME
+    // FIXME -- set current dir to bin dir, but should set it to something app-specific
+    Path::Set(Path::DIR_CURRENT, boost::filesystem::path(Path::Get(Path::DIR_EXE)).parent_path().string());
+
+    String appExe = getExecutablePath(binary);
+    binaryArgs.insert(binaryArgs.begin(), appExe);
+    String cmd = "";
+    for(int i = 0; i < binaryArgs.size(); i++)
+        cmd = cmd + " " + binaryArgs[i];
+    /* Helpful for debugging
+    int msgboxID = MessageBox(
+        NULL,
+        cmd.c_str(),
+        "slauncher",
+        MB_ICONWARNING | MB_CANCELTRYCONTINUE | MB_DEFBUTTON2
+    );
+    */
+    STARTUPINFO info={sizeof(info)};
+    PROCESS_INFORMATION processInfo;
+    CreateProcess(appExe.c_str(), (LPSTR)cmd.c_str(), NULL, NULL, TRUE, 0, NULL, NULL, &info, &processInfo);
 #endif
-    eventLoopExit(retval, 0);//*retval = 0;
+    eventLoopExit(retval, 0);
 }
 
 // ### Driver ###
@@ -255,10 +320,13 @@ int main(int argc, char** argv) {
     // Special simple case for registering handlers
 
     bool registerHandler = GetOptionValue<bool>("register");
-    if (registerHandler)
+    bool unregisterHandler = GetOptionValue<bool>("unregister");
+    String uri = GetOptionValue<String>("uri");
+
+    // Make default action be registration
+    if (registerHandler || (!unregisterHandler && uri.empty()))
         return (registerURIHandler() ? 0 : -1);
 
-    bool unregisterHandler = GetOptionValue<bool>("unregister");
     if (unregisterHandler)
         return (unregisterURIHandler() ? 0 : -1);
 
@@ -276,8 +344,6 @@ int main(int argc, char** argv) {
     Transfer::TransferPoolPtr transferPool = Transfer::TransferMediator::getSingleton().registerClient<Transfer::AggregatedTransferPool>("slauncher");
 
     // Start loading
-
-    String uri = GetOptionValue<String>("uri");
     int retval = 0;
     bool launched = startLaunchURI(uri, transferPool, &retval);
     // Only start the process if we
