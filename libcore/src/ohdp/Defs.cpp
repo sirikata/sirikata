@@ -111,7 +111,7 @@ SpaceNodeID::SpaceNodeID(const SpaceID& s, const NodeID& n)
 {
 }
 
-const SpaceNodeID::SpaceNodeID& null() {
+const SpaceNodeID& SpaceNodeID::null() {
     static SpaceNodeID n(SpaceID::null(), NodeID::null());
     return n;
 }

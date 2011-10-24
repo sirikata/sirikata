@@ -59,21 +59,21 @@ class SIRIKATA_SPACE_EXPORT LocationServiceListener {
 public:
     virtual ~LocationServiceListener();
 
-    virtual void localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics) = 0;
-    virtual void localObjectRemoved(const UUID& uuid, bool agg) = 0;
-    virtual void localLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval) = 0;
-    virtual void localOrientationUpdated(const UUID& uuid, bool agg, const TimedMotionQuaternion& newval) = 0;
-    virtual void localBoundsUpdated(const UUID& uuid, bool agg, const BoundingSphere3f& newval) = 0;
-    virtual void localMeshUpdated(const UUID& uuid, bool agg, const String& newval) = 0;
-    virtual void localPhysicsUpdated(const UUID& uuid, bool agg, const String& newval) = 0;
+    virtual void localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics) {}
+    virtual void localObjectRemoved(const UUID& uuid, bool agg) {}
+    virtual void localLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval) {}
+    virtual void localOrientationUpdated(const UUID& uuid, bool agg, const TimedMotionQuaternion& newval) {}
+    virtual void localBoundsUpdated(const UUID& uuid, bool agg, const BoundingSphere3f& newval) {}
+    virtual void localMeshUpdated(const UUID& uuid, bool agg, const String& newval) {}
+    virtual void localPhysicsUpdated(const UUID& uuid, bool agg, const String& newval) {}
 
-    virtual void replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics) = 0;
-    virtual void replicaObjectRemoved(const UUID& uuid) = 0;
-    virtual void replicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) = 0;
-    virtual void replicaOrientationUpdated(const UUID& uuid, const TimedMotionQuaternion& newval) = 0;
-    virtual void replicaBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) = 0;
-    virtual void replicaMeshUpdated(const UUID& uuid, const String& newval) = 0;
-    virtual void replicaPhysicsUpdated(const UUID& uuid, const String& newval) = 0;
+    virtual void replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics) {}
+    virtual void replicaObjectRemoved(const UUID& uuid) {}
+    virtual void replicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) {}
+    virtual void replicaOrientationUpdated(const UUID& uuid, const TimedMotionQuaternion& newval) {}
+    virtual void replicaBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) {}
+    virtual void replicaMeshUpdated(const UUID& uuid, const String& newval) {}
+    virtual void replicaPhysicsUpdated(const UUID& uuid, const String& newval) {}
 }; // class LocationServiceListener
 
 
@@ -84,9 +84,6 @@ public:
  */
 class SIRIKATA_SPACE_EXPORT LocationUpdatePolicy : public LocationServiceListener, public Service {
 public:
-    typedef Sirikata::AtomicValue<uint32> SeqNo;
-    typedef std::tr1::shared_ptr<SeqNo> SeqNoPtr;
-
     LocationUpdatePolicy();
     virtual ~LocationUpdatePolicy();
 
@@ -95,30 +92,13 @@ public:
     virtual void start() = 0;
     virtual void stop() = 0;
 
-    virtual void subscribe(ServerID remote, const UUID& uuid, LocationService* locservice, SeqNoPtr seqNo) = 0;
+    virtual void subscribe(ServerID remote, const UUID& uuid, SeqNoPtr seqNo) = 0;
     virtual void unsubscribe(ServerID remote, const UUID& uuid) = 0;
     virtual void unsubscribe(ServerID remote) = 0;
 
-    virtual void subscribe(const UUID& remote, const UUID& uuid, LocationService* locservice, SeqNoPtr seqNo) = 0;
+    virtual void subscribe(const UUID& remote, const UUID& uuid) = 0;
     virtual void unsubscribe(const UUID& remote, const UUID& uuid) = 0;
     virtual void unsubscribe(const UUID& remote) = 0;
-
-
-    virtual void localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics) = 0;
-    virtual void localObjectRemoved(const UUID& uuid, bool agg) = 0;
-    virtual void localLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval) = 0;
-    virtual void localOrientationUpdated(const UUID& uuid, bool agg, const TimedMotionQuaternion& newval) = 0;
-    virtual void localBoundsUpdated(const UUID& uuid, bool agg, const BoundingSphere3f& newval) = 0;
-    virtual void localMeshUpdated(const UUID& uuid, bool agg, const String& newval) = 0;
-    virtual void localPhysicsUpdated(const UUID& uuid, bool agg, const String& newval) = 0;
-
-    virtual void replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics) = 0;
-    virtual void replicaObjectRemoved(const UUID& uuid) = 0;
-    virtual void replicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) = 0;
-    virtual void replicaOrientationUpdated(const UUID& uuid, const TimedMotionQuaternion& newval) = 0;
-    virtual void replicaBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) = 0;
-    virtual void replicaMeshUpdated(const UUID& uuid, const String& newval) = 0;
-    virtual void replicaPhysicsUpdated(const UUID& uuid, const String& newval) = 0;
 
     virtual void service() = 0;
 
@@ -142,9 +122,6 @@ class SIRIKATA_SPACE_EXPORT LocationUpdatePolicyFactory
  */
 class SIRIKATA_SPACE_EXPORT LocationService : public MessageRecipient, public PollingService, public ObjectSessionListener {
 public:
-    typedef LocationUpdatePolicy::SeqNo SeqNo;
-    typedef LocationUpdatePolicy::SeqNoPtr SeqNoPtr;
-
     enum TrackingType {
         NotTracking,
         Local,
@@ -213,7 +190,7 @@ public:
 
 
     /** Subscriptions for local objects. */
-    virtual void subscribe(const UUID& remote, const UUID& uuid, SeqNoPtr seq_no_ptr);
+    virtual void subscribe(const UUID& remote, const UUID& uuid);
     virtual void unsubscribe(const UUID& remote, const UUID& uuid);
     /** Unsubscripe the given server from all its location subscriptions. */
     virtual void unsubscribe(const UUID& remote);

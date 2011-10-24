@@ -262,42 +262,6 @@ void MigrationMonitor::handleLocalLocationUpdated(const UUID& uuid, const TimedM
     waitForNextEvent();
 }
 
-void MigrationMonitor::localOrientationUpdated(const UUID& uuid, bool agg, const TimedMotionQuaternion& newval) {
-    // We only care about location, not orientation
-}
-
-void MigrationMonitor::localBoundsUpdated(const UUID& uuid, bool agg, const BoundingSphere3f& newval) {
-    // We only care about location, not bounds
-}
-
-void MigrationMonitor::localMeshUpdated(const UUID& uuid, bool agg, const String& newval) {
-    // We only care about location, not mesh
-}
-void MigrationMonitor::localPhysicsUpdated(const UUID& uuid, bool agg, const String& newval) {
-    // We only care about location, not phy
-}
-
-void MigrationMonitor::replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics) {
-    // We don't care about replicas
-}
-void MigrationMonitor::replicaObjectRemoved(const UUID& uuid) {
-    // We don't care about replicas
-}
-void MigrationMonitor::replicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) {
-    // We don't care about replicas
-}
-void MigrationMonitor::replicaOrientationUpdated(const UUID& uuid, const TimedMotionQuaternion& newval) {
-    // We only care about location
-}
-void MigrationMonitor::replicaBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) {
-    // We don't care about replicas
-}
-void MigrationMonitor::replicaMeshUpdated(const UUID& uuid, const String& newval) {
-    // We don't care about replicas
-}
-void MigrationMonitor::replicaPhysicsUpdated(const UUID& uuid, const String& newval) {
-    // We don't care about replicas
-}
 
 /** CoordinateSegmentation::Listener Interface. */
 void MigrationMonitor::updatedSegmentation(CoordinateSegmentation* cseg, const std::vector<SegmentationInfo>& new_segmentation) {

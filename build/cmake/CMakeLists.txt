@@ -1259,6 +1259,7 @@ SET(SIRIKATA_CORE_SOURCES
         ${LIBCORE_SOURCE_DIR}/util/Timer.cpp
         ${LIBCORE_SOURCE_DIR}/util/RegionWeightCalculator.cpp
         ${LIBCORE_SOURCE_DIR}/util/Liveness.cpp
+        ${LIBCORE_SOURCE_DIR}/util/Paths.cpp
         ${LIBCORE_SOURCE_DIR}/trace/BatchedBuffer.cpp
         ${LIBCORE_SOURCE_DIR}/trace/Trace.cpp
         ${LIBCORE_SOURCE_DIR}/trace/TimeSeries.cpp
@@ -1734,6 +1735,7 @@ ${TEST_LIBCORE_SOURCE_DIR}/TCPSSTConnectTest.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/TR1Test.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/Vector3Test.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/BoundingBoxTest.hpp
+${TEST_LIBCORE_SOURCE_DIR}/PathsTest.hpp
  )
 IF(BUILD_LIBSQLITE)
   SET(CXXTESTSources

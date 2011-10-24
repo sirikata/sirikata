@@ -73,16 +73,28 @@
 
 namespace {
 using namespace Sirikata;
-void createServer(Server** server_out, SpaceContext* space_context, Authenticator* auth, Forwarder* forwarder, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, ObjectSegmentation* oseg, Address4 addr, ObjectHostSessionManager* oh_sess_mgr, ObjectSessionManager* obj_sess_mgr) {
+
+// Some platforms can't bind as many variables as we want to use, so we need to
+// manually package them up.
+struct ServerData {
+    SpaceContext* space_context;
+    Authenticator* auth;
+    Forwarder* forwarder;
+    LocationService* loc_service;
+    CoordinateSegmentation* cseg;
+    Proximity* prox;
+    ObjectSegmentation* oseg;
+    ObjectHostSessionManager* oh_sess_mgr;
+    ObjectSessionManager* obj_sess_mgr;
+};
+void createServer(Server** server_out, ServerData sd, Address4 addr) {
     if (addr == Address4::Null) {
         SILOG(space, fatal, "The requested server ID isn't in ServerIDMap");
-        space_context->shutdown();
+        sd.space_context->shutdown();
     }
 
-    Server* server = new Server(space_context, auth, forwarder, loc_service, cseg, prox, oseg, addr, oh_sess_mgr, obj_sess_mgr);
-    prox->initialize(cseg);
-    space_context->add(prox);
-    space_context->add(server);
+    Server* server = new Server(sd.space_context, sd.auth, sd.forwarder, sd.loc_service, sd.cseg, sd.prox, sd.oseg, addr, sd.oh_sess_mgr, sd.obj_sess_mgr);
+    sd.space_context->add(server);
 
     *server_out = server;
 }
@@ -258,7 +270,7 @@ int main(int argc, char** argv) {
 
     std::string prox_type = GetOptionValue<String>(OPT_PROX);
     std::string prox_options = GetOptionValue<String>(OPT_PROX_OPTIONS);
-    Proximity* prox = ProximityFactory::getSingleton().getConstructor(prox_type)(space_context, loc_service, gNetwork, aggmgr, prox_options);
+    Proximity* prox = ProximityFactory::getSingleton().getConstructor(prox_type)(space_context, loc_service, cseg, gNetwork, aggmgr, prox_options);
 
     // We need to do an async lookup, and to finish it the server needs to be
     // running. But we can't create the server until we have the address from
@@ -268,10 +280,20 @@ int main(int argc, char** argv) {
     // handle cleaning it up ourselves.
     using std::tr1::placeholders::_1;
     Server* server = NULL;
+    ServerData sd;
+    sd.space_context = space_context;
+    sd.auth = auth;
+    sd.forwarder = forwarder;
+    sd.loc_service = loc_service;
+    sd.cseg = cseg;
+    sd.prox = prox;
+    sd.oseg = oseg;
+    sd.oh_sess_mgr = oh_sess_mgr;
+    sd.obj_sess_mgr = obj_sess_mgr;
     server_id_map->lookupExternal(
         space_context->id(),
         space_context->mainStrand->wrap(
-            std::tr1::bind( &createServer, &server, space_context, auth, forwarder, loc_service, cseg, prox, oseg, _1, oh_sess_mgr, obj_sess_mgr)
+            std::tr1::bind( &createServer, &server, sd, _1)
         )
     );
 
@@ -300,9 +322,9 @@ int main(int argc, char** argv) {
     space_context->add(loadMonitor);
     space_context->add(sstConnMgr);
     space_context->add(ohSstConnMgr);
+    space_context->add(prox);
 
-
-    space_context->run(2);
+    space_context->run(3);
 
     space_context->cleanup();
 
@@ -311,7 +333,6 @@ int main(int argc, char** argv) {
     }
 
     gTrace->prepareShutdown();
-    prox->shutdown();
     Mesh::FilterFactory::destroy();
     ModelsSystemFactory::destroy();
     LocationServiceFactory::destroy();

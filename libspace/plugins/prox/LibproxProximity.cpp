@@ -123,32 +123,29 @@ const String& LibproxProximity::ObjectClassToString(ObjectClass c) {
     }
 }
 
-LibproxProximity::LibproxProximity(SpaceContext* ctx, LocationService* locservice, SpaceNetwork* net, AggregateManager* aggmgr)
- : Proximity(ctx, locservice, net, aggmgr, Duration::milliseconds((int64)100)),
+LibproxProximity::LibproxProximity(SpaceContext* ctx, LocationService* locservice, CoordinateSegmentation* cseg, SpaceNetwork* net, AggregateManager* aggmgr)
+ : Proximity(ctx, locservice, cseg, net, aggmgr, Duration::milliseconds((int64)100)),
    mServerQuerier(NULL),
    mDistanceQueryDistance(0.f),
    mMaxObject(0.0f),
    mMinObjectQueryAngle(SolidAngle::Max),
    mMaxMaxCount(1),
-   mProxThread(NULL),
-   mProxService(NULL),
-   mProxStrand(NULL),
+   mProxStrand(ctx->ioService->createStrand()),
    mLocCache(NULL),
    mServerQueries(),
    mServerDistance(false),
+   mServerHandlerPoller(mProxStrand, std::tr1::bind(&LibproxProximity::tickQueryHandler, this, mServerQueryHandler), Duration::milliseconds((int64)100)),
    mObjectQueries(),
-   mObjectDistance(false)
+   mObjectDistance(false),
+   mObjectHandlerPoller(mProxStrand, std::tr1::bind(&LibproxProximity::tickQueryHandler, this, mObjectQueryHandler), Duration::milliseconds((int64)100)),
+   mStaticRebuilderPoller(mProxStrand, std::tr1::bind(&LibproxProximity::rebuildHandler, this, OBJECT_CLASS_STATIC), Duration::seconds(3600.f)),
+   mDynamicRebuilderPoller(mProxStrand, std::tr1::bind(&LibproxProximity::rebuildHandler, this, OBJECT_CLASS_DYNAMIC), Duration::seconds(3600.f))
 {
     using std::tr1::placeholders::_1;
     using std::tr1::placeholders::_2;
     using std::tr1::placeholders::_3;
     using std::tr1::placeholders::_4;
     using std::tr1::placeholders::_5;
-
-    // Do some necessary initialization for the prox thread, needed to let main thread
-    // objects know about it's strand/service
-    mProxService = Network::IOServiceFactory::makeIOService();
-    mProxStrand = mProxService->createStrand();
 
     // Server Querier (discover other servers)
     String pinto_type = GetOptionValue<String>(OPT_PINTO);
@@ -203,9 +200,6 @@ LibproxProximity::LibproxProximity(SpaceContext* ctx, LocationService* locservic
     if (object_handler_type == "dist" || object_handler_type == "rtreedist") mObjectDistance = true;
 
     mProxServerMessageService = mContext->serverRouter()->createServerMessageService("proximity");
-
-    // Start the processing thread
-    mProxThread = new Thread( std::tr1::bind(&LibproxProximity::proxThreadMain, this) );
 }
 
 LibproxProximity::~LibproxProximity() {
@@ -221,38 +215,25 @@ LibproxProximity::~LibproxProximity() {
     delete mServerQuerier;
 
     delete mProxStrand;
-    Network::IOServiceFactory::destroyIOService(mProxService);
-    mProxService = NULL;
-
-    delete mProxThread;
 }
 
 
 // MAIN Thread Methods: The following should only be called from the main thread.
 
-void LibproxProximity::initialize(CoordinateSegmentation* cseg) {
-    Proximity::initialize(cseg);
+void LibproxProximity::start() {
+    Proximity::start();
 
     // Always initialize with CSeg's current size
     BoundingBoxList bboxes = mCSeg->serverRegion(mContext->id());
     BoundingBox3f bbox = aggregateBBoxes(bboxes);
     mServerQuerier->updateRegion(bbox);
 
-    mStatsPoller.start();
+    mContext->add(&mServerHandlerPoller);
+    mContext->add(&mObjectHandlerPoller);
+    mContext->add(&mStaticRebuilderPoller);
+    mContext->add(&mDynamicRebuilderPoller);
 }
 
-void LibproxProximity::shutdown() {
-    Proximity::shutdown();
-
-    // Shut down the main processing thread
-    if (mProxThread != NULL) {
-        if (mProxService != NULL)
-            mProxService->stop();
-        mProxThread->join();
-    }
-
-    mStatsPoller.stop();
-}
 
 void LibproxProximity::newSession(ObjectSession* session) {
     using std::tr1::placeholders::_1;
@@ -490,20 +471,10 @@ void LibproxProximity::removeRelevantServer(ServerID sid) {
     mServersQueried.erase(sid);
 }
 
-void LibproxProximity::scheduleAggregateEventHandler() {
-    mContext->mainStrand->post(std::tr1::bind(&LibproxProximity::invokeAggregateEventHandler, this));
-}
-
-void LibproxProximity::invokeAggregateEventHandler() {
-    AggregateEventHandler evt;
-    if (!mAggregateEventHandlers.pop(evt)) return;
-    evt();
-}
-
 void LibproxProximity::aggregateCreated(ProxQueryHandler* handler, const UUID& objid) {
     // On addition, an "aggregate" will have no children, i.e. its zero sized.
 
-    mAggregateEventHandlers.push(
+    mContext->mainStrand->post(
         std::tr1::bind(
             &LocationService::addLocalAggregateObject, mLocService,
             objid,
@@ -514,9 +485,6 @@ void LibproxProximity::aggregateCreated(ProxQueryHandler* handler, const UUID& o
             ""
         )
     );
-
-    scheduleAggregateEventHandler();
-
 
     mAggregateManager->addAggregate(objid);
 }
@@ -539,14 +507,13 @@ void LibproxProximity::updateAggregateLoc(const UUID& objid, const BoundingSpher
 void LibproxProximity::aggregateChildAdded(ProxQueryHandler* handler, const UUID& objid, const UUID& child, const BoundingSphere3f& bnds) {
     if (!mLocService->contains(objid) || mLocService->bounds(objid) != bnds) {
       // Loc cares only about this chance to update state of aggregate
-      mAggregateEventHandlers.push(
+      mContext->mainStrand->post(
         std::tr1::bind(
             &LibproxProximity::updateAggregateLoc, this,
             objid, bnds
         )
       );
     }
-    scheduleAggregateEventHandler();
 
     mAggregateManager->addChild(objid, child);
 }
@@ -554,42 +521,38 @@ void LibproxProximity::aggregateChildAdded(ProxQueryHandler* handler, const UUID
 void LibproxProximity::aggregateChildRemoved(ProxQueryHandler* handler, const UUID& objid, const UUID& child, const BoundingSphere3f& bnds) {
     if (!mLocService->contains(objid) || mLocService->bounds(objid) != bnds) {
       // Loc cares only about this chance to update state of aggregate
-      mAggregateEventHandlers.push(
+      mContext->mainStrand->post(
         std::tr1::bind(
             &LibproxProximity::updateAggregateLoc, this,
             objid, bnds
         )
       );
     }
-    scheduleAggregateEventHandler();
 
     mAggregateManager->removeChild(objid, child);
 }
 
 void LibproxProximity::aggregateBoundsUpdated(ProxQueryHandler* handler, const UUID& objid, const BoundingSphere3f& bnds) {
   if (!mLocService->contains(objid) || mLocService->bounds(objid) != bnds) {
-    mAggregateEventHandlers.push(
+    mContext->mainStrand->post(
         std::tr1::bind(
             &LibproxProximity::updateAggregateLoc, this,
             objid, bnds
         )
     );
   }
-  scheduleAggregateEventHandler();
 
   if (mLocService->contains(objid) && mLocService->bounds(objid) != bnds)
     mAggregateManager->generateAggregateMesh(objid, Duration::seconds(300.0+rand()%300));
 }
 
 void LibproxProximity::aggregateDestroyed(ProxQueryHandler* handler, const UUID& objid) {
-    mAggregateEventHandlers.push(
+    mContext->mainStrand->post(
         std::tr1::bind(
             &LocationService::removeLocalAggregateObject, mLocService, objid
         )
     );
-    scheduleAggregateEventHandler();
     mAggregateManager->removeAggregate(objid);
-
 }
 
 void LibproxProximity::aggregateObserved(ProxQueryHandler* handler, const UUID& objid, uint32 nobservers) {
@@ -633,9 +596,11 @@ void LibproxProximity::addQuery(UUID obj, const String& params) {
 }
 
 void LibproxProximity::updateQuery(UUID obj, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, SolidAngle sa, uint32 max_results) {
+    SeqNoPtr obj_seqno = mContext->objectSessionManager()->getSession(ObjectReference(obj))->getSeqNoPtr();
+
     // Update the prox thread
     mProxStrand->post(
-        std::tr1::bind(&LibproxProximity::handleUpdateObjectQuery, this, obj, loc, bounds, sa, max_results)
+        std::tr1::bind(&LibproxProximity::handleUpdateObjectQuery, this, obj, loc, bounds, sa, max_results, obj_seqno)
     );
 
     bool update_remote_queries = false;
@@ -900,13 +865,13 @@ void LibproxProximity::poll() {
 
 // Note that we pass through seqPtr from the prox thread because it is
 // stored in ProxStreamInfo, and those are Prox-thread-only structs.
-void LibproxProximity::handleAddObjectLocSubscription(const UUID& subscriber, const UUID& observed, SeqNoPtr seqPtr) {
+void LibproxProximity::handleAddObjectLocSubscription(const UUID& subscriber, const UUID& observed) {
     // We check the cache when we get the request, but also check it here since
     // the observed object may have been removed between the request to add this
     // subscription and its actual execution.
     if (!mLocService->contains(observed)) return;
 
-    mLocService->subscribe(subscriber, observed, seqPtr);
+    mLocService->subscribe(subscriber, observed);
 }
 
 void LibproxProximity::handleRemoveObjectLocSubscription(const UUID& subscriber, const UUID& observed) {
@@ -957,31 +922,13 @@ void LibproxProximity::localLocationUpdated(const UUID& uuid, bool agg, const Ti
     if (mSeparateDynamicObjects)
         checkObjectClass(true, uuid, newval);
 }
-void LibproxProximity::localOrientationUpdated(const UUID& uuid, bool agg, const TimedMotionQuaternion& newval) {
-}
 void LibproxProximity::localBoundsUpdated(const UUID& uuid, bool agg, const BoundingSphere3f& newval) {
     updateQuery(uuid, mLocService->location(uuid), newval, NoUpdateSolidAngle, NoUpdateMaxResults);
     updateObjectSize(uuid, newval.radius());
 }
-void LibproxProximity::localMeshUpdated(const UUID& uuid, bool agg, const String& newval) {
-}
-void LibproxProximity::localPhysicsUpdated(const UUID& uuid, bool agg, const String& newval) {
-}
-void LibproxProximity::replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics) {
-}
-void LibproxProximity::replicaObjectRemoved(const UUID& uuid) {
-}
 void LibproxProximity::replicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) {
     if (mSeparateDynamicObjects)
         checkObjectClass(false, uuid, newval);
-}
-void LibproxProximity::replicaOrientationUpdated(const UUID& uuid, const TimedMotionQuaternion& newval) {
-}
-void LibproxProximity::replicaBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) {
-}
-void LibproxProximity::replicaMeshUpdated(const UUID& uuid, const String& newval) {
-}
-void LibproxProximity::replicaPhysicsUpdated(const UUID& uuid, const String& newval) {
 }
 
 void LibproxProximity::updatedSegmentation(CoordinateSegmentation* cseg, const std::vector<SegmentationInfo>& new_seg) {
@@ -992,24 +939,6 @@ void LibproxProximity::updatedSegmentation(CoordinateSegmentation* cseg, const s
 
 
 // PROX Thread: Everything after this should only be called from within the prox thread.
-
-// The main loop for the prox processing thread
-void LibproxProximity::proxThreadMain() {
-    Duration max_rate = Duration::milliseconds((int64)100);
-
-    Poller mServerHandlerPoller(mProxStrand, std::tr1::bind(&LibproxProximity::tickQueryHandler, this, mServerQueryHandler), max_rate);
-    Poller mObjectHandlerPoller(mProxStrand, std::tr1::bind(&LibproxProximity::tickQueryHandler, this, mObjectQueryHandler), max_rate);
-
-    Poller staticRebuilder(mProxStrand, std::tr1::bind(&LibproxProximity::rebuildHandler, this, OBJECT_CLASS_STATIC), Duration::seconds(3600.f));
-    Poller dynamicRebuilder(mProxStrand, std::tr1::bind(&LibproxProximity::rebuildHandler, this, OBJECT_CLASS_DYNAMIC), Duration::seconds(3600.f));
-
-    mServerHandlerPoller.start();
-    mObjectHandlerPoller.start();
-    staticRebuilder.start();
-    dynamicRebuilder.start();
-
-    mProxService->run();
-}
 
 void LibproxProximity::tickQueryHandler(ProxQueryHandler* qh[NUM_OBJECT_CLASSES]) {
     Time simT = mContext->simTime();
@@ -1125,7 +1054,7 @@ void LibproxProximity::generateObjectQueryEvents(Query* query) {
     uint32 max_count = GetOptionValue<uint32>(PROX_MAX_PER_RESULT);
 
     UUID query_id = mInvertedObjectQueries[query];
-    SeqNoPtr seqNoPtr = getOrCreateSeqNoInfo(query_id);
+    SeqNoPtr seqNoPtr = getSeqNoInfo(query_id);
 
     QueryEventList evts;
     query->popEvents(evts);
@@ -1145,7 +1074,7 @@ void LibproxProximity::generateObjectQueryEvents(Query* query) {
                     count++;
 
                     mContext->mainStrand->post(
-                        std::tr1::bind(&LibproxProximity::handleAddObjectLocSubscription, this, query_id, objid, seqNoPtr)
+                        std::tr1::bind(&LibproxProximity::handleAddObjectLocSubscription, this, query_id, objid)
                     );
 
                     Sirikata::Protocol::Prox::IObjectAddition addition = event_results.add_addition();
@@ -1212,7 +1141,7 @@ void LibproxProximity::generateObjectQueryEvents(Query* query) {
 }
 
 
-LibproxProximity::SeqNoPtr LibproxProximity::getOrCreateSeqNoInfo(const ServerID server_id)
+SeqNoPtr LibproxProximity::getOrCreateSeqNoInfo(const ServerID server_id)
 {
     // server_id == querier
     ServerSeqNoInfoMap::iterator proxSeqNoIt = mServerSeqNos.find(server_id);
@@ -1230,12 +1159,11 @@ void LibproxProximity::eraseSeqNoInfo(const ServerID server_id)
 }
 
 
-LibproxProximity::SeqNoPtr LibproxProximity::getOrCreateSeqNoInfo(const UUID& obj_id)
+SeqNoPtr LibproxProximity::getSeqNoInfo(const UUID& obj_id)
 {
     // obj_id == querier
     ObjectSeqNoInfoMap::iterator proxSeqNoIt = mObjectSeqNos.find(obj_id);
-    if (proxSeqNoIt == mObjectSeqNos.end())
-        proxSeqNoIt = mObjectSeqNos.insert( ObjectSeqNoInfoMap::value_type(obj_id, SeqNoPtr(new SeqNo())) ).first;
+    assert(proxSeqNoIt != mObjectSeqNos.end());
     return proxSeqNoIt->second;
 }
 
@@ -1337,11 +1265,14 @@ void LibproxProximity::handleDisconnectedServer(ServerID sid) {
         mLocService->removeReplicaObject(t, *it);
 }
 
-void LibproxProximity::handleUpdateObjectQuery(const UUID& object, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const SolidAngle& angle, uint32 max_results) {
+void LibproxProximity::handleUpdateObjectQuery(const UUID& object, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const SolidAngle& angle, uint32 max_results, SeqNoPtr seqno) {
     BoundingSphere3f region(bounds.center(), 0);
     float ms = bounds.radius();
 
     PROXLOG(detailed,"Update object query from " << object.toString() << ", min angle " << angle.asFloat() << ", max results " << max_results);
+
+    if (mObjectSeqNos.find(object) == mObjectSeqNos.end())
+        mObjectSeqNos.insert( ObjectSeqNoInfoMap::value_type(object, seqno) );
 
     for(int i = 0; i < NUM_OBJECT_CLASSES; i++) {
         if (mObjectQueryHandler[i] == NULL) continue;
