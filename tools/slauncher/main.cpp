@@ -44,6 +44,10 @@ String getExecutablePath(String name) {
 #if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
     name = name + ".exe";
 #endif
+#if SIRIKATA_PLATFORM == PLATFORM_MAC
+    if (name == "cppoh" || name == "cppoh_d")
+        name = name + ".app/Contents/MacOS/" + name;
+#endif
 
     return (boost::filesystem::path(exe_dir) / name).string();
 }
@@ -227,6 +231,10 @@ void finishLaunchURI(Transfer::ChunkRequestPtr req, Transfer::DenseDataPtr data,
     for(uint32 i = 0; i < binaryArgs.size(); i++)
         execArgs[i] = binaryArgs[i].c_str();
     execArgs[binaryArgs.size()] = NULL;
+    // FIXME -- currently we set to the bin directory as that's a sane default,
+    // but we should customize for the current config, e.g. to a location where
+    // app-specific data is synced and isolated from other apps
+    Path::Set(Path::DIR_CURRENT, Path::Get(Path::DIR_EXE));
     execCommand(appExe.c_str(), execArgs);
 #elif SIRIKATA_PLATFORM == PLATFORM_WINDOWS
     // FIXME
