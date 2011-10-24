@@ -43,6 +43,7 @@
 #include <sirikata/space/CoordinateSegmentation.hpp>
 #include <sirikata/space/MigrationDataClient.hpp>
 #include <sirikata/space/SpaceNetwork.hpp>
+#include <sirikata/space/ObjectHostSession.hpp>
 
 #include <sirikata/core/util/Factory.hpp>
 
@@ -58,6 +59,7 @@ class SIRIKATA_SPACE_EXPORT Proximity :
         CoordinateSegmentation::Listener,
         SpaceNetworkConnectionListener,
         public ObjectSessionListener,
+        public ObjectHostSessionListener,
         protected LocationServiceListener,
         protected MessageRecipient
 {
@@ -92,6 +94,10 @@ class SIRIKATA_SPACE_EXPORT Proximity :
     // ObjectSessionListener Interface
     virtual void newSession(ObjectSession* session) = 0;
     virtual void sessionClosed(ObjectSession* session) = 0;
+
+    // ObjectHostSessionListener Interface
+    virtual void onObjectHostSession(const OHDP::NodeID& id, OHDPSST::Stream::Ptr oh_stream) { }
+    virtual void onObjectHostSessionEnded(const OHDP::NodeID& id) { }
 
     // LocationServiceListener Interface
     // Implement as necessary, some updates may be ignored
