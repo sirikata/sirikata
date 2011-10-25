@@ -173,7 +173,7 @@ public:
 };
 
 template <class QueueType>
-class SIRIKATA_EXPORT WorkQueueImpl : public WorkQueue {
+class WorkQueueImpl : public WorkQueue {
 	typedef QueueType Queue;
 	Queue mQueue;
 public:
