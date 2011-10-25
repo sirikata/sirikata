@@ -107,75 +107,6 @@ void WorkQueue::destroyWorkerThreads(WorkQueueThread *th) {
 }
 
 template <class QueueType>
-void WorkQueueImpl<QueueType>::enqueue(WorkItem *element) {
-  
-    if (element) {
-        element->enqueued();
-    }
-	mQueue.push(element);
-}
-
-template <class QueueType>
-bool WorkQueueImpl<QueueType>::dequeueBlocking() {
-	WorkItem *element;
-	mQueue.blockingPop(element);
-	if (element) {
-		(*element)();
-		return true;
-	} else {
-		return false;
-	}
-}
-
-template <class QueueType>
-bool WorkQueueImpl<QueueType>::dequeuePoll() {
-
-	WorkItem *element;
-	if (mQueue.pop(element)) {
-		if (element) {
-			(*element)();
-		}
-		return true;
-	}
-	return false;
-}
-
-template <class QueueType>
-unsigned int WorkQueueImpl<QueueType>::dequeueAll() {
-
-	typename Queue::NodeIterator queueIter (mQueue);
-	WorkItem** workPtr;
-	unsigned int numProcessed = 0;
-
-	while ((workPtr = queueIter.next()) != NULL) {
-		if (*workPtr) {
-			(**workPtr)();
-		}
-		++numProcessed;
-	}
-	return numProcessed;
-}
-
-template <class QueueType>
-WorkQueueImpl<QueueType>::~WorkQueueImpl() {
-	typename Queue::NodeIterator queueIter (mQueue);
-	WorkItem** workPtr;
-	while ((workPtr = queueIter.next()) != NULL) {
-		if (*workPtr) {
-            std::auto_ptr<WorkItem>deleteMe(*workPtr);
-		}
-	}
-    //get rid of all extra queue items on the queue
-}
-
-template <class QueueType>
-bool WorkQueueImpl<QueueType>::probablyEmpty() {
-	return mQueue.probablyEmpty();
-}
-
-
-
-template <class QueueType>
 void UnsafeWorkQueueImpl<QueueType>::enqueue(WorkItem *element) {
 	mQueue[mWhichQueue].push(element);
 }
@@ -239,16 +170,6 @@ template <class QueueType>
 bool UnsafeWorkQueueImpl<QueueType>::probablyEmpty() {
 	return mQueue[mWhichQueue].empty();
 }
-
-
-
-
-// Explicit instantiations.
-template class SIRIKATA_EXPORT WorkQueueImpl<ThreadSafeQueue<WorkItem*> >;
-
-// FIXME: Add semaphore to LockFreeQueue to allow for blockingPop
-// See sem_init (POSIX/Linux), sem_open (OS X), CreateSemaphore (WIN32)
-template class SIRIKATA_EXPORT WorkQueueImpl<LockFreeQueue<WorkItem*> >;
 
 template class SIRIKATA_EXPORT UnsafeWorkQueueImpl<std::queue<WorkItem*> >;
 
