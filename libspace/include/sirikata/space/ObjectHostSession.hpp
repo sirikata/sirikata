@@ -33,12 +33,32 @@ class ObjectHostSessionManager : public Provider<ObjectHostSessionListener*> {
         ctx->mObjectHostSessionManager = this;
     }
 
+    // Owner interface
     void fireObjectHostSession(const OHDP::NodeID& id, OHDPSST::Stream::Ptr oh_stream) {
         notify(&ObjectHostSessionListener::onObjectHostSession, id, oh_stream);
+        mOHSessions[id] = oh_stream;
     }
     void fireObjectHostSessionEnded(const OHDP::NodeID& id) {
         notify(&ObjectHostSessionListener::onObjectHostSessionEnded, id);
+        ObjectHostSessionMap::const_iterator it = mOHSessions.find(id);
+        if (it != mOHSessions.end()) {
+            // Force closure of the stream
+            if (it->second) it->second->close(true);
+            mOHSessions.erase(it);
+        }
     }
+
+
+    // User interface
+    OHDPSST::Stream::Ptr getSession(const OHDP::NodeID& id) {
+        ObjectHostSessionMap::const_iterator it = mOHSessions.find(id);
+        if (it == mOHSessions.end()) return OHDPSST::Stream::Ptr();
+        return it->second;
+    }
+
+  private:
+    typedef std::tr1::unordered_map<OHDP::NodeID, OHDPSST::Stream::Ptr, OHDP::NodeID::Hasher> ObjectHostSessionMap;
+    ObjectHostSessionMap mOHSessions;
 };
 
 } // namespace Sirikata
