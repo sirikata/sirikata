@@ -43,6 +43,10 @@ public:
         return mScheme;
     }
 
+    inline String schemeSpecificPart() const {
+        return mURI.substr(mScheme.size()+1);
+    }
+
     inline const String& toString () const {
         return mURI;
     }
