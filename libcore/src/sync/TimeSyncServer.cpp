@@ -72,7 +72,7 @@ void TimeSyncServer::handleMessage(const OHDP::Endpoint& src, const OHDP::Endpoi
     // send it back.
     sync_msg.set_t(mContext->simTime());
     String resp = serializePBJMessage(sync_msg);
-    mPort->send(src, MemoryReference(payload));
+    mPort->send(src, MemoryReference(resp));
     SILOG(timesync, detailed, "Sent time sync message reply to remote node " << src.node());
 }
 

@@ -251,13 +251,12 @@ void TransferMediator::PoolWorker::run() {
                 //And check if it's changed, we need to update the index
                 TransferRequest::PriorityType newAggPriority = (*findID)->getPriority();
                 if(oldAggPriority != newAggPriority) {
-                    using boost::lambda::_1;
                     //Convert the iterator to the priority one and update
                     AggregateListByPriority::iterator byPriority =
                             TransferMediator::getSingleton().mAggregateList.project<tagPriority>(findID);
                     AggregateListByPriority & priorityIndex =
                             TransferMediator::getSingleton().mAggregateList.get<tagPriority>();
-                    priorityIndex.modify_key(byPriority, _1=newAggPriority);
+                    priorityIndex.modify_key(byPriority, boost::lambda::_1=newAggPriority);
                 }
             }
         } else {

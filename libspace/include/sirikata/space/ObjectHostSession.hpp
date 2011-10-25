@@ -27,7 +27,7 @@ class SIRIKATA_SPACE_EXPORT ObjectHostSessionListener {
  * forwards events from the real provider (allowing us to provide the
  * ObjectHostSessionManager before the real provider is created).
  */
-class SIRIKATA_SPACE_EXPORT ObjectHostSessionManager : public Provider<ObjectHostSessionListener*> {
+class ObjectHostSessionManager : public Provider<ObjectHostSessionListener*> {
   public:
     ObjectHostSessionManager(SpaceContext* ctx) {
         ctx->mObjectHostSessionManager = this;

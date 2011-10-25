@@ -280,9 +280,9 @@ void computeCosts(Mesh::MeshdataPtr agg_mesh,
 
           cost = (vbar4f.dot(  Q * vbar4f ));
           cost = (cost < 0.0) ? -cost : cost;
-          assert( !custom_isnan(cost) );
+          
 
-          if (cost < 1e-2 && (position-neighborPosition).length() > cost * 1e2) {
+          if ( custom_isnan(cost) || (cost < 1e-2 && (position-neighborPosition).length() > cost * 1e2)) {
             cost = (position-neighborPosition).length();
           }
         }
@@ -364,10 +364,9 @@ void computeCosts(Mesh::MeshdataPtr agg_mesh, uint32 geomIdx, uint32 sourcePosit
       Vector4f vbar4f (neighborPosition.x, neighborPosition.y, neighborPosition.z, 1);
       cost = (vbar4f.dot(  Q * vbar4f )) ;            
 
-      cost = (cost < 0.0) ? -cost : cost;
-      assert( !custom_isnan(cost) );
+      cost = (cost < 0.0) ? -cost : cost;      
 
-      if (cost < 1e-2 && (position-neighborPosition).length() > cost * 1e2) {
+      if ( custom_isnan(cost) || (cost < 1e-2 && (position-neighborPosition).length() > cost * 1e2) ) {
         cost = (position-neighborPosition).length();
       }
     }
@@ -616,12 +615,13 @@ void MeshSimplifier::simplify(Mesh::MeshdataPtr agg_mesh, int32 numFacesLeft) {
     }
   }
 
-  computeCosts(agg_mesh, submeshPositionQs, vertexPairs, pairPriorities, submeshNeighborVertices, vertexToFacesMap);
-  
-  std::tr1::unordered_map<int, std::tr1::unordered_map<int,int>  > vertexMapping1;
-
   printf("countFaces=%d\n", countFaces);
   printf("numFacesLeft %i\n",  numFacesLeft);
+  if (numFacesLeft < countFaces)  std::cout << "SIMPLIFICATION NEEDED\n";
+
+  computeCosts(agg_mesh, submeshPositionQs, vertexPairs, pairPriorities, submeshNeighborVertices, vertexToFacesMap);
+  
+  std::tr1::unordered_map<int, std::tr1::unordered_map<int,int>  > vertexMapping1;  
 
   //Do the actual edge collapses.
   while (countFaces > numFacesLeft && vertexPairs.size() > 0) {    
@@ -739,7 +739,7 @@ void MeshSimplifier::simplify(Mesh::MeshdataPtr agg_mesh, int32 numFacesLeft) {
 
         vector3fSet[ curGeometry.positions[j] ] = positions.size();
 
-        positions.push_back(curGeometry.positions[j]);    
+        positions.push_back(curGeometry.positions[j]);            
 
         if (j < curGeometry.normals.size())
           normals.push_back(curGeometry.normals[j]);
@@ -748,8 +748,10 @@ void MeshSimplifier::simplify(Mesh::MeshdataPtr agg_mesh, int32 numFacesLeft) {
           unsigned int stride = curGeometry.texUVs[k].stride;
           if (stride*j < curGeometry.texUVs[k].uvs.size()) {
             uint32 idx = stride * j;
-            while ( idx++ < stride*j+stride)
+            while ( idx < stride*j+stride){
               texUVs[k].uvs.push_back(curGeometry.texUVs[k].uvs[idx]);
+              idx++;
+            }
           }
         }
       }

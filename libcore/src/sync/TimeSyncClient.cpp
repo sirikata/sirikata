@@ -113,11 +113,14 @@ void TimeSyncClient::handleSyncMessage(const OHDP::Endpoint &src, const OHDP::En
     static Duration sMaxRTT = Duration::seconds(5); // this could definitely be lower
     Duration rtt = local_finish_t - local_start_t;
     if (local_finish_t < local_start_t ||
-        rtt > sMaxRTT)
+        rtt > sMaxRTT) {
+        SILOG(timesync, detailed, "Ignoring time sync reply: out of date or non-sensical results");
         return;
+    }
 
     // FIXME use averaging, falloff, etc instead of just replacing the value outright
     mOffset = server_t - (local_start_t + (rtt/2.f));
+    SILOG(timesync, detailed, "RTT " << rtt << " updates offset to " << mOffset);
     mHasBeenInitialized = true;
     if (mCB)
         mCB();

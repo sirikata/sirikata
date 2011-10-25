@@ -173,17 +173,67 @@ public:
 };
 
 template <class QueueType>
-class SIRIKATA_EXPORT WorkQueueImpl : public WorkQueue {
+class WorkQueueImpl : public WorkQueue {
 	typedef QueueType Queue;
 	Queue mQueue;
 public:
-	virtual void enqueue(WorkItem *element);
-	virtual bool dequeueBlocking();
-	virtual bool dequeuePoll();
-	virtual unsigned int dequeueAll();
-	virtual ~WorkQueueImpl();
+	virtual void enqueue(WorkItem *element) {
+	    if (element) {
+	        element->enqueued();
+	    }
+		mQueue.push(element);
+	}
 
-	virtual bool probablyEmpty();
+	virtual bool dequeueBlocking() {
+		WorkItem *element;
+		mQueue.blockingPop(element);
+		if (element) {
+			(*element)();
+			return true;
+		} else {
+			return false;
+		}
+	}
+
+	virtual bool dequeuePoll() {
+		WorkItem *element;
+		if (mQueue.pop(element)) {
+			if (element) {
+				(*element)();
+			}
+			return true;
+		}
+		return false;
+	}
+
+	virtual unsigned int dequeueAll() {
+		typename Queue::NodeIterator queueIter (mQueue);
+		WorkItem** workPtr;
+		unsigned int numProcessed = 0;
+
+		while ((workPtr = queueIter.next()) != NULL) {
+			if (*workPtr) {
+				(**workPtr)();
+			}
+			++numProcessed;
+		}
+		return numProcessed;
+	}
+
+	virtual ~WorkQueueImpl() {
+		typename Queue::NodeIterator queueIter (mQueue);
+		WorkItem** workPtr;
+		while ((workPtr = queueIter.next()) != NULL) {
+			if (*workPtr) {
+	            std::auto_ptr<WorkItem>deleteMe(*workPtr);
+			}
+		}
+	    //get rid of all extra queue items on the queue
+	}
+
+	virtual bool probablyEmpty() {
+		return mQueue.probablyEmpty();
+	}
 };
 
 ///// blockingPop not implemented yet in LockFreeQueue.

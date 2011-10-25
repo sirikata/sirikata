@@ -192,7 +192,7 @@ void LocationService::removeListener(LocationServiceListener* listener) {
 
 
 void LocationService::subscribe(ServerID remote, const UUID& uuid, SeqNoPtr seqnoptr) {
-    mUpdatePolicy->subscribe(remote, uuid, this,seqnoptr);
+    mUpdatePolicy->subscribe(remote, uuid, seqnoptr);
 }
 
 void LocationService::unsubscribe(ServerID remote, const UUID& uuid) {
@@ -204,8 +204,8 @@ void LocationService::unsubscribe(ServerID remote) {
 }
 
 
-void LocationService::subscribe(const UUID& remote, const UUID& uuid, SeqNoPtr seqnoptr) {
-    mUpdatePolicy->subscribe(remote, uuid, this,seqnoptr);
+void LocationService::subscribe(const UUID& remote, const UUID& uuid) {
+    mUpdatePolicy->subscribe(remote, uuid);
 }
 
 void LocationService::unsubscribe(const UUID& remote, const UUID& uuid) {

@@ -148,8 +148,7 @@ void Server::newStream(int err, SST::Stream<SpaceObjectReference>::Ptr s) {
   }
 
   // Otherwise, they have a complete session
-  ObjectSession* new_obj_session = new ObjectSession(objid, s);
-  mObjectSessionManager->addSession(new_obj_session);
+  mObjectSessionManager->completeSession(objid, s);
 }
 
 Server::~Server()
@@ -656,6 +655,8 @@ void Server::finishAddObject(const UUID& obj_id, OSegAddNewStatus status)
       StoredConnection sc = mStoredConnectionData[obj_id];
       if (status == OSegWriteListener::SUCCESS)
       {
+          mObjectSessionManager->addSession(new ObjectSession(ObjectReference(obj_id)));
+
           // Note: we always use local time for connections. The client
           // accounts for by using the values we return in the response
           // instead of the original values sent with the connection
@@ -870,6 +871,8 @@ void Server::handleMigration(const UUID& obj_id)
 
 
     SILOG(space,detailed,"Finishing migration of " << obj_id.toString());
+
+    mObjectSessionManager->addSession(new ObjectSession(ObjectReference(obj_id)));
 
     // Get the data from the two maps
     ObjectConnection* obj_conn = obj_map_it->second;
@@ -1117,6 +1120,7 @@ void Server::processAlreadyMigrating(const UUID& obj_id)
         return;
     }
 
+    mObjectSessionManager->addSession(new ObjectSession(ObjectReference(obj_id)));
 
     // Get the data from the two maps
     ObjectConnection* obj_conn = obj_map_it->second;

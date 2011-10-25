@@ -63,15 +63,11 @@ public:
     typedef Prox::Query<ObjectProxSimulationTraits> Query;
     typedef Prox::QueryEvent<ObjectProxSimulationTraits> QueryEvent;
 
-    LibproxProximity(SpaceContext* ctx, LocationService* locservice, SpaceNetwork* net, AggregateManager* aggmgr);
+    LibproxProximity(SpaceContext* ctx, LocationService* locservice, CoordinateSegmentation* cseg, SpaceNetwork* net, AggregateManager* aggmgr);
     ~LibproxProximity();
 
-    // Initialize prox.  Must be called after everything else (specifically message router) is set up since it
-    // needs to send messages.
-    void initialize(CoordinateSegmentation* cseg);
-
-    // Shutdown the proximity thread.
-    void shutdown();
+    // Service Interface overrides
+    virtual void start();
 
     // ObjectSessionListener Interface
     virtual void newSession(ObjectSession* session);
@@ -89,17 +85,8 @@ public:
     virtual void localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics);
     virtual void localObjectRemoved(const UUID& uuid, bool agg);
     virtual void localLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval);
-    virtual void localOrientationUpdated(const UUID& uuid, bool agg, const TimedMotionQuaternion& newval);
     virtual void localBoundsUpdated(const UUID& uuid, bool agg, const BoundingSphere3f& newval);
-    virtual void localMeshUpdated(const UUID& uuid, bool agg, const String& newval);
-    virtual void localPhysicsUpdated(const UUID& uuid, bool agg, const String& newval);
-    virtual void replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics);
-    virtual void replicaObjectRemoved(const UUID& uuid);
     virtual void replicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval);
-    virtual void replicaOrientationUpdated(const UUID& uuid, const TimedMotionQuaternion& newval);
-    virtual void replicaBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval);
-    virtual void replicaMeshUpdated(const UUID& uuid, const String& newval);
-    virtual void replicaPhysicsUpdated(const UUID& uuid, const String& newval);
 
     // CoordinateSegmentation::Listener Interface
     virtual void updatedSegmentation(CoordinateSegmentation* cseg, const std::vector<SegmentationInfo>& new_seg);
@@ -168,10 +155,6 @@ private:
 
 
 
-    typedef Sirikata::AtomicValue<uint32> SeqNo;
-    typedef std::tr1::shared_ptr<SeqNo> SeqNoPtr;
-
-
     void handleObjectProximityMessage(const UUID& objid, void* buffer, uint32 length);
 
     void updateAggregateLoc(const UUID& objid, const BoundingSphere3f& bnds);
@@ -216,7 +199,7 @@ private:
 
 
     // Handle various events in the main thread that are triggered in the prox thread
-    void handleAddObjectLocSubscription(const UUID& subscriber, const UUID& observed, SeqNoPtr seqPtr);
+    void handleAddObjectLocSubscription(const UUID& subscriber, const UUID& observed);
     void handleRemoveObjectLocSubscription(const UUID& subscriber, const UUID& observed);
     void handleRemoveAllObjectLocSubscription(const UUID& subscriber);
     void handleAddServerLocSubscription(const ServerID& subscriber, const UUID& observed, SeqNoPtr seqPtr);
@@ -225,15 +208,14 @@ private:
 
 
     // PROX Thread: These are utility methods which should only be called from the prox thread.
-    // The main loop for the prox processing thread
-    void proxThreadMain();
+
     // Handle various query events from the main thread
     void handleUpdateServerQuery(const ServerID& server, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const SolidAngle& angle, uint32 max_results);
     void handleRemoveServerQuery(const ServerID& server);
     void handleConnectedServer(ServerID sid);
     void handleDisconnectedServer(ServerID sid);
 
-    void handleUpdateObjectQuery(const UUID& object, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const SolidAngle& angle, uint32 max_results);
+    void handleUpdateObjectQuery(const UUID& object, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const SolidAngle& angle, uint32 max_results, SeqNoPtr seqno);
     void handleRemoveObjectQuery(const UUID& object, bool notify_main_thread);
     void handleDisconnectedObject(const UUID& object);
 
@@ -255,7 +237,7 @@ private:
      */
     SeqNoPtr getOrCreateSeqNoInfo(const ServerID server_id);
     void eraseSeqNoInfo(const ServerID server_id);
-    SeqNoPtr getOrCreateSeqNoInfo(const UUID& obj_id);
+    SeqNoPtr getSeqNoInfo(const UUID& obj_id);
     void eraseSeqNoInfo(const UUID& obj_id);
 
     typedef std::set<UUID> ObjectSet;
@@ -320,20 +302,13 @@ private:
     typedef std::tr1::unordered_map<UUID, ProxStreamInfoPtr, UUID::Hasher> ObjectProxStreamMap;
     ObjectProxStreamMap mObjectProxStreams;
 
-    typedef std::tr1::function<void()> AggregateEventHandler;
-    Sirikata::ThreadSafeQueue<AggregateEventHandler> mAggregateEventHandlers;
-    void scheduleAggregateEventHandler(); // Schedule main thread to handle events
-    void invokeAggregateEventHandler(); // Worker which invokes handler events
 
     // PROX Thread - Should only be accessed in methods used by the main thread
 
     void tickQueryHandler(ProxQueryHandler* qh[NUM_OBJECT_CLASSES]);
     void rebuildHandler(ObjectClass objtype);
 
-    Thread* mProxThread;
-    Network::IOService* mProxService;
     Network::IOStrand* mProxStrand;
-    Sirikata::AtomicValue<bool> mShutdownProxThread;
 
     CBRLocationServiceCache* mLocCache;
 
@@ -346,6 +321,7 @@ private:
     // Results from queries to other servers, so we know what we need to remove
     // on forceful disconnection
     ServerQueryResultSet mServerQueryResults;
+    Poller mServerHandlerPoller;
 
     // These track all objects being reported to this server and
     // answer queries for objects connected to this server.
@@ -353,6 +329,11 @@ private:
     InvertedObjectQueryMap mInvertedObjectQueries;
     ProxQueryHandler* mObjectQueryHandler[NUM_OBJECT_CLASSES];
     bool mObjectDistance; // Using distance queries
+    Poller mObjectHandlerPoller;
+
+    // Pollers that trigger rebuilding of query data structures
+    Poller mStaticRebuilderPoller;
+    Poller mDynamicRebuilderPoller;
 
     // Track SeqNo info for each querier
     typedef std::tr1::unordered_map<ServerID, SeqNoPtr> ServerSeqNoInfoMap;

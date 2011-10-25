@@ -40,28 +40,44 @@
 
 namespace Sirikata {
 
+class ObjectSessionManager;
+
+/** State associated with an Object's session with the space. While
+ *  the state can be accessed from other threads, the ObjectSession is
+ *  managed and destroyed by the main thread so any data that needs to
+ *  be accessed by other threads should be extracted while in the main
+ *  strand (e.g. on an ObjectSessionListener::newSession callback).
+ */
 class SIRIKATA_SPACE_EXPORT ObjectSession {
   public:
     typedef ODPSST::Stream SSTStream;
     typedef SSTStream::Ptr SSTStreamPtr;
 
-    ObjectSession(ObjectReference& objid, SSTStreamPtr strm)
+    ObjectSession(const ObjectReference& objid)
         : mID(objid),
-        mSSTStream(strm)
+        mSSTStream(), // set later by ObjectSessionManager
+        mSeqNo(new SeqNo())
     {}
     ~ObjectSession()
     {
         // Force closure, there's no way to get data to the object anymore...
-        mSSTStream->close(true);
+        if (mSSTStream) mSSTStream->close(true);
     }
 
     const ObjectReference& id() const { return mID; }
 
     SSTStreamPtr getStream() const { return mSSTStream; }
 
+    SeqNoPtr getSeqNoPtr() const { return mSeqNo; }
+
   private:
+    friend class ObjectSessionManager;
+
     ObjectReference mID;
     SSTStreamPtr mSSTStream;
+    // We still use SeqNoPtrs to deal with thread safety -- the seqno
+    // is own
+    SeqNoPtr mSeqNo;
 };
 
 class SIRIKATA_SPACE_EXPORT ObjectSessionListener {
@@ -78,9 +94,16 @@ class SIRIKATA_SPACE_EXPORT ObjectSessionManager : public Provider<ObjectSession
     }
     virtual ~ObjectSessionManager() {}
 
-    // Owner interface -- adds and removes sessions
+    // Owner interface -- adds and removes sessions. Adding is split
+    // into two steps. The first adds the session, making it
+    // accessible for services that don't need streams. The second
+    // completes it
     void addSession(ObjectSession* session) {
         mObjectSessions[session->id()] = session;
+    }
+    void completeSession(ObjectReference& obj, ObjectSession::SSTStreamPtr s) {
+        ObjectSession* session = mObjectSessions[obj];
+        session->mSSTStream = s;
         notify(&ObjectSessionListener::newSession, session);
     }
     void removeSession(const ObjectReference& obj) {

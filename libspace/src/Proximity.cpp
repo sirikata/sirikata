@@ -20,11 +20,11 @@ void ProximityFactory::destroy() {
 
 
 
-Proximity::Proximity(SpaceContext* ctx, LocationService* locservice, SpaceNetwork* net, AggregateManager* aggmgr, const Duration& poll_freq)
+Proximity::Proximity(SpaceContext* ctx, LocationService* locservice, CoordinateSegmentation* cseg, SpaceNetwork* net, AggregateManager* aggmgr, const Duration& poll_freq)
  : PollingService(ctx->mainStrand, poll_freq),
    mContext(ctx),
    mLocService(locservice),
-   mCSeg(NULL),
+   mCSeg(cseg),
    mAggregateManager(aggmgr),
    mStatsPoller(
        ctx->mainStrand,
@@ -35,6 +35,7 @@ Proximity::Proximity(SpaceContext* ctx, LocationService* locservice, SpaceNetwor
 {
     net->addListener(this);
     mLocService->addListener(this, false);
+    mCSeg->addListener(this);
     mContext->serverDispatcher()->registerMessageRecipient(SERVER_PORT_PROX, this);
     mContext->objectSessionManager()->addListener(this);
 }
@@ -45,12 +46,13 @@ Proximity::~Proximity() {
     mLocService->removeListener(this);
 }
 
-void Proximity::initialize(CoordinateSegmentation* cseg) {
-    mCSeg = cseg;
-    mCSeg->addListener(this);
+void Proximity::start() {
+    PollingService::start();
+    mContext->add(&mStatsPoller);
 }
 
-void Proximity::shutdown() {
+void Proximity::stop() {
+    PollingService::stop();
 }
 
 void Proximity::poll() {
