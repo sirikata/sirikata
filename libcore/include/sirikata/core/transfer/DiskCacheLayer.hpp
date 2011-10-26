@@ -161,6 +161,7 @@ protected:
 			std::string fileName = fileId.convertToHexString();
 			std::tr1::shared_ptr<DiskRequest> req
                             (new DiskRequest(DiskRequest::OPDELETE, fileId, Range(true)));
+                        mRequestQueue.push(req);
 		}
 		CacheData *toDelete = static_cast<CacheData*>(cacheLayerData);
 		delete toDelete;
