@@ -394,7 +394,9 @@ void DiskCacheLayer::unserialize() {
 				continue;
 			}
 
-			if (!writer.insert(fprint, totalLength)) {
+                        if (writer.find(fprint)) {
+                            // Some sort of conflict, maybe between
+                            // partial/whole files?
 				delete cdata;
 				cdata = NULL;
 				if (!thisispartial) {
@@ -408,10 +410,24 @@ void DiskCacheLayer::unserialize() {
 					std::string partialName(pathName + PARTIAL_SUFFIX);
 					unlink(partialName.c_str());
 				}
-				continue;
-			}
+                                continue;
+                        }
 
-			*writer = cdata; // Finally, set the iterator contents.
+                        if (!mFiles.alloc(totalLength, writer)) {
+                            // We couldn't allocate space for this file, get rid
+                            // of it. Probably means we somehow ended up
+                            // violating space requirements (e.g. if the setting
+                            // on total cache size changed and this file is
+                            // bigger than the entire cache).
+                            delete cdata;
+                            unlink(pathName.c_str());
+                            continue;
+                        }
+
+			if (writer.insert(fprint, totalLength)) {
+                            *writer = cdata;
+                            writer.use();
+                        }
 		}
 		closedir(mydir);
 		// And we are done reading the directory.
