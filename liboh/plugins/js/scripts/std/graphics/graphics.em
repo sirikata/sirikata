@@ -75,7 +75,7 @@ function() {
             system.event(std.core.bind(this._handleOnReady,this,cb,true));
         }
 
-
+        this._guis = {};
     };
 
     std.graphics.Graphics.prototype.invoke = function() {
@@ -217,14 +217,21 @@ function() {
 
     /** Request that the given URL be added as a module in the UI. */
     std.graphics.Graphics.prototype.addGUIModule = function(name, url, cb) {
-    	return new std.graphics.GUI(name, this._simulator.invoke("addModuleToUI", name, url), cb);
+        this._guis[name] = new std.graphics.GUI(name, this._simulator.invoke("addModuleToUI", name, url), cb);
+    	return this._guis[name];
     };
 
     /** Request that the given script text be added as a module in the UI. */
     std.graphics.Graphics.prototype.addGUITextModule = function(name, js_text, cb) {
         // addTextModuleToUI expects pre-escaped strings
         js_text = Escape.escapeString(js_text);
-    	return new std.graphics.GUI(name, this._simulator.invoke("addTextModuleToUI", name, js_text), cb);
+        this._guis[name] = new std.graphics.GUI(name, this._simulator.invoke("addTextModuleToUI", name, js_text), cb);
+    	return this._guis[name];
+    };
+
+    /** Get the GUI for a previously loaded GUI module. */
+    std.graphics.Graphics.prototype.getGUIModule = function(name) {
+    	return this._guis[name];
     };
 
     /** Request that the given URL be presented as a widget. */

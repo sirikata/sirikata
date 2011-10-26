@@ -286,6 +286,11 @@ function() {
         return this._simulator.addGUITextModule(name, js_text, cb);
     };
 
+    /** Get the GUI for a previously loaded GUI module. */
+    std.graphics.DefaultGraphics.prototype.getGUIModule = function(name) {
+        return this._simulator.getGUIModule(name);
+    };
+
     /** Request that the given URL be presented as a widget. */
     std.graphics.DefaultGraphics.prototype.createBrowser = function(name, url, cb) {
         return this._simulator.createBrowser(name, url, cb);
