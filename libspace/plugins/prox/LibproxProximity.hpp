@@ -58,6 +58,7 @@ class LibproxProximity :
 {
 private:
     typedef Prox::QueryHandler<ObjectProxSimulationTraits> ProxQueryHandler;
+    typedef Prox::Aggregator<ObjectProxSimulationTraits> ProxAggregator;
 public:
     // MAIN Thread: All public interface is expected to be called only from the main thread.
     typedef Prox::Query<ObjectProxSimulationTraits> Query;
@@ -104,12 +105,12 @@ public:
     virtual void removeRelevantServer(ServerID sid);
 
     // AggregateListener Interface
-    virtual void aggregateCreated(ProxQueryHandler* handler, const UUID& objid);
-    virtual void aggregateChildAdded(ProxQueryHandler* handler, const UUID& objid, const UUID& child, const BoundingSphere3f& bnds);
-    virtual void aggregateChildRemoved(ProxQueryHandler* handler, const UUID& objid, const UUID& child, const BoundingSphere3f& bnds);
-    virtual void aggregateBoundsUpdated(ProxQueryHandler* handler, const UUID& objid, const BoundingSphere3f& bnds);
-    virtual void aggregateDestroyed(ProxQueryHandler* handler, const UUID& objid);
-    virtual void aggregateObserved(ProxQueryHandler* handler, const UUID& objid, uint32 nobservers);
+    virtual void aggregateCreated(ProxAggregator* handler, const UUID& objid);
+    virtual void aggregateChildAdded(ProxAggregator* handler, const UUID& objid, const UUID& child, const BoundingSphere3f& bnds);
+    virtual void aggregateChildRemoved(ProxAggregator* handler, const UUID& objid, const UUID& child, const BoundingSphere3f& bnds);
+    virtual void aggregateBoundsUpdated(ProxAggregator* handler, const UUID& objid, const BoundingSphere3f& bnds);
+    virtual void aggregateDestroyed(ProxAggregator* handler, const UUID& objid);
+    virtual void aggregateObserved(ProxAggregator* handler, const UUID& objid, uint32 nobservers);
 
     // SpaceNetworkConnectionListener Interface
     virtual void onSpaceNetworkConnected(ServerID sid);
