@@ -738,6 +738,9 @@ IF(GOOGLE_PERFTOOLS_FOUND)
   ENDIF()
 ENDIF()
 
+# dependency: liboauthcpp
+ADD_SUBDIRECTORY(${TOP_LEVEL}/externals/liboauthcpp/build ${CMAKE_CURRENT_BINARY_DIR})
+
 # -- User defined variables that control which components get built
 SET(WITH_OGRE_OH TRUE CACHE BOOL "Build with Ogre support if available")
 SET(WITH_LIBSQLITE TRUE CACHE BOOL "Build SQLite library if available")
