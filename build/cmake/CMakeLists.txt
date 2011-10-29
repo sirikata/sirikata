@@ -739,7 +739,9 @@ IF(GOOGLE_PERFTOOLS_FOUND)
 ENDIF()
 
 # dependency: liboauthcpp
+SET(LIBOAUTHCPP_ADDED_DEFINITIONS ${ADDED_DEFINITIONS})
 ADD_SUBDIRECTORY(${TOP_LEVEL}/externals/liboauthcpp/build ${CMAKE_CURRENT_BINARY_DIR})
+SET(LIBOAUTHCPP_INCLUDE_DIR ${TOP_LEVEL}/externals/liboauthcpp/include)
 
 # -- User defined variables that control which components get built
 SET(WITH_OGRE_OH TRUE CACHE BOOL "Build with Ogre support if available")
@@ -944,6 +946,7 @@ SET(INCLUDE_DIRECTORIES
   #${GLUT_INCLUDE_DIR}
   ${GSL_INCLUDE_DIR}
   ${HTTP_PARSER_INCLUDE_DIR}
+  ${LIBOAUTHCPP_INCLUDE_DIR}
   )
 
 IF(BUILD_LIBSQLITE)
@@ -1789,6 +1792,7 @@ SET(SIRIKATA_CORE_LIBRARIES
     ${BREAKPAD_LIBRARIES}
     http-parser
     ${GOOGLE_PERFTOOLS_SETTING_LIBRARIES}
+    oauthcpp
     )
 
 IF(BERKELIUM_FOUND)
