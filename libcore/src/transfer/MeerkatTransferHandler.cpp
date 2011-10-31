@@ -105,7 +105,7 @@ void MeerkatNameHandler::request_finished(std::tr1::shared_ptr<HttpManager::Http
         return;
     }
 
-    std::map<std::string, std::string>::const_iterator it;
+    HttpManager::Headers::const_iterator it;
     it = response->getHeaders().find("Content-Length");
     if (it != response->getHeaders().end()) {
         SILOG(transfer, error, "Content-Length header was present when it shouldn't be during an HTTP name lookup (" << request->getURI() << ")");
@@ -168,7 +168,7 @@ void MeerkatNameHandler::request_finished(std::tr1::shared_ptr<HttpManager::Http
     chunkList.push_back(chunk);
 
     std::tr1::shared_ptr<RemoteFileMetadata> met(new RemoteFileMetadata(fp, request->getURI(),
-            file_size, chunkList, response->getHeaders()));
+            file_size, chunkList, response->getRawHeaders()));
 
     callback(met);
     SILOG(transfer, detailed, "done http name handler request_finished");
@@ -295,7 +295,7 @@ void MeerkatChunkHandler::request_finished(std::tr1::shared_ptr<HttpManager::Htt
         return;
     }
 
-    std::map<std::string, std::string>::const_iterator it;
+    HttpManager::Headers::const_iterator it;
     it = response->getHeaders().find("Content-Length");
     if (it == response->getHeaders().end()) {
         SILOG(transfer, error, "Content-Length header was not present when it should be during an HTTP " << reqType << " (" << file->getURI() << ")");

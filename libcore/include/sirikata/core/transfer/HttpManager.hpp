@@ -106,7 +106,22 @@ protected:
 
 public:
         typedef std::map<std::string, std::string> StringDictionary;
-        typedef StringDictionary Headers;
+        // StringDictionary that uses case-insensitive keys, as required for
+        // http headers by RFC 2616
+        struct CaseInsensitiveStringLess {
+            bool operator()(const std::string& lhs, const std::string& rhs) const {
+                std::size_t lsize = lhs.size(), rsize = rhs.size();
+                if (lsize != rsize) return (lsize < rsize);
+                for(std::size_t i = 0; i < lsize; i++) {
+                    char li = std::tolower(lhs[i]), ri = std::tolower(rhs[i]);
+                    if (li != ri) return (li < ri);
+                }
+                return false;
+            }
+        };
+        typedef std::map<std::string, std::string, CaseInsensitiveStringLess> CaseInsensitiveStringDictionary;
+
+        typedef CaseInsensitiveStringDictionary Headers;
         typedef StringDictionary QueryParameters;
 
 
@@ -146,6 +161,12 @@ public:
     public:
         inline std::tr1::shared_ptr<DenseData> getData() { return mData; }
         inline const Headers& getHeaders() { return mHeaders; }
+        inline StringDictionary getRawHeaders() {
+            StringDictionary raw_headers;
+            for(Headers::const_iterator it = mHeaders.begin(); it != mHeaders.end(); it++)
+                raw_headers[it->first] = it->second;
+            return raw_headers;
+        }
         inline ssize_t getContentLength() { return mContentLength; }
         inline unsigned short getStatusCode() { return mStatusCode; }
 

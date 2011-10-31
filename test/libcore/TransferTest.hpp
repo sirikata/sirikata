@@ -156,6 +156,9 @@ public:
             TS_ASSERT(mHttpResponse->getHeaders().size() != 0);
             it = mHttpResponse->getHeaders().find("File-Size");
             TS_ASSERT(it != mHttpResponse->getHeaders().end());
+            // Also sanity check the case insensitivity
+            TS_ASSERT( mHttpResponse->getHeaders().find("File-Size") == mHttpResponse->getHeaders().find("file-size") );
+            TS_ASSERT( mHttpResponse->getHeaders().find("File-Size") == mHttpResponse->getHeaders().find("FILE-SIZE") );
             it = mHttpResponse->getHeaders().find("Hash");
             TS_ASSERT(it != mHttpResponse->getHeaders().end());
             TS_ASSERT( !(mHttpResponse->getData()) );
@@ -459,7 +462,7 @@ public:
             TS_ASSERT(compressed->getStatusCode() == uncompressed->getStatusCode());
 
             //get headers
-            typedef std::map<std::string, std::string> HeaderMapType;
+            typedef Transfer::HttpManager::Headers HeaderMapType;
             const HeaderMapType& compressedHeaders = compressed->getHeaders();
             const HeaderMapType& uncompressedHeaders = uncompressed->getHeaders();
 

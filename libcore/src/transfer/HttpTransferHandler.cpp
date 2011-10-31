@@ -128,7 +128,7 @@ void HttpNameHandler::request_finished(std::tr1::shared_ptr<HttpManager::HttpRes
 
     SharedChunkCache::getSingleton().getCache()->addToCache(fp, response->getData());
     std::tr1::shared_ptr<RemoteFileMetadata> met(new RemoteFileMetadata(fp, request->getURI(),
-            file_size, chunkList, response->getHeaders()));
+            file_size, chunkList, response->getRawHeaders()));
     callback(met);
 }
 
