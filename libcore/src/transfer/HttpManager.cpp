@@ -139,16 +139,8 @@ void HttpManager::makeRequest(
     std::ostringstream request_stream;
 
     // Request line
-    request_stream << methodAsString(method) << " " << path;
-    if (!query_params.empty()) {
-        request_stream << "?";
-        bool first_param = true;
-        for(QueryParameters::const_iterator it = query_params.begin(); it != query_params.end(); it++) {
-            if (!first_param) request_stream << "?";
-            request_stream << OAuth::URLEncode(it->first) << "=" << OAuth::URLEncode(it->second);
-            first_param = false;
-        }
-    }
+    request_stream << methodAsString(method) << " ";
+    formatPath(request_stream, path, query_params);
     request_stream << " HTTP/1.1\r\n";
 
     // Headers
@@ -166,6 +158,30 @@ void HttpManager::makeRequest(
     // reparsing the request by going through the other makeRequest call. We
     // could dispatch this ourselves and not waste the time reparsing.
     makeRequest(addr, method, request_stream.str(), allow_redirects, cb);
+}
+
+void HttpManager::formatPath(std::ostream& os, const String& path, const QueryParameters& query_params) {
+    os << path;
+    if (!query_params.empty()) {
+        os << "?";
+        bool first_param = true;
+        for(QueryParameters::const_iterator it = query_params.begin(); it != query_params.end(); it++) {
+            if (!first_param) os << "?";
+            os << OAuth::URLEncode(it->first) << "=" << OAuth::URLEncode(it->second);
+            first_param = false;
+        }
+    }
+
+}
+
+String HttpManager::formatPath(const String& path, const QueryParameters& query_params) {
+    std::ostringstream formatted;
+    formatPath(formatted, path, query_params);
+    return formatted.str();
+}
+
+String HttpManager::formatURL(const String& host, const String& path, const QueryParameters& query_params) {
+    return "http://" + host + formatPath(path, query_params);
 }
 
 void HttpManager::head(

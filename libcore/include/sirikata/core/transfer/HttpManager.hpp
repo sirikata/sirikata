@@ -230,6 +230,9 @@ public:
         bool allow_redirects = true
     );
 
+    static String formatPath(const String& path, const QueryParameters& query_params);
+    static String formatURL(const String& host, const String& path, const QueryParameters& query_params);
+
     void head(
         Sirikata::Network::Address addr, const String& path,
         HttpCallback cb, const Headers& headers = Headers(), const QueryParameters& query_params = QueryParameters(),
@@ -254,6 +257,7 @@ protected:
     friend std::auto_ptr<HttpManager>::~auto_ptr();
     friend void std::auto_ptr<HttpManager>::reset(HttpManager*);
 
+    static void formatPath(std::ostream& os, const String& path, const QueryParameters& query_params);
 private:
     //For convenience
     typedef Sirikata::Network::IOServicePool IOServicePool;
