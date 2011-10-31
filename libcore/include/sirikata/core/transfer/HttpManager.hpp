@@ -105,6 +105,10 @@ protected:
 	};
 
 public:
+        typedef std::map<std::string, std::string> StringDictionary;
+        typedef StringDictionary Headers;
+        typedef StringDictionary QueryParameters;
+
 
     /*
      * Stores headers and data returned from an HTTP request
@@ -131,7 +135,7 @@ public:
         std::stringstream mCompressedStream;
         //
 
-        std::map<std::string, std::string> mHeaders;
+        Headers mHeaders;
         std::tr1::shared_ptr<DenseData> mData;
         ssize_t mContentLength;
         unsigned short mStatusCode;
@@ -141,7 +145,7 @@ public:
               mGzip(false), mContentLength(0), mStatusCode(0) {}
     public:
         inline std::tr1::shared_ptr<DenseData> getData() { return mData; }
-        inline const std::map<std::string, std::string>& getHeaders() { return mHeaders; }
+        inline const Headers& getHeaders() { return mHeaders; }
         inline ssize_t getContentLength() { return mContentLength; }
         inline unsigned short getStatusCode() { return mStatusCode; }
 
@@ -176,11 +180,46 @@ public:
         HEAD,
         GET
     };
+    static String methodAsString(HTTP_METHOD m);
 
-    /*
-     * Makes an HTTP request and calls cb when finished
+    /** Makes an HTTP request and calls cb when finished. This is the lowest
+     *  level version exposed publicly, taking a raw HTTP request, which you
+     *  should ensure is properly formatted. Usually you should use the
+     *  convenience wrappers that format the request for you.
      */
-    void makeRequest(Sirikata::Network::Address addr, HTTP_METHOD method, std::string req, HttpCallback cb);
+    void makeRequest(Sirikata::Network::Address addr, HTTP_METHOD method, std::string req, bool allow_redirects, HttpCallback cb);
+
+    /** Formats and makes an HTTP request and calls cb when finished. This
+     *  version is a utility for the more specific request types (i.e. head()
+     *  and get()).
+     *
+     *  \param addr the address of the server
+     *  \param method the HTTP request method, i.e. HEAD, GET, or POST
+     *  \param path the path of the resource to access
+     *  \param cb callback to invoke upon completion
+     *  \param query_params dictionary of unencoded query parameters to add to
+     *         the url
+     *  \param headers dictionary of headers to add to the request
+     *  \param allow_redirects if true, redirects will be followed, triggering a
+     *         new requests
+     */
+    void makeRequest(
+        Sirikata::Network::Address addr, HTTP_METHOD method, const String& path,
+        HttpCallback cb, const Headers& headers = Headers(), const QueryParameters& query_params = QueryParameters(),
+        bool allow_redirects = true
+    );
+
+    void head(
+        Sirikata::Network::Address addr, const String& path,
+        HttpCallback cb, const Headers& headers = Headers(), const QueryParameters& query_params = QueryParameters(),
+        bool allow_redirects = true
+    );
+
+    void get(
+        Sirikata::Network::Address addr, const String& path,
+        HttpCallback cb, const Headers& headers = Headers(), const QueryParameters& query_params = QueryParameters(),
+        bool allow_redirects = true
+    );
 
 protected:
     /*
@@ -210,9 +249,10 @@ private:
         const std::string req;
         const HttpCallback cb;
         const HTTP_METHOD method;
-        HttpRequest(Sirikata::Network::Address _addr, std::string _req, HTTP_METHOD meth, HttpCallback _cb)
-            : addr(_addr), req(_req), cb(_cb), method(meth), mNumTries(0),
-              mLastCallback(NONE), mHeaderComplete(false) {}
+        const bool allow_redirects;
+        HttpRequest(Sirikata::Network::Address _addr, std::string _req, HTTP_METHOD meth, bool _allow_redirects, HttpCallback _cb)
+         : addr(_addr), req(_req), cb(_cb), method(meth), allow_redirects(_allow_redirects),
+           mNumTries(0), mLastCallback(NONE), mHeaderComplete(false) {}
 
         friend class HttpManager;
     protected:
@@ -223,7 +263,7 @@ private:
         std::string mTempHeaderValue;
         LAST_HEADER_CB mLastCallback;
         bool mHeaderComplete;
-        std::map<std::string, std::string> mHeaders;
+        Headers mHeaders;
     };
 
     //Holds a queue of requests to be made

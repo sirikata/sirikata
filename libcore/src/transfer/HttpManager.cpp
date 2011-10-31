@@ -34,6 +34,7 @@
 #include <sirikata/core/transfer/HttpManager.hpp>
 #include <sirikata/core/transfer/URL.hpp>
 #include <sirikata/core/network/Address.hpp>
+#include <liboauthcpp/liboauthcpp.h>
 
 AUTO_SINGLETON_INSTANCE(Sirikata::Transfer::HttpManager);
 
@@ -92,9 +93,17 @@ void HttpManager::postCallback(IOCallback cb) {
     mServicePool->service()->post(cb);
 }
 
-void HttpManager::makeRequest(Sirikata::Network::Address addr, HTTP_METHOD method, std::string req, HttpCallback cb) {
+String HttpManager::methodAsString(HTTP_METHOD m) {
+    switch(m) {
+      case HEAD: return "HEAD";
+      case GET: return "GET";
+      default: return "";
+    }
+}
 
-    std::tr1::shared_ptr<HttpRequest> r(new HttpRequest(addr, req, method, cb));
+void HttpManager::makeRequest(Sirikata::Network::Address addr, HTTP_METHOD method, std::string req, bool allow_redirects, HttpCallback cb) {
+
+    std::tr1::shared_ptr<HttpRequest> r(new HttpRequest(addr, req, method, allow_redirects, cb));
 
     //Initialize http parser settings callbacks
     r->mHttpSettings = EMPTY_PARSER_SETTINGS;
@@ -121,6 +130,56 @@ void HttpManager::makeRequest(Sirikata::Network::Address addr, HTTP_METHOD metho
 
     add_req(r);
     processQueue();
+}
+
+void HttpManager::makeRequest(
+    Sirikata::Network::Address addr, HTTP_METHOD method, const String& path,
+    HttpCallback cb, const Headers& headers, const QueryParameters& query_params, bool allow_redirects)
+{
+    std::ostringstream request_stream;
+
+    // Request line
+    request_stream << methodAsString(method) << " " << path;
+    if (!query_params.empty()) {
+        request_stream << "?";
+        bool first_param = true;
+        for(QueryParameters::const_iterator it = query_params.begin(); it != query_params.end(); it++) {
+            if (!first_param) request_stream << "?";
+            request_stream << OAuth::URLEncode(it->first) << "=" << OAuth::URLEncode(it->second);
+            first_param = false;
+        }
+    }
+    request_stream << " HTTP/1.1\r\n";
+
+    // Headers
+    for(Headers::const_iterator it = headers.begin(); it != headers.end(); it++)
+        request_stream << it->first << ": " << it->second << "\r\n";
+    if (headers.find("Accept") == headers.end())
+        request_stream << "Accept: */*\r\n";
+
+    // Required blank line
+    request_stream << "\r\n";
+
+    // FIXME body of request
+
+    // FIXME This is actually kind of round-about as we are formatting and then
+    // reparsing the request by going through the other makeRequest call. We
+    // could dispatch this ourselves and not waste the time reparsing.
+    makeRequest(addr, method, request_stream.str(), allow_redirects, cb);
+}
+
+void HttpManager::head(
+    Sirikata::Network::Address addr, const String& path,
+    HttpCallback cb, const Headers& headers, const QueryParameters& query_params, bool allow_redirects)
+{
+    makeRequest(addr, HEAD, path, cb, headers, query_params, allow_redirects);
+}
+
+void HttpManager::get(
+    Sirikata::Network::Address addr, const String& path,
+    HttpCallback cb, const Headers& headers, const QueryParameters& query_params, bool allow_redirects)
+{
+    makeRequest(addr, GET, path, cb, headers, query_params, allow_redirects);
 }
 
 void HttpManager::processQueue() {
@@ -378,10 +437,10 @@ void HttpManager::handle_read(std::tr1::shared_ptr<TCPSocket> socket, std::tr1::
         SILOG(transfer, detailed, "Finished http transfer with content length of " << respPtr->getContentLength());
         std::map<std::string, std::string>::const_iterator findLocation;
         findLocation = respPtr->mHeaders.find("Location");
-        if (respPtr->getStatusCode() == 301 && findLocation != respPtr->mHeaders.end()) {
+        if (respPtr->getStatusCode() == 301 && findLocation != respPtr->mHeaders.end() && req->allow_redirects) {
             SILOG(transfer, detailed, "Got a 301 redirect reply and location = " << findLocation->second);
             std::ostringstream request_stream;
-            std::string request_method = (req->method == HEAD) ? "HEAD" : "GET";
+            std::string request_method = methodAsString(req->method);
             URL newURI(findLocation->second.c_str());
             request_stream << request_method << " " << newURI.fullpath() << " HTTP/1.1\r\n";
             std::map<std::string, std::string>::const_iterator it;
@@ -394,7 +453,7 @@ void HttpManager::handle_read(std::tr1::shared_ptr<TCPSocket> socket, std::tr1::
             }
             request_stream << "\r\n";
             Network::Address newaddr(newURI.host(), newURI.proto());
-            makeRequest(newaddr, req->method, request_stream.str(), req->cb);
+            makeRequest(newaddr, req->method, request_stream.str(), req->allow_redirects, req->cb);
         } else {
             req->cb(respPtr, SUCCESS, ec);
         }

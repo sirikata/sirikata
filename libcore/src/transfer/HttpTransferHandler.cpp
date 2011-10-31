@@ -67,7 +67,7 @@ void HttpNameHandler::resolve(std::tr1::shared_ptr<MetadataRequest> request, Nam
     request_stream << "Accept-Encoding: deflate, gzip\r\n";
     request_stream << "\r\n";
 
-    HttpManager::getSingleton().makeRequest(cdn_addr, Transfer::HttpManager::GET, request_stream.str(), std::tr1::bind(
+    HttpManager::getSingleton().makeRequest(cdn_addr, Transfer::HttpManager::GET, request_stream.str(), true, std::tr1::bind(
             &HttpNameHandler::request_finished, this, _1, _2, _3, request, callback));
 }
 
@@ -194,7 +194,7 @@ void HttpChunkHandler::cache_check_callback(const SparseData* data, std::tr1::sh
         request_stream << "Accept-Encoding: deflate, gzip\r\n";
         request_stream << "\r\n";
 
-        HttpManager::getSingleton().makeRequest(cdn_addr, Transfer::HttpManager::GET, request_stream.str(), std::tr1::bind(
+        HttpManager::getSingleton().makeRequest(cdn_addr, Transfer::HttpManager::GET, request_stream.str(), true, std::tr1::bind(
                 &HttpChunkHandler::request_finished, this, _1, _2, _3, file, chunk, callback));
     }
 }
