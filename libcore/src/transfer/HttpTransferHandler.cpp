@@ -14,6 +14,7 @@
 #include <boost/bind.hpp>
 #include <sirikata/core/transfer/HttpTransferHandler.hpp>
 #include <sirikata/core/transfer/URL.hpp>
+#include <boost/lexical_cast.hpp>
 
 AUTO_SINGLETON_INSTANCE(Sirikata::Transfer::HttpNameHandler);
 AUTO_SINGLETON_INSTANCE(Sirikata::Transfer::HttpChunkHandler);
@@ -60,15 +61,15 @@ void HttpNameHandler::resolve(std::tr1::shared_ptr<MetadataRequest> request, Nam
     if (service.empty()) service = "http";
     Network::Address cdn_addr(host_name, service);
 
-    std::ostringstream request_stream;
-    request_stream << "GET " << url.fullpath() << " HTTP/1.1\r\n";
-    request_stream << "Host: " << host_name << "\r\n";
-    request_stream << "Accept: */*\r\n";
-    request_stream << "Accept-Encoding: deflate, gzip\r\n";
-    request_stream << "\r\n";
+    HttpManager::Headers headers;
+    headers["Host"] = host_name;
+    headers["Accept-Encoding"] = "deflate, gzip";
 
-    HttpManager::getSingleton().makeRequest(cdn_addr, Transfer::HttpManager::GET, request_stream.str(), true, std::tr1::bind(
-            &HttpNameHandler::request_finished, this, _1, _2, _3, request, callback));
+    HttpManager::getSingleton().get(
+        cdn_addr, url.fullpath(),
+        std::tr1::bind(&HttpNameHandler::request_finished, this, _1, _2, _3, request, callback),
+        headers
+    );
 }
 
 void HttpNameHandler::request_finished(std::tr1::shared_ptr<HttpManager::HttpResponse> response,
@@ -187,15 +188,15 @@ void HttpChunkHandler::cache_check_callback(const SparseData* data, std::tr1::sh
         if (service.empty()) service = "http";
         Network::Address cdn_addr(host_name, service);
 
-        std::ostringstream request_stream;
-        request_stream << "GET " << url.fullpath() << " HTTP/1.1\r\n";
-        request_stream << "Host: " << host_name << "\r\n";
-        request_stream << "Accept: */*\r\n";
-        request_stream << "Accept-Encoding: deflate, gzip\r\n";
-        request_stream << "\r\n";
+        HttpManager::Headers headers;
+        headers["Host"] = host_name;
+        headers["Accept-Encoding"] = "deflate, gzip";
 
-        HttpManager::getSingleton().makeRequest(cdn_addr, Transfer::HttpManager::GET, request_stream.str(), true, std::tr1::bind(
-                &HttpChunkHandler::request_finished, this, _1, _2, _3, file, chunk, callback));
+        HttpManager::getSingleton().get(
+            cdn_addr, url.fullpath(),
+            std::tr1::bind(&HttpChunkHandler::request_finished, this, _1, _2, _3, file, chunk, callback),
+            headers
+        );
     }
 }
 
