@@ -451,7 +451,7 @@ void HttpManager::handle_read(std::tr1::shared_ptr<TCPSocket> socket, std::tr1::
         }
 
         SILOG(transfer, detailed, "Finished http transfer with content length of " << respPtr->getContentLength());
-        std::map<std::string, std::string>::const_iterator findLocation;
+        Headers::const_iterator findLocation;
         findLocation = respPtr->mHeaders.find("Location");
         if (respPtr->getStatusCode() == 301 && findLocation != respPtr->mHeaders.end() && req->allow_redirects) {
             SILOG(transfer, detailed, "Got a 301 redirect reply and location = " << findLocation->second);
@@ -459,7 +459,7 @@ void HttpManager::handle_read(std::tr1::shared_ptr<TCPSocket> socket, std::tr1::
             std::string request_method = methodAsString(req->method);
             URL newURI(findLocation->second.c_str());
             request_stream << request_method << " " << newURI.fullpath() << " HTTP/1.1\r\n";
-            std::map<std::string, std::string>::const_iterator it;
+            Headers::const_iterator it;
             for (it = req->mHeaders.begin(); it != req->mHeaders.end(); it++) {
             	if (it->first == "Host") {
             		request_stream << "Host: " << newURI.host() << "\r\n";
@@ -523,7 +523,7 @@ int HttpManager::on_headers_complete(http_parser* _) {
     }
 
     //Check if Content-Encoding = gzip
-    std::map<std::string, std::string>::const_iterator it = curResponse->mHeaders.find("Content-Encoding");
+    Headers::const_iterator it = curResponse->mHeaders.find("Content-Encoding");
     if(it != curResponse->mHeaders.end() && it->second == "gzip") {
         curResponse->mGzip = true;
     }
