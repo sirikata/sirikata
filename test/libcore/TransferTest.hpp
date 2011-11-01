@@ -58,6 +58,7 @@ using boost::asio::ip::tcp;
 class HttpTransferTest : public CxxTest::TestSuite {
 
 public:
+    typedef Transfer::HttpManager::Headers HeaderMapType;
 
     boost::condition_variable mDone;
     boost::mutex mMutex;
@@ -106,7 +107,7 @@ public:
         using std::tr1::placeholders::_3;
 
         Network::Address addr(mCdnHost, mCdnService);
-        std::map<std::string, std::string>::const_iterator it;
+        HeaderMapType::const_iterator it;
         std::ostringstream request_stream;
         boost::unique_lock<boost::mutex> lock(mMutex);
 
@@ -462,7 +463,6 @@ public:
             TS_ASSERT(compressed->getStatusCode() == uncompressed->getStatusCode());
 
             //get headers
-            typedef Transfer::HttpManager::Headers HeaderMapType;
             const HeaderMapType& compressedHeaders = compressed->getHeaders();
             const HeaderMapType& uncompressedHeaders = uncompressed->getHeaders();
 
@@ -609,7 +609,7 @@ public:
                 TS_ASSERT(response);
                 if(response) {
                     TS_ASSERT(response->getHeaders().size() != 0);
-                    std::map<std::string, std::string>::const_iterator it = response->getHeaders().find("Content-Length");
+                    HeaderMapType::const_iterator it = response->getHeaders().find("Content-Length");
                     TS_ASSERT(it != response->getHeaders().end());
                     TS_ASSERT(response->getStatusCode() == 200);
                     TS_ASSERT(response->getData());
