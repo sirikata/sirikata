@@ -124,6 +124,24 @@ public:
         typedef CaseInsensitiveStringDictionary Headers;
         typedef StringDictionary QueryParameters;
 
+        /** Represents one field in a multipart/form-data */
+        struct MultipartData {
+            MultipartData(const String& _field, const String& _data)
+             : field(_field), headers(), filename(""), data(_data)
+            {}
+            MultipartData(const String& _field, const String& _data, const String& _filename)
+             : field(_field), headers(), filename(_filename), data(_data)
+            {}
+            MultipartData(const String& _field, const String& _data, const String& _filename, const Headers& _headers)
+             : field(_field), headers(_headers), filename(_filename), data(_data)
+            {}
+
+            String field;
+            Headers headers;
+            String filename;
+            String data;
+        };
+        typedef std::vector<MultipartData> MultipartDataList;
 
     /*
      * Stores headers and data returned from an HTTP request
@@ -199,7 +217,8 @@ public:
     //Methods supported
     enum HTTP_METHOD {
         HEAD,
-        GET
+        GET,
+        POST
     };
     static String methodAsString(HTTP_METHOD m);
 
@@ -218,18 +237,24 @@ public:
      *  \param method the HTTP request method, i.e. HEAD, GET, or POST
      *  \param path the path of the resource to access
      *  \param cb callback to invoke upon completion
+     *  \param headers dictionary of headers to add to the request
      *  \param query_params dictionary of unencoded query parameters to add to
      *         the url
-     *  \param headers dictionary of headers to add to the request
+     *  \param body if non-empty, the encoded HTTP request body, i.e. the data
+     *         provided after all the headers. If you provide this, you should
+     *         probably include headers to specify it's format
      *  \param allow_redirects if true, redirects will be followed, triggering a
      *         new requests
      */
     void makeRequest(
         Sirikata::Network::Address addr, HTTP_METHOD method, const String& path,
-        HttpCallback cb, const Headers& headers = Headers(), const QueryParameters& query_params = QueryParameters(),
+        HttpCallback cb,
+        const Headers& headers = Headers(), const QueryParameters& query_params = QueryParameters(),
+        const String& body = "",
         bool allow_redirects = true
     );
 
+    static String formatURLEncodedDictionary(const StringDictionary& query_params);
     static String formatPath(const String& path, const QueryParameters& query_params);
     static String formatURL(const String& host, const String& path, const QueryParameters& query_params);
 
@@ -241,6 +266,33 @@ public:
 
     void get(
         Sirikata::Network::Address addr, const String& path,
+        HttpCallback cb, const Headers& headers = Headers(), const QueryParameters& query_params = QueryParameters(),
+        bool allow_redirects = true
+    );
+
+    /** Perform an HTTP POST using the specified content type and message
+     *  body. This can be used if you want to use an unusual encoding or as a
+     *  utility for other, more specific post methods.
+     */
+    void post(
+        Sirikata::Network::Address addr, const String& path,
+        const String& content_type, const String& body,
+        HttpCallback cb, const Headers& headers = Headers(), const QueryParameters& query_params = QueryParameters(),
+        bool allow_redirects = true
+    );
+
+    /** Perform a HTTP POST whose body is x-www-form-urlencoded parameters. */
+    void postURLEncoded(
+        Sirikata::Network::Address addr, const String& path,
+        const StringDictionary& body,
+        HttpCallback cb, const Headers& headers = Headers(), const QueryParameters& query_params = QueryParameters(),
+        bool allow_redirects = true
+    );
+
+    /** Perform a HTTP POST whose body is multipart/form-data encoded body. */
+    void postMultipartForm(
+        Sirikata::Network::Address addr, const String& path,
+        const MultipartDataList& data,
         HttpCallback cb, const Headers& headers = Headers(), const QueryParameters& query_params = QueryParameters(),
         bool allow_redirects = true
     );
@@ -257,6 +309,10 @@ protected:
     friend std::auto_ptr<HttpManager>::~auto_ptr();
     friend void std::auto_ptr<HttpManager>::reset(HttpManager*);
 
+    // Formats a URL encoded dictionary -- for form-urlencoded data or query
+    // strings. NOTE: There is no ? prefixed to this.
+    static void formatURLEncodedDictionary(std::ostream& os, const StringDictionary& query_params);
+    // Formats the entire path portion of a URL -- path + query args
     static void formatPath(std::ostream& os, const String& path, const QueryParameters& query_params);
 private:
     //For convenience
