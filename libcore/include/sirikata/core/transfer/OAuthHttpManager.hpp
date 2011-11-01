@@ -34,6 +34,27 @@ public:
         bool allow_redirects = true
     );
 
+    void post(
+        Sirikata::Network::Address addr, const String& path,
+        const String& content_type, const String& body,
+        HttpManager::HttpCallback cb, const HttpManager::Headers& headers = HttpManager::Headers(), const HttpManager::QueryParameters& query_params = HttpManager::QueryParameters(),
+        bool allow_redirects = true
+    );
+
+    void postURLEncoded(
+        Sirikata::Network::Address addr, const String& path,
+        const HttpManager::StringDictionary& body,
+        HttpManager::HttpCallback cb, const HttpManager::Headers& headers = HttpManager::Headers(), const HttpManager::QueryParameters& query_params = HttpManager::QueryParameters(),
+        bool allow_redirects = true
+    );
+
+    void postMultipartForm(
+        Sirikata::Network::Address addr, const String& path,
+        const HttpManager::MultipartDataList& data,
+        HttpManager::HttpCallback cb, const HttpManager::Headers& headers = HttpManager::Headers(), const HttpManager::QueryParameters& query_params = HttpManager::QueryParameters(),
+        bool allow_redirects = true
+    );
+
 private:
     const String mHostname;
     OAuth::Consumer mConsumer;
