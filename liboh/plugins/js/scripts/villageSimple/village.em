@@ -52,8 +52,6 @@ function createBuildings(x,z,ini_x,ini_z)
 {
     d = 50;
     N = meshes.length;
-//    ini_x = 0.5;
-//    ini_z = -(z-1)/2;
     for(var i=0; i<z; i++) {
         for(var j=0; j<x; j++) {
             n = i*z+j
@@ -67,8 +65,6 @@ function createBuildings(x,z,ini_x,ini_z)
 function createStreets(x,z,ini_x,ini_z)
 {
     d = 50;
-//    ini_x = 0;
-//    ini_z = -(z-1)/2;
     for(var i=0; i<z; i++) {
         for(var j=0; j<x; j++) {
             xx = -(ini_x+j)*d;
@@ -90,7 +86,7 @@ function CreatePresCB()
     }
 }
 
-//create x by z blocks, with street corner initial position <ini_x,-20,ini_z>
+//create x by z blocks, with street corner initial position <ini_x*d,-20,ini_z*d>, d is the block size
 function createVillage(x,z,ini_x,ini_z)
 {
     createBuildings(x,z,ini_x+0.5,ini_z+0.5);
