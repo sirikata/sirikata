@@ -66,6 +66,10 @@ void execCommand(const char* file, const char* const argv[]) {
     pid_t pID = fork();
 
     if (pID == 0) {
+        // setsid() decouples this process from the parent, ensuring that the
+        // exit of the parent doesn't kill the child process by accident
+        // (e.g. by causing the parent terminal to exit).
+        setsid();
         execvp(file, (char* const*)argv);
     }
     else if (pID < 0) {
