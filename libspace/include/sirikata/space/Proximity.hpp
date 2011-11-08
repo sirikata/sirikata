@@ -67,6 +67,8 @@ class SIRIKATA_SPACE_EXPORT Proximity :
     Proximity(SpaceContext* ctx, LocationService* locservice, CoordinateSegmentation* cseg, SpaceNetwork* net, AggregateManager* aggmgr, const Duration& poll_freq);
     virtual ~Proximity();
 
+    // ** These interfaces are required
+
     // Service Interface overrides
     virtual void start();
     virtual void stop();
@@ -84,16 +86,20 @@ class SIRIKATA_SPACE_EXPORT Proximity :
     virtual std::string generateMigrationData(const UUID& obj, ServerID source_server, ServerID dest_server) = 0;
     virtual void receiveMigrationData(const UUID& obj, ServerID source_server, ServerID dest_server, const std::string& data) = 0;
 
+    // ** These interfaces are stubbed out because you don't necessarily need to
+    // ** override them. Some subsets, however, are required, i.e. at least
+    // ** either ObjectSessionListener or ObjectHostSessionListener
+
     // CoordinateSegmentation::Listener Interface
-    virtual void updatedSegmentation(CoordinateSegmentation* cseg, const std::vector<SegmentationInfo>& new_seg) = 0;
+    virtual void updatedSegmentation(CoordinateSegmentation* cseg, const std::vector<SegmentationInfo>& new_seg) { }
 
     // SpaceNetworkConnectionListener Interface
-    virtual void onSpaceNetworkConnected(ServerID sid) = 0;
-    virtual void onSpaceNetworkDisconnected(ServerID sid) = 0;
+    virtual void onSpaceNetworkConnected(ServerID sid) { }
+    virtual void onSpaceNetworkDisconnected(ServerID sid) { }
 
     // ObjectSessionListener Interface
-    virtual void newSession(ObjectSession* session) = 0;
-    virtual void sessionClosed(ObjectSession* session) = 0;
+    virtual void newSession(ObjectSession* session) { }
+    virtual void sessionClosed(ObjectSession* session) { }
 
     // ObjectHostSessionListener Interface
     virtual void onObjectHostSession(const OHDP::NodeID& id, OHDPSST::Stream::Ptr oh_stream) { }
@@ -103,7 +109,7 @@ class SIRIKATA_SPACE_EXPORT Proximity :
     // Implement as necessary, some updates may be ignored
 
     // MessageRecipient Interface
-    virtual void receiveMessage(Message* msg) = 0;
+    virtual void receiveMessage(Message* msg) { }
 
   protected:
 
@@ -112,8 +118,8 @@ class SIRIKATA_SPACE_EXPORT Proximity :
     // Update stats server
     void reportStats();
 
-    virtual int32 objectQueries() const = 0;
-    virtual int32 serverQueries() const = 0;
+    virtual int32 objectQueries() const { return 0; }
+    virtual int32 serverQueries() const { return 0; }
 
     // Fields
     // Thread safe:
