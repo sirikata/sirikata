@@ -1,5 +1,6 @@
 system.require("villageSimple/meshes.em");
 system.require("std/core/repeatingTimer.em");
+system.require("villageSimple/map.em");
 
 meshes = housemeshes.concat(apartmentmeshes).concat(buildingmeshes);
 
@@ -96,8 +97,9 @@ function createVillage(x,z,ini_x,ini_z)
 
 function init()
 {
-    createPres(terrainmesh,0,0,1000)
+    //createPres(terrainmesh,0,0,1000)
     createVillage(3,3,0,-1);
-    repTimer = std.core.RepeatingTimer(0.5,CreatePresCB);
+    system.onPresenceConnected(CreatePresCB);
+    CreatePresCB();
 }
 
