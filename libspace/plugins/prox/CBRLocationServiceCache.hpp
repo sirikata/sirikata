@@ -35,7 +35,7 @@
 
 #include <sirikata/space/ProxSimulationTraits.hpp>
 #include <sirikata/space/LocationService.hpp>
-#include <prox/LocationServiceCache.hpp>
+#include <prox/base/LocationServiceCache.hpp>
 
 namespace Sirikata {
 

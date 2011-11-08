@@ -40,9 +40,9 @@
 
 #include <sirikata/space/ProxSimulationTraits.hpp>
 
-#include <prox/QueryHandler.hpp>
-#include <prox/QueryEventListener.hpp>
-#include <prox/LocationUpdateListener.hpp>
+#include <prox/geom/QueryHandler.hpp>
+#include <prox/base/QueryEventListener.hpp>
+#include <prox/base/LocationUpdateListener.hpp>
 
 #include "PintoManagerLocationServiceCache.hpp"
 
@@ -54,7 +54,10 @@ namespace Sirikata {
  *  services on each space server use it to determine which other servers they
  *  may need to query.
  */
-class PintoManager : public Service, public Prox::QueryEventListener<ServerProxSimulationTraits> {
+class PintoManager
+    : public Service,
+      public Prox::QueryEventListener<ServerProxSimulationTraits, Prox::Query<ServerProxSimulationTraits> >
+{
 public:
     PintoManager(PintoContext* ctx);
     ~PintoManager();

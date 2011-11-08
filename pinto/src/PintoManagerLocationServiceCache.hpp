@@ -33,7 +33,7 @@
 #ifndef _SIRIKATA_PINTO_PINTO_MANAGER_LOCATION_SERVICE_CACHE_HPP_
 #define _SIRIKATA_PINTO_PINTO_MANAGER_LOCATION_SERVICE_CACHE_HPP_
 
-#include <prox/LocationServiceCache.hpp>
+#include <prox/base/LocationServiceCache.hpp>
 #include <sirikata/space/ProxSimulationTraits.hpp>
 #include <boost/thread.hpp>
 

@@ -33,11 +33,11 @@
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/options/Options.hpp>
 
-#include <prox/BruteForceQueryHandler.hpp>
-#include <prox/RTreeAngleQueryHandler.hpp>
-#include <prox/RTreeDistanceQueryHandler.hpp>
-#include <prox/RTreeCutQueryHandler.hpp>
-#include <prox/RebuildingQueryHandler.hpp>
+#include <prox/geom/BruteForceQueryHandler.hpp>
+#include <prox/geom/RTreeAngleQueryHandler.hpp>
+#include <prox/geom/RTreeDistanceQueryHandler.hpp>
+#include <prox/geom/RTreeCutQueryHandler.hpp>
+#include <prox/geom/RebuildingQueryHandler.hpp>
 
 namespace Sirikata {
 

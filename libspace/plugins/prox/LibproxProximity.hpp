@@ -35,9 +35,9 @@
 
 #include "LibproxProximityBase.hpp"
 #include <sirikata/space/ProxSimulationTraits.hpp>
-#include <prox/QueryHandler.hpp>
-#include <prox/LocationUpdateListener.hpp>
-#include <prox/AggregateListener.hpp>
+#include <prox/geom/QueryHandler.hpp>
+#include <prox/base/LocationUpdateListener.hpp>
+#include <prox/base/AggregateListener.hpp>
 
 #include <sirikata/core/network/SSTImpl.hpp>
 #include <sirikata/core/queue/ThreadSafeQueue.hpp>
@@ -52,7 +52,7 @@ class ProximityOutputEvent;
 
 class LibproxProximity :
         public LibproxProximityBase,
-        Prox::QueryEventListener<ObjectProxSimulationTraits>,
+        Prox::QueryEventListener<ObjectProxSimulationTraits, Prox::Query<ObjectProxSimulationTraits> >,
         PintoServerQuerierListener,
         Prox::AggregateListener<ObjectProxSimulationTraits>
 {
