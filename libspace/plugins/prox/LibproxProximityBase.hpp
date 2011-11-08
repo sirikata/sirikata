@@ -19,6 +19,25 @@ public:
     ~LibproxProximityBase();
 
 protected:
+    // Helper types & methods
+    enum ObjectClass {
+        OBJECT_CLASS_STATIC = 0,
+        OBJECT_CLASS_DYNAMIC = 1,
+        NUM_OBJECT_CLASSES = 2
+    };
+    static const std::string& ObjectClassToString(ObjectClass c);
+    static BoundingBox3f aggregateBBoxes(const BoundingBoxList& bboxes);
+    static bool velocityIsStatic(const Vector3f& vel);
+
+
+    // BOTH Threads: These are read-only.
+
+    // To support a static/dynamic split but also support mixing them for
+    // comparison purposes track which we are doing and, for most places, use a
+    // simple index to control whether they point to different query handlers or
+    // the same one.
+    bool mSeparateDynamicObjects;
+    int mNumQueryHandlers;
 
 
     // MAIN Thread: Utility methods that should only be called from the main

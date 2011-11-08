@@ -7,6 +7,9 @@
 #include <sirikata/core/network/Frame.hpp>
 #include <sirikata/core/network/IOStrandImpl.hpp>
 
+#include "Options.hpp"
+#include <sirikata/core/options/CommonOptions.hpp>
+
 #define PROXLOG(level,msg) SILOG(prox,level,"[PROX] " << msg)
 
 namespace Sirikata {
@@ -114,6 +117,10 @@ LibproxProximityBase::LibproxProximityBase(SpaceContext* ctx, LocationService* l
 
     // Location cache, for both types of queries
     mLocCache = new CBRLocationServiceCache(mProxStrand, locservice, true);
+
+    // Deal with static/dynamic split
+    mSeparateDynamicObjects = GetOptionValue<bool>(OPT_PROX_SPLIT_DYNAMIC);
+    mNumQueryHandlers = (mSeparateDynamicObjects ? 2 : 1);
 }
 
 LibproxProximityBase::~LibproxProximityBase() {
@@ -121,6 +128,38 @@ LibproxProximityBase::~LibproxProximityBase() {
     delete mLocCache;
     delete mProxStrand;
 }
+
+
+const String& LibproxProximityBase::ObjectClassToString(ObjectClass c) {
+    static String static_ = "static";
+    static String dynamic_ = "dynamic";
+    static String unknown_ = "unknown";
+
+    switch(c) {
+      case OBJECT_CLASS_STATIC: return static_; break;
+      case OBJECT_CLASS_DYNAMIC: return dynamic_; break;
+      default: return unknown_; break;
+    }
+}
+
+BoundingBox3f LibproxProximityBase::aggregateBBoxes(const BoundingBoxList& bboxes) {
+    BoundingBox3f bbox = bboxes[0];
+    for(uint32 i = 1; i< bboxes.size(); i++)
+        bbox.mergeIn(bboxes[i]);
+    return bbox;
+}
+
+bool LibproxProximityBase::velocityIsStatic(const Vector3f& vel) {
+    // These values are arbitrary, just meant to indicate that the object is,
+    // for practical purposes, not moving.
+    return (
+        vel.x < .05f &&
+        vel.y < .05f &&
+        vel.z < .05f
+    );
+}
+
+
 
 void LibproxProximityBase::sendObjectResult(Sirikata::Protocol::Object::ObjectMessage* msg) {
     using std::tr1::placeholders::_1;

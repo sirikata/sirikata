@@ -118,17 +118,6 @@ public:
 
 
 private:
-    enum ObjectClass {
-        OBJECT_CLASS_STATIC = 0,
-        OBJECT_CLASS_DYNAMIC = 1,
-        NUM_OBJECT_CLASSES = 2
-    };
-    static const std::string& ObjectClassToString(ObjectClass c);
-
-
-
-
-
 
     void handleObjectProximityMessage(const UUID& objid, void* buffer, uint32 length);
 
@@ -215,13 +204,6 @@ private:
 
 
     PintoServerQuerier* mServerQuerier;
-
-    // To support a static/dynamic split but also support mixing them for
-    // comparison purposes track which we are doing and, for most places, use a
-    // simple index to control whether they point to different query handlers or
-    // the same one.
-    bool mSeparateDynamicObjects;
-    int mNumQueryHandlers;
 
     // MAIN Thread - Should only be accessed in methods used by the main thread
 

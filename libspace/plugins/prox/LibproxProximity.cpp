@@ -59,23 +59,6 @@ static SolidAngle NoUpdateSolidAngle = SolidAngle(0.f);
 // leaving it as is, because we don't actually have a new value.
 static uint32 NoUpdateMaxResults = ((uint32)INT_MAX)+1;
 
-static BoundingBox3f aggregateBBoxes(const BoundingBoxList& bboxes) {
-    BoundingBox3f bbox = bboxes[0];
-    for(uint32 i = 1; i< bboxes.size(); i++)
-        bbox.mergeIn(bboxes[i]);
-    return bbox;
-}
-
-static bool velocityIsStatic(const Vector3f& vel) {
-    // These values are arbitrary, just meant to indicate that the object is,
-    // for practical purposes, not moving.
-    return (
-        vel.x < .05f &&
-        vel.y < .05f &&
-        vel.z < .05f
-    );
-}
-
 namespace {
 
 bool parseQueryRequest(const String& query, SolidAngle* qangle_out, uint32* max_results_out) {
@@ -108,18 +91,6 @@ bool parseQueryRequest(const String& query, SolidAngle* qangle_out, uint32* max_
 
 }
 
-const String& LibproxProximity::ObjectClassToString(ObjectClass c) {
-    static String static_ = "static";
-    static String dynamic_ = "dynamic";
-    static String unknown_ = "unknown";
-
-    switch(c) {
-      case OBJECT_CLASS_STATIC: return static_; break;
-      case OBJECT_CLASS_DYNAMIC: return dynamic_; break;
-      default: return unknown_; break;
-    }
-}
-
 LibproxProximity::LibproxProximity(SpaceContext* ctx, LocationService* locservice, CoordinateSegmentation* cseg, SpaceNetwork* net, AggregateManager* aggmgr)
  : LibproxProximityBase(ctx, locservice, cseg, net, aggmgr),
    mServerQuerier(NULL),
@@ -147,10 +118,6 @@ LibproxProximity::LibproxProximity(SpaceContext* ctx, LocationService* locservic
     String pinto_options = GetOptionValue<String>(OPT_PINTO_OPTIONS);
     mServerQuerier = PintoServerQuerierFactory::getSingleton().getConstructor(pinto_type)(mContext, pinto_options);
     mServerQuerier->addListener(this);
-
-    // Deal with static/dynamic split
-    mSeparateDynamicObjects = GetOptionValue<bool>(OPT_PROX_SPLIT_DYNAMIC);
-    mNumQueryHandlers = (mSeparateDynamicObjects ? 2 : 1);
 
     // Generic query parameters
     mDistanceQueryDistance = GetOptionValue<float32>(OPT_PROX_QUERY_RANGE);
