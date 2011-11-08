@@ -119,6 +119,7 @@ class SIRIKATA_SPACE_EXPORT Proximity :
     void reportStats();
 
     virtual int32 objectQueries() const { return 0; }
+    virtual int32 objectHostQueries() const { return 0; }
     virtual int32 serverQueries() const { return 0; }
 
     // Fields
@@ -137,6 +138,7 @@ class SIRIKATA_SPACE_EXPORT Proximity :
     // Stats
     Poller mStatsPoller;
     const String mTimeSeriesObjectQueryCountName;
+    const String mTimeSeriesObjectHostQueryCountName;
     const String mTimeSeriesServerQueryCountName;
 
 }; //class Proximity

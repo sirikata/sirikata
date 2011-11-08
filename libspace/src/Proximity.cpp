@@ -31,6 +31,7 @@ Proximity::Proximity(SpaceContext* ctx, LocationService* locservice, CoordinateS
        std::tr1::bind(&Proximity::reportStats, this),
        Duration::seconds((int64)1)),
    mTimeSeriesObjectQueryCountName(String("space.server") + boost::lexical_cast<String>(ctx->id()) + ".prox.object_queries"),
+   mTimeSeriesObjectHostQueryCountName(String("space.server") + boost::lexical_cast<String>(ctx->id()) + ".prox.object_host_queries"),
    mTimeSeriesServerQueryCountName(String("space.server") + boost::lexical_cast<String>(ctx->id()) + ".prox.server_queries")
 {
     net->addListener(this);
@@ -64,6 +65,10 @@ void Proximity::reportStats() {
     mContext->timeSeries->report(
         mTimeSeriesServerQueryCountName,
         serverQueries()
+    );
+    mContext->timeSeries->report(
+        mTimeSeriesObjectHostQueryCountName,
+        objectHostQueries()
     );
     mContext->timeSeries->report(
         mTimeSeriesObjectQueryCountName,
