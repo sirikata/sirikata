@@ -6,6 +6,8 @@
 #include <sirikata/core/network/Frame.hpp>
 #include "Protocol_Prox.pbj.hpp"
 
+#define QPLOG(lvl, msg) SILOG(manual-query-processor, lvl, msg)
+
 namespace Sirikata {
 namespace OH {
 namespace Manual {
@@ -24,9 +26,18 @@ ManualObjectQueryProcessor::~ManualObjectQueryProcessor() {
 }
 
 void ManualObjectQueryProcessor::start() {
+    mContext->objectHost->SpaceNodeSessionManager::addListener(static_cast<SpaceNodeSessionListener*>(this));
 }
 
 void ManualObjectQueryProcessor::stop() {
+    mContext->objectHost->SpaceNodeSessionManager::removeListener(static_cast<SpaceNodeSessionListener*>(this));
+}
+
+void ManualObjectQueryProcessor::onSpaceNodeSession(const OHDP::SpaceNodeID& id, OHDPSST::Stream::Ptr sn_stream) {
+    QPLOG(detailed, "New space node session " << id);
+}
+
+void ManualObjectQueryProcessor::onSpaceNodeSessionEnded(const OHDP::SpaceNodeID& id) {
 }
 
 void ManualObjectQueryProcessor::updateQuery(HostedObjectPtr ho, const SpaceObjectReference& sporef, const String& new_query) {

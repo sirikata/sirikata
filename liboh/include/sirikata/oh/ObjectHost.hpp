@@ -42,6 +42,7 @@
 #include <sirikata/core/service/Service.hpp>
 #include <sirikata/oh/SessionManager.hpp>
 #include <sirikata/core/ohdp/Service.hpp>
+#include <sirikata/oh/SpaceNodeSession.hpp>
 
 namespace Sirikata {
 class ProxyManager;
@@ -67,7 +68,12 @@ class PersistedObjectSet;
 class ObjectQueryProcessor;
 }
 
-class SIRIKATA_OH_EXPORT ObjectHost : public ConnectionEventProvider, public Service, public OHDP::Service {
+class SIRIKATA_OH_EXPORT ObjectHost
+    : public ConnectionEventProvider,
+      public Service,
+      public OHDP::Service,
+      public SpaceNodeSessionManager, private SpaceNodeSessionListener
+{
 
     ObjectHostContext* mContext;
 
@@ -249,6 +255,10 @@ public:
     ProxyManager *getProxyManager(const SpaceID&space) const;
 
   private:
+    // SpaceNodeSessionListener Interface -- forwards on to real listeners
+    virtual void onSpaceNodeSession(const OHDP::SpaceNodeID& id, OHDPSST::Stream::Ptr sn_stream) { fireSpaceNodeSession(id, sn_stream); }
+    virtual void onSpaceNodeSessionEnded(const OHDP::SpaceNodeID& id) { fireSpaceNodeSessionEnded(id); }
+
     // Session Management Implementation
     void handleObjectConnected(const SpaceObjectReference& sporef_internalID, ServerID server);
     void handleObjectMigrated(const SpaceObjectReference& sporef_internalID, ServerID from, ServerID to);

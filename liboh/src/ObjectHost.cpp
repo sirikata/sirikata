@@ -147,6 +147,7 @@ void ObjectHost::addServerIDMap(const SpaceID& space_id, ServerIDMap* sidmap) {
     smgr->registerDefaultOHDPHandler(
         std::tr1::bind(&ObjectHost::handleDefaultOHDPMessageHandler, this, _1, _2, _3)
     );
+    smgr->addListener(static_cast<SpaceNodeSessionListener*>(this));
     mSessionManagers[space_id] = smgr;
     smgr->start();
 }

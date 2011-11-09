@@ -46,6 +46,7 @@
 #include <sirikata/core/network/Address4.hpp>
 
 #include <sirikata/oh/DisconnectCodes.hpp>
+#include <sirikata/oh/SpaceNodeSession.hpp>
 
 namespace Sirikata {
 
@@ -60,7 +61,11 @@ class ServerIDMap;
  *  individual space servers (e.g. used internally for time sync). It is also
  *  exposed so other services can communicate directly with space servers.
  */
-class SIRIKATA_OH_EXPORT SessionManager : public PollingService, public OHDP::DelegateService {
+class SIRIKATA_OH_EXPORT SessionManager
+    : public PollingService,
+      public OHDP::DelegateService,
+      public SpaceNodeSessionManager
+{
   public:
 
     struct ConnectionInfo {
@@ -222,6 +227,8 @@ private:
     void handleSpaceConnection(const Sirikata::Network::Stream::ConnectionStatus status,
                                const std::string&reason,
                                ServerID sid);
+    // Handle a session event, i.e. the SST stream conected.
+    void handleSpaceSession(ServerID sid, SpaceNodeConnection* conn);
 
 
     /** Object session initiation. */

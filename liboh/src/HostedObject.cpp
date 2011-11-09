@@ -501,7 +501,7 @@ bool HostedObject::addSimListeners(PerPresenceData& pd, const String& simName,Ti
     else
     {
         pd.sims[simName] = sim;
-        mObjectHost->addListener(sim);
+        mObjectHost->ConnectionEventProvider::addListener(static_cast<ConnectionEventListener*>(sim));
         HO_LOG(info,String("Successfully initialized ") + simName);
     }
     return true;

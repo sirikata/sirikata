@@ -6,6 +6,7 @@
 #define _SIRIKATA_OH_MANUAL_OBJECT_QUERY_PROCESSOR_HPP_
 
 #include <sirikata/oh/ObjectQueryProcessor.hpp>
+#include <sirikata/oh/SpaceNodeSession.hpp>
 
 namespace Sirikata {
 namespace OH {
@@ -16,7 +17,10 @@ namespace Manual {
  *  servers' data structure, and locally executes queries over that data
  *  structure.
  */
-class ManualObjectQueryProcessor : public ObjectQueryProcessor {
+class ManualObjectQueryProcessor :
+        public ObjectQueryProcessor,
+        public SpaceNodeSessionListener
+{
 public:
     static ManualObjectQueryProcessor* create(ObjectHostContext* ctx, const String& args);
 
@@ -25,6 +29,9 @@ public:
 
     virtual void start();
     virtual void stop();
+
+    virtual void onSpaceNodeSession(const OHDP::SpaceNodeID& id, OHDPSST::Stream::Ptr sn_stream);
+    virtual void onSpaceNodeSessionEnded(const OHDP::SpaceNodeID& id);
 
     virtual void updateQuery(HostedObjectPtr ho, const SpaceObjectReference& sporef, const String& new_query);
 
