@@ -60,16 +60,30 @@ protected:
         typedef std::tr1::shared_ptr<ProxStreamInfo> Ptr;
         typedef std::tr1::weak_ptr<ProxStreamInfo> WPtr;
 
+        // Start a fresh ProxStreamInfo, which will require requesting
+        // a new substream
         ProxStreamInfo()
          : iostream_requested(false), writing(false) {}
+        // Start a ProxStreamInfo on an existing stream.
+        ProxStreamInfo(StreamTypePtr strm)
+         : iostream(strm), iostream_requested(true), writing(false) {}
+
         void disable() {
             if (iostream)
                 iostream->close(false);
         }
+
+        // Setup reading of frames from the stream. ProxStreamInfo
+        // takes care of queueing up messages until complete frames
+        // are available, giving just a callback per message.
+        typedef std::tr1::function<void(String&)> FrameReceivedCallback;
+        void readFramesFromStream(Ptr prox_stream, FrameReceivedCallback cb);
+
         // The actual stream we send on
         StreamTypePtr iostream;
         // Whether we've requested the iostream
         bool iostream_requested;
+
         // Outstanding data to be sent. FIXME efficiency
         std::queue<std::string> outstanding;
         // If writing is currently in progress
@@ -77,7 +91,18 @@ protected:
         // Stored callback for writing
         std::tr1::function<void()> writecb;
 
-        // Defined safely in cpp since these are only used from LibproxProximityBase
+        // Stored callback for reading frames
+        FrameReceivedCallback read_frame_cb;
+        // Backlog of data, i.e. incomplete frame
+        String partial_frame;
+
+        // Defined safely in cpp since these are only used from
+        // LibproxProximityBase
+
+        // Handle reads from the underlying stream, decoding frames
+        // and invoking the read callback
+        static void handleRead(WPtr w_prox_stream, uint8* data, int size);
+
         // The driver for getting data to the OH, initially triggered by sendObjectResults
         static void writeSomeObjectResults(Context* ctx, WPtr prox_stream);
         // Helper for setting up the initial proximity stream. Retries automatically
@@ -94,6 +119,11 @@ protected:
     typedef ProxStreamInfo<OHDP::NodeID, OHDPSST::Stream> ProxObjectHostStreamInfo;
     typedef std::tr1::shared_ptr<ProxObjectHostStreamInfo> ProxObjectHostStreamInfoPtr;
 
+    // Utility for implementations. Start listening on the stream and
+    // read each Network::Frame, emitting a callback for each.
+    void readFramesFromObjectStream(const ObjectReference& oref, ProxObjectStreamInfo::FrameReceivedCallback cb);
+    void readFramesFromObjectHostStream(const OHDP::NodeID& node, ProxObjectHostStreamInfo::FrameReceivedCallback cb);
+
     // Utility for poll.  Queues a message for delivery, encoding it and putting
     // it on the send stream.  If necessary, starts send processing on the stream.
     void sendObjectResult(Sirikata::Protocol::Object::ObjectMessage*);
@@ -104,6 +134,10 @@ protected:
     bool validSession(const OHDP::NodeID& node) const;
     ProxObjectStreamPtr getBaseStream(const ObjectReference& oref) const;
     ProxObjectHostStreamPtr getBaseStream(const OHDP::NodeID& node) const;
+    // Use these to setup ProxStreamInfo's when the client initiates
+    // the stream that will be used to communicate with it.
+    void addObjectProxStreamInfo(ODPSST::Stream::Ptr);
+    void addObjectHostProxStreamInfo(OHDPSST::Stream::Ptr);
 
     typedef std::tr1::unordered_map<UUID, ProxObjectStreamInfoPtr, UUID::Hasher> ObjectProxStreamMap;
     ObjectProxStreamMap mObjectProxStreams;

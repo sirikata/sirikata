@@ -34,7 +34,19 @@ public:
     virtual std::string generateMigrationData(const UUID& obj, ServerID source_server, ServerID dest_server);
     virtual void receiveMigrationData(const UUID& obj, ServerID source_server, ServerID dest_server, const std::string& data);
 
+    virtual void onObjectHostSession(const OHDP::NodeID& id, OHDPSST::Stream::Ptr oh_stream);
+    virtual void onObjectHostSessionEnded(const OHDP::NodeID& id);
+
 private:
+
+    // MAIN Thread:
+
+    // ObjectHost message management
+    void handleObjectHostSubstream(int success, OHDPSST::Stream::Ptr substream);
+    void handleObjectHostProxMessage(const OHDP::NodeID& id, String& data);
+
+
+    // PROX Thread:
 
 }; // class LibproxManualProximity
 

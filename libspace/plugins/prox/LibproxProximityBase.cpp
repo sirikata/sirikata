@@ -15,6 +15,34 @@
 namespace Sirikata {
 
 template<typename EndpointType, typename StreamType>
+void LibproxProximityBase::ProxStreamInfo<EndpointType, StreamType>::readFramesFromStream(Ptr prox_stream, FrameReceivedCallback cb) {
+    using std::tr1::placeholders::_1;
+    using std::tr1::placeholders::_2;
+
+    assert(iostream);
+    read_frame_cb = cb;
+    iostream->registerReadCallback(
+        std::tr1::bind(
+            &LibproxProximityBase::ProxStreamInfo<EndpointType,StreamType>::handleRead,
+            WPtr(prox_stream), _1, _2
+        )
+    );
+}
+
+template<typename EndpointType, typename StreamType>
+void LibproxProximityBase::ProxStreamInfo<EndpointType, StreamType>::handleRead(WPtr w_prox_stream, uint8* data, int size) {
+    Ptr prox_stream = w_prox_stream.lock();
+    if (!prox_stream) return;
+
+    prox_stream->partial_frame.append((const char*)data, size);
+    while(true) {
+        String parsed = Network::Frame::parse(prox_stream->partial_frame);
+        if (parsed.empty()) return;
+        prox_stream->read_frame_cb(parsed);
+    }
+}
+
+template<typename EndpointType, typename StreamType>
 void LibproxProximityBase::ProxStreamInfo<EndpointType, StreamType>::writeSomeObjectResults(Context* ctx, WPtr w_prox_stream) {
     static Duration retry_rate = Duration::milliseconds((int64)1);
 
@@ -160,6 +188,17 @@ bool LibproxProximityBase::velocityIsStatic(const Vector3f& vel) {
 }
 
 
+void LibproxProximityBase::readFramesFromObjectStream(const ObjectReference& oref, ProxObjectStreamInfo::FrameReceivedCallback cb) {
+    ObjectProxStreamMap::iterator prox_stream_it = mObjectProxStreams.find(oref.getAsUUID());
+    assert(prox_stream_it != mObjectProxStreams.end());
+    prox_stream_it->second->readFramesFromStream(prox_stream_it->second, cb);
+}
+
+void LibproxProximityBase::readFramesFromObjectHostStream(const OHDP::NodeID& node, ProxObjectHostStreamInfo::FrameReceivedCallback cb) {
+    ObjectHostProxStreamMap::iterator prox_stream_it = mObjectHostProxStreams.find(node);
+    assert(prox_stream_it != mObjectHostProxStreams.end());
+    prox_stream_it->second->readFramesFromStream(prox_stream_it->second, cb);
+}
 
 void LibproxProximityBase::sendObjectResult(Sirikata::Protocol::Object::ObjectMessage* msg) {
     using std::tr1::placeholders::_1;
@@ -233,6 +272,30 @@ LibproxProximityBase::ProxObjectStreamPtr LibproxProximityBase::getBaseStream(co
 
 LibproxProximityBase::ProxObjectHostStreamPtr LibproxProximityBase::getBaseStream(const OHDP::NodeID& node) const {
     return mContext->ohSessionManager()->getSession(node);
+}
+
+void LibproxProximityBase::addObjectProxStreamInfo(ODPSST::Stream::Ptr strm) {
+    UUID objid = strm->remoteEndPoint().endPoint.object().getAsUUID();
+    assert(mObjectProxStreams.find(objid) == mObjectProxStreams.end());
+
+    mObjectProxStreams.insert(
+        ObjectProxStreamMap::value_type(
+            objid,
+            ProxObjectStreamInfoPtr(new ProxObjectStreamInfo(strm))
+        )
+    );
+}
+
+void LibproxProximityBase::addObjectHostProxStreamInfo(OHDPSST::Stream::Ptr strm) {
+    OHDP::NodeID nodeid = strm->remoteEndPoint().endPoint.node();
+    assert(mObjectHostProxStreams.find(nodeid) == mObjectHostProxStreams.end());
+
+    mObjectHostProxStreams.insert(
+        ObjectHostProxStreamMap::value_type(
+            nodeid,
+            ProxObjectHostStreamInfoPtr(new ProxObjectHostStreamInfo(strm))
+        )
+    );
 }
 
 } // namespace Sirikata
