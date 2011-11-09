@@ -153,11 +153,15 @@ void ObjectHost::addServerIDMap(const SpaceID& space_id, ServerIDMap* sidmap) {
 }
 
 void ObjectHost::handleObjectConnected(const SpaceObjectReference& sporef_objid, ServerID server) {
-    // ignored
+    ObjectNodeSessionProvider::notify(&ObjectNodeSessionListener::onObjectNodeSession, sporef_objid.space(), sporef_objid.object(), OHDP::NodeID(server));
 }
 
 void ObjectHost::handleObjectMigrated(const SpaceObjectReference& sporef_objid, ServerID from, ServerID to) {
-    // ignored
+    ObjectNodeSessionProvider::notify(&ObjectNodeSessionListener::onObjectNodeSession, sporef_objid.space(), sporef_objid.object(), OHDP::NodeID(to));
+}
+
+void ObjectHost::handleObjectDisconnected(const SpaceObjectReference& sporef_objid, Disconnect::Code) {
+    ObjectNodeSessionProvider::notify(&ObjectNodeSessionListener::onObjectNodeSession, sporef_objid.space(), sporef_objid.object(), OHDP::NodeID::null());
 }
 
 //use this function to request the object host to send a disconnect message
@@ -182,10 +186,6 @@ void ObjectHost::handleObjectMessage(const SpaceObjectReference& sporef_internal
         OH_LOG(warn, "Got message for " << sporef_internalID << " but no such object exists.");
         delete msg;
     }
-}
-
-void ObjectHost::handleObjectDisconnected(const SpaceObjectReference& sporef_internalID, Disconnect::Code) {
-    // ignored
 }
 
 //This function just returns the first space id in the unordered map

@@ -7,6 +7,7 @@
 
 #include <sirikata/oh/ObjectQueryProcessor.hpp>
 #include <sirikata/oh/SpaceNodeSession.hpp>
+#include <sirikata/oh/ObjectNodeSession.hpp>
 
 namespace Sirikata {
 namespace OH {
@@ -19,7 +20,8 @@ namespace Manual {
  */
 class ManualObjectQueryProcessor :
         public ObjectQueryProcessor,
-        public SpaceNodeSessionListener
+        public SpaceNodeSessionListener,
+        public ObjectNodeSessionListener
 {
 public:
     static ManualObjectQueryProcessor* create(ObjectHostContext* ctx, const String& args);
@@ -30,8 +32,12 @@ public:
     virtual void start();
     virtual void stop();
 
+    // SpaceNodeSessionListener Interface
     virtual void onSpaceNodeSession(const OHDP::SpaceNodeID& id, OHDPSST::Stream::Ptr sn_stream);
     virtual void onSpaceNodeSessionEnded(const OHDP::SpaceNodeID& id);
+
+    // ObjectNodeSessionListener Interface
+    virtual void onObjectNodeSession(const SpaceID& space, const ObjectReference& sporef, const OHDP::NodeID& id);
 
     virtual void updateQuery(HostedObjectPtr ho, const SpaceObjectReference& sporef, const String& new_query);
 

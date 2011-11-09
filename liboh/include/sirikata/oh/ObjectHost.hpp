@@ -43,6 +43,7 @@
 #include <sirikata/oh/SessionManager.hpp>
 #include <sirikata/core/ohdp/Service.hpp>
 #include <sirikata/oh/SpaceNodeSession.hpp>
+#include <sirikata/oh/ObjectNodeSession.hpp>
 
 namespace Sirikata {
 class ProxyManager;
@@ -72,7 +73,8 @@ class SIRIKATA_OH_EXPORT ObjectHost
     : public ConnectionEventProvider,
       public Service,
       public OHDP::Service,
-      public SpaceNodeSessionManager, private SpaceNodeSessionListener
+      public SpaceNodeSessionManager, private SpaceNodeSessionListener,
+      public ObjectNodeSessionProvider
 {
 
     ObjectHostContext* mContext;
