@@ -85,7 +85,7 @@ private:
     void tickQueryHandler(ProxQueryHandler* qh[NUM_OBJECT_CLASSES]);
 
     // Real handler for OH requests, in the prox thread
-    void handleObjectHostProxMessage(const OHDP::NodeID& id, String& data);
+    void handleObjectHostProxMessage(const OHDP::NodeID& id, const String& data);
     // Real handler for OH disconnects
     void handleObjectHostSessionEnded(const OHDP::NodeID& id);
     void destroyQuery(const OHDP::NodeID& id);

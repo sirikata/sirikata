@@ -183,7 +183,7 @@ void LibproxManualProximity::tickQueryHandler(ProxQueryHandler* qh[NUM_OBJECT_CL
     }
 }
 
-void LibproxManualProximity::handleObjectHostProxMessage(const OHDP::NodeID& id, String& data) {
+void LibproxManualProximity::handleObjectHostProxMessage(const OHDP::NodeID& id, const String& data) {
     Protocol::Prox::QueryRequest request;
     bool parse_success = request.ParseFromString(data);
 
