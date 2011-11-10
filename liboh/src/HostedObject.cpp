@@ -54,7 +54,6 @@
 #include <vector>
 #include <sirikata/proxyobject/SimulationFactory.hpp>
 #include "PerPresenceData.hpp"
-#include "Protocol_Frame.pbj.hpp"
 
 #include "Protocol_Loc.pbj.hpp"
 #include "Protocol_Prox.pbj.hpp"
@@ -600,13 +599,7 @@ void HostedObject::handleStreamCreated(const HostedObjectWPtr& weakSelf, const S
     HostedObjectPtr self(weakSelf.lock());
     if (!self)
         return;
-    SSTStreamPtr sstStream = self->mObjectHost->getSpaceStream(spaceobj.space(), spaceobj.object());
 
-    if (sstStream != SSTStreamPtr() ) {
-        sstStream->listenSubstream(OBJECT_PORT_LOCATION,
-            std::tr1::bind(&HostedObject::handleLocationSubstream, weakSelf, spaceobj, _1, _2)
-        );
-    }
     HO_LOG(detailed,"Notifying of connected object " << spaceobj.object() << " to space " << spaceobj.space());
     if (after == SessionManager::Connected)
         self->notify(&SessionEventListener::onConnected, self, spaceobj, token);
@@ -689,30 +682,6 @@ void HostedObject::receiveMessage(const SpaceID& space, const Protocol::Object::
 
 
 
-void HostedObject::handleLocationSubstream(const HostedObjectWPtr& weakSelf, const SpaceObjectReference& spaceobj, int err, SSTStreamPtr s) {
-    s->registerReadCallback( std::tr1::bind(&HostedObject::handleLocationSubstreamRead, weakSelf, spaceobj, s, new std::stringstream(), _1, _2) );
-}
-
-void HostedObject::handleLocationSubstreamRead(const HostedObjectWPtr& weakSelf, const SpaceObjectReference& spaceobj, SSTStreamPtr s, std::stringstream* prevdata, uint8* buffer, int length) {
-    HostedObjectPtr self(weakSelf.lock());
-    if (!self)
-        return;
-    if (self->stopped()) {
-        HO_LOG(detailed,"Ignoring location update after system stop requested.");
-        return;
-    }
-
-    prevdata->write((const char*)buffer, length);
-    if (self->handleLocationMessage(spaceobj, prevdata->str())) {
-        // FIXME we should be getting a callback on stream close instead of
-        // relying on this parsing as an indicator
-        delete prevdata;
-        // Clear out callback so we aren't responsible for any remaining
-        // references to s, and close the stream
-        s->registerReadCallback(0);
-        s->close(false);
-    }
-}
 
 //not responsible for deleting opd.  gets deleted elsewhere.
 void HostedObject::processOrphanedProxyData(const SpaceObjectReference& sporef, ProxyObjectPtr proxy_obj,OrphanLocUpdateManager::OrphanedProxData* opd)
@@ -799,23 +768,15 @@ void HostedObject::processLocationUpdate(const SpaceID& space, ProxyObjectPtr pr
         proxy_obj->setPhysics(*phy, seqno);
 }
 
-bool HostedObject::handleLocationMessage(const SpaceObjectReference& spaceobj, const std::string& payload) {
+void HostedObject::handleLocationMessage(const SpaceObjectReference& spaceobj, const Sirikata::Protocol::Loc::BulkLocationUpdate& contents) {
     HostedObject* self=this;
-
-    Sirikata::Protocol::Frame frame;
-    bool parse_success = frame.ParseFromString(payload);
-    if (!parse_success) return false;
-    Sirikata::Protocol::Loc::BulkLocationUpdate contents;
-    contents.ParseFromString(frame.payload());
 
     SpaceID space = spaceobj.space();
     ObjectReference oref = spaceobj.object();
     ProxyManagerPtr proxy_manager = self->getProxyManager(space, oref);
 
     if (!proxy_manager)
-    {
-        return true;
-    }
+        return;
 
     for(int32 idx = 0; idx < contents.update_size(); idx++) {
         Sirikata::Protocol::Loc::LocationUpdate update = contents.update(idx);
@@ -834,8 +795,6 @@ bool HostedObject::handleLocationMessage(const SpaceObjectReference& spaceobj, c
 
         self->processLocationUpdate(spaceobj, proxy_obj, update);
     }
-
-    return true;
 }
 
 void HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, const Sirikata::Protocol::Prox::ProximityResults& contents) {
