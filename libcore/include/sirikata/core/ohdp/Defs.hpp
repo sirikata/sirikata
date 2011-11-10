@@ -78,7 +78,7 @@ public:
 
     String toString() const;
 
-    class Hasher {
+    class SIRIKATA_EXPORT Hasher {
     public:
         size_t operator()(const SpaceNodeID& p) const;
     };
