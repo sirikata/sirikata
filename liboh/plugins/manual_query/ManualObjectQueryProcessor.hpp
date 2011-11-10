@@ -67,21 +67,29 @@ private:
     // Queries we've registered with servers so that we can resolve
     // object queries
     struct ServerQueryState {
-        ServerQueryState()
-         : nconnected(0)
+        ServerQueryState(OHDPSST::Stream::Ptr base)
+         : nconnected(0),
+           base_stream(base),
+           prox_stream()
         {}
 
+        // Returns true if the *query* can be removed (not if this
+        // object can be removed, that is tracked by the lifetime of
+        // the session)
         bool canRemove() const {
             return nconnected == 0;
         }
 
         // # of connected objects
         int32 nconnected;
+        OHDPSST::Stream::Ptr base_stream;
+        OHDPSST::Stream::Ptr prox_stream;
     };
     typedef std::tr1::unordered_map<OHDP::SpaceNodeID, ServerQueryState, OHDP::SpaceNodeID::Hasher> ServerQueryMap;
     ServerQueryMap mServerQueries;
 
-    // Helper that marks a
+    // Helper that marks a server with another connected object and may register
+    // a query
     void incrementServerQuery(ServerQueryMap::iterator serv_it);
     // Helper that updates a server query, possibly sending an
     // initialization message to the server to setup the query
@@ -90,6 +98,11 @@ private:
     // iterator, checking if it is referenced at all yet and sending a
     // message to kill the query
     void decrementServerQuery(ServerQueryMap::iterator serv_it);
+
+    // Callback from creating proximity substream
+    void handleCreatedProxSubstream(const OHDP::SpaceNodeID& snid, int success, OHDPSST::Stream::Ptr prox_stream);
+    // Data read callback for prox substreams -- translate to proximity events
+    void handleProximitySubstreamRead(const OHDP::SpaceNodeID& spaceobj, OHDPSST::Stream::Ptr prox_stream, String* prevdata, uint8* buffer, int length);
 };
 
 } // namespace Manual

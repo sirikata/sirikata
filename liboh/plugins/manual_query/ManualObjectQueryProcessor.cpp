@@ -6,11 +6,18 @@
 #include <sirikata/core/network/Frame.hpp>
 #include "Protocol_Prox.pbj.hpp"
 
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/json_parser.hpp>
+
 #define QPLOG(lvl, msg) SILOG(manual-query-processor, lvl, msg)
 
 namespace Sirikata {
 namespace OH {
 namespace Manual {
+
+using std::tr1::placeholders::_1;
+using std::tr1::placeholders::_2;
+using std::tr1::placeholders::_3;
 
 ManualObjectQueryProcessor* ManualObjectQueryProcessor::create(ObjectHostContext* ctx, const String& args) {
     return new ManualObjectQueryProcessor(ctx);
@@ -37,9 +44,12 @@ void ManualObjectQueryProcessor::stop() {
 
 void ManualObjectQueryProcessor::onSpaceNodeSession(const OHDP::SpaceNodeID& id, OHDPSST::Stream::Ptr sn_stream) {
     QPLOG(detailed, "New space node session " << id);
+    assert(mServerQueries.find(id) == mServerQueries.end());
+    mServerQueries.insert( ServerQueryMap::value_type(id, ServerQueryState(sn_stream)) );
 }
 
 void ManualObjectQueryProcessor::onSpaceNodeSessionEnded(const OHDP::SpaceNodeID& id) {
+    mServerQueries.erase(id);
 }
 
 void ManualObjectQueryProcessor::onObjectNodeSession(const SpaceID& space, const ObjectReference& oref, const OHDP::NodeID& id) {
@@ -70,8 +80,7 @@ void ManualObjectQueryProcessor::onObjectNodeSession(const SpaceID& space, const
     obj_it->second.node = id;
     // Figure out if we need to do anything on the
     ServerQueryMap::iterator serv_it = mServerQueries.find(snid);
-    if (serv_it == mServerQueries.end())
-        serv_it = mServerQueries.insert( ServerQueryMap::value_type(snid, ServerQueryState()) ).first;
+    assert(serv_it != mServerQueries.end());
     incrementServerQuery(serv_it);
 }
 
@@ -84,8 +93,72 @@ void ManualObjectQueryProcessor::incrementServerQuery(ServerQueryMap::iterator s
 void ManualObjectQueryProcessor::updateServerQuery(ServerQueryMap::iterator serv_it, bool is_new) {
     if (is_new) {
         QPLOG(detailed, "Initializing server query to " << serv_it->first);
-        // FIXME send init message
+
+        Protocol::Prox::QueryRequest request;
+        using namespace boost::property_tree;
+        try {
+            ptree pt;
+            pt.put("action", "init");
+            std::stringstream data_json;
+            write_json(data_json, pt);
+            request.set_query_parameters(data_json.str());
+        }
+        catch(json_parser::json_parser_error exc) {
+            QPLOG(detailed, "Failed to encode 'init' request.");
+            return;
+        }
+        std::string init_msg_str = serializePBJMessage(request);
+
+        String framed = Network::Frame::write(init_msg_str);
+
+        serv_it->second.base_stream->createChildStream(
+            std::tr1::bind(&ManualObjectQueryProcessor::handleCreatedProxSubstream, this, serv_it->first, _1, _2),
+            (void*)framed.c_str(), framed.size(),
+            OBJECT_PORT_PROXIMITY, OBJECT_PORT_PROXIMITY
+        );
     }
+}
+
+void ManualObjectQueryProcessor::handleCreatedProxSubstream(const OHDP::SpaceNodeID& snid, int success, OHDPSST::Stream::Ptr prox_stream) {
+    if (success != SST_IMPL_SUCCESS)
+        QPLOG(error, "Failed to create proximity substream to " << snid);
+
+    // Save the stream for additional writing
+    ServerQueryMap::iterator serv_it = mServerQueries.find(snid);
+    // We may have lost the session since we requested the connection
+    if (serv_it == mServerQueries.end()) return;
+    serv_it->second.prox_stream = prox_stream;
+
+    // Register to get data
+    String* prevdata = new String();
+    prox_stream->registerReadCallback(
+        std::tr1::bind(&ManualObjectQueryProcessor::handleProximitySubstreamRead, this,
+            snid, prox_stream, prevdata, _1, _2
+        )
+    );
+}
+
+void ManualObjectQueryProcessor::handleProximitySubstreamRead(const OHDP::SpaceNodeID& snid, OHDPSST::Stream::Ptr prox_stream, String* prevdata, uint8* buffer, int length) {
+    if (mContext->stopped()) {
+        QPLOG(detailed, "Ignoring proximity update after system stop requested.");
+        return;
+    }
+
+    prevdata->append((const char*)buffer, length);
+
+    while(true) {
+        std::string msg = Network::Frame::parse(*prevdata);
+
+        // If we don't have a full message, just wait for more
+        if (msg.empty()) return;
+
+        // Otherwise, try to handle it
+        QPLOG(detailed, "Got proximity message.");
+        // FIXME handleProximityMessage(snid, msg);
+    }
+
+    // FIXME we should be getting a callback on stream close so we can clean up!
+    //prox_stream->registerReadCallback(0);
 }
 
 void ManualObjectQueryProcessor::decrementServerQuery(ServerQueryMap::iterator serv_it) {
@@ -94,8 +167,25 @@ void ManualObjectQueryProcessor::decrementServerQuery(ServerQueryMap::iterator s
 
     // FIXME send message
     QPLOG(detailed, "Destroying server query to " << serv_it->first);
+    if (serv_it->second.prox_stream) {
+        Protocol::Prox::QueryRequest request;
 
-    mServerQueries.erase(serv_it);
+        using namespace boost::property_tree;
+        try {
+            ptree pt;
+            pt.put("action", "destroy");
+            std::stringstream data_json;
+            write_json(data_json, pt);
+            request.set_query_parameters(data_json.str());
+        }
+        catch(json_parser::json_parser_error exc) {
+            QPLOG(detailed, "Failed to encode 'destroy' request.");
+            return;
+        }
+        std::string destroy_msg_str = serializePBJMessage(request);
+        String framed = Network::Frame::write(destroy_msg_str);
+        serv_it->second.prox_stream->write((const uint8*)framed.c_str(), framed.size());
+    }
 }
 
 void ManualObjectQueryProcessor::updateQuery(HostedObjectPtr ho, const SpaceObjectReference& sporef, const String& new_query) {
