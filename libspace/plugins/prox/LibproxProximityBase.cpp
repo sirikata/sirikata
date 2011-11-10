@@ -271,7 +271,8 @@ LibproxProximityBase::ProxObjectStreamPtr LibproxProximityBase::getBaseStream(co
 }
 
 LibproxProximityBase::ProxObjectHostStreamPtr LibproxProximityBase::getBaseStream(const OHDP::NodeID& node) const {
-    return mContext->ohSessionManager()->getSession(node);
+    ObjectHostSessionPtr session = mContext->ohSessionManager()->getSession(node);
+    return (session ? session->stream() : ProxObjectHostStreamPtr());
 }
 
 void LibproxProximityBase::addObjectProxStreamInfo(ODPSST::Stream::Ptr strm) {

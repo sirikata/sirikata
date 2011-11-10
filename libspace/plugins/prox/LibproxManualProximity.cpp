@@ -107,22 +107,24 @@ void LibproxManualProximity::receiveMigrationData(const UUID& obj, ServerID sour
 
 // Object host session and message management
 
-void LibproxManualProximity::onObjectHostSession(const OHDP::NodeID& id, OHDPSST::Stream::Ptr oh_stream) {
+void LibproxManualProximity::onObjectHostSession(const OHDP::NodeID& id, ObjectHostSessionPtr oh_sess) {
     // Setup listener for requests from object hosts. We should only
     // have one active substream at a time. Proximity sessions are
     // always initiated by the object host -- upon receiving a
     // connection we register the query and use the same substream to
     // transmit results.
-    oh_stream->listenSubstream(
+    // We also pass through the seqNoPtr() since we need to extract it in this
+    // thread, it shouldn't change, and we don't want to hold onto the session.
+    oh_sess->stream()->listenSubstream(
         OBJECT_PORT_PROXIMITY,
         std::tr1::bind(
             &LibproxManualProximity::handleObjectHostSubstream, this,
-            _1, _2
+            _1, _2, oh_sess->seqNoPtr()
         )
     );
 }
 
-void LibproxManualProximity::handleObjectHostSubstream(int success, OHDPSST::Stream::Ptr substream) {
+void LibproxManualProximity::handleObjectHostSubstream(int success, OHDPSST::Stream::Ptr substream, SeqNoPtr seqno) {
     if (success != SST_IMPL_SUCCESS) return;
 
     PROXLOG(detailed, "New object host proximity session from " << substream->remoteEndPoint().endPoint);
@@ -132,7 +134,7 @@ void LibproxManualProximity::handleObjectHostSubstream(int success, OHDPSST::Str
     readFramesFromObjectHostStream(
         substream->remoteEndPoint().endPoint.node(),
         mProxStrand->wrap(
-            std::tr1::bind(&LibproxManualProximity::handleObjectHostProxMessage, this, substream->remoteEndPoint().endPoint.node(), _1)
+            std::tr1::bind(&LibproxManualProximity::handleObjectHostProxMessage, this, substream->remoteEndPoint().endPoint.node(), _1, seqno)
         )
     );
 }
@@ -183,7 +185,11 @@ void LibproxManualProximity::tickQueryHandler(ProxQueryHandler* qh[NUM_OBJECT_CL
     }
 }
 
-void LibproxManualProximity::handleObjectHostProxMessage(const OHDP::NodeID& id, const String& data) {
+void LibproxManualProximity::handleObjectHostProxMessage(const OHDP::NodeID& id, const String& data, SeqNoPtr seqNo) {
+    // Handle the seqno update
+    if (mOHSeqNos.find(id) == mOHSeqNos.end())
+        mOHSeqNos.insert( OHSeqNoInfoMap::value_type(id, seqNo) );
+
     Protocol::Prox::QueryRequest request;
     bool parse_success = request.ParseFromString(data);
 
@@ -278,11 +284,10 @@ bool LibproxManualProximity::handlerShouldHandleObject(bool is_static_handler, b
         return false;
 }
 
-SeqNoPtr LibproxManualProximity::getOrCreateSeqNoInfo(const OHDP::NodeID& node)
+SeqNoPtr LibproxManualProximity::getSeqNoInfo(const OHDP::NodeID& node)
 {
     OHSeqNoInfoMap::iterator proxSeqNoIt = mOHSeqNos.find(node);
-    if (proxSeqNoIt == mOHSeqNos.end())
-        proxSeqNoIt = mOHSeqNos.insert( OHSeqNoInfoMap::value_type(node, SeqNoPtr(new SeqNo())) ).first;
+    assert (proxSeqNoIt != mOHSeqNos.end());
     return proxSeqNoIt->second;
 }
 
@@ -299,7 +304,7 @@ void LibproxManualProximity::queryHasEvents(ProxQuery* query) {
     uint32 max_count = GetOptionValue<uint32>(PROX_MAX_PER_RESULT);
 
     OHDP::NodeID query_id = mInvertedOHQueries[query];
-    SeqNoPtr seqNoPtr = getOrCreateSeqNoInfo(query_id);
+    SeqNoPtr seqNoPtr = getSeqNoInfo(query_id);
 
     QueryEventList evts;
     query->popEvents(evts);

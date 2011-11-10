@@ -102,7 +102,7 @@ class SIRIKATA_SPACE_EXPORT Proximity :
     virtual void sessionClosed(ObjectSession* session) { }
 
     // ObjectHostSessionListener Interface
-    virtual void onObjectHostSession(const OHDP::NodeID& id, OHDPSST::Stream::Ptr oh_stream) { }
+    virtual void onObjectHostSession(const OHDP::NodeID& id, ObjectHostSessionPtr oh_sess) { }
     virtual void onObjectHostSessionEnded(const OHDP::NodeID& id) { }
 
     // LocationServiceListener Interface
