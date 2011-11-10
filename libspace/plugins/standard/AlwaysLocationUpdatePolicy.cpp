@@ -33,6 +33,7 @@
 #include "AlwaysLocationUpdatePolicy.hpp"
 #include <sirikata/space/ServerMessage.hpp>
 #include <sirikata/core/options/Options.hpp>
+#include <sirikata/space/ObjectHostSession.hpp>
 
 #include "Protocol_Frame.pbj.hpp"
 
@@ -54,9 +55,12 @@ AlwaysLocationUpdatePolicy::AlwaysLocationUpdatePolicy(SpaceContext* ctx, const 
    mLastStatsTime(ctx->simTime()),
    mTimeSeriesServerUpdatesName(String("space.server") + boost::lexical_cast<String>(ctx->id()) + ".loc.server_updates_per_second"),
    mServerUpdatesPerSecond(0),
+   mTimeSeriesOHUpdatesName(String("space.server") + boost::lexical_cast<String>(ctx->id()) + ".loc.oh_updates_per_second"),
+   mOHUpdatesPerSecond(0),
    mTimeSeriesObjectUpdatesName(String("space.server") + boost::lexical_cast<String>(ctx->id()) + ".loc.object_updates_per_second"),
    mObjectUpdatesPerSecond(0),
    mServerSubscriptions(this, mServerUpdatesPerSecond),
+   mOHSubscriptions(this, mOHUpdatesPerSecond),
    mObjectSubscriptions(this, mObjectUpdatesPerSecond)
 {
     OptionSet* optionsSet = OptionSet::getOptions(ALWAYS_POLICY_OPTIONS,NULL);
@@ -86,6 +90,12 @@ void AlwaysLocationUpdatePolicy::reportStats() {
     mServerUpdatesPerSecond = 0;
 
     mLocService->context()->timeSeries->report(
+        mTimeSeriesOHUpdatesName,
+        mOHUpdatesPerSecond.read() / since_last_seconds
+    );
+    mOHUpdatesPerSecond = 0;
+
+    mLocService->context()->timeSeries->report(
         mTimeSeriesObjectUpdatesName,
         mObjectUpdatesPerSecond.read() / since_last_seconds
     );
@@ -103,6 +113,18 @@ void AlwaysLocationUpdatePolicy::unsubscribe(ServerID remote, const UUID& uuid) 
 
 void AlwaysLocationUpdatePolicy::unsubscribe(ServerID remote) {
     mServerSubscriptions.unsubscribe(remote);
+}
+
+void AlwaysLocationUpdatePolicy::subscribe(const OHDP::NodeID& remote, const UUID& uuid) {
+    mOHSubscriptions.subscribe(remote, uuid, mLocService->context()->ohSessionManager()->getSession(remote)->seqNoPtr());
+}
+
+void AlwaysLocationUpdatePolicy::unsubscribe(const OHDP::NodeID& remote, const UUID& uuid) {
+    mOHSubscriptions.unsubscribe(remote, uuid);
+}
+
+void AlwaysLocationUpdatePolicy::unsubscribe(const OHDP::NodeID& remote) {
+    mOHSubscriptions.unsubscribe(remote);
 }
 
 void AlwaysLocationUpdatePolicy::subscribe(const UUID& remote, const UUID& uuid) {
@@ -128,26 +150,31 @@ void AlwaysLocationUpdatePolicy::localObjectRemoved(const UUID& uuid, bool agg) 
 
 void AlwaysLocationUpdatePolicy::localLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval) {
     mServerSubscriptions.locationUpdated(uuid, newval, mLocService);
+    mOHSubscriptions.locationUpdated(uuid, newval, mLocService);
     mObjectSubscriptions.locationUpdated(uuid, newval, mLocService);
 }
 
 void AlwaysLocationUpdatePolicy::localOrientationUpdated(const UUID& uuid, bool agg, const TimedMotionQuaternion& newval) {
     mServerSubscriptions.orientationUpdated(uuid, newval, mLocService);
+    mOHSubscriptions.orientationUpdated(uuid, newval, mLocService);
     mObjectSubscriptions.orientationUpdated(uuid, newval, mLocService);
 }
 
 void AlwaysLocationUpdatePolicy::localBoundsUpdated(const UUID& uuid, bool agg, const BoundingSphere3f& newval) {
     mServerSubscriptions.boundsUpdated(uuid, newval, mLocService);
+    mOHSubscriptions.boundsUpdated(uuid, newval, mLocService);
     mObjectSubscriptions.boundsUpdated(uuid, newval, mLocService);
 }
 
 void AlwaysLocationUpdatePolicy::localMeshUpdated(const UUID& uuid, bool agg, const String& newval) {
     mServerSubscriptions.meshUpdated(uuid, newval, mLocService);
+    mOHSubscriptions.meshUpdated(uuid, newval, mLocService);
     mObjectSubscriptions.meshUpdated(uuid, newval, mLocService);
 }
 
 void AlwaysLocationUpdatePolicy::localPhysicsUpdated(const UUID& uuid, bool agg, const String& newval) {
     mServerSubscriptions.physicsUpdated(uuid, newval, mLocService);
+    mOHSubscriptions.physicsUpdated(uuid, newval, mLocService);
     mObjectSubscriptions.physicsUpdated(uuid, newval, mLocService);
 }
 
@@ -182,23 +209,56 @@ void AlwaysLocationUpdatePolicy::replicaPhysicsUpdated(const UUID& uuid, const S
 
 void AlwaysLocationUpdatePolicy::service() {
     mServerSubscriptions.service();
+    mOHSubscriptions.service();
     mObjectSubscriptions.service();
 }
 
-void AlwaysLocationUpdatePolicy::tryCreateChildStream(const UUID& dest, SSTStreamPtr parent_stream, std::string* msg, int count) {
+void AlwaysLocationUpdatePolicy::tryCreateChildStream(const UUID& dest, ODPSST::Stream::Ptr parent_stream, std::string* msg, int count) {
     if (!validSubscriber(dest)) {
         delete msg;
         return;
     }
 
     parent_stream->createChildStream(
-        std::tr1::bind(&AlwaysLocationUpdatePolicy::locSubstreamCallback, this, _1, _2, dest, parent_stream, msg, count+1),
+        std::tr1::bind(&AlwaysLocationUpdatePolicy::objectLocSubstreamCallback, this, _1, _2, dest, parent_stream, msg, count+1),
         (void*)msg->data(), msg->size(),
         OBJECT_PORT_LOCATION, OBJECT_PORT_LOCATION
     );
 }
 
-void AlwaysLocationUpdatePolicy::locSubstreamCallback(int x, SSTStreamPtr substream, const UUID& dest, SSTStreamPtr parent_stream, std::string* msg, int count) {
+void AlwaysLocationUpdatePolicy::objectLocSubstreamCallback(int x, ODPSST::Stream::Ptr substream, const UUID& dest, ODPSST::Stream::Ptr parent_stream, std::string* msg, int count) {
+    // If we got it, the data got sent and we can drop the stream
+    if (substream) {
+        delete msg;
+        substream->close(false);
+        return;
+    }
+
+    // If we didn't get it and we haven't retried too many times, try
+    // again. Otherwise, report error and give up.
+    if (count < 5) {
+        tryCreateChildStream(dest, parent_stream, msg, count);
+    }
+    else {
+        SILOG(always_loc,error,"Failed multiple times to open loc update substream.");
+        delete msg;
+    }
+}
+
+void AlwaysLocationUpdatePolicy::tryCreateChildStream(const OHDP::NodeID& dest, OHDPSST::Stream::Ptr parent_stream, std::string* msg, int count) {
+    if (!validSubscriber(dest)) {
+        delete msg;
+        return;
+    }
+
+    parent_stream->createChildStream(
+        std::tr1::bind(&AlwaysLocationUpdatePolicy::ohLocSubstreamCallback, this, _1, _2, dest, parent_stream, msg, count+1),
+        (void*)msg->data(), msg->size(),
+        OBJECT_PORT_LOCATION, OBJECT_PORT_LOCATION
+    );
+}
+
+void AlwaysLocationUpdatePolicy::ohLocSubstreamCallback(int x, OHDPSST::Stream::Ptr substream, const OHDP::NodeID& dest, OHDPSST::Stream::Ptr parent_stream, std::string* msg, int count) {
     // If we got it, the data got sent and we can drop the stream
     if (substream) {
         delete msg;
@@ -221,6 +281,10 @@ bool AlwaysLocationUpdatePolicy::validSubscriber(const UUID& dest) {
     return (mLocService->context()->objectSessionManager()->getSession(ObjectReference(dest)) != NULL);
 }
 
+bool AlwaysLocationUpdatePolicy::validSubscriber(const OHDP::NodeID& dest) {
+    return (mLocService->context()->ohSessionManager()->getSession(dest));
+}
+
 bool AlwaysLocationUpdatePolicy::validSubscriber(const ServerID& dest) {
     // FIXME we might be able to do something based on active servers from the
     // ServerIDMap, but right now we just assume other servers are always valid
@@ -231,19 +295,34 @@ bool AlwaysLocationUpdatePolicy::validSubscriber(const ServerID& dest) {
 
 bool AlwaysLocationUpdatePolicy::trySend(const UUID& dest, const Sirikata::Protocol::Loc::BulkLocationUpdate& blu)
 {
-  std::string bluMsg = serializePBJMessage(blu);
-  SSTStreamPtr locServiceStream = mLocService->getObjectStream(dest);
+    std::string bluMsg = serializePBJMessage(blu);
 
-  bool sent = false;
-  if (locServiceStream) {
-      Sirikata::Protocol::Frame msg_frame;
-      msg_frame.set_payload(bluMsg);
-      std::string* framed_loc_msg = new std::string(serializePBJMessage(msg_frame));
-      tryCreateChildStream(dest, locServiceStream, framed_loc_msg, 0);
-      sent = true;
-  }
+    ObjectSession* session = mLocService->context()->objectSessionManager()->getSession(ObjectReference(dest));
+    if (session == NULL) return false;
+    ODPSST::Stream::Ptr locServiceStream = session->getStream();
+    if (!locServiceStream) return false;
 
-  return sent;
+    Sirikata::Protocol::Frame msg_frame;
+    msg_frame.set_payload(bluMsg);
+    std::string* framed_loc_msg = new std::string(serializePBJMessage(msg_frame));
+    tryCreateChildStream(dest, locServiceStream, framed_loc_msg, 0);
+    return true;
+}
+
+bool AlwaysLocationUpdatePolicy::trySend(const OHDP::NodeID& dest, const Sirikata::Protocol::Loc::BulkLocationUpdate& blu)
+{
+    std::string bluMsg = serializePBJMessage(blu);
+
+    ObjectHostSessionPtr session = mLocService->context()->ohSessionManager()->getSession(dest);
+    if (!session) return false;
+    OHDPSST::Stream::Ptr locServiceStream = session->stream();
+    if (!locServiceStream) return false;
+
+    Sirikata::Protocol::Frame msg_frame;
+    msg_frame.set_payload(bluMsg);
+    std::string* framed_loc_msg = new std::string(serializePBJMessage(msg_frame));
+    tryCreateChildStream(dest, locServiceStream, framed_loc_msg, 0);
+    return true;
 }
 
 bool AlwaysLocationUpdatePolicy::trySend(const ServerID& dest, const Sirikata::Protocol::Loc::BulkLocationUpdate& blu) {

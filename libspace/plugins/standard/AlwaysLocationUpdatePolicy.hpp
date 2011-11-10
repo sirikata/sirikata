@@ -60,6 +60,10 @@ public:
     virtual void unsubscribe(ServerID remote, const UUID& uuid);
     virtual void unsubscribe(ServerID remote);
 
+    virtual void subscribe(const OHDP::NodeID& remote, const UUID& uuid);
+    virtual void unsubscribe(const OHDP::NodeID& remote, const UUID& uuid);
+    virtual void unsubscribe(const OHDP::NodeID& remote);
+
     virtual void subscribe(const UUID& remote, const UUID& uuid);
     virtual void unsubscribe(const UUID& remote, const UUID& uuid);
     virtual void unsubscribe(const UUID& remote);
@@ -85,15 +89,17 @@ public:
 private:
     void reportStats();
 
-    typedef SST::Stream<SpaceObjectReference>::Ptr SSTStreamPtr;
-
-    void tryCreateChildStream(const UUID& dest, SSTStreamPtr parent_stream, std::string* msg, int count);
-    void locSubstreamCallback(int x, SSTStreamPtr substream, const UUID& dest, SSTStreamPtr parent_substream, std::string* msg, int count);
+    void tryCreateChildStream(const UUID& dest, ODPSST::Stream::Ptr parent_stream, std::string* msg, int count);
+    void objectLocSubstreamCallback(int x, ODPSST::Stream::Ptr substream, const UUID& dest, ODPSST::Stream::Ptr parent_substream, std::string* msg, int count);
+    void tryCreateChildStream(const OHDP::NodeID& dest, OHDPSST::Stream::Ptr parent_stream, std::string* msg, int count);
+    void ohLocSubstreamCallback(int x, OHDPSST::Stream::Ptr substream, const OHDP::NodeID& dest, OHDPSST::Stream::Ptr parent_substream, std::string* msg, int count);
 
     bool validSubscriber(const UUID& dest);
+    bool validSubscriber(const OHDP::NodeID& dest);
     bool validSubscriber(const ServerID& dest);
 
     bool trySend(const UUID& dest, const Sirikata::Protocol::Loc::BulkLocationUpdate& blu);
+    bool trySend(const OHDP::NodeID& dest, const Sirikata::Protocol::Loc::BulkLocationUpdate& blu);
     bool trySend(const ServerID& dest, const Sirikata::Protocol::Loc::BulkLocationUpdate& blu);
 
     struct UpdateInfo {
@@ -384,11 +390,16 @@ private:
     Time mLastStatsTime;
     const String mTimeSeriesServerUpdatesName;
     AtomicValue<uint32> mServerUpdatesPerSecond;
+    const String mTimeSeriesOHUpdatesName;
+    AtomicValue<uint32> mOHUpdatesPerSecond;
     const String mTimeSeriesObjectUpdatesName;
     AtomicValue<uint32> mObjectUpdatesPerSecond;
 
     typedef SubscriberIndex<ServerID> ServerSubscriberIndex;
     ServerSubscriberIndex mServerSubscriptions;
+
+    typedef SubscriberIndex<OHDP::NodeID> OHSubscriberIndex;
+    ServerSubscriberIndex mOHSubscriptions;
 
     typedef SubscriberIndex<UUID> ObjectSubscriberIndex;
     ObjectSubscriberIndex mObjectSubscriptions;

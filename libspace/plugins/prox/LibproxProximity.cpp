@@ -695,38 +695,6 @@ void LibproxProximity::poll() {
 
 
 
-void LibproxProximity::handleAddObjectLocSubscription(const UUID& subscriber, const UUID& observed) {
-    // We check the cache when we get the request, but also check it here since
-    // the observed object may have been removed between the request to add this
-    // subscription and its actual execution.
-    if (!mLocService->contains(observed)) return;
-
-    mLocService->subscribe(subscriber, observed);
-}
-
-void LibproxProximity::handleRemoveObjectLocSubscription(const UUID& subscriber, const UUID& observed) {
-    mLocService->unsubscribe(subscriber, observed);
-}
-
-void LibproxProximity::handleRemoveAllObjectLocSubscription(const UUID& subscriber) {
-    mLocService->unsubscribe(subscriber);
-}
-
-void LibproxProximity::handleAddServerLocSubscription(const ServerID& subscriber, const UUID& observed, SeqNoPtr seqPtr) {
-    // We check the cache when we get the request, but also check it here since
-    // the observed object may have been removed between the request to add this
-    // subscription and its actual execution.
-    if (!mLocService->contains(observed)) return;
-
-    mLocService->subscribe(subscriber, observed, seqPtr);
-}
-void LibproxProximity::handleRemoveServerLocSubscription(const ServerID& subscriber, const UUID& observed) {
-    mLocService->unsubscribe(subscriber, observed);
-}
-void LibproxProximity::handleRemoveAllServerLocSubscription(const ServerID& subscriber) {
-    mLocService->unsubscribe(subscriber);
-}
-
 void LibproxProximity::queryHasEvents(Query* query) {
     if (
         query->handler() == mServerQueryHandler[OBJECT_CLASS_STATIC] ||

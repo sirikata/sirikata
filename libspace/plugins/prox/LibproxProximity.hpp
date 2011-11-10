@@ -151,15 +151,6 @@ private:
     void sendQueryRequests();
 
 
-    // Handle various events in the main thread that are triggered in the prox thread
-    void handleAddObjectLocSubscription(const UUID& subscriber, const UUID& observed);
-    void handleRemoveObjectLocSubscription(const UUID& subscriber, const UUID& observed);
-    void handleRemoveAllObjectLocSubscription(const UUID& subscriber);
-    void handleAddServerLocSubscription(const ServerID& subscriber, const UUID& observed, SeqNoPtr seqPtr);
-    void handleRemoveServerLocSubscription(const ServerID& subscriber, const UUID& observed);
-    void handleRemoveAllServerLocSubscription(const ServerID& subscriber);
-
-
     // PROX Thread: These are utility methods which should only be called from the prox thread.
 
     // Handle various query events from the main thread

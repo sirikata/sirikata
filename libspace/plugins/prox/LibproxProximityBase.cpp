@@ -299,4 +299,58 @@ void LibproxProximityBase::addObjectHostProxStreamInfo(OHDPSST::Stream::Ptr strm
     );
 }
 
+
+
+
+void LibproxProximityBase::handleAddObjectLocSubscription(const UUID& subscriber, const UUID& observed) {
+    // We check the cache when we get the request, but also check it here since
+    // the observed object may have been removed between the request to add this
+    // subscription and its actual execution.
+    if (!mLocService->contains(observed)) return;
+
+    mLocService->subscribe(subscriber, observed);
+}
+
+void LibproxProximityBase::handleRemoveObjectLocSubscription(const UUID& subscriber, const UUID& observed) {
+    mLocService->unsubscribe(subscriber, observed);
+}
+
+void LibproxProximityBase::handleRemoveAllObjectLocSubscription(const UUID& subscriber) {
+    mLocService->unsubscribe(subscriber);
+}
+
+void LibproxProximityBase::handleAddOHLocSubscription(const OHDP::NodeID& subscriber, const UUID& observed) {
+    // We check the cache when we get the request, but also check it here since
+    // the observed object may have been removed between the request to add this
+    // subscription and its actual execution.
+    if (!mLocService->contains(observed)) return;
+
+    mLocService->subscribe(subscriber, observed);
+}
+
+void LibproxProximityBase::handleRemoveOHLocSubscription(const OHDP::NodeID& subscriber, const UUID& observed) {
+    mLocService->unsubscribe(subscriber, observed);
+}
+
+void LibproxProximityBase::handleRemoveAllOHLocSubscription(const OHDP::NodeID& subscriber) {
+    mLocService->unsubscribe(subscriber);
+}
+
+void LibproxProximityBase::handleAddServerLocSubscription(const ServerID& subscriber, const UUID& observed, SeqNoPtr seqPtr) {
+    // We check the cache when we get the request, but also check it here since
+    // the observed object may have been removed between the request to add this
+    // subscription and its actual execution.
+    if (!mLocService->contains(observed)) return;
+
+    mLocService->subscribe(subscriber, observed, seqPtr);
+}
+
+void LibproxProximityBase::handleRemoveServerLocSubscription(const ServerID& subscriber, const UUID& observed) {
+    mLocService->unsubscribe(subscriber, observed);
+}
+
+void LibproxProximityBase::handleRemoveAllServerLocSubscription(const ServerID& subscriber) {
+    mLocService->unsubscribe(subscriber);
+}
+
 } // namespace Sirikata

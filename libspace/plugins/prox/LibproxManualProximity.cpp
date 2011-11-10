@@ -255,6 +255,12 @@ void LibproxManualProximity::destroyQuery(const OHDP::NodeID& id) {
         mInvertedOHQueries.erase(q);
         delete q; // Note: Deleting query notifies QueryHandler and unsubscribes.
     }
+
+    eraseSeqNoInfo(id);
+    mContext->mainStrand->post(
+        std::tr1::bind(&LibproxManualProximity::handleRemoveAllOHLocSubscription, this, id)
+    );
+
 }
 
 
@@ -324,10 +330,9 @@ void LibproxManualProximity::queryHasEvents(ProxQuery* query) {
                 if (mLocCache->tracking(objid)) { // If the cache already lost it, we can't do anything
                     count++;
 
-                    // FIXME
-                    //mContext->mainStrand->post(
-                    //    std::tr1::bind(&LibproxManualProximity::handleAddObjectLocSubscription, this, query_id, objid)
-                    //);
+                    mContext->mainStrand->post(
+                        std::tr1::bind(&LibproxManualProximity::handleAddOHLocSubscription, this, query_id, objid)
+                    );
 
                     Sirikata::Protocol::Prox::IObjectAddition addition = event_results.add_addition();
                     addition.set_object( objid );
@@ -365,10 +370,10 @@ void LibproxManualProximity::queryHasEvents(ProxQuery* query) {
                 count++;
                 // Clear out seqno and let main strand remove loc
                 // subcription
-                // FIXME
-                //mContext->mainStrand->post(
-                //    std::tr1::bind(&LibproxManualProximity::handleRemoveObjectLocSubscription, this, query_id, objid)
-                //);
+
+                mContext->mainStrand->post(
+                    std::tr1::bind(&LibproxManualProximity::handleRemoveOHLocSubscription, this, query_id, objid)
+                );
 
                 Sirikata::Protocol::Prox::IObjectRemoval removal = event_results.add_removal();
                 removal.set_object( objid );

@@ -139,6 +139,17 @@ protected:
     void addObjectProxStreamInfo(ODPSST::Stream::Ptr);
     void addObjectHostProxStreamInfo(OHDPSST::Stream::Ptr);
 
+    // Handle various events in the main thread that are triggered in the prox thread
+    void handleAddObjectLocSubscription(const UUID& subscriber, const UUID& observed);
+    void handleRemoveObjectLocSubscription(const UUID& subscriber, const UUID& observed);
+    void handleRemoveAllObjectLocSubscription(const UUID& subscriber);
+    void handleAddOHLocSubscription(const OHDP::NodeID& subscriber, const UUID& observed);
+    void handleRemoveOHLocSubscription(const OHDP::NodeID& subscriber, const UUID& observed);
+    void handleRemoveAllOHLocSubscription(const OHDP::NodeID& subscriber);
+    void handleAddServerLocSubscription(const ServerID& subscriber, const UUID& observed, SeqNoPtr seqPtr);
+    void handleRemoveServerLocSubscription(const ServerID& subscriber, const UUID& observed);
+    void handleRemoveAllServerLocSubscription(const ServerID& subscriber);
+
     typedef std::tr1::unordered_map<UUID, ProxObjectStreamInfoPtr, UUID::Hasher> ObjectProxStreamMap;
     ObjectProxStreamMap mObjectProxStreams;
 
