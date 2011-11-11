@@ -99,10 +99,22 @@ private:
     // message to kill the query
     void decrementServerQuery(ServerQueryMap::iterator serv_it);
 
+
+
+    // Proximity
     // Callback from creating proximity substream
     void handleCreatedProxSubstream(const OHDP::SpaceNodeID& snid, int success, OHDPSST::Stream::Ptr prox_stream);
     // Data read callback for prox substreams -- translate to proximity events
-    void handleProximitySubstreamRead(const OHDP::SpaceNodeID& spaceobj, OHDPSST::Stream::Ptr prox_stream, String* prevdata, uint8* buffer, int length);
+    void handleProximitySubstreamRead(const OHDP::SpaceNodeID& snid, OHDPSST::Stream::Ptr prox_stream, String* prevdata, uint8* buffer, int length);
+
+
+    // Location
+    // Handlers for substreams for space-managed updates
+    void handleLocationSubstream(const OHDP::SpaceNodeID& snid, int err, OHDPSST::Stream::Ptr s);
+    // Handlers for substream read events for space-managed updates
+    void handleLocationSubstreamRead(const OHDP::SpaceNodeID& snid, OHDPSST::Stream::Ptr s, std::stringstream* prevdata, uint8* buffer, int length);
+    bool handleLocationMessage(const OHDP::SpaceNodeID& snid, const std::string& paylod);
+
 };
 
 } // namespace Manual

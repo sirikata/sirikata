@@ -5,6 +5,8 @@
 #include "ManualObjectQueryProcessor.hpp"
 #include <sirikata/core/network/Frame.hpp>
 #include "Protocol_Prox.pbj.hpp"
+#include "Protocol_Loc.pbj.hpp"
+#include "Protocol_Frame.pbj.hpp"
 
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
@@ -46,6 +48,12 @@ void ManualObjectQueryProcessor::onSpaceNodeSession(const OHDP::SpaceNodeID& id,
     QPLOG(detailed, "New space node session " << id);
     assert(mServerQueries.find(id) == mServerQueries.end());
     mServerQueries.insert( ServerQueryMap::value_type(id, ServerQueryState(sn_stream)) );
+
+    sn_stream->listenSubstream(OBJECT_PORT_LOCATION,
+        std::tr1::bind(&ManualObjectQueryProcessor::handleLocationSubstream, this,
+            id, _1, _2
+        )
+    );
 }
 
 void ManualObjectQueryProcessor::onSpaceNodeSessionEnded(const OHDP::SpaceNodeID& id) {
@@ -119,48 +127,6 @@ void ManualObjectQueryProcessor::updateServerQuery(ServerQueryMap::iterator serv
     }
 }
 
-void ManualObjectQueryProcessor::handleCreatedProxSubstream(const OHDP::SpaceNodeID& snid, int success, OHDPSST::Stream::Ptr prox_stream) {
-    if (success != SST_IMPL_SUCCESS)
-        QPLOG(error, "Failed to create proximity substream to " << snid);
-
-    // Save the stream for additional writing
-    ServerQueryMap::iterator serv_it = mServerQueries.find(snid);
-    // We may have lost the session since we requested the connection
-    if (serv_it == mServerQueries.end()) return;
-    serv_it->second.prox_stream = prox_stream;
-
-    // Register to get data
-    String* prevdata = new String();
-    prox_stream->registerReadCallback(
-        std::tr1::bind(&ManualObjectQueryProcessor::handleProximitySubstreamRead, this,
-            snid, prox_stream, prevdata, _1, _2
-        )
-    );
-}
-
-void ManualObjectQueryProcessor::handleProximitySubstreamRead(const OHDP::SpaceNodeID& snid, OHDPSST::Stream::Ptr prox_stream, String* prevdata, uint8* buffer, int length) {
-    if (mContext->stopped()) {
-        QPLOG(detailed, "Ignoring proximity update after system stop requested.");
-        return;
-    }
-
-    prevdata->append((const char*)buffer, length);
-
-    while(true) {
-        std::string msg = Network::Frame::parse(*prevdata);
-
-        // If we don't have a full message, just wait for more
-        if (msg.empty()) return;
-
-        // Otherwise, try to handle it
-        QPLOG(detailed, "Got proximity message.");
-        // FIXME handleProximityMessage(snid, msg);
-    }
-
-    // FIXME we should be getting a callback on stream close so we can clean up!
-    //prox_stream->registerReadCallback(0);
-}
-
 void ManualObjectQueryProcessor::decrementServerQuery(ServerQueryMap::iterator serv_it) {
     serv_it->second.nconnected--;
     if (!serv_it->second.canRemove()) return;
@@ -205,6 +171,93 @@ void ManualObjectQueryProcessor::updateQuery(HostedObjectPtr ho, const SpaceObje
         // FIXME
     }
 }
+
+
+// Proximity
+
+void ManualObjectQueryProcessor::handleCreatedProxSubstream(const OHDP::SpaceNodeID& snid, int success, OHDPSST::Stream::Ptr prox_stream) {
+    if (success != SST_IMPL_SUCCESS)
+        QPLOG(error, "Failed to create proximity substream to " << snid);
+
+    // Save the stream for additional writing
+    ServerQueryMap::iterator serv_it = mServerQueries.find(snid);
+    // We may have lost the session since we requested the connection
+    if (serv_it == mServerQueries.end()) return;
+    serv_it->second.prox_stream = prox_stream;
+
+    // Register to get data
+    String* prevdata = new String();
+    prox_stream->registerReadCallback(
+        std::tr1::bind(&ManualObjectQueryProcessor::handleProximitySubstreamRead, this,
+            snid, prox_stream, prevdata, _1, _2
+        )
+    );
+}
+
+void ManualObjectQueryProcessor::handleProximitySubstreamRead(const OHDP::SpaceNodeID& snid, OHDPSST::Stream::Ptr prox_stream, String* prevdata, uint8* buffer, int length) {
+    if (mContext->stopped()) {
+        QPLOG(detailed, "Ignoring proximity update after system stop requested.");
+        return;
+    }
+
+    prevdata->append((const char*)buffer, length);
+
+    while(true) {
+        std::string msg = Network::Frame::parse(*prevdata);
+
+        // If we don't have a full message, just wait for more
+        if (msg.empty()) return;
+
+        // Otherwise, try to handle it
+        QPLOG(detailed, "Got proximity message.");
+        // FIXME handleProximityMessage(snid, msg);
+    }
+
+    // FIXME we should be getting a callback on stream close so we can clean up!
+    //prox_stream->registerReadCallback(0);
+}
+
+
+
+// Location
+
+
+void ManualObjectQueryProcessor::handleLocationSubstream(const OHDP::SpaceNodeID& snid, int err, OHDPSST::Stream::Ptr s) {
+    s->registerReadCallback(
+        std::tr1::bind(
+            &ManualObjectQueryProcessor::handleLocationSubstreamRead, this,
+            snid, s, new std::stringstream(), _1, _2
+        )
+    );
+}
+
+void ManualObjectQueryProcessor::handleLocationSubstreamRead(const OHDP::SpaceNodeID& snid, OHDPSST::Stream::Ptr s, std::stringstream* prevdata, uint8* buffer, int length) {
+    prevdata->write((const char*)buffer, length);
+    if (handleLocationMessage(snid, prevdata->str())) {
+        // FIXME we should be getting a callback on stream close instead of
+        // relying on this parsing as an indicator
+        delete prevdata;
+        // Clear out callback so we aren't responsible for any remaining
+        // references to s, and close the stream
+        s->registerReadCallback(0);
+        s->close(false);
+    }
+}
+
+bool ManualObjectQueryProcessor::handleLocationMessage(const OHDP::SpaceNodeID& snid, const std::string& payload) {
+    Sirikata::Protocol::Frame frame;
+    bool parse_success = frame.ParseFromString(payload);
+    if (!parse_success) return false;
+    Sirikata::Protocol::Loc::BulkLocationUpdate contents;
+    contents.ParseFromString(frame.payload());
+
+    QPLOG(detailed, "Got location message.");
+    // FIXME figure out who to forward to, or store for later use
+
+    return true;
+}
+
+
 
 } // namespace Manual
 } // namespace OH
