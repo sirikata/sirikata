@@ -399,7 +399,7 @@ private:
     ServerSubscriberIndex mServerSubscriptions;
 
     typedef SubscriberIndex<OHDP::NodeID> OHSubscriberIndex;
-    ServerSubscriberIndex mOHSubscriptions;
+    OHSubscriberIndex mOHSubscriptions;
 
     typedef SubscriberIndex<UUID> ObjectSubscriberIndex;
     ObjectSubscriberIndex mObjectSubscriptions;
