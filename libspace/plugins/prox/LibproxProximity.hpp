@@ -67,6 +67,8 @@ public:
     LibproxProximity(SpaceContext* ctx, LocationService* locservice, CoordinateSegmentation* cseg, SpaceNetwork* net, AggregateManager* aggmgr);
     ~LibproxProximity();
 
+    // MAIN Thread:
+
     // Service Interface overrides
     virtual void start();
 
@@ -78,9 +80,6 @@ public:
     virtual void addQuery(UUID obj, SolidAngle sa, uint32 max_results);
     virtual void addQuery(UUID obj, const String& params);
     virtual void removeQuery(UUID obj);
-
-    // QueryEventListener Interface
-    void queryHasEvents(Query* query);
 
     // LocationServiceListener Interface
     virtual void localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics);
@@ -104,6 +103,14 @@ public:
     virtual void addRelevantServer(ServerID sid);
     virtual void removeRelevantServer(ServerID sid);
 
+    // SpaceNetworkConnectionListener Interface
+    virtual void onSpaceNetworkConnected(ServerID sid);
+    virtual void onSpaceNetworkDisconnected(ServerID sid);
+
+
+
+    // PROX Thread:
+
     // AggregateListener Interface
     virtual void aggregateCreated(ProxAggregator* handler, const UUID& objid);
     virtual void aggregateChildAdded(ProxAggregator* handler, const UUID& objid, const UUID& child, const BoundingSphere3f& bnds);
@@ -112,16 +119,13 @@ public:
     virtual void aggregateDestroyed(ProxAggregator* handler, const UUID& objid);
     virtual void aggregateObserved(ProxAggregator* handler, const UUID& objid, uint32 nobservers);
 
-    // SpaceNetworkConnectionListener Interface
-    virtual void onSpaceNetworkConnected(ServerID sid);
-    virtual void onSpaceNetworkDisconnected(ServerID sid);
+    // QueryEventListener Interface
+    void queryHasEvents(Query* query);
 
 
 private:
 
     void handleObjectProximityMessage(const UUID& objid, void* buffer, uint32 length);
-
-    void updateAggregateLoc(const UUID& objid, const BoundingSphere3f& bnds);
 
     // MAIN Thread: These are utility methods which should only be called from the main thread.
     virtual int32 objectQueries() const;

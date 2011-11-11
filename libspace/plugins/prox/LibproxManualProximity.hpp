@@ -55,6 +55,9 @@ public:
     virtual void onObjectHostSession(const OHDP::NodeID& id, ObjectHostSessionPtr oh_sess);
     virtual void onObjectHostSessionEnded(const OHDP::NodeID& id);
 
+
+    // PROX Thread:
+
     // AggregateListener Interface
     virtual void aggregateCreated(ProxAggregator* handler, const UUID& objid);
     virtual void aggregateChildAdded(ProxAggregator* handler, const UUID& objid, const UUID& child, const BoundingSphere3f& bnds);
@@ -62,8 +65,6 @@ public:
     virtual void aggregateBoundsUpdated(ProxAggregator* handler, const UUID& objid, const BoundingSphere3f& bnds);
     virtual void aggregateDestroyed(ProxAggregator* handler, const UUID& objid);
     virtual void aggregateObserved(ProxAggregator* handler, const UUID& objid, uint32 nobservers);
-
-    // PROX Thread:
 
     // QueryEventListener Interface
     void queryHasEvents(ProxQuery* query);

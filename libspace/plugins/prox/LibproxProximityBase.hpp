@@ -162,6 +162,19 @@ protected:
 
     CBRLocationServiceCache* mLocCache;
 
+    // Query-Type-Agnostic AggregateListener Interface -- manages adding to Loc
+    // and passing to AggregateManager, but you need to delegate to these
+    // yourself since the AggregateListener interface depends on the type of
+    // query/query handler being used.
+    virtual void aggregateCreated(const UUID& objid);
+    virtual void aggregateChildAdded(const UUID& objid, const UUID& child, const BoundingSphere3f& bnds);
+    virtual void aggregateChildRemoved(const UUID& objid, const UUID& child, const BoundingSphere3f& bnds);
+    virtual void aggregateBoundsUpdated(const UUID& objid, const BoundingSphere3f& bnds);
+    virtual void aggregateDestroyed(const UUID& objid);
+    virtual void aggregateObserved(const UUID& objid, uint32 nobservers);
+    // Helper for updating aggregates
+    void updateAggregateLoc(const UUID& objid, const BoundingSphere3f& bnds);
+
 }; // class LibproxProximityBase
 
 } // namespace Sirikata

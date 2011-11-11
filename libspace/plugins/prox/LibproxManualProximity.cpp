@@ -146,26 +146,6 @@ void LibproxManualProximity::onObjectHostSessionEnded(const OHDP::NodeID& id) {
 }
 
 
-void LibproxManualProximity::aggregateCreated(ProxAggregator* handler, const UUID& objid) {
-}
-
-void LibproxManualProximity::aggregateChildAdded(ProxAggregator* handler, const UUID& objid, const UUID& child, const BoundingSphere3f& bnds) {
-}
-
-void LibproxManualProximity::aggregateChildRemoved(ProxAggregator* handler, const UUID& objid, const UUID& child, const BoundingSphere3f& bnds) {
-}
-
-void LibproxManualProximity::aggregateBoundsUpdated(ProxAggregator* handler, const UUID& objid, const BoundingSphere3f& bnds) {
-}
-
-void LibproxManualProximity::aggregateDestroyed(ProxAggregator* handler, const UUID& objid) {
-}
-
-void LibproxManualProximity::aggregateObserved(ProxAggregator* handler, const UUID& objid, uint32 nobservers) {
-}
-
-
-
 int32 LibproxManualProximity::objectHostQueries() const {
     return mOHQueries[OBJECT_CLASS_STATIC].size();
 }
@@ -176,6 +156,31 @@ int32 LibproxManualProximity::objectHostQueries() const {
 
 
 // PROX Thread
+
+void LibproxManualProximity::aggregateCreated(ProxAggregator* handler, const UUID& objid) {
+    LibproxProximityBase::aggregateCreated(objid);
+}
+
+void LibproxManualProximity::aggregateChildAdded(ProxAggregator* handler, const UUID& objid, const UUID& child, const BoundingSphere3f& bnds) {
+    LibproxProximityBase::aggregateChildAdded(objid, child, bnds);
+}
+
+void LibproxManualProximity::aggregateChildRemoved(ProxAggregator* handler, const UUID& objid, const UUID& child, const BoundingSphere3f& bnds) {
+    LibproxProximityBase::aggregateChildRemoved(objid, child, bnds);
+}
+
+void LibproxManualProximity::aggregateBoundsUpdated(ProxAggregator* handler, const UUID& objid, const BoundingSphere3f& bnds) {
+    LibproxProximityBase::aggregateBoundsUpdated(objid, bnds);
+}
+
+void LibproxManualProximity::aggregateDestroyed(ProxAggregator* handler, const UUID& objid) {
+    LibproxProximityBase::aggregateDestroyed(objid);
+}
+
+void LibproxManualProximity::aggregateObserved(ProxAggregator* handler, const UUID& objid, uint32 nobservers) {
+    LibproxProximityBase::aggregateObserved(objid, nobservers);
+}
+
 
 void LibproxManualProximity::tickQueryHandler(ProxQueryHandler* qh[NUM_OBJECT_CLASSES]) {
     Time simT = mContext->simTime();

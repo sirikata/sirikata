@@ -10,6 +10,8 @@
 #include "Options.hpp"
 #include <sirikata/core/options/CommonOptions.hpp>
 
+#include <sirikata/space/AggregateManager.hpp>
+
 #define PROXLOG(level,msg) SILOG(prox,level,"[PROX] " << msg)
 
 namespace Sirikata {
@@ -188,6 +190,8 @@ bool LibproxProximityBase::velocityIsStatic(const Vector3f& vel) {
 }
 
 
+// MAIN Thread
+
 void LibproxProximityBase::readFramesFromObjectStream(const ObjectReference& oref, ProxObjectStreamInfo::FrameReceivedCallback cb) {
     ObjectProxStreamMap::iterator prox_stream_it = mObjectProxStreams.find(oref.getAsUUID());
     assert(prox_stream_it != mObjectProxStreams.end());
@@ -351,6 +355,96 @@ void LibproxProximityBase::handleRemoveServerLocSubscription(const ServerID& sub
 
 void LibproxProximityBase::handleRemoveAllServerLocSubscription(const ServerID& subscriber) {
     mLocService->unsubscribe(subscriber);
+}
+
+
+
+// PROX Thread
+
+void LibproxProximityBase::aggregateCreated(const UUID& objid) {
+    // On addition, an "aggregate" will have no children, i.e. its zero sized.
+
+    mContext->mainStrand->post(
+        std::tr1::bind(
+            &LocationService::addLocalAggregateObject, mLocService,
+            objid,
+            TimedMotionVector3f(mContext->simTime(), MotionVector3f()),
+            TimedMotionQuaternion(mContext->simTime(), MotionQuaternion()),
+            BoundingSphere3f(),
+            "",
+            ""
+        )
+    );
+
+    mAggregateManager->addAggregate(objid);
+}
+
+void LibproxProximityBase::aggregateChildAdded(const UUID& objid, const UUID& child, const BoundingSphere3f& bnds) {
+    if (!mLocService->contains(objid) || mLocService->bounds(objid) != bnds) {
+        // Loc cares only about this chance to update state of aggregate
+        mContext->mainStrand->post(
+            std::tr1::bind(
+                &LibproxProximityBase::updateAggregateLoc, this,
+                objid, bnds
+            )
+        );
+    }
+
+    mAggregateManager->addChild(objid, child);
+}
+
+void LibproxProximityBase::aggregateChildRemoved(const UUID& objid, const UUID& child, const BoundingSphere3f& bnds) {
+    if (!mLocService->contains(objid) || mLocService->bounds(objid) != bnds) {
+        // Loc cares only about this chance to update state of aggregate
+        mContext->mainStrand->post(
+            std::tr1::bind(
+                &LibproxProximityBase::updateAggregateLoc, this,
+                objid, bnds
+            )
+        );
+    }
+
+    mAggregateManager->removeChild(objid, child);
+}
+
+void LibproxProximityBase::aggregateBoundsUpdated(const UUID& objid, const BoundingSphere3f& bnds) {
+    if (!mLocService->contains(objid) || mLocService->bounds(objid) != bnds) {
+        mContext->mainStrand->post(
+            std::tr1::bind(
+                &LibproxProximityBase::updateAggregateLoc, this,
+                objid, bnds
+            )
+        );
+    }
+
+    if (mLocService->contains(objid) && mLocService->bounds(objid) != bnds)
+        mAggregateManager->generateAggregateMesh(objid, Duration::seconds(300.0+rand()%300));
+}
+
+void LibproxProximityBase::aggregateDestroyed(const UUID& objid) {
+    mContext->mainStrand->post(
+        std::tr1::bind(
+            &LocationService::removeLocalAggregateObject, mLocService, objid
+        )
+    );
+    mAggregateManager->removeAggregate(objid);
+}
+
+void LibproxProximityBase::aggregateObserved(const UUID& objid, uint32 nobservers) {
+    mAggregateManager->aggregateObserved(objid, nobservers);
+}
+
+void LibproxProximityBase::updateAggregateLoc(const UUID& objid, const BoundingSphere3f& bnds) {
+    if (mLocService->contains(objid)) {
+        mLocService->updateLocalAggregateLocation(
+            objid,
+            TimedMotionVector3f(mContext->simTime(), MotionVector3f(bnds.center(), Vector3f(0,0,0)))
+        );
+        mLocService->updateLocalAggregateBounds(
+            objid,
+            BoundingSphere3f(bnds.center(), bnds.radius())
+        );
+    }
 }
 
 } // namespace Sirikata
