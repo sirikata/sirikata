@@ -738,6 +738,11 @@ IF(GOOGLE_PERFTOOLS_FOUND)
   ENDIF()
 ENDIF()
 
+# dependency: liboauthcpp
+SET(LIBOAUTHCPP_ADDED_DEFINITIONS ${ADDED_DEFINITIONS})
+ADD_SUBDIRECTORY(${TOP_LEVEL}/externals/liboauthcpp/build ${CMAKE_CURRENT_BINARY_DIR}/liboauthcpp)
+SET(LIBOAUTHCPP_INCLUDE_DIR ${TOP_LEVEL}/externals/liboauthcpp/include)
+
 # -- User defined variables that control which components get built
 SET(WITH_OGRE_OH TRUE CACHE BOOL "Build with Ogre support if available")
 SET(WITH_LIBSQLITE TRUE CACHE BOOL "Build SQLite library if available")
@@ -941,6 +946,7 @@ SET(INCLUDE_DIRECTORIES
   #${GLUT_INCLUDE_DIR}
   ${GSL_INCLUDE_DIR}
   ${HTTP_PARSER_INCLUDE_DIR}
+  ${LIBOAUTHCPP_INCLUDE_DIR}
   )
 
 IF(BUILD_LIBSQLITE)
@@ -1206,6 +1212,7 @@ SET(SIRIKATA_CORE_SOURCES
 	${LIBCORE_SOURCE_DIR}/transfer/TransferPool.cpp
 	${LIBCORE_SOURCE_DIR}/transfer/HttpManager.cpp
         ${LIBCORE_SOURCE_DIR}/transfer/ResourceDownloadTask.cpp
+	${LIBCORE_SOURCE_DIR}/transfer/OAuthHttpManager.cpp
 	${LIBCORE_SOURCE_DIR}/task/DependencyTask.cpp
 	${LIBCORE_SOURCE_DIR}/task/WorkQueue.cpp
 	${LIBCORE_SOURCE_DIR}/task/Time.cpp
@@ -1572,6 +1579,7 @@ SET(LIBSPACE_PLUGIN_PROX_SOURCES
   ${LIBSPACE_PLUGIN_PROX_DIR}/CBRLocationServiceCache.cpp
   ${LIBSPACE_PLUGIN_PROX_DIR}/LibproxProximityBase.cpp
   ${LIBSPACE_PLUGIN_PROX_DIR}/LibproxProximity.cpp
+  ${LIBSPACE_PLUGIN_PROX_DIR}/LibproxManualProximity.cpp
   )
 
 
@@ -1786,6 +1794,7 @@ SET(SIRIKATA_CORE_LIBRARIES
     ${BREAKPAD_LIBRARIES}
     http-parser
     ${GOOGLE_PERFTOOLS_SETTING_LIBRARIES}
+    oauthcpp
     )
 
 IF(BERKELIUM_FOUND)
@@ -2302,6 +2311,20 @@ ADD_PLUGIN_TARGET(oh-simple-query
 		    VERSION_INFO ${SIRIKATA_VERSION_SETTINGS}
 		    )
 SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} oh-simple-query)
+
+SET(LIBOH_PLUGIN_MANUAL_QUERY_DIR ${LIBOH_PLUGIN_DIR}/manual_query)
+SET(LIBOH_PLUGIN_MANUAL_QUERY_SOURCES
+ ${LIBOH_PLUGIN_MANUAL_QUERY_DIR}/ManualObjectQueryProcessor.cpp
+ ${LIBOH_PLUGIN_MANUAL_QUERY_DIR}/PluginInterface.cpp
+    )
+ADD_PLUGIN_TARGET(oh-manual-query
+                    SOURCES ${LIBOH_PLUGIN_MANUAL_QUERY_SOURCES}
+                    TARGET_LDFLAGS ${sirikata_LDFLAGS}
+                    TARGET_LIBRARIES ${SIRIKATA_OH_LIB} ${SIRIKATA_CORE_LIB}
+                    LIBRARIES ${SIRIKATA_OH_LIB} ${SIRIKATA_CORE_LIB}
+		    VERSION_INFO ${SIRIKATA_VERSION_SETTINGS}
+		    )
+SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} oh-manual-query)
 
 
 # simplecamera plugin

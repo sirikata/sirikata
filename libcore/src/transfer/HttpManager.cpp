@@ -34,6 +34,10 @@
 #include <sirikata/core/transfer/HttpManager.hpp>
 #include <sirikata/core/transfer/URL.hpp>
 #include <sirikata/core/network/Address.hpp>
+#include <liboauthcpp/liboauthcpp.h>
+
+#include <boost/lexical_cast.hpp>
+#include <sirikata/core/util/UUID.hpp>
 
 AUTO_SINGLETON_INSTANCE(Sirikata::Transfer::HttpManager);
 
@@ -92,9 +96,18 @@ void HttpManager::postCallback(IOCallback cb) {
     mServicePool->service()->post(cb);
 }
 
-void HttpManager::makeRequest(Sirikata::Network::Address addr, HTTP_METHOD method, std::string req, HttpCallback cb) {
+String HttpManager::methodAsString(HTTP_METHOD m) {
+    switch(m) {
+      case HEAD: return "HEAD";
+      case GET: return "GET";
+      case POST: return "POST";
+      default: return "";
+    }
+}
 
-    std::tr1::shared_ptr<HttpRequest> r(new HttpRequest(addr, req, method, cb));
+void HttpManager::makeRequest(Sirikata::Network::Address addr, HTTP_METHOD method, std::string req, bool allow_redirects, HttpCallback cb) {
+
+    std::tr1::shared_ptr<HttpRequest> r(new HttpRequest(addr, req, method, allow_redirects, cb));
 
     //Initialize http parser settings callbacks
     r->mHttpSettings = EMPTY_PARSER_SETTINGS;
@@ -122,6 +135,159 @@ void HttpManager::makeRequest(Sirikata::Network::Address addr, HTTP_METHOD metho
     add_req(r);
     processQueue();
 }
+
+void HttpManager::makeRequest(
+    Sirikata::Network::Address addr, HTTP_METHOD method, const String& path,
+    HttpCallback cb,
+    const Headers& headers, const QueryParameters& query_params,
+    const String& body,
+    bool allow_redirects)
+{
+    std::ostringstream request_stream;
+
+    // Request line
+    request_stream << methodAsString(method) << " ";
+    formatPath(request_stream, path, query_params);
+    request_stream << " HTTP/1.1\r\n";
+
+    // Headers
+    for(Headers::const_iterator it = headers.begin(); it != headers.end(); it++)
+        request_stream << it->first << ": " << it->second << "\r\n";
+    if (headers.find("Accept") == headers.end())
+        request_stream << "Accept: */*\r\n";
+
+    // Required blank line
+    request_stream << "\r\n";
+
+    // Body
+    if (!body.empty())
+        request_stream << body;
+
+    // FIXME This is actually kind of round-about as we are formatting and then
+    // reparsing the request by going through the other makeRequest call. We
+    // could dispatch this ourselves and not waste the time reparsing.
+    makeRequest(addr, method, request_stream.str(), allow_redirects, cb);
+}
+
+void HttpManager::formatURLEncodedDictionary(std::ostream& os, const StringDictionary& query_params) {
+    bool first_param = true;
+    for(QueryParameters::const_iterator it = query_params.begin(); it != query_params.end(); it++) {
+        if (!first_param) os << "&";
+        os << OAuth::URLEncode(it->first) << "=" << OAuth::URLEncode(it->second);
+        first_param = false;
+    }
+}
+
+String HttpManager::formatURLEncodedDictionary(const StringDictionary& query_params) {
+    std::ostringstream formatted;
+    formatURLEncodedDictionary(formatted, query_params);
+    return formatted.str();
+}
+
+void HttpManager::formatPath(std::ostream& os, const String& path, const QueryParameters& query_params) {
+    os << path;
+    if (!query_params.empty()) {
+        os << "?";
+        formatURLEncodedDictionary(os, query_params);
+    }
+
+}
+
+String HttpManager::formatPath(const String& path, const QueryParameters& query_params) {
+    std::ostringstream formatted;
+    formatPath(formatted, path, query_params);
+    return formatted.str();
+}
+
+String HttpManager::formatURL(const String& host, const String& path, const QueryParameters& query_params) {
+    return "http://" + host + formatPath(path, query_params);
+}
+
+void HttpManager::head(
+    Sirikata::Network::Address addr, const String& path,
+    HttpCallback cb, const Headers& headers, const QueryParameters& query_params, bool allow_redirects)
+{
+    makeRequest(addr, HEAD, path, cb, headers, query_params, "", allow_redirects);
+}
+
+void HttpManager::get(
+    Sirikata::Network::Address addr, const String& path,
+    HttpCallback cb, const Headers& headers, const QueryParameters& query_params, bool allow_redirects)
+{
+    makeRequest(addr, GET, path, cb, headers, query_params, "", allow_redirects);
+}
+
+void HttpManager::post(
+    Sirikata::Network::Address addr, const String& path,
+    const String& content_type, const String& body,
+    HttpCallback cb, const Headers& headers, const QueryParameters& query_params,
+    bool allow_redirects)
+{
+    Headers new_headers(headers);
+
+    if (!body.empty()) {
+        if (new_headers.find("Content-Type") == new_headers.end())
+            new_headers["Content-Type"] = content_type;
+        if (new_headers.find("Content-Length") == new_headers.end())
+            new_headers["Content-Length"] = boost::lexical_cast<String>(body.size());
+    }
+
+    makeRequest(addr, POST, path, cb, new_headers, query_params, body, allow_redirects);
+}
+
+void HttpManager::postURLEncoded(
+    Sirikata::Network::Address addr, const String& path,
+    const StringDictionary& body,
+    HttpCallback cb, const Headers& headers, const QueryParameters& query_params,
+    bool allow_redirects)
+{
+    post(
+        addr, path, "application/x-www-form-urlencoded", formatURLEncodedDictionary(body),
+        cb, headers, query_params, allow_redirects
+    );
+}
+
+void HttpManager::postMultipartForm(
+    Sirikata::Network::Address addr, const String& path,
+    const MultipartDataList& data,
+    HttpCallback cb, const Headers& headers, const QueryParameters& query_params,
+    bool allow_redirects)
+{
+    String boundary = UUID::random().rawHexData();
+    String content_type = "multipart/form-data; boundary=" + boundary;
+
+    std::ostringstream request_body;
+    for(MultipartDataList::const_iterator it = data.begin(); it != data.end(); it++) {
+        const MultipartData& mp = *it;
+
+        request_body << "--" << boundary << "\r\n";
+        // Content disposition line
+        request_body << "Content-Disposition: form-data; name=\"" << mp.field << "\"";
+        if (!mp.filename.empty()) {
+            request_body << "; filename=\"" << mp.filename << "\"";
+        }
+        request_body << "\r\n";
+        // Other headers
+        for(Headers::const_iterator head_it = mp.headers.begin(); head_it != mp.headers.end(); head_it++)
+            request_body << head_it->first << ": " << head_it->second << "\r\n";
+        // Default content-type header for files
+        if (!mp.filename.empty() && mp.headers.find("Content-Type") == mp.headers.end())
+            request_body << "Content-Type: application/octet-stream\r\n";
+        // Data
+        request_body << "\r\n";
+        request_body << mp.data;
+        request_body << "\r\n";
+    }
+    request_body << "--" << boundary << "--\r\n";
+
+    // Perform the post
+    post(
+        addr, path, content_type, request_body.str(),
+        cb, headers, query_params, allow_redirects
+    );
+}
+
+
 
 void HttpManager::processQueue() {
     SILOG(transfer, insane, "processQueue called, mNumTotalConnections = "
@@ -367,7 +533,7 @@ void HttpManager::handle_read(std::tr1::shared_ptr<TCPSocket> socket, std::tr1::
     }
 
     if ((req->method == HEAD && respPtr->mHeaderComplete) ||
-            (req->method == GET && respPtr->mMessageComplete)) {
+        ((req->method == GET || req->method == POST) && respPtr->mMessageComplete)) {
         //We're done
 
         //If we didn't get any body data, erase the DenseData pointer
@@ -376,15 +542,15 @@ void HttpManager::handle_read(std::tr1::shared_ptr<TCPSocket> socket, std::tr1::
         }
 
         SILOG(transfer, detailed, "Finished http transfer with content length of " << respPtr->getContentLength());
-        std::map<std::string, std::string>::const_iterator findLocation;
+        Headers::const_iterator findLocation;
         findLocation = respPtr->mHeaders.find("Location");
-        if (respPtr->getStatusCode() == 301 && findLocation != respPtr->mHeaders.end()) {
+        if (respPtr->getStatusCode() == 301 && findLocation != respPtr->mHeaders.end() && req->allow_redirects) {
             SILOG(transfer, detailed, "Got a 301 redirect reply and location = " << findLocation->second);
             std::ostringstream request_stream;
-            std::string request_method = (req->method == HEAD) ? "HEAD" : "GET";
+            std::string request_method = methodAsString(req->method);
             URL newURI(findLocation->second.c_str());
             request_stream << request_method << " " << newURI.fullpath() << " HTTP/1.1\r\n";
-            std::map<std::string, std::string>::const_iterator it;
+            Headers::const_iterator it;
             for (it = req->mHeaders.begin(); it != req->mHeaders.end(); it++) {
             	if (it->first == "Host") {
             		request_stream << "Host: " << newURI.host() << "\r\n";
@@ -394,7 +560,7 @@ void HttpManager::handle_read(std::tr1::shared_ptr<TCPSocket> socket, std::tr1::
             }
             request_stream << "\r\n";
             Network::Address newaddr(newURI.host(), newURI.proto());
-            makeRequest(newaddr, req->method, request_stream.str(), req->cb);
+            makeRequest(newaddr, req->method, request_stream.str(), req->allow_redirects, req->cb);
         } else {
             req->cb(respPtr, SUCCESS, ec);
         }
@@ -448,7 +614,7 @@ int HttpManager::on_headers_complete(http_parser* _) {
     }
 
     //Check if Content-Encoding = gzip
-    std::map<std::string, std::string>::const_iterator it = curResponse->mHeaders.find("Content-Encoding");
+    Headers::const_iterator it = curResponse->mHeaders.find("Content-Encoding");
     if(it != curResponse->mHeaders.end() && it->second == "gzip") {
         curResponse->mGzip = true;
     }

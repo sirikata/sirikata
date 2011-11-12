@@ -58,6 +58,7 @@ using boost::asio::ip::tcp;
 class HttpTransferTest : public CxxTest::TestSuite {
 
 public:
+    typedef Transfer::HttpManager::Headers HeaderMapType;
 
     boost::condition_variable mDone;
     boost::mutex mMutex;
@@ -106,7 +107,7 @@ public:
         using std::tr1::placeholders::_3;
 
         Network::Address addr(mCdnHost, mCdnService);
-        std::map<std::string, std::string>::const_iterator it;
+        HeaderMapType::const_iterator it;
         std::ostringstream request_stream;
         boost::unique_lock<boost::mutex> lock(mMutex);
 
@@ -122,7 +123,7 @@ public:
         request_stream << "BAD INPUTlkjslkd lskjdflks jdlfks dflskjdflkj";
 
         SILOG(transfer, debug, "Issuing invalid GET request");
-        Transfer::HttpManager::getSingleton().makeRequest(addr, Transfer::HttpManager::GET, request_stream.str(),
+        Transfer::HttpManager::getSingleton().makeRequest(addr, Transfer::HttpManager::GET, request_stream.str(), true,
                 std::tr1::bind(&HttpTransferTest::expect_request_failed, this, _1, _2, _3));
         mDone.wait(lock);
 
@@ -134,15 +135,16 @@ public:
          * and make sure body is null, content length is not present,
          * http status is 200
          */
-        request_stream.str("");
-        request_stream << "HEAD " << mCdnDnsUriPrefix << mDnsTest1 << " HTTP/1.1\r\n";
-        request_stream << "Host: " << mCdnHost << "\r\n";
-        request_stream << "Accept: */*\r\n";
-        request_stream << "Connection: close\r\n\r\n";
+        Transfer::HttpManager::Headers headers;
+        headers["Host"] = mCdnHost;
+        headers["Connection"] = "close";
 
         SILOG(transfer, debug, "Issuing head metadata request");
-        Transfer::HttpManager::getSingleton().makeRequest(addr, Transfer::HttpManager::HEAD, request_stream.str(),
-                std::tr1::bind(&HttpTransferTest::request_finished, this, _1, _2, _3));
+        Transfer::HttpManager::getSingleton().head(
+            addr, mCdnDnsUriPrefix + mDnsTest1,
+            std::tr1::bind(&HttpTransferTest::request_finished, this, _1, _2, _3),
+            headers
+        );
         mDone.wait(lock);
 
         TS_ASSERT(mHttpResponse);
@@ -155,26 +157,48 @@ public:
             TS_ASSERT(mHttpResponse->getHeaders().size() != 0);
             it = mHttpResponse->getHeaders().find("File-Size");
             TS_ASSERT(it != mHttpResponse->getHeaders().end());
+            // Also sanity check the case insensitivity
+            TS_ASSERT( mHttpResponse->getHeaders().find("File-Size") == mHttpResponse->getHeaders().find("file-size") );
+            TS_ASSERT( mHttpResponse->getHeaders().find("File-Size") == mHttpResponse->getHeaders().find("FILE-SIZE") );
             it = mHttpResponse->getHeaders().find("Hash");
             TS_ASSERT(it != mHttpResponse->getHeaders().end());
             TS_ASSERT( !(mHttpResponse->getData()) );
         }
 
 
+        /*
+         * Sanity check query parameter encoding.
+         */
+        headers.clear();
+        headers["Host"] = mCdnHost;
+        headers["Connection"] = "close";
+        Transfer::HttpManager::QueryParameters query_params;
+        query_params["foo"] = "bar";
+        query_params["x"] = "a string with special characters +=#@";
+
+        SILOG(transfer, debug, "Issuing request with query parameters");
+        Transfer::HttpManager::getSingleton().head(
+            addr, mCdnDnsUriPrefix + mDnsTest1,
+            std::tr1::bind(&HttpTransferTest::request_finished, this, _1, _2, _3),
+            headers, query_params
+        );
+        mDone.wait(lock);
+
 
         /*
          * For HEAD file request, make sure body is null,
          * content length is present and correct, status code is 200
          */
-        request_stream.str("");
-        request_stream << "HEAD " << mCdnDownloadUriPrefix << "/" << mHashTest1 << " HTTP/1.1\r\n";
-        request_stream << "Host: " << mCdnHost << "\r\n";
-        request_stream << "Accept: */*\r\n";
-        request_stream << "Connection: close\r\n\r\n";
+        headers.clear();
+        headers["Host"] = mCdnHost;
+        headers["Connection"] = "close";
 
         SILOG(transfer, debug, "Issuing head file request");
-        Transfer::HttpManager::getSingleton().makeRequest(addr, Transfer::HttpManager::HEAD, request_stream.str(),
-                std::tr1::bind(&HttpTransferTest::request_finished, this, _1, _2, _3));
+        Transfer::HttpManager::getSingleton().head(
+            addr, mCdnDownloadUriPrefix + "/" + mHashTest1,
+            std::tr1::bind(&HttpTransferTest::request_finished, this, _1, _2, _3),
+            headers
+        );
         mDone.wait(lock);
 
         TS_ASSERT(mHttpResponse);
@@ -194,15 +218,16 @@ public:
          * content length = data size, http status code 200,
          * check content length = correct size of file
          */
-        request_stream.str("");
-        request_stream << "GET " << mCdnDownloadUriPrefix << "/" << mHashTest1 << " HTTP/1.1\r\n";
-        request_stream << "Host: " << mCdnHost << "\r\n";
-        request_stream << "Accept: */*\r\n";
-        request_stream << "Connection: close\r\n\r\n";
+        headers.clear();
+        headers["Host"] = mCdnHost;
+        headers["Connection"] = "close";
 
         SILOG(transfer, debug, "Issuing get file request");
-        Transfer::HttpManager::getSingleton().makeRequest(addr, Transfer::HttpManager::GET, request_stream.str(),
-                std::tr1::bind(&HttpTransferTest::request_finished, this, _1, _2, _3));
+        Transfer::HttpManager::getSingleton().get(
+            addr, mCdnDownloadUriPrefix + "/" + mHashTest1,
+            std::tr1::bind(&HttpTransferTest::request_finished, this, _1, _2, _3),
+            headers
+        );
         mDone.wait(lock);
 
         TS_ASSERT(mHttpResponse);
@@ -225,16 +250,17 @@ public:
          * For GET file range request, check content length is present,
          * content length = range size, http status code 200
          */
-        request_stream.str("");
-        request_stream << "GET " << mCdnDownloadUriPrefix << "/" << mHashTest1 << " HTTP/1.1\r\n";
-        request_stream << "Range: bytes=10-20\r\n";
-        request_stream << "Host: " << mCdnHost << "\r\n";
-        request_stream << "Accept: */*\r\n";
-        request_stream << "Connection: close\r\n\r\n";
+        headers.clear();
+        headers["Host"] = mCdnHost;
+        headers["Connection"] = "close";
+        headers["Range"] = "Range: bytes=10-20";
 
         SILOG(transfer, debug, "Issuing get file range request");
-        Transfer::HttpManager::getSingleton().makeRequest(addr, Transfer::HttpManager::GET, request_stream.str(),
-                std::tr1::bind(&HttpTransferTest::request_finished, this, _1, _2, _3));
+        Transfer::HttpManager::getSingleton().get(
+            addr,  mCdnDownloadUriPrefix + "/" + mHashTest1,
+            std::tr1::bind(&HttpTransferTest::request_finished, this, _1, _2, _3),
+            headers
+        );
         mDone.wait(lock);
 
         TS_ASSERT(mHttpResponse);
@@ -262,14 +288,15 @@ public:
          * content length = data size, http status code 200,
          * check content length = correct size of file
          */
-        request_stream.str("");
-        request_stream << "GET " << mCdnDownloadUriPrefix << "/" << mHashTest1 << " HTTP/1.1\r\n";
-        request_stream << "Host: " << mCdnHost << "\r\n";
-        request_stream << "Accept: */*\r\n\r\n";
+        headers.clear();
+        headers["Host"] = mCdnHost;
 
         SILOG(transfer, debug, "Issuing persistent get file request");
-        Transfer::HttpManager::getSingleton().makeRequest(addr, Transfer::HttpManager::GET, request_stream.str(),
-                std::tr1::bind(&HttpTransferTest::request_finished, this, _1, _2, _3));
+        Transfer::HttpManager::getSingleton().get(
+            addr, mCdnDownloadUriPrefix + "/" + mHashTest1,
+            std::tr1::bind(&HttpTransferTest::request_finished, this, _1, _2, _3),
+            headers
+        );
         mDone.wait(lock);
 
         TS_ASSERT(mHttpResponse);
@@ -290,15 +317,16 @@ public:
          * check content length is present, content length = data size,
          * http status code 200, Content-Encoding = gzip
          */
-        request_stream.str("");
-        request_stream << "GET " << mCdnDownloadUriPrefix << "/" << mHashTest1 << " HTTP/1.1\r\n";
-        request_stream << "Host: " << mCdnHost << "\r\n";
-        request_stream << "Accept: */*\r\n";
-        request_stream << "Accept-Encoding: deflate, gzip\r\n\r\n";
+        headers.clear();
+        headers["Host"] = mCdnHost;
+        headers["Accept-Encoding"] = "deflate, gzip";
 
         SILOG(transfer, debug, "Issuing compressed get file request");
-        Transfer::HttpManager::getSingleton().makeRequest(addr, Transfer::HttpManager::GET, request_stream.str(),
-                std::tr1::bind(&HttpTransferTest::request_finished, this, _1, _2, _3));
+        Transfer::HttpManager::getSingleton().get(
+            addr, mCdnDownloadUriPrefix + "/" + mHashTest1,
+            std::tr1::bind(&HttpTransferTest::request_finished, this, _1, _2, _3),
+            headers
+        );
         mDone.wait(lock);
 
         TS_ASSERT(mHttpResponse);
@@ -326,16 +354,16 @@ public:
          * http status code 200, Content-Encoding = gzip, check actual bytes
          * Note: some web servers will turn off gzip for bytes < 200
          */
-        request_stream.str("");
-        request_stream << "GET " << mCdnDownloadUriPrefix << "/" << mHashTest1 << " HTTP/1.1\r\n";
-        request_stream << "Host: " << mCdnHost << "\r\n";
-        request_stream << "Range: bytes=10-220\r\n";
-        request_stream << "Accept: */*\r\n";
-        request_stream << "Accept-Encoding: deflate, gzip\r\n\r\n";
+        headers.clear();
+        headers["Host"] = mCdnHost;
+        headers["Range"] = "bytes=10-220";
+        headers["Accept-Encoding"] = "deflate, gzip";
 
         SILOG(transfer, debug, "Issuing compressed range get file request");
-        Transfer::HttpManager::getSingleton().makeRequest(addr, Transfer::HttpManager::GET, request_stream.str(),
-                std::tr1::bind(&HttpTransferTest::request_finished, this, _1, _2, _3));
+        Transfer::HttpManager::getSingleton().get(
+            addr, mCdnDownloadUriPrefix + "/" + mHashTest1,
+            std::tr1::bind(&HttpTransferTest::request_finished, this, _1, _2, _3),
+            headers);
         mDone.wait(lock);
 
         TS_ASSERT(mHttpResponse);
@@ -361,15 +389,16 @@ public:
         /*
          * First do a HEAD request for file 2
          */
-        request_stream.str("");
-        request_stream << "HEAD " << mCdnDnsUriPrefix << mDnsTest2 << " HTTP/1.1\r\n";
-        request_stream << "Host: " << mCdnHost << "\r\n";
-        request_stream << "Accept: */*\r\n";
-        request_stream << "Connection: close\r\n\r\n";
+        headers.clear();
+        headers["Host"] = mCdnHost;
+        headers["Connection"] = "close";
 
         SILOG(transfer, debug, "Issuing head metadata request");
-        Transfer::HttpManager::getSingleton().makeRequest(addr, Transfer::HttpManager::HEAD, request_stream.str(),
-                std::tr1::bind(&HttpTransferTest::request_finished, this, _1, _2, _3));
+        Transfer::HttpManager::getSingleton().head(
+            addr, mCdnDnsUriPrefix + mDnsTest2,
+            std::tr1::bind(&HttpTransferTest::request_finished, this, _1, _2, _3),
+            headers
+        );
         mDone.wait(lock);
 
         TS_ASSERT(mHttpResponse);
@@ -399,27 +428,29 @@ public:
          * and then do the same request with compression off to compare
          * and make sur ethey are equal
          */
-        request_stream.str("");
-        request_stream << "GET " << mCdnDownloadUriPrefix << "/" << mHashTest2 << " HTTP/1.1\r\n";
-        request_stream << "Host: " << mCdnHost << "\r\n";
-        request_stream << "Accept: */*\r\n";
-        request_stream << "Accept-Encoding: deflate, gzip\r\n\r\n";
+        headers.clear();
+        headers["Host"] = mCdnHost;
+        headers["Accept-Encoding"] = "deflate, gzip";
 
         SILOG(transfer, debug, "Issuing compressed get file request");
-        Transfer::HttpManager::getSingleton().makeRequest(addr, Transfer::HttpManager::GET, request_stream.str(),
-                std::tr1::bind(&HttpTransferTest::request_finished, this, _1, _2, _3));
+        Transfer::HttpManager::getSingleton().get(
+            addr, mCdnDownloadUriPrefix + "/" + mHashTest2,
+            std::tr1::bind(&HttpTransferTest::request_finished, this, _1, _2, _3),
+            headers
+        );
         mDone.wait(lock);
 
         std::tr1::shared_ptr<Transfer::HttpManager::HttpResponse> compressed = mHttpResponse;
 
-        request_stream.str("");
-        request_stream << "GET " << mCdnDownloadUriPrefix << "/" << mHashTest2 << " HTTP/1.1\r\n";
-        request_stream << "Host: " << mCdnHost << "\r\n";
-        request_stream << "Accept: */*\r\n\r\n";
+        headers.clear();
+        headers["Host"] = mCdnHost;
 
         SILOG(transfer, debug, "Issuing uncompresed get file request");
-        Transfer::HttpManager::getSingleton().makeRequest(addr, Transfer::HttpManager::GET, request_stream.str(),
-                std::tr1::bind(&HttpTransferTest::request_finished, this, _1, _2, _3));
+        Transfer::HttpManager::getSingleton().get(
+            addr, mCdnDownloadUriPrefix + "/" + mHashTest2,
+            std::tr1::bind(&HttpTransferTest::request_finished, this, _1, _2, _3),
+            headers
+        );
         mDone.wait(lock);
 
         std::tr1::shared_ptr<Transfer::HttpManager::HttpResponse> uncompressed = mHttpResponse;
@@ -432,7 +463,6 @@ public:
             TS_ASSERT(compressed->getStatusCode() == uncompressed->getStatusCode());
 
             //get headers
-            typedef std::map<std::string, std::string> HeaderMapType;
             const HeaderMapType& compressedHeaders = compressed->getHeaders();
             const HeaderMapType& uncompressedHeaders = uncompressed->getHeaders();
 
@@ -502,15 +532,16 @@ public:
          * a 301 redirect to make sure that the HttpManager will
          * redirect us properly
          */
-        request_stream.str("");
-        request_stream << "GET /api/browse HTTP/1.1\r\n";
-        request_stream << "Host: www.open3dhub.com\r\n";
-        request_stream << "Accept: */*\r\n\r\n";
+        headers.clear();
+        headers["Host"] = "www.open3dhub.com";
 
         SILOG(transfer, debug, "Issuing known redirect URL");
         Network::Address redir_addr("www.open3dhub.com", "http");
-        Transfer::HttpManager::getSingleton().makeRequest(redir_addr, Transfer::HttpManager::GET, request_stream.str(),
-                std::tr1::bind(&HttpTransferTest::request_finished, this, _1, _2, _3));
+        Transfer::HttpManager::getSingleton().get(
+            redir_addr, "/api/browse",
+            std::tr1::bind(&HttpTransferTest::request_finished, this, _1, _2, _3),
+            headers
+        );
         mDone.wait(lock);
 
         TS_ASSERT(mHttpResponse);
@@ -521,21 +552,45 @@ public:
 
 
         /*
+         * Issue a GET request to a location that is known to return
+         * a 301 redirect, but disable redirects to make sure we can control
+         * redirection.
+         */
+        headers.clear();
+        headers["Host"] = "www.open3dhub.com";
+
+        SILOG(transfer, debug, "Issuing known redirect URL");
+        // Reuse redir_addr
+        Transfer::HttpManager::getSingleton().get(
+            redir_addr, "/api/browse",
+            std::tr1::bind(&HttpTransferTest::request_finished, this, _1, _2, _3),
+            headers, Transfer::HttpManager::QueryParameters(), false
+        );
+        mDone.wait(lock);
+
+        TS_ASSERT(mHttpResponse);
+        if(mHttpResponse) {
+            TS_ASSERT(mHttpResponse->getHeaders().size() != 0);
+            TS_ASSERT(mHttpResponse->getStatusCode() == 301);
+        }
+
+
+        /*
          * Now, let's plug in a bunch of persistent connections (no connection:close)
          * all at once to stress test
          */
         mNumCbs = 20;
         for(int i=0; i<20; i++) {
-            request_stream.str("");
-            request_stream << "GET " << mCdnDownloadUriPrefix << "/" << mHashTest1 << " HTTP/1.1\r\n";
-            request_stream << "Host: " << mCdnHost << "\r\n";
-            request_stream << "Accept: */*\r\n";
-            request_stream << "Accept-Encoding: deflate, gzip\r\n";
-            request_stream << "\r\n";
+            headers.clear();
+            headers["Host"] = mCdnHost;
+            headers["Accept-Encoding"] = "deflate, gzip";
 
             SILOG(transfer, debug, "Issuing persistent get file request #" << i+1);
-            Transfer::HttpManager::getSingleton().makeRequest(addr, Transfer::HttpManager::GET, request_stream.str(),
-                    std::tr1::bind(&HttpTransferTest::multi_request_finished, this, _1, _2, _3));
+            Transfer::HttpManager::getSingleton().get(
+                addr, mCdnDownloadUriPrefix + "/" + mHashTest1,
+                std::tr1::bind(&HttpTransferTest::multi_request_finished, this, _1, _2, _3),
+                headers
+            );
         }
 
         mDone.wait(lock);
@@ -554,7 +609,7 @@ public:
                 TS_ASSERT(response);
                 if(response) {
                     TS_ASSERT(response->getHeaders().size() != 0);
-                    std::map<std::string, std::string>::const_iterator it = response->getHeaders().find("Content-Length");
+                    HeaderMapType::const_iterator it = response->getHeaders().find("Content-Length");
                     TS_ASSERT(it != response->getHeaders().end());
                     TS_ASSERT(response->getStatusCode() == 200);
                     TS_ASSERT(response->getData());

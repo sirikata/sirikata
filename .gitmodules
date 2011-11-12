@@ -19,3 +19,6 @@
 [submodule "libproxyobject/plugins/ogre/data/ace"]
 	path = libproxyobject/plugins/ogre/data/ace
 	url = https://github.com/ajaxorg/ace.git
+[submodule "externals/liboauthcpp"]
+	path = externals/liboauthcpp
+	url = git://github.com/sirikata/liboauthcpp.git

@@ -59,6 +59,7 @@ namespace Sirikata {
 namespace Protocol {
 namespace Loc {
 class LocationUpdate;
+class BulkLocationUpdate;
 }
 namespace Prox {
 class ProximityResults;
@@ -368,7 +369,7 @@ public:
 
     // ObjectQuerier Interface
     void handleProximityMessage(const SpaceObjectReference& spaceobj, const Sirikata::Protocol::Prox::ProximityResults& results);
-
+    void handleLocationMessage(const SpaceObjectReference& spaceobj, const Sirikata::Protocol::Loc::BulkLocationUpdate& blu);
 
   private:
     /** \deprecated
@@ -381,15 +382,9 @@ public:
     bool delegateODPPortSend(const ODP::Endpoint& source_ep, const ODP::Endpoint& dest_ep, MemoryReference payload);
 
 
-    // Handlers for substreams for space-managed updates
-    static void handleLocationSubstream(const HostedObjectWPtr &weakSelf, const SpaceObjectReference& spaceobj, int err, SSTStreamPtr s);
-    // Handlers for substream read events for space-managed updates
-    static void handleLocationSubstreamRead(const HostedObjectWPtr &weakSelf, const SpaceObjectReference& spaceobj, SSTStreamPtr s, std::stringstream* prevdata, uint8* buffer, int length);
-
     // Handlers for core space-managed updates
     void processLocationUpdate(const SpaceObjectReference& sporef, ProxyObjectPtr proxy_obj, const Sirikata::Protocol::Loc::LocationUpdate& update);
     void processLocationUpdate(const SpaceID& space, ProxyObjectPtr proxy_obj, uint64 seqno, bool predictive, TimedMotionVector3f* loc, TimedMotionQuaternion* orient, BoundingSphere3f* bounds, String* mesh, String* phy);
-    bool handleLocationMessage(const SpaceObjectReference& spaceobj, const std::string& paylod);
 
     /**
        Any time that we get a prox removal call, we first save the existing

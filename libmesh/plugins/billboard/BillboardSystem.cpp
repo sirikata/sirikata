@@ -67,7 +67,7 @@ bool BillboardSystem::canLoad(Transfer::DenseDataPtr data) {
     return true;
 }
 
-Mesh::VisualPtr BillboardSystem::load(const Transfer::URI& uri, const Transfer::Fingerprint& fp,
+Mesh::VisualPtr BillboardSystem::load(const Transfer::RemoteFileMetadata& metadata, const Transfer::Fingerprint& fp,
     Transfer::DenseDataPtr data) {
     ptree pt;
     try {
@@ -85,7 +85,7 @@ Mesh::VisualPtr BillboardSystem::load(const Transfer::URI& uri, const Transfer::
     String type = pt.get("facing", String("camera"));
 
     Mesh::BillboardPtr result(new Mesh::Billboard());
-    result->uri = uri.toString();
+    result->uri = metadata.getURI().toString();
     result->hash = fp;
     result->image = url;
     result->aspectRatio = aspect;

@@ -7,9 +7,42 @@
 #include <sirikata/core/network/Frame.hpp>
 #include <sirikata/core/network/IOStrandImpl.hpp>
 
+#include "Options.hpp"
+#include <sirikata/core/options/CommonOptions.hpp>
+
+#include <sirikata/space/AggregateManager.hpp>
+
 #define PROXLOG(level,msg) SILOG(prox,level,"[PROX] " << msg)
 
 namespace Sirikata {
+
+template<typename EndpointType, typename StreamType>
+void LibproxProximityBase::ProxStreamInfo<EndpointType, StreamType>::readFramesFromStream(Ptr prox_stream, FrameReceivedCallback cb) {
+    using std::tr1::placeholders::_1;
+    using std::tr1::placeholders::_2;
+
+    assert(iostream);
+    read_frame_cb = cb;
+    iostream->registerReadCallback(
+        std::tr1::bind(
+            &LibproxProximityBase::ProxStreamInfo<EndpointType,StreamType>::handleRead,
+            WPtr(prox_stream), _1, _2
+        )
+    );
+}
+
+template<typename EndpointType, typename StreamType>
+void LibproxProximityBase::ProxStreamInfo<EndpointType, StreamType>::handleRead(WPtr w_prox_stream, uint8* data, int size) {
+    Ptr prox_stream = w_prox_stream.lock();
+    if (!prox_stream) return;
+
+    prox_stream->partial_frame.append((const char*)data, size);
+    while(true) {
+        String parsed = Network::Frame::parse(prox_stream->partial_frame);
+        if (parsed.empty()) return;
+        prox_stream->read_frame_cb(parsed);
+    }
+}
 
 template<typename EndpointType, typename StreamType>
 void LibproxProximityBase::ProxStreamInfo<EndpointType, StreamType>::writeSomeObjectResults(Context* ctx, WPtr w_prox_stream) {
@@ -114,12 +147,61 @@ LibproxProximityBase::LibproxProximityBase(SpaceContext* ctx, LocationService* l
 
     // Location cache, for both types of queries
     mLocCache = new CBRLocationServiceCache(mProxStrand, locservice, true);
+
+    // Deal with static/dynamic split
+    mSeparateDynamicObjects = GetOptionValue<bool>(OPT_PROX_SPLIT_DYNAMIC);
+    mNumQueryHandlers = (mSeparateDynamicObjects ? 2 : 1);
 }
 
 LibproxProximityBase::~LibproxProximityBase() {
     delete mProxServerMessageService;
     delete mLocCache;
     delete mProxStrand;
+}
+
+
+const String& LibproxProximityBase::ObjectClassToString(ObjectClass c) {
+    static String static_ = "static";
+    static String dynamic_ = "dynamic";
+    static String unknown_ = "unknown";
+
+    switch(c) {
+      case OBJECT_CLASS_STATIC: return static_; break;
+      case OBJECT_CLASS_DYNAMIC: return dynamic_; break;
+      default: return unknown_; break;
+    }
+}
+
+BoundingBox3f LibproxProximityBase::aggregateBBoxes(const BoundingBoxList& bboxes) {
+    BoundingBox3f bbox = bboxes[0];
+    for(uint32 i = 1; i< bboxes.size(); i++)
+        bbox.mergeIn(bboxes[i]);
+    return bbox;
+}
+
+bool LibproxProximityBase::velocityIsStatic(const Vector3f& vel) {
+    // These values are arbitrary, just meant to indicate that the object is,
+    // for practical purposes, not moving.
+    return (
+        vel.x < .05f &&
+        vel.y < .05f &&
+        vel.z < .05f
+    );
+}
+
+
+// MAIN Thread
+
+void LibproxProximityBase::readFramesFromObjectStream(const ObjectReference& oref, ProxObjectStreamInfo::FrameReceivedCallback cb) {
+    ObjectProxStreamMap::iterator prox_stream_it = mObjectProxStreams.find(oref.getAsUUID());
+    assert(prox_stream_it != mObjectProxStreams.end());
+    prox_stream_it->second->readFramesFromStream(prox_stream_it->second, cb);
+}
+
+void LibproxProximityBase::readFramesFromObjectHostStream(const OHDP::NodeID& node, ProxObjectHostStreamInfo::FrameReceivedCallback cb) {
+    ObjectHostProxStreamMap::iterator prox_stream_it = mObjectHostProxStreams.find(node);
+    assert(prox_stream_it != mObjectHostProxStreams.end());
+    prox_stream_it->second->readFramesFromStream(prox_stream_it->second, cb);
 }
 
 void LibproxProximityBase::sendObjectResult(Sirikata::Protocol::Object::ObjectMessage* msg) {
@@ -193,7 +275,176 @@ LibproxProximityBase::ProxObjectStreamPtr LibproxProximityBase::getBaseStream(co
 }
 
 LibproxProximityBase::ProxObjectHostStreamPtr LibproxProximityBase::getBaseStream(const OHDP::NodeID& node) const {
-    return mContext->ohSessionManager()->getSession(node);
+    ObjectHostSessionPtr session = mContext->ohSessionManager()->getSession(node);
+    return (session ? session->stream() : ProxObjectHostStreamPtr());
+}
+
+void LibproxProximityBase::addObjectProxStreamInfo(ODPSST::Stream::Ptr strm) {
+    UUID objid = strm->remoteEndPoint().endPoint.object().getAsUUID();
+    assert(mObjectProxStreams.find(objid) == mObjectProxStreams.end());
+
+    mObjectProxStreams.insert(
+        ObjectProxStreamMap::value_type(
+            objid,
+            ProxObjectStreamInfoPtr(new ProxObjectStreamInfo(strm))
+        )
+    );
+}
+
+void LibproxProximityBase::addObjectHostProxStreamInfo(OHDPSST::Stream::Ptr strm) {
+    OHDP::NodeID nodeid = strm->remoteEndPoint().endPoint.node();
+    assert(mObjectHostProxStreams.find(nodeid) == mObjectHostProxStreams.end());
+
+    mObjectHostProxStreams.insert(
+        ObjectHostProxStreamMap::value_type(
+            nodeid,
+            ProxObjectHostStreamInfoPtr(new ProxObjectHostStreamInfo(strm))
+        )
+    );
+}
+
+
+
+
+void LibproxProximityBase::handleAddObjectLocSubscription(const UUID& subscriber, const UUID& observed) {
+    // We check the cache when we get the request, but also check it here since
+    // the observed object may have been removed between the request to add this
+    // subscription and its actual execution.
+    if (!mLocService->contains(observed)) return;
+
+    mLocService->subscribe(subscriber, observed);
+}
+
+void LibproxProximityBase::handleRemoveObjectLocSubscription(const UUID& subscriber, const UUID& observed) {
+    mLocService->unsubscribe(subscriber, observed);
+}
+
+void LibproxProximityBase::handleRemoveAllObjectLocSubscription(const UUID& subscriber) {
+    mLocService->unsubscribe(subscriber);
+}
+
+void LibproxProximityBase::handleAddOHLocSubscription(const OHDP::NodeID& subscriber, const UUID& observed) {
+    // We check the cache when we get the request, but also check it here since
+    // the observed object may have been removed between the request to add this
+    // subscription and its actual execution.
+    if (!mLocService->contains(observed)) return;
+
+    mLocService->subscribe(subscriber, observed);
+}
+
+void LibproxProximityBase::handleRemoveOHLocSubscription(const OHDP::NodeID& subscriber, const UUID& observed) {
+    mLocService->unsubscribe(subscriber, observed);
+}
+
+void LibproxProximityBase::handleRemoveAllOHLocSubscription(const OHDP::NodeID& subscriber) {
+    mLocService->unsubscribe(subscriber);
+}
+
+void LibproxProximityBase::handleAddServerLocSubscription(const ServerID& subscriber, const UUID& observed, SeqNoPtr seqPtr) {
+    // We check the cache when we get the request, but also check it here since
+    // the observed object may have been removed between the request to add this
+    // subscription and its actual execution.
+    if (!mLocService->contains(observed)) return;
+
+    mLocService->subscribe(subscriber, observed, seqPtr);
+}
+
+void LibproxProximityBase::handleRemoveServerLocSubscription(const ServerID& subscriber, const UUID& observed) {
+    mLocService->unsubscribe(subscriber, observed);
+}
+
+void LibproxProximityBase::handleRemoveAllServerLocSubscription(const ServerID& subscriber) {
+    mLocService->unsubscribe(subscriber);
+}
+
+
+
+// PROX Thread
+
+void LibproxProximityBase::aggregateCreated(const UUID& objid) {
+    // On addition, an "aggregate" will have no children, i.e. its zero sized.
+
+    mContext->mainStrand->post(
+        std::tr1::bind(
+            &LocationService::addLocalAggregateObject, mLocService,
+            objid,
+            TimedMotionVector3f(mContext->simTime(), MotionVector3f()),
+            TimedMotionQuaternion(mContext->simTime(), MotionQuaternion()),
+            BoundingSphere3f(),
+            "",
+            ""
+        )
+    );
+
+    mAggregateManager->addAggregate(objid);
+}
+
+void LibproxProximityBase::aggregateChildAdded(const UUID& objid, const UUID& child, const BoundingSphere3f& bnds) {
+    if (!mLocService->contains(objid) || mLocService->bounds(objid) != bnds) {
+        // Loc cares only about this chance to update state of aggregate
+        mContext->mainStrand->post(
+            std::tr1::bind(
+                &LibproxProximityBase::updateAggregateLoc, this,
+                objid, bnds
+            )
+        );
+    }
+
+    mAggregateManager->addChild(objid, child);
+}
+
+void LibproxProximityBase::aggregateChildRemoved(const UUID& objid, const UUID& child, const BoundingSphere3f& bnds) {
+    if (!mLocService->contains(objid) || mLocService->bounds(objid) != bnds) {
+        // Loc cares only about this chance to update state of aggregate
+        mContext->mainStrand->post(
+            std::tr1::bind(
+                &LibproxProximityBase::updateAggregateLoc, this,
+                objid, bnds
+            )
+        );
+    }
+
+    mAggregateManager->removeChild(objid, child);
+}
+
+void LibproxProximityBase::aggregateBoundsUpdated(const UUID& objid, const BoundingSphere3f& bnds) {
+    if (!mLocService->contains(objid) || mLocService->bounds(objid) != bnds) {
+        mContext->mainStrand->post(
+            std::tr1::bind(
+                &LibproxProximityBase::updateAggregateLoc, this,
+                objid, bnds
+            )
+        );
+    }
+
+    if (mLocService->contains(objid) && mLocService->bounds(objid) != bnds)
+        mAggregateManager->generateAggregateMesh(objid, Duration::seconds(300.0+rand()%300));
+}
+
+void LibproxProximityBase::aggregateDestroyed(const UUID& objid) {
+    mContext->mainStrand->post(
+        std::tr1::bind(
+            &LocationService::removeLocalAggregateObject, mLocService, objid
+        )
+    );
+    mAggregateManager->removeAggregate(objid);
+}
+
+void LibproxProximityBase::aggregateObserved(const UUID& objid, uint32 nobservers) {
+    mAggregateManager->aggregateObserved(objid, nobservers);
+}
+
+void LibproxProximityBase::updateAggregateLoc(const UUID& objid, const BoundingSphere3f& bnds) {
+    if (mLocService->contains(objid)) {
+        mLocService->updateLocalAggregateLocation(
+            objid,
+            TimedMotionVector3f(mContext->simTime(), MotionVector3f(bnds.center(), Vector3f(0,0,0)))
+        );
+        mLocService->updateLocalAggregateBounds(
+            objid,
+            BoundingSphere3f(bnds.center(), bnds.radius())
+        );
+    }
 }
 
 } // namespace Sirikata

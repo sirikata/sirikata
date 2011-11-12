@@ -203,6 +203,18 @@ void LocationService::unsubscribe(ServerID remote) {
     mUpdatePolicy->unsubscribe(remote);
 }
 
+void LocationService::subscribe(const OHDP::NodeID& remote, const UUID& uuid) {
+    mUpdatePolicy->subscribe(remote, uuid);
+}
+
+void LocationService::unsubscribe(const OHDP::NodeID& remote, const UUID& uuid) {
+    mUpdatePolicy->unsubscribe(remote, uuid);
+}
+
+void LocationService::unsubscribe(const OHDP::NodeID& remote) {
+    mUpdatePolicy->unsubscribe(remote);
+}
+
 
 void LocationService::subscribe(const UUID& remote, const UUID& uuid) {
     mUpdatePolicy->subscribe(remote, uuid);

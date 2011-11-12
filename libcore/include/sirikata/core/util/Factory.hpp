@@ -34,6 +34,27 @@
 #define _SIRIKATA_FACTORY_HPP_
 
 namespace Sirikata {
+
+class FactoryMissingConstructorException : public std::exception {
+public:
+    FactoryMissingConstructorException(const String& _name)
+     : name(_name),
+       what_msg(new String())
+    {}
+    virtual ~FactoryMissingConstructorException() throw() {
+        delete what_msg;
+    }
+
+    char const* what() const throw() {
+        if (what_msg->empty())
+            (*what_msg) = "Factory missing constructor: " + name + " not registered in the factory.";
+        return what_msg->c_str();
+    }
+private:
+    const String name;
+    String* what_msg;
+};
+
 template<class T, class Ftype>
 class FactoryImpl {
 
@@ -88,7 +109,8 @@ public:
             result.push_back(it->first);
         return result;
     }
-    const Ftype &getConstructor(const String&name)const{
+
+    const Ftype &getConstructorOrDefault(const String&name)const{
         typename ConstructorMap::const_iterator where=mConstructors.find(name);
         if (where==mConstructors.end()) {
             if (name.length()==0&&mDefault.length()) {
@@ -98,6 +120,15 @@ public:
         }
         return where->second;
     }
+
+    // Gets a specific constructor and throws a
+    // FactoryMissingConstructorException if it can't be found
+    const Ftype& getConstructor(const String&name) const {
+        if (!hasConstructor(name))
+            throw FactoryMissingConstructorException(name);
+        return getConstructorOrDefault(name);
+    }
+
     const Ftype& getDefaultConstructor()const{
         return getConstructor(mDefault);
     }

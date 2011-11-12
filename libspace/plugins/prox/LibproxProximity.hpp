@@ -35,9 +35,9 @@
 
 #include "LibproxProximityBase.hpp"
 #include <sirikata/space/ProxSimulationTraits.hpp>
-#include <prox/QueryHandler.hpp>
-#include <prox/LocationUpdateListener.hpp>
-#include <prox/AggregateListener.hpp>
+#include <prox/geom/QueryHandler.hpp>
+#include <prox/base/LocationUpdateListener.hpp>
+#include <prox/base/AggregateListener.hpp>
 
 #include <sirikata/core/network/SSTImpl.hpp>
 #include <sirikata/core/queue/ThreadSafeQueue.hpp>
@@ -52,12 +52,13 @@ class ProximityOutputEvent;
 
 class LibproxProximity :
         public LibproxProximityBase,
-        Prox::QueryEventListener<ObjectProxSimulationTraits>,
+        Prox::QueryEventListener<ObjectProxSimulationTraits, Prox::Query<ObjectProxSimulationTraits> >,
         PintoServerQuerierListener,
         Prox::AggregateListener<ObjectProxSimulationTraits>
 {
 private:
     typedef Prox::QueryHandler<ObjectProxSimulationTraits> ProxQueryHandler;
+    typedef Prox::Aggregator<ObjectProxSimulationTraits> ProxAggregator;
 public:
     // MAIN Thread: All public interface is expected to be called only from the main thread.
     typedef Prox::Query<ObjectProxSimulationTraits> Query;
@@ -65,6 +66,8 @@ public:
 
     LibproxProximity(SpaceContext* ctx, LocationService* locservice, CoordinateSegmentation* cseg, SpaceNetwork* net, AggregateManager* aggmgr);
     ~LibproxProximity();
+
+    // MAIN Thread:
 
     // Service Interface overrides
     virtual void start();
@@ -77,9 +80,6 @@ public:
     virtual void addQuery(UUID obj, SolidAngle sa, uint32 max_results);
     virtual void addQuery(UUID obj, const String& params);
     virtual void removeQuery(UUID obj);
-
-    // QueryEventListener Interface
-    void queryHasEvents(Query* query);
 
     // LocationServiceListener Interface
     virtual void localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics);
@@ -103,35 +103,29 @@ public:
     virtual void addRelevantServer(ServerID sid);
     virtual void removeRelevantServer(ServerID sid);
 
-    // AggregateListener Interface
-    virtual void aggregateCreated(ProxQueryHandler* handler, const UUID& objid);
-    virtual void aggregateChildAdded(ProxQueryHandler* handler, const UUID& objid, const UUID& child, const BoundingSphere3f& bnds);
-    virtual void aggregateChildRemoved(ProxQueryHandler* handler, const UUID& objid, const UUID& child, const BoundingSphere3f& bnds);
-    virtual void aggregateBoundsUpdated(ProxQueryHandler* handler, const UUID& objid, const BoundingSphere3f& bnds);
-    virtual void aggregateDestroyed(ProxQueryHandler* handler, const UUID& objid);
-    virtual void aggregateObserved(ProxQueryHandler* handler, const UUID& objid, uint32 nobservers);
-
     // SpaceNetworkConnectionListener Interface
     virtual void onSpaceNetworkConnected(ServerID sid);
     virtual void onSpaceNetworkDisconnected(ServerID sid);
 
 
+
+    // PROX Thread:
+
+    // AggregateListener Interface
+    virtual void aggregateCreated(ProxAggregator* handler, const UUID& objid);
+    virtual void aggregateChildAdded(ProxAggregator* handler, const UUID& objid, const UUID& child, const BoundingSphere3f& bnds);
+    virtual void aggregateChildRemoved(ProxAggregator* handler, const UUID& objid, const UUID& child, const BoundingSphere3f& bnds);
+    virtual void aggregateBoundsUpdated(ProxAggregator* handler, const UUID& objid, const BoundingSphere3f& bnds);
+    virtual void aggregateDestroyed(ProxAggregator* handler, const UUID& objid);
+    virtual void aggregateObserved(ProxAggregator* handler, const UUID& objid, uint32 nobservers);
+
+    // QueryEventListener Interface
+    void queryHasEvents(Query* query);
+
+
 private:
-    enum ObjectClass {
-        OBJECT_CLASS_STATIC = 0,
-        OBJECT_CLASS_DYNAMIC = 1,
-        NUM_OBJECT_CLASSES = 2
-    };
-    static const std::string& ObjectClassToString(ObjectClass c);
-
-
-
-
-
 
     void handleObjectProximityMessage(const UUID& objid, void* buffer, uint32 length);
-
-    void updateAggregateLoc(const UUID& objid, const BoundingSphere3f& bnds);
 
     // MAIN Thread: These are utility methods which should only be called from the main thread.
     virtual int32 objectQueries() const;
@@ -159,15 +153,6 @@ private:
 
     // Send a query add/update request to all the other servers
     void sendQueryRequests();
-
-
-    // Handle various events in the main thread that are triggered in the prox thread
-    void handleAddObjectLocSubscription(const UUID& subscriber, const UUID& observed);
-    void handleRemoveObjectLocSubscription(const UUID& subscriber, const UUID& observed);
-    void handleRemoveAllObjectLocSubscription(const UUID& subscriber);
-    void handleAddServerLocSubscription(const ServerID& subscriber, const UUID& observed, SeqNoPtr seqPtr);
-    void handleRemoveServerLocSubscription(const ServerID& subscriber, const UUID& observed);
-    void handleRemoveAllServerLocSubscription(const ServerID& subscriber);
 
 
     // PROX Thread: These are utility methods which should only be called from the prox thread.
@@ -214,13 +199,6 @@ private:
 
 
     PintoServerQuerier* mServerQuerier;
-
-    // To support a static/dynamic split but also support mixing them for
-    // comparison purposes track which we are doing and, for most places, use a
-    // simple index to control whether they point to different query handlers or
-    // the same one.
-    bool mSeparateDynamicObjects;
-    int mNumQueryHandlers;
 
     // MAIN Thread - Should only be accessed in methods used by the main thread
 

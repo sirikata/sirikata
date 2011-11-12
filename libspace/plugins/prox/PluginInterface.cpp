@@ -34,6 +34,7 @@
 #include <sirikata/core/options/Options.hpp>
 #include <sirikata/space/ObjectSegmentation.hpp>
 #include "LibproxProximity.hpp"
+#include "LibproxManualProximity.hpp"
 #include "Options.hpp"
 
 static int space_prox_plugin_refcount = 0;
@@ -71,7 +72,11 @@ static Proximity* createProx(SpaceContext* ctx, LocationService* locservice, Coo
     return new LibproxProximity(ctx, locservice, cseg, net, aggmgr);
 }
 
-void registerConstructor(const String& name) {
+static Proximity* createManualProx(SpaceContext* ctx, LocationService* locservice, CoordinateSegmentation* cseg, SpaceNetwork* net, AggregateManager* aggmgr, const String& args) {
+    // This implementation doesn't currently parse any options -- the command
+    // line parsing takes acer of it for us since we insert options into the
+    // main option set.
+    return new LibproxManualProximity(ctx, locservice, cseg, net, aggmgr);
 }
 
 } // namespace Sirikata
@@ -89,6 +94,9 @@ SIRIKATA_PLUGIN_EXPORT_C void init() {
         ProximityFactory::getSingleton()
             .registerConstructor("libprox",
                 std::tr1::bind(&createProx, _1, _2, _3, _4, _5, _6));
+        ProximityFactory::getSingleton()
+            .registerConstructor("libprox-manual",
+                std::tr1::bind(&createManualProx, _1, _2, _3, _4, _5, _6));
     }
     space_prox_plugin_refcount++;
 }
@@ -105,6 +113,7 @@ SIRIKATA_PLUGIN_EXPORT_C void destroy() {
     using namespace Sirikata;
     if (space_prox_plugin_refcount==0) {
         ProximityFactory::getSingleton().unregisterConstructor("libprox");
+        ProximityFactory::getSingleton().unregisterConstructor("libprox-manual");
     }
 }
 

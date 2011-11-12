@@ -10,6 +10,7 @@
 #include <boost/bind.hpp>
 #include <sirikata/core/transfer/MeerkatTransferHandler.hpp>
 #include <sirikata/core/transfer/URL.hpp>
+#include <boost/lexical_cast.hpp>
 
 AUTO_SINGLETON_INSTANCE(Sirikata::Transfer::MeerkatNameHandler);
 AUTO_SINGLETON_INSTANCE(Sirikata::Transfer::MeerkatChunkHandler);
@@ -64,13 +65,14 @@ void MeerkatNameHandler::resolve(std::tr1::shared_ptr<MetadataRequest> request, 
         dns_uri_prefix = "";
     }
 
-    std::ostringstream request_stream;
-    request_stream << "HEAD " << dns_uri_prefix << url.fullpath() << " HTTP/1.1\r\n";
-    request_stream << "Host: " << host_name << "\r\n";
-    request_stream << "Accept: * /*\r\n\r\n";
+    HttpManager::Headers headers;
+    headers["Host"] = host_name;
 
-    HttpManager::getSingleton().makeRequest(cdn_addr, Transfer::HttpManager::HEAD, request_stream.str(), std::tr1::bind(
-            &MeerkatNameHandler::request_finished, this, _1, _2, _3, request, callback));
+    HttpManager::getSingleton().head(
+        cdn_addr, dns_uri_prefix + url.fullpath(),
+        std::tr1::bind(&MeerkatNameHandler::request_finished, this, _1, _2, _3, request, callback),
+        headers
+    );
 }
 
 void MeerkatNameHandler::request_finished(std::tr1::shared_ptr<HttpManager::HttpResponse> response,
@@ -103,7 +105,7 @@ void MeerkatNameHandler::request_finished(std::tr1::shared_ptr<HttpManager::Http
         return;
     }
 
-    std::map<std::string, std::string>::const_iterator it;
+    HttpManager::Headers::const_iterator it;
     it = response->getHeaders().find("Content-Length");
     if (it != response->getHeaders().end()) {
         SILOG(transfer, error, "Content-Length header was present when it shouldn't be during an HTTP name lookup (" << request->getURI() << ")");
@@ -166,7 +168,7 @@ void MeerkatNameHandler::request_finished(std::tr1::shared_ptr<HttpManager::Http
     chunkList.push_back(chunk);
 
     std::tr1::shared_ptr<RemoteFileMetadata> met(new RemoteFileMetadata(fp, request->getURI(),
-            file_size, chunkList, response->getHeaders()));
+            file_size, chunkList, response->getRawHeaders()));
 
     callback(met);
     SILOG(transfer, detailed, "done http name handler request_finished");
@@ -241,20 +243,22 @@ void MeerkatChunkHandler::cache_check_callback(const SparseData* data, std::tr1:
             download_uri_prefix = "";
         }
 
-        std::ostringstream request_stream;
+        HttpManager::Headers headers;
+        headers["Host"] = host_name;
+        headers["Accept-Encoding"] = "deflate, gzip";
+
         bool chunkReq = false;
-        request_stream << "GET " << download_uri_prefix << "/" << file->getFingerprint().convertToHexString() << " HTTP/1.1\r\n";
         if(!chunk->getRange().goesToEndOfFile() && chunk->getRange().size() < file->getSize()) {
             chunkReq = true;
-            request_stream << "Range: bytes=" << chunk->getRange().startbyte() << "-" << chunk->getRange().endbyte() << "\r\n";
+            headers["Range"] = "bytes=" + boost::lexical_cast<String>(chunk->getRange().startbyte()) +
+                "-" + boost::lexical_cast<String>(chunk->getRange().endbyte());
         }
-        request_stream << "Host: " << host_name << "\r\n";
-        request_stream << "Accept: */*\r\n";
-        request_stream << "Accept-Encoding: deflate, gzip\r\n";
-        request_stream << "\r\n";
 
-        HttpManager::getSingleton().makeRequest(cdn_addr, Transfer::HttpManager::GET, request_stream.str(), std::tr1::bind(
-                &MeerkatChunkHandler::request_finished, this, _1, _2, _3, file, chunk, chunkReq, callback));
+        HttpManager::getSingleton().get(
+            cdn_addr, download_uri_prefix + "/" + file->getFingerprint().convertToHexString(),
+            std::tr1::bind(&MeerkatChunkHandler::request_finished, this, _1, _2, _3, file, chunk, chunkReq, callback),
+            headers
+        );
     }
 }
 
@@ -291,7 +295,7 @@ void MeerkatChunkHandler::request_finished(std::tr1::shared_ptr<HttpManager::Htt
         return;
     }
 
-    std::map<std::string, std::string>::const_iterator it;
+    HttpManager::Headers::const_iterator it;
     it = response->getHeaders().find("Content-Length");
     if (it == response->getHeaders().end()) {
         SILOG(transfer, error, "Content-Length header was not present when it should be during an HTTP " << reqType << " (" << file->getURI() << ")");

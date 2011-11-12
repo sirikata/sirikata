@@ -6,6 +6,7 @@
 #include <sirikata/core/service/Context.hpp>
 #include <sirikata/core/network/IOServiceFactory.hpp>
 #include <sirikata/core/network/IOWork.hpp>
+#include <sirikata/core/network/IOStrandImpl.hpp>
 #include <sirikata/core/trace/Trace.hpp>
 #include <sirikata/core/util/Timer.hpp>
 #include <sirikata/core/options/Options.hpp>
@@ -23,6 +24,9 @@
 #define LAUNCHER_LOG(lvl, msg) SILOG(launcher, lvl, msg)
 
 using namespace Sirikata;
+
+Context* gContext = NULL;
+Transfer::TransferPoolPtr gTransferPool;
 
 // ### Utils ###
 
@@ -62,6 +66,10 @@ void execCommand(const char* file, const char* const argv[]) {
     pid_t pID = fork();
 
     if (pID == 0) {
+        // setsid() decouples this process from the parent, ensuring that the
+        // exit of the parent doesn't kill the child process by accident
+        // (e.g. by causing the parent terminal to exit).
+        setsid();
         execvp(file, (char* const*)argv);
     }
     else if (pID < 0) {
@@ -158,7 +166,7 @@ bool unregisterURIHandler() {
     const char* const enabled_argv[] = { "gconftool-2", "-t", "bool", "-s", "/desktop/gnome/url-handlers/sirikata/enabled", "false", NULL};
     execCommand("gconftool-2", enabled_argv);
 #elif SIRIKATA_PLATFORM == PLATFORM_WINDOWS
-    bool success = 
+    bool success =
         deleteRegKey(HKEY_CLASSES_ROOT, "sirikata\\shell\\open\\command") &&
         deleteRegKey(HKEY_CLASSES_ROOT, "sirikata\\shell\\open") &&
         deleteRegKey(HKEY_CLASSES_ROOT, "sirikata\\shell") &&
@@ -187,10 +195,12 @@ void stopWork() {
     ioWork = NULL;
 }
 
+void finishLaunchURI(Transfer::ChunkRequestPtr req, Transfer::DenseDataPtr data, int* retval);
+void finishDownloadResource(const String& data_path, Transfer::ChunkRequestPtr req, Transfer::DenseDataPtr data, int* retval);
+void doExecApp(int* retval);
 
 Transfer::ResourceDownloadTaskPtr rdl;
-void finishLaunchURI(Transfer::ChunkRequestPtr req, Transfer::DenseDataPtr data, int* retval);
-bool startLaunchURI(String uri_str, Transfer::TransferPoolPtr transferPool, int* retval) {
+bool startLaunchURI(String uri_str, int* retval) {
     Transfer::URI uri(uri_str);
     if (uri.scheme() != "sirikata") {
         LAUNCHER_LOG(error, "slauncher only supports sirikata URIs");
@@ -210,8 +220,8 @@ bool startLaunchURI(String uri_str, Transfer::TransferPoolPtr transferPool, int*
 
     rdl =
         Transfer::ResourceDownloadTask::construct(
-            config_uri, transferPool, 1.0,
-            std::tr1::bind(finishLaunchURI, std::tr1::placeholders::_1, std::tr1::placeholders::_2, retval)
+            config_uri, gTransferPool, 1.0,
+            gContext->mainStrand->wrap(std::tr1::bind(finishLaunchURI, std::tr1::placeholders::_1, std::tr1::placeholders::_2, retval))
         );
     rdl->start();
 
@@ -222,6 +232,25 @@ void eventLoopExit(int* retval, int val) {
     stopWork();
     *retval = val;
 }
+
+String app;
+String appDir;
+String binary;
+std::vector<String> binaryArgs;
+String appDirPath() {
+    // For now, we put it within the bin directory. This probably isn't a good
+    // long term solution since we could be installed in a system path.
+#if SIRIKATA_PLATFORM == PLATFORM_LINUX || SIRIKATA_PLATFORM == PLATFORM_MAC
+    return (boost::filesystem::path(Path::Get(Path::DIR_EXE)) / appDir).string();
+#elif SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+    // Windows has the Release & Debug directories
+    return (boost::filesystem::path(Path::Get(Path::DIR_EXE)).parent_path() / appDir).string();
+#endif
+
+}
+
+typedef std::map<String, Transfer::ResourceDownloadTaskPtr> ResourceDownloadMap;
+ResourceDownloadMap resourceDownloads;
 
 void finishLaunchURI(Transfer::ChunkRequestPtr req, Transfer::DenseDataPtr data, int* retval) {
     // Fire off the request for
@@ -246,11 +275,6 @@ void finishLaunchURI(Transfer::ChunkRequestPtr req, Transfer::DenseDataPtr data,
         return;
     }
 
-
-    String app;
-    String appDir;
-    String binary;
-    std::vector<String> binaryArgs;
     try {
         app = pt.get<String>("app.name");
         appDir = pt.get<String>("app.directory");
@@ -268,14 +292,79 @@ void finishLaunchURI(Transfer::ChunkRequestPtr req, Transfer::DenseDataPtr data,
         return;
     }
 
+    // Make sure our app path has been created
+    boost::filesystem::path app_dir_path(appDirPath());
+    if (!boost::filesystem::exists(app_dir_path)) {
+        if (!boost::filesystem::create_directory(app_dir_path)) {
+            LAUNCHER_LOG(error, "Application directory didn't exist and failed to create it.");
+            eventLoopExit(retval, -1);
+            return;
+        }
+    }
+    LAUNCHER_LOG(error, "Using appliction directory: " << appDirPath());
+
+    // This is not required data
+    try {
+        // We allow syncing of data that's required for the app
+        BOOST_FOREACH(ptree::value_type &v,
+            pt.get_child("app.files")) {
+            String data_path(v.first);
+            Transfer::URI data_uri(v.second.data());
+            LAUNCHER_LOG(detailed, "Download resource " << data_path << " from " << data_uri);
+            Transfer::ResourceDownloadTaskPtr dl =
+                Transfer::ResourceDownloadTask::construct(
+                    data_uri, gTransferPool, 1.0,
+                    gContext->mainStrand->wrap(
+                        std::tr1::bind(finishDownloadResource,
+                            data_path,
+                            std::tr1::placeholders::_1, std::tr1::placeholders::_2, retval
+                        )
+                    )
+                );
+            dl->start();
+            resourceDownloads[data_path] = dl;
+        }
+    }
+    catch(ptree_bad_data exc) {
+        // If we didn't queue any, start the app now
+        if (resourceDownloads.empty())
+            doExecApp(retval);
+        return;
+    }
+}
+
+void finishDownloadResource(const String& data_path, Transfer::ChunkRequestPtr req, Transfer::DenseDataPtr data, int* retval) {
+    if (!data || data->size() == 0) {
+        LAUNCHER_LOG(error, "Failed to download data file: " << data_path);
+        eventLoopExit(retval, -1);
+        return;
+    }
+
+    // Store to disk
+    boost::filesystem::path app_data_path(appDirPath());
+    app_data_path /= data_path;
+    String app_data_path_str = app_data_path.string();
+    FILE* fp = fopen(app_data_path_str.c_str(), "wb");
+    fwrite(data->begin(), 1, data->size(), fp);
+    fclose(fp);
+
+    // Clear out record, and if we're ready launch the app
+    resourceDownloads.erase(data_path);
+    if (resourceDownloads.empty())
+        doExecApp(retval);
+}
+
+void doExecApp(int* retval) {
+    LAUNCHER_LOG(detailed, "Got config and all resources, executing application.");
+
+    String appCurrDir = appDirPath();
+    Path::Set(Path::DIR_CURRENT, appCurrDir);
+
     // We want to add support for syncing additional content (maybe
     // something like app.data = url for archive) which will require
     // additional downloading, but for now we just invoke the command
     // here.
 #if SIRIKATA_PLATFORM == PLATFORM_LINUX || SIRIKATA_PLATFORM == PLATFORM_MAC
-    // FIXME -- set current dir to bin dir, but should set it to something app-specific
-    Path::Set(Path::DIR_CURRENT, Path::Get(Path::DIR_EXE));
-
     String appExe = getExecutablePath(binary);
     binaryArgs.insert(binaryArgs.begin(), appExe);
     const char** execArgs = new const char*[binaryArgs.size()+1];
@@ -284,9 +373,6 @@ void finishLaunchURI(Transfer::ChunkRequestPtr req, Transfer::DenseDataPtr data,
     execArgs[binaryArgs.size()] = NULL;
     execCommand(appExe.c_str(), execArgs);
 #elif SIRIKATA_PLATFORM == PLATFORM_WINDOWS
-    // FIXME -- set current dir to bin dir, but should set it to something app-specific
-    Path::Set(Path::DIR_CURRENT, boost::filesystem::path(Path::Get(Path::DIR_EXE)).parent_path().string());
-
     String appExe = getExecutablePath(binary);
     binaryArgs.insert(binaryArgs.begin(), appExe);
     String cmd = "";
@@ -302,7 +388,7 @@ void finishLaunchURI(Transfer::ChunkRequestPtr req, Transfer::DenseDataPtr data,
     */
     STARTUPINFO info={sizeof(info)};
     PROCESS_INFORMATION processInfo;
-    CreateProcess(appExe.c_str(), (LPSTR)cmd.c_str(), NULL, NULL, TRUE, 0, NULL, NULL, &info, &processInfo);
+    CreateProcess(appExe.c_str(), (LPSTR)cmd.c_str(), NULL, NULL, TRUE, 0, NULL, appCurrDir.c_str(), &info, &processInfo);
 #endif
     eventLoopExit(retval, 0);
 }
@@ -339,24 +425,24 @@ int main(int argc, char** argv) {
     Trace::Trace* trace = new Trace::Trace("slauncher.log");
     Time epoch = Timer::now();
 
-    Context* ctx = new Context("slauncher", ios, iostrand, trace, epoch);
+    gContext = new Context("slauncher", ios, iostrand, trace, epoch);
 
-    Transfer::TransferPoolPtr transferPool = Transfer::TransferMediator::getSingleton().registerClient<Transfer::AggregatedTransferPool>("slauncher");
+    gTransferPool = Transfer::TransferMediator::getSingleton().registerClient<Transfer::AggregatedTransferPool>("slauncher");
 
     // Start loading
     int retval = 0;
-    bool launched = startLaunchURI(uri, transferPool, &retval);
+    bool launched = startLaunchURI(uri, &retval);
     // Only start the process if we
     if (!launched) return -1;
 
     // Run
-    ctx->add(ctx);
-    ctx->run(1);
+    gContext->add(gContext);
+    gContext->run(1);
 
     // Cleanup
-    ctx->cleanup();
+    gContext->cleanup();
     trace->prepareShutdown();
-    delete ctx;
+    delete gContext;
     delete trace;
 
     delete iostrand;

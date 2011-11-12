@@ -36,7 +36,7 @@ EmersonHttpManager::EmersonHttpToken EmersonHttpManager::makeRequest(Sirikata::N
         managerLiveness = getSharedPtr();
 
     //issue query, and have response callback to receiveHttpResponse
-    Transfer::HttpManager::getSingleton().makeRequest(addr,method,req,
+    Transfer::HttpManager::getSingleton().makeRequest(addr,method,req,true,
         std::tr1::bind(&EmersonHttpManager::receiveHttpResponse, this, currentToken, _1,_2,_3));
 
     return currentToken;

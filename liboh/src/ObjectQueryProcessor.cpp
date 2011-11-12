@@ -25,8 +25,12 @@ void ObjectQueryProcessor::presenceDisconnected(HostedObjectPtr ho, const SpaceO
 }
 
 
-void ObjectQueryProcessor::deliverResults(HostedObjectPtr ho, const SpaceObjectReference& sporef, const Sirikata::Protocol::Prox::ProximityResults& results) {
+void ObjectQueryProcessor::deliverProximityResults(HostedObjectPtr ho, const SpaceObjectReference& sporef, const Sirikata::Protocol::Prox::ProximityResults& results) {
     ho->handleProximityMessage(sporef, results);
+}
+
+void ObjectQueryProcessor::deliverLocationUpdate(HostedObjectPtr ho, const SpaceObjectReference& sporef, const Sirikata::Protocol::Loc::BulkLocationUpdate& blu) {
+    ho->handleLocationMessage(sporef, blu);
 }
 
 

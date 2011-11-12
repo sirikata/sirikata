@@ -113,7 +113,7 @@ JSObjectScriptManager::JSObjectScriptManager(ObjectHostContext* ctx, const Sirik
         "jsobjectscriptmanager",this,
         // Default value allows us to use std libs in the build tree, starting
         // from build/cmake
-        import_paths = new OptionValue("import-paths","../../liboh/plugins/js/scripts,../share/js/scripts",OptionValueType<std::list<String> >(),"Comma separated list of paths to import files from, searched in order for the requested import."),
+        import_paths = new OptionValue("import-paths","<bindir>/../../liboh/plugins/js/scripts,<bindir>/../../../liboh/plugins/js/scripts,<bindir>/../share/js/scripts",OptionValueType<std::list<String> >(),"Comma separated list of paths to import files from, searched in order for the requested import."),
         v8_flags_opt = new OptionValue("v8-flags", "", OptionValueType<String>(), "Flags to pass on to v8, e.g. for profiling."),
         emer_resource_max = new OptionValue("emer-resource-max","100000000",OptionValueType<int>(),"int32: how many cycles to allow to run in one pass of event loop before throwing resource error in Emerson."),
         NULL
@@ -546,12 +546,12 @@ void JSObjectScriptManager::loadMesh(const Transfer::URI& uri, MeshLoadCallback 
 
 void JSObjectScriptManager::meshDownloaded(Transfer::ChunkRequestPtr request, Transfer::DenseDataPtr data) {
     mParsingIOService->post(
-        std::tr1::bind(&JSObjectScriptManager::parseMeshWork, this, request->getMetadata().getURI(), request->getMetadata().getFingerprint(), data)
+        std::tr1::bind(&JSObjectScriptManager::parseMeshWork, this, request->getMetadata(), request->getMetadata().getFingerprint(), data)
     );
 }
 
-void JSObjectScriptManager::parseMeshWork(const Transfer::URI& uri, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data) {
-    Mesh::VisualPtr parsed = mModelParser->load(uri, fp, data);
+void JSObjectScriptManager::parseMeshWork(const Transfer::RemoteFileMetadata& metadata, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data) {
+    Mesh::VisualPtr parsed = mModelParser->load(metadata, fp, data);
     if (parsed && mModelFilter) {
         Mesh::MutableFilterDataPtr input_data(new Mesh::FilterData);
         input_data->push_back(parsed);
@@ -560,7 +560,7 @@ void JSObjectScriptManager::parseMeshWork(const Transfer::URI& uri, const Transf
         parsed = output_data->get();
     }
 
-    mContext->mainStrand->post(std::tr1::bind(&JSObjectScriptManager::finishMeshDownload, this, uri, parsed));
+    mContext->mainStrand->post(std::tr1::bind(&JSObjectScriptManager::finishMeshDownload, this, metadata.getURI(), parsed));
 }
 
 void JSObjectScriptManager::finishMeshDownload(const Transfer::URI& uri, VisualPtr mesh) {

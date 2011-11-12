@@ -951,19 +951,19 @@ void OgreRenderer::removeObject(Entity* ent) {
     mDownloadPlanner->removeObject(ent);
 }
 
-void OgreRenderer::parseMesh(const Transfer::URI& orig_uri, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data, ParseMeshCallback cb) {
+void OgreRenderer::parseMesh(const Transfer::RemoteFileMetadata& metadata, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data, ParseMeshCallback cb) {
     mParsingIOService->post(
-        std::tr1::bind(&OgreRenderer::parseMeshWork, this, orig_uri, fp, data, cb)
+        std::tr1::bind(&OgreRenderer::parseMeshWork, this, metadata, fp, data, cb)
     );
 }
 
-void OgreRenderer::parseMeshWork(const Transfer::URI& orig_uri, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data, ParseMeshCallback cb) {
-    Mesh::VisualPtr parsed = parseMeshWorkSync(orig_uri, fp, data);
+void OgreRenderer::parseMeshWork(const Transfer::RemoteFileMetadata& metadata, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data, ParseMeshCallback cb) {
+    Mesh::VisualPtr parsed = parseMeshWorkSync(metadata, fp, data);
     mContext->mainStrand->post(std::tr1::bind(cb, parsed));
 }
 
-Mesh::VisualPtr OgreRenderer::parseMeshWorkSync(const Transfer::URI& orig_uri, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data) {
-    Mesh::VisualPtr parsed = mModelParser->load(orig_uri, fp, data);
+Mesh::VisualPtr OgreRenderer::parseMeshWorkSync(const Transfer::RemoteFileMetadata& metadata, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data) {
+    Mesh::VisualPtr parsed = mModelParser->load(metadata, fp, data);
     if (parsed && mModelFilter) {
         Mesh::MutableFilterDataPtr input_data(new Mesh::FilterData);
         input_data->push_back(parsed);

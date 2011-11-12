@@ -66,7 +66,7 @@
 #include <boost/lexical_cast.hpp>
 #include "JSObjectStructs/JSCapabilitiesConsts.hpp"
 
-
+#include <sirikata/core/util/Paths.hpp>
 
 using namespace v8;
 using namespace std;
@@ -991,6 +991,14 @@ void JSObjectScript::resolveImport(const String& filename, boost::filesystem::pa
     }
 
     std::list<String> search_paths = mManager->getOptions()->referenceOption("import-paths")->as< std::list<String> >();
+    // Replace special tags with their values
+    for(std::list<String>::iterator search_it = search_paths.begin(); search_it != search_paths.end(); search_it++) {
+        // Binary directory
+        static const String bindir_pattern("<bindir>");
+        std::size_t bindir_pos = search_it->find(bindir_pattern);
+        if (bindir_pos != String::npos)
+            search_it->replace(bindir_pos, bindir_pattern.size(), Path::Get(Path::DIR_EXE));
+    }
     // Always search the current directory as a last resort
     search_paths.push_back(".");
     for (std::list<String>::iterator pit = search_paths.begin(); pit != search_paths.end(); pit++) {

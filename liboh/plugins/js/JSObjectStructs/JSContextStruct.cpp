@@ -86,7 +86,7 @@ void JSContextStruct::httpSuccess(v8::Persistent<v8::Function> cb,EmersonHttpMan
 
     //load response headers
     v8::Handle<v8::Object> respHeadersObj = v8::Object::New();
-    const std::map<String,String>& respHeaders = httpResp->getHeaders();
+    const std::map<String,String>& respHeaders = httpResp->getRawHeaders();
     for (std::map<String,String>::const_iterator headerFieldIt = respHeaders.begin();
          headerFieldIt != respHeaders.end(); ++headerFieldIt)
     {

@@ -301,7 +301,7 @@ void BulletPhysicsService::getMeshCallback(Transfer::ChunkRequestPtr request, Tr
     // This callback can come in on a separate thread (e.g. from a tranfer
     // thread) so make sure we get it back on the main thread.
     if (request && response) {
-        VisualPtr vis = mModelsSystem->load(request->getURI(), request->getMetadata().getFingerprint(), response);
+        VisualPtr vis = mModelsSystem->load(request->getMetadata(), request->getMetadata().getFingerprint(), response);
         // FIXME support more than Meshdata
         MeshdataPtr mesh( std::tr1::dynamic_pointer_cast<Meshdata>(vis) );
         if (mesh && mModelFilter) {

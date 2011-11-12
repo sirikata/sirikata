@@ -130,7 +130,7 @@ private:
     Mesh::Filter* mModelFilter;
 
     void meshDownloaded(Transfer::ChunkRequestPtr request, Transfer::DenseDataPtr data);
-    void parseMeshWork(const Transfer::URI& uri, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data);
+    void parseMeshWork(const Transfer::RemoteFileMetadata& metadata, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data);
     void meshParsed();
     void finishMeshDownload(const Transfer::URI& uri, Mesh::VisualPtr mesh);
 

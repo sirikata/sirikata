@@ -15,11 +15,35 @@ namespace Sirikata {
 // These classes are thin wrappers around ObjectHostConnectionManager and it's
 // affiliated classes for tracking sessions
 
+class SIRIKATA_SPACE_EXPORT ObjectHostSession {
+  public:
+    ObjectHostSession(const OHDP::NodeID& id, OHDPSST::Stream::Ptr strm)
+        : mID(id),
+        mSSTStream(strm),
+        mSeqNo(new SeqNo())
+        {
+        }
+
+    ~ObjectHostSession() {
+        if (mSSTStream) mSSTStream->close(true);
+    }
+
+    const OHDP::NodeID& id() const { return mID; }
+    const OHDPSST::Stream::Ptr& stream() const { return mSSTStream; }
+    const SeqNoPtr& seqNoPtr() const { return mSeqNo; }
+
+  private:
+    OHDP::NodeID mID;
+    OHDPSST::Stream::Ptr mSSTStream;
+    SeqNoPtr mSeqNo;
+};
+typedef std::tr1::shared_ptr<ObjectHostSession> ObjectHostSessionPtr;
+
 class SIRIKATA_SPACE_EXPORT ObjectHostSessionListener {
   public:
     virtual ~ObjectHostSessionListener() {}
 
-    virtual void onObjectHostSession(const OHDP::NodeID& id, OHDPSST::Stream::Ptr oh_stream) {}
+    virtual void onObjectHostSession(const OHDP::NodeID& id, ObjectHostSessionPtr) {}
     virtual void onObjectHostSessionEnded(const OHDP::NodeID& id) {}
 };
 
@@ -35,29 +59,28 @@ class ObjectHostSessionManager : public Provider<ObjectHostSessionListener*> {
 
     // Owner interface
     void fireObjectHostSession(const OHDP::NodeID& id, OHDPSST::Stream::Ptr oh_stream) {
-        notify(&ObjectHostSessionListener::onObjectHostSession, id, oh_stream);
-        mOHSessions[id] = oh_stream;
+        ObjectHostSessionPtr sess(new ObjectHostSession(id, oh_stream));
+        mOHSessions[id] = sess;
+        notify(&ObjectHostSessionListener::onObjectHostSession, id, sess);
+
     }
     void fireObjectHostSessionEnded(const OHDP::NodeID& id) {
         notify(&ObjectHostSessionListener::onObjectHostSessionEnded, id);
         ObjectHostSessionMap::const_iterator it = mOHSessions.find(id);
-        if (it != mOHSessions.end()) {
-            // Force closure of the stream
-            if (it->second) it->second->close(true);
+        if (it != mOHSessions.end())
             mOHSessions.erase(it);
-        }
     }
 
 
     // User interface
-    OHDPSST::Stream::Ptr getSession(const OHDP::NodeID& id) {
+    ObjectHostSessionPtr getSession(const OHDP::NodeID& id) {
         ObjectHostSessionMap::const_iterator it = mOHSessions.find(id);
-        if (it == mOHSessions.end()) return OHDPSST::Stream::Ptr();
+        if (it == mOHSessions.end()) return ObjectHostSessionPtr();
         return it->second;
     }
 
   private:
-    typedef std::tr1::unordered_map<OHDP::NodeID, OHDPSST::Stream::Ptr, OHDP::NodeID::Hasher> ObjectHostSessionMap;
+    typedef std::tr1::unordered_map<OHDP::NodeID, ObjectHostSessionPtr, OHDP::NodeID::Hasher> ObjectHostSessionMap;
     ObjectHostSessionMap mOHSessions;
 };
 

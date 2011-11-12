@@ -40,12 +40,12 @@
 
 # Look for the protocol buffers headers, first in the additional location and then in default system locations
 IF(PROX_ROOT)
-FIND_PATH(PROX_INCLUDE_DIRS NAMES prox/QueryHandler.hpp PATHS ${PROX_ROOT}/libprox/include/ ${PROX_ROOT}/include ${TOP_LEVEL}/externals/include ${TOP_LEVEL}/externals/prox/libprox/include/ ${TOP_LEVEL}/externals/include/ DOC "Location of PROX header files" NO_DEFAULT_PATH)
+FIND_PATH(PROX_INCLUDE_DIRS NAMES prox/base/QueryCache.hpp PATHS ${PROX_ROOT}/libprox/include/ ${PROX_ROOT}/include ${TOP_LEVEL}/externals/include ${TOP_LEVEL}/externals/prox/libprox/include/ ${TOP_LEVEL}/externals/include/ DOC "Location of PROX header files" NO_DEFAULT_PATH)
 ELSE()
-FIND_PATH(PROX_INCLUDE_DIRS NAMES prox/QueryHandler.hpp PATHS ${TOP_LEVEL}/externals/include ${TOP_LEVEL}/externals/prox/libprox/include/ ${TOP_LEVEL}/externals/include/ DOC "Location of PROX header files" NO_DEFAULT_PATH)
+FIND_PATH(PROX_INCLUDE_DIRS NAMES prox/base/QueryCache.hpp PATHS ${TOP_LEVEL}/externals/include ${TOP_LEVEL}/externals/prox/libprox/include/ ${TOP_LEVEL}/externals/include/ DOC "Location of PROX header files" NO_DEFAULT_PATH)
 ENDIF()
 IF(NOT PROX_INCLUDE_DIRS)
-    FIND_PATH(PROX_INCLUDE_DIRS NAMES prox/QueryHandler.hpp DOC "Location of antlr header files")
+    FIND_PATH(PROX_INCLUDE_DIRS NAMES prox/base/QueryCache.hpp DOC "Location of PROX header files")
 ENDIF()
 
 SET(PROX_FOUND FALSE)
@@ -60,24 +60,6 @@ IF(PROX_INCLUDE_DIRS)
     IF("${PROX_ROOT_DIRS}" MATCHES "/include$")
         # Destroy trailing "/include" in the path.
         GET_FILENAME_COMPONENT(PROX_ROOT_DIRS ${PROX_ROOT_DIRS} PATH)
-    ENDIF()
-    SET(PROX_LIBRARY_DIRS ${PROX_ROOT_DIRS})
-    IF(EXISTS ${PROX_LIBRARY_DIRS}/src)
-        SET(PROX_LIBRARY_DIRS ${PROX_LIBRARY_DIRS}/src)
-    ENDIF()
-    IF(PROX_LIBRARY_DIRS)
-        SET(PROX_SOURCE_FILES
-         ${PROX_LIBRARY_DIRS}/ArcAngle.cpp 
-         ${PROX_LIBRARY_DIRS}/BruteForceQueryHandler.cpp 
-         ${PROX_LIBRARY_DIRS}/Duration.cpp 
-         ${PROX_LIBRARY_DIRS}/Object.cpp 
-         ${PROX_LIBRARY_DIRS}/Quaternion.cpp 
-         ${PROX_LIBRARY_DIRS}/QueryCache.cpp 
-         ${PROX_LIBRARY_DIRS}/Query.cpp 
-         ${PROX_LIBRARY_DIRS}/RTreeQueryHandler.cpp 
-         ${PROX_LIBRARY_DIRS}/SolidAngle.cpp 
-         ${PROX_LIBRARY_DIRS}/Time.cpp)
-        SET(PROX_FOUND TRUE)
     ENDIF()
 ENDIF()
 

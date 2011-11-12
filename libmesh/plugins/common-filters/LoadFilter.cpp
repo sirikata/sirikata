@@ -78,7 +78,8 @@ FilterDataPtr LoadFilter::apply(FilterDataPtr input) {
 
     URI fileuri(std::string("file://") + mFilename);
     Fingerprint hash = Fingerprint::computeDigest(filedata->data(), filedata->size());
-    VisualPtr vis = parser->load(fileuri, hash, filedata);
+    RemoteFileMetadata metadata(hash, fileuri, filedata->size(), ChunkList(), FileHeaders());
+    VisualPtr vis = parser->load(metadata, hash, filedata);
 
     if (!vis) {
         std::cout << "Error applying LoadFilter: " << mFilename << std::endl;

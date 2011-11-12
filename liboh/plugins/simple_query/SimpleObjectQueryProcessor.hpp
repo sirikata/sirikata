@@ -29,9 +29,18 @@ public:
     virtual void updateQuery(HostedObjectPtr ho, const SpaceObjectReference& sporef, const String& new_query);
 
 private:
+    // Proximity
     void handleProximitySubstream(const HostedObjectWPtr &weakSelf, const SpaceObjectReference& spaceobj, int err, SSTStreamPtr s);
     void handleProximitySubstreamRead(const HostedObjectWPtr &weakSelf, const SpaceObjectReference& spaceobj, SSTStreamPtr s, String* prevdata, uint8* buffer, int length);
     bool handleProximityMessage(HostedObjectPtr self, const SpaceObjectReference& spaceobj, const std::string& payload);
+
+    // Location
+    // Handlers for substreams for space-managed updates
+    void handleLocationSubstream(const HostedObjectWPtr &weakSelf, const SpaceObjectReference& spaceobj, int err, SSTStreamPtr s);
+    // Handlers for substream read events for space-managed updates
+    void handleLocationSubstreamRead(const HostedObjectWPtr &weakSelf, const SpaceObjectReference& spaceobj, SSTStreamPtr s, std::stringstream* prevdata, uint8* buffer, int length);
+    bool handleLocationMessage(const HostedObjectPtr& self, const SpaceObjectReference& spaceobj, const std::string& paylod);
+
 
     ObjectHostContext* mContext;
 };

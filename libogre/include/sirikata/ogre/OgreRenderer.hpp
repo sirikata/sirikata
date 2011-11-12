@@ -146,14 +146,13 @@ public:
      *  find the right parser using magic numbers.  If it is unable to find the
      *  right parser, returns NULL.  Otherwise, returns the parsed mesh as a
      *  Visual object.
-     *  \param orig_uri original URI, used to construct correct relative paths
-     *                  for dependent resources
+     *  \param metadata RemoteFileMetadata describing the remote resource
      *  \param fp the fingerprint of the data, used for unique naming and passed
      *            through to the resulting mesh data
      *  \param data the contents of the
      *  \param cb callback to invoke when parsing is complete
      */
-    void parseMesh(const Transfer::URI& orig_uri, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data, ParseMeshCallback cb);
+    void parseMesh(const Transfer::RemoteFileMetadata& metadata, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data, ParseMeshCallback cb);
 
     /** Get the default mesh to present if a model fails to load. This may
      *  return an empty VisualPtr if no default mesh is specified.
@@ -180,8 +179,8 @@ public:
     virtual void postFrame(Task::LocalTime, Duration);
 
 
-    void parseMeshWork(const Transfer::URI& orig_uri, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data, ParseMeshCallback cb);
-    Mesh::VisualPtr parseMeshWorkSync(const Transfer::URI& orig_uri, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data);
+    void parseMeshWork(const Transfer::RemoteFileMetadata& metadata, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data, ParseMeshCallback cb);
+    Mesh::VisualPtr parseMeshWorkSync(const Transfer::RemoteFileMetadata& metadata, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data);
 
 
     // Invokable helpers

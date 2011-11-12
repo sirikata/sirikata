@@ -105,6 +105,43 @@ protected:
 	};
 
 public:
+        typedef std::map<std::string, std::string> StringDictionary;
+        // StringDictionary that uses case-insensitive keys, as required for
+        // http headers by RFC 2616
+        struct CaseInsensitiveStringLess {
+            bool operator()(const std::string& lhs, const std::string& rhs) const {
+                std::size_t lsize = lhs.size(), rsize = rhs.size();
+                if (lsize != rsize) return (lsize < rsize);
+                for(std::size_t i = 0; i < lsize; i++) {
+                    char li = std::tolower(lhs[i]), ri = std::tolower(rhs[i]);
+                    if (li != ri) return (li < ri);
+                }
+                return false;
+            }
+        };
+        typedef std::map<std::string, std::string, CaseInsensitiveStringLess> CaseInsensitiveStringDictionary;
+
+        typedef CaseInsensitiveStringDictionary Headers;
+        typedef StringDictionary QueryParameters;
+
+        /** Represents one field in a multipart/form-data */
+        struct MultipartData {
+            MultipartData(const String& _field, const String& _data)
+             : field(_field), headers(), filename(""), data(_data)
+            {}
+            MultipartData(const String& _field, const String& _data, const String& _filename)
+             : field(_field), headers(), filename(_filename), data(_data)
+            {}
+            MultipartData(const String& _field, const String& _data, const String& _filename, const Headers& _headers)
+             : field(_field), headers(_headers), filename(_filename), data(_data)
+            {}
+
+            String field;
+            Headers headers;
+            String filename;
+            String data;
+        };
+        typedef std::vector<MultipartData> MultipartDataList;
 
     /*
      * Stores headers and data returned from an HTTP request
@@ -131,7 +168,7 @@ public:
         std::stringstream mCompressedStream;
         //
 
-        std::map<std::string, std::string> mHeaders;
+        Headers mHeaders;
         std::tr1::shared_ptr<DenseData> mData;
         ssize_t mContentLength;
         unsigned short mStatusCode;
@@ -141,7 +178,13 @@ public:
               mGzip(false), mContentLength(0), mStatusCode(0) {}
     public:
         inline std::tr1::shared_ptr<DenseData> getData() { return mData; }
-        inline const std::map<std::string, std::string>& getHeaders() { return mHeaders; }
+        inline const Headers& getHeaders() { return mHeaders; }
+        inline StringDictionary getRawHeaders() {
+            StringDictionary raw_headers;
+            for(Headers::const_iterator it = mHeaders.begin(); it != mHeaders.end(); it++)
+                raw_headers[it->first] = it->second;
+            return raw_headers;
+        }
         inline ssize_t getContentLength() { return mContentLength; }
         inline unsigned short getStatusCode() { return mStatusCode; }
 
@@ -174,13 +217,85 @@ public:
     //Methods supported
     enum HTTP_METHOD {
         HEAD,
-        GET
+        GET,
+        POST
     };
+    static String methodAsString(HTTP_METHOD m);
 
-    /*
-     * Makes an HTTP request and calls cb when finished
+    /** Makes an HTTP request and calls cb when finished. This is the lowest
+     *  level version exposed publicly, taking a raw HTTP request, which you
+     *  should ensure is properly formatted. Usually you should use the
+     *  convenience wrappers that format the request for you.
      */
-    void makeRequest(Sirikata::Network::Address addr, HTTP_METHOD method, std::string req, HttpCallback cb);
+    void makeRequest(Sirikata::Network::Address addr, HTTP_METHOD method, std::string req, bool allow_redirects, HttpCallback cb);
+
+    /** Formats and makes an HTTP request and calls cb when finished. This
+     *  version is a utility for the more specific request types (i.e. head()
+     *  and get()).
+     *
+     *  \param addr the address of the server
+     *  \param method the HTTP request method, i.e. HEAD, GET, or POST
+     *  \param path the path of the resource to access
+     *  \param cb callback to invoke upon completion
+     *  \param headers dictionary of headers to add to the request
+     *  \param query_params dictionary of unencoded query parameters to add to
+     *         the url
+     *  \param body if non-empty, the encoded HTTP request body, i.e. the data
+     *         provided after all the headers. If you provide this, you should
+     *         probably include headers to specify it's format
+     *  \param allow_redirects if true, redirects will be followed, triggering a
+     *         new requests
+     */
+    void makeRequest(
+        Sirikata::Network::Address addr, HTTP_METHOD method, const String& path,
+        HttpCallback cb,
+        const Headers& headers = Headers(), const QueryParameters& query_params = QueryParameters(),
+        const String& body = "",
+        bool allow_redirects = true
+    );
+
+    static String formatURLEncodedDictionary(const StringDictionary& query_params);
+    static String formatPath(const String& path, const QueryParameters& query_params);
+    static String formatURL(const String& host, const String& path, const QueryParameters& query_params);
+
+    void head(
+        Sirikata::Network::Address addr, const String& path,
+        HttpCallback cb, const Headers& headers = Headers(), const QueryParameters& query_params = QueryParameters(),
+        bool allow_redirects = true
+    );
+
+    void get(
+        Sirikata::Network::Address addr, const String& path,
+        HttpCallback cb, const Headers& headers = Headers(), const QueryParameters& query_params = QueryParameters(),
+        bool allow_redirects = true
+    );
+
+    /** Perform an HTTP POST using the specified content type and message
+     *  body. This can be used if you want to use an unusual encoding or as a
+     *  utility for other, more specific post methods.
+     */
+    void post(
+        Sirikata::Network::Address addr, const String& path,
+        const String& content_type, const String& body,
+        HttpCallback cb, const Headers& headers = Headers(), const QueryParameters& query_params = QueryParameters(),
+        bool allow_redirects = true
+    );
+
+    /** Perform a HTTP POST whose body is x-www-form-urlencoded parameters. */
+    void postURLEncoded(
+        Sirikata::Network::Address addr, const String& path,
+        const StringDictionary& body,
+        HttpCallback cb, const Headers& headers = Headers(), const QueryParameters& query_params = QueryParameters(),
+        bool allow_redirects = true
+    );
+
+    /** Perform a HTTP POST whose body is multipart/form-data encoded body. */
+    void postMultipartForm(
+        Sirikata::Network::Address addr, const String& path,
+        const MultipartDataList& data,
+        HttpCallback cb, const Headers& headers = Headers(), const QueryParameters& query_params = QueryParameters(),
+        bool allow_redirects = true
+    );
 
 protected:
     /*
@@ -194,6 +309,11 @@ protected:
     friend std::auto_ptr<HttpManager>::~auto_ptr();
     friend void std::auto_ptr<HttpManager>::reset(HttpManager*);
 
+    // Formats a URL encoded dictionary -- for form-urlencoded data or query
+    // strings. NOTE: There is no ? prefixed to this.
+    static void formatURLEncodedDictionary(std::ostream& os, const StringDictionary& query_params);
+    // Formats the entire path portion of a URL -- path + query args
+    static void formatPath(std::ostream& os, const String& path, const QueryParameters& query_params);
 private:
     //For convenience
     typedef Sirikata::Network::IOServicePool IOServicePool;
@@ -210,9 +330,10 @@ private:
         const std::string req;
         const HttpCallback cb;
         const HTTP_METHOD method;
-        HttpRequest(Sirikata::Network::Address _addr, std::string _req, HTTP_METHOD meth, HttpCallback _cb)
-            : addr(_addr), req(_req), cb(_cb), method(meth), mNumTries(0),
-              mLastCallback(NONE), mHeaderComplete(false) {}
+        const bool allow_redirects;
+        HttpRequest(Sirikata::Network::Address _addr, std::string _req, HTTP_METHOD meth, bool _allow_redirects, HttpCallback _cb)
+         : addr(_addr), req(_req), cb(_cb), method(meth), allow_redirects(_allow_redirects),
+           mNumTries(0), mLastCallback(NONE), mHeaderComplete(false) {}
 
         friend class HttpManager;
     protected:
@@ -223,7 +344,7 @@ private:
         std::string mTempHeaderValue;
         LAST_HEADER_CB mLastCallback;
         bool mHeaderComplete;
-        std::map<std::string, std::string> mHeaders;
+        Headers mHeaders;
     };
 
     //Holds a queue of requests to be made

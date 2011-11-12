@@ -785,6 +785,7 @@ void SessionManager::setupSpaceConnection(ServerID server, SpaceNodeConnection::
         ),
         std::tr1::bind(&SessionManager::scheduleHandleServerMessages, this, _1)
     );
+    conn->addCallback(std::tr1::bind(&SessionManager::handleSpaceSession, this, server, _1));
     conn->addCallback(cb);
     mConnectingConnections[server] = conn;
 
@@ -874,6 +875,11 @@ void SessionManager::handleSpaceConnection(const Sirikata::Network::Stream::Conn
         }
         return;
     }
+}
+
+void SessionManager::handleSpaceSession(ServerID sid, SpaceNodeConnection* conn) {
+    if (conn != NULL)
+        fireSpaceNodeSession(OHDP::SpaceNodeID(mSpace, OHDP::NodeID(sid)), conn->stream());
 }
 
 void SessionManager::scheduleHandleServerMessages(SpaceNodeConnection* conn) {
