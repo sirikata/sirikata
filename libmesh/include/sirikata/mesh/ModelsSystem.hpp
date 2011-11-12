@@ -36,7 +36,7 @@
 #include <sirikata/core/transfer/Defs.hpp>
 #include <sirikata/core/transfer/URI.hpp>
 #include <sirikata/core/transfer/TransferData.hpp>
-
+#include <sirikata/core/transfer/RemoteFileMetadata.hpp>
 #include <sirikata/core/transfer/Range.hpp>
 
 #include <sirikata/mesh/Visual.hpp>
@@ -67,7 +67,7 @@ class SIRIKATA_MESH_EXPORT ModelsSystem
         virtual bool canLoad(Transfer::DenseDataPtr data) = 0;
 
         /** Load a mesh into a Visual object. */
-        virtual Mesh::VisualPtr load(const Transfer::URI& uri, const Transfer::Fingerprint& fp,
+        virtual Mesh::VisualPtr load(const Transfer::RemoteFileMetadata& metadata, const Transfer::Fingerprint& fp,
             Transfer::DenseDataPtr data) = 0;
 
 

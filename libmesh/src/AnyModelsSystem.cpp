@@ -68,17 +68,17 @@ bool AnyModelsSystem::canLoad(Transfer::DenseDataPtr data) {
     return false;
 }
 
-Mesh::VisualPtr AnyModelsSystem::load(const Transfer::URI& uri, const Transfer::Fingerprint& fp,
+Mesh::VisualPtr AnyModelsSystem::load(const Transfer::RemoteFileMetadata& metadata, const Transfer::Fingerprint& fp,
     Transfer::DenseDataPtr data) {
     Mesh::VisualPtr result;
     for(SystemsMap::iterator it = mModelsSystems.begin(); it != mModelsSystems.end(); it++) {
         ModelsSystem* ms = it->second;
         if (ms->canLoad(data)) {
-            result = ms->load(uri, fp, data);
+            result = ms->load(metadata, fp, data);
             if (result) return result;
         }
     }
-    SILOG(AnyModelsSystem,error,"Couldn't find parser for " << uri);
+    SILOG(AnyModelsSystem,error,"Couldn't find parser for " << metadata.getURI());
     return result;
 }
 

@@ -546,12 +546,12 @@ void JSObjectScriptManager::loadMesh(const Transfer::URI& uri, MeshLoadCallback 
 
 void JSObjectScriptManager::meshDownloaded(Transfer::ChunkRequestPtr request, Transfer::DenseDataPtr data) {
     mParsingIOService->post(
-        std::tr1::bind(&JSObjectScriptManager::parseMeshWork, this, request->getMetadata().getURI(), request->getMetadata().getFingerprint(), data)
+        std::tr1::bind(&JSObjectScriptManager::parseMeshWork, this, request->getMetadata(), request->getMetadata().getFingerprint(), data)
     );
 }
 
-void JSObjectScriptManager::parseMeshWork(const Transfer::URI& uri, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data) {
-    Mesh::VisualPtr parsed = mModelParser->load(uri, fp, data);
+void JSObjectScriptManager::parseMeshWork(const Transfer::RemoteFileMetadata& metadata, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data) {
+    Mesh::VisualPtr parsed = mModelParser->load(metadata, fp, data);
     if (parsed && mModelFilter) {
         Mesh::MutableFilterDataPtr input_data(new Mesh::FilterData);
         input_data->push_back(parsed);
@@ -560,7 +560,7 @@ void JSObjectScriptManager::parseMeshWork(const Transfer::URI& uri, const Transf
         parsed = output_data->get();
     }
 
-    mContext->mainStrand->post(std::tr1::bind(&JSObjectScriptManager::finishMeshDownload, this, uri, parsed));
+    mContext->mainStrand->post(std::tr1::bind(&JSObjectScriptManager::finishMeshDownload, this, metadata.getURI(), parsed));
 }
 
 void JSObjectScriptManager::finishMeshDownload(const Transfer::URI& uri, VisualPtr mesh) {

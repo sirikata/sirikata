@@ -162,7 +162,9 @@ bool OgreSystem::initialize(VWObjectPtr viewer, const SpaceObjectReference& pres
     using namespace boost::filesystem;
     String cube_path = (path(mResourcesDir) / "cube.dae").string();
     Transfer::DenseDataPtr cube_data = read_file(cube_path);
-    mDefaultMesh = parseMeshWorkSync(Transfer::URI("file:///fake.dae"), Transfer::Fingerprint::null(), cube_data);
+    Transfer::Fingerprint hash = Transfer::Fingerprint::computeDigest(cube_data->data(), cube_data->size());
+    Transfer::RemoteFileMetadata fakeMetadata(hash, Transfer::URI("file:///fake.dae"), cube_data->length(), Transfer::ChunkList(), Transfer::FileHeaders());
+    mDefaultMesh = parseMeshWorkSync(fakeMetadata, Transfer::Fingerprint::null(), cube_data);
 
     //finish instantiation here
     instantiateAllObjects(proxyManager);

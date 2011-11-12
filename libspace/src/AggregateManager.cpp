@@ -590,7 +590,7 @@ void AggregateManager::chunkFinished(Time t, const UUID uuid, const UUID child_u
       boost::mutex::scoped_lock aggregateObjectsLock(mAggregateObjectsMutex);
       if (mAggregateObjects[child_uuid]->mMeshdata == MeshdataPtr() ) {
 
-        VisualPtr v = mModelsSystem->load(request->getURI(), request->getMetadata().getFingerprint(), response);
+        VisualPtr v = mModelsSystem->load(request->getMetadata(), request->getMetadata().getFingerprint(), response);
         // FIXME handle non-Meshdata formats
         MeshdataPtr m = std::tr1::dynamic_pointer_cast<Meshdata>(v);
 

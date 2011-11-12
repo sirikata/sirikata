@@ -110,10 +110,10 @@ bool ColladaSystem::canLoad(Transfer::DenseDataPtr data) {
     return false;
 }
 
-Mesh::VisualPtr ColladaSystem::load(const Transfer::URI& uri, const Transfer::Fingerprint& fp,
+Mesh::VisualPtr ColladaSystem::load(const Transfer::RemoteFileMetadata& metadata, const Transfer::Fingerprint& fp,
             Transfer::DenseDataPtr data)
 {
-    ColladaDocumentLoader loader(uri, fp);
+    ColladaDocumentLoader loader(metadata.getURI(), fp);
 
       SparseData data_reflatten = SparseData();
       data_reflatten.addValidData(data);

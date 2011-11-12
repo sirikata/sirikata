@@ -135,7 +135,7 @@ void AssetDownloadTask::assetFileDownloaded(std::tr1::shared_ptr<ChunkRequest> r
     // copy of the raw data any more.
 
     mScene->parseMesh(
-        mAssetURI, request->getMetadata().getFingerprint(), response,
+        request->getMetadata(), request->getMetadata().getFingerprint(), response,
         std::tr1::bind(&AssetDownloadTask::weakHandleAssetParsed, getWeakPtr(), _1)
     );
 }
