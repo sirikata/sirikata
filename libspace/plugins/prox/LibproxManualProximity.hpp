@@ -52,8 +52,11 @@ public:
     virtual void receiveMigrationData(const UUID& obj, ServerID source_server, ServerID dest_server, const std::string& data);
 
     // ObjectHostSessionListener Interface
-    virtual void onObjectHostSession(const OHDP::NodeID& id, OHDPSST::Stream::Ptr oh_stream);
+    virtual void onObjectHostSession(const OHDP::NodeID& id, ObjectHostSessionPtr oh_sess);
     virtual void onObjectHostSessionEnded(const OHDP::NodeID& id);
+
+
+    // PROX Thread:
 
     // AggregateListener Interface
     virtual void aggregateCreated(ProxAggregator* handler, const UUID& objid);
@@ -62,8 +65,6 @@ public:
     virtual void aggregateBoundsUpdated(ProxAggregator* handler, const UUID& objid, const BoundingSphere3f& bnds);
     virtual void aggregateDestroyed(ProxAggregator* handler, const UUID& objid);
     virtual void aggregateObserved(ProxAggregator* handler, const UUID& objid, uint32 nobservers);
-
-    // PROX Thread:
 
     // QueryEventListener Interface
     void queryHasEvents(ProxQuery* query);
@@ -75,7 +76,7 @@ private:
     virtual int32 objectHostQueries() const;
 
     // ObjectHost message management
-    void handleObjectHostSubstream(int success, OHDPSST::Stream::Ptr substream);
+    void handleObjectHostSubstream(int success, OHDPSST::Stream::Ptr substream, SeqNoPtr seqNo);
 
 
     std::deque<OHResult> mOHResultsToSend;
@@ -85,7 +86,7 @@ private:
     void tickQueryHandler(ProxQueryHandler* qh[NUM_OBJECT_CLASSES]);
 
     // Real handler for OH requests, in the prox thread
-    void handleObjectHostProxMessage(const OHDP::NodeID& id, const String& data);
+    void handleObjectHostProxMessage(const OHDP::NodeID& id, const String& data, SeqNoPtr seqNo);
     // Real handler for OH disconnects
     void handleObjectHostSessionEnded(const OHDP::NodeID& id);
     void destroyQuery(const OHDP::NodeID& id);
@@ -93,7 +94,7 @@ private:
     // Decides whether a query handler should handle a particular object.
     bool handlerShouldHandleObject(bool is_static_handler, bool is_global_handler, const UUID& obj_id, bool is_local, const TimedMotionVector3f& pos, const BoundingSphere3f& region, float maxSize);
 
-    SeqNoPtr getOrCreateSeqNoInfo(const OHDP::NodeID& node);
+    SeqNoPtr getSeqNoInfo(const OHDP::NodeID& node);
     void eraseSeqNoInfo(const OHDP::NodeID& node);
 
     typedef std::tr1::unordered_map<OHDP::NodeID, ProxQuery*, OHDP::NodeID::Hasher> OHQueryMap;

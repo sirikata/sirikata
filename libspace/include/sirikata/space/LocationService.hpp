@@ -96,6 +96,10 @@ public:
     virtual void unsubscribe(ServerID remote, const UUID& uuid) = 0;
     virtual void unsubscribe(ServerID remote) = 0;
 
+    virtual void subscribe(const OHDP::NodeID& remote, const UUID& uuid) = 0;
+    virtual void unsubscribe(const OHDP::NodeID& remote, const UUID& uuid) = 0;
+    virtual void unsubscribe(const OHDP::NodeID& remote) = 0;
+
     virtual void subscribe(const UUID& remote, const UUID& uuid) = 0;
     virtual void unsubscribe(const UUID& remote, const UUID& uuid) = 0;
     virtual void unsubscribe(const UUID& remote) = 0;
@@ -187,7 +191,11 @@ public:
     /** Unsubscripe the given server from all its location subscriptions. */
     virtual void unsubscribe(ServerID remote);
 
-
+    /** Subscriptions for connected object hosts. */
+    virtual void subscribe(const OHDP::NodeID& remote, const UUID& uuid);
+    virtual void unsubscribe(const OHDP::NodeID& remote, const UUID& uuid);
+    /** Unsubscripe the given object host from all its location subscriptions. */
+    virtual void unsubscribe(const OHDP::NodeID& remote);
 
     /** Subscriptions for local objects. */
     virtual void subscribe(const UUID& remote, const UUID& uuid);
@@ -200,12 +208,6 @@ public:
     virtual void receiveMessage(Message* msg) = 0;
 
     virtual bool locationUpdate(UUID source, void* buffer, uint32 length) = 0;
-
-    SST::Stream<SpaceObjectReference>::Ptr getObjectStream(const UUID& uuid) {
-        ObjectSession* session = mContext->objectSessionManager()->getSession(ObjectReference(uuid));
-        if (session == NULL) return SST::Stream<SpaceObjectReference>::Ptr();
-        return session->getStream();
-    }
 
 protected:
     virtual void start();

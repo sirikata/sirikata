@@ -50,6 +50,8 @@
 #define ONE_PIXEL_SOLID_ANGLE (HUMAN_FOV/(2560.0*1600.0))
 #define TWO_PI (2.0*3.14159)
 
+#define AGG_LOG(lvl, msg) SILOG(aggregate-manager, lvl, msg)
+
 namespace Sirikata {
 
 using namespace Mesh;
@@ -101,14 +103,14 @@ void AggregateManager::aggregationThreadMain() {
 }
 
 void AggregateManager::addAggregate(const UUID& uuid) {
-  std::cout << "addAggregate called: uuid=" << uuid.toString()  << "\n";
+    AGG_LOG(detailed, "addAggregate called: uuid=" << uuid.toString());
 
   boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
   mAggregateObjects[uuid] = std::tr1::shared_ptr<AggregateObject> (new AggregateObject(uuid, UUID::null()));
 }
 
 void AggregateManager::removeAggregate(const UUID& uuid) {
-  std::cout << "removeAggregate: " << uuid.toString() << "\n";
+    AGG_LOG(detailed, "removeAggregate: " << uuid.toString());
 
   boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
 
@@ -139,9 +141,7 @@ void AggregateManager::addChild(const UUID& uuid, const UUID& child_uuid) {
 
     lock.unlock();
 
-    std::cout << "addChild:  "  << uuid.toString()
-              << " CHILD " << child_uuid.toString() << " "
-              << "\n";
+    AGG_LOG(detailed, "addChild:  "  << uuid.toString() << " CHILD " << child_uuid.toString());
 
     mAggregationStrand->post(Duration::seconds(20), std::tr1::bind(&AggregateManager::generateMeshesFromQueue, this, mAggregateGenerationStartTime));
   }
@@ -199,7 +199,7 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
   /* Get the aggregate object corresponding to UUID 'uuid'.  */
   boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
   if (mAggregateObjects.find(uuid) == mAggregateObjects.end()) {
-    std::cout << uuid.toString() <<" : not found in aggregate objects map\n";
+      AGG_LOG(detailed, uuid.toString() <<" : not found in aggregate objects map");
     return false;
   }
   std::tr1::shared_ptr<AggregateObject> aggObject = mAggregateObjects[uuid];
@@ -556,7 +556,7 @@ void AggregateManager::metadataFinished(Time t, const UUID uuid, const UUID chil
                                           std::tr1::shared_ptr<Transfer::RemoteFileMetadata> response)
 {
   if (response != NULL) {
-    std::cout << ( Timer::now() - t )  << " : metadataFinished SUCCESS\n";
+      AGG_LOG(detailed, ( Timer::now() - t )  << " : metadataFinished SUCCESS");
 
     const Transfer::RemoteFileMetadata metadata = *response;
 
@@ -569,7 +569,7 @@ void AggregateManager::metadataFinished(Time t, const UUID uuid, const UUID chil
     mTransferPool->addRequest(req);
   }
   else {
-    std::cout<<"Failed metadata download: Retrying...: Response time: "   << ( Timer::now() - t )   << std::endl;
+      AGG_LOG(detailed, "Failed metadata download: Retrying...: Response time: "   << ( Timer::now() - t ));
     Transfer::TransferRequestPtr req(
                                        new Transfer::MetadataRequest( Transfer::URI(meshName), 1.0, std::tr1::bind(
                                        &AggregateManager::metadataFinished, this, t, uuid, child_uuid, meshName,
@@ -585,7 +585,7 @@ void AggregateManager::chunkFinished(Time t, const UUID uuid, const UUID child_u
                                        std::tr1::shared_ptr<const Transfer::DenseData> response)
 {
     if (response != NULL) {
-      std::cout << "Time spent downloading: " << (Timer::now() - t)  << "\n";
+        AGG_LOG(detailed, "Time spent downloading: " << (Timer::now() - t));
 
       boost::mutex::scoped_lock aggregateObjectsLock(mAggregateObjectsMutex);
       if (mAggregateObjects[child_uuid]->mMeshdata == MeshdataPtr() ) {
@@ -603,12 +603,12 @@ void AggregateManager::chunkFinished(Time t, const UUID uuid, const UUID child_u
 
           mMeshStore[request->getURI().toString()] = m;
 
-          std::cout << "Stored mesh in mesh store for: " <<  request->getURI().toString()  << "\n";
+          AGG_LOG(detailed, "Stored mesh in mesh store for: " <<  request->getURI().toString());
         }
       }
     }
     else {
-      std::cout << "ChunkFinished fail... retrying\n";
+        AGG_LOG(detailed, "ChunkFinished fail... retrying");
       Transfer::TransferRequestPtr req(
                                        new Transfer::MetadataRequest( Transfer::URI(meshName), 1.0, std::tr1::bind(
                                        &AggregateManager::metadataFinished, this, t, uuid, child_uuid, meshName,

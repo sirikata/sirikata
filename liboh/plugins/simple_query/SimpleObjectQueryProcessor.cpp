@@ -5,6 +5,10 @@
 #include "SimpleObjectQueryProcessor.hpp"
 #include <sirikata/core/network/Frame.hpp>
 #include "Protocol_Prox.pbj.hpp"
+#include "Protocol_Loc.pbj.hpp"
+#include "Protocol_Frame.pbj.hpp"
+
+#define SOQP_LOG(lvl, msg) SILOG(simple-object-query-processor, lvl, msg)
 
 namespace Sirikata {
 namespace OH {
@@ -35,7 +39,15 @@ void SimpleObjectQueryProcessor::presenceConnectedStream(HostedObjectPtr ho, con
             HostedObjectWPtr(ho), sporef, _1, _2
         )
     );
+
+    strm->listenSubstream(OBJECT_PORT_LOCATION,
+        std::tr1::bind(&SimpleObjectQueryProcessor::handleLocationSubstream, this,
+            HostedObjectWPtr(ho), sporef, _1, _2
+        )
+    );
 }
+
+// Proximity
 
 void SimpleObjectQueryProcessor::handleProximitySubstream(const HostedObjectWPtr& weakHO, const SpaceObjectReference& spaceobj, int err, SSTStreamPtr s) {
     String* prevdata = new String();
@@ -51,7 +63,7 @@ void SimpleObjectQueryProcessor::handleProximitySubstreamRead(const HostedObject
     if (!self)
         return;
     if (self->stopped()) {
-        SILOG(simple-object-query-processor,detailed,"Ignoring proximity update after system stop requested.");
+        SOQP_LOG(detailed,"Ignoring proximity update after system stop requested.");
         return;
     }
 
@@ -78,7 +90,7 @@ bool SimpleObjectQueryProcessor::handleProximityMessage(HostedObjectPtr self, co
     if (!parse_success)
         return false;
 
-    deliverResults(self, spaceobj, contents);
+    deliverProximityResults(self, spaceobj, contents);
     return true;
 }
 
@@ -99,6 +111,49 @@ void SimpleObjectQueryProcessor::updateQuery(HostedObjectPtr ho, const SpaceObje
             NULL
         );
     }
+}
+
+
+// Location
+
+void SimpleObjectQueryProcessor::handleLocationSubstream(const HostedObjectWPtr& weakSelf, const SpaceObjectReference& spaceobj, int err, SSTStreamPtr s) {
+    s->registerReadCallback(
+        std::tr1::bind(
+            &SimpleObjectQueryProcessor::handleLocationSubstreamRead, this,
+            weakSelf, spaceobj, s, new std::stringstream(), _1, _2
+        )
+    );
+}
+
+void SimpleObjectQueryProcessor::handleLocationSubstreamRead(const HostedObjectWPtr& weakSelf, const SpaceObjectReference& spaceobj, SSTStreamPtr s, std::stringstream* prevdata, uint8* buffer, int length) {
+    HostedObjectPtr self(weakSelf.lock());
+    if (!self)
+        return;
+    if (self->stopped()) {
+        SOQP_LOG(detailed,"Ignoring location update after system stop requested.");
+        return;
+    }
+
+    prevdata->write((const char*)buffer, length);
+    if (handleLocationMessage(self, spaceobj, prevdata->str())) {
+        // FIXME we should be getting a callback on stream close instead of
+        // relying on this parsing as an indicator
+        delete prevdata;
+        // Clear out callback so we aren't responsible for any remaining
+        // references to s, and close the stream
+        s->registerReadCallback(0);
+        s->close(false);
+    }
+}
+
+bool SimpleObjectQueryProcessor::handleLocationMessage(const HostedObjectPtr& self, const SpaceObjectReference& spaceobj, const std::string& payload) {
+    Sirikata::Protocol::Frame frame;
+    bool parse_success = frame.ParseFromString(payload);
+    if (!parse_success) return false;
+    Sirikata::Protocol::Loc::BulkLocationUpdate contents;
+    contents.ParseFromString(frame.payload());
+    deliverLocationUpdate(self, spaceobj, contents);
+    return true;
 }
 
 } // namespace Simple

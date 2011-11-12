@@ -423,92 +423,29 @@ void LibproxProximity::removeRelevantServer(ServerID sid) {
 }
 
 void LibproxProximity::aggregateCreated(ProxAggregator* handler, const UUID& objid) {
-    // On addition, an "aggregate" will have no children, i.e. its zero sized.
-
-    mContext->mainStrand->post(
-        std::tr1::bind(
-            &LocationService::addLocalAggregateObject, mLocService,
-            objid,
-            TimedMotionVector3f(mContext->simTime(), MotionVector3f()),
-            TimedMotionQuaternion(mContext->simTime(), MotionQuaternion()),
-            BoundingSphere3f(),
-            "",
-            ""
-        )
-    );
-
-    mAggregateManager->addAggregate(objid);
-}
-
-
-void LibproxProximity::updateAggregateLoc(const UUID& objid, const BoundingSphere3f& bnds) {
-
-  if (mLocService->contains(objid)) {
-    mLocService->updateLocalAggregateLocation(
-        objid,
-        TimedMotionVector3f(mContext->simTime(), MotionVector3f(bnds.center(), Vector3f(0,0,0)))
-    );
-    mLocService->updateLocalAggregateBounds(
-        objid,
-        BoundingSphere3f(bnds.center(), bnds.radius())
-    );
-  }
+    LibproxProximityBase::aggregateCreated(objid);
 }
 
 void LibproxProximity::aggregateChildAdded(ProxAggregator* handler, const UUID& objid, const UUID& child, const BoundingSphere3f& bnds) {
-    if (!mLocService->contains(objid) || mLocService->bounds(objid) != bnds) {
-      // Loc cares only about this chance to update state of aggregate
-      mContext->mainStrand->post(
-        std::tr1::bind(
-            &LibproxProximity::updateAggregateLoc, this,
-            objid, bnds
-        )
-      );
-    }
-
-    mAggregateManager->addChild(objid, child);
+    LibproxProximityBase::aggregateChildAdded(objid, child, bnds);
 }
 
 void LibproxProximity::aggregateChildRemoved(ProxAggregator* handler, const UUID& objid, const UUID& child, const BoundingSphere3f& bnds) {
-    if (!mLocService->contains(objid) || mLocService->bounds(objid) != bnds) {
-      // Loc cares only about this chance to update state of aggregate
-      mContext->mainStrand->post(
-        std::tr1::bind(
-            &LibproxProximity::updateAggregateLoc, this,
-            objid, bnds
-        )
-      );
-    }
-
-    mAggregateManager->removeChild(objid, child);
+    LibproxProximityBase::aggregateChildRemoved(objid, child, bnds);
 }
 
 void LibproxProximity::aggregateBoundsUpdated(ProxAggregator* handler, const UUID& objid, const BoundingSphere3f& bnds) {
-  if (!mLocService->contains(objid) || mLocService->bounds(objid) != bnds) {
-    mContext->mainStrand->post(
-        std::tr1::bind(
-            &LibproxProximity::updateAggregateLoc, this,
-            objid, bnds
-        )
-    );
-  }
-
-  if (mLocService->contains(objid) && mLocService->bounds(objid) != bnds)
-    mAggregateManager->generateAggregateMesh(objid, Duration::seconds(300.0+rand()%300));
+    LibproxProximityBase::aggregateBoundsUpdated(objid, bnds);
 }
 
 void LibproxProximity::aggregateDestroyed(ProxAggregator* handler, const UUID& objid) {
-    mContext->mainStrand->post(
-        std::tr1::bind(
-            &LocationService::removeLocalAggregateObject, mLocService, objid
-        )
-    );
-    mAggregateManager->removeAggregate(objid);
+    LibproxProximityBase::aggregateDestroyed(objid);
 }
 
 void LibproxProximity::aggregateObserved(ProxAggregator* handler, const UUID& objid, uint32 nobservers) {
-  mAggregateManager->aggregateObserved(objid, nobservers);
+    LibproxProximityBase::aggregateObserved(objid, nobservers);
 }
+
 
 void LibproxProximity::onSpaceNetworkConnected(ServerID sid) {
     mProxStrand->post(
@@ -694,38 +631,6 @@ void LibproxProximity::poll() {
 }
 
 
-
-void LibproxProximity::handleAddObjectLocSubscription(const UUID& subscriber, const UUID& observed) {
-    // We check the cache when we get the request, but also check it here since
-    // the observed object may have been removed between the request to add this
-    // subscription and its actual execution.
-    if (!mLocService->contains(observed)) return;
-
-    mLocService->subscribe(subscriber, observed);
-}
-
-void LibproxProximity::handleRemoveObjectLocSubscription(const UUID& subscriber, const UUID& observed) {
-    mLocService->unsubscribe(subscriber, observed);
-}
-
-void LibproxProximity::handleRemoveAllObjectLocSubscription(const UUID& subscriber) {
-    mLocService->unsubscribe(subscriber);
-}
-
-void LibproxProximity::handleAddServerLocSubscription(const ServerID& subscriber, const UUID& observed, SeqNoPtr seqPtr) {
-    // We check the cache when we get the request, but also check it here since
-    // the observed object may have been removed between the request to add this
-    // subscription and its actual execution.
-    if (!mLocService->contains(observed)) return;
-
-    mLocService->subscribe(subscriber, observed, seqPtr);
-}
-void LibproxProximity::handleRemoveServerLocSubscription(const ServerID& subscriber, const UUID& observed) {
-    mLocService->unsubscribe(subscriber, observed);
-}
-void LibproxProximity::handleRemoveAllServerLocSubscription(const ServerID& subscriber) {
-    mLocService->unsubscribe(subscriber);
-}
 
 void LibproxProximity::queryHasEvents(Query* query) {
     if (

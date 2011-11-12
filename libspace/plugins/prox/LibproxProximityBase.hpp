@@ -139,6 +139,17 @@ protected:
     void addObjectProxStreamInfo(ODPSST::Stream::Ptr);
     void addObjectHostProxStreamInfo(OHDPSST::Stream::Ptr);
 
+    // Handle various events in the main thread that are triggered in the prox thread
+    void handleAddObjectLocSubscription(const UUID& subscriber, const UUID& observed);
+    void handleRemoveObjectLocSubscription(const UUID& subscriber, const UUID& observed);
+    void handleRemoveAllObjectLocSubscription(const UUID& subscriber);
+    void handleAddOHLocSubscription(const OHDP::NodeID& subscriber, const UUID& observed);
+    void handleRemoveOHLocSubscription(const OHDP::NodeID& subscriber, const UUID& observed);
+    void handleRemoveAllOHLocSubscription(const OHDP::NodeID& subscriber);
+    void handleAddServerLocSubscription(const ServerID& subscriber, const UUID& observed, SeqNoPtr seqPtr);
+    void handleRemoveServerLocSubscription(const ServerID& subscriber, const UUID& observed);
+    void handleRemoveAllServerLocSubscription(const ServerID& subscriber);
+
     typedef std::tr1::unordered_map<UUID, ProxObjectStreamInfoPtr, UUID::Hasher> ObjectProxStreamMap;
     ObjectProxStreamMap mObjectProxStreams;
 
@@ -150,6 +161,19 @@ protected:
     Network::IOStrand* mProxStrand;
 
     CBRLocationServiceCache* mLocCache;
+
+    // Query-Type-Agnostic AggregateListener Interface -- manages adding to Loc
+    // and passing to AggregateManager, but you need to delegate to these
+    // yourself since the AggregateListener interface depends on the type of
+    // query/query handler being used.
+    virtual void aggregateCreated(const UUID& objid);
+    virtual void aggregateChildAdded(const UUID& objid, const UUID& child, const BoundingSphere3f& bnds);
+    virtual void aggregateChildRemoved(const UUID& objid, const UUID& child, const BoundingSphere3f& bnds);
+    virtual void aggregateBoundsUpdated(const UUID& objid, const BoundingSphere3f& bnds);
+    virtual void aggregateDestroyed(const UUID& objid);
+    virtual void aggregateObserved(const UUID& objid, uint32 nobservers);
+    // Helper for updating aggregates
+    void updateAggregateLoc(const UUID& objid, const BoundingSphere3f& bnds);
 
 }; // class LibproxProximityBase
 
