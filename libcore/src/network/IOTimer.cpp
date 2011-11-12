@@ -33,6 +33,7 @@
 #include <sirikata/core/util/Standard.hh>
 #include <sirikata/core/network/IOTimer.hpp>
 #include <sirikata/core/network/IOService.hpp>
+#include <sirikata/core/network/IOStrandImpl.hpp>
 #include <sirikata/core/util/Time.hpp>
 #include <sirikata/core/network/Asio.hpp>
 
@@ -46,7 +47,7 @@ class IOTimer::TimedOut {
 public:
     static void timedOut(
             const boost::system::error_code &error,
-            IOTimerWPtr wthis,uint64 tokenVal)
+            IOTimerWPtr wthis, uint64 tokenVal)
     {
         IOTimerPtr sharedThis (wthis.lock());
         if (!sharedThis) {
@@ -55,23 +56,49 @@ public:
         if (error == boost::asio::error::operation_aborted) {
             return; // don't care if the timer was cancelled.
         }
-        sharedThis->chk.serializedEnter();
+
+        if (sharedThis->mStrand != NULL) sharedThis->chk.serializedEnter();
         IOTimer*st=&*sharedThis;
 
         //token only gets incremented if was canceled.  Therefore, if these two
         //are equal, means wasn't canceled.
-        if (tokenVal == st->callbackToken)
+        if (tokenVal == st->mCanceled)
             sharedThis->mFunc();
-        sharedThis->chk.serializedExit();
+        if (sharedThis->mStrand != NULL) sharedThis->chk.serializedExit();
     }
 };
 
-IOTimer::IOTimer(IOService& io) :mCanceled(false){
-    mTimer = new DeadlineTimer(io);
+IOTimer::IOTimer(IOService& io)
+ : mTimer(new DeadlineTimer(io)),
+   mStrand(NULL),
+   mFunc(),
+   mCanceled(0)
+{
 }
 
-IOTimer::IOTimer(IOService& io, const IOCallback& cb)  :callbackToken(0){
-    mTimer = new DeadlineTimer(io);
+IOTimer::IOTimer(IOService& io, const IOCallback& cb)
+ : mTimer(new DeadlineTimer(io)),
+   mStrand(NULL),
+   mFunc(),
+   mCanceled(0)
+{
+    setCallback(cb);
+}
+
+IOTimer::IOTimer(IOStrand* ios)
+ : mTimer(new DeadlineTimer(ios->service())),
+   mStrand(ios),
+   mFunc(),
+   mCanceled(0)
+{
+}
+
+IOTimer::IOTimer(IOStrand* ios, const IOCallback& cb)
+ : mTimer(new DeadlineTimer(ios->service())),
+   mStrand(ios),
+   mFunc(),
+   mCanceled(0)
+{
     setCallback(cb);
 }
 
@@ -83,6 +110,14 @@ IOTimerPtr IOTimer::create(IOService& io) {
     return IOTimerPtr(new IOTimer(io));
 }
 
+IOTimerPtr IOTimer::create(IOStrand* ios) {
+    return IOTimerPtr(new IOTimer(ios));
+}
+
+IOTimerPtr IOTimer::create(IOStrand& ios) {
+    return IOTimerPtr(new IOTimer(&ios));
+}
+
 IOTimerPtr IOTimer::create(IOService* io, const IOCallback& cb) {
     return IOTimerPtr(new IOTimer(*io, cb));
 }
@@ -91,11 +126,20 @@ IOTimerPtr IOTimer::create(IOService& io, const IOCallback& cb) {
     return IOTimerPtr(new IOTimer(io, cb));
 }
 
+IOTimerPtr IOTimer::create(IOStrand* ios, const IOCallback& cb) {
+    return IOTimerPtr(new IOTimer(ios, cb));
+}
+
+IOTimerPtr IOTimer::create(IOStrand& ios, const IOCallback& cb) {
+    return IOTimerPtr(new IOTimer(&ios, cb));
+}
+
+
 IOTimer::~IOTimer() {
-    chk.serializedEnter();
+    if (mStrand != NULL) chk.serializedEnter();
     cancel();
     delete mTimer;
-    chk.serializedExit();
+    if (mStrand != NULL) chk.serializedExit();
 }
 
 IOService IOTimer::service() const {
@@ -105,12 +149,28 @@ IOService IOTimer::service() const {
 void IOTimer::wait(const Duration &num_seconds) {
     mTimer->expires_from_now(boost::posix_time::microseconds(num_seconds.toMicroseconds()));
     IOTimerWPtr weakThisPtr(this->shared_from_this());
-    mTimer->async_wait(
-        boost::bind(
-            &IOTimer::TimedOut::timedOut,
-            boost::asio::placeholders::error,
-            weakThisPtr,
-            callbackToken.read()));
+    if (mStrand == NULL) {
+        mTimer->async_wait(
+            boost::bind(
+                &IOTimer::TimedOut::timedOut,
+                boost::asio::placeholders::error,
+                weakThisPtr,
+                mCanceled.read()
+            )
+        );
+    }
+    else {
+        mTimer->async_wait(
+            mStrand->wrap(
+                boost::bind(
+                    &IOTimer::TimedOut::timedOut,
+                    boost::asio::placeholders::error,
+                    weakThisPtr,
+                    mCanceled.read()
+                )
+            )
+        );
+    }
 
     mCanceled = false;
 }
@@ -125,10 +185,10 @@ void IOTimer::setCallback(const IOCallback& cb) {
 }
 
 void IOTimer::cancel() {
-    chk.serializedEnter();
-    callbackToken++;
+    if (mStrand != NULL) chk.serializedEnter();
+    mCanceled++;
     mTimer->cancel();
-    chk.serializedExit();
+    if (mStrand != NULL) chk.serializedExit();
 }
 Duration IOTimer::expiresFromNow() {
     return Duration::microseconds(mTimer->expires_from_now().total_microseconds());

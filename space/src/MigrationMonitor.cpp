@@ -31,7 +31,7 @@
  */
 
 #include "MigrationMonitor.hpp"
-#include <sirikata/core/network/IOStrandImpl.hpp>
+
 #ifdef _WIN32
 #pragma warning (disable:4355)//this within constructor initializer
 #endif
@@ -44,8 +44,8 @@ MigrationMonitor::MigrationMonitor(SpaceContext* ctx, LocationService* locservic
    mStrand(ctx->mainStrand), // NOTE: All uses of Loc, CSeg, and mBoundingRegions need to be thread safe before this is its own strand
    mTimer(
        Network::IOTimer::create(
-           ctx->ioService,
-           mStrand->wrap(std::tr1::bind(&MigrationMonitor::service, this))
+           mStrand,
+           std::tr1::bind(&MigrationMonitor::service, this)
        )
    ),
    mMinEventTime(Time::null()),

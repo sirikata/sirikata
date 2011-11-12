@@ -49,6 +49,14 @@ typedef std::tr1::weak_ptr<IOTimer> IOTimerWPtr;
  *  supported by specifying a callback up front which will be called at each
  *  timeout.
  *
+ *  Because this works with the multithreaded event loop you should be careful
+ *  of how use use IOTimers: the handler may be queued to run or running on a
+ *  different thread, meaning it can actually run *after* you cancel it. If you
+ *  need single-threaded-style semantics, provide an IOStrand for the IOTimer to
+ *  use and *only operate on it from within that strand*. When you do this, you
+ *  don't have to deal with wrapping your own callbacks: they are guaranteed to
+ *  be invoked from the strand you pass in.
+ *
  *  Note: Instances of this class should not be stored directly, instead they
  *  must be stored using a shared_ptr<IOTimer> (which is available as IOTimerPtr).
  *  In order to enforce this, you cannot allocate one directly -- instead you
@@ -56,8 +64,8 @@ typedef std::tr1::weak_ptr<IOTimer> IOTimerWPtr;
  */
 class SIRIKATA_EXPORT IOTimer : public std::tr1::enable_shared_from_this<IOTimer> {
     DeadlineTimer *mTimer;
+    IOStrand* mStrand;
     IOCallback mFunc;
-    class TimedOut;
     SerializationCheck chk;
 
     /**
@@ -67,10 +75,17 @@ class SIRIKATA_EXPORT IOTimer : public std::tr1::enable_shared_from_this<IOTimer
      * callbackToken when at this point.  When executing callback compare the
      * bound value passed through with current value of callbackToken.  If
      * tokens aren't equal, programmer called cancel in intervening time.
+     *
+     * Note that this is only guaranteed effective if you provide a strand to
+     * work with. Otherwise it just reduces the likelihood of executing the
+     * callback after the cancel is finished (or of executing it *while*
+     * executing the cancel, in separate threads).
      */
-    AtomicValue<uint32> callbackToken;
+    AtomicValue<uint32> mCanceled;
 
-    bool mCanceled;
+    class TimedOut;
+
+
     /** Create a new timer, serviced by the specified IOService.
      *  \param io the IOService to service this timers events
      */
@@ -81,12 +96,29 @@ class SIRIKATA_EXPORT IOTimer : public std::tr1::enable_shared_from_this<IOTimer
      *  \param cb the handler for this timer's events.
      */
     IOTimer(IOService &io, const IOCallback& cb);
+
+    /** Create a new timer, serviced within the given IOStrand.
+     *  \param ios the IOStrand to service this timer's events
+     */
+    IOTimer(IOStrand* ios);
+
+    /** Create a new timer, serviced by the specified IOStrand.
+     *  \param ios the IOStrand to service this timer's events
+     *  \param cb the handler for this timer's events.
+     */
+    IOTimer(IOStrand* ios, const IOCallback& cb);
+
 public:
     /** Create a new timer, serviced by the specified IOService.
      *  \param io the IOService to service this timers events
      */
     static IOTimerPtr create(IOService *io);
     static IOTimerPtr create(IOService &io);
+    /** Create a new timer, serviced by the specified IOStrand
+     *  \param ios the IOStrand to service this timers events
+     */
+    static IOTimerPtr create(IOStrand *ios);
+    static IOTimerPtr create(IOStrand &ios);
 
     /** Create a new timer, serviced by the specified IOService.
      *  \param io the IOService to service this timers events
@@ -94,6 +126,12 @@ public:
      */
     static IOTimerPtr create(IOService *io, const IOCallback& cb);
     static IOTimerPtr create(IOService &io, const IOCallback& cb);
+    /** Create a new timer, serviced by the specified IOStrand.
+     *  \param io the IOStrand to service this timers events
+     *  \param cb the handler for this timer's events.
+     */
+    static IOTimerPtr create(IOStrand *ios, const IOCallback& cb);
+    static IOTimerPtr create(IOStrand &ios, const IOCallback& cb);
 
     ~IOTimer();
 
