@@ -47,3 +47,4 @@ buildingmeshes.push("meerkat:///emily2e/models/citigroupCen.dae/optimized/citigr
 var streetmesh = "meerkat:///kittyvision/street.dae/optimized/0/street.dae";
 var intersectionmesh = "meerkat:///kittyvision/street/intersection.dae/optimized/0/intersection.dae";
 var terrainmesh = "meerkat:///echeslack/simple_terrain.dae/optimized/0/simple_terrain.dae"
+var cubemesh = "meerkat:///test/multimtl.dae/original/0/multimtl.dae";

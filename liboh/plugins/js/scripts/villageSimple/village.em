@@ -5,6 +5,7 @@ system.require("villageSimple/map.em");
 meshes = housemeshes.concat(apartmentmeshes).concat(buildingmeshes);
 
 PresQueue = [];
+PresCount = 1;
 
 //create a pressence (buiding) at <x,-20,z>
 function createPres(mesh,x,z,scale)
@@ -31,6 +32,7 @@ function createStreet(mesh,ax,az,bx,bz)
     scale = 1;
     system.createPresence({'mesh': mesh,
                            'pos': <(ax+bx)/2,0,(az+bz)/2>, 
+                           //'scale': 2, // for cube test
                            'callback': function(presence) {
                                presence.loadMesh(function() {
                                    if (ax==bx)
@@ -84,6 +86,10 @@ function CreatePresCB()
         args = PresQueue.shift();
         if(args.length==4) createPres.apply(this,args);
         else if(args.length==5) createStreet.apply(this,args);
+
+        PresCount++;
+        system.print(PresCount);
+        system.print('----presenced connected\n');
     }
 }
 
@@ -101,5 +107,14 @@ function init()
     createVillage(3,3,0,-1);
     system.onPresenceConnected(CreatePresCB);
     CreatePresCB();
+
+    system.onPresenceDisconnected(function()
+                                  {
+                                      PresCount--;
+                                      system.print(PresCount);
+                                      system.print('----Presence Disconnceted\n');
+                                  }
+                                 );
+
 }
 
