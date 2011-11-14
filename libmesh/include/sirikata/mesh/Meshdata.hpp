@@ -35,6 +35,7 @@
 
 #include <sirikata/mesh/Platform.hpp>
 #include <sirikata/mesh/Visual.hpp>
+#include <sirikata/core/transfer/RemoteFileMetadata.hpp>
 #include "LightInfo.hpp"
 #include <stack>
 
@@ -270,6 +271,41 @@ struct SIRIKATA_MESH_EXPORT Node {
 };
 typedef std::vector<Node> NodeList;
 
+//Stores information about a single mipmap level
+struct SIRIKATA_MESH_EXPORT ProgressiveMipmapLevel {
+    //Offset within the tar file of the mipmap
+    uint32 offset;
+    //Length of the mipmap file within the tar file
+    uint32 length;
+    //Width of the mipmap image
+    uint32 width;
+    //Height of the mipmap image
+    uint32 height;
+};
+//A map containing mipmap levels in an archive
+typedef std::map<uint32, ProgressiveMipmapLevel> ProgressiveMipmaps;
+//Information about an archive of mipmaps
+struct SIRIKATA_MESH_EXPORT ProgressiveMipmapArchive {
+    //Contains the list of mipmap levels
+    ProgressiveMipmaps mipmaps;
+    //The name of the image in the mesh that references this
+    std::string name;
+    //The hash of the mipmap archive
+    Transfer::Fingerprint archiveHash;
+};
+//A map containing the names of mipmap archives
+typedef std::map<std::string, ProgressiveMipmapArchive> ProgressiveMipmapMap;
+//Stores progressive mesh information
+struct SIRIKATA_MESH_EXPORT ProgressiveData {
+    //The hash of the progressive stream
+    Transfer::Fingerprint progressiveHash;
+    //The number of triangles in the progressive stream
+	uint32 numProgressiveTriangles;
+	//Maps the names of mipmap archives to the mipmap archive data
+	ProgressiveMipmapMap mipmaps;
+};
+typedef std::tr1::shared_ptr<ProgressiveData> ProgressiveDataPtr;
+
 struct SIRIKATA_MESH_EXPORT Meshdata : public Visual {
   private:
     static String sType;
@@ -311,6 +347,9 @@ struct SIRIKATA_MESH_EXPORT Meshdata : public Visual {
     // these methods cannot correctly compute the transform when instance_nodes
     // are involved.
     Matrix4x4f getTransform(NodeIndex index) const;
+
+    // If this mesh is in progressive format, stores progressive information
+    ProgressiveDataPtr progressiveData;
 
   private:
 
