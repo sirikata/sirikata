@@ -62,6 +62,10 @@ void DynamicLibrary::Initialize() {
     String exe_path = Path::Get(Path::DIR_EXE);
     if (!exe_path.empty())
         AddLoadPath(exe_path);
+    // Also, if it differs, add the bundle's path
+    String exe_bundle_path = Path::Get(Path::DIR_EXE_BUNDLE);
+    if (!exe_bundle_path.empty() && exe_bundle_path != exe_path)
+        AddLoadPath(exe_bundle_path);
 }
 
 void DynamicLibrary::AddLoadPath(const String& path) {

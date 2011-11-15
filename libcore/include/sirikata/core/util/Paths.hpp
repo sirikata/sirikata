@@ -17,9 +17,16 @@ namespace Path {
 enum Key {
     PATH_START = 0,
 
-    FILE_EXE, // Full path to executable file,
-    DIR_EXE, // Full path to executable file's directory
-    DIR_CURRENT, // Full path to current directory
+    // Full path to executable file
+    FILE_EXE,
+    // Full path to executable file's directory
+    DIR_EXE,
+    // Full path to executable file's bundle. On most platform's this is
+    // equivalent to DIR_EXE. On OS X, it gives the directory of the .app
+    // containing the binary when it is located in one.
+    DIR_EXE_BUNDLE,
+    // Full path to current directory
+    DIR_CURRENT,
 
     PATH_END
 };

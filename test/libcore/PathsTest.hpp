@@ -28,6 +28,11 @@ public:
         TS_ASSERT_DIFFERS(res, "");
     }
 
+    void testGetExeBundleDir(void) {
+        Sirikata::String res = Sirikata::Path::Get(Sirikata::Path::DIR_EXE_BUNDLE);
+        TS_ASSERT_DIFFERS(res, "");
+    }
+
     void testGetExeDirMatchesFile(void) {
         Sirikata::String exe_file = Sirikata::Path::Get(Sirikata::Path::FILE_EXE);
         Sirikata::String exe_dir = Sirikata::Path::Get(Sirikata::Path::DIR_EXE);

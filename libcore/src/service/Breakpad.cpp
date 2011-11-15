@@ -79,7 +79,7 @@ const String& getCrashReporterPath() {
     reporter_name = reporter_name + ".exe";
 #endif
 
-    String exe_path = Path::Get(Path::DIR_EXE);
+    String exe_path = Path::Get(Path::DIR_EXE_BUNDLE);
     if (exe_path.empty())
         cr_full_path = reporter_name;
     else
