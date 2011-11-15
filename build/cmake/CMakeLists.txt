@@ -3095,20 +3095,10 @@ IF(BUILD_OGRE_OH)
   ENDIF()
 
   # data for ogre, including web views
-  IF(APPLE)
-    INSTALL(DIRECTORY ${SIRIKATA_OGRE_DATA_DIR}/
-      DESTINATION share/ogre/data/
-      PATTERN "*/jquery" EXCLUDE
-      )
-    #and jquery is a link, so we need to handle it carefully
-    INSTALL(DIRECTORY ${TOP_LEVEL}/dependencies/jquery/
-      DESTINATION share/ogre/data/jquery
-      )
-  ELSE()
-    INSTALL(DIRECTORY ${TOP_LEVEL}/libproxyobject/plugins/ogre/data/
-      DESTINATION share/ogre/data/
-      )
-  ENDIF()
+  INSTALL(DIRECTORY ${TOP_LEVEL}/libproxyobject/plugins/ogre/data/
+    DESTINATION share/ogre/data/
+    PATTERN "*/.git" EXCLUDE
+    )
 ENDIF()
 
 IF(FREEIMAGE_FOUND)
