@@ -93,7 +93,7 @@ private:
     const std::string CDN_DOWNLOAD_URI_PREFIX;
     const Network::Address mCdnAddr;
 
-    void cache_check_callback(const SparseData* data, std::tr1::shared_ptr<RemoteFileMetadata> file,
+    void cache_check_callback(const SparseData* data, const URI& uri,
             std::tr1::shared_ptr<Chunk> chunk, ChunkCallback callback);
 
 public:
@@ -107,11 +107,16 @@ public:
             std::tr1::shared_ptr<Chunk> chunk, ChunkCallback callback);
 
     /*
+     * Downloads the chunk referenced and calls callback when completed
+     */
+    void get(std::tr1::shared_ptr<Chunk> chunk, ChunkCallback callback);
+
+    /*
      * Callback from HttpManager when an http request finishes
      */
     void request_finished(std::tr1::shared_ptr<HttpManager::HttpResponse> response,
             HttpManager::ERR_TYPE error, const boost::system::error_code& boost_error,
-            std::tr1::shared_ptr<RemoteFileMetadata> file, std::tr1::shared_ptr<Chunk> chunk,
+            const URI& uri, std::tr1::shared_ptr<Chunk> chunk,
             bool chunkReq, ChunkCallback callback);
 
     static MeerkatChunkHandler& getSingleton();
