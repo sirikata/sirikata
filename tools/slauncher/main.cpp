@@ -243,8 +243,18 @@ String appDirPath() {
 #if SIRIKATA_PLATFORM == PLATFORM_LINUX || SIRIKATA_PLATFORM == PLATFORM_MAC
     return (boost::filesystem::path(Path::Get(Path::DIR_EXE)) / appDir).string();
 #elif SIRIKATA_PLATFORM == PLATFORM_WINDOWS
-    // Windows has the Release & Debug directories
-    return (boost::filesystem::path(Path::Get(Path::DIR_EXE)).parent_path() / appDir).string();
+    boost::filesystem::path exe_path(Path::Get(Path::DIR_EXE));
+    // Windows has the Release & Debug directories when we're in the
+    // build tree. Try detecting and removing them.
+    if (exe_path.has_filename() &&
+        (exe_path.filename() == "Debug" ||
+            exe_path.filename() == "Release" ||
+            exe_path.filename() == "RelWithDebInfo"
+        )
+    ) {
+        exe_path = exe_path.parent_path();
+    }
+    return (exe_path / appDir).string();
 #endif
 
 }
