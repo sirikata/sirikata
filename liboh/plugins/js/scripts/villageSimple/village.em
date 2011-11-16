@@ -6,6 +6,8 @@ meshes = housemeshes.concat(apartmentmeshes).concat(buildingmeshes);
 
 PresQueue = [];
 PresCount = 1;
+windowSize = 10;
+windowCount = 0;
 
 //create a pressence (buiding) at <x,-20,z>
 function createPres(mesh,x,z,scale)
@@ -61,6 +63,7 @@ function createBuildings(x,z,ini_x,ini_z)
             xx = -(ini_x+j)*d;
             zz = (ini_z+i)*d;
             PresQueue.push([meshes[n%N],xx,zz,20]);
+            //PresQueue.push([cubemesh,xx,zz,20]);
         }
     }
 }
@@ -76,6 +79,8 @@ function createStreets(x,z,ini_x,ini_z)
             zzz= (ini_z+i+1)*d;
             if(j!=x-1) PresQueue.push([streetmesh, xx, zz, xxx, zz]);
             if(i!=z-1) PresQueue.push([streetmesh, xx, zz, xx, zzz]);
+            //if(j!=x-1) PresQueue.push([cubemesh, xx, zz, xxx, zz]);
+            //if(i!=z-1) PresQueue.push([cubemesh, xx, zz, xx, zzz]);
         }
     }
 }
@@ -83,13 +88,14 @@ function createStreets(x,z,ini_x,ini_z)
 function CreatePresCB()
 {
     if (PresQueue.length>0) {
-        args = PresQueue.shift();
-        if(args.length==4) createPres.apply(this,args);
-        else if(args.length==5) createStreet.apply(this,args);
-
-        PresCount++;
-        system.print(PresCount);
-        system.print('----presenced connected\n');
+        while(windowCount<=windowSize){
+            windowCount++;
+            //system.print(windowCount);
+            //system.print('----current windowCount\n');
+            args = PresQueue.shift();
+            if(args.length==4) createPres.apply(this,args);
+            else if(args.length==5) createStreet.apply(this,args);
+        }
     }
 }
 
@@ -105,7 +111,18 @@ function init()
 {
     //createPres(terrainmesh,0,0,1000)
     createVillage(3,3,0,-1);
-    system.onPresenceConnected(CreatePresCB);
+    system.onPresenceConnected(function()
+                               {
+                                   windowCount--;
+                                   //system.print(windowCount);
+                                   //system.print('----current windowCount\n');
+                                   PresCount++;
+                                   system.print(PresCount);
+                                   system.print('----presenced connected\n');
+
+                                   CreatePresCB();
+                               }
+                              );
     CreatePresCB();
 
     system.onPresenceDisconnected(function()
