@@ -52,6 +52,7 @@ namespace Loc {
 class LocationUpdate;
 }
 }
+class ProxDataLocUpdate;
 
 /** OrphanLocUpdateManager tracks location updates/information for objects,
  *  making sure that location information does not get lost due to reordering of
@@ -77,6 +78,12 @@ class LocationUpdate;
  */
 class SIRIKATA_PROXYOBJECT_EXPORT OrphanLocUpdateManager : public PollingService {
 public:
+    class Listener {
+    public:
+        virtual ~Listener() {}
+        virtual void onOrphanLocUpdate(const SpaceObjectReference& observer, const LocUpdate& lu) = 0;
+    };
+
     OrphanLocUpdateManager(Context* ctx, Network::IOStrand* strand, const Duration& timeout);
 
     /** Add an orphan update to the queue and set a timeout for it to be cleared
@@ -104,18 +111,18 @@ public:
         uint64 physics_seqno
     );
 
-    struct UpdateInfo;
-    typedef std::tr1::shared_ptr<UpdateInfo> UpdateInfoPtr;
-    typedef std::vector<UpdateInfoPtr> UpdateInfoList;
-
-
     /** Gets all orphan updates for a given object. */
-    UpdateInfoList getOrphanUpdates(const SpaceObjectReference& obj);
+    void invokeOrphanUpdates(const SpaceObjectReference& observer, const SpaceObjectReference& proximateID, Listener* listener);
+
+private:
+    friend class ProxDataLocUpdate;
+
+    virtual void poll();
+
 
     //When we get a prox removal, we take all the data that was stored in the
     //corresponding proxy object and put it into an OrphanedProxData
-    struct OrphanedProxData
-    {
+    struct OrphanedProxData {
         OrphanedProxData(
             const ObjectReference& oref,
             const TimedMotionVector3f& tmv, uint64 tmv_seq_no, const TimedMotionQuaternion& tmq, uint64 tmq_seq_no, const Transfer::URI& uri_mesh, uint64 mesh_seq_no, const BoundingSphere3f& bounding_sphere, uint64 bnds_seq_no, const String& phys, uint64 phys_seq_no)
@@ -167,16 +174,11 @@ public:
         Sirikata::Protocol::Loc::LocationUpdate* value;
         OrphanedProxData* opd;
         Time expiresAt;
-
-        LocUpdate* getLocUpdate() const;
     private:
         UpdateInfo();
     };
-
-
-private:
-    virtual void poll();
-
+    typedef std::tr1::shared_ptr<UpdateInfo> UpdateInfoPtr;
+    typedef std::vector<UpdateInfoPtr> UpdateInfoList;
 
     typedef std::tr1::unordered_map<SpaceObjectReference, UpdateInfoList, SpaceObjectReference::Hasher> ObjectUpdateMap;
 

@@ -39,7 +39,6 @@
 
 namespace Sirikata {
 
-namespace {
 /** Implementation of LocUpdate which collects its information from
  *  stored OrphanedProxData.
  */
@@ -81,20 +80,12 @@ private:
 
     const OrphanLocUpdateManager::OrphanedProxData& mUpdate;
 };
-} // namespace
 
 OrphanLocUpdateManager::UpdateInfo::~UpdateInfo() {
     if (value != NULL)
         delete value;
     if (opd != NULL)
         delete opd;
-}
-
-LocUpdate* OrphanLocUpdateManager::UpdateInfo::getLocUpdate() const {
-    if (value != NULL)
-        return new ProtocolLocUpdate(*value);
-    else
-        return new ProxDataLocUpdate(*opd);
 }
 
 OrphanLocUpdateManager::OrphanLocUpdateManager(Context* ctx, Network::IOStrand* strand, const Duration& timeout)
@@ -155,18 +146,22 @@ void OrphanLocUpdateManager::addUpdateFromExisting(const SpaceObjectReference&ob
 }
 
 
+void OrphanLocUpdateManager::invokeOrphanUpdates(const SpaceObjectReference& observer, const SpaceObjectReference& proximateID, Listener* listener) {
+    ObjectUpdateMap::iterator it = mUpdates.find(proximateID);
+    if (it == mUpdates.end()) return;
 
-OrphanLocUpdateManager::UpdateInfoList OrphanLocUpdateManager::getOrphanUpdates(const SpaceObjectReference& obj) {
-    UpdateInfoList results;
+    const UpdateInfoList& info_list = it->second;
+    for(UpdateInfoList::const_iterator info_it = info_list.begin(); info_it != info_list.end(); info_it++) {
+        if ((*info_it)->value != NULL)
+            listener->onOrphanLocUpdate( observer, ProtocolLocUpdate( *((*info_it)->value) ) );
+        else if ((*info_it)->opd != NULL)
+            listener->onOrphanLocUpdate( observer, ProxDataLocUpdate( *((*info_it)->opd) ) );
+    }
 
-    ObjectUpdateMap::iterator it = mUpdates.find(obj);
-    if (it == mUpdates.end()) return results;
-
-    UpdateInfoList& info_list = it->second;
-    results.swap(info_list);
-
+    // Once we've notified of these we can get rid of them -- if they
+    // need the info again they should re-register it with
+    // addUpdateFromExisting before cleaning up the object.
     mUpdates.erase(it);
-    return results;
 }
 
 void OrphanLocUpdateManager::poll() {

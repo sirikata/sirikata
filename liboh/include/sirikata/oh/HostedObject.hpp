@@ -79,7 +79,11 @@ class PerPresenceData;
 typedef std::tr1::weak_ptr<HostedObject> HostedObjectWPtr;
 typedef std::tr1::shared_ptr<HostedObject> HostedObjectPtr;
 
-class SIRIKATA_OH_EXPORT HostedObject : public VWObject, public Service {
+class SIRIKATA_OH_EXPORT HostedObject
+    : public VWObject,
+      public Service,
+      OrphanLocUpdateManager::Listener
+{
 //------- Private inner classes
 
     struct PrivateCallbacks;
@@ -374,6 +378,9 @@ public:
     void handleLocationMessage(const SpaceObjectReference& spaceobj, const Sirikata::Protocol::Loc::LocationUpdate& update);
 
   private:
+    // OrphanLocUpdateManager::Listener Interface
+    virtual void onOrphanLocUpdate(const SpaceObjectReference& observer, const LocUpdate& lu);
+
     /** \deprecated
      *  Helper for encoding default, solid angle queries. Used to enable old,
      *  deprecated API for setting queries.

@@ -784,6 +784,23 @@ void HostedObject::handleLocationMessage(const SpaceObjectReference& spaceobj, c
     self->processLocationUpdate(spaceobj, proxy_obj, ProtocolLocUpdate(update));
 }
 
+void HostedObject::onOrphanLocUpdate(const SpaceObjectReference& observer, const LocUpdate& lu) {
+    // Similar to handleLocationMessage but for deferred (or 'backed
+    // up') updates. Should *not* store updates as orphans from this
+
+    ProxyManagerPtr proxy_manager = this->getProxyManager(observer.space(), observer.object());
+    if (!proxy_manager) {
+        HO_LOG(warn,"Hosted Object received a message for a presence without a proxy manager.");
+        return;
+    }
+
+    SpaceObjectReference observed(observer.space(), ObjectReference(lu.object()));
+    ProxyObjectPtr proxy_obj = proxy_manager->getProxyObject(observed);
+    assert(proxy_obj);
+
+    this->processLocationUpdate( observer, proxy_obj, lu);
+}
+
 void HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, const Sirikata::Protocol::Prox::ProximityResults& contents) {
     HostedObject* self = this;
     SpaceID space = spaceobj.space();
@@ -842,17 +859,7 @@ void HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
 
 
             // Notify of any out of order loc updates
-            OrphanLocUpdateManager::UpdateInfoList orphan_updates = self->mOrphanLocUpdates.getOrphanUpdates(proximateID);
-            for(OrphanLocUpdateManager::UpdateInfoList::iterator orphan_it = orphan_updates.begin(); orphan_it != orphan_updates.end(); orphan_it++)
-            {
-                // FIXME this could be more efficient, not requiring
-                // to heap allocate the update, if we could get the
-                // orphan loc update manager to call
-                // processLocationUpdate.
-                LocUpdate* lu = (*orphan_it)->getLocUpdate();
-                self->processLocationUpdate( spaceobj, proxy_obj, *lu);
-                delete lu;
-            }
+            self->mOrphanLocUpdates.invokeOrphanUpdates(spaceobj, proximateID, this);
 
             //tells the object script that something that was close has come
             //into view
