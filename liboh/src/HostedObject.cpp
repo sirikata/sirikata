@@ -178,12 +178,6 @@ void HostedObject::destroy(bool need_self) {
         delete mObjectScript;
         mObjectScript=NULL;
     }
-    if (need_self) {
-//        mOrphanLocUpdates.setFinalCallback(std::tr1::bind(&nop,self_ptr));
-        SILOG(oh,detailed,"Safe stopping of object "<<(size_t)this<<" with poller "<<(size_t)static_cast<Poller*>(&mOrphanLocUpdates));
-    }else {
-        SILOG(oh,detailed,"Warning assuming poller is shut down, stopping object immediately "<<(size_t)this<<" with poller "<<(size_t)static_cast<Poller*>(&mOrphanLocUpdates));
-    }
 
     mOrphanLocUpdates.stop();
     for (PresenceDataMap::iterator iter = mPresenceData.begin(); iter != mPresenceData.end(); ++iter) {
