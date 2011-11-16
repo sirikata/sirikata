@@ -34,9 +34,68 @@
 #include <sirikata/core/service/Context.hpp>
 #include "Protocol_Loc.pbj.hpp"
 #include <sirikata/proxyobject/ProxyObject.hpp>
-
+#include <sirikata/oh/LocUpdate.hpp>
+#include <sirikata/oh/ProtocolLocUpdate.hpp>
 
 namespace Sirikata {
+
+namespace {
+/** Implementation of LocUpdate which collects its information from
+ *  stored OrphanedProxData.
+ */
+class ProxDataLocUpdate : public LocUpdate {
+public:
+    ProxDataLocUpdate(const OrphanLocUpdateManager::OrphanedProxData& lu)
+     : mUpdate(lu)
+    {}
+    virtual ~ProxDataLocUpdate() {}
+
+    virtual ObjectReference object() const { return mUpdate.object; }
+
+    // Location
+    virtual bool has_location() const { return true; }
+    virtual TimedMotionVector3f location() const { return mUpdate.timedMotionVector; }
+    virtual uint64 location_seqno() const { return mUpdate.tmvSeqNo; }
+
+    // Orientation
+    virtual bool has_orientation() const { return true; }
+    virtual TimedMotionQuaternion orientation() const { return mUpdate.timedMotionQuat; }
+    virtual uint64 orientation_seqno() const { return mUpdate.tmqSeqNo; }
+
+    // Bounds
+    virtual bool has_bounds() const { return true; }
+    virtual BoundingSphere3f bounds() const { return mUpdate.bounds; }
+    virtual uint64 bounds_seqno() const { return mUpdate.bndsSeqNo; }
+
+    // Mesh
+    virtual bool has_mesh() const { return true; }
+    virtual String mesh() const { return mUpdate.mesh.toString(); }
+    virtual uint64 mesh_seqno() const { return mUpdate.meshSeqNo; }
+
+    // Physics
+    virtual bool has_physics() const { return true; }
+    virtual String physics() const { return mUpdate.physics; }
+    virtual uint64 physics_seqno() const { return mUpdate.physSeqNo; }
+private:
+    ProxDataLocUpdate();
+
+    const OrphanLocUpdateManager::OrphanedProxData& mUpdate;
+};
+} // namespace
+
+OrphanLocUpdateManager::UpdateInfo::~UpdateInfo() {
+    if (value != NULL)
+        delete value;
+    if (opd != NULL)
+        delete opd;
+}
+
+LocUpdate* OrphanLocUpdateManager::UpdateInfo::getLocUpdate() const {
+    if (value != NULL)
+        return new ProtocolLocUpdate(*value);
+    else
+        return new ProxDataLocUpdate(*opd);
+}
 
 OrphanLocUpdateManager::OrphanLocUpdateManager(Context* ctx, Network::IOStrand* strand, const Duration& timeout)
  : PollingService(strand, timeout, ctx, "OrphanLocUpdateManager"),
@@ -46,47 +105,53 @@ OrphanLocUpdateManager::OrphanLocUpdateManager(Context* ctx, Network::IOStrand* 
 
 }
 
-OrphanLocUpdateManager::~OrphanLocUpdateManager() {
-    for(ObjectUpdateMap::iterator it = mUpdates.begin(); it != mUpdates.end(); it++) {
-        UpdateInfoList& info_list = it->second;
-        for(UpdateInfoList::iterator up_it = info_list.begin(); up_it != info_list.end(); up_it++) {
-            if (up_it->value != NULL) delete up_it->value;
-            if (up_it->opd != NULL) delete up_it->opd;
-        }
-    }
-    mUpdates.clear();
+void OrphanLocUpdateManager::addOrphanUpdate(const SpaceObjectReference& obj, const Sirikata::Protocol::Loc::LocationUpdate& update) {
+    UpdateInfoList& info_list = mUpdates[obj];
+    info_list.push_back(
+        UpdateInfoPtr(new UpdateInfo(new Sirikata::Protocol::Loc::LocationUpdate(update), mContext->simTime() + mTimeout))
+    );
 }
 
-void OrphanLocUpdateManager::addOrphanUpdate(const SpaceObjectReference& obj, const LocUpdate& update) {
+void OrphanLocUpdateManager::addUpdateFromExisting(
+    const SpaceObjectReference& obj,
+    const TimedMotionVector3f& loc,
+    uint64 loc_seqno,
+    const TimedMotionQuaternion& orient,
+    uint64 orient_seqno,
+    const BoundingSphere3f& bounds,
+    uint64 bounds_seqno,
+    const Transfer::URI& mesh,
+    uint64 mesh_seqno,
+    const String& physics,
+    uint64 physics_seqno
+) {
     UpdateInfoList& info_list = mUpdates[obj];
 
-    UpdateInfo ui;
-    ui.value = new LocUpdate(update);
-    ui.opd = NULL;
-    ui.expiresAt = mContext->simTime() + mTimeout;
-    info_list.push_back(ui);
+    OrphanedProxData* opd = new OrphanedProxData(
+        obj.object(),
+        loc, loc_seqno,
+        orient, orient_seqno,
+        mesh, mesh_seqno,
+        bounds, bounds_seqno,
+        physics, physics_seqno
+    );
+    info_list.push_back( UpdateInfoPtr(new UpdateInfo(opd, mContext->simTime() + mTimeout)) );
 }
 
-void OrphanLocUpdateManager::addUpdateFromExisting(const SpaceObjectReference&obj, ProxyObjectPtr proxyPtr)
-{
-    UpdateInfoList& info_list = mUpdates[obj];
-
-    UpdateInfo ui;
-    ui.value = NULL;
-
-    ui.opd = new OrphanedProxData(proxyPtr->getTimedMotionVector(),
+void OrphanLocUpdateManager::addUpdateFromExisting(const SpaceObjectReference&obj, ProxyObjectPtr proxyPtr) {
+    addUpdateFromExisting(
+        proxyPtr->getObjectReference(),
+        proxyPtr->getTimedMotionVector(),
         proxyPtr->getUpdateSeqNo(ProxyObject::LOC_POS_PART),
         proxyPtr->getTimedMotionQuaternion(),
         proxyPtr->getUpdateSeqNo(ProxyObject::LOC_ORIENT_PART),
-        proxyPtr->getMesh(),
-        proxyPtr->getUpdateSeqNo(ProxyObject::LOC_MESH_PART),
         proxyPtr->getBounds(),
         proxyPtr->getUpdateSeqNo(ProxyObject::LOC_BOUNDS_PART),
+        proxyPtr->getMesh(),
+        proxyPtr->getUpdateSeqNo(ProxyObject::LOC_MESH_PART),
         proxyPtr->getPhysics(),
-        proxyPtr->getUpdateSeqNo(ProxyObject::LOC_PHYSICS_PART));
-
-    ui.expiresAt = mContext->simTime() + mTimeout;
-    info_list.push_back(ui);
+        proxyPtr->getUpdateSeqNo(ProxyObject::LOC_PHYSICS_PART)
+    );
 }
 
 
@@ -97,43 +162,19 @@ OrphanLocUpdateManager::UpdateInfoList OrphanLocUpdateManager::getOrphanUpdates(
     ObjectUpdateMap::iterator it = mUpdates.find(obj);
     if (it == mUpdates.end()) return results;
 
-    const UpdateInfoList& info_list = it->second;
-
-    for(UpdateInfoList::const_iterator up_it = info_list.begin(); up_it != info_list.end(); up_it++)
-    {
-        UpdateInfo upInfo;
-        if (up_it->value == NULL)
-        {
-            upInfo.value = NULL;
-            OrphanedProxData* opd = up_it->opd;
-            assert(opd != NULL);
-            upInfo.opd   = new OrphanedProxData(*opd);
-            delete opd;
-        }
-        else
-        {
-            assert (up_it->opd == NULL);
-            LocUpdate* lu = up_it->value;
-            upInfo.value = new LocUpdate(*lu);
-            delete lu;
-        }
-        results.push_back(upInfo);
-    }
+    UpdateInfoList& info_list = it->second;
+    results.swap(info_list);
 
     mUpdates.erase(it);
     return results;
 }
+
 void OrphanLocUpdateManager::poll() {
     Time now = mContext->simTime();
     // Scan through all updates looking for outdated ones
     for(ObjectUpdateMap::iterator it = mUpdates.begin(); it != mUpdates.end(); ) {
         UpdateInfoList& info_list = it->second;
-        while(!info_list.empty() && info_list.begin()->expiresAt < now) {
-            if (info_list.begin()->value != NULL)
-                delete info_list.begin()->value;
-            if (info_list.begin()->opd != NULL)
-                delete info_list.begin()->opd;
-
+        while(!info_list.empty() && (*info_list.begin())->expiresAt < now) {
             info_list.erase(info_list.begin());
         }
 

@@ -3,6 +3,7 @@
 // be found in the LICENSE file.
 
 #include <sirikata/oh/ObjectQueryProcessor.hpp>
+#include "Protocol_Loc.pbj.hpp"
 
 AUTO_SINGLETON_INSTANCE(Sirikata::OH::ObjectQueryProcessorFactory);
 
@@ -30,7 +31,10 @@ void ObjectQueryProcessor::deliverProximityResults(HostedObjectPtr ho, const Spa
 }
 
 void ObjectQueryProcessor::deliverLocationUpdate(HostedObjectPtr ho, const SpaceObjectReference& sporef, const Sirikata::Protocol::Loc::BulkLocationUpdate& blu) {
-    ho->handleLocationMessage(sporef, blu);
+    for(int32 idx = 0; idx < blu.update_size(); idx++) {
+        Sirikata::Protocol::Loc::LocationUpdate update = blu.update(idx);
+        ho->handleLocationMessage(sporef, update);
+    }
 }
 
 

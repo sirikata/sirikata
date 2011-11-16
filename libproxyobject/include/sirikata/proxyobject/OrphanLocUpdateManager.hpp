@@ -44,54 +44,85 @@
 #include <sirikata/core/util/BoundingSphere.hpp>
 
 
-
 namespace Sirikata {
 
+class LocUpdate;
 namespace Protocol {
 namespace Loc {
 class LocationUpdate;
 }
 }
 
-/** OrphanLocUpdateManager keeps track of loc updates that arrived before the
- *  corresponding prox update so they can be delivered when the prox update does
- *  arrive. Without an OrphanLocUpdateManager, a loc update could be lost due to
- *  incorrect ordering, resulting in the correct information never being updated
- *  to its correct value.  Loc updates are saved for short time and then
- *  discarded.
+/** OrphanLocUpdateManager tracks location updates/information for objects,
+ *  making sure that location information does not get lost due to reordering of
+ *  proximity and location messages from the space server. It currently handles
+ *  two types of errors.
+ *
+ *  First, if a location message is received before the corresponding proximity
+ *  addition event, it is stored for awhile in case the addition is received
+ *  soon. (This is the reason for the name of the class -- the location update
+ *  is 'orphaned' since it doesn't have a parent proximity addition.)
+ *
+ *  The second type of issue is when the messages that should be received are
+ *  (remove object X, add object X, update location of X), but it is received as
+ *  (update location of X, remove object X, add object X). In this case the
+ *  update would have been applied and then lost. For this case, we save the
+ *  state of objects for a short while after they are removed, including the
+ *  sequence numbers. Then, we can reapply them after objects are re-added, just
+ *  as we would with an orphaned update.
+ *
+ *  Loc updates are saved for short time and, if they aren't needed, are
+ *  discarded. In all cases, sequence numbers are still used so possibly trying
+ *  to apply old updates isn't an issue.
  */
 class SIRIKATA_PROXYOBJECT_EXPORT OrphanLocUpdateManager : public PollingService {
 public:
-    typedef Sirikata::Protocol::Loc::LocationUpdate LocUpdate;
-    
     OrphanLocUpdateManager(Context* ctx, Network::IOStrand* strand, const Duration& timeout);
-    ~OrphanLocUpdateManager();
 
     /** Add an orphan update to the queue and set a timeout for it to be cleared
      *  out.
      */
-    void addOrphanUpdate(const SpaceObjectReference& obj, const LocUpdate& update);
+    void addOrphanUpdate(const SpaceObjectReference& obj, const Sirikata::Protocol::Loc::LocationUpdate& update);
     /**
        Take all fields in proxyPtr, and create an OrphanedProxData struct from
-       them.  
+       them.
      */
     void addUpdateFromExisting(const SpaceObjectReference&obj, ProxyObjectPtr proxyPtr);
+    /** Take all parameters from an object to backup for a short time.
+     */
+    void addUpdateFromExisting(
+        const SpaceObjectReference& obj,
+        const TimedMotionVector3f& loc,
+        uint64 loc_seqno,
+        const TimedMotionQuaternion& orient,
+        uint64 orient_seqno,
+        const BoundingSphere3f& bounds,
+        uint64 bounds_seqno,
+        const Transfer::URI& mesh,
+        uint64 mesh_seqno,
+        const String& physics,
+        uint64 physics_seqno
+    );
 
     struct UpdateInfo;
-    typedef std::vector<UpdateInfo> UpdateInfoList;
+    typedef std::tr1::shared_ptr<UpdateInfo> UpdateInfoPtr;
+    typedef std::vector<UpdateInfoPtr> UpdateInfoList;
 
-    
+
     /** Gets all orphan updates for a given object. */
     UpdateInfoList getOrphanUpdates(const SpaceObjectReference& obj);
 
     void setFinalCallback(const std::tr1::function<void()>&);
-    
+
     //When we get a prox removal, we take all the data that was stored in the
     //corresponding proxy object and put it into an OrphanedProxData
     struct OrphanedProxData
     {
-        OrphanedProxData(const TimedMotionVector3f& tmv, uint64 tmv_seq_no, const TimedMotionQuaternion& tmq, uint64 tmq_seq_no, const Transfer::URI& uri_mesh, uint64 mesh_seq_no, const BoundingSphere3f& bounding_sphere, uint64 bnds_seq_no, const String& phys, uint64 phys_seq_no)
-         : timedMotionVector(tmv),
+        OrphanedProxData(
+            const ObjectReference& oref,
+            const TimedMotionVector3f& tmv, uint64 tmv_seq_no, const TimedMotionQuaternion& tmq, uint64 tmq_seq_no, const Transfer::URI& uri_mesh, uint64 mesh_seq_no, const BoundingSphere3f& bounding_sphere, uint64 bnds_seq_no, const String& phys, uint64 phys_seq_no)
+         : object(oref),
+           timedMotionVector(tmv),
            tmvSeqNo(tmv_seq_no),
            timedMotionQuat(tmq),
            tmqSeqNo(tmq_seq_no),
@@ -105,8 +136,10 @@ public:
 
         ~OrphanedProxData()
         {}
-        
-        
+
+
+        ObjectReference object;
+
         TimedMotionVector3f timedMotionVector;
         uint64 tmvSeqNo;
 
@@ -118,22 +151,34 @@ public:
 
         BoundingSphere3f bounds;
         uint64 bndsSeqNo;
-        
+
         String physics;
         uint64 physSeqNo;
     };
 
     struct UpdateInfo {
+        UpdateInfo(Sirikata::Protocol::Loc::LocationUpdate* _v, const Time& t)
+         : value(_v), opd(NULL), expiresAt(t)
+        {}
+        UpdateInfo(OrphanedProxData* _v, const Time& t)
+         : value(NULL), opd(_v), expiresAt(t)
+        {}
+        ~UpdateInfo();
+
         //Either value or opd will be non-null.  Never both.
-        LocUpdate* value;
+        Sirikata::Protocol::Loc::LocationUpdate* value;
         OrphanedProxData* opd;
         Time expiresAt;
+
+        LocUpdate* getLocUpdate() const;
+    private:
+        UpdateInfo();
     };
 
-     
+
 private:
     virtual void poll();
-    
+
 
     typedef std::tr1::unordered_map<SpaceObjectReference, UpdateInfoList, SpaceObjectReference::Hasher> ObjectUpdateMap;
 
