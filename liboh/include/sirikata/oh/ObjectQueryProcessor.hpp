@@ -77,17 +77,17 @@ class SIRIKATA_OH_EXPORT ObjectQueryProcessor : public Service {
      *  results to the HostedObject.
      *  \param ho the HostedObject requesting the update
      *  \param sporef the ID of the presence that registered the query
-     *  \param results the new results to be returned
+     *  \param update a single proximity update to apply
      */
-    void deliverProximityResults(HostedObjectPtr ho, const SpaceObjectReference& sporef, const Sirikata::Protocol::Prox::ProximityResults& results);
+    void deliverProximityUpdate(HostedObjectPtr ho, const SpaceObjectReference& sporef, const Sirikata::Protocol::Prox::ProximityUpdate& update);
 
     /** Helper method for implementations which delivers location
      *  updates to the HostedObject.
      *  \param ho the HostedObject requesting the update
      *  \param sporef the ID of the presence that registered the query
-     *  \param blu the new location updates to be returned
+     *  \param lu the location update
      */
-    void deliverLocationUpdate(HostedObjectPtr ho, const SpaceObjectReference& sporef, const Sirikata::Protocol::Loc::BulkLocationUpdate& blu);
+    void deliverLocationUpdate(HostedObjectPtr ho, const SpaceObjectReference& sporef, const LocUpdate& lu);
 };
 
 

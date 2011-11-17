@@ -7,6 +7,7 @@
 #include "Protocol_Prox.pbj.hpp"
 #include "Protocol_Loc.pbj.hpp"
 #include "Protocol_Frame.pbj.hpp"
+#include <sirikata/oh/ProtocolLocUpdate.hpp>
 
 #define SOQP_LOG(lvl, msg) SILOG(simple-object-query-processor, lvl, msg)
 
@@ -34,6 +35,10 @@ void SimpleObjectQueryProcessor::stop() {
 }
 
 void SimpleObjectQueryProcessor::presenceConnectedStream(HostedObjectPtr ho, const SpaceObjectReference& sporef, HostedObject::SSTStreamPtr strm) {
+    // Setup tracking state for this query
+    mObjectStateMap[sporef] = ObjectStatePtr(new ObjectState(mContext, ho));;
+
+    // And setup listeners for new data from the server
     strm->listenSubstream(OBJECT_PORT_PROXIMITY,
         std::tr1::bind(&SimpleObjectQueryProcessor::handleProximitySubstream, this,
             HostedObjectWPtr(ho), sporef, _1, _2
@@ -45,6 +50,10 @@ void SimpleObjectQueryProcessor::presenceConnectedStream(HostedObjectPtr ho, con
             HostedObjectWPtr(ho), sporef, _1, _2
         )
     );
+}
+
+void SimpleObjectQueryProcessor::presenceDisconnected(HostedObjectPtr ho, const SpaceObjectReference& sporef) {
+    mObjectStateMap.erase(sporef);
 }
 
 // Proximity
@@ -90,7 +99,43 @@ bool SimpleObjectQueryProcessor::handleProximityMessage(HostedObjectPtr self, co
     if (!parse_success)
         return false;
 
-    deliverProximityResults(self, spaceobj, contents);
+    ObjectStatePtr obj_state = mObjectStateMap[spaceobj];
+
+    ProxyManagerPtr proxy_manager = self->getProxyManager(spaceobj.space(), spaceobj.object());
+    if (!proxy_manager) {
+        SOQP_LOG(warn,"Hosted Object received a message for a presence without a proxy manager.");
+        return true;
+    }
+
+    for(int32 idx = 0; idx < contents.update_size(); idx++) {
+        Sirikata::Protocol::Prox::ProximityUpdate update = contents.update(idx);
+
+        // To take care of tracking orphans for the HostedObject, we need to
+        // take take a pass through the results ourselves. We backup data for
+        // objects that are going to be removed before delivering the
+        // results...
+        for(int32 ridx = 0; ridx < update.removal_size(); ridx++) {
+            Sirikata::Protocol::Prox::ObjectRemoval removal = update.removal(ridx);
+
+            SpaceObjectReference observed(spaceobj.space(), ObjectReference(removal.object()));
+            ProxyObjectPtr proxy_obj = proxy_manager->getProxyObject(observed);
+
+            obj_state->orphans.addUpdateFromExisting(observed, proxy_obj);
+        }
+
+        // Then deliver the results....
+        deliverProximityUpdate(self, spaceobj, update);
+
+        // And work through the additions, processing orphaned updates.
+        for(int32 aidx = 0; aidx < update.addition_size(); aidx++) {
+            Sirikata::Protocol::Prox::ObjectAddition addition = update.addition(aidx);
+
+            SpaceObjectReference observed(spaceobj.space(), ObjectReference(addition.object()));
+
+            obj_state->orphans.invokeOrphanUpdates(spaceobj, observed, this);
+        }
+    }
+
     return true;
 }
 
@@ -152,8 +197,50 @@ bool SimpleObjectQueryProcessor::handleLocationMessage(const HostedObjectPtr& se
     if (!parse_success) return false;
     Sirikata::Protocol::Loc::BulkLocationUpdate contents;
     contents.ParseFromString(frame.payload());
-    deliverLocationUpdate(self, spaceobj, contents);
+
+    // Each update is checked against the current proximity results (in this
+    // implementation's case, that's just the object's ProxyObjects) and
+    // either goes into orphan tracking or is delivered.
+
+    // We can sanity check for all updates on this presence, as well as reuse
+    // the proxy manager lookup.
+    ProxyManagerPtr proxy_manager = self->getProxyManager(spaceobj.space(), spaceobj.object());
+    if (!proxy_manager) {
+        SOQP_LOG(warn,"Hosted Object received a message for a presence without a proxy manager.");
+        return true;
+    }
+    // As well as looking up object state (orhpan manager) only once
+    ObjectStatePtr obj_state = mObjectStateMap[spaceobj];
+
+    for(int32 idx = 0; idx < contents.update_size(); idx++) {
+        Sirikata::Protocol::Loc::LocationUpdate update = contents.update(idx);
+        SpaceObjectReference observed(spaceobj.space(), ObjectReference(update.object()));
+        ProxyObjectPtr proxy_obj = proxy_manager->getProxyObject(observed);
+
+        if (!proxy_obj)
+            obj_state->orphans.addOrphanUpdate(observed, update);
+        else
+            deliverLocationUpdate(self, spaceobj, ProtocolLocUpdate(update));
+    }
+
     return true;
+}
+
+void SimpleObjectQueryProcessor::onOrphanLocUpdate(const SpaceObjectReference& spaceobj, const LocUpdate& update) {
+    // This is similar to processing a location message except that we know
+    // we're ready for these updates -- the proxy will be there and we
+    // definitely never have to add it as an orphan
+
+    ObjectStatePtr obj_state = mObjectStateMap[spaceobj];
+    HostedObjectPtr ho = obj_state->ho.lock();
+    if (!ho) return;
+
+    ProxyManagerPtr proxy_manager = ho->getProxyManager(spaceobj.space(), spaceobj.object());
+    assert(proxy_manager);
+    SpaceObjectReference observed(spaceobj.space(), ObjectReference(update.object()));
+    ProxyObjectPtr proxy_obj = proxy_manager->getProxyObject(observed);
+    assert(proxy_obj);
+    deliverLocationUpdate(ho, spaceobj, update);
 }
 
 } // namespace Simple

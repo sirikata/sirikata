@@ -7,6 +7,8 @@
 
 #include <sirikata/oh/ObjectQueryProcessor.hpp>
 
+#include <sirikata/proxyobject/OrphanLocUpdateManager.hpp>
+
 namespace Sirikata {
 namespace OH {
 namespace Simple {
@@ -16,7 +18,10 @@ namespace Simple {
  *  are passed directly through and it only manages listening for new result
  *  streams and parsing the results.
  */
-class SimpleObjectQueryProcessor : public ObjectQueryProcessor {
+class SimpleObjectQueryProcessor :
+        public ObjectQueryProcessor,
+        OrphanLocUpdateManager::Listener
+{
 public:
     static SimpleObjectQueryProcessor* create(ObjectHostContext* ctx, const String& args);
 
@@ -25,7 +30,10 @@ public:
 
     virtual void start();
     virtual void stop();
+
     virtual void presenceConnectedStream(HostedObjectPtr ho, const SpaceObjectReference& sporef, HostedObject::SSTStreamPtr strm);
+    virtual void presenceDisconnected(HostedObjectPtr ho, const SpaceObjectReference& sporef);
+
     virtual void updateQuery(HostedObjectPtr ho, const SpaceObjectReference& sporef, const String& new_query);
 
 private:
@@ -42,7 +50,33 @@ private:
     bool handleLocationMessage(const HostedObjectPtr& self, const SpaceObjectReference& spaceobj, const std::string& paylod);
 
 
+    // OrphanLocUpdateManager::Listener Interface
+    virtual void onOrphanLocUpdate(const SpaceObjectReference& observer, const LocUpdate& lu);
+
     ObjectHostContext* mContext;
+
+    // We resolve ordering issues here instead of leaving it up to the
+    // object. To do so, we track a bit of state for each query -- the
+    // object so we can check it's ProxyManager for proxies (i.e. the
+    // current query result state) and an OrphanLocUpdateManager for
+    // fixing the ordering problems.
+    struct ObjectState {
+        ObjectState(Context* ctx, HostedObjectPtr _ho)
+         : ho(_ho),
+           orphans(ctx, ctx->mainStrand, Duration::seconds(10))
+        {
+            orphans.start();
+        }
+        ~ObjectState() {
+            orphans.stop();
+        }
+
+        HostedObjectWPtr ho;
+        OrphanLocUpdateManager orphans;
+    };
+    typedef std::tr1::shared_ptr<ObjectState> ObjectStatePtr;
+    typedef std::tr1::unordered_map<SpaceObjectReference, ObjectStatePtr, SpaceObjectReference::Hasher> ObjectStateMap;
+    ObjectStateMap mObjectStateMap;
 };
 
 } // namespace Simple

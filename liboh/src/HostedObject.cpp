@@ -77,11 +77,8 @@ HostedObject::HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID
    mObjectHost(parent),
    mObjectScript(NULL),
    mNextSubscriptionID(0),
-   destroyed(false),
-   mOrphanLocUpdates(ctx, ctx->mainStrand, Duration::seconds(10))
+   destroyed(false)
 {
-    mContext->add(&mOrphanLocUpdates);
-
     mDelegateODPService = new ODP::DelegateService(
         std::tr1::bind(
             &HostedObject::createDelegateODPPort, this,
@@ -124,12 +121,6 @@ TimeSteppedSimulation* HostedObject::runSimulation(const SpaceObjectReference& s
 
 
 HostedObject::~HostedObject() {
-    // OrphanLocUpdateManager may need to be stopped, or the context may have
-    // already done it. Either way, we need should unregister with the context
-    if (!mContext->stopped())
-        mOrphanLocUpdates.stop();
-    mContext->remove(&mOrphanLocUpdates);
-
     destroy(false);
     for (PresenceDataMap::iterator i=mPresenceData.begin();i!=mPresenceData.end();++i) {
         delete i->second;
@@ -179,7 +170,6 @@ void HostedObject::destroy(bool need_self) {
         mObjectScript=NULL;
     }
 
-    mOrphanLocUpdates.stop();
     for (PresenceDataMap::iterator iter = mPresenceData.begin(); iter != mPresenceData.end(); ++iter) {
         // Make sure we explicitly. Other paths don't necessarily do this,
         // e.g. if the call to destroy happens between receiving a connection
@@ -761,33 +751,7 @@ void HostedObject::processLocationUpdate(
         proxy_obj->setPhysics(*phy, phy_seqno);
 }
 
-void HostedObject::handleLocationMessage(const SpaceObjectReference& spaceobj, const Sirikata::Protocol::Loc::LocationUpdate& update) {
-    HostedObject* self=this;
-
-    SpaceID space = spaceobj.space();
-    ObjectReference oref = spaceobj.object();
-    ProxyManagerPtr proxy_manager = self->getProxyManager(space, oref);
-
-    if (!proxy_manager) {
-        HO_LOG(warn,"Hosted Object received a message for a presence without a proxy manager.");
-        return;
-    }
-
-    SpaceObjectReference observed(spaceobj.space(), ObjectReference(update.object()));
-    ProxyObjectPtr proxy_obj = proxy_manager->getProxyObject(observed);
-
-    if (!proxy_obj) {
-        self->mOrphanLocUpdates.addOrphanUpdate(observed, update);
-        return;
-    }
-
-    self->processLocationUpdate(spaceobj, proxy_obj, ProtocolLocUpdate(update));
-}
-
-void HostedObject::onOrphanLocUpdate(const SpaceObjectReference& observer, const LocUpdate& lu) {
-    // Similar to handleLocationMessage but for deferred (or 'backed
-    // up') updates. Should *not* store updates as orphans from this
-
+void HostedObject::handleLocationUpdate(const SpaceObjectReference& observer, const LocUpdate& lu) {
     ProxyManagerPtr proxy_manager = this->getProxyManager(observer.space(), observer.object());
     if (!proxy_manager) {
         HO_LOG(warn,"Hosted Object received a message for a presence without a proxy manager.");
@@ -801,7 +765,7 @@ void HostedObject::onOrphanLocUpdate(const SpaceObjectReference& observer, const
     this->processLocationUpdate( observer, proxy_obj, lu);
 }
 
-void HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, const Sirikata::Protocol::Prox::ProximityResults& contents) {
+void HostedObject::handleProximityUpdate(const SpaceObjectReference& spaceobj, const Sirikata::Protocol::Prox::ProximityUpdate& update) {
     HostedObject* self = this;
     SpaceID space = spaceobj.space();
 
@@ -811,112 +775,97 @@ void HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
         return;
     }
 
-    for(int32 idx = 0; idx < contents.update_size(); idx++) {
-        Sirikata::Protocol::Prox::ProximityUpdate update = contents.update(idx);
+    for(int32 aidx = 0; aidx < update.addition_size(); aidx++) {
+        Sirikata::Protocol::Prox::ObjectAddition addition = update.addition(aidx);
 
-        for(int32 aidx = 0; aidx < update.addition_size(); aidx++) {
-            Sirikata::Protocol::Prox::ObjectAddition addition = update.addition(aidx);
+        SpaceObjectReference proximateID(spaceobj.space(), ObjectReference(addition.object()));
 
-            SpaceObjectReference proximateID(spaceobj.space(), ObjectReference(addition.object()));
+        TimedMotionVector3f loc(self->localTime(space, addition.location().t()), MotionVector3f(addition.location().position(), addition.location().velocity()));
 
-            TimedMotionVector3f loc(self->localTime(space, addition.location().t()), MotionVector3f(addition.location().position(), addition.location().velocity()));
+        CONTEXT_OHTRACE(prox,
+            spaceobj.object().getAsUUID(),
+            //getUUID(),
+            addition.object(),
+            true,
+            loc
+        );
 
-            CONTEXT_OHTRACE(prox,
-                spaceobj.object().getAsUUID(),
-                //getUUID(),
-                addition.object(),
-                true,
-                loc
-            );
+        TimedMotionQuaternion orient(localTime(space, addition.orientation().t()), MotionQuaternion(addition.orientation().position(), addition.orientation().velocity()));
+        BoundingSphere3f bnds = addition.bounds();
+        String mesh = (addition.has_mesh() ? addition.mesh() : "");
+        String phy = (addition.has_physics() ? addition.physics() : "");
 
-            TimedMotionQuaternion orient(localTime(space, addition.orientation().t()), MotionQuaternion(addition.orientation().position(), addition.orientation().velocity()));
-            BoundingSphere3f bnds = addition.bounds();
-            String mesh = (addition.has_mesh() ? addition.mesh() : "");
-            String phy = (addition.has_physics() ? addition.physics() : "");
+        uint64 proxyAddSeqNo = addition.seqno();
 
-            uint64 proxyAddSeqNo = addition.seqno();
+        ProxyObjectPtr proxy_obj = proxy_manager->getProxyObject(proximateID);
+        if (!proxy_obj) {
+            Transfer::URI meshuri;
+            if (addition.has_mesh()) meshuri = Transfer::URI(addition.mesh());
 
-            ProxyObjectPtr proxy_obj = proxy_manager->getProxyObject(proximateID);
-            if (!proxy_obj) {
-                Transfer::URI meshuri;
-                if (addition.has_mesh()) meshuri = Transfer::URI(addition.mesh());
+            // FIXME use weak_ptr instead of raw
+            proxy_obj = self->createProxy(proximateID, spaceobj, meshuri, loc, orient, bnds, phy, "", proxyAddSeqNo);
+        }
+        else {
+            // We need to handle optional values properly -- they
+            // shouldn't get overwritten.
+            String* mesh_ptr = (addition.has_mesh() ? &mesh : NULL);
+            String* phy_ptr = (addition.has_physics() ? &phy : NULL);
 
-                // FIXME use weak_ptr instead of raw
-                proxy_obj = self->createProxy(proximateID, spaceobj, meshuri, loc, orient, bnds, phy, "", proxyAddSeqNo);
-            }
-            else {
-                // We need to handle optional values properly -- they
-                // shouldn't get overwritten.
-                String* mesh_ptr = (addition.has_mesh() ? &mesh : NULL);
-                String* phy_ptr = (addition.has_physics() ? &phy : NULL);
-
-                self->processLocationUpdate(space, proxy_obj, false, &loc, proxyAddSeqNo, &orient, proxyAddSeqNo, &bnds, proxyAddSeqNo, mesh_ptr, proxyAddSeqNo, phy_ptr, proxyAddSeqNo);
-            }
-
-            // Always mark the object as valid (either revalidated, or just
-            // valid for the first time)
-            if (proxy_obj) proxy_obj->validate();
-
-
-            // Notify of any out of order loc updates
-            self->mOrphanLocUpdates.invokeOrphanUpdates(spaceobj, proximateID, this);
-
-            //tells the object script that something that was close has come
-            //into view
-            if(self->mObjectScript)
-                self->mObjectScript->notifyProximate(proxy_obj,spaceobj);
+            self->processLocationUpdate(space, proxy_obj, false, &loc, proxyAddSeqNo, &orient, proxyAddSeqNo, &bnds, proxyAddSeqNo, mesh_ptr, proxyAddSeqNo, phy_ptr, proxyAddSeqNo);
         }
 
-        for(int32 ridx = 0; ridx < update.removal_size(); ridx++) {
-            Sirikata::Protocol::Prox::ObjectRemoval removal = update.removal(ridx);
+        // Always mark the object as valid (either revalidated, or just
+        // valid for the first time)
+        if (proxy_obj) proxy_obj->validate();
 
-            ProxyManagerPtr proxy_manager = self->getProxyManager(spaceobj.space(), spaceobj.object());
+        //tells the object script that something that was close has come
+        //into view
+        if(self->mObjectScript)
+            self->mObjectScript->notifyProximate(proxy_obj,spaceobj);
+    }
 
-            if (!proxy_manager)
-                continue;
+    for(int32 ridx = 0; ridx < update.removal_size(); ridx++) {
+        Sirikata::Protocol::Prox::ObjectRemoval removal = update.removal(ridx);
 
-            SpaceObjectReference removed_obj_ref(spaceobj.space(),
-                ObjectReference(removal.object()));
-            bool permanent = (removal.has_type() && (removal.type() == Sirikata::Protocol::Prox::ObjectRemoval::Permanent));
+        ProxyManagerPtr proxy_manager = self->getProxyManager(spaceobj.space(), spaceobj.object());
 
-            if (self->mPresenceData.find(removed_obj_ref) != self->mPresenceData.end()) {
-                SILOG(oh,detailed,"Ignoring self removal from proximity results.");
-            }
-            else {
-                ProxyObjectPtr proxy_obj = proxy_manager->getProxyObject(removed_obj_ref);
+        if (!proxy_manager)
+            continue;
 
-                if (proxy_obj) {
-                    // NOTE: We *don't* reset the proxy object
-                    // here. Resetting it puts the seqnos back at 0,
-                    // but if we get an addition while still on this
-                    // space server, we actually want the old ones to
-                    // stay in place, in case of unordered prox/loc
-                    // updates. Resetting only happens when we move
-                    // across space servers (see handleMigrated).
+        SpaceObjectReference removed_obj_ref(spaceobj.space(),
+            ObjectReference(removal.object()));
+        bool permanent = (removal.has_type() && (removal.type() == Sirikata::Protocol::Prox::ObjectRemoval::Permanent));
 
-                    //hold on to the removed proxy object's internal data for a
-                    //little extra time in case get a re-addition proxy message, and
-                    //the loc messages that had already been processed for proxy_obj
-                    //arrived before the removal.
-                    self->mOrphanLocUpdates.addUpdateFromExisting(removed_obj_ref, proxy_obj);
-
-                    proxy_manager->destroyObject(proxy_obj);
-
-                    if (self->mObjectScript)
-                        self->mObjectScript->notifyProximateGone(proxy_obj,spaceobj);
-
-                    proxy_obj->invalidate(permanent);
-                }
-            }
-
-            CONTEXT_OHTRACE(prox,
-                spaceobj.object().getAsUUID(),
-                //getUUID(),
-                removal.object(),
-                false,
-                TimedMotionVector3f()
-            );
+        if (self->mPresenceData.find(removed_obj_ref) != self->mPresenceData.end()) {
+            SILOG(oh,detailed,"Ignoring self removal from proximity results.");
         }
+        else {
+            ProxyObjectPtr proxy_obj = proxy_manager->getProxyObject(removed_obj_ref);
+
+            if (proxy_obj) {
+                // NOTE: We *don't* reset the proxy object
+                // here. Resetting it puts the seqnos back at 0,
+                // but if we get an addition while still on this
+                // space server, we actually want the old ones to
+                // stay in place, in case of unordered prox/loc
+                // updates. Resetting only happens when we move
+                // across space servers (see handleMigrated).
+                proxy_manager->destroyObject(proxy_obj);
+
+                if (self->mObjectScript)
+                    self->mObjectScript->notifyProximateGone(proxy_obj,spaceobj);
+
+                proxy_obj->invalidate(permanent);
+            }
+        }
+
+        CONTEXT_OHTRACE(prox,
+            spaceobj.object().getAsUUID(),
+            //getUUID(),
+            removal.object(),
+            false,
+            TimedMotionVector3f()
+        );
     }
 }
 

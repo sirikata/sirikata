@@ -52,8 +52,6 @@
 #include <sirikata/oh/ObjectHostProxyManager.hpp>
 #include <sirikata/proxyobject/SimulationFactory.hpp>
 
-#include <sirikata/proxyobject/OrphanLocUpdateManager.hpp>
-
 namespace Sirikata {
 
 class LocUpdate;
@@ -64,7 +62,7 @@ class LocationUpdate;
 class BulkLocationUpdate;
 }
 namespace Prox {
-class ProximityResults;
+class ProximityUpdate;
 }
 }
 
@@ -81,8 +79,7 @@ typedef std::tr1::shared_ptr<HostedObject> HostedObjectPtr;
 
 class SIRIKATA_OH_EXPORT HostedObject
     : public VWObject,
-      public Service,
-      OrphanLocUpdateManager::Listener
+      public Service
 {
 //------- Private inner classes
 
@@ -104,8 +101,6 @@ protected:
     bool destroyed;
 
     ODP::DelegateService* mDelegateODPService;
-
-    OrphanLocUpdateManager mOrphanLocUpdates;
 
 //------- Constructors/Destructors
 
@@ -374,13 +369,10 @@ public:
 
 
     // ObjectQuerier Interface
-    void handleProximityMessage(const SpaceObjectReference& spaceobj, const Sirikata::Protocol::Prox::ProximityResults& results);
-    void handleLocationMessage(const SpaceObjectReference& spaceobj, const Sirikata::Protocol::Loc::LocationUpdate& update);
+    void handleProximityUpdate(const SpaceObjectReference& spaceobj, const Sirikata::Protocol::Prox::ProximityUpdate& update);
+    void handleLocationUpdate(const SpaceObjectReference& spaceobj, const LocUpdate& lu);
 
   private:
-    // OrphanLocUpdateManager::Listener Interface
-    virtual void onOrphanLocUpdate(const SpaceObjectReference& observer, const LocUpdate& lu);
-
     /** \deprecated
      *  Helper for encoding default, solid angle queries. Used to enable old,
      *  deprecated API for setting queries.
