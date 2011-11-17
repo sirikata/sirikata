@@ -451,7 +451,7 @@ SHA256 computeVisualHash(const Mesh::VisualPtr& visptr, AssetDownloadTaskPtr ass
 
     for(AssetDownloadTask::Dependencies::const_iterator tex_it = assetDownload->dependencies().begin(); tex_it != assetDownload->dependencies().end(); tex_it++) {
         const AssetDownloadTask::ResourceData& tex_data = tex_it->second;
-        data += tex_data.request->getMetadata().getFingerprint().toString();
+        data += tex_data.request->getIdentifier();
     }
 
     return SHA256::computeDigest(data);
@@ -605,11 +605,13 @@ void DistanceDownloadPlanner::loadDependentTextures(Asset* asset, bool usingDefa
         tex_it++)
     {
         const AssetDownloadTask::ResourceData& tex_data = tex_it->second;
-        if (mActiveCDNArchive && asset->textureFingerprints->find(tex_data.request->getURI().toString()) == asset->textureFingerprints->end() ) {
-            String id = tex_data.request->getURI().toString() + tex_data.request->getMetadata().getFingerprint().toString();
+        if (mActiveCDNArchive && asset->textureFingerprints->find(tex_data.request->getIdentifier()) == asset->textureFingerprints->end() ) {
+            String id = tex_data.request->getIdentifier();
             fixOgreURI(id);
 
-            (*asset->textureFingerprints)[tex_data.request->getURI().toString()] = id;
+            (*asset->textureFingerprints)[tex_data.request->getIdentifier()] = id;
+
+            Transfer::MetadataRequestPtr uriRequest = std::tr1::dynamic_pointer_cast<Transfer::MetadataRequest>(tex_data.request);
 
             // This could be a regular texture or a . If its ever a static
             // image, we want to decode it directly...
@@ -629,15 +631,15 @@ void DistanceDownloadPlanner::loadDependentTextures(Asset* asset, bool usingDefa
                 asset->loadedResources.push_back(id);
                 asset->loadingResources++;
             }
-            else if (tex_data.request->getURI().scheme() == "http") {
+            else if (uriRequest && uriRequest->getURI().scheme() == "http") {
                 // Or, if its an http URL, we can try displaying it in a webview
-                OGRE_LOG(detailed,"Using webview for " << id << ": " << tex_data.request->getURI());
+                OGRE_LOG(detailed,"Using webview for " << id << ": " << uriRequest->getURI());
                 WebView* web_mat = WebViewManager::getSingleton().createWebViewMaterial(
                     mContext,
                     id,
                     512, 512 // Completely arbitrary...
                 );
-                web_mat->loadURL(tex_data.request->getURI().toString());
+                web_mat->loadURL(uriRequest->getURI().toString());
                 asset->webMaterials.push_back(web_mat);
             }
         }

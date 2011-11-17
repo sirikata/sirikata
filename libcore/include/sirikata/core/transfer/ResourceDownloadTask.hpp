@@ -59,15 +59,12 @@ typedef std::tr1::weak_ptr<ResourceDownloadTask> ResourceDownloadTaskWPtr;
 class SIRIKATA_EXPORT ResourceDownloadTask : public SelfWeakPtr<ResourceDownloadTask> {
 public:
     typedef std::tr1::function<void(
-        ChunkRequestPtr request,
+        ResourceDownloadTaskPtr taskptr,
+        TransferRequestPtr request,
         DenseDataPtr response)> DownloadCallback;
 
     static ResourceDownloadTaskPtr construct(const URI& uri, TransferPoolPtr transfer_pool, double priority, DownloadCallback cb);
     virtual ~ResourceDownloadTask();
-
-    void setRange(const Range &r) {
-        mRange = r;
-    }
 
     void mergeData(const SparseData &dataToMerge);
 
@@ -79,6 +76,11 @@ public:
 
     void updatePriority(float64 priority);
     void cancel();
+
+    inline const String& getIdentifier() const {
+        return mID;
+    }
+
 protected:
     ResourceDownloadTask(const URI& uri, TransferPoolPtr transfer_pool, double priority, DownloadCallback cb);
 
@@ -99,10 +101,10 @@ protected:
     const URI mURI;
     TransferPoolPtr mTransferPool;
     TransferRequestPtr mCurrentRequest;
-    Range mRange;
     SparseData mMergeData;
     double mPriority;
     DownloadCallback cb;
+    const String& mID;
 };
 
 } // namespace Transfer

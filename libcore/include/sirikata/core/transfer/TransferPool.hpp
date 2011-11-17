@@ -160,6 +160,8 @@ public:
         return mID < other.mID;
     }
 
+    virtual ~MetadataRequest() {}
+
 protected:
 
     const URI mURI;

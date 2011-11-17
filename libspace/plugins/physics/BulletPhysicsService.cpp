@@ -291,17 +291,19 @@ void BulletPhysicsService::setOrientation(const UUID& uuid, const TimedMotionQua
 void BulletPhysicsService::getMesh(const std::string meshURI, const UUID uuid, MeshdataParsedCallback cb) {
     Transfer::ResourceDownloadTaskPtr dl = Transfer::ResourceDownloadTask::construct(
         Transfer::URI(meshURI), mTransferPool, 1.0,
-        std::tr1::bind(&BulletPhysicsService::getMeshCallback, this, _1, _2, cb)
+        std::tr1::bind(&BulletPhysicsService::getMeshCallback, this, _1, _2, _3, cb)
     );
     mMeshDownloads[uuid] = dl;
     dl->start();
 }
 
-void BulletPhysicsService::getMeshCallback(Transfer::ChunkRequestPtr request, Transfer::DenseDataPtr response, MeshdataParsedCallback cb) {
+void BulletPhysicsService::getMeshCallback(Transfer::ResourceDownloadTaskPtr taskptr, Transfer::TransferRequestPtr request, Transfer::DenseDataPtr response, MeshdataParsedCallback cb) {
     // This callback can come in on a separate thread (e.g. from a tranfer
     // thread) so make sure we get it back on the main thread.
     if (request && response) {
-        VisualPtr vis = mModelsSystem->load(request->getMetadata(), request->getMetadata().getFingerprint(), response);
+        Transfer::ChunkRequestPtr chunkreq = std::tr1::static_pointer_cast<Transfer::ChunkRequest>(request);
+
+        VisualPtr vis = mModelsSystem->load(chunkreq->getMetadata(), chunkreq->getMetadata().getFingerprint(), response);
         // FIXME support more than Meshdata
         MeshdataPtr mesh( std::tr1::dynamic_pointer_cast<Meshdata>(vis) );
         if (mesh && mModelFilter) {

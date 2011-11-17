@@ -45,7 +45,7 @@ ResourceDownloadTaskPtr ResourceDownloadTask::construct(const URI& uri, Transfer
 }
 
 ResourceDownloadTask::ResourceDownloadTask(const Transfer::URI &uri, TransferPoolPtr transfer_pool, double priority, DownloadCallback cb)
- : mURI(uri), mTransferPool(transfer_pool), mRange(true),
+ : mURI(uri), mTransferPool(transfer_pool), mID(uri.toString()),
    mPriority(priority), cb(cb)
 {
   mStarted = false;
@@ -95,10 +95,10 @@ void ResourceDownloadTask::chunkFinished(ChunkRequestPtr request,
     if (!cb) return;
 
     if (response != NULL) {
-        cb(request, response);
+        cb(getSharedPtr(), request, response);
     }
     else {
-        cb(request, Transfer::DenseDataPtr());
+        cb(getSharedPtr(), request, Transfer::DenseDataPtr());
     }
 }
 
@@ -123,7 +123,7 @@ void ResourceDownloadTask::metadataFinished(MetadataRequestPtr request,
   }
   else {
       SILOG(ogre,error,"Failed metadata download");
-      if (cb) cb(ChunkRequestPtr(), Transfer::DenseDataPtr());
+      if (cb) cb(getSharedPtr(), ChunkRequestPtr(), Transfer::DenseDataPtr());
   }
 }
 

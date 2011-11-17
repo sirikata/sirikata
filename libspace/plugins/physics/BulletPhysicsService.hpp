@@ -136,7 +136,7 @@ public:
     // The last two get set in this callback, indicating that the
     // transfer finished (whether or not it was successful) and the
     // resulting data.
-    void getMeshCallback(Transfer::ChunkRequestPtr request, Transfer::DenseDataPtr response, MeshdataParsedCallback cb);
+    void getMeshCallback(Transfer::ResourceDownloadTaskPtr taskptr, Transfer::TransferRequestPtr request, Transfer::DenseDataPtr response, MeshdataParsedCallback cb);
 
 
     void updateBulletFromObject(const UUID& uuid, btTransform& worldTrans);

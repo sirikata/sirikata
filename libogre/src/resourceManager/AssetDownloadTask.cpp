@@ -102,25 +102,26 @@ void AssetDownloadTask::downloadAssetFile() {
     ResourceDownloadTaskPtr dl = ResourceDownloadTask::construct(
         mAssetURI, mScene->transferPool(),
         mPriority,
-        std::tr1::bind(&AssetDownloadTask::weakAssetFileDownloaded, getWeakPtr(), _1, _2)
+        std::tr1::bind(&AssetDownloadTask::weakAssetFileDownloaded, getWeakPtr(), _1, _2, _3)
     );
-    mActiveDownloads[mAssetURI] = dl;
+    mActiveDownloads[dl->getIdentifier()] = dl;
     dl->start();
 }
 
-void AssetDownloadTask::weakAssetFileDownloaded(std::tr1::weak_ptr<AssetDownloadTask> thus, std::tr1::shared_ptr<ChunkRequest> request, std::tr1::shared_ptr<const DenseData> response) {
+void AssetDownloadTask::weakAssetFileDownloaded(std::tr1::weak_ptr<AssetDownloadTask> thus, ResourceDownloadTaskPtr taskptr,
+        Transfer::TransferRequestPtr request, Transfer::DenseDataPtr response) {
     std::tr1::shared_ptr<AssetDownloadTask> locked(thus.lock());
     if (locked){
-        locked->assetFileDownloaded(request,response);
+        locked->assetFileDownloaded(taskptr, std::tr1::static_pointer_cast<Transfer::ChunkRequest, Transfer::TransferRequest>(request),response);
     }
 }
 
-void AssetDownloadTask::assetFileDownloaded(std::tr1::shared_ptr<ChunkRequest> request, std::tr1::shared_ptr<const DenseData> response) {
+void AssetDownloadTask::assetFileDownloaded(ResourceDownloadTaskPtr taskptr, Transfer::ChunkRequestPtr request, Transfer::DenseDataPtr response) {
     boost::mutex::scoped_lock lok(mDependentDownloadMutex);
 
     // Clear from the active download list
     assert(mActiveDownloads.size() == 1);
-    mActiveDownloads.erase(mAssetURI);
+    mActiveDownloads.erase(taskptr->getIdentifier());
 
     // Lack of response data means failure of some sort
     if (!response) {
@@ -229,16 +230,17 @@ void AssetDownloadTask::handleAssetParsed(Mesh::VisualPtr vis) {
 void AssetDownloadTask::addDependentDownload(const Transfer::URI& depUrl) {
     boost::mutex::scoped_lock lok(mDependentDownloadMutex);
 
-    // Sometimes we get duplicate references, so make sure we're not already
-    // working on this one.
-    if (mActiveDownloads.find(depUrl) != mActiveDownloads.end()) return;
-
     ResourceDownloadTaskPtr dl = ResourceDownloadTask::construct(
         depUrl, mScene->transferPool(),
         mPriority,
-        std::tr1::bind(&AssetDownloadTask::weakTextureDownloaded, getWeakPtr(), _1, _2)
+        std::tr1::bind(&AssetDownloadTask::weakTextureDownloaded, getWeakPtr(), _1, _2, _3)
     );
-    mActiveDownloads[depUrl] = dl;
+
+    // Sometimes we get duplicate references, so make sure we're not already
+    // working on this one.
+    if (mActiveDownloads.find(dl->getIdentifier()) != mActiveDownloads.end()) return;
+
+    mActiveDownloads[dl->getIdentifier()] = dl;
 }
 
 void AssetDownloadTask::startDependentDownloads() {
@@ -250,14 +252,14 @@ void AssetDownloadTask::startDependentDownloads() {
         it->second->start();
 }
 
-void AssetDownloadTask::weakTextureDownloaded(const std::tr1::weak_ptr<AssetDownloadTask>&thus, std::tr1::shared_ptr<ChunkRequest> request, std::tr1::shared_ptr<const DenseData> response) {
+void AssetDownloadTask::weakTextureDownloaded(const std::tr1::weak_ptr<AssetDownloadTask>& thus, ResourceDownloadTaskPtr taskptr, Transfer::TransferRequestPtr request, Transfer::DenseDataPtr response) {
     std::tr1::shared_ptr<AssetDownloadTask>locked(thus.lock());
     if (locked) {
-        locked->textureDownloaded(request,response);
+        locked->textureDownloaded(taskptr, request, response);
     }
 }
 
-void AssetDownloadTask::textureDownloaded(std::tr1::shared_ptr<ChunkRequest> request, std::tr1::shared_ptr<const DenseData> response) {
+void AssetDownloadTask::textureDownloaded(ResourceDownloadTaskPtr taskptr, Transfer::TransferRequestPtr request, Transfer::DenseDataPtr response) {
     // This could be triggered by any CDN thread, protect access
     // (mActiveDownloads, mDependencies)
     boost::mutex::scoped_lock lok(mDependentDownloadMutex);
@@ -268,7 +270,7 @@ void AssetDownloadTask::textureDownloaded(std::tr1::shared_ptr<ChunkRequest> req
     }
 
     // Clear the download task
-    mActiveDownloads.erase(request->getURI());
+    mActiveDownloads.erase(taskptr->getIdentifier());
 
     // Lack of response data means failure of some sort
     if (!response) {
@@ -277,8 +279,8 @@ void AssetDownloadTask::textureDownloaded(std::tr1::shared_ptr<ChunkRequest> req
     }
 
     // Store data for later use
-    mDependencies[request->getURI()].request = request;
-    mDependencies[request->getURI()].response = response;
+    mDependencies[request->getIdentifier()].request = request;
+    mDependencies[request->getIdentifier()].response = response;
 
     if (mActiveDownloads.size() == 0)
         mCB();
