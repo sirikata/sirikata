@@ -165,10 +165,14 @@ public:
     ObjectHostContext* context() { return mContext; }
     const ObjectHostContext* context() const { return mContext; }
 
-    virtual Time spaceTime(const SpaceID& space, const Time& t);
-    virtual Time currentSpaceTime(const SpaceID& space);
-    virtual Time localTime(const SpaceID& space, const Time& t);
-    virtual Time currentLocalTime();
+    /** \see ObjectHost::spaceTime */
+    Time spaceTime(const SpaceID& space, const Time& t);
+    /** \see ObjectHost::currentSpaceTime */
+    Time currentSpaceTime(const SpaceID& space);
+    /** \see ObjectHost::localTime */
+    Time localTime(const SpaceID& space, const Time& t);
+    /** \see ObjectHost::currentLocalTime */
+    Time currentLocalTime();
 
     ///makes a new objects with objectName startingLocation mesh and connect to some interesting space
     void initializeScript(const String& script_type, const String& args, const String& script);
