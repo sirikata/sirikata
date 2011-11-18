@@ -114,7 +114,7 @@ public:
         const UpdateInfoList& info_list = it->second;
         for(UpdateInfoList::const_iterator info_it = info_list.begin(); info_it != info_list.end(); info_it++) {
             if ((*info_it)->value != NULL)
-                listener->onOrphanLocUpdate( observer, ProtocolLocUpdate( *((*info_it)->value) ) );
+                listener->onOrphanLocUpdate( observer, LocProtocolLocUpdate( *((*info_it)->value) ) );
             else if ((*info_it)->opd != NULL)
                 listener->onOrphanLocUpdate( observer, PresencePropertiesLocUpdate( (*info_it)->object.object(), *((*info_it)->opd) ) );
         }

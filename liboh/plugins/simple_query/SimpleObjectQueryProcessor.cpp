@@ -220,7 +220,7 @@ bool SimpleObjectQueryProcessor::handleLocationMessage(const HostedObjectPtr& se
         if (!proxy_obj)
             obj_state->orphans.addOrphanUpdate(observed, update);
         else
-            deliverLocationUpdate(self, spaceobj, ProtocolLocUpdate(update));
+            deliverLocationUpdate(self, spaceobj, LocProtocolLocUpdate(update));
     }
 
     return true;

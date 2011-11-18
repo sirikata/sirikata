@@ -655,7 +655,7 @@ void HostedObject::receiveMessage(const SpaceID& space, const Protocol::Object::
 }
 
 
-void HostedObject::processLocationUpdate( const SpaceObjectReference& sporef,ProxyObjectPtr proxy_obj, const LocUpdate& update) {
+void HostedObject::processLocationUpdate(const SpaceObjectReference& sporef, ProxyObjectPtr proxy_obj, const LocUpdate& update) {
     TimedMotionVector3f loc;
     TimedMotionQuaternion orient;
     BoundingSphere3f bounds;
@@ -674,8 +674,7 @@ void HostedObject::processLocationUpdate( const SpaceObjectReference& sporef,Pro
     uint64 phy_seqno = update.physics_seqno();
 
     if (update.has_location()) {
-        loc = update.location();
-        loc = TimedMotionVector3f(localTime(sporef.space(), loc.updateTime()), MotionVector3f(loc.position(), loc.velocity()));
+        loc = update.locationWithLocalTime(this, sporef.space());
 
         CONTEXT_OHTRACE(objectLoc,
             sporef.object().getAsUUID(),
@@ -688,8 +687,7 @@ void HostedObject::processLocationUpdate( const SpaceObjectReference& sporef,Pro
     }
 
     if (update.has_orientation()) {
-        orient = update.orientation();
-        orient = TimedMotionQuaternion(localTime(sporef.space(), orient.updateTime()), MotionQuaternion(orient.position(), orient.velocity()));
+        orient = update.orientationWithLocalTime(this, sporef.space());
         orientptr = &orient;
     }
 
@@ -765,10 +763,11 @@ void HostedObject::handleProximityUpdate(const SpaceObjectReference& spaceobj, c
 
     for(int32 aidx = 0; aidx < update.addition_size(); aidx++) {
         Sirikata::Protocol::Prox::ObjectAddition addition = update.addition(aidx);
+        ProxProtocolLocUpdate add(addition);
 
-        SpaceObjectReference proximateID(spaceobj.space(), ObjectReference(addition.object()));
+        SpaceObjectReference proximateID(spaceobj.space(), add.object());
 
-        TimedMotionVector3f loc(self->localTime(space, addition.location().t()), MotionVector3f(addition.location().position(), addition.location().velocity()));
+        TimedMotionVector3f loc(add.locationWithLocalTime(this, spaceobj.space()));
 
         CONTEXT_OHTRACE(prox,
             spaceobj.object().getAsUUID(),
@@ -778,12 +777,10 @@ void HostedObject::handleProximityUpdate(const SpaceObjectReference& spaceobj, c
             loc
         );
 
-        TimedMotionQuaternion orient(localTime(space, addition.orientation().t()), MotionQuaternion(addition.orientation().position(), addition.orientation().velocity()));
-        BoundingSphere3f bnds = addition.bounds();
-        String mesh = (addition.has_mesh() ? addition.mesh() : "");
-        String phy = (addition.has_physics() ? addition.physics() : "");
-
-        uint64 proxyAddSeqNo = addition.seqno();
+        TimedMotionQuaternion orient(add.orientationWithLocalTime(this, spaceobj.space()));
+        BoundingSphere3f bnds = add.bounds();
+        String mesh = add.meshOrDefault();
+        String phy = add.physicsOrDefault();
 
         ProxyObjectPtr proxy_obj = proxy_manager->getProxyObject(proximateID);
         if (!proxy_obj) {
@@ -791,6 +788,11 @@ void HostedObject::handleProximityUpdate(const SpaceObjectReference& spaceobj, c
             if (addition.has_mesh()) meshuri = Transfer::URI(addition.mesh());
 
             // FIXME use weak_ptr instead of raw
+            uint64 proxyAddSeqNo = add.location_seqno();
+            assert( add.location_seqno() == add.orientation_seqno() &&
+                 add.location_seqno() == add.bounds_seqno() &&
+                add.location_seqno() == add.mesh_seqno() &&
+                add.location_seqno() == add.physics_seqno());
             proxy_obj = self->createProxy(proximateID, spaceobj, meshuri, loc, orient, bnds, phy, "", proxyAddSeqNo);
         }
         else {
@@ -799,7 +801,13 @@ void HostedObject::handleProximityUpdate(const SpaceObjectReference& spaceobj, c
             String* mesh_ptr = (addition.has_mesh() ? &mesh : NULL);
             String* phy_ptr = (addition.has_physics() ? &phy : NULL);
 
-            self->processLocationUpdate(space, proxy_obj, false, &loc, proxyAddSeqNo, &orient, proxyAddSeqNo, &bnds, proxyAddSeqNo, mesh_ptr, proxyAddSeqNo, phy_ptr, proxyAddSeqNo);
+            self->processLocationUpdate(space, proxy_obj, false,
+                &loc, add.location_seqno(),
+                &orient, add.orientation_seqno(),
+                &bnds, add.bounds_seqno(),
+                mesh_ptr, add.mesh_seqno(),
+                phy_ptr, add.physics_seqno()
+            );
         }
 
         // Always mark the object as valid (either revalidated, or just
