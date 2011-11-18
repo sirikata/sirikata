@@ -20,7 +20,7 @@ namespace Simple {
  */
 class SimpleObjectQueryProcessor :
         public ObjectQueryProcessor,
-        OrphanLocUpdateManager::Listener
+        OrphanLocUpdateManager::Listener<SpaceObjectReference>
 {
 public:
     static SimpleObjectQueryProcessor* create(ObjectHostContext* ctx, const String& args);

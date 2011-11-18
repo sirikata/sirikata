@@ -9,6 +9,8 @@
 #include <sirikata/oh/SpaceNodeSession.hpp>
 #include <sirikata/oh/ObjectNodeSession.hpp>
 
+#include <sirikata/proxyobject/OrphanLocUpdateManager.hpp>
+
 namespace Sirikata {
 namespace OH {
 namespace Manual {
@@ -21,7 +23,8 @@ namespace Manual {
 class ManualObjectQueryProcessor :
         public ObjectQueryProcessor,
         public SpaceNodeSessionListener,
-        public ObjectNodeSessionListener
+        public ObjectNodeSessionListener,
+        OrphanLocUpdateManager::Listener<OHDP::SpaceNodeID>
 {
 public:
     static ManualObjectQueryProcessor* create(ObjectHostContext* ctx, const String& args);
@@ -67,11 +70,17 @@ private:
     // Queries we've registered with servers so that we can resolve
     // object queries
     struct ServerQueryState {
-        ServerQueryState(OHDPSST::Stream::Ptr base)
+        ServerQueryState(Context* ctx, OHDPSST::Stream::Ptr base)
          : nconnected(0),
            base_stream(base),
-           prox_stream()
-        {}
+           prox_stream(),
+           orphans(ctx, ctx->mainStrand, Duration::seconds(10))
+        {
+            orphans.start();
+        }
+        ~ServerQueryState() {
+            orphans.stop();
+        }
 
         // Returns true if the *query* can be removed (not if this
         // object can be removed, that is tracked by the lifetime of
@@ -84,8 +93,16 @@ private:
         int32 nconnected;
         OHDPSST::Stream::Ptr base_stream;
         OHDPSST::Stream::Ptr prox_stream;
+
+        // Each server query has an independent stream of results +
+        // loc updates, so each gets its own set of objects w/ properties and
+        // orphan tracking
+        typedef std::tr1::unordered_map<SpaceObjectReference, SequencedPresenceProperties, SpaceObjectReference::Hasher> ObjectPropertiesMap;
+        ObjectPropertiesMap objects;
+        OrphanLocUpdateManager orphans;
     };
-    typedef std::tr1::unordered_map<OHDP::SpaceNodeID, ServerQueryState, OHDP::SpaceNodeID::Hasher> ServerQueryMap;
+    typedef std::tr1::shared_ptr<ServerQueryState> ServerQueryStatePtr;
+    typedef std::tr1::unordered_map<OHDP::SpaceNodeID, ServerQueryStatePtr, OHDP::SpaceNodeID::Hasher> ServerQueryMap;
     ServerQueryMap mServerQueries;
 
     // Helper that marks a server with another connected object and may register
@@ -115,6 +132,8 @@ private:
     void handleLocationSubstreamRead(const OHDP::SpaceNodeID& snid, OHDPSST::Stream::Ptr s, std::stringstream* prevdata, uint8* buffer, int length);
     bool handleLocationMessage(const OHDP::SpaceNodeID& snid, const std::string& paylod);
 
+    // OrphanLocUpdateManager::Listener Interface
+    virtual void onOrphanLocUpdate(const OHDP::SpaceNodeID& observer, const LocUpdate& lu);
 };
 
 } // namespace Manual

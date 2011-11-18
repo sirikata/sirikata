@@ -42,12 +42,20 @@ void ManualObjectQueryProcessor::start() {
 void ManualObjectQueryProcessor::stop() {
     mContext->objectHost->ObjectNodeSessionProvider::removeListener(static_cast<ObjectNodeSessionListener*>(this));
     mContext->objectHost->SpaceNodeSessionManager::removeListener(static_cast<SpaceNodeSessionListener*>(this));
+
+    mObjectState.clear();
+    mServerQueries.clear();
 }
 
 void ManualObjectQueryProcessor::onSpaceNodeSession(const OHDP::SpaceNodeID& id, OHDPSST::Stream::Ptr sn_stream) {
     QPLOG(detailed, "New space node session " << id);
     assert(mServerQueries.find(id) == mServerQueries.end());
-    mServerQueries.insert( ServerQueryMap::value_type(id, ServerQueryState(sn_stream)) );
+    mServerQueries.insert(
+        ServerQueryMap::value_type(
+            id,
+            ServerQueryStatePtr(new ServerQueryState(mContext, sn_stream))
+        )
+    );
 
     sn_stream->listenSubstream(OBJECT_PORT_LOCATION,
         std::tr1::bind(&ManualObjectQueryProcessor::handleLocationSubstream, this,
@@ -93,8 +101,8 @@ void ManualObjectQueryProcessor::onObjectNodeSession(const SpaceID& space, const
 }
 
 void ManualObjectQueryProcessor::incrementServerQuery(ServerQueryMap::iterator serv_it) {
-    bool is_new = (serv_it->second.nconnected == 0);
-    serv_it->second.nconnected++;
+    bool is_new = (serv_it->second->nconnected == 0);
+    serv_it->second->nconnected++;
     updateServerQuery(serv_it, is_new);
 }
 
@@ -119,7 +127,7 @@ void ManualObjectQueryProcessor::updateServerQuery(ServerQueryMap::iterator serv
 
         String framed = Network::Frame::write(init_msg_str);
 
-        serv_it->second.base_stream->createChildStream(
+        serv_it->second->base_stream->createChildStream(
             std::tr1::bind(&ManualObjectQueryProcessor::handleCreatedProxSubstream, this, serv_it->first, _1, _2),
             (void*)framed.c_str(), framed.size(),
             OBJECT_PORT_PROXIMITY, OBJECT_PORT_PROXIMITY
@@ -128,12 +136,12 @@ void ManualObjectQueryProcessor::updateServerQuery(ServerQueryMap::iterator serv
 }
 
 void ManualObjectQueryProcessor::decrementServerQuery(ServerQueryMap::iterator serv_it) {
-    serv_it->second.nconnected--;
-    if (!serv_it->second.canRemove()) return;
+    serv_it->second->nconnected--;
+    if (!serv_it->second->canRemove()) return;
 
     // FIXME send message
     QPLOG(detailed, "Destroying server query to " << serv_it->first);
-    if (serv_it->second.prox_stream) {
+    if (serv_it->second->prox_stream) {
         Protocol::Prox::QueryRequest request;
 
         using namespace boost::property_tree;
@@ -150,7 +158,7 @@ void ManualObjectQueryProcessor::decrementServerQuery(ServerQueryMap::iterator s
         }
         std::string destroy_msg_str = serializePBJMessage(request);
         String framed = Network::Frame::write(destroy_msg_str);
-        serv_it->second.prox_stream->write((const uint8*)framed.c_str(), framed.size());
+        serv_it->second->prox_stream->write((const uint8*)framed.c_str(), framed.size());
     }
 }
 
@@ -183,7 +191,7 @@ void ManualObjectQueryProcessor::handleCreatedProxSubstream(const OHDP::SpaceNod
     ServerQueryMap::iterator serv_it = mServerQueries.find(snid);
     // We may have lost the session since we requested the connection
     if (serv_it == mServerQueries.end()) return;
-    serv_it->second.prox_stream = prox_stream;
+    serv_it->second->prox_stream = prox_stream;
 
     // Register to get data
     String* prevdata = new String();
@@ -257,7 +265,8 @@ bool ManualObjectQueryProcessor::handleLocationMessage(const OHDP::SpaceNodeID& 
     return true;
 }
 
-
+void ManualObjectQueryProcessor::onOrphanLocUpdate(const OHDP::SpaceNodeID& observer, const LocUpdate& lu) {
+}
 
 } // namespace Manual
 } // namespace OH

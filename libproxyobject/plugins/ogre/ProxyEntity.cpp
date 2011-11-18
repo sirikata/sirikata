@@ -76,7 +76,7 @@ void ProxyEntity::initializeToProxy(const ProxyObjectPtr &ppo) {
 }
 
 BoundingSphere3f ProxyEntity::bounds() {
-    return getProxy().getBounds();
+    return getProxy().bounds();
 }
 
 void ProxyEntity::tick(const Time& t, const Duration& deltaTime) {
@@ -113,7 +113,7 @@ void ProxyEntity::validated(ProxyObjectPtr ptr) {
     // Because this could be a new ProxyEntity, created after a bunch
     // of updates have been received by the ProxyObject, we need to
     // refresh its important data
-    updateLocation( mProxy, mProxy->getTimedMotionVector(), mProxy->getTimedMotionQuaternion(), mProxy->getBounds(),SpaceObjectReference::null() );
+    updateLocation( mProxy, mProxy->location(), mProxy->orientation(), mProxy->bounds(), SpaceObjectReference::null() );
 }
 
 void ProxyEntity::invalidated(ProxyObjectPtr ptr, bool permanent) {

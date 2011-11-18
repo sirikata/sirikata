@@ -68,11 +68,11 @@ void JSProxyData::decref() {
 void JSProxyData::updateFrom(ProxyObjectPtr from) {
     assert(sporefToListenTo  == from->getObjectReference());
 
-    mLocation = from->getTimedMotionVector();
-    mOrientation = from->getTimedMotionQuaternion();
-    mBounds = from->getBounds();
-    mMesh = from->getMesh().toString();
-    mPhysics = from->getPhysics();
+    mLocation = from->location();
+    mOrientation = from->orientation();
+    mBounds = from->bounds();
+    mMesh = from->mesh().toString();
+    mPhysics = from->physics();
 }
 
 bool JSProxyData::visibleToPresence() const {

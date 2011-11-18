@@ -1144,7 +1144,7 @@ bool HostedObject::requestMeshUri(const SpaceID& space, const ObjectReference& o
         return false;
     }
 
-    tUri = proxy_obj->getMesh();
+    tUri = proxy_obj->mesh();
     return true;
 }
 
@@ -1182,7 +1182,7 @@ BoundingSphere3f HostedObject::requestCurrentBounds(const SpaceID& space,const O
     }
 
 
-    return proxy_obj->getBounds();
+    return proxy_obj->bounds();
 }
 
 void HostedObject::requestBoundsUpdate(const SpaceID& space, const ObjectReference& oref, const BoundingSphere3f& bounds) {
@@ -1204,7 +1204,7 @@ const String& HostedObject::requestCurrentPhysics(const SpaceID& space,const Obj
     }
 
 
-    return proxy_obj->getPhysics();
+    return proxy_obj->physics();
 }
 
 
