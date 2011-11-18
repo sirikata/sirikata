@@ -111,6 +111,7 @@ FilterDataPtr SquashInstancedGeometryFilter::apply(FilterDataPtr input) {
         new_md->uri = md->uri;
         new_md->hash = md->hash;
         new_md->id = md->id;
+        new_md->progressiveData = md->progressiveData;
         //new_md->lightInstances = md->lightInstances;
         // Old globalTransform will have already been applied
         new_md->globalTransform = Matrix4x4f::identity();

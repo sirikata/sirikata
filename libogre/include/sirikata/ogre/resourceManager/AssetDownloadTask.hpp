@@ -58,7 +58,7 @@ public:
         Transfer::TransferRequestPtr request;
         Transfer::DenseDataPtr response;
     };
-    typedef std::map<const String, ResourceData> Dependencies;
+    typedef std::map<Transfer::URI, ResourceData> Dependencies;
 private:
     AssetDownloadTask(const Transfer::URI& uri, Graphics::OgreRenderer* const scene, double priority, FinishedCallback cb);
 public:
@@ -79,15 +79,19 @@ private:
     static void weakHandleAssetParsed(std::tr1::weak_ptr<AssetDownloadTask> thus, Mesh::VisualPtr md);
     void handleAssetParsed(Mesh::VisualPtr md);
 
+    void addDependentDownload(Transfer::ResourceDownloadTaskPtr resPtr);
     void addDependentDownload(const Transfer::URI& depUrl);
+    void addDependentDownload(const Transfer::URI& depUrl, const Transfer::Chunk& depChunk);
+
     // Start is separate from add so we can be sure mActiveDownloads isn't being
     // modified after we start the downloads, except by the completion handler
     void startDependentDownloads();
 
-    static void weakTextureDownloaded(const std::tr1::weak_ptr<AssetDownloadTask>&, Transfer::ResourceDownloadTaskPtr taskptr,
+    static void weakTextureDownloaded(const std::tr1::weak_ptr<AssetDownloadTask>&, Transfer::URI uri, Transfer::ResourceDownloadTaskPtr taskptr,
             Transfer::TransferRequestPtr request, Transfer::DenseDataPtr response);
 
-    void textureDownloaded(Transfer::ResourceDownloadTaskPtr taskptr, Transfer::TransferRequestPtr request, Transfer::DenseDataPtr response);
+    void textureDownloaded(Transfer::URI uri, Transfer::ResourceDownloadTaskPtr taskptr, Transfer::TransferRequestPtr request,
+            Transfer::DenseDataPtr response);
 
 
     // Fails the entire process as a result of one dependency (or the original

@@ -34,6 +34,7 @@
 #ifndef SIRIKATA_RemoteFileMetadata_HPP__
 #define SIRIKATA_RemoteFileMetadata_HPP__
 
+#include <boost/lexical_cast.hpp>
 #include <sirikata/core/util/Sha256.hpp>
 #include <sirikata/core/transfer/Range.hpp>
 #include <sirikata/core/transfer/URI.hpp>
@@ -54,6 +55,9 @@ private:
     Fingerprint mHash;
     Range mRange;
 public:
+    Chunk() :
+        mHash(), mRange(true) {}
+
     Chunk(const Fingerprint &fingerprint, const Range &range) :
         mHash(fingerprint), mRange(range) {
 
@@ -69,6 +73,19 @@ public:
 
     inline bool operator==(const Chunk &other) const {
         return (mHash == other.mHash && mRange == other.mRange);
+    }
+
+    inline String toString() const {
+        String toret = mHash.toString() + "_";
+        toret += boost::lexical_cast<String>(mRange.startbyte());
+        toret += "_";
+        if (mRange.goesToEndOfFile()) {
+            toret += "EOF";
+        } else {
+            toret += boost::lexical_cast<String>(mRange.endbyte());
+        }
+
+        return toret;
     }
 
 };

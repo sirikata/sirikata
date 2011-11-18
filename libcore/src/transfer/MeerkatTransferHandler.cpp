@@ -327,20 +327,27 @@ void MeerkatChunkHandler::request_finished(std::tr1::shared_ptr<HttpManager::Htt
         return;
     }
 
-    it = response->getHeaders().find("Range");
+    it = response->getHeaders().find("Content-Range");
     if (chunkReq && it == response->getHeaders().end()) {
-        SILOG(transfer, error, "Expected Range header not present during an HTTP " << reqType << " (" << uri << ")");
+        SILOG(transfer, error, "Expected Content-Range header not present during an HTTP " << reqType << " (" << uri << ")");
         callback(bad);
         return;
     } else if (chunkReq) {
         std::string range_str = it->second;
         bool range_parsed = false;
 
-        if (range_str.substr(0,6) == "bytes=") {
+        if (range_str.substr(0,6) == "bytes ") {
             range_str = range_str.substr(6);
             size_type dashPos = range_str.find('-');
             if (dashPos != std::string::npos) {
                 range_str.replace(dashPos, 1, " ");
+
+                //total file size is optional
+                size_type slashPos = range_str.find('/');
+                if (slashPos != std::string::npos) {
+                    range_str.replace(slashPos, 1, " ");
+                }
+
                 std::istringstream instream(range_str);
                 uint64 range_start;
                 uint64 range_end;

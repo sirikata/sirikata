@@ -63,7 +63,17 @@ public:
         TransferRequestPtr request,
         DenseDataPtr response)> DownloadCallback;
 
+    /* Download this resource based on URI
+     * - First a name lookup will be performed for the URI
+     * - Then the hash that comes back from the name lookup will be downloaded
+     */
     static ResourceDownloadTaskPtr construct(const URI& uri, TransferPoolPtr transfer_pool, double priority, DownloadCallback cb);
+
+    /* Download this resource based on a hash
+     *  - Just directly download the hash given
+     */
+    static ResourceDownloadTaskPtr construct(const Chunk& chunk, TransferPoolPtr transfer_pool, double priority, DownloadCallback cb);
+
     virtual ~ResourceDownloadTask();
 
     void mergeData(const SparseData &dataToMerge);
@@ -83,6 +93,7 @@ public:
 
 protected:
     ResourceDownloadTask(const URI& uri, TransferPoolPtr transfer_pool, double priority, DownloadCallback cb);
+    ResourceDownloadTask(const Chunk& chunk, TransferPoolPtr transfer_pool, double priority, DownloadCallback cb);
 
     static void metadataFinishedWeak(ResourceDownloadTaskWPtr thiswptr,
         MetadataRequestPtr request,
@@ -93,18 +104,22 @@ protected:
     static void chunkFinishedWeak(ResourceDownloadTaskWPtr thiswptr,
         ChunkRequestPtr request,
         DenseDataPtr response);
-    void chunkFinished(ChunkRequestPtr request,
+    static void directChunkFinishedWeak(ResourceDownloadTaskWPtr thiswptr,
+        DirectChunkRequestPtr request,
         DenseDataPtr response);
 
+    void chunkFinished(TransferRequestPtr request,
+        DenseDataPtr response);
 
     bool mStarted;
     const URI mURI;
+    const Chunk mChunk;
     TransferPoolPtr mTransferPool;
     TransferRequestPtr mCurrentRequest;
     SparseData mMergeData;
     double mPriority;
     DownloadCallback cb;
-    const String& mID;
+    const String mID;
 };
 
 } // namespace Transfer

@@ -604,14 +604,18 @@ void DistanceDownloadPlanner::loadDependentTextures(Asset* asset, bool usingDefa
         tex_it != asset->downloadTask->dependencies().end();
         tex_it++)
     {
+        const Transfer::URI& uri = tex_it->first;
+        const String& uri_str = uri.toString();
         const AssetDownloadTask::ResourceData& tex_data = tex_it->second;
-        if (mActiveCDNArchive && asset->textureFingerprints->find(tex_data.request->getIdentifier()) == asset->textureFingerprints->end() ) {
-            String id = tex_data.request->getIdentifier();
+
+        if (mActiveCDNArchive && asset->textureFingerprints->find(uri_str) == asset->textureFingerprints->end() ) {
+            String id = uri_str + tex_data.request->getIdentifier();
+
+            OGRE_LOG(warn, "Got asset ID of " << id);
+
             fixOgreURI(id);
 
-            (*asset->textureFingerprints)[tex_data.request->getIdentifier()] = id;
-
-            Transfer::MetadataRequestPtr uriRequest = std::tr1::dynamic_pointer_cast<Transfer::MetadataRequest>(tex_data.request);
+            (*asset->textureFingerprints)[uri_str] = id;
 
             // This could be a regular texture or a . If its ever a static
             // image, we want to decode it directly...
@@ -631,15 +635,14 @@ void DistanceDownloadPlanner::loadDependentTextures(Asset* asset, bool usingDefa
                 asset->loadedResources.push_back(id);
                 asset->loadingResources++;
             }
-            else if (uriRequest && uriRequest->getURI().scheme() == "http") {
+            else if (uri.scheme() == "http") {
                 // Or, if its an http URL, we can try displaying it in a webview
-                OGRE_LOG(detailed,"Using webview for " << id << ": " << uriRequest->getURI());
                 WebView* web_mat = WebViewManager::getSingleton().createWebViewMaterial(
                     mContext,
                     id,
                     512, 512 // Completely arbitrary...
                 );
-                web_mat->loadURL(uriRequest->getURI().toString());
+                web_mat->loadURL(uri_str);
                 asset->webMaterials.push_back(web_mat);
             }
         }

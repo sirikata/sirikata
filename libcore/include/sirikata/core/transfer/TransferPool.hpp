@@ -202,11 +202,15 @@ public:
             {
                 mPriority = priority;
                 mDeletionRequest = false;
-                mID = chunk.getHash().toString();
+                mID = chunk.toString();
             }
 
     inline const Chunk& getChunk() {
         return *mChunk;
+    }
+
+    inline const std::string &getIdentifier() const {
+        return mID;
     }
 
     void execute(std::tr1::shared_ptr<TransferRequest> req, ExecuteFinished cb);

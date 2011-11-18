@@ -195,8 +195,8 @@ void stopWork() {
     ioWork = NULL;
 }
 
-void finishLaunchURI(Transfer::ChunkRequestPtr req, Transfer::DenseDataPtr data, int* retval);
-void finishDownloadResource(const String& data_path, Transfer::ChunkRequestPtr req, Transfer::DenseDataPtr data, int* retval);
+void finishLaunchURI(Transfer::ResourceDownloadTaskPtr taskptr, Transfer::TransferRequestPtr req, Transfer::DenseDataPtr data, int* retval);
+void finishDownloadResource(const String& data_path, Transfer::ResourceDownloadTaskPtr taskptr, Transfer::TransferRequestPtr req, Transfer::DenseDataPtr data, int* retval);
 void doExecApp(int* retval);
 
 Transfer::ResourceDownloadTaskPtr rdl;
@@ -221,7 +221,7 @@ bool startLaunchURI(String uri_str, int* retval) {
     rdl =
         Transfer::ResourceDownloadTask::construct(
             config_uri, gTransferPool, 1.0,
-            gContext->mainStrand->wrap(std::tr1::bind(finishLaunchURI, std::tr1::placeholders::_1, std::tr1::placeholders::_2, retval))
+            gContext->mainStrand->wrap(std::tr1::bind(finishLaunchURI, std::tr1::placeholders::_1, std::tr1::placeholders::_2, std::tr1::placeholders::_3, retval))
         );
     rdl->start();
 
@@ -252,7 +252,7 @@ String appDirPath() {
 typedef std::map<String, Transfer::ResourceDownloadTaskPtr> ResourceDownloadMap;
 ResourceDownloadMap resourceDownloads;
 
-void finishLaunchURI(Transfer::ChunkRequestPtr req, Transfer::DenseDataPtr data, int* retval) {
+void finishLaunchURI(Transfer::ResourceDownloadTaskPtr taskptr, Transfer::TransferRequestPtr req, Transfer::DenseDataPtr data, int* retval) {
     // Fire off the request for
     if (!data || data->size() == 0) {
         LAUNCHER_LOG(error, "Failed to download config");
@@ -317,7 +317,8 @@ void finishLaunchURI(Transfer::ChunkRequestPtr req, Transfer::DenseDataPtr data,
                     gContext->mainStrand->wrap(
                         std::tr1::bind(finishDownloadResource,
                             data_path,
-                            std::tr1::placeholders::_1, std::tr1::placeholders::_2, retval
+                            std::tr1::placeholders::_1, std::tr1::placeholders::_2,
+                            std::tr1::placeholders::_3, retval
                         )
                     )
                 );
@@ -333,7 +334,7 @@ void finishLaunchURI(Transfer::ChunkRequestPtr req, Transfer::DenseDataPtr data,
     }
 }
 
-void finishDownloadResource(const String& data_path, Transfer::ChunkRequestPtr req, Transfer::DenseDataPtr data, int* retval) {
+void finishDownloadResource(const String& data_path, Transfer::ResourceDownloadTaskPtr taskptr, Transfer::TransferRequestPtr req, Transfer::DenseDataPtr data, int* retval) {
     if (!data || data->size() == 0) {
         LAUNCHER_LOG(error, "Failed to download data file: " << data_path);
         eventLoopExit(retval, -1);
