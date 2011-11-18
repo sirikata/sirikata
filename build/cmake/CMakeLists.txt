@@ -1427,6 +1427,7 @@ SET(LIBOH_SOURCES
                   ${LIBOH_SOURCE_DIR}/Storage.cpp
                   ${LIBOH_SOURCE_DIR}/PersistedObjectSet.cpp
                   ${LIBOH_SOURCE_DIR}/ObjectQueryProcessor.cpp
+                  ${LIBOH_SOURCE_DIR}/LocUpdate.cpp
                    )
 
 SET(LIBMESH_PLUGIN_COLLADAMODELS_DIR ${LIBMESH_PLUGIN_DIR}/collada)
