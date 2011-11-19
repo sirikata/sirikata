@@ -52,28 +52,26 @@ OrphanLocUpdateManager::OrphanLocUpdateManager(Context* ctx, Network::IOStrand* 
 
 }
 
-void OrphanLocUpdateManager::addOrphanUpdate(const SpaceObjectReference& obj, const Sirikata::Protocol::Loc::LocationUpdate& update) {
-    UpdateInfoList& info_list = mUpdates[obj];
-    SpaceObjectReference observed(obj.space(), ObjectReference(update.object()));
+void OrphanLocUpdateManager::addOrphanUpdate(const SpaceObjectReference& observed, const Sirikata::Protocol::Loc::LocationUpdate& update) {
+    assert( ObjectReference(update.object()) == observed.object() );
+    UpdateInfoList& info_list = mUpdates[observed];
     info_list.push_back(
         UpdateInfoPtr(new UpdateInfo(observed, new Sirikata::Protocol::Loc::LocationUpdate(update), mContext->simTime() + mTimeout))
     );
 }
 
 void OrphanLocUpdateManager::addUpdateFromExisting(
-    const SpaceObjectReference& obj,
     const SpaceObjectReference& observed,
     const SequencedPresenceProperties& props
 ) {
-    UpdateInfoList& info_list = mUpdates[obj];
+    UpdateInfoList& info_list = mUpdates[observed];
 
     SequencedPresenceProperties* opd = new SequencedPresenceProperties(props);
     info_list.push_back( UpdateInfoPtr(new UpdateInfo(observed, opd, mContext->simTime() + mTimeout)) );
 }
 
-void OrphanLocUpdateManager::addUpdateFromExisting(const SpaceObjectReference&obj, ProxyObjectPtr proxyPtr) {
+void OrphanLocUpdateManager::addUpdateFromExisting(ProxyObjectPtr proxyPtr) {
     addUpdateFromExisting(
-        obj,
         proxyPtr->getObjectReference(),
         *(dynamic_cast<SequencedPresenceProperties*>(proxyPtr.get()))
     );

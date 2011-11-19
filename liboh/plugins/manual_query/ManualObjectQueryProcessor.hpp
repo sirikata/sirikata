@@ -123,14 +123,15 @@ private:
     void handleCreatedProxSubstream(const OHDP::SpaceNodeID& snid, int success, OHDPSST::Stream::Ptr prox_stream);
     // Data read callback for prox substreams -- translate to proximity events
     void handleProximitySubstreamRead(const OHDP::SpaceNodeID& snid, OHDPSST::Stream::Ptr prox_stream, String* prevdata, uint8* buffer, int length);
-
+    // Handle decode proximity message
+    void handleProximityMessage(const OHDP::SpaceNodeID& snid, const String& payload);
 
     // Location
     // Handlers for substreams for space-managed updates
     void handleLocationSubstream(const OHDP::SpaceNodeID& snid, int err, OHDPSST::Stream::Ptr s);
     // Handlers for substream read events for space-managed updates
     void handleLocationSubstreamRead(const OHDP::SpaceNodeID& snid, OHDPSST::Stream::Ptr s, std::stringstream* prevdata, uint8* buffer, int length);
-    bool handleLocationMessage(const OHDP::SpaceNodeID& snid, const std::string& paylod);
+    bool handleLocationMessage(const OHDP::SpaceNodeID& snid, const std::string& payload);
 
     // OrphanLocUpdateManager::Listener Interface
     virtual void onOrphanLocUpdate(const OHDP::SpaceNodeID& observer, const LocUpdate& lu);

@@ -217,14 +217,65 @@ void ManualObjectQueryProcessor::handleProximitySubstreamRead(const OHDP::SpaceN
         if (msg.empty()) return;
 
         // Otherwise, try to handle it
-        QPLOG(detailed, "Got proximity message.");
-        // FIXME handleProximityMessage(snid, msg);
+        handleProximityMessage(snid, msg);
     }
 
     // FIXME we should be getting a callback on stream close so we can clean up!
     //prox_stream->registerReadCallback(0);
 }
 
+void ManualObjectQueryProcessor::handleProximityMessage(const OHDP::SpaceNodeID& snid, const String& payload) {
+    ServerQueryMap::iterator serv_it = mServerQueries.find(snid);
+    if (serv_it == mServerQueries.end()) {
+        QPLOG(debug, "Received proximity message without query. Query may have recently been destroyed.");
+        return;
+    }
+    ServerQueryStatePtr& query_state = serv_it->second;
+
+    Sirikata::Protocol::Prox::ProximityResults contents;
+    bool parse_success = contents.ParseFromString(payload);
+    if (!parse_success) {
+        QPLOG(error, "Failed to decode proximity message");
+        return;
+    }
+
+    // Proximity messages are handled just by updating our state
+    // tracking the objects, adding or removing the objects or
+    // updating their properties.
+
+    for(int32 idx = 0; idx < contents.update_size(); idx++) {
+        Sirikata::Protocol::Prox::ProximityUpdate update = contents.update(idx);
+
+        for(int32 aidx = 0; aidx < update.addition_size(); aidx++) {
+            Sirikata::Protocol::Prox::ObjectAddition addition = update.addition(aidx);
+            ProxProtocolLocUpdate add(addition);
+
+            SpaceObjectReference observed(snid.space(), ObjectReference(addition.object()));
+
+            // Store the data
+            assert(query_state->objects.find(observed) == query_state->objects.end());
+            SequencedPresenceProperties& props = query_state->objects[observed];
+            props.setLocation(add.locationWithLocalTime(mContext->objectHost, snid.space()), add.location_seqno());
+            props.setOrientation(add.orientationWithLocalTime(mContext->objectHost, snid.space()), add.orientation_seqno());
+            props.setBounds(add.bounds(), add.bounds_seqno());
+            props.setMesh(Transfer::URI(add.meshOrDefault()), add.mesh_seqno());
+            props.setPhysics(add.physicsOrDefault(), add.physics_seqno());
+
+            // Replay orphans
+            query_state->orphans.invokeOrphanUpdates(snid, observed, this);
+        }
+
+        for(int32 ridx = 0; ridx < update.removal_size(); ridx++) {
+            Sirikata::Protocol::Prox::ObjectRemoval removal = update.removal(ridx);
+            SpaceObjectReference observed(snid.space(), ObjectReference(removal.object()));
+            assert(query_state->objects.find(observed) != query_state->objects.end());
+            // Backup data for orphans and then destroy
+            query_state->orphans.addUpdateFromExisting(observed, query_state->objects[observed]);
+            query_state->objects.erase(observed);
+        }
+    }
+
+}
 
 
 // Location
@@ -252,6 +303,22 @@ void ManualObjectQueryProcessor::handleLocationSubstreamRead(const OHDP::SpaceNo
     }
 }
 
+namespace {
+// Helper for applying an update to
+void applyLocUpdate(SequencedPresenceProperties& props, const LocUpdate& lu, ObjectHost* oh, const SpaceID& space) {
+    if (lu.has_location())
+        props.setLocation(lu.locationWithLocalTime(oh, space), lu.location_seqno());
+    if (lu.has_orientation())
+        props.setOrientation(lu.orientationWithLocalTime(oh, space), lu.orientation_seqno());
+    if (lu.has_bounds())
+        props.setBounds(lu.bounds(), lu.bounds_seqno());
+    if (lu.has_mesh())
+        props.setMesh(Transfer::URI(lu.meshOrDefault()), lu.mesh_seqno());
+    if (lu.has_physics())
+        props.setPhysics(lu.physicsOrDefault(), lu.physics_seqno());
+}
+}
+
 bool ManualObjectQueryProcessor::handleLocationMessage(const OHDP::SpaceNodeID& snid, const std::string& payload) {
     Sirikata::Protocol::Frame frame;
     bool parse_success = frame.ParseFromString(payload);
@@ -259,13 +326,42 @@ bool ManualObjectQueryProcessor::handleLocationMessage(const OHDP::SpaceNodeID& 
     Sirikata::Protocol::Loc::BulkLocationUpdate contents;
     contents.ParseFromString(frame.payload());
 
-    QPLOG(detailed, "Got location message.");
-    // FIXME figure out who to forward to, or store for later use
+    ServerQueryMap::iterator serv_it = mServerQueries.find(snid);
+    if (serv_it == mServerQueries.end()) {
+        QPLOG(debug, "Received location message without query. Query may have recently been destroyed.");
+        return true; // Was successfully parsed, but not handled
+    }
+    ServerQueryStatePtr& query_state = serv_it->second;
+
+    for(int32 idx = 0; idx < contents.update_size(); idx++) {
+        Sirikata::Protocol::Loc::LocationUpdate update = contents.update(idx);
+        SpaceObjectReference observed(snid.space(), ObjectReference(update.object()));
+
+        ServerQueryState::ObjectPropertiesMap::iterator props_it = query_state->objects.find(observed);
+
+        // Because of prox/loc ordering, we may or may not have a record of the
+        // object yet.
+        if (props_it == query_state->objects.end())
+            query_state->orphans.addOrphanUpdate(observed, update);
+        else
+            applyLocUpdate(props_it->second, LocProtocolLocUpdate(update), mContext->objectHost, snid.space());
+    }
 
     return true;
 }
 
 void ManualObjectQueryProcessor::onOrphanLocUpdate(const OHDP::SpaceNodeID& observer, const LocUpdate& lu) {
+    ServerQueryMap::iterator serv_it = mServerQueries.find(observer);
+    if (serv_it == mServerQueries.end()) {
+        QPLOG(debug, "Received proximity message without query. Query may have recently been destroyed.");
+        return;
+    }
+    ServerQueryStatePtr& query_state = serv_it->second;
+
+    SpaceObjectReference observed(observer.space(), lu.object());
+    assert(query_state->objects.find(observed) != query_state->objects.end());
+    SequencedPresenceProperties& props = query_state->objects[observed];
+    applyLocUpdate(props, lu, mContext->objectHost, observer.space());
 }
 
 } // namespace Manual

@@ -91,16 +91,15 @@ public:
     /** Add an orphan update to the queue and set a timeout for it to be cleared
      *  out.
      */
-    void addOrphanUpdate(const SpaceObjectReference& obj, const Sirikata::Protocol::Loc::LocationUpdate& update);
+    void addOrphanUpdate(const SpaceObjectReference& observed, const Sirikata::Protocol::Loc::LocationUpdate& update);
     /**
        Take all fields in proxyPtr, and create an struct from
        them.
      */
-    void addUpdateFromExisting(const SpaceObjectReference&obj, ProxyObjectPtr proxyPtr);
+    void addUpdateFromExisting(ProxyObjectPtr proxyPtr);
     /** Take all parameters from an object to backup for a short time.
      */
     void addUpdateFromExisting(
-        const SpaceObjectReference& obj,
         const SpaceObjectReference& observed,
         const SequencedPresenceProperties& props
     );
