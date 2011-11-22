@@ -111,7 +111,7 @@ bool ProxyObject::UpdateNeeded::operator() (
 }
 
 bool ProxyObject::isStatic() const {
-    return mLoc.velocity() == Vector3f::nil() && mOrientation.velocity() == Quaternion::identity();
+    return mLoc.velocity() == Vector3f::zero() && mOrientation.velocity() == Quaternion::identity();
 }
 
 

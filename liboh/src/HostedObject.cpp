@@ -1104,7 +1104,7 @@ Vector3d HostedObject::requestCurrentPosition (const SpaceID& space, const Objec
     if (proxy_obj == nullPtr)
     {
         SILOG(cppoh,error,"[HO] Unknown space object reference looking for position for for  " << space<< "-"<<oref<<".");
-        return Vector3d::nil();
+        return Vector3d::zero();
     }
 
     return requestCurrentPosition(proxy_obj);
@@ -1156,7 +1156,7 @@ Vector3f HostedObject::requestCurrentVelocity(const SpaceID& space, const Object
     if (proxy_obj == nullPtr)
     {
         SILOG(cppoh,error,"[HO] Unknown space object reference looking for velocity for for  " << space<< "-"<<oref<<".");
-        return Vector3f::nil();
+        return Vector3f::zero();
     }
 
     return requestCurrentVelocity(proxy_obj);

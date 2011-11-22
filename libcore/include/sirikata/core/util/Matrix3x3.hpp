@@ -43,12 +43,14 @@ private:
 public:
     typedef scalar real;
     Matrix3x3(){}
-    static const Matrix3x3& nil() {
-        static Matrix3x3 nil(Vector3x::nil(),
-                             Vector3x::nil(),
-                             Vector3x::nil(),
-                             COLUMNS());
-        return nil;
+    static const Matrix3x3& zero() {
+        static Matrix3x3 zero_(
+            Vector3x::zero(),
+            Vector3x::zero(),
+            Vector3x::zero(),
+            COLUMNS()
+        );
+        return zero_;
     }
     static const Matrix3x3& identity() {
         static Matrix3x3 identity (Vector3x::unitX(),

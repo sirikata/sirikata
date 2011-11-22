@@ -18,9 +18,9 @@ class PresenceProperties {
 public:
 
     PresenceProperties()
-     : mLoc(Time::null(), MotionVector3f(Vector3f::nil(), Vector3f::nil())),
+     : mLoc(Time::null(), MotionVector3f(Vector3f::zero(), Vector3f::zero())),
        mOrientation(Time::null(), MotionQuaternion(Quaternion::identity(), Quaternion::identity())),
-       mBounds(Vector3f::nil(), 0),
+       mBounds(Vector3f::zero(), 0),
        mMesh(),
        mPhysics()
     {}

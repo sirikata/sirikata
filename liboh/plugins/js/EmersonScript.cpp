@@ -480,7 +480,7 @@ void EmersonScript::create_entity(EntityCreateInfo& eci)
 
     obj->connect(eci.space,
         eci.loc,
-        BoundingSphere3f(Vector3f::nil(), eci.scale),
+        BoundingSphere3f(Vector3f::zero(), eci.scale),
         eci.mesh,
         eci.physics,
         eci.solid_angle,
