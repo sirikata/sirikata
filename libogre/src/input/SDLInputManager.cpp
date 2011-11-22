@@ -46,12 +46,6 @@
 #include <shellapi.h>
 #endif
 
-//Thank you Apple:
-// /System/Library/Frameworks/CoreServices.framework/Headers/../Frameworks/CarbonCore.framework/Headers/MacTypes.h
-#ifdef nil
-#undef nil
-#endif
-
 #include <sirikata/core/task/WorkQueue.hpp>
 #include <sirikata/core/util/Time.hpp>
 

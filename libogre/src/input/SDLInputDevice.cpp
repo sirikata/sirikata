@@ -46,15 +46,6 @@
 #include <boost/lexical_cast.hpp>
 #include <SDL_keysym.h>
 
-/*
-#if SIRIKATA_PLATFORM == PLATFORM_MAC
-#include <CGRemoteOperation.h>
-#endif
-*/
-#ifdef nil
-#undef nil
-#endif
-
 namespace Sirikata {
 namespace Input {
 
