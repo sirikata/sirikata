@@ -55,6 +55,7 @@ public:
     virtual uint64 physics_seqno() const { return seqno(); }
 private:
     LocProtocolLocUpdate();
+    LocProtocolLocUpdate(const LocProtocolLocUpdate&);
 
     uint64 seqno() const { return (mUpdate.has_seqno() ? mUpdate.seqno() : 0); }
 
@@ -105,6 +106,7 @@ public:
     virtual uint64 physics_seqno() const { return seqno(); }
 private:
     ProxProtocolLocUpdate();
+    ProxProtocolLocUpdate(const ProxProtocolLocUpdate&);
 
     uint64 seqno() const { return (mUpdate.has_seqno() ? mUpdate.seqno() : 0); }
 

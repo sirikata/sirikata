@@ -217,10 +217,13 @@ bool SimpleObjectQueryProcessor::handleLocationMessage(const HostedObjectPtr& se
         SpaceObjectReference observed(spaceobj.space(), ObjectReference(update.object()));
         ProxyObjectPtr proxy_obj = proxy_manager->getProxyObject(observed);
 
-        if (!proxy_obj)
+        if (!proxy_obj) {
             obj_state->orphans.addOrphanUpdate(observed, update);
-        else
-            deliverLocationUpdate(self, spaceobj, LocProtocolLocUpdate(update));
+        }
+        else {
+            LocProtocolLocUpdate llu(update);
+            deliverLocationUpdate(self, spaceobj, llu);
+        }
     }
 
     return true;

@@ -112,10 +112,14 @@ public:
 
         const UpdateInfoList& info_list = it->second;
         for(UpdateInfoList::const_iterator info_it = info_list.begin(); info_it != info_list.end(); info_it++) {
-            if ((*info_it)->value != NULL)
-                listener->onOrphanLocUpdate( observer, LocProtocolLocUpdate( *((*info_it)->value) ) );
-            else if ((*info_it)->opd != NULL)
-                listener->onOrphanLocUpdate( observer, PresencePropertiesLocUpdate( (*info_it)->object.object(), *((*info_it)->opd) ) );
+            if ((*info_it)->value != NULL) {
+                LocProtocolLocUpdate llu( *((*info_it)->value) );
+                listener->onOrphanLocUpdate( observer, llu );
+            }
+            else if ((*info_it)->opd != NULL) {
+                PresencePropertiesLocUpdate plu( (*info_it)->object.object(), *((*info_it)->opd) );
+                listener->onOrphanLocUpdate( observer, plu );
+            }
         }
 
         // Once we've notified of these we can get rid of them -- if they
@@ -195,6 +199,7 @@ public:
     virtual uint64 physics_seqno() const { return mUpdate.getUpdateSeqNo(SequencedPresenceProperties::LOC_PHYSICS_PART); }
 private:
     PresencePropertiesLocUpdate();
+    PresencePropertiesLocUpdate(const PresencePropertiesLocUpdate&);
 
     const ObjectReference& mObject;
     const SequencedPresenceProperties& mUpdate;

@@ -341,10 +341,13 @@ bool ManualObjectQueryProcessor::handleLocationMessage(const OHDP::SpaceNodeID& 
 
         // Because of prox/loc ordering, we may or may not have a record of the
         // object yet.
-        if (props_it == query_state->objects.end())
+        if (props_it == query_state->objects.end()) {
             query_state->orphans.addOrphanUpdate(observed, update);
-        else
-            applyLocUpdate(props_it->second, LocProtocolLocUpdate(update), mContext->objectHost, snid.space());
+        }
+        else {
+            LocProtocolLocUpdate llu(update);
+            applyLocUpdate(props_it->second, llu, mContext->objectHost, snid.space());
+        }
     }
 
     return true;
