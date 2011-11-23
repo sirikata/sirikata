@@ -17,7 +17,7 @@ def process_item(channel):
         if x is None:
             break
         
-        level, filedata1, filedata2 = x
+        level, meshdir, filedata1, filedata2 = x
         file1 = StringIO.StringIO(filedata1)
         file2 = StringIO.StringIO(filedata2)
         
@@ -30,7 +30,7 @@ def process_item(channel):
                     in itertools.izip(base_image.getdata(), compared_image.getdata())
                     if not(len(rgb_base) > 3 and len(rgb_cur) > 3 and rgb_base[3] == 0 and rgb_cur[3] == 0)]
         
-        channel.send((level, delta_Es))
+        channel.send((level, meshdir, delta_Es))
 
 def main():
     if len(sys.argv) != 2:
@@ -61,25 +61,21 @@ def main():
             print 'SKIPPING', meshdir
     
         for i, prog_ss in enumerate(prog_ss_levels):
-            prog_levels[i].append((orig_ss, prog_ss))
+            prog_levels[i].append((orig_ss, prog_ss, meshdir))
     
     tasks = []
     for i, level in enumerate(prog_levels):
-        for orig_ss, prog_ss in level:
-            tasks.append((i, open(orig_ss, 'rb').read(), open(prog_ss, 'rb').read()))
+        for orig_ss, prog_ss, meshdir in level:
+            tasks.append((i, meshdir, open(orig_ss, 'rb').read(), open(prog_ss, 'rb').read()))
     
     group = execnet.Group()
     
-    todo = range(26,45)
+    todo = [27,28,29,30,31,32,33,34,35,36,37,38,40,41,42,43,44]
     
     for i in todo:
         for core in range(8):
             group.makegateway("ssh=sns%d.cs.princeton.edu//id=sns%d-%d" % (i,i,core))
     mch = group.remote_exec(process_item)
-    
-    results_files = []
-    for i in range(0,101,10):
-        results_files.append(open('results-%d.txt' % i, 'w'))
     
     q = mch.make_receive_queue(endmarker=-1)
     terminated = 0
@@ -96,10 +92,11 @@ def main():
             continue
         if item != "ready":
             print "other side %s returned" % (channel.gateway.id)
-            level, data = item
+            level, meshdir, data = item
+            f = open(os.path.join(sys.argv[1], meshdir, 'results-%d.txt' % level), 'w')
             for d in data:
-                results_files[level].write("%f\n" % d)
-            results_files[level].write("\n")
+                f.write("%f\n" % d)
+            f.close()
         if not tasks:
             print "no tasks remain, sending termination request to all"
             mch.send_each(None)
