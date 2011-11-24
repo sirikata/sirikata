@@ -110,7 +110,16 @@ bool registerURIHandler() {
     String exe_file = getExecutablePath("slauncher");
 
 #if SIRIKATA_PLATFORM == PLATFORM_LINUX
-    String cmd = exe_file + " --uri=%s";
+
+    // We register in two ways. The first way is for Firefox/Gnome and just adds
+    // the appropriate command for the uri type to gconf. xdg-utils, it seems,
+    // *sometimes* picks up this one as well.
+
+    // Note that in both cases, we use --uri sirikata:foobar rather than
+    // --uri=sirikata:foobar. Sometimes the launcher (e.g. xdg-open) insists on
+    // splitting the url portion into a separate argument, even if we didn't
+    // leave a space, so we are forced to use this format.
+    String cmd = exe_file + " --uri %s";
     String needs_terminal =
 #if SIRIKATA_DEBUG
         "true"
@@ -126,6 +135,37 @@ bool registerURIHandler() {
 
     const char* const enabled_argv[] = { "gconftool-2", "-t", "bool", "-s", "/desktop/gnome/url-handlers/sirikata/enabled", "true", NULL};
     execCommand("gconftool-2", enabled_argv);
+
+    // The second registration is through xdg-utils. We generate a .desktop
+    // entry for the current user (putting it in their
+    // ~/.local/share/applications). This should work across a bunch of
+    // browsers, work from the command line, and is also used as a fallback in
+    // some cases.
+    // TODO(ewencp) we could probably improve this by detecting root user and
+    // installing globally in that case
+
+    {
+        FILE* desktop_fp = fopen("/tmp/sirikata-slauncher.desktop", "w");
+        if (!desktop_fp) {
+            LAUNCHER_LOG(error, "Couldn't create temporary .desktop file.");
+        }
+        else {
+            fprintf(desktop_fp, "[Desktop Entry]\n");
+            fprintf(desktop_fp, "Name=Sirikata Launcher\n");
+            fprintf(desktop_fp, "Comment=Launcher for Sirikata Virtual Worlds\n");
+            String desktop_cmd = exe_file + " '--uri %u'";
+            fprintf(desktop_fp, "Exec=%s\n", desktop_cmd.c_str());
+            fprintf(desktop_fp, "Terminal=%s\n", needs_terminal.c_str());
+            fprintf(desktop_fp, "Type=Application\n");
+            fprintf(desktop_fp, "Categories=Network\n");
+            fprintf(desktop_fp, "MimeType=x-scheme-handler/sirikata\n");
+            fclose(desktop_fp);
+
+            const char* const desktop_install_argv[] = { "xdg-desktop-menu", "install", "/tmp/sirikata-slauncher.desktop", NULL};
+            execCommand("xdg-desktop-menu", desktop_install_argv);
+        }
+    }
+
 
 #elif SIRIKATA_PLATFORM == PLATFORM_WINDOWS
     String exe_name = getExecutableName("slauncher");
