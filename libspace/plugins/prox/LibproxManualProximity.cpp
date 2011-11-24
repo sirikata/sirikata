@@ -368,6 +368,15 @@ void LibproxManualProximity::queryHasEvents(ProxQuery* query) {
                     const String& phy = mLocCache->physics(objid);
                     if (phy.size() > 0)
                         addition.set_physics(phy);
+
+                    UUID parentid = evt.additions()[aidx].parent();
+                    if (parentid != UUID::null())
+                        addition.set_parent(parentid);
+                    addition.set_type(
+                        (evt.additions()[aidx].type() == ProxQueryEvent::Normal) ?
+                        Sirikata::Protocol::Prox::ObjectAddition::Object :
+                        Sirikata::Protocol::Prox::ObjectAddition::Aggregate
+                    );
                 }
             }
             for(uint32 ridx = 0; ridx < evt.removals().size(); ridx++) {
