@@ -45,7 +45,6 @@ IF(NOT WIN32 AND NOT APPLE)
 ENDIF()
 
 IF(APPLE)
-
     IF(IS_DIRECTORY /Developer/SDKs/MacOSX10.5.sdk)
        SET(MAC_SDK_DIR /Developer/SDKs/MacOSX10.5.sdk)
        SET(MAC_MIN_VER 10.5)
@@ -56,10 +55,17 @@ IF(APPLE)
        SET(MAC_SDK_DIR /Developer/SDKs/MacOSX10.6.sdk)
        SET(MAC_MIN_VER 10.6)
        SET(MAC_EXTRA_FLAGS -m32)
-        SET(CMAKE_CXX_COMPILER g++-4.2)
-        SET(CMAKE_C_COMPILER gcc-4.2)
+       IF(EXISTS /usr/bin/g++-4.2)
+         SET(CMAKE_CXX_COMPILER g++-4.2)
+         SET(CMAKE_C_COMPILER gcc-4.2)
+       ELSE()
+         # New versions of XCode require falling back to plan old
+         # gcc/g++ because they don't provide versioned symlinks (and
+         # also aren't even real gcc...)
+         #SET(CMAKE_CXX_COMPILER /usr/bin/c++)
+         #SET(CMAKE_C_COMPILER /usr/bin/gcc)
+       ENDIF()
     ENDIF()
-    
 ENDIF()
 
 
