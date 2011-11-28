@@ -351,7 +351,7 @@ void finishLaunchURI(Transfer::ChunkRequestPtr req, Transfer::DenseDataPtr data,
             return;
         }
     }
-    LAUNCHER_LOG(error, "Using appliction directory: " << appDirPath());
+    LAUNCHER_LOG(info, "Using appliction directory: " << appDirPath());
 
     // This is not required data
     try {
@@ -393,8 +393,25 @@ void finishDownloadResource(const String& data_path, Transfer::ChunkRequestPtr r
     // Store to disk
     boost::filesystem::path app_data_path(appDirPath());
     app_data_path /= data_path;
+
+    // Make sure the directory exists. If we had sirikata/bin/demo/ as
+    // the app data path and foo/bar/bin.db as the file, we need to
+    // make sure sirikata/bin/demo/foo/bar/ exists, which is the
+    // parent of the full data file path. We know from earlier that
+    // we've already got sirikata/bin/demo/.
+    if (!boost::filesystem::exists(app_data_path.parent_path()) &&
+        !boost::filesystem::create_directories(app_data_path.parent_path())) {
+        LAUNCHER_LOG(error, "Couldn't create data directory: " << app_data_path.parent_path().string());
+        eventLoopExit(retval, -1);
+        return;
+    }
+
     String app_data_path_str = app_data_path.string();
     FILE* fp = fopen(app_data_path_str.c_str(), "wb");
+    if (fp == NULL) {
+        LAUNCHER_LOG(error, "Couldn't open file for writing: " << app_data_path_str);
+        eventLoopExit(retval, -1);
+    }
     fwrite(data->begin(), 1, data->size(), fp);
     fclose(fp);
 
