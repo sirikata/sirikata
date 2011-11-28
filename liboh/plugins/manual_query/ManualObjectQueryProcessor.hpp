@@ -126,8 +126,15 @@ private:
     void decrementServerQuery(ServerQueryMap::iterator serv_it);
 
 
-
     // Proximity
+    // Helpers for sending different types of basic requests
+    void sendInitRequest(ServerQueryMap::iterator serv_it);
+    void sendRefineRequest(ServerQueryMap::iterator serv_it, const ObjectReference& agg);
+    void sendRefineRequest(ServerQueryMap::iterator serv_it, const std::vector<ObjectReference>& aggs);
+    void sendCoarsenRequest(ServerQueryMap::iterator serv_it, const ObjectReference& agg);
+    void sendCoarsenRequest(ServerQueryMap::iterator serv_it, const std::vector<ObjectReference>& aggs);
+    void sendDestroyRequest(ServerQueryMap::iterator serv_it);
+
     // Send a message to prox, triggering new stream as necessary
     void sendProxMessage(ServerQueryMap::iterator serv_it, const String& msg);
     // Utility that triggers writing some more prox data. As long as more is

@@ -22,6 +22,83 @@ using std::tr1::placeholders::_2;
 using std::tr1::placeholders::_3;
 
 
+namespace {
+
+// Helpers for encoding requests
+String initRequest() {
+    using namespace boost::property_tree;
+    try {
+        ptree pt;
+        pt.put("action", "init");
+        std::stringstream data_json;
+        write_json(data_json, pt);
+        return data_json.str();
+    }
+    catch(json_parser::json_parser_error exc) {
+        QPLOG(detailed, "Failed to encode 'init' request.");
+        return "";
+    }
+}
+
+String destroyRequest() {
+    using namespace boost::property_tree;
+    try {
+        ptree pt;
+        pt.put("action", "destroy");
+        std::stringstream data_json;
+        write_json(data_json, pt);
+        return data_json.str();
+    }
+    catch(json_parser::json_parser_error exc) {
+        QPLOG(detailed, "Failed to encode 'destroy' request.");
+        return "";
+    }
+}
+
+String refineRequest(const std::vector<ObjectReference>& aggs) {
+    using namespace boost::property_tree;
+    try {
+        ptree nodes;
+        for(uint32 i = 0; i < aggs.size(); i++) {
+            nodes.put( aggs[i].toString(), aggs[i].toString() );
+        }
+
+        ptree pt;
+        pt.put("action", "refine");
+        pt.put_child("nodes", nodes);
+        std::stringstream data_json;
+        write_json(data_json, pt);
+        return data_json.str();
+    }
+    catch(json_parser::json_parser_error exc) {
+        QPLOG(detailed, "Failed to encode 'refine' request.");
+        return "";
+    }
+}
+
+String coarsenRequest(const std::vector<ObjectReference>& aggs) {
+    using namespace boost::property_tree;
+    try {
+        ptree nodes;
+        for(uint32 i = 0; i < aggs.size(); i++) {
+            nodes.put( aggs[i].toString(), aggs[i].toString() );
+        }
+
+        ptree pt;
+        pt.put("action", "coarsen");
+        pt.put_child("nodes", nodes);
+        std::stringstream data_json;
+        write_json(data_json, pt);
+        return data_json.str();
+    }
+    catch(json_parser::json_parser_error exc) {
+        QPLOG(detailed, "Failed to encode 'coarsen' request.");
+        return "";
+    }
+}
+
+}
+
 ManualObjectQueryProcessor* ManualObjectQueryProcessor::create(ObjectHostContext* ctx, const String& args) {
     return new ManualObjectQueryProcessor(ctx);
 }
@@ -110,25 +187,7 @@ void ManualObjectQueryProcessor::incrementServerQuery(ServerQueryMap::iterator s
 void ManualObjectQueryProcessor::updateServerQuery(ServerQueryMap::iterator serv_it, bool is_new) {
     if (is_new) {
         QPLOG(detailed, "Initializing server query to " << serv_it->first);
-
-        Protocol::Prox::QueryRequest request;
-        using namespace boost::property_tree;
-        try {
-            ptree pt;
-            pt.put("action", "init");
-            std::stringstream data_json;
-            write_json(data_json, pt);
-            request.set_query_parameters(data_json.str());
-        }
-        catch(json_parser::json_parser_error exc) {
-            QPLOG(detailed, "Failed to encode 'init' request.");
-            return;
-        }
-        std::string init_msg_str = serializePBJMessage(request);
-
-        String framed = Network::Frame::write(init_msg_str);
-        sendProxMessage(serv_it, framed);
-
+        sendInitRequest(serv_it);
     }
 }
 
@@ -136,27 +195,8 @@ void ManualObjectQueryProcessor::decrementServerQuery(ServerQueryMap::iterator s
     serv_it->second->nconnected--;
     if (!serv_it->second->canRemove()) return;
 
-    // FIXME send message
     QPLOG(detailed, "Destroying server query to " << serv_it->first);
-    if (serv_it->second->prox_stream) {
-        Protocol::Prox::QueryRequest request;
-
-        using namespace boost::property_tree;
-        try {
-            ptree pt;
-            pt.put("action", "destroy");
-            std::stringstream data_json;
-            write_json(data_json, pt);
-            request.set_query_parameters(data_json.str());
-        }
-        catch(json_parser::json_parser_error exc) {
-            QPLOG(detailed, "Failed to encode 'destroy' request.");
-            return;
-        }
-        std::string destroy_msg_str = serializePBJMessage(request);
-        String framed = Network::Frame::write(destroy_msg_str);
-        serv_it->second->prox_stream->write((const uint8*)framed.c_str(), framed.size());
-    }
+    sendDestroyRequest(serv_it);
 }
 
 void ManualObjectQueryProcessor::updateQuery(HostedObjectPtr ho, const SpaceObjectReference& sporef, const String& new_query) {
@@ -179,6 +219,58 @@ void ManualObjectQueryProcessor::updateQuery(HostedObjectPtr ho, const SpaceObje
 
 
 // Proximity
+
+void ManualObjectQueryProcessor::sendInitRequest(ServerQueryMap::iterator serv_it) {
+    Protocol::Prox::QueryRequest request;
+    request.set_query_parameters(initRequest());
+    if (request.query_parameters().empty()) return;
+    std::string init_msg_str = serializePBJMessage(request);
+
+    String framed = Network::Frame::write(init_msg_str);
+    sendProxMessage(serv_it, framed);
+}
+
+void ManualObjectQueryProcessor::sendDestroyRequest(ServerQueryMap::iterator serv_it) {
+    if (!serv_it->second->prox_stream) return;
+
+    Protocol::Prox::QueryRequest request;
+    request.set_query_parameters(destroyRequest());
+    if (request.query_parameters().empty()) return;
+    std::string destroy_msg_str = serializePBJMessage(request);
+    String framed = Network::Frame::write(destroy_msg_str);
+    sendProxMessage(serv_it, framed);
+}
+
+void ManualObjectQueryProcessor::sendRefineRequest(ServerQueryMap::iterator serv_it, const ObjectReference& agg) {
+    std::vector<ObjectReference> aggs;
+    aggs.push_back(agg);
+    sendRefineRequest(serv_it, aggs);
+}
+
+void ManualObjectQueryProcessor::sendRefineRequest(ServerQueryMap::iterator serv_it, const std::vector<ObjectReference>& aggs) {
+    Protocol::Prox::QueryRequest request;
+    request.set_query_parameters(refineRequest(aggs));
+    if (request.query_parameters().empty()) return;
+    std::string msg_str = serializePBJMessage(request);
+    String framed = Network::Frame::write(msg_str);
+    sendProxMessage(serv_it, framed);
+}
+
+void ManualObjectQueryProcessor::sendCoarsenRequest(ServerQueryMap::iterator serv_it, const ObjectReference& agg) {
+    std::vector<ObjectReference> aggs;
+    aggs.push_back(agg);
+    sendCoarsenRequest(serv_it, aggs);
+}
+
+void ManualObjectQueryProcessor::sendCoarsenRequest(ServerQueryMap::iterator serv_it, const std::vector<ObjectReference>& aggs) {
+    Protocol::Prox::QueryRequest request;
+    request.set_query_parameters(coarsenRequest(aggs));
+    if (request.query_parameters().empty()) return;
+    std::string msg_str = serializePBJMessage(request);
+    String framed = Network::Frame::write(msg_str);
+    sendProxMessage(serv_it, framed);
+}
+
 
 void ManualObjectQueryProcessor::sendProxMessage(ServerQueryMap::iterator serv_it, const String& msg) {
     serv_it->second->outstanding.push(msg);
@@ -309,7 +401,8 @@ void ManualObjectQueryProcessor::handleProximityMessage(const OHDP::SpaceNodeID&
             Sirikata::Protocol::Prox::ObjectAddition addition = update.addition(aidx);
             ProxProtocolLocUpdate add(addition);
 
-            SpaceObjectReference observed(snid.space(), ObjectReference(addition.object()));
+            ObjectReference observed_oref(addition.object());
+            SpaceObjectReference observed(snid.space(), observed_oref);
 
             // Store the data
             assert(query_state->objects.find(observed) == query_state->objects.end());
@@ -322,6 +415,12 @@ void ManualObjectQueryProcessor::handleProximityMessage(const OHDP::SpaceNodeID&
 
             // Replay orphans
             query_state->orphans.invokeOrphanUpdates(snid, observed, this);
+
+            // TODO(ewencp) this is a temporary way to trigger refinement -- we
+            // just always refine whenver we see. Obviously this is inefficient
+            // and won't scale, but it's useful to get some tests running.
+            if (addition.has_type() && addition.type() == Sirikata::Protocol::Prox::ObjectAddition::Aggregate)
+                sendRefineRequest(serv_it, observed_oref);
         }
 
         for(int32 ridx = 0; ridx < update.removal_size(); ridx++) {
