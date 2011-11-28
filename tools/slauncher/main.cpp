@@ -12,6 +12,7 @@
 #include <sirikata/core/options/Options.hpp>
 #include <sirikata/core/options/CommonOptions.hpp>
 #include <sirikata/core/transfer/URI.hpp>
+#include <sirikata/core/transfer/URL.hpp>
 #include <sirikata/core/util/Paths.hpp>
 #include <boost/filesystem.hpp>
 #include <sirikata/core/transfer/AggregatedTransferPool.hpp>
@@ -235,7 +236,7 @@ void stopWork() {
     ioWork = NULL;
 }
 
-void finishLaunchURI(Transfer::ChunkRequestPtr req, Transfer::DenseDataPtr data, int* retval);
+void finishLaunchURI(Transfer::URI config_uri, Transfer::ChunkRequestPtr req, Transfer::DenseDataPtr data, int* retval);
 void finishDownloadResource(const String& data_path, Transfer::ChunkRequestPtr req, Transfer::DenseDataPtr data, int* retval);
 void doExecApp(int* retval);
 
@@ -261,7 +262,7 @@ bool startLaunchURI(String uri_str, int* retval) {
     rdl =
         Transfer::ResourceDownloadTask::construct(
             config_uri, gTransferPool, 1.0,
-            gContext->mainStrand->wrap(std::tr1::bind(finishLaunchURI, std::tr1::placeholders::_1, std::tr1::placeholders::_2, retval))
+            gContext->mainStrand->wrap(std::tr1::bind(finishLaunchURI, config_uri, std::tr1::placeholders::_1, std::tr1::placeholders::_2, retval))
         );
     rdl->start();
 
@@ -302,7 +303,7 @@ String appDirPath() {
 typedef std::map<String, Transfer::ResourceDownloadTaskPtr> ResourceDownloadMap;
 ResourceDownloadMap resourceDownloads;
 
-void finishLaunchURI(Transfer::ChunkRequestPtr req, Transfer::DenseDataPtr data, int* retval) {
+void finishLaunchURI(Transfer::URI config_uri, Transfer::ChunkRequestPtr req, Transfer::DenseDataPtr data, int* retval) {
     // Fire off the request for
     if (!data || data->size() == 0) {
         LAUNCHER_LOG(error, "Failed to download config");
@@ -359,7 +360,21 @@ void finishLaunchURI(Transfer::ChunkRequestPtr req, Transfer::DenseDataPtr data,
         BOOST_FOREACH(ptree::value_type &v,
             pt.get_child("app.files")) {
             String data_path(v.first);
+
+            // Handle relative URLs carefullly.
+            // By default, we'll just try handling
             Transfer::URI data_uri(v.second.data());
+            // And we'll only override it with a relative one if the relative
+            // one can be decoded as a URL.
+            Transfer::URL config_url(config_uri);
+            if (!config_url.empty()) {
+                // Constructor figures out absolute/relative, and just fails if
+                // it can't construct a valid URL.
+                Transfer::URL deriv_url(config_url.context(), v.second.data());
+                if (!deriv_url.empty())
+                    data_uri = Transfer::URI(deriv_url.toString());
+            }
+
             LAUNCHER_LOG(detailed, "Download resource " << data_path << " from " << data_uri);
             Transfer::ResourceDownloadTaskPtr dl =
                 Transfer::ResourceDownloadTask::construct(
