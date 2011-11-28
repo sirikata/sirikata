@@ -74,6 +74,9 @@ private:
          : nconnected(0),
            base_stream(base),
            prox_stream(),
+           prox_stream_requested(false),
+           outstanding(),
+           writing(false),
            orphans(ctx, ctx->mainStrand, Duration::seconds(10))
         {
             orphans.start();
@@ -93,6 +96,12 @@ private:
         int32 nconnected;
         OHDPSST::Stream::Ptr base_stream;
         OHDPSST::Stream::Ptr prox_stream;
+        // Whether we've requested the prox_stream
+        bool prox_stream_requested;
+        // Outstanding data to be sent
+        std::queue<String> outstanding;
+        // Whether we're in the process of sending messages
+        bool writing;
 
         // Each server query has an independent stream of results +
         // loc updates, so each gets its own set of objects w/ properties and
@@ -119,6 +128,11 @@ private:
 
 
     // Proximity
+    // Send a message to prox, triggering new stream as necessary
+    void sendProxMessage(ServerQueryMap::iterator serv_it, const String& msg);
+    // Utility that triggers writing some more prox data. As long as more is
+    // available, it'll keep looping.
+    void writeSomeProxData(ServerQueryStatePtr data);
     // Callback from creating proximity substream
     void handleCreatedProxSubstream(const OHDP::SpaceNodeID& snid, int success, OHDPSST::Stream::Ptr prox_stream);
     // Data read callback for prox substreams -- translate to proximity events

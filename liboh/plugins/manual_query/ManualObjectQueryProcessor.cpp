@@ -21,6 +21,7 @@ using std::tr1::placeholders::_1;
 using std::tr1::placeholders::_2;
 using std::tr1::placeholders::_3;
 
+
 ManualObjectQueryProcessor* ManualObjectQueryProcessor::create(ObjectHostContext* ctx, const String& args) {
     return new ManualObjectQueryProcessor(ctx);
 }
@@ -126,12 +127,8 @@ void ManualObjectQueryProcessor::updateServerQuery(ServerQueryMap::iterator serv
         std::string init_msg_str = serializePBJMessage(request);
 
         String framed = Network::Frame::write(init_msg_str);
+        sendProxMessage(serv_it, framed);
 
-        serv_it->second->base_stream->createChildStream(
-            std::tr1::bind(&ManualObjectQueryProcessor::handleCreatedProxSubstream, this, serv_it->first, _1, _2),
-            (void*)framed.c_str(), framed.size(),
-            OBJECT_PORT_PROXIMITY, OBJECT_PORT_PROXIMITY
-        );
     }
 }
 
@@ -183,6 +180,64 @@ void ManualObjectQueryProcessor::updateQuery(HostedObjectPtr ho, const SpaceObje
 
 // Proximity
 
+void ManualObjectQueryProcessor::sendProxMessage(ServerQueryMap::iterator serv_it, const String& msg) {
+    serv_it->second->outstanding.push(msg);
+
+    // Possibly trigger writing
+
+    // Already in progress
+    if (serv_it->second->writing) return;
+
+    // Without a stream, we need to first create the stream
+    if (!serv_it->second->prox_stream) {
+        serv_it->second->writing = true;
+
+        serv_it->second->base_stream->createChildStream(
+            std::tr1::bind(&ManualObjectQueryProcessor::handleCreatedProxSubstream, this, serv_it->first, _1, _2),
+            NULL, 0,
+            OBJECT_PORT_PROXIMITY, OBJECT_PORT_PROXIMITY
+        );
+        return;
+    }
+
+    // Otherwise, we're clear for starting writing
+    writeSomeProxData(serv_it->second);
+}
+
+void ManualObjectQueryProcessor::writeSomeProxData(ServerQueryStatePtr data) {
+    assert(data->prox_stream);
+    data->writing = true;
+
+    while(!data->outstanding.empty()) {
+        String& msg = data->outstanding.front();
+        int bytes_written = data->prox_stream->write((const uint8*)msg.data(), msg.size());
+        if (bytes_written < 0) {
+            // FIXME
+            break;
+        }
+        else if (bytes_written < (int)msg.size()) {
+            msg = msg.substr(bytes_written);
+            break;
+        }
+        else {
+            data->outstanding.pop();
+        }
+    }
+
+    if (data->outstanding.empty()) {
+        data->writing = false;
+    }
+    else {
+        if (mContext->stopped()) return;
+
+        static Duration retry_rate = Duration::milliseconds((int64)1);
+        mContext->mainStrand->post(
+            retry_rate,
+            std::tr1::bind(&ManualObjectQueryProcessor::writeSomeProxData, this, data)
+        );
+    }
+}
+
 void ManualObjectQueryProcessor::handleCreatedProxSubstream(const OHDP::SpaceNodeID& snid, int success, OHDPSST::Stream::Ptr prox_stream) {
     if (success != SST_IMPL_SUCCESS)
         QPLOG(error, "Failed to create proximity substream to " << snid);
@@ -200,6 +255,10 @@ void ManualObjectQueryProcessor::handleCreatedProxSubstream(const OHDP::SpaceNod
             snid, prox_stream, prevdata, _1, _2
         )
     );
+
+    // We created the stream to start writing, so start that now
+    assert(serv_it->second->writing == true);
+    writeSomeProxData(serv_it->second);
 }
 
 void ManualObjectQueryProcessor::handleProximitySubstreamRead(const OHDP::SpaceNodeID& snid, OHDPSST::Stream::Ptr prox_stream, String* prevdata, uint8* buffer, int length) {
@@ -242,7 +301,7 @@ void ManualObjectQueryProcessor::handleProximityMessage(const OHDP::SpaceNodeID&
     // Proximity messages are handled just by updating our state
     // tracking the objects, adding or removing the objects or
     // updating their properties.
-
+    QPLOG(detailed, "Received proximity message with " << contents.update_size() << " updates");
     for(int32 idx = 0; idx < contents.update_size(); idx++) {
         Sirikata::Protocol::Prox::ProximityUpdate update = contents.update(idx);
 
