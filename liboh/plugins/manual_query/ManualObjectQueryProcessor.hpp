@@ -42,6 +42,7 @@ public:
     // ObjectNodeSessionListener Interface
     virtual void onObjectNodeSession(const SpaceID& space, const ObjectReference& oref, const OHDP::NodeID& id);
 
+    virtual String connectRequest(HostedObjectPtr ho, const SpaceObjectReference& sporef, const String& query);
     virtual void updateQuery(HostedObjectPtr ho, const SpaceObjectReference& sporef, const String& new_query);
 
 private:

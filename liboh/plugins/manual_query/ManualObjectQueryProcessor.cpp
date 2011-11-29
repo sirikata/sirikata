@@ -199,6 +199,18 @@ void ManualObjectQueryProcessor::decrementServerQuery(ServerQueryMap::iterator s
     sendDestroyRequest(serv_it);
 }
 
+String ManualObjectQueryProcessor::connectRequest(HostedObjectPtr ho, const SpaceObjectReference& sporef, const String& query) {
+    ObjectStateMap::iterator obj_it = mObjectState.find(sporef);
+    // Very likely brand new here
+    if (obj_it == mObjectState.end())
+        obj_it = mObjectState.insert( ObjectStateMap::value_type(sporef, ObjectState()) ).first;
+    obj_it->second.query = query;
+
+    // Return an empty query -- we don't want any query passed on to the
+    // serve. We aggregate and register the OH query separately.
+    return "";
+}
+
 void ManualObjectQueryProcessor::updateQuery(HostedObjectPtr ho, const SpaceObjectReference& sporef, const String& new_query) {
     ObjectStateMap::iterator it = mObjectState.find(sporef);
 

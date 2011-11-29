@@ -65,6 +65,22 @@ class SIRIKATA_OH_EXPORT ObjectQueryProcessor : public Service {
     virtual void presenceDisconnected(HostedObjectPtr ho, const SpaceObjectReference& sporef);
 
 
+    /** Request a query during connection. This is used by the object host to
+     *  inform the ObjectQueryProcessor that the object wants to connect with
+     *  the given query. This gives a chance to filter the query before it is
+     *  passed to the space. However, the query processor should *not* start
+     *  processing it until the object has been successfully connected to the
+     *  space. The default implementation is a noop.
+     *
+     *  \param ho the HostedObject requesting connection
+     *  \param sporef the ID of the presence requesting connection
+     *  \param query the query requested
+     *  \returns a new query to actually pass to the space server with the
+     *           connection request. It may be empty if no object-specific query
+     *           should be registered
+     */
+    virtual String connectRequest(HostedObjectPtr ho, const SpaceObjectReference& sporef, const String& query);
+
     /** Request an update to the query parameters for the specified presence.
      *  \param ho the HostedObject requesting the update
      *  \param sporef the ID of the presence to update a query for

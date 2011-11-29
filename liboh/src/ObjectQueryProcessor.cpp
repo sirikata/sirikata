@@ -25,6 +25,10 @@ void ObjectQueryProcessor::presenceConnectedStream(HostedObjectPtr ho, const Spa
 void ObjectQueryProcessor::presenceDisconnected(HostedObjectPtr ho, const SpaceObjectReference& sporef) {
 }
 
+String ObjectQueryProcessor::connectRequest(HostedObjectPtr ho, const SpaceObjectReference& sporef, const String& query) {
+    return query;
+}
+
 
 void ObjectQueryProcessor::deliverProximityUpdate(HostedObjectPtr ho, const SpaceObjectReference& sporef, const Sirikata::Protocol::Prox::ProximityUpdate& update) {
     ho->handleProximityUpdate(sporef, update);
