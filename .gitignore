@@ -86,7 +86,6 @@ docs/html
 *.commits.patch
 
 # Ogre data
-libproxyobject/plugins/ogre/data/jquery
 ogre.cfg
 Ogre.log
 

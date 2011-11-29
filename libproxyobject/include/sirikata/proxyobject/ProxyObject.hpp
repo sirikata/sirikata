@@ -46,10 +46,10 @@
 
 #include "VWObject.hpp"
 
-#include <sirikata/core/transfer/URI.hpp>
 #include <sirikata/proxyobject/MeshListener.hpp>
 #include "MeshListener.hpp"
 
+#include <sirikata/proxyobject/PresenceProperties.hpp>
 
 namespace Sirikata {
 
@@ -96,6 +96,7 @@ public:
  */
 class SIRIKATA_PROXYOBJECT_EXPORT ProxyObject
     : public SelfWeakPtr<ProxyObject>,
+      public SequencedPresenceProperties,
       public ProxyObjectProvider,
       public PositionProvider,
       public MeshProvider
@@ -112,37 +113,19 @@ public:
     };
     typedef TimedWeightedExtrapolator<Location,UpdateNeeded> Extrapolator;
 
-    enum LOC_PARTS {
-        LOC_POS_PART = 0,
-        LOC_ORIENT_PART = 1,
-        LOC_BOUNDS_PART = 2,
-        LOC_MESH_PART = 3,
-        LOC_PHYSICS_PART = 4,
-        LOC_NUM_PART = 5
-    };
-
-
-    uint64 getUpdateSeqNo(LOC_PARTS);
-
 private:
     const SpaceObjectReference mID;
     ProxyManager *const mManager;
 
+    SequencedPresenceProperties mProperties;
 
-    uint64 mUpdateSeqno[LOC_NUM_PART];
-
-    TimedMotionVector3f mLoc;
-    TimedMotionQuaternion mOrientation;
-    BoundingSphere3f mBounds;
 
     VWObjectPtr mParent;
     const SpaceObjectReference mParentPresenceID;
     ODP::Port* mDefaultPort; // Default port used to send messages to the object
                              // this ProxyObject represents
 
-    //added private members to proxy object from mesh object
-    Transfer::URI mMeshURI;
-    String mPhysics;
+
 public:
     /** Constructs a new ProxyObject. After constructing this object, it
         should be wrapped in a shared_ptr and sent to ProxyManager::createObject().
@@ -182,18 +165,6 @@ public:
         return Vector3d(mLoc.position());
     }
 
-    /// returns the timed motion vector associated with this proxy object
-    /// necessary for bootstrapping positions of emerson objects.
-    inline const TimedMotionVector3f getTimedMotionVector() const{
-        return mLoc;
-    }
-
-    /// returns the timed motion quaternion this proxy object is holding.
-    /// Like getTimedMotionVector, this function is used to bootstrap positions
-    /// of emerson objects.
-    inline const TimedMotionQuaternion getTimedMotionQuaternion() const{
-        return mOrientation;
-    }
 
     /// returns the last updated velocity for this object
     inline Vector3d getVelocity() const
@@ -212,10 +183,6 @@ public:
         return mOrientation.velocity();
     }
 
-
-    inline const BoundingSphere3f& getBounds() const {
-        return mBounds;
-    }
 
 
     ~ProxyObject();
@@ -258,6 +225,10 @@ public:
         but it is the first step in moving a local object. */
     void setBounds(const BoundingSphere3f& bnds, uint64 seqno, bool predictive = false);
 
+    void setMesh (Transfer::URI const& rhs, uint64 seqno, bool predictive = false);
+
+    void setPhysics(const String& rhs, uint64 seqno, bool predictive = false);
+
     /// Returns the global location of this object in space coordinates at timeStamp.
     Location globalLocation(TemporalValue<Location>::Time timeStamp) const {
         ProxyObjectPtr ppop = getParentProxy();
@@ -279,13 +250,6 @@ public:
 
         return Location(Vector3d(mLoc.position(current)), mOrientation.position(current).normal(), mLoc.velocity(), angaxis, angvel);
     }
-
-    // interface from MeshObject
-    virtual void setMesh (Transfer::URI const& rhs, uint64 seqno, bool predictive = false);
-    virtual Transfer::URI const& getMesh () const;
-
-    virtual void setPhysics(const String& rhs, uint64 seqno, bool predictive = false);
-    virtual const String& getPhysics() const;
 
 
     unsigned int hash() const {

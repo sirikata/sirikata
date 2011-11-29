@@ -56,11 +56,10 @@ std.simpleStorage.setScript(
             };
             storageTimer = std.core.RepeatingTimer(60, storeFunc);
             storeFunc(); // Force immediate storage
-            if (presConnectClearable !== undefined)
-                presConnectClearable.clear();
+            
         };
         if (system.self)
             init();
-        else
-            system.onPresenceConnected(function(pres,toClear) { init(toClear); });
+
+        system.onPresenceConnected(function(pres,toClear) { init(toClear); });
     },false);

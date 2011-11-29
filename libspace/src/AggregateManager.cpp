@@ -521,7 +521,14 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
   mMeshSimplifier.simplify(agg_mesh, 600);
 
   //... and now create the collada file, upload to the CDN and update LOC.
-  mModelsSystem->convertVisual(agg_mesh, "colladamodels", std::string("/home/tahir/merucdn/meru/dump/") + localMeshName);
+  bool converted = mModelsSystem->convertVisual(agg_mesh, "colladamodels", std::string("/home/tahir/merucdn/meru/dump/") + localMeshName);
+  if (!converted) {
+      AGG_LOG(error, "Failed to save aggregate mesh " << localMeshName << ", it won't be displayed.");
+      // Here the return value isn't success, it's "should I remove this
+      // aggregate object from the queue for processing." Failure to save is
+      // effectively fatal for the aggregate, so tell it to get removed.
+      return true;
+  }
 
   //Upload to CDN
   std::string cmdline = std::string("./upload_to_cdn.sh ") +  localMeshName;

@@ -101,9 +101,17 @@ if (typeof(std) === 'undefined')
          var indexPortBegin = urlIn.search(portSep);
          if (indexPortBegin != -1)
          {
+             //to avoid catching args as part of port
              havePort = true;
-             host = urlIn.substr(0,indexPortBegin);
-             urlIn = urlIn.substr(indexPortBegin + portSep.length);
+             var argsIndex = urlIn.search('[?]');
+             if (argsIndex != -1)
+                 havePort = (indexPortBegin < argsIndex);
+
+             if (havePort)
+             {
+                 host = urlIn.substr(0,indexPortBegin);
+                 urlIn = urlIn.substr(indexPortBegin + portSep.length);                 
+             }
          }
 
     

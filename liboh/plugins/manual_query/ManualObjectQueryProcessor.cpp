@@ -21,6 +21,126 @@ using std::tr1::placeholders::_1;
 using std::tr1::placeholders::_2;
 using std::tr1::placeholders::_3;
 
+
+namespace {
+
+// Helpers for encoding requests
+String initRequest() {
+    using namespace boost::property_tree;
+    try {
+        ptree pt;
+        pt.put("action", "init");
+        std::stringstream data_json;
+        write_json(data_json, pt);
+        return data_json.str();
+    }
+    catch(json_parser::json_parser_error exc) {
+        QPLOG(detailed, "Failed to encode 'init' request.");
+        return "";
+    }
+}
+
+String destroyRequest() {
+    using namespace boost::property_tree;
+    try {
+        ptree pt;
+        pt.put("action", "destroy");
+        std::stringstream data_json;
+        write_json(data_json, pt);
+        return data_json.str();
+    }
+    catch(json_parser::json_parser_error exc) {
+        QPLOG(detailed, "Failed to encode 'destroy' request.");
+        return "";
+    }
+}
+
+String refineRequest(const std::vector<ObjectReference>& aggs) {
+    using namespace boost::property_tree;
+    try {
+        ptree nodes;
+        for(uint32 i = 0; i < aggs.size(); i++) {
+            nodes.put( aggs[i].toString(), aggs[i].toString() );
+        }
+
+        ptree pt;
+        pt.put("action", "refine");
+        pt.put_child("nodes", nodes);
+        std::stringstream data_json;
+        write_json(data_json, pt);
+        return data_json.str();
+    }
+    catch(json_parser::json_parser_error exc) {
+        QPLOG(detailed, "Failed to encode 'refine' request.");
+        return "";
+    }
+}
+
+String coarsenRequest(const std::vector<ObjectReference>& aggs) {
+    using namespace boost::property_tree;
+    try {
+        ptree nodes;
+        for(uint32 i = 0; i < aggs.size(); i++) {
+            nodes.put( aggs[i].toString(), aggs[i].toString() );
+        }
+
+        ptree pt;
+        pt.put("action", "coarsen");
+        pt.put_child("nodes", nodes);
+        std::stringstream data_json;
+        write_json(data_json, pt);
+        return data_json.str();
+    }
+    catch(json_parser::json_parser_error exc) {
+        QPLOG(detailed, "Failed to encode 'coarsen' request.");
+        return "";
+    }
+}
+
+
+void addAdditionResult(Sirikata::Protocol::Prox::ProximityUpdate& obj_results, const SpaceObjectReference& observed, const SequencedPresenceProperties& props) {
+    Sirikata::Protocol::Prox::IObjectAddition addition = obj_results.add_addition();
+    addition.set_object(observed.object().getAsUUID());
+
+    addition.set_seqno(props.maxSeqNo());
+
+    Sirikata::Protocol::ITimedMotionVector motion = addition.mutable_location();
+    TimedMotionVector3f loc = props.location();
+    motion.set_t(loc.updateTime());
+    motion.set_position(loc.position());
+    motion.set_velocity(loc.velocity());
+
+    TimedMotionQuaternion orient = props.orientation();
+    Sirikata::Protocol::ITimedMotionQuaternion msg_orient = addition.mutable_orientation();
+    msg_orient.set_t(orient.updateTime());
+    msg_orient.set_position(orient.position());
+    msg_orient.set_velocity(orient.velocity());
+
+    addition.set_bounds( props.bounds() );
+    const String& mesh = props.mesh().toString();
+    if (mesh.size() > 0)
+        addition.set_mesh(mesh);
+    const String& phy = props.physics();
+    if (phy.size() > 0)
+        addition.set_physics(phy);
+
+    // FIXME parent?
+    // FIXME should we expose whether the object is an aggregate?
+}
+
+void addRemovalResult(Sirikata::Protocol::Prox::ProximityUpdate& obj_results, const SpaceObjectReference& observed, uint64 seqno, bool permanent) {
+    Sirikata::Protocol::Prox::IObjectRemoval removal = obj_results.add_removal();
+    removal.set_object(observed.object().getAsUUID());
+    removal.set_seqno(seqno);
+    removal.set_type(
+        permanent ?
+        Sirikata::Protocol::Prox::ObjectRemoval::Permanent :
+        Sirikata::Protocol::Prox::ObjectRemoval::Transient
+    );
+}
+
+}
+
 ManualObjectQueryProcessor* ManualObjectQueryProcessor::create(ObjectHostContext* ctx, const String& args) {
     return new ManualObjectQueryProcessor(ctx);
 }
@@ -42,12 +162,20 @@ void ManualObjectQueryProcessor::start() {
 void ManualObjectQueryProcessor::stop() {
     mContext->objectHost->ObjectNodeSessionProvider::removeListener(static_cast<ObjectNodeSessionListener*>(this));
     mContext->objectHost->SpaceNodeSessionManager::removeListener(static_cast<SpaceNodeSessionListener*>(this));
+
+    mObjectState.clear();
+    mServerQueries.clear();
 }
 
 void ManualObjectQueryProcessor::onSpaceNodeSession(const OHDP::SpaceNodeID& id, OHDPSST::Stream::Ptr sn_stream) {
     QPLOG(detailed, "New space node session " << id);
     assert(mServerQueries.find(id) == mServerQueries.end());
-    mServerQueries.insert( ServerQueryMap::value_type(id, ServerQueryState(sn_stream)) );
+    mServerQueries.insert(
+        ServerQueryMap::value_type(
+            id,
+            ServerQueryStatePtr(new ServerQueryState(mContext, sn_stream))
+        )
+    );
 
     sn_stream->listenSubstream(OBJECT_PORT_LOCATION,
         std::tr1::bind(&ManualObjectQueryProcessor::handleLocationSubstream, this,
@@ -93,65 +221,37 @@ void ManualObjectQueryProcessor::onObjectNodeSession(const SpaceID& space, const
 }
 
 void ManualObjectQueryProcessor::incrementServerQuery(ServerQueryMap::iterator serv_it) {
-    bool is_new = (serv_it->second.nconnected == 0);
-    serv_it->second.nconnected++;
+    bool is_new = (serv_it->second->nconnected == 0);
+    serv_it->second->nconnected++;
     updateServerQuery(serv_it, is_new);
 }
 
 void ManualObjectQueryProcessor::updateServerQuery(ServerQueryMap::iterator serv_it, bool is_new) {
     if (is_new) {
         QPLOG(detailed, "Initializing server query to " << serv_it->first);
-
-        Protocol::Prox::QueryRequest request;
-        using namespace boost::property_tree;
-        try {
-            ptree pt;
-            pt.put("action", "init");
-            std::stringstream data_json;
-            write_json(data_json, pt);
-            request.set_query_parameters(data_json.str());
-        }
-        catch(json_parser::json_parser_error exc) {
-            QPLOG(detailed, "Failed to encode 'init' request.");
-            return;
-        }
-        std::string init_msg_str = serializePBJMessage(request);
-
-        String framed = Network::Frame::write(init_msg_str);
-
-        serv_it->second.base_stream->createChildStream(
-            std::tr1::bind(&ManualObjectQueryProcessor::handleCreatedProxSubstream, this, serv_it->first, _1, _2),
-            (void*)framed.c_str(), framed.size(),
-            OBJECT_PORT_PROXIMITY, OBJECT_PORT_PROXIMITY
-        );
+        sendInitRequest(serv_it);
     }
 }
 
 void ManualObjectQueryProcessor::decrementServerQuery(ServerQueryMap::iterator serv_it) {
-    serv_it->second.nconnected--;
-    if (!serv_it->second.canRemove()) return;
+    serv_it->second->nconnected--;
+    if (!serv_it->second->canRemove()) return;
 
-    // FIXME send message
     QPLOG(detailed, "Destroying server query to " << serv_it->first);
-    if (serv_it->second.prox_stream) {
-        Protocol::Prox::QueryRequest request;
+    sendDestroyRequest(serv_it);
+}
 
-        using namespace boost::property_tree;
-        try {
-            ptree pt;
-            pt.put("action", "destroy");
-            std::stringstream data_json;
-            write_json(data_json, pt);
-            request.set_query_parameters(data_json.str());
-        }
-        catch(json_parser::json_parser_error exc) {
-            QPLOG(detailed, "Failed to encode 'destroy' request.");
-            return;
-        }
-        std::string destroy_msg_str = serializePBJMessage(request);
-        String framed = Network::Frame::write(destroy_msg_str);
-        serv_it->second.prox_stream->write((const uint8*)framed.c_str(), framed.size());
-    }
+String ManualObjectQueryProcessor::connectRequest(HostedObjectPtr ho, const SpaceObjectReference& sporef, const String& query) {
+    ObjectStateMap::iterator obj_it = mObjectState.find(sporef);
+    // Very likely brand new here
+    if (obj_it == mObjectState.end())
+        obj_it = mObjectState.insert( ObjectStateMap::value_type(sporef, ObjectState()) ).first;
+    obj_it->second.who = ho;
+    obj_it->second.query = query;
+
+    // Return an empty query -- we don't want any query passed on to the
+    // serve. We aggregate and register the OH query separately.
+    return "";
 }
 
 void ManualObjectQueryProcessor::updateQuery(HostedObjectPtr ho, const SpaceObjectReference& sporef, const String& new_query) {
@@ -166,6 +266,7 @@ void ManualObjectQueryProcessor::updateQuery(HostedObjectPtr ho, const SpaceObje
     }
     else { // Init or update
         // Track state
+        it->second.who = ho;
         it->second.query = new_query;
         // Update server query
         // FIXME
@@ -175,6 +276,116 @@ void ManualObjectQueryProcessor::updateQuery(HostedObjectPtr ho, const SpaceObje
 
 // Proximity
 
+void ManualObjectQueryProcessor::sendInitRequest(ServerQueryMap::iterator serv_it) {
+    Protocol::Prox::QueryRequest request;
+    request.set_query_parameters(initRequest());
+    if (request.query_parameters().empty()) return;
+    std::string init_msg_str = serializePBJMessage(request);
+
+    String framed = Network::Frame::write(init_msg_str);
+    sendProxMessage(serv_it, framed);
+}
+
+void ManualObjectQueryProcessor::sendDestroyRequest(ServerQueryMap::iterator serv_it) {
+    if (!serv_it->second->prox_stream) return;
+
+    Protocol::Prox::QueryRequest request;
+    request.set_query_parameters(destroyRequest());
+    if (request.query_parameters().empty()) return;
+    std::string destroy_msg_str = serializePBJMessage(request);
+    String framed = Network::Frame::write(destroy_msg_str);
+    sendProxMessage(serv_it, framed);
+}
+
+void ManualObjectQueryProcessor::sendRefineRequest(ServerQueryMap::iterator serv_it, const ObjectReference& agg) {
+    std::vector<ObjectReference> aggs;
+    aggs.push_back(agg);
+    sendRefineRequest(serv_it, aggs);
+}
+
+void ManualObjectQueryProcessor::sendRefineRequest(ServerQueryMap::iterator serv_it, const std::vector<ObjectReference>& aggs) {
+    Protocol::Prox::QueryRequest request;
+    request.set_query_parameters(refineRequest(aggs));
+    if (request.query_parameters().empty()) return;
+    std::string msg_str = serializePBJMessage(request);
+    String framed = Network::Frame::write(msg_str);
+    sendProxMessage(serv_it, framed);
+}
+
+void ManualObjectQueryProcessor::sendCoarsenRequest(ServerQueryMap::iterator serv_it, const ObjectReference& agg) {
+    std::vector<ObjectReference> aggs;
+    aggs.push_back(agg);
+    sendCoarsenRequest(serv_it, aggs);
+}
+
+void ManualObjectQueryProcessor::sendCoarsenRequest(ServerQueryMap::iterator serv_it, const std::vector<ObjectReference>& aggs) {
+    Protocol::Prox::QueryRequest request;
+    request.set_query_parameters(coarsenRequest(aggs));
+    if (request.query_parameters().empty()) return;
+    std::string msg_str = serializePBJMessage(request);
+    String framed = Network::Frame::write(msg_str);
+    sendProxMessage(serv_it, framed);
+}
+
+
+void ManualObjectQueryProcessor::sendProxMessage(ServerQueryMap::iterator serv_it, const String& msg) {
+    serv_it->second->outstanding.push(msg);
+
+    // Possibly trigger writing
+
+    // Already in progress
+    if (serv_it->second->writing) return;
+
+    // Without a stream, we need to first create the stream
+    if (!serv_it->second->prox_stream) {
+        serv_it->second->writing = true;
+
+        serv_it->second->base_stream->createChildStream(
+            std::tr1::bind(&ManualObjectQueryProcessor::handleCreatedProxSubstream, this, serv_it->first, _1, _2),
+            NULL, 0,
+            OBJECT_PORT_PROXIMITY, OBJECT_PORT_PROXIMITY
+        );
+        return;
+    }
+
+    // Otherwise, we're clear for starting writing
+    writeSomeProxData(serv_it->second);
+}
+
+void ManualObjectQueryProcessor::writeSomeProxData(ServerQueryStatePtr data) {
+    assert(data->prox_stream);
+    data->writing = true;
+
+    while(!data->outstanding.empty()) {
+        String& msg = data->outstanding.front();
+        int bytes_written = data->prox_stream->write((const uint8*)msg.data(), msg.size());
+        if (bytes_written < 0) {
+            // FIXME
+            break;
+        }
+        else if (bytes_written < (int)msg.size()) {
+            msg = msg.substr(bytes_written);
+            break;
+        }
+        else {
+            data->outstanding.pop();
+        }
+    }
+
+    if (data->outstanding.empty()) {
+        data->writing = false;
+    }
+    else {
+        if (mContext->stopped()) return;
+
+        static Duration retry_rate = Duration::milliseconds((int64)1);
+        mContext->mainStrand->post(
+            retry_rate,
+            std::tr1::bind(&ManualObjectQueryProcessor::writeSomeProxData, this, data)
+        );
+    }
+}
+
 void ManualObjectQueryProcessor::handleCreatedProxSubstream(const OHDP::SpaceNodeID& snid, int success, OHDPSST::Stream::Ptr prox_stream) {
     if (success != SST_IMPL_SUCCESS)
         QPLOG(error, "Failed to create proximity substream to " << snid);
@@ -183,7 +394,7 @@ void ManualObjectQueryProcessor::handleCreatedProxSubstream(const OHDP::SpaceNod
     ServerQueryMap::iterator serv_it = mServerQueries.find(snid);
     // We may have lost the session since we requested the connection
     if (serv_it == mServerQueries.end()) return;
-    serv_it->second.prox_stream = prox_stream;
+    serv_it->second->prox_stream = prox_stream;
 
     // Register to get data
     String* prevdata = new String();
@@ -192,6 +403,10 @@ void ManualObjectQueryProcessor::handleCreatedProxSubstream(const OHDP::SpaceNod
             snid, prox_stream, prevdata, _1, _2
         )
     );
+
+    // We created the stream to start writing, so start that now
+    assert(serv_it->second->writing == true);
+    writeSomeProxData(serv_it->second);
 }
 
 void ManualObjectQueryProcessor::handleProximitySubstreamRead(const OHDP::SpaceNodeID& snid, OHDPSST::Stream::Ptr prox_stream, String* prevdata, uint8* buffer, int length) {
@@ -209,14 +424,100 @@ void ManualObjectQueryProcessor::handleProximitySubstreamRead(const OHDP::SpaceN
         if (msg.empty()) return;
 
         // Otherwise, try to handle it
-        QPLOG(detailed, "Got proximity message.");
-        // FIXME handleProximityMessage(snid, msg);
+        handleProximityMessage(snid, msg);
     }
 
     // FIXME we should be getting a callback on stream close so we can clean up!
     //prox_stream->registerReadCallback(0);
 }
 
+void ManualObjectQueryProcessor::handleProximityMessage(const OHDP::SpaceNodeID& snid, const String& payload) {
+    ServerQueryMap::iterator serv_it = mServerQueries.find(snid);
+    if (serv_it == mServerQueries.end()) {
+        QPLOG(debug, "Received proximity message without query. Query may have recently been destroyed.");
+        return;
+    }
+    ServerQueryStatePtr& query_state = serv_it->second;
+
+    Sirikata::Protocol::Prox::ProximityResults contents;
+    bool parse_success = contents.ParseFromString(payload);
+    if (!parse_success) {
+        QPLOG(error, "Failed to decode proximity message");
+        return;
+    }
+
+    // Proximity messages are handled just by updating our state
+    // tracking the objects, adding or removing the objects or
+    // updating their properties.
+    QPLOG(detailed, "Received proximity message with " << contents.update_size() << " updates");
+    for(int32 idx = 0; idx < contents.update_size(); idx++) {
+        Sirikata::Protocol::Prox::ProximityUpdate update = contents.update(idx);
+
+        // TODO(ewencp) this is temporary code to actually get
+        // results to objects, without actually doing real querying. We
+        // shouldn't even do this in here, we should trigger some code in a
+        // query handler which will then trigger the results for the object.
+        // Note that we generate a new update so that we are sure to use the
+        // most up-to-date loc information.
+        Sirikata::Protocol::Prox::ProximityUpdate obj_update;
+
+        for(int32 aidx = 0; aidx < update.addition_size(); aidx++) {
+            Sirikata::Protocol::Prox::ObjectAddition addition = update.addition(aidx);
+            ProxProtocolLocUpdate add(addition);
+
+            ObjectReference observed_oref(addition.object());
+            SpaceObjectReference observed(snid.space(), observed_oref);
+
+            // Store the data
+            assert(query_state->objects.find(observed) == query_state->objects.end());
+            SequencedPresenceProperties& props = query_state->objects[observed];
+            props.setLocation(add.locationWithLocalTime(mContext->objectHost, snid.space()), add.location_seqno());
+            props.setOrientation(add.orientationWithLocalTime(mContext->objectHost, snid.space()), add.orientation_seqno());
+            props.setBounds(add.bounds(), add.bounds_seqno());
+            props.setMesh(Transfer::URI(add.meshOrDefault()), add.mesh_seqno());
+            props.setPhysics(add.physicsOrDefault(), add.physics_seqno());
+
+            // Replay orphans
+            query_state->orphans.invokeOrphanUpdates(snid, observed, this);
+
+            // TODO(ewencp) temporary code to get results out. See note above.
+            addAdditionResult(obj_update, observed, props);
+
+            // TODO(ewencp) this is a temporary way to trigger refinement -- we
+            // just always refine whenver we see. Obviously this is inefficient
+            // and won't scale, but it's useful to get some tests running.
+            if (addition.has_type() && addition.type() == Sirikata::Protocol::Prox::ObjectAddition::Aggregate)
+                sendRefineRequest(serv_it, observed_oref);
+        }
+
+        for(int32 ridx = 0; ridx < update.removal_size(); ridx++) {
+            Sirikata::Protocol::Prox::ObjectRemoval removal = update.removal(ridx);
+            SpaceObjectReference observed(snid.space(), ObjectReference(removal.object()));
+            assert(query_state->objects.find(observed) != query_state->objects.end());
+            // Backup data for orphans and then destroy
+            query_state->orphans.addUpdateFromExisting(observed, query_state->objects[observed]);
+            query_state->objects.erase(observed);
+
+            // TODO(ewencp) temporary code to get results out. See note above.
+            addRemovalResult(
+                obj_update, observed,
+                removal.seqno(),
+                (removal.has_type() && (removal.type() == Sirikata::Protocol::Prox::ObjectRemoval::Permanent))
+            );
+        }
+
+        // TODO(ewencp) temporary to get results to objects. See note above.
+        // FIXME this also isn't even right. we need to track which objects
+        // should get results from this query.
+        for(ObjectStateMap::const_iterator obj_it = mObjectState.begin(); obj_it != mObjectState.end(); obj_it++) {
+            HostedObjectPtr ho = obj_it->second.who.lock();
+            if (!ho) continue;
+            const SpaceObjectReference& sporef = obj_it->first;
+            deliverProximityUpdate(ho, sporef, obj_update);
+        }
+    }
+
+}
 
 
 // Location
@@ -244,6 +545,22 @@ void ManualObjectQueryProcessor::handleLocationSubstreamRead(const OHDP::SpaceNo
     }
 }
 
+namespace {
+// Helper for applying an update to
+void applyLocUpdate(SequencedPresenceProperties& props, const LocUpdate& lu, ObjectHost* oh, const SpaceID& space) {
+    if (lu.has_location())
+        props.setLocation(lu.locationWithLocalTime(oh, space), lu.location_seqno());
+    if (lu.has_orientation())
+        props.setOrientation(lu.orientationWithLocalTime(oh, space), lu.orientation_seqno());
+    if (lu.has_bounds())
+        props.setBounds(lu.bounds(), lu.bounds_seqno());
+    if (lu.has_mesh())
+        props.setMesh(Transfer::URI(lu.meshOrDefault()), lu.mesh_seqno());
+    if (lu.has_physics())
+        props.setPhysics(lu.physicsOrDefault(), lu.physics_seqno());
+}
+}
+
 bool ManualObjectQueryProcessor::handleLocationMessage(const OHDP::SpaceNodeID& snid, const std::string& payload) {
     Sirikata::Protocol::Frame frame;
     bool parse_success = frame.ParseFromString(payload);
@@ -251,13 +568,46 @@ bool ManualObjectQueryProcessor::handleLocationMessage(const OHDP::SpaceNodeID& 
     Sirikata::Protocol::Loc::BulkLocationUpdate contents;
     contents.ParseFromString(frame.payload());
 
-    QPLOG(detailed, "Got location message.");
-    // FIXME figure out who to forward to, or store for later use
+    ServerQueryMap::iterator serv_it = mServerQueries.find(snid);
+    if (serv_it == mServerQueries.end()) {
+        QPLOG(debug, "Received location message without query. Query may have recently been destroyed.");
+        return true; // Was successfully parsed, but not handled
+    }
+    ServerQueryStatePtr& query_state = serv_it->second;
+
+    for(int32 idx = 0; idx < contents.update_size(); idx++) {
+        Sirikata::Protocol::Loc::LocationUpdate update = contents.update(idx);
+        SpaceObjectReference observed(snid.space(), ObjectReference(update.object()));
+
+        ServerQueryState::ObjectPropertiesMap::iterator props_it = query_state->objects.find(observed);
+
+        // Because of prox/loc ordering, we may or may not have a record of the
+        // object yet.
+        if (props_it == query_state->objects.end()) {
+            query_state->orphans.addOrphanUpdate(observed, update);
+        }
+        else {
+            LocProtocolLocUpdate llu(update);
+            applyLocUpdate(props_it->second, llu, mContext->objectHost, snid.space());
+        }
+    }
 
     return true;
 }
 
+void ManualObjectQueryProcessor::onOrphanLocUpdate(const OHDP::SpaceNodeID& observer, const LocUpdate& lu) {
+    ServerQueryMap::iterator serv_it = mServerQueries.find(observer);
+    if (serv_it == mServerQueries.end()) {
+        QPLOG(debug, "Received proximity message without query. Query may have recently been destroyed.");
+        return;
+    }
+    ServerQueryStatePtr& query_state = serv_it->second;
 
+    SpaceObjectReference observed(observer.space(), lu.object());
+    assert(query_state->objects.find(observed) != query_state->objects.end());
+    SequencedPresenceProperties& props = query_state->objects[observed];
+    applyLocUpdate(props, lu, mContext->objectHost, observer.space());
+}
 
 } // namespace Manual
 } // namespace OH

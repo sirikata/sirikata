@@ -319,7 +319,7 @@ void CSVObjectFactory::generate(const String& timestamp)
                 ObjectConnectInfo oci;
                 oci.object = obj;
                 oci.loc = Location( pos, orient, vel, rot_axis, angular_speed);
-                oci.bounds = BoundingSphere3f(Vector3f::nil(), scale);
+                oci.bounds = BoundingSphere3f(Vector3f::zero(), scale);
                 oci.mesh = mesh;
                 oci.query_angle = query_angle;
                 oci.query_max_results = max_results;

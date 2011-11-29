@@ -100,10 +100,10 @@ public:
         assert_near(
             Location(a.getPosition(),
                      a.getOrientation(),
-                     Vector3f::nil(),Vector3f::nil(),0),
+                     Vector3f::zero(),Vector3f::zero(),0),
             Location(b.getPosition(),
                      b.getOrientation(),
-                     Vector3f::nil(),Vector3f::nil(),0));
+                     Vector3f::zero(),Vector3f::zero(),0));
     }
     void assert_near(const Location &a,const Location &b) {
         bool fail=false;

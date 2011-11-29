@@ -96,6 +96,12 @@ public:
             return uuid.hash();
         }
     };
+    class Null {
+    public:
+        const UUID& operator()() const {
+            return UUID::null();
+        }
+    };
     class Random {
     public:
         UUID operator()() const {

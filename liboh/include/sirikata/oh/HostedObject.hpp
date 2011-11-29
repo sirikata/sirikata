@@ -52,9 +52,9 @@
 #include <sirikata/oh/ObjectHostProxyManager.hpp>
 #include <sirikata/proxyobject/SimulationFactory.hpp>
 
-#include <sirikata/proxyobject/OrphanLocUpdateManager.hpp>
-
 namespace Sirikata {
+
+class LocUpdate;
 
 namespace Protocol {
 namespace Loc {
@@ -62,7 +62,7 @@ class LocationUpdate;
 class BulkLocationUpdate;
 }
 namespace Prox {
-class ProximityResults;
+class ProximityUpdate;
 }
 }
 
@@ -77,7 +77,10 @@ class PerPresenceData;
 typedef std::tr1::weak_ptr<HostedObject> HostedObjectWPtr;
 typedef std::tr1::shared_ptr<HostedObject> HostedObjectPtr;
 
-class SIRIKATA_OH_EXPORT HostedObject : public VWObject, public Service {
+class SIRIKATA_OH_EXPORT HostedObject
+    : public VWObject,
+      public Service
+{
 //------- Private inner classes
 
     struct PrivateCallbacks;
@@ -98,8 +101,6 @@ protected:
     bool destroyed;
 
     ODP::DelegateService* mDelegateODPService;
-
-    OrphanLocUpdateManager mOrphanLocUpdates;
 
 //------- Constructors/Destructors
 
@@ -164,10 +165,14 @@ public:
     ObjectHostContext* context() { return mContext; }
     const ObjectHostContext* context() const { return mContext; }
 
-    virtual Time spaceTime(const SpaceID& space, const Time& t);
-    virtual Time currentSpaceTime(const SpaceID& space);
-    virtual Time localTime(const SpaceID& space, const Time& t);
-    virtual Time currentLocalTime();
+    /** \see ObjectHost::spaceTime */
+    Time spaceTime(const SpaceID& space, const Time& t);
+    /** \see ObjectHost::currentSpaceTime */
+    Time currentSpaceTime(const SpaceID& space);
+    /** \see ObjectHost::localTime */
+    Time localTime(const SpaceID& space, const Time& t);
+    /** \see ObjectHost::currentLocalTime */
+    Time currentLocalTime();
 
     ///makes a new objects with objectName startingLocation mesh and connect to some interesting space
     void initializeScript(const String& script_type, const String& args, const String& script);
@@ -368,8 +373,8 @@ public:
 
 
     // ObjectQuerier Interface
-    void handleProximityMessage(const SpaceObjectReference& spaceobj, const Sirikata::Protocol::Prox::ProximityResults& results);
-    void handleLocationMessage(const SpaceObjectReference& spaceobj, const Sirikata::Protocol::Loc::BulkLocationUpdate& blu);
+    void handleProximityUpdate(const SpaceObjectReference& spaceobj, const Sirikata::Protocol::Prox::ProximityUpdate& update);
+    void handleLocationUpdate(const SpaceObjectReference& spaceobj, const LocUpdate& lu);
 
   private:
     /** \deprecated
@@ -383,17 +388,15 @@ public:
 
 
     // Handlers for core space-managed updates
-    void processLocationUpdate(const SpaceObjectReference& sporef, ProxyObjectPtr proxy_obj, const Sirikata::Protocol::Loc::LocationUpdate& update);
-    void processLocationUpdate(const SpaceID& space, ProxyObjectPtr proxy_obj, uint64 seqno, bool predictive, TimedMotionVector3f* loc, TimedMotionQuaternion* orient, BoundingSphere3f* bounds, String* mesh, String* phy);
-
-    /**
-       Any time that we get a prox removal call, we first save the existing
-       proxy object's data to the orphan manager.  If we get a prox addition
-       call on the same object before the proxy object's data is removed,
-       the orphan manager will return these data to us to process.  (by process,
-       I mean update the pos, bounds, orient, etc. for the proxy object).
-     */
-    void processOrphanedProxyData(const SpaceObjectReference& sporef, ProxyObjectPtr proxy_obj,OrphanLocUpdateManager::OrphanedProxData* opd);
+    void processLocationUpdate(const SpaceObjectReference& sporef, ProxyObjectPtr proxy_obj, const LocUpdate& update);
+    void processLocationUpdate(
+        const SpaceID& space, ProxyObjectPtr proxy_obj, bool predictive,
+        TimedMotionVector3f* loc, uint64 loc_seqno,
+        TimedMotionQuaternion* orient, uint64 orient_seqno,
+        BoundingSphere3f* bounds, uint64 bounds_seqno,
+        String* mesh, uint64 mesh_seqno,
+        String* phy, uint64 phy_seqno
+    );
 
     // Helper for creating the correct type of proxy
 

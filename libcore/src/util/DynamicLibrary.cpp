@@ -62,6 +62,10 @@ void DynamicLibrary::Initialize() {
     String exe_path = Path::Get(Path::DIR_EXE);
     if (!exe_path.empty())
         AddLoadPath(exe_path);
+    // Also, if it differs, add the bundle's path
+    String exe_bundle_path = Path::Get(Path::DIR_EXE_BUNDLE);
+    if (!exe_bundle_path.empty() && exe_bundle_path != exe_path)
+        AddLoadPath(exe_bundle_path);
 }
 
 void DynamicLibrary::AddLoadPath(const String& path) {
@@ -133,14 +137,24 @@ bool DynamicLibrary::load() {
         SILOG(plugin,error,"Failed to open library "<<mPath<<": "<<errnum);
     }
 #elif SIRIKATA_PLATFORM == PLATFORM_MAC || SIRIKATA_PLATFORM == PLATFORM_LINUX
-    mHandle = dlopen(mPath.c_str(), RTLD_LAZY | RTLD_GLOBAL);
+
+// Use RTLD_NOW in debug builds to make it more likely to catch missing symbols
+// in simple tests, i.e. just by loading the library, since other tests might
+// not get good enough coverage.
+#if SIRIKATA_DEBUG
+#define SIRIKATA_DLOPEN_FLAGS (RTLD_NOW | RTLD_GLOBAL)
+#else
+#define SIRIKATA_DLOPEN_FLAGS (RTLD_LAZY | RTLD_GLOBAL)
+#endif
+
+    mHandle = dlopen(mPath.c_str(), SIRIKATA_DLOPEN_FLAGS);
     if (mHandle == NULL) {
         // Try any registered search paths
         for(uint32 i = 0; mHandle == NULL && i < DL_search_paths.size(); i++) {
             std::string str = (boost::filesystem::path(DL_search_paths[i]) / mPath).string();
             mHandle = dlopen(
                 str.c_str(),
-                RTLD_LAZY | RTLD_GLOBAL
+                SIRIKATA_DLOPEN_FLAGS
             );
         }
     }

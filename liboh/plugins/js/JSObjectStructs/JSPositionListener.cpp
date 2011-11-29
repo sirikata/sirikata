@@ -100,12 +100,12 @@ v8::Handle<v8::Value> JSPositionListener::struct_getPhysics()
 
 Vector3f JSPositionListener::getPosition()
 {
-    CHECK_JPP_INIT_THROW_LOG_CPP_ERROR(getPosition,Vector3f::nil());
+    CHECK_JPP_INIT_THROW_LOG_CPP_ERROR(getPosition,Vector3f::zero());
     return jpp->mLocation.position(jpp->emerScript->getHostedTime());
 }
 Vector3f JSPositionListener::getVelocity()
 {
-    CHECK_JPP_INIT_THROW_LOG_CPP_ERROR(getVelocity,Vector3f::nil());
+    CHECK_JPP_INIT_THROW_LOG_CPP_ERROR(getVelocity,Vector3f::zero());
     return jpp->mLocation.velocity();
 }
 

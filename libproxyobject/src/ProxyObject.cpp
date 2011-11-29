@@ -53,11 +53,8 @@ ProxyObject::ProxyObject(ProxyManager *man, const SpaceObjectReference&id, VWObj
      MeshProvider (),
      mID(id),
      mManager(man),
-     mLoc(Time::null(), MotionVector3f(Vector3f::nil(), Vector3f::nil())),
-     mOrientation(Time::null(), MotionQuaternion(Quaternion::identity(), Quaternion::identity())),
      mParent(vwobj),
-     mParentPresenceID(owner_sor),
-     mMeshURI()
+     mParentPresenceID(owner_sor)
 {
     assert(mParent);
     mDefaultPort = mParent->bindODPPort(owner_sor);
@@ -73,7 +70,7 @@ ProxyObject::~ProxyObject() {
 }
 
 void ProxyObject::reset() {
-    memset(mUpdateSeqno, 0, LOC_NUM_PART * sizeof(uint64));
+    SequencedPresenceProperties::reset();
 }
 
 void ProxyObject::validate() {
@@ -114,107 +111,54 @@ bool ProxyObject::UpdateNeeded::operator() (
 }
 
 bool ProxyObject::isStatic() const {
-    return mLoc.velocity() == Vector3f::nil() && mOrientation.velocity() == Quaternion::identity();
+    return mLoc.velocity() == Vector3f::zero() && mOrientation.velocity() == Quaternion::identity();
 }
 
 
 void ProxyObject::setLocation(const TimedMotionVector3f& reqloc, uint64 seqno, bool predictive) {
-    if (seqno < mUpdateSeqno[LOC_POS_PART] && !predictive)
-    {
-        return;
-    }
-
-    if (!predictive) mUpdateSeqno[LOC_POS_PART] = seqno;
-
-    // FIXME at some point we need to resolve these, but this might
-    // require additional information from the space server, e.g. if
-    // requests were actually accepted. This all gets very tricky
-    // unless we track multiple outstanding update requests and can
-    // figure out which one failed, even if the space server generates
-    // other update while handling eht requests...
-    if (predictive || reqloc.updateTime() >= mLoc.updateTime()) {
-        mLoc = reqloc;
+    if (SequencedPresenceProperties::setLocation(reqloc, seqno, predictive)) {
         ProxyObjectPtr ptr = getSharedPtr();
         assert(ptr);
-        PositionProvider::notify(&PositionListener::updateLocation, ptr, mLoc, mOrientation, mBounds,mID);
+        PositionProvider::notify(&PositionListener::updateLocation, ptr, mLoc, mOrientation, mBounds, mID);
     }
 }
 
 void ProxyObject::setOrientation(const TimedMotionQuaternion& reqorient, uint64 seqno, bool predictive) {
-    if (seqno < mUpdateSeqno[LOC_ORIENT_PART] && !predictive) return;
-
-    if (!predictive) mUpdateSeqno[LOC_ORIENT_PART] = seqno;
-
-    // FIXME see relevant comment in setLocation
-    if (predictive || reqorient.updateTime() >= mOrientation.updateTime()) {
-        mOrientation = reqorient;
+    if (SequencedPresenceProperties::setOrientation(reqorient, seqno, predictive)) {
         ProxyObjectPtr ptr = getSharedPtr();
         assert(ptr);
-        PositionProvider::notify(&PositionListener::updateLocation, ptr, mLoc, mOrientation, mBounds,mID);
+        PositionProvider::notify(&PositionListener::updateLocation, ptr, mLoc, mOrientation, mBounds, mID);
     }
 }
 
-uint64 ProxyObject::getUpdateSeqNo(LOC_PARTS whichPart)
-{
-    if (whichPart >= LOC_NUM_PART)
-    {
-        SILOG(proxy,error,"Error in getUpdateSeqNo of proxy.  Requesting an update sequence number for a field that does not exist.  Returning 0");
-        return 0;
+void ProxyObject::setBounds(const BoundingSphere3f& bnds, uint64 seqno, bool predictive) {
+    if (SequencedPresenceProperties::setBounds(bnds, seqno, predictive)) {
+        ProxyObjectPtr ptr = getSharedPtr();
+        assert(ptr);
+        PositionProvider::notify(&PositionListener::updateLocation, ptr, mLoc, mOrientation, mBounds, mID);
+        MeshProvider::notify (&MeshListener::onSetScale, ptr, mBounds.radius(), mID);
     }
-    return mUpdateSeqno[whichPart];
-}
-
-void ProxyObject::setBounds(const BoundingSphere3f& bnds, uint64 seqno, bool predictive)
-{
-    if (seqno < mUpdateSeqno[LOC_BOUNDS_PART] && !predictive)
-        return;
-
-    if (!predictive)
-        mUpdateSeqno[LOC_BOUNDS_PART] = seqno;
-
-
-    mBounds = bnds;
-    ProxyObjectPtr ptr = getSharedPtr();
-    assert(ptr);
-    PositionProvider::notify(&PositionListener::updateLocation, ptr, mLoc, mOrientation, mBounds,mID);
-    MeshProvider::notify (&MeshListener::onSetScale, ptr, mBounds.radius(),mID);
-}
-
-ProxyObjectPtr ProxyObject::getParentProxy() const {
-    return ProxyObjectPtr();
 }
 
 //you can set a camera's mesh as of now.
 void ProxyObject::setMesh (Transfer::URI const& mesh, uint64 seqno, bool predictive) {
-
-
-    if (seqno < mUpdateSeqno[LOC_MESH_PART] && !predictive) return;
-
-    if (!predictive) mUpdateSeqno[LOC_MESH_PART] = seqno;
-
-    mMeshURI = mesh;
-
-    ProxyObjectPtr ptr = getSharedPtr();
-    if (ptr) MeshProvider::notify ( &MeshListener::onSetMesh, ptr, mesh,mID);
+    if (SequencedPresenceProperties::setMesh(mesh, seqno, predictive)) {
+        ProxyObjectPtr ptr = getSharedPtr();
+        assert(ptr);
+        if (ptr) MeshProvider::notify ( &MeshListener::onSetMesh, ptr, mesh, mID);
+    }
 }
-
-//cameras may have meshes as of now.
-Transfer::URI const& ProxyObject::getMesh () const
-{
-    return mMeshURI;
-}
-
 
 void ProxyObject::setPhysics (const String& rhs, uint64 seqno, bool predictive) {
-    if (seqno < mUpdateSeqno[LOC_PHYSICS_PART] && !predictive) return;
-    if (!predictive) mUpdateSeqno[LOC_PHYSICS_PART] = seqno;
-    mPhysics = rhs;
-    ProxyObjectPtr ptr = getSharedPtr();
-    if (ptr) MeshProvider::notify ( &MeshListener::onSetPhysics, ptr, rhs,mID);
+    if (SequencedPresenceProperties::setPhysics(rhs, seqno, predictive)) {
+        ProxyObjectPtr ptr = getSharedPtr();
+        assert(ptr);
+        if (ptr) MeshProvider::notify ( &MeshListener::onSetPhysics, ptr, rhs, mID);
+    }
 }
 
-const String& ProxyObject::getPhysics () const {
-    return mPhysics;
+ProxyObjectPtr ProxyObject::getParentProxy() const {
+    return ProxyObjectPtr();
 }
 
 }

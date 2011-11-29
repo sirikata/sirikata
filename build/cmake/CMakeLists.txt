@@ -45,7 +45,6 @@ IF(NOT WIN32 AND NOT APPLE)
 ENDIF()
 
 IF(APPLE)
-
     IF(IS_DIRECTORY /Developer/SDKs/MacOSX10.5.sdk)
        SET(MAC_SDK_DIR /Developer/SDKs/MacOSX10.5.sdk)
        SET(MAC_MIN_VER 10.5)
@@ -56,10 +55,17 @@ IF(APPLE)
        SET(MAC_SDK_DIR /Developer/SDKs/MacOSX10.6.sdk)
        SET(MAC_MIN_VER 10.6)
        SET(MAC_EXTRA_FLAGS -m32)
-        SET(CMAKE_CXX_COMPILER g++-4.2)
-        SET(CMAKE_C_COMPILER gcc-4.2)
+       IF(EXISTS /usr/bin/g++-4.2)
+         SET(CMAKE_CXX_COMPILER g++-4.2)
+         SET(CMAKE_C_COMPILER gcc-4.2)
+       ELSE()
+         # New versions of XCode require falling back to plan old
+         # gcc/g++ because they don't provide versioned symlinks (and
+         # also aren't even real gcc...)
+         #SET(CMAKE_CXX_COMPILER /usr/bin/c++)
+         #SET(CMAKE_C_COMPILER /usr/bin/gcc)
+       ENDIF()
     ENDIF()
-    
 ENDIF()
 
 
@@ -1427,6 +1433,7 @@ SET(LIBOH_SOURCES
                   ${LIBOH_SOURCE_DIR}/Storage.cpp
                   ${LIBOH_SOURCE_DIR}/PersistedObjectSet.cpp
                   ${LIBOH_SOURCE_DIR}/ObjectQueryProcessor.cpp
+                  ${LIBOH_SOURCE_DIR}/LocUpdate.cpp
                    )
 
 SET(LIBMESH_PLUGIN_COLLADAMODELS_DIR ${LIBMESH_PLUGIN_DIR}/collada)
@@ -3095,20 +3102,10 @@ IF(BUILD_OGRE_OH)
   ENDIF()
 
   # data for ogre, including web views
-  IF(APPLE)
-    INSTALL(DIRECTORY ${SIRIKATA_OGRE_DATA_DIR}/
-      DESTINATION share/ogre/data/
-      PATTERN "*/jquery" EXCLUDE
-      )
-    #and jquery is a link, so we need to handle it carefully
-    INSTALL(DIRECTORY ${TOP_LEVEL}/dependencies/jquery/
-      DESTINATION share/ogre/data/jquery
-      )
-  ELSE()
-    INSTALL(DIRECTORY ${TOP_LEVEL}/libproxyobject/plugins/ogre/data/
-      DESTINATION share/ogre/data/
-      )
-  ENDIF()
+  INSTALL(DIRECTORY ${TOP_LEVEL}/libproxyobject/plugins/ogre/data/
+    DESTINATION share/ogre/data/
+    PATTERN "*/.git" EXCLUDE
+    )
 ENDIF()
 
 IF(FREEIMAGE_FOUND)

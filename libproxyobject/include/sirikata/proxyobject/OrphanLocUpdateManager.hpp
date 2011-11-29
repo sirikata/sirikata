@@ -42,8 +42,9 @@
 #include <sirikata/core/util/MotionQuaternion.hpp>
 #include <sirikata/core/transfer/URI.hpp>
 #include <sirikata/core/util/BoundingSphere.hpp>
-
-
+#include <sirikata/oh/LocUpdate.hpp>
+#include <sirikata/oh/ProtocolLocUpdate.hpp>
+#include <sirikata/proxyobject/PresenceProperties.hpp>
 
 namespace Sirikata {
 
@@ -52,88 +53,103 @@ namespace Loc {
 class LocationUpdate;
 }
 }
+class PresencePropertiesLocUpdate;
 
-/** OrphanLocUpdateManager keeps track of loc updates that arrived before the
- *  corresponding prox update so they can be delivered when the prox update does
- *  arrive. Without an OrphanLocUpdateManager, a loc update could be lost due to
- *  incorrect ordering, resulting in the correct information never being updated
- *  to its correct value.  Loc updates are saved for short time and then
- *  discarded.
+/** OrphanLocUpdateManager tracks location updates/information for objects,
+ *  making sure that location information does not get lost due to reordering of
+ *  proximity and location messages from the space server. It currently handles
+ *  two types of errors.
+ *
+ *  First, if a location message is received before the corresponding proximity
+ *  addition event, it is stored for awhile in case the addition is received
+ *  soon. (This is the reason for the name of the class -- the location update
+ *  is 'orphaned' since it doesn't have a parent proximity addition.)
+ *
+ *  The second type of issue is when the messages that should be received are
+ *  (remove object X, add object X, update location of X), but it is received as
+ *  (update location of X, remove object X, add object X). In this case the
+ *  update would have been applied and then lost. For this case, we save the
+ *  state of objects for a short while after they are removed, including the
+ *  sequence numbers. Then, we can reapply them after objects are re-added, just
+ *  as we would with an orphaned update.
+ *
+ *  Loc updates are saved for short time and, if they aren't needed, are
+ *  discarded. In all cases, sequence numbers are still used so possibly trying
+ *  to apply old updates isn't an issue.
  */
 class SIRIKATA_PROXYOBJECT_EXPORT OrphanLocUpdateManager : public PollingService {
 public:
-    typedef Sirikata::Protocol::Loc::LocationUpdate LocUpdate;
-    
+    template<typename QuerierIDType>
+    class Listener {
+    public:
+        virtual ~Listener() {}
+        virtual void onOrphanLocUpdate(const QuerierIDType& observer, const LocUpdate& lu) = 0;
+    };
+
     OrphanLocUpdateManager(Context* ctx, Network::IOStrand* strand, const Duration& timeout);
-    ~OrphanLocUpdateManager();
 
     /** Add an orphan update to the queue and set a timeout for it to be cleared
      *  out.
      */
-    void addOrphanUpdate(const SpaceObjectReference& obj, const LocUpdate& update);
+    void addOrphanUpdate(const SpaceObjectReference& observed, const Sirikata::Protocol::Loc::LocationUpdate& update);
     /**
-       Take all fields in proxyPtr, and create an OrphanedProxData struct from
-       them.  
+       Take all fields in proxyPtr, and create an struct from
+       them.
      */
-    void addUpdateFromExisting(const SpaceObjectReference&obj, ProxyObjectPtr proxyPtr);
+    void addUpdateFromExisting(ProxyObjectPtr proxyPtr);
+    /** Take all parameters from an object to backup for a short time.
+     */
+    void addUpdateFromExisting(
+        const SpaceObjectReference& observed,
+        const SequencedPresenceProperties& props
+    );
 
-    struct UpdateInfo;
-    typedef std::vector<UpdateInfo> UpdateInfoList;
-
-    
     /** Gets all orphan updates for a given object. */
-    UpdateInfoList getOrphanUpdates(const SpaceObjectReference& obj);
+    template<typename QuerierIDType>
+    void invokeOrphanUpdates(const QuerierIDType& observer, const SpaceObjectReference& proximateID, Listener<QuerierIDType>* listener) {
+        ObjectUpdateMap::iterator it = mUpdates.find(proximateID);
+        if (it == mUpdates.end()) return;
 
-    void setFinalCallback(const std::tr1::function<void()>&);
-    
-    //When we get a prox removal, we take all the data that was stored in the
-    //corresponding proxy object and put it into an OrphanedProxData
-    struct OrphanedProxData
-    {
-        OrphanedProxData(const TimedMotionVector3f& tmv, uint64 tmv_seq_no, const TimedMotionQuaternion& tmq, uint64 tmq_seq_no, const Transfer::URI& uri_mesh, uint64 mesh_seq_no, const BoundingSphere3f& bounding_sphere, uint64 bnds_seq_no, const String& phys, uint64 phys_seq_no)
-         : timedMotionVector(tmv),
-           tmvSeqNo(tmv_seq_no),
-           timedMotionQuat(tmq),
-           tmqSeqNo(tmq_seq_no),
-           mesh(uri_mesh),
-           meshSeqNo(mesh_seq_no),
-           bounds(bounding_sphere),
-           bndsSeqNo(bnds_seq_no),
-           physics(phys),
-           physSeqNo(phys_seq_no)
-        {}
+        const UpdateInfoList& info_list = it->second;
+        for(UpdateInfoList::const_iterator info_it = info_list.begin(); info_it != info_list.end(); info_it++) {
+            if ((*info_it)->value != NULL) {
+                LocProtocolLocUpdate llu( *((*info_it)->value) );
+                listener->onOrphanLocUpdate( observer, llu );
+            }
+            else if ((*info_it)->opd != NULL) {
+                PresencePropertiesLocUpdate plu( (*info_it)->object.object(), *((*info_it)->opd) );
+                listener->onOrphanLocUpdate( observer, plu );
+            }
+        }
 
-        ~OrphanedProxData()
-        {}
-        
-        
-        TimedMotionVector3f timedMotionVector;
-        uint64 tmvSeqNo;
+        // Once we've notified of these we can get rid of them -- if they
+        // need the info again they should re-register it with
+        // addUpdateFromExisting before cleaning up the object.
+        mUpdates.erase(it);
+    }
 
-        TimedMotionQuaternion timedMotionQuat;
-        uint64 tmqSeqNo;
-
-        Transfer::URI mesh;
-        uint64 meshSeqNo;
-
-        BoundingSphere3f bounds;
-        uint64 bndsSeqNo;
-        
-        String physics;
-        uint64 physSeqNo;
-    };
-
-    struct UpdateInfo {
-        //Either value or opd will be non-null.  Never both.
-        LocUpdate* value;
-        OrphanedProxData* opd;
-        Time expiresAt;
-    };
-
-     
 private:
     virtual void poll();
-    
+
+    struct UpdateInfo {
+        UpdateInfo(const SpaceObjectReference& obj, Sirikata::Protocol::Loc::LocationUpdate* _v, const Time& t)
+         : object(obj), value(_v), opd(NULL), expiresAt(t)
+        {}
+        UpdateInfo(const SpaceObjectReference& obj, SequencedPresenceProperties* _v, const Time& t)
+         : object(obj), value(NULL), opd(_v), expiresAt(t)
+        {}
+        ~UpdateInfo();
+
+        SpaceObjectReference object;
+        //Either value or opd will be non-null.  Never both.
+        Sirikata::Protocol::Loc::LocationUpdate* value;
+        SequencedPresenceProperties* opd;
+        Time expiresAt;
+    private:
+        UpdateInfo();
+    };
+    typedef std::tr1::shared_ptr<UpdateInfo> UpdateInfoPtr;
+    typedef std::vector<UpdateInfoPtr> UpdateInfoList;
 
     typedef std::tr1::unordered_map<SpaceObjectReference, UpdateInfoList, SpaceObjectReference::Hasher> ObjectUpdateMap;
 
@@ -141,6 +157,53 @@ private:
     Duration mTimeout;
     ObjectUpdateMap mUpdates;
 }; // class OrphanLocUpdateManager
+
+
+
+/** Implementation of LocUpdate which collects its information from
+ *  stored SequencedPresenceProperties.
+ */
+class PresencePropertiesLocUpdate : public LocUpdate {
+public:
+    PresencePropertiesLocUpdate(const ObjectReference& o, const SequencedPresenceProperties& lu)
+     : mObject(o),
+       mUpdate(lu)
+    {}
+    virtual ~PresencePropertiesLocUpdate() {}
+
+    virtual ObjectReference object() const { return mObject; }
+
+    // Location
+    virtual bool has_location() const { return true; }
+    virtual TimedMotionVector3f location() const { return mUpdate.location(); }
+    virtual uint64 location_seqno() const { return mUpdate.getUpdateSeqNo(SequencedPresenceProperties::LOC_POS_PART); }
+
+    // Orientation
+    virtual bool has_orientation() const { return true; }
+    virtual TimedMotionQuaternion orientation() const { return mUpdate.orientation(); }
+    virtual uint64 orientation_seqno() const { return mUpdate.getUpdateSeqNo(SequencedPresenceProperties::LOC_ORIENT_PART); }
+
+    // Bounds
+    virtual bool has_bounds() const { return true; }
+    virtual BoundingSphere3f bounds() const { return mUpdate.bounds(); }
+    virtual uint64 bounds_seqno() const { return mUpdate.getUpdateSeqNo(SequencedPresenceProperties::LOC_BOUNDS_PART); }
+
+    // Mesh
+    virtual bool has_mesh() const { return true; }
+    virtual String mesh() const { return mUpdate.mesh().toString(); }
+    virtual uint64 mesh_seqno() const { return mUpdate.getUpdateSeqNo(SequencedPresenceProperties::LOC_MESH_PART); }
+
+    // Physics
+    virtual bool has_physics() const { return true; }
+    virtual String physics() const { return mUpdate.physics(); }
+    virtual uint64 physics_seqno() const { return mUpdate.getUpdateSeqNo(SequencedPresenceProperties::LOC_PHYSICS_PART); }
+private:
+    PresencePropertiesLocUpdate();
+    PresencePropertiesLocUpdate(const PresencePropertiesLocUpdate&);
+
+    const ObjectReference& mObject;
+    const SequencedPresenceProperties& mUpdate;
+};
 
 
 } // namespace Sirikata

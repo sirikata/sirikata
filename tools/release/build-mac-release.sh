@@ -27,8 +27,6 @@ make -j2 install
 
 # Package it all up
 cd ${TMPDIR}
-# Clean out some useless stuff
-find ${NAMEDIR} -name .git | xargs rm -rf
 # tar, gz
 tar -cvvf ${TAR_NAME} ${NAMEDIR}
 gzip --best ${TAR_NAME}

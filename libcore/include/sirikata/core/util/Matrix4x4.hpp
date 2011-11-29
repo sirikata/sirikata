@@ -60,18 +60,20 @@ private:
 public:
     typedef scalar real;
     Matrix4x4(){
-      setCol(0,Vector4x::nil());
-      setCol(1,Vector4x::nil());
-      setCol(2,Vector4x::nil());
-      setCol(3,Vector4x::nil());
+      setCol(0,Vector4x::zero());
+      setCol(1,Vector4x::zero());
+      setCol(2,Vector4x::zero());
+      setCol(3,Vector4x::zero());
     }
-    static const Matrix4x4& nil() {
-        static Matrix4x4 nil(Vector4x::nil(),
-                             Vector4x::nil(),
-                             Vector4x::nil(),
-                             Vector4x::nil(),
-                             COLUMNS());
-        return nil;
+    static const Matrix4x4& zero() {
+        static Matrix4x4 zero_(
+            Vector4x::zero(),
+            Vector4x::zero(),
+            Vector4x::zero(),
+            Vector4x::zero(),
+            COLUMNS()
+        );
+        return zero_;
     }
     static const Matrix4x4& identity() {
         static Matrix4x4 identity (Vector4x::unitX(),
@@ -303,7 +305,7 @@ public:
                       ROWS());
     }
 
-    scalar invert(Matrix4x4& inv) const { 
+    scalar invert(Matrix4x4& inv) const {
        /* Code adapted from an Intel matrix inversion optimization report
           (ftp://download.intel.com/design/pentiumiii/sml/24504301.pdf) */
       scalar mat[16];

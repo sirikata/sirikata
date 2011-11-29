@@ -211,6 +211,21 @@ public:
      * is just a utility, is always -serverTimeOffset(). */
     Duration clientTimeOffset(const SpaceID& space) const;
 
+    /** Convert a local time into a time for the given space.
+     *  \param space the space to translate to
+     *  \param t the local time to convert
+     */
+    Time spaceTime(const SpaceID& space, const Time& t);
+    /** Get the current time in the given space */
+    Time currentSpaceTime(const SpaceID& space);
+    /** Convert a time in the given space to a local time.
+     *  \param space the space to translate from
+     *  \param t the time in the space to convert to a local time
+     */
+    Time localTime(const SpaceID& space, const Time& t);
+    /** Get the current local time. */
+    Time currentLocalTime();
+
     /** Primary ODP send function. */
     bool send(SpaceObjectReference& sporefsrc, const SpaceID& space, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload);
     bool send(SpaceObjectReference& sporefsrc, const SpaceID& space, const uint16 src_port, const UUID& dest, const uint16 dest_port, MemoryReference payload);

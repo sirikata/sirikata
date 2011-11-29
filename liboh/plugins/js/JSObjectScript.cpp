@@ -997,7 +997,7 @@ void JSObjectScript::resolveImport(const String& filename, boost::filesystem::pa
         static const String bindir_pattern("<bindir>");
         std::size_t bindir_pos = search_it->find(bindir_pattern);
         if (bindir_pos != String::npos)
-            search_it->replace(bindir_pos, bindir_pattern.size(), Path::Get(Path::DIR_EXE));
+            search_it->replace(bindir_pos, bindir_pattern.size(), Path::Get(Path::DIR_EXE_BUNDLE));
     }
     // Always search the current directory as a last resort
     search_paths.push_back(".");

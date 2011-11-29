@@ -12,6 +12,7 @@
 #include <sirikata/core/options/Options.hpp>
 #include <sirikata/core/options/CommonOptions.hpp>
 #include <sirikata/core/transfer/URI.hpp>
+#include <sirikata/core/transfer/URL.hpp>
 #include <sirikata/core/util/Paths.hpp>
 #include <boost/filesystem.hpp>
 #include <sirikata/core/transfer/AggregatedTransferPool.hpp>
@@ -110,7 +111,16 @@ bool registerURIHandler() {
     String exe_file = getExecutablePath("slauncher");
 
 #if SIRIKATA_PLATFORM == PLATFORM_LINUX
-    String cmd = exe_file + " --uri=%s";
+
+    // We register in two ways. The first way is for Firefox/Gnome and just adds
+    // the appropriate command for the uri type to gconf. xdg-utils, it seems,
+    // *sometimes* picks up this one as well.
+
+    // Note that in both cases, we use --uri sirikata:foobar rather than
+    // --uri=sirikata:foobar. Sometimes the launcher (e.g. xdg-open) insists on
+    // splitting the url portion into a separate argument, even if we didn't
+    // leave a space, so we are forced to use this format.
+    String cmd = exe_file + " --uri %s";
     String needs_terminal =
 #if SIRIKATA_DEBUG
         "true"
@@ -126,6 +136,37 @@ bool registerURIHandler() {
 
     const char* const enabled_argv[] = { "gconftool-2", "-t", "bool", "-s", "/desktop/gnome/url-handlers/sirikata/enabled", "true", NULL};
     execCommand("gconftool-2", enabled_argv);
+
+    // The second registration is through xdg-utils. We generate a .desktop
+    // entry for the current user (putting it in their
+    // ~/.local/share/applications). This should work across a bunch of
+    // browsers, work from the command line, and is also used as a fallback in
+    // some cases.
+    // TODO(ewencp) we could probably improve this by detecting root user and
+    // installing globally in that case
+
+    {
+        FILE* desktop_fp = fopen("/tmp/sirikata-slauncher.desktop", "w");
+        if (!desktop_fp) {
+            LAUNCHER_LOG(error, "Couldn't create temporary .desktop file.");
+        }
+        else {
+            fprintf(desktop_fp, "[Desktop Entry]\n");
+            fprintf(desktop_fp, "Name=Sirikata Launcher\n");
+            fprintf(desktop_fp, "Comment=Launcher for Sirikata Virtual Worlds\n");
+            String desktop_cmd = exe_file + " '--uri %u'";
+            fprintf(desktop_fp, "Exec=%s\n", desktop_cmd.c_str());
+            fprintf(desktop_fp, "Terminal=%s\n", needs_terminal.c_str());
+            fprintf(desktop_fp, "Type=Application\n");
+            fprintf(desktop_fp, "Categories=Network\n");
+            fprintf(desktop_fp, "MimeType=x-scheme-handler/sirikata\n");
+            fclose(desktop_fp);
+
+            const char* const desktop_install_argv[] = { "xdg-desktop-menu", "install", "/tmp/sirikata-slauncher.desktop", NULL};
+            execCommand("xdg-desktop-menu", desktop_install_argv);
+        }
+    }
+
 
 #elif SIRIKATA_PLATFORM == PLATFORM_WINDOWS
     String exe_name = getExecutableName("slauncher");
@@ -195,7 +236,7 @@ void stopWork() {
     ioWork = NULL;
 }
 
-void finishLaunchURI(Transfer::ChunkRequestPtr req, Transfer::DenseDataPtr data, int* retval);
+void finishLaunchURI(Transfer::URI config_uri, Transfer::ChunkRequestPtr req, Transfer::DenseDataPtr data, int* retval);
 void finishDownloadResource(const String& data_path, Transfer::ChunkRequestPtr req, Transfer::DenseDataPtr data, int* retval);
 void doExecApp(int* retval);
 
@@ -221,7 +262,7 @@ bool startLaunchURI(String uri_str, int* retval) {
     rdl =
         Transfer::ResourceDownloadTask::construct(
             config_uri, gTransferPool, 1.0,
-            gContext->mainStrand->wrap(std::tr1::bind(finishLaunchURI, std::tr1::placeholders::_1, std::tr1::placeholders::_2, retval))
+            gContext->mainStrand->wrap(std::tr1::bind(finishLaunchURI, config_uri, std::tr1::placeholders::_1, std::tr1::placeholders::_2, retval))
         );
     rdl->start();
 
@@ -243,8 +284,18 @@ String appDirPath() {
 #if SIRIKATA_PLATFORM == PLATFORM_LINUX || SIRIKATA_PLATFORM == PLATFORM_MAC
     return (boost::filesystem::path(Path::Get(Path::DIR_EXE)) / appDir).string();
 #elif SIRIKATA_PLATFORM == PLATFORM_WINDOWS
-    // Windows has the Release & Debug directories
-    return (boost::filesystem::path(Path::Get(Path::DIR_EXE)).parent_path() / appDir).string();
+    boost::filesystem::path exe_path(Path::Get(Path::DIR_EXE));
+    // Windows has the Release & Debug directories when we're in the
+    // build tree. Try detecting and removing them.
+    if (exe_path.has_filename() &&
+        (exe_path.filename() == "Debug" ||
+            exe_path.filename() == "Release" ||
+            exe_path.filename() == "RelWithDebInfo"
+        )
+    ) {
+        exe_path = exe_path.parent_path();
+    }
+    return (exe_path / appDir).string();
 #endif
 
 }
@@ -252,7 +303,7 @@ String appDirPath() {
 typedef std::map<String, Transfer::ResourceDownloadTaskPtr> ResourceDownloadMap;
 ResourceDownloadMap resourceDownloads;
 
-void finishLaunchURI(Transfer::ChunkRequestPtr req, Transfer::DenseDataPtr data, int* retval) {
+void finishLaunchURI(Transfer::URI config_uri, Transfer::ChunkRequestPtr req, Transfer::DenseDataPtr data, int* retval) {
     // Fire off the request for
     if (!data || data->size() == 0) {
         LAUNCHER_LOG(error, "Failed to download config");
@@ -301,7 +352,7 @@ void finishLaunchURI(Transfer::ChunkRequestPtr req, Transfer::DenseDataPtr data,
             return;
         }
     }
-    LAUNCHER_LOG(error, "Using appliction directory: " << appDirPath());
+    LAUNCHER_LOG(info, "Using appliction directory: " << appDirPath());
 
     // This is not required data
     try {
@@ -309,7 +360,21 @@ void finishLaunchURI(Transfer::ChunkRequestPtr req, Transfer::DenseDataPtr data,
         BOOST_FOREACH(ptree::value_type &v,
             pt.get_child("app.files")) {
             String data_path(v.first);
+
+            // Handle relative URLs carefullly.
+            // By default, we'll just try handling
             Transfer::URI data_uri(v.second.data());
+            // And we'll only override it with a relative one if the relative
+            // one can be decoded as a URL.
+            Transfer::URL config_url(config_uri);
+            if (!config_url.empty()) {
+                // Constructor figures out absolute/relative, and just fails if
+                // it can't construct a valid URL.
+                Transfer::URL deriv_url(config_url.context(), v.second.data());
+                if (!deriv_url.empty())
+                    data_uri = Transfer::URI(deriv_url.toString());
+            }
+
             LAUNCHER_LOG(detailed, "Download resource " << data_path << " from " << data_uri);
             Transfer::ResourceDownloadTaskPtr dl =
                 Transfer::ResourceDownloadTask::construct(
@@ -343,8 +408,25 @@ void finishDownloadResource(const String& data_path, Transfer::ChunkRequestPtr r
     // Store to disk
     boost::filesystem::path app_data_path(appDirPath());
     app_data_path /= data_path;
+
+    // Make sure the directory exists. If we had sirikata/bin/demo/ as
+    // the app data path and foo/bar/bin.db as the file, we need to
+    // make sure sirikata/bin/demo/foo/bar/ exists, which is the
+    // parent of the full data file path. We know from earlier that
+    // we've already got sirikata/bin/demo/.
+    if (!boost::filesystem::exists(app_data_path.parent_path()) &&
+        !boost::filesystem::create_directories(app_data_path.parent_path())) {
+        LAUNCHER_LOG(error, "Couldn't create data directory: " << app_data_path.parent_path().string());
+        eventLoopExit(retval, -1);
+        return;
+    }
+
     String app_data_path_str = app_data_path.string();
     FILE* fp = fopen(app_data_path_str.c_str(), "wb");
+    if (fp == NULL) {
+        LAUNCHER_LOG(error, "Couldn't open file for writing: " << app_data_path_str);
+        eventLoopExit(retval, -1);
+    }
     fwrite(data->begin(), 1, data->size(), fp);
     fclose(fp);
 

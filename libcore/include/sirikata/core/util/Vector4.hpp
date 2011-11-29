@@ -97,7 +97,7 @@ public:
         w=other;
         return *this;
     }
-    static Vector4 nil() {
+    static Vector4 zero() {
         return Vector4(0,0,0,0);
     }
     static Vector4 unitX() {

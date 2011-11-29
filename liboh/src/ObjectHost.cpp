@@ -223,8 +223,9 @@ bool ObjectHost::connect(
         return false;
     SessionManager *sm = mSessionManagers[space];
 
+    String filtered_query = mQueryProcessor->connectRequest(ho, sporef, query);
     return sm->connect(
-        sporef, loc, orient, bnds, mesh, phy, query,
+        sporef, loc, orient, bnds, mesh, phy, filtered_query,
         std::tr1::bind(&ObjectHost::wrappedConnectedCallback, this, HostedObjectWPtr(ho), _1, _2, _3, connected_cb),
         migrated_cb,
         std::tr1::bind(&ObjectHost::wrappedStreamCreatedCallback, this, HostedObjectWPtr(ho), _1, _2, stream_created_cb),
@@ -286,6 +287,35 @@ Duration ObjectHost::clientTimeOffset(const SpaceID& space) const {
     assert(mSessionManagers.find(space) != mSessionManagers.end());
     return mSessionManagers.find(space)->second->clientTimeOffset();
 }
+
+Time ObjectHost::spaceTime(const SpaceID& space, const Time& t) {
+    Duration off = serverTimeOffset(space);
+    // FIXME we should probably return a negative time and force the code using
+    // this (e.g. the loc update stuff) to make sure it handles it correctly by
+    // extrapolating to a current time.
+    // This is kinda gross, but we need to make sure result >= 0
+    if ( (int64)t.raw() + off.toMicro() < 0) return Time::null();
+    return t + off;
+}
+
+Time ObjectHost::currentSpaceTime(const SpaceID& space) {
+    return spaceTime(space, mContext->simTime());
+}
+
+Time ObjectHost::localTime(const SpaceID& space, const Time& t) {
+    Duration off = clientTimeOffset(space);
+    // FIXME we should probably return a negative time and force the code using
+    // this (e.g. the loc update stuff) to make sure it handles it correctly by
+    // extrapolating to a current time.
+    // This is kinda gross, but we need to make sure result >= 0
+    if ( (int64)t.raw() + off.toMicro() < 0) return Time::null();
+    return t + off;
+}
+
+Time ObjectHost::currentLocalTime() {
+    return mContext->simTime();
+}
+
 
 bool ObjectHost::send(SpaceObjectReference& sporef_src, const SpaceID& space, const uint16 src_port, const UUID& dest, const uint16 dest_port, MemoryReference payload) {
     Sirikata::SerializationCheck::Scoped sc(&mSessionSerialization);

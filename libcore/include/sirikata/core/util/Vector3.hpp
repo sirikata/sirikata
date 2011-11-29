@@ -92,7 +92,7 @@ public:
         z=other;
         return *this;
     }
-    static Vector3 nil() {
+    static Vector3 zero() {
         return Vector3(0,0,0);
     }
     static Vector3 unitX() {

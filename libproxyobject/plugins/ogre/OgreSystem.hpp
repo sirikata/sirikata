@@ -46,12 +46,6 @@
 
 #include <sirikata/ogre/OgreRenderer.hpp>
 
-//Thank you Apple:
-// /System/Library/Frameworks/CoreServices.framework/Headers/../Frameworks/CarbonCore.framework/Headers/MacTypes.h
-#ifdef nil
-#undef nil
-#endif
-
 namespace Ogre {
 struct RaySceneQueryResultEntry;
 class SubEntity;

@@ -374,6 +374,11 @@ namespace Sirikata {
 
 typedef uint32 ServerID;
 #define NullServerID 0
+struct ServerIDNull {
+    ServerID operator()() {
+        return NullServerID;
+    };
+};
 struct ServerIDRandom {
     ServerID operator()() {
         // Because ServerIDs aren't really random (we start allocating linearly

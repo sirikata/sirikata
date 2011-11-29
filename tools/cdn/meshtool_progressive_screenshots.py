@@ -28,8 +28,10 @@ def decode(str):
     return unicodedata.normalize('NFKD', str).encode('ascii','ignore')
 
 def save_screenshot(mesh_file, screenshot_file, zip_filename=None):
-    screenshot = factory.getInstance('save_screenshot')
     mesh = collada.Collada(mesh_file, zip_filename=zip_filename)
+    strip_lines = factory.getInstance('strip_lines')
+    mesh = strip_lines.apply(mesh)
+    screenshot = factory.getInstance('save_screenshot')
     screenshot.apply(mesh, screenshot_file)
 
 def progressive_screenshot(prog_dae, prog_pdae, percentage, screenshot_file, full_path):

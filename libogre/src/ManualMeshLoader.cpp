@@ -8,8 +8,6 @@
 #include <OgreHardwareBufferManager.h>
 #include <sirikata/ogre/OgreConversions.hpp>
 
-#undef nil
-
 namespace Sirikata {
 namespace Graphics {
 
@@ -217,7 +215,7 @@ void ManualMeshLoader::traverseNodes(Ogre::Resource* r, const bool useSharedBuff
         mesh_rad = std::max(mesh_rad, rad);
 
         const SkinController* skin = (submesh.skinControllers.size() > 0) ? (&(submesh.skinControllers[0])) : NULL;
-        if (skin != NULL && skin->bindShapeMatrix != Matrix4x4f::identity() && skin->bindShapeMatrix != Matrix4x4f::nil()) {
+        if (skin != NULL && skin->bindShapeMatrix != Matrix4x4f::identity() && skin->bindShapeMatrix != Matrix4x4f::zero()) {
             rad = 0;
             submeshaabb = BoundingBox3f3f::null();
             geoinst.computeTransformedBounds(md, pos_xform*(skin->bindShapeMatrix), &submeshaabb, &rad);

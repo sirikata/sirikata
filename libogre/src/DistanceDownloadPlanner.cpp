@@ -138,13 +138,13 @@ void DistanceDownloadPlanner::addNewObject(Entity *ent, const Transfer::URI& mes
 }
 
 void DistanceDownloadPlanner::addNewObject(ProxyObjectPtr p, Entity *mesh) {
-    addObject(new Object(mesh, p->getMesh(), p));
+    addObject(new Object(mesh, p->mesh(), p));
 }
 
 void DistanceDownloadPlanner::updateObject(ProxyObjectPtr p) {
     Object* r = findObject(p->getObjectReference().toString());
     URI last_file = r->file;
-    URI new_file = p->getMesh();
+    URI new_file = p->mesh();
     if (new_file != last_file && r->loaded) {
         unrequestAssetForObject(r);
     }

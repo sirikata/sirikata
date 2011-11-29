@@ -131,7 +131,7 @@ void PintoManager::handleClientReceived(Sirikata::Network::Stream* stream, Chunk
         PINTO_LOG(debug, "Associated connection with space server " << msg.server().server());
         cdata.server = msg.server().server();
 
-        TimedMotionVector3f default_loc( Time::null(), MotionVector3f( Vector3f::nil(), Vector3f::nil() ) );
+        TimedMotionVector3f default_loc( Time::null(), MotionVector3f( Vector3f::zero(), Vector3f::zero() ) );
         BoundingSphere3f default_region(BoundingSphere3f::null());
         float32 default_max = 0.f;
         SolidAngle default_min_angle(SolidAngle::Max);

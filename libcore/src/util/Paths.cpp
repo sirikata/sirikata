@@ -70,6 +70,35 @@ String Get(Key key) {
           }
           break;
 
+      case DIR_EXE_BUNDLE:
+          {
+#if SIRIKATA_PLATFORM == PLATFORM_WINDOWS || SIRIKATA_PLATFORM == PLATFORM_LINUX
+              // Windows and Linux don't have bundles
+              return Get(DIR_EXE);
+#elif SIRIKATA_PLATFORM == PLATFORM_MAC
+              // On mac we need to detect that we're in a .app. We assume this
+              // only applies if the binaries are in the standard location,
+              // i.e. foo.app/Contents/MacOS/bar_binary
+              String exe_dir = Get(DIR_EXE);
+              boost::filesystem::path exe_dir_path(exe_dir);
+              // Work our way back up verifying the path names, finally
+              // returning if we actually find the .app.
+              if (exe_dir_path.has_filename() && exe_dir_path.filename() == "MacOS") {
+                  exe_dir_path = exe_dir_path.parent_path();
+                  if (exe_dir_path.has_filename() && exe_dir_path.filename() == "Contents") {
+                      exe_dir_path = exe_dir_path.parent_path();
+                      if (exe_dir_path.has_filename()) {
+                          String app_dir_name = exe_dir_path.filename();
+                          if (app_dir_name.substr(app_dir_name.size()-4, 4) == ".app")
+                              return exe_dir_path.parent_path().string();
+                      }
+                  }
+              }
+              // Otherwise dump the original
+              return exe_dir;
+#endif
+          }
+          break;
 
       case DIR_CURRENT:
           {

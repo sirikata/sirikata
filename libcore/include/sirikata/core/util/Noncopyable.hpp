@@ -30,6 +30,9 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifndef _SIRIKATA_CORE_UTIL_NONCOPYABLE_HPP_
+#define _SIRIKATA_CORE_UTIL_NONCOPYABLE_HPP_
+
 namespace Sirikata {
 class Noncopyable{
    protected:
@@ -42,3 +45,5 @@ class Noncopyable{
       const Noncopyable& operator=( const Noncopyable& );
 };
 }
+
+#endif //_SIRIKATA_CORE_UTIL_NONCOPYABLE_HPP_
