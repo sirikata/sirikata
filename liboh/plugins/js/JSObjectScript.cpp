@@ -269,8 +269,9 @@ void JSObjectScript::initialize(const String& args, const String& script,int32 m
 }
 
 
-JSObjectScript::JSObjectScript(JSObjectScriptManager* jMan, OH::Storage* storage, OH::PersistedObjectSet* persisted_set, const UUID& internal_id)
- : mInternalID(internal_id),
+JSObjectScript::JSObjectScript(JSObjectScriptManager* jMan, OH::Storage* storage, OH::PersistedObjectSet* persisted_set, const UUID& internal_id, Network::IOStrand* objStrand)
+ : mStrand(objStrand),
+   mInternalID(internal_id),
    mResourceCounter(0),
    mNestedEvalCounter(0),
    contIDTracker(0),

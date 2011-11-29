@@ -75,8 +75,9 @@ namespace JS {
 
 #define EMERSON_UNRELIABLE_COMMUNICATION_PORT 12
 
-EmersonScript::EmersonScript(HostedObjectPtr ho, const String& args, const String& script, JSObjectScriptManager* jMan)
- : JSObjectScript(jMan, ho->getObjectHost()->getStorage(), ho->getObjectHost()->getPersistedObjectSet(), ho->id()),
+EmersonScript::EmersonScript(HostedObjectPtr ho, const String& args, const String& script, JSObjectScriptManager* jMan, Network::IOStrand* objStrand)
+ : JSObjectScript(jMan, ho->getObjectHost()->getStorage(),
+     ho->getObjectHost()->getPersistedObjectSet(), ho->id(),objStrand),
    JSVisibleManager(this),
    EmersonMessagingManager(ho->context()),
    mParent(ho),

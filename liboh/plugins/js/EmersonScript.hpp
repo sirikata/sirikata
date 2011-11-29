@@ -70,7 +70,10 @@ class EmersonScript : public JSObjectScript,
 {
 
 public:
-    EmersonScript(HostedObjectPtr ho, const String& args, const String& script, JSObjectScriptManager* jMan);
+    EmersonScript(HostedObjectPtr ho, const String& args,
+        const String& script, JSObjectScriptManager* jMan,
+        Network::IOStrand* objStrand);
+    
     virtual ~EmersonScript();
 
     // Sirikata::Service Interface
