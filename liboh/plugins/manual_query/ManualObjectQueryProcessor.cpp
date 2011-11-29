@@ -97,6 +97,48 @@ String coarsenRequest(const std::vector<ObjectReference>& aggs) {
     }
 }
 
+
+void addAdditionResult(Sirikata::Protocol::Prox::ProximityUpdate& obj_results, const SpaceObjectReference& observed, const SequencedPresenceProperties& props) {
+    Sirikata::Protocol::Prox::IObjectAddition addition = obj_results.add_addition();
+    addition.set_object(observed.object().getAsUUID());
+
+    addition.set_seqno(props.maxSeqNo());
+
+    Sirikata::Protocol::ITimedMotionVector motion = addition.mutable_location();
+    TimedMotionVector3f loc = props.location();
+    motion.set_t(loc.updateTime());
+    motion.set_position(loc.position());
+    motion.set_velocity(loc.velocity());
+
+    TimedMotionQuaternion orient = props.orientation();
+    Sirikata::Protocol::ITimedMotionQuaternion msg_orient = addition.mutable_orientation();
+    msg_orient.set_t(orient.updateTime());
+    msg_orient.set_position(orient.position());
+    msg_orient.set_velocity(orient.velocity());
+
+    addition.set_bounds( props.bounds() );
+    const String& mesh = props.mesh().toString();
+    if (mesh.size() > 0)
+        addition.set_mesh(mesh);
+    const String& phy = props.physics();
+    if (phy.size() > 0)
+        addition.set_physics(phy);
+
+    // FIXME parent?
+    // FIXME should we expose whether the object is an aggregate?
+}
+
+void addRemovalResult(Sirikata::Protocol::Prox::ProximityUpdate& obj_results, const SpaceObjectReference& observed, uint64 seqno, bool permanent) {
+    Sirikata::Protocol::Prox::IObjectRemoval removal = obj_results.add_removal();
+    removal.set_object(observed.object().getAsUUID());
+    removal.set_seqno(seqno);
+    removal.set_type(
+        permanent ?
+        Sirikata::Protocol::Prox::ObjectRemoval::Permanent :
+        Sirikata::Protocol::Prox::ObjectRemoval::Transient
+    );
+}
+
 }
 
 ManualObjectQueryProcessor* ManualObjectQueryProcessor::create(ObjectHostContext* ctx, const String& args) {
@@ -204,6 +246,7 @@ String ManualObjectQueryProcessor::connectRequest(HostedObjectPtr ho, const Spac
     // Very likely brand new here
     if (obj_it == mObjectState.end())
         obj_it = mObjectState.insert( ObjectStateMap::value_type(sporef, ObjectState()) ).first;
+    obj_it->second.who = ho;
     obj_it->second.query = query;
 
     // Return an empty query -- we don't want any query passed on to the
@@ -223,6 +266,7 @@ void ManualObjectQueryProcessor::updateQuery(HostedObjectPtr ho, const SpaceObje
     }
     else { // Init or update
         // Track state
+        it->second.who = ho;
         it->second.query = new_query;
         // Update server query
         // FIXME
@@ -409,6 +453,14 @@ void ManualObjectQueryProcessor::handleProximityMessage(const OHDP::SpaceNodeID&
     for(int32 idx = 0; idx < contents.update_size(); idx++) {
         Sirikata::Protocol::Prox::ProximityUpdate update = contents.update(idx);
 
+        // TODO(ewencp) this is temporary code to actually get
+        // results to objects, without actually doing real querying. We
+        // shouldn't even do this in here, we should trigger some code in a
+        // query handler which will then trigger the results for the object.
+        // Note that we generate a new update so that we are sure to use the
+        // most up-to-date loc information.
+        Sirikata::Protocol::Prox::ProximityUpdate obj_update;
+
         for(int32 aidx = 0; aidx < update.addition_size(); aidx++) {
             Sirikata::Protocol::Prox::ObjectAddition addition = update.addition(aidx);
             ProxProtocolLocUpdate add(addition);
@@ -428,6 +480,9 @@ void ManualObjectQueryProcessor::handleProximityMessage(const OHDP::SpaceNodeID&
             // Replay orphans
             query_state->orphans.invokeOrphanUpdates(snid, observed, this);
 
+            // TODO(ewencp) temporary code to get results out. See note above.
+            addAdditionResult(obj_update, observed, props);
+
             // TODO(ewencp) this is a temporary way to trigger refinement -- we
             // just always refine whenver we see. Obviously this is inefficient
             // and won't scale, but it's useful to get some tests running.
@@ -442,6 +497,23 @@ void ManualObjectQueryProcessor::handleProximityMessage(const OHDP::SpaceNodeID&
             // Backup data for orphans and then destroy
             query_state->orphans.addUpdateFromExisting(observed, query_state->objects[observed]);
             query_state->objects.erase(observed);
+
+            // TODO(ewencp) temporary code to get results out. See note above.
+            addRemovalResult(
+                obj_update, observed,
+                removal.seqno(),
+                (removal.has_type() && (removal.type() == Sirikata::Protocol::Prox::ObjectRemoval::Permanent))
+            );
+        }
+
+        // TODO(ewencp) temporary to get results to objects. See note above.
+        // FIXME this also isn't even right. we need to track which objects
+        // should get results from this query.
+        for(ObjectStateMap::const_iterator obj_it = mObjectState.begin(); obj_it != mObjectState.end(); obj_it++) {
+            HostedObjectPtr ho = obj_it->second.who.lock();
+            if (!ho) continue;
+            const SpaceObjectReference& sporef = obj_it->first;
+            deliverProximityUpdate(ho, sporef, obj_update);
         }
     }
 

@@ -142,6 +142,13 @@ public:
     void reset() {
         memset(mUpdateSeqno, 0, LOC_NUM_PART * sizeof(uint64));
     }
+
+    uint64 maxSeqNo() const {
+        uint64 maxseqno = mUpdateSeqno[0];
+        for(uint32 i = 1; i < LOC_NUM_PART; i++)
+            maxseqno = std::max(maxseqno, mUpdateSeqno[i]);
+        return maxseqno;
+    }
 private:
     uint64 mUpdateSeqno[LOC_NUM_PART];
 };

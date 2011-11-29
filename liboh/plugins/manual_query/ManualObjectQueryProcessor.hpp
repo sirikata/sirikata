@@ -62,6 +62,7 @@ private:
             return (node == OHDP::NodeID::null());
         }
 
+        HostedObjectWPtr who;
         OHDP::NodeID node;
         String query;
     };
