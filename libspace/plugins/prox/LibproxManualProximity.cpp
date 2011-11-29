@@ -11,6 +11,7 @@
 
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
+#include <boost/foreach.hpp>
 
 #include <prox/manual/RTreeManualQueryHandler.hpp>
 
@@ -234,9 +235,39 @@ void LibproxManualProximity::handleObjectHostProxMessage(const OHDP::NodeID& id,
     }
     else if (action == "refine") {
         PROXLOG(detailed, "Refine query for " << id);
+
+        std::vector<UUID> refine_nodes;
+        BOOST_FOREACH(ptree::value_type &v,
+            pt.get_child("nodes"))
+            refine_nodes.push_back(UUID(v.first, UUID::HumanReadable()));
+
+        for(int kls = 0; kls < NUM_OBJECT_CLASSES; kls++) {
+            if (mOHQueryHandler[kls] == NULL) continue;
+            OHQueryMap::iterator query_it = mOHQueries[kls].find(id);
+            if (query_it == mOHQueries[kls].end()) continue;
+            ProxQuery* q = query_it->second;
+
+            for(uint32 i = 0; i < refine_nodes.size(); i++)
+                q->refine(refine_nodes[i]);
+        }
     }
     else if (action == "coarsen") {
         PROXLOG(detailed, "Coarsen query for " << id);
+
+        std::vector<UUID> coarsen_nodes;
+        BOOST_FOREACH(ptree::value_type &v,
+            pt.get_child("nodes"))
+            coarsen_nodes.push_back(UUID(v.first, UUID::HumanReadable()));
+
+        for(int kls = 0; kls < NUM_OBJECT_CLASSES; kls++) {
+            if (mOHQueryHandler[kls] == NULL) continue;
+            OHQueryMap::iterator query_it = mOHQueries[kls].find(id);
+            if (query_it == mOHQueries[kls].end()) continue;
+            ProxQuery* q = query_it->second;
+
+            for(uint32 i = 0; i < coarsen_nodes.size(); i++)
+                q->coarsen(coarsen_nodes[i]);
+        }
     }
     else if (action == "destroy") {
         destroyQuery(id);
