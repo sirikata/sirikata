@@ -1,6 +1,7 @@
 #include "MeshdataToCollada.hpp"
 
 #include "COLLADASWStreamWriter.h"
+#include "COLLADASWException.h"
 
 #include "COLLADASWAsset.h"
 #include "COLLADASWScene.h"
@@ -1020,56 +1021,62 @@ public:
       scene.add();
   }
 
-  int meshdataToCollada(const Meshdata& meshdata, const std::string& fileName) {
-    COLLADASW::StreamWriter  streamWriter( COLLADASW::NativeString (fileName), false );
+int meshdataToCollada(const Meshdata& meshdata, const std::string& fileName) {
+    try {
+        COLLADASW::StreamWriter  streamWriter( COLLADASW::NativeString (fileName), false );
 
-    streamWriter.startDocument();
+        streamWriter.startDocument();
 
-    exportAsset(&streamWriter, meshdata);
+        exportAsset(&streamWriter, meshdata);
 
-    std::map<String,int> texturesList;
-    for (TextureList::const_iterator it = meshdata.textures.begin() ; it!= meshdata.textures.end(); it++) {
-      texturesList[*it] = 1;
+        std::map<String,int> texturesList;
+        for (TextureList::const_iterator it = meshdata.textures.begin() ; it!= meshdata.textures.end(); it++) {
+            texturesList[*it] = 1;
+        }
+
+        ImageExporter imageExporter(&streamWriter);
+        imageExporter.exportImages( texturesList);
+
+
+        std::map<std::string, int> textureURIToEffectIndexMap;
+        EffectExporter effectExporter(&streamWriter);
+        effectExporter.exportEffect(&streamWriter, meshdata, texturesList, textureURIToEffectIndexMap);
+
+
+        std::map<int, int> materialRedirectionMap;
+        MaterialExporter materialExporter(&streamWriter);
+        materialExporter.exportMaterial( meshdata, textureURIToEffectIndexMap, materialRedirectionMap);
+
+
+        std::map<int,bool> addedGeometriesList;
+        GeometryExporter geometryExporter(&streamWriter);
+        geometryExporter.exportGeometry(&streamWriter, meshdata, addedGeometriesList, materialRedirectionMap);
+
+        std::map<int,bool> addedLightsList;
+        LightExporter lightExporter(&streamWriter);
+        lightExporter.exportLights(&streamWriter, meshdata, addedLightsList);
+
+        {
+            ControllerExporter controllerExporter(&streamWriter);
+            controllerExporter.exportControllers(&streamWriter, meshdata);
+        }
+
+        NodeExporter nodeExporter(&streamWriter);
+        nodeExporter.exportNodes(meshdata, addedGeometriesList, materialRedirectionMap, addedLightsList);
+
+        VisualSceneExporter visualSceneExporter(&streamWriter);
+        visualSceneExporter.exportVisualScene(&streamWriter, meshdata, addedGeometriesList, materialRedirectionMap, addedLightsList);
+
+        exportScene(&streamWriter, meshdata);
+
+        streamWriter.endDocument();
+
+        return 0;
     }
-
-    ImageExporter imageExporter(&streamWriter);
-    imageExporter.exportImages( texturesList);
-
-
-    std::map<std::string, int> textureURIToEffectIndexMap;
-    EffectExporter effectExporter(&streamWriter);
-    effectExporter.exportEffect(&streamWriter, meshdata, texturesList, textureURIToEffectIndexMap);
-
-
-    std::map<int, int> materialRedirectionMap;
-    MaterialExporter materialExporter(&streamWriter);
-    materialExporter.exportMaterial( meshdata, textureURIToEffectIndexMap, materialRedirectionMap);
-
-
-    std::map<int,bool> addedGeometriesList;
-    GeometryExporter geometryExporter(&streamWriter);
-    geometryExporter.exportGeometry(&streamWriter, meshdata, addedGeometriesList, materialRedirectionMap);
-
-    std::map<int,bool> addedLightsList;
-    LightExporter lightExporter(&streamWriter);
-    lightExporter.exportLights(&streamWriter, meshdata, addedLightsList);
-
-    {
-        ControllerExporter controllerExporter(&streamWriter);
-        controllerExporter.exportControllers(&streamWriter, meshdata);
+    catch (COLLADASW::StreamWriterException swexc) {
+        SILOG(collada, error, "[COLLADA] Failed to convert to collada because the requested file couldn't be opened: " << swexc.getMessage());
+        return -1;
     }
-
-    NodeExporter nodeExporter(&streamWriter);
-    nodeExporter.exportNodes(meshdata, addedGeometriesList, materialRedirectionMap, addedLightsList);
-
-    VisualSceneExporter visualSceneExporter(&streamWriter);
-    visualSceneExporter.exportVisualScene(&streamWriter, meshdata, addedGeometriesList, materialRedirectionMap, addedLightsList);
-
-    exportScene(&streamWriter, meshdata);
-
-    streamWriter.endDocument();
-
-    return 0;
-  }
+}
 
 }
