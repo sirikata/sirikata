@@ -32,6 +32,9 @@
 #ifndef _SIRIKATA_CONNECTION_EVENT_LISTENER_HPP_
 #define _SIRIKATA_CONNECTION_EVENT_LISTENER_HPP_
 
+#include <sirikata/proxyobject/Platform.hpp>
+#include <sirikata/core/util/ListenerProvider.hpp>
+
 namespace Sirikata {
 
 /** ConnectionEventListener listens for events relating to object host
@@ -57,6 +60,8 @@ public:
      */
     virtual void onDisconnected(const Network::Address& addr, bool requested, const String& reason) {};
 };
+
+typedef Provider< ConnectionEventListener* > ConnectionEventProvider;
 
 } // namespace Sirikata
 

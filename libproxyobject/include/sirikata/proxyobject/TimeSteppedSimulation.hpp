@@ -34,14 +34,13 @@
 #define _SIRIKATA_TIME_STEPPED_SIMULATION_HPP_
 
 #include <sirikata/proxyobject/Platform.hpp>
-#include <sirikata/proxyobject/ConnectionEventListener.hpp>
 #include <sirikata/core/service/PollingService.hpp>
 #include <sirikata/core/service/Context.hpp>
 #include "Invokable.hpp"
 
 namespace Sirikata {
 
-class TimeSteppedSimulation : public ConnectionEventListener, public PollingService, public Invokable {
+class TimeSteppedSimulation : public PollingService, public Invokable {
 public:
     TimeSteppedSimulation(Context* ctx, const Duration& rate, const String& name, bool accurate=false)
      : PollingService(ctx->mainStrand, rate, ctx, name, accurate)

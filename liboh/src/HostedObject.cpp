@@ -465,7 +465,7 @@ bool HostedObject::addSimListeners(PerPresenceData& pd, const String& simName,Ti
     }
 
     HO_LOG(info,String("[OH] Initializing ") + simName);
-    sim = SimulationFactory::getSingleton().getConstructor ( simName ) ( mContext, getSharedPtr(), pd.id(), getObjectHost()->getSimOptions(simName));
+    sim = SimulationFactory::getSingleton().getConstructor ( simName ) ( mContext, static_cast<ConnectionEventProvider*>(mObjectHost), getSharedPtr(), pd.id(), getObjectHost()->getSimOptions(simName));
     if (!sim)
     {
         HO_LOG(error, "Unable to load " << simName << " plugin.");
@@ -474,7 +474,6 @@ bool HostedObject::addSimListeners(PerPresenceData& pd, const String& simName,Ti
     else
     {
         pd.sims[simName] = sim;
-        mObjectHost->ConnectionEventProvider::addListener(static_cast<ConnectionEventListener*>(sim));
         HO_LOG(info,String("Successfully initialized ") + simName);
     }
     return true;
