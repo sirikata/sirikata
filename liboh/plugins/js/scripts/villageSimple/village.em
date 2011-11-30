@@ -87,15 +87,13 @@ function createStreets(x,z,ini_x,ini_z)
 
 function CreatePresCB()
 {
-    if (PresQueue.length>0) {
-        while(windowCount<=windowSize){
-            windowCount++;
-            //system.print(windowCount);
-            //system.print('----current windowCount\n');
-            args = PresQueue.shift();
-            if(args.length==4) createPres.apply(this,args);
-            else if(args.length==5) createStreet.apply(this,args);
-        }
+    while(PresQueue.length>0 && windowCount<=windowSize){
+        windowCount++;
+        //system.print(windowCount);
+        //system.print('----current windowCount\n');
+        args = PresQueue.shift();
+        if(args.length==4) createPres.apply(this,args);
+        else if(args.length==5) createStreet.apply(this,args);
     }
 }
 
