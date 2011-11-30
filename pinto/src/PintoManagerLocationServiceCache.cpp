@@ -161,27 +161,27 @@ void PintoManagerLocationServiceCache::stopTracking(const Iterator& id) {
 }
 
 
-const TimedMotionVector3f& PintoManagerLocationServiceCache::location(const Iterator& id) const {
+TimedMotionVector3f PintoManagerLocationServiceCache::location(const Iterator& id) {
     SpaceServerData& dat = EXTRACT_ITERATOR_DATA(id);
     return dat.location;
 }
 
-const BoundingSphere3f& PintoManagerLocationServiceCache::region(const Iterator& id) const {
+BoundingSphere3f PintoManagerLocationServiceCache::region(const Iterator& id) {
     SpaceServerData& dat = EXTRACT_ITERATOR_DATA(id);
     return dat.region;
 }
 
-float32 PintoManagerLocationServiceCache::maxSize(const Iterator& id) const {
+float32 PintoManagerLocationServiceCache::maxSize(const Iterator& id) {
     SpaceServerData& dat = EXTRACT_ITERATOR_DATA(id);
     return dat.maxSize;
 }
 
-bool PintoManagerLocationServiceCache::isLocal(const Iterator& id) const {
+bool PintoManagerLocationServiceCache::isLocal(const Iterator& id) {
     // non-sensical here
     return false;
 }
 
-const ServerID& PintoManagerLocationServiceCache::iteratorID(const Iterator& id) const {
+const ServerID& PintoManagerLocationServiceCache::iteratorID(const Iterator& id) {
     return EXTRACT_ITERATOR(id)->first;
 }
 

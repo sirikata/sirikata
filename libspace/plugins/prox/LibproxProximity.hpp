@@ -34,7 +34,7 @@
 #define _SIRIKATA_LIBPROX_PROXIMITY_HPP_
 
 #include "LibproxProximityBase.hpp"
-#include <sirikata/space/ProxSimulationTraits.hpp>
+#include "ProxSimulationTraits.hpp"
 #include <prox/geom/QueryHandler.hpp>
 #include <prox/base/LocationUpdateListener.hpp>
 #include <prox/base/AggregateListener.hpp>

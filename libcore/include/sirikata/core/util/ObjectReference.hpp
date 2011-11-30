@@ -66,6 +66,10 @@ class SIRIKATA_EXPORT ObjectReference : public TotallyOrdered<ObjectReference>{
         return retval;
     }
 
+    static ObjectReference random() {
+        return ObjectReference(UUID::random());
+    }
+
     static const ObjectReference &spaceServiceID() {
         return null();
     }
@@ -80,6 +84,19 @@ class SIRIKATA_EXPORT ObjectReference : public TotallyOrdered<ObjectReference>{
     size_t hash() const{
         return mID.hash();
     }
+
+    class Null {
+    public:
+        const ObjectReference& operator()() const {
+            return ObjectReference::null();
+        }
+    };
+    class Random {
+    public:
+        ObjectReference operator()() const {
+            return ObjectReference::random();
+        }
+    };
 
     /** Get the %UUID of the object referred to. This is not necessarily space-specific, it is just the value used to
      *  construct this reference. Note the contrast with getAsUUID().

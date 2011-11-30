@@ -11,6 +11,8 @@
 
 #include <sirikata/proxyobject/OrphanLocUpdateManager.hpp>
 
+#include "OHLocationServiceCache.hpp"
+
 namespace Sirikata {
 namespace OH {
 namespace Manual {
@@ -82,6 +84,7 @@ private:
            orphans(ctx, ctx->mainStrand, Duration::seconds(10))
         {
             orphans.start();
+            objects = OHLocationServiceCachePtr(new OHLocationServiceCache(ctx->mainStrand /* FIXME should be prox querying strand */));
         }
         ~ServerQueryState() {
             orphans.stop();
@@ -105,11 +108,7 @@ private:
         // Whether we're in the process of sending messages
         bool writing;
 
-        // Each server query has an independent stream of results +
-        // loc updates, so each gets its own set of objects w/ properties and
-        // orphan tracking
-        typedef std::tr1::unordered_map<SpaceObjectReference, SequencedPresenceProperties, SpaceObjectReference::Hasher> ObjectPropertiesMap;
-        ObjectPropertiesMap objects;
+        OHLocationServiceCachePtr objects;
         OrphanLocUpdateManager orphans;
     };
     typedef std::tr1::shared_ptr<ServerQueryState> ServerQueryStatePtr;
