@@ -1,6 +1,6 @@
+system.import("std/default.em");
 system.require("villageSimple/meshes.em");
 system.require("std/core/repeatingTimer.em");
-system.require("villageSimple/map.em");
 
 meshes = housemeshes.concat(apartmentmeshes).concat(buildingmeshes);
 
