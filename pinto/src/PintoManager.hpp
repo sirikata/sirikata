@@ -38,7 +38,7 @@
 #include <sirikata/core/network/StreamListener.hpp>
 #include <sirikata/core/network/Stream.hpp>
 
-#include <sirikata/space/ProxSimulationTraits.hpp>
+#include "ProxSimulationTraits.hpp"
 
 #include <prox/geom/QueryHandler.hpp>
 #include <prox/base/QueryEventListener.hpp>

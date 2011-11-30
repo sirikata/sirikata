@@ -1391,7 +1391,6 @@ SET(LIBSPACE_SOURCES
   ${LIBSPACE_SOURCE_DIR}/Trace.cpp
   ${LIBSPACE_SOURCE_DIR}/PintoServerQuerier.cpp
   ${LIBSPACE_SOURCE_DIR}/LocationService.cpp
-  ${LIBSPACE_SOURCE_DIR}/ProxSimulationTraits.cpp
   ${LIBSPACE_SOURCE_DIR}/Proximity.cpp
   ${LIBSPACE_SOURCE_DIR}/AggregateManager.cpp
   ${LIBSPACE_SOURCE_DIR}/ObjectHostConnectionID.cpp
@@ -1583,6 +1582,7 @@ SET(LIBSPACE_PLUGIN_BULLETPHYSICS_SOURCES
 SET(LIBSPACE_PLUGIN_PROX_DIR ${LIBSPACE_PLUGIN_DIR}/prox)
 SET(LIBSPACE_PLUGIN_PROX_SOURCES
   ${LIBSPACE_PLUGIN_PROX_DIR}/PluginInterface.cpp
+  ${LIBSPACE_PLUGIN_PROX_DIR}/ProxSimulationTraits.cpp
   ${LIBSPACE_PLUGIN_PROX_DIR}/CBRLocationServiceCache.cpp
   ${LIBSPACE_PLUGIN_PROX_DIR}/LibproxProximityBase.cpp
   ${LIBSPACE_PLUGIN_PROX_DIR}/LibproxProximity.cpp
@@ -1668,6 +1668,7 @@ SET(CSEG_SOURCES
   )
 
 SET(PINTO_SOURCES
+  ${PINTO_SOURCE_DIR}/ProxSimulationTraits.cpp
   ${PINTO_SOURCE_DIR}/PintoManager.cpp
   ${PINTO_SOURCE_DIR}/PintoManagerLocationServiceCache.cpp
   ${PINTO_SOURCE_DIR}/Options.cpp
@@ -2321,6 +2322,8 @@ SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} oh-simple-query)
 
 SET(LIBOH_PLUGIN_MANUAL_QUERY_DIR ${LIBOH_PLUGIN_DIR}/manual_query)
 SET(LIBOH_PLUGIN_MANUAL_QUERY_SOURCES
+  ${LIBOH_PLUGIN_MANUAL_QUERY_DIR}/ProxSimulationTraits.cpp
+ ${LIBOH_PLUGIN_MANUAL_QUERY_DIR}/OHLocationServiceCache.cpp
  ${LIBOH_PLUGIN_MANUAL_QUERY_DIR}/ManualObjectQueryProcessor.cpp
  ${LIBOH_PLUGIN_MANUAL_QUERY_DIR}/PluginInterface.cpp
     )

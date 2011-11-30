@@ -94,7 +94,7 @@ bool CBRLocationServiceCache::tracking(const UUID& id) {
 }
 
 
-const TimedMotionVector3f& CBRLocationServiceCache::location(const Iterator& id) const {
+TimedMotionVector3f CBRLocationServiceCache::location(const Iterator& id) {
     // NOTE: Only accesses via iterator, shouldn't need a lock
     IteratorData* itdat = (IteratorData*)id.data;
     ObjectDataMap::iterator it = itdat->it;
@@ -102,7 +102,7 @@ const TimedMotionVector3f& CBRLocationServiceCache::location(const Iterator& id)
     return it->second.location;
 }
 
-const BoundingSphere3f& CBRLocationServiceCache::region(const Iterator& id) const {
+BoundingSphere3f CBRLocationServiceCache::region(const Iterator& id) {
     // NOTE: Only accesses via iterator, shouldn't need a lock
     // "Region" for individual objects is the degenerate bounding sphere about
     // their center.
@@ -112,7 +112,7 @@ const BoundingSphere3f& CBRLocationServiceCache::region(const Iterator& id) cons
     return it->second.region;
 }
 
-float32 CBRLocationServiceCache::maxSize(const Iterator& id) const {
+float32 CBRLocationServiceCache::maxSize(const Iterator& id) {
     // NOTE: Only accesses via iterator, shouldn't need a lock
     // Max size is just the size of the object.
     IteratorData* itdat = (IteratorData*)id.data;
@@ -121,7 +121,7 @@ float32 CBRLocationServiceCache::maxSize(const Iterator& id) const {
     return it->second.maxSize;
 }
 
-bool CBRLocationServiceCache::isLocal(const Iterator& id) const {
+bool CBRLocationServiceCache::isLocal(const Iterator& id) {
     // NOTE: Only accesses via iterator, shouldn't need a lock
     IteratorData* itdat = (IteratorData*)id.data;
     ObjectDataMap::iterator it = itdat->it;
@@ -130,7 +130,7 @@ bool CBRLocationServiceCache::isLocal(const Iterator& id) const {
 }
 
 
-const UUID& CBRLocationServiceCache::iteratorID(const Iterator& id) const {
+const UUID& CBRLocationServiceCache::iteratorID(const Iterator& id) {
     // NOTE: Only accesses via iterator, shouldn't need a lock
     IteratorData* itdat = (IteratorData*)id.data;
     ObjectDataMap::iterator it = itdat->it;

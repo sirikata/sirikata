@@ -360,7 +360,6 @@ void ManualObjectQueryProcessor::writeSomeProxData(ServerQueryStatePtr data) {
         String& msg = data->outstanding.front();
         int bytes_written = data->prox_stream->write((const uint8*)msg.data(), msg.size());
         if (bytes_written < 0) {
-            // FIXME
             break;
         }
         else if (bytes_written < (int)msg.size()) {
@@ -468,20 +467,23 @@ void ManualObjectQueryProcessor::handleProximityMessage(const OHDP::SpaceNodeID&
             ObjectReference observed_oref(addition.object());
             SpaceObjectReference observed(snid.space(), observed_oref);
 
+            bool is_agg = (addition.has_type() && addition.type() == Sirikata::Protocol::Prox::ObjectAddition::Aggregate);
+
             // Store the data
-            assert(query_state->objects.find(observed) == query_state->objects.end());
-            SequencedPresenceProperties& props = query_state->objects[observed];
-            props.setLocation(add.locationWithLocalTime(mContext->objectHost, snid.space()), add.location_seqno());
-            props.setOrientation(add.orientationWithLocalTime(mContext->objectHost, snid.space()), add.orientation_seqno());
-            props.setBounds(add.bounds(), add.bounds_seqno());
-            props.setMesh(Transfer::URI(add.meshOrDefault()), add.mesh_seqno());
-            props.setPhysics(add.physicsOrDefault(), add.physics_seqno());
+            query_state->objects->objectAdded(
+                observed_oref, is_agg,
+                add.locationWithLocalTime(mContext->objectHost, snid.space()), add.location_seqno(),
+                add.orientationWithLocalTime(mContext->objectHost, snid.space()), add.orientation_seqno(),
+                add.bounds(), add.bounds_seqno(),
+                Transfer::URI(add.meshOrDefault()), add.mesh_seqno(),
+                add.physicsOrDefault(), add.physics_seqno()
+            );
 
             // Replay orphans
             query_state->orphans.invokeOrphanUpdates(snid, observed, this);
 
             // TODO(ewencp) temporary code to get results out. See note above.
-            addAdditionResult(obj_update, observed, props);
+            addAdditionResult(obj_update, observed, query_state->objects->properties(observed_oref));
 
             // TODO(ewencp) this is a temporary way to trigger refinement -- we
             // just always refine whenver we see. Obviously this is inefficient
@@ -492,11 +494,13 @@ void ManualObjectQueryProcessor::handleProximityMessage(const OHDP::SpaceNodeID&
 
         for(int32 ridx = 0; ridx < update.removal_size(); ridx++) {
             Sirikata::Protocol::Prox::ObjectRemoval removal = update.removal(ridx);
-            SpaceObjectReference observed(snid.space(), ObjectReference(removal.object()));
-            assert(query_state->objects.find(observed) != query_state->objects.end());
+            ObjectReference observed_oref(removal.object());
+            SpaceObjectReference observed(snid.space(), observed_oref);
             // Backup data for orphans and then destroy
-            query_state->orphans.addUpdateFromExisting(observed, query_state->objects[observed]);
-            query_state->objects.erase(observed);
+            query_state->orphans.addUpdateFromExisting(observed, query_state->objects->properties(observed_oref));
+            query_state->objects->objectRemoved(
+                observed_oref
+            );
 
             // TODO(ewencp) temporary code to get results out. See note above.
             addRemovalResult(
@@ -547,17 +551,17 @@ void ManualObjectQueryProcessor::handleLocationSubstreamRead(const OHDP::SpaceNo
 
 namespace {
 // Helper for applying an update to
-void applyLocUpdate(SequencedPresenceProperties& props, const LocUpdate& lu, ObjectHost* oh, const SpaceID& space) {
+void applyLocUpdate(const ObjectReference& objid, OHLocationServiceCachePtr loccache, const LocUpdate& lu, ObjectHost* oh, const SpaceID& space) {
     if (lu.has_location())
-        props.setLocation(lu.locationWithLocalTime(oh, space), lu.location_seqno());
+        loccache->locationUpdated(objid, lu.locationWithLocalTime(oh, space), lu.location_seqno());
     if (lu.has_orientation())
-        props.setOrientation(lu.orientationWithLocalTime(oh, space), lu.orientation_seqno());
+        loccache->orientationUpdated(objid, lu.orientationWithLocalTime(oh, space), lu.orientation_seqno());
     if (lu.has_bounds())
-        props.setBounds(lu.bounds(), lu.bounds_seqno());
+        loccache->boundsUpdated(objid, lu.bounds(), lu.bounds_seqno());
     if (lu.has_mesh())
-        props.setMesh(Transfer::URI(lu.meshOrDefault()), lu.mesh_seqno());
+        loccache->meshUpdated(objid, Transfer::URI(lu.meshOrDefault()), lu.mesh_seqno());
     if (lu.has_physics())
-        props.setPhysics(lu.physicsOrDefault(), lu.physics_seqno());
+        loccache->physicsUpdated(objid, lu.physicsOrDefault(), lu.physics_seqno());
 }
 }
 
@@ -577,18 +581,17 @@ bool ManualObjectQueryProcessor::handleLocationMessage(const OHDP::SpaceNodeID& 
 
     for(int32 idx = 0; idx < contents.update_size(); idx++) {
         Sirikata::Protocol::Loc::LocationUpdate update = contents.update(idx);
-        SpaceObjectReference observed(snid.space(), ObjectReference(update.object()));
-
-        ServerQueryState::ObjectPropertiesMap::iterator props_it = query_state->objects.find(observed);
+        ObjectReference observed_oref(update.object());
+        SpaceObjectReference observed(snid.space(), observed_oref);
 
         // Because of prox/loc ordering, we may or may not have a record of the
         // object yet.
-        if (props_it == query_state->objects.end()) {
+        if (!query_state->objects->tracking(observed_oref)) {
             query_state->orphans.addOrphanUpdate(observed, update);
         }
         else {
             LocProtocolLocUpdate llu(update);
-            applyLocUpdate(props_it->second, llu, mContext->objectHost, snid.space());
+            applyLocUpdate(observed_oref, query_state->objects, llu, mContext->objectHost, snid.space());
         }
     }
 
@@ -604,9 +607,8 @@ void ManualObjectQueryProcessor::onOrphanLocUpdate(const OHDP::SpaceNodeID& obse
     ServerQueryStatePtr& query_state = serv_it->second;
 
     SpaceObjectReference observed(observer.space(), lu.object());
-    assert(query_state->objects.find(observed) != query_state->objects.end());
-    SequencedPresenceProperties& props = query_state->objects[observed];
-    applyLocUpdate(props, lu, mContext->objectHost, observer.space());
+    assert(query_state->objects->tracking(lu.object()));
+    applyLocUpdate(lu.object(), query_state->objects, lu, mContext->objectHost, observer.space());
 }
 
 } // namespace Manual

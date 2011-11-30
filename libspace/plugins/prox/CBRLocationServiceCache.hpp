@@ -33,7 +33,7 @@
 #ifndef _SIRIKATA_CBR_LOCATION_SERVICE_CACHE_HPP_
 #define _SIRIKATA_CBR_LOCATION_SERVICE_CACHE_HPP_
 
-#include <sirikata/space/ProxSimulationTraits.hpp>
+#include "ProxSimulationTraits.hpp"
 #include <sirikata/space/LocationService.hpp>
 #include <prox/base/LocationServiceCache.hpp>
 
@@ -64,12 +64,12 @@ public:
 
     bool tracking(const ObjectID& id);
 
-    virtual const TimedMotionVector3f& location(const Iterator& id) const;
-    virtual const BoundingSphere3f& region(const Iterator& id) const;
-    virtual float32 maxSize(const Iterator& id) const;
-    virtual bool isLocal(const Iterator& id) const;
+    virtual TimedMotionVector3f location(const Iterator& id);
+    virtual BoundingSphere3f region(const Iterator& id);
+    virtual float32 maxSize(const Iterator& id);
+    virtual bool isLocal(const Iterator& id);
 
-    virtual const UUID& iteratorID(const Iterator& id) const;
+    virtual const UUID& iteratorID(const Iterator& id);
 
     virtual void addUpdateListener(LocationUpdateListener* listener);
     virtual void removeUpdateListener(LocationUpdateListener* listener);
