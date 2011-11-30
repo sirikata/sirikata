@@ -2227,6 +2227,7 @@ SET(LIBOH_PLUGIN_JS_SOURCES
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectScriptManager.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectScript.cpp
   ${LIBOH_PLUGIN_JS_DIR}/EmersonScript.cpp
+  ${LIBOH_PLUGIN_JS_DIR}/JSCtx.cpp
   ${LIBOH_PLUGIN_JS_DIR}/EmersonHttpManager.cpp
   ${LIBOH_PLUGIN_JS_DIR}/EmersonMessagingManager.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSUtil.cpp

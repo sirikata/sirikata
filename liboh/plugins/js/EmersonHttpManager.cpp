@@ -10,10 +10,11 @@
 namespace Sirikata {
 namespace JS {
 
-EmersonHttpManager::EmersonHttpManager(Sirikata::Context* ctx)
+EmersonHttpManager::EmersonHttpManager(Sirikata::Context* ctx, Network::IOStrand* objStrand)
  : SelfWeakPtr<EmersonHttpManager>(),
    currentToken(0),
-   mContext(ctx)
+   mContext(ctx),
+   mStrand(objStrand)
 {
     managerLiveness = nullEmersonHttpPtr;
 }
@@ -89,7 +90,13 @@ void EmersonHttpManager::receiveHttpResponse(EmersonHttpToken respToken,HttpResp
         JSLOG(warn, "Received HTTP response after shutdown request, ignoring...");
         return;
     }
-    mContext->mainStrand->post(std::tr1::bind(&EmersonHttpManager::postReceiveResp, this, respToken,hrp, error, boost_error));
+
+    #ifdef DEBUG_BFTM
+    Where should stopped check actually be conducted;
+    #endif
+    
+    mStrand->post(
+        std::tr1::bind(&EmersonHttpManager::postReceiveResp, this, respToken,hrp, error, boost_error));
 }
 
 void EmersonHttpManager::debugPrintContextMap()
@@ -116,6 +123,8 @@ void EmersonHttpManager::debugPrintTokenMap()
     std::cout<<"\n\n";
 }
 
+
+//should be called from within mStrand
 void EmersonHttpManager::postReceiveResp(EmersonHttpToken respToken,HttpRespPtr hrp,Transfer::HttpManager::ERR_TYPE error,const boost::system::error_code& boost_error)
 {
 
