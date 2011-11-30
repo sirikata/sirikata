@@ -71,6 +71,7 @@ typedef std::tr1::shared_ptr<SDLKeyRepeatInfo> SDLKeyRepeatInfoPtr;
 
 class SIRIKATA_OGRE_EXPORT SDLInputManager : public InputManager {
     Graphics::OgreRenderer* mParent;
+    bool mInitialized;
     SDL_WindowID mWindowID;
     SDL_GLContext mWindowContext;
     std::vector<SDLKeyboardPtr> mKeys;
