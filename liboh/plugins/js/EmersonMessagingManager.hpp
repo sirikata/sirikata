@@ -30,9 +30,6 @@ public:
 
     //EmersonScript must know what to do with messages that we receive.
     /*
-      Returns true if decoded payload as a scripting communication message,
-      false otherwise.
-
       Payload should be able to be parsed into JS::Proctocol::JSMessage.  If it
       can be, and deserialization is successful, processes the scripting
       message. (via deserializeMsgAndDispatch.)

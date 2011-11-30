@@ -132,10 +132,10 @@ void EmersonMessagingManager::handleIncomingSubstream(Liveness::Token alive, int
     String* msgBuf = new String();
     streamPtr->registerReadCallback(
         std::tr1::bind(&EmersonMessagingManager::handleScriptCommStreamRead, this,
-            livenessToken(), streamPtr, msgBuf, _1, _2
-        )
+            livenessToken(), streamPtr, msgBuf, _1, _2)
     );
 }
+
 
 //Gets executed whenever have additional data to read.
 void EmersonMessagingManager::handleScriptCommStreamRead(Liveness::Token alive, SSTStreamPtr sstptr, String* prevdata, uint8* buffer, int length)
@@ -158,8 +158,8 @@ void EmersonMessagingManager::handleScriptCommStreamRead(Liveness::Token alive, 
         return;
 
     //otherwise, try to handle it.
-    if (! handleScriptCommRead(sstptr->remoteEndPoint().endPoint, sstptr->localEndPoint().endPoint, msg))
-        JSLOG(error, "Error in messaging manager.  Cannot decode a message that had a full frame");
+    handleScriptCommRead(sstptr->remoteEndPoint().endPoint, sstptr->localEndPoint().endPoint, msg);
+
 
     delete prevdata;
     sstptr->registerReadCallback(0);

@@ -20,7 +20,6 @@ struct JSTimerStruct : public JSSuspendable {
     JSTimerStruct(EmersonScript* eobj, Duration dur, v8::Persistent<v8::Function>& callback,
         JSContextStruct* jscont, Sirikata::Context* ctx, uint32 contID,
         double timeRemaining, bool isSuspended, bool isCleared);
-
     ~JSTimerStruct();
 
     static JSTimerStruct* decodeTimerStruct(v8::Handle<v8::Value> toDecode,String& errorMessage);

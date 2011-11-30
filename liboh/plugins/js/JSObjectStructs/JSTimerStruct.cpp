@@ -227,8 +227,6 @@ v8::Handle<v8::Value> JSTimerStruct::struct_getAllData()
     return handle_scope.Close(returner);
 }
 
-
-
 void JSTimerStruct::evaluateCallback()
 {
     Liveness::Token token=mLiveness.livenessToken();

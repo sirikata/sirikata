@@ -72,6 +72,7 @@ class EmersonScript : public JSObjectScript,
 public:
     EmersonScript(HostedObjectPtr ho, const String& args,
         const String& script, JSObjectScriptManager* jMan,
+        Network::IOStrand* mainStrand,
         Network::IOStrand* objStrand);
     
     virtual ~EmersonScript();
@@ -81,6 +82,7 @@ public:
     virtual void stop();
 
     // SessionEventListener Interface
+    //called from main strand posts to object strand.
     virtual void onConnected(SessionEventProviderPtr from, const SpaceObjectReference& name,HostedObject::PresenceToken token);
     virtual void onDisconnected(SessionEventProviderPtr from, const SpaceObjectReference& name);
 
@@ -96,14 +98,13 @@ public:
 
 
     /*
-      Returns true if decoded payload as a scripting communication message,
-      false otherwise.
-
       Payload should be able to be parsed into JS::Proctocol::JSMessage.  If it
       can be, and deserialization is successful, processes the scripting
       message. (via deserializeMsgAndDispatch.)
+      Return has no meaning.
      */
-    virtual bool handleScriptCommRead(const SpaceObjectReference& src, const SpaceObjectReference& dst, const std::string& payload);
+    virtual bool handleScriptCommRead(
+        const SpaceObjectReference& src, const SpaceObjectReference& dst, const std::string& payload);
 
 
     /**
@@ -307,9 +308,6 @@ private:
     // struct is destroyed (i.e. gc, shutdown), we can then clear out references
     // to the presence's data.
     void removePresenceData(const SpaceObjectReference& sporefToDelete);
-    // Helper for disconnections, does the final callback and cleanup of the
-    // presence struct.
-    void finishOnDisconnected(const SpaceObjectReference& name);
 
     /**
        Wraps proxVis in an Emerson visible object and notifies shim layer that a
@@ -335,7 +333,9 @@ private:
       If have any handlers that match pattern of message, dispatch their associated
       callbacks.
      */
-    bool handleScriptCommRead(const SpaceObjectReference& src, const SpaceObjectReference& dst, Sirikata::JS::Protocol::JSMessage js_msg);
+    bool handleScriptCommRead(
+        const SpaceObjectReference& src, const SpaceObjectReference& dst,
+        Sirikata::JS::Protocol::JSMessage js_msg);
 
 
     bool mHandlingEvent;
@@ -411,6 +411,24 @@ private:
     std::vector<JSContextStruct*> contextsToClear;
 
     EmersonHttpPtr emHttpPtr;
+
+
+    //counterpart of onConnected.  Called within mStrand.
+    void iOnConnected(SessionEventProviderPtr from,
+        const SpaceObjectReference& name, HostedObject::PresenceToken token);
+    void iOnDisconnected(
+        SessionEventProviderPtr from, const SpaceObjectReference& name);
+    void iCreateEntityFinish(ObjectHost* oh,EntityCreateInfo& eci);
+    void iStop();
+
+    void iHandleScriptCommRead(
+        const SpaceObjectReference& src, const SpaceObjectReference& dst, const String& payload);
+
+    void iHandleScriptCommUnreliable(
+        const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload);
+
+    void mainStrandCompletePresConnect(Location newLoc,BoundingSphere3f bs,
+        PresStructRestoreParams psrp,HostedObject::PresenceToken presToke);
 };
 
 } // namespace JS

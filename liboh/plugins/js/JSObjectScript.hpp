@@ -70,7 +70,10 @@ void printException(v8::TryCatch& try_catch);
 class SIRIKATA_SCRIPTING_JS_EXPORT JSObjectScript : public ObjectScript, public virtual Liveness
 {
 public:
-    JSObjectScript(JSObjectScriptManager* jMan, OH::Storage* storage, OH::PersistedObjectSet* persisted_set, const UUID& internal_id, Network::IOStrand* objStrand);
+    JSObjectScript(JSObjectScriptManager* jMan, OH::Storage* storage,
+        OH::PersistedObjectSet* persisted_set, const UUID& internal_id,
+        Network::IOStrand* mainStrand,Network::IOStrand* objStrand);
+    
     virtual ~JSObjectScript();
 
     v8::Handle<v8::Value> debug_fileWrite(const String& strToWrite,const String& filename);
@@ -203,7 +206,9 @@ public:
 
 
 protected:
+    Network::IOStrand* mainStrand;
     Network::IOStrand* mStrand;
+    
     
     // Object host internal identifier for the object associated with
     // this script. We copy this information here because this base
@@ -343,6 +348,7 @@ protected:
 
 
   private:
+    
     //should already be inside of a frame;
     v8::Handle<v8::Value> compileFunctionInContext( v8::Handle<v8::Function>&cb);
 

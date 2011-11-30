@@ -75,9 +75,13 @@ namespace JS {
 
 #define EMERSON_UNRELIABLE_COMMUNICATION_PORT 12
 
-EmersonScript::EmersonScript(HostedObjectPtr ho, const String& args, const String& script, JSObjectScriptManager* jMan, Network::IOStrand* objStrand)
+EmersonScript::EmersonScript(HostedObjectPtr ho, const String& args,
+    const String& script, JSObjectScriptManager* jMan,
+    Network::IOStrand* mainerStrand, Network::IOStrand* objStrand)
+ 
  : JSObjectScript(jMan, ho->getObjectHost()->getStorage(),
-     ho->getObjectHost()->getPersistedObjectSet(), ho->id(),objStrand),
+     ho->getObjectHost()->getPersistedObjectSet(), ho->id(),
+     mainerStrand,objStrand),
    JSVisibleManager(this),
    EmersonMessagingManager(ho->context()),
    mParent(ho),
@@ -89,7 +93,7 @@ EmersonScript::EmersonScript(HostedObjectPtr ho, const String& args, const Strin
 {
     int32 resourceMax = mManager->getOptions()->referenceOption("emer-resource-max")->as<int32> ();
     JSObjectScript::initialize(args, script,resourceMax);
-
+    
     // Subscribe for session events
     mParent->addListener((SessionEventListener*)this);
     // And notify the script of existing ones
@@ -362,7 +366,30 @@ void EmersonScript::postCallbackChecks() {
         killScript();
 }
 
+#ifdef BFTM_DEBUG
+lkjs;
+ensure that onConnected is called on mainStrand;
+#endif
 void EmersonScript::onConnected(SessionEventProviderPtr from, const SpaceObjectReference& name, HostedObject::PresenceToken token)
+{
+    //should not be necessary if onConnected is called by mainStrand
+    // if (! isInitialized)
+    // {
+    //     JSLOG(warn,"Received an onConnected event while " +
+    //         "still initializing.  Re-posting");
+        
+    //     mainerStrand->post(std::tr1::bind(&EmersonScript::onConnected,this,
+    //             from,name,token));
+    //     return;
+    // }
+
+    mStrand->post(std::tr1::bind(&EmersonScript::iOnConnected,this,
+            from,name,token));
+
+}
+
+void EmersonScript::iOnConnected(SessionEventProviderPtr from,
+    const SpaceObjectReference& name, HostedObject::PresenceToken token)
 {
     //register underlying visible manager to listen for proxy creation events on
     //hostedobjectproxymanager
@@ -407,7 +434,7 @@ void EmersonScript::onConnected(SessionEventProviderPtr from, const SpaceObjectR
     }
 }
 
-
+//already within mStrand
 void EmersonScript::callbackUnconnected(ProxyObjectPtr proxy, HostedObject::PresenceToken token)
 {
     for (PresenceVec::iterator iter = mUnconnectedPresences.begin(); iter != mUnconnectedPresences.end(); ++iter)
@@ -430,13 +457,25 @@ void EmersonScript::callbackUnconnected(ProxyObjectPtr proxy, HostedObject::Pres
 
 //called by JSPresenceStruct.  requests the parent HostedObject disconnect
 //the presence associated with jspres
+//should only be called from within mStrand
 void EmersonScript::requestDisconnect(JSPresenceStruct* jspres)
 {
     SpaceObjectReference sporef = (jspres->getSporef());
     mParent->disconnectFromSpace(sporef.space(), sporef.object());
 }
 
-void EmersonScript::onDisconnected(SessionEventProviderPtr from, const SpaceObjectReference& name)
+
+void EmersonScript::onDisconnected(
+    SessionEventProviderPtr from, const SpaceObjectReference& name)
+{
+    //post message
+    mStrand->post(
+        std::tr1::bind(&EmersonScript::iOnDisconnected,this,from,name));
+}
+
+//should be called from mStrand
+void EmersonScript::iOnDisconnected(
+    SessionEventProviderPtr from, const SpaceObjectReference& name)
 {
     // We need to mark disconnection here so we don't request
     // disconnection twice, but the callback has to be deferred until later
@@ -456,30 +495,34 @@ void EmersonScript::onDisconnected(SessionEventProviderPtr from, const SpaceObje
 
     EmersonMessagingManager::presenceDisconnected(name);
 
-    // Defer processing of the disconnect for the presence, making sure that the
-    // disconnection event is executed separately. This is necessary because
-    // this entire process may have been triggered from within a currently
-    // executing callback, resulting in weird results, e.g. if you disconnected,
-    // got a disconnect callback, and in that callback killed the entity. This
-    // could cause conflicting uses of data structures (e.g. live presences)
-    // resulting in double disconnects, etc.
-    mParent->context()->mainStrand->post(std::tr1::bind(&EmersonScript::finishOnDisconnected, this, name));
-}
 
-void EmersonScript::finishOnDisconnected(const SpaceObjectReference& name) {
-    PresenceMap::iterator internal_it = mPresences.find(name);
     // Because of the delay inprocessing, we may not have the presence anymore.
-    if (internal_it == mPresences.end()) return;
+    if (internal_it == mPresences.end())
+        return;
+    
     JSPresenceStruct* jspres = internal_it->second;
     if (jspres != NULL)
         jspres->handleDisconnectedCallback();
 }
 
-
+//from mStrand to mainStrand
 void EmersonScript::create_entity(EntityCreateInfo& eci)
 {
-    HostedObjectPtr obj = mParent->getObjectHost()->createObject(eci.scriptType, eci.scriptOpts, eci.scriptContents);
+    ObjectHost* oh =mParent->getObjectHost();
 
+    //note: calling main strand, not mStrand: want actual connection to happen
+    //on mainStrand so that object creation does not interfere with other
+    //operations on the oh.
+    mainStrand->post(std::tr1::bind(
+            &EmersonScript::iCreateEntityFinish,this,oh,eci));
+}
+
+//called from within mainStrand
+void EmersonScript::iCreateEntityFinish(ObjectHost* oh,EntityCreateInfo& eci)
+{
+    HostedObjectPtr obj =
+        oh->createObject(eci.scriptType, eci.scriptOpts, eci.scriptContents);
+    
     obj->connect(eci.space,
         eci.loc,
         BoundingSphere3f(Vector3f::zero(), eci.scale),
@@ -501,7 +544,14 @@ void EmersonScript::start() {
     JSObjectScript::start();
 }
 
-void EmersonScript::stop() {
+void EmersonScript::stop()
+{
+    mStrand->post(std::tr1::bind(&EmersonScript::iStop,this));
+}
+
+//called from mStrand
+void EmersonScript::iStop()
+{
     Liveness::letDie();
 
     // Clean up ProxyCreationListeners. We subscribe for each presence in
@@ -523,6 +573,9 @@ void EmersonScript::stop() {
 
     mPresences.clear();
 
+    #ifdef BFTM_DEBUG
+    lkjs; I wonder if this should actually be on this strand;  may have to coordinate message deletion with messaging manager;
+    #endif
     // Delete messaging ports
     for(MessagingPortMap::iterator messaging_it = mMessagingPortMap.begin();
         messaging_it != mMessagingPortMap.end();
@@ -537,7 +590,7 @@ bool EmersonScript::valid() const
 }
 
 
-
+//called from mStrand
 void EmersonScript::sendMessageToEntityUnreliable(const SpaceObjectReference& sporef, const SpaceObjectReference& from, const std::string& msgBody)
 {
     std::map<SpaceObjectReference, ODP::Port*>::iterator iter = mMessagingPortMap.find(from);
@@ -566,7 +619,7 @@ v8::Handle<v8::Value> EmersonScript::create_event(v8::Persistent<v8::Function>& 
         return v8::Boolean::New(false);
     }
 
-    mParent->context()->mainStrand->post(
+    mStrand->post(
         std::tr1::bind(&EmersonScript::invokeCallbackInContext, this, livenessToken(), cb, jscont)
     );
     return v8::Boolean::New(true);
@@ -575,6 +628,10 @@ v8::Handle<v8::Value> EmersonScript::create_event(v8::Persistent<v8::Function>& 
 
 v8::Handle<v8::Value> EmersonScript::create_timeout(double period,v8::Persistent<v8::Function>& cb, uint32 contID,double timeRemaining, bool isSuspended, bool isCleared, JSContextStruct* jscont)
 {
+    
+#ifdef BFTM_DEBUG
+    lkjs; need to change from context;
+#endif
     JSTimerStruct* jstimer = new JSTimerStruct(this,Duration::seconds(period),cb,jscont,mParent->context(),contID, timeRemaining,isSuspended,isCleared);
 
     v8::HandleScope handle_scope;
@@ -582,9 +639,6 @@ v8::Handle<v8::Value> EmersonScript::create_timeout(double period,v8::Persistent
     //create an object
     v8::Local<v8::Object> localReturner = mManager->mTimerTemplate->NewInstance();
 
-
-//    v8::Persistent<v8::Object> returner =
-//    v8::Persistent<v8::Object>::New(mManager->mTimerTemplate->NewInstance());
     v8::Persistent<v8::Object> returner = v8::Persistent<v8::Object>::New(localReturner);
 
     returner->SetInternalField(TIMER_JSTIMERSTRUCT_FIELD,External::New(jstimer));
@@ -604,9 +658,9 @@ v8::Handle<v8::Value> EmersonScript::create_timeout(double period, v8::Persisten
 }
 
 
-
 //third arg may be null to evaluate in global context
-void EmersonScript::invokeCallbackInContext(Liveness::Token alive, v8::Persistent<v8::Function> cb, JSContextStruct* jscontext)
+void EmersonScript::invokeCallbackInContext(
+    Liveness::Token alive, v8::Persistent<v8::Function> cb, JSContextStruct* jscontext)
 {
     if (!alive) return;
 
@@ -620,7 +674,9 @@ void EmersonScript::invokeCallbackInContext(Liveness::Token alive, v8::Persisten
 //calls funcToCall in jscont, binding jspres bound as first arg.
 //mostly used for contexts and presences to execute their callbacks on
 //connection and disconnection events
-void EmersonScript::handlePresCallback( v8::Handle<v8::Function> funcToCall,JSContextStruct* jscont, JSPresenceStruct* jspres)
+//shoudl be called within mStrand
+void EmersonScript::handlePresCallback(
+    v8::Handle<v8::Function> funcToCall,JSContextStruct* jscont, JSPresenceStruct* jspres)
 {
     if (isStopped()) {
         JSLOG(warn, "Ignoring presence callback after shutdown request.");
@@ -671,8 +727,24 @@ void EmersonScript::finishContextClear(JSContextStruct* jscont)
     }
 }
 
-bool EmersonScript::handleScriptCommRead(const SpaceObjectReference& src, const SpaceObjectReference& dst, const String& payload)
+
+//should be called from within mStrand
+bool EmersonScript::handleScriptCommRead(
+    const SpaceObjectReference& src, const SpaceObjectReference& dst, const String& payload)
 {
+    mStrand->post(std::tr1::bind(&EmersonScript::iHandleScriptCommRead,this,
+            src,dst,payload));
+    return true;
+}
+
+
+void EmersonScript::iHandleScriptCommRead(
+    const SpaceObjectReference& src, const SpaceObjectReference& dst, const String& payload)
+{
+#ifdef BFTM_DEBUG
+    lkjs;
+    may want to check liveness here as well;
+#endif
     Sirikata::JS::Protocol::JSMessage jsMsg;
     Sirikata::JS::Protocol::JSFieldValue jsFieldVal;
     bool isJSMsg   = jsMsg.ParseFromString(payload);
@@ -690,13 +762,12 @@ bool EmersonScript::handleScriptCommRead(const SpaceObjectReference& src, const 
     //if can't decode the payload as a jsmessage or
     //a jsfieldval, then return false;
     if (!(isJSMsg || isJSField))
-        return false;
-
+        return;
 
     if (isStopped()) {
         JSLOG(warn, "Ignoring message after shutdown request.");
         // Regardless of whether we can or not, just say we can't decode it.
-        return false;
+        return;
     }
 
     //cannot affect the event handlers when we are executing event handlers.
@@ -759,7 +830,7 @@ bool EmersonScript::handleScriptCommRead(const SpaceObjectReference& src, const 
 
                 //match removing the context that we appended to stack.
                 mEvalContextStack.pop();
-                return false;
+                return;
             }
 
             v8::Handle<v8::Value> argv[3];
@@ -784,29 +855,40 @@ bool EmersonScript::handleScriptCommRead(const SpaceObjectReference& src, const 
     contextsToClear.clear();
     postCallbackChecks();
 
-    return true;
 }
 
 
 /**
    Used for unreliable messages.
  */
-void EmersonScript::handleScriptCommUnreliable (const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload)
+void EmersonScript::handleScriptCommUnreliable (
+    const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload)
+{
+    mStrand->post(std::tr1::bind(&EmersonScript::iHandleScriptCommUnreliable,this,
+            src,dst,payload));
+}
+
+//called from within mStrand
+void EmersonScript::iHandleScriptCommUnreliable(
+    const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload)
 {
     SpaceObjectReference to  (dst.space(), dst.object());
     SpaceObjectReference from(src.space(), src.object());
     handleScriptCommRead(from,to,String((const char*) payload.data(), payload.size()));
 }
 
-
-
+//called from within mStrand
 v8::Handle<v8::Value> EmersonScript::sendSandbox(const String& msgToSend, uint32 senderID, uint32 receiverID)
 {
     //posting task so that still get asynchronous messages.
-    mParent->getIOService()->post(std::tr1::bind(&EmersonScript::processSandboxMessage, this,msgToSend,senderID,receiverID));
+    mStrand->post(
+        std::tr1::bind(&EmersonScript::processSandboxMessage, this,
+            msgToSend,senderID,receiverID));
+    
     return v8::Undefined();
 }
 
+//called from within mStrand
 void EmersonScript::processSandboxMessage(const String& msgToSend, uint32 senderID, uint32 receiverID)
 {
     //FIXME: there's a chance that when post was called in sendSandbox, the
@@ -862,7 +944,6 @@ void EmersonScript::processSandboxMessage(const String& msgToSend, uint32 sender
         argv[1] = senderObj;
     }
 
-
     invokeCallback(receiver,receiver->sandboxMessageCallback,2,argv);
     postCallbackChecks();
 }
@@ -912,6 +993,8 @@ void EmersonScript::unsubscribePresenceEvents(const SpaceObjectReference& name) 
     }
 }
 
+
+
 void EmersonScript::removePresenceData(const SpaceObjectReference& sporefToDelete) {
     PresenceMapIter pIter = mPresences.find(sporefToDelete);
     if (pIter != mPresences.end())
@@ -938,8 +1021,8 @@ v8::Local<v8::Object> EmersonScript::presToVis(JSPresenceStruct* jspres, JSConte
     return returner;
 }
 
-
-JSPresenceStruct*  EmersonScript::addConnectedPresence(const SpaceObjectReference& sporef,HostedObject::PresenceToken token)
+JSPresenceStruct*  EmersonScript::addConnectedPresence(
+    const SpaceObjectReference& sporef,HostedObject::PresenceToken token)
 {
     JSPresenceStruct* presToAdd = new JSPresenceStruct(this, sporef,mContext,token);
     // Add to our internal map
@@ -948,10 +1031,11 @@ JSPresenceStruct*  EmersonScript::addConnectedPresence(const SpaceObjectReferenc
 }
 
 
-
 //should be called from something that already has declared a handlescope,
 //wraps the presence in a v8 object and returns it.
-v8::Local<v8::Object> EmersonScript::wrapPresence(JSPresenceStruct* presToWrap, v8::Persistent<v8::Context>* ctxToWrapIn)
+//should be called within mStrand
+v8::Local<v8::Object> EmersonScript::wrapPresence(
+    JSPresenceStruct* presToWrap, v8::Persistent<v8::Context>* ctxToWrapIn)
 {
     v8::HandleScope handle_scope;
     v8::Handle<v8::Context> ctx = (ctxToWrapIn == NULL) ? mContext->mContext : *ctxToWrapIn;
@@ -966,20 +1050,7 @@ v8::Local<v8::Object> EmersonScript::wrapPresence(JSPresenceStruct* presToWrap, 
 
 
 
-//looks through all previously connected presneces (located in mPresences).
-//returns the corresponding jspresencestruct that has a spaceobjectreference
-//that matches sporef.
-JSPresenceStruct* EmersonScript::findPresence(const SpaceObjectReference& sporef)
-{
-    PresenceMap::iterator internal_it = mPresences.find(sporef);
-    if (internal_it == mPresences.end())
-    {
-        JSLOG(error, "Got findPresence call for Presence that wasn't being tracked.");
-        return NULL;
-    }
-    return internal_it->second;
-}
-
+//called from within mStrand
 v8::Handle<v8::Value> EmersonScript::restorePresence(PresStructRestoreParams& psrp,JSContextStruct* jsctx)
 {
     v8::Context::Scope context_scope(jsctx->mContext);
@@ -1030,17 +1101,8 @@ v8::Handle<v8::Value> EmersonScript::restorePresence(PresStructRestoreParams& ps
 
     if (psrp.isConnected)
     {
-        mParent->connect(psrp.sporef.space(),
-            newLoc,
-            bs,
-            psrp.mesh,
-            psrp.physics,
-            psrp.query,
-            psrp.queryMaxResults,
-            UUID::null(),
-            psrp.sporef.object(),
-            presToke
-        );
+        mainStrand->post(std::tr1::bind(&EmersonScript::mainStrandCompletePresConnect,this,
+                newLoc,bs,psrp,presToke));
 
         mUnconnectedPresences.push_back(jspres);
         return v8::Null();
@@ -1052,10 +1114,30 @@ v8::Handle<v8::Value> EmersonScript::restorePresence(PresStructRestoreParams& ps
 
 
 
+void EmersonScript::mainStrandCompletePresConnect(Location newLoc,BoundingSphere3f bs,
+    PresStructRestoreParams psrp,HostedObject::PresenceToken presToke)
+{
+#ifdef BFTM_DEBUG    
+  note: should do some form of liveness check here;
+#endif
+    mParent->connect(psrp.sporef.space(),
+        newLoc,
+        bs,
+        psrp.mesh,
+        psrp.physics,
+        psrp.query,
+        psrp.queryMaxResults,
+        UUID::null(),
+        psrp.sporef.object(),
+        presToke
+    );
+}
+
 //This function returns to you the current value of present token and incrmenets
 //presenceToken so that get a unique one each time.  If presenceToken is equal
 //to default_presence_token, increments one beyond it so that don't start inadvertently
 //returning the DEFAULT_PRESENCE_TOKEN;
+//called from within mStrand
 HostedObject::PresenceToken EmersonScript::incrementPresenceToken()
 {
     HostedObject::PresenceToken returner = presenceToken++;
