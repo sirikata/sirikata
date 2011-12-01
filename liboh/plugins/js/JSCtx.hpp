@@ -2,6 +2,7 @@
 #define __SIRIKATA_JSCTX_HPP__
 
 #include <sirikata/core/service/Context.hpp>
+#include <sirikata/core/util/SerializationCheck.hpp>
 
 namespace Sirikata
 {
@@ -22,10 +23,16 @@ public:
 
     bool stopped();
     void stop();
+    void initialize();
+    bool initialized();
+
+    Sirikata::SerializationCheck* serializationCheck();
+    
     
 private:
     bool isStopped;
-    
+    bool isInitialized;
+    Sirikata::SerializationCheck mCheck;
 };
 
 }//end namespace Sirikata

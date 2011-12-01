@@ -10,11 +10,10 @@
 namespace Sirikata {
 namespace JS {
 
-EmersonHttpManager::EmersonHttpManager(Sirikata::Context* ctx, Network::IOStrand* objStrand)
+EmersonHttpManager::EmersonHttpManager(JSCtx* ctx)
  : SelfWeakPtr<EmersonHttpManager>(),
    currentToken(0),
-   mContext(ctx),
-   mStrand(objStrand)
+   mContext(ctx)
 {
     managerLiveness = nullEmersonHttpPtr;
 }
@@ -91,11 +90,21 @@ void EmersonHttpManager::receiveHttpResponse(EmersonHttpToken respToken,HttpResp
         return;
     }
 
-    #ifdef DEBUG_BFTM
-    Where should stopped check actually be conducted;
-    #endif
+    //require to check if initialized because http code is on separate strand
+    //from main or object.  During initialization (including initial shim/file
+    //import), on main strand.  If that code made an http request (processed on
+    //http strand) that finished before initial import was over, should not post
+    //it back to the object strand.  Should instead re-post and try again.
+    if (!mContext->initialized())
+    {
+        mContext->objStrand->post(
+            std::tr1::bind(
+                &EmersonHttpManager::receiveHttpResponse,this,respToken,hrp,error,boost_error)
+        );
+        return;
+    }
     
-    mStrand->post(
+    mContext->objStrand->post(
         std::tr1::bind(&EmersonHttpManager::postReceiveResp, this, respToken,hrp, error, boost_error));
 }
 

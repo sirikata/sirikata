@@ -58,6 +58,8 @@
 #include "JS_JSMessage.pbj.hpp"
 #include "EmersonMessagingManager.hpp"
 #include "EmersonHttpManager.hpp"
+#include <sirikata/core/util/SerializationCheck.hpp>
+#include "JSCtx.hpp"
 
 namespace Sirikata {
 namespace JS {
@@ -72,8 +74,8 @@ class EmersonScript : public JSObjectScript,
 public:
     EmersonScript(HostedObjectPtr ho, const String& args,
         const String& script, JSObjectScriptManager* jMan,
-        Network::IOStrand* mainStrand,
-        Network::IOStrand* objStrand);
+        JSCtx* ctx);
+
     
     virtual ~EmersonScript();
 
@@ -309,14 +311,6 @@ private:
     // to the presence's data.
     void removePresenceData(const SpaceObjectReference& sporefToDelete);
 
-    /**
-       Wraps proxVis in an Emerson visible object and notifies shim layer that a
-       visibile is now within presence with sporef proxTo's result set.
-     */
-    void notifyProximate(JSVisibleStruct* proxVis, const SpaceObjectReference& proxTo);
-
-
-
 
     //wraps internal c++ jsvisiblestruct in a v8 object
     v8::Local<v8::Object> createVisibleWeakPersistent(JSVisibleStruct* jsvis);
@@ -376,8 +370,6 @@ private:
     //that matches sporef.
     JSPresenceStruct* findPresence(const SpaceObjectReference& sporef);
 
-    //debugging code to output the sporefs of all the presences that I have in mPresences
-    void printMPresences();
 
     typedef std::map<SpaceObjectReference, ODP::Port*> MessagingPortMap;
     MessagingPortMap mMessagingPortMap;
@@ -418,7 +410,7 @@ private:
         const SpaceObjectReference& name, HostedObject::PresenceToken token);
     void iOnDisconnected(
         SessionEventProviderPtr from, const SpaceObjectReference& name);
-    void iCreateEntityFinish(ObjectHost* oh,EntityCreateInfo& eci);
+    void eCreateEntityFinish(ObjectHost* oh,EntityCreateInfo& eci);
     void iStop();
 
     void iHandleScriptCommRead(
@@ -429,6 +421,42 @@ private:
 
     void mainStrandCompletePresConnect(Location newLoc,BoundingSphere3f bs,
         PresStructRestoreParams psrp,HostedObject::PresenceToken presToke);
+
+    void iNotifyProximateGone(
+        ProxyObjectPtr proximateObject, const SpaceObjectReference& querier);
+
+    void iNotifyProximateHelper(
+        JSVisibleStruct* proxVis, const SpaceObjectReference& proxTo);
+
+    void  iNotifyProximate(
+        ProxyObjectPtr proximateObject, const SpaceObjectReference& querier);
+
+
+    void eSetQueryFunction(
+        const SpaceObjectReference sporef, const SolidAngle& sa,
+        const uint32 max_count);
+    
+    void eSetPhysicsFunction(
+        const SpaceObjectReference sporef, const String& newPhyString);
+    
+    void eSetVisualFunction(
+        const SpaceObjectReference sporef, const std::string& newMeshString);    
+
+    void eSetVisualScaleFunction(
+        const SpaceObjectReference sporef, float newscale);
+
+    void eSetOrientationFunction(
+        const SpaceObjectReference sporef, const Quaternion& quat);
+
+    void eSetVelocityFunction(
+        const SpaceObjectReference sporef, const Vector3f& velVec);
+
+    void eSetPositionFunction(
+        const SpaceObjectReference sporef, const Vector3f& posVec);
+
+    void eSetOrientationVelFunction(
+        const SpaceObjectReference sporef,const Quaternion& quat);
+
 };
 
 } // namespace JS

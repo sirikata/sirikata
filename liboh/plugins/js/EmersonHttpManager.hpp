@@ -10,6 +10,7 @@
 #include <v8.h>
 #include <sirikata/core/util/SelfWeakPtr.hpp>
 #include <sirikata/core/network/IOStrandImpl.hpp>
+#include "JSCtx.hpp"
 
 namespace Sirikata {
 
@@ -29,7 +30,7 @@ class EmersonHttpManager : public SelfWeakPtr<EmersonHttpManager>
 public:
     typedef uint32 EmersonHttpToken;
 
-    EmersonHttpManager(Sirikata::Context* ctx, Network::IOStrand* objStrand);
+    EmersonHttpManager(JSCtx* ctx);
     ~EmersonHttpManager();
 
     typedef std::tr1::shared_ptr<Transfer::HttpManager::HttpResponse> HttpRespPtr;
@@ -124,8 +125,7 @@ private:
     //If have outstanding requests, this pointer will have a pointer to self.
     //If don't, then it has an empty ptr.  Allows this to garbage collect properly
     EmersonHttpPtr managerLiveness;
-    Sirikata::Context* mContext;
-    Network::IOStrand* mStrand;
+    JSCtx* mContext;
 };
 
 static EmersonHttpPtr nullEmersonHttpPtr;

@@ -58,6 +58,9 @@
 #include <sirikata/core/util/Liveness.hpp>
 #include <stack>
 #include <sirikata/core/network/IOStrandImpl.hpp>
+#include "JSCtx.hpp"
+#include <sirikata/core/util/SerializationCheck.hpp>
+
 
 namespace Sirikata {
 namespace JS {
@@ -72,7 +75,8 @@ class SIRIKATA_SCRIPTING_JS_EXPORT JSObjectScript : public ObjectScript, public 
 public:
     JSObjectScript(JSObjectScriptManager* jMan, OH::Storage* storage,
         OH::PersistedObjectSet* persisted_set, const UUID& internal_id,
-        Network::IOStrand* mainStrand,Network::IOStrand* objStrand);
+        JSCtx* ctx);
+
     
     virtual ~JSObjectScript();
 
@@ -206,9 +210,8 @@ public:
 
 
 protected:
-    Network::IOStrand* mainStrand;
-    Network::IOStrand* mStrand;
-    
+
+    JSCtx* mCtx;
     
     // Object host internal identifier for the object associated with
     // this script. We copy this information here because this base
@@ -377,6 +380,10 @@ protected:
     v8::Handle<v8::Context> getCurrentV8Context();
 
 };
+
+#define JSSCRIPT_SERIAL_CHECK()\
+    Sirikata::SerializationCheck::Scoped sc (mCtx->serializationCheck());
+
 
 } // namespace JS
 } // namespace Sirikata

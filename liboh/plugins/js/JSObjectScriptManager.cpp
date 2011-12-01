@@ -612,7 +612,7 @@ JSObjectScript* JSObjectScriptManager::createHeadless(const String& args, const 
     JSLOG(error, "Cannot run emheadless without providing a context from which to get strand.");
     assert(false);
     JSObjectScript* new_script =
-        new JSObjectScript(this, NULL, NULL, UUID::random(),NULL,NULL);
+        new JSObjectScript(this, NULL, NULL, UUID::random(),NULL);
     
     new_script->initialize(args, script, maxres);
     return new_script;
@@ -620,8 +620,15 @@ JSObjectScript* JSObjectScriptManager::createHeadless(const String& args, const 
 
 ObjectScript* JSObjectScriptManager::createObjectScript(HostedObjectPtr ho, const String& args, const String& script)
 {
+    #ifdef BFTM_DEBUG
+    lkjs;  need to figure out when to delete jsctx;
+    #endif
+    JSCtx* jsctx = new JSCtx(mContext, mContext->ioService->createStrand());
+    
     EmersonScript* new_script =new EmersonScript(
-        ho, args, script, this,mContext->mainStrand,mContext->ioService->createStrand());
+        ho, args, script, this,jsctx);
+
+//        mContext->mainStrand,mContext->ioService->createStrand());
 
     
     if (!new_script->valid()) {

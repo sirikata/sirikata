@@ -269,9 +269,11 @@ void JSObjectScript::initialize(const String& args, const String& script,int32 m
 }
 
 
-JSObjectScript::JSObjectScript(JSObjectScriptManager* jMan, OH::Storage* storage, OH::PersistedObjectSet* persisted_set, const UUID& internal_id, Network::IOStrand* mainerStrand,Network::IOStrand* objStrand)
- : mainStrand(mainerStrand),
-   mStrand(objStrand),
+JSObjectScript::JSObjectScript(
+    JSObjectScriptManager* jMan, OH::Storage* storage,
+    OH::PersistedObjectSet* persisted_set, const UUID& internal_id,
+    JSCtx* ctx)
+ : mCtx (ctx),
    mInternalID(internal_id),
    mResourceCounter(0),
    mNestedEvalCounter(0),
