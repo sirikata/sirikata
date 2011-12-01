@@ -6,6 +6,13 @@
 #include <sirikata/sdl/SDL.hpp>
 #include "SDL_audio.h"
 
+// FFmpeg doesn't check for C++ in their headers, so we have to wrap all FFmpeg
+// includes in extern "C"
+extern "C" {
+#include <libavcodec/avcodec.h>
+#include <libavformat/avformat.h>
+}
+
 #define AUDIO_LOG(lvl, msg) SILOG(sdl-audio, lvl, msg)
 
 namespace Sirikata {
@@ -56,6 +63,10 @@ void AudioSimulation::start() {
     }
 
     mOpenedAudio = true;
+
+    // Initialize ffmpeg
+    av_register_all();
+
     SDL_PauseAudio(0);
 }
 

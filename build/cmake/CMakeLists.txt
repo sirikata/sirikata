@@ -749,6 +749,17 @@ SET(LIBOAUTHCPP_ADDED_DEFINITIONS ${ADDED_DEFINITIONS})
 ADD_SUBDIRECTORY(${TOP_LEVEL}/externals/liboauthcpp/build ${CMAKE_CURRENT_BINARY_DIR}/liboauthcpp)
 SET(LIBOAUTHCPP_INCLUDE_DIR ${TOP_LEVEL}/externals/liboauthcpp/include)
 
+# optional dependency: ffmpeg
+# Not sure how to set this yet, the various libav* libraries have
+# different version numbers
+#SET(FFMPEG_MINIMUM_VERSION 1.3.0)
+IF(NOT FFMPEG_ROOT)
+  IF(EXISTS ${PLATFORM_LIBS}/installed-ffmpeg)
+    SET(FFMPEG_ROOT ${PLATFORM_LIBS}/installed-ffmpeg)
+  ENDIF()
+ENDIF()
+FIND_PACKAGE(FFmpeg)
+
 # -- User defined variables that control which components get built
 SET(WITH_LIBSDL TRUE CACHE BOOL "Build with SDL support if available")
 SET(WITH_SDLAUDIO_OH TRUE CACHE BOOL "Build with SDL audio plugin support if available")
@@ -791,7 +802,7 @@ IF(WITH_LIBSDL AND sdl_FOUND)
 ENDIF()
 
 SET(BUILD_SDLAUDIO_OH FALSE)
-IF(BUILD_LIBSDL AND WITH_SDLAUDIO_OH)
+IF(BUILD_LIBSDL AND WITH_SDLAUDIO_OH AND FFMPEG_FOUND)
   SET(BUILD_SDLAUDIO_OH TRUE)
 ENDIF()
 
@@ -1850,6 +1861,9 @@ SET(FINAL_LINK_DIRS
 IF(BUILD_LIBSDL)
   SET(FINAL_LINK_DIRS ${FINAL_LINK_DIRS} ${sdl_LIBRARY_DIRS})
 ENDIF()
+IF(FFMPEG_FOUND)
+  SET(FINAL_LINK_DIRS ${FINAL_LINK_DIRS} ${FFMPEG_LIBRARY_DIRS})
+ENDIF()
 IF(BUILD_OGRE_OH)
   SET(FINAL_LINK_DIRS ${FINAL_LINK_DIRS} ${OGRE_LIBRARY_DIRS} ${BERKELIUM_LIBRARY_DIRS} ${CMAKE_CURRENT_BINARY_DIR}/chrome)
 ENDIF()
@@ -2164,10 +2178,10 @@ ENDIF()
 IF(BUILD_SDLAUDIO_OH)
   ADD_PLUGIN_TARGET(sdlaudio
                     SOURCES ${LIBPROXYOBJECT_PLUGIN_SDLAUDIO_SOURCES}
-                    TARGET_CXXFLAGS ${sdl_CFLAGS}
-                    TARGET_LDFLAGS ${sdl_LDFLAGS} ${sirikata_LDFLAGS}
+                    TARGET_CXXFLAGS ${sdl_CFLAGS} ${FFMPEG_CFLAGS}
+                    TARGET_LDFLAGS ${sdl_LDFLAGS} ${FFMPEG_LDFLAGS} ${sirikata_LDFLAGS}
                     TARGET_LIBRARIES ${SIRIKATA_CORE_LIB} ${SIRIKATA_SDL_LIB} ${SIRIKATA_PROXYOBJECT_LIB}
-                    LIBRARIES ${SIRIKATA_CORE_LIB} ${SIRIKATA_SDL_LIB} ${SIRIKATA_PROXYOBJECT_LIB} ${sdl_LIBRARIES}
+                    LIBRARIES ${SIRIKATA_CORE_LIB} ${SIRIKATA_SDL_LIB} ${SIRIKATA_PROXYOBJECT_LIB} ${sdl_LIBRARIES} ${FFMPEG_LIBRARIES}
 		    VERSION_INFO ${SIRIKATA_VERSION_SETTINGS}
 		    )
   SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} sdlaudio)
@@ -3117,6 +3131,34 @@ IF(sdl_FOUND AND sdl_ROOT)
             PATTERN "*.exe" EXCLUDE)
   ELSE()
     INSTALL(DIRECTORY ${sdl_LIBRARY_DIRS}/
+            FILE_PERMISSIONS ${EXEC_PERMS}
+            DESTINATION lib/
+            #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
+            PATTERN "*.a" EXCLUDE
+            PATTERN "*.la" EXCLUDE
+            PATTERN "*.exe" EXCLUDE)
+  ENDIF()
+ENDIF()
+
+#install FFmpeg
+IF(FFMPEG_FOUND)
+  IF(WIN32)
+    INSTALL(DIRECTORY ${FFMPEG_ROOT}/bin/
+            FILE_PERMISSIONS ${EXEC_PERMS}
+            DESTINATION bin/
+            #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
+            PATTERN "*.exe" EXCLUDE
+            PATTERN "*.lib" EXCLUDE)
+  ELSEIF(APPLE)
+    INSTALL(DIRECTORY ${FFMPEG_ROOT}/lib/
+            FILE_PERMISSIONS ${EXEC_PERMS}
+            DESTINATION lib/
+            #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
+            PATTERN "*.a" EXCLUDE
+            PATTERN "*.la" EXCLUDE
+            PATTERN "*.exe" EXCLUDE)
+  ELSE()
+    INSTALL(DIRECTORY ${FFMPEG_LIBRARY_DIRS}/
             FILE_PERMISSIONS ${EXEC_PERMS}
             DESTINATION lib/
             #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
