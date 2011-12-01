@@ -106,10 +106,11 @@ EmersonScript::EmersonScript(HostedObjectPtr ho, const String& args,
         onConnected(mParent, *space_it, HostedObject::DEFAULT_PRESENCE_TOKEN);
 
 
-    #ifdef BFTM_DEBUG
-    lkjs;  Read below.  Need to add init guards on storage and timer callbacks;
-    #endif
-
+    /**
+       lkjs;
+       FIXME: Read below.  Need to add init guards on storage and timer callbacks;
+     */
+    
     //want to block all callbacks into this object until initialization is
     //finished.  Because constructor is called from mainStrand, only have to
     //worry about objStrand and httpManager's strand from interfering.
@@ -658,11 +659,13 @@ v8::Handle<v8::Value> EmersonScript::create_event(
     }
 
 
-    #ifdef BFTM_DEBUG
-    lkjs what happens if jscont gets deleted before invokeCallbackInContext is called; or suspended in between;
-    //probably should pass context id through invokeCallbackInContext;
-    #endif
 
+    /**
+       lkjs;
+       FIXME: what happens if jscont gets deleted before
+       invokeCallbackInContext is called; or suspended in between;
+       probably should pass context id through invokeCallbackInContext;
+     */
     
     mCtx->objStrand->post(
         std::tr1::bind(&EmersonScript::invokeCallbackInContext, this, livenessToken(), cb, jscont)
@@ -675,10 +678,11 @@ v8::Handle<v8::Value> EmersonScript::create_timeout(double period,v8::Persistent
 {
     JSSCRIPT_SERIAL_CHECK();    
 
-    #ifdef BFTM_DEBUG
-    lkjs; need to change from context;
-    #endif
-    
+
+    /**
+       lkjs;
+       FIXME: need to update JSTimerStruct to use JSCtx and objstrand.
+     */
     JSTimerStruct* jstimer = new JSTimerStruct(
         this,Duration::seconds(period),cb,jscont,mParent->context(),
         contID, timeRemaining,isSuspended,isCleared);
@@ -816,11 +820,12 @@ void EmersonScript::iHandleScriptCommRead(
 
     if (mCtx->stopped())
         return;
-    
-#ifdef BFTM_DEBUG
-    lkjs;
-    may want to check liveness here as well;
-#endif
+
+
+    /**
+       lkjs;
+       FIXME: May want to check liveness here as well.
+     */
     Sirikata::JS::Protocol::JSMessage jsMsg;
     Sirikata::JS::Protocol::JSFieldValue jsFieldVal;
     bool isJSMsg   = jsMsg.ParseFromString(payload);
@@ -1236,9 +1241,10 @@ void EmersonScript::mainStrandCompletePresConnect(Location newLoc,BoundingSphere
     PresStructRestoreParams psrp,HostedObject::PresenceToken presToke)
 {
 
-#ifdef BFTM_DEBUG    
-  note: should do some form of liveness check here;
-#endif
+    /**
+       FIXME: lkjs;
+       note: should do some form of liveness check here;       
+     */
     mParent->connect(psrp.sporef.space(),
         newLoc,
         bs,

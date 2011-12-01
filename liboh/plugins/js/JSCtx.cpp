@@ -18,9 +18,10 @@ JSCtx::JSCtx(Context* ctx,Network::IOStrand* oStrand)
 
 JSCtx::~JSCtx()
 {
-    #ifdef BFTM_DEBUG
-    lkjs;  Who actually deletes the objStrand?;
-    #endif
+    /**
+       lkjs;
+       FIXME: who actually deletes the objStrand?
+     */
 }
 
 Sirikata::SerializationCheck* JSCtx::serializationCheck()

@@ -620,9 +620,11 @@ JSObjectScript* JSObjectScriptManager::createHeadless(const String& args, const 
 
 ObjectScript* JSObjectScriptManager::createObjectScript(HostedObjectPtr ho, const String& args, const String& script)
 {
-    #ifdef BFTM_DEBUG
-    lkjs;  need to figure out when to delete jsctx;
-    #endif
+    /**
+       lkjs;
+       FIXME: need to figure out when to delete jsctx;
+     */
+
     JSCtx* jsctx = new JSCtx(mContext, mContext->ioService->createStrand());
     
     EmersonScript* new_script =new EmersonScript(

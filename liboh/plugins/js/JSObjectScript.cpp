@@ -347,12 +347,28 @@ v8::Handle<v8::Value> JSObjectScript::storageCommit(JSContextStruct* jscont, v8:
 }
 
 
+
+
+/**
+   lkjs; FIXME
+
+   ERROR: Should not rely on the being around of jscont.  Should
+   pass id through instead, and look it up.;
+ */
 void JSObjectScript::storageCommitCallback(JSContextStruct* jscont, v8::Persistent<v8::Function> cb, bool success, OH::Storage::ReadSet* rs) {
     if (isStopped()) {
         JSLOG(warn, "Ignoring storage commit callback after shutdown request.");
         return;
     }
 
+    if (! mCtx->initialized())
+    {
+        mCtx->objStrand->post(
+            std::tr1::bind(&JSObjectScript, this, jscont, cb, success, rs));
+        return;
+    }
+
+    
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(mContext->mContext);
     TryCatch try_catch;
