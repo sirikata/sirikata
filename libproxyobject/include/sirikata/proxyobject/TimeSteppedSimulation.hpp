@@ -34,18 +34,58 @@
 #define _SIRIKATA_TIME_STEPPED_SIMULATION_HPP_
 
 #include <sirikata/proxyobject/Platform.hpp>
-#include <sirikata/core/service/PollingService.hpp>
+#include <sirikata/proxyobject/Simulation.hpp>
+#include <sirikata/core/service/Poller.hpp>
 #include <sirikata/core/service/Context.hpp>
-#include "Invokable.hpp"
+#include <sirikata/core/service/TimeProfiler.hpp>
 
 namespace Sirikata {
 
-class TimeSteppedSimulation : public PollingService, public Invokable {
+// Simulation which wants a periodic callback, e.g. for rendering.
+//
+// To avoid double-inheritance from Service, this uses Poller instead of
+// PollingService. This unfortunately means it essentially duplicates that
+// implementation.
+class TimeSteppedSimulation : public Simulation, public Poller {
 public:
     TimeSteppedSimulation(Context* ctx, const Duration& rate, const String& name, bool accurate=false)
-     : PollingService(ctx->mainStrand, rate, ctx, name, accurate)
+     : Poller(ctx->mainStrand, std::tr1::bind(&TimeSteppedSimulation::indirectPoll, this), rate, accurate),
+       mProfiler(NULL)
     {
+        if (ctx != NULL && !name.empty())
+            mProfiler = ctx->profiler->addStage(name);
     }
+    ~TimeSteppedSimulation() {
+        delete mProfiler;
+    }
+
+    virtual void start() {
+        Poller::start();
+    }
+    virtual void stop() {
+        shutdown();
+        Poller::stop();
+    }
+
+protected:
+    /** Override this method to specify the work to be done when polling. */
+    virtual void poll() = 0;
+
+    /** Override this method to clean up when a shutdown is requested. */
+    virtual void shutdown() {}
+
+private:
+    void indirectPoll() {
+        if (mProfiler != NULL)
+            mProfiler->started();
+
+        poll();
+
+        if (mProfiler != NULL)
+            mProfiler->finished();
+    }
+
+    TimeProfiler::Stage* mProfiler;
 };
 
 }

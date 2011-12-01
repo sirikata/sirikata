@@ -104,7 +104,7 @@ private:
     OHQueryMap mOHQueries[NUM_OBJECT_CLASSES];
     InvertedOHQueryMap mInvertedOHQueries;
     ProxQueryHandler* mOHQueryHandler[NUM_OBJECT_CLASSES];
-    Poller mOHHandlerPoller;
+    PollerService mOHHandlerPoller;
     Sirikata::ThreadSafeQueue<OHResult> mOHResults;
     typedef std::tr1::unordered_map<OHDP::NodeID, SeqNoPtr, OHDP::NodeID::Hasher> OHSeqNoInfoMap;
     OHSeqNoInfoMap mOHSeqNos;

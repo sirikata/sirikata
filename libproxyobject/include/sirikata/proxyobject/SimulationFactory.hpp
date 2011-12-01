@@ -35,8 +35,8 @@
 
 #include <sirikata/proxyobject/Platform.hpp>
 #include <sirikata/proxyobject/Defs.hpp>
-#include <sirikata/core/util/ListenerProvider.hpp>
-#include <sirikata/proxyobject/TimeSteppedSimulation.hpp>
+#include <sirikata/proxyobject/Simulation.hpp>
+#include <sirikata/core/service/Context.hpp>
 #include <sirikata/proxyobject/ConnectionEventListener.hpp>
 
 namespace Sirikata{
@@ -47,7 +47,7 @@ namespace Sirikata{
 // parameter since some Simulations don't care about it.
 class SIRIKATA_PROXYOBJECT_EXPORT SimulationFactory
     : public AutoSingleton<SimulationFactory>,
-      public Factory5<TimeSteppedSimulation*,
+      public Factory5<Simulation*,
                       Context*,
                       ConnectionEventProvider*,
                       VWObjectPtr, // Object simulation is working within

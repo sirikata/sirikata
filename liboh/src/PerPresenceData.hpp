@@ -43,7 +43,7 @@ public:
     String requestPhysics;
     Network::IOTimerPtr rerequestTimer;
 
-    typedef std::map<String, TimeSteppedSimulation*> SimulationMap;
+    typedef std::map<String, Simulation*> SimulationMap;
     SimulationMap sims;
 
     PerPresenceData(HostedObject* _parent, const SpaceID& _space, const ObjectReference& _oref, const HostedObject::BaseDatagramLayerPtr& layer, const String& query);

@@ -33,21 +33,23 @@
 #ifndef _SIRIKATA_POLLING_SERVICE_HPP_
 #define _SIRIKATA_POLLING_SERVICE_HPP_
 
-#include "Poller.hpp"
-#include "TimeProfiler.hpp"
+#include <sirikata/core/service/PollerService.hpp>
+#include <sirikata/core/service/TimeProfiler.hpp>
 
 namespace Sirikata {
 
 class Context;
 
 /** A service which needs to be polled periodically.  This class handles
- *  scheduling and polling the service.
+ *  scheduling and polling the service and only requires the user to override a
+ *  single poll() method.
  */
-class SIRIKATA_EXPORT PollingService : public Poller {
+class SIRIKATA_EXPORT PollingService : public PollerService {
 public:
     PollingService(Network::IOStrand* str, const Duration& max_rate = Duration::microseconds(0), Context* ctx = NULL, const String& name = "", bool accurate=false);
     ~PollingService();
 
+    virtual void start();
     virtual void stop();
 protected:
     /** Override this method to specify the work to be done when polling. */

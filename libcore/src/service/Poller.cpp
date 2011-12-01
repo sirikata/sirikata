@@ -51,6 +51,9 @@ Poller::Poller(Network::IOStrand* str, const Network::IOCallback& cb, const Dura
     mTimer->setCallback(mCB);
 }
 
+Poller::~Poller() {
+}
+
 void Poller::start() {
     // Always make the first callback run immediately
     mStrand->post(mCB);

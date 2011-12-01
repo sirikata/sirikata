@@ -95,9 +95,9 @@ Network::IOService* HostedObject::getIOService()
 }
 
 
-TimeSteppedSimulation* HostedObject::runSimulation(const SpaceObjectReference& sporef, const String& simName)
+Simulation* HostedObject::runSimulation(const SpaceObjectReference& sporef, const String& simName)
 {
-    TimeSteppedSimulation* sim = NULL;
+    Simulation* sim = NULL;
 
     if (stopped()) return sim;
 
@@ -457,7 +457,7 @@ bool HostedObject::connect(
 
 
 //returns true if sim gets an already-existing listener.  false otherwise
-bool HostedObject::addSimListeners(PerPresenceData& pd, const String& simName,TimeSteppedSimulation*& sim)
+bool HostedObject::addSimListeners(PerPresenceData& pd, const String& simName, Simulation*& sim)
 {
     if (pd.sims.find(simName) != pd.sims.end()) {
         sim = pd.sims[simName];

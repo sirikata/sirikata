@@ -51,11 +51,12 @@ Proximity::~Proximity() {
 
 void Proximity::start() {
     PollingService::start();
-    mContext->add(&mStatsPoller);
+    mStatsPoller.start();
 }
 
 void Proximity::stop() {
     PollingService::stop();
+    mStatsPoller.stop();
 }
 
 void Proximity::poll() {
