@@ -32,6 +32,9 @@
 
 #ifndef _SIRIKATA_SINGLETON_HPP_
 #define _SIRIKATA_SINGLETON_HPP_
+
+#include <sirikata/core/util/Platform.hpp>
+
 namespace Sirikata {
 
 template <class T> class AutoSingleton {
