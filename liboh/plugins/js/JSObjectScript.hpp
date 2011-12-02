@@ -379,6 +379,43 @@ protected:
     //context stack is empty, prints error, and returns context associated with mContext.
     v8::Handle<v8::Context> getCurrentV8Context();
 
+
+
+    
+    //all of these functions are used to post between strands.
+    void eStorageBeginTransaction(JSContextStruct* jscont);
+    void eStorageCommit(JSContextStruct* jscont, v8::Handle<v8::Function> cb);
+    void iStorageCommitCallback(
+        JSContextStruct* jscont, v8::Persistent<v8::Function> cb,
+        bool success, OH::Storage::ReadSet* rs);
+    void iStorageCountCallback(
+        JSContextStruct* jscont, v8::Persistent<v8::Function> cb,
+        bool success, int32 count);
+    void eStorageErase(
+        const OH::Storage::Key& key, v8::Handle<v8::Function> cb,
+        JSContextStruct* jscont);
+    void eStorageWrite(
+        const OH::Storage::Key& key, const String& toWrite,
+        v8::Handle<v8::Function> cb, JSContextStruct* jscont);
+    void eStorageRead(
+        const OH::Storage::Key& key, v8::Handle<v8::Function> cb,
+        JSContextStruct* jscont);
+    
+    void eStorageRangeRead(
+        const OH::Storage::Key& start, const OH::Storage::Key& finish,
+        v8::Handle<v8::Function> cb, JSContextStruct* jscont);
+
+    void eStorageRangeErase(
+        const OH::Storage::Key& start, const OH::Storage::Key& finish,
+        v8::Handle<v8::Function> cb, JSContextStruct* jscont);
+
+    void eStorageCount(
+        const OH::Storage::Key& start, const OH::Storage::Key& finish,
+        v8::Handle<v8::Function> cb, JSContextStruct* jscont);
+
+    void eSetRestoreScript(
+        JSContextStruct* jscont, const String& script, v8::Handle<v8::Function> cb);
+    
 };
 
 #define JSSCRIPT_SERIAL_CHECK()\

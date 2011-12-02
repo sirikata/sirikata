@@ -295,6 +295,8 @@ void JSObjectScript::stop() {
     if (Liveness::livenessAlive())
         Liveness::letDie();
 
+    mCtx->stop();
+
     stopCalled = true;
     // This clear has to happen before ~JSObjectScript because it can call
     // virtual functions which need to be dispatched to subclasses
@@ -328,24 +330,52 @@ void JSObjectScript::shimImportAndEvalScript(JSContextStruct* jscont, const Stri
     mEvalContextStack.pop();
 }
 
-
-v8::Handle<v8::Value> JSObjectScript::storageBeginTransaction(JSContextStruct* jscont) {
+/**
+   lkjs;
+   FIXME: instead of posting jscont through, instead post its id through.  That
+   way, it can't get deleted out from under us.
+ */
+v8::Handle<v8::Value> JSObjectScript::storageBeginTransaction(JSContextStruct* jscont)
+{
     if (mStorage == NULL) return v8::ThrowException( v8::Exception::Error(v8::String::New("No persistent storage available.")) );
-    mStorage->beginTransaction(mInternalID);
+
+    mCtx->mainStrand->post(
+        std::tr1::bind(&JSObjectScript::eStorageBeginTransaction,this,jscont));
+
     return v8::Undefined();
 }
+
+
+void JSObjectScript::eStorageBeginTransaction(JSContextStruct* jscont)
+{
+    mStorage->beginTransaction(mInternalID);
+}
+
+
 
 v8::Handle<v8::Value> JSObjectScript::storageCommit(JSContextStruct* jscont, v8::Handle<v8::Function> cb)
 {
     if (mStorage == NULL) return v8::ThrowException( v8::Exception::Error(v8::String::New("No persistent storage available.")) );
-    OH::Storage::CommitCallback wrapped_cb = 0;
-    if (!cb.IsEmpty()) {
-        wrapped_cb = std::tr1::bind(&JSObjectScript::storageCommitCallback, this, jscont, v8::Persistent<v8::Function>::New(cb), _1, _2);
-    }
-    mStorage->commitTransaction(mInternalID, wrapped_cb);
+
+    mCtx->mainStrand->post(
+        std::tr1::bind(&JSObjectScript::eStorageCommit,this,jscont,cb));
+
     return v8::Undefined();
 }
 
+
+void JSObjectScript::eStorageCommit(JSContextStruct* jscont, v8::Handle<v8::Function> cb)
+{
+    
+    OH::Storage::CommitCallback wrapped_cb = 0;
+    if (!cb.IsEmpty())
+    {
+        wrapped_cb =std::tr1::bind(
+            &JSObjectScript::iStorageCommitCallback, this,
+                jscont, v8::Persistent<v8::Function>::New(cb), _1, _2);
+    }
+    mStorage->commitTransaction(mInternalID, wrapped_cb);
+}
 
 
 
@@ -361,13 +391,28 @@ void JSObjectScript::storageCommitCallback(JSContextStruct* jscont, v8::Persiste
         return;
     }
 
+    mCtx->objStrand->post(
+        std::tr1::bind(&JSObjectScript::iStorageCommitCallback,this,
+            jscont,cb,success,rs));
+}
+
+void JSObjectScript::iStorageCommitCallback(
+    JSContextStruct* jscont, v8::Persistent<v8::Function> cb,
+    bool success, OH::Storage::ReadSet* rs)
+{
+    if (mCtx->stopped())
+    {
+        JSLOG(warn, "Ignoring storage commit callback after shutdown request.");
+        return;
+    }
+    
     if (! mCtx->initialized())
     {
         mCtx->objStrand->post(
-            std::tr1::bind(&JSObjectScript, this, jscont, cb, success, rs));
+            std::tr1::bind(&JSObjectScript::iStorageCommitCallback, this,
+                jscont, cb, success, rs));
         return;
     }
-
     
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(mContext->mContext);
@@ -390,12 +435,41 @@ void JSObjectScript::storageCommitCallback(JSContextStruct* jscont, v8::Persiste
     postCallbackChecks();
 }
 
-void JSObjectScript::storageCountCallback(JSContextStruct* jscont, v8::Persistent<v8::Function> cb, bool success, int32 count) {
+
+void JSObjectScript::storageCountCallback(
+    JSContextStruct* jscont, v8::Persistent<v8::Function> cb,
+    bool success, int32 count)
+{
     if (isStopped()) {
         JSLOG(warn, "Ignoring storage commit callback after shutdown request.");
         return;
     }
 
+    mCtx->objStrand->post(
+        std::tr1::bind(&JSObjectScript::iStorageCountCallback,this,
+            jscont,cb,success,count));
+}
+
+
+void JSObjectScript::iStorageCountCallback(
+    JSContextStruct* jscont, v8::Persistent<v8::Function> cb,
+    bool success, int32 count)
+{
+    if (mCtx->stopped())
+    {
+        JSLOG(warn, "Ignoring storage commit callback after shutdown request.");
+        return;
+    }
+
+    if (!mCtx->initialized())
+    {
+        mCtx->objStrand->post(
+            std::tr1::bind(&JSObjectScript::iStorageCountCallback,this,
+                jscont,cb,success,count));
+        return;
+    }
+
+    
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(mContext->mContext);
     TryCatch try_catch;
@@ -410,86 +484,187 @@ void JSObjectScript::storageCountCallback(JSContextStruct* jscont, v8::Persisten
 }
 
 
-v8::Handle<v8::Value> JSObjectScript::storageErase(const OH::Storage::Key& key, v8::Handle<v8::Function> cb, JSContextStruct* jscont)
+v8::Handle<v8::Value> JSObjectScript::storageErase(
+    const OH::Storage::Key& key, v8::Handle<v8::Function> cb,
+    JSContextStruct* jscont)
 {
     if (mStorage == NULL) return v8::ThrowException( v8::Exception::Error(v8::String::New("No persistent storage available.")) );
 
+
+    mCtx->mainStrand->post(
+        std::tr1::bind(&JSObjectScript::eStorageErase,this,
+            key,cb,jscont));
+
+    return v8::Boolean::New(true);
+}
+
+
+void JSObjectScript::eStorageErase(
+    const OH::Storage::Key& key, v8::Handle<v8::Function> cb,
+    JSContextStruct* jscont)
+{
     OH::Storage::CommitCallback wrapped_cb = 0;
     if (!cb.IsEmpty()) {
         wrapped_cb = std::tr1::bind(&JSObjectScript::storageCommitCallback, this, jscont, v8::Persistent<v8::Function>::New(cb), _1, _2);
     }
 
     bool returner = mStorage->erase(mInternalID, key, wrapped_cb);
-    return v8::Boolean::New(returner);
+    return;
 }
 
-v8::Handle<v8::Value> JSObjectScript::storageWrite(const OH::Storage::Key& key, const String& toWrite, v8::Handle<v8::Function> cb, JSContextStruct* jscont)
+
+v8::Handle<v8::Value> JSObjectScript::storageWrite(
+    const OH::Storage::Key& key, const String& toWrite,
+    v8::Handle<v8::Function> cb, JSContextStruct* jscont)
 {
     if (mStorage == NULL) return v8::ThrowException( v8::Exception::Error(v8::String::New("No persistent storage available.")) );
 
+    mCtx->mainStrand->post(
+        std::tr1::bind(&JSObjectScript::eStorageWrite,this,
+            key,toWrite,cb,jscont));
+
+    return v8::Boolean::New(true);
+}
+
+void JSObjectScript::eStorageWrite(
+    const OH::Storage::Key& key, const String& toWrite,
+    v8::Handle<v8::Function> cb, JSContextStruct* jscont)
+{
     OH::Storage::CommitCallback wrapped_cb = 0;
-    if (!cb.IsEmpty()) {
-        wrapped_cb = std::tr1::bind(&JSObjectScript::storageCommitCallback, this, jscont, v8::Persistent<v8::Function>::New(cb), _1, _2);
+    if (!cb.IsEmpty())
+    {
+        wrapped_cb =
+            std::tr1::bind(&JSObjectScript::storageCommitCallback, this,
+                jscont, v8::Persistent<v8::Function>::New(cb), _1, _2);
     }
 
     bool returner = mStorage->write(mInternalID, key, toWrite, wrapped_cb);
-    return v8::Boolean::New(returner);
 }
 
-v8::Handle<v8::Value> JSObjectScript::storageRead(const OH::Storage::Key& key, v8::Handle<v8::Function> cb, JSContextStruct* jscont)
+
+
+v8::Handle<v8::Value> JSObjectScript::storageRead(
+    const OH::Storage::Key& key, v8::Handle<v8::Function> cb,
+    JSContextStruct* jscont)
 {
     if (mStorage == NULL) return v8::ThrowException( v8::Exception::Error(v8::String::New("No persistent storage available.")) );
 
+    mCtx->mainStrand->post(
+        std::tr1::bind(&JSObjectScript::eStorageRead,this,
+            key,cb,jscont));
+
+    return v8::Boolean::New(true);
+}
+
+
+void JSObjectScript::eStorageRead(
+    const OH::Storage::Key& key, v8::Handle<v8::Function> cb,
+    JSContextStruct* jscont)
+{
     OH::Storage::CommitCallback wrapped_cb = 0;
     if (!cb.IsEmpty()) {
-        wrapped_cb = std::tr1::bind(&JSObjectScript::storageCommitCallback, this, jscont, v8::Persistent<v8::Function>::New(cb), _1, _2);
+        wrapped_cb =
+            std::tr1::bind(&JSObjectScript::storageCommitCallback, this,
+                jscont, v8::Persistent<v8::Function>::New(cb), _1, _2);
     }
 
     bool read_queue_success = mStorage->read(mInternalID, key, wrapped_cb);
-    return v8::Boolean::New(read_queue_success);
 }
 
-v8::Handle<v8::Value> JSObjectScript::storageRangeRead(const OH::Storage::Key& start, const OH::Storage::Key& finish, v8::Handle<v8::Function> cb, JSContextStruct* jscont)
+
+
+v8::Handle<v8::Value> JSObjectScript::storageRangeRead(
+    const OH::Storage::Key& start, const OH::Storage::Key& finish,
+    v8::Handle<v8::Function> cb, JSContextStruct* jscont)
 {
+    
     if (mStorage == NULL) return v8::ThrowException( v8::Exception::Error(v8::String::New("No persistent storage available.")) );
 
+    mCtx->mainStrand->post(
+        std::tr1::bind(&JSObjectScript::eStorageRangeRead,this,
+            start,finish,cb,jscont));
+
+    return v8::Boolean::New(true);
+}
+
+void JSObjectScript::eStorageRangeRead(
+    const OH::Storage::Key& start, const OH::Storage::Key& finish,
+    v8::Handle<v8::Function> cb, JSContextStruct* jscont)
+{
     OH::Storage::CommitCallback wrapped_cb = 0;
-    if (!cb.IsEmpty()) {
-        wrapped_cb = std::tr1::bind(&JSObjectScript::storageCommitCallback, this, jscont, v8::Persistent<v8::Function>::New(cb), _1, _2);
+    if (!cb.IsEmpty())
+    {
+        wrapped_cb =
+            std::tr1::bind(&JSObjectScript::storageCommitCallback, this,
+                jscont, v8::Persistent<v8::Function>::New(cb), _1, _2);
     }
 
     bool returner = mStorage->rangeRead(mInternalID, start, finish, wrapped_cb);
-    return v8::Boolean::New(returner);
 }
 
-v8::Handle<v8::Value> JSObjectScript::storageRangeErase(const OH::Storage::Key& start, const OH::Storage::Key& finish, v8::Handle<v8::Function> cb, JSContextStruct* jscont)
+
+v8::Handle<v8::Value> JSObjectScript::storageRangeErase(
+    const OH::Storage::Key& start, const OH::Storage::Key& finish,
+    v8::Handle<v8::Function> cb, JSContextStruct* jscont)
 {
     if (mStorage == NULL) return v8::ThrowException( v8::Exception::Error(v8::String::New("No persistent storage available.")) );
 
+    mCtx->mainStrand->post(
+        std::tr1::bind(&JSObjectScript::eStorageRangeErase,this,
+            start,finish,cb,jscont));
+
+    return v8::Boolean::New(true);
+}
+
+void JSObjectScript::eStorageRangeErase(
+    const OH::Storage::Key& start, const OH::Storage::Key& finish,
+    v8::Handle<v8::Function> cb, JSContextStruct* jscont)
+{
     OH::Storage::CommitCallback wrapped_cb = 0;
-    if (!cb.IsEmpty()) {
-        wrapped_cb = std::tr1::bind(&JSObjectScript::storageCommitCallback, this, jscont, v8::Persistent<v8::Function>::New(cb), _1, _2);
+    if (!cb.IsEmpty())
+    {
+        wrapped_cb =
+            std::tr1::bind(&JSObjectScript::storageCommitCallback, this,
+                jscont, v8::Persistent<v8::Function>::New(cb), _1, _2);
     }
 
     bool returner = mStorage->rangeErase(mInternalID, start, finish, wrapped_cb);
-    return v8::Boolean::New(returner);
 }
 
-v8::Handle<v8::Value> JSObjectScript::storageCount(const OH::Storage::Key& start, const OH::Storage::Key& finish, v8::Handle<v8::Function> cb, JSContextStruct* jscont)
+
+v8::Handle<v8::Value> JSObjectScript::storageCount(
+    const OH::Storage::Key& start, const OH::Storage::Key& finish,
+    v8::Handle<v8::Function> cb, JSContextStruct* jscont)
 {
     if (mStorage == NULL) return v8::ThrowException( v8::Exception::Error(v8::String::New("No persistent storage available.")) );
 
-    OH::Storage::CountCallback wrapped_cb = 0;
-    if (!cb.IsEmpty()) {
-        wrapped_cb = std::tr1::bind(&JSObjectScript::storageCountCallback, this, jscont, v8::Persistent<v8::Function>::New(cb), _1, _2);
-    }
+    mCtx->mainStrand->post(
+        std::tr1::bind(&JSObjectScript::eStorageCount,this,
+            start,finish,cb,jscont));
 
-    bool returner = mStorage->count(mInternalID, start, finish, wrapped_cb);
-    return v8::Boolean::New(returner);
+    return v8::Boolean::New(true);
 }
 
 
-void JSObjectScript::setRestoreScriptCallback(JSContextStruct* jscont, v8::Persistent<v8::Function> cb, bool success) {
+void JSObjectScript::eStorageCount(
+    const OH::Storage::Key& start, const OH::Storage::Key& finish,
+    v8::Handle<v8::Function> cb, JSContextStruct* jscont)
+{
+    OH::Storage::CountCallback wrapped_cb = 0;
+    if (!cb.IsEmpty())
+    {
+        wrapped_cb =
+            std::tr1::bind(&JSObjectScript::storageCountCallback, this,
+                jscont, v8::Persistent<v8::Function>::New(cb), _1, _2);
+    }
+
+    bool returner = mStorage->count(mInternalID, start, finish, wrapped_cb);
+}
+
+
+void JSObjectScript::setRestoreScriptCallback(
+    JSContextStruct* jscont, v8::Persistent<v8::Function> cb, bool success)
+{
     if (isStopped()) {
         JSLOG(warn, "Ignoring restore script callback after shutdown request.");
         return;
@@ -516,12 +691,27 @@ void JSObjectScript::registerContextForClear(JSContextStruct* jscont)
     jscont->finishClear();
 }
 
-v8::Handle<v8::Value> JSObjectScript::setRestoreScript(JSContextStruct* jscont, const String& script, v8::Handle<v8::Function> cb) {
+v8::Handle<v8::Value> JSObjectScript::setRestoreScript(
+    JSContextStruct* jscont, const String& script, v8::Handle<v8::Function> cb)
+{
     if (mPersistedObjectSet == NULL) return v8::ThrowException( v8::Exception::Error(v8::String::New("No persistent storage available.")) );
 
+    mCtx->mainStrand->post(
+        std::tr1::bind(&JSObjectScript::eSetRestoreScript,this,
+            jscont,script,cb));
+    return v8::Undefined();
+}
+
+    
+void JSObjectScript::eSetRestoreScript(
+    JSContextStruct* jscont, const String& script, v8::Handle<v8::Function> cb)
+{
     OH::PersistedObjectSet::RequestCallback wrapped_cb = 0;
-    if (!cb.IsEmpty()) {
-        wrapped_cb = std::tr1::bind(&JSObjectScript::setRestoreScriptCallback, this, jscont, v8::Persistent<v8::Function>::New(cb), _1);
+    if (!cb.IsEmpty())
+    {
+        wrapped_cb =
+            std::tr1::bind(&JSObjectScript::setRestoreScriptCallback, this,
+                jscont, v8::Persistent<v8::Function>::New(cb), _1);
     }
 
     // FIXME we should really tack on any additional parameters we
@@ -533,8 +723,8 @@ v8::Handle<v8::Value> JSObjectScript::setRestoreScript(JSContextStruct* jscont, 
 
     // FIXME script_args
     mPersistedObjectSet->requestPersistedObject(mInternalID, script_type, "", script, wrapped_cb);
-    return v8::Undefined();
 }
+
 
 v8::Handle<v8::Value> JSObjectScript::debug_fileRead(const String& filename)
 {
