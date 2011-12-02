@@ -645,6 +645,9 @@ void Server::handleConnectAuthResponse(const ObjectHostConnectionID& oh_conn_id,
     mStoredConnectionData[obj_id] = sc;
 
     mOSeg->addNewObject(obj_id,connect_msg.bounds().radius());
+
+    // Show the UUID of connected object
+    SPACE_LOG(info, "New object connected with ID: " << obj_id.rawHexData());
 }
 
 void Server::finishAddObject(const UUID& obj_id, OSegAddNewStatus status)
