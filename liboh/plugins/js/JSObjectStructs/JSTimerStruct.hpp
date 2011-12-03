@@ -9,6 +9,7 @@
 #include <sirikata/core/network/IOTimer.hpp>
 #include "JSSuspendable.hpp"
 #include <sirikata/core/util/Liveness.hpp>
+#include "../JSCtx.hpp"
 
 namespace Sirikata {
 
@@ -18,8 +19,8 @@ namespace JS {
 
 struct JSTimerStruct : public JSSuspendable {
     JSTimerStruct(EmersonScript* eobj, Duration dur, v8::Persistent<v8::Function>& callback,
-        JSContextStruct* jscont, Sirikata::Context* ctx, uint32 contID,
-        double timeRemaining, bool isSuspended, bool isCleared);
+        JSContextStruct* jscont, uint32 contID,
+        double timeRemaining, bool isSuspended, bool isCleared, JSCtx* mCtx);
     ~JSTimerStruct();
 
     static JSTimerStruct* decodeTimerStruct(v8::Handle<v8::Value> toDecode,String& errorMessage);
@@ -39,7 +40,7 @@ public:
     v8::Persistent<v8::Function> cb;
     JSContextStruct* jsContStruct;
 private:
-    Sirikata::Context* mContext;
+    JSCtx* mCtx;
     Liveness mLiveness;
     Sirikata::Network::IOTimerPtr mDeadlineTimer;
 public:
@@ -105,6 +106,8 @@ private:
      */
     v8::Persistent<v8::Object> mPersistentHandle;
 
+    void iEvaluateCallback(Liveness::Token token);
+    
 };
 
 

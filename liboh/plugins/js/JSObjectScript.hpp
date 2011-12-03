@@ -171,6 +171,12 @@ public:
 
 
 
+
+
+    //lkjs; note: will need to grab most recent context from stack.
+    v8::Local<v8::Function> functionValue(const String& em_script_str);
+
+
     // A generic interface for invoking callback methods, used by other classes
     // that have JSObjectScript* (e.g. Invokable). Probably needs a version for
     // contexts if the function was bound within a context
@@ -178,11 +184,7 @@ public:
     v8::Handle<v8::Value> invokeCallback(JSContextStruct* ctx, v8::Handle<v8::Function>& cb, int argc, v8::Handle<v8::Value> argv[]);
     v8::Handle<v8::Value> invokeCallback(JSContextStruct* ctx, v8::Handle<v8::Function>& cb);
 
-
-    //lkjs; note: will need to grab most recent context from stack.
-    v8::Local<v8::Function> functionValue(const String& em_script_str);
-
-
+    
 
     // Hook to invoke after a callback is invoked. Allows you to check for
     // conditions that may be set during the callback (kill requested, reset,
@@ -207,10 +209,17 @@ public:
     /** Eval a string, executing its contents in the root object's scope. */
     v8::Handle<v8::Value> evalInGlobal(const String& contents, v8::ScriptOrigin* em_script_name,JSContextStruct* jscs);
 
+    /**
+       FIXME: actually need to dispose of isolate and clean it up.
+     */
+    v8::Isolate* mIsolate;
 
 
 protected:
 
+
+    
+    
     JSCtx* mCtx;
     
     // Object host internal identifier for the object associated with
@@ -415,6 +424,8 @@ protected:
 
     void eSetRestoreScript(
         JSContextStruct* jscont, const String& script, v8::Handle<v8::Function> cb);
+
+    void iStop();
     
 };
 

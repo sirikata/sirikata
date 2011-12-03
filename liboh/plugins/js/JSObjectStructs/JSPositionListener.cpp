@@ -15,12 +15,9 @@
 namespace Sirikata {
 namespace JS {
 
-
-
-
-
-JSPositionListener::JSPositionListener(JSProxyPtr _jpp)
- : jpp(_jpp)
+JSPositionListener::JSPositionListener(JSProxyPtr _jpp, JSCtx* ctx)
+ : jpp(_jpp),
+   mCtx(ctx)
 {
 }
 
@@ -208,26 +205,66 @@ v8::Handle<v8::Value> JSPositionListener::struct_getAnimationList()
     return handle_scope.Close(returner);
 }
 
-v8::Handle<v8::Value> JSPositionListener::loadMesh(JSContextStruct* ctx, v8::Handle<v8::Function> cb) {
+v8::Handle<v8::Value> JSPositionListener::loadMesh(
+    JSContextStruct* ctx, v8::Handle<v8::Function> cb)
+{
     CHECK_JPP_INIT_THROW_V8_ERROR(loadMesh);
 
-    JSObjectScriptManager::MeshLoadCallback wrapped_cb =
-        std::tr1::bind(&JSPositionListener::finishLoadMesh, this,
-            this->livenessToken(), ctx->livenessToken(), ctx, v8::Persistent<v8::Function>::New(cb), _1);
-    jpp->emerScript->manager()->loadMesh(Transfer::URI(getMesh()), wrapped_cb);
+    mCtx->mainStrand->post(
+        std::tr1::bind(&JSPositionListener::eLoadMesh,this,
+            ctx,cb));
+
     return v8::Undefined();
 }
 
-void JSPositionListener::finishLoadMesh(Liveness::Token alive, Liveness::Token ctx_alive, JSContextStruct* ctx, v8::Persistent<v8::Function> cb, Mesh::VisualPtr data) {
+void JSPositionListener::eLoadMesh(
+    JSContextStruct* ctx,v8::Handle<v8::Function>cb)
+{
+    JSObjectScriptManager::MeshLoadCallback wrapped_cb =
+        std::tr1::bind(&JSPositionListener::finishLoadMesh, this,
+            this->livenessToken(), ctx->livenessToken(), ctx,
+            v8::Persistent<v8::Function>::New(cb), _1);
+    
+    jpp->emerScript->manager()->loadMesh(Transfer::URI(getMesh()), wrapped_cb);
+}
+
+
+
+
+void JSPositionListener::finishLoadMesh(
+    Liveness::Token alive, Liveness::Token ctx_alive, JSContextStruct* ctx,
+    v8::Persistent<v8::Function> cb, Mesh::VisualPtr data)
+{
     if (!alive || !ctx_alive) return;
 
+    mCtx->objStrand->post(
+        std::tr1::bind(&JSPositionListener::iFinishLoadMesh,this,
+            alive,ctx_alive,ctx,cb,data));
+}
+
+
+
+void JSPositionListener::iFinishLoadMesh(
+    Liveness::Token alive, Liveness::Token ctx_alive, JSContextStruct* ctx,
+    v8::Persistent<v8::Function> cb, Mesh::VisualPtr data)
+{
+    if (!alive || !ctx_alive) return;
+    
     if (jpp->emerScript->isStopped()) {
         JSLOG(warn, "Ignoring load mesh callback after shutdown request.");
         return;
     }
 
-    mVisual = data;
+    if (!mCtx->initialized())
+    {
+        mCtx->objStrand->post(
+            std::tr1::bind(&JSPositionListener::iFinishLoadMesh,this,
+                alive,ctx_alive,ctx,cb,data));
+        return;
+    }
 
+    mVisual = data;
+    v8::Isolate::Scope iscope(jpp->emerScript->mIsolate);
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(ctx->mContext);
     TryCatch try_catch;

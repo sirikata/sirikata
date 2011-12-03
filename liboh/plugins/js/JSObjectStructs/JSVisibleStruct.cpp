@@ -10,8 +10,8 @@
 namespace Sirikata {
 namespace JS {
 
-JSVisibleStruct::JSVisibleStruct(JSProxyPtr addParams)
- : JSPositionListener(addParams)
+JSVisibleStruct::JSVisibleStruct(JSProxyPtr addParams,JSCtx* ctx)
+ : JSPositionListener(addParams,ctx)
 {
 }
 

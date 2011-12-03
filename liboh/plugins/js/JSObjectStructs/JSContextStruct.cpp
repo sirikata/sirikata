@@ -56,7 +56,7 @@ v8::Handle<v8::Value> JSContextStruct::httpRequest(Sirikata::Network::Address ad
     return v8::Uint32::New(emerScript->getEmersonHttpPtr()->makeRequest(addr,method,request, cb, this));
 }
 
-
+//EmersonHttpManager ensures that this is called from within objStrand
 void JSContextStruct::httpFail(v8::Persistent<v8::Function> cb,const String& failureReason )
 {
     // FIXME we really shouldn't need this, but JSObjectScript doesn't hold
@@ -65,6 +65,7 @@ void JSContextStruct::httpFail(v8::Persistent<v8::Function> cb,const String& fai
         return;
     }
 
+    v8::Isolate::Scope iscope(jsObjScript->mIsolate);
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(mContext);
     v8::Handle<v8::Value> argv[2] = { v8::Boolean::New(false), v8::String::New(failureReason.c_str(),failureReason.size())};
@@ -80,6 +81,7 @@ void JSContextStruct::httpSuccess(v8::Persistent<v8::Function> cb,EmersonHttpMan
         return;
     }
 
+    v8::Isolate::Scope iscope(jsObjScript->mIsolate);
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(mContext);
     v8::Handle<v8::Object> httpObj = v8::Object::New();

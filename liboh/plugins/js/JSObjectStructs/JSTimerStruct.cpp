@@ -15,14 +15,14 @@ namespace Sirikata {
 namespace JS {
 
 JSTimerStruct::JSTimerStruct(EmersonScript* eobj, Duration dur, v8::Persistent<v8::Function>& callback,
-    JSContextStruct* jscont, Sirikata::Context* ctx, uint32 contID,
-    double timeRemaining, bool isSuspended,bool isCleared)
+    JSContextStruct* jscont, uint32 contID,
+    double timeRemaining, bool isSuspended,bool isCleared, JSCtx* jsctx)
  :JSSuspendable(),
   emerScript(eobj),
   cb(callback),
   jsContStruct(jscont),
-  mContext(ctx),
-  mDeadlineTimer(Sirikata::Network::IOTimer::create(*ctx->ioService)),
+  mCtx(jsctx),
+  mDeadlineTimer(Sirikata::Network::IOTimer::create(*jsctx->ioService)),
   timeUntil(dur),
   mTimeRemaining(timeRemaining),
   killAfterFire(false),
@@ -227,12 +227,28 @@ v8::Handle<v8::Value> JSTimerStruct::struct_getAllData()
     return handle_scope.Close(returner);
 }
 
-void JSTimerStruct::evaluateCallback()
+void JSTimerStruct::evaluateCallback() 
 {
     Liveness::Token token=mLiveness.livenessToken();
+    mCtx->objStrand->post(
+        std::tr1::bind(&JSTimerStruct::iEvaluateCallback,this,
+            token));
+}
+
+
+void JSTimerStruct::iEvaluateCallback(Liveness::Token token)
+{
+    if (!mCtx->initialized())
+    {
+        mCtx->objStrand->post(
+            std::tr1::bind(&JSTimerStruct::iEvaluateCallback,this,
+                token));
+        return;
+    }
+    
     emerScript->invokeCallbackInContext(emerScript->livenessToken(), cb, jsContStruct);
     if (token) {
-        if (mContext->stopped()) {
+        if (mCtx->stopped()) {
             JSLOG(warn, "Timer evaluateCallback invoked after stop request, ignoring...");
             noTimerWaiting=true; // Allow cleanup, see notes below
             return;
@@ -241,7 +257,7 @@ void JSTimerStruct::evaluateCallback()
         //if we were told to kill the timer after firing, then check kill conditions
         //again in noReference.
         if (killAfterFire)
-            mContext->mainStrand->post(std::tr1::bind(&JSTimerStruct::noReference,this,token));
+            mCtx->mainStrand->post(std::tr1::bind(&JSTimerStruct::noReference,this,token));
 
         //means that we have no pending timer operation.
         // Note that since this allows the JS GC thread to destroy this object

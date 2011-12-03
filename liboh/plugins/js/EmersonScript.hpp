@@ -459,6 +459,10 @@ private:
 
 };
 
+#define EMERSCRIPT_SERIAL_CHECK()\
+    Sirikata::SerializationCheck::Scoped sc (JSObjectScript::mCtx->serializationCheck());
+
+
 } // namespace JS
 } // namespace Sirikata
 
