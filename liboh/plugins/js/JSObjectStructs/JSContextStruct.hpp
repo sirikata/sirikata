@@ -15,6 +15,7 @@
 #include "../EmersonHttpManager.hpp"
 #include "../JSVisibleManager.hpp"
 #include "JSCapabilitiesConsts.hpp"
+#include "../JSCtx.hpp"
 
 namespace Sirikata {
 namespace JS {
@@ -32,7 +33,11 @@ struct PresStructRestoreParams;
 
 struct JSContextStruct : public JSSuspendable, public Liveness
 {
-    JSContextStruct(JSObjectScript* parent, JSPresenceStruct* whichPresence, SpaceObjectReference home,Capabilities::CapNum capNum,v8::Handle<v8::ObjectTemplate> contGlobTempl, uint32 contextID,JSContextStruct* parentContext);
+    JSContextStruct(JSObjectScript* parent, JSPresenceStruct* whichPresence,
+        SpaceObjectReference home,Capabilities::CapNum capNum,
+        v8::Handle<v8::ObjectTemplate> contGlobTempl, uint32 contextID,
+        JSContextStruct* parentContext, JSCtx* jsctx);
+    
     ~JSContextStruct();
 
     //looks in current context and returns the current context as pointer to
@@ -206,7 +211,8 @@ struct JSContextStruct : public JSSuspendable, public Liveness
 
     //this is the context that any and all objects will be run in.
     v8::Persistent<v8::Context> mContext;
-
+    JSCtx* mCtx;
+    
     String getScript();
     //sets proxAddedFunc and proxRemovedFunc, respectively
     v8::Handle<v8::Value> proxAddedHandlerCallallback(v8::Handle<v8::Function>cb);

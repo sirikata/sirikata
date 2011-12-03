@@ -24,10 +24,15 @@
 namespace Sirikata {
 namespace JS {
 
-JSContextStruct::JSContextStruct(JSObjectScript* parent, JSPresenceStruct* whichPresence, SpaceObjectReference home,Capabilities::CapNum capNum,v8::Handle<v8::ObjectTemplate> contGlobTempl, uint32 contextID,JSContextStruct* parentContext)
+JSContextStruct::JSContextStruct(
+    JSObjectScript* parent, JSPresenceStruct* whichPresence,
+    SpaceObjectReference home,Capabilities::CapNum capNum,
+    v8::Handle<v8::ObjectTemplate> contGlobTempl, uint32 contextID,
+    JSContextStruct* parentContext,JSCtx* jsctx)
  : JSSuspendable(),
    jsObjScript(parent),
    mContext(v8::Context::New(NULL, contGlobTempl)),
+   mCtx(jsctx),
    mParentContext(parentContext),
    mContextID(contextID),
    hasOnConnectedCallback(false),
@@ -65,7 +70,7 @@ void JSContextStruct::httpFail(v8::Persistent<v8::Function> cb,const String& fai
         return;
     }
 
-    v8::Isolate::Scope iscope(jsObjScript->mIsolate);
+    v8::Isolate::Scope iscope(mCtx->mIsolate);
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(mContext);
     v8::Handle<v8::Value> argv[2] = { v8::Boolean::New(false), v8::String::New(failureReason.c_str(),failureReason.size())};
@@ -81,7 +86,7 @@ void JSContextStruct::httpSuccess(v8::Persistent<v8::Function> cb,EmersonHttpMan
         return;
     }
 
-    v8::Isolate::Scope iscope(jsObjScript->mIsolate);
+    v8::Isolate::Scope iscope(mCtx->mIsolate);    
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(mContext);
     v8::Handle<v8::Object> httpObj = v8::Object::New();

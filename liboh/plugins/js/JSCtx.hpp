@@ -3,6 +3,8 @@
 
 #include <sirikata/core/service/Context.hpp>
 #include <sirikata/core/util/SerializationCheck.hpp>
+#include <v8.h>
+
 
 namespace Sirikata
 {
@@ -16,11 +18,12 @@ namespace JS
 class JSCtx : public Context
 {
 public:    
-    JSCtx(Context* ctx,Network::IOStrand* oStrand);
+    JSCtx(Context* ctx,Network::IOStrand* oStrand,v8::Isolate* is);
     ~JSCtx();
     
     Network::IOStrand* objStrand;
 
+    v8::Isolate* mIsolate;
     bool stopped();
     void stop();
     void initialize();

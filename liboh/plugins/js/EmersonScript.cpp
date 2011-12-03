@@ -90,6 +90,8 @@ EmersonScript::EmersonScript(HostedObjectPtr ho, const String& args,
    presenceToken(HostedObject::DEFAULT_PRESENCE_TOKEN +1),
    emHttpPtr(EmersonHttpManager::construct<EmersonHttpManager> (ctx))
 {
+    v8::Isolate::Scope iscope(JSObjectScript::mCtx->mIsolate);
+    
     int32 resourceMax = mManager->getOptions()->referenceOption("emer-resource-max")->as<int32> ();
     JSObjectScript::initialize(args, script,resourceMax);
     
@@ -110,7 +112,6 @@ EmersonScript::EmersonScript(HostedObjectPtr ho, const String& args,
        lkjs;
        FIXME: Read below.  Need to add init guards on storage and timer callbacks;
      */
-    
     //want to block all callbacks into this object until initialization is
     //finished.  Because constructor is called from mainStrand, only have to
     //worry about objStrand and httpManager's strand from interfering.
@@ -219,7 +220,7 @@ void EmersonScript::iNotifyProximateGone(ProxyObjectPtr proximateObject, const S
     }
     
     JSLOG(detailed,"Notified that object "<<proximateObject->getObjectReference()<<" went out of query of "<<querier<<".  Mostly just ignoring it.");
-    v8::Isolate::Scope iscope(mIsolate);
+    v8::Isolate::Scope iscope(JSObjectScript::mCtx->mIsolate);
 
     //FIXME: we aren't ever freeing this memory
     //lkjs; what about freeing this memeory?;
@@ -335,7 +336,7 @@ void  EmersonScript::iNotifyProximate(
     ProxyObjectPtr proximateObject, const SpaceObjectReference& querier)
 {
     EMERSCRIPT_SERIAL_CHECK();
-    v8::Isolate::Scope iscope(mIsolate);
+    v8::Isolate::Scope iscope(JSObjectScript::mCtx->mIsolate);
     if (JSObjectScript::mCtx->stopped())
     {
         JSLOG(warn, "Ignoring proximity addition callback after shutdown request.");
@@ -508,7 +509,7 @@ void EmersonScript::iOnDisconnected(
     SessionEventProviderPtr from, const SpaceObjectReference& name)
 {
     EMERSCRIPT_SERIAL_CHECK();
-    v8::Isolate::Scope iscope(mIsolate);
+    v8::Isolate::Scope iscope(JSObjectScript::mCtx->mIsolate);
     // We need to mark disconnection here so we don't request
     // disconnection twice, but the callback has to be deferred until later
     PresenceMap::iterator internal_it = mPresences.find(name);
@@ -589,8 +590,7 @@ void EmersonScript::iStop()
 {
     EMERSCRIPT_SERIAL_CHECK();
     Liveness::letDie();
-
-    v8::Isolate::Scope iscope(mIsolate);
+    v8::Isolate::Scope iscope(JSObjectScript::mCtx->mIsolate);
 
     // Clean up ProxyCreationListeners. We subscribe for each presence in
     // onConnected, so we need to run through all presences (stored in the
@@ -730,7 +730,7 @@ void EmersonScript::invokeCallbackInContext(
         return;
     }
 
-    v8::Isolate::Scope iscope(mIsolate);
+    v8::Isolate::Scope iscope(JSObjectScript::mCtx->mIsolate);
     v8::HandleScope handle_scope;
     v8::Context::Scope(jscontext->mContext);
     TryCatch try_catch;
@@ -752,7 +752,6 @@ void EmersonScript::handlePresCallback(
         return;
     }
 
-    
     v8::HandleScope handle_scope;
     v8::Context::Scope(jscont->mContext);
     TryCatch try_catch;
@@ -820,7 +819,7 @@ void EmersonScript::iHandleScriptCommRead(
     const SpaceObjectReference& src, const SpaceObjectReference& dst, const String& payload)
 {
     EMERSCRIPT_SERIAL_CHECK();
-    v8::Isolate::Scope iscope(mIsolate);
+    v8::Isolate::Scope iscope(JSObjectScript::mCtx->mIsolate);
     if (JSObjectScript::mCtx->stopped())
         return;
 
@@ -964,7 +963,7 @@ void EmersonScript::iHandleScriptCommUnreliable(
     const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload)
 {
     EMERSCRIPT_SERIAL_CHECK();
-    v8::Isolate::Scope iscope(mIsolate);
+    v8::Isolate::Scope iscope(JSObjectScript::mCtx->mIsolate);
     if (isStopped())
     {
         JSLOG(warn, "Ignoring message after shutdown request.");
@@ -1009,7 +1008,7 @@ void EmersonScript::processSandboxMessage(const String& msgToSend, uint32 sender
         return;
     }
 
-    v8::Isolate::Scope iscope(mIsolate);
+    v8::Isolate::Scope iscope(JSObjectScript::mCtx->mIsolate);
     //FIXME: there's a chance that when post was called in sendSandbox, the
     //sandbox sender was destroyed and then a new one created with the same
     //senderID.  That's exceptionally unlikely, but may want to fix just in

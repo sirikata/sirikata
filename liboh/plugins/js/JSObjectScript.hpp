@@ -209,11 +209,6 @@ public:
     /** Eval a string, executing its contents in the root object's scope. */
     v8::Handle<v8::Value> evalInGlobal(const String& contents, v8::ScriptOrigin* em_script_name,JSContextStruct* jscs);
 
-    /**
-       FIXME: actually need to dispose of isolate and clean it up.
-     */
-    v8::Isolate* mIsolate;
-
 
 protected:
 
@@ -393,7 +388,7 @@ protected:
     
     //all of these functions are used to post between strands.
     void eStorageBeginTransaction(JSContextStruct* jscont);
-    void eStorageCommit(JSContextStruct* jscont, v8::Handle<v8::Function> cb);
+    void eStorageCommit(JSContextStruct* jscont, v8::Persistent<v8::Function> cb);
     void iStorageCommitCallback(
         JSContextStruct* jscont, v8::Persistent<v8::Function> cb,
         bool success, OH::Storage::ReadSet* rs);
@@ -401,29 +396,30 @@ protected:
         JSContextStruct* jscont, v8::Persistent<v8::Function> cb,
         bool success, int32 count);
     void eStorageErase(
-        const OH::Storage::Key& key, v8::Handle<v8::Function> cb,
+        const OH::Storage::Key& key, v8::Persistent<v8::Function> cb,
         JSContextStruct* jscont);
     void eStorageWrite(
         const OH::Storage::Key& key, const String& toWrite,
-        v8::Handle<v8::Function> cb, JSContextStruct* jscont);
+        v8::Persistent<v8::Function> cb, JSContextStruct* jscont);
     void eStorageRead(
-        const OH::Storage::Key& key, v8::Handle<v8::Function> cb,
+        const OH::Storage::Key& key, v8::Persistent<v8::Function> cb,
         JSContextStruct* jscont);
     
     void eStorageRangeRead(
         const OH::Storage::Key& start, const OH::Storage::Key& finish,
-        v8::Handle<v8::Function> cb, JSContextStruct* jscont);
+        v8::Persistent<v8::Function> cb, JSContextStruct* jscont);
 
     void eStorageRangeErase(
         const OH::Storage::Key& start, const OH::Storage::Key& finish,
-        v8::Handle<v8::Function> cb, JSContextStruct* jscont);
+        v8::Persistent<v8::Function> cb, JSContextStruct* jscont);
 
     void eStorageCount(
         const OH::Storage::Key& start, const OH::Storage::Key& finish,
-        v8::Handle<v8::Function> cb, JSContextStruct* jscont);
+        v8::Persistent<v8::Function> cb, JSContextStruct* jscont);
 
     void eSetRestoreScript(
-        JSContextStruct* jscont, const String& script, v8::Handle<v8::Function> cb);
+        JSContextStruct* jscont, const String& script,
+        v8::Persistent<v8::Function> cb);
 
     void iStop();
     

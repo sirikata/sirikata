@@ -7,9 +7,10 @@ namespace JS
 {
 
 
-JSCtx::JSCtx(Context* ctx,Network::IOStrand* oStrand)
+JSCtx::JSCtx(Context* ctx,Network::IOStrand* oStrand,v8::Isolate* is)
  : Context("JS", ctx->ioService, ctx->mainStrand, NULL,Time::null()),
    objStrand(oStrand),
+   mIsolate(is),
    isStopped(false),
    isInitialized(false),
    mCheck()

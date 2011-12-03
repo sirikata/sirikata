@@ -83,6 +83,11 @@ public:
 
 private:
     ObjectHostContext* mContext;
+    /**
+       lkjs;
+       FIXME: Who is in charge of deleting the isolate?
+     */
+    v8::Isolate* mIsolate;
 
     void createVisibleTemplate();
     void createPresenceTemplate();
