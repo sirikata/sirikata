@@ -31,6 +31,9 @@ public:
     void mix(uint8* raw_stream, int32 len);
 
 private:
+    // Indicates whether basic initialization was successful, i.e. whether we're
+    // going to be able to do any operations.
+    bool ready() const;
 
     void handleFinishedDownload(Transfer::ChunkRequestPtr request, Transfer::DenseDataPtr response);
 

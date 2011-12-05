@@ -72,6 +72,10 @@ void AudioSimulation::start() {
     mTransferPool = Transfer::TransferMediator::getSingleton().registerClient<Transfer::AggregatedTransferPool>("SDLAudio");
 }
 
+bool AudioSimulation::ready() const {
+    return (mInitializedAudio && mOpenedAudio && mTransferPool);
+}
+
 void AudioSimulation::stop() {
     AUDIO_LOG(detailed, "Stopping SDLAudio");
 
@@ -101,6 +105,10 @@ boost::any AudioSimulation::invoke(std::vector<boost::any>& params) {
     AUDIO_LOG(detailed, "Invoking the function " << name);
 
     if (name == "play") {
+        // Ignore if we didn't initialize properly
+        if (!ready())
+            return Invokable::asAny(false);
+
         if (params.size() < 2 || !Invokable::anyIsString(params[1]))
             return Invokable::asAny(false);
         String sound_url_str = Invokable::anyAsString(params[1]);
