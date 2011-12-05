@@ -93,12 +93,14 @@ AVPacket* FFmpegAudioStream::getNextPacket() {
         }
 
         if (packet.stream_index == mStreamIndex) {
+            AUDIO_LOG(insane, "Got packet for selected audio stream (" << mStreamIndex << ")");
             // This seems to be used to ensure the packet data outlives the next
             // call to av_read_frame
             av_dup_packet(&packet);
             AVPacket* result = new AVPacket(packet);
             return result;
         } else {
+            AUDIO_LOG(insane, "Discarding packet for other stream (" << packet.stream_index << ")");
             av_free_packet(&packet);
         }
     }
@@ -125,11 +127,14 @@ void FFmpegAudioStream::decodeSome() {
         mCodecCtx, (int16*)mDecodedData, &data_size, &pkt_temp
     );
 
-    mCurrentPacketOffset += used_bytes;
+    AUDIO_LOG(insane, "Decoded " << used_bytes << " bytes of compressed data to generate " << data_size << " uncompressed bytes");
+    if (used_bytes > 0)
+        mCurrentPacketOffset += used_bytes;
 
     if (data_size <= 0) {
         // Got no data out. With these settings, we effectively ignore the frame
         // and move on
+        AUDIO_LOG(insane, "Audio decoding failed, ignoring packet");
         mConvertedOffset = 0;
         mConvertedSize = 0;
     }
@@ -143,6 +148,8 @@ void FFmpegAudioStream::decodeSome() {
         used_bytes < 0 || // Decode failure
         mCurrentPacketOffset >= mCurrentPacket->size  // Finished packet
     ) {
+        if (used_bytes < 0)
+            AUDIO_LOG(insane, "Audio decoding failed, ignoring packet");
         if (mCurrentPacket->data)
             av_free_packet(mCurrentPacket);
         delete mCurrentPacket;
@@ -173,13 +180,19 @@ SDL_AudioFormat FFmpegFormatToSDLFormat(AVSampleFormat fmt) {
 void FFmpegAudioStream::convertFormat(int decoded_size) {
     // Simple case where it's already in the right format
     if (mCodecCtx->sample_fmt == AV_SAMPLE_FMT_S16 &&
-        mCodecCtx->channels == 2) {
+        mCodecCtx->channels == 2 &&
+        mCodecCtx->sample_rate == 44100
+    ) {
 
         if (mConvertedData == NULL)
             mConvertedData = new uint16[DECODE_BUFFER_SIZE];
 
         // Copy data into the conversion buffer
         memcpy(mConvertedData, mDecodedData, decoded_size);
+
+        mConvertedOffset = 0;
+        // Note division by size of sample to go from bytes -> samples
+        mConvertedSize = decoded_size / sizeof(uint16);
 
         return;
     }
