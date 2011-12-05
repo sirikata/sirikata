@@ -185,16 +185,20 @@ void AudioSimulation::mix(uint8* raw_stream, int32 raw_len) {
     Lock lck(mStreamsMutex);
 
     for(int i = 0; i < samples_len; i++) {
+        int32 mixed[nchannels];
         for(int c = 0; c < nchannels; c++)
-            stream[i*nchannels + c] = 0;
+            mixed[c] = 0;
 
         for(uint32 st = 0; st < mStreams.size(); st++) {
             int16 samples[nchannels];
             mStreams[st]->samples(samples);
 
             for(int c = 0; c < nchannels; c++)
-                stream[i*nchannels + c] += samples[c];
+                mixed[c] += samples[c];
         }
+
+        for(int c = 0; c < nchannels; c++)
+            stream[i*nchannels + c] = (int16)std::min(std::max(mixed[c], -32768), 32767);
     }
 
     // Clean out streams that have finished
