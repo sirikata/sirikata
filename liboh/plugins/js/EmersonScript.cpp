@@ -105,8 +105,7 @@ EmersonScript::EmersonScript(HostedObjectPtr ho, const String& args,
 
     //default connections.
     for(HostedObject::SpaceObjRefVec::const_iterator space_it = spaceobjrefs.begin(); space_it != spaceobjrefs.end(); space_it++)
-        onConnected(mParent, *space_it, HostedObject::DEFAULT_PRESENCE_TOKEN);
-
+        iOnConnected(mParent, *space_it, HostedObject::DEFAULT_PRESENCE_TOKEN,true);
 
     /**
        lkjs;
@@ -417,6 +416,28 @@ void EmersonScript::postCallbackChecks()
 void EmersonScript::onConnected(SessionEventProviderPtr from,
     const SpaceObjectReference& name, HostedObject::PresenceToken token)
 {
+    JSObjectScript::mCtx->objStrand->post(
+        std::tr1::bind(&EmersonScript::iOnConnected,this,
+            from,name,token,false));
+}
+
+void EmersonScript::iOnConnected(SessionEventProviderPtr from,
+    const SpaceObjectReference& name, HostedObject::PresenceToken token,
+    bool duringInit)
+{
+    if (JSObjectScript::mCtx->stopped())
+        return;
+
+    
+    if ((!JSObjectScript::mCtx->initialized()) && (! duringInit))
+    {
+        JSObjectScript::mCtx->objStrand->post(
+            std::tr1::bind(&EmersonScript::iOnConnected,this,
+                from,name,token,duringInit));
+        return;
+    }
+    v8::Isolate::Scope iscope(JSObjectScript::mCtx->mIsolate);
+    
     //adding this here because don't want to call onConnected while objStrand is
     //executing.
     EMERSCRIPT_SERIAL_CHECK();

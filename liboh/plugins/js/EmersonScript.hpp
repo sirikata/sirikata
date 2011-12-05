@@ -405,9 +405,7 @@ private:
     EmersonHttpPtr emHttpPtr;
 
 
-    //counterpart of onConnected.  Called within mStrand.
-    void iOnConnected(SessionEventProviderPtr from,
-        const SpaceObjectReference& name, HostedObject::PresenceToken token);
+    // Called within mStrand.
     void iOnDisconnected(
         SessionEventProviderPtr from, const SpaceObjectReference& name);
     void eCreateEntityFinish(ObjectHost* oh,EntityCreateInfo& eci);
@@ -456,6 +454,10 @@ private:
 
     void eSetOrientationVelFunction(
         const SpaceObjectReference sporef,const Quaternion& quat);
+
+    void iOnConnected(SessionEventProviderPtr from,
+        const SpaceObjectReference& name, HostedObject::PresenceToken token,
+        bool duringInit);
 
 };
 
