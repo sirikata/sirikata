@@ -117,6 +117,8 @@ public:
      */
     void handleScriptCommUnreliable (const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload);
 
+    boost::any invokeInvokable(std::vector<boost::any>& params,v8::Persistent<v8::Function> function_);
+    
 
     // Post this function to an IOService to add an event to be handled. Must
     // take liveness token because while waiting to be processed the object may,
@@ -458,6 +460,9 @@ private:
     void iOnConnected(SessionEventProviderPtr from,
         const SpaceObjectReference& name, HostedObject::PresenceToken token,
         bool duringInit);
+
+    void iInvokeInvokable(
+        std::vector<boost::any>& params,v8::Persistent<v8::Function> function_);
 
 };
 

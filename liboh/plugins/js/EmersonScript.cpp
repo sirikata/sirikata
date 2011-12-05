@@ -68,6 +68,8 @@
 #include "EmersonMessagingManager.hpp"
 #include "EmersonHttpManager.hpp"
 
+#include "JSObjects/JSInvokableUtil.hpp"
+
 using namespace v8;
 using namespace std;
 namespace Sirikata {
@@ -270,6 +272,56 @@ void EmersonScript::fireProxEvent(const SpaceObjectReference& localPresSporef,
     }
     postCallbackChecks();
 
+}
+
+boost::any EmersonScript::invokeInvokable(
+    std::vector<boost::any>& params,v8::Persistent<v8::Function> function_)
+{
+    JSObjectScript::mCtx->objStrand->post(
+        std::tr1::bind(&EmersonScript::iInvokeInvokable,this,
+            params,function_));
+
+    return boost::any_cast<bool>(true);
+}
+
+
+void EmersonScript::iInvokeInvokable(
+    std::vector<boost::any>& params,v8::Persistent<v8::Function> function_)
+{
+    if (JSObjectScript::mCtx->stopped())
+        return;
+
+    if (!JSObjectScript::mCtx->initialized())
+    {
+        JSObjectScript::mCtx->objStrand->post(
+            std::tr1::bind(&EmersonScript::iInvokeInvokable,this,
+                params,function_));
+        return;
+    }
+
+    EMERSCRIPT_SERIAL_CHECK();
+    v8::Isolate::Scope iscope(JSObjectScript::mCtx->mIsolate);
+    int argc = params.size();
+
+    /**
+       FIXME: lkjs All invokables are executed from the root context.  This is
+       incorrect.
+     */
+    v8::HandleScope handle_scope;
+    v8::Context::Scope  context_scope(context());
+
+    std::vector<v8::Handle<v8::Value> >argv(argc);
+
+    for(uint32 i = 0; i < params.size(); i++)
+        argv[i] = InvokableUtil::AnyToV8(this, params[i]);
+
+    // We are currently executing in the global context of the entity
+    // FIXME: need to take care fo the "this" pointer
+    v8::Handle<v8::Value> result;
+    if (argc > 0)
+        result = invokeCallback(rootContext(), function_, argc, &argv[0]);
+    else
+        result = invokeCallback(rootContext(), function_);
 }
 
 //should already be in a context by the time this is called
