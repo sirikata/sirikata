@@ -187,18 +187,19 @@ void AudioSimulation::mix(uint8* raw_stream, int32 raw_len) {
     // Length in individual samples
     int32 stream_len = raw_len / sizeof(int16);
     // Length in samples for all channels
+#define MAX_CHANNELS 6
     int32 nchannels = 2; // Assuming stereo, see SDL audio setup
     int32 samples_len = stream_len / nchannels;
 
     Lock lck(mStreamsMutex);
 
     for(int i = 0; i < samples_len; i++) {
-        int32 mixed[nchannels];
+        int32 mixed[MAX_CHANNELS];
         for(int c = 0; c < nchannels; c++)
             mixed[c] = 0;
 
         for(uint32 st = 0; st < mStreams.size(); st++) {
-            int16 samples[nchannels];
+            int16 samples[MAX_CHANNELS];
             mStreams[st]->samples(samples);
 
             for(int c = 0; c < nchannels; c++)

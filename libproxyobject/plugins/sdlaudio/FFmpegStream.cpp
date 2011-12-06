@@ -2,6 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can
 // be found in the LICENSE file.
 
+#include <sirikata/core/util/Platform.hpp>
+#if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+// Hack to disable OpenCollada's stdint.h for windows. This one should be
+// using the one added for ffmpeg.
+#define _ZZIP__STDINT_H 1
+#endif
+
 #include "FFmpegStream.hpp"
 #include "FFmpegGlue.hpp"
 #include "FFmpegAudioStream.hpp"

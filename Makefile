@@ -29,7 +29,7 @@ clean:
 	( test -e Makefile && $(MAKE) clean $(*) ) || true
 
 DEPVC8REV=HEAD
-DEPVC9REV=23
+DEPVC9REV=24
 DEPOSXREV=88
 DEPSOURCE=60
 DEPARCHINDEP=7

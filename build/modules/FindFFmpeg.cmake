@@ -26,9 +26,9 @@ IF(WIN32)  # Windows
   IF(FFMPEG_ROOT AND EXISTS "${FFMPEG_ROOT}")
     SET(FFMPEG_LIBRARY_DIRS ${FFMPEG_ROOT}/lib)
     SET(FFMPEG_LIBRARIES
-        debug libavutil_d.lib optimized libavutil.lib
-        debug libavcodec_d.lib optimized libavcodec.lib
-        debug libavformat_d.lib optimized libavformat.lib
+        avutil.lib
+        avcodec.lib
+        avformat.lib
         )
     SET(FFMPEG_LDFLAGS)
     SET(FFMPEG_INCLUDE_DIRS ${FFMPEG_ROOT}/include)
