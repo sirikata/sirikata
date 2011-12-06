@@ -1,4 +1,4 @@
-system.import("std/default.em");
+system.require("std/default.em");
 system.require("villageSimple/meshes.em");
 system.require("std/core/repeatingTimer.em");
 
