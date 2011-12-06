@@ -41,18 +41,29 @@ private:
     bool mInitializedAudio;
     bool mOpenedAudio;
 
-    Transfer::TransferPoolPtr mTransferPool;
-    typedef std::map<Transfer::URI, Transfer::ResourceDownloadTaskPtr> DownloadTaskMap;
-    DownloadTaskMap mDownloads;
+    typedef uint32 ClipHandle;
+    ClipHandle mClipHandleSource;
 
-    // Mixing callbacks come from SDL's thread, so we need to be careful about
-    // managing the audio stream set.
+    // Mixing callbacks come from SDL's thread, download handlers come from
+    // transfer thread, so we need to be careful about managing access.
     typedef boost::mutex Mutex;
     typedef boost::unique_lock<Mutex> Lock;
-    Mutex mStreamsMutex;
+    Mutex mMutex;
 
-    typedef std::vector<FFmpegAudioStreamPtr> AudioStreamSet;
-    AudioStreamSet mStreams;
+    Transfer::TransferPoolPtr mTransferPool;
+    struct DownloadTask {
+        Transfer::ResourceDownloadTaskPtr task;
+        std::set<ClipHandle> waiting;
+    };
+    typedef std::map<Transfer::URI, DownloadTask> DownloadTaskMap;
+    DownloadTaskMap mDownloads;
+
+    // ClipHandles are used to uniquely identify playing clips
+    struct Clip {
+        FFmpegAudioStreamPtr stream;
+    };
+    typedef std::map<ClipHandle, Clip> ClipMap;
+    ClipMap mClips;
 };
 
 } //namespace SDL

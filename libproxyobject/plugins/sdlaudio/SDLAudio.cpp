@@ -38,7 +38,8 @@ extern void mixaudio(void* _sim, Uint8* raw_stream, int raw_len) {
 AudioSimulation::AudioSimulation(Context* ctx)
  : mContext(ctx),
    mInitializedAudio(false),
-   mOpenedAudio(false)
+   mOpenedAudio(false),
+   mClipHandleSource(0)
 {}
 
 void AudioSimulation::start() {
@@ -107,34 +108,65 @@ boost::any AudioSimulation::invoke(std::vector<boost::any>& params) {
     if (name == "play") {
         // Ignore if we didn't initialize properly
         if (!ready())
-            return Invokable::asAny(false);
+            return boost::any();
 
         if (params.size() < 2 || !Invokable::anyIsString(params[1]))
-            return Invokable::asAny(false);
+            return boost::any();
         String sound_url_str = Invokable::anyAsString(params[1]);
         Transfer::URI sound_url(sound_url_str);
-        if (sound_url.empty()) return Invokable::asAny(false);
+        if (sound_url.empty()) return boost::any();
 
-        AUDIO_LOG(detailed, "Play request for " << sound_url.toString());
+        Lock lck(mMutex);
+
+        ClipHandle id = mClipHandleSource++;
+        AUDIO_LOG(detailed, "Play request for " << sound_url.toString() << " assigned ID " << id);
         DownloadTaskMap::iterator task_it = mDownloads.find(sound_url);
         // If we're already working on it, we don't need to do
         // anything.  TODO(ewencp) actually we should track the number
         // of requests and play it that many times when it completes...
         if (task_it != mDownloads.end()) {
             AUDIO_LOG(insane, "Already downloading " << sound_url.toString());
-            return Invokable::asAny(true);
+            task_it->second.waiting.insert(id);
+            return Invokable::asAny(id);
         }
 
         AUDIO_LOG(insane, "Issuing download request for " << sound_url.toString());
         Transfer::ResourceDownloadTaskPtr dl = Transfer::ResourceDownloadTask::construct(
             sound_url, mTransferPool,
             1.0,
-            mContext->mainStrand->wrap(
-                std::tr1::bind(&AudioSimulation::handleFinishedDownload, this, _1, _2)
-            )
+            std::tr1::bind(&AudioSimulation::handleFinishedDownload, this, _1, _2)
         );
-        mDownloads[sound_url] = dl;
+        mDownloads[sound_url].task = dl;
+        mDownloads[sound_url].waiting.insert(id);
         dl->start();
+
+        return Invokable::asAny(id);
+    }
+    else if (name == "stop") {
+        if (params.size() < 2 || !Invokable::anyIsNumeric(params[1]))
+            return boost::any();
+        ClipHandle id = Invokable::anyAsNumeric(params[1]);
+
+        AUDIO_LOG(detailed, "Stop request for ID " << id);
+
+        Lock lck(mMutex);
+
+        // Clear out from playing streams
+        ClipMap::iterator clip_it = mClips.find(id);
+        if (clip_it != mClips.end()) {
+            AUDIO_LOG(insane, "Stopping actively playing clip ID " << id);
+            mClips.erase(clip_it);
+        }
+
+        // Clear out from downloads if it's still downloading
+        // Not particularly efficient, but hopefully this isn't a very big map
+        for(DownloadTaskMap::iterator down_it = mDownloads.begin(); down_it != mDownloads.end(); down_it++) {
+            if (down_it->second.waiting.find(id) != down_it->second.waiting.end()) {
+                AUDIO_LOG(insane, "Stopping downloading clip ID " << id);
+                down_it->second.waiting.erase(id);
+                break;
+            }
+        }
     }
     else {
         AUDIO_LOG(warn, "Function " << name << " was invoked but this function was not found.");
@@ -144,12 +176,15 @@ boost::any AudioSimulation::invoke(std::vector<boost::any>& params) {
 }
 
 void AudioSimulation::handleFinishedDownload(Transfer::ChunkRequestPtr request, Transfer::DenseDataPtr response) {
+    Lock lck(mMutex);
+
     const Transfer::URI& sound_url = request->getMetadata().getURI();
     // We may have stopped the simulation and then gotten the callback. Ignore
     // in this case.
     if (mDownloads.find(sound_url) == mDownloads.end()) return;
 
-    // Otherwise remove the record
+    // Otherwise remove the record, saving the waiting clips
+    std::set<ClipHandle> waiting = mDownloads[sound_url].waiting;
     mDownloads.erase(sound_url);
 
     // If the download failed, just log it
@@ -165,20 +200,28 @@ void AudioSimulation::handleFinishedDownload(Transfer::ChunkRequestPtr request, 
 
     AUDIO_LOG(detailed, "Finished download for audio file " << sound_url << ": " << response->size() << " bytes");
 
-    FFmpegMemoryProtocol* dataSource = new FFmpegMemoryProtocol(sound_url.toString(), response);
-    FFmpegStreamPtr stream(FFmpegStream::construct<FFmpegStream>(static_cast<FFmpegURLProtocol*>(dataSource)));
-    if (stream->numAudioStreams() == 0) {
-        AUDIO_LOG(error, "Found zero audio streams in " << sound_url << ", ignoring");
-        return;
-    }
-    if (stream->numAudioStreams() > 1)
-        AUDIO_LOG(detailed, "Found more than one audio stream in " << sound_url << ", only playing first");
-    FFmpegAudioStreamPtr audio_stream = stream->getAudioStream(0, 2);
+    // Track whether we had sound disabled so we know whether to enable it after
+    // adding these new streams.
+    bool was_silent = mClips.empty();
 
-    Lock lck(mStreamsMutex);
-    mStreams.push_back(audio_stream);
+    for(std::set<ClipHandle>::iterator id_it = waiting.begin(); id_it != waiting.end(); id_it++) {
+        FFmpegMemoryProtocol* dataSource = new FFmpegMemoryProtocol(sound_url.toString(), response);
+        FFmpegStreamPtr stream(FFmpegStream::construct<FFmpegStream>(static_cast<FFmpegURLProtocol*>(dataSource)));
+        if (stream->numAudioStreams() == 0) {
+            AUDIO_LOG(error, "Found zero audio streams in " << sound_url << ", ignoring");
+            return;
+        }
+        if (stream->numAudioStreams() > 1)
+            AUDIO_LOG(detailed, "Found more than one audio stream in " << sound_url << ", only playing first");
+        FFmpegAudioStreamPtr audio_stream = stream->getAudioStream(0, 2);
+
+        Clip clip;
+        clip.stream = audio_stream;
+        mClips[*id_it] = clip;
+    }
+
     // Enable playback if we didn't have any active streams before
-    if (mStreams.size() == 1)
+    if (was_silent)
         SDL_PauseAudio(0);
 }
 
@@ -191,16 +234,16 @@ void AudioSimulation::mix(uint8* raw_stream, int32 raw_len) {
     int32 nchannels = 2; // Assuming stereo, see SDL audio setup
     int32 samples_len = stream_len / nchannels;
 
-    Lock lck(mStreamsMutex);
+    Lock lck(mMutex);
 
     for(int i = 0; i < samples_len; i++) {
         int32 mixed[MAX_CHANNELS];
         for(int c = 0; c < nchannels; c++)
             mixed[c] = 0;
 
-        for(uint32 st = 0; st < mStreams.size(); st++) {
+        for(ClipMap::iterator st_it = mClips.begin(); st_it != mClips.end(); st_it++) {
             int16 samples[MAX_CHANNELS];
-            mStreams[st]->samples(samples);
+            st_it->second.stream->samples(samples);
 
             for(int c = 0; c < nchannels; c++)
                 mixed[c] += samples[c];
@@ -211,11 +254,14 @@ void AudioSimulation::mix(uint8* raw_stream, int32 raw_len) {
     }
 
     // Clean out streams that have finished
-    for(int32 idx = mStreams.size()-1; idx >= 0; idx--)
-        if (mStreams[idx]->finished()) mStreams.erase(mStreams.begin() + idx);
+    for(ClipMap::iterator st_it = mClips.begin(); st_it != mClips.end(); ) {
+        ClipMap::iterator del_it = st_it;
+        if (del_it->second.stream->finished()) mClips.erase(del_it);
+        st_it++;
+    }
 
     // Disable playback if we've run out of sounds
-    if (mStreams.empty())
+    if (mClips.empty())
         SDL_PauseAudio(1);
 }
 
