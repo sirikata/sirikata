@@ -78,8 +78,10 @@ class OgreSystem :
     void destroyMouseHandler();
     void tickInputHandler(const Task::LocalTime& t) const;
 
-    OgreSystem(Context* ctx);
+
+    OgreSystem(Context* ctx,Network::IOStrand* sStrand);
     bool initialize(ConnectionEventProvider* cevtprovider, VWObjectPtr viewer, const SpaceObjectReference& presenceid, const String&options);
+
 
 
     Ogre::RaySceneQuery* mRayQuery;
@@ -128,11 +130,17 @@ public:
         ConnectionEventProvider* cevtprovider,
         HostedObjectPtr obj,
         const SpaceObjectReference& presenceid,
-        const String& options
+        const String& options,
+        Network::IOStrand* sStrand
     )
     {
+<<<<<<< HEAD
         OgreSystem*os= new OgreSystem(ctx);
         if (os->initialize(cevtprovider, obj, presenceid, options))
+=======
+        OgreSystem*os= new OgreSystem(ctx,sStrand);
+        if (os->initialize(obj, presenceid, options))
+>>>>>>> Pushed strands all the way into the ogre code.
             return os;
         delete os;
         return NULL;

@@ -67,7 +67,7 @@ using Input::SDLInputManager;
 /** Represents a SQLite database connection. */
 class SIRIKATA_OGRE_EXPORT OgreRenderer : public TimeSteppedSimulation, public Ogre::WindowEventListener {
 public:
-    OgreRenderer(Context* ctx);
+    OgreRenderer(Context* ctx,Network::IOStrand* sStrand);
     virtual ~OgreRenderer();
 
     virtual bool initialize(const String& options, bool with_berkelium = true);
@@ -162,6 +162,7 @@ public:
     void screenshot(const String& filename);
     void screenshotNextFrame(const String& filename);
   protected:
+    Network::IOStrand* simStrand;
     static Ogre::Root *getRoot();
 
     bool loadBuiltinPlugins();
@@ -265,6 +266,7 @@ public:
     // To simplify taking screenshots after a specific event has occurred, we
     // allow them to be taken on the next frame.
     String mNextFrameScreenshotFile;
+
 };
 
 } // namespace Graphics

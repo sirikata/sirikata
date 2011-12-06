@@ -254,8 +254,9 @@ public:
 
 
 
-OgreRenderer::OgreRenderer(Context* ctx)
- : TimeSteppedSimulation(ctx, Duration::seconds(1.f/60.f), "Ogre Graphics", true),
+OgreRenderer::OgreRenderer(Context* ctx,Network::IOStrand* sStrand)
+ : TimeSteppedSimulation(ctx, Duration::seconds(1.f/60.f), "Ogre Graphics", sStrand,true),
+   simStrand(sStrand),
    mContext(ctx),
    mQuitRequested(false),
    mQuitRequestHandled(false),
