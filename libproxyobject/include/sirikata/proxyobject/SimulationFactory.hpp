@@ -35,16 +35,21 @@
 
 #include <sirikata/proxyobject/Platform.hpp>
 #include <sirikata/proxyobject/Defs.hpp>
-#include <sirikata/core/util/ListenerProvider.hpp>
-#include <sirikata/proxyobject/TimeSteppedSimulation.hpp>
+#include <sirikata/proxyobject/Simulation.hpp>
+#include <sirikata/core/service/Context.hpp>
+#include <sirikata/proxyobject/ConnectionEventListener.hpp>
 
 namespace Sirikata{
 
-///Class to create graphics subsystems. FIXME: should this load a dll when a named factory is not found
+// Note that we provide a ConnectionEventProvider because we're in
+// libproxyobject so we can't just provide the ObjectHostContext, which would
+// give access to the ObjectHost if it was needed. Ideally we wouldn't pass this
+// parameter since some Simulations don't care about it.
 class SIRIKATA_PROXYOBJECT_EXPORT SimulationFactory
     : public AutoSingleton<SimulationFactory>,
-      public Factory4<TimeSteppedSimulation*,
+      public Factory5<Simulation*,
                       Context*,
+                      ConnectionEventProvider*,
                       VWObjectPtr, // Object simulation is working within
                       const SpaceObjectReference&, // Presence the simulation is working within
                       const String&> //options string for the graphics system

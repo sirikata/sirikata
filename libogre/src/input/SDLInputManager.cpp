@@ -36,6 +36,7 @@
 #endif
 
 #include <sirikata/proxyobject/Platform.hpp>
+#include <sirikata/sdl/SDL.hpp>
 #include <SDL.h>
 #include <SDL_video.h>
 #include <SDL_syswm.h>
@@ -145,14 +146,17 @@ const char* SDLInputManager::InitializationException::what() const throw() {
 
 SDLInputManager::SDLInputManager(Graphics::OgreRenderer* parent, unsigned int width,unsigned int height, bool fullscreen, bool grabCursor, void *&currentWindow)
  : InputManager(new Task::ThreadSafeWorkQueue),
-   mParent(parent)
+   mParent(parent),
+   mInitialized(false)
 {
     mWindowContext=0;
     mWidth = width;
     mHasKeyboardFocus = true;
     mHeight = height;
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_NOPARACHUTE) < 0)
-        throw InitializationException("SDL_Init failed.");
+    if (SDL::InitializeSubsystem(SDL::Subsystem::Video) < 0)
+        throw InitializationException("Failed to initialize SDL video.");
+    else
+        mInitialized = true;
 
 #if 1
     if (currentWindow) {
@@ -568,8 +572,9 @@ bool SDLInputManager::isScrollLockDown() const {
 SDLInputManager::~SDLInputManager(){
     SDL_GL_DeleteContext(mWindowContext);
     SDL_DestroyWindow(mWindowID);
-    SDL_Quit();
-	delete getWorkQueue();
+    if (mInitialized)
+        SDL::QuitSubsystem(SDL::Subsystem::Video);
+    delete getWorkQueue();
 }
 
 } }

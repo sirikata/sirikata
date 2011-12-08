@@ -78,13 +78,13 @@ function() {
         {
             var ui_finish_cb = std.core.bind(this.finishedUIInit, this, cb);
             this._loadingUIs++; this._scripter = new std.script.Scripter(this, ui_finish_cb);
-            this._loadingUIs++; this._chat = new std.graphics.Chat(this._pres, this._simulator, ui_finish_cb);
-            this._loadingUIs++; this._physics = new std.graphics.PhysicsProperties(this._simulator, ui_finish_cb);
-            this._loadingUIs++; this._propertybox = new std.propertybox.PropertyBox(this, ui_finish_cb);
-            this._loadingUIs++; this._presenceList = new std.graphics.PresenceList(this._pres, this._simulator, this._scripter, ui_finish_cb);
-            this._loadingUIs++; this._setMesh = new std.graphics.SetMesh(this._simulator, ui_finish_cb);
-            this._loadingUIs++; this._flatland = new std.fl.FL(this, ui_finish_cb);
             this._loadingUIs++; this._villageBuilder = new std.graphics.VillageBuilder(this._simulator, ui_finish_cb);
+            //this._loadingUIs++; this._chat = new std.graphics.Chat(this._pres, this._simulator, ui_finish_cb);
+            //this._loadingUIs++; this._physics = new std.graphics.PhysicsProperties(this._simulator, ui_finish_cb);
+            //this._loadingUIs++; this._propertybox = new std.propertybox.PropertyBox(this, ui_finish_cb);
+            //this._loadingUIs++; this._presenceList = new std.graphics.PresenceList(this._pres, this._simulator, this._scripter, ui_finish_cb);
+            //this._loadingUIs++; this._setMesh = new std.graphics.SetMesh(this._simulator, ui_finish_cb);
+            //this._loadingUIs++; this._flatland = new std.fl.FL(this, ui_finish_cb);                
         }
         else
             this.finishedUIInit(cb);
@@ -96,13 +96,13 @@ function() {
 
         var ui_finish_cb = std.core.bind(this.finishedUIInit, this);
         this._loadingUIs++; this._scripter.onReset(ui_finish_cb);
-        this._loadingUIs++; this._chat.onReset(ui_finish_cb);
-        this._loadingUIs++; this._physics.onReset(ui_finish_cb);
-        this._loadingUIs++; this._propertybox.onReset(ui_finish_cb);
-        this._loadingUIs++; this._presenceList.onReset(ui_finish_cb);
-        this._loadingUIs++; this._setMesh.onReset(ui_finish_cb);
-        this._loadingUIs++; this._flatland.onReset(ui_finish_cb);
         this._loadingUIs++; this._villageBuilder.onReset(ui_finish_cb);
+        //this._loadingUIs++; this._chat.onReset(ui_finish_cb);
+        //this._loadingUIs++; this._physics.onReset(ui_finish_cb);
+        //this._loadingUIs++; this._propertybox.onReset(ui_finish_cb);
+        //this._loadingUIs++; this._presenceList.onReset(ui_finish_cb);
+        //this._loadingUIs++; this._setMesh.onReset(ui_finish_cb);
+        //this._loadingUIs++; this._flatland.onReset(ui_finish_cb);
     };
 
 
@@ -143,12 +143,12 @@ function() {
             
             this._binding.addAction('togglePropertyBox', std.core.bind(this.togglePropertyBox, this));
             this._binding.addAction('toggleChat', std.core.bind(this.toggleChat, this));
-            this._binding.addAction('togglePhysicsProperties', std.core.bind(this._physics.toggle, this._physics));
-            this._binding.addAction('togglePresenceList', std.core.bind(this._presenceList.toggle, this._presenceList));
-            this._binding.addAction('toggleSetMesh', std.core.bind(this._setMesh.toggle, this._setMesh));
             this._binding.addAction('toggleVillageBuilder', std.core.bind(this._villageBuilder.toggle, this._villageBuilder));
-            this._binding.addFloat2Action('showFlatland', std.core.bind(this.showFlatland, this));
-            this._binding.addAction('hideFlatland', std.core.bind(this.hideFlatland, this));
+            //this._binding.addAction('togglePhysicsProperties', std.core.bind(this._physics.toggle, this._physics));
+            //this._binding.addAction('togglePresenceList', std.core.bind(this._presenceList.toggle, this._presenceList));
+            //this._binding.addAction('toggleSetMesh', std.core.bind(this._setMesh.toggle, this._setMesh));
+            //this._binding.addFloat2Action('showFlatland', std.core.bind(this.showFlatland, this));
+            //this._binding.addAction('hideFlatland', std.core.bind(this.hideFlatland, this));
 
             this._binding.addAction('toggleCameraMode', std.core.bind(this.toggleCameraMode, this));
 
@@ -471,7 +471,7 @@ function() {
     /** @function */
     std.graphics.DefaultGraphics.prototype.updatePhysicsProperties = function() {
         // Update even if not selected so display can be disabled
-        this._physics.update(this._selected);
+        //this._physics.update(this._selected);
     };
 
     /** @function */
@@ -490,14 +490,14 @@ function() {
     /** @function */
     std.graphics.DefaultGraphics.prototype.forwardMouseDragToDragger = function(evt) {
         if (this._dragger) this._dragger.onMouseDrag(evt);
-        this._propertybox.HandleUpdateProperties(this._selected);
+        //this._propertybox.HandleUpdateProperties(this._selected);
     };
 
 
     
     /** @function */
     std.graphics.DefaultGraphics.prototype.updatePropertyBox = function(evt) {
-        this._propertybox.HandleUpdateProperties(this._selected);
+        //this._propertybox.HandleUpdateProperties(this._selected);
     };
 
     /** @function */

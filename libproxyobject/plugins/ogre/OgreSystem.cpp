@@ -57,6 +57,7 @@ namespace Graphics {
 
 OgreSystem::OgreSystem(Context* ctx)
  : OgreRenderer(ctx),
+   mConnectionEventProvider(NULL),
    mOnReadyCallback(NULL),
    mOnResetReadyCallback(NULL),
    mPrimaryCamera(NULL),
@@ -146,8 +147,11 @@ Transfer::DenseDataPtr read_file(const String& filename)
 }
 }
 
-bool OgreSystem::initialize(VWObjectPtr viewer, const SpaceObjectReference& presenceid, const String& options) {
+bool OgreSystem::initialize(ConnectionEventProvider* cevtprovider, VWObjectPtr viewer, const SpaceObjectReference& presenceid, const String& options) {
     if(!OgreRenderer::initialize(options)) return false;
+
+    mConnectionEventProvider = cevtprovider;
+    mConnectionEventProvider->addListener(this);
 
     mViewer = viewer;
     mPresenceID = presenceid;
@@ -276,6 +280,11 @@ void OgreSystem::stop() {
     if (mViewer) {
         ProxyManagerPtr proxyManager = mViewer->presence(mPresenceID);
         proxyManager->removeListener(this);
+    }
+
+    if (mConnectionEventProvider) {
+        mConnectionEventProvider->removeListener(this);
+        mConnectionEventProvider = NULL;
     }
 
     OgreRenderer::stop();

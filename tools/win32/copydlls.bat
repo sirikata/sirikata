@@ -43,6 +43,9 @@ copy dependencies\installed-gsl\bin\*.dll %RELDEST%
 copy dependencies\FreeImage\*.dll %DEBDEST%
 copy dependencies\FreeImage\*.dll %RELDEST%
 
+copy dependencies\installed-ffmpeg\bin\*.dll %DEBDEST%
+copy dependencies\installed-ffmpeg\bin\*.dll %RELDEST%
+
 mkdir %DEBDEST%\chrome
 mkdir %DEBDEST%\chrome\img
 mkdir %DEBDEST%\chrome\css

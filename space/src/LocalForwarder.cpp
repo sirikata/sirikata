@@ -51,7 +51,7 @@ LocalForwarder::LocalForwarder(SpaceContext* ctx)
 void LocalForwarder::addActiveConnection(ObjectConnection* conn, bool obj_migrating) {
     boost::lock_guard<boost::mutex> lock(mMutex);
 
-    if (obj_migrating==false)
+    if (!obj_migrating)
     	assert(mActiveConnections.find(conn->id()) == mActiveConnections.end());
     mActiveConnections[conn->id()] = conn;
 }

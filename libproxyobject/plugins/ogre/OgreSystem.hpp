@@ -46,6 +46,8 @@
 
 #include <sirikata/ogre/OgreRenderer.hpp>
 
+#include <sirikata/proxyobject/ConnectionEventListener.hpp>
+
 namespace Ogre {
 struct RaySceneQueryResultEntry;
 class SubEntity;
@@ -61,8 +63,13 @@ struct IntersectResult;
 class OgreSystemMouseHandler;
 
 /** Represents one OGRE SceneManager, a single environment. */
-class OgreSystem: public OgreRenderer, protected SessionEventListener, public ProxyCreationListener
+class OgreSystem :
+        public OgreRenderer,
+        protected SessionEventListener,
+        public ProxyCreationListener,
+        public ConnectionEventListener
 {
+    ConnectionEventProvider* mConnectionEventProvider;
     VWObjectPtr mViewer;
     SpaceObjectReference mPresenceID;
 
@@ -74,7 +81,7 @@ class OgreSystem: public OgreRenderer, protected SessionEventListener, public Pr
     void tickInputHandler(const Task::LocalTime& t) const;
 
     OgreSystem(Context* ctx);
-    bool initialize(VWObjectPtr viewer, const SpaceObjectReference& presenceid, const String&options);
+    bool initialize(ConnectionEventProvider* cevtprovider, VWObjectPtr viewer, const SpaceObjectReference& presenceid, const String&options);
 
 
     Ogre::RaySceneQuery* mRayQuery;
@@ -120,13 +127,14 @@ public:
 
     static TimeSteppedSimulation* create(
         Context* ctx,
+        ConnectionEventProvider* cevtprovider,
         VWObjectPtr obj,
         const SpaceObjectReference& presenceid,
         const String& options
     )
     {
         OgreSystem*os= new OgreSystem(ctx);
-        if (os->initialize(obj, presenceid, options))
+        if (os->initialize(cevtprovider, obj, presenceid, options))
             return os;
         delete os;
         return NULL;

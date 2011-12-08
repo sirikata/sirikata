@@ -40,7 +40,6 @@
 #include <sirikata/core/util/Time.hpp>
 
 namespace Sirikata {
-class Context;
 
 /** Poller allows you to generate a callback periodically without having
  *  to inherit from the PollingService class.  It serves the same function
@@ -57,9 +56,10 @@ class Context;
  *  slower rate, and usually not by much, so you should only use this in special
  *  circumstances.
  */
-class SIRIKATA_EXPORT Poller : public Service {
+class SIRIKATA_EXPORT Poller {
 public:
     Poller(Network::IOStrand* str, const Network::IOCallback& cb, const Duration& max_rate = Duration::microseconds(0), bool accurate = false);
+    virtual ~Poller();
 
     /** Start polling this service on this strand at the given maximum rate. */
     virtual void start();

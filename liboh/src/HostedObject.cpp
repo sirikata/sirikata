@@ -95,9 +95,9 @@ Network::IOService* HostedObject::getIOService()
 }
 
 
-TimeSteppedSimulation* HostedObject::runSimulation(const SpaceObjectReference& sporef, const String& simName)
+Simulation* HostedObject::runSimulation(const SpaceObjectReference& sporef, const String& simName)
 {
-    TimeSteppedSimulation* sim = NULL;
+    Simulation* sim = NULL;
 
     if (stopped()) return sim;
 
@@ -457,7 +457,7 @@ bool HostedObject::connect(
 
 
 //returns true if sim gets an already-existing listener.  false otherwise
-bool HostedObject::addSimListeners(PerPresenceData& pd, const String& simName,TimeSteppedSimulation*& sim)
+bool HostedObject::addSimListeners(PerPresenceData& pd, const String& simName, Simulation*& sim)
 {
     if (pd.sims.find(simName) != pd.sims.end()) {
         sim = pd.sims[simName];
@@ -465,7 +465,7 @@ bool HostedObject::addSimListeners(PerPresenceData& pd, const String& simName,Ti
     }
 
     HO_LOG(info,String("[OH] Initializing ") + simName);
-    sim = SimulationFactory::getSingleton().getConstructor ( simName ) ( mContext, getSharedPtr(), pd.id(), getObjectHost()->getSimOptions(simName));
+    sim = SimulationFactory::getSingleton().getConstructor ( simName ) ( mContext, static_cast<ConnectionEventProvider*>(mObjectHost), getSharedPtr(), pd.id(), getObjectHost()->getSimOptions(simName));
     if (!sim)
     {
         HO_LOG(error, "Unable to load " << simName << " plugin.");
@@ -474,7 +474,6 @@ bool HostedObject::addSimListeners(PerPresenceData& pd, const String& simName,Ti
     else
     {
         pd.sims[simName] = sim;
-        mObjectHost->ConnectionEventProvider::addListener(static_cast<ConnectionEventListener*>(sim));
         HO_LOG(info,String("Successfully initialized ") + simName);
     }
     return true;
