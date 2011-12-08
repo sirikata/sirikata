@@ -57,7 +57,7 @@ class LocalForwarder : public PollingService {
      *  LocalForwarder.
      *  \param conn the new connection to add
      */
-    void addActiveConnection(ObjectConnection* conn);
+    void addActiveConnection(ObjectConnection* conn, bool obj_migrating=false);
 
     /** Remove the connection for an object.
      *  \param objid the UUID of the object to remove

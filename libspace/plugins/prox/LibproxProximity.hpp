@@ -82,7 +82,7 @@ public:
     virtual void removeQuery(UUID obj);
 
     // LocationServiceListener Interface
-    virtual void localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics);
+    virtual void localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics, bool obj_migrating=false);
     virtual void localObjectRemoved(const UUID& uuid, bool agg);
     virtual void localLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval);
     virtual void localBoundsUpdated(const UUID& uuid, bool agg, const BoundingSphere3f& newval);
@@ -254,7 +254,7 @@ private:
     // Results from queries to other servers, so we know what we need to remove
     // on forceful disconnection
     ServerQueryResultSet mServerQueryResults;
-    Poller mServerHandlerPoller;
+    PollerService mServerHandlerPoller;
 
     // These track all objects being reported to this server and
     // answer queries for objects connected to this server.
@@ -262,11 +262,11 @@ private:
     InvertedObjectQueryMap mInvertedObjectQueries;
     ProxQueryHandler* mObjectQueryHandler[NUM_OBJECT_CLASSES];
     bool mObjectDistance; // Using distance queries
-    Poller mObjectHandlerPoller;
+    PollerService mObjectHandlerPoller;
 
     // Pollers that trigger rebuilding of query data structures
-    Poller mStaticRebuilderPoller;
-    Poller mDynamicRebuilderPoller;
+    PollerService mStaticRebuilderPoller;
+    PollerService mDynamicRebuilderPoller;
 
     // Track SeqNo info for each querier
     typedef std::tr1::unordered_map<ServerID, SeqNoPtr> ServerSeqNoInfoMap;

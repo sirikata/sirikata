@@ -268,6 +268,10 @@ bool Server::isObjectConnecting(const UUID& object_id) const {
     return (mStoredConnectionData.find(object_id) != mStoredConnectionData.end());
 }
 
+bool Server::isObjectMigrating(const UUID& object_id) const {
+    return (mMigratingObjects.find(object_id) != mMigratingObjects.end());
+}
+
 void Server::sendSessionMessageWithRetry(const ObjectHostConnectionID& conn, Sirikata::Protocol::Object::ObjectMessage* msg, const Duration& retry_rate) {
     bool sent = mObjectHostConnectionManager->send( conn, msg );
     if (!sent) {
@@ -617,6 +621,7 @@ void Server::handleConnectAuthResponse(const ObjectHostConnectionID& oh_conn_id,
         {
             // retry, tell them they're fine.
             sendConnectSuccess(oh_conn_id, obj_id);
+            return;
         }
         else if
             // or was connecting and was the same oh sending message
@@ -626,14 +631,28 @@ void Server::handleConnectAuthResponse(const ObjectHostConnectionID& oh_conn_id,
             // Do nothing, they're still working on the connection. We can't
             // send success (they aren't fully connected yet) and we can't send
             // failure (they might still succeed).
+        	return;
         }
         else
         {
             // conflict, fail the new connection leaving existing alone
-            sendConnectError(oh_conn_id, obj_id);
+        	if (!isObjectMigrating(obj_id)) {
+        		sendConnectError(oh_conn_id, obj_id);
+        		return;
+        	}
+
+        	// Allow migrating objects from different OH with the same id to be connected
+        	else {
+        		// if this OH is authenticated as the migrating OH.
+        		if (mMigratingObjects[obj_id]==connect_msg.oh_id())
+        			SPACE_LOG(info, "Migrating object with ID: " << obj_id.rawHexData());
+        		else {
+        			sendConnectError(oh_conn_id, obj_id);
+        			return;
+        		}
+        	}
         }
 
-        return;
     }
 
     // Update our oseg to show that we know that we have this object now. Also
@@ -646,8 +665,6 @@ void Server::handleConnectAuthResponse(const ObjectHostConnectionID& oh_conn_id,
 
     mOSeg->addNewObject(obj_id,connect_msg.bounds().radius());
 
-    // Show the UUID of connected object
-    SPACE_LOG(info, "New object connected with ID: " << obj_id.rawHexData());
 }
 
 void Server::finishAddObject(const UUID& obj_id, OSegAddNewStatus status)
@@ -656,7 +673,7 @@ void Server::finishAddObject(const UUID& obj_id, OSegAddNewStatus status)
   if (storedConIter != mStoredConnectionData.end())
   {
       StoredConnection sc = mStoredConnectionData[obj_id];
-      if (status == OSegWriteListener::SUCCESS)
+      if (status == OSegWriteListener::SUCCESS || status == OSegWriteListener::OBJ_ALREADY_REGISTERED)
       {
           mObjectSessionManager->addSession(new ObjectSession(ObjectReference(obj_id)));
 
@@ -680,12 +697,23 @@ void Server::finishAddObject(const UUID& obj_id, OSegAddNewStatus status)
           //for cleaner semantics?
           mCSeg->reportLoad(mContext->id(), mCSeg->serverRegion(mContext->id())[0] , mObjects.size()  );
 
-          mLocalForwarder->addActiveConnection(conn);
+          // New object
+          if (!isObjectMigrating(obj_id))
+        	  mLocalForwarder->addActiveConnection(conn, false);
+          // Migrating object
+          else
+        	  mLocalForwarder->addActiveConnection(conn, true);
 
           // Add object as local object to LocationService
           String obj_mesh = sc.conn_msg.has_mesh() ? sc.conn_msg.mesh() : "";
           String obj_phy = sc.conn_msg.has_physics() ? sc.conn_msg.physics() : "";
-          mLocationService->addLocalObject(obj_id, loc, orient, bnds, obj_mesh, obj_phy);
+
+          // New object
+          if (!isObjectMigrating(obj_id))
+        	  mLocationService->addLocalObject(obj_id, loc, orient, bnds, obj_mesh, obj_phy, false);
+          // Migrating object
+          else
+        	  mLocationService->addLocalObject(obj_id, loc, orient, bnds, obj_mesh, obj_phy, true);
 
           // Register proximity query
           // Currently, the preferred way to register the query is to send the
@@ -708,6 +736,8 @@ void Server::finishAddObject(const UUID& obj_id, OSegAddNewStatus status)
           mForwarder->addObjectConnection(obj_id, conn);
 
           sendConnectSuccess(conn->connID(), obj_id);
+          // Show the UUID of connected object
+          SPACE_LOG(info, "New object connected with ID: " << obj_id.rawHexData());
       }
       else
       {

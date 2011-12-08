@@ -220,14 +220,15 @@ void MigrationMonitor::changeNextEventTime(ObjectInfo& objinfo, const Time& newt
 
 /** LocationServiceListener Interface. */
 
-void MigrationMonitor::localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& phy) {
+void MigrationMonitor::localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& phy, bool obj_migrating) {
     mStrand->post(
-        std::tr1::bind(&MigrationMonitor::handleLocalObjectAdded, this, uuid, loc, bounds)
+        std::tr1::bind(&MigrationMonitor::handleLocalObjectAdded, this, uuid, loc, bounds, obj_migrating)
     );
 }
 
-void MigrationMonitor::handleLocalObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds) {
-    assert( mObjectInfo.get<objid>().find(uuid) == mObjectInfo.get<objid>().end());
+void MigrationMonitor::handleLocalObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, bool obj_migrating) {
+    if(!obj_migrating)
+    	assert( mObjectInfo.get<objid>().find(uuid) == mObjectInfo.get<objid>().end());
 
     mObjectInfo.insert( ObjectInfo(uuid, computeNextEventTime(uuid, loc)) );
     waitForNextEvent();

@@ -142,6 +142,8 @@ private:
     // Checks if an object is current connecting to this server (post authentication)
     bool isObjectConnecting(const UUID& object_id) const;
 
+    // Checks if an object is migrating between OHs
+    bool isObjectMigrating(const UUID& object_id) const;
 
     // Handle an object host closing its connection
     void handleObjectHostConnectionClosed(const ObjectHostConnectionID& conn_id);
@@ -237,11 +239,11 @@ private:
       bool serviceConnection;
     };
 
-      typedef std::queue<Message*> MigrateMessageQueue;
-      // Outstanding MigrateMessages, which get objects to other servers.
-      MigrateMessageQueue mMigrateMessages;
+    typedef std::queue<Message*> MigrateMessageQueue;
+    // Outstanding MigrateMessages, which get objects to other servers.
+    MigrateMessageQueue mMigrateMessages;
 
-    //    ObjectConnectionMap mMigratingConnections;//bftm add
+    // ObjectConnectionMap mMigratingConnections;//bftm add
     typedef std::map<UUID,MigratingObjectConnectionsData> MigConnectionsMap;
     MigConnectionsMap mMigratingConnections;//bftm add
     Timer mMigrationTimer;
@@ -265,6 +267,9 @@ private:
             return 1;
         }
     };
+
+    typedef std::map<UUID, String> MigratingObjects; // <object_id, Host ID that is migrating to>
+    MigratingObjects mMigratingObjects;
 
     // FIXME Another place where needing a size queue and notifications causes
     // double locking...
