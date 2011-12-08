@@ -636,21 +636,21 @@ void Server::handleConnectAuthResponse(const ObjectHostConnectionID& oh_conn_id,
         else
         {
             // conflict, fail the new connection leaving existing alone
-        	//if (!isObjectMigrating(obj_id)) {
-        	//	sendConnectError(oh_conn_id, obj_id);
-        	//	return;
-        	//}
+        	if (!isObjectMigrating(obj_id)) {
+        		sendConnectError(oh_conn_id, obj_id);
+        		return;
+        	}
 
         	// Allow migrating objects from different OH with the same id to be connected
-        	//else {
+        	else {
         		// if this OH is authenticated as the migrating OH.
-        	//	if (mMigratingObjects[obj_id]==connect_msg.oh_id())
+        		if (mMigratingObjects[obj_id]==connect_msg.oh_id())
         			SPACE_LOG(info, "Migrating object with ID: " << obj_id.rawHexData());
-        	//	else {
-        	//		sendConnectError(oh_conn_id, obj_id);
-        	//		return;
-        	//	}
-        	//}
+        		else {
+        			sendConnectError(oh_conn_id, obj_id);
+        			return;
+        		}
+        	}
         }
 
     }
