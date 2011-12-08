@@ -286,6 +286,11 @@ void JSObjectScript::start() {
 }
 
 void JSObjectScript::stop() {
+    // If we're really a subclass, i.e. an EmersonScript, we'll have already
+    // called letDie().
+    if (Liveness::livenessAlive())
+        Liveness::letDie();
+
     stopCalled = true;
     // This clear has to happen before ~JSObjectScript because it can call
     // virtual functions which need to be dispatched to subclasses

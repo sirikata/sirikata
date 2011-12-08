@@ -18,6 +18,9 @@ JSVisibleStruct::JSVisibleStruct(JSProxyPtr addParams)
 
 JSVisibleStruct::~JSVisibleStruct()
 {
+    // We might be able to do this in JSPositionListener if we don't have any
+    // overridden virtual methods?
+    Liveness::letDie();
 }
 
 
@@ -107,7 +110,7 @@ void JSVisibleStruct::visibleWeakReferenceCleanup(v8::Persistent<v8::Value> cont
     delete jsvis;
     vis->SetInternalField(VISIBLE_JSVISIBLESTRUCT_FIELD,v8::External::New(NULL));
     vis->SetInternalField(TYPEID_FIELD,v8::External::New(NULL));
-        
+
     JSLOG(insane,"Freeing memory for jsvisible.");
 }
 

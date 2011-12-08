@@ -603,6 +603,8 @@ v8::Handle<v8::Value> JSContextStruct::struct_rootReset()
 //should have called clear before got to destructor
 JSContextStruct::~JSContextStruct()
 {
+    Liveness::letDie();
+
     clear();
     delete mSystem;
     delete mUtil;

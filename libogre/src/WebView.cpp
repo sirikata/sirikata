@@ -162,6 +162,8 @@ WebView::WebView(
 
 WebView::~WebView()
 {
+    Liveness::letDie();
+
 	if(alphaCache)
 		delete[] alphaCache;
 #ifdef HAVE_BERKELIUM

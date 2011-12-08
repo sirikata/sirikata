@@ -397,6 +397,10 @@ v8::Handle<v8::Value> JSPresenceStruct::setConnectedCB(v8::Handle<v8::Function> 
 
 JSPresenceStruct::~JSPresenceStruct()
 {
+    // We might be able to do this in JSPositionListener if we don't have any
+    // overridden virtual methods?
+    Liveness::letDie();
+
     clear();
 }
 
