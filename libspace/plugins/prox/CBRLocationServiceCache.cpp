@@ -186,7 +186,7 @@ const String& CBRLocationServiceCache::physics(const ObjectID& id) const {
     return it->second.physics;
 }
 
-void CBRLocationServiceCache::localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& phy, bool obj_migrating) {
+void CBRLocationServiceCache::localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& phy) {
     objectAdded(uuid, true, agg, loc, orient, bounds, mesh, phy);
 }
 

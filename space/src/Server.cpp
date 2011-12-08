@@ -636,21 +636,21 @@ void Server::handleConnectAuthResponse(const ObjectHostConnectionID& oh_conn_id,
         else
         {
             // conflict, fail the new connection leaving existing alone
-        	if (!isObjectMigrating(obj_id)) {
-        		sendConnectError(oh_conn_id, obj_id);
-        		return;
-        	}
+        	//if (!isObjectMigrating(obj_id)) {
+        	//	sendConnectError(oh_conn_id, obj_id);
+        	//	return;
+        	//}
 
         	// Allow migrating objects from different OH with the same id to be connected
-        	else {
+        	//else {
         		// if this OH is authenticated as the migrating OH.
-        		if (mMigratingObjects[obj_id]==connect_msg.oh_id())
+        	//	if (mMigratingObjects[obj_id]==connect_msg.oh_id())
         			SPACE_LOG(info, "Migrating object with ID: " << obj_id.rawHexData());
-        		else {
-        			sendConnectError(oh_conn_id, obj_id);
-        			return;
-        		}
-        	}
+        	//	else {
+        	//		sendConnectError(oh_conn_id, obj_id);
+        	//		return;
+        	//	}
+        	//}
         }
 
     }
@@ -677,17 +677,6 @@ void Server::finishAddObject(const UUID& obj_id, OSegAddNewStatus status)
       {
           mObjectSessionManager->addSession(new ObjectSession(ObjectReference(obj_id)));
 
-          // Note: we always use local time for connections. The client
-          // accounts for by using the values we return in the response
-          // instead of the original values sent with the connection
-          // request.
-          Time local_t = mContext->simTime();
-          TimedMotionVector3f loc( local_t, MotionVector3f(sc.conn_msg.loc().position(), sc.conn_msg.loc().velocity()) );
-          TimedMotionQuaternion orient(
-              local_t,
-              MotionQuaternion( sc.conn_msg.orientation().position(), sc.conn_msg.orientation().velocity() )
-          );
-          BoundingSphere3f bnds = sc.conn_msg.bounds();
           // Create and store the connection
           ObjectConnection* conn = new ObjectConnection(obj_id, mObjectHostConnectionManager, sc.conn_id);
           mObjects[obj_id] = conn;
@@ -704,16 +693,27 @@ void Server::finishAddObject(const UUID& obj_id, OSegAddNewStatus status)
           else
         	  mLocalForwarder->addActiveConnection(conn, true);
 
-          // Add object as local object to LocationService
-          String obj_mesh = sc.conn_msg.has_mesh() ? sc.conn_msg.mesh() : "";
-          String obj_phy = sc.conn_msg.has_physics() ? sc.conn_msg.physics() : "";
-
           // New object
           if (!isObjectMigrating(obj_id))
-        	  mLocationService->addLocalObject(obj_id, loc, orient, bnds, obj_mesh, obj_phy, false);
-          // Migrating object
-          else
-        	  mLocationService->addLocalObject(obj_id, loc, orient, bnds, obj_mesh, obj_phy, true);
+          {
+        	  // Note: we always use local time for connections. The client
+        	  // accounts for by using the values we return in the response
+        	  // instead of the original values sent with the connection
+        	  // request.
+        	  Time local_t = mContext->simTime();
+        	  TimedMotionVector3f loc( local_t, MotionVector3f(sc.conn_msg.loc().position(), sc.conn_msg.loc().velocity()) );
+        	  TimedMotionQuaternion orient(
+        			  local_t,
+        			  MotionQuaternion( sc.conn_msg.orientation().position(), sc.conn_msg.orientation().velocity() )
+        	  );
+        	  BoundingSphere3f bnds = sc.conn_msg.bounds();
+
+        	  // Add object as local object to LocationService
+        	  String obj_mesh = sc.conn_msg.has_mesh() ? sc.conn_msg.mesh() : "";
+        	  String obj_phy = sc.conn_msg.has_physics() ? sc.conn_msg.physics() : "";
+
+        	  mLocationService->addLocalObject(obj_id, loc, orient, bnds, obj_mesh, obj_phy);
+          }
 
           // Register proximity query
           // Currently, the preferred way to register the query is to send the

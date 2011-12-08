@@ -82,7 +82,7 @@ public:
     virtual void removeQuery(UUID obj);
 
     // LocationServiceListener Interface
-    virtual void localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics, bool obj_migrating=false);
+    virtual void localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics);
     virtual void localObjectRemoved(const UUID& uuid, bool agg);
     virtual void localLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval);
     virtual void localBoundsUpdated(const UUID& uuid, bool agg, const BoundingSphere3f& newval);

@@ -228,10 +228,10 @@ void LocationService::unsubscribe(const UUID& remote) {
     mUpdatePolicy->unsubscribe(remote);
 }
 
-void LocationService::notifyLocalObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics, bool obj_migrating) const {
+void LocationService::notifyLocalObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics) const {
     for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++)
         if (!agg || it->wantAggregates)
-            it->listener->localObjectAdded(uuid, agg, loc, orient, bounds, mesh, physics, obj_migrating);
+            it->listener->localObjectAdded(uuid, agg, loc, orient, bounds, mesh, physics);
 }
 
 void LocationService::notifyLocalObjectRemoved(const UUID& uuid, bool agg) const {

@@ -113,7 +113,7 @@ const String& StandardLocationService::physics(const UUID& uuid) {
     return locinfo.physics;
 }
 
-void StandardLocationService::addLocalObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& msh, const String& phy, bool obj_migrating) {
+void StandardLocationService::addLocalObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& msh, const String& phy) {
     LocationMap::iterator it = mLocations.find(uuid);
 
     // Add or update the information to the cache
@@ -141,7 +141,7 @@ void StandardLocationService::addLocalObject(const UUID& uuid, const TimedMotion
 
     // Add to the list of local objects
     CONTEXT_SPACETRACE(serverObjectEvent, mContext->id(), mContext->id(), uuid, true, loc);
-    notifyLocalObjectAdded(uuid, false, location(uuid), orientation(uuid), bounds(uuid), mesh(uuid), physics(uuid), obj_migrating);
+    notifyLocalObjectAdded(uuid, false, location(uuid), orientation(uuid), bounds(uuid), mesh(uuid), physics(uuid));
 }
 
 void StandardLocationService::removeLocalObject(const UUID& uuid) {

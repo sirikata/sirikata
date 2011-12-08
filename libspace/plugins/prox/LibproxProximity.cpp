@@ -646,7 +646,7 @@ void LibproxProximity::queryHasEvents(Query* query) {
 // Note: LocationServiceListener interface is only used in order to get updates on objects which have
 // registered queries, allowing us to update those queries as appropriate.  All updating of objects
 // in the prox data structure happens via the LocationServiceCache
-void LibproxProximity::localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics, bool obj_migrating) {
+void LibproxProximity::localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics) {
     updateObjectSize(uuid, bounds.radius());
 }
 void LibproxProximity::localObjectRemoved(const UUID& uuid, bool agg) {
