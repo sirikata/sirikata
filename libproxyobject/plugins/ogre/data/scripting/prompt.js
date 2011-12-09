@@ -248,8 +248,6 @@ var editHistoryForward = function() {
 	    }
         );
 
-	var newcsslink = $("<link />").attr({rel:'stylesheet', type:'text/css', href:'../jquery_themes/redmond/jquery-ui-1.8.6.custom.css'})
-	$("head").append(newcsslink);
 	var newcsslink = $("<link />").attr({rel:'stylesheet', type:'text/css', href:'../scripting/prompt.css'})
 	$("head").append(newcsslink);
 
