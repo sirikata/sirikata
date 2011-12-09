@@ -220,6 +220,16 @@ void DistanceDownloadPlanner::unloadObject(Object* r) {
 
 void DistanceDownloadPlanner::poll()
 {
+    mScene->renderStrand()->post(
+        std::tr1::bind(&DistanceDownloadPlanner::iPoll, this,
+            livenessToken()));
+}
+
+void DistanceDownloadPlanner::iPoll(Liveness::Token dpAlive)
+{
+    if (!dpAlive)
+        return;
+    
     if (camera == NULL) return;
     if (mContext->stopped()) return;
 
@@ -309,8 +319,24 @@ void DistanceDownloadPlanner::poll()
     }
 }
 
-void DistanceDownloadPlanner::stop() {
-    for(AssetMap::iterator it = mAssets.begin(); it != mAssets.end(); it++) {
+void DistanceDownloadPlanner::stop()
+{
+    mScene->renderStrand()->post(
+        std::tr1::bind(&DistanceDownloadPlanner::iStop, this,
+            livenessToken()));
+}
+
+void DistanceDownloadPlanner::iStop(Liveness::Token dpAlive)
+{
+    if (!dpAlive)
+    {
+        DLPLANNER_LOG(error,"Posted to internal stop after was already deleted");
+        return;
+    }
+
+    
+    for(AssetMap::iterator it = mAssets.begin(); it != mAssets.end(); it++)
+    {
         Asset* asset = it->second;
         delete asset;
     }

@@ -38,13 +38,15 @@
 #include <sirikata/ogre/Util.hpp>
 #include <sirikata/mesh/Meshdata.hpp>
 #include <sirikata/mesh/Billboard.hpp>
+#include <sirikata/core/util/Liveness.hpp>
 
 namespace Sirikata {
 namespace Graphics {
 
 class WebView;
 
-class DistanceDownloadPlanner : public ResourceDownloadPlanner
+class DistanceDownloadPlanner : public ResourceDownloadPlanner,
+                                public virtual Liveness
 {
 public:
     DistanceDownloadPlanner(Context* c, OgreRenderer* renderer);
@@ -199,6 +201,9 @@ protected:
 
     bool mActiveCDNArchive;
     unsigned int mCDNArchive;
+
+    void iStop(Liveness::Token dpAlive);
+    void iPoll(Liveness::Token dpAlive);
 };
 
 } // namespace Graphics

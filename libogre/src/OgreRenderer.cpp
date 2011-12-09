@@ -266,7 +266,8 @@ OgreRenderer::OgreRenderer(Context* ctx,Network::IOStrand* sStrand)
    mOnTickCallback(NULL),
    mModelParser( ModelsSystemFactory::getSingleton ().getConstructor ( "any" ) ( "" ) ),
    mDownloadPlanner(NULL),
-   mNextFrameScreenshotFile("")
+   mNextFrameScreenshotFile(""),
+   initialized(false)
 {
     try {
         // These have to be consistent with any other simulations -- e.g. the
@@ -493,6 +494,7 @@ bool OgreRenderer::initialize(const String& options, bool with_berkelium) {
     }
 
     if (!getRoot()->isInitialised()) {
+        initialized = true;
         return false;
     }
     if (mRenderWindow != NULL) {
@@ -521,6 +523,7 @@ bool OgreRenderer::initialize(const String& options, bool with_berkelium) {
 
     loadSystemLights();
 
+    initialized = true;
     return true;
 }
 
@@ -560,7 +563,9 @@ bool ogreLoadPlugin(const String& _filename, const String& root = "") {
     path not_found;
     path plugin_path = path(findResource(search_paths, nsearch_paths, std::vector<String>(), false, root, not_found));
     if (plugin_path == not_found)
+    {
         return false;
+    }
 
     String plugin_str = plugin_path.string();
 
@@ -838,7 +843,21 @@ void OgreRenderer::preFrame(Task::LocalTime currentTime, Duration frameTime) {
 void OgreRenderer::postFrame(Task::LocalTime current, Duration frameTime) {
 }
 
-void OgreRenderer::poll() {
+void OgreRenderer::poll()
+{
+    simStrand->post(
+        std::tr1::bind(&OgreRenderer::iPoll,this,
+            livenessToken()));
+}
+
+void OgreRenderer::iPoll(Liveness::Token rendererAlive)
+{
+    if (!rendererAlive)
+        return;
+
+    if (!initialized)
+        return;
+    
     Task::LocalTime curFrameTime(Task::LocalTime::now());
 
     Duration frameTime=curFrameTime-mLastFrameTime;
@@ -857,9 +876,23 @@ void OgreRenderer::poll() {
     }
 }
 
-void OgreRenderer::stop() {
+void OgreRenderer::stop()
+{
+    simStrand->post(
+        std::tr1::bind(&OgreRenderer::iStop, this,
+            livenessToken()));
+}
+
+void OgreRenderer::iStop(Liveness::Token rendererAlive)
+{
+    if (!rendererAlive)
+        return;
+    
+    while (! initialized){}
+    
     delete mParsingWork;
     TimeSteppedSimulation::stop();
+    stopped = true;
 }
 
 // Invokable Interface
@@ -954,19 +987,32 @@ void OgreRenderer::addObject(Entity* ent, const Transfer::URI& mesh) {
     mDownloadPlanner->addNewObject(ent, mesh);
 }
 
+
 void OgreRenderer::removeObject(Entity* ent) {
     mDownloadPlanner->removeObject(ent);
 }
 
 void OgreRenderer::parseMesh(const Transfer::RemoteFileMetadata& metadata, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data, ParseMeshCallback cb) {
     mParsingIOService->post(
-        std::tr1::bind(&OgreRenderer::parseMeshWork, this, metadata, fp, data, cb)
+        std::tr1::bind(&OgreRenderer::parseMeshWork, this,
+            livenessToken(),metadata, fp, data, cb)
     );
 }
 
-void OgreRenderer::parseMeshWork(const Transfer::RemoteFileMetadata& metadata, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data, ParseMeshCallback cb) {
+void OgreRenderer::parseMeshWork(
+    Liveness::Token rendererAlive,
+    const Transfer::RemoteFileMetadata& metadata,
+    const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data,
+    ParseMeshCallback cb)
+{
+    if (! livenessToken())
+        return;
+
+    if (stopped)
+        return;
+    
     Mesh::VisualPtr parsed = parseMeshWorkSync(metadata, fp, data);
-    mContext->mainStrand->post(std::tr1::bind(cb, parsed));
+    simStrand->post(std::tr1::bind(cb,parsed));
 }
 
 Mesh::VisualPtr OgreRenderer::parseMeshWorkSync(const Transfer::RemoteFileMetadata& metadata, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data) {
