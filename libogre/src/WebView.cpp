@@ -283,6 +283,7 @@ void WebView::setReadyCallback(ReadyCallback cb) {
 #endif
 }
 
+
 void WebView::setResetReadyCallback(ResetReadyCallback cb) {
     mResetReadyCallback = cb;
 }

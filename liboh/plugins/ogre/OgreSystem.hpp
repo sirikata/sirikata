@@ -258,10 +258,24 @@ private:
     void instantiateAllObjects(ProxyManagerPtr pop);
     double clamp(const double& val);
 
+    void iOnDisconnected(
+        Liveness::Token osAlive, SessionEventProviderPtr from,
+        const SpaceObjectReference& name);
+    void iOnDisconnected(
+        Liveness::Token osAlive,const Network::Address& addr,
+        bool requested, const String& reason);
+
+    void iOnCreateProxy(
+        Liveness::Token osAlive, ProxyObjectPtr p, bool inInit);
+    void iOnDestroyProxy(
+        Liveness::Token osAlive,ProxyObjectPtr p);
+    
+    
     typedef std::tr1::unordered_map<SpaceObjectReference, ProxyEntity*, SpaceObjectReference::Hasher> EntityMap;
     EntityMap mEntityMap;
     String currentMat;
     bool mReady;
+    bool initialized;
 };
 
 
