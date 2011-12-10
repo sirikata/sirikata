@@ -500,6 +500,8 @@ void EmersonScript::start() {
 }
 
 void EmersonScript::stop() {
+    Liveness::letDie();
+
     // Clean up ProxyCreationListeners. We subscribe for each presence in
     // onConnected, so we need to run through all presences (stored in the
     // HostedObject) and clear out ourselfs as a listener. Note that we have to

@@ -55,7 +55,7 @@ namespace Sirikata {
  *  and check if it is valid at the top of the callback. The token is just a
  *  shared_ptr maintained internally and passed through the callback as a
  *  weak_ptr, the same strategy as the SelfWeakPtr approach. Essentially, you
- *  pay for one additional heap allocation to avoid .
+ *  pay for one additional heap allocation.
  *
  *  To use, inherit from Liveness, pass livenessToken() as an extra
  *  parameter to your callbacks, and check the token's validity as the first
@@ -65,10 +65,36 @@ namespace Sirikata {
  *    if (!alive) return;
  *  }
  *
- *  Note that this, of course, does not protect you against multithreading,
- *  e.g. if the object is valid at the beginning of the callback but deleted by
- *  another thread during its execution. In those cases, you should use the
- *  SelfWeakPtr approach.
+ *  Since you haven't accessed any data in the object, this is safe even if the
+ *  this pointer to the MyClass instance has been deleted.
+ *
+ *  This basic approach doesn't protect you against multithreading: if the
+ *  object is valid at the beginning of the callback but deleted by another
+ *  thread during its execution, you'll end up accessing unallocated memory. In
+ *  those cases, you can use a stronger primitive, a Liveness::Lock, which keeps
+ *  the Liveness object from dying while you are using it: as long as there are
+ *  Liveness::Lock objects which point to the Liveness object, it will block the
+ *  thread trying to invalidate it. To support this, objects that inherit from
+ *  Liveness call Liveness::letDie() when they want to disallow future access to
+ *  themselves, e.g. because they are becoming invalid or being deleted. Then,
+ *  the user of the object tries to allocate a lock, much like using
+ *  weak_ptr::lock():
+ *
+ *  void MyClass::my_callback(Liveness::Token alive) {
+ *    Liveness::Lock locked(alive);
+ *    if (!locked) return;
+ *  }
+ *
+ *  This is similar but not exactly the same as using SelfWeakPtr, and is
+ *  especially useful as it doesn't force you to use shared_ptrs for all your
+ *  classes.
+ *
+ *  Classes that inherit from Liveness *must* call letDie() and should be
+ *  careful about when they call it. It *must* be called before any method calls
+ *  could be invalid. Because virtual methods could become invalid during
+ *  destruction, the absolute latest you can call it is in the destructor of the
+ *  deepest subclass of Liveness. This means that you should be very careful
+ *  about inheriting from other classes that themselves inherit from Liveness.
  */
 class SIRIKATA_EXPORT Liveness {
     typedef std::tr1::shared_ptr<int> StrongInternalToken;
@@ -82,9 +108,40 @@ class SIRIKATA_EXPORT Liveness {
         operator bool() const { return mData.lock(); }
     };
 
-    Liveness();
+    struct SIRIKATA_EXPORT Lock {
+        StrongInternalToken mData;
 
+        Lock(InternalToken t);
+        Lock(const Token& t);
+        operator bool() const { return mData; }
+    };
+
+    Liveness();
+    ~Liveness();
+
+    /** Get a token which can be used to determine whether the object is still
+     *  alive or obtain a liveness lock on it.
+     */
     Token livenessToken() const { return Token(mLivenessStrongToken); }
+
+    /** Allow this object to "die", blocking until no other threads have access
+     *  anymore to return.  You should call this before your object will become
+     *  invalid for further calls -- definitely by the destructor of the
+     *  inheriting class (when data and virtual methods will become invalid),
+     *  but possibly earlier (e.g. when Service::stop() is called for the
+     *  object).
+     */
+    void letDie();
+
+  protected:
+    /** Helper method to determine whether this object is still alive. Useful
+     *  for classes that inherit from Liveness and also have subclasses, but can
+     *  be valid on their own. For example if we have Liveness <- A <- B, then A
+     *  might use this method to determine whether it is a B which has already
+     *  called letDie() or if it's just a regular A and needs to call letDie()
+     *  itself.
+     */
+    bool livenessAlive() const { return mLivenessStrongToken; }
 
   private:
     StrongInternalToken mLivenessStrongToken;

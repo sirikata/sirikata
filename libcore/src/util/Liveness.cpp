@@ -38,8 +38,33 @@ Liveness::Token::Token(InternalToken t)
  : mData(t)
 {}
 
+Liveness::Lock::Lock(InternalToken t)
+ : mData(t)
+{}
+
+Liveness::Lock::Lock(const Token& t)
+ : mData(t.mData)
+{}
+
 Liveness::Liveness()
  : mLivenessStrongToken(new int)
 {}
+
+Liveness::~Liveness() {
+    assert(!mLivenessStrongToken && "You need to call letDie in the subclass of Liveness");
+}
+
+void Liveness::letDie() {
+    // The basic strategy is to save a weak pointer to the token, clear the
+    // strong pointer, and then block until we can't lock the weak pointer
+    // anymore, i.e. when all strong pointers have disappeared, meaning no other
+    // thread could see the object as alive anymore.
+    assert(mLivenessStrongToken);
+
+    InternalToken weak_self = mLivenessStrongToken;
+    mLivenessStrongToken.reset();
+    // busy wait
+    while(weak_self.lock()) {}
+}
 
 }

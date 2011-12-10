@@ -53,6 +53,8 @@ ProxyEntity::ProxyEntity(OgreRenderer *scene, const ProxyObjectPtr &ppo)
 }
 
 ProxyEntity::~ProxyEntity() {
+    Liveness::letDie();
+
     getProxy().MeshProvider::removeListener(this);
 
     getProxy().ProxyObjectProvider::removeListener(this);

@@ -91,39 +91,6 @@ WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, InputManager* in
     Berkelium::init(Berkelium::FileString::empty());
     bkContext = Berkelium::Context::create();
 #endif
-#ifdef HAVE_BERKELIUM
-/*
-        // flash test
-        WebView *mychromeWebView = createWebView("yahoo", 800, 600, OverlayPosition(RP_TOPLEFT), false, 70);
-        mychromeWebView->loadURL("http://yahoo.com/");
-
-        // <video> tag test
-        mychromeWebView = createWebView("videotag", 800, 600, OverlayPosition(RP_TOPLEFT), false, 70);
-        mychromeWebView->loadURL("http://people.xiph.org/~maikmerten/demos/bigbuckbunny-videoonly.html");
-        // flash video test
-        mychromeWebView = createWebView("youtube", 800, 600, OverlayPosition(RP_TOPRIGHT), false, 70);
-        mychromeWebView->loadURL("http://www.youtube.com/watch?v=oHg5SJYRHA0");
-        mychromeWebView->setTransparent(true);
-*/
-/*
-        chromeWebView = createWebView("__chrome", "__chrome", 410, 40, OverlayPosition(RP_TOPCENTER), false, 70, TIER_FRONT);
-        chromeWebView->loadFile("chrome/navbar.html");
-*/
-        /*
-        WebView *mychromeWebView = createWebView("google", 400, 300, OverlayPosition(RP_BOTTOMLEFT), false, 70);
-        mychromeWebView->loadURL("http://google.com/");
-        mychromeWebView->setTransparent(true);
-        mychromeWebView->focus();
-        */
-/*
-        mychromeWebView = createWebView("xahoo", 800, 600, OverlayPosition(RP_TOPRIGHT), false, 70);
-        mychromeWebView->loadURL("http://www.adobe.com/aboutadobe/contact.html");
-        mychromeWebView->setTransparent(true);
-        mychromeWebView = createWebView("GoOGLE", 800, 600, OverlayPosition(RP_TOPRIGHT), false, 70);
-        mychromeWebView->loadURL(http://dunnbypaul.net/js_mouse/");
-        mychromeWebView->setTransparent(false);
-*/
-#endif
 }
 
 WebViewManager::~WebViewManager()

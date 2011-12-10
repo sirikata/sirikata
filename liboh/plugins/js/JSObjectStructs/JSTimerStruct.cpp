@@ -173,6 +173,7 @@ JSTimerStruct* JSTimerStruct::decodeTimerStruct(v8::Handle<v8::Value> toDecode,S
 
 JSTimerStruct::~JSTimerStruct()
 {
+    mLiveness.letDie();
     clear();
 }
 
