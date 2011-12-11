@@ -398,7 +398,7 @@ bool HostedObject::connect(
         const ObjectReference& orefID,
         PresenceToken token)
 {
-    DEPRECATED(ho);
+    //DEPRECATED(ho);
     return connect(
         spaceID, startingLocation, meshBounds, mesh, phy,
         encodeDefaultQuery(queryAngle, queryMaxResults),

@@ -355,7 +355,8 @@ void Server::onObjectHostConnected(const ObjectHostConnectionID& conn_id, const 
 }
 
 void Server::onObjectHostDisconnected(const ObjectHostConnectionID& oh_conn_id, const ShortObjectHostConnectionID short_conn_id) {
-    mContext->mainStrand->post( std::tr1::bind(&Server::handleObjectHostConnectionClosed, this, oh_conn_id) );
+	SPACE_LOG(info, "OH connection "<<short_conn_id<<" disconnected");
+    mContext->mainStrand->post( std::tr1::bind(&Server::handleObjectHostConnectionClosed, this, oh_conn_id, short_conn_id) );
     mOHSessionManager->fireObjectHostSessionEnded( OHDP::NodeID(short_conn_id) );
 }
 
@@ -463,8 +464,8 @@ void Server::handleSessionMessage(const ObjectHostConnectionID& oh_conn_id, Siri
 
     // Connect or migrate messages
     if (session_msg.has_connect()) {
-        if (session_msg.connect().has_version())
-            logVersionInfo(session_msg.connect().version());
+    	//if (session_msg.connect().has_version())
+            //logVersionInfo(session_msg.connect().version());
 
         if (session_msg.connect().type() == Sirikata::Protocol::Session::Connect::Fresh)
         {
@@ -495,7 +496,7 @@ void Server::handleSessionMessage(const ObjectHostConnectionID& oh_conn_id, Siri
     delete msg;
 }
 
-void Server::handleObjectHostConnectionClosed(const ObjectHostConnectionID& oh_conn_id) {
+void Server::handleObjectHostConnectionClosed(const ObjectHostConnectionID& oh_conn_id, const ShortObjectHostConnectionID short_conn_id) {
     for(ObjectConnectionMap::iterator it = mObjects.begin(); it != mObjects.end(); ) {
         UUID obj_id = it->first;
         ObjectConnection* obj_conn = it->second;
@@ -505,7 +506,7 @@ void Server::handleObjectHostConnectionClosed(const ObjectHostConnectionID& oh_c
         if (obj_conn->connID() != oh_conn_id)
             continue;
 
-        handleDisconnect(obj_id, obj_conn);
+        handleDisconnect(obj_id, obj_conn, short_conn_id);
     }
     mContext->timeSeries->report(mTimeSeriesObjects, mObjects.size());
 }
@@ -643,9 +644,10 @@ void Server::handleConnectAuthResponse(const ObjectHostConnectionID& oh_conn_id,
 
         	// Allow migrating objects from different OH with the same id to be connected
         	else {
-        		// if this OH is authenticated as the migrating OH.
-        		if (mMigratingObjects[obj_id]==connect_msg.oh_id())
-        			SPACE_LOG(info, "Migrating object with ID: " << obj_id.rawHexData());
+        		// if this OH is authenticated as the migrating OH. FIXME need to define identifier for OH
+        		if (mMigratingObjects[obj_id]=="oh_id") {
+        			//SPACE_LOG(info, "Migrating object with ID: " << obj_id.rawHexData());
+        		}
         		else {
         			sendConnectError(oh_conn_id, obj_id);
         			return;
@@ -687,13 +689,16 @@ void Server::finishAddObject(const UUID& obj_id, OSegAddNewStatus status)
           mCSeg->reportLoad(mContext->id(), mCSeg->serverRegion(mContext->id())[0] , mObjects.size()  );
 
           // New object
-          if (!isObjectMigrating(obj_id))
+          if (!isObjectMigrating(obj_id)) {
         	  mLocalForwarder->addActiveConnection(conn, false);
+          }
           // Migrating object
-          else
+          else {
         	  mLocalForwarder->addActiveConnection(conn, true);
+          }
 
           // New object
+          // For migrating object, we do not need to update these information
           if (!isObjectMigrating(obj_id))
           {
         	  // Note: we always use local time for connections. The client
@@ -713,31 +718,37 @@ void Server::finishAddObject(const UUID& obj_id, OSegAddNewStatus status)
         	  String obj_phy = sc.conn_msg.has_physics() ? sc.conn_msg.physics() : "";
 
         	  mLocationService->addLocalObject(obj_id, loc, orient, bnds, obj_mesh, obj_phy);
-          }
 
-          // Register proximity query
-          // Currently, the preferred way to register the query is to send the
-          // opaque parameters string, which the query processor will
-          // understand. The first case handles that. The deprecated, old style
-          // is to specify solid angle & maximum number of results. The second
-          // part handles that case.
-          if (sc.conn_msg.has_query_parameters()) {
-              mProximity->addQuery(obj_id, sc.conn_msg.query_parameters());
-          }
-          else if (sc.conn_msg.has_query_angle() || sc.conn_msg.has_query_max_count()) {
-              uint32 query_max_results = 0;
-              if (sc.conn_msg.has_query_max_count() && sc.conn_msg.query_max_count() > 0)
-                  query_max_results = sc.conn_msg.query_max_count();
-              if (sc.conn_msg.has_query_angle())
-                  mProximity->addQuery(obj_id, SolidAngle(sc.conn_msg.query_angle()), query_max_results);
+        	  // Register proximity query
+        	  // Currently, the preferred way to register the query is to send the
+        	  // opaque parameters string, which the query processor will
+        	  // understand. The first case handles that. The deprecated, old style
+        	  // is to specify solid angle & maximum number of results. The second
+        	  // part handles that case.
+        	  if (sc.conn_msg.has_query_parameters()) {
+        		  mProximity->addQuery(obj_id, sc.conn_msg.query_parameters());
+        	  }
+        	  else if (sc.conn_msg.has_query_angle() || sc.conn_msg.has_query_max_count()) {
+        		  uint32 query_max_results = 0;
+        		  if (sc.conn_msg.has_query_max_count() && sc.conn_msg.query_max_count() > 0)
+        			  query_max_results = sc.conn_msg.query_max_count();
+        		  if (sc.conn_msg.has_query_angle())
+        			  mProximity->addQuery(obj_id, SolidAngle(sc.conn_msg.query_angle()), query_max_results);
+        	  }
           }
 
           // Stage the connection with the forwarder, but don't enable it until an ack is received
           mForwarder->addObjectConnection(obj_id, conn);
 
           sendConnectSuccess(conn->connID(), obj_id);
-          // Show the UUID of connected object
-          SPACE_LOG(info, "New object connected with ID: " << obj_id.rawHexData());
+          // Show the new connected object
+          if (!isObjectMigrating(obj_id))
+        	  SPACE_LOG(info, "New object with ID " << obj_id.rawHexData()<<" connected from OH connection "<<sc.conn_id.shortID());
+          else
+        	  SPACE_LOG(info, "Migrated object with ID " << obj_id.rawHexData()<<" connected from OH connection "<<sc.conn_id.shortID());
+
+          // FIXME Just for test, mark every new objects as migrating, allow to test other functions.
+          mMigratingObjects[obj_id]="oh_id";
       }
       else
       {
@@ -819,7 +830,7 @@ void Server::handleConnectAck(const ObjectHostConnectionID& oh_conn_id, const Si
 
 // Note that the obj_id is intentionally not a const & so that we're sure it is
 // valid throughout this method.
-void Server::handleDisconnect(UUID obj_id, ObjectConnection* conn) {
+void Server::handleDisconnect(UUID obj_id, ObjectConnection* conn, ShortObjectHostConnectionID short_conn_id) {
     assert(conn->id() == obj_id);
 
     mOSeg->removeObject(obj_id);
@@ -836,6 +847,11 @@ void Server::handleDisconnect(UUID obj_id, ObjectConnection* conn) {
 
     ObjectReference obj(obj_id);
     mObjectSessionManager->removeSession(obj);
+
+    if(short_conn_id==0)
+    	SPACE_LOG(info, "Object with ID " << obj_id.rawHexData()<<" disconnected from OH connection "<<conn->connID().shortID());
+    else
+    	SPACE_LOG(info, "Object with ID " << obj_id.rawHexData()<<" disconnected from OH connection "<<short_conn_id);
 
     delete conn;
 }

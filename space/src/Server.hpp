@@ -146,7 +146,7 @@ private:
     bool isObjectMigrating(const UUID& object_id) const;
 
     // Handle an object host closing its connection
-    void handleObjectHostConnectionClosed(const ObjectHostConnectionID& conn_id);
+    void handleObjectHostConnectionClosed(const ObjectHostConnectionID& conn_id, const ShortObjectHostConnectionID short_conn_id);
     // Schedule main thread to handle oh message routing
     void scheduleObjectHostMessageRouting();
     void handleObjectHostMessageRouting();
@@ -175,7 +175,7 @@ private:
     void handleMigration(const UUID& obj_id);
 
     // Handle a disconnection
-    void handleDisconnect(UUID obj_id, ObjectConnection* conn);
+    void handleDisconnect(UUID obj_id, ObjectConnection* conn, const ShortObjectHostConnectionID short_conn_id=0);
 
     //finally deletes any object connections to obj_id
     void killObjectConnection(const UUID& obj_id);
