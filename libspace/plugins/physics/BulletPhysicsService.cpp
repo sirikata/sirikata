@@ -31,9 +31,10 @@
  */
 
 #include "BulletPhysicsService.hpp"
+#include "BulletObject.hpp"
+#include "BulletRigidBodyObject.hpp"
 #include <sirikata/core/trace/Trace.hpp>
 #include <sirikata/mesh/CompositeFilter.hpp>
-#include <sirikata/mesh/Bounds.hpp>
 
 #include "Protocol_Loc.pbj.hpp"
 
@@ -43,61 +44,7 @@
 
 #include <sirikata/core/transfer/AggregatedTransferPool.hpp>
 
-#define BULLETLOG(lvl, msg) SILOG(BulletPhysics, lvl, msg)
-
 namespace Sirikata {
-#ifdef _WIN32
-	//FIXME: is this the right thing? DRH
-typedef float float_t;
-#endif
-
-void BulletPhysicsService::getCollisionMask(bulletObjTreatment treatment, bulletObjCollisionMaskGroup* mygroup, bulletObjCollisionMaskGroup* collide_with) {
-    switch(treatment) {
-      case BULLET_OBJECT_TREATMENT_IGNORE:
-        // We shouldn't be trying to add this to a sim
-        assert(treatment != BULLET_OBJECT_TREATMENT_IGNORE);
-        break;
-      case BULLET_OBJECT_TREATMENT_STATIC:
-        *mygroup = BULLET_OBJECT_COLLISION_GROUP_STATIC;
-        // Static collides with everything
-        *collide_with = (bulletObjCollisionMaskGroup)(BULLET_OBJECT_COLLISION_GROUP_STATIC | BULLET_OBJECT_COLLISION_GROUP_DYNAMIC | BULLET_OBJECT_COLLISION_GROUP_CONSTRAINED);
-        break;
-      case BULLET_OBJECT_TREATMENT_DYNAMIC:
-        *mygroup = BULLET_OBJECT_COLLISION_GROUP_DYNAMIC;
-        *collide_with = (bulletObjCollisionMaskGroup)(BULLET_OBJECT_COLLISION_GROUP_STATIC | BULLET_OBJECT_COLLISION_GROUP_DYNAMIC | BULLET_OBJECT_COLLISION_GROUP_CONSTRAINED);
-        break;
-      case BULLET_OBJECT_TREATMENT_LINEAR_DYNAMIC:
-      case BULLET_OBJECT_TREATMENT_VERTICAL_DYNAMIC:
-        *mygroup = BULLET_OBJECT_COLLISION_GROUP_CONSTRAINED;
-        // Only collide with static objects because the constrained
-        // movement can become problematic otherwise, e.g. the
-        // vertical only movement can result in interpenetrating
-        // objects which can't resolve their collision normally and
-        // the energy ends up in the vertically moving object,
-        // throwing it up in the air
-        *collide_with = BULLET_OBJECT_COLLISION_GROUP_STATIC;
-        break;
-
-    };
-}
-
-BulletPhysicsService::LocationInfo::LocationInfo()
- : location(),
-   orientation(),
-   bounds(),
-   mesh(),
-   physics(),
-   local(),
-   aggregate(),
-   isFixed(true),
-   objTreatment(BULLET_OBJECT_TREATMENT_IGNORE),
-   objBBox(BULLET_OBJECT_BOUNDS_SPHERE),
-   mass(1.f),
-   objShape(NULL),
-   objMotionState(NULL),
-   objRigidBody(NULL)
-{
-}
 
 namespace {
 void bulletPhysicsInternalTickCallback(btDynamicsWorld *world, btScalar timeStep) {
@@ -114,9 +61,9 @@ BulletPhysicsService::BulletPhysicsService(SpaceContext* ctx, LocationUpdatePoli
     collisionConfiguration = new btDefaultCollisionConfiguration();
     dispatcher = new btCollisionDispatcher(collisionConfiguration);
     solver = new btSequentialImpulseConstraintSolver;
-    dynamicsWorld = new btDiscreteDynamicsWorld(dispatcher, broadphase, solver, collisionConfiguration);
-    dynamicsWorld->setInternalTickCallback(bulletPhysicsInternalTickCallback, (void*)this);
-    dynamicsWorld->setGravity(btVector3(0,-1,0));
+    mDynamicsWorld = new btDiscreteDynamicsWorld(dispatcher, broadphase, solver, collisionConfiguration);
+    mDynamicsWorld->setInternalTickCallback(bulletPhysicsInternalTickCallback, (void*)this);
+    mDynamicsWorld->setGravity(btVector3(0,-1,0));
 
     mLastTime = mContext->simTime();
     mLastDeactivationTime = mContext->simTime();
@@ -146,7 +93,7 @@ BulletPhysicsService::BulletPhysicsService(SpaceContext* ctx, LocationUpdatePoli
 }
 
 BulletPhysicsService::~BulletPhysicsService(){
-	delete dynamicsWorld;
+	delete mDynamicsWorld;
 	delete solver;
 	delete dispatcher;
 	delete collisionConfiguration;
@@ -182,7 +129,7 @@ void BulletPhysicsService::service() {
     float simForwardTime = delTime.toMilliseconds() / 1000.0f;
 
     // Step simulation
-    dynamicsWorld->stepSimulation(simForwardTime);
+    mDynamicsWorld->stepSimulation(simForwardTime);
 
     // Check for deactivated objects. Unfortunately there isn't a way to get
     // this information from bullet at the time deactivation, so we need to poll
@@ -192,9 +139,8 @@ void BulletPhysicsService::service() {
         for(UUIDSet::iterator id_it = mDynamicPhysicsObjects.begin(); id_it != mDynamicPhysicsObjects.end(); id_it++) {
             const UUID& locobj = *id_it;
             LocationInfo& locinfo = mLocations[locobj];
-
-            if (locinfo.objRigidBody != NULL && !locinfo.objRigidBody->isActive())
-                updateObjectFromDeactivation(locobj);
+            assert(locinfo.simObject != NULL);
+            locinfo.simObject->deactivationTick();
         }
         mLastDeactivationTime = now;
     }
@@ -267,7 +213,8 @@ bool BulletPhysicsService::isFixed(const UUID& uuid) {
     assert(it != mLocations.end());
 
     const LocationInfo& locinfo = it->second;
-    return locinfo.isFixed;
+    assert(locinfo.simObject != NULL);
+    return locinfo.simObject->fixed();
 }
 
 void BulletPhysicsService::setLocation(const UUID& uuid, const TimedMotionVector3f& newloc) {
@@ -394,49 +341,28 @@ void BulletPhysicsService::updatePhysicsWorld(const UUID& uuid) {
         mass = pt.get("mass", DEFAULT_MASS);
     }
 
-    // Check if anything has changed.
-    if (locinfo.objTreatment == objTreatment &&
-        locinfo.objBBox == objBBox &&
-        locinfo.mass == mass)
-        return;
-
     // Clear out previous state from the simulation.
-    removeRigidBody(uuid, locinfo);
-
-    // Store updated info
-    locinfo.objTreatment = objTreatment;
-    locinfo.objBBox = objBBox;
-    locinfo.mass = mass;
+    if (locinfo.simObject != NULL) {
+        locinfo.simObject->unload();
+        locinfo.simObject = NULL;
+    }
 
     // And then proceed to add the new simulated object into bullet
-
-    //objTreatment enum defined in header file
-    //using if/elseif here to avoid switch/case compiler complaints (initializing variables in a case)
-    if(objTreatment == BULLET_OBJECT_TREATMENT_IGNORE) {
+    switch(objTreatment) {
+      case BULLET_OBJECT_TREATMENT_IGNORE:
         BULLETLOG(detailed," This mesh will not be added to the bullet world: " << msh);
+        locinfo.simObject = NULL;
         return;
-    }
-    else if(objTreatment == BULLET_OBJECT_TREATMENT_STATIC) {
-        BULLETLOG(detailed, "This mesh will not move: " << msh);
-        //this is a variable in loc structure that sets the item to be static
-        locinfo.isFixed = true;
-        //if the mass is 0, Bullet treats the object as static
-        locinfo.mass = 0;
-    }
-    else if(objTreatment == BULLET_OBJECT_TREATMENT_DYNAMIC) {
-        BULLETLOG(detailed, "This mesh will move: " << msh);
-        locinfo.isFixed = false;
-    }
-    else if(objTreatment == BULLET_OBJECT_TREATMENT_LINEAR_DYNAMIC) {
-        BULLETLOG(detailed, "This mesh will move linearly: " << msh);
-        locinfo.isFixed = false;
-    }
-    else if(objTreatment == BULLET_OBJECT_TREATMENT_VERTICAL_DYNAMIC) {
-        BULLETLOG(detailed, "This mesh will move vertically: " << msh);
-        locinfo.isFixed = false;
-    }
-    else {
+      case BULLET_OBJECT_TREATMENT_STATIC:
+      case BULLET_OBJECT_TREATMENT_DYNAMIC:
+      case BULLET_OBJECT_TREATMENT_LINEAR_DYNAMIC:
+      case BULLET_OBJECT_TREATMENT_VERTICAL_DYNAMIC:
+        locinfo.simObject = new BulletRigidBodyObject(this, uuid, objTreatment, objBBox, mass);
+        break;
+      default:
         BULLETLOG(detailed,"Error in objTreatment initialization!");
+        locinfo.simObject = NULL;
+        return;
     }
 
     // We may need the mesh in order to continue. We need it only if:
@@ -456,176 +382,9 @@ void BulletPhysicsService::updatePhysicsWorldWithMesh(const UUID& uuid, Meshdata
     LocationMap::iterator it = mLocations.find(uuid);
     LocationInfo& locinfo = it->second;
 
-    // Spheres can be handled trivially
-    if(locinfo.objBBox == BULLET_OBJECT_BOUNDS_SPHERE ||
-        !retrievedMesh) {
-        locinfo.objShape = new btSphereShape(locinfo.bounds.radius());
-        BULLETLOG(detailed, "sphere radius: " << locinfo.bounds.radius());
-        addRigidBody(uuid, locinfo);
-        return;
-    }
-
-    // Other types require processing the retrieved mesh.
-
-    /***Let's now find the bounding box for the entire object, which is needed for re-scaling purposes.
-	* Supposedly the system scales every mesh down to a unit sphere and then scales up by the scale factor
-	* from the scene file. We try to emulate this behavior here, but this should really be on the CDN side
-	* (we retrieve the precomputed bounding box as well as the mesh) ***/
-    BoundingBox3f3f bbox;
-    double mesh_rad;
-    ComputeBounds(retrievedMesh, &bbox, &mesh_rad);
-
-    BULLETLOG(detailed, "bbox: " << bbox);
-    Vector3f diff = bbox.max() - bbox.min();
-
-    //objBBox enum defined in header file
-    //using if/elseif here to avoid switch/case compiler complaints (initializing variables in a case)
-    if(locinfo.objBBox == BULLET_OBJECT_BOUNDS_ENTIRE_OBJECT) {
-        double scalingFactor = locinfo.bounds.radius()/mesh_rad;
-        BULLETLOG(detailed, "bbox half extents: " << fabs(diff.x/2)*scalingFactor << ", " << fabs(diff.y/2)*scalingFactor << ", " << fabs(diff.z/2)*scalingFactor);
-        locinfo.objShape = new btBoxShape(btVector3(fabs((diff.x/2)*scalingFactor), fabs((diff.y/2)*scalingFactor), fabs((diff.z/2)*scalingFactor)));
-    }
-    //do NOT attempt to collide two btBvhTriangleMeshShapes, it will not work
-    else if(locinfo.objBBox == BULLET_OBJECT_BOUNDS_PER_TRIANGLE) {
-		//we found the bounding box and radius, so let's scale the mesh down by the radius and up by the scaling factor from the scene file (bnds.radius())
-    //initialize the world transformation
-        // The raw mesh data is scaled down to unit size, see below
-        // for scaling up to the requested size.
-        Matrix4x4f scale_to_unit = Matrix4x4f::scale(1.f/mesh_rad);
-		//reset the instance iterator for a second round
-                Meshdata::GeometryInstanceIterator geoIter = retrievedMesh->getGeometryInstanceIterator();
-		//we need to pass the triangles to Bullet
-		btTriangleMesh * meshToConstruct = new btTriangleMesh(false, false);
-		//loop through the instances again, applying the new
-		//transformations to vertices and adding them to the Bullet mesh
-                uint32 indexInstance;
-                Matrix4x4f transformInstance;
-		while(geoIter.next(&indexInstance, &transformInstance)) {
-                    // Note: Scale to unit *after* transforming the
-                    // instanced geometry to its location --
-                    // scale_to_unit is applied to the mesh as a whole!
-			transformInstance = scale_to_unit * transformInstance;
-			GeometryInstance* geoInst = &(retrievedMesh->instances[indexInstance]);
-
-			unsigned int geoIndx = geoInst->geometryIndex;
-			SubMeshGeometry* subGeom = &(retrievedMesh->geometry[geoIndx]);
-			unsigned int numOfPrimitives = subGeom->primitives.size();
-			std::vector<int> gIndices;
-			std::vector<Vector3f> gVertices;
-			for(unsigned int i = 0; i < numOfPrimitives; i++) {
-				//create bullet triangle array from our data structure
-				Vector3f transformedVertex;
-                                BULLETLOG(detailed, "subgeom indices: ");
-				for(unsigned int j=0; j < subGeom->primitives[i].indices.size(); j++) {
-					gIndices.push_back((int)(subGeom->primitives[i].indices[j]));
-                                        BULLETLOG(detailed, (int)(subGeom->primitives[i].indices[j]) << ", ");
-				}
-                                BULLETLOG(detailed, "gIndices size: " << (int) gIndices.size());
-				for(unsigned int j=0; j < subGeom->positions.size(); j++) {
-					//printf("preTransform Vertex: %f, %f, %f\n", subGeom->positions[j].x, subGeom->positions[j].y, subGeom->positions[j].z);
-					transformedVertex = transformInstance * subGeom->positions[j];
-					//printf("Transformed Vertex: %f, %f, %f\n", transformedVertex.x, transformedVertex.y, transformedVertex.z);
-					gVertices.push_back(transformedVertex);
-				}
-				//TODO: check memleak, check divisible by 3
-				/*printf("btTriangleIndexVertexArray:\n");
-				printf("argument 1: %d\n", (int) (gIndices.size())/3);
-				printf("argument 3: %d\n", (int) 3*sizeof(int));
-				printf("argument 4: %d\n", gVertices.size());
-				printf("argument 6: %d\n", (int) sizeof(btVector3));
-				btTriangleIndexVertexArray* indexVertexArrays = new btTriangleIndexVertexArray((int) gIndices.size()/3, &gIndices[0], (int) 3*sizeof(int), gVertices.size(), (btScalar *) &gVertices[0].x, (int) sizeof(btVector3));*/
-			}
-			for(unsigned int j=0; j < gIndices.size(); j+=3) {
-				//printf("triangle %d: %d, %d, %d\n", j/3, j, j+1, j+2);
-				//printf("triangle %d:\n",  j/3);
-				//printf("vertex 1: %f, %f, %f\n", gVertices[gIndices[j]].x, gVertices[gIndices[j]].y, gVertices[gIndices[j]].z);
-				//printf("vertex 2: %f, %f, %f\n", gVertices[gIndices[j+1]].x, gVertices[gIndices[j+1]].y, gVertices[gIndices[j+1]].z);
-				//printf("vertex 3: %f, %f, %f\n\n", gVertices[gIndices[j+2]].x, gVertices[gIndices[j+2]].y, gVertices[gIndices[j+2]].z);
-				meshToConstruct->addTriangle(
-                                    btVector3( gVertices[gIndices[j]].x, gVertices[gIndices[j]].y, gVertices[gIndices[j]].z ),
-                                    btVector3( gVertices[gIndices[j+1]].x, gVertices[gIndices[j+1]].y, gVertices[gIndices[j+1]].z ),
-                                    btVector3( gVertices[gIndices[j+2]].x, gVertices[gIndices[j+2]].y, gVertices[gIndices[j+2]].z )
-                                );
-			}
-			Vector3f bMin = bbox.min();
-		}
-                BULLETLOG(detailed, "total bounds: " << bbox);
-                BULLETLOG(detailed, "bounds radius: " << mesh_rad);
-                BULLETLOG(detailed, "Num of triangles in mesh: " << meshToConstruct->getNumTriangles());
-		//btVector3 aabbMin(-1000,-1000,-1000),aabbMax(1000,1000,1000);
-		locinfo.objShape  = new btBvhTriangleMeshShape(meshToConstruct,true);
-                // Apply additional scaling factor to get from unit
-                // scale up to requested scale.
-                float32 rad_scale = locinfo.bounds.radius();
-                locinfo.objShape->setLocalScaling(btVector3(rad_scale, rad_scale, rad_scale));
-	}
-	//FIXME bug somewhere else? bnds.radius()/mesh_rad should be
-	//the correct radius, but it is not...
-
-    addRigidBody(uuid, locinfo);
+    locinfo.simObject->load(retrievedMesh);
 }
 
-void BulletPhysicsService::addRigidBody(const UUID& uuid, LocationInfo& locinfo) {
-    //register the motion state (callbacks) for Bullet
-    locinfo.objMotionState = new SirikataMotionState(this, uuid);
-
-    //set a placeholder for the inertial vector
-    btVector3 objInertia(0,0,0);
-    //calculate the inertia
-    locinfo.objShape->calculateLocalInertia(locinfo.mass,objInertia);
-    //make a constructionInfo object
-    btRigidBody::btRigidBodyConstructionInfo objRigidBodyCI(locinfo.mass, locinfo.objMotionState, locinfo.objShape, objInertia);
-
-    //CREATE: make the rigid body
-    locinfo.objRigidBody = new btRigidBody(objRigidBodyCI);
-    //locinfo.objRigidBody->setRestitution(0.5);
-    //set initial velocity
-    Vector3f objVelocity = locinfo.location.velocity();
-    locinfo.objRigidBody->setLinearVelocity(btVector3(objVelocity.x, objVelocity.y, objVelocity.z));
-    Quaternion objAngVelocity = locinfo.orientation.velocity();
-    Vector3f angvel_axis;
-    float32 angvel_angle;
-    objAngVelocity.toAngleAxis(angvel_angle, angvel_axis);
-    Vector3f angvel = angvel_axis.normal() * angvel_angle;
-    locinfo.objRigidBody->setAngularVelocity(btVector3(angvel.x, angvel.y, angvel.z));
-    // With different types of dynamic objects we need to set . Eventually, we
-    // might just want to store values for this in locinfo, currently we just
-    // decide based on the treatment.  Everything is linear: <1, 1, 1>, angular
-    // <1, 1, 1> by default.
-    if (locinfo.objTreatment == BULLET_OBJECT_TREATMENT_LINEAR_DYNAMIC) {
-        locinfo.objRigidBody->setAngularFactor(btVector3(0, 0, 0));
-    }
-    else if (locinfo.objTreatment == BULLET_OBJECT_TREATMENT_VERTICAL_DYNAMIC) {
-        locinfo.objRigidBody->setAngularFactor(btVector3(0, 0, 0));
-        locinfo.objRigidBody->setLinearFactor(btVector3(0, 1, 0));
-    }
-
-    // Get mask information
-    bulletObjCollisionMaskGroup mygroup, collide_with;
-    getCollisionMask(locinfo.objTreatment, &mygroup, &collide_with);
-    //add to the dynamics world
-    dynamicsWorld->addRigidBody(locinfo.objRigidBody, (short)mygroup, (short)collide_with);
-    // And if its dynamic, make sure its in our list of objects to
-    // track for sanity checking
-    mDynamicPhysicsObjects.insert(uuid);
-}
-
-void BulletPhysicsService::removeRigidBody(const UUID& uuid, LocationInfo& locinfo) {
-    if (locinfo.objRigidBody) {
-        dynamicsWorld->removeRigidBody(locinfo.objRigidBody);
-
-        delete locinfo.objShape;
-        locinfo.objShape = NULL;
-        delete locinfo.objMotionState;
-        locinfo.objMotionState = NULL;
-        delete locinfo.objRigidBody;
-        locinfo.objRigidBody = NULL;
-
-        UUIDSet::iterator dynamic_obj_it = mDynamicPhysicsObjects.find(uuid);
-        if (dynamic_obj_it != mDynamicPhysicsObjects.end())
-            mDynamicPhysicsObjects.erase(dynamic_obj_it);
-    }
-}
 
 void BulletPhysicsService::removeLocalObject(const UUID& uuid) {
     // Remove from mLocations, but save the cached state
@@ -639,7 +398,8 @@ void BulletPhysicsService::removeLocalObject(const UUID& uuid) {
     // automatically.
 
     LocationInfo& locinfo = mLocations[uuid];
-    removeRigidBody(uuid, locinfo);
+    if (locinfo.simObject != NULL)
+        locinfo.simObject->unload();
 
     mLocations.erase(uuid);
 
@@ -648,38 +408,27 @@ void BulletPhysicsService::removeLocalObject(const UUID& uuid) {
     notifyLocalObjectRemoved(uuid, false);
 }
 
-void BulletPhysicsService::updateBulletFromObject(const UUID& uuid, btTransform& worldTrans) {
-    Vector3f objPosition = currentPosition(uuid);
-    Quaternion objOrient = currentOrientation(uuid);
-    worldTrans = btTransform(
-        btQuaternion(objOrient.x,objOrient.y,objOrient.z,objOrient.w),
-        btVector3(objPosition.x,objPosition.y,objPosition.z)
-    );
+LocationInfo& BulletPhysicsService::info(const UUID& uuid) {
+    assert(mLocations.find(uuid) != mLocations.end());
+    return mLocations[uuid];
 }
 
-void BulletPhysicsService::updateObjectFromBullet(const UUID& uuid, const btTransform& worldTrans) {
-    assert(isFixed(uuid) == false);
+const LocationInfo& BulletPhysicsService::info(const UUID& uuid) const {
+    assert(mLocations.find(uuid) != mLocations.end());
+    return mLocations.find(uuid)->second;
+}
 
-    LocationInfo& locinfo = mLocations[uuid];
+void BulletPhysicsService::addDynamicObject(const UUID& uuid) {
+    mDynamicPhysicsObjects.insert(uuid);
+}
 
-    btVector3 pos = worldTrans.getOrigin();
-    btVector3 vel = locinfo.objRigidBody->getLinearVelocity();
-    TimedMotionVector3f newLocation(context()->simTime(), MotionVector3f(Vector3f(pos.x(), pos.y(), pos.z()), Vector3f(vel.x(), vel.y(), vel.z())));
-    setLocation(uuid, newLocation);
-    BULLETLOG(insane, "Updating " << uuid.toString() << " to velocity " << vel.x() << " " << vel.y() << " " << vel.z());
-    btQuaternion rot = worldTrans.getRotation();
-    btVector3 angvel = locinfo.objRigidBody->getAngularVelocity();
-    Vector3f angvel_siri(angvel.x(), angvel.y(), angvel.z());
-    float angvel_angle = angvel_siri.normalizeThis();
-    TimedMotionQuaternion newOrientation(
-        context()->simTime(),
-        MotionQuaternion(
-            Quaternion(rot.x(), rot.y(), rot.z(), rot.w()),
-            Quaternion(angvel_siri, angvel_angle)
-        )
-    );
-    setOrientation(uuid, newOrientation);
+void BulletPhysicsService::removeDynamicObject(const UUID& uuid) {
+    UUIDSet::iterator dynamic_obj_it = mDynamicPhysicsObjects.find(uuid);
+    if (dynamic_obj_it != mDynamicPhysicsObjects.end())
+        mDynamicPhysicsObjects.erase(dynamic_obj_it);
+}
 
+void BulletPhysicsService::addUpdate(const UUID& uuid) {
     physicsUpdates.insert(uuid);
 }
 
@@ -712,31 +461,11 @@ void BulletPhysicsService::updateObjectFromDeactivation(const UUID& uuid) {
     physicsUpdates.insert(uuid);
 }
 
-
-namespace {
-
-void capLinearVelocity(btRigidBody* rb, float32 max_speed) {
-    btVector3 vel = rb->getLinearVelocity();
-    float32 speed = vel.length();
-    if (speed > max_speed)
-        rb->setLinearVelocity( vel * (max_speed / speed) );
-}
-
-void capAngularVelocity(btRigidBody* rb, float32 max_speed) {
-    btVector3 vel = rb->getAngularVelocity();
-    float32 speed = vel.length();
-    if (speed > max_speed)
-        rb->setAngularVelocity( vel * (max_speed / speed) );
-}
-
-}
-
 void BulletPhysicsService::internalTickCallback() {
     for(UUIDSet::iterator id_it = mDynamicPhysicsObjects.begin(); id_it != mDynamicPhysicsObjects.end(); id_it++) {
         LocationInfo& locinfo = mLocations[*id_it];
-        assert(locinfo.objRigidBody != NULL);
-        capLinearVelocity(locinfo.objRigidBody, 100);
-        capAngularVelocity(locinfo.objRigidBody, 4*3.14159);
+        assert(locinfo.simObject != NULL);
+        locinfo.simObject->internalTick();
     }
 }
 
