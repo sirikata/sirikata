@@ -175,6 +175,20 @@ void ObjectHost::disconnectObject(const SpaceID& space, const ObjectReference& o
     iter->second->disconnect(SpaceObjectReference(space,oref));
 }
 
+//Feng
+void ObjectHost::initialTransfer(const SpaceID& space)
+{
+    SpaceSessionManagerMap::iterator iter = mSessionManagers.find(space);
+    if (iter == mSessionManagers.end())
+      return;
+
+    for (hosted_objects_set::iterator it = mTransObjects.begin();
+         it != mTransObjects.end(); ++it) {
+        ObjectReference oref = ObjectReference(*it);
+        iter->second->transfer(SpaceObjectReference(space, oref));
+    }
+
+}
 
 void ObjectHost::handleObjectMessage(const SpaceObjectReference& sporef_internalID, const SpaceID& space, Sirikata::Protocol::Object::ObjectMessage* msg) {
     // Either we know the object and deliver, or somethings gone wacky

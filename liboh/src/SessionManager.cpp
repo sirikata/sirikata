@@ -714,6 +714,29 @@ void SessionManager::sendRetryingMessage(const SpaceObjectReference& sporef_src,
     }
 }
 
+// Feng
+void SessionManager::transfer(const SpaceObjectReference& sporef_objid) {
+	Sirikata::SerializationCheck::Scoped sc(&mSerialization);
+  
+	ServerID connected_to = mObjectConnections.getConnectedServer(sporef_objid);
+	if (connected_to == NullServerID) return;
+
+	Sirikata::Protocol::Session::Container session_msg;
+	Sirikata::Protocol::Session::ITransfer transfer_msg = session_msg.mutable_transfer();
+	transfer_msg.set_object(sporef_objid.object().getAsUUID());
+	transfer_msg.set_reason("Unbalance");
+
+	sendRetryingMessage(
+			sporef_objid, OBJECT_PORT_SESSION,
+			UUID::null(), OBJECT_PORT_SESSION,
+			serializePBJMessage(session_msg),
+			connected_to, mContext->mainStrand, Duration::seconds(0.05));
+
+  // receive ack from the sapce server and disconnect
+  // I'm not sure how it works.
+
+}
+
 void SessionManager::getAnySpaceConnection(SpaceNodeConnection::GotSpaceConnectionCallback cb) {
     Sirikata::SerializationCheck::Scoped sc(&mSerialization);
 
@@ -1010,19 +1033,25 @@ void SessionManager::handleSessionMessage(Sirikata::Protocol::Object::ObjectMess
             assert(mTimeSyncClient != NULL);
             bool time_synced = mTimeSyncClient->valid();
 
-            ServerID connected_to = mObjectConnections.handleConnectSuccess(sporef_obj, loc, orient, bnds, mesh, phy, time_synced);
+	   		ServerID connected_to = mObjectConnections.handleConnectSuccess(sporef_obj, loc, orient, bnds, mesh, phy, time_synced);
 
-            // Send an ack so the server (our first conn or after migrating) can start sending data to us
-            Sirikata::Protocol::Session::Container ack_msg;
-            Sirikata::Protocol::Session::IConnectAck connect_ack_msg = ack_msg.mutable_connect_ack();
-            sendRetryingMessage(
-            		sporef_obj, OBJECT_PORT_SESSION,
-            		UUID::null(), OBJECT_PORT_SESSION,
-            		serializePBJMessage(ack_msg),
-            		connected_to,
-            		mContext->mainStrand,
-            		Duration::seconds(0.05)
+	    	// Send an ack so the server (our first conn or after migrating) can start sending data to us
+	    	Sirikata::Protocol::Session::Container ack_msg;
+	    	Sirikata::Protocol::Session::IConnectAck connect_ack_msg = ack_msg.mutable_connect_ack();
+	    	sendRetryingMessage(
+					sporef_obj, OBJECT_PORT_SESSION,
+					UUID::null(), OBJECT_PORT_SESSION,
+					serializePBJMessage(ack_msg),
+					connected_to,
+					mContext->mainStrand,
+					Duration::seconds(0.05)
 					);
+
+	    	// Feng
+	    	//sleep(15);
+	    	//SESSION_LOG(info,"Start a transfer requirest to " << mSpace);
+	    	//transfer(sporef_obj);
+	    	//SESSION_LOG(info,"End a transfer requirest to " << mSpace);
         }
         else if (conn_resp.response() == Sirikata::Protocol::Session::ConnectResponse::Redirect) {
             ServerID redirected = conn_resp.redirect();
@@ -1054,6 +1083,13 @@ void SessionManager::handleSessionMessage(Sirikata::Protocol::Object::ObjectMess
     		SESSION_LOG(info,"Object "<<disconnect.object()<<" migrated to another OH");
     		mObjectConnections.migrateDisconnect(sporef_obj);
     	}
+    }
+
+    //Feng
+    if (session_msg.has_oh_migration_req()) {
+        Sirikata::Protocol::Session::OHMigration init_oh_migr = session_msg.oh_migration_req();
+        SESSION_LOG(info,"Received oh migration request of " << init_oh_migr.object() << " to this host");
+        // handle_migrate(sporef_obj, init_oh_migr.object());
     }
 
     delete msg;

@@ -116,6 +116,10 @@ public:
     //to space for object
     void disconnectObject(const SpaceID& space, const ObjectReference& oref);
 
+    typedef std::set<UUID> hosted_objects_set;
+    hosted_objects_set mTransObjects; 
+    void initialTransfer(const SpaceID& space);
+
     typedef std::tr1::function<void(const SpaceID&, const ObjectReference&, ServerID)> SessionCallback;
     // Callback indicating that a connection to the server was made and it is available for sessions
     typedef std::tr1::function<void(const SpaceID&, const ObjectReference&, ConnectionInfo)> ConnectedCallback;

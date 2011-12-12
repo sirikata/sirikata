@@ -269,7 +269,7 @@ bool Server::isObjectConnecting(const UUID& object_id) const {
 }
 
 bool Server::isObjectMigrating(const UUID& object_id) const {
-    return (mMigratingObjects.find(object_id) != mMigratingObjects.end());
+    return (mOHMigratingObjects.find(object_id) != mOHMigratingObjects.end());
 }
 
 void Server::sendSessionMessageWithRetry(const ObjectHostConnectionID& conn, Sirikata::Protocol::Object::ObjectMessage* msg, const Duration& retry_rate) {
@@ -488,6 +488,13 @@ void Server::handleSessionMessage(const ObjectHostConnectionID& oh_conn_id, Siri
             mContext->timeSeries->report(mTimeSeriesObjects, mObjects.size());
         }
     }
+    else if (session_msg.has_transfer()) { // add by Feng
+        ObjectConnectionMap::iterator it = mObjects.find(session_msg.transfer().object());
+        if (it != mObjects.end()) {
+            handleTransfer(session_msg.transfer().object(), it->second);
+            mContext->timeSeries->report(mTimeSeriesObjects, mObjects.size());
+        }
+    }
 
     // InitiateMigration messages
     assert(!session_msg.has_connect_response());
@@ -664,7 +671,7 @@ void Server::handleConnectAuthResponse(const ObjectHostConnectionID& oh_conn_id,
         	// Allow migrating objects from different OH with the same id to be connected
         	else {
         		// if this OH is authenticated as the migrating OH. FIXME need to define identifier for OH
-        		if (mMigratingObjects[obj_id]=="oh_id") {
+        		if (mOHMigratingObjects[obj_id]==0) {
         			//SPACE_LOG(info, "Migrating object " << obj_id.rawHexData());
         		}
         		else {
@@ -718,7 +725,7 @@ void Server::finishAddObject(const UUID& obj_id, OSegAddNewStatus status)
         	  mObjects[obj_id] = conn;
         	  mLocalForwarder->addActiveConnection(conn, true);
         	  sendDisconnect(old->connID(),obj_id,"OH Migration");
-        	  SPACE_LOG(info, "Migrated object " << obj_id.rawHexData()<<" disconnected from OH connection "<<old->connID().shortID());
+        	  SPACE_LOG(info, "Migrating object " << obj_id.rawHexData()<<" disconnected from OH connection "<<old->connID().shortID());
         	  delete old;
           }
 
@@ -773,7 +780,7 @@ void Server::finishAddObject(const UUID& obj_id, OSegAddNewStatus status)
         	  SPACE_LOG(info, "Migrated object " << obj_id.rawHexData()<<" connected from OH connection "<<sc.conn_id.shortID());
 
           // FIXME Just for test, mark every new objects as migrating, allow to test other functions.
-          mMigratingObjects[obj_id]="oh_id";
+          mOHMigratingObjects[obj_id]=0;
       }
       else
       {
@@ -873,7 +880,7 @@ void Server::handleDisconnect(UUID obj_id, ObjectConnection* conn, ShortObjectHo
     ObjectReference obj(obj_id);
     mObjectSessionManager->removeSession(obj);
 
-    mMigratingObjects.erase(obj_id);
+    mOHMigratingObjects.erase(obj_id);
 
     if(short_conn_id==0)
     	SPACE_LOG(info, "Object " << obj_id.rawHexData()<<" disconnected from OH connection "<<conn->connID().shortID());
@@ -881,6 +888,69 @@ void Server::handleDisconnect(UUID obj_id, ObjectConnection* conn, ShortObjectHo
     	SPACE_LOG(info, "Object " << obj_id.rawHexData()<<" disconnected from OH connection "<<short_conn_id);
 
     delete conn;
+}
+
+// Feng: to find an object with this new target object host
+UUID Server::chooseOHMigrationHelper(ObjectHostConnectionID& conn_id) {
+ 
+  ObjectConnectionMap::iterator it; 
+  for (it = mObjects.begin(); it != mObjects.end(); it++) {
+    ObjectConnection* conn = it->second;
+    if (conn->mOHConnection == conn_id) {
+      break;
+    }
+  }
+  assert(((it->second->mOHConnection) == conn_id) &&
+          (it != mObjects.end()) && 
+          "Only one object is connected!");
+  return it->first;
+}
+
+// Feng
+void Server::handleTransfer(UUID obj_id, ObjectConnection* conn) {
+    static int Counter = 0;
+    if (Counter == 0) 
+      Counter++;
+    else 
+      return;
+
+    assert(conn->id() == obj_id);
+
+    SILOG(space,info,"Received transfer message from " <<
+          obj_id.toString() << " on Host " << conn->mOHConnection.shortID());
+ 
+    /* find a target object host, which is different from the original one */
+    ObjectHostConnectionID dest = mObjectHostConnectionManager->chooseOHMigrationDest(conn->mOHConnection);
+
+    const UUID helper = chooseOHMigrationHelper(dest);   
+    assert((obj_id != helper) && "It should be a different object!");
+    mOHMigratingObjects[obj_id] = dest.shortID(); 
+
+    /* send a request */
+    SILOG(space,info,"Start to send the transfer req to Host " << dest.shortID());
+    SILOG(space,info,"The helper is " << helper.toString());
+    sendOHMigrationReq(dest, obj_id, helper);
+    SILOG(space,info,"End to send the transfer req to Host " << dest.shortID());
+}
+
+//Feng
+void Server::sendOHMigrationReq(const ObjectHostConnectionID& oh_conn_id, const UUID& obj_id, const UUID& helper) {
+    Sirikata::Protocol::Session::Container oh_migration_req;
+    Sirikata::Protocol::Session::IOHMigration oh_migration_msg 
+      = oh_migration_req.mutable_oh_migration_req();
+    oh_migration_msg.set_object(obj_id);
+
+    Sirikata::Protocol::Object::ObjectMessage* migration_req = createObjectMessage(
+        mContext->id(),
+        UUID::null(), OBJECT_PORT_SESSION,
+        helper, OBJECT_PORT_SESSION,
+        serializePBJMessage(oh_migration_req)
+    );
+
+    // Sent directly via object host connection manager because we don't have an ObjectConnection
+    if (!mObjectHostConnectionManager->send( oh_conn_id, migration_req )) {
+        mContext->mainStrand->post(Duration::seconds(0.05),std::tr1::bind(&Server::retryHandleConnect,this,oh_conn_id,migration_req));
+    }
 }
 
 void Server::osegAddNewFinished(const UUID& id, OSegAddNewStatus status) {
@@ -1137,7 +1207,7 @@ void Server::handleMigrationEvent(const UUID& obj_id) {
 
             mObjectSessionManager->removeSession(obj);
 
-            mMigratingObjects.erase(obj_id);
+            mOHMigratingObjects.erase(obj_id);
         }
     }
 

@@ -271,8 +271,11 @@ private:
         }
     };
 
-    typedef std::map<UUID, String> MigratingObjects; // <object_id, Host ID that is migrating to>
-    MigratingObjects mMigratingObjects;
+    typedef std::map<UUID, ShortObjectHostConnectionID> OHMigratingObjects; // <object_id, Host ID that is migrating to>
+    OHMigratingObjects mOHMigratingObjects;
+    UUID chooseOHMigrationHelper(ObjectHostConnectionID& conn_id);
+    void handleTransfer(UUID obj_id, ObjectConnection* conn); // Feng
+    void sendOHMigrationReq(const ObjectHostConnectionID&, const UUID&,const UUID&);
 
     // FIXME Another place where needing a size queue and notifications causes
     // double locking...
