@@ -261,6 +261,13 @@ void SessionManager::ObjectConnections::gracefulDisconnect(const SpaceObjectRefe
     }
 }
 
+void SessionManager::ObjectConnections::migrateDisconnect(const SpaceObjectReference& sporef) {
+    ObjectInfoMap::iterator wherei=mObjectInfo.find(sporef);
+    if (wherei!=mObjectInfo.end()) {
+        disconnectWithCode(sporef,wherei->second.connectedAs, Disconnect::Migrated);
+    }
+}
+
 ServerID SessionManager::ObjectConnections::getConnectedServer(const SpaceObjectReference& sporef_obj_id, bool allow_connecting) {
     // FIXME getConnectedServer during migrations?
 
@@ -1003,19 +1010,19 @@ void SessionManager::handleSessionMessage(Sirikata::Protocol::Object::ObjectMess
             assert(mTimeSyncClient != NULL);
             bool time_synced = mTimeSyncClient->valid();
 
-	    ServerID connected_to = mObjectConnections.handleConnectSuccess(sporef_obj, loc, orient, bnds, mesh, phy, time_synced);
+            ServerID connected_to = mObjectConnections.handleConnectSuccess(sporef_obj, loc, orient, bnds, mesh, phy, time_synced);
 
-	    // Send an ack so the server (our first conn or after migrating) can start sending data to us
-	    Sirikata::Protocol::Session::Container ack_msg;
-	    Sirikata::Protocol::Session::IConnectAck connect_ack_msg = ack_msg.mutable_connect_ack();
-	    sendRetryingMessage(
-				sporef_obj, OBJECT_PORT_SESSION,
-				UUID::null(), OBJECT_PORT_SESSION,
-				serializePBJMessage(ack_msg),
-				connected_to,
-				mContext->mainStrand,
-				Duration::seconds(0.05)
-				);
+            // Send an ack so the server (our first conn or after migrating) can start sending data to us
+            Sirikata::Protocol::Session::Container ack_msg;
+            Sirikata::Protocol::Session::IConnectAck connect_ack_msg = ack_msg.mutable_connect_ack();
+            sendRetryingMessage(
+            		sporef_obj, OBJECT_PORT_SESSION,
+            		UUID::null(), OBJECT_PORT_SESSION,
+            		serializePBJMessage(ack_msg),
+            		connected_to,
+            		mContext->mainStrand,
+            		Duration::seconds(0.05)
+					);
         }
         else if (conn_resp.response() == Sirikata::Protocol::Session::ConnectResponse::Redirect) {
             ServerID redirected = conn_resp.redirect();
@@ -1039,6 +1046,14 @@ void SessionManager::handleSessionMessage(Sirikata::Protocol::Object::ObjectMess
         Sirikata::Protocol::Session::InitiateMigration init_migr = session_msg.init_migration();
         SESSION_LOG(insane,"Received migration request for " << sporef_obj << " to " << init_migr.new_server());
         migrate(sporef_obj, init_migr.new_server());
+    }
+
+    if (session_msg.has_disconnect()) {
+    	Sirikata::Protocol::Session::Disconnect disconnect = session_msg.disconnect();
+    	if(disconnect.reason()=="OH Migration"){
+    		SESSION_LOG(info,"Object "<<disconnect.object()<<" migrated to another OH");
+    		mObjectConnections.migrateDisconnect(sporef_obj);
+    	}
     }
 
     delete msg;

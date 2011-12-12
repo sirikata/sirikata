@@ -629,6 +629,15 @@ void HostedObject::handleDisconnected(const HostedObjectWPtr& weakSelf, const Sp
         assert(self->mPresenceData.find(spaceobj)==self->mPresenceData.end());
         self->mObjectHost->unregisterHostedObject(spaceobj, self.get());
     }
+    if (cc == Disconnect::Migrated){
+        PresenceDataMap::iterator where = self->mPresenceData.find(spaceobj);
+        if (where!=self->mPresenceData.end()) {
+            delete where->second;
+            self->mPresenceData.erase(where);
+            self->mObjectHost->unregisterHostedObject(spaceobj, self.get());
+            SILOG(cppoh, info,"Object Connection "<<spaceobj<<" closed");
+        }
+    }
 }
 
 

@@ -538,6 +538,25 @@ void Server::sendConnectError(const ObjectHostConnectionID& oh_conn_id, const UU
     }
 }
 
+void Server::sendDisconnect(const ObjectHostConnectionID& oh_conn_id, const UUID& obj_id, const String& reason) {
+    Sirikata::Protocol::Session::Container msg_container;
+    Sirikata::Protocol::Session::IDisconnect disconnect = msg_container.mutable_disconnect();
+    disconnect.set_object(obj_id);
+    disconnect.set_reason(reason);
+
+    Sirikata::Protocol::Object::ObjectMessage* obj_disconnect = createObjectMessage(
+        mContext->id(),
+        UUID::null(), OBJECT_PORT_SESSION,
+        obj_id, OBJECT_PORT_SESSION,
+        serializePBJMessage(msg_container)
+    );
+
+    // Sent directly via object host connection manager
+    if (!mObjectHostConnectionManager->send( oh_conn_id, obj_disconnect )) {
+        mContext->mainStrand->post(Duration::seconds(0.05),std::tr1::bind(&Server::retryHandleConnect,this,oh_conn_id,obj_disconnect));
+    }
+}
+
 // Handle Connect message from object
 void Server::handleConnect(const ObjectHostConnectionID& oh_conn_id, const Sirikata::Protocol::Object::ObjectMessage& container, const Sirikata::Protocol::Session::Connect& connect_msg) {
     UUID obj_id = container.source_object();
@@ -646,7 +665,7 @@ void Server::handleConnectAuthResponse(const ObjectHostConnectionID& oh_conn_id,
         	else {
         		// if this OH is authenticated as the migrating OH. FIXME need to define identifier for OH
         		if (mMigratingObjects[obj_id]=="oh_id") {
-        			//SPACE_LOG(info, "Migrating object with ID: " << obj_id.rawHexData());
+        			//SPACE_LOG(info, "Migrating object " << obj_id.rawHexData());
         		}
         		else {
         			sendConnectError(oh_conn_id, obj_id);
@@ -681,20 +700,26 @@ void Server::finishAddObject(const UUID& obj_id, OSegAddNewStatus status)
 
           // Create and store the connection
           ObjectConnection* conn = new ObjectConnection(obj_id, mObjectHostConnectionManager, sc.conn_id);
-          mObjects[obj_id] = conn;
-          mContext->timeSeries->report(mTimeSeriesObjects, mObjects.size());
-
-          //TODO: assumes each server process is assigned only one region... perhaps we should enforce this constraint
-          //for cleaner semantics?
-          mCSeg->reportLoad(mContext->id(), mCSeg->serverRegion(mContext->id())[0] , mObjects.size()  );
 
           // New object
           if (!isObjectMigrating(obj_id)) {
+              mObjects[obj_id] = conn;
+              mContext->timeSeries->report(mTimeSeriesObjects, mObjects.size());
+
+              //TODO: assumes each server process is assigned only one region... perhaps we should enforce this constraint
+              //for cleaner semantics?
+              mCSeg->reportLoad(mContext->id(), mCSeg->serverRegion(mContext->id())[0] , mObjects.size()  );
+
         	  mLocalForwarder->addActiveConnection(conn, false);
           }
           // Migrating object
           else {
+        	  ObjectConnection* old = mObjects[obj_id];
+        	  mObjects[obj_id] = conn;
         	  mLocalForwarder->addActiveConnection(conn, true);
+        	  sendDisconnect(old->connID(),obj_id,"OH Migration");
+        	  SPACE_LOG(info, "Migrated object " << obj_id.rawHexData()<<" disconnected from OH connection "<<old->connID().shortID());
+        	  delete old;
           }
 
           // New object
@@ -743,9 +768,9 @@ void Server::finishAddObject(const UUID& obj_id, OSegAddNewStatus status)
           sendConnectSuccess(conn->connID(), obj_id);
           // Show the new connected object
           if (!isObjectMigrating(obj_id))
-        	  SPACE_LOG(info, "New object with ID " << obj_id.rawHexData()<<" connected from OH connection "<<sc.conn_id.shortID());
+        	  SPACE_LOG(info, "New object " << obj_id.rawHexData()<<" connected from OH connection "<<sc.conn_id.shortID());
           else
-        	  SPACE_LOG(info, "Migrated object with ID " << obj_id.rawHexData()<<" connected from OH connection "<<sc.conn_id.shortID());
+        	  SPACE_LOG(info, "Migrated object " << obj_id.rawHexData()<<" connected from OH connection "<<sc.conn_id.shortID());
 
           // FIXME Just for test, mark every new objects as migrating, allow to test other functions.
           mMigratingObjects[obj_id]="oh_id";
@@ -848,10 +873,12 @@ void Server::handleDisconnect(UUID obj_id, ObjectConnection* conn, ShortObjectHo
     ObjectReference obj(obj_id);
     mObjectSessionManager->removeSession(obj);
 
+    mMigratingObjects.erase(obj_id);
+
     if(short_conn_id==0)
-    	SPACE_LOG(info, "Object with ID " << obj_id.rawHexData()<<" disconnected from OH connection "<<conn->connID().shortID());
+    	SPACE_LOG(info, "Object " << obj_id.rawHexData()<<" disconnected from OH connection "<<conn->connID().shortID());
     else
-    	SPACE_LOG(info, "Object with ID " << obj_id.rawHexData()<<" disconnected from OH connection "<<short_conn_id);
+    	SPACE_LOG(info, "Object " << obj_id.rawHexData()<<" disconnected from OH connection "<<short_conn_id);
 
     delete conn;
 }
@@ -1109,6 +1136,8 @@ void Server::handleMigrationEvent(const UUID& obj_id) {
             ObjectReference obj(obj_id);
 
             mObjectSessionManager->removeSession(obj);
+
+            mMigratingObjects.erase(obj_id);
         }
     }
 

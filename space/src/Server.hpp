@@ -177,6 +177,9 @@ private:
     // Handle a disconnection
     void handleDisconnect(UUID obj_id, ObjectConnection* conn, const ShortObjectHostConnectionID short_conn_id=0);
 
+    // Send a disconnection to OH
+    void sendDisconnect(const ObjectHostConnectionID& oh_conn_id, const UUID& obj_id, const String& reason);
+
     //finally deletes any object connections to obj_id
     void killObjectConnection(const UUID& obj_id);
 
