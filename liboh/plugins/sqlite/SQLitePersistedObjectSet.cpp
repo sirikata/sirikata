@@ -145,5 +145,7 @@ void SQLitePersistedObjectSet::performUpdate(const UUID& internal_id, const Stri
         mContext->mainStrand->post(std::tr1::bind(cb, success));
 }
 
+void SQLitePersistedObjectSet::movePersistedObject(const String& oh_id, const String& timestamp) {}
+
 } //end namespace OH
 } //end namespace Sirikata

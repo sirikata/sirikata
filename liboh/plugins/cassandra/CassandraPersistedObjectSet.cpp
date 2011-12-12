@@ -108,5 +108,36 @@ void CassandraPersistedObjectSet::performUpdate(const UUID& internal_id, const S
         mContext->mainStrand->post(std::tr1::bind(cb, success));
 }
 
+void CassandraPersistedObjectSet::movePersistedObject(const String& oh_id, const String& timestamp) {
+	 mIOService->post(
+	        std::tr1::bind(&CassandraPersistedObjectSet::readPersistedObject, this, oh_id, timestamp)
+	    );
+}
+
+void CassandraPersistedObjectSet::readPersistedObject(const String& oh_id, const String& timestamp) {
+	std::vector<Column> Columns;
+    try{
+        SliceRange range;
+        range.count=1000000; // set large enough to get all the objects of the object host
+        Columns = mDB->db()->getColumns(mOHostID, CF_NAME, timestamp, range);
+    }
+    catch(...){
+        std::cout <<"Exception Caught when getting object lists"<<std::endl;
+        return;
+    }
+    mContext->mainStrand->post(std::tr1::bind(&CassandraPersistedObjectSet::writePersistedObject, this, oh_id, Columns, timestamp));
+}
+
+void CassandraPersistedObjectSet::writePersistedObject(const String& oh_id, std::vector<Column> Columns, const String& timestamp) {
+	std::vector<String> keys;
+	try {
+		batchTuple tuple=batchTuple(CF_NAME, oh_id, timestamp, Columns, keys);
+		mDB->db()->batchMutate(tuple);
+	}
+    catch(...){
+        std::cout <<"Exception Caught when move persisted objects"<<std::endl;
+    }
+}
+
 } //end namespace OH
 } //end namespace Sirikata

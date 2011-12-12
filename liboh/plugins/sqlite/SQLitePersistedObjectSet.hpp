@@ -63,6 +63,7 @@ public:
     virtual void stop();
 
     virtual void requestPersistedObject(const UUID& internal_id, const String& script_type, const String& script_args, const String& script_contents, RequestCallback cb, const String& timestamp="current");
+    virtual void movePersistedObject(const String& oh_id, const String& timestamp="current");
 
 private:
     void initDB();

@@ -63,11 +63,24 @@ public:
     virtual void stop();
 
     virtual void requestPersistedObject(const UUID& internal_id, const String& script_type, const String& script_args, const String& script_contents, RequestCallback cb, const String& timestamp="current");
+    virtual void movePersistedObject(const String& oh_id, const String& timestamp="current");
 
 private:
 
     void initDB();
     void performUpdate(const UUID& internal_id, const String& script_type, const String& script_args, const String& script_contents, RequestCallback cb, const String& timestamp="current");
+
+    typedef org::apache::cassandra::Column Column;
+    typedef org::apache::cassandra::SliceRange SliceRange;
+    typedef std::tr1::tuple<String,   //column family
+                            String,   //row key
+                            String,   //super column name
+                            std::vector<Column>,  //columns to write
+                            std::vector<String>   //keys to erase
+                          > batchTuple;
+
+    void readPersistedObject(const String& oh_id, const String& timestamp="current");
+    void writePersistedObject(const String& oh_id, std::vector<Column> Columns, const String& timestamp="current");
 
     ObjectHostContext* mContext;
     String mDBHost;
