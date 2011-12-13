@@ -267,7 +267,8 @@ OgreRenderer::OgreRenderer(Context* ctx,Network::IOStrand* sStrand)
    mModelParser( ModelsSystemFactory::getSingleton ().getConstructor ( "any" ) ( "" ) ),
    mDownloadPlanner(NULL),
    mNextFrameScreenshotFile(""),
-   initialized(false)
+   initialized(false),
+   stopped(false)
 {
     try {
         // These have to be consistent with any other simulations -- e.g. the
@@ -992,7 +993,11 @@ void OgreRenderer::removeObject(Entity* ent) {
     mDownloadPlanner->removeObject(ent);
 }
 
-void OgreRenderer::parseMesh(const Transfer::RemoteFileMetadata& metadata, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data, ParseMeshCallback cb) {
+void OgreRenderer::parseMesh(
+    const Transfer::RemoteFileMetadata& metadata, const Transfer::Fingerprint& fp,
+    Transfer::DenseDataPtr data, ParseMeshCallback cb)
+{
+    std::cout<<"\n\nGot into parseMesh\n\n";
     mParsingIOService->post(
         std::tr1::bind(&OgreRenderer::parseMeshWork, this,
             livenessToken(),metadata, fp, data, cb)
@@ -1005,11 +1010,16 @@ void OgreRenderer::parseMeshWork(
     const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data,
     ParseMeshCallback cb)
 {
+    std::cout<<"\n\nGot into parseMeshWork\n\n";
+    
     if (! livenessToken())
         return;
 
+    std::cout<<"\n\nPassed first check\n";
+    
     if (stopped)
         return;
+    std::cout<<"\n\nGot passed checks\n\n";
     
     Mesh::VisualPtr parsed = parseMeshWorkSync(metadata, fp, data);
     simStrand->post(std::tr1::bind(cb,parsed));

@@ -231,7 +231,9 @@ void DistanceDownloadPlanner::iPoll(Liveness::Token dpAlive)
         return;
     
     if (camera == NULL) return;
+
     if (mContext->stopped()) return;
+    
 
     // Update priorities, tracking the largest undisplayed priority and the
     // smallest displayed priority to decide if we're going to have to swap.
@@ -344,7 +346,7 @@ void DistanceDownloadPlanner::iStop(Liveness::Token dpAlive)
 
 void DistanceDownloadPlanner::requestAssetForObject(Object* forObject) {
     DLPLANNER_LOG(detailed, "Requesting " << forObject->file << " for " << forObject->name);
-
+    
     if (forObject->file.empty()) {
         forObject->mesh->loadEmpty();
         return;
@@ -374,15 +376,28 @@ void DistanceDownloadPlanner::requestAssetForObject(Object* forObject) {
 
 void DistanceDownloadPlanner::downloadAsset(Asset* asset, Object* forObject) {
     DLPLANNER_LOG(detailed, "Starting download of " << asset->uri);
+
+    std::cout<<"\nStarting download\n";
+    
     asset->downloadTask =
         AssetDownloadTask::construct(
             asset->uri, getScene(), forObject->priority,
-            mContext->mainStrand->wrap(
+            mScene->renderStrand()->wrap(
                 std::tr1::bind(&DistanceDownloadPlanner::loadAsset, this, asset->uri)
             ));
+
+        // AssetDownloadTask::construct(
+        //     asset->uri, getScene(), forObject->priority,
+        //     mContext->mainStrand->wrap(
+        //         std::tr1::bind(&DistanceDownloadPlanner::loadAsset, this, asset->uri)
+        //     ));
+
 }
 
 void DistanceDownloadPlanner::loadAsset(Transfer::URI asset_uri) {
+
+    std::cout<<"\n\nI am done downloading\n\n";
+    
     DLPLANNER_LOG(detailed, "Finished downloading " << asset_uri);
 
     if (mAssets.find(asset_uri) == mAssets.end()) return;
@@ -425,6 +440,9 @@ void DistanceDownloadPlanner::finishLoadAsset(Asset* asset, bool success) {
     DLPLANNER_LOG(detailed, "Finishing load of asset " << asset->uri << " (priority " << asset->downloadTask->priority() << ")");
     // We need to notify all Objects (objects) waiting for this to load that
     // it finished (or failed)
+
+    std::cout<<"\n\nI have finished loading asset\n\n";
+    
     for(ObjectSet::iterator it = asset->waitingObjects.begin(); it != asset->waitingObjects.end(); it++) {
         const String& resource_id = *it;
 

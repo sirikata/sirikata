@@ -98,7 +98,12 @@ void AssetDownloadTask::cancelNoLock() {
 void AssetDownloadTask::downloadAssetFile() {
     assert( !mAssetURI.empty() );
 
+    std::cout<<"\n\nGot into downloadAssetFile\n\n";
+    
     boost::mutex::scoped_lock lok(mDependentDownloadMutex);
+
+    std::cout<<"\n\nGot past lock\n\n";
+    
     ResourceDownloadTaskPtr dl = ResourceDownloadTask::construct(
         mAssetURI, mScene->transferPool(),
         mPriority,
@@ -109,8 +114,12 @@ void AssetDownloadTask::downloadAssetFile() {
 }
 
 void AssetDownloadTask::weakAssetFileDownloaded(std::tr1::weak_ptr<AssetDownloadTask> thus, std::tr1::shared_ptr<ChunkRequest> request, std::tr1::shared_ptr<const DenseData> response) {
+
+    std::cout<<"\n\nGot into weakAssetFileDownloaded\n\n";
+    
     std::tr1::shared_ptr<AssetDownloadTask> locked(thus.lock());
     if (locked){
+        std::cout<<"\n\nGot into locked\n\n";
         locked->assetFileDownloaded(request,response);
     }
 }
@@ -118,16 +127,23 @@ void AssetDownloadTask::weakAssetFileDownloaded(std::tr1::weak_ptr<AssetDownload
 void AssetDownloadTask::assetFileDownloaded(std::tr1::shared_ptr<ChunkRequest> request, std::tr1::shared_ptr<const DenseData> response) {
     boost::mutex::scoped_lock lok(mDependentDownloadMutex);
 
+    std::cout<<"\nGot into assetFileDownloaded\n";
+    
     // Clear from the active download list
     assert(mActiveDownloads.size() == 1);
     mActiveDownloads.erase(mAssetURI);
 
     // Lack of response data means failure of some sort
     if (!response) {
+
+        std::cout<<"\n\nGot into no response of assetFileDownloaded\n";
         failDownload();
         return;
     }
 
+
+    std::cout<<"\nGot past assetFileDownloaded\n";
+    
     // FIXME here we could have another callback which lets them get
     // at the hash to try to use an existing copy. Even with the
     // eventual centralized loading we want, this may still be
