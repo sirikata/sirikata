@@ -153,6 +153,10 @@ private:
     // been retrieved.
     void updatePhysicsWorldWithMesh(const UUID& uuid, MeshdataPtr retrievedMesh);
 
+    // Helper for cleaning up a LocationInfo before removing it
+    void cleanupLocationInfo(LocationInfo& locinfo);
+
+
     //Bullet Dynamics World Vars
     btBroadphaseInterface* mBroadphase;
     btDefaultCollisionConfiguration* collisionConfiguration;

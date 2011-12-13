@@ -94,7 +94,12 @@ BulletPhysicsService::BulletPhysicsService(SpaceContext* ctx, LocationUpdatePoli
 }
 
 BulletPhysicsService::~BulletPhysicsService() {
-    // FIXME(ewencp) cleanup leftover BulletObjects in the LocationInfo
+    // Note that we should get removal requests for all objects.  Just as a
+    // sanity check, we'll make sure we've cleaned everything out at this point.
+    while(!mLocations.empty()) {
+        cleanupLocationInfo(mLocations.begin()->second);
+        mLocations.erase(mLocations.begin());
+    }
 
     delete mDynamicsWorld;
     delete solver;
@@ -358,6 +363,7 @@ void BulletPhysicsService::updatePhysicsWorld(const UUID& uuid) {
     // Clear out previous state from the simulation.
     if (locinfo.simObject != NULL) {
         locinfo.simObject->unload();
+        delete locinfo.simObject;
         locinfo.simObject = NULL;
     }
 
@@ -402,6 +408,14 @@ void BulletPhysicsService::updatePhysicsWorldWithMesh(const UUID& uuid, Meshdata
     locinfo.simObject->load(retrievedMesh);
 }
 
+// Helper for cleaning up a LocationInfo before removing it
+void BulletPhysicsService::cleanupLocationInfo(LocationInfo& locinfo) {
+    if (locinfo.simObject != NULL) {
+        locinfo.simObject->unload();
+        delete locinfo.simObject;
+        locinfo.simObject = NULL;
+    }
+}
 
 void BulletPhysicsService::removeLocalObject(const UUID& uuid) {
     // Remove from mLocations, but save the cached state
@@ -415,9 +429,7 @@ void BulletPhysicsService::removeLocalObject(const UUID& uuid) {
     // automatically.
 
     LocationInfo& locinfo = mLocations[uuid];
-    if (locinfo.simObject != NULL)
-        locinfo.simObject->unload();
-
+    cleanupLocationInfo(locinfo);
     mLocations.erase(uuid);
 
     // Remove from the list of local objects
@@ -533,6 +545,9 @@ void BulletPhysicsService::removeLocalAggregateObject(const UUID& uuid) {
     assert( mLocations.find(uuid) != mLocations.end() );
     assert( mLocations[uuid].local == true );
     assert( mLocations[uuid].aggregate == true );
+
+    LocationInfo& locinfo = mLocations[uuid];
+    cleanupLocationInfo(locinfo);
     mLocations.erase(uuid);
 
     notifyLocalObjectRemoved(uuid, true);
@@ -626,7 +641,8 @@ void BulletPhysicsService::removeReplicaObject(const Time& t, const UUID& uuid) 
         return;
 
     // Otherwise, remove and notify
-    mLocations.erase(uuid);
+    cleanupLocationInfo(locinfo);
+    mLocations.erase(it);
     CONTEXT_SPACETRACE(serverObjectEvent, 0, mContext->id(), uuid, false, TimedMotionVector3f()); // FIXME add remote server ID
     notifyReplicaObjectRemoved(uuid);
 }
