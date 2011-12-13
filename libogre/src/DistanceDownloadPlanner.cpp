@@ -662,8 +662,10 @@ void DistanceDownloadPlanner::loadDependentTextures(Asset* asset, bool usingDefa
                 WebView* web_mat = WebViewManager::getSingleton().createWebViewMaterial(
                     mContext,
                     id,
-                    512, 512 // Completely arbitrary...
+                    512, 512, // Completely arbitrary...
+                    mScene->renderStrand()
                 );
+
                 web_mat->loadURL(tex_data.request->getURI().toString());
                 asset->webMaterials.push_back(web_mat);
             }

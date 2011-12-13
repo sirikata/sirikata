@@ -161,10 +161,15 @@ SpaceObjectReference OgreSystemMouseHandler::pick(Vector2f p, int direction, con
 }
 
 /** Create a UI element using a web view. */
-void OgreSystemMouseHandler::createUIAction(const String& ui_page) {
-    WebView* ui_wv = WebViewManager::getSingleton().createWebView(mParent->context(), "__object", "__object", 300, 300, OverlayPosition(RP_BOTTOMCENTER));
-    ui_wv->loadFile(ui_page);
+void OgreSystemMouseHandler::createUIAction(const String& ui_page)
+{
+    WebView* ui_wv =
+        WebViewManager::getSingleton().createWebView(
+            mParent->context(), "__object", "__object", 300,
+            300, OverlayPosition(RP_BOTTOMCENTER),
+            mParent->renderStrand());
 
+    ui_wv->loadFile(ui_page);
 }
 
 inline Vector3f direction(Quaternion cameraAngle) {
@@ -679,7 +684,10 @@ void OgreSystemMouseHandler::ensureUI() {
             mParent->context(),
             "ui_widget","ui_widget",
             mParent->getRenderTarget()->getWidth(), mParent->getRenderTarget()->getHeight(),
-            OverlayPosition(RP_TOPLEFT), false, 70, TIER_BACK, 0, WebView::WebViewBorderSize(0,0,0,0));
+            OverlayPosition(RP_TOPLEFT), false,
+            mParent->renderStrand(),
+            70, TIER_BACK, 0,
+            WebView::WebViewBorderSize(0,0,0,0));
         mUIWidgetView->bind("ui-action", std::tr1::bind(&OgreSystemMouseHandler::onUIAction, this, _1, _2));
         mUIWidgetView->loadFile("chrome/ui.html");
         mUIWidgetView->setTransparent(true);

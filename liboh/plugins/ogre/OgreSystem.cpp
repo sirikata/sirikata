@@ -804,7 +804,11 @@ boost::any OgreSystem::createWindow(const String& window_name, bool is_html, boo
     WebView* ui_wv = wvManager->getWebView(window_name);
     if(!ui_wv)
     {
-        ui_wv = wvManager->createWebView(mContext, window_name, window_name, width, height, OverlayPosition(RP_TOPLEFT));
+        ui_wv = wvManager->createWebView(
+            mContext, window_name, window_name,
+            width, height, OverlayPosition(RP_TOPLEFT),
+            simStrand);
+        
         if (is_html)
             ui_wv->loadHTML(content);
         else if (is_file)

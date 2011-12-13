@@ -58,8 +58,10 @@ WebView::WebView(
     const std::string& name, const std::string& type,
     unsigned short width, unsigned short height,
     const OverlayPosition &viewPosition, Ogre::uchar zOrder, Tier tier,
-    Ogre::Viewport* viewport, const WebViewBorderSize& border)
- : mContext(ctx)
+    Ogre::Viewport* viewport,Network::IOStrand* strand,
+    const WebViewBorderSize& border)
+ : mContext(ctx),
+   postingStrand(strand)
 {
 #ifdef HAVE_BERKELIUM
 	webView = 0;
@@ -115,8 +117,10 @@ WebView::WebView(
 WebView::WebView(
     Context* ctx,
     const std::string& name, const std::string& type, unsigned short width, unsigned short height,
-    Ogre::FilterOptions texFiltering)
- : mContext(ctx)
+    Ogre::FilterOptions texFiltering,
+    Network::IOStrand* strand)
+ : mContext(ctx),
+   postingStrand(strand)
 {
 #ifdef HAVE_BERKELIUM
 	webView = 0;
@@ -361,7 +365,10 @@ boost::any WebView::handleOpenBrowser(WebView* wv, const JSArguments& args) {
     WebView* child_wv = WebViewManager::getSingleton().createWebView(
         mContext,
         name, name, w, h,
-        OverlayPosition(RP_CENTER), false, 70, TIER_MIDDLE, 0);
+        OverlayPosition(RP_CENTER), postingStrand, false, 70,
+        TIER_MIDDLE,0);
+
+    
     child_wv->loadURL(url);
     child_wv->setTransparent(false);
 
@@ -1328,7 +1335,7 @@ void WebView::onCreatedWindow(Berkelium::Window*, Berkelium::Window*newwin) {
         mContext,
         name, r.width(), r.height(),
         OverlayPosition(r.left(), r.top()),
-        newwin, TIER_MIDDLE,
+        newwin, postingStrand,TIER_MIDDLE,
         overlay?overlay->viewport:WebViewManager::getSingleton().defaultViewport);
 }
 
