@@ -27,8 +27,8 @@ public:
 
     virtual void load(Mesh::MeshdataPtr mesh);
     virtual void unload();
-    virtual void internalTick();
-    virtual void deactivationTick();
+    virtual void internalTick(const Time& t);
+    virtual void deactivationTick(const Time& t);
 
 
     // Updates from SirikataMotionState
@@ -36,7 +36,7 @@ public:
     void updateObjectFromBullet(const btTransform& worldTrans);
 
 private:
-    void addRigidBody(const LocationInfo& locinfo);
+    void addRigidBody();
     void removeRigidBody();
 
     UUID mID;

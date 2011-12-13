@@ -33,6 +33,7 @@
 #include "BulletPhysicsService.hpp"
 #include "BulletObject.hpp"
 #include "BulletRigidBodyObject.hpp"
+#include "BulletCharacterObject.hpp"
 #include <sirikata/core/trace/Trace.hpp>
 #include <sirikata/mesh/CompositeFilter.hpp>
 
@@ -57,11 +58,11 @@ BulletPhysicsService::BulletPhysicsService(SpaceContext* ctx, LocationUpdatePoli
  : LocationService(ctx, update_policy)
 {
 
-    broadphase = new btDbvtBroadphase();
+    mBroadphase = new btDbvtBroadphase();
     collisionConfiguration = new btDefaultCollisionConfiguration();
     dispatcher = new btCollisionDispatcher(collisionConfiguration);
     solver = new btSequentialImpulseConstraintSolver;
-    mDynamicsWorld = new btDiscreteDynamicsWorld(dispatcher, broadphase, solver, collisionConfiguration);
+    mDynamicsWorld = new btDiscreteDynamicsWorld(dispatcher, mBroadphase, solver, collisionConfiguration);
     mDynamicsWorld->setInternalTickCallback(bulletPhysicsInternalTickCallback, (void*)this);
     mDynamicsWorld->setGravity(btVector3(0,-1,0));
 
@@ -92,16 +93,18 @@ BulletPhysicsService::BulletPhysicsService(SpaceContext* ctx, LocationUpdatePoli
     BULLETLOG(detailed, "Service Loaded");
 }
 
-BulletPhysicsService::~BulletPhysicsService(){
-	delete mDynamicsWorld;
-	delete solver;
-	delete dispatcher;
-	delete collisionConfiguration;
-	delete broadphase;
-        delete mModelFilter;
-	delete mModelsSystem;
+BulletPhysicsService::~BulletPhysicsService() {
+    // FIXME(ewencp) cleanup leftover BulletObjects in the LocationInfo
 
-	BULLETLOG(detailed,"Service Unloaded");
+    delete mDynamicsWorld;
+    delete solver;
+    delete dispatcher;
+    delete collisionConfiguration;
+    delete mBroadphase;
+    delete mModelFilter;
+    delete mModelsSystem;
+
+    BULLETLOG(detailed,"Service Unloaded");
 }
 
 bool BulletPhysicsService::contains(const UUID& uuid) const {
@@ -128,19 +131,33 @@ void BulletPhysicsService::service() {
     mLastTime = now;
     float simForwardTime = delTime.toMilliseconds() / 1000.0f;
 
+    // Pre tick
+    for(UUIDSet::iterator id_it = mTickObjects.begin(); id_it != mTickObjects.end(); id_it++) {
+        const UUID& locobj = *id_it;
+        LocationInfo& locinfo = mLocations[locobj];
+        assert(locinfo.simObject != NULL);
+        locinfo.simObject->preTick(now);
+    }
     // Step simulation
     mDynamicsWorld->stepSimulation(simForwardTime);
+    // Post tick
+    for(UUIDSet::iterator id_it = mTickObjects.begin(); id_it != mTickObjects.end(); id_it++) {
+        const UUID& locobj = *id_it;
+        LocationInfo& locinfo = mLocations[locobj];
+        assert(locinfo.simObject != NULL);
+        locinfo.simObject->postTick(now);
+    }
 
     // Check for deactivated objects. Unfortunately there isn't a way to get
     // this information from bullet at the time deactivation, so we need to poll
     // for it
     static Duration deactivation_check_interval(Duration::seconds(1));
     if (now - mLastDeactivationTime > deactivation_check_interval) {
-        for(UUIDSet::iterator id_it = mDynamicPhysicsObjects.begin(); id_it != mDynamicPhysicsObjects.end(); id_it++) {
+        for(UUIDSet::iterator id_it = mDeactivateableObjects.begin(); id_it != mDeactivateableObjects.end(); id_it++) {
             const UUID& locobj = *id_it;
             LocationInfo& locinfo = mLocations[locobj];
             assert(locinfo.simObject != NULL);
-            locinfo.simObject->deactivationTick();
+            locinfo.simObject->deactivationTick(now);
         }
         mLastDeactivationTime = now;
     }
@@ -298,10 +315,6 @@ void BulletPhysicsService::addLocalObject(const UUID& uuid, const TimedMotionVec
     updatePhysicsWorld(uuid);
 }
 
-#define DEFAULT_TREATMENT BULLET_OBJECT_TREATMENT_IGNORE
-#define DEFAULT_BOUNDS BULLET_OBJECT_BOUNDS_SPHERE
-#define DEFAULT_MASS 1.f
-
 void BulletPhysicsService::updatePhysicsWorld(const UUID& uuid) {
     LocationMap::iterator it = mLocations.find(uuid);
     LocationInfo& locinfo = it->second;
@@ -333,6 +346,7 @@ void BulletPhysicsService::updatePhysicsWorld(const UUID& uuid) {
         if (objTreatmentString == "dynamic") objTreatment = BULLET_OBJECT_TREATMENT_DYNAMIC;
         if (objTreatmentString == "linear_dynamic") objTreatment = BULLET_OBJECT_TREATMENT_LINEAR_DYNAMIC;
         if (objTreatmentString == "vertical_dynamic") objTreatment = BULLET_OBJECT_TREATMENT_VERTICAL_DYNAMIC;
+        if (objTreatmentString == "character") objTreatment = BULLET_OBJECT_TREATMENT_CHARACTER;
 
         String objBBoxString = pt.get("bounds", String("sphere"));
         if (objBBoxString == "box") objBBox = BULLET_OBJECT_BOUNDS_ENTIRE_OBJECT;
@@ -359,6 +373,9 @@ void BulletPhysicsService::updatePhysicsWorld(const UUID& uuid) {
       case BULLET_OBJECT_TREATMENT_VERTICAL_DYNAMIC:
         locinfo.simObject = new BulletRigidBodyObject(this, uuid, objTreatment, objBBox, mass);
         break;
+      case BULLET_OBJECT_TREATMENT_CHARACTER:
+        locinfo.simObject = new BulletCharacterObject(this, uuid, objBBox);
+        break;
       default:
         BULLETLOG(detailed,"Error in objTreatment initialization!");
         locinfo.simObject = NULL;
@@ -367,7 +384,7 @@ void BulletPhysicsService::updatePhysicsWorld(const UUID& uuid) {
 
     // We may need the mesh in order to continue. We need it only if:
     // treatment != ignore (see above check) && bounds != sphere.
-    if (objBBox == BULLET_OBJECT_BOUNDS_SPHERE) {
+    if (locinfo.simObject->bbox() == BULLET_OBJECT_BOUNDS_SPHERE) {
         // Invoke directly since we have all the data we need
         updatePhysicsWorldWithMesh(uuid, MeshdataPtr());
     }
@@ -418,15 +435,33 @@ const LocationInfo& BulletPhysicsService::info(const UUID& uuid) const {
     return mLocations.find(uuid)->second;
 }
 
-void BulletPhysicsService::addDynamicObject(const UUID& uuid) {
-    mDynamicPhysicsObjects.insert(uuid);
+void BulletPhysicsService::addTickObject(const UUID& uuid) {
+    mTickObjects.insert(uuid);
+}
+void BulletPhysicsService::removeTickObject(const UUID& uuid) {
+    UUIDSet::iterator dynamic_obj_it = mTickObjects.find(uuid);
+    if (dynamic_obj_it != mTickObjects.end())
+        mTickObjects.erase(dynamic_obj_it);
 }
 
-void BulletPhysicsService::removeDynamicObject(const UUID& uuid) {
-    UUIDSet::iterator dynamic_obj_it = mDynamicPhysicsObjects.find(uuid);
-    if (dynamic_obj_it != mDynamicPhysicsObjects.end())
-        mDynamicPhysicsObjects.erase(dynamic_obj_it);
+void BulletPhysicsService::addInternalTickObject(const UUID& uuid) {
+    mInternalTickObjects.insert(uuid);
 }
+void BulletPhysicsService::removeInternalTickObject(const UUID& uuid) {
+    UUIDSet::iterator dynamic_obj_it = mInternalTickObjects.find(uuid);
+    if (dynamic_obj_it != mInternalTickObjects.end())
+        mInternalTickObjects.erase(dynamic_obj_it);
+}
+
+void BulletPhysicsService::addDeactivateableObject(const UUID& uuid) {
+    mDeactivateableObjects.insert(uuid);
+}
+void BulletPhysicsService::removeDeactivateableObject(const UUID& uuid) {
+    UUIDSet::iterator dynamic_obj_it = mDeactivateableObjects.find(uuid);
+    if (dynamic_obj_it != mDeactivateableObjects.end())
+        mDeactivateableObjects.erase(dynamic_obj_it);
+}
+
 
 void BulletPhysicsService::addUpdate(const UUID& uuid) {
     physicsUpdates.insert(uuid);
@@ -462,10 +497,11 @@ void BulletPhysicsService::updateObjectFromDeactivation(const UUID& uuid) {
 }
 
 void BulletPhysicsService::internalTickCallback() {
-    for(UUIDSet::iterator id_it = mDynamicPhysicsObjects.begin(); id_it != mDynamicPhysicsObjects.end(); id_it++) {
+    Time t = mContext->simTime();
+    for(UUIDSet::iterator id_it = mInternalTickObjects.begin(); id_it != mInternalTickObjects.end(); id_it++) {
         LocationInfo& locinfo = mLocations[*id_it];
         assert(locinfo.simObject != NULL);
-        locinfo.simObject->internalTick();
+        locinfo.simObject->internalTick(t);
     }
 }
 

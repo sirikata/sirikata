@@ -7,6 +7,8 @@
 
 #include "Defs.hpp"
 
+class btCollisionShape;
+
 namespace Sirikata {
 
 /** Base class for simulated objects in bullet. This provides a pretty generic
@@ -38,18 +40,30 @@ public:
      */
     virtual void unload() = 0;
 
+    /** Make modifications before a full tick.
+     */
+    virtual void preTick(const Time& t) {}
+
+    /** Make modifications before a full tick.
+     */
+    virtual void postTick(const Time& t) {}
+
     /** Make modifications during an internal tick. Useful for capping speed and
      *  rotational speed.
      */
-    virtual void internalTick() = 0;
+    virtual void internalTick(const Time& t) {}
 
     /** Check this object for deactivation. Implementations should call
      *  BulletPhysicsService::updateObjectFromDeactivation if the object has
      *  been deactivated.
      */
-    virtual void deactivationTick() = 0;
+    virtual void deactivationTick(const Time& t) {}
 
 protected:
+
+    // Helper for computing the collision
+    btCollisionShape* computeCollisionShape(const UUID& id, bulletObjBBox shape_type, Mesh::MeshdataPtr retrievedMesh);
+
     BulletPhysicsService* mParent;
 }; // class BulletObject
 

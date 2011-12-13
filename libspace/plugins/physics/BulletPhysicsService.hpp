@@ -104,9 +104,21 @@ public:
     const LocationInfo& info(const UUID& uuid) const;
 
     btDiscreteDynamicsWorld* dynamicsWorld() { return mDynamicsWorld; }
+    btBroadphaseInterface* broadphase() { return mBroadphase; }
 
-    void addDynamicObject(const UUID& uuid);
-    void removeDynamicObject(const UUID& uuid);
+    // Objects that want callbacks for each tick, e.g. for grabbing updates that
+    // aren't emitted automatically or updating velocity
+    void addTickObject(const UUID& uuid);
+    void removeTickObject(const UUID& uuid);
+    // Objects that want callbacks for each internal tick, e.g. for capping
+    // velocity
+    void addInternalTickObject(const UUID& uuid);
+    void removeInternalTickObject(const UUID& uuid);
+    // Objects that want deactivation check callbacks
+    void addDeactivateableObject(const UUID& uuid);
+    void removeDeactivateableObject(const UUID& uuid);
+
+    // Add an update for this object, i.e. it was detected that it moved
     void addUpdate(const UUID& uuid);
 
     void updateObjectFromDeactivation(const UUID& uuid);
@@ -121,7 +133,12 @@ protected:
     typedef std::tr1::unordered_set<UUID, UUID::Hasher> UUIDSet;
     // Which objects have dynamic physical simulation and need to be
     // sanity checked at each tick.
-    UUIDSet mDynamicPhysicsObjects;
+    UUIDSet mTickObjects;
+    // Which objects have dynamic physical simulation and need to be
+    // sanity checked at each tick.
+    UUIDSet mInternalTickObjects;
+    // Objects that need to be checked for deactivation
+    UUIDSet mDeactivateableObjects;
     // Objects which have outstanding updates to location information
     // from the physics engine.
     UUIDSet physicsUpdates;
@@ -137,7 +154,7 @@ private:
     void updatePhysicsWorldWithMesh(const UUID& uuid, MeshdataPtr retrievedMesh);
 
     //Bullet Dynamics World Vars
-    btBroadphaseInterface* broadphase;
+    btBroadphaseInterface* mBroadphase;
     btDefaultCollisionConfiguration* collisionConfiguration;
     btCollisionDispatcher* dispatcher;
     btSequentialImpulseConstraintSolver* solver;
