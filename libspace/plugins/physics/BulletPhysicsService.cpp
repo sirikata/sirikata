@@ -571,15 +571,19 @@ void BulletPhysicsService::updateLocalAggregateBounds(const UUID& uuid, const Bo
     LocationMap::iterator loc_it = mLocations.find(uuid);
     assert(loc_it != mLocations.end());
     assert(loc_it->second.aggregate == true);
+    BoundingSphere3f oldval = loc_it->second.bounds;
     loc_it->second.bounds = newval;
     notifyLocalBoundsUpdated( uuid, true, newval );
+    if (oldval != newval) updatePhysicsWorld(uuid);
 }
 void BulletPhysicsService::updateLocalAggregateMesh(const UUID& uuid, const String& newval) {
     LocationMap::iterator loc_it = mLocations.find(uuid);
     assert(loc_it != mLocations.end());
     assert(loc_it->second.aggregate == true);
+    String oldval = loc_it->second.mesh;
     loc_it->second.mesh = newval;
     notifyLocalMeshUpdated( uuid, true, newval );
+    if (oldval != newval) updatePhysicsWorld(uuid);
 }
 void BulletPhysicsService::updateLocalAggregatePhysics(const UUID& uuid, const String& newval) {
     LocationMap::iterator loc_it = mLocations.find(uuid);
@@ -606,6 +610,7 @@ void BulletPhysicsService::addReplicaObject(const Time& t, const UUID& uuid, con
             locinfo.physics = phy;
             //local = false
             // FIXME should we notify location and bounds updated info?
+            updatePhysicsWorld(uuid);
         }
         // else ignore
     }
@@ -672,6 +677,11 @@ void BulletPhysicsService::receiveMessage(Message* msg) {
             // arrives.
             assert(loc_it != mLocations.end());
 
+            // Many different changes could require updating the
+            // physics simulation, this tracks if we need to and the
+            // update is performed at the end.
+            bool updatePhysics = false;
+
             if (update.has_location()) {
                 TimedMotionVector3f newloc(
                     update.location().t(),
@@ -693,24 +703,31 @@ void BulletPhysicsService::receiveMessage(Message* msg) {
             }
 
             if (update.has_bounds()) {
+                BoundingSphere3f oldbounds = loc_it->second.bounds;
                 BoundingSphere3f newbounds = update.bounds();
                 loc_it->second.bounds = newbounds;
                 notifyReplicaBoundsUpdated( update.object(), newbounds );
+                if (oldbounds != newbounds) updatePhysics = true;
             }
 
             if (update.has_mesh()) {
+                String oldmesh = loc_it->second.mesh;
                 String newmesh = update.mesh();
                 loc_it->second.mesh = newmesh;
                 notifyReplicaMeshUpdated( update.object(), newmesh );
+                if (oldmesh != newmesh) updatePhysics = true;
             }
 
             if (update.has_physics()) {
-                String newphy = update.physics();
                 String oldphy = loc_it->second.physics;
+                String newphy = update.physics();
                 loc_it->second.physics = newphy;
                 notifyReplicaPhysicsUpdated( update.object(), newphy );
-                if (oldphy != newphy) updatePhysicsWorld(update.object());
+                if (oldphy != newphy) updatePhysics = true;
             }
+
+            if (updatePhysics)
+                updatePhysicsWorld(update.object());
         }
     }
 
@@ -733,6 +750,11 @@ bool BulletPhysicsService::locationUpdate(UUID source, void* buffer, uint32 leng
             LocationMap::iterator loc_it = mLocations.find( source );
             assert(loc_it != mLocations.end());
 
+            // Many different changes could require updating the
+            // physics simulation, this tracks if we need to and the
+            // update is performed at the end.
+            bool updatePhysics = false;
+
             if (request.has_location()) {
                 TimedMotionVector3f newloc(
                     request.location().t(),
@@ -744,18 +766,6 @@ bool BulletPhysicsService::locationUpdate(UUID source, void* buffer, uint32 leng
                 CONTEXT_SPACETRACE(serverLoc, mContext->id(), mContext->id(), source, newloc );
             }
 
-            if (request.has_bounds()) {
-                BoundingSphere3f newbounds = request.bounds();
-                loc_it->second.bounds = newbounds;
-                notifyLocalBoundsUpdated( source, loc_it->second.aggregate, newbounds );
-            }
-
-            if (request.has_mesh()) {
-                String newmesh = request.mesh();
-                loc_it->second.mesh = newmesh;
-                notifyLocalMeshUpdated( source, loc_it->second.aggregate, newmesh );
-            }
-
             if (request.has_orientation()) {
                 TimedMotionQuaternion neworient(
                     request.orientation().t(),
@@ -765,14 +775,32 @@ bool BulletPhysicsService::locationUpdate(UUID source, void* buffer, uint32 leng
                 notifyLocalOrientationUpdated( source, loc_it->second.aggregate, neworient );
             }
 
-            if (request.has_physics()) {
-                String newphy = request.physics();
-                String oldphy = loc_it->second.physics;
-                loc_it->second.physics = newphy;
-                notifyLocalPhysicsUpdated( source, loc_it->second.aggregate, newphy );
-                if (oldphy != newphy) updatePhysicsWorld(source);
+            if (request.has_bounds()) {
+                BoundingSphere3f oldbounds = loc_it->second.bounds;
+                BoundingSphere3f newbounds = request.bounds();
+                loc_it->second.bounds = newbounds;
+                notifyLocalBoundsUpdated( source, loc_it->second.aggregate, newbounds );
+                if (oldbounds != newbounds) updatePhysics = true;
             }
 
+            if (request.has_mesh()) {
+                String oldmesh = loc_it->second.mesh;
+                String newmesh = request.mesh();
+                loc_it->second.mesh = newmesh;
+                notifyLocalMeshUpdated( source, loc_it->second.aggregate, newmesh );
+                if (oldmesh != newmesh) updatePhysics = true;
+            }
+
+            if (request.has_physics()) {
+                String oldphy = loc_it->second.physics;
+                String newphy = request.physics();
+                loc_it->second.physics = newphy;
+                notifyLocalPhysicsUpdated( source, loc_it->second.aggregate, newphy );
+                if (oldphy != newphy) updatePhysics = true;
+            }
+
+            if (updatePhysics)
+                updatePhysicsWorld(source);
         }
         else {
             // Warn about update to non-local object
