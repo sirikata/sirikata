@@ -493,8 +493,14 @@ void Server::handleSessionMessage(const ObjectHostConnectionID& oh_conn_id, Siri
     		UUID entity_id = session_msg.oh_migration().id();
     		String dst_oh_name = session_msg.oh_migration().oh_name();
     		ObjectHostConnectionID oh_conn_id =  mOHNameConnections[dst_oh_name];
-
     		SPACE_LOG(info, "Receive OH migration request of entity "<<entity_id.rawHexData()<<" to OH "<<dst_oh_name<<" through OH connection "<<oh_conn_id.shortID());
+
+    		for(int i=0; i<session_msg.oh_migration().objects_size(); i++) {
+    			UUID obj = session_msg.oh_migration().objects(i);
+                mOHMigratingObjects[obj]=dst_oh_name;
+                SPACE_LOG(info, "Mark object "<<obj.rawHexData()<<" as migrating");
+    		}
+
     		handleEntityOHMigraion(entity_id, oh_conn_id);
     	}
     	else if(session_msg.oh_migration().type()== Sirikata::Protocol::Session::OHMigration::Object){}
@@ -674,8 +680,8 @@ void Server::handleConnectAuthResponse(const ObjectHostConnectionID& oh_conn_id,
 
         	// Allow migrating objects from different OH with the same id to be connected
         	else {
-        		// if this OH is authenticated as the migrating OH. FIXME need to define identifier for OH
-        		if (mOHMigratingObjects[obj_id]==0) {
+        		// if this OH is authenticated as the migrating OH.
+        		if (mOHMigratingObjects[obj_id]==connect_msg.oh_name()) {
         			//SPACE_LOG(info, "Migrating object " << obj_id.rawHexData());
         		}
         		else {
@@ -733,7 +739,8 @@ void Server::finishAddObject(const UUID& obj_id, OSegAddNewStatus status)
         	  SPACE_LOG(info, "Migrating object " << obj_id.rawHexData()<<" disconnected from OH connection "<<old->connID().shortID());
         	  delete old;
           }
-          if(mOHNameConnections.find(sc.conn_msg.oh_name())==mOHNameConnections.end()){
+          if(mOHNameConnections.find(sc.conn_msg.oh_name())==mOHNameConnections.end() || mOHNameConnections[sc.conn_msg.oh_name()]!=sc.conn_id)
+          {
         	  mOHNameConnections[sc.conn_msg.oh_name()]=sc.conn_id;
           	  SPACE_LOG(info, "mOHNameConnections: < "<<sc.conn_msg.oh_name()<<", "<<sc.conn_id.shortID()<<" >");
           }
@@ -785,11 +792,10 @@ void Server::finishAddObject(const UUID& obj_id, OSegAddNewStatus status)
           // Show the new connected object
           if (!isObjectMigrating(obj_id))
         	  SPACE_LOG(info, "New object " << obj_id.rawHexData()<<" connected from OH connection "<<sc.conn_id.shortID());
-          else
+          else {
         	  SPACE_LOG(info, "Migrated object " << obj_id.rawHexData()<<" connected from OH connection "<<sc.conn_id.shortID());
-
-          // FIXME Just for test, mark every new objects as migrating, allow to test other functions.
-          mOHMigratingObjects[obj_id]=0;
+        	  mOHMigratingObjects.erase(obj_id);
+          }
       }
       else
       {
@@ -910,10 +916,8 @@ void Server::handleEntityOHMigraion(const UUID& uuid, const ObjectHostConnection
         UUID::null(), OBJECT_PORT_SESSION,
         serializePBJMessage(oh_migration)
     );
-    // Sent directly via object host connection manager because we don't have an ObjectConnection
-    if (!mObjectHostConnectionManager->send( oh_conn_id, migration_req )) {
-        mContext->mainStrand->post(Duration::seconds(0.05),std::tr1::bind(&Server::retryHandleConnect,this,oh_conn_id,migration_req));
-    }
+    // Sent directly via object host connection manager
+    sendSessionMessageWithRetry(oh_conn_id, migration_req, Duration::seconds(0.05));
 }
 
 

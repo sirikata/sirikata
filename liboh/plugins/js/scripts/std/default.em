@@ -54,7 +54,7 @@ std.simpleStorage.setScript(
                 if (system.self.getIsConnected())
                     std.simpleStorage.writePresence(system.self);
             };
-            storageTimer = std.core.RepeatingTimer(60, storeFunc);
+            storageTimer = std.core.RepeatingTimer(15, storeFunc);
             storeFunc(); // Force immediate storage
             
         };

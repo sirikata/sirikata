@@ -98,9 +98,11 @@ class SIRIKATA_OH_EXPORT ObjectHost
     CreatedEntityMap mCreatedEntities;
     typedef std::tr1::unordered_map<UUID, UUID, UUID::Hasher> PresenceEntityMap;
     PresenceEntityMap mPresenceEntity;
-    typedef std::tr1::unordered_map<UUID, std::set<UUID>, UUID::Hasher> EntityPresenceSet;
+    typedef std::tr1::unordered_map<UUID, ObjectSet, UUID::Hasher> EntityPresenceSet;
     EntityPresenceSet mEntityPresenceSet;
+    ObjectSet mMigratingEntity;
 
+    void initalMigrateEntity(const SpaceID& space, const UUID& uuid, const String& name);
     void migrateEntity(const SpaceID& space, const UUID& uuid, const String& name);
     void migratAllEntity(const SpaceID& space, const String& name);
 

@@ -271,7 +271,7 @@ private:
         }
     };
 
-    typedef std::map<UUID, ShortObjectHostConnectionID> OHMigratingObjects; // <object_id, Host ID that is migrating to>
+    typedef std::map<UUID, String> OHMigratingObjects; // <object_id, Host Name that is migrating to>
     OHMigratingObjects mOHMigratingObjects;
 
     void handleEntityOHMigraion(const UUID& uuid, const ObjectHostConnectionID& oh_conn_id);
