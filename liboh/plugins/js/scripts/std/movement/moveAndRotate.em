@@ -184,7 +184,8 @@ std.movement.MoveAndRotate = system.Class.extend(
 
             // Then do callbacks
             if (this._updatecb &&
-                (this._update_type == this.UPDATE_TYPE_ALL ||
+                (is_first ||
+                 this._update_type == this.UPDATE_TYPE_ALL ||
                  (this._update_type == this.UPDATE_TYPE_MOVEMENT && this._moving) ||
                  (this._update_type == this.UPDATE_TYPE_ROTATION && this._rotating))) {
                 this._updatecb();

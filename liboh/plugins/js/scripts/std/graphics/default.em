@@ -46,6 +46,7 @@ system.require('std/graphics/presenceList.em');
 system.require('std/graphics/setMesh.em');
 system.require('std/graphics/axes.em');
 system.require('std/graphics/flatlandViewer.em');
+system.require('std/graphics/characterAnimation.em');
 
 (
 function() {
@@ -117,7 +118,8 @@ function() {
         if (! this._alreadyInitialized)
             this._simulator.hideLoadScreen();
 
-        this._moverot = new std.movement.MoveAndRotate(this._pres, std.core.bind(this.updateCameraOffset, this), 'rotation');
+        this._moverot = new std.movement.MoveAndRotate(this._pres, std.core.bind(this.updateCameraAndAnimation, this), 'rotation');
+        this._characterAnimation = new std.graphics.CharacterAnimation(this);
 
         this._draggers = {
             move: new std.graphics.MoveDragHandler(this._simulator),
@@ -265,6 +267,10 @@ function() {
             cb(this);
     };
 
+    std.graphics.DefaultGraphics.prototype.presence = function() {
+        return this._pres;
+    };
+
     /** @function */
     std.graphics.DefaultGraphics.prototype.simulator = function() {
         return this._simulator;
@@ -369,11 +375,20 @@ function() {
     };
 
     /** @function */
-    std.graphics.DefaultGraphics.prototype.updateCameraOffset = function(evt) {
+    std.graphics.DefaultGraphics.prototype.updateCameraOffset = function() {
         if (this._camera.mode() == 'third') {
             var orient = this._pres.getOrientation();
-            this._camera.setOffset(orient.mul(<0, 1.5, 4>));
+            this._camera.setOffset(orient.mul(<0, 1.5, 6>));
         }
+    };
+
+    std.graphics.DefaultGraphics.prototype.updateAnimation = function() {
+        this._characterAnimation.update();
+    };
+
+    std.graphics.DefaultGraphics.prototype.updateCameraAndAnimation = function() {
+        this.updateCameraOffset();
+        this.updateAnimation();
     };
 
     /** @function */
