@@ -997,7 +997,6 @@ void OgreRenderer::parseMesh(
     const Transfer::RemoteFileMetadata& metadata, const Transfer::Fingerprint& fp,
     Transfer::DenseDataPtr data, ParseMeshCallback cb)
 {
-    std::cout<<"\n\nGot into parseMesh\n\n";
     mParsingIOService->post(
         std::tr1::bind(&OgreRenderer::parseMeshWork, this,
             livenessToken(),metadata, fp, data, cb)
@@ -1010,16 +1009,8 @@ void OgreRenderer::parseMeshWork(
     const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data,
     ParseMeshCallback cb)
 {
-    std::cout<<"\n\nGot into parseMeshWork\n\n";
-    
-    if (! livenessToken())
-        return;
-
-    std::cout<<"\n\nPassed first check\n";
-    
     if (stopped)
         return;
-    std::cout<<"\n\nGot passed checks\n\n";
     
     Mesh::VisualPtr parsed = parseMeshWorkSync(metadata, fp, data);
     simStrand->post(std::tr1::bind(cb,parsed));
