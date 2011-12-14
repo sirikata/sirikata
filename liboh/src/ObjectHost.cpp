@@ -65,15 +65,20 @@ ObjectHost::ObjectHost(ObjectHostContext* ctx, Network::IOService *ioServ, const
     OptionValue *protocolOptions;
     OptionValue *scriptManagers;
     OptionValue *simOptions;
+    OptionValue *nameOptions;
+    String default_name = UUID::random().rawHexData();
     InitializeClassOptions ico("objecthost",this,
                            protocolOptions=new OptionValue("protocols","",OptionValueType<std::map<std::string,std::string> >(),"passes options into protocol specific libraries like \"tcpsst:{--send-buffer-size=1440 --parallel-sockets=1},udp:{--send-buffer-size=1500}\""),
                            scriptManagers=new OptionValue("scriptManagers","simplecamera:{},js:{}",OptionValueType<std::map<std::string,std::string> >(),"Instantiates script managers with specified options like \"simplecamera:{},js:{--import-paths=/path/to/scripts}\""),
                            simOptions=new OptionValue("simOptions","ogregraphics:{}",OptionValueType<std::map<std::string,std::string> >(),"Passes initialization strings to simulations, by name"),
-
+                           nameOptions=new OptionValue("name", default_name, Sirikata::OptionValueType<String>(), "Object Host name"),
                            NULL);
 
     OptionSet* oh_options = OptionSet::getOptions("objecthost",this);
     oh_options->parse(options);
+
+    mName=oh_options->referenceOption("name")->as<String>();
+
     mSimOptions=simOptions->as<std::map<std::string,std::string> > ();
     {
         std::map<std::string,std::string> *options=&protocolOptions->as<std::map<std::string,std::string> > ();
@@ -115,6 +120,8 @@ HostedObjectPtr ObjectHost::createObject(const String& script_type, const String
 
 HostedObjectPtr ObjectHost::createObject(const UUID &uuid, const String& script_type, const String& script_opts, const String& script_contents) {
     mActiveHostedObjects++;
+    mCreatedEntities[uuid]=script_contents;
+
     HostedObjectPtr ho = HostedObject::construct<HostedObject>(mContext, this, uuid);
     ho->start();
     // NOTE: This condition has been carefully thought through. Since you can
@@ -142,7 +149,8 @@ void ObjectHost::addServerIDMap(const SpaceID& space_id, ServerIDMap* sidmap) {
         std::tr1::bind(&ObjectHost::handleObjectConnected, this, _1, _2),
         std::tr1::bind(&ObjectHost::handleObjectMigrated, this, _1, _2, _3),
         std::tr1::bind(&ObjectHost::handleObjectMessage, this, _1, space_id, _2),
-        std::tr1::bind(&ObjectHost::handleObjectDisconnected, this, _1, _2)
+        std::tr1::bind(&ObjectHost::handleObjectDisconnected, this, _1, _2),
+        std::tr1::bind(&ObjectHost::handleObjectOHMigration, this, _1, _2, _3, _4)
     );
     smgr->registerDefaultOHDPHandler(
         std::tr1::bind(&ObjectHost::handleDefaultOHDPMessageHandler, this, _1, _2, _3)
@@ -150,6 +158,16 @@ void ObjectHost::addServerIDMap(const SpaceID& space_id, ServerIDMap* sidmap) {
     smgr->addListener(static_cast<SpaceNodeSessionListener*>(this));
     mSessionManagers[space_id] = smgr;
     smgr->start();
+
+    if(mName=="oh1"){
+        SILOG(oh,info,"sleep, wait migration");
+
+        mContext->mainStrand->post(
+        		Duration::seconds(10),
+        		std::tr1::bind(&ObjectHost::migratAllEntity, this, getDefaultSpace(), "oh2")
+        );
+    }
+
 }
 
 void ObjectHost::handleObjectConnected(const SpaceObjectReference& sporef_objid, ServerID server) {
@@ -164,6 +182,10 @@ void ObjectHost::handleObjectDisconnected(const SpaceObjectReference& sporef_obj
     ObjectNodeSessionProvider::notify(&ObjectNodeSessionListener::onObjectNodeSession, sporef_objid.space(), sporef_objid.object(), OHDP::NodeID::null());
 }
 
+void ObjectHost::handleObjectOHMigration(const UUID &_id, const String& script_type, const String& script_opts, const String& script_contents) {
+	HostedObjectPtr obj = createObject(_id, script_type, script_opts, script_contents);
+}
+
 //use this function to request the object host to send a disconnect message
 //to space for object
 void ObjectHost::disconnectObject(const SpaceID& space, const ObjectReference& oref)
@@ -175,19 +197,22 @@ void ObjectHost::disconnectObject(const SpaceID& space, const ObjectReference& o
     iter->second->disconnect(SpaceObjectReference(space,oref));
 }
 
-//Feng
-void ObjectHost::initialTransfer(const SpaceID& space)
+void ObjectHost::migrateEntity(const SpaceID& space, const UUID& uuid, const String& name)
 {
     SpaceSessionManagerMap::iterator iter = mSessionManagers.find(space);
     if (iter == mSessionManagers.end())
-      return;
-
-    for (hosted_objects_set::iterator it = mTransObjects.begin();
-         it != mTransObjects.end(); ++it) {
-        ObjectReference oref = ObjectReference(*it);
-        iter->second->transfer(SpaceObjectReference(space, oref));
+    	return;
+    if(!mEntityPresenceSet[uuid].empty()){
+    	ObjectReference oref = ObjectReference(*mEntityPresenceSet[uuid].begin());
+    	iter->second->migrateEntity(SpaceObjectReference(space, oref), uuid, name);
     }
+}
 
+void ObjectHost::migratAllEntity(const SpaceID& space, const String& name)
+{
+	for(CreatedEntityMap::iterator it = mCreatedEntities.begin(); it!=mCreatedEntities.end(); ++it){
+		migrateEntity(space, it->first, name);
+	}
 }
 
 void ObjectHost::handleObjectMessage(const SpaceObjectReference& sporef_internalID, const SpaceID& space, Sirikata::Protocol::Object::ObjectMessage* msg) {
@@ -239,7 +264,7 @@ bool ObjectHost::connect(
 
     String filtered_query = mQueryProcessor->connectRequest(ho, sporef, query);
     return sm->connect(
-        sporef, loc, orient, bnds, mesh, phy, filtered_query,
+        sporef, loc, orient, bnds, mesh, phy, filtered_query,mName,
         std::tr1::bind(&ObjectHost::wrappedConnectedCallback, this, HostedObjectWPtr(ho), _1, _2, _3, connected_cb),
         migrated_cb,
         std::tr1::bind(&ObjectHost::wrappedStreamCreatedCallback, this, HostedObjectWPtr(ho), _1, _2, stream_created_cb),
@@ -350,6 +375,9 @@ void ObjectHost::registerHostedObject(const SpaceObjectReference &sporef_uuid, c
         SILOG(oh,error,"Two objects having the same internal name in the mHostedObjects map on connect"<<sporef_uuid.toString());
     }
     mHostedObjects[sporef_uuid]=obj;
+
+    mPresenceEntity[sporef_uuid.object().getAsUUID()]=obj->id();
+    mEntityPresenceSet[obj->id()].insert(sporef_uuid.object().getAsUUID());
 }
 void ObjectHost::unregisterHostedObject(const SpaceObjectReference& sporef_uuid, HostedObject* key_obj)
 {

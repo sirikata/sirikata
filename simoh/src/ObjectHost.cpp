@@ -65,7 +65,8 @@ ObjectHost::ObjectHost(ObjectHostContext* ctx, Trace::Trace* trace, ServerIDMap*
        std::tr1::bind(&ObjectHost::handleObjectConnected, this, _1, _2),
        std::tr1::bind(&ObjectHost::handleObjectMigrated, this, _1, _2, _3),
        std::tr1::bind(&ObjectHost::handleObjectMessage, this, _1, _2),
-       std::tr1::bind(&ObjectHost::handleObjectDisconnected, this, _1, _2)
+       std::tr1::bind(&ObjectHost::handleObjectDisconnected, this, _1, _2),
+       std::tr1::bind(&ObjectHost::handleObjectOHMigration, this, _1, _2, _3, _4)
    )
 {
     mPingId=0;
@@ -122,7 +123,7 @@ void ObjectHost::connect(
     }
 
     mSessionManager.connect(
-        sporef, init_loc, init_orient, init_bounds, "", "", query,
+        sporef, init_loc, init_orient, init_bounds, "", "", query,"",
 	std::tr1::bind(&ObjectHost::dispatchConnectedCallback, this, _1, _2, _3, connect_cb),
 	migrate_cb, stream_created_cb, disconnected_cb
     );
@@ -146,7 +147,7 @@ void ObjectHost::connect(
     SpaceObjectReference sporef(SpaceID::null(),ObjectReference(obj->uuid()));
 
     mSessionManager.connect(
-        sporef, init_loc, init_orient, init_bounds, "", "", "",
+        sporef, init_loc, init_orient, init_bounds, "", "", "", "",
 	std::tr1::bind(&ObjectHost::dispatchConnectedCallback, this, _1, _2, _3, connect_cb),
         migrate_cb, stream_created_cb, disconnected_cb
     );
@@ -258,6 +259,9 @@ void ObjectHost::handleObjectMessage(const SpaceObjectReference& sporef_internal
 
 void ObjectHost::handleObjectDisconnected(const SpaceObjectReference& sporef_objid, Disconnect::Code) {
     notify(&ObjectHostListener::objectHostDisconnectedObject, this, mObjects[sporef_objid.object().getAsUUID()]);
+}
+
+void ObjectHost::handleObjectOHMigration(const UUID &_id, const String& script_type, const String& script_opts, const String& script_contents) {
 }
 
 bool ObjectHost::registerService(uint64 port, const ObjectMessageCallback&cb) {

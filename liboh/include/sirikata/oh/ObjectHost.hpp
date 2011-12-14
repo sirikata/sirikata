@@ -92,6 +92,18 @@ class SIRIKATA_OH_EXPORT ObjectHost
     uint32 mActiveHostedObjects;
     HostedObjectMap mHostedObjects;
 
+    String mName;
+    typedef std::set<UUID> ObjectSet;
+    typedef std::tr1::unordered_map<UUID, String, UUID::Hasher> CreatedEntityMap;
+    CreatedEntityMap mCreatedEntities;
+    typedef std::tr1::unordered_map<UUID, UUID, UUID::Hasher> PresenceEntityMap;
+    PresenceEntityMap mPresenceEntity;
+    typedef std::tr1::unordered_map<UUID, std::set<UUID>, UUID::Hasher> EntityPresenceSet;
+    EntityPresenceSet mEntityPresenceSet;
+
+    void migrateEntity(const SpaceID& space, const UUID& uuid, const String& name);
+    void migratAllEntity(const SpaceID& space, const String& name);
+
     PluginManager *mScriptPlugins;
     typedef std::tr1::unordered_map<String, ObjectScriptManager*> ScriptManagerMap;
     ScriptManagerMap mScriptManagers;
@@ -115,10 +127,6 @@ public:
     //use this function to request the object host to send a disconnect message
     //to space for object
     void disconnectObject(const SpaceID& space, const ObjectReference& oref);
-
-    typedef std::set<UUID> hosted_objects_set;
-    hosted_objects_set mTransObjects; 
-    void initialTransfer(const SpaceID& space);
 
     typedef std::tr1::function<void(const SpaceID&, const ObjectReference&, ServerID)> SessionCallback;
     // Callback indicating that a connection to the server was made and it is available for sessions
@@ -285,6 +293,7 @@ public:
     void handleObjectMigrated(const SpaceObjectReference& sporef_internalID, ServerID from, ServerID to);
     void handleObjectMessage(const SpaceObjectReference& sporef_internalID, const SpaceID& space, Sirikata::Protocol::Object::ObjectMessage* msg);
     void handleObjectDisconnected(const SpaceObjectReference& sporef_internalID, Disconnect::Code);
+    void handleObjectOHMigration(const UUID &_id, const String& script_type, const String& script_opts, const String& script_contents);
 
     // Wrappers so we can forward events to interested parties. For Connected
     // callback, also allows us to convert ConnectionInfo.

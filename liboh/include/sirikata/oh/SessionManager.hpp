@@ -107,6 +107,8 @@ class SIRIKATA_OH_EXPORT SessionManager
     // reason.
     typedef std::tr1::function<void(const SpaceObjectReference&, Disconnect::Code)> ObjectDisconnectedCallback;
 
+    typedef std::tr1::function<void(const UUID&, const String&, const String&, const String&)> ObjectOHMigrationCallback;
+
     // SST stream related typedefs
     typedef SST::Stream<SpaceObjectReference> SSTStream;
     typedef SSTStream::Ptr SSTStreamPtr;
@@ -116,7 +118,7 @@ class SIRIKATA_OH_EXPORT SessionManager
     typedef OHDPSST::Endpoint OHSSTEndpoint;
 
 
-    SessionManager(ObjectHostContext* ctx, const SpaceID& space, ServerIDMap* sidmap, ObjectConnectedCallback, ObjectMigratedCallback, ObjectMessageHandlerCallback, ObjectDisconnectedCallback);
+    SessionManager(ObjectHostContext* ctx, const SpaceID& space, ServerIDMap* sidmap, ObjectConnectedCallback, ObjectMigratedCallback, ObjectMessageHandlerCallback, ObjectDisconnectedCallback, ObjectOHMigrationCallback);
     ~SessionManager();
 
     // NOTE: The public interface is only safe to access from the main strand.
@@ -131,12 +133,14 @@ class SIRIKATA_OH_EXPORT SessionManager
         const BoundingSphere3f& init_bounds,
         const String& init_mesh, const String& init_phy,
         const String& init_query,
+        const String& init_oh_name,
         ConnectedCallback connect_cb, MigratedCallback migrate_cb,
         StreamCreatedCallback stream_cb, DisconnectedCallback disconnected_cb
     );
     /** Disconnect the object from the space. */
     void disconnect(const SpaceObjectReference& id);
     void transfer(const SpaceObjectReference& id); //Feng
+    void migrateEntity(const SpaceObjectReference& id, const UUID uuid, const String name);
 
     /** Get offset of server time from client time for the given space. Should
      * only be called by objects with an active connection to that space.
@@ -284,6 +288,7 @@ private:
     ObjectMigratedCallback mObjectMigratedCallback;
     ObjectMessageHandlerCallback mObjectMessageHandlerCallback;
     ObjectDisconnectedCallback mObjectDisconnectedCallback;
+    ObjectOHMigrationCallback mObjectOHMigrationCallback;
 
     // Only main strand accesses and manipulates the map, although other strand
     // may access the SpaceNodeConnection*'s.
@@ -299,6 +304,7 @@ private:
         String mesh;
         String physics;
         String query;
+        String name;
     };
     typedef std::tr1::function<void(const SpaceID&, const ObjectReference&, ServerID, const ConnectingInfo& ci)> InternalConnectedCallback;
 

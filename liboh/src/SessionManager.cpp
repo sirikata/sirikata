@@ -300,7 +300,7 @@ void SessionManager::ObjectConnections::invokeDeferredCallbacks() {
 SessionManager::SessionManager(
     ObjectHostContext* ctx, const SpaceID& space, ServerIDMap* sidmap,
     ObjectConnectedCallback conn_cb, ObjectMigratedCallback mig_cb,
-    ObjectMessageHandlerCallback msg_cb, ObjectDisconnectedCallback disconn_cb
+    ObjectMessageHandlerCallback msg_cb, ObjectDisconnectedCallback disconn_cb, ObjectOHMigrationCallback ohmig_cb
 )
  : PollingService(ctx->mainStrand, Duration::seconds(1.f), ctx, "Space Server"),
    OHDP::DelegateService( std::tr1::bind(&SessionManager::createDelegateOHDPPort, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2) ),
@@ -312,6 +312,7 @@ SessionManager::SessionManager(
    mObjectMigratedCallback(mig_cb),
    mObjectMessageHandlerCallback(msg_cb),
    mObjectDisconnectedCallback(disconn_cb),
+   mObjectOHMigrationCallback(ohmig_cb),
    mObjectConnections(this),
    mTimeSyncClient(NULL),
    mShuttingDown(false)
@@ -386,7 +387,7 @@ void SessionManager::poll() {
 bool SessionManager::connect(
     const SpaceObjectReference& sporef_objid,
     const TimedMotionVector3f& init_loc, const TimedMotionQuaternion& init_orient, const BoundingSphere3f& init_bounds,
-    const String& init_mesh, const String& init_phy, const String& init_query,
+    const String& init_mesh, const String& init_phy, const String& init_query,const String& init_oh_name,
     ConnectedCallback connect_cb, MigratedCallback migrate_cb,
     StreamCreatedCallback stream_created_cb, DisconnectedCallback disconn_cb
 )
@@ -413,6 +414,7 @@ bool SessionManager::connect(
     ci.query = init_query;
     ci.mesh = init_mesh;
     ci.physics = init_phy;
+    ci.name = init_oh_name;
 
 
     // connect_cb gets wrapped so we can start some automatic steps (initial
@@ -509,6 +511,7 @@ void SessionManager::openConnectionStartSession(const SpaceObjectReference& spor
     fillVersionInfo(connect_msg.mutable_version(), mContext);
     connect_msg.set_type(Sirikata::Protocol::Session::Connect::Fresh);
     connect_msg.set_object(sporef_uuid.object().getAsUUID());
+    connect_msg.set_oh_name(ci.name);
     Sirikata::Protocol::ITimedMotionVector loc = connect_msg.mutable_loc();
     loc.set_t( ci.loc.updateTime() );
     loc.set_position( ci.loc.position() );
@@ -714,17 +717,17 @@ void SessionManager::sendRetryingMessage(const SpaceObjectReference& sporef_src,
     }
 }
 
-// Feng
-void SessionManager::transfer(const SpaceObjectReference& sporef_objid) {
+void SessionManager::migrateEntity(const SpaceObjectReference& sporef_objid, const UUID uuid, const String name) {
 	Sirikata::SerializationCheck::Scoped sc(&mSerialization);
-  
+
 	ServerID connected_to = mObjectConnections.getConnectedServer(sporef_objid);
 	if (connected_to == NullServerID) return;
 
 	Sirikata::Protocol::Session::Container session_msg;
-	Sirikata::Protocol::Session::ITransfer transfer_msg = session_msg.mutable_transfer();
-	transfer_msg.set_object(sporef_objid.object().getAsUUID());
-	transfer_msg.set_reason("Unbalance");
+	Sirikata::Protocol::Session::IOHMigration oh_migration_msg = session_msg.mutable_oh_migration();
+	oh_migration_msg.set_type(Sirikata::Protocol::Session::OHMigration::Entity);
+	oh_migration_msg.set_id(uuid);
+	oh_migration_msg.set_oh_name(name);
 
 	sendRetryingMessage(
 			sporef_objid, OBJECT_PORT_SESSION,
@@ -732,9 +735,7 @@ void SessionManager::transfer(const SpaceObjectReference& sporef_objid) {
 			serializePBJMessage(session_msg),
 			connected_to, mContext->mainStrand, Duration::seconds(0.05));
 
-  // receive ack from the sapce server and disconnect
-  // I'm not sure how it works.
-
+	SESSION_LOG(info,"Intiated OH Migration of entity "<<uuid.rawHexData()<<" to OH with name "<<name);
 }
 
 void SessionManager::getAnySpaceConnection(SpaceNodeConnection::GotSpaceConnectionCallback cb) {
@@ -1046,12 +1047,6 @@ void SessionManager::handleSessionMessage(Sirikata::Protocol::Object::ObjectMess
 					mContext->mainStrand,
 					Duration::seconds(0.05)
 					);
-
-	    	// Feng
-	    	//sleep(15);
-	    	//SESSION_LOG(info,"Start a transfer requirest to " << mSpace);
-	    	//transfer(sporef_obj);
-	    	//SESSION_LOG(info,"End a transfer requirest to " << mSpace);
         }
         else if (conn_resp.response() == Sirikata::Protocol::Session::ConnectResponse::Redirect) {
             ServerID redirected = conn_resp.redirect();
@@ -1085,11 +1080,16 @@ void SessionManager::handleSessionMessage(Sirikata::Protocol::Object::ObjectMess
     	}
     }
 
-    //Feng
-    if (session_msg.has_oh_migration_req()) {
-        Sirikata::Protocol::Session::OHMigration init_oh_migr = session_msg.oh_migration_req();
-        SESSION_LOG(info,"Received oh migration request of " << init_oh_migr.object() << " to this host");
-        // handle_migrate(sporef_obj, init_oh_migr.object());
+    if (session_msg.has_oh_migration()) {
+        Sirikata::Protocol::Session::OHMigration oh_migration = session_msg.oh_migration();
+        if(oh_migration.type()==Sirikata::Protocol::Session::OHMigration::Object)
+        	SESSION_LOG(info,"Received oh migration request of " << oh_migration.id() << " to this host");
+        else if(oh_migration.type()==Sirikata::Protocol::Session::OHMigration::Entity){
+        	UUID entity_id = oh_migration.id();
+        	SESSION_LOG(info,"Receive OH migration request of entity "<<entity_id.rawHexData());
+        	// FIXME need to pass these arguments from object host
+        	mObjectOHMigrationCallback(entity_id,"js","","system.require('std/shim/restore/simpleStorage.em');");
+        }
     }
 
     delete msg;

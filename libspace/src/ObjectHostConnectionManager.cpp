@@ -278,22 +278,4 @@ void ObjectHostConnectionManager::closeAllConnections() {
         destroyConnection(*(mConnections.begin()));
 }
 
-// Feng
-ObjectHostConnectionID 
-ObjectHostConnectionManager::chooseOHMigrationDest(ObjectHostConnectionID& conn) {
-    
-    ObjectHostConnectionSet::iterator it;
-    for (it = mConnections.begin(); it != mConnections.end(); it++) {
-      if (conn_id(*it) != conn) {
-        break; 
-      }
-    }
-
-    // this can be changed to an error report or diagnose message
-    assert((conn_id(*it) != conn) &&
-           (it != mConnections.end()) && 
-            "nowhere to migrate!"); 
-    return conn_id(*it);
-}
-
 } // namespace Sirikata

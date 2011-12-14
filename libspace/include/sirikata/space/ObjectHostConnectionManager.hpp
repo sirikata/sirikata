@@ -136,9 +136,6 @@ private:
     void insertConnection(ObjectHostConnection* conn);
     void destroyConnection(ObjectHostConnection* conn);
     void closeAllConnections();
-public:
-    //Feng
-    ObjectHostConnectionID chooseOHMigrationDest(ObjectHostConnectionID&);
 
 };
 
