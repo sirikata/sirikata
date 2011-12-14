@@ -174,6 +174,7 @@ private:
 
     Transfer::TransferMediator *mTransferMediator;
     Transfer::TransferPoolPtr mTransferPool;
+    Network::IOStrand* mParsingStrand;
 }; // class BulletPhysicsService
 
 } // namespace Sirikata

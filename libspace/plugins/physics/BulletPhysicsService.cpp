@@ -44,6 +44,7 @@
 #include <boost/property_tree/json_parser.hpp>
 
 #include <sirikata/core/transfer/AggregatedTransferPool.hpp>
+#include <sirikata/core/network/IOStrandImpl.hpp>
 
 namespace Sirikata {
 
@@ -55,7 +56,8 @@ void bulletPhysicsInternalTickCallback(btDynamicsWorld *world, btScalar timeStep
 }
 
 BulletPhysicsService::BulletPhysicsService(SpaceContext* ctx, LocationUpdatePolicy* update_policy)
- : LocationService(ctx, update_policy)
+ : LocationService(ctx, update_policy),
+   mParsingStrand( ctx->ioService->createStrand() )
 {
 
     mBroadphase = new btDbvtBroadphase();
@@ -106,8 +108,10 @@ BulletPhysicsService::~BulletPhysicsService() {
     delete dispatcher;
     delete collisionConfiguration;
     delete mBroadphase;
+
     delete mModelFilter;
     delete mModelsSystem;
+    delete mParsingStrand;
 
     BULLETLOG(detailed,"Service Unloaded");
 }
@@ -260,7 +264,12 @@ void BulletPhysicsService::setOrientation(const UUID& uuid, const TimedMotionQua
 void BulletPhysicsService::getMesh(const std::string meshURI, const UUID uuid, MeshdataParsedCallback cb) {
     Transfer::ResourceDownloadTaskPtr dl = Transfer::ResourceDownloadTask::construct(
         Transfer::URI(meshURI), mTransferPool, 1.0,
-        std::tr1::bind(&BulletPhysicsService::getMeshCallback, this, _1, _2, cb)
+        // Ideally parsing wouldn't need to be serialized, but something about
+        // getting callbacks from multiple threads and parsing simultaneously is
+        // causing a crash
+        mParsingStrand->wrap(
+            std::tr1::bind(&BulletPhysicsService::getMeshCallback, this, _1, _2, cb)
+        )
     );
     mMeshDownloads[uuid] = dl;
     dl->start();
