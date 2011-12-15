@@ -32,16 +32,8 @@
 
 #include <sirikata/core/util/Platform.hpp>
 #include "DistributedCoordinateSegmentation.hpp"
+#include <sirikata/core/network/IOStrandImpl.hpp>
 
-#include <algorithm>
-#include <boost/tokenizer.hpp>
-#include <boost/bind.hpp>
-
-
-#include <sirikata/core/options/CommonOptions.hpp>
-#include <sirikata/core/network/Message.hpp>
-#include <sirikata/core/util/Hash.hpp>
-#include "WorldPopulationBSPTree.hpp"
 #include <sirikata/core/network/ServerIDMap.hpp>
 
 #if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
@@ -55,15 +47,6 @@ T clamp(T val, T minval, T maxval) {
   if (val < minval) return minval;
   if (val > maxval) return maxval;
   return val;
-}
-
-void memdump(uint8* buffer, int len) {
-  for (int i=0; i<len; i++) {
-    uint8* val = buffer+i;
-    printf("at addr %p, val=%d\n",  val, *val);
-  }
-  printf("\n");
-  fflush(stdout);
 }
 
 bool isPowerOfTwo(double n) {
@@ -100,11 +83,11 @@ String sha1(void* data, size_t len) {
 static String sha1_bbox(const BoundingBox3f& bb) {
     char buf[24];
     *((float32*)buf) = bb.min().x;
-    *((float32*)buf+4) = bb.min().y;
-    *((float32*)buf+8) = bb.min().z;
-    *((float32*)buf+12) = bb.max().x;
-    *((float32*)buf+16) = bb.max().y;
-    *((float32*)buf+20) = bb.max().z;
+    *((float32*)(buf+4)) = bb.min().y;
+    *((float32*)(buf+8)) = bb.min().z;
+    *((float32*)(buf+12)) = bb.max().x;
+    *((float32*)(buf+16)) = bb.max().y;
+    *((float32*)(buf+20)) = bb.max().z;
     return sha1(buf, 24);
 }
 
@@ -182,6 +165,17 @@ void DistributedCoordinateSegmentation::subdivideTopLevelRegion(SegmentedRegion*
   }
 }
 
+void DistributedCoordinateSegmentation::handleSelfLookup(Address4 my_addr) {
+  uint16 cseg_server_ll_port = my_addr.getPort()+10000;
+  mLLTreeAcceptor = boost::shared_ptr<tcp::acceptor>(new tcp::acceptor(mLLIOService,tcp::endpoint(tcp::v4(), cseg_server_ll_port)));
+
+  startAcceptingLLRequests();
+
+  Thread thrd(boost::bind(&DistributedCoordinateSegmentation::ioServicingLoop, this));
+  Thread thrd2(boost::bind(&DistributedCoordinateSegmentation::llIOServicingLoop, this));
+}
+
+
 DistributedCoordinateSegmentation::DistributedCoordinateSegmentation(CSegContext* ctx, const BoundingBox3f& region,
                                                                      const Vector3ui32& perdim, int nservers, ServerIDMap * sidmap)
  : PollingService(ctx->mainStrand, Duration::milliseconds((int64)1000)),
@@ -215,19 +209,17 @@ DistributedCoordinateSegmentation::DistributedCoordinateSegmentation(CSegContext
 
 
   if ((int)ctx->id() <= mUpperTreeCSEGServers) {
-      mAcceptor = boost::shared_ptr<tcp::acceptor>(new tcp::acceptor(mIOService,tcp::endpoint(tcp::v4(), atoi( GetOptionValue<String>("cseg-service-tcp-port").c_str() ))));
+      mAcceptor = boost::shared_ptr<tcp::acceptor>(
+                    new tcp::acceptor(mIOService,
+                      tcp::endpoint(tcp::v4(), atoi( GetOptionValue<String>("cseg-service-tcp-port").c_str() ))));
     startAccepting();
   }
 
-  Address4 addy = sidmap->lookupInternal(ctx->id());
-  uint16 cseg_server_ll_port = addy.getPort()+10000;
-  mLLTreeAcceptor = boost::shared_ptr<tcp::acceptor>(new tcp::acceptor(mLLIOService,tcp::endpoint(tcp::v4(), cseg_server_ll_port)));
-
-  startAcceptingLLRequests();
-
-
-  Thread thrd(boost::bind(&DistributedCoordinateSegmentation::ioServicingLoop, this));
-  Thread thrd2(boost::bind(&DistributedCoordinateSegmentation::llIOServicingLoop, this));
+  sidmap->lookupInternal(ctx->id(), 
+                         ctx->mainStrand->wrap(
+                         std::tr1::bind(&DistributedCoordinateSegmentation::handleSelfLookup, this, 
+                                        std::tr1::placeholders::_1)
+      ) );
 }
 
 DistributedCoordinateSegmentation::~DistributedCoordinateSegmentation() {
@@ -595,7 +587,6 @@ void DistributedCoordinateSegmentation::traverseAndStoreTree(SegmentedRegion* re
   }
 }
 
-
 void DistributedCoordinateSegmentation::accept_handler()
 {
   uint8* asyncBufferArray = new uint8[1];
@@ -671,6 +662,8 @@ void DistributedCoordinateSegmentation::asyncRead(boost::shared_ptr<tcp::socket>
     SegmentationChangeListener sl;
     memcpy(sl.host, csegMessage.segmentation_listen_message().host().c_str(), 255);
     sl.port = csegMessage.segmentation_listen_message().port();
+
+    std::cout << "Listening: " << sl.host << " : " << sl.port <<"\n";
     mSpacePeers.push_back(sl);
   }
   else if (csegMessage.has_load_report_message()) {
@@ -897,6 +890,7 @@ void DistributedCoordinateSegmentation::generateHierarchicalTrees(SegmentedRegio
       }
 
       String bbox_hash = sha1_bbox(segRegion->mBoundingBox);
+
       mLowerLevelTrees[bbox_hash] = segRegion;
     }
 
@@ -926,6 +920,15 @@ void DistributedCoordinateSegmentation::generateHierarchicalTrees(SegmentedRegio
   generateHierarchicalTrees(region->mLeftChild, depth+1, numLLTreesSoFar);
   generateHierarchicalTrees(region->mRightChild, depth+1, numLLTreesSoFar);
 }
+/*
+void DistributedCoordinateSegmentation::asyncGetSocketToCSEGServers(int curIdx, std::vector<ServerID> serverIDList) {
+  mSidMap->lookupInternal(serverIDList[curIdx], 
+                          ctx->mainStrand->wrap(
+                            std::tr1::bind(&DistributedCoordinateSegmentation::asyncGetSocketToCSEGServers, this, 
+                                           curIdx+1, serverIDList, std::tr1::placeholders::_1)
+                         ) );
+}
+*/
 
 SocketContainer DistributedCoordinateSegmentation::getSocketToCSEGServer(ServerID server_id) {
   // get upgradable access
@@ -947,7 +950,7 @@ SocketContainer DistributedCoordinateSegmentation::getSocketToCSEGServer(ServerI
 
   //Get a new socket
   tcp::resolver resolver(mIOService);
-
+  
   Address4 addy = mSidMap->lookupInternal(server_id);
   struct in_addr ip_addr;
   ip_addr.s_addr = addy.ip;
@@ -995,6 +998,8 @@ SocketContainer DistributedCoordinateSegmentation::getSocketToCSEGServer(ServerI
 
   return socketContainer;
 }
+
+
 
 void DistributedCoordinateSegmentation::callLowerLevelCSEGServersForLookupBoundingBoxes(
                                         const BoundingBox3f& lookedUpBbox,
