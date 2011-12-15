@@ -664,7 +664,7 @@ void OgreSystem::iOnDisconnected(
     }
 
     while(!initialized){}
-    
+
     mViewer->removeListener((SessionEventListener*)this);
     SILOG(ogre,info,"Got disconnected from space server.");
     mMouseHandler->alert("Disconnected", "Lost connection to space server...");
@@ -764,8 +764,6 @@ boost::any OgreSystem::invoke(vector<boost::any>& params)
     else
         return OgreRenderer::invoke(params);
 
-//lkjs;
-    
     return boost::any();
 }
 

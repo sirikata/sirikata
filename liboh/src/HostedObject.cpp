@@ -585,6 +585,10 @@ void HostedObject::handleStreamCreated(const HostedObjectWPtr& weakSelf, const S
     if (!self)
         return;
 
+    lkjs;
+    lock here;
+    lkjs;
+    
     HO_LOG(detailed,"Notifying of connected object " << spaceobj.object() << " to space " << spaceobj.space());
     if (after == SessionManager::Connected)
         self->notify(&SessionEventListener::onConnected, self, spaceobj, token);
@@ -630,6 +634,8 @@ void HostedObject::handleDisconnected(const HostedObjectWPtr& weakSelf, const Sp
         return;
     }
 
+    lkjs;
+    lock notify;
     self->notify(&SessionEventListener::onDisconnected, self, spaceobj);
 
     // Only invoke disconnectFromSpace if we weren't already aware of the
