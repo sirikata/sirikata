@@ -1,0 +1,7 @@
+Format: http://dep.debian.net/deps/dep5
+Upstream-Name: sirikata
+Source: http://sirikata.com/
+
+Files: *
+Copyright: 2008, the Sirikata developers
+License: BSD

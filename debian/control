@@ -1,0 +1,22 @@
+Source: sirikata
+Section: devel
+Priority: extra
+Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+XSBC-Original-Maintainer: Jeff Terrace <jterrace@gmail.com>
+Build-Depends: debhelper (>= 8.0.0), git-core, cmake, sed, unzip, zip, automake1.9, nvidia-cg-toolkit, jam, g++, libzzip-dev, libxt-dev, libxaw7-dev, libxxf86vm-dev, libxrandr-dev, libfreetype6-dev, libxext-dev, autoconf, libtool, libpcre3-dev, flex, bison, patch, libbz2-dev, gawk, libglu1-mesa-dev, tofrodos, freeglut3-dev, scons, libexpat1-dev, libgtk2.0-dev, libnss3-dev, libgconf2-dev, gperf, libasound2-dev, subversion, libtool, autoconf, ruby, flex, libgsl0-dev, libssl-dev, libspeex-dev, libxss-dev, libdbus-glib-1-dev, libgnome-keyring-dev, libxml2-dev, libjpeg62-dev, libcups2-dev, wget, libcurl4-gnutls-dev, build-essential, libxmu-dev, libxi-dev, libusb-1.0-0-dev, yasm
+Standards-Version: 3.9.2
+Homepage: http://sirikata.com/
+
+Package: sirikata
+Architecture: amd64
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Sirikata is a BSD-licensed open source platform for virtual worlds.
+   Sirikata is a BSD-licensed open source platform for virtual worlds. We
+   aim to provide a set of open libraries and protocols which anyone can
+   use to deploy a virtual world.  Sirikata isn’t a single virtual world,
+   it’s a platform for building virtual worlds. All the common, core
+   components of virtual worlds are built-in — servers that simulate the
+   world and distribute content, a graphical client, and scripting
+   language support — allowing you to focus on creating the objects and
+   behaviors unique to your world. These videos give a sense of what you
+   can currently do in Sirikata worlds.
