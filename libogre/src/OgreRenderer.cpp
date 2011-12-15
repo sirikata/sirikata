@@ -832,7 +832,7 @@ void OgreRenderer::postFrame(Task::LocalTime current, Duration frameTime) {
 }
 
 void OgreRenderer::poll() {
-    SerializationCheck::Scoped check(&mSerialization);
+    SerializationCheck::Scoped sc(&mSerialization);
 
     Task::LocalTime curFrameTime(Task::LocalTime::now());
 
@@ -859,7 +859,7 @@ void OgreRenderer::stop() {
 
 // Invokable Interface
 boost::any OgreRenderer::invoke(std::vector<boost::any>& params) {
-    SerializationCheck::Scoped check(&mSerialization);
+    SerializationCheck::Scoped sc(&mSerialization);
 
     // Decode the command. First argument is the "function name"
     if (params.empty() || !Invokable::anyIsString(params[0]))
