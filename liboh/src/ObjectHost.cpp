@@ -48,6 +48,7 @@
 #include <sirikata/core/util/SpaceObjectReference.hpp>
 #include <sirikata/core/service/Context.hpp>
 #include <sirikata/oh/ObjectQueryProcessor.hpp>
+#include <sirikata/oh/PersistedObjectSet.hpp>
 
 #define OH_LOG(lvl,msg) SILOG(oh,lvl,msg)
 
@@ -223,7 +224,7 @@ void ObjectHost::migrateEntity(const SpaceID& space, const UUID& uuid, const Str
 
 void ObjectHost::migratAllEntity(const SpaceID& space, const String& name)
 {
-	//mPersistentSet->movePersistedObject(name);
+	mPersistentSet->movePersistedObject(name);
 	for(CreatedEntityMap::iterator it = mCreatedEntities.begin(); it!=mCreatedEntities.end(); ++it){
 		migrateEntity(space, it->first, name);
 	}
