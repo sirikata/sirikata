@@ -42,6 +42,8 @@
 #include <sirikata/proxyobject/TimeSteppedSimulation.hpp>
 #include <OgreWindowEventUtilities.h>
 
+#include <sirikata/core/util/SerializationCheck.hpp>
+
 namespace Sirikata {
 
 namespace Input {
@@ -197,6 +199,7 @@ public:
     static Ogre::RenderTarget *sRenderTarget; // FIXME why a static render target?
 
     Context* mContext;
+    SerializationCheck mSerialization;
 
     bool mQuitRequested;
     bool mQuitRequestHandled;
