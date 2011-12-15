@@ -10,8 +10,11 @@ DIR=`pwd`
 CCACHE=`which ccache`
 GPP=`which g++`
 GCC=`which gcc`
+DARWIN=`uname | grep Darwin`
 
-if [ "$CCACHE" != "" -a "$GPP" != "" -a "$GCC" != "" ]; then
+# CMake on mac doesn't play well with overriding the compiler so we
+# explicitly disable it there.
+if [ "$CCACHE" != "" -a "$GPP" != "" -a "$GCC" != "" -a "x$DARWIN" == "x" ]; then
     echo "Using CCache"
     CC="$CCACHE $GCC" CXX="$CCACHE $GPP" cmake $*
     exit 0
