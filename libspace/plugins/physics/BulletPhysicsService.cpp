@@ -412,6 +412,15 @@ void BulletPhysicsService::updatePhysicsWorld(const UUID& uuid) {
 
 void BulletPhysicsService::updatePhysicsWorldWithMesh(const UUID& uuid, MeshdataPtr retrievedMesh) {
     LocationMap::iterator it = mLocations.find(uuid);
+    // It's possible it has already disconnected. TODO(ewencp) we
+    // should clear the download instead of waiting for it to finish,
+    // but this works for now. Actually, we should also make sure that
+    // the data still matches (we could change physics to A, change it
+    // to B, have them processed async, finish B, then finish A,
+    // resulting in simulation that doesn't match the settings in the
+    // locinfo).
+    if (it == mLocations.end()) return;
+
     LocationInfo& locinfo = it->second;
 
     locinfo.simObject->load(retrievedMesh);
