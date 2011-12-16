@@ -1,4 +1,19 @@
-sirikata (0.0.16-0ubuntu1) oneiric; urgency=low
+sirikata (0.0.17-3ubuntu1) oneiric; urgency=low
+  * Trying to fix build system 3
+
+ -- Jeff Terrace <jterrace@gmail.com>  Fri, 16 Dec 2011 11:47:00 -0500
+
+sirikata (0.0.17-2ubuntu1) oneiric; urgency=low
+  * Trying to fix build system 2
+
+ -- Jeff Terrace <jterrace@gmail.com>  Thu, 15 Dec 2011 20:00:00 -0500
+
+sirikata (0.0.17-1ubuntu1) oneiric; urgency=low
+  * Trying to fix build system
+
+ -- Jeff Terrace <jterrace@gmail.com>  Thu, 15 Dec 2011 19:00:00 -0500
+
+sirikata (0.0.17-0ubuntu1) oneiric; urgency=low
 
   * Initial release
 
