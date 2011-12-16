@@ -2775,6 +2775,7 @@ IF(APPLE)
     ${BUILD_DIR}/slauncher_helper.app
     VERBATIM
     )
+  INSTALL(FILES ${BUILD_DIR}/slauncher_helper.app DESTINATION bin)
 ENDIF()
 
 
