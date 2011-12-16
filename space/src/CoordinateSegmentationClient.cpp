@@ -74,7 +74,7 @@ CoordinateSegmentationClient::CoordinateSegmentationClient(SpaceContext* ctx, co
 {
   mTopLevelRegion.mBoundingBox = BoundingBox3f( Vector3f(0,0,0), Vector3f(0,0,0));
 
-  mSidMap->lookupInternal(
+  mSidMap->lookupExternal(
       mContext->id(),
       mContext->mainStrand->wrap(
           std::tr1::bind(&CoordinateSegmentationClient::handleSelfLookup, this, _1)
@@ -84,6 +84,7 @@ CoordinateSegmentationClient::CoordinateSegmentationClient(SpaceContext* ctx, co
 
 void CoordinateSegmentationClient::handleSelfLookup(Address4 my_addr) {
     mAcceptor = boost::shared_ptr<TCPListener>(new TCPListener(*mIOService,boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), my_addr.port+10000)));
+
     startAccepting();
     sendSegmentationListenMessage(my_addr);
 }

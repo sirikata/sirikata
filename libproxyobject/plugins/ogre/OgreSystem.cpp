@@ -292,8 +292,6 @@ void OgreSystem::stop() {
 
 void OgreSystem::onCreateProxy(ProxyObjectPtr p)
 {
-    SerializationCheck::Scoped check(&mSerialization);
-
     bool created = false;
 
     ProxyEntity* mesh = NULL;
@@ -330,8 +328,6 @@ void OgreSystem::onCreateProxy(ProxyObjectPtr p)
 
 void OgreSystem::onDestroyProxy(ProxyObjectPtr p)
 {
-    SerializationCheck::Scoped check(&mSerialization);
-
     mDownloadPlanner->removeObject(p);
     // FIXME don't delete here because we want to mask proximity
     // additions/removals that aren't due to actual connect/disconnect.
@@ -509,8 +505,6 @@ ProxyEntity *OgreSystem::internalRayTrace(const Ogre::Ray &traceFrom, bool aabbO
 }
 
 void OgreSystem::poll(){
-    SerializationCheck::Scoped check(&mSerialization);
-
     OgreRenderer::poll();
     Task::LocalTime curFrameTime(Task::LocalTime::now());
     tickInputHandler(curFrameTime);
@@ -567,8 +561,6 @@ void OgreSystem::onDisconnected(const Network::Address& addr, bool requested, co
 }
 
 void OgreSystem::onDisconnected(SessionEventProviderPtr from, const SpaceObjectReference& name) {
-    SerializationCheck::Scoped check(&mSerialization);
-
     mViewer->removeListener((SessionEventListener*)this);
     SILOG(ogre,info,"Got disconnected from space server.");
     mMouseHandler->alert("Disconnected", "Lost connection to space server...");
@@ -592,8 +584,6 @@ void OgreSystem::tickInputHandler(const Task::LocalTime& t) const {
 
 boost::any OgreSystem::invoke(vector<boost::any>& params)
 {
-    SerializationCheck::Scoped check(&mSerialization);
-
     // Decode the command. First argument is the "function name"
     if (params.empty() || !Invokable::anyIsString(params[0]))
         return boost::any();
