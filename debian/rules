@@ -16,9 +16,16 @@
 # This has to be exported to make some magic below work.
 export DH_OPTIONS
 
+.PHONY: build
+
+build:
+	dh build
 
 %:
 	dh $@ 
 
 override_dh_auto_build:
-	make fulldepends && make
+	(cd build/cmake; cmake . -DCMAKE_BUILD_TYPE=Release) && make
+
+override_dh_auto_test:
+	echo "Skipping tests (requires network)."
