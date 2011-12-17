@@ -279,7 +279,8 @@ OgreSystem::~OgreSystem() {
 void OgreSystem::stop() {
     if (mViewer) {
         ProxyManagerPtr proxyManager = mViewer->presence(mPresenceID);
-        proxyManager->removeListener(this);
+        if (proxyManager) // May have been disconnected
+            proxyManager->removeListener(this);
     }
 
     if (mConnectionEventProvider) {
