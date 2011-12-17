@@ -221,6 +221,7 @@ void DistanceDownloadPlanner::unloadObject(Object* r) {
 void DistanceDownloadPlanner::poll()
 {
     if (camera == NULL) return;
+    if (mContext->stopped()) return;
 
     // Update priorities, tracking the largest undisplayed priority and the
     // smallest displayed priority to decide if we're going to have to swap.
