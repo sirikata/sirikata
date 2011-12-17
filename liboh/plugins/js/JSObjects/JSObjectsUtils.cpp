@@ -25,7 +25,7 @@ bool decodeUint32(v8::Handle<v8::Value> toDecode, uint32& toDecodeTo, String& er
         errMsg += "  Could not decode as uint32.";
         return false;
     }
-    
+
     toDecodeTo = toDecode->ToUint32()->Value();
     return true;
 }
@@ -39,7 +39,7 @@ bool decodeDouble(v8::Handle<v8::Value> toDecode, double& toDecodeTo, String& er
         errMsg += "  Could not decode as number.";
         return false;
     }
-    
+
     toDecodeTo = toDecode->ToNumber()->Value();
     return true;
 }
@@ -52,7 +52,7 @@ bool decodeInt64(v8::Handle<v8::Value> toDecode, int64& toDecodeTo, String& errM
         errMsg += "  Could not decode as integer.";
         return false;
     }
-    
+
     toDecodeTo = toDecode->ToNumber()->Value();
     return true;
 }
@@ -67,7 +67,7 @@ v8::Handle<v8::Value> strToUint16Str(const String& toSerialize)
 
     v8::Handle<v8::Value> returner = v8::String::New(toStoreArray,toSerialize.size());
 
-    delete toStoreArray;
+    delete[] toStoreArray;
     return returner;
 }
 
@@ -76,7 +76,7 @@ String uint16StrToStr(v8::Handle<v8::String> toDeserialize)
 {
     uint16* toReadArray = new uint16[toDeserialize->Length()];
     char* binArray = new char[toDeserialize->Length()];
-    
+
     toDeserialize->Write(toReadArray,0, toDeserialize->Length());
 
     for (int s=0; s < toDeserialize->Length(); ++s)
@@ -84,8 +84,8 @@ String uint16StrToStr(v8::Handle<v8::String> toDeserialize)
 
     String returner (binArray, toDeserialize->Length());
 
-    delete toReadArray;
-    delete binArray;
+    delete[] toReadArray;
+    delete[] binArray;
     return returner;
 }
 
@@ -136,7 +136,7 @@ bool decodeSporef(v8::Handle<v8::Value> toDecode, SpaceObjectReference& sporef, 
     catch (std::invalid_argument& ia)
     {
         std::cout<<"\n\nDEBUG: This is sporef string: "<<sporefStr<<"\n\n";
-        
+
         errorMessage += "  Could not convert string to sporef when decoding sporef.";
         return false;
     }
@@ -205,7 +205,7 @@ bool decodeTimeFromString (v8::Handle<v8::Value> toDecode, Time& toDecodeTo, Str
         errorMessage += "Time to decode was not a uint64.  ";
         return false;
     }
-    
+
     toDecodeTo = Time(timeVal);
 
     return true;
