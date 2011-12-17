@@ -35,7 +35,13 @@ struct SafeInitCleanup {
 
     ~SafeInitCleanup() {
         if (initialized) {
-            SDL_Quit();
+            // We want to do
+            //  SDL_Quit();
+            // but we can't currently because forked processes (Berkelium) get
+            // hung up trying to cleanup, I guess because something is
+            // mismatched when you fork too late (after allocating graphics
+            // resources).  This isn't really that horrible as SDL is usually
+            // tied mostly to the lifetime of the entire process anyway.
             initialized = false;
         }
     }
