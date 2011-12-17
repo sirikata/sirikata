@@ -616,6 +616,7 @@ ELSE()
   SET(GSL_LIBRARIES)
 ENDIF()
 
+SET(BERKELIUM_WITH_TESTS FALSE CACHE BOOL "")
 IF(WIN32)
 #dependency: berkelium
   IF(NOT BERKELIUM_ROOT)
@@ -2806,6 +2807,7 @@ IF(CHROME_FOUND)
 
       SET(CHROME_SYMLINKS_COMMAND
         ln -sf ${CHROMIUM_DATADIR}/locales &&
+        ln -sf ${CHROMIUM_DATADIR}/resources &&
         ln -sf ${CHROMIUM_DATADIR}/resources.pak &&
         ln -sf ${CHROMIUM_DATADIR}/chrome.pak
         )

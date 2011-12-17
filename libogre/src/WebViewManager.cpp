@@ -88,7 +88,13 @@ WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, InputManager* in
     tooltipWebView = 0;
     DynamicLibrary::AddLoadPath(binDirectory);
 #ifdef HAVE_BERKELIUM
+#if BERKELIUM_REMOTE_DEBUGGING
+    unsigned int extra_argc = 1;
+    const char* extra_argv[] = { "--remote-debugging-port=9222", NULL };
+    Berkelium::init(Berkelium::FileString::empty(), Berkelium::FileString::empty(), extra_argc, extra_argv);
+#else
     Berkelium::init(Berkelium::FileString::empty());
+#endif
     bkContext = Berkelium::Context::create();
 #endif
 }
