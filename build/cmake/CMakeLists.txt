@@ -455,6 +455,8 @@ SET(Boost_LIBRARIES
   debug ${Boost_REGEX_LIBRARY_DEBUG} optimized ${Boost_REGEX_LIBRARY_RELEASE}
   debug ${Boost_IOSTREAMS_LIBRARY_DEBUG} optimized ${Boost_IOSTREAMS_LIBRARY_RELEASE}
   )
+# Make sure we use boost filesystem v2 if both v2 and v3 are available.
+ADD_DEFINITIONS(-DBOOST_FILESYSTEM_VERSION=2)
 
 #dependency: curl
 IF(NOT CURL_ROOT)
