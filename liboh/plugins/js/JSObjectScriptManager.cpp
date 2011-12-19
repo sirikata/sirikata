@@ -106,14 +106,23 @@ JSObjectScriptManager::JSObjectScriptManager(ObjectHostContext* ctx, const Sirik
         }
     }
 
+    OptionValue* default_import_paths;
     OptionValue* import_paths;
     OptionValue* v8_flags_opt;
     OptionValue* emer_resource_max;
     InitializeClassOptions(
         "jsobjectscriptmanager",this,
         // Default value allows us to use std libs in the build tree, starting
-        // from build/cmake
-        import_paths = new OptionValue("import-paths","<bindir>/../../liboh/plugins/js/scripts,<bindir>/../../../liboh/plugins/js/scripts,<bindir>/../share/js/scripts,<bindir>/../../share/js/scripts",OptionValueType<std::list<String> >(),"Comma separated list of paths to import files from, searched in order for the requested import."),
+        // from build/cmake, bin/, or lib/sirikata/. These defaults
+        // are pretty much always sane -- only override if you
+        // absolutely know what you're doing
+        default_import_paths = new OptionValue("default-import-paths","<bindir>/../../liboh/plugins/js/scripts,<bindir>/../../../liboh/plugins/js/scripts,<bindir>/../share/js/scripts,<bindir>/../../share/js/scripts",OptionValueType<std::list<String> >(),"Comma separated list of paths to import files from, searched in order for the requested import."),
+        // These are additional import paths. Generally if you need to
+        // adjust import paths, you want to simply add to this. We
+        // split the default-import-paths and import-paths so it's
+        // easier to override the paths by only adding import-paths
+        // and not changing default-import-paths
+        import_paths = new OptionValue("import-paths","",OptionValueType<std::list<String> >(),"Comma separated list of paths to import files from, searched in order for the requested import."),
         v8_flags_opt = new OptionValue("v8-flags", "", OptionValueType<String>(), "Flags to pass on to v8, e.g. for profiling."),
         emer_resource_max = new OptionValue("emer-resource-max","100000000",OptionValueType<int>(),"int32: how many cycles to allow to run in one pass of event loop before throwing resource error in Emerson."),
         NULL
