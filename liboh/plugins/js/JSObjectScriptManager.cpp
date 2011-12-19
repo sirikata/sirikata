@@ -113,7 +113,7 @@ JSObjectScriptManager::JSObjectScriptManager(ObjectHostContext* ctx, const Sirik
         "jsobjectscriptmanager",this,
         // Default value allows us to use std libs in the build tree, starting
         // from build/cmake
-        import_paths = new OptionValue("import-paths","<bindir>/../../liboh/plugins/js/scripts,<bindir>/../../../liboh/plugins/js/scripts,<bindir>/../share/js/scripts",OptionValueType<std::list<String> >(),"Comma separated list of paths to import files from, searched in order for the requested import."),
+        import_paths = new OptionValue("import-paths","<bindir>/../../liboh/plugins/js/scripts,<bindir>/../../../liboh/plugins/js/scripts,<bindir>/../share/js/scripts,<bindir>/../../share/js/scripts",OptionValueType<std::list<String> >(),"Comma separated list of paths to import files from, searched in order for the requested import."),
         v8_flags_opt = new OptionValue("v8-flags", "", OptionValueType<String>(), "Flags to pass on to v8, e.g. for profiling."),
         emer_resource_max = new OptionValue("emer-resource-max","100000000",OptionValueType<int>(),"int32: how many cycles to allow to run in one pass of event loop before throwing resource error in Emerson."),
         NULL
