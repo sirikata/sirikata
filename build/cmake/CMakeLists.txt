@@ -508,25 +508,6 @@ ENDIF()
 FIND_PACKAGE(CURL)
 SET(TEST_LIBRARIES ${CURL_LIBRARIES})
 
-#dependency: ois
-IF(NOT OIS_ROOT)
-  IF(EXISTS ${PLATFORM_LIBS}/installed-ois)
-    SET(OIS_ROOT ${PLATFORM_LIBS}/installed-ois)
-  ELSEIF(EXISTS ${PLATFORM_LIBS}/ois-1.2)
-    SET(OIS_ROOT ${PLATFORM_LIBS}/ois-1.2)
-  ELSEIF(EXISTS ${PLATFORM_LIBS}/ois-1.0)
-    SET(OIS_ROOT ${PLATFORM_LIBS}/ois-1.0)
-  ENDIF()
-  IF(WIN32 AND OIS_ROOT)
-    GET_FILENAME_COMPONENT(OIS_ROOT ${OIS_ROOT} ABSOLUTE)
-  ENDIF()
-  IF(NOT OIS_ROOT)
-    SET(OIS_ROOT ${PLATFORM_LIBS})
-  ENDIF()
-ENDIF()
-
-FIND_PACKAGE(OIS)
-
 #dependency: ogre
 IF(NOT OGRE_ROOT)
   IF(EXISTS ${PLATFORM_LIBS}/installed-ogre)
@@ -3123,26 +3104,6 @@ IF(PROTOCOLBUFFERS_ROOT)
   ELSE()
     INSTALL(DIRECTORY ${PROTOCOLBUFFERS_ROOT}/lib/
             FILE_PERMISSIONS ${EXEC_PERMS}
-            DESTINATION ${SIRIKATA_INSTALL_LIBRARY_PATH}
-            #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
-            PATTERN "*.exe" EXCLUDE)
-  ENDIF()
-ENDIF()
-
-
-#install ois
-IF(OIS_ROOT AND FOUND_OIS)
-  IF(WIN32)
-    INSTALL(DIRECTORY ${OIS_ROOT}/bin/
-            FILE_PERMISSIONS ${EXEC_PERMS}
-            DESTINATION ${SIRIKATA_INSTALL_BINARY_PATH}
-            #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
-            PATTERN "*.exe" EXCLUDE)
-  ELSE()
-    INSTALL(DIRECTORY ${OIS_ROOT}/lib/
-            FILE_PERMISSIONS ${EXEC_PERMS}
-            PATTERN "*.a" EXCLUDE
-            PATTERN "*.la" EXCLUDE
             DESTINATION ${SIRIKATA_INSTALL_LIBRARY_PATH}
             #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
             PATTERN "*.exe" EXCLUDE)
