@@ -995,7 +995,11 @@ void JSObjectScript::resolveImport(const String& filename, boost::filesystem::pa
         }
     }
 
-    std::list<String> search_paths = mManager->getOptions()->referenceOption("import-paths")->as< std::list<String> >();
+    std::list<String> default_search_paths = mManager->getOptions()->referenceOption("default-import-paths")->as< std::list<String> >();
+    std::list<String> additional_search_paths = mManager->getOptions()->referenceOption("import-paths")->as< std::list<String> >();
+    std::list<String> search_paths;
+    search_paths.splice(search_paths.end(), default_search_paths);
+    search_paths.splice(search_paths.end(), additional_search_paths);
     // Replace special tags with their values
     for(std::list<String>::iterator search_it = search_paths.begin(); search_it != search_paths.end(); search_it++) {
         // Binary directory
