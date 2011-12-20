@@ -49,7 +49,7 @@ ProxyEntity::ProxyEntity(OgreRenderer *scene, const ProxyObjectPtr &ppo)
    mActive(false)
 {
     mDestroyTimer = Network::IOTimer::create(
-        mScene->context()->ioService,
+        mScene->context()->mainStrand,
         std::tr1::bind(&ProxyEntity::handleDestroyTimeout, this)
     );
 }
