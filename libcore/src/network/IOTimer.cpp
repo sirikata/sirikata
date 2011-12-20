@@ -171,8 +171,6 @@ void IOTimer::wait(const Duration &num_seconds) {
             )
         );
     }
-
-    mCanceled = false;
 }
 
 void IOTimer::wait(const Duration &num_seconds, const IOCallback& cb) {
