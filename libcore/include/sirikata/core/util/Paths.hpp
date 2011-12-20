@@ -27,6 +27,13 @@ enum Key {
     DIR_EXE_BUNDLE,
     // Full path to current directory
     DIR_CURRENT,
+    // Full path to a user-specific directory, e.g. /home/username
+    DIR_USER,
+    // Full path to a hidden directory in a user-specific location,
+    // e.g. /home/username/.sirikata
+    DIR_USER_HIDDEN,
+    // Full path to temporary directory, e.g. under /tmp
+    DIR_TEMP,
 
     PATH_END
 };
