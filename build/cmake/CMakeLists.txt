@@ -3077,6 +3077,12 @@ IF(SIRIKATA_GENERATE_BINARY_WRAPPERS)
       SET(BINARY_EXE "${BINARY_EXE}_d")
     ENDIF()
 
+    # We need to special case cppoh since it's run in a .app structure
+    STRING(COMPARE EQUAL ${BINARY_NAME} "cppoh" IS_CPPOH)
+    IF(IS_CPPOH)
+      SET(BINARY_EXE "${BINARY_EXE}.app/Contents/MacOS/${BINARY_EXE}")
+    ENDIF()
+
     # Generate the wrapper script
     CONFIGURE_FILE(
       ${TOP_LEVEL}/tools/posix/binary_launcher.sh
@@ -3267,7 +3273,7 @@ IF(BUILD_OGRE_OH)
   ELSEIF(APPLE)
     INSTALL(DIRECTORY ${OGRE_FRAMEWORKS}
       FILE_PERMISSIONS ${EXEC_PERMS}
-      DESTINATION Frameworks/
+      DESTINATION lib/Frameworks/
     )
     INSTALL(DIRECTORY ${OGRE_LIBRARY_DIRS}/
       FILE_PERMISSIONS ${EXEC_PERMS}
