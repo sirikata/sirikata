@@ -33,6 +33,7 @@
 #include "ProxyEntity.hpp"
 #include <sirikata/ogre/OgreRenderer.hpp>
 #include <sirikata/ogre/ResourceDownloadPlanner.hpp>
+#include "OgreSystem.hpp"
 
 using namespace Sirikata::Transfer;
 
@@ -46,7 +47,8 @@ ProxyEntityListener::~ProxyEntityListener() {
 ProxyEntity::ProxyEntity(OgreRenderer *scene, const ProxyObjectPtr &ppo)
  : Entity(scene, ppo->getObjectReference().toString()),
    mProxy(),
-   mActive(false)
+   mActive(false),
+   mCanDestroy(false)
 {
     mDestroyTimer = Network::IOTimer::create(
         mScene->context()->mainStrand,
@@ -119,6 +121,8 @@ void ProxyEntity::validated(ProxyObjectPtr ptr) {
 
     SILOG(ogre, detailed, "Validating ProxyEntity " << ptr->getObjectReference().toString());
 
+    mCanDestroy = false;
+
     mDestroyTimer->cancel();
 
     // Because this could be a new ProxyEntity, created after a bunch
@@ -158,16 +162,16 @@ void ProxyEntity::handleDestroyTimeout() {
 
     getScene()->downloadPlanner()->removeObject(mProxy);
     mActive = false;
+    tryDelete();
 }
 
 void ProxyEntity::destroyed(ProxyObjectPtr ptr) {
     assert(ptr == mProxy);
 
-    // FIXME this is triggered by the ProxyObjectListener interface. But we
-    //actually don't want to delete it here, we want to *maybe* mask things for
-    //awhile. For now, we just leak this, but clearly this needs to be fixed.
-    //Provider<ProxyEntityListener*>::notify(&ProxyEntityListener::proxyEntityDestroyed, this);
-    //delete this;
+    // Not explicitly deleted here, we just mark it as a candidate for
+    // destruction.
+    mCanDestroy = true;
+    tryDelete();
 }
 
 void ProxyEntity::extrapolateLocation(TemporalValue<Location>::Time current) {
@@ -189,6 +193,13 @@ void ProxyEntity::onSetScale (ProxyObjectPtr proxy, float32 scale,const SpaceObj
     getScene()->downloadPlanner()->updateObject(proxy);
 }
 
+void ProxyEntity::tryDelete() {
+    if (!mActive && mCanDestroy) {
+        static_cast<OgreSystem*>(getScene())->entityDestroyed(this);
+        Provider<ProxyEntityListener*>::notify(&ProxyEntityListener::proxyEntityDestroyed, this);
+        delete this;
+    }
+}
 
 }
 }

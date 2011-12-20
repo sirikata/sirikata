@@ -61,9 +61,19 @@ protected:
     ProxyObjectPtr mProxy;
     bool mActive; // Whether we've added ourselves to the download planner
     Network::IOTimerPtr mDestroyTimer;
+    // Indicates if the parent cares about this ProxyEntity anymore,
+    // i.e. if it can self destruct if it determines it's no longer
+    // needed for rendering.
+    bool mCanDestroy;
 
     void handleDestroyTimeout();
 
+    // Invoked when some condition switches to making it possible that
+    // deletion could occur. If all conditions are satisfied, this
+    // causes self destruction. NOTE: This *must not* be followed by
+    // any other operations since it may result in the destruction of
+    // this object.
+    void tryDelete();
 public:
     /** NOTE that you *MUST* call initializeToProxy with the same ProxyObjectPtr
      * immediately after. We can't completely split the construction and
