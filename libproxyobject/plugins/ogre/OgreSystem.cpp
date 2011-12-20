@@ -302,7 +302,6 @@ void OgreSystem::onCreateProxy(ProxyObjectPtr p)
         mesh = new ProxyEntity(this,p);
     mesh->initializeToProxy(p);
     mEntityMap[p->getObjectReference()] = mesh;
-    mDownloadPlanner->addNewObject(p,mesh);
     // Force validation. In the case of existing ProxyObjects, this
     // should trigger the download + display process
     mesh->validated(p);
@@ -329,7 +328,6 @@ void OgreSystem::onCreateProxy(ProxyObjectPtr p)
 
 void OgreSystem::onDestroyProxy(ProxyObjectPtr p)
 {
-    mDownloadPlanner->removeObject(p);
     // FIXME don't delete here because we want to mask proximity
     // additions/removals that aren't due to actual connect/disconnect.
     // See also ProxyEntity.cpp:destroy().

@@ -59,6 +59,7 @@ class ProxyEntity
 {
 protected:
     ProxyObjectPtr mProxy;
+    bool mActive; // Whether we've added ourselves to the download planner
     Network::IOTimerPtr mDestroyTimer;
 
     void handleDestroyTimeout();
