@@ -39,6 +39,9 @@ enum Key {
 };
 
 SIRIKATA_FUNCTION_EXPORT String Get(Key key);
+// Get a path from an offset based on key, e.g. use Get(DIR_TEMP, "foo.log") to
+// get the equivalent of "/tmp/sirikata/foo.log".
+SIRIKATA_FUNCTION_EXPORT String Get(Key key, const String& relative_path);
 SIRIKATA_FUNCTION_EXPORT bool Set(Key key, const String& path);
 
 } // namespace Path

@@ -208,6 +208,15 @@ String Get(Key key) {
     }
 }
 
+String Get(Key key, const String& relative_path) {
+    boost::filesystem::path rel_path(relative_path);
+    // If they actually gave us a relative path, just hand it back
+    if (rel_path.is_complete()) return relative_path;
+
+    boost::filesystem::path base_path(Get(key));
+    return (base_path / rel_path).string();
+}
+
 bool Set(Key key, const String& path) {
     switch(key) {
 
