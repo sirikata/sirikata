@@ -169,20 +169,7 @@ protected:
 
 public:
 
-	DiskCacheLayer(CachePolicy *policy, const std::string &prefix, CacheLayer *tryNext)
-			: CacheLayer(tryNext),
-			mFiles(NULL, policy),
-			mPrefix(prefix+"/"),
-			mCleaningUp(false) {
-		mFiles.setOwner(this);
-		mWorkerThread=new Thread(std::tr1::bind(&DiskCacheLayer::workerThread, this));
-		try {
-			unserialize();
-		} catch (...) {
-			SILOG(transfer,fatal,"ERROR loading file list!");
-			/// do nothing
-		}
-	}
+	DiskCacheLayer(CachePolicy *policy, const std::string &prefix, CacheLayer *tryNext);
 
 	virtual ~DiskCacheLayer() {
 		std::tr1::shared_ptr<DiskRequest> req

@@ -34,6 +34,7 @@
 #include <sirikata/core/transfer/DiskCacheLayer.hpp>
 
 #include <sirikata/core/options/Options.hpp>
+#include <sirikata/core/util/Paths.hpp>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -175,6 +176,27 @@ cache_usize_type sizeFromDirentry(const std::string &name, dirent *ent, bool &is
 #endif
 
 } // anon namespace.
+
+DiskCacheLayer::DiskCacheLayer(CachePolicy *policy, const std::string &prefix, CacheLayer *tryNext)
+ : CacheLayer(tryNext),
+   mFiles(NULL, policy),
+   mPrefix(),
+   mCleaningUp(false)
+{
+    // If absolute, use directly. Otherwise, append to temp directory
+    mPrefix = Path::Get(Path::DIR_TEMP, prefix);
+    if (mPrefix[mPrefix.size()-1] != '/')
+        mPrefix += '/';
+
+    mFiles.setOwner(this);
+    mWorkerThread=new Thread(std::tr1::bind(&DiskCacheLayer::workerThread, this));
+    try {
+        unserialize();
+    } catch (...) {
+        SILOG(transfer,fatal,"ERROR loading file list!");
+        /// do nothing
+    }
+}
 
 void DiskCacheLayer::workerThread() {
 	while (true) {
