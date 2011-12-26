@@ -156,6 +156,7 @@ Transfer::DenseDataPtr read_file(const String& filename)
 bool OgreSystem::initialize(ConnectionEventProvider* cevtprovider, VWObjectPtr viewer, const SpaceObjectReference& presenceid, const String& options) {
     if(!OgreRenderer::initialize(options)) return false;
 
+
     mConnectionEventProvider = cevtprovider;
     mConnectionEventProvider->addListener(this);
 

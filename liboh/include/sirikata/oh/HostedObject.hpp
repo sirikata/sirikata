@@ -52,6 +52,19 @@
 #include <sirikata/oh/ObjectHostProxyManager.hpp>
 #include <sirikata/oh/SimulationFactory.hpp>
 
+//here
+#include <sirikata/core/util/Platform.hpp>
+
+#include <sirikata/core/service/Service.hpp>
+#include <sirikata/core/util/Timer.hpp>
+#include <sirikata/core/service/Context.hpp>
+
+#include <sirikata/core/network/Message.hpp>
+
+#include <boost/lexical_cast.hpp>
+#include <boost/asio.hpp> //htons, ntohs
+
+
 namespace Sirikata {
 
 class LocUpdate;
@@ -122,6 +135,9 @@ private:
     HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID &_id);
 
 public:
+    boost::mutex mMutex;
+    
+    
     typedef SST::EndPoint<SpaceObjectReference> EndPointType;
     typedef SST::BaseDatagramLayer<SpaceObjectReference> BaseDatagramLayerType;
     typedef BaseDatagramLayerType::Ptr BaseDatagramLayerPtr;
@@ -284,7 +300,7 @@ public:
     Location getLocation(const SpaceID& space, const ObjectReference& oref);
 
   private:
-
+    
     // Because IOStrand->wrap() can't handle > 5 parameters (because the
     // underlying boost impementation doesnt), we need to handle wrapping
     // connection callbacks manually.
