@@ -153,12 +153,12 @@ function() {
             this._binding.addAction('actOnObject', std.core.bind(this.actOnObject, this));
             this._binding.addAction('teleportToObj', std.core.bind(this.teleportToObj, this));
 
-            this._binding.addToggleAction('moveForward', std.core.bind(this.moveSelf, this, new util.Vec3(0, 0, -1)), 1, -1);
-            this._binding.addToggleAction('moveBackward', std.core.bind(this.moveSelf, this, new util.Vec3(0, 0, 1)), 1, -1);
-            this._binding.addToggleAction('moveLeft', std.core.bind(this.moveSelf, this, new util.Vec3(-1, 0, 0)), 1, -1);
-            this._binding.addToggleAction('moveRight', std.core.bind(this.moveSelf, this, new util.Vec3(1, 0, 0)), 1, -1);
-            this._binding.addToggleAction('moveUp', std.core.bind(this.moveSelf, this, new util.Vec3(0, 1, 0)), 1, -1);
-            this._binding.addToggleAction('moveDown', std.core.bind(this.moveSelf, this, new util.Vec3(0, -1, 0)), 1, -1);
+            this._binding.addToggleAction('moveForward', std.core.bind(this.moveSelf, this, new util.Vec3(0, 0, -10)), 1, -1);
+            this._binding.addToggleAction('moveBackward', std.core.bind(this.moveSelf, this, new util.Vec3(0, 0, 10)), 1, -1);
+            this._binding.addToggleAction('moveLeft', std.core.bind(this.moveSelf, this, new util.Vec3(-10, 0, 0)), 1, -1);
+            this._binding.addToggleAction('moveRight', std.core.bind(this.moveSelf, this, new util.Vec3(10, 0, 0)), 1, -1);
+            this._binding.addToggleAction('moveUp', std.core.bind(this.moveSelf, this, new util.Vec3(0, 10, 0)), 1, -1);
+            this._binding.addToggleAction('moveDown', std.core.bind(this.moveSelf, this, new util.Vec3(0, -10, 0)), 1, -1);
 
             this._binding.addToggleAction('rotateUp', std.core.bind(this.rotateSelf, this, new util.Vec3(1, 0, 0), "_rotate_up_handle_"), true, false);
             this._binding.addToggleAction('rotateDown', std.core.bind(this.rotateSelf, this, new util.Vec3(-1, 0, 0), "_rotate_down_handle_"), true, false);
