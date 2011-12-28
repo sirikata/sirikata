@@ -34,7 +34,7 @@ if [ xdebug = x"$debug" ]; then
   binname="$binname"_d
 fi
 
-binoutdir="$outdir/bin"
+binoutdir="$outdir/lib/sirikata"
 liboutdir="$outdir/lib"
 appname="$binname.app"
 appoutdir="$binoutdir/$appname"

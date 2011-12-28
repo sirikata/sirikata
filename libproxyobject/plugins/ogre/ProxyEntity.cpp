@@ -33,6 +33,7 @@
 #include "ProxyEntity.hpp"
 #include <sirikata/ogre/OgreRenderer.hpp>
 #include <sirikata/ogre/ResourceDownloadPlanner.hpp>
+#include "OgreSystem.hpp"
 
 using namespace Sirikata::Transfer;
 
@@ -42,17 +43,22 @@ namespace Graphics {
 ProxyEntityListener::~ProxyEntityListener() {
 }
 
+// mProxy is intentially not initialized to ppo. You need to call initializeToProxy().
 ProxyEntity::ProxyEntity(OgreRenderer *scene, const ProxyObjectPtr &ppo)
  : Entity(scene, ppo->getObjectReference().toString()),
-   mProxy()
+   mProxy(),
+   mActive(false),
+   mCanDestroy(false)
 {
     mDestroyTimer = Network::IOTimer::create(
-        mScene->context()->ioService,
+        mScene->context()->mainStrand,
         std::tr1::bind(&ProxyEntity::handleDestroyTimeout, this)
     );
 }
 
 ProxyEntity::~ProxyEntity() {
+    SILOG(ogre, detailed, "Killing ProxyEntity " << mProxy->getObjectReference().toString());
+
     Liveness::letDie();
 
     getProxy().MeshProvider::removeListener(this);
@@ -101,6 +107,7 @@ ProxyEntity *ProxyEntity::fromMovableObject(Ogre::MovableObject *movable) {
 }
 
 void ProxyEntity::updateLocation(ProxyObjectPtr proxy, const TimedMotionVector3f &newLocation, const TimedMotionQuaternion& newOrient, const BoundingSphere3f& newBounds,const SpaceObjectReference& sporef) {
+    assert(proxy == mProxy);
     SILOG(ogre,detailed,"UpdateLocation "<<this<<" to "<<newLocation.position()<<"; "<<newOrient.position());
 
     setOgrePosition(Vector3d(newLocation.position()));
@@ -110,15 +117,32 @@ void ProxyEntity::updateLocation(ProxyObjectPtr proxy, const TimedMotionVector3f
 }
 
 void ProxyEntity::validated(ProxyObjectPtr ptr) {
+    assert(ptr == mProxy);
+
+    SILOG(ogre, detailed, "Validating ProxyEntity " << ptr->getObjectReference().toString());
+
+    mCanDestroy = false;
+
     mDestroyTimer->cancel();
 
     // Because this could be a new ProxyEntity, created after a bunch
     // of updates have been received by the ProxyObject, we need to
     // refresh its important data
     updateLocation( mProxy, mProxy->location(), mProxy->orientation(), mProxy->bounds(), SpaceObjectReference::null() );
+
+    if (!mActive) {
+        getScene()->downloadPlanner()->addNewObject(mProxy, this);
+        mActive = true;
+    }
 }
 
 void ProxyEntity::invalidated(ProxyObjectPtr ptr, bool permanent) {
+    assert(ptr == mProxy);
+
+    SILOG(ogre, detailed, "Invalidating ProxyEntity " << ptr->getObjectReference().toString());
+
+    if (!mActive) return;
+
     // If the the object really disconnected, it'll be marked as a permanent
     // removal. If it just left the result set then it should still be in the
     // world and shouldn't hurt to leave it around for awhile, and we'll get
@@ -131,15 +155,23 @@ void ProxyEntity::invalidated(ProxyObjectPtr ptr, bool permanent) {
 }
 
 void ProxyEntity::handleDestroyTimeout() {
-    unload();
+    SILOG(ogre, detailed, "Handling destruction timeout for ProxyEntity " << mProxy->getObjectReference().toString());
+
+    assert(mProxy);
+    assert(mActive);
+
+    getScene()->downloadPlanner()->removeObject(mProxy);
+    mActive = false;
+    tryDelete();
 }
 
 void ProxyEntity::destroyed(ProxyObjectPtr ptr) {
-    // FIXME this is triggered by the ProxyObjectListener interface. But we
-    //actually don't want to delete it here, we want to *maybe* mask things for
-    //awhile. For now, we just leak this, but clearly this needs to be fixed.
-    //Provider<ProxyEntityListener*>::notify(&ProxyEntityListener::proxyEntityDestroyed, this);
-    //delete this;
+    assert(ptr == mProxy);
+
+    // Not explicitly deleted here, we just mark it as a candidate for
+    // destruction.
+    mCanDestroy = true;
+    tryDelete();
 }
 
 void ProxyEntity::extrapolateLocation(TemporalValue<Location>::Time current) {
@@ -148,21 +180,26 @@ void ProxyEntity::extrapolateLocation(TemporalValue<Location>::Time current) {
     setOgreOrientation(loc.getOrientation());
 }
 
-/////////////////////////////////////////////////////////////////////
-// overrides from MeshListener
-// MCB: integrate these with the MeshObject model class
-
 void ProxyEntity::onSetMesh (ProxyObjectPtr proxy, Transfer::URI const& meshFile,const SpaceObjectReference& sporef )
 {
+    assert(proxy == mProxy);
     getScene()->downloadPlanner()->updateObject(proxy);
 }
 
 void ProxyEntity::onSetScale (ProxyObjectPtr proxy, float32 scale,const SpaceObjectReference& sporef )
 {
+    assert(proxy == mProxy);
     updateScale(scale);
     getScene()->downloadPlanner()->updateObject(proxy);
 }
 
+void ProxyEntity::tryDelete() {
+    if (!mActive && mCanDestroy) {
+        static_cast<OgreSystem*>(getScene())->entityDestroyed(this);
+        Provider<ProxyEntityListener*>::notify(&ProxyEntityListener::proxyEntityDestroyed, this);
+        delete this;
+    }
+}
 
 }
 }

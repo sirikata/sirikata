@@ -142,6 +142,8 @@ public:
 
     ProxyEntity* getEntity(const SpaceObjectReference &proxyId) const;
     ProxyEntity* getEntity(const ProxyObjectPtr &proxy) const;
+    // Invoked when a ProxyEntity is self destructing
+    void entityDestroyed(ProxyEntity*);
 
     bool queryRay(const Vector3d&position,
                   const Vector3f&direction,

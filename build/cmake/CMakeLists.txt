@@ -106,9 +106,9 @@ STRING(COMPARE EQUAL ${UPPERCASE_BUILD_TYPE} "DEBUG" ISDEBUG)
 
 SET(ADDED_DEFINITIONS -Wall -Wno-unused-function -Wno-unused-variable -fvisibility=hidden -fPIC -Wnon-virtual-dtor  -Wreorder -Wstrict-null-sentinel -Wsign-promo )
 
-IF(APPLE)    
+IF(APPLE)
     SET(ADDED_DEFINITIONS ${ADDED_DEFINITIONS} -isysroot ${MAC_SDK_DIR} -arch i386 ${MAC_EXTRA_FLAGS} -mmacosx-version-min=${MAC_MIN_VER} )
-    
+
     IF(sirikata_LDFLAGS)
        SET(sirikata_LDFLAGS "${sirikata_LDFLAGS} ${MAC_EXTRA_FLAGS} -Wl,-syslibroot -Wl,${MAC_SDK_DIR} -arch i386")
     ELSE()
@@ -229,6 +229,7 @@ IF(NOT BUILD_DIR)
 ENDIF()
 GET_FILENAME_COMPONENT(BUILD_DIR ${BUILD_DIR} ABSOLUTE)
 
+
 INCLUDE(GitRevision)
 
 # Set major, minor, and revision numbers. In theory, we should have:
@@ -238,7 +239,7 @@ INCLUDE(GitRevision)
 #  * Revisions also only have additions and are very minor.
 SET(SIRIKATA_VERSION_MAJOR "0" CACHE STRING "Sirikata's major version" FORCE)
 SET(SIRIKATA_VERSION_MINOR "0" CACHE STRING "Sirikata's minor version" FORCE)
-SET(SIRIKATA_VERSION_REVISION "16" CACHE STRING "Sirikata's revision version" FORCE)
+SET(SIRIKATA_VERSION_REVISION "17" CACHE STRING "Sirikata's revision version" FORCE)
 
 # These get translated into two settings: the VERSION and
 # SOVERSION. The SOVERSION includes just the major number so anything
@@ -257,6 +258,35 @@ SET(SIRIKATA_GIT_REVISION ${SIRIKATA_GIT_REVISION_VAL} CACHE STRING "Sirikata's 
 
 # Finally, we generate a configuration file with these settings
 CONFIGURE_FILE(${TOP_LEVEL}/libcore/include/sirikata/core/util/Version.hpp.in ${TOP_LEVEL}/libcore/include/sirikata/core/util/Version.hpp)
+
+# Install offsets -- we run the install process differently depending
+# on platform because different platforms handle dynamicly linked
+# libraries differently (e.g. Windows includes the binary's path in
+# the search PATH automatically whereas Linux traditionally keeps bin/
+# and lib/ separate, and we may not be installed to a system path
+# which is already part of the search paths). The different settings are:
+#
+# USER_BINARY_PATH - offset for 'binaries' which are invoked by the user. These
+#                    are likely just wrapper scripts around the real binaries
+# BINARY_PATH - offset for binaries which are internally used, i.e. they are
+#               invoked indirectly or by wrappers, not by the user
+# LIBRARY_PATH - offset for Sirikata libraries
+# PLUGIN_PATH - offset for installed plugins. Generally should be same/very
+#               similar to LIBRARY_PATH
+#
+IF(WIN32)
+  SET(SIRIKATA_INSTALL_USER_BINARY_PATH bin)
+  SET(SIRIKATA_INSTALL_BINARY_PATH bin)
+  SET(SIRIKATA_INSTALL_LIBRARY_PATH lib)
+  SET(SIRIKATA_INSTALL_PLUGIN_PATH lib)
+ELSE()
+  SET(SIRIKATA_INSTALL_USER_BINARY_PATH bin)
+  SET(SIRIKATA_INSTALL_BINARY_PATH lib/sirikata)
+  SET(SIRIKATA_INSTALL_LIBRARY_PATH lib/sirikata)
+  SET(SIRIKATA_INSTALL_PLUGIN_PATH lib/sirikata)
+
+  SET(SIRIKATA_GENERATE_BINARY_WRAPPERS TRUE)
+ENDIF()
 
 # a bunch of location definitions
 IF(NOT DEPENDENCIES_ROOT)
@@ -356,7 +386,7 @@ IF(EXISTS ${PLATFORM_LIBS}/installed-protobufs/bin)
   SET(PROTOCOLBUFFERS_ROOT ${PLATFORM_LIBS}/installed-protobufs)
 ELSEIF(EXISTS ${PLATFORM_LIBS}/protobufs/bin)
   SET(PROTOCOLBUFFERS_ROOT ${PLATFORM_LIBS}/protobufs)
-ELSE()
+ELSEIF(EXISTS ${PLATFORM_LIBS}/lib)
   SET(PROTOCOLBUFFERS_ROOT ${PLATFORM_LIBS})
 ENDIF()
 FIND_PACKAGE(ProtocolBuffers)
@@ -402,7 +432,13 @@ IF(NOT BOOST_ROOT)
     SET(BOOST_ROOT ${PLATFORM_LIBS}/installed-boost)
   ELSEIF(EXISTS ${PLATFORM_LIBS}/boost_1_35_0/lib)
     SET(BOOST_ROOT ${PLATFORM_LIBS}/boost_1_35_0)
-  ELSE()
+  ELSEIF(EXISTS ${PLATFORM_LIBS}/boost_1_42_0/lib)
+    SET(BOOST_ROOT ${PLATFORM_LIBS}/boost_1_42_0)
+  ELSEIF(EXISTS ${PLATFORM_LIBS}/boost_1_44_0/lib)
+    SET(BOOST_ROOT ${PLATFORM_LIBS}/boost_1_44_0)
+  ELSEIF(EXISTS ${PLATFORM_LIBS}/boost_1_45_0/lib)
+    SET(BOOST_ROOT ${PLATFORM_LIBS}/boost_1_45_0)
+  ELSEIF(EXISTS ${PLATFORM_LIBS}/lib)
     SET(BOOST_ROOT ${PLATFORM_LIBS})
   ENDIF()
 ENDIF()
@@ -455,6 +491,8 @@ SET(Boost_LIBRARIES
   debug ${Boost_REGEX_LIBRARY_DEBUG} optimized ${Boost_REGEX_LIBRARY_RELEASE}
   debug ${Boost_IOSTREAMS_LIBRARY_DEBUG} optimized ${Boost_IOSTREAMS_LIBRARY_RELEASE}
   )
+# Make sure we use boost filesystem v2 if both v2 and v3 are available.
+ADD_DEFINITIONS(-DBOOST_FILESYSTEM_VERSION=2)
 
 #dependency: curl
 IF(NOT CURL_ROOT)
@@ -468,32 +506,10 @@ IF(NOT CURL_ROOT)
   IF(WIN32)
     GET_FILENAME_COMPONENT(CURL_ROOT ${CURL_ROOT} ABSOLUTE)
   ENDIF()
-  IF(NOT CURL_ROOT)
-    SET(CURL_ROOT ${PLATFORM_LIBS}/libcurl_7_15_5)
-  ENDIF()
 ENDIF()
 
 FIND_PACKAGE(CURL)
 SET(TEST_LIBRARIES ${CURL_LIBRARIES})
-
-#dependency: ois
-IF(NOT OIS_ROOT)
-  IF(EXISTS ${PLATFORM_LIBS}/installed-ois)
-    SET(OIS_ROOT ${PLATFORM_LIBS}/installed-ois)
-  ELSEIF(EXISTS ${PLATFORM_LIBS}/ois-1.2)
-    SET(OIS_ROOT ${PLATFORM_LIBS}/ois-1.2)
-  ELSEIF(EXISTS ${PLATFORM_LIBS}/ois-1.0)
-    SET(OIS_ROOT ${PLATFORM_LIBS}/ois-1.0)
-  ENDIF()
-  IF(WIN32 AND OIS_ROOT)
-    GET_FILENAME_COMPONENT(OIS_ROOT ${OIS_ROOT} ABSOLUTE)
-  ENDIF()
-  IF(NOT OIS_ROOT)
-    SET(OIS_ROOT ${PLATFORM_LIBS})
-  ENDIF()
-ENDIF()
-
-FIND_PACKAGE(OIS)
 
 #dependency: ogre
 IF(NOT OGRE_ROOT)
@@ -616,6 +632,7 @@ ELSE()
   SET(GSL_LIBRARIES)
 ENDIF()
 
+SET(BERKELIUM_WITH_TESTS FALSE CACHE BOOL "")
 IF(WIN32)
 #dependency: berkelium
   IF(NOT BERKELIUM_ROOT)
@@ -653,6 +670,9 @@ ELSE()
                    ${CMAKE_CURRENT_BINARY_DIR}/scene.db)
 
     SET(BERKELIUM_CHROME_ROOT_SEARCH_PATHS ${TOP_LEVEL}/externals/berkelium/chromium/chromium)
+    # Override install path for binaries to lib/ since we install binaries to lib/ and add wrappers.
+    SET(BERKELIUM_INSTALL_BINARY_PATH ${SIRIKATA_INSTALL_BINARY_PATH} CACHE STRING "")
+    SET(BERKELIUM_INSTALL_LIBRARY_PATH ${SIRIKATA_INSTALL_LIBRARY_PATH} CACHE STRING "")
     ADD_SUBDIRECTORY(${TOP_LEVEL}/externals/berkelium ${CMAKE_CURRENT_BINARY_DIR}/chrome)
 
     SET(CMAKE_MODULE_PATH ${TOP_LEVEL}/externals/berkelium ${CMAKE_MODULE_PATH})
@@ -1629,6 +1649,10 @@ SET(LIBSPACE_PLUGIN_STANDARD_SOURCES
 SET(LIBSPACE_PLUGIN_BULLETPHYSICS_DIR ${LIBSPACE_PLUGIN_DIR}/physics)
 SET(LIBSPACE_PLUGIN_BULLETPHYSICS_SOURCES
   ${LIBSPACE_PLUGIN_BULLETPHYSICS_DIR}/PluginInterface.cpp
+  ${LIBSPACE_PLUGIN_BULLETPHYSICS_DIR}/BulletObject.cpp
+  ${LIBSPACE_PLUGIN_BULLETPHYSICS_DIR}/BulletCharacterController.cpp
+  ${LIBSPACE_PLUGIN_BULLETPHYSICS_DIR}/BulletCharacterObject.cpp
+  ${LIBSPACE_PLUGIN_BULLETPHYSICS_DIR}/BulletRigidBodyObject.cpp
   ${LIBSPACE_PLUGIN_BULLETPHYSICS_DIR}/BulletPhysicsService.cpp
 )
 
@@ -2328,7 +2352,7 @@ ENDIF()
 SET(EMHEADLESS_SOURCES
   ${LIBOH_PLUGIN_JS_DIR}/headless/EMHeadless.cpp
   )
- 
+
 
 
 SET(LIBOH_PLUGIN_CSVFACTORY_DIR ${LIBOH_PLUGIN_DIR}/csvfactory)
@@ -2771,6 +2795,10 @@ IF(APPLE)
     ${BUILD_DIR}/slauncher_helper.app
     VERBATIM
     )
+  INSTALL(DIRECTORY
+    ${SLAUNCHER_SOURCE_DIR}/slauncher_helper.app/
+    DESTINATION ${SIRIKATA_INSTALL_BINARY_PATH}/slauncher_helper.app/
+    )
 ENDIF()
 
 
@@ -2801,6 +2829,7 @@ IF(CHROME_FOUND)
 
       SET(CHROME_SYMLINKS_COMMAND
         ln -sf ${CHROMIUM_DATADIR}/locales &&
+        ln -sf ${CHROMIUM_DATADIR}/resources &&
         ln -sf ${CHROMIUM_DATADIR}/resources.pak &&
         ln -sf ${CHROMIUM_DATADIR}/chrome.pak
         )
@@ -2860,6 +2889,13 @@ ENDIF()
 
 IF(BUILD_OGRE_OH)
   SET(ALL_BINARIES ${ALL_BINARIES} ${MESH_VIEW_BINARY})
+ENDIF()
+
+IF(BUILD_JS_OH)
+  SET(ALL_BINARIES ${ALL_BINARIES} emheadless)
+ENDIF()
+IF(BUILD_EMERSON_COMPILER)
+  SET(ALL_BINARIES ${ALL_BINARIES} emerson)
 ENDIF()
 
 SET(ALL_BINARIES ${ALL_BINARIES} slauncher)
@@ -2926,93 +2962,144 @@ IF(PYTHON_EXECUTABLE) #FIXME should work if we have dotnet protobufs (if we can 
       DEPENDS ${AdditionalProtoDepends} ${INPUT_BLANK_CSV}
       COMMENT "Making example scene database from  ${GENERATED_BLANK_DB}"
       )
-    INSTALL(FILES ${GENERATED_SCENE_DB} DESTINATION bin)
+    INSTALL(FILES
+      ${GENERATED_SCENE_DB}
+      DESTINATION ${SIRIKATA_INSTALL_BINARY_PATH}
+      )
     MESSAGE(STATUS "Added ${GENERATED_SCENE_DB} target.")
   ENDIF()
 ENDIF()
 
 SET(EXEC_PERMS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_EXECUTE GROUP_READ WORLD_EXECUTE WORLD_READ)
 #installation information
-SET(SIRIKATA_BINARY_INSTALL_TARGETS
-          ${PBJ_BINARY}
-          ${SIRIKATA_CORE_LIB}
-          ${SIRIKATA_SPACE_LIB}
-          ${SIRIKATA_MESH_LIB}
-          ${SIRIKATA_PROXYOBJECT_LIB}
-          ${SIRIKATA_OH_LIB}
-          ${PLUGIN_INSTALL_LIST}
-          ${SPACE_BINARY}
-          ${CPPOH_BINARY}
-          cseg
-          pinto
-          slauncher
-          )
+SET(SIRIKATA_LIBRARY_TARGETS
+  ${SIRIKATA_CORE_LIB}
+  ${SIRIKATA_SPACE_LIB}
+  ${SIRIKATA_MESH_LIB}
+  ${SIRIKATA_PROXYOBJECT_LIB}
+  ${SIRIKATA_OH_LIB}
+  )
+SET(SIRIKATA_PLUGIN_TARGETS
+  ${PLUGIN_INSTALL_LIST}
+  )
+SET(SIRIKATA_BINARY_TARGETS
+  ${PBJ_BINARY}
+  ${SPACE_BINARY}
+  ${CPPOH_BINARY}
+  cseg
+  pinto
+  slauncher
+  )
 IF(BUILD_LIBSDL)
-  SET(SIRIKATA_BINARY_INSTALL_TARGETS
-    ${SIRIKATA_BINARY_INSTALL_TARGETS}
+  SET(SIRIKATA_LIBRARY_TARGETS
+    ${SIRIKATA_LIBRARY_TARGETS}
     ${SIRIKATA_SDL_LIB}
     )
 ENDIF()
 IF(BUILD_OGRE_OH)
-  SET(SIRIKATA_BINARY_INSTALL_TARGETS
-    ${SIRIKATA_BINARY_INSTALL_TARGETS}
+  SET(SIRIKATA_LIBRARY_TARGETS
+    ${SIRIKATA_LIBRARY_TARGETS}
     ${SIRIKATA_OGRE_LIB}
+    )
+  SET(SIRIKATA_BINARY_TARGETS
+    ${SIRIKATA_BINARY_TARGETS}
     ${MESH_VIEW_BINARY}
   )
 ENDIF()
 IF(BUILD_LIBSQLITE)
-  SET(SIRIKATA_BINARY_INSTALL_TARGETS
-    ${SIRIKATA_BINARY_INSTALL_TARGETS}
+  SET(SIRIKATA_LIBRARY_TARGETS
+    ${SIRIKATA_LIBRARY_TARGETS}
     ${SIRIKATA_SQLITE_LIB}
   )
 ENDIF()
 IF(BUILD_JS_OH)
-  SET(SIRIKATA_BINARY_INSTALL_TARGETS
-    ${SIRIKATA_BINARY_INSTALL_TARGETS}
+  SET(SIRIKATA_BINARY_TARGETS
+    ${SIRIKATA_BINARY_TARGETS}
     emheadless
     )
 ENDIF()
 IF(BUILD_EMERSON_COMPILER)
-  SET(SIRIKATA_BINARY_INSTALL_TARGETS
-    ${SIRIKATA_BINARY_INSTALL_TARGETS}
+  SET(SIRIKATA_BINARY_TARGETS
+    ${SIRIKATA_BINARY_TARGETS}
     emerson
     )
 ENDIF()
 IF(BUILD_MESHTOOL)
-  SET(SIRIKATA_BINARY_INSTALL_TARGETS
-    ${SIRIKATA_BINARY_INSTALL_TARGETS}
+  SET(SIRIKATA_BINARY_TARGETS
+    ${SIRIKATA_BINARY_TARGETS}
     ${MESH_TOOL_BINARY}
     )
 ENDIF()
 
 IF (LIBCASSANDRA_FOUND)
-  SET(SIRIKATA_BINARY_INSTALL_TARGETS
-    ${SIRIKATA_BINARY_INSTALL_TARGETS}
+  SET(SIRIKATA_LIBRARY_TARGETS
+    ${SIRIKATA_LIBRARY_TARGETS}
     ${SIRIKATA_CASSANDRA_LIB}
-  )
+    )
 ENDIF()
-INSTALL(TARGETS
-  ${SIRIKATA_BINARY_INSTALL_TARGETS}
-        PERMISSIONS ${EXEC_PERMS}
-        RUNTIME
-          DESTINATION bin
-        LIBRARY
-          DESTINATION lib
-        ARCHIVE
-          DESTINATION lib
-)
 
 IF(BUILDING_CRASHREPORTER)
-  INSTALL(TARGETS
-          ${CRASHREPORTER_BINARY}
+  SET(SIRIKATA_BINARY_TARGETS
+    ${SIRIKATA_BINARY_TARGETS}
+    ${CRASHREPORTER_BINARY}
+    )
+ENDIF()
+
+SET(SIRIKATA_INSTALL_TARGETS
+  ${SIRIKATA_LIBRARY_TARGETS}
+  ${SIRIKATA_PLUGIN_TARGETS}
+  ${SIRIKATA_BINARY_TARGETS}
+  )
+INSTALL(TARGETS
+  ${SIRIKATA_INSTALL_TARGETS}
         PERMISSIONS ${EXEC_PERMS}
         RUNTIME
-          DESTINATION bin
+          DESTINATION ${SIRIKATA_INSTALL_BINARY_PATH}
         LIBRARY
-          DESTINATION lib
+          DESTINATION ${SIRIKATA_INSTALL_LIBRARY_PATH}
         ARCHIVE
-          DESTINATION lib
-          )
+          DESTINATION ${SIRIKATA_INSTALL_LIBRARY_PATH}
+)
+
+# On platforms that don't have a simple setup for libraries, we need
+# to generate wrappers for binaries. We do this by using a simple
+# template bash script to generate a wrapper for each binary.
+IF(SIRIKATA_GENERATE_BINARY_WRAPPERS)
+  IF(APPLE)
+    SET(LD_LIBRARY_PATH_NAME DYLD_LIBRARY_PATH)
+  ELSE()
+    SET(LD_LIBRARY_PATH_NAME LD_LIBRARY_PATH)
+  ENDIF()
+
+  FOREACH(BINARY_NAME ${SIRIKATA_BINARY_TARGETS})
+    # Get the real filename of the executable
+    GET_TARGET_PROPERTY(BINARY_EXE ${BINARY_NAME} LOCATION)
+    GET_FILENAME_COMPONENT(BINARY_EXE ${BINARY_EXE} NAME)
+    # Annoyingly, we don't get the suffix from these commands
+    IF(ISDEBUG)
+      SET(BINARY_EXE "${BINARY_EXE}_d")
+    ENDIF()
+
+    # We need to special case cppoh since it's run in a .app structure
+    STRING(COMPARE EQUAL ${BINARY_NAME} "cppoh" IS_CPPOH)
+    IF(IS_CPPOH)
+      SET(BINARY_EXE "${BINARY_EXE}.app/Contents/MacOS/${BINARY_EXE}")
+    ENDIF()
+
+    # Generate the wrapper script
+    CONFIGURE_FILE(
+      ${TOP_LEVEL}/tools/posix/binary_launcher.sh
+      generated/${BINARY_NAME}
+      @ONLY
+      )
+
+    # Install the wrapper script
+    INSTALL(
+      FILES generated/${BINARY_NAME}
+      PERMISSIONS ${EXEC_PERMS}
+      DESTINATION ${SIRIKATA_INSTALL_USER_BINARY_PATH}
+      )
+  ENDFOREACH()
 ENDIF()
 
 #install protobufs
@@ -3020,33 +3107,13 @@ IF(PROTOCOLBUFFERS_ROOT)
   IF(WIN32)
     INSTALL(DIRECTORY ${PROTOCOLBUFFERS_ROOT}/bin/
             FILE_PERMISSIONS ${EXEC_PERMS}
-            DESTINATION bin/
+            DESTINATION ${SIRIKATA_INSTALL_BINARY_PATH}
             #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
             PATTERN "*.exe" EXCLUDE)
   ELSE()
     INSTALL(DIRECTORY ${PROTOCOLBUFFERS_ROOT}/lib/
             FILE_PERMISSIONS ${EXEC_PERMS}
-            DESTINATION lib/
-            #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
-            PATTERN "*.exe" EXCLUDE)
-  ENDIF()
-ENDIF()
-
-
-#install ois
-IF(OIS_ROOT AND FOUND_OIS)
-  IF(WIN32)
-    INSTALL(DIRECTORY ${OIS_ROOT}/bin/
-            FILE_PERMISSIONS ${EXEC_PERMS}
-            DESTINATION bin/
-            #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
-            PATTERN "*.exe" EXCLUDE)
-  ELSE()
-    INSTALL(DIRECTORY ${OIS_ROOT}/lib/
-            FILE_PERMISSIONS ${EXEC_PERMS}
-            PATTERN "*.a" EXCLUDE
-            PATTERN "*.la" EXCLUDE
-            DESTINATION lib/
+            DESTINATION ${SIRIKATA_INSTALL_LIBRARY_PATH}
             #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
             PATTERN "*.exe" EXCLUDE)
   ENDIF()
@@ -3058,14 +3125,14 @@ IF(BUILD_LIBSQLITE AND SQLite3_ROOT)
   IF(WIN32)
     INSTALL(DIRECTORY ${SQLite3_ROOT}/lib/
             FILE_PERMISSIONS ${EXEC_PERMS}
-            DESTINATION bin/
+            DESTINATION ${SIRIKATA_INSTALL_BINARY_PATH}
             #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
             PATTERN "*.exe" EXCLUDE
             PATTERN "*.lib" EXCLUDE)
   ELSE()
     INSTALL(DIRECTORY ${SQLite3_ROOT}/lib/
             FILE_PERMISSIONS ${EXEC_PERMS}
-            DESTINATION lib/
+            DESTINATION ${SIRIKATA_INSTALL_LIBRARY_PATH}
             #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
             PATTERN "*.a" EXCLUDE
             PATTERN "*.la" EXCLUDE
@@ -3078,14 +3145,14 @@ IF(BUILD_REDIS_SPACE)
   IF(WIN32)
     INSTALL(DIRECTORY ${HIREDIS_ROOT}/lib/
             FILE_PERMISSIONS ${EXEC_PERMS}
-            DESTINATION bin/
+            DESTINATION ${SIRIKATA_INSTALL_BINARY_PATH}
             #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
             PATTERN "*.exe" EXCLUDE
             PATTERN "*.lib" EXCLUDE)
   ELSE()
     INSTALL(DIRECTORY ${HIREDIS_ROOT}/lib/
             FILE_PERMISSIONS ${EXEC_PERMS}
-            DESTINATION lib/
+            DESTINATION ${SIRIKATA_INSTALL_LIBRARY_PATH}
             #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
             PATTERN "*.a" EXCLUDE
             PATTERN "*.la" EXCLUDE
@@ -3098,27 +3165,27 @@ IF(BUILD_CASSANDRA_OH)
   IF(WIN32)
     INSTALL(DIRECTORY ${THRIFT_ROOT}/lib/
             FILE_PERMISSIONS ${EXEC_PERMS}
-            DESTINATION bin/
+            DESTINATION ${SIRIKATA_INSTALL_BINARY_PATH}
             #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
             PATTERN "*.exe" EXCLUDE
             PATTERN "*.lib" EXCLUDE)
     INSTALL(DIRECTORY ${LIBCASSANDRA_ROOT}/lib/
             FILE_PERMISSIONS ${EXEC_PERMS}
-            DESTINATION bin/
+            DESTINATION ${SIRIKATA_INSTALL_BINARY_PATH}
             #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
             PATTERN "*.exe" EXCLUDE
             PATTERN "*.lib" EXCLUDE)
   ELSE()
     INSTALL(DIRECTORY ${THRIFT_ROOT}/lib/
             FILE_PERMISSIONS ${EXEC_PERMS}
-            DESTINATION lib/
+            DESTINATION ${SIRIKATA_INSTALL_LIBRARY_PATH}
             #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
             PATTERN "*.a" EXCLUDE
             PATTERN "*.la" EXCLUDE
             PATTERN "*.exe" EXCLUDE)
     INSTALL(DIRECTORY ${LIBCASSANDRA_ROOT}/lib/
             FILE_PERMISSIONS ${EXEC_PERMS}
-            DESTINATION lib/
+            DESTINATION ${SIRIKATA_INSTALL_LIBRARY_PATH}
             #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
             PATTERN "*.a" EXCLUDE
             PATTERN "*.la" EXCLUDE
@@ -3131,14 +3198,14 @@ IF(sdl_FOUND AND sdl_ROOT)
   IF(WIN32)
     INSTALL(DIRECTORY ${sdl_ROOT}/bin/
             FILE_PERMISSIONS ${EXEC_PERMS}
-            DESTINATION bin/
+            DESTINATION ${SIRIKATA_INSTALL_BINARY_PATH}
             #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
             PATTERN "*.exe" EXCLUDE
             PATTERN "*.lib" EXCLUDE)
   ELSEIF(APPLE)
     INSTALL(DIRECTORY ${sdl_ROOT}/lib/
             FILE_PERMISSIONS ${EXEC_PERMS}
-            DESTINATION lib/
+            DESTINATION ${SIRIKATA_INSTALL_LIBRARY_PATH}
             #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
             PATTERN "*.a" EXCLUDE
             PATTERN "*.la" EXCLUDE
@@ -3146,7 +3213,7 @@ IF(sdl_FOUND AND sdl_ROOT)
   ELSE()
     INSTALL(DIRECTORY ${sdl_LIBRARY_DIRS}/
             FILE_PERMISSIONS ${EXEC_PERMS}
-            DESTINATION lib/
+            DESTINATION ${SIRIKATA_INSTALL_LIBRARY_PATH}
             #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
             PATTERN "*.a" EXCLUDE
             PATTERN "*.la" EXCLUDE
@@ -3159,33 +3226,35 @@ IF(FFMPEG_FOUND)
   IF(WIN32)
     INSTALL(DIRECTORY ${FFMPEG_ROOT}/bin/
             FILE_PERMISSIONS ${EXEC_PERMS}
-            DESTINATION bin/
+            DESTINATION ${SIRIKATA_INSTALL_BINARY_PATH}
             #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
             PATTERN "*.exe" EXCLUDE
             PATTERN "*.lib" EXCLUDE)
   ELSEIF(APPLE)
     INSTALL(DIRECTORY ${FFMPEG_ROOT}/lib/
             FILE_PERMISSIONS ${EXEC_PERMS}
-            DESTINATION lib/
+            DESTINATION ${SIRIKATA_INSTALL_LIBRARY_PATH}
             #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
             PATTERN "*.a" EXCLUDE
             PATTERN "*.la" EXCLUDE
             PATTERN "*.exe" EXCLUDE)
   ELSE()
-    INSTALL(DIRECTORY ${FFMPEG_LIBRARY_DIRS}/
-            FILE_PERMISSIONS ${EXEC_PERMS}
-            DESTINATION lib/
-            #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
-            PATTERN "*.a" EXCLUDE
-            PATTERN "*.la" EXCLUDE
-            PATTERN "*.exe" EXCLUDE)
+    FOREACH(FFMPEG_LIBRARY_DIR ${FFMPEG_LIBRARY_DIRS})
+      INSTALL(DIRECTORY ${FFMPEG_LIBRARY_DIR}/
+        FILE_PERMISSIONS ${EXEC_PERMS}
+        DESTINATION ${SIRIKATA_INSTALL_LIBRARY_PATH}
+        #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
+        PATTERN "*.a" EXCLUDE
+        PATTERN "*.la" EXCLUDE
+        PATTERN "*.exe" EXCLUDE)
+    ENDFOREACH()
   ENDIF()
 ENDIF()
 
 IF(BUILD_BULLET_SPACE AND bullet_ROOT)
   INSTALL(DIRECTORY ${bullet_ROOT}/lib/
           FILE_PERMISSIONS ${EXEC_PERMS}
-          DESTINATION lib/
+          DESTINATION ${SIRIKATA_INSTALL_LIBRARY_PATH}
           PATTERN "*.a" EXCLUDE
           PATTERN "*.la" EXCLUDE
           #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
@@ -3201,24 +3270,24 @@ IF(BUILD_OGRE_OH)
     ENDIF()
     INSTALL(DIRECTORY ${OGRE_ROOT}/bin/${OGRE_BIN_SUBFOLDER}
             FILE_PERMISSIONS ${EXEC_PERMS}
-            DESTINATION bin/
+            DESTINATION ${SIRIKATA_INSTALL_BINARY_PATH}
             #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
             PATTERN "*.exe" EXCLUDE)
   ELSEIF(APPLE)
     INSTALL(DIRECTORY ${OGRE_FRAMEWORKS}
       FILE_PERMISSIONS ${EXEC_PERMS}
-      DESTINATION Frameworks/
+      DESTINATION lib/Frameworks/
     )
     INSTALL(DIRECTORY ${OGRE_LIBRARY_DIRS}/
       FILE_PERMISSIONS ${EXEC_PERMS}
-      DESTINATION lib/
+      DESTINATION ${SIRIKATA_INSTALL_LIBRARY_PATH}
       PATTERN "*.framework" EXCLUDE
     )
   ELSE()
     FOREACH(OGRE_LIBRARY_DIR ${OGRE_LIBRARY_DIRS})
       INSTALL(DIRECTORY ${OGRE_LIBRARY_DIR}/
             FILE_PERMISSIONS ${EXEC_PERMS}
-            DESTINATION lib/
+            DESTINATION ${SIRIKATA_INSTALL_LIBRARY_PATH}
             #PATTERN "*.so"<-- if only we could just INCLUDE a pattern
             PATTERN "*.la" EXCLUDE
             PATTERN "*.a" EXCLUDE
@@ -3240,7 +3309,7 @@ IF(FREEIMAGE_FOUND)
   IF(WIN32)
     INSTALL(DIRECTORY ${FREEIMAGE_ROOT}/
       FILE_PERMISSIONS ${EXEC_PERMS}
-      DESTINATION bin/
+      DESTINATION ${SIRIKATA_INSTALL_BINARY_PATH}
       PATTERN "*.h" EXCLUDE
       PATTERN "*.lib" EXCLUDE
       )
@@ -3254,7 +3323,7 @@ IF(BOOST_ROOT)
       IF(EXISTS ${Boost_LIBRARY_DIR})
       INSTALL(DIRECTORY ${Boost_LIBRARY_DIR}/
             FILE_PERMISSIONS ${EXEC_PERMS}
-            DESTINATION bin/
+            DESTINATION ${SIRIKATA_INSTALL_BINARY_PATH}
             #PATTERN "*.so"<-- if only we could just INCLUDE a pattern
             PATTERN "*.la" EXCLUDE
             PATTERN "*.a" EXCLUDE
@@ -3271,7 +3340,7 @@ IF(BOOST_ROOT)
   ELSE()
     INSTALL(DIRECTORY ${BOOST_ROOT}/lib/
             FILE_PERMISSIONS ${EXEC_PERMS}
-            DESTINATION lib/
+            DESTINATION ${SIRIKATA_INSTALL_LIBRARY_PATH}
             #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
             PATTERN "*.exe" EXCLUDE)
   ENDIF()
@@ -3282,13 +3351,13 @@ IF(GSL_FOUND)
   IF(WIN32)
     INSTALL(DIRECTORY ${GSL_ROOT}/bin/
       FILE_PERMISSIONS ${EXEC_PERMS}
-      DESTINATION bin/
+      DESTINATION ${SIRIKATA_INSTALL_BINARY_PATH}
       PATTERN "*.exe" EXCLUDE
       )
   ELSEIF(APPLE)
     INSTALL(DIRECTORY ${GSL_ROOT}/lib/
       FILE_PERMISSIONS ${EXEC_PERMS}
-      DESTINATION lib/
+      DESTINATION ${SIRIKATA_INSTALL_LIBRARY_PATH}
       PATTERN "*.exe" EXCLUDE
       )
   ELSE()
@@ -3301,7 +3370,8 @@ IF(BUILD_OGRE_OH_BERKELIUM)
 IF(WIN32)
   INSTALL(DIRECTORY ${BERKELIUM_ROOT}/bin/
           FILE_PERMISSIONS ${EXEC_PERMS}
-          DESTINATION bin/ )
+          DESTINATION ${SIRIKATA_INSTALL_BINARY_PATH}
+          )
 ELSE()
 IF(APPLE)
     SET(CHROMIUM_FRAMEWORK Chromium\ Framework.framework)
@@ -3338,7 +3408,7 @@ IF(CURL_ROOT)
   IF(WIN32)
     INSTALL(DIRECTORY ${CURL_ROOT}/
             FILE_PERMISSIONS ${EXEC_PERMS}
-            DESTINATION bin/
+            DESTINATION ${SIRIKATA_INSTALL_BINARY_PATH}
             PATTERN "*.lib" EXCLUDE
             PATTERN "*README" EXCLUDE
             PATTERN "*COPYING" EXCLUDE
@@ -3353,7 +3423,7 @@ IF(CURL_ROOT)
   ELSE()
     INSTALL(DIRECTORY ${CURL_ROOT}/lib/
             FILE_PERMISSIONS ${EXEC_PERMS}
-            DESTINATION lib/
+            DESTINATION ${SIRIKATA_INSTALL_LIBRARY_PATH}
             #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
             PATTERN "*.exe" EXCLUDE)
   ENDIF()
@@ -3369,7 +3439,7 @@ ENDIF()
 IF(GOOGLE_PERFTOOLS_FOUND)
   INSTALL(DIRECTORY ${GOOGLE_PERFTOOLS_LIB_DIR}/
     FILE_PERMISSIONS ${EXEC_PERMS}
-    DESTINATION lib/
+    DESTINATION ${SIRIKATA_INSTALL_LIBRARY_PATH}
     PATTERN "*.exe" EXCLUDE
     )
 ENDIF()
@@ -3404,7 +3474,7 @@ ENDIF()
 IF(PYTHON_EXECUTABLE)
   IF(${GENERATED_SCENE_DB})
     INSTALL(FILES ${GENERATED_SCENE_DB}
-      DESTINATION bin/
+      DESTINATION ${SIRIKATA_INSTALL_BINARY_PATH}
       OPTIONAL )
   ENDIF()
 ENDIF()

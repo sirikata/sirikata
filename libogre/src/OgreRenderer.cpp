@@ -84,10 +84,9 @@ uint32 OgreRenderer::sNumOgreSystems=0;
 
 namespace {
 
-// FIXME we really need a better way to figure out where our data is
-// This is a generic search method. It searches upwards from the current
-// directory for any of the specified files and returns the first path it finds
-// that contains one of them.
+// This is a generic search method. It searches upwards from the
+// directory containing the executable for any of the specified files
+// and returns the first path it finds that contains one of them.
 std::string findResource(boost::filesystem::path* search_paths, uint32 nsearch_paths, const std::vector<String>&searchPoints, bool want_dir = true, const std::string& start_path = ".", boost::filesystem::path default_ = boost::filesystem::complete(boost::filesystem::path("."))) {
     using namespace boost::filesystem;
 
@@ -126,7 +125,6 @@ std::string findResource(boost::filesystem::path* search_paths, uint32 nsearch_p
     return default_.string();
 }
 
-// FIXME we really need a better way to figure out where our data is
 std::string getOgreResourcesDir(const std::vector<String>&searchPoints) {
     using namespace boost::filesystem;
 
@@ -140,10 +138,10 @@ std::string getOgreResourcesDir(const std::vector<String>&searchPoints) {
     };
     uint32 nsearch_paths = sizeof(search_paths)/sizeof(*search_paths);
 
-    return findResource(search_paths, nsearch_paths, searchPoints);
+    String exe_dir = Path::Get(Path::DIR_EXE);
+    return findResource(search_paths, nsearch_paths, searchPoints, true, exe_dir);
 }
 
-// FIXME we really need a better way to figure out where our data is
 std::string getBerkeliumBinaryDir(const std::vector<String>&searchPoints) {
     using namespace boost::filesystem;
 
@@ -165,7 +163,8 @@ std::string getBerkeliumBinaryDir(const std::vector<String>&searchPoints) {
     };
     uint32 nsearch_paths = sizeof(search_paths)/sizeof(*search_paths);
 
-    return findResource(search_paths, nsearch_paths,searchPoints);
+    String exe_dir = Path::Get(Path::DIR_EXE);
+    return findResource(search_paths, nsearch_paths, searchPoints, true, exe_dir);
 }
 
 std::string getChromeResourcesDir(const std::vector<String>&searchPoints) {
@@ -360,9 +359,16 @@ bool OgreRenderer::initialize(const String& options, bool with_berkelium) {
 
     // Initialize this first so we can get it to not spit out to stderr
     Ogre::LogManager * lm = OGRE_NEW Ogre::LogManager();
+    // NOTE: we specifically keep the log file as specified instead of
+    // relocating it so logs show up in the expected location and
+    // different clients don't overwrite each other's logs if they are
+    // run from different locations
     lm->createLog(ogreLogFile->as<String>(), true, false, false);
 
-    static bool success=((sRoot=OGRE_NEW Ogre::Root(pluginFile->as<String>(),configFile->as<String>(),ogreLogFile->as<String>()))!=NULL
+    // NOTE: However, unlike above, we share the config file. This is
+    // nice since you only have to configure once.
+    std::string ogreConfigFile = Path::Get(Path::DIR_USER_HIDDEN, configFile->as<String>());
+    static bool success=((sRoot=OGRE_NEW Ogre::Root(pluginFile->as<String>(),ogreConfigFile,ogreLogFile->as<String>()))!=NULL
                          &&loadBuiltinPlugins()
                          &&((purgeConfig->as<bool>()==false&&getRoot()->restoreConfig())
                             || (userAccepted=getRoot()->showConfigDialog())));

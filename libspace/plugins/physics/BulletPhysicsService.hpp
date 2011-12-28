@@ -44,53 +44,15 @@
 #include <sirikata/mesh/Filter.hpp>
 #include <sirikata/mesh/Meshdata.hpp>
 
+#include "Defs.hpp"
+
 namespace Sirikata {
-
-class SirikataMotionState;
-
-//FIXME Enums for manual treatment of objects and bboxes
-//IGNORE = Bullet shouldn't know about this object
-//STATIC = Bullet thinks this is a static (not moving) object
-//DYNAMIC = Bullet thinks this is a dynamic (moving) object
-//LINEAR_DYNAMIC = Turn off rotational effects, but make the object
-//dynamic. This means you can push it around and gravity affects it, but it
-//should never rotate.
-//VERTICAL_DYNAMIC = Turn off all but vertical movement. Useful for
-//placing objects on the ground.
-enum bulletObjTreatment {
-	BULLET_OBJECT_TREATMENT_IGNORE,
-	BULLET_OBJECT_TREATMENT_STATIC,
-	BULLET_OBJECT_TREATMENT_DYNAMIC,
-	BULLET_OBJECT_TREATMENT_LINEAR_DYNAMIC,
-	BULLET_OBJECT_TREATMENT_VERTICAL_DYNAMIC
-};
-
-enum bulletObjCollisionMaskGroup {
-	BULLET_OBJECT_COLLISION_GROUP_STATIC = 1,
-	BULLET_OBJECT_COLLISION_GROUP_DYNAMIC = 1 << 1,
-	BULLET_OBJECT_COLLISION_GROUP_CONSTRAINED = 1 << 2
-};
-
-//ENTIRE_OBJECT = Bullet creates an AABB encompassing the entire object
-//PER_TRIANGLE = Bullet creates a series of AABBs for each triangle in the object
-//		This option is useful for polygon soups - terrain, for example
-//SPHERE = Bullet creates a bounding sphere based on the bounds.radius
-enum bulletObjBBox {
-	BULLET_OBJECT_BOUNDS_ENTIRE_OBJECT,
-	BULLET_OBJECT_BOUNDS_PER_TRIANGLE,
-	BULLET_OBJECT_BOUNDS_SPHERE
-};
-
 
 using namespace Mesh;
 /** Standard location service, which functions entirely based on location
  *  updates from objects and other spaces servers.
  */
 class BulletPhysicsService : public LocationService {
-	friend class SirikataMotionState;
-
-    // Gets the collision mask for a given type of object
-    static void getCollisionMask(bulletObjTreatment treatment, bulletObjCollisionMaskGroup* mygroup, bulletObjCollisionMaskGroup* collide_with);
 public:
     BulletPhysicsService(SpaceContext* ctx, LocationUpdatePolicy* update_policy);
     virtual ~BulletPhysicsService();
@@ -138,45 +100,45 @@ public:
     // resulting data.
     void getMeshCallback(Transfer::ChunkRequestPtr request, Transfer::DenseDataPtr response, MeshdataParsedCallback cb);
 
+    LocationInfo& info(const UUID& uuid);
+    const LocationInfo& info(const UUID& uuid) const;
 
-    void updateBulletFromObject(const UUID& uuid, btTransform& worldTrans);
-    void updateObjectFromBullet(const UUID& uuid, const btTransform& worldTrans);
+    btDiscreteDynamicsWorld* dynamicsWorld() { return mDynamicsWorld; }
+    btBroadphaseInterface* broadphase() { return mBroadphase; }
+
+    // Objects that want callbacks for each tick, e.g. for grabbing updates that
+    // aren't emitted automatically or updating velocity
+    void addTickObject(const UUID& uuid);
+    void removeTickObject(const UUID& uuid);
+    // Objects that want callbacks for each internal tick, e.g. for capping
+    // velocity
+    void addInternalTickObject(const UUID& uuid);
+    void removeInternalTickObject(const UUID& uuid);
+    // Objects that want deactivation check callbacks
+    void addDeactivateableObject(const UUID& uuid);
+    void removeDeactivateableObject(const UUID& uuid);
+
+    // Add an update for this object, i.e. it was detected that it moved
+    void addUpdate(const UUID& uuid);
+
     void updateObjectFromDeactivation(const UUID& uuid);
 
     // Callback invoked each time bullet performs an internal tick
     // (may be finer granularity than we request).
     void internalTickCallback();
 protected:
-    struct LocationInfo {
-	LocationInfo();
-
-        // Regular location info that we need to maintain for all objects
-        TimedMotionVector3f location;
-        TimedMotionQuaternion orientation;
-        BoundingSphere3f bounds;
-        String mesh;
-        String physics;
-        bool local;
-        bool aggregate;
-
-        // Bullet specific data. First some basic properties:
-        bool isFixed;
-	bulletObjTreatment objTreatment;
-	bulletObjBBox objBBox;
-        float32 mass;
-        // And then some implementation data:
-	btCollisionShape * objShape;
-	SirikataMotionState* objMotionState;
-	btRigidBody* objRigidBody;
-    };
-
     typedef std::tr1::unordered_map<UUID, LocationInfo, UUID::Hasher> LocationMap;
     LocationMap mLocations;
 
     typedef std::tr1::unordered_set<UUID, UUID::Hasher> UUIDSet;
     // Which objects have dynamic physical simulation and need to be
     // sanity checked at each tick.
-    UUIDSet mDynamicPhysicsObjects;
+    UUIDSet mTickObjects;
+    // Which objects have dynamic physical simulation and need to be
+    // sanity checked at each tick.
+    UUIDSet mInternalTickObjects;
+    // Objects that need to be checked for deactivation
+    UUIDSet mDeactivateableObjects;
     // Objects which have outstanding updates to location information
     // from the physics engine.
     UUIDSet physicsUpdates;
@@ -191,19 +153,16 @@ private:
     // been retrieved.
     void updatePhysicsWorldWithMesh(const UUID& uuid, MeshdataPtr retrievedMesh);
 
-    // This does the work of actually adding the rigid body to the
-    // bullet simulation.
-    void addRigidBody(const UUID& uuid, LocationInfo& locinfo);
-    // This clears a rigid body from the bullet simulation, and clears
-    // the associated state in the LocationInfo.
-    void removeRigidBody(const UUID& uuid, LocationInfo& locinfo);
+    // Helper for cleaning up a LocationInfo before removing it
+    void cleanupLocationInfo(LocationInfo& locinfo);
+
 
     //Bullet Dynamics World Vars
-    btBroadphaseInterface* broadphase;
+    btBroadphaseInterface* mBroadphase;
     btDefaultCollisionConfiguration* collisionConfiguration;
     btCollisionDispatcher* dispatcher;
     btSequentialImpulseConstraintSolver* solver;
-    btDiscreteDynamicsWorld* dynamicsWorld;
+    btDiscreteDynamicsWorld* mDynamicsWorld;
 
     Time mLastTime;
     // Track last time we checked deactivation state
@@ -215,31 +174,8 @@ private:
 
     Transfer::TransferMediator *mTransferMediator;
     Transfer::TransferPoolPtr mTransferPool;
+    Network::IOStrand* mParsingStrand;
 }; // class BulletPhysicsService
-
-class SirikataMotionState : public btMotionState {
-public:
-    SirikataMotionState(BulletPhysicsService* service, UUID uuid)
-     : ptrToService(service),
-       mUUID(uuid)
-    {
-    }
-
-    virtual ~SirikataMotionState() {
-    }
-
-    virtual void getWorldTransform(btTransform &worldTrans) const {
-        ptrToService->updateBulletFromObject(mUUID, worldTrans);
-    }
-
-    virtual void setWorldTransform(const btTransform &worldTrans) {
-        ptrToService->updateObjectFromBullet(mUUID, worldTrans);
-    }
-
-protected:
-    BulletPhysicsService* ptrToService;
-    UUID mUUID;
-}; // class SirikataMotionState
 
 } // namespace Sirikata
 

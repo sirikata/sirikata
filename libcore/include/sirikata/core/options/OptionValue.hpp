@@ -115,7 +115,7 @@ public:
             else
                 break;
         }
-        while(list_end >= 0) {
+        while(list_end > 0) {
             if (value[list_end-1] == ']') {
                 list_end--;
                 break;

@@ -36,6 +36,7 @@ void InitLauncherOptions() {
         .addOption(new OptionValue("register","false",Sirikata::OptionValueType<bool>(),"If true, registers this binary as handler"))
         .addOption(new OptionValue("unregister","false",Sirikata::OptionValueType<bool>(),"If true, unregisters this binary as handler"))
         .addOption(new OptionValue("uri","",Sirikata::OptionValueType<String>(),"The URI to launch"))
+        .addOption(new OptionValue("debug","false",Sirikata::OptionValueType<bool>(),"If true, try to run under the debugger"))
         ;
 }
 
@@ -63,8 +64,10 @@ String getExecutablePath(String name) {
 
 
 #if SIRIKATA_PLATFORM == PLATFORM_LINUX || SIRIKATA_PLATFORM == PLATFORM_MAC
-void execCommand(const char* file, const char* const argv[]) {
-    pid_t pID = fork();
+void execCommand(const char* file, const char* const argv[], bool do_fork = true) {
+    pid_t pID = 0;
+    if (do_fork)
+        fork();
 
     if (pID == 0) {
         // setsid() decouples this process from the parent, ensuring that the
@@ -279,25 +282,7 @@ String appDir;
 String binary;
 std::vector<String> binaryArgs;
 String appDirPath() {
-    // For now, we put it within the bin directory. This probably isn't a good
-    // long term solution since we could be installed in a system path.
-#if SIRIKATA_PLATFORM == PLATFORM_LINUX || SIRIKATA_PLATFORM == PLATFORM_MAC
-    return (boost::filesystem::path(Path::Get(Path::DIR_EXE)) / appDir).string();
-#elif SIRIKATA_PLATFORM == PLATFORM_WINDOWS
-    boost::filesystem::path exe_path(Path::Get(Path::DIR_EXE));
-    // Windows has the Release & Debug directories when we're in the
-    // build tree. Try detecting and removing them.
-    if (exe_path.has_filename() &&
-        (exe_path.filename() == "Debug" ||
-            exe_path.filename() == "Release" ||
-            exe_path.filename() == "RelWithDebInfo"
-        )
-    ) {
-        exe_path = exe_path.parent_path();
-    }
-    return (exe_path / appDir).string();
-#endif
-
+    return (boost::filesystem::path(Path::Get(Path::DIR_USER_HIDDEN)) / appDir).string();
 }
 
 typedef std::map<String, Transfer::ResourceDownloadTaskPtr> ResourceDownloadMap;
@@ -449,11 +434,24 @@ void doExecApp(int* retval) {
 #if SIRIKATA_PLATFORM == PLATFORM_LINUX || SIRIKATA_PLATFORM == PLATFORM_MAC
     String appExe = getExecutablePath(binary);
     binaryArgs.insert(binaryArgs.begin(), appExe);
+
+    bool do_fork = true;
+    bool do_debug = GetOptionValue<bool>("debug");
+    if (do_debug) {
+        // We need to prefix gdb --args and change the app name to
+        // gdb. Also don't fork so we can actually use gdb
+        binaryArgs.insert(binaryArgs.begin(), "--args");
+        binaryArgs.insert(binaryArgs.begin(), "gdb");
+        appExe = "gdb";
+        do_fork = false;
+    }
+
+    // Generate a version of the args that can be used by exec
     const char** execArgs = new const char*[binaryArgs.size()+1];
     for(uint32 i = 0; i < binaryArgs.size(); i++)
         execArgs[i] = binaryArgs[i].c_str();
     execArgs[binaryArgs.size()] = NULL;
-    execCommand(appExe.c_str(), execArgs);
+    execCommand(appExe.c_str(), execArgs, do_fork);
 #elif SIRIKATA_PLATFORM == PLATFORM_WINDOWS
     String appExe = getExecutablePath(binary);
     binaryArgs.insert(binaryArgs.begin(), appExe);

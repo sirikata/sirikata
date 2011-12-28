@@ -12,6 +12,12 @@
 
 #if SIRIKATA_PLATFORM == PLATFORM_MAC || SIRIKATA_PLATFORM == PLATFORM_LINUX
 #include <unistd.h>
+#include <sys/types.h>
+#include <pwd.h>
+#endif
+
+#if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+#include <shlobj.h>
 #endif
 
 #ifndef MAX_PATH
@@ -122,9 +128,93 @@ String Get(Key key) {
           }
           break;
 
+      case DIR_USER:
+          {
+#if SIRIKATA_PLATFORM == PLATFORM_LINUX || SIRIKATA_PLATFORM == PLATFORM_MAC
+              uid_t uid = getuid();
+              passwd* pw = getpwuid(uid);
+              if (pw != NULL && pw->pw_dir != NULL) {
+                  boost::filesystem::path homedir(pw->pw_dir);
+                  if (boost::filesystem::exists(homedir) && boost::filesystem::is_directory(homedir))
+                      return homedir.string();
+              }
+#elif SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+              char system_buffer[MAX_PATH];
+              system_buffer[0] = 0;
+              if (FAILED(SHGetFolderPath(NULL, CSIDL_LOCAL_APPDATA, NULL, 0, system_buffer)))
+                  return "";
+              std::string appdata_str(system_buffer);
+              boost::filesystem::path user_appdata(appdata_str);
+              user_appdata /= "Sirikata";
+              if (!boost::filesystem::exists(user_appdata))
+                  boost::filesystem::create_directory(user_appdata);
+              if (boost::filesystem::exists(user_appdata) && boost::filesystem::is_directory(user_appdata))
+                  return user_appdata.string();
+#endif
+              // Last resort (and default for unknown platform) is to try to use
+              // the current directory
+              return ".";
+          }
+          break;
+
+      case DIR_USER_HIDDEN:
+          {
+#if SIRIKATA_PLATFORM == SIRIKATA_WINDOWS
+              // On windows there's no difference from the user-specific data directory since that's already hidden.
+              return Get(DIR_USER);
+#else
+              // We just compute this as an offset from the user directory
+              boost::filesystem::path user_dir(Get(DIR_USER));
+              user_dir /= ".sirikata";
+              if (!boost::filesystem::exists(user_dir))
+                  boost::filesystem::create_directory(user_dir);
+              if (boost::filesystem::exists(user_dir) && boost::filesystem::is_directory(user_dir))
+                  return user_dir.string();
+#endif
+              return ".";
+          }
+
+      case DIR_TEMP:
+          {
+#if SIRIKATA_PLATFORM == PLATFORM_LINUX || SIRIKATA_PLATFORM == PLATFORM_MAC
+              // On Mac and Linux we try to work under tmp using our own directory
+              boost::filesystem::path tmp_path("/tmp");
+              if (boost::filesystem::exists(tmp_path) && boost::filesystem::is_directory(tmp_path)) {
+                  tmp_path /= "sirikata";
+                  // If it doesn't exist, try creating it
+                  if (!boost::filesystem::exists(tmp_path))
+                      boost::filesystem::create_directory(tmp_path);
+                  if (boost::filesystem::exists(tmp_path) && boost::filesystem::is_directory(tmp_path))
+                      return tmp_path.string();
+              }
+#elif SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+              // Windows doesn't seem to suggest a good location for this, so we
+              // put it under the app data directory in its own temp directory
+              boost::filesystem::path sirikata_temp_dir =
+                  boost::filesystem::path(Get(DIR_USER_HIDDEN)) / "temp";
+              if (!boost::filesystem::exists(sirikata_temp_dir))
+                  boost::filesystem::create_directory(sirikata_temp_dir);
+              if (boost::filesystem::exists(sirikata_temp_dir) && boost::filesystem::is_directory(sirikata_temp_dir))
+                  return sirikata_temp_dir.string();
+#endif
+              // Last resort (and default for unknown platform) is to try to use
+              // the current directory
+              return ".";
+          }
+          break;
+
       default:
         return "";
     }
+}
+
+String Get(Key key, const String& relative_path) {
+    boost::filesystem::path rel_path(relative_path);
+    // If they actually gave us a relative path, just hand it back
+    if (rel_path.is_complete()) return relative_path;
+
+    boost::filesystem::path base_path(Get(key));
+    return (base_path / rel_path).string();
 }
 
 bool Set(Key key, const String& path) {

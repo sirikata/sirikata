@@ -36,11 +36,20 @@
 #include <boost/unordered_map.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/asio.hpp>
+#include <boost/tokenizer.hpp>
+#include <boost/bind.hpp>
+
 
 #include <sirikata/core/util/AtomicTypes.hpp>
+#include <sirikata/core/network/Message.hpp>
 #include <sirikata/core/queue/SizedThreadSafeQueue.hpp>
 #include <sirikata/core/service/PollingService.hpp>
 #include <sirikata/space/SegmentedRegion.hpp>
+#include <sirikata/core/network/Address4.hpp>
+#include <sirikata/core/options/CommonOptions.hpp>
+#include <sirikata/core/network/Message.hpp>
+#include <sirikata/core/util/Hash.hpp>
+#include "WorldPopulationBSPTree.hpp"
 #include "CSegContext.hpp"
 #include "LoadBalancer.hpp"
 
@@ -95,6 +104,8 @@ public:
 
     virtual void poll();
     virtual void stop();
+
+    void handleSelfLookup(Address4 my_addr);
 
 private:
     void service();    
@@ -209,6 +220,7 @@ private:
     
 
     ServerIDMap *  mSidMap;
+    
 
     /* Key value maps for fast lookup of bounding boxes managed by space servers. */
     std::map<ServerID, BoundingBoxList > mWholeTreeServerRegionMap;

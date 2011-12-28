@@ -279,7 +279,8 @@ OgreSystem::~OgreSystem() {
 void OgreSystem::stop() {
     if (mViewer) {
         ProxyManagerPtr proxyManager = mViewer->presence(mPresenceID);
-        proxyManager->removeListener(this);
+        if (proxyManager) // May have been disconnected
+            proxyManager->removeListener(this);
     }
 
     if (mConnectionEventProvider) {
@@ -301,7 +302,6 @@ void OgreSystem::onCreateProxy(ProxyObjectPtr p)
         mesh = new ProxyEntity(this,p);
     mesh->initializeToProxy(p);
     mEntityMap[p->getObjectReference()] = mesh;
-    mDownloadPlanner->addNewObject(p,mesh);
     // Force validation. In the case of existing ProxyObjects, this
     // should trigger the download + display process
     mesh->validated(p);
@@ -326,13 +326,16 @@ void OgreSystem::onCreateProxy(ProxyObjectPtr p)
     }
 }
 
+void OgreSystem::entityDestroyed(ProxyEntity* p) {
+    mEntityMap.erase(p->getProxyPtr()->getObjectReference());
+    // No deletion, this is invoked as the ProxyEntity is self-destructing.
+}
+
 void OgreSystem::onDestroyProxy(ProxyObjectPtr p)
 {
-    mDownloadPlanner->removeObject(p);
-    // FIXME don't delete here because we want to mask proximity
-    // additions/removals that aren't due to actual connect/disconnect.
-    // See also ProxyEntity.cpp:destroy().
-    //mEntityMap.erase(p->getObjectReference());
+    // We don't clean anything up here since the entity could be
+    // masking an addition/removal. Instead, we just wait and let the
+    // ProxyEntity tell us when it's destroyed.
 }
 
 
