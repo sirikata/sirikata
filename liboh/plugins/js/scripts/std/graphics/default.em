@@ -46,7 +46,7 @@ system.require('std/graphics/presenceList.em');
 system.require('std/graphics/setMesh.em');
 system.require('std/graphics/axes.em');
 system.require('std/graphics/flatlandViewer.em');
-system.require('std/graphics/villageBuilder.em');
+system.require('std/graphics/characterAnimation.em');
 
 (
 function() {
@@ -78,9 +78,8 @@ function() {
         {
             var ui_finish_cb = std.core.bind(this.finishedUIInit, this, cb);
             this._loadingUIs++; this._scripter = new std.script.Scripter(this, ui_finish_cb);
-            this._loadingUIs++; this._villageBuilder = new std.graphics.VillageBuilder(this._simulator, ui_finish_cb);
             //this._loadingUIs++; this._chat = new std.graphics.Chat(this._pres, this._simulator, ui_finish_cb);
-            //this._loadingUIs++; this._physics = new std.graphics.PhysicsProperties(this._simulator, ui_finish_cb);
+            this._loadingUIs++; this._physics = new std.graphics.PhysicsProperties(this._simulator, ui_finish_cb);
             //this._loadingUIs++; this._propertybox = new std.propertybox.PropertyBox(this, ui_finish_cb);
             //this._loadingUIs++; this._presenceList = new std.graphics.PresenceList(this._pres, this._simulator, this._scripter, ui_finish_cb);
             //this._loadingUIs++; this._setMesh = new std.graphics.SetMesh(this._simulator, ui_finish_cb);
@@ -96,9 +95,8 @@ function() {
 
         var ui_finish_cb = std.core.bind(this.finishedUIInit, this);
         this._loadingUIs++; this._scripter.onReset(ui_finish_cb);
-        this._loadingUIs++; this._villageBuilder.onReset(ui_finish_cb);
         //this._loadingUIs++; this._chat.onReset(ui_finish_cb);
-        //this._loadingUIs++; this._physics.onReset(ui_finish_cb);
+        this._loadingUIs++; this._physics.onReset(ui_finish_cb);
         //this._loadingUIs++; this._propertybox.onReset(ui_finish_cb);
         //this._loadingUIs++; this._presenceList.onReset(ui_finish_cb);
         //this._loadingUIs++; this._setMesh.onReset(ui_finish_cb);
@@ -120,7 +118,8 @@ function() {
         if (! this._alreadyInitialized)
             this._simulator.hideLoadScreen();
 
-        this._moverot = new std.movement.MoveAndRotate(this._pres, std.core.bind(this.updateCameraOffset, this), 'rotation');
+        this._moverot = new std.movement.MoveAndRotate(this._pres, std.core.bind(this.updateCameraAndAnimation, this), 'rotation');
+        this._characterAnimation = new std.graphics.CharacterAnimation(this);
 
         this._draggers = {
             move: new std.graphics.MoveDragHandler(this._simulator),
@@ -143,8 +142,7 @@ function() {
             
             this._binding.addAction('togglePropertyBox', std.core.bind(this.togglePropertyBox, this));
             this._binding.addAction('toggleChat', std.core.bind(this.toggleChat, this));
-            this._binding.addAction('toggleVillageBuilder', std.core.bind(this._villageBuilder.toggle, this._villageBuilder));
-            //this._binding.addAction('togglePhysicsProperties', std.core.bind(this._physics.toggle, this._physics));
+            this._binding.addAction('togglePhysicsProperties', std.core.bind(this._physics.toggle, this._physics));
             //this._binding.addAction('togglePresenceList', std.core.bind(this._presenceList.toggle, this._presenceList));
             //this._binding.addAction('toggleSetMesh', std.core.bind(this._setMesh.toggle, this._setMesh));
             //this._binding.addFloat2Action('showFlatland', std.core.bind(this.showFlatland, this));
@@ -155,12 +153,12 @@ function() {
             this._binding.addAction('actOnObject', std.core.bind(this.actOnObject, this));
             this._binding.addAction('teleportToObj', std.core.bind(this.teleportToObj, this));
 
-            this._binding.addToggleAction('moveForward', std.core.bind(this.moveSelf, this, new util.Vec3(0, 0, -10)), 1, -1);
-            this._binding.addToggleAction('moveBackward', std.core.bind(this.moveSelf, this, new util.Vec3(0, 0, 10)), 1, -1);
-            this._binding.addToggleAction('moveLeft', std.core.bind(this.moveSelf, this, new util.Vec3(-10, 0, 0)), 1, -1);
-            this._binding.addToggleAction('moveRight', std.core.bind(this.moveSelf, this, new util.Vec3(10, 0, 0)), 1, -1);
-            this._binding.addToggleAction('moveUp', std.core.bind(this.moveSelf, this, new util.Vec3(0, 10, 0)), 1, -1);
-            this._binding.addToggleAction('moveDown', std.core.bind(this.moveSelf, this, new util.Vec3(0, -10, 0)), 1, -1);
+            this._binding.addToggleAction('moveForward', std.core.bind(this.moveSelf, this, new util.Vec3(0, 0, -1)), 1, -1);
+            this._binding.addToggleAction('moveBackward', std.core.bind(this.moveSelf, this, new util.Vec3(0, 0, 1)), 1, -1);
+            this._binding.addToggleAction('moveLeft', std.core.bind(this.moveSelf, this, new util.Vec3(-1, 0, 0)), 1, -1);
+            this._binding.addToggleAction('moveRight', std.core.bind(this.moveSelf, this, new util.Vec3(1, 0, 0)), 1, -1);
+            this._binding.addToggleAction('moveUp', std.core.bind(this.moveSelf, this, new util.Vec3(0, 1, 0)), 1, -1);
+            this._binding.addToggleAction('moveDown', std.core.bind(this.moveSelf, this, new util.Vec3(0, -1, 0)), 1, -1);
 
             this._binding.addToggleAction('rotateUp', std.core.bind(this.rotateSelf, this, new util.Vec3(1, 0, 0), "_rotate_up_handle_"), true, false);
             this._binding.addToggleAction('rotateDown', std.core.bind(this.rotateSelf, this, new util.Vec3(-1, 0, 0), "_rotate_down_handle_"), true, false);
@@ -215,7 +213,7 @@ function() {
                                         { key: ['button-pressed', 'p', 'alt' ], action: 'togglePropertyBox' },
                                         { key: ['button-pressed', 'l', 'ctrl' ], action: 'togglePresenceList' },
                                         { key: ['button-pressed', 'j', 'ctrl' ], action: 'toggleSetMesh' },
-            	    	                { key: ['button-pressed', 'm', 'ctrl' ], action: 'toggleVillageBuilder' },
+            
                                         { key: ['button-pressed', 'g', 'alt' ], action: 'axesSnapLocal' },
                                         { key: ['button-pressed', 'g', 'ctrl' ], action: 'axesSnapGlobal' },
                                         
@@ -267,6 +265,10 @@ function() {
 
         if (cb && typeof(cb) === "function")
             cb(this);
+    };
+
+    std.graphics.DefaultGraphics.prototype.presence = function() {
+        return this._pres;
     };
 
     /** @function */
@@ -373,11 +375,20 @@ function() {
     };
 
     /** @function */
-    std.graphics.DefaultGraphics.prototype.updateCameraOffset = function(evt) {
+    std.graphics.DefaultGraphics.prototype.updateCameraOffset = function() {
         if (this._camera.mode() == 'third') {
             var orient = this._pres.getOrientation();
-            this._camera.setOffset(orient.mul(<0, 1.5, 4>));
+            this._camera.setOffset(orient.mul(<0, 1.5, 6>));
         }
+    };
+
+    std.graphics.DefaultGraphics.prototype.updateAnimation = function() {
+        this._characterAnimation.update();
+    };
+
+    std.graphics.DefaultGraphics.prototype.updateCameraAndAnimation = function() {
+        this.updateCameraOffset();
+        this.updateAnimation();
     };
 
     /** @function */
@@ -471,7 +482,7 @@ function() {
     /** @function */
     std.graphics.DefaultGraphics.prototype.updatePhysicsProperties = function() {
         // Update even if not selected so display can be disabled
-        //this._physics.update(this._selected);
+        this._physics.update(this._selected);
     };
 
     /** @function */
