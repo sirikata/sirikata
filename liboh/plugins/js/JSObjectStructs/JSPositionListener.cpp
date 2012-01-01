@@ -256,9 +256,7 @@ void JSPositionListener::iFinishLoadMesh(
     }
 
     while (!mCtx->initialized())
-    {
-        std::cout<<"\niFinishLoadMesh\n";
-    }
+    {}
 
     mVisual = data;
     v8::Isolate::Scope iscope(mCtx->mIsolate);

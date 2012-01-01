@@ -214,9 +214,7 @@ void EmersonScript::iNotifyProximateGone(ProxyObjectPtr proximateObject, const S
 {
     EMERSCRIPT_SERIAL_CHECK();
     while(!JSObjectScript::mCtx->initialized())
-    {
-        std::cout<<"\niNotifyProximateGone\n";
-    }
+    {}
     if(JSObjectScript::mCtx->stopped())
     {
         JSLOG(warn, "Ignoring proximity removal callback after shutdown request.");
@@ -295,9 +293,7 @@ void EmersonScript::iInvokeInvokable(
         return;
 
     while(!JSObjectScript::mCtx->initialized())
-    {
-        std::cout<<"\niInvokeInvokable\n";
-    }
+    {}
     
 
     EMERSCRIPT_SERIAL_CHECK();
@@ -391,9 +387,7 @@ void  EmersonScript::iNotifyProximate(
 {
     EMERSCRIPT_SERIAL_CHECK();
     while(!JSObjectScript::mCtx->initialized())
-    {
-        std::cout<<"\niNotifyProximate\n";
-    }
+    {}
 
     v8::Isolate::Scope iscope(JSObjectScript::mCtx->mIsolate);
     if (JSObjectScript::mCtx->stopped())
@@ -421,7 +415,6 @@ void EmersonScript::iNotifyProximateHelper(
 
 JSInvokableObject::JSInvokableObjectInt* EmersonScript::runSimulation(const SpaceObjectReference& sporef, const String& simname)
 {
-    std::cout<<"\n\nDEBUG: got into runSimulation\n\n";
     /**
        FIXME: lkjs;
        Call into runSimulation should either be in mainStrand, or take locks in hostedobject.
@@ -497,8 +490,6 @@ void EmersonScript::iOnConnected(SessionEventProviderPtr from,
     if (JSObjectScript::mCtx->stopped())
         return;
 
-    std::cout<<"\nGot an iOnConnected for "<<name<<"\n";
-    
     while ((!JSObjectScript::mCtx->initialized()) && (! duringInit))
     {}
 
@@ -810,9 +801,7 @@ void EmersonScript::invokeCallbackInContext(
     if (!alive) return;
 
     while(!JSObjectScript::mCtx->initialized())
-    {
-        std::cout<<"\ninvokeCallbackInContext\n";
-    }
+    {}
 
     v8::Isolate::Scope iscope(JSObjectScript::mCtx->mIsolate);
     v8::HandleScope handle_scope;
@@ -1083,9 +1072,7 @@ void EmersonScript::processSandboxMessage(const String& msgToSend, uint32 sender
     }
     
     while(!JSObjectScript::mCtx->initialized())
-    {
-        std::cout<<"\nprocessSandboxMessage\n";
-    }
+    {}
 
     v8::Isolate::Scope iscope(JSObjectScript::mCtx->mIsolate);
     //FIXME: there's a chance that when post was called in sendSandbox, the

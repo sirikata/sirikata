@@ -507,10 +507,7 @@ function PresenceEntry(sporef, presObj)
          if (typeof(cb) === 'function')
              return baseSystem.setRestoreScript.apply(baseSystem, [script, system.wrapCallbackForSelf(cb)]);                 
          else
-         {
-             system.__debugPrint('\n\nGoing down second route in setRestoreScript\n\n');
              return baseSystem.setRestoreScript.apply(baseSystem, [script]);
-         }
 
      };
      /** Disable restoration from storage after a crash.

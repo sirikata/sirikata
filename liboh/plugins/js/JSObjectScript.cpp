@@ -746,14 +746,9 @@ void JSObjectScript::eSetRestoreScript(
     OH::PersistedObjectSet::RequestCallback wrapped_cb = 0;
     if (!cb.IsEmpty())
     {
-        std::cout<<"\n\nIn esetRestoreScript.  Non-empty callback\n\n";
         wrapped_cb =
             std::tr1::bind(&JSObjectScript::setRestoreScriptCallback, this,
                 jscont, cb, _1);
-    }
-    else
-    {
-        std::cout<<"\n\nIn esetRestoreScript.  Empty callback\n\n";
     }
 
     // FIXME we should really tack on any additional parameters we

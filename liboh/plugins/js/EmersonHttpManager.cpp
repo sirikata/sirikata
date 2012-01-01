@@ -96,9 +96,7 @@ void EmersonHttpManager::receiveHttpResponse(EmersonHttpToken respToken,HttpResp
     //http strand) that finished before initial import was over, should not post
     //it back to the object strand.  Should instead re-post and try again.
     while(!mContext->initialized())
-    {
-        std::cout<<"\nemersonHttp\n";
-    }
+    {    }
     
     mContext->objStrand->post(
         std::tr1::bind(&EmersonHttpManager::postReceiveResp, this, respToken,hrp, error, boost_error));

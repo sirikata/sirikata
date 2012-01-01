@@ -491,7 +491,6 @@ bool HostedObject::addSimListeners(
     if (!sim)
     {
         HO_LOG(error, "Unable to load " << simName << " plugin.");
-        std::cout<<"\n\nUnable to laoder\n\n";
         return true;
     }
 
@@ -537,7 +536,6 @@ void HostedObject::handleConnectedIndirect(const HostedObjectWPtr& weakSelf, con
         HO_LOG(warning,"Failed to connect object:" << obj << " to space " << space);
         return;
     }
-    std::cout<<"\n\nDEBUG: Connecting oref: "<<obj<<"\n\n";
     
     HostedObjectPtr self(weakSelf.lock());
     if (!self)
@@ -557,8 +555,6 @@ void HostedObject::handleConnectedIndirect(const HostedObjectWPtr& weakSelf, con
                 )
             );
         }
-        std::cout<<"\n\nDEBUG: Connecting oref 2: "<<obj<<"\n\n";
-        
     }
     
     
@@ -574,7 +570,6 @@ void HostedObject::handleConnectedIndirect(const HostedObjectWPtr& weakSelf, con
         PerPresenceData& psd = *psd_it->second;
         self->initializePerPresenceData(psd, self_proxy);
     }
-    std::cout<<"\n\nDEBUG: Connecting oref3: "<<obj<<"\n\n";
     HO_LOG(detailed,"Connected object " << obj << " to space " << space << " waiting on notice");
 }
 
