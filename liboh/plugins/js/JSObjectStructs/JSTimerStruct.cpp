@@ -238,13 +238,8 @@ void JSTimerStruct::evaluateCallback()
 
 void JSTimerStruct::iEvaluateCallback(Liveness::Token token)
 {
-    if (!mCtx->initialized())
-    {
-        mCtx->objStrand->post(
-            std::tr1::bind(&JSTimerStruct::iEvaluateCallback,this,
-                token));
-        return;
-    }
+    while(!mCtx->initialized())
+    {}
     
     emerScript->invokeCallbackInContext(emerScript->livenessToken(), cb, jsContStruct);
     if (token) {

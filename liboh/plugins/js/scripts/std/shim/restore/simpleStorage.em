@@ -11,11 +11,12 @@ if (typeof(std.simpleStorage) != 'undefined')
     system.require('std/shim/restore/persistService.em');
     std.simpleStorage = {  };
 
-    var allKeysKeyname = 'allKeys';
-    var prepender      = 'toPrependWith_';
+    var allKeysKeyname   = 'allKeys';
+    var prepender        = 'toPrependWith_';
 
+    var hasNotSetScript  =  true;
 
-    var scriptKeyName =   'pScriptKeyName';
+    var scriptKeyName    = 'pScriptKeyName';
 
     //contains the script to execute on restore in its script field.
     var mScript = { };
@@ -179,7 +180,8 @@ if (typeof(std.simpleStorage) != 'undefined')
 
     std.simpleStorage.setScript = function(newScriptFunc,executeOnSet)
     {
-        var newScript =  ("(" + newScriptFunc + ")();");
+        hasNotSetScript = false;
+        var newScript =  ("( " + newScriptFunc + ")();");
         if (typeof(executeOnSet) === 'undefined')
             executeOnSet = false;
 
@@ -189,7 +191,7 @@ if (typeof(std.simpleStorage) != 'undefined')
         var cbFunc = function(){ };
         if (executeOnSet)
             cbFunc = function(){ eval(newScript);  };
-
+        
         std.persist.checkpointPartialPersist(mScript,scriptKeyName,cbFunc);
     };
 
@@ -213,12 +215,13 @@ if (typeof(std.simpleStorage) != 'undefined')
         eval(scriptToEval);
     };
 
+    
     //restores the script
     function finishOnRestorePresences()
     {
-        std.simpleStorage.readScript(onRestoreScript,"");
+        if (hasNotSetScript)
+            std.simpleStorage.readScript(onRestoreScript,"");
     }
-
 
 
     /**

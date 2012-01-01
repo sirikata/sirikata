@@ -116,7 +116,7 @@ Simulation* HostedObject::runSimulation(
     PerPresenceData& pd =  *psd_it->second;
     locker.unlock();
     bool newSimListener = addSimListeners(pd,simName,sim,simStrand);
-    
+
     if ((sim != NULL) && (newSimListener))
     {
         HO_LOG(detailed, "Adding simulation to context");
@@ -321,7 +321,6 @@ bool myisalphanum(char c) {
 }
 }
 
-
 void HostedObject::initializeScript(const String& script_type, const String& args, const String& script)
 {
     if (stopped()) {
@@ -492,6 +491,7 @@ bool HostedObject::addSimListeners(
     if (!sim)
     {
         HO_LOG(error, "Unable to load " << simName << " plugin.");
+        std::cout<<"\n\nUnable to laoder\n\n";
         return true;
     }
 
@@ -508,6 +508,7 @@ void HostedObject::handleConnected(const HostedObjectWPtr& weakSelf, const Space
     HostedObjectPtr self(weakSelf.lock());
     if ((!self)||self->stopped()) {
         HO_LOG(detailed,"Ignoring connection success after system stop requested.");
+
         return;
     }
     if (info.server == NullServerID)
@@ -536,10 +537,12 @@ void HostedObject::handleConnectedIndirect(const HostedObjectWPtr& weakSelf, con
         HO_LOG(warning,"Failed to connect object:" << obj << " to space " << space);
         return;
     }
+    std::cout<<"\n\nDEBUG: Connecting oref: "<<obj<<"\n\n";
+    
     HostedObjectPtr self(weakSelf.lock());
     if (!self)
         return;
-
+    
     SpaceObjectReference self_objref(space, obj);
 
     {
@@ -554,6 +557,8 @@ void HostedObject::handleConnectedIndirect(const HostedObjectWPtr& weakSelf, con
                 )
             );
         }
+        std::cout<<"\n\nDEBUG: Connecting oref 2: "<<obj<<"\n\n";
+        
     }
     
     
@@ -569,7 +574,7 @@ void HostedObject::handleConnectedIndirect(const HostedObjectWPtr& weakSelf, con
         PerPresenceData& psd = *psd_it->second;
         self->initializePerPresenceData(psd, self_proxy);
     }
-
+    std::cout<<"\n\nDEBUG: Connecting oref3: "<<obj<<"\n\n";
     HO_LOG(detailed,"Connected object " << obj << " to space " << space << " waiting on notice");
 }
 
@@ -606,7 +611,6 @@ void HostedObject::handleStreamCreated(const HostedObjectWPtr& weakSelf, const S
         return;
 
     boost::mutex::scoped_lock lock((boost::mutex&)self->mMutex);
-    
     HO_LOG(detailed,"Notifying of connected object " << spaceobj.object() << " to space " << spaceobj.space());
     if (after == SessionManager::Connected)
         self->notify(&SessionEventListener::onConnected, self, spaceobj, token);
@@ -629,7 +633,7 @@ void HostedObject::disconnectFromSpace(const SpaceID &spaceID, const ObjectRefer
     }
 
     SpaceObjectReference sporef(spaceID, oref);
-    boost::mutex::scoped_lock lock((boost::mutex&)mMutex);
+    boost::unique_lock<boost::mutex> locker((boost::mutex&)mMutex);
     PresenceDataMap::iterator where;
     where=mPresenceData.find(sporef);
     if (where!=mPresenceData.end()) {
@@ -639,8 +643,10 @@ void HostedObject::disconnectFromSpace(const SpaceID &spaceID, const ObjectRefer
         mObjectHost->disconnectObject(spaceID,oref);
         delete where->second;
         mPresenceData.erase(where);
+        locker.unlock();
         mObjectHost->unregisterHostedObject(sporef, this);
     } else {
+        locker.unlock();
         SILOG(cppoh,error,"Attempting to disconnect from space "<<spaceID<<" and object: "<< oref<<" when not connected to it...");
     }
 }

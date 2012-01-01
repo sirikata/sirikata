@@ -179,7 +179,7 @@ bool OgreSystem::initialize(ConnectionEventProvider* cevtprovider, VWObjectPtr v
 
     //finish instantiation here
     instantiateAllObjects(proxyManager);
-
+    std::cout<<"\n\nDEBUG: Ogre system initialized\n\n";
     mMouseHandler->mUIWidgetView->setReadyCallback( std::tr1::bind(&OgreSystem::handleUIReady, this) );
     mMouseHandler->mUIWidgetView->setResetReadyCallback( std::tr1::bind(&OgreSystem::handleUIResetReady, this) );
     mMouseHandler->mUIWidgetView->setUpdateViewportCallback( std::tr1::bind(&OgreSystem::handleUpdateUIViewport, this, _1, _2, _3, _4) );
@@ -233,6 +233,7 @@ bool OgreSystem::initialize(ConnectionEventProvider* cevtprovider, VWObjectPtr v
     initialized = true;
     return true;
 }
+
 
 void OgreSystem::handleUIReady() {
     // Currently the only blocker for being ready is that the UI loaded. If we

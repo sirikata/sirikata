@@ -134,13 +134,8 @@ public:
         Network::IOStrand* sStrand
     )
     {
-<<<<<<< HEAD
-        OgreSystem*os= new OgreSystem(ctx);
-        if (os->initialize(cevtprovider, obj, presenceid, options))
-=======
         OgreSystem*os= new OgreSystem(ctx,sStrand);
-        if (os->initialize(obj, presenceid, options))
->>>>>>> Pushed strands all the way into the ogre code.
+        if (os->initialize(cevtprovider, obj, presenceid, options))
             return os;
         delete os;
         return NULL;

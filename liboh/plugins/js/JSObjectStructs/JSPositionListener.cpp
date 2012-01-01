@@ -255,12 +255,9 @@ void JSPositionListener::iFinishLoadMesh(
         return;
     }
 
-    if (!mCtx->initialized())
+    while (!mCtx->initialized())
     {
-        mCtx->objStrand->post(
-            std::tr1::bind(&JSPositionListener::iFinishLoadMesh,this,
-                alive,ctx_alive,ctx,cb,data));
-        return;
+        std::cout<<"\niFinishLoadMesh\n";
     }
 
     mVisual = data;

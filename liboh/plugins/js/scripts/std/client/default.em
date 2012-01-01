@@ -79,7 +79,7 @@ function() {
     
     std.client.Default.prototype.finishedGraphicsInit = function(cb, gfx, alreadyInitialized) {
         this._camera = new std.graphics.DefaultCamera(this._simulator, system.self);
-
+        
         this._selected = null;
         this._loadingUIs = 0;
 

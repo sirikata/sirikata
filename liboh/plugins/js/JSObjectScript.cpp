@@ -150,8 +150,6 @@ v8::Handle<v8::Value> ProtectedJSCallbackFull(v8::Handle<v8::Context> ctx, v8::H
 }
 
 
-
-
 v8::Handle<v8::Value> ProtectedJSCallbackFull(v8::Handle<v8::Context> ctx, v8::Handle<v8::Object> *target, v8::Handle<v8::Function> cb, String* exc = NULL) {
     return ProtectedJSCallbackFull(ctx, target, cb, 0, NULL, exc);
 }
@@ -438,18 +436,13 @@ void JSObjectScript::iStorageCommitCallback(
         return;
     }
 
+    
+    while (! mCtx->initialized())
+    {}
 
-    if (! mCtx->initialized())
-    {
-        mCtx->objStrand->post(
-            std::tr1::bind(&JSObjectScript::iStorageCommitCallback, this,
-                jscont, cb, success, rs));
-        return;
-    }
     
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(mContext->mContext);
-
     
     TryCatch try_catch;
 
@@ -498,13 +491,8 @@ void JSObjectScript::iStorageCountCallback(
         return;
     }
 
-    if (!mCtx->initialized())
-    {
-        mCtx->objStrand->post(
-            std::tr1::bind(&JSObjectScript::iStorageCountCallback,this,
-                jscont,cb,success,count));
-        return;
-    }
+    while (!mCtx->initialized())
+    {}
 
     
     v8::HandleScope handle_scope;
@@ -758,9 +746,14 @@ void JSObjectScript::eSetRestoreScript(
     OH::PersistedObjectSet::RequestCallback wrapped_cb = 0;
     if (!cb.IsEmpty())
     {
+        std::cout<<"\n\nIn esetRestoreScript.  Non-empty callback\n\n";
         wrapped_cb =
             std::tr1::bind(&JSObjectScript::setRestoreScriptCallback, this,
                 jscont, cb, _1);
+    }
+    else
+    {
+        std::cout<<"\n\nIn esetRestoreScript.  Empty callback\n\n";
     }
 
     // FIXME we should really tack on any additional parameters we

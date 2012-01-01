@@ -213,6 +213,10 @@ void  EmersonScript::notifyProximateGone(ProxyObjectPtr proximateObject, const S
 void EmersonScript::iNotifyProximateGone(ProxyObjectPtr proximateObject, const SpaceObjectReference& querier)
 {
     EMERSCRIPT_SERIAL_CHECK();
+    while(!JSObjectScript::mCtx->initialized())
+    {
+        std::cout<<"\niNotifyProximateGone\n";
+    }
     if(JSObjectScript::mCtx->stopped())
     {
         JSLOG(warn, "Ignoring proximity removal callback after shutdown request.");
@@ -290,13 +294,11 @@ void EmersonScript::iInvokeInvokable(
     if (JSObjectScript::mCtx->stopped())
         return;
 
-    if (!JSObjectScript::mCtx->initialized())
+    while(!JSObjectScript::mCtx->initialized())
     {
-        JSObjectScript::mCtx->objStrand->post(
-            std::tr1::bind(&EmersonScript::iInvokeInvokable,this,
-                params,function_));
-        return;
+        std::cout<<"\niInvokeInvokable\n";
     }
+    
 
     EMERSCRIPT_SERIAL_CHECK();
     v8::Isolate::Scope iscope(JSObjectScript::mCtx->mIsolate);
@@ -370,6 +372,8 @@ v8::Handle<v8::Value> EmersonScript::findVisible(const SpaceObjectReference& pro
 //satisfies the solid angle query registered by querier
 void  EmersonScript::notifyProximate(ProxyObjectPtr proximateObject, const SpaceObjectReference& querier)
 {
+
+    
     if (JSObjectScript::mCtx->stopped())
     {
         JSLOG(warn, "Ignoring proximity addition callback after shutdown request.");
@@ -386,6 +390,11 @@ void  EmersonScript::iNotifyProximate(
     ProxyObjectPtr proximateObject, const SpaceObjectReference& querier)
 {
     EMERSCRIPT_SERIAL_CHECK();
+    while(!JSObjectScript::mCtx->initialized())
+    {
+        std::cout<<"\niNotifyProximate\n";
+    }
+
     v8::Isolate::Scope iscope(JSObjectScript::mCtx->mIsolate);
     if (JSObjectScript::mCtx->stopped())
     {
@@ -412,6 +421,7 @@ void EmersonScript::iNotifyProximateHelper(
 
 JSInvokableObject::JSInvokableObjectInt* EmersonScript::runSimulation(const SpaceObjectReference& sporef, const String& simname)
 {
+    std::cout<<"\n\nDEBUG: got into runSimulation\n\n";
     /**
        FIXME: lkjs;
        Call into runSimulation should either be in mainStrand, or take locks in hostedobject.
@@ -483,17 +493,15 @@ void EmersonScript::iOnConnected(SessionEventProviderPtr from,
     const SpaceObjectReference& name, HostedObject::PresenceToken token,
     bool duringInit)
 {
+
     if (JSObjectScript::mCtx->stopped())
         return;
 
+    std::cout<<"\nGot an iOnConnected for "<<name<<"\n";
     
-    if ((!JSObjectScript::mCtx->initialized()) && (! duringInit))
-    {
-        JSObjectScript::mCtx->objStrand->post(
-            std::tr1::bind(&EmersonScript::iOnConnected,this,
-                from,name,token,duringInit));
-        return;
-    }
+    while ((!JSObjectScript::mCtx->initialized()) && (! duringInit))
+    {}
+
     v8::Isolate::Scope iscope(JSObjectScript::mCtx->mIsolate);
     
     //adding this here because don't want to call onConnected while objStrand is
@@ -801,12 +809,9 @@ void EmersonScript::invokeCallbackInContext(
 
     if (!alive) return;
 
-    if (!JSObjectScript::mCtx->initialized())
+    while(!JSObjectScript::mCtx->initialized())
     {
-        JSObjectScript::mCtx->objStrand->post(
-            std::tr1::bind(&EmersonScript::invokeCallbackInContext, this,
-                alive,cb,jscontext));
-        return;
+        std::cout<<"\ninvokeCallbackInContext\n";
     }
 
     v8::Isolate::Scope iscope(JSObjectScript::mCtx->mIsolate);
@@ -1077,14 +1082,9 @@ void EmersonScript::processSandboxMessage(const String& msgToSend, uint32 sender
         return;
     }
     
-    if (!JSObjectScript::mCtx->initialized())
+    while(!JSObjectScript::mCtx->initialized())
     {
-        JSLOG(warn,"Resending sandbox message.  Waiting for init");
-
-        JSObjectScript::mCtx->objStrand->post(
-            std::tr1::bind(&EmersonScript::processSandboxMessage,this,
-                msgToSend,senderID,receiverID));
-        return;
+        std::cout<<"\nprocessSandboxMessage\n";
     }
 
     v8::Isolate::Scope iscope(JSObjectScript::mCtx->mIsolate);
