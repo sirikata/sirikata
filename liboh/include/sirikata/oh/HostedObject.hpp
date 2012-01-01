@@ -195,7 +195,7 @@ public:
 
     bool addSimListeners(
         PerPresenceData& pd, const String& oh_sims,
-        Simulation*& sim,Network::IOStrand* simStrand);
+        Simulation*& sim,Network::IOStrandPtr simStrand);
 
 
 
@@ -222,7 +222,7 @@ public:
 
     Simulation* runSimulation(
         const SpaceObjectReference& sporef, const String& simName,
-        Network::IOStrand* simStrand);
+        Network::IOStrandPtr simStrand);
 
 
     bool getProxyObjectFrom(const SpaceObjectReference*   spVisTo, const SpaceObjectReference*   sporef, ProxyObjectPtr& p);

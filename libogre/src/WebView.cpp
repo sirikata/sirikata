@@ -58,7 +58,7 @@ WebView::WebView(
     const std::string& name, const std::string& type,
     unsigned short width, unsigned short height,
     const OverlayPosition &viewPosition, Ogre::uchar zOrder, Tier tier,
-    Ogre::Viewport* viewport,Network::IOStrand* strand,
+    Ogre::Viewport* viewport,Network::IOStrandPtr strand,
     const WebViewBorderSize& border)
  : mContext(ctx),
    postingStrand(strand)
@@ -118,7 +118,7 @@ WebView::WebView(
     Context* ctx,
     const std::string& name, const std::string& type, unsigned short width, unsigned short height,
     Ogre::FilterOptions texFiltering,
-    Network::IOStrand* strand)
+    Network::IOStrandPtr strand)
  : mContext(ctx),
    postingStrand(strand)
 {

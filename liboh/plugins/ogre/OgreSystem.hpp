@@ -79,7 +79,7 @@ class OgreSystem :
     void tickInputHandler(const Task::LocalTime& t) const;
 
 
-    OgreSystem(Context* ctx,Network::IOStrand* sStrand);
+    OgreSystem(Context* ctx,Network::IOStrandPtr sStrand);
     bool initialize(ConnectionEventProvider* cevtprovider, VWObjectPtr viewer, const SpaceObjectReference& presenceid, const String&options);
 
 
@@ -131,7 +131,7 @@ public:
         HostedObjectPtr obj,
         const SpaceObjectReference& presenceid,
         const String& options,
-        Network::IOStrand* sStrand
+        Network::IOStrandPtr sStrand
     )
     {
         OgreSystem*os= new OgreSystem(ctx,sStrand);

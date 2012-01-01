@@ -57,7 +57,7 @@ namespace Graphics {
 
 
 
-OgreSystem::OgreSystem(Context* ctx,Network::IOStrand* sStrand)
+OgreSystem::OgreSystem(Context* ctx,Network::IOStrandPtr sStrand)
  : OgreRenderer(ctx,sStrand),
    mConnectionEventProvider(NULL),
    mOnReadyCallback(NULL),

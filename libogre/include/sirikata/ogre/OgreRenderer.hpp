@@ -72,7 +72,7 @@ class SIRIKATA_OGRE_EXPORT OgreRenderer :
         public virtual Liveness
 {
 public:
-    OgreRenderer(Context* ctx,Network::IOStrand* sStrand);
+    OgreRenderer(Context* ctx,Network::IOStrandPtr sStrand);
     virtual ~OgreRenderer();
 
     virtual bool initialize(const String& options, bool with_berkelium = true);
@@ -100,7 +100,7 @@ public:
     virtual void destroyRenderTarget(Ogre::ResourcePtr& name);
     virtual void destroyRenderTarget(const String &name);
 
-    Network::IOStrand* renderStrand()
+    Network::IOStrandPtr renderStrand()
     {
         return simStrand;
     }
@@ -174,7 +174,7 @@ public:
     void screenshot(const String& filename);
     void screenshotNextFrame(const String& filename);
   protected:
-    Network::IOStrand* simStrand;
+    Network::IOStrandPtr simStrand;
     static Ogre::Root *getRoot();
 
     bool loadBuiltinPlugins();

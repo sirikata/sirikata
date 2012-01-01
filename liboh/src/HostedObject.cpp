@@ -97,7 +97,7 @@ Network::IOService* HostedObject::getIOService()
 
 Simulation* HostedObject::runSimulation(
     const SpaceObjectReference& sporef, const String& simName,
-    Network::IOStrand* simStrand)
+    Network::IOStrandPtr simStrand)
 {
     Simulation* sim = NULL;
 
@@ -472,7 +472,7 @@ bool HostedObject::connect(
 //returns true if sim gets an already-existing listener.  false otherwise
 bool HostedObject::addSimListeners(
     PerPresenceData& pd, const String& simName,Simulation*& sim,
-    Network::IOStrand* simStrand)
+    Network::IOStrandPtr simStrand)
 {
     if (pd.sims.find(simName) != pd.sims.end())
     {

@@ -135,7 +135,7 @@ public:
         Context* ctx,const std::string &webViewName,
         const std::string& webViewType,unsigned short width,
         unsigned short height,const OverlayPosition &webViewPosition,
-        Network::IOStrand* postStrand,
+        Network::IOStrandPtr postStrand,
         bool asyncRender = false, int maxAsyncRenderRate = 70,
         Tier tier = TIER_MIDDLE, Ogre::Viewport* viewport = 0,
         const WebView::WebViewBorderSize& border = WebView::mDefaultBorder);
@@ -148,7 +148,7 @@ public:
             Context* ctx,const std::string &webViewName,
             unsigned short width, unsigned short height,
             const OverlayPosition &webViewPosition,
-            Berkelium::Window *newwin, Network::IOStrand* postingStrand,
+            Berkelium::Window *newwin, Network::IOStrandPtr postingStrand,
             Tier tier = TIER_MIDDLE, Ogre::Viewport* viewport = 0);
 #endif
 	/**
@@ -159,7 +159,7 @@ public:
 	WebView* createWebViewMaterial(
             Context* ctx,const std::string &webViewName,
             unsigned short width, unsigned short height,
-            Network::IOStrand* postingStrand,
+            Network::IOStrandPtr postingStrand,
             bool asyncRender = false, int maxAsyncRenderRate = 70,
             Ogre::FilterOptions texFiltering = Ogre::FO_ANISOTROPIC);
 

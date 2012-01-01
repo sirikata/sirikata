@@ -176,7 +176,7 @@ WebView* WebViewManager::createWebView(
     Context* ctx, const std::string &webViewName,
     const std::string& webViewType,unsigned short width,
     unsigned short height, const OverlayPosition &webViewPosition,
-    Network::IOStrand* postStrand,
+    Network::IOStrandPtr postStrand,
     bool asyncRender, int maxAsyncRenderRate, Tier tier,
     Ogre::Viewport* viewport, const WebView::WebViewBorderSize& border)
 {
@@ -218,7 +218,7 @@ WebView* WebViewManager::createWebViewPopup(
     unsigned short width, unsigned short height,
     const OverlayPosition &webViewPosition,
     Berkelium::Window *newwin,
-    Network::IOStrand* postingStrand,
+    Network::IOStrandPtr postingStrand,
     Tier tier, Ogre::Viewport* viewport)
 {
 	if(activeWebViews.find(webViewName) != activeWebViews.end())
@@ -258,7 +258,7 @@ WebView* WebViewManager::createWebViewPopup(
 WebView* WebViewManager::createWebViewMaterial(
     Context* ctx, const std::string &webViewName,
     unsigned short width, unsigned short height,
-    Network::IOStrand* postingStrand,
+    Network::IOStrandPtr postingStrand,
     bool asyncRender, int maxAsyncRenderRate,
     Ogre::FilterOptions texFiltering)
 {

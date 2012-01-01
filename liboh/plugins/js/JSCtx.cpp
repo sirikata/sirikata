@@ -7,7 +7,7 @@ namespace JS
 {
 
 
-JSCtx::JSCtx(Context* ctx,Network::IOStrand* oStrand,v8::Isolate* is)
+JSCtx::JSCtx(Context* ctx,Network::IOStrandPtr oStrand,v8::Isolate* is)
  : Context("JS", ctx->ioService, ctx->mainStrand, NULL,Time::null()),
    objStrand(oStrand),
    mIsolate(is),
@@ -19,10 +19,7 @@ JSCtx::JSCtx(Context* ctx,Network::IOStrand* oStrand,v8::Isolate* is)
 
 JSCtx::~JSCtx()
 {
-    /**
-       lkjs;
-       FIXME: who actually deletes the objStrand?
-     */
+    mIsolate->Dispose();
 }
 
 Sirikata::SerializationCheck* JSCtx::serializationCheck()

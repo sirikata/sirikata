@@ -684,9 +684,9 @@ void OgreSystemMouseHandler::ensureUI() {
             mParent->context(),
             "ui_widget","ui_widget",
             mParent->getRenderTarget()->getWidth(), mParent->getRenderTarget()->getHeight(),
-            OverlayPosition(RP_TOPLEFT), false,
+            OverlayPosition(RP_TOPLEFT),
             mParent->renderStrand(),
-            70, TIER_BACK, 0,
+            false,70, TIER_BACK, 0,
             WebView::WebViewBorderSize(0,0,0,0));
         mUIWidgetView->bind("ui-action", std::tr1::bind(&OgreSystemMouseHandler::onUIAction, this, _1, _2));
         mUIWidgetView->loadFile("chrome/ui.html");

@@ -414,7 +414,7 @@ class SIRIKATA_OGRE_EXPORT WebView
 
 	protected:
                 Context* mContext;
-                Network::IOStrand* postingStrand;
+                Network::IOStrandPtr postingStrand;
                 
                 
 #ifdef HAVE_BERKELIUM
@@ -539,7 +539,7 @@ class SIRIKATA_OGRE_EXPORT WebView
                     unsigned short width, unsigned short height,
                     const OverlayPosition &viewPosition,Ogre::uchar zOrder,
                     Tier tier, Ogre::Viewport* viewport,
-                    Network::IOStrand* postBackStrand,
+                    Network::IOStrandPtr postBackStrand,
                     const WebViewBorderSize& border = mDefaultBorder);
 
 
@@ -547,7 +547,7 @@ class SIRIKATA_OGRE_EXPORT WebView
                     Context* ctx, const std::string& name, const std::string& type,
                     unsigned short width, unsigned short height,
                     Ogre::FilterOptions texFiltering,
-                    Network::IOStrand* postBackStrand);
+                    Network::IOStrandPtr postBackStrand);
 
 		~WebView();
 

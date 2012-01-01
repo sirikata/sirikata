@@ -623,18 +623,11 @@ JSObjectScript* JSObjectScriptManager::createHeadless(const String& args, const 
 
 ObjectScript* JSObjectScriptManager::createObjectScript(HostedObjectPtr ho, const String& args, const String& script)
 {
-    /**
-       lkjs;
-       FIXME: need to figure out when to delete jsctx;
-     */
-
     JSCtx* jsctx =
-        new JSCtx(mContext, mContext->ioService->createStrand(),mIsolate);
+        new JSCtx(mContext,Network::IOStrandPtr(mContext->ioService->createStrand()),mIsolate);
     
     EmersonScript* new_script =new EmersonScript(
         ho, args, script, this,jsctx);
-
-//        mContext->mainStrand,mContext->ioService->createStrand());
 
     
     if (!new_script->valid()) {

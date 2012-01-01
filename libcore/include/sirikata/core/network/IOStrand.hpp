@@ -116,6 +116,8 @@ class SIRIKATA_EXPORT IOStrand {
     WrappedHandler<CallbackType> wrap(const CallbackType& handler);
 };
 
+typedef std::tr1::shared_ptr<IOStrand> IOStrandPtr;
+
 } // namespace Network
 } // namespace Sirikata
 

@@ -853,6 +853,7 @@ bool JSObjectScript::isRootContext(JSContextStruct* jscont)
 
 JSObjectScript::~JSObjectScript()
 {
+    delete mCtx;
 }
 
 

@@ -18,10 +18,10 @@ namespace JS
 class JSCtx : public Context
 {
 public:    
-    JSCtx(Context* ctx,Network::IOStrand* oStrand,v8::Isolate* is);
+    JSCtx(Context* ctx,Network::IOStrandPtr oStrand,v8::Isolate* is);
     ~JSCtx();
     
-    Network::IOStrand* objStrand;
+    Network::IOStrandPtr objStrand;
 
     v8::Isolate* mIsolate;
     bool stopped();
@@ -37,6 +37,7 @@ private:
     bool isInitialized;
     Sirikata::SerializationCheck mCheck;
 };
+
 
 }//end namespace Sirikata
 }//end namespace JS
