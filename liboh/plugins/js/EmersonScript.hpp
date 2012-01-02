@@ -358,7 +358,9 @@ private:
        sandbox messages defined on it.  If it does, then call it with the
        deserialized message object in it.
      */
-    void processSandboxMessage(const String& msgToSend, uint32 senderID, uint32 receiverID);
+    void processSandboxMessage(
+        const String& msgToSend, uint32 senderID, uint32 receiverID,
+        Liveness::Token alive);
 
 
     /**
@@ -409,60 +411,74 @@ private:
 
     // Called within mStrand.
     void iOnDisconnected(
-        SessionEventProviderPtr from, const SpaceObjectReference& name);
+        SessionEventProviderPtr from, const SpaceObjectReference& name,
+        Liveness::Token alive);
     void eCreateEntityFinish(ObjectHost* oh,EntityCreateInfo& eci);
     void iStop();
 
     void iHandleScriptCommRead(
-        const SpaceObjectReference& src, const SpaceObjectReference& dst, const String& payload);
+        const SpaceObjectReference& src, const SpaceObjectReference& dst,
+        const String& payload,Liveness::Token alive);
 
     void iHandleScriptCommUnreliable(
-        const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload);
+        const ODP::Endpoint& src, const ODP::Endpoint& dst,
+        MemoryReference payload,Liveness::Token alive);
 
     void mainStrandCompletePresConnect(Location newLoc,BoundingSphere3f bs,
-        PresStructRestoreParams psrp,HostedObject::PresenceToken presToke);
+        PresStructRestoreParams psrp,HostedObject::PresenceToken presToke,
+        Liveness::Token alive);
 
     void iNotifyProximateGone(
-        ProxyObjectPtr proximateObject, const SpaceObjectReference& querier);
+        ProxyObjectPtr proximateObject, const SpaceObjectReference& querier,
+        Liveness::Token alive);
 
     void iNotifyProximateHelper(
         JSVisibleStruct* proxVis, const SpaceObjectReference& proxTo);
 
     void  iNotifyProximate(
-        ProxyObjectPtr proximateObject, const SpaceObjectReference& querier);
+        ProxyObjectPtr proximateObject, const SpaceObjectReference& querier,
+        Liveness::Token alive);
 
 
     void eSetQueryFunction(
         const SpaceObjectReference sporef, const SolidAngle& sa,
-        const uint32 max_count);
+        const uint32 max_count,Liveness::Token alive);
     
     void eSetPhysicsFunction(
-        const SpaceObjectReference sporef, const String& newPhyString);
+        const SpaceObjectReference sporef, const String& newPhyString,
+        Liveness::Token alive);
     
     void eSetVisualFunction(
-        const SpaceObjectReference sporef, const std::string& newMeshString);    
+        const SpaceObjectReference sporef, const std::string& newMeshString,
+        Liveness::Token alive);    
 
     void eSetVisualScaleFunction(
-        const SpaceObjectReference sporef, float newscale);
+        const SpaceObjectReference sporef, float newscale,
+        Liveness::Token alive);
 
     void eSetOrientationFunction(
-        const SpaceObjectReference sporef, const Quaternion& quat);
+        const SpaceObjectReference sporef, const Quaternion& quat,
+        Liveness::Token alive);
 
     void eSetVelocityFunction(
-        const SpaceObjectReference sporef, const Vector3f& velVec);
+        const SpaceObjectReference sporef, const Vector3f& velVec,
+        Liveness::Token alive);
 
     void eSetPositionFunction(
-        const SpaceObjectReference sporef, const Vector3f& posVec);
+        const SpaceObjectReference sporef, const Vector3f& posVec,
+        Liveness::Token alive);
 
     void eSetOrientationVelFunction(
-        const SpaceObjectReference sporef,const Quaternion& quat);
+        const SpaceObjectReference sporef,const Quaternion& quat,
+        Liveness::Token alive);
 
     void iOnConnected(SessionEventProviderPtr from,
         const SpaceObjectReference& name, HostedObject::PresenceToken token,
-        bool duringInit);
+        bool duringInit,Liveness::Token alive);
 
     void iInvokeInvokable(
-        std::vector<boost::any>& params,v8::Persistent<v8::Function> function_);
+        std::vector<boost::any>& params,v8::Persistent<v8::Function> function_,
+        Liveness::Token alive);
 
 };
 

@@ -106,19 +106,8 @@ EmersonScript::EmersonScript(HostedObjectPtr ho, const String& args,
 
     //default connections.
     for(HostedObject::SpaceObjRefVec::const_iterator space_it = spaceobjrefs.begin(); space_it != spaceobjrefs.end(); space_it++)
-        iOnConnected(mParent, *space_it, HostedObject::DEFAULT_PRESENCE_TOKEN,true);
+        iOnConnected(mParent, *space_it, HostedObject::DEFAULT_PRESENCE_TOKEN,true,Liveness::livenessToken());
 
-    /**
-       lkjs;
-       FIXME: Read below.  Need to add init guards on storage and timer callbacks;
-     */
-    //want to block all callbacks into this object until initialization is
-    //finished.  Because constructor is called from mainStrand, only have to
-    //worry about objStrand and httpManager's strand from interfering.
-    //objStrand will not interfere if check init before storage callbacks, timer
-    //callbacks, create_event callbacks, sendSandbox callbacks, and invokable
-    //callbacks.  httpManager won't interfere if check init before posting back
-    //to objStrand.
     JSObjectScript::mCtx->initialize();
 }
 
@@ -206,12 +195,17 @@ void  EmersonScript::notifyProximateGone(ProxyObjectPtr proximateObject, const S
     }
 
     JSObjectScript::mCtx->objStrand->post(
-        std::tr1::bind(&EmersonScript::iNotifyProximateGone,this,proximateObject,querier)
-    );
+        std::tr1::bind(&EmersonScript::iNotifyProximateGone,this,
+            proximateObject,querier,Liveness::livenessToken()));
 }
 
-void EmersonScript::iNotifyProximateGone(ProxyObjectPtr proximateObject, const SpaceObjectReference& querier)
+void EmersonScript::iNotifyProximateGone(
+    ProxyObjectPtr proximateObject, const SpaceObjectReference& querier,
+    Liveness::Token alive)
 {
+    Liveness::Lock locked(alive);
+    if (!locked) return;
+
     EMERSCRIPT_SERIAL_CHECK();
     while(!JSObjectScript::mCtx->initialized())
     {}
@@ -280,15 +274,20 @@ boost::any EmersonScript::invokeInvokable(
 {
     JSObjectScript::mCtx->objStrand->post(
         std::tr1::bind(&EmersonScript::iInvokeInvokable,this,
-            params,function_));
+            params,function_,Liveness::livenessToken()));
 
     return boost::any_cast<bool>(true);
 }
 
 
 void EmersonScript::iInvokeInvokable(
-    std::vector<boost::any>& params,v8::Persistent<v8::Function> function_)
+    std::vector<boost::any>& params,v8::Persistent<v8::Function> function_,
+    Liveness::Token alive)
 {
+    Liveness::Lock locked(alive);
+    if (!locked) return;
+
+    
     if (JSObjectScript::mCtx->stopped())
         return;
 
@@ -378,13 +377,18 @@ void  EmersonScript::notifyProximate(ProxyObjectPtr proximateObject, const Space
     
     JSObjectScript::mCtx->objStrand->post(
         std::tr1::bind(&EmersonScript::iNotifyProximate,this,
-            proximateObject,querier));
+            proximateObject,querier,Liveness::livenessToken()));
 }
 
 
 void  EmersonScript::iNotifyProximate(
-    ProxyObjectPtr proximateObject, const SpaceObjectReference& querier)
+    ProxyObjectPtr proximateObject, const SpaceObjectReference& querier,
+    Liveness::Token alive)
 {
+    Liveness::Lock locked(alive);
+    if (!locked) return;
+
+    
     EMERSCRIPT_SERIAL_CHECK();
     while(!JSObjectScript::mCtx->initialized())
     {}
@@ -479,14 +483,17 @@ void EmersonScript::onConnected(SessionEventProviderPtr from,
 {
     JSObjectScript::mCtx->objStrand->post(
         std::tr1::bind(&EmersonScript::iOnConnected,this,
-            from,name,token,false));
+            from,name,token,false,Liveness::livenessToken()));
 }
 
 void EmersonScript::iOnConnected(SessionEventProviderPtr from,
     const SpaceObjectReference& name, HostedObject::PresenceToken token,
-    bool duringInit)
+    bool duringInit,Liveness::Token alive)
 {
+    Liveness::Lock locked(alive);
+    if (!locked) return;
 
+    
     if (JSObjectScript::mCtx->stopped())
         return;
 
@@ -579,13 +586,18 @@ void EmersonScript::onDisconnected(
 {
     //post message
     JSObjectScript::mCtx->objStrand->post(
-        std::tr1::bind(&EmersonScript::iOnDisconnected,this,from,name));
+        std::tr1::bind(&EmersonScript::iOnDisconnected,this,
+            from,name,Liveness::livenessToken()));
 }
 
 //should be called from mStrand
 void EmersonScript::iOnDisconnected(
-    SessionEventProviderPtr from, const SpaceObjectReference& name)
+    SessionEventProviderPtr from, const SpaceObjectReference& name,
+    Liveness::Token alive)
 {
+    Liveness::Lock locked(alive);
+    if (!locked) return;
+    
     EMERSCRIPT_SERIAL_CHECK();
     v8::Isolate::Scope iscope(JSObjectScript::mCtx->mIsolate);
     // We need to mark disconnection here so we don't request
@@ -666,6 +678,7 @@ void EmersonScript::stop()
 //called from mStrand
 void EmersonScript::iStop()
 {
+    
     EMERSCRIPT_SERIAL_CHECK();
     Liveness::letDie();
     v8::Isolate::Scope iscope(JSObjectScript::mCtx->mIsolate);
@@ -748,8 +761,8 @@ v8::Handle<v8::Value> EmersonScript::create_event(
        probably should pass context id through invokeCallbackInContext;
      */
     JSObjectScript::mCtx->objStrand->post(
-        std::tr1::bind(&EmersonScript::invokeCallbackInContext, this, livenessToken(), cb, jscont)
-    );
+        std::tr1::bind(&EmersonScript::invokeCallbackInContext, this,
+            livenessToken(), cb, jscont));
     return v8::Boolean::New(true);
 }
 
@@ -797,8 +810,8 @@ void EmersonScript::invokeCallbackInContext(
     Liveness::Token alive, v8::Persistent<v8::Function> cb, JSContextStruct* jscontext)
 {
     EMERSCRIPT_SERIAL_CHECK();
-
-    if (!alive) return;
+    Liveness::Lock locked(alive);
+    if (!locked) return;
 
     while(!JSObjectScript::mCtx->initialized())
     {}
@@ -883,14 +896,18 @@ bool EmersonScript::handleScriptCommRead(
 
     JSObjectScript::mCtx->objStrand->post(
         std::tr1::bind(&EmersonScript::iHandleScriptCommRead,this,
-            src,dst,payload));
+            src,dst,payload,Liveness::livenessToken()));
     return true;
 }
 
 
 void EmersonScript::iHandleScriptCommRead(
-    const SpaceObjectReference& src, const SpaceObjectReference& dst, const String& payload)
+    const SpaceObjectReference& src, const SpaceObjectReference& dst,
+    const String& payload, Liveness::Token alive)
 {
+    Liveness::Lock locked(alive);
+    if (!locked) return;
+
     EMERSCRIPT_SERIAL_CHECK();
     v8::Isolate::Scope iscope(JSObjectScript::mCtx->mIsolate);
     if (JSObjectScript::mCtx->stopped())
@@ -1028,13 +1045,18 @@ void EmersonScript::handleScriptCommUnreliable (
 
     JSObjectScript::mCtx->objStrand->post(
         std::tr1::bind(&EmersonScript::iHandleScriptCommUnreliable,this,
-            src,dst,payload));
+            src,dst,payload,Liveness::livenessToken()));
 }
 
 //called from within mStrand
 void EmersonScript::iHandleScriptCommUnreliable(
-    const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload)
+    const ODP::Endpoint& src, const ODP::Endpoint& dst,
+    MemoryReference payload,Liveness::Token alive)
 {
+    Liveness::Lock locked(alive);
+    if (!locked) return;
+
+    
     EMERSCRIPT_SERIAL_CHECK();
     v8::Isolate::Scope iscope(JSObjectScript::mCtx->mIsolate);
     if (isStopped())
@@ -1056,14 +1078,19 @@ v8::Handle<v8::Value> EmersonScript::sendSandbox(const String& msgToSend, uint32
     //posting task so that still get asynchronous messages.
     JSObjectScript::mCtx->objStrand->post(
         std::tr1::bind(&EmersonScript::processSandboxMessage, this,
-            msgToSend,senderID,receiverID));
+            msgToSend,senderID,receiverID,Liveness::livenessToken()));
     
     return v8::Undefined();
 }
 
 //called from within mStrand
-void EmersonScript::processSandboxMessage(const String& msgToSend, uint32 senderID, uint32 receiverID)
+void EmersonScript::processSandboxMessage(
+    const String& msgToSend, uint32 senderID, uint32 receiverID,
+    Liveness::Token alive)
 {
+    Liveness::Lock locked(alive);
+    if (!locked) return;
+    
     EMERSCRIPT_SERIAL_CHECK();
     if (JSObjectScript::mCtx->stopped())
     {
@@ -1296,7 +1323,7 @@ v8::Handle<v8::Value> EmersonScript::restorePresence(PresStructRestoreParams& ps
     {
         JSObjectScript::mCtx->mainStrand->post(
             std::tr1::bind(&EmersonScript::mainStrandCompletePresConnect,this,
-                newLoc,bs,psrp,presToke));
+                newLoc,bs,psrp,presToke,Liveness::livenessToken()));
 
         mUnconnectedPresences.push_back(jspres);
         return v8::Null();
@@ -1308,14 +1335,14 @@ v8::Handle<v8::Value> EmersonScript::restorePresence(PresStructRestoreParams& ps
 
 
 
-void EmersonScript::mainStrandCompletePresConnect(Location newLoc,BoundingSphere3f bs,
-    PresStructRestoreParams psrp,HostedObject::PresenceToken presToke)
+void EmersonScript::mainStrandCompletePresConnect(
+    Location newLoc,BoundingSphere3f bs,
+    PresStructRestoreParams psrp,HostedObject::PresenceToken presToke,
+    Liveness::Token alive)
 {
+    Liveness::Lock locked(alive);
+    if (!locked) return;
 
-    /**
-       FIXME: lkjs;
-       note: should do some form of liveness check here;       
-     */
     mParent->connect(psrp.sporef.space(),
         newLoc,
         bs,
@@ -1351,13 +1378,16 @@ void EmersonScript::setOrientationVelFunction(const SpaceObjectReference sporef,
     EMERSCRIPT_SERIAL_CHECK();
     JSObjectScript::mCtx->mainStrand->post(
         std::tr1::bind(&EmersonScript::eSetOrientationVelFunction,this,
-            sporef, quat));
+            sporef, quat,Liveness::livenessToken()));
 }
 
 //called in mainStrand
 void EmersonScript::eSetOrientationVelFunction(
-    const SpaceObjectReference sporef,const Quaternion& quat)
+    const SpaceObjectReference sporef,const Quaternion& quat,Liveness::Token alive)
 {
+    Liveness::Lock locked(alive);
+    if (!locked) return;
+    
     mParent->requestOrientationVelocityUpdate(sporef.space(),sporef.object(),quat);
 }
 
@@ -1366,12 +1396,16 @@ void EmersonScript::setPositionFunction(const SpaceObjectReference sporef, const
     EMERSCRIPT_SERIAL_CHECK();
     JSObjectScript::mCtx->mainStrand->post(
         std::tr1::bind(&EmersonScript::eSetPositionFunction,this,
-            sporef,posVec));
+            sporef,posVec,Liveness::livenessToken()));
 }
 
 void EmersonScript::eSetPositionFunction(
-    const SpaceObjectReference sporef, const Vector3f& posVec)
+    const SpaceObjectReference sporef, const Vector3f& posVec,
+    Liveness::Token alive)
 {
+    Liveness::Lock locked(alive);
+    if (!locked) return;
+
     mParent->requestPositionUpdate(sporef.space(),sporef.object(),posVec);
 }
 
@@ -1383,12 +1417,16 @@ void EmersonScript::setVelocityFunction(
     EMERSCRIPT_SERIAL_CHECK();
     JSObjectScript::mCtx->mainStrand->post(
         std::tr1::bind(&EmersonScript::eSetVelocityFunction,this,
-            sporef,velVec));
+            sporef,velVec,Liveness::livenessToken()));
 }
 
 void EmersonScript::eSetVelocityFunction(
-    const SpaceObjectReference sporef, const Vector3f& velVec)
+    const SpaceObjectReference sporef, const Vector3f& velVec,
+    Liveness::Token alive)
 {
+    Liveness::Lock locked(alive);
+    if (!locked) return;
+
     mParent->requestVelocityUpdate(sporef.space(),sporef.object(),velVec);
 }
 
@@ -1401,12 +1439,16 @@ void  EmersonScript::setOrientationFunction(
     EMERSCRIPT_SERIAL_CHECK();
     JSObjectScript::mCtx->mainStrand->post(
         std::tr1::bind(&EmersonScript::eSetOrientationFunction,this,
-            sporef,quat));
+            sporef,quat,Liveness::livenessToken()));
 }
 
 void EmersonScript::eSetOrientationFunction(
-    const SpaceObjectReference sporef, const Quaternion& quat)
+    const SpaceObjectReference sporef, const Quaternion& quat,
+    Liveness::Token alive)
 {
+    Liveness::Lock locked(alive);
+    if (!locked) return;
+
     mParent->requestOrientationDirectionUpdate(sporef.space(),sporef.object(),quat);
 }
 
@@ -1419,12 +1461,15 @@ void EmersonScript::setVisualScaleFunction(
     EMERSCRIPT_SERIAL_CHECK();
     JSObjectScript::mCtx->mainStrand->post(
         std::tr1::bind(&EmersonScript::eSetVisualScaleFunction,this,
-                sporef,newscale));
+                sporef,newscale,Liveness::livenessToken()));
 }
 
 void EmersonScript::eSetVisualScaleFunction(
-    const SpaceObjectReference sporef, float newscale)
+    const SpaceObjectReference sporef, float newscale,Liveness::Token alive)
 {
+    Liveness::Lock locked(alive);
+    if (!locked) return;
+
     BoundingSphere3f bnds = mParent->requestCurrentBounds(sporef.space(),sporef.object());
     bnds = BoundingSphere3f(bnds.center(), newscale);
     mParent->requestBoundsUpdate(sporef.space(),sporef.object(), bnds);
@@ -1440,12 +1485,16 @@ void  EmersonScript::setVisualFunction(
     EMERSCRIPT_SERIAL_CHECK();
     JSObjectScript::mCtx->mainStrand->post(
         std::tr1::bind(&EmersonScript::eSetVisualFunction,this,
-            sporef,newMeshString));
+            sporef,newMeshString,Liveness::livenessToken()));
 }
 
 void  EmersonScript::eSetVisualFunction(
-    const SpaceObjectReference sporef, const std::string& newMeshString)
+    const SpaceObjectReference sporef, const std::string& newMeshString,
+    Liveness::Token alive)
 {
+    Liveness::Lock locked(alive);
+    if (!locked) return;
+
     mParent->requestMeshUpdate(sporef.space(),sporef.object(),newMeshString);
 }
 
@@ -1468,12 +1517,16 @@ void EmersonScript::setPhysicsFunction(
     EMERSCRIPT_SERIAL_CHECK();
     JSObjectScript::mCtx->mainStrand->post(
         std::tr1::bind(&EmersonScript::eSetPhysicsFunction,this,
-            sporef,newPhyString));
+            sporef,newPhyString,Liveness::livenessToken()));
 }
 
 void EmersonScript::eSetPhysicsFunction(
-    const SpaceObjectReference sporef, const String& newPhyString)
+    const SpaceObjectReference sporef, const String& newPhyString,
+    Liveness::Token alive)
 {
+    Liveness::Lock locked(alive);
+    if (!locked) return;
+    
     mParent->requestPhysicsUpdate(sporef.space(), sporef.object(), newPhyString);
 }
 
@@ -1485,13 +1538,17 @@ void EmersonScript::setQueryFunction(
     EMERSCRIPT_SERIAL_CHECK();
     JSObjectScript::mCtx->mainStrand->post(
         std::tr1::bind(&EmersonScript::eSetQueryFunction,this,
-            sporef,sa,max_count));
+            sporef,sa,max_count,Liveness::livenessToken()));
 }
+
 
 void EmersonScript::eSetQueryFunction(
     const SpaceObjectReference sporef, const SolidAngle& sa,
-    const uint32 max_count)
+    const uint32 max_count,Liveness::Token alive)
 {
+    Liveness::Lock locked(alive);
+    if (!locked) return;
+
     mParent->requestQueryUpdate(
         sporef.space(), sporef.object(),
         sa,
