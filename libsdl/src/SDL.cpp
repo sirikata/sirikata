@@ -47,6 +47,16 @@ struct SafeInitCleanup {
     }
 
     int initialize(Subsystem::Type sub) {
+        // Trying to catch a crash: http://crashes.sirikata.com/status/2097,
+        // issue #463.
+        // Intentionally not using assert since we want to track this in binary
+        // releases.
+        if (this == NULL) {
+            SILOG(sdl, fatal, "Got NULL this pointer in SDL::SafeInitCleanup::initialize");
+            // This should trigger a crash, which would just happen later anyway.
+            this->initialized = false;
+        }
+
         assert(sub < Subsystem::NumSubsystems);
         if (subsystem_refcounts[sub] == 0) {
             if (!initialized) {
