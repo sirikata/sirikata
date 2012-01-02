@@ -43,7 +43,22 @@ AudioSimulation::AudioSimulation(Context* ctx)
    mPlaying(false)
 {}
 
-void AudioSimulation::start() {
+
+void AudioSimulation::start()
+{
+    audioStrand->post(
+        std::tr1::bind(&AudioSimulation::iStart, this));
+}
+
+void AudioSimulation::iStart(Liveness::Token lt)
+{
+    if (!lt)
+    {
+        AUDIO_LOG(warn,"Did not finish internal start "<<\
+            "of AudioSimulation: expired audiosim.");
+        return;
+    }
+    
     AUDIO_LOG(detailed, "Starting SDLAudio");
 
     if (SDL::InitializeSubsystem(SDL::Subsystem::Audio) != 0)
@@ -78,7 +93,21 @@ bool AudioSimulation::ready() const {
     return (mInitializedAudio && mOpenedAudio && mTransferPool);
 }
 
-void AudioSimulation::stop() {
+void AudioSimulation::stop()
+{
+    audioStrand->post(
+        std::tr1::bind(&AudioSimulation::stop,this));
+}
+
+void AudioSimulation::iStop(Liveness::Token lt)
+{
+    if (!lt)
+    {
+        AUDIO_LOG(warn,"Did not finish internal stop "<<\
+            "of AudioSimulation: expired audiosim.");
+        return;
+    }
+    
     AUDIO_LOG(detailed, "Stopping SDLAudio");
 
     mTransferPool.reset();
@@ -102,7 +131,7 @@ boost::any AudioSimulation::invoke(std::vector<boost::any>& params) {
     // Decode the command. First argument is the "function name"
     if (params.empty() || !Invokable::anyIsString(params[0]))
         return boost::any();
-
+    
     std::string name = Invokable::anyAsString(params[0]);
     AUDIO_LOG(detailed, "Invoking the function " << name);
 
@@ -243,7 +272,26 @@ boost::any AudioSimulation::invoke(std::vector<boost::any>& params) {
     return boost::any();
 }
 
-void AudioSimulation::handleFinishedDownload(Transfer::ChunkRequestPtr request, Transfer::DenseDataPtr response) {
+void AudioSimulation::handleFinishedDownload(
+    Transfer::ChunkRequestPtr request, Transfer::DenseDataPtr response)
+{
+    audioStrand->post(
+        std::tr1::bind(&AudioSimulation::iHandleFinishedDownload,this,
+            livenessToken(),request,response);
+}
+
+void AudioSimulation::iHandleFinishedDownload(
+    Liveness::Token lt,Transfer::ChunkRequestPtr request,
+    Transfer::DenseDataPtr response)
+{
+    if (!lt)
+    {
+        AUDIO_LOG(warn, "Aborting finished download: "<<\
+            "audio sim no longer live.");
+        return;
+    }
+
+    
     Lock lck(mMutex);
 
     const Transfer::URI& sound_url = request->getMetadata().getURI();
