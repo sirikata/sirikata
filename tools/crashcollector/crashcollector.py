@@ -174,6 +174,7 @@ def status_page(environ, start_response, id):
 
     result = []
     result += ['<h3>Report ', id_link(id), '</h3>']
+    result += ['<a href="/">home</a>', '<br>', '<br>']
 
     result += ['<form action="/status/', str(id), '" method="POST">']
     result += ['<input type="submit" value="Reanalyze"></input>']
