@@ -44,15 +44,21 @@ AudioSimulation::AudioSimulation(Context* ctx)
 {}
 
 
+AudioSimulation::~AudioSimulation()
+{
+    Liveness::letDie();
+}
+
 void AudioSimulation::start()
 {
     audioStrand->post(
-        std::tr1::bind(&AudioSimulation::iStart, this));
+        std::tr1::bind(&AudioSimulation::iStart, this,livenessToken()));
 }
 
 void AudioSimulation::iStart(Liveness::Token lt)
 {
-    if (!lt)
+    Liveness::Lock locked(lt);
+    if (!locked)
     {
         AUDIO_LOG(warn,"Did not finish internal start "<<\
             "of AudioSimulation: expired audiosim.");
@@ -96,12 +102,13 @@ bool AudioSimulation::ready() const {
 void AudioSimulation::stop()
 {
     audioStrand->post(
-        std::tr1::bind(&AudioSimulation::stop,this));
+        std::tr1::bind(&AudioSimulation::iStop,this,livenessToken()));
 }
 
 void AudioSimulation::iStop(Liveness::Token lt)
 {
-    if (!lt)
+    Liveness::Lock locked(lt);
+    if (!locked)
     {
         AUDIO_LOG(warn,"Did not finish internal stop "<<\
             "of AudioSimulation: expired audiosim.");
@@ -284,7 +291,8 @@ void AudioSimulation::iHandleFinishedDownload(
     Liveness::Token lt,Transfer::ChunkRequestPtr request,
     Transfer::DenseDataPtr response)
 {
-    if (!lt)
+    Liveness::Lock locked(lt);
+    if (!locked)
     {
         AUDIO_LOG(warn, "Aborting finished download: "<<\
             "audio sim no longer live.");

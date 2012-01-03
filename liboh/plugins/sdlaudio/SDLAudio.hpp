@@ -22,7 +22,9 @@ class AudioSimulation : public Simulation,
 {
 public:
     AudioSimulation(Context* ctx, Network::IOStrandPtr aStrand);
+    virtual ~AudioSimulation();
 
+    
     // Service Interface
     virtual void start();
     virtual void stop();
@@ -30,6 +32,7 @@ public:
     // Invokable Interface
     virtual boost::any invoke(std::vector<boost::any>& params);
 
+    
     
     // Mixing interface, public for the mixing callback function
     void mix(uint8* raw_stream, int32 len);
