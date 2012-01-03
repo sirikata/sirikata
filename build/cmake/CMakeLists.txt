@@ -3072,7 +3072,7 @@ IF(SIRIKATA_GENERATE_BINARY_WRAPPERS)
 
     # We need to special case cppoh since it's run in a .app structure
     STRING(COMPARE EQUAL ${BINARY_NAME} "cppoh" IS_CPPOH)
-    IF(IS_CPPOH)
+    IF(APPLE AND IS_CPPOH)
       SET(BINARY_EXE "${BINARY_EXE}.app/Contents/MacOS/${BINARY_EXE}")
     ENDIF()
 
