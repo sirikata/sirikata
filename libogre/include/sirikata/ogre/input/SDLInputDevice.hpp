@@ -57,6 +57,8 @@ public:
     SDLMouse(SDLInputManager *inputManager, unsigned int which);
     virtual ~SDLMouse();
 
+    SDLInputManager* inputManager();
+
     enum Axes {WHEELX=NUM_POINTER_AXES, WHEELY,
           PRESSURE, CURSORZ, ROTATION, TILT, NUM_AXES};
     virtual int getNumButtons() const;
@@ -95,10 +97,8 @@ public:
     }
 
     void fireMotion(const SDLMousePtr &thisptr,
-                    SDLInputManager *em,
                     const ::SDL_MouseMotionEvent &ev);
     void fireWheel(const SDLMousePtr &thisptr,
-                   SDLInputManager *em,
                    int xrel,
                    int yrel);
 };
@@ -121,6 +121,9 @@ public:
     /// FIXME!!! throws std::runtime_exception if SDL_JoystickOpen fails.
     SDLJoystick(unsigned int which);
     virtual ~SDLJoystick();
+
+    SDLInputManager* inputManager();
+
     virtual std::string getButtonName(unsigned int button) const;
     virtual std::string getAxisName(unsigned int button) const;
     void setButtonName(unsigned int button, std::string name);
@@ -128,11 +131,9 @@ public:
     virtual int getNumButtons() const;
 
     void fireHat(const SDLJoystickPtr &thisptr,
-                 Task::GenEventManager *em,
                  unsigned int hatNumber,
                  int hatValue);
     void fireBall(const SDLJoystickPtr &thisptr,
-                  SDLInputManager *em,
                   unsigned int ballNumber,
                   int xrel,
                   int yrel);
@@ -143,6 +144,8 @@ class SIRIKATA_OGRE_EXPORT SDLKeyboard : public InputDevice {
 public:
     SDLKeyboard(unsigned int which);
     virtual ~SDLKeyboard();
+
+    SDLInputManager* inputManager();
 
     enum Directions {UP, RIGHT, DOWN, LEFT, MAX_DIRECTION};
 	virtual std::string getButtonName(unsigned int button) const;

@@ -34,7 +34,6 @@ extern "C" typedef Sirikata::uint32 SDL_WindowID;
 extern "C" typedef void* SDL_GLContext;
 extern "C" typedef union SDL_Event SDL_Event;
 
-#include <sirikata/ogre/task/EventManager.hpp>
 #include <sirikata/ogre/input/InputManager.hpp>
 
 namespace Sirikata {

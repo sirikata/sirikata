@@ -38,7 +38,6 @@
 #include <sirikata/ogre/ViewportOverlay.hpp>
 #include <sirikata/ogre/input/InputEvents.hpp>
 #include <sirikata/ogre/input/InputManager.hpp>
-#include <sirikata/ogre/task/EventManager.hpp>
 #include <sirikata/ogre/WebView.hpp>
 
 namespace Sirikata {
@@ -309,12 +308,13 @@ protected:
      */
     boost::any onRaiseWebViewEvent(WebView* webview, const JSArguments& args);
 public:
-	Sirikata::Task::EventResponse onMouseMove(Sirikata::Task::EventPtr evt);
-	Sirikata::Task::EventResponse onMousePressed(Sirikata::Task::EventPtr evt);
-	Sirikata::Task::EventResponse onMouseDrag(Sirikata::Task::EventPtr evt);
-	Sirikata::Task::EventResponse onMouseClick(Sirikata::Task::EventPtr evt);
-	Sirikata::Task::EventResponse onButton(Sirikata::Task::EventPtr evt);
-	Sirikata::Task::EventResponse onKeyTextInput(Sirikata::Task::EventPtr evt);
+
+    Input::EventResponse onMouseHover(Input::MouseHoverEventPtr evt);
+    Input::EventResponse onMousePressed(Input::MousePressedEventPtr evt);
+    Input::EventResponse onMouseDrag(Input::MouseDragEventPtr evt);
+    Input::EventResponse onMouseClick(Input::MouseClickEventPtr evt);
+    Input::EventResponse onButton(Input::ButtonEventPtr evt);
+    Input::EventResponse onKeyTextInput(Input::TextInputEventPtr evt);
 };
 
 }

@@ -1416,9 +1416,6 @@ SET(LIBSDL_SOURCES
   )
 
 SET(LIBOGRE_SOURCES
-  ${LIBOGRE_SOURCE_DIR}/task/EventManager.cpp
-  ${LIBOGRE_SOURCE_DIR}/task/Event.cpp
-  ${LIBOGRE_SOURCE_DIR}/task/UniqueId.cpp
   ${LIBOGRE_SOURCE_DIR}/input/InputEvents.cpp
   ${LIBOGRE_SOURCE_DIR}/input/InputDevice.cpp
   ${LIBOGRE_SOURCE_DIR}/input/SDLInputDevice.cpp

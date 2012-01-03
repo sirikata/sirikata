@@ -31,16 +31,12 @@
  */
 
 #include <sirikata/core/util/Standard.hh>
-#include <sirikata/ogre/task/Event.hpp>
-#include <sirikata/ogre/task/EventManager.hpp>
 #include <sirikata/ogre/input/InputEvents.hpp>
 #include <sirikata/ogre/input/InputDevice.hpp>
+#include <sirikata/ogre/input/InputManager.hpp>
 
 namespace Sirikata {
 namespace Input {
-
-using Task::EventPtr;
-using Task::GenEventManager;
 
 bool InputDevice::changeButton(unsigned int button, bool newState, Modifier &modifiers) {
     bool changed;
@@ -79,7 +75,6 @@ bool InputDevice::changeButton(unsigned int button, bool newState, Modifier &mod
 }
 
 bool InputDevice::fireButton(const InputDevicePtr &thisptr,
-                             GenEventManager *em,
                              unsigned int button, bool newStateIsPressed, Modifier modifiers) {
     Modifier oldmodifiers = modifiers;
     bool changed = changeButton(button, newStateIsPressed, oldmodifiers);
@@ -87,21 +82,21 @@ bool InputDevice::fireButton(const InputDevicePtr &thisptr,
         if (newStateIsPressed) {
             if (oldmodifiers != modifiers) {
                 // If modifiers change, release old
-                em->fire(EventPtr(new ButtonReleased(thisptr, button, oldmodifiers)));
+                mManager->fire(ButtonReleasedPtr(new ButtonReleased(thisptr, button, oldmodifiers)));
             }
-            em->fire(EventPtr(new ButtonPressed(thisptr, button, modifiers)));
+            mManager->fire(ButtonPressedPtr(new ButtonPressed(thisptr, button, modifiers)));
             Time tnow = Timer::now();
             buttonState.find(button)->second.initialTime = tnow;
             buttonState.find(button)->second.lastTime = tnow;
         } else {
-            em->fire(EventPtr(new ButtonReleased(thisptr, button, oldmodifiers)));
+            mManager->fire(ButtonReleasedPtr(new ButtonReleased(thisptr, button, oldmodifiers)));
         }
     } else {
         if (newStateIsPressed) {
             if (oldmodifiers != modifiers) {
                 // If modifiers change, release old and press new
-                em->fire(EventPtr(new ButtonReleased(thisptr, button, oldmodifiers)));
-                em->fire(EventPtr(new ButtonPressed(thisptr, button, modifiers)));
+                mManager->fire(ButtonReleasedPtr(new ButtonReleased(thisptr, button, oldmodifiers)));
+                mManager->fire(ButtonPressedPtr(new ButtonPressed(thisptr, button, modifiers)));
                 assert(buttonState.find(button) != buttonState.end());
                 Time tnow = Timer::now();
                 buttonState.find(button)->second.initialTime == Timer::now();
@@ -115,7 +110,7 @@ bool InputDevice::fireButton(const InputDevicePtr &thisptr,
                 Duration since_initial = tnow - buttonState.find(button)->second.initialTime;
                 Duration since_last = tnow - buttonState.find(button)->second.lastTime;
                 if (since_initial > repeat_delay && since_last > repeat_rate) {
-                    em->fire(EventPtr(new ButtonRepeated(thisptr, button, modifiers)));
+                    mManager->fire(ButtonRepeatedPtr(new ButtonRepeated(thisptr, button, modifiers)));
                     assert(buttonState.find(button) != buttonState.end());
                     buttonState.find(button)->second.lastTime = tnow;
                 }
@@ -137,20 +132,18 @@ bool InputDevice::changeAxis(unsigned int axis, AxisValue newState) {
 }
 
 bool InputDevice::fireAxis(const InputDevicePtr &thisptr,
-                           GenEventManager *em,
                            unsigned int axis, AxisValue newState) {
     newState.clip();
     bool changed = changeAxis(axis, newState);
     changed = changed || (newState != AxisValue::null());
     if (changed) {
-        em->fire(EventPtr(new AxisEvent(thisptr, axis, newState)));
+        mManager->fire(AxisEventPtr(new AxisEvent(thisptr, axis, newState)));
     }
     return changed;
 }
 
 void PointerDevice::firePointerClick(
         const PointerDevicePtr &thisptr,
-        GenEventManager *em,
         float xPixel,
         float yPixel,
         int cursor,
@@ -175,7 +168,7 @@ void PointerDevice::firePointerClick(
         di.mOffsetX = 0;
         di.mOffsetY = 0;
         mDragInfo.insert(mDragInfo.begin(), di);
-        em->fire(EventPtr(
+        mManager->fire(MousePressedEventPtr(
                 new MousePressedEvent(
                     thisptr,
                     xPixel,
@@ -188,7 +181,7 @@ void PointerDevice::firePointerClick(
                 xPixel = (*iter).mDragX;
                 yPixel = (*iter).mDragY;
             }
-            em->fire(EventPtr(
+            mManager->fire(MouseDragEventPtr(
                     new MouseDragEvent(
                         thisptr, DRAG_END,
                         (*iter).mDragStartX,
@@ -199,14 +192,14 @@ void PointerDevice::firePointerClick(
                         (*iter).mDragY+(*iter).mOffsetY,
                         cursor, button, 0, 0, 0)));
         } else {
-            em->fire(EventPtr(
+            mManager->fire(MouseClickEventPtr(
                     new MouseClickEvent(
                         thisptr,
                         (*iter).mDragStartX,
                         (*iter).mDragStartY,
                         cursor, button)));
         }
-        em->fire(EventPtr(
+        mManager->fire(MouseReleasedEventPtr(
                 new MouseReleasedEvent(
                     thisptr,
                     xPixel,
@@ -218,13 +211,12 @@ void PointerDevice::firePointerClick(
 
 void PointerDevice::firePointerMotion(
         const PointerDevicePtr &thisptr,
-        GenEventManager *em,
         float xPixelArg,
         float yPixelArg,
         int cursorType,
         int pressure, int pressmin, int pressmax) {
     if (mDragInfo.empty() && !mRelativeMode) {
-        em->fire(EventPtr(new MouseHoverEvent(thisptr, xPixelArg, yPixelArg, cursorType)));
+        mManager->fire(MouseHoverEventPtr(new MouseHoverEvent(thisptr, xPixelArg, yPixelArg, cursorType)));
     } else {
         bool first = true;
         for (DragMap::iterator iter = mDragInfo.begin();
@@ -247,7 +239,7 @@ void PointerDevice::firePointerMotion(
                 } else {
                     dragType = DRAG_DRAG;
                 }
-                em->fire(EventPtr(new MouseDragEvent(
+                mManager->fire(MouseDragEventPtr(new MouseDragEvent(
                                       thisptr, dragType,
                                       di.mDragStartX, di.mDragStartY,
                                       xPixel+di.mOffsetX, yPixel+di.mOffsetY,
