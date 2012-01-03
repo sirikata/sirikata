@@ -276,9 +276,17 @@ String Get(Key key, const String& relative_path, const String& alternate_base) {
     // binary's directory.
     boost::filesystem::path exe_dir(Get(DIR_EXE_BUNDLE));
     // From there, we have a couple of possibilities. In the installed
-    // version we'll have, e.g., /usr/bin and /usr/share/sirikata:
+    // version we'll have, e.g., /usr/bin or /usr/lib/sirikata and
+    // /usr/share/sirikata
     {
+        // Try for /usr/bin
         boost::filesystem::path share_dir_resource = exe_dir.parent_path() / "share" / "sirikata" / relative_path;
+        if (boost::filesystem::exists(share_dir_resource))
+            return share_dir_resource.string();
+    }
+    {
+        // Try for /usr/lib/sirikata
+        boost::filesystem::path share_dir_resource = exe_dir.parent_path().parent_path() / "share" / "sirikata" / relative_path;
         if (boost::filesystem::exists(share_dir_resource))
             return share_dir_resource.string();
     }
