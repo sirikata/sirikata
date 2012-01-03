@@ -853,7 +853,8 @@ void OgreRenderer::poll()
 
 void OgreRenderer::iPoll(Liveness::Token rendererAlive)
 {
-    if (!rendererAlive)
+    Liveness::Lock locked(rendererAlive);
+    if (!locked)
         return;
 
     if (!initialized)
@@ -886,7 +887,8 @@ void OgreRenderer::stop()
 
 void OgreRenderer::iStop(Liveness::Token rendererAlive)
 {
-    if (!rendererAlive)
+    Liveness::Lock locked(rendererAlive);
+    if (!locked)
         return;
     
     while (! initialized){}
@@ -1009,6 +1011,11 @@ void OgreRenderer::parseMeshWork(
     const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data,
     ParseMeshCallback cb)
 {
+    Liveness::Lock locked(rendererAlive);
+    if (!locked)
+        return;
+
+    
     if (stopped)
         return;
     
