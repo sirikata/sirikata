@@ -102,7 +102,6 @@ class SIRIKATA_OH_EXPORT ObjectHost
     EntityPresenceSet mEntityPresenceSet;
     ObjectSet mMigratingEntity;
 
-    void initalMigrateEntity(const SpaceID& space, const UUID& uuid, const String& name);
     void migrateEntity(const SpaceID& space, const UUID& uuid, const String& name);
     void migratAllEntity(const SpaceID& space, const String& name);
 

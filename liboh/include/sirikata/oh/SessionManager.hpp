@@ -141,6 +141,7 @@ class SIRIKATA_OH_EXPORT SessionManager
     void disconnect(const SpaceObjectReference& id);
     void notifyObjMigration(const SpaceObjectReference& sporef_objid, const String& name);
     void migrateEntity(const SpaceObjectReference& sporef_objid, const UUID& uuid, const String& name, const std::set<UUID>& object_set);
+    void migrateObject(const SpaceObjectReference& sporef_objid, const UUID& uuid, const String& name);
 
     /** Get offset of server time from client time for the given space. Should
      * only be called by objects with an active connection to that space.

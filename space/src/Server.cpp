@@ -489,21 +489,29 @@ void Server::handleSessionMessage(const ObjectHostConnectionID& oh_conn_id, Siri
         }
     }
     else if (session_msg.has_oh_migration()) {
-    	if(session_msg.oh_migration().type()== Sirikata::Protocol::Session::OHMigration::Entity){
+    	if(session_msg.oh_migration().type()== Sirikata::Protocol::Session::OHMigration::Object){
+    		UUID obj_id = session_msg.oh_migration().id();
+    		String dst_oh_name = session_msg.oh_migration().oh_name();
+    		mOHMigratingObjects[obj_id]=dst_oh_name;
+
+    		ObjectHostConnectionID oh_conn_id =  mOHNameConnections[dst_oh_name];
+    		SPACE_LOG(info, "Mark object "<<obj_id.rawHexData()<<" as migrating to OH "<<dst_oh_name<<" through OH connection "<<oh_conn_id.shortID());
+    	}
+
+    	else if(session_msg.oh_migration().type()== Sirikata::Protocol::Session::OHMigration::Entity){
     		UUID entity_id = session_msg.oh_migration().id();
     		String dst_oh_name = session_msg.oh_migration().oh_name();
     		ObjectHostConnectionID oh_conn_id =  mOHNameConnections[dst_oh_name];
     		SPACE_LOG(info, "Receive OH migration request of entity "<<entity_id.rawHexData()<<" to OH "<<dst_oh_name<<" through OH connection "<<oh_conn_id.shortID());
 
-    		for(int i=0; i<session_msg.oh_migration().objects_size(); i++) {
+    		/*for(int i=0; i<session_msg.oh_migration().objects_size(); i++) {
     			UUID obj = session_msg.oh_migration().objects(i);
                 mOHMigratingObjects[obj]=dst_oh_name;
                 SPACE_LOG(info, "Mark object "<<obj.rawHexData()<<" as migrating");
-    		}
+    		}*/
 
     		handleEntityOHMigraion(entity_id, oh_conn_id);
     	}
-    	else if(session_msg.oh_migration().type()== Sirikata::Protocol::Session::OHMigration::Object){}
     }
 
     // InitiateMigration messages

@@ -749,9 +749,9 @@ void SessionManager::migrateEntity(const SpaceObjectReference& sporef_objid, con
 	oh_migration_msg.set_type(Sirikata::Protocol::Session::OHMigration::Entity);
 	oh_migration_msg.set_id(uuid);
 	oh_migration_msg.set_oh_name(name);
-        for(std::set<UUID>::iterator it=object_set.begin(); it!=object_set.end();++it) {
-          oh_migration_msg.add_objects(*it);
-        }
+	//for(std::set<UUID>::iterator it=object_set.begin(); it!=object_set.end();++it) {
+	//	oh_migration_msg.add_objects(*it);
+	//}
 
 	sendRetryingMessage(
 			sporef_objid, OBJECT_PORT_SESSION,
@@ -760,6 +760,27 @@ void SessionManager::migrateEntity(const SpaceObjectReference& sporef_objid, con
 			connected_to, mContext->mainStrand, Duration::seconds(0.05));
 
 	SESSION_LOG(info,"Send Request: entity "<<uuid.rawHexData()<<" migrate to OH "<<name);
+}
+
+void SessionManager::migrateObject(const SpaceObjectReference& sporef_objid, const UUID& uuid, const String& name) {
+	Sirikata::SerializationCheck::Scoped sc(&mSerialization);
+
+	ServerID connected_to = mObjectConnections.getConnectedServer(sporef_objid);
+	if (connected_to == NullServerID) return;
+
+	Sirikata::Protocol::Session::Container session_msg;
+	Sirikata::Protocol::Session::IOHMigration oh_migration_msg = session_msg.mutable_oh_migration();
+	oh_migration_msg.set_type(Sirikata::Protocol::Session::OHMigration::Object);
+	oh_migration_msg.set_id(uuid);
+	oh_migration_msg.set_oh_name(name);
+
+	sendRetryingMessage(
+			sporef_objid, OBJECT_PORT_SESSION,
+			UUID::null(), OBJECT_PORT_SESSION,
+			serializePBJMessage(session_msg),
+			connected_to, mContext->mainStrand, Duration::seconds(0.05));
+
+	SESSION_LOG(info,"Send Request: object "<<uuid.rawHexData()<<" migrate to OH "<<name);
 }
 
 void SessionManager::getAnySpaceConnection(SpaceNodeConnection::GotSpaceConnectionCallback cb) {
