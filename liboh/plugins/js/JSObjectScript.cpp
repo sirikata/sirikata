@@ -362,14 +362,23 @@ v8::Handle<v8::Value> JSObjectScript::storageBeginTransaction(JSContextStruct* j
     if (mStorage == NULL) return v8::ThrowException( v8::Exception::Error(v8::String::New("No persistent storage available.")) );
 
     mCtx->mainStrand->post(
-        std::tr1::bind(&JSObjectScript::eStorageBeginTransaction,this,jscont));
+        std::tr1::bind(&JSObjectScript::eStorageBeginTransaction,this,
+            jscont,Liveness::livenessToken(),jscont->livenessToken()));
 
     return v8::Undefined();
 }
 
 
-void JSObjectScript::eStorageBeginTransaction(JSContextStruct* jscont)
+void JSObjectScript::eStorageBeginTransaction(
+    JSContextStruct* jscont,Liveness::Token objAlive,
+    Liveness::Token ctxAlive)
 {
+    Liveness::Lock locked(objAlive);
+    if (!locked) return;
+
+    Liveness::Lock lockedCtx(ctxAlive);
+    if (!lockedCtx) return;
+    
     mStorage->beginTransaction(mInternalID);
 }
 
@@ -382,22 +391,31 @@ v8::Handle<v8::Value> JSObjectScript::storageCommit(JSContextStruct* jscont, v8:
 
     mCtx->mainStrand->post(
         std::tr1::bind(&JSObjectScript::eStorageCommit,this,
-            jscont,v8::Persistent<v8::Function>::New(cb)));
+            jscont,v8::Persistent<v8::Function>::New(cb),
+            Liveness::livenessToken(),jscont->livenessToken()));
 
     return v8::Undefined();
 }
 
 
 void JSObjectScript::eStorageCommit(
-    JSContextStruct* jscont, v8::Persistent<v8::Function> cb)
+    JSContextStruct* jscont, v8::Persistent<v8::Function> cb,
+    Liveness::Token objAlive,Liveness::Token ctxAlive)
 {
+    Liveness::Lock locked(objAlive);
+    if (!locked) return;
+
+    Liveness::Lock lockedCtx(ctxAlive);
+    if (!lockedCtx) return;
+    
     
     OH::Storage::CommitCallback wrapped_cb = 0;
     if (!cb.IsEmpty())
     {
         wrapped_cb =std::tr1::bind(
             &JSObjectScript::storageCommitCallback, this,
-                jscont, cb, _1, _2);
+            jscont, cb, _1, _2,Liveness::livenessToken(),
+            jscont->livenessToken());
     }
     mStorage->commitTransaction(mInternalID, wrapped_cb);
 }
@@ -412,8 +430,16 @@ void JSObjectScript::eStorageCommit(
  */
 void JSObjectScript::storageCommitCallback(
     JSContextStruct* jscont, v8::Persistent<v8::Function> cb,
-    bool success, OH::Storage::ReadSet* rs) 
+    bool success, OH::Storage::ReadSet* rs,Liveness::Token objAlive,
+    Liveness::Token ctxAlive) 
 {
+    Liveness::Lock locked(objAlive);
+    if (!locked) return;
+
+    Liveness::Lock lockedCtx(ctxAlive);
+    if (!lockedCtx) return;
+    
+    
     if (isStopped()) {
         JSLOG(warn, "Ignoring storage commit callback after shutdown request.");
         return;
@@ -421,13 +447,21 @@ void JSObjectScript::storageCommitCallback(
 
     mCtx->objStrand->post(
         std::tr1::bind(&JSObjectScript::iStorageCommitCallback,this,
-            jscont,cb,success,rs));
+            jscont,cb,success,rs,Liveness::livenessToken(),jscont->livenessToken()));
 }
 
 void JSObjectScript::iStorageCommitCallback(
     JSContextStruct* jscont, v8::Persistent<v8::Function> cb,
-    bool success, OH::Storage::ReadSet* rs)
+    bool success, OH::Storage::ReadSet* rs,Liveness::Token objAlive,
+    Liveness::Token ctxAlive)
 {
+    Liveness::Lock locked(objAlive);
+    if (!locked) return;
+
+    Liveness::Lock lockedCtx(ctxAlive);
+    if (!lockedCtx) return;
+    
+    
     v8::Isolate::Scope iscope(mCtx->mIsolate);
     JSSCRIPT_SERIAL_CHECK();
     if (mCtx->stopped())
@@ -466,8 +500,16 @@ void JSObjectScript::iStorageCommitCallback(
 
 void JSObjectScript::storageCountCallback(
     JSContextStruct* jscont, v8::Persistent<v8::Function> cb,
-    bool success, int32 count)
+    bool success, int32 count,Liveness::Token objAlive,
+    Liveness::Token ctxAlive)
 {
+    Liveness::Lock locked(objAlive);
+    if (!locked) return;
+
+    Liveness::Lock lockedCtx(ctxAlive);
+    if (!lockedCtx) return;
+
+    
     if (isStopped()) {
         JSLOG(warn, "Ignoring storage commit callback after shutdown request.");
         return;
@@ -475,14 +517,23 @@ void JSObjectScript::storageCountCallback(
 
     mCtx->objStrand->post(
         std::tr1::bind(&JSObjectScript::iStorageCountCallback,this,
-            jscont,cb,success,count));
+            jscont,cb,success,count,Liveness::livenessToken(),
+            jscont->livenessToken()));
 }
 
 
 void JSObjectScript::iStorageCountCallback(
     JSContextStruct* jscont, v8::Persistent<v8::Function> cb,
-    bool success, int32 count)
+    bool success, int32 count,Liveness::Token objAlive,
+    Liveness::Token ctxAlive)
 {
+    Liveness::Lock locked(objAlive);
+    if (!locked) return;
+
+    Liveness::Lock lockedCtx(ctxAlive);
+    if (!lockedCtx) return;
+        
+    
     v8::Isolate::Scope iscope(mCtx->mIsolate);
     JSSCRIPT_SERIAL_CHECK();
     if (mCtx->stopped())
@@ -519,22 +570,29 @@ v8::Handle<v8::Value> JSObjectScript::storageErase(
 
     mCtx->mainStrand->post(
         std::tr1::bind(&JSObjectScript::eStorageErase,this,
-            key,v8::Persistent<v8::Function>::New(cb),jscont));
-
+            key,v8::Persistent<v8::Function>::New(cb),jscont,
+            Liveness::livenessToken(),jscont->livenessToken()));
+    
     return v8::Boolean::New(true);
 }
 
 
 void JSObjectScript::eStorageErase(
     const OH::Storage::Key& key, v8::Persistent<v8::Function> cb,
-    JSContextStruct* jscont)
+    JSContextStruct* jscont,Liveness::Token objAlive,Liveness::Token ctxAlive)
 {
+    Liveness::Lock locked(objAlive);
+    if (!locked) return;
+
+    Liveness::Lock lockedCtx(ctxAlive);
+    if (!lockedCtx) return;    
+    
     OH::Storage::CommitCallback wrapped_cb = 0;
     if (!cb.IsEmpty()) {
         
         wrapped_cb =
             std::tr1::bind(&JSObjectScript::storageCommitCallback, this,
-                jscont, cb, _1, _2);
+                jscont, cb, _1, _2,Liveness::livenessToken(),jscont->livenessToken());
     }
 
     bool returner = mStorage->erase(mInternalID, key, wrapped_cb);
@@ -551,21 +609,29 @@ v8::Handle<v8::Value> JSObjectScript::storageWrite(
 
     mCtx->mainStrand->post(
         std::tr1::bind(&JSObjectScript::eStorageWrite,this,
-            key,toWrite,v8::Persistent<v8::Function>::New(cb),jscont));
+            key,toWrite,v8::Persistent<v8::Function>::New(cb),jscont,
+            Liveness::livenessToken(),jscont->livenessToken()));
 
     return v8::Boolean::New(true);
 }
 
 void JSObjectScript::eStorageWrite(
     const OH::Storage::Key& key, const String& toWrite,
-    v8::Persistent<v8::Function> cb, JSContextStruct* jscont)
+    v8::Persistent<v8::Function> cb, JSContextStruct* jscont,
+    Liveness::Token objAlive,Liveness::Token ctxAlive)
 {
+    Liveness::Lock locked(objAlive);
+    if (!locked) return;
+
+    Liveness::Lock lockedCtx(ctxAlive);
+    if (!lockedCtx) return;
+    
     OH::Storage::CommitCallback wrapped_cb = 0;
     if (!cb.IsEmpty())
     {
         wrapped_cb =
             std::tr1::bind(&JSObjectScript::storageCommitCallback, this,
-                jscont, cb, _1, _2);
+                jscont, cb, _1, _2,Liveness::livenessToken(),jscont->livenessToken());
     }
 
     bool returner = mStorage->write(mInternalID, key, toWrite, wrapped_cb);
@@ -578,12 +644,14 @@ v8::Handle<v8::Value> JSObjectScript::storageRead(
     JSContextStruct* jscont)
 {
     JSSCRIPT_SERIAL_CHECK();
-    if (mStorage == NULL) return v8::ThrowException( v8::Exception::Error(v8::String::New("No persistent storage available.")) );
+    if (mStorage == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("No persistent storage available.")) );
 
 
     mCtx->mainStrand->post(
         std::tr1::bind(&JSObjectScript::eStorageRead,this,
-            key,v8::Persistent<v8::Function>::New(cb),jscont));
+            key,v8::Persistent<v8::Function>::New(cb),jscont,
+            Liveness::livenessToken(),jscont->livenessToken()));
 
     return v8::Boolean::New(true);
 }
@@ -591,15 +659,22 @@ v8::Handle<v8::Value> JSObjectScript::storageRead(
 
 void JSObjectScript::eStorageRead(
     const OH::Storage::Key& key, v8::Persistent<v8::Function> cb,
-    JSContextStruct* jscont)
+    JSContextStruct* jscont,Liveness::Token objAlive,Liveness::Token ctxAlive)
 {
+    Liveness::Lock locked(objAlive);
+    if (!locked) return;
+    
+    Liveness::Lock lockedCtx(ctxAlive);
+    if (!lockedCtx) return;
+
     OH::Storage::CommitCallback wrapped_cb = 0;
     if (!cb.IsEmpty()) {
         wrapped_cb =
             std::tr1::bind(&JSObjectScript::storageCommitCallback, this,
-                jscont, cb, _1, _2);
+                jscont, cb, _1, _2,Liveness::livenessToken(),
+                jscont->livenessToken());
     }
-
+    
     bool read_queue_success = mStorage->read(mInternalID, key, wrapped_cb);
 }
 
@@ -614,24 +689,34 @@ v8::Handle<v8::Value> JSObjectScript::storageRangeRead(
 
     mCtx->mainStrand->post(
         std::tr1::bind(&JSObjectScript::eStorageRangeRead,this,
-            start,finish,v8::Persistent<v8::Function>::New(cb),jscont));
+            start,finish,v8::Persistent<v8::Function>::New(cb),jscont,
+            Liveness::livenessToken(),jscont->livenessToken()));
 
     return v8::Boolean::New(true);
 }
 
 void JSObjectScript::eStorageRangeRead(
     const OH::Storage::Key& start, const OH::Storage::Key& finish,
-    v8::Persistent<v8::Function> cb, JSContextStruct* jscont)
+    v8::Persistent<v8::Function> cb, JSContextStruct* jscont,
+    Liveness::Token objAlive,Liveness::Token ctxAlive)
 {
+    Liveness::Lock locked(objAlive);
+    if (!locked) return;
+
+    Liveness::Lock lockedCtx(ctxAlive);
+    if (!lockedCtx) return;
+
     OH::Storage::CommitCallback wrapped_cb = 0;
     if (!cb.IsEmpty())
     {
         wrapped_cb =
             std::tr1::bind(&JSObjectScript::storageCommitCallback, this,
-                jscont,cb, _1, _2);
+                jscont,cb, _1, _2,livenessToken(),
+                jscont->livenessToken());
     }
 
-    bool returner = mStorage->rangeRead(mInternalID, start, finish, wrapped_cb);
+    bool returner =
+        mStorage->rangeRead(mInternalID, start, finish, wrapped_cb);
 }
 
 
@@ -644,21 +729,30 @@ v8::Handle<v8::Value> JSObjectScript::storageRangeErase(
 
     mCtx->mainStrand->post(
         std::tr1::bind(&JSObjectScript::eStorageRangeErase,this,
-            start,finish,v8::Persistent<v8::Function>::New(cb),jscont));
+            start,finish,v8::Persistent<v8::Function>::New(cb),jscont,
+            Liveness::livenessToken(),jscont->livenessToken()));
 
     return v8::Boolean::New(true);
 }
 
 void JSObjectScript::eStorageRangeErase(
     const OH::Storage::Key& start, const OH::Storage::Key& finish,
-    v8::Persistent<v8::Function> cb, JSContextStruct* jscont)
+    v8::Persistent<v8::Function> cb, JSContextStruct* jscont,
+    Liveness::Token objAlive,Liveness::Token ctxAlive)
 {
+    Liveness::Lock locked(objAlive);
+    if (!locked) return;
+    
+    Liveness::Lock lockedCtx(ctxAlive);
+    if (!lockedCtx) return;
+
     OH::Storage::CommitCallback wrapped_cb = 0;
     if (!cb.IsEmpty())
     {
         wrapped_cb =
             std::tr1::bind(&JSObjectScript::storageCommitCallback, this,
-                jscont,cb, _1, _2);
+                jscont,cb, _1, _2,Liveness::livenessToken(),
+                jscont->livenessToken());
     }
 
     bool returner = mStorage->rangeErase(mInternalID, start, finish, wrapped_cb);
@@ -674,7 +768,8 @@ v8::Handle<v8::Value> JSObjectScript::storageCount(
 
     mCtx->mainStrand->post(
         std::tr1::bind(&JSObjectScript::eStorageCount,this,
-            start,finish,v8::Persistent<v8::Function>::New(cb),jscont));
+            start,finish,v8::Persistent<v8::Function>::New(cb),jscont,
+            Liveness::livenessToken(),jscont->livenessToken()));
 
     return v8::Boolean::New(true);
 }
@@ -682,23 +777,37 @@ v8::Handle<v8::Value> JSObjectScript::storageCount(
 
 void JSObjectScript::eStorageCount(
     const OH::Storage::Key& start, const OH::Storage::Key& finish,
-    v8::Persistent<v8::Function> cb, JSContextStruct* jscont)
+    v8::Persistent<v8::Function> cb, JSContextStruct* jscont,
+    Liveness::Token objAlive,Liveness::Token ctxAlive)
 {
+    Liveness::Lock locked(objAlive);
+    if (!locked) return;
+
+    Liveness::Lock lockedCtx(ctxAlive);
+    if (!lockedCtx) return;
+    
     OH::Storage::CountCallback wrapped_cb = 0;
     if (!cb.IsEmpty())
     {
         wrapped_cb =
             std::tr1::bind(&JSObjectScript::storageCountCallback, this,
-                jscont, cb, _1, _2);
+                jscont, cb, _1, _2,livenessToken(),jscont->livenessToken());
     }
 
     bool returner = mStorage->count(mInternalID, start, finish, wrapped_cb);
 }
 
-
 void JSObjectScript::setRestoreScriptCallback(
-    JSContextStruct* jscont, v8::Persistent<v8::Function> cb, bool success)
+    JSContextStruct* jscont, v8::Persistent<v8::Function> cb, bool success,
+    Liveness::Token objAlive,Liveness::Token ctxAlive)
 {
+    Liveness::Lock locked(objAlive);
+    if (!locked) return;
+
+    Liveness::Lock lockedCtx(ctxAlive);
+    if (!lockedCtx) return;
+    
+    
     JSSCRIPT_SERIAL_CHECK();
     if (isStopped()) {
         JSLOG(warn, "Ignoring restore script callback after shutdown request.");
@@ -735,20 +844,30 @@ v8::Handle<v8::Value> JSObjectScript::setRestoreScript(
 
     mCtx->mainStrand->post(
         std::tr1::bind(&JSObjectScript::eSetRestoreScript,this,
-            jscont,script,v8::Persistent<v8::Function>::New(cb)));
+            jscont,script,v8::Persistent<v8::Function>::New(cb),
+            Liveness::livenessToken(),jscont->livenessToken()));
     return v8::Undefined();
 }
 
     
 void JSObjectScript::eSetRestoreScript(
-    JSContextStruct* jscont, const String& script, v8::Persistent<v8::Function> cb)
+    JSContextStruct* jscont, const String& script,
+    v8::Persistent<v8::Function> cb, Liveness::Token objAlive,
+    Liveness::Token ctxAlive)
 {
+    Liveness::Lock locked(objAlive);
+    if (!locked) return;
+
+    Liveness::Lock lockedCtx(ctxAlive);
+    if (!lockedCtx) return;
+    
+    
     OH::PersistedObjectSet::RequestCallback wrapped_cb = 0;
     if (!cb.IsEmpty())
     {
         wrapped_cb =
             std::tr1::bind(&JSObjectScript::setRestoreScriptCallback, this,
-                jscont, cb, _1);
+                jscont, cb, _1,Liveness::livenessToken(),jscont->livenessToken());
     }
 
     // FIXME we should really tack on any additional parameters we

@@ -336,10 +336,17 @@ protected:
     OH::Storage* mStorage;
     OH::PersistedObjectSet* mPersistedObjectSet;
 
-    void storageCommitCallback(JSContextStruct* jscont, v8::Persistent<v8::Function> cb, bool success, OH::Storage::ReadSet* rs);
-    void storageCountCallback(JSContextStruct* jscont, v8::Persistent<v8::Function> cb, bool success, int32 count);
+    void storageCommitCallback(
+        JSContextStruct* jscont, v8::Persistent<v8::Function> cb,
+        bool success, OH::Storage::ReadSet* rs,Liveness::Token objAlive,
+        Liveness::Token ctxAlive);
 
-    void setRestoreScriptCallback(JSContextStruct* jscont, v8::Persistent<v8::Function> cb, bool success);
+    void storageCountCallback(JSContextStruct* jscont, v8::Persistent<v8::Function> cb,
+        bool success, int32 count,Liveness::Token objAlive,Liveness::Token ctxAlive);
+
+    void setRestoreScriptCallback(
+        JSContextStruct* jscont, v8::Persistent<v8::Function> cb, bool success,
+        Liveness::Token,Liveness::Token ctxAlive);
 
     /**
        If we execute this number of cycles in one pass of event loop, throw a
@@ -387,39 +394,53 @@ protected:
 
     
     //all of these functions are used to post between strands.
-    void eStorageBeginTransaction(JSContextStruct* jscont);
-    void eStorageCommit(JSContextStruct* jscont, v8::Persistent<v8::Function> cb);
+    void eStorageBeginTransaction(JSContextStruct* jscont,
+        Liveness::Token objAlive,Liveness::Token ctxAlive);
+    
+    void eStorageCommit(
+        JSContextStruct* jscont, v8::Persistent<v8::Function> cb,
+        Liveness::Token objAlive,Liveness::Token ctxAlive);
+    
     void iStorageCommitCallback(
         JSContextStruct* jscont, v8::Persistent<v8::Function> cb,
-        bool success, OH::Storage::ReadSet* rs);
+        bool success, OH::Storage::ReadSet* rs,Liveness::Token objAlive,
+        Liveness::Token ctxAlive);
     void iStorageCountCallback(
         JSContextStruct* jscont, v8::Persistent<v8::Function> cb,
-        bool success, int32 count);
+        bool success, int32 count,Liveness::Token objAlive,
+        Liveness::Token ctxAlive);
     void eStorageErase(
         const OH::Storage::Key& key, v8::Persistent<v8::Function> cb,
-        JSContextStruct* jscont);
+        JSContextStruct* jscont,Liveness::Token objAlive,
+        Liveness::Token ctxAlive);
     void eStorageWrite(
         const OH::Storage::Key& key, const String& toWrite,
-        v8::Persistent<v8::Function> cb, JSContextStruct* jscont);
+        v8::Persistent<v8::Function> cb, JSContextStruct* jscont,
+        Liveness::Token objAlive,Liveness::Token ctxAlive);
     void eStorageRead(
         const OH::Storage::Key& key, v8::Persistent<v8::Function> cb,
-        JSContextStruct* jscont);
+        JSContextStruct* jscont,Liveness::Token objAlive,
+        Liveness::Token ctxAlive);
     
     void eStorageRangeRead(
         const OH::Storage::Key& start, const OH::Storage::Key& finish,
-        v8::Persistent<v8::Function> cb, JSContextStruct* jscont);
+        v8::Persistent<v8::Function> cb, JSContextStruct* jscont,
+        Liveness::Token objAlive,Liveness::Token ctxAlive);
 
     void eStorageRangeErase(
         const OH::Storage::Key& start, const OH::Storage::Key& finish,
-        v8::Persistent<v8::Function> cb, JSContextStruct* jscont);
+        v8::Persistent<v8::Function> cb, JSContextStruct* jscont,
+        Liveness::Token objAlive,Liveness::Token ctxAlive);
 
     void eStorageCount(
         const OH::Storage::Key& start, const OH::Storage::Key& finish,
-        v8::Persistent<v8::Function> cb, JSContextStruct* jscont);
+        v8::Persistent<v8::Function> cb, JSContextStruct* jscont,
+        Liveness::Token objAlive,Liveness::Token ctxAlive);
 
     void eSetRestoreScript(
         JSContextStruct* jscont, const String& script,
-        v8::Persistent<v8::Function> cb);
+        v8::Persistent<v8::Function> cb, Liveness::Token objAlive,
+        Liveness::Token ctxAlive);
 
     void iStop();
     
