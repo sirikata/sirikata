@@ -666,8 +666,7 @@ ELSE()
                    ${CMAKE_CURRENT_BINARY_DIR}/cppoh
                    ${CMAKE_CURRENT_BINARY_DIR}/chrome/berkelium
                    ${CMAKE_CURRENT_BINARY_DIR}/chrome/plugin_carbon_interpose.dylib
-                   ${CMAKE_CURRENT_BINARY_DIR}/cppoh_d
-                   ${CMAKE_CURRENT_BINARY_DIR}/scene.db)
+                   ${CMAKE_CURRENT_BINARY_DIR}/cppoh_d)
 
     SET(BERKELIUM_CHROME_ROOT_SEARCH_PATHS ${TOP_LEVEL}/externals/berkelium/chromium/chromium)
     # Override install path for binaries to lib/ since we install binaries to lib/ and add wrappers.
@@ -2856,7 +2855,6 @@ IF(CHROME_FOUND)
       DEPENDS ${CPPOH_BINARY} ${BERKELIUM_TARGET_LIBRARIES} ${BERKELIUM_TARGET_BINARIES}
       COPY
       ${CMAKE_CURRENT_BINARY_DIR}/chrome/berkelium
-      ${CMAKE_CURRENT_BINARY_DIR}/scene.db
       )
 
   ELSEIF(ISLINUX)
@@ -2937,16 +2935,15 @@ ENDIF()
 
 
 IF(PYTHON_EXECUTABLE) #FIXME should work if we have dotnet protobufs (if we can generate pbj.py files)
+  # We 'generate' a single file, which is just a default scene for testing.
   SET(CSV_CONVERTER_BINARY ${OH_TOOLS_DIR}/csv_converter.py)
-  SET(INPUT_BLANK_CSV ${DEMO_SCENES_DIR}/blank.csv)
   SET(INPUT_SCENE_CSV ${DEMO_SCENES_DIR}/boxes.db)
 
   IF(EXISTS ${CSV_CONVERTER_BINARY} AND EXISTS ${INPUT_SCENE_CSV})
-    SET(GENERATED_BLANK_DB ${CMAKE_CURRENT_BINARY_DIR}/blank.db)
-    SET(GENERATED_SCENE_DB ${CMAKE_CURRENT_BINARY_DIR}/scene.db)
+    SET(GENERATED_SCENE_DB ${DEMO_SCENES_DIR}/sirikata.db)
 
     ADD_CUSTOM_TARGET(SCENEDB ALL
-      DEPENDS ${AdditionalProtoDepends} ${GENERATED_BLANK_DB} ${GENERATED_SCENE_DB}
+      DEPENDS ${AdditionalProtoDepends} ${GENERATED_SCENE_DB}
       COMMENT "Checking databases...")
 
     ADD_CUSTOM_COMMAND(OUTPUT ${GENERATED_SCENE_DB}
@@ -2954,16 +2951,12 @@ IF(PYTHON_EXECUTABLE) #FIXME should work if we have dotnet protobufs (if we can 
       DEPENDS ${AdditionalProtoDepends} ${INPUT_SCENE_CSV}
       COMMENT "Making example scene database from  ${GENERATED_SCENE_DB}"
       )
-    ADD_CUSTOM_COMMAND(OUTPUT ${GENERATED_BLANK_DB}
-      COMMAND ${PYTHON_EXECUTABLE} ${CSV_CONVERTER_BINARY} ${INPUT_BLANK_CSV} ${GENERATED_BLANK_DB}
-      DEPENDS ${AdditionalProtoDepends} ${INPUT_BLANK_CSV}
-      COMMENT "Making example scene database from  ${GENERATED_BLANK_DB}"
+
+    # The install process is just copying the demo scenes into share/
+    INSTALL(
+      DIRECTORY ${DEMO_SCENES_DIR}/
+      DESTINATION share/scenes/
       )
-    INSTALL(FILES
-      ${GENERATED_SCENE_DB}
-      DESTINATION ${SIRIKATA_INSTALL_BINARY_PATH}
-      )
-    MESSAGE(STATUS "Added ${GENERATED_SCENE_DB} target.")
   ENDIF()
 ENDIF()
 
@@ -3465,14 +3458,6 @@ ELSE()
     GET_TARGET_PROPERTY(TEST_RUNABLE ${TEST_BINARY} DEBUG_LOCATION)
   ELSE()
     GET_TARGET_PROPERTY(TEST_RUNABLE ${TEST_BINARY} LOCATION)
-  ENDIF()
-ENDIF()
-
-IF(PYTHON_EXECUTABLE)
-  IF(${GENERATED_SCENE_DB})
-    INSTALL(FILES ${GENERATED_SCENE_DB}
-      DESTINATION ${SIRIKATA_INSTALL_BINARY_PATH}
-      OPTIONAL )
   ENDIF()
 ENDIF()
 

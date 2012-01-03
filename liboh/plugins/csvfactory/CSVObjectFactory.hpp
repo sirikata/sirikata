@@ -33,13 +33,10 @@
 #ifndef _SIRIKATA_CSV_OBJECT_FACTORY_HPP_
 #define _SIRIKATA_CSV_OBJECT_FACTORY_HPP_
 
+#include <sirikata/oh/Platform.hpp>
 #include <sirikata/oh/ObjectFactory.hpp>
 #include <sirikata/oh/HostedObject.hpp>
-#include <vector>
-#include <list>
 #include <sirikata/proxyobject/SimulationFactory.hpp>
-
-
 
 namespace Sirikata {
 
@@ -48,7 +45,7 @@ class CSVObjectFactory : public ObjectFactory {
 public:
     typedef std::vector<String> StringList;
 
-    CSVObjectFactory(ObjectHostContext* ctx, ObjectHost* oh, const SpaceID& space, const String& filename, int32 max_objects, int32 connect_rate);
+    CSVObjectFactory(ObjectHostContext* ctx, ObjectHost* oh, const SpaceID& space, const std::list<String>& search_paths, const String& filename, int32 max_objects, int32 connect_rate);
     virtual ~CSVObjectFactory() {}
 
     virtual void generate(const String& timestamp="current");
