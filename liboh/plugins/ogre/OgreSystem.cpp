@@ -280,6 +280,7 @@ bool OgreSystem::translateToDisplayViewport(float32 x, float32 y, float32* ox, f
 }
 
 OgreSystem::~OgreSystem() {
+    Liveness::letDie();
     decrefcount();
     destroyMouseHandler();
 }
@@ -314,12 +315,12 @@ void OgreSystem::onCreateProxy(ProxyObjectPtr p)
 void OgreSystem::iOnCreateProxy(
     Liveness::Token osAlive, ProxyObjectPtr p, bool inInit)
 {
-    if (! osAlive)
+    Liveness::Lock locked(osAlive);
+    if (!locked) 
     {
         SILOG(ogre,error,"Received disconnect after having deleted ogre system");
         return;
     }
-
     
     //busy wait until initialized.  note that the initialization code actually
     //calls iOnCreateProxy itself (through instantiateAllObjects).  If the
@@ -381,7 +382,8 @@ void OgreSystem::iOnDestroyProxy(
     // We don't clean anything up here since the entity could be
     // masking an addition/removal. Instead, we just wait and let the
     // ProxyEntity tell us when it's destroyed.
-    if (!osAlive)
+    Liveness::Lock locked(osAlive);
+    if (!locked) 
     {
         SILOG(ogre,error,"Received onDestroyProxy after having deleted ogre system");
         return;
@@ -625,12 +627,12 @@ void OgreSystem::iOnDisconnected(
     Liveness::Token osAlive,const Network::Address& addr,
     bool requested, const String& reason)
 {
-    if (!osAlive)
+    Liveness::Lock locked(osAlive);
+    if (!locked) 
     {
         SILOG(ogre,error,"Received disconnect after having deleted ogre system");
         return;
     }
-
 
     //don't want to disconnect before we were done connecting.
     while (!initialized){}
@@ -658,7 +660,8 @@ void OgreSystem::iOnDisconnected(
     Liveness::Token osAlive, SessionEventProviderPtr from,
     const SpaceObjectReference& name)
 {
-    if (! osAlive)
+    Liveness::Lock locked(osAlive);
+    if (!locked) 
     {
         SILOG(ogre,error,"Received session disconnect after having deleted ogre system");
         return;
