@@ -1001,12 +1001,8 @@ void JSObjectScript::resolveImport(const String& filename, boost::filesystem::pa
     search_paths.splice(search_paths.end(), default_search_paths);
     search_paths.splice(search_paths.end(), additional_search_paths);
     // Replace special tags with their values
-    for(std::list<String>::iterator search_it = search_paths.begin(); search_it != search_paths.end(); search_it++) {
-        // Binary directory
+    for(std::list<String>::iterator search_it = search_paths.begin(); search_it != search_paths.end(); search_it++)
         *search_it = Path::SubstitutePlaceholders(*search_it);
-    }
-    // Always search the current directory as a last resort
-    search_paths.push_back(".");
     for (std::list<String>::iterator pit = search_paths.begin(); pit != search_paths.end(); pit++) {
         path base_path(*pit);
         path fq = base_path / filename_as_path;

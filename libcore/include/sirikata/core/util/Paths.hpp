@@ -57,6 +57,7 @@ enum Key {
 namespace Placeholders {
 extern SIRIKATA_EXPORT const String DIR_EXE;
 extern SIRIKATA_EXPORT const String DIR_EXE_BUNDLE;
+extern SIRIKATA_EXPORT const String DIR_CURRENT;
 extern SIRIKATA_EXPORT const String DIR_USER;
 extern SIRIKATA_EXPORT const String DIR_USER_HIDDEN;
 extern SIRIKATA_EXPORT const String DIR_TEMP;

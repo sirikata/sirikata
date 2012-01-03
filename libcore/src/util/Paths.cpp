@@ -30,6 +30,7 @@ namespace Path {
 namespace Placeholders {
 const String DIR_EXE("<bindir>");
 const String DIR_EXE_BUNDLE("<bundledir>");
+const String DIR_CURRENT("<currentdir>");
 const String DIR_USER("<userdir>");
 const String DIR_USER_HIDDEN("<hiddenuserdir>");
 const String DIR_TEMP("<temp>");

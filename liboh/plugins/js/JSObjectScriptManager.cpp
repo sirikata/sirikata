@@ -120,7 +120,8 @@ JSObjectScriptManager::JSObjectScriptManager(ObjectHostContext* ctx, const Sirik
         // absolutely know what you're doing
         default_import_paths = new OptionValue("default-import-paths",
             Path::Placeholders::DIR_SYSTEM_CONFIG + "/js/scripts" + "," +
-            Path::Placeholders::RESOURCE("liboh/plugins", "js/scripts"),
+            Path::Placeholders::RESOURCE("liboh/plugins", "js/scripts") + "," +
+            Path::Placeholders::DIR_CURRENT,
             OptionValueType<std::list<String> >(),"Comma separated list of paths to import files from, searched in order for the requested import."),
         // These are additional import paths. Generally if you need to
         // adjust import paths, you want to simply add to this. We
