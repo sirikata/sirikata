@@ -33,6 +33,7 @@ const String DIR_EXE_BUNDLE("<bundledir>");
 const String DIR_USER("<userdir>");
 const String DIR_USER_HIDDEN("<hiddenuserdir>");
 const String DIR_TEMP("<temp>");
+const String DIR_SYSTEM_CONFIG("<sysconfig>");
 
 String RESOURCE(const String& intree, const String& resource) {
     return "<resource:" + intree + ":" + resource + ">";
@@ -45,6 +46,7 @@ const PlaceholderPair All[] = {
     PlaceholderPair(Sirikata::Path::Placeholders::DIR_USER, Sirikata::Path::DIR_USER),
     PlaceholderPair(Sirikata::Path::Placeholders::DIR_USER_HIDDEN, Sirikata::Path::DIR_USER_HIDDEN),
     PlaceholderPair(Sirikata::Path::Placeholders::DIR_TEMP, Sirikata::Path::DIR_TEMP),
+    PlaceholderPair(Sirikata::Path::Placeholders::DIR_SYSTEM_CONFIG, Sirikata::Path::DIR_SYSTEM_CONFIG),
 };
 } // namespace Placeholders
 
@@ -221,6 +223,22 @@ String Get(Key key) {
               // Last resort (and default for unknown platform) is to try to use
               // the current directory
               return ".";
+          }
+          break;
+
+      case DIR_SYSTEM_CONFIG:
+          {
+#if SIRIKATA_PLATFORM == PLATFORM_LINUX || SIRIKATA_PLATFORM == PLATFORM_MAC
+              // This is sirikata specific, so we're looking for more
+              // than just /etc.
+              if (boost::filesystem::exists("/etc") && boost::filesystem::is_directory("/etc") &&
+                  boost::filesystem::exists("/etc/sirikata") && boost::filesystem::is_directory("/etc/sirikata"))
+                  return "/etc/sirikata";
+              return "";
+#else
+              // Other platforms don't have an equivalent?
+              return "";
+#endif
           }
           break;
 

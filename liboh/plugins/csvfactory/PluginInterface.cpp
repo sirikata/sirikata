@@ -43,6 +43,7 @@ namespace Sirikata {
 static void InitPluginOptions() {
     Sirikata::InitializeClassOptions ico("csvfactory",NULL,
         new Sirikata::OptionValue("search-paths",
+            Path::Placeholders::DIR_SYSTEM_CONFIG + "," +
             Path::Placeholders::RESOURCE("demo", "scenes") + "," +
             Path::Placeholders::DIR_USER,
             Sirikata::OptionValueType<std::list<String> >(), "Search paths for scene files if a relative path is specified"),

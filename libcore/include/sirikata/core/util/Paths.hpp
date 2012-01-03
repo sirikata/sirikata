@@ -34,6 +34,9 @@ enum Key {
     DIR_USER_HIDDEN,
     // Full path to temporary directory, e.g. under /tmp
     DIR_TEMP,
+    // System-wide configuration directory, e.g. /etc/sirikata. Note
+    // that this is sirikata specific.
+    DIR_SYSTEM_CONFIG,
 
     // Path to resources directory, e.g. share/. You can't request
     // this path directly since it's actually a collection of in-tree
@@ -57,6 +60,7 @@ extern SIRIKATA_EXPORT const String DIR_EXE_BUNDLE;
 extern SIRIKATA_EXPORT const String DIR_USER;
 extern SIRIKATA_EXPORT const String DIR_USER_HIDDEN;
 extern SIRIKATA_EXPORT const String DIR_TEMP;
+extern SIRIKATA_EXPORT const String DIR_SYSTEM_CONFIG;
 // This one is a function because you must provide a search file or
 // path within the resources directory.
 SIRIKATA_FUNCTION_EXPORT String RESOURCE(const String& intree, const String& resource);
