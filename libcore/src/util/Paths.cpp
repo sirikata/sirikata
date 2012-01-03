@@ -34,6 +34,10 @@ const String DIR_USER("<userdir>");
 const String DIR_USER_HIDDEN("<hiddenuserdir>");
 const String DIR_TEMP("<temp>");
 
+String RESOURCE(const String& intree, const String& resource) {
+    return "<resource:" + intree + ":" + resource + ">";
+}
+
 typedef std::pair<String, Key> PlaceholderPair;
 const PlaceholderPair All[] = {
     PlaceholderPair(Sirikata::Path::Placeholders::DIR_EXE, Sirikata::Path::DIR_EXE),
@@ -220,6 +224,14 @@ String Get(Key key) {
           }
           break;
 
+      case RESOURCE:
+          {
+              SILOG(core,fatal,"Can't request RESOURCE without specifiying an in-tree path and path to resource.");
+              assert(key != RESOURCE);
+              return "";
+          }
+          break;
+
       default:
         return "";
     }
@@ -232,6 +244,42 @@ String Get(Key key, const String& relative_path) {
 
     boost::filesystem::path base_path(Get(key));
     return (base_path / rel_path).string();
+}
+
+String Get(Key key, const String& relative_path, const String& alternate_base) {
+    if (key != RESOURCE) {
+        SILOG(core,fatal,"Get with alternate base paths is only supported for RESOURCE");
+        assert(key == RESOURCE);
+        return "";
+    }
+
+    // We can always find the resource directory as an offset from the
+    // binary's directory.
+    boost::filesystem::path exe_dir(Get(DIR_EXE_BUNDLE));
+    // From there, we have a couple of possibilities. In the installed
+    // version we'll have, e.g., /usr/bin and /usr/share:
+    {
+        boost::filesystem::path share_dir_resource = exe_dir.parent_path() / "share" / relative_path;
+        if (boost::filesystem::exists(share_dir_resource))
+            return share_dir_resource.string();
+    }
+    // Otherwise we need to try the alternate base path within the
+    // tree.
+    {
+#if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+        // On windows we need to deal with the fact that we have Debug/
+        // and RelWithDebInfo/ directories under build/cmake/.
+        boost::filesystem::path source_base = exe_dir.parent_path().parent_path().parent_path();
+#else
+        // On other platforms, we just have the normal offset in build/cmake/.
+        boost::filesystem::path source_base = exe_dir.parent_path().parent_path();
+#endif
+        boost::filesystem::path intree_resource = source_base / alternate_base / relative_path;
+        if (boost::filesystem::exists(intree_resource))
+            return intree_resource.string();
+    }
+
+    return "";
 }
 
 bool Set(Key key, const String& path) {
@@ -262,6 +310,26 @@ String SubstitutePlaceholders(const String& path) {
         if (sub_pos != String::npos)
             result.replace(sub_pos, Placeholders::All[i].first.size(), Path::Get(Placeholders::All[i].second));
     }
+
+    // Resource placeholders are handled differently because they
+    // don't have a fixed pattern. They have the form
+    // <resource:intree:resourcepath>.
+    std::size_t resource_start_pos = result.find("<resource:");
+    if (resource_start_pos != String::npos) {
+        std::size_t resource_pos = resource_start_pos + 10; // sizeof("<resource:")
+        std::size_t resource_end_pos = result.find(">", resource_pos);
+        // Get the paths part of the resource string and split it by
+        // the :
+        String resource_paths = result.substr(resource_pos, resource_end_pos - resource_pos);
+        std::size_t split_pos = resource_paths.find(":");
+        String alternate_base = resource_paths.substr(0, split_pos);
+        String resource_path = resource_paths.substr(split_pos + 1);
+
+        // Finally lookup and replace the resource path
+        String replace_path = Get(RESOURCE, resource_path, alternate_base);
+        result.replace(resource_start_pos, resource_end_pos - resource_start_pos + 1, replace_path);
+    }
+
     return result;
 }
 
