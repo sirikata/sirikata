@@ -2955,7 +2955,7 @@ IF(PYTHON_EXECUTABLE) #FIXME should work if we have dotnet protobufs (if we can 
     # The install process is just copying the demo scenes into share/
     INSTALL(
       DIRECTORY ${DEMO_SCENES_DIR}/
-      DESTINATION share/scenes/
+      DESTINATION share/sirikata/scenes/
       )
   ENDIF()
 ENDIF()
@@ -3290,7 +3290,7 @@ IF(BUILD_OGRE_OH)
 
   # data for ogre, including web views
   INSTALL(DIRECTORY ${TOP_LEVEL}/libproxyobject/plugins/ogre/data/
-    DESTINATION share/ogre/data/
+    DESTINATION share/sirikata/ogre/data/
     PATTERN "*/.git" EXCLUDE
     )
 ENDIF()
@@ -3422,7 +3422,7 @@ ENDIF()
 IF(BUILD_JS_OH)
   # data for ogre, including web views
   INSTALL(DIRECTORY ${TOP_LEVEL}/liboh/plugins/js/scripts/
-    DESTINATION share/js/scripts/
+    DESTINATION share/sirikata/js/scripts/
     )
 ENDIF()
 
