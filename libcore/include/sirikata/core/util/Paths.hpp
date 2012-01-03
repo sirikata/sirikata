@@ -38,11 +38,26 @@ enum Key {
     PATH_END
 };
 
+/** Path placeholders are strings that can be automatically substituted with
+ *  standard locations, e.g. the binary path, the user's home directory,
+ *  etc. They correspond to the Path::Key directories.
+ */
+namespace Placeholders {
+extern SIRIKATA_EXPORT const String DIR_EXE;
+extern SIRIKATA_EXPORT const String DIR_EXE_BUNDLE;
+extern SIRIKATA_EXPORT const String DIR_USER;
+extern SIRIKATA_EXPORT const String DIR_USER_HIDDEN;
+extern SIRIKATA_EXPORT const String DIR_TEMP;
+} // namespace Placeholders
+
 SIRIKATA_FUNCTION_EXPORT String Get(Key key);
 // Get a path from an offset based on key, e.g. use Get(DIR_TEMP, "foo.log") to
 // get the equivalent of "/tmp/sirikata/foo.log".
 SIRIKATA_FUNCTION_EXPORT String Get(Key key, const String& relative_path);
 SIRIKATA_FUNCTION_EXPORT bool Set(Key key, const String& path);
+
+/** Substitute full values for placeholders in the given path. */
+SIRIKATA_FUNCTION_EXPORT String SubstitutePlaceholders(const String& path);
 
 } // namespace Path
 } // namespace Sirikata

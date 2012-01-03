@@ -27,6 +27,23 @@
 namespace Sirikata {
 namespace Path {
 
+namespace Placeholders {
+const String DIR_EXE("<bindir>");
+const String DIR_EXE_BUNDLE("<bundledir>");
+const String DIR_USER("<userdir>");
+const String DIR_USER_HIDDEN("<hiddenuserdir>");
+const String DIR_TEMP("<temp>");
+
+typedef std::pair<String, Key> PlaceholderPair;
+const PlaceholderPair All[] = {
+    PlaceholderPair(Sirikata::Path::Placeholders::DIR_EXE, Sirikata::Path::DIR_EXE),
+    PlaceholderPair(Sirikata::Path::Placeholders::DIR_EXE_BUNDLE, Sirikata::Path::DIR_EXE_BUNDLE),
+    PlaceholderPair(Sirikata::Path::Placeholders::DIR_USER, Sirikata::Path::DIR_USER),
+    PlaceholderPair(Sirikata::Path::Placeholders::DIR_USER_HIDDEN, Sirikata::Path::DIR_USER_HIDDEN),
+    PlaceholderPair(Sirikata::Path::Placeholders::DIR_TEMP, Sirikata::Path::DIR_TEMP),
+};
+} // namespace Placeholders
+
 String Get(Key key) {
     switch(key) {
 
@@ -235,6 +252,17 @@ bool Set(Key key, const String& path) {
         return false;
         break;
     }
+}
+
+
+String SubstitutePlaceholders(const String& path) {
+    String result = path;
+    for(uint32 i = 0; i < sizeof(Placeholders::All) / sizeof(Placeholders::PlaceholderPair); i++) {
+        std::size_t sub_pos = result.find(Placeholders::All[i].first);
+        if (sub_pos != String::npos)
+            result.replace(sub_pos, Placeholders::All[i].first.size(), Path::Get(Placeholders::All[i].second));
+    }
+    return result;
 }
 
 } // namespace Path

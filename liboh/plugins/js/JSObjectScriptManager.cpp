@@ -62,6 +62,8 @@
 
 #include <sirikata/core/transfer/AggregatedTransferPool.hpp>
 
+#include <sirikata/core/util/Paths.hpp>
+
 namespace Sirikata {
 namespace JS {
 
@@ -116,7 +118,12 @@ JSObjectScriptManager::JSObjectScriptManager(ObjectHostContext* ctx, const Sirik
         // from build/cmake, bin/, or lib/sirikata/. These defaults
         // are pretty much always sane -- only override if you
         // absolutely know what you're doing
-        default_import_paths = new OptionValue("default-import-paths","<bindir>/../../liboh/plugins/js/scripts,<bindir>/../../../liboh/plugins/js/scripts,<bindir>/../share/js/scripts,<bindir>/../../share/js/scripts",OptionValueType<std::list<String> >(),"Comma separated list of paths to import files from, searched in order for the requested import."),
+        default_import_paths = new OptionValue("default-import-paths",
+            Path::Placeholders::DIR_EXE_BUNDLE + "/../../liboh/plugins/js/scripts," +
+            Path::Placeholders::DIR_EXE_BUNDLE + "/../../../liboh/plugins/js/scripts," +
+            Path::Placeholders::DIR_EXE_BUNDLE + "/../share/js/scripts," +
+            Path::Placeholders::DIR_EXE_BUNDLE + "/../../share/js/scripts",
+            OptionValueType<std::list<String> >(),"Comma separated list of paths to import files from, searched in order for the requested import."),
         // These are additional import paths. Generally if you need to
         // adjust import paths, you want to simply add to this. We
         // split the default-import-paths and import-paths so it's
