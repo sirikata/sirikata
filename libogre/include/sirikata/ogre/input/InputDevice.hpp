@@ -33,11 +33,9 @@
 #ifndef SIRIKATA_INPUT_InputDevice_HPP__
 #define SIRIKATA_INPUT_InputDevice_HPP__
 
-#include <sirikata/core/util/Platform.hpp>
+#include <sirikata/ogre/Platform.hpp>
 #include <sirikata/core/util/Time.hpp>
 #include <sirikata/core/util/Timer.hpp>
-#include <sirikata/ogre/task/EventManager.hpp>
-#include <sirikata/ogre/task/Event.hpp>
 
 namespace Sirikata {
 namespace Input {
@@ -266,10 +264,8 @@ public:
     virtual bool isKeyboard() { return false; }
 
     bool fireButton(const InputDevicePtr &thisptr,
-                    Task::GenEventManager *em,
                     unsigned int button, bool newState, Modifier mod = 0);
     bool fireAxis(const InputDevicePtr &thisptr,
-                  Task::GenEventManager *em,
                   unsigned int axis, AxisValue newState);
 
     inline AxisValue getAxis(unsigned int axis) const {
@@ -341,13 +337,11 @@ public:
     }
 
     void firePointerMotion(const PointerDevicePtr &thisptr,
-                    Task::GenEventManager *em,
                     float xPixel,
                     float yPixel,
                     int cursorType,
                     int pressure, int pressmin, int pressmax);
     void firePointerClick(const PointerDevicePtr &thisptr,
-                    Task::GenEventManager *em,
                     float xPixel,
                     float yPixel,
                     int cursor,

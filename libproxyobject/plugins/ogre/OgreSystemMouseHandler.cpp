@@ -44,8 +44,6 @@
 #include <sirikata/ogre/input/SDLInputManager.hpp>
 #include <sirikata/ogre/input/InputManager.hpp>
 
-#include <sirikata/ogre/task/Event.hpp>
-#include <sirikata/ogre/task/EventManager.hpp>
 #include <sirikata/core/task/Time.hpp>
 #include <set>
 
@@ -176,30 +174,28 @@ inline Vector3f direction(Quaternion cameraAngle) {
 
 ///// Top Level Input Event Handlers //////
 
-EventResponse OgreSystemMouseHandler::keyHandler(EventPtr ev) {
-    std::tr1::shared_ptr<ButtonEvent> buttonev (
-        std::tr1::dynamic_pointer_cast<ButtonEvent>(ev));
-    if (!buttonev) {
-        return EventResponse::nop();
+EventResponse OgreSystemMouseHandler::onInputDeviceEvent(InputDeviceEventPtr ev) {
+    switch (ev->mType) {
+      case InputDeviceEvent::ADDED:
+        break;
+      case InputDeviceEvent::REMOVED:
+        break;
     }
+    return EventResponse::nop();
+}
 
+EventResponse OgreSystemMouseHandler::onKeyEvent(ButtonEventPtr buttonev) {
     // Give the browsers a chance to use this input first
     EventResponse browser_resp = WebViewManager::getSingleton().onButton(buttonev);
     if (browser_resp == EventResponse::cancel())
         return EventResponse::cancel();
 
-    InputEventPtr inputev (std::tr1::dynamic_pointer_cast<InputEvent>(ev));
-    delegateEvent(inputev);
+    delegateEvent(buttonev);
 
     return EventResponse::nop();
 }
 
-EventResponse OgreSystemMouseHandler::axisHandler(EventPtr ev) {
-    std::tr1::shared_ptr<AxisEvent> axisev (
-        std::tr1::dynamic_pointer_cast<AxisEvent>(ev));
-    if (!axisev)
-        return EventResponse::nop();
-
+EventResponse OgreSystemMouseHandler::onAxisEvent(AxisEventPtr axisev) {
     float multiplier = mParent->mInputManager->wheelToAxis();
 
     if (axisev->mAxis == SDLMouse::WHEELY) {
@@ -213,42 +209,29 @@ EventResponse OgreSystemMouseHandler::axisHandler(EventPtr ev) {
             return EventResponse::cancel();
     }
 
-    InputEventPtr inputev (std::tr1::dynamic_pointer_cast<InputEvent>(ev));
-    delegateEvent(inputev);
+    delegateEvent(axisev);
 
     return EventResponse::cancel();
 }
 
-EventResponse OgreSystemMouseHandler::textInputHandler(EventPtr ev) {
-    std::tr1::shared_ptr<TextInputEvent> textev (
-        std::tr1::dynamic_pointer_cast<TextInputEvent>(ev));
-    if (!textev)
-        return EventResponse::nop();
-
+EventResponse OgreSystemMouseHandler::onTextInputEvent(TextInputEventPtr textev) {
     // Give the browsers a chance to use this input first
     EventResponse browser_resp = WebViewManager::getSingleton().onKeyTextInput(textev);
     if (browser_resp == EventResponse::cancel())
         return EventResponse::cancel();
 
-    InputEventPtr inputev (std::tr1::dynamic_pointer_cast<InputEvent>(ev));
-    delegateEvent(inputev);
+    delegateEvent(textev);
 
     return EventResponse::nop();
 }
 
-EventResponse OgreSystemMouseHandler::mouseHoverHandler(EventPtr ev) {
-    std::tr1::shared_ptr<MouseHoverEvent> mouseev (
-        std::tr1::dynamic_pointer_cast<MouseHoverEvent>(ev));
-    if (!mouseev)
-        return EventResponse::nop();
-
+EventResponse OgreSystemMouseHandler::onMouseHoverEvent(MouseHoverEventPtr mouseev) {
     // Give the browsers a chance to use this input first
-    EventResponse browser_resp = WebViewManager::getSingleton().onMouseMove(mouseev);
+    EventResponse browser_resp = WebViewManager::getSingleton().onMouseHover(mouseev);
     if (browser_resp == EventResponse::cancel())
         return EventResponse::cancel();
 
-    InputEventPtr inputev (std::tr1::dynamic_pointer_cast<InputEvent>(ev));
-    delegateEvent(inputev);
+    delegateEvent(mouseev);
 
     if (mParent->mPrimaryCamera) {
         Camera *camera = mParent->mPrimaryCamera;
@@ -260,12 +243,7 @@ EventResponse OgreSystemMouseHandler::mouseHoverHandler(EventPtr ev) {
     return EventResponse::nop();
 }
 
-EventResponse OgreSystemMouseHandler::mousePressedHandler(EventPtr ev) {
-    std::tr1::shared_ptr<MousePressedEvent> mouseev (
-        std::tr1::dynamic_pointer_cast<MousePressedEvent>(ev));
-    if (!mouseev)
-        return EventResponse::nop();
-
+EventResponse OgreSystemMouseHandler::onMousePressedEvent(MousePressedEventPtr mouseev) {
     // Give the browsers a chance to use this input first
     EventResponse browser_resp = WebViewManager::getSingleton().onMousePressed(mouseev);
     if (browser_resp == EventResponse::cancel()) {
@@ -280,18 +258,13 @@ EventResponse OgreSystemMouseHandler::mousePressedHandler(EventPtr ev) {
         hoverEntity(camera, time, mouseev->mXStart, mouseev->mYStart, true, &lhc, mWhichRayObject);
         mouseOverWebView(camera, time, mouseev->mXStart, mouseev->mYStart, true, false);
     }
-    InputEventPtr inputev (std::tr1::dynamic_pointer_cast<InputEvent>(ev));
-    delegateEvent(inputev);
+
+    delegateEvent(mouseev);
 
     return EventResponse::nop();
 }
 
-EventResponse OgreSystemMouseHandler::mouseReleasedHandler(EventPtr ev) {
-    std::tr1::shared_ptr<MouseReleasedEvent> mouseev (
-        std::tr1::dynamic_pointer_cast<MouseReleasedEvent>(ev));
-    if (!mouseev)
-        return EventResponse::nop();
-
+EventResponse OgreSystemMouseHandler::onMouseReleasedEvent(MouseReleasedEventPtr mouseev) {
     if (mParent->mPrimaryCamera) {
         Camera *camera = mParent->mPrimaryCamera;
         Time time = mParent->simTime();
@@ -299,18 +272,13 @@ EventResponse OgreSystemMouseHandler::mouseReleasedHandler(EventPtr ev) {
         hoverEntity(camera, time, mouseev->mXStart, mouseev->mYStart, true, &lhc, mWhichRayObject);
         mouseOverWebView(camera, time, mouseev->mXStart, mouseev->mYStart, true, false);
     }
-    InputEventPtr inputev (std::tr1::dynamic_pointer_cast<InputEvent>(ev));
-    delegateEvent(inputev);
+
+    delegateEvent(mouseev);
 
     return EventResponse::nop();
 }
 
-EventResponse OgreSystemMouseHandler::mouseClickHandler(EventPtr ev) {
-    std::tr1::shared_ptr<MouseClickEvent> mouseev (
-        std::tr1::dynamic_pointer_cast<MouseClickEvent>(ev));
-    if (!mouseev)
-        return EventResponse::nop();
-
+EventResponse OgreSystemMouseHandler::onMouseClickEvent(MouseClickEventPtr mouseev) {
     // Give the browsers a chance to use this input first
     EventResponse browser_resp = WebViewManager::getSingleton().onMouseClick(mouseev);
     if (mWebViewActiveButtons.find(mouseev->mButton) != mWebViewActiveButtons.end()) {
@@ -328,17 +296,12 @@ EventResponse OgreSystemMouseHandler::mouseClickHandler(EventPtr ev) {
     }
     mMouseDownObject.reset();
 
-    InputEventPtr inputev (std::tr1::dynamic_pointer_cast<InputEvent>(ev));
-    delegateEvent(inputev);
+    delegateEvent(mouseev);
 
     return EventResponse::nop();
 }
 
-EventResponse OgreSystemMouseHandler::mouseDragHandler(EventPtr evbase) {
-    MouseDragEventPtr ev (std::tr1::dynamic_pointer_cast<MouseDragEvent>(evbase));
-    if (!ev) {
-        return EventResponse::nop();
-    }
+EventResponse OgreSystemMouseHandler::onMouseDragEvent(MouseDragEventPtr ev) {
     if (!mParent||!mParent->mPrimaryCamera) return EventResponse::nop();
     std::set<int>::iterator iter = mWebViewActiveButtons.find(ev->mButton);
     if (iter != mWebViewActiveButtons.end()) {
@@ -364,21 +327,15 @@ EventResponse OgreSystemMouseHandler::mouseDragHandler(EventPtr evbase) {
         mMouseDownObject.reset();
     }
 
-    InputEventPtr inputev (std::tr1::dynamic_pointer_cast<InputEvent>(evbase));
-    delegateEvent(inputev);
+    delegateEvent(ev);
 
     return EventResponse::nop();
 }
 
-EventResponse OgreSystemMouseHandler::webviewHandler(EventPtr ev) {
-    WebViewEventPtr webview_ev (std::tr1::dynamic_pointer_cast<WebViewEvent>(ev));
-    if (!webview_ev)
-        return EventResponse::nop();
-
+EventResponse OgreSystemMouseHandler::onWebViewEvent(WebViewEventPtr webview_ev) {
     // For everything else we let the browser go first, but in this case it should have
     // had its chance, so we just let it go
-    InputEventPtr inputev (std::tr1::dynamic_pointer_cast<InputEvent>(ev));
-    delegateEvent(inputev);
+    delegateEvent(webview_ev);
 
     return EventResponse::nop();
 }
@@ -416,63 +373,6 @@ void OgreSystemMouseHandler::renderStatsUpdateTick(const Task::LocalTime& t) {
 }
 
 
-
-EventResponse OgreSystemMouseHandler::deviceListener(EventPtr evbase) {
-    std::tr1::shared_ptr<InputDeviceEvent> ev (std::tr1::dynamic_pointer_cast<InputDeviceEvent>(evbase));
-    if (!ev) {
-        return EventResponse::nop();
-    }
-    switch (ev->mType) {
-      case InputDeviceEvent::ADDED:
-        if (!!(std::tr1::dynamic_pointer_cast<SDLMouse>(ev->mDevice))) {
-            SubscriptionId subId = mParent->mInputManager->subscribeId(
-                AxisEvent::getEventId(),
-                std::tr1::bind(&OgreSystemMouseHandler::axisHandler, this, _1));
-            mEvents.push_back(subId);
-            mDeviceSubscriptions.insert(DeviceSubMap::value_type(&*ev->mDevice, subId));
-        }
-        if (!!(std::tr1::dynamic_pointer_cast<SDLKeyboard>(ev->mDevice))) {
-            // Key Pressed
-            {
-                SubscriptionId subId = mParent->mInputManager->subscribeId(
-                    ButtonPressed::getEventId(),
-                    std::tr1::bind(&OgreSystemMouseHandler::keyHandler, this, _1)
-                );
-                mEvents.push_back(subId);
-                mDeviceSubscriptions.insert(DeviceSubMap::value_type(&*ev->mDevice, subId));
-            }
-            // Key Repeated
-            {
-                SubscriptionId subId = mParent->mInputManager->subscribeId(
-                    ButtonRepeated::getEventId(),
-                    std::tr1::bind(&OgreSystemMouseHandler::keyHandler, this, _1)
-                );
-                mEvents.push_back(subId);
-                mDeviceSubscriptions.insert(DeviceSubMap::value_type(&*ev->mDevice, subId));
-            }
-            // Key Released
-            {
-                SubscriptionId subId = mParent->mInputManager->subscribeId(
-                    ButtonReleased::getEventId(),
-                    std::tr1::bind(&OgreSystemMouseHandler::keyHandler, this, _1)
-                );
-                mEvents.push_back(subId);
-                mDeviceSubscriptions.insert(DeviceSubMap::value_type(&*ev->mDevice, subId));
-            }
-        }
-        break;
-      case InputDeviceEvent::REMOVED: {
-          DeviceSubMap::iterator iter;
-          while ((iter = mDeviceSubscriptions.find(&*ev->mDevice))!=mDeviceSubscriptions.end()) {
-              mParent->mInputManager->unsubscribe((*iter).second);
-              mDeviceSubscriptions.erase(iter);
-          }
-      }
-        break;
-    }
-    return EventResponse::nop();
-}
-
 OgreSystemMouseHandler::OgreSystemMouseHandler(OgreSystem *parent)
  : mUIWidgetView(NULL),
    mParent(parent),
@@ -486,49 +386,16 @@ OgreSystemMouseHandler::OgreSystemMouseHandler(OgreSystem *parent)
     mLastHitX=0;
     mLastHitY=0;
 
-    mEvents.push_back(mParent->mInputManager->registerDeviceListener(
-            std::tr1::bind(&OgreSystemMouseHandler::deviceListener, this, _1)));
-
-    mEvents.push_back(mParent->mInputManager->subscribeId(
-            MouseHoverEvent::getEventId(),
-            std::tr1::bind(&OgreSystemMouseHandler::mouseHoverHandler, this, _1)));
-
-    mEvents.push_back(mParent->mInputManager->subscribeId(
-            MousePressedEvent::getEventId(),
-            std::tr1::bind(&OgreSystemMouseHandler::mousePressedHandler, this, _1)));
-
-    mEvents.push_back(mParent->mInputManager->subscribeId(
-            MouseReleasedEvent::getEventId(),
-            std::tr1::bind(&OgreSystemMouseHandler::mouseReleasedHandler, this, _1)));
-
-    mEvents.push_back(mParent->mInputManager->subscribeId(
-            MouseDragEvent::getEventId(),
-            std::tr1::bind(&OgreSystemMouseHandler::mouseDragHandler, this, _1)));
-
-    mEvents.push_back(mParent->mInputManager->subscribeId(
-            MouseClickEvent::getEventId(),
-            std::tr1::bind(&OgreSystemMouseHandler::mouseClickHandler, this, _1)));
-
-    mEvents.push_back(mParent->mInputManager->subscribeId(
-            TextInputEvent::getEventId(),
-            std::tr1::bind(&OgreSystemMouseHandler::textInputHandler, this, _1)));
-
-    mEvents.push_back(mParent->mInputManager->subscribeId(
-            WebViewEvent::getEventId(),
-            std::tr1::bind(&OgreSystemMouseHandler::webviewHandler, this, _1)));
+    mParent->mInputManager->addListener(this);
 }
 
 OgreSystemMouseHandler::~OgreSystemMouseHandler() {
 
+    mParent->mInputManager->removeListener(this);
+
     if(mUIWidgetView) {
         WebViewManager::getSingleton().destroyWebView(mUIWidgetView);
         mUIWidgetView = NULL;
-    }
-
-    for (std::vector<SubscriptionId>::const_iterator iter = mEvents.begin();
-         iter != mEvents.end();
-         ++iter) {
-        mParent->mInputManager->unsubscribe(*iter);
     }
 }
 
@@ -739,7 +606,7 @@ void OgreSystemMouseHandler::delegateEvent(InputEventPtr inputev) {
     std::vector<boost::any> args;
     args.push_back(Invokable::asAny(event_data));
 
-    
+
     for (std::map<Invokable*, Invokable*>::iterator delIter = mDelegates.begin();
          delIter != mDelegates.end(); ++delIter)
     {

@@ -33,34 +33,28 @@
 #ifndef SIRIKATA_INPUT_InputManager_HPP__
 #define SIRIKATA_INPUT_InputManager_HPP__
 
-#include <sirikata/ogre/task/EventManager.hpp>
 #include <sirikata/ogre/input/InputDevice.hpp>
+#include <sirikata/ogre/input/InputListener.hpp>
+#include <sirikata/core/util/ListenerProvider.hpp>
 
 namespace Sirikata {
 namespace Input {
 
 typedef std::tr1::weak_ptr<InputDevice> InputDeviceWPtr;
 
-struct SIRIKATA_OGRE_EXPORT InputDeviceEvent : public Task::Event {
-    typedef Task::IdPair IdPair;
-    static const IdPair::Primary &getEventId() {
-        static IdPair::Primary retval("InputDeviceEvent");
-        return retval;
-    }
-
+struct SIRIKATA_OGRE_EXPORT InputDeviceEvent {
     enum Type {ADDED, REMOVED} mType;
     InputDevicePtr mDevice;
     InputDeviceEvent(Type type, const InputDevicePtr &dev)
-        : Task::Event(IdPair(getEventId(), IdPair::Secondary::null())),
-         mType(type), mDevice(dev) {
+        : mType(type), mDevice(dev) {
     }
 };
 
-class SIRIKATA_OGRE_EXPORT InputManager : public Task::GenEventManager {
+class SIRIKATA_OGRE_EXPORT InputManager : public Provider<InputListener*> {
 protected:
     std::set<InputDevicePtr> mAllDevices;
 public:
-    InputManager(Task::WorkQueue*queue) : Task::GenEventManager(queue) {}
+    InputManager() {}
     virtual ~InputManager() {}
 
 	virtual void getWindowSize(unsigned int &width, unsigned int &height) = 0; // temporary
@@ -70,30 +64,22 @@ public:
     virtual bool isNumLockDown() const = 0;
     virtual bool isScrollLockDown() const = 0;
 
-    /** Calls func *synchronously* for each device already known, then
-        registers DeviceAdded and DeviceRemoved events.
-     Note: SDL does not yet support adding or removing devices. */
-    Task::SubscriptionId registerDeviceListener(const EventListener &func) {
-        for (std::set<InputDevicePtr>::iterator iter = mAllDevices.begin();
-             iter != mAllDevices.end();
-             ++iter) {
-            func(EventPtr(new InputDeviceEvent(InputDeviceEvent::ADDED, (*iter))));
-        }
-        return subscribeId(InputDeviceEvent::getEventId(), func);
-    }
-
-    void addDevice(const InputDevicePtr &dev) {
-        mAllDevices.insert(dev);
-        fire(EventPtr(new InputDeviceEvent(InputDeviceEvent::ADDED, dev)));
-    }
-
-    void removeDevice(const InputDevicePtr &dev) {
-        std::set<InputDevicePtr>::iterator iter = mAllDevices.find(dev);
-        if (iter != mAllDevices.end()) {
-            mAllDevices.erase(iter);
-        }
-        fire(EventPtr(new InputDeviceEvent(InputDeviceEvent::REMOVED, dev)));
-    }
+    // Helpers for firing events to listeners
+    virtual void fire(InputDeviceEventPtr ev) { notify(&InputListener::onInputDeviceEvent, ev); }
+    virtual void fire(ButtonPressedPtr ev) { notify(&InputListener::onKeyPressedEvent, ev); }
+    virtual void fire(ButtonRepeatedPtr ev) { notify(&InputListener::onKeyRepeatedEvent, ev); }
+    virtual void fire(ButtonReleasedPtr ev) { notify(&InputListener::onKeyReleasedEvent, ev); }
+    virtual void fire(ButtonDownPtr ev) { notify(&InputListener::onKeyDownEvent, ev); }
+    virtual void fire(AxisEventPtr ev) { notify(&InputListener::onAxisEvent, ev); }
+    virtual void fire(TextInputEventPtr ev) { notify(&InputListener::onTextInputEvent, ev); }
+    virtual void fire(MouseHoverEventPtr ev) { notify(&InputListener::onMouseHoverEvent, ev); }
+    virtual void fire(MousePressedEventPtr ev) { notify(&InputListener::onMousePressedEvent, ev); }
+    virtual void fire(MouseReleasedEventPtr ev) { notify(&InputListener::onMouseReleasedEvent, ev); }
+    virtual void fire(MouseClickEventPtr ev) { notify(&InputListener::onMouseClickEvent, ev); }
+    virtual void fire(MouseDragEventPtr ev) { notify(&InputListener::onMouseDragEvent, ev); }
+    virtual void fire(DragAndDropEventPtr ev) { notify(&InputListener::onDragAndDropEvent, ev); }
+    virtual void fire(WebViewEventPtr ev) { notify(&InputListener::onWebViewEvent, ev); }
+    virtual void fire(WindowEventPtr ev) { notify(&InputListener::onWindowEvent, ev); }
 };
 
 }

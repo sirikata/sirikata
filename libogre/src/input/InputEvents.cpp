@@ -37,7 +37,7 @@ namespace Sirikata {
 namespace Input {
 
 WebViewEvent::WebViewEvent(const String &wvName, const String& _name, const std::vector<String>& _args)
- : InputEvent(InputDeviceWPtr(), IdPair(getEventId(), _name)),
+ : InputEvent(InputDeviceWPtr()),
    webview(wvName),
    name(_name),
    args(_args)
@@ -47,8 +47,7 @@ WebViewEvent::WebViewEvent(const String &wvName, const String& _name, const std:
 
 
 WebViewEvent::WebViewEvent(const String &wvName, const std::vector<DataReference<const char*> >& jsargs)
- : InputEvent(InputDeviceWPtr(), IdPair(getEventId(),
-       jsargs.empty()?std::string():std::string(jsargs[0].data(), jsargs[0].length()))),
+ : InputEvent(InputDeviceWPtr()),
    webview(wvName)
 {
     if (jsargs.size() >= 1) {
@@ -59,11 +58,6 @@ WebViewEvent::WebViewEvent(const String &wvName, const std::vector<DataReference
         }
     }
 }
-
-
-
-
-
 
 WebViewEvent::~WebViewEvent() {
 }

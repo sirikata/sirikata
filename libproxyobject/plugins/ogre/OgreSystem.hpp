@@ -41,9 +41,6 @@
 #include <OgreResourceManager.h>
 #include <OgrePixelFormat.h>
 
-#include <sirikata/ogre/task/EventManager.hpp>
-#include <sirikata/core/task/WorkQueue.hpp>
-
 #include <sirikata/ogre/OgreRenderer.hpp>
 
 #include <sirikata/proxyobject/ConnectionEventListener.hpp>

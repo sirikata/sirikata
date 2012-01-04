@@ -31,8 +31,6 @@
  */
 
 #include <sirikata/core/util/Standard.hh>
-#include <sirikata/ogre/task/Event.hpp>
-#include <sirikata/ogre/task/EventManager.hpp>
 #include <sirikata/ogre/input/SDLInputManager.hpp>
 #include <sirikata/ogre/input/SDLInputDevice.hpp>
 #include <sirikata/ogre/input/InputEvents.hpp>
@@ -48,9 +46,6 @@
 
 namespace Sirikata {
 namespace Input {
-
-using Task::EventPtr;
-using Task::GenEventManager;
 
 // HACK: Constant to convert uncalibrated axes to floating point.
 // We need a way to set calibration values for each axis.
@@ -69,6 +64,10 @@ SDLMouse::SDLMouse(SDLInputManager *manager, unsigned int which) : mWhich(which)
 }
 
 SDLMouse::~SDLMouse() {
+}
+
+SDLInputManager* SDLMouse::inputManager() {
+    return static_cast<SDLInputManager*>(mManager);
 }
 
 int SDLMouse::getNumButtons() const {
@@ -101,10 +100,9 @@ void SDLMouse::setRelativeMode(bool enabled) {
 }
 
 void SDLMouse::fireMotion(const SDLMousePtr &thisptr,
-                          SDLInputManager *em,
                           const struct SDL_MouseMotionEvent &event) {
     unsigned int screenwid, screenhei;
-    em->getWindowSize(screenwid, screenhei);
+    inputManager()->getWindowSize(screenwid, screenhei);
     AxisValue xPctFromCenter = AxisValue::from01(event.x / float(screenwid));
     AxisValue yPctFromCenter = AxisValue::from01(1-(event.y / float(screenhei)));
 
@@ -112,37 +110,37 @@ void SDLMouse::fireMotion(const SDLMousePtr &thisptr,
     bool changedy = (getAxis(AXIS_CURSORY) != yPctFromCenter);
     if (mRelativeMode) {
         // negate y axis since coordinates start at bottom-left.
-        float to_axis(em->relativeMouseToAxis());
-        fireAxis(thisptr, em, AXIS_RELX, AxisValue::fromCentered(to_axis*event.xrel));
-        fireAxis(thisptr, em, AXIS_RELY, AxisValue::fromCentered(-to_axis*event.yrel));
+        float to_axis(inputManager()->relativeMouseToAxis());
+        fireAxis(thisptr, AXIS_RELX, AxisValue::fromCentered(to_axis*event.xrel));
+        fireAxis(thisptr, AXIS_RELY, AxisValue::fromCentered(-to_axis*event.yrel));
         // drag events still get fired...
-        firePointerMotion(thisptr, em, event.xrel/float(screenwid),
+        firePointerMotion(thisptr, event.xrel/float(screenwid),
                           -event.yrel/float(screenhei), event.cursor,
                           event.pressure, event.pressure_min, event.pressure_max);
     } else {
-        fireAxis(thisptr, em, AXIS_CURSORX, xPctFromCenter);
-        fireAxis(thisptr, em, AXIS_CURSORY, yPctFromCenter);
+        fireAxis(thisptr, AXIS_CURSORX, xPctFromCenter);
+        fireAxis(thisptr, AXIS_CURSORY, yPctFromCenter);
         if (changedx || changedy) {
-            firePointerMotion(thisptr, em, xPctFromCenter.getCentered(),
+            firePointerMotion(thisptr, xPctFromCenter.getCentered(),
                               yPctFromCenter.getCentered(), event.cursor,
                               event.pressure, event.pressure_min, event.pressure_max);
         }
     }
     if (event.pressure_max) {
-        fireAxis(thisptr, em, PRESSURE, AxisValue::fromCentered((float)event.pressure / (float)event.pressure_max));
+        fireAxis(thisptr, PRESSURE, AxisValue::fromCentered((float)event.pressure / (float)event.pressure_max));
     }
 
     // "For future use"
-    //fireAxis(em, CURSORZ, event.z);
-    //fireAxis(em, TILT, event.pressure);
-    //fireAxis(em, ROTATION, event.pressure);
+    //fireAxis(CURSORZ, event.z);
+    //fireAxis(TILT, event.pressure);
+    //fireAxis(ROTATION, event.pressure);
 }
 void SDLMouse::fireWheel(const SDLMousePtr &thisptr,
-                         SDLInputManager *em, int xrel, int yrel) {
-    float to_axis (em->wheelToAxis());
+                         int xrel, int yrel) {
+    float to_axis (inputManager()->wheelToAxis());
     SILOG(input,detailed,"WHEEL: " << xrel << "; " << yrel);
-    fireAxis(thisptr, em, WHEELX, AxisValue::fromCentered(to_axis*xrel));
-    fireAxis(thisptr, em, WHEELY, AxisValue::fromCentered(to_axis*yrel));
+    fireAxis(thisptr, WHEELX, AxisValue::fromCentered(to_axis*xrel));
+    fireAxis(thisptr, WHEELY, AxisValue::fromCentered(to_axis*yrel));
 }
 
 SDLJoystick::SDLJoystick(unsigned int whichDevice)
@@ -168,6 +166,10 @@ SDLJoystick::~SDLJoystick() {
     if (mJoy) {
         SDL_JoystickClose(mJoy);
     }
+}
+
+SDLInputManager* SDLJoystick::inputManager() {
+    return static_cast<SDLInputManager*>(mManager);
 }
 
 int SDLJoystick::getNumButtons() const {
@@ -198,17 +200,17 @@ std::string SDLJoystick::getAxisName(unsigned int axis) const {
 }
 
 void SDLJoystick::fireHat(const SDLJoystickPtr &thisptr,
-                          GenEventManager *em, unsigned int num, int val) {
-    this->fireButton(thisptr, em, mNumButtons + HAT_MAX*num + HAT_UP, !!(val & SDL_HAT_UP));
-    this->fireButton(thisptr, em, mNumButtons + HAT_MAX*num + HAT_RIGHT, !!(val & SDL_HAT_RIGHT));
-    this->fireButton(thisptr, em, mNumButtons + HAT_MAX*num + HAT_DOWN, !!(val & SDL_HAT_DOWN));
-    this->fireButton(thisptr, em, mNumButtons + HAT_MAX*num + HAT_LEFT, !!(val & SDL_HAT_LEFT));
+                          unsigned int num, int val) {
+    this->fireButton(thisptr, mNumButtons + HAT_MAX*num + HAT_UP, !!(val & SDL_HAT_UP));
+    this->fireButton(thisptr, mNumButtons + HAT_MAX*num + HAT_RIGHT, !!(val & SDL_HAT_RIGHT));
+    this->fireButton(thisptr, mNumButtons + HAT_MAX*num + HAT_DOWN, !!(val & SDL_HAT_DOWN));
+    this->fireButton(thisptr, mNumButtons + HAT_MAX*num + HAT_LEFT, !!(val & SDL_HAT_LEFT));
 }
 void SDLJoystick::fireBall(const SDLJoystickPtr &thisptr,
-                          SDLInputManager *em, unsigned int ballNumber, int xrel, int yrel) {
-    float to_axis (em->joyBallToAxis());
-    fireAxis(thisptr, em, mNumGeneralAxes + 2*ballNumber, AxisValue::fromCentered(to_axis*xrel));
-    fireAxis(thisptr, em, mNumGeneralAxes + 2*ballNumber + 1, AxisValue::fromCentered(to_axis*yrel));
+                          unsigned int ballNumber, int xrel, int yrel) {
+    float to_axis (inputManager()->joyBallToAxis());
+    fireAxis(thisptr, mNumGeneralAxes + 2*ballNumber, AxisValue::fromCentered(to_axis*xrel));
+    fireAxis(thisptr, mNumGeneralAxes + 2*ballNumber + 1, AxisValue::fromCentered(to_axis*yrel));
 }
 
 std::string SDLJoystick::getButtonName(unsigned int button) const {
@@ -265,6 +267,9 @@ SDLKeyboard::SDLKeyboard(unsigned int which) : mWhich(which) {
 SDLKeyboard::~SDLKeyboard() {
 }
 
+SDLInputManager* SDLKeyboard::inputManager() {
+    return static_cast<SDLInputManager*>(mManager);
+}
 
 std::string SDLKeyboard::getButtonName(unsigned int button) const {
     const char *keyname = SDL_GetScancodeName((SDL_scancode)button);

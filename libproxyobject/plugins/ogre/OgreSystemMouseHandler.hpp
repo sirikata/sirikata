@@ -32,15 +32,11 @@
 
 #include <sirikata/proxyobject/Platform.hpp>
 #include "OgreSystem.hpp"
-#include <sirikata/ogre/task/UniqueId.hpp>
 #include <sirikata/ogre/WebView.hpp>
 #include <sirikata/ogre/WebViewManager.hpp>
 #include "OgreMeshRaytrace.hpp"
-#include <sirikata/ogre/task/Event.hpp>
-#include <sirikata/ogre/task/EventManager.hpp>
 #include <sirikata/core/transfer/DiskManager.hpp>
-#include <sirikata/ogre/input/InputEvents.hpp>
-#include <map>
+#include <sirikata/ogre/input/InputListener.hpp>
 
 namespace Sirikata {
 
@@ -50,7 +46,7 @@ class InputDevice;
 
 namespace Graphics {
 
-class OgreSystemMouseHandler {
+class OgreSystemMouseHandler : public Input::InputListener {
 public:
     OgreSystemMouseHandler(OgreSystem *parent);
     ~OgreSystemMouseHandler();
@@ -86,21 +82,25 @@ private:
 
     void createUIAction(const String& ui_page);
 
-    Task::EventResponse keyHandler(Task::EventPtr ev);
-    Task::EventResponse axisHandler(Task::EventPtr ev);
-    Task::EventResponse textInputHandler(Task::EventPtr ev);
-    Task::EventResponse mouseHoverHandler(Task::EventPtr ev);
-    Task::EventResponse mousePressedHandler(Task::EventPtr ev);
-    Task::EventResponse mouseReleasedHandler(Task::EventPtr ev);
-    Task::EventResponse mouseClickHandler(Task::EventPtr ev);
-    Task::EventResponse mouseDragHandler(Task::EventPtr evbase);
-    Task::EventResponse webviewHandler(Task::EventPtr ev);
+    // InputListener Interface
+    virtual Input::EventResponse onInputDeviceEvent(Input::InputDeviceEventPtr ev);
+    virtual Input::EventResponse onKeyPressedEvent(Input::ButtonPressedPtr ev) { return onKeyEvent(ev); }
+    virtual Input::EventResponse onKeyRepeatedEvent(Input::ButtonRepeatedPtr ev) { return onKeyEvent(ev); }
+    virtual Input::EventResponse onKeyReleasedEvent(Input::ButtonReleasedPtr ev) { return onKeyEvent(ev); }
+    virtual Input::EventResponse onKeyDownEvent(Input::ButtonDownPtr ev) { return onKeyEvent(ev); }
+    Input::EventResponse onKeyEvent(Input::ButtonEventPtr ev);
+    virtual Input::EventResponse onAxisEvent(Input::AxisEventPtr ev);
+    virtual Input::EventResponse onTextInputEvent(Input::TextInputEventPtr ev);
+    virtual Input::EventResponse onMouseHoverEvent(Input::MouseHoverEventPtr ev);
+    virtual Input::EventResponse onMousePressedEvent(Input::MousePressedEventPtr ev);
+    virtual Input::EventResponse onMouseReleasedEvent(Input::MouseReleasedEventPtr ev);
+    virtual Input::EventResponse onMouseClickEvent(Input::MouseClickEventPtr ev);
+    virtual Input::EventResponse onMouseDragEvent(Input::MouseDragEventPtr ev);
+    virtual Input::EventResponse onWebViewEvent(Input::WebViewEventPtr ev);
 
     void fpsUpdateTick(const Task::LocalTime& t);
 
     void renderStatsUpdateTick(const Task::LocalTime& t);
-
-    Task::EventResponse deviceListener(Task::EventPtr evbase);
 
     void onUIDirectoryListingFinished(String initial_path,
         std::tr1::shared_ptr<Transfer::DiskManager::ScanRequest::DirectoryListing> dirListing);
@@ -108,9 +108,6 @@ private:
     boost::any onUIAction(WebView* webview, const JSArguments& args);
 
     OgreSystem *mParent;
-    std::vector<Task::SubscriptionId> mEvents;
-    typedef std::multimap<Sirikata::Input::InputDevice*, Task::SubscriptionId> DeviceSubMap;
-    DeviceSubMap mDeviceSubscriptions;
 
     //key and value are same.
     std::map<Invokable*,Invokable*> mDelegates;

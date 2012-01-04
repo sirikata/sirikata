@@ -88,6 +88,9 @@ def id_list():
 def id_link(id, text=None):
     return '<a href="' + '/status/' + str(id) + '">' + (text or str(id)) + '</a>'
 
+def id_dump_link(id, text=None):
+    return '<a href="' + '/data/' + str(id) + '/dump">' + (text or str(id)) + '</a>'
+
 def id_get_stackwalk(id, dump, force=False):
     """Gets the stackwalk for a dump within a crash report. The report
     is cached, but can be forced to regenerate using force=True."""
@@ -171,6 +174,7 @@ def status_page(environ, start_response, id):
 
     result = []
     result += ['<h3>Report ', id_link(id), '</h3>']
+    result += ['<a href="/">home</a>', '<br>', '<br>']
 
     result += ['<form action="/status/', str(id), '" method="POST">']
     result += ['<input type="submit" value="Reanalyze"></input>']
@@ -184,7 +188,7 @@ def status_page(environ, start_response, id):
     if dump['desc']:
         result += ['Description:<br><pre>', dump['desc'], '</pre>']
     for d in dump['dumps']:
-        result += ['Dump: ', d, '<br>']
+        result += ['Dump: ', id_dump_link(id, d), '<br>']
         bt = id_get_stackwalk(id, d, force=reanalyze)
         result += ['<pre>', bt, '</pre>', '<br>']
 
@@ -232,6 +236,49 @@ def edit_page(environ, start_response, id):
 
     # And if nothing else, they just aren't authorized.
     return wrap_html('You can\'t edit report ' + str(id) + '.')
+
+def data_file(environ, start_response, data_path):
+    # Format should be id/file_type
+    parts = data_path.split('/')
+    id, file_type = None, None
+    if len(parts) == 2:
+        id = int(parts[0])
+        file_type = parts[1]
+
+    if not id or not file_type or file_type not in ['dump']:
+        status = '404 Not Found'
+        headers = [('Content-type', 'text/html')]
+        start_response(status, headers)
+        return wrap_html('Invalid URL')
+
+    dump = id_lookup(id)
+    if not dump:
+        status = '200 OK'
+        headers = [('Content-type', 'text/html')]
+        start_response(status, headers)
+        return wrap_html('Report' + str(id) + ' not found.')
+
+    if file_type == 'dump':
+        dump_files = dump['dumps']
+        if len(dump_files) == 1:
+            status = '200 OK'
+            headers = [
+                ('Content-type', 'application/octet-stream'),
+                ('Content-Disposition', 'attachment; filename='+dump_files[0])
+                ]
+            result = [ load_file(server_file('data', str(id), dump_files[0])) ]
+        else:
+            status = '404 Not Found'
+            headers = [('Content-type', 'text/html')]
+            result = wrap_html(['Download only works for single dump file.'])
+    else:
+        status = '404 Not Found'
+        headers = [('Content-type', 'text/html')]
+        start_response(status, headers)
+        return wrap_html('Invalid URL')
+
+    start_response(status, headers)
+    return result
 
 def listing(environ, start_response):
     status = '200 OK'
@@ -284,6 +331,9 @@ def crashcollector_app(environ, start_response):
     elif url.startswith('/status/'):
         url = url.replace('/status/', '')
         return status_page(environ, start_response, int(url))
+    elif url.startswith('/data'):
+        url = url.replace('/data/', '')
+        return data_file(environ, start_response, url)
     elif url.startswith('/listing') or url == '/':
         return listing(environ, start_response)
 

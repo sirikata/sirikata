@@ -36,7 +36,6 @@
 #include "OgreSystem.hpp"
 #include "OgreSystemMouseHandler.hpp"
 #include "OgrePlugin.hpp"
-#include <sirikata/ogre/task/Event.hpp>
 #include <sirikata/proxyobject/ProxyManager.hpp>
 #include <sirikata/proxyobject/ProxyObject.hpp>
 #include "ProxyEntity.hpp"
