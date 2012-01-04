@@ -63,7 +63,8 @@ public:
     virtual void stop();
 
     virtual void requestPersistedObject(const UUID& internal_id, const String& script_type, const String& script_args, const String& script_contents, RequestCallback cb, const String& timestamp="current");
-    virtual void movePersistedObject(const String& oh_id, const String& timestamp="current");
+    virtual void movePersistedObject(const UUID& internal_id, const String& oh_id, const String& timestamp="current");
+    virtual void moveAllPersistedObject(const String& oh_id, const String& timestamp="current");
 
 private:
 
@@ -79,8 +80,12 @@ private:
                             std::vector<String>   //keys to erase
                           > batchTuple;
 
-    void readPersistedObject(const String& oh_id, const String& timestamp="current");
-    void writePersistedObject(const String& oh_id, std::vector<Column> Columns, const String& timestamp="current");
+    void readPersistedObject(const UUID& internal_id, const String& oh_id, const String& timestamp="current");
+    void writePersistedObject(const UUID& internal_id, const String& oh_id, const String& script_value, const String& timestamp="current");
+    void removePersistedObject(const UUID& internal_id, const String& timestamp="current");
+
+    void readAllPersistedObject(const String& oh_id, const String& timestamp="current");
+    void writeAllPersistedObject(const String& oh_id, std::vector<Column> Columns, const String& timestamp="current");
 
     ObjectHostContext* mContext;
     String mDBHost;

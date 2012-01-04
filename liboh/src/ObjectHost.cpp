@@ -198,28 +198,29 @@ void ObjectHost::disconnectObject(const SpaceID& space, const ObjectReference& o
     iter->second->disconnect(SpaceObjectReference(space,oref));
 }
 
-void ObjectHost::migrateEntity(const SpaceID& space, const UUID& uuid, const String& name)
+void ObjectHost::migrateEntity(const SpaceID& space, const UUID& uuid, const String& dest_name)
 {
     SpaceSessionManagerMap::iterator iter = mSessionManagers.find(space);
     if (iter == mSessionManagers.end())
     	return;
 
     mMigratingEntity.insert(uuid);
+    mPersistentSet->movePersistedObject(uuid, dest_name);
     if(!mEntityPresenceSet[uuid].empty()){
     	for(ObjectSet::iterator it = mEntityPresenceSet[uuid].begin(); it!=mEntityPresenceSet[uuid].end();++it){
     		ObjectReference oref = ObjectReference(*it);
-    		iter->second->migrateObject(SpaceObjectReference(space, oref), *it, name);
+    		iter->second->migrateObject(SpaceObjectReference(space, oref), *it, dest_name);
     	}
     	ObjectReference oref = ObjectReference(*mEntityPresenceSet[uuid].begin());
-    	iter->second->migrateEntity(SpaceObjectReference(space, oref), uuid, name, mEntityPresenceSet[uuid]);
+    	iter->second->migrateEntity(SpaceObjectReference(space, oref), uuid, dest_name, mEntityPresenceSet[uuid]);
     }
 }
 
-void ObjectHost::migratAllEntity(const SpaceID& space, const String& name)
+void ObjectHost::migratAllEntity(const SpaceID& space, const String& dest_name)
 {
-	mPersistentSet->movePersistedObject(name);
+	//mPersistentSet->moveAllPersistedObject(dest_name);
 	for(CreatedEntityMap::iterator it = mCreatedEntities.begin(); it!=mCreatedEntities.end(); ++it){
-		migrateEntity(space, it->first, name);
+		migrateEntity(space, it->first, dest_name);
 	}
 }
 

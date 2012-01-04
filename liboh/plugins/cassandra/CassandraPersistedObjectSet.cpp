@@ -108,13 +108,55 @@ void CassandraPersistedObjectSet::performUpdate(const UUID& internal_id, const S
         mContext->mainStrand->post(std::tr1::bind(cb, success));
 }
 
-void CassandraPersistedObjectSet::movePersistedObject(const String& oh_id, const String& timestamp) {
+void CassandraPersistedObjectSet::movePersistedObject(const UUID& internal_id, const String& oh_id, const String& timestamp) {
+	mIOService->post(
+		        std::tr1::bind(&CassandraPersistedObjectSet::readPersistedObject, this, internal_id, oh_id, timestamp)
+		    );
+}
+
+void CassandraPersistedObjectSet::readPersistedObject(const UUID& internal_id, const String& oh_id, const String& timestamp) {
+	String script_value;
+	String id_str = internal_id.rawHexData();
+	try{
+		script_value = mDB->db()->getColumnValue(mOHostID, CF_NAME, timestamp, id_str);
+	}
+    catch(...){
+        std::cout <<"Exception Caught when reading persisted object"<<std::endl;
+        return;
+    }
+    mContext->mainStrand->post(std::tr1::bind(&CassandraPersistedObjectSet::writePersistedObject, this, internal_id, oh_id, script_value, timestamp));
+}
+
+void CassandraPersistedObjectSet::writePersistedObject(const UUID& internal_id, const String& oh_id, const String& script_value, const String& timestamp) {
+	String id_str = internal_id.rawHexData();
+    try{
+        mDB->db()->insertColumn(oh_id, CF_NAME, timestamp, id_str, script_value);
+    }
+    catch(...){
+        std::cout <<"Exception Caught when writing persisted object"<<std::endl;
+        return;
+    }
+    mContext->mainStrand->post(std::tr1::bind(&CassandraPersistedObjectSet::removePersistedObject, this, internal_id, timestamp));
+}
+
+void CassandraPersistedObjectSet::removePersistedObject(const UUID& internal_id, const String& timestamp) {
+	String id_str = internal_id.rawHexData();
+	try{
+		mDB->db()->removeColumn(mOHostID, CF_NAME, timestamp, id_str);
+	}
+    catch(...){
+        std::cout <<"Exception Caught when deleting persisted object"<<std::endl;
+        return;
+    }
+}
+
+void CassandraPersistedObjectSet::moveAllPersistedObject(const String& oh_id, const String& timestamp) {
 	 mIOService->post(
-	        std::tr1::bind(&CassandraPersistedObjectSet::readPersistedObject, this, oh_id, timestamp)
+	        std::tr1::bind(&CassandraPersistedObjectSet::readAllPersistedObject, this, oh_id, timestamp)
 	    );
 }
 
-void CassandraPersistedObjectSet::readPersistedObject(const String& oh_id, const String& timestamp) {
+void CassandraPersistedObjectSet::readAllPersistedObject(const String& oh_id, const String& timestamp) {
 	std::vector<Column> Columns;
     try{
         SliceRange range;
@@ -125,10 +167,10 @@ void CassandraPersistedObjectSet::readPersistedObject(const String& oh_id, const
         std::cout <<"Exception Caught when getting object lists"<<std::endl;
         return;
     }
-    mContext->mainStrand->post(std::tr1::bind(&CassandraPersistedObjectSet::writePersistedObject, this, oh_id, Columns, timestamp));
+    mContext->mainStrand->post(std::tr1::bind(&CassandraPersistedObjectSet::writeAllPersistedObject, this, oh_id, Columns, timestamp));
 }
 
-void CassandraPersistedObjectSet::writePersistedObject(const String& oh_id, std::vector<Column> Columns, const String& timestamp) {
+void CassandraPersistedObjectSet::writeAllPersistedObject(const String& oh_id, std::vector<Column> Columns, const String& timestamp) {
 	std::vector<String> keys;
 	try {
 		batchTuple tuple=batchTuple(CF_NAME, oh_id, timestamp, Columns, keys);
