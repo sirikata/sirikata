@@ -790,8 +790,17 @@ v8::Handle<v8::Value> EmersonScript::create_timeout(double period,v8::Persistent
     returner->SetInternalField(TIMER_JSTIMERSTRUCT_FIELD,External::New(jstimer));
     returner->SetInternalField(TYPEID_FIELD, External::New(new String("timer")));
 
-    returner.MakeWeak(NULL,&JSTimerStruct::timerWeakReferenceCleanup);
+    //returner.MakeWeak(NULL,&JSTimerStruct::timerWeakReferenceCleanup);
+    
+    // returner.MakeWeak(NULL,
+    //     JSObjectScript::mCtx->objStrand->wrap(
+    //         std::tr1::bind(&JSTimerStruct::timerWeakReferenceCleanup,
+    //             _1,_2,jstimer->mLiveness.livenessToken())));
 
+    Liveness::Token* lt = new Liveness::Token(jstimer->mLiveness.livenessToken());
+    returner.MakeWeak(lt,&JSTimerStruct::timerWeakReferenceCleanup);
+    
+    
     //timer requires a handle to its persistent object so can handle cleanup
     //correctly.
     jstimer->setPersistentObject(returner);
@@ -1387,7 +1396,10 @@ void EmersonScript::eSetOrientationVelFunction(
 {
     Liveness::Lock locked(alive);
     if (!locked) return;
-    
+
+    if (JSObjectScript::mCtx->stopped())
+        return;
+
     mParent->requestOrientationVelocityUpdate(sporef.space(),sporef.object(),quat);
 }
 
@@ -1406,6 +1418,10 @@ void EmersonScript::eSetPositionFunction(
     Liveness::Lock locked(alive);
     if (!locked) return;
 
+    if (JSObjectScript::mCtx->stopped())
+        return;
+
+    
     mParent->requestPositionUpdate(sporef.space(),sporef.object(),posVec);
 }
 
@@ -1427,6 +1443,10 @@ void EmersonScript::eSetVelocityFunction(
     Liveness::Lock locked(alive);
     if (!locked) return;
 
+    if (JSObjectScript::mCtx->stopped())
+        return;
+
+    
     mParent->requestVelocityUpdate(sporef.space(),sporef.object(),velVec);
 }
 
@@ -1449,6 +1469,10 @@ void EmersonScript::eSetOrientationFunction(
     Liveness::Lock locked(alive);
     if (!locked) return;
 
+    if (JSObjectScript::mCtx->stopped())
+        return;
+
+    
     mParent->requestOrientationDirectionUpdate(sporef.space(),sporef.object(),quat);
 }
 
@@ -1470,6 +1494,9 @@ void EmersonScript::eSetVisualScaleFunction(
     Liveness::Lock locked(alive);
     if (!locked) return;
 
+    if (JSObjectScript::mCtx->stopped())
+        return;
+    
     BoundingSphere3f bnds = mParent->requestCurrentBounds(sporef.space(),sporef.object());
     bnds = BoundingSphere3f(bnds.center(), newscale);
     mParent->requestBoundsUpdate(sporef.space(),sporef.object(), bnds);
@@ -1494,6 +1521,9 @@ void  EmersonScript::eSetVisualFunction(
 {
     Liveness::Lock locked(alive);
     if (!locked) return;
+
+    if (JSObjectScript::mCtx->stopped())
+        return;
 
     mParent->requestMeshUpdate(sporef.space(),sporef.object(),newMeshString);
 }
@@ -1526,6 +1556,9 @@ void EmersonScript::eSetPhysicsFunction(
 {
     Liveness::Lock locked(alive);
     if (!locked) return;
+
+    if (JSObjectScript::mCtx->stopped())
+        return;
     
     mParent->requestPhysicsUpdate(sporef.space(), sporef.object(), newPhyString);
 }
@@ -1549,6 +1582,10 @@ void EmersonScript::eSetQueryFunction(
     Liveness::Lock locked(alive);
     if (!locked) return;
 
+    if (JSObjectScript::mCtx->stopped())
+        return;
+
+    
     mParent->requestQueryUpdate(
         sporef.space(), sporef.object(),
         sa,

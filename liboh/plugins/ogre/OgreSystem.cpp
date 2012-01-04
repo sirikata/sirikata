@@ -318,7 +318,13 @@ void OgreSystem::iOnCreateProxy(
     Liveness::Lock locked(osAlive);
     if (!locked) 
     {
-        SILOG(ogre,error,"Received disconnect after having deleted ogre system");
+        SILOG(ogre,error,"Received onCreateProxy after having deleted ogre system");
+        return;
+    }
+
+    if (stopped)
+    {
+        SILOG(ogre,warn,"Received onCreateProxy after having stopped");
         return;
     }
     
@@ -389,6 +395,9 @@ void OgreSystem::iOnDestroyProxy(
         return;
     }
 
+    if (stopped)
+        return;
+    
     mDownloadPlanner->removeObject(p);
     // FIXME don't delete here because we want to mask proximity
     // additions/removals that aren't due to actual connect/disconnect.
@@ -634,6 +643,11 @@ void OgreSystem::iOnDisconnected(
         return;
     }
 
+    if (stopped)
+    {
+        SILOG(ogre,error,"Received iOnDisconnecte after having stopped ogre system");
+        return;
+    }
     //don't want to disconnect before we were done connecting.
     while (!initialized){}
     
@@ -669,6 +683,12 @@ void OgreSystem::iOnDisconnected(
 
     while(!initialized){}
 
+    if (stopped)
+    {
+        SILOG(ogre,error,"Received iOnDisconnecte after having stopped ogre system");
+        return;
+    }
+    
     mViewer->removeListener((SessionEventListener*)this);
     SILOG(ogre,info,"Got disconnected from space server.");
     mMouseHandler->alert("Disconnected", "Lost connection to space server...");

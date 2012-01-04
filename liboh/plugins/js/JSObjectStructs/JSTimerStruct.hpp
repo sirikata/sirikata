@@ -28,7 +28,7 @@ struct JSTimerStruct : public JSSuspendable {
 
     v8::Handle<v8::Value> struct_resetTimer(double timeInSecondsToRefire);
 private:
-    void evaluateCallback();
+    void evaluateCallback(Liveness::Token isAlive);
 public:
     virtual v8::Handle<v8::Value>suspend();
     virtual v8::Handle<v8::Value>resume();
@@ -39,9 +39,11 @@ public:
     EmersonScript* emerScript;
     v8::Persistent<v8::Function> cb;
     JSContextStruct* jsContStruct;
+    Liveness mLiveness;
+    
 private:
     JSCtx* mCtx;
-    Liveness mLiveness;
+
     Sirikata::Network::IOTimerPtr mDeadlineTimer;
 public:
 
@@ -59,7 +61,8 @@ public:
        contains the persistent object pointing to the timer.  The second should
        just be null.
      */
-    static void timerWeakReferenceCleanup(v8::Persistent<v8::Value> containsTimer, void* otherArg);
+    static void timerWeakReferenceCleanup(
+        v8::Persistent<v8::Value> containsTimer, void* otherArg);
 
     /**
        When no longer have a reference to the Emerson object holding this timer
