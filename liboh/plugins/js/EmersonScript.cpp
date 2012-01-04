@@ -791,15 +791,10 @@ v8::Handle<v8::Value> EmersonScript::create_timeout(double period,v8::Persistent
     returner->SetInternalField(TYPEID_FIELD, External::New(new String("timer")));
 
     //returner.MakeWeak(NULL,&JSTimerStruct::timerWeakReferenceCleanup);
-    
-    // returner.MakeWeak(NULL,
-    //     JSObjectScript::mCtx->objStrand->wrap(
-    //         std::tr1::bind(&JSTimerStruct::timerWeakReferenceCleanup,
-    //             _1,_2,jstimer->mLiveness.livenessToken())));
 
-    Liveness::Token* lt = new Liveness::Token(jstimer->mLiveness.livenessToken());
-    returner.MakeWeak(lt,&JSTimerStruct::timerWeakReferenceCleanup);
-    
+    JSTimerLivenessHolder* jstlh = new JSTimerLivenessHolder(jstimer);
+    returner.MakeWeak(jstlh,&JSTimerStruct::timerWeakReferenceCleanup);
+   
     
     //timer requires a handle to its persistent object so can handle cleanup
     //correctly.

@@ -17,7 +17,9 @@ class Context;
 
 namespace JS {
 
-struct JSTimerStruct : public JSSuspendable {
+struct JSTimerStruct : public JSSuspendable,
+                       public Liveness
+{
     JSTimerStruct(EmersonScript* eobj, Duration dur, v8::Persistent<v8::Function>& callback,
         JSContextStruct* jscont, uint32 contID,
         double timeRemaining, bool isSuspended, bool isCleared, JSCtx* mCtx);
@@ -29,6 +31,7 @@ struct JSTimerStruct : public JSSuspendable {
     v8::Handle<v8::Value> struct_resetTimer(double timeInSecondsToRefire);
 private:
     void evaluateCallback(Liveness::Token isAlive);
+
 public:
     virtual v8::Handle<v8::Value>suspend();
     virtual v8::Handle<v8::Value>resume();
@@ -39,7 +42,7 @@ public:
     EmersonScript* emerScript;
     v8::Persistent<v8::Function> cb;
     JSContextStruct* jsContStruct;
-    Liveness mLiveness;
+    // Liveness mLiveness;
     
 private:
     JSCtx* mCtx;
@@ -84,6 +87,15 @@ public:
     void setPersistentObject(v8::Persistent<v8::Object>);
 
 private:
+
+    /**
+       Means that we're currently processing the callback of a timer.
+       Should be used to prevent invalid memory access if try to clear
+       a timer from within its own callback.  (Ie, won't delete the
+       timer if amExecuting is true.)
+     */
+    bool amExecuting;
+    
     /**
        Need to know when to clean up timer struct.  Have made Emerson objects
        that are timers weak.  This means that as soon as the objects holding
@@ -113,6 +125,15 @@ private:
     
 };
 
+struct JSTimerLivenessHolder
+{
+    JSTimerLivenessHolder(JSTimerStruct* jst)
+     : lt (jst->livenessToken())
+    {}
+
+    Liveness::Token lt;
+};
+
 
 #define INLINE_TIMER_CONV_ERROR(toConvert,whereError,whichArg,whereWriteTo)   \
     JSTimerStruct* whereWriteTo;                                                   \
@@ -122,9 +143,6 @@ private:
         if (whereWriteTo == NULL) \
             return v8::ThrowException(v8::Exception::Error(v8::String::New(_errMsg.c_str(), _errMsg.length()))); \
     }
-
-
-
 
 typedef std::map<JSTimerStruct*,int>  TimerMap;
 typedef TimerMap::iterator TimerIter;

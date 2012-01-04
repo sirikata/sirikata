@@ -757,7 +757,40 @@ void JSContextStruct::struct_registerSuspendable   (JSSuspendable* toRegister)
 }
 
 
-void JSContextStruct::struct_deregisterSuspendable (JSSuspendable* toDeregister)
+void JSContextStruct::struct_asyncDeregisterSuspendable (
+    JSSuspendable* toDeregister,Liveness::Token contAlive,
+    Liveness::Token suspAlive)
+{
+    Liveness::Lock lockedCont(contAlive);
+    if (!lockedCont)
+    {
+        //lkjs;
+        //FIXME: These seem as though they really should be
+        //a locked condition
+        if (!suspAlive)
+            return;
+
+        //context and suspendable are still alive.  go
+        //ahead and delete normally.
+        struct_deregisterSuspendable(toDeregister);
+    }
+    else
+    {
+        //lkjs;
+        //FIXME: These seem as though they really should be
+        //a locked condition
+        if (!suspAlive)
+            return;
+
+        //context isn't still alive, but the suspendable
+        //is. delete it straightaway.
+        delete toDeregister;
+    }
+}
+
+
+void JSContextStruct::struct_deregisterSuspendable (
+    JSSuspendable* toDeregister)
 {
     if (mInSuspendableLoop)
     {
@@ -790,8 +823,7 @@ void JSContextStruct::struct_deregisterSuspendable (JSSuspendable* toDeregister)
         return;
     }
 
-
-    //if it's just a timer or a context, can delete without requesting
+    //if it's just a context, can delete without requesting
     //Emerscript to do anything special.
     delete toDeregister;
 }

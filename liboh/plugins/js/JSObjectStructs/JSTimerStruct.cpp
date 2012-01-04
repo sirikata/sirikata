@@ -21,6 +21,7 @@ JSTimerStruct::JSTimerStruct(EmersonScript* eobj, Duration dur, v8::Persistent<v
   emerScript(eobj),
   cb(callback),
   jsContStruct(jscont),
+  amExecuting(false),
   mCtx(jsctx),
   mDeadlineTimer(Sirikata::Network::IOTimer::create(*jsctx->ioService)),
   timeUntil(dur),
@@ -47,9 +48,17 @@ JSTimerStruct::JSTimerStruct(EmersonScript* eobj, Duration dur, v8::Persistent<v
         noTimerWaiting=false;
 
         if (timeRemaining == 0)
-            mDeadlineTimer->wait(timeUntil,std::tr1::bind(&JSTimerStruct::evaluateCallback,this,mLiveness.livenessToken()));
+        {
+            mDeadlineTimer->wait(
+                timeUntil,std::tr1::bind(
+                    &JSTimerStruct::evaluateCallback,this,livenessToken()));
+        }
         else
-            mDeadlineTimer->wait(Duration::microseconds(timeRemaining*1000000),std::tr1::bind(&JSTimerStruct::evaluateCallback,this,mLiveness.livenessToken()));
+        {
+            mDeadlineTimer->wait(
+                Duration::microseconds(timeRemaining*1000000),
+                std::tr1::bind(&JSTimerStruct::evaluateCallback,this,livenessToken()));
+        }
 
 
         if (jscont != NULL)
@@ -65,13 +74,25 @@ void JSTimerStruct::setPersistentObject(v8::Persistent<v8::Object>pers)
 void JSTimerStruct::timerWeakReferenceCleanup(
     v8::Persistent<v8::Value> containsTimer, void* otherArg)
 {
-    std::cout<<"\nWeak reference cleanup\n";
-    std::cout.flush();
-    Liveness::Token* timerAlive = (Liveness::Token*) otherArg;    
-    Liveness::Lock locked(*timerAlive);
-    delete timerAlive;
-    if (!locked)
+    JSTimerLivenessHolder* jstlh = (JSTimerLivenessHolder*) otherArg;
+
+    //lkjs: FIXME: This really should be a locked call, but doing that keeps
+    //throwing:
+    //    terminate called after throwing an instance of 'boost::bad_weak_ptr'
+    //what(): boost::bad_weak_ptr
+    //Aborted
+    
+    // Liveness::Lock locked(jstlh->lt);
+    // delete jstlh;
+    // if (!locked)
+    //     return;
+
+    if (!jstlh->lt)
+    {
+        delete jstlh;
         return;
+    }
+    delete jstlh;
     
     if (!containsTimer->IsObject())
     {
@@ -95,13 +116,11 @@ void JSTimerStruct::timerWeakReferenceCleanup(
         return;
     }
 
-    std::cout<<"\nPointer weak ref cleanup: "<<jstimer<<"\n\n";
-    std::cout.flush();
     //asks the particular timer to free itself if it's never going to fire
     //again, or schedule itself to be freed after will never fire again.
     jstimer->mCtx->objStrand->post(
         std::tr1::bind(&JSTimerStruct::noReference, jstimer,
-            jstimer->mLiveness.livenessToken()));
+            jstimer->livenessToken()));
 }
 
 
@@ -119,9 +138,6 @@ void JSTimerStruct::timerWeakReferenceCleanup(
  */
 void JSTimerStruct::noReference(const Liveness::Token& alive)
 {
-    std::cout<<"\nNo reference in "<<this<<"\n";
-    std::cout.flush();
-    
     if (alive) {
         killAfterFire = true;
 
@@ -144,11 +160,17 @@ void JSTimerStruct::fixSuspendableToContext(JSContextStruct* toAttachTo)
 
     noTimerWaiting=false;
     if (mTimeRemaining == 0)
-        mDeadlineTimer->wait(timeUntil,std::tr1::bind(&JSTimerStruct::evaluateCallback,this,mLiveness.livenessToken()));
+    {
+        mDeadlineTimer->wait(
+            timeUntil,std::tr1::bind(
+                &JSTimerStruct::evaluateCallback,this,livenessToken()));
+    }
     else
+    {
         mDeadlineTimer->wait(
             Duration::microseconds(mTimeRemaining*1000000),
-            std::tr1::bind(&JSTimerStruct::evaluateCallback,this,mLiveness.livenessToken()));
+            std::tr1::bind(&JSTimerStruct::evaluateCallback,this,livenessToken()));
+    }
 
     jsContStruct->struct_registerSuspendable(this);
 }
@@ -191,11 +213,7 @@ JSTimerStruct* JSTimerStruct::decodeTimerStruct(v8::Handle<v8::Value> toDecode,S
 
 JSTimerStruct::~JSTimerStruct()
 {
-    static int tmp = 0;
-    std::cout<<"\nJSTimerStruct closing "<<++tmp;
-    std::cout<<" pointer: "<< this <<"\n";
-    std::cout.flush();
-    mLiveness.letDie();
+    letDie();
     clear();
 }
 
@@ -251,15 +269,12 @@ v8::Handle<v8::Value> JSTimerStruct::struct_getAllData()
 
 void JSTimerStruct::evaluateCallback(Liveness::Token isAlive) 
 {
-    std::cout<<"\n\nEvaluate callback: "<<this<<"\n\n";
-    std::cout.flush();
     Liveness::Lock locked(isAlive);
     if (!locked) return;
     
     if (mCtx->stopped())
         return;
 
-    
     mCtx->objStrand->post(
         std::tr1::bind(&JSTimerStruct::iEvaluateCallback,this,
             isAlive));
@@ -268,11 +283,12 @@ void JSTimerStruct::evaluateCallback(Liveness::Token isAlive)
 
 void JSTimerStruct::iEvaluateCallback(Liveness::Token token)
 {
-    std::cout<<"\niEvaluateCallback:  "<<this<<"\n";
+    //lkjs; FIXME: Can weak reference clean up a timer
+    //while it's in this function?  (If we try to use lock, we run
+    //into a problem when the timer tries to clear itself.)
+    if (!token)
+        return;
     
-    Liveness::Lock locked(token);
-    if (!locked) return;
-
     if (mCtx->stopped()) {
         JSLOG(warn, "Timer evaluateCallback invoked after stop request, ignoring...");
         noTimerWaiting=true; // Allow cleanup, see notes below
@@ -281,23 +297,18 @@ void JSTimerStruct::iEvaluateCallback(Liveness::Token token)
 
         
     while(!mCtx->initialized())
-    {
-        std::cout<<"\nStuck in mCtx not initialized\n";
-        std::cout.flush();
-    }
-    
-
+    {}
+    amExecuting = true;
     emerScript->invokeCallbackInContext(emerScript->livenessToken(), cb, jsContStruct);
+
 
     //if we were told to kill the timer after firing, then check kill conditions
     //again in noReference.
     if (killAfterFire)
     {
-        std::cout<<"\nTold to killAfterFire for "<<this<<"\n";
-        std::cout.flush();
         mCtx->objStrand->post(
             std::tr1::bind(&JSTimerStruct::noReference,this,
-                mLiveness.livenessToken()));
+                livenessToken()));
     }
     
     //means that we have no pending timer operation.
@@ -306,6 +317,7 @@ void JSTimerStruct::iEvaluateCallback(Liveness::Token token)
     // we need to make sure it is absolutely the *last* operation we do on
     // member variables.
     noTimerWaiting=true;
+    amExecuting = false;
 }
 
 
@@ -348,8 +360,8 @@ v8::Handle<v8::Value> JSTimerStruct::resume()
 
     noTimerWaiting=false;
     mDeadlineTimer->wait(
-        timeUntil,
-        std::tr1::bind(&JSTimerStruct::evaluateCallback,this,mLiveness.livenessToken()));
+        timeUntil,std::tr1::bind(
+            &JSTimerStruct::evaluateCallback,this,livenessToken()));
 
     return JSSuspendable::resume();
 }
@@ -388,7 +400,17 @@ v8::Handle<v8::Value> JSTimerStruct::clear()
     // delete this object so you shouldn't use any member variables after
     // invoking it.
     if (jsContStruct != NULL)
-        jsContStruct->struct_deregisterSuspendable(this);
+    {
+        //cannot clear if amExecuting.  
+        if (amExecuting)
+        {
+            mCtx->objStrand->post(
+                std::tr1::bind(&JSContextStruct::struct_asyncDeregisterSuspendable,jsContStruct,this,
+                    jsContStruct->livenessToken(),livenessToken()));
+        }
+        else
+            jsContStruct->struct_deregisterSuspendable(this);
+    }
 
     // Note that since this allows the JS GC thread to destroy this object
     // in response to all references to it being lost,
@@ -415,7 +437,7 @@ v8::Handle<v8::Value> JSTimerStruct::struct_resetTimer(double timeInSecondsToRef
     noTimerWaiting=false;
     mDeadlineTimer->wait(
         Duration::seconds(timeInSecondsToRefire),
-        std::tr1::bind(&JSTimerStruct::evaluateCallback,this, mLiveness.livenessToken()));
+        std::tr1::bind(&JSTimerStruct::evaluateCallback,this, livenessToken()));
 
     return JSSuspendable::resume();
 }

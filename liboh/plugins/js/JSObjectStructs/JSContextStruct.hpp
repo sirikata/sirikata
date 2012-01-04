@@ -142,6 +142,11 @@ struct JSContextStruct : public JSSuspendable, public Liveness
     void struct_registerSuspendable   (JSSuspendable* toRegister);
     void struct_deregisterSuspendable (JSSuspendable* toDeregister);
 
+    //if calling deregister through a post.
+    void struct_asyncDeregisterSuspendable (
+        JSSuspendable* toDeregister,Liveness::Token contAlive,
+        Liveness::Token suspAlive);
+    
     //creates a vec3 emerson object out of the vec3d cpp object passed in.
     v8::Handle<v8::Value> struct_createVec3(Vector3d& toCreate);
     v8::Handle<v8::Value> struct_createQuaternion(Quaternion& toCreate);
