@@ -92,7 +92,7 @@ JSVisibleManager::~JSVisibleManager()
     // Stop tracking all known objects to clear out all listeners and state.
     while(!mTrackedObjects.empty()) {
         ProxyObjectPtr toFakeDestroy = *(mTrackedObjects.begin());
-        onDestroyProxy(toFakeDestroy);
+        iOnDestroyProxy(toFakeDestroy);
     }
 
     // Some proxies may not have gotten cleared out if there are still

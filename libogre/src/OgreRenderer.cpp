@@ -859,6 +859,10 @@ void OgreRenderer::iPoll(Liveness::Token rendererAlive)
 
     if (!initialized)
         return;
+
+    if (stopped)
+        return;
+
     
     Task::LocalTime curFrameTime(Task::LocalTime::now());
 

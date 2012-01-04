@@ -359,7 +359,7 @@ protected:
      */
     bool stopCalled;
 
-
+    void iStop();
 
   private:
     
@@ -442,7 +442,7 @@ protected:
         v8::Persistent<v8::Function> cb, Liveness::Token objAlive,
         Liveness::Token ctxAlive);
 
-    void iStop();
+
     
 };
 

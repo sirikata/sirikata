@@ -340,6 +340,7 @@ v8::Local<v8::Object> EmersonScript::createVisibleWeakPersistent(JSVisibleStruct
 
     v8::Persistent<v8::Object> returnerPers = v8::Persistent<v8::Object>::New(returner);
 
+    //lkjs FIXME: may want to pass a liveness token through.
     returnerPers.MakeWeak(NULL,&JSVisibleStruct::visibleWeakReferenceCleanup);
     return handle_scope.Close(returner);
 }
@@ -678,7 +679,6 @@ void EmersonScript::stop()
 //called from mStrand
 void EmersonScript::iStop()
 {
-    
     EMERSCRIPT_SERIAL_CHECK();
     Liveness::letDie();
     v8::Isolate::Scope iscope(JSObjectScript::mCtx->mIsolate);
@@ -696,7 +696,7 @@ void EmersonScript::iStop()
     for (PresenceMap::const_iterator it = mPresences.begin(); it != mPresences.end(); it++)
         unsubscribePresenceEvents(it->first);
 
-    JSObjectScript::stop();
+    JSObjectScript::iStop();
 
     mParent->removeListener((SessionEventListener*)this);
 

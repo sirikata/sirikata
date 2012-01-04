@@ -702,13 +702,17 @@ void JSContextStruct::finishClear()
     inClear = true;
     JSLOG(insane,"Clearing context.");
 
-
     mInSuspendableLoop = true;
     //when a suspendable gets cleared, it calls deregister_suspendable of
     //JSContextStruct directly.  All deletion is done in that method or when
     //flushing queued methods.
     for (SuspendableIter iter = associatedSuspendables.begin(); iter != associatedSuspendables.end(); ++iter)
-        iter->first->clear();
+    {
+        JSSuspendable* jssusp = iter->first;
+        jssusp->clear();
+//        iter->first->clear();
+    }
+
     mInSuspendableLoop = false;
     flushQueuedSuspendablesToChange();
 
@@ -782,9 +786,10 @@ void JSContextStruct::struct_asyncDeregisterSuspendable (
         if (!suspAlive)
             return;
 
+        std::cout<<"\n\nContext not alive, but suspendable to delete\n\n";
         //context isn't still alive, but the suspendable
         //is. delete it straightaway.
-        delete toDeregister;
+//        delete toDeregister;
     }
 }
 
