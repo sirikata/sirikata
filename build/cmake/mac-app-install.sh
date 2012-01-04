@@ -71,7 +71,7 @@ chmod +x "$liboutdir/$lib"
 
 echo "Installing $appname"
 mkdir -p "$appoutdir/Contents/MacOS"
-ln -fs '../../../lib' "$appoutdir/Contents/lib"
+ln -fs '../../..' "$appoutdir/Contents/lib"
 ln -fs '../../../Frameworks' "$appoutdir/Contents/Frameworks"
 for exe in berkelium libplugin_carbon_interpose.dylib "$binname"; do
     cp "$binoutdir/$exe" "$appoutdir/Contents/MacOS/$exe"
