@@ -64,11 +64,6 @@ for exe in berkelium libplugin_carbon_interpose.dylib "$binname"; do
     chmod +x "$binoutdir/$exe"
 done
 
-echo "Installing shared library $lib ..."
-./bin_replace "$PWD/$lib" '@executable_path/../lib/'"$lib" < "$lib" | \
-    ./bin_replace "$PWD/" 'Berkelium/' > "$liboutdir/$lib"
-chmod +x "$liboutdir/$lib"
-
 echo "Installing $appname"
 mkdir -p "$appoutdir/Contents/MacOS"
 ln -fs '../../..' "$appoutdir/Contents/lib"
