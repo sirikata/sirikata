@@ -100,7 +100,21 @@ DistanceDownloadPlanner::~DistanceDownloadPlanner()
     }
 }
 
-void DistanceDownloadPlanner::addObject(Object* r) {
+void DistanceDownloadPlanner::addObject(Object* r)
+{
+    mScene->renderStrand()->post(
+        std::tr1::bind(&DistanceDownloadPlanner::iAddObject,this,
+            r, livenessToken()));
+}
+
+void DistanceDownloadPlanner::iAddObject(Object* r, Liveness::Token alive)
+{
+    if (!alive)
+    {
+        delete r;
+        return;
+    }
+    
     calculatePriority(r->proxy);
     mObjects[r->name] = r;
     mWaitingObjects[r->name] = r;
@@ -113,7 +127,21 @@ DistanceDownloadPlanner::Object* DistanceDownloadPlanner::findObject(const Strin
     return (it != mObjects.end() ? it->second : NULL);
 }
 
-void DistanceDownloadPlanner::removeObject(const String& name) {
+
+
+void DistanceDownloadPlanner::removeObject(const String& name)
+{
+    mScene->renderStrand()->post(
+        std::tr1::bind(&DistanceDownloadPlanner::iRemoveObject, this,
+            name,livenessToken()));
+}
+
+void DistanceDownloadPlanner::iRemoveObject(
+    const String& name, Liveness::Token alive)
+{
+    if (!alive)
+        return;
+    
     ObjectMap::iterator it = mObjects.find(name);
     if (it != mObjects.end()) {
         Object* r = it->second;
@@ -141,7 +169,20 @@ void DistanceDownloadPlanner::addNewObject(ProxyObjectPtr p, Entity *mesh) {
     addObject(new Object(mesh, p->mesh(), p));
 }
 
-void DistanceDownloadPlanner::updateObject(ProxyObjectPtr p) {
+
+void DistanceDownloadPlanner::updateObject(ProxyObjectPtr p)
+{
+    mScene->renderStrand()->post(
+        std::tr1::bind(&DistanceDownloadPlanner::iUpdateObject,this,
+            p,livenessToken()));
+}
+
+void DistanceDownloadPlanner::iUpdateObject(
+    ProxyObjectPtr p, Liveness::Token alive)
+{
+    if (!alive)
+        return;
+    
     Object* r = findObject(p->getObjectReference().toString());
     URI last_file = r->file;
     URI new_file = p->mesh();

@@ -116,6 +116,7 @@ void ProxyEntity::updateLocation(ProxyObjectPtr proxy, const TimedMotionVector3f
     checkDynamic();
 }
 
+
 void ProxyEntity::validated(ProxyObjectPtr ptr) {
     assert(ptr == mProxy);
 
@@ -185,6 +186,7 @@ void ProxyEntity::onSetMesh (ProxyObjectPtr proxy, Transfer::URI const& meshFile
     assert(proxy == mProxy);
     getScene()->downloadPlanner()->updateObject(proxy);
 }
+
 
 void ProxyEntity::onSetScale (ProxyObjectPtr proxy, float32 scale,const SpaceObjectReference& sporef )
 {

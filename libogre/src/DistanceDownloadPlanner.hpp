@@ -65,6 +65,9 @@ public:
 protected:
     struct Object;
 
+    void iUpdateObject(ProxyObjectPtr p,Liveness::Token lt);
+    void iRemoveObject(const String& name, Liveness::Token alive);
+    void iAddObject(Object* r, Liveness::Token alive);
     void addObject(Object* r);
     Object* findObject(const String& sporef);
     void removeObject(const String& sporef);
