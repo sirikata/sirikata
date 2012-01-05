@@ -8,6 +8,11 @@ release:
 	cmake . -DCMAKE_BUILD_TYPE=Release && \
 	$(MAKE) $(*)
 
+debian-release:
+	cd build/cmake && \
+	cmake . -DCMAKE_INSTALL_PREFIX:PATH=/usr -DCMAKE_BUILD_TYPE=Release && \
+	$(MAKE) $(*)
+
 debug:
 	cd build/cmake && \
 	cmake . -DCMAKE_BUILD_TYPE=Debug && \
@@ -23,6 +28,10 @@ tests:
 	cd build/cmake && \
 	cmake . && \
 	$(MAKE) tests $(*)
+
+install:
+	cd build/cmake && \
+	$(MAKE) install $(*)
 
 clean:
 	cd build/cmake && \

@@ -25,7 +25,10 @@ build:
 	dh $@ 
 
 override_dh_auto_build:
-	(cd build/cmake; cmake . -DCMAKE_BUILD_TYPE=Release) && make
+	make debian-release
 
 override_dh_auto_test:
 	echo "Skipping tests (requires network)."
+
+override_dh_shlibdeps:
+	LD_LIBRARY_PATH=$(LD_LIBRARY_PATH):/usr/lib/sirikata dh_shlibdeps
