@@ -124,17 +124,26 @@ bool DynamicLibrary::load() {
         return false;
 
 #if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS
+    // Paths + resulting errors, in case we need to report them
+    std::vector<String> dlopen_paths;
+    std::vector<DWORD> dlopen_errors;
+
+    dlopen_paths.push_back(mPath.c_str());
     mHandle = LoadLibrary(mPath.c_str());
     if (mHandle == NULL) {
+        dlopen_errors.push_back(GetLastError());
         // Try any registered search paths
         for(uint32 i = 0; mHandle == NULL && i < DL_search_paths.size(); i++) {
             std::string str =(boost::filesystem::path(DL_search_paths[i]) / mPath).string();
+            dlopen_paths.push_back(str);
             mHandle = LoadLibrary(str.c_str());
+            if (mHandle == NULL) dlopen_errors.push_back(GetLastError());
         }
     }
     if (mHandle == NULL) {
-        DWORD errnum = GetLastError();
-        SILOG(plugin,error,"Failed to open library "<<mPath<<": "<<errnum);
+        SILOG(plugin,warning,"Failed to open library " << mPath << ": ");
+        for(uint32 i = 0; i < dlopen_paths.size(); i++)
+            SILOG(plugin,warning," Tried to load " << dlopen_paths[i] << ": " << dlopen_errors[i]);
     }
 #elif SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_MAC || SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_LINUX
 
@@ -147,20 +156,29 @@ bool DynamicLibrary::load() {
 #define SIRIKATA_DLOPEN_FLAGS (RTLD_LAZY | RTLD_GLOBAL)
 #endif
 
+    // Paths + resulting errors, in case we need to report them
+    std::vector<String> dlopen_paths;
+    std::vector<String> dlopen_errors;
+
+    dlopen_paths.push_back(mPath.c_str());
     mHandle = dlopen(mPath.c_str(), SIRIKATA_DLOPEN_FLAGS);
     if (mHandle == NULL) {
+        dlopen_errors.push_back(String(dlerror()));
         // Try any registered search paths
         for(uint32 i = 0; mHandle == NULL && i < DL_search_paths.size(); i++) {
             std::string str = (boost::filesystem::path(DL_search_paths[i]) / mPath).string();
+            dlopen_paths.push_back(str);
             mHandle = dlopen(
                 str.c_str(),
                 SIRIKATA_DLOPEN_FLAGS
             );
+            if (mHandle == NULL) dlopen_errors.push_back(String(dlerror()));
         }
     }
     if (mHandle == NULL) {
-        const char *errorstr = dlerror();
-        SILOG(plugin,error,"Failed to open library "<<mPath<<": "<<errorstr);
+        SILOG(plugin,warning,"Failed to open library " << mPath << ": ");
+        for(uint32 i = 0; i < dlopen_paths.size(); i++)
+            SILOG(plugin,warning," Tried to load " << dlopen_paths[i] << ": " << dlopen_errors[i]);
     }
 #endif
 
