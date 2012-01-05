@@ -174,19 +174,23 @@ void AggregateManager::aggregateObserved(const UUID& objid, uint32 nobservers) {
 
 
 void AggregateManager::generateAggregateMesh(const UUID& uuid, const Duration& delayFor) {
-  if (mModelsSystem == NULL) return;
-
-  if (mDirtyAggregateObjects.find(uuid) != mDirtyAggregateObjects.end()) return;
-
   boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
   if (mAggregateObjects.find(uuid) == mAggregateObjects.end()) return;
   std::tr1::shared_ptr<AggregateObject> aggObject = mAggregateObjects[uuid];
   lock.unlock();
+  generateAggregateMesh(uuid, aggObject, delayFor);
+}
+
+void AggregateManager::generateAggregateMesh(const UUID& uuid, AggregateObjectPtr aggObject, const Duration& delayFor) {
+  if (mModelsSystem == NULL) return;
+  if (mDirtyAggregateObjects.find(uuid) != mDirtyAggregateObjects.end()) return;
+
   aggObject->mLastGenerateTime = Timer::now();
 
   AGG_LOG(detailed,"Setting up aggregate " << uuid << " to generate aggregate mesh with " << aggObject->mChildren.size() << " in " << delayFor);
   mAggregationStrand->post( delayFor, std::tr1::bind(&AggregateManager::generateAggregateMeshAsyncIgnoreErrors, this, uuid, aggObject->mLastGenerateTime, true)  );
 }
+
 void AggregateManager::generateAggregateMeshAsyncIgnoreErrors(const UUID uuid, Time postTime, bool generateSiblings) {
 	bool retval=generateAggregateMeshAsync(uuid, postTime, generateSiblings);
 	if (!retval) {
@@ -221,14 +225,14 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
     UUID child_uuid = children[i];
 
     if (!mLoc->contains(child_uuid)) {
-      generateAggregateMesh(uuid, Duration::milliseconds(10.0f));
+        generateAggregateMesh(uuid, aggObject, Duration::milliseconds(10.0f));
 
       return false;
     }
   }
 
   if (!mLoc->contains(uuid)) {
-    generateAggregateMesh(uuid, Duration::milliseconds(10.0f));
+      generateAggregateMesh(uuid, aggObject, Duration::milliseconds(10.0f));
 
     return false;
   }
@@ -307,7 +311,7 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
         }
       }
       else {
-        generateAggregateMesh(uuid, Duration::milliseconds(100.0f));
+          generateAggregateMesh(uuid, aggObject, Duration::milliseconds(100.0f));
         return false;
       }
     }

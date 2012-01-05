@@ -94,6 +94,7 @@ private:
     double mDistance;  //MINIMUM distance at which this object could be part of a cut
 
   } AggregateObject;
+  typedef std::tr1::shared_ptr<AggregateObject> AggregateObjectPtr;
 
   void getLeaves(const std::vector<UUID>& mIndividualObjects);
 
@@ -137,7 +138,11 @@ public:
 
   void aggregateObserved(const UUID& objid, uint32 nobservers);
 
+  // This version requires locking to get at the AggregateObjectPtr
+  // for the object. This isn't safe if you already hold that lock.
   void generateAggregateMesh(const UUID& uuid, const Duration& delayFor = Duration::milliseconds(1.0f) );
+  // This version doesn't require a lock.
+  void generateAggregateMesh(const UUID& uuid, AggregateObjectPtr aggObject, const Duration& delayFor = Duration::milliseconds(1.0f) );
 
   void metadataFinished(Time t, const UUID uuid, const UUID child_uuid, std::string meshName,
                         std::tr1::shared_ptr<Transfer::MetadataRequest> request,
