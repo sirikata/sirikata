@@ -203,6 +203,7 @@ void EmersonScript::iNotifyProximateGone(
     ProxyObjectPtr proximateObject, const SpaceObjectReference& querier,
     Liveness::Token alive)
 {
+    if (!alive) return;
     Liveness::Lock locked(alive);
     if (!locked) return;
 
@@ -284,6 +285,7 @@ void EmersonScript::iInvokeInvokable(
     std::vector<boost::any>& params,v8::Persistent<v8::Function> function_,
     Liveness::Token alive)
 {
+    if (!alive) return;
     Liveness::Lock locked(alive);
     if (!locked) return;
 
@@ -386,6 +388,7 @@ void  EmersonScript::iNotifyProximate(
     ProxyObjectPtr proximateObject, const SpaceObjectReference& querier,
     Liveness::Token alive)
 {
+    if (!alive) return;
     Liveness::Lock locked(alive);
     if (!locked) return;
 
@@ -461,9 +464,23 @@ void EmersonScript::killScript()
         //storage.
         setRestoreScript(mContext,"",emptyCB);
     }
-    stop();
+    iStop(false);
+    JSObjectScript::mCtx->objStrand->post(
+        std::tr1::bind(&EmersonScript::postDestroy,this,
+            livenessToken()));
+//    mParent->destroy();
+}
+
+
+void EmersonScript::postDestroy(Liveness::Token alive)
+{
+    //lkjs; FIXME: I feel as though this should be a lock, but then interferes
+    //with letDie call in destructors.
+    if (!alive)
+        return;
     mParent->destroy();
 }
+
 
 void EmersonScript::postCallbackChecks() 
 {
@@ -491,6 +508,7 @@ void EmersonScript::iOnConnected(SessionEventProviderPtr from,
     const SpaceObjectReference& name, HostedObject::PresenceToken token,
     bool duringInit,Liveness::Token alive)
 {
+    if (!alive) return;
     Liveness::Lock locked(alive);
     if (!locked) return;
 
@@ -596,6 +614,7 @@ void EmersonScript::iOnDisconnected(
     SessionEventProviderPtr from, const SpaceObjectReference& name,
     Liveness::Token alive)
 {
+    if (!alive) return;
     Liveness::Lock locked(alive);
     if (!locked) return;
     
@@ -662,6 +681,8 @@ void EmersonScript::eCreateEntityFinish(ObjectHost* oh,EntityCreateInfo& eci)
 
 EmersonScript::~EmersonScript()
 {
+    if (Liveness::livenessAlive())
+        Liveness::letDie();
 }
 
 //called from main strand
@@ -673,14 +694,18 @@ void EmersonScript::start() {
 void EmersonScript::stop()
 {
     JSObjectScript::mCtx->stop();
-    JSObjectScript::mCtx->objStrand->post(std::tr1::bind(&EmersonScript::iStop,this));
+    JSObjectScript::mCtx->objStrand->post(
+        std::tr1::bind(&EmersonScript::iStop,this,true));
 }
 
 //called from mStrand
-void EmersonScript::iStop()
+void EmersonScript::iStop(bool letDie)
 {
     EMERSCRIPT_SERIAL_CHECK();
-    Liveness::letDie();
+    if (letDie)
+        Liveness::letDie();
+        
+    JSObjectScript::mCtx->stop();
     v8::Isolate::Scope iscope(JSObjectScript::mCtx->mIsolate);
 
     // Clean up ProxyCreationListeners. We subscribe for each presence in
@@ -696,7 +721,7 @@ void EmersonScript::iStop()
     for (PresenceMap::const_iterator it = mPresences.begin(); it != mPresences.end(); it++)
         unsubscribePresenceEvents(it->first);
 
-    JSObjectScript::iStop();
+    JSObjectScript::iStop(letDie);
 
     mParent->removeListener((SessionEventListener*)this);
 
@@ -814,6 +839,7 @@ void EmersonScript::invokeCallbackInContext(
     Liveness::Token alive, v8::Persistent<v8::Function> cb, JSContextStruct* jscontext)
 {
     EMERSCRIPT_SERIAL_CHECK();
+    if (!alive) return;
     Liveness::Lock locked(alive);
     if (!locked) return;
 
@@ -909,6 +935,7 @@ void EmersonScript::iHandleScriptCommRead(
     const SpaceObjectReference& src, const SpaceObjectReference& dst,
     const String& payload, Liveness::Token alive)
 {
+    if (!alive) return;
     Liveness::Lock locked(alive);
     if (!locked) return;
 
@@ -1057,6 +1084,7 @@ void EmersonScript::iHandleScriptCommUnreliable(
     const ODP::Endpoint& src, const ODP::Endpoint& dst,
     MemoryReference payload,Liveness::Token alive)
 {
+    if (!alive) return;
     Liveness::Lock locked(alive);
     if (!locked) return;
 
@@ -1092,6 +1120,7 @@ void EmersonScript::processSandboxMessage(
     const String& msgToSend, uint32 senderID, uint32 receiverID,
     Liveness::Token alive)
 {
+    if (!alive) return;
     Liveness::Lock locked(alive);
     if (!locked) return;
     
@@ -1344,6 +1373,7 @@ void EmersonScript::mainStrandCompletePresConnect(
     PresStructRestoreParams psrp,HostedObject::PresenceToken presToke,
     Liveness::Token alive)
 {
+    if (!alive) return;
     Liveness::Lock locked(alive);
     if (!locked) return;
 
@@ -1389,6 +1419,7 @@ void EmersonScript::setOrientationVelFunction(const SpaceObjectReference sporef,
 void EmersonScript::eSetOrientationVelFunction(
     const SpaceObjectReference sporef,const Quaternion& quat,Liveness::Token alive)
 {
+    if (!alive) return;
     Liveness::Lock locked(alive);
     if (!locked) return;
 
@@ -1410,6 +1441,7 @@ void EmersonScript::eSetPositionFunction(
     const SpaceObjectReference sporef, const Vector3f& posVec,
     Liveness::Token alive)
 {
+    if (!alive) return;
     Liveness::Lock locked(alive);
     if (!locked) return;
 
@@ -1435,6 +1467,7 @@ void EmersonScript::eSetVelocityFunction(
     const SpaceObjectReference sporef, const Vector3f& velVec,
     Liveness::Token alive)
 {
+    if (!alive) return;
     Liveness::Lock locked(alive);
     if (!locked) return;
 
@@ -1461,6 +1494,7 @@ void EmersonScript::eSetOrientationFunction(
     const SpaceObjectReference sporef, const Quaternion& quat,
     Liveness::Token alive)
 {
+    if (!alive) return;
     Liveness::Lock locked(alive);
     if (!locked) return;
 
@@ -1486,6 +1520,7 @@ void EmersonScript::setVisualScaleFunction(
 void EmersonScript::eSetVisualScaleFunction(
     const SpaceObjectReference sporef, float newscale,Liveness::Token alive)
 {
+    if (!alive) return;
     Liveness::Lock locked(alive);
     if (!locked) return;
 
@@ -1514,6 +1549,7 @@ void  EmersonScript::eSetVisualFunction(
     const SpaceObjectReference sporef, const std::string& newMeshString,
     Liveness::Token alive)
 {
+    if (!alive) return;
     Liveness::Lock locked(alive);
     if (!locked) return;
 
@@ -1549,6 +1585,7 @@ void EmersonScript::eSetPhysicsFunction(
     const SpaceObjectReference sporef, const String& newPhyString,
     Liveness::Token alive)
 {
+    if (!alive) return;
     Liveness::Lock locked(alive);
     if (!locked) return;
 
@@ -1574,6 +1611,7 @@ void EmersonScript::eSetQueryFunction(
     const SpaceObjectReference sporef, const SolidAngle& sa,
     const uint32 max_count,Liveness::Token alive)
 {
+    if (!alive) return;
     Liveness::Lock locked(alive);
     if (!locked) return;
 

@@ -410,6 +410,7 @@ void WebView::forwardBrowserNavigatedCallback(Liveness::Token alive, const Strin
     // liveness since the child may outlive the parent (although it
     // shouldn't, or you're probably going to have orphan WebViews
     // that will never get closed.
+    if (!alive) return;
     Liveness::Lock locked(alive);
     if (!locked)
         return;
@@ -1293,6 +1294,7 @@ void WebView::onUnresponsive(Berkelium::Window*) {
 }
 
 void WebView::handleUnresponsiveTimeout(Liveness::Token alive) {
+    if (!alive) return;
     Liveness::Lock locked(alive);
     if (!locked)
         return;

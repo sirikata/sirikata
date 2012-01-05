@@ -359,7 +359,7 @@ protected:
      */
     bool stopCalled;
 
-    void iStop();
+    void iStop(bool letDie);
 
   private:
     

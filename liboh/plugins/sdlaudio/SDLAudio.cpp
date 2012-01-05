@@ -57,6 +57,7 @@ void AudioSimulation::start()
 
 void AudioSimulation::iStart(Liveness::Token lt)
 {
+    if (!lt) return;
     Liveness::Lock locked(lt);
     if (!locked)
     {
@@ -107,6 +108,7 @@ void AudioSimulation::stop()
 
 void AudioSimulation::iStop(Liveness::Token lt)
 {
+    if (!lt) return;
     Liveness::Lock locked(lt);
     if (!locked)
     {
@@ -291,6 +293,7 @@ void AudioSimulation::iHandleFinishedDownload(
     Liveness::Token lt,Transfer::ChunkRequestPtr request,
     Transfer::DenseDataPtr response)
 {
+    if (!lt) return;
     Liveness::Lock locked(lt);
     if (!locked)
     {

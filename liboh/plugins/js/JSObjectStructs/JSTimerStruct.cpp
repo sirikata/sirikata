@@ -76,23 +76,17 @@ void JSTimerStruct::timerWeakReferenceCleanup(
 {
     JSTimerLivenessHolder* jstlh = (JSTimerLivenessHolder*) otherArg;
 
-    //lkjs: FIXME: This really should be a locked call, but doing that keeps
-    //throwing:
-    //    terminate called after throwing an instance of 'boost::bad_weak_ptr'
-    //what(): boost::bad_weak_ptr
-    //Aborted
-    
-    // Liveness::Lock locked(jstlh->lt);
-    // delete jstlh;
-    // if (!locked)
-    //     return;
 
     if (!jstlh->lt)
     {
         delete jstlh;
         return;
     }
+    Liveness::Lock locked(jstlh->lt);
     delete jstlh;
+    if (!locked)
+        return;
+
     
     if (!containsTimer->IsObject())
     {
@@ -269,6 +263,7 @@ v8::Handle<v8::Value> JSTimerStruct::struct_getAllData()
 
 void JSTimerStruct::evaluateCallback(Liveness::Token isAlive) 
 {
+    if (!isAlive) return;
     Liveness::Lock locked(isAlive);
     if (!locked) return;
     

@@ -306,6 +306,8 @@ public:
     virtual void postCallbackChecks();
 private:
 
+    void postDestroy(Liveness::Token alive);
+    
     // Helper for disconnections
     void unsubscribePresenceEvents(const SpaceObjectReference& name);
     // Helper for *clearing* presences (not disconnections). When the presence
@@ -414,7 +416,12 @@ private:
         SessionEventProviderPtr from, const SpaceObjectReference& name,
         Liveness::Token alive);
     void eCreateEntityFinish(ObjectHost* oh,EntityCreateInfo& eci);
-    void iStop();
+
+    //When we initiate stop of object from killEntity, we do not actually
+    //want to call letDie in iStop.  This is because we've already locked
+    //liveness of Script.  If letDie is false, then, we don't call letDie until
+    //we get to destructor.
+    void iStop(bool letDie);
 
     void iHandleScriptCommRead(
         const SpaceObjectReference& src, const SpaceObjectReference& dst,

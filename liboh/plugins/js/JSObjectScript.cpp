@@ -299,15 +299,18 @@ void JSObjectScript::start() {
 void JSObjectScript::stop()
 {
     mCtx->objStrand->post(
-        std::tr1::bind(&JSObjectScript::iStop,this));
+        std::tr1::bind(&JSObjectScript::iStop,this,true));
 }
 
-void JSObjectScript::iStop()
+void JSObjectScript::iStop(bool letDie)
 {
     // If we're really a subclass, i.e. an EmersonScript, we'll have already
     // called letDie().
-    if (Liveness::livenessAlive())
-        Liveness::letDie();
+    if (letDie)
+    {
+        if (Liveness::livenessAlive())
+            Liveness::letDie();
+    }
     
     v8::Isolate::Scope iscope(mCtx->mIsolate);
 
@@ -373,9 +376,11 @@ void JSObjectScript::eStorageBeginTransaction(
     JSContextStruct* jscont,Liveness::Token objAlive,
     Liveness::Token ctxAlive)
 {
+    if (!objAlive) return;
     Liveness::Lock locked(objAlive);
     if (!locked) return;
 
+    if (!ctxAlive) return;
     Liveness::Lock lockedCtx(ctxAlive);
     if (!lockedCtx) return;
     
@@ -402,9 +407,11 @@ void JSObjectScript::eStorageCommit(
     JSContextStruct* jscont, v8::Persistent<v8::Function> cb,
     Liveness::Token objAlive,Liveness::Token ctxAlive)
 {
+    if (! objAlive) return;
     Liveness::Lock locked(objAlive);
     if (!locked) return;
 
+    if (! ctxAlive) return;
     Liveness::Lock lockedCtx(ctxAlive);
     if (!lockedCtx) return;
     
@@ -433,9 +440,11 @@ void JSObjectScript::storageCommitCallback(
     bool success, OH::Storage::ReadSet* rs,Liveness::Token objAlive,
     Liveness::Token ctxAlive) 
 {
+    if (!objAlive) return;
     Liveness::Lock locked(objAlive);
     if (!locked) return;
 
+    if (!ctxAlive) return;
     Liveness::Lock lockedCtx(ctxAlive);
     if (!lockedCtx) return;
     
@@ -455,9 +464,11 @@ void JSObjectScript::iStorageCommitCallback(
     bool success, OH::Storage::ReadSet* rs,Liveness::Token objAlive,
     Liveness::Token ctxAlive)
 {
+    if (!objAlive) return;
     Liveness::Lock locked(objAlive);
     if (!locked) return;
 
+    if (!ctxAlive) return;
     Liveness::Lock lockedCtx(ctxAlive);
     if (!lockedCtx) return;
     
@@ -503,9 +514,11 @@ void JSObjectScript::storageCountCallback(
     bool success, int32 count,Liveness::Token objAlive,
     Liveness::Token ctxAlive)
 {
+    if (!objAlive) return;
     Liveness::Lock locked(objAlive);
     if (!locked) return;
 
+    if (!ctxAlive) return;
     Liveness::Lock lockedCtx(ctxAlive);
     if (!lockedCtx) return;
 
@@ -527,9 +540,11 @@ void JSObjectScript::iStorageCountCallback(
     bool success, int32 count,Liveness::Token objAlive,
     Liveness::Token ctxAlive)
 {
+    if (!objAlive) return;
     Liveness::Lock locked(objAlive);
     if (!locked) return;
 
+    if (!ctxAlive) return;
     Liveness::Lock lockedCtx(ctxAlive);
     if (!lockedCtx) return;
         
@@ -581,9 +596,11 @@ void JSObjectScript::eStorageErase(
     const OH::Storage::Key& key, v8::Persistent<v8::Function> cb,
     JSContextStruct* jscont,Liveness::Token objAlive,Liveness::Token ctxAlive)
 {
+    if (!objAlive) return;
     Liveness::Lock locked(objAlive);
     if (!locked) return;
 
+    if (!ctxAlive) return;
     Liveness::Lock lockedCtx(ctxAlive);
     if (!lockedCtx) return;    
     
@@ -620,9 +637,11 @@ void JSObjectScript::eStorageWrite(
     v8::Persistent<v8::Function> cb, JSContextStruct* jscont,
     Liveness::Token objAlive,Liveness::Token ctxAlive)
 {
+    if (!objAlive) return;
     Liveness::Lock locked(objAlive);
     if (!locked) return;
 
+    if (!ctxAlive) return;
     Liveness::Lock lockedCtx(ctxAlive);
     if (!lockedCtx) return;
     
@@ -661,9 +680,11 @@ void JSObjectScript::eStorageRead(
     const OH::Storage::Key& key, v8::Persistent<v8::Function> cb,
     JSContextStruct* jscont,Liveness::Token objAlive,Liveness::Token ctxAlive)
 {
+    if (!objAlive) return;
     Liveness::Lock locked(objAlive);
     if (!locked) return;
-    
+
+    if (!ctxAlive) return;
     Liveness::Lock lockedCtx(ctxAlive);
     if (!lockedCtx) return;
 
@@ -700,9 +721,11 @@ void JSObjectScript::eStorageRangeRead(
     v8::Persistent<v8::Function> cb, JSContextStruct* jscont,
     Liveness::Token objAlive,Liveness::Token ctxAlive)
 {
+    if (!objAlive) return;
     Liveness::Lock locked(objAlive);
     if (!locked) return;
 
+    if (!ctxAlive) return;
     Liveness::Lock lockedCtx(ctxAlive);
     if (!lockedCtx) return;
 
@@ -740,9 +763,11 @@ void JSObjectScript::eStorageRangeErase(
     v8::Persistent<v8::Function> cb, JSContextStruct* jscont,
     Liveness::Token objAlive,Liveness::Token ctxAlive)
 {
+    if (!objAlive) return;
     Liveness::Lock locked(objAlive);
     if (!locked) return;
-    
+
+    if (!ctxAlive) return;
     Liveness::Lock lockedCtx(ctxAlive);
     if (!lockedCtx) return;
 
@@ -780,9 +805,11 @@ void JSObjectScript::eStorageCount(
     v8::Persistent<v8::Function> cb, JSContextStruct* jscont,
     Liveness::Token objAlive,Liveness::Token ctxAlive)
 {
+    if (!objAlive) return;
     Liveness::Lock locked(objAlive);
     if (!locked) return;
 
+    if (!ctxAlive) return;
     Liveness::Lock lockedCtx(ctxAlive);
     if (!lockedCtx) return;
     
@@ -801,9 +828,11 @@ void JSObjectScript::setRestoreScriptCallback(
     JSContextStruct* jscont, v8::Persistent<v8::Function> cb, bool success,
     Liveness::Token objAlive,Liveness::Token ctxAlive)
 {
+    if (!objAlive) return;
     Liveness::Lock locked(objAlive);
     if (!locked) return;
 
+    if (!ctxAlive) return;
     Liveness::Lock lockedCtx(ctxAlive);
     if (!lockedCtx) return;
     
@@ -855,9 +884,11 @@ void JSObjectScript::eSetRestoreScript(
     v8::Persistent<v8::Function> cb, Liveness::Token objAlive,
     Liveness::Token ctxAlive)
 {
+    if (!objAlive) return;
     Liveness::Lock locked(objAlive);
     if (!locked) return;
 
+    if (!ctxAlive) return;
     Liveness::Lock lockedCtx(ctxAlive);
     if (!lockedCtx) return;
     
@@ -972,6 +1003,8 @@ bool JSObjectScript::isRootContext(JSContextStruct* jscont)
 
 JSObjectScript::~JSObjectScript()
 {
+    if (Liveness::livenessAlive())
+        Liveness::letDie();
     delete mCtx;
 }
 

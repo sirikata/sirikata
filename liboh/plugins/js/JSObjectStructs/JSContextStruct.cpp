@@ -765,14 +765,10 @@ void JSContextStruct::struct_asyncDeregisterSuspendable (
     JSSuspendable* toDeregister,Liveness::Token contAlive,
     Liveness::Token suspAlive)
 {
-    Liveness::Lock lockedCont(contAlive);
-    if (!lockedCont)
+
+    if (!contAlive)
     {
         //the context is not still alive.  
-        
-        //lkjs;
-        //FIXME: These seem as though they really should be
-        //a locked condition
         if (!suspAlive)
             return;
 
@@ -788,6 +784,8 @@ void JSContextStruct::struct_asyncDeregisterSuspendable (
         if (!suspAlive)
             return;
 
+        Liveness::Lock lockedCont(contAlive);
+        Liveness::Lock lockedSusp(suspAlive);
         //context and suspendable are still alive.  go
         //ahead and delete normally.
         struct_deregisterSuspendable(toDeregister);

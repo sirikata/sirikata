@@ -315,6 +315,7 @@ void OgreSystem::onCreateProxy(ProxyObjectPtr p)
 void OgreSystem::iOnCreateProxy(
     Liveness::Token osAlive, ProxyObjectPtr p, bool inInit)
 {
+    if (!osAlive) return;
     Liveness::Lock locked(osAlive);
     if (!locked) 
     {
@@ -388,6 +389,7 @@ void OgreSystem::iOnDestroyProxy(
     // We don't clean anything up here since the entity could be
     // masking an addition/removal. Instead, we just wait and let the
     // ProxyEntity tell us when it's destroyed.
+    if (!osAlive) return;
     Liveness::Lock locked(osAlive);
     if (!locked) 
     {
@@ -636,6 +638,7 @@ void OgreSystem::iOnDisconnected(
     Liveness::Token osAlive,const Network::Address& addr,
     bool requested, const String& reason)
 {
+    if (!osAlive) return;
     Liveness::Lock locked(osAlive);
     if (!locked) 
     {
@@ -674,6 +677,7 @@ void OgreSystem::iOnDisconnected(
     Liveness::Token osAlive, SessionEventProviderPtr from,
     const SpaceObjectReference& name)
 {
+    if (!osAlive) return;
     Liveness::Lock locked(osAlive);
     if (!locked) 
     {
