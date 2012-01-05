@@ -546,7 +546,9 @@ FIND_PACKAGE(Bullet)
 
 
 IF(NOT SQLite3_ROOT)
-  SET(SQLite3_ROOT ${PLATFORM_LIBS}/installed-sqlite)
+  IF(EXISTS ${PLATFORM_LIBS}/installed-sqlite)
+     SET(SQLite3_ROOT ${PLATFORM_LIBS}/installed-sqlite)
+  ENDIF()
 ENDIF()
 IF(NOT SQLite3_FOUND)
   FIND_PACKAGE(SQLite3)
