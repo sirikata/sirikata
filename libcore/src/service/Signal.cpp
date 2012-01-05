@@ -35,10 +35,10 @@
 
 #include <sirikata/core/util/Platform.hpp>
 
-#if SIRIKATA_PLATFORM == PLATFORM_LINUX
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_LINUX
 #include <signal.h>
 #else
-#if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS
 #include <signal.h>
 #endif
 // Currently we don't handle signals on other platforms.
@@ -52,7 +52,7 @@ typedef std::map<HandlerID, Handler> SignalHandlerMap;
 SignalHandlerMap sSignalHandlers;
 int32 sNextHandlerID = 0;
 
-//#if SIRIKATA_PLATFORM == PLATFORM_LINUX
+//#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_LINUX
 void handle_signal(int signum) {
     // Reregister
     signal(signum, handle_signal);
@@ -84,7 +84,7 @@ HandlerID registerHandler(Handler handler) {
     HandlerID id = sNextHandlerID++;
     sSignalHandlers[id] = handler;
 
-//#if SIRIKATA_PLATFORM == PLATFORM_LINUX
+//#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_LINUX
     if (was_empty) {
         signal(SIGINT, handle_signal);
 #ifndef _WIN32
@@ -104,7 +104,7 @@ HandlerID registerHandler(Handler handler) {
 void unregisterHandler(HandlerID& handler) {
     sSignalHandlers.erase(handler);
 
-#if SIRIKATA_PLATFORM == PLATFORM_LINUX
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_LINUX
     if (sSignalHandlers.empty()) {
         signal(SIGINT, SIG_DFL);
         signal(SIGHUP, SIG_DFL);

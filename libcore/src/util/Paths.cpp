@@ -6,17 +6,17 @@
 #include <sirikata/core/util/Paths.hpp>
 #include <boost/filesystem.hpp>
 
-#if SIRIKATA_PLATFORM == PLATFORM_MAC
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_MAC
 #include <mach-o/dyld.h>
 #endif
 
-#if SIRIKATA_PLATFORM == PLATFORM_MAC || SIRIKATA_PLATFORM == PLATFORM_LINUX
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_MAC || SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_LINUX
 #include <unistd.h>
 #include <sys/types.h>
 #include <pwd.h>
 #endif
 
-#if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS
 #include <shlobj.h>
 #endif
 
@@ -56,7 +56,7 @@ String Get(Key key) {
 
       case FILE_EXE:
           {
-#if SIRIKATA_PLATFORM == PLATFORM_MAC
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_MAC
               // Executable path can have relative references ("..") depending on
               // how the app was launched.
               uint32_t executable_length = 0;
@@ -68,7 +68,7 @@ String Get(Key key) {
               if ((rv != 0) || (executable_path.empty()))
                   return "";
               return executable_path;
-#elif SIRIKATA_PLATFORM == PLATFORM_LINUX
+#elif SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_LINUX
               // boost::filesystem can't chase symlinks, do it manually
               const char* selfExe = "/proc/self/exe";
 
@@ -80,7 +80,7 @@ String Get(Key key) {
               }
               bin_dir[bin_dir_size] = 0;
               return String(bin_dir, bin_dir_size);
-#elif SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+#elif SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS
               char system_buffer[MAX_PATH];
               system_buffer[0] = 0;
               GetModuleFileName(NULL, system_buffer, MAX_PATH);
@@ -102,10 +102,10 @@ String Get(Key key) {
 
       case DIR_EXE_BUNDLE:
           {
-#if SIRIKATA_PLATFORM == PLATFORM_WINDOWS || SIRIKATA_PLATFORM == PLATFORM_LINUX
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS || SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_LINUX
               // Windows and Linux don't have bundles
               return Get(DIR_EXE);
-#elif SIRIKATA_PLATFORM == PLATFORM_MAC
+#elif SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_MAC
               // On mac we need to detect that we're in a .app. We assume this
               // only applies if the binaries are in the standard location,
               // i.e. foo.app/Contents/MacOS/bar_binary
@@ -132,14 +132,14 @@ String Get(Key key) {
 
       case DIR_CURRENT:
           {
-#if SIRIKATA_PLATFORM == PLATFORM_MAC || SIRIKATA_PLATFORM == PLATFORM_LINUX
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_MAC || SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_LINUX
               char system_buffer[MAX_PATH] = "";
               if (!getcwd(system_buffer, sizeof(system_buffer))) {
                   return "";
               }
 
               return String(system_buffer);
-#elif SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+#elif SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS
               char system_buffer[MAX_PATH];
               system_buffer[0] = 0;
               DWORD len = ::GetCurrentDirectory(MAX_PATH, system_buffer);
@@ -154,7 +154,7 @@ String Get(Key key) {
 
       case DIR_USER:
           {
-#if SIRIKATA_PLATFORM == PLATFORM_LINUX || SIRIKATA_PLATFORM == PLATFORM_MAC
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_LINUX || SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_MAC
               uid_t uid = getuid();
               passwd* pw = getpwuid(uid);
               if (pw != NULL && pw->pw_dir != NULL) {
@@ -162,7 +162,7 @@ String Get(Key key) {
                   if (boost::filesystem::exists(homedir) && boost::filesystem::is_directory(homedir))
                       return homedir.string();
               }
-#elif SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+#elif SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS
               char system_buffer[MAX_PATH];
               system_buffer[0] = 0;
               if (FAILED(SHGetFolderPath(NULL, CSIDL_LOCAL_APPDATA, NULL, 0, system_buffer)))
@@ -200,7 +200,7 @@ String Get(Key key) {
 
       case DIR_TEMP:
           {
-#if SIRIKATA_PLATFORM == PLATFORM_LINUX || SIRIKATA_PLATFORM == PLATFORM_MAC
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_LINUX || SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_MAC
               // On Mac and Linux we try to work under tmp using our own directory
               boost::filesystem::path tmp_path("/tmp");
               if (boost::filesystem::exists(tmp_path) && boost::filesystem::is_directory(tmp_path)) {
@@ -211,7 +211,7 @@ String Get(Key key) {
                   if (boost::filesystem::exists(tmp_path) && boost::filesystem::is_directory(tmp_path))
                       return tmp_path.string();
               }
-#elif SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+#elif SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS
               // Windows doesn't seem to suggest a good location for this, so we
               // put it under the app data directory in its own temp directory
               boost::filesystem::path sirikata_temp_dir =
@@ -229,7 +229,7 @@ String Get(Key key) {
 
       case DIR_SYSTEM_CONFIG:
           {
-#if SIRIKATA_PLATFORM == PLATFORM_LINUX || SIRIKATA_PLATFORM == PLATFORM_MAC
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_LINUX || SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_MAC
               // This is sirikata specific, so we're looking for more
               // than just /etc.
               if (boost::filesystem::exists("/etc") && boost::filesystem::is_directory("/etc") &&
@@ -293,7 +293,7 @@ String Get(Key key, const String& relative_path, const String& alternate_base) {
     // Otherwise we need to try the alternate base path within the
     // tree.
     {
-#if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS
         // On windows we need to deal with the fact that we have Debug/
         // and RelWithDebInfo/ directories under build/cmake/.
         boost::filesystem::path source_base = exe_dir.parent_path().parent_path().parent_path();
@@ -314,10 +314,10 @@ bool Set(Key key, const String& path) {
 
       case DIR_CURRENT:
           {
-#if SIRIKATA_PLATFORM == PLATFORM_MAC || SIRIKATA_PLATFORM == PLATFORM_LINUX
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_MAC || SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_LINUX
               int ret = chdir(path.c_str());
               return !ret;
-#elif SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+#elif SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS
               BOOL ret = ::SetCurrentDirectory(path.c_str());
               return ret != 0;
 #endif

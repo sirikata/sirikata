@@ -32,7 +32,7 @@
 
 #include <sirikata/core/network/Address4.hpp>
 
-#if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS
 #include <winsock2.h>
 #else
 #include <netdb.h>

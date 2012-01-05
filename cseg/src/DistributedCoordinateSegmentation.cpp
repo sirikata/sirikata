@@ -36,7 +36,7 @@
 
 #include <sirikata/core/network/ServerIDMap.hpp>
 
-#if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS
 #define snprintf _snprintf
 #endif
 
@@ -215,9 +215,9 @@ DistributedCoordinateSegmentation::DistributedCoordinateSegmentation(CSegContext
     startAccepting();
   }
 
-  sidmap->lookupInternal(ctx->id(), 
+  sidmap->lookupInternal(ctx->id(),
                          ctx->mainStrand->wrap(
-                         std::tr1::bind(&DistributedCoordinateSegmentation::handleSelfLookup, this, 
+                         std::tr1::bind(&DistributedCoordinateSegmentation::handleSelfLookup, this,
                                         std::tr1::placeholders::_1)
       ) );
 }
@@ -922,9 +922,9 @@ void DistributedCoordinateSegmentation::generateHierarchicalTrees(SegmentedRegio
 }
 /*
 void DistributedCoordinateSegmentation::asyncGetSocketToCSEGServers(int curIdx, std::vector<ServerID> serverIDList) {
-  mSidMap->lookupInternal(serverIDList[curIdx], 
+  mSidMap->lookupInternal(serverIDList[curIdx],
                           ctx->mainStrand->wrap(
-                            std::tr1::bind(&DistributedCoordinateSegmentation::asyncGetSocketToCSEGServers, this, 
+                            std::tr1::bind(&DistributedCoordinateSegmentation::asyncGetSocketToCSEGServers, this,
                                            curIdx+1, serverIDList, std::tr1::placeholders::_1)
                          ) );
 }
@@ -950,7 +950,7 @@ SocketContainer DistributedCoordinateSegmentation::getSocketToCSEGServer(ServerI
 
   //Get a new socket
   tcp::resolver resolver(mIOService);
-  
+
   Address4 addy = mSidMap->lookupInternal(server_id);
   struct in_addr ip_addr;
   ip_addr.s_addr = addy.ip;

@@ -40,7 +40,7 @@
 
 #include <sirikata/core/transfer/AggregatedTransferPool.hpp>
 
-#if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS
 #define snprintf _snprintf
 #endif
 

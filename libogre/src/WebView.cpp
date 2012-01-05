@@ -1185,7 +1185,7 @@ void WebView::blitScrollImage(
     size_t width = shared_rect.width();
     size_t height = shared_rect.height();
 
-#if SIRIKATA_PLATFORM == PLATFORM_LINUX
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_LINUX
     // For some reason, copying between hardware buffers on Linux doesn't work
     // properly, and its not even card specific (both ATI and NVidia cards have
     // this problem). Instead, we have to copy between GPU and RAM on Linux.

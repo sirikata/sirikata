@@ -8,7 +8,7 @@
 #include <sirikata/core/util/Platform.hpp>
 
 #ifndef SIRIKATA_SCRIPTING_JS_EXPORT
-# if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+# if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS
 #   if defined(STATIC_LINKED)
 #     define SIRIKATA_SCRIPTING_JS_EXPORT
 #   else

@@ -36,10 +36,10 @@
 
 #include <boost/filesystem.hpp>
 
-#if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS
 #  define WIN32_LEAN_AND_MEAN
 #  include <windows.h>
-#elif SIRIKATA_PLATFORM == PLATFORM_MAC || SIRIKATA_PLATFORM == PLATFORM_LINUX
+#elif SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_MAC || SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_LINUX
 #  include <dlfcn.h>
 #endif
 
@@ -49,7 +49,7 @@ static std::vector<String> DL_search_paths;
 
 void DynamicLibrary::Initialize() {
     using namespace boost::filesystem;
-#if SIRIKATA_PLATFORM == PLATFORM_MAC
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_MAC
     // On mac, we might be in a .app, specifically at .app/Contents. To load the
     // libs we need, we add .app/Contents/MacOS to the LD_LIBRARY_PATH
     path to_macos_dir = path(Path::Get(Path::DIR_CURRENT)) / path("MacOS");
@@ -69,7 +69,7 @@ void DynamicLibrary::Initialize() {
 }
 
 void DynamicLibrary::AddLoadPath(const String& path) {
-#if SIRIKATA_PLATFORM == PLATFORM_LINUX
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_LINUX
 #define LD_LIBRARY_PATH_STR "LD_LIBRARY_PATH"
     {
         String oldLdLibraryPath = getenv(LD_LIBRARY_PATH_STR)?getenv(LD_LIBRARY_PATH_STR):"";
@@ -90,9 +90,9 @@ DynamicLibrary::DynamicLibrary(const String& path)
 {
 }
 static bool unloadLibrary(DL_HANDLE lib) {
-#if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS
     bool success = !FreeLibrary(lib);
-#elif SIRIKATA_PLATFORM == PLATFORM_MAC || SIRIKATA_PLATFORM == PLATFORM_LINUX
+#elif SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_MAC || SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_LINUX
     bool success = dlclose(lib)==0;
 #endif
     return success;
@@ -123,7 +123,7 @@ bool DynamicLibrary::load() {
     if (!isValidLibraryFilename())
         return false;
 
-#if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS
     mHandle = LoadLibrary(mPath.c_str());
     if (mHandle == NULL) {
         // Try any registered search paths
@@ -136,7 +136,7 @@ bool DynamicLibrary::load() {
         DWORD errnum = GetLastError();
         SILOG(plugin,error,"Failed to open library "<<mPath<<": "<<errnum);
     }
-#elif SIRIKATA_PLATFORM == PLATFORM_MAC || SIRIKATA_PLATFORM == PLATFORM_LINUX
+#elif SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_MAC || SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_LINUX
 
 // Use RTLD_NOW in debug builds to make it more likely to catch missing symbols
 // in simple tests, i.e. just by loading the library, since other tests might
@@ -176,19 +176,19 @@ bool DynamicLibrary::unload() {
 }
 
 void* DynamicLibrary::symbol(const String& name) const {
-#if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS
     return (void*)GetProcAddress(mHandle, name.c_str());
-#elif SIRIKATA_PLATFORM == PLATFORM_MAC || SIRIKATA_PLATFORM == PLATFORM_LINUX
+#elif SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_MAC || SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_LINUX
     return (void*)dlsym(mHandle, name.c_str());
 #endif
 }
 
 String DynamicLibrary::prefix() {
-#if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS
     return "";
-#elif SIRIKATA_PLATFORM == PLATFORM_MAC
+#elif SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_MAC
     return "lib";
-#elif SIRIKATA_PLATFORM == PLATFORM_LINUX
+#elif SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_LINUX
     return "lib";
 #endif
 }
@@ -202,11 +202,11 @@ String DynamicLibrary::postfix() {
 }
 
 String DynamicLibrary::extension() {
-#if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS
     return ".dll";
-#elif SIRIKATA_PLATFORM == PLATFORM_MAC
+#elif SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_MAC
     return ".dylib";
-#elif SIRIKATA_PLATFORM == PLATFORM_LINUX
+#elif SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_LINUX
     return ".so";
 #endif
 }
@@ -216,9 +216,9 @@ String DynamicLibrary::filename(const String& name) {
 }
 
 String DynamicLibrary::filename(const String& path, const String& name) {
-#if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS
     const char file_separator = '\\';
-#elif SIRIKATA_PLATFORM == PLATFORM_MAC || SIRIKATA_PLATFORM == PLATFORM_LINUX
+#elif SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_MAC || SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_LINUX
     const char file_separator = '/';
 #endif
 

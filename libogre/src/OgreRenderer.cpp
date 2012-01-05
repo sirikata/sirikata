@@ -149,7 +149,7 @@ std::string getBerkeliumBinaryDir(const std::vector<String>&searchPoints) {
     // The current two reflect what we'd expect for installed
     // and what's in the source tree.
     path search_paths[] = {
-#if SIRIKATA_PLATFORM == PLATFORM_MAC
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_MAC
         // On mac we must be in a .app/Contents
         // It needs to be there so that running the .app from the Finder works
         // and therefore the resources for berkelium are setup to be found from
@@ -317,7 +317,7 @@ bool OgreRenderer::initialize(const String& options, bool with_berkelium) {
                            ogreSceneManager=new OptionValue("scenemanager","OctreeSceneManager",OptionValueType<String>(),"Which scene manager to use to arrange objects"),
                            mWindowWidth=new OptionValue("windowwidth","1024",OptionValueType<uint32>(),"Window width"),
                            mFullScreen=new OptionValue("fullscreen","false",OptionValueType<bool>(),"Fullscreen"),
-#if SIRIKATA_PLATFORM == PLATFORM_MAC
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_MAC
 #define SIRIKATA_OGRE_DEFAULT_WINDOW_HEIGHT "600"
 #else
 #define SIRIKATA_OGRE_DEFAULT_WINDOW_HEIGHT "768"
@@ -528,7 +528,7 @@ bool ogreLoadPlugin(const String& _filename, const String& root = "") {
     using namespace boost::filesystem;
 
     String filename = _filename;
-#if SIRIKATA_PLATFORM == PLATFORM_MAC
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_MAC
     filename += ".dylib";
 #endif
 

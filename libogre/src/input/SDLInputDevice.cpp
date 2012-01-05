@@ -93,7 +93,7 @@ void SDLMouse::setRelativeMode(bool enabled) {
     int oldmouse = SDL_SelectMouse(mWhich);
     SDL_ShowCursor(enabled? 1 : 0);
     SDL_SetRelativeMouseMode(mWhich, enabled ? SDL_TRUE : SDL_FALSE);
-/*#if SIRIKATA_PLATFORM == PLATFORM_MAC
+/*#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_MAC
     CGAssociateMouseAndMouseCursorPosition(!enabled);
 #endif*/
     SDL_SelectMouse(oldmouse);

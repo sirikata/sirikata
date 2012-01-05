@@ -34,7 +34,7 @@
 #include <iostream>
 #include <iomanip>
 #include <string>
-#if SIRIKATA_PLATFORM != PLATFORM_WINDOWS
+#if SIRIKATA_PLATFORM != SIRIKATA_PLATFORM_WINDOWS
 #include <stdint.h>
 #endif
 
@@ -80,7 +80,7 @@ namespace Sirikata
 
 }
 
-#if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS
 #define PTR_AS_INT(X) ((uint64)X)
 #else
 #define PTR_AS_INT(X) ((uintptr_t)X)

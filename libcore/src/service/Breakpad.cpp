@@ -37,9 +37,9 @@
 #include <sirikata/core/options/CommonOptions.hpp>
 
 #ifdef HAVE_BREAKPAD
-#if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS
 #include <client/windows/handler/exception_handler.h>
-#elif SIRIKATA_PLATFORM == PLATFORM_LINUX
+#elif SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_LINUX
 #include <client/linux/handler/exception_handler.h>
 #endif
 #endif // HAVE_BREAKPAD
@@ -75,7 +75,7 @@ const String& getCrashReporterPath() {
       "crashreporter"
 #endif
         ;
-#if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS
     reporter_name = reporter_name + ".exe";
 #endif
 
@@ -90,7 +90,7 @@ const String& getCrashReporterPath() {
 
 }
 
-#if SIRIKATA_PLATFORM  == PLATFORM_WINDOWS
+#if SIRIKATA_PLATFORM  == SIRIKATA_PLATFORM_WINDOWS
 namespace {
 
 static google_breakpad::ExceptionHandler* breakpad_handler = NULL;
@@ -211,7 +211,7 @@ void init() {
         SILOG(breakpad, error, "Using in-process dump generation.");
 }
 
-#elif SIRIKATA_PLATFORM == PLATFORM_LINUX
+#elif SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_LINUX
 
 namespace {
 
@@ -262,7 +262,7 @@ void init() {
     breakpad_handler = new ExceptionHandler("./", NULL, finishedDump, NULL, true);
 }
 
-#elif SIRIKATA_PLATFORM == PLATFORM_MAC
+#elif SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_MAC
 // No mac support currently
 void init() {
 }

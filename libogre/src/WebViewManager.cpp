@@ -727,7 +727,7 @@ Input::EventResponse WebViewManager::onButton(Input::ButtonEventPtr evt)
 {
 	bool success = true;
 	if(evt->getDevice()->isKeyboard()) {
-#if SIRIKATA_PLATFORM == PLATFORM_WINDOWS || SIRIKATA_PLATFORM == PLATFORM_LINUX
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS || SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_LINUX
             // Work around a problem with Berkelium where cut/copy/paste don't
             // seem to get the same delay as other keyboard repeats. Instead,
             // just filter the repeats out for these keys
@@ -736,7 +736,7 @@ Input::EventResponse WebViewManager::onButton(Input::ButtonEventPtr evt)
                 success = true; // Pretend we ate it
             else
                 success = this->injectKeyEvent(evt->pressed(), (evt->pressed() && !evt->activelyPressed()), evt->mModifier, evt->mButton);
-#elif SIRIKATA_PLATFORM == PLATFORM_MAC
+#elif SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_MAC
 	    if (evt->mModifier == MOD_GUI && (evt->pressed() && evt->activelyPressed())) {
 	      if (evt->mButton == SDL_SCANCODE_X)
 		success = this->injectCut();
