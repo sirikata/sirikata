@@ -8,7 +8,9 @@ if (typeof(std.graphics) === 'undefined') std.graphics = {};
 (
 function() {
 
-    /** Billboards are simple, textured quads. They can be textured
+    /** @class A class for constructing mesh settings for billboards.
+     *
+     *  Billboards are simple, textured quads. They can be textured
      *  with any image URL, can always face the camera or stay fixed
      *  in place, and their shape can be controlled. This class helps
      *  you setup/parse billboard information and the mesh() method
