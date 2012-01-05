@@ -42,6 +42,7 @@
 
 #define OPT_OH_OPTIONS           "objecthost"
 #define OPT_MAIN_SPACE           "mainspace"
+#define OPT_OH_COORDINATOR       "ohcoordinator"
 
 #define OPT_SIGFPE               "sigfpe"
 

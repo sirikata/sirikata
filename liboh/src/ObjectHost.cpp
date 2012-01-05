@@ -168,7 +168,23 @@ void ObjectHost::addServerIDMap(const SpaceID& space_id, ServerIDMap* sidmap) {
         		std::tr1::bind(&ObjectHost::migratAllEntity, this, getDefaultSpace(), "oh2")
         );
     }
+}
 
+void ObjectHost::addOHCoordinator(const SpaceID& space_id, ServerIDMap* sidmap) {
+    SessionManager* smgr = new SessionManager(
+        mContext, space_id, sidmap,
+        std::tr1::bind(&ObjectHost::handleObjectConnected, this, _1, _2),
+        std::tr1::bind(&ObjectHost::handleObjectMigrated, this, _1, _2, _3),
+        std::tr1::bind(&ObjectHost::handleObjectMessage, this, _1, space_id, _2),
+        std::tr1::bind(&ObjectHost::handleObjectDisconnected, this, _1, _2),
+        std::tr1::bind(&ObjectHost::handleObjectOHMigration, this, _1, _2, _3, _4)
+    );
+    smgr->registerDefaultOHDPHandler(
+        std::tr1::bind(&ObjectHost::handleDefaultOHDPMessageHandler, this, _1, _2, _3)
+    );
+    smgr->addListener(static_cast<SpaceNodeSessionListener*>(this));
+    CoordinatorSessionManager = smgr;
+    smgr->start();
 }
 
 void ObjectHost::handleObjectConnected(const SpaceObjectReference& sporef_objid, ServerID server) {
@@ -273,7 +289,7 @@ bool ObjectHost::connect(
 
     String filtered_query = mQueryProcessor->connectRequest(ho, sporef, query);
     return sm->connect(
-        sporef, loc, orient, bnds, mesh, phy, filtered_query,mName,
+        sporef, loc, orient, bnds, mesh, phy, filtered_query, mName,
         std::tr1::bind(&ObjectHost::wrappedConnectedCallback, this, HostedObjectWPtr(ho), _1, _2, _3, connected_cb),
         migrated_cb,
         std::tr1::bind(&ObjectHost::wrappedStreamCreatedCallback, this, HostedObjectWPtr(ho), _1, _2, stream_created_cb),

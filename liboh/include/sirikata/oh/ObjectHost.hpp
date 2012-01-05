@@ -88,6 +88,7 @@ class SIRIKATA_OH_EXPORT ObjectHost
     OH::ObjectQueryProcessor* mQueryProcessor;
 
     SpaceSessionManagerMap mSessionManagers;
+    SessionManager* CoordinatorSessionManager;
 
     uint32 mActiveHostedObjects;
     HostedObjectMap mHostedObjects;
@@ -178,6 +179,8 @@ public:
 
     // Space API - Provide info for ObjectHost to communicate with spaces
     void addServerIDMap(const SpaceID& space_id, ServerIDMap* sidmap);
+
+    void addOHCoordinator(const SpaceID& space_id, ServerIDMap* sidmap);
 
     // Get and set the storage backend to use for persistent object storage.
     void setStorage(OH::Storage* storage) { mStorage = storage; }

@@ -157,6 +157,14 @@ int main (int argc, char** argv) {
     // spaces.
     oh->addServerIDMap(mainSpace, server_id_map);
 
+    // Add oh coordinator
+    String coordinatormap_type = GetOptionValue<String>("coordinatormap");
+    String coordinatormap_options = GetOptionValue<String>("coordinatormap-options");
+    ServerIDMap * coordinator_id_map =
+    	ServerIDMapFactory::getSingleton().getConstructor(coordinatormap_type)(ctx, coordinatormap_options);
+    SpaceID coordinatorSpace(GetOptionValue<UUID>(OPT_OH_COORDINATOR));
+    oh->addOHCoordinator(coordinatorSpace, coordinator_id_map);
+
     String objstorage_type = GetOptionValue<String>(OPT_OBJECT_STORAGE);
     String objstorage_options = GetOptionValue<String>(OPT_OBJECT_STORAGE_OPTS);
     OH::Storage* obj_storage =

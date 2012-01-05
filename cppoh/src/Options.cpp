@@ -57,6 +57,10 @@ void InitCPPOHOptions() {
 
         .addOption(new OptionValue(OPT_OH_OPTIONS,"",OptionValueType<String>(),"Options passed to the object host"))
         .addOption(new OptionValue(OPT_MAIN_SPACE,"12345678-1111-1111-1111-DEFA01759ACE",OptionValueType<UUID>(),"space which to connect default objects to"))
+        .addOption(new OptionValue(OPT_OH_COORDINATOR,"12345678-1111-1111-1111-0123456789AB",OptionValueType<UUID>(),"coordinator which to connect object host"))
+
+        .addOption(new OptionValue("coordinatormap", "local", Sirikata::OptionValueType<String>(), "The type of ServerIDMap to instantiate."))
+        .addOption(new OptionValue("coordinatormap-options", "", Sirikata::OptionValueType<String>(), "Options to pass to the ServerIDMap constructor."))
 
         .addOption(new OptionValue(OPT_SIGFPE,"false",OptionValueType<bool>(),"Enable floating point exceptions"))
 
