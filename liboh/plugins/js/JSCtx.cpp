@@ -19,6 +19,9 @@ JSCtx::JSCtx(Context* ctx,Network::IOStrandPtr oStrand,v8::Isolate* is)
 
 JSCtx::~JSCtx()
 {
+    if (v8::Isolate::GetCurrent())
+        mIsolate->Exit();
+    
     mIsolate->Dispose();
 }
 
