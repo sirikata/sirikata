@@ -646,7 +646,25 @@ void HostedObject::disconnectFromSpace(const SpaceID &spaceID, const ObjectRefer
     }
 }
 
-void HostedObject::handleDisconnected(const HostedObjectWPtr& weakSelf, const SpaceObjectReference& spaceobj, Disconnect::Code cc) {
+void HostedObject::handleDisconnected(
+    const HostedObjectWPtr& weakSelf, const SpaceObjectReference& spaceobj,
+    Disconnect::Code cc)
+{
+    HostedObjectPtr self(weakSelf.lock());
+    if ((!self)||self->stopped()) {
+        HO_LOG(detailed,"Ignoring disconnection callback after system stop requested.");
+        return;
+    }
+    
+    self->mContext->mainStrand->post(
+        std::tr1::bind(&HostedObject::iHandleDisconnected,self.get(),
+            weakSelf, spaceobj, cc));
+}
+
+void HostedObject::iHandleDisconnected(
+    const HostedObjectWPtr& weakSelf, const SpaceObjectReference& spaceobj,
+    Disconnect::Code cc)
+{
     HostedObjectPtr self(weakSelf.lock());
     if ((!self)||self->stopped()) {
         HO_LOG(detailed,"Ignoring disconnection callback after system stop requested.");

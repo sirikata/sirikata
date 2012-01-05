@@ -305,7 +305,10 @@ public:
     // underlying boost impementation doesnt), we need to handle wrapping
     // connection callbacks manually.
 
-
+    void iHandleDisconnected(
+        const HostedObjectWPtr& weakSelf, const SpaceObjectReference& spaceobj,
+        Disconnect::Code cc);
+    
     static void handleConnected(const HostedObjectWPtr &weakSelf, const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info);
     static void handleConnectedIndirect(const HostedObjectWPtr &weakSelf, const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, const BaseDatagramLayerPtr&);
 
