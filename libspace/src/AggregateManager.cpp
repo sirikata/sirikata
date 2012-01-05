@@ -184,6 +184,7 @@ void AggregateManager::generateAggregateMesh(const UUID& uuid, const Duration& d
   lock.unlock();
   aggObject->mLastGenerateTime = Timer::now();
 
+  AGG_LOG(detailed,"Setting up aggregate " << uuid << " to generate aggregate mesh with " << aggObject->mChildren.size() << " in " << delayFor);
   mAggregationStrand->post( delayFor, std::tr1::bind(&AggregateManager::generateAggregateMeshAsyncIgnoreErrors, this, uuid, aggObject->mLastGenerateTime, true)  );
 }
 void AggregateManager::generateAggregateMeshAsyncIgnoreErrors(const UUID uuid, Time postTime, bool generateSiblings) {
