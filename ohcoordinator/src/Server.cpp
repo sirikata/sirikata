@@ -40,7 +40,6 @@
 #include <sirikata/ohcoordinator/Authenticator.hpp>
 #include "Forwarder.hpp"
 #include "LocalForwarder.hpp"
-#include "MigrationMonitor.hpp"
 
 #include <sirikata/ohcoordinator/ObjectSegmentation.hpp>
 
@@ -76,21 +75,17 @@ void logVersionInfo(Sirikata::Protocol::Session::VersionInfo vers_info) {
 } // namespace
 
 
-Server::Server(SpaceContext* ctx, Authenticator* auth, Forwarder* forwarder, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, ObjectSegmentation* oseg, Address4 oh_listen_addr, ObjectHostSessionManager* oh_sess_mgr, ObjectSessionManager* obj_sess_mgr)
+Server::Server(SpaceContext* ctx, Authenticator* auth, Forwarder* forwarder, CoordinateSegmentation* cseg, ObjectSegmentation* oseg, Address4 oh_listen_addr, ObjectHostSessionManager* oh_sess_mgr, ObjectSessionManager* obj_sess_mgr)
  : ODP::DelegateService( std::tr1::bind(&Server::createDelegateODPPort, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2, std::tr1::placeholders::_3) ),
    OHDP::DelegateService( std::tr1::bind(&Server::createDelegateOHDPPort, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2) ),
    mContext(ctx),
    mAuthenticator(auth),
-   mLocationService(loc_service),
    mCSeg(cseg),
-   mProximity(prox),
    mOSeg(oseg),
    mLocalForwarder(NULL),
    mForwarder(forwarder),
-   mMigrationMonitor(NULL),
    mOHSessionManager(oh_sess_mgr),
    mObjectSessionManager(obj_sess_mgr),
-   mMigrationSendRunning(false),
    mShutdownRequested(false),
    mObjectHostConnectionManager(NULL),
    mRouteObjectMessage(Sirikata::SizedResourceMonitor(GetOptionValue<size_t>("route-object-message-buffer"))),
@@ -101,19 +96,9 @@ Server::Server(SpaceContext* ctx, Authenticator* auth, Forwarder* forwarder, Loc
 
     mTimeSyncServer = new TimeSyncServer(mContext, this);
 
-    mMigrateServerMessageService = mForwarder->createServerMessageService("migrate");
-
-    mForwarder->registerMessageRecipient(SERVER_PORT_MIGRATION, this);
     mForwarder->setODPService(this);
 
-      mOSeg->setWriteListener((OSegWriteListener*)this);
-
-      mMigrationMonitor = new MigrationMonitor(
-          mContext, mLocationService, mCSeg,
-          mContext->mainStrand->wrap(
-              std::tr1::bind(&Server::handleMigrationEvent, this, std::tr1::placeholders::_1)
-          )
-      );
+    mOSeg->setWriteListener((OSegWriteListener*)this);
 
     // Forwarder::setODPService creates the ODP SST datagram layer allowing us
     // to listen for object connections
@@ -132,7 +117,6 @@ Server::Server(SpaceContext* ctx, Authenticator* auth, Forwarder* forwarder, Loc
     mLocalForwarder = new LocalForwarder(mContext);
     mForwarder->setLocalForwarder(mLocalForwarder);
 
-    mMigrationTimer.start();
 }
 
 void Server::newStream(int err, SST::Stream<SpaceObjectReference>::Ptr s) {
@@ -153,22 +137,15 @@ void Server::newStream(int err, SST::Stream<SpaceObjectReference>::Ptr s) {
 
 Server::~Server()
 {
-    delete mMigrateServerMessageService;
+    //delete mMigrateServerMessageService;
 
-    mForwarder->unregisterMessageRecipient(SERVER_PORT_MIGRATION, this);
+    //mForwarder->unregisterMessageRecipient(SERVER_PORT_MIGRATION, this);
 
     SPACE_LOG(debug, "mObjects.size=" << mObjects.size());
 
     for(ObjectConnectionMap::iterator it = mObjects.begin(); it != mObjects.end(); it++) {
         UUID obj_id = it->first;
 
-        // Stop any proximity queries for this object
-        mProximity->removeQuery(obj_id);
-
-        mLocationService->removeLocalObject(obj_id);
-
-        // Stop Forwarder from delivering via this Object's
-        // connection, destroy said connection
         mForwarder->removeObjectConnection(obj_id);
 
         // FIXME there's probably quite a bit more cleanup to do here
@@ -177,9 +154,6 @@ Server::~Server()
 
     delete mObjectHostConnectionManager;
     delete mLocalForwarder;
-
-    delete mMigrationMonitor;
-
     delete mTimeSyncServer;
 }
 
@@ -266,10 +240,6 @@ bool Server::isObjectConnected(const UUID& object_id) const {
 
 bool Server::isObjectConnecting(const UUID& object_id) const {
     return (mStoredConnectionData.find(object_id) != mStoredConnectionData.end());
-}
-
-bool Server::isObjectMigrating(const UUID& object_id) const {
-    return (mOHMigratingObjects.find(object_id) != mOHMigratingObjects.end());
 }
 
 void Server::sendSessionMessageWithRetry(const ObjectHostConnectionID& conn, Sirikata::Protocol::Object::ObjectMessage* msg, const Duration& retry_rate) {
@@ -427,25 +397,13 @@ bool Server::handleSingleObjectHostMessageRouting() {
     // NOTE that we check connecting objects as well since we need to get past this point to deliver
     // Session messages.
     bool source_connected =
-        mObjects.find(source_object) != mObjects.end() ||
-        mMigratingConnections.find(source_object) != mMigratingConnections.end();
+        mObjects.find(source_object) != mObjects.end();
     if (!source_connected)
     {
-        if (mObjectsAwaitingMigration.find(source_object) == mObjectsAwaitingMigration.end() &&
-            mObjectMigrations.find(source_object) == mObjectMigrations.end())
-        {
-            SILOG(cbr,warn,"Got message for unknown object: " << source_object.toString());
-        }
-        else
-        {
-            SILOG(cbr,warn,"Server got message from object after migration started: " << source_object.toString());
-        }
-
-        delete front.obj_msg;
-
-        return true;
+       SILOG(cbr,warn,"Got message for unknown object: " << source_object.toString());
+       delete front.obj_msg;
+       return true;
     }
-
 
     // Finally, if we've passed all these tests, then everything looks good and we can route it
     mForwarder->routeObjectHostMessage(front.obj_msg);
@@ -471,10 +429,6 @@ void Server::handleSessionMessage(const ObjectHostConnectionID& oh_conn_id, Siri
         {
             handleConnect(oh_conn_id, *msg, session_msg.connect());
         }
-        else if (session_msg.connect().type() == Sirikata::Protocol::Session::Connect::Migration)
-        {
-            handleMigrate(oh_conn_id, *msg, session_msg.connect());
-        }
         else
             SILOG(space,error,"Unknown connection message type");
     }
@@ -488,29 +442,32 @@ void Server::handleSessionMessage(const ObjectHostConnectionID& oh_conn_id, Siri
             mContext->timeSeries->report(mTimeSeriesObjects, mObjects.size());
         }
     }
-    else if (session_msg.has_oh_migration()) {
-    	if(session_msg.oh_migration().type()== Sirikata::Protocol::Session::OHMigration::Object){
-    		UUID obj_id = session_msg.oh_migration().id();
-    		String dst_oh_name = session_msg.oh_migration().oh_name();
-    		mOHMigratingObjects[obj_id]=dst_oh_name;
-
-    		ObjectHostConnectionID oh_conn_id =  mOHNameConnections[dst_oh_name];
-    		SPACE_LOG(info, "Mark object "<<obj_id.rawHexData()<<" as migrating to OH "<<dst_oh_name<<" through OH connection "<<oh_conn_id.shortID());
+    else if (session_msg.has_coordinate()) {
+    	if(session_msg.coordinate().type() == Sirikata::Protocol::Session::Coordinate::Update) { //Feng
+    		UUID obj_id = session_msg.coordinate().object();
+    		/*Feng: */
+    		SPACE_LOG(info, "Add one object to object host's list: ");
+    		mObjectsDistribution[oh_conn_id.shortID()]->counter++;
+    		mObjectsDistribution[oh_conn_id.shortID()]->lObjects.insert(obj_id);
+    		/*calculate unbalance*/
+    		/*if there are any unbalance, send message; until balance*/
+    		if(existingUnbalance()) { //while(existingUnbalance()) {
+    			/*send a message back*/
+    			informOHMigration(obj_id, oh_conn_id); //Note: This obj_id should the targeting object id
+    			/*re map the objects in the record*/
+    			// actually for migration, an ack message should be sent from the object host.
+    			//But we did not implement that.
+    			mObjectsDistribution[oh_conn_id.shortID()]->counter--;
+    			mObjectsDistribution[oh_conn_id.shortID()]->lObjects.erase(obj_id);
+    			//ObjectHostConnectionID dest_oh_conn_id =  mOHNameConnections[DestOHName];
+    			//mObjectsDistribution[dest_oh_conn_id.shortID()]->counter++;
+    			//mObjectsDistribution[dest_oh_conn_id.shortID()]->lObjects.insert(obj_id);;
+   	    	}
     	}
+    	else if(session_msg.coordinate().type() == Sirikata::Protocol::Session::Coordinate::MigrateReq) {
+   			UUID entity_id = session_msg.coordinate().entity();
+   			SPACE_LOG(info, "Receive migration request of entity "<<entity_id.rawHexData());
 
-    	else if(session_msg.oh_migration().type()== Sirikata::Protocol::Session::OHMigration::Entity){
-    		UUID entity_id = session_msg.oh_migration().id();
-    		String dst_oh_name = session_msg.oh_migration().oh_name();
-    		ObjectHostConnectionID oh_conn_id =  mOHNameConnections[dst_oh_name];
-    		SPACE_LOG(info, "Receive OH migration request of entity "<<entity_id.rawHexData()<<" to OH "<<dst_oh_name);
-
-    		/*for(int i=0; i<session_msg.oh_migration().objects_size(); i++) {
-    			UUID obj = session_msg.oh_migration().objects(i);
-                mOHMigratingObjects[obj]=dst_oh_name;
-                SPACE_LOG(info, "Mark object "<<obj.rawHexData()<<" as migrating");
-    		}*/
-
-    		//handleEntityOHMigraion(entity_id, oh_conn_id);
     	}
     }
 
@@ -519,6 +476,46 @@ void Server::handleSessionMessage(const ObjectHostConnectionID& oh_conn_id, Siri
     assert(!session_msg.has_init_migration());
 
     delete msg;
+}
+
+//Feng
+void Server::informOHMigration(const UUID& uuid, const ObjectHostConnectionID& oh_conn_id) {
+	Sirikata::Protocol::Session::Container session_msg;
+	Sirikata::Protocol::Session::Coordinate oh_coordinate_msg = session_msg.mutable_coordinate();
+	oh_coordinate_msg.set_entity(uuid);
+	oh_coordinate_msg.set_oh_name(DestOHName);
+	oh_coordinate_msg.set_type(Sirikata::Protocol::Session::Coordinate::MigrateTo);
+	Sirikata::Protocol::Object::ObjectMessage* migration_req = createObjectMessage(
+			mContext->id(),
+			UUID::null(), OBJECT_PORT_SESSION,
+			UUID::null(), OBJECT_PORT_SESSION,
+			serializePBJMessage(session_msg)
+			);
+	// Sent directly via object host connection manager
+	sendSessionMessageWithRetry(oh_conn_id, migration_req, Duration::seconds(0.05));
+}
+//Feng
+bool Server::existingUnbalance() {
+	ObjectsDistributionMap::iterator it;
+	int max, min;
+	max = min = 0;
+	String maxOHName = mObjectsDistribution.begin()->second->ObjectHostName;
+	String minOHName = mObjectsDistribution.begin()->second->ObjectHostName;
+	for (it = mObjectsDistribution.begin(); it != mObjectsDistribution.end(); it++) {
+		if (it->second->counter > max) {
+			max = it->second->counter;
+			maxOHName = it->second->ObjectHostName;
+		}
+		if (it->second->counter < min) {
+			min = it->second->counter;
+			minOHName = it->second->ObjectHostName;
+		}
+	}
+	if (max > 100) {  // this is about the policy; And it can be changed.
+		DestOHName = minOHName;
+		return true;
+	}
+	return false;
 }
 
 void Server::handleObjectHostConnectionClosed(const ObjectHostConnectionID& oh_conn_id, const ShortObjectHostConnectionID short_conn_id) {
@@ -653,18 +650,6 @@ void Server::handleConnectAuthResponse(const ObjectHostConnectionID& oh_conn_id,
     mOHNameConnections[sc.conn_msg.oh_name()]=sc.conn_id;
     mForwarder->addObjectConnection(obj_id, conn);
     sendConnectSuccess(conn->connID(), obj_id);
-
-    // Feng: Based on the collect information, an oh migration hint will be given
-    //
-    //
-
-    // Feng: I commented this out, then no objects would be stored. 
-    // mOSeg->addNewObject(obj_id,connect_msg.bounds().radius());
-}
-
-void Server::finishAddObject(const UUID& obj_id, OSegAddNewStatus status)
-{
-
 }
 
 void Server::sendConnectSuccess(const ObjectHostConnectionID& oh_conn_id, const UUID& obj_id) {
@@ -685,13 +670,6 @@ void Server::sendConnectSuccess(const ObjectHostConnectionID& oh_conn_id, const 
     sendSessionMessageWithRetry(oh_conn_id, obj_response, Duration::seconds(0.05));
 }
 
-// Handle Migrate message from object
-//this is called by the receiving server.
-void Server::handleMigrate(const ObjectHostConnectionID& oh_conn_id, const Sirikata::Protocol::Object::ObjectMessage& container, const Sirikata::Protocol::Session::Connect& migrate_msg)
-{
-
-}
-
 void Server::handleConnectAck(const ObjectHostConnectionID& oh_conn_id, const Sirikata::Protocol::Object::ObjectMessage& container) {
     UUID obj_id = container.source_object();
 
@@ -706,8 +684,6 @@ void Server::handleDisconnect(UUID obj_id, ObjectConnection* conn, ShortObjectHo
 
     //mOSeg->removeObject(obj_id);
     mLocalForwarder->removeActiveConnection(obj_id);
-
-
     mForwarder->removeObjectConnection(obj_id);
 
     mObjects.erase(obj_id);
@@ -744,45 +720,11 @@ void Server::handleEntityOHMigraion(const UUID& uuid, const ObjectHostConnection
 
 
 void Server::osegAddNewFinished(const UUID& id, OSegAddNewStatus status) {
-    // Indicates an update to OSeg finished, meaning a migration can
-    // continue.
-    mContext->mainStrand->post(
-        std::tr1::bind(&Server::finishAddObject, this, id, status)
-                               );
+
 }
 
-void Server::osegMigrationAcknowledged(const UUID& id) {
-    // Indicates its safe to destroy the object connection since the migration
-    // was successful
-    mContext->mainStrand->post(
-        std::tr1::bind(&Server::killObjectConnection, this, id)
-                               );
-}
 
 void Server::receiveMessage(Message* msg)
-{
-    if (msg->dest_port() == SERVER_PORT_MIGRATION) {
-        Sirikata::Protocol::Migration::MigrationMessage* mig_msg = new Sirikata::Protocol::Migration::MigrationMessage();
-        bool parsed = parsePBJMessage(mig_msg, msg->payload());
-
-        if (!parsed) {
-            delete mig_msg;
-        }
-        else {
-            const UUID obj_id = mig_msg->object();
-
-            SILOG(space,detailed,"Received server migration message for " << obj_id.toString() << " from server " << mig_msg->source_server());
-
-            mObjectMigrations[obj_id] = mig_msg;
-            // Try to handle this migration if all the info is available
-            handleMigration(obj_id);
-        }
-        delete msg;
-    }
-}
-
-//handleMigration to this server.
-void Server::handleMigration(const UUID& obj_id)
 {
 
 }
@@ -796,43 +738,5 @@ void Server::stop() {
     mObjectHostConnectionManager->shutdown();
     mShutdownRequested = true;
 }
-
-void Server::handleMigrationEvent(const UUID& obj_id) {
-
-}
-
-void Server::startSendMigrationMessages() {
-
-}
-void Server::trySendMigrationMessages() {
-
-}
-
-/*
-  This function migrates an object to this server that was in the process of migrating away from this server (except the killconn message hasn't come yet.
-
-  Assumes that checks that the object was in migration have occurred
-
-*/
-void Server::processAlreadyMigrating(const UUID& obj_id)
-{
-
-}
-
-
-//returns true if the object associated with obj_id is in the process of migrating from this server
-//returns false otherwise.
-bool Server::checkAlreadyMigrating(const UUID& obj_id)
-{
-	return true;
-}
-
-
-//This shouldn't get called yet.
-void Server::killObjectConnection(const UUID& obj_id)
-{
-}
-
-
 
 } // namespace Sirikata

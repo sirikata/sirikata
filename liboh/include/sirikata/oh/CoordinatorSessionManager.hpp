@@ -80,15 +80,11 @@ class SIRIKATA_OH_EXPORT CoordinatorSessionManager
     // Callback indicating that a connection to the server was made
     // and it is available for sessions
     typedef std::tr1::function<void(const SpaceID&, const ObjectReference&, const ConnectionInfo&)> ConnectedCallback;
-
     typedef std::tr1::function<void(const SpaceObjectReference&, ConnectionEvent after)> StreamCreatedCallback;
     typedef std::tr1::function<void(const SpaceObjectReference&, Disconnect::Code)> DisconnectedCallback;
-
     typedef std::tr1::function<void(const Sirikata::Protocol::Object::ObjectMessage&)> ObjectMessageCallback;
-
     // Notifies the ObjectHost class of a new object connection: void(object, connectedTo)
     typedef std::tr1::function<void(const SpaceObjectReference&,ServerID)> ObjectConnectedCallback;
-
     // Returns a message to the object host for handling.
     typedef std::tr1::function<void(const SpaceObjectReference&, Sirikata::Protocol::Object::ObjectMessage*)> ObjectMessageHandlerCallback;
     // Notifies the ObjectHost of object connection that was closed, including a
@@ -116,7 +112,7 @@ class SIRIKATA_OH_EXPORT CoordinatorSessionManager
 
     /** Disconnect the object from the space. */
     void disconnect(const SpaceObjectReference& id);
-    void migrateEntity(const SpaceObjectReference& sporef_objid, const UUID& uuid, const String& name);
+    void migrateRequest(const SpaceObjectReference& sporef_objid, const UUID& uuid);
 
     /** Get offset of server time from client time for the given space. Should
      * only be called by objects with an active connection to that space.

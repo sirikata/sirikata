@@ -111,7 +111,6 @@ public:
     };
 
     virtual void osegAddNewFinished(const UUID& id, OSegAddNewStatus) = 0;
-    virtual void osegMigrationAcknowledged(const UUID& id) = 0;
 }; // class OSegMembershipListener
 
 

@@ -93,7 +93,7 @@ void createServer(Server** server_out, ServerData sd, Address4 addr) {
         sd.space_context->shutdown();
     }
 
-    Server* server = new Server(sd.space_context, sd.auth, sd.forwarder, sd.loc_service, sd.cseg, sd.prox, sd.oseg, addr, sd.oh_sess_mgr, sd.obj_sess_mgr);
+    Server* server = new Server(sd.space_context, sd.auth, sd.forwarder, sd.cseg, sd.oseg, addr, sd.oh_sess_mgr, sd.obj_sess_mgr);
     sd.space_context->add(server);
 
     *server_out = server;

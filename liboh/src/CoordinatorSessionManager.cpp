@@ -542,17 +542,18 @@ void CoordinatorSessionManager::sendRetryingMessage(const SpaceObjectReference& 
     }
 }
 
-void CoordinatorSessionManager::migrateEntity(const SpaceObjectReference& sporef_objid, const UUID& uuid, const String& dest_name) {
+void CoordinatorSessionManager::migrateRequest(const SpaceObjectReference& sporef_objid, const UUID& uuid) {
 	Sirikata::SerializationCheck::Scoped sc(&mSerialization);
 
 	ServerID connected_to = mObjectConnections.getConnectedServer(sporef_objid);
 	if (connected_to == NullServerID) return;
 
 	Sirikata::Protocol::Session::Container session_msg;
-	Sirikata::Protocol::Session::IOHMigration oh_migration_msg = session_msg.mutable_oh_migration();
-	oh_migration_msg.set_type(Sirikata::Protocol::Session::OHMigration::Entity);
-	oh_migration_msg.set_id(uuid);
-	oh_migration_msg.set_oh_name(dest_name);
+	Sirikata::Protocol::Session::Coordinate coordinate_msg = session_msg.mutable_coordinate();
+	session_msg.coordinate().set_type(Sirikata::Protocol::Session::Coordinate::MigrateReq);
+	session_msg.coordinate().set_entity(uuid);
+	//coordinate_msg.set_type(Sirikata::Protocol::Session::Coordinate::MigrateReq);
+	//coordinate_msg.set_object(uuid);
 
 	sendRetryingMessage(
 			sporef_objid, OBJECT_PORT_SESSION,
@@ -560,7 +561,7 @@ void CoordinatorSessionManager::migrateEntity(const SpaceObjectReference& sporef
 			serializePBJMessage(session_msg),
 			connected_to, mContext->mainStrand, Duration::seconds(0.05));
 
-	SESSION_LOG(info,"Send Request: entity "<<uuid.rawHexData()<<" migrate to OH "<<dest_name);
+	SESSION_LOG(info,"Send Request: entity "<<uuid.rawHexData()<<" request to migrate");
 }
 
 void CoordinatorSessionManager::getAnySpaceConnection(SpaceNodeConnection::GotSpaceConnectionCallback cb) {
@@ -851,7 +852,7 @@ void CoordinatorSessionManager::handleSessionMessage(Sirikata::Protocol::Object:
 					Duration::seconds(0.05)
 					);
 
-        mContext->mainStrand->post(Duration::seconds(2), std::tr1::bind(&CoordinatorSessionManager::migrateEntity, this, sporef_obj, UUID::random(), "test_oh"));
+	    	mContext->mainStrand->post(Duration::seconds(2), std::tr1::bind(&CoordinatorSessionManager::migrateRequest, this, sporef_obj, UUID::random()));
 
         }
         else if (conn_resp.response() == Sirikata::Protocol::Session::ConnectResponse::Error) {
@@ -863,14 +864,22 @@ void CoordinatorSessionManager::handleSessionMessage(Sirikata::Protocol::Object:
         }
     }
 
-    if (session_msg.has_oh_migration()) {
-        Sirikata::Protocol::Session::OHMigration oh_migration = session_msg.oh_migration();
-        if(oh_migration.type()==Sirikata::Protocol::Session::OHMigration::Object)
-        	SESSION_LOG(info,"Received oh migration request of " << oh_migration.id() << " to this host");
-        else if(oh_migration.type()==Sirikata::Protocol::Session::OHMigration::Entity){
-        	UUID entity_id = oh_migration.id();
-        	SESSION_LOG(info,"Receive OH migration request of entity "<<entity_id.rawHexData());
-        }
+    if (session_msg.has_coordinate()) {
+    	Sirikata::Protocol::Session::Coordinate coordinate = session_msg.coordinate();
+    	if(coordinate.type()==Sirikata::Protocol::Session::Coordinate::MigrateTo) {
+    		UUID obj_id = coordinate.object();
+    		UUID entity_id = coordinate.entity(); // obviously, both ids are different;
+    		String DestOHName = coordinate.oh_name();
+    		SpaceID space; // search to obtaint the space id;
+    		// migrateEntity(space, obj_id , DestOHName); //how to call object host function from th session manager?
+    		SESSION_LOG(info,"Receive OH migration request of entity "<<entity_id.rawHexData());
+    	}
+    	if(coordinate.type()==Sirikata::Protocol::Session::Coordinate::MigrateFrom) {
+
+    	}
+    	if(coordinate.type()==Sirikata::Protocol::Session::Coordinate::Update) {
+
+    	}
     }
 
     delete msg;
