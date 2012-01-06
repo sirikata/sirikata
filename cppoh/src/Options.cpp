@@ -56,7 +56,7 @@ void InitCPPOHOptions() {
 #if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_LINUX || SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_MAC
                 ",oh-cassandra"
 #endif
-                ",oh-simple-query,oh-manual-query,sdlaudio",
+                ",oh-simple-query,oh-manual-query,sdlaudio,oh-environment",
                 Sirikata::OptionValueType<String>(),"Plugin list to load."))
         .addOption(new OptionValue(OPT_OH_PLUGIN_SEARCH_PATHS,"",Sirikata::OptionValueType<String>(),"Colon separated list of paths to search for plugins."))
 

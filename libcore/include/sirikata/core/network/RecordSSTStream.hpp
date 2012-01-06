@@ -8,6 +8,7 @@
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/network/Frame.hpp>
 #include <sirikata/core/util/Liveness.hpp>
+#include <sirikata/core/util/Time.hpp>
 
 namespace Sirikata {
 

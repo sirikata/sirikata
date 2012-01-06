@@ -330,6 +330,8 @@ public:
     virtual ODP::PortID unusedODPPort(const SpaceObjectReference& sor);
     virtual void registerDefaultODPHandler(const ODP::Service::MessageHandler& cb);
 
+    // Access to SST for this object
+    ODPSST::Stream::Ptr getSpaceStream(const SpaceObjectReference& sor);
 
     // Movement Interface
     //note: location update services both position and velocity
