@@ -1772,6 +1772,17 @@ public:
     return mState;
   }
 
+  const Context* getContext() {
+    if (mContext == NULL) {
+      std::tr1::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
+      assert(conn);
+
+      mContext = conn->getContext();
+    }
+
+    return mContext;
+  }
+
 private:
   Stream(LSID parentLSID, std::tr1::weak_ptr<Connection<EndPointType> > conn,
 	 uint16 local_port, uint16 remote_port,
@@ -1887,17 +1898,6 @@ private:
 
   void initRemoteLSID(LSID remoteLSID) {
       mRemoteLSID = remoteLSID;
-  }
-
-  const Context* getContext() {
-    if (mContext == NULL) {
-      std::tr1::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
-      assert(conn);
-
-      mContext = conn->getContext();
-    }
-
-    return mContext;
   }
 
   void sendKeepAlive(std::tr1::weak_ptr<Stream<EndPointType> > wstrm, std::tr1::shared_ptr<Connection<EndPointType> > conn) {
