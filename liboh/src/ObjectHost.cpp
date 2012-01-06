@@ -162,29 +162,29 @@ void ObjectHost::addServerIDMap(const SpaceID& space_id, ServerIDMap* sidmap) {
 
     if(mName=="oh1"){
         SILOG(oh,info,"sleep, wait migration");
-
         mContext->mainStrand->post(
         		Duration::seconds(10),
-        		std::tr1::bind(&ObjectHost::migratAllEntity, this, getDefaultSpace(), "oh2")
+        		std::tr1::bind(&ObjectHost::migrateAllEntity, this, getDefaultSpace(), "oh2")
         );
     }
 }
 
 void ObjectHost::addOHCoordinator(const SpaceID& space_id, ServerIDMap* sidmap) {
-    SessionManager* smgr = new SessionManager(
+    CoordinatorSessionManager* smgr = new CoordinatorSessionManager(
         mContext, space_id, sidmap,
         std::tr1::bind(&ObjectHost::handleObjectConnected, this, _1, _2),
-        std::tr1::bind(&ObjectHost::handleObjectMigrated, this, _1, _2, _3),
         std::tr1::bind(&ObjectHost::handleObjectMessage, this, _1, space_id, _2),
-        std::tr1::bind(&ObjectHost::handleObjectDisconnected, this, _1, _2),
-        std::tr1::bind(&ObjectHost::handleObjectOHMigration, this, _1, _2, _3, _4)
+        std::tr1::bind(&ObjectHost::handleObjectDisconnected, this, _1, _2)
     );
     smgr->registerDefaultOHDPHandler(
         std::tr1::bind(&ObjectHost::handleDefaultOHDPMessageHandler, this, _1, _2, _3)
     );
     smgr->addListener(static_cast<SpaceNodeSessionListener*>(this));
-    CoordinatorSessionManager = smgr;
+    mCoordinatorSessionManager = smgr;
+    mCoordinatorSpaceID = space_id;
     smgr->start();
+
+    mContext->mainStrand->post(std::tr1::bind(&ObjectHost::connectOHCoordinator, this));
 }
 
 void ObjectHost::handleObjectConnected(const SpaceObjectReference& sporef_objid, ServerID server) {
@@ -232,7 +232,7 @@ void ObjectHost::migrateEntity(const SpaceID& space, const UUID& uuid, const Str
     }
 }
 
-void ObjectHost::migratAllEntity(const SpaceID& space, const String& dest_name)
+void ObjectHost::migrateAllEntity(const SpaceID& space, const String& dest_name)
 {
 	//mPersistentSet->moveAllPersistedObject(dest_name);
 	for(CreatedEntityMap::iterator it = mCreatedEntities.begin(); it!=mCreatedEntities.end(); ++it){
@@ -285,6 +285,7 @@ bool ObjectHost::connect(
     Sirikata::SerializationCheck::Scoped sc(&mSessionSerialization);
     if (mHostedObjects.find(sporef)!=mHostedObjects.end())
         return false;
+
     SessionManager *sm = mSessionManagers[space];
 
     String filtered_query = mQueryProcessor->connectRequest(ho, sporef, query);
@@ -295,6 +296,12 @@ bool ObjectHost::connect(
         std::tr1::bind(&ObjectHost::wrappedStreamCreatedCallback, this, HostedObjectWPtr(ho), _1, _2, stream_created_cb),
         std::tr1::bind(&ObjectHost::wrappedDisconnectedCallback, this, HostedObjectWPtr(ho), _1, _2, disconnected_cb)
     );
+}
+
+bool ObjectHost::connectOHCoordinator() {
+	ObjectReference oref = ObjectReference(UUID::random());
+	SpaceObjectReference sporef (mCoordinatorSpaceID,oref);
+	return mCoordinatorSessionManager->connect(sporef, mName);
 }
 
 void ObjectHost::wrappedConnectedCallback(HostedObjectWPtr ho_weak, const SpaceID& space, const ObjectReference& obj, const SessionManager::ConnectionInfo& ci, ConnectedCallback cb) {
@@ -452,6 +459,7 @@ void ObjectHost::stop() {
         SessionManager* sm = it->second;
         sm->stop();
     }
+    mCoordinatorSessionManager->stop();
 
     // HostedObjects may appear multiple times because they may have
     // multiple presences. Track which we've called stop on so we

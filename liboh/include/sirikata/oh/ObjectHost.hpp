@@ -41,6 +41,7 @@
 #include <sirikata/core/util/ListenerProvider.hpp>
 #include <sirikata/core/service/Service.hpp>
 #include <sirikata/oh/SessionManager.hpp>
+#include <sirikata/oh/CoordinatorSessionManager.hpp>
 #include <sirikata/core/ohdp/Service.hpp>
 #include <sirikata/oh/SpaceNodeSession.hpp>
 #include <sirikata/oh/ObjectNodeSession.hpp>
@@ -88,7 +89,9 @@ class SIRIKATA_OH_EXPORT ObjectHost
     OH::ObjectQueryProcessor* mQueryProcessor;
 
     SpaceSessionManagerMap mSessionManagers;
-    SessionManager* CoordinatorSessionManager;
+
+    CoordinatorSessionManager* mCoordinatorSessionManager;
+    SpaceID mCoordinatorSpaceID;
 
     uint32 mActiveHostedObjects;
     HostedObjectMap mHostedObjects;
@@ -104,7 +107,7 @@ class SIRIKATA_OH_EXPORT ObjectHost
     ObjectSet mMigratingEntity;
 
     void migrateEntity(const SpaceID& space, const UUID& uuid, const String& name);
-    void migratAllEntity(const SpaceID& space, const String& name);
+    void migrateAllEntity(const SpaceID& space, const String& name);
 
     PluginManager *mScriptPlugins;
     typedef std::tr1::unordered_map<String, ObjectScriptManager*> ScriptManagerMap;
@@ -311,6 +314,9 @@ public:
     void handleDefaultOHDPMessageHandler(const OHDP::Endpoint& src, const OHDP::Endpoint& dst, MemoryReference payload);
 
     OHDP::MessageHandler mDefaultOHDPMessageHandler;
+
+    bool connectOHCoordinator();
+
 }; // class ObjectHost
 
 } // namespace Sirikata
