@@ -134,7 +134,7 @@ std::string getOgreResourcesDir(const std::vector<String>&searchPoints) {
     path search_paths[] = {
         path("ogre/data"),
         path("share/sirikata/ogre/data"),
-        path("libproxyobject/plugins/ogre/data")
+        path("liboh/plugins/ogre/data")
     };
     uint32 nsearch_paths = sizeof(search_paths)/sizeof(*search_paths);
 
