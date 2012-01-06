@@ -1458,6 +1458,7 @@ SET(LIBSPACE_SOURCES
   ${LIBSPACE_SOURCE_DIR}/AggregateManager.cpp
   ${LIBSPACE_SOURCE_DIR}/ObjectHostConnectionID.cpp
   ${LIBSPACE_SOURCE_DIR}/ObjectHostConnectionManager.cpp
+  ${LIBSPACE_SOURCE_DIR}/SpaceModule.cpp
   )
 
 SET(LIBMESH_SOURCES

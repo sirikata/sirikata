@@ -71,8 +71,12 @@
 #include <sirikata/mesh/Filter.hpp>
 #include <sirikata/mesh/ModelsSystemFactory.hpp>
 
+#include <sirikata/space/SpaceModule.hpp>
+
 namespace {
 using namespace Sirikata;
+
+typedef std::vector<SpaceModule*> ModuleList;
 
 // Some platforms can't bind as many variables as we want to use, so we need to
 // manually package them up.
@@ -87,7 +91,7 @@ struct ServerData {
     ObjectHostSessionManager* oh_sess_mgr;
     ObjectSessionManager* obj_sess_mgr;
 };
-void createServer(Server** server_out, ServerData sd, Address4 addr) {
+void createServer(Server** server_out, ModuleList* modules_out, ServerData sd, Address4 addr) {
     if (addr == Address4::Null) {
         SILOG(space, fatal, "The requested server ID isn't in ServerIDMap");
         sd.space_context->shutdown();
@@ -97,6 +101,18 @@ void createServer(Server** server_out, ServerData sd, Address4 addr) {
     sd.space_context->add(server);
 
     *server_out = server;
+
+    // With everything else setup, we can start server modules
+    typedef std::vector<String> ModuleNameList;
+    ModuleNameList modules = GetOptionValue<ModuleNameList>(OPT_MODULES);
+    for(ModuleNameList::iterator it = modules.begin(); it != modules.end(); it++) {
+        String module_name = *it;
+        // FIXME options? Getting options in a list of modules is going to be tricky...
+        SpaceModule* module =
+            SpaceModuleFactory::getSingleton().getConstructor(module_name)(sd.space_context, "");
+        sd.space_context->add(module);
+        modules_out->push_back(module);
+    }
 }
 }
 
@@ -280,6 +296,7 @@ int main(int argc, char** argv) {
     // handle cleaning it up ourselves.
     using std::tr1::placeholders::_1;
     Server* server = NULL;
+    ModuleList modules;
     ServerData sd;
     sd.space_context = space_context;
     sd.auth = auth;
@@ -293,7 +310,7 @@ int main(int argc, char** argv) {
     server_id_map->lookupExternal(
         space_context->id(),
         space_context->mainStrand->wrap(
-            std::tr1::bind( &createServer, &server, sd, _1)
+            std::tr1::bind( &createServer, &server, &modules, sd, _1)
         )
     );
 
@@ -337,6 +354,11 @@ int main(int argc, char** argv) {
     ModelsSystemFactory::destroy();
     LocationServiceFactory::destroy();
     LocationUpdatePolicyFactory::destroy();
+
+    for(ModuleList::iterator it = modules.begin(); it != modules.end(); it++)
+        delete *it;
+    modules.clear();
+
     delete server;
     delete sq;
     delete server_message_receiver;

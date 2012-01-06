@@ -75,6 +75,8 @@
 #define OPT_PROX                   "prox"
 #define OPT_PROX_OPTIONS           "prox-options"
 
+#define OPT_MODULES                "modules"
+
 namespace Sirikata {
 
 void InitSpaceOptions();
