@@ -38,6 +38,7 @@ private:
     void handleCreatedStream(int err, ODPSST::Stream::Ptr strm);
     void handleMessage(MemoryReference data);
 
+    void sendUpdate();
 
     HostedObjectPtr mParent;
     SpaceObjectReference mPresence;

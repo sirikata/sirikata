@@ -33,6 +33,31 @@ void EnvironmentSimulation::stop() {
 }
 
 boost::any EnvironmentSimulation::invoke(std::vector<boost::any>& params) {
+    // Decode the command. First argument is the "function name"
+    if (params.empty() || !Invokable::anyIsString(params[0]))
+        return boost::any();
+
+    String name = Invokable::anyAsString(params[0]);
+
+    if (name == "get") {
+        if (params.size() < 2 || !Invokable::anyIsString(params[1]))
+            return boost::any();
+        String key = Invokable::anyAsString(params[1]);
+        String val = mEnvironment.get<std::string>(key);
+        return Invokable::asAny(val);
+    }
+    else if (name == "set") {
+        if (params.size() < 3
+            || !Invokable::anyIsString(params[1])
+            || !Invokable::anyIsString(params[2]))
+            return boost::any();
+        String key = Invokable::anyAsString(params[1]);
+        String val = Invokable::anyAsString(params[2]);
+        mEnvironment.put(key, val);
+        sendUpdate();
+        return Invokable::asAny(true);
+    }
+
     return boost::any();
 }
 
@@ -50,6 +75,15 @@ void EnvironmentSimulation::handleMessage(MemoryReference data) {
     // Currently just receiving whole thing every time
     std::stringstream env_json(std::string((char*)data.begin(), data.size()));
     read_json(env_json, mEnvironment);
+}
+
+void EnvironmentSimulation::sendUpdate() {
+    // Currently we just always serialize and send the whole thing
+    std::stringstream data_json;
+    write_json(data_json, mEnvironment);
+    String serialized = data_json.str();
+    ENV_LOG(insane, "Sending update: " << serialized);
+    mRecordStream.write(MemoryReference(serialized));
 }
 
 } // namespace Sirikata

@@ -59,8 +59,15 @@ void Environment::handleStream(int err, ODPSST::Stream::Ptr strm) {
 }
 
 void Environment::handleMessage(const ObjectReference& id, MemoryReference data) {
-    ENV_LOG(insane, "Received message from " << id);
-    mSubscribers[id]->record_stream.write(data);
+    ENV_LOG(insane, "Received message from " << id << ": " << String((char*)data.begin(), data.size()));
+    // Currently just receiving whole thing every time
+    std::stringstream env_json(std::string((char*)data.begin(), data.size()));
+    read_json(env_json, mEnvironment);
+
+    // And notifying everyone asap
+    for(SubscriberMap::iterator it = mSubscribers.begin(); it != mSubscribers.end(); it++) {
+        sendUpdate(it->first);
+    }
 }
 
 void Environment::sendUpdate(const ObjectReference& id) {

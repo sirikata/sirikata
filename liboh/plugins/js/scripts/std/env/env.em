@@ -20,4 +20,12 @@ function() {
         return this._sim.invoke.apply(this._sim, arguments);
     };
 
+    ns.Environment.prototype.set = function(key, val) {
+        return this.invoke('set', key, val);
+    };
+
+    ns.Environment.prototype.get = function(key) {
+        return this.invoke('get', key);
+    };
+
 })();
