@@ -31,7 +31,6 @@
  */
 
 #include "CSFQODPFlowScheduler.hpp"
-#include <sirikata/ohcoordinator/LocationService.hpp>
 #include <sirikata/ohcoordinator/CoordinateSegmentation.hpp>
 #include <sirikata/core/util/Random.hpp>
 #include <sirikata/core/trace/Trace.hpp>
@@ -49,12 +48,11 @@
 
 namespace Sirikata {
 
-CSFQODPFlowScheduler::CSFQODPFlowScheduler(SpaceContext* ctx, ForwarderServiceQueue* parent, ServerID sid, uint32 serv_id, uint32 max_size, LocationService* loc)
+CSFQODPFlowScheduler::CSFQODPFlowScheduler(SpaceContext* ctx, ForwarderServiceQueue* parent, ServerID sid, uint32 serv_id, uint32 max_size)
  : ODPFlowScheduler(ctx, parent, sid, serv_id),
    mQueueBuffer(),
    mQueue(Sirikata::SizedResourceMonitor(max_size)),
    mNeedsNotification(true),
-   mLoc(loc),
    mArrivalRate(_Ka_double),
    mSumEstimatedArrivalRates(0),
    mAcceptedRate(_Ka_double),
@@ -350,12 +348,6 @@ float CSFQODPFlowScheduler::totalReceiverUsedWeight() {
 
 BoundingBox3f CSFQODPFlowScheduler::getObjectWeightRegion(const UUID& objid, const OSegEntry& info) const {
     // We might have exact info
-    if (mLoc->contains(objid)) {
-        Vector3f pos = mLoc->currentPosition(objid);
-        BoundingSphere3f bounds = mLoc->bounds(objid);
-        BoundingBox3f bb(pos + bounds.center(), bounds.radius());
-        return bb;
-    }
 
     if (info.server() == mContext->id())
         CSFQLOG(warn,"Using approximation for local object!");

@@ -66,7 +66,6 @@ namespace Trace {
   class OSegLookupQueue;
 class ForwarderServiceQueue;
 class ODPFlowScheduler;
-class LocationService;
 class LocalForwarder;
 
 namespace ODP {
@@ -145,7 +144,7 @@ private:
       Forwarder(SpaceContext* ctx);
       ~Forwarder();
 
-    void initialize(ObjectSegmentation* oseg, ServerMessageQueue* smq, ServerMessageReceiver* smr, LocationService* loc);
+    void initialize(ObjectSegmentation* oseg, ServerMessageQueue* smq, ServerMessageReceiver* smr);
     void setODPService(ODP::DelegateService* odp);
 
     void setLocalForwarder(LocalForwarder* lf) { mLocalForwarder = lf; }
@@ -156,14 +155,6 @@ private:
 
   private:
     void reportStats();
-
-    // Init method: adds an odp routing service to the ForwarderServiceQueue and
-    // sets up the callback used to create new ODP input queues.
-    void addODPServerMessageService(LocationService* loc);
-    // Allocates a new ODPFlowScheduler, invoked by ForwarderServiceQueue when a
-    // new server connection is made.  This creates it and gets it setup so the
-    // Forwarder can get weight updates sent to the remote endpoint.
-    ODPFlowScheduler* createODPFlowScheduler(LocationService* loc, ServerID remote_server, uint32 max_size);
 
     // Invoked periodically by an (internal) poller to update server fair queue
     // weights. Updates local ServerMessageQueue and sends messages to remote

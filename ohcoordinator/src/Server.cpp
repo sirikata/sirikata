@@ -32,7 +32,6 @@
 
 #include <sirikata/ohcoordinator/SpaceNetwork.hpp>
 #include "Server.hpp"
-#include <sirikata/ohcoordinator/Proximity.hpp>
 #include <sirikata/ohcoordinator/CoordinateSegmentation.hpp>
 #include <sirikata/ohcoordinator/ServerMessage.hpp>
 #include <sirikata/core/trace/Trace.hpp>
@@ -465,8 +464,9 @@ void Server::handleSessionMessage(const ObjectHostConnectionID& oh_conn_id, Siri
    	    	}
     	}
     	else if(session_msg.coordinate().type() == Sirikata::Protocol::Session::Coordinate::MigrateReq) {
-   			UUID entity_id = session_msg.coordinate().entity();
-   			SPACE_LOG(info, "Receive migration request of entity "<<entity_id.rawHexData());
+		UUID entity_id = session_msg.coordinate().entity();
+		SPACE_LOG(info, "Receive migration request of entity "<<entity_id.rawHexData());
+                informOHMigration(entity_id, oh_conn_id);
 
     	}
     }
@@ -482,9 +482,9 @@ void Server::handleSessionMessage(const ObjectHostConnectionID& oh_conn_id, Siri
 void Server::informOHMigration(const UUID& uuid, const ObjectHostConnectionID& oh_conn_id) {
 	Sirikata::Protocol::Session::Container session_msg;
 	Sirikata::Protocol::Session::Coordinate oh_coordinate_msg = session_msg.mutable_coordinate();
-	oh_coordinate_msg.set_entity(uuid);
-	oh_coordinate_msg.set_oh_name(DestOHName);
-	oh_coordinate_msg.set_type(Sirikata::Protocol::Session::Coordinate::MigrateTo);
+	session_msg.coordinate().set_entity(uuid);
+	session_msg.coordinate().set_oh_name(DestOHName);
+	session_msg.coordinate().set_type(Sirikata::Protocol::Session::Coordinate::MigrateTo);
 	Sirikata::Protocol::Object::ObjectMessage* migration_req = createObjectMessage(
 			mContext->id(),
 			UUID::null(), OBJECT_PORT_SESSION,

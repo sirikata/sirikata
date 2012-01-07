@@ -42,14 +42,13 @@
 
 namespace Sirikata {
 
-class LocationService;
 
 /** CSFQODPFlowScheduler tracks all active flows and uses a CSFQ-style
  *  approach to enforce fairness over those flows.
  */
 class CSFQODPFlowScheduler : public ODPFlowScheduler {
 public:
-    CSFQODPFlowScheduler(SpaceContext* ctx, ForwarderServiceQueue* parent, ServerID sid, uint32 serv_id, uint32 max_size, LocationService* loc);
+    CSFQODPFlowScheduler(SpaceContext* ctx, ForwarderServiceQueue* parent, ServerID sid, uint32 serv_id, uint32 max_size);
     virtual ~CSFQODPFlowScheduler();
 
     // Interface: AbstractQueue<Message*>
@@ -162,8 +161,6 @@ private:
     mutable QueuedMessage mQueueBuffer;
     mutable Sirikata::SizedThreadSafeQueue<QueuedMessage> mQueue;
     mutable Sirikata::AtomicValue<bool> mNeedsNotification;
-    // Used to collect information for weight computation
-    LocationService* mLoc;
 
     // CSFQ Summary Information
     SimpleRateEstimator mArrivalRate;

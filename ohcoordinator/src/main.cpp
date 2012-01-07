@@ -46,10 +46,6 @@
 
 #include "Forwarder.hpp"
 
-#include <sirikata/ohcoordinator/LocationService.hpp>
-
-#include <sirikata/ohcoordinator/Proximity.hpp>
-#include <sirikata/ohcoordinator/AggregateManager.hpp>
 #include "Server.hpp"
 
 #include "Options.hpp"
@@ -80,9 +76,7 @@ struct ServerData {
     SpaceContext* space_context;
     Authenticator* auth;
     Forwarder* forwarder;
-    LocationService* loc_service;
     CoordinateSegmentation* cseg;
-    Proximity* prox;
     ObjectSegmentation* oseg;
     ObjectHostSessionManager* oh_sess_mgr;
     ObjectSessionManager* obj_sess_mgr;
@@ -197,17 +191,6 @@ int main(int argc, char** argv) {
         exit(-1);
     }
 
-
-    String loc_update_type = GetOptionValue<String>(LOC_UPDATE);
-    String loc_update_opts = GetOptionValue<String>(LOC_UPDATE_OPTIONS);
-    LocationUpdatePolicy* loc_update_policy =
-        LocationUpdatePolicyFactory::getSingleton().getConstructor(loc_update_type)(space_context, loc_update_opts);
-
-    String loc_service_type = GetOptionValue<String>(LOC);
-    String loc_service_opts = GetOptionValue<String>(LOC_OPTIONS);
-    LocationService* loc_service =
-        LocationServiceFactory::getSingleton().getConstructor(loc_service_type)(space_context, loc_update_policy, loc_service_opts);
-
     ServerMessageQueue* sq = NULL;
     String server_queue_type = GetOptionValue<String>(SERVER_QUEUE);
     if (server_queue_type == "fair") {
@@ -264,13 +247,8 @@ int main(int argc, char** argv) {
 
 
     // We have all the info to initialize the forwarder now
-    forwarder->initialize(oseg, sq, server_message_receiver, loc_service);
+    forwarder->initialize(oseg, sq, server_message_receiver);
 
-    AggregateManager* aggmgr = new AggregateManager(loc_service);
-
-    std::string prox_type = GetOptionValue<String>(OPT_PROX);
-    std::string prox_options = GetOptionValue<String>(OPT_PROX_OPTIONS);
-    Proximity* prox = ProximityFactory::getSingleton().getConstructor(prox_type)(space_context, loc_service, cseg, gNetwork, aggmgr, prox_options);
 
     // We need to do an async lookup, and to finish it the server needs to be
     // running. But we can't create the server until we have the address from
@@ -284,9 +262,7 @@ int main(int argc, char** argv) {
     sd.space_context = space_context;
     sd.auth = auth;
     sd.forwarder = forwarder;
-    sd.loc_service = loc_service;
     sd.cseg = cseg;
-    sd.prox = prox;
     sd.oseg = oseg;
     sd.oh_sess_mgr = oh_sess_mgr;
     sd.obj_sess_mgr = obj_sess_mgr;
@@ -317,12 +293,10 @@ int main(int argc, char** argv) {
     space_context->add(auth);
     space_context->add(gNetwork);
     space_context->add(cseg);
-    space_context->add(loc_service);
     space_context->add(oseg);
     space_context->add(loadMonitor);
     space_context->add(sstConnMgr);
     space_context->add(ohSstConnMgr);
-    space_context->add(prox);
 
     space_context->run(3);
 
@@ -335,13 +309,9 @@ int main(int argc, char** argv) {
     gTrace->prepareShutdown();
     Mesh::FilterFactory::destroy();
     ModelsSystemFactory::destroy();
-    LocationServiceFactory::destroy();
-    LocationUpdatePolicyFactory::destroy();
     delete server;
     delete sq;
     delete server_message_receiver;
-    delete prox;
-    delete aggmgr;
     delete server_id_map;
 
     delete loadMonitor;
@@ -349,7 +319,6 @@ int main(int argc, char** argv) {
     delete cseg;
     delete oseg;
     delete oseg_cache;
-    delete loc_service;
     delete forwarder;
 
     delete obj_sess_mgr;

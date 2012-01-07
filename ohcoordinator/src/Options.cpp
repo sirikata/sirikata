@@ -81,15 +81,6 @@ void InitSpaceOptions() {
         .addOption(new OptionValue(SPACE_OPT_AUTH, "null", Sirikata::OptionValueType<String>(), "Type of authenticator to authenticate object connections."))
         .addOption(new OptionValue(SPACE_OPT_AUTH_OPTIONS, "", Sirikata::OptionValueType<String>(), "Options to pass to authenticator constructor."))
 
-        .addOption(new OptionValue(LOC, "standard", Sirikata::OptionValueType<String>(), "Type of location service to run."))
-        .addOption(new OptionValue(LOC_OPTIONS, "", Sirikata::OptionValueType<String>(), "Options to pass to Loc constructor."))
-        .addOption(new OptionValue(LOC_UPDATE, "always", Sirikata::OptionValueType<String>(), "Type of location service to run."))
-        .addOption(new OptionValue(LOC_UPDATE_OPTIONS, "", Sirikata::OptionValueType<String>(), "Options to pass to Loc constructor."))
-
-
-        .addOption(new OptionValue(OPT_PROX, "libprox", Sirikata::OptionValueType<String>(), "Type of Proximity query processor to instantiate."))
-        .addOption(new OptionValue(OPT_PROX_OPTIONS, "", Sirikata::OptionValueType<String>(), "Arguments to pass to Proximity query processor. Note that many common options are already provided (type of top-level service, type of server-to-server and object-to-server handlers, etc) so they do not need to be passed through."))
-
       .addOption(new OptionValue("route-object-message-buffer", "64", Sirikata::OptionValueType<size_t>(), "size of the buffer between network and main strand for space server message routing"))
 
       ;

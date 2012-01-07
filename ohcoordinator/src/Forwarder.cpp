@@ -157,9 +157,8 @@ Forwarder::Forwarder(SpaceContext* ctx)
   /*
     Assigning time and mObjects, which should have been constructed in Server's constructor.
   */
-void Forwarder::initialize(ObjectSegmentation* oseg, ServerMessageQueue* smq, ServerMessageReceiver* smr, LocationService* loc)
+void Forwarder::initialize(ObjectSegmentation* oseg, ServerMessageQueue* smq, ServerMessageReceiver* smr)
 {
-    addODPServerMessageService(loc);
 
     mOSegLookups = new OSegLookupQueue(mContext->mainStrand, oseg);
     mServerMessageQueue = smq;
@@ -260,48 +259,6 @@ ObjectConnection* Forwarder::getObjectConnection(const UUID& dest_obj, uint64& i
     }
     ider = it->second.id;
     return it->second.conn;
-}
-
-
-// -- Server message handling.  These methods handle server to server messages,
-// -- where the payload is either an already serialized ODP message, meaning its
-// -- information isn't available, or may simply be between two space servers so
-// -- that object information doesn't even exist.
-
-void Forwarder::addODPServerMessageService(LocationService* loc) {
-    using std::tr1::placeholders::_1;
-    using std::tr1::placeholders::_2;
-
-    assert(mServiceIDMap.find(ODP_SERVER_MESSAGE_SERVICE) == mServiceIDMap.end());
-
-    ForwarderServiceQueue::ServiceID svc_id = mServiceIDSource++;
-    mServiceIDMap[ODP_SERVER_MESSAGE_SERVICE] = svc_id;
-    mOutgoingMessages->addService(
-        svc_id,
-        std::tr1::bind(&Forwarder::createODPFlowScheduler, this, loc, _1, _2)
-    );
-}
-
-ODPFlowScheduler* Forwarder::createODPFlowScheduler(LocationService* loc, ServerID remote_server, uint32 max_size) {
-    String flow_sched_type = GetOptionValue<String>(SERVER_ODP_FLOW_SCHEDULER);
-    ODPFlowScheduler* new_flow_scheduler = NULL;
-
-    if (flow_sched_type == "region") {
-        new_flow_scheduler =
-            new RegionODPFlowScheduler(mContext, mOutgoingMessages, remote_server, mServiceIDMap[ODP_SERVER_MESSAGE_SERVICE], max_size);
-    }
-    else if (flow_sched_type == "csfq") {
-        new_flow_scheduler =
-            new CSFQODPFlowScheduler(mContext, mOutgoingMessages, remote_server, mServiceIDMap[ODP_SERVER_MESSAGE_SERVICE], max_size, loc);
-    }
-
-    assert(new_flow_scheduler != NULL);
-
-    {
-        boost::lock_guard<boost::recursive_mutex> lck(mODPRouterMapMutex);
-        mODPRouters[remote_server] = new_flow_scheduler;
-    }
-    return new_flow_scheduler;
 }
 
 void Forwarder::updateServerWeights() {

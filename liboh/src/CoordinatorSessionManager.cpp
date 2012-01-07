@@ -872,7 +872,7 @@ void CoordinatorSessionManager::handleSessionMessage(Sirikata::Protocol::Object:
     		String DestOHName = coordinate.oh_name();
     		SpaceID space; // search to obtaint the space id;
     		// migrateEntity(space, obj_id , DestOHName); //how to call object host function from th session manager?
-    		SESSION_LOG(info,"Receive OH migration request of entity "<<entity_id.rawHexData());
+    		SESSION_LOG(info,"Receive OH migration request of entity "<<entity_id.rawHexData()<<" to "<<DestOHName);
     	}
     	if(coordinate.type()==Sirikata::Protocol::Session::Coordinate::MigrateFrom) {
 

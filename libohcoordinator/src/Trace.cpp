@@ -173,7 +173,6 @@ CREATE_TRACE_DEF(SpaceTrace, osegCumulativeResponse, mLogOSegCumulative, const T
     rec.set_t(t);
     rec.set_object(traceToken->mID);
     rec.set_lookup_server(traceToken->lookerUpper);
-    rec.set_location_server(traceToken->locatedOn);
 
     rec.set_not_ready(traceToken->notReady);
     rec.set_shutting_down(traceToken->shuttingDown);
@@ -282,8 +281,6 @@ CREATE_TRACE_DEF(SpaceTrace, serverLoc, mLogLocProx, const Time& t, const Server
     rec.set_object(obj);
     Sirikata::Trace::ITimedMotionVector rec_loc = rec.mutable_loc();
     fillTimedMotionVector(rec_loc, loc);
-
-    mTrace->writeRecord(ServerLocationTag, rec);
 }
 
 CREATE_TRACE_DEF(SpaceTrace, serverObjectEvent, mLogLocProx, const Time& t, const ServerID& source, const ServerID& dest, const UUID& obj, bool added, const TimedMotionVector3f& loc) {
