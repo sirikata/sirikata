@@ -222,10 +222,8 @@ function testTryExceedCaps()
             //GUI
             try
             {
-                system.require('std/graphics/default.em');
-                simulator = new std.graphics.DefaultGraphics(system.self,
-                                                             'ogregraphics',
-                                                             function(){});
+                system.require('std/client/default.em');
+                simulator = new std.client.Default(system.self, function(){});
 
                 mTest.fail('Error in testTryExceedCaps.  Should not have been able to perform a gui command.');
             }

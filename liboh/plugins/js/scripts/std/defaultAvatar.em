@@ -43,7 +43,7 @@ std.simpleStorage.setScript(
         system.require('std/script/scriptable.em');
         system.require('std/movement/movable.em');
         system.require('std/movement/animatable.em');
-        system.require('std/graphics/default.em');
+        system.require('std/client/default.em');
         
         scriptable = new std.script.Scriptable();
         movable = new std.movement.Movable(true); // Self only
@@ -55,7 +55,7 @@ std.simpleStorage.setScript(
         function(msg, sender) { system.prettyprint('Message from ', sender.toString(), ': ', msg); } << [{'printrequest'::}];
 
         var init = function() {
-            simulator = new std.graphics.DefaultGraphics(system.self, 'ogregraphics');
+            simulator = new std.client.Default(system.self);
         };
 
         if (system.self)

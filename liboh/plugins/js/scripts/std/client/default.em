@@ -30,15 +30,16 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-system.require('graphics.em');
-system.require('undo.em');
+system.require('std/core/namespace.em');
+system.require('std/graphics/graphics.em');
+system.require('std/graphics/undo.em');
 system.require('std/movement/pursue.em');
 system.require('std/script/scripter.em');
-system.require('inputbinding.em');
-system.require('defaultcamera.em');
-system.require('drag/move.em');
-system.require('drag/rotate.em');
-system.require('drag/scale.em');
+system.require('std/graphics/inputbinding.em');
+system.require('std/graphics/defaultcamera.em');
+system.require('std/graphics/drag/move.em');
+system.require('std/graphics/drag/rotate.em');
+system.require('std/graphics/drag/scale.em');
 system.require('std/graphics/chat.em');
 system.require('std/graphics/physics.em');
 system.require('std/graphics/propertybox.em');
@@ -51,23 +52,23 @@ system.require('std/graphics/characterAnimation.em');
 (
 function() {
 
-    var ns = std.graphics;
+    var ns = Namespace('std.client');
 
     /** @namespace
-     *  The DefaultGraphics class just contains some sane defaults for
+     *  The Default class just contains some sane defaults for
      *  interaction, allowing you to get a decent, baseline client
      *  that only requires built-in functionality. You still define
      *  the presence and which underlying graphics system to use, but
      *  this class takes care of defining all other UI and interaction.
      */
-    std.graphics.DefaultGraphics = function(pres, name, cb) {
+    std.client.Default = function(pres, cb) {
         this._pres = pres;
-            
-        this._simulator = new std.graphics.Graphics(pres, name, std.core.bind(this.finishedGraphicsInit, this, cb), std.core.bind(this.finishedGraphicsUIReset, this));
+
+        this._simulator = new std.graphics.Graphics(pres, 'ogregraphics', std.core.bind(this.finishedGraphicsInit, this, cb), std.core.bind(this.finishedGraphicsUIReset, this));
     };
 
     
-    std.graphics.DefaultGraphics.prototype.finishedGraphicsInit = function(cb, gfx, alreadyInitialized) {
+    std.client.Default.prototype.finishedGraphicsInit = function(cb, gfx, alreadyInitialized) {
         this._camera = new std.graphics.DefaultCamera(this._simulator, system.self);
 
         this._selected = null;
@@ -90,7 +91,7 @@ function() {
 
     };
 
-    std.graphics.DefaultGraphics.prototype.finishedGraphicsUIReset = function(gfx) {
+    std.client.Default.prototype.finishedGraphicsUIReset = function(gfx) {
         this._camera.reinit();
 
         var ui_finish_cb = std.core.bind(this.finishedUIInit, this);
@@ -110,7 +111,7 @@ function() {
      through this initialization process.  If false, means that we
      are doing initialization for the first time.
      */
-    std.graphics.DefaultGraphics.prototype.finishedUIInit = function(cb) {
+    std.client.Default.prototype.finishedUIInit = function(cb) {
         this._loadingUIs--;
         if (this._loadingUIs > 0) return;
 
@@ -267,44 +268,44 @@ function() {
             cb(this);
     };
 
-    std.graphics.DefaultGraphics.prototype.presence = function() {
+    std.client.Default.prototype.presence = function() {
         return this._pres;
     };
 
     /** @function */
-    std.graphics.DefaultGraphics.prototype.simulator = function() {
+    std.client.Default.prototype.simulator = function() {
         return this._simulator;
     };
 
     /** @function */
-    std.graphics.DefaultGraphics.prototype.invoke = function() {
+    std.client.Default.prototype.invoke = function() {
         // Just forward manual invoke commands directly
         return this._simulator.invoke.apply(this._simulator, arguments);
     };
 
     /** Request that the given URL be added as a module in the UI. */
-    std.graphics.DefaultGraphics.prototype.addGUIModule = function(name, url, cb) {
+    std.client.Default.prototype.addGUIModule = function(name, url, cb) {
         return this._simulator.addGUIModule(name, url, cb);
     };
 
     /** Request that the given script text be added as a module in the UI. */
-    std.graphics.DefaultGraphics.prototype.addGUITextModule = function(name, js_text, cb) {
+    std.client.Default.prototype.addGUITextModule = function(name, js_text, cb) {
         return this._simulator.addGUITextModule(name, js_text, cb);
     };
 
     /** Get the GUI for a previously loaded GUI module. */
-    std.graphics.DefaultGraphics.prototype.getGUIModule = function(name) {
+    std.client.Default.prototype.getGUIModule = function(name) {
         return this._simulator.getGUIModule(name);
     };
 
     /** Request that the given URL be presented as a widget. */
-    std.graphics.DefaultGraphics.prototype.createBrowser = function(name, url, cb) {
+    std.client.Default.prototype.createBrowser = function(name, url, cb) {
         return this._simulator.createBrowser(name, url, cb);
     };
 
 
     /** Get a list of animations associated with this entity. */
-    std.graphics.DefaultGraphics.prototype.getAnimationList = function(vis) {
+    std.client.Default.prototype.getAnimationList = function(vis) {
         if (!vis)
           vis = system.self;
 
@@ -312,12 +313,12 @@ function() {
     };
 
     /** Start the animation on this entity given by the specified animation name. */
-    std.graphics.DefaultGraphics.prototype.startAnimation = function(vis, anim) {
+    std.client.Default.prototype.startAnimation = function(vis, anim) {
         return this._simulator.startAnimation(vis, anim);
     };
 
     /** Stop the animation on this entity. */
-    std.graphics.DefaultGraphics.prototype.stopAnimation = function(vis) {
+    std.client.Default.prototype.stopAnimation = function(vis) {
         return this._simulator.stopAnimation(vis);
     };
 
@@ -326,28 +327,28 @@ function() {
     //by default how to scale translational velocity from keypresses.  (movement
     //is agonizingly slow if just set this to 1.  I really recommend 5.)
     /** @public */
-    std.graphics.DefaultGraphics.prototype.defaultVelocityScaling = 5;
+    std.client.Default.prototype.defaultVelocityScaling = 5;
     //by default how to scale rotational velocity from keypresses
     /** @public */
-    std.graphics.DefaultGraphics.prototype.defaultRotationalVelocityScaling = .5;
+    std.client.Default.prototype.defaultRotationalVelocityScaling = .5;
 
 
     /** @function */
-    std.graphics.DefaultGraphics.prototype.toggleChat = function() {
+    std.client.Default.prototype.toggleChat = function() {
         this._chat.toggle();
     };
 
     /** @function */
-    std.graphics.DefaultGraphics.prototype.scriptSelf = function() {
+    std.client.Default.prototype.scriptSelf = function() {
         this._scripter.script(system.self);
     };
 
     /** @function */
-    std.graphics.DefaultGraphics.prototype.togglePropertyBox = function() {
+    std.client.Default.prototype.togglePropertyBox = function() {
         this._propertybox.TogglePropertyBox();
     };
 
-    std.graphics.DefaultGraphics.prototype.setAxesInheritOrient = function(inheritOrient) {
+    std.client.Default.prototype.setAxesInheritOrient = function(inheritOrient) {
         if (this._axesInheritOrient === inheritOrient) {
             return;
         }
@@ -360,7 +361,7 @@ function() {
     };
 
     /** @function */
-    std.graphics.DefaultGraphics.prototype.scriptSelectedObject = function() {
+    std.client.Default.prototype.scriptSelectedObject = function() {
         if (this._selected == null)
             return;
         //this._presenceList.addObject(this._selected.toString(), 'Scripted');
@@ -368,36 +369,36 @@ function() {
     };
 
     /** @function */
-    std.graphics.DefaultGraphics.prototype.toggleCameraMode = function(evt) {
+    std.client.Default.prototype.toggleCameraMode = function(evt) {
         var newmode = this._camera.mode() == 'first' ? 'third' : 'first';
         this._camera.setMode(newmode);
         this.updateCameraOffset();
     };
 
     /** @function */
-    std.graphics.DefaultGraphics.prototype.updateCameraOffset = function() {
+    std.client.Default.prototype.updateCameraOffset = function() {
         if (this._camera.mode() == 'third') {
             var orient = this._pres.getOrientation();
             this._camera.setOffset(orient.mul(<0, 1.5, 6>));
         }
     };
 
-    std.graphics.DefaultGraphics.prototype.updateAnimation = function() {
+    std.client.Default.prototype.updateAnimation = function() {
         this._characterAnimation.update();
     };
 
-    std.graphics.DefaultGraphics.prototype.updateCameraAndAnimation = function() {
+    std.client.Default.prototype.updateCameraAndAnimation = function() {
         this.updateCameraOffset();
         this.updateAnimation();
     };
 
     /** @function */
-    std.graphics.DefaultGraphics.prototype.moveSelf = function(dir, val) {
+    std.client.Default.prototype.moveSelf = function(dir, val) {
         this._moverot.move(dir, this.defaultVelocityScaling * val);
     };
 
     /** @function */
-    std.graphics.DefaultGraphics.prototype.rotateSelf = function(about, name, val) {
+    std.client.Default.prototype.rotateSelf = function(about, name, val) {
         if (val) {
             this[name] = this._moverot.rotate(about, this.defaultRotationalVelocityScaling);
         }
@@ -407,7 +408,7 @@ function() {
         }
     };
 
-    std.graphics.DefaultGraphics.prototype.turnOffAxis = function(x, y) {
+    std.client.Default.prototype.turnOffAxis = function(x, y) {
         if (!this._selected) {
             return;
         }
@@ -420,7 +421,7 @@ function() {
     };
 
     /** @function */
-    std.graphics.DefaultGraphics.prototype.pickObject = function(x, y)
+    std.client.Default.prototype.pickObject = function(x, y)
     {
         var ignore_self = this._camera.mode() == 'first';
         var clicked = this._simulator.pick(x, y, ignore_self);
@@ -456,13 +457,13 @@ function() {
     };
 
     /** @function */
-    std.graphics.DefaultGraphics.prototype.actOnObject = function(evt) {
+    std.client.Default.prototype.actOnObject = function(evt) {
         if (this._selected)
             { 'action' : 'touch' } >> this._selected >> [];
     }
     
     /** @function */
-    std.graphics.DefaultGraphics.prototype.teleportToObj = function(evt) {
+    std.client.Default.prototype.teleportToObj = function(evt) {
         if (this._selected) {
             var dir = this._selected.getPosition() - this._pres.getPosition();
             dir = dir.normal();
@@ -480,13 +481,13 @@ function() {
     }
 
     /** @function */
-    std.graphics.DefaultGraphics.prototype.updatePhysicsProperties = function() {
+    std.client.Default.prototype.updatePhysicsProperties = function() {
         // Update even if not selected so display can be disabled
         this._physics.update(this._selected);
     };
 
     /** @function */
-    std.graphics.DefaultGraphics.prototype.startDrag = function(dragger, evt) {
+    std.client.Default.prototype.startDrag = function(dragger, evt) {
         if (this._selected)
             this._dragger = dragger;
         if (this._dragger)
@@ -494,12 +495,12 @@ function() {
     };
 
     /** @function */
-    std.graphics.DefaultGraphics.prototype.forwardMousePressToDragger = function(evt) {
+    std.client.Default.prototype.forwardMousePressToDragger = function(evt) {
         if (this._dragger) this._dragger.onMousePress(evt);
     };
 
     /** @function */
-    std.graphics.DefaultGraphics.prototype.forwardMouseDragToDragger = function(evt) {
+    std.client.Default.prototype.forwardMouseDragToDragger = function(evt) {
         if (this._dragger) this._dragger.onMouseDrag(evt);
         //this._propertybox.HandleUpdateProperties(this._selected);
     };
@@ -507,29 +508,29 @@ function() {
 
     
     /** @function */
-    std.graphics.DefaultGraphics.prototype.updatePropertyBox = function(evt) {
+    std.client.Default.prototype.updatePropertyBox = function(evt) {
         //this._propertybox.HandleUpdateProperties(this._selected);
     };
 
     /** @function */
-    std.graphics.DefaultGraphics.prototype.forwardMouseReleaseToDragger = function(evt) {
+    std.client.Default.prototype.forwardMouseReleaseToDragger = function(evt) {
         if (this._dragger) this._dragger.onMouseRelease(evt);
     };
 
     /** @function */
-    std.graphics.DefaultGraphics.prototype.stopDrag = function() {
+    std.client.Default.prototype.stopDrag = function() {
         delete this._dragger;
     };
 
     /** @function */
-    std.graphics.DefaultGraphics.prototype.startFreeRotate = function(evt) {
+    std.client.Default.prototype.startFreeRotate = function(evt) {
         this.startX = evt.x;
         this.startY = evt.y;
         this.startOrientation = this._pres.getOrientation();
     };
 
     /** @function */
-    std.graphics.DefaultGraphics.prototype.freeRotateDrag = function(evt) {
+    std.client.Default.prototype.freeRotateDrag = function(evt) {
         if (this.startX == null || this.startY == null)
             return;
 
@@ -551,22 +552,22 @@ function() {
     };
 
     /** @function */
-    std.graphics.DefaultGraphics.prototype.freeRotateRelease = function(evt) {
+    std.client.Default.prototype.freeRotateRelease = function(evt) {
         this.startX = null;
         this.startY = null;
         this.startOrientation = null;
     };
 
-    std.graphics.DefaultGraphics.prototype.undo = function(evt) {
+    std.client.Default.prototype.undo = function(evt) {
         this._simulator.undo();
     };
 
-    std.graphics.DefaultGraphics.prototype.redo = function(evt) {
+    std.client.Default.prototype.redo = function(evt) {
         this._simulator.redo();
     };
 
 
-    std.graphics.DefaultGraphics.prototype.orientDefault = function(evt) {
+    std.client.Default.prototype.orientDefault = function(evt) {
         var vis = this._selected;
         if(!vis)
             return;
@@ -583,18 +584,18 @@ function() {
         });
     };
 
-    std.graphics.DefaultGraphics.prototype.setMaxObjects = function(maxobjs) {
+    std.client.Default.prototype.setMaxObjects = function(maxobjs) {
         this._simulator.setMaxObjects(maxobjs);
     };
 
 
-    std.graphics.DefaultGraphics.prototype.showFlatland = function (x, y) {
+    std.client.Default.prototype.showFlatland = function (x, y) {
         var ignore_self = this._camera.mode() == 'first';
         var clicked = this._simulator.pick(x, y, ignore_self);
         this._flatland.show(clicked, x, y);
     };
 
-    std.graphics.DefaultGraphics.prototype.hideFlatland = function () {
+    std.client.Default.prototype.hideFlatland = function () {
         this._flatland.hide();
     };
 

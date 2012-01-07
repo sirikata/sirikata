@@ -40,10 +40,10 @@ function onReset()
                   return;
               }
               system.require('std/script/scriptable.em');
-              system.require('std/graphics/default.em');
+              system.require('std/client/default.em');
               scriptable = new std.script.Scriptable();
               system.self.setQueryAngle(.00001);      
-              simulator = new std.graphics.DefaultGraphics(restObjGraph,'ogregraphics');
+              simulator = new std.client.Default(restObjGraph);
           };
           
           restoreMChars(function() {
