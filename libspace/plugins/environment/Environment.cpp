@@ -20,8 +20,6 @@ Environment::Environment(SpaceContext* ctx)
 }
 
 void Environment::start() {
-    mEnvironment.put("foo", "bar");
-
     mContext->objectSessionManager()->addListener(this);
 }
 
