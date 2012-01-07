@@ -49,6 +49,9 @@ system.require('std/graphics/axes.em');
 system.require('std/graphics/flatlandViewer.em');
 system.require('std/graphics/characterAnimation.em');
 
+system.require('std/audio/audio.em');
+system.require('std/env/env.em');
+
 (
 function() {
 
@@ -64,7 +67,13 @@ function() {
     std.client.Default = function(pres, cb) {
         this._pres = pres;
 
+        // We'd like to rename this this._graphics, but many other things depend on it's location still...
         this._simulator = new std.graphics.Graphics(pres, 'ogregraphics', std.core.bind(this.finishedGraphicsInit, this, cb), std.core.bind(this.finishedGraphicsUIReset, this));
+
+        this._env = new std.env.Environment(pres);
+        this._env.listen(std.core.bind(this._environmentChanged, this));
+
+        this._audio = new std.audio.Audio(pres, 'sdlaudio');
     };
 
     
@@ -597,6 +606,20 @@ function() {
 
     std.client.Default.prototype.hideFlatland = function () {
         this._flatland.hide();
+    };
+
+
+
+    std.client.Default.prototype._environmentChanged = function () {
+        // Check all paths we know about to see if they've changed
+
+        // Audio
+        var audio_ambient = this._env.get('audio.ambient');
+        if (audio_ambient && audio_ambient != this._env.audio_ambient) {
+            this._env.audio_ambient = audio_ambient;
+            this._audio.play(audio_ambient);
+        }
+
     };
 
 })();
