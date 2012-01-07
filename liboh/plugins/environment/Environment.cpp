@@ -57,12 +57,15 @@ boost::any EnvironmentSimulation::invoke(std::vector<boost::any>& params) {
     }
     else if (name == "set") {
         if (params.size() < 3
-            || !Invokable::anyIsString(params[1])
-            || !Invokable::anyIsString(params[2]))
+            || !Invokable::anyIsString(params[1]))
             return boost::any();
         String key = Invokable::anyAsString(params[1]);
-        String val = Invokable::anyAsString(params[2]);
-        mEnvironment.put(key, val);
+        if (Invokable::anyIsString(params[2]))
+            mEnvironment.put(key, Invokable::anyAsString(params[2]));
+        else if (Invokable::anyIsNumeric(params[2]))
+            mEnvironment.put(key, Invokable::anyAsNumeric(params[2]));
+        else
+            return Invokable::asAny(false);
         sendUpdate();
         return Invokable::asAny(true);
     }
