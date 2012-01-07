@@ -1,5 +1,5 @@
-/*  Sirikata Object Host
- *  ConnectionEvent.hpp
+/*  Sirikata Object Host -- Proxy Creation and Destruction manager
+ *  SimulationFactory.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
@@ -29,40 +29,36 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef _SIRIKATA_CONNECTION_EVENT_LISTENER_HPP_
-#define _SIRIKATA_CONNECTION_EVENT_LISTENER_HPP_
 
-#include <sirikata/proxyobject/Platform.hpp>
-#include <sirikata/core/util/ListenerProvider.hpp>
+#ifndef _SIRIKATA_SIMULATION_FACTORY_
+#define _SIRIKATA_SIMULATION_FACTORY_
 
-namespace Sirikata {
+#include <sirikata/oh/Platform.hpp>
+#include <sirikata/proxyobject/Defs.hpp>
+#include <sirikata/oh/Simulation.hpp>
+#include <sirikata/core/service/Context.hpp>
+#include <sirikata/oh/ConnectionEventListener.hpp>
 
-/** ConnectionEventListener listens for events relating to object host
- * connections. This is useful for monitoring the health of the underlying
- * system without directly exposing the details.
- *
- * FIXME This should be in liboh, but it is primarily useful to display plugins,
- * e.g. Ogre, which currently only use libproxyobject.
- */
-class SIRIKATA_PROXYOBJECT_EXPORT ConnectionEventListener {
+namespace Sirikata{
+
+// Note that we provide a ConnectionEventProvider because we're in
+// libproxyobject so we can't just provide the ObjectHostContext, which would
+// give access to the ObjectHost if it was needed. Ideally we wouldn't pass this
+// parameter since some Simulations don't care about it.
+class SIRIKATA_OH_EXPORT SimulationFactory
+    : public AutoSingleton<SimulationFactory>,
+      public Factory5<Simulation*,
+                      Context*,
+                      ConnectionEventProvider*,
+                      VWObjectPtr, // Object simulation is working within
+                      const SpaceObjectReference&, // Presence the simulation is working within
+                      const String&> //options string for the graphics system
+{
 public:
-    virtual ~ConnectionEventListener(){}
-
-    /** Invoked upon connection.
-     *  \param addr the address connected to
-     */
-    virtual void onConnected(const Network::Address& addr) {};
-    /** Invoked upon disconnection.
-     *  \param addr the address disconnected from
-     *  \param requested indicates whether the user requested the disconnection
-     *  \param reason if requested is false, gives a textual description of the
-     *  reason for the disconnection
-     */
-    virtual void onDisconnected(const Network::Address& addr, bool requested, const String& reason) {};
+    static SimulationFactory&getSingleton();
+    static void destroy();
 };
 
-typedef Provider< ConnectionEventListener* > ConnectionEventProvider;
 
-} // namespace Sirikata
-
-#endif //_SIRIKATA_CONNECTION_EVENT_LISTENER_HPP_
+}
+#endif

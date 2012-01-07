@@ -5,7 +5,7 @@
 #ifndef _SIRIKATA_SDLAUDIO_SDLAUDIO_HPP_
 #define _SIRIKATA_SDLAUDIO_SDLAUDIO_HPP_
 
-#include <sirikata/proxyobject/Simulation.hpp>
+#include <sirikata/oh/Simulation.hpp>
 #include <sirikata/core/service/Context.hpp>
 #include <sirikata/core/transfer/TransferMediator.hpp>
 #include <sirikata/core/transfer/ResourceDownloadTask.hpp>

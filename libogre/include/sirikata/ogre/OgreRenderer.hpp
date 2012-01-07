@@ -39,7 +39,7 @@
 #include <sirikata/mesh/Visual.hpp>
 #include <sirikata/core/service/Context.hpp>
 #include <sirikata/core/transfer/TransferMediator.hpp>
-#include <sirikata/proxyobject/TimeSteppedSimulation.hpp>
+#include <sirikata/oh/TimeSteppedSimulation.hpp>
 #include <OgreWindowEventUtilities.h>
 
 namespace Sirikata {

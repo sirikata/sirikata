@@ -44,7 +44,7 @@
 #include <sirikata/oh/ObjectScriptManagerFactory.hpp>
 #include <sirikata/core/network/StreamFactory.hpp>
 #include <sirikata/core/options/Options.hpp>
-#include <sirikata/proxyobject/ConnectionEventListener.hpp>
+#include <sirikata/oh/ConnectionEventListener.hpp>
 #include <sirikata/core/util/SpaceObjectReference.hpp>
 #include <sirikata/core/service/Context.hpp>
 #include <sirikata/oh/ObjectQueryProcessor.hpp>

@@ -33,8 +33,8 @@
 #ifndef _SIRIKATA_TIME_STEPPED_SIMULATION_HPP_
 #define _SIRIKATA_TIME_STEPPED_SIMULATION_HPP_
 
-#include <sirikata/proxyobject/Platform.hpp>
-#include <sirikata/proxyobject/Simulation.hpp>
+#include <sirikata/oh/Platform.hpp>
+#include <sirikata/oh/Simulation.hpp>
 #include <sirikata/core/service/Poller.hpp>
 #include <sirikata/core/service/Context.hpp>
 #include <sirikata/core/service/TimeProfiler.hpp>

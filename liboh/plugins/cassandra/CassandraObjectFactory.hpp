@@ -35,7 +35,7 @@
 
 #include <sirikata/oh/ObjectFactory.hpp>
 #include <sirikata/oh/HostedObject.hpp>
-#include <sirikata/proxyobject/SimulationFactory.hpp>
+#include <sirikata/oh/SimulationFactory.hpp>
 #include <libcassandra/cassandra.h>
 
 namespace Sirikata {

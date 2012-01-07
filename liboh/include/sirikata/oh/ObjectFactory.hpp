@@ -39,7 +39,7 @@
 #include <sirikata/core/util/SpaceID.hpp>
 #include <vector>
 #include <list>
-#include <sirikata/proxyobject/SimulationFactory.hpp>
+#include <sirikata/oh/SimulationFactory.hpp>
 
 
 namespace Sirikata {

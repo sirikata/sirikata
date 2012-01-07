@@ -31,7 +31,7 @@
  */
 
 #include <sirikata/proxyobject/Platform.hpp>
-#include <sirikata/proxyobject/SimulationFactory.hpp>
+#include <sirikata/oh/SimulationFactory.hpp>
 #include "OgreSystem.hpp"
 static int core_plugin_refcount = 0;
 

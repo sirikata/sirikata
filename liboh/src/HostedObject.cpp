@@ -52,7 +52,7 @@
 #include <sirikata/core/network/IOStrandImpl.hpp>
 #include <list>
 #include <vector>
-#include <sirikata/proxyobject/SimulationFactory.hpp>
+#include <sirikata/oh/SimulationFactory.hpp>
 #include "PerPresenceData.hpp"
 
 #include <sirikata/oh/LocUpdate.hpp>

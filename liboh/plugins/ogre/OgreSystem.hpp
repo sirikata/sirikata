@@ -43,7 +43,7 @@
 
 #include <sirikata/ogre/OgreRenderer.hpp>
 
-#include <sirikata/proxyobject/ConnectionEventListener.hpp>
+#include <sirikata/oh/ConnectionEventListener.hpp>
 
 namespace Ogre {
 struct RaySceneQueryResultEntry;

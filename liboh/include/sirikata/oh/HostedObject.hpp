@@ -50,7 +50,7 @@
 
 #include <sirikata/oh/ObjectHost.hpp>
 #include <sirikata/oh/ObjectHostProxyManager.hpp>
-#include <sirikata/proxyobject/SimulationFactory.hpp>
+#include <sirikata/oh/SimulationFactory.hpp>
 
 namespace Sirikata {
 

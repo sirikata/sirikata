@@ -1,5 +1,5 @@
-/*  Sirikata Object Host -- Proxy Creation and Destruction manager
- *  SimulationFactory.hpp
+/*  Sirikata Object Host
+ *  ConnectionEvent.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
@@ -29,36 +29,37 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+#ifndef _SIRIKATA_CONNECTION_EVENT_LISTENER_HPP_
+#define _SIRIKATA_CONNECTION_EVENT_LISTENER_HPP_
 
-#ifndef _SIRIKATA_SIMULATION_FACTORY_
-#define _SIRIKATA_SIMULATION_FACTORY_
+#include <sirikata/oh/Platform.hpp>
+#include <sirikata/core/util/ListenerProvider.hpp>
 
-#include <sirikata/proxyobject/Platform.hpp>
-#include <sirikata/proxyobject/Defs.hpp>
-#include <sirikata/proxyobject/Simulation.hpp>
-#include <sirikata/core/service/Context.hpp>
-#include <sirikata/proxyobject/ConnectionEventListener.hpp>
+namespace Sirikata {
 
-namespace Sirikata{
-
-// Note that we provide a ConnectionEventProvider because we're in
-// libproxyobject so we can't just provide the ObjectHostContext, which would
-// give access to the ObjectHost if it was needed. Ideally we wouldn't pass this
-// parameter since some Simulations don't care about it.
-class SIRIKATA_PROXYOBJECT_EXPORT SimulationFactory
-    : public AutoSingleton<SimulationFactory>,
-      public Factory5<Simulation*,
-                      Context*,
-                      ConnectionEventProvider*,
-                      VWObjectPtr, // Object simulation is working within
-                      const SpaceObjectReference&, // Presence the simulation is working within
-                      const String&> //options string for the graphics system
-{
+/** ConnectionEventListener listens for events relating to object host
+ * connections. This is useful for monitoring the health of the underlying
+ * system without directly exposing the details.
+ */
+class SIRIKATA_OH_EXPORT ConnectionEventListener {
 public:
-    static SimulationFactory&getSingleton();
-    static void destroy();
+    virtual ~ConnectionEventListener(){}
+
+    /** Invoked upon connection.
+     *  \param addr the address connected to
+     */
+    virtual void onConnected(const Network::Address& addr) {};
+    /** Invoked upon disconnection.
+     *  \param addr the address disconnected from
+     *  \param requested indicates whether the user requested the disconnection
+     *  \param reason if requested is false, gives a textual description of the
+     *  reason for the disconnection
+     */
+    virtual void onDisconnected(const Network::Address& addr, bool requested, const String& reason) {};
 };
 
+typedef Provider< ConnectionEventListener* > ConnectionEventProvider;
 
-}
-#endif
+} // namespace Sirikata
+
+#endif //_SIRIKATA_CONNECTION_EVENT_LISTENER_HPP_

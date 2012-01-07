@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can
 // be found in the LICENSE file.
 
-#include <sirikata/proxyobject/Platform.hpp>
-#include <sirikata/proxyobject/SimulationFactory.hpp>
+#include <sirikata/oh/Platform.hpp>
+#include <sirikata/oh/SimulationFactory.hpp>
 #include "SDLAudio.hpp"
 
 static int sdlaudio_plugin_refcount = 0;
