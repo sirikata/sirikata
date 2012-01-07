@@ -43,7 +43,12 @@ boost::any EnvironmentSimulation::invoke(std::vector<boost::any>& params) {
         if (params.size() < 2 || !Invokable::anyIsString(params[1]))
             return boost::any();
         String key = Invokable::anyAsString(params[1]);
-        String val = mEnvironment.get<std::string>(key);
+        String val;
+        try {
+            val = mEnvironment.get<std::string>(key);
+        } catch (ptree_bad_path exc) {
+            return boost::any();
+        }
         return Invokable::asAny(val);
     }
     else if (name == "set") {
