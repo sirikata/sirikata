@@ -617,9 +617,14 @@ function() {
         var audio_ambient = this._env.get('audio.ambient');
         if (audio_ambient && audio_ambient != this._env.audio_ambient) {
             this._env.audio_ambient = audio_ambient;
-            this._audio.play(audio_ambient);
+            if (this._env.audio_ambient_clip)
+                this._env.audio_ambient_clip.stop();
+            this._env.audio_ambient_clip = this._audio.play(audio_ambient);
         }
-
+        var audio_ambient_volume = this._env.get('audio.ambient_volume');
+        if (audio_ambient_volume !== undefined && this._env.audio_ambient_clip) {
+            this._env.audio_ambient_clip.volume(parseFloat(audio_ambient_volume));
+        }
     };
 
 })();

@@ -10,9 +10,11 @@ function() {
     var ns = Namespace('std.audio');
 
     /** Represents a single audio track to be played. */
-    ns.Clip = function(parent, url) {
+    ns.Clip = function(parent, url, volume) {
         this._parent = parent;
         this._url = url;
+        this._volume = (volume === undefined || volume === null) ? 1.0 : volume;
+
         // Handle for the underlying system clip value. Combined with the
         // parent, this gives a unique handle to the clip. However, it isn't set
         // until it gets allocated by calling play
@@ -30,7 +32,7 @@ function() {
 
     /** Load and play the clip. */
     ns.Clip.prototype.play = function() {
-        this._handle = this._parent.invoke('play', this._url);
+        this._handle = this._parent.invoke('play', this._url, this._volume);
         var success = (this._handle !== undefined);
         return success;
     };
@@ -39,6 +41,12 @@ function() {
     ns.Clip.prototype.stop = function() {
         if (this._handle === undefined) return;
         this._parent.invoke('stop', this._handle);
+    };
+
+    /** Change the volume of the clip. */
+    ns.Clip.prototype.volume = function(v) {
+        if (this._handle === undefined) return;
+        this._parent.invoke('volume', this._handle, v);
     };
 
 })();
