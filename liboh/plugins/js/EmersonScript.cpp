@@ -318,6 +318,7 @@ void  EmersonScript::notifyProximate(ProxyObjectPtr proximateObject, const Space
 JSInvokableObject::JSInvokableObjectInt* EmersonScript::runSimulation(const SpaceObjectReference& sporef, const String& simname)
 {
     Simulation* sim = mParent->runSimulation(sporef,simname);
+    if (sim == NULL) return NULL;
     return new JSInvokableObject::JSInvokableObjectInt(sim);
 }
 

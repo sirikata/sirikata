@@ -465,17 +465,20 @@ bool HostedObject::addSimListeners(PerPresenceData& pd, const String& simName, S
     }
 
     HO_LOG(info,String("[OH] Initializing ") + simName);
-    sim = SimulationFactory::getSingleton().getConstructor ( simName ) ( mContext, static_cast<ConnectionEventProvider*>(mObjectHost), getSharedPtr(), pd.id(), getObjectHost()->getSimOptions(simName));
-    if (!sim)
-    {
+    try {
+        sim = SimulationFactory::getSingleton().getConstructor ( simName ) ( mContext, static_cast<ConnectionEventProvider*>(mObjectHost), getSharedPtr(), pd.id(), getObjectHost()->getSimOptions(simName));
+    } catch(FactoryMissingConstructorException exc) {
+        sim = NULL;
+    }
+
+    if (!sim) {
         HO_LOG(error, "Unable to load " << simName << " plugin.");
         return true;
     }
-    else
-    {
-        pd.sims[simName] = sim;
-        HO_LOG(info,String("Successfully initialized ") + simName);
-    }
+
+    pd.sims[simName] = sim;
+    HO_LOG(info,String("Successfully initialized ") + simName);
+
     return true;
 }
 

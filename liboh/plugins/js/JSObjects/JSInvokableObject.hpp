@@ -22,14 +22,18 @@ class JSInvokableObjectInt : public Invokable
 {
 
   public:
-  JSInvokableObjectInt(Invokable* _invokable) : invokable_(_invokable){}
+  JSInvokableObjectInt(Invokable* _invokable)
+   : invokable_(_invokable)
+    {
+        assert(invokable_ != NULL);
+    }
 
   Invokable* invokable() const {return invokable_;}
   void invokableIs(Invokable* _invokable) {invokable_=_invokable;}
-  
+
   boost::any invoke(std::vector<boost::any>& params);
 
-  
+
   private:
 
   Invokable* invokable_;

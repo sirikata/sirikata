@@ -440,12 +440,15 @@ v8::Local<v8::Object>  JSPresenceStruct::toVisible()
   GIANT FIXME on this entire function.  Likely garbage collection is incorrect.
   Doing very little through jsobjscript directly, etc.
  */
-v8::Handle<v8::Value>JSPresenceStruct::runSimulation(String simname)
+v8::Handle<v8::Value> JSPresenceStruct::runSimulation(String simname)
 {
     v8::HandleScope scope;
     INLINE_CHECK_CAPABILITY_ERROR(Capabilities::GUI, runSimulation);
 
     JSInvokableObject::JSInvokableObjectInt* invokableObj = mParent->runSimulation(getSporef(),simname);
+    if (invokableObj == NULL)
+        return scope.Close(v8::Undefined());
+
     v8::Local<v8::Object> tmpObj = mParent->manager()->mInvokableObjectTemplate->NewInstance();
     tmpObj->SetInternalField(JSSIMOBJECT_JSOBJSCRIPT_FIELD,External::New(mParent));
     tmpObj->SetInternalField(JSSIMOBJECT_SIMULATION_FIELD,External::New(invokableObj));
