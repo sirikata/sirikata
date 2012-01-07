@@ -38,6 +38,8 @@ private:
     void handleCreatedStream(int err, ODPSST::Stream::Ptr strm);
     void handleMessage(MemoryReference data);
 
+    void notifyListener();
+
     void sendUpdate();
 
     HostedObjectPtr mParent;
@@ -49,6 +51,9 @@ private:
     // Communication with the space
     ODPSST::Stream::Ptr mStream;
     RecordSSTStream<ODPSST::Stream::Ptr> mRecordStream;
+
+    // Listener for updates
+    Invokable* mListener;
 };
 
 } // namespace Sirikata

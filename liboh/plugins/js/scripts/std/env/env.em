@@ -28,4 +28,8 @@ function() {
         return this.invoke('get', key);
     };
 
+    ns.Environment.prototype.listen = function(cb) {
+        return this.invoke('listen', cb);
+    };
+
 })();

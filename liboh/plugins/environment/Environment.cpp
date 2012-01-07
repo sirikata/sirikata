@@ -14,7 +14,11 @@ using namespace boost::property_tree;
 
 EnvironmentSimulation::EnvironmentSimulation(HostedObjectPtr ho, const SpaceObjectReference& pres)
  : mParent(ho),
-   mPresence(pres)
+   mPresence(pres),
+   mEnvironment(),
+   mStream(),
+   mRecordStream(),
+   mListener(NULL)
 {
 }
 
@@ -62,6 +66,18 @@ boost::any EnvironmentSimulation::invoke(std::vector<boost::any>& params) {
         sendUpdate();
         return Invokable::asAny(true);
     }
+    else if (name == "listen") {
+        // This gets triggers callbacks when we receive updates
+        if (params.size() < 2 || !Invokable::anyIsInvokable(params[1]))
+            return boost::any();
+        Invokable* listener = Invokable::anyAsInvokable(params[1]);
+        mListener = listener;
+        // Also trigger a (delayed) callback immediately
+        mParent->context()->mainStrand->post(
+            std::tr1::bind(&EnvironmentSimulation::notifyListener, this)
+        );
+        return Invokable::asAny(true);
+    }
 
     return boost::any();
 }
@@ -80,6 +96,16 @@ void EnvironmentSimulation::handleMessage(MemoryReference data) {
     // Currently just receiving whole thing every time
     std::stringstream env_json(std::string((char*)data.begin(), data.size()));
     read_json(env_json, mEnvironment);
+
+    notifyListener();
+}
+
+void EnvironmentSimulation::notifyListener() {
+    // Trigger update to listener if we have one. We currently don't
+    // pass anything like a delta. The user is responsible for getting
+    // keys they care about and checking whether they've been updated.
+    if (mListener)
+        mListener->invoke();
 }
 
 void EnvironmentSimulation::sendUpdate() {
