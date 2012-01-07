@@ -135,7 +135,8 @@ private:
     HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID &_id);
 
 public:
-    boost::mutex mMutex;
+    boost::mutex presenceDataMutex;
+    boost::mutex notifyMutex;
     
     
     typedef SST::EndPoint<SpaceObjectReference> EndPointType;
