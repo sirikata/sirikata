@@ -33,7 +33,7 @@
 #ifndef _SIRIKATA_COLLADA_ERROR_HANDLER_
 #define _SIRIKATA_COLLADA_ERROR_HANDLER_
 
-#include <sirikata/proxyobject/Platform.hpp>
+#include <sirikata/mesh/Platform.hpp>
 
 //#include "COLLADASaxFWLIError.h"
 #include "COLLADASaxFWLIErrorHandler.h"

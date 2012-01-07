@@ -34,7 +34,7 @@
 #ifndef SIRIKATA_HttpManager_HPP__
 #define SIRIKATA_HttpManager_HPP__
 
-#include <sirikata/proxyobject/Platform.hpp>
+#include <sirikata/core/util/Platform.hpp>
 #include <string>
 #include <deque>
 #include <sstream>
