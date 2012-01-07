@@ -39,7 +39,7 @@ void Environment::newSession(ObjectSession* session) {
 
 void Environment::sessionClosed(ObjectSession *session) {
     ODPSST::Stream::Ptr strm = session->getStream();
-    strm->unlistenSubstream(ENVIRONMENT_SERVICE_PORT);
+    if (strm) strm->unlistenSubstream(ENVIRONMENT_SERVICE_PORT);
 }
 
 void Environment::handleStream(int err, ODPSST::Stream::Ptr strm) {
