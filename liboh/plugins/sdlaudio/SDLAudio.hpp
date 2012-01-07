@@ -61,6 +61,7 @@ private:
     // ClipHandles are used to uniquely identify playing clips
     struct Clip {
         FFmpegAudioStreamPtr stream;
+        bool paused;
         float32 volume;
     };
     typedef std::map<ClipHandle, Clip> ClipMap;

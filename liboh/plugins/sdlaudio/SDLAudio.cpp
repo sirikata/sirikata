@@ -130,6 +130,7 @@ boost::any AudioSimulation::invoke(std::vector<boost::any>& params) {
         // process and so we can make adjustments while it's still downloading.
         Clip clip;
         clip.stream.reset();
+        clip.paused = false;
         clip.volume = volume;
         mClips[id] = clip;
 
@@ -190,9 +191,29 @@ boost::any AudioSimulation::invoke(std::vector<boost::any>& params) {
             return boost::any();
         float32 volume = (float32)Invokable::anyAsNumeric(params[2]);
 
+        Lock lck(mMutex);
         mClips[id].volume = volume;
 
         return Invokable::asAny(true);
+    }
+    else if (name == "pause" || name == "resume") {
+        if (params.size() < 2 || !Invokable::anyIsNumeric(params[1]))
+            return boost::any();
+        ClipHandle id = Invokable::anyAsNumeric(params[1]);
+
+        bool paused = (name == "pause");
+        AUDIO_LOG(detailed, name << " request for ID " << id);
+
+        Lock lck(mMutex);
+
+        ClipMap::iterator clip_it = mClips.find(id);
+        if (clip_it != mClips.end()) {
+            clip_it->second.paused = paused;
+            return Invokable::asAny(true);
+        }
+        else {
+            return Invokable::asAny(false);
+        }
     }
     else {
         AUDIO_LOG(warn, "Function " << name << " was invoked but this function was not found.");
@@ -264,8 +285,10 @@ void AudioSimulation::mix(uint8* raw_stream, int32 raw_len) {
             mixed[c] = 0;
 
         for(ClipMap::iterator st_it = mClips.begin(); st_it != mClips.end(); st_it++) {
-            // We might still be downloading it
-            if (!st_it->second.stream) continue;
+            // We might still be downloading it or it might be paused
+            if (!st_it->second.stream ||
+                st_it->second.paused)
+                continue;
 
             int16 samples[MAX_CHANNELS];
             st_it->second.stream->samples(samples);

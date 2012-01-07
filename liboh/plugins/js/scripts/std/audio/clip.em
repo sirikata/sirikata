@@ -37,6 +37,18 @@ function() {
         return success;
     };
 
+    /** Pause the clip. */
+    ns.Clip.prototype.pause = function() {
+        if (this._handle === undefined) return;
+        this._parent.invoke('pause', this._handle);
+    };
+
+    /** Resume the clip. */
+    ns.Clip.prototype.resume = function() {
+        if (this._handle === undefined) return;
+        this._parent.invoke('resume', this._handle);
+    };
+
     /** Stop playing the clip. */
     ns.Clip.prototype.stop = function() {
         if (this._handle === undefined) return;
