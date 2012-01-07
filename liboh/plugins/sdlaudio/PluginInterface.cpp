@@ -15,7 +15,7 @@ namespace {
 Simulation* createSDLAudio(
     Context* ctx,
     ConnectionEventProvider* cevtprovider,
-    VWObjectPtr obj,
+    HostedObjectPtr obj,
     const SpaceObjectReference& presenceid,
     const String& options
 ) {

@@ -41,6 +41,9 @@
 
 namespace Sirikata{
 
+class HostedObject;
+typedef std::tr1::shared_ptr<HostedObject> HostedObjectPtr;
+
 // Note that we provide a ConnectionEventProvider because we're in
 // libproxyobject so we can't just provide the ObjectHostContext, which would
 // give access to the ObjectHost if it was needed. Ideally we wouldn't pass this
@@ -50,7 +53,7 @@ class SIRIKATA_OH_EXPORT SimulationFactory
       public Factory5<Simulation*,
                       Context*,
                       ConnectionEventProvider*,
-                      VWObjectPtr, // Object simulation is working within
+                      HostedObjectPtr, // Object simulation is working within
                       const SpaceObjectReference&, // Presence the simulation is working within
                       const String&> //options string for the graphics system
 {

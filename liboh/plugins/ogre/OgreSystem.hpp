@@ -44,6 +44,7 @@
 #include <sirikata/ogre/OgreRenderer.hpp>
 
 #include <sirikata/oh/ConnectionEventListener.hpp>
+#include <sirikata/oh/HostedObject.hpp>
 
 namespace Ogre {
 struct RaySceneQueryResultEntry;
@@ -125,7 +126,7 @@ public:
     static TimeSteppedSimulation* create(
         Context* ctx,
         ConnectionEventProvider* cevtprovider,
-        VWObjectPtr obj,
+        HostedObjectPtr obj,
         const SpaceObjectReference& presenceid,
         const String& options
     )
