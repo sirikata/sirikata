@@ -121,6 +121,10 @@ boost::any AudioSimulation::invoke(std::vector<boost::any>& params) {
         float32 volume = 1.f;
         if (params.size() >= 3 && Invokable::anyIsNumeric(params[2]))
             volume = (float32)Invokable::anyAsNumeric(params[2]);
+        // Looping
+        bool looped = false;
+        if (params.size() >= 4 && Invokable::anyIsBoolean(params[3]))
+            looped = Invokable::anyAsBoolean(params[3]);
 
         Lock lck(mMutex);
 
@@ -132,6 +136,7 @@ boost::any AudioSimulation::invoke(std::vector<boost::any>& params) {
         clip.stream.reset();
         clip.paused = false;
         clip.volume = volume;
+        clip.loop = looped;
         mClips[id] = clip;
 
         DownloadTaskMap::iterator task_it = mDownloads.find(sound_url);
@@ -192,6 +197,7 @@ boost::any AudioSimulation::invoke(std::vector<boost::any>& params) {
         float32 volume = (float32)Invokable::anyAsNumeric(params[2]);
 
         Lock lck(mMutex);
+        if (mClips.find(id) == mClips.end()) return Invokable::asAny(false);
         mClips[id].volume = volume;
 
         return Invokable::asAny(true);
@@ -214,6 +220,21 @@ boost::any AudioSimulation::invoke(std::vector<boost::any>& params) {
         else {
             return Invokable::asAny(false);
         }
+    }
+    else if (name == "loop") {
+        if (params.size() < 2 || !Invokable::anyIsNumeric(params[1]))
+            return boost::any();
+        ClipHandle id = Invokable::anyAsNumeric(params[1]);
+
+        if (params.size() < 3 || !Invokable::anyIsBoolean(params[2]))
+            return boost::any();
+        bool looped = Invokable::anyAsBoolean(params[2]);
+
+        Lock lck(mMutex);
+        if (mClips.find(id) == mClips.end()) return Invokable::asAny(false);
+        mClips[id].loop = looped;
+
+        return Invokable::asAny(true);
     }
     else {
         AUDIO_LOG(warn, "Function " << name << " was invoked but this function was not found.");
@@ -258,6 +279,9 @@ void AudioSimulation::handleFinishedDownload(Transfer::ChunkRequestPtr request, 
             AUDIO_LOG(detailed, "Found more than one audio stream in " << sound_url << ", only playing first");
         FFmpegAudioStreamPtr audio_stream = stream->getAudioStream(0, 2);
 
+        // Might have been removed already
+        if (mClips.find(*id_it) == mClips.end()) continue;
+
         mClips[*id_it].stream = audio_stream;
     }
 
@@ -291,7 +315,7 @@ void AudioSimulation::mix(uint8* raw_stream, int32 raw_len) {
                 continue;
 
             int16 samples[MAX_CHANNELS];
-            st_it->second.stream->samples(samples);
+            st_it->second.stream->samples(samples, st_it->second.loop);
 
             for(int c = 0; c < nchannels; c++)
                 mixed[c] += samples[c] * st_it->second.volume;

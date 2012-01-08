@@ -63,6 +63,7 @@ private:
         FFmpegAudioStreamPtr stream;
         bool paused;
         float32 volume;
+        bool loop;
     };
     typedef std::map<ClipHandle, Clip> ClipMap;
     ClipMap mClips;

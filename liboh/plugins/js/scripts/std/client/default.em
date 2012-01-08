@@ -619,7 +619,8 @@ function() {
             this._env.audio_ambient = audio_ambient;
             if (this._env.audio_ambient_clip)
                 this._env.audio_ambient_clip.stop();
-            this._env.audio_ambient_clip = this._audio.play(audio_ambient);
+            // Default to volume 1, looping
+            this._env.audio_ambient_clip = this._audio.play(audio_ambient, 1, true);
         }
         var audio_ambient_volume = this._env.get('audio.ambient_volume');
         if (audio_ambient_volume !== undefined && this._env.audio_ambient_clip) {

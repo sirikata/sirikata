@@ -30,7 +30,7 @@ class FFmpegAudioStream {
 public:
     ~FFmpegAudioStream();
 
-    // Returns true if this stream.
+    // Returns true if this stream has finished decoding.
     bool finished() const;
 
     /** Get the next samples from the stream, or fill them with silence if the
@@ -39,16 +39,23 @@ public:
      *
      *  \param samples_out output buffer for decoded samples. Always uses 16-bit
      *         signed values
+     *  \param loop if true, loops the track if the end is reached while
+     *         decoding the requested samples
      */
-    void samples(int16* samples_out);
+    void samples(int16* samples_out, bool loop);
 
 private:
     friend class FFmpegStream;
 
     FFmpegAudioStream(FFmpegStreamPtr parent, uint32 stream_idx, uint8 target_nchannels);
 
-    AVPacket* getNextPacket();
-    void decodeSome();
+    // These are factored out so we can rerun them. Other components shouldn't
+    // need cleanup and reinitialization.
+    bool openCodec();
+    void closeCodec();
+
+    AVPacket* getNextPacket(bool loop);
+    void decodeSome(bool loop);
     void convertFormat(int decoded_size);
 
     FFmpegStreamPtr mParent;
