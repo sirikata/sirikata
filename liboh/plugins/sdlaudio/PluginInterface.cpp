@@ -17,9 +17,10 @@ Simulation* createSDLAudio(
     ConnectionEventProvider* cevtprovider,
     HostedObjectPtr obj,
     const SpaceObjectReference& presenceid,
-    const String& options
+    const String& options,
+    Network::IOStrandPtr ptr
 ) {
-    return new SDL::AudioSimulation(ctx);
+    return new SDL::AudioSimulation(ctx,ptr);
 }
 
 }

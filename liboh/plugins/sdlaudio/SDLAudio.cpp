@@ -35,12 +35,13 @@ extern void mixaudio(void* _sim, Uint8* raw_stream, int raw_len) {
 
 }
 
-AudioSimulation::AudioSimulation(Context* ctx)
+AudioSimulation::AudioSimulation(Context* ctx,Network::IOStrandPtr ptr)
  : mContext(ctx),
    mInitializedAudio(false),
    mOpenedAudio(false),
    mClipHandleSource(0),
-   mPlaying(false)
+   mPlaying(false),
+   audioStrand(ptr)
 {}
 
 
@@ -286,7 +287,7 @@ void AudioSimulation::handleFinishedDownload(
 {
     audioStrand->post(
         std::tr1::bind(&AudioSimulation::iHandleFinishedDownload,this,
-            livenessToken(),request,response);
+            livenessToken(),request,response));
 }
 
 void AudioSimulation::iHandleFinishedDownload(

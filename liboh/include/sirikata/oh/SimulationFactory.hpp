@@ -50,12 +50,13 @@ typedef std::tr1::shared_ptr<HostedObject> HostedObjectPtr;
 // parameter since some Simulations don't care about it.
 class SIRIKATA_OH_EXPORT SimulationFactory
     : public AutoSingleton<SimulationFactory>,
-      public Factory5<Simulation*,
+      public Factory6<Simulation*,
                       Context*,
                       ConnectionEventProvider*,
                       HostedObjectPtr, // Object simulation is working within
                       const SpaceObjectReference&, // Presence the simulation is working within
-                      const String&> //options string for the graphics system
+                      const String&, //options string for the graphics system
+                      Network::IOStrandPtr>
 {
 public:
     static SimulationFactory&getSingleton();

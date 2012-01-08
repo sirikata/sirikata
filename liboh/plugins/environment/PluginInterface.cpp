@@ -17,7 +17,8 @@ Simulation* createEnvironment(
     ConnectionEventProvider* cevtprovider,
     HostedObjectPtr obj,
     const SpaceObjectReference& presenceid,
-    const String& options
+    const String& options,
+    Network::IOStrandPtr
 ) {
     return new EnvironmentSimulation(obj, presenceid);
 }

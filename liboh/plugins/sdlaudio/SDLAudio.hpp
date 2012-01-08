@@ -9,6 +9,7 @@
 #include <sirikata/core/service/Context.hpp>
 #include <sirikata/core/transfer/TransferMediator.hpp>
 #include <sirikata/core/transfer/ResourceDownloadTask.hpp>
+#include <sirikata/core/util/Liveness.hpp>
 
 namespace Sirikata {
 namespace SDL {
