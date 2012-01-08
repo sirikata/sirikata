@@ -84,18 +84,13 @@ class Server :
         ObjectHostConnectionManager::Listener
 {
 public:
-    Server(SpaceContext* ctx, Authenticator* auth, Forwarder* forwarder, CoordinateSegmentation* cseg, ObjectSegmentation* oseg, Address4 oh_listen_addr, ObjectHostSessionManager* oh_sess_mgr, ObjectSessionManager* obj_sess_mgr);
+    Server(SpaceContext* ctx, Authenticator* auth, Forwarder* forwarder, Address4 oh_listen_addr, ObjectHostSessionManager* oh_sess_mgr, ObjectSessionManager* obj_sess_mgr);
     ~Server();
 
-    virtual void receiveMessage(Message* msg);
 private:
     // Service Implementation
     void start();
     void stop();
-
-    // OSegWriteListener Interface
-    virtual void osegAddNewFinished(const UUID& id, OSegAddNewStatus status);
-
 
     // ODP::DelegateService dependencies
     ODP::DelegatePort* createDelegateODPPort(ODP::DelegateService*, const SpaceObjectReference& sor, ODP::PortID port);

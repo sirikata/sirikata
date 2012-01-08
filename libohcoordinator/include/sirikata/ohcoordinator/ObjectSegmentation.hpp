@@ -109,8 +109,6 @@ public:
         OBJ_ALREADY_REGISTERED,
         UNKNOWN_ERROR
     };
-
-    virtual void osegAddNewFinished(const UUID& id, OSegAddNewStatus) = 0;
 }; // class OSegMembershipListener
 
 

@@ -74,30 +74,23 @@ void logVersionInfo(Sirikata::Protocol::Session::VersionInfo vers_info) {
 } // namespace
 
 
-Server::Server(SpaceContext* ctx, Authenticator* auth, Forwarder* forwarder, CoordinateSegmentation* cseg, ObjectSegmentation* oseg, Address4 oh_listen_addr, ObjectHostSessionManager* oh_sess_mgr, ObjectSessionManager* obj_sess_mgr)
+Server::Server(SpaceContext* ctx, Authenticator* auth, Forwarder* forwarder, Address4 oh_listen_addr, ObjectHostSessionManager* oh_sess_mgr, ObjectSessionManager* obj_sess_mgr)
  : ODP::DelegateService( std::tr1::bind(&Server::createDelegateODPPort, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2, std::tr1::placeholders::_3) ),
    OHDP::DelegateService( std::tr1::bind(&Server::createDelegateOHDPPort, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2) ),
    mContext(ctx),
    mAuthenticator(auth),
-   mCSeg(cseg),
-   mOSeg(oseg),
    mLocalForwarder(NULL),
    mForwarder(forwarder),
    mOHSessionManager(oh_sess_mgr),
    mObjectSessionManager(obj_sess_mgr),
    mShutdownRequested(false),
    mObjectHostConnectionManager(NULL),
-   mRouteObjectMessage(Sirikata::SizedResourceMonitor(GetOptionValue<size_t>("route-object-message-buffer"))),
-   mTimeSeriesObjects(String("space.server") + boost::lexical_cast<String>(ctx->id()) + ".objects")
+   mRouteObjectMessage(Sirikata::SizedResourceMonitor(GetOptionValue<size_t>("route-object-message-buffer")))
 {
     using std::tr1::placeholders::_1;
     using std::tr1::placeholders::_2;
 
-    mTimeSyncServer = new TimeSyncServer(mContext, this);
-
     mForwarder->setODPService(this);
-
-    mOSeg->setWriteListener((OSegWriteListener*)this);
 
     // Forwarder::setODPService creates the ODP SST datagram layer allowing us
     // to listen for object connections
@@ -153,7 +146,6 @@ Server::~Server()
 
     delete mObjectHostConnectionManager;
     delete mLocalForwarder;
-    delete mTimeSyncServer;
 }
 
 ODP::DelegatePort* Server::createDelegateODPPort(ODP::DelegateService*, const SpaceObjectReference& sor, ODP::PortID port) {
@@ -438,7 +430,6 @@ void Server::handleSessionMessage(const ObjectHostConnectionID& oh_conn_id, Siri
         ObjectConnectionMap::iterator it = mObjects.find(session_msg.disconnect().object());
         if (it != mObjects.end()) {
             handleDisconnect(session_msg.disconnect().object(), it->second);
-            mContext->timeSeries->report(mTimeSeriesObjects, mObjects.size());
         }
     }
     else if (session_msg.has_coordinate()) {
@@ -530,7 +521,6 @@ void Server::handleObjectHostConnectionClosed(const ObjectHostConnectionID& oh_c
 
         handleDisconnect(obj_id, obj_conn, short_conn_id);
     }
-    mContext->timeSeries->report(mTimeSeriesObjects, mObjects.size());
 }
 
 void Server::retryHandleConnect(const ObjectHostConnectionID& oh_conn_id, Sirikata::Protocol::Object::ObjectMessage* obj_response) {
@@ -631,9 +621,6 @@ void Server::handleConnectAuthResponse(const ObjectHostConnectionID& oh_conn_id,
 
     }
 
-    // Update our oseg to show that we know that we have this object now. Also
-    // mark it as connecting (by storing in mStoredConnectionData) so any
-    // additional connection attempts will fail.
     StoredConnection sc;
     sc.conn_id = oh_conn_id;
     sc.conn_msg = connect_msg;
@@ -646,7 +633,6 @@ void Server::handleConnectAuthResponse(const ObjectHostConnectionID& oh_conn_id,
     mObjectSessionManager->addSession(new ObjectSession(ObjectReference(obj_id)));
     ObjectConnection* conn = new ObjectConnection(obj_id, mObjectHostConnectionManager, sc.conn_id);
     mObjects[obj_id] = conn;
-    mContext->timeSeries->report(mTimeSeriesObjects, mObjects.size());
     mOHNameConnections[sc.conn_msg.oh_name()]=sc.conn_id;
     mForwarder->addObjectConnection(obj_id, conn);
     sendConnectSuccess(conn->connID(), obj_id);
@@ -682,7 +668,6 @@ void Server::handleConnectAck(const ObjectHostConnectionID& oh_conn_id, const Si
 void Server::handleDisconnect(UUID obj_id, ObjectConnection* conn, ShortObjectHostConnectionID short_conn_id) {
     assert(conn->id() == obj_id);
 
-    //mOSeg->removeObject(obj_id);
     mLocalForwarder->removeActiveConnection(obj_id);
     mForwarder->removeObjectConnection(obj_id);
 
@@ -716,17 +701,6 @@ void Server::handleEntityOHMigraion(const UUID& uuid, const ObjectHostConnection
     );
     // Sent directly via object host connection manager
     sendSessionMessageWithRetry(oh_conn_id, migration_req, Duration::seconds(0.05));
-}
-
-
-void Server::osegAddNewFinished(const UUID& id, OSegAddNewStatus status) {
-
-}
-
-
-void Server::receiveMessage(Message* msg)
-{
-
 }
 
 void Server::start() {

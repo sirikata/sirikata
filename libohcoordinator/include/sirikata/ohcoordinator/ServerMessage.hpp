@@ -131,8 +131,6 @@ private:
 class SIRIKATA_OHCOORDINATOR_EXPORT MessageRecipient {
 public:
     virtual ~MessageRecipient() {}
-
-    virtual void receiveMessage(Message* msg) = 0;
 }; // class MessageRecipient
 
 

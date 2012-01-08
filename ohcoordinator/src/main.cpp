@@ -76,8 +76,6 @@ struct ServerData {
     SpaceContext* space_context;
     Authenticator* auth;
     Forwarder* forwarder;
-    CoordinateSegmentation* cseg;
-    ObjectSegmentation* oseg;
     ObjectHostSessionManager* oh_sess_mgr;
     ObjectSessionManager* obj_sess_mgr;
 };
@@ -87,7 +85,7 @@ void createServer(Server** server_out, ServerData sd, Address4 addr) {
         sd.space_context->shutdown();
     }
 
-    Server* server = new Server(sd.space_context, sd.auth, sd.forwarder, sd.cseg, sd.oseg, addr, sd.oh_sess_mgr, sd.obj_sess_mgr);
+    Server* server = new Server(sd.space_context, sd.auth, sd.forwarder, addr, sd.oh_sess_mgr, sd.obj_sess_mgr);
     sd.space_context->add(server);
 
     *server_out = server;
@@ -262,8 +260,6 @@ int main(int argc, char** argv) {
     sd.space_context = space_context;
     sd.auth = auth;
     sd.forwarder = forwarder;
-    sd.cseg = cseg;
-    sd.oseg = oseg;
     sd.oh_sess_mgr = oh_sess_mgr;
     sd.obj_sess_mgr = obj_sess_mgr;
     server_id_map->lookupExternal(
