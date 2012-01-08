@@ -43,9 +43,6 @@
 #include <sirikata/ohcoordinator/Authenticator.hpp>
 
 #include <sirikata/ohcoordinator/SpaceNetwork.hpp>
-
-#include "Forwarder.hpp"
-
 #include "Server.hpp"
 
 #include "Options.hpp"
@@ -53,13 +50,7 @@
 #include <sirikata/core/util/PluginManager.hpp>
 #include <sirikata/core/trace/Trace.hpp>
 #include "TCPSpaceNetwork.hpp"
-#include "FairServerMessageReceiver.hpp"
-#include "FairServerMessageQueue.hpp"
 #include <sirikata/core/network/ServerIDMap.hpp>
-#include "UniformCoordinateSegmentation.hpp"
-#include "CoordinateSegmentationClient.hpp"
-#include <sirikata/ohcoordinator/LoadMonitor.hpp>
-#include <sirikata/ohcoordinator/ObjectSegmentation.hpp>
 #include "caches/CommunicationCache.hpp"
 #include "caches/CacheLRUOriginal.hpp"
 
@@ -75,7 +66,6 @@ using namespace Sirikata;
 struct ServerData {
     SpaceContext* space_context;
     Authenticator* auth;
-    Forwarder* forwarder;
     ObjectHostSessionManager* oh_sess_mgr;
     ObjectSessionManager* obj_sess_mgr;
 };
@@ -85,7 +75,7 @@ void createServer(Server** server_out, ServerData sd, Address4 addr) {
         sd.space_context->shutdown();
     }
 
-    Server* server = new Server(sd.space_context, sd.auth, sd.forwarder, addr, sd.oh_sess_mgr, sd.obj_sess_mgr);
+    Server* server = new Server(sd.space_context, sd.auth, addr, sd.oh_sess_mgr, sd.obj_sess_mgr);
     sd.space_context->add(server);
 
     *server_out = server;
@@ -174,80 +164,6 @@ int main(int argc, char** argv) {
     gNetwork->setServerIDMap(server_id_map);
 
 
-    Forwarder* forwarder = new Forwarder(space_context);
-
-
-    String cseg_type = GetOptionValue<String>(CSEG);
-    CoordinateSegmentation* cseg = NULL;
-    if (cseg_type == "uniform")
-        cseg = new UniformCoordinateSegmentation(space_context, region, layout);
-    else if (cseg_type == "client") {
-      cseg = new CoordinateSegmentationClient(space_context, region, layout, server_id_map);
-    }
-    else {
-        assert(false);
-        exit(-1);
-    }
-
-    ServerMessageQueue* sq = NULL;
-    String server_queue_type = GetOptionValue<String>(SERVER_QUEUE);
-    if (server_queue_type == "fair") {
-        sq = new FairServerMessageQueue(
-            space_context, gNetwork,
-            (ServerMessageQueue::Sender*)forwarder);
-    }
-    else {
-        assert(false);
-        exit(-1);
-    }
-
-    ServerMessageReceiver* server_message_receiver = NULL;
-    String server_receiver_type = GetOptionValue<String>(SERVER_RECEIVER);
-    if (server_queue_type == "fair")
-        server_message_receiver =
-                new FairServerMessageReceiver(space_context, gNetwork, (ServerMessageReceiver::Listener*)forwarder);
-    else {
-        assert(false);
-        exit(-1);
-    }
-
-
-
-    LoadMonitor* loadMonitor = new LoadMonitor(space_context, cseg);
-
-
-    // OSeg Cache
-    OSegCache* oseg_cache = NULL;
-    std::string cacheSelector = GetOptionValue<String>(CACHE_SELECTOR);
-    uint32 cacheSize = GetOptionValue<uint32>(OSEG_CACHE_SIZE);
-    if (cacheSelector == CACHE_TYPE_COMMUNICATION) {
-        double cacheCommScaling = GetOptionValue<double>(CACHE_COMM_SCALING);
-        oseg_cache = new CommunicationCache(space_context, cacheCommScaling, cseg, cacheSize);
-    }
-    else if (cacheSelector == CACHE_TYPE_ORIGINAL_LRU) {
-        uint32 cacheCleanGroupSize = GetOptionValue<uint32>(OSEG_CACHE_CLEAN_GROUP_SIZE);
-        Duration entryLifetime = GetOptionValue<Duration>(OSEG_CACHE_ENTRY_LIFETIME);
-        oseg_cache = new CacheLRUOriginal(space_context, cacheSize, cacheCleanGroupSize, entryLifetime);
-    }
-    else {
-        std::cout<<"\n\nUNKNOWN CACHE TYPE SELECTED.  Please re-try.\n\n";
-        std::cout.flush();
-        assert(false);
-    }
-
-    //Create OSeg
-    std::string oseg_type = GetOptionValue<String>(OSEG);
-    std::string oseg_options = GetOptionValue<String>(OSEG_OPTIONS);
-    Network::IOStrand* osegStrand = space_context->ioService->createStrand();
-    ObjectSegmentation* oseg =
-        OSegFactory::getSingleton().getConstructor(oseg_type)(space_context, osegStrand, cseg, oseg_cache, oseg_options);
-    //end create oseg
-
-
-    // We have all the info to initialize the forwarder now
-    forwarder->initialize(oseg, sq, server_message_receiver);
-
-
     // We need to do an async lookup, and to finish it the server needs to be
     // running. But we can't create the server until we have the address from
     // this lookup. We isolate as little as possible into this callback --
@@ -259,7 +175,6 @@ int main(int argc, char** argv) {
     ServerData sd;
     sd.space_context = space_context;
     sd.auth = auth;
-    sd.forwarder = forwarder;
     sd.oh_sess_mgr = oh_sess_mgr;
     sd.obj_sess_mgr = obj_sess_mgr;
     server_id_map->lookupExternal(
@@ -288,9 +203,6 @@ int main(int argc, char** argv) {
 
     space_context->add(auth);
     space_context->add(gNetwork);
-    space_context->add(cseg);
-    space_context->add(oseg);
-    space_context->add(loadMonitor);
     space_context->add(sstConnMgr);
     space_context->add(ohSstConnMgr);
 
@@ -306,16 +218,7 @@ int main(int argc, char** argv) {
     Mesh::FilterFactory::destroy();
     ModelsSystemFactory::destroy();
     delete server;
-    delete sq;
-    delete server_message_receiver;
     delete server_id_map;
-
-    delete loadMonitor;
-
-    delete cseg;
-    delete oseg;
-    delete oseg_cache;
-    delete forwarder;
 
     delete obj_sess_mgr;
     delete oh_sess_mgr;
@@ -334,7 +237,6 @@ int main(int argc, char** argv) {
     delete time_series;
 
     delete mainStrand;
-    delete osegStrand;
 
     Network::IOServiceFactory::destroyIOService(ios);
 

@@ -73,27 +73,24 @@ void logVersionInfo(Sirikata::Protocol::Session::VersionInfo vers_info) {
 }
 } // namespace
 
-
-Server::Server(SpaceContext* ctx, Authenticator* auth, Forwarder* forwarder, Address4 oh_listen_addr, ObjectHostSessionManager* oh_sess_mgr, ObjectSessionManager* obj_sess_mgr)
- : ODP::DelegateService( std::tr1::bind(&Server::createDelegateODPPort, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2, std::tr1::placeholders::_3) ),
-   OHDP::DelegateService( std::tr1::bind(&Server::createDelegateOHDPPort, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2) ),
-   mContext(ctx),
-   mAuthenticator(auth),
-   mLocalForwarder(NULL),
-   mForwarder(forwarder),
-   mOHSessionManager(oh_sess_mgr),
-   mObjectSessionManager(obj_sess_mgr),
-   mShutdownRequested(false),
-   mObjectHostConnectionManager(NULL),
-   mRouteObjectMessage(Sirikata::SizedResourceMonitor(GetOptionValue<size_t>("route-object-message-buffer")))
+Server::Server(SpaceContext* ctx, Authenticator* auth, Address4 oh_listen_addr, ObjectHostSessionManager* oh_sess_mgr, ObjectSessionManager* obj_sess_mgr)
+ :ODP::DelegateService( std::tr1::bind(&Server::createDelegateODPPort, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2, std::tr1::placeholders::_3) ),
+  OHDP::DelegateService( std::tr1::bind(&Server::createDelegateOHDPPort, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2) ),
+  mContext(ctx),
+  mAuthenticator(auth),
+  mOHSessionManager(oh_sess_mgr),
+  mObjectSessionManager(obj_sess_mgr),
+  mShutdownRequested(false),
+  mObjectHostConnectionManager(NULL),
+  mRouteObjectMessage(Sirikata::SizedResourceMonitor(GetOptionValue<size_t>("route-object-message-buffer")))
 {
     using std::tr1::placeholders::_1;
     using std::tr1::placeholders::_2;
 
-    mForwarder->setODPService(this);
+    mContext->sstConnectionManager()->createDatagramLayer(
+            SpaceObjectReference(SpaceID::null(), ObjectReference::spaceServiceID()), mContext, this
+        );
 
-    // Forwarder::setODPService creates the ODP SST datagram layer allowing us
-    // to listen for object connections
     mContext->sstConnectionManager()->listen(
         std::tr1::bind(&Server::newStream, this, _1, _2),
         SST::EndPoint<SpaceObjectReference>(SpaceObjectReference(SpaceID::null(), ObjectReference::spaceServiceID()), OBJECT_SPACE_PORT)
@@ -107,7 +104,6 @@ Server::Server(SpaceContext* ctx, Authenticator* auth, Forwarder* forwarder, Add
     );
 
     mLocalForwarder = new LocalForwarder(mContext);
-    mForwarder->setLocalForwarder(mLocalForwarder);
 
 }
 
@@ -129,23 +125,9 @@ void Server::newStream(int err, SST::Stream<SpaceObjectReference>::Ptr s) {
 
 Server::~Server()
 {
-    //delete mMigrateServerMessageService;
-
-    //mForwarder->unregisterMessageRecipient(SERVER_PORT_MIGRATION, this);
-
     SPACE_LOG(debug, "mObjects.size=" << mObjects.size());
-
-    for(ObjectConnectionMap::iterator it = mObjects.begin(); it != mObjects.end(); it++) {
-        UUID obj_id = it->first;
-
-        mForwarder->removeObjectConnection(obj_id);
-
-        // FIXME there's probably quite a bit more cleanup to do here
-    }
     mObjects.clear();
-
     delete mObjectHostConnectionManager;
-    delete mLocalForwarder;
 }
 
 ODP::DelegatePort* Server::createDelegateODPPort(ODP::DelegateService*, const SpaceObjectReference& sor, ODP::PortID port) {
@@ -184,6 +166,7 @@ bool Server::delegateODPPortSend(const ODP::Endpoint& source_ep, const ODP::Endp
 
     return send_success;
 }
+
 
 OHDP::DelegatePort* Server::createDelegateOHDPPort(OHDP::DelegateService*, const OHDP::Endpoint& ept) {
     using std::tr1::placeholders::_1;
@@ -270,20 +253,7 @@ bool Server::onObjectHostMessageReceived(const ObjectHostConnectionID& conn_id, 
         return true;
     }
 
-    // 3. Try to shortcut the main thread. Let the LocalForwarder try
-    // to ship it over a connection.  This checks both the source
-    // and dest objects, guaranteeing that the appropriate connections
-    // exist for both.
-    if (mLocalForwarder->tryForward(obj_msg))
-        return true;
-
-    // 4. Try to shortcut them main thread. Use forwarder to try to forward
-    // using the cache. FIXME when we do this, we skip over some checks that
-    // happen during the full forwarding
-    if (mForwarder->tryCacheForward(obj_msg))
-        return true;
-
-    // 5. Otherwise, we're going to have to ship this to the main thread, either
+    // Otherwise, we're going to have to ship this to the main thread, either
     // for handling session messages, messages to the space, or to make a
     // routing decision.
     bool hit_empty;
@@ -395,9 +365,6 @@ bool Server::handleSingleObjectHostMessageRouting() {
        delete front.obj_msg;
        return true;
     }
-
-    // Finally, if we've passed all these tests, then everything looks good and we can route it
-    mForwarder->routeObjectHostMessage(front.obj_msg);
     return true;
 }
 
@@ -634,7 +601,6 @@ void Server::handleConnectAuthResponse(const ObjectHostConnectionID& oh_conn_id,
     ObjectConnection* conn = new ObjectConnection(obj_id, mObjectHostConnectionManager, sc.conn_id);
     mObjects[obj_id] = conn;
     mOHNameConnections[sc.conn_msg.oh_name()]=sc.conn_id;
-    mForwarder->addObjectConnection(obj_id, conn);
     sendConnectSuccess(conn->connID(), obj_id);
 }
 
@@ -658,18 +624,12 @@ void Server::sendConnectSuccess(const ObjectHostConnectionID& oh_conn_id, const 
 
 void Server::handleConnectAck(const ObjectHostConnectionID& oh_conn_id, const Sirikata::Protocol::Object::ObjectMessage& container) {
     UUID obj_id = container.source_object();
-
-    // Allow the forwarder to send to ship messages to this connection
-    mForwarder->enableObjectConnection(obj_id);
 }
 
 // Note that the obj_id is intentionally not a const & so that we're sure it is
 // valid throughout this method.
 void Server::handleDisconnect(UUID obj_id, ObjectConnection* conn, ShortObjectHostConnectionID short_conn_id) {
     assert(conn->id() == obj_id);
-
-    mLocalForwarder->removeActiveConnection(obj_id);
-    mForwarder->removeObjectConnection(obj_id);
 
     mObjects.erase(obj_id);
     // Num objects is reported by the caller
@@ -704,11 +664,9 @@ void Server::handleEntityOHMigraion(const UUID& uuid, const ObjectHostConnection
 }
 
 void Server::start() {
-    mForwarder->start();
 }
 
 void Server::stop() {
-    mForwarder->stop();
     mObjectHostConnectionManager->shutdown();
     mShutdownRequested = true;
 }

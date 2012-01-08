@@ -58,12 +58,7 @@
 namespace Sirikata
 {
 class Authenticator;
-
-class Forwarder;
 class LocalForwarder;
-
-class CoordinateSegmentation;
-class ObjectSegmentation;
 
 class ObjectConnection;
 class ObjectHostConnectionManager;
@@ -78,13 +73,12 @@ class ObjectSessionManager;
    */
 
 class Server :
-        public MessageRecipient, public Service,
-        public OSegWriteListener,
+        public Service,
         public ODP::DelegateService, public OHDP::DelegateService,
         ObjectHostConnectionManager::Listener
 {
 public:
-    Server(SpaceContext* ctx, Authenticator* auth, Forwarder* forwarder, Address4 oh_listen_addr, ObjectHostSessionManager* oh_sess_mgr, ObjectSessionManager* obj_sess_mgr);
+    Server(SpaceContext* ctx, Authenticator* auth, Address4 oh_listen_addr, ObjectHostSessionManager* oh_sess_mgr, ObjectSessionManager* obj_sess_mgr);
     ~Server();
 
 private:
@@ -157,10 +151,7 @@ private:
     TimeSyncServer* mTimeSyncServer;
 
     Authenticator* mAuthenticator;
-    CoordinateSegmentation* mCSeg;
-    ObjectSegmentation* mOSeg;
     LocalForwarder* mLocalForwarder;
-    Forwarder* mForwarder;
     ObjectHostSessionManager* mOHSessionManager;
     ObjectSessionManager* mObjectSessionManager;
 
