@@ -32,15 +32,10 @@
 
 #include <sirikata/ohcoordinator/SpaceNetwork.hpp>
 #include "Server.hpp"
-#include <sirikata/ohcoordinator/CoordinateSegmentation.hpp>
-#include <sirikata/ohcoordinator/ServerMessage.hpp>
 #include <sirikata/core/trace/Trace.hpp>
 #include <sirikata/core/options/CommonOptions.hpp>
 #include <sirikata/ohcoordinator/Authenticator.hpp>
-#include "Forwarder.hpp"
 #include "LocalForwarder.hpp"
-
-#include <sirikata/ohcoordinator/ObjectSegmentation.hpp>
 
 #include "ObjectConnection.hpp"
 #include <sirikata/ohcoordinator/ObjectSessionManager.hpp>
@@ -78,6 +73,7 @@ Server::Server(SpaceContext* ctx, Authenticator* auth, Address4 oh_listen_addr, 
   OHDP::DelegateService( std::tr1::bind(&Server::createDelegateOHDPPort, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2) ),
   mContext(ctx),
   mAuthenticator(auth),
+  mLocalForwarder(NULL),
   mOHSessionManager(oh_sess_mgr),
   mObjectSessionManager(obj_sess_mgr),
   mShutdownRequested(false),

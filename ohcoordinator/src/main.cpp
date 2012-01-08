@@ -51,8 +51,6 @@
 #include <sirikata/core/trace/Trace.hpp>
 #include "TCPSpaceNetwork.hpp"
 #include <sirikata/core/network/ServerIDMap.hpp>
-#include "caches/CommunicationCache.hpp"
-#include "caches/CacheLRUOriginal.hpp"
 
 #include <sirikata/ohcoordinator/SpaceContext.hpp>
 #include <sirikata/mesh/Filter.hpp>
@@ -148,8 +146,6 @@ int main(int argc, char** argv) {
     if (network_type == "tcp")
       gNetwork = new TCPSpaceNetwork(space_context);
 
-    BoundingBox3f region = GetOptionValue<BoundingBox3f>("region");
-    Vector3ui32 layout = GetOptionValue<Vector3ui32>("layout");
 
     srand( GetOptionValue<uint32>("rand-seed") );
 

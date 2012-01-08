@@ -1468,10 +1468,6 @@ SET(LIBSPACE_SOURCES
 
 SET(LIBOHCOORDINATOR_SOURCES
   ${LIBOHCOORDINATOR_SOURCE_DIR}/Authenticator.cpp
-  ${LIBOHCOORDINATOR_SOURCE_DIR}/CoordinateSegmentation.cpp
-  ${LIBOHCOORDINATOR_SOURCE_DIR}/LoadMonitor.cpp
-  ${LIBOHCOORDINATOR_SOURCE_DIR}/ObjectSegmentation.cpp
-  ${LIBOHCOORDINATOR_SOURCE_DIR}/OSegLookupTraceToken.cpp
   ${LIBOHCOORDINATOR_SOURCE_DIR}/ServerMessage.cpp
   ${LIBOHCOORDINATOR_SOURCE_DIR}/SpaceContext.cpp
   ${LIBOHCOORDINATOR_SOURCE_DIR}/SpaceNetwork.cpp
@@ -1718,29 +1714,12 @@ SET(SPACE_SOURCES
 )
 
 SET(OHCOORDINATOR_SOURCES
-  ${OHCOORDINATOR_SOURCE_DIR}/CoordinateSegmentationClient.cpp
-  ${OHCOORDINATOR_SOURCE_DIR}/caches/Complete_Cache.cpp
-  ${OHCOORDINATOR_SOURCE_DIR}/caches/CacheRecords.cpp
-  ${OHCOORDINATOR_SOURCE_DIR}/caches/FCache.cpp
-  ${OHCOORDINATOR_SOURCE_DIR}/caches/CommunicationCache.cpp
-  ${OHCOORDINATOR_SOURCE_DIR}/caches/CacheLRUOriginal.cpp
-  ${OHCOORDINATOR_SOURCE_DIR}/RegionODPFlowScheduler.cpp
-  ${OHCOORDINATOR_SOURCE_DIR}/CSFQODPFlowScheduler.cpp
-  ${OHCOORDINATOR_SOURCE_DIR}/ServerMessageReceiver.cpp
-  ${OHCOORDINATOR_SOURCE_DIR}/FairServerMessageReceiver.cpp
-  ${OHCOORDINATOR_SOURCE_DIR}/ServerMessageQueue.cpp
-  ${OHCOORDINATOR_SOURCE_DIR}/FairServerMessageQueue.cpp
-  ${OHCOORDINATOR_SOURCE_DIR}/Forwarder.cpp
-  ${OHCOORDINATOR_SOURCE_DIR}/ForwarderServiceQueue.cpp
   ${OHCOORDINATOR_SOURCE_DIR}/LocalForwarder.cpp
   ${OHCOORDINATOR_SOURCE_DIR}/ObjectConnection.cpp
   ${OHCOORDINATOR_SOURCE_DIR}/Options.cpp
-  ${OHCOORDINATOR_SOURCE_DIR}/OSegHasher.cpp
-  ${OHCOORDINATOR_SOURCE_DIR}/OSegLookupQueue.cpp
   ${OHCOORDINATOR_SOURCE_DIR}/Server.cpp
   ${OHCOORDINATOR_SOURCE_DIR}/TCPSpaceNetwork.cpp
 #  ${OHCOORDINATOR_SOURCE_DIR}/Test.cpp
-  ${OHCOORDINATOR_SOURCE_DIR}/UniformCoordinateSegmentation.cpp
   ${OHCOORDINATOR_SOURCE_DIR}/main.cpp
 )
 

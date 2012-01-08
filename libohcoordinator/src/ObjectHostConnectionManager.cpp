@@ -32,7 +32,6 @@
 
 #include <sirikata/ohcoordinator/ObjectHostConnectionManager.hpp>
 #include <sirikata/core/options/CommonOptions.hpp>
-#include <sirikata/ohcoordinator/ServerMessage.hpp>
 #include <sirikata/core/network/IOStrand.hpp>
 #include <sirikata/core/network/IOStrandImpl.hpp>
 #include <sirikata/core/network/StreamListenerFactory.hpp>

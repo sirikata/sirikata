@@ -41,12 +41,7 @@
 #include <sirikata/core/service/Service.hpp>
 #include <sirikata/core/queue/SizedThreadSafeQueue.hpp>
 
-#include <sirikata/core/util/MotionVector.hpp>
-
 #include "Protocol_Session.pbj.hpp"
-#include "Protocol_Migration.pbj.hpp"
-
-#include <sirikata/ohcoordinator/ObjectSegmentation.hpp>
 
 #include <sirikata/core/odp/DelegateService.hpp>
 #include <sirikata/core/ohdp/DelegateService.hpp>
