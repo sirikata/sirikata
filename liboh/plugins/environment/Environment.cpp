@@ -86,6 +86,10 @@ boost::any EnvironmentSimulation::invoke(std::vector<boost::any>& params) {
 }
 
 void EnvironmentSimulation::handleCreatedStream(int err, ODPSST::Stream::Ptr strm) {
+    if (err != SST_IMPL_SUCCESS) {
+        ENV_LOG(error, "Failed to create substream for environment messages. This might happen if the environment service isn't running on the space server.");
+        return;
+    }
     mStream = strm;
     mRecordStream.initialize(
         mStream,
