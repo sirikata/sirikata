@@ -238,6 +238,7 @@ protected:
     typedef SSTStream::Ptr SSTStreamPtr;
     void handleLocationUpdateSubstream(const UUID& source, int err, SSTStreamPtr s);
     void handleLocationUpdateSubstreamRead(const UUID& source, SSTStreamPtr s, std::stringstream* prevdata, uint8* buffer, int length);
+    void tryHandleLocationUpdate(const UUID& source, SSTStreamPtr s, const String& payload, std::stringstream* prevdata);
 
     SpaceContext* mContext;
 private:
