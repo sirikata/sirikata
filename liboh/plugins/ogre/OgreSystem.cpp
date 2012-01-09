@@ -628,13 +628,12 @@ void OgreSystem::onDisconnected(const Network::Address& addr, bool requested, co
 {
     //ugh!  This is an ugly function.
     simStrand->post(
-        std::tr1::bind<
-        void (OgreSystem::*) (Liveness::Token,const Network::Address&, bool, const String&)>(
-            (&OgreSystem::iOnDisconnected),this,
+        std::tr1::bind(
+            (&OgreSystem::iOnNetworkDisconnected),this,
             livenessToken(), addr,requested,reason));
 }
 
-void OgreSystem::iOnDisconnected(
+void OgreSystem::iOnNetworkDisconnected(
     Liveness::Token osAlive,const Network::Address& addr,
     bool requested, const String& reason)
 {
@@ -667,13 +666,12 @@ void OgreSystem::onDisconnected(
     SessionEventProviderPtr from, const SpaceObjectReference& name)
 {
     simStrand->post(
-        std::tr1::bind<
-        void (OgreSystem::*)(Liveness::Token, SessionEventProviderPtr, const SpaceObjectReference&)>(
-            &OgreSystem::iOnDisconnected,this,
+        std::tr1::bind(
+            &OgreSystem::iOnSessionDisconnected,this,
             livenessToken(),from,name));
 }
 
-void OgreSystem::iOnDisconnected(
+void OgreSystem::iOnSessionDisconnected(
     Liveness::Token osAlive, SessionEventProviderPtr from,
     const SpaceObjectReference& name)
 {

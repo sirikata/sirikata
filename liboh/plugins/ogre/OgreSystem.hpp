@@ -253,10 +253,10 @@ private:
     void instantiateAllObjects(ProxyManagerPtr pop);
     double clamp(const double& val);
 
-    void iOnDisconnected(
+    void iOnSessionDisconnected(
         Liveness::Token osAlive, SessionEventProviderPtr from,
         const SpaceObjectReference& name);
-    void iOnDisconnected(
+    void iOnNetworkDisconnected(
         Liveness::Token osAlive,const Network::Address& addr,
         bool requested, const String& reason);
 
