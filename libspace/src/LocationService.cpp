@@ -108,16 +108,6 @@ void LocationService::newSession(ObjectSession* session) {
 
     SpaceObjectReference sourceObject = conn->remoteEndPoint().endPoint;
 
-    // Datagram updates
-    conn->registerReadDatagramCallback( OBJECT_PORT_LOCATION,
-        std::tr1::bind(
-            &LocationService::handleLocationUpdateDatagram, this,
-            sourceObject.object().getAsUUID(),
-            std::tr1::placeholders::_1,std::tr1::placeholders::_2
-        )
-    );
-
-    // SST updates
     strm->listenSubstream(OBJECT_PORT_LOCATION,
         std::tr1::bind(
             &LocationService::handleLocationUpdateSubstream, this,
@@ -126,12 +116,6 @@ void LocationService::newSession(ObjectSession* session) {
         )
     );
 
-}
-
-void LocationService::handleLocationUpdateDatagram(UUID source, void* buffer, uint32 length) {
-    // We need this indirection because std::tr1::bind on windows
-    // doesn't like the return value.
-    locationUpdate(source, buffer, length);
 }
 
 void LocationService::handleLocationUpdateSubstream(const UUID& source, int err, SSTStreamPtr s) {

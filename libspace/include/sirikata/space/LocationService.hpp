@@ -231,8 +231,6 @@ protected:
     void notifyReplicaMeshUpdated(const UUID& uuid, const String& newval) const;
     void notifyReplicaPhysicsUpdated(const UUID& uuid, const String& newval) const;
 
-    // Helper for listening for datagrams
-    void handleLocationUpdateDatagram(UUID source, void* buffer, uint32 length);
     // Helpers for listening to streams
     typedef SST::Stream<SpaceObjectReference> SSTStream;
     typedef SSTStream::Ptr SSTStreamPtr;

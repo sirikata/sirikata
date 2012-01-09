@@ -180,7 +180,7 @@ void HostedObject::destroy(bool need_self)
 
     //copying the data to a separate map before clearing to avoid deadlock in
     //destructor.
-    
+
     boost::unique_lock<boost::mutex> locker((boost::mutex&)presenceDataMutex);
     PresenceDataMap toDeleteFrom(mPresenceData);
     mPresenceData.clear();
@@ -232,7 +232,7 @@ ProxyManagerPtr HostedObject::getProxyManager(const SpaceID& space, const Object
 //returns all the spaceobjectreferences associated with the presence with id sporef
 void HostedObject::getProxySpaceObjRefs(const SpaceObjectReference& sporef,SpaceObjRefVec& ss) const
 {
-    
+
     boost::mutex::scoped_lock lock((boost::mutex&)presenceDataMutex);
     PresenceDataMap::const_iterator smapIter = mPresenceData.find(sporef);
 
@@ -484,7 +484,7 @@ bool HostedObject::addSimListeners(
         sim = pd.sims[simName];
         return false;
     }
-    
+
     HO_LOG(info,String("[OH] Initializing ") + simName);
 
     try {
@@ -541,11 +541,11 @@ void HostedObject::handleConnectedIndirect(const HostedObjectWPtr& weakSelf, con
         HO_LOG(warning,"Failed to connect object:" << obj << " to space " << space);
         return;
     }
-    
+
     HostedObjectPtr self(weakSelf.lock());
     if (!self)
         return;
-    
+
     SpaceObjectReference self_objref(space, obj);
 
     {
@@ -561,8 +561,8 @@ void HostedObject::handleConnectedIndirect(const HostedObjectWPtr& weakSelf, con
             );
         }
     }
-    
-    
+
+
     // Convert back to local time
     TimedMotionVector3f local_loc(self->localTime(space, info.loc.updateTime()), info.loc.value());
     TimedMotionQuaternion local_orient(self->localTime(space, info.orient.updateTime()), info.orient.value());
@@ -660,7 +660,7 @@ void HostedObject::handleDisconnected(
         HO_LOG(detailed,"Ignoring disconnection callback after system stop requested.");
         return;
     }
-    
+
     self->mContext->mainStrand->post(
         std::tr1::bind(&HostedObject::iHandleDisconnected,self.get(),
             weakSelf, spaceobj, cc));
@@ -1327,7 +1327,7 @@ void HostedObject::updateLocUpdateRequest(const SpaceID& space, const ObjectRefe
     assert(mPresenceData.find(SpaceObjectReference(space, oref)) != mPresenceData.end());
     PerPresenceData& pd = *(mPresenceData.find(SpaceObjectReference(space, oref)))->second;
     locker.unlock();
-    
+
     if (loc != NULL) { pd.requestLocation = *loc; pd.updateFields |= PerPresenceData::LOC_FIELD_LOC; }
     if (orient != NULL) { pd.requestOrientation = *orient; pd.updateFields |= PerPresenceData::LOC_FIELD_ORIENTATION; }
     if (bounds != NULL) { pd.requestBounds = *bounds; pd.updateFields |= PerPresenceData::LOC_FIELD_BOUNDS; }
@@ -1400,12 +1400,6 @@ void HostedObject::sendLocUpdateRequest(const SpaceID& space, const ObjectRefere
     bool send_succeeded = false;
     SSTStreamPtr spaceStream = mObjectHost->getSpaceStream(space, oref);
     if (spaceStream) {
-        /* datagram update, still supported but gets dropped
-        SSTConnectionPtr conn = spaceStream->connection().lock();
-        assert(conn);
-        send_succeeded = conn->datagram( (void*)payload.data(), payload.size(), OBJECT_PORT_LOCATION,
-            OBJECT_PORT_LOCATION, NULL);
-        */
         spaceStream->createChildStream(
             std::tr1::bind(discardChildStream, _1, _2),
             (void*)payload.data(), payload.size(),
