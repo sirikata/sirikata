@@ -64,12 +64,14 @@ String getExecutablePath(String name) {
 
 
 #if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_LINUX || SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_MAC
-void execCommand(const char* file, const char* const argv[], bool do_fork = true) {
+void execCommand(const char* file, const char* const argv[], bool do_fork = true)
+{
     pid_t pID = 0;
     if (do_fork)
-        fork();
+        pID = fork();
 
     if (pID == 0) {
+        
         // setsid() decouples this process from the parent, ensuring that the
         // exit of the parent doesn't kill the child process by accident
         // (e.g. by causing the parent terminal to exit).
