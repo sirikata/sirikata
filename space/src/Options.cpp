@@ -92,7 +92,7 @@ void InitSpaceOptions() {
 
       .addOption(new OptionValue("route-object-message-buffer", "64", Sirikata::OptionValueType<size_t>(), "size of the buffer between network and main strand for space server message routing"))
 
-        .addOption(new OptionValue(OPT_MODULES, "", Sirikata::OptionValueType< std::vector<String> >(), "Additional SpaceModules to load"))
+        .addOption(new OptionValue(OPT_MODULES, "environment", Sirikata::OptionValueType< std::vector<String> >(), "Additional SpaceModules to load"))
 
       ;
 }
