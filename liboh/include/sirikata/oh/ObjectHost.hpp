@@ -92,7 +92,6 @@ class SIRIKATA_OH_EXPORT ObjectHost
     uint32 mActiveHostedObjects;
     HostedObjectMap mHostedObjects;
 
-    PluginManager *mScriptPlugins;
     typedef std::tr1::unordered_map<String, ObjectScriptManager*> ScriptManagerMap;
     ScriptManagerMap mScriptManagers;
 
@@ -100,6 +99,7 @@ class SIRIKATA_OH_EXPORT ObjectHost
     ///options passed to initialization of scripts (usually path information)
     std::map<std::string, std::string > mSimOptions;
     typedef std::tr1::function<void(const SpaceID&, const ObjectReference&, ServerID, const TimedMotionVector3f&, const TimedMotionQuaternion&, const BoundingSphere3f&, const String&, const String&)> SessionConnectedCallback;
+
 public:
     String getSimOptions(const String&);
     struct ConnectionInfo {
@@ -112,10 +112,6 @@ public:
         String query;
     };
 
-    //use this function to request the object host to send a disconnect message
-    //to space for object
-    void disconnectObject(const SpaceID& space, const ObjectReference& oref);
-
     typedef std::tr1::function<void(const SpaceID&, const ObjectReference&, ServerID)> SessionCallback;
     // Callback indicating that a connection to the server was made and it is available for sessions
     typedef std::tr1::function<void(const SpaceID&, const ObjectReference&, ConnectionInfo)> ConnectedCallback;
@@ -127,9 +123,6 @@ public:
     // Notifies the ObjectHost of object connection that was closed, including a
     // reason.
     typedef std::tr1::function<void(const SpaceObjectReference&, Disconnect::Code)> DisconnectedCallback;
-
-    //FIXME: this call will have to go away sooner or later.
-    SpaceID getDefaultSpace();
 
     /** Caller is responsible for starting a thread
      *
@@ -198,9 +191,10 @@ public:
         DisconnectedCallback disconnected_cb
     );
 
-
-    /** Disconnect the object from the space. */
-    void disconnect(SpaceObjectReference& sporef, const SpaceID& space);
+    /** Use this function to request the object host to send a disconnect message
+     *  to space for object.
+     */
+    void disconnectObject(const SpaceID& space, const ObjectReference& oref);
 
     /** Get offset of server time from client time for the given space. Should
      * only be called by objects with an active connection to that space.
@@ -243,9 +237,6 @@ public:
     /* Notify the ObjectHost that . Only called by HostedObject. */
     void hostedObjectDestroyed(const UUID& objid);
 
-    /** Lookup HostedObject by private UUID. */
-    HostedObjectPtr getHostedObject(const SpaceObjectReference &id) const;
-
     /** Lookup the SST stream for a particular object. */
     typedef SST::Stream<SpaceObjectReference> SSTStream;
     typedef SSTStream::Ptr SSTStreamPtr;
@@ -261,17 +252,16 @@ public:
     virtual OHDP::PortID unusedOHDPPort(const SpaceID& space, const OHDP::NodeID& node);
     virtual void registerDefaultOHDPHandler(const MessageHandler& cb);
 
-    PluginManager *getScriptPluginManager(){return mScriptPlugins;}
-
     // The object host will instantiate script managers and pass them user
     // specified flags.  These can then be reused by calling this method to get
     // at them.
     ObjectScriptManager* getScriptManager(const String& id);
 
-    /// DEPRECATED
-    ProxyManager *getProxyManager(const SpaceID&space) const;
-
   private:
+
+    /** Lookup HostedObject by private UUID. */
+    HostedObjectPtr getHostedObject(const SpaceObjectReference &id) const;
+
     // SpaceNodeSessionListener Interface -- forwards on to real listeners
     virtual void onSpaceNodeSession(const OHDP::SpaceNodeID& id, OHDPSST::Stream::Ptr sn_stream) { fireSpaceNodeSession(id, sn_stream); }
     virtual void onSpaceNodeSessionEnded(const OHDP::SpaceNodeID& id) { fireSpaceNodeSessionEnded(id); }

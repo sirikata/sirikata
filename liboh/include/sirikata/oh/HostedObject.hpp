@@ -94,52 +94,29 @@ class SIRIKATA_OH_EXPORT HostedObject
     : public VWObject,
       public Service
 {
-//------- Private inner classes
-
+  private:
     struct PrivateCallbacks;
-protected:
 
-//------- Members
     ObjectHostContext* mContext;
     const UUID mID;
-
-  private:
 
     ObjectHost *mObjectHost;
     ObjectScript *mObjectScript;
     typedef std::map<SpaceObjectReference, PerPresenceData*> PresenceDataMap;
     PresenceDataMap mPresenceData;
 
-    int mNextSubscriptionID;
     bool destroyed;
 
     ODP::DelegateService* mDelegateODPService;
 
-//------- Constructors/Destructors
-
-private:
-    friend class ::Sirikata::SelfWeakPtr<VWObject>;
-    friend class PerPresenceData;
-/// Private: Use "SelfWeakPtr<HostedObject>::construct(ObjectHost*)"
-    /** Create a new HostedObject. script_type and script_opts are treated as
-     * "use defaults" if you pass NULL and "use no script" if you pass empty
-     * strings.  Invalid values are equivalent to passing NULL, since no scripts
-     * can be instantiated -- there is no fallback to the default if you
-     * explicitly specify a script type and options.
-     *
-     * \param _id A unique identifier for this object within this object
-     * host. You can specify it at construction so that objects can be restored
-     * from permanent storage.  You should always specify a non-null value, even
-     * if you need to manually allocate a new random identifier.
-     */
-    HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID &_id);
-
-public:
     typedef boost::mutex Mutex;
     Mutex presenceDataMutex;
     Mutex notifyMutex;
 
+    friend class ::Sirikata::SelfWeakPtr<VWObject>;
+    friend class PerPresenceData;
 
+public:
     typedef SST::EndPoint<SpaceObjectReference> EndPointType;
     typedef SST::BaseDatagramLayer<SpaceObjectReference> BaseDatagramLayerType;
     typedef BaseDatagramLayerType::Ptr BaseDatagramLayerPtr;
@@ -148,7 +125,7 @@ public:
     typedef SST::Stream<SpaceObjectReference> SSTStream;
     typedef SSTStream::Ptr SSTStreamPtr;
 
-/// Destructor: will only be called from shared_ptr::~shared_ptr.
+    /// Destructor: will only be called from shared_ptr::~shared_ptr.
     virtual ~HostedObject();
 
     /** Get a unique identifier for this object on this object host. This is for
@@ -162,11 +139,6 @@ public:
     virtual void stop();
 
     bool stopped() const;
-private:
-//------- Private member functions:
-    // When a connection to a space is setup, initialize it to handle default behaviors
-    void initializePerPresenceData(PerPresenceData& psd, ProxyObjectPtr selfproxy);
-public:
 
     /** Get a set of spaces the object is currently connected to.
      *  NOTE: Be very careful with this. It reports everything connected,
@@ -176,10 +148,7 @@ public:
      */
     typedef std::vector<SpaceObjectReference> SpaceObjRefVec;
     void getSpaceObjRefs(SpaceObjRefVec& ss) const;
-    void getProxySpaceObjRefs(const SpaceObjectReference& sporef,SpaceObjRefVec& ss) const;
 
-
-//------- Public member functions:
     ObjectHostContext* context() { return mContext; }
     const ObjectHostContext* context() const { return mContext; }
 
@@ -200,8 +169,6 @@ public:
         Simulation*& sim,Network::IOStrandPtr simStrand);
 
 
-
-
     /** Removes this HostedObject from the ObjectHost, and destroys the internal shared pointer
       * Safe to reuse for another connection, as long as you hold a shared_ptr to this object.
       */
@@ -212,41 +179,17 @@ public:
     ObjectHost *getObjectHost()const {return mObjectHost;}
 
     /// Gets the proxy object representing this HostedObject inside space.
-    ///const ProxyObjectPtr &getProxy(const SpaceID &space) const;
     ProxyObjectPtr getProxy(const SpaceID& space, const ObjectReference& oref);
-    bool getProxy(const SpaceObjectReference* sporef, ProxyObjectPtr& p);
-    const ProxyObjectPtr &getProxyConst(const SpaceID& space, const ObjectReference& oref) const;
-
-public:
-
-    ObjectReference getObjReference(const SpaceID& space);
-
 
     Simulation* runSimulation(
         const SpaceObjectReference& sporef, const String& simName,
         Network::IOStrandPtr simStrand);
 
 
-    bool getProxyObjectFrom(const SpaceObjectReference*   spVisTo, const SpaceObjectReference*   sporef, ProxyObjectPtr& p);
-
-    /** Returns the internal object reference, which can be used for connecting
-        to a space, talking to other objects within this object host, and
-        persistence messages.
-    */
-
-
-
     virtual ProxyManagerPtr getProxyManager(const SpaceID& space,const ObjectReference& oref);
-    virtual ProxyManagerPtr getDefaultProxyManager(const SpaceID& space);
-    virtual ProxyObjectPtr  getDefaultProxyObject(const SpaceID& space);
-
-    /** Called once per frame, at a certain framerate. */
-    void tick();
-
 
     typedef int64 PresenceToken;
     const static PresenceToken DEFAULT_PRESENCE_TOKEN = -1;
-
 
     /** Initiate connection process to a space, but do not send any messages yet.
         After calling connectToSpace, it is immediately possible to send() a NewObj
@@ -298,28 +241,6 @@ public:
         const ObjectReference& orefID,
         PresenceToken token = DEFAULT_PRESENCE_TOKEN);
 
-
-    Location getLocation(const SpaceID& space, const ObjectReference& oref);
-
-  private:
-
-    // Because IOStrand->wrap() can't handle > 5 parameters (because the
-    // underlying boost impementation doesnt), we need to handle wrapping
-    // connection callbacks manually.
-
-    void iHandleDisconnected(
-        const HostedObjectWPtr& weakSelf, const SpaceObjectReference& spaceobj,
-        Disconnect::Code cc);
-
-    static void handleConnected(const HostedObjectWPtr &weakSelf, const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info);
-    static void handleConnectedIndirect(const HostedObjectWPtr &weakSelf, const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, const BaseDatagramLayerPtr&);
-
-//    static bool handleEntityCreateMessage(const HostedObjectWPtr &weakSelf, const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference bodyData);
-    static void handleMigrated(const HostedObjectWPtr &weakSelf, const SpaceID& space, const ObjectReference& obj, ServerID server);
-    static void handleStreamCreated(const HostedObjectWPtr &weakSelf, const SpaceObjectReference& spaceobj, SessionManager::ConnectionEvent after, PresenceToken token);
-    static void handleDisconnected(const HostedObjectWPtr &weakSelf, const SpaceObjectReference& spaceobj, Disconnect::Code cc);
-
-  public:
     /// Disconnects from the given space by terminating the corresponding substream.
     void disconnectFromSpace(const SpaceID &spaceID, const ObjectReference& oref);
 
@@ -328,24 +249,14 @@ public:
     void receiveMessage(const SpaceID& space, const Protocol::Object::ObjectMessage* msg);
 
 
-  public:
-
-
-    std::tr1::shared_ptr<HostedObject> getSharedPtr() {
+    HostedObjectPtr getSharedPtr() {
         return std::tr1::static_pointer_cast<HostedObject>(this->VWObject::getSharedPtr());
     }
-    std::tr1::weak_ptr<HostedObject> getWeakPtr() {
+    HostedObjectWPtr getWeakPtr() {
         return std::tr1::static_pointer_cast<HostedObject>(this->VWObject::getSharedPtr());
     }
 
-    Network::IOService* getIOService();
-    //void registerTimeoutCallback(const Duration& dur, std::tr1::function<void( );
-
-
-  public:
     // Identification
-    // virtual SpaceObjectReference id(const SpaceID& space) const;
-
     virtual ProxyManagerPtr presence(const SpaceObjectReference& sor);
     virtual ProxyObjectPtr self(const SpaceObjectReference& sor);
 
@@ -407,6 +318,31 @@ public:
     void handleLocationUpdate(const SpaceObjectReference& spaceobj, const LocUpdate& lu);
 
   private:
+    /// Private: Use "SelfWeakPtr<HostedObject>::construct(ObjectHost*)"
+    /** Create a new HostedObject.
+     * \param _id A unique identifier for this object within this object
+     * host. You can specify it at construction so that objects can be restored
+     * from permanent storage.  You should always specify a non-null value, even
+     * if you need to manually allocate a new random identifier.
+     */
+    HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID &_id);
+
+    // Because IOStrand->wrap() can't handle > 5 parameters (because the
+    // underlying boost impementation doesnt), we need to handle wrapping
+    // connection callbacks manually.
+
+    void iHandleDisconnected(
+        const HostedObjectWPtr& weakSelf, const SpaceObjectReference& spaceobj,
+        Disconnect::Code cc);
+
+    static void handleConnected(const HostedObjectWPtr &weakSelf, const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info);
+    static void handleConnectedIndirect(const HostedObjectWPtr &weakSelf, const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, const BaseDatagramLayerPtr&);
+
+//    static bool handleEntityCreateMessage(const HostedObjectWPtr &weakSelf, const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference bodyData);
+    static void handleMigrated(const HostedObjectWPtr &weakSelf, const SpaceID& space, const ObjectReference& obj, ServerID server);
+    static void handleStreamCreated(const HostedObjectWPtr &weakSelf, const SpaceObjectReference& spaceobj, SessionManager::ConnectionEvent after, PresenceToken token);
+    static void handleDisconnected(const HostedObjectWPtr &weakSelf, const SpaceObjectReference& spaceobj, Disconnect::Code cc);
+
     /** \deprecated
      *  Helper for encoding default, solid angle queries. Used to enable old,
      *  deprecated API for setting queries.
@@ -429,23 +365,12 @@ public:
     );
 
     // Helper for creating the correct type of proxy
-
     ProxyObjectPtr createProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri, TimedMotionVector3f& tmv, TimedMotionQuaternion& tmvq, const BoundingSphere3f& bounds, const String& physics, const String& query, uint64 seqNo);
-    ProxyObjectPtr createDummyProxy();
 
     // Helper for constructing and sending location update
     void updateLocUpdateRequest(const SpaceID& space, const ObjectReference& oref, const TimedMotionVector3f* const loc, const TimedMotionQuaternion* const orient, const BoundingSphere3f* const bounds, const String* const mesh, const String* const phy);
     void sendLocUpdateRequest(const SpaceID& space, const ObjectReference& oref);
-
 };
-
-
-/// shared_ptr, keeps a reference to the HostedObject. Do not store one of these.
-typedef std::tr1::shared_ptr<HostedObject> HostedObjectPtr;
-/// weak_ptr, to be used to hold onto a HostedObject reference. @see SelfWeakPtr.
-typedef std::tr1::weak_ptr<HostedObject> HostedObjectWPtr;
-
-
 
 }
 

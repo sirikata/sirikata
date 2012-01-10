@@ -116,13 +116,6 @@ ProxyEntity* OgreSystemMouseHandler::hoverEntity (Camera *cam, Time time, float 
         }
     }
     if (mouseOverEntity) {
-        while (
-            mouseOverEntity->getProxy().getParentProxy()) {
-            mouseOverEntity = mParent->getEntity(mouseOverEntity->getProxy().getParentProxy()->getObjectReference());
-            if (mouseOverEntity == NULL) {
-                return NULL; // FIXME: should try again.
-            }
-        }
         if (hitPointOut != NULL) *hitPointOut = Vector3f(pos) + dir.normal()*dist;
         return mouseOverEntity;
     }

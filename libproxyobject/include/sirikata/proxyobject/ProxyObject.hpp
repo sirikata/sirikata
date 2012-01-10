@@ -60,7 +60,6 @@ class ProxyObjectListener;
 
 
 //typedefs
-typedef double AbsTime;
 typedef Provider<PositionListener*> PositionProvider;
 typedef Provider<ProxyObjectListener*> ProxyObjectProvider;
 typedef Provider< MeshListener* > MeshProvider;
@@ -115,17 +114,8 @@ public:
 
 private:
     const SpaceObjectReference mID;
-    ProxyManager *const mManager;
-
-    SequencedPresenceProperties mProperties;
-
-
     VWObjectPtr mParent;
     const SpaceObjectReference mParentPresenceID;
-    ODP::Port* mDefaultPort; // Default port used to send messages to the object
-                             // this ProxyObject represents
-
-
 public:
     /** Constructs a new ProxyObject. After constructing this object, it
         should be wrapped in a shared_ptr and sent to ProxyManager::createObject().
@@ -142,23 +132,20 @@ public:
     /// Subclasses can do any necessary cleanup first.
     virtual void destroy();
 
-    ODP::Service* odp() const {
-        DEPRECATED(ProxyObject);
-        return mParent.get();
-    }
-
-
     ///Returns the unique identification for this object and the space to which it is connected that gives it said name
     inline const SpaceObjectReference&getObjectReference() const{
         return mID;
     }
-    /// Returns the ProxyManager that owns this object. There is currently one ProxyManager per Space per ObjectHost.
-    inline ProxyManager *getProxyManager() const {
-        return mManager;
-    }
     inline const SpaceObjectReference getOwnerPresenceID() const {
         return mParentPresenceID;
     }
+    /// Gets the owning Proxy
+    // Note: I think parent is being used here in different ways. mParent refers
+    // to the "owner" of this proxy, i.e. the VWObject this proxy was created
+    // for, whereas other uses of Parent presumably refer to the physical
+    // hierarchy, i.e. the hierarchy used to move grouped/connected objects in
+    // virtual space.
+    VWObjectPtr getOwner() const { return mParent; }
 
     /// Returns the last updated position for this object.
     inline Vector3d getPosition() const{
@@ -200,16 +187,6 @@ public:
      */
     void invalidate(bool permanent);
 
-    /// Gets the parent ProxyObject. This may return null!
-    ProxyObjectPtr getParentProxy() const;
-    /// Gets the owning Proxy
-    // Note: I think parent is being used here in different ways. mParent refers
-    // to the "owner" of this proxy, i.e. the VWObject this proxy was created
-    // for, whereas other uses of Parent presumably refer to the physical
-    // hierarchy, i.e. the hierarchy used to move grouped/connected objects in
-    // virtual space.
-    VWObjectPtr getOwner() const { return mParent; }
-
     /// Returns if this object has a zero velocity and requires no extrapolation.
     bool isStatic() const;
 
@@ -228,19 +205,6 @@ public:
     void setMesh (Transfer::URI const& rhs, uint64 seqno, bool predictive = false);
 
     void setPhysics(const String& rhs, uint64 seqno, bool predictive = false);
-
-    /// Returns the global location of this object in space coordinates at timeStamp.
-    Location globalLocation(TemporalValue<Location>::Time timeStamp) const {
-        ProxyObjectPtr ppop = getParentProxy();
-        if (ppop) {
-            return extrapolateLocation(timeStamp).
-                toWorld(ppop->globalLocation(timeStamp));
-        } else {
-            return extrapolateLocation(timeStamp);
-        }
-    }
-
-    bool sendMessage(const ODP::PortID& dest_port, MemoryReference message) const;
 
     /** Retuns the local location of this object at the current timestamp. */
     Location extrapolateLocation(TemporalValue<Location>::Time current) const {

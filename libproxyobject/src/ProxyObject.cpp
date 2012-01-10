@@ -52,12 +52,10 @@ ProxyObject::ProxyObject(ProxyManager *man, const SpaceObjectReference&id, VWObj
      ProxyObjectProvider(),
      MeshProvider (),
      mID(id),
-     mManager(man),
      mParent(vwobj),
      mParentPresenceID(owner_sor)
 {
     assert(mParent);
-    mDefaultPort = mParent->bindODPPort(owner_sor);
 
     reset();
 
@@ -66,7 +64,6 @@ ProxyObject::ProxyObject(ProxyManager *man, const SpaceObjectReference&id, VWObj
 
 
 ProxyObject::~ProxyObject() {
-    delete mDefaultPort;
 }
 
 void ProxyObject::reset() {
@@ -89,16 +86,7 @@ void ProxyObject::destroy() {
     ProxyObjectPtr ptr = getSharedPtr();
     assert(ptr);
     ProxyObjectProvider::notify(&ProxyObjectListener::destroyed, ptr);
-    //FIXME mManager->notify(&ProxyCreationListener::onDestroyProxy);
 }
-
-
-
-bool ProxyObject::sendMessage(const ODP::PortID& dest_port, MemoryReference message) const {
-    ODP::Endpoint dest(mID.space(), mID.object(), dest_port);
-    return mDefaultPort->send(dest, message);
-}
-
 
 bool ProxyObject::UpdateNeeded::operator() (
     const Location&updatedValue,
@@ -155,10 +143,6 @@ void ProxyObject::setPhysics (const String& rhs, uint64 seqno, bool predictive) 
         assert(ptr);
         if (ptr) MeshProvider::notify ( &MeshListener::onSetPhysics, ptr, rhs, mID);
     }
-}
-
-ProxyObjectPtr ProxyObject::getParentProxy() const {
-    return ProxyObjectPtr();
 }
 
 }

@@ -76,7 +76,6 @@ HostedObject::HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID
    mID(_id),
    mObjectHost(parent),
    mObjectScript(NULL),
-   mNextSubscriptionID(0),
    destroyed(false)
 {
     mDelegateODPService = new ODP::DelegateService(
@@ -86,14 +85,6 @@ HostedObject::HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID
         )
     );
 }
-
-
-//Need to define this function so that can register timeouts in jscript
-Network::IOService* HostedObject::getIOService()
-{
-    return mContext->ioService;
-}
-
 
 Simulation* HostedObject::runSimulation(
     const SpaceObjectReference& sporef, const String& simName,
@@ -229,24 +220,6 @@ ProxyManagerPtr HostedObject::getProxyManager(const SpaceID& space, const Object
 }
 
 
-//returns all the spaceobjectreferences associated with the presence with id sporef
-void HostedObject::getProxySpaceObjRefs(const SpaceObjectReference& sporef,SpaceObjRefVec& ss) const
-{
-
-    boost::mutex::scoped_lock lock( const_cast<Mutex&>(presenceDataMutex) );
-    PresenceDataMap::const_iterator smapIter = mPresenceData.find(sporef);
-
-    if (smapIter != mPresenceData.end())
-    {
-        //means that we actually did have a connection with this sporef
-        //load the proxy objects the sporef'd connection has actually seen into
-        //ss.
-        smapIter->second->proxyManager->getAllObjectReferences(ss);
-    }
-}
-
-
-
 //returns all the spaceobjrefs associated with all presences of this object.
 //They are returned in ss.
 void HostedObject::getSpaceObjRefs(SpaceObjRefVec& ss) const
@@ -260,36 +233,8 @@ void HostedObject::getSpaceObjRefs(SpaceObjRefVec& ss) const
 
 
 static ProxyObjectPtr nullPtr;
-const ProxyObjectPtr &HostedObject::getProxyConst(const SpaceID &space, const ObjectReference& oref) const
-{
-    boost::mutex::scoped_lock lock( const_cast<Mutex&>(presenceDataMutex) );
-    PresenceDataMap::const_iterator iter = mPresenceData.find(SpaceObjectReference(space,oref));
-    if (iter == mPresenceData.end()) {
-        return nullPtr;
-    }
-    return iter->second->mProxyObject;
-}
-
-
-//first checks to see if have a presence associated with spVisTo.  If do, then
-//checks if have a proxy object associated with sporef, sets p to the associated
-//proxy object, and returns true.  Otherwise, returns false.
-bool HostedObject::getProxyObjectFrom(const SpaceObjectReference*   spVisTo, const SpaceObjectReference*   sporef, ProxyObjectPtr& p)
-{
-    ProxyManagerPtr ohpmp = getProxyManager(spVisTo->space(),spVisTo->object());
-    if (ohpmp.get() == NULL)
-        return false;
-
-    p = ohpmp->getProxyObject(*sporef);
-
-    if (p.get() == NULL)
-        return false;
-
-    return true;
-}
-
-
 static ProxyManagerPtr nullManPtr;
+
 ProxyObjectPtr HostedObject::getProxy(const SpaceID& space, const ObjectReference& oref)
 {
     ProxyManagerPtr proxy_manager = getProxyManager(space,oref);
@@ -301,19 +246,6 @@ ProxyObjectPtr HostedObject::getProxy(const SpaceID& space, const ObjectReferenc
 
     ProxyObjectPtr  proxy_obj = proxy_manager->getProxyObject(SpaceObjectReference(space,oref));
     return proxy_obj;
-}
-
-bool HostedObject::getProxy(const SpaceObjectReference* sporef, ProxyObjectPtr& p)
-{
-    p = getProxy(sporef->space(), sporef->object());
-
-    if (p.get() == NULL)
-    {
-        SILOG(oh,info, "[HO] In getProxy of HostedObject, have no proxy presence associated with "<<*sporef);
-        return false;
-    }
-
-    return true;
 }
 
 
@@ -343,21 +275,8 @@ void HostedObject::initializeScript(const String& script_type, const String& arg
     static ThreadIdCheck scriptId=ThreadId::registerThreadGroup(NULL);
     assertThreadGroup(scriptId);
     if (!ObjectScriptManagerFactory::getSingleton().hasConstructor(script_type)) {
-        bool passed=true;
-        for (std::string::const_iterator i=script_type.begin(),ie=script_type.end();i!=ie;++i) {
-            if (!myisalphanum(*i)) {
-                if (*i!='-'&&*i!='_') {
-                    passed=false;
-                }
-            }
-        }
-        if (passed) {
-            mObjectHost->getScriptPluginManager()->load(script_type);
-        }
-        else
-        {
-            HO_LOG(debug,"[HO] Failed to create script for object because incorrect script type");
-        }
+        HO_LOG(debug,"[HO] Failed to create script for object because incorrect script type");
+        return;
     }
     ObjectScriptManager *mgr = mObjectHost->getScriptManager(script_type);
     if (mgr) {
@@ -573,7 +492,7 @@ void HostedObject::handleConnectedIndirect(const HostedObjectWPtr& weakSelf, con
         boost::mutex::scoped_lock lock(self->presenceDataMutex);
         PresenceDataMap::iterator psd_it = self->mPresenceData.find(self_objref);
         PerPresenceData& psd = *psd_it->second;
-        self->initializePerPresenceData(psd, self_proxy);
+        psd.initializeAs(self_proxy);
     }
     HO_LOG(detailed,"Connected object " << obj << " to space " << space << " waiting on notice");
 }
@@ -616,13 +535,6 @@ void HostedObject::handleStreamCreated(const HostedObjectWPtr& weakSelf, const S
         self->notify(&SessionEventListener::onConnected, self, spaceobj, token);
     else if (after == SessionManager::Migrated)
         self->notify(&SessionEventListener::onMigrated, self, spaceobj, token);
-}
-
-
-
-
-void HostedObject::initializePerPresenceData(PerPresenceData& psd, ProxyObjectPtr selfproxy) {
-    psd.initializeAs(selfproxy);
 }
 
 void HostedObject::disconnectFromSpace(const SpaceID &spaceID, const ObjectReference& oref)
@@ -977,21 +889,6 @@ ProxyManagerPtr HostedObject::presence(const SpaceObjectReference& sor)
     //  return proxyManPtr;
     return getProxyManager(sor.space(), sor.object());
 }
-ProxyObjectPtr HostedObject::getDefaultProxyObject(const SpaceID& space)
-{
-    boost::unique_lock<boost::mutex> locker(presenceDataMutex);
-    ObjectReference oref = mPresenceData.begin()->first.object();
-    locker.unlock();
-    return  getProxy(space, oref);
-}
-
-ProxyManagerPtr HostedObject::getDefaultProxyManager(const SpaceID& space)
-{
-    boost::mutex::scoped_lock lock(presenceDataMutex);
-    ObjectReference oref = mPresenceData.begin()->first.object();
-    return  getProxyManager(space, oref);
-}
-
 
 
 ProxyObjectPtr HostedObject::self(const SpaceObjectReference& sor)
@@ -1421,18 +1318,5 @@ void HostedObject::sendLocUpdateRequest(const SpaceID& space, const ObjectRefere
     }
 }
 
-
-Location HostedObject::getLocation(const SpaceID& space, const ObjectReference& oref)
-{
-    ProxyObjectPtr proxy = getProxy(space, oref);
-    if (!proxy)
-    {
-        HO_LOG(warn,"Requesting getLocation for missing proxy.  Doing nothing.");
-        return Location();
-    }
-
-    Location currentLoc = proxy->globalLocation(currentSpaceTime(space));
-    return currentLoc;
-}
 
 }
