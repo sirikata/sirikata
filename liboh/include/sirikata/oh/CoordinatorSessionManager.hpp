@@ -90,6 +90,9 @@ class SIRIKATA_OH_EXPORT CoordinatorSessionManager
     // Notifies the ObjectHost of object connection that was closed, including a
     // reason.
     typedef std::tr1::function<void(const SpaceObjectReference&, Disconnect::Code)> ObjectDisconnectedCallback;
+    //Feng:
+    typedef std::tr1::function<void(const UUID&, const String&)> ObjectMigrationCallback;
+    typedef std::tr1::function<void(const UUID&, const String&, const String&, const String&)> ObjectOHMigrationCallback;
 
     // SST stream related typedefs
     typedef SST::Stream<SpaceObjectReference> SSTStream;
@@ -99,8 +102,9 @@ class SIRIKATA_OH_EXPORT CoordinatorSessionManager
     typedef OHSSTStream::Ptr OHSSTStreamPtr;
     typedef OHDPSST::Endpoint OHSSTEndpoint;
 
+    CoordinatorSessionManager(ObjectHostContext* ctx, const SpaceID& space, ServerIDMap* sidmap, ObjectConnectedCallback, ObjectMessageHandlerCallback,
+    						  ObjectDisconnectedCallback, ObjectMigrationCallback, ObjectOHMigrationCallback);
 
-    CoordinatorSessionManager(ObjectHostContext* ctx, const SpaceID& space, ServerIDMap* sidmap, ObjectConnectedCallback, ObjectMessageHandlerCallback, ObjectDisconnectedCallback);
     ~CoordinatorSessionManager();
 
     // NOTE: The public interface is only safe to access from the main strand.
@@ -113,6 +117,9 @@ class SIRIKATA_OH_EXPORT CoordinatorSessionManager
     /** Disconnect the object from the space. */
     void disconnect(const SpaceObjectReference& id);
     void migrateRequest(const SpaceObjectReference& sporef_objid, const UUID& uuid);
+
+    //Feng
+    void updateCoordinator(const SpaceObjectReference& sporef_objid, const UUID& uuid, const String& oh_name);
 
     /** Get offset of server time from client time for the given space. Should
      * only be called by objects with an active connection to that space.
@@ -249,6 +256,9 @@ private:
     ObjectConnectedCallback mObjectConnectedCallback;
     ObjectMessageHandlerCallback mObjectMessageHandlerCallback;
     ObjectDisconnectedCallback mObjectDisconnectedCallback;
+    //Feng:
+    ObjectMigrationCallback mObjectMigrationToCallback;
+    ObjectOHMigrationCallback mObjectOHMigrationCallback;
 
     // Only main strand accesses and manipulates the map, although other strand
     // may access the SpaceNodeConnection*'s.

@@ -151,12 +151,6 @@ int main (int argc, char** argv) {
     String oh_options = GetOptionValue<String>(OPT_OH_OPTIONS);
     ObjectHost *oh = new CppohObjectHost(ctx, ios, oh_options);
 
-    // Add all the spaces to the ObjectHost.  We used to have SpaceIDMap and
-    // fill in the same ServerIDMap for all these. Now we just add the
-    // ServerIDMap for the main space. We need a better way of handling multiple
-    // spaces.
-    oh->addServerIDMap(mainSpace, server_id_map);
-
     // Add oh coordinator
     String coordinatormap_type = GetOptionValue<String>("coordinatormap");
     String coordinatormap_options = GetOptionValue<String>("coordinatormap-options");
@@ -164,6 +158,13 @@ int main (int argc, char** argv) {
     	ServerIDMapFactory::getSingleton().getConstructor(coordinatormap_type)(ctx, coordinatormap_options);
     SpaceID coordinatorSpace(GetOptionValue<UUID>(OPT_OH_COORDINATOR));
     oh->addOHCoordinator(coordinatorSpace, coordinator_id_map);
+
+
+    // Add all the spaces to the ObjectHost.  We used to have SpaceIDMap and
+    // fill in the same ServerIDMap for all these. Now we just add the
+    // ServerIDMap for the main space. We need a better way of handling multiple
+    // spaces.
+    oh->addServerIDMap(mainSpace, server_id_map);
 
     String objstorage_type = GetOptionValue<String>(OPT_OBJECT_STORAGE);
     String objstorage_options = GetOptionValue<String>(OPT_OBJECT_STORAGE_OPTS);

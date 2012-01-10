@@ -107,6 +107,7 @@ class SIRIKATA_OH_EXPORT ObjectHost
     ObjectSet mMigratingEntity;
 
     void migrateEntity(const SpaceID& space, const UUID& uuid, const String& name);
+    void migrateEntityHelper(const UUID& uuid, const String& name);
     void migrateAllEntity(const SpaceID& space, const String& name);
 
     PluginManager *mScriptPlugins;
@@ -261,6 +262,8 @@ public:
     void unregisterHostedObject(const SpaceObjectReference& sporef_uuid, HostedObject *obj);
     /* Notify the ObjectHost that . Only called by HostedObject. */
     void hostedObjectDestroyed(const UUID& objid);
+    //Feng:
+    void updateCoordinator(const SpaceObjectReference &sporef_uuid);
 
     /** Lookup HostedObject by private UUID. */
     HostedObjectPtr getHostedObject(const SpaceObjectReference &id) const;
@@ -297,10 +300,13 @@ public:
 
     // Session Management Implementation
     void handleObjectConnected(const SpaceObjectReference& sporef_internalID, ServerID server);
+    void handleObjectConnectedHelper(const SpaceObjectReference& sporef_internalID, ServerID server);
     void handleObjectMigrated(const SpaceObjectReference& sporef_internalID, ServerID from, ServerID to);
     void handleObjectMessage(const SpaceObjectReference& sporef_internalID, const SpaceID& space, Sirikata::Protocol::Object::ObjectMessage* msg);
     void handleObjectDisconnected(const SpaceObjectReference& sporef_internalID, Disconnect::Code);
     void handleObjectOHMigration(const UUID &_id, const String& script_type, const String& script_opts, const String& script_contents);
+    //Feng: this function should be changed definitly.
+    void handleObjectOHMigrationHelper(const UUID& uuid, const String& name);
 
     // Wrappers so we can forward events to interested parties. For Connected
     // callback, also allows us to convert ConnectionInfo.

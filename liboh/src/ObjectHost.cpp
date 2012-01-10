@@ -147,7 +147,7 @@ HostedObjectPtr ObjectHost::createObject(const UUID &uuid, const String& script_
 void ObjectHost::addServerIDMap(const SpaceID& space_id, ServerIDMap* sidmap) {
     SessionManager* smgr = new SessionManager(
         mContext, space_id, sidmap,
-        std::tr1::bind(&ObjectHost::handleObjectConnected, this, _1, _2),
+        std::tr1::bind(&ObjectHost::handleObjectConnectedHelper, this, _1, _2),
         std::tr1::bind(&ObjectHost::handleObjectMigrated, this, _1, _2, _3),
         std::tr1::bind(&ObjectHost::handleObjectMessage, this, _1, space_id, _2),
         std::tr1::bind(&ObjectHost::handleObjectDisconnected, this, _1, _2),
@@ -159,7 +159,7 @@ void ObjectHost::addServerIDMap(const SpaceID& space_id, ServerIDMap* sidmap) {
     smgr->addListener(static_cast<SpaceNodeSessionListener*>(this));
     mSessionManagers[space_id] = smgr;
     smgr->start();
-
+/*
     if(mName=="oh1"){
         SILOG(oh,info,"sleep, wait migration");
         mContext->mainStrand->post(
@@ -167,6 +167,7 @@ void ObjectHost::addServerIDMap(const SpaceID& space_id, ServerIDMap* sidmap) {
         		std::tr1::bind(&ObjectHost::migrateAllEntity, this, getDefaultSpace(), "oh2")
         );
     }
+*/
 }
 
 void ObjectHost::addOHCoordinator(const SpaceID& space_id, ServerIDMap* sidmap) {
@@ -174,7 +175,9 @@ void ObjectHost::addOHCoordinator(const SpaceID& space_id, ServerIDMap* sidmap) 
         mContext, space_id, sidmap,
         std::tr1::bind(&ObjectHost::handleObjectConnected, this, _1, _2),
         std::tr1::bind(&ObjectHost::handleObjectMessage, this, _1, space_id, _2),
-        std::tr1::bind(&ObjectHost::handleObjectDisconnected, this, _1, _2)
+        std::tr1::bind(&ObjectHost::handleObjectDisconnected, this, _1, _2),
+        std::tr1::bind(&ObjectHost::migrateEntityHelper, this, _1, _2),
+        std::tr1::bind(&ObjectHost::handleObjectOHMigration, this, _1, _2, _3, _4)
     );
     smgr->registerDefaultOHDPHandler(
         std::tr1::bind(&ObjectHost::handleDefaultOHDPMessageHandler, this, _1, _2, _3)
@@ -191,6 +194,16 @@ void ObjectHost::handleObjectConnected(const SpaceObjectReference& sporef_objid,
     ObjectNodeSessionProvider::notify(&ObjectNodeSessionListener::onObjectNodeSession, sporef_objid.space(), sporef_objid.object(), OHDP::NodeID(server));
 }
 
+// Feng: This function is as same as handleObjectConnected, but it contains the logging function.
+void ObjectHost::handleObjectConnectedHelper(const SpaceObjectReference& sporef_objid, ServerID server) {
+    ObjectNodeSessionProvider::notify(&ObjectNodeSessionListener::onObjectNodeSession, sporef_objid.space(), sporef_objid.object(), OHDP::NodeID(server));
+
+    //Feng:
+    /*This object is also registered in the oh coordinator */
+    OH_LOG(info, "Register the object" << sporef_objid.toString() << "to the coordinator");
+    updateCoordinator(sporef_objid);
+}
+
 void ObjectHost::handleObjectMigrated(const SpaceObjectReference& sporef_objid, ServerID from, ServerID to) {
     ObjectNodeSessionProvider::notify(&ObjectNodeSessionListener::onObjectNodeSession, sporef_objid.space(), sporef_objid.object(), OHDP::NodeID(to));
 }
@@ -203,6 +216,16 @@ void ObjectHost::handleObjectOHMigration(const UUID &_id, const String& script_t
 	HostedObjectPtr obj = createObject(_id, script_type, script_opts, script_contents);
 }
 
+// Feng: This function should be changed.
+void ObjectHost::handleObjectOHMigrationHelper(const UUID& uuid, const String& src_name) {
+    //Feng:
+    /*This object is also registered in the oh coordinator */
+    OH_LOG(info, "Receive a request of entity " << uuid.rawHexData() << "from OH " << src_name);
+
+    /* real function body goes here: */
+
+}
+
 //use this function to request the object host to send a disconnect message
 //to space for object
 void ObjectHost::disconnectObject(const SpaceID& space, const ObjectReference& oref)
@@ -212,6 +235,13 @@ void ObjectHost::disconnectObject(const SpaceID& space, const ObjectReference& o
         return;
 
     iter->second->disconnect(SpaceObjectReference(space,oref));
+}
+
+void ObjectHost::migrateEntityHelper(const UUID& uuid, const String& dest_name)
+{
+    mContext->mainStrand->post(
+    		Duration::seconds(5),
+    		std::tr1::bind(&ObjectHost::migrateEntity, this, getDefaultSpace(), uuid, dest_name));
 }
 
 void ObjectHost::migrateEntity(const SpaceID& space, const UUID& uuid, const String& dest_name)
@@ -300,7 +330,10 @@ bool ObjectHost::connect(
 
 bool ObjectHost::connectOHCoordinator() {
 	ObjectReference oref = ObjectReference(UUID::random());
+
+	//Feng: this is a very important object. It will be recalled in the furture.
 	SpaceObjectReference sporef (mCoordinatorSpaceID,oref);
+	OH_LOG(info, "Connect to coordinator" << mCoordinatorSpaceID << "");
 	return mCoordinatorSessionManager->connect(sporef, mName);
 }
 
@@ -421,6 +454,12 @@ void ObjectHost::unregisterHostedObject(const SpaceObjectReference& sporef_uuid,
         else
             SILOG(oh,error,"Two objects having the same internal name in the mHostedObjects map on disconnect "<<sporef_uuid.toString());
     }
+}
+
+/* Feng: all the objects should also be registered at the coordinator with the entity id and object id, to measure the unbalance */
+void ObjectHost::updateCoordinator(const SpaceObjectReference& sporef_objid) {
+    OH_LOG(info, "update to coordinator" << mCoordinatorSpaceID << "");
+    mCoordinatorSessionManager->updateCoordinator(sporef_objid, mPresenceEntity[sporef_objid.object().getAsUUID()], mName);
 }
 
 void ObjectHost::hostedObjectDestroyed(const UUID& objid) {

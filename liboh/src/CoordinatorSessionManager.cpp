@@ -236,7 +236,9 @@ void CoordinatorSessionManager::ObjectConnections::invokeDeferredCallbacks() {
 CoordinatorSessionManager::CoordinatorSessionManager(
     ObjectHostContext* ctx, const SpaceID& space, ServerIDMap* sidmap,
     ObjectConnectedCallback conn_cb, ObjectMessageHandlerCallback msg_cb,
-    ObjectDisconnectedCallback disconn_cb
+    ObjectDisconnectedCallback disconn_cb,
+    ObjectMigrationCallback objmigrationto_cb,
+    ObjectOHMigrationCallback ohmig_cb
 )
  : PollingService(ctx->mainStrand, Duration::seconds(1.f), ctx, "Space Server"),
    OHDP::DelegateService( std::tr1::bind(&CoordinatorSessionManager::createDelegateOHDPPort, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2) ),
@@ -247,6 +249,8 @@ CoordinatorSessionManager::CoordinatorSessionManager(
    mObjectConnectedCallback(conn_cb),
    mObjectMessageHandlerCallback(msg_cb),
    mObjectDisconnectedCallback(disconn_cb),
+   mObjectMigrationToCallback(objmigrationto_cb),
+   mObjectOHMigrationCallback(ohmig_cb),
    mObjectConnections(this),
    mTimeSyncClient(NULL),
    mShuttingDown(false)
@@ -564,6 +568,28 @@ void CoordinatorSessionManager::migrateRequest(const SpaceObjectReference& spore
 	SESSION_LOG(info,"Send Request: entity "<<uuid.rawHexData()<<" request to migrate");
 }
 
+void CoordinatorSessionManager::updateCoordinator(const SpaceObjectReference& sporef_objid, const UUID& entity_uuid, const String& oh_name) {
+    Sirikata::SerializationCheck::Scoped sc(&mSerialization);
+
+    ServerID connected_to = mObjectConnections.getConnectedServer(mSpaceObjectRef);
+    if (connected_to == NullServerID) return;
+
+    Sirikata::Protocol::Session::Container session_msg;
+    Sirikata::Protocol::Session::Coordinate coordinate_msg = session_msg.mutable_coordinate();
+    session_msg.coordinate().set_type(Sirikata::Protocol::Session::Coordinate::Update);
+    session_msg.coordinate().set_object(sporef_objid.object().getAsUUID());
+    session_msg.coordinate().set_entity(entity_uuid); // entity id;
+    session_msg.coordinate().set_oh_name(oh_name); // name of coordinator, should be a global
+
+    SESSION_LOG(info,"Send Update: add an object information "<<
+                      sporef_objid.object().getAsUUID().rawHexData()<<" to coordinator");
+    sendRetryingMessage(
+      mSpaceObjectRef, OBJECT_PORT_SESSION,
+      UUID::null(), OBJECT_PORT_SESSION,
+      serializePBJMessage(session_msg),
+      connected_to, mContext->mainStrand, Duration::seconds(0.05)); // Feng: this is sent to the coordiantor, so all the field should be correct!
+}
+
 void CoordinatorSessionManager::getAnySpaceConnection(SpaceNodeConnection::GotSpaceConnectionCallback cb) {
     Sirikata::SerializationCheck::Scoped sc(&mSerialization);
 
@@ -852,7 +878,7 @@ void CoordinatorSessionManager::handleSessionMessage(Sirikata::Protocol::Object:
 					Duration::seconds(0.05)
 					);
 
-	    	mContext->mainStrand->post(Duration::seconds(2), std::tr1::bind(&CoordinatorSessionManager::migrateRequest, this, sporef_obj, UUID::random()));
+	    	//mContext->mainStrand->post(Duration::seconds(2), std::tr1::bind(&CoordinatorSessionManager::migrateRequest, this, sporef_obj, UUID::random()));
 
         }
         else if (conn_resp.response() == Sirikata::Protocol::Session::ConnectResponse::Error) {
@@ -867,18 +893,21 @@ void CoordinatorSessionManager::handleSessionMessage(Sirikata::Protocol::Object:
     if (session_msg.has_coordinate()) {
     	Sirikata::Protocol::Session::Coordinate coordinate = session_msg.coordinate();
     	if(coordinate.type()==Sirikata::Protocol::Session::Coordinate::MigrateTo) {
-    		UUID obj_id = coordinate.object();
-    		UUID entity_id = coordinate.entity(); // obviously, both ids are different;
-    		String DestOHName = coordinate.oh_name();
-    		SpaceID space; // search to obtaint the space id;
-    		// migrateEntity(space, obj_id , DestOHName); //how to call object host function from th session manager?
-    		SESSION_LOG(info,"Receive OH migration request of entity "<<entity_id.rawHexData()<<" to "<<DestOHName);
+    		UUID entity_id = coordinate.entity();
+    		String DstOHName = coordinate.oh_name();
+    		SESSION_LOG(info,"Receive OH migration request of entity "<<entity_id.rawHexData()<<" to "<<DstOHName);
+    		mObjectMigrationToCallback(entity_id, DstOHName);
     	}
     	if(coordinate.type()==Sirikata::Protocol::Session::Coordinate::MigrateFrom) {
 
+        	UUID entity_id = coordinate.entity();
+        	String SrcOHName = coordinate.oh_name();
+        	SESSION_LOG(info,"Receive OH migration request of entity "<<entity_id.rawHexData()<<" from "<<SrcOHName);
+        	// FIXME need to pass these arguments from object host
+        	mObjectOHMigrationCallback(entity_id,"js","","system.require('std/shim/restore/simpleStorage.em');");
     	}
     	if(coordinate.type()==Sirikata::Protocol::Session::Coordinate::Update) {
-
+                // Feng: I don't think we implemented this functionality
     	}
     }
 
