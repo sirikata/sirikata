@@ -305,8 +305,7 @@ public:
     void handleObjectMessage(const SpaceObjectReference& sporef_internalID, const SpaceID& space, Sirikata::Protocol::Object::ObjectMessage* msg);
     void handleObjectDisconnected(const SpaceObjectReference& sporef_internalID, Disconnect::Code);
     void handleObjectOHMigration(const UUID &_id, const String& script_type, const String& script_opts, const String& script_contents);
-    //Feng: this function should be changed definitly.
-    void handleObjectOHMigrationHelper(const UUID& uuid, const String& name);
+    void handleEntityMigrationReady(const UUID& entity_id);
 
     // Wrappers so we can forward events to interested parties. For Connected
     // callback, also allows us to convert ConnectionInfo.

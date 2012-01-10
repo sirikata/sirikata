@@ -211,12 +211,14 @@ private:
       std::tr1::unordered_map<UUID, objectsPerEntity_t,UUID::Hasher> entityMap;
     };
     typedef std::tr1::unordered_map<ShortObjectHostConnectionID, ObjectsDistribution*> ObjectsDistributionMap;
-	ObjectsDistributionMap mObjectsDistribution;
-	bool existingUnbalance();
-	String DstOHName;
-	String SrcOHName;
-	void informOHMigrationTo(const UUID& uuid, const ObjectHostConnectionID& oh_conn_id);
-	void informOHMigrationFrom(const UUID& uuid, const ObjectHostConnectionID& oh_conn_id);
+    ObjectsDistributionMap mObjectsDistribution;
+    bool existingUnbalance();
+    String DstOHName;
+    String SrcOHName;
+    void informOHMigrationTo(const UUID& uuid, const ObjectHostConnectionID& oh_conn_id);
+    void informOHMigrationFrom(const UUID& uuid, const ObjectHostConnectionID& oh_conn_id);
+
+    std::tr1::unordered_map<UUID, String, UUID::Hasher> mMigratingEntity;
 
 }; // class Server
 

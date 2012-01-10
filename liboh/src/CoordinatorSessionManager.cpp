@@ -914,6 +914,25 @@ void CoordinatorSessionManager::handleSessionMessage(Sirikata::Protocol::Object:
     delete msg;
 }
 
+void CoordinatorSessionManager::handleEntityMigrationReady(const UUID& entity_id){
+    Sirikata::SerializationCheck::Scoped sc(&mSerialization);
+
+    ServerID connected_to = mObjectConnections.getConnectedServer(mSpaceObjectRef);
+    if (connected_to == NullServerID) return;
+
+    Sirikata::Protocol::Session::Container session_msg;
+    Sirikata::Protocol::Session::Coordinate coordinate_msg = session_msg.mutable_coordinate();
+    session_msg.coordinate().set_type(Sirikata::Protocol::Session::Coordinate::Ready);
+    session_msg.coordinate().set_entity(entity_id); // entity id;
+
+    SESSION_LOG(info,"Tell coordinator that entity "<<entity_id.rawHexData()<<" is ready to migrate");
+    sendRetryingMessage(
+      mSpaceObjectRef, OBJECT_PORT_SESSION,
+      UUID::null(), OBJECT_PORT_SESSION,
+      serializePBJMessage(session_msg),
+      connected_to, mContext->mainStrand, Duration::seconds(0.05));
+}
+
 void CoordinatorSessionManager::handleObjectFullyConnected(const SpaceID& space, const ObjectReference& obj, ServerID server, const ConnectingInfo& ci) {
     // Do the callback even if the connection failed so the object is notified.
 

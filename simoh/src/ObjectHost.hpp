@@ -121,6 +121,7 @@ private:
     void handleObjectMessage(const SpaceObjectReference& sporef_internalID, Sirikata::Protocol::Object::ObjectMessage* msg);
     void handleObjectDisconnected(const SpaceObjectReference& sporef_internalID, Disconnect::Code);
     void handleObjectOHMigration(const UUID &_id, const String& script_type, const String& script_opts, const String& script_contents);
+    void handleEntityMigrationReady(const UUID& entity_id);
 
     OptionSet* mStreamOptions;
 

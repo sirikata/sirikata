@@ -120,6 +120,7 @@ class SIRIKATA_OH_EXPORT CoordinatorSessionManager
 
     //Feng
     void updateCoordinator(const SpaceObjectReference& sporef_objid, const UUID& uuid, const String& oh_name);
+    void handleEntityMigrationReady(const UUID& entity_id);
 
     /** Get offset of server time from client time for the given space. Should
      * only be called by objects with an active connection to that space.
@@ -210,7 +211,6 @@ private:
                                ServerID sid);
     // Handle a session event, i.e. the SST stream conected.
     void handleSpaceSession(ServerID sid, SpaceNodeConnection* conn);
-
 
     /** Object session initiation. */
 

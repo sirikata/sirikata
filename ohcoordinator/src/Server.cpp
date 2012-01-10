@@ -397,31 +397,48 @@ void Server::handleSessionMessage(const ObjectHostConnectionID& oh_conn_id, Siri
     }
     else if (session_msg.has_coordinate()) {
     	if(session_msg.coordinate().type() == Sirikata::Protocol::Session::Coordinate::Update) { //Feng
-    		UUID obj_id = session_msg.coordinate().object();
-            UUID entity_id = session_msg.coordinate().entity();
+	  UUID obj_id = session_msg.coordinate().object();
+	  UUID entity_id = session_msg.coordinate().entity();
 
-    		mObjectsDistribution[oh_conn_id.shortID()]->counter++;
-    		mObjectsDistribution[oh_conn_id.shortID()]->entityMap[entity_id].insert(obj_id);
+	  mObjectsDistribution[oh_conn_id.shortID()]->counter++;
+	  mObjectsDistribution[oh_conn_id.shortID()]->entityMap[entity_id].insert(obj_id);
 
-    		SPACE_LOG(info, "Add one object to object host's list");
+	  SPACE_LOG(info, "Add one object to object host's list");
 
-    		/*calculate unbalance*/
-    		/*if there are any unbalance, send message; until balance*/
-    		if(existingUnbalance()) { //while(existingUnbalance()) {
-    			/*send a message back*/
-    			informOHMigrationTo(entity_id, oh_conn_id);
-    			//informOHMigrationFrom(entity_id, mOHNameConnections[DstOHName]);
+	  /* We need a better load balance algorithm
+	  //calculate unbalance
+	  //if there are any unbalance, send message; until balance
+	  if(existingUnbalance()) { //while(existingUnbalance()) {
+	    //send a message back
+	    informOHMigrationTo(entity_id, oh_conn_id);
+	    
+	    //re map the objects in the record
+	    mObjectsDistribution[oh_conn_id.shortID()]->counter--;
+	    mObjectsDistribution[oh_conn_id.shortID()]->entityMap[entity_id].erase(obj_id); //Feng: actually the whole entry should be deleted
+	  }
+	  */
 
-    			/*re map the objects in the record*/
-    			mObjectsDistribution[oh_conn_id.shortID()]->counter--;
-    			mObjectsDistribution[oh_conn_id.shortID()]->entityMap[entity_id].erase(obj_id); //Feng: actually the whole entry should be deleted
-   	    	}
+
+	  // the following is only for functional test
+	  String oh_name =  mObjectsDistribution[oh_conn_id.shortID()]->ObjectHostName;
+	  if(oh_name=="oh1"){
+	    SrcOHName = "oh1";
+	    DstOHName = "oh2";
+	    mMigratingEntity[entity_id] = DstOHName;
+	    informOHMigrationTo(entity_id, oh_conn_id);
+	  }
+
     	}
     	else if(session_msg.coordinate().type() == Sirikata::Protocol::Session::Coordinate::MigrateReq) {
     		UUID entity_id = session_msg.coordinate().entity();
     		SPACE_LOG(info, "Receive migration request of entity "<<entity_id.rawHexData());
     		informOHMigrationTo(entity_id, oh_conn_id);
     	}
+	else if(session_msg.coordinate().type() == Sirikata::Protocol::Session::Coordinate::Ready) {
+	  UUID entity_id = session_msg.coordinate().entity();
+	  SPACE_LOG(info, "Entity "<<entity_id.rawHexData()<<" is ready to migrate");
+	  informOHMigrationFrom(entity_id, mOHNameConnections[DstOHName]);
+	}
     }
 
     // InitiateMigration messages

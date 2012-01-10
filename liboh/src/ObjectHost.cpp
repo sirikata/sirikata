@@ -151,7 +151,8 @@ void ObjectHost::addServerIDMap(const SpaceID& space_id, ServerIDMap* sidmap) {
         std::tr1::bind(&ObjectHost::handleObjectMigrated, this, _1, _2, _3),
         std::tr1::bind(&ObjectHost::handleObjectMessage, this, _1, space_id, _2),
         std::tr1::bind(&ObjectHost::handleObjectDisconnected, this, _1, _2),
-        std::tr1::bind(&ObjectHost::handleObjectOHMigration, this, _1, _2, _3, _4)
+        std::tr1::bind(&ObjectHost::handleObjectOHMigration, this, _1, _2, _3, _4),
+	std::tr1::bind(&ObjectHost::handleEntityMigrationReady, this, _1)
     );
     smgr->registerDefaultOHDPHandler(
         std::tr1::bind(&ObjectHost::handleDefaultOHDPMessageHandler, this, _1, _2, _3)
@@ -216,14 +217,8 @@ void ObjectHost::handleObjectOHMigration(const UUID &_id, const String& script_t
 	HostedObjectPtr obj = createObject(_id, script_type, script_opts, script_contents);
 }
 
-// Feng: This function should be changed.
-void ObjectHost::handleObjectOHMigrationHelper(const UUID& uuid, const String& src_name) {
-    //Feng:
-    /*This object is also registered in the oh coordinator */
-    OH_LOG(info, "Receive a request of entity " << uuid.rawHexData() << "from OH " << src_name);
-
-    /* real function body goes here: */
-
+void ObjectHost::handleEntityMigrationReady(const UUID& entity_id) {
+  mCoordinatorSessionManager->handleEntityMigrationReady(entity_id);
 }
 
 //use this function to request the object host to send a disconnect message
@@ -253,12 +248,13 @@ void ObjectHost::migrateEntity(const SpaceID& space, const UUID& uuid, const Str
     mMigratingEntity.insert(uuid);
     mPersistentSet->movePersistedObject(uuid, dest_name);
     if(!mEntityPresenceSet[uuid].empty()){
+    	ObjectReference oref = ObjectReference(*mEntityPresenceSet[uuid].begin());
+    	iter->second->migrateEntity(SpaceObjectReference(space, oref), uuid, dest_name, mEntityPresenceSet[uuid]);
+
     	for(ObjectSet::iterator it = mEntityPresenceSet[uuid].begin(); it!=mEntityPresenceSet[uuid].end();++it){
     		ObjectReference oref = ObjectReference(*it);
     		iter->second->migrateObject(SpaceObjectReference(space, oref), *it, dest_name);
     	}
-    	ObjectReference oref = ObjectReference(*mEntityPresenceSet[uuid].begin());
-    	iter->second->migrateEntity(SpaceObjectReference(space, oref), uuid, dest_name, mEntityPresenceSet[uuid]);
     }
 }
 
@@ -455,17 +451,18 @@ void ObjectHost::unregisterHostedObject(const SpaceObjectReference& sporef_uuid,
             if(iter_entity != mPresenceEntity.end()){
             	ObjectSet::iterator iter_object = mEntityPresenceSet[iter_entity->second].find(sporef_uuid.object().getAsUUID());
             	if(iter_object != mEntityPresenceSet[iter_entity->second].end()){
-            		mEntityPresenceSet[iter_entity->second].erase(iter_object);
+		  mEntityPresenceSet[iter_entity->second].erase(iter_object);
             	}
             	else
-            		SILOG(oh,error,"Presence "<<sporef_uuid.object().getAsUUID().rawHexData()<<" is not recorded in mEntityPresenceSet of entity "
-            				<<iter_entity->second.rawHexData()<<" on disconnect");
+		  SILOG(oh,error,"Presence "<<sporef_uuid.object().getAsUUID().rawHexData()<<" is not recorded in mEntityPresenceSet of entity "
+			<<iter_entity->second.rawHexData()<<" on disconnect");
+		mPresenceEntity.erase(iter_entity);
             }
-        	else
-        		SILOG(oh,error,"Presence "<<sporef_uuid.object().getAsUUID().rawHexData()<<" does not belong to any entity on disconnect");
+	    else
+	      SILOG(oh,error,"Presence "<<sporef_uuid.object().getAsUUID().rawHexData()<<" does not belong to any entity on disconnect");
         }
         else
-            SILOG(oh,error,"Two objects having the same internal name in the mHostedObjects map on disconnect "<<sporef_uuid.toString());
+	  SILOG(oh,error,"Two objects having the same internal name in the mHostedObjects map on disconnect "<<sporef_uuid.toString());
     }
 }
 

@@ -300,7 +300,8 @@ void SessionManager::ObjectConnections::invokeDeferredCallbacks() {
 SessionManager::SessionManager(
     ObjectHostContext* ctx, const SpaceID& space, ServerIDMap* sidmap,
     ObjectConnectedCallback conn_cb, ObjectMigratedCallback mig_cb,
-    ObjectMessageHandlerCallback msg_cb, ObjectDisconnectedCallback disconn_cb, ObjectOHMigrationCallback ohmig_cb
+    ObjectMessageHandlerCallback msg_cb, ObjectDisconnectedCallback disconn_cb, 
+    ObjectOHMigrationCallback ohmig_cb, EntityOHMigrationReadyCallback migready_cb
 )
  : PollingService(ctx->mainStrand, Duration::seconds(1.f), ctx, "Space Server"),
    OHDP::DelegateService( std::tr1::bind(&SessionManager::createDelegateOHDPPort, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2) ),
@@ -313,6 +314,7 @@ SessionManager::SessionManager(
    mObjectMessageHandlerCallback(msg_cb),
    mObjectDisconnectedCallback(disconn_cb),
    mObjectOHMigrationCallback(ohmig_cb),
+   mEntityOHMigrationReadyCallback(migready_cb),
    mObjectConnections(this),
    mTimeSyncClient(NULL),
    mShuttingDown(false)
@@ -740,7 +742,7 @@ void SessionManager::notifyObjMigration(const SpaceObjectReference& sporef_objid
 
 void SessionManager::migrateEntity(const SpaceObjectReference& sporef_objid, const UUID& uuid, const String& dest_name, const std::set<UUID>& object_set) {
 	Sirikata::SerializationCheck::Scoped sc(&mSerialization);
-
+	/*
 	ServerID connected_to = mObjectConnections.getConnectedServer(sporef_objid);
 	if (connected_to == NullServerID) return;
 
@@ -760,6 +762,12 @@ void SessionManager::migrateEntity(const SpaceObjectReference& sporef_objid, con
 			connected_to, mContext->mainStrand, Duration::seconds(0.05));
 
 	SESSION_LOG(info,"Send Request: entity "<<uuid.rawHexData()<<" migrate to OH "<<dest_name);
+	*/
+	for(std::set<UUID>::iterator it=object_set.begin(); it!=object_set.end();++it) { 
+	  mMigratingPresenceEntity[*it]=uuid;
+	  mMigratingEntityPresenceSet[uuid].insert(*it);
+	}
+
 }
 
 void SessionManager::migrateObject(const SpaceObjectReference& sporef_objid, const UUID& uuid, const String& dest_name) {
@@ -1135,10 +1143,39 @@ void SessionManager::handleSessionMessage(Sirikata::Protocol::Object::ObjectMess
         	// FIXME need to pass these arguments from object host
         	mObjectOHMigrationCallback(entity_id,"js","","system.require('std/shim/restore/simpleStorage.em');");
         }
+	else if(oh_migration.type()==Sirikata::Protocol::Session::OHMigration::Ack){
+	  UUID object_id = oh_migration.id();
+	  SESSION_LOG(info,"Received Ack, space server are ready to migrate object" << object_id.rawHexData());
+	  handleOHMigrationACK(object_id);
+	}
     }
 
     delete msg;
 }
+
+void SessionManager::handleOHMigrationACK(const UUID& object_id) {
+  PresenceEntityMap::iterator iter_entity = mMigratingPresenceEntity.find(object_id);
+  if(iter_entity != mMigratingPresenceEntity.end()){
+    UUID entity_id = iter_entity->second;
+    ObjectSet::iterator iter_object = mMigratingEntityPresenceSet[entity_id].find(object_id);
+    if(iter_object != mMigratingEntityPresenceSet[entity_id].end()){
+      mMigratingEntityPresenceSet[entity_id].erase(iter_object);
+      if(mMigratingEntityPresenceSet[entity_id].empty()){
+	SESSION_LOG(info,"Entity "<<entity_id.rawHexData()<<" is ready to migrate");
+	mMigratingEntityPresenceSet.erase(entity_id);
+	mEntityOHMigrationReadyCallback(entity_id);
+      }
+    }
+    else
+      SESSION_LOG(error,"Presence "<<object_id.rawHexData()<<" is not recorded in mMigratingEntityPresenceSet of entity "
+	    <<iter_entity->second.rawHexData());
+    mMigratingPresenceEntity.erase(object_id);
+  }
+  else
+    SESSION_LOG(error,"Presence "<<object_id.rawHexData()<<" does not belong to a migrating entity");
+}
+
+
 
 void SessionManager::handleObjectFullyConnected(const SpaceID& space, const ObjectReference& obj, ServerID server, const ConnectingInfo& ci, ConnectedCallback real_cb) {
     // Do the callback even if the connection failed so the object is notified.

@@ -109,6 +109,8 @@ class SIRIKATA_OH_EXPORT SessionManager
 
     typedef std::tr1::function<void(const UUID&, const String&, const String&, const String&)> ObjectOHMigrationCallback;
 
+    typedef std::tr1::function<void(const UUID&)> EntityOHMigrationReadyCallback;
+
     // SST stream related typedefs
     typedef SST::Stream<SpaceObjectReference> SSTStream;
     typedef SSTStream::Ptr SSTStreamPtr;
@@ -118,7 +120,7 @@ class SIRIKATA_OH_EXPORT SessionManager
     typedef OHDPSST::Endpoint OHSSTEndpoint;
 
 
-    SessionManager(ObjectHostContext* ctx, const SpaceID& space, ServerIDMap* sidmap, ObjectConnectedCallback, ObjectMigratedCallback, ObjectMessageHandlerCallback, ObjectDisconnectedCallback, ObjectOHMigrationCallback);
+    SessionManager(ObjectHostContext* ctx, const SpaceID& space, ServerIDMap* sidmap, ObjectConnectedCallback, ObjectMigratedCallback, ObjectMessageHandlerCallback, ObjectDisconnectedCallback, ObjectOHMigrationCallback, EntityOHMigrationReadyCallback);
     ~SessionManager();
 
     // NOTE: The public interface is only safe to access from the main strand.
@@ -290,12 +292,21 @@ private:
     ObjectMessageHandlerCallback mObjectMessageHandlerCallback;
     ObjectDisconnectedCallback mObjectDisconnectedCallback;
     ObjectOHMigrationCallback mObjectOHMigrationCallback;
+    EntityOHMigrationReadyCallback mEntityOHMigrationReadyCallback;
 
     // Only main strand accesses and manipulates the map, although other strand
     // may access the SpaceNodeConnection*'s.
     typedef std::tr1::unordered_map<ServerID, SpaceNodeConnection*> ServerConnectionMap;
     ServerConnectionMap mConnections;
     ServerConnectionMap mConnectingConnections;
+
+    typedef std::set<UUID> ObjectSet;
+    typedef std::tr1::unordered_map<UUID, UUID, UUID::Hasher> PresenceEntityMap;
+    PresenceEntityMap mMigratingPresenceEntity;
+    typedef std::tr1::unordered_map<UUID, ObjectSet, UUID::Hasher> EntityPresenceSet;
+    EntityPresenceSet mMigratingEntityPresenceSet;
+
+    void handleOHMigrationACK(const UUID& object_id);
 
     // Info associated with opening connections
     struct ConnectingInfo {

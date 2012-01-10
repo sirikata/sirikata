@@ -66,7 +66,8 @@ ObjectHost::ObjectHost(ObjectHostContext* ctx, Trace::Trace* trace, ServerIDMap*
        std::tr1::bind(&ObjectHost::handleObjectMigrated, this, _1, _2, _3),
        std::tr1::bind(&ObjectHost::handleObjectMessage, this, _1, _2),
        std::tr1::bind(&ObjectHost::handleObjectDisconnected, this, _1, _2),
-       std::tr1::bind(&ObjectHost::handleObjectOHMigration, this, _1, _2, _3, _4)
+       std::tr1::bind(&ObjectHost::handleObjectOHMigration, this, _1, _2, _3, _4),
+       std::tr1::bind(&ObjectHost::handleEntityMigrationReady, this, _1)
    )
 {
     mPingId=0;
@@ -263,6 +264,10 @@ void ObjectHost::handleObjectDisconnected(const SpaceObjectReference& sporef_obj
 
 void ObjectHost::handleObjectOHMigration(const UUID &_id, const String& script_type, const String& script_opts, const String& script_contents) {
 }
+
+void ObjectHost::handleEntityMigrationReady(const UUID& entity_id) {
+}
+
 
 bool ObjectHost::registerService(uint64 port, const ObjectMessageCallback&cb) {
     Sirikata::SerializationCheck::Scoped sc(&mSerialization);
