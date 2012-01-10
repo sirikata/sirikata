@@ -44,6 +44,7 @@ typedef std::pair<String, Key> PlaceholderPair;
 const PlaceholderPair All[] = {
     PlaceholderPair(Sirikata::Path::Placeholders::DIR_EXE, Sirikata::Path::DIR_EXE),
     PlaceholderPair(Sirikata::Path::Placeholders::DIR_EXE_BUNDLE, Sirikata::Path::DIR_EXE_BUNDLE),
+    PlaceholderPair(Sirikata::Path::Placeholders::DIR_CURRENT, Sirikata::Path::DIR_CURRENT),
     PlaceholderPair(Sirikata::Path::Placeholders::DIR_USER, Sirikata::Path::DIR_USER),
     PlaceholderPair(Sirikata::Path::Placeholders::DIR_USER_HIDDEN, Sirikata::Path::DIR_USER_HIDDEN),
     PlaceholderPair(Sirikata::Path::Placeholders::DIR_TEMP, Sirikata::Path::DIR_TEMP),

@@ -195,8 +195,14 @@ boost::filesystem::path JSObjectScript::EvalContext::getFullRelativeScriptDir() 
     path result;
     // Scan through all matching parts
     path::const_iterator script_it, base_it;
-    for(script_it = currentScriptDir.begin(), base_it = currentScriptBaseDir.begin(); base_it != currentScriptBaseDir.end(); script_it++, base_it++) {
-        assert(*script_it == *base_it);
+    for(script_it = currentScriptDir.begin(), base_it = currentScriptBaseDir.begin(); base_it != currentScriptBaseDir.end(); script_it++, base_it++)
+    {
+        if (*script_it != *base_it)
+        {
+            JSLOG(error,"Mismatched script and base iterators.  " <<\
+                "script: "<<*script_it<<"   base: "<<*base_it);
+            assert(false);
+        }
     }
     // Get any leftover script parts
     while(script_it != currentScriptDir.end()) {
@@ -1393,7 +1399,6 @@ void JSObjectScript::print(const String& str) {
 
 
 
-
 //takes in a name of a file to read from and execute all instructions within.
 //also takes in a context to do so in.  If this context is null, just use
 //mContext instead.
@@ -1407,10 +1412,15 @@ void JSObjectScript::resolveImport(const String& filename, boost::filesystem::pa
     path filename_as_path(filename);
     assert(!mEvalContextStack.empty());
     EvalContext& ctx = mEvalContextStack.top();
-    if (!ctx.currentScriptDir.empty()) {
-        path fq = ctx.currentScriptDir / filename_as_path;
-        try {
-            if (boost::filesystem::exists(fq)) {
+    if (!ctx.currentScriptDir.empty())
+    {
+
+        path fq =  ctx.currentScriptDir / filename_as_path;
+        
+        try
+        {
+            if (boost::filesystem::exists(fq))
+            {
                 *full_file_out = fq;
                 *base_path_out = ctx.currentScriptBaseDir;
                 return;
@@ -1426,12 +1436,21 @@ void JSObjectScript::resolveImport(const String& filename, boost::filesystem::pa
     std::list<String> search_paths;
     search_paths.splice(search_paths.end(), default_search_paths);
     search_paths.splice(search_paths.end(), additional_search_paths);
+
     // Replace special tags with their values
-    for(std::list<String>::iterator search_it = search_paths.begin(); search_it != search_paths.end(); search_it++)
+    for(std::list<String>::iterator search_it = search_paths.begin();
+        search_it != search_paths.end(); search_it++)
+    {
         *search_it = Path::SubstitutePlaceholders(*search_it);
-    for (std::list<String>::iterator pit = search_paths.begin(); pit != search_paths.end(); pit++) {
+    }
+
+    
+    for (std::list<String>::iterator pit = search_paths.begin();
+         pit != search_paths.end(); pit++)
+    {
         path base_path(*pit);
         path fq = base_path / filename_as_path;
+
         try {
             if (boost::filesystem::exists(fq)) {
                 *full_file_out = fq;
