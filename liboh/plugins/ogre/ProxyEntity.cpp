@@ -131,10 +131,13 @@ void ProxyEntity::validated(ProxyObjectPtr ptr) {
     // refresh its important data
     updateLocation( mProxy, mProxy->location(), mProxy->orientation(), mProxy->bounds(), SpaceObjectReference::null() );
 
-    if (!mActive) {
+    
+    if (!mActive)
+    {
         getScene()->downloadPlanner()->addNewObject(mProxy, this);
         mActive = true;
     }
+
 }
 
 void ProxyEntity::invalidated(ProxyObjectPtr ptr, bool permanent) {

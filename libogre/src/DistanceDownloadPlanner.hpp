@@ -63,6 +63,7 @@ public:
     virtual void stop();
 
 protected:
+    bool mStopped;
     struct Object;
 
     void iUpdateObject(ProxyObjectPtr p,Liveness::Token lt);

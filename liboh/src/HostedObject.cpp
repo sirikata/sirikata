@@ -824,7 +824,7 @@ void HostedObject::handleProximityUpdate(const SpaceObjectReference& spaceobj, c
         ProxProtocolLocUpdate add(addition);
 
         SpaceObjectReference proximateID(spaceobj.space(), add.object());
-
+        
         TimedMotionVector3f loc(add.locationWithLocalTime(this, spaceobj.space()));
 
         CONTEXT_OHTRACE(prox,

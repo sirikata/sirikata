@@ -336,7 +336,6 @@ void OgreSystem::iOnCreateProxy(
     while (!inInit && !initialized)
     {}
 
-    
     bool created = false;
 
     ProxyEntity* mesh = NULL;
@@ -380,7 +379,6 @@ void OgreSystem::onDestroyProxy(ProxyObjectPtr p)
     simStrand->post(
         std::tr1::bind(&OgreSystem::iOnDestroyProxy,this,
             livenessToken(), p));
-
 }
 
 void OgreSystem::iOnDestroyProxy(
@@ -389,22 +387,6 @@ void OgreSystem::iOnDestroyProxy(
     // We don't clean anything up here since the entity could be
     // masking an addition/removal. Instead, we just wait and let the
     // ProxyEntity tell us when it's destroyed.
-    if (!osAlive) return;
-    Liveness::Lock locked(osAlive);
-    if (!locked) 
-    {
-        SILOG(ogre,error,"Received onDestroyProxy after having deleted ogre system");
-        return;
-    }
-
-    if (stopped)
-        return;
-    
-    mDownloadPlanner->removeObject(p);
-    // FIXME don't delete here because we want to mask proximity
-    // additions/removals that aren't due to actual connect/disconnect.
-    // See also ProxyEntity.cpp:destroy().
-    //mEntityMap.erase(p->getObjectReference());
 }
 
 
