@@ -895,14 +895,14 @@ void CoordinatorSessionManager::handleSessionMessage(Sirikata::Protocol::Object:
     	if(coordinate.type()==Sirikata::Protocol::Session::Coordinate::MigrateTo) {
     		UUID entity_id = coordinate.entity();
     		String DstOHName = coordinate.oh_name();
-    		SESSION_LOG(info,"Receive OH migration request of entity "<<entity_id.rawHexData()<<" to "<<DstOHName);
+    		SESSION_LOG(info,"Receive request to migrate entity "<<entity_id.rawHexData()<<" to "<<DstOHName);
     		mObjectMigrationToCallback(entity_id, DstOHName);
     	}
     	if(coordinate.type()==Sirikata::Protocol::Session::Coordinate::MigrateFrom) {
 
         	UUID entity_id = coordinate.entity();
         	String SrcOHName = coordinate.oh_name();
-        	SESSION_LOG(info,"Receive OH migration request of entity "<<entity_id.rawHexData()<<" from "<<SrcOHName);
+        	SESSION_LOG(info,"Receive request to migrate entity "<<entity_id.rawHexData()<<" from "<<SrcOHName);
         	// FIXME need to pass these arguments from object host
         	mObjectOHMigrationCallback(entity_id,"js","","system.require('std/shim/restore/simpleStorage.em');");
     	}
@@ -927,10 +927,10 @@ void CoordinatorSessionManager::handleEntityMigrationReady(const UUID& entity_id
 
     SESSION_LOG(info,"Tell coordinator that entity "<<entity_id.rawHexData()<<" is ready to migrate");
     sendRetryingMessage(
-      mSpaceObjectRef, OBJECT_PORT_SESSION,
-      UUID::null(), OBJECT_PORT_SESSION,
-      serializePBJMessage(session_msg),
-      connected_to, mContext->mainStrand, Duration::seconds(0.05));
+    		mSpaceObjectRef, OBJECT_PORT_SESSION,
+    		UUID::null(), OBJECT_PORT_SESSION,
+    		serializePBJMessage(session_msg),
+    		connected_to, mContext->mainStrand, Duration::seconds(0.05));
 }
 
 void CoordinatorSessionManager::handleObjectFullyConnected(const SpaceID& space, const ObjectReference& obj, ServerID server, const ConnectingInfo& ci) {

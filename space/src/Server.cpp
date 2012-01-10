@@ -355,8 +355,12 @@ void Server::onObjectHostConnected(const ObjectHostConnectionID& conn_id, const 
 }
 
 void Server::onObjectHostDisconnected(const ObjectHostConnectionID& oh_conn_id, const ShortObjectHostConnectionID short_conn_id) {
-	SPACE_LOG(info, "OH connection "<<short_conn_id<<" disconnected");
-    mContext->mainStrand->post( std::tr1::bind(&Server::handleObjectHostConnectionClosed, this, oh_conn_id, short_conn_id) );
+	String oh_name = mOHConnectionNames[oh_conn_id.shortID()];
+	SPACE_LOG(info, "OH connection "<<short_conn_id<<": "<<oh_name<<" disconnected");
+	mOHConnectionNames.erase(oh_conn_id.shortID());
+	mOHNameConnections.erase(oh_name);
+
+    mContext->mainStrand->post( std::tr1::bind(&Server::handleObjectHostConnectionClosed, this, oh_conn_id, oh_name) );
     mOHSessionManager->fireObjectHostSessionEnded( OHDP::NodeID(short_conn_id) );
 }
 
@@ -484,7 +488,7 @@ void Server::handleSessionMessage(const ObjectHostConnectionID& oh_conn_id, Siri
     else if (session_msg.has_disconnect()) {
         ObjectConnectionMap::iterator it = mObjects.find(session_msg.disconnect().object());
         if (it != mObjects.end()) {
-            handleDisconnect(session_msg.disconnect().object(), it->second);
+            handleDisconnect(session_msg.disconnect().object(), it->second, mOHConnectionNames[oh_conn_id.shortID()]);
             mContext->timeSeries->report(mTimeSeriesObjects, mObjects.size());
         }
     }
@@ -493,7 +497,8 @@ void Server::handleSessionMessage(const ObjectHostConnectionID& oh_conn_id, Siri
     		UUID obj_id = session_msg.oh_migration().id();
     		String dst_oh_name = session_msg.oh_migration().oh_name();
     		mOHMigratingObjects[obj_id]=dst_oh_name;
-    		SPACE_LOG(info, "Mark object "<<obj_id.rawHexData()<<" as migrating to OH "<<dst_oh_name);
+    		SPACE_LOG(info, "Mark object "<<obj_id.rawHexData()<<" as migrating. "
+    						"< src: "<<mOHConnectionNames[oh_conn_id.shortID()]<<", dst: "<<dst_oh_name<<" >");
 
     		handleObjectOHMigraion(obj_id, oh_conn_id);
     	}
@@ -515,7 +520,7 @@ void Server::handleSessionMessage(const ObjectHostConnectionID& oh_conn_id, Siri
     delete msg;
 }
 
-void Server::handleObjectHostConnectionClosed(const ObjectHostConnectionID& oh_conn_id, const ShortObjectHostConnectionID short_conn_id) {
+void Server::handleObjectHostConnectionClosed(const ObjectHostConnectionID& oh_conn_id, const String& oh_name) {
     for(ObjectConnectionMap::iterator it = mObjects.begin(); it != mObjects.end(); ) {
         UUID obj_id = it->first;
         ObjectConnection* obj_conn = it->second;
@@ -525,7 +530,7 @@ void Server::handleObjectHostConnectionClosed(const ObjectHostConnectionID& oh_c
         if (obj_conn->connID() != oh_conn_id)
             continue;
 
-        handleDisconnect(obj_id, obj_conn, short_conn_id);
+        handleDisconnect(obj_id, obj_conn, oh_name);
     }
     mContext->timeSeries->report(mTimeSeriesObjects, mObjects.size());
 }
@@ -738,13 +743,14 @@ void Server::finishAddObject(const UUID& obj_id, OSegAddNewStatus status)
         	  mLocalForwarder->addActiveConnection(conn, true);
 
         	  sendDisconnect(old->connID(),obj_id,"OH Migration");
-        	  SPACE_LOG(info, "Migrating object " << obj_id.rawHexData()<<" disconnected from OH connection "<<old->connID().shortID());
+        	  SPACE_LOG(info, "Migrating object " << obj_id.rawHexData()<<" disconnected from OH "<<mOHConnectionNames[old->connID().shortID()]);
         	  delete old;
           }
           if(mOHNameConnections.find(sc.conn_msg.oh_name())==mOHNameConnections.end() || mOHNameConnections[sc.conn_msg.oh_name()]!=sc.conn_id)
           {
         	  mOHNameConnections[sc.conn_msg.oh_name()]=sc.conn_id;
-          	  SPACE_LOG(info, "mOHNameConnections: < "<<sc.conn_msg.oh_name()<<", "<<sc.conn_id.shortID()<<" >");
+        	  mOHConnectionNames[sc.conn_id.shortID()]=sc.conn_msg.oh_name();
+          	  SPACE_LOG(info, "New object host connected: < name: "<<sc.conn_msg.oh_name()<<", connection id: "<<sc.conn_id.shortID()<<" >");
           }
 
           // New object
@@ -793,9 +799,9 @@ void Server::finishAddObject(const UUID& obj_id, OSegAddNewStatus status)
           sendConnectSuccess(conn->connID(), obj_id);
           // Show the new connected object
           if (!isObjectMigrating(obj_id))
-        	  SPACE_LOG(info, "New object " << obj_id.rawHexData()<<" connected from OH connection "<<sc.conn_id.shortID());
+        	  SPACE_LOG(info, "New object " << obj_id.rawHexData()<<" connected from OH "<<mOHConnectionNames[sc.conn_id.shortID()]);
           else {
-        	  SPACE_LOG(info, "Migrated object " << obj_id.rawHexData()<<" connected from OH connection "<<sc.conn_id.shortID());
+        	  SPACE_LOG(info, "Migrated object " << obj_id.rawHexData()<<" connected from OH "<<mOHConnectionNames[sc.conn_id.shortID()]);
         	  mOHMigratingObjects.erase(obj_id);
           }
       }
@@ -879,7 +885,7 @@ void Server::handleConnectAck(const ObjectHostConnectionID& oh_conn_id, const Si
 
 // Note that the obj_id is intentionally not a const & so that we're sure it is
 // valid throughout this method.
-void Server::handleDisconnect(UUID obj_id, ObjectConnection* conn, ShortObjectHostConnectionID short_conn_id) {
+void Server::handleDisconnect(UUID obj_id, ObjectConnection* conn, const String& oh_name) {
     assert(conn->id() == obj_id);
 
     mOSeg->removeObject(obj_id);
@@ -899,10 +905,7 @@ void Server::handleDisconnect(UUID obj_id, ObjectConnection* conn, ShortObjectHo
 
     mOHMigratingObjects.erase(obj_id);
 
-    if(short_conn_id==0)
-    	SPACE_LOG(info, "Object " << obj_id.rawHexData()<<" disconnected from OH connection "<<conn->connID().shortID());
-    else
-    	SPACE_LOG(info, "Object " << obj_id.rawHexData()<<" disconnected from OH connection "<<short_conn_id);
+    SPACE_LOG(info, "Object " <<obj_id.rawHexData()<<" disconnected from OH "<<oh_name);
 
     delete conn;
 }

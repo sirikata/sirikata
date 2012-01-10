@@ -111,7 +111,7 @@ private:
     bool isObjectConnecting(const UUID& object_id) const;
 
     // Handle an object host closing its connection
-    void handleObjectHostConnectionClosed(const ObjectHostConnectionID& conn_id, const ShortObjectHostConnectionID short_conn_id);
+    void handleObjectHostConnectionClosed(const ObjectHostConnectionID& conn_id);
     // Schedule main thread to handle oh message routing
     void scheduleObjectHostMessageRouting();
     void handleObjectHostMessageRouting();
@@ -134,7 +134,7 @@ private:
     void handleConnectAck(const ObjectHostConnectionID& oh_conn_id, const Sirikata::Protocol::Object::ObjectMessage& container);
 
     // Handle a disconnection
-    void handleDisconnect(UUID obj_id, ObjectConnection* conn, const ShortObjectHostConnectionID short_conn_id=0);
+    void handleDisconnect(UUID obj_id, ObjectConnection* conn);
 
     // Send a disconnection to OH
     void sendDisconnect(const ObjectHostConnectionID& oh_conn_id, const UUID& obj_id, const String& reason);

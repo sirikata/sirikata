@@ -788,7 +788,7 @@ void SessionManager::migrateObject(const SpaceObjectReference& sporef_objid, con
 			serializePBJMessage(session_msg),
 			connected_to, mContext->mainStrand, Duration::seconds(0.05));
 
-	SESSION_LOG(info,"Send Request: object "<<uuid.rawHexData()<<" migrate to OH "<<dest_name);
+	SESSION_LOG(info,"Send migration request to space: object "<<uuid.rawHexData()<<" migrate to OH "<<dest_name);
 }
 
 void SessionManager::getAnySpaceConnection(SpaceNodeConnection::GotSpaceConnectionCallback cb) {
@@ -1143,36 +1143,36 @@ void SessionManager::handleSessionMessage(Sirikata::Protocol::Object::ObjectMess
         	// FIXME need to pass these arguments from object host
         	mObjectOHMigrationCallback(entity_id,"js","","system.require('std/shim/restore/simpleStorage.em');");
         }
-	else if(oh_migration.type()==Sirikata::Protocol::Session::OHMigration::Ack){
-	  UUID object_id = oh_migration.id();
-	  SESSION_LOG(info,"Received Ack, space server are ready to migrate object" << object_id.rawHexData());
-	  handleOHMigrationACK(object_id);
-	}
+        else if(oh_migration.type()==Sirikata::Protocol::Session::OHMigration::Ack){
+        	UUID object_id = oh_migration.id();
+        	SESSION_LOG(info,"Received Ack, space server is ready to migrate object " << object_id.rawHexData());
+        	handleOHMigrationACK(object_id);
+        }
     }
 
     delete msg;
 }
 
 void SessionManager::handleOHMigrationACK(const UUID& object_id) {
-  PresenceEntityMap::iterator iter_entity = mMigratingPresenceEntity.find(object_id);
-  if(iter_entity != mMigratingPresenceEntity.end()){
-    UUID entity_id = iter_entity->second;
-    ObjectSet::iterator iter_object = mMigratingEntityPresenceSet[entity_id].find(object_id);
-    if(iter_object != mMigratingEntityPresenceSet[entity_id].end()){
-      mMigratingEntityPresenceSet[entity_id].erase(iter_object);
-      if(mMigratingEntityPresenceSet[entity_id].empty()){
-	SESSION_LOG(info,"Entity "<<entity_id.rawHexData()<<" is ready to migrate");
-	mMigratingEntityPresenceSet.erase(entity_id);
-	mEntityOHMigrationReadyCallback(entity_id);
-      }
-    }
-    else
-      SESSION_LOG(error,"Presence "<<object_id.rawHexData()<<" is not recorded in mMigratingEntityPresenceSet of entity "
-	    <<iter_entity->second.rawHexData());
-    mMigratingPresenceEntity.erase(object_id);
-  }
-  else
-    SESSION_LOG(error,"Presence "<<object_id.rawHexData()<<" does not belong to a migrating entity");
+	PresenceEntityMap::iterator iter_entity = mMigratingPresenceEntity.find(object_id);
+	if(iter_entity != mMigratingPresenceEntity.end()){
+		UUID entity_id = iter_entity->second;
+		ObjectSet::iterator iter_object = mMigratingEntityPresenceSet[entity_id].find(object_id);
+		if(iter_object != mMigratingEntityPresenceSet[entity_id].end()){
+			mMigratingEntityPresenceSet[entity_id].erase(iter_object);
+			if(mMigratingEntityPresenceSet[entity_id].empty()){
+				SESSION_LOG(info,"Entity "<<entity_id.rawHexData()<<" is ready to migrate");
+				mMigratingEntityPresenceSet.erase(entity_id);
+				mEntityOHMigrationReadyCallback(entity_id);
+			}
+		}
+		else
+			SESSION_LOG(error,"Presence "<<object_id.rawHexData()<<" is not recorded in mMigratingEntityPresenceSet of entity "
+					<<iter_entity->second.rawHexData());
+		mMigratingPresenceEntity.erase(object_id);
+	}
+	else
+		SESSION_LOG(error,"Presence "<<object_id.rawHexData()<<" does not belong to a migrating entity");
 }
 
 
