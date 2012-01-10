@@ -275,6 +275,7 @@ private:
     OHMigratingObjects mOHMigratingObjects;
 
     void handleEntityOHMigraion(const UUID& uuid, const ObjectHostConnectionID& oh_conn_id);
+    void handleObjectOHMigraion(const UUID& uuid, const ObjectHostConnectionID& oh_conn_id);
 
     typedef std::tr1::unordered_map<String, ObjectHostConnectionID> OHNameConnectionMap;
     OHNameConnectionMap mOHNameConnections;

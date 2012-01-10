@@ -493,24 +493,18 @@ void Server::handleSessionMessage(const ObjectHostConnectionID& oh_conn_id, Siri
     		UUID obj_id = session_msg.oh_migration().id();
     		String dst_oh_name = session_msg.oh_migration().oh_name();
     		mOHMigratingObjects[obj_id]=dst_oh_name;
+    		SPACE_LOG(info, "Mark object "<<obj_id.rawHexData()<<" as migrating to OH "<<dst_oh_name);
 
-    		ObjectHostConnectionID oh_conn_id =  mOHNameConnections[dst_oh_name];
-    		SPACE_LOG(info, "Mark object "<<obj_id.rawHexData()<<" as migrating to OH "<<dst_oh_name<<" through OH connection "<<oh_conn_id.shortID());
+    		handleObjectOHMigraion(obj_id, oh_conn_id);
     	}
 
     	else if(session_msg.oh_migration().type()== Sirikata::Protocol::Session::OHMigration::Entity){
     		UUID entity_id = session_msg.oh_migration().id();
     		String dst_oh_name = session_msg.oh_migration().oh_name();
-    		ObjectHostConnectionID oh_conn_id =  mOHNameConnections[dst_oh_name];
-    		SPACE_LOG(info, "Receive OH migration request of entity "<<entity_id.rawHexData()<<" to OH "<<dst_oh_name<<" through OH connection "<<oh_conn_id.shortID());
+    		ObjectHostConnectionID dst_oh_conn_id =  mOHNameConnections[dst_oh_name];
+    		SPACE_LOG(info, "Receive OH migration request of entity "<<entity_id.rawHexData()<<" to OH "<<dst_oh_name<<" through OH connection "<<dst_oh_conn_id.shortID());
 
-    		/*for(int i=0; i<session_msg.oh_migration().objects_size(); i++) {
-    			UUID obj = session_msg.oh_migration().objects(i);
-                mOHMigratingObjects[obj]=dst_oh_name;
-                SPACE_LOG(info, "Mark object "<<obj.rawHexData()<<" as migrating");
-    		}*/
-
-    		handleEntityOHMigraion(entity_id, oh_conn_id);
+    		handleEntityOHMigraion(entity_id, dst_oh_conn_id);
     	}
     }
 
@@ -911,6 +905,21 @@ void Server::handleDisconnect(UUID obj_id, ObjectConnection* conn, ShortObjectHo
     	SPACE_LOG(info, "Object " << obj_id.rawHexData()<<" disconnected from OH connection "<<short_conn_id);
 
     delete conn;
+}
+
+void Server::handleObjectOHMigraion(const UUID& uuid, const ObjectHostConnectionID& oh_conn_id) {
+    Sirikata::Protocol::Session::Container oh_migration;
+    Sirikata::Protocol::Session::IOHMigration oh_migration_msg = oh_migration.mutable_oh_migration();
+    oh_migration_msg.set_id(uuid);
+    oh_migration_msg.set_type(Sirikata::Protocol::Session::OHMigration::Ack);
+    Sirikata::Protocol::Object::ObjectMessage* migration_ack = createObjectMessage(
+        mContext->id(),
+        UUID::null(), OBJECT_PORT_SESSION,
+        UUID::null(), OBJECT_PORT_SESSION,
+        serializePBJMessage(oh_migration)
+    );
+    // Sent directly via object host connection manager
+    sendSessionMessageWithRetry(oh_conn_id, migration_ack, Duration::seconds(0.05));
 }
 
 void Server::handleEntityOHMigraion(const UUID& uuid, const ObjectHostConnectionID& oh_conn_id) {

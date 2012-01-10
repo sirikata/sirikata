@@ -389,8 +389,8 @@ private:
 
             InternalConnectedCallback connectedCB;
             MigratedCallback migratedCB;
-  	    StreamCreatedCallback streamCreatedCB;
-  	    DisconnectedCallback disconnectedCB;
+            StreamCreatedCallback streamCreatedCB;
+            DisconnectedCallback disconnectedCB;
         };
         typedef std::tr1::unordered_map<ServerID, std::vector<SpaceObjectReference> > ObjectServerMap;
         ObjectServerMap mObjectServerMap;
