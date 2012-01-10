@@ -62,7 +62,6 @@ std.simpleStorage.setScript(
 
         if (system.self)
         {
-            system.__debugPrint('\n\nIf condition\n\n');
             //already have a connected presence, use it.
             init();
         }
