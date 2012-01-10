@@ -135,10 +135,11 @@ private:
     HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID &_id);
 
 public:
-    boost::mutex presenceDataMutex;
-    boost::mutex notifyMutex;
-    
-    
+    typedef boost::mutex Mutex;
+    Mutex presenceDataMutex;
+    Mutex notifyMutex;
+
+
     typedef SST::EndPoint<SpaceObjectReference> EndPointType;
     typedef SST::BaseDatagramLayer<SpaceObjectReference> BaseDatagramLayerType;
     typedef BaseDatagramLayerType::Ptr BaseDatagramLayerPtr;
@@ -301,7 +302,7 @@ public:
     Location getLocation(const SpaceID& space, const ObjectReference& oref);
 
   private:
-    
+
     // Because IOStrand->wrap() can't handle > 5 parameters (because the
     // underlying boost impementation doesnt), we need to handle wrapping
     // connection callbacks manually.
@@ -309,7 +310,7 @@ public:
     void iHandleDisconnected(
         const HostedObjectWPtr& weakSelf, const SpaceObjectReference& spaceobj,
         Disconnect::Code cc);
-    
+
     static void handleConnected(const HostedObjectWPtr &weakSelf, const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info);
     static void handleConnectedIndirect(const HostedObjectWPtr &weakSelf, const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, const BaseDatagramLayerPtr&);
 

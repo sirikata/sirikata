@@ -103,7 +103,7 @@ Simulation* HostedObject::runSimulation(
 
     if (stopped()) return sim;
 
-    boost::unique_lock<boost::mutex> locker((boost::mutex&)presenceDataMutex);
+    boost::unique_lock<boost::mutex> locker(presenceDataMutex);
     PresenceDataMap::iterator psd_it = mPresenceData.find(sporef);
     if (psd_it == mPresenceData.end())
     {
@@ -129,7 +129,7 @@ Simulation* HostedObject::runSimulation(
 HostedObject::~HostedObject() {
     destroy(false);
 
-    boost::mutex::scoped_lock lock((boost::mutex&)presenceDataMutex);
+    boost::mutex::scoped_lock lock(presenceDataMutex);
     for (PresenceDataMap::iterator i=mPresenceData.begin();i!=mPresenceData.end();++i) {
         delete i->second;
     }
@@ -181,7 +181,7 @@ void HostedObject::destroy(bool need_self)
     //copying the data to a separate map before clearing to avoid deadlock in
     //destructor.
 
-    boost::unique_lock<boost::mutex> locker((boost::mutex&)presenceDataMutex);
+    boost::unique_lock<boost::mutex> locker(presenceDataMutex);
     PresenceDataMap toDeleteFrom(mPresenceData);
     mPresenceData.clear();
     locker.unlock();
@@ -219,7 +219,7 @@ Time HostedObject::currentLocalTime() {
 
 ProxyManagerPtr HostedObject::getProxyManager(const SpaceID& space, const ObjectReference& oref)
 {
-    boost::mutex::scoped_lock lock((boost::mutex&)presenceDataMutex);
+    boost::mutex::scoped_lock lock(presenceDataMutex);
     SpaceObjectReference toFind(space,oref);
     PresenceDataMap::const_iterator it = mPresenceData.find(toFind);
     if (it == mPresenceData.end())
@@ -233,7 +233,7 @@ ProxyManagerPtr HostedObject::getProxyManager(const SpaceID& space, const Object
 void HostedObject::getProxySpaceObjRefs(const SpaceObjectReference& sporef,SpaceObjRefVec& ss) const
 {
 
-    boost::mutex::scoped_lock lock((boost::mutex&)presenceDataMutex);
+    boost::mutex::scoped_lock lock( const_cast<Mutex&>(presenceDataMutex) );
     PresenceDataMap::const_iterator smapIter = mPresenceData.find(sporef);
 
     if (smapIter != mPresenceData.end())
@@ -251,7 +251,7 @@ void HostedObject::getProxySpaceObjRefs(const SpaceObjectReference& sporef,Space
 //They are returned in ss.
 void HostedObject::getSpaceObjRefs(SpaceObjRefVec& ss) const
 {
-    boost::mutex::scoped_lock lock((boost::mutex&)presenceDataMutex);
+    boost::mutex::scoped_lock lock( const_cast<Mutex&>(presenceDataMutex) );
     PresenceDataMap::const_iterator smapIter;
     for (smapIter = mPresenceData.begin(); smapIter != mPresenceData.end(); ++smapIter)
         ss.push_back(SpaceObjectReference(smapIter->second->space,smapIter->second->object));
@@ -262,7 +262,7 @@ void HostedObject::getSpaceObjRefs(SpaceObjRefVec& ss) const
 static ProxyObjectPtr nullPtr;
 const ProxyObjectPtr &HostedObject::getProxyConst(const SpaceID &space, const ObjectReference& oref) const
 {
-    boost::mutex::scoped_lock lock((boost::mutex&)presenceDataMutex);
+    boost::mutex::scoped_lock lock( const_cast<Mutex&>(presenceDataMutex) );
     PresenceDataMap::const_iterator iter = mPresenceData.find(SpaceObjectReference(space,oref));
     if (iter == mPresenceData.end()) {
         return nullPtr;
@@ -549,7 +549,7 @@ void HostedObject::handleConnectedIndirect(const HostedObjectWPtr& weakSelf, con
     SpaceObjectReference self_objref(space, obj);
 
     {
-        boost::mutex::scoped_lock lock((boost::mutex&)self->presenceDataMutex);
+        boost::mutex::scoped_lock lock(self->presenceDataMutex);
 
         if(self->mPresenceData.find(self_objref) == self->mPresenceData.end())
         {
@@ -570,7 +570,7 @@ void HostedObject::handleConnectedIndirect(const HostedObjectWPtr& weakSelf, con
 
     // Use to initialize PerSpaceData
     {
-        boost::mutex::scoped_lock lock((boost::mutex&)self->presenceDataMutex);
+        boost::mutex::scoped_lock lock(self->presenceDataMutex);
         PresenceDataMap::iterator psd_it = self->mPresenceData.find(self_objref);
         PerPresenceData& psd = *psd_it->second;
         self->initializePerPresenceData(psd, self_proxy);
@@ -610,7 +610,7 @@ void HostedObject::handleStreamCreated(const HostedObjectWPtr& weakSelf, const S
     if (!self)
         return;
 
-    boost::mutex::scoped_lock lock((boost::mutex&)self->notifyMutex);
+    boost::mutex::scoped_lock lock(self->notifyMutex);
     HO_LOG(detailed,"Notifying of connected object " << spaceobj.object() << " to space " << spaceobj.space());
     if (after == SessionManager::Connected)
         self->notify(&SessionEventListener::onConnected, self, spaceobj, token);
@@ -633,7 +633,7 @@ void HostedObject::disconnectFromSpace(const SpaceID &spaceID, const ObjectRefer
     }
 
     SpaceObjectReference sporef(spaceID, oref);
-    boost::unique_lock<boost::mutex> locker((boost::mutex&)presenceDataMutex);
+    boost::unique_lock<boost::mutex> locker(presenceDataMutex);
     PresenceDataMap::iterator where;
     where=mPresenceData.find(sporef);
     if (where!=mPresenceData.end()) {
@@ -676,7 +676,7 @@ void HostedObject::iHandleDisconnected(
         return;
     }
 
-    boost::mutex::scoped_lock lock((boost::mutex&)self->notifyMutex);
+    boost::mutex::scoped_lock lock(self->notifyMutex);
     self->notify(&SessionEventListener::onDisconnected, self, spaceobj);
 
     // Only invoke disconnectFromSpace if we weren't already aware of the
@@ -824,7 +824,7 @@ void HostedObject::handleProximityUpdate(const SpaceObjectReference& spaceobj, c
         ProxProtocolLocUpdate add(addition);
 
         SpaceObjectReference proximateID(spaceobj.space(), add.object());
-        
+
         TimedMotionVector3f loc(add.locationWithLocalTime(this, spaceobj.space()));
 
         CONTEXT_OHTRACE(prox,
@@ -890,7 +890,7 @@ void HostedObject::handleProximityUpdate(const SpaceObjectReference& spaceobj, c
             ObjectReference(removal.object()));
         bool permanent = (removal.has_type() && (removal.type() == Sirikata::Protocol::Prox::ObjectRemoval::Permanent));
 
-        boost::mutex::scoped_lock lock((boost::mutex&)presenceDataMutex);
+        boost::mutex::scoped_lock lock(presenceDataMutex);
         if (self->mPresenceData.find(removed_obj_ref) != self->mPresenceData.end()) {
             SILOG(oh,detailed,"Ignoring self removal from proximity results.");
         }
@@ -928,7 +928,7 @@ void HostedObject::handleProximityUpdate(const SpaceObjectReference& spaceobj, c
 ProxyObjectPtr HostedObject::createProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri, TimedMotionVector3f& tmv, TimedMotionQuaternion& tmq, const BoundingSphere3f& bs, const String& phy, const String& query, uint64 seqNo)
 {
     ProxyManagerPtr proxy_manager = getProxyManager(owner_objref.space(), owner_objref.object());
-    boost::mutex::scoped_lock lock((boost::mutex&)presenceDataMutex);
+    boost::mutex::scoped_lock lock(presenceDataMutex);
     if (!proxy_manager)
     {
         mPresenceData.insert(
@@ -979,7 +979,7 @@ ProxyManagerPtr HostedObject::presence(const SpaceObjectReference& sor)
 }
 ProxyObjectPtr HostedObject::getDefaultProxyObject(const SpaceID& space)
 {
-    boost::unique_lock<boost::mutex> locker((boost::mutex&)presenceDataMutex);
+    boost::unique_lock<boost::mutex> locker(presenceDataMutex);
     ObjectReference oref = mPresenceData.begin()->first.object();
     locker.unlock();
     return  getProxy(space, oref);
@@ -987,7 +987,7 @@ ProxyObjectPtr HostedObject::getDefaultProxyObject(const SpaceID& space)
 
 ProxyManagerPtr HostedObject::getDefaultProxyManager(const SpaceID& space)
 {
-    boost::mutex::scoped_lock lock((boost::mutex&)presenceDataMutex);
+    boost::mutex::scoped_lock lock(presenceDataMutex);
     ObjectReference oref = mPresenceData.begin()->first.object();
     return  getProxyManager(space, oref);
 }
@@ -1272,7 +1272,7 @@ const String& HostedObject::requestCurrentPhysics(const SpaceID& space,const Obj
 
 const String& HostedObject::requestQuery(const SpaceID& space, const ObjectReference& oref)
 {
-    boost::mutex::scoped_lock lock((boost::mutex&)presenceDataMutex);
+    boost::mutex::scoped_lock lock(presenceDataMutex);
     PresenceDataMap::iterator iter = mPresenceData.find(SpaceObjectReference(space,oref));
     if (iter == mPresenceData.end())
     {
@@ -1296,7 +1296,7 @@ void HostedObject::requestQueryUpdate(const SpaceID& space, const ObjectReferenc
     }
 
     SpaceObjectReference sporef(space,oref);
-    boost::mutex::scoped_lock lock((boost::mutex&)presenceDataMutex);
+    boost::mutex::scoped_lock lock(presenceDataMutex);
     PresenceDataMap::iterator pdmIter = mPresenceData.find(sporef);
     if (pdmIter != mPresenceData.end()) {
         pdmIter->second->query = new_query;
@@ -1323,7 +1323,7 @@ void HostedObject::updateLocUpdateRequest(const SpaceID& space, const ObjectRefe
         HO_LOG(detailed,"Ignoring loc update request after system stop.");
         return;
     }
-    boost::unique_lock<boost::mutex> locker((boost::mutex&)presenceDataMutex);
+    boost::unique_lock<boost::mutex> locker(presenceDataMutex);
     assert(mPresenceData.find(SpaceObjectReference(space, oref)) != mPresenceData.end());
     PerPresenceData& pd = *(mPresenceData.find(SpaceObjectReference(space, oref)))->second;
     locker.unlock();
@@ -1351,7 +1351,7 @@ void discardChildStream(int success, SST::Stream<SpaceObjectReference>::Ptr sptr
 
 void HostedObject::sendLocUpdateRequest(const SpaceID& space, const ObjectReference& oref) {
     assert(mPresenceData.find(SpaceObjectReference(space, oref)) != mPresenceData.end());
-    boost::unique_lock<boost::mutex> locker((boost::mutex&)presenceDataMutex);
+    boost::unique_lock<boost::mutex> locker(presenceDataMutex);
     PerPresenceData& pd = *(mPresenceData.find(SpaceObjectReference(space, oref)))->second;
     locker.unlock();
     ProxyObjectPtr self_proxy = getProxy(space, oref);
