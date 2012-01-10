@@ -131,12 +131,34 @@ void LoadBalancer::service() {
   {
     uint32 availableSvrIndex = getAvailableServerIndex();
     if (availableSvrIndex != INT_MAX) {
-
       ServerID availableServer = mAvailableServers[availableSvrIndex].mServer;
+      SegmentedRegion* overloadedRegion = *it;
+
+      std::vector<SegmentationInfo> segInfoVector;
+      SegmentationInfo segInfo, segInfo2;
+      segInfo.server = overloadedRegion->mServer;
+      segInfo.region = mCSeg->serverRegionCached(overloadedRegion->mServer);
+      if (segInfo.region.size() == 0) {
+        //Get the server region information asynchronously. This overloaded region will
+        //be handled later when service() is called.
+        mCSeg->getServerRegionUncached(segInfo.server, boost::shared_ptr<tcp::socket>() );
+        continue;
+      }
+      segInfoVector.push_back( segInfo );
+
+      segInfo2.server = availableServer;
+      segInfo2.region = mCSeg->serverRegionCached(availableServer);
+      if (segInfo2.region.size() == 0) {
+        //Get the server region information asynchronously. This overloaded region will
+        //be handled later when service() is called.
+        mCSeg->getServerRegionUncached(segInfo2.server, boost::shared_ptr<tcp::socket>() );
+        continue;
+      }
+      segInfoVector.push_back(segInfo2);
+      
 
       mAvailableServers[availableSvrIndex].mAvailable = false;
-
-      SegmentedRegion* overloadedRegion = *it;
+     
       overloadedRegion->mLeftChild = new SegmentedRegion(overloadedRegion);
       overloadedRegion->mRightChild = new SegmentedRegion(overloadedRegion);
 
@@ -174,17 +196,7 @@ void LoadBalancer::service() {
       mCSeg->mWholeTreeServerRegionMap.erase(availableServer);
       mCSeg->mLowerTreeServerRegionMap.erase(overloadedRegion->mServer);
       mCSeg->mLowerTreeServerRegionMap.erase(availableServer);
-
-
-      std::vector<SegmentationInfo> segInfoVector;
-      SegmentationInfo segInfo, segInfo2;
-      segInfo.server = overloadedRegion->mServer;
-      segInfo.region = mCSeg->serverRegion(overloadedRegion->mServer);
-      segInfoVector.push_back( segInfo );
-
-      segInfo2.server = availableServer;
-      segInfo2.region = mCSeg->serverRegion(availableServer);
-      segInfoVector.push_back(segInfo2);
+      
 
       Thread thrd(boost::bind(&DistributedCoordinateSegmentation::notifySpaceServersOfChange,mCSeg,segInfoVector));
       
@@ -204,10 +216,13 @@ void LoadBalancer::service() {
        it++)
   {
     SegmentedRegion* underloadedRegion = *it;
+
     if (underloadedRegion->mParent == NULL) {
       mUnderloadedRegionsList.erase(it);
       break;
     }
+
+    SegmentedRegion* parent = underloadedRegion->mParent;
 
     bool isRightChild = (underloadedRegion->mParent->mRightChild == underloadedRegion);
     SegmentedRegion* sibling = NULL;
@@ -226,7 +241,30 @@ void LoadBalancer::service() {
       break;
     }
 
-    SegmentedRegion* parent = underloadedRegion->mParent;
+
+    std::vector<SegmentationInfo> segInfoVector;
+    SegmentationInfo segInfo, segInfo2;
+    segInfo.server = parent->mRightChild->mServer;
+    segInfo.region = mCSeg->serverRegionCached(parent->mRightChild->mServer);
+    if (segInfo.region.size() == 0) {
+      //Get the server region information asynchronously. This underloaded region will
+      //be handled later when service() is called.
+      mCSeg->getServerRegionUncached( segInfo.server, boost::shared_ptr<tcp::socket>() );
+      continue;
+    }
+    segInfoVector.push_back( segInfo );
+
+    segInfo2.server = parent->mLeftChild->mServer;
+    segInfo2.region = mCSeg->serverRegionCached(parent->mLeftChild->mServer);
+    if (segInfo2.region.size() == 0) {
+      //Get the server region information asynchronously. This underloaded region will
+      //be handled later when service() is called.
+      mCSeg->getServerRegionUncached( segInfo2.server, boost::shared_ptr<tcp::socket>() );
+      continue;
+    }
+    segInfoVector.push_back(segInfo2);
+
+
     parent->mServer = parent->mLeftChild->mServer;
     for (uint32 i=0; i<mAvailableServers.size(); i++) {
       if (mAvailableServers[i].mServer == parent->mRightChild->mServer) {
@@ -238,22 +276,13 @@ void LoadBalancer::service() {
     mCSeg->mWholeTreeServerRegionMap.erase(parent->mRightChild->mServer);
     mCSeg->mLowerTreeServerRegionMap.erase(parent->mRightChild->mServer);
     mCSeg->mWholeTreeServerRegionMap.erase(parent->mLeftChild->mServer);
-    mCSeg->mLowerTreeServerRegionMap.erase(parent->mLeftChild->mServer);
-
-    std::vector<SegmentationInfo> segInfoVector;
-    SegmentationInfo segInfo, segInfo2;
-    segInfo.server = parent->mRightChild->mServer;
-    segInfo.region = mCSeg->serverRegion(parent->mRightChild->mServer);
-    segInfoVector.push_back( segInfo );
-
-    segInfo2.server = parent->mLeftChild->mServer;
-    segInfo2.region = mCSeg->serverRegion(parent->mLeftChild->mServer);
-    segInfoVector.push_back(segInfo2);
+    mCSeg->mLowerTreeServerRegionMap.erase(parent->mLeftChild->mServer);     
+   
 
     Thread thrd(boost::bind(&DistributedCoordinateSegmentation::notifySpaceServersOfChange,mCSeg,segInfoVector));
 
     mUnderloadedRegionsList.erase(it);
-    sibling_it = std::find(mUnderloadedRegionsList.begin(), mUnderloadedRegionsList.end(), sibling);   
+    sibling_it = std::find(mUnderloadedRegionsList.begin(), mUnderloadedRegionsList.end(), sibling);
     mUnderloadedRegionsList.erase(sibling_it);
 
     std::cout << "Merged " << parent->mLeftChild->mServer << " : " << parent->mRightChild->mServer << "!\n";

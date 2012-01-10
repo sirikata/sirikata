@@ -108,6 +108,9 @@ private:
     boost::shared_ptr<Network::TCPSocket> mLeasedSocket;
     Time mLeaseExpiryTime;
 
+    String mCSEGHost;
+    String mCSEGPort;
+
     void handleSelfLookup(Address4 my_addr);
 
     void startAccepting();
