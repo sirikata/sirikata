@@ -449,8 +449,21 @@ void ObjectHost::unregisterHostedObject(const SpaceObjectReference& sporef_uuid,
     HostedObjectMap::iterator iter = mHostedObjects.find(sporef_uuid);
     if (iter != mHostedObjects.end()) {
         HostedObjectPtr obj (iter->second);
-        if (obj.get()==key_obj)
+        if (obj.get()==key_obj) {
             mHostedObjects.erase(iter);
+            PresenceEntityMap::iterator iter_entity = mPresenceEntity.find(sporef_uuid.object().getAsUUID());
+            if(iter_entity != mPresenceEntity.end()){
+            	ObjectSet::iterator iter_object = mEntityPresenceSet[iter_entity->second].find(sporef_uuid.object().getAsUUID());
+            	if(iter_object != mEntityPresenceSet[iter_entity->second].end()){
+            		mEntityPresenceSet[iter_entity->second].erase(iter_object);
+            	}
+            	else
+            		SILOG(oh,error,"Presence "<<sporef_uuid.object().getAsUUID().rawHexData()<<" is not recorded in mEntityPresenceSet of entity "
+            				<<iter_entity->second.rawHexData()<<" on disconnect");
+            }
+        	else
+        		SILOG(oh,error,"Presence "<<sporef_uuid.object().getAsUUID().rawHexData()<<" does not belong to any entity on disconnect");
+        }
         else
             SILOG(oh,error,"Two objects having the same internal name in the mHostedObjects map on disconnect "<<sporef_uuid.toString());
     }
