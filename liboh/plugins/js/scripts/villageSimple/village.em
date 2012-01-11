@@ -44,8 +44,9 @@ function createStreet(mesh,ax,az,bx,bz)
                                    bb = presence.meshBounds().across();
                                    pos = <(ax+bx)/2, bb.y/2-20, (az+bz)/2>;
                                    presence.position = pos;
-                                   if (ax==bx) scale=d/bb.z;
-                                   else if (az==bz) scale=(d+d*bb.z/bb.x)/bb.x;
+                                   //if (ax==bx) 
+                                   scale=d/bb.z;
+                                   //else if (az==bz) scale=(d+d*bb.z/bb.x)/bb.x;
                                    presence.setScale(scale);
                                });
                            }
