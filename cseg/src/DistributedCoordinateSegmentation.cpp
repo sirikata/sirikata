@@ -334,7 +334,7 @@ void DistributedCoordinateSegmentation::writeServerRegionResponse( boost::shared
 
   writeCSEGMessage(socket, csegResponseMessage);
 
-  uint8_t* asyncBufferArray = new uint8_t[1];
+  uint8* asyncBufferArray = new uint8[1];
   socket->async_read_some( boost::asio::buffer(asyncBufferArray, 1),
          std::tr1::bind(&DistributedCoordinateSegmentation::asyncRead, this,
                            socket, asyncBufferArray, _1, _2)  );
@@ -1247,7 +1247,7 @@ void DistributedCoordinateSegmentation::lookupBBoxOnSocket(boost::shared_ptr<tcp
 
   writeLookupBBoxResponse(clientSocket, server_ids);
 
-  uint8_t* asyncBufferArray = new uint8_t[1];
+  uint8* asyncBufferArray = new uint8[1];
   clientSocket->async_read_some( boost::asio::buffer(asyncBufferArray, 1),
          std::tr1::bind(&DistributedCoordinateSegmentation::asyncRead, this,
                            clientSocket, asyncBufferArray, _1, _2)  );
@@ -1295,7 +1295,7 @@ void DistributedCoordinateSegmentation::lookupOnSocket(boost::shared_ptr<tcp::so
   writeLookupResponse(clientSocket, leafBBox, server_id);
   
   //Start listening on the socket for further requests.
-  uint8_t* asyncBufferArray = new uint8_t[1];
+  uint8* asyncBufferArray = new uint8[1];
   clientSocket->async_read_some( boost::asio::buffer(asyncBufferArray, 1),
          std::tr1::bind(&DistributedCoordinateSegmentation::asyncRead, this,
                            clientSocket, asyncBufferArray, _1, _2)  );
@@ -1428,7 +1428,7 @@ void DistributedCoordinateSegmentation::sendLoadReportOnSocket(boost::shared_ptr
   csegResponseMessage.mutable_load_report_ack_message().set_ack(1);
   writeCSEGMessage(clientSocket, csegResponseMessage);
 
-  uint8_t* asyncBufferArray = new uint8_t[1];
+  uint8* asyncBufferArray = new uint8[1];
   clientSocket->async_read_some( boost::asio::buffer(asyncBufferArray, 1),
          std::tr1::bind(&DistributedCoordinateSegmentation::asyncRead, this,
                            clientSocket, asyncBufferArray, _1, _2)  );
