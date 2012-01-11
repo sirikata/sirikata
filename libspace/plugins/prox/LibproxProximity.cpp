@@ -696,6 +696,7 @@ void LibproxProximity::generateServerQueryEvents(Query* query) {
     Time t = mContext->simTime();
     uint32 max_count = GetOptionValue<uint32>(PROX_MAX_PER_RESULT);
 
+    assert(mInvertedServerQueries.find(query) != mInvertedServerQueries.end());
     ServerID sid = mInvertedServerQueries[query];
     SeqNoPtr seqNoPtr = getOrCreateSeqNoInfo(sid);
 
@@ -788,6 +789,7 @@ void LibproxProximity::generateObjectQueryEvents(Query* query) {
 
     uint32 max_count = GetOptionValue<uint32>(PROX_MAX_PER_RESULT);
 
+    assert(mInvertedObjectQueries.find(query) != mInvertedObjectQueries.end());
     UUID query_id = mInvertedObjectQueries[query];
     SeqNoPtr seqNoPtr = getSeqNoInfo(query_id);
 
@@ -927,9 +929,9 @@ void LibproxProximity::handleUpdateServerQuery(const ServerID& server, const Tim
                 mServerQueryHandler[i]->registerQuery(loc, region, ms, angle) ;
             if (max_results != NoUpdateMaxResults && max_results > 0)
                 q->maxResults(max_results);
-            q->setEventListener(this);
             mServerQueries[i][server] = q;
             mInvertedServerQueries[q] = server;
+            q->setEventListener(this);
         }
         else {
             PROXLOG(debug,"Update server query from " << server << ", min angle " << angle.asFloat() << ", object class " << ObjectClassToString((ObjectClass)i));
@@ -1024,9 +1026,9 @@ void LibproxProximity::handleUpdateObjectQuery(const UUID& object, const TimedMo
                     mObjectQueryHandler[i]->registerQuery(loc, region, ms, angle);
                 if (max_results != NoUpdateMaxResults && max_results > 0)
                     q->maxResults(max_results);
-                q->setEventListener(this);
                 mObjectQueries[i][object] = q;
                 mInvertedObjectQueries[q] = object;
+                q->setEventListener(this);
             }
         }
         else {

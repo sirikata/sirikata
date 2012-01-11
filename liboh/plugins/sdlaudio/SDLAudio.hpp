@@ -5,10 +5,11 @@
 #ifndef _SIRIKATA_SDLAUDIO_SDLAUDIO_HPP_
 #define _SIRIKATA_SDLAUDIO_SDLAUDIO_HPP_
 
-#include <sirikata/proxyobject/Simulation.hpp>
+#include <sirikata/oh/Simulation.hpp>
 #include <sirikata/core/service/Context.hpp>
 #include <sirikata/core/transfer/TransferMediator.hpp>
 #include <sirikata/core/transfer/ResourceDownloadTask.hpp>
+#include <sirikata/core/util/Liveness.hpp>
 
 namespace Sirikata {
 namespace SDL {
@@ -16,10 +17,15 @@ namespace SDL {
 class FFmpegAudioStream;
 typedef std::tr1::shared_ptr<FFmpegAudioStream> FFmpegAudioStreamPtr;
 
-class AudioSimulation : public Simulation {
+class AudioSimulation : public Simulation,
+                        public Liveness
+                        
+{
 public:
-    AudioSimulation(Context* ctx);
+    AudioSimulation(Context* ctx, Network::IOStrandPtr aStrand);
+    virtual ~AudioSimulation();
 
+    
     // Service Interface
     virtual void start();
     virtual void stop();
@@ -27,16 +33,33 @@ public:
     // Invokable Interface
     virtual boost::any invoke(std::vector<boost::any>& params);
 
+    
+    
     // Mixing interface, public for the mixing callback function
     void mix(uint8* raw_stream, int32 len);
 
 private:
+    void iStart(Liveness::Token lt);
+    void iStop(Liveness::Token lt);
+
+    bool initialized;
+    
     // Indicates whether basic initialization was successful, i.e. whether we're
     // going to be able to do any operations.
     bool ready() const;
 
-    void handleFinishedDownload(Transfer::ChunkRequestPtr request, Transfer::DenseDataPtr response);
+    void handleFinishedDownload(
+        Transfer::ChunkRequestPtr request,
+        Transfer::DenseDataPtr response);
+    
+    void iHandleFinishedDownload(
+        Liveness::Token lt,
+        Transfer::ChunkRequestPtr request,
+        Transfer::DenseDataPtr response);
 
+    Network::IOStrandPtr audioStrand;
+    
+    
     Context* mContext;
     bool mInitializedAudio;
     bool mOpenedAudio;
@@ -61,9 +84,14 @@ private:
     // ClipHandles are used to uniquely identify playing clips
     struct Clip {
         FFmpegAudioStreamPtr stream;
+        bool paused;
+        float32 volume;
+        bool loop;
     };
     typedef std::map<ClipHandle, Clip> ClipMap;
     ClipMap mClips;
+
+    bool mPlaying;
 };
 
 } //namespace SDL

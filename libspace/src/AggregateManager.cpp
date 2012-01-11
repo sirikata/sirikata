@@ -40,7 +40,7 @@
 
 #include <sirikata/core/transfer/AggregatedTransferPool.hpp>
 
-#if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS
 #define snprintf _snprintf
 #endif
 
@@ -106,13 +106,52 @@ void AggregateManager::addAggregate(const UUID& uuid) {
     AGG_LOG(detailed, "addAggregate called: uuid=" << uuid.toString());
 
   boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
-  mAggregateObjects[uuid] = std::tr1::shared_ptr<AggregateObject> (new AggregateObject(uuid, UUID::null()));
+  mAggregateObjects[uuid] = std::tr1::shared_ptr<AggregateObject> (new AggregateObject(uuid, UUID::null(), false));
+}
+
+bool AggregateManager::cleanUpChild(const UUID& child_id) {
+    // *Must* have already locked mAggregateObjectsMutex
+
+    // This cleans up the tree so we don't have any stale pointers.
+    //
+    // The approach isn't really ideal, but since we add individual leaf objects
+    // as aggregates and don't get feedback on their removal, we have to take
+    // this approach.
+    //
+    // You would think that we could just remove all children since we should
+    // get removals bottom up. While we do get removals in that order, it is
+    // also possible for a tree to end up collapsing -- if a node ends up with
+    // only one child, the parent can be removed, violating the expected
+    // condition that the children will be leaves (and therefore have no
+    // children of their own). So we detect these two possibilities and either
+    // remove the leaf object or cleanup the parent pointer for the aggregate
+    // (since we sometimes walk up parent pointers and it will clearly not be
+    // valid anymore).
+
+    assert(mAggregateObjects.find(child_id) != mAggregateObjects.end());
+    if (mAggregateObjects[child_id]->leaf) {
+        // Leaf object, can just clean it up
+        mAggregateObjects.erase(child_id);
+        return true;
+    }
+    else {
+        // Aggregate that's getting removed because it only has one child
+        // left, just remove the parent pointer
+        mAggregateObjects[child_id]->mParentUUID = UUID::null();
+        return false;
+    }
 }
 
 void AggregateManager::removeAggregate(const UUID& uuid) {
     AGG_LOG(detailed, "removeAggregate: " << uuid.toString());
 
   boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
+
+  // Cleans up children if necessary, or makes sure they at least don't refer to
+  // this object anymore. See cleanUpChild for details.
+  AggregateObjectPtr agg = mAggregateObjects[uuid];
+  for (std::vector<UUID>::iterator child_it = agg->mChildren.begin(); child_it != agg->mChildren.end(); child_it++)
+      cleanUpChild(*child_it);
 
   mAggregateObjects.erase(uuid);
 }
@@ -127,7 +166,13 @@ void AggregateManager::addChild(const UUID& uuid, const UUID& child_uuid) {
     boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
 
     if (mAggregateObjects.find(child_uuid) == mAggregateObjects.end()) {
-      mAggregateObjects[child_uuid] = std::tr1::shared_ptr<AggregateObject> (new AggregateObject(child_uuid, uuid));
+        // TODO(ewencp,tazim) This alone clearly isn't right -- we'll
+        // never get a signal that these "aggregates" (which are
+        // really just individual objects that don't need aggregation)
+        // have been removed, so they'll never be cleaned up... Currently we
+        // just remove them when they are left as children of an aggregate (see
+        // removeAggregate).
+        mAggregateObjects[child_uuid] = std::tr1::shared_ptr<AggregateObject> (new AggregateObject(child_uuid, uuid, true));
     }
     else {
       mAggregateObjects[child_uuid]->mParentUUID = uuid;
@@ -148,6 +193,8 @@ void AggregateManager::addChild(const UUID& uuid, const UUID& child_uuid) {
 }
 
 void AggregateManager::removeChild(const UUID& uuid, const UUID& child_uuid) {
+    AGG_LOG(detailed, "removeChild:  "  << uuid.toString() << " CHILD " << child_uuid.toString());
+
   std::vector<UUID>& children = getChildren(uuid);
 
   std::vector<UUID>::iterator it = std::find(children.begin(), children.end(), child_uuid);
@@ -157,7 +204,14 @@ void AggregateManager::removeChild(const UUID& uuid, const UUID& child_uuid) {
 
     boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
 
-    addDirtyAggregates(child_uuid);
+    // Cleans up the child if necessary, or makes sure it doesn't still refer to
+    // this object anymore. See cleanUpChild for details.
+    bool child_removed = cleanUpChild(child_uuid);
+
+    if (!child_removed)
+        addDirtyAggregates(child_uuid);
+    else
+        addDirtyAggregates(uuid);
 
     mAggregateGenerationStartTime =  Timer::now();
 
@@ -174,18 +228,23 @@ void AggregateManager::aggregateObserved(const UUID& objid, uint32 nobservers) {
 
 
 void AggregateManager::generateAggregateMesh(const UUID& uuid, const Duration& delayFor) {
-  if (mModelsSystem == NULL) return;
-
-  if (mDirtyAggregateObjects.find(uuid) != mDirtyAggregateObjects.end()) return;
-
   boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
   if (mAggregateObjects.find(uuid) == mAggregateObjects.end()) return;
   std::tr1::shared_ptr<AggregateObject> aggObject = mAggregateObjects[uuid];
   lock.unlock();
+  generateAggregateMesh(uuid, aggObject, delayFor);
+}
+
+void AggregateManager::generateAggregateMesh(const UUID& uuid, AggregateObjectPtr aggObject, const Duration& delayFor) {
+  if (mModelsSystem == NULL) return;
+  if (mDirtyAggregateObjects.find(uuid) != mDirtyAggregateObjects.end()) return;
+
   aggObject->mLastGenerateTime = Timer::now();
 
+  AGG_LOG(detailed,"Setting up aggregate " << uuid << " to generate aggregate mesh with " << aggObject->mChildren.size() << " in " << delayFor);
   mAggregationStrand->post( delayFor, std::tr1::bind(&AggregateManager::generateAggregateMeshAsyncIgnoreErrors, this, uuid, aggObject->mLastGenerateTime, true)  );
 }
+
 void AggregateManager::generateAggregateMeshAsyncIgnoreErrors(const UUID uuid, Time postTime, bool generateSiblings) {
 	bool retval=generateAggregateMeshAsync(uuid, postTime, generateSiblings);
 	if (!retval) {
@@ -220,14 +279,14 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
     UUID child_uuid = children[i];
 
     if (!mLoc->contains(child_uuid)) {
-      generateAggregateMesh(uuid, Duration::milliseconds(10.0f));
+        generateAggregateMesh(uuid, aggObject, Duration::milliseconds(10.0f));
 
       return false;
     }
   }
 
   if (!mLoc->contains(uuid)) {
-    generateAggregateMesh(uuid, Duration::milliseconds(10.0f));
+      generateAggregateMesh(uuid, aggObject, Duration::milliseconds(10.0f));
 
     return false;
   }
@@ -306,7 +365,7 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
         }
       }
       else {
-        generateAggregateMesh(uuid, Duration::milliseconds(100.0f));
+          generateAggregateMesh(uuid, aggObject, Duration::milliseconds(100.0f));
         return false;
       }
     }

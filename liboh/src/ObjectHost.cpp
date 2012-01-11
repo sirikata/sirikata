@@ -44,7 +44,7 @@
 #include <sirikata/oh/ObjectScriptManagerFactory.hpp>
 #include <sirikata/core/network/StreamFactory.hpp>
 #include <sirikata/core/options/Options.hpp>
-#include <sirikata/proxyobject/ConnectionEventListener.hpp>
+#include <sirikata/oh/ConnectionEventListener.hpp>
 #include <sirikata/core/util/SpaceObjectReference.hpp>
 #include <sirikata/core/service/Context.hpp>
 #include <sirikata/oh/ObjectQueryProcessor.hpp>
@@ -62,7 +62,6 @@ ObjectHost::ObjectHost(ObjectHostContext* ctx, Network::IOService *ioServ, const
    mActiveHostedObjects(0)
 {
     mContext->objectHost = this;
-    mScriptPlugins=new PluginManager;
     OptionValue *protocolOptions;
     OptionValue *scriptManagers;
     OptionValue *simOptions;
@@ -111,7 +110,6 @@ ObjectHost::~ObjectHost()
         }
         objs.clear(); // The HostedObject destructor will attempt to delete from mHostedObjects
     }
-    delete mScriptPlugins;
 }
 
 HostedObjectPtr ObjectHost::createObject(const String& script_type, const String& script_opts, const String& script_contents) {
@@ -278,19 +276,6 @@ void ObjectHost::handleObjectMessage(const SpaceObjectReference& sporef_internal
     }
 }
 
-//This function just returns the first space id in the unordered map
-//associated with mSessionManagers.
-SpaceID ObjectHost::getDefaultSpace()
-{
-    if (mSessionManagers.size() == 0)
-    {
-        std::cout<<"\n\nERROR: no record of space in object host\n\n";
-        assert(false);
-    }
-
-    return mSessionManagers.begin()->first;
-}
-
 // Primary HostedObject API
 
 bool ObjectHost::connect(
@@ -371,11 +356,6 @@ void ObjectHost::wrappedDisconnectedCallback(HostedObjectWPtr ho_weak, const Spa
             mQueryProcessor->presenceDisconnected(ho, sporef);
     }
     cb(sporef, cause);
-}
-
-void ObjectHost::disconnect(SpaceObjectReference& sporef, const SpaceID& space) {
-    Sirikata::SerializationCheck::Scoped sc(&mSessionSerialization);
-    mSessionManagers[space]->disconnect(sporef);
 }
 
 Duration ObjectHost::serverTimeOffset(const SpaceID& space) const {
@@ -562,12 +542,6 @@ ObjectScriptManager* ObjectHost::getScriptManager(const String& id) {
     return it->second;
 }
 
-ProxyManager *ObjectHost::getProxyManager(const SpaceID&space) const
-{
-    DEPRECATED();
-    NOT_IMPLEMENTED(oh);
-    return NULL;
-}
 String ObjectHost::getSimOptions(const String&simName){
     std::string nam=simName;
     std::map<std::string,std::string>::iterator where=mSimOptions.find(nam);

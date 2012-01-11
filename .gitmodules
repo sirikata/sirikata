@@ -16,9 +16,9 @@
 [submodule "externals/sirikata-protocol"]
 	path = externals/sirikata-protocol
 	url = git://github.com/sirikata/sirikata-protocol.git
-[submodule "libproxyobject/plugins/ogre/data/ace"]
-	path = libproxyobject/plugins/ogre/data/ace
-	url = https://github.com/ajaxorg/ace.git
 [submodule "externals/liboauthcpp"]
 	path = externals/liboauthcpp
 	url = git://github.com/sirikata/liboauthcpp.git
+[submodule "liboh/plugins/ogre/data/ace"]
+	path = liboh/plugins/ogre/data/ace
+	url = https://github.com/ajaxorg/ace.git

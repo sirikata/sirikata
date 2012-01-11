@@ -34,7 +34,7 @@
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/util/SpaceObjectReference.hpp>
 #include <sirikata/core/util/PluginManager.hpp>
-#include <sirikata/proxyobject/SimulationFactory.hpp>
+#include <sirikata/oh/SimulationFactory.hpp>
 
 #include "ObjectHost.hpp"
 #include <sirikata/mesh/LightInfo.hpp>

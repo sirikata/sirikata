@@ -1,5 +1,5 @@
-/*  Sirikata Object Host
- *  ConnectionEvent.hpp
+/*  Sirikata Graphical Object Host
+ *  OgrePlugin.cpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
@@ -29,40 +29,39 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef _SIRIKATA_CONNECTION_EVENT_LISTENER_HPP_
-#define _SIRIKATA_CONNECTION_EVENT_LISTENER_HPP_
 
 #include <sirikata/proxyobject/Platform.hpp>
-#include <sirikata/core/util/ListenerProvider.hpp>
+#include <sirikata/oh/SimulationFactory.hpp>
+#include "OgreSystem.hpp"
+static int core_plugin_refcount = 0;
 
-namespace Sirikata {
+SIRIKATA_PLUGIN_EXPORT_C void init() {
+    using namespace Sirikata;
+    using namespace Sirikata::Graphics;
+    if (core_plugin_refcount==0)
+        SimulationFactory::getSingleton().registerConstructor("ogregraphics",
+                                                            &OgreSystem::create,
+                                                            true);
+    core_plugin_refcount++;
+}
 
-/** ConnectionEventListener listens for events relating to object host
- * connections. This is useful for monitoring the health of the underlying
- * system without directly exposing the details.
- *
- * FIXME This should be in liboh, but it is primarily useful to display plugins,
- * e.g. Ogre, which currently only use libproxyobject.
- */
-class SIRIKATA_PROXYOBJECT_EXPORT ConnectionEventListener {
-public:
-    virtual ~ConnectionEventListener(){}
+SIRIKATA_PLUGIN_EXPORT_C int increfcount() {
+    return ++core_plugin_refcount;
+}
+SIRIKATA_PLUGIN_EXPORT_C int decrefcount() {
+    assert(core_plugin_refcount>0);
+    return --core_plugin_refcount;
+}
 
-    /** Invoked upon connection.
-     *  \param addr the address connected to
-     */
-    virtual void onConnected(const Network::Address& addr) {};
-    /** Invoked upon disconnection.
-     *  \param addr the address disconnected from
-     *  \param requested indicates whether the user requested the disconnection
-     *  \param reason if requested is false, gives a textual description of the
-     *  reason for the disconnection
-     */
-    virtual void onDisconnected(const Network::Address& addr, bool requested, const String& reason) {};
-};
+SIRIKATA_PLUGIN_EXPORT_C void destroy() {
+    using namespace Sirikata;
+    if (core_plugin_refcount==0)
+        SimulationFactory::getSingleton().unregisterConstructor("ogregraphics");
+}
 
-typedef Provider< ConnectionEventListener* > ConnectionEventProvider;
-
-} // namespace Sirikata
-
-#endif //_SIRIKATA_CONNECTION_EVENT_LISTENER_HPP_
+SIRIKATA_PLUGIN_EXPORT_C const char* name() {
+    return "ogregraphics";
+}
+SIRIKATA_PLUGIN_EXPORT_C int refcount() {
+    return core_plugin_refcount;
+}

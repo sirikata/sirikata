@@ -36,7 +36,7 @@
 #include <sirikata/oh/Platform.hpp>
 #include <sirikata/oh/ObjectFactory.hpp>
 #include <sirikata/oh/HostedObject.hpp>
-#include <sirikata/proxyobject/SimulationFactory.hpp>
+#include <sirikata/oh/SimulationFactory.hpp>
 
 namespace Sirikata {
 

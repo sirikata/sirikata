@@ -31,7 +31,7 @@
  */
 
 #include <sirikata/core/util/Platform.hpp>
-#include <sirikata/proxyobject/SimulationFactory.hpp>
+#include <sirikata/oh/SimulationFactory.hpp>
 
 AUTO_SINGLETON_INSTANCE(Sirikata::SimulationFactory);
 namespace Sirikata {

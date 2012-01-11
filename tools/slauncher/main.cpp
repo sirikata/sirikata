@@ -44,7 +44,7 @@ String getExecutableName(String name) {
 #if SIRIKATA_DEBUG
     name = name + "_d";
 #endif
-#if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS
     name = name + ".exe";
 #endif
     return name;
@@ -54,7 +54,7 @@ String getExecutablePath(String name) {
     String exe_dir = Path::Get(Path::DIR_EXE);
 
     name = getExecutableName(name);
-#if SIRIKATA_PLATFORM == PLATFORM_MAC
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_MAC
     if (name == "cppoh" || name == "cppoh_d")
         name = name + ".app/Contents/MacOS/" + name;
 #endif
@@ -63,13 +63,15 @@ String getExecutablePath(String name) {
 }
 
 
-#if SIRIKATA_PLATFORM == PLATFORM_LINUX || SIRIKATA_PLATFORM == PLATFORM_MAC
-void execCommand(const char* file, const char* const argv[], bool do_fork = true) {
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_LINUX || SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_MAC
+void execCommand(const char* file, const char* const argv[], bool do_fork = true)
+{
     pid_t pID = 0;
     if (do_fork)
-        fork();
+        pID = fork();
 
     if (pID == 0) {
+        
         // setsid() decouples this process from the parent, ensuring that the
         // exit of the parent doesn't kill the child process by accident
         // (e.g. by causing the parent terminal to exit).
@@ -82,7 +84,7 @@ void execCommand(const char* file, const char* const argv[], bool do_fork = true
 }
 #endif
 
-#if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS
 /* Set a registry key. Only creates the key if subkey == NULL. To set the default value, use subkey == "". */
 bool setRegKey(HKEY base, const char* key, const char* subkey = NULL, const char* value = NULL) {
     HKEY hkey;
@@ -113,7 +115,7 @@ bool registerURIHandler() {
     // gracefully, i.e. without having to reregister.
     String exe_file = getExecutablePath("slauncher");
 
-#if SIRIKATA_PLATFORM == PLATFORM_LINUX
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_LINUX
 
     // We register in two ways. The first way is for Firefox/Gnome and just adds
     // the appropriate command for the uri type to gconf. xdg-utils, it seems,
@@ -171,7 +173,7 @@ bool registerURIHandler() {
     }
 
 
-#elif SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+#elif SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS
     String exe_name = getExecutableName("slauncher");
     // See http://msdn.microsoft.com/en-us/library/aa767914.aspx for an explanation of what these registry keys do.
     // NOTE: YOU MUST RUN THIS AS ADMINISTRATOR. It'll fail to add the keys if you don't.
@@ -191,7 +193,7 @@ bool registerURIHandler() {
     if (!success)
         LAUNCHER_LOG(error, "Failed to register handler in system registry.");
     return success;
-#elif SIRIKATA_PLATFORM == PLATFORM_MAC
+#elif SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_MAC
     // FIXME
     LAUNCHER_LOG(error, "URI handler registration not supported on this platform.");
     return false;
@@ -206,10 +208,10 @@ bool unregisterURIHandler() {
     // See note in registerURIHandler
     String exe_file = getExecutablePath("slauncher");
 
-#if SIRIKATA_PLATFORM == PLATFORM_LINUX
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_LINUX
     const char* const enabled_argv[] = { "gconftool-2", "-t", "bool", "-s", "/desktop/gnome/url-handlers/sirikata/enabled", "false", NULL};
     execCommand("gconftool-2", enabled_argv);
-#elif SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+#elif SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS
     bool success =
         deleteRegKey(HKEY_CLASSES_ROOT, "sirikata\\shell\\open\\command") &&
         deleteRegKey(HKEY_CLASSES_ROOT, "sirikata\\shell\\open") &&
@@ -218,7 +220,7 @@ bool unregisterURIHandler() {
         deleteRegKey(HKEY_CLASSES_ROOT, "sirikata");
     LAUNCHER_LOG(error, "Failed to unregister handler in system registry.");
     return success;
-#elif SIRIKATA_PLATFORM == PLATFORM_MAC
+#elif SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_MAC
     // FIXME
 #endif
 
@@ -431,7 +433,7 @@ void doExecApp(int* retval) {
     // something like app.data = url for archive) which will require
     // additional downloading, but for now we just invoke the command
     // here.
-#if SIRIKATA_PLATFORM == PLATFORM_LINUX || SIRIKATA_PLATFORM == PLATFORM_MAC
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_LINUX || SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_MAC
     String appExe = getExecutablePath(binary);
     binaryArgs.insert(binaryArgs.begin(), appExe);
 
@@ -452,7 +454,7 @@ void doExecApp(int* retval) {
         execArgs[i] = binaryArgs[i].c_str();
     execArgs[binaryArgs.size()] = NULL;
     execCommand(appExe.c_str(), execArgs, do_fork);
-#elif SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+#elif SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS
     String appExe = getExecutablePath(binary);
     binaryArgs.insert(binaryArgs.begin(), appExe);
     String cmd = "";

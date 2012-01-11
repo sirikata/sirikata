@@ -128,22 +128,28 @@ public:
 
 	/**
 	* Creates a WebView.
+        @param {Network::IOStrand*} postStrand -- where the webview will post
+        its callbacks to.
 	*/
     WebView* createWebView(
-        Context* ctx,
-        const std::string &webViewName, const std::string& webViewType,unsigned short width, unsigned short height,
-	        const OverlayPosition &webViewPosition,	bool asyncRender = false, int maxAsyncRenderRate = 70,
-	        Tier tier = TIER_MIDDLE, Ogre::Viewport* viewport = 0,
-	        const WebView::WebViewBorderSize& border = WebView::mDefaultBorder);
+        Context* ctx,const std::string &webViewName,
+        const std::string& webViewType,unsigned short width,
+        unsigned short height,const OverlayPosition &webViewPosition,
+        Network::IOStrandPtr postStrand,
+        bool asyncRender = false, int maxAsyncRenderRate = 70,
+        Tier tier = TIER_MIDDLE, Ogre::Viewport* viewport = 0,
+        const WebView::WebViewBorderSize& border = WebView::mDefaultBorder);
 
 #ifdef HAVE_BERKELIUM
 	/**
 	* Creates a WebView from a given Berkelium::Window.
 	*/
 	WebView* createWebViewPopup(
-            Context* ctx,
-            const std::string &webViewName, unsigned short width, unsigned short height, const OverlayPosition &webViewPosition,
-		Berkelium::Window *newwin, Tier tier = TIER_MIDDLE, Ogre::Viewport* viewport = 0);
+            Context* ctx,const std::string &webViewName,
+            unsigned short width, unsigned short height,
+            const OverlayPosition &webViewPosition,
+            Berkelium::Window *newwin, Network::IOStrandPtr postingStrand,
+            Tier tier = TIER_MIDDLE, Ogre::Viewport* viewport = 0);
 #endif
 	/**
 	* Creates a WebViewMaterial. WebViewMaterials are just like WebViews except that they lack a movable overlay element.
@@ -151,9 +157,11 @@ public:
 	* injected via the WebView::injectMouse_____ API calls instead of the global WebViewManager::injectMouse_____ calls.
 	*/
 	WebView* createWebViewMaterial(
-            Context* ctx,
-            const std::string &webViewName, unsigned short width, unsigned short height,
-		bool asyncRender = false, int maxAsyncRenderRate = 70, Ogre::FilterOptions texFiltering = Ogre::FO_ANISOTROPIC);
+            Context* ctx,const std::string &webViewName,
+            unsigned short width, unsigned short height,
+            Network::IOStrandPtr postingStrand,
+            bool asyncRender = false, int maxAsyncRenderRate = 70,
+            Ogre::FilterOptions texFiltering = Ogre::FO_ANISOTROPIC);
 
 	/**
 	* Retrieve a pointer to a WebView by name.

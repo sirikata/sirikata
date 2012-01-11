@@ -5,6 +5,7 @@
 #include <v8.h>
 #include <vector>
 #include "JSPositionListener.hpp"
+#include "../JSCtx.hpp"
 
 namespace Sirikata {
 namespace JS {
@@ -37,7 +38,7 @@ public:
 
     
 private:
-    JSVisibleStruct( std::tr1::shared_ptr<JSProxyData>  jspd);
+    JSVisibleStruct( std::tr1::shared_ptr<JSProxyData>  jspd, JSCtx* ctx);    
     friend class JSVisibleManager;
 
 };

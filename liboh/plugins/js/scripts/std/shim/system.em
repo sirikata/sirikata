@@ -505,9 +505,10 @@ function PresenceEntry(sporef, presObj)
              throw new TypeError('Invalid callback parameter: expected function.');
 
          if (typeof(cb) === 'function')
-             return baseSystem.setRestoreScript.apply(baseSystem, [script, system.wrapCallbackForSelf(cb)]);
+             return baseSystem.setRestoreScript.apply(baseSystem, [script, system.wrapCallbackForSelf(cb)]);                 
          else
              return baseSystem.setRestoreScript.apply(baseSystem, [script]);
+
      };
      /** Disable restoration from storage after a crash.
       *  @param{Function} cb callback to invoke when the update finishes, taking

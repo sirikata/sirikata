@@ -50,9 +50,7 @@
 #include <sirikata/core/odp/Exceptions.hpp>
 
 #include <sirikata/core/network/IOStrandImpl.hpp>
-#include <list>
-#include <vector>
-#include <sirikata/proxyobject/SimulationFactory.hpp>
+#include <sirikata/oh/SimulationFactory.hpp>
 #include "PerPresenceData.hpp"
 
 #include <sirikata/oh/LocUpdate.hpp>
@@ -76,7 +74,6 @@ HostedObject::HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID
    mID(_id),
    mObjectHost(parent),
    mObjectScript(NULL),
-   mNextSubscriptionID(0),
    destroyed(false)
 {
     mDelegateODPService = new ODP::DelegateService(
@@ -87,41 +84,67 @@ HostedObject::HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID
     );
 }
 
-
-//Need to define this function so that can register timeouts in jscript
-Network::IOService* HostedObject::getIOService()
+Simulation* HostedObject::runSimulation(
+    const SpaceObjectReference& sporef, const String& simName,
+    Network::IOStrandPtr simStrand)
 {
-    return mContext->ioService;
-}
+    if (stopped()) return NULL;
 
-
-Simulation* HostedObject::runSimulation(const SpaceObjectReference& sporef, const String& simName)
-{
-    Simulation* sim = NULL;
-
-    if (stopped()) return sim;
-
-    PresenceDataMap::iterator psd_it = mPresenceData.find(sporef);
-    if (psd_it == mPresenceData.end())
+    PerPresenceData* pd = NULL;
     {
-        HO_LOG(error, "Error requesting to run a simulation for a presence that does not exist.");
+        Mutex::scoped_lock locker(presenceDataMutex);
+        PresenceDataMap::iterator psd_it = mPresenceData.find(sporef);
+        if (psd_it == mPresenceData.end())
+        {
+            HO_LOG(error, "Error requesting to run a "<<        \
+                "simulation for a presence that does not exist.");
+            return NULL;
+        }
+
+        pd = psd_it->second;
+
+        if (pd->sims.find(simName) != pd->sims.end()) {
+            return pd->sims[simName];
+        }
+    }
+
+    Simulation* sim = NULL;
+    // This is kept outside the lock because the constructor can
+    // access the HostedObject and call methods which need the
+    // lock.
+    HO_LOG(info,String("[OH] Initializing ") + simName);
+    try {
+        sim = SimulationFactory::getSingleton().getConstructor ( simName ) (
+            mContext, static_cast<ConnectionEventProvider*>(mObjectHost),
+            getSharedPtr(), sporef,
+            getObjectHost()->getSimOptions(simName), simStrand
+        );
+    } catch(FactoryMissingConstructorException exc) {
+        sim = NULL;
+    }
+
+    if (!sim) {
+        HO_LOG(error, "Unable to load " << simName << " plugin.");
         return NULL;
     }
 
-    PerPresenceData& pd =  *psd_it->second;
-    bool newSimListener = addSimListeners(pd,simName,sim);
-
-    if ((sim != NULL) && (newSimListener))
+    HO_LOG(info,String("Successfully initialized ") + simName);
     {
-        HO_LOG(detailed, "Adding simulation to context");
-        mContext->add(sim);
+        Mutex::scoped_lock locker(presenceDataMutex);
+        pd->sims[simName] = sim;
     }
+
+    HO_LOG(detailed, "Adding simulation to context");
+    mContext->add(sim);
+
     return sim;
 }
 
 
 HostedObject::~HostedObject() {
     destroy(false);
+
+    Mutex::scoped_lock lock(presenceDataMutex);
     for (PresenceDataMap::iterator i=mPresenceData.begin();i!=mPresenceData.end();++i) {
         delete i->second;
     }
@@ -147,13 +170,9 @@ void HostedObject::stop() {
 bool HostedObject::stopped() const {
     return (mContext->stopped() || destroyed);
 }
-namespace {
-void nop (const HostedObjectPtr&) {
 
-}
-}
-
-void HostedObject::destroy(bool need_self) {
+void HostedObject::destroy(bool need_self)
+{
     // Avoid recursive destruction
     if (destroyed) return;
 
@@ -162,7 +181,6 @@ void HostedObject::destroy(bool need_self) {
     // (e.g. when the ObjectScript removes all references) and then we return
     // here to do more work and we've already been deleted.
     HostedObjectPtr self_ptr = need_self ? getSharedPtr() : HostedObjectPtr();
-
     destroyed = true;
 
     if (mObjectScript) {
@@ -170,7 +188,18 @@ void HostedObject::destroy(bool need_self) {
         mObjectScript=NULL;
     }
 
-    for (PresenceDataMap::iterator iter = mPresenceData.begin(); iter != mPresenceData.end(); ++iter) {
+    //copying the data to a separate map before clearing to avoid deadlock in
+    //destructor.
+
+    PresenceDataMap toDeleteFrom;
+    {
+        Mutex::scoped_lock locker(presenceDataMutex);
+        toDeleteFrom.swap(mPresenceData);
+    }
+
+    for (PresenceDataMap::iterator iter = toDeleteFrom.begin();
+         iter != toDeleteFrom.end(); ++iter)
+    {
         // Make sure we explicitly. Other paths don't necessarily do this,
         // e.g. if the call to destroy happens between receiving a connection
         // success and the actual creation of the stream from the space, leaving
@@ -181,8 +210,6 @@ void HostedObject::destroy(bool need_self) {
         // And just clear the ref out from the ObjectHost
         mObjectHost->unregisterHostedObject(iter->first,this);
     }
-
-    mPresenceData.clear();
 }
 
 Time HostedObject::spaceTime(const SpaceID& space, const Time& t) {
@@ -204,6 +231,7 @@ Time HostedObject::currentLocalTime() {
 
 ProxyManagerPtr HostedObject::getProxyManager(const SpaceID& space, const ObjectReference& oref)
 {
+    Mutex::scoped_lock lock(presenceDataMutex);
     SpaceObjectReference toFind(space,oref);
     PresenceDataMap::const_iterator it = mPresenceData.find(toFind);
     if (it == mPresenceData.end())
@@ -213,27 +241,11 @@ ProxyManagerPtr HostedObject::getProxyManager(const SpaceID& space, const Object
 }
 
 
-//returns all the spaceobjectreferences associated with the presence with id sporef
-void HostedObject::getProxySpaceObjRefs(const SpaceObjectReference& sporef,SpaceObjRefVec& ss) const
-{
-    PresenceDataMap::const_iterator smapIter = mPresenceData.find(sporef);
-
-    if (smapIter != mPresenceData.end())
-    {
-        //means that we actually did have a connection with this sporef
-        //load the proxy objects the sporef'd connection has actually seen into
-        //ss.
-        smapIter->second->proxyManager->getAllObjectReferences(ss);
-    }
-}
-
-
-
 //returns all the spaceobjrefs associated with all presences of this object.
 //They are returned in ss.
 void HostedObject::getSpaceObjRefs(SpaceObjRefVec& ss) const
 {
-
+    Mutex::scoped_lock lock( const_cast<Mutex&>(presenceDataMutex) );
     PresenceDataMap::const_iterator smapIter;
     for (smapIter = mPresenceData.begin(); smapIter != mPresenceData.end(); ++smapIter)
         ss.push_back(SpaceObjectReference(smapIter->second->space,smapIter->second->object));
@@ -242,35 +254,8 @@ void HostedObject::getSpaceObjRefs(SpaceObjRefVec& ss) const
 
 
 static ProxyObjectPtr nullPtr;
-const ProxyObjectPtr &HostedObject::getProxyConst(const SpaceID &space, const ObjectReference& oref) const
-{
-    PresenceDataMap::const_iterator iter = mPresenceData.find(SpaceObjectReference(space,oref));
-    if (iter == mPresenceData.end()) {
-        return nullPtr;
-    }
-    return iter->second->mProxyObject;
-}
-
-
-//first checks to see if have a presence associated with spVisTo.  If do, then
-//checks if have a proxy object associated with sporef, sets p to the associated
-//proxy object, and returns true.  Otherwise, returns false.
-bool HostedObject::getProxyObjectFrom(const SpaceObjectReference*   spVisTo, const SpaceObjectReference*   sporef, ProxyObjectPtr& p)
-{
-    ProxyManagerPtr ohpmp = getProxyManager(spVisTo->space(),spVisTo->object());
-    if (ohpmp.get() == NULL)
-        return false;
-
-    p = ohpmp->getProxyObject(*sporef);
-
-    if (p.get() == NULL)
-        return false;
-
-    return true;
-}
-
-
 static ProxyManagerPtr nullManPtr;
+
 ProxyObjectPtr HostedObject::getProxy(const SpaceID& space, const ObjectReference& oref)
 {
     ProxyManagerPtr proxy_manager = getProxyManager(space,oref);
@@ -284,19 +269,6 @@ ProxyObjectPtr HostedObject::getProxy(const SpaceID& space, const ObjectReferenc
     return proxy_obj;
 }
 
-bool HostedObject::getProxy(const SpaceObjectReference* sporef, ProxyObjectPtr& p)
-{
-    p = getProxy(sporef->space(), sporef->object());
-
-    if (p.get() == NULL)
-    {
-        SILOG(oh,info, "[HO] In getProxy of HostedObject, have no proxy presence associated with "<<*sporef);
-        return false;
-    }
-
-    return true;
-}
-
 
 namespace {
 bool myisalphanum(char c) {
@@ -306,7 +278,6 @@ bool myisalphanum(char c) {
     return false;
 }
 }
-
 
 void HostedObject::initializeScript(const String& script_type, const String& args, const String& script)
 {
@@ -325,21 +296,8 @@ void HostedObject::initializeScript(const String& script_type, const String& arg
     static ThreadIdCheck scriptId=ThreadId::registerThreadGroup(NULL);
     assertThreadGroup(scriptId);
     if (!ObjectScriptManagerFactory::getSingleton().hasConstructor(script_type)) {
-        bool passed=true;
-        for (std::string::const_iterator i=script_type.begin(),ie=script_type.end();i!=ie;++i) {
-            if (!myisalphanum(*i)) {
-                if (*i!='-'&&*i!='_') {
-                    passed=false;
-                }
-            }
-        }
-        if (passed) {
-            mObjectHost->getScriptPluginManager()->load(script_type);
-        }
-        else
-        {
-            HO_LOG(debug,"[HO] Failed to create script for object because incorrect script type");
-        }
+        HO_LOG(debug,"[HO] Failed to create script for object because incorrect script type");
+        return;
     }
     ObjectScriptManager *mgr = mObjectHost->getScriptManager(script_type);
     if (mgr) {
@@ -454,38 +412,12 @@ bool HostedObject::connect(
 }
 
 
-
-
-//returns true if sim gets an already-existing listener.  false otherwise
-bool HostedObject::addSimListeners(PerPresenceData& pd, const String& simName, Simulation*& sim)
-{
-    if (pd.sims.find(simName) != pd.sims.end()) {
-        sim = pd.sims[simName];
-        return false;
-    }
-
-    HO_LOG(info,String("[OH] Initializing ") + simName);
-    sim = SimulationFactory::getSingleton().getConstructor ( simName ) ( mContext, static_cast<ConnectionEventProvider*>(mObjectHost), getSharedPtr(), pd.id(), getObjectHost()->getSimOptions(simName));
-    if (!sim)
-    {
-        HO_LOG(error, "Unable to load " << simName << " plugin.");
-        return true;
-    }
-    else
-    {
-        pd.sims[simName] = sim;
-        HO_LOG(info,String("Successfully initialized ") + simName);
-    }
-    return true;
-}
-
-
-
 void HostedObject::handleConnected(const HostedObjectWPtr& weakSelf, const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info)
 {
     HostedObjectPtr self(weakSelf.lock());
     if ((!self)||self->stopped()) {
         HO_LOG(detailed,"Ignoring connection success after system stop requested.");
+
         return;
     }
     if (info.server == NullServerID)
@@ -514,19 +446,27 @@ void HostedObject::handleConnectedIndirect(const HostedObjectWPtr& weakSelf, con
         HO_LOG(warning,"Failed to connect object:" << obj << " to space " << space);
         return;
     }
+
     HostedObjectPtr self(weakSelf.lock());
     if (!self)
         return;
+
     SpaceObjectReference self_objref(space, obj);
-    if(self->mPresenceData.find(self_objref) == self->mPresenceData.end())
+
     {
-        self->mPresenceData.insert(
-            PresenceDataMap::value_type(
-                self_objref,
-                new PerPresenceData(self.get(), space, obj, baseDatagramLayer, info.query)
-            )
-        );
+        Mutex::scoped_lock lock(self->presenceDataMutex);
+
+        if(self->mPresenceData.find(self_objref) == self->mPresenceData.end())
+        {
+            self->mPresenceData.insert(
+                PresenceDataMap::value_type(
+                    self_objref,
+                    new PerPresenceData(self.get(), space, obj, baseDatagramLayer, info.query)
+                )
+            );
+        }
     }
+
 
     // Convert back to local time
     TimedMotionVector3f local_loc(self->localTime(space, info.loc.updateTime()), info.loc.value());
@@ -534,10 +474,12 @@ void HostedObject::handleConnectedIndirect(const HostedObjectWPtr& weakSelf, con
     ProxyObjectPtr self_proxy = self->createProxy(self_objref, self_objref, Transfer::URI(info.mesh), local_loc, local_orient, info.bnds, info.physics, info.query, 0);
 
     // Use to initialize PerSpaceData
-    PresenceDataMap::iterator psd_it = self->mPresenceData.find(self_objref);
-    PerPresenceData& psd = *psd_it->second;
-    self->initializePerPresenceData(psd, self_proxy);
-
+    {
+        Mutex::scoped_lock lock(self->presenceDataMutex);
+        PresenceDataMap::iterator psd_it = self->mPresenceData.find(self_objref);
+        PerPresenceData& psd = *psd_it->second;
+        psd.initializeAs(self_proxy);
+    }
     HO_LOG(detailed,"Connected object " << obj << " to space " << space << " waiting on notice");
 }
 
@@ -573,18 +515,12 @@ void HostedObject::handleStreamCreated(const HostedObjectWPtr& weakSelf, const S
     if (!self)
         return;
 
+    Mutex::scoped_lock lock(self->notifyMutex);
     HO_LOG(detailed,"Notifying of connected object " << spaceobj.object() << " to space " << spaceobj.space());
     if (after == SessionManager::Connected)
         self->notify(&SessionEventListener::onConnected, self, spaceobj, token);
     else if (after == SessionManager::Migrated)
         self->notify(&SessionEventListener::onMigrated, self, spaceobj, token);
-}
-
-
-
-
-void HostedObject::initializePerPresenceData(PerPresenceData& psd, ProxyObjectPtr selfproxy) {
-    psd.initializeAs(selfproxy);
 }
 
 void HostedObject::disconnectFromSpace(const SpaceID &spaceID, const ObjectReference& oref)
@@ -595,7 +531,7 @@ void HostedObject::disconnectFromSpace(const SpaceID &spaceID, const ObjectRefer
     }
 
     SpaceObjectReference sporef(spaceID, oref);
-
+    Mutex::scoped_lock locker(presenceDataMutex);
     PresenceDataMap::iterator where;
     where=mPresenceData.find(sporef);
     if (where!=mPresenceData.end()) {
@@ -611,13 +547,32 @@ void HostedObject::disconnectFromSpace(const SpaceID &spaceID, const ObjectRefer
     }
 }
 
-void HostedObject::handleDisconnected(const HostedObjectWPtr& weakSelf, const SpaceObjectReference& spaceobj, Disconnect::Code cc) {
+void HostedObject::handleDisconnected(
+    const HostedObjectWPtr& weakSelf, const SpaceObjectReference& spaceobj,
+    Disconnect::Code cc)
+{
     HostedObjectPtr self(weakSelf.lock());
     if ((!self)||self->stopped()) {
         HO_LOG(detailed,"Ignoring disconnection callback after system stop requested.");
         return;
     }
 
+    self->mContext->mainStrand->post(
+        std::tr1::bind(&HostedObject::iHandleDisconnected,self.get(),
+            weakSelf, spaceobj, cc));
+}
+
+void HostedObject::iHandleDisconnected(
+    const HostedObjectWPtr& weakSelf, const SpaceObjectReference& spaceobj,
+    Disconnect::Code cc)
+{
+    HostedObjectPtr self(weakSelf.lock());
+    if ((!self)||self->stopped()) {
+        HO_LOG(detailed,"Ignoring disconnection callback after system stop requested.");
+        return;
+    }
+
+    Mutex::scoped_lock lock(self->notifyMutex);
     self->notify(&SessionEventListener::onDisconnected, self, spaceobj);
 
     // Only invoke disconnectFromSpace if we weren't already aware of the
@@ -840,6 +795,7 @@ void HostedObject::handleProximityUpdate(const SpaceObjectReference& spaceobj, c
             ObjectReference(removal.object()));
         bool permanent = (removal.has_type() && (removal.type() == Sirikata::Protocol::Prox::ObjectRemoval::Permanent));
 
+        Mutex::scoped_lock lock(presenceDataMutex);
         if (self->mPresenceData.find(removed_obj_ref) != self->mPresenceData.end()) {
             SILOG(oh,detailed,"Ignoring self removal from proximity results.");
         }
@@ -877,7 +833,7 @@ void HostedObject::handleProximityUpdate(const SpaceObjectReference& spaceobj, c
 ProxyObjectPtr HostedObject::createProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri, TimedMotionVector3f& tmv, TimedMotionQuaternion& tmq, const BoundingSphere3f& bs, const String& phy, const String& query, uint64 seqNo)
 {
     ProxyManagerPtr proxy_manager = getProxyManager(owner_objref.space(), owner_objref.object());
-
+    Mutex::scoped_lock lock(presenceDataMutex);
     if (!proxy_manager)
     {
         mPresenceData.insert(
@@ -926,18 +882,6 @@ ProxyManagerPtr HostedObject::presence(const SpaceObjectReference& sor)
     //  return proxyManPtr;
     return getProxyManager(sor.space(), sor.object());
 }
-ProxyObjectPtr HostedObject::getDefaultProxyObject(const SpaceID& space)
-{
-    ObjectReference oref = mPresenceData.begin()->first.object();
-    return  getProxy(space, oref);
-}
-
-ProxyManagerPtr HostedObject::getDefaultProxyManager(const SpaceID& space)
-{
-    ObjectReference oref = mPresenceData.begin()->first.object();
-    return  getProxyManager(space, oref);
-}
-
 
 
 ProxyObjectPtr HostedObject::self(const SpaceObjectReference& sor)
@@ -984,6 +928,10 @@ ODP::PortID HostedObject::unusedODPPort(const SpaceObjectReference& sor) {
 void HostedObject::registerDefaultODPHandler(const ODP::Service::MessageHandler& cb) {
     if (stopped()) return;
     mDelegateODPService->registerDefaultODPHandler(cb);
+}
+
+ODPSST::Stream::Ptr HostedObject::getSpaceStream(const SpaceObjectReference& sor) {
+    return mObjectHost->getSpaceStream(sor.space(), sor.object());
 }
 
 ODP::DelegatePort* HostedObject::createDelegateODPPort(ODP::DelegateService* parentService, const SpaceObjectReference& spaceobj, ODP::PortID port) {
@@ -1214,6 +1162,7 @@ const String& HostedObject::requestCurrentPhysics(const SpaceID& space,const Obj
 
 const String& HostedObject::requestQuery(const SpaceID& space, const ObjectReference& oref)
 {
+    Mutex::scoped_lock lock(presenceDataMutex);
     PresenceDataMap::iterator iter = mPresenceData.find(SpaceObjectReference(space,oref));
     if (iter == mPresenceData.end())
     {
@@ -1237,6 +1186,7 @@ void HostedObject::requestQueryUpdate(const SpaceID& space, const ObjectReferenc
     }
 
     SpaceObjectReference sporef(space,oref);
+    Mutex::scoped_lock lock(presenceDataMutex);
     PresenceDataMap::iterator pdmIter = mPresenceData.find(sporef);
     if (pdmIter != mPresenceData.end()) {
         pdmIter->second->query = new_query;
@@ -1264,17 +1214,22 @@ void HostedObject::updateLocUpdateRequest(const SpaceID& space, const ObjectRefe
         return;
     }
 
-    assert(mPresenceData.find(SpaceObjectReference(space, oref)) != mPresenceData.end());
-    PerPresenceData& pd = *(mPresenceData.find(SpaceObjectReference(space, oref)))->second;
+    {
+        // Scope this lock since sendLocUpdateRequest will acquire
+        // lock itself
+        Mutex::scoped_lock locker(presenceDataMutex);
+        assert(mPresenceData.find(SpaceObjectReference(space, oref)) != mPresenceData.end());
+        PerPresenceData& pd = *(mPresenceData.find(SpaceObjectReference(space, oref)))->second;
 
-    if (loc != NULL) { pd.requestLocation = *loc; pd.updateFields |= PerPresenceData::LOC_FIELD_LOC; }
-    if (orient != NULL) { pd.requestOrientation = *orient; pd.updateFields |= PerPresenceData::LOC_FIELD_ORIENTATION; }
-    if (bounds != NULL) { pd.requestBounds = *bounds; pd.updateFields |= PerPresenceData::LOC_FIELD_BOUNDS; }
-    if (mesh != NULL) { pd.requestMesh = *mesh; pd.updateFields |= PerPresenceData::LOC_FIELD_MESH; }
-    if (phy != NULL) { pd.requestPhysics = *phy; pd.updateFields |= PerPresenceData::LOC_FIELD_PHYSICS; }
+        if (loc != NULL) { pd.requestLocation = *loc; pd.updateFields |= PerPresenceData::LOC_FIELD_LOC; }
+        if (orient != NULL) { pd.requestOrientation = *orient; pd.updateFields |= PerPresenceData::LOC_FIELD_ORIENTATION; }
+        if (bounds != NULL) { pd.requestBounds = *bounds; pd.updateFields |= PerPresenceData::LOC_FIELD_BOUNDS; }
+        if (mesh != NULL) { pd.requestMesh = *mesh; pd.updateFields |= PerPresenceData::LOC_FIELD_MESH; }
+        if (phy != NULL) { pd.requestPhysics = *phy; pd.updateFields |= PerPresenceData::LOC_FIELD_PHYSICS; }
 
-    // Cancel the re-request timer if it was active
-    pd.rerequestTimer->cancel();
+        // Cancel the re-request timer if it was active
+        pd.rerequestTimer->cancel();
+    }
 
     sendLocUpdateRequest(space, oref);
 }
@@ -1287,11 +1242,14 @@ void discardChildStream(int success, SST::Stream<SpaceObjectReference>::Ptr sptr
 }
 }
 
+
 void HostedObject::sendLocUpdateRequest(const SpaceID& space, const ObjectReference& oref) {
+    // Up here to avoid recursive lock
+    ProxyObjectPtr self_proxy = getProxy(space, oref);
+
+    Mutex::scoped_lock locker(presenceDataMutex);
     assert(mPresenceData.find(SpaceObjectReference(space, oref)) != mPresenceData.end());
     PerPresenceData& pd = *(mPresenceData.find(SpaceObjectReference(space, oref)))->second;
-
-    ProxyObjectPtr self_proxy = getProxy(space, oref);
 
     if (!self_proxy)
     {
@@ -1337,12 +1295,6 @@ void HostedObject::sendLocUpdateRequest(const SpaceID& space, const ObjectRefere
     bool send_succeeded = false;
     SSTStreamPtr spaceStream = mObjectHost->getSpaceStream(space, oref);
     if (spaceStream) {
-        /* datagram update, still supported but gets dropped
-        SSTConnectionPtr conn = spaceStream->connection().lock();
-        assert(conn);
-        send_succeeded = conn->datagram( (void*)payload.data(), payload.size(), OBJECT_PORT_LOCATION,
-            OBJECT_PORT_LOCATION, NULL);
-        */
         spaceStream->createChildStream(
             std::tr1::bind(discardChildStream, _1, _2),
             (void*)payload.data(), payload.size(),
@@ -1364,18 +1316,5 @@ void HostedObject::sendLocUpdateRequest(const SpaceID& space, const ObjectRefere
     }
 }
 
-
-Location HostedObject::getLocation(const SpaceID& space, const ObjectReference& oref)
-{
-    ProxyObjectPtr proxy = getProxy(space, oref);
-    if (!proxy)
-    {
-        HO_LOG(warn,"Requesting getLocation for missing proxy.  Doing nothing.");
-        return Location();
-    }
-
-    Location currentLoc = proxy->globalLocation(currentSpaceTime(space));
-    return currentLoc;
-}
 
 }

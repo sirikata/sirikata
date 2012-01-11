@@ -33,7 +33,7 @@
 #ifndef _SIRIKATA_COLLADA_ASSET_
 #define _SIRIKATA_COLLADA_ASSET_
 
-#include <sirikata/proxyobject/Platform.hpp>
+#include <sirikata/mesh/Platform.hpp>
 
 namespace COLLADAFW {
 

@@ -36,7 +36,7 @@
 #include <sirikata/core/util/Platform.hpp>
 
 #ifndef SIRIKATA_PROXYOBJECT_EXPORT
-# if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+# if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS
 #   if defined(STATIC_LINKED)
 #     define SIRIKATA_PROXYOBJECT_EXPORT
 #   else

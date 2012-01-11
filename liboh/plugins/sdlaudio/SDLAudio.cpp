@@ -35,14 +35,38 @@ extern void mixaudio(void* _sim, Uint8* raw_stream, int raw_len) {
 
 }
 
-AudioSimulation::AudioSimulation(Context* ctx)
+AudioSimulation::AudioSimulation(Context* ctx,Network::IOStrandPtr ptr)
  : mContext(ctx),
    mInitializedAudio(false),
    mOpenedAudio(false),
-   mClipHandleSource(0)
+   mClipHandleSource(0),
+   mPlaying(false),
+   audioStrand(ptr)
 {}
 
-void AudioSimulation::start() {
+
+AudioSimulation::~AudioSimulation()
+{
+    Liveness::letDie();
+}
+
+void AudioSimulation::start()
+{
+    audioStrand->post(
+        std::tr1::bind(&AudioSimulation::iStart, this,livenessToken()));
+}
+
+void AudioSimulation::iStart(Liveness::Token lt)
+{
+    if (!lt) return;
+    Liveness::Lock locked(lt);
+    if (!locked)
+    {
+        AUDIO_LOG(warn,"Did not finish internal start "<<\
+            "of AudioSimulation: expired audiosim.");
+        return;
+    }
+    
     AUDIO_LOG(detailed, "Starting SDLAudio");
 
     if (SDL::InitializeSubsystem(SDL::Subsystem::Audio) != 0)
@@ -77,7 +101,23 @@ bool AudioSimulation::ready() const {
     return (mInitializedAudio && mOpenedAudio && mTransferPool);
 }
 
-void AudioSimulation::stop() {
+void AudioSimulation::stop()
+{
+    audioStrand->post(
+        std::tr1::bind(&AudioSimulation::iStop,this,livenessToken()));
+}
+
+void AudioSimulation::iStop(Liveness::Token lt)
+{
+    if (!lt) return;
+    Liveness::Lock locked(lt);
+    if (!locked)
+    {
+        AUDIO_LOG(warn,"Did not finish internal stop "<<\
+            "of AudioSimulation: expired audiosim.");
+        return;
+    }
+    
     AUDIO_LOG(detailed, "Stopping SDLAudio");
 
     mTransferPool.reset();
@@ -101,7 +141,7 @@ boost::any AudioSimulation::invoke(std::vector<boost::any>& params) {
     // Decode the command. First argument is the "function name"
     if (params.empty() || !Invokable::anyIsString(params[0]))
         return boost::any();
-
+    
     std::string name = Invokable::anyAsString(params[0]);
     AUDIO_LOG(detailed, "Invoking the function " << name);
 
@@ -110,16 +150,34 @@ boost::any AudioSimulation::invoke(std::vector<boost::any>& params) {
         if (!ready())
             return boost::any();
 
+        // URL
         if (params.size() < 2 || !Invokable::anyIsString(params[1]))
             return boost::any();
         String sound_url_str = Invokable::anyAsString(params[1]);
         Transfer::URI sound_url(sound_url_str);
         if (sound_url.empty()) return boost::any();
+        // Volume
+        float32 volume = 1.f;
+        if (params.size() >= 3 && Invokable::anyIsNumeric(params[2]))
+            volume = (float32)Invokable::anyAsNumeric(params[2]);
+        // Looping
+        bool looped = false;
+        if (params.size() >= 4 && Invokable::anyIsBoolean(params[3]))
+            looped = Invokable::anyAsBoolean(params[3]);
 
         Lock lck(mMutex);
 
         ClipHandle id = mClipHandleSource++;
         AUDIO_LOG(detailed, "Play request for " << sound_url.toString() << " assigned ID " << id);
+        // Save info immediately so we don't have to track it through download
+        // process and so we can make adjustments while it's still downloading.
+        Clip clip;
+        clip.stream.reset();
+        clip.paused = false;
+        clip.volume = volume;
+        clip.loop = looped;
+        mClips[id] = clip;
+
         DownloadTaskMap::iterator task_it = mDownloads.find(sound_url);
         // If we're already working on it, we don't need to do
         // anything.  TODO(ewencp) actually we should track the number
@@ -168,6 +226,55 @@ boost::any AudioSimulation::invoke(std::vector<boost::any>& params) {
             }
         }
     }
+    else if (name == "volume") {
+        if (params.size() < 2 || !Invokable::anyIsNumeric(params[1]))
+            return boost::any();
+        ClipHandle id = Invokable::anyAsNumeric(params[1]);
+
+        if (params.size() < 3 || !Invokable::anyIsNumeric(params[2]))
+            return boost::any();
+        float32 volume = (float32)Invokable::anyAsNumeric(params[2]);
+
+        Lock lck(mMutex);
+        if (mClips.find(id) == mClips.end()) return Invokable::asAny(false);
+        mClips[id].volume = volume;
+
+        return Invokable::asAny(true);
+    }
+    else if (name == "pause" || name == "resume") {
+        if (params.size() < 2 || !Invokable::anyIsNumeric(params[1]))
+            return boost::any();
+        ClipHandle id = Invokable::anyAsNumeric(params[1]);
+
+        bool paused = (name == "pause");
+        AUDIO_LOG(detailed, name << " request for ID " << id);
+
+        Lock lck(mMutex);
+
+        ClipMap::iterator clip_it = mClips.find(id);
+        if (clip_it != mClips.end()) {
+            clip_it->second.paused = paused;
+            return Invokable::asAny(true);
+        }
+        else {
+            return Invokable::asAny(false);
+        }
+    }
+    else if (name == "loop") {
+        if (params.size() < 2 || !Invokable::anyIsNumeric(params[1]))
+            return boost::any();
+        ClipHandle id = Invokable::anyAsNumeric(params[1]);
+
+        if (params.size() < 3 || !Invokable::anyIsBoolean(params[2]))
+            return boost::any();
+        bool looped = Invokable::anyAsBoolean(params[2]);
+
+        Lock lck(mMutex);
+        if (mClips.find(id) == mClips.end()) return Invokable::asAny(false);
+        mClips[id].loop = looped;
+
+        return Invokable::asAny(true);
+    }
     else {
         AUDIO_LOG(warn, "Function " << name << " was invoked but this function was not found.");
     }
@@ -175,7 +282,28 @@ boost::any AudioSimulation::invoke(std::vector<boost::any>& params) {
     return boost::any();
 }
 
-void AudioSimulation::handleFinishedDownload(Transfer::ChunkRequestPtr request, Transfer::DenseDataPtr response) {
+void AudioSimulation::handleFinishedDownload(
+    Transfer::ChunkRequestPtr request, Transfer::DenseDataPtr response)
+{
+    audioStrand->post(
+        std::tr1::bind(&AudioSimulation::iHandleFinishedDownload,this,
+            livenessToken(),request,response));
+}
+
+void AudioSimulation::iHandleFinishedDownload(
+    Liveness::Token lt,Transfer::ChunkRequestPtr request,
+    Transfer::DenseDataPtr response)
+{
+    if (!lt) return;
+    Liveness::Lock locked(lt);
+    if (!locked)
+    {
+        AUDIO_LOG(warn, "Aborting finished download: "<<\
+            "audio sim no longer live.");
+        return;
+    }
+
+    
     Lock lck(mMutex);
 
     const Transfer::URI& sound_url = request->getMetadata().getURI();
@@ -200,10 +328,6 @@ void AudioSimulation::handleFinishedDownload(Transfer::ChunkRequestPtr request, 
 
     AUDIO_LOG(detailed, "Finished download for audio file " << sound_url << ": " << response->size() << " bytes");
 
-    // Track whether we had sound disabled so we know whether to enable it after
-    // adding these new streams.
-    bool was_silent = mClips.empty();
-
     for(std::set<ClipHandle>::iterator id_it = waiting.begin(); id_it != waiting.end(); id_it++) {
         FFmpegMemoryProtocol* dataSource = new FFmpegMemoryProtocol(sound_url.toString(), response);
         FFmpegStreamPtr stream(FFmpegStream::construct<FFmpegStream>(static_cast<FFmpegURLProtocol*>(dataSource)));
@@ -215,14 +339,17 @@ void AudioSimulation::handleFinishedDownload(Transfer::ChunkRequestPtr request, 
             AUDIO_LOG(detailed, "Found more than one audio stream in " << sound_url << ", only playing first");
         FFmpegAudioStreamPtr audio_stream = stream->getAudioStream(0, 2);
 
-        Clip clip;
-        clip.stream = audio_stream;
-        mClips[*id_it] = clip;
+        // Might have been removed already
+        if (mClips.find(*id_it) == mClips.end()) continue;
+
+        mClips[*id_it].stream = audio_stream;
     }
 
     // Enable playback if we didn't have any active streams before
-    if (was_silent)
+    if (!mPlaying) {
         SDL_PauseAudio(0);
+        mPlaying = true;
+    }
 }
 
 void AudioSimulation::mix(uint8* raw_stream, int32 raw_len) {
@@ -242,11 +369,16 @@ void AudioSimulation::mix(uint8* raw_stream, int32 raw_len) {
             mixed[c] = 0;
 
         for(ClipMap::iterator st_it = mClips.begin(); st_it != mClips.end(); st_it++) {
+            // We might still be downloading it or it might be paused
+            if (!st_it->second.stream ||
+                st_it->second.paused)
+                continue;
+
             int16 samples[MAX_CHANNELS];
-            st_it->second.stream->samples(samples);
+            st_it->second.stream->samples(samples, st_it->second.loop);
 
             for(int c = 0; c < nchannels; c++)
-                mixed[c] += samples[c];
+                mixed[c] += samples[c] * st_it->second.volume;
         }
 
         for(int c = 0; c < nchannels; c++)
@@ -261,8 +393,10 @@ void AudioSimulation::mix(uint8* raw_stream, int32 raw_len) {
     }
 
     // Disable playback if we've run out of sounds
-    if (mClips.empty())
+    if (mClips.empty()) {
         SDL_PauseAudio(1);
+        mPlaying = false;
+    }
 }
 
 } //namespace SDL

@@ -3,7 +3,7 @@
 // be found in the LICENSE file.
 
 #include <sirikata/core/util/Platform.hpp>
-#if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS
 // Hack to disable OpenCollada's stdint.h for windows. This one should be
 // using the one added for ffmpeg.
 #define _ZZIP__STDINT_H 1
@@ -29,22 +29,7 @@ FFmpegStream::FFmpegStream(FFmpegURLProtocol* raw)
  : mData(raw),
    mFormatCtx(NULL)
 {
-    String key = FFmpegGlue::getSingleton().addProtocol(mData);
-
-    // Open video file
-    if(av_open_input_file(&mFormatCtx, key.c_str(), NULL, 0, NULL) != 0) {
-        AUDIO_LOG(error, "Failed to open " << key << " for " << mData->name());
-        return;
-    }
-
-    // Retrieve stream information
-    if(av_find_stream_info(mFormatCtx) < 0) {
-        AUDIO_LOG(error, "Couldn't find stream information for " << mData->name());
-        return;
-    }
-
-    // Dump information about file onto standard error
-    av_dump_format(mFormatCtx, 0, key.c_str(), 0);
+    initDecode();
 }
 
 uint32 FFmpegStream::numAudioStreams() {
@@ -74,13 +59,43 @@ FFmpegAudioStreamPtr FFmpegStream::getAudioStream(uint32 idx, uint8 nchannels) {
     return FFmpegAudioStreamPtr(new FFmpegAudioStream(getSharedPtr(), audioStream, nchannels));
 }
 
-FFmpegStream::~FFmpegStream() {
+void FFmpegStream::initDecode() {
+    mData->setPosition(0); // Make sure we're at the start since this can be
+                           // reused from a previous decode
+    String key = FFmpegGlue::getSingleton().addProtocol(mData);
+
+    // Open video file
+    if(av_open_input_file(&mFormatCtx, key.c_str(), NULL, 0, NULL) != 0) {
+        AUDIO_LOG(error, "Failed to open " << key << " for " << mData->name());
+        return;
+    }
+
+    // Retrieve stream information
+    if(av_find_stream_info(mFormatCtx) < 0) {
+        AUDIO_LOG(error, "Couldn't find stream information for " << mData->name());
+        return;
+    }
+
+    // Dump information about file onto standard error
+    av_dump_format(mFormatCtx, 0, key.c_str(), 0);
+}
+
+void FFmpegStream::cleanupDecode() {
     // Close the video file
     av_close_input_file(mFormatCtx);
-
     FFmpegGlue::getSingleton().removeProtocol(mData);
+}
+
+void FFmpegStream::reload() {
+    cleanupDecode();
+    initDecode();
+}
+
+FFmpegStream::~FFmpegStream() {
+    cleanupDecode();
     delete mData;
 }
+
 
 } // namespace SDL
 } // namespace Sirikata

@@ -9,6 +9,7 @@
 #include <sirikata/core/network/IOTimer.hpp>
 #include "JSSuspendable.hpp"
 #include <sirikata/core/util/Liveness.hpp>
+#include "../JSCtx.hpp"
 
 namespace Sirikata {
 
@@ -16,11 +17,12 @@ class Context;
 
 namespace JS {
 
-struct JSTimerStruct : public JSSuspendable {
+struct JSTimerStruct : public JSSuspendable,
+                       public Liveness
+{
     JSTimerStruct(EmersonScript* eobj, Duration dur, v8::Persistent<v8::Function>& callback,
-        JSContextStruct* jscont, Sirikata::Context* ctx, uint32 contID,
-        double timeRemaining, bool isSuspended, bool isCleared);
-
+        JSContextStruct* jscont, uint32 contID,
+        double timeRemaining, bool isSuspended, bool isCleared, JSCtx* mCtx);
     ~JSTimerStruct();
 
     static JSTimerStruct* decodeTimerStruct(v8::Handle<v8::Value> toDecode,String& errorMessage);
@@ -28,7 +30,8 @@ struct JSTimerStruct : public JSSuspendable {
 
     v8::Handle<v8::Value> struct_resetTimer(double timeInSecondsToRefire);
 private:
-    void evaluateCallback();
+    void evaluateCallback(Liveness::Token isAlive);
+
 public:
     virtual v8::Handle<v8::Value>suspend();
     virtual v8::Handle<v8::Value>resume();
@@ -39,9 +42,11 @@ public:
     EmersonScript* emerScript;
     v8::Persistent<v8::Function> cb;
     JSContextStruct* jsContStruct;
+    // Liveness mLiveness;
+    
 private:
-    Sirikata::Context* mContext;
-    Liveness mLiveness;
+    JSCtx* mCtx;
+
     Sirikata::Network::IOTimerPtr mDeadlineTimer;
 public:
 
@@ -59,7 +64,8 @@ public:
        contains the persistent object pointing to the timer.  The second should
        just be null.
      */
-    static void timerWeakReferenceCleanup(v8::Persistent<v8::Value> containsTimer, void* otherArg);
+    static void timerWeakReferenceCleanup(
+        v8::Persistent<v8::Value> containsTimer, void* otherArg);
 
     /**
        When no longer have a reference to the Emerson object holding this timer
@@ -81,6 +87,15 @@ public:
     void setPersistentObject(v8::Persistent<v8::Object>);
 
 private:
+
+    /**
+       Means that we're currently processing the callback of a timer.
+       Should be used to prevent invalid memory access if try to clear
+       a timer from within its own callback.  (Ie, won't delete the
+       timer if amExecuting is true.)
+     */
+    bool amExecuting;
+    
     /**
        Need to know when to clean up timer struct.  Have made Emerson objects
        that are timers weak.  This means that as soon as the objects holding
@@ -106,6 +121,17 @@ private:
      */
     v8::Persistent<v8::Object> mPersistentHandle;
 
+    void iEvaluateCallback(Liveness::Token token);
+    
+};
+
+struct JSTimerLivenessHolder
+{
+    JSTimerLivenessHolder(JSTimerStruct* jst)
+     : lt (jst->livenessToken())
+    {}
+
+    Liveness::Token lt;
 };
 
 
@@ -117,9 +143,6 @@ private:
         if (whereWriteTo == NULL) \
             return v8::ThrowException(v8::Exception::Error(v8::String::New(_errMsg.c_str(), _errMsg.length()))); \
     }
-
-
-
 
 typedef std::map<JSTimerStruct*,int>  TimerMap;
 typedef TimerMap::iterator TimerIter;

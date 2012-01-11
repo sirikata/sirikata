@@ -73,14 +73,19 @@ CoordinateSegmentationClient::CoordinateSegmentationClient(SpaceContext* ctx, co
     mSidMap(sidmap), mLeaseExpiryTime(Timer::now() + Duration::milliseconds(60000.0))
 {
   mTopLevelRegion.mBoundingBox = BoundingBox3f( Vector3f(0,0,0), Vector3f(0,0,0));
+  mCSEGHost = GetOptionValue<String>("cseg-service-host");
+  mCSEGPort = GetOptionValue<String>("cseg-service-tcp-port");
 
-  mSidMap->lookupExternal(
+  if (mSidMap != NULL) {
+    mSidMap->lookupExternal(
       mContext->id(),
       mContext->mainStrand->wrap(
           std::tr1::bind(&CoordinateSegmentationClient::handleSelfLookup, this, _1)
       )
-  );
+    );
+  }
 }
+
 
 void CoordinateSegmentationClient::handleSelfLookup(Address4 my_addr) {
     mAcceptor = boost::shared_ptr<TCPListener>(new TCPListener(*mIOService,boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), my_addr.port+10000)));
@@ -187,8 +192,7 @@ boost::shared_ptr<TCPSocket> CoordinateSegmentationClient::getLeasedSocket() {
   else {
     TCPResolver resolver(*mIOService);
 
-    TCPResolver::query query(boost::asio::ip::tcp::v4(), GetOptionValue<String>("cseg-service-host"),
-			     GetOptionValue<String>("cseg-service-tcp-port"));
+    TCPResolver::query query(boost::asio::ip::tcp::v4(), mCSEGHost, mCSEGPort);
 
     TCPResolver::iterator endpoint_iterator = resolver.resolve(query);
 
@@ -261,6 +265,8 @@ ServerID CoordinateSegmentationClient::lookup(const Vector3f& pos)  {
 
     mLookupCache.push_back( LookupCacheEntry(retval, csegMessage.lookup_response_message().server_bbox()) );
   }
+
+  std::cout << "Lookup : " << pos << " : " << retval << "\n";
 
   return retval;
 }

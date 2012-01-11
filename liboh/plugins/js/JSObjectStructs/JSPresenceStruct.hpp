@@ -10,6 +10,7 @@
 #include <sirikata/core/util/Nullable.hpp>
 #include "../JSObjects/JSObjectsUtils.hpp"
 #include "JSCapabilitiesConsts.hpp"
+#include "../JSCtx.hpp"
 
 namespace Sirikata {
 namespace JS {
@@ -89,14 +90,14 @@ struct JSPresenceStruct : public JSPositionListener,
                           public JSSuspendable
 {
     //isConnected is false using this: have no sporef.
-    JSPresenceStruct(EmersonScript* parent,v8::Handle<v8::Function> onConnected,JSContextStruct* ctx, HostedObject::PresenceToken presenceToken);
+    JSPresenceStruct(EmersonScript* parent,v8::Handle<v8::Function> onConnected,JSContextStruct* ctx, HostedObject::PresenceToken presenceToken,JSCtx*);
 
     //Already have a sporef (ie, turn an entity in the world that wasn't built
     //for scripting into one that is)
-    JSPresenceStruct(EmersonScript* parent, const SpaceObjectReference& _sporef, JSContextStruct* ctx,HostedObject::PresenceToken presenceToken);
+    JSPresenceStruct(EmersonScript* parent, const SpaceObjectReference& _sporef, JSContextStruct* ctx,HostedObject::PresenceToken presenceToken,JSCtx*);
 
     //restoration constructor
-    JSPresenceStruct(EmersonScript* parent,PresStructRestoreParams& psrp,Vector3f center, HostedObject::PresenceToken presToken,JSContextStruct* jscont, const TimedMotionVector3f& tmv, const TimedMotionQuaternion& tmq);
+    JSPresenceStruct(EmersonScript* parent,PresStructRestoreParams& psrp,Vector3f center, HostedObject::PresenceToken presToken,JSContextStruct* jscont, const TimedMotionVector3f& tmv, const TimedMotionQuaternion& tmq,JSCtx*);
 
 
     virtual void fixupSuspendable()

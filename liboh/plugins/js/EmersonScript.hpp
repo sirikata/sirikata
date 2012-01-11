@@ -58,6 +58,8 @@
 #include "JS_JSMessage.pbj.hpp"
 #include "EmersonMessagingManager.hpp"
 #include "EmersonHttpManager.hpp"
+#include <sirikata/core/util/SerializationCheck.hpp>
+#include "JSCtx.hpp"
 
 namespace Sirikata {
 namespace JS {
@@ -70,7 +72,11 @@ class EmersonScript : public JSObjectScript,
 {
 
 public:
-    EmersonScript(HostedObjectPtr ho, const String& args, const String& script, JSObjectScriptManager* jMan);
+    EmersonScript(HostedObjectPtr ho, const String& args,
+        const String& script, JSObjectScriptManager* jMan,
+        JSCtx* ctx);
+
+    
     virtual ~EmersonScript();
 
     // Sirikata::Service Interface
@@ -78,6 +84,7 @@ public:
     virtual void stop();
 
     // SessionEventListener Interface
+    //called from main strand posts to object strand.
     virtual void onConnected(SessionEventProviderPtr from, const SpaceObjectReference& name,HostedObject::PresenceToken token);
     virtual void onDisconnected(SessionEventProviderPtr from, const SpaceObjectReference& name);
 
@@ -93,14 +100,13 @@ public:
 
 
     /*
-      Returns true if decoded payload as a scripting communication message,
-      false otherwise.
-
       Payload should be able to be parsed into JS::Proctocol::JSMessage.  If it
       can be, and deserialization is successful, processes the scripting
       message. (via deserializeMsgAndDispatch.)
+      Return has no meaning.
      */
-    virtual bool handleScriptCommRead(const SpaceObjectReference& src, const SpaceObjectReference& dst, const std::string& payload);
+    virtual bool handleScriptCommRead(
+        const SpaceObjectReference& src, const SpaceObjectReference& dst, const std::string& payload);
 
 
     /**
@@ -111,6 +117,8 @@ public:
      */
     void handleScriptCommUnreliable (const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload);
 
+    boost::any invokeInvokable(std::vector<boost::any>& params,v8::Persistent<v8::Function> function_);
+    
 
     // Post this function to an IOService to add an event to be handled. Must
     // take liveness token because while waiting to be processed the object may,
@@ -298,23 +306,14 @@ public:
     virtual void postCallbackChecks();
 private:
 
+    void postDestroy(Liveness::Token alive);
+    
     // Helper for disconnections
     void unsubscribePresenceEvents(const SpaceObjectReference& name);
     // Helper for *clearing* presences (not disconnections). When the presence
     // struct is destroyed (i.e. gc, shutdown), we can then clear out references
     // to the presence's data.
     void removePresenceData(const SpaceObjectReference& sporefToDelete);
-    // Helper for disconnections, does the final callback and cleanup of the
-    // presence struct.
-    void finishOnDisconnected(const SpaceObjectReference& name);
-
-    /**
-       Wraps proxVis in an Emerson visible object and notifies shim layer that a
-       visibile is now within presence with sporef proxTo's result set.
-     */
-    void notifyProximate(JSVisibleStruct* proxVis, const SpaceObjectReference& proxTo);
-
-
 
 
     //wraps internal c++ jsvisiblestruct in a v8 object
@@ -332,7 +331,9 @@ private:
       If have any handlers that match pattern of message, dispatch their associated
       callbacks.
      */
-    bool handleScriptCommRead(const SpaceObjectReference& src, const SpaceObjectReference& dst, Sirikata::JS::Protocol::JSMessage js_msg);
+    bool handleScriptCommRead(
+        const SpaceObjectReference& src, const SpaceObjectReference& dst,
+        Sirikata::JS::Protocol::JSMessage js_msg);
 
 
     bool mHandlingEvent;
@@ -359,7 +360,9 @@ private:
        sandbox messages defined on it.  If it does, then call it with the
        deserialized message object in it.
      */
-    void processSandboxMessage(const String& msgToSend, uint32 senderID, uint32 receiverID);
+    void processSandboxMessage(
+        const String& msgToSend, uint32 senderID, uint32 receiverID,
+        Liveness::Token alive);
 
 
     /**
@@ -373,8 +376,6 @@ private:
     //that matches sporef.
     JSPresenceStruct* findPresence(const SpaceObjectReference& sporef);
 
-    //debugging code to output the sporefs of all the presences that I have in mPresences
-    void printMPresences();
 
     typedef std::map<SpaceObjectReference, ODP::Port*> MessagingPortMap;
     MessagingPortMap mMessagingPortMap;
@@ -408,7 +409,89 @@ private:
     std::vector<JSContextStruct*> contextsToClear;
 
     EmersonHttpPtr emHttpPtr;
+
+
+    // Called within mStrand.
+    void iOnDisconnected(
+        SessionEventProviderPtr from, const SpaceObjectReference& name,
+        Liveness::Token alive);
+    void eCreateEntityFinish(ObjectHost* oh,EntityCreateInfo& eci);
+
+    //When we initiate stop of object from killEntity, we do not actually
+    //want to call letDie in iStop.  This is because we've already locked
+    //liveness of Script.  If letDie is false, then, we don't call letDie until
+    //we get to destructor.
+    void iStop(bool letDie);
+
+    void iHandleScriptCommRead(
+        const SpaceObjectReference& src, const SpaceObjectReference& dst,
+        const String& payload,Liveness::Token alive);
+
+    void iHandleScriptCommUnreliable(
+        const ODP::Endpoint& src, const ODP::Endpoint& dst,
+        MemoryReference payload,Liveness::Token alive);
+
+    void mainStrandCompletePresConnect(Location newLoc,BoundingSphere3f bs,
+        PresStructRestoreParams psrp,HostedObject::PresenceToken presToke,
+        Liveness::Token alive);
+
+    void iNotifyProximateGone(
+        ProxyObjectPtr proximateObject, const SpaceObjectReference& querier,
+        Liveness::Token alive);
+
+    void iNotifyProximateHelper(
+        JSVisibleStruct* proxVis, const SpaceObjectReference& proxTo);
+
+    void  iNotifyProximate(
+        ProxyObjectPtr proximateObject, const SpaceObjectReference& querier,
+        Liveness::Token alive);
+
+
+    void eSetQueryFunction(
+        const SpaceObjectReference sporef, const SolidAngle& sa,
+        const uint32 max_count,Liveness::Token alive);
+    
+    void eSetPhysicsFunction(
+        const SpaceObjectReference sporef, const String& newPhyString,
+        Liveness::Token alive);
+    
+    void eSetVisualFunction(
+        const SpaceObjectReference sporef, const std::string& newMeshString,
+        Liveness::Token alive);    
+
+    void eSetVisualScaleFunction(
+        const SpaceObjectReference sporef, float newscale,
+        Liveness::Token alive);
+
+    void eSetOrientationFunction(
+        const SpaceObjectReference sporef, const Quaternion& quat,
+        Liveness::Token alive);
+
+    void eSetVelocityFunction(
+        const SpaceObjectReference sporef, const Vector3f& velVec,
+        Liveness::Token alive);
+
+    void eSetPositionFunction(
+        const SpaceObjectReference sporef, const Vector3f& posVec,
+        Liveness::Token alive);
+
+    void eSetOrientationVelFunction(
+        const SpaceObjectReference sporef,const Quaternion& quat,
+        Liveness::Token alive);
+
+    void iOnConnected(SessionEventProviderPtr from,
+        const SpaceObjectReference& name, HostedObject::PresenceToken token,
+        bool duringInit,Liveness::Token alive);
+
+    void iInvokeInvokable(
+        std::vector<boost::any>& params,v8::Persistent<v8::Function> function_,
+        Liveness::Token alive);
+
 };
+
+#define EMERSCRIPT_SERIAL_CHECK()\
+    Sirikata::SerializationCheck::Scoped sc (JSObjectScript::mCtx->serializationCheck());
+
 
 } // namespace JS
 } // namespace Sirikata

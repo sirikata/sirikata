@@ -1,5 +1,5 @@
-/*  Sirikata Graphical Object Host
- *  OgrePlugin.cpp
+/*  Sirikata Object Host -- Proxy Creation and Destruction manager
+ *  SimulationFactory.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
@@ -30,38 +30,39 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sirikata/proxyobject/Platform.hpp>
-#include <sirikata/proxyobject/SimulationFactory.hpp>
-#include "OgreSystem.hpp"
-static int core_plugin_refcount = 0;
+#ifndef _SIRIKATA_SIMULATION_FACTORY_
+#define _SIRIKATA_SIMULATION_FACTORY_
 
-SIRIKATA_PLUGIN_EXPORT_C void init() {
-    using namespace Sirikata;
-    using namespace Sirikata::Graphics;
-    if (core_plugin_refcount==0)
-        SimulationFactory::getSingleton().registerConstructor("ogregraphics",
-                                                            &OgreSystem::create,
-                                                            true);
-    core_plugin_refcount++;
-}
+#include <sirikata/oh/Platform.hpp>
+#include <sirikata/proxyobject/Defs.hpp>
+#include <sirikata/oh/Simulation.hpp>
+#include <sirikata/core/service/Context.hpp>
+#include <sirikata/oh/ConnectionEventListener.hpp>
 
-SIRIKATA_PLUGIN_EXPORT_C int increfcount() {
-    return ++core_plugin_refcount;
-}
-SIRIKATA_PLUGIN_EXPORT_C int decrefcount() {
-    assert(core_plugin_refcount>0);
-    return --core_plugin_refcount;
-}
+namespace Sirikata{
 
-SIRIKATA_PLUGIN_EXPORT_C void destroy() {
-    using namespace Sirikata;
-    if (core_plugin_refcount==0)
-        SimulationFactory::getSingleton().unregisterConstructor("ogregraphics");
-}
+class HostedObject;
+typedef std::tr1::shared_ptr<HostedObject> HostedObjectPtr;
 
-SIRIKATA_PLUGIN_EXPORT_C const char* name() {
-    return "ogregraphics";
+// Note that we provide a ConnectionEventProvider because we're in
+// libproxyobject so we can't just provide the ObjectHostContext, which would
+// give access to the ObjectHost if it was needed. Ideally we wouldn't pass this
+// parameter since some Simulations don't care about it.
+class SIRIKATA_OH_EXPORT SimulationFactory
+    : public AutoSingleton<SimulationFactory>,
+      public Factory6<Simulation*,
+                      Context*,
+                      ConnectionEventProvider*,
+                      HostedObjectPtr, // Object simulation is working within
+                      const SpaceObjectReference&, // Presence the simulation is working within
+                      const String&, //options string for the graphics system
+                      Network::IOStrandPtr>
+{
+public:
+    static SimulationFactory&getSingleton();
+    static void destroy();
+};
+
+
 }
-SIRIKATA_PLUGIN_EXPORT_C int refcount() {
-    return core_plugin_refcount;
-}
+#endif

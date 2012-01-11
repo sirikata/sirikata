@@ -43,23 +43,31 @@ std.simpleStorage.setScript(
         system.require('std/script/scriptable.em');
         system.require('std/movement/movable.em');
         system.require('std/movement/animatable.em');
-        system.require('std/graphics/default.em');
+        system.require('std/client/default.em');
         
         scriptable = new std.script.Scriptable();
         movable = new std.movement.Movable(true); // Self only
         animatable = new std.movement.Animatable();
+
         
         // For convenience in debugging, figuring out who's trying to
         // contact you, etc, while we don't have a UI for it, print
         // out any requests that ask you to
         function(msg, sender) { system.prettyprint('Message from ', sender.toString(), ': ', msg); } << [{'printrequest'::}];
 
+                
         var init = function() {
-            simulator = new std.graphics.DefaultGraphics(system.self, 'ogregraphics');
+            simulator = new std.client.Default(system.self);
         };
 
         if (system.self)
         {
+            //already have a connected presence, use it.
+            init();
+        }
+        else if (system.presences.length != 0)
+        {
+            system.changeSelf(system.presences[0]);
             //already have a connected presence, use it.
             init();
         }
@@ -73,6 +81,5 @@ std.simpleStorage.setScript(
                 }
             );
         }
+    }, true);
 
-        
-    }, false);

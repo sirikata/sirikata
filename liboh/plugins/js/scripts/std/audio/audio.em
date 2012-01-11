@@ -25,12 +25,12 @@ function() {
     /** Allocate a clip using the given URL. This doesn't play the
      *  clip, just allocates the object that allows you to control it.
      */
-    ns.Audio.prototype.clip = function(url) {
-        return new ns.Clip(this, url);
+    ns.Audio.prototype.clip = function(url, volume, loop) {
+        return new ns.Clip(this, url, volume, loop);
     };
 
-    ns.Audio.prototype.play = function(url) {
-        var clip = this.clip(url);
+    ns.Audio.prototype.play = function(url, volume, loop) {
+        var clip = this.clip(url, volume, loop);
         clip.play();
         return clip;
     };

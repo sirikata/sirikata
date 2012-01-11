@@ -60,6 +60,11 @@ std.simpleStorage.setScript(
         };
         if (system.self)
             init();
+        else if (system.presences.length != 0)
+        {
+            system.changeSelf(system.presences[0]);
+            init();
+        }
 
         system.onPresenceConnected(function(pres,toClear) { init(toClear); });
-    },false);
+    },true);

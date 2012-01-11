@@ -97,8 +97,9 @@ void AssetDownloadTask::cancelNoLock() {
 
 void AssetDownloadTask::downloadAssetFile() {
     assert( !mAssetURI.empty() );
-
+    
     boost::mutex::scoped_lock lok(mDependentDownloadMutex);
+    
     ResourceDownloadTaskPtr dl = ResourceDownloadTask::construct(
         mAssetURI, mScene->transferPool(),
         mPriority,
@@ -109,6 +110,8 @@ void AssetDownloadTask::downloadAssetFile() {
 }
 
 void AssetDownloadTask::weakAssetFileDownloaded(std::tr1::weak_ptr<AssetDownloadTask> thus, std::tr1::shared_ptr<ChunkRequest> request, std::tr1::shared_ptr<const DenseData> response) {
+
+    
     std::tr1::shared_ptr<AssetDownloadTask> locked(thus.lock());
     if (locked){
         locked->assetFileDownloaded(request,response);
@@ -117,7 +120,7 @@ void AssetDownloadTask::weakAssetFileDownloaded(std::tr1::weak_ptr<AssetDownload
 
 void AssetDownloadTask::assetFileDownloaded(std::tr1::shared_ptr<ChunkRequest> request, std::tr1::shared_ptr<const DenseData> response) {
     boost::mutex::scoped_lock lok(mDependentDownloadMutex);
-
+    
     // Clear from the active download list
     assert(mActiveDownloads.size() == 1);
     mActiveDownloads.erase(mAssetURI);
@@ -127,7 +130,7 @@ void AssetDownloadTask::assetFileDownloaded(std::tr1::shared_ptr<ChunkRequest> r
         failDownload();
         return;
     }
-
+    
     // FIXME here we could have another callback which lets them get
     // at the hash to try to use an existing copy. Even with the
     // eventual centralized loading we want, this may still be

@@ -81,8 +81,9 @@ bool JSProxyData::visibleToPresence() const {
 
 
 
-JSVisibleManager::JSVisibleManager(EmersonScript* eScript)
- : emerScript(eScript)
+JSVisibleManager::JSVisibleManager(EmersonScript* eScript,JSCtx* ctx)
+ : emerScript(eScript),
+   mCtx(ctx)
 {
 }
 
@@ -91,7 +92,7 @@ JSVisibleManager::~JSVisibleManager()
     // Stop tracking all known objects to clear out all listeners and state.
     while(!mTrackedObjects.empty()) {
         ProxyObjectPtr toFakeDestroy = *(mTrackedObjects.begin());
-        onDestroyProxy(toFakeDestroy);
+        iOnDestroyProxy(toFakeDestroy);
     }
 
     // Some proxies may not have gotten cleared out if there are still
@@ -109,7 +110,7 @@ JSVisibleManager::~JSVisibleManager()
 
 JSVisibleStruct* JSVisibleManager::createVisStruct(const SpaceObjectReference& whatsVisible, JSProxyPtr addParams) {
     JSProxyPtr toCreateFrom = getOrCreateProxyPtr(whatsVisible, addParams);
-    return new JSVisibleStruct(toCreateFrom);
+    return new JSVisibleStruct(toCreateFrom,mCtx);
 }
 
 JSProxyPtr JSVisibleManager::getOrCreateProxyPtr(const SpaceObjectReference& whatsVisible, JSProxyPtr addParams) {
@@ -161,7 +162,15 @@ void JSVisibleManager::removeProxyData(const SpaceObjectReference& sporef) {
 
 
 
-void JSVisibleManager::onCreateProxy(ProxyObjectPtr p) {
+void JSVisibleManager::onCreateProxy(ProxyObjectPtr p)
+{
+    mCtx->objStrand->post(
+        std::tr1::bind(&JSVisibleManager::iOnCreateProxy,this,
+            p));
+}
+
+void JSVisibleManager::iOnCreateProxy(ProxyObjectPtr p)
+{
     JSProxyPtr data = getOrCreateProxyPtr(p);
     data->incref(data);
     p->PositionProvider::addListener(this);
@@ -170,6 +179,13 @@ void JSVisibleManager::onCreateProxy(ProxyObjectPtr p) {
 }
 
 void JSVisibleManager::onDestroyProxy(ProxyObjectPtr p)
+{
+    mCtx->objStrand->post(
+        std::tr1::bind(&JSVisibleManager::iOnDestroyProxy,this,
+            p));
+}
+
+void JSVisibleManager::iOnDestroyProxy(ProxyObjectPtr p)
 {
     JSProxyPtr data = getOrCreateProxyPtr(p);
     data->decref();
@@ -180,7 +196,21 @@ void JSVisibleManager::onDestroyProxy(ProxyObjectPtr p)
     mTrackedObjects.erase(p);
 }
 
-void JSVisibleManager::updateLocation (ProxyObjectPtr proxy, const TimedMotionVector3f &newLocation, const TimedMotionQuaternion& newOrient, const BoundingSphere3f& newBounds, const SpaceObjectReference& sporef)
+void JSVisibleManager::updateLocation (
+    ProxyObjectPtr proxy, const TimedMotionVector3f &newLocation,
+    const TimedMotionQuaternion& newOrient, const BoundingSphere3f& newBounds,
+    const SpaceObjectReference& sporef)
+{
+    mCtx->objStrand->post(
+        std::tr1::bind(&JSVisibleManager::iUpdateLocation,this,
+            proxy,newLocation,newOrient,newBounds,sporef));
+}
+
+
+void JSVisibleManager::iUpdateLocation (
+    ProxyObjectPtr proxy, const TimedMotionVector3f &newLocation,
+    const TimedMotionQuaternion& newOrient, const BoundingSphere3f& newBounds,
+    const SpaceObjectReference& sporef)
 {
     JSProxyPtr data = getOrCreateProxyPtr(sporef, JSProxyPtr());
     data->mLocation = newLocation;
@@ -188,24 +218,55 @@ void JSVisibleManager::updateLocation (ProxyObjectPtr proxy, const TimedMotionVe
     data->mBounds = newBounds;
 }
 
-void JSVisibleManager::onSetMesh (ProxyObjectPtr proxy, Transfer::URI const& newMesh,const SpaceObjectReference& sporef)
+
+void JSVisibleManager::onSetMesh (
+    ProxyObjectPtr proxy, Transfer::URI const& newMesh,
+    const SpaceObjectReference& sporef)
+{
+    mCtx->objStrand->post(
+        std::tr1::bind(&JSVisibleManager::iOnSetMesh,this,
+            proxy,newMesh,sporef));
+}
+
+void JSVisibleManager::iOnSetMesh (
+    ProxyObjectPtr proxy, Transfer::URI const& newMesh,
+    const SpaceObjectReference& sporef)
 {
     JSProxyPtr data = getOrCreateProxyPtr(sporef, JSProxyPtr());
     data->mMesh = newMesh.toString();
 }
 
-void JSVisibleManager::onSetScale (ProxyObjectPtr proxy, float32 newScale, const SpaceObjectReference& sporef)
+void JSVisibleManager::onSetScale (
+    ProxyObjectPtr proxy, float32 newScale, const SpaceObjectReference& sporef)
+{
+    mCtx->objStrand->post(
+        std::tr1::bind(&JSVisibleManager::iOnSetScale,this,
+            proxy,newScale,sporef));
+}
+
+void JSVisibleManager::iOnSetScale(
+    ProxyObjectPtr proxy, float32 newScale, const SpaceObjectReference& sporef)
 {
     JSProxyPtr data = getOrCreateProxyPtr(sporef, JSProxyPtr());
     data->mBounds = BoundingSphere3f(data->mBounds.center(), newScale);
 }
 
-void JSVisibleManager::onSetPhysics (ProxyObjectPtr proxy, const String& newphy,const SpaceObjectReference& sporef)
+void JSVisibleManager::onSetPhysics (
+    ProxyObjectPtr proxy, const String& newphy,
+    const SpaceObjectReference& sporef)
+{
+    mCtx->objStrand->post(
+        std::tr1::bind(&JSVisibleManager::iOnSetPhysics,this,
+            proxy,newphy,sporef));
+}
+
+void JSVisibleManager::iOnSetPhysics (
+    ProxyObjectPtr proxy, const String& newphy,
+    const SpaceObjectReference& sporef)
 {
     JSProxyPtr data = getOrCreateProxyPtr(sporef, JSProxyPtr());
     data->mPhysics = newphy;
 }
-
 
 
 bool JSVisibleManager::isVisible(const SpaceObjectReference& sporef)

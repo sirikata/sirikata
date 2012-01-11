@@ -108,16 +108,6 @@ void LocationService::newSession(ObjectSession* session) {
 
     SpaceObjectReference sourceObject = conn->remoteEndPoint().endPoint;
 
-    // Datagram updates
-    conn->registerReadDatagramCallback( OBJECT_PORT_LOCATION,
-        std::tr1::bind(
-            &LocationService::handleLocationUpdateDatagram, this,
-            sourceObject.object().getAsUUID(),
-            std::tr1::placeholders::_1,std::tr1::placeholders::_2
-        )
-    );
-
-    // SST updates
     strm->listenSubstream(OBJECT_PORT_LOCATION,
         std::tr1::bind(
             &LocationService::handleLocationUpdateSubstream, this,
@@ -126,12 +116,6 @@ void LocationService::newSession(ObjectSession* session) {
         )
     );
 
-}
-
-void LocationService::handleLocationUpdateDatagram(UUID source, void* buffer, uint32 length) {
-    // We need this indirection because std::tr1::bind on windows
-    // doesn't like the return value.
-    locationUpdate(source, buffer, length);
 }
 
 void LocationService::handleLocationUpdateSubstream(const UUID& source, int err, SSTStreamPtr s) {
@@ -147,6 +131,21 @@ void LocationService::handleLocationUpdateSubstream(const UUID& source, int err,
 void LocationService::handleLocationUpdateSubstreamRead(const UUID& source, SSTStreamPtr s, std::stringstream* prevdata, uint8* buffer, int length) {
     prevdata->write((const char*)buffer, length);
     String payload(prevdata->str());
+#ifdef SIRIKATA_SPACE_DELAY_APPLY_LOC_UPDATE
+    static Duration delay = Duration::seconds(SIRIKATA_SPACE_DELAY_APPLY_LOC_UPDATE);
+    mContext->mainStrand->post(
+        delay,
+        std::tr1::bind(
+            &LocationService::tryHandleLocationUpdate, this,
+            source, s, payload, prevdata
+        )
+    );
+#else
+    tryHandleLocationUpdate(source, s, payload, prevdata);
+#endif
+}
+
+void LocationService::tryHandleLocationUpdate(const UUID& source, SSTStreamPtr s, const String& payload, std::stringstream* prevdata) {
     if (locationUpdate(source, (void*)payload.c_str(), payload.size())) {
         // FIXME we should be getting a callback on stream close instead of
         // relying on this parsing as an indicator

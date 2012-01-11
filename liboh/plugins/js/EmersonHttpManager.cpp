@@ -10,7 +10,7 @@
 namespace Sirikata {
 namespace JS {
 
-EmersonHttpManager::EmersonHttpManager(Sirikata::Context* ctx)
+EmersonHttpManager::EmersonHttpManager(JSCtx* ctx)
  : SelfWeakPtr<EmersonHttpManager>(),
    currentToken(0),
    mContext(ctx)
@@ -89,7 +89,17 @@ void EmersonHttpManager::receiveHttpResponse(EmersonHttpToken respToken,HttpResp
         JSLOG(warn, "Received HTTP response after shutdown request, ignoring...");
         return;
     }
-    mContext->mainStrand->post(std::tr1::bind(&EmersonHttpManager::postReceiveResp, this, respToken,hrp, error, boost_error));
+
+    //require to check if initialized because http code is on separate strand
+    //from main or object.  During initialization (including initial shim/file
+    //import), on main strand.  If that code made an http request (processed on
+    //http strand) that finished before initial import was over, should not post
+    //it back to the object strand.  Should instead re-post and try again.
+    while(!mContext->initialized())
+    {    }
+    
+    mContext->objStrand->post(
+        std::tr1::bind(&EmersonHttpManager::postReceiveResp, this, respToken,hrp, error, boost_error));
 }
 
 void EmersonHttpManager::debugPrintContextMap()
@@ -116,6 +126,8 @@ void EmersonHttpManager::debugPrintTokenMap()
     std::cout<<"\n\n";
 }
 
+
+//should be called from within mStrand
 void EmersonHttpManager::postReceiveResp(EmersonHttpToken respToken,HttpRespPtr hrp,Transfer::HttpManager::ERR_TYPE error,const boost::system::error_code& boost_error)
 {
 

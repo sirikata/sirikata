@@ -3,7 +3,7 @@
 // be found in the LICENSE file.
 
 #include <sirikata/core/util/Platform.hpp>
-#if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS
 // Hack to disable OpenCollada's stdint.h for windows. This one should be
 // using the one added for ffmpeg.
 #define _ZZIP__STDINT_H 1
@@ -47,6 +47,26 @@ FFmpegAudioStream::FFmpegAudioStream(FFmpegStreamPtr parent, uint32 stream_idx, 
   mConvertedOffset(0),
   mConvertedSize(0)
 {
+    openCodec();
+}
+
+FFmpegAudioStream::~FFmpegAudioStream() {
+    if (mConverter != NULL) {
+        delete mConverter;
+        mConverter = NULL;
+    }
+
+    closeCodec();
+
+    delete[] mDecodedData;
+    delete[] mConvertedData;
+}
+
+bool FFmpegAudioStream::finished() const {
+    return mFinished;
+}
+
+bool FFmpegAudioStream::openCodec() {
     assert(mParent);
     assert(
         mParent->mFormatCtx->nb_streams > mStreamIndex &&
@@ -59,44 +79,49 @@ FFmpegAudioStream::FFmpegAudioStream(FFmpegStreamPtr parent, uint32 stream_idx, 
     mCodec = avcodec_find_decoder(mCodecCtx->codec_id);
     if(mCodec == NULL) {
         AUDIO_LOG(error, "Unsupported codec for " << mParent->mData->name());
-        return;
+        return false;
     }
+
     // Open codec
     if(avcodec_open(mCodecCtx, mCodec) < 0) {
         AUDIO_LOG(error, "Couldn't open codec for " << mParent->mData->name());
-        return;
+        return false;
     }
+    return true;
 }
 
-FFmpegAudioStream::~FFmpegAudioStream() {
-    if (mConverter != NULL) {
-        delete mConverter;
-        mConverter = NULL;
-    }
-
+void FFmpegAudioStream::closeCodec() {
     // Close the codec
     if (mCodecCtx != NULL) {
         avcodec_close(mCodecCtx);
         mCodecCtx = NULL;
     }
-
-    delete[] mDecodedData;
-    delete[] mConvertedData;
 }
 
-bool FFmpegAudioStream::finished() const {
-    return mFinished;
-}
 
-AVPacket* FFmpegAudioStream::getNextPacket() {
+AVPacket* FFmpegAudioStream::getNextPacket(bool loop) {
     // FIXME reading frames in the audio stream instead of in the parent means
     // we can only decode one stream from a parent stream at a time
     AVPacket packet;
     while(true) {
         int32 res = av_read_frame(mParent->mFormatCtx, &packet);
         if (res < 0) {
-            mFinished = true;
-            return NULL;
+            AUDIO_LOG(insane, "Finished decoding clip");
+            // We ran out of data. In the case of looping we need to
+            // reinitialize from the beginning to start over
+            if (loop) {
+                AUDIO_LOG(insane, "Reinitializing decoding for loop");
+                closeCodec();
+                mParent->reload();
+                openCodec();
+                continue;
+            }
+            else {
+                // Otherwise, the clip is done.
+                AUDIO_LOG(insane, "Marking clip as finished");
+                mFinished = true;
+                return NULL;
+            }
         }
 
         if (packet.stream_index == mStreamIndex) {
@@ -115,10 +140,10 @@ AVPacket* FFmpegAudioStream::getNextPacket() {
     return NULL;
 }
 
-void FFmpegAudioStream::decodeSome() {
+void FFmpegAudioStream::decodeSome(bool loop) {
     // Grab a packet if we need one
     if (mCurrentPacket == NULL) {
-        mCurrentPacket = getNextPacket();
+        mCurrentPacket = getNextPacket(loop);
         if (mCurrentPacket == NULL)
             return;
         mCurrentPacketOffset = 0;
@@ -242,10 +267,10 @@ void FFmpegAudioStream::convertFormat(int decoded_size) {
     mConvertedSize = decoded_size * mConverter->len_mult / sizeof(uint16);
 }
 
-void FFmpegAudioStream::samples(int16* samples_out) {
+void FFmpegAudioStream::samples(int16* samples_out, bool loop) {
     // Decode more if we need to
     while (!finished() && mConvertedOffset >= mConvertedSize)
-        decodeSome();
+        decodeSome(loop);
 
     // Silence if we finished the decode
     if (finished()) {

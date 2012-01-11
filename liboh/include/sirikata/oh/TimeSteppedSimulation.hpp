@@ -33,8 +33,8 @@
 #ifndef _SIRIKATA_TIME_STEPPED_SIMULATION_HPP_
 #define _SIRIKATA_TIME_STEPPED_SIMULATION_HPP_
 
-#include <sirikata/proxyobject/Platform.hpp>
-#include <sirikata/proxyobject/Simulation.hpp>
+#include <sirikata/oh/Platform.hpp>
+#include <sirikata/oh/Simulation.hpp>
 #include <sirikata/core/service/Poller.hpp>
 #include <sirikata/core/service/Context.hpp>
 #include <sirikata/core/service/TimeProfiler.hpp>
@@ -48,7 +48,9 @@ namespace Sirikata {
 // implementation.
 class TimeSteppedSimulation : public Simulation, public Poller {
 public:
-    TimeSteppedSimulation(Context* ctx, const Duration& rate, const String& name, bool accurate=false)
+    TimeSteppedSimulation(
+        Context* ctx, const Duration& rate, const String& name,
+        Network::IOStrandPtr strand, bool accurate=false)
      : Poller(ctx->mainStrand, std::tr1::bind(&TimeSteppedSimulation::indirectPoll, this), rate, accurate),
        mProfiler(NULL)
     {

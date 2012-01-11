@@ -18,8 +18,8 @@ namespace JS {
 //this constructor is called when we ask the space to create a presence for us.
 //we give the space the token presenceToken, which it ships back when connection
 //is completed.
-JSPresenceStruct::JSPresenceStruct(EmersonScript* parent, v8::Handle<v8::Function> connectedCallback, JSContextStruct* ctx, HostedObject::PresenceToken presenceToken)
- : JSPositionListener(JSProxyPtr(new JSProxyData())),
+JSPresenceStruct::JSPresenceStruct(EmersonScript* parent, v8::Handle<v8::Function> connectedCallback, JSContextStruct* ctx, HostedObject::PresenceToken presenceToken, JSCtx* jsctx)
+ : JSPositionListener(JSProxyPtr(new JSProxyData()),jsctx),
    JSSuspendable(),
    mOnConnectedCallback(v8::Persistent<v8::Function>::New(connectedCallback)),
    mParent(parent),
@@ -38,8 +38,8 @@ JSPresenceStruct::JSPresenceStruct(EmersonScript* parent, v8::Handle<v8::Functio
 
 //use this constructor if we already have a presence that is connected to the
 //space with spaceObjectRecference _sporef
-JSPresenceStruct::JSPresenceStruct(EmersonScript* parent, const SpaceObjectReference& _sporef, JSContextStruct* ctx,HostedObject::PresenceToken presenceToken)
- : JSPositionListener(parent->getOrCreateProxyPtr(_sporef)),
+JSPresenceStruct::JSPresenceStruct(EmersonScript* parent, const SpaceObjectReference& _sporef, JSContextStruct* ctx,HostedObject::PresenceToken presenceToken, JSCtx* jsctx)
+ : JSPositionListener(parent->getOrCreateProxyPtr(_sporef),jsctx),
    JSSuspendable(),
    mParent(parent),
    mContID(ctx->getContextID()),
@@ -56,8 +56,8 @@ JSPresenceStruct::JSPresenceStruct(EmersonScript* parent, const SpaceObjectRefer
 }
 
 //use this constructor when we are restoring a presence.
-JSPresenceStruct::JSPresenceStruct(EmersonScript* parent, PresStructRestoreParams& psrp, Vector3f center, HostedObject::PresenceToken presToken,JSContextStruct* jscont, const TimedMotionVector3f& tmv, const TimedMotionQuaternion& tmq)
- : JSPositionListener(parent->getOrCreateProxyPtr(psrp.sporef)),
+JSPresenceStruct::JSPresenceStruct(EmersonScript* parent, PresStructRestoreParams& psrp, Vector3f center, HostedObject::PresenceToken presToken,JSContextStruct* jscont, const TimedMotionVector3f& tmv, const TimedMotionQuaternion& tmq,JSCtx* jsctx)
+ : JSPositionListener(parent->getOrCreateProxyPtr(psrp.sporef),jsctx),
    JSSuspendable(),
    mParent(parent),
    isConnected(false),
@@ -440,12 +440,15 @@ v8::Local<v8::Object>  JSPresenceStruct::toVisible()
   GIANT FIXME on this entire function.  Likely garbage collection is incorrect.
   Doing very little through jsobjscript directly, etc.
  */
-v8::Handle<v8::Value>JSPresenceStruct::runSimulation(String simname)
+v8::Handle<v8::Value> JSPresenceStruct::runSimulation(String simname)
 {
     v8::HandleScope scope;
     INLINE_CHECK_CAPABILITY_ERROR(Capabilities::GUI, runSimulation);
 
     JSInvokableObject::JSInvokableObjectInt* invokableObj = mParent->runSimulation(getSporef(),simname);
+    if (invokableObj == NULL)
+        return scope.Close(v8::Undefined());
+
     v8::Local<v8::Object> tmpObj = mParent->manager()->mInvokableObjectTemplate->NewInstance();
     tmpObj->SetInternalField(JSSIMOBJECT_JSOBJSCRIPT_FIELD,External::New(mParent));
     tmpObj->SetInternalField(JSSIMOBJECT_SIMULATION_FIELD,External::New(invokableObj));

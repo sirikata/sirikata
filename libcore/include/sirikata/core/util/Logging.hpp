@@ -93,7 +93,7 @@ SIRIKATA_FUNCTION_EXPORT void finishLog();
 
 #define SILOG(module,lvl,value) SILOGBARE(module,lvl, "[" << Sirikata::Logging::LogModuleString(#module) << "] " << Sirikata::Logging::LogLevelString(Sirikata::Logging::lvl, #lvl) << ": " << value)
 
-#if SIRIKATA_PLATFORM == PLATFORM_LINUX
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_LINUX
 // FIXME only works on GCC
 #define NOT_IMPLEMENTED_MSG (Sirikata::String("Not implemented reached in ") + Sirikata::String(__PRETTY_FUNCTION__))
 #else
@@ -103,7 +103,7 @@ SIRIKATA_FUNCTION_EXPORT void finishLog();
 #define NOT_IMPLEMENTED(module) SILOG(module,error,NOT_IMPLEMENTED_MSG)
 
 
-#if SIRIKATA_PLATFORM == PLATFORM_LINUX
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_LINUX
 // FIXME only works on GCC
 #define DEPRECATED_MSG (Sirikata::String("DEPRECATED reached in ") + Sirikata::String(__PRETTY_FUNCTION__))
 #else

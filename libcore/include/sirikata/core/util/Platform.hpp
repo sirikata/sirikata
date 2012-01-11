@@ -34,9 +34,9 @@
 #define _SIRIKATA_PLATFORM_HPP_
 
 
-#define PLATFORM_WINDOWS 0
-#define PLATFORM_LINUX   1
-#define PLATFORM_MAC     2
+#define SIRIKATA_PLATFORM_WINDOWS 0
+#define SIRIKATA_PLATFORM_LINUX   1
+#define SIRIKATA_PLATFORM_MAC     2
 
 
 #if defined(__WIN32__) || defined(_WIN32)
@@ -46,14 +46,14 @@
 #pragma warning (disable: 4661)
 //disable non dll-interface class used as base for dll-interface class when deriving from singleton
 #pragma warning (disable : 4275)
-#  define SIRIKATA_PLATFORM PLATFORM_WINDOWS
+#  define SIRIKATA_PLATFORM SIRIKATA_PLATFORM_WINDOWS
 #elif defined(__APPLE_CC__) || defined(__APPLE__)
-#  define SIRIKATA_PLATFORM PLATFORM_MAC
+#  define SIRIKATA_PLATFORM SIRIKATA_PLATFORM_MAC
 #  ifndef __MACOSX__
 #    define __MACOSX__
 #  endif
 #else
-#  define SIRIKATA_PLATFORM PLATFORM_LINUX
+#  define SIRIKATA_PLATFORM SIRIKATA_PLATFORM_LINUX
 #endif
 
 #ifdef SIRIKATA_DEBUG_BUILD
@@ -63,7 +63,7 @@
 #endif
 
 #ifndef SIRIKATA_EXPORT
-# if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+# if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS
 #   if defined(STATIC_LINKED)
 #     define SIRIKATA_EXPORT
 #   else
@@ -90,7 +90,7 @@
 
 
 #ifndef SIRIKATA_FUNCTION_EXPORT
-# if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+# if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS
 #   if defined(STATIC_LINKED)
 #     define SIRIKATA_FUNCTION_EXPORT
 #   else
@@ -176,7 +176,7 @@
 # endif
 #endif
 
-#if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
@@ -235,7 +235,7 @@ namespace Sirikata {
 
 // numeric typedefs to get standardized types
 typedef unsigned char uchar;
-#if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif

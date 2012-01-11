@@ -39,7 +39,7 @@ Liveness::Token::Token(InternalToken t)
 {}
 
 Liveness::Lock::Lock(InternalToken t)
- : mData(t)
+ : mData(t.lock())
 {}
 
 Liveness::Lock::Lock(const Token& t)

@@ -9,6 +9,8 @@
 #include <sirikata/core/transfer/HttpManager.hpp>
 #include <v8.h>
 #include <sirikata/core/util/SelfWeakPtr.hpp>
+#include <sirikata/core/network/IOStrandImpl.hpp>
+#include "JSCtx.hpp"
 
 namespace Sirikata {
 
@@ -28,7 +30,7 @@ class EmersonHttpManager : public SelfWeakPtr<EmersonHttpManager>
 public:
     typedef uint32 EmersonHttpToken;
 
-    EmersonHttpManager(Sirikata::Context* ctx);
+    EmersonHttpManager(JSCtx* ctx);
     ~EmersonHttpManager();
 
     typedef std::tr1::shared_ptr<Transfer::HttpManager::HttpResponse> HttpRespPtr;
@@ -59,7 +61,9 @@ public:
        Returns the token associated with the request: in the future, may allow a
        user him/herself, to cancel an http request.
      */
-    EmersonHttpToken makeRequest(Sirikata::Network::Address addr,     Transfer::HttpManager::HTTP_METHOD method, std::string req,v8::Persistent<v8::Function> cb, JSContextStruct* jscont);
+    EmersonHttpToken makeRequest(
+        Sirikata::Network::Address addr,Transfer::HttpManager::HTTP_METHOD method,
+        std::string req,v8::Persistent<v8::Function> cb, JSContextStruct* jscont);
 
 
 private:
@@ -121,7 +125,7 @@ private:
     //If have outstanding requests, this pointer will have a pointer to self.
     //If don't, then it has an empty ptr.  Allows this to garbage collect properly
     EmersonHttpPtr managerLiveness;
-    Sirikata::Context* mContext;
+    JSCtx* mContext;
 };
 
 static EmersonHttpPtr nullEmersonHttpPtr;

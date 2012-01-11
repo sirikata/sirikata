@@ -47,6 +47,8 @@
 #include <sirikata/ogre/Camera.hpp>
 #include <stdio.h>
 #include <sirikata/ogre/ResourceDownloadPlanner.hpp>
+#include <sirikata/core/network/Address.hpp>
+
 
 using namespace std;
 
@@ -54,14 +56,16 @@ namespace Sirikata {
 namespace Graphics {
 
 
-OgreSystem::OgreSystem(Context* ctx)
- : OgreRenderer(ctx),
+
+OgreSystem::OgreSystem(Context* ctx,Network::IOStrandPtr sStrand)
+ : OgreRenderer(ctx,sStrand),
    mConnectionEventProvider(NULL),
    mOnReadyCallback(NULL),
    mOnResetReadyCallback(NULL),
    mPrimaryCamera(NULL),
    mOverlayCamera(NULL),
-   mReady(false)
+   mReady(false),
+   initialized(false)
 {
     increfcount();
     mCubeMap=NULL;
@@ -111,6 +115,9 @@ void OgreSystem::detachCamera(Camera* entity) {
     }
 }
 
+
+//Be careful about calling this function in too many other places:
+//its use of iOnCreateProxy with true passed in is tricky.
 void OgreSystem::instantiateAllObjects(ProxyManagerPtr pman)
 {
     std::vector<SpaceObjectReference> allORefs;
@@ -120,7 +127,7 @@ void OgreSystem::instantiateAllObjects(ProxyManagerPtr pman)
     {
         //instantiate each object in graphics system separately.
         ProxyObjectPtr toAdd = pman->getProxyObject(*iter);
-        onCreateProxy(toAdd);
+        iOnCreateProxy(livenessToken(),toAdd,true);
     }
 }
 
@@ -149,6 +156,7 @@ Transfer::DenseDataPtr read_file(const String& filename)
 bool OgreSystem::initialize(ConnectionEventProvider* cevtprovider, VWObjectPtr viewer, const SpaceObjectReference& presenceid, const String& options) {
     if(!OgreRenderer::initialize(options)) return false;
 
+
     mConnectionEventProvider = cevtprovider;
     mConnectionEventProvider->addListener(this);
 
@@ -171,7 +179,6 @@ bool OgreSystem::initialize(ConnectionEventProvider* cevtprovider, VWObjectPtr v
 
     //finish instantiation here
     instantiateAllObjects(proxyManager);
-
     mMouseHandler->mUIWidgetView->setReadyCallback( std::tr1::bind(&OgreSystem::handleUIReady, this) );
     mMouseHandler->mUIWidgetView->setResetReadyCallback( std::tr1::bind(&OgreSystem::handleUIResetReady, this) );
     mMouseHandler->mUIWidgetView->setUpdateViewportCallback( std::tr1::bind(&OgreSystem::handleUpdateUIViewport, this, _1, _2, _3, _4) );
@@ -222,8 +229,10 @@ bool OgreSystem::initialize(ConnectionEventProvider* cevtprovider, VWObjectPtr v
     mat->getTechnique(0)->getPass(0)->setAmbient(0, 0, 0);
     mat->getTechnique(0)->getPass(0)->setSelfIllumination(0.25, 0.5, 0.25);
 
+    initialized = true;
     return true;
 }
+
 
 void OgreSystem::handleUIReady() {
     // Currently the only blocker for being ready is that the UI loaded. If we
@@ -271,11 +280,15 @@ bool OgreSystem::translateToDisplayViewport(float32 x, float32 y, float32* ox, f
 }
 
 OgreSystem::~OgreSystem() {
+    Liveness::letDie();
     decrefcount();
     destroyMouseHandler();
 }
 
-void OgreSystem::stop() {
+void OgreSystem::stop()
+{
+    //note: leaving command to mViewer here so that access to mViewer is still
+    //within mainStrand
     if (mViewer) {
         ProxyManagerPtr proxyManager = mViewer->presence(mPresenceID);
         if (proxyManager) // May have been disconnected
@@ -292,6 +305,37 @@ void OgreSystem::stop() {
 
 void OgreSystem::onCreateProxy(ProxyObjectPtr p)
 {
+    simStrand->post(
+        std::tr1::bind(&OgreSystem::iOnCreateProxy,this,
+            livenessToken(),p, false));
+}
+
+
+
+void OgreSystem::iOnCreateProxy(
+    Liveness::Token osAlive, ProxyObjectPtr p, bool inInit)
+{
+    if (!osAlive) return;
+    Liveness::Lock locked(osAlive);
+    if (!locked) 
+    {
+        SILOG(ogre,error,"Received onCreateProxy after having deleted ogre system");
+        return;
+    }
+
+    if (stopped)
+    {
+        SILOG(ogre,warn,"Received onCreateProxy after having stopped");
+        return;
+    }
+    
+    //busy wait until initialized.  note that the initialization code actually
+    //calls iOnCreateProxy itself (through instantiateAllObjects).  If the
+    //inInit param is true then we know that the initialization code called this
+    //function, and we should not busy wait.
+    while (!inInit && !initialized)
+    {}
+
     bool created = false;
 
     ProxyEntity* mesh = NULL;
@@ -331,6 +375,14 @@ void OgreSystem::entityDestroyed(ProxyEntity* p) {
 }
 
 void OgreSystem::onDestroyProxy(ProxyObjectPtr p)
+{
+    simStrand->post(
+        std::tr1::bind(&OgreSystem::iOnDestroyProxy,this,
+            livenessToken(), p));
+}
+
+void OgreSystem::iOnDestroyProxy(
+    Liveness::Token osAlive,ProxyObjectPtr p)
 {
     // We don't clean anything up here since the entity could be
     // masking an addition/removal. Instead, we just wait and let the
@@ -553,7 +605,37 @@ void OgreSystem::onConnected(const Network::Address& addr)
 {
 }
 
-void OgreSystem::onDisconnected(const Network::Address& addr, bool requested, const String& reason) {
+
+void OgreSystem::onDisconnected(const Network::Address& addr, bool requested, const String& reason)
+{
+    //ugh!  This is an ugly function.
+    simStrand->post(
+        std::tr1::bind(
+            (&OgreSystem::iOnNetworkDisconnected),this,
+            livenessToken(), addr,requested,reason));
+}
+
+void OgreSystem::iOnNetworkDisconnected(
+    Liveness::Token osAlive,const Network::Address& addr,
+    bool requested, const String& reason)
+{
+    if (!osAlive) return;
+    Liveness::Lock locked(osAlive);
+    if (!locked) 
+    {
+        SILOG(ogre,error,"Received disconnect after having deleted ogre system");
+        return;
+    }
+
+    if (stopped)
+    {
+        SILOG(ogre,error,"Received iOnDisconnecte after having stopped ogre system");
+        return;
+    }
+    //don't want to disconnect before we were done connecting.
+    while (!initialized){}
+    
+    
     if (!requested) {
         SILOG(ogre,fatal,"Got disconnected from space server: " << reason);
         quit(); // FIXME
@@ -562,7 +644,35 @@ void OgreSystem::onDisconnected(const Network::Address& addr, bool requested, co
         SILOG(ogre,warn,"Disconnected from space server.");
 }
 
-void OgreSystem::onDisconnected(SessionEventProviderPtr from, const SpaceObjectReference& name) {
+void OgreSystem::onDisconnected(
+    SessionEventProviderPtr from, const SpaceObjectReference& name)
+{
+    simStrand->post(
+        std::tr1::bind(
+            &OgreSystem::iOnSessionDisconnected,this,
+            livenessToken(),from,name));
+}
+
+void OgreSystem::iOnSessionDisconnected(
+    Liveness::Token osAlive, SessionEventProviderPtr from,
+    const SpaceObjectReference& name)
+{
+    if (!osAlive) return;
+    Liveness::Lock locked(osAlive);
+    if (!locked) 
+    {
+        SILOG(ogre,error,"Received session disconnect after having deleted ogre system");
+        return;
+    }
+
+    while(!initialized){}
+
+    if (stopped)
+    {
+        SILOG(ogre,error,"Received iOnDisconnecte after having stopped ogre system");
+        return;
+    }
+    
     mViewer->removeListener((SessionEventListener*)this);
     SILOG(ogre,info,"Got disconnected from space server.");
     mMouseHandler->alert("Disconnected", "Lost connection to space server...");
@@ -583,6 +693,7 @@ void OgreSystem::tickInputHandler(const Task::LocalTime& t) const {
     if (mMouseHandler != NULL)
         mMouseHandler->tick(t);
 }
+
 
 boost::any OgreSystem::invoke(vector<boost::any>& params)
 {
@@ -699,7 +810,11 @@ boost::any OgreSystem::createWindow(const String& window_name, bool is_html, boo
     WebView* ui_wv = wvManager->getWebView(window_name);
     if(!ui_wv)
     {
-        ui_wv = wvManager->createWebView(mContext, window_name, window_name, width, height, OverlayPosition(RP_TOPLEFT));
+        ui_wv = wvManager->createWebView(
+            mContext, window_name, window_name,
+            width, height, OverlayPosition(RP_TOPLEFT),
+            simStrand);
+        
         if (is_html)
             ui_wv->loadHTML(content);
         else if (is_file)

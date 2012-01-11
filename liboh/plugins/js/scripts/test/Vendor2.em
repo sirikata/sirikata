@@ -1,4 +1,4 @@
-system.import('std/graphics/default.em');
+system.import('std/client/default.em');
 
 /* This is a Book Vendor */
 
@@ -63,7 +63,7 @@ system.onPresenceConnected( function(pres) {
     system.print(system.presences.length);
     if (system.presences.length == 1)
     {
-        simulator = new std.graphics.DefaultGraphics(pres, 'ogregraphics');
+        simulator = new std.client.Default(pres);
       system.presences[0].onProxAdded(proxAddedCallback);
     }
 });

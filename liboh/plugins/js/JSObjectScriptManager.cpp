@@ -77,6 +77,7 @@ ObjectScriptManager* JSObjectScriptManager::createObjectScriptManager(ObjectHost
 
 JSObjectScriptManager::JSObjectScriptManager(ObjectHostContext* ctx, const Sirikata::String& arguments)
  : mContext(ctx),
+   mIsolate(v8::Isolate::New()),
    mTransferPool(),
    mParsingIOService(NULL),
    mParsingWork(NULL),
@@ -151,6 +152,7 @@ JSObjectScriptManager::JSObjectScriptManager(ObjectHostContext* ctx, const Sirik
 
 void JSObjectScriptManager::createUtilTemplate()
 {
+
     v8::HandleScope handle_scope;
     mUtilTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
 
@@ -192,6 +194,7 @@ void JSObjectScriptManager::createUtilTemplate()
 //these templates involve vec, quat, pattern, etc.
 void JSObjectScriptManager::createTemplates()
 {
+    v8::Isolate::Scope iscope(mIsolate);
     v8::HandleScope handle_scope;
     mVec3Template        = v8::Persistent<v8::FunctionTemplate>::New(CreateVec3Template());
     mQuaternionTemplate  = v8::Persistent<v8::FunctionTemplate>::New(CreateQuaternionTemplate());
@@ -609,14 +612,24 @@ JSObjectScriptManager::~JSObjectScriptManager()
 
 JSObjectScript* JSObjectScriptManager::createHeadless(const String& args, const String& script,int32 maxres)
 {
-    JSObjectScript* new_script = new JSObjectScript(this, NULL, NULL, UUID::random());
+    JSLOG(error, "Cannot run emheadless without providing a context from which to get strand.");
+    assert(false);
+    JSObjectScript* new_script =
+        new JSObjectScript(this, NULL, NULL, UUID::random(),NULL);
+    
     new_script->initialize(args, script, maxres);
     return new_script;
 }
 
 ObjectScript* JSObjectScriptManager::createObjectScript(HostedObjectPtr ho, const String& args, const String& script)
 {
-    EmersonScript* new_script = new EmersonScript(ho, args, script, this);
+    JSCtx* jsctx =
+        new JSCtx(mContext,Network::IOStrandPtr(mContext->ioService->createStrand()),mIsolate);
+    
+    EmersonScript* new_script =new EmersonScript(
+        ho, args, script, this,jsctx);
+
+    
     if (!new_script->valid()) {
         delete new_script;
         return NULL;

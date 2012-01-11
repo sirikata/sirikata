@@ -83,7 +83,8 @@ DistanceDownloadPlanner::Asset::~Asset() {
 }
 
 DistanceDownloadPlanner::DistanceDownloadPlanner(Context* c, OgreRenderer* renderer)
- : ResourceDownloadPlanner(c, renderer)
+ : ResourceDownloadPlanner(c, renderer),
+   mStopped(false)
 {
     mAggregationAlgorithm = new Transfer::MaxPriorityAggregation();
 
@@ -100,7 +101,23 @@ DistanceDownloadPlanner::~DistanceDownloadPlanner()
     }
 }
 
-void DistanceDownloadPlanner::addObject(Object* r) {
+void DistanceDownloadPlanner::addObject(Object* r)
+{
+    DLPLANNER_LOG(detailed,"Request to add object with name "<<r->name);
+    
+    mScene->renderStrand()->post(
+        std::tr1::bind(&DistanceDownloadPlanner::iAddObject,this,
+            r, livenessToken()));
+}
+
+void DistanceDownloadPlanner::iAddObject(Object* r, Liveness::Token alive)
+{
+    if (!alive)
+    {
+        delete r;
+        return;
+    }
+    
     calculatePriority(r->proxy);
     mObjects[r->name] = r;
     mWaitingObjects[r->name] = r;
@@ -113,7 +130,22 @@ DistanceDownloadPlanner::Object* DistanceDownloadPlanner::findObject(const Strin
     return (it != mObjects.end() ? it->second : NULL);
 }
 
-void DistanceDownloadPlanner::removeObject(const String& name) {
+
+
+void DistanceDownloadPlanner::removeObject(const String& name)
+{
+    DLPLANNER_LOG(detailed,"Request to remove object with name "<<name);
+    mScene->renderStrand()->post(
+        std::tr1::bind(&DistanceDownloadPlanner::iRemoveObject, this,
+            name,livenessToken()));
+}
+
+void DistanceDownloadPlanner::iRemoveObject(
+    const String& name, Liveness::Token alive)
+{
+    if (!alive)
+        return;
+    
     ObjectMap::iterator it = mObjects.find(name);
     if (it != mObjects.end()) {
         Object* r = it->second;
@@ -141,8 +173,31 @@ void DistanceDownloadPlanner::addNewObject(ProxyObjectPtr p, Entity *mesh) {
     addObject(new Object(mesh, p->mesh(), p));
 }
 
-void DistanceDownloadPlanner::updateObject(ProxyObjectPtr p) {
+
+void DistanceDownloadPlanner::updateObject(ProxyObjectPtr p)
+{
+    DLPLANNER_LOG(detailed,"Request to update object with name "<< \
+        p->getObjectReference().toString());
+    mScene->renderStrand()->post(
+        std::tr1::bind(&DistanceDownloadPlanner::iUpdateObject,this,
+            p,livenessToken()));
+}
+
+
+void DistanceDownloadPlanner::iUpdateObject(
+    ProxyObjectPtr p, Liveness::Token alive)
+{
+    if (!alive)
+        return;
+    
     Object* r = findObject(p->getObjectReference().toString());
+    if (!r)
+    {
+        DLPLANNER_LOG(warn,"Could not find object associated with "   <<\
+            "reference "<<p->getObjectReference().toString()<< " in " <<\
+            "distance download planner.  Not updating.");
+        return;
+    }
     URI last_file = r->file;
     URI new_file = p->mesh();
     if (new_file != last_file && r->loaded) {
@@ -220,8 +275,20 @@ void DistanceDownloadPlanner::unloadObject(Object* r) {
 
 void DistanceDownloadPlanner::poll()
 {
+    mScene->renderStrand()->post(
+        std::tr1::bind(&DistanceDownloadPlanner::iPoll, this,
+            livenessToken()));
+}
+
+void DistanceDownloadPlanner::iPoll(Liveness::Token dpAlive)
+{
+    if (!dpAlive)
+        return;
+    
     if (camera == NULL) return;
+
     if (mContext->stopped()) return;
+    
 
     // Update priorities, tracking the largest undisplayed priority and the
     // smallest displayed priority to decide if we're going to have to swap.
@@ -309,8 +376,26 @@ void DistanceDownloadPlanner::poll()
     }
 }
 
-void DistanceDownloadPlanner::stop() {
-    for(AssetMap::iterator it = mAssets.begin(); it != mAssets.end(); it++) {
+void DistanceDownloadPlanner::stop()
+{
+    mScene->renderStrand()->post(
+        std::tr1::bind(&DistanceDownloadPlanner::iStop, this,
+            livenessToken()));
+}
+
+void DistanceDownloadPlanner::iStop(Liveness::Token dpAlive)
+{
+    if (!dpAlive)
+    {
+        DLPLANNER_LOG(error,"Posted to internal stop after was already deleted");
+        return;
+    }
+
+
+    mStopped = true;
+    
+    for(AssetMap::iterator it = mAssets.begin(); it != mAssets.end(); it++)
+    {
         Asset* asset = it->second;
         delete asset;
     }
@@ -318,8 +403,8 @@ void DistanceDownloadPlanner::stop() {
 
 void DistanceDownloadPlanner::requestAssetForObject(Object* forObject) {
     DLPLANNER_LOG(detailed, "Requesting " << forObject->file << " for " << forObject->name);
-
     if (forObject->file.empty()) {
+        DLPLANNER_LOG(detailed,"Empty file for requested asset object");
         forObject->mesh->loadEmpty();
         return;
     }
@@ -348,15 +433,17 @@ void DistanceDownloadPlanner::requestAssetForObject(Object* forObject) {
 
 void DistanceDownloadPlanner::downloadAsset(Asset* asset, Object* forObject) {
     DLPLANNER_LOG(detailed, "Starting download of " << asset->uri);
+    
     asset->downloadTask =
         AssetDownloadTask::construct(
             asset->uri, getScene(), forObject->priority,
-            mContext->mainStrand->wrap(
+            mScene->renderStrand()->wrap(
                 std::tr1::bind(&DistanceDownloadPlanner::loadAsset, this, asset->uri)
             ));
 }
 
 void DistanceDownloadPlanner::loadAsset(Transfer::URI asset_uri) {
+    
     DLPLANNER_LOG(detailed, "Finished downloading " << asset_uri);
 
     if (mAssets.find(asset_uri) == mAssets.end()) return;
@@ -399,6 +486,7 @@ void DistanceDownloadPlanner::finishLoadAsset(Asset* asset, bool success) {
     DLPLANNER_LOG(detailed, "Finishing load of asset " << asset->uri << " (priority " << asset->downloadTask->priority() << ")");
     // We need to notify all Objects (objects) waiting for this to load that
     // it finished (or failed)
+    
     for(ObjectSet::iterator it = asset->waitingObjects.begin(); it != asset->waitingObjects.end(); it++) {
         const String& resource_id = *it;
 
@@ -433,8 +521,9 @@ void DistanceDownloadPlanner::finishLoadAsset(Asset* asset, bool success) {
     }
     asset->downloadTask.reset();
     asset->waitingObjects.clear();
-
-    checkRemoveAsset(asset);
+    mScene->renderStrand()->post(
+        std::tr1::bind(&DistanceDownloadPlanner::checkRemoveAsset,this,asset));
+//        checkRemoveAsset(asset);
 }
 
 namespace {
@@ -636,8 +725,10 @@ void DistanceDownloadPlanner::loadDependentTextures(Asset* asset, bool usingDefa
                 WebView* web_mat = WebViewManager::getSingleton().createWebViewMaterial(
                     mContext,
                     id,
-                    512, 512 // Completely arbitrary...
+                    512, 512, // Completely arbitrary...
+                    mScene->renderStrand()
                 );
+
                 web_mat->loadURL(tex_data.request->getURI().toString());
                 asset->webMaterials.push_back(web_mat);
             }
@@ -693,10 +784,17 @@ void DistanceDownloadPlanner::unrequestAssetForObject(Object* forObject) {
     // If somebody is still using it, update priority
     updateAssetPriority(asset);
     // If nobody needs it anymore, clear it out.
-    checkRemoveAsset(asset);
+
+    mScene->renderStrand()->post(
+        std::tr1::bind(&DistanceDownloadPlanner::checkRemoveAsset,this,asset));
 }
 
-void DistanceDownloadPlanner::checkRemoveAsset(Asset* asset) {
+void DistanceDownloadPlanner::checkRemoveAsset(Asset* asset)
+{
+    //means that the asset was likely already deleted
+    if (mStopped)
+        return;
+    
     if (asset->waitingObjects.empty() && asset->usingObjects.empty()) {
         // We need to be careful if a download is in progress.
         if (asset->downloadTask) return;

@@ -49,7 +49,8 @@ namespace InvokableUtil {
 /** Converts a V8 object into a boost:any, leaving the boost::any empty if the
  *  object cannot be translated.
  */
-inline boost::any V8ToAny(EmersonScript* parent, v8::Handle<v8::Value> val) {
+inline boost::any V8ToAny(EmersonScript* parent, v8::Handle<v8::Value> val)
+{
     /* Pushing only string params for now */
     if(val->IsString())
     {
@@ -95,8 +96,11 @@ inline boost::any V8ToAny(EmersonScript* parent, v8::Handle<v8::Value> val) {
 /** Converts a boost::any into a V8 object, or returns undefined if the object
  *  can't be translated.
  */
-inline v8::Handle<v8::Value> AnyToV8(EmersonScript* parent, const boost::any& val) {
-    if(Invokable::anyIsString(val)) {        std::string s = Invokable::anyAsString(val);
+inline v8::Handle<v8::Value> AnyToV8(
+    EmersonScript* parent, const boost::any& val)
+{
+    if(Invokable::anyIsString(val)) {
+        std::string s = Invokable::anyAsString(val);
         return v8::String::New(s.c_str(), s.length());
     }
     else if(Invokable::anyIsFloat(val)) {

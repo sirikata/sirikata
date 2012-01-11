@@ -44,7 +44,20 @@ void InitCPPOHOptions() {
 
         .addOption(new OptionValue(OPT_CONFIG_FILE,"cppoh.cfg",Sirikata::OptionValueType<String>(),"Configuration file to load."))
 
-        .addOption(new OptionValue(OPT_OH_PLUGINS,"weight-exp,weight-sqr,tcpsst,weight-const,ogregraphics,colladamodels,mesh-billboard,nvtt,common-filters,csvfactory,oh-file,oh-sqlite,scripting-js,simplecamera,oh-cassandra,oh-simple-query,oh-manual-query,sdlaudio",Sirikata::OptionValueType<String>(),"Plugin list to load."))
+        // Some platforms don't have support for some plugins and those plugins
+        // aren't required, so we try to filter them out to reduce the noise
+        // output by default.
+        .addOption(new OptionValue(OPT_OH_PLUGINS,
+                "weight-exp,weight-sqr,tcpsst,weight-const,ogregraphics,colladamodels,mesh-billboard"
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_LINUX
+                ",nvtt"
+#endif
+                ",common-filters,csvfactory,oh-file,oh-sqlite,scripting-js,simplecamera"
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_LINUX || SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_MAC
+                ",oh-cassandra"
+#endif
+                ",oh-simple-query,oh-manual-query,sdlaudio,oh-environment",
+                Sirikata::OptionValueType<String>(),"Plugin list to load."))
         .addOption(new OptionValue(OPT_OH_PLUGIN_SEARCH_PATHS,"",Sirikata::OptionValueType<String>(),"Colon separated list of paths to search for plugins."))
 
         .addOption(new OptionValue("ohid", "1", Sirikata::OptionValueType<ObjectHostID>(), "Object host ID for this server"))

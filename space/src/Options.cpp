@@ -41,7 +41,7 @@ void InitSpaceOptions() {
 
         .addOption(new OptionValue(OPT_CONFIG_FILE,"space.cfg",Sirikata::OptionValueType<String>(),"Configuration file to load."))
 
-        .addOption(new OptionValue(OPT_SPACE_PLUGINS,"weight-exp,weight-sqr,weight-const,space-null,space-local,space-standard,space-prox,colladamodels,mesh-billboard,common-filters,space-bulletphysics",Sirikata::OptionValueType<String>(),"Plugin list to load."))
+        .addOption(new OptionValue(OPT_SPACE_PLUGINS,"weight-exp,weight-sqr,weight-const,space-null,space-local,space-standard,space-prox,colladamodels,mesh-billboard,common-filters,space-bulletphysics,space-environment",Sirikata::OptionValueType<String>(),"Plugin list to load."))
 
         .addOption(new OptionValue("spacestreamlib","tcpsst",Sirikata::OptionValueType<String>(),"Which library to use to communicate with the object host"))
         .addOption(new OptionValue("spacestreamoptions","--send-buffer-size=32768 --parallel-sockets=1 --no-delay=true",Sirikata::OptionValueType<String>(),"TCPSST stream options such as how many bytes to collect for sending during an ongoing asynchronous send call."))
@@ -91,6 +91,8 @@ void InitSpaceOptions() {
         .addOption(new OptionValue(OPT_PROX_OPTIONS, "", Sirikata::OptionValueType<String>(), "Arguments to pass to Proximity query processor. Note that many common options are already provided (type of top-level service, type of server-to-server and object-to-server handlers, etc) so they do not need to be passed through."))
 
       .addOption(new OptionValue("route-object-message-buffer", "64", Sirikata::OptionValueType<size_t>(), "size of the buffer between network and main strand for space server message routing"))
+
+        .addOption(new OptionValue(OPT_MODULES, "environment", Sirikata::OptionValueType< std::vector<String> >(), "Additional SpaceModules to load"))
 
       ;
 }

@@ -37,7 +37,15 @@ public:
 
     uint32 numAudioStreams();
     FFmpegAudioStreamPtr getAudioStream(uint32 idx, uint8 nchannels);
+
+    // Reloads the stream to start parsing from the beginning.
+    void reload();
 private:
+
+    // Helpers for cleanup/init used by both constructor/destructor and reload().
+    void initDecode();
+    void cleanupDecode();
+
     friend class FFmpegAudioStream;
 
     FFmpegURLProtocol* mData;

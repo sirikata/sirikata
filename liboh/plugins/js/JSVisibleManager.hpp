@@ -10,6 +10,7 @@
 #include <sirikata/proxyobject/PositionListener.hpp>
 #include <sirikata/proxyobject/MeshListener.hpp>
 #include "JSUtil.hpp"
+#include "JSCtx.hpp"
 
 namespace Sirikata{
 namespace JS{
@@ -90,7 +91,7 @@ class JSVisibleManager : public ProxyCreationListener,
                          public MeshListener
 {
 public:
-    JSVisibleManager(EmersonScript* eScript);
+    JSVisibleManager(EmersonScript* eScript,JSCtx* ctx);
     virtual ~JSVisibleManager();
 
     /**
@@ -150,13 +151,33 @@ private:
 
 
     EmersonScript* emerScript;
-
+    JSCtx* mCtx;
+    
     typedef std::map<SpaceObjectReference,JSProxyWPtr > SporefProxyMap;
     typedef SporefProxyMap::iterator SporefProxyMapIter;
     SporefProxyMap mProxies;
 
     typedef std::tr1::unordered_set<ProxyObjectPtr, ProxyObject::Hasher> TrackedObjectsMap;
     TrackedObjectsMap mTrackedObjects;
+
+
+    void iOnSetPhysics (
+        ProxyObjectPtr proxy, const String& newphy,
+        const SpaceObjectReference& sporef);
+    void iOnSetScale(
+        ProxyObjectPtr proxy, float32 newScale, const SpaceObjectReference& sporef);
+    void iOnSetMesh (
+        ProxyObjectPtr proxy, Transfer::URI const& newMesh,
+        const SpaceObjectReference& sporef);
+
+    void iUpdateLocation (
+        ProxyObjectPtr proxy, const TimedMotionVector3f &newLocation,
+        const TimedMotionQuaternion& newOrient, const BoundingSphere3f& newBounds,
+        const SpaceObjectReference& sporef);
+    
+    void iOnDestroyProxy(ProxyObjectPtr p);
+    void iOnCreateProxy(ProxyObjectPtr p);
+    
 };
 
 } //end namespace js

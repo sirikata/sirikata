@@ -191,12 +191,12 @@ typedef struct SegmentedRegion {
   }
 
   SegmentedRegion* lookup(const Vector3f& pos) const {
-    if (mRightChild == NULL && mLeftChild == NULL) {
-      if (mBoundingBox.contains(pos)) {
+    if (mRightChild == NULL && mLeftChild == NULL) {      
+      if (mBoundingBox.contains(pos) || mBoundingBox.degenerate()) {        
 	return ((SegmentedRegion*)this);
       }
     }
-
+    
     SegmentedRegion* region = NULL;
 
     if (mLeftChild != NULL && mLeftChild->mBoundingBox.contains(pos)) {

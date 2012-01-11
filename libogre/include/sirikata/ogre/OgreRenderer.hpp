@@ -39,8 +39,9 @@
 #include <sirikata/mesh/Visual.hpp>
 #include <sirikata/core/service/Context.hpp>
 #include <sirikata/core/transfer/TransferMediator.hpp>
-#include <sirikata/proxyobject/TimeSteppedSimulation.hpp>
+#include <sirikata/oh/TimeSteppedSimulation.hpp>
 #include <OgreWindowEventUtilities.h>
+#include <sirikata/core/util/Liveness.hpp>
 
 namespace Sirikata {
 
@@ -65,9 +66,13 @@ class ResourceDownloadPlanner;
 using Input::SDLInputManager;
 
 /** Represents a SQLite database connection. */
-class SIRIKATA_OGRE_EXPORT OgreRenderer : public TimeSteppedSimulation, public Ogre::WindowEventListener {
+class SIRIKATA_OGRE_EXPORT OgreRenderer :
+        public TimeSteppedSimulation,
+        public Ogre::WindowEventListener,
+        public virtual Liveness
+{
 public:
-    OgreRenderer(Context* ctx);
+    OgreRenderer(Context* ctx,Network::IOStrandPtr sStrand);
     virtual ~OgreRenderer();
 
     virtual bool initialize(const String& options, bool with_berkelium = true);
@@ -95,6 +100,12 @@ public:
     virtual void destroyRenderTarget(Ogre::ResourcePtr& name);
     virtual void destroyRenderTarget(const String &name);
 
+    Network::IOStrandPtr renderStrand()
+    {
+        return simStrand;
+    }
+
+    
     Ogre::SceneManager* getSceneManager() {
         return mSceneManager;
     }
@@ -120,6 +131,7 @@ public:
     virtual void stop();
 
     // Invokable Interface
+    //should only invoke from within simStrand
     virtual boost::any invoke(std::vector<boost::any>& params);
 
 
@@ -162,6 +174,7 @@ public:
     void screenshot(const String& filename);
     void screenshotNextFrame(const String& filename);
   protected:
+    Network::IOStrandPtr simStrand;
     static Ogre::Root *getRoot();
 
     bool loadBuiltinPlugins();
@@ -178,8 +191,15 @@ public:
     ///all the things that should happen once the frame finishes
     virtual void postFrame(Task::LocalTime, Duration);
 
-
-    void parseMeshWork(const Transfer::RemoteFileMetadata& metadata, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data, ParseMeshCallback cb);
+    void iPoll(Liveness::Token rendererAlive);
+    void iStop(Liveness::Token rendererAlive);
+    
+    void parseMeshWork(
+        Liveness::Token rendererAlive,
+        const Transfer::RemoteFileMetadata& metadata,
+        const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data,
+        ParseMeshCallback cb);
+    
     Mesh::VisualPtr parseMeshWorkSync(const Transfer::RemoteFileMetadata& metadata, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data);
 
 
@@ -265,6 +285,9 @@ public:
     // To simplify taking screenshots after a specific event has occurred, we
     // allow them to be taken on the next frame.
     String mNextFrameScreenshotFile;
+    bool initialized;
+    bool stopped;
+    
 };
 
 } // namespace Graphics

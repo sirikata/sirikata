@@ -172,7 +172,13 @@ void WebViewManager::Update()
 }
 
 
-WebView* WebViewManager::createWebView(Context* ctx, const std::string &webViewName, const std::string& webViewType,unsigned short width, unsigned short height, const OverlayPosition &webViewPosition,bool asyncRender, int maxAsyncRenderRate, Tier tier, Ogre::Viewport* viewport, const WebView::WebViewBorderSize& border)
+WebView* WebViewManager::createWebView(
+    Context* ctx, const std::string &webViewName,
+    const std::string& webViewType,unsigned short width,
+    unsigned short height, const OverlayPosition &webViewPosition,
+    Network::IOStrandPtr postStrand,
+    bool asyncRender, int maxAsyncRenderRate, Tier tier,
+    Ogre::Viewport* viewport, const WebView::WebViewBorderSize& border)
 {
 	if(activeWebViews.find(webViewName) != activeWebViews.end())
 		OGRE_EXCEPT(Ogre::Exception::ERR_RT_ASSERTION_FAILED,
@@ -193,8 +199,13 @@ WebView* WebViewManager::createWebView(Context* ctx, const std::string &webViewN
 		zOrder = highestZOrder + 1;
 
 
-        WebView* newWebView = new WebView(ctx, webViewName, webViewType,width, height, webViewPosition, (Ogre::uchar)zOrder, tier,
-            viewport? viewport : defaultViewport, border);
+        WebView* newWebView =
+            new WebView(
+                ctx, webViewName, webViewType,width, height,
+                webViewPosition, (Ogre::uchar)zOrder, tier,
+                viewport? viewport : defaultViewport,postStrand,
+                border);
+        
         newWebView->createWebView(false);
 	activeWebViews[webViewName] = newWebView;
         newWebView->bind("event", std::tr1::bind(&WebViewManager::onRaiseWebViewEvent, this, _1, _2));
@@ -202,8 +213,13 @@ WebView* WebViewManager::createWebView(Context* ctx, const std::string &webViewN
 }
 
 #ifdef HAVE_BERKELIUM
-WebView* WebViewManager::createWebViewPopup(Context* ctx, const std::string &webViewName, unsigned short width, unsigned short height, const OverlayPosition &webViewPosition,
-		Berkelium::Window *newwin, Tier tier, Ogre::Viewport* viewport)
+WebView* WebViewManager::createWebViewPopup(
+    Context* ctx, const std::string &webViewName,
+    unsigned short width, unsigned short height,
+    const OverlayPosition &webViewPosition,
+    Berkelium::Window *newwin,
+    Network::IOStrandPtr postingStrand,
+    Tier tier, Ogre::Viewport* viewport)
 {
 	if(activeWebViews.find(webViewName) != activeWebViews.end())
 		OGRE_EXCEPT(Ogre::Exception::ERR_RT_ASSERTION_FAILED,
@@ -223,8 +239,15 @@ WebView* WebViewManager::createWebViewPopup(Context* ctx, const std::string &web
 	if(highestZOrder != -1)
 		zOrder = highestZOrder + 1;
 
-        WebView* newWebView = new WebView(ctx, webViewName, "___popup___", width, height, webViewPosition, (Ogre::uchar)zOrder, tier,
-            viewport? viewport : defaultViewport);
+
+        
+        WebView* newWebView =
+            new WebView(
+                ctx, webViewName, "___popup___", width,
+                height, webViewPosition, (Ogre::uchar)zOrder, tier,
+                viewport? viewport : defaultViewport, postingStrand);
+
+        
         newWebView->initializeWebView(newwin, false);
 	activeWebViews[webViewName] = newWebView;
         newWebView->bind("event", std::tr1::bind(&WebViewManager::onRaiseWebViewEvent, this, _1, _2));
@@ -232,15 +255,23 @@ WebView* WebViewManager::createWebViewPopup(Context* ctx, const std::string &web
         return newWebView;
 }
 #endif //HAVE_BERKELIUM
-WebView* WebViewManager::createWebViewMaterial(Context* ctx, const std::string &webViewName, unsigned short width, unsigned short height,
-			bool asyncRender, int maxAsyncRenderRate, Ogre::FilterOptions texFiltering)
+WebView* WebViewManager::createWebViewMaterial(
+    Context* ctx, const std::string &webViewName,
+    unsigned short width, unsigned short height,
+    Network::IOStrandPtr postingStrand,
+    bool asyncRender, int maxAsyncRenderRate,
+    Ogre::FilterOptions texFiltering)
 {
 	if(activeWebViews.find(webViewName) != activeWebViews.end())
 		OGRE_EXCEPT(Ogre::Exception::ERR_RT_ASSERTION_FAILED,
 			"An attempt was made to create a WebView named '" + webViewName + "' when a WebView by the same name already exists!",
 			"WebViewManager::createWebViewMaterial");
 
-        WebView* newWebView = new WebView(ctx, webViewName, "___material___", width, height, texFiltering);
+        
+        WebView* newWebView =
+            new WebView(ctx, webViewName, "___material___",
+                width, height, texFiltering,postingStrand);
+        
         newWebView->createWebView(false);
         activeWebViews[webViewName] = newWebView;
         newWebView->bind("event", std::tr1::bind(&WebViewManager::onRaiseWebViewEvent, this, _1, _2));
@@ -727,7 +758,7 @@ Input::EventResponse WebViewManager::onButton(Input::ButtonEventPtr evt)
 {
 	bool success = true;
 	if(evt->getDevice()->isKeyboard()) {
-#if SIRIKATA_PLATFORM == PLATFORM_WINDOWS || SIRIKATA_PLATFORM == PLATFORM_LINUX
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS || SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_LINUX
             // Work around a problem with Berkelium where cut/copy/paste don't
             // seem to get the same delay as other keyboard repeats. Instead,
             // just filter the repeats out for these keys
@@ -736,7 +767,7 @@ Input::EventResponse WebViewManager::onButton(Input::ButtonEventPtr evt)
                 success = true; // Pretend we ate it
             else
                 success = this->injectKeyEvent(evt->pressed(), (evt->pressed() && !evt->activelyPressed()), evt->mModifier, evt->mButton);
-#elif SIRIKATA_PLATFORM == PLATFORM_MAC
+#elif SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_MAC
 	    if (evt->mModifier == MOD_GUI && (evt->pressed() && evt->activelyPressed())) {
 	      if (evt->mButton == SDL_SCANCODE_X)
 		success = this->injectCut();

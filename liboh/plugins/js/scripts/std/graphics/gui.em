@@ -78,8 +78,9 @@ function() {
     var getGUIJSValue = function(arg) {
         if (typeof(arg) === 'string')
             return Escape.escapeString(arg, '"');
-        else if (typeof(arg) === 'undefined' ||
-                 (typeof(arg) === 'object' && arg === null) ||
+        else if (typeof(arg) === 'undefined')
+             return undefined;
+        else if ((typeof(arg) === 'object' && arg === null) ||
                  typeof(arg) === 'number' ||
                  typeof(arg) === 'boolean')
             return arg.toString();

@@ -42,7 +42,7 @@
 
 #include <boost/lexical_cast.hpp>
 
-#if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS
 // No SSL on windows, uses bogus md5 digest but needs length constant
 #define MD5_DIGEST_LENGTH 16
 #else
@@ -103,7 +103,7 @@ std::string getWebSocketSecReply(const std::string& key1, const std::string& key
     memcpy(magic_bytes, &(key3[0]), 8);
 
     unsigned char result[MD5_DIGEST_LENGTH];
-#if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS
     // FIXME md5 hash. Windows doesn't have SSL dependency yet.
     memset(result, 0, MD5_DIGEST_LENGTH);
 #else

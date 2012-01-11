@@ -43,7 +43,8 @@
 
 #include <sirikata/ogre/OgreRenderer.hpp>
 
-#include <sirikata/proxyobject/ConnectionEventListener.hpp>
+#include <sirikata/oh/ConnectionEventListener.hpp>
+#include <sirikata/oh/HostedObject.hpp>
 
 namespace Ogre {
 struct RaySceneQueryResultEntry;
@@ -77,8 +78,10 @@ class OgreSystem :
     void destroyMouseHandler();
     void tickInputHandler(const Task::LocalTime& t) const;
 
-    OgreSystem(Context* ctx);
+
+    OgreSystem(Context* ctx,Network::IOStrandPtr sStrand);
     bool initialize(ConnectionEventProvider* cevtprovider, VWObjectPtr viewer, const SpaceObjectReference& presenceid, const String&options);
+
 
 
     Ogre::RaySceneQuery* mRayQuery;
@@ -125,12 +128,13 @@ public:
     static TimeSteppedSimulation* create(
         Context* ctx,
         ConnectionEventProvider* cevtprovider,
-        VWObjectPtr obj,
+        HostedObjectPtr obj,
         const SpaceObjectReference& presenceid,
-        const String& options
+        const String& options,
+        Network::IOStrandPtr sStrand
     )
     {
-        OgreSystem*os= new OgreSystem(ctx);
+        OgreSystem*os= new OgreSystem(ctx,sStrand);
         if (os->initialize(cevtprovider, obj, presenceid, options))
             return os;
         delete os;
@@ -249,10 +253,24 @@ private:
     void instantiateAllObjects(ProxyManagerPtr pop);
     double clamp(const double& val);
 
+    void iOnSessionDisconnected(
+        Liveness::Token osAlive, SessionEventProviderPtr from,
+        const SpaceObjectReference& name);
+    void iOnNetworkDisconnected(
+        Liveness::Token osAlive,const Network::Address& addr,
+        bool requested, const String& reason);
+
+    void iOnCreateProxy(
+        Liveness::Token osAlive, ProxyObjectPtr p, bool inInit);
+    void iOnDestroyProxy(
+        Liveness::Token osAlive,ProxyObjectPtr p);
+    
+    
     typedef std::tr1::unordered_map<SpaceObjectReference, ProxyEntity*, SpaceObjectReference::Hasher> EntityMap;
     EntityMap mEntityMap;
     String currentMat;
     bool mReady;
+    bool initialized;
 };
 
 

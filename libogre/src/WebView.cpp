@@ -58,8 +58,10 @@ WebView::WebView(
     const std::string& name, const std::string& type,
     unsigned short width, unsigned short height,
     const OverlayPosition &viewPosition, Ogre::uchar zOrder, Tier tier,
-    Ogre::Viewport* viewport, const WebViewBorderSize& border)
- : mContext(ctx)
+    Ogre::Viewport* viewport,Network::IOStrandPtr strand,
+    const WebViewBorderSize& border)
+ : mContext(ctx),
+   postingStrand(strand)
 {
 #ifdef HAVE_BERKELIUM
 	webView = 0;
@@ -115,8 +117,10 @@ WebView::WebView(
 WebView::WebView(
     Context* ctx,
     const std::string& name, const std::string& type, unsigned short width, unsigned short height,
-    Ogre::FilterOptions texFiltering)
- : mContext(ctx)
+    Ogre::FilterOptions texFiltering,
+    Network::IOStrandPtr strand)
+ : mContext(ctx),
+   postingStrand(strand)
 {
 #ifdef HAVE_BERKELIUM
 	webView = 0;
@@ -283,6 +287,7 @@ void WebView::setReadyCallback(ReadyCallback cb) {
 #endif
 }
 
+
 void WebView::setResetReadyCallback(ResetReadyCallback cb) {
     mResetReadyCallback = cb;
 }
@@ -360,7 +365,10 @@ boost::any WebView::handleOpenBrowser(WebView* wv, const JSArguments& args) {
     WebView* child_wv = WebViewManager::getSingleton().createWebView(
         mContext,
         name, name, w, h,
-        OverlayPosition(RP_CENTER), false, 70, TIER_MIDDLE, 0);
+        OverlayPosition(RP_CENTER), postingStrand, false, 70,
+        TIER_MIDDLE,0);
+
+    
     child_wv->loadURL(url);
     child_wv->setTransparent(false);
 
@@ -403,6 +411,9 @@ void WebView::forwardBrowserNavigatedCallback(Liveness::Token alive, const Strin
     // shouldn't, or you're probably going to have orphan WebViews
     // that will never get closed.
     if (!alive) return;
+    Liveness::Lock locked(alive);
+    if (!locked)
+        return;
 
     String escaped_url = "";
     for(uint32 i = 0; i < url.size(); i++) {
@@ -1185,7 +1196,7 @@ void WebView::blitScrollImage(
     size_t width = shared_rect.width();
     size_t height = shared_rect.height();
 
-#if SIRIKATA_PLATFORM == PLATFORM_LINUX
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_LINUX
     // For some reason, copying between hardware buffers on Linux doesn't work
     // properly, and its not even card specific (both ATI and NVidia cards have
     // this problem). Instead, we have to copy between GPU and RAM on Linux.
@@ -1284,6 +1295,10 @@ void WebView::onUnresponsive(Berkelium::Window*) {
 
 void WebView::handleUnresponsiveTimeout(Liveness::Token alive) {
     if (!alive) return;
+    Liveness::Lock locked(alive);
+    if (!locked)
+        return;
+
     if (!mUnresponsive) return;
     restartPage();
 }
@@ -1327,7 +1342,7 @@ void WebView::onCreatedWindow(Berkelium::Window*, Berkelium::Window*newwin) {
         mContext,
         name, r.width(), r.height(),
         OverlayPosition(r.left(), r.top()),
-        newwin, TIER_MIDDLE,
+        newwin, postingStrand,TIER_MIDDLE,
         overlay?overlay->viewport:WebViewManager::getSingleton().defaultViewport);
 }
 
