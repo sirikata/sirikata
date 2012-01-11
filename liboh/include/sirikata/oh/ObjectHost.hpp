@@ -142,6 +142,9 @@ public:
     // reason.
     typedef std::tr1::function<void(const SpaceObjectReference&, Disconnect::Code)> DisconnectedCallback;
 
+    //FIXME: this call will have to go away sooner or later.
+    SpaceID getDefaultSpace();
+
     /** Caller is responsible for starting a thread
      *
      * @param ioServ IOService to run this object host on

@@ -276,6 +276,19 @@ void ObjectHost::handleObjectMessage(const SpaceObjectReference& sporef_internal
     }
 }
 
+//This function just returns the first space id in the unordered map
+//associated with mSessionManagers.
+SpaceID ObjectHost::getDefaultSpace()
+{
+    if (mSessionManagers.size() == 0)
+    {
+        std::cout<<"\n\nERROR: no record of space in object host\n\n";
+        assert(false);
+    }
+
+    return mSessionManagers.begin()->first;
+}
+
 // Primary HostedObject API
 
 bool ObjectHost::connect(
