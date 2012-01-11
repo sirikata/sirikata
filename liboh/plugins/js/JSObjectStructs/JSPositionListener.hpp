@@ -75,7 +75,7 @@ protected:
 private:
 
     void eLoadMesh(
-        JSContextStruct* ctx,v8::Handle<v8::Function>cb);
+        JSContextStruct* ctx,v8::Persistent<v8::Function>cb);
     
     void iFinishLoadMesh(
         Liveness::Token alive, Liveness::Token ctx_alive,

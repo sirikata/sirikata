@@ -212,18 +212,17 @@ v8::Handle<v8::Value> JSPositionListener::loadMesh(
 
     mCtx->mainStrand->post(
         std::tr1::bind(&JSPositionListener::eLoadMesh,this,
-            ctx,cb));
+            ctx,v8::Persistent<v8::Function>::New(cb)));
 
     return v8::Undefined();
 }
 
 void JSPositionListener::eLoadMesh(
-    JSContextStruct* ctx,v8::Handle<v8::Function>cb)
+    JSContextStruct* ctx,v8::Persistent<v8::Function>cb)
 {
     JSObjectScriptManager::MeshLoadCallback wrapped_cb =
         std::tr1::bind(&JSPositionListener::finishLoadMesh, this,
-            this->livenessToken(), ctx->livenessToken(), ctx,
-            v8::Persistent<v8::Function>::New(cb), _1);
+            this->livenessToken(), ctx->livenessToken(), ctx,cb, _1);
     
     jpp->emerScript->manager()->loadMesh(Transfer::URI(getMesh()), wrapped_cb);
 }
@@ -259,6 +258,7 @@ void JSPositionListener::iFinishLoadMesh(
     {}
 
     mVisual = data;
+    
     v8::Isolate::Scope iscope(mCtx->mIsolate);
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(ctx->mContext);
