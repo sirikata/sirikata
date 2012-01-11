@@ -196,7 +196,7 @@ int main (int argc, char** argv) {
     }
 
 
-    ctx->run(1);
+    ctx->run(2);
 
     ctx->cleanup();
 
@@ -209,7 +209,6 @@ int main (int argc, char** argv) {
     ModelsSystemFactory::destroy();
     ObjectScriptManagerFactory::destroy();
     delete oh;
-    //delete pd;
 
 
     delete obj_storage;
