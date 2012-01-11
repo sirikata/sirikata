@@ -56,9 +56,12 @@ ProxyEntity::ProxyEntity(OgreRenderer *scene, const ProxyObjectPtr &ppo)
     );
 }
 
-ProxyEntity::~ProxyEntity() {
+ProxyEntity::~ProxyEntity()
+{
+    bool mobileVal =!getProxy().isStatic();
+    removeFromScene(&mobileVal);
+    
     SILOG(ogre, detailed, "Killing ProxyEntity " << mProxy->getObjectReference().toString());
-
     Liveness::letDie();
 
     getProxy().MeshProvider::removeListener(this);

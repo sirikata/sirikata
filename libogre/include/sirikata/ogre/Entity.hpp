@@ -129,7 +129,12 @@ public:
 
     static Entity *fromMovableObject(Ogre::MovableObject *obj);
 
-    void removeFromScene();
+    //note that we do not want to check if we're mobile or not if we're calling
+    //removeFromScene from destructor of Entity because isMobile is purely
+    //virtual from within Entity.  As a result, take an extra bool param.  If
+    //true, then we check isMobile before removing from scene.  Otherwise, we do
+    //not.
+    void removeFromScene(bool *mobileVal=NULL);
     void addToScene(Ogre::SceneNode *newParent=NULL);
 
     OgreRenderer *getScene() const{
@@ -160,7 +165,7 @@ public:
 
     void setVisible(bool vis);
 
-    void setAnimation(const String& name);
+    void setAnimation(const String& name,bool* checkVisible = NULL);
     const std::vector<String> getAnimationList();
 
 
