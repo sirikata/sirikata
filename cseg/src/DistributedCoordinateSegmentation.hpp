@@ -277,7 +277,7 @@ private:
                                      BoundingBoxList bbList,
                                      std::map<ServerID, SocketContainer> socketList);
 
-  void finishHandleServerRegion( boost::shared_ptr<tcp::socket> socket, 
+  void writeServerRegionResponse(boost::shared_ptr<tcp::socket> socket, 
                                  BoundingBoxList boundingBoxlist);
 
   bool handleLookupBBox(const BoundingBox3f& bbox, boost::shared_ptr<tcp::socket> socket);
