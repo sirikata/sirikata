@@ -61,6 +61,7 @@ class SIRIKATA_EXPORT BaseDatagramLayer<SpaceObjectReference>
         EndPointType endPointID = listeningEndPoint.endPoint;
 
         BaseDatagramLayerPtr bdl = sstConnVars->getDatagramLayer(endPointID);
+        if (!bdl) return;
         sstConnVars->removeDatagramLayer(endPointID, true);
         bdl->unlisten(listeningEndPoint);
     }
