@@ -85,13 +85,14 @@ if (typeof(std.core.SimpleInput) != 'undefined')
          var callFunc = '';
          if (type == std.core.SimpleInput.SELECT_LIST)
              callFunc = 'simpleInputSelectList';
-         else if (type == std.core.SimpleInput.SELECT_TEXT)
+         else if (type == std.core.SimpleInput.ENTER_TEXT)
              callFunc = 'simpleInputSelectText';
          else
              throw new Error ('Error: please select a valid type ' +
                               'for SimpleInput');
 
-         guiMod.call(callFunc,message,this.indexUsed,additional);
+//         guiMod.call(callFunc,message,this.indexUsed,additional);
+                  guiMod.call(callFunc,message,this.indexUsed);
      };
 
      /*** Types of simple input to get  ***/
@@ -165,18 +166,79 @@ if (typeof(std.core.SimpleInput) != 'undefined')
                  }
              );
              inputWindow.show();
-             existingWindows[newWindowID] = [inputWindow,simpleInputID];             
+             existingWindows[newWindowID] = [inputWindow,simpleInputID];
+         }
+
+         simpleInputSubmit = function(simpleInputID)
+         {
+             var returner = null;
+             //first check to see if we got the value for a text element
+             var textInputID = generateSimpleInputOptionID(simpleInputID);
+             var textInput = $('#' + textInputID);
+             if (textInput.length > 0)
+             {
+                 //means that we got a text input
+                 returner =textInput.val();
+             }
+             else
+             {
+                 var radioInput = $('input:radio[name=' +
+                                    textInputID +']:checked');
+                 if (radioInput.length > 0)
+                     returner = radioInput.val();
+             }
+
+             
+             if (returner === null)
+             {
+                 sirikata.log('error','In simpleInput, selecting ' +
+                              'an input that does not exist.');
+             }
+             else
+             {
+                 sirikata.event('responseReceived',simpleInputID,returner);                     
+             }
+
+             
+             delete existingWindows[simpleInputID];
+             //actually remove the window from view after its question has been answered.
+             var inputID = generateDivIDFromInputID(simpleInputID);
+             $('#'+inputID).remove();
+         };
+         
+         function generateSubmitButtonHtml(simpleInputID)
+         {
+             var htmlToDisplay = '';
+             htmlToDisplay += '<button ' +
+                 'onclick="simpleInputSubmit(' + simpleInputID.toString() +
+                 ')">';
+             
+             htmlToDisplay += 'Submit';
+             htmlToDisplay += '</button>';
+
+             return htmlToDisplay;
          }
          
          simpleInputSelectList =
              function(message,simpleInputID,additional)
          {
-             newWindow(message,simpleInputID);
+             var htmlInsert = message + '<br/>';
+             newWindow(htmlInsert,simpleInputID);
          };
 
+         function generateSimpleInputOptionID(inputID)
+         {
+             return 'simpleInputIDOption__' + inputID.toString();
+         }
+         
          simpleInputSelectText = function(message,simpleInputID)
          {
-             newWindow(message,simpleInputID);  
+             var htmlInsert = message + '<br/>';
+             htmlInsert += '<input id="'                      +
+                 generateSimpleInputOptionID(simpleInputID)   +
+                 '"></input><br/>';
+             htmlInsert += generateSubmitButtonHtml(simpleInputID);
+             newWindow(htmlInsert,simpleInputID);
          };
          
          @;
