@@ -65,12 +65,12 @@ if (typeof(std.core.SimpleInput) != 'undefined')
          if (!haveInited)
              throw new Error('Error.  GUI still initializing.  Please wait.');
 
-         if (type == std.core.SimpleInput.SELECT_LIST)
-         {
-             throw new Error('Error.  Have not finished setting html ' +
-                             'in simpleInputSelectList function.  '    +
-                             'Must complete.');
-         }
+         // if (type == std.core.SimpleInput.SELECT_LIST)
+         // {
+         //     throw new Error('Error.  Have not finished setting html ' +
+         //                     'in simpleInputSelectList function.  '    +
+         //                     'Must complete.');
+         // }
          
          this.type       = type;
          this.message    = message;
@@ -231,6 +231,15 @@ if (typeof(std.core.SimpleInput) != 'undefined')
              function(message,simpleInputID,additional)
          {
              var htmlInsert = message + '<br/>';
+             var radName = generateSimpleInputOptionID(simpleInputID);
+             for (var s in additional)
+             {
+                 htmlInsert += '<input type=radio name="' +
+                     radName + '" value="' + additional[s][1] +
+                     '"></input>' + additional[s][0];
+                 htmlInsert += '</br>';
+             }
+             htmlInsert += generateSubmitButtonHtml(simpleInputID);
              newWindow(htmlInsert,simpleInputID);
          };
 
