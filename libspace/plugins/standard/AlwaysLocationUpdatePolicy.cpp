@@ -104,7 +104,8 @@ void AlwaysLocationUpdatePolicy::reportStats() {
 
 void AlwaysLocationUpdatePolicy::subscribe(ServerID remote, const UUID& uuid, SeqNoPtr seqnoPtr)
 {
-    mServerSubscriptions.subscribe(remote, uuid, seqnoPtr);
+    if (validSubscriber(remote))
+        mServerSubscriptions.subscribe(remote, uuid, seqnoPtr);
 }
 
 void AlwaysLocationUpdatePolicy::unsubscribe(ServerID remote, const UUID& uuid) {
@@ -116,7 +117,8 @@ void AlwaysLocationUpdatePolicy::unsubscribe(ServerID remote) {
 }
 
 void AlwaysLocationUpdatePolicy::subscribe(const OHDP::NodeID& remote, const UUID& uuid) {
-    mOHSubscriptions.subscribe(remote, uuid, mLocService->context()->ohSessionManager()->getSession(remote)->seqNoPtr());
+    if (validSubscriber(remote))
+        mOHSubscriptions.subscribe(remote, uuid, mLocService->context()->ohSessionManager()->getSession(remote)->seqNoPtr());
 }
 
 void AlwaysLocationUpdatePolicy::unsubscribe(const OHDP::NodeID& remote, const UUID& uuid) {
@@ -128,7 +130,8 @@ void AlwaysLocationUpdatePolicy::unsubscribe(const OHDP::NodeID& remote) {
 }
 
 void AlwaysLocationUpdatePolicy::subscribe(const UUID& remote, const UUID& uuid) {
-    mObjectSubscriptions.subscribe(remote, uuid, mLocService->context()->objectSessionManager()->getSession(ObjectReference(remote))->getSeqNoPtr());
+    if (validSubscriber(remote))
+        mObjectSubscriptions.subscribe(remote, uuid, mLocService->context()->objectSessionManager()->getSession(ObjectReference(remote))->getSeqNoPtr());
 }
 
 void AlwaysLocationUpdatePolicy::unsubscribe(const UUID& remote, const UUID& uuid) {
