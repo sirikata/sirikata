@@ -50,8 +50,6 @@
 #include <sirikata/core/odp/Exceptions.hpp>
 
 #include <sirikata/core/network/IOStrandImpl.hpp>
-#include <list>
-#include <vector>
 #include <sirikata/oh/SimulationFactory.hpp>
 #include "PerPresenceData.hpp"
 
@@ -90,29 +88,55 @@ Simulation* HostedObject::runSimulation(
     const SpaceObjectReference& sporef, const String& simName,
     Network::IOStrandPtr simStrand)
 {
-    Simulation* sim = NULL;
+    if (stopped()) return NULL;
 
-    if (stopped()) return sim;
-
-    boost::unique_lock<boost::mutex> locker(presenceDataMutex);
-    PresenceDataMap::iterator psd_it = mPresenceData.find(sporef);
-    if (psd_it == mPresenceData.end())
+    PerPresenceData* pd = NULL;
     {
-        HO_LOG(error, "Error requesting to run a "<<\
-            "simulation for a presence that does not exist.");
-        locker.unlock();
+        Mutex::scoped_lock locker(presenceDataMutex);
+        PresenceDataMap::iterator psd_it = mPresenceData.find(sporef);
+        if (psd_it == mPresenceData.end())
+        {
+            HO_LOG(error, "Error requesting to run a "<<        \
+                "simulation for a presence that does not exist.");
+            return NULL;
+        }
+
+        pd = psd_it->second;
+
+        if (pd->sims.find(simName) != pd->sims.end()) {
+            return pd->sims[simName];
+        }
+    }
+
+    Simulation* sim = NULL;
+    // This is kept outside the lock because the constructor can
+    // access the HostedObject and call methods which need the
+    // lock.
+    HO_LOG(info,String("[OH] Initializing ") + simName);
+    try {
+        sim = SimulationFactory::getSingleton().getConstructor ( simName ) (
+            mContext, static_cast<ConnectionEventProvider*>(mObjectHost),
+            getSharedPtr(), sporef,
+            getObjectHost()->getSimOptions(simName), simStrand
+        );
+    } catch(FactoryMissingConstructorException exc) {
+        sim = NULL;
+    }
+
+    if (!sim) {
+        HO_LOG(error, "Unable to load " << simName << " plugin.");
         return NULL;
     }
 
-    PerPresenceData& pd =  *psd_it->second;
-    locker.unlock();
-    bool newSimListener = addSimListeners(pd,simName,sim,simStrand);
-
-    if ((sim != NULL) && (newSimListener))
+    HO_LOG(info,String("Successfully initialized ") + simName);
     {
-        HO_LOG(detailed, "Adding simulation to context");
-        mContext->add(sim);
+        Mutex::scoped_lock locker(presenceDataMutex);
+        pd->sims[simName] = sim;
     }
+
+    HO_LOG(detailed, "Adding simulation to context");
+    mContext->add(sim);
+
     return sim;
 }
 
@@ -120,7 +144,7 @@ Simulation* HostedObject::runSimulation(
 HostedObject::~HostedObject() {
     destroy(false);
 
-    boost::mutex::scoped_lock lock(presenceDataMutex);
+    Mutex::scoped_lock lock(presenceDataMutex);
     for (PresenceDataMap::iterator i=mPresenceData.begin();i!=mPresenceData.end();++i) {
         delete i->second;
     }
@@ -146,11 +170,6 @@ void HostedObject::stop() {
 bool HostedObject::stopped() const {
     return (mContext->stopped() || destroyed);
 }
-namespace {
-void nop (const HostedObjectPtr&) {
-
-}
-}
 
 void HostedObject::destroy(bool need_self)
 {
@@ -172,10 +191,12 @@ void HostedObject::destroy(bool need_self)
     //copying the data to a separate map before clearing to avoid deadlock in
     //destructor.
 
-    boost::unique_lock<boost::mutex> locker(presenceDataMutex);
-    PresenceDataMap toDeleteFrom(mPresenceData);
-    mPresenceData.clear();
-    locker.unlock();
+    PresenceDataMap toDeleteFrom;
+    {
+        Mutex::scoped_lock locker(presenceDataMutex);
+        toDeleteFrom.swap(mPresenceData);
+    }
+
     for (PresenceDataMap::iterator iter = toDeleteFrom.begin();
          iter != toDeleteFrom.end(); ++iter)
     {
@@ -210,7 +231,7 @@ Time HostedObject::currentLocalTime() {
 
 ProxyManagerPtr HostedObject::getProxyManager(const SpaceID& space, const ObjectReference& oref)
 {
-    boost::mutex::scoped_lock lock(presenceDataMutex);
+    Mutex::scoped_lock lock(presenceDataMutex);
     SpaceObjectReference toFind(space,oref);
     PresenceDataMap::const_iterator it = mPresenceData.find(toFind);
     if (it == mPresenceData.end())
@@ -224,7 +245,7 @@ ProxyManagerPtr HostedObject::getProxyManager(const SpaceID& space, const Object
 //They are returned in ss.
 void HostedObject::getSpaceObjRefs(SpaceObjRefVec& ss) const
 {
-    boost::mutex::scoped_lock lock( const_cast<Mutex&>(presenceDataMutex) );
+    Mutex::scoped_lock lock( const_cast<Mutex&>(presenceDataMutex) );
     PresenceDataMap::const_iterator smapIter;
     for (smapIter = mPresenceData.begin(); smapIter != mPresenceData.end(); ++smapIter)
         ss.push_back(SpaceObjectReference(smapIter->second->space,smapIter->second->object));
@@ -391,41 +412,6 @@ bool HostedObject::connect(
 }
 
 
-
-
-//returns true if sim gets an already-existing listener.  false otherwise
-bool HostedObject::addSimListeners(
-    PerPresenceData& pd, const String& simName,Simulation*& sim,
-    Network::IOStrandPtr simStrand)
-{
-    if (pd.sims.find(simName) != pd.sims.end())
-    {
-        sim = pd.sims[simName];
-        return false;
-    }
-
-    HO_LOG(info,String("[OH] Initializing ") + simName);
-
-    try {
-        sim = SimulationFactory::getSingleton().getConstructor ( simName ) ( mContext, static_cast<ConnectionEventProvider*>(mObjectHost), getSharedPtr(), pd.id(), getObjectHost()->getSimOptions(simName),simStrand);
-    } catch(FactoryMissingConstructorException exc) {
-        sim = NULL;
-    }
-
-    if (!sim)
-    {
-        HO_LOG(error, "Unable to load " << simName << " plugin.");
-        return true;
-    }
-
-    pd.sims[simName] = sim;
-    HO_LOG(info,String("Successfully initialized ") + simName);
-
-    return true;
-}
-
-
-
 void HostedObject::handleConnected(const HostedObjectWPtr& weakSelf, const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info)
 {
     HostedObjectPtr self(weakSelf.lock());
@@ -468,7 +454,7 @@ void HostedObject::handleConnectedIndirect(const HostedObjectWPtr& weakSelf, con
     SpaceObjectReference self_objref(space, obj);
 
     {
-        boost::mutex::scoped_lock lock(self->presenceDataMutex);
+        Mutex::scoped_lock lock(self->presenceDataMutex);
 
         if(self->mPresenceData.find(self_objref) == self->mPresenceData.end())
         {
@@ -489,7 +475,7 @@ void HostedObject::handleConnectedIndirect(const HostedObjectWPtr& weakSelf, con
 
     // Use to initialize PerSpaceData
     {
-        boost::mutex::scoped_lock lock(self->presenceDataMutex);
+        Mutex::scoped_lock lock(self->presenceDataMutex);
         PresenceDataMap::iterator psd_it = self->mPresenceData.find(self_objref);
         PerPresenceData& psd = *psd_it->second;
         psd.initializeAs(self_proxy);
@@ -529,7 +515,7 @@ void HostedObject::handleStreamCreated(const HostedObjectWPtr& weakSelf, const S
     if (!self)
         return;
 
-    boost::mutex::scoped_lock lock(self->notifyMutex);
+    Mutex::scoped_lock lock(self->notifyMutex);
     HO_LOG(detailed,"Notifying of connected object " << spaceobj.object() << " to space " << spaceobj.space());
     if (after == SessionManager::Connected)
         self->notify(&SessionEventListener::onConnected, self, spaceobj, token);
@@ -545,7 +531,7 @@ void HostedObject::disconnectFromSpace(const SpaceID &spaceID, const ObjectRefer
     }
 
     SpaceObjectReference sporef(spaceID, oref);
-    boost::unique_lock<boost::mutex> locker(presenceDataMutex);
+    Mutex::scoped_lock locker(presenceDataMutex);
     PresenceDataMap::iterator where;
     where=mPresenceData.find(sporef);
     if (where!=mPresenceData.end()) {
@@ -555,10 +541,8 @@ void HostedObject::disconnectFromSpace(const SpaceID &spaceID, const ObjectRefer
         mObjectHost->disconnectObject(spaceID,oref);
         delete where->second;
         mPresenceData.erase(where);
-        locker.unlock();
         mObjectHost->unregisterHostedObject(sporef, this);
     } else {
-        locker.unlock();
         SILOG(cppoh,error,"Attempting to disconnect from space "<<spaceID<<" and object: "<< oref<<" when not connected to it...");
     }
 }
@@ -588,7 +572,7 @@ void HostedObject::iHandleDisconnected(
         return;
     }
 
-    boost::mutex::scoped_lock lock(self->notifyMutex);
+    Mutex::scoped_lock lock(self->notifyMutex);
     self->notify(&SessionEventListener::onDisconnected, self, spaceobj);
 
     // Only invoke disconnectFromSpace if we weren't already aware of the
@@ -802,7 +786,7 @@ void HostedObject::handleProximityUpdate(const SpaceObjectReference& spaceobj, c
             ObjectReference(removal.object()));
         bool permanent = (removal.has_type() && (removal.type() == Sirikata::Protocol::Prox::ObjectRemoval::Permanent));
 
-        boost::mutex::scoped_lock lock(presenceDataMutex);
+        Mutex::scoped_lock lock(presenceDataMutex);
         if (self->mPresenceData.find(removed_obj_ref) != self->mPresenceData.end()) {
             SILOG(oh,detailed,"Ignoring self removal from proximity results.");
         }
@@ -840,7 +824,7 @@ void HostedObject::handleProximityUpdate(const SpaceObjectReference& spaceobj, c
 ProxyObjectPtr HostedObject::createProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri, TimedMotionVector3f& tmv, TimedMotionQuaternion& tmq, const BoundingSphere3f& bs, const String& phy, const String& query, uint64 seqNo)
 {
     ProxyManagerPtr proxy_manager = getProxyManager(owner_objref.space(), owner_objref.object());
-    boost::mutex::scoped_lock lock(presenceDataMutex);
+    Mutex::scoped_lock lock(presenceDataMutex);
     if (!proxy_manager)
     {
         mPresenceData.insert(
@@ -1169,7 +1153,7 @@ const String& HostedObject::requestCurrentPhysics(const SpaceID& space,const Obj
 
 const String& HostedObject::requestQuery(const SpaceID& space, const ObjectReference& oref)
 {
-    boost::mutex::scoped_lock lock(presenceDataMutex);
+    Mutex::scoped_lock lock(presenceDataMutex);
     PresenceDataMap::iterator iter = mPresenceData.find(SpaceObjectReference(space,oref));
     if (iter == mPresenceData.end())
     {
@@ -1193,7 +1177,7 @@ void HostedObject::requestQueryUpdate(const SpaceID& space, const ObjectReferenc
     }
 
     SpaceObjectReference sporef(space,oref);
-    boost::mutex::scoped_lock lock(presenceDataMutex);
+    Mutex::scoped_lock lock(presenceDataMutex);
     PresenceDataMap::iterator pdmIter = mPresenceData.find(sporef);
     if (pdmIter != mPresenceData.end()) {
         pdmIter->second->query = new_query;
@@ -1220,19 +1204,23 @@ void HostedObject::updateLocUpdateRequest(const SpaceID& space, const ObjectRefe
         HO_LOG(detailed,"Ignoring loc update request after system stop.");
         return;
     }
-    boost::unique_lock<boost::mutex> locker(presenceDataMutex);
-    assert(mPresenceData.find(SpaceObjectReference(space, oref)) != mPresenceData.end());
-    PerPresenceData& pd = *(mPresenceData.find(SpaceObjectReference(space, oref)))->second;
-    locker.unlock();
 
-    if (loc != NULL) { pd.requestLocation = *loc; pd.updateFields |= PerPresenceData::LOC_FIELD_LOC; }
-    if (orient != NULL) { pd.requestOrientation = *orient; pd.updateFields |= PerPresenceData::LOC_FIELD_ORIENTATION; }
-    if (bounds != NULL) { pd.requestBounds = *bounds; pd.updateFields |= PerPresenceData::LOC_FIELD_BOUNDS; }
-    if (mesh != NULL) { pd.requestMesh = *mesh; pd.updateFields |= PerPresenceData::LOC_FIELD_MESH; }
-    if (phy != NULL) { pd.requestPhysics = *phy; pd.updateFields |= PerPresenceData::LOC_FIELD_PHYSICS; }
+    {
+        // Scope this lock since sendLocUpdateRequest will acquire
+        // lock itself
+        Mutex::scoped_lock locker(presenceDataMutex);
+        assert(mPresenceData.find(SpaceObjectReference(space, oref)) != mPresenceData.end());
+        PerPresenceData& pd = *(mPresenceData.find(SpaceObjectReference(space, oref)))->second;
 
-    // Cancel the re-request timer if it was active
-    pd.rerequestTimer->cancel();
+        if (loc != NULL) { pd.requestLocation = *loc; pd.updateFields |= PerPresenceData::LOC_FIELD_LOC; }
+        if (orient != NULL) { pd.requestOrientation = *orient; pd.updateFields |= PerPresenceData::LOC_FIELD_ORIENTATION; }
+        if (bounds != NULL) { pd.requestBounds = *bounds; pd.updateFields |= PerPresenceData::LOC_FIELD_BOUNDS; }
+        if (mesh != NULL) { pd.requestMesh = *mesh; pd.updateFields |= PerPresenceData::LOC_FIELD_MESH; }
+        if (phy != NULL) { pd.requestPhysics = *phy; pd.updateFields |= PerPresenceData::LOC_FIELD_PHYSICS; }
+
+        // Cancel the re-request timer if it was active
+        pd.rerequestTimer->cancel();
+    }
 
     sendLocUpdateRequest(space, oref);
 }
@@ -1247,11 +1235,12 @@ void discardChildStream(int success, SST::Stream<SpaceObjectReference>::Ptr sptr
 
 
 void HostedObject::sendLocUpdateRequest(const SpaceID& space, const ObjectReference& oref) {
-    assert(mPresenceData.find(SpaceObjectReference(space, oref)) != mPresenceData.end());
-    boost::unique_lock<boost::mutex> locker(presenceDataMutex);
-    PerPresenceData& pd = *(mPresenceData.find(SpaceObjectReference(space, oref)))->second;
-    locker.unlock();
+    // Up here to avoid recursive lock
     ProxyObjectPtr self_proxy = getProxy(space, oref);
+
+    Mutex::scoped_lock locker(presenceDataMutex);
+    assert(mPresenceData.find(SpaceObjectReference(space, oref)) != mPresenceData.end());
+    PerPresenceData& pd = *(mPresenceData.find(SpaceObjectReference(space, oref)))->second;
 
     if (!self_proxy)
     {

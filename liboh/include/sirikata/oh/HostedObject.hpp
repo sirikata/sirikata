@@ -164,11 +164,6 @@ public:
     ///makes a new objects with objectName startingLocation mesh and connect to some interesting space
     void initializeScript(const String& script_type, const String& args, const String& script);
 
-    bool addSimListeners(
-        PerPresenceData& pd, const String& oh_sims,
-        Simulation*& sim,Network::IOStrandPtr simStrand);
-
-
     /** Removes this HostedObject from the ObjectHost, and destroys the internal shared pointer
       * Safe to reuse for another connection, as long as you hold a shared_ptr to this object.
       */
