@@ -40,7 +40,6 @@ inline void DataFiles::setData(String s){
     dataSet[s+"-1K"]=dataString(1000,s);
     dataSet[s+"-10K"]=dataString(10000,s);
     dataSet[s+"-100K"]=dataString(100000,s);
-//  dataSet[s+"-1M"]=dataString(1000000,s);
 }
 
 inline DataFiles::DataFiles(){
