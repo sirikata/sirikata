@@ -36,8 +36,6 @@ if (typeof(std.core.SimpleInput) != 'undefined')
          knownUsed = null;
          inputter.cb(response);
      }
-
-     
      
      
      /**
@@ -67,6 +65,13 @@ if (typeof(std.core.SimpleInput) != 'undefined')
          if (!haveInited)
              throw new Error('Error.  GUI still initializing.  Please wait.');
 
+         if (type == std.core.SimpleInput.SELECT_LIST)
+         {
+             throw new Error('Error.  Have not finished setting html ' +
+                             'in simpleInputSelectList function.  '    +
+                             'Must complete.');
+         }
+         
          this.type       = type;
          this.message    = message;
          this.cb         = cb;
@@ -91,8 +96,7 @@ if (typeof(std.core.SimpleInput) != 'undefined')
              throw new Error ('Error: please select a valid type ' +
                               'for SimpleInput');
 
-//         guiMod.call(callFunc,message,this.indexUsed,additional);
-                  guiMod.call(callFunc,message,this.indexUsed);
+         guiMod.call(callFunc,message,this.indexUsed,additional);
      };
 
      /*** Types of simple input to get  ***/
@@ -101,7 +105,11 @@ if (typeof(std.core.SimpleInput) != 'undefined')
      //of SimpleInput
      std.core.SimpleInput.SELECT_LIST = 0;
      std.core.SimpleInput.ENTER_TEXT  = 1;
-     
+
+     std.core.SimpleInput.ready = function()
+     {
+         return haveInited;
+     };
 
      
      /**
