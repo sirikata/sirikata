@@ -52,13 +52,7 @@ public:
     {}
     virtual ~ServerIDMap() {}
 
-    /** Lookup for internal addresses, i.e. those used for space server
-     *  to space server communication. Returns NullServerID or Address4::Null if
-     *  the server can't be found.
-     *  \deprecated
-     */
-    virtual ServerID lookupInternal(const Address4& pos) = 0;
-    virtual Address4 lookupInternal(const ServerID& obj_id) = 0;
+   
     /** Lookup for internal addresses, i.e. those used for space server
      *  to space server communication. Returns NullServerID or Address4::Null if
      *  the server can't be found.
