@@ -407,6 +407,26 @@ void Server::handleSessionMessage(const ObjectHostConnectionID& oh_conn_id, Siri
 
     		SPACE_LOG(info, "Add one object to object host's list of "<<mObjectsDistribution[oh_conn_id.shortID()]->ObjectHostName);
 
+                 
+	        ObjectsDistributionMap::iterator it;
+                int sum = 0;
+	        for (it = mObjectsDistribution.begin(); it != mObjectsDistribution.end(); it++) {
+			sum += it->second->counter2;
+		}
+                int avg = sum / mObjectsDistribution.size();
+                bool update_flag = true;
+	        for (it = mObjectsDistribution.begin(); it != mObjectsDistribution.end(); it++) {
+			if (it->second->counter2 != avg && it->second->counter2 != avg + 1) {
+                          update_flag = false; 
+                        }
+		}
+                if (update_flag == true) {
+	          for (it = mObjectsDistribution.begin(); it != mObjectsDistribution.end(); it++) {
+			it->second->counter2 = it->second->counter;
+		  }
+                }
+
+
     		/*We need a better load balance algorithm
 	  	  	//calculate unbalance
 	  	  	//if there are any unbalance, send message; until balance
@@ -439,6 +459,13 @@ void Server::handleSessionMessage(const ObjectHostConnectionID& oh_conn_id, Siri
                 if (existingUnbalance(SrcOHName, DstOHName, entity_id)) {
                   mObjectsDistribution[oh_conn_id.shortID()]->entityMap[entity_id].MigrationDstOHName = DstOHName;
                   mObjectsDistribution[oh_conn_id.shortID()]->entityMap[entity_id].Migrating = true;
+
+                  int t = mObjectsDistribution[mOHNameConnections[SrcOHName].shortID()]->entityMap[entity_id].ObjectSet.size();
+                  mObjectsDistribution[mOHNameConnections[SrcOHName].shortID()]->counter2 -= t;
+
+                  t = mObjectsDistribution[mOHNameConnections[DstOHName].shortID()]->entityMap[entity_id].ObjectSet.size();
+                  mObjectsDistribution[mOHNameConnections[DstOHName].shortID()]->counter2 += t;
+
     		  informOHMigrationTo(DstOHName, entity_id, oh_conn_id);
                 } else {
 
@@ -450,9 +477,7 @@ void Server::handleSessionMessage(const ObjectHostConnectionID& oh_conn_id, Siri
     		SPACE_LOG(info, "Entity "<<entity_id.rawHexData()<<" is ready to migrate");
                 String DstOHName = mObjectsDistribution[oh_conn_id.shortID()]->entityMap[entity_id].MigrationDstOHName;
                 String SrcOHName = mObjectsDistribution[oh_conn_id.shortID()]->ObjectHostName;
-                int t = mObjectsDistribution[oh_conn_id.shortID()]->entityMap[entity_id].ObjectSet.size();
-                mObjectsDistribution[oh_conn_id.shortID()]->counter -= t;
-                mObjectsDistribution[oh_conn_id.shortID()]->entityMap.erase(entity_id);
+                               mObjectsDistribution[oh_conn_id.shortID()]->entityMap.erase(entity_id);
 
     		informOHMigrationFrom(SrcOHName, entity_id,  mOHNameConnections[DstOHName]);
     	}
@@ -467,13 +492,13 @@ void Server::handleSessionMessage(const ObjectHostConnectionID& oh_conn_id, Siri
 //Feng
 bool Server::existingUnbalance(const String& SrcOHName, String& DstOHName1, const UUID& entity_id) {
 	ObjectsDistributionMap::iterator it;
-	int min = mObjectsDistribution[mOHNameConnections[SrcOHName].shortID()]->counter; // we are going to find a OH has few objects
+	int min = mObjectsDistribution[mOHNameConnections[SrcOHName].shortID()]->counter2; // we are going to find a OH has few objects
         int delta = mObjectsDistribution[mOHNameConnections[SrcOHName].shortID()]->entityMap[entity_id].ObjectSet.size();
         int min_org = min;
 	String minOHName = SrcOHName;
 	for (it = mObjectsDistribution.begin(); it != mObjectsDistribution.end(); it++) {
-		if (it->second->counter < min) {
-			min = it->second->counter;
+		if (it->second->counter2 < min) {
+			min = it->second->counter2;
 			minOHName = it->second->ObjectHostName;
 		}
 	}
@@ -492,12 +517,12 @@ bool Server::existingUnbalance(const String& SrcOHName, String& DstOHName) {
 	String maxOHName = mObjectsDistribution.begin()->second->ObjectHostName;
 	String minOHName = mObjectsDistribution.begin()->second->ObjectHostName;
 	for (it = mObjectsDistribution.begin(); it != mObjectsDistribution.end(); it++) {
-		if (it->second->counter > max) {
-			max = it->second->counter;
+		if (it->second->counter2 > max) {
+			max = it->second->counter2;
 			maxOHName = it->second->ObjectHostName;
 		}
-		if (it->second->counter < min) {
-			min = it->second->counter;
+		if (it->second->counter2 < min) {
+			min = it->second->counter2;
 			minOHName = it->second->ObjectHostName;
 		}
 	}
@@ -678,6 +703,7 @@ void Server::handleConnectAuthResponse(const ObjectHostConnectionID& oh_conn_id,
     ObjectsDistribution* dist = new ObjectsDistribution;
     dist->ObjectHostName = sc.conn_msg.oh_name();
     dist->counter = 0;
+    dist->counter2 = 0;
     mObjectsDistribution[oh_conn_id.shortID()] = dist;
 
     SPACE_LOG(info, "New object host connected: < name: "<<mObjectsDistribution[oh_conn_id.shortID()]->ObjectHostName

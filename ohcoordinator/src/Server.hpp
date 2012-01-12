@@ -207,6 +207,7 @@ private:
       //ObjectHostConnectionID conn_id;
       String ObjectHostName;
       int counter;
+      int counter2;
 
       typedef struct EntityInfo {
         String MigrationDstOHName;
