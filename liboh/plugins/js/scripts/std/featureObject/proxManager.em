@@ -6,22 +6,73 @@
  {
      //map
      //keys: sporef of presence
-     //values: array of actual visible objects
-     var pResultSet = { };
+     //values: map of actual visible objects
+     var pResultSet = {};
 
-     // //map
-     // //keys: sporef of visible awaiting data on
-     // //value: Tuparray of visible objects awaiting data, 
-     // var awaitingFeatureData ={ };
+     /**
+      These get placed into the awaitingFeatureData and
+      haveFeatureDataFor map
+      @param {visible} vis - The visible that we request features for.
+      @param {presence} featGrabber - The presence that we're using to
+      request features and listen for feature updates.
+      @param {presence} subscriber (optional) - A presence
+      that wants to receive updates on vis.
+      */
+     function SubscriptionElement (vis,featGrabber,subscriber)
+     {
+         this.vis = vis;
+         this.featGrabber =featGrabber;
+         this.subscribers = {};
+         if (typeof(subscriber) != 'undefined')
+             this.subscribers[subscriber.toString()] = subscriber;
+     }
+
+     SubscriptionElement.prototype.addSubscriber =
+         function(presToAdd)
+     {
+         this.subscribers[presToAdd.toString()] = presToAdd;
+     };
+
+     //returns true if there are no subscribers left.
+     SubscriptionElement.prototype.noSubscribers =
+         function()
+     {
+         for (var s in this.subscribers)
+             return false;
+
+         return true;
+     };
+     
+     SubscriptionElement.prototype.removeSubscriber =
+         function(presToRemove)
+     {
+         if (!(presToRemove.toString() in this.subscribers))
+             delete this.subscribers[presToRemove.toString()];
+     };
+
+     
+     //map
+     //keys: sporef of visible awaiting data on
+     //value: SubscriptionElement
+     var awaitingFeatureData = {};
+
+     //map
+     //keys: sporef of visibles
+     //keys: SubscriptionElement
+     var haveFeatureDataFor  = {};
      
      //map
      //keys: sporef of presence
-     //values: array of proximity added functions
-     var pAddCB = { };
+     //values: array of proximity added functions.  note, some
+     //elements may be null if the proximity added function was
+     //deregistered.
+     var pAddCB = {};
 
      //map
      //keys: sporef of presence
-     //values: array of proximity removed functions
+     //values: array of proximity removed functions.  note, some
+     //elements may be null if the proximity removed function was
+     //deregistered.
      var pRemCB = {};
 
      //map
@@ -39,7 +90,8 @@
          });
 
      
-     
+     //Does not hold internal data.  Instead, has private-like
+     //variables defined above.
      function ProxManager()
      {
      }
@@ -59,7 +111,7 @@
          if (!(pres.toString() in pAddCB))
          {
              throw new Error('Cannot add prox callback because do ' +
-                             'not have associated presence in ProxManager.');
+                             'Not have associated presence in ProxManager.');
          }
 
          
@@ -114,7 +166,6 @@
 
          var pArray = pAddCB[pres.toString()];
          
-         
          if (!(typeof(pArray[addID]) == 'undefined'))
              pArray[addID] = null;
      };
@@ -134,7 +185,13 @@
              pArray[addID] = null;         
      };
 
-     
+
+     /**
+      Gets called by system whenever visibleObj is within proximity
+      range of pres.  Will trigger proxadded callbacks to be called
+      if we already have the featureData for visibleObj.  Otherwise,
+      queue visibleObj onto awaitingFeatureData.
+      */
      ProxManager.prototype.proxAddedEvent = function (pres,visibleObj)
      {
          if (!(pres.toString() in pAddCB))
@@ -143,6 +200,86 @@
                              'not have associated presence in ProxManager.');
          }
 
+         
+         if (visibleObj.toString() in haveFeatureDataFor)
+         {
+             //we already have feature data for this visible.  add pres
+             //as subscriber to haveFeatureDataFor map and trigger callback.
+             var subElement = haveFeatureDataFor[visibleObj.toString()];
+             subElement.addSubscriber(pres);
+             this.triggerAddCallback(pres,subElement.vis);
+         }
+         else
+         {
+             //we do not already have feature data for this visible.
+             //Check if we're waiting on feature data for this object.
+             //If we are, then, just add pres as a subscriber.  If we
+             //are not, initiate feature object subscription using
+             //pres as the requester.  If we are, waiting, then add
+             //pres as a subscriber for this feature data.
+             if (visibleObj.toString() in awaitingFeatureData)
+             {
+                 var subElement = awaitingFeatureData[visibleObj.toString()];
+                 subElement.addSubscriber(pres);
+             }
+             else
+             {
+                 var subElement = new SubscriptionElement(visibleObj,pres,pres);
+                 this.beginFeatureSubscribe(pres, visibleObj);
+                 awaitingFeatureData[visibleObj.toString()] = subElement;
+             }
+         }
+     };
+
+     //tells pres to listen for feature vector from visibleObj
+     ProxManager.prototype.beginFeatureSubscribe = function(pres,visibleObj)
+     {
+         //for now, simple sanity check.  After 1 second, release,
+         //saying that featureData is 1.
+         system.timeout(1,std.core.bind(this.subscribeComplete,this,pres,visibleObj,1));
+     };
+
+     //should get called when a presence has received feature data
+     //from visibleObj.
+     ProxManager.prototype.subscribeComplete =
+         function(pres,visibleObj,featureData)
+     {
+         visibleObj.featureData = featureData;
+         if (!(visibleObj.toString() in awaitingFeatureData))
+         {
+             throw new Error('Error in subscribeComplete.  No longer '+
+                             'have visibleObj in awaitingFeatureData.');                 
+         }
+
+         var subElement = awaitingFeatureData[visibleObj.toString()];
+         delete awaitingFeatureData[visibleObj.toString()];
+
+         
+         if (subElement.noSubscribers())
+         {
+             //no one is waiting for/actually cares about the new
+             //data.
+             this.killSubscription(pres,visibleObj);
+             return;
+         }
+
+         //know that we've received the data and that others want to
+         //hear about it.  add subElement to haveFeatureDataFor map
+         //and notify all subscribers that visibleObj (with
+         //featureData) is in its prox result set and add visibleObj
+         //to result set.
+         haveFeatureDataFor[visibleObj.toString()] = subElement;
+         for (var s in subElement.subscribers)
+         {
+             this.triggerAddCallback(subElement.subscribers[s],
+                                     subElement.vis);
+         }
+     };
+
+     //actually fire callback for pres's having seen visibleObj in-world
+     //and add visibleObj to result set.
+     ProxManager.prototype.triggerAddCallback = function(pres,visibleObj)
+     {
          pResultSet[pres.toString()][visibleObj.toString()] = visibleObj;
          var pArray = pAddCB[pres.toString()];
          //trigger all non-null non-undefined callbacks
@@ -174,9 +311,7 @@
 		pArray[i](visibleObj);
      };
 
-
+     //actually register an instance of proxmanager with system.
      system.__registerProxManager(new ProxManager());
-     
  }
 )();
-
