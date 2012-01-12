@@ -207,16 +207,22 @@ private:
       //ObjectHostConnectionID conn_id;
       String ObjectHostName;
       int counter;
-      typedef std::set<UUID> objectsPerEntity_t;
+
+      typedef struct EntityInfo {
+        String MigrationDstOHName;
+        bool Migrating;
+        std::set<UUID> ObjectSet;
+      } objectsPerEntity_t;
+
       std::tr1::unordered_map<UUID, objectsPerEntity_t,UUID::Hasher> entityMap;
+
     };
     typedef std::tr1::unordered_map<ShortObjectHostConnectionID, ObjectsDistribution*> ObjectsDistributionMap;
     ObjectsDistributionMap mObjectsDistribution;
-    bool existingUnbalance();
-    String DstOHName;
-    String SrcOHName;
-    void informOHMigrationTo(const UUID& uuid, const ObjectHostConnectionID& oh_conn_id);
-    void informOHMigrationFrom(const UUID& uuid, const ObjectHostConnectionID& oh_conn_id);
+    bool existingUnbalance(const String&, String&);
+    bool existingUnbalance(const String&, String&, const UUID&);
+    void informOHMigrationTo(const String& DstOHName, const UUID& uuid, const ObjectHostConnectionID& oh_conn_id);
+    void informOHMigrationFrom(const String& SrcOHName, const UUID& uuid, const ObjectHostConnectionID& oh_conn_id);
 
     std::tr1::unordered_map<UUID, String, UUID::Hasher> mMigratingEntity;
 
