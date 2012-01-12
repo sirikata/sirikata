@@ -119,7 +119,7 @@ class SIRIKATA_OH_EXPORT CoordinatorSessionManager
     void migrateRequest(const UUID& uuid);
 
     //Feng
-    void updateCoordinator(const SpaceObjectReference& sporef_objid, const UUID& uuid, const String& oh_name);
+    void updateCoordinator(const SpaceObjectReference& sporef_objid, const UUID& uuid, const String& oh_name, const bool& is_connect);
     void handleEntityMigrationReady(const UUID& entity_id);
 
     /** Get offset of server time from client time for the given space. Should

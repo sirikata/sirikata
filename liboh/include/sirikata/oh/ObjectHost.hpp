@@ -261,7 +261,7 @@ public:
     /* Notify the ObjectHost that . Only called by HostedObject. */
     void hostedObjectDestroyed(const UUID& objid);
     //Feng:
-    void updateCoordinator(const SpaceObjectReference &sporef_uuid);
+    void updateCoordinator(const SpaceObjectReference &sporef_uuid, const bool& is_connect);
 
     /** Lookup the SST stream for a particular object. */
     typedef SST::Stream<SpaceObjectReference> SSTStream;

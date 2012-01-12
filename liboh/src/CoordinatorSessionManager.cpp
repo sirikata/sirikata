@@ -568,7 +568,7 @@ void CoordinatorSessionManager::migrateRequest(const UUID& uuid) {
 	SESSION_LOG(info,"Send Request: entity "<<uuid.rawHexData()<<" request to migrate");
 }
 
-void CoordinatorSessionManager::updateCoordinator(const SpaceObjectReference& sporef_objid, const UUID& entity_uuid, const String& oh_name) {
+void CoordinatorSessionManager::updateCoordinator(const SpaceObjectReference& sporef_objid, const UUID& entity_uuid, const String& oh_name, const bool& is_connect) {
     Sirikata::SerializationCheck::Scoped sc(&mSerialization);
 
     ServerID connected_to = mObjectConnections.getConnectedServer(mSpaceObjectRef);
@@ -576,7 +576,10 @@ void CoordinatorSessionManager::updateCoordinator(const SpaceObjectReference& sp
 
     Sirikata::Protocol::Session::Container session_msg;
     Sirikata::Protocol::Session::Coordinate coordinate_msg = session_msg.mutable_coordinate();
-    session_msg.coordinate().set_type(Sirikata::Protocol::Session::Coordinate::Update);
+    if(is_connect)
+    	session_msg.coordinate().set_type(Sirikata::Protocol::Session::Coordinate::Update);
+    else
+    	session_msg.coordinate().set_type(Sirikata::Protocol::Session::Coordinate::Remove);
     session_msg.coordinate().set_object(sporef_objid.object().getAsUUID());
     session_msg.coordinate().set_entity(entity_uuid); // entity id;
     session_msg.coordinate().set_oh_name(oh_name); // name of coordinator, should be a global
@@ -877,8 +880,6 @@ void CoordinatorSessionManager::handleSessionMessage(Sirikata::Protocol::Object:
 					mContext->mainStrand,
 					Duration::seconds(0.05)
 					);
-
-	    	//mContext->mainStrand->post(Duration::seconds(2), std::tr1::bind(&CoordinatorSessionManager::migrateRequest, this, sporef_obj, UUID::random()));
 
         }
         else if (conn_resp.response() == Sirikata::Protocol::Session::ConnectResponse::Error) {

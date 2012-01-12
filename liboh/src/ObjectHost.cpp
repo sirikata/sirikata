@@ -200,7 +200,7 @@ void ObjectHost::handleObjectConnectedHelper(const SpaceObjectReference& sporef_
     //Feng:
     /*This object is also registered in the oh coordinator */
     OH_LOG(info, "Register the object" << sporef_objid.toString() << "to the coordinator");
-    updateCoordinator(sporef_objid);
+    updateCoordinator(sporef_objid, true);
 }
 
 void ObjectHost::handleObjectMigrated(const SpaceObjectReference& sporef_objid, ServerID from, ServerID to) {
@@ -208,6 +208,9 @@ void ObjectHost::handleObjectMigrated(const SpaceObjectReference& sporef_objid, 
 }
 
 void ObjectHost::handleObjectDisconnected(const SpaceObjectReference& sporef_objid, Disconnect::Code) {
+    OH_LOG(info, "Unregister the object" << sporef_objid.toString() << "to the coordinator");
+    updateCoordinator(sporef_objid, false);
+
     ObjectNodeSessionProvider::notify(&ObjectNodeSessionListener::onObjectNodeSession, sporef_objid.space(), sporef_objid.object(), OHDP::NodeID::null());
 }
 
@@ -216,7 +219,7 @@ void ObjectHost::handleObjectOHMigration(const UUID &_id, const String& script_t
 }
 
 void ObjectHost::handleEntityMigrationReady(const UUID& entity_id) {
-  mCoordinatorSessionManager->handleEntityMigrationReady(entity_id);
+	mCoordinatorSessionManager->handleEntityMigrationReady(entity_id);
 }
 
 //use this function to request the object host to send a disconnect message
@@ -433,13 +436,13 @@ void ObjectHost::registerHostedObject(const SpaceObjectReference &sporef_uuid, c
     mPresenceEntity[sporef_uuid.object().getAsUUID()]=obj->id();
     mEntityPresenceSet[obj->id()].insert(sporef_uuid.object().getAsUUID());
 
-    if(mName=="oh1"){
-        SILOG(oh,info,"sleep, wait migration");
+    //if(mName=="oh1"){
+        SILOG(oh,info,"sleep, send migration request");
         mContext->mainStrand->post(
-        		Duration::seconds(10),
+        		Duration::seconds(3),
         		std::tr1::bind(&ObjectHost::migrateRequest, this, obj->id())
         );
-    }
+    //}
 }
 
 void ObjectHost::migrateRequest(const UUID& uuid)
@@ -474,9 +477,9 @@ void ObjectHost::unregisterHostedObject(const SpaceObjectReference& sporef_uuid,
 }
 
 /* Feng: all the objects should also be registered at the coordinator with the entity id and object id, to measure the unbalance */
-void ObjectHost::updateCoordinator(const SpaceObjectReference& sporef_objid) {
-    OH_LOG(info, "update to coordinator" << mCoordinatorSpaceID << "");
-    mCoordinatorSessionManager->updateCoordinator(sporef_objid, mPresenceEntity[sporef_objid.object().getAsUUID()], mName);
+void ObjectHost::updateCoordinator(const SpaceObjectReference& sporef_objid, const bool& is_connect) {
+    OH_LOG(info, "update to coordinator " << mCoordinatorSpaceID << "");
+    mCoordinatorSessionManager->updateCoordinator(sporef_objid, mPresenceEntity[sporef_objid.object().getAsUUID()], mName, is_connect);
 }
 
 void ObjectHost::hostedObjectDestroyed(const UUID& objid) {

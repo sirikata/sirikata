@@ -378,8 +378,7 @@ void Server::handleSessionMessage(const ObjectHostConnectionID& oh_conn_id, Siri
     // Connect or migrate messages
     if (session_msg.has_connect()) {
     	//if (session_msg.connect().has_version())
-            //logVersionInfo(session_msg.connect().version());
-
+        //logVersionInfo(session_msg.connect().version());
         if (session_msg.connect().type() == Sirikata::Protocol::Session::Connect::Fresh)
         {
             handleConnect(oh_conn_id, *msg, session_msg.connect());
@@ -407,25 +406,20 @@ void Server::handleSessionMessage(const ObjectHostConnectionID& oh_conn_id, Siri
 
     		SPACE_LOG(info, "Add one object to object host's list of "<<mObjectsDistribution[oh_conn_id.shortID()]->ObjectHostName);
 
-                 
-	        ObjectsDistributionMap::iterator it;
-                int sum = 0;
+    		ObjectsDistributionMap::iterator it;
+	        int sum = 0;
+	        for (it = mObjectsDistribution.begin(); it != mObjectsDistribution.end(); it++)
+	        	sum += it->second->counter2;
+	        int avg = sum / mObjectsDistribution.size();
+	        bool update_flag = true;
 	        for (it = mObjectsDistribution.begin(); it != mObjectsDistribution.end(); it++) {
-			sum += it->second->counter2;
-		}
-                int avg = sum / mObjectsDistribution.size();
-                bool update_flag = true;
-	        for (it = mObjectsDistribution.begin(); it != mObjectsDistribution.end(); it++) {
-			if (it->second->counter2 != avg && it->second->counter2 != avg + 1) {
-                          update_flag = false; 
-                        }
-		}
-                if (update_flag == true) {
-	          for (it = mObjectsDistribution.begin(); it != mObjectsDistribution.end(); it++) {
-			it->second->counter2 = it->second->counter;
-		  }
-                }
-
+	        	if (it->second->counter2 != avg && it->second->counter2 != avg + 1)
+	        		update_flag = false;
+	        }
+	        if (update_flag == true) {
+	        	for (it = mObjectsDistribution.begin(); it != mObjectsDistribution.end(); it++)
+	        		it->second->counter2 = it->second->counter;
+	        }
 
     		/*We need a better load balance algorithm
 	  	  	//calculate unbalance
@@ -454,30 +448,39 @@ void Server::handleSessionMessage(const ObjectHostConnectionID& oh_conn_id, Siri
     	else if(session_msg.coordinate().type() == Sirikata::Protocol::Session::Coordinate::MigrateReq) {
     		UUID entity_id = session_msg.coordinate().entity();
     		SPACE_LOG(info, "Receive migration request of entity "<<entity_id.rawHexData());
-                String DstOHName;
-                String SrcOHName = mObjectsDistribution[oh_conn_id.shortID()]->ObjectHostName;
-                if (existingUnbalance(SrcOHName, DstOHName, entity_id)) {
-                  mObjectsDistribution[oh_conn_id.shortID()]->entityMap[entity_id].MigrationDstOHName = DstOHName;
-                  mObjectsDistribution[oh_conn_id.shortID()]->entityMap[entity_id].Migrating = true;
+    		String DstOHName;
+    		String SrcOHName = mObjectsDistribution[oh_conn_id.shortID()]->ObjectHostName;
+    		if (existingUnbalance(SrcOHName, DstOHName, entity_id)) {
+    			mObjectsDistribution[oh_conn_id.shortID()]->entityMap[entity_id].MigrationDstOHName = DstOHName;
+                mObjectsDistribution[oh_conn_id.shortID()]->entityMap[entity_id].Migrating = true;
 
-                  int t = mObjectsDistribution[mOHNameConnections[SrcOHName].shortID()]->entityMap[entity_id].ObjectSet.size();
-                  mObjectsDistribution[mOHNameConnections[SrcOHName].shortID()]->counter2 -= t;
+                int t = mObjectsDistribution[mOHNameConnections[SrcOHName].shortID()]->entityMap[entity_id].ObjectSet.size();
+                mObjectsDistribution[mOHNameConnections[SrcOHName].shortID()]->counter2 -= t;
 
-                  t = mObjectsDistribution[mOHNameConnections[DstOHName].shortID()]->entityMap[entity_id].ObjectSet.size();
-                  mObjectsDistribution[mOHNameConnections[DstOHName].shortID()]->counter2 += t;
+                t = mObjectsDistribution[mOHNameConnections[DstOHName].shortID()]->entityMap[entity_id].ObjectSet.size();
+                mObjectsDistribution[mOHNameConnections[DstOHName].shortID()]->counter2 += t;
 
-    		  informOHMigrationTo(DstOHName, entity_id, oh_conn_id);
-                } else {
+                informOHMigrationTo(DstOHName, entity_id, oh_conn_id);
+    		} else {
 
-                }
+    		}
 
     	}
+        if(session_msg.coordinate().type() == Sirikata::Protocol::Session::Coordinate::Remove) { //Feng
+        	UUID obj_id = session_msg.coordinate().object();
+        	UUID entity_id = session_msg.coordinate().entity();
+
+        	mObjectsDistribution[oh_conn_id.shortID()]->counter--;
+        	mObjectsDistribution[oh_conn_id.shortID()]->entityMap[entity_id].ObjectSet.erase(obj_id);
+
+        	SPACE_LOG(info, "Remove one object to object host's list of "<<mObjectsDistribution[oh_conn_id.shortID()]->ObjectHostName);
+        }
     	else if(session_msg.coordinate().type() == Sirikata::Protocol::Session::Coordinate::Ready) {
     		UUID entity_id = session_msg.coordinate().entity();
     		SPACE_LOG(info, "Entity "<<entity_id.rawHexData()<<" is ready to migrate");
-                String DstOHName = mObjectsDistribution[oh_conn_id.shortID()]->entityMap[entity_id].MigrationDstOHName;
-                String SrcOHName = mObjectsDistribution[oh_conn_id.shortID()]->ObjectHostName;
-                               mObjectsDistribution[oh_conn_id.shortID()]->entityMap.erase(entity_id);
+    		String DstOHName = mObjectsDistribution[oh_conn_id.shortID()]->entityMap[entity_id].MigrationDstOHName;
+    		String SrcOHName = mObjectsDistribution[oh_conn_id.shortID()]->ObjectHostName;
+    		mObjectsDistribution[oh_conn_id.shortID()]->entityMap.erase(entity_id);
 
     		informOHMigrationFrom(SrcOHName, entity_id,  mOHNameConnections[DstOHName]);
     	}
@@ -493,8 +496,8 @@ void Server::handleSessionMessage(const ObjectHostConnectionID& oh_conn_id, Siri
 bool Server::existingUnbalance(const String& SrcOHName, String& DstOHName1, const UUID& entity_id) {
 	ObjectsDistributionMap::iterator it;
 	int min = mObjectsDistribution[mOHNameConnections[SrcOHName].shortID()]->counter2; // we are going to find a OH has few objects
-        int delta = mObjectsDistribution[mOHNameConnections[SrcOHName].shortID()]->entityMap[entity_id].ObjectSet.size();
-        int min_org = min;
+	int delta = mObjectsDistribution[mOHNameConnections[SrcOHName].shortID()]->entityMap[entity_id].ObjectSet.size();
+	int min_org = min;
 	String minOHName = SrcOHName;
 	for (it = mObjectsDistribution.begin(); it != mObjectsDistribution.end(); it++) {
 		if (it->second->counter2 < min) {
