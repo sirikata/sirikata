@@ -7,18 +7,19 @@ from numpy import *
 from pylab import *
 
 if len (sys.argv) not in [4, 5]:
-    print 'Usage: stats <output-file-name> <graph-type(pdf/cdf)> <bins> <1/0: x-axis consistency>'
+    print 'Usage: stats <output-file-name> <storage(Cassandra/SQLite)> <graph-type(hist/cdf)> <bins> <1/0: x-axis consistency>'
     sys.exit(0)
 
 file = open(sys.argv[1], 'r')
 lines = file.readlines()
 
-type = sys.argv[2]
-bins = int(sys.argv[3])
+name = sys.argv[2]
+type = sys.argv[3]
+bins = int(sys.argv[4])
 
 xbool = 0
-if len(sys.argv) == 5:
-  xbool = int(sys.argv[4])
+if len(sys.argv) == 6:
+  xbool = int(sys.argv[5])
 
 singleWritesTime = []
 singleReadsTime = []
@@ -109,7 +110,7 @@ settings = '\nbuckets number = %d, keys per bucket = %d, data size = %s bytes, s
 if type == 'hist':
 
     fig = figure() 
-    fig.suptitle('Stress Tests - Histogram (bins = %d) \n%s'%(bins, settings))
+    fig.suptitle('%s - Histogram (bins = %d) \n%s'%(name, bins, settings))
 
     ax = fig.add_subplot(321)
     histplot(ax, _swt, bins, swt_mean, swt_std, s_min, s_max, 'single writes time', xbool)
@@ -129,7 +130,7 @@ if type == 'hist':
 elif type == 'cdf':
     
     fig = figure()
-    fig.suptitle('Cassandra Tests - CDF\n%s'%settings)
+    fig.suptitle('%s Tests - CDF\n%s'%(name, settings))
 
     ax = fig.add_subplot(321)
     cdfplot(ax, _swt, bins, swt_mean, swt_std, s_min, s_max, 'single writes time', xbool)
