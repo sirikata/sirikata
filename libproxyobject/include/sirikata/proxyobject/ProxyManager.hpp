@@ -42,27 +42,40 @@ namespace Sirikata {
 
 /** An interface for a class that keeps track of proxy object references. */
 class SIRIKATA_PROXYOBJECT_EXPORT ProxyManager :
-        public Provider<ProxyCreationListener*> {
+        public Provider<ProxyCreationListener*>,
+        public Noncopyable
+{
 public:
-    ProxyManager() {}
-    virtual ~ProxyManager() {}
+    ProxyManager(const SpaceID& space);
+    virtual ~ProxyManager();
+
     ///Called after providers attached
-    virtual void initialize()=0;
+    virtual void initialize();
     ///Called before providers detatched
-    virtual void destroy()=0;
+    virtual void destroy();
 
     ///Adds to internal ProxyObject map and calls creation listeners.
-    virtual void createObject(const ProxyObjectPtr &newObj)=0;
+    virtual void createObject(const ProxyObjectPtr &newObj);
 
     ///Removes from internal ProxyObject map, calls destruction listeners, and calls newObj->destroy().
-    virtual void destroyObject(const ProxyObjectPtr &newObj)=0;
+    virtual void destroyObject(const ProxyObjectPtr &newObj);
 
     /// Ask for a proxy object by ID. Returns ProxyObjectPtr() if it doesn't exist.
-    virtual ProxyObjectPtr getProxyObject(const SpaceObjectReference &id) const=0;
+    virtual ProxyObjectPtr getProxyObject(const SpaceObjectReference &id) const;
 
-    virtual void getAllObjectReferences(std::vector<SpaceObjectReference>& allObjReferences) const = 0;
-    virtual void getAllObjectReferences(std::vector<SpaceObjectReference*>& allObjReferences) const = 0;
+    virtual void getAllObjectReferences(std::vector<SpaceObjectReference>& allObjReferences) const;
+    virtual void getAllObjectReferences(std::vector<SpaceObjectReference*>& allObjReferences) const;
+
+
+private:
+    SpaceID mSpaceID;
+
+    typedef std::tr1::unordered_map<ObjectReference, ProxyObjectPtr, ObjectReference::Hasher> ProxyMap;
+    ProxyMap mProxyMap;
 };
+
+typedef std::tr1::shared_ptr<ProxyManager> ProxyManagerPtr;
+typedef std::tr1::weak_ptr<ProxyManager> ProxyManagerWPtr;
 
 }
 

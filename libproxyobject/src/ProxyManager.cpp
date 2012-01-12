@@ -1,5 +1,5 @@
-/*  Sirikata liboh -- Object Host
- *  ObjectHostProxyManager.cpp
+/*  Sirikata
+ *  ProxyManager.cpp
  *
  *  Copyright (c) 2009, Patrick Reiter Horn
  *  All rights reserved.
@@ -30,32 +30,36 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sirikata/oh/Platform.hpp>
+#include <sirikata/proxyobject/Platform.hpp>
 #include <sirikata/core/util/SpaceObjectReference.hpp>
-#include <sirikata/oh/ObjectHostProxyManager.hpp>
-#include <sirikata/oh/ObjectHost.hpp>
-#include <sirikata/oh/HostedObject.hpp>
-#include <vector>
-
+#include <sirikata/proxyobject/ProxyManager.hpp>
+#include <sirikata/proxyobject/ProxyObject.hpp>
 
 namespace Sirikata {
 
-void ObjectHostProxyManager::initialize() {
+
+ProxyManager::ProxyManager(const SpaceID& space)
+ : mSpaceID(space)
+{}
+
+ProxyManager::~ProxyManager() {
+    destroy();
 }
-void ObjectHostProxyManager::destroy() {
+
+void ProxyManager::initialize() {
+}
+
+void ProxyManager::destroy() {
     for (ProxyMap::iterator iter = mProxyMap.begin();
          iter != mProxyMap.end();
          ++iter) {
-        iter->second.obj->destroy();
-        notify(&ProxyCreationListener::onDestroyProxy,iter->second.obj);
+        iter->second->destroy();
+        notify(&ProxyCreationListener::onDestroyProxy,iter->second);
     }
     mProxyMap.clear();
 }
-ObjectHostProxyManager::~ObjectHostProxyManager() {
-	destroy();
-}
 
-void ObjectHostProxyManager::createObject(const ProxyObjectPtr &newObj) {
+void ProxyManager::createObject(const ProxyObjectPtr &newObj) {
     ProxyMap::iterator iter = mProxyMap.find(newObj->getObjectReference().object());
     if (iter == mProxyMap.end()) {
         std::pair<ProxyMap::iterator, bool> result = mProxyMap.insert(
@@ -64,21 +68,22 @@ void ObjectHostProxyManager::createObject(const ProxyObjectPtr &newObj) {
         notify(&ProxyCreationListener::onCreateProxy,newObj);
     }
 }
-void ObjectHostProxyManager::destroyObject(const ProxyObjectPtr &delObj) {
+
+void ProxyManager::destroyObject(const ProxyObjectPtr &delObj) {
     ProxyMap::iterator iter = mProxyMap.find(delObj->getObjectReference().object());
     if (iter != mProxyMap.end()) {
-        iter->second.obj->destroy();
-        notify(&ProxyCreationListener::onDestroyProxy,iter->second.obj);
+        iter->second->destroy();
+        notify(&ProxyCreationListener::onDestroyProxy,iter->second);
         mProxyMap.erase(iter);
     }
 }
 
-ProxyObjectPtr ObjectHostProxyManager::getProxyObject(const SpaceObjectReference &id) const {
+ProxyObjectPtr ProxyManager::getProxyObject(const SpaceObjectReference &id) const {
     assert(id.space() == mSpaceID);
 
     ProxyMap::const_iterator iter = mProxyMap.find(id.object());
     if (iter != mProxyMap.end())
-        return (*iter).second.obj;
+        return (*iter).second;
 
     return ProxyObjectPtr();
 }
@@ -87,7 +92,7 @@ ProxyObjectPtr ObjectHostProxyManager::getProxyObject(const SpaceObjectReference
 
 //runs through all object references held by this particular object host proxy
 //manager and returns them in vecotr form.
-void ObjectHostProxyManager::getAllObjectReferences(std::vector<SpaceObjectReference>& allObjReferences) const
+void ProxyManager::getAllObjectReferences(std::vector<SpaceObjectReference>& allObjReferences) const
 {
     ProxyMap::const_iterator iter;
 
@@ -95,7 +100,7 @@ void ObjectHostProxyManager::getAllObjectReferences(std::vector<SpaceObjectRefer
         allObjReferences.push_back(SpaceObjectReference(mSpaceID,iter->first));
 }
 
-void ObjectHostProxyManager::getAllObjectReferences(std::vector<SpaceObjectReference*>& allObjReferences) const
+void ProxyManager::getAllObjectReferences(std::vector<SpaceObjectReference*>& allObjReferences) const
 {
     ProxyMap::const_iterator iter;
     for (iter = mProxyMap.begin(); iter != mProxyMap.end(); ++iter)

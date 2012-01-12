@@ -1486,6 +1486,7 @@ SET(LIBPROXYOBJECT_SOURCES
   ${Bullet_PBJ_CPP_FILES}
                   ${LIBPROXYOBJECT_SOURCE_DIR}/Invokable.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/ProxyObject.cpp
+                  ${LIBPROXYOBJECT_SOURCE_DIR}/ProxyManager.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/VWObject.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/OrphanLocUpdateManager.cpp
     )
@@ -1495,7 +1496,6 @@ SET(LIBOH_SOURCES
                   ${LIBOH_SOURCE_DIR}/ObjectHost.cpp
                   ${LIBOH_SOURCE_DIR}/ObjectFactory.cpp
                   ${LIBOH_SOURCE_DIR}/HostedObject.cpp
-                  ${LIBOH_SOURCE_DIR}/ObjectHostProxyManager.cpp
                   ${LIBOH_SOURCE_DIR}/ObjectScriptManagerFactory.cpp
                   ${LIBOH_SOURCE_DIR}/ObjectHostContext.cpp
                   ${LIBOH_SOURCE_DIR}/PerPresenceData.cpp

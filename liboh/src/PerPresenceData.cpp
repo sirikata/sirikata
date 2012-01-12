@@ -4,7 +4,6 @@
 #include <sirikata/core/util/SpaceObjectReference.hpp>
 #include <sirikata/proxyobject/ProxyObject.hpp>
 #include <sirikata/proxyobject/VWObject.hpp>
-#include <sirikata/oh/ObjectHostProxyManager.hpp>
 #include "PerPresenceData.hpp"
 #include <sirikata/oh/ObjectHostContext.hpp>
 
@@ -32,7 +31,7 @@ PerPresenceData::PerPresenceData(HostedObject* _parent, const SpaceID& _space, c
             Location(Vector3d(0,0,0),Quaternion(Quaternion::identity()),
                      Vector3f(0,0,0),Vector3f(0,1,0),0),
             ProxyObject::UpdateNeeded()),
-       proxyManager(new ObjectHostProxyManager(_space)),
+       proxyManager(new ProxyManager(_space)),
        validSpaceObjRef(true),
        query(_query),
        mSSTDatagramLayers(layer),
@@ -50,7 +49,7 @@ PerPresenceData::PerPresenceData(HostedObject* _parent, const SpaceID& _space, c
             Location(Vector3d(0,0,0),Quaternion(Quaternion::identity()),
                      Vector3f(0,0,0),Vector3f(0,1,0),0),
             ProxyObject::UpdateNeeded()),
-       proxyManager(new ObjectHostProxyManager(_space)),
+       proxyManager(new ProxyManager(_space)),
        validSpaceObjRef(false),
        query(_query),
        mSSTDatagramLayers(layer),
@@ -77,7 +76,7 @@ PerPresenceData::~PerPresenceData() {
         object  = sporef.object();
     }
 
-    ObjectHostProxyManagerPtr PerPresenceData::getProxyManager()
+    ProxyManagerPtr PerPresenceData::getProxyManager()
     {
         return proxyManager;
     }

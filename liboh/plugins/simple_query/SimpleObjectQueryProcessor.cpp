@@ -8,6 +8,7 @@
 #include "Protocol_Loc.pbj.hpp"
 #include "Protocol_Frame.pbj.hpp"
 #include <sirikata/oh/ProtocolLocUpdate.hpp>
+#include <sirikata/proxyobject/ProxyManager.hpp>
 
 #define SOQP_LOG(lvl, msg) SILOG(simple-object-query-processor, lvl, msg)
 

@@ -49,7 +49,6 @@
 #include <sirikata/core/transfer/URI.hpp>
 
 #include <sirikata/oh/ObjectHost.hpp>
-#include <sirikata/oh/ObjectHostProxyManager.hpp>
 #include <sirikata/oh/SimulationFactory.hpp>
 
 //here

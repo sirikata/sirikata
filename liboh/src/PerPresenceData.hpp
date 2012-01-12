@@ -3,7 +3,7 @@
 #include <sirikata/core/util/SpaceObjectReference.hpp>
 #include <sirikata/proxyobject/ProxyObject.hpp>
 #include <sirikata/proxyobject/VWObject.hpp>
-#include <sirikata/oh/ObjectHostProxyManager.hpp>
+#include <sirikata/proxyobject/ProxyManager.hpp>
 
 
 #ifndef _SIRIKATA_PER_PRESENCE_DATA_HPP_
@@ -21,7 +21,7 @@ public:
     ObjectReference object;
     ProxyObjectPtr mProxyObject;
     ProxyObject::Extrapolator mUpdatedLocation;
-    ObjectHostProxyManagerPtr proxyManager;
+    ProxyManagerPtr proxyManager;
     bool validSpaceObjRef;
     String query;
     HostedObject::BaseDatagramLayerPtr mSSTDatagramLayers;
@@ -52,7 +52,7 @@ public:
 
     void populateSpaceObjRef(const SpaceObjectReference& sporef);
 
-    ObjectHostProxyManagerPtr getProxyManager();
+    ProxyManagerPtr getProxyManager();
 
     SpaceObjectReference id() const;
     void initializeAs(ProxyObjectPtr proxyobj);

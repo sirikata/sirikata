@@ -46,6 +46,7 @@
 #include "JSObjects/JSInvokableObject.hpp"
 
 #include <sirikata/oh/ObjectHost.hpp>
+#include <sirikata/proxyobject/ProxyManager.hpp>
 #include <sirikata/core/network/IOService.hpp>
 #include <sirikata/core/util/Random.hpp>
 
@@ -92,10 +93,10 @@ EmersonScript::EmersonScript(HostedObjectPtr ho, const String& args,
    emHttpPtr(EmersonHttpManager::construct<EmersonHttpManager> (ctx))
 {
     v8::Isolate::Scope iscope(JSObjectScript::mCtx->mIsolate);
-    
+
     int32 resourceMax = mManager->getOptions()->referenceOption("emer-resource-max")->as<int32> ();
     JSObjectScript::initialize(args, script,resourceMax);
-    
+
     // Subscribe for session events
     mParent->addListener((SessionEventListener*)this);
     // And notify the script of existing ones
@@ -215,7 +216,7 @@ void EmersonScript::iNotifyProximateGone(
         JSLOG(warn, "Ignoring proximity removal callback after shutdown request.");
         return;
     }
-    
+
     JSLOG(detailed,"Notified that object "<<proximateObject->getObjectReference()<<" went out of query of "<<querier<<".  Mostly just ignoring it.");
     v8::Isolate::Scope iscope(JSObjectScript::mCtx->mIsolate);
 
@@ -289,13 +290,13 @@ void EmersonScript::iInvokeInvokable(
     Liveness::Lock locked(alive);
     if (!locked) return;
 
-    
+
     if (JSObjectScript::mCtx->stopped())
         return;
 
     while(!JSObjectScript::mCtx->initialized())
     {}
-    
+
 
     EMERSCRIPT_SERIAL_CHECK();
     v8::Isolate::Scope iscope(JSObjectScript::mCtx->mIsolate);
@@ -371,13 +372,13 @@ v8::Handle<v8::Value> EmersonScript::findVisible(const SpaceObjectReference& pro
 void  EmersonScript::notifyProximate(ProxyObjectPtr proximateObject, const SpaceObjectReference& querier)
 {
 
-    
+
     if (JSObjectScript::mCtx->stopped())
     {
         JSLOG(warn, "Ignoring proximity addition callback after shutdown request.");
         return;
     }
-    
+
     JSObjectScript::mCtx->objStrand->post(
         std::tr1::bind(&EmersonScript::iNotifyProximate,this,
             proximateObject,querier,Liveness::livenessToken()));
@@ -392,7 +393,7 @@ void  EmersonScript::iNotifyProximate(
     Liveness::Lock locked(alive);
     if (!locked) return;
 
-    
+
     EMERSCRIPT_SERIAL_CHECK();
     while(!JSObjectScript::mCtx->initialized())
     {}
@@ -403,7 +404,7 @@ void  EmersonScript::iNotifyProximate(
         JSLOG(warn, "Ignoring proximity addition callback after shutdown request.");
         return;
     }
-    
+
     JSVisibleStruct* jsvis = JSVisibleManager::createVisStruct(proximateObject->getObjectReference());
     iNotifyProximateHelper(jsvis,querier);
 }
@@ -431,7 +432,7 @@ JSInvokableObject::JSInvokableObjectInt* EmersonScript::runSimulation(const Spac
 
     Simulation* sim =
         mParent->runSimulation(sporef,simname,JSObjectScript::mCtx->objStrand);
-    
+
 
     if (sim == NULL) return NULL;
 
@@ -482,7 +483,7 @@ void EmersonScript::postDestroy(Liveness::Token alive)
 }
 
 
-void EmersonScript::postCallbackChecks() 
+void EmersonScript::postCallbackChecks()
 {
     EMERSCRIPT_SERIAL_CHECK();
     //if one of the actions that your handler took was to call reset, then reset
@@ -512,7 +513,7 @@ void EmersonScript::iOnConnected(SessionEventProviderPtr from,
     Liveness::Lock locked(alive);
     if (!locked) return;
 
-    
+
     if (JSObjectScript::mCtx->stopped())
         return;
 
@@ -520,7 +521,7 @@ void EmersonScript::iOnConnected(SessionEventProviderPtr from,
     {}
 
     v8::Isolate::Scope iscope(JSObjectScript::mCtx->mIsolate);
-    
+
     //adding this here because don't want to call onConnected while objStrand is
     //executing.
     EMERSCRIPT_SERIAL_CHECK();
@@ -617,7 +618,7 @@ void EmersonScript::iOnDisconnected(
     if (!alive) return;
     Liveness::Lock locked(alive);
     if (!locked) return;
-    
+
     EMERSCRIPT_SERIAL_CHECK();
     v8::Isolate::Scope iscope(JSObjectScript::mCtx->mIsolate);
     // We need to mark disconnection here so we don't request
@@ -642,7 +643,7 @@ void EmersonScript::iOnDisconnected(
     // Because of the delay inprocessing, we may not have the presence anymore.
     if (internal_it == mPresences.end())
         return;
-    
+
     JSPresenceStruct* jspres = internal_it->second;
     if (jspres != NULL)
         jspres->handleDisconnectedCallback();
@@ -666,7 +667,7 @@ void EmersonScript::eCreateEntityFinish(ObjectHost* oh,EntityCreateInfo& eci)
 {
     HostedObjectPtr obj =
         oh->createObject(eci.scriptType, eci.scriptOpts, eci.scriptContents);
-    
+
     obj->connect(eci.space,
         eci.loc,
         BoundingSphere3f(Vector3f::zero(), eci.scale),
@@ -704,7 +705,7 @@ void EmersonScript::iStop(bool letDie)
     EMERSCRIPT_SERIAL_CHECK();
     if (letDie)
         Liveness::letDie();
-        
+
     JSObjectScript::mCtx->stop();
     v8::Isolate::Scope iscope(JSObjectScript::mCtx->mIsolate);
 
@@ -768,10 +769,10 @@ Time EmersonScript::getHostedTime()
 
 
 v8::Handle<v8::Value> EmersonScript::create_event(
-    v8::Persistent<v8::Function>& cb, JSContextStruct* jscont) 
+    v8::Persistent<v8::Function>& cb, JSContextStruct* jscont)
 {
     EMERSCRIPT_SERIAL_CHECK();
-    
+
     if (mParent->context()->stopped()) {
         JSLOG(warn, "Not creating event because shutdown was requested.");
         return v8::Boolean::New(false);
@@ -819,8 +820,8 @@ v8::Handle<v8::Value> EmersonScript::create_timeout(double period,v8::Persistent
 
     JSTimerLivenessHolder* jstlh = new JSTimerLivenessHolder(jstimer);
     returner.MakeWeak(jstlh,&JSTimerStruct::timerWeakReferenceCleanup);
-   
-    
+
+
     //timer requires a handle to its persistent object so can handle cleanup
     //correctly.
     jstimer->setPersistentObject(returner);
@@ -862,7 +863,7 @@ void EmersonScript::handlePresCallback(
     v8::Handle<v8::Function> funcToCall,JSContextStruct* jscont, JSPresenceStruct* jspres)
 {
     EMERSCRIPT_SERIAL_CHECK();
-    
+
     if (isStopped()) {
         JSLOG(warn, "Ignoring presence callback after shutdown request.");
         return;
@@ -899,7 +900,7 @@ void EmersonScript::registerContextForClear(JSContextStruct* jscont)
 void EmersonScript::finishContextClear(JSContextStruct* jscont)
 {
     EMERSCRIPT_SERIAL_CHECK();
-    
+
     //tell it to finish clearing itself.
     jscont->finishClear();
 
@@ -1088,7 +1089,7 @@ void EmersonScript::iHandleScriptCommUnreliable(
     Liveness::Lock locked(alive);
     if (!locked) return;
 
-    
+
     EMERSCRIPT_SERIAL_CHECK();
     v8::Isolate::Scope iscope(JSObjectScript::mCtx->mIsolate);
     if (isStopped())
@@ -1106,12 +1107,12 @@ void EmersonScript::iHandleScriptCommUnreliable(
 v8::Handle<v8::Value> EmersonScript::sendSandbox(const String& msgToSend, uint32 senderID, uint32 receiverID)
 {
     EMERSCRIPT_SERIAL_CHECK();
-    
+
     //posting task so that still get asynchronous messages.
     JSObjectScript::mCtx->objStrand->post(
         std::tr1::bind(&EmersonScript::processSandboxMessage, this,
             msgToSend,senderID,receiverID,Liveness::livenessToken()));
-    
+
     return v8::Undefined();
 }
 
@@ -1123,14 +1124,14 @@ void EmersonScript::processSandboxMessage(
     if (!alive) return;
     Liveness::Lock locked(alive);
     if (!locked) return;
-    
+
     EMERSCRIPT_SERIAL_CHECK();
     if (JSObjectScript::mCtx->stopped())
     {
         JSLOG(warn,"Ignoring sandbox message after shutdown request");
         return;
     }
-    
+
     while(!JSObjectScript::mCtx->initialized())
     {}
 
@@ -1275,7 +1276,7 @@ JSPresenceStruct*  EmersonScript::addConnectedPresence(
     EMERSCRIPT_SERIAL_CHECK();
     JSPresenceStruct* presToAdd =
         new JSPresenceStruct(this, sporef,mContext,token,JSObjectScript::mCtx);
-    
+
     // Add to our internal map
     mPresences[sporef] = presToAdd;
     return presToAdd;
@@ -1448,7 +1449,7 @@ void EmersonScript::eSetPositionFunction(
     if (JSObjectScript::mCtx->stopped())
         return;
 
-    
+
     mParent->requestPositionUpdate(sporef.space(),sporef.object(),posVec);
 }
 
@@ -1474,7 +1475,7 @@ void EmersonScript::eSetVelocityFunction(
     if (JSObjectScript::mCtx->stopped())
         return;
 
-    
+
     mParent->requestVelocityUpdate(sporef.space(),sporef.object(),velVec);
 }
 
@@ -1501,7 +1502,7 @@ void EmersonScript::eSetOrientationFunction(
     if (JSObjectScript::mCtx->stopped())
         return;
 
-    
+
     mParent->requestOrientationDirectionUpdate(sporef.space(),sporef.object(),quat);
 }
 
@@ -1526,7 +1527,7 @@ void EmersonScript::eSetVisualScaleFunction(
 
     if (JSObjectScript::mCtx->stopped())
         return;
-    
+
     BoundingSphere3f bnds = mParent->requestCurrentBounds(sporef.space(),sporef.object());
     bnds = BoundingSphere3f(bnds.center(), newscale);
     mParent->requestBoundsUpdate(sporef.space(),sporef.object(), bnds);
@@ -1563,10 +1564,10 @@ void  EmersonScript::eSetVisualFunction(
 v8::Handle<v8::Value> EmersonScript::getPhysicsFunction(const SpaceObjectReference sporef)
 {
     EMERSCRIPT_SERIAL_CHECK();
-    
+
     JSLOG(error,"Calling physics function in "<<\
         "EmersonScript.cpp is unsafe.  Must fix");
-    
+
     String curphy = mParent->requestCurrentPhysics(sporef.space(),sporef.object());
     return v8::String::New(curphy.c_str(), curphy.size());
 }
@@ -1591,7 +1592,7 @@ void EmersonScript::eSetPhysicsFunction(
 
     if (JSObjectScript::mCtx->stopped())
         return;
-    
+
     mParent->requestPhysicsUpdate(sporef.space(), sporef.object(), newPhyString);
 }
 
@@ -1618,7 +1619,7 @@ void EmersonScript::eSetQueryFunction(
     if (JSObjectScript::mCtx->stopped())
         return;
 
-    
+
     mParent->requestQueryUpdate(
         sporef.space(), sporef.object(),
         sa,

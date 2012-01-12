@@ -38,7 +38,6 @@
 
 #include "ObjectHost.hpp"
 #include <sirikata/mesh/LightInfo.hpp>
-#include <sirikata/oh/ObjectHostProxyManager.hpp>
 #include <sirikata/oh/HostedObject.hpp>
 #include <sirikata/core/network/IOServiceFactory.hpp>
 #include <sirikata/core/network/IOService.hpp>
