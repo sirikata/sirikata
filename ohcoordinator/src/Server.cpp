@@ -282,7 +282,8 @@ void Server::onObjectHostConnected(const ObjectHostConnectionID& conn_id, const 
 }
 
 void Server::onObjectHostDisconnected(const ObjectHostConnectionID& oh_conn_id, const ShortObjectHostConnectionID short_conn_id) {
-	SPACE_LOG(info, "OH connection "<<short_conn_id<<": "<<mObjectsDistribution[oh_conn_id.shortID()]->ObjectHostName<<" disconnected");
+	SPACE_LOG(info, "OH connection "<<short_conn_id<<": "<<mObjectsDistribution[short_conn_id]->ObjectHostName<<" disconnected");
+	mObjectsDistribution.erase(short_conn_id);
     mContext->mainStrand->post( std::tr1::bind(&Server::handleObjectHostConnectionClosed, this, oh_conn_id) );
     mOHSessionManager->fireObjectHostSessionEnded( OHDP::NodeID(short_conn_id) );
 }

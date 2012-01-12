@@ -355,9 +355,9 @@ void Server::onObjectHostConnected(const ObjectHostConnectionID& conn_id, const 
 }
 
 void Server::onObjectHostDisconnected(const ObjectHostConnectionID& oh_conn_id, const ShortObjectHostConnectionID short_conn_id) {
-	String oh_name = mOHConnectionNames[oh_conn_id.shortID()];
+	String oh_name = mOHConnectionNames[short_conn_id];
 	SPACE_LOG(info, "OH connection "<<short_conn_id<<": "<<oh_name<<" disconnected");
-	mOHConnectionNames.erase(oh_conn_id.shortID());
+	mOHConnectionNames.erase(short_conn_id);
 	mOHNameConnections.erase(oh_name);
 
     mContext->mainStrand->post( std::tr1::bind(&Server::handleObjectHostConnectionClosed, this, oh_conn_id, oh_name) );
