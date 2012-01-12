@@ -130,8 +130,7 @@ private:
     void sendConnectSuccess(const ObjectHostConnectionID& oh_conn_id, const UUID& obj_id);
     void sendConnectError(const ObjectHostConnectionID& oh_conn_id, const UUID& obj_id);
 
-    // Handle connection ack message from object
-    void handleConnectAck(const ObjectHostConnectionID& oh_conn_id, const Sirikata::Protocol::Object::ObjectMessage& container);
+    void handleMigrateRequest(const ObjectHostConnectionID& oh_conn_id, const UUID& obj_id);
 
     // Handle a disconnection
     void handleDisconnect(UUID obj_id, ObjectConnection* conn);
@@ -189,10 +188,6 @@ private:
 
     void handleEntityOHMigraion(const UUID& uuid, const ObjectHostConnectionID& oh_conn_id);
 
-    typedef std::tr1::unordered_map<String, ObjectHostConnectionID> OHNameConnectionMap;
-    OHNameConnectionMap mOHNameConnections;
-
-
     // FIXME Another place where needing a size queue and notifications causes
     // double locking...
     boost::mutex mRouteObjectMessageMutex;
@@ -208,6 +203,8 @@ private:
       String ObjectHostName;
       int counter;
       int counter2;
+      int migrate_capacity;
+      int migrate_threshold;
 
       typedef struct EntityInfo {
         String MigrationDstOHName;
@@ -220,11 +217,13 @@ private:
     };
     typedef std::tr1::unordered_map<ShortObjectHostConnectionID, ObjectsDistribution*> ObjectsDistributionMap;
     ObjectsDistributionMap mObjectsDistribution;
-    bool existingUnbalance(const String&, String&);
-    bool existingUnbalance(const String&, String&, const UUID&);
+    bool rebalance(const String&, String&);
+    bool rebalance(const String&, String&, const UUID&);
     void informOHMigrationTo(const String& DstOHName, const UUID& uuid, const ObjectHostConnectionID& oh_conn_id);
     void informOHMigrationFrom(const String& SrcOHName, const UUID& uuid, const ObjectHostConnectionID& oh_conn_id);
 
+    typedef std::tr1::unordered_map<String, ObjectHostConnectionID> OHNameConnectionMap;
+    OHNameConnectionMap mOHNameConnections;
     std::tr1::unordered_map<UUID, String, UUID::Hasher> mMigratingEntity;
 
 }; // class Server

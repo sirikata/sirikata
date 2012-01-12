@@ -106,6 +106,10 @@ class SIRIKATA_OH_EXPORT ObjectHost
     EntityPresenceSet mEntityPresenceSet;
     ObjectSet mMigratingEntity;
 
+    uint32 mRecvMigrateCapacity;
+    uint32 mRecvMigrateThreshold;
+    uint32 mSendMigrateThreshold;
+
     void migrateEntity(const SpaceID& space, const UUID& uuid, const String& name);
     void migrateEntityHelper(const UUID& uuid, const String& name);
     void migrateAllEntity(const SpaceID& space, const String& name);
@@ -294,7 +298,7 @@ public:
 
     // Session Management Implementation
     void handleObjectConnected(const SpaceObjectReference& sporef_internalID, ServerID server);
-    void handleObjectConnectedHelper(const SpaceObjectReference& sporef_internalID, ServerID server);
+    void handleObjectConnectedtoCoordinator(const SpaceObjectReference& sporef_internalID, ServerID server);
     void handleObjectMigrated(const SpaceObjectReference& sporef_internalID, ServerID from, ServerID to);
     void handleObjectMessage(const SpaceObjectReference& sporef_internalID, const SpaceID& space, Sirikata::Protocol::Object::ObjectMessage* msg);
     void handleObjectDisconnected(const SpaceObjectReference& sporef_internalID, Disconnect::Code);

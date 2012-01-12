@@ -102,8 +102,8 @@ class SIRIKATA_OH_EXPORT CoordinatorSessionManager
     typedef OHSSTStream::Ptr OHSSTStreamPtr;
     typedef OHDPSST::Endpoint OHSSTEndpoint;
 
-    CoordinatorSessionManager(ObjectHostContext* ctx, const SpaceID& space, ServerIDMap* sidmap, ObjectConnectedCallback, ObjectMessageHandlerCallback,
-    						  ObjectDisconnectedCallback, ObjectMigrationCallback, ObjectOHMigrationCallback);
+    CoordinatorSessionManager(ObjectHostContext* ctx, const SpaceID& space, ServerIDMap* sidmap, uint32 migrate_threshold, uint32 migrate_capacity,
+    		ObjectConnectedCallback, ObjectMessageHandlerCallback, ObjectDisconnectedCallback, ObjectMigrationCallback, ObjectOHMigrationCallback);
 
     ~CoordinatorSessionManager();
 
@@ -259,6 +259,9 @@ private:
     //Feng:
     ObjectMigrationCallback mObjectMigrationToCallback;
     ObjectOHMigrationCallback mObjectOHMigrationCallback;
+
+    uint32 mMigrateCapacity;
+    uint32 mMigrateThreshold;
 
     // Only main strand accesses and manipulates the map, although other strand
     // may access the SpaceNodeConnection*'s.

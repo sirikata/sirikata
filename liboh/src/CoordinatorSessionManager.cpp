@@ -235,6 +235,7 @@ void CoordinatorSessionManager::ObjectConnections::invokeDeferredCallbacks() {
 
 CoordinatorSessionManager::CoordinatorSessionManager(
     ObjectHostContext* ctx, const SpaceID& space, ServerIDMap* sidmap,
+    uint32 migrate_threshold, uint32 migrate_capacity,
     ObjectConnectedCallback conn_cb, ObjectMessageHandlerCallback msg_cb,
     ObjectDisconnectedCallback disconn_cb,
     ObjectMigrationCallback objmigrationto_cb,
@@ -246,6 +247,8 @@ CoordinatorSessionManager::CoordinatorSessionManager(
    mSpace(space),
    mIOStrand( ctx->ioService->createStrand() ),
    mServerIDMap(sidmap),
+   mMigrateThreshold(migrate_threshold),
+   mMigrateCapacity(migrate_capacity),
    mObjectConnectedCallback(conn_cb),
    mObjectMessageHandlerCallback(msg_cb),
    mObjectDisconnectedCallback(disconn_cb),
@@ -577,20 +580,23 @@ void CoordinatorSessionManager::updateCoordinator(const SpaceObjectReference& sp
     Sirikata::Protocol::Session::Container session_msg;
     Sirikata::Protocol::Session::Coordinate coordinate_msg = session_msg.mutable_coordinate();
     if(is_connect)
-    	session_msg.coordinate().set_type(Sirikata::Protocol::Session::Coordinate::Update);
+    	session_msg.coordinate().set_type(Sirikata::Protocol::Session::Coordinate::Add);
     else
     	session_msg.coordinate().set_type(Sirikata::Protocol::Session::Coordinate::Remove);
     session_msg.coordinate().set_object(sporef_objid.object().getAsUUID());
     session_msg.coordinate().set_entity(entity_uuid); // entity id;
     session_msg.coordinate().set_oh_name(oh_name); // name of coordinator, should be a global
-
-    SESSION_LOG(info,"Send Update: add an object information "<<
-                      sporef_objid.object().getAsUUID().rawHexData()<<" to coordinator");
+/*
+    if(is_connect)
+    	SESSION_LOG(info,"Send Update: add an object information "<<sporef_objid.object().getAsUUID()<<" to coordinator");
+    else
+    	SESSION_LOG(info,"Send Update: remove an object information "<<sporef_objid.object().getAsUUID()<<" to coordinator");
+*/
     sendRetryingMessage(
-      mSpaceObjectRef, OBJECT_PORT_SESSION,
-      UUID::null(), OBJECT_PORT_SESSION,
-      serializePBJMessage(session_msg),
-      connected_to, mContext->mainStrand, Duration::seconds(0.05)); // Feng: this is sent to the coordiantor, so all the field should be correct!
+    		mSpaceObjectRef, OBJECT_PORT_SESSION,
+    		UUID::null(), OBJECT_PORT_SESSION,
+    		serializePBJMessage(session_msg),
+    		connected_to, mContext->mainStrand, Duration::seconds(0.05));
 }
 
 void CoordinatorSessionManager::getAnySpaceConnection(SpaceNodeConnection::GotSpaceConnectionCallback cb) {
@@ -871,7 +877,11 @@ void CoordinatorSessionManager::handleSessionMessage(Sirikata::Protocol::Object:
 
 	    	// Send an ack so the server (our first conn or after migrating) can start sending data to us
 	    	Sirikata::Protocol::Session::Container ack_msg;
-	    	Sirikata::Protocol::Session::IConnectAck connect_ack_msg = ack_msg.mutable_connect_ack();
+	    	Sirikata::Protocol::Session::Coordinate connect_ack_msg = ack_msg.mutable_coordinate();
+	    	ack_msg.coordinate().set_type(Sirikata::Protocol::Session::Coordinate::Ack);
+	    	ack_msg.coordinate().set_migrate_capacity(mMigrateCapacity);
+	    	ack_msg.coordinate().set_migrate_threshold(mMigrateThreshold);
+
 	    	sendRetryingMessage(
 					sporef_obj, OBJECT_PORT_SESSION,
 					UUID::null(), OBJECT_PORT_SESSION,
@@ -907,7 +917,7 @@ void CoordinatorSessionManager::handleSessionMessage(Sirikata::Protocol::Object:
         	// FIXME need to pass these arguments from object host
         	mObjectOHMigrationCallback(entity_id,"js","","system.require('std/shim/restore/simpleStorage.em');");
     	}
-    	if(coordinate.type()==Sirikata::Protocol::Session::Coordinate::Update) {
+    	if(coordinate.type()==Sirikata::Protocol::Session::Coordinate::Add) {
                 // Feng: I don't think we implemented this functionality
     	}
     }
