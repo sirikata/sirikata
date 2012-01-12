@@ -1,5 +1,5 @@
 system.require("std/default.em");
-system.require("villageSimple/village.em");
+system.require("villageSimple/villageEntity.em");
 
 var start=0
 
