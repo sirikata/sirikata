@@ -7,7 +7,7 @@ from numpy import *
 from pylab import *
 
 if len (sys.argv) not in [4, 5]:
-    print 'Usage: stats <output-file-name> <graph-type> <bins> <1/0: x-axis consistency>'
+    print 'Usage: stats <output-file-name> <graph-type(pdf/cdf)> <bins> <1/0: x-axis consistency>'
     sys.exit(0)
 
 file = open(sys.argv[1], 'r')
@@ -109,7 +109,7 @@ settings = '\nbuckets number = %d, keys per bucket = %d, data size = %s bytes, s
 if type == 'hist':
 
     fig = figure() 
-    fig.suptitle('Cassandra Tests - Histogram (bins = %d) \n%s'%(bins, settings))
+    fig.suptitle('Stress Tests - Histogram (bins = %d) \n%s'%(bins, settings))
 
     ax = fig.add_subplot(321)
     histplot(ax, _swt, bins, swt_mean, swt_std, s_min, s_max, 'single writes time', xbool)
