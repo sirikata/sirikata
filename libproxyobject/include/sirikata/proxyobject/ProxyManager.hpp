@@ -64,7 +64,6 @@ public:
     virtual ProxyObjectPtr getProxyObject(const SpaceObjectReference &id) const;
 
     virtual void getAllObjectReferences(std::vector<SpaceObjectReference>& allObjReferences) const;
-    virtual void getAllObjectReferences(std::vector<SpaceObjectReference*>& allObjReferences) const;
 
 
 private:

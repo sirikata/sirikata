@@ -100,17 +100,4 @@ void ProxyManager::getAllObjectReferences(std::vector<SpaceObjectReference>& all
         allObjReferences.push_back(SpaceObjectReference(mSpaceID,iter->first));
 }
 
-void ProxyManager::getAllObjectReferences(std::vector<SpaceObjectReference*>& allObjReferences) const
-{
-    ProxyMap::const_iterator iter;
-    for (iter = mProxyMap.begin(); iter != mProxyMap.end(); ++iter)
-    {
-        //ObjectReference tmp = iter->first;
-        SpaceObjectReference* toPush = new SpaceObjectReference(mSpaceID, iter->first);
-        //allObjReferences.push_back(iter->first);
-        allObjReferences.push_back(toPush);
-    }
-}
-
-
 }
