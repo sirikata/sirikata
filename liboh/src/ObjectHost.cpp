@@ -432,7 +432,21 @@ void ObjectHost::registerHostedObject(const SpaceObjectReference &sporef_uuid, c
 
     mPresenceEntity[sporef_uuid.object().getAsUUID()]=obj->id();
     mEntityPresenceSet[obj->id()].insert(sporef_uuid.object().getAsUUID());
+
+    if(mName=="oh1"){
+        SILOG(oh,info,"sleep, wait migration");
+        mContext->mainStrand->post(
+        		Duration::seconds(10),
+        		std::tr1::bind(&ObjectHost::migrateRequest, this, obj->id())
+        );
+    }
 }
+
+void ObjectHost::migrateRequest(const UUID& uuid)
+{
+	mCoordinatorSessionManager->migrateRequest(uuid);
+}
+
 void ObjectHost::unregisterHostedObject(const SpaceObjectReference& sporef_uuid, HostedObject* key_obj)
 {
     HostedObjectMap::iterator iter = mHostedObjects.find(sporef_uuid);

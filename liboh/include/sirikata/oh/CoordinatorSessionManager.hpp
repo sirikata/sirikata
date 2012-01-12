@@ -116,7 +116,7 @@ class SIRIKATA_OH_EXPORT CoordinatorSessionManager
 
     /** Disconnect the object from the space. */
     void disconnect(const SpaceObjectReference& id);
-    void migrateRequest(const SpaceObjectReference& sporef_objid, const UUID& uuid);
+    void migrateRequest(const UUID& uuid);
 
     //Feng
     void updateCoordinator(const SpaceObjectReference& sporef_objid, const UUID& uuid, const String& oh_name);

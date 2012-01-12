@@ -109,6 +109,7 @@ class SIRIKATA_OH_EXPORT ObjectHost
     void migrateEntity(const SpaceID& space, const UUID& uuid, const String& name);
     void migrateEntityHelper(const UUID& uuid, const String& name);
     void migrateAllEntity(const SpaceID& space, const String& name);
+    void migrateRequest(const UUID& uuid);
 
     typedef std::tr1::unordered_map<String, ObjectScriptManager*> ScriptManagerMap;
     ScriptManagerMap mScriptManagers;

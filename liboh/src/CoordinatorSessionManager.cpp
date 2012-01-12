@@ -546,10 +546,10 @@ void CoordinatorSessionManager::sendRetryingMessage(const SpaceObjectReference& 
     }
 }
 
-void CoordinatorSessionManager::migrateRequest(const SpaceObjectReference& sporef_objid, const UUID& uuid) {
+void CoordinatorSessionManager::migrateRequest(const UUID& uuid) {
 	Sirikata::SerializationCheck::Scoped sc(&mSerialization);
 
-	ServerID connected_to = mObjectConnections.getConnectedServer(sporef_objid);
+	ServerID connected_to = mObjectConnections.getConnectedServer(mSpaceObjectRef);
 	if (connected_to == NullServerID) return;
 
 	Sirikata::Protocol::Session::Container session_msg;
@@ -560,7 +560,7 @@ void CoordinatorSessionManager::migrateRequest(const SpaceObjectReference& spore
 	//coordinate_msg.set_object(uuid);
 
 	sendRetryingMessage(
-			sporef_objid, OBJECT_PORT_SESSION,
+			mSpaceObjectRef, OBJECT_PORT_SESSION,
 			UUID::null(), OBJECT_PORT_SESSION,
 			serializePBJMessage(session_msg),
 			connected_to, mContext->mainStrand, Duration::seconds(0.05));
