@@ -203,12 +203,15 @@ system.require('featureObject.em');
       */
      ProxManager.prototype.proxAddedEvent = function (pres,visibleObj)
      {
+         //ignore events where you have entered your own prox set.
+         if (pres.toString() == visibleObj.toString())
+             return;
+         
          if (!(pres.toString() in pAddCB))
          {
              throw new Error('Cannot call add event callback because do ' +
                              'not have associated presence in ProxManager.');
          }
-
          
          if (visibleObj.toString() in haveFeatureDataFor)
          {
@@ -363,6 +366,11 @@ system.require('featureObject.em');
      //haveFeatureDataFor.
      ProxManager.prototype.proxRemovedEvent = function (pres,visibleObj)
      {
+         //ignore events where you have entered your own prox set.
+         if (pres.toString() == visibleObj.toString())
+             return;
+
+         
          if (visibleObj.toString() in awaitingFeatureData)
              awaitingFeatureData[visibleObj.toString()].removeSubscriber(pres);                 
          else
