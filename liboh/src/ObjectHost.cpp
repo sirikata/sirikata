@@ -66,21 +66,27 @@ ObjectHost::ObjectHost(ObjectHostContext* ctx, Network::IOService *ioServ, const
     OptionValue *scriptManagers;
     OptionValue *simOptions;
     OptionValue *nameOptions;
+    OptionValue *sendThOptions;
+    OptionValue *recvThOptions;
+    OptionValue *recvCapOptions;
     String default_name = UUID::random().rawHexData();
     InitializeClassOptions ico("objecthost",this,
                            protocolOptions=new OptionValue("protocols","",OptionValueType<std::map<std::string,std::string> >(),"passes options into protocol specific libraries like \"tcpsst:{--send-buffer-size=1440 --parallel-sockets=1},udp:{--send-buffer-size=1500}\""),
                            scriptManagers=new OptionValue("scriptManagers","simplecamera:{},js:{}",OptionValueType<std::map<std::string,std::string> >(),"Instantiates script managers with specified options like \"simplecamera:{},js:{--import-paths=/path/to/scripts}\""),
                            simOptions=new OptionValue("simOptions","ogregraphics:{}",OptionValueType<std::map<std::string,std::string> >(),"Passes initialization strings to simulations, by name"),
                            nameOptions=new OptionValue("name", default_name, Sirikata::OptionValueType<String>(), "Object Host name"),
+                           sendThOptions=new OptionValue("sendTh", "99999", Sirikata::OptionValueType<uint32>(), "Threshold to send migration request"),
+                           recvThOptions=new OptionValue("recvTh", "99999", Sirikata::OptionValueType<uint32>(), "Threshold to receive migration request"),
+                           recvCapOptions=new OptionValue("recvCap", "99999", Sirikata::OptionValueType<uint32>(), "Capacity to receive migration request"),
                            NULL);
 
     OptionSet* oh_options = OptionSet::getOptions("objecthost",this);
     oh_options->parse(options);
 
     mName=oh_options->referenceOption("name")->as<String>();
-    mSendMigrateThreshold = 6;
-    mRecvMigrateThreshold = 5;
-    mRecvMigrateCapacity = 4;
+    mSendMigrateThreshold = oh_options->referenceOption("sendTh")->as<uint32>();
+    mRecvMigrateThreshold = oh_options->referenceOption("recvTh")->as<uint32>();
+    mRecvMigrateCapacity = oh_options->referenceOption("recvCap")->as<uint32>();
 
     mSimOptions=simOptions->as<std::map<std::string,std::string> > ();
     {

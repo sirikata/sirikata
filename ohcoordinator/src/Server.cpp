@@ -498,7 +498,7 @@ void Server::handleMigrateRequest(const ObjectHostConnectionID& oh_conn_id, cons
 	int delta = mObjectsDistribution[oh_conn_id.shortID()]->entityMap[entity_id].ObjectSet.size();
 	ObjectsDistributionMap::iterator it;
 	for (it = mObjectsDistribution.begin(); it != mObjectsDistribution.end(); it++) {
-		if( it->first != oh_conn_id.shortID() && it->second->counter + delta < it->second->migrate_threshold
+		if( it->first != oh_conn_id.shortID() && it->second->counter + delta <= it->second->migrate_threshold
 				&& delta <= it->second->migrate_capacity) {
 			DstOHName = it->second->ObjectHostName;
 			success = true;

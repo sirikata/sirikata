@@ -74,6 +74,7 @@ void InitCPPOHOptions() {
 
         .addOption(new OptionValue("coordinatormap", "local", Sirikata::OptionValueType<String>(), "The type of ServerIDMap to instantiate."))
         .addOption(new OptionValue("coordinatormap-options", "", Sirikata::OptionValueType<String>(), "Options to pass to the ServerIDMap constructor."))
+        .addOption(new OptionValue(OPT_OH_MIGRATE_OPTS,"",OptionValueType<String>(),"OH migration options"))
 
         .addOption(new OptionValue(OPT_SIGFPE,"false",OptionValueType<bool>(),"Enable floating point exceptions"))
 
