@@ -1,5 +1,16 @@
 (function()
  {
+     //if we request the feature object this many times from another
+     //visible, and do not receive it, then just fire the prox event
+     //for the visible setting featureObject to be undefined.
+     var NUM_TRIES_TO_GET_FEATURE_OBJECT = 3;
+     //if we haven't heard back from visible in this amount of time,
+     //then either re-issue the feature object request (up to
+     //NUM_TRIES_TO_GET_FATURE_OBJECT times), or just pass through
+     //undefined for the visible's featureObject (if tried that many
+     //times, and didn't get a response).
+     var TIME_TO_WAIT_FOR_FEATURE_OBJECT_RESP = 10;
+     
      //map
      //keys: sporef of presence
      //values: map of actual visible objects
@@ -227,20 +238,61 @@
          }
      };
 
-     //tells pres to listen for feature vector from visibleObj
-     ProxManager.prototype.beginFeatureSubscribe = function(pres,visibleObj)
+     //tells pres to listen for feature vector from visibleObj.
+     //numTriesLeft should be left blank except when this function
+     //calls itself.  (the idea is that it tries to get feature object
+     //data from a presence multiple times and numTriesLeft is a
+     //simple way for the function to keep track of how many times
+     //we've attempted to get feature object data from other side.
+     ProxManager.prototype.beginFeatureSubscribe =
+         function(pres,visibleObj,numTriesLeft)
      {
-         system.__debugPrint('\nbeginFeatureSubscribe in proxManager ' +
-                             'is just a dummy for now.  Fix soon.\n');
-         //for now, simple sanity check.  After 1 second, release,
-         //saying that featureData is 1.
-         system.timeout(1,std.core.bind(this.subscribeComplete,this,pres,visibleObj,1));
+         if (typeof(numTriesLeft) == 'undefined')
+             numTriesLeft = NUM_TRIES_TO_GET_FEATURE_OBJECT;
+
+         //If we try multiple times, and still don't get a response, the visible
+         //probably is not running the feature object protocol.  We
+         //can't do anything about that, and instead fire callback
+         //with undefined passed through for featureObject.
+         if (numTriesLeft <=0)
+         {
+             this.subscribeComplete(pres,visibleObj,undefined);
+             return;
+         }
+         --numTriesLeft;
+
+         
+         //see handleFeautreObjectSubscribe (featureObject.em) to see
+         //what format the feature object subscription request message
+         //should take.
+         pres # {'presFeatureSubRequest':true} >> visibleObj >>
+             [std.core.bind(handleFeatureData,undefined,this,pres,visibleObj),
+              TIME_TO_WAIT_FOR_FEATURE_OBJECT_RESP,
+              std.core.bind(
+                  this.beginFeatureSubscribe,
+                  this,pres,visibleObj,numTriesLeft)];
+         
+         // //for now, simple sanity check.  After 1 second, release,
+         // //saying that featureData is 1.
+         // system.timeout(1,std.core.bind(this.subscribeComplete,this,pres,visibleObj,1));
      };
 
+     function handleFeatureData(proxMan,mPres,vis,featureMsg,visSender)
+     {
+         //see handleFeatureObjectSubscribe for structure of reply
+         //mesages.
+         proxMan.subscribeComplete(mPres,vis,featureMsg.data);
+     }
+     
+
+     //Call this function when you want pres to unsubscribe for
+     //feature data from visibleObj.
      ProxManager.prototype.killSubscription = function(pres,visibleObj)
      {
-         system.__debugPrint('\nkillSubscription in proxManager ' +
-                             'is just a dummy for now.  Fix soon.\n');
+         //see handleFeautreObjectRequestUnsubscribe message handler
+         //in featureObject.em to see what the format of a
+         //killSubscription message should look like.
+         pres # {'presFeatureReqUnsub': true} >> visibleObj >> [];
      };
 
      

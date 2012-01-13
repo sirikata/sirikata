@@ -1277,7 +1277,7 @@ PresenceEntry.prototype.proxRemovedEvent = function (visibleObj,visTo)
              //reset self;
              system.__setBehindSelf( system._selfMap[presVisTo.toString()].presObj);
              //fire proxAddedEvent.
-             system._selfMap[presVisTo.toString()].proxAddedEvent(visObj,presVisTo);
+             system._selfMap[presVisTo.toString()].proxAddedEvent(visObj,system.self);
          }
          else
              throw new Error('Error: received prox added message for presence not controlling');
@@ -1296,7 +1296,7 @@ PresenceEntry.prototype.proxRemovedEvent = function (visibleObj,visTo)
              //reset self;
              system.__setBehindSelf( system._selfMap[presVisTo.toString()].presObj);
              //fire proxRemovedEvent.
-             system._selfMap[presVisTo.toString()].proxRemovedEvent(visObj,presVisTo);
+             system._selfMap[presVisTo.toString()].proxRemovedEvent(visObj,system.self);
          }
          else
              throw new Error('Error: received prox added message for presence not controlling');
