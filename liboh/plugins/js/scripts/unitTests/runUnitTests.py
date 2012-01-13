@@ -173,6 +173,21 @@ def registerTests():
     testArray.append(messagingTest);
 
 
+    csvFeatureObjectEntInfo = CSVConstructorInfo(
+        script_type="js",
+        script_contents="system.import('unitTests/emTests/featureObjectTest.em');");
+    
+    featureObjTest     = csvTest.CSVTest("featureObjectTest",
+                                         touches=['onPresenceConnected', 'message syntax', 'featureObject',
+                                                  'serialization', 'deserialization','makeReply'],
+                                         #should load same script on two entities.
+                                         entityConstructorInfo=[csvFeatureObjectEntInfo,csvFeatureObjectEntInfo],
+                                         duration=17);
+    testArray.append(featureObjTest);
+
+    
+    
+
     connectionLoadTestInfo = CSVConstructorInfo(script_type="js",
                                                 script_contents="system.import('unitTests/emTests/connectionLoadTest.em');");
     connectionLoadTest     = csvTest.CSVTest("connectionLoadTest",
