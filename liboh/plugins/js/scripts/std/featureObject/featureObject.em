@@ -135,8 +135,9 @@ system.require('featureChangeTransaction.em');
     std.featureObject.removeField = function(index,pres)
     {
         singleCommit(
-            std.featureObject.Action.ADD,index,undefined,pres);
+            std.featureObject.Action.REMOVE,index,undefined,pres);
     };
+
     
     std.featureObject.changeField = function(index,data,pres)
     {
