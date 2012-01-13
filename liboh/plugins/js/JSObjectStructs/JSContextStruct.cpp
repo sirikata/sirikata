@@ -710,7 +710,6 @@ void JSContextStruct::finishClear()
     {
         JSSuspendable* jssusp = iter->first;
         jssusp->clear();
-//        iter->first->clear();
     }
 
     mInSuspendableLoop = false;

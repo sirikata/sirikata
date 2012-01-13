@@ -330,10 +330,29 @@ void JSObjectScript::iStop(bool letDie)
     // (i.e. EmersonScript).
     if (mContext != NULL)
     {
+        JSContextStruct* toDel = mContext;
         v8::HandleScope handle_scope;
         mContext->clear();
-        delete mContext;
         mContext = NULL;
+
+        mCtx->objStrand->post(
+            std::tr1::bind(&JSObjectScript::iDelContext,this,toDel,toDel->livenessToken()));
+
+    }
+}
+
+
+void JSObjectScript::iDelContext(JSContextStruct* toDel,Liveness::Token ctxLT)
+{
+    if (ctxLT)
+    {
+        if (!toDel->getIsCleared())
+        {
+            JSLOG(error,"Context should already be cleared "\
+                "before calling internal delete on it");
+            assert(false);
+        }
+        delete toDel;
     }
 }
 
