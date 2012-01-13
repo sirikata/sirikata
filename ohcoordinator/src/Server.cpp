@@ -285,6 +285,7 @@ void Server::onObjectHostConnected(const ObjectHostConnectionID& conn_id, const 
 void Server::onObjectHostDisconnected(const ObjectHostConnectionID& oh_conn_id, const ShortObjectHostConnectionID short_conn_id) {
 	SPACE_LOG(info, "OH connection "<<short_conn_id<<": "<<mObjectsDistribution[short_conn_id]->ObjectHostName<<" disconnected");
 	mOHNameConnections.erase(mObjectsDistribution[short_conn_id]->ObjectHostName);
+	mCount = mCount-mObjectsDistribution[short_conn_id]->counter;
 	mObjectsDistribution.erase(short_conn_id);
     mContext->mainStrand->post( std::tr1::bind(&Server::handleObjectHostConnectionClosed, this, oh_conn_id) );
     mOHSessionManager->fireObjectHostSessionEnded( OHDP::NodeID(short_conn_id) );
@@ -404,7 +405,6 @@ void Server::handleSessionMessage(const ObjectHostConnectionID& oh_conn_id, Siri
     		mObjectsDistribution[oh_conn_id.shortID()]->counter++;
     		mObjectsDistribution[oh_conn_id.shortID()]->entityMap[entity_id].ObjectSet.insert(obj_id);
     		mObjectsDistribution[oh_conn_id.shortID()]->entityMap[entity_id].Migrating = false;
-
     		mCount++;
 
     	    // Update mObjectInfo
