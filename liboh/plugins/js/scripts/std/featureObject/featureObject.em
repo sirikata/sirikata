@@ -16,9 +16,13 @@ will use transaction model to write changes to object.
 
 std.featureObject = {};
 
+system.require('featureChangeTransaction.em');
+
+
+
 (function()
 {
-    var presencesToFeatureObjectMap = {  };
+    var presencesToFeatureObjectMap = {};
     var TIME_TO_ACK_UPDATE = 10;
     
     /**
@@ -160,7 +164,11 @@ std.featureObject = {};
         else if (type == std.featureObject.Action.CHANGE)
             committer.changeField(index,data);
         else
-            throw new Error('Unrecognized commit type in singleCommit of featureObject.');
+        {
+            throw new Error('Unrecognized commit type in singleCommit ' +
+                            'of featureObject.');                
+        }
+
 
         committer.commit();
     };
@@ -313,6 +321,3 @@ std.featureObject = {};
     }
 })();
     
-
-
-
