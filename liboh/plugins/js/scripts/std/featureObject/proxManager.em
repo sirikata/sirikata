@@ -1,7 +1,3 @@
-
-
-////////////Now prox manager///////////
-
 (function()
  {
      //map
@@ -85,8 +81,8 @@
          {
              sporefToPresences[newPres.toString()] = newPres;
              pResultSet[newPres.toString()]        = {};
-             pAddCB[newPres.toString()]            = {};
-             pRemCB[newPres.toString()]            = {};
+             pAddCB[newPres.toString()]            = [];
+             pRemCB[newPres.toString()]            = [];
          });
 
      
@@ -138,7 +134,7 @@
              throw new Error('Cannot add prox rem callback because do ' +
                              'not have associated presence in ProxManager.');
          }
-         
+
          var pArray = pRemCB[pres.toString()];
          
 	 for (var i = 0; i <= pArray.length; i++)
@@ -234,11 +230,20 @@
      //tells pres to listen for feature vector from visibleObj
      ProxManager.prototype.beginFeatureSubscribe = function(pres,visibleObj)
      {
+         system.__debugPrint('\nbeginFeatureSubscribe in proxManager ' +
+                             'is just a dummy for now.  Fix soon.\n');
          //for now, simple sanity check.  After 1 second, release,
          //saying that featureData is 1.
          system.timeout(1,std.core.bind(this.subscribeComplete,this,pres,visibleObj,1));
      };
 
+     ProxManager.prototype.killSubscription = function(pres,visibleObj)
+     {
+         system.__debugPrint('\nkillSubscription in proxManager ' +
+                             'is just a dummy for now.  Fix soon.\n');
+     };
+
+     
      //should get called when a presence has received feature data
      //from visibleObj.
      ProxManager.prototype.subscribeComplete =
@@ -291,26 +296,70 @@
          }
      };
 
-     
+
+
+     //called by system when pinto actually states that visibleObj is
+     //distant from pres.  If the visible exists in awaitingFeatureData
+     //then we just remove a subscriber from it.  If the visible exists in
+     //haveFeatureDataFor, then fire removed callback, decrement
+     //subscribers.  If no subscribers left in haveFeatureDataFor, then
+     //unsubscribe from feature data, and remove element from
+     //haveFeatureDataFor.
      ProxManager.prototype.proxRemovedEvent = function (pres,visibleObj)
+     {
+         if (visibleObj.toString() in awaitingFeatureData)
+             awaitingFeatureData[visibleObj.toString()].removeSubscriber(pres);                 
+         else
+         {
+             //this line ensures that visibleObj will maintain
+             //featureData associated with stored vis.
+             visibleObj = haveFeatureDataFor[visibleObj.toString()].vis;
+             var subElem = haveFeatureDataFor[visibleObj.toString()];
+             subElem.removeSubscriber(pres);
+
+             if (subElem.noSubscribers())
+             {
+                 this.killSubscription(pres,visibleObj);
+                 delete haveFeatureDataFor[visibleObj.toString()];
+             }
+
+             //actually fire removed callback.
+             this.triggerRemoveCallback(pres,visibleObj);
+         }
+     };
+
+
+
+     ProxManager.prototype.triggerRemoveCallback = function(pres,visibleObj)
      {
          if (!(pres.toString() in pRemCB))
          {
              throw new Error('Cannot call rem event callback because do ' +
                              'not have associated presence in ProxManager.');
          }
+         if (!(pres.toString() in pResultSet))
+         {
+             throw new Error('Cannot call rem event callback for presence ' +
+                             'because no presence in pResultSet matches.');
+         }
 
-         var pArray = pRemCB[pres.toString()];
-         
          //remove from to proxResultSet
-        delete pArray[visibleObj.toString()];
-        system.changeSelf(pres);
-        //trigger all non-null non-undefined callbacks
-	for (var i in pArray)
-	    if ((typeof(pArray[i]) != 'undefined') && (pArray[i] != null))
-		pArray[i](visibleObj);
+         delete pResultSet[pres.toString()][visibleObj.toString()];
+
+         //actually issue callbacks
+         var pArray = pRemCB[pres.toString()];
+         system.changeSelf(pres);
+         //trigger all non-null non-undefined callbacks
+
+	 for (var i in pArray)
+         {
+	     if ((typeof(pArray[i]) != 'undefined') && (pArray[i] != null))
+		 pArray[i](visibleObj);                          
+         }
+
      };
 
+     
      //actually register an instance of proxmanager with system.
      system.__registerProxManager(new ProxManager());
  }
