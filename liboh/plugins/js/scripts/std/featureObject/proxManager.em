@@ -305,7 +305,7 @@ system.require('featureObject.em');
      ProxManager.prototype.subscribeComplete =
          function(pres,visibleObj,featureData)
      {
-         visibleObj.featureData = featureData;
+         visibleObj.featureObject= featureData;
          if (!(visibleObj.toString() in awaitingFeatureData))
          {
              throw new Error('Error in subscribeComplete.  No longer '+
@@ -421,6 +421,9 @@ system.require('featureObject.em');
      //object instead of the parts that have changed/been updated.
      function handleFeatureObjUpdates(updateMsg,sender)
      {
+         var update = updateMsg.featureObjUpdate;
+
+         
          if (!(sender.toString() in haveFeatureDataFor))
          {
              throw new Error('Error upon reception of feature object ' +
@@ -429,7 +432,11 @@ system.require('featureObject.em');
          }
 
          var localVis = haveFeatureDataFor[sender.toString()].vis;
-         localVis.featureData = updateMsg.featureObjUpdate;
+         localVis.featureObject = update;
+
+         //sends ack to other side so update sender knows we're still
+         //alive.
+         updateMsg.makeReply({}) >> [];
      }
      //see sendFeaturesToSubscribers function in featureObject.em for
      //format of featureObject update messages.

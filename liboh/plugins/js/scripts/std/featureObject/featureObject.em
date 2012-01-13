@@ -195,11 +195,12 @@ system.require('featureChangeTransaction.em');
                             'presence to bind changes to.');
         }
         var featureObject = presencesToFeatureObjectMap[presToChange.toString()];
-        return new FeatureChangeTransaction(presToChange,updateCount);
+        return new std.featureObject.FeatureChangeTransaction(
+            presToChange,featureObject.updateCount);
     };
 
     /**
-     @param {FeatureChangeTransaction} featChangeTrans
+     @param {std.featureObject.FeatureChangeTransaction} featChangeTrans
      @throws Error if changes to feature vector are stamped after
      latest update to vector.
      */
@@ -219,7 +220,7 @@ system.require('featureChangeTransaction.em');
 
         for (var s in featChangeTrans.actions)
         {
-            var act = featChangeTrans[s];
+            var act = featChangeTrans.actions[s];
             
             if (act.type == std.featureObject.Action.ADD)
                 addedDataMap[act.index] = true;
@@ -274,7 +275,7 @@ system.require('featureChangeTransaction.em');
                 }
             }
         }
-        sendFeatureToSubscribers(featElement,featChangeTrans.pres);
+        sendFeaturesToSubscribers(featElement,featChangeTrans.pres);
     };
 
     
@@ -284,6 +285,7 @@ system.require('featureChangeTransaction.em');
      */
     function sendFeaturesToSubscribers(featElement,pres)
     {
+        
         //see handleFeatureObjUpdates in proxManager.em for format of
         //featureObject update messages.
         var updateMsg =
