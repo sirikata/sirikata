@@ -48,3 +48,11 @@ var streetmesh = "meerkat:///kittyvision/street.dae/optimized/0/street.dae";
 var intersectionmesh = "meerkat:///kittyvision/street/intersection.dae/optimized/0/intersection.dae";
 var terrainmesh = "meerkat:///echeslack/simple_terrain.dae/optimized/0/simple_terrain.dae"
 var cubemesh = "meerkat:///test/multimtl.dae/original/0/multimtl.dae";
+var ballmesh = "meerkat:///kchung25/reddot.dae/optimized/reddot.dae";
+
+var ballonmeshes = [];
+ballonmeshes.push("meerkat:///kittyvision/balloon/red.dae/optimized/red.dae");
+ballonmeshes.push("meerkat:///kittyvision/balloon/yellow.dae/optimized/yellow.dae");
+ballonmeshes.push("meerkat:///kittyvision/balloon/purple.dae/optimized/purple.dae");
+ballonmeshes.push("meerkat:///kittyvision/balloon/green.dae/optimized/green.dae");
+ballonmeshes.push("meerkat:///kittyvision/balloon/blue.dae/optimized/blue.dae");
