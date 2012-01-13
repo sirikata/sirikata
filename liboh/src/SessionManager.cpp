@@ -674,7 +674,7 @@ bool SessionManager::send(const SpaceObjectReference& sporef_src, const uint16 s
         dest_server = mObjectConnections.getConnectedServer(sporef_src);
         // And if we still don't have something, give up
         if (dest_server == NullServerID) {
-            SESSION_LOG(error,"Tried to send message when not connected.");
+            //SESSION_LOG(error,"Tried to send message when not connected.");
             return false;
         }
     }
