@@ -201,10 +201,12 @@ private:
     struct ObjectsDistribution {
       //ObjectHostConnectionID conn_id;
       String ObjectHostName;
-      int counter;
-      int counter2;
-      int migrate_capacity;
-      int migrate_threshold;
+      uint32 counter;
+      uint32 counter2;
+      uint32 migratingTo_N;
+      uint32 migratingFrom_N;
+      uint32 migrate_capacity;
+      uint32 migrate_threshold;
 
       typedef struct EntityInfo {
         String MigrationDstOHName;
@@ -225,6 +227,19 @@ private:
     typedef std::tr1::unordered_map<String, ObjectHostConnectionID> OHNameConnectionMap;
     OHNameConnectionMap mOHNameConnections;
     std::tr1::unordered_map<UUID, String, UUID::Hasher> mMigratingEntity;
+
+    uint32 mCount; // total number of objects
+
+    typedef struct objectInfo {
+    	ShortObjectHostConnectionID short_id;
+    	UUID entity;
+    	bool Migrating;
+    	String MigratingTo;
+    } ObjectInfo;
+
+    std::tr1::unordered_map<UUID, objectInfo, UUID::Hasher> mObjectInfo;
+    // Checks if an object already recorded
+    bool isObjectRecorded(const UUID& object_id) const {return (mObjectInfo.find(object_id) != mObjectInfo.end());}
 
 }; // class Server
 
