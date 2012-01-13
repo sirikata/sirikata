@@ -37,9 +37,14 @@
 
 namespace Sirikata {
 
+ProxyManagerPtr ProxyManager::construct(VWObjectPtr parent, const SpaceObjectReference& _id) {
+    ProxyManagerPtr res(SelfWeakPtr<ProxyManager>::internalConstruct(new ProxyManager(parent, _id)));
+    return res;
+}
 
-ProxyManager::ProxyManager(const SpaceID& space)
- : mSpaceID(space)
+ProxyManager::ProxyManager(VWObjectPtr parent, const SpaceObjectReference& _id)
+ : mParent(parent),
+   mID(_id)
 {}
 
 ProxyManager::~ProxyManager() {
@@ -53,37 +58,130 @@ void ProxyManager::destroy() {
     for (ProxyMap::iterator iter = mProxyMap.begin();
          iter != mProxyMap.end();
          ++iter) {
-        iter->second->destroy();
-        notify(&ProxyCreationListener::onDestroyProxy,iter->second);
+        if (iter->second.ptr) {
+            iter->second.ptr->destroy();
+            notify(&ProxyCreationListener::onDestroyProxy,iter->second.ptr);
+        }
     }
     mProxyMap.clear();
 }
 
-void ProxyManager::createObject(const ProxyObjectPtr &newObj) {
-    ProxyMap::iterator iter = mProxyMap.find(newObj->getObjectReference().object());
-    if (iter == mProxyMap.end()) {
-        std::pair<ProxyMap::iterator, bool> result = mProxyMap.insert(
-            ProxyMap::value_type(newObj->getObjectReference().object(), newObj));
-        iter = result.first;
-        notify(&ProxyCreationListener::onCreateProxy,newObj);
+ProxyObjectPtr ProxyManager::createObject(
+    const SpaceObjectReference& id,
+    const TimedMotionVector3f& tmv, const TimedMotionQuaternion& tmq, const BoundingSphere3f& bs,
+    const Transfer::URI& meshuri, const String& phy, uint64 seqNo
+)
+{
+    ProxyObjectPtr newObj;
+    // Try to reuse an existing object, even if we only have a valid
+    // weak pointer to it.
+    assert(id.space() == mID.space());
+    ProxyMap::iterator iter = mProxyMap.find(id.object());
+    if (iter != mProxyMap.end()) {
+        // From strong ref
+        newObj = iter->second.ptr;
+        if (!newObj) {
+            // From weak ref
+            newObj = iter->second.wptr.lock();
+
+            // And either update the strong ref or clear out the entry
+            // if its not even valid anymore.
+            if (newObj)
+                iter->second.ptr = newObj;
+            else
+                mProxyMap.erase(iter);
+        }
     }
+
+    // If we couldn't get a valid existing copy, create and insert a
+    // new one.
+    if (!newObj) {
+        newObj = ProxyObject::construct(getSharedPtr(), id);
+        std::pair<ProxyMap::iterator, bool> result = mProxyMap.insert(
+            ProxyMap::value_type(
+                newObj->getObjectReference().object(),
+                ProxyData(newObj)
+            )
+        );
+        iter = result.first;
+    }
+
+    assert(newObj);
+    assert(newObj->getObjectReference() == id);
+    assert(newObj->getOwner().get() == this);
+
+    // This makes things simpler elsewhere: For new objects, we ensure
+    // all the values are set properly so that when the notification
+    // happens below, the proxy passed to listeners (for
+    // onCreateProxy) will be completely setup, making it valid for
+    // use. We don't need this for old ProxyObjects since they were
+    // already initialized. The seqNo of 0 only updates something if it wasn't
+    // set yet.
+    newObj->setLocation(tmv, 0);
+    newObj->setOrientation(tmq, 0);
+    newObj->setBounds(bs, 0);
+    if(meshuri)
+        newObj->setMesh(meshuri, 0);
+    if(phy.size() > 0)
+        newObj->setPhysics(phy, 0);
+
+
+    // Notification of the proxy will have already occured, but
+    // updates via, e.g., PositionListener or MeshListener, will go
+    // out here, so the potentially invalid initial data automatically
+    // filled when the object was created by createObject() shouldn't
+    // matter.
+    newObj->setLocation(tmv, seqNo);
+    newObj->setOrientation(tmq, seqNo);
+    newObj->setBounds(bs, seqNo);
+    if(meshuri)
+        newObj->setMesh(meshuri, seqNo);
+    if(phy.size() > 0)
+        newObj->setPhysics(phy, seqNo);
+
+
+    // Notification has to happen either way
+    notify(&ProxyCreationListener::onCreateProxy, newObj);
+
+    return newObj;
 }
 
 void ProxyManager::destroyObject(const ProxyObjectPtr &delObj) {
     ProxyMap::iterator iter = mProxyMap.find(delObj->getObjectReference().object());
     if (iter != mProxyMap.end()) {
-        iter->second->destroy();
-        notify(&ProxyCreationListener::onDestroyProxy,iter->second);
-        mProxyMap.erase(iter);
+        iter->second.ptr->destroy();
+        notify(&ProxyCreationListener::onDestroyProxy,iter->second.ptr);
+        // Here we only erase the strong reference, keeping the weak one so we
+        // can recover it if its still in use and we get a re-addition. Be
+        // careful not to use the iterator after this since this may trigger
+        // destruction of the object which will call proxyDeleted and invalidate
+        // it!
+        iter->second.ptr.reset();
     }
 }
 
+void ProxyManager::proxyDeleted(const ObjectReference& id) {
+    ProxyMap::iterator iter = mProxyMap.find(id);
+    // It should either be in here, or we should be empty after a call
+    // to destroy().
+    assert(iter != mProxyMap.end() || mProxyMap.empty());
+    if (iter == mProxyMap.end()) {
+        assert(mProxyMap.empty());
+        return;
+    }
+
+    assert(!(iter->second.ptr));
+    // This is where it's actually safe to erase because everything has lost
+    // references to it.
+    mProxyMap.erase(iter);
+}
+
 ProxyObjectPtr ProxyManager::getProxyObject(const SpaceObjectReference &id) const {
-    assert(id.space() == mSpaceID);
+    assert(id.space() == mID.space());
 
     ProxyMap::const_iterator iter = mProxyMap.find(id.object());
     if (iter != mProxyMap.end())
-        return (*iter).second;
+        return (*iter).second.ptr;
 
     return ProxyObjectPtr();
 }
@@ -96,8 +194,9 @@ void ProxyManager::getAllObjectReferences(std::vector<SpaceObjectReference>& all
 {
     ProxyMap::const_iterator iter;
 
+    SpaceID space = mID.space();
     for (iter = mProxyMap.begin(); iter != mProxyMap.end(); ++iter)
-        allObjReferences.push_back(SpaceObjectReference(mSpaceID,iter->first));
+        allObjReferences.push_back(SpaceObjectReference(space, iter->first));
 }
 
 }

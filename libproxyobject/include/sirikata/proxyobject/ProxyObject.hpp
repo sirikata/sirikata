@@ -50,6 +50,7 @@
 #include "MeshListener.hpp"
 
 #include <sirikata/proxyobject/PresenceProperties.hpp>
+#include <sirikata/proxyobject/ProxyManager.hpp>
 
 namespace Sirikata {
 
@@ -102,7 +103,7 @@ class SIRIKATA_PROXYOBJECT_EXPORT ProxyObject
 {
 
 public:
-    static ProxyObjectPtr construct(ProxyManager *man, const SpaceObjectReference&id, VWObjectPtr vwobj, const SpaceObjectReference& owner_sor);
+    static ProxyObjectPtr construct(ProxyManagerPtr man, const SpaceObjectReference& id);
 
     class SIRIKATA_PROXYOBJECT_EXPORT UpdateNeeded {
     public:
@@ -114,8 +115,7 @@ public:
 
 private:
     const SpaceObjectReference mID;
-    VWObjectPtr mParent;
-    const SpaceObjectReference mParentPresenceID;
+    ProxyManagerPtr mParent;
 public:
     /** Constructs a new ProxyObject. After constructing this object, it
         should be wrapped in a shared_ptr and sent to ProxyManager::createObject().
@@ -123,29 +123,23 @@ public:
         @param id  The SpaceID and ObjectReference assigned to this proxyObject.
         \param vwobj the owning VWObject, allowing the ProxyObject to interact
                     with the space
-        \param owner_sor the owning SpaceObjectReference, i.e. the presence the
-        proximity event was generated for
     */
-    ProxyObject(ProxyManager *man, const SpaceObjectReference&id, VWObjectPtr vwobj, const SpaceObjectReference& owner_sor);
+    ProxyObject(ProxyManagerPtr man, const SpaceObjectReference& id);
 
 
     /// Subclasses can do any necessary cleanup first.
     virtual void destroy();
 
     ///Returns the unique identification for this object and the space to which it is connected that gives it said name
-    inline const SpaceObjectReference&getObjectReference() const{
+    inline const SpaceObjectReference& getObjectReference() const {
         return mID;
     }
-    inline const SpaceObjectReference getOwnerPresenceID() const {
-        return mParentPresenceID;
+    inline const SpaceObjectReference& getOwnerPresenceID() const {
+        return getOwner()->id();
     }
-    /// Gets the owning Proxy
-    // Note: I think parent is being used here in different ways. mParent refers
-    // to the "owner" of this proxy, i.e. the VWObject this proxy was created
-    // for, whereas other uses of Parent presumably refer to the physical
-    // hierarchy, i.e. the hierarchy used to move grouped/connected objects in
-    // virtual space.
-    VWObjectPtr getOwner() const { return mParent; }
+
+    /// Gets the owning ProxyManager
+    ProxyManagerPtr getOwner() const { return mParent; }
 
     /// Returns the last updated position for this object.
     inline Vector3d getPosition() const{

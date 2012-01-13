@@ -16,7 +16,7 @@ namespace Sirikata
 class PerPresenceData
 {
 public:
-    HostedObject* parent;
+    HostedObjectPtr parent;
     SpaceID space;
     ObjectReference object;
     ProxyObjectPtr mProxyObject;
@@ -46,8 +46,7 @@ public:
     typedef std::map<String, Simulation*> SimulationMap;
     SimulationMap sims;
 
-    PerPresenceData(HostedObject* _parent, const SpaceID& _space, const ObjectReference& _oref, const HostedObject::BaseDatagramLayerPtr& layer, const String& query);
-    PerPresenceData(HostedObject* _parent, const SpaceID& _space, const HostedObject::BaseDatagramLayerPtr& layer, const String& query);
+    PerPresenceData(HostedObjectPtr _parent, const SpaceID& _space, const ObjectReference& _oref, const HostedObject::BaseDatagramLayerPtr& layer, const String& query);
     ~PerPresenceData();
 
     void populateSpaceObjRef(const SpaceObjectReference& sporef);

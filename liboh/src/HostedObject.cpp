@@ -461,7 +461,7 @@ void HostedObject::handleConnectedIndirect(const HostedObjectWPtr& weakSelf, con
             self->mPresenceData.insert(
                 PresenceDataMap::value_type(
                     self_objref,
-                    new PerPresenceData(self.get(), space, obj, baseDatagramLayer, info.query)
+                    new PerPresenceData(self, space, obj, baseDatagramLayer, info.query)
                 )
             );
         }
@@ -473,7 +473,8 @@ void HostedObject::handleConnectedIndirect(const HostedObjectWPtr& weakSelf, con
     TimedMotionQuaternion local_orient(self->localTime(space, info.orient.updateTime()), info.orient.value());
     ProxyObjectPtr self_proxy = self->createProxy(self_objref, self_objref, Transfer::URI(info.mesh), local_loc, local_orient, info.bnds, info.physics, info.query, 0);
 
-    // Use to initialize PerSpaceData
+    // Use to initialize PerSpaceData. This just lets the PerPresenceData know
+    // there's a self proxy now.
     {
         Mutex::scoped_lock lock(self->presenceDataMutex);
         PresenceDataMap::iterator psd_it = self->mPresenceData.find(self_objref);
@@ -830,47 +831,19 @@ ProxyObjectPtr HostedObject::createProxy(const SpaceObjectReference& objref, con
         mPresenceData.insert(
             PresenceDataMap::value_type(
                 owner_objref,
-                new PerPresenceData(this, owner_objref.space(),owner_objref.object(), BaseDatagramLayerPtr(), query)
+                new PerPresenceData(getSharedPtr(), owner_objref.space(),owner_objref.object(), BaseDatagramLayerPtr(), query)
             )
         );
         proxy_manager = getProxyManager(owner_objref.space(), owner_objref.object());
     }
 
-    ProxyObjectPtr proxy_obj = ProxyObject::construct(proxy_manager.get(),objref,getSharedPtr(),owner_objref);
-
-    // The redundancy here is confusing, but is for the sake of simplicity
-    // elsewhere. First, we make sure all the values are set properly so that
-    // when we call ProxyManager::createObject, the proxy passed to listeners
-    // (for onCreateProxy) will be completely setup, making it valid for use:
-    proxy_obj->setLocation(tmv, 0);
-    proxy_obj->setOrientation(tmq, 0);
-    proxy_obj->setBounds(bs, 0);
-    if(meshuri)
-        proxy_obj->setMesh(meshuri, 0);
-    if(phy.size() > 0)
-        proxy_obj->setPhysics(phy, 0);
-
-    proxy_manager->createObject(proxy_obj);
-
-    // Then we repeat it all for the sake of listeners who only pay attention to
-    // updates from, e.g., PositionListener or MeshListener.
-
-    proxy_obj->setLocation(tmv, seqNo);
-    proxy_obj->setOrientation(tmq, seqNo);
-    proxy_obj->setBounds(bs, seqNo);
-    if(meshuri)
-        proxy_obj->setMesh(meshuri, seqNo);
-    if(phy.size() > 0)
-        proxy_obj->setPhysics(phy, seqNo);
-
+    ProxyObjectPtr proxy_obj = proxy_manager->createObject(objref, tmv, tmq, bs, meshuri, phy, seqNo);
     return proxy_obj;
 }
 
 
 ProxyManagerPtr HostedObject::presence(const SpaceObjectReference& sor)
 {
-    //    ProxyManagerPtr proxyManPtr = getProxyManager(sor.space(),sor.object());
-    //  return proxyManPtr;
     return getProxyManager(sor.space(), sor.object());
 }
 

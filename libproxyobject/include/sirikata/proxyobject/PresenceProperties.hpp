@@ -6,6 +6,8 @@
 #define _SIRIKATA_LIBPROXYOBJECT_PRESENCE_PROPERTIES_HPP_
 
 #include <sirikata/proxyobject/Platform.hpp>
+#include <sirikata/core/util/MotionVector.hpp>
+#include <sirikata/core/util/MotionQuaternion.hpp>
 #include <sirikata/core/transfer/URI.hpp>
 
 namespace Sirikata {

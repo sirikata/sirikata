@@ -21,7 +21,7 @@ namespace Sirikata{
     }
 
 
-PerPresenceData::PerPresenceData(HostedObject* _parent, const SpaceID& _space, const ObjectReference& _oref, const HostedObject::BaseDatagramLayerPtr&layer, const String& _query)
+PerPresenceData::PerPresenceData(HostedObjectPtr _parent, const SpaceID& _space, const ObjectReference& _oref, const HostedObject::BaseDatagramLayerPtr&layer, const String& _query)
      : parent(_parent),
        space(_space),
        object(_oref),
@@ -31,26 +31,8 @@ PerPresenceData::PerPresenceData(HostedObject* _parent, const SpaceID& _space, c
             Location(Vector3d(0,0,0),Quaternion(Quaternion::identity()),
                      Vector3f(0,0,0),Vector3f(0,1,0),0),
             ProxyObject::UpdateNeeded()),
-       proxyManager(new ProxyManager(_space)),
+       proxyManager(ProxyManager::construct( _parent, SpaceObjectReference(_space, _oref) )),
        validSpaceObjRef(true),
-       query(_query),
-       mSSTDatagramLayers(layer),
-       updateFields(LOC_FIELD_NONE),
-       rerequestTimer( Network::IOTimer::create(_parent->context()->ioService) )
-    {
-    }
-
-
-PerPresenceData::PerPresenceData(HostedObject* _parent, const SpaceID& _space, const HostedObject::BaseDatagramLayerPtr&layer, const String& _query)
-     : parent(_parent),
-       mUpdatedLocation(
-            Duration::seconds(.1),
-            TemporalValue<Location>::Time::null(),
-            Location(Vector3d(0,0,0),Quaternion(Quaternion::identity()),
-                     Vector3f(0,0,0),Vector3f(0,1,0),0),
-            ProxyObject::UpdateNeeded()),
-       proxyManager(new ProxyManager(_space)),
-       validSpaceObjRef(false),
        query(_query),
        mSSTDatagramLayers(layer),
        updateFields(LOC_FIELD_NONE),
@@ -82,8 +64,7 @@ PerPresenceData::~PerPresenceData() {
     }
 
     void PerPresenceData::initializeAs(ProxyObjectPtr proxyobj) {
-        object = proxyobj->getObjectReference().object();
-
+        assert(object == proxyobj->getObjectReference().object());
         mProxyObject = proxyobj;
     }
 

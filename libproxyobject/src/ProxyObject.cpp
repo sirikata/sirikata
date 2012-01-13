@@ -41,19 +41,18 @@
 
 namespace Sirikata {
 
-ProxyObjectPtr ProxyObject::construct(ProxyManager *man, const SpaceObjectReference&id, VWObjectPtr vwobj, const SpaceObjectReference& owner_sor) {
-    ProxyObjectPtr res(SelfWeakPtr<ProxyObject>::internalConstruct(new ProxyObject(man, id, vwobj, owner_sor)));
+ProxyObjectPtr ProxyObject::construct(ProxyManagerPtr man, const SpaceObjectReference& id) {
+    ProxyObjectPtr res(SelfWeakPtr<ProxyObject>::internalConstruct(new ProxyObject(man, id)));
     res->validate();
     return res;
 }
 
-ProxyObject::ProxyObject(ProxyManager *man, const SpaceObjectReference&id, VWObjectPtr vwobj, const SpaceObjectReference& owner_sor)
+ProxyObject::ProxyObject(ProxyManagerPtr man, const SpaceObjectReference& id)
  :   SelfWeakPtr<ProxyObject>(),
      ProxyObjectProvider(),
      MeshProvider (),
      mID(id),
-     mParent(vwobj),
-     mParentPresenceID(owner_sor)
+     mParent(man)
 {
     assert(mParent);
 
@@ -64,6 +63,7 @@ ProxyObject::ProxyObject(ProxyManager *man, const SpaceObjectReference&id, VWObj
 
 
 ProxyObject::~ProxyObject() {
+    mParent->proxyDeleted(mID.object());
 }
 
 void ProxyObject::reset() {
