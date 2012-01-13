@@ -12,11 +12,6 @@ namespace Sirikata{
 
     SpaceObjectReference PerPresenceData::id() const
     {
-        if (! validSpaceObjRef)
-        {
-            std::cout<<"\n\nERROR should have set which space earlier\n\n";
-            assert(false);
-        }
         return SpaceObjectReference(space, object);
     }
 
@@ -32,7 +27,6 @@ PerPresenceData::PerPresenceData(HostedObjectPtr _parent, const SpaceID& _space,
                      Vector3f(0,0,0),Vector3f(0,1,0),0),
             ProxyObject::UpdateNeeded()),
        proxyManager(ProxyManager::construct( _parent, SpaceObjectReference(_space, _oref) )),
-       validSpaceObjRef(true),
        query(_query),
        mSSTDatagramLayers(layer),
        updateFields(LOC_FIELD_NONE),
@@ -50,13 +44,6 @@ PerPresenceData::~PerPresenceData() {
 
     rerequestTimer->cancel();
 }
-
-    void PerPresenceData::populateSpaceObjRef(const SpaceObjectReference& sporef)
-    {
-        validSpaceObjRef = true;
-        space   = sporef.space();
-        object  = sporef.object();
-    }
 
     ProxyManagerPtr PerPresenceData::getProxyManager()
     {

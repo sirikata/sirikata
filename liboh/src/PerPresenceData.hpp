@@ -22,7 +22,6 @@ public:
     ProxyObjectPtr mProxyObject;
     ProxyObject::Extrapolator mUpdatedLocation;
     ProxyManagerPtr proxyManager;
-    bool validSpaceObjRef;
     String query;
     HostedObject::BaseDatagramLayerPtr mSSTDatagramLayers;
     // Outstanding requests for loc updates.
@@ -48,8 +47,6 @@ public:
 
     PerPresenceData(HostedObjectPtr _parent, const SpaceID& _space, const ObjectReference& _oref, const HostedObject::BaseDatagramLayerPtr& layer, const String& query);
     ~PerPresenceData();
-
-    void populateSpaceObjRef(const SpaceObjectReference& sporef);
 
     ProxyManagerPtr getProxyManager();
 
