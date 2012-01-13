@@ -1,3 +1,5 @@
+system.require('featureObject.em');
+
 (function()
  {
      //if we request the feature object this many times from another
@@ -53,7 +55,7 @@
      SubscriptionElement.prototype.removeSubscriber =
          function(presToRemove)
      {
-         if (!(presToRemove.toString() in this.subscribers))
+         if (presToRemove.toString() in this.subscribers)
              delete this.subscribers[presToRemove.toString()];
      };
 
@@ -295,6 +297,8 @@
          pres # {'presFeatureReqUnsub': true} >> visibleObj >> [];
      };
 
+
+     
      
      //should get called when a presence has received feature data
      //from visibleObj.
@@ -410,6 +414,26 @@
          }
 
      };
+
+
+     //This function handles all the feature object updates.  For now,
+     //we have a very dumb protocol.  We transmit the full feature
+     //object instead of the parts that have changed/been updated.
+     function handleFeatureObjUpdates(updateMsg,sender)
+     {
+         if (!(sender.toString() in haveFeatureDataFor))
+         {
+             throw new Error('Error upon reception of feature object ' +
+                             'update.  Had no subscription to sender ' +
+                             'of message.');
+         }
+
+         var localVis = haveFeatureDataFor[sender.toString()].vis;
+         localVis.featureData = updateMsg.featureObjUpdate;
+     }
+     //see sendFeaturesToSubscribers function in featureObject.em for
+     //format of featureObject update messages.
+     handleFeatureObjUpdates << {'featureObjUpdate'::};
 
      
      //actually register an instance of proxmanager with system.
