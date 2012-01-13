@@ -69,7 +69,8 @@ function createStreets(x,z,ini_x,ini_z)
 
 function CreatePresCB()
 {
-    while(PresQueue.length>0 && windowCount<=windowSize){
+    //while(PresQueue.length>0 && windowCount<=windowSize){
+    if(PresQueue.length>0) {
         windowCount++;
         //system.print(windowCount);
         //system.print('----current windowCount\n');
@@ -89,8 +90,12 @@ function createVillage(x,z,ini_x,ini_z)
 
 function init()
 {
+
     //createPres(terrainmesh,0,0,1000)
-    createVillage(3,3,0,-1);
+    createVillage(5,5,0,-1);
+
+    var repTimer = new std.core.RepeatingTimer(1,CreatePresCB);
+/*
     system.onPresenceConnected(function()
                                {
                                    windowCount--;
@@ -103,7 +108,9 @@ function init()
                                    CreatePresCB();
                                }
                               );
+
     CreatePresCB();
+
 
     system.onPresenceDisconnected(function()
                                   {
@@ -112,6 +119,6 @@ function init()
                                       system.print('----Presence Disconnceted\n');
                                   }
                                  );
-
+*/
 }
 
