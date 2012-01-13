@@ -27,11 +27,18 @@ function newEntExec()
     var onPresConnectedCB = function()
     {
         system.self.setScale(5);
+        system.self.setOrientation(util.Quaternion.fromLookAt(<0,0,1>));
+        /*
+        system.self.loadMesh(function(){
+            bound = system.self.meshBounds().across();
+            pos = system.self.getPosition();
+            system.self.setPosition(<pos.x, bound.y/2-20, pos.z>);
+        });*/
     };
 
     system.onPresenceConnected(onPresConnectedCB);
 
-    system.__debugPrint('\nGot into new entity\n');
+    system.__debugPrint('\nNew entity created\n');
 
 }
 
@@ -92,7 +99,7 @@ function init()
 {
 
     //createPres(terrainmesh,0,0,1000)
-    createVillage(5,5,0,-1);
+    createVillage(5,5,3,-1);
 
     var repTimer = new std.core.RepeatingTimer(1,CreatePresCB);
 /*
