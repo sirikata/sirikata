@@ -92,6 +92,17 @@ void LibproxProximityBase::ProxStreamInfo<EndpointType, StreamType>::requestProx
     // the request is deferred, should eventually result in a stream.
     prox_stream->iostream_requested = true;
 
+    // We need to check for a valid session here. This can be necessary because
+    // we may have gotten a base session, registered a query, gotten results,
+    // started to try returning them and had to wait for the base stream to the
+    // object, and then had it disconnect before it ever got there. Then we'd be
+    // stuck in an infinite loop, checking for the base stream and failing to
+    // find it, then posting a retry.  validSession should only check for a
+    // still-active connection, not the stream, so it should only kill this
+    // process in this unusual case of a very short lived connection to the
+    // space.
+    if (!parent->validSession(ep)) return;
+
     StreamTypePtr base_stream = parent->getBaseStream(ep);
     if (!base_stream) {
         ctx->mainStrand->post(
