@@ -252,22 +252,22 @@ Stream::StreamID MultiplexedSocket::getNewID() {
     assert(retval>1);
     return Stream::StreamID(retval);
 }
-MultiplexedSocket::MultiplexedSocket(IOStrand*io, const Stream::SubstreamCallback&substreamCallback, bool zeroDelim)
+MultiplexedSocket::MultiplexedSocket(IOStrand*io, const Stream::SubstreamCallback&substreamCallback, StreamType streamType)
  : SerializationCheck(),
    mIO(io),
    mNewSubstreamCallback(substreamCallback),
    mHighestStreamID(1)
 {
-    mZeroDelim=zeroDelim;
+    mStreamType = streamType;
     mNewRequests=NULL;
     mSocketConnectionPhase=PRECONNECTION;
 }
-MultiplexedSocket::MultiplexedSocket(IOStrand*io,const UUID&uuid,const Stream::SubstreamCallback &substreamCallback, bool zeroDelimited)
+MultiplexedSocket::MultiplexedSocket(IOStrand*io,const UUID&uuid,const Stream::SubstreamCallback &substreamCallback, StreamType streamType)
  :SerializationCheck(),
   mIO(io),
      mNewSubstreamCallback(substreamCallback),
      mHighestStreamID(0) {
-    mZeroDelim=zeroDelimited;
+    mStreamType = streamType;
     mNewRequests=NULL;
     mSocketConnectionPhase=PRECONNECTION;
 }

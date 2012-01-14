@@ -468,6 +468,22 @@ void ASIOSocketWrapper::sendServerProtocolHeader(const MultiplexedSocketPtr& thu
     rawSend(thus,headerData,true);
 }
 
+void ASIOSocketWrapper::sendServerProtocolHeader13(const MultiplexedSocketPtr& thus, const std::string&origin, const std::string&host, const std::string&port, const std::string&resource_name, const std::string&subprotocol, const std::string& response){
+    std::stringstream header;
+    header << "HTTP/1.1 101 Switching Protocols\r\n";
+    header << "Upgrade: websocket\r\n";
+    header << "Connection: Upgrade\r\n";
+    header << "Access-Control-Allow-Origin: " << origin << "\r\n";
+    header << "Location: ws://" << host << resource_name << "\r\n";
+    header << "Sec-WebSocket-Accept: " << response << "\r\n";
+    header << "Sec-WebSocket-Protocol: " << subprotocol << "\r\n";
+    header << "\r\n";
+
+    std::string finalHeader(header.str());
+    Chunk * headerData= new Chunk(finalHeader.begin(),finalHeader.end());
+    rawSend(thus,headerData,true);
+}
+
 void ASIOSocketWrapper::sendProtocolHeader(const MultiplexedSocketPtr&parentMultiSocket, const Address& address,  const UUID&value, unsigned int numConnections) {
 //    if (paerntMultiSocket->isZeroDelim()) {
         std::stringstream header;

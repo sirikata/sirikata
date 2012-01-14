@@ -33,6 +33,8 @@
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/network/Asio.hpp>
 #include <sirikata/core/network/IOStrandImpl.hpp>
+#include "Hash.hpp"
+#include "Base64.hpp"
 #include "TCPStream.hpp"
 #include "ASIOSocketWrapper.hpp"
 #include "MultiplexedSocket.hpp"
@@ -183,13 +185,18 @@ void buildStream(TcpSstHeaderArray *buffer,
             continue;
         }
 
-        std::string::size_type colon = line.find(":");
+        // FIXME: We should be stripping whitespace properly...
+        std::string::size_type colon = line.find(": ");
         if (colon == std::string::npos) {
             SILOG(tcpsst,warning,"Error parsing headers: missing colon.");
             delete socket;
             return;
         }
         std::string head = line.substr(0, colon);
+        for (std::string::size_type i = 0; i < head.length(); ++i)
+        {
+            head[i] = tolower(head[i]);
+        }
         std::string val = line.substr(colon+2);
 
         headers[head] = val;
@@ -198,30 +205,60 @@ void buildStream(TcpSstHeaderArray *buffer,
         offset += 2;
     }
 
-    if (headers.find("Host") == headers.end() ||
-        headers.find("Origin") == headers.end() ||
-        headers.find("Sec-WebSocket-Key1") == headers.end() ||
-        headers.find("Sec-WebSocket-Key2") == headers.end())
+    int wsversion = 0;
+    {
+        std::istringstream str(headers["Sec-WebSocket-Version"]);
+        str >> wsversion;
+    }
+    if (headers.find("host") == headers.end() ||
+        headers.find("origin") == headers.end())
     {
         SILOG(tcpsst,warning,"Connection request didn't specify all required fields.");
         delete socket;
         return;
     }
-
-    std::string host = headers["Host"];
-    std::string origin = headers["Origin"];
+    std::string host = headers["host"];
+    std::string origin = headers["origin"];
     std::string protocol = "wssst1";
-    if (headers.find("Sec-WebSocket-Protocol") != headers.end())
-        protocol = headers["Sec-WebSocket-Protocol"];
-    std::string key1 = headers["Sec-WebSocket-Key1"];
-    std::string key2 = headers["Sec-WebSocket-Key2"];
-    std::string key3 = buffer_str.substr(bytes_transferred - 8);
-    assert(key3.size() == 8);
-
-    std::string reply_str = getWebSocketSecReply(key1, key2, key3);
-
-    bool binaryStream=protocol.find("sst")==0;
-    bool base64Stream=!binaryStream;
+    if (headers.find("sec-websocket-protocol") != headers.end())
+        protocol = headers["sec-websocket-protocol"];
+'\0'
+    std::string reply_str;
+    MultiplexedSocket::StreamType streamType = MultiplexedSocket::LENGTHDELIM;
+    if (wsversion == 0)
+    {
+        if (headers.find("sec-websocket-key1") == headers.end() ||
+            headers.find("sec-websocket-key2") == headers.end())
+        {
+            SILOG(tcpsst,warning,"WS-76 connection request didn't specify key.");
+            delete socket;
+            return;
+        }
+        std::string key1 = headers["sec-websocket-key1"];
+        std::string key2 = headers["sec-websocket-key2"];
+        std::string key3 = buffer_str.substr(bytes_transferred - 8);
+        assert(key3.size() == 8);
+        reply_str = getWebSocketSecReply(key1, key2, key3);
+        bool binaryStream=protocol.find("sst")==0;
+        if (!binaryStream) {
+            streamType = MultiplexedSocket::BASE64_ZERODELIM;
+    }
+    else if (wsversion >= 13)
+    {
+        if (headers.find("sec-websocket-key") == headers.end())
+        {
+            SILOG(tcpsst,warning,"WS Version " << wsversion << " connection request didn't specify key.");
+            delete socket;
+            return;
+        }
+        reply_str = Base64::encode(Sha1(headers["sec-websocket-key"] + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"));
+        streamType = MultiplexedSocket::WS13;
+    } else {
+        SILOG(tcpsst,warning,"Unsupported Websocket Version " << wsversion);
+        // FIXME: Send 400 Bad Request with "Sec-WebSocket-Version: 13" to tell clients to renegotiate an older version.
+        delete socket;
+        return;
+    }
     boost::asio::ip::tcp::no_delay option(data->mNoDelay);
     socket->set_option(option);
     IncompleteStreamMap::iterator where=sIncompleteStreams.find(context);
@@ -265,7 +302,7 @@ void buildStream(TcpSstHeaderArray *buffer,
         where->second.mWebSocketResponses[socket] = reply_str;
         if (numConnections==(unsigned int)where->second.mSockets.size()) {
             MultiplexedSocketPtr shared_socket(
-                MultiplexedSocket::construct<MultiplexedSocket>(data->strand,context,data->cb,base64Stream));
+                MultiplexedSocket::construct<MultiplexedSocket>(data->strand,context,data->cb,streamType));
             shared_socket->initFromSockets(where->second.mSockets,data->mSendBufferSize);
             std::string port=shared_socket->getASIOSocketWrapper(0).getLocalEndpoint().getService();
             std::string resource_name='/'+context.toString();
