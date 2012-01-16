@@ -45,6 +45,7 @@
 
 #include <iostream>
 #include <iomanip>
+#include <sys/time.h>
 
 #include <sirikata/core/network/IOStrandImpl.hpp>
 
@@ -102,6 +103,11 @@ Server::Server(SpaceContext* ctx, Authenticator* auth, Address4 oh_listen_addr, 
     mLocalForwarder = new LocalForwarder(mContext);
 
     mCount = 0;
+
+    timeval ts;
+    gettimeofday(&ts,NULL);
+    mtime_s = ts.tv_sec;
+    mtime_us=ts.tv_usec;
 }
 
 void Server::newStream(int err, SST::Stream<SpaceObjectReference>::Ptr s) {
@@ -430,8 +436,17 @@ void Server::handleSessionMessage(const ObjectHostConnectionID& oh_conn_id, Siri
     	    	}
     	    }
 
+            timeval ts;
+            gettimeofday(&ts,NULL);
+            long int time_s = ts.tv_sec;
+            int time_us=ts.tv_usec;
+            long int diff_s=time_s - mtime_s;
+            int diff_us=time_us - mtime_us;
+            double diff_t=diff_s+diff_us/(double)1000000;
+
     		SPACE_LOG(info, "OH "<<mObjectsDistribution[oh_conn_id.shortID()]->ObjectHostName
-    						<<" add one object, count: "<<mObjectsDistribution[oh_conn_id.shortID()]->counter<<"/"<<mCount);
+    						<<" add one object, count: "<<mObjectsDistribution[oh_conn_id.shortID()]->counter<<"/"<<mCount
+    						<<", time: "<<diff_t<<" s");
 
     		rebalance(entity_id, oh_conn_id);
 
@@ -457,12 +472,24 @@ void Server::handleSessionMessage(const ObjectHostConnectionID& oh_conn_id, Siri
         	UUID obj_id = session_msg.coordinate().object();
         	UUID entity_id = session_msg.coordinate().entity();
 
-        	mObjectsDistribution[oh_conn_id.shortID()]->counter--;
-        	mObjectsDistribution[oh_conn_id.shortID()]->entityMap[entity_id].ObjectSet.erase(obj_id);
-        	mCount--;
+        	if (mObjectsDistribution[oh_conn_id.shortID()]->entityMap.find(entity_id) != mObjectsDistribution[oh_conn_id.shortID()]->entityMap.end()
+        		&& 	mObjectsDistribution[oh_conn_id.shortID()]->entityMap[entity_id].ObjectSet.find(obj_id) != mObjectsDistribution[oh_conn_id.shortID()]->entityMap[entity_id].ObjectSet.end()) {
+        		mCount--;
+        		mObjectsDistribution[oh_conn_id.shortID()]->counter--;
+        		mObjectsDistribution[oh_conn_id.shortID()]->entityMap[entity_id].ObjectSet.erase(obj_id);
 
-    		SPACE_LOG(info, "OH "<<mObjectsDistribution[oh_conn_id.shortID()]->ObjectHostName
-    						<<" remove one object, count: "<<mObjectsDistribution[oh_conn_id.shortID()]->counter<<"/"<<mCount);
+                timeval ts;
+                gettimeofday(&ts,NULL);
+                long int time_s = ts.tv_sec;
+                int time_us=ts.tv_usec;
+                long int diff_s=time_s - mtime_s;
+                int diff_us=time_us - mtime_us;
+                double diff_t=diff_s+diff_us/(double)1000000;
+
+        		SPACE_LOG(info, "OH "<<mObjectsDistribution[oh_conn_id.shortID()]->ObjectHostName
+    							<<" remove one object, count: "<<mObjectsDistribution[oh_conn_id.shortID()]->counter<<"/"<<mCount
+    							<<", time: "<<diff_t<<" s");
+        	}
         }
         if(session_msg.coordinate().type() == Sirikata::Protocol::Session::Coordinate::Ack) {
         	mObjectsDistribution[oh_conn_id.shortID()]->migrate_capacity = session_msg.coordinate().migrate_capacity();

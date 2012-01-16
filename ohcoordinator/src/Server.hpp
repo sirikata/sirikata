@@ -242,6 +242,9 @@ private:
     // Checks if an object already recorded
     bool isObjectRecorded(const UUID& object_id) const {return (mObjectInfo.find(object_id) != mObjectInfo.end());}
 
+    long int mtime_s;
+    int mtime_us;
+
 }; // class Server
 
 } // namespace Sirikata
