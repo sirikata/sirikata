@@ -279,9 +279,11 @@ private:
 
     typedef std::tr1::unordered_map<String, ObjectHostConnectionID> OHNameConnectionMap;
     typedef std::tr1::unordered_map<ShortObjectHostConnectionID, String> OHConnectionNameMap;
+    typedef std::tr1::unordered_map<ShortObjectHostConnectionID, uint32> OHConnectionCountMap;
     OHNameConnectionMap mOHNameConnections;
     OHConnectionNameMap mOHConnectionNames;
-
+    OHConnectionCountMap mOHConnectionCounts;
+    void retryreportCount(uint time);
 
     // FIXME Another place where needing a size queue and notifications causes
     // double locking...

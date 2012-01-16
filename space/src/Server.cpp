@@ -133,6 +133,8 @@ Server::Server(SpaceContext* ctx, Authenticator* auth, Forwarder* forwarder, Loc
     mForwarder->setLocalForwarder(mLocalForwarder);
 
     mMigrationTimer.start();
+
+    mContext->mainStrand->post(Duration::seconds(2),std::tr1::bind(&Server::retryreportCount,this, 0));
 }
 
 void Server::newStream(int err, SST::Stream<SpaceObjectReference>::Ptr s) {
@@ -490,6 +492,7 @@ void Server::handleSessionMessage(const ObjectHostConnectionID& oh_conn_id, Siri
         if (it != mObjects.end()) {
             handleDisconnect(session_msg.disconnect().object(), it->second, mOHConnectionNames[oh_conn_id.shortID()]);
             mContext->timeSeries->report(mTimeSeriesObjects, mObjects.size());
+            mOHConnectionCounts[oh_conn_id.shortID()]--;
         }
     }
     else if (session_msg.has_oh_migration()) {
@@ -530,6 +533,7 @@ void Server::handleObjectHostConnectionClosed(const ObjectHostConnectionID& oh_c
         if (obj_conn->connID() != oh_conn_id)
             continue;
 
+        mOHConnectionCounts[oh_conn_id.shortID()]--;
         handleDisconnect(obj_id, obj_conn, oh_name);
     }
     mContext->timeSeries->report(mTimeSeriesObjects, mObjects.size());
@@ -743,6 +747,7 @@ void Server::finishAddObject(const UUID& obj_id, OSegAddNewStatus status)
         	  mLocalForwarder->addActiveConnection(conn, true);
 
         	  sendDisconnect(old->connID(),obj_id,"OH Migration");
+        	  mOHConnectionCounts[old->connID().shortID()]--;
         	  SPACE_LOG(info, "Migrating object " << obj_id.rawHexData()<<" disconnected from OH "<<mOHConnectionNames[old->connID().shortID()]);
         	  delete old;
           }
@@ -750,8 +755,10 @@ void Server::finishAddObject(const UUID& obj_id, OSegAddNewStatus status)
           {
         	  mOHNameConnections[sc.conn_msg.oh_name()]=sc.conn_id;
         	  mOHConnectionNames[sc.conn_id.shortID()]=sc.conn_msg.oh_name();
+        	  mOHConnectionCounts[sc.conn_id.shortID()]=0;
           	  SPACE_LOG(info, "New object host connected: < name: "<<sc.conn_msg.oh_name()<<", connection id: "<<sc.conn_id.shortID()<<" >");
           }
+          mOHConnectionCounts[sc.conn_id.shortID()]++;
 
           // New object
           // For migrating object, we do not need to update these information
@@ -1381,6 +1388,16 @@ void Server::killObjectConnection(const UUID& obj_id)
   }
 }
 
-
+void Server::retryreportCount(uint time) {
+	std::cout<<std::endl;
+	SPACE_LOG(info, "=====Objects Count Report======");
+	SPACE_LOG(info, "Time: "<<time);
+	SPACE_LOG(info, "Total Count: "<<mObjects.size());
+    for(OHConnectionCountMap::iterator it = mOHConnectionCounts.begin(); it != mOHConnectionCounts.end(); it++) {
+    	SPACE_LOG(info, mOHConnectionNames[it->first]<<" : "<<it->second);
+    }
+    SPACE_LOG(info, "================================\n");
+	mContext->mainStrand->post(Duration::seconds(5),std::tr1::bind(&Server::retryreportCount, this, ++time));
+}
 
 } // namespace Sirikata
