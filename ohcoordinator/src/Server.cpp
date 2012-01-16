@@ -431,12 +431,12 @@ void Server::handleSessionMessage(const ObjectHostConnectionID& oh_conn_id, Siri
     	    	    	mObjectInfo[obj_id].entity=entity_id;
     	    	    	mObjectInfo[obj_id].Migrating=false;
 
-    	    	    	SPACE_LOG(info, "Migrated object recorded, OH: "<<mObjectsDistribution[oh_conn_id.shortID()]->ObjectHostName
-    	    	    			<<", migratingFrom_N: "<<mObjectsDistribution[oh_conn_id.shortID()]->migratingFrom_N);
+    	    	    	//SPACE_LOG(info, "Migrated object recorded, OH: "<<mObjectsDistribution[oh_conn_id.shortID()]->ObjectHostName
+    	    	    	//		<<", migratingFrom_N: "<<mObjectsDistribution[oh_conn_id.shortID()]->migratingFrom_N);
     	    		}
     	    	}
     	    }
-
+/*
             timeval ts;
             gettimeofday(&ts,NULL);
             long int time_s = ts.tv_sec;
@@ -444,10 +444,10 @@ void Server::handleSessionMessage(const ObjectHostConnectionID& oh_conn_id, Siri
             long int diff_s=time_s - mtime_s;
             int diff_us=time_us - mtime_us;
             double diff_t=diff_s+diff_us/(double)1000000;
-
+*/
     		SPACE_LOG(info, "OH "<<mObjectsDistribution[oh_conn_id.shortID()]->ObjectHostName
-    						<<" add one object, count: "<<mObjectsDistribution[oh_conn_id.shortID()]->counter<<"/"<<mCount
-    						<<", time: "<<diff_t<<" s");
+    						<<" add one object, count: "<<mObjectsDistribution[oh_conn_id.shortID()]->counter<<"/"<<mCount);
+ //   						<<", time: "<<diff_t<<" s");
 
     		rebalance(entity_id, oh_conn_id);
 
@@ -479,17 +479,17 @@ void Server::handleSessionMessage(const ObjectHostConnectionID& oh_conn_id, Siri
         		mObjectsDistribution[oh_conn_id.shortID()]->counter--;
         		mObjectsDistribution[oh_conn_id.shortID()]->entityMap[entity_id].ObjectSet.erase(obj_id);
 
-                timeval ts;
+/*                timeval ts;
                 gettimeofday(&ts,NULL);
                 long int time_s = ts.tv_sec;
                 int time_us=ts.tv_usec;
                 long int diff_s=time_s - mtime_s;
                 int diff_us=time_us - mtime_us;
                 double diff_t=diff_s+diff_us/(double)1000000;
-
+*/
         		SPACE_LOG(info, "OH "<<mObjectsDistribution[oh_conn_id.shortID()]->ObjectHostName
-    							<<" remove one object, count: "<<mObjectsDistribution[oh_conn_id.shortID()]->counter<<"/"<<mCount
-    							<<", time: "<<diff_t<<" s");
+    							<<" remove one object, count: "<<mObjectsDistribution[oh_conn_id.shortID()]->counter<<"/"<<mCount);
+//    							<<", time: "<<diff_t<<" s");
         	}
         }
         if(session_msg.coordinate().type() == Sirikata::Protocol::Session::Coordinate::Ack) {
@@ -563,7 +563,8 @@ bool Server::rebalance(const UUID& entity_id, const ObjectHostConnectionID& oh_c
 	String DstOHName;
 	bool unbalance = false ;
 	uint32 delta = mObjectsDistribution[oh_conn_id.shortID()]->entityMap[entity_id].ObjectSet.size();
-	uint32 min = mObjectsDistribution[oh_conn_id.shortID()]->counter - mObjectsDistribution[oh_conn_id.shortID()]->migratingTo_N;
+	uint32 min = mObjectsDistribution[oh_conn_id.shortID()]->counter +mObjectsDistribution[oh_conn_id.shortID()]->migratingFrom_N
+				 - mObjectsDistribution[oh_conn_id.shortID()]->migratingTo_N;
 	uint32 min_org = min;
 
 	ObjectsDistributionMap::iterator it;
@@ -579,7 +580,7 @@ bool Server::rebalance(const UUID& entity_id, const ObjectHostConnectionID& oh_c
 	if (min + 2*delta < min_org) {
 		unbalance = true;
 		informOHMigrationTo(DstOHName, entity_id, oh_conn_id);
-		SPACE_LOG(info, "Unbalance! move entity "<<entity_id.rawHexData()<<" from "
+		SPACE_LOG(info, "===Unbalance! move entity "<<entity_id.rawHexData()<<" from "
 				<<mObjectsDistribution[oh_conn_id.shortID()]->ObjectHostName<<" to "<<DstOHName);
 	}
 
