@@ -546,7 +546,8 @@ void Server::handleMigrateRequest(const ObjectHostConnectionID& oh_conn_id, cons
 	ObjectsDistributionMap::iterator it;
 	for (it = mObjectsDistribution.begin(); it != mObjectsDistribution.end(); it++) {
 		if( it->first != oh_conn_id.shortID()
-				&& it->second->counter + delta + it->second->migratingFrom_N <= it->second->migrate_threshold
+				&& it->second->counter + it->second->migratingFrom_N - mObjectsDistribution[oh_conn_id.shortID()]->migratingTo_N + delta
+				<= it->second->migrate_threshold
 				&& delta <= it->second->migrate_capacity) {
 
 			DstOHName = it->second->ObjectHostName;
@@ -563,7 +564,7 @@ bool Server::rebalance(const UUID& entity_id, const ObjectHostConnectionID& oh_c
 	String DstOHName;
 	bool unbalance = false ;
 	uint32 delta = mObjectsDistribution[oh_conn_id.shortID()]->entityMap[entity_id].ObjectSet.size();
-	uint32 min = mObjectsDistribution[oh_conn_id.shortID()]->counter +mObjectsDistribution[oh_conn_id.shortID()]->migratingFrom_N
+	uint32 min = mObjectsDistribution[oh_conn_id.shortID()]->counter + mObjectsDistribution[oh_conn_id.shortID()]->migratingFrom_N
 				 - mObjectsDistribution[oh_conn_id.shortID()]->migratingTo_N;
 	uint32 min_org = min;
 
@@ -675,6 +676,7 @@ void Server::informOHMigrationTo(const String& DstOHName, const UUID& uuid, cons
     std::set<UUID>::iterator it;
     for (it=mObjectsDistribution[oh_conn_id.shortID()]->entityMap[uuid].ObjectSet.begin();
     		it!=mObjectsDistribution[oh_conn_id.shortID()]->entityMap[uuid].ObjectSet.end();it++) {
+
     	mObjectInfo[*it].Migrating = true;
     	mObjectInfo[*it].MigratingTo = DstOHName;
     	mObjectsDistribution[oh_conn_id.shortID()]->migratingTo_N++;
