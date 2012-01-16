@@ -423,6 +423,7 @@ void Server::handleSessionMessage(const ObjectHostConnectionID& oh_conn_id, Siri
     	    else{
     	    	if(mObjectInfo[obj_id].Migrating==true) {
     	    		if(mObjectInfo[obj_id].MigratingTo==mObjectsDistribution[oh_conn_id.shortID()]->ObjectHostName){
+    	    			mObjectsDistribution[mObjectInfo[obj_id].short_id]->entityMap.erase(entity_id);
     	    			mObjectsDistribution[mObjectInfo[obj_id].short_id]->migratingTo_N--;
     	    			mObjectsDistribution[oh_conn_id.shortID()]->migratingFrom_N--;
 
@@ -472,8 +473,8 @@ void Server::handleSessionMessage(const ObjectHostConnectionID& oh_conn_id, Siri
         	UUID obj_id = session_msg.coordinate().object();
         	UUID entity_id = session_msg.coordinate().entity();
 
-        	if (mObjectsDistribution[oh_conn_id.shortID()]->entityMap.find(entity_id) != mObjectsDistribution[oh_conn_id.shortID()]->entityMap.end()
-        		&& 	mObjectsDistribution[oh_conn_id.shortID()]->entityMap[entity_id].ObjectSet.find(obj_id) != mObjectsDistribution[oh_conn_id.shortID()]->entityMap[entity_id].ObjectSet.end()) {
+        	if (mObjectsDistribution[oh_conn_id.shortID()]->entityMap[entity_id].ObjectSet.find(obj_id) != mObjectsDistribution[oh_conn_id.shortID()]->entityMap[entity_id].ObjectSet.end()) {
+
         		mCount--;
         		mObjectsDistribution[oh_conn_id.shortID()]->counter--;
         		mObjectsDistribution[oh_conn_id.shortID()]->entityMap[entity_id].ObjectSet.erase(obj_id);
@@ -525,7 +526,7 @@ void Server::handleSessionMessage(const ObjectHostConnectionID& oh_conn_id, Siri
     		SPACE_LOG(info, "Entity "<<entity_id.rawHexData()<<" is ready to migrate");
     		String DstOHName = mObjectsDistribution[oh_conn_id.shortID()]->entityMap[entity_id].MigrationDstOHName;
     		String SrcOHName = mObjectsDistribution[oh_conn_id.shortID()]->ObjectHostName;
-    		mObjectsDistribution[oh_conn_id.shortID()]->entityMap.erase(entity_id);
+    		//mObjectsDistribution[oh_conn_id.shortID()]->entityMap.erase(entity_id);
 
     		informOHMigrationFrom(SrcOHName, entity_id,  mOHNameConnections[DstOHName]);
     	}
