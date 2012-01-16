@@ -433,6 +433,8 @@ void Server::handleSessionMessage(const ObjectHostConnectionID& oh_conn_id, Siri
     		SPACE_LOG(info, "OH "<<mObjectsDistribution[oh_conn_id.shortID()]->ObjectHostName
     						<<" add one object, count: "<<mObjectsDistribution[oh_conn_id.shortID()]->counter<<"/"<<mCount);
 
+    		rebalance(entity_id, oh_conn_id);
+
     		/*
     		ObjectsDistributionMap::iterator it;
 	        int sum = 0;
@@ -448,18 +450,6 @@ void Server::handleSessionMessage(const ObjectHostConnectionID& oh_conn_id, Siri
 	        	for (it = mObjectsDistribution.begin(); it != mObjectsDistribution.end(); it++)
 	        		it->second->counter2 = it->second->counter;
 	        }
-
-    		//We need a better load balance algorithm
-	  	  	//calculate unbalance
-	  	  	//if there are any unbalance, send message; until balance
-    		if(existingUnbalance()) { //while(existingUnbalance()) {
-    			//send a message back
-    			informOHMigrationTo(entity_id, oh_conn_id);
-	    
-    			//re map the objects in the record
-    			mObjectsDistribution[oh_conn_id.shortID()]->counter--;
-    			mObjectsDistribution[oh_conn_id.shortID()]->entityMap[entity_id].erase(obj_id); //Feng: actually the whole entry should be deleted
-    		}
            */
 
     	}
@@ -538,6 +528,34 @@ void Server::handleMigrateRequest(const ObjectHostConnectionID& oh_conn_id, cons
 	}
 	if (success)
 		informOHMigrationTo(DstOHName, entity_id, oh_conn_id);
+}
+
+bool Server::rebalance(const UUID& entity_id, const ObjectHostConnectionID& oh_conn_id)
+{
+	String DstOHName;
+	bool unbalance = false ;
+	uint32 delta = mObjectsDistribution[oh_conn_id.shortID()]->entityMap[entity_id].ObjectSet.size();
+	uint32 min = mObjectsDistribution[oh_conn_id.shortID()]->counter - mObjectsDistribution[oh_conn_id.shortID()]->migratingTo_N;
+	uint32 min_org = min;
+
+	ObjectsDistributionMap::iterator it;
+	for (it = mObjectsDistribution.begin(); it != mObjectsDistribution.end(); it++) {
+		if( it->first != oh_conn_id.shortID()
+			&& it->second->counter + it->second->migratingFrom_N - it->second->migratingTo_N < min)
+		{
+			DstOHName = it->second->ObjectHostName;
+			min = it->second->counter + it->second->migratingFrom_N - it->second->migratingTo_N;
+		}
+	}
+
+	if (min + 2*delta < min_org) {
+		unbalance = true;
+		informOHMigrationTo(DstOHName, entity_id, oh_conn_id);
+		SPACE_LOG(info, "Unbalance! move entity "<<entity_id.rawHexData()<<" from "
+				<<mObjectsDistribution[oh_conn_id.shortID()]->ObjectHostName<<" to "<<DstOHName);
+	}
+
+	return unbalance;
 }
 
 //Feng

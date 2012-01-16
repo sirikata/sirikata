@@ -221,6 +221,7 @@ private:
     ObjectsDistributionMap mObjectsDistribution;
     bool rebalance(const String&, String&);
     bool rebalance(const String&, String&, const UUID&);
+    bool rebalance(const UUID& uuid, const ObjectHostConnectionID& oh_conn_id);
     void informOHMigrationTo(const String& DstOHName, const UUID& uuid, const ObjectHostConnectionID& oh_conn_id);
     void informOHMigrationFrom(const String& SrcOHName, const UUID& uuid, const ObjectHostConnectionID& oh_conn_id);
 
