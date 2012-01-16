@@ -2246,6 +2246,7 @@ SET(LIBOH_PLUGIN_JS_SOURCES
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSTimer.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSGlobal.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSSerializer.cpp
+  ${LIBOH_PLUGIN_JS_DIR}/JSVisibleData.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSVisibleManager.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSContextStruct.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSSystemStruct.cpp

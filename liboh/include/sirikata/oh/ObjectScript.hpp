@@ -32,6 +32,7 @@
 #ifndef _OBJECT_SCRIPT_HPP_
 #define _OBJECT_SCRIPT_HPP_
 
+#include <sirikata/oh/Platform.hpp>
 #include <sirikata/core/util/Logging.hpp>
 #include <sirikata/proxyobject/ProxyObject.hpp>
 #include <sirikata/core/service/Service.hpp>

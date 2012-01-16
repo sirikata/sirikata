@@ -76,7 +76,7 @@ public:
         const String& script, JSObjectScriptManager* jMan,
         JSCtx* ctx);
 
-    
+
     virtual ~EmersonScript();
 
     // Sirikata::Service Interface
@@ -118,7 +118,7 @@ public:
     void handleScriptCommUnreliable (const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload);
 
     boost::any invokeInvokable(std::vector<boost::any>& params,v8::Persistent<v8::Function> function_);
-    
+
 
     // Post this function to an IOService to add an event to be handled. Must
     // take liveness token because while waiting to be processed the object may,
@@ -213,12 +213,14 @@ public:
        @param {SpaceObjectReference} visibleObj Will make a JSVisibleStruct out
        of this spaceobjectreference.
 
-       @param {JSProxyData} addParams If don't have a proxy object in the world
+       @param {JSVisibleDataPtr} addParams If don't have a proxy object in the world
        with sporef visibleObj, will try to fill in JSVisibleStruct data with
        these values (note: if NULL), fills in default values.
      */
     v8::Local<v8::Object> createVisibleWeakPersistent(
-        const SpaceObjectReference& visibleObj, JSProxyPtr addParams);
+        const SpaceObjectReference& presID, const SpaceObjectReference& visibleObj, JSVisibleDataPtr addParams);
+    v8::Local<v8::Object> createVisibleWeakPersistent(
+        const SpaceObjectReference& visibleObj, JSVisibleDataPtr addParams);
 
     //handling basic datatypes for JSPresences
     void setVisualFunction(const SpaceObjectReference sporef, const std::string& newMeshString);
@@ -307,7 +309,7 @@ public:
 private:
 
     void postDestroy(Liveness::Token alive);
-    
+
     // Helper for disconnections
     void unsubscribePresenceEvents(const SpaceObjectReference& name);
     // Helper for *clearing* presences (not disconnections). When the presence
@@ -450,14 +452,14 @@ private:
     void eSetQueryFunction(
         const SpaceObjectReference sporef, const SolidAngle& sa,
         const uint32 max_count,Liveness::Token alive);
-    
+
     void eSetPhysicsFunction(
         const SpaceObjectReference sporef, const String& newPhyString,
         Liveness::Token alive);
-    
+
     void eSetVisualFunction(
         const SpaceObjectReference sporef, const std::string& newMeshString,
-        Liveness::Token alive);    
+        Liveness::Token alive);
 
     void eSetVisualScaleFunction(
         const SpaceObjectReference sporef, float newscale,

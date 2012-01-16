@@ -12,13 +12,24 @@
 
 namespace Sirikata {
 
+/** Read-only interface for PresenceProperties. */
+class IPresencePropertiesRead {
+public:
+    virtual ~IPresencePropertiesRead() {}
+
+    virtual const TimedMotionVector3f& location() const = 0;
+    virtual const TimedMotionQuaternion& orientation() const = 0;
+    virtual const BoundingSphere3f& bounds() const = 0;
+    virtual const Transfer::URI& mesh() const = 0;
+    virtual const String& physics() const = 0;
+};
+
 /** Stores the basic properties provided for objects, i.e. location,
  *  orientation, mesh, etc. This is intentionally bare-bones: it can be used in
  *  a variety of places to minimally track the properties for an object.
  */
-class PresenceProperties {
+class PresenceProperties : public virtual IPresencePropertiesRead {
 public:
-
     PresenceProperties()
      : mLoc(Time::null(), MotionVector3f(Vector3f::zero(), Vector3f::zero())),
        mOrientation(Time::null(), MotionQuaternion(Quaternion::identity(), Quaternion::identity())),
@@ -26,19 +37,31 @@ public:
        mMesh(),
        mPhysics()
     {}
-    const TimedMotionVector3f& location() const { return mLoc;}
+    PresenceProperties(
+        const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient,
+        const BoundingSphere3f& bnds, const Transfer::URI& msh, const String& phy
+    )
+     : mLoc(loc),
+       mOrientation(orient),
+       mBounds(bnds),
+       mMesh(msh),
+       mPhysics(phy)
+    {}
+    virtual ~PresenceProperties() {}
+
+    virtual const TimedMotionVector3f& location() const { return mLoc;}
     bool setLocation(const TimedMotionVector3f& l) { mLoc = l; return true; }
 
-    const TimedMotionQuaternion& orientation() const { return mOrientation;}
+    virtual const TimedMotionQuaternion& orientation() const { return mOrientation;}
     bool setOrientation(const TimedMotionQuaternion& o) { mOrientation = o; return true; }
 
-    const BoundingSphere3f& bounds() const { return mBounds;}
+    virtual const BoundingSphere3f& bounds() const { return mBounds;}
     bool setBounds(const BoundingSphere3f& b) { mBounds = b; return true; }
 
-    const Transfer::URI& mesh() const { return mMesh;}
+    virtual const Transfer::URI& mesh() const { return mMesh;}
     bool setMesh(const Transfer::URI& m) { mMesh = m; return true; }
 
-    const String& physics() const { return mPhysics;}
+    virtual const String& physics() const { return mPhysics;}
     bool setPhysics(const String& p) { mPhysics = p; return true; }
 
 protected:
@@ -68,6 +91,7 @@ public:
     {
         reset();
     }
+    virtual ~SequencedPresenceProperties() {}
 
     uint64 getUpdateSeqNo(LOC_PARTS whichPart) const {
         if (whichPart >= LOC_NUM_PART)

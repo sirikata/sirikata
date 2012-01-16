@@ -19,7 +19,9 @@ namespace JS {
 //we give the space the token presenceToken, which it ships back when connection
 //is completed.
 JSPresenceStruct::JSPresenceStruct(EmersonScript* parent, v8::Handle<v8::Function> connectedCallback, JSContextStruct* ctx, HostedObject::PresenceToken presenceToken, JSCtx* jsctx)
- : JSPositionListener(JSProxyPtr(new JSProxyData()),jsctx),
+ // TODO(ewencp) this used to pass a default version of JSVisibleDataPtr instead
+ // of NULL, is this ok?
+ : JSPositionListener(parent, JSAggregateVisibleDataPtr(), jsctx),
    JSSuspendable(),
    mOnConnectedCallback(v8::Persistent<v8::Function>::New(connectedCallback)),
    mParent(parent),
@@ -39,7 +41,7 @@ JSPresenceStruct::JSPresenceStruct(EmersonScript* parent, v8::Handle<v8::Functio
 //use this constructor if we already have a presence that is connected to the
 //space with spaceObjectRecference _sporef
 JSPresenceStruct::JSPresenceStruct(EmersonScript* parent, const SpaceObjectReference& _sporef, JSContextStruct* ctx,HostedObject::PresenceToken presenceToken, JSCtx* jsctx)
- : JSPositionListener(parent->getOrCreateProxyPtr(_sporef),jsctx),
+ : JSPositionListener(parent, parent->getOrCreateVisible(_sporef),jsctx),
    JSSuspendable(),
    mParent(parent),
    mContID(ctx->getContextID()),
@@ -52,12 +54,16 @@ JSPresenceStruct::JSPresenceStruct(EmersonScript* parent, const SpaceObjectRefer
    mQueryAngle(),
    mQueryMaxCount(0)
 {
+    // Normally we would need to initialize after calling
+    // getOrCreateVisibleData, but in this case we will have already initialized
+    // from the proxy data (in EmersonScript).
+
     mContext->struct_registerSuspendable(this);
 }
 
 //use this constructor when we are restoring a presence.
-JSPresenceStruct::JSPresenceStruct(EmersonScript* parent, PresStructRestoreParams& psrp, Vector3f center, HostedObject::PresenceToken presToken,JSContextStruct* jscont, const TimedMotionVector3f& tmv, const TimedMotionQuaternion& tmq,JSCtx* jsctx)
- : JSPositionListener(parent->getOrCreateProxyPtr(psrp.sporef),jsctx),
+JSPresenceStruct::JSPresenceStruct(EmersonScript* parent, PresStructRestoreParams& psrp, Vector3f center, HostedObject::PresenceToken presToken,JSContextStruct* jscont, const TimedMotionVector3f& tmv, const TimedMotionQuaternion& tmq, JSCtx* jsctx)
+ : JSPositionListener(parent, parent->getOrCreateVisible(psrp.sporef), jsctx),
    JSSuspendable(),
    mParent(parent),
    isConnected(false),
@@ -65,11 +71,11 @@ JSPresenceStruct::JSPresenceStruct(EmersonScript* parent, PresStructRestoreParam
    mPresenceToken(presToken),
    mContext(NULL)
 {
-    jpp->mLocation    = tmv;
-    jpp->mOrientation = tmq;
-    jpp->mMesh    = psrp.mesh;
-    jpp->mBounds  = BoundingSphere3f( center  ,psrp.scale);
-    jpp->mPhysics = psrp.physics;
+    jpp->updateFrom(
+        PresenceProperties(
+            tmv, tmq, BoundingSphere3f(center, psrp.scale), Transfer::URI(psrp.mesh), psrp.physics
+        )
+    );
 
     mQueryAngle = psrp.query;
     mQueryMaxCount = psrp.queryMaxResults;
@@ -245,9 +251,9 @@ HostedObject::PresenceToken JSPresenceStruct::getPresenceToken()
 
 void JSPresenceStruct::connect(const SpaceObjectReference& _sporef)
 {
-    // We need to update our JSProxyPtr since before the connect we didn't even
+    // We need to update our JSVisibleDataPtr since before the connect we didn't even
     // know what our SpaceObjectReference would be.
-    jpp = mParent->getOrCreateProxyPtr(_sporef);
+    jpp = mParent->getOrCreateVisible(_sporef);
 
     v8::HandleScope handle_scope;
 

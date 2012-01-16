@@ -7,79 +7,6 @@
 namespace Sirikata{
 namespace JS{
 
-JSProxyData::JSProxyData()
- : emerScript(NULL),
-   refcount(0),
-   selfPtr()
-{
-}
-
-JSProxyData::JSProxyData(EmersonScript* eScript, const SpaceObjectReference& from)
- : emerScript(eScript),
-   sporefToListenTo(from),
-   refcount(0),
-   selfPtr()
-{
-}
-
-JSProxyData::JSProxyData(EmersonScript* eScript, ProxyObjectPtr from)
- : emerScript(eScript),
-   sporefToListenTo(from->getObjectReference()),
-   refcount(0),
-   selfPtr()
-{
-    updateFrom(from);
-}
-
-JSProxyData::JSProxyData(EmersonScript* eScript, const SpaceObjectReference& from, JSProxyPtr fromData)
- : emerScript(eScript),
-   sporefToListenTo(from),
-   mLocation(fromData->mLocation),
-   mOrientation(fromData->mOrientation),
-   mBounds(fromData->mBounds),
-   mMesh(fromData->mMesh),
-   mPhysics(fromData->mPhysics),
-   refcount(0),
-   selfPtr()
-{
-}
-
-JSProxyData::~JSProxyData()
-{
-    // We're guaranteed by shared_ptrs and our reference counting that
-    // this destructor is only called once there are no more
-    // ProxyObjectPtrs and no v8 visibles referring to this data,
-    // allowing us to clear this out of the JSVisibleManager.
-    if (emerScript)
-        emerScript->removeProxyData(sporefToListenTo);
-}
-
-void JSProxyData::incref(JSProxyPtr self) {
-    selfPtr = self;
-    refcount++;
-}
-
-void JSProxyData::decref() {
-    assert(refcount > 0);
-    refcount--;
-    if (refcount == 0) selfPtr.reset();
-}
-
-void JSProxyData::updateFrom(ProxyObjectPtr from) {
-    assert(sporefToListenTo  == from->getObjectReference());
-
-    mLocation = from->location();
-    mOrientation = from->orientation();
-    mBounds = from->bounds();
-    mMesh = from->mesh().toString();
-    mPhysics = from->physics();
-}
-
-bool JSProxyData::visibleToPresence() const {
-    return refcount > 0;
-}
-
-
 
 JSVisibleManager::JSVisibleManager(EmersonScript* eScript,JSCtx* ctx)
  : emerScript(eScript),
@@ -89,6 +16,10 @@ JSVisibleManager::JSVisibleManager(EmersonScript* eScript,JSCtx* ctx)
 
 JSVisibleManager::~JSVisibleManager()
 {
+    clearVisibles();
+}
+
+void JSVisibleManager::clearVisibles() {
     // Stop tracking all known objects to clear out all listeners and state.
     while(!mTrackedObjects.empty()) {
         ProxyObjectPtr toFakeDestroy = *(mTrackedObjects.begin());
@@ -102,65 +33,33 @@ JSVisibleManager::~JSVisibleManager()
     // there are no more references to them.
     for(SporefProxyMap::iterator pit = mProxies.begin(); pit != mProxies.end(); pit++) {
         // Clearing this blocks it from getting back to us.
-        pit->second.lock()->emerScript = NULL;
+        pit->second.lock()->disable();
     }
     mProxies.clear();
 }
 
-
-JSVisibleStruct* JSVisibleManager::createVisStruct(const SpaceObjectReference& whatsVisible, JSProxyPtr addParams) {
-    JSProxyPtr toCreateFrom = getOrCreateProxyPtr(whatsVisible, addParams);
-    return new JSVisibleStruct(toCreateFrom,mCtx);
+JSVisibleStruct* JSVisibleManager::createVisStruct(EmersonScript* parent, const SpaceObjectReference& whatsVisible, JSVisibleDataPtr addParams) {
+    JSAggregateVisibleDataPtr toCreateFrom = getOrCreateVisible(whatsVisible);
+    if (addParams) toCreateFrom->updateFrom(*addParams);
+    return new JSVisibleStruct(parent, toCreateFrom,mCtx);
 }
 
-JSProxyPtr JSVisibleManager::getOrCreateProxyPtr(const SpaceObjectReference& whatsVisible, JSProxyPtr addParams) {
-    // If we have proxy data already, ignore the additional parameters
-    // (since they only come from previously stored objects) and
-    // return the existing data.
-    SporefProxyMapIter proxIter = mProxies.find(whatsVisible);
-    if (proxIter != mProxies.end()) {
-        JSProxyPtr ret = proxIter->second.lock();
-        // Based on our memory management, it shouldn't be possible for it to
-        // remain as a weak pointer in our data structure but have no other
-        // references.
-        assert(ret);
-        return ret;
-    }
-
-    JSProxyPtr returner;
-    if (addParams) {
-        assert(addParams->sporefToListenTo == whatsVisible);
-        returner = JSProxyPtr(new JSProxyData(emerScript, whatsVisible, addParams));
-    }
-    else {
-        returner = JSProxyPtr(new JSProxyData(emerScript, whatsVisible));
-    }
-    mProxies[whatsVisible] = JSProxyWPtr(returner);
-    return returner;
-}
-
-JSProxyPtr JSVisibleManager::getOrCreateProxyPtr(ProxyObjectPtr proxy) {
-    // If we have data already, update it (new proxy should have
-    // up-to-date info).
-    SporefProxyMapIter proxIter = mProxies.find(proxy->getObjectReference());
-    if (proxIter != mProxies.end()) {
-        JSProxyPtr ret = proxIter->second.lock();
-        ret->updateFrom(proxy);
-        return ret;
-    }
-
-    JSProxyPtr returner (new JSProxyData(emerScript, proxy));
-    mProxies[proxy->getObjectReference()] = JSProxyWPtr(returner);
-    return returner;
-}
-
-void JSVisibleManager::removeProxyData(const SpaceObjectReference& sporef) {
-    SporefProxyMapIter proxIter = mProxies.find(sporef);
+void JSVisibleManager::removeVisibleData(JSVisibleData* data) {
+    SporefProxyMapIter proxIter = mProxies.find(data->id());
     assert(proxIter != mProxies.end());
     mProxies.erase(proxIter);
 }
 
 
+JSAggregateVisibleDataPtr JSVisibleManager::getOrCreateVisible(const SpaceObjectReference& whatsVisible) {
+    SporefProxyMapIter proxIter = mProxies.find(whatsVisible);
+    if (proxIter != mProxies.end())
+        return proxIter->second.lock();
+
+    JSAggregateVisibleDataPtr ret(new JSAggregateVisibleData(this, whatsVisible));
+    mProxies.insert( SporefProxyMap::value_type(whatsVisible, ret) );
+    return ret;
+}
 
 void JSVisibleManager::onCreateProxy(ProxyObjectPtr p)
 {
@@ -171,10 +70,12 @@ void JSVisibleManager::onCreateProxy(ProxyObjectPtr p)
 
 void JSVisibleManager::iOnCreateProxy(ProxyObjectPtr p)
 {
-    JSProxyPtr data = getOrCreateProxyPtr(p);
-    data->incref(data);
     p->PositionProvider::addListener(this);
     p->MeshProvider::addListener(this);
+
+    JSAggregateVisibleDataPtr data = getOrCreateVisible(p->getObjectReference());
+    data->updateFrom(p);
+    data->incref(data);
     mTrackedObjects.insert(p);
 }
 
@@ -187,91 +88,40 @@ void JSVisibleManager::onDestroyProxy(ProxyObjectPtr p)
 
 void JSVisibleManager::iOnDestroyProxy(ProxyObjectPtr p)
 {
-    JSProxyPtr data = getOrCreateProxyPtr(p);
-    data->decref();
-
     p->PositionProvider::removeListener(this);
     p->MeshProvider::removeListener(this);
 
+    JSAggregateVisibleDataPtr data = getOrCreateVisible(p->getObjectReference());
+    data->updateFrom(p);
+    data->decref();
     mTrackedObjects.erase(p);
 }
 
-void JSVisibleManager::updateLocation (
-    ProxyObjectPtr proxy, const TimedMotionVector3f &newLocation,
-    const TimedMotionQuaternion& newOrient, const BoundingSphere3f& newBounds,
-    const SpaceObjectReference& sporef)
-{
-    mCtx->objStrand->post(
-        std::tr1::bind(&JSVisibleManager::iUpdateLocation,this,
-            proxy,newLocation,newOrient,newBounds,sporef));
+void JSVisibleManager::updateLocation(ProxyObjectPtr proxy, const TimedMotionVector3f &newLocation, const TimedMotionQuaternion& newOrient, const BoundingSphere3f& newBounds,const SpaceObjectReference& sporef) {
+    mCtx->objStrand->post(std::tr1::bind(&JSVisibleManager::iUpdatedProxy, this, proxy));
 }
 
-
-void JSVisibleManager::iUpdateLocation (
-    ProxyObjectPtr proxy, const TimedMotionVector3f &newLocation,
-    const TimedMotionQuaternion& newOrient, const BoundingSphere3f& newBounds,
-    const SpaceObjectReference& sporef)
-{
-    JSProxyPtr data = getOrCreateProxyPtr(sporef, JSProxyPtr());
-    data->mLocation = newLocation;
-    data->mOrientation = newOrient;
-    data->mBounds = newBounds;
+void JSVisibleManager::onSetMesh(ProxyObjectPtr proxy, Transfer::URI const& newMesh,const SpaceObjectReference& sporef) {
+    mCtx->objStrand->post(std::tr1::bind(&JSVisibleManager::iUpdatedProxy, this, proxy));
 }
 
-
-void JSVisibleManager::onSetMesh (
-    ProxyObjectPtr proxy, Transfer::URI const& newMesh,
-    const SpaceObjectReference& sporef)
-{
-    mCtx->objStrand->post(
-        std::tr1::bind(&JSVisibleManager::iOnSetMesh,this,
-            proxy,newMesh,sporef));
+void JSVisibleManager::onSetScale(ProxyObjectPtr proxy, float32 newScale ,const SpaceObjectReference& sporef) {
+    mCtx->objStrand->post(std::tr1::bind(&JSVisibleManager::iUpdatedProxy, this, proxy));
 }
 
-void JSVisibleManager::iOnSetMesh (
-    ProxyObjectPtr proxy, Transfer::URI const& newMesh,
-    const SpaceObjectReference& sporef)
-{
-    JSProxyPtr data = getOrCreateProxyPtr(sporef, JSProxyPtr());
-    data->mMesh = newMesh.toString();
+void JSVisibleManager::onSetPhysics(ProxyObjectPtr proxy, const String& newphy,const SpaceObjectReference& sporef) {
+    mCtx->objStrand->post(std::tr1::bind(&JSVisibleManager::iUpdatedProxy, this, proxy));
 }
 
-void JSVisibleManager::onSetScale (
-    ProxyObjectPtr proxy, float32 newScale, const SpaceObjectReference& sporef)
-{
-    mCtx->objStrand->post(
-        std::tr1::bind(&JSVisibleManager::iOnSetScale,this,
-            proxy,newScale,sporef));
+void JSVisibleManager::iUpdatedProxy(ProxyObjectPtr p) {
+    JSAggregateVisibleDataPtr data = getOrCreateVisible(p->getObjectReference());
+    data->updateFrom(p);
 }
-
-void JSVisibleManager::iOnSetScale(
-    ProxyObjectPtr proxy, float32 newScale, const SpaceObjectReference& sporef)
-{
-    JSProxyPtr data = getOrCreateProxyPtr(sporef, JSProxyPtr());
-    data->mBounds = BoundingSphere3f(data->mBounds.center(), newScale);
-}
-
-void JSVisibleManager::onSetPhysics (
-    ProxyObjectPtr proxy, const String& newphy,
-    const SpaceObjectReference& sporef)
-{
-    mCtx->objStrand->post(
-        std::tr1::bind(&JSVisibleManager::iOnSetPhysics,this,
-            proxy,newphy,sporef));
-}
-
-void JSVisibleManager::iOnSetPhysics (
-    ProxyObjectPtr proxy, const String& newphy,
-    const SpaceObjectReference& sporef)
-{
-    JSProxyPtr data = getOrCreateProxyPtr(sporef, JSProxyPtr());
-    data->mPhysics = newphy;
-}
-
 
 bool JSVisibleManager::isVisible(const SpaceObjectReference& sporef)
 {
-    JSProxyPtr data = getOrCreateProxyPtr(sporef, JSProxyPtr());
+    // TODO(ewencp) This shouldn't be getOrCreate, it should just be get.
+    JSAggregateVisibleDataPtr data = getOrCreateVisible(sporef);
     return data->visibleToPresence();
 }
 

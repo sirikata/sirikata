@@ -37,7 +37,7 @@ struct JSContextStruct : public JSSuspendable, public Liveness
         SpaceObjectReference home,Capabilities::CapNum capNum,
         v8::Handle<v8::ObjectTemplate> contGlobTempl, uint32 contextID,
         JSContextStruct* parentContext, JSCtx* jsctx);
-    
+
     ~JSContextStruct();
 
     //looks in current context and returns the current context as pointer to
@@ -69,7 +69,7 @@ struct JSContextStruct : public JSSuspendable, public Liveness
     //this context
     v8::Handle<v8::Object> struct_getSystem();
 
-    v8::Handle<v8::Value> struct_create_vis(const SpaceObjectReference& sporefWathcing, JSProxyPtr addParams);
+    v8::Handle<v8::Value> struct_create_vis(const SpaceObjectReference& sporefWathcing, JSVisibleDataPtr addParams);
 
     v8::Handle<v8::Value> killEntity();
 
@@ -83,7 +83,7 @@ struct JSContextStruct : public JSSuspendable, public Liveness
        @param {bool} isGone True if the event is that a visible moved *out* of a
        presence's result set.  False if the event is that a visible moved *into*
        a presence's result set.
-       
+
        Checks to see if this notification is applicable to fire.  Ie, if the
        sandbox isn't suspended and if the notification is for its root presence
        (and we have capability to fire for the root presence) or if the
@@ -94,7 +94,7 @@ struct JSContextStruct : public JSSuspendable, public Liveness
     void proximateEvent(const SpaceObjectReference& goneFrom,
         JSVisibleStruct* jsvis,bool isGone);
 
-    
+
     v8::Handle<v8::Value> storageBeginTransaction();
     v8::Handle<v8::Value> storageCommit(v8::Handle<v8::Function> cb);
     v8::Handle<v8::Value> storageWrite(const OH::Storage::Key& key, const String& toWrite, v8::Handle<v8::Function> cb);
@@ -118,7 +118,7 @@ struct JSContextStruct : public JSSuspendable, public Liveness
 
 
     v8::Handle<v8::Value> struct_evalInGlobal(const String& native_contents, ScriptOrigin* sOrigin);
-    
+
 
     //create presence in the place, and with the script specified in eci
     v8::Handle<v8::Value> struct_createEntity(EntityCreateInfo& eci);
@@ -146,7 +146,7 @@ struct JSContextStruct : public JSSuspendable, public Liveness
     void struct_asyncDeregisterSuspendable (
         JSSuspendable* toDeregister,Liveness::Token contAlive,
         Liveness::Token suspAlive);
-    
+
     //creates a vec3 emerson object out of the vec3d cpp object passed in.
     v8::Handle<v8::Value> struct_createVec3(Vector3d& toCreate);
     v8::Handle<v8::Value> struct_createQuaternion(Quaternion& toCreate);
@@ -217,7 +217,7 @@ struct JSContextStruct : public JSSuspendable, public Liveness
     //this is the context that any and all objects will be run in.
     v8::Persistent<v8::Context> mContext;
     JSCtx* mCtx;
-    
+
     String getScript();
     //sets proxAddedFunc and proxRemovedFunc, respectively
     v8::Handle<v8::Value> proxAddedHandlerCallallback(v8::Handle<v8::Function>cb);
@@ -225,7 +225,7 @@ struct JSContextStruct : public JSSuspendable, public Liveness
 
 
     v8::Handle<v8::Value> getAssociatedPresence();
-    
+
     JSPresenceStruct* getAssociatedPresenceStruct()
     {
         return associatedPresence;
@@ -273,9 +273,9 @@ struct JSContextStruct : public JSSuspendable, public Liveness
     //returns associated capabilities number
     Capabilities::CapNum getCapNum();
 
-    
+
 private:
-    
+
     uint32 mContextID;
 
     //runs through suspendable map to check if have a presence in this sandbox
@@ -375,7 +375,7 @@ private:
 
 
 
-    
+
 }; //end class
 
 

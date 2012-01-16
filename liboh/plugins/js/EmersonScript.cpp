@@ -139,7 +139,7 @@ v8::Handle<v8::Value> EmersonScript::requestReset(JSContextStruct* jscont,const 
              proxSetIter != presIter->second.end();
              ++proxSetIter)
         {
-            resettingVisiblesResultSet[presIter->first].push_back(createVisStruct(*proxSetIter));
+            resettingVisiblesResultSet[presIter->first].push_back(createVisStruct(this, *proxSetIter));
         }
     }
     return v8::Undefined();
@@ -222,7 +222,7 @@ void EmersonScript::iNotifyProximateGone(
 
     //FIXME: we aren't ever freeing this memory
     //lkjs; what about freeing this memeory?;
-    JSVisibleStruct* jsvis =  createVisStruct(proximateObject->getObjectReference());
+    JSVisibleStruct* jsvis =  createVisStruct(this, proximateObject->getObjectReference());
 
     std::map<uint32, JSContextStruct*>::iterator contIter;
     for (contIter  =  mContStructMap.begin(); contIter != mContStructMap.end();
@@ -324,11 +324,17 @@ void EmersonScript::iInvokeInvokable(
 }
 
 //should already be in a context by the time this is called
-v8::Local<v8::Object> EmersonScript::createVisibleWeakPersistent(const SpaceObjectReference& visibleObj, JSProxyPtr addParams)
+v8::Local<v8::Object> EmersonScript::createVisibleWeakPersistent(const SpaceObjectReference& presID, const SpaceObjectReference& visibleObj, JSVisibleDataPtr addParams)
+{
+    return createVisibleWeakPersistent(visibleObj, addParams);
+}
+
+//should already be in a context by the time this is called
+v8::Local<v8::Object> EmersonScript::createVisibleWeakPersistent(const SpaceObjectReference& visibleObj, JSVisibleDataPtr addParams)
 {
     EMERSCRIPT_SERIAL_CHECK();
     v8::HandleScope handle_scope;
-    JSVisibleStruct* jsvis = createVisStruct(visibleObj, addParams);
+    JSVisibleStruct* jsvis = createVisStruct(this, visibleObj, addParams);
     return handle_scope.Close(createVisibleWeakPersistent(jsvis));
 }
 
@@ -360,7 +366,7 @@ v8::Handle<v8::Value> EmersonScript::findVisible(const SpaceObjectReference& pro
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(mContext->mContext);
 
-    JSVisibleStruct* jsvis = createVisStruct(proximateObj);
+    JSVisibleStruct* jsvis = createVisStruct(this, proximateObj);
     v8::Local<v8::Object> returnerPers =createVisibleWeakPersistent(jsvis);
     return handle_scope.Close(returnerPers);
 }
@@ -405,7 +411,7 @@ void  EmersonScript::iNotifyProximate(
         return;
     }
 
-    JSVisibleStruct* jsvis = JSVisibleManager::createVisStruct(proximateObject->getObjectReference());
+    JSVisibleStruct* jsvis = JSVisibleManager::createVisStruct(this, proximateObject->getObjectReference());
     iNotifyProximateHelper(jsvis,querier);
 }
 
@@ -728,6 +734,13 @@ void EmersonScript::iStop(bool letDie)
 
     mPresences.clear();
 
+    // Clear out references to visible data. This is currently very
+    // important because they hold on to references to ProxyObjects
+    // which hold references up to the HostedObject, resulting in
+    // circular references that never get cleared. This makes sure
+    // they can get cleaned up.
+    clearVisibles();
+
     // Delete messaging ports
     for(MessagingPortMap::iterator messaging_it = mMessagingPortMap.begin();
         messaging_it != mMessagingPortMap.end();
@@ -1007,8 +1020,11 @@ void EmersonScript::iHandleScriptCommRead(
             v8::HandleScope handle_scope;
             v8::Context::Scope context_scope (receiver->mContext);
 
-            v8::Local<v8::Object> msgSender =createVisibleWeakPersistent(
-                SpaceObjectReference(src.space(),src.object()), JSProxyPtr());
+            v8::Local<v8::Object> msgSender = createVisibleWeakPersistent(
+                SpaceObjectReference(dst.space(),dst.object()),
+                SpaceObjectReference(src.space(),src.object()),
+                JSVisibleDataPtr()
+            );
 
             //try deserialization
             bool deserializeWorks =false;
@@ -1265,7 +1281,7 @@ void EmersonScript::removePresenceData(const SpaceObjectReference& sporefToDelet
 v8::Local<v8::Object> EmersonScript::presToVis(JSPresenceStruct* jspres, JSContextStruct* jscont)
 {
     EMERSCRIPT_SERIAL_CHECK();
-    JSVisibleStruct* jsvis = createVisStruct(jspres->getSporef());
+    JSVisibleStruct* jsvis = createVisStruct(this, jspres->getSporef());
     v8::Local<v8::Object> returner = createVisibleWeakPersistent(jsvis);
     return returner;
 }

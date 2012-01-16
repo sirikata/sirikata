@@ -656,7 +656,7 @@ v8::Handle<v8::Value> root_createVisible(const v8::Arguments& args)
         return v8::ThrowException( v8::Exception::Error(v8::String::New( errMsg.c_str())));
 
     if  (args.Length() == 1)
-        return jssys->struct_create_vis(sporefVisWatching, JSProxyPtr());
+        return jssys->struct_create_vis(sporefVisWatching, JSVisibleDataPtr());
 
 
 
@@ -707,12 +707,12 @@ v8::Handle<v8::Value> root_createVisible(const v8::Arguments& args)
     //do not delete this bcause it gets put into a shared pointer.
     //note, do not need to point at
     //emerScript here.
-    JSProxyPtr jspd(new JSProxyData(NULL, sporefVisWatching));
-    jspd->mLocation = location;
-    jspd->mOrientation = orientation;
-    jspd->mBounds = bsph;
-    jspd->mMesh = meshString;
-    jspd->mPhysics = physicsString;
+    JSVisibleDataPtr jspd(
+        new JSRestoredVisibleData(
+            NULL, sporefVisWatching,
+            PresenceProperties(location, orientation, bsph, Transfer::URI(meshString), physicsString)
+        )
+    );
 
     v8::Handle<v8::Value> returner = jssys->struct_create_vis(sporefVisWatching,jspd);
     return handle_scope.Close(returner);
