@@ -76,6 +76,10 @@ public:
 
     virtual void getAllObjectReferences(std::vector<SpaceObjectReference>& allObjReferences) const;
 
+    /// Resets all ProxyObjects. Use this after migration to ensure they are
+    /// back in a clean state for fresh updates starting from a new base
+    /// sequence number.
+    void resetAllProxies();
 
 private:
     friend class ProxyObject;

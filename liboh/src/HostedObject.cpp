@@ -500,12 +500,7 @@ void HostedObject::handleMigrated(const HostedObjectWPtr& weakSelf, const SpaceI
         HO_LOG(error, "Got migrated message but don't have a ProxyManager for the object.");
         return;
     }
-    std::vector<SpaceObjectReference> proxy_names;
-    proxy_manager->getAllObjectReferences(proxy_names);
-    for(std::vector<SpaceObjectReference>::iterator it = proxy_names.begin(); it != proxy_names.end(); it++) {
-        ProxyObjectPtr proxy = proxy_manager->getProxyObject(*it);
-        proxy->reset();
-    }
+    proxy_manager->resetAllProxies();
 }
 
 

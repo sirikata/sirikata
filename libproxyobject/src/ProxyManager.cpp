@@ -214,8 +214,25 @@ void ProxyManager::getAllObjectReferences(std::vector<SpaceObjectReference>& all
     ProxyMap::const_iterator iter;
 
     SpaceID space = mID.space();
-    for (iter = mProxyMap.begin(); iter != mProxyMap.end(); ++iter)
-        allObjReferences.push_back(SpaceObjectReference(space, iter->first));
+    for (iter = mProxyMap.begin(); iter != mProxyMap.end(); ++iter) {
+        if (iter->second.ptr)
+            allObjReferences.push_back(SpaceObjectReference(space, iter->first));
+    }
+}
+
+void ProxyManager::resetAllProxies() {
+    PROXYMAN_SERIALIZED();
+
+    for (ProxyMap::const_iterator iter = mProxyMap.begin(); iter != mProxyMap.end(); ++iter) {
+        // Just try locking the weak pointer, if that doesn't work nothing
+        // will. Note that we want to catch *everything*, even ones we don't
+        // keep a strong ref to. This ensures that we if we reuse a proxy later
+        // via the weak reference, we won't forget to reset it. Since resetting
+        // only affects seqnos, this shouldn't have any adverse affects on those
+        // still holding a reference.
+        ProxyObjectPtr proxy = iter->second.wptr.lock();
+        if (proxy) proxy->reset();
+    }
 }
 
 }
