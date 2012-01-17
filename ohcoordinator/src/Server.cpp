@@ -419,6 +419,8 @@ void Server::handleSessionMessage(const ObjectHostConnectionID& oh_conn_id, Siri
     	    	mObjectInfo[obj_id].entity=entity_id;
     	    	mObjectInfo[obj_id].Migrating=false;
     	    	//SPACE_LOG(info, "New object recorded");
+
+    	    	rebalance(entity_id, oh_conn_id);
     	    }
     	    else{
     	    	if(mObjectInfo[obj_id].Migrating==true) {
@@ -448,8 +450,6 @@ void Server::handleSessionMessage(const ObjectHostConnectionID& oh_conn_id, Siri
     		SPACE_LOG(info, "OH "<<mObjectsDistribution[oh_conn_id.shortID()]->ObjectHostName
     						<<" add one object, count: "<<mObjectsDistribution[oh_conn_id.shortID()]->counter<<"/"<<mCount);
  //   						<<", time: "<<diff_t<<" s");
-
-    		rebalance(entity_id, oh_conn_id);
 
     		/*
     		ObjectsDistributionMap::iterator it;
@@ -546,7 +546,7 @@ void Server::handleMigrateRequest(const ObjectHostConnectionID& oh_conn_id, cons
 	ObjectsDistributionMap::iterator it;
 	for (it = mObjectsDistribution.begin(); it != mObjectsDistribution.end(); it++) {
 		if( it->first != oh_conn_id.shortID()
-				&& it->second->counter + it->second->migratingFrom_N - mObjectsDistribution[oh_conn_id.shortID()]->migratingTo_N + delta
+				&& it->second->counter + it->second->migratingFrom_N - it->second->migratingTo_N + delta
 				<= it->second->migrate_threshold
 				&& delta <= it->second->migrate_capacity) {
 
