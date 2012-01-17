@@ -475,7 +475,6 @@ void EmersonScript::killScript()
     JSObjectScript::mCtx->objStrand->post(
         std::tr1::bind(&EmersonScript::postDestroy,this,
             livenessToken()));
-//    mParent->destroy();
 }
 
 

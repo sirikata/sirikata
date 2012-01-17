@@ -442,7 +442,7 @@ protected:
         v8::Persistent<v8::Function> cb, Liveness::Token objAlive,
         Liveness::Token ctxAlive);
 
-
+    void iDelContext(JSContextStruct* toDel,Liveness::Token ctxLT);
     
 };
 
