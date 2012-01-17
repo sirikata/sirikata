@@ -191,9 +191,6 @@ private:
     bool hasConnectedCallback;
     HostedObject::PresenceToken mPresenceToken;
 
-    TimedMotionVector3f mLocation;
-    TimedMotionQuaternion mOrientation;
-
     //These two pieces of state hold the values for a presence's
     //velocity and orientation velocity when suspend was called.
     //on resume, use these velocities to resume from.

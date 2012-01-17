@@ -448,39 +448,6 @@ private:
         ProxyObjectPtr proximateObject, const SpaceObjectReference& querier,
         Liveness::Token alive);
 
-
-    void eSetQueryFunction(
-        const SpaceObjectReference sporef, const SolidAngle& sa,
-        const uint32 max_count,Liveness::Token alive);
-
-    void eSetPhysicsFunction(
-        const SpaceObjectReference sporef, const String& newPhyString,
-        Liveness::Token alive);
-
-    void eSetVisualFunction(
-        const SpaceObjectReference sporef, const std::string& newMeshString,
-        Liveness::Token alive);
-
-    void eSetVisualScaleFunction(
-        const SpaceObjectReference sporef, float newscale,
-        Liveness::Token alive);
-
-    void eSetOrientationFunction(
-        const SpaceObjectReference sporef, const Quaternion& quat,
-        Liveness::Token alive);
-
-    void eSetVelocityFunction(
-        const SpaceObjectReference sporef, const Vector3f& velVec,
-        Liveness::Token alive);
-
-    void eSetPositionFunction(
-        const SpaceObjectReference sporef, const Vector3f& posVec,
-        Liveness::Token alive);
-
-    void eSetOrientationVelFunction(
-        const SpaceObjectReference sporef,const Quaternion& quat,
-        Liveness::Token alive);
-
     void iOnConnected(SessionEventProviderPtr from,
         const SpaceObjectReference& name, HostedObject::PresenceToken token,
         bool duringInit,Liveness::Token alive);

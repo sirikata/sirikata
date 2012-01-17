@@ -1427,120 +1427,44 @@ HostedObject::PresenceToken EmersonScript::incrementPresenceToken()
 void EmersonScript::setOrientationVelFunction(const SpaceObjectReference sporef,const Quaternion& quat)
 {
     EMERSCRIPT_SERIAL_CHECK();
-    JSObjectScript::mCtx->mainStrand->post(
-        std::tr1::bind(&EmersonScript::eSetOrientationVelFunction,this,
-            sporef, quat,Liveness::livenessToken()));
-}
-
-//called in mainStrand
-void EmersonScript::eSetOrientationVelFunction(
-    const SpaceObjectReference sporef,const Quaternion& quat,Liveness::Token alive)
-{
-    if (!alive) return;
-    Liveness::Lock locked(alive);
-    if (!locked) return;
-
     if (JSObjectScript::mCtx->stopped())
         return;
-
     mParent->requestOrientationVelocityUpdate(sporef.space(),sporef.object(),quat);
 }
 
 void EmersonScript::setPositionFunction(const SpaceObjectReference sporef, const Vector3f& posVec)
 {
     EMERSCRIPT_SERIAL_CHECK();
-    JSObjectScript::mCtx->mainStrand->post(
-        std::tr1::bind(&EmersonScript::eSetPositionFunction,this,
-            sporef,posVec,Liveness::livenessToken()));
-}
-
-void EmersonScript::eSetPositionFunction(
-    const SpaceObjectReference sporef, const Vector3f& posVec,
-    Liveness::Token alive)
-{
-    if (!alive) return;
-    Liveness::Lock locked(alive);
-    if (!locked) return;
-
     if (JSObjectScript::mCtx->stopped())
         return;
-
-
     mParent->requestPositionUpdate(sporef.space(),sporef.object(),posVec);
 }
-
 
 //velocity
 void EmersonScript::setVelocityFunction(
     const SpaceObjectReference sporef, const Vector3f& velVec)
 {
     EMERSCRIPT_SERIAL_CHECK();
-    JSObjectScript::mCtx->mainStrand->post(
-        std::tr1::bind(&EmersonScript::eSetVelocityFunction,this,
-            sporef,velVec,Liveness::livenessToken()));
-}
-
-void EmersonScript::eSetVelocityFunction(
-    const SpaceObjectReference sporef, const Vector3f& velVec,
-    Liveness::Token alive)
-{
-    if (!alive) return;
-    Liveness::Lock locked(alive);
-    if (!locked) return;
-
     if (JSObjectScript::mCtx->stopped())
         return;
-
-
     mParent->requestVelocityUpdate(sporef.space(),sporef.object(),velVec);
 }
-
-
 
 //orientation
 void  EmersonScript::setOrientationFunction(
     const SpaceObjectReference sporef, const Quaternion& quat)
 {
     EMERSCRIPT_SERIAL_CHECK();
-    JSObjectScript::mCtx->mainStrand->post(
-        std::tr1::bind(&EmersonScript::eSetOrientationFunction,this,
-            sporef,quat,Liveness::livenessToken()));
-}
-
-void EmersonScript::eSetOrientationFunction(
-    const SpaceObjectReference sporef, const Quaternion& quat,
-    Liveness::Token alive)
-{
-    if (!alive) return;
-    Liveness::Lock locked(alive);
-    if (!locked) return;
-
     if (JSObjectScript::mCtx->stopped())
         return;
-
-
     mParent->requestOrientationDirectionUpdate(sporef.space(),sporef.object(),quat);
 }
-
-
 
 //scale
 void EmersonScript::setVisualScaleFunction(
     const SpaceObjectReference sporef, float newscale)
 {
     EMERSCRIPT_SERIAL_CHECK();
-    JSObjectScript::mCtx->mainStrand->post(
-        std::tr1::bind(&EmersonScript::eSetVisualScaleFunction,this,
-                sporef,newscale,Liveness::livenessToken()));
-}
-
-void EmersonScript::eSetVisualScaleFunction(
-    const SpaceObjectReference sporef, float newscale,Liveness::Token alive)
-{
-    if (!alive) return;
-    Liveness::Lock locked(alive);
-    if (!locked) return;
-
     if (JSObjectScript::mCtx->stopped())
         return;
 
@@ -1549,30 +1473,14 @@ void EmersonScript::eSetVisualScaleFunction(
     mParent->requestBoundsUpdate(sporef.space(),sporef.object(), bnds);
 }
 
-
-
 //mesh
 //FIXME: May want to have an error handler for this function.
 void  EmersonScript::setVisualFunction(
     const SpaceObjectReference sporef, const std::string& newMeshString)
 {
     EMERSCRIPT_SERIAL_CHECK();
-    JSObjectScript::mCtx->mainStrand->post(
-        std::tr1::bind(&EmersonScript::eSetVisualFunction,this,
-            sporef,newMeshString,Liveness::livenessToken()));
-}
-
-void  EmersonScript::eSetVisualFunction(
-    const SpaceObjectReference sporef, const std::string& newMeshString,
-    Liveness::Token alive)
-{
-    if (!alive) return;
-    Liveness::Lock locked(alive);
-    if (!locked) return;
-
     if (JSObjectScript::mCtx->stopped())
         return;
-
     mParent->requestMeshUpdate(sporef.space(),sporef.object(),newMeshString);
 }
 
@@ -1593,22 +1501,8 @@ void EmersonScript::setPhysicsFunction(
     const SpaceObjectReference sporef, const String& newPhyString)
 {
     EMERSCRIPT_SERIAL_CHECK();
-    JSObjectScript::mCtx->mainStrand->post(
-        std::tr1::bind(&EmersonScript::eSetPhysicsFunction,this,
-            sporef,newPhyString,Liveness::livenessToken()));
-}
-
-void EmersonScript::eSetPhysicsFunction(
-    const SpaceObjectReference sporef, const String& newPhyString,
-    Liveness::Token alive)
-{
-    if (!alive) return;
-    Liveness::Lock locked(alive);
-    if (!locked) return;
-
     if (JSObjectScript::mCtx->stopped())
         return;
-
     mParent->requestPhysicsUpdate(sporef.space(), sporef.object(), newPhyString);
 }
 
@@ -1618,23 +1512,8 @@ void EmersonScript::setQueryFunction(
     const uint32 max_count)
 {
     EMERSCRIPT_SERIAL_CHECK();
-    JSObjectScript::mCtx->mainStrand->post(
-        std::tr1::bind(&EmersonScript::eSetQueryFunction,this,
-            sporef,sa,max_count,Liveness::livenessToken()));
-}
-
-
-void EmersonScript::eSetQueryFunction(
-    const SpaceObjectReference sporef, const SolidAngle& sa,
-    const uint32 max_count,Liveness::Token alive)
-{
-    if (!alive) return;
-    Liveness::Lock locked(alive);
-    if (!locked) return;
-
     if (JSObjectScript::mCtx->stopped())
         return;
-
 
     mParent->requestQueryUpdate(
         sporef.space(), sporef.object(),
@@ -1642,7 +1521,6 @@ void EmersonScript::eSetQueryFunction(
         max_count
     );
 }
-
 
 const String& EmersonScript::getQuery(const SpaceObjectReference& sporef) const {
     JSLOG(error,"Calling getQuery function in "<<\
