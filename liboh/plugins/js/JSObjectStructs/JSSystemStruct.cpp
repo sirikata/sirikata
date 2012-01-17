@@ -109,12 +109,12 @@ v8::Handle<v8::Value> JSSystemStruct::checkResources()
 }
 
 
-v8::Handle<v8::Value> JSSystemStruct::debug_fileWrite(const String& strToWrite,const String& filename)
+v8::Handle<v8::Value> JSSystemStruct::debug_fileWrite(String& strToWrite,String& filename)
 {
     return associatedContext->debug_fileWrite(strToWrite,filename);
 }
 
-v8::Handle<v8::Value> JSSystemStruct::debug_fileRead(const String& filename)
+v8::Handle<v8::Value> JSSystemStruct::debug_fileRead(String& filename)
 {
     return associatedContext->debug_fileRead(filename);
 }

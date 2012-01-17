@@ -65,7 +65,8 @@
 #include "JSObjectStructs/JSUtilStruct.hpp"
 #include <boost/lexical_cast.hpp>
 #include "JSObjectStructs/JSCapabilitiesConsts.hpp"
-
+#include <boost/algorithm/string.hpp>
+#include <boost/algorithm/string/erase.hpp>
 #include <sirikata/core/util/Paths.hpp>
 
 #include <sys/stat.h>
@@ -392,7 +393,6 @@ void JSObjectScript::shimImportAndEvalScript(JSContextStruct* jscont, const Stri
 }
 
 /**
-   lkjs;
    FIXME: instead of posting jscont through, instead post its id through.  That
    way, it can't get deleted out from under us.
  */
@@ -952,11 +952,22 @@ void JSObjectScript::eSetRestoreScript(
     mPersistedObjectSet->requestPersistedObject(mInternalID, script_type, "", script, wrapped_cb);
 }
 
-
-v8::Handle<v8::Value> JSObjectScript::debug_fileRead(const String& filename)
+v8::Handle<v8::Value> JSObjectScript::debug_fileRead(String& filename)
 {
     JSSCRIPT_SERIAL_CHECK();
-    std::ifstream fRead(filename.c_str(), std::ios::binary | std::ios::in);
+    boost::filesystem::path baseDir  =
+        Path::SubstitutePlaceholders(Path::Placeholders::RESOURCE(JS_PLUGINS_DIR,JS_SCRIPTS_DIR));
+
+    boost::erase_all(filename,"..");
+    boost::filesystem::path fullPath =
+        baseDir / filename;
+
+    if (!boost::filesystem::is_regular_file(fullPath))
+        V8_EXCEPTION_CSTR("No such file to read from");
+
+    
+    std::ifstream fRead(fullPath.string().c_str(),
+        std::ios::binary | std::ios::in);
     std::ifstream::pos_type begin, end;
 
     begin = fRead.tellg();
@@ -976,10 +987,42 @@ v8::Handle<v8::Value> JSObjectScript::debug_fileRead(const String& filename)
 }
 
 
-v8::Handle<v8::Value> JSObjectScript::debug_fileWrite(const String& strToWrite,const String& filename)
+v8::Handle<v8::Value> JSObjectScript::debug_fileWrite(String& strToWrite,String& filename)
 {
     JSSCRIPT_SERIAL_CHECK();
-    std::ofstream fWriter (filename.c_str(),  std::ios::out | std::ios::binary);
+    
+    boost::filesystem::path baseDir  =
+        Path::SubstitutePlaceholders(Path::Placeholders::RESOURCE(JS_PLUGINS_DIR,JS_SCRIPTS_DIR));
+
+    boost::erase_all(filename,"..");
+    boost::filesystem::path fullPath =
+        baseDir / filename;
+
+    
+    String splitval;
+    splitval += boost::filesystem::slash<boost::filesystem::path>::value;
+    std::vector<String> pathParts;
+    boost::algorithm::split(
+        pathParts,fullPath.string(),
+        boost::is_any_of(splitval.c_str()));
+
+    boost::filesystem::path partialPath("/");
+    for (uint64 s= 0; s < pathParts.size() -1; ++s)
+    {
+        partialPath = partialPath / pathParts[s];
+
+        if (boost::filesystem::is_regular_file(partialPath))
+            V8_EXCEPTION_CSTR("Error writing file already have file with directory name");
+            
+        if ((!boost::filesystem::is_directory(partialPath)) &&
+            (!boost::filesystem::is_regular_file(partialPath)))
+        {
+            boost::filesystem::create_directory(partialPath);
+        }
+    }
+
+    std::ofstream fWriter (fullPath.string().c_str(),
+        std::ios::out | std::ios::binary);
 
     for (String::size_type s = 0; s < strToWrite.size(); ++s)
     {

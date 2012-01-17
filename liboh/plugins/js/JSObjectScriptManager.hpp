@@ -44,7 +44,8 @@
 
 #include <v8.h>
 
-
+#define JS_SCRIPTS_DIR "js/scripts"
+#define JS_PLUGINS_DIR "liboh/plugins"
 
 namespace Sirikata {
 namespace JS {

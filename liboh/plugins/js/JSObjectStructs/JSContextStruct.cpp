@@ -238,12 +238,12 @@ v8::Handle<v8::Value> JSContextStruct::setRestoreScript(const String& key, v8::H
 }
 
 
-v8::Handle<v8::Value>JSContextStruct::debug_fileWrite(const String& strToWrite,const String& filename)
+v8::Handle<v8::Value>JSContextStruct::debug_fileWrite(String& strToWrite,String& filename)
 {
     return jsObjScript->debug_fileWrite(strToWrite,filename);
 }
 
-v8::Handle<v8::Value> JSContextStruct::debug_fileRead(const String& filename)
+v8::Handle<v8::Value> JSContextStruct::debug_fileRead(String& filename)
 {
     return jsObjScript->debug_fileRead(filename);
 }
