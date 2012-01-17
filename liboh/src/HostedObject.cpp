@@ -1180,11 +1180,13 @@ void HostedObject::updateLocUpdateRequest(const SpaceID& space, const ObjectRefe
         assert(mPresenceData.find(SpaceObjectReference(space, oref)) != mPresenceData.end());
         PerPresenceData& pd = *(mPresenceData.find(SpaceObjectReference(space, oref)))->second;
 
-        if (loc != NULL) { pd.requestLocation = *loc; pd.updateFields |= PerPresenceData::LOC_FIELD_LOC; }
-        if (orient != NULL) { pd.requestOrientation = *orient; pd.updateFields |= PerPresenceData::LOC_FIELD_ORIENTATION; }
-        if (bounds != NULL) { pd.requestBounds = *bounds; pd.updateFields |= PerPresenceData::LOC_FIELD_BOUNDS; }
-        if (mesh != NULL) { pd.requestMesh = *mesh; pd.updateFields |= PerPresenceData::LOC_FIELD_MESH; }
-        if (phy != NULL) { pd.requestPhysics = *phy; pd.updateFields |= PerPresenceData::LOC_FIELD_PHYSICS; }
+        // These set values directly, the epoch/seqno values will be
+        // updated when the request is sent
+        if (loc != NULL) { pd.requestLoc->setLocation(*loc); pd.updateFields |= PerPresenceData::LOC_FIELD_LOC; }
+        if (orient != NULL) { pd.requestLoc->setOrientation(*orient); pd.updateFields |= PerPresenceData::LOC_FIELD_ORIENTATION; }
+        if (bounds != NULL) { pd.requestLoc->setBounds(*bounds); pd.updateFields |= PerPresenceData::LOC_FIELD_BOUNDS; }
+        if (mesh != NULL) { pd.requestLoc->setMesh(Transfer::URI(*mesh)); pd.updateFields |= PerPresenceData::LOC_FIELD_MESH; }
+        if (phy != NULL) { pd.requestLoc->setPhysics(*phy); pd.updateFields |= PerPresenceData::LOC_FIELD_PHYSICS; }
 
         // Cancel the re-request timer if it was active
         pd.rerequestTimer->cancel();
@@ -1216,31 +1218,43 @@ void HostedObject::sendLocUpdateRequest(const SpaceID& space, const ObjectRefere
         return;
     }
 
-
+    assert(pd.updateFields != PerPresenceData::LOC_FIELD_NONE);
     // Generate and send an update to Loc
     Protocol::Loc::Container container;
     Protocol::Loc::ILocationUpdateRequest loc_request = container.mutable_update_request();
+    uint64 epoch = pd.requestEpoch++;
+    loc_request.set_epoch(epoch);
     if (pd.updateFields & PerPresenceData::LOC_FIELD_LOC) {
         Protocol::ITimedMotionVector requested_loc = loc_request.mutable_location();
-        requested_loc.set_t( spaceTime(space, pd.requestLocation.updateTime()) );
-        requested_loc.set_position(pd.requestLocation.position());
-        requested_loc.set_velocity(pd.requestLocation.velocity());
+        requested_loc.set_t( spaceTime(space, pd.requestLoc->location().updateTime()) );
+        requested_loc.set_position(pd.requestLoc->location().position());
+        requested_loc.set_velocity(pd.requestLoc->location().velocity());
+        // Save value but bump the epoch
+        pd.requestLoc->setLocation(pd.requestLoc->location(), epoch);
     }
     if (pd.updateFields & PerPresenceData::LOC_FIELD_ORIENTATION) {
         Protocol::ITimedMotionQuaternion requested_orient = loc_request.mutable_orientation();
-        requested_orient.set_t( spaceTime(space, pd.requestOrientation.updateTime()) );
+        requested_orient.set_t( spaceTime(space, pd.requestLoc->orientation().updateTime()) );
         //Normalize positions, which only make sense as unit quaternions.
-        requested_orient.set_position(pd.requestOrientation.position().normal());
-        requested_orient.set_velocity(pd.requestOrientation.velocity());
+        requested_orient.set_position(pd.requestLoc->orientation().position().normal());
+        requested_orient.set_velocity(pd.requestLoc->orientation().velocity());
+        // Save value but bump the epoch
+        pd.requestLoc->setOrientation(pd.requestLoc->orientation(), epoch);
     }
     if (pd.updateFields & PerPresenceData::LOC_FIELD_BOUNDS) {
-        loc_request.set_bounds(pd.requestBounds);
+        loc_request.set_bounds(pd.requestLoc->bounds());
+        // Save value but bump the epoch
+        pd.requestLoc->setBounds(pd.requestLoc->bounds(), epoch);
     }
     if (pd.updateFields & PerPresenceData::LOC_FIELD_MESH) {
-        loc_request.set_mesh(pd.requestMesh);
+        loc_request.set_mesh(pd.requestLoc->mesh().toString());
+        // Save value but bump the epoch
+        pd.requestLoc->setMesh(pd.requestLoc->mesh(), epoch);
     }
     if (pd.updateFields & PerPresenceData::LOC_FIELD_PHYSICS) {
-        loc_request.set_physics(pd.requestPhysics);
+        loc_request.set_physics(pd.requestLoc->physics());
+        // Save value but bump the epoch
+        pd.requestLoc->setPhysics(pd.requestLoc->physics(), epoch);
     }
 
     std::string payload = serializePBJMessage(container);

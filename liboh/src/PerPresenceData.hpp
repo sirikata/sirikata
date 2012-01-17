@@ -20,7 +20,6 @@ public:
     SpaceID space;
     ObjectReference object;
     ProxyObjectPtr mProxyObject;
-    ProxyObject::Extrapolator mUpdatedLocation;
     ProxyManagerPtr proxyManager;
     String query;
     HostedObject::BaseDatagramLayerPtr mSSTDatagramLayers;
@@ -35,11 +34,14 @@ public:
     };
 
     LocField updateFields;
-    TimedMotionVector3f requestLocation;
-    TimedMotionQuaternion requestOrientation;
-    BoundingSphere3f requestBounds;
-    String requestMesh;
-    String requestPhysics;
+    uint64 requestEpoch;
+    // Requested location information, may or may not have been
+    // accepted/applied by the space. We keep this as a shared_ptr so
+    // we can return it in place of a down-casted
+    // ProxyObjectPtr. This tracks the request epoch for each
+    // component since they are requested independently so we need to
+    // resolve differences for each component independently.
+    SequencedPresencePropertiesPtr requestLoc;
     Network::IOTimerPtr rerequestTimer;
 
     typedef std::map<String, Simulation*> SimulationMap;
