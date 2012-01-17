@@ -121,12 +121,12 @@ public:
         // unless we track multiple outstanding update requests and can
         // figure out which one failed, even if the space server generates
         // other update while handling eht requests...
-        if (predictive || reqloc.updateTime() >= mLoc.updateTime()) {
-            mLoc = reqloc;
-            return true;
-        }
-
-        return false;
+        // We used to check the update times here but that really doesn't work
+        // given synchronization. Instead we just accept the values now, but we
+        // really should figure out whether the update is up to date with our
+        // prediction, i.e. the last request...
+        mLoc = reqloc;
+        return true;
     }
 
     bool setOrientation(const TimedMotionQuaternion& reqorient, uint64 seqno, bool predictive=false) {
@@ -135,11 +135,8 @@ public:
         if (!predictive) mUpdateSeqno[LOC_ORIENT_PART] = seqno;
 
         // FIXME see relevant comment in setLocation
-        if (predictive || reqorient.updateTime() >= mOrientation.updateTime()) {
-            mOrientation = reqorient;
-            return true;
-        }
-        return false;
+        mOrientation = reqorient;
+        return true;
     }
 
     bool setBounds(const BoundingSphere3f& b, uint64 seqno, bool predictive=false) {
