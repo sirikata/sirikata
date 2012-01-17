@@ -136,27 +136,27 @@ const String& ProxyObject::physics() const {
 }
 
 
-void ProxyObject::setLocation(const TimedMotionVector3f& reqloc, uint64 seqno, bool predictive) {
+void ProxyObject::setLocation(const TimedMotionVector3f& reqloc, uint64 seqno) {
     PROXY_SERIALIZED();
-    if (SequencedPresenceProperties::setLocation(reqloc, seqno, predictive)) {
+    if (SequencedPresenceProperties::setLocation(reqloc, seqno)) {
         ProxyObjectPtr ptr = getSharedPtr();
         assert(ptr);
         PositionProvider::notify(&PositionListener::updateLocation, ptr, mLoc, mOrientation, mBounds, mID);
     }
 }
 
-void ProxyObject::setOrientation(const TimedMotionQuaternion& reqorient, uint64 seqno, bool predictive) {
+void ProxyObject::setOrientation(const TimedMotionQuaternion& reqorient, uint64 seqno) {
     PROXY_SERIALIZED();
-    if (SequencedPresenceProperties::setOrientation(reqorient, seqno, predictive)) {
+    if (SequencedPresenceProperties::setOrientation(reqorient, seqno)) {
         ProxyObjectPtr ptr = getSharedPtr();
         assert(ptr);
         PositionProvider::notify(&PositionListener::updateLocation, ptr, mLoc, mOrientation, mBounds, mID);
     }
 }
 
-void ProxyObject::setBounds(const BoundingSphere3f& bnds, uint64 seqno, bool predictive) {
+void ProxyObject::setBounds(const BoundingSphere3f& bnds, uint64 seqno) {
     PROXY_SERIALIZED();
-    if (SequencedPresenceProperties::setBounds(bnds, seqno, predictive)) {
+    if (SequencedPresenceProperties::setBounds(bnds, seqno)) {
         ProxyObjectPtr ptr = getSharedPtr();
         assert(ptr);
         PositionProvider::notify(&PositionListener::updateLocation, ptr, mLoc, mOrientation, mBounds, mID);
@@ -165,18 +165,18 @@ void ProxyObject::setBounds(const BoundingSphere3f& bnds, uint64 seqno, bool pre
 }
 
 //you can set a camera's mesh as of now.
-void ProxyObject::setMesh (Transfer::URI const& mesh, uint64 seqno, bool predictive) {
+void ProxyObject::setMesh (Transfer::URI const& mesh, uint64 seqno) {
     PROXY_SERIALIZED();
-    if (SequencedPresenceProperties::setMesh(mesh, seqno, predictive)) {
+    if (SequencedPresenceProperties::setMesh(mesh, seqno)) {
         ProxyObjectPtr ptr = getSharedPtr();
         assert(ptr);
         if (ptr) MeshProvider::notify ( &MeshListener::onSetMesh, ptr, mesh, mID);
     }
 }
 
-void ProxyObject::setPhysics (const String& rhs, uint64 seqno, bool predictive) {
+void ProxyObject::setPhysics (const String& rhs, uint64 seqno) {
     PROXY_SERIALIZED();
-    if (SequencedPresenceProperties::setPhysics(rhs, seqno, predictive)) {
+    if (SequencedPresenceProperties::setPhysics(rhs, seqno)) {
         ProxyObjectPtr ptr = getSharedPtr();
         assert(ptr);
         if (ptr) MeshProvider::notify ( &MeshListener::onSetPhysics, ptr, rhs, mID);

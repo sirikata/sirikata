@@ -90,9 +90,11 @@ public:
 
 
 /**
- * This class represents a generic object on a remote server
- * Every object has a SpaceObjectReference that allows one to communicate
- * with it.
+ * This class represents a generic object on a remote server. This
+ * tracks the basic properties maintained by the space -- the object
+ * identifier, location, orientation, bounds, mesh, and physics. Note
+ * that this *always* represents the current reported status of the
+ * object in the space, even if you own the presence.
  *
  * Note that this class is *not* thread safe. You need to protect it by locking
  * a mutex from the ProxyManager or HostedObject while accessing it.
@@ -195,21 +197,11 @@ public:
     virtual const Transfer::URI& mesh() const;
     virtual const String& physics() const;
 
-    /** Sets the location for this update. Note: This does not tell the
-        Space that we have moved, but it is the first step in moving a local object. */
-    void setLocation(const TimedMotionVector3f& reqloc, uint64 seqno, bool predictive = false);
-
-    /** Sets the orientation for this update. Note: This does not tell the
-        Space that we have moved, but it is the first step in moving a local object. */
-    void setOrientation(const TimedMotionQuaternion& reqorient, uint64 seqno, bool predictive = false);
-
-    /** Sets the bounds. Note: This does not tell the Space that we have moved,
-        but it is the first step in moving a local object. */
-    void setBounds(const BoundingSphere3f& bnds, uint64 seqno, bool predictive = false);
-
-    void setMesh (Transfer::URI const& rhs, uint64 seqno, bool predictive = false);
-
-    void setPhysics(const String& rhs, uint64 seqno, bool predictive = false);
+    void setLocation(const TimedMotionVector3f& reqloc, uint64 seqno);
+    void setOrientation(const TimedMotionQuaternion& reqorient, uint64 seqno);
+    void setBounds(const BoundingSphere3f& bnds, uint64 seqno);
+    void setMesh (Transfer::URI const& rhs, uint64 seqno);
+    void setPhysics(const String& rhs, uint64 seqno);
 
 
 

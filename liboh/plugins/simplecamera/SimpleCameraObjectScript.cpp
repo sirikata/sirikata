@@ -172,8 +172,6 @@ void SimpleCameraObjectScript::moveAction(Vector3f dir, float amount)
     // Request updates from spcae
     TimedMotionVector3f newloc(now, MotionVector3f(Vector3f(loc.getPosition()), (orient * dir) * amount * WORLD_SCALE * .5) );
     mParent->requestLocationUpdate(mID.space(), mID.object(), newloc);
-    // And update our local Proxy's information, assuming the move will be successful
-    mSelfProxy->setLocation(newloc, 0, true);
 }
 
 void SimpleCameraObjectScript::rotateAction(Vector3f about, float amount)
@@ -185,8 +183,6 @@ void SimpleCameraObjectScript::rotateAction(Vector3f about, float amount)
 
     TimedMotionQuaternion neworient(now, MotionQuaternion(loc.getOrientation(), Quaternion(about, amount)));
     mParent->requestOrientationUpdate(mID.space(), mID.object(), neworient);
-    // And update our local Proxy's information, assuming the move will be successful
-    mSelfProxy->setOrientation(neworient, 0, true);
 }
 
 static bool quat2Euler(Quaternion q, double& pitch, double& roll, double& yaw) {
@@ -227,8 +223,6 @@ void SimpleCameraObjectScript::stableRotateAction(float dir, float amount)
     // Request updates from spcae
     TimedMotionQuaternion neworient(now, MotionQuaternion(loc.getOrientation(), Quaternion(raxis, dir*amount)));
     mParent->requestOrientationUpdate(mID.space(), mID.object(), neworient);
-    // And update our local Proxy's information, assuming the move will be successful
-    mSelfProxy->setOrientation(neworient, 0, true);
 }
 
 } // namespace SimpleCamera

@@ -1221,14 +1221,12 @@ void HostedObject::sendLocUpdateRequest(const SpaceID& space, const ObjectRefere
     Protocol::Loc::Container container;
     Protocol::Loc::ILocationUpdateRequest loc_request = container.mutable_update_request();
     if (pd.updateFields & PerPresenceData::LOC_FIELD_LOC) {
-        self_proxy->setLocation(pd.requestLocation, 0, true);
         Protocol::ITimedMotionVector requested_loc = loc_request.mutable_location();
         requested_loc.set_t( spaceTime(space, pd.requestLocation.updateTime()) );
         requested_loc.set_position(pd.requestLocation.position());
         requested_loc.set_velocity(pd.requestLocation.velocity());
     }
     if (pd.updateFields & PerPresenceData::LOC_FIELD_ORIENTATION) {
-        self_proxy->setOrientation(pd.requestOrientation, 0, true);
         Protocol::ITimedMotionQuaternion requested_orient = loc_request.mutable_orientation();
         requested_orient.set_t( spaceTime(space, pd.requestOrientation.updateTime()) );
         //Normalize positions, which only make sense as unit quaternions.
@@ -1236,15 +1234,12 @@ void HostedObject::sendLocUpdateRequest(const SpaceID& space, const ObjectRefere
         requested_orient.set_velocity(pd.requestOrientation.velocity());
     }
     if (pd.updateFields & PerPresenceData::LOC_FIELD_BOUNDS) {
-        self_proxy->setBounds(pd.requestBounds, 0, true);
         loc_request.set_bounds(pd.requestBounds);
     }
     if (pd.updateFields & PerPresenceData::LOC_FIELD_MESH) {
-        self_proxy->setMesh(Transfer::URI(pd.requestMesh), 0, true);
         loc_request.set_mesh(pd.requestMesh);
     }
     if (pd.updateFields & PerPresenceData::LOC_FIELD_PHYSICS) {
-        self_proxy->setPhysics(pd.requestPhysics, 0, true);
         loc_request.set_physics(pd.requestPhysics);
     }
 
