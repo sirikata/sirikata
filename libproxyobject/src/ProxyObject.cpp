@@ -38,6 +38,12 @@
 
 #include <sirikata/proxyobject/MeshListener.hpp>
 
+// Helper for checking serialization of data access to a ProxyObject. These
+// don't necessarily cover all conflicts or uses, they just cover many parts of
+// ProxyObject where we don't use locks directly (or data would escape mutex
+// because it is returned) so we know problems could arise if they aren't
+// properly protected by callers.
+#define PROXY_SERIALIZED() SerializationCheck::Scoped ___proxy_serialization_check(const_cast<ProxyObject*>(this))
 
 namespace Sirikata {
 
@@ -99,11 +105,39 @@ bool ProxyObject::UpdateNeeded::operator() (
 }
 
 bool ProxyObject::isStatic() const {
+    PROXY_SERIALIZED();
     return mLoc.velocity() == Vector3f::zero() && mOrientation.velocity() == Quaternion::identity();
 }
 
 
+const TimedMotionVector3f& ProxyObject::location() const {
+    PROXY_SERIALIZED();
+    return SequencedPresenceProperties::location();
+}
+
+const TimedMotionQuaternion& ProxyObject::orientation() const {
+    PROXY_SERIALIZED();
+    return SequencedPresenceProperties::orientation();
+}
+
+const BoundingSphere3f& ProxyObject::bounds() const {
+    PROXY_SERIALIZED();
+    return SequencedPresenceProperties::bounds();
+}
+
+const Transfer::URI& ProxyObject::mesh() const {
+    PROXY_SERIALIZED();
+    return SequencedPresenceProperties::mesh();
+}
+
+const String& ProxyObject::physics() const {
+    PROXY_SERIALIZED();
+    return SequencedPresenceProperties::physics();
+}
+
+
 void ProxyObject::setLocation(const TimedMotionVector3f& reqloc, uint64 seqno, bool predictive) {
+    PROXY_SERIALIZED();
     if (SequencedPresenceProperties::setLocation(reqloc, seqno, predictive)) {
         ProxyObjectPtr ptr = getSharedPtr();
         assert(ptr);
@@ -112,6 +146,7 @@ void ProxyObject::setLocation(const TimedMotionVector3f& reqloc, uint64 seqno, b
 }
 
 void ProxyObject::setOrientation(const TimedMotionQuaternion& reqorient, uint64 seqno, bool predictive) {
+    PROXY_SERIALIZED();
     if (SequencedPresenceProperties::setOrientation(reqorient, seqno, predictive)) {
         ProxyObjectPtr ptr = getSharedPtr();
         assert(ptr);
@@ -120,6 +155,7 @@ void ProxyObject::setOrientation(const TimedMotionQuaternion& reqorient, uint64 
 }
 
 void ProxyObject::setBounds(const BoundingSphere3f& bnds, uint64 seqno, bool predictive) {
+    PROXY_SERIALIZED();
     if (SequencedPresenceProperties::setBounds(bnds, seqno, predictive)) {
         ProxyObjectPtr ptr = getSharedPtr();
         assert(ptr);
@@ -130,6 +166,7 @@ void ProxyObject::setBounds(const BoundingSphere3f& bnds, uint64 seqno, bool pre
 
 //you can set a camera's mesh as of now.
 void ProxyObject::setMesh (Transfer::URI const& mesh, uint64 seqno, bool predictive) {
+    PROXY_SERIALIZED();
     if (SequencedPresenceProperties::setMesh(mesh, seqno, predictive)) {
         ProxyObjectPtr ptr = getSharedPtr();
         assert(ptr);
@@ -138,6 +175,7 @@ void ProxyObject::setMesh (Transfer::URI const& mesh, uint64 seqno, bool predict
 }
 
 void ProxyObject::setPhysics (const String& rhs, uint64 seqno, bool predictive) {
+    PROXY_SERIALIZED();
     if (SequencedPresenceProperties::setPhysics(rhs, seqno, predictive)) {
         ProxyObjectPtr ptr = getSharedPtr();
         assert(ptr);

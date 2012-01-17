@@ -39,13 +39,16 @@
 #include "ProxyCreationListener.hpp"
 #include <sirikata/proxyobject/PresenceProperties.hpp>
 
+#include <sirikata/core/util/SerializationCheck.hpp>
+
 namespace Sirikata {
 
 /** An interface for a class that keeps track of proxy object references. */
 class SIRIKATA_PROXYOBJECT_EXPORT ProxyManager
     : public SelfWeakPtr<ProxyManager>,
       public Provider<ProxyCreationListener*>,
-      public Noncopyable
+      public Noncopyable,
+      SerializationCheck
 {
 public:
     static ProxyManagerPtr construct(VWObjectPtr parent, const SpaceObjectReference& _id);

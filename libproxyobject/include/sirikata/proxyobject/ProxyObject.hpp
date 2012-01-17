@@ -52,6 +52,8 @@
 #include <sirikata/proxyobject/PresenceProperties.hpp>
 #include <sirikata/proxyobject/ProxyManager.hpp>
 
+#include <sirikata/core/util/SerializationCheck.hpp>
+
 namespace Sirikata {
 
 
@@ -90,16 +92,18 @@ public:
 /**
  * This class represents a generic object on a remote server
  * Every object has a SpaceObjectReference that allows one to communicate
- * with it. Subclasses implement several Providers for concerned listeners
- * This class should be casted to the various subclasses (ProxyLightObject,etc)
- * and appropriate listeners be registered.
+ * with it.
+ *
+ * Note that this class is *not* thread safe. You need to protect it by locking
+ * a mutex from the ProxyManager or HostedObject while accessing it.
  */
 class SIRIKATA_PROXYOBJECT_EXPORT ProxyObject
     : public SelfWeakPtr<ProxyObject>,
       public SequencedPresenceProperties,
       public ProxyObjectProvider,
       public PositionProvider,
-      public MeshProvider
+      public MeshProvider,
+      SerializationCheck
 {
 
 public:
@@ -184,6 +188,13 @@ public:
     /// Returns if this object has a zero velocity and requires no extrapolation.
     bool isStatic() const;
 
+    // PresenceProperties Overrides
+    virtual const TimedMotionVector3f& location() const;
+    virtual const TimedMotionQuaternion& orientation() const;
+    virtual const BoundingSphere3f& bounds() const;
+    virtual const Transfer::URI& mesh() const;
+    virtual const String& physics() const;
+
     /** Sets the location for this update. Note: This does not tell the
         Space that we have moved, but it is the first step in moving a local object. */
     void setLocation(const TimedMotionVector3f& reqloc, uint64 seqno, bool predictive = false);
@@ -199,6 +210,8 @@ public:
     void setMesh (Transfer::URI const& rhs, uint64 seqno, bool predictive = false);
 
     void setPhysics(const String& rhs, uint64 seqno, bool predictive = false);
+
+
 
     /** Retuns the local location of this object at the current timestamp. */
     Location extrapolateLocation(TemporalValue<Location>::Time current) const {

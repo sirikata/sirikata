@@ -35,6 +35,13 @@
 #include <sirikata/proxyobject/ProxyManager.hpp>
 #include <sirikata/proxyobject/ProxyObject.hpp>
 
+// Helper for checking serialization of data access to a ProxyManager. These
+// don't necessarily cover all conflicts or uses, they just cover many parts of
+// ProxyManager where we don't use locks directly (or data would escape mutex
+// because it is returned) so we know problems could arise if they aren't
+// properly protected by callers.
+#define PROXYMAN_SERIALIZED() SerializationCheck::Scoped ___proxy_manager_serialization_check(const_cast<ProxyManager*>(this))
+
 namespace Sirikata {
 
 ProxyManagerPtr ProxyManager::construct(VWObjectPtr parent, const SpaceObjectReference& _id) {
@@ -55,6 +62,8 @@ void ProxyManager::initialize() {
 }
 
 void ProxyManager::destroy() {
+    PROXYMAN_SERIALIZED();
+
     for (ProxyMap::iterator iter = mProxyMap.begin();
          iter != mProxyMap.end();
          ++iter) {
@@ -72,6 +81,8 @@ ProxyObjectPtr ProxyManager::createObject(
     const Transfer::URI& meshuri, const String& phy, uint64 seqNo
 )
 {
+    PROXYMAN_SERIALIZED();
+
     ProxyObjectPtr newObj;
     // Try to reuse an existing object, even if we only have a valid
     // weak pointer to it.
@@ -147,6 +158,8 @@ ProxyObjectPtr ProxyManager::createObject(
 }
 
 void ProxyManager::destroyObject(const ProxyObjectPtr &delObj) {
+    PROXYMAN_SERIALIZED();
+
     ProxyMap::iterator iter = mProxyMap.find(delObj->getObjectReference().object());
     if (iter != mProxyMap.end()) {
         iter->second.ptr->destroy();
@@ -161,6 +174,8 @@ void ProxyManager::destroyObject(const ProxyObjectPtr &delObj) {
 }
 
 void ProxyManager::proxyDeleted(const ObjectReference& id) {
+    PROXYMAN_SERIALIZED();
+
     ProxyMap::iterator iter = mProxyMap.find(id);
     // It should either be in here, or we should be empty after a call
     // to destroy().
@@ -177,6 +192,8 @@ void ProxyManager::proxyDeleted(const ObjectReference& id) {
 }
 
 ProxyObjectPtr ProxyManager::getProxyObject(const SpaceObjectReference &id) const {
+    PROXYMAN_SERIALIZED();
+
     assert(id.space() == mID.space());
 
     ProxyMap::const_iterator iter = mProxyMap.find(id.object());
@@ -192,6 +209,8 @@ ProxyObjectPtr ProxyManager::getProxyObject(const SpaceObjectReference &id) cons
 //manager and returns them in vecotr form.
 void ProxyManager::getAllObjectReferences(std::vector<SpaceObjectReference>& allObjReferences) const
 {
+    PROXYMAN_SERIALIZED();
+
     ProxyMap::const_iterator iter;
 
     SpaceID space = mID.space();

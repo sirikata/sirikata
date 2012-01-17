@@ -12,7 +12,14 @@
 
 namespace Sirikata {
 
-/** Read-only interface for PresenceProperties. */
+/** Read-only interface for PresenceProperties. Note that you need to be
+ *  careful using this interface in threaded code since you can't implement a
+ *  thread-safe version of this interface just by locking each accessor -- you
+ *  need to lock around the calls since they return const-references. This
+ *  approach currently makes sense because it allows us to avoid making copies
+ *  where they aren't necessary and frequently we need locks for longer anyway,
+ *  e.g. to ensure that operations on a ProxyObject are performed atomically.
+ */
 class IPresencePropertiesRead {
 public:
     virtual ~IPresencePropertiesRead() {}
@@ -49,20 +56,20 @@ public:
     {}
     virtual ~PresenceProperties() {}
 
-    virtual const TimedMotionVector3f& location() const { return mLoc;}
-    bool setLocation(const TimedMotionVector3f& l) { mLoc = l; return true; }
+    virtual const TimedMotionVector3f& location() const { return mLoc; }
+    virtual bool setLocation(const TimedMotionVector3f& l) { mLoc = l; return true; }
 
-    virtual const TimedMotionQuaternion& orientation() const { return mOrientation;}
-    bool setOrientation(const TimedMotionQuaternion& o) { mOrientation = o; return true; }
+    virtual const TimedMotionQuaternion& orientation() const { return mOrientation; }
+    virtual bool setOrientation(const TimedMotionQuaternion& o) { mOrientation = o; return true; }
 
-    virtual const BoundingSphere3f& bounds() const { return mBounds;}
-    bool setBounds(const BoundingSphere3f& b) { mBounds = b; return true; }
+    virtual const BoundingSphere3f& bounds() const { return mBounds; }
+    virtual bool setBounds(const BoundingSphere3f& b) { mBounds = b; return true; }
 
-    virtual const Transfer::URI& mesh() const { return mMesh;}
-    bool setMesh(const Transfer::URI& m) { mMesh = m; return true; }
+    virtual const Transfer::URI& mesh() const { return mMesh; }
+    virtual bool setMesh(const Transfer::URI& m) { mMesh = m; return true; }
 
-    virtual const String& physics() const { return mPhysics;}
-    bool setPhysics(const String& p) { mPhysics = p; return true; }
+    virtual const String& physics() const { return mPhysics; }
+    virtual bool setPhysics(const String& p) { mPhysics = p; return true; }
 
 protected:
     TimedMotionVector3f mLoc;

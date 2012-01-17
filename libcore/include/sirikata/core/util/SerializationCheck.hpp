@@ -34,6 +34,7 @@
 #define _SIRIKATA_SERIALIZATION_CHECK_HPP_
 
 #include <sirikata/core/util/Platform.hpp>
+#include <sirikata/core/util/AtomicTypes.hpp>
 
 #include <boost/thread/thread.hpp>
 
