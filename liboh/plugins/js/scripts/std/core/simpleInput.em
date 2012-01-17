@@ -33,7 +33,7 @@ if (typeof(std.core.SimpleInput) != 'undefined')
          }
 
          var inputter = knownUsed[forWhom];
-         knownUsed = null;
+         knownUsed[forWhom] = null;
          inputter.cb(response);
      }
      
@@ -65,13 +65,6 @@ if (typeof(std.core.SimpleInput) != 'undefined')
          if (!haveInited)
              throw new Error('Error.  GUI still initializing.  Please wait.');
 
-         // if (type == std.core.SimpleInput.SELECT_LIST)
-         // {
-         //     throw new Error('Error.  Have not finished setting html ' +
-         //                     'in simpleInputSelectList function.  '    +
-         //                     'Must complete.');
-         // }
-         
          this.type       = type;
          this.message    = message;
          this.cb         = cb;
@@ -111,7 +104,7 @@ if (typeof(std.core.SimpleInput) != 'undefined')
          return haveInited;
      };
 
-     
+
      /**
       We want to recycle the divs,etc. associ
       */
@@ -223,7 +216,7 @@ if (typeof(std.core.SimpleInput) != 'undefined')
              
              htmlToDisplay += 'Submit';
              htmlToDisplay += '</button>';
-
+             
              return htmlToDisplay;
          }
          
@@ -256,8 +249,21 @@ if (typeof(std.core.SimpleInput) != 'undefined')
                  '"></input><br/>';
              htmlInsert += generateSubmitButtonHtml(simpleInputID);
              newWindow(htmlInsert,simpleInputID);
+
+             //handles enter submitting text
+             var handleEnterHit = function(evt)
+             {
+                 //13 represents keycode for enter, submits whatever's in
+                 //the text box if user hits enter.
+                 if (evt.keyCode == 13)
+                     simpleInputSubmit(simpleInputID);
+             };
+
+             //copied from chat.js
+             var register_area = document.getElementById(
+                 generateSimpleInputOptionID(simpleInputID));
+             register_area.onkeyup = handleEnterHit;
          };
-         
          @;
 
 
