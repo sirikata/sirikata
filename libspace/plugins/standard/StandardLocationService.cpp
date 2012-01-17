@@ -62,6 +62,14 @@ void StandardLocationService::service() {
     mUpdatePolicy->service();
 }
 
+uint64 StandardLocationService::epoch(const UUID& uuid) {
+    LocationMap::iterator it = mLocations.find(uuid);
+    assert(it != mLocations.end());
+
+    LocationInfo locinfo = it->second;
+    return locinfo.epoch;
+}
+
 TimedMotionVector3f StandardLocationService::location(const UUID& uuid) {
     LocationMap::iterator it = mLocations.find(uuid);
     assert(it != mLocations.end());
@@ -128,6 +136,7 @@ void StandardLocationService::addLocalObject(const UUID& uuid, const TimedMotion
     }
 
     LocationInfo& locinfo = it->second;
+    locinfo.epoch = 0;
     locinfo.location = loc;
     locinfo.orientation = orient;
     locinfo.bounds = bnds;
@@ -171,6 +180,7 @@ void StandardLocationService::addLocalAggregateObject(const UUID& uuid, const Ti
     LocationMap::iterator it = mLocations.find(uuid);
 
     LocationInfo& locinfo = it->second;
+    locinfo.epoch = 0;
     locinfo.location = loc;
     locinfo.orientation = orient;
     locinfo.bounds = bnds;
@@ -250,6 +260,7 @@ void StandardLocationService::addReplicaObject(const Time& t, const UUID& uuid, 
     else {
         // Its a new replica, just insert it
         LocationInfo locinfo;
+        locinfo.epoch = 0;
         locinfo.location = loc;
         locinfo.orientation = orient;
         locinfo.bounds = bnds;
@@ -307,6 +318,13 @@ void StandardLocationService::receiveMessage(Message* msg) {
             // condition is false so they can be applied once the prox update
             // arrives.
             assert(loc_it != mLocations.end());
+
+            // FIXME we should probably track epoch values per-field
+            // so we can kill old updates since substreams for update
+            // requests can come in out of order...
+            if (update.has_epoch()) {
+                loc_it->second.epoch = std::max(loc_it->second.epoch, update.epoch());
+            }
 
             if (update.has_location()) {
                 TimedMotionVector3f newloc(
@@ -366,6 +384,13 @@ bool StandardLocationService::locationUpdate(UUID source, void* buffer, uint32 l
         if (obj_type == Local) {
             LocationMap::iterator loc_it = mLocations.find( source );
             assert(loc_it != mLocations.end());
+
+            // FIXME we should probably track epoch values per-field
+            // so we can kill old updates since substreams for update
+            // requests can come in out of order...
+            if (request.has_epoch()) {
+                loc_it->second.epoch = std::max(loc_it->second.epoch, request.epoch());
+            }
 
             if (request.has_location()) {
                 TimedMotionVector3f newloc(

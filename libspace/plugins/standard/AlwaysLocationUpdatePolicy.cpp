@@ -296,6 +296,22 @@ bool AlwaysLocationUpdatePolicy::validSubscriber(const ServerID& dest) {
     return true;
 }
 
+
+bool AlwaysLocationUpdatePolicy::isSelfSubscriber(const UUID& sid, const UUID& observed) {
+    return sid == observed;
+}
+
+bool AlwaysLocationUpdatePolicy::isSelfSubscriber(const OHDP::NodeID& sid, const UUID& observed) {
+    // TODO(ewencp) we could do better here by only returning true if the
+    // observed object is on the given OH.
+    return true;
+}
+
+bool AlwaysLocationUpdatePolicy::isSelfSubscriber(const ServerID& sid, const UUID& observed) {
+    // Servers never need self info since they don't request changes
+    return false;
+}
+
 bool AlwaysLocationUpdatePolicy::trySend(const UUID& dest, const Sirikata::Protocol::Loc::BulkLocationUpdate& blu)
 {
     std::string bluMsg = serializePBJMessage(blu);
