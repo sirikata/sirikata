@@ -498,7 +498,7 @@ void JSObjectScript::iStorageCommitCallback(
     if (!lockedCtx) return;
     
     
-    v8::Isolate::Scope iscope(mCtx->mIsolate);
+
     JSSCRIPT_SERIAL_CHECK();
     if (mCtx->stopped())
     {
@@ -510,6 +510,8 @@ void JSObjectScript::iStorageCommitCallback(
     while (! mCtx->initialized())
     {}
 
+
+    v8::Isolate::Scope iscope(mCtx->mIsolate);
     
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(mContext->mContext);
@@ -574,7 +576,7 @@ void JSObjectScript::iStorageCountCallback(
     if (!lockedCtx) return;
         
     
-    v8::Isolate::Scope iscope(mCtx->mIsolate);
+
     JSSCRIPT_SERIAL_CHECK();
     if (mCtx->stopped())
     {
@@ -585,6 +587,7 @@ void JSObjectScript::iStorageCountCallback(
     while (!mCtx->initialized())
     {}
 
+    v8::Isolate::Scope iscope(mCtx->mIsolate);
     
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(mContext->mContext);

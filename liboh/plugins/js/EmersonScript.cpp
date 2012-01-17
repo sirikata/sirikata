@@ -828,10 +828,9 @@ v8::Handle<v8::Value> EmersonScript::create_timeout(double period,v8::Persistent
     returner->SetInternalField(TIMER_JSTIMERSTRUCT_FIELD,External::New(jstimer));
     returner->SetInternalField(TYPEID_FIELD, External::New(new String("timer")));
 
-    //returner.MakeWeak(NULL,&JSTimerStruct::timerWeakReferenceCleanup);
-
     JSTimerLivenessHolder* jstlh = new JSTimerLivenessHolder(jstimer);
     returner.MakeWeak(jstlh,&JSTimerStruct::timerWeakReferenceCleanup);
+
 
 
     //timer requires a handle to its persistent object so can handle cleanup

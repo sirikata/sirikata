@@ -74,6 +74,8 @@ void JSTimerStruct::setPersistentObject(v8::Persistent<v8::Object>pers)
 void JSTimerStruct::timerWeakReferenceCleanup(
     v8::Persistent<v8::Value> containsTimer, void* otherArg)
 {
+
+    
     JSTimerLivenessHolder* jstlh = (JSTimerLivenessHolder*) otherArg;
 
 
@@ -95,7 +97,7 @@ void JSTimerStruct::timerWeakReferenceCleanup(
     }
 
     v8::Handle<v8::Object> timer = containsTimer->ToObject();
-
+    
     //check to make sure object has adequate number of fields.
     CHECK_INTERNAL_FIELD_COUNT(timer,jstimer,TIMER_JSTIMER_TEMPLATE_FIELD_COUNT, );
 
@@ -132,6 +134,7 @@ void JSTimerStruct::timerWeakReferenceCleanup(
  */
 void JSTimerStruct::noReference(const Liveness::Token& alive)
 {
+    v8::Isolate::Scope iscope(mCtx->mIsolate);
     if (alive) {
         killAfterFire = true;
 
