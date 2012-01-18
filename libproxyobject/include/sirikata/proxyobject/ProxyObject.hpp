@@ -151,29 +151,6 @@ public:
     /// i.e. if it's ID is the same as the owner ID
     bool isPresence() const { return getObjectReference() == getOwnerPresenceID(); }
 
-    /// Returns the last updated position for this object.
-    inline Vector3d getPosition() const{
-        return Vector3d(mLoc.position());
-    }
-
-
-    /// returns the last updated velocity for this object
-    inline Vector3d getVelocity() const
-    {
-        return Vector3d(mLoc.velocity());
-    }
-
-    /// Returns the last updated Quaternion for this object.
-    inline const Quaternion& getOrientation() const{
-        return mOrientation.position();
-    }
-
-    /// Returns the Quaternion speed (I know that's not the right term; maybe
-    /// angular velocity???) for this object.
-    inline const Quaternion& getOrientationSpeed() const{
-        return mOrientation.velocity();
-    }
-
 
 
     ~ProxyObject();
@@ -201,6 +178,14 @@ public:
     virtual const Transfer::URI& mesh() const;
     virtual const String& physics() const;
 
+    // Alternatives that access only the *verified* location information,
+    // i.e. data sent by the space.
+    const TimedMotionVector3f& verifiedLocation() const;
+    const TimedMotionQuaternion& verifiedOrientation() const;
+    const BoundingSphere3f& verifiedBounds() const;
+    const Transfer::URI& verifiedMesh() const;
+    const String& verifiedPhysics() const;
+
     void setLocation(const TimedMotionVector3f& reqloc, uint64 seqno);
     void setOrientation(const TimedMotionQuaternion& reqorient, uint64 seqno);
     void setBounds(const BoundingSphere3f& bnds, uint64 seqno);
@@ -211,11 +196,15 @@ public:
 
     /** Retuns the local location of this object at the current timestamp. */
     Location extrapolateLocation(TemporalValue<Location>::Time current) const {
+        // Note that we call methods to get these so we use predicted values if possible.
+        TimedMotionVector3f loc = location();
+        TimedMotionQuaternion orient = orientation();
+
         Vector3f angaxis;
         float32 angvel;
-        mOrientation.velocity().toAngleAxis(angvel, angaxis);
+        orient.velocity().toAngleAxis(angvel, angaxis);
 
-        return Location(Vector3d(mLoc.position(current)), mOrientation.position(current).normal(), mLoc.velocity(), angaxis, angvel);
+        return Location(Vector3d(loc.position(current)), orient.position(current).normal(), loc.velocity(), angaxis, angvel);
     }
 
 

@@ -53,11 +53,11 @@ PerPresenceData::~PerPresenceData() {
 
         // Initialize request location information with sane defaults.
         requestLoc->reset();
-        requestLoc->setLocation(proxyobj->location(), 0);
-        requestLoc->setOrientation(proxyobj->orientation(), 0);
-        requestLoc->setBounds(proxyobj->bounds(), 0);
-        requestLoc->setMesh(proxyobj->mesh(), 0);
-        requestLoc->setPhysics(proxyobj->physics(), 0);
+        requestLoc->setLocation(proxyobj->verifiedLocation(), 0);
+        requestLoc->setOrientation(proxyobj->verifiedOrientation(), 0);
+        requestLoc->setBounds(proxyobj->verifiedBounds(), 0);
+        requestLoc->setMesh(proxyobj->verifiedMesh(), 0);
+        requestLoc->setPhysics(proxyobj->verifiedPhysics(), 0);
     }
 
 

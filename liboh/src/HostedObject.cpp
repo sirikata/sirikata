@@ -853,6 +853,23 @@ ProxyManagerPtr HostedObject::presence(const SpaceObjectReference& sor)
     return getProxyManager(sor.space(), sor.object());
 }
 
+SequencedPresencePropertiesPtr HostedObject::presenceRequestedLocation(const SpaceObjectReference& sor) {
+    Mutex::scoped_lock lock(presenceDataMutex);
+    PresenceDataMap::const_iterator it = mPresenceData.find(sor);
+    if (it == mPresenceData.end())
+        return SequencedPresencePropertiesPtr();
+
+    return it->second->requestLoc;
+}
+
+uint64 HostedObject::presenceLatestEpoch(const SpaceObjectReference& sor) {
+    Mutex::scoped_lock lock(presenceDataMutex);
+    PresenceDataMap::const_iterator it = mPresenceData.find(sor);
+    if (it == mPresenceData.end())
+        return 0;
+
+    return it->second->latestReportedEpoch;
+}
 
 ProxyObjectPtr HostedObject::self(const SpaceObjectReference& sor)
 {

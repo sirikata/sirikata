@@ -112,28 +112,85 @@ bool ProxyObject::isStatic() const {
 
 const TimedMotionVector3f& ProxyObject::location() const {
     PROXY_SERIALIZED();
-    return SequencedPresenceProperties::location();
+    if (!isPresence())
+        return SequencedPresenceProperties::location();
+    SequencedPresencePropertiesPtr req = mParent->parent()->presenceRequestedLocation(getObjectReference());
+    uint64 latest_epoch = mParent->parent()->presenceLatestEpoch(getObjectReference());
+    if (!req || latest_epoch >= req->getUpdateSeqNo(LOC_POS_PART))
+        return SequencedPresenceProperties::location();
+    return req->location();
 }
 
 const TimedMotionQuaternion& ProxyObject::orientation() const {
     PROXY_SERIALIZED();
-    return SequencedPresenceProperties::orientation();
+    if (!isPresence())
+        return SequencedPresenceProperties::orientation();
+    SequencedPresencePropertiesPtr req = mParent->parent()->presenceRequestedLocation(getObjectReference());
+    uint64 latest_epoch = mParent->parent()->presenceLatestEpoch(getObjectReference());
+    if (!req || latest_epoch >= req->getUpdateSeqNo(LOC_ORIENT_PART))
+        return SequencedPresenceProperties::orientation();
+    return req->orientation();
 }
 
 const BoundingSphere3f& ProxyObject::bounds() const {
     PROXY_SERIALIZED();
-    return SequencedPresenceProperties::bounds();
+    if (!isPresence())
+        return SequencedPresenceProperties::bounds();
+    SequencedPresencePropertiesPtr req = mParent->parent()->presenceRequestedLocation(getObjectReference());
+    uint64 latest_epoch = mParent->parent()->presenceLatestEpoch(getObjectReference());
+    if (!req || latest_epoch >= req->getUpdateSeqNo(LOC_BOUNDS_PART))
+        return SequencedPresenceProperties::bounds();
+    return req->bounds();
 }
 
 const Transfer::URI& ProxyObject::mesh() const {
     PROXY_SERIALIZED();
-    return SequencedPresenceProperties::mesh();
+    if (!isPresence())
+        return SequencedPresenceProperties::mesh();
+    SequencedPresencePropertiesPtr req = mParent->parent()->presenceRequestedLocation(getObjectReference());
+    uint64 latest_epoch = mParent->parent()->presenceLatestEpoch(getObjectReference());
+    if (!req || latest_epoch >= req->getUpdateSeqNo(LOC_MESH_PART))
+        return SequencedPresenceProperties::mesh();
+    return req->mesh();
 }
 
 const String& ProxyObject::physics() const {
     PROXY_SERIALIZED();
+    if (!isPresence())
+        return SequencedPresenceProperties::physics();
+    SequencedPresencePropertiesPtr req = mParent->parent()->presenceRequestedLocation(getObjectReference());
+    uint64 latest_epoch = mParent->parent()->presenceLatestEpoch(getObjectReference());
+    if (!req || latest_epoch >= req->getUpdateSeqNo(LOC_PHYSICS_PART))
+        return SequencedPresenceProperties::physics();
+    return req->physics();
+}
+
+
+const TimedMotionVector3f& ProxyObject::verifiedLocation() const {
+    PROXY_SERIALIZED();
+    return SequencedPresenceProperties::location();
+}
+
+const TimedMotionQuaternion& ProxyObject::verifiedOrientation() const {
+    PROXY_SERIALIZED();
+    return SequencedPresenceProperties::orientation();
+}
+
+const BoundingSphere3f& ProxyObject::verifiedBounds() const {
+    PROXY_SERIALIZED();
+    return SequencedPresenceProperties::bounds();
+}
+
+const Transfer::URI& ProxyObject::verifiedMesh() const {
+    PROXY_SERIALIZED();
+    return SequencedPresenceProperties::mesh();
+}
+
+const String& ProxyObject::verifiedPhysics() const {
+    PROXY_SERIALIZED();
     return SequencedPresenceProperties::physics();
 }
+
 
 
 void ProxyObject::setLocation(const TimedMotionVector3f& reqloc, uint64 seqno) {

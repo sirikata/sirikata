@@ -104,7 +104,7 @@ DistanceDownloadPlanner::~DistanceDownloadPlanner()
 void DistanceDownloadPlanner::addObject(Object* r)
 {
     DLPLANNER_LOG(detailed,"Request to add object with name "<<r->name);
-    
+
     mScene->renderStrand()->post(
         std::tr1::bind(&DistanceDownloadPlanner::iAddObject,this,
             r, livenessToken()));
@@ -117,7 +117,7 @@ void DistanceDownloadPlanner::iAddObject(Object* r, Liveness::Token alive)
         delete r;
         return;
     }
-    
+
     calculatePriority(r->proxy);
     mObjects[r->name] = r;
     mWaitingObjects[r->name] = r;
@@ -145,7 +145,7 @@ void DistanceDownloadPlanner::iRemoveObject(
 {
     if (!alive)
         return;
-    
+
     ObjectMap::iterator it = mObjects.find(name);
     if (it != mObjects.end()) {
         Object* r = it->second;
@@ -189,7 +189,7 @@ void DistanceDownloadPlanner::iUpdateObject(
 {
     if (!alive)
         return;
-    
+
     Object* r = findObject(p->getObjectReference().toString());
     if (!r)
     {
@@ -224,7 +224,7 @@ double DistanceDownloadPlanner::calculatePriority(ProxyObjectPtr proxy)
     if (camera == NULL || !proxy) return 0;
 
     Vector3d cameraLoc = camera->getPosition();
-    Vector3d objLoc = proxy->getPosition();
+    Vector3d objLoc(proxy->location().position());
     Vector3d diff = cameraLoc - objLoc;
 
     /*double diff2d = sqrt(pow(diff.x, 2) + pow(diff.y, 2));
@@ -284,11 +284,11 @@ void DistanceDownloadPlanner::iPoll(Liveness::Token dpAlive)
 {
     if (!dpAlive)
         return;
-    
+
     if (camera == NULL) return;
 
     if (mContext->stopped()) return;
-    
+
 
     // Update priorities, tracking the largest undisplayed priority and the
     // smallest displayed priority to decide if we're going to have to swap.
@@ -393,7 +393,7 @@ void DistanceDownloadPlanner::iStop(Liveness::Token dpAlive)
 
 
     mStopped = true;
-    
+
     for(AssetMap::iterator it = mAssets.begin(); it != mAssets.end(); it++)
     {
         Asset* asset = it->second;
@@ -433,7 +433,7 @@ void DistanceDownloadPlanner::requestAssetForObject(Object* forObject) {
 
 void DistanceDownloadPlanner::downloadAsset(Asset* asset, Object* forObject) {
     DLPLANNER_LOG(detailed, "Starting download of " << asset->uri);
-    
+
     asset->downloadTask =
         AssetDownloadTask::construct(
             asset->uri, getScene(), forObject->priority,
@@ -443,7 +443,7 @@ void DistanceDownloadPlanner::downloadAsset(Asset* asset, Object* forObject) {
 }
 
 void DistanceDownloadPlanner::loadAsset(Transfer::URI asset_uri) {
-    
+
     DLPLANNER_LOG(detailed, "Finished downloading " << asset_uri);
 
     if (mAssets.find(asset_uri) == mAssets.end()) return;
@@ -486,7 +486,7 @@ void DistanceDownloadPlanner::finishLoadAsset(Asset* asset, bool success) {
     DLPLANNER_LOG(detailed, "Finishing load of asset " << asset->uri << " (priority " << asset->downloadTask->priority() << ")");
     // We need to notify all Objects (objects) waiting for this to load that
     // it finished (or failed)
-    
+
     for(ObjectSet::iterator it = asset->waitingObjects.begin(); it != asset->waitingObjects.end(); it++) {
         const String& resource_id = *it;
 
@@ -794,7 +794,7 @@ void DistanceDownloadPlanner::checkRemoveAsset(Asset* asset)
     //means that the asset was likely already deleted
     if (mStopped)
         return;
-    
+
     if (asset->waitingObjects.empty() && asset->usingObjects.empty()) {
         // We need to be careful if a download is in progress.
         if (asset->downloadTask) return;

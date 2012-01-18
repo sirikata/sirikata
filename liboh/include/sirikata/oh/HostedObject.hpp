@@ -252,6 +252,9 @@ public:
 
     // Identification
     virtual ProxyManagerPtr presence(const SpaceObjectReference& sor);
+    virtual SequencedPresencePropertiesPtr presenceRequestedLocation(const SpaceObjectReference& sor);
+    virtual uint64 presenceLatestEpoch(const SpaceObjectReference& sor);
+
     virtual ProxyObjectPtr self(const SpaceObjectReference& sor);
 
     // ODP::Service Interface

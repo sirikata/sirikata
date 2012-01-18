@@ -56,6 +56,8 @@ public:
 
     const SpaceObjectReference& id() const { return mID; }
 
+    VWObjectPtr parent() const { return mParent; }
+
     ///Called after providers attached
     virtual void initialize();
     ///Called before providers detatched
