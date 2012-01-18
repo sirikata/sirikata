@@ -147,6 +147,10 @@ public:
     /// Gets the owning ProxyManager
     ProxyManagerPtr getOwner() const { return mParent; }
 
+    /// Returns true if this ProxyObject is the one for the presence,
+    /// i.e. if it's ID is the same as the owner ID
+    bool isPresence() const { return getObjectReference() == getOwnerPresenceID(); }
+
     /// Returns the last updated position for this object.
     inline Vector3d getPosition() const{
         return Vector3d(mLoc.position());

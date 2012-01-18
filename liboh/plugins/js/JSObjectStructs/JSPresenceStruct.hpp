@@ -162,7 +162,6 @@ struct JSPresenceStruct : public JSPositionListener,
 
 
 
-    v8::Handle<v8::Value>  getPhysicsFunction();
     v8::Handle<v8::Value>  setPhysicsFunction(const String& loc);
 
     //returns this presence as a visible object.
