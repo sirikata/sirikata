@@ -26,7 +26,8 @@ PerPresenceData::PerPresenceData(HostedObjectPtr _parent, const SpaceID& _space,
        updateFields(LOC_FIELD_NONE),
        requestEpoch(1),
        requestLoc( new SequencedPresenceProperties() ),
-       rerequestTimer( Network::IOTimer::create(_parent->context()->ioService) )
+       rerequestTimer( Network::IOTimer::create(_parent->context()->ioService) ),
+       latestReportedEpoch(0)
     {
     }
 

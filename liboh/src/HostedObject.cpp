@@ -623,6 +623,17 @@ void HostedObject::processLocationUpdate(const SpaceObjectReference& sporef, Pro
     String* phyptr = NULL;
     uint64 phy_seqno = update.physics_seqno();
 
+    if (update.has_epoch()) {
+        // Check if this object is our own presence and update our epoch info if
+        // it is.
+        Mutex::scoped_lock locker(presenceDataMutex);
+        PresenceDataMap::iterator pres_it = mPresenceData.find(sporef);
+        if (pres_it != mPresenceData.end()) {
+            PerPresenceData* pd = pres_it->second;
+            pd->latestReportedEpoch = std::max(pd->latestReportedEpoch, update.epoch());
+        }
+    }
+
     if (update.has_location()) {
         loc = update.locationWithLocalTime(this, sporef.space());
 

@@ -23,6 +23,10 @@ public:
 
     virtual ObjectReference object() const { return ObjectReference(mUpdate.object()); }
 
+    // Request epoch
+    virtual bool has_epoch() const { return mUpdate.has_epoch(); }
+    virtual uint64 epoch() const { return mUpdate.epoch(); }
+
     // Location
     virtual bool has_location() const { return mUpdate.has_location(); }
     virtual TimedMotionVector3f location() const {
@@ -73,6 +77,10 @@ public:
     virtual ~ProxProtocolLocUpdate() {}
 
     virtual ObjectReference object() const { return ObjectReference(mUpdate.object()); }
+
+    // Request epoch
+    virtual bool has_epoch() const { return true; }
+    virtual uint64 epoch() const { return 0; }
 
     // Location
     virtual bool has_location() const { return true; }

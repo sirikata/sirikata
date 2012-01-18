@@ -44,6 +44,10 @@ public:
     SequencedPresencePropertiesPtr requestLoc;
     Network::IOTimerPtr rerequestTimer;
 
+    // This tracks the latest epoch we've seen *reported* from the space server,
+    // i.e. what requests the server has handled.
+    uint64 latestReportedEpoch;
+
     typedef std::map<String, Simulation*> SimulationMap;
     SimulationMap sims;
 
