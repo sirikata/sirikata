@@ -848,8 +848,14 @@ bool BulletPhysicsService::locationUpdate(UUID source, void* buffer, uint32 leng
                     updated = loc_it->second.simObject->applyRequestedLocation(newloc);
                 }
 
+                // We always force an update, even if we don't apply the
+                // change. This ensures that the client is notified of
+                // the existing value with the current epoch,
+                // indicating that the update was received but not applied.
+                // TODO(ewencp) we accomplish this more efficiently by
+                // having a notifyLocalEpochUpdated.
+                notifyLocalLocationUpdated( source, loc_it->second.aggregate, loc_it->second.location );
                 if (updated) {
-                    notifyLocalLocationUpdated( source, loc_it->second.aggregate, loc_it->second.location );
                     CONTEXT_SPACETRACE(serverLoc, mContext->id(), mContext->id(), source, loc_it->second.location );
                 }
             }
@@ -861,18 +867,17 @@ bool BulletPhysicsService::locationUpdate(UUID source, void* buffer, uint32 leng
                     MotionQuaternion( request.orientation().position(), request.orientation().velocity() )
                 );
 
-                bool updated = false;
+                // See above note about always sending an update, even
+                // if nothing changed.
                 if (apply_direct) {
                     loc_it->second.orientation = neworient;
-                    updated = true;
                 }
                 else {
                     assert(loc_it->second.simObject != NULL);
-                    updated = loc_it->second.simObject->applyRequestedOrientation(neworient);
+                    loc_it->second.simObject->applyRequestedOrientation(neworient);
                 }
 
-                if (updated)
-                    notifyLocalOrientationUpdated( source, loc_it->second.aggregate, loc_it->second.orientation );
+                notifyLocalOrientationUpdated( source, loc_it->second.aggregate, loc_it->second.orientation );
             }
 
             if (request.has_bounds()) {
