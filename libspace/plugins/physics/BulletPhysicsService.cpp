@@ -251,6 +251,19 @@ bool BulletPhysicsService::isFixed(const UUID& uuid) {
     return locinfo.simObject->fixed();
 }
 
+bool BulletPhysicsService::directMotionRequestsEnabled(const UUID& uuid) {
+    LocationMap::iterator it = mLocations.find(uuid);
+    assert(it != mLocations.end());
+
+    const LocationInfo& locinfo = it->second;
+    // If we don't have a simulation object to refer to, it can move freely
+    if (locinfo.simObject == NULL) return true;
+    // If it's remote, we should always be applying updates
+    if (!locinfo.local) return true;
+    // Otherwise, defer updates to the simulated object
+    return false;
+}
+
 void BulletPhysicsService::setLocation(const UUID& uuid, const TimedMotionVector3f& newloc) {
     LocationMap::iterator it = mLocations.find(uuid);
     assert(it != mLocations.end());
@@ -708,6 +721,9 @@ void BulletPhysicsService::receiveMessage(Message* msg) {
             // update is performed at the end.
             bool updatePhysics = false;
 
+            // Whether we should directly apply requests to move the object
+            bool apply_direct = directMotionRequestsEnabled(update.object());
+
             // FIXME we should probably track epoch values per-field
             // so we can kill old updates since substreams for update
             // requests can come in out of order...
@@ -716,23 +732,27 @@ void BulletPhysicsService::receiveMessage(Message* msg) {
             }
 
             if (update.has_location()) {
-                TimedMotionVector3f newloc(
-                    update.location().t(),
-                    MotionVector3f( update.location().position(), update.location().velocity() )
-                );
-                loc_it->second.location = newloc;
-                notifyReplicaLocationUpdated( update.object(), newloc );
+                if (apply_direct) {
+                    TimedMotionVector3f newloc(
+                        update.location().t(),
+                        MotionVector3f( update.location().position(), update.location().velocity() )
+                    );
+                    loc_it->second.location = newloc;
+                    notifyReplicaLocationUpdated( update.object(), newloc );
 
-                CONTEXT_SPACETRACE(serverLoc, msg->source_server(), mContext->id(), update.object(), newloc );
+                    CONTEXT_SPACETRACE(serverLoc, msg->source_server(), mContext->id(), update.object(), newloc );
+                }
             }
 
             if (update.has_orientation()) {
-                TimedMotionQuaternion neworient(
-                    update.orientation().t(),
-                    MotionQuaternion( update.orientation().position(), update.orientation().velocity() )
-                );
-                loc_it->second.orientation = neworient;
-                notifyReplicaOrientationUpdated( update.object(), neworient );
+                if (apply_direct) {
+                    TimedMotionQuaternion neworient(
+                        update.orientation().t(),
+                        MotionQuaternion( update.orientation().position(), update.orientation().velocity() )
+                    );
+                    loc_it->second.orientation = neworient;
+                    notifyReplicaOrientationUpdated( update.object(), neworient );
+                }
             }
 
             if (update.has_bounds()) {
@@ -788,6 +808,9 @@ bool BulletPhysicsService::locationUpdate(UUID source, void* buffer, uint32 leng
             // update is performed at the end.
             bool updatePhysics = false;
 
+            // Whether we should directly apply requests to move the object
+            bool apply_direct = directMotionRequestsEnabled(source);
+
             // FIXME we should probably track epoch values per-field
             // so we can kill old updates since substreams for update
             // requests can come in out of order...
@@ -796,23 +819,27 @@ bool BulletPhysicsService::locationUpdate(UUID source, void* buffer, uint32 leng
             }
 
             if (request.has_location()) {
-                TimedMotionVector3f newloc(
-                    request.location().t(),
-                    MotionVector3f( request.location().position(), request.location().velocity() )
-                );
-                loc_it->second.location = newloc;
-                notifyLocalLocationUpdated( source, loc_it->second.aggregate, newloc );
+                if (apply_direct) {
+                    TimedMotionVector3f newloc(
+                        request.location().t(),
+                        MotionVector3f( request.location().position(), request.location().velocity() )
+                    );
+                    loc_it->second.location = newloc;
+                    notifyLocalLocationUpdated( source, loc_it->second.aggregate, newloc );
 
-                CONTEXT_SPACETRACE(serverLoc, mContext->id(), mContext->id(), source, newloc );
+                    CONTEXT_SPACETRACE(serverLoc, mContext->id(), mContext->id(), source, newloc );
+                }
             }
 
             if (request.has_orientation()) {
-                TimedMotionQuaternion neworient(
-                    request.orientation().t(),
-                    MotionQuaternion( request.orientation().position(), request.orientation().velocity() )
-                );
-                loc_it->second.orientation = neworient;
-                notifyLocalOrientationUpdated( source, loc_it->second.aggregate, neworient );
+                if (apply_direct) {
+                    TimedMotionQuaternion neworient(
+                        request.orientation().t(),
+                        MotionQuaternion( request.orientation().position(), request.orientation().velocity() )
+                    );
+                    loc_it->second.orientation = neworient;
+                    notifyLocalOrientationUpdated( source, loc_it->second.aggregate, neworient );
+                }
             }
 
             if (request.has_bounds()) {

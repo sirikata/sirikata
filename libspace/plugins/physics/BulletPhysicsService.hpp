@@ -72,6 +72,11 @@ public:
     virtual const String& physics(const UUID& uuid);
     // Added for Bullet implementation
     bool isFixed(const UUID& uuid);
+    // Returns true if the current settings for the object allow
+    // motion requests (location, orientation) to be directly applied.
+    // Even when false, other requests, like changing bounds, mesh,
+    // and physics settings, should still go through.
+    bool directMotionRequestsEnabled(const UUID& uuid);
     void setLocation(const UUID& uuid, const TimedMotionVector3f& newloc);
     void setOrientation(const UUID& uuid, const TimedMotionQuaternion& neworient);
 
