@@ -80,6 +80,7 @@ DistanceDownloadPlanner::Asset::~Asset() {
     for(WebMaterialList::iterator it = webMaterials.begin(); it != webMaterials.end(); it++)
         WebViewManager::getSingleton().destroyWebView(*it);
     webMaterials.clear();
+    Liveness::letDie();
 }
 
 DistanceDownloadPlanner::DistanceDownloadPlanner(Context* c, OgreRenderer* renderer)
@@ -522,8 +523,8 @@ void DistanceDownloadPlanner::finishLoadAsset(Asset* asset, bool success) {
     asset->downloadTask.reset();
     asset->waitingObjects.clear();
     mScene->renderStrand()->post(
-        std::tr1::bind(&DistanceDownloadPlanner::checkRemoveAsset,this,asset));
-//        checkRemoveAsset(asset);
+        std::tr1::bind(&DistanceDownloadPlanner::checkRemoveAsset,
+            this,asset,asset->livenessToken()));
 }
 
 namespace {
@@ -786,15 +787,20 @@ void DistanceDownloadPlanner::unrequestAssetForObject(Object* forObject) {
     // If nobody needs it anymore, clear it out.
 
     mScene->renderStrand()->post(
-        std::tr1::bind(&DistanceDownloadPlanner::checkRemoveAsset,this,asset));
+        std::tr1::bind(&DistanceDownloadPlanner::checkRemoveAsset,
+            this,asset,asset->livenessToken()));
 }
 
-void DistanceDownloadPlanner::checkRemoveAsset(Asset* asset)
+void DistanceDownloadPlanner::checkRemoveAsset(Asset* asset,Liveness::Token assetAlive)
 {
     //means that the asset was likely already deleted
     if (mStopped)
         return;
 
+    if (!assetAlive)
+        return;
+
+    
     if (asset->waitingObjects.empty() && asset->usingObjects.empty()) {
         // We need to be careful if a download is in progress.
         if (asset->downloadTask) return;

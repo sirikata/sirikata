@@ -137,7 +137,8 @@ protected:
     // from the CDN and loaded into memory. Since a single asset can be loaded
     // many times by different 'Objects' (i.e. objects in the world) we track
     // them separately and make sure we only issue single requests for them.
-    struct Asset {
+    struct Asset : public Liveness
+    {
         Transfer::URI uri;
         AssetDownloadTaskPtr downloadTask;
         // Objects that want this asset to be loaded and are waiting for it
@@ -201,7 +202,7 @@ protected:
 
     // Helper to check if it's safe to remove an asset and does so if
     // possible. Properly handles current
-    void checkRemoveAsset(Asset* asset);
+    void checkRemoveAsset(Asset* asset,Liveness::Token lt);
 
     bool mActiveCDNArchive;
     unsigned int mCDNArchive;
