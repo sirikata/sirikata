@@ -49,7 +49,7 @@
 #include <sirikata/proxyobject/MeshListener.hpp>
 #include "MeshListener.hpp"
 
-#include <sirikata/proxyobject/PresenceProperties.hpp>
+#include <sirikata/core/util/PresenceProperties.hpp>
 #include <sirikata/proxyobject/ProxyManager.hpp>
 
 #include <sirikata/core/util/SerializationCheck.hpp>

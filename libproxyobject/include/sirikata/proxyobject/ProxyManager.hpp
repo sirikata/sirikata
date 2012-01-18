@@ -37,7 +37,7 @@
 
 #include <sirikata/proxyobject/Defs.hpp>
 #include "ProxyCreationListener.hpp"
-#include <sirikata/proxyobject/PresenceProperties.hpp>
+#include <sirikata/core/util/PresenceProperties.hpp>
 
 #include <sirikata/core/util/SerializationCheck.hpp>
 

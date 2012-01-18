@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can
 // be found in the LICENSE file.
 
-#ifndef _SIRIKATA_LIBPROXYOBJECT_PRESENCE_PROPERTIES_HPP_
-#define _SIRIKATA_LIBPROXYOBJECT_PRESENCE_PROPERTIES_HPP_
+#ifndef _SIRIKATA_LIBCORE_PRESENCE_PROPERTIES_HPP_
+#define _SIRIKATA_LIBCORE_PRESENCE_PROPERTIES_HPP_
 
-#include <sirikata/proxyobject/Platform.hpp>
+#include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/util/MotionVector.hpp>
 #include <sirikata/core/util/MotionQuaternion.hpp>
 #include <sirikata/core/transfer/URI.hpp>
@@ -177,4 +177,4 @@ typedef std::tr1::shared_ptr<SequencedPresenceProperties> SequencedPresencePrope
 
 } // namespace Sirikata
 
-#endif //_SIRIKATA_LIBPROXYOBJECT_PRESENCE_PROPERTIES_HPP_
+#endif //_SIRIKATA_LIBCORE_PRESENCE_PROPERTIES_HPP_

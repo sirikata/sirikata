@@ -6,7 +6,7 @@
 #define _SIRIKATA_JS_VISIBLE_DATA_HPP_
 
 #include <sirikata/core/util/Platform.hpp>
-#include <sirikata/proxyobject/PresenceProperties.hpp>
+#include <sirikata/core/util/PresenceProperties.hpp>
 #include <sirikata/proxyobject/ProxyObject.hpp>
 
 namespace Sirikata{

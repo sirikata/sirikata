@@ -37,7 +37,7 @@
 #include <sirikata/core/odp/Service.hpp>
 #include <sirikata/proxyobject/SessionEventListener.hpp>
 #include <sirikata/proxyobject/Defs.hpp>
-#include <sirikata/proxyobject/PresenceProperties.hpp>
+#include <sirikata/core/util/PresenceProperties.hpp>
 
 namespace Sirikata {
 
