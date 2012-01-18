@@ -6,7 +6,7 @@ from cdfplot import *
 from numpy import *
 from pylab import *
 
-if len (sys.argv) not in [4, 5]:
+if len (sys.argv) not in [5,6]:
     print 'Usage: stats <output-file-name> <storage(Cassandra/SQLite)> <graph-type(hist/cdf)> <bins> <1/0: x-axis consistency>'
     sys.exit(0)
 
@@ -110,7 +110,7 @@ settings = '\nbuckets number = %d, keys per bucket = %d, data size = %s bytes, s
 if type == 'hist':
 
     fig = figure() 
-    fig.suptitle('%s - Histogram (bins = %d) \n%s'%(name, bins, settings))
+    fig.suptitle('%s Stress Tests - Histogram (bins = %d) \n%s'%(name, bins, settings))
 
     ax = fig.add_subplot(321)
     histplot(ax, _swt, bins, swt_mean, swt_std, s_min, s_max, 'single writes time', xbool)
