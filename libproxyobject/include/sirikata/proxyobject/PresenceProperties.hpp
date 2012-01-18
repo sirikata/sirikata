@@ -30,6 +30,7 @@ public:
     virtual const Transfer::URI& mesh() const = 0;
     virtual const String& physics() const = 0;
 };
+typedef std::tr1::shared_ptr<IPresencePropertiesRead> IPresencePropertiesReadPtr;
 
 /** Stores the basic properties provided for objects, i.e. location,
  *  orientation, mesh, etc. This is intentionally bare-bones: it can be used in
@@ -78,6 +79,7 @@ protected:
     Transfer::URI mMesh;
     String mPhysics;
 };
+typedef std::tr1::shared_ptr<PresenceProperties> PresencePropertiesPtr;
 
 /** Stores the basic properties for objects, i.e. location, orientation, mesh,
  *  etc., as well sequence numbers for each of those properties. Useful in
@@ -109,68 +111,54 @@ public:
         return mUpdateSeqno[whichPart];
     }
 
-    bool setLocation(const TimedMotionVector3f& reqloc, uint64 seqno, bool predictive=false) {
-        if (seqno < mUpdateSeqno[LOC_POS_PART] && !predictive)
+    bool setLocation(const TimedMotionVector3f& reqloc, uint64 seqno) {
+        if (seqno < mUpdateSeqno[LOC_POS_PART])
             return false;
 
-        if (!predictive) mUpdateSeqno[LOC_POS_PART] = seqno;
-
-        // FIXME at some point we need to resolve these, but this might
-        // require additional information from the space server, e.g. if
-        // requests were actually accepted. This all gets very tricky
-        // unless we track multiple outstanding update requests and can
-        // figure out which one failed, even if the space server generates
-        // other update while handling eht requests...
-        if (predictive || reqloc.updateTime() >= mLoc.updateTime()) {
-            mLoc = reqloc;
-            return true;
-        }
-
-        return false;
+        mUpdateSeqno[LOC_POS_PART] = seqno;
+        mLoc = reqloc;
+        return true;
     }
+    bool setLocation(const TimedMotionVector3f& l) { return PresenceProperties::setLocation(l); }
 
-    bool setOrientation(const TimedMotionQuaternion& reqorient, uint64 seqno, bool predictive=false) {
-        if (seqno < mUpdateSeqno[LOC_ORIENT_PART] && !predictive) return false;
+    bool setOrientation(const TimedMotionQuaternion& reqorient, uint64 seqno) {
+        if (seqno < mUpdateSeqno[LOC_ORIENT_PART]) return false;
 
-        if (!predictive) mUpdateSeqno[LOC_ORIENT_PART] = seqno;
-
-        // FIXME see relevant comment in setLocation
-        if (predictive || reqorient.updateTime() >= mOrientation.updateTime()) {
-            mOrientation = reqorient;
-            return true;
-        }
-        return false;
+        mUpdateSeqno[LOC_ORIENT_PART] = seqno;
+        mOrientation = reqorient;
+        return true;
     }
+    bool setOrientation(const TimedMotionQuaternion& o) { return PresenceProperties::setOrientation(o); }
 
-    bool setBounds(const BoundingSphere3f& b, uint64 seqno, bool predictive=false) {
-        if (seqno < mUpdateSeqno[LOC_BOUNDS_PART] && !predictive)
+    bool setBounds(const BoundingSphere3f& b, uint64 seqno) {
+        if (seqno < mUpdateSeqno[LOC_BOUNDS_PART])
             return false;
 
-        if (!predictive)
-            mUpdateSeqno[LOC_BOUNDS_PART] = seqno;
+        mUpdateSeqno[LOC_BOUNDS_PART] = seqno;
         mBounds = b;
         return true;
     }
+    bool setBounds(const BoundingSphere3f& b) { return PresenceProperties::setBounds(b); }
 
-    bool setMesh(const Transfer::URI& m, uint64 seqno, bool predictive=false) {
-        if (seqno < mUpdateSeqno[LOC_MESH_PART] && !predictive)
+    bool setMesh(const Transfer::URI& m, uint64 seqno) {
+        if (seqno < mUpdateSeqno[LOC_MESH_PART])
             return false;
 
-        if (!predictive)
-            mUpdateSeqno[LOC_MESH_PART] = seqno;
+        mUpdateSeqno[LOC_MESH_PART] = seqno;
         mMesh = m;
         return true;
     }
+    bool setMesh(const Transfer::URI& m) { return PresenceProperties::setMesh(m); }
 
-    bool setPhysics(const String& p, uint64 seqno, bool predictive=false) {
-        if (seqno < mUpdateSeqno[LOC_PHYSICS_PART] && !predictive)
+    bool setPhysics(const String& p, uint64 seqno) {
+        if (seqno < mUpdateSeqno[LOC_PHYSICS_PART])
             return false;
 
-        if (!predictive)
-            mUpdateSeqno[LOC_PHYSICS_PART] = seqno;
+        mUpdateSeqno[LOC_PHYSICS_PART] = seqno;
         mPhysics = p;
         return true;
     }
+    bool setPhysics(const String& p) { return PresenceProperties::setPhysics(p); }
 
     void reset() {
         memset(mUpdateSeqno, 0, LOC_NUM_PART * sizeof(uint64));
@@ -185,6 +173,7 @@ public:
 private:
     uint64 mUpdateSeqno[LOC_NUM_PART];
 };
+typedef std::tr1::shared_ptr<SequencedPresenceProperties> SequencedPresencePropertiesPtr;
 
 } // namespace Sirikata
 

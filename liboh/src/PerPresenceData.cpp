@@ -20,17 +20,14 @@ PerPresenceData::PerPresenceData(HostedObjectPtr _parent, const SpaceID& _space,
      : parent(_parent),
        space(_space),
        object(_oref),
-       mUpdatedLocation(
-            Duration::seconds(.1),
-            TemporalValue<Location>::Time::null(),
-            Location(Vector3d(0,0,0),Quaternion(Quaternion::identity()),
-                     Vector3f(0,0,0),Vector3f(0,1,0),0),
-            ProxyObject::UpdateNeeded()),
        proxyManager(ProxyManager::construct( _parent, SpaceObjectReference(_space, _oref) )),
        query(_query),
        mSSTDatagramLayers(layer),
        updateFields(LOC_FIELD_NONE),
-       rerequestTimer( Network::IOTimer::create(_parent->context()->ioService) )
+       requestEpoch(1),
+       requestLoc( new SequencedPresenceProperties() ),
+       rerequestTimer( Network::IOTimer::create(_parent->context()->ioService) ),
+       latestReportedEpoch(0)
     {
     }
 
@@ -53,6 +50,14 @@ PerPresenceData::~PerPresenceData() {
     void PerPresenceData::initializeAs(ProxyObjectPtr proxyobj) {
         assert(object == proxyobj->getObjectReference().object());
         mProxyObject = proxyobj;
+
+        // Initialize request location information with sane defaults.
+        requestLoc->reset();
+        requestLoc->setLocation(proxyobj->verifiedLocation(), 0);
+        requestLoc->setOrientation(proxyobj->verifiedOrientation(), 0);
+        requestLoc->setBounds(proxyobj->verifiedBounds(), 0);
+        requestLoc->setMesh(proxyobj->verifiedMesh(), 0);
+        requestLoc->setPhysics(proxyobj->verifiedPhysics(), 0);
     }
 
 

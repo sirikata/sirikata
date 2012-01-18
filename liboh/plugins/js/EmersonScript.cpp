@@ -1422,76 +1422,41 @@ HostedObject::PresenceToken EmersonScript::incrementPresenceToken()
 }
 
 
-void EmersonScript::setOrientationVelFunction(const SpaceObjectReference sporef,const Quaternion& quat)
+void EmersonScript::setLocation(const SpaceObjectReference sporef, const TimedMotionVector3f& loc)
 {
     EMERSCRIPT_SERIAL_CHECK();
     if (JSObjectScript::mCtx->stopped())
         return;
-    mParent->requestOrientationVelocityUpdate(sporef.space(),sporef.object(),quat);
+    mParent->requestLocationUpdate(sporef.space(), sporef.object(), loc);
 }
 
-void EmersonScript::setPositionFunction(const SpaceObjectReference sporef, const Vector3f& posVec)
+void  EmersonScript::setOrientation(
+    const SpaceObjectReference sporef, const TimedMotionQuaternion& orient)
 {
     EMERSCRIPT_SERIAL_CHECK();
     if (JSObjectScript::mCtx->stopped())
         return;
-    mParent->requestPositionUpdate(sporef.space(),sporef.object(),posVec);
+    mParent->requestOrientationUpdate(sporef.space(), sporef.object(), orient);
 }
 
-//velocity
-void EmersonScript::setVelocityFunction(
-    const SpaceObjectReference sporef, const Vector3f& velVec)
-{
-    EMERSCRIPT_SERIAL_CHECK();
-    if (JSObjectScript::mCtx->stopped())
-        return;
-    mParent->requestVelocityUpdate(sporef.space(),sporef.object(),velVec);
-}
-
-//orientation
-void  EmersonScript::setOrientationFunction(
-    const SpaceObjectReference sporef, const Quaternion& quat)
-{
-    EMERSCRIPT_SERIAL_CHECK();
-    if (JSObjectScript::mCtx->stopped())
-        return;
-    mParent->requestOrientationDirectionUpdate(sporef.space(),sporef.object(),quat);
-}
-
-//scale
-void EmersonScript::setVisualScaleFunction(
-    const SpaceObjectReference sporef, float newscale)
+void EmersonScript::setBounds(
+    const SpaceObjectReference sporef, const BoundingSphere3f& bnds)
 {
     EMERSCRIPT_SERIAL_CHECK();
     if (JSObjectScript::mCtx->stopped())
         return;
 
-    BoundingSphere3f bnds = mParent->requestCurrentBounds(sporef.space(),sporef.object());
-    bnds = BoundingSphere3f(bnds.center(), newscale);
     mParent->requestBoundsUpdate(sporef.space(),sporef.object(), bnds);
 }
 
 //mesh
-//FIXME: May want to have an error handler for this function.
-void  EmersonScript::setVisualFunction(
+void  EmersonScript::setVisual(
     const SpaceObjectReference sporef, const std::string& newMeshString)
 {
     EMERSCRIPT_SERIAL_CHECK();
     if (JSObjectScript::mCtx->stopped())
         return;
     mParent->requestMeshUpdate(sporef.space(),sporef.object(),newMeshString);
-}
-
-//physics
-v8::Handle<v8::Value> EmersonScript::getPhysicsFunction(const SpaceObjectReference sporef)
-{
-    EMERSCRIPT_SERIAL_CHECK();
-
-    JSLOG(error,"Calling physics function in "<<\
-        "EmersonScript.cpp is unsafe.  Must fix");
-
-    String curphy = mParent->requestCurrentPhysics(sporef.space(),sporef.object());
-    return v8::String::New(curphy.c_str(), curphy.size());
 }
 
 //FIXME: May want to have an error handler for this function.

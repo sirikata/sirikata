@@ -149,6 +149,7 @@ public:
     virtual TrackingType type(const UUID& uuid) const = 0;
 
     /** Methods dealing with information requests. */
+    virtual uint64 epoch(const UUID& uuid) = 0;
     virtual TimedMotionVector3f location(const UUID& uuid) = 0;
     virtual Vector3f currentPosition(const UUID& uuid) = 0;
     virtual TimedMotionQuaternion orientation(const UUID& uuid) = 0;

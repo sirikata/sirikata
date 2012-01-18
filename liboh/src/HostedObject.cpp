@@ -623,6 +623,17 @@ void HostedObject::processLocationUpdate(const SpaceObjectReference& sporef, Pro
     String* phyptr = NULL;
     uint64 phy_seqno = update.physics_seqno();
 
+    if (update.has_epoch()) {
+        // Check if this object is our own presence and update our epoch info if
+        // it is.
+        Mutex::scoped_lock locker(presenceDataMutex);
+        PresenceDataMap::iterator pres_it = mPresenceData.find(sporef);
+        if (pres_it != mPresenceData.end()) {
+            PerPresenceData* pd = pres_it->second;
+            pd->latestReportedEpoch = std::max(pd->latestReportedEpoch, update.epoch());
+        }
+    }
+
     if (update.has_location()) {
         loc = update.locationWithLocalTime(this, sporef.space());
 
@@ -842,6 +853,23 @@ ProxyManagerPtr HostedObject::presence(const SpaceObjectReference& sor)
     return getProxyManager(sor.space(), sor.object());
 }
 
+SequencedPresencePropertiesPtr HostedObject::presenceRequestedLocation(const SpaceObjectReference& sor) {
+    Mutex::scoped_lock lock(presenceDataMutex);
+    PresenceDataMap::const_iterator it = mPresenceData.find(sor);
+    if (it == mPresenceData.end())
+        return SequencedPresencePropertiesPtr();
+
+    return it->second->requestLoc;
+}
+
+uint64 HostedObject::presenceLatestEpoch(const SpaceObjectReference& sor) {
+    Mutex::scoped_lock lock(presenceDataMutex);
+    PresenceDataMap::const_iterator it = mPresenceData.find(sor);
+    if (it == mPresenceData.end())
+        return 0;
+
+    return it->second->latestReportedEpoch;
+}
 
 ProxyObjectPtr HostedObject::self(const SpaceObjectReference& sor)
 {
@@ -931,170 +959,10 @@ void HostedObject::requestLocationUpdate(const SpaceID& space, const ObjectRefer
     updateLocUpdateRequest(space, oref,&loc, NULL, NULL, NULL, NULL);
 }
 
-//only update the position of the object, leave the velocity and orientation unaffected
-void HostedObject::requestPositionUpdate(const SpaceID& space, const ObjectReference& oref, const Vector3f& pos)
-{
-    Vector3f curVel = requestCurrentVelocity(space,oref);
-    //TimedMotionVector3f tmv
-    //(currentSpaceTime(space),MotionVector3f(pos,curVel));
-    TimedMotionVector3f tmv (currentLocalTime(),MotionVector3f(pos,curVel));
-    requestLocationUpdate(space,oref,tmv);
-}
-
-//only update the velocity of the object, leave the position and the orientation
-//unaffected
-void HostedObject::requestVelocityUpdate(const SpaceID& space,  const ObjectReference& oref, const Vector3f& vel)
-{
-    Vector3f curPos = Vector3f(requestCurrentPosition(space,oref));
-
-    TimedMotionVector3f tmv(currentLocalTime(),MotionVector3f(curPos,vel));
-    requestLocationUpdate(space,oref,tmv);
-}
-
-//send a request to update the orientation of this object
-void HostedObject::requestOrientationDirectionUpdate(const SpaceID& space, const ObjectReference& oref,const Quaternion& quat)
-{
-    Quaternion curQuatVel = requestCurrentQuatVel(space,oref);
-    TimedMotionQuaternion tmq (currentLocalTime(),MotionQuaternion(quat,curQuatVel));
-    requestOrientationUpdate(space,oref, tmq);
-}
-
-
-Quaternion HostedObject::requestCurrentQuatVel(const SpaceID& space, const ObjectReference& oref)
-{
-    ProxyObjectPtr proxy_obj = getProxy(space,oref);
-    if (!proxy_obj)
-    {
-        HO_LOG(warn,"Requesting quat vel for missing proxy.  Returning blank.");
-        return Quaternion();
-    }
-
-    return proxy_obj->getOrientationSpeed();
-}
-
-
-Quaternion HostedObject::requestCurrentOrientation(const SpaceID& space, const ObjectReference& oref)
-{
-    ProxyObjectPtr proxy_obj = getProxy(space,oref);
-    if (!proxy_obj)
-    {
-        HO_LOG(warn,"Requesting orientation for missing proxy.  Returning blank.");
-        return Quaternion();
-    }
-
-
-    Location curLoc = proxy_obj->extrapolateLocation(currentLocalTime());
-    return curLoc.getOrientation();
-}
-
-Quaternion HostedObject::requestCurrentOrientationVel(const SpaceID& space, const ObjectReference& oref)
-{
-    ProxyObjectPtr proxy_obj = getProxy(space,oref);
-    if (!proxy_obj)
-    {
-        HO_LOG(warn,"Requesting current orientation for missing proxy.  Returning blank.");
-        return Quaternion();
-    }
-
-
-    Quaternion returner  = proxy_obj->getOrientationSpeed();
-    return returner;
-}
-
-void HostedObject::requestOrientationVelocityUpdate(const SpaceID& space, const ObjectReference& oref, const Quaternion& quat)
-{
-    Quaternion curOrientQuat = requestCurrentOrientation(space,oref);
-    TimedMotionQuaternion tmq (currentLocalTime(),MotionQuaternion(curOrientQuat,quat));
-    requestOrientationUpdate(space, oref,tmq);
-}
-
-
-
-//goes into proxymanager and gets out the current location of the presence
-//associated with
-Vector3d HostedObject::requestCurrentPosition (const SpaceID& space, const ObjectReference& oref)
-{
-    ProxyObjectPtr proxy_obj  = getProxy(space,oref);
-
-    if (proxy_obj == nullPtr)
-    {
-        SILOG(cppoh,error,"[HO] Unknown space object reference looking for position for for  " << space<< "-"<<oref<<".");
-        return Vector3d::zero();
-    }
-
-    return requestCurrentPosition(proxy_obj);
-}
-
-//skips the proxymanager.  can directly extrapolate position using current
-//simulation time.
-Vector3d HostedObject::requestCurrentPosition(ProxyObjectPtr proxy_obj)
-{
-    Location curLoc = proxy_obj->extrapolateLocation(currentLocalTime());
-    Vector3d currentPosition = curLoc.getPosition();
-    return currentPosition;
-}
-
-
-//apparently, will always return true now.  even if camera.
-bool HostedObject::requestMeshUri(const SpaceID& space, const ObjectReference& oref, Transfer::URI& tUri)
-{
-
-    ProxyManagerPtr proxy_manager = getProxyManager(space,oref);
-
-    if (!proxy_manager)
-    {
-        HO_LOG(warn,"Requesting mesh without proxy manager. Doing nothing");
-        return false;
-    }
-
-    ProxyObjectPtr  proxy_obj     = proxy_manager->getProxyObject(SpaceObjectReference(space,oref));
-
-    if (! proxy_obj)
-    {
-        HO_LOG(warn,"Requesting mesh for disconnected. Doing nothing");
-        return false;
-    }
-
-    tUri = proxy_obj->mesh();
-    return true;
-}
-
-Vector3f HostedObject::requestCurrentVelocity(ProxyObjectPtr proxy_obj)
-{
-    return (Vector3f)proxy_obj->getVelocity();
-}
-
-
-Vector3f HostedObject::requestCurrentVelocity(const SpaceID& space, const ObjectReference& oref)
-{
-    ProxyObjectPtr proxy_obj = getProxy(space,oref);
-    if (proxy_obj == nullPtr)
-    {
-        SILOG(cppoh,error,"[HO] Unknown space object reference looking for velocity for for  " << space<< "-"<<oref<<".");
-        return Vector3f::zero();
-    }
-
-    return requestCurrentVelocity(proxy_obj);
-}
-
 void HostedObject::requestOrientationUpdate(const SpaceID& space, const ObjectReference& oref, const TimedMotionQuaternion& orient) {
     updateLocUpdateRequest(space, oref, NULL, &orient, NULL, NULL, NULL);
 }
 
-
-
-BoundingSphere3f HostedObject::requestCurrentBounds(const SpaceID& space,const ObjectReference& oref) {
-    ProxyObjectPtr proxy_obj = getProxy(space,oref);
-
-    if (!proxy_obj)
-    {
-        HO_LOG(warn,"Requesting bounding sphere for missing proxy.  Returning blank.");
-        return BoundingSphere3f();
-    }
-
-
-    return proxy_obj->bounds();
-}
 
 void HostedObject::requestBoundsUpdate(const SpaceID& space, const ObjectReference& oref, const BoundingSphere3f& bounds) {
     updateLocUpdateRequest(space, oref,NULL, NULL, &bounds, NULL, NULL);
@@ -1104,20 +972,6 @@ void HostedObject::requestMeshUpdate(const SpaceID& space, const ObjectReference
 {
     updateLocUpdateRequest(space, oref, NULL, NULL, NULL, &mesh, NULL);
 }
-
-const String& HostedObject::requestCurrentPhysics(const SpaceID& space,const ObjectReference& oref) {
-    ProxyObjectPtr proxy_obj = getProxy(space, oref);
-    if (!proxy_obj)
-    {
-        HO_LOG(warn,"Requesting physics for missing proxy.  Returning blank.");
-        static String empty;
-        return empty;
-    }
-
-
-    return proxy_obj->physics();
-}
-
 
 const String& HostedObject::requestQuery(const SpaceID& space, const ObjectReference& oref)
 {
@@ -1180,11 +1034,13 @@ void HostedObject::updateLocUpdateRequest(const SpaceID& space, const ObjectRefe
         assert(mPresenceData.find(SpaceObjectReference(space, oref)) != mPresenceData.end());
         PerPresenceData& pd = *(mPresenceData.find(SpaceObjectReference(space, oref)))->second;
 
-        if (loc != NULL) { pd.requestLocation = *loc; pd.updateFields |= PerPresenceData::LOC_FIELD_LOC; }
-        if (orient != NULL) { pd.requestOrientation = *orient; pd.updateFields |= PerPresenceData::LOC_FIELD_ORIENTATION; }
-        if (bounds != NULL) { pd.requestBounds = *bounds; pd.updateFields |= PerPresenceData::LOC_FIELD_BOUNDS; }
-        if (mesh != NULL) { pd.requestMesh = *mesh; pd.updateFields |= PerPresenceData::LOC_FIELD_MESH; }
-        if (phy != NULL) { pd.requestPhysics = *phy; pd.updateFields |= PerPresenceData::LOC_FIELD_PHYSICS; }
+        // These set values directly, the epoch/seqno values will be
+        // updated when the request is sent
+        if (loc != NULL) { pd.requestLoc->setLocation(*loc); pd.updateFields |= PerPresenceData::LOC_FIELD_LOC; }
+        if (orient != NULL) { pd.requestLoc->setOrientation(*orient); pd.updateFields |= PerPresenceData::LOC_FIELD_ORIENTATION; }
+        if (bounds != NULL) { pd.requestLoc->setBounds(*bounds); pd.updateFields |= PerPresenceData::LOC_FIELD_BOUNDS; }
+        if (mesh != NULL) { pd.requestLoc->setMesh(Transfer::URI(*mesh)); pd.updateFields |= PerPresenceData::LOC_FIELD_MESH; }
+        if (phy != NULL) { pd.requestLoc->setPhysics(*phy); pd.updateFields |= PerPresenceData::LOC_FIELD_PHYSICS; }
 
         // Cancel the re-request timer if it was active
         pd.rerequestTimer->cancel();
@@ -1216,36 +1072,43 @@ void HostedObject::sendLocUpdateRequest(const SpaceID& space, const ObjectRefere
         return;
     }
 
-
+    assert(pd.updateFields != PerPresenceData::LOC_FIELD_NONE);
     // Generate and send an update to Loc
     Protocol::Loc::Container container;
     Protocol::Loc::ILocationUpdateRequest loc_request = container.mutable_update_request();
+    uint64 epoch = pd.requestEpoch++;
+    loc_request.set_epoch(epoch);
     if (pd.updateFields & PerPresenceData::LOC_FIELD_LOC) {
-        self_proxy->setLocation(pd.requestLocation, 0, true);
         Protocol::ITimedMotionVector requested_loc = loc_request.mutable_location();
-        requested_loc.set_t( spaceTime(space, pd.requestLocation.updateTime()) );
-        requested_loc.set_position(pd.requestLocation.position());
-        requested_loc.set_velocity(pd.requestLocation.velocity());
+        requested_loc.set_t( spaceTime(space, pd.requestLoc->location().updateTime()) );
+        requested_loc.set_position(pd.requestLoc->location().position());
+        requested_loc.set_velocity(pd.requestLoc->location().velocity());
+        // Save value but bump the epoch
+        pd.requestLoc->setLocation(pd.requestLoc->location(), epoch);
     }
     if (pd.updateFields & PerPresenceData::LOC_FIELD_ORIENTATION) {
-        self_proxy->setOrientation(pd.requestOrientation, 0, true);
         Protocol::ITimedMotionQuaternion requested_orient = loc_request.mutable_orientation();
-        requested_orient.set_t( spaceTime(space, pd.requestOrientation.updateTime()) );
+        requested_orient.set_t( spaceTime(space, pd.requestLoc->orientation().updateTime()) );
         //Normalize positions, which only make sense as unit quaternions.
-        requested_orient.set_position(pd.requestOrientation.position().normal());
-        requested_orient.set_velocity(pd.requestOrientation.velocity());
+        requested_orient.set_position(pd.requestLoc->orientation().position().normal());
+        requested_orient.set_velocity(pd.requestLoc->orientation().velocity());
+        // Save value but bump the epoch
+        pd.requestLoc->setOrientation(pd.requestLoc->orientation(), epoch);
     }
     if (pd.updateFields & PerPresenceData::LOC_FIELD_BOUNDS) {
-        self_proxy->setBounds(pd.requestBounds, 0, true);
-        loc_request.set_bounds(pd.requestBounds);
+        loc_request.set_bounds(pd.requestLoc->bounds());
+        // Save value but bump the epoch
+        pd.requestLoc->setBounds(pd.requestLoc->bounds(), epoch);
     }
     if (pd.updateFields & PerPresenceData::LOC_FIELD_MESH) {
-        self_proxy->setMesh(Transfer::URI(pd.requestMesh), 0, true);
-        loc_request.set_mesh(pd.requestMesh);
+        loc_request.set_mesh(pd.requestLoc->mesh().toString());
+        // Save value but bump the epoch
+        pd.requestLoc->setMesh(pd.requestLoc->mesh(), epoch);
     }
     if (pd.updateFields & PerPresenceData::LOC_FIELD_PHYSICS) {
-        self_proxy->setPhysics(pd.requestPhysics, 0, true);
-        loc_request.set_physics(pd.requestPhysics);
+        loc_request.set_physics(pd.requestLoc->physics());
+        // Save value but bump the epoch
+        pd.requestLoc->setPhysics(pd.requestLoc->physics(), epoch);
     }
 
     std::string payload = serializePBJMessage(container);

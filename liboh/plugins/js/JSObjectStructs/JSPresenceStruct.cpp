@@ -289,14 +289,24 @@ v8::Handle<v8::Value> JSPresenceStruct::setOrientationVelFunction(Quaternion new
 {
     INLINE_CHECK_IS_CONNECTED_ERROR("setOrientationVel");
     INLINE_CHECK_CAPABILITY_ERROR(Capabilities::MOVEMENT,setOrientationVel);
-    mParent->setOrientationVelFunction(getSporef(),newOrientationVel);
+
+    Time tnow = mParent->getHostedTime();
+    TimedMotionQuaternion orient = jpp->orientation();
+    TimedMotionQuaternion new_orient(tnow, MotionQuaternion(orient.position(tnow), newOrientationVel) );
+    mParent->setOrientation(getSporef(), new_orient);
+
     return v8::Undefined();
 }
 v8::Handle<v8::Value> JSPresenceStruct::struct_setVelocity(const Vector3f& newVel)
 {
     INLINE_CHECK_IS_CONNECTED_ERROR("setVelocity");
     INLINE_CHECK_CAPABILITY_ERROR(Capabilities::MOVEMENT,setVelocity);
-    mParent->setVelocityFunction(getSporef(),newVel);
+
+    Time tnow = mParent->getHostedTime();
+    TimedMotionVector3f loc = jpp->location();
+    TimedMotionVector3f new_loc(tnow, MotionVector3f(loc.position(tnow), newVel) );
+    mParent->setLocation(getSporef(), new_loc);
+
     return v8::Undefined();
 }
 
@@ -304,7 +314,13 @@ v8::Handle<v8::Value> JSPresenceStruct::struct_setPosition(Vector3f newPos)
 {
     INLINE_CHECK_IS_CONNECTED_ERROR("setPosition");
     INLINE_CHECK_CAPABILITY_ERROR(Capabilities::MOVEMENT,setPosition);
-    mParent->setPositionFunction(getSporef(), newPos);
+
+
+    Time tnow = mParent->getHostedTime();
+    TimedMotionVector3f loc = jpp->location();
+    TimedMotionVector3f new_loc(tnow, MotionVector3f(newPos, loc.velocity()) );
+    mParent->setLocation(getSporef(), new_loc);
+
     return v8::Undefined();
 }
 
@@ -312,7 +328,12 @@ v8::Handle<v8::Value> JSPresenceStruct::setOrientationFunction(Quaternion newOri
 {
     INLINE_CHECK_IS_CONNECTED_ERROR("setOrientation");
     INLINE_CHECK_CAPABILITY_ERROR(Capabilities::MOVEMENT,setPosition);
-    mParent->setOrientationFunction(getSporef(),newOrientation);
+
+    Time tnow = mParent->getHostedTime();
+    TimedMotionQuaternion orient = jpp->orientation();
+    TimedMotionQuaternion new_orient(tnow, MotionQuaternion(newOrientation, orient.velocity()) );
+    mParent->setOrientation(getSporef(), new_orient);
+
     return v8::Undefined();
 }
 
@@ -321,7 +342,9 @@ v8::Handle<v8::Value> JSPresenceStruct::setVisualScaleFunction(float new_scale)
 {
     INLINE_CHECK_IS_CONNECTED_ERROR("setScale");
     INLINE_CHECK_CAPABILITY_ERROR(Capabilities::MESH,setScale);
-    mParent->setVisualScaleFunction(getSporef(), new_scale);
+
+    mParent->setBounds(getSporef(), BoundingSphere3f(jpp->bounds().center(), new_scale));
+
     return v8::Undefined();
 }
 
@@ -329,7 +352,7 @@ v8::Handle<v8::Value>JSPresenceStruct::setVisualFunction(String urilocation)
 {
     INLINE_CHECK_IS_CONNECTED_ERROR("setMesh");
     INLINE_CHECK_CAPABILITY_ERROR(Capabilities::MESH,setMesh);
-    mParent->setVisualFunction(getSporef(), urilocation);
+    mParent->setVisual(getSporef(), urilocation);
     return v8::Undefined();
 }
 
@@ -382,9 +405,6 @@ v8::Handle<v8::Value> JSPresenceStruct::setQueryCount(uint32 new_qc)
 
 
 
-v8::Handle<v8::Value> JSPresenceStruct::getPhysicsFunction() {
-    return mParent->getPhysicsFunction(getSporef());
-}
 v8::Handle<v8::Value> JSPresenceStruct::setPhysicsFunction(const String& phy) {
     INLINE_CHECK_IS_CONNECTED_ERROR("setPhysics");
     mParent->setPhysicsFunction(getSporef(), phy);

@@ -223,17 +223,14 @@ public:
         const SpaceObjectReference& visibleObj, JSVisibleDataPtr addParams);
 
     //handling basic datatypes for JSPresences
-    void setVisualFunction(const SpaceObjectReference sporef, const std::string& newMeshString);
-    void setPositionFunction(const SpaceObjectReference sporef, const Vector3f& posVec);
-    void setVelocityFunction(const SpaceObjectReference sporef, const Vector3f& velVec);
-    void setOrientationFunction(const SpaceObjectReference sporef, const Quaternion& quat);
-    void setVisualScaleFunction(const SpaceObjectReference sporef, float newScale);
-    void setOrientationVelFunction(const SpaceObjectReference sporef, const Quaternion& quat);
+    void setLocation(const SpaceObjectReference sporef, const TimedMotionVector3f& loc);
+    void setOrientation(const SpaceObjectReference sporef, const TimedMotionQuaternion& orient);
+    void setBounds(const SpaceObjectReference sporef, const BoundingSphere3f& bounds);
+    void setVisual(const SpaceObjectReference sporef, const std::string& newMeshString);
 
     const String& getQuery(const SpaceObjectReference& sporef) const;
     void setQueryFunction(const SpaceObjectReference sporef, const SolidAngle& sa, const uint32 count);
 
-    v8::Handle<v8::Value> getPhysicsFunction(const SpaceObjectReference sporef);
     void setPhysicsFunction(const SpaceObjectReference sporef, const String& newPhysicsString);
 
     /****Methods that return V8 wrappers for c++ objects **/

@@ -50,6 +50,7 @@ public:
 
     virtual void service();
 
+    virtual uint64 epoch(const UUID& uuid);
     virtual TimedMotionVector3f location(const UUID& uuid);
     virtual Vector3f currentPosition(const UUID& uuid);
     virtual TimedMotionQuaternion orientation(const UUID& uuid);
@@ -78,6 +79,7 @@ public:
 
 private:
     struct LocationInfo {
+        uint64 epoch;
         TimedMotionVector3f location;
         TimedMotionQuaternion orientation;
         BoundingSphere3f bounds;

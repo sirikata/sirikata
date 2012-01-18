@@ -98,11 +98,16 @@ private:
     bool validSubscriber(const OHDP::NodeID& dest);
     bool validSubscriber(const ServerID& dest);
 
+    bool isSelfSubscriber(const UUID& sid, const UUID& observed);
+    bool isSelfSubscriber(const OHDP::NodeID& sid, const UUID& observed);
+    bool isSelfSubscriber(const ServerID& sid, const UUID& observed);
+
     bool trySend(const UUID& dest, const Sirikata::Protocol::Loc::BulkLocationUpdate& blu);
     bool trySend(const OHDP::NodeID& dest, const Sirikata::Protocol::Loc::BulkLocationUpdate& blu);
     bool trySend(const ServerID& dest, const Sirikata::Protocol::Loc::BulkLocationUpdate& blu);
 
     struct UpdateInfo {
+        uint64 epoch;
         TimedMotionVector3f location;
         TimedMotionQuaternion orientation;
         BoundingSphere3f bounds;
@@ -240,6 +245,7 @@ private:
 
             if (sub_info->outstandingUpdates.find(uuid) == sub_info->outstandingUpdates.end()) {
                 UpdateInfo new_ui;
+                new_ui.epoch = locservice->epoch(uuid);
                 new_ui.location = locservice->location(uuid);
                 new_ui.bounds = locservice->bounds(uuid);
                 new_ui.mesh = locservice->mesh(uuid);
@@ -330,6 +336,8 @@ private:
                     //write and update sequence number
                     update.set_seqno( (*(sub_info->seqnoPtr)) ++ );
 
+                    if (parent->isSelfSubscriber(sid, up_it->first))
+                        update.set_epoch(up_it->second.epoch);
 
                     Sirikata::Protocol::ITimedMotionVector location = update.mutable_location();
                     location.set_t(up_it->second.location.updateTime());

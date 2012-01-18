@@ -182,6 +182,14 @@ void BulletPhysicsService::service() {
     mUpdatePolicy->service();
 }
 
+uint64 BulletPhysicsService::epoch(const UUID& uuid) {
+    LocationMap::iterator it = mLocations.find(uuid);
+    assert(it != mLocations.end());
+
+    LocationInfo locinfo = it->second;
+    return locinfo.epoch;
+}
+
 TimedMotionVector3f BulletPhysicsService::location(const UUID& uuid) {
     LocationMap::iterator it = mLocations.find(uuid);
     assert(it != mLocations.end());
@@ -700,6 +708,13 @@ void BulletPhysicsService::receiveMessage(Message* msg) {
             // update is performed at the end.
             bool updatePhysics = false;
 
+            // FIXME we should probably track epoch values per-field
+            // so we can kill old updates since substreams for update
+            // requests can come in out of order...
+            if (update.has_epoch()) {
+                loc_it->second.epoch = std::max(loc_it->second.epoch, update.epoch());
+            }
+
             if (update.has_location()) {
                 TimedMotionVector3f newloc(
                     update.location().t(),
@@ -772,6 +787,13 @@ bool BulletPhysicsService::locationUpdate(UUID source, void* buffer, uint32 leng
             // physics simulation, this tracks if we need to and the
             // update is performed at the end.
             bool updatePhysics = false;
+
+            // FIXME we should probably track epoch values per-field
+            // so we can kill old updates since substreams for update
+            // requests can come in out of order...
+            if (request.has_epoch()) {
+                loc_it->second.epoch = std::max(loc_it->second.epoch, request.epoch());
+            }
 
             if (request.has_location()) {
                 TimedMotionVector3f newloc(

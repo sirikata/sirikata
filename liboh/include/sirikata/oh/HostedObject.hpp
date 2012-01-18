@@ -252,6 +252,9 @@ public:
 
     // Identification
     virtual ProxyManagerPtr presence(const SpaceObjectReference& sor);
+    virtual SequencedPresencePropertiesPtr presenceRequestedLocation(const SpaceObjectReference& sor);
+    virtual uint64 presenceLatestEpoch(const SpaceObjectReference& sor);
+
     virtual ProxyObjectPtr self(const SpaceObjectReference& sor);
 
     // ODP::Service Interface
@@ -270,33 +273,9 @@ public:
     //note: location update services both position and velocity
 
     virtual void requestLocationUpdate(const SpaceID& space, const ObjectReference& oref,const TimedMotionVector3f& loc);
-
-
-    virtual void requestPositionUpdate(const SpaceID& space, const ObjectReference& oref, const Vector3f& pos);
-    virtual void requestVelocityUpdate(const SpaceID& space, const ObjectReference& oref, const Vector3f& vel);
-
-    virtual Vector3d requestCurrentPosition (const SpaceID& space,const ObjectReference& oref);
-    virtual Vector3d requestCurrentPosition(ProxyObjectPtr proxy_obj);
-    virtual Vector3f requestCurrentVelocity(const SpaceID& space, const ObjectReference& oref);
-    virtual Vector3f requestCurrentVelocity(ProxyObjectPtr proxy_obj);
-
     virtual void requestOrientationUpdate(const SpaceID& space, const ObjectReference& oref, const TimedMotionQuaternion& orient);
-
-    virtual void requestOrientationDirectionUpdate(const SpaceID& space, const ObjectReference& oref, const Quaternion& orient);
-    virtual void requestOrientationVelocityUpdate(const SpaceID& space, const ObjectReference& oref, const Quaternion& quat);
-
-    virtual Quaternion requestCurrentQuatVel(const SpaceID& space, const ObjectReference& oref);
-    virtual Quaternion requestCurrentOrientation(const SpaceID& space, const ObjectReference& oref);
-    virtual Quaternion requestCurrentOrientationVel(const SpaceID& space, const ObjectReference& oref);
-
-
-    virtual BoundingSphere3f requestCurrentBounds(const SpaceID& space,const ObjectReference& oref);
     virtual void requestBoundsUpdate(const SpaceID& space, const ObjectReference& oref, const BoundingSphere3f& bounds);
     virtual void requestMeshUpdate(const SpaceID& space, const ObjectReference& oref, const String& mesh);
-
-    virtual bool requestMeshUri(const SpaceID& space, const ObjectReference& oref, Transfer::URI& tUri);
-
-    virtual const String& requestCurrentPhysics(const SpaceID& space,const ObjectReference& oref);
     virtual void requestPhysicsUpdate(const SpaceID& space, const ObjectReference& oref, const String& phy);
 
     virtual void requestQueryUpdate(const SpaceID& space, const ObjectReference& oref, const String& new_query);

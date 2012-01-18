@@ -31,6 +31,10 @@ public:
     // Object
     virtual ObjectReference object() const = 0;
 
+    // Request epoch
+    virtual bool has_epoch() const = 0;
+    virtual uint64 epoch() const = 0;
+
     // Location
     virtual bool has_location() const = 0;
     virtual TimedMotionVector3f location() const = 0;

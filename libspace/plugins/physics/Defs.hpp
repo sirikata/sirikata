@@ -62,7 +62,8 @@ enum bulletObjBBox {
 
 struct LocationInfo {
     LocationInfo()
-     : location(),
+     : epoch(0),
+       location(),
        orientation(),
        bounds(),
        mesh(),
@@ -73,6 +74,7 @@ struct LocationInfo {
     {}
 
     // Regular location info that we need to maintain for all objects
+    uint64 epoch;
     TimedMotionVector3f location;
     TimedMotionQuaternion orientation;
     BoundingSphere3f bounds;
