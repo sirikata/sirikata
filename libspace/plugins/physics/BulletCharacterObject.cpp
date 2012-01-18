@@ -129,7 +129,7 @@ void BulletCharacterObject::postTick(const Time& t) {
     btTransform worldTrans = mGhostObject->getWorldTransform();
     btVector3 pos = worldTrans.getOrigin();
     TimedMotionVector3f newLocation(t, MotionVector3f(Vector3f(pos.x(), pos.y(), pos.z()), locinfo.location.velocity()));
-    mParent->setLocation(mID, newLocation);
+
     btQuaternion rot = worldTrans.getRotation();
     TimedMotionQuaternion newOrientation(
         t,
@@ -138,9 +138,25 @@ void BulletCharacterObject::postTick(const Time& t) {
             locinfo.orientation.velocity()
         )
     );
-    mParent->setOrientation(mID, newOrientation);
 
-    mParent->addUpdate(mID);
+    // Only update and report a change if it's big enough. This allows us to
+    // stop sending updates if the object ends up essentially still.
+    float32 pos_diff = (mParent->location(mID).position(t)-newLocation.position(t)).lengthSquared();
+    // This test is easy, but also conservative...
+    float32 angle1, angle2;
+    Vector3f axis1, axis2;
+    mParent->orientation(mID).position(t).toAngleAxis(angle1, axis1);
+    newOrientation.position(t).toAngleAxis(angle2, axis2);
+    // FIXME what should this really be? This approach doesn't seem to really
+    // work because we sometimes get 0 vectors and the constants seem odd...
+    bool orient_changed =
+        (axis1.dot(axis2) < 0.9) || (fabs(angle1-angle2) > 3.14159/180);
+
+    if (pos_diff > 0.001 || orient_changed) {
+        mParent->setLocation(mID, newLocation);
+        mParent->setOrientation(mID, newOrientation);
+        mParent->addUpdate(mID);
+    }
 }
 
 void BulletCharacterObject::deactivationTick(const Time& t) {
