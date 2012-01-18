@@ -55,10 +55,13 @@ if (typeof(std.script) === "undefined") std.script = {};
         var prevPrefix = system.__getImportPrefix();
         try
         {
-            //any call to import from these files will first check in
-            //these directories.
-            system.__setImportPrefix(generateFolderName(sender));
 
+            if (sender.toString() != system.self.toString())
+            {
+                //any call to import from these files will first check in
+                //these directories.
+                system.__setImportPrefix(generateFolderName(sender));
+            }
             
             if (!this._printer || sender != this._printer) {
                 this._printer = sender;
