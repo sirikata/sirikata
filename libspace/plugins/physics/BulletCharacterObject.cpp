@@ -164,4 +164,50 @@ void BulletCharacterObject::deactivationTick(const Time& t) {
         mParent->updateObjectFromDeactivation(mID);
 }
 
+bool BulletCharacterObject::applyRequestedLocation(const TimedMotionVector3f& loc) {
+    applyForcedLocation(loc);
+    return true;
+}
+
+bool BulletCharacterObject::applyRequestedOrientation(const TimedMotionQuaternion& orient) {
+    applyForcedOrientation(orient);
+    return true;
+}
+
+void BulletCharacterObject::applyForcedLocation(const TimedMotionVector3f& loc) {
+    // Update recorded info
+    LocationInfo& locinfo = mParent->info(mID);
+    locinfo.location = loc;
+
+    // And apply current position. We don't need to apply velocity because it'll
+    // be applied at the next tick.
+    btTransform xform = mGhostObject->getWorldTransform();
+    Vector3f objPosition = mParent->currentPosition(mID);
+    btQuaternion objOrient = xform.getRotation();
+    mGhostObject->setWorldTransform(
+        btTransform(
+            objOrient,
+            btVector3( objPosition.x, objPosition.y, objPosition.z )
+        )
+    );
+}
+
+void BulletCharacterObject::applyForcedOrientation(const TimedMotionQuaternion& orient) {
+    // Update recorded info
+    LocationInfo& locinfo = mParent->info(mID);
+    locinfo.orientation = orient;
+
+    // And apply current position. We don't need to apply velocity because it'll
+    // be applied at the next tick.
+    btTransform xform = mGhostObject->getWorldTransform();
+    btVector3 objPosition = xform.getOrigin();
+    Quaternion objOrient = mParent->currentOrientation(mID);
+    mGhostObject->setWorldTransform(
+        btTransform(
+            btQuaternion(objOrient.x, objOrient.y, objOrient.z, objOrient.w),
+            objPosition
+        )
+    );
+}
+
 } // namespace Sirikata

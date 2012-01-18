@@ -212,4 +212,49 @@ void BulletRigidBodyObject::deactivationTick(const Time& t) {
         mParent->updateObjectFromDeactivation(mID);
 }
 
+
+bool BulletRigidBodyObject::applyRequestedLocation(const TimedMotionVector3f& loc) {
+    // We can move any dynamic objects, but we'll require that static objects
+    // have physics turned off, move, then turn physics back on.
+    if (mTreatment == BULLET_OBJECT_TREATMENT_STATIC)
+        return false;
+
+    applyForcedLocation(loc);
+    return true;
+}
+
+bool BulletRigidBodyObject::applyRequestedOrientation(const TimedMotionQuaternion& orient) {
+    // We can move any dynamic objects, but we'll require that static objects
+    // have physics turned off, move, then turn physics back on.
+    if (mTreatment == BULLET_OBJECT_TREATMENT_STATIC)
+        return false;
+
+    applyForcedOrientation(orient);
+    return true;
+}
+
+void BulletRigidBodyObject::applyForcedLocation(const TimedMotionVector3f& loc) {
+    // Update recorded info
+    LocationInfo& locinfo = mParent->info(mID);
+    locinfo.location = loc;
+
+    // Setting the motion state triggers a sync, even if its the same one that
+    // was already being used.
+    mObjRigidBody->setMotionState(mObjMotionState);
+    // Activate the object in case it's gone to sleep from being still
+    mObjRigidBody->activate();
+}
+
+void BulletRigidBodyObject::applyForcedOrientation(const TimedMotionQuaternion& orient) {
+    // Update recorded info
+    LocationInfo& locinfo = mParent->info(mID);
+    locinfo.orientation = orient;
+
+    // Setting the motion state triggers a sync, even if its the same one that
+    // was already being used.
+    mObjRigidBody->setMotionState(mObjMotionState);
+    // Activate the object in case it's gone to sleep from being still
+    mObjRigidBody->activate();
+}
+
 } // namespace Sirikata

@@ -34,6 +34,12 @@ public:
     virtual void postTick(const Time& t);
     virtual void deactivationTick(const Time& t);
 
+
+    virtual bool applyRequestedLocation(const TimedMotionVector3f& loc);
+    virtual bool applyRequestedOrientation(const TimedMotionQuaternion& orient);
+    virtual void applyForcedLocation(const TimedMotionVector3f& loc);
+    virtual void applyForcedOrientation(const TimedMotionQuaternion& orient);
+
 private:
     UUID mID;
 

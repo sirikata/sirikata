@@ -59,6 +59,36 @@ public:
      */
     virtual void deactivationTick(const Time& t) {}
 
+
+
+    /** Try to apply the requested position to this object, updating
+     *  the physics simulation if necessary. Some types of objects
+     *  may always fail to apply updates. Returns true if the update
+     *  was applied and an update will need to be sent.
+     */
+    virtual bool applyRequestedLocation(const TimedMotionVector3f& loc) = 0;
+    /** Try to apply the requested orientation to this object, updating
+     *  the physics simulation if necessary. Some types of objects
+     *  may always fail to apply updates. Returns true if the update
+     *  was applied and an update will need to be sent.
+     */
+    virtual bool applyRequestedOrientation(const TimedMotionQuaternion& orient) = 0;
+
+    /** Apply the given position to this object. This takes whatever
+     *  steps are necessary to apply the change, even completely
+     *  reloading the object in Bullet. This should only be used when
+     *  absolutely necessary, e.g. for updates about remote,
+     *  physically simulated objects.
+     */
+    virtual void applyForcedLocation(const TimedMotionVector3f& loc) = 0;
+    /** Apply the given orientation to this object. This takes whatever
+     *  steps are necessary to apply the change, even completely
+     *  reloading the object in Bullet. This should only be used when
+     *  absolutely necessary, e.g. for updates about remote,
+     *  physically simulated objects.
+     */
+    virtual void applyForcedOrientation(const TimedMotionQuaternion& orient) = 0;
+
 protected:
 
     // Helper for computing the collision
