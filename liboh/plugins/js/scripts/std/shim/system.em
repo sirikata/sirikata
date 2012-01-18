@@ -116,6 +116,9 @@ PresenceEntry.prototype.proxRemovedEvent = function (visibleObj,visTo)
      var proxManager = null;
      var sboxMessageManager = null;
      var presMessageManager = null;
+
+     var importPrefix = '';
+     var entityToken = undefined;
      
      system = {};
 
@@ -700,6 +703,14 @@ PresenceEntry.prototype.proxRemovedEvent = function (visibleObj,visTo)
          baseSystem.sendMessageUnreliable.apply(baseSystem,arguments);
      };
      
+
+
+     system.__setImportPrefix = function(toPrefixWith)
+     {
+         system.__debugPrint('\nWARNING __setImportPrefix is a ' +
+                             'security flaw must fix at a later date.\n');
+         importPrefix = toPrefixWith;
+     };
      
       /** @function
        *  @description Loads a file and evaluates its contents. Note
@@ -713,7 +724,7 @@ PresenceEntry.prototype.proxRemovedEvent = function (visibleObj,visTo)
        */
       system.import = function(/** String */ scriptFile)
       {
-          baseSystem.import.apply(baseSystem, arguments);
+          baseSystem.import(importPrefix + '/' + scriptFile);
       };
 
       /** @function
@@ -1203,6 +1214,9 @@ PresenceEntry.prototype.proxRemovedEvent = function (visibleObj,visTo)
 
      var onPresConnFunc = function(pres)
      {
+         if (typeof(entityToken) == 'undefined')
+             entityToken = pres.toString();
+         
          for (var s in presConnectedManager)
              presConnectedManager[s](pres, new ClearablePresConnected(s));                 
      };
@@ -1364,9 +1378,20 @@ PresenceEntry.prototype.proxRemovedEvent = function (visibleObj,visTo)
        */
       system.require = function(/** String */ filename)
       {
-          baseSystem.require.apply(baseSystem, arguments);
+          baseSystem.require(importPrefix + '/' + filename);
       };
 
+     system.__getImportPrefix = function()
+     {
+         return importPrefix;
+     };
+
+     system.__entityToken = function()
+     {
+         return entityToken;
+     };
+
+     
       /** @function
        @description Destroys all created objects, except presences in the root context. Then executes script associated with root context. (Use system.setScript to set this script.)
        @see system.setScript
