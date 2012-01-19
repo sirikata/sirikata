@@ -113,7 +113,7 @@ public:
 
 	/** The ending byte--again, when goesToEndOfFile() is true, this may be undefined. */
 	inline base_type endbyte() const {
-		return mStart + mLength;
+		return mStart + mLength - 1;
 	}
 
 	/// Sets the length of the range.
@@ -173,7 +173,7 @@ public:
 			}
 			base_type end = (*iter).endbyte();
 
-			if (mStart >= start && mStart < end) {
+			if (mStart >= start && mStart <= end) {
 				found = true;
 				lastEnd = end;
 				break;

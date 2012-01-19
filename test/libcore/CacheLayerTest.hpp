@@ -366,7 +366,7 @@ public:
 		TS_ASSERT(myData!=NULL);
 		if (myData) {
 			Transfer::Range::base_type offset = compare->startbyte();
-			while (offset < compare->endbyte()) {
+			while (offset <= compare->endbyte()) {
 				Transfer::Range::length_type len;
 				const unsigned char *gotData = myData->dataAt(offset, len);
 				const unsigned char *compareData = compare->dataAt(offset);
@@ -376,7 +376,7 @@ public:
 				}
                 TS_ASSERT_SAME_DATA(compareData,gotData,len+offset<compare->endbyte() ? (size_t)len : (size_t)(compare->endbyte()-offset));
 				offset += len;
-				if (offset >= compare->endbyte()) {
+				if (offset > compare->endbyte()) {
 					break;
 				}
 			}

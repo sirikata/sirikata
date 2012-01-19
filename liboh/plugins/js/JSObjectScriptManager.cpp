@@ -556,15 +556,16 @@ void JSObjectScriptManager::loadMesh(const Transfer::URI& uri, MeshLoadCallback 
         uri,
         mTransferPool,
         1.0,
-        std::tr1::bind(&JSObjectScriptManager::meshDownloaded, this, _1, _2)
+        std::tr1::bind(&JSObjectScriptManager::meshDownloaded, this, _1, _2, _3)
     );
     mMeshDownloads[uri] = dl;
     dl->start();
 }
 
-void JSObjectScriptManager::meshDownloaded(Transfer::ChunkRequestPtr request, Transfer::DenseDataPtr data) {
+void JSObjectScriptManager::meshDownloaded(Transfer::ResourceDownloadTaskPtr taskptr, Transfer::TransferRequestPtr request, Transfer::DenseDataPtr data) {
+    Transfer::ChunkRequestPtr chunkreq = std::tr1::static_pointer_cast<Transfer::ChunkRequest>(request);
     mParsingIOService->post(
-        std::tr1::bind(&JSObjectScriptManager::parseMeshWork, this, request->getMetadata(), request->getMetadata().getFingerprint(), data)
+        std::tr1::bind(&JSObjectScriptManager::parseMeshWork, this, chunkreq->getMetadata(), chunkreq->getMetadata().getFingerprint(), data)
     );
 }
 

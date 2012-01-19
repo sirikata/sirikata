@@ -37,6 +37,7 @@
 
 #include <sirikata/mesh/Platform.hpp>
 #include <sirikata/mesh/ModelsSystem.hpp>
+#include <sirikata/mesh/Meshdata.hpp>
 #include <sirikata/core/util/ListenerProvider.hpp>
 #include <sirikata/core/transfer/TransferMediator.hpp>
 #include <sirikata/core/transfer/TransferPool.hpp>
@@ -75,6 +76,8 @@ class SIRIKATA_PLUGIN_EXPORT ColladaSystem
     ColladaSystem& operator = ( ColladaSystem const & ); // not implemented
 
     bool initialize(String const& options);
+
+    void addHeaderData(const Transfer::RemoteFileMetadata& metadata, Mesh::MeshdataPtr mesh);
 
     // documents that have been transfered, parsed, and loaded.
     // MCB: make this a map when/if a key becomes useful

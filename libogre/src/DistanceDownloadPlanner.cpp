@@ -401,7 +401,7 @@ void DistanceDownloadPlanner::iStop(Liveness::Token dpAlive)
 
 
     mStopped = true;
-    
+
     RMutex::scoped_lock lock(dlPlannerMutex);
     for(AssetMap::iterator it = mAssets.begin(); it != mAssets.end(); it++)
     {
@@ -464,7 +464,7 @@ void DistanceDownloadPlanner::loadAsset(Transfer::URI asset_uri) {
         if (mAssets.find(asset_uri) == mAssets.end()) return;
         asset = mAssets[asset_uri];
     }
-    
+
     DLPLANNER_LOG(detailed, "Loading asset " << asset->uri);
 
     //get the mesh data and check that it is valid.
@@ -557,7 +557,7 @@ SHA256 computeVisualHash(const Mesh::VisualPtr& visptr, AssetDownloadTaskPtr ass
 
     for(AssetDownloadTask::Dependencies::const_iterator tex_it = assetDownload->dependencies().begin(); tex_it != assetDownload->dependencies().end(); tex_it++) {
         const AssetDownloadTask::ResourceData& tex_data = tex_it->second;
-        data += tex_data.request->getMetadata().getFingerprint().toString();
+        data += tex_data.request->getIdentifier();
     }
 
     return SHA256::computeDigest(data);
@@ -710,12 +710,18 @@ void DistanceDownloadPlanner::loadDependentTextures(Asset* asset, bool usingDefa
         tex_it != asset->downloadTask->dependencies().end();
         tex_it++)
     {
+        const Transfer::URI& uri = tex_it->first;
+        const String& uri_str = uri.toString();
         const AssetDownloadTask::ResourceData& tex_data = tex_it->second;
-        if (mActiveCDNArchive && asset->textureFingerprints->find(tex_data.request->getURI().toString()) == asset->textureFingerprints->end() ) {
-            String id = tex_data.request->getURI().toString() + tex_data.request->getMetadata().getFingerprint().toString();
+
+        if (mActiveCDNArchive && asset->textureFingerprints->find(uri_str) == asset->textureFingerprints->end() ) {
+            String id = uri_str + tex_data.request->getIdentifier();
+
+            //OGRE_LOG(warn, "Got asset ID of " << id);
+
             fixOgreURI(id);
 
-            (*asset->textureFingerprints)[tex_data.request->getURI().toString()] = id;
+            (*asset->textureFingerprints)[uri_str] = id;
 
             // This could be a regular texture or a . If its ever a static
             // image, we want to decode it directly...
@@ -735,17 +741,15 @@ void DistanceDownloadPlanner::loadDependentTextures(Asset* asset, bool usingDefa
                 asset->loadedResources.push_back(id);
                 asset->loadingResources++;
             }
-            else if (tex_data.request->getURI().scheme() == "http") {
+            else if (uri.scheme() == "http") {
                 // Or, if its an http URL, we can try displaying it in a webview
-                OGRE_LOG(detailed,"Using webview for " << id << ": " << tex_data.request->getURI());
                 WebView* web_mat = WebViewManager::getSingleton().createWebViewMaterial(
                     mContext,
                     id,
                     512, 512, // Completely arbitrary...
                     mScene->renderStrand()
                 );
-
-                web_mat->loadURL(tex_data.request->getURI().toString());
+                web_mat->loadURL(uri_str);
                 asset->webMaterials.push_back(web_mat);
             }
         }
@@ -822,7 +826,7 @@ void DistanceDownloadPlanner::checkRemoveAsset(Asset* asset,Liveness::Token asse
         return;
 
 
-    
+
     if (asset->waitingObjects.empty() && asset->usingObjects.empty()) {
         // We need to be careful if a download is in progress.
         if (asset->downloadTask) return;

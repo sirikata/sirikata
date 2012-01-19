@@ -71,7 +71,7 @@ void execCommand(const char* file, const char* const argv[], bool do_fork = true
         pID = fork();
 
     if (pID == 0) {
-        
+
         // setsid() decouples this process from the parent, ensuring that the
         // exit of the parent doesn't kill the child process by accident
         // (e.g. by causing the parent terminal to exit).
@@ -241,8 +241,8 @@ void stopWork() {
     ioWork = NULL;
 }
 
-void finishLaunchURI(Transfer::URI config_uri, Transfer::ChunkRequestPtr req, Transfer::DenseDataPtr data, int* retval);
-void finishDownloadResource(const String& data_path, Transfer::ChunkRequestPtr req, Transfer::DenseDataPtr data, int* retval);
+void finishLaunchURI(Transfer::URI config_uri, Transfer::ResourceDownloadTaskPtr taskptr, Transfer::TransferRequestPtr req, Transfer::DenseDataPtr data, int* retval);
+void finishDownloadResource(const String& data_path, Transfer::ResourceDownloadTaskPtr taskptr, Transfer::TransferRequestPtr req, Transfer::DenseDataPtr data, int* retval);
 void doExecApp(int* retval);
 
 Transfer::ResourceDownloadTaskPtr rdl;
@@ -267,7 +267,7 @@ bool startLaunchURI(String uri_str, int* retval) {
     rdl =
         Transfer::ResourceDownloadTask::construct(
             config_uri, gTransferPool, 1.0,
-            gContext->mainStrand->wrap(std::tr1::bind(finishLaunchURI, config_uri, std::tr1::placeholders::_1, std::tr1::placeholders::_2, retval))
+            gContext->mainStrand->wrap(std::tr1::bind(finishLaunchURI, config_uri, std::tr1::placeholders::_1, std::tr1::placeholders::_2, std::tr1::placeholders::_3, retval))
         );
     rdl->start();
 
@@ -290,7 +290,7 @@ String appDirPath() {
 typedef std::map<String, Transfer::ResourceDownloadTaskPtr> ResourceDownloadMap;
 ResourceDownloadMap resourceDownloads;
 
-void finishLaunchURI(Transfer::URI config_uri, Transfer::ChunkRequestPtr req, Transfer::DenseDataPtr data, int* retval) {
+void finishLaunchURI(Transfer::URI config_uri, Transfer::ResourceDownloadTaskPtr taskptr, Transfer::TransferRequestPtr req, Transfer::DenseDataPtr data, int* retval) {
     // Fire off the request for
     if (!data || data->size() == 0) {
         LAUNCHER_LOG(error, "Failed to download config");
@@ -369,7 +369,8 @@ void finishLaunchURI(Transfer::URI config_uri, Transfer::ChunkRequestPtr req, Tr
                     gContext->mainStrand->wrap(
                         std::tr1::bind(finishDownloadResource,
                             data_path,
-                            std::tr1::placeholders::_1, std::tr1::placeholders::_2, retval
+                            std::tr1::placeholders::_1, std::tr1::placeholders::_2,
+                            std::tr1::placeholders::_3, retval
                         )
                     )
                 );
@@ -385,7 +386,7 @@ void finishLaunchURI(Transfer::URI config_uri, Transfer::ChunkRequestPtr req, Tr
     }
 }
 
-void finishDownloadResource(const String& data_path, Transfer::ChunkRequestPtr req, Transfer::DenseDataPtr data, int* retval) {
+void finishDownloadResource(const String& data_path, Transfer::ResourceDownloadTaskPtr taskptr, Transfer::TransferRequestPtr req, Transfer::DenseDataPtr data, int* retval) {
     if (!data || data->size() == 0) {
         LAUNCHER_LOG(error, "Failed to download data file: " << data_path);
         eventLoopExit(retval, -1);

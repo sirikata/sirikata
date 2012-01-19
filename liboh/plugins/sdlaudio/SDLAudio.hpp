@@ -19,13 +19,13 @@ typedef std::tr1::shared_ptr<FFmpegAudioStream> FFmpegAudioStreamPtr;
 
 class AudioSimulation : public Simulation,
                         public Liveness
-                        
+
 {
 public:
     AudioSimulation(Context* ctx, Network::IOStrandPtr aStrand);
     virtual ~AudioSimulation();
 
-    
+
     // Service Interface
     virtual void start();
     virtual void stop();
@@ -33,8 +33,8 @@ public:
     // Invokable Interface
     virtual boost::any invoke(std::vector<boost::any>& params);
 
-    
-    
+
+
     // Mixing interface, public for the mixing callback function
     void mix(uint8* raw_stream, int32 len);
 
@@ -43,23 +43,25 @@ private:
     void iStop(Liveness::Token lt);
 
     bool initialized;
-    
+
     // Indicates whether basic initialization was successful, i.e. whether we're
     // going to be able to do any operations.
     bool ready() const;
 
     void handleFinishedDownload(
-        Transfer::ChunkRequestPtr request,
+        Transfer::ResourceDownloadTaskPtr taskptr,
+        Transfer::TransferRequestPtr request,
         Transfer::DenseDataPtr response);
-    
+
     void iHandleFinishedDownload(
         Liveness::Token lt,
-        Transfer::ChunkRequestPtr request,
+        Transfer::ResourceDownloadTaskPtr taskptr,
+        Transfer::TransferRequestPtr request,
         Transfer::DenseDataPtr response);
 
     Network::IOStrandPtr audioStrand;
-    
-    
+
+
     Context* mContext;
     bool mInitializedAudio;
     bool mOpenedAudio;

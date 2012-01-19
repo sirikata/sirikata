@@ -102,7 +102,7 @@ public:
 	 * Note that it will also return NULL if startbyte() > offset.
 	 */
 	inline const unsigned char *dataAt(base_type offset) const {
-		if (offset >= endbyte() || offset < startbyte())
+		if (offset > endbyte() || offset < startbyte())
 		    return NULL;
 		return &(mData[(std::vector<unsigned char>::size_type)(offset-startbyte())]);
 	}
@@ -266,7 +266,7 @@ public:
 		for (const_iterator iter = begin(); iter != enditer; ++iter) {
 			const Range &range = (*iter);
 			if (offset >= range.startbyte() &&
-					(range.goesToEndOfFile() || offset < range.endbyte())) {
+					(range.goesToEndOfFile() || offset <= range.endbyte())) {
 				// We're within some valid data... return the DenseData.
 				length = range.length() + (Range::length_type)(range.startbyte() - offset);
 				return (*iter).dataAt(offset);
@@ -330,7 +330,7 @@ public:
 		size_type dataend;
 
 		void setDataPtr() {
-			if (globalbyte >= parent->endbyte() || iter == (parent->DenseDataList::end())) {
+			if (globalbyte > parent->endbyte() || iter == (parent->DenseDataList::end())) {
 				data = NULL;
 				dataend = globalbyte;
 				datastart = globalbyte;
@@ -484,7 +484,7 @@ public:
 	}
 
 	inline cache_usize_type length() const {
-		return endbyte() - startbyte();
+		return endbyte() - startbyte() + 1;
 	}
 
 	inline cache_usize_type size() const {

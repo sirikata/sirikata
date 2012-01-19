@@ -131,6 +131,37 @@ void ChunkRequest::notifyCaller(TransferRequestPtr me, TransferRequestPtr from, 
     SILOG(transfer, detailed, "done ChunkRequest notifyCaller");
 }
 
+void DirectChunkRequest::execute(std::tr1::shared_ptr<TransferRequest> req, ExecuteFinished cb) {
+    std::tr1::shared_ptr<DirectChunkRequest> casted =
+            std::tr1::static_pointer_cast<DirectChunkRequest, TransferRequest>(req);
+
+    MeerkatChunkHandler::getSingleton().get(mChunk,
+            std::tr1::bind(&DirectChunkRequest::execute_finished, this, _1, cb));
+}
+
+void DirectChunkRequest::execute_finished(std::tr1::shared_ptr<const DenseData> response, ExecuteFinished cb) {
+    SILOG(transfer, detailed, "execute_finished in DirectChunkRequest called");
+    mDenseData = response;
+    HttpManager::getSingleton().postCallback(cb);
+    SILOG(transfer, detailed, "done DirectChunkRequest execute_finished");
+}
+
+void DirectChunkRequest::notifyCaller(TransferRequestPtr me, TransferRequestPtr from) {
+    DirectChunkRequestPtr fromC =
+        std::tr1::static_pointer_cast<DirectChunkRequest, TransferRequest>(from);
+    notifyCaller(me, from, fromC->mDenseData);
+}
+
+void DirectChunkRequest::notifyCaller(TransferRequestPtr me, TransferRequestPtr from, DenseDataPtr data) {
+    DirectChunkRequestPtr meC =
+        std::tr1::static_pointer_cast<DirectChunkRequest, TransferRequest>(me);
+    DirectChunkRequestPtr fromC =
+        std::tr1::static_pointer_cast<DirectChunkRequest, TransferRequest>(from);
+
+    // To pass back the original request, we need to copy data over
+    HttpManager::getSingleton().postCallback(std::tr1::bind(mCallback, meC, data));
+    SILOG(transfer, detailed, "done DirectChunkRequest notifyCaller");
+}
 
 } // namespace Transfer
 } // namespace Sirikata

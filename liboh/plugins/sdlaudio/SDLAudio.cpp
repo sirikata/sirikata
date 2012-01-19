@@ -66,7 +66,7 @@ void AudioSimulation::iStart(Liveness::Token lt)
             "of AudioSimulation: expired audiosim.");
         return;
     }
-    
+
     AUDIO_LOG(detailed, "Starting SDLAudio");
 
     if (SDL::InitializeSubsystem(SDL::Subsystem::Audio) != 0)
@@ -117,7 +117,7 @@ void AudioSimulation::iStop(Liveness::Token lt)
             "of AudioSimulation: expired audiosim.");
         return;
     }
-    
+
     AUDIO_LOG(detailed, "Stopping SDLAudio");
 
     mTransferPool.reset();
@@ -141,7 +141,7 @@ boost::any AudioSimulation::invoke(std::vector<boost::any>& params) {
     // Decode the command. First argument is the "function name"
     if (params.empty() || !Invokable::anyIsString(params[0]))
         return boost::any();
-    
+
     std::string name = Invokable::anyAsString(params[0]);
     AUDIO_LOG(detailed, "Invoking the function " << name);
 
@@ -192,7 +192,7 @@ boost::any AudioSimulation::invoke(std::vector<boost::any>& params) {
         Transfer::ResourceDownloadTaskPtr dl = Transfer::ResourceDownloadTask::construct(
             sound_url, mTransferPool,
             1.0,
-            std::tr1::bind(&AudioSimulation::handleFinishedDownload, this, _1, _2)
+            std::tr1::bind(&AudioSimulation::handleFinishedDownload, this, _1, _2, _3)
         );
         mDownloads[sound_url].task = dl;
         mDownloads[sound_url].waiting.insert(id);
@@ -283,15 +283,19 @@ boost::any AudioSimulation::invoke(std::vector<boost::any>& params) {
 }
 
 void AudioSimulation::handleFinishedDownload(
-    Transfer::ChunkRequestPtr request, Transfer::DenseDataPtr response)
+    Transfer::ResourceDownloadTaskPtr taskptr,
+    Transfer::TransferRequestPtr request,
+    Transfer::DenseDataPtr response)
 {
     audioStrand->post(
         std::tr1::bind(&AudioSimulation::iHandleFinishedDownload,this,
-            livenessToken(),request,response));
+            livenessToken(),taskptr,request,response));
 }
 
 void AudioSimulation::iHandleFinishedDownload(
-    Liveness::Token lt,Transfer::ChunkRequestPtr request,
+    Liveness::Token lt,
+    Transfer::ResourceDownloadTaskPtr taskptr,
+    Transfer::TransferRequestPtr request,
     Transfer::DenseDataPtr response)
 {
     if (!lt) return;
@@ -303,10 +307,13 @@ void AudioSimulation::iHandleFinishedDownload(
         return;
     }
 
-    
+
     Lock lck(mMutex);
 
-    const Transfer::URI& sound_url = request->getMetadata().getURI();
+    Transfer::MetadataRequestPtr uriRequest = std::tr1::dynamic_pointer_cast<Transfer::MetadataRequest>(request);
+    assert(uriRequest && "Got unexpected TransferRequest subclass.");
+    const Transfer::URI& sound_url = uriRequest->getURI();
+
     // We may have stopped the simulation and then gotten the callback. Ignore
     // in this case.
     if (mDownloads.find(sound_url) == mDownloads.end()) return;
