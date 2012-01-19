@@ -137,16 +137,9 @@ int main (int argc, char** argv) {
     Duration duration = Duration::zero(); // Indicates to run forever.
     ObjectHostContext* ctx = new ObjectHostContext("cppoh", oh_id, sstConnMgr, ohSstConnMgr, ios, mainStrand, trace, start_time, duration);
 
-    String servermap_type = GetOptionValue<String>("servermap");
-    String servermap_options = GetOptionValue<String>("servermap-options");
-    ServerIDMap * server_id_map =
-        ServerIDMapFactory::getSingleton().getConstructor(servermap_type)(ctx, servermap_options);
-
     String timeseries_type = GetOptionValue<String>(OPT_TRACE_TIMESERIES);
     String timeseries_options = GetOptionValue<String>(OPT_TRACE_TIMESERIES_OPTIONS);
     Trace::TimeSeries* time_series = Trace::TimeSeriesFactory::getSingleton().getConstructor(timeseries_type)(ctx, timeseries_options);
-
-    SpaceID mainSpace(GetOptionValue<UUID>(OPT_MAIN_SPACE));
 
     String oh_options = GetOptionValue<String>(OPT_OH_OPTIONS);
     ObjectHost *oh = new CppohObjectHost(ctx, ios, oh_options);
@@ -154,11 +147,18 @@ int main (int argc, char** argv) {
     // Add oh coordinator
     String coordinatormap_type = GetOptionValue<String>("coordinatormap");
     String coordinatormap_options = GetOptionValue<String>("coordinatormap-options");
-    ServerIDMap * coordinator_id_map =
-    	ServerIDMapFactory::getSingleton().getConstructor(coordinatormap_type)(ctx, coordinatormap_options);
-    SpaceID coordinatorSpace(GetOptionValue<UUID>(OPT_OH_COORDINATOR));
-    oh->addOHCoordinator(coordinatorSpace, coordinator_id_map);
+    if(coordinatormap_options!="") {
+    	ServerIDMap * coordinator_id_map =
+    			ServerIDMapFactory::getSingleton().getConstructor(coordinatormap_type)(ctx, coordinatormap_options);
+    	SpaceID coordinatorSpace(GetOptionValue<UUID>(OPT_OH_COORDINATOR));
+    	oh->addOHCoordinator(coordinatorSpace, coordinator_id_map);
+    }
 
+    String servermap_type = GetOptionValue<String>("servermap");
+    String servermap_options = GetOptionValue<String>("servermap-options");
+    ServerIDMap * server_id_map =
+        ServerIDMapFactory::getSingleton().getConstructor(servermap_type)(ctx, servermap_options);
+    SpaceID mainSpace(GetOptionValue<UUID>(OPT_MAIN_SPACE));
 
     // Add all the spaces to the ObjectHost.  We used to have SpaceIDMap and
     // fill in the same ServerIDMap for all these. Now we just add the
