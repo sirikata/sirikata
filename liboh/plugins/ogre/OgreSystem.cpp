@@ -962,7 +962,7 @@ boost::any OgreSystem::getAnimationList(vector<boost::any>& params) {
       arr.push_back(Invokable::asAny(animationList[i]));
     }
 
-    return arr;
+    return Invokable::asAny(arr);
 }
 
 boost::any OgreSystem::startAnimation(std::vector<boost::any>& params) {
