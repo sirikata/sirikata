@@ -105,7 +105,7 @@ void BulletCharacterObject::unload() {
 
 void BulletCharacterObject::preTick(const Time& t) {
     LocationInfo& locinfo = mParent->info(mID);
-    Vector3f char_vel = locinfo.location.velocity();
+    Vector3f char_vel = locinfo.props.location().velocity();
     btVector3 bt_char_vel(char_vel.x, char_vel.y, char_vel.z);
     mCharacter->setWalkDirection(bt_char_vel);
     // Character controller doesn't have any rotation support. Instead, we set
@@ -128,14 +128,14 @@ void BulletCharacterObject::postTick(const Time& t) {
 
     btTransform worldTrans = mGhostObject->getWorldTransform();
     btVector3 pos = worldTrans.getOrigin();
-    TimedMotionVector3f newLocation(t, MotionVector3f(Vector3f(pos.x(), pos.y(), pos.z()), locinfo.location.velocity()));
+    TimedMotionVector3f newLocation(t, MotionVector3f(Vector3f(pos.x(), pos.y(), pos.z()), locinfo.props.location().velocity()));
 
     btQuaternion rot = worldTrans.getRotation();
     TimedMotionQuaternion newOrientation(
         t,
         MotionQuaternion(
             Quaternion(rot.x(), rot.y(), rot.z(), rot.w()),
-            locinfo.orientation.velocity()
+            locinfo.props.orientation().velocity()
         )
     );
 
@@ -164,20 +164,21 @@ void BulletCharacterObject::deactivationTick(const Time& t) {
         mParent->updateObjectFromDeactivation(mID);
 }
 
-bool BulletCharacterObject::applyRequestedLocation(const TimedMotionVector3f& loc) {
-    applyForcedLocation(loc);
+bool BulletCharacterObject::applyRequestedLocation(const TimedMotionVector3f& loc, uint64 epoch) {
+    applyForcedLocation(loc, epoch);
     return true;
 }
 
-bool BulletCharacterObject::applyRequestedOrientation(const TimedMotionQuaternion& orient) {
-    applyForcedOrientation(orient);
+bool BulletCharacterObject::applyRequestedOrientation(const TimedMotionQuaternion& orient, uint64 epoch) {
+    applyForcedOrientation(orient, epoch);
     return true;
 }
 
-void BulletCharacterObject::applyForcedLocation(const TimedMotionVector3f& loc) {
-    // Update recorded info
+void BulletCharacterObject::applyForcedLocation(const TimedMotionVector3f& loc, uint64 epoch) {
+    // Update recorded info. Note that this still follows epoch ordering! It
+    // will be ignored if it is out of date, even though this is "forced".
     LocationInfo& locinfo = mParent->info(mID);
-    locinfo.location = loc;
+    locinfo.props.setLocation(loc, epoch);
 
     // And apply current position. We don't need to apply velocity because it'll
     // be applied at the next tick.
@@ -192,10 +193,11 @@ void BulletCharacterObject::applyForcedLocation(const TimedMotionVector3f& loc) 
     );
 }
 
-void BulletCharacterObject::applyForcedOrientation(const TimedMotionQuaternion& orient) {
-    // Update recorded info
+void BulletCharacterObject::applyForcedOrientation(const TimedMotionQuaternion& orient, uint64 epoch) {
+    // Update recorded info. Note that this still follows epoch ordering! It
+    // will be ignored if it is out of date, even though this is "forced".
     LocationInfo& locinfo = mParent->info(mID);
-    locinfo.orientation = orient;
+    locinfo.props.setOrientation(orient, epoch);
 
     // And apply current position. We don't need to apply velocity because it'll
     // be applied at the next tick.

@@ -100,7 +100,7 @@ public:
     virtual bool locationUpdate(UUID source, void* buffer, uint32 length);
 
     typedef std::tr1::function<void(MeshdataPtr)> MeshdataParsedCallback;
-    void getMesh(const std::string meshURI, const UUID uuid, MeshdataParsedCallback cb);
+    void getMesh(const Transfer::URI meshURI, const UUID uuid, MeshdataParsedCallback cb);
     // The last two get set in this callback, indicating that the
     // transfer finished (whether or not it was successful) and the
     // resulting data.

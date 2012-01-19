@@ -96,9 +96,9 @@ void BulletRigidBodyObject::addRigidBody() {
     mObjRigidBody = new btRigidBody(objRigidBodyCI);
     //mObjRigidBody->setRestitution(0.5);
     //set initial velocity
-    Vector3f objVelocity = locinfo.location.velocity();
+    Vector3f objVelocity = locinfo.props.location().velocity();
     mObjRigidBody->setLinearVelocity(btVector3(objVelocity.x, objVelocity.y, objVelocity.z));
-    Quaternion objAngVelocity = locinfo.orientation.velocity();
+    Quaternion objAngVelocity = locinfo.props.orientation().velocity();
     Vector3f angvel_axis;
     float32 angvel_angle;
     objAngVelocity.toAngleAxis(angvel_angle, angvel_axis);
@@ -213,30 +213,30 @@ void BulletRigidBodyObject::deactivationTick(const Time& t) {
 }
 
 
-bool BulletRigidBodyObject::applyRequestedLocation(const TimedMotionVector3f& loc) {
+bool BulletRigidBodyObject::applyRequestedLocation(const TimedMotionVector3f& loc, uint64 epoch) {
     // We can move any dynamic objects, but we'll require that static objects
     // have physics turned off, move, then turn physics back on.
     if (mTreatment == BULLET_OBJECT_TREATMENT_STATIC)
         return false;
 
-    applyForcedLocation(loc);
+    applyForcedLocation(loc, epoch);
     return true;
 }
 
-bool BulletRigidBodyObject::applyRequestedOrientation(const TimedMotionQuaternion& orient) {
+bool BulletRigidBodyObject::applyRequestedOrientation(const TimedMotionQuaternion& orient, uint64 epoch) {
     // We can move any dynamic objects, but we'll require that static objects
     // have physics turned off, move, then turn physics back on.
     if (mTreatment == BULLET_OBJECT_TREATMENT_STATIC)
         return false;
 
-    applyForcedOrientation(orient);
+    applyForcedOrientation(orient, epoch);
     return true;
 }
 
-void BulletRigidBodyObject::applyForcedLocation(const TimedMotionVector3f& loc) {
+void BulletRigidBodyObject::applyForcedLocation(const TimedMotionVector3f& loc, uint64 epoch) {
     // Update recorded info
     LocationInfo& locinfo = mParent->info(mID);
-    locinfo.location = loc;
+    locinfo.props.setLocation(loc, epoch);
 
     // Setting the motion state triggers a sync, even if its the same one that
     // was already being used.
@@ -245,10 +245,10 @@ void BulletRigidBodyObject::applyForcedLocation(const TimedMotionVector3f& loc) 
     mObjRigidBody->activate();
 }
 
-void BulletRigidBodyObject::applyForcedOrientation(const TimedMotionQuaternion& orient) {
+void BulletRigidBodyObject::applyForcedOrientation(const TimedMotionQuaternion& orient, uint64 epoch) {
     // Update recorded info
     LocationInfo& locinfo = mParent->info(mID);
-    locinfo.orientation = orient;
+    locinfo.props.setOrientation(orient, epoch);
 
     // Setting the motion state triggers a sync, even if its the same one that
     // was already being used.
