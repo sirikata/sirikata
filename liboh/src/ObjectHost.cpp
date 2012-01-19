@@ -59,7 +59,9 @@ ObjectHost::ObjectHost(ObjectHostContext* ctx, Network::IOService *ioServ, const
    mStorage(NULL),
    mPersistentSet(NULL),
    mQueryProcessor(NULL),
-   mActiveHostedObjects(0)
+   mActiveHostedObjects(0),
+   mCoordinatorConnecting(false),
+   mCoordinatorConnected(false)
 {
     mContext->objectHost = this;
     OptionValue *protocolOptions;
@@ -75,9 +77,9 @@ ObjectHost::ObjectHost(ObjectHostContext* ctx, Network::IOService *ioServ, const
                            scriptManagers=new OptionValue("scriptManagers","simplecamera:{},js:{}",OptionValueType<std::map<std::string,std::string> >(),"Instantiates script managers with specified options like \"simplecamera:{},js:{--import-paths=/path/to/scripts}\""),
                            simOptions=new OptionValue("simOptions","ogregraphics:{}",OptionValueType<std::map<std::string,std::string> >(),"Passes initialization strings to simulations, by name"),
                            nameOptions=new OptionValue("name", default_name, Sirikata::OptionValueType<String>(), "Object Host name"),
-                           sendThOptions=new OptionValue("sendTh", "99999", Sirikata::OptionValueType<uint32>(), "Threshold to send migration request"),
-                           recvThOptions=new OptionValue("recvTh", "99999", Sirikata::OptionValueType<uint32>(), "Threshold to receive migration request"),
-                           recvCapOptions=new OptionValue("recvCap", "99999", Sirikata::OptionValueType<uint32>(), "Capacity to receive migration request"),
+                           sendThOptions=new OptionValue("sendTh", "1000000000", Sirikata::OptionValueType<uint32>(), "Threshold to send migration request"),
+                           recvThOptions=new OptionValue("recvTh", "0", Sirikata::OptionValueType<uint32>(), "Threshold to receive migration request"),
+                           recvCapOptions=new OptionValue("recvCap", "0", Sirikata::OptionValueType<uint32>(), "Capacity to receive migration request"),
                            NULL);
 
     OptionSet* oh_options = OptionSet::getOptions("objecthost",this);
@@ -159,7 +161,7 @@ void ObjectHost::addServerIDMap(const SpaceID& space_id, ServerIDMap* sidmap) {
         std::tr1::bind(&ObjectHost::handleObjectMessage, this, _1, space_id, _2),
         std::tr1::bind(&ObjectHost::handleObjectDisconnected, this, _1, _2),
         std::tr1::bind(&ObjectHost::handleObjectOHMigration, this, _1, _2, _3, _4),
-	std::tr1::bind(&ObjectHost::handleEntityMigrationReady, this, _1)
+        std::tr1::bind(&ObjectHost::handleEntityMigrationReady, this, _1)
     );
     smgr->registerDefaultOHDPHandler(
         std::tr1::bind(&ObjectHost::handleDefaultOHDPMessageHandler, this, _1, _2, _3)
@@ -167,7 +169,6 @@ void ObjectHost::addServerIDMap(const SpaceID& space_id, ServerIDMap* sidmap) {
     smgr->addListener(static_cast<SpaceNodeSessionListener*>(this));
     mSessionManagers[space_id] = smgr;
     smgr->start();
-
 }
 
 void ObjectHost::addOHCoordinator(const SpaceID& space_id, ServerIDMap* sidmap) {
@@ -185,30 +186,34 @@ void ObjectHost::addOHCoordinator(const SpaceID& space_id, ServerIDMap* sidmap) 
     smgr->addListener(static_cast<SpaceNodeSessionListener*>(this));
     mCoordinatorSessionManager = smgr;
     mCoordinatorSpaceID = space_id;
+    mCoordinatorConnecting = true;
     smgr->start();
 
     mContext->mainStrand->post(std::tr1::bind(&ObjectHost::connectOHCoordinator, this));
 }
 
 void ObjectHost::handleObjectConnectedtoCoordinator(const SpaceObjectReference& sporef_objid, ServerID server) {
+	mCoordinatorConnected = true;
+	mCoordinatorConnecting = false;
     ObjectNodeSessionProvider::notify(&ObjectNodeSessionListener::onObjectNodeSession, sporef_objid.space(), sporef_objid.object(), OHDP::NodeID(server));
 }
 
-// Feng: This function is as same as handleObjectConnected, but it contains the logging function.
 void ObjectHost::handleObjectConnected(const SpaceObjectReference& sporef_objid, ServerID server) {
     ObjectNodeSessionProvider::notify(&ObjectNodeSessionListener::onObjectNodeSession, sporef_objid.space(), sporef_objid.object(), OHDP::NodeID(server));
 
-    OH_LOG(info, "Register the object " << sporef_objid.object().getAsUUID()<< " to the coordinator");
+    //OH_LOG(info, "Register the object " << sporef_objid.object().getAsUUID()<< " to the coordinator");
     updateCoordinator(sporef_objid, true);
+    //checkload(sporef_objid.object().getAsUUID());
 }
 
 void ObjectHost::handleObjectMigrated(const SpaceObjectReference& sporef_objid, ServerID from, ServerID to) {
     ObjectNodeSessionProvider::notify(&ObjectNodeSessionListener::onObjectNodeSession, sporef_objid.space(), sporef_objid.object(), OHDP::NodeID(to));
 }
 
-void ObjectHost::handleObjectDisconnected(const SpaceObjectReference& sporef_objid, Disconnect::Code) {
-    OH_LOG(info, "Unregister the object " << sporef_objid.object().getAsUUID()<< " to the coordinator");
-    updateCoordinator(sporef_objid, false);
+void ObjectHost::handleObjectDisconnected(const SpaceObjectReference& sporef_objid, Disconnect::Code code) {
+    //OH_LOG(info, "Unregister the object " << sporef_objid.object().getAsUUID()<< " to the coordinator");
+    if(code != Disconnect::Migrated)
+    	updateCoordinator(sporef_objid, false);
 
     ObjectNodeSessionProvider::notify(&ObjectNodeSessionListener::onObjectNodeSession, sporef_objid.space(), sporef_objid.object(), OHDP::NodeID::null());
 }
@@ -218,7 +223,8 @@ void ObjectHost::handleObjectOHMigration(const UUID &_id, const String& script_t
 }
 
 void ObjectHost::handleEntityMigrationReady(const UUID& entity_id) {
-	mCoordinatorSessionManager->handleEntityMigrationReady(entity_id);
+	if(mCoordinatorConnected)
+		mCoordinatorSessionManager->handleEntityMigrationReady(entity_id);
 }
 
 //use this function to request the object host to send a disconnect message
@@ -236,7 +242,7 @@ void ObjectHost::migrateEntityHelper(const UUID& uuid, const String& dest_name)
 {
 	//migrateEntity(getDefaultSpace(), uuid, dest_name);
     mContext->mainStrand->post(
-    		Duration::seconds(2),
+    		Duration::seconds(1),
     		std::tr1::bind(&ObjectHost::migrateEntity, this, getDefaultSpace(), uuid, dest_name));
 }
 
@@ -246,8 +252,8 @@ void ObjectHost::migrateEntity(const SpaceID& space, const UUID& uuid, const Str
     if (iter == mSessionManagers.end())
     	return;
 
+    mContext->mainStrand->post(std::tr1::bind(&ObjectHost::movePersistedObjectSet, this, uuid, dest_name));
     mMigratingEntity.insert(uuid);
-    mPersistentSet->movePersistedObject(uuid, dest_name);
     if(!mEntityPresenceSet[uuid].empty()){
     	ObjectReference oref = ObjectReference(*mEntityPresenceSet[uuid].begin());
     	iter->second->migrateEntity(SpaceObjectReference(space, oref), uuid, dest_name, mEntityPresenceSet[uuid]);
@@ -257,6 +263,11 @@ void ObjectHost::migrateEntity(const SpaceID& space, const UUID& uuid, const Str
     		iter->second->migrateObject(SpaceObjectReference(space, oref), *it, dest_name);
     	}
     }
+}
+
+void ObjectHost::movePersistedObjectSet(const UUID& uuid, const String& dest_name)
+{
+	mPersistentSet->movePersistedObject(uuid, dest_name);
 }
 
 void ObjectHost::migrateAllEntity(const SpaceID& space, const String& dest_name)
@@ -327,10 +338,7 @@ bool ObjectHost::connect(
 
 bool ObjectHost::connectOHCoordinator() {
 	ObjectReference oref = ObjectReference(UUID::random());
-
-	//Feng: this is a very important object. It will be recalled in the furture.
 	SpaceObjectReference sporef (mCoordinatorSpaceID,oref);
-	OH_LOG(info, "Connect to coordinator " << mCoordinatorSpaceID << "");
 	return mCoordinatorSessionManager->connect(sporef, mName);
 }
 
@@ -436,18 +444,34 @@ void ObjectHost::registerHostedObject(const SpaceObjectReference &sporef_uuid, c
     mPresenceEntity[sporef_uuid.object().getAsUUID()]=obj->id();
     mEntityPresenceSet[obj->id()].insert(sporef_uuid.object().getAsUUID());
 
+    //migration test
+    if(mEntityPresenceSet.size()>mSendMigrateThreshold) {
+    	mContext->mainStrand->post(
+    			Duration::seconds(2),
+    			std::tr1::bind(&ObjectHost::migrateRequest, this, obj->id()));
+    }
+
+}
+
+void ObjectHost::checkload(const UUID& obj_id)
+{
     // migration test
-    if(mEntityPresenceSet.size()>mSendMigrateThreshold){
-        mContext->mainStrand->post(
-        		Duration::seconds(2),
-        		std::tr1::bind(&ObjectHost::migrateRequest, this, obj->id())
-        );
+    if(mEntityPresenceSet.size()>mSendMigrateThreshold) {
+    	mContext->mainStrand->post(
+    			Duration::seconds(2),
+    			std::tr1::bind(&ObjectHost::migrateRequest, this, mPresenceEntity[obj_id]));
     }
 }
 
-void ObjectHost::migrateRequest(const UUID& uuid)
+void ObjectHost::migrateRequest(const UUID& entity_id)
 {
-	mCoordinatorSessionManager->migrateRequest(uuid);
+	if(mCoordinatorConnected)
+		mCoordinatorSessionManager->migrateRequest(entity_id);
+	else if(mCoordinatorConnecting) {
+	    mContext->mainStrand->post(
+	    		Duration::seconds(0.05),
+	    		std::tr1::bind(&ObjectHost::migrateRequest, this, entity_id));
+	}
 }
 
 void ObjectHost::unregisterHostedObject(const SpaceObjectReference& sporef_uuid, HostedObject* key_obj)
@@ -476,10 +500,16 @@ void ObjectHost::unregisterHostedObject(const SpaceObjectReference& sporef_uuid,
     }
 }
 
-/* Feng: all the objects should also be registered at the coordinator with the entity id and object id, to measure the unbalance */
+// Inform oh coordinator of the added or deleted object
 void ObjectHost::updateCoordinator(const SpaceObjectReference& sporef_objid, const bool& is_connect) {
     //OH_LOG(info, "update to coordinator " << mCoordinatorSpaceID << "");
-    mCoordinatorSessionManager->updateCoordinator(sporef_objid, mPresenceEntity[sporef_objid.object().getAsUUID()], mName, is_connect);
+	if(mCoordinatorConnected)
+		mCoordinatorSessionManager->updateCoordinator(sporef_objid, mPresenceEntity[sporef_objid.object().getAsUUID()], mName, is_connect);
+	else if(mCoordinatorConnecting) {
+	    mContext->mainStrand->post(
+	    		Duration::seconds(0.05),
+	    		std::tr1::bind(&ObjectHost::updateCoordinator, this, sporef_objid, is_connect));
+	}
 }
 
 void ObjectHost::hostedObjectDestroyed(const UUID& objid) {
@@ -518,7 +548,8 @@ void ObjectHost::stop() {
         SessionManager* sm = it->second;
         sm->stop();
     }
-    mCoordinatorSessionManager->stop();
+    if(mCoordinatorConnected)
+    	mCoordinatorSessionManager->stop();
 
     // HostedObjects may appear multiple times because they may have
     // multiple presences. Track which we've called stop on so we

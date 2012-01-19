@@ -45,11 +45,10 @@
 
 #include <iostream>
 #include <iomanip>
-#include <sys/time.h>
 
 #include <sirikata/core/network/IOStrandImpl.hpp>
 
-#define SPACE_LOG(lvl,msg) SILOG(space, lvl, msg)
+#define SPACE_LOG(lvl,msg) SILOG(coordinator, lvl, msg)
 
 namespace Sirikata
 {
@@ -103,11 +102,6 @@ Server::Server(SpaceContext* ctx, Authenticator* auth, Address4 oh_listen_addr, 
     mLocalForwarder = new LocalForwarder(mContext);
 
     mCount = 0;
-
-    timeval ts;
-    gettimeofday(&ts,NULL);
-    mtime_s = ts.tv_sec;
-    mtime_us=ts.tv_usec;
 }
 
 void Server::newStream(int err, SST::Stream<SpaceObjectReference>::Ptr s) {
@@ -379,7 +373,7 @@ void Server::handleSessionMessage(const ObjectHostConnectionID& oh_conn_id, Siri
     Sirikata::Protocol::Session::Container session_msg;
     bool parse_success = session_msg.ParseFromString(msg->payload());
     if (!parse_success) {
-        LOG_INVALID_MESSAGE(space, error, msg->payload());
+        LOG_INVALID_MESSAGE(coordinator, error, msg->payload());
         delete msg;
         return;
     }
@@ -393,7 +387,7 @@ void Server::handleSessionMessage(const ObjectHostConnectionID& oh_conn_id, Siri
             handleConnect(oh_conn_id, *msg, session_msg.connect());
         }
         else
-            SILOG(space,error,"Unknown connection message type");
+        	SPACE_LOG(error,"Unknown connection message type");
     }
     else if (session_msg.has_connect_ack()) {
     }
@@ -411,23 +405,27 @@ void Server::handleSessionMessage(const ObjectHostConnectionID& oh_conn_id, Siri
     		mObjectsDistribution[oh_conn_id.shortID()]->counter++;
     		mObjectsDistribution[oh_conn_id.shortID()]->entityMap[entity_id].ObjectSet.insert(obj_id);
     		mObjectsDistribution[oh_conn_id.shortID()]->entityMap[entity_id].Migrating = false;
-    		mCount++;
 
     	    // Update mObjectInfo
     	    if(!isObjectRecorded(obj_id)){
+    	    	mCount++;
     	    	mObjectInfo[obj_id].short_id=oh_conn_id.shortID();
     	    	mObjectInfo[obj_id].entity=entity_id;
     	    	mObjectInfo[obj_id].Migrating=false;
     	    	//SPACE_LOG(info, "New object recorded");
-
-    	    	rebalance(entity_id, oh_conn_id);
+    	    	//rebalance(entity_id, oh_conn_id);
     	    }
     	    else{
     	    	if(mObjectInfo[obj_id].Migrating==true) {
     	    		if(mObjectInfo[obj_id].MigratingTo==mObjectsDistribution[oh_conn_id.shortID()]->ObjectHostName){
-    	    			mObjectsDistribution[mObjectInfo[obj_id].short_id]->entityMap.erase(entity_id);
+    	    			//mObjectsDistribution[mObjectInfo[obj_id].short_id]->entityMap.erase(entity_id);
     	    			mObjectsDistribution[mObjectInfo[obj_id].short_id]->migratingTo_N--;
     	    			mObjectsDistribution[oh_conn_id.shortID()]->migratingFrom_N--;
+
+   	    				mObjectsDistribution[mObjectInfo[obj_id].short_id]->counter--;
+   	    				mObjectsDistribution[mObjectInfo[obj_id].short_id]->entityMap[entity_id].ObjectSet.erase(obj_id);
+   	    				SPACE_LOG(info, "OH "<<mObjectsDistribution[mObjectInfo[obj_id].short_id]->ObjectHostName
+   	    								<<" remove one migrated object, count: "<<mObjectsDistribution[mObjectInfo[obj_id].short_id]->counter<<"/"<<mCount);
 
     	    	    	mObjectInfo[obj_id].short_id=oh_conn_id.shortID();
     	    	    	mObjectInfo[obj_id].entity=entity_id;
@@ -438,58 +436,23 @@ void Server::handleSessionMessage(const ObjectHostConnectionID& oh_conn_id, Siri
     	    		}
     	    	}
     	    }
-/*
-            timeval ts;
-            gettimeofday(&ts,NULL);
-            long int time_s = ts.tv_sec;
-            int time_us=ts.tv_usec;
-            long int diff_s=time_s - mtime_s;
-            int diff_us=time_us - mtime_us;
-            double diff_t=diff_s+diff_us/(double)1000000;
-*/
+
     		SPACE_LOG(info, "OH "<<mObjectsDistribution[oh_conn_id.shortID()]->ObjectHostName
     						<<" add one object, count: "<<mObjectsDistribution[oh_conn_id.shortID()]->counter<<"/"<<mCount);
- //   						<<", time: "<<diff_t<<" s");
-
-    		/*
-    		ObjectsDistributionMap::iterator it;
-	        int sum = 0;
-	        for (it = mObjectsDistribution.begin(); it != mObjectsDistribution.end(); it++)
-	        	sum += it->second->counter2;
-	        int avg = sum / mObjectsDistribution.size();
-	        bool update_flag = true;
-	        for (it = mObjectsDistribution.begin(); it != mObjectsDistribution.end(); it++) {
-	        	if (it->second->counter2 != avg && it->second->counter2 != avg + 1)
-	        		update_flag = false;
-	        }
-	        if (update_flag == true) {
-	        	for (it = mObjectsDistribution.begin(); it != mObjectsDistribution.end(); it++)
-	        		it->second->counter2 = it->second->counter;
-	        }
-           */
 
     	}
         if(session_msg.coordinate().type() == Sirikata::Protocol::Session::Coordinate::Remove) { //Feng
         	UUID obj_id = session_msg.coordinate().object();
         	UUID entity_id = session_msg.coordinate().entity();
 
-        	if (mObjectsDistribution[oh_conn_id.shortID()]->entityMap[entity_id].ObjectSet.find(obj_id) != mObjectsDistribution[oh_conn_id.shortID()]->entityMap[entity_id].ObjectSet.end()) {
-
+        	if (mObjectsDistribution[oh_conn_id.shortID()]->entityMap[entity_id].ObjectSet.find(obj_id)
+        			!= mObjectsDistribution[oh_conn_id.shortID()]->entityMap[entity_id].ObjectSet.end()) {
         		mCount--;
         		mObjectsDistribution[oh_conn_id.shortID()]->counter--;
         		mObjectsDistribution[oh_conn_id.shortID()]->entityMap[entity_id].ObjectSet.erase(obj_id);
 
-/*                timeval ts;
-                gettimeofday(&ts,NULL);
-                long int time_s = ts.tv_sec;
-                int time_us=ts.tv_usec;
-                long int diff_s=time_s - mtime_s;
-                int diff_us=time_us - mtime_us;
-                double diff_t=diff_s+diff_us/(double)1000000;
-*/
         		SPACE_LOG(info, "OH "<<mObjectsDistribution[oh_conn_id.shortID()]->ObjectHostName
     							<<" remove one object, count: "<<mObjectsDistribution[oh_conn_id.shortID()]->counter<<"/"<<mCount);
-//    							<<", time: "<<diff_t<<" s");
         	}
         }
         if(session_msg.coordinate().type() == Sirikata::Protocol::Session::Coordinate::Ack) {
@@ -501,25 +464,6 @@ void Server::handleSessionMessage(const ObjectHostConnectionID& oh_conn_id, Siri
     		SPACE_LOG(info, "Receive migration request of entity "<<entity_id.rawHexData());
 
     		handleMigrateRequest(oh_conn_id, entity_id);
-
-    		/*
-    		String DstOHName;
-    		String SrcOHName = mObjectsDistribution[oh_conn_id.shortID()]->ObjectHostName;
-
-    		if (rebalance(SrcOHName, DstOHName, entity_id)) {
-    			mObjectsDistribution[oh_conn_id.shortID()]->entityMap[entity_id].MigrationDstOHName = DstOHName;
-                mObjectsDistribution[oh_conn_id.shortID()]->entityMap[entity_id].Migrating = true;
-
-                int t = mObjectsDistribution[mOHNameConnections[SrcOHName].shortID()]->entityMap[entity_id].ObjectSet.size();
-                mObjectsDistribution[mOHNameConnections[SrcOHName].shortID()]->counter2 -= t;
-
-                t = mObjectsDistribution[mOHNameConnections[DstOHName].shortID()]->entityMap[entity_id].ObjectSet.size();
-                mObjectsDistribution[mOHNameConnections[DstOHName].shortID()]->counter2 += t;
-
-                informOHMigrationTo(DstOHName, entity_id, oh_conn_id);
-    		} else {}
-    		*/
-
     	}
     	else if(session_msg.coordinate().type() == Sirikata::Protocol::Session::Coordinate::Ready) {
     		UUID entity_id = session_msg.coordinate().entity();
@@ -571,8 +515,7 @@ bool Server::rebalance(const UUID& entity_id, const ObjectHostConnectionID& oh_c
 	ObjectsDistributionMap::iterator it;
 	for (it = mObjectsDistribution.begin(); it != mObjectsDistribution.end(); it++) {
 		if( it->first != oh_conn_id.shortID()
-			&& it->second->counter + it->second->migratingFrom_N - it->second->migratingTo_N < min)
-		{
+			&& it->second->counter + it->second->migratingFrom_N - it->second->migratingTo_N < min) {
 			DstOHName = it->second->ObjectHostName;
 			min = it->second->counter + it->second->migratingFrom_N - it->second->migratingTo_N;
 		}
@@ -581,58 +524,13 @@ bool Server::rebalance(const UUID& entity_id, const ObjectHostConnectionID& oh_c
 	if (min + 2*delta < min_org) {
 		unbalance = true;
 		informOHMigrationTo(DstOHName, entity_id, oh_conn_id);
-		SPACE_LOG(info, "===Unbalance! move entity "<<entity_id.rawHexData()<<" from "
+		SPACE_LOG(info, "Rebalance: move entity "<<entity_id.rawHexData()<<" from "
 				<<mObjectsDistribution[oh_conn_id.shortID()]->ObjectHostName<<" to "<<DstOHName);
 	}
 
 	return unbalance;
 }
 
-//Feng
-bool Server::rebalance(const String& SrcOHName, String& DstOHName1, const UUID& entity_id) {
-	ObjectsDistributionMap::iterator it;
-	uint32 min = mObjectsDistribution[mOHNameConnections[SrcOHName].shortID()]->counter2; // we are going to find a OH has few objects
-	uint32 delta = mObjectsDistribution[mOHNameConnections[SrcOHName].shortID()]->entityMap[entity_id].ObjectSet.size();
-	uint32 min_org = min;
-	String minOHName = SrcOHName;
-	for (it = mObjectsDistribution.begin(); it != mObjectsDistribution.end(); it++) {
-		if (it->second->counter2 < min) {
-			min = it->second->counter2;
-			minOHName = it->second->ObjectHostName;
-		}
-	}
-	if ((min_org - min) > 2 * delta) {  // this is about the policy; And it can be changed.
-		DstOHName1 = minOHName;
-		return true;
-	}
-	return false;
-}
-
-//Feng
-bool Server::rebalance(const String& SrcOHName, String& DstOHName) {
-	ObjectsDistributionMap::iterator it;
-	uint32 max, min;
-	max = min = 0;
-	String maxOHName = mObjectsDistribution.begin()->second->ObjectHostName;
-	String minOHName = mObjectsDistribution.begin()->second->ObjectHostName;
-	for (it = mObjectsDistribution.begin(); it != mObjectsDistribution.end(); it++) {
-		if (it->second->counter2 > max) {
-			max = it->second->counter2;
-			maxOHName = it->second->ObjectHostName;
-		}
-		if (it->second->counter2 < min) {
-			min = it->second->counter2;
-			minOHName = it->second->ObjectHostName;
-		}
-	}
-	if (max > 2) {  // this is about the policy; And it can be changed.
-		DstOHName = minOHName;
-		return true;
-	}
-	return false;
-}
-
-//Feng
 void Server::informOHMigrationFrom(const String& SrcOHName, const UUID& uuid, const ObjectHostConnectionID& oh_conn_id) {
 	Sirikata::Protocol::Session::Container session_msg;
 	Sirikata::Protocol::Session::Coordinate oh_coordinate_msg = session_msg.mutable_coordinate();
@@ -664,26 +562,21 @@ void Server::informOHMigrationTo(const String& DstOHName, const UUID& uuid, cons
 			UUID::null(), OBJECT_PORT_SESSION,
 			serializePBJMessage(session_msg)
 			);
-	// Sent directly via object host connection manager
-
-	String SrcOHName = mObjectsDistribution[oh_conn_id.shortID()]->ObjectHostName;
-	SPACE_LOG(info, "Send migration request to OH "<< SrcOHName <<" < type:To, entity:"
-                        << uuid.rawHexData() << ", dst:" << DstOHName <<" >");
-	sendSessionMessageWithRetry(oh_conn_id, migration_req, Duration::seconds(0.05));
 
 	mObjectsDistribution[oh_conn_id.shortID()]->entityMap[uuid].MigrationDstOHName = DstOHName;
     mObjectsDistribution[oh_conn_id.shortID()]->entityMap[uuid].Migrating = true;
-    std::set<UUID>::iterator it;
-    for (it=mObjectsDistribution[oh_conn_id.shortID()]->entityMap[uuid].ObjectSet.begin();
+    for ( std::set<UUID>::iterator it=mObjectsDistribution[oh_conn_id.shortID()]->entityMap[uuid].ObjectSet.begin();
     		it!=mObjectsDistribution[oh_conn_id.shortID()]->entityMap[uuid].ObjectSet.end();it++) {
-
     	mObjectInfo[*it].Migrating = true;
     	mObjectInfo[*it].MigratingTo = DstOHName;
     	mObjectsDistribution[oh_conn_id.shortID()]->migratingTo_N++;
     	mObjectsDistribution[mOHNameConnections[DstOHName].shortID()]->migratingFrom_N++;
-    	//SPACE_LOG(info, "OH: "<<mObjectsDistribution[mOHNameConnections[DstOHName].shortID()]->ObjectHostName
-    	//		<<", migratingFrom_N: "<<mObjectsDistribution[mOHNameConnections[DstOHName].shortID()]->migratingFrom_N);
     }
+
+	SPACE_LOG(info, "Send migration request to OH "<< mObjectsDistribution[oh_conn_id.shortID()]->ObjectHostName
+				<<" < type:To, entity:"<< uuid.rawHexData() << ", dst:" << DstOHName <<" >");
+	// Sent directly via object host connection manager
+	sendSessionMessageWithRetry(oh_conn_id, migration_req, Duration::seconds(0.05));
 }
 
 
@@ -778,25 +671,18 @@ void Server::handleConnectAuthResponse(const ObjectHostConnectionID& oh_conn_id,
         // Decide whether this is a conflict or a retry
         if  //was already connected and it was the same oh sending msg
             (isObjectConnected(obj_id) &&
-                (mObjects[obj_id]->connID() == oh_conn_id))
-        {
+                (mObjects[obj_id]->connID() == oh_conn_id)) {
             // retry, tell them they're fine.
             sendConnectSuccess(oh_conn_id, obj_id);
-
         }
         else if
             // or was connecting and was the same oh sending message
-            (isObjectConnecting(obj_id) &&
-                mStoredConnectionData[obj_id].conn_id == oh_conn_id)
-        {
-
+            (isObjectConnecting(obj_id) && mStoredConnectionData[obj_id].conn_id == oh_conn_id){
         }
-        else
-        {
+        else {
         	sendConnectError(oh_conn_id, obj_id);
         }
         return;
-
     }
 
     StoredConnection sc;
@@ -804,21 +690,16 @@ void Server::handleConnectAuthResponse(const ObjectHostConnectionID& oh_conn_id,
     sc.conn_msg = connect_msg;
     mStoredConnectionData[obj_id] = sc;
 
-    // Feng: For each object connection, the distribution map will keep a record.
-    mObjectHostConnectionManager->addObject(oh_conn_id.shortID(), obj_id);  
-
-
     mObjectSessionManager->addSession(new ObjectSession(ObjectReference(obj_id)));
     ObjectConnection* conn = new ObjectConnection(obj_id, mObjectHostConnectionManager, sc.conn_id);
     mObjects[obj_id] = conn;
     mOHNameConnections[sc.conn_msg.oh_name()]=sc.conn_id;
     sendConnectSuccess(conn->connID(), obj_id);
 
-    /*Feng: this is a successful oh connection, then this oh should be added to the record */
+    // this is a successful oh connection, then this oh should be added to the record
     ObjectsDistribution* dist = new ObjectsDistribution;
     dist->ObjectHostName = sc.conn_msg.oh_name();
     dist->counter = 0;
-    dist->counter2 = 0;
     dist->migrate_threshold = 0;
     dist->migratingFrom_N = 0;
     dist->migratingTo_N = 0;
@@ -857,25 +738,7 @@ void Server::handleDisconnect(UUID obj_id, ObjectConnection* conn) {
     ObjectReference obj(obj_id);
     mObjectSessionManager->removeSession(obj);
 
-    // Feng:
-    // mObjectHostConnectionManager->deleteObject(short_conn_id, obj_id);
-
     delete conn;
-}
-
-void Server::handleEntityOHMigraion(const UUID& uuid, const ObjectHostConnectionID& oh_conn_id) {
-    Sirikata::Protocol::Session::Container oh_migration;
-    Sirikata::Protocol::Session::IOHMigration oh_migration_msg = oh_migration.mutable_oh_migration();
-    oh_migration_msg.set_id(uuid);
-    oh_migration_msg.set_type(Sirikata::Protocol::Session::OHMigration::Entity);
-    Sirikata::Protocol::Object::ObjectMessage* migration_req = createObjectMessage(
-        mContext->id(),
-        UUID::null(), OBJECT_PORT_SESSION,
-        UUID::null(), OBJECT_PORT_SESSION,
-        serializePBJMessage(oh_migration)
-    );
-    // Sent directly via object host connection manager
-    sendSessionMessageWithRetry(oh_conn_id, migration_req, Duration::seconds(0.05));
 }
 
 void Server::start() {

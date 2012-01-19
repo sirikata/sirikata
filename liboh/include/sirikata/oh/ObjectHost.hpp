@@ -319,6 +319,10 @@ public:
     OHDP::MessageHandler mDefaultOHDPMessageHandler;
 
     bool connectOHCoordinator();
+    void movePersistedObjectSet(const UUID& uuid, const String& dest_name);
+    void checkload(const UUID& obj_id);
+    bool mCoordinatorConnecting;
+    bool mCoordinatorConnected;
 
 }; // class ObjectHost
 

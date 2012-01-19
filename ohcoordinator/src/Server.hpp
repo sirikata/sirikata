@@ -130,8 +130,6 @@ private:
     void sendConnectSuccess(const ObjectHostConnectionID& oh_conn_id, const UUID& obj_id);
     void sendConnectError(const ObjectHostConnectionID& oh_conn_id, const UUID& obj_id);
 
-    void handleMigrateRequest(const ObjectHostConnectionID& oh_conn_id, const UUID& obj_id);
-
     // Handle a disconnection
     void handleDisconnect(UUID obj_id, ObjectConnection* conn);
 
@@ -183,11 +181,6 @@ private:
         }
     };
 
-    typedef std::map<UUID, String> OHMigratingObjects; // <object_id, Host Name that is migrating to>
-    OHMigratingObjects mOHMigratingObjects;
-
-    void handleEntityOHMigraion(const UUID& uuid, const ObjectHostConnectionID& oh_conn_id);
-
     // FIXME Another place where needing a size queue and notifications causes
     // double locking...
     boost::mutex mRouteObjectMessageMutex;
@@ -197,12 +190,10 @@ private:
     // cache them so TimeSeries reports are fast
     String mTimeSeriesObjects;
 
-    //Feng: create the data structure for the record
+    //Create the data structure for the record
     struct ObjectsDistribution {
-      //ObjectHostConnectionID conn_id;
       String ObjectHostName;
       uint32 counter;
-      uint32 counter2;
       uint32 migratingTo_N;
       uint32 migratingFrom_N;
       uint32 migrate_capacity;
@@ -215,21 +206,18 @@ private:
       } objectsPerEntity_t;
 
       std::tr1::unordered_map<UUID, objectsPerEntity_t,UUID::Hasher> entityMap;
-
     };
+
     typedef std::tr1::unordered_map<ShortObjectHostConnectionID, ObjectsDistribution*> ObjectsDistributionMap;
     ObjectsDistributionMap mObjectsDistribution;
-    bool rebalance(const String&, String&);
-    bool rebalance(const String&, String&, const UUID&);
+    typedef std::tr1::unordered_map<String, ObjectHostConnectionID> OHNameConnectionMap;
+    OHNameConnectionMap mOHNameConnections;
+    uint32 mCount; // total number of objects
+
     bool rebalance(const UUID& uuid, const ObjectHostConnectionID& oh_conn_id);
     void informOHMigrationTo(const String& DstOHName, const UUID& uuid, const ObjectHostConnectionID& oh_conn_id);
     void informOHMigrationFrom(const String& SrcOHName, const UUID& uuid, const ObjectHostConnectionID& oh_conn_id);
-
-    typedef std::tr1::unordered_map<String, ObjectHostConnectionID> OHNameConnectionMap;
-    OHNameConnectionMap mOHNameConnections;
-    std::tr1::unordered_map<UUID, String, UUID::Hasher> mMigratingEntity;
-
-    uint32 mCount; // total number of objects
+    void handleMigrateRequest(const ObjectHostConnectionID& oh_conn_id, const UUID& obj_id);
 
     typedef struct objectInfo {
     	ShortObjectHostConnectionID short_id;
@@ -237,13 +225,10 @@ private:
     	bool Migrating;
     	String MigratingTo;
     } ObjectInfo;
-
     std::tr1::unordered_map<UUID, objectInfo, UUID::Hasher> mObjectInfo;
+
     // Checks if an object already recorded
     bool isObjectRecorded(const UUID& object_id) const {return (mObjectInfo.find(object_id) != mObjectInfo.end());}
-
-    long int mtime_s;
-    int mtime_us;
 
 }; // class Server
 

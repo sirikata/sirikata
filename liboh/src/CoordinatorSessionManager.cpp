@@ -59,7 +59,7 @@ void fillVersionInfo(Sirikata::Protocol::Session::IVersionInfo vers_info, Object
     vers_info.set_vcs_version(SIRIKATA_GIT_REVISION);
 }
 void logVersionInfo(Sirikata::Protocol::Session::VersionInfo vers_info) {
-    SESSION_LOG(info, "Connection to space server " << (vers_info.has_name() ? vers_info.name() : "(unknown)") << " version " << (vers_info.has_version() ? vers_info.version() : "(unknown)") << " (" << (vers_info.has_vcs_version() ? vers_info.vcs_version() : "") << ")");
+    SESSION_LOG(info, "Connection to oh coordinator " << (vers_info.has_name() ? vers_info.name() : "(unknown)") << " version " << (vers_info.has_version() ? vers_info.version() : "(unknown)") << " (" << (vers_info.has_vcs_version() ? vers_info.vcs_version() : "") << ")");
 }
 } // namespace
 
@@ -200,7 +200,7 @@ void CoordinatorSessionManager::ObjectConnections::disconnectWithCode(const Spac
         if (disconFunc)
             disconFunc(tmp_sporef, code);
         else
-            SILOG(oh,error,"Disconnection callback for "<<sporef.toString()<<" is null");
+            SILOG(oh,error,"Coordinator disconnection callback is null");
         parent->mObjectDisconnectedCallback(sporef, code);
     }
 }
@@ -247,13 +247,13 @@ CoordinatorSessionManager::CoordinatorSessionManager(
    mSpace(space),
    mIOStrand( ctx->ioService->createStrand() ),
    mServerIDMap(sidmap),
-   mMigrateThreshold(migrate_threshold),
-   mMigrateCapacity(migrate_capacity),
    mObjectConnectedCallback(conn_cb),
    mObjectMessageHandlerCallback(msg_cb),
    mObjectDisconnectedCallback(disconn_cb),
    mObjectMigrationToCallback(objmigrationto_cb),
    mObjectOHMigrationCallback(ohmig_cb),
+   mMigrateThreshold(migrate_threshold),
+   mMigrateCapacity(migrate_capacity),
    mObjectConnections(this),
    mTimeSyncClient(NULL),
    mShuttingDown(false)
@@ -511,7 +511,7 @@ bool CoordinatorSessionManager::send(const SpaceObjectReference& sporef_src, con
 
     ServerConnectionMap::iterator it = mConnections.find(dest_server);
     if (it == mConnections.end()) {
-        SESSION_LOG(warn,"Tried to send message for object to unconnected server.");
+        SESSION_LOG(warn,"Tried to send message for object to unconnected Coordinator.");
         return false;
     }
     SpaceNodeConnection* conn = it->second;
@@ -586,12 +586,12 @@ void CoordinatorSessionManager::updateCoordinator(const SpaceObjectReference& sp
     session_msg.coordinate().set_object(sporef_objid.object().getAsUUID());
     session_msg.coordinate().set_entity(entity_uuid); // entity id;
     session_msg.coordinate().set_oh_name(oh_name); // name of coordinator, should be a global
-/*
+
     if(is_connect)
-    	SESSION_LOG(info,"Send Update: add an object information "<<sporef_objid.object().getAsUUID()<<" to coordinator");
+    	SESSION_LOG(info,"Send Update to coordinator: add an object "<<sporef_objid.object().getAsUUID());
     else
-    	SESSION_LOG(info,"Send Update: remove an object information "<<sporef_objid.object().getAsUUID()<<" to coordinator");
-*/
+    	SESSION_LOG(info,"Send Update to coordinator: remove an object "<<sporef_objid.object().getAsUUID());
+
     sendRetryingMessage(
     		mSpaceObjectRef, OBJECT_PORT_SESSION,
     		UUID::null(), OBJECT_PORT_SESSION,
@@ -714,7 +714,7 @@ void CoordinatorSessionManager::finishSetupSpaceConnection(ServerID server, Addr
     Address addy(convertAddress4ToSirikata(addr));
     mConnections[server] = conn;
     conn->connect(addy);
-    SESSION_LOG(info,"Trying to connect to " << addy.toString());
+    SESSION_LOG(detailed,"Trying to connect to " << addy.toString());
 }
 
 void CoordinatorSessionManager::handleSpaceConnection(const Sirikata::Network::Stream::ConnectionStatus status,
@@ -746,13 +746,13 @@ void CoordinatorSessionManager::handleSpaceConnection(const Sirikata::Network::S
         mTimeSyncClient->addNode(OHDP::NodeID(sid));
     }
     else if (status == Sirikata::Network::Stream::ConnectionFailed) {
-        SESSION_LOG(error,"Failed to connect to server " << sid << ": " << reason);
+        SESSION_LOG(error,"Failed to connect to OH Coordinator: " << reason);
         delete conn;
         mConnections.erase(sid);
         return;
     }
     else if (status == Sirikata::Network::Stream::Disconnected) {
-        SESSION_LOG(error,"Disconnected from server " << sid << ": " << reason);
+        SESSION_LOG(error,"Disconnected from OH Coordinator: " << reason);
         delete conn;
         mConnections.erase(sid);
         mTimeSyncClient->removeNode(OHDP::NodeID(sid));

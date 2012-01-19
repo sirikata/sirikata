@@ -69,7 +69,7 @@ struct ServerData {
 };
 void createServer(Server** server_out, ServerData sd, Address4 addr) {
     if (addr == Address4::Null) {
-        SILOG(space, fatal, "The requested server ID isn't in ServerIDMap");
+        SILOG(coordinator, fatal, "The requested server ID isn't in ServerIDMap");
         sd.space_context->shutdown();
     }
 
