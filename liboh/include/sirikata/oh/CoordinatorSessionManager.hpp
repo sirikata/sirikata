@@ -260,8 +260,8 @@ private:
     ObjectMigrationCallback mObjectMigrationToCallback;
     ObjectOHMigrationCallback mObjectOHMigrationCallback;
 
-    uint32 mMigrateCapacity;
     uint32 mMigrateThreshold;
+    uint32 mMigrateCapacity;
 
     // Only main strand accesses and manipulates the map, although other strand
     // may access the SpaceNodeConnection*'s.
