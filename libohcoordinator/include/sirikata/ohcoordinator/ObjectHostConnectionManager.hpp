@@ -141,15 +141,6 @@ private:
     void insertConnection(ObjectHostConnection* conn);
     void destroyConnection(ObjectHostConnection* conn);
     void closeAllConnections();
-
-    //Feng: create the data structure for the record
-    struct ObjectsDistribution {
-      ObjectHostConnectionID conn_id;
-      int counter;
-      std::set<UUID> lObjects;
-    };
-    typedef std::tr1::unordered_map<ShortObjectHostConnectionID, ObjectsDistribution*> ObjectsDistributionMap;
-    ObjectsDistributionMap mObjectsDistribution;
 };
 
 } // namespace Sirikata

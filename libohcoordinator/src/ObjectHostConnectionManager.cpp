@@ -37,7 +37,7 @@
 #include <sirikata/core/network/StreamListenerFactory.hpp>
 #include <sirikata/core/util/PluginManager.hpp>
 #include <sirikata/core/trace/Trace.hpp>
-#define SPACE_LOG(level,msg) SILOG(space,level,msg)
+#define SPACE_LOG(level,msg) SILOG(coordinator,level,msg)
 
 namespace Sirikata {
 
@@ -167,7 +167,6 @@ void ObjectHostConnectionManager::listen(const Address4& listen_addr) {
     );
 
     SPACE_LOG(debug,"Listening for object hosts on " << convertAddress4ToSirikata(listen_addr).toString());
-    SPACE_LOG(debug,"This is a test for the new version " << convertAddress4ToSirikata(listen_addr).toString());
 }
 
 void ObjectHostConnectionManager::shutdown() {
@@ -262,16 +261,6 @@ void ObjectHostConnectionManager::handleConnectionRead(ObjectHostConnection* con
 void ObjectHostConnectionManager::insertConnection(ObjectHostConnection* conn) {
     mConnections.insert(conn);
     mShortConnections[conn->short_id] = conn;
-
-    //Feng: Here we can add a phase to insert the object host to the record
-    ObjectsDistribution* newOHList = new ObjectsDistribution;
-    newOHList->conn_id = conn_id(conn);
-    newOHList->counter = 0;
-    if (mObjectsDistribution.find(conn->short_id) == mObjectsDistribution.end()) {
-      mObjectsDistribution[conn->short_id] = newOHList;
-    } else {
-      assert(0 && "Can not reach here!!");
-    }
     // onObjectHostConnected notification happens upon stream connection
 }
 
@@ -280,38 +269,12 @@ void ObjectHostConnectionManager::destroyConnection(ObjectHostConnection* conn) 
     mListener->onObjectHostDisconnected(conn_id(conn), conn->short_id);
     mConnections.erase(conn);
     mShortConnections.erase(conn->short_id);
-
-    //Feng: Here we can add a phase to delete the object host from the record
-    if (mObjectsDistribution.find(conn->short_id) != mObjectsDistribution.end()) {
-      mObjectsDistribution.erase(conn->short_id);
-    } else {
-      assert(0 && "Can not reach here!!");
-    }
-
     delete conn;
 }
 
 void ObjectHostConnectionManager::closeAllConnections() {
     while(!mConnections.empty())
         destroyConnection(*(mConnections.begin()));
-}
-
-//Feng:
-void ObjectHostConnectionManager::addObject(const ShortObjectHostConnectionID short_conn_id, const UUID& obj_id) {
-    if (mObjectsDistribution.find(short_conn_id) != mObjectsDistribution.end()) {
-      mObjectsDistribution[short_conn_id]->counter++;
-      mObjectsDistribution[short_conn_id]->lObjects.insert(obj_id);
-    } else {
-      assert(0 && "can not reach here!!");
-    }
-}
-void ObjectHostConnectionManager::deleteObject(const ShortObjectHostConnectionID short_conn_id, const UUID& obj_id) {
-    if (mObjectsDistribution.find(short_conn_id) != mObjectsDistribution.end()) {
-      mObjectsDistribution[short_conn_id]->counter--;
-      mObjectsDistribution[short_conn_id]->lObjects.erase(obj_id);
-    } else {
-      assert(0 && "can not reach here!!");
-    }
 }
 
 } // namespace Sirikata
