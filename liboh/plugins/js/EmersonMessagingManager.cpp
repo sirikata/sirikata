@@ -211,7 +211,7 @@ void EmersonMessagingManager::scriptCommWriteStreamConnectedCB(Liveness::Token a
     if (err != SST_IMPL_SUCCESS)
     {
         if (retries > 0)
-            sendScriptCommMessageReliable(sender, receiver, msg, retries--);
+            sendScriptCommMessageReliable(sender, receiver, msg, --retries);
         return;
     }
 
@@ -235,11 +235,12 @@ void EmersonMessagingManager::writeMessage(Liveness::Token alive, SSTStreamPtr s
 void EmersonMessagingManager::writeMessageSubstream(Liveness::Token alive, int err, SSTStreamPtr subStreamPtr, const String& msg, const SpaceObjectReference& sender, const SpaceObjectReference& receiver, int8 retries) {
     if (!alive) return;
 
-    if (err != SST_IMPL_SUCCESS) {
+    if (err != SST_IMPL_SUCCESS)
+    {
         // Try the whole process over, starting from scratch in case the stream
         // changed
         if (retries > 0)
-            sendScriptCommMessageReliable(sender, receiver, msg, retries--);
+            sendScriptCommMessageReliable(sender, receiver, msg, --retries);
         return;
     }
 
