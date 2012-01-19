@@ -127,6 +127,13 @@ protected:
     // Waiting to be important enough to load
     ObjectMap mWaitingObjects;
 
+    typedef boost::recursive_mutex RMutex;
+    //prevents multiple threads from simultaneously accessing
+    //mObjects,mLoadedObjects,mWatingObjects,and assetMap.  can always split
+    //this into multiple mutexes if performance suffers.
+    RMutex dlPlannerMutex;
+
+
     // Heap storage for Objects. Choice between min/max heap is at call time.
     typedef std::vector<Object*> ObjectHeap;
 
@@ -167,7 +174,10 @@ protected:
         ~Asset();
     };
     typedef std::tr1::unordered_map<Transfer::URI, Asset*, Transfer::URI::Hasher> AssetMap;
+
+
     AssetMap mAssets;
+
 
     // Because we aggregate all Asset requests so we only generate one
     // AssetDownloadTask, we need to aggregate some priorities

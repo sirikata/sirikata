@@ -119,6 +119,7 @@ void DistanceDownloadPlanner::iAddObject(Object* r, Liveness::Token alive)
         return;
     }
 
+    RMutex::scoped_lock lock(dlPlannerMutex);
     calculatePriority(r->proxy);
     mObjects[r->name] = r;
     mWaitingObjects[r->name] = r;
@@ -126,7 +127,9 @@ void DistanceDownloadPlanner::iAddObject(Object* r, Liveness::Token alive)
     checkShouldLoadNewObject(r);
 }
 
-DistanceDownloadPlanner::Object* DistanceDownloadPlanner::findObject(const String& name) {
+DistanceDownloadPlanner::Object* DistanceDownloadPlanner::findObject(const String& name)
+{
+    RMutex::scoped_lock lock(dlPlannerMutex);
     ObjectMap::iterator it = mObjects.find(name);
     return (it != mObjects.end() ? it->second : NULL);
 }
@@ -146,7 +149,7 @@ void DistanceDownloadPlanner::iRemoveObject(
 {
     if (!alive)
         return;
-
+    RMutex::scoped_lock lock(dlPlannerMutex);
     ObjectMap::iterator it = mObjects.find(name);
     if (it != mObjects.end()) {
         Object* r = it->second;
@@ -253,6 +256,7 @@ bool DistanceDownloadPlanner::budgetRequiresChange() const {
 }
 
 void DistanceDownloadPlanner::loadObject(Object* r) {
+    RMutex::scoped_lock lock(dlPlannerMutex);
     mWaitingObjects.erase(r->name);
     mLoadedObjects[r->name] = r;
 
@@ -264,6 +268,7 @@ void DistanceDownloadPlanner::loadObject(Object* r) {
 }
 
 void DistanceDownloadPlanner::unloadObject(Object* r) {
+    RMutex::scoped_lock lock(dlPlannerMutex);
     mLoadedObjects.erase(r->name);
     mWaitingObjects[r->name] = r;
 
@@ -290,7 +295,7 @@ void DistanceDownloadPlanner::iPoll(Liveness::Token dpAlive)
 
     if (mContext->stopped()) return;
 
-
+    RMutex::scoped_lock lock(dlPlannerMutex);
     // Update priorities, tracking the largest undisplayed priority and the
     // smallest displayed priority to decide if we're going to have to swap.
     float32 mMinLoadedPriority = 1000000, mMaxWaitingPriority = 0;
@@ -369,6 +374,8 @@ void DistanceDownloadPlanner::iPoll(Liveness::Token dpAlive)
         }
     }
 
+
+
     // Finally, now that we've settled on the set of Objects that are being
     // loaded, update the per-Asset priorities for currently loading assets
     for(AssetMap::iterator it = mAssets.begin(); it != mAssets.end(); it++) {
@@ -394,7 +401,8 @@ void DistanceDownloadPlanner::iStop(Liveness::Token dpAlive)
 
 
     mStopped = true;
-
+    
+    RMutex::scoped_lock lock(dlPlannerMutex);
     for(AssetMap::iterator it = mAssets.begin(); it != mAssets.end(); it++)
     {
         Asset* asset = it->second;
@@ -412,13 +420,16 @@ void DistanceDownloadPlanner::requestAssetForObject(Object* forObject) {
 
     Asset* asset = NULL;
     // First make sure we have an Asset for this
-    AssetMap::iterator asset_it = mAssets.find(forObject->file);
-    if (asset_it == mAssets.end()) {
-        asset = new Asset(forObject->file);
-        mAssets.insert( AssetMap::value_type(forObject->file, asset) );
-    }
-    else {
-        asset = asset_it->second;
+    {
+        RMutex::scoped_lock lock(dlPlannerMutex);
+        AssetMap::iterator asset_it = mAssets.find(forObject->file);
+        if (asset_it == mAssets.end()) {
+            asset = new Asset(forObject->file);
+            mAssets.insert( AssetMap::value_type(forObject->file, asset) );
+        }
+        else {
+            asset = asset_it->second;
+        }
     }
 
     assert(asset->waitingObjects.find(forObject->id()) == asset->waitingObjects.end());
@@ -447,9 +458,13 @@ void DistanceDownloadPlanner::loadAsset(Transfer::URI asset_uri) {
 
     DLPLANNER_LOG(detailed, "Finished downloading " << asset_uri);
 
-    if (mAssets.find(asset_uri) == mAssets.end()) return;
-    Asset* asset = mAssets[asset_uri];
-
+    Asset* asset = NULL;
+    {
+        RMutex::scoped_lock lock(dlPlannerMutex);
+        if (mAssets.find(asset_uri) == mAssets.end()) return;
+        asset = mAssets[asset_uri];
+    }
+    
     DLPLANNER_LOG(detailed, "Loading asset " << asset->uri);
 
     //get the mesh data and check that it is valid.
@@ -492,9 +507,9 @@ void DistanceDownloadPlanner::finishLoadAsset(Asset* asset, bool success) {
         const String& resource_id = *it;
 
         DLPLANNER_LOG(detailed, "Using asset " << asset->uri << " for " << resource_id);
-
         // It may not even need it anymore if its not in the set of objects we
         // currently wnat loaded anymore (or not even exist anymore)
+        RMutex::scoped_lock lock(dlPlannerMutex);
         ObjectMap::iterator rit = mObjects.find(resource_id);
         if (rit == mObjects.end()) continue;
         Object* resource = rit->second;
@@ -745,6 +760,7 @@ void DistanceDownloadPlanner::handleLoadedResource(Asset* asset) {
     }
 }
 
+
 void DistanceDownloadPlanner::updateAssetPriority(Asset* asset) {
     // We only care about updating priorities when we're still downloading
     // the asset.
@@ -752,6 +768,7 @@ void DistanceDownloadPlanner::updateAssetPriority(Asset* asset) {
 
     std::vector<TransferRequest::PriorityType> priorities;
     for(ObjectSet::iterator obj_it = asset->waitingObjects.begin(); obj_it != asset->waitingObjects.end(); obj_it++) {
+        RMutex::scoped_lock lock(dlPlannerMutex);
         String objid = *obj_it;
         assert(mObjects.find(objid) != mObjects.end());
         Object* obj = mObjects[objid];
@@ -767,8 +784,12 @@ void DistanceDownloadPlanner::unrequestAssetForObject(Object* forObject) {
 
     DLPLANNER_LOG(detailed, "Unrequesting " << forObject->file << " for " << forObject->name);
 
-    assert(mAssets.find(forObject->file) != mAssets.end());
-    Asset* asset = mAssets[forObject->file];
+    Asset* asset = NULL;
+    {
+        RMutex::scoped_lock lock(dlPlannerMutex);
+        assert(mAssets.find(forObject->file) != mAssets.end());
+        asset = mAssets[forObject->file];
+    }
 
     // Make sure we're not displaying it anymore
     forObject->mesh->unload();
@@ -800,6 +821,7 @@ void DistanceDownloadPlanner::checkRemoveAsset(Asset* asset,Liveness::Token asse
     if (!assetAlive)
         return;
 
+
     
     if (asset->waitingObjects.empty() && asset->usingObjects.empty()) {
         // We need to be careful if a download is in progress.
@@ -815,7 +837,10 @@ void DistanceDownloadPlanner::checkRemoveAsset(Asset* asset,Liveness::Token asse
         }
 
         // And really erase it
-        mAssets.erase(asset->uri);
+        {
+            RMutex::scoped_lock lock(dlPlannerMutex);
+            mAssets.erase(asset->uri);
+        }
         delete asset;
     }
 }
