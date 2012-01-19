@@ -38,7 +38,9 @@ public:
 
 
     bool sendScriptCommMessageReliable(const SpaceObjectReference& sender, const SpaceObjectReference& receiver, const String& msg);
-    bool sendScriptCommMessageReliable(const SpaceObjectReference& sender, const SpaceObjectReference& receiver, const String& msg, int8 retries);
+    bool sendScriptCommMessageReliable(
+        const SpaceObjectReference& sender, const SpaceObjectReference& receiver,
+        const String& msg, int8 retriesSameStream,int8 retriesNewStream);
 
 
     void presenceConnected(const SpaceObjectReference& connPresSporef);
@@ -62,13 +64,29 @@ private:
     void handleScriptCommStreamRead(Liveness::Token alive, SSTStreamPtr sstptr, String* prevdata, uint8* buffer, int length);
 
     //writing helper
-    void scriptCommWriteStreamConnectedCB(Liveness::Token alive, const String& msg, const SpaceObjectReference& sender, const SpaceObjectReference& receiver, int err, SSTStreamPtr streamPtr, int8 retries);
+    void scriptCommWriteStreamConnectedCB(
+        Liveness::Token alive, const String& msg,
+        const SpaceObjectReference& sender, const SpaceObjectReference& receiver,
+        int err, SSTStreamPtr streamPtr, int8 retriesSameStream,int8 retriesNewStream);
 
     // Writes a message to a *substream* of the given stream
-    void writeMessage(Liveness::Token alive, SSTStreamPtr streamPtr, const String& msg, const SpaceObjectReference& sender, const SpaceObjectReference& receiver, int8 retries);
-    void writeMessageSubstream(Liveness::Token alive, int err, SSTStreamPtr subStreamPtr, const String& msg, const SpaceObjectReference& sender, const SpaceObjectReference& receiver, int8 retries);
+    void writeMessage(
+        Liveness::Token alive, SSTStreamPtr streamPtr,
+        const String& msg, const SpaceObjectReference& sender,
+        const SpaceObjectReference& receiver, int8 retriesSameStream,
+        int8 retriesNewStream);
+    
+    void writeMessageSubstream(
+        Liveness::Token alive, int err, SSTStreamPtr subStreamPtr,
+        const String& msg, const SpaceObjectReference& sender,
+        const SpaceObjectReference& receiver, int8 retriesSameStream,
+        int8 retriesNewStream);
+    
     void writeData(Liveness::Token alive, SSTStreamPtr streamPtr, const String& msg, const SpaceObjectReference& sender, const SpaceObjectReference& receiver);
 
+    void removeStream(
+        const SpaceObjectReference& sender, const SpaceObjectReference& receiver);
+    
 
     ObjectHostContext* mMainContext;
 
