@@ -70,7 +70,7 @@ namespace Sirikata { namespace Models {
           Nodes = 4 // Normal child nodes
         };
 
-        NodeState(const COLLADAFW::Node* _node, const COLLADAFW::Node* _parent, const Matrix4x4f& xform, 
+        NodeState(const COLLADAFW::Node* _node, const COLLADAFW::Node* _parent, const Matrix4x4f& xform,
                   std::vector<Matrix4x4f> _transformList, int _child = -1, Modes _mode = Fresh)
           : node(_node), parent(_parent), transform(xform), child(_child), mode(_mode)
         {
@@ -207,7 +207,7 @@ namespace Sirikata { namespace Models {
         const COLLADAFW::Node* rn = root_nodes[i].node;
         bool true_root = root_nodes[i].true_root;
 
-        std::stack<NodeState> node_stack;        
+        std::stack<NodeState> node_stack;
         node_stack.push( NodeState(rn, NULL, mMesh->globalTransform, std::vector<Matrix4x4f>() ) );
 
         while(!node_stack.empty()) {
@@ -216,10 +216,10 @@ namespace Sirikata { namespace Models {
 
           if (curnode.mode == NodeState::Fresh) {
             COLLADABU::Math::Matrix4 xform = curnode.node->getTransformationMatrix();
-                        
+
             curnode.transform = curnode.transform * Matrix4x4f(xform, Matrix4x4f::ROW_MAJOR());
             curnode.transformList.push_back( Matrix4x4f(xform, Matrix4x4f::ROW_MAJOR()) );
-                        
+
             // Get node indices
             NodeIndex nindex = mMesh->nodes.size();
             NodeIndex parent_idx = NullNodeIndex;
@@ -248,20 +248,20 @@ namespace Sirikata { namespace Models {
             {
               // Check for any animations on this node. Animations may
               // apply to any sub-transformation, but we don't have a way
-              // to handle this right now. 
+              // to handle this right now.
 
               uint16 numAnimationKeyFrames = 0;
               bool animationFormatSupported = true;
 
               std::tr1::unordered_map<String, std::map<float32, std::vector<Matrix4x4f> > > animationMatrices;
-              bool hasAnimations = false;              
-                            
+              bool hasAnimations = false;
+
               for(int ti = 0; animationFormatSupported && ti < curnode.node->getTransformations().getCount(); ti++) {
                 COLLADAFW::Transformation* joint_xform = curnode.node->getTransformations()[ti];
-                              
+
                 const COLLADAFW::UniqueId& joint_anim = joint_xform->getAnimationList();
                 if (!joint_anim.isValid()) continue;
-                              
+
                 const AnimationBindings& bindings = mAnimationBindings[joint_anim];
                 for(AnimationBindings::const_iterator bind_it = bindings.begin(); bind_it != bindings.end(); bind_it++) {
                   // The binding just indexes into our set of
@@ -269,7 +269,7 @@ namespace Sirikata { namespace Models {
 
                   const AnimationCurve& anim_curve = mAnimationCurves[bind_it->animation];
                   TransformationKeyFrames& anim_out = mMesh->nodes[nindex].animations[anim_curve.name];
-                                
+
                   for(uint32 sample_idx = 0; sample_idx < anim_curve.inputs.size(); sample_idx++) {
                     float32 frameTime = anim_curve.inputs[sample_idx];
                     if (  animationMatrices[anim_curve.name][frameTime].empty() ) {
@@ -278,8 +278,8 @@ namespace Sirikata { namespace Models {
                       animationMatrices[anim_curve.name][frameTime].push_back(Matrix4x4f::identity()); //scale
                       animationMatrices[anim_curve.name][frameTime].push_back(Matrix4x4f::identity()); //full matrix
                     }
-                    
-                    if (!hasAnimations) { 
+
+                    if (!hasAnimations) {
                       hasAnimations = true;
                       mMesh->hasAnimations = true;
                     }
@@ -287,51 +287,51 @@ namespace Sirikata { namespace Models {
                     std::vector<Matrix4x4f>& trs = animationMatrices[anim_curve.name][frameTime];
 
                     switch (joint_xform->getTransformationType()) {
-                                    
-                    case COLLADAFW::Transformation::ROTATE: 
+
+                    case COLLADAFW::Transformation::ROTATE:
                       {
                         COLLADAFW::Rotate* rotate = static_cast<COLLADAFW::Rotate*> (joint_xform);
 
                         float32 angle = anim_curve.outputs[sample_idx] * 3.14159/180.0;
 
-                        Vector3f axis(rotate->getRotationAxis().x, rotate->getRotationAxis().y, 
+                        Vector3f axis(rotate->getRotationAxis().x, rotate->getRotationAxis().y,
                                       rotate->getRotationAxis().z);
                         if (bind_it->animationClass == COLLADAFW::AnimationList::AXISANGLE) {
                           SILOG(collada,error,"AXIS ANGLE rotation in animation not supported.");
                         }
-                                      
+
                         Quaternion quat(axis, angle);
                         trs[1] = trs[1] * Matrix4x4f::rotate(quat);
-                                      
+
                         break;
                       }
-                    case COLLADAFW::Transformation::TRANSLATE: 
+                    case COLLADAFW::Transformation::TRANSLATE:
                       {
                         Vector3f vec(anim_curve.outputs[3*sample_idx], anim_curve.outputs[3*sample_idx+1],
                                      anim_curve.outputs[3*sample_idx+2]);
-  
+
 
                         trs[0] = trs[0] * Matrix4x4f::translate(vec);
-  
+
 
                         break;
                       }
-                    case COLLADAFW::Transformation::SCALE: 
+                    case COLLADAFW::Transformation::SCALE:
                       {
                         Matrix4x4f scalemat = Matrix4x4f::identity();
                         scalemat(0,0) = anim_curve.outputs[3*sample_idx];
                         scalemat(1,1) = anim_curve.outputs[3*sample_idx+1];
                         scalemat(2,2) = anim_curve.outputs[3*sample_idx+2];
                         trs[2] = trs[2] * scalemat;
-                                        
+
                         break;
                       }
-                    case COLLADAFW::Transformation::MATRIX: 
+                    case COLLADAFW::Transformation::MATRIX:
                       {
                         trs[3] = trs[3] * Matrix4x4f( &anim_curve.outputs[16*sample_idx], Matrix4x4f::ROW_MAJOR() );
                         break;
                       }
-                    default: 
+                    default:
                       {
                         SILOG(collada,error,"Unsupported transformation type in animation.");
                       }
@@ -340,12 +340,12 @@ namespace Sirikata { namespace Models {
                 }
               }
 
-             
+
               for (std::tr1::unordered_map<String, std::map<float32, std::vector<Matrix4x4f> > >::iterator it = animationMatrices.begin();
                    it != animationMatrices.end(); it++)
                 {
                   TransformationKeyFrames& anim_out = mMesh->nodes[nindex].animations[it->first];
-                  
+
                   for (std::map<float32, std::vector<Matrix4x4f> >::iterator frame_it = it->second.begin(); frame_it != it->second.end(); frame_it++) {
                     float32 time = frame_it->first;
 
@@ -354,7 +354,7 @@ namespace Sirikata { namespace Models {
                     if ((frame_it->second)[3] == Matrix4x4f::identity()) { // it's not a matrix type animation. Separate trans, rot, scale are given.
                       if ((frame_it->second)[0] == Matrix4x4f::identity()) {
                         Matrix4x4f mat = Matrix4x4f::identity();
-                        mat(0,3) = xform.getElement(0,3); 
+                        mat(0,3) = xform.getElement(0,3);
                         mat(1,3) = xform.getElement(1,3);
                         mat(2,3) = xform.getElement(2,3);
                         (frame_it->second)[0] = mat;
@@ -363,7 +363,7 @@ namespace Sirikata { namespace Models {
                         // Still need to make sure this is the right thing to do and that we dont have to use the matrix from the
                         // previous frame instead of from the joint's node.
                         Matrix4x4f mat = Matrix4x4f(xform, Matrix4x4f::ROW_MAJOR());
-                        
+
                         (frame_it->second)[1] = Matrix4x4f::rotate( Quaternion(mat.extract3x3())  );
                       }
                       if ((frame_it->second)[2] == Matrix4x4f::identity()) {
@@ -371,15 +371,15 @@ namespace Sirikata { namespace Models {
 
                         float32 scaleX = mat.getCol(0).length();
                         float32 scaleY = mat.getCol(1).length();
-                        float32 scaleZ = mat.getCol(2).length();            
-                        
+                        float32 scaleZ = mat.getCol(2).length();
+
                         Matrix4x4f scalemat( Matrix4x4f::identity()  );
                         scalemat(0,0) = scaleX;
                         scalemat(1,1) = scaleY;
                         scalemat(2,2) = scaleZ;
 
                         (frame_it->second)[2] = scalemat;
-                      }                      
+                      }
 
                       matrix = (frame_it->second)[0] * (frame_it->second)[1] * (frame_it->second)[2];
                     }
@@ -602,14 +602,14 @@ namespace Sirikata { namespace Models {
         std::stack<NodeState> node_stack;
         node_stack.push( NodeState(rn, NULL, mMesh->globalTransform, std::vector<Matrix4x4f>()) );
 
-        while(!node_stack.empty()) {          
+        while(!node_stack.empty()) {
           NodeState curnode = node_stack.top();
           node_stack.pop();
 
           if (curnode.mode == NodeState::Fresh) {
             // In this traversal we don't need to do anything when the node
             // is just added
-            COLLADABU::Math::Matrix4 xform = curnode.node->getTransformationMatrix();                
+            COLLADABU::Math::Matrix4 xform = curnode.node->getTransformationMatrix();
             curnode.transform = curnode.transform * Matrix4x4f(xform, Matrix4x4f::ROW_MAJOR());
             curnode.transformList.push_back( Matrix4x4f(xform, Matrix4x4f::ROW_MAJOR())  );
 
@@ -919,7 +919,6 @@ namespace Sirikata { namespace Models {
           mExtraGeometryData.back().primitives.push_back(ExtraPrimitiveData());
           outputPrim=&submesh->primitives.back();
           setupPrim(outputPrim,mExtraGeometryData.back().primitives.back(),prim);
-          std::vector<uint32>& inverse_vert_index_map = mExtraGeometryData.back().inverseVertexIndexMap;
           size_t faceCount=prim->getGroupedVerticesVertexCount(i);
           if (!multiPrim)
             faceCount *= prim->getGroupedVertexElementsCount();
@@ -987,7 +986,7 @@ namespace Sirikata { namespace Models {
               // number of vertices.
               // -Note the push_back puts it at submesh->positions.size(),
               // i.e. the index is *new vertex index*.
-              inverse_vert_index_map.push_back(uniqueIndexSet.positionIndices);
+              mExtraGeometryData.back().inverseVertexIndexMap.push_back(uniqueIndexSet.positionIndices);
               outputPrim->indices.push_back(submesh->positions.size());
               if (vdata||vdatad) {
                 if (vdata) {
@@ -1384,7 +1383,7 @@ namespace Sirikata { namespace Models {
 
       COLLADA_LOG(insane, "ColladaDocumentImporter::writeAnimation(" << animation << ") entered");
 
-      if (animation->getAnimationType()==COLLADAFW::Animation::ANIMATION_CURVE) {//makes sure static cast will work        
+      if (animation->getAnimationType()==COLLADAFW::Animation::ANIMATION_CURVE) {//makes sure static cast will work
         const COLLADAFW::AnimationCurve* curveAnimation = static_cast<const COLLADAFW::AnimationCurve*>(animation);
         AnimationCurve* copy = &mAnimationCurves[animation->getUniqueId()];
 
@@ -1392,10 +1391,10 @@ namespace Sirikata { namespace Models {
         convertColladaFloatDoubleArray(curveAnimation->getOutputValues(), copy->outputs);
         // FIXME interpolation types don't seem to be getting returned, only
         // getInterpolationType() has a value. Currently always assuming linear.
-        // FIXME tangents        
+        // FIXME tangents
 
         copy->name = animation->getOriginalId();
-        
+
 
         //We only support COLLADA files in which animations are specified in one of the following ways:
         // i) There is a list of animations (each with its own animation ID), and each animation affects
@@ -1427,11 +1426,11 @@ namespace Sirikata { namespace Models {
 
       COLLADA_LOG(insane, "ColladaDocumentImporter::writeAnimationList(" << animationList << ") entered");
 
-      AnimationBindings* copy = &mAnimationBindings[animationList->getUniqueId()];   
+      AnimationBindings* copy = &mAnimationBindings[animationList->getUniqueId()];
 
       const COLLADAFW::AnimationList::AnimationBindings& orig = animationList->getAnimationBindings();
       //printf("animation list: %s %d bindings\n", animationList->getUniqueId().toAscii().c_str(), (int)orig.getCount());
-      for(uint32 i = 0; i < orig.getCount(); i++) {                
+      for(uint32 i = 0; i < orig.getCount(); i++) {
         copy->push_back( orig[i] );
       }
 
@@ -1449,7 +1448,7 @@ namespace Sirikata { namespace Models {
       std::vector<float> xweights;
       convertColladaFloatDoubleArray(skinControllerData->getWeights(), xweights);
 
-    
+
 
       const COLLADAFW::Matrix4Array * inverseBind = &skinControllerData->getInverseBindMatrices();
       for (size_t i=0;i<inverseBind->getCount();++i) {
@@ -1475,7 +1474,7 @@ namespace Sirikata { namespace Models {
       for (size_t i=0;i<jointIndices->getCount();++i) {
         copy->jointIndices.push_back((*jointIndices)[i]);
       }
-    
+
       return true;
     }
 
@@ -1490,7 +1489,7 @@ namespace Sirikata { namespace Models {
         copy->source = skinController->getSource();
         copy->skinControllerData = skinController->getSkinControllerData();
         for (unsigned int i=0;i<skinController->getJoints().getCount();++i) {
-          copy->joints.push_back((skinController->getJoints())[i]); 
+          copy->joints.push_back((skinController->getJoints())[i]);
         }
       }
       else {
