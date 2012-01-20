@@ -88,6 +88,13 @@ public:
 protected:
     void clearVisibles();
 
+protected:
+    void iOnDestroyProxy(ProxyObjectPtr p);
+    void iOnCreateProxy(ProxyObjectPtr p);
+
+    // Invoked when we received an update on a Proxy, making it the most up-to-date.
+    void iUpdatedProxy(ProxyObjectPtr p);
+
 private:
 
 
@@ -106,13 +113,6 @@ private:
 
     typedef std::tr1::unordered_set<ProxyObjectPtr, ProxyObject::Hasher> TrackedObjectsMap;
     TrackedObjectsMap mTrackedObjects;
-
-
-    void iOnDestroyProxy(ProxyObjectPtr p);
-    void iOnCreateProxy(ProxyObjectPtr p);
-
-    // Invoked when we received an update on a Proxy, making it the most up-to-date.
-    void iUpdatedProxy(ProxyObjectPtr p);
 };
 
 } //end namespace js

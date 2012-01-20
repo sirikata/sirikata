@@ -537,7 +537,9 @@ void EmersonScript::iOnConnected(SessionEventProviderPtr from,
     // Proxies for the object connected are created before this occurs, so we
     // need to manually notify of it:
     ProxyObjectPtr self_proxy = proxy_manager->getProxyObject(name);
-    this->onCreateProxy(self_proxy);
+    // But we call iOnCreateProxy because we want it to be synchronous
+    // and we're already in the correct strand
+    this->iOnCreateProxy(self_proxy);
 
     //register for scripting messages from user
     SpaceID space_id = name.space();
