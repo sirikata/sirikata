@@ -443,7 +443,7 @@ public:
 		}
 		size_type lengthAt() const {
 			if (valid()) {
-				return dataend - globalbyte;
+				return dataend - globalbyte + 1;
 			} else if (eof()) {
 				return 0;
 			} else {
