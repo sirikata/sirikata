@@ -758,7 +758,6 @@ bool JSSerializer::deserializeObjectInternal( EmersonScript* emerScript, Sirikat
             {
                 if (val->IsObject())
                 {
-                    v8::Handle<v8::Array> tmpArray =v8::Array::New();
                     setPrototype(deserializeTo,val->ToObject());
                 }
                 else

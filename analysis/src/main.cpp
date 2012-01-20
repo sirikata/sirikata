@@ -106,8 +106,6 @@ int main(int argc, char** argv) {
     Network::IOService* ios = Network::IOServiceFactory::makeIOService();
     Network::IOStrand* mainStrand = ios->createStrand();
 
-
-    BoundingBox3f region = GetOptionValue<BoundingBox3f>("region");
     Vector3ui32 layout = GetOptionValue<Vector3ui32>("layout");
 
 

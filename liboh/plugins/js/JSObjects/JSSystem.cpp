@@ -1029,7 +1029,7 @@ v8::Handle<v8::Value> commonImport(const v8::Arguments& args, bool isJS)
     //decode the filename to import from.
     String strDecodeErrorMessage = "Error decoding string as first argument of root_import of jssystem.  ";
     String native_filename; //string to decode to.
-    bool decodeStrSuccessful = decodeString(args[0],native_filename,strDecodeErrorMessage);
+    bool decodeStrSuccessful = decodeString(filename,native_filename,strDecodeErrorMessage);
     if (! decodeStrSuccessful)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(strDecodeErrorMessage.c_str(), strDecodeErrorMessage.length())) );
 

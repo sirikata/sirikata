@@ -144,7 +144,6 @@ btCollisionShape* BulletObject::computeCollisionShape(const UUID& id, bulletObjB
                 btVector3( gVertices[gIndices[j+2]].x, gVertices[gIndices[j+2]].y, gVertices[gIndices[j+2]].z )
             );
         }
-        Vector3f bMin = bbox.min();
     }
     BULLETLOG(detailed, "total bounds: " << bbox);
     BULLETLOG(detailed, "bounds radius: " << mesh_rad);

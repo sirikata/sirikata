@@ -2123,7 +2123,7 @@ void LocationLatencyAnalysis(const char* opt_name, const uint32 nservers) {
         std::ofstream os(llfile.c_str(), std::ios::out);
 
         for(EventListMap::iterator it = locEvents.begin(); it != locEvents.end(); it++) {
-            UUID objid = it->first;
+            //UUID objid = it->first;
             EventList* evt_list = it->second;
 
             // Sort all sets
@@ -2279,7 +2279,7 @@ void OSegCumulativeTraceAnalysis::generateAllData()
   generateOSegQLenReturn();
   generateRunTime();
   generateBeginTime();
-  
+
   sortByCompleteLookupTime();
 }
 
@@ -2379,7 +2379,7 @@ void OSegCumulativeTraceAnalysis::printDataHuman(std::ostream &fileOut)
   for (int s=0; s < untilVariable; ++s)
     fileOut  << mCumData[s]->beginTime << ",";
 
-  
+
   fileOut <<"\n\n\n";
 }
 
@@ -2458,8 +2458,8 @@ void OSegCumulativeTraceAnalysis::printData(std::ostream &fileOut)
   fileOut << "\n";
   for (int s=0; s < untilVariable; ++s)
     fileOut  << mCumData[s]->beginTime << ",";
-  
-  
+
+
   fileOut <<"\n\n\n";
 }
 

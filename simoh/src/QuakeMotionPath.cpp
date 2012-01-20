@@ -158,7 +158,8 @@ TimedMotionVector3f QuakeMotionPath::parseTraceLines(String firstLine, String se
 
     tokenizer::iterator tok_iter = tokens.begin();
 
-    int id = atoi((*tok_iter).c_str());
+    // If we needed it:
+    //int id = atoi((*tok_iter).c_str());
 
     ++tok_iter;
     float x = atof((*tok_iter).c_str());
@@ -180,7 +181,8 @@ TimedMotionVector3f QuakeMotionPath::parseTraceLines(String firstLine, String se
 
     tok_iter = tokens2.begin();
 
-    id = atoi((*tok_iter).c_str());
+    // If we needed it:
+    //id = atoi((*tok_iter).c_str());
 
     ++tok_iter;
     x = atof((*tok_iter).c_str());

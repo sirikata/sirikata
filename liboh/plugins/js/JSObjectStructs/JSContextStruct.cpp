@@ -696,7 +696,7 @@ void JSContextStruct::finishClear()
 
 
     v8::HandleScope handle_scope;
-    v8::Handle<v8::Value> returner = JSSuspendable::clear();
+    JSSuspendable::clear();
 
 
     inClear = true;

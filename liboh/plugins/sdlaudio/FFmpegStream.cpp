@@ -34,7 +34,7 @@ FFmpegStream::FFmpegStream(FFmpegURLProtocol* raw)
 
 uint32 FFmpegStream::numAudioStreams() {
     uint32 result = 0;
-    for(int i = 0; i < mFormatCtx->nb_streams; i++) {
+    for(uint32 i = 0; i < mFormatCtx->nb_streams; i++) {
         if (mFormatCtx->streams[i]->codec->codec_type == AVMEDIA_TYPE_AUDIO)
             result++;
     }
@@ -44,11 +44,11 @@ uint32 FFmpegStream::numAudioStreams() {
 FFmpegAudioStreamPtr FFmpegStream::getAudioStream(uint32 idx, uint8 nchannels) {
     int nAudioStreamsSeen = -1;
     int audioStream = -1;
-    for(int i = 0; i < mFormatCtx->nb_streams; i++) {
+    for(uint32 i = 0; i < mFormatCtx->nb_streams; i++) {
         if(mFormatCtx->streams[i]->codec->codec_type == AVMEDIA_TYPE_AUDIO) {
             nAudioStreamsSeen++;
-            if (nAudioStreamsSeen == idx) {
-                audioStream = i;
+            if (nAudioStreamsSeen == (int32)idx) {
+                audioStream = (int)i;
                 break;
             }
         }

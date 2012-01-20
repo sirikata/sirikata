@@ -338,7 +338,7 @@ String HostedObject::encodeDefaultQuery(const SolidAngle& qangle, const uint32 m
             query = data_json.str();
         }
         catch(json_parser::json_parser_error exc) {
-            return false;
+            return "";
         }
     }
     return query;
@@ -903,12 +903,12 @@ ODP::Port* HostedObject::bindODPPort(const SpaceObjectReference& sor) {
 }
 
 ODP::PortID HostedObject::unusedODPPort(const SpaceID& space, const ObjectReference& objref) {
-    if (stopped()) return NULL;
+    if (stopped()) return 0;
     return mDelegateODPService->unusedODPPort(space, objref);
 }
 
 ODP::PortID HostedObject::unusedODPPort(const SpaceObjectReference& sor) {
-    if (stopped()) return NULL;
+    if (stopped()) return 0;
     return mDelegateODPService->unusedODPPort(sor);
 }
 

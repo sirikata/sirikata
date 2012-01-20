@@ -84,8 +84,6 @@ int main(int argc, char** argv) {
     MaxDistUpdatePredicate::maxDist = GetOptionValue<float64>(MAX_EXTRAPOLATOR_DIST);
 
     BoundingBox3f region = GetOptionValue<BoundingBox3f>("region");
-    Vector3ui32 layout = GetOptionValue<Vector3ui32>("layout");
-
 
     Duration duration = GetOptionValue<Duration>("duration");
     // Get the starting time

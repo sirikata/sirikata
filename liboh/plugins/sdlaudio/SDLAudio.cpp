@@ -36,12 +36,12 @@ extern void mixaudio(void* _sim, Uint8* raw_stream, int raw_len) {
 }
 
 AudioSimulation::AudioSimulation(Context* ctx,Network::IOStrandPtr ptr)
- : mContext(ctx),
+ : audioStrand(ptr),
+   mContext(ctx),
    mInitializedAudio(false),
    mOpenedAudio(false),
    mClipHandleSource(0),
-   mPlaying(false),
-   audioStrand(ptr)
+   mPlaying(false)
 {}
 
 

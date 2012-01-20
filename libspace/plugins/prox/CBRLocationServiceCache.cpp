@@ -346,7 +346,6 @@ void CBRLocationServiceCache::processOrientationUpdated(const UUID& uuid, bool a
     ObjectDataMap::iterator it = mObjects.find(uuid);
     if (it == mObjects.end()) return;
 
-    TimedMotionQuaternion oldval = it->second.orientation;
     it->second.orientation = newval;
 }
 
@@ -365,7 +364,6 @@ void CBRLocationServiceCache::processBoundsUpdated(const UUID& uuid, bool agg, c
     ObjectDataMap::iterator it = mObjects.find(uuid);
     if (it == mObjects.end()) return;
 
-    BoundingSphere3f oldval = it->second.bounds;
     it->second.bounds = newval;
 
     BoundingSphere3f old_region = it->second.region;

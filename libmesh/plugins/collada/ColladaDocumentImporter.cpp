@@ -256,7 +256,7 @@ namespace Sirikata { namespace Models {
               std::tr1::unordered_map<String, std::map<float32, std::vector<Matrix4x4f> > > animationMatrices;
               bool hasAnimations = false;
 
-              for(int ti = 0; animationFormatSupported && ti < curnode.node->getTransformations().getCount(); ti++) {
+              for(int ti = 0; animationFormatSupported && ti < (int)curnode.node->getTransformations().getCount(); ti++) {
                 COLLADAFW::Transformation* joint_xform = curnode.node->getTransformations()[ti];
 
                 const COLLADAFW::UniqueId& joint_anim = joint_xform->getAnimationList();
@@ -477,7 +477,7 @@ namespace Sirikata { namespace Models {
           assert(jidx_it != mJointIndices.end());
           mesh_skin.joints.push_back(jidx_it->second);
         }
-        for (int i=0; i < mAnimatedNodeIndices.size(); i++) {
+        for (int i=0; i < (int)mAnimatedNodeIndices.size(); i++) {
           skindata.inverseBindMatrices.push_back(Matrix4x4f::identity());
           mesh_skin.joints.push_back(mAnimatedNodeIndices[i]);
         }

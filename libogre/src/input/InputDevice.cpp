@@ -98,7 +98,6 @@ bool InputDevice::fireButton(const InputDevicePtr &thisptr,
                 mManager->fire(ButtonReleasedPtr(new ButtonReleased(thisptr, button, oldmodifiers)));
                 mManager->fire(ButtonPressedPtr(new ButtonPressed(thisptr, button, modifiers)));
                 assert(buttonState.find(button) != buttonState.end());
-                Time tnow = Timer::now();
                 buttonState.find(button)->second.initialTime == Timer::now();
                 buttonState.find(button)->second.lastTime == Timer::now();
             }

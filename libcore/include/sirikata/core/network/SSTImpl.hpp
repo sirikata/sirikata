@@ -731,8 +731,6 @@ private:
 
     uint64 transmitSequenceNumber =  mTransmitSequenceNumber;
 
-    bool pushedIntoQueue = false;
-
     if ( isAck ) {
       Sirikata::Protocol::SST::SSTChannelHeader sstMsg;
       sstMsg.set_channel_id( mRemoteChannelID );
@@ -748,7 +746,6 @@ private:
       if (mQueuedSegments.size() < MAX_QUEUED_SEGMENTS) {
         mQueuedSegments.push_back( std::tr1::shared_ptr<ChannelSegment>(
                                    new ChannelSegment(data, length, mTransmitSequenceNumber, mLastReceivedSequenceNumber) ) );
-        pushedIntoQueue = true;
 
         if (mInSendingMode) {
           getContext()->mainStrand->post(Duration::milliseconds(1.0),

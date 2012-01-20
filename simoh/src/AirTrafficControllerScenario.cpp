@@ -247,10 +247,6 @@ AirTrafficControllerScenario::AirTrafficControllerScenario(const String &options
     mNumObjectsPerServer=optionsSet->referenceOption("num-objects-per-server")->as<uint32>();
     mLocalTraffic = optionsSet->referenceOption("local")->as<bool>();
     mFractionMessagesUniform= optionsSet->referenceOption("prob-messages-uniform")->as<double>();
-    Vector3ui32 layout = GetOptionValue<Vector3ui32>("layout");
-
-
-    Duration duration = GetOptionValue<Duration>("duration");
 
 
     mNumGeneratedPings = 0;
@@ -405,10 +401,6 @@ void AirTrafficControllerScenario::delayedStart() {
     mStartTime = mContext->simTime();
     OptionSet* optionsSet = OptionSet::getOptions("AirTrafficControllerScenario",this);
 
-    int ss=mFloodServer;
-    if (mFloodServer ==0) {
-        ss=(rand() % mObjectTracker->numServerIDs())+1;
-    }
     if (mNumHitPointsPerSecond) {
         Object * objA = mControlTower->getNextObject(UUID::null());
         if (!objA->connected()) {
