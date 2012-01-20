@@ -658,7 +658,7 @@ ELSE()
   SET(BERKELIUM_TARGET_LIBRARIES)
   SET(BERKELIUM_TARGET_BINARIES)
   SET(BERKELIUM_LIBRARIES)
-  IF(EXISTS ${TOP_LEVEL}/externals/berkelium/chromium AND EXISTS ${TOP_LEVEL}/externals/berkelium/chromium/chromium)
+  IF(NOT DISABLE_BERKELIUM AND EXISTS ${TOP_LEVEL}/externals/berkelium/chromium AND EXISTS ${TOP_LEVEL}/externals/berkelium/chromium/chromium)
     # This name is needed by the ADD_CHROME_APP macro
     SET(BERKELIUM_TOP_LEVEL ${TOP_LEVEL}/externals/berkelium)
 
