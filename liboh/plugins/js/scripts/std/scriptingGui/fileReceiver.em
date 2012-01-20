@@ -23,7 +23,7 @@ if (typeof(std.script) === "undefined") std.script = {};
     {
         var newFilename =
             generateFolderName(sender) + msg.filename;
-
+        
         system.__debugFileWrite(msg.text,newFilename);
         msg.makeReply({}) >> [];
     }
