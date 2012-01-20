@@ -40,7 +40,8 @@ public:
     bool sendScriptCommMessageReliable(const SpaceObjectReference& sender, const SpaceObjectReference& receiver, const String& msg);
     bool sendScriptCommMessageReliable(
         const SpaceObjectReference& sender, const SpaceObjectReference& receiver,
-        const String& msg, int8 retriesSameStream,int8 retriesNewStream);
+        const String& msg, int8 retriesSameStream,int8 retriesNewStream,
+        bool isRetry=false);
 
 
     void presenceConnected(const SpaceObjectReference& connPresSporef);
@@ -50,7 +51,7 @@ private:
     // Possibly save the new stream to mStreams for later use. Since both sides
     // might initiate, we always save the stream initiated by the object with
     // smaller if we identify a conflict.
-    void setupNewStream(SSTStreamPtr sstStream);
+    void setupNewStream(SSTStreamPtr sstStream, bool closePrevious = false);
     // Get a saved stream for the given destination object, or NULL if one isn't
     // available.
     SSTStreamPtr getStream(const SpaceObjectReference& pres, const SpaceObjectReference& remote);
@@ -67,7 +68,7 @@ private:
     void scriptCommWriteStreamConnectedCB(
         Liveness::Token alive, const String& msg,
         const SpaceObjectReference& sender, const SpaceObjectReference& receiver,
-        int err, SSTStreamPtr streamPtr, int8 retriesSameStream,int8 retriesNewStream);
+        int err, SSTStreamPtr streamPtr, int8 retriesSameStream,int8 retriesNewStream,bool isRetry);
 
     // Writes a message to a *substream* of the given stream
     void writeMessage(
