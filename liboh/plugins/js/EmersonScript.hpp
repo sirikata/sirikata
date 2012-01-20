@@ -229,7 +229,7 @@ public:
     void setVisual(const SpaceObjectReference sporef, const std::string& newMeshString);
 
     const String& getQuery(const SpaceObjectReference& sporef) const;
-    void setQueryFunction(const SpaceObjectReference sporef, const SolidAngle& sa, const uint32 count);
+    void setQueryFunction(const SpaceObjectReference sporef, const String& query);
 
     void setPhysicsFunction(const SpaceObjectReference sporef, const String& newPhysicsString);
 

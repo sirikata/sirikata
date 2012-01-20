@@ -58,11 +58,6 @@
 #include "Protocol_Loc.pbj.hpp"
 #include "Protocol_Prox.pbj.hpp"
 
-// Property tree for old API for queries
-#include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/json_parser.hpp>
-
-
 #define HO_LOG(lvl,msg) SILOG(ho,lvl,msg);
 
 namespace Sirikata {
@@ -314,65 +309,8 @@ bool HostedObject::connect(
         const Location&startingLocation,
         const BoundingSphere3f &meshBounds,
         const String& mesh,
-        const String& phy,
-        const UUID&object_uuid_evidence,
-        PresenceToken token)
-{
-    return connect(spaceID, startingLocation, meshBounds, mesh, phy, SolidAngle::Max, 0, object_uuid_evidence,ObjectReference::null(),token);
-}
-
-String HostedObject::encodeDefaultQuery(const SolidAngle& qangle, const uint32 max_count) {
-    // For old format, assume we just encode the query parameters assuming the
-    // standard, basic, solid angle query
-
-    String query;
-    using namespace boost::property_tree;
-    bool with_query = qangle != SolidAngle::Max;
-    if (with_query) {
-        try {
-            ptree pt;
-            pt.put("angle", qangle.asFloat());
-            pt.put("max_results", max_count);
-            std::stringstream data_json;
-            write_json(data_json, pt);
-            query = data_json.str();
-        }
-        catch(json_parser::json_parser_error exc) {
-            return "";
-        }
-    }
-    return query;
-}
-
-bool HostedObject::connect(
-        const SpaceID&spaceID,
-        const Location&startingLocation,
-        const BoundingSphere3f &meshBounds,
-        const String& mesh,
-        const String& phy,
-        const SolidAngle& queryAngle,
-        uint32 queryMaxResults,
-        const UUID&object_uuid_evidence,
-        const ObjectReference& orefID,
-        PresenceToken token)
-{
-    DEPRECATED(ho);
-    return connect(
-        spaceID, startingLocation, meshBounds, mesh, phy,
-        encodeDefaultQuery(queryAngle, queryMaxResults),
-        object_uuid_evidence,
-        orefID, token
-    );
-}
-
-bool HostedObject::connect(
-        const SpaceID&spaceID,
-        const Location&startingLocation,
-        const BoundingSphere3f &meshBounds,
-        const String& mesh,
         const String& physics,
         const String& query,
-        const UUID&object_uuid_evidence,
         const ObjectReference& orefID,
         PresenceToken token) {
     if (stopped()) {
@@ -1009,11 +947,6 @@ void HostedObject::requestQueryUpdate(const SpaceID& space, const ObjectReferenc
     }
 
     mObjectHost->getQueryProcessor()->updateQuery(getSharedPtr(), sporef, new_query);
-}
-
-void HostedObject::requestQueryUpdate(const SpaceID& space, const ObjectReference& oref, const SolidAngle& sa, uint32 max_count) {
-    DEPRECATED(ho);
-    requestQueryUpdate(space, oref, encodeDefaultQuery(sa, max_count));
 }
 
 void HostedObject::requestQueryRemoval(const SpaceID& space, const ObjectReference& oref) {

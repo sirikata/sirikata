@@ -96,6 +96,14 @@ Object.defineProperty(system.__presence_constructor__.prototype, "position",
                       }
 );
 
+Object.defineProperty(system.__presence_constructor__.prototype, "query",
+                      {
+                          get: function() { return this.getQuery(); },
+                          set: function() { return this.setQuery.apply(this, arguments); },
+                          enumerable: true
+                      }
+);
+
 Object.defineProperty(system.__presence_constructor__.prototype, "queryAngle",
                       {
                           get: function() { return this.getQueryAngle(); },
@@ -245,7 +253,7 @@ system.__presence_constructor__.prototype.__getType = function()
       *    {boolean} isSuspended,
       *    {vec3} suspendedVelocity,
       *    {quaternion} suspendedOrientationVelocity,
-      *    {float} solidAngleQuery
+      *    {float} query
       */
       presence.prototype.getAllData = function()
       {
@@ -348,6 +356,12 @@ system.__presence_constructor__.prototype.__getType = function()
        @return {object} Can call clear on this object to de-register cb.
        */
       presence.prototype.onProxRemoved = function(){ };
+
+    /**@function
+       @description Sets the raw query that is issued from this presence.
+       @param newQuery
+    */
+    presence.prototype.setQuery = function(/** String */ newQuery){};
 
     /**@function
        @description Sets the solid angle query that is issued from this presence.
@@ -513,8 +527,8 @@ system.__presence_constructor__.prototype.__getType = function()
      // get/setOrientation since it accepts a more flexible set of
      // arguments
 
-     var orig_setQueryAngle = system.__presence_constructor__.prototype.setQueryAngle;
-     var orig_setQueryCount = system.__presence_constructor__.prototype.setQueryCount;
+     var orig_getQuery = system.__presence_constructor__.prototype.getQuery;
+     var orig_setQuery = system.__presence_constructor__.prototype.setQuery;
      var orig_setPosition = system.__presence_constructor__.prototype.setPosition;
      var orig_setVelocity = system.__presence_constructor__.prototype.setVelocity;
      var orig_setOrientation = system.__presence_constructor__.prototype.setOrientation;
@@ -525,13 +539,55 @@ system.__presence_constructor__.prototype.__getType = function()
          return (!isFinite(v) || isNaN(v));
      };
 
+     // FIXME we have this here currently so restore.em and system.em can use it for presence creation/restoration functions
+     system.__presence_constructor__.__encodeDeprecatedQuery = function(angle, count) {
+         if (typeof(angle) === 'undefined' && typeof(count) === 'undefined') return '';
+
+         if (typeof(angle) === 'undefined' ||
+             (typeof(angle) === 'number' && angle == 0))
+             angle = 12.5664;
+
+         var query = {
+             'angle' : angle
+         };
+
+         if (typeof(count) !== 'undefined')
+             query['max_results'] = count;
+
+         return JSON.stringify(query);
+     };
+
+     system.__presence_constructor__.prototype.getQuery = function() {
+         return JSON.parse(orig_getQuery.apply(this));
+     };
+
+     system.__presence_constructor__.prototype.setQuery = function(v) {
+         if (typeof(v) === 'object')
+             v = JSON.stringify(v);
+
+         if (typeof(v) !== 'string')
+             throw new TypeError('presence.setQuery expects a string');
+
+         return orig_setQuery.apply(this, [v]);
+     };
+
+     system.__presence_constructor__.prototype.getQueryAngle = function() {
+         return this.getQuery()['angle'];
+     };
+
      system.__presence_constructor__.prototype.setQueryAngle = function(v) {
          if (typeof(v) !== 'number')
              throw new TypeError('presence.setQueryAngle expects a number');
          if (infiniteOrNaN(v) || v < 0 || v > 12.5664)
              throw new RangeError('presence.setQueryAngle expects a value between 0 and 12.5664');
 
-         return orig_setQueryAngle.apply(this, [v]);
+         var orig_query = this.getQuery();
+         orig_query['angle'] = v;
+         return this.setQuery(v);
+     };
+
+     system.__presence_constructor__.prototype.getQueryCount = function() {
+         return this.getQuery()['max_results'];
      };
 
      system.__presence_constructor__.prototype.setQueryCount = function(v) {
@@ -540,7 +596,9 @@ system.__presence_constructor__.prototype.__getType = function()
          if (infiniteOrNaN(v) || v < 0)
              throw new RangeError('presence.setQueryCount expects a value greater than 0');
 
-         return orig_setQueryCount.apply(this, [v]);
+         var orig_query = this.getQuery();
+         orig_query['max_results'] = v;
+         return this.setQuery(v);
      };
 
      system.__presence_constructor__.prototype.setPosition = function(v) {

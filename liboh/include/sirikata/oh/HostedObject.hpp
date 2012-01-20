@@ -196,8 +196,7 @@ public:
         @param mesh the URL of the mesh for this object
         @param physics Physical parameters, serialized to a string. The exact
         format depends on the physics implementation the server is using.
-        @param evidence  Usually use getUUID(); can be set differently if needed
-        for authentication.
+        @param query if non-empty, query parameters
         @param token  When connection completes, notifies all session
         listeners.  Provides token to these listeners so they can distinguish
         which presence may have connected, etc.
@@ -208,31 +207,8 @@ public:
         const BoundingSphere3f &meshBounds,
         const String& mesh,
         const String& physics,
-        const UUID&object_uuid_evidence,
-        PresenceToken token = DEFAULT_PRESENCE_TOKEN);
-
-    bool connect(
-        const SpaceID&spaceID,
-        const Location&startingLocation,
-        const BoundingSphere3f &meshBounds,
-        const String& mesh,
-        const String& physics,
         const String& query,
-        const UUID&object_uuid_evidence,
-        const ObjectReference& orefID,
-        PresenceToken token = DEFAULT_PRESENCE_TOKEN);
-
-    /** \deprecated */
-    bool connect(
-        const SpaceID&spaceID,
-        const Location&startingLocation,
-        const BoundingSphere3f &meshBounds,
-        const String& mesh,
-        const String& physics,
-        const SolidAngle& queryAngle,
-        uint32 queryMaxResults,
-        const UUID&object_uuid_evidence,
-        const ObjectReference& orefID,
+        const ObjectReference& orefID = ObjectReference::null(),
         PresenceToken token = DEFAULT_PRESENCE_TOKEN);
 
     /// Disconnects from the given space by terminating the corresponding substream.
@@ -279,8 +255,6 @@ public:
     virtual void requestPhysicsUpdate(const SpaceID& space, const ObjectReference& oref, const String& phy);
 
     virtual void requestQueryUpdate(const SpaceID& space, const ObjectReference& oref, const String& new_query);
-    /** \deprecated */
-    virtual void requestQueryUpdate(const SpaceID& space, const ObjectReference& oref, const SolidAngle& sa, uint32 max_count);
     // Shortcut for requestQueryUpdate("")
     virtual void requestQueryRemoval(const SpaceID& space, const ObjectReference& oref);
     virtual const String& requestQuery(const SpaceID& space, const ObjectReference& oref);
@@ -315,12 +289,6 @@ public:
     static void handleMigrated(const HostedObjectWPtr &weakSelf, const SpaceID& space, const ObjectReference& obj, ServerID server);
     static void handleStreamCreated(const HostedObjectWPtr &weakSelf, const SpaceObjectReference& spaceobj, SessionManager::ConnectionEvent after, PresenceToken token);
     static void handleDisconnected(const HostedObjectWPtr &weakSelf, const SpaceObjectReference& spaceobj, Disconnect::Code cc);
-
-    /** \deprecated
-     *  Helper for encoding default, solid angle queries. Used to enable old,
-     *  deprecated API for setting queries.
-     */
-    String encodeDefaultQuery(const SolidAngle& qangle, const uint32 max_count);
 
     ODP::DelegatePort* createDelegateODPPort(ODP::DelegateService* parentService, const SpaceObjectReference& spaceobj, ODP::PortID port);
     bool delegateODPPortSend(const ODP::Endpoint& source_ep, const ODP::Endpoint& dest_ep, MemoryReference payload);

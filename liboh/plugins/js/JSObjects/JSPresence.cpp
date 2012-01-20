@@ -497,74 +497,39 @@ void isConnectedSetter(v8::Local<v8::String> property, v8::Local<v8::Value> toSe
 
 
 /**
-   @param Number in sterradians.
-
-   Sets the solid angle query associated with the presence.  Ie. asks the system
-   to return all presences that appear larger than parameter passed in.
-   Roughly, the higher this number is, the fewer presences will cause the function associated with
-   onProxAdded to be called.  (Reasonable ranges from my experience: .1-4.
+   @param Query parameters, as a string. Format depends on what the server supports.
  */
-        v8::Handle<v8::Value> setQueryAngle(const v8::Arguments& args)
-        {
-            if (args.Length() != 1)
-                return v8::ThrowException( v8::Exception::Error(v8::String::New("ERROR: You need to specify exactly one argument to setQueryAngle.")) );
-
-            String errorMessage = "Error in setQueryAngle while decoding presence.  ";
-            JSPresenceStruct* mStruct = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
-
-            if (mStruct == NULL)
-                return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
-
-
-            if (!NumericValidate(args[0]))
-                return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in setQueryAngle function. Wrong argument: require a number for query angle.")) );
-            SolidAngle new_qa(NumericExtract(args[0]));
-
-            return mStruct->setQueryAngleFunction(new_qa);
-        }
-
-
-v8::Handle<v8::Value>  getQueryAngle(const v8::Arguments& args)
-{
-    String errorMessage = "Error in getQueryAngle while decoding presence.  ";
-    JSPresenceStruct* mStruct = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
-
-    if (mStruct == NULL)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
-
-    return mStruct->struct_getQueryAngle();
-}
-
-
-v8::Handle<v8::Value> setQueryCount(const v8::Arguments& args)
+v8::Handle<v8::Value> setQuery(const v8::Arguments& args)
 {
     if (args.Length() != 1)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("ERROR: You need to specify exactly one argument to setQueryCount.")) );
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("ERROR: You need to specify exactly one argument to setQuery.")) );
 
-    String errorMessage = "Error in setQueryCount while decoding presence.  ";
+    String errorMessage = "Error in setQuery while decoding presence.  ";
     JSPresenceStruct* mStruct = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
 
     if (mStruct == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
 
-    if (!NumericValidate(args[0]))
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in setQueryCount function. Wrong argument: require a number for query count.")) );
-    uint32 new_qa = NumericExtract(args[0]);
 
-    return mStruct->setQueryCount(new_qa);
+    if (!NumericValidate(args[0]))
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in setQuery function. Wrong argument: require a number for query angle.")) );
+    String new_qa(StringExtract(args[0]));
+
+    return mStruct->setQueryFunction(new_qa);
 }
 
 
-v8::Handle<v8::Value> getQueryCount(const v8::Arguments& args)
+v8::Handle<v8::Value>  getQuery(const v8::Arguments& args)
 {
-    String errorMessage = "Error in getQueryCount while decoding presence.  ";
-    JSPresenceStruct* mStruct = JSPresenceStruct::decodePresenceStruct(args.This(), errorMessage);
+    String errorMessage = "Error in getQuery while decoding presence.  ";
+    JSPresenceStruct* mStruct = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
 
     if (mStruct == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
 
-    return mStruct->struct_getQueryCount();
+    return mStruct->struct_getQuery();
 }
+
 
 /**
    @return A number indicating the scale of the presence.

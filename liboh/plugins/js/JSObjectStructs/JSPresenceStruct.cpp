@@ -14,7 +14,6 @@
 namespace Sirikata {
 namespace JS {
 
-
 //this constructor is called when we ask the space to create a presence for us.
 //we give the space the token presenceToken, which it ships back when connection
 //is completed.
@@ -32,8 +31,7 @@ JSPresenceStruct::JSPresenceStruct(EmersonScript* parent, v8::Handle<v8::Functio
    mSuspendedVelocity(Vector3f::zero()),
    mSuspendedOrientationVelocity(Quaternion::identity()),
    mContext(ctx),
-   mQueryAngle(),
-   mQueryMaxCount(0)
+   mQuery()
 {
     mContext->struct_registerSuspendable(this);
 }
@@ -51,8 +49,7 @@ JSPresenceStruct::JSPresenceStruct(EmersonScript* parent, const SpaceObjectRefer
    mSuspendedVelocity(Vector3f::zero()),
    mSuspendedOrientationVelocity(Quaternion::identity()),
    mContext(ctx),
-   mQueryAngle(),
-   mQueryMaxCount(0)
+   mQuery()
 {
     // Normally we would need to initialize after calling
     // getOrCreateVisibleData, but in this case we will have already initialized
@@ -77,8 +74,7 @@ JSPresenceStruct::JSPresenceStruct(EmersonScript* parent, PresStructRestoreParam
         )
     );
 
-    mQueryAngle = psrp.query;
-    mQueryMaxCount = psrp.queryMaxResults;
+    mQuery = psrp.query;
 
     if (!psrp.suspendedVelocity.isNull())
         mSuspendedVelocity = psrp.suspendedVelocity.getValue();
@@ -151,9 +147,7 @@ v8::Handle<v8::Value> JSPresenceStruct::getAllData()
     returner->Set(v8::String::New("suspendedOrientationVelocity"),CreateJSResult(curContext,mSuspendedOrientationVelocity));
     returner->Set(v8::String::New("suspendedVelocity"),CreateJSResult(curContext,mSuspendedVelocity));
 
-    returner->Set(v8::String::New("solidAngleQuery"),struct_getQueryAngle());
-    returner->Set(v8::String::New("queryCount"),struct_getQueryCount());
-
+    returner->Set(v8::String::New("query"), struct_getQuery());
 
 
     //onConnected
@@ -358,50 +352,25 @@ v8::Handle<v8::Value>JSPresenceStruct::setVisualFunction(String urilocation)
 
 
 
-//FIXME: should store query angle locally instead of requiring a request through
-//EmersonScript to hosted object.
-SolidAngle JSPresenceStruct::getQueryAngle()
+const String& JSPresenceStruct::getQuery()
 {
-    return mQueryAngle;
+    return mQuery;
 }
 
-v8::Handle<v8::Value> JSPresenceStruct::struct_getQueryAngle()
+v8::Handle<v8::Value> JSPresenceStruct::struct_getQuery()
 {
     INLINE_CHECK_IS_CONNECTED_ERROR("getQueryAngle");
-    return v8::Number::New(getQueryAngle().asFloat());
+    return v8::String::New(getQuery().c_str(), getQuery().size());
 }
 
-v8::Handle<v8::Value> JSPresenceStruct::setQueryAngleFunction(SolidAngle new_qa)
+v8::Handle<v8::Value> JSPresenceStruct::setQueryFunction(const String& new_qa)
 {
-    INLINE_CHECK_IS_CONNECTED_ERROR("setQueryAngle");
-    INLINE_CHECK_CAPABILITY_ERROR(Capabilities::PROX_QUERIES,setQueryAngle);
-    mParent->setQueryFunction(getSporef(), new_qa, getQueryCount());
-    mQueryAngle = new_qa;
+    INLINE_CHECK_IS_CONNECTED_ERROR("setQuery");
+    INLINE_CHECK_CAPABILITY_ERROR(Capabilities::PROX_QUERIES,setQuery);
+    mParent->setQueryFunction(getSporef(), new_qa);
+    mQuery = new_qa;
     return v8::Undefined();
 }
-
-//FIXME: should store query count locally instead of requiring a request through
-//EmersonScript to hosted object.
-uint32 JSPresenceStruct::getQueryCount()
-{
-    return mQueryMaxCount;
-}
-
-v8::Handle<v8::Value> JSPresenceStruct::struct_getQueryCount()
-{
-    INLINE_CHECK_IS_CONNECTED_ERROR("getQueryCount");
-    return v8::Integer::New(getQueryCount());
-}
-
-v8::Handle<v8::Value> JSPresenceStruct::setQueryCount(uint32 new_qc)
-{
-    INLINE_CHECK_IS_CONNECTED_ERROR("setQueryCount");
-    mParent->setQueryFunction(getSporef(), getQueryAngle(), new_qc);
-    return v8::Undefined();
-}
-
-
-
 
 
 

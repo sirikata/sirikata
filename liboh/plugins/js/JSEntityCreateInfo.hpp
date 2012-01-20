@@ -16,8 +16,7 @@ struct EntityCreateInfo
     float  scale;
     String mesh;
     String physics;
-    SolidAngle solid_angle;
-    uint32 max_results;
+    String query;
     SpaceID space;
 };
 

@@ -680,10 +680,7 @@ void EmersonScript::eCreateEntityFinish(ObjectHost* oh,EntityCreateInfo& eci)
         BoundingSphere3f(Vector3f::zero(), eci.scale),
         eci.mesh,
         eci.physics,
-        eci.solid_angle,
-        eci.max_results,
-        UUID::null(),
-        ObjectReference::null()
+        eci.query
     );
 }
 
@@ -1400,8 +1397,6 @@ void EmersonScript::mainStrandCompletePresConnect(
         psrp.mesh,
         psrp.physics,
         psrp.query,
-        psrp.queryMaxResults,
-        UUID::null(),
         psrp.sporef.object(),
         presToke
     );
@@ -1473,17 +1468,15 @@ void EmersonScript::setPhysicsFunction(
 
 
 void EmersonScript::setQueryFunction(
-    const SpaceObjectReference sporef, const SolidAngle& sa,
-    const uint32 max_count)
+    const SpaceObjectReference sporef, const String& query
+)
 {
     EMERSCRIPT_SERIAL_CHECK();
     if (JSObjectScript::mCtx->stopped())
         return;
 
     mParent->requestQueryUpdate(
-        sporef.space(), sporef.object(),
-        sa,
-        max_count
+        sporef.space(), sporef.object(), query
     );
 }
 
