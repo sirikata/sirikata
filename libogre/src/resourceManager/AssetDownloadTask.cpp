@@ -217,12 +217,12 @@ void AssetDownloadTask::handleAssetParsed(Mesh::VisualPtr vis) {
                 const ProgressiveMipmaps& progMipmaps = findProgTex->second.mipmaps;
                 uint32 mipmapLevel = 0;
                 for ( ; mipmapLevel < progMipmaps.size(); mipmapLevel++) {
-                    if (progMipmaps.at(mipmapLevel).width >= 128 || progMipmaps.at(mipmapLevel).height >= 128) {
+                    if (progMipmaps.find(mipmapLevel)->second.width >= 128 || progMipmaps.find(mipmapLevel)->second.height >= 128) {
                         break;
                     }
                 }
-                uint32 offset = progMipmaps.at(mipmapLevel).offset;
-                uint32 length = progMipmaps.at(mipmapLevel).length;
+                uint32 offset = progMipmaps.find(mipmapLevel)->second.offset;
+                uint32 length = progMipmaps.find(mipmapLevel)->second.length;
                 Transfer::Fingerprint hash = findProgTex->second.archiveHash;
                 addDependentDownload(texURI, Transfer::Chunk(hash, Transfer::Range(offset, length, Transfer::LENGTH)));
             } else {
