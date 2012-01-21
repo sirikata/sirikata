@@ -110,7 +110,7 @@ void EmersonMessagingManager::setupNewStream(
         }
     }
 
-    
+
     StreamMap& pres_streams = mStreams[pres];
     StreamMap::iterator it = pres_streams.find(sender);
     if (it == pres_streams.end() || !it->second->connected() || save_mine) {
@@ -235,11 +235,17 @@ bool EmersonMessagingManager::sendScriptCommMessageReliable(const SpaceObjectRef
         {
             writeMessage(
                 livenessToken(), streamPtr, msg, sender,
-                receiver, retriesSameStream,retriesNewStream--);
+                receiver, retriesSameStream,--retriesNewStream);
             return true;
         }
     }
 
+
+    //what to do when the connection is created.
+    CommWriteStreamConnectedCBRetryData retryData;
+    retryData.retriesSameStream = retriesSameStream;
+    retryData.retriesNewStream = --retriesNewStream;
+    retryData.isRetry = isRetry;
 
     // Otherwise, start the process of connecting
     // connection will overwrite existing streams if they are there.
@@ -249,12 +255,10 @@ bool EmersonMessagingManager::sendScriptCommMessageReliable(const SpaceObjectRef
         //send to receiver's script comm port
         SST::EndPoint<SpaceObjectReference>(receiver,EMERSON_RELIABLE_COMMUNICATION_PORT),
 
-        //what to do when the connection is created.
         std::tr1::bind(
             &EmersonMessagingManager::scriptCommWriteStreamConnectedCB, this,
             livenessToken(),
-            msg, sender,receiver, _1, _2, retriesSameStream,retriesNewStream--,
-            isRetry
+            msg, sender,receiver, _1, _2, retryData
         )
     );
 
@@ -266,9 +270,13 @@ void EmersonMessagingManager::scriptCommWriteStreamConnectedCB(
     Liveness::Token alive, const String& msg,
     const SpaceObjectReference& sender,
     const SpaceObjectReference& receiver, int err, SSTStreamPtr streamPtr,
-    int8 retriesSameStream,int8 retriesNewStream,bool isRetry)
+    CommWriteStreamConnectedCBRetryData retryData)
 {
     if (!alive) return;
+
+    int8 retriesSameStream = retryData.retriesSameStream;
+    int8 retriesNewStream = retryData.retriesNewStream;
+    bool isRetry = retryData.isRetry;
 
     //if connection failure, just try to re-connect.
     if (err != SST_IMPL_SUCCESS)

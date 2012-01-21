@@ -64,11 +64,18 @@ private:
     void handleIncomingSubstream(Liveness::Token alive, int err, SSTStreamPtr streamPtr);
     void handleScriptCommStreamRead(Liveness::Token alive, SSTStreamPtr sstptr, String* prevdata, uint8* buffer, int length);
 
+    // Only put a few parameters in here to avoid copying lots of stuff, we only
+    // need to get < 8 parameters for bind to work on all platforms
+    struct CommWriteStreamConnectedCBRetryData {
+        int8 retriesSameStream;
+        int8 retriesNewStream;
+        bool isRetry;
+    };
     //writing helper
     void scriptCommWriteStreamConnectedCB(
         Liveness::Token alive, const String& msg,
         const SpaceObjectReference& sender, const SpaceObjectReference& receiver,
-        int err, SSTStreamPtr streamPtr, int8 retriesSameStream,int8 retriesNewStream,bool isRetry);
+        int err, SSTStreamPtr streamPtr, CommWriteStreamConnectedCBRetryData retryData);
 
     // Writes a message to a *substream* of the given stream
     void writeMessage(
@@ -76,18 +83,18 @@ private:
         const String& msg, const SpaceObjectReference& sender,
         const SpaceObjectReference& receiver, int8 retriesSameStream,
         int8 retriesNewStream);
-    
+
     void writeMessageSubstream(
         Liveness::Token alive, int err, SSTStreamPtr subStreamPtr,
         const String& msg, const SpaceObjectReference& sender,
         const SpaceObjectReference& receiver, int8 retriesSameStream,
         int8 retriesNewStream);
-    
+
     void writeData(Liveness::Token alive, SSTStreamPtr streamPtr, const String& msg, const SpaceObjectReference& sender, const SpaceObjectReference& receiver);
 
     void removeStream(
         const SpaceObjectReference& sender, const SpaceObjectReference& receiver);
-    
+
 
     ObjectHostContext* mMainContext;
 
