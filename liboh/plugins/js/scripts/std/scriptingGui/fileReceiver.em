@@ -16,7 +16,8 @@ if (typeof(std.script) === "undefined") std.script = {};
                              'receiving a file.  Have no token.');                
         }
 
-        return 'ishmael_scripting_receiver/'+entToke+'__'+vis.toString();
+        return 'ishmael_scripting_receiver/' +
+            entToke + '__' + vis.toString() + '/';
     }
     
     function fileReceiver(msg,sender)
@@ -52,15 +53,18 @@ if (typeof(std.script) === "undefined") std.script = {};
 
     ns.Scriptable.prototype._handleScriptRequest = function(msg, sender)
     {
-        var prevPrefix = system.__getImportPrefix();
+        var newScopeDir = false;
+        if (sender.toString() != system.self.toString())
+            newScopeDir = true;
+            
         try
         {
-
             if (sender.toString() != system.self.toString())
             {
                 //any call to import from these files will first check in
                 //these directories.
-                system.__setImportPrefix(generateFolderName(sender));
+                system.__pushEvalContextScopeDirectory(
+                    generateFolderName(sender));
             }
             
             if (!this._printer || sender != this._printer) {
@@ -114,7 +118,8 @@ if (typeof(std.script) === "undefined") std.script = {};
         { }
         finally
         {
-            system.__setImportPrefix(prevPrefix);
+            if (newScopeDir)
+                system.__popEvalContextScopeDirectory();
         }
         
     };

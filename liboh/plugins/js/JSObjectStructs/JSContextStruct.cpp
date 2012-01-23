@@ -187,6 +187,15 @@ v8::Handle<v8::Value> JSContextStruct::struct_evalInGlobal(const String& native_
 }
 
 
+v8::Handle<v8::Value> JSContextStruct::pushEvalContextScopeDirectory(const String& newDir)
+{
+    return jsObjScript->pushEvalContextScopeDirectory(newDir);
+}
+
+v8::Handle<v8::Value> JSContextStruct::popEvalContextScopeDirectory()
+{
+    return jsObjScript->popEvalContextScopeDirectory();
+}
 
 
 v8::Handle<v8::Value> JSContextStruct::emersonCompileString(const String& toCompile)

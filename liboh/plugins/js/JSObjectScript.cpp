@@ -896,6 +896,51 @@ void JSObjectScript::setRestoreScriptCallback(
 }
 
 
+v8::Handle<v8::Value> JSObjectScript::pushEvalContextScopeDirectory(
+    const String& newDir)
+{
+    JSSCRIPT_SERIAL_CHECK();
+    if (mEvalContextStack.empty())
+    {
+        V8_EXCEPTION_CSTR(
+            "Error when pushing context scope.  Have no surrounding scope.");
+    }
+
+    boost::filesystem::path baseDir  =
+        Path::SubstitutePlaceholders(Path::Placeholders::RESOURCE(JS_PLUGINS_DIR,JS_SCRIPTS_DIR));
+
+    String newerDir(newDir);
+    boost::erase_all(newerDir,"..");
+    boost::filesystem::path fullPath =
+        baseDir / newerDir;
+
+    JSLOG(detailed,"Pushing new path "<<fullPath<<" onto scope stack.");
+    
+    EvalContext ec(mEvalContextStack.top());
+    ec.currentScriptDir = fullPath;
+
+    mEvalContextStack.push(ec);
+    return v8::Undefined();
+}
+
+v8::Handle<v8::Value> JSObjectScript::popEvalContextScopeDirectory()
+{
+    JSSCRIPT_SERIAL_CHECK();
+    if (mEvalContextStack.empty())
+    {
+        V8_EXCEPTION_CSTR(
+            "Error when popping context scope.  Have no surrounding scope.");
+    }
+
+    JSLOG(detailed,
+        "Popping new path "<<mEvalContextStack.top().currentScriptDir<< \
+        " from scope stack.");
+    
+    mEvalContextStack.pop();
+    return v8::Undefined();
+}
+    
+
 
 //can instantly finish the clear operation in JSObjectScript because not in the
 //midst of handling any events that might invalidate iterators.
@@ -1519,6 +1564,7 @@ void JSObjectScript::resolveImport(const String& filename, boost::filesystem::pa
     {
 
         path fq =  ctx.currentScriptDir / filename_as_path;
+        JSLOG(detailed,"Attempting to resolve import for "<<fq);
 
         try
         {
@@ -1736,8 +1782,11 @@ v8::Handle<v8::Value> JSObjectScript::import(const String& filename,  bool isJS)
 
     if(fileToFind == NULL)
     {
-      std::string errMsg = "Cannot import " + filename + ". Illegal file extension.";
-      return v8::ThrowException( v8::Exception::Error(v8::String::New(errMsg.c_str()) ) );;
+        std::string errMsg = "Cannot import " +
+            filename + ". Illegal file extension.";
+        
+        return v8::ThrowException(
+            v8::Exception::Error(v8::String::New(errMsg.c_str()) ) );
     }
     boost::filesystem::path full_filename, full_base;
     resolveImport(*fileToFind, &full_filename, &full_base);

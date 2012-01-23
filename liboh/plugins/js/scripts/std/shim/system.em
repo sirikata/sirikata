@@ -117,7 +117,7 @@ PresenceEntry.prototype.proxRemovedEvent = function (visibleObj,visTo)
      var sboxMessageManager = null;
      var presMessageManager = null;
 
-     var importPrefix = '';
+
      var entityToken = undefined;
      
      system = {};
@@ -194,6 +194,24 @@ PresenceEntry.prototype.proxRemovedEvent = function (visibleObj,visTo)
      };     
 
 
+     /**
+      Changes the directory from which we look for scripts.
+      
+      @param {String} newDir Directory we check first when resolving
+      imports/requires.
+      */
+     system.__pushEvalContextScopeDirectory = function (newDir)
+     {
+         return baseSystem.__pushEvalContextScopeDirectory.apply(
+             baseSystem,arguments);
+     };
+
+     system.__popEvalContextScopeDirectory = function()
+     {
+         return baseSystem.__popEvalContextScopeDirectory.apply(
+             baseSystem,arguments);
+     };
+     
      /**
       @ignore
 
@@ -705,12 +723,6 @@ PresenceEntry.prototype.proxRemovedEvent = function (visibleObj,visTo)
      
 
 
-     system.__setImportPrefix = function(toPrefixWith)
-     {
-         system.__debugPrint('\nWARNING __setImportPrefix is a ' +
-                             'security flaw must fix at a later date.\n');
-         importPrefix = toPrefixWith;
-     };
      
       /** @function
        *  @description Loads a file and evaluates its contents. Note
@@ -724,7 +736,7 @@ PresenceEntry.prototype.proxRemovedEvent = function (visibleObj,visTo)
        */
       system.import = function(/** String */ scriptFile)
       {
-          baseSystem.import(importPrefix + '/' + scriptFile);
+          baseSystem.import(scriptFile);
       };
 
       /** @function
@@ -1378,13 +1390,8 @@ PresenceEntry.prototype.proxRemovedEvent = function (visibleObj,visTo)
        */
       system.require = function(/** String */ filename)
       {
-          baseSystem.require(importPrefix + '/' + filename);
+          baseSystem.require(filename);
       };
-
-     system.__getImportPrefix = function()
-     {
-         return importPrefix;
-     };
 
      system.__entityToken = function()
      {

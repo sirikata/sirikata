@@ -38,6 +38,9 @@ struct JSSystemStruct
     v8::Handle<v8::Value> struct_canProxChangeQuery();
     v8::Handle<v8::Value> struct_canImport();
 
+    v8::Handle<v8::Value> pushEvalContextScopeDirectory(const String& newDir);
+    v8::Handle<v8::Value> popEvalContextScopeDirectory();
+    
     v8::Handle<v8::Value> checkResources();
     v8::Handle<v8::Value> struct_evalInGlobal(const String& native_contents, ScriptOrigin* sOrigin);
     v8::Handle<v8::Value> checkHeadless();

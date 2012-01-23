@@ -137,6 +137,11 @@ public:
 
     v8::Handle<v8::Value> setRestoreScript(JSContextStruct* jscont, const String& script, v8::Handle<v8::Function> cb);
 
+    //creates a new EvalContext with newDir as scripting directory.  Puts that
+    //context on mEvalContextStack.
+    v8::Handle<v8::Value> pushEvalContextScopeDirectory(const String& newDir);
+    v8::Handle<v8::Value> popEvalContextScopeDirectory();
+    
     /**
        Returns true if context eval stack is not empty and if the top context on
        the stack allows operation associated with whatCap on jspres.  Returns

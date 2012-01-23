@@ -285,7 +285,12 @@ void JSObjectScriptManager::createSystemTemplate()
     mSystemTemplate->Set(v8::String::New("setRestoreScript"),v8::FunctionTemplate::New(JSSystem::setRestoreScript));
     mSystemTemplate->Set(v8::String::New("__emersonCompileString"), v8::FunctionTemplate::New(JSSystem::emersonCompileString));
 
-
+    mSystemTemplate->Set(v8::String::New("__pushEvalContextScopeDirectory"),
+        v8::FunctionTemplate::New(JSSystem::pushEvalContextScopeDirectory));
+    mSystemTemplate->Set(v8::String::New("__popEvalContextScopeDirectory"),
+        v8::FunctionTemplate::New(JSSystem::popEvalContextScopeDirectory));
+    
+    
     mSystemTemplate->Set(v8::String::New("createVisible"),v8::FunctionTemplate::New(JSSystem::root_createVisible));
 
     //check what permissions fake root is loaded with

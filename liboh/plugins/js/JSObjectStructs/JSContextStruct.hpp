@@ -95,6 +95,9 @@ struct JSContextStruct : public JSSuspendable, public Liveness
         JSVisibleStruct* jsvis,bool isGone);
 
 
+    v8::Handle<v8::Value> pushEvalContextScopeDirectory(const String& newDir);
+    v8::Handle<v8::Value> popEvalContextScopeDirectory();
+    
     v8::Handle<v8::Value> storageBeginTransaction();
     v8::Handle<v8::Value> storageCommit(v8::Handle<v8::Function> cb);
     v8::Handle<v8::Value> storageWrite(const OH::Storage::Key& key, const String& toWrite, v8::Handle<v8::Function> cb);
