@@ -146,7 +146,7 @@ void ColladaSystem::addHeaderData(const Transfer::RemoteFileMetadata& metadata, 
     //Parse number of triangles in the progressive stream
     uint32 prog_triangles;
     try {
-        prog_triangles = boost::lexical_cast<uint32>(findProgNumTriangles->second);
+        prog_triangles = uint32_lexical_cast(findProgNumTriangles->second);
     } catch (boost::bad_lexical_cast const&) {
         COLLADA_LOG(warn, "Error parsing progressive-stream-num-triangles from headers");
         return;
@@ -157,7 +157,7 @@ void ColladaSystem::addHeaderData(const Transfer::RemoteFileMetadata& metadata, 
     //Parse number of mipmaps
     uint32 num_mipmaps;
     try {
-        num_mipmaps = boost::lexical_cast<uint32>(findMipmaps->second);
+        num_mipmaps = uint32_lexical_cast(findMipmaps->second);
     } catch (boost::bad_lexical_cast const&) {
         COLLADA_LOG(warn, "Error parsing number of mipmaps from headers");
         return;
@@ -206,10 +206,10 @@ void ColladaSystem::addHeaderData(const Transfer::RemoteFileMetadata& metadata, 
                     return;
                 }
                 try {
-                    mipmapLevel.offset = boost::lexical_cast<uint32>(tokens[0]);
-                    mipmapLevel.length = boost::lexical_cast<uint32>(tokens[1]);
-                    mipmapLevel.width = boost::lexical_cast<uint32>(tokens[2]);
-                    mipmapLevel.height = boost::lexical_cast<uint32>(tokens[3]);
+                    mipmapLevel.offset = uint32_lexical_cast(tokens[0]);
+                    mipmapLevel.length = uint32_lexical_cast(tokens[1]);
+                    mipmapLevel.width = uint32_lexical_cast(tokens[2]);
+                    mipmapLevel.height = uint32_lexical_cast(tokens[3]);
                 } catch (boost::bad_lexical_cast const&) {
                     COLLADA_LOG(warn, "Error converting mipmap level tokens to integers");
                     return;
