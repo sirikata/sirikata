@@ -34,15 +34,11 @@
 #ifndef SIRIKATA_MeerkatTransferHandler_HPP__
 #define SIRIKATA_MeerkatTransferHandler_HPP__
 
-#include <map>
-#include <queue>
-#include <string>
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/transfer/RemoteFileMetadata.hpp>
-#include <sirikata/core/transfer/TransferPool.hpp>
 #include <sirikata/core/transfer/HttpManager.hpp>
-#include <boost/asio.hpp>
 #include <sirikata/core/network/Address.hpp>
+#include <sirikata/core/transfer/TransferHandlers.hpp>
 
 namespace Sirikata {
 namespace Transfer {

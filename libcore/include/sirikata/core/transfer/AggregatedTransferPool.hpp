@@ -91,7 +91,7 @@ public:
     }
 
     //Updates priority of a request in the pool
-    virtual void updatePriority(TransferRequestPtr req, TransferRequest::PriorityType p) {
+    virtual void updatePriority(TransferRequestPtr req, Priority p) {
         boost::unique_lock<boost::mutex> lock(mMutex);
 
         RequestDataMap::iterator it = mRequestData.find(req->getIdentifier());

@@ -698,7 +698,7 @@ class RequestVerifier {
 public:
     typedef std::tr1::function<void()> VerifyFinished;
     virtual void addToPool(std::tr1::shared_ptr<Transfer::TransferPool> pool,
-            VerifyFinished cb, Transfer::TransferRequest::PriorityType priority) = 0;
+            VerifyFinished cb, Transfer::Priority priority) = 0;
     virtual ~RequestVerifier() {}
 };
 
@@ -734,7 +734,7 @@ public:
         : mFileSize(file_size), mHash(Transfer::Fingerprint::convertFromHex(hash)), mURI(uri), mGotResponse(false) {
     }
     void addToPool(std::tr1::shared_ptr<Transfer::TransferPool> pool,
-            VerifyFinished cb, Transfer::TransferRequest::PriorityType priority) {
+            VerifyFinished cb, Transfer::Priority priority) {
         std::tr1::shared_ptr<Transfer::TransferRequest> req(
                 new Transfer::MetadataRequest(mURI, priority, std::tr1::bind(
                 &MetadataVerifier::metadataFinished, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2, cb)));
@@ -764,11 +764,11 @@ public:
           mChunkHash(Transfer::Fingerprint::convertFromHex(chunk_hash)) {
 	        }
     void addToPool(std::tr1::shared_ptr<Transfer::TransferPool> pool,
-            VerifyFinished cb, Transfer::TransferRequest::PriorityType priority) {
+            VerifyFinished cb, Transfer::Priority priority) {
         MetadataVerifier::addToPool(pool, std::tr1::bind(&ChunkVerifier::metadataFinished, this, pool, cb, priority), priority);
     }
     void metadataFinished(std::tr1::shared_ptr<Transfer::TransferPool> pool,
-            VerifyFinished cb, Transfer::TransferRequest::PriorityType priority) {
+            VerifyFinished cb, Transfer::Priority priority) {
 
         //Make sure chunk given is part of file
         SILOG(transfer, debug, "Verifying metadata response for chunk " << mURI.toString());

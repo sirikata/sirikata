@@ -18,6 +18,8 @@ typedef std::tr1::shared_ptr<ChunkRequest> ChunkRequestPtr;
 /// simple file ID class--should make no assumptions about which hash.
 typedef SHA256 Fingerprint;
 
+typedef float32 Priority;
+
 } // namespace Transfer
 } // namespace Sirikata
 
