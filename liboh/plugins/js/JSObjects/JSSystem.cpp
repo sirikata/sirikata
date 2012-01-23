@@ -184,6 +184,15 @@ v8::Handle<v8::Value> setPresenceMessageCallback(const v8::Arguments& args)
 }
 
 
+v8::Handle<v8::Value> getUniqueToken(const v8::Arguments& args)
+{
+    if (args.Length() != 0)
+        V8_EXCEPTION_CSTR("getUniqueToken requires 0 arguments.");
+
+    UUID randUUID = UUID::random();
+    return v8::String::New(randUUID.toString().c_str());
+}
+
 
 /**
    First argument should contain a message object that will be

@@ -46,6 +46,7 @@ v8::Handle<v8::Value> root_http(const v8::Arguments& args);
 
 v8::Handle<v8::Value> emersonCompileString(const v8::Arguments& args);
 v8::Handle<v8::Value> evalInGlobal(const v8::Arguments& args);
+v8::Handle<v8::Value> getUniqueToken(const v8::Arguments& args);
 
 v8::Handle<v8::Value> setSandboxMessageCallback(const v8::Arguments& args);
 v8::Handle<v8::Value> setPresenceMessageCallback(const v8::Arguments& args);

@@ -118,7 +118,7 @@ PresenceEntry.prototype.proxRemovedEvent = function (visibleObj,visTo)
      var presMessageManager = null;
 
 
-     var entityToken = undefined;
+     var entityToken = baseSystem.getUniqueToken();
      
      system = {};
 
@@ -1226,8 +1226,6 @@ PresenceEntry.prototype.proxRemovedEvent = function (visibleObj,visTo)
 
      var onPresConnFunc = function(pres)
      {
-         if (typeof(entityToken) == 'undefined')
-             entityToken = pres.toString();
          
          for (var s in presConnectedManager)
              presConnectedManager[s](pres, new ClearablePresConnected(s));                 
@@ -1393,6 +1391,7 @@ PresenceEntry.prototype.proxRemovedEvent = function (visibleObj,visTo)
           baseSystem.require(filename);
       };
 
+     
      system.__entityToken = function()
      {
          return entityToken;

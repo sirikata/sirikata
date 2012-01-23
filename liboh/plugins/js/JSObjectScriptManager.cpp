@@ -290,6 +290,8 @@ void JSObjectScriptManager::createSystemTemplate()
     mSystemTemplate->Set(v8::String::New("__popEvalContextScopeDirectory"),
         v8::FunctionTemplate::New(JSSystem::popEvalContextScopeDirectory));
     
+    mSystemTemplate->Set(v8::String::New("getUniqueToken"),
+        v8::FunctionTemplate::New(JSSystem::getUniqueToken));
     
     mSystemTemplate->Set(v8::String::New("createVisible"),v8::FunctionTemplate::New(JSSystem::root_createVisible));
 
