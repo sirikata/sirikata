@@ -361,6 +361,7 @@ void Server::onObjectHostDisconnected(const ObjectHostConnectionID& oh_conn_id, 
 	SPACE_LOG(info, "OH connection "<<short_conn_id<<": "<<oh_name<<" disconnected");
 	mOHConnectionNames.erase(short_conn_id);
 	mOHNameConnections.erase(oh_name);
+	mOHConnectionCounts.erase(short_conn_id);
 
     mContext->mainStrand->post( std::tr1::bind(&Server::handleObjectHostConnectionClosed, this, oh_conn_id, oh_name) );
     mOHSessionManager->fireObjectHostSessionEnded( OHDP::NodeID(short_conn_id) );
@@ -533,7 +534,6 @@ void Server::handleObjectHostConnectionClosed(const ObjectHostConnectionID& oh_c
         if (obj_conn->connID() != oh_conn_id)
             continue;
 
-        mOHConnectionCounts[oh_conn_id.shortID()]--;
         handleDisconnect(obj_id, obj_conn, oh_name);
     }
     mContext->timeSeries->report(mTimeSeriesObjects, mObjects.size());
