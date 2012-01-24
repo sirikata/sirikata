@@ -111,7 +111,7 @@ private:
     bool isObjectConnecting(const UUID& object_id) const;
 
     // Handle an object host closing its connection
-    void handleObjectHostConnectionClosed(const ObjectHostConnectionID& conn_id);
+    void handleObjectHostConnectionClosed(const ObjectHostConnectionID& conn_id, const ShortObjectHostConnectionID short_conn_id);
     // Schedule main thread to handle oh message routing
     void scheduleObjectHostMessageRouting();
     void handleObjectHostMessageRouting();
@@ -190,6 +190,13 @@ private:
     // cache them so TimeSeries reports are fast
     String mTimeSeriesObjects;
 
+    typedef struct EntityInfo {
+      String MigrationDstOHName;
+      bool Migrating;
+      std::set<UUID> ObjectSet;
+    } objectsPerEntity_t;
+    typedef std::tr1::unordered_map<UUID, objectsPerEntity_t,UUID::Hasher> EntityMap;
+
     //Create the data structure for the record
     struct ObjectsDistribution {
       String ObjectHostName;
@@ -198,14 +205,7 @@ private:
       uint32 migratingFrom_N;
       uint32 migrate_capacity;
       uint32 migrate_threshold;
-
-      typedef struct EntityInfo {
-        String MigrationDstOHName;
-        bool Migrating;
-        std::set<UUID> ObjectSet;
-      } objectsPerEntity_t;
-
-      std::tr1::unordered_map<UUID, objectsPerEntity_t,UUID::Hasher> entityMap;
+      EntityMap entityMap;
     };
 
     typedef std::tr1::unordered_map<ShortObjectHostConnectionID, ObjectsDistribution*> ObjectsDistributionMap;

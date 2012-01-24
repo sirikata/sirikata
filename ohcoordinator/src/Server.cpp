@@ -284,10 +284,7 @@ void Server::onObjectHostConnected(const ObjectHostConnectionID& conn_id, const 
 
 void Server::onObjectHostDisconnected(const ObjectHostConnectionID& oh_conn_id, const ShortObjectHostConnectionID short_conn_id) {
 	SPACE_LOG(info, "OH connection "<<short_conn_id<<": "<<mObjectsDistribution[short_conn_id]->ObjectHostName<<" disconnected");
-	mOHNameConnections.erase(mObjectsDistribution[short_conn_id]->ObjectHostName);
-	mCount = mCount-mObjectsDistribution[short_conn_id]->counter;
-	mObjectsDistribution.erase(short_conn_id);
-    mContext->mainStrand->post( std::tr1::bind(&Server::handleObjectHostConnectionClosed, this, oh_conn_id) );
+    mContext->mainStrand->post( std::tr1::bind(&Server::handleObjectHostConnectionClosed, this, oh_conn_id, short_conn_id) );
     mOHSessionManager->fireObjectHostSessionEnded( OHDP::NodeID(short_conn_id) );
 }
 
@@ -398,7 +395,7 @@ void Server::handleSessionMessage(const ObjectHostConnectionID& oh_conn_id, Siri
         }
     }
     else if (session_msg.has_coordinate()) {
-    	if(session_msg.coordinate().type() == Sirikata::Protocol::Session::Coordinate::Add) { //Feng
+    	if(session_msg.coordinate().type() == Sirikata::Protocol::Session::Coordinate::Add) {
     		UUID obj_id = session_msg.coordinate().object();
     		UUID entity_id = session_msg.coordinate().entity();
 
@@ -450,6 +447,7 @@ void Server::handleSessionMessage(const ObjectHostConnectionID& oh_conn_id, Siri
         		mCount--;
         		mObjectsDistribution[oh_conn_id.shortID()]->counter--;
         		mObjectsDistribution[oh_conn_id.shortID()]->entityMap[entity_id].ObjectSet.erase(obj_id);
+        		mObjectInfo.erase(obj_id);
 
         		SPACE_LOG(info, "OH "<<mObjectsDistribution[oh_conn_id.shortID()]->ObjectHostName
     							<<" remove one object, count: "<<mObjectsDistribution[oh_conn_id.shortID()]->counter<<"/"<<mCount);
@@ -501,6 +499,9 @@ void Server::handleMigrateRequest(const ObjectHostConnectionID& oh_conn_id, cons
 	}
 	if (success)
 		informOHMigrationTo(DstOHName, entity_id, oh_conn_id);
+	else
+		SPACE_LOG(info,"Cannot find object host to handle migration request from "
+				<<mObjectsDistribution[oh_conn_id.shortID()]->ObjectHostName<<" of entity "<<entity_id);
 }
 
 bool Server::rebalance(const UUID& entity_id, const ObjectHostConnectionID& oh_conn_id)
@@ -521,7 +522,7 @@ bool Server::rebalance(const UUID& entity_id, const ObjectHostConnectionID& oh_c
 		}
 	}
 
-	if (min + 2*delta < min_org) {
+	if (min + 2*delta <= min_org) {
 		unbalance = true;
 		informOHMigrationTo(DstOHName, entity_id, oh_conn_id);
 		SPACE_LOG(info, "Rebalance: move entity "<<entity_id.rawHexData()<<" from "
@@ -580,7 +581,20 @@ void Server::informOHMigrationTo(const String& DstOHName, const UUID& uuid, cons
 }
 
 
-void Server::handleObjectHostConnectionClosed(const ObjectHostConnectionID& oh_conn_id) {
+void Server::handleObjectHostConnectionClosed(const ObjectHostConnectionID& oh_conn_id, const ShortObjectHostConnectionID short_conn_id) {
+	mOHNameConnections.erase(mObjectsDistribution[short_conn_id]->ObjectHostName);
+	mCount = mCount-mObjectsDistribution[short_conn_id]->counter;
+
+	for(EntityMap::iterator entityMapIter = mObjectsDistribution[short_conn_id]->entityMap.begin();
+			entityMapIter != mObjectsDistribution[short_conn_id]->entityMap.end(); entityMapIter++){
+		for(std::set<UUID>::iterator iter = entityMapIter->second.ObjectSet.begin();
+				iter != entityMapIter->second.ObjectSet.end(); iter++){
+			mObjectInfo.erase(*iter);
+		}
+	}
+
+	mObjectsDistribution.erase(short_conn_id);
+
     for(ObjectConnectionMap::iterator it = mObjects.begin(); it != mObjects.end(); ) {
         UUID obj_id = it->first;
         ObjectConnection* obj_conn = it->second;
