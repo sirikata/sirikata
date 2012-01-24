@@ -1838,6 +1838,7 @@ SET(BENCH_SOURCES
 #test source files
 SET(CXXTESTSources
 ${TEST_LIBCORE_SOURCE_DIR}/TransferTest.hpp
+#${TEST_LIBCORE_SOURCE_DIR}/TransferUploadTest.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/AnyTest.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/AtomicTest.hpp
 #${TEST_LIBCORE_SOURCE_DIR}/CacheLayerTest.hpp

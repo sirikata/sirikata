@@ -50,6 +50,8 @@
 #define OPT_CDN_SERVICE          "cdn.service"
 #define OPT_CDN_DNS_URI_PREFIX   "cdn.dns.prefix"
 #define OPT_CDN_DOWNLOAD_URI_PREFIX     "cdn.download.prefix"
+#define OPT_CDN_UPLOAD_URI_PREFIX   "cdn.upload.prefix"
+#define OPT_CDN_UPLOAD_STATUS_URI_PREFIX   "cdn.upload.status.prefix"
 
 #define OPT_TRACE_TIMESERIES           "trace.timeseries"
 #define OPT_TRACE_TIMESERIES_OPTIONS   "trace.timeseries-options"

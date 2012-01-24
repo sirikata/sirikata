@@ -39,6 +39,7 @@
 #include <sirikata/core/transfer/DiskCacheLayer.hpp>
 #include <sirikata/core/transfer/MemoryCacheLayer.hpp>
 #include <sirikata/core/transfer/LRUPolicy.hpp>
+#include <sirikata/core/transfer/TransferRequest.hpp>
 
 namespace Sirikata {
 namespace Transfer {
@@ -79,6 +80,25 @@ public:
             std::tr1::shared_ptr<Chunk> chunk, ChunkCallback callback) = 0;
 
     virtual ~ChunkHandler() {
+    }
+
+};
+
+
+/*
+ * Base class for an implementation that satisfies file uploads.
+ * Input is credentials, files, requested path, and parameters, output is the path
+ */
+class UploadHandler {
+
+public:
+    typedef std::tr1::function<void(Transfer::URI)> UploadCallback;
+
+    virtual void upload(
+        UploadRequestPtr request,
+        UploadCallback callback) = 0;
+
+    virtual ~UploadHandler() {
     }
 
 };

@@ -133,5 +133,44 @@ void DirectChunkRequest::notifyCaller(TransferRequestPtr me, TransferRequestPtr 
     SILOG(transfer, detailed, "done DirectChunkRequest notifyCaller");
 }
 
+
+
+const std::string& UploadRequest::getIdentifier() const {
+    return mPath;
+}
+
+void UploadRequest::execute(TransferRequestPtr req, ExecuteFinished cb) {
+    UploadRequestPtr casted =
+        std::tr1::static_pointer_cast<UploadRequest>(req);
+    // Only support meerkat for now, need way to specify where/how to upload in UploadRequest
+    MeerkatUploadHandler::getSingleton().upload(
+        casted,
+        std::tr1::bind(
+            &UploadRequest::execute_finished, this, _1, cb
+        )
+    );
+}
+
+void UploadRequest::execute_finished(Transfer::URI uploaded_path, ExecuteFinished cb) {
+    SILOG(transfer, detailed, "execute_finished in UploadRequest called");
+    mUploadedPath = uploaded_path;
+    HttpManager::getSingleton().postCallback(cb, "UploadRequest::execute_finished");
+    SILOG(transfer, detailed, "done UploadRequest execute_finished");
+}
+
+void UploadRequest::notifyCaller(TransferRequestPtr me, TransferRequestPtr from) {
+    UploadRequestPtr meU =
+        std::tr1::static_pointer_cast<UploadRequest>(me);
+    UploadRequestPtr fromU =
+        std::tr1::static_pointer_cast<UploadRequest>(from);
+
+    meU->mUploadedPath = fromU->mUploadedPath;
+    HttpManager::getSingleton().postCallback(
+        std::tr1::bind(mCB, meU, meU->mUploadedPath),
+        "UploadRequest::notifyCaller"
+    );
+    SILOG(transfer, detailed, "done UploadRequest notifyCaller");
+}
+
 } // namespace Transfer
 } // namespace Sirikata

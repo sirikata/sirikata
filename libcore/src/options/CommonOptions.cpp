@@ -92,6 +92,8 @@ void InitOptions() {
         .addOption(new OptionValue(OPT_CDN_SERVICE, "http", Sirikata::OptionValueType<String>(), "Service to access CDN by."))
         .addOption(new OptionValue(OPT_CDN_DNS_URI_PREFIX, "/dns", Sirikata::OptionValueType<String>(), "URI prefix for CDN HTTP name looksup."))
         .addOption(new OptionValue(OPT_CDN_DOWNLOAD_URI_PREFIX, "/download", Sirikata::OptionValueType<String>(), "URI prefix for CDN HTTP downloads."))
+        .addOption(new OptionValue(OPT_CDN_UPLOAD_URI_PREFIX, "/api/upload", Sirikata::OptionValueType<String>(), "URI prefix for CDN HTTP uploads."))
+        .addOption(new OptionValue(OPT_CDN_UPLOAD_STATUS_URI_PREFIX, "/upload/processing", Sirikata::OptionValueType<String>(), "URI prefix for CDN HTTP upload status checks."))
 
         .addOption(new OptionValue(OPT_TRACE_TIMESERIES, "null", Sirikata::OptionValueType<String>(), "Service to report TimeSeries data to."))
         .addOption(new OptionValue(OPT_TRACE_TIMESERIES_OPTIONS, "", Sirikata::OptionValueType<String>(), "Options for TimeSeries reporting service."))

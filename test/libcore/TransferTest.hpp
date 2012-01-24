@@ -701,6 +701,7 @@ public:
             VerifyFinished cb, Transfer::Priority priority) = 0;
     virtual ~RequestVerifier() {}
 };
+typedef std::tr1::shared_ptr<RequestVerifier> RequestVerifierPtr;
 
 class MetadataVerifier
     : public RequestVerifier {
@@ -809,6 +810,9 @@ public:
         cb();
     }
 };
+
+
+
 
 class SampleClient {
 

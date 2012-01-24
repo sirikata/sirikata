@@ -96,6 +96,10 @@ void HttpManager::postCallback(IOCallback cb, const char* tag) {
     mServicePool->service()->post(cb, tag);
 }
 
+void HttpManager::postCallback(const Duration& waitFor, IOCallback cb, const char* tag) {
+    mServicePool->service()->post(waitFor, cb, tag);
+}
+
 String HttpManager::methodAsString(HTTP_METHOD m) {
     switch(m) {
       case HEAD: return "HEAD";
@@ -202,8 +206,12 @@ String HttpManager::formatPath(const String& path, const QueryParameters& query_
     return formatted.str();
 }
 
-String HttpManager::formatURL(const String& host, const String& path, const QueryParameters& query_params) {
-    return "http://" + host + formatPath(path, query_params);
+String HttpManager::formatURL(const String& host, const String& service, const String& path, const QueryParameters& query_params) {
+    String service_part = "";
+    // FIXME sanity check service is a port number?
+    if (!service.empty() && service != "http" && service != "80")
+        service_part = ":" + service;
+    return "http://" + host + service_part + formatPath(path, query_params);
 }
 
 void HttpManager::head(

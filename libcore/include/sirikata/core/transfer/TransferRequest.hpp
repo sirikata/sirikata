@@ -10,6 +10,7 @@
 #include <sirikata/core/transfer/TransferData.hpp>
 #include "RemoteFileMetadata.hpp"
 #include "URI.hpp"
+#include <sirikata/core/transfer/OAuthParams.hpp>
 
 namespace Sirikata {
 namespace Transfer {
@@ -240,6 +241,62 @@ protected:
 
 typedef std::tr1::shared_ptr<ChunkRequest> ChunkRequestPtr;
 
+
+
+
+
+class UploadRequest;
+typedef std::tr1::shared_ptr<UploadRequest> UploadRequestPtr;
+/** Upload requests allow you to upload content to the CDN and
+ *  retrieve their URL when the upload is complete.
+ */
+class SIRIKATA_EXPORT UploadRequest : public TransferRequest {
+  public:
+    typedef std::map<String, String> StringMap;
+
+    typedef std::tr1::function<void(
+        UploadRequestPtr request,
+        const Transfer::URI& path)> UploadCallback;
+
+    UploadRequest(OAuthParamsPtr oauth,
+        const StringMap& files, const String& path, const StringMap& params,
+        Priority priority,
+        UploadCallback cb)
+        : mOAuth(oauth),
+          mFiles(files),
+          mPath(path),
+          mParams(params),
+          mCB(cb)
+    {
+    }
+    virtual ~UploadRequest() {}
+
+    // TransferRequest Interface
+    virtual const std::string& getIdentifier() const;
+    virtual void execute(TransferRequestPtr req, ExecuteFinished cb);
+    virtual void notifyCaller(TransferRequestPtr me, TransferRequestPtr from);
+
+    OAuthParamsPtr oauth() { return mOAuth; }
+    const StringMap& files() { return mFiles; }
+    const String& path() { return mPath; }
+    const StringMap& params() { return mParams; }
+
+  private:
+
+    void execute_finished(Transfer::URI uploaded_path, ExecuteFinished cb);
+
+    const OAuthParamsPtr mOAuth;
+    const StringMap mFiles; // Filename -> data
+    const String mPath; // Requested location of asset,
+                        // e.g. apiupload/filename results in
+                        // /username/apiupload/filename
+    const StringMap mParams; // Optional params, e.g. title = 'Building'
+
+    // The URI the file was actually uploaded to, or empty if it failed
+    Transfer::URI mUploadedPath;
+
+    UploadCallback mCB;
+};
 
 } // namespace Transfer
 } // namespace Sirikata

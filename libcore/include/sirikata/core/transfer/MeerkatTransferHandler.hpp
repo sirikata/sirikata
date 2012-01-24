@@ -119,6 +119,50 @@ public:
     static void destroy();
 };
 
+
+/*
+ * Implements uploads via HTTP
+ */
+class SIRIKATA_EXPORT MeerkatUploadHandler
+    : public UploadHandler, public AutoSingleton<MeerkatUploadHandler> {
+
+private:
+    //TODO: should get these from settings
+    const std::string CDN_HOST_NAME;
+    const std::string CDN_SERVICE;
+    const std::string CDN_UPLOAD_URI_PREFIX;
+    const std::string CDN_UPLOAD_STATUS_URI_PREFIX;
+    const Network::Address mCdnAddr;
+
+    void getServerProps(UploadRequestPtr request, Network::Address& cdn_addr, String& full_oauth_hostinfo);
+
+
+    void request_finished(std::tr1::shared_ptr<HttpManager::HttpResponse> response,
+            HttpManager::ERR_TYPE error, const boost::system::error_code& boost_error,
+            UploadRequestPtr request, UploadCallback callback);
+
+    void requestStatus(UploadRequestPtr request, const String& task_id, UploadCallback callback, int32 retries);
+
+    void handleRequestStatusResult(
+        std::tr1::shared_ptr<HttpManager::HttpResponse> response,
+        HttpManager::ERR_TYPE error, const boost::system::error_code& boost_error,
+        UploadRequestPtr request, const String& task_id, UploadCallback callback,
+        int32 retries
+    );
+
+public:
+    MeerkatUploadHandler();
+    ~MeerkatUploadHandler();
+
+    virtual void upload(
+        UploadRequestPtr request,
+        UploadCallback callback);
+
+    static MeerkatUploadHandler& getSingleton();
+    static void destroy();
+};
+
+
 }
 }
 
