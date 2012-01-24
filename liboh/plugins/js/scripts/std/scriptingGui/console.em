@@ -21,5 +21,11 @@ system.require('scriptingGuiUtil.em');
     {
         std.ScriptingGui.Util.dPrint('\nGot a script recevied event\n');
     };
+
+    std.ScriptingGui.Console.prototype.fileEvent =
+        function(fObj)
+    {
+        std.ScriptingGui.Util.dPrint('\nGot a fileEvent object\n');
+    };
     
 })();

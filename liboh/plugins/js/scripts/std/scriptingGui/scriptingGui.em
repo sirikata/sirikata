@@ -299,8 +299,14 @@ system.require('fileManagerElement.em');
             throw new Error ('Error in FileManager.updateAll.  ' +
                              'Do not have record for this visible.');
         }
+
+        var updateFileId = std.ScriptingGui.Util.uniqueId();
+        var consMsg = scriptedVisMap[vis.toString()].updateAll(
+            updateFileId,
+            std.core.bind(onFileUpdateSuccess,undefined,this,updateFileId),
+            std.core.bind(onFileUpdateFailure,undefined,this,updateFileId));
         
-        return scriptedVisMap[vis.toString()].updateAll();
+        console.fileEvent(consMsg);
     };
 
     std.ScriptingGui.Controller.prototype.updateFile = function(vis,filename)
@@ -311,9 +317,36 @@ system.require('fileManagerElement.em');
                              'Do not have record for this visible.');
         }
 
-        return scriptedVisMap[vis.toString()].updateFilename(filename);
+        var updateFileId = std.ScriptingGui.Util.uniqueId();
+        var consMsg = scriptedVisMap[vis.toString()].updateFile(
+            filename,updateFileId,
+            std.core.bind(onFileUpdateSuccess,undefined,this,updateFileId),
+            std.core.bind(onFileUpdateFailure,undefined,this,updateFileId));
+
+        console.fileEvent(consMsg);
     };
 
+    function onFileUpdateSuccess(scriptingGui,updateId,filename)
+    {
+        var consMsg = {
+            type: 'FILE_UPDATE_SUCCESS',
+            filename: filename,
+            updateId: updateId
+        };
+        console.fileEvent(consMsg);
+    }
+
+    function onFileUpdateFailure(scriptingGui,updateId,filename)
+    {
+        var consMsg = {
+            type: 'FILE_UPDATE_FAIL',
+            filename: filename,
+            updateId: updateId
+        };
+        console.fileEvent(consMsg);        
+    }
+    
+    
     std.ScriptingGui.Controller.prototype.getFileText = function(vis,filename)
     {
         if (!scriptedVisExists(vis))

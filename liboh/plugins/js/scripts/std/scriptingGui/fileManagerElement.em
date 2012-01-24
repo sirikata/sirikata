@@ -41,20 +41,38 @@
          delete this.fileMap[name];
      };
 
-     std.FileManager.FileManagerElement.prototype.checkFileExists = function(name)
+     std.FileManager.FileManagerElement.prototype.checkFileExists =
+         function(name)
      {
          return (name in this.fileMap);
      };
 
-     
+
      //Force visible to read all files sent.
-     std.FileManager.FileManagerElement.prototype.updateAll = function()
+     //Returns an object that the console can display in output.
+     std.FileManager.FileManagerElement.prototype.updateAll =
+         function(operationId,onSuccess,onFailure)
      {
+         var consMsg = {
+             type: "FILE_MANAGER_UPDATE_ALL",
+             operationId: operationId,
+             visId: this.vis.toString(),
+             files:{}
+             };
+
+
+         //console message will be composed of a bunch of individual
+         //calls to push individual files over.
          for (var s in this.fileMap)
-             this.updateFile(s);
+         {
+             consMsg['files'][s] =
+                 this.updateFile(s,operationId,onSuccess,onFailure);
+         }
+         return consMsg;
      };
 
-     std.FileManager.FileManagerElement.prototype.getFileText = function(filename)
+     std.FileManager.FileManagerElement.prototype.getFileText =
+         function(filename)
      {
          if (!this.checkFileExists(filename))
          {
@@ -65,7 +83,8 @@
          return this.fileMap[filename].text;
      };
 
-     std.FileManager.FileManagerElement.prototype.getRemoteVersionText = function(filename)
+     std.FileManager.FileManagerElement.prototype.getRemoteVersionText =
+         function(filename)
      {
          if (!this.checkFileExists(filename))
          {
@@ -82,7 +101,8 @@
       rereads every file from disk that is associated with this
       visible.
       */
-     std.FileManager.FileManagerElement.prototype.rereadFile = function(filename)
+     std.FileManager.FileManagerElement.prototype.rereadFile =
+         function(filename)
      {
          if (typeof(filename) == 'undefined')
          {
@@ -102,9 +122,14 @@
          this.fileMap[filename].readFile();
 
      };
-     
-     //sends the file to visible.
-     std.FileManager.FileManagerElement.prototype.updateFile = function(filename)
+
+     /**
+      sends the file to visible.
+      If file sending is successful, then call onSuccess with filename.
+      If unsuccessful, then call onFail with filename.
+      */
+     std.FileManager.FileManagerElement.prototype.updateFile =
+         function(filename,operationId,onSuccess,onFail)
      {
          if(!(filename in this.fileMap))
          {
@@ -126,13 +151,26 @@
              [ function()
                {
                    file.setRemoteVersionText(file.text);
+                   onSuccess(filename);
                },
                FILE_UPDATE_TIMEOUT,
                function()
                {
                    errorFunction('No response to update.');
+                   onFail(filename);
                }
              ];
+
+         var consMsg =
+             {
+                 type: "FILE_MANAGER_UPDATE",
+                 operationId: operationId,
+                 visId: this.vis.toString(),
+                 filename: filename
+             };
+         
+         return consMsg;
+         
      };
 
  })();
