@@ -27,5 +27,18 @@ system.require('scriptingGuiUtil.em');
     {
         std.ScriptingGui.Util.dPrint('\nGot a fileEvent object\n');
     };
+
+    std.ScriptingGui.Console.prototype.nearbyEvent =
+        function(nearbyObj)
+    {
+        std.ScriptingGui.Util.dPrint('\nGot a nearbyEvent object\n');
+    };
+
+    std.ScriptingGui.Console.prototype.scriptedObjEvent =
+        function(nearbyObj)
+    {
+        std.ScriptingGui.Util.dPrint('\nGot a scriptedObjEvent object\n');
+    };
+
     
 })();

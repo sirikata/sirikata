@@ -189,12 +189,24 @@ system.require('fileManagerElement.em');
         system.self.onProxAdded(addToNearby,true);
         system.self.onProxRemoved(removeFromNearby);
         function addToNearby(newVis)
-        {
+        {            
             nearbyVisMap[newVis.toString()] = newVis;
+
+            var consMsg = {
+                    type: 'NEARBY_ADDED',
+                    addedVis: newVis
+                };
+            console.nearbyEvent(consMsg);
         }
         function removeFromNearby(oldVis)
         {
             delete nearbyVisMap[oldVis.toString()];
+
+            var consMsg = {
+                    type: 'NEARBY_REMOVED',
+                    removedVis: oldVis
+                };
+            console.nearbyEvent(consMsg);
         }
     }
 
@@ -222,6 +234,13 @@ system.require('fileManagerElement.em');
             new std.FileManager.FileManagerElement(
                 visToAdd,defaultErrorFunction,
                 generateScriptingDirectory(visToAdd));
+
+        var consMsg = {
+                type: 'ADD_VISIBLE',
+                visible: visToAdd
+            };
+
+        console.scriptedObjEvent(consMsg);
     };
 
     std.ScriptingGui.Controller.prototype.removeVisible =
@@ -234,6 +253,12 @@ system.require('fileManagerElement.em');
         }
         system.__debugPrint('\nNote: not removing previously-written files.\n');
         delete scriptedVisMap[visToRemove.toString()];
+
+        var consMsg = {
+                type: 'REMOVE_VISIBLE',
+                visible: visToRemove
+            };
+        console.scriptedObjEvent(consMsg);
     };
 
 
