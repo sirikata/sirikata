@@ -53,6 +53,12 @@
 #include <iostream>
 #include <fstream>
 
+#include <sirikata/core/util/Paths.hpp>
+
+#include <boost/iostreams/read.hpp>
+#include <boost/iostreams/write.hpp>
+#include <boost/filesystem.hpp>
+
 #define COLLADA_LOG(lvl,msg) SILOG(collada, lvl, msg);
 
 using namespace std;
@@ -245,6 +251,51 @@ Mesh::VisualPtr ColladaSystem::load(const Transfer::RemoteFileMetadata& metadata
     addHeaderData(metadata, mesh);
 
     return mesh;
+}
+
+bool ColladaSystem::convertVisual(const Mesh::VisualPtr& visual, const String& format, std::ostream& vout) {
+    // Currently OpenCOLLADA only seems to support writing to files, despite
+    // having a generic StreamWriter interface. To save to a stream, we save to
+    // a temporary file and then read it back.
+
+    String fname = Path::Get(Path::DIR_TEMP, Path::GetTempFilename("colladasystem.convertVisual."));
+    bool converted = convertVisual(visual, format, fname);
+
+    // Read it back and get it into the output stream if successful
+    if (converted) {
+        assert(boost::filesystem::exists(fname));
+        // Sigh. It would be nice to use boost::iostreams::copy, but that closes
+        // the output buffer, which may not be what we want.
+        std::ifstream vin(fname.c_str(), ifstream::in | ifstream::binary);
+#define COLLADA_CONVERT_BUF_SIZE 1024
+        char buf[COLLADA_CONVERT_BUF_SIZE];
+        bool copied_all = true;
+        while(true) {
+            std::streamsize nread =
+                boost::iostreams::read(vin, buf, COLLADA_CONVERT_BUF_SIZE);
+            if (nread == -1) break;
+            std::streamsize write_pos = 0;
+            while(write_pos < nread) {
+                if (!vout) {
+                    copied_all = false;
+                    break;
+                }
+                std::streamsize nwritten =
+                    boost::iostreams::write(vout, buf, nread);
+                write_pos += nwritten;
+            }
+            if (!copied_all) break;
+        }
+        converted = converted && copied_all;
+    }
+
+    // Regardless of success, make sure we cleanup the file.
+    if (boost::filesystem::exists(fname)) {
+        bool removed = boost::filesystem::remove(fname);
+        if (!removed) COLLADA_LOG(error, "Failed to remove temporary conversion file " << fname);
+    }
+
+    return converted;
 }
 
 bool ColladaSystem::convertVisual(const Mesh::VisualPtr& visual, const String& format, const String& filename) {

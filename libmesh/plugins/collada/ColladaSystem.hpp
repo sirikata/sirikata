@@ -67,6 +67,7 @@ class SIRIKATA_PLUGIN_EXPORT ColladaSystem
     virtual bool canLoad(Transfer::DenseDataPtr data);
     virtual Mesh::VisualPtr load(const Transfer::RemoteFileMetadata& metadata, const Transfer::Fingerprint& fp,
         Transfer::DenseDataPtr data);
+    virtual bool convertVisual(const Mesh::VisualPtr& visual, const String& format, std::ostream& vout);
     virtual bool convertVisual(const Mesh::VisualPtr& visual, const String& format, const String& filename);
 
 

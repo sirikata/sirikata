@@ -93,6 +93,10 @@ Mesh::VisualPtr BillboardSystem::load(const Transfer::RemoteFileMetadata& metada
     return result;
 }
 
+bool BillboardSystem::convertVisual(const Mesh::VisualPtr& meshdata, const String& format, std::ostream& vout) {
+    return false;
+}
+
 bool BillboardSystem::convertVisual(const Mesh::VisualPtr& visual, const String& format, const String& filename) {
     return false;
 }
