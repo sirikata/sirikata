@@ -61,6 +61,22 @@
          return this.visIDToElements[vis.toString()].removeFile(filename);
      };
 
+     /**
+      @param vis
+      @param {String} filename (optional).  If undefined, will reread
+      all files associated with this visible from disk.
+      */
+     std.FileManager.prototype.rereadFile = function(vis,filename)
+     {
+         if (!this.visExists(vis))
+         {
+             throw new Error ('Error in FileManager.reareadFile.  '+
+                              'Do not have record for this visible.');
+         }
+
+         return this.visIDToElements[vis.toString()].rereadFile(filename);
+     };
+     
      
      //if text is undefined, means just use the version on disk.
      std.FileManager.prototype.addFile = function(vis,filename,text)

@@ -1,11 +1,14 @@
 
-system.require('file.em');
+
+
 
 (function()
  {
      var FILE_UPDATE_TIMEOUT = 10;
      
-
+     std.FileManager = { };     
+     system.require('file.em');
+     
      std.FileManager.FileManagerElement = function(vis,errorFunction,filedir)
      {
          this.vis = vis;
@@ -72,7 +75,35 @@ system.require('file.em');
 
          return this.fileMap[filename].remoteVersionText;         
      };
+
+
+     /**
+      @param {String} filename (optional) -- If undefined, just
+      rereads every file from disk that is associated with this
+      visible.
+      */
+     std.FileManager.FileManagerElement.prototype.rereadFile = function(filename)
+     {
+         if (typeof(filename) == 'undefined')
+         {
+             for (var s in this.fileMap)
+                 this.fileMap[s].readFile();
+             return;    
+         }
+
+         
+         if (!this.checkFileExists(filename))
+         {
+             throw new Error('Error rereading file from disk.  Have no ' +
+                             'record of file with name ' +
+                             filename.toString());
+         }
+
+         this.fileMap[filename].readFile();
+
+     };
      
+     //sends the file to visible.
      std.FileManager.FileManagerElement.prototype.updateFile = function(filename)
      {
          if(!(filename in this.fileMap))

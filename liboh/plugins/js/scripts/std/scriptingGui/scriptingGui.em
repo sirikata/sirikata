@@ -2,7 +2,7 @@ std.ScriptingGui = {};
 system.require('scriptingGuiUtil.em');
 system.require('action.em');
 system.require('console.em');
-
+system.require('fileManagerElement.em');
 
 (function()
 {
@@ -11,24 +11,25 @@ system.require('console.em');
     //actIDs to std.ScriptingGui.Actions
     var actionMap = {};
 
-    //Next to maps are indexed by visible ids and have values of
-    //visible objects.
+
+    //map from visible id to visible object
     //which visibles are near me
-    var nearbyVisMap = {};
+    var nearbyVisMap   = {};
+    //map from visible id to fileManagerElement
     //which visibles I have scripted before.
     var scriptedVisMap = {};
 
-    var scripter = null;
-    
+    var scripter    = null;
+    var console     = new std.ScriptingGui.Console();
+
+
+    //basic constructor
     std.ScriptingGui.Controller = function(presScripter)
     {
-        this.console = new std.ScriptingGui.Console();
-
         scripter = presScripter;
         if (typeof(presScripter) === 'undefined')
             scripter = system.self;
     };
-
 
 
     //************* ACTIONS ***********************//
@@ -81,7 +82,7 @@ system.require('console.em');
                             'have no record of it.');                
         }
 
-        var vis = getVisAndChangeToUsed(visId);
+        var vis = getVisAndChangeToUsed(visId,this);
         
         if (vis === null)
         {
@@ -96,30 +97,33 @@ system.require('console.em');
              std.core.bind(onNoActResp,undefined,this,action,visId)];
 
         var consDescription = actionMap[actId].getConsoleDescription(visId);
-        this.console.scriptSentEvent(consDescription);
+        console.scriptSentEvent(consDescription);
     };
 
 
     
     /**
-     If visId exists in nearbyVisMap, then removes it and adds it to
-     scriptedVisMap.  Returns the associated visible.  
+     If we've alread scripted this visible before (visId key exists in
+     nearbyVisMap), then returns the visible object associated with
+     it.
 
-     If first condition isn't met, but visId exists in scriptedVisMap,
-     returns visible.
+     If we have not already scripted this object before, then check if
+     object is in nearbyVisMap.  If it is, then we create a new
+     filemanagerelement object associated with visible in
+     scriptedVisMap, and return visible associated with it.
 
      Otherwise, returns null.
      */
-    function getVisAndChangeToUsed(visId)
+    function getVisAndChangeToUsed(visId,scriptingGui)
     {
         var returner = null;
-        if (visId in nearbyVisMap)
+        if (visId in scriptedVisMap)
+            returner = scriptedVisMap[visId].vis;
+        else if (visId in nearbyVisMap)
         {
             returner = nearbyVisMap[visId];
-            scriptedVisMap[visId] = returner;
+            scriptingGui.addVisible(returner);
         }
-        else if (visId in scriptedVisMap)
-            returner = scriptedVisMap[visId];
 
         return returner;
     }
@@ -142,7 +146,7 @@ system.require('console.em');
         var resp=
             action.getConsoleResponseDescription(msg,sender.toString());
         //tell the console about the change
-        scriptGui.console.scriptRespEvent(resp);
+        console.scriptRespEvent(resp);
     }
 
     /**
@@ -161,10 +165,8 @@ system.require('console.em');
             action.getConsoleNoResponseDescription(visId);
 
         //tell the console about the change
-        scriptGui.console.scriptRespEvent(resp);
+        console.scriptRespEvent(resp);
     }
-
-    
     
     
     //************** VISIBLES ***********************//
@@ -195,13 +197,163 @@ system.require('console.em');
             delete nearbyVisMap[oldVis.toString()];
         }
     }
-    
-
 
 
     //************** FILES    ***********************//
 
+    //returns true if visId is a key in scriptedVisMap (ie, have
+    //already scripted a visible with id visId)
+    function scriptedVisExists(visId)
+    {
+        return (visId in scriptedVisMap);
+    }
+          
+     
+    std.ScriptingGui.Controller.prototype.addVisible =
+        function(visToAdd)
+    {
+        if (scriptedVisExists(visToAdd))
+        {
+            throw new Error ('Error in FileManager.addVisible.  ' +
+                             'Already had record for this visible.');            
+        }
 
+        scriptedVisMap[visToAdd.toString()] =
+            new std.FileManager.FileManagerElement(
+                visToAdd,defaultErrorFunction,
+                generateScriptingDirectory(visToAdd));
+    };
+
+    std.ScriptingGui.Controller.prototype.removeVisible =
+        function(visToRemove)
+    {
+        if (!scriptedVisExists(visToRemove))
+        {
+            throw new Error ('Error in FileManager.removeVisible.  ' +
+                             'Do not have record for this visible.');
+        }
+        system.__debugPrint('\nNote: not removing previously-written files.\n');
+        delete scriptedVisMap[visToRemove.toString()];
+    };
+
+
+    std.ScriptingGui.Controller.prototype.removeFile =
+        function(vis,filename)
+    {
+        if (!scriptedVisExists(vis))
+        {
+            throw new Error ('Error in FileManager.removeFile.  ' +
+                             'Do not have record for this visible.');
+        }
+
+        return scriptedVisMap[vis.toString()].removeFile(filename);
+    };
+
+    /**
+     @param vis
+     @param {String} filename (optional).  If undefined, will reread
+     all files associated with this visible from disk.
+     */
+    std.ScriptingGui.Controller.prototype.rereadFile = function(vis,filename)
+    {
+        if (!scriptedVisExists(vis))
+        {
+            throw new Error ('Error in FileManager.reareadFile.  '+
+                             'Do not have record for this visible.');
+        }
+
+        return scriptedVisMap[vis.toString()].rereadFile(filename);
+    };
+     
+     
+    //if text is undefined, means just use the version on disk.
+    std.ScriptingGui.Controller.prototype.addFile = function(vis,filename,text)
+    {
+        if (!scriptedVisExists(vis))
+        {
+            throw new Error ('Error in FileManager.addFile.  ' +
+                             'Do not have record for this visible.');
+        }
+
+        return scriptedVisMap[vis.toString()].addFile(filename,text);
+    };
+     
+     
+
+    std.ScriptingGui.Controller.prototype.checkFileExists = function(vis,filename)
+    {
+        if (!scriptedVisExists(vis))
+        {
+            throw new Error ('Error in FileManager.checkFileExists.  ' +
+                             'Do not have record for this visible.');
+        }
+
+        return scriptedVisMap[vis.toString()].checkFileExists(filename);
+    };
+
+
+    std.ScriptingGui.Controller.prototype.updateAll = function(vis)
+    {
+        if (!scriptedVisExists(vis))
+        {
+            throw new Error ('Error in FileManager.updateAll.  ' +
+                             'Do not have record for this visible.');
+        }
+        
+        return scriptedVisMap[vis.toString()].updateAll();
+    };
+
+    std.ScriptingGui.Controller.prototype.updateFile = function(vis,filename)
+    {
+        if (!scriptedVisExists(vis))
+        {
+            throw new Error ('Error in FileManager.updateFilename.  ' +
+                             'Do not have record for this visible.');
+        }
+
+        return scriptedVisMap[vis.toString()].updateFilename(filename);
+    };
+
+    std.ScriptingGui.Controller.prototype.getFileText = function(vis,filename)
+    {
+        if (!scriptedVisExists(vis))
+        {
+            throw new Error ('Error in FileManager.getFileText.  ' +
+                             'Do not have record for this visible.');
+        }
+        
+        return scriptedVisMap[vis.toString()].getFileText(filename);
+    };
+
+    std.ScriptingGui.Controller.prototype.getRemoteVersionText = function(vis,filename)
+    {
+        if (!scriptedVisExists(vis))
+        {
+            throw new Error ('Error in FileManager.getRemoteVersionText.  ' +
+                             'Do not have record for this visible.');
+        }
+         
+        return scriptedVisMap[vis.toString()].getRemoteVersionText(filename);
+    };
+     
+    
+    function defaultErrorFunction(errorString)
+    {
+        system.__debugPrint('\n');
+        system.__debugPrint(errorString);
+        system.__debugPrint('\n');
+    }
+
+    /**
+     Returns the directory that all scripts associated with remove
+     visible, visible, will be stored.
+     */
+    function generateScriptingDirectory(visible)
+    {
+        return 'ishmael_scripting/' + visible.toString();
+    }
+
+    
     //************** CONSOLES ***********************//
 
     
