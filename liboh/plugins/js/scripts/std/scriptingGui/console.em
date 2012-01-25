@@ -40,5 +40,12 @@ system.require('scriptingGuiUtil.em');
         std.ScriptingGui.Util.dPrint('\nGot a scriptedObjEvent object\n');
     };
 
+
+    std.ScriptingGui.Console.prototype.guiEvent =
+        function(guiObj)
+    {
+        std.ScriptingGui.Util.dPrint('\nGot a gui event object\n');
+    };
+    
     
 })();

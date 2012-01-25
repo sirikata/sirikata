@@ -220,16 +220,17 @@
 
     //returns true if visId is a key in scriptedVisMap (ie, have
     //already scripted a visible with id visId)
-    function scriptedVisExists(visId)
+    std.ScriptingGui.Controller.prototype.scriptedVisExists =
+        function(visId)
     {
         return (visId in scriptedVisMap);
-    }
+    };
           
      
     std.ScriptingGui.Controller.prototype.addVisible =
         function(visToAdd)
     {
-        if (scriptedVisExists(visToAdd))
+        if (this.scriptedVisExists(visToAdd))
         {
             throw new Error ('Error in FileManager.addVisible.  ' +
                              'Already had record for this visible.');            
@@ -246,12 +247,13 @@
             };
 
         console.scriptedObjEvent(consMsg);
+        gui.redraw();
     };
 
     std.ScriptingGui.Controller.prototype.removeVisible =
         function(visToRemove)
     {
-        if (!scriptedVisExists(visToRemove))
+        if (!this.scriptedVisExists(visToRemove))
         {
             throw new Error ('Error in FileManager.removeVisible.  ' +
                              'Do not have record for this visible.');
@@ -270,7 +272,7 @@
     std.ScriptingGui.Controller.prototype.removeFile =
         function(vis,filename)
     {
-        if (!scriptedVisExists(vis))
+        if (!this.scriptedVisExists(vis))
         {
             throw new Error ('Error in FileManager.removeFile.  ' +
                              'Do not have record for this visible.');
@@ -286,7 +288,7 @@
      */
     std.ScriptingGui.Controller.prototype.rereadFile = function(vis,filename)
     {
-        if (!scriptedVisExists(vis))
+        if (!this.scriptedVisExists(vis))
         {
             throw new Error ('Error in FileManager.reareadFile.  '+
                              'Do not have record for this visible.');
@@ -299,7 +301,7 @@
     //if text is undefined, means just use the version on disk.
     std.ScriptingGui.Controller.prototype.addFile = function(vis,filename,text)
     {
-        if (!scriptedVisExists(vis))
+        if (!this.scriptedVisExists(vis))
         {
             throw new Error ('Error in FileManager.addFile.  ' +
                              'Do not have record for this visible.');
@@ -312,7 +314,7 @@
 
     std.ScriptingGui.Controller.prototype.checkFileExists = function(vis,filename)
     {
-        if (!scriptedVisExists(vis))
+        if (!this.scriptedVisExists(vis))
         {
             throw new Error ('Error in FileManager.checkFileExists.  ' +
                              'Do not have record for this visible.');
@@ -324,7 +326,7 @@
 
     std.ScriptingGui.Controller.prototype.updateAll = function(vis)
     {
-        if (!scriptedVisExists(vis))
+        if (!this.scriptedVisExists(vis))
         {
             throw new Error ('Error in FileManager.updateAll.  ' +
                              'Do not have record for this visible.');
@@ -341,7 +343,7 @@
 
     std.ScriptingGui.Controller.prototype.updateFile = function(vis,filename)
     {
-        if (!scriptedVisExists(vis))
+        if (!this.scriptedVisExists(vis))
         {
             throw new Error ('Error in FileManager.updateFilename.  ' +
                              'Do not have record for this visible.');
@@ -379,7 +381,7 @@
     
     std.ScriptingGui.Controller.prototype.getFileText = function(vis,filename)
     {
-        if (!scriptedVisExists(vis))
+        if (!this.scriptedVisExists(vis))
         {
             throw new Error ('Error in FileManager.getFileText.  ' +
                              'Do not have record for this visible.');
@@ -390,7 +392,7 @@
 
     std.ScriptingGui.Controller.prototype.getRemoteVersionText = function(vis,filename)
     {
-        if (!scriptedVisExists(vis))
+        if (!this.scriptedVisExists(vis))
         {
             throw new Error ('Error in FileManager.getRemoteVersionText.  ' +
                              'Do not have record for this visible.');
