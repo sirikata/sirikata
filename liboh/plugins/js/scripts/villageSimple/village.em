@@ -13,7 +13,7 @@ windowCount = 0;
 function createPres(mesh,x,z,scale)
 {
     system.createPresence({'mesh': mesh, 
-                           'pos': <x,0,z>,
+                           'pos': <x,-10,z>,
                            'orient': util.Quaternion.fromLookAt(<0,0,1>),
                            'scale': scale,
                            'callback': function (presence) {
@@ -33,7 +33,7 @@ function createStreet(mesh,ax,az,bx,bz)
     d = 50;
     scale = 1;
     system.createPresence({'mesh': mesh,
-                           'pos': <(ax+bx)/2,0,(az+bz)/2>, 
+                           'pos': <(ax+bx)/2,-20,(az+bz)/2>, 
                            //'scale': 2, // for cube test
                            'callback': function(presence) {
                                presence.loadMesh(function() {
@@ -44,9 +44,10 @@ function createStreet(mesh,ax,az,bx,bz)
                                    bb = presence.meshBounds().across();
                                    pos = <(ax+bx)/2, bb.y/2-20, (az+bz)/2>;
                                    presence.position = pos;
-                                   //if (ax==bx) 
-                                   scale=d/bb.z;
-                                   //else if (az==bz) scale=(d+d*bb.z/bb.x)/bb.x;
+                                   if (ax==bx) 
+                                       scale=d/bb.z;
+                                   else if (az==bz) 
+                                       scale=(d+d*bb.z/bb.x)/bb.x;
                                    presence.setScale(scale);
                                });
                            }

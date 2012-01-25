@@ -15,7 +15,7 @@ function createPres(mesh,x,z,scale)
     system.createEntityScript(<x,-20,z>,
                               newEntExec,
                               null,
-                              3,
+                              '0.01',
                               mesh
                              );
 }

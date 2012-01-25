@@ -1,5 +1,5 @@
 system.require("std/default.em");
-system.require("villageSimple/BallonRandom.em");
+system.require("villageSimple/village.em");
 
 var start=0
 

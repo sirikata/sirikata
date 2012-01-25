@@ -12,7 +12,7 @@ function createPres(mesh,x,z,scale)
     system.createEntityScript(<x+(util.rand()-0.5)*3,-20+util.rand()*10,z+(util.rand()-0.5)*3>,
                               newEntExec,
                               null,
-                              3,
+                              '0.01',
                               mesh
                              );
 }
