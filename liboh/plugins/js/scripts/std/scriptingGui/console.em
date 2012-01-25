@@ -5,9 +5,9 @@ system.require('scriptingGuiUtil.em');
 (function ()
 {
 
-    std.ScriptingGui.Console = function()
+    std.ScriptingGui.Console = function(scriptingGui)
     {
-        
+        this.scriptingGui = scriptingGui;
     };
 
     std.ScriptingGui.Console.prototype.scriptSentEvent =
