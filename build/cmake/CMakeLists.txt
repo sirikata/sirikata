@@ -775,9 +775,12 @@ SET(LIBOAUTHCPP_INCLUDE_DIR ${TOP_LEVEL}/externals/liboauthcpp/include)
 # dependencies for Mac and Linux (Windows doesn't check versions but
 # it is also somewhere around that version). These currently
 # correspond to ffmpeg 0.8.7.
-SET(FFMPEG_AVUTIL_MINIMUM_VERSION 51.9.1)
-SET(FFMPEG_AVCODEC_MINIMUM_VERSION 53.8.0)
-SET(FFMPEG_AVFORMAT_MINIMUM_VERSION 53.5.0)
+#SET(FFMPEG_AVUTIL_MINIMUM_VERSION 51.9.1)
+#SET(FFMPEG_AVCODEC_MINIMUM_VERSION 53.8.0)
+#SET(FFMPEG_AVFORMAT_MINIMUM_VERSION 53.5.0)
+SET(FFMPEG_AVUTIL_MINIMUM_VERSION 51.7.0)
+SET(FFMPEG_AVCODEC_MINIMUM_VERSION 53.6.0)
+SET(FFMPEG_AVFORMAT_MINIMUM_VERSION 53.3.0)
 # Not sure how to set this yet, the various libav* libraries have
 # different version numbers
 #SET(FFMPEG_MINIMUM_VERSION 1.3.0)
