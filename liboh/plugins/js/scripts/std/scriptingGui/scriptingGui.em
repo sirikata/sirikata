@@ -76,7 +76,6 @@
              this.console.guiEvent();
              return;
          }
-             
 
          this.controller.addVisible(this.nearbyVisMap[visId]);
      };
@@ -205,13 +204,15 @@
              return visId.replace(':','');
          }
          
-         
-         $('<div>'   +
-           
-           '<div id="'+ nearbyListId() +'">'   +
-           '</div>'  +
 
-           '<div id="'+ scriptedListId() +'">'   +
+         $('<div>'   +
+
+           '<div id="'+ scriptedListId() + '"  ' +
+           'style="height:200px;width:250px;overflow:scroll;">'   +
+           '</div>'  +
+           
+           '<div id="'+ nearbyListId() + '"  ' +
+           'style="height:200px;width:250px;overflow:scroll;">'   +
            '</div>'  +
            
            '</div>' //end div at top.
@@ -223,7 +224,7 @@
 	             autoOpen: true,
 	             height: 'auto',
 	             width: 300,
-                     height: 300,
+                     height: 600,
                      position: 'right'
                  }
              );
@@ -234,8 +235,6 @@
              redrawNearby(nearbyObjs);
              redrawScriptedObjs(scriptedObjs);
          };
-
-
 
          
          /**
