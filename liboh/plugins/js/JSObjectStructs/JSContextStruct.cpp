@@ -86,7 +86,7 @@ void JSContextStruct::httpSuccess(v8::Persistent<v8::Function> cb,EmersonHttpMan
         return;
     }
 
-    v8::Isolate::Scope iscope(mCtx->mIsolate);    
+    v8::Isolate::Scope iscope(mCtx->mIsolate);
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(mContext);
     v8::Handle<v8::Object> httpObj = v8::Object::New();
@@ -362,7 +362,7 @@ v8::Handle<v8::Value>  JSContextStruct::checkHeadless()
 }
 
 
-v8::Handle<v8::Value> JSContextStruct::struct_create_vis(const SpaceObjectReference& sporefWatching, JSProxyPtr addParams)
+v8::Handle<v8::Value> JSContextStruct::struct_create_vis(const SpaceObjectReference& sporefWatching, JSVisibleDataPtr addParams)
 {
     v8::HandleScope handle_scope;
     CHECK_EMERSON_SCRIPT_ERROR(emerScript,create_vis,jsObjScript);
@@ -696,7 +696,7 @@ void JSContextStruct::finishClear()
 
 
     v8::HandleScope handle_scope;
-    v8::Handle<v8::Value> returner = JSSuspendable::clear();
+    JSSuspendable::clear();
 
 
     inClear = true;
@@ -710,7 +710,6 @@ void JSContextStruct::finishClear()
     {
         JSSuspendable* jssusp = iter->first;
         jssusp->clear();
-//        iter->first->clear();
     }
 
     mInSuspendableLoop = false;
@@ -768,7 +767,7 @@ void JSContextStruct::struct_asyncDeregisterSuspendable (
 
     if (!contAlive)
     {
-        //the context is not still alive.  
+        //the context is not still alive.
         if (!suspAlive)
             return;
 

@@ -146,7 +146,8 @@ Entity::~Entity() {
         mMovingIter = mScene->mMovingEntities.end();
     }
 
-    removeFromScene();
+    bool mobVal = false;
+    removeFromScene(&mobVal);
     init(NULL);
     mSceneNode->detachAllObjects();
     /* detaches all children from the scene.
@@ -221,12 +222,16 @@ void Entity::setVisible(bool vis) {
     updateVisibility();
 }
 
-void Entity::setAnimation(const String& name) {
+void Entity::setAnimation(const String& name, bool* mobileVal)
+{
     // Disable current animation if we have one
     if (mCurrentAnimation) {
         mCurrentAnimation->setEnabled(false);
         mCurrentAnimation = NULL;
-        setDynamic(isMobile());
+        if (mobileVal)
+            setDynamic(mobileVal);
+        else
+            setDynamic(isMobile());
     }
 
     if (name.empty()) return;
@@ -264,13 +269,14 @@ void Entity::updateVisibility() {
     mSceneNode->setVisible(mVisible, true);
 }
 
-void Entity::removeFromScene() {
+void Entity::removeFromScene(bool* checkMobile)
+{
     Ogre::SceneNode *oldParent = mSceneNode->getParentSceneNode();
     if (oldParent) {
         oldParent->removeChild(mSceneNode);
     }
     // Force dynamicity off
-    setAnimation("");
+    setAnimation("",checkMobile);
     setDynamic(false);
 }
 void Entity::addToScene(Ogre::SceneNode *newParent) {

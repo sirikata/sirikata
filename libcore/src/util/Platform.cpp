@@ -31,9 +31,13 @@
  */
 
 #include <sirikata/core/util/Standard.hh>
+#include <boost/lexical_cast.hpp>
 
 namespace Sirikata {
 
+uint32 uint32_lexical_cast(const String& rhs) {
+    return boost::lexical_cast<uint32>(rhs);
+}
 
 std::ostream& operator<<(std::ostream& os, const ObjectHostID& rhs) {
     os << rhs.id;

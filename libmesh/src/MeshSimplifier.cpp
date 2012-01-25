@@ -397,8 +397,6 @@ void computeCosts(Mesh::MeshdataPtr agg_mesh, uint32 geomIdx, uint32 sourcePosit
 }
 
 void MeshSimplifier::simplify(Mesh::MeshdataPtr agg_mesh, int32 numFacesLeft) {
-  Sirikata::Time curTime = Sirikata::Timer::now();
-
   std::tr1::unordered_map<uint32, uint32> submeshInstanceCount;
 
   int countFaces = 0;

@@ -41,6 +41,10 @@ public:
      : name(_name),
        what_msg(new String())
     {}
+    FactoryMissingConstructorException(const FactoryMissingConstructorException& rhs)
+     : name(rhs.name),
+       what_msg(new String(*(rhs.what_msg)))
+    {}
     virtual ~FactoryMissingConstructorException() throw() {
         delete what_msg;
     }

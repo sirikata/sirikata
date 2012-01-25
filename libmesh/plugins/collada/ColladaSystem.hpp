@@ -37,6 +37,7 @@
 
 #include <sirikata/mesh/Platform.hpp>
 #include <sirikata/mesh/ModelsSystem.hpp>
+#include <sirikata/mesh/Meshdata.hpp>
 #include <sirikata/core/util/ListenerProvider.hpp>
 #include <sirikata/core/transfer/TransferMediator.hpp>
 #include <sirikata/core/transfer/TransferPool.hpp>
@@ -66,6 +67,7 @@ class SIRIKATA_PLUGIN_EXPORT ColladaSystem
     virtual bool canLoad(Transfer::DenseDataPtr data);
     virtual Mesh::VisualPtr load(const Transfer::RemoteFileMetadata& metadata, const Transfer::Fingerprint& fp,
         Transfer::DenseDataPtr data);
+    virtual bool convertVisual(const Mesh::VisualPtr& visual, const String& format, std::ostream& vout);
     virtual bool convertVisual(const Mesh::VisualPtr& visual, const String& format, const String& filename);
 
 
@@ -75,6 +77,8 @@ class SIRIKATA_PLUGIN_EXPORT ColladaSystem
     ColladaSystem& operator = ( ColladaSystem const & ); // not implemented
 
     bool initialize(String const& options);
+
+    void addHeaderData(const Transfer::RemoteFileMetadata& metadata, Mesh::MeshdataPtr mesh);
 
     // documents that have been transfered, parsed, and loaded.
     // MCB: make this a map when/if a key becomes useful

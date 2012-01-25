@@ -82,6 +82,16 @@ Mesh::VisualPtr AnyModelsSystem::load(const Transfer::RemoteFileMetadata& metada
     return result;
 }
 
+bool AnyModelsSystem::convertVisual(const Mesh::VisualPtr& visual, const String& format, std::ostream& vout) {
+    SystemsMap::iterator it = mModelsSystems.find(format);
+    if (it == mModelsSystems.end()) {
+        SILOG(AnyModelsSystem,error,"AnyModelsSystem couldn't find format " << format << " during mesh conversion.");
+        return false;
+    }
+    ModelsSystem* ms = it->second;
+    return ms->convertVisual(visual, "", vout);
+}
+
 bool AnyModelsSystem::convertVisual(const Mesh::VisualPtr& visual, const String& format, const String& filename) {
     SystemsMap::iterator it = mModelsSystems.find(format);
     if (it == mModelsSystems.end()) {

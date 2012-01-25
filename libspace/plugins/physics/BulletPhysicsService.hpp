@@ -62,6 +62,7 @@ public:
 
     virtual void service();
 
+    virtual uint64 epoch(const UUID& uuid);
     virtual TimedMotionVector3f location(const UUID& uuid);
     virtual Vector3f currentPosition(const UUID& uuid);
     virtual TimedMotionQuaternion orientation(const UUID& uuid);
@@ -71,6 +72,11 @@ public:
     virtual const String& physics(const UUID& uuid);
     // Added for Bullet implementation
     bool isFixed(const UUID& uuid);
+    // Returns true if the current settings for the object allow
+    // motion requests (location, orientation) to be directly applied.
+    // Even when false, other requests, like changing bounds, mesh,
+    // and physics settings, should still go through.
+    bool directMotionRequestsEnabled(const UUID& uuid);
     void setLocation(const UUID& uuid, const TimedMotionVector3f& newloc);
     void setOrientation(const UUID& uuid, const TimedMotionQuaternion& neworient);
 
@@ -94,11 +100,11 @@ public:
     virtual bool locationUpdate(UUID source, void* buffer, uint32 length);
 
     typedef std::tr1::function<void(MeshdataPtr)> MeshdataParsedCallback;
-    void getMesh(const std::string meshURI, const UUID uuid, MeshdataParsedCallback cb);
+    void getMesh(const Transfer::URI meshURI, const UUID uuid, MeshdataParsedCallback cb);
     // The last two get set in this callback, indicating that the
     // transfer finished (whether or not it was successful) and the
     // resulting data.
-    void getMeshCallback(Transfer::ChunkRequestPtr request, Transfer::DenseDataPtr response, MeshdataParsedCallback cb);
+    void getMeshCallback(Transfer::ResourceDownloadTaskPtr taskptr, Transfer::TransferRequestPtr request, Transfer::DenseDataPtr response, MeshdataParsedCallback cb);
 
     LocationInfo& info(const UUID& uuid);
     const LocationInfo& info(const UUID& uuid) const;

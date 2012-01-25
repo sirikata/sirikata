@@ -38,7 +38,6 @@
 
 #include "ObjectHost.hpp"
 #include <sirikata/mesh/LightInfo.hpp>
-#include <sirikata/oh/ObjectHostProxyManager.hpp>
 #include <sirikata/oh/HostedObject.hpp>
 #include <sirikata/core/network/IOServiceFactory.hpp>
 #include <sirikata/core/network/IOService.hpp>
@@ -205,7 +204,7 @@ int main (int argc, char** argv) {
     }
 
 
-    ctx->run(1);
+    ctx->run(2);
 
     ctx->cleanup();
 
@@ -218,7 +217,6 @@ int main (int argc, char** argv) {
     ModelsSystemFactory::destroy();
     ObjectScriptManagerFactory::destroy();
     delete oh;
-    //delete pd;
 
 
     delete obj_storage;

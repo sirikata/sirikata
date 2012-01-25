@@ -7,9 +7,8 @@
 
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/util/UUID.hpp>
-#include <sirikata/core/util/MotionVector.hpp>
-#include <sirikata/core/util/MotionQuaternion.hpp>
 #include <sirikata/mesh/Meshdata.hpp>
+#include <sirikata/core/util/PresenceProperties.hpp>
 
 namespace Sirikata {
 
@@ -62,22 +61,19 @@ enum bulletObjBBox {
 
 struct LocationInfo {
     LocationInfo()
-     : location(),
-       orientation(),
-       bounds(),
-       mesh(),
-       physics(),
+     : props(),
        local(),
        aggregate(),
        simObject(NULL)
     {}
 
     // Regular location info that we need to maintain for all objects
-    TimedMotionVector3f location;
-    TimedMotionQuaternion orientation;
-    BoundingSphere3f bounds;
-    String mesh;
-    String physics;
+    SequencedPresenceProperties props;
+    // NOTE: This is a copy of props.mesh(), which *is not always valid*. It's
+    // only used for the accessor, when returning by const& since we don't have
+    // a String version within props. DO NOT use anywhere else.
+    String mesh_copied_str;
+
     bool local;
     bool aggregate;
 

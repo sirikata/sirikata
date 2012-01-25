@@ -167,8 +167,7 @@ void CSVObjectFactory::generate(const String& timestamp)
     int script_contents_idx = -1;
     int scale_idx = -1;
     int objid_idx = -1;
-    int solid_angle_idx = -1;
-    int max_results_idx = -1;
+    int query_idx = -1;
     int physics_opts_idx = -1;
 
     // For each line
@@ -205,14 +204,7 @@ void CSVObjectFactory::generate(const String& timestamp)
                 {
                     objid_idx = idx;
                 }
-                if(line_parts[idx] == "solid_angle")
-                {
-                    solid_angle_idx = idx;
-                }
-                if(line_parts[idx] == "max_results")
-                {
-                    max_results_idx = idx;
-                }
+                if(line_parts[idx] == "query") query_idx = idx;
                 if (line_parts[idx] == "physics") physics_opts_idx = idx;
             }
 
@@ -286,21 +278,10 @@ void CSVObjectFactory::generate(const String& timestamp)
                     1.f :
                     safeLexicalCast<float>(line_parts[scale_idx], 1.f);
 
-                String solid_angle = "";
-                SolidAngle query_angle(SolidAngle::Max);
-
-                if(solid_angle_idx != -1)
-                {
-                  solid_angle = line_parts[solid_angle_idx];
-                  if(solid_angle != "")
-                  {
-
-                    query_angle = SolidAngle(atof(solid_angle.c_str()));
-                  }
-                }
-
-                uint32 max_results = (max_results_idx == -1) ? 0 :
-                    safeLexicalCast<uint32>(line_parts[max_results_idx], 0);
+                String query_opts =
+                    query_idx == -1 ?
+                    "" :
+                    line_parts[query_idx];
 
                 String physics_opts =
                     physics_opts_idx == -1 ?
@@ -335,8 +316,7 @@ void CSVObjectFactory::generate(const String& timestamp)
                 oci.loc = Location( pos, orient, vel, rot_axis, angular_speed);
                 oci.bounds = BoundingSphere3f(Vector3f::zero(), scale);
                 oci.mesh = mesh;
-                oci.query_angle = query_angle;
-                oci.query_max_results = max_results;
+                oci.query = query_opts;
                 oci.physics = physics_opts;
                 mIncompleteObjects.push(oci);
 
@@ -363,11 +343,7 @@ void CSVObjectFactory::connectObjects()
 
         oci.object->connect(
             mSpace,
-            oci.loc, oci.bounds, oci.mesh, oci.physics,
-            const_cast<SolidAngle&>(oci.query_angle),
-            oci.query_max_results,
-            UUID::null(),
-            ObjectReference::null()
+            oci.loc, oci.bounds, oci.mesh, oci.physics, oci.query
         );
     }
 

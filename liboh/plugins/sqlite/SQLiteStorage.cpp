@@ -147,8 +147,18 @@ bool SQLiteStorage::StorageAction::execute(SQLiteDBPtr db, const Bucket& bucket,
               }
 
               int step_rc = sqlite3_step(value_insert_stmt);
-              if (step_rc != SQLITE_OK && step_rc != SQLITE_DONE)
+              if (step_rc != SQLITE_OK && step_rc != SQLITE_DONE) {
                   sqlite3_reset(value_insert_stmt); // allow this to be cleaned up
+                  success = false;
+              }
+              else {
+                  // Check the number of changes that the statement actually
+                  // made. This is update, insertion, or deletion. This should
+                  // just be 1 since we expect exactly one change on a write or
+                  // erase.
+                  int changes = sqlite3_changes(db->db());
+                  success = success && (changes == 1);
+              }
 
               rc = sqlite3_finalize(value_insert_stmt);
               success = success && !SQLite::check_sql_error(db->db(), rc, NULL, "Error finalizing value insert statement");

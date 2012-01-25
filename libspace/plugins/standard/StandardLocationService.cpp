@@ -62,12 +62,20 @@ void StandardLocationService::service() {
     mUpdatePolicy->service();
 }
 
+uint64 StandardLocationService::epoch(const UUID& uuid) {
+    LocationMap::iterator it = mLocations.find(uuid);
+    assert(it != mLocations.end());
+
+    LocationInfo locinfo = it->second;
+    return locinfo.props.maxSeqNo();
+}
+
 TimedMotionVector3f StandardLocationService::location(const UUID& uuid) {
     LocationMap::iterator it = mLocations.find(uuid);
     assert(it != mLocations.end());
 
     LocationInfo locinfo = it->second;
-    return locinfo.location;
+    return locinfo.props.location();
 }
 
 Vector3f StandardLocationService::currentPosition(const UUID& uuid) {
@@ -81,7 +89,7 @@ TimedMotionQuaternion StandardLocationService::orientation(const UUID& uuid) {
     assert(it != mLocations.end());
 
     LocationInfo locinfo = it->second;
-    return locinfo.orientation;
+    return locinfo.props.orientation();
 }
 
 Quaternion StandardLocationService::currentOrientation(const UUID& uuid) {
@@ -94,15 +102,16 @@ BoundingSphere3f StandardLocationService::bounds(const UUID& uuid) {
     assert(it != mLocations.end());
 
     LocationInfo locinfo = it->second;
-    return locinfo.bounds;
+    return locinfo.props.bounds();
 }
 
 const String& StandardLocationService::mesh(const UUID& uuid) {
     LocationMap::iterator it = mLocations.find(uuid);
     assert(it != mLocations.end());
 
-    const LocationInfo& locinfo = it->second;
-    return locinfo.mesh;
+    LocationInfo& locinfo = it->second;
+    locinfo.mesh_copied_str = locinfo.props.mesh().toString();
+    return locinfo.mesh_copied_str;
 }
 
 const String& StandardLocationService::physics(const UUID& uuid) {
@@ -110,7 +119,7 @@ const String& StandardLocationService::physics(const UUID& uuid) {
     assert(it != mLocations.end());
 
     const LocationInfo& locinfo = it->second;
-    return locinfo.physics;
+    return locinfo.props.physics();
 }
 
 void StandardLocationService::addLocalObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& msh, const String& phy) {
@@ -128,11 +137,12 @@ void StandardLocationService::addLocalObject(const UUID& uuid, const TimedMotion
     }
 
     LocationInfo& locinfo = it->second;
-    locinfo.location = loc;
-    locinfo.orientation = orient;
-    locinfo.bounds = bnds;
-    locinfo.mesh = msh;
-    locinfo.physics = phy;
+    locinfo.props.reset();
+    locinfo.props.setLocation(loc, 0);
+    locinfo.props.setOrientation(orient, 0);
+    locinfo.props.setBounds(bnds, 0);
+    locinfo.props.setMesh(Transfer::URI(msh), 0);
+    locinfo.props.setPhysics(phy, 0);
     locinfo.local = true;
     locinfo.aggregate = false;
 
@@ -171,11 +181,13 @@ void StandardLocationService::addLocalAggregateObject(const UUID& uuid, const Ti
     LocationMap::iterator it = mLocations.find(uuid);
 
     LocationInfo& locinfo = it->second;
-    locinfo.location = loc;
-    locinfo.orientation = orient;
-    locinfo.bounds = bnds;
-    locinfo.mesh = msh;
-    locinfo.physics = phy;
+    locinfo.props.reset();
+    locinfo.props.setLocation(loc, 0);
+    locinfo.props.setOrientation(orient, 0);
+    locinfo.props.setBounds(bnds, 0);
+    locinfo.props.setMesh(Transfer::URI(msh), 0);
+    locinfo.props.setPhysics(phy, 0);
+
     locinfo.local = true;
     locinfo.aggregate = true;
 
@@ -197,35 +209,35 @@ void StandardLocationService::updateLocalAggregateLocation(const UUID& uuid, con
     LocationMap::iterator loc_it = mLocations.find(uuid);
     assert(loc_it != mLocations.end());
     assert(loc_it->second.aggregate == true);
-    loc_it->second.location = newval;
+    loc_it->second.props.setLocation(newval, 0);
     notifyLocalLocationUpdated( uuid, true, newval );
 }
 void StandardLocationService::updateLocalAggregateOrientation(const UUID& uuid, const TimedMotionQuaternion& newval) {
     LocationMap::iterator loc_it = mLocations.find(uuid);
     assert(loc_it != mLocations.end());
     assert(loc_it->second.aggregate == true);
-    loc_it->second.orientation = newval;
+    loc_it->second.props.setOrientation(newval, 0);
     notifyLocalOrientationUpdated( uuid, true, newval );
 }
 void StandardLocationService::updateLocalAggregateBounds(const UUID& uuid, const BoundingSphere3f& newval) {
     LocationMap::iterator loc_it = mLocations.find(uuid);
     assert(loc_it != mLocations.end());
     assert(loc_it->second.aggregate == true);
-    loc_it->second.bounds = newval;
+    loc_it->second.props.setBounds(newval);
     notifyLocalBoundsUpdated( uuid, true, newval );
 }
 void StandardLocationService::updateLocalAggregateMesh(const UUID& uuid, const String& newval) {
     LocationMap::iterator loc_it = mLocations.find(uuid);
     assert(loc_it != mLocations.end());
     assert(loc_it->second.aggregate == true);
-    loc_it->second.mesh = newval;
+    loc_it->second.props.setMesh(Transfer::URI(newval));
     notifyLocalMeshUpdated( uuid, true, newval );
 }
 void StandardLocationService::updateLocalAggregatePhysics(const UUID& uuid, const String& newval) {
     LocationMap::iterator loc_it = mLocations.find(uuid);
     assert(loc_it != mLocations.end());
     assert(loc_it->second.aggregate == true);
-    loc_it->second.physics = newval;
+    loc_it->second.props.setPhysics(newval, 0);
     notifyLocalPhysicsUpdated( uuid, true, newval );
 }
 
@@ -237,11 +249,13 @@ void StandardLocationService::addReplicaObject(const Time& t, const UUID& uuid, 
         // It already exists. If its local, ignore the update. If its another replica, somethings out of sync, but perform the update anyway
         LocationInfo& locinfo = it->second;
         if (!locinfo.local) {
-            locinfo.location = loc;
-            locinfo.orientation = orient;
-            locinfo.bounds = bnds;
-            locinfo.mesh = msh;
-            locinfo.physics = phy;
+            locinfo.props.reset();
+            locinfo.props.setLocation(loc, 0);
+            locinfo.props.setOrientation(orient, 0);
+            locinfo.props.setBounds(bnds, 0);
+            locinfo.props.setMesh(Transfer::URI(msh), 0);
+            locinfo.props.setPhysics(phy, 0);
+
             //local = false
             // FIXME should we notify location and bounds updated info?
         }
@@ -250,11 +264,12 @@ void StandardLocationService::addReplicaObject(const Time& t, const UUID& uuid, 
     else {
         // Its a new replica, just insert it
         LocationInfo locinfo;
-        locinfo.location = loc;
-        locinfo.orientation = orient;
-        locinfo.bounds = bnds;
-        locinfo.mesh = msh;
-        locinfo.physics = phy;
+        locinfo.props.reset();
+        locinfo.props.setLocation(loc, 0);
+        locinfo.props.setOrientation(orient, 0);
+        locinfo.props.setBounds(bnds, 0);
+        locinfo.props.setMesh(Transfer::URI(msh), 0);
+        locinfo.props.setPhysics(phy, 0);
         locinfo.local = false;
         locinfo.aggregate = false;
         mLocations[uuid] = locinfo;
@@ -308,15 +323,19 @@ void StandardLocationService::receiveMessage(Message* msg) {
             // arrives.
             assert(loc_it != mLocations.end());
 
+            uint64 epoch = 0;
+            if (update.has_epoch())
+                epoch = update.epoch();
+
             if (update.has_location()) {
                 TimedMotionVector3f newloc(
                     update.location().t(),
                     MotionVector3f( update.location().position(), update.location().velocity() )
                 );
-                loc_it->second.location = newloc;
-                notifyReplicaLocationUpdated( update.object(), newloc );
+                loc_it->second.props.setLocation(newloc, epoch);
+                notifyReplicaLocationUpdated( update.object(), loc_it->second.props.location() );
 
-                CONTEXT_SPACETRACE(serverLoc, msg->source_server(), mContext->id(), update.object(), newloc );
+                CONTEXT_SPACETRACE(serverLoc, msg->source_server(), mContext->id(), update.object(), loc_it->second.props.location() );
             }
 
             if (update.has_orientation()) {
@@ -324,26 +343,26 @@ void StandardLocationService::receiveMessage(Message* msg) {
                     update.orientation().t(),
                     MotionQuaternion( update.orientation().position(), update.orientation().velocity() )
                 );
-                loc_it->second.orientation = neworient;
-                notifyReplicaOrientationUpdated( update.object(), neworient );
+                loc_it->second.props.setOrientation(neworient, epoch);
+                notifyReplicaOrientationUpdated( update.object(), loc_it->second.props.orientation() );
             }
 
             if (update.has_bounds()) {
                 BoundingSphere3f newbounds = update.bounds();
-                loc_it->second.bounds = newbounds;
-                notifyReplicaBoundsUpdated( update.object(), newbounds );
+                loc_it->second.props.setBounds(newbounds, epoch);
+                notifyReplicaBoundsUpdated( update.object(), loc_it->second.props.bounds() );
             }
 
             if (update.has_mesh()) {
                 String newmesh = update.mesh();
-                loc_it->second.mesh = newmesh;
-                notifyReplicaMeshUpdated( update.object(), newmesh );
+                loc_it->second.props.setMesh(Transfer::URI(newmesh), epoch);
+                notifyReplicaMeshUpdated( update.object(), loc_it->second.props.mesh().toString() );
             }
 
             if (update.has_physics()) {
                 String newphy = update.physics();
-                loc_it->second.physics = newphy;
-                notifyReplicaPhysicsUpdated( update.object(), newphy );
+                loc_it->second.props.setPhysics(newphy, epoch);
+                notifyReplicaPhysicsUpdated( update.object(), loc_it->second.props.physics() );
             }
         }
     }
@@ -367,27 +386,19 @@ bool StandardLocationService::locationUpdate(UUID source, void* buffer, uint32 l
             LocationMap::iterator loc_it = mLocations.find( source );
             assert(loc_it != mLocations.end());
 
+            uint64 epoch = 0;
+            if (request.has_epoch())
+                epoch = request.epoch();
+
             if (request.has_location()) {
                 TimedMotionVector3f newloc(
                     request.location().t(),
                     MotionVector3f( request.location().position(), request.location().velocity() )
                 );
-                loc_it->second.location = newloc;
-                notifyLocalLocationUpdated( source, loc_it->second.aggregate, newloc );
+                loc_it->second.props.setLocation(newloc, epoch);
+                notifyLocalLocationUpdated( source, loc_it->second.aggregate, loc_it->second.props.location() );
 
-                CONTEXT_SPACETRACE(serverLoc, mContext->id(), mContext->id(), source, newloc );
-            }
-
-            if (request.has_bounds()) {
-                BoundingSphere3f newbounds = request.bounds();
-                loc_it->second.bounds = newbounds;
-                notifyLocalBoundsUpdated( source, loc_it->second.aggregate, newbounds );
-            }
-
-            if (request.has_mesh()) {
-                String newmesh = request.mesh();
-                loc_it->second.mesh = newmesh;
-                notifyLocalMeshUpdated( source, loc_it->second.aggregate, newmesh );
+                CONTEXT_SPACETRACE(serverLoc, mContext->id(), mContext->id(), source, loc_it->second.props.location() );
             }
 
             if (request.has_orientation()) {
@@ -395,14 +406,26 @@ bool StandardLocationService::locationUpdate(UUID source, void* buffer, uint32 l
                     request.orientation().t(),
                     MotionQuaternion( request.orientation().position(), request.orientation().velocity() )
                 );
-                loc_it->second.orientation = neworient;
-                notifyLocalOrientationUpdated( source, loc_it->second.aggregate, neworient );
+                loc_it->second.props.setOrientation(neworient, epoch);
+                notifyLocalOrientationUpdated( source, loc_it->second.aggregate, loc_it->second.props.orientation() );
+            }
+
+            if (request.has_bounds()) {
+                BoundingSphere3f newbounds = request.bounds();
+                loc_it->second.props.setBounds(newbounds, epoch);
+                notifyLocalBoundsUpdated( source, loc_it->second.aggregate, loc_it->second.props.bounds() );
+            }
+
+            if (request.has_mesh()) {
+                String newmesh = request.mesh();
+                loc_it->second.props.setMesh(Transfer::URI(newmesh), epoch);
+                notifyLocalMeshUpdated( source, loc_it->second.aggregate, loc_it->second.props.mesh().toString() );
             }
 
             if (request.has_physics()) {
                 String newphy = request.physics();
-                loc_it->second.physics = newphy;
-                notifyLocalPhysicsUpdated( source, loc_it->second.aggregate, newphy );
+                loc_it->second.props.setPhysics(newphy, epoch);
+                notifyLocalPhysicsUpdated( source, loc_it->second.aggregate, loc_it->second.props.physics() );
             }
 
         }

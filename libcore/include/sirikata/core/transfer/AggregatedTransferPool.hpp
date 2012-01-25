@@ -64,6 +64,15 @@ public:
                     )
                 );
             }
+            DirectChunkRequestPtr direct_chunk_req = std::tr1::dynamic_pointer_cast<DirectChunkRequest>(req);
+            if (direct_chunk_req) {
+                data.aggregateRequest = TransferRequestPtr(
+                    new DirectChunkRequest(
+                        direct_chunk_req->getChunk(), direct_chunk_req->getPriority(),
+                        std::tr1::bind(&AggregatedTransferPool::handleDirectChunk, this, req->getIdentifier(), _1, _2)
+                    )
+                );
+            }
 
             mRequestData[req->getIdentifier()] = data;
             it = mRequestData.find(req->getIdentifier());
@@ -227,6 +236,24 @@ private:
             in_it++) {
             ChunkRequestPtr chunk_req = std::tr1::dynamic_pointer_cast<ChunkRequest>(*in_it);
             chunk_req->notifyCaller(chunk_req, req, response);
+        }
+    }
+
+    void handleDirectChunk(const String input_identifier, DirectChunkRequestPtr req, DenseDataPtr response) {
+        TransferRequestList inputRequests;
+        {
+            boost::unique_lock<boost::mutex> lock(mMutex);
+            RequestDataMap::iterator it = mRequestData.find(input_identifier);
+            if (it == mRequestData.end()) return;
+            inputRequests.swap(it->second.inputRequests);
+            mRequestData.erase(it);
+        }
+
+        for(TransferRequestList::iterator in_it = inputRequests.begin();
+            in_it != inputRequests.end();
+            in_it++) {
+            DirectChunkRequestPtr direct_chunk_req = std::tr1::dynamic_pointer_cast<DirectChunkRequest>(*in_it);
+            direct_chunk_req->notifyCaller(direct_chunk_req, req, response);
         }
     }
 

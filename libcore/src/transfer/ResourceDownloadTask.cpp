@@ -44,9 +44,20 @@ ResourceDownloadTaskPtr ResourceDownloadTask::construct(const URI& uri, Transfer
     return ResourceDownloadTaskPtr(SelfWeakPtr<ResourceDownloadTask>::internalConstruct(new ResourceDownloadTask(uri, transfer_pool, priority, cb)));
 }
 
+ResourceDownloadTaskPtr ResourceDownloadTask::construct(const Chunk& chunk, TransferPoolPtr transfer_pool, double priority, DownloadCallback cb) {
+    return ResourceDownloadTaskPtr(SelfWeakPtr<ResourceDownloadTask>::internalConstruct(new ResourceDownloadTask(chunk, transfer_pool, priority, cb)));
+}
+
 ResourceDownloadTask::ResourceDownloadTask(const Transfer::URI &uri, TransferPoolPtr transfer_pool, double priority, DownloadCallback cb)
- : mURI(uri), mTransferPool(transfer_pool), mRange(true),
-   mPriority(priority), cb(cb)
+ : mURI(uri), mChunk(), mTransferPool(transfer_pool),
+   mPriority(priority), cb(cb), mID(uri.toString())
+{
+  mStarted = false;
+}
+
+ResourceDownloadTask::ResourceDownloadTask(const Chunk& chunk, TransferPoolPtr transfer_pool, double priority, DownloadCallback cb)
+ : mURI(), mChunk(chunk), mTransferPool(transfer_pool),
+   mPriority(priority), cb(cb), mID(chunk.toString())
 {
   mStarted = false;
 }
@@ -85,7 +96,12 @@ void ResourceDownloadTask::chunkFinishedWeak(ResourceDownloadTaskWPtr thiswptr, 
     if (thisptr) thisptr->chunkFinished(request, response);
 }
 
-void ResourceDownloadTask::chunkFinished(ChunkRequestPtr request,
+void ResourceDownloadTask::directChunkFinishedWeak(ResourceDownloadTaskWPtr thiswptr, DirectChunkRequestPtr request, DenseDataPtr response) {
+    ResourceDownloadTaskPtr thisptr(thiswptr.lock());
+    if (thisptr) thisptr->chunkFinished(request, response);
+}
+
+void ResourceDownloadTask::chunkFinished(TransferRequestPtr request,
     std::tr1::shared_ptr<const DenseData> response)
 {
     // Let the request get cleaned up.
@@ -95,10 +111,10 @@ void ResourceDownloadTask::chunkFinished(ChunkRequestPtr request,
     if (!cb) return;
 
     if (response != NULL) {
-        cb(request, response);
+        cb(getSharedPtr(), request, response);
     }
     else {
-        cb(request, Transfer::DenseDataPtr());
+        cb(getSharedPtr(), request, Transfer::DenseDataPtr());
     }
 }
 
@@ -123,7 +139,7 @@ void ResourceDownloadTask::metadataFinished(MetadataRequestPtr request,
   }
   else {
       SILOG(ogre,error,"Failed metadata download");
-      if (cb) cb(ChunkRequestPtr(), Transfer::DenseDataPtr());
+      if (cb) cb(getSharedPtr(), ChunkRequestPtr(), Transfer::DenseDataPtr());
   }
 }
 
@@ -132,9 +148,19 @@ void ResourceDownloadTask::start()
     mStarted = true;
 
     assert(!mCurrentRequest);
-    mCurrentRequest = TransferRequestPtr(
-        new MetadataRequest(mURI, mPriority,
-            std::tr1::bind(&ResourceDownloadTask::metadataFinishedWeak, getWeakPtr(), _1, _2)));
+
+    if (mURI.empty()) {
+        //just a hash lookup
+        mCurrentRequest = TransferRequestPtr(
+            new DirectChunkRequest(mChunk, mPriority,
+                std::tr1::bind(&ResourceDownloadTask::directChunkFinishedWeak, getWeakPtr(), _1, _2)));
+    } else {
+        //a full name/hash lookup
+        mCurrentRequest = TransferRequestPtr(
+            new MetadataRequest(mURI, mPriority,
+                std::tr1::bind(&ResourceDownloadTask::metadataFinishedWeak, getWeakPtr(), _1, _2)));
+    }
+
     mTransferPool->addRequest(mCurrentRequest);
 }
 

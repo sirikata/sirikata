@@ -83,6 +83,15 @@ SIRIKATA_FUNCTION_EXPORT String Get(Key key, const String& relative_path, const 
 /** Substitute full values for placeholders in the given path. */
 SIRIKATA_FUNCTION_EXPORT String SubstitutePlaceholders(const String& path);
 
+/** Get temporary filename, i.e. a file name with extra random characters to
+ *  avoid conflicting files within a temporary directory.
+ *
+ *  NOTE: Be careful using this since it can't guarantee uniqueness, only make
+ *  it unlikely. You generally should not leave prefix empty as this helps avoid
+ *  conflicts.
+ */
+SIRIKATA_FUNCTION_EXPORT String GetTempFilename(const String& prefix);
+
 } // namespace Path
 } // namespace Sirikata
 

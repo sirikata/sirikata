@@ -105,7 +105,7 @@ void BulletCharacterObject::unload() {
 
 void BulletCharacterObject::preTick(const Time& t) {
     LocationInfo& locinfo = mParent->info(mID);
-    Vector3f char_vel = locinfo.location.velocity();
+    Vector3f char_vel = locinfo.props.location().velocity();
     btVector3 bt_char_vel(char_vel.x, char_vel.y, char_vel.z);
     mCharacter->setWalkDirection(bt_char_vel);
     // Character controller doesn't have any rotation support. Instead, we set
@@ -128,24 +128,88 @@ void BulletCharacterObject::postTick(const Time& t) {
 
     btTransform worldTrans = mGhostObject->getWorldTransform();
     btVector3 pos = worldTrans.getOrigin();
-    TimedMotionVector3f newLocation(t, MotionVector3f(Vector3f(pos.x(), pos.y(), pos.z()), locinfo.location.velocity()));
-    mParent->setLocation(mID, newLocation);
+    TimedMotionVector3f newLocation(t, MotionVector3f(Vector3f(pos.x(), pos.y(), pos.z()), locinfo.props.location().velocity()));
+
     btQuaternion rot = worldTrans.getRotation();
     TimedMotionQuaternion newOrientation(
         t,
         MotionQuaternion(
             Quaternion(rot.x(), rot.y(), rot.z(), rot.w()),
-            locinfo.orientation.velocity()
+            locinfo.props.orientation().velocity()
         )
     );
-    mParent->setOrientation(mID, newOrientation);
 
-    mParent->addUpdate(mID);
+    // Only update and report a change if it's big enough. This allows us to
+    // stop sending updates if the object ends up essentially still.
+    float32 pos_diff = (mParent->location(mID).position(t)-newLocation.position(t)).lengthSquared();
+    // This test is easy, but also conservative...
+    float32 angle1, angle2;
+    Vector3f axis1, axis2;
+    mParent->orientation(mID).position(t).toAngleAxis(angle1, axis1);
+    newOrientation.position(t).toAngleAxis(angle2, axis2);
+    // FIXME what should this really be? This approach doesn't seem to really
+    // work because we sometimes get 0 vectors and the constants seem odd...
+    bool orient_changed =
+        (axis1.dot(axis2) < 0.9) || (fabs(angle1-angle2) > 3.14159/180);
+
+    if (pos_diff > 0.001 || orient_changed) {
+        mParent->setLocation(mID, newLocation);
+        mParent->setOrientation(mID, newOrientation);
+        mParent->addUpdate(mID);
+    }
 }
 
 void BulletCharacterObject::deactivationTick(const Time& t) {
     if (mGhostObject != NULL && !mGhostObject->isActive())
         mParent->updateObjectFromDeactivation(mID);
+}
+
+bool BulletCharacterObject::applyRequestedLocation(const TimedMotionVector3f& loc, uint64 epoch) {
+    applyForcedLocation(loc, epoch);
+    return true;
+}
+
+bool BulletCharacterObject::applyRequestedOrientation(const TimedMotionQuaternion& orient, uint64 epoch) {
+    applyForcedOrientation(orient, epoch);
+    return true;
+}
+
+void BulletCharacterObject::applyForcedLocation(const TimedMotionVector3f& loc, uint64 epoch) {
+    // Update recorded info. Note that this still follows epoch ordering! It
+    // will be ignored if it is out of date, even though this is "forced".
+    LocationInfo& locinfo = mParent->info(mID);
+    locinfo.props.setLocation(loc, epoch);
+
+    // And apply current position. We don't need to apply velocity because it'll
+    // be applied at the next tick.
+    btTransform xform = mGhostObject->getWorldTransform();
+    Vector3f objPosition = mParent->currentPosition(mID);
+    btQuaternion objOrient = xform.getRotation();
+    mGhostObject->setWorldTransform(
+        btTransform(
+            objOrient,
+            btVector3( objPosition.x, objPosition.y, objPosition.z )
+        )
+    );
+}
+
+void BulletCharacterObject::applyForcedOrientation(const TimedMotionQuaternion& orient, uint64 epoch) {
+    // Update recorded info. Note that this still follows epoch ordering! It
+    // will be ignored if it is out of date, even though this is "forced".
+    LocationInfo& locinfo = mParent->info(mID);
+    locinfo.props.setOrientation(orient, epoch);
+
+    // And apply current position. We don't need to apply velocity because it'll
+    // be applied at the next tick.
+    btTransform xform = mGhostObject->getWorldTransform();
+    btVector3 objPosition = xform.getOrigin();
+    Quaternion objOrient = mParent->currentOrientation(mID);
+    mGhostObject->setWorldTransform(
+        btTransform(
+            btQuaternion(objOrient.x, objOrient.y, objOrient.z, objOrient.w),
+            objPosition
+        )
+    );
 }
 
 } // namespace Sirikata

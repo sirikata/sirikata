@@ -124,7 +124,7 @@ AVPacket* FFmpegAudioStream::getNextPacket(bool loop) {
             }
         }
 
-        if (packet.stream_index == mStreamIndex) {
+        if (packet.stream_index == (int32)mStreamIndex) {
             AUDIO_LOG(insane, "Got packet for selected audio stream (" << mStreamIndex << ")");
             // This seems to be used to ensure the packet data outlives the next
             // call to av_read_frame

@@ -44,7 +44,7 @@
 #include <sirikata/core/util/BoundingSphere.hpp>
 #include <sirikata/oh/LocUpdate.hpp>
 #include <sirikata/oh/ProtocolLocUpdate.hpp>
-#include <sirikata/proxyobject/PresenceProperties.hpp>
+#include <sirikata/core/util/PresenceProperties.hpp>
 
 namespace Sirikata {
 
@@ -144,6 +144,7 @@ private:
         //Either value or opd will be non-null.  Never both.
         Sirikata::Protocol::Loc::LocationUpdate* value;
         SequencedPresenceProperties* opd;
+
         Time expiresAt;
     private:
         UpdateInfo();
@@ -172,6 +173,13 @@ public:
     virtual ~PresencePropertiesLocUpdate() {}
 
     virtual ObjectReference object() const { return mObject; }
+
+    // Request epoch
+    // Since these are only used for orphan updates, we should never have an
+    // epoch we would care about -- presences should never have orphans since
+    // their proxies are created as soon as they get connected.
+    virtual bool has_epoch() const { return false; }
+    virtual uint64 epoch() const { return 0; }
 
     // Location
     virtual bool has_location() const { return true; }

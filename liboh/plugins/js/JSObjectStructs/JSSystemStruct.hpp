@@ -43,7 +43,7 @@ struct JSSystemStruct
     v8::Handle<v8::Value> checkHeadless();
 
     v8::Handle<v8::Value> getAssociatedPresence();
-    
+
     v8::Handle<v8::Value> storageBeginTransaction();
     v8::Handle<v8::Value> storageCommit(v8::Handle<v8::Function> cb);
     v8::Handle<v8::Value> storageWrite(const OH::Storage::Key& key, const String& toWrite, v8::Handle<v8::Function> cb);
@@ -77,7 +77,7 @@ struct JSSystemStruct
 
     v8::Handle<v8::Value> emersonCompileString(const String& toCompile);
 
-    v8::Handle<v8::Value> struct_create_vis(const SpaceObjectReference& sporefWatching, JSProxyPtr addParams)
+    v8::Handle<v8::Value> struct_create_vis(const SpaceObjectReference& sporefWatching, JSVisibleDataPtr addParams)
     {
         return associatedContext->struct_create_vis(sporefWatching,addParams);
     }
@@ -131,28 +131,28 @@ struct JSSystemStruct
 
 
     Capabilities::CapNum getCapNum();
-    
+
 private:
 
    /**
       @param {Capabilities::CapNum} The requested amount of capabilities.
       @param {Capabilities::Caps} capRequesting Capability that scripter is
       requesting to imbue into new sandbox.
-      
+
       @param {JSPresenceStruct} jspres Default presence for new sandbox.
-   
+
       If scripter is trying to request capabilities that the initial sandbox he/she
       is creating does not have, strips those capabilities.
    */
     void stripCapEscalation(Capabilities::CapNum& permNum, Capabilities::Caps capRequesting, JSPresenceStruct* jspres, const String& capRequestingName);
-    
+
 
     //returns true if you have capability to perform the operation associated with
     //capRequesting on jspres, false otherwise.  Note: pass null to jspres if
     //requesting a capability not associated with a presence.  (See list of
     //these in JSCapabilitiesConsts.hpp.)
     bool checkCurCtxtHasCapability(JSPresenceStruct* jspres, Capabilities::Caps capRequesting);
-    
+
     //associated data
     JSContextStruct* associatedContext;
     uint32 mCapNum;

@@ -114,7 +114,6 @@ void JSSerializer::serializeVisible(v8::Local<v8::Object> jsVisible, Sirikata::J
     return ;
   }
 
-  EmersonScript* emerScript         =      vstruct->jpp->emerScript;
   SpaceObjectReference sporef       =      vstruct->getSporef();
 
   fillVisible(jsmessage, sporef);
@@ -594,7 +593,7 @@ void JSSerializer::shallowCopyFields(v8::Handle<v8::Object> dst, v8::Handle<v8::
  */
 v8::Handle<v8::Object> JSSerializer::deserializeObject( EmersonScript* emerScript, Sirikata::JS::Protocol::JSMessage jsmessage,bool& deserializeSuccessful)
 {
-    
+
     v8::HandleScope handle_scope;
     ObjectMap labeledObjs;
     FixupMap  toFixUp;
@@ -608,7 +607,7 @@ v8::Handle<v8::Object> JSSerializer::deserializeObject( EmersonScript* emerScrip
       }
 
 
-    
+
     v8::Handle<v8::Object> deserializeTo;
 
     //if we're deserializing to a function, we need to know rigth off the bat,
@@ -646,7 +645,7 @@ v8::Handle<v8::Value> JSSerializer::deserializeMessage(EmersonScript* emerScript
           return v8::Undefined();
       }
 
-    
+
     v8::HandleScope handle_scope;
     ObjectMap labeledObjs;
     FixupMap toFixUp;
@@ -730,7 +729,7 @@ bool JSSerializer::deserializeObjectInternal( EmersonScript* emerScript, Sirikat
       }
 
       //create the vis obj through objScript
-      deserializeTo = emerScript->createVisibleWeakPersistent(visibleObj, JSProxyPtr());
+      deserializeTo = emerScript->createVisibleWeakPersistent(visibleObj, JSVisibleDataPtr());
       return true;
     }
 
@@ -759,7 +758,6 @@ bool JSSerializer::deserializeObjectInternal( EmersonScript* emerScript, Sirikat
             {
                 if (val->IsObject())
                 {
-                    v8::Handle<v8::Array> tmpArray =v8::Array::New();
                     setPrototype(deserializeTo,val->ToObject());
                 }
                 else

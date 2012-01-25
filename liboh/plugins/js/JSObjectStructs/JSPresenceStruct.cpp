@@ -14,12 +14,13 @@
 namespace Sirikata {
 namespace JS {
 
-
 //this constructor is called when we ask the space to create a presence for us.
 //we give the space the token presenceToken, which it ships back when connection
 //is completed.
 JSPresenceStruct::JSPresenceStruct(EmersonScript* parent, v8::Handle<v8::Function> connectedCallback, JSContextStruct* ctx, HostedObject::PresenceToken presenceToken, JSCtx* jsctx)
- : JSPositionListener(JSProxyPtr(new JSProxyData()),jsctx),
+ // TODO(ewencp) this used to pass a default version of JSVisibleDataPtr instead
+ // of NULL, is this ok?
+ : JSPositionListener(parent, JSAggregateVisibleDataPtr(), jsctx),
    JSSuspendable(),
    mOnConnectedCallback(v8::Persistent<v8::Function>::New(connectedCallback)),
    mParent(parent),
@@ -30,8 +31,7 @@ JSPresenceStruct::JSPresenceStruct(EmersonScript* parent, v8::Handle<v8::Functio
    mSuspendedVelocity(Vector3f::zero()),
    mSuspendedOrientationVelocity(Quaternion::identity()),
    mContext(ctx),
-   mQueryAngle(),
-   mQueryMaxCount(0)
+   mQuery()
 {
     mContext->struct_registerSuspendable(this);
 }
@@ -39,7 +39,7 @@ JSPresenceStruct::JSPresenceStruct(EmersonScript* parent, v8::Handle<v8::Functio
 //use this constructor if we already have a presence that is connected to the
 //space with spaceObjectRecference _sporef
 JSPresenceStruct::JSPresenceStruct(EmersonScript* parent, const SpaceObjectReference& _sporef, JSContextStruct* ctx,HostedObject::PresenceToken presenceToken, JSCtx* jsctx)
- : JSPositionListener(parent->getOrCreateProxyPtr(_sporef),jsctx),
+ : JSPositionListener(parent, parent->getOrCreateVisible(_sporef),jsctx),
    JSSuspendable(),
    mParent(parent),
    mContID(ctx->getContextID()),
@@ -49,15 +49,18 @@ JSPresenceStruct::JSPresenceStruct(EmersonScript* parent, const SpaceObjectRefer
    mSuspendedVelocity(Vector3f::zero()),
    mSuspendedOrientationVelocity(Quaternion::identity()),
    mContext(ctx),
-   mQueryAngle(),
-   mQueryMaxCount(0)
+   mQuery()
 {
+    // Normally we would need to initialize after calling
+    // getOrCreateVisibleData, but in this case we will have already initialized
+    // from the proxy data (in EmersonScript).
+
     mContext->struct_registerSuspendable(this);
 }
 
 //use this constructor when we are restoring a presence.
-JSPresenceStruct::JSPresenceStruct(EmersonScript* parent, PresStructRestoreParams& psrp, Vector3f center, HostedObject::PresenceToken presToken,JSContextStruct* jscont, const TimedMotionVector3f& tmv, const TimedMotionQuaternion& tmq,JSCtx* jsctx)
- : JSPositionListener(parent->getOrCreateProxyPtr(psrp.sporef),jsctx),
+JSPresenceStruct::JSPresenceStruct(EmersonScript* parent, PresStructRestoreParams& psrp, Vector3f center, HostedObject::PresenceToken presToken,JSContextStruct* jscont, const TimedMotionVector3f& tmv, const TimedMotionQuaternion& tmq, JSCtx* jsctx)
+ : JSPositionListener(parent, parent->getOrCreateVisible(psrp.sporef), jsctx),
    JSSuspendable(),
    mParent(parent),
    isConnected(false),
@@ -65,14 +68,13 @@ JSPresenceStruct::JSPresenceStruct(EmersonScript* parent, PresStructRestoreParam
    mPresenceToken(presToken),
    mContext(NULL)
 {
-    jpp->mLocation    = tmv;
-    jpp->mOrientation = tmq;
-    jpp->mMesh    = psrp.mesh;
-    jpp->mBounds  = BoundingSphere3f( center  ,psrp.scale);
-    jpp->mPhysics = psrp.physics;
+    jpp->updateFrom(
+        PresenceProperties(
+            tmv, tmq, BoundingSphere3f(center, psrp.scale), Transfer::URI(psrp.mesh), psrp.physics
+        )
+    );
 
-    mQueryAngle = psrp.query;
-    mQueryMaxCount = psrp.queryMaxResults;
+    mQuery = psrp.query;
 
     if (!psrp.suspendedVelocity.isNull())
         mSuspendedVelocity = psrp.suspendedVelocity.getValue();
@@ -145,9 +147,7 @@ v8::Handle<v8::Value> JSPresenceStruct::getAllData()
     returner->Set(v8::String::New("suspendedOrientationVelocity"),CreateJSResult(curContext,mSuspendedOrientationVelocity));
     returner->Set(v8::String::New("suspendedVelocity"),CreateJSResult(curContext,mSuspendedVelocity));
 
-    returner->Set(v8::String::New("solidAngleQuery"),struct_getQueryAngle());
-    returner->Set(v8::String::New("queryCount"),struct_getQueryCount());
-
+    returner->Set(v8::String::New("query"), struct_getQuery());
 
 
     //onConnected
@@ -245,9 +245,9 @@ HostedObject::PresenceToken JSPresenceStruct::getPresenceToken()
 
 void JSPresenceStruct::connect(const SpaceObjectReference& _sporef)
 {
-    // We need to update our JSProxyPtr since before the connect we didn't even
+    // We need to update our JSVisibleDataPtr since before the connect we didn't even
     // know what our SpaceObjectReference would be.
-    jpp = mParent->getOrCreateProxyPtr(_sporef);
+    jpp = mParent->getOrCreateVisible(_sporef);
 
     v8::HandleScope handle_scope;
 
@@ -283,14 +283,24 @@ v8::Handle<v8::Value> JSPresenceStruct::setOrientationVelFunction(Quaternion new
 {
     INLINE_CHECK_IS_CONNECTED_ERROR("setOrientationVel");
     INLINE_CHECK_CAPABILITY_ERROR(Capabilities::MOVEMENT,setOrientationVel);
-    mParent->setOrientationVelFunction(getSporef(),newOrientationVel);
+
+    Time tnow = mParent->getHostedTime();
+    TimedMotionQuaternion orient = jpp->orientation();
+    TimedMotionQuaternion new_orient(tnow, MotionQuaternion(orient.position(tnow), newOrientationVel) );
+    mParent->setOrientation(getSporef(), new_orient);
+
     return v8::Undefined();
 }
 v8::Handle<v8::Value> JSPresenceStruct::struct_setVelocity(const Vector3f& newVel)
 {
     INLINE_CHECK_IS_CONNECTED_ERROR("setVelocity");
     INLINE_CHECK_CAPABILITY_ERROR(Capabilities::MOVEMENT,setVelocity);
-    mParent->setVelocityFunction(getSporef(),newVel);
+
+    Time tnow = mParent->getHostedTime();
+    TimedMotionVector3f loc = jpp->location();
+    TimedMotionVector3f new_loc(tnow, MotionVector3f(loc.position(tnow), newVel) );
+    mParent->setLocation(getSporef(), new_loc);
+
     return v8::Undefined();
 }
 
@@ -298,7 +308,13 @@ v8::Handle<v8::Value> JSPresenceStruct::struct_setPosition(Vector3f newPos)
 {
     INLINE_CHECK_IS_CONNECTED_ERROR("setPosition");
     INLINE_CHECK_CAPABILITY_ERROR(Capabilities::MOVEMENT,setPosition);
-    mParent->setPositionFunction(getSporef(), newPos);
+
+
+    Time tnow = mParent->getHostedTime();
+    TimedMotionVector3f loc = jpp->location();
+    TimedMotionVector3f new_loc(tnow, MotionVector3f(newPos, loc.velocity()) );
+    mParent->setLocation(getSporef(), new_loc);
+
     return v8::Undefined();
 }
 
@@ -306,7 +322,12 @@ v8::Handle<v8::Value> JSPresenceStruct::setOrientationFunction(Quaternion newOri
 {
     INLINE_CHECK_IS_CONNECTED_ERROR("setOrientation");
     INLINE_CHECK_CAPABILITY_ERROR(Capabilities::MOVEMENT,setPosition);
-    mParent->setOrientationFunction(getSporef(),newOrientation);
+
+    Time tnow = mParent->getHostedTime();
+    TimedMotionQuaternion orient = jpp->orientation();
+    TimedMotionQuaternion new_orient(tnow, MotionQuaternion(newOrientation, orient.velocity()) );
+    mParent->setOrientation(getSporef(), new_orient);
+
     return v8::Undefined();
 }
 
@@ -315,7 +336,9 @@ v8::Handle<v8::Value> JSPresenceStruct::setVisualScaleFunction(float new_scale)
 {
     INLINE_CHECK_IS_CONNECTED_ERROR("setScale");
     INLINE_CHECK_CAPABILITY_ERROR(Capabilities::MESH,setScale);
-    mParent->setVisualScaleFunction(getSporef(), new_scale);
+
+    mParent->setBounds(getSporef(), BoundingSphere3f(jpp->bounds().center(), new_scale));
+
     return v8::Undefined();
 }
 
@@ -323,62 +346,34 @@ v8::Handle<v8::Value>JSPresenceStruct::setVisualFunction(String urilocation)
 {
     INLINE_CHECK_IS_CONNECTED_ERROR("setMesh");
     INLINE_CHECK_CAPABILITY_ERROR(Capabilities::MESH,setMesh);
-    mParent->setVisualFunction(getSporef(), urilocation);
+    mParent->setVisual(getSporef(), urilocation);
     return v8::Undefined();
 }
 
 
 
-//FIXME: should store query angle locally instead of requiring a request through
-//EmersonScript to hosted object.
-SolidAngle JSPresenceStruct::getQueryAngle()
+const String& JSPresenceStruct::getQuery()
 {
-    return mQueryAngle;
+    return mQuery;
 }
 
-v8::Handle<v8::Value> JSPresenceStruct::struct_getQueryAngle()
+v8::Handle<v8::Value> JSPresenceStruct::struct_getQuery()
 {
     INLINE_CHECK_IS_CONNECTED_ERROR("getQueryAngle");
-    return v8::Number::New(getQueryAngle().asFloat());
+    return v8::String::New(getQuery().c_str(), getQuery().size());
 }
 
-v8::Handle<v8::Value> JSPresenceStruct::setQueryAngleFunction(SolidAngle new_qa)
+v8::Handle<v8::Value> JSPresenceStruct::setQueryFunction(const String& new_qa)
 {
-    INLINE_CHECK_IS_CONNECTED_ERROR("setQueryAngle");
-    INLINE_CHECK_CAPABILITY_ERROR(Capabilities::PROX_QUERIES,setQueryAngle);
-    mParent->setQueryFunction(getSporef(), new_qa, getQueryCount());
-    mQueryAngle = new_qa;
-    return v8::Undefined();
-}
-
-//FIXME: should store query count locally instead of requiring a request through
-//EmersonScript to hosted object.
-uint32 JSPresenceStruct::getQueryCount()
-{
-    return mQueryMaxCount;
-}
-
-v8::Handle<v8::Value> JSPresenceStruct::struct_getQueryCount()
-{
-    INLINE_CHECK_IS_CONNECTED_ERROR("getQueryCount");
-    return v8::Integer::New(getQueryCount());
-}
-
-v8::Handle<v8::Value> JSPresenceStruct::setQueryCount(uint32 new_qc)
-{
-    INLINE_CHECK_IS_CONNECTED_ERROR("setQueryCount");
-    mParent->setQueryFunction(getSporef(), getQueryAngle(), new_qc);
+    INLINE_CHECK_IS_CONNECTED_ERROR("setQuery");
+    INLINE_CHECK_CAPABILITY_ERROR(Capabilities::PROX_QUERIES,setQuery);
+    mParent->setQueryFunction(getSporef(), new_qa);
+    mQuery = new_qa;
     return v8::Undefined();
 }
 
 
 
-
-
-
-v8::Handle<v8::Value> JSPresenceStruct::getPhysicsFunction() {
-    return mParent->getPhysicsFunction(getSporef());
-}
 v8::Handle<v8::Value> JSPresenceStruct::setPhysicsFunction(const String& phy) {
     INLINE_CHECK_IS_CONNECTED_ERROR("setPhysics");
     mParent->setPhysicsFunction(getSporef(), phy);

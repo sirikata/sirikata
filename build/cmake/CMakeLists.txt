@@ -239,7 +239,7 @@ INCLUDE(GitRevision)
 #  * Revisions also only have additions and are very minor.
 SET(SIRIKATA_VERSION_MAJOR "0" CACHE STRING "Sirikata's major version" FORCE)
 SET(SIRIKATA_VERSION_MINOR "0" CACHE STRING "Sirikata's minor version" FORCE)
-SET(SIRIKATA_VERSION_REVISION "18" CACHE STRING "Sirikata's revision version" FORCE)
+SET(SIRIKATA_VERSION_REVISION "19" CACHE STRING "Sirikata's revision version" FORCE)
 
 # These get translated into two settings: the VERSION and
 # SOVERSION. The SOVERSION includes just the major number so anything
@@ -658,7 +658,7 @@ ELSE()
   SET(BERKELIUM_TARGET_LIBRARIES)
   SET(BERKELIUM_TARGET_BINARIES)
   SET(BERKELIUM_LIBRARIES)
-  IF(EXISTS ${TOP_LEVEL}/externals/berkelium/chromium AND EXISTS ${TOP_LEVEL}/externals/berkelium/chromium/chromium)
+  IF(NOT DISABLE_BERKELIUM AND EXISTS ${TOP_LEVEL}/externals/berkelium/chromium AND EXISTS ${TOP_LEVEL}/externals/berkelium/chromium/chromium)
     # This name is needed by the ADD_CHROME_APP macro
     SET(BERKELIUM_TOP_LEVEL ${TOP_LEVEL}/externals/berkelium)
 
@@ -1503,6 +1503,7 @@ SET(LIBPROXYOBJECT_SOURCES
   ${Bullet_PBJ_CPP_FILES}
                   ${LIBPROXYOBJECT_SOURCE_DIR}/Invokable.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/ProxyObject.cpp
+                  ${LIBPROXYOBJECT_SOURCE_DIR}/ProxyManager.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/VWObject.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/OrphanLocUpdateManager.cpp
     )
@@ -1513,7 +1514,6 @@ SET(LIBOH_SOURCES
                   ${LIBOH_SOURCE_DIR}/ObjectHost.cpp
                   ${LIBOH_SOURCE_DIR}/ObjectFactory.cpp
                   ${LIBOH_SOURCE_DIR}/HostedObject.cpp
-                  ${LIBOH_SOURCE_DIR}/ObjectHostProxyManager.cpp
                   ${LIBOH_SOURCE_DIR}/ObjectScriptManagerFactory.cpp
                   ${LIBOH_SOURCE_DIR}/ObjectHostContext.cpp
                   ${LIBOH_SOURCE_DIR}/PerPresenceData.cpp
@@ -2285,6 +2285,7 @@ SET(LIBOH_PLUGIN_JS_SOURCES
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSTimer.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSGlobal.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSSerializer.cpp
+  ${LIBOH_PLUGIN_JS_DIR}/JSVisibleData.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSVisibleManager.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSContextStruct.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSSystemStruct.cpp

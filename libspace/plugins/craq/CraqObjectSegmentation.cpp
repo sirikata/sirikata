@@ -534,8 +534,6 @@ void CraqObjectSegmentation::addMigratedObject(const UUID& obj_id, float radius,
         obj_id,mContext->id(),
         new_server_id.server());
 
-    InTransitMap::const_iterator transIter = mInTransitOrLookup.find(obj_id);
-
     TransLookup tmpTransLookup;
     tmpTransLookup.sID = CraqEntry(new_server_id);
 
@@ -544,9 +542,6 @@ void CraqObjectSegmentation::addMigratedObject(const UUID& obj_id, float radius,
     tmpTransLookup.timeAdmitted = (int)tmpDurer.toMilliseconds();
 
     mInTransitOrLookup[obj_id] = tmpTransLookup;
-
-    //erases the local copy of obj_id
-    UUID tmp_id = obj_id; //note: can probably delete this line
 
     //erase the local copy of the object.
     size_t num_erased = mObjects.erase(obj_id);

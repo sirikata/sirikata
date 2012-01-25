@@ -47,6 +47,7 @@ system.js_require('std/shim/util.em');
 system.require('std/shim/sandbox.em');
 system.require('std/shim/system.em');
 system.require('std/shim/messaging/messaging.em');
+system.require('std/featureObject/proxManager.em');
 system.require('std/shim/class.em');
 system.require('std/shim/capabilities.em');
 

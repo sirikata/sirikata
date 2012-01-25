@@ -74,8 +74,19 @@ class SIRIKATA_MESH_EXPORT ModelsSystem
         /** Convert a Visual to the format for this ModelsSystem.
          *  \param visual the Visual to save to disk
          *  \param format format hint (may or may not be used by plugin)
+         *  \param vout an output stream to write the visual's data to
+         *  \returns true if the conversion was successful, false otherwise
+         */
+        virtual bool convertVisual(const Mesh::VisualPtr& visual, const String& format, std::ostream& vout) = 0;
+
+        /** Convert a Visual to the format for this ModelsSystem.
+         *  \param visual the Visual to save to disk
+         *  \param format format hint (may or may not be used by plugin)
          *  \param filename the file to save the serialized mesh to
          *  \returns true if the conversion was successful, false otherwise
+         *
+         *  \deprecated You should use the version of this method that takes a
+         *  std::ostream instead.
          */
         virtual bool convertVisual(const Mesh::VisualPtr& visual, const String& format, const String& filename) = 0;
 

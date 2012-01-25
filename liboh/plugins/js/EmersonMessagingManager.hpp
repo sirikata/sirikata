@@ -38,7 +38,10 @@ public:
 
 
     bool sendScriptCommMessageReliable(const SpaceObjectReference& sender, const SpaceObjectReference& receiver, const String& msg);
-    bool sendScriptCommMessageReliable(const SpaceObjectReference& sender, const SpaceObjectReference& receiver, const String& msg, int8 retries);
+    bool sendScriptCommMessageReliable(
+        const SpaceObjectReference& sender, const SpaceObjectReference& receiver,
+        const String& msg, int8 retriesSameStream,int8 retriesNewStream,
+        bool isRetry=false);
 
 
     void presenceConnected(const SpaceObjectReference& connPresSporef);
@@ -48,7 +51,7 @@ private:
     // Possibly save the new stream to mStreams for later use. Since both sides
     // might initiate, we always save the stream initiated by the object with
     // smaller if we identify a conflict.
-    void setupNewStream(SSTStreamPtr sstStream);
+    void setupNewStream(SSTStreamPtr sstStream, bool closePrevious = false);
     // Get a saved stream for the given destination object, or NULL if one isn't
     // available.
     SSTStreamPtr getStream(const SpaceObjectReference& pres, const SpaceObjectReference& remote);
@@ -61,13 +64,36 @@ private:
     void handleIncomingSubstream(Liveness::Token alive, int err, SSTStreamPtr streamPtr);
     void handleScriptCommStreamRead(Liveness::Token alive, SSTStreamPtr sstptr, String* prevdata, uint8* buffer, int length);
 
+    // Only put a few parameters in here to avoid copying lots of stuff, we only
+    // need to get < 8 parameters for bind to work on all platforms
+    struct CommWriteStreamConnectedCBRetryData {
+        int8 retriesSameStream;
+        int8 retriesNewStream;
+        bool isRetry;
+    };
     //writing helper
-    void scriptCommWriteStreamConnectedCB(Liveness::Token alive, const String& msg, const SpaceObjectReference& sender, const SpaceObjectReference& receiver, int err, SSTStreamPtr streamPtr, int8 retries);
+    void scriptCommWriteStreamConnectedCB(
+        Liveness::Token alive, const String& msg,
+        const SpaceObjectReference& sender, const SpaceObjectReference& receiver,
+        int err, SSTStreamPtr streamPtr, CommWriteStreamConnectedCBRetryData retryData);
 
     // Writes a message to a *substream* of the given stream
-    void writeMessage(Liveness::Token alive, SSTStreamPtr streamPtr, const String& msg, const SpaceObjectReference& sender, const SpaceObjectReference& receiver, int8 retries);
-    void writeMessageSubstream(Liveness::Token alive, int err, SSTStreamPtr subStreamPtr, const String& msg, const SpaceObjectReference& sender, const SpaceObjectReference& receiver, int8 retries);
+    void writeMessage(
+        Liveness::Token alive, SSTStreamPtr streamPtr,
+        const String& msg, const SpaceObjectReference& sender,
+        const SpaceObjectReference& receiver, int8 retriesSameStream,
+        int8 retriesNewStream);
+
+    void writeMessageSubstream(
+        Liveness::Token alive, int err, SSTStreamPtr subStreamPtr,
+        const String& msg, const SpaceObjectReference& sender,
+        const SpaceObjectReference& receiver, int8 retriesSameStream,
+        int8 retriesNewStream);
+
     void writeData(Liveness::Token alive, SSTStreamPtr streamPtr, const String& msg, const SpaceObjectReference& sender, const SpaceObjectReference& receiver);
+
+    void removeStream(
+        const SpaceObjectReference& sender, const SpaceObjectReference& receiver);
 
 
     ObjectHostContext* mMainContext;

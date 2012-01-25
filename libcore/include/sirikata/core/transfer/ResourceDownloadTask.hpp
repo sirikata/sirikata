@@ -59,15 +59,22 @@ typedef std::tr1::weak_ptr<ResourceDownloadTask> ResourceDownloadTaskWPtr;
 class SIRIKATA_EXPORT ResourceDownloadTask : public SelfWeakPtr<ResourceDownloadTask> {
 public:
     typedef std::tr1::function<void(
-        ChunkRequestPtr request,
+        ResourceDownloadTaskPtr taskptr,
+        TransferRequestPtr request,
         DenseDataPtr response)> DownloadCallback;
 
+    /* Download this resource based on URI
+     * - First a name lookup will be performed for the URI
+     * - Then the hash that comes back from the name lookup will be downloaded
+     */
     static ResourceDownloadTaskPtr construct(const URI& uri, TransferPoolPtr transfer_pool, double priority, DownloadCallback cb);
-    virtual ~ResourceDownloadTask();
 
-    void setRange(const Range &r) {
-        mRange = r;
-    }
+    /* Download this resource based on a hash
+     *  - Just directly download the hash given
+     */
+    static ResourceDownloadTaskPtr construct(const Chunk& chunk, TransferPoolPtr transfer_pool, double priority, DownloadCallback cb);
+
+    virtual ~ResourceDownloadTask();
 
     void mergeData(const SparseData &dataToMerge);
 
@@ -79,8 +86,14 @@ public:
 
     void updatePriority(float64 priority);
     void cancel();
+
+    inline const String& getIdentifier() const {
+        return mID;
+    }
+
 protected:
     ResourceDownloadTask(const URI& uri, TransferPoolPtr transfer_pool, double priority, DownloadCallback cb);
+    ResourceDownloadTask(const Chunk& chunk, TransferPoolPtr transfer_pool, double priority, DownloadCallback cb);
 
     static void metadataFinishedWeak(ResourceDownloadTaskWPtr thiswptr,
         MetadataRequestPtr request,
@@ -91,18 +104,22 @@ protected:
     static void chunkFinishedWeak(ResourceDownloadTaskWPtr thiswptr,
         ChunkRequestPtr request,
         DenseDataPtr response);
-    void chunkFinished(ChunkRequestPtr request,
+    static void directChunkFinishedWeak(ResourceDownloadTaskWPtr thiswptr,
+        DirectChunkRequestPtr request,
         DenseDataPtr response);
 
+    void chunkFinished(TransferRequestPtr request,
+        DenseDataPtr response);
 
     bool mStarted;
     const URI mURI;
+    const Chunk mChunk;
     TransferPoolPtr mTransferPool;
     TransferRequestPtr mCurrentRequest;
-    Range mRange;
     SparseData mMergeData;
     double mPriority;
     DownloadCallback cb;
+    const String mID;
 };
 
 } // namespace Transfer

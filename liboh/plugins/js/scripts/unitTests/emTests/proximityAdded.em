@@ -48,12 +48,9 @@ Stage 4
  <wait 2 seconds>
 
 Stage 5 
- If we didn't see 3 presences (including ourselves) in proximity
- query, print error.
-
-
- Call system.getProxResultSet.  If there aren't 3 visibles in it,
- then print error.
+ If we didn't see 2 presences (excluding ourselves since proximity
+ results don't return our own presence) in proximity query, print
+ error.
 
  If have not yet printed error, then print success.
  */
@@ -126,8 +123,8 @@ function stage4()
 function stage5()
 {
     mTest.print('In stage 5.');
-    if (numPresencesSeen != 3)
-        failed('In stage4, did not see 3 visibles from setting prox query.');
+    if (numPresencesSeen != 2)
+        failed('In stage4, did not see 2 visibles from setting prox query.');
 
     var fullProxSet = system.getProxSet(system.self);
     var count =0;
@@ -135,8 +132,8 @@ function stage5()
         ++count;
 
 
-    if (count != 3)
-        failed('In stage 5, prox result set should contain 3 visibles');            
+    if (count != 2)
+        failed('In stage 5, prox result set should contain 2 visibles');            
 
     
     if (success)

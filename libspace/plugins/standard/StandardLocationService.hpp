@@ -34,6 +34,7 @@
 #define _SIRIKATA_STANDARD_LOCATION_SERVICE_HPP_
 
 #include <sirikata/space/LocationService.hpp>
+#include <sirikata/core/util/PresenceProperties.hpp>
 
 namespace Sirikata {
 
@@ -50,6 +51,7 @@ public:
 
     virtual void service();
 
+    virtual uint64 epoch(const UUID& uuid);
     virtual TimedMotionVector3f location(const UUID& uuid);
     virtual Vector3f currentPosition(const UUID& uuid);
     virtual TimedMotionQuaternion orientation(const UUID& uuid);
@@ -78,11 +80,13 @@ public:
 
 private:
     struct LocationInfo {
-        TimedMotionVector3f location;
-        TimedMotionQuaternion orientation;
-        BoundingSphere3f bounds;
-        String mesh;
-        String physics;
+        // Regular location info that we need to maintain for all objects
+        SequencedPresenceProperties props;
+        // NOTE: This is a copy of props.mesh(), which *is not always valid*. It's
+        // only used for the accessor, when returning by const& since we don't have
+        // a String version within props. DO NOT use anywhere else.
+        String mesh_copied_str;
+
         bool local;
         bool aggregate;
     };

@@ -55,8 +55,8 @@ public:
     typedef std::tr1::function<void()> FinishedCallback;
 
     struct ResourceData {
-        std::tr1::shared_ptr<Transfer::ChunkRequest> request;
-        std::tr1::shared_ptr<const Transfer::DenseData> response;
+        Transfer::TransferRequestPtr request;
+        Transfer::DenseDataPtr response;
     };
     typedef std::map<Transfer::URI, ResourceData> Dependencies;
 private:
@@ -73,21 +73,25 @@ public:
     void cancel();
 private:
     void downloadAssetFile();
-    static void weakAssetFileDownloaded(std::tr1::weak_ptr<AssetDownloadTask> thus, std::tr1::shared_ptr<Transfer::ChunkRequest> request, std::tr1::shared_ptr<const Transfer::DenseData> response);
-    void assetFileDownloaded(std::tr1::shared_ptr<Transfer::ChunkRequest> request, std::tr1::shared_ptr<const Transfer::DenseData> response);
+    static void weakAssetFileDownloaded(std::tr1::weak_ptr<AssetDownloadTask> thus, Transfer::ResourceDownloadTaskPtr taskptr,
+            Transfer::TransferRequestPtr request, Transfer::DenseDataPtr response);
+    void assetFileDownloaded(Transfer::ResourceDownloadTaskPtr taskptr, Transfer::ChunkRequestPtr request, Transfer::DenseDataPtr response);
     static void weakHandleAssetParsed(std::tr1::weak_ptr<AssetDownloadTask> thus, Mesh::VisualPtr md);
     void handleAssetParsed(Mesh::VisualPtr md);
 
+    void addDependentDownload(Transfer::ResourceDownloadTaskPtr resPtr);
     void addDependentDownload(const Transfer::URI& depUrl);
+    void addDependentDownload(const Transfer::URI& depUrl, const Transfer::Chunk& depChunk);
+
     // Start is separate from add so we can be sure mActiveDownloads isn't being
     // modified after we start the downloads, except by the completion handler
     void startDependentDownloads();
 
-    static void weakTextureDownloaded(const std::tr1::weak_ptr<AssetDownloadTask>&,std::tr1::shared_ptr<Transfer::ChunkRequest> request,
-        std::tr1::shared_ptr<const Transfer::DenseData> response);
+    static void weakTextureDownloaded(const std::tr1::weak_ptr<AssetDownloadTask>&, Transfer::URI uri, Transfer::ResourceDownloadTaskPtr taskptr,
+            Transfer::TransferRequestPtr request, Transfer::DenseDataPtr response);
 
-    void textureDownloaded(std::tr1::shared_ptr<Transfer::ChunkRequest> request,
-        std::tr1::shared_ptr<const Transfer::DenseData> response);
+    void textureDownloaded(Transfer::URI uri, Transfer::ResourceDownloadTaskPtr taskptr, Transfer::TransferRequestPtr request,
+            Transfer::DenseDataPtr response);
 
 
     // Fails the entire process as a result of one dependency (or the original
@@ -109,7 +113,7 @@ private:
     Dependencies mDependencies;
 
     // Active downloads, for making sure shared_ptrs stick around and for cancelling
-    typedef std::map<Transfer::URI, Transfer::ResourceDownloadTaskPtr> ActiveDownloadMap;
+    typedef std::map<const String, Transfer::ResourceDownloadTaskPtr> ActiveDownloadMap;
     ActiveDownloadMap mActiveDownloads;
 
     boost::mutex mDependentDownloadMutex;

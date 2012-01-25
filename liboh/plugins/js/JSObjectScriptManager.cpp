@@ -492,10 +492,8 @@ void JSObjectScriptManager::createPresenceTemplate()
 
 
   // Query angle
-  proto_t->Set(v8::String::New("setQueryAngle"),v8::FunctionTemplate::New(JSPresence::setQueryAngle));
-  proto_t->Set(v8::String::New("getQueryAngle"), v8::FunctionTemplate::New(JSPresence::getQueryAngle));
-  proto_t->Set(v8::String::New("setQueryCount"),v8::FunctionTemplate::New(JSPresence::setQueryCount));
-  proto_t->Set(v8::String::New("getQueryCount"), v8::FunctionTemplate::New(JSPresence::getQueryCount));
+  proto_t->Set(v8::String::New("setQuery"),v8::FunctionTemplate::New(JSPresence::setQuery));
+  proto_t->Set(v8::String::New("getQuery"), v8::FunctionTemplate::New(JSPresence::getQuery));
 
   //set up graphics
   proto_t->Set(v8::String::New("_runSimulation"),v8::FunctionTemplate::New(JSPresence::runSimulation));
@@ -556,15 +554,16 @@ void JSObjectScriptManager::loadMesh(const Transfer::URI& uri, MeshLoadCallback 
         uri,
         mTransferPool,
         1.0,
-        std::tr1::bind(&JSObjectScriptManager::meshDownloaded, this, _1, _2)
+        std::tr1::bind(&JSObjectScriptManager::meshDownloaded, this, _1, _2, _3)
     );
     mMeshDownloads[uri] = dl;
     dl->start();
 }
 
-void JSObjectScriptManager::meshDownloaded(Transfer::ChunkRequestPtr request, Transfer::DenseDataPtr data) {
+void JSObjectScriptManager::meshDownloaded(Transfer::ResourceDownloadTaskPtr taskptr, Transfer::TransferRequestPtr request, Transfer::DenseDataPtr data) {
+    Transfer::ChunkRequestPtr chunkreq = std::tr1::static_pointer_cast<Transfer::ChunkRequest>(request);
     mParsingIOService->post(
-        std::tr1::bind(&JSObjectScriptManager::parseMeshWork, this, request->getMetadata(), request->getMetadata().getFingerprint(), data)
+        std::tr1::bind(&JSObjectScriptManager::parseMeshWork, this, chunkreq->getMetadata(), chunkreq->getMetadata().getFingerprint(), data)
     );
 }
 
@@ -616,7 +615,7 @@ JSObjectScript* JSObjectScriptManager::createHeadless(const String& args, const 
     assert(false);
     JSObjectScript* new_script =
         new JSObjectScript(this, NULL, NULL, UUID::random(),NULL);
-    
+
     new_script->initialize(args, script, maxres);
     return new_script;
 }
@@ -625,11 +624,11 @@ ObjectScript* JSObjectScriptManager::createObjectScript(HostedObjectPtr ho, cons
 {
     JSCtx* jsctx =
         new JSCtx(mContext,Network::IOStrandPtr(mContext->ioService->createStrand()),mIsolate);
-    
+
     EmersonScript* new_script =new EmersonScript(
         ho, args, script, this,jsctx);
 
-    
+
     if (!new_script->valid()) {
         delete new_script;
         return NULL;

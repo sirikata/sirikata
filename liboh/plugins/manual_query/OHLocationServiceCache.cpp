@@ -275,7 +275,6 @@ void OHLocationServiceCache::orientationUpdated(const ObjectReference& uuid, con
     ObjectDataMap::iterator it = mObjects.find(uuid);
     if (it == mObjects.end()) return;
 
-    TimedMotionQuaternion oldval = it->second.props.orientation();
     it->second.props.setOrientation(newval, seqno);
 }
 

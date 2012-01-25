@@ -24,6 +24,8 @@
 #define MAX_PATH 1024
 #endif
 
+#include <sirikata/core/util/Random.hpp>
+
 namespace Sirikata {
 namespace Path {
 
@@ -356,6 +358,19 @@ String SubstitutePlaceholders(const String& path) {
         // Finally lookup and replace the resource path
         String replace_path = Get(RESOURCE, resource_path, alternate_base);
         result.replace(resource_start_pos, resource_end_pos - resource_start_pos + 1, replace_path);
+    }
+
+    return result;
+}
+
+String GetTempFilename(const String& prefix) {
+    static const char* random_chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
+    static int32 num_random_chars = strlen(random_chars);
+
+    String result = prefix;
+    for(uint32 i = 0; i < 8; i++) {
+        uint32 idx = randInt(0, num_random_chars-1);
+        result += random_chars[idx];
     }
 
     return result;

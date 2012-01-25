@@ -217,16 +217,28 @@ void MeerkatChunkHandler::get(std::tr1::shared_ptr<RemoteFileMetadata> file,
 
     //Check to see if it's in the cache first
     SharedChunkCache::getSingleton().getCache()->getData(file->getFingerprint(), chunk->getRange(), std::tr1::bind(
-            &MeerkatChunkHandler::cache_check_callback, this, _1, file, chunk, callback));
+            &MeerkatChunkHandler::cache_check_callback, this, _1, file->getURI(), chunk, callback));
 }
 
-void MeerkatChunkHandler::cache_check_callback(const SparseData* data, std::tr1::shared_ptr<RemoteFileMetadata> file,
+void MeerkatChunkHandler::get(std::tr1::shared_ptr<Chunk> chunk, ChunkCallback callback) {
+    std::tr1::shared_ptr<DenseData> bad;
+    if (!chunk) {
+        SILOG(transfer, error, "HttpChunkHandler get called with null chunk parameter");
+        callback(bad);
+        return;
+    }
+    //Check to see if it's in the cache first
+    SharedChunkCache::getSingleton().getCache()->getData(chunk->getHash(), chunk->getRange(), std::tr1::bind(
+            &MeerkatChunkHandler::cache_check_callback, this, _1, URI("meerkat:///"), chunk, callback));
+}
+
+void MeerkatChunkHandler::cache_check_callback(const SparseData* data, const URI& uri,
             std::tr1::shared_ptr<Chunk> chunk, ChunkCallback callback) {
     if (data) {
         std::tr1::shared_ptr<const DenseData> flattened = data->flatten();
         callback(flattened);
     } else {
-        URL url(file->getURI());
+        URL url(uri);
         assert(!url.empty());
 
         std::string download_uri_prefix = CDN_DOWNLOAD_URI_PREFIX;
@@ -248,15 +260,15 @@ void MeerkatChunkHandler::cache_check_callback(const SparseData* data, std::tr1:
         headers["Accept-Encoding"] = "deflate, gzip";
 
         bool chunkReq = false;
-        if(!chunk->getRange().goesToEndOfFile() && chunk->getRange().size() < file->getSize()) {
+        if(!chunk->getRange().goesToEndOfFile() || chunk->getRange().startbyte() != 0) {
             chunkReq = true;
             headers["Range"] = "bytes=" + boost::lexical_cast<String>(chunk->getRange().startbyte()) +
                 "-" + boost::lexical_cast<String>(chunk->getRange().endbyte());
         }
 
         HttpManager::getSingleton().get(
-            cdn_addr, download_uri_prefix + "/" + file->getFingerprint().convertToHexString(),
-            std::tr1::bind(&MeerkatChunkHandler::request_finished, this, _1, _2, _3, file, chunk, chunkReq, callback),
+            cdn_addr, download_uri_prefix + "/" + chunk->getHash().convertToHexString(),
+            std::tr1::bind(&MeerkatChunkHandler::request_finished, this, _1, _2, _3, uri, chunk, chunkReq, callback),
             headers
         );
     }
@@ -264,7 +276,7 @@ void MeerkatChunkHandler::cache_check_callback(const SparseData* data, std::tr1:
 
 void MeerkatChunkHandler::request_finished(std::tr1::shared_ptr<HttpManager::HttpResponse> response,
         HttpManager::ERR_TYPE error, const boost::system::error_code& boost_error,
-        std::tr1::shared_ptr<RemoteFileMetadata> file, std::tr1::shared_ptr<Chunk> chunk,
+        const URI& uri, std::tr1::shared_ptr<Chunk> chunk,
         bool chunkReq, ChunkCallback callback) {
 
     std::tr1::shared_ptr<DenseData> bad;
@@ -272,25 +284,25 @@ void MeerkatChunkHandler::request_finished(std::tr1::shared_ptr<HttpManager::Htt
     if(chunkReq) reqType = "chunk request";
 
     if (error == Transfer::HttpManager::REQUEST_PARSING_FAILED) {
-        SILOG(transfer, error, "Request parsing failed during an HTTP " << reqType << " (" << file->getURI() << ")");
+        SILOG(transfer, error, "Request parsing failed during an HTTP " << reqType << " (" << uri << ")");
         callback(bad);
         return;
     } else if (error == Transfer::HttpManager::RESPONSE_PARSING_FAILED) {
-        SILOG(transfer, error, "Response parsing failed during an HTTP " << reqType << " (" << file->getURI() << ")");
+        SILOG(transfer, error, "Response parsing failed during an HTTP " << reqType << " (" << uri << ")");
         callback(bad);
         return;
     } else if (error == Transfer::HttpManager::BOOST_ERROR) {
-        SILOG(transfer, error, "A boost error happened during an HTTP " << reqType << ". Boost error = " << boost_error.message() << " (" << file->getURI() << ")");
+        SILOG(transfer, error, "A boost error happened during an HTTP " << reqType << ". Boost error = " << boost_error.message() << " (" << uri << ")");
         callback(bad);
         return;
     } else if (error != HttpManager::SUCCESS) {
-        SILOG(transfer, error, "An unknown error happened during an HTTP " << reqType << " (" << file->getURI() << ")");
+        SILOG(transfer, error, "An unknown error happened during an HTTP " << reqType << " (" << uri << ")");
         callback(bad);
         return;
     }
 
     if (response->getHeaders().size() == 0) {
-        SILOG(transfer, error, "There were no headers returned during an HTTP " << reqType << " (" << file->getURI() << ")");
+        SILOG(transfer, error, "There were no headers returned during an HTTP " << reqType << " (" << uri << ")");
         callback(bad);
         return;
     }
@@ -298,37 +310,44 @@ void MeerkatChunkHandler::request_finished(std::tr1::shared_ptr<HttpManager::Htt
     HttpManager::Headers::const_iterator it;
     it = response->getHeaders().find("Content-Length");
     if (it == response->getHeaders().end()) {
-        SILOG(transfer, error, "Content-Length header was not present when it should be during an HTTP " << reqType << " (" << file->getURI() << ")");
+        SILOG(transfer, error, "Content-Length header was not present when it should be during an HTTP " << reqType << " (" << uri << ")");
         callback(bad);
         return;
     }
 
     if (response->getStatusCode() != 200) {
-        SILOG(transfer, error, "HTTP status code = " << response->getStatusCode() << " instead of 200 during an HTTP " << reqType << " (" << file->getURI() << ")");
+        SILOG(transfer, error, "HTTP status code = " << response->getStatusCode() << " instead of 200 during an HTTP " << reqType << " (" << uri << ")");
         callback(bad);
         return;
     }
 
     if (!response->getData()) {
-        SILOG(transfer, error, "Body not present during an HTTP " << reqType << " (" << file->getURI() << ")");
+        SILOG(transfer, error, "Body not present during an HTTP " << reqType << " (" << uri << ")");
         callback(bad);
         return;
     }
 
-    it = response->getHeaders().find("Range");
+    it = response->getHeaders().find("Content-Range");
     if (chunkReq && it == response->getHeaders().end()) {
-        SILOG(transfer, error, "Expected Range header not present during an HTTP " << reqType << " (" << file->getURI() << ")");
+        SILOG(transfer, error, "Expected Content-Range header not present during an HTTP " << reqType << " (" << uri << ")");
         callback(bad);
         return;
     } else if (chunkReq) {
         std::string range_str = it->second;
         bool range_parsed = false;
 
-        if (range_str.substr(0,6) == "bytes=") {
+        if (range_str.substr(0,6) == "bytes ") {
             range_str = range_str.substr(6);
             size_type dashPos = range_str.find('-');
             if (dashPos != std::string::npos) {
                 range_str.replace(dashPos, 1, " ");
+
+                //total file size is optional
+                size_type slashPos = range_str.find('/');
+                if (slashPos != std::string::npos) {
+                    range_str.replace(slashPos, 1, " ");
+                }
+
                 std::istringstream instream(range_str);
                 uint64 range_start;
                 uint64 range_end;
@@ -344,19 +363,19 @@ void MeerkatChunkHandler::request_finished(std::tr1::shared_ptr<HttpManager::Htt
         }
 
         if(!range_parsed) {
-            SILOG(transfer, error, "Range header has invalid format during an HTTP " << reqType << " header='" << it->second << "'" << " (" << file->getURI() << ")");
+            SILOG(transfer, error, "Range header has invalid format during an HTTP " << reqType << " header='" << it->second << "'" << " (" << uri << ")");
             callback(bad);
             return;
         }
-    } else if (!chunkReq && response->getData()->length() != file->getSize()) {
+    } else if (!chunkReq && response->getData()->length() != chunk->getRange().size()) {
         SILOG(transfer, error, "Data retrieved not expected size during an HTTP "
-                << reqType << " response=" << response->getData()->length() << " expected=" << file->getSize());
+                << reqType << " response=" << response->getData()->length() << " expected=" << chunk->getRange().size());
         callback(bad);
         return;
     }
 
-    SILOG(transfer, detailed, "about to call addToCache with fingerprint ID = " << file->getFingerprint().convertToHexString());
-    SharedChunkCache::getSingleton().getCache()->addToCache(file->getFingerprint(), response->getData());
+    SILOG(transfer, detailed, "about to call addToCache with fingerprint ID = " << chunk->getHash().convertToHexString());
+    SharedChunkCache::getSingleton().getCache()->addToCache(chunk->getHash(), response->getData());
 
     callback(response->getData());
     SILOG(transfer, detailed, "done http chunk handler request_finished");

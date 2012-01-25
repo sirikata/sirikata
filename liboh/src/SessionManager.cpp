@@ -109,13 +109,20 @@ bool SessionManager::ObjectConnections::exists(const SpaceObjectReference& spore
 }
 
 SessionManager::ConnectingInfo& SessionManager::ObjectConnections::connectingTo(const SpaceObjectReference& sporef_objid, ServerID connecting_to) {
-    mObjectInfo[sporef_objid].connectingTo = connecting_to;
+    if (mObjectInfo[sporef_objid].connectedTo==NullServerID) {
+        mObjectInfo[sporef_objid].connectingTo = connecting_to;
+    }else if (connecting_to!=mObjectInfo[sporef_objid].connectedTo) {
+        mObjectInfo[sporef_objid].connectedTo = NullServerID;
+    }else {
+        //SILOG(oh,error,"Interesting case hit");
+    }
     return mObjectInfo[sporef_objid].connectingInfo;
 }
 
 
 void SessionManager::ObjectConnections::startMigration(const SpaceObjectReference& sporef_objid, ServerID migrating_to) {
     mObjectInfo[sporef_objid].migratingTo = migrating_to;
+    mObjectInfo[sporef_objid].connectingTo = NullServerID;
     // Update object indices
     std::vector<SpaceObjectReference>& sporef_objects = mObjectServerMap[mObjectInfo[sporef_objid].connectedTo];
     std::vector<SpaceObjectReference>::iterator sporef_where = std::find(sporef_objects.begin(), sporef_objects.end(), sporef_objid);
@@ -134,9 +141,12 @@ SessionManager::InternalConnectedCallback& SessionManager::ObjectConnections::ge
 ServerID SessionManager::ObjectConnections::handleConnectSuccess(const SpaceObjectReference& sporef_obj, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& mesh, const String& phy, bool do_cb) {
     if (mObjectInfo[sporef_obj].connectingTo != NullServerID) { // We were connecting to a server
         ServerID connectedTo = mObjectInfo[sporef_obj].connectingTo;
-        SESSION_LOG(detailed,"Successfully connected " << sporef_obj << " to space node " << connectedTo);
+        SESSION_LOG(detailed,"Successfully connected " << sporef_obj << " to space node " << connectedTo<< " migrating to "<<mObjectInfo[sporef_obj].migratingTo);
         mObjectInfo[sporef_obj].connectedTo = connectedTo;
         mObjectInfo[sporef_obj].connectingTo = NullServerID;
+        if (connectedTo == mObjectInfo[sporef_obj].migratingTo) {
+            mObjectInfo[sporef_obj].migratingTo = NullServerID;
+        }
         mObjectServerMap[connectedTo].push_back(sporef_obj);
 
         mObjectInfo[sporef_obj].connectedAs = sporef_obj;
@@ -173,6 +183,7 @@ ServerID SessionManager::ObjectConnections::handleConnectSuccess(const SpaceObje
 
         SESSION_LOG(detailed,"Successfully migrated " << sporef_obj << " to space node " << migratedTo);
         mObjectInfo[sporef_obj].connectedTo = migratedTo;
+        mObjectInfo[sporef_obj].connectingTo = NullServerID;
         mObjectInfo[sporef_obj].migratingTo = NullServerID;
         mObjectServerMap[migratedTo].push_back(sporef_obj);
 
@@ -272,8 +283,12 @@ ServerID SessionManager::ObjectConnections::getConnectedServer(const SpaceObject
     // FIXME getConnectedServer during migrations?
 
     ServerID dest_server = mObjectInfo[sporef_obj_id].connectedTo;
+
     if (dest_server == NullServerID && allow_connecting)
         dest_server = mObjectInfo[sporef_obj_id].connectingTo;
+
+    if (dest_server == NullServerID && allow_connecting)
+        dest_server = mObjectInfo[sporef_obj_id].migratingTo;
 
     return dest_server;
 }
@@ -1060,7 +1075,8 @@ void SessionManager::handleSessionMessage(Sirikata::Protocol::Object::ObjectMess
             // To handle unreliability, we may get extra copies of the reply. If
             // we're already connected, ignore this.
             if ((mObjectConnections.getConnectedServer(sporef_obj) != NullServerID) &&
-                (mObjectConnections.getMigratingToServer(sporef_obj) == NullServerID))
+                (mObjectConnections.getMigratingToServer(sporef_obj) == NullServerID) && 
+                (mObjectConnections.getConnectingToServer(sporef_obj) == NullServerID))
             {
                 delete msg;
                 return;

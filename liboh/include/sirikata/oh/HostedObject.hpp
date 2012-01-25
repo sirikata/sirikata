@@ -49,7 +49,6 @@
 #include <sirikata/core/transfer/URI.hpp>
 
 #include <sirikata/oh/ObjectHost.hpp>
-#include <sirikata/oh/ObjectHostProxyManager.hpp>
 #include <sirikata/oh/SimulationFactory.hpp>
 
 //here
@@ -115,6 +114,8 @@ class SIRIKATA_OH_EXPORT HostedObject
 
     friend class ::Sirikata::SelfWeakPtr<VWObject>;
     friend class PerPresenceData;
+    AtomicValue<int> mNumOutstandingConnections;
+    bool mDestroyWhenConnected;
 
 public:
     typedef SST::EndPoint<SpaceObjectReference> EndPointType;
@@ -197,8 +198,7 @@ public:
         @param mesh the URL of the mesh for this object
         @param physics Physical parameters, serialized to a string. The exact
         format depends on the physics implementation the server is using.
-        @param evidence  Usually use getUUID(); can be set differently if needed
-        for authentication.
+        @param query if non-empty, query parameters
         @param token  When connection completes, notifies all session
         listeners.  Provides token to these listeners so they can distinguish
         which presence may have connected, etc.
@@ -209,31 +209,8 @@ public:
         const BoundingSphere3f &meshBounds,
         const String& mesh,
         const String& physics,
-        const UUID&object_uuid_evidence,
-        PresenceToken token = DEFAULT_PRESENCE_TOKEN);
-
-    bool connect(
-        const SpaceID&spaceID,
-        const Location&startingLocation,
-        const BoundingSphere3f &meshBounds,
-        const String& mesh,
-        const String& physics,
         const String& query,
-        const UUID&object_uuid_evidence,
-        const ObjectReference& orefID,
-        PresenceToken token = DEFAULT_PRESENCE_TOKEN);
-
-    /** \deprecated */
-    bool connect(
-        const SpaceID&spaceID,
-        const Location&startingLocation,
-        const BoundingSphere3f &meshBounds,
-        const String& mesh,
-        const String& physics,
-        const SolidAngle& queryAngle,
-        uint32 queryMaxResults,
-        const UUID&object_uuid_evidence,
-        const ObjectReference& orefID,
+        const ObjectReference& orefID = ObjectReference::null(),
         PresenceToken token = DEFAULT_PRESENCE_TOKEN);
 
     /// Disconnects from the given space by terminating the corresponding substream.
@@ -253,6 +230,9 @@ public:
 
     // Identification
     virtual ProxyManagerPtr presence(const SpaceObjectReference& sor);
+    virtual SequencedPresencePropertiesPtr presenceRequestedLocation(const SpaceObjectReference& sor);
+    virtual uint64 presenceLatestEpoch(const SpaceObjectReference& sor);
+
     virtual ProxyObjectPtr self(const SpaceObjectReference& sor);
 
     // ODP::Service Interface
@@ -271,38 +251,12 @@ public:
     //note: location update services both position and velocity
 
     virtual void requestLocationUpdate(const SpaceID& space, const ObjectReference& oref,const TimedMotionVector3f& loc);
-
-
-    virtual void requestPositionUpdate(const SpaceID& space, const ObjectReference& oref, const Vector3f& pos);
-    virtual void requestVelocityUpdate(const SpaceID& space, const ObjectReference& oref, const Vector3f& vel);
-
-    virtual Vector3d requestCurrentPosition (const SpaceID& space,const ObjectReference& oref);
-    virtual Vector3d requestCurrentPosition(ProxyObjectPtr proxy_obj);
-    virtual Vector3f requestCurrentVelocity(const SpaceID& space, const ObjectReference& oref);
-    virtual Vector3f requestCurrentVelocity(ProxyObjectPtr proxy_obj);
-
     virtual void requestOrientationUpdate(const SpaceID& space, const ObjectReference& oref, const TimedMotionQuaternion& orient);
-
-    virtual void requestOrientationDirectionUpdate(const SpaceID& space, const ObjectReference& oref, const Quaternion& orient);
-    virtual void requestOrientationVelocityUpdate(const SpaceID& space, const ObjectReference& oref, const Quaternion& quat);
-
-    virtual Quaternion requestCurrentQuatVel(const SpaceID& space, const ObjectReference& oref);
-    virtual Quaternion requestCurrentOrientation(const SpaceID& space, const ObjectReference& oref);
-    virtual Quaternion requestCurrentOrientationVel(const SpaceID& space, const ObjectReference& oref);
-
-
-    virtual BoundingSphere3f requestCurrentBounds(const SpaceID& space,const ObjectReference& oref);
     virtual void requestBoundsUpdate(const SpaceID& space, const ObjectReference& oref, const BoundingSphere3f& bounds);
     virtual void requestMeshUpdate(const SpaceID& space, const ObjectReference& oref, const String& mesh);
-
-    virtual bool requestMeshUri(const SpaceID& space, const ObjectReference& oref, Transfer::URI& tUri);
-
-    virtual const String& requestCurrentPhysics(const SpaceID& space,const ObjectReference& oref);
     virtual void requestPhysicsUpdate(const SpaceID& space, const ObjectReference& oref, const String& phy);
 
     virtual void requestQueryUpdate(const SpaceID& space, const ObjectReference& oref, const String& new_query);
-    /** \deprecated */
-    virtual void requestQueryUpdate(const SpaceID& space, const ObjectReference& oref, const SolidAngle& sa, uint32 max_count);
     // Shortcut for requestQueryUpdate("")
     virtual void requestQueryRemoval(const SpaceID& space, const ObjectReference& oref);
     virtual const String& requestQuery(const SpaceID& space, const ObjectReference& oref);
@@ -337,12 +291,6 @@ public:
     static void handleMigrated(const HostedObjectWPtr &weakSelf, const SpaceID& space, const ObjectReference& obj, ServerID server);
     static void handleStreamCreated(const HostedObjectWPtr &weakSelf, const SpaceObjectReference& spaceobj, SessionManager::ConnectionEvent after, PresenceToken token);
     static void handleDisconnected(const HostedObjectWPtr &weakSelf, const SpaceObjectReference& spaceobj, Disconnect::Code cc);
-
-    /** \deprecated
-     *  Helper for encoding default, solid angle queries. Used to enable old,
-     *  deprecated API for setting queries.
-     */
-    String encodeDefaultQuery(const SolidAngle& qangle, const uint32 max_count);
 
     ODP::DelegatePort* createDelegateODPPort(ODP::DelegateService* parentService, const SpaceObjectReference& spaceobj, ODP::PortID port);
     bool delegateODPPortSend(const ODP::Endpoint& source_ep, const ODP::Endpoint& dest_ep, MemoryReference payload);

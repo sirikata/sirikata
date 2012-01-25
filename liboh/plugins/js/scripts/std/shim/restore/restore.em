@@ -305,6 +305,10 @@ if (typeof(std.persist) === 'undefined')
          //trying to point to.  (Eg. pos object, vel obj, etc.)
          performPtrFinalFixups(pToFix,nameService);
 
+         // Backwards compatibility for old stored data with query angle + count rather than just an opaque string
+         if (toRestoreFrom.query === undefined && toRestoreFrom.solidAngleQuery !== undefined)
+             toRestoreFrom.query = fo(toRestoreFrom.solidAngleQuery, toRestoreFrom.queryCount);
+
          var returner = system.createVisible(
              toRestoreFrom.sporef,
              toRestoreFrom.pos,
@@ -317,7 +321,7 @@ if (typeof(std.persist) === 'undefined')
              toRestoreFrom.scale,
              toRestoreFrom.mesh,
              toRestoreFrom.physics,
-             toRestoreFrom.solidAngleQuery
+             toRestoreFrom.query
          );
 
          cb(true, returner);
@@ -436,6 +440,10 @@ if (typeof(std.persist) === 'undefined')
          //system has connected this presence.
          registerPresenceStillRestoring(keyName, ptrId);
 
+         // Backwards compatibility for old stored data with query angle + count rather than just an opaque string
+         if (toRestoreFrom.query === undefined)
+             toRestoreFrom.query = system.__presence_constructor__.__encodeDeprecatedQuery(toRestoreFrom.solidAngleQuery, toRestoreFrom.queryCount);
+
          var onConnectCB = afterRestored(keyName,ptrId,nameService,cb);
          system.restorePresence(
              toRestoreFrom.sporef,
@@ -455,7 +463,7 @@ if (typeof(std.persist) === 'undefined')
              toRestoreFrom.isSuspended,
              toRestoreFrom.suspendedVelocity,
              toRestoreFrom.suspendedOrientationVelocity,
-             toRestoreFrom.solidAngleQuery
+             toRestoreFrom.query
          );
      };
 

@@ -186,8 +186,6 @@ void ObjectFactory::generatePackObjects(const BoundingBox3f& region, const Durat
                            // from a pack
 
     Time start(Time::null());
-    Time end = start + duration;
-    Vector3f region_extents = region.extents();
 
     uint32 nobjects = GetOptionValue<uint32>(OBJECT_PACK_NUM);
     if (nobjects == 0) return;
@@ -281,8 +279,6 @@ struct SortObjectUpdateListByDist {
 
 void ObjectFactory::generateStaticTraceObjects(const BoundingBox3f& region, const Duration& duration) {
     Time start(Time::null());
-    Time end = start + duration;
-    Vector3f region_extents = region.extents();
 
     uint32 nobjects = GetOptionValue<uint32>(OBJECT_SL_NUM);
     if (nobjects == 0) return;

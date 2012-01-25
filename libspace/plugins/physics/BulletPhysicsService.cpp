@@ -175,11 +175,19 @@ void BulletPhysicsService::service() {
     for(UUIDSet::iterator i = physicsUpdates.begin(); i != physicsUpdates.end(); i++) {
         LocationMap::iterator it = mLocations.find(*i);
         if(it != mLocations.end())
-            notifyLocalLocationUpdated(*i, it->second.aggregate, it->second.location );
+            notifyLocalLocationUpdated(*i, it->second.aggregate, it->second.props.location() );
     }
     physicsUpdates.clear();
 
     mUpdatePolicy->service();
+}
+
+uint64 BulletPhysicsService::epoch(const UUID& uuid) {
+    LocationMap::iterator it = mLocations.find(uuid);
+    assert(it != mLocations.end());
+
+    LocationInfo locinfo = it->second;
+    return locinfo.props.maxSeqNo();
 }
 
 TimedMotionVector3f BulletPhysicsService::location(const UUID& uuid) {
@@ -188,7 +196,7 @@ TimedMotionVector3f BulletPhysicsService::location(const UUID& uuid) {
 
 
     LocationInfo locinfo = it->second;
-    return locinfo.location;
+    return locinfo.props.location();
 }
 
 Vector3f BulletPhysicsService::currentPosition(const UUID& uuid) {
@@ -202,7 +210,7 @@ TimedMotionQuaternion BulletPhysicsService::orientation(const UUID& uuid) {
     assert(it != mLocations.end());
 
     LocationInfo locinfo = it->second;
-    return locinfo.orientation;
+    return locinfo.props.orientation();
 }
 
 Quaternion BulletPhysicsService::currentOrientation(const UUID& uuid) {
@@ -215,15 +223,16 @@ BoundingSphere3f BulletPhysicsService::bounds(const UUID& uuid) {
     assert(it != mLocations.end());
 
     LocationInfo locinfo = it->second;
-    return locinfo.bounds;
+    return locinfo.props.bounds();
 }
 
 const String& BulletPhysicsService::mesh(const UUID& uuid) {
     LocationMap::iterator it = mLocations.find(uuid);
     assert(it != mLocations.end());
 
-    const LocationInfo& locinfo = it->second;
-    return locinfo.mesh;
+    LocationInfo& locinfo = it->second;
+    locinfo.mesh_copied_str = locinfo.props.mesh().toString();
+    return locinfo.mesh_copied_str;
 }
 
 const String& BulletPhysicsService::physics(const UUID& uuid) {
@@ -231,7 +240,7 @@ const String& BulletPhysicsService::physics(const UUID& uuid) {
     assert(it != mLocations.end());
 
     const LocationInfo& locinfo = it->second;
-    return locinfo.physics;
+    return locinfo.props.physics();
 }
 
 bool BulletPhysicsService::isFixed(const UUID& uuid) {
@@ -243,12 +252,26 @@ bool BulletPhysicsService::isFixed(const UUID& uuid) {
     return locinfo.simObject->fixed();
 }
 
+bool BulletPhysicsService::directMotionRequestsEnabled(const UUID& uuid) {
+    LocationMap::iterator it = mLocations.find(uuid);
+    assert(it != mLocations.end());
+
+    const LocationInfo& locinfo = it->second;
+    // If we don't have a simulation object to refer to, it can move freely
+    if (locinfo.simObject == NULL) return true;
+    // If it's remote, we should always be applying updates
+    if (!locinfo.local) return true;
+    // Otherwise, defer updates to the simulated object
+    return false;
+}
+
 void BulletPhysicsService::setLocation(const UUID& uuid, const TimedMotionVector3f& newloc) {
     LocationMap::iterator it = mLocations.find(uuid);
     assert(it != mLocations.end());
 
     LocationInfo& locinfo = it->second;
-    locinfo.location = newloc;
+    // Note non-epoch (seqno) version because this isn't due to a request.
+    locinfo.props.setLocation(newloc);
     notifyLocalLocationUpdated( uuid, locinfo.aggregate, newloc );
 }
 
@@ -257,29 +280,32 @@ void BulletPhysicsService::setOrientation(const UUID& uuid, const TimedMotionQua
     assert(it != mLocations.end());
 
     LocationInfo& locinfo = it->second;
-    locinfo.orientation = neworient;
+    // Note non-epoch (seqno) version because this isn't due to a request.
+    locinfo.props.setOrientation(neworient);
     notifyLocalOrientationUpdated( uuid, locinfo.aggregate, neworient );
 }
 
-void BulletPhysicsService::getMesh(const std::string meshURI, const UUID uuid, MeshdataParsedCallback cb) {
+void BulletPhysicsService::getMesh(const Transfer::URI meshURI, const UUID uuid, MeshdataParsedCallback cb) {
     Transfer::ResourceDownloadTaskPtr dl = Transfer::ResourceDownloadTask::construct(
         Transfer::URI(meshURI), mTransferPool, 1.0,
         // Ideally parsing wouldn't need to be serialized, but something about
         // getting callbacks from multiple threads and parsing simultaneously is
         // causing a crash
         mParsingStrand->wrap(
-            std::tr1::bind(&BulletPhysicsService::getMeshCallback, this, _1, _2, cb)
+            std::tr1::bind(&BulletPhysicsService::getMeshCallback, this, _1, _2, _3, cb)
         )
     );
     mMeshDownloads[uuid] = dl;
     dl->start();
 }
 
-void BulletPhysicsService::getMeshCallback(Transfer::ChunkRequestPtr request, Transfer::DenseDataPtr response, MeshdataParsedCallback cb) {
+void BulletPhysicsService::getMeshCallback(Transfer::ResourceDownloadTaskPtr taskptr, Transfer::TransferRequestPtr request, Transfer::DenseDataPtr response, MeshdataParsedCallback cb) {
     // This callback can come in on a separate thread (e.g. from a tranfer
     // thread) so make sure we get it back on the main thread.
     if (request && response) {
-        VisualPtr vis = mModelsSystem->load(request->getMetadata(), request->getMetadata().getFingerprint(), response);
+        Transfer::ChunkRequestPtr chunkreq = std::tr1::static_pointer_cast<Transfer::ChunkRequest>(request);
+
+        VisualPtr vis = mModelsSystem->load(chunkreq->getMetadata(), chunkreq->getMetadata().getFingerprint(), response);
         // FIXME support more than Meshdata
         MeshdataPtr mesh( std::tr1::dynamic_pointer_cast<Meshdata>(vis) );
         if (mesh && mModelFilter) {
@@ -311,11 +337,11 @@ void BulletPhysicsService::addLocalObject(const UUID& uuid, const TimedMotionVec
     }
 
     LocationInfo& locinfo = it->second;
-    locinfo.location = loc;
-    locinfo.orientation = orient;
-    locinfo.bounds = bnds;
-    locinfo.mesh = msh;
-    locinfo.physics = phy;
+    locinfo.props.setLocation(loc, 0);
+    locinfo.props.setOrientation(orient, 0);
+    locinfo.props.setBounds(bnds, 0);
+    locinfo.props.setMesh(Transfer::URI(msh), 0);
+    locinfo.props.setPhysics(phy, 0);
     locinfo.local = true;
     locinfo.aggregate = false;
 
@@ -332,8 +358,8 @@ void BulletPhysicsService::addLocalObject(const UUID& uuid, const TimedMotionVec
 void BulletPhysicsService::updatePhysicsWorld(const UUID& uuid) {
     LocationMap::iterator it = mLocations.find(uuid);
     LocationInfo& locinfo = it->second;
-    const String& msh = locinfo.mesh;
-    const String& phy = locinfo.physics;
+    const Transfer::URI& msh = locinfo.props.mesh();
+    const String& phy = locinfo.props.physics();
 
     /*BEGIN: Bullet Physics Code*/
 
@@ -545,11 +571,11 @@ void BulletPhysicsService::addLocalAggregateObject(const UUID& uuid, const Timed
     LocationMap::iterator it = mLocations.find(uuid);
 
     LocationInfo& locinfo = it->second;
-    locinfo.location = loc;
-    locinfo.orientation = orient;
-    locinfo.bounds = bnds;
-    locinfo.mesh = msh;
-    locinfo.physics = phy;
+    locinfo.props.setLocation(loc, 0);
+    locinfo.props.setOrientation(orient, 0);
+    locinfo.props.setBounds(bnds, 0);
+    locinfo.props.setMesh(Transfer::URI(msh), 0);
+    locinfo.props.setPhysics(phy, 0);
     locinfo.local = true;
     locinfo.aggregate = true;
 
@@ -575,22 +601,22 @@ void BulletPhysicsService::updateLocalAggregateLocation(const UUID& uuid, const 
     LocationMap::iterator loc_it = mLocations.find(uuid);
     assert(loc_it != mLocations.end());
     assert(loc_it->second.aggregate == true);
-    loc_it->second.location = newval;
+    loc_it->second.props.setLocation(newval, 0); // no epochs for aggregates
     notifyLocalLocationUpdated( uuid, true, newval );
 }
 void BulletPhysicsService::updateLocalAggregateOrientation(const UUID& uuid, const TimedMotionQuaternion& newval) {
     LocationMap::iterator loc_it = mLocations.find(uuid);
     assert(loc_it != mLocations.end());
     assert(loc_it->second.aggregate == true);
-    loc_it->second.orientation = newval;
+    loc_it->second.props.setOrientation(newval, 0); // no epochs for aggregates
     notifyLocalOrientationUpdated( uuid, true, newval );
 }
 void BulletPhysicsService::updateLocalAggregateBounds(const UUID& uuid, const BoundingSphere3f& newval) {
     LocationMap::iterator loc_it = mLocations.find(uuid);
     assert(loc_it != mLocations.end());
     assert(loc_it->second.aggregate == true);
-    BoundingSphere3f oldval = loc_it->second.bounds;
-    loc_it->second.bounds = newval;
+    BoundingSphere3f oldval = loc_it->second.props.bounds();
+    loc_it->second.props.setBounds(newval, 0); // no epochs for aggregates
     notifyLocalBoundsUpdated( uuid, true, newval );
     if (oldval != newval) updatePhysicsWorld(uuid);
 }
@@ -598,8 +624,8 @@ void BulletPhysicsService::updateLocalAggregateMesh(const UUID& uuid, const Stri
     LocationMap::iterator loc_it = mLocations.find(uuid);
     assert(loc_it != mLocations.end());
     assert(loc_it->second.aggregate == true);
-    String oldval = loc_it->second.mesh;
-    loc_it->second.mesh = newval;
+    String oldval = loc_it->second.props.mesh().toString();
+    loc_it->second.props.setMesh(Transfer::URI(newval), 0); // no epochs for aggregates
     notifyLocalMeshUpdated( uuid, true, newval );
     if (oldval != newval) updatePhysicsWorld(uuid);
 }
@@ -607,8 +633,8 @@ void BulletPhysicsService::updateLocalAggregatePhysics(const UUID& uuid, const S
     LocationMap::iterator loc_it = mLocations.find(uuid);
     assert(loc_it != mLocations.end());
     assert(loc_it->second.aggregate == true);
-    String oldval = loc_it->second.physics;
-    loc_it->second.physics = newval;
+    String oldval = loc_it->second.props.physics();
+    loc_it->second.props.setPhysics(newval, 0); // no epochs for aggregates
     notifyLocalPhysicsUpdated( uuid, true, newval );
     if (oldval != newval) updatePhysicsWorld(uuid);
 }
@@ -621,11 +647,12 @@ void BulletPhysicsService::addReplicaObject(const Time& t, const UUID& uuid, con
         // It already exists. If its local, ignore the update. If its another replica, somethings out of sync, but perform the update anyway
         LocationInfo& locinfo = it->second;
         if (!locinfo.local) {
-            locinfo.location = loc;
-            locinfo.orientation = orient;
-            locinfo.bounds = bnds;
-            locinfo.mesh = msh;
-            locinfo.physics = phy;
+            locinfo.props.reset();
+            locinfo.props.setLocation(loc, 0);
+            locinfo.props.setOrientation(orient, 0);
+            locinfo.props.setBounds(bnds, 0);
+            locinfo.props.setMesh(Transfer::URI(msh), 0);
+            locinfo.props.setPhysics(phy, 0);
             //local = false
             // FIXME should we notify location and bounds updated info?
             updatePhysicsWorld(uuid);
@@ -635,11 +662,11 @@ void BulletPhysicsService::addReplicaObject(const Time& t, const UUID& uuid, con
     else {
         // Its a new replica, just insert it
         LocationInfo locinfo;
-        locinfo.location = loc;
-        locinfo.orientation = orient;
-        locinfo.bounds = bnds;
-        locinfo.mesh = msh;
-        locinfo.physics = phy;
+        locinfo.props.setLocation(loc, 0);
+        locinfo.props.setOrientation(orient, 0);
+        locinfo.props.setBounds(bnds, 0);
+        locinfo.props.setMesh(Transfer::URI(msh), 0);
+        locinfo.props.setPhysics(phy, 0);
         locinfo.local = false;
         locinfo.aggregate = false;
         mLocations[uuid] = locinfo;
@@ -700,47 +727,71 @@ void BulletPhysicsService::receiveMessage(Message* msg) {
             // update is performed at the end.
             bool updatePhysics = false;
 
+            // Whether we should directly apply requests to move the object
+            bool apply_direct = directMotionRequestsEnabled(update.object());
+
+            uint64 epoch = 0;
+            if (update.has_epoch())
+                epoch = update.epoch();
+
             if (update.has_location()) {
+                // Remote objects are always updated, forced if necessary.
                 TimedMotionVector3f newloc(
                     update.location().t(),
                     MotionVector3f( update.location().position(), update.location().velocity() )
                 );
-                loc_it->second.location = newloc;
-                notifyReplicaLocationUpdated( update.object(), newloc );
 
-                CONTEXT_SPACETRACE(serverLoc, msg->source_server(), mContext->id(), update.object(), newloc );
+                if (apply_direct) {
+                    loc_it->second.props.setLocation(newloc, epoch);
+                }
+                else {
+                    assert(loc_it->second.simObject != NULL);
+                    loc_it->second.simObject->applyForcedLocation(newloc, epoch);
+                }
+
+                notifyReplicaLocationUpdated( update.object(), loc_it->second.props.location() );
+                CONTEXT_SPACETRACE(serverLoc, msg->source_server(), mContext->id(), update.object(), loc_it->second.props.location() );
             }
 
             if (update.has_orientation()) {
+                // Remote objects are always updated, forced if necessary.
                 TimedMotionQuaternion neworient(
                     update.orientation().t(),
                     MotionQuaternion( update.orientation().position(), update.orientation().velocity() )
                 );
-                loc_it->second.orientation = neworient;
-                notifyReplicaOrientationUpdated( update.object(), neworient );
+
+                if (apply_direct) {
+                    loc_it->second.props.setOrientation(neworient, epoch);
+                }
+                else {
+                    assert(loc_it->second.simObject != NULL);
+                    loc_it->second.simObject->applyForcedOrientation(neworient, epoch);
+                }
+
+                notifyReplicaOrientationUpdated( update.object(), loc_it->second.props.orientation());
             }
 
             if (update.has_bounds()) {
-                BoundingSphere3f oldbounds = loc_it->second.bounds;
+                BoundingSphere3f oldbounds = loc_it->second.props.bounds();
                 BoundingSphere3f newbounds = update.bounds();
-                loc_it->second.bounds = newbounds;
-                notifyReplicaBoundsUpdated( update.object(), newbounds );
+                loc_it->second.props.setBounds(newbounds, epoch);
+                notifyReplicaBoundsUpdated( update.object(), loc_it->second.props.bounds() );
                 if (oldbounds != newbounds) updatePhysics = true;
             }
 
             if (update.has_mesh()) {
-                String oldmesh = loc_it->second.mesh;
-                String newmesh = update.mesh();
-                loc_it->second.mesh = newmesh;
-                notifyReplicaMeshUpdated( update.object(), newmesh );
+                Transfer::URI oldmesh = loc_it->second.props.mesh();
+                Transfer::URI newmesh(update.mesh());
+                loc_it->second.props.setMesh(newmesh, epoch);
+                notifyReplicaMeshUpdated( update.object(), loc_it->second.props.mesh().toString() );
                 if (oldmesh != newmesh) updatePhysics = true;
             }
 
             if (update.has_physics()) {
-                String oldphy = loc_it->second.physics;
+                String oldphy = loc_it->second.props.physics();
                 String newphy = update.physics();
-                loc_it->second.physics = newphy;
-                notifyReplicaPhysicsUpdated( update.object(), newphy );
+                loc_it->second.props.setPhysics(newphy, epoch);
+                notifyReplicaPhysicsUpdated( update.object(), loc_it->second.props.physics());
                 if (oldphy != newphy) updatePhysics = true;
             }
 
@@ -773,47 +824,83 @@ bool BulletPhysicsService::locationUpdate(UUID source, void* buffer, uint32 leng
             // update is performed at the end.
             bool updatePhysics = false;
 
+            // Whether we should directly apply requests to move the object
+            bool apply_direct = directMotionRequestsEnabled(source);
+
+            uint64 epoch = 0;
+            if (request.has_epoch())
+                epoch = request.epoch();
+
             if (request.has_location()) {
+                // When requested from an object, we only try to apply the update
                 TimedMotionVector3f newloc(
                     request.location().t(),
                     MotionVector3f( request.location().position(), request.location().velocity() )
                 );
-                loc_it->second.location = newloc;
-                notifyLocalLocationUpdated( source, loc_it->second.aggregate, newloc );
 
-                CONTEXT_SPACETRACE(serverLoc, mContext->id(), mContext->id(), source, newloc );
+                bool updated = false;
+                if (apply_direct) {
+                    loc_it->second.props.setLocation(newloc, epoch);
+                    updated = true;
+                }
+                else {
+                    assert(loc_it->second.simObject != NULL);
+                    updated = loc_it->second.simObject->applyRequestedLocation(newloc, epoch);
+                }
+
+                // We always force an update, even if we don't apply the
+                // change. This ensures that the client is notified of
+                // the existing value with the current epoch,
+                // indicating that the update was received but not applied.
+                // TODO(ewencp) we accomplish this more efficiently by
+                // having a notifyLocalEpochUpdated.
+                notifyLocalLocationUpdated( source, loc_it->second.aggregate, loc_it->second.props.location() );
+                if (updated) {
+                    CONTEXT_SPACETRACE(serverLoc, mContext->id(), mContext->id(), source, loc_it->second.props.location() );
+                }
             }
 
             if (request.has_orientation()) {
+                // When requested from an object, we only try to apply the update
                 TimedMotionQuaternion neworient(
                     request.orientation().t(),
                     MotionQuaternion( request.orientation().position(), request.orientation().velocity() )
                 );
-                loc_it->second.orientation = neworient;
-                notifyLocalOrientationUpdated( source, loc_it->second.aggregate, neworient );
+
+                // See above note about always sending an update, even
+                // if nothing changed.
+                if (apply_direct) {
+                    loc_it->second.props.setOrientation(neworient, epoch);
+                }
+                else {
+                    assert(loc_it->second.simObject != NULL);
+                    loc_it->second.simObject->applyRequestedOrientation(neworient, epoch);
+                }
+
+                notifyLocalOrientationUpdated( source, loc_it->second.aggregate, loc_it->second.props.orientation() );
             }
 
             if (request.has_bounds()) {
-                BoundingSphere3f oldbounds = loc_it->second.bounds;
+                BoundingSphere3f oldbounds = loc_it->second.props.bounds();
                 BoundingSphere3f newbounds = request.bounds();
-                loc_it->second.bounds = newbounds;
-                notifyLocalBoundsUpdated( source, loc_it->second.aggregate, newbounds );
+                loc_it->second.props.setBounds(newbounds, epoch);
+                notifyLocalBoundsUpdated( source, loc_it->second.aggregate, loc_it->second.props.bounds() );
                 if (oldbounds != newbounds) updatePhysics = true;
             }
 
             if (request.has_mesh()) {
-                String oldmesh = loc_it->second.mesh;
-                String newmesh = request.mesh();
-                loc_it->second.mesh = newmesh;
-                notifyLocalMeshUpdated( source, loc_it->second.aggregate, newmesh );
+                Transfer::URI oldmesh = loc_it->second.props.mesh();
+                Transfer::URI newmesh(request.mesh());
+                loc_it->second.props.setMesh(newmesh, epoch);
+                notifyLocalMeshUpdated( source, loc_it->second.aggregate, loc_it->second.props.mesh().toString() );
                 if (oldmesh != newmesh) updatePhysics = true;
             }
 
             if (request.has_physics()) {
-                String oldphy = loc_it->second.physics;
+                String oldphy = loc_it->second.props.physics();
                 String newphy = request.physics();
-                loc_it->second.physics = newphy;
-                notifyLocalPhysicsUpdated( source, loc_it->second.aggregate, newphy );
+                loc_it->second.props.setPhysics(newphy, epoch);
+                notifyLocalPhysicsUpdated( source, loc_it->second.aggregate, loc_it->second.props.physics() );
                 if (oldphy != newphy) updatePhysics = true;
             }
 

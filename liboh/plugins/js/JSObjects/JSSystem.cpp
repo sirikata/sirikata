@@ -656,7 +656,7 @@ v8::Handle<v8::Value> root_createVisible(const v8::Arguments& args)
         return v8::ThrowException( v8::Exception::Error(v8::String::New( errMsg.c_str())));
 
     if  (args.Length() == 1)
-        return jssys->struct_create_vis(sporefVisWatching, JSProxyPtr());
+        return jssys->struct_create_vis(sporefVisWatching, JSVisibleDataPtr());
 
 
 
@@ -707,12 +707,12 @@ v8::Handle<v8::Value> root_createVisible(const v8::Arguments& args)
     //do not delete this bcause it gets put into a shared pointer.
     //note, do not need to point at
     //emerScript here.
-    JSProxyPtr jspd(new JSProxyData(NULL, sporefVisWatching));
-    jspd->mLocation = location;
-    jspd->mOrientation = orientation;
-    jspd->mBounds = bsph;
-    jspd->mMesh = meshString;
-    jspd->mPhysics = physicsString;
+    JSVisibleDataPtr jspd(
+        new JSRestoredVisibleData(
+            NULL, sporefVisWatching,
+            PresenceProperties(location, orientation, bsph, Transfer::URI(meshString), physicsString)
+        )
+    );
 
     v8::Handle<v8::Value> returner = jssys->struct_create_vis(sporefVisWatching,jspd);
     return handle_scope.Close(returner);
@@ -1029,7 +1029,7 @@ v8::Handle<v8::Value> commonImport(const v8::Arguments& args, bool isJS)
     //decode the filename to import from.
     String strDecodeErrorMessage = "Error decoding string as first argument of root_import of jssystem.  ";
     String native_filename; //string to decode to.
-    bool decodeStrSuccessful = decodeString(args[0],native_filename,strDecodeErrorMessage);
+    bool decodeStrSuccessful = decodeString(filename,native_filename,strDecodeErrorMessage);
     if (! decodeStrSuccessful)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(strDecodeErrorMessage.c_str(), strDecodeErrorMessage.length())) );
 
@@ -1134,8 +1134,8 @@ v8::Handle<v8::Value> root_restorePresence(const v8::Arguments& args)
 {
     v8::HandleScope handle_scope;
 
-    if (args.Length() != 19)
-        return v8::ThrowException(v8::Exception::Error(v8::String::New("Error when trying to restore presence through system object.  restore_presence requires 19 arguments")));
+    if (args.Length() != 18)
+        return v8::ThrowException(v8::Exception::Error(v8::String::New("Error when trying to restore presence through system object.  restore_presence requires 18 arguments")));
 
 
     v8::Handle<v8::Value> mSporefArg                       = args[0];
@@ -1155,8 +1155,7 @@ v8::Handle<v8::Value> root_restorePresence(const v8::Arguments& args)
     v8::Handle<v8::Value> isSuspendedArg                   = args[14];
     v8::Handle<v8::Value> suspendedVelocityArg             = args[15];
     v8::Handle<v8::Value> suspendedOrientationVelocityArg  = args[16];
-    v8::Handle<v8::Value> solidAngleQueryArg               = args[17];
-    v8::Handle<v8::Value> maxResultsQueryArg               = args[18];
+    v8::Handle<v8::Value> queryArg                         = args[17];
 
     //now, it's time to decode them.
 
@@ -1278,9 +1277,11 @@ v8::Handle<v8::Value> root_restorePresence(const v8::Arguments& args)
     suspendedOrientationVelocity.setValue( QuaternionValExtract(suspendedOrientationVelocityArg));
 
 
-    INLINE_SA_CONV_ERROR(solidAngleQueryArg,restorePresence,16,queryAngle);
-    //FIXME INLINE_DECODE_UINT_32(maxResultsQueryArg,maxResults);
-    uint32 maxResults = 0;
+    String query;
+    specificErrMsg = baseErrMsg + "query.";
+    bool queryDecodeSuccessful = decodeString(queryArg, query, specificErrMsg);
+    if (! queryDecodeSuccessful)
+        return v8::ThrowException(v8::Exception::Error(v8::String::New(specificErrMsg.c_str())));
 
     //decode system.
     String errorMessageFRoot = "Error decoding the system object from restorePresence.  ";
@@ -1308,8 +1309,7 @@ v8::Handle<v8::Value> root_restorePresence(const v8::Arguments& args)
         isSuspended,
         suspendedVelocity,
         suspendedOrientationVelocity,
-        queryAngle,
-        maxResults
+        query
     );
 
     return handle_scope.Close(jssys->restorePresence(restParams));
@@ -1373,11 +1373,11 @@ v8::Handle<v8::Value> root_createEntity(const v8::Arguments& args)
     float scale  =  NumericExtract(scale_arg);
 
     //get the solid angle
-    Handle<Object> qa_arg = ObjectCast(args[5]);
-    if (!NumericValidate(qa_arg))
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in ScriptCreateEntity function. Wrong argument: require a number for query angle.")) );
+    Handle<Object> query_arg = ObjectCast(args[5]);
+    if (!StringValidate(query_arg))
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in ScriptCreateEntity function. Wrong argument: require a string for query.")) );
 
-    SolidAngle new_qa(NumericExtract(qa_arg));
+    String new_query(StringExtract(query_arg));
 
     //get the space argument
     String spaceStr;
@@ -1398,9 +1398,7 @@ v8::Handle<v8::Value> root_createEntity(const v8::Arguments& args)
 
     eci.loc  = Location(pos,Quaternion(1,0,0,0),Vector3f(0,0,0),Vector3f(0,0,0),0.0);
 
-    eci.solid_angle = new_qa;
-    // FIXME add control for max results
-    eci.max_results = 0;
+    eci.query = new_query;
 
     eci.scale = scale;
     eci.space = toCreateIn;
@@ -1465,11 +1463,11 @@ v8::Handle<v8::Value> root_createEntityNoSpace(const v8::Arguments& args)
     float scale  =  NumericExtract(scale_arg);
 
     //get the solid angle
-    Handle<Object> qa_arg = ObjectCast(args[5]);
-    if (!NumericValidate(qa_arg))
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in ScriptCreateEntity function. Wrong argument: require a number for query angle.")) );
+    Handle<Object> query_arg = ObjectCast(args[5]);
+    if (!StringValidate(query_arg))
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in ScriptCreateEntity function. Wrong argument: require a string for query.")) );
 
-    SolidAngle new_qa(NumericExtract(qa_arg));
+    String new_query(StringExtract(query_arg));
 
 
 
@@ -1483,9 +1481,7 @@ v8::Handle<v8::Value> root_createEntityNoSpace(const v8::Arguments& args)
 
     eci.loc  = Location(pos,Quaternion(1,0,0,0),Vector3f(0,0,0),Vector3f(0,0,0),0.0);
 
-    eci.solid_angle = new_qa;
-    // FIXME add control over max results
-    eci.max_results = 0;
+    eci.query = new_query;
 
     eci.scale = scale;
 

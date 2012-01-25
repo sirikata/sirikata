@@ -1,0 +1,2 @@
+"objtype","pos_x","pos_y","pos_z","scale","meshURI","script_type","script_contents","query","physics"
+"mesh",20,50,20,2,"meerkat:///danielrh/maleWalkIdleSit.dae/optimized/maleWalkIdleSit.dae","js","system.import('std/defaultAvatar.em');","{"angle":0.000000001}","{"treatment":"character", "bounds":"box"}"

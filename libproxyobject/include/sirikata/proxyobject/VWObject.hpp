@@ -37,6 +37,7 @@
 #include <sirikata/core/odp/Service.hpp>
 #include <sirikata/proxyobject/SessionEventListener.hpp>
 #include <sirikata/proxyobject/Defs.hpp>
+#include <sirikata/core/util/PresenceProperties.hpp>
 
 namespace Sirikata {
 
@@ -57,6 +58,20 @@ public:
 
     /** Get the ProxyManager for the given presence. */
     virtual ProxyManagerPtr presence(const SpaceObjectReference& sor) { return ProxyManagerPtr(); };
+
+    // TODO(ewencp) presence() should really be the only method and should
+    // return something like PerPresenceData (or just an interface version of
+    // it). That would avoid all these separate methods and just use one,
+    // standard interface.
+    /** Get requested location information for a presence. This should be used
+     * carefully -- generally you should use a proxy object to resolve possibly
+     * rejected requests rather than using this directly.
+     */
+    virtual SequencedPresencePropertiesPtr presenceRequestedLocation(const SpaceObjectReference& sor) { return SequencedPresencePropertiesPtr(); };
+    /** Get the last seen epoch for the given presence (reported from space,
+     *  there may be higher epochs for outstanding requests).
+     */
+    virtual uint64 presenceLatestEpoch(const SpaceObjectReference& sor) { return 0; };
 
 }; // class VWObject
 

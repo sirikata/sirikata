@@ -88,8 +88,7 @@ private:
         Location loc;
         BoundingSphere3f bounds;
         String mesh;
-        SolidAngle query_angle;
-        uint32 query_max_results;
+        String query;
         String physics;
     };
     std::queue<ObjectConnectInfo> mIncompleteObjects;

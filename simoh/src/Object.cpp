@@ -95,7 +95,6 @@ void Object::stop() {
 void Object::scheduleNextLocUpdate() {
     const Time tnow = mContext->simTime();
 
-    TimedMotionVector3f curLoc = location();
     const TimedMotionVector3f* update = mMotion->nextUpdate(tnow);
     if (update != NULL) {
 
@@ -174,8 +173,6 @@ void Object::connect() {
         OBJ_LOG(warning,"Tried to connect when already connected " << mID.toString());
         return;
     }
-
-    TimedMotionVector3f curMotion = mMotion->at(mContext->simTime());
 
     using std::tr1::placeholders::_1;
     using std::tr1::placeholders::_2;

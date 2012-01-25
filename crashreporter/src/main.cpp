@@ -61,7 +61,6 @@ size_t writehandler(void*ptr, size_t size, size_t nmemb, std::string* userdata) 
 
 void reportCrash(const std::string& report_url, const std::string&dumpfilename,  const std::string& fulldumpfile, const std::string& sirikata_version, const std::string& sirikata_git_hash) {
     CURL* curl;
-    CURLcode res;
 
     curl_httppost* formpost = NULL;
     curl_httppost* lastptr = NULL;
@@ -98,7 +97,7 @@ void reportCrash(const std::string& report_url, const std::string&dumpfilename, 
         curl_easy_setopt(curl, CURLOPT_HTTPPOST, formpost);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, &resultStr);
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writehandler);
-        res = curl_easy_perform(curl);
+        curl_easy_perform(curl);
 
         curl_easy_cleanup(curl);
         curl_formfree(formpost);

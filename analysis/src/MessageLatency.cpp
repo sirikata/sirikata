@@ -585,7 +585,6 @@ class PacketStageGraph {
         }
         while(!sorted_unused_samples.empty()) {
             // Take the next earliest
-            Time us_time = sorted_unused_samples.begin()->first;
             UnusedSamples us = sorted_unused_samples.begin()->second;
             sorted_unused_samples.erase( sorted_unused_samples.begin() );
 

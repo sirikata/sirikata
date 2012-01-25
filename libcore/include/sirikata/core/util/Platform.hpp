@@ -409,6 +409,7 @@ struct ObjectHostID {
     uint64 id;
 };
 
+SIRIKATA_FUNCTION_EXPORT uint32 uint32_lexical_cast(const String& rhs);
 SIRIKATA_FUNCTION_EXPORT std::ostream& operator<<(std::ostream& os, const ObjectHostID& rhs);
 SIRIKATA_FUNCTION_EXPORT std::istream& operator>>(std::istream& is, ObjectHostID& rhs);
 

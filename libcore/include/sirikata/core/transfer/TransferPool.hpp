@@ -160,6 +160,8 @@ public:
         return mID < other.mID;
     }
 
+    virtual ~MetadataRequest() {}
+
 protected:
 
     const URI mURI;
@@ -184,6 +186,48 @@ protected:
 
 };
 
+/*
+ * Handles requests for the data associated with a file:chunk pair
+ */
+class SIRIKATA_EXPORT DirectChunkRequest : public TransferRequest {
+
+public:
+    typedef std::tr1::function<void(
+            std::tr1::shared_ptr<DirectChunkRequest> request,
+            std::tr1::shared_ptr<const DenseData> response)> DirectChunkCallback;
+
+    DirectChunkRequest(const Chunk &chunk, PriorityType priority, DirectChunkCallback cb)
+            : mChunk(std::tr1::shared_ptr<Chunk>(new Chunk(chunk))),
+            mCallback(cb)
+            {
+                mPriority = priority;
+                mDeletionRequest = false;
+                mID = chunk.toString();
+            }
+
+    inline const Chunk& getChunk() {
+        return *mChunk;
+    }
+
+    inline const std::string &getIdentifier() const {
+        return mID;
+    }
+
+    void execute(std::tr1::shared_ptr<TransferRequest> req, ExecuteFinished cb);
+
+    void execute_finished(std::tr1::shared_ptr<const DenseData> response, ExecuteFinished cb);
+
+    void notifyCaller(TransferRequestPtr me, TransferRequestPtr from);
+    void notifyCaller(TransferRequestPtr me, TransferRequestPtr from, DenseDataPtr data);
+
+protected:
+    std::string mID;
+    std::tr1::shared_ptr<Chunk> mChunk;
+    DirectChunkCallback mCallback;
+    std::tr1::shared_ptr<const DenseData> mDenseData;
+};
+
+typedef std::tr1::shared_ptr<DirectChunkRequest> DirectChunkRequestPtr;
 
 /*
  * Handles requests for the data associated with a file:chunk pair

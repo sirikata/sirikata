@@ -34,6 +34,8 @@
 #include <sirikata/core/options/Options.hpp>
 #include <sirikata/mesh/ModelsSystemFactory.hpp>
 
+#include <boost/filesystem.hpp>
+
 namespace Sirikata {
 namespace Mesh {
 
@@ -55,9 +57,14 @@ FilterDataPtr SaveFilter::apply(FilterDataPtr input) {
 
     ModelsSystem* parser = ModelsSystemFactory::getSingleton().getConstructor("any")("");
     VisualPtr vis = input->get();
+
+    std::ofstream model_ostream(mFilename.c_str(), std::ofstream::out | std::ofstream::binary);
     bool success = parser->convertVisual(vis, mFormat, mFilename);
+    model_ostream.close();
     if (!success) {
         std::cout << "Error saving mesh." << std::endl;
+        if (boost::filesystem::exists(mFilename))
+            boost::filesystem::remove(mFilename);
         return FilterDataPtr();
     }
     return input;

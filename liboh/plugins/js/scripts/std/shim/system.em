@@ -33,6 +33,7 @@
 system.require('std/core/pretty.em');
 system.require('std/escape.em');
 
+
 // This is just a document hack.
 // System should not be in the if as there is something wrong if it
 // does.
@@ -42,128 +43,68 @@ if(system == undefined)
   system = new Object();
 }
 
+/**
+ Should only be instantiated from featureObject.em
 
+ Registers self as proximity manager.
+ */
 
 /**@ignore
  Each presence entry object manages the proximity result set for a presence.
  @param {string} sporef The space object reference for the presence, presObj.
  @param {presence} presObj The actual js presence object.
  */
-function PresenceEntry(sporef, presObj)
+function PresenceEntry(sporef, presObj,proxMan)
 {
     this.sporef  = sporef;
     this.presObj = presObj;
-    this.proxResultSet = {   };
-    this.proxAddCB = new Array();
-    this.proxRemCB = new Array();
-    this.__getType = function()
-    {
-        return "presenceEntry";
-    };
-
-    //returns a copy of the proximity result set that this entry is managing for its presence.
-    this.getProxResultSet = function()
-    {
-        var returner = {};
-        for (var s in this.proxResultSet)
-        {
-            returner[s] = this.proxResultSet[s];
-        }
-        return returner;
-    };
-    
-    //print prox result set.
-    this.printProxResultSet = function()
-    {
-        system.print('\nPrinting result set for presence: ' + this.sporef.toString()+'\n');
-        for (var s in this.proxResultSet)
-            system.print('\t' + s.toString() + '\n' );
-    };
-
-    //to set a prox add callback
-    this.setProxAddCB = function (proxAddCB)
-    {
-        if ((typeof(proxAddCB) == 'undefined') || (proxAddCB == null))
-            return null;
-        else
-	{
-	    for (var i = 0; i <= this.proxAddCB.length; i++)
-	    {
-		if ((typeof(this.proxAddCB[i]) == 'undefined') || (this.proxAddCB[i] == null))
-		{
-		    this.proxAddCB[i] = std.core.bind(proxAddCB, this.presObj);
-		    return i;
-		}
-	    }
-	    // shouldn't reach here
-	    return null;
-	}
-    };
-
-
-    
-    //to set a prox removed callback
-    this.setProxRemCB = function (proxRemCB)
-    {
-        if ((typeof(proxRemCB) == 'undefined') || (proxRemCB == null))
-            return null;
-        else
-	{
-	    for (var i = 0; i <= this.proxRemCB.length; i++)
-	    {
-		if ((typeof(this.proxRemCB[i]) == 'undefined') || (this.proxRemCB[i] == null))
-		{
-		    this.proxRemCB[i] = std.core.bind(proxRemCB, this.presObj);
-		    return i;
-		}
-	    }
-	    // shouldn't reach here
-	    return null;
-	}
-    };
-    
-    // to delete a prox added callback
-    this.delProxAddCB = function (addID)
-    {
-	if (!(typeof(this.proxAddCB[addID]) == 'undefined'))
-	    this.proxAddCB[addID] = null;
-    };
-    
-    // to delete a prox removed callback
-    this.delProxRemCB = function (remID)
-    {
-	if (!(typeof(this.proxRemCB[remID]) == 'undefined'))
-	    this.proxRemCB[remID] = null;
-    };
-
-    //call this function when get a visible object added to prox results
-    this.proxAddedEvent = function (visibleObj,visTo)
-    {
-        //add to proxResultSet
-        this.proxResultSet[visibleObj.toString()] = visibleObj;
-        //trigger all non-null non-undefined callbacks
-	for (var i in this.proxAddCB)
-	    if ((typeof(this.proxAddCB[i]) != 'undefined') && (this.proxAddCB[i] != null))
-		this.proxAddCB[i](visibleObj);
-    };
-
-    //call this function when get a visible object removed to prox results
-    this.proxRemovedEvent = function (visibleObj,visTo)
-    {
-        //remove from to proxResultSet
-        delete this.proxResultSet[visibleObj.toString()];
-
-        //trigger all non-null non-undefined callbacks
-	for (var i in this.proxRemCB)
-	    if ((typeof(this.proxRemCB[i]) != 'undefined') && (this.proxRemCB[i] != null))
-		this.proxRemCB[i](visibleObj);
-    };
-    
-    this.debugPrint = function(printFunc)
-    {
-        printFunc('sporef name ' + this.sporef + '\n');
-    };
+    this.proxMan = proxMan;
 }
+
+PresenceEntry.prototype.getProxResultSet = function()
+{
+    if (typeof(this.proxMan) == 'undefined')
+        throw new Error ('\n\nError proxMan is not defined\n\n');
+    
+    return this.proxMan.getProxResultSet(this.sporef);
+};
+
+PresenceEntry.prototype.__getType = function()
+{
+    return 'presenceEntry';
+};
+
+PresenceEntry.prototype.setProxAddCB = function (proxAddCB)
+{
+    return this.proxMan.setProxAddCB(this.presObj,proxAddCB);
+};
+
+PresenceEntry.prototype.setProxRemCB = function (proxRemCB)
+{
+    return this.proxMan.setProxRemCB(this.presObj,proxRemCB);
+};
+
+PresenceEntry.prototype.delProxAddCB = function(addID)
+{
+    return this.proxMan.delProxAddCB(this.presObj,addID);
+};
+
+PresenceEntry.prototype.delProxRemCB = function(remID)
+{
+    return this.proxMan.delProxRemCB(this.presObj,remID);
+};
+
+PresenceEntry.prototype.proxAddedEvent = function(visibleObj,visTo)
+{
+    return this.proxMan.proxAddedEvent(visTo,visibleObj);
+};
+
+PresenceEntry.prototype.proxRemovedEvent = function (visibleObj,visTo)
+{
+    return this.proxMan.proxRemovedEvent(visTo,visibleObj);
+};
+
+
 
 
 (function()
@@ -172,11 +113,17 @@ function PresenceEntry(sporef, presObj)
      var isResetting = false;
      var isKilling   = false;
 
+     var proxManager = null;
      var sboxMessageManager = null;
      var presMessageManager = null;
      
      system = {};
 
+     system.__registerProxManager = function(proxMan)
+     {
+         proxManager = proxMan;
+     };
+     
      system.__getType = function()
      {
        return 'system';
@@ -190,7 +137,7 @@ function PresenceEntry(sporef, presObj)
           if (selfKey in this._selfMap)
               return;
 
-          this._selfMap[selfKey] = new PresenceEntry(selfKey,toAdd);
+          this._selfMap[selfKey] = new PresenceEntry(selfKey,toAdd,proxManager);
       };
 
      system.printSelfMap = function()
@@ -1136,7 +1083,7 @@ function PresenceEntry(sporef, presObj)
             var isSuspended = false;
             var suspendedVelocity = new util.Vec3(0,0,0);
             var suspendedOrientationVelocity = new util.Quaternion(0,0,0,1);
-            var solidAngleQuery = 1000; //set it to a high solid angle.  
+            var query = "";
 
             
             if (typeof(firstArg) == 'object')
@@ -1181,10 +1128,12 @@ function PresenceEntry(sporef, presObj)
                     connectedCallback = this.__wrapPresConnCB(firstArg['callback']);
 
                 if ('solidAngleQuery' in firstArg)
-                    solidAngleQuery = firstArg['solidAngleQuery'];
-                
+                    query = system.__presence_constructor__.__encodeDeprecatedQuery(firstArg['solidAngleQuery']);
+
+                if ('query' in firstArg)
+                    query = firstArg['query'];
             }
-            return system.restorePresence(sporef,pos,vel,posTime,orient,orientVel,orientTime,mesh,physics,scale,isCleared,contextID,isConnected,connectedCallback,isSuspended,suspendedVelocity,suspendedOrientationVelocity,solidAngleQuery);
+            return system.restorePresence(sporef,pos,vel,posTime,orient,orientVel,orientTime,mesh,physics,scale,isCleared,contextID,isConnected,connectedCallback,isSuspended,suspendedVelocity,suspendedOrientationVelocity,query);
 
         };
 
@@ -1208,17 +1157,14 @@ function PresenceEntry(sporef, presObj)
       @param {boolean} isSuspended,
       @param {vec3} suspendedVelocity,
       @param {quaternion} suspendedOrientationVelocity,
-      @param {float} solidAngleQuery
-      @param {uint32} queryMaxResults
+      @param {string} query
       */
-     system.restorePresence = function(sporef,pos,vel,posTime,orient,orientVel,orientTime,mesh,physics,scale,isCleared,contextId,isConnected,connCB,isSuspended,suspendedVelocity,suspendedOrientationVelocity,solidAngleQuery,queryMaxResults)
+     system.restorePresence = function(sporef,pos,vel,posTime,orient,orientVel,orientTime,mesh,physics,scale,isCleared,contextId,isConnected,connCB,isSuspended,suspendedVelocity,suspendedOrientationVelocity,query)
      {
          if (connCB != null)
              connCB = this.__wrapPresConnCB(connCB);
 
-         if (queryMaxResults === undefined) queryMaxResults = 1000000;
-
-         return baseSystem.restorePresence(sporef,pos,vel,posTime,orient,orientVel,orientTime,mesh,physics,scale,isCleared,contextId,isConnected,connCB,isSuspended,suspendedVelocity,suspendedOrientationVelocity,solidAngleQuery,queryMaxResults);
+         return baseSystem.restorePresence(sporef,pos,vel,posTime,orient,orientVel,orientTime,mesh,physics,scale,isCleared,contextId,isConnected,connCB,isSuspended,suspendedVelocity,suspendedOrientationVelocity,query);
      };
       
       /** @deprecated Use createPresence */
@@ -1330,7 +1276,7 @@ function PresenceEntry(sporef, presObj)
              //reset self;
              system.__setBehindSelf( system._selfMap[presVisTo.toString()].presObj);
              //fire proxAddedEvent.
-             system._selfMap[presVisTo.toString()].proxAddedEvent(visObj,presVisTo);
+             system._selfMap[presVisTo.toString()].proxAddedEvent(visObj,system.self);
          }
          else
              throw new Error('Error: received prox added message for presence not controlling');
@@ -1349,7 +1295,7 @@ function PresenceEntry(sporef, presObj)
              //reset self;
              system.__setBehindSelf( system._selfMap[presVisTo.toString()].presObj);
              //fire proxRemovedEvent.
-             system._selfMap[presVisTo.toString()].proxRemovedEvent(visObj,presVisTo);
+             system._selfMap[presVisTo.toString()].proxRemovedEvent(visObj,system.self);
          }
          else
              throw new Error('Error: received prox added message for presence not controlling');
@@ -1402,7 +1348,7 @@ function PresenceEntry(sporef, presObj)
           else
               throw new Error('Error: do not have a presence in map matching ' + presCalling.toString());
       };
-	  
+
 	 /**
 	  @presCalling this is the presence that wants to unregister onProxAdded function
 	  @addID this is the ID number of the onProxAdded function to delete

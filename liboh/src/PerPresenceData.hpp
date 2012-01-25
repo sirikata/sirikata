@@ -3,7 +3,7 @@
 #include <sirikata/core/util/SpaceObjectReference.hpp>
 #include <sirikata/proxyobject/ProxyObject.hpp>
 #include <sirikata/proxyobject/VWObject.hpp>
-#include <sirikata/oh/ObjectHostProxyManager.hpp>
+#include <sirikata/proxyobject/ProxyManager.hpp>
 
 
 #ifndef _SIRIKATA_PER_PRESENCE_DATA_HPP_
@@ -16,13 +16,11 @@ namespace Sirikata
 class PerPresenceData
 {
 public:
-    HostedObject* parent;
+    HostedObjectPtr parent;
     SpaceID space;
     ObjectReference object;
     ProxyObjectPtr mProxyObject;
-    ProxyObject::Extrapolator mUpdatedLocation;
-    ObjectHostProxyManagerPtr proxyManager;
-    bool validSpaceObjRef;
+    ProxyManagerPtr proxyManager;
     String query;
     HostedObject::BaseDatagramLayerPtr mSSTDatagramLayers;
     // Outstanding requests for loc updates.
@@ -36,23 +34,27 @@ public:
     };
 
     LocField updateFields;
-    TimedMotionVector3f requestLocation;
-    TimedMotionQuaternion requestOrientation;
-    BoundingSphere3f requestBounds;
-    String requestMesh;
-    String requestPhysics;
+    uint64 requestEpoch;
+    // Requested location information, may or may not have been
+    // accepted/applied by the space. We keep this as a shared_ptr so
+    // we can return it in place of a down-casted
+    // ProxyObjectPtr. This tracks the request epoch for each
+    // component since they are requested independently so we need to
+    // resolve differences for each component independently.
+    SequencedPresencePropertiesPtr requestLoc;
     Network::IOTimerPtr rerequestTimer;
+
+    // This tracks the latest epoch we've seen *reported* from the space server,
+    // i.e. what requests the server has handled.
+    uint64 latestReportedEpoch;
 
     typedef std::map<String, Simulation*> SimulationMap;
     SimulationMap sims;
 
-    PerPresenceData(HostedObject* _parent, const SpaceID& _space, const ObjectReference& _oref, const HostedObject::BaseDatagramLayerPtr& layer, const String& query);
-    PerPresenceData(HostedObject* _parent, const SpaceID& _space, const HostedObject::BaseDatagramLayerPtr& layer, const String& query);
+    PerPresenceData(HostedObjectPtr _parent, const SpaceID& _space, const ObjectReference& _oref, const HostedObject::BaseDatagramLayerPtr& layer, const String& query);
     ~PerPresenceData();
 
-    void populateSpaceObjRef(const SpaceObjectReference& sporef);
-
-    ObjectHostProxyManagerPtr getProxyManager();
+    ProxyManagerPtr getProxyManager();
 
     SpaceObjectReference id() const;
     void initializeAs(ProxyObjectPtr proxyobj);

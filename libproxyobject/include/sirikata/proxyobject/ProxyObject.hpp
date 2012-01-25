@@ -49,7 +49,10 @@
 #include <sirikata/proxyobject/MeshListener.hpp>
 #include "MeshListener.hpp"
 
-#include <sirikata/proxyobject/PresenceProperties.hpp>
+#include <sirikata/core/util/PresenceProperties.hpp>
+#include <sirikata/proxyobject/ProxyManager.hpp>
+
+#include <sirikata/core/util/SerializationCheck.hpp>
 
 namespace Sirikata {
 
@@ -87,22 +90,26 @@ public:
 
 
 /**
- * This class represents a generic object on a remote server
- * Every object has a SpaceObjectReference that allows one to communicate
- * with it. Subclasses implement several Providers for concerned listeners
- * This class should be casted to the various subclasses (ProxyLightObject,etc)
- * and appropriate listeners be registered.
+ * This class represents a generic object on a remote server. This
+ * tracks the basic properties maintained by the space -- the object
+ * identifier, location, orientation, bounds, mesh, and physics. Note
+ * that this *always* represents the current reported status of the
+ * object in the space, even if you own the presence.
+ *
+ * Note that this class is *not* thread safe. You need to protect it by locking
+ * a mutex from the ProxyManager or HostedObject while accessing it.
  */
 class SIRIKATA_PROXYOBJECT_EXPORT ProxyObject
     : public SelfWeakPtr<ProxyObject>,
       public SequencedPresenceProperties,
       public ProxyObjectProvider,
       public PositionProvider,
-      public MeshProvider
+      public MeshProvider,
+      SerializationCheck
 {
 
 public:
-    static ProxyObjectPtr construct(ProxyManager *man, const SpaceObjectReference&id, VWObjectPtr vwobj, const SpaceObjectReference& owner_sor);
+    static ProxyObjectPtr construct(ProxyManagerPtr man, const SpaceObjectReference& id);
 
     class SIRIKATA_PROXYOBJECT_EXPORT UpdateNeeded {
     public:
@@ -114,8 +121,7 @@ public:
 
 private:
     const SpaceObjectReference mID;
-    VWObjectPtr mParent;
-    const SpaceObjectReference mParentPresenceID;
+    ProxyManagerPtr mParent;
 public:
     /** Constructs a new ProxyObject. After constructing this object, it
         should be wrapped in a shared_ptr and sent to ProxyManager::createObject().
@@ -123,52 +129,27 @@ public:
         @param id  The SpaceID and ObjectReference assigned to this proxyObject.
         \param vwobj the owning VWObject, allowing the ProxyObject to interact
                     with the space
-        \param owner_sor the owning SpaceObjectReference, i.e. the presence the
-        proximity event was generated for
     */
-    ProxyObject(ProxyManager *man, const SpaceObjectReference&id, VWObjectPtr vwobj, const SpaceObjectReference& owner_sor);
+    ProxyObject(ProxyManagerPtr man, const SpaceObjectReference& id);
 
 
     /// Subclasses can do any necessary cleanup first.
     virtual void destroy();
 
     ///Returns the unique identification for this object and the space to which it is connected that gives it said name
-    inline const SpaceObjectReference&getObjectReference() const{
+    inline const SpaceObjectReference& getObjectReference() const {
         return mID;
     }
-    inline const SpaceObjectReference getOwnerPresenceID() const {
-        return mParentPresenceID;
-    }
-    /// Gets the owning Proxy
-    // Note: I think parent is being used here in different ways. mParent refers
-    // to the "owner" of this proxy, i.e. the VWObject this proxy was created
-    // for, whereas other uses of Parent presumably refer to the physical
-    // hierarchy, i.e. the hierarchy used to move grouped/connected objects in
-    // virtual space.
-    VWObjectPtr getOwner() const { return mParent; }
-
-    /// Returns the last updated position for this object.
-    inline Vector3d getPosition() const{
-        return Vector3d(mLoc.position());
+    inline const SpaceObjectReference& getOwnerPresenceID() const {
+        return getOwner()->id();
     }
 
+    /// Gets the owning ProxyManager
+    ProxyManagerPtr getOwner() const { return mParent; }
 
-    /// returns the last updated velocity for this object
-    inline Vector3d getVelocity() const
-    {
-        return Vector3d(mLoc.velocity());
-    }
-
-    /// Returns the last updated Quaternion for this object.
-    inline const Quaternion& getOrientation() const{
-        return mOrientation.position();
-    }
-
-    /// Returns the Quaternion speed (I know that's not the right term; maybe
-    /// angular velocity???) for this object.
-    inline const Quaternion& getOrientationSpeed() const{
-        return mOrientation.velocity();
-    }
+    /// Returns true if this ProxyObject is the one for the presence,
+    /// i.e. if it's ID is the same as the owner ID
+    bool isPresence() const { return getObjectReference() == getOwnerPresenceID(); }
 
 
 
@@ -190,29 +171,40 @@ public:
     /// Returns if this object has a zero velocity and requires no extrapolation.
     bool isStatic() const;
 
-    /** Sets the location for this update. Note: This does not tell the
-        Space that we have moved, but it is the first step in moving a local object. */
-    void setLocation(const TimedMotionVector3f& reqloc, uint64 seqno, bool predictive = false);
+    // PresenceProperties Overrides
+    virtual const TimedMotionVector3f& location() const;
+    virtual const TimedMotionQuaternion& orientation() const;
+    virtual const BoundingSphere3f& bounds() const;
+    virtual const Transfer::URI& mesh() const;
+    virtual const String& physics() const;
 
-    /** Sets the orientation for this update. Note: This does not tell the
-        Space that we have moved, but it is the first step in moving a local object. */
-    void setOrientation(const TimedMotionQuaternion& reqorient, uint64 seqno, bool predictive = false);
+    // Alternatives that access only the *verified* location information,
+    // i.e. data sent by the space.
+    const TimedMotionVector3f& verifiedLocation() const;
+    const TimedMotionQuaternion& verifiedOrientation() const;
+    const BoundingSphere3f& verifiedBounds() const;
+    const Transfer::URI& verifiedMesh() const;
+    const String& verifiedPhysics() const;
 
-    /** Sets the bounds. Note: This does not tell the Space that we have moved,
-        but it is the first step in moving a local object. */
-    void setBounds(const BoundingSphere3f& bnds, uint64 seqno, bool predictive = false);
+    void setLocation(const TimedMotionVector3f& reqloc, uint64 seqno);
+    void setOrientation(const TimedMotionQuaternion& reqorient, uint64 seqno);
+    void setBounds(const BoundingSphere3f& bnds, uint64 seqno);
+    void setMesh (Transfer::URI const& rhs, uint64 seqno);
+    void setPhysics(const String& rhs, uint64 seqno);
 
-    void setMesh (Transfer::URI const& rhs, uint64 seqno, bool predictive = false);
 
-    void setPhysics(const String& rhs, uint64 seqno, bool predictive = false);
 
     /** Retuns the local location of this object at the current timestamp. */
     Location extrapolateLocation(TemporalValue<Location>::Time current) const {
+        // Note that we call methods to get these so we use predicted values if possible.
+        TimedMotionVector3f loc = location();
+        TimedMotionQuaternion orient = orientation();
+
         Vector3f angaxis;
         float32 angvel;
-        mOrientation.velocity().toAngleAxis(angvel, angaxis);
+        orient.velocity().toAngleAxis(angvel, angaxis);
 
-        return Location(Vector3d(mLoc.position(current)), mOrientation.position(current).normal(), mLoc.velocity(), angaxis, angvel);
+        return Location(Vector3d(loc.position(current)), orient.position(current).normal(), loc.velocity(), angaxis, angvel);
     }
 
 

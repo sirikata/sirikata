@@ -407,7 +407,6 @@ protected:
         // Loop through until we find one that has data and can be handled.
         bool advance = true; // Indicates whether the loop needs to advance, set to false when an unexpected front has already advanced to the next item in order to remove the current item
         for(ByTimeIterator it = mQueuesByTime.begin(); it != mQueuesByTime.end(); advance ? it++ : it) {
-            Time min_queue_finish_time = it->first;
             QueueInfo* min_queue_info = it->second;
 
             advance = true;

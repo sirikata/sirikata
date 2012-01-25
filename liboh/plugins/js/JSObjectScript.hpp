@@ -77,7 +77,7 @@ public:
         OH::PersistedObjectSet* persisted_set, const UUID& internal_id,
         JSCtx* ctx);
 
-    
+
     virtual ~JSObjectScript();
 
     v8::Handle<v8::Value> debug_fileWrite(const String& strToWrite,const String& filename);
@@ -184,7 +184,7 @@ public:
     v8::Handle<v8::Value> invokeCallback(JSContextStruct* ctx, v8::Handle<v8::Function>& cb, int argc, v8::Handle<v8::Value> argv[]);
     v8::Handle<v8::Value> invokeCallback(JSContextStruct* ctx, v8::Handle<v8::Function>& cb);
 
-    
+
 
     // Hook to invoke after a callback is invoked. Allows you to check for
     // conditions that may be set during the callback (kill requested, reset,
@@ -213,10 +213,10 @@ public:
 protected:
 
 
-    
-    
+
+
     JSCtx* mCtx;
-    
+
     // Object host internal identifier for the object associated with
     // this script. We copy this information here because this base
     // class is used for emheadless, which can't get the identifier
@@ -323,6 +323,7 @@ protected:
     v8::Handle<v8::Value> absoluteImport(const boost::filesystem::path& full_filename, const boost::filesystem::path& full_base_dir,bool isJS);
 
 
+
     JSContextStruct* mContext;
 
 
@@ -362,7 +363,7 @@ protected:
     void iStop(bool letDie);
 
   private:
-    
+
     //should already be inside of a frame;
     v8::Handle<v8::Value> compileFunctionInContext( v8::Handle<v8::Function>&cb);
 
@@ -371,7 +372,7 @@ protected:
     // code but which should report errors to the user.
     void printExceptionToScript(const String& exc);
 
-    v8::Handle<v8::Value> protectedEval(const String& em_script_str, v8::ScriptOrigin* em_script_name, const EvalContext& new_ctx, bool return_exc = false, bool isJS=false);
+    v8::Handle<v8::Value> protectedEval(const String& em_script_str, v8::ScriptOrigin* em_script_name, const EvalContext& new_ctx, bool return_exc = false, const String& cache_path = "", bool isJS=false);
 
 
     // is_emerson controls whether this is compiled as emerson or
@@ -383,7 +384,8 @@ protected:
     //         necessary if there is no JS caller higher on the
     //         stack. Otherwise, V8 gets stuck with an uncaught
     //         exception and fails on future V8 calls.
-    v8::Handle<v8::Value> internalEval( const String& em_script_str, v8::ScriptOrigin* em_script_name, bool is_emerson, bool return_exc = false);
+    // \param cache_path if non-empty, cache compiled results to the given file
+    v8::Handle<v8::Value> internalEval( const String& em_script_str, v8::ScriptOrigin* em_script_name, bool is_emerson, bool return_exc = false, const String& cache_path = "");
 
 
     //Takes the context from the top value of context stack and returns it.  If
@@ -392,15 +394,15 @@ protected:
 
 
 
-    
+
     //all of these functions are used to post between strands.
     void eStorageBeginTransaction(JSContextStruct* jscont,
         Liveness::Token objAlive,Liveness::Token ctxAlive);
-    
+
     void eStorageCommit(
         JSContextStruct* jscont, v8::Persistent<v8::Function> cb,
         Liveness::Token objAlive,Liveness::Token ctxAlive);
-    
+
     void iStorageCommitCallback(
         JSContextStruct* jscont, v8::Persistent<v8::Function> cb,
         bool success, OH::Storage::ReadSet* rs,Liveness::Token objAlive,
@@ -421,7 +423,7 @@ protected:
         const OH::Storage::Key& key, v8::Persistent<v8::Function> cb,
         JSContextStruct* jscont,Liveness::Token objAlive,
         Liveness::Token ctxAlive);
-    
+
     void eStorageRangeRead(
         const OH::Storage::Key& start, const OH::Storage::Key& finish,
         v8::Persistent<v8::Function> cb, JSContextStruct* jscont,
@@ -442,8 +444,8 @@ protected:
         v8::Persistent<v8::Function> cb, Liveness::Token objAlive,
         Liveness::Token ctxAlive);
 
+    void iDelContext(JSContextStruct* toDel,Liveness::Token ctxLT);
 
-    
 };
 
 #define JSSCRIPT_SERIAL_CHECK()\

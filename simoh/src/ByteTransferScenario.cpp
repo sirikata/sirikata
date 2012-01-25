@@ -122,7 +122,7 @@ void ByteTransferScenario::stop() {
 }
 void ByteTransferScenario::pingReturn(const Sirikata::Protocol::Object::ObjectMessage&msg){
     mReturned=true;
-    static Time start=mContext->simTime();
+    //static Time start=mContext->simTime();
     if (msg.payload().size()>=8){
         if (msg.payload().size()!=mPacketSize&&mPacketSize>=8) {
             SILOG(oh,error,"Packet size does not match received packet size "<<msg.payload().size()<< " != "<<mPacketSize);

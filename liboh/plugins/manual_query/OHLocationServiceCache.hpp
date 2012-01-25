@@ -8,7 +8,7 @@
 #include "ProxSimulationTraits.hpp"
 #include <prox/base/LocationServiceCache.hpp>
 #include <sirikata/core/util/MotionQuaternion.hpp>
-#include <sirikata/proxyobject/PresenceProperties.hpp>
+#include <sirikata/core/util/PresenceProperties.hpp>
 #include <boost/thread.hpp>
 
 namespace Sirikata {
