@@ -1,3 +1,33 @@
+sirikata (0.0.19-0ubuntu1) oneiric; urgency=low
+
+  * New upstream release
+
+ -- Jeff Terrace <jterrace@gmail.com>  Wed, 25 Jan 2012 17:29:23 -0500
+
+sirikata (0.0.18-0ubuntu4) oneiric; urgency=low
+
+  * Adding v8 dependency
+
+ -- Jeff Terrace <jterrace@gmail.com>  Thu, 05 Jan 2012 19:00:24 -0500
+
+sirikata (0.0.18-0ubuntu3) oneiric; urgency=low
+
+  * Adding more dependencies
+
+ -- Jeff Terrace <jterrace@gmail.com>  Thu, 05 Jan 2012 14:18:29 -0500
+
+sirikata (0.0.18-0ubuntu2) oneiric; urgency=low
+
+  * Grab changes that should have been in 0.0.18 from master
+
+ -- Jeff Terrace <jterrace@gmail.com>  Wed, 04 Jan 2012 18:41:22 -0500
+
+sirikata (0.0.18-0ubuntu1) oneiric; urgency=low
+
+  * New upstream release
+
+ -- Jeff Terrace <jterrace@gmail.com>  Wed, 04 Jan 2012 16:10:22 -0500
+
 sirikata (0.0.17-5ubuntu1) oneiric; urgency=low
   * Trying to fix build system 5
 
