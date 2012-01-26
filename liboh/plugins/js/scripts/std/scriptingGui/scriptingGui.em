@@ -35,6 +35,7 @@
          this.scriptedVisMap   = scriptedVisMap;
          this.actionMap        = actionMap;
          this.console          = console;
+
          
          this.guiMod = simulator._simulator.addGUITextModule(
              guiName(),
@@ -52,7 +53,8 @@
          
          //trigger redraw call
          this.guiMod.call(
-             'ishmaelRedraw',toHtmlNearbyMap(this),toHtmlScriptedMap(this));
+             'ishmaelRedraw',toHtmlNearbyMap(this),toHtmlScriptedMap(this),
+             toHtmlActionMap(this));
          
      };
 
@@ -87,6 +89,15 @@
                          'in scriptingGui');
      };
 
+     // //whenever user selects an action to display, then we change
+     // //model of internal action that should be displaying.  
+     // std.ScriptingGui.prototype.hActionSelected = function(actId)
+     // {
+     //     if(actId in this.actionMap)
+     //         this.selectedAction = this.actionMap[actId];
+     //     else
+     //         this.selectedAction = undefined;
+     // };
      
      
      /**
@@ -108,6 +119,7 @@
              'removeVisible',
              std.core.bind(scriptingGui.hRemoveVisible,scriptingGui));
 
+         
          scriptingGui.redraw();
      }
      
@@ -142,6 +154,13 @@
          return returner;
      }
 
+
+     function toHtmlActionMap(scriptingGui)
+     {
+         return scriptingGui.actionMap;
+     }
+
+     
      
      function guiName()
      {
@@ -175,6 +194,17 @@
          }
 
 
+         function actionListId()
+         {
+             return 'ishmael__actionListID__';
+         }
+
+         function actionTareaId()
+         {
+             return 'ishmael__actionEditor__';
+         }
+         
+
          /**
           \param {String} nearbyObj (id of visible that we are
           communicating with).
@@ -198,7 +228,7 @@
              return 'ishmael__scriptedDivID___' + visIdDivable;
          }
 
-
+         
          function divizeVisibleId(visId)
          {
              return visId.replace(':','');
@@ -214,26 +244,98 @@
            '<div id="'+ nearbyListId() + '"  ' +
            'style="height:200px;width:250px;overflow:scroll;">'   +
            '</div>'  +
+
+           '<select id="' + actionListId() + '" size=5 multiple>' +
+           '</select>' +
+
+           '<textarea id="'+ actionTareaId() + '"  >' +
+           '</textarea>' +
            
            '</div>' //end div at top.
           ).attr({id:ishmaelWindowId(),title:'ishmael'}).appendTo('body');
 
+
+         //int id of the currently selected action.
+         var currentlySelectedAction = undefined;
+         //map from int to std.ScriptingGui.Action objects.  It gets
+         //updated whenever we received an ishmaelRedraw call.  Note
+         //that the redraw call will not write over the text of
+         //currentlySelectedAction.  This ensures that scripter
+         //edits will not be lost while they are being written if some
+         //other action triggers a call to ishmaelRedraw (for
+         //instance, a new nearbyObject gets added).
+         var allActions = undefined;
+
+         //set a listener for action list.  whenever select an option,
+         //should communicate that to emerson gui, so that can keep
+         //track of selected action.
+         $('#' + actionListId()).change(
+             function()
+             {
+                 var val = 
+                     $('#' + actionListId()).val();
+                 changeActionText(parseInt(val));
+                 sirikata.log('error', 'Selected action: '  + val.toString());
+             });
+         
          var inputWindow = new sirikata.ui.window(
              '#' + ishmaelWindowId(),
                  {
 	             autoOpen: true,
 	             height: 'auto',
-	             width: 300,
+	             width: 600,
                      height: 600,
                      position: 'right'
                  }
              );
          inputWindow.show();
+
+
+
+         /**
+          \param {int or undefined} idActSelected.  If an int, then
+          looks through record of allActions, and sets action text
+          area to that.  If undefined, then clears action text area.
+          */
+         function changeActionText(idActSelected)
+         {
+             currentlySelectedAction = idActSelected;
+             var textToSetTo = '';
+             
+             if (typeof(idActSelected) !='undefined')
+             {
+                 if (! idActSelected in allActions)
+                 {
+                     sirikata.log('error','action ids out of ' +
+                                  'sync with actions in scripting gui.');
+                     return;
+                 }
+
+                 textToSetTo = allActions[idActSelected].text;
+             }
+
+             //actually update textarea with correct text
+             $('#' + actionTareaId()).val(textToSetTo);
+         }
          
-         ishmaelRedraw = function(nearbyObjs,scriptedObjs)
+         
+         /**
+          \param {object: <int:std.ScriptingGui.Action>} actionMap
+
+          FIXEM: currentlySelectedAction is no longer passed. Instead,
+          maintain it in html/js
+
+          \param {int or undefined} currentlySelectedAction -- null if
+          do not have a currently selected action.  the id of the
+          action that is currently selected otherwise.  this id can be
+          used to index into actionMap
+          */
+         ishmaelRedraw = function(
+             nearbyObjs,scriptedObjs,actionMap)
          {
              redrawNearby(nearbyObjs);
              redrawScriptedObjs(scriptedObjs);
+             redrawActionList(actionMap);
          };
 
          
@@ -289,8 +391,38 @@
                      });
              }
          }
-         
-         
+
+
+
+         function redrawActionList(actionMap)
+         {
+             var prevCurAct = null;
+             if (typeof(currentlySelectedAction) != 'undefined')
+                 prevCurAct = allActions[currentlySelectedAction];
+
+             allActions = actionMap;
+             //preserves edits that scripter was potentially making
+             //when other action triggered redraw (eg. a new nearby
+             //object).
+             if (prevCurAct !== null)
+                 allActions[prevCurAct.id] = prevCurAct;
+
+             
+             var newHtml = '';
+             for (var s in actionMap)
+             {
+                 if (s === currentlySelectedAction)
+                     newHtml += '<option selected ';
+                 else
+                     newHtml += '<option ';
+
+                 newHtml += 'value="' + s + '">';
+                 newHtml += actionMap[s].name ;
+                 newHtml += '</option>';
+             }
+
+             $('#' + actionListId()).html(newHtml);
+         }
 
          @;
          

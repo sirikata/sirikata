@@ -50,6 +50,7 @@
         actionMap[actId] =
             new std.ScriptingGui.Action(name,text,actId);
 
+        gui.redraw();
         return actId;
     };
 
