@@ -134,7 +134,7 @@ Server::Server(SpaceContext* ctx, Authenticator* auth, Forwarder* forwarder, Loc
 
     mMigrationTimer.start();
 
-    mContext->mainStrand->post(Duration::seconds(2),std::tr1::bind(&Server::retryreportCount,this, 0));
+    //mContext->mainStrand->post(Duration::seconds(2),std::tr1::bind(&Server::retryreportCount,this, 0));
 }
 
 void Server::newStream(int err, SST::Stream<SpaceObjectReference>::Ptr s) {
