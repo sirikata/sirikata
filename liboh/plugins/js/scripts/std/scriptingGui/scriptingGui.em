@@ -471,7 +471,7 @@
              var newHtml = '';
              for (var s in actionMap)
              {
-                 if (s === currentlySelectedAction)
+                 if (parseInt(s) === parseInt(currentlySelectedAction))
                      newHtml += '<option selected ';
                  else
                      newHtml += '<option ';
