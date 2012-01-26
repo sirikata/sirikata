@@ -1,34 +1,6 @@
-/*  Sirikata
- *  DelegateService.cpp
- *
- *  Copyright (c) 2010, Ewen Cheslack-Postava
- *  All rights reserved.
- *
- *  Redistribution and use in source and binary forms, with or without
- *  modification, are permitted provided that the following conditions are
- *  met:
- *  * Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- *  * Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in
- *    the documentation and/or other materials provided with the
- *    distribution.
- *  * Neither the name of Sirikata nor the names of its contributors may
- *    be used to endorse or promote products derived from this software
- *    without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
- * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
- * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
- * PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
- * OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
- * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
- * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
- * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
- * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
- * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- */
+// Copyright (c) 2010 Sirikata Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can
+// be found in the LICENSE file.
 
 #include <sirikata/core/util/Standard.hh>
 #include <sirikata/core/odp/DelegateService.hpp>
@@ -99,21 +71,35 @@ PortID DelegateService::unusedODPPort(const SpaceID& space, const ObjectReferenc
 }
 
 PortID DelegateService::unusedODPPort(const SpaceObjectReference& sor) {
-    // 10000 is completely arbitrary and probably too high...
-    for(uint32 i = 0; i < 10000; i++) {
-        PortID port_id = (rand() % (OBJECT_PORT_SYSTEM_MAX-OBJECT_PORT_SYSTEM_RESERVED_MAX)) + (OBJECT_PORT_SYSTEM_RESERVED_MAX+1);
+    // We want to make this efficient in most cases, but need to make it
+    // exhaustively search for available ports when we can't easily find a free
+    // one. The approach is simple: choose a random port to start with and check
+    // if it's free. From there, perform a linear search (which must wrap and
+    // avoid reserved ports). This won't perform well in extreme cases where we
+    // the port space is almost completely full...
 
-        // If we don't have a PortMap yet, then its definitely not allocated
-        PortMap* pm = getPortMap(sor);
-        if (pm == NULL) return port_id;
+    PortID starting_port_id = (rand() % (OBJECT_PORT_SYSTEM_MAX-OBJECT_PORT_SYSTEM_RESERVED_MAX)) + (OBJECT_PORT_SYSTEM_RESERVED_MAX+1);
 
+    // If we don't have a PortMap yet, then its definitely not allocated
+    PortMap* pm = getPortMap(sor);
+    if (pm == NULL) return starting_port_id;
+
+    // Loop until we hit the starting point again
+    PortID port_id = starting_port_id;
+    do {
         // This port may be allocated already
         PortMap::iterator it = pm->find(port_id);
-        if (it != pm->end()) continue;
+        if (it == pm->end())
+            return port_id;
 
-        // Otherwise, we're all good
-        return port_id;
-    }
+        // Otherwise we need to move on, ensuring looping of Port IDs.
+        port_id++;
+        if (port_id > PortID(OBJECT_PORT_SYSTEM_MAX))
+            port_id = OBJECT_PORT_SYSTEM_RESERVED_MAX+1;
+    } while(port_id != starting_port_id);
+
+    // If we get here, we're really out of ports
+    SILOG(odp-delegate-service, error, "Exhausted ODP ports for " << sor);
     return PortID::null();
 }
 
