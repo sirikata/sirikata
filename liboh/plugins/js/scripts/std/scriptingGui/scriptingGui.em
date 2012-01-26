@@ -1,4 +1,5 @@
 
+system.require('std/core/simpleInput.em');
 
 (function()
  {
@@ -119,17 +120,31 @@
          this.controller.execAction(actId,visId);
      };
 
-     
-     // //whenever user selects an action to display, then we change
-     // //model of internal action that should be displaying.  
-     // std.ScriptingGui.prototype.hActionSelected = function(actId)
-     // {
-     //     if(actId in this.actionMap)
-     //         this.selectedAction = this.actionMap[actId];
-     //     else
-     //         this.selectedAction = undefined;
-     // };
-     
+     /**
+      Prompt user for the name of the new action using
+      std.core.SimpleInput.
+      */
+     std.ScriptingGui.prototype.hNewAction =
+         function()
+     {
+         var newInput = std.core.SimpleInput(
+             std.core.SimpleInput.ENTER_TEXT,
+             'Enter new action\'s name',
+             std.core.bind(addActionInputCB,undefined,this));
+     };
+
+     /**
+      @param {std.ScriptingGui} scriptingGui
+      @param {String} userResp_actionName - The name of the new action
+      that the user wants.
+      */
+     function addActionInputCB(scriptingGui,userResp_actionName)
+     {
+         //new action won't have any text in it.
+         scriptingGui.controller.addAction(userResp_actionName,'');
+         scriptingGui.redraw();
+     }
+      
      
      /**
       @param {std.ScriptingGui} 
@@ -161,7 +176,11 @@
          scriptingGui.guiMod.bind(
              'saveAndExecuteAction',
              std.core.bind(scriptingGui.hSaveAndExecuteAction,scriptingGui));
-         
+
+
+         scriptingGui.guiMod.bind(
+             'newAction',
+             std.core.bind(scriptingGui.hNewAction,scriptingGui));
          
          
          scriptingGui.redraw();
@@ -257,6 +276,11 @@
          {
              return 'ishmael__execActionButton__';
          }
+
+         function newActionButtonId()
+         {
+             return 'ishmael__newActionButton__';
+         }
          
          /**
           \param {String} nearbyObj (id of visible that we are
@@ -312,7 +336,9 @@
            'exec&save action' +
            '</button>' +
 
-
+           '<button id="' + newActionButtonId() + '">' +
+           'new action'   +
+           '</button>'    +
            
            '</div>' //end div at top.
           ).attr({id:ishmaelWindowId(),title:'ishmael'}).appendTo('body');
@@ -416,6 +442,16 @@
                      toSaveText,currentlySelectedVisible);
              });
 
+
+         //user asks for new action: we pass event down to
+         //scriptingGui, which creates a simpleInput asking for new
+         //action name.
+         $('#' + newActionButtonId()).click(
+             function()
+             {
+                 sirikata.event('newAction');
+             });
+         
          
          var inputWindow = new sirikata.ui.window(
              '#' + ishmaelWindowId(),
