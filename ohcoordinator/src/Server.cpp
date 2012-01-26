@@ -30,7 +30,6 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sirikata/ohcoordinator/SpaceNetwork.hpp>
 #include "Server.hpp"
 #include <sirikata/core/trace/Trace.hpp>
 #include <sirikata/core/options/CommonOptions.hpp>

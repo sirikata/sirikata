@@ -42,14 +42,12 @@
 #include <sirikata/ohcoordinator/ObjectSessionManager.hpp>
 #include <sirikata/ohcoordinator/Authenticator.hpp>
 
-#include <sirikata/ohcoordinator/SpaceNetwork.hpp>
 #include "Server.hpp"
 
 #include "Options.hpp"
 #include <sirikata/core/options/CommonOptions.hpp>
 #include <sirikata/core/util/PluginManager.hpp>
 #include <sirikata/core/trace/Trace.hpp>
-#include "TCPSpaceNetwork.hpp"
 #include <sirikata/core/network/ServerIDMap.hpp>
 
 #include <sirikata/ohcoordinator/SpaceContext.hpp>
@@ -135,16 +133,9 @@ int main(int argc, char** argv) {
 
     space_context->add(space_context);
 
-
     String timeseries_type = GetOptionValue<String>(OPT_TRACE_TIMESERIES);
     String timeseries_options = GetOptionValue<String>(OPT_TRACE_TIMESERIES_OPTIONS);
     Trace::TimeSeries* time_series = Trace::TimeSeriesFactory::getSingleton().getConstructor(timeseries_type)(space_context, timeseries_options);
-
-    Sirikata::SpaceNetwork* gNetwork = NULL;
-    String network_type = GetOptionValue<String>(NETWORK_TYPE);
-    if (network_type == "tcp")
-      gNetwork = new TCPSpaceNetwork(space_context);
-
 
     srand( GetOptionValue<uint32>("rand-seed") );
 
@@ -155,9 +146,6 @@ int main(int argc, char** argv) {
     String auth_opts = GetOptionValue<String>(SPACE_OPT_AUTH_OPTIONS);
     Authenticator* auth =
         AuthenticatorFactory::getSingleton().getConstructor(auth_type)(space_context, auth_opts);
-
-    gNetwork->setServerIDMap(server_id_map);
-
 
     // We need to do an async lookup, and to finish it the server needs to be
     // running. But we can't create the server until we have the address from
@@ -197,7 +185,6 @@ int main(int argc, char** argv) {
 
 
     space_context->add(auth);
-    space_context->add(gNetwork);
     space_context->add(ohSstConnMgr);
 
     space_context->run(3);
@@ -216,9 +203,6 @@ int main(int argc, char** argv) {
 
     delete obj_sess_mgr;
     delete oh_sess_mgr;
-
-    delete gNetwork;
-    gNetwork=NULL;
 
     gTrace->shutdown();
     delete gTrace;
