@@ -297,6 +297,11 @@ bool Server::onObjectHostMessageReceived(const ObjectHostConnectionID& conn_id, 
 
         // FIXME infinite queue
         mContext->mainStrand->post(
+// As a debugging tool for session messages, we can introduce delay in the
+// handling of session messages as a compile-time constant
+#ifdef SIRIKATA_SPACE_DELAY_HANDLE_SESSION_MESSAGE
+            Duration::seconds(SIRIKATA_SPACE_DELAY_HANDLE_SESSION_MESSAGE),
+#endif
             std::tr1::bind(
                 &Server::handleSessionMessage, this,
                 conn_id, obj_msg

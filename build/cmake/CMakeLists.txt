@@ -912,6 +912,16 @@ SET(TEST_CASSANDRA FALSE
   CACHE BOOL "If enabled, include Cassandra tests. These tests require an external service (cassandra) and may require changing the test code to point at the correct cassandra server."
 )
 
+# -- Compile-time debugging settings --
+# Space session message delay
+SET(SPACE_DELAY_HANDLE_SESSION_MESSAGE ""
+  CACHE STRING "If non-empty, apply this much delay (in seconds) to handling session messages on the space server."
+)
+STRING(LENGTH "${SPACE_DELAY_HANDLE_SESSION_MESSAGE}" SPACE_DELAY_HANDLE_SESSION_MESSAGE_LENGTH)
+IF(SPACE_DELAY_HANDLE_SESSION_MESSAGE_LENGTH GREATER 0)
+  ADD_DEFINITIONS(-DSIRIKATA_SPACE_DELAY_HANDLE_SESSION_MESSAGE=${SPACE_DELAY_HANDLE_SESSION_MESSAGE})
+ENDIF()
+# Space loc update delay
 SET(SPACE_DELAY_APPLY_LOC_UPDATE ""
   CACHE STRING "If non-empty, apply this much delay (in seconds) to applying loc update requests on the space server."
 )
