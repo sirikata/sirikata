@@ -144,7 +144,18 @@ system.require('std/core/simpleInput.em');
          scriptingGui.controller.addAction(userResp_actionName,'');
          scriptingGui.redraw();
      }
-      
+
+     /**
+      @param {String?} actId -- Should be parsedInt to get an index
+      into actionMap
+      */
+     std.ScriptingGui.prototype.hRemoveAction =
+         function(actId)
+     {
+         this.controller.removeAction(parseInt(actId));
+         this.redraw();
+     };
+     
      
      /**
       @param {std.ScriptingGui} 
@@ -181,7 +192,11 @@ system.require('std/core/simpleInput.em');
          scriptingGui.guiMod.bind(
              'newAction',
              std.core.bind(scriptingGui.hNewAction,scriptingGui));
-         
+
+         scriptingGui.guiMod.bind(
+             'removeAction',
+             std.core.bind(scriptingGui.hRemoveAction,scriptingGui));
+
          
          scriptingGui.redraw();
      }
@@ -281,6 +296,12 @@ system.require('std/core/simpleInput.em');
          {
              return 'ishmael__newActionButton__';
          }
+
+         function removeActionButtonId()
+         {
+             return 'ishmael__removeActionButton__';
+         }
+         
          
          /**
           \param {String} nearbyObj (id of visible that we are
@@ -315,30 +336,34 @@ system.require('std/core/simpleInput.em');
          $('<div>'   +
 
            '<b>Scripted presences</b><br/>' +
-           '<select id="'+ scriptedListId() + '"  size=5>' +
-           '</select><br/>'  +
+           '<select id="'     + scriptedListId() + '" size=5>' +
+           '</select><br/>'   +
 
            '<b>Nearby presences</b><br/>'      +
-           '<select id="'+ nearbyListId() + '"  size=5>' +
-           '</select><br/>'  +
+           '<select id="'     + nearbyListId() + '" size=5>'   +
+           '</select><br/>'   +
 
-           '<select id="' + actionListId() + '" size=5>'   +
-           '</select>' +
+           '<select id="'     + actionListId() + '" size=5>'   +
+           '</select>'        +
 
-           '<textarea id="'+ actionTareaId() + '"  >' +
-           '</textarea>' +
+           '<textarea id="'   + actionTareaId()         + '">' +
+           '</textarea>'      +
 
-           '<button id="' + saveActionButtonId() + '">' +
-           'save action' +
-           '</button>' +
+           '<button id="'     + saveActionButtonId()    + '">' +
+           'save action'      +
+           '</button>'        +
 
-           '<button id="' + execActionButtonId() + '">' +
+           '<button id="'     + execActionButtonId()    + '">' +
            'exec&save action' +
-           '</button>' +
+           '</button>'        +
 
-           '<button id="' + newActionButtonId() + '">' +
-           'new action'   +
-           '</button>'    +
+           '<button id="'     + newActionButtonId()     + '">' +
+           'new action'       +
+           '</button>'        +
+
+           '<button id="'     + removeActionButtonId()  + '">' +
+           'remove action'    +
+           '</button>'        +
            
            '</div>' //end div at top.
           ).attr({id:ishmaelWindowId(),title:'ishmael'}).appendTo('body');
@@ -452,6 +477,17 @@ system.require('std/core/simpleInput.em');
                  sirikata.event('newAction');
              });
          
+         $('#' + removeActionButtonId()).click(
+             function()
+             {
+                 if (typeof(currentlySelectedAction) == 'undefined')
+                     return;
+                 
+                 sirikata.event('removeAction',currentlySelectedAction);
+                 currentlySelectedAction = undefined;
+             });
+
+
          
          var inputWindow = new sirikata.ui.window(
              '#' + ishmaelWindowId(),
