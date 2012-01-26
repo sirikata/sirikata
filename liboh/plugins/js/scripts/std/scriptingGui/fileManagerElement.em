@@ -47,6 +47,16 @@
          return (name in this.fileMap);
      };
 
+     std.FileManager.FileManagerElement.prototype.getAllFilenames =
+         function()
+     {
+         var returner = {};
+
+         for(var s in this.fileMap)
+             returner[s] = s;
+
+         return returner;
+     };
 
      //Force visible to read all files sent.
      //Returns an object that the console can display in output.

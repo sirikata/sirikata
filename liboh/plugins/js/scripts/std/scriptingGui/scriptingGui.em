@@ -55,11 +55,10 @@ system.require('std/core/simpleInput.em');
          //trigger redraw call
          this.guiMod.call(
              'ishmaelRedraw',toHtmlNearbyMap(this),toHtmlScriptedMap(this),
-             toHtmlActionMap(this));
-         
+             toHtmlActionMap(this),toHtmlFileMap(this));
      };
 
-
+     
      /**
       @param {String} visId -- Id of visible.
       */
@@ -238,6 +237,11 @@ system.require('std/core/simpleInput.em');
          return scriptingGui.actionMap;
      }
 
+
+     function toHtmlFileMap(scriptingGui)
+     {
+         return scriptingGui.controller.htmlFileMap();
+     }
      
      
      function guiName()
@@ -301,6 +305,12 @@ system.require('std/core/simpleInput.em');
          {
              return 'ishmael__removeActionButton__';
          }
+
+         function fileSelectId()
+         {
+             return 'ishmael__fileSelectId__';
+         }
+         
          
          
          /**
@@ -335,6 +345,7 @@ system.require('std/core/simpleInput.em');
 
          $('<div>'   +
 
+           //which presences are available
            '<b>Scripted presences</b><br/>' +
            '<select id="'     + scriptedListId() + '" size=5>' +
            '</select><br/>'   +
@@ -343,6 +354,9 @@ system.require('std/core/simpleInput.em');
            '<select id="'     + nearbyListId() + '" size=5>'   +
            '</select><br/>'   +
 
+           '<hr/>'            + 
+
+           //action gui
            '<select id="'     + actionListId() + '" size=5>'   +
            '</select>'        +
 
@@ -364,11 +378,18 @@ system.require('std/core/simpleInput.em');
            '<button id="'     + removeActionButtonId()  + '">' +
            'remove action'    +
            '</button>'        +
+
+           '<hr/>'            +
+
+           //file gui
+           '<b>Files</b><br/>'  +
+           '<select id="'     + fileSelectId() + '" size=5>'   +
+           '</select>'        +
            
            '</div>' //end div at top.
           ).attr({id:ishmaelWindowId(),title:'ishmael'}).appendTo('body');
 
-
+         
          //The id of the visible that the scripter has selected to
          //program.
          var currentlySelectedVisible = undefined;
@@ -384,16 +405,18 @@ system.require('std/core/simpleInput.em');
          //instance, a new nearbyObject gets added).
          var allActions = undefined;
 
+         var currentlySelectedFile = undefined;
+         var allFiles = undefined;
+         
          $('#' + scriptedListId()).change(
              function()
              {
                  //loads the visible id 
                  var val = $('#' + scriptedListId()).val();
-                 currentlySelectedVisible = val;
 
-                 //for debugging
-                 sirikata.log(
-                     'error','Selected new vis to script: ' + val.toString());
+                 //updates currentlySelectedVisible and the display of
+                 //the files that should be associated with it.
+                 changeCurrentlySelectedVisible(val);
 
                  //if we change which visible we're scripting from the
                  //scripting selection menu, we want that change to be
@@ -418,10 +441,28 @@ system.require('std/core/simpleInput.em');
              function()
              {
                  var val = $('#'+nearbyListId()).val();
-                 currentlySelectedVisible = val;
+                 //updates currentlySelectedVisible and the display of
+                 //the files that should be associated with it.
+                 changeCurrentlySelectedVisible(val);
                  sirikata.event('addVisible',val);
              });
 
+
+         /**
+          \param {String} newVisible -- id of the new visible to set
+          currentlySelectedVisible to.
+
+          This function changes currentlySelectedVisible as well as
+          updating the file fields that should be associated with that
+          visible.
+          */
+         function changeCurrentlySelectedVisible(newVisible)
+         {
+             currentlySelectedVisible = newVisible;
+             //ensures that file list gets updated as well.
+             redrawFileSelect(allFiles); 
+         }
+         
          //when hit save, sends the action text through to controller
          //to save it.
          $('#' + saveActionButtonId()).click(
@@ -488,6 +529,12 @@ system.require('std/core/simpleInput.em');
              });
 
 
+         $('#' + fileSelectId()).change(
+             function()
+             {
+                 currentlySelectedFile = $('#' + fileSelectId()).val();
+             });
+         
          
          var inputWindow = new sirikata.ui.window(
              '#' + ishmaelWindowId(),
@@ -564,20 +611,19 @@ system.require('std/core/simpleInput.em');
          /**
           \param {object: <int:std.ScriptingGui.Action>} actionMap
 
-          FIXEM: currentlySelectedAction is no longer passed. Instead,
-          maintain it in html/js
-
-          \param {int or undefined} currentlySelectedAction -- null if
-          do not have a currently selected action.  the id of the
-          action that is currently selected otherwise.  this id can be
-          used to index into actionMap
+          
+          \param {object: <string (visibleId):
+              object: <string(filename):string(filename)>>} fileMap --
+          keyed by visible id, elements are maps of files that each
+          remote visible has on it.
           */
          ishmaelRedraw = function(
-             nearbyObjs,scriptedObjs,actionMap)
+             nearbyObjs,scriptedObjs,actionMap,fileMap)
          {
              redrawNearby(nearbyObjs);
              redrawScriptedObjs(scriptedObjs);
              redrawActionList(actionMap);
+             redrawFileSelect(fileMap);
          };
 
          
@@ -661,6 +707,65 @@ system.require('std/core/simpleInput.em');
 
              $('#' + actionListId()).html(newHtml);
          }
+
+         /**
+          \param {object: <string (visibleId):
+              object: <string(filename):string(filename)>>} fileMap --
+          keyed by visible id, elements are maps of files that each
+          remote visible has on it.
+
+          (fileMap can also be undefined if called from
+          changeCurrentlySelectedVisible.)
+          
+          Sets currentlySelectedFile to undefined if have no
+          currentlySelectedFile that exists in list of files under
+          currentlySelectedVisible.  This ensures that
+          changeCurrentlySelectedVisible can call this function
+          whenever want to update files after having updated
+          currentlySelectedVisible.
+          */
+         function redrawFileSelect(fileMap)
+         {
+             if (typeof(allFiles) == 'undefined')
+                 allFiles = fileMap;
+
+             //no work to do.
+             if(typeof(allFiles) == 'undefined')
+                 return;
+             
+             //no visible selected, and hence no list of files to
+             //show.
+             if (typeof(currentlySelectedVisible) == 'undefined')
+             {
+                 currentlySelectedFile = undefined;
+                 return;                     
+             }
+
+
+             var visFiles = fileMap[currentlySelectedVisible];
+             var newHtml = '';
+             var haveSelectedFile = false;
+             for (var s in visFiles)
+             {
+                 if (s === currentlySelectedFile)
+                 {
+                     newHtml += '<option selected ';
+                     haveSelectedFile = true;
+                 }
+                 else
+                     newHtml += '<option ';
+
+                 newHtml += 'value="' + s + '">';
+                 newHtml += visFiles[s];
+                 newHtml += '</option>';
+             }
+
+             if (!haveSelectedFile)
+                 currentlySelectedFile = undefined;
+             
+             $('#' + fileSelectId()).html(newHtml);
+         }
+         
 
          @;
          

@@ -298,7 +298,25 @@
         return scriptedVisMap[vis.toString()].rereadFile(filename);
     };
      
+
+    /**
+     @returns {object: <string (visibleId):
+              object: <string(filename):string(filename)>>}
      
+     keyed by visible id, elements are maps of files that each remote
+     visible has on it.
+     
+     @see ishmaelRedraw in scriptingGui.em
+     */
+    std.ScriptingGui.Controller.prototype.htmlFileMap =function()
+    {
+        var returner = {};
+
+        for (var s in scriptedVisMap)
+            returner[s] = scriptedVisMap[s].getAllFilenames();
+        return returner;
+    };
+    
     //if text is undefined, means just use the version on disk.
     std.ScriptingGui.Controller.prototype.addFile = function(vis,filename,text)
     {
