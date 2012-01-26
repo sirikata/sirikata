@@ -104,6 +104,21 @@
      {
          this.controller.editAction(parseInt(actId),newText);
      };
+
+     /**
+      @param {String?} actId -- Should be parsedInt to get an index
+      into actionMap
+      @param {String} newText -- What action with actId should set as
+      its text.
+      @param {String} visId   -- Id of visible to execute action on.
+      */
+     std.ScriptingGui.prototype.hSaveAndExecuteAction =
+         function(actId,newText, visId)
+     {
+         this.hSaveAction(actId,newText);
+         this.controller.execAction(actId,visId);
+     };
+
      
      // //whenever user selects an action to display, then we change
      // //model of internal action that should be displaying.  
@@ -140,6 +155,13 @@
          scriptingGui.guiMod.bind(
              'saveAction',
              std.core.bind(scriptingGui.hSaveAction,scriptingGui));
+
+
+         //saves and executes action to visible.
+         scriptingGui.guiMod.bind(
+             'saveAndExecuteAction',
+             std.core.bind(scriptingGui.hSaveAndExecuteAction,scriptingGui));
+         
          
          
          scriptingGui.redraw();
@@ -230,6 +252,11 @@
          {
              return 'ishmael__saveActionButton__';
          }
+
+         function execActionButtonId()
+         {
+             return 'ishmael__execActionButton__';
+         }
          
          /**
           \param {String} nearbyObj (id of visible that we are
@@ -280,6 +307,12 @@
            '<button id="' + saveActionButtonId() + '">' +
            'save action' +
            '</button>' +
+
+           '<button id="' + execActionButtonId() + '">' +
+           'exec&save action' +
+           '</button>' +
+
+
            
            '</div>' //end div at top.
           ).attr({id:ishmaelWindowId(),title:'ishmael'}).appendTo('body');
@@ -361,7 +394,28 @@
                      'saveAction',currentlySelectedAction,toSaveText);
              });
 
-         
+
+         //saves and executes current action
+         $('#' + execActionButtonId()).click(
+             function()
+             {
+                 if ((typeof(currentlySelectedAction)  == 'undefined') ||
+                     (typeof(currentlySelectedVisible) == 'undefined'))
+                 {
+                     sirikata.log(
+                         'error','Cannot execute action.  ' +
+                             'No vis or action selected.');
+                     return;
+                 }
+
+                 //see comments in click handler for saveActionButton.
+                 var toSaveText = $('#' + actionTareaId()).val();
+                 allActions[currentlySelectedAction].text = toSaveText;
+                 sirikata.event(
+                     'saveAndExecuteAction',currentlySelectedAction,
+                     toSaveText,currentlySelectedVisible);
+             });
+
          
          var inputWindow = new sirikata.ui.window(
              '#' + ishmaelWindowId(),
