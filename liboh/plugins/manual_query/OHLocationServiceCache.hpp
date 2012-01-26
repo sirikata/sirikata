@@ -7,8 +7,8 @@
 
 #include "ProxSimulationTraits.hpp"
 #include <prox/base/LocationServiceCache.hpp>
-#include <sirikata/core/util/MotionQuaternion.hpp>
 #include <sirikata/core/util/PresenceProperties.hpp>
+#include "OHLocationUpdateListener.hpp"
 #include <boost/thread.hpp>
 
 namespace Sirikata {
@@ -35,7 +35,9 @@ typedef std::tr1::shared_ptr<OHLocationServiceCache> OHLocationServiceCachePtr;
  *  ensure the (non-thread-safe) data remains consistent when reported.
  */
 class OHLocationServiceCache :
-        public Prox::LocationServiceCache<ObjectProxSimulationTraits> {
+        public Prox::LocationServiceCache<ObjectProxSimulationTraits>,
+        public OHLocationUpdateProvider
+{
 public:
     typedef Prox::LocationUpdateListener<ObjectProxSimulationTraits> LocationUpdateListener;
 
@@ -97,6 +99,11 @@ private:
     void notifyObjectRemoved(const ObjectReference& uuid);
     void notifyLocationUpdated(const ObjectReference& uuid, const TimedMotionVector3f& oldval, const TimedMotionVector3f& newval);
     void notifyBoundsUpdated(const ObjectReference& uuid, const BoundingSphere3f& oldval, const BoundingSphere3f& newval);
+    // These are only used by OHLocationUpdateListener so they don't need values
+    // with them (see comments for that class)
+    void notifyOrientationUpdated(const ObjectReference& uuid);
+    void notifyMeshUpdated(const ObjectReference& uuid);
+    void notifyPhysicsUpdated(const ObjectReference& uuid);
 
 
     OHLocationServiceCache();
