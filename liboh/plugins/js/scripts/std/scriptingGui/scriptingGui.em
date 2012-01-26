@@ -93,6 +93,18 @@
                          'in scriptingGui');
      };
 
+
+     /**
+      @param {String?} actId -- Should be parsedInt to get an index
+      into actionMap
+      @param {String} newText -- What action with actId should set as
+      its text.
+      */
+     std.ScriptingGui.prototype.hSaveAction = function(actId,newText)
+     {
+         this.controller.editAction(parseInt(actId),newText);
+     };
+     
      // //whenever user selects an action to display, then we change
      // //model of internal action that should be displaying.  
      // std.ScriptingGui.prototype.hActionSelected = function(actId)
@@ -123,6 +135,12 @@
              'removeVisible',
              std.core.bind(scriptingGui.hRemoveVisible,scriptingGui));
 
+         //when a user updates a particular action, and clicks to save
+         //the new action text.
+         scriptingGui.guiMod.bind(
+             'saveAction',
+             std.core.bind(scriptingGui.hSaveAction,scriptingGui));
+         
          
          scriptingGui.redraw();
      }
@@ -208,7 +226,11 @@
              return 'ishmael__actionEditor__';
          }
          
-
+         function saveActionButtonId()
+         {
+             return 'ishmael__saveActionButton__';
+         }
+         
          /**
           \param {String} nearbyObj (id of visible that we are
           communicating with).
@@ -254,6 +276,10 @@
 
            '<textarea id="'+ actionTareaId() + '"  >' +
            '</textarea>' +
+
+           '<button id="' + saveActionButtonId() + '">' +
+           'save action' +
+           '</button>' +
            
            '</div>' //end div at top.
           ).attr({id:ishmaelWindowId(),title:'ishmael'}).appendTo('body');
@@ -312,7 +338,30 @@
                  sirikata.event('addVisible',val);
              });
 
+         //when hit save, sends the action text through to controller
+         //to save it.
+         $('#' + saveActionButtonId()).click(
+             function()
+             {
+                 //no action is selected
+                 if ((typeof(currentlySelectedAction) == 'undefined') ||
+                     (currentlySelectedAction === null))
+                     return;
 
+                 var toSaveText = $('#' + actionTareaId()).val();
+
+                 //saving action does not force a redraw.  must
+                 //preserve new text in allActions on our end. (takes
+                 //care of failure case where save an action, then
+                 //click on another action, then return to current
+                 //action).
+                 allActions[currentlySelectedAction].text = toSaveText;
+                 
+                 sirikata.event(
+                     'saveAction',currentlySelectedAction,toSaveText);
+             });
+
+         
          
          var inputWindow = new sirikata.ui.window(
              '#' + ishmaelWindowId(),
@@ -378,7 +427,6 @@
                                   'sync with actions in scripting gui.');
                      return;
                  }
-
                  textToSetTo = allActions[idActSelected].text;
              }
 
@@ -458,7 +506,11 @@
          {
              var prevCurAct = null;
              if (typeof(currentlySelectedAction) != 'undefined')
+             {
                  prevCurAct = allActions[currentlySelectedAction];
+                 //update with text that had entered in tarea.
+                 prevCurAct.text = $('#' + actionTareaId()).val();
+             }
 
              allActions = actionMap;
              //preserves edits that scripter was potentially making
