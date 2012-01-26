@@ -86,22 +86,6 @@ Server::Server(SpaceContext* ctx, Authenticator* auth, Address4 oh_listen_addr, 
     mCount = 0;
 }
 
-void Server::newStream(int err, SST::Stream<SpaceObjectReference>::Ptr s) {
-  if (err != SST_IMPL_SUCCESS){
-    return;
-  }
-
-  // If we've lost the object's connection, we should just ignore this
-  ObjectReference objid = s->remoteEndPoint().endPoint.object();
-  if (mObjects.find(objid.getAsUUID()) == mObjects.end()) {
-      s->close(false);
-      return;
-  }
-
-  // Otherwise, they have a complete session
-  mObjectSessionManager->completeSession(objid, s);
-}
-
 Server::~Server()
 {
     SPACE_LOG(debug, "mObjects.size=" << mObjects.size());

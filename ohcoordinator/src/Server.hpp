@@ -132,8 +132,6 @@ private:
     // Send a disconnection to OH
     void sendDisconnect(const ObjectHostConnectionID& oh_conn_id, const UUID& obj_id, const String& reason);
 
-    void newStream(int err, SST::Stream<SpaceObjectReference>::Ptr s);
-
     SpaceContext* mContext;
 
     TimeSyncServer* mTimeSyncServer;
