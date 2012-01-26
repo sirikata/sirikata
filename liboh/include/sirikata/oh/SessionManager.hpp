@@ -276,8 +276,6 @@ private:
 
     Sirikata::SerializationCheck mSerialization;
 
-    // Main strand only
-
     // Callbacks for parent ObjectHost
     ObjectConnectedCallback mObjectConnectedCallback;
     ObjectMigratedCallback mObjectMigratedCallback;
@@ -314,6 +312,9 @@ private:
         );
 
         bool exists(const SpaceObjectReference& sporef_objid);
+
+        // Get a new seqno, and store it
+        uint64 updateSeqno(const SpaceObjectReference& sporef_objid);
 
         // Mark the object as connecting to the given server
         ConnectingInfo& connectingTo(const SpaceObjectReference& obj, ServerID connecting_to);
@@ -362,10 +363,15 @@ private:
     private:
         SessionManager* parent;
 
+        // Source for seqnos for Session messages
+        uint64 mSeqnoSource;
+
         struct ObjectInfo {
             ObjectInfo();
 
             ConnectingInfo connectingInfo;
+
+            uint64 seqno;
 
             // Server currently being connected to
             ServerID connectingTo;

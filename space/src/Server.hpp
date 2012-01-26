@@ -157,17 +157,17 @@ private:
     void handleSessionMessage(const ObjectHostConnectionID& oh_conn_id, Sirikata::Protocol::Object::ObjectMessage* msg);
     // Handle Connect message from object
     void retryHandleConnect(const ObjectHostConnectionID& oh_conn_id, Sirikata::Protocol::Object::ObjectMessage* );
-    void handleConnect(const ObjectHostConnectionID& oh_conn_id, const Sirikata::Protocol::Object::ObjectMessage& container, const Sirikata::Protocol::Session::Connect& connect_msg);
-    void handleConnectAuthResponse(const ObjectHostConnectionID& oh_conn_id, const UUID& obj_id, const Sirikata::Protocol::Session::Connect& connect_msg, bool authenticated);
+    void handleConnect(const ObjectHostConnectionID& oh_conn_id, const Sirikata::Protocol::Object::ObjectMessage& container, const Sirikata::Protocol::Session::Connect& connect_msg, uint64 seqno);
+    void handleConnectAuthResponse(const ObjectHostConnectionID& oh_conn_id, const UUID& obj_id, const Sirikata::Protocol::Session::Connect& connect_msg, uint64 seqno, bool authenticated);
 
-    void sendConnectSuccess(const ObjectHostConnectionID& oh_conn_id, const UUID& obj_id);
-    void sendConnectError(const ObjectHostConnectionID& oh_conn_id, const UUID& obj_id);
+    void sendConnectSuccess(const ObjectHostConnectionID& oh_conn_id, const UUID& obj_id, uint64 session_request_seqno);
+    void sendConnectError(const ObjectHostConnectionID& oh_conn_id, const UUID& obj_id, uint64 session_request_seqno);
 
     // Handle connection ack message from object
     void handleConnectAck(const ObjectHostConnectionID& oh_conn_id, const Sirikata::Protocol::Object::ObjectMessage& container);
 
     // Handle Migrate message from object
-    void handleMigrate(const ObjectHostConnectionID& oh_conn_id, const Sirikata::Protocol::Object::ObjectMessage& container, const Sirikata::Protocol::Session::Connect& migrate_msg);
+    void handleMigrate(const ObjectHostConnectionID& oh_conn_id, const Sirikata::Protocol::Object::ObjectMessage& container, const Sirikata::Protocol::Session::Connect& migrate_msg, uint64 seqno);
 
     // Performs actual migration after all the necessary information is available.
     void handleMigration(const UUID& obj_id);
@@ -216,7 +216,14 @@ private:
                                   // should actually use the connection, this is
                                   // only still a map to handle migrations
                                   // properly
-    ObjectConnectionMap mObjectsAwaitingMigration;
+    // Information to be able to respond to a migration request *from
+    // the object*.
+    struct MigrationRequestInfo {
+        ObjectConnection* conn;
+        uint64 session_seqno;
+    };
+    typedef std::tr1::unordered_map<UUID, MigrationRequestInfo, UUID::Hasher> MigrationRequestMap;
+    MigrationRequestMap mObjectsAwaitingMigration;
 
 
     typedef std::tr1::unordered_map<UUID, Sirikata::Protocol::Migration::MigrationMessage*, UUID::Hasher> ObjectMigrationMap;
@@ -250,6 +257,9 @@ private:
     {
       ObjectHostConnectionID    conn_id;
       Sirikata::Protocol::Session::Connect             conn_msg;
+        // Sequence number from session request so we can uniquely
+        // identify the request
+        uint64 session_seqno;
     };
 
     typedef std::map<UUID, StoredConnection> StoredConnectionMap;

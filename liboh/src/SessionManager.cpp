@@ -66,7 +66,8 @@ void logVersionInfo(Sirikata::Protocol::Session::VersionInfo vers_info) {
 
 // ObjectInfo Implementation
 SessionManager::ObjectConnections::ObjectInfo::ObjectInfo()
- : connectingTo(0),
+ : seqno(0),
+   connectingTo(0),
    connectedTo(0),
    migratingTo(0),
    connectedAs(SpaceObjectReference::null()),
@@ -77,7 +78,8 @@ SessionManager::ObjectConnections::ObjectInfo::ObjectInfo()
 // ObjectConnections Implementation
 
 SessionManager::ObjectConnections::ObjectConnections(SessionManager* _parent)
- : parent(_parent)
+ : parent(_parent),
+   mSeqnoSource(1)
 {
 }
 
@@ -106,6 +108,12 @@ void SessionManager::ObjectConnections::add(
 
 bool SessionManager::ObjectConnections::exists(const SpaceObjectReference& sporef_objid) {
     return mObjectInfo.find(sporef_objid) != mObjectInfo.end();
+}
+
+uint64 SessionManager::ObjectConnections::updateSeqno(const SpaceObjectReference& sporef_objid) {
+    uint64 seqno = mSeqnoSource++;
+    mObjectInfo[sporef_objid].seqno = seqno;
+    return seqno;
 }
 
 SessionManager::ConnectingInfo& SessionManager::ObjectConnections::connectingTo(const SpaceObjectReference& sporef_objid, ServerID connecting_to) {
@@ -460,6 +468,7 @@ void SessionManager::disconnect(const SpaceObjectReference& sporef_objid) {
     // Construct and send disconnect message.  This has to happen first so we still have
     // connection information so we know where to send the disconnect
     Sirikata::Protocol::Session::Container session_msg;
+    session_msg.set_seqno( mObjectConnections.updateSeqno(sporef_objid) );
     Sirikata::Protocol::Session::IDisconnect disconnect_msg = session_msg.mutable_disconnect();
     disconnect_msg.set_object(sporef_objid.object().getAsUUID());
     disconnect_msg.set_reason("Quit");
@@ -472,6 +481,11 @@ void SessionManager::disconnect(const SpaceObjectReference& sporef_objid) {
         serializePBJMessage(session_msg),
         connected_to, mContext->mainStrand, Duration::seconds(0.05)
     );
+
+    // TODO(ewencp) we should probably keep around a record of this
+    // and get an ack from the space server. Otherwise we could end up
+    // with connections that get stuck if this OH remains connected to
+    // the OH
 
     // Notify of disconnect (requested), then remove
     mObjectConnections.gracefulDisconnect(sporef_objid);
@@ -513,6 +527,7 @@ void SessionManager::openConnectionStartSession(const SpaceObjectReference& spor
     ConnectingInfo ci = mObjectConnections.connectingTo(sporef_uuid, conn->server());
 
     Sirikata::Protocol::Session::Container session_msg;
+    session_msg.set_seqno( mObjectConnections.updateSeqno(sporef_uuid) );
     Sirikata::Protocol::Session::IConnect connect_msg = session_msg.mutable_connect();
     fillVersionInfo(connect_msg.mutable_version(), mContext);
     connect_msg.set_type(Sirikata::Protocol::Session::Connect::Fresh);
@@ -603,6 +618,7 @@ void SessionManager::openConnectionStartMigration(const SpaceObjectReference& sp
     }
 
     Sirikata::Protocol::Session::Container session_msg;
+    session_msg.set_seqno( mObjectConnections.updateSeqno(sporef_obj_id) );
     Sirikata::Protocol::Session::IConnect connect_msg = session_msg.mutable_connect();
     fillVersionInfo(connect_msg.mutable_version(), mContext);
     connect_msg.set_type(Sirikata::Protocol::Session::Connect::Migration);
@@ -977,6 +993,8 @@ void SessionManager::handleSessionMessage(Sirikata::Protocol::Object::ObjectMess
         return;
     }
 
+    uint64 seqno = (session_msg.has_seqno() ? session_msg.seqno() : 0);
+
     assert(!session_msg.has_connect());
     SpaceObjectReference sporef_obj(mSpace,ObjectReference(msg->dest_object()));
 
@@ -991,7 +1009,7 @@ void SessionManager::handleSessionMessage(Sirikata::Protocol::Object::ObjectMess
             // To handle unreliability, we may get extra copies of the reply. If
             // we're already connected, ignore this.
             if ((mObjectConnections.getConnectedServer(sporef_obj) != NullServerID) &&
-                (mObjectConnections.getMigratingToServer(sporef_obj) == NullServerID) && 
+                (mObjectConnections.getMigratingToServer(sporef_obj) == NullServerID) &&
                 (mObjectConnections.getConnectingToServer(sporef_obj) == NullServerID))
             {
                 delete msg;
@@ -1023,6 +1041,7 @@ void SessionManager::handleSessionMessage(Sirikata::Protocol::Object::ObjectMess
 
 	    // Send an ack so the server (our first conn or after migrating) can start sending data to us
 	    Sirikata::Protocol::Session::Container ack_msg;
+            // Omit seqno here, no need for it since this ack would never have a response
 	    Sirikata::Protocol::Session::IConnectAck connect_ack_msg = ack_msg.mutable_connect_ack();
 	    sendRetryingMessage(
 				sporef_obj, OBJECT_PORT_SESSION,
