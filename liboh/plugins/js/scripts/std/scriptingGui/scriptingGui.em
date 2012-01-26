@@ -237,15 +237,16 @@
 
          $('<div>'   +
 
-           '<div id="'+ scriptedListId() + '"  ' +
-           'style="height:200px;width:250px;overflow:scroll;">'   +
-           '</div>'  +
-           
+           '<b>Scripted presences</b><br/>' +
+           '<select id="'+ scriptedListId() + '"  size=5>' +
+           '</select><br/>'  +
+
+           '<b>Nearby presences</b><br/>'      +
            '<div id="'+ nearbyListId() + '"  ' +
-           'style="height:200px;width:250px;overflow:scroll;">'   +
+           'style="height:200px;width:250px;overflow:scroll;">'     +
            '</div>'  +
 
-           '<select id="' + actionListId() + '" size=5 multiple>' +
+           '<select id="' + actionListId() + '" size=5>'   +
            '</select>' +
 
            '<textarea id="'+ actionTareaId() + '"  >' +
@@ -255,6 +256,10 @@
           ).attr({id:ishmaelWindowId(),title:'ishmael'}).appendTo('body');
 
 
+         //The id of the visible that the scripter has selected to
+         //program.
+         var currentlySelectedVisible = undefined;
+         
          //int id of the currently selected action.
          var currentlySelectedAction = undefined;
          //map from int to std.ScriptingGui.Action objects.  It gets
@@ -266,6 +271,18 @@
          //instance, a new nearbyObject gets added).
          var allActions = undefined;
 
+         $('#' + scriptedListId()).change(
+             function()
+             {
+                 //loads the visible id 
+                 var val = $('#' + scriptedListId()).val();
+                 currentlySelectedVisible = val;
+
+                 //for debugging
+                 sirikata.log(
+                     'error','Selected new vis to script: ' + val.toString());
+             });
+         
          //set a listener for action list.  whenever select an option,
          //should communicate that to emerson gui, so that can keep
          //track of selected action.
@@ -345,7 +362,7 @@
           */
          function redrawNearby(nearbyObjs)
          {
-             var newHtml = '<b>Nearby presences</b><br/>';
+             var newHtml = '';
              for (var s in nearbyObjs)
              {
                  newHtml += '<div id="' + generateNearbyDivId(s) + '">';
@@ -372,24 +389,19 @@
           */
          function redrawScriptedObjs(scriptedObjs)
          {
-             var newHtml = '<b>Scripted presences</b><br/>';
+             var newHtml = '';
              for (var s in scriptedObjs)
              {
-                 newHtml += '<div id="' + generateScriptedDivId(s) + '">';
+                 if (s === currentlySelectedVisible)
+                     newHtml += '<option selected ';
+                 else
+                     newHtml += '<option ';
+                 
+                 newHtml += 'value="' +s +  '">';
                  newHtml += s;
-                 newHtml += '</div>';
+                 newHtml += '</option>';
              }
              $('#' + scriptedListId()).html(newHtml);
-
-             
-             for (var s in scriptedObjs)
-             {
-                 $('#' + generateScriptedDivId(s)).click(
-                     function()
-                     {
-                         sirikata.log('error','\\\n\\\nClicked on scripted\\\n\\\n');
-                     });
-             }
          }
 
 
