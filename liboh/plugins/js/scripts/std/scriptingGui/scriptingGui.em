@@ -69,16 +69,20 @@
          if (visId in this.scriptedVisMap)
          {
              this.console.guiEvent();
+             this.redraw();
              return;
          }
+
 
          if (!(visId in this.nearbyVisMap))
          {
              //visible is no longer available.
              this.console.guiEvent();
+             this.redraw();
              return;
          }
 
+         //redraw called from inside of addVisible.
          this.controller.addVisible(this.nearbyVisMap[visId]);
      };
 
@@ -242,9 +246,8 @@
            '</select><br/>'  +
 
            '<b>Nearby presences</b><br/>'      +
-           '<div id="'+ nearbyListId() + '"  ' +
-           'style="height:200px;width:250px;overflow:scroll;">'     +
-           '</div>'  +
+           '<select id="'+ nearbyListId() + '"  size=5>' +
+           '</select><br/>'  +
 
            '<select id="' + actionListId() + '" size=5>'   +
            '</select>' +
@@ -281,6 +284,11 @@
                  //for debugging
                  sirikata.log(
                      'error','Selected new vis to script: ' + val.toString());
+
+                 //if we change which visible we're scripting from the
+                 //scripting selection menu, we want that change to be
+                 //reflected in the nearby selection list.
+                 updateNearbySelection(val.toString());
              });
          
          //set a listener for action list.  whenever select an option,
@@ -294,6 +302,17 @@
                  changeActionText(parseInt(val));
                  sirikata.log('error', 'Selected action: '  + val.toString());
              });
+
+         
+         $('#' + nearbyListId()).change(
+             function()
+             {
+                 var val = $('#'+nearbyListId()).val();
+                 currentlySelectedVisible = val;
+                 sirikata.event('addVisible',val);
+             });
+
+
          
          var inputWindow = new sirikata.ui.window(
              '#' + ishmaelWindowId(),
@@ -307,6 +326,38 @@
              );
          inputWindow.show();
 
+
+
+         /**
+          changes selection in updateNearby to the one associated with
+          visibleId (if it's available).  If it's not, then we just
+          unselect.
+
+          Right now, we take a performance hit, because the selection
+          change that we do here will trigger the .change handler
+          associated with nearbyList.  Should still maintain semantics
+          though.
+          */
+         function updateNearbySelection(visibleId)
+         {
+             var nearbyOption = $('#' + generateNearbyDivId(visibleId));
+             if (nearbyOption.size())
+             {
+                 //means that the element did exist.  now want it to
+                 //appear selected in nearbyList.
+                 var nearbyVal = nearbyOption.val();
+                 $('#' + nearbyListId()).val(nearbyVal);
+             }
+             else
+             {
+                 var errMsg =
+                     'In updatenearbyselection attempting '+
+                     'to set selector to none.';
+                 
+                 sirikatal.log('error',errMsg);
+                 $('#' + nearbyListId()).val(null);                     
+             }
+         }
 
 
          /**
@@ -365,20 +416,17 @@
              var newHtml = '';
              for (var s in nearbyObjs)
              {
-                 newHtml += '<div id="' + generateNearbyDivId(s) + '">';
+                 if (s===currentlySelectedVisible)
+                     newHtml += '<option selected ';
+                 else
+                     newHtml += '<option ';
+
+                 newHtml += 'value="' + s + '" ';
+                 newHtml += 'id="' + generateNearbyDivId(s) + '">';
                  newHtml += s;
-                 newHtml += '</div>';
+                 newHtml += '</option>';
              }
              $('#' + nearbyListId()).html(newHtml);
-
-             for (var s in nearbyObjs)
-             {
-                 $('#' + generateNearbyDivId(s)).click(
-                     function()
-                     {
-                         sirikata.event('addVisible',s);
-                     });
-             }
          }
 
 
