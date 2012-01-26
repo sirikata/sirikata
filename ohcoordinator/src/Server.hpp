@@ -69,7 +69,7 @@ class ObjectSessionManager;
 
 class Server :
         public Service,
-        public ODP::DelegateService, public OHDP::DelegateService,
+        public OHDP::DelegateService,
         ObjectHostConnectionManager::Listener
 {
 public:
@@ -80,10 +80,6 @@ private:
     // Service Implementation
     void start();
     void stop();
-
-    // ODP::DelegateService dependencies
-    ODP::DelegatePort* createDelegateODPPort(ODP::DelegateService*, const SpaceObjectReference& sor, ODP::PortID port);
-    bool delegateODPPortSend(const ODP::Endpoint& source_ep, const ODP::Endpoint& dest_ep, MemoryReference payload);
 
     // OHDP::DelegateService dependencies
     OHDP::DelegatePort* createDelegateOHDPPort(OHDP::DelegateService*, const OHDP::Endpoint& ept);
@@ -143,7 +139,7 @@ private:
     TimeSyncServer* mTimeSyncServer;
 
     Authenticator* mAuthenticator;
-    LocalForwarder* mLocalForwarder;
+
     ObjectHostSessionManager* mOHSessionManager;
     ObjectSessionManager* mObjectSessionManager;
 

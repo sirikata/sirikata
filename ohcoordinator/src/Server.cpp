@@ -35,7 +35,6 @@
 #include <sirikata/core/trace/Trace.hpp>
 #include <sirikata/core/options/CommonOptions.hpp>
 #include <sirikata/ohcoordinator/Authenticator.hpp>
-#include "LocalForwarder.hpp"
 
 #include "ObjectConnection.hpp"
 #include <sirikata/ohcoordinator/ObjectSessionManager.hpp>
@@ -69,28 +68,15 @@ void logVersionInfo(Sirikata::Protocol::Session::VersionInfo vers_info) {
 } // namespace
 
 Server::Server(SpaceContext* ctx, Authenticator* auth, Address4 oh_listen_addr, ObjectHostSessionManager* oh_sess_mgr, ObjectSessionManager* obj_sess_mgr)
- :ODP::DelegateService( std::tr1::bind(&Server::createDelegateODPPort, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2, std::tr1::placeholders::_3) ),
-  OHDP::DelegateService( std::tr1::bind(&Server::createDelegateOHDPPort, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2) ),
+ :OHDP::DelegateService( std::tr1::bind(&Server::createDelegateOHDPPort, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2) ),
   mContext(ctx),
   mAuthenticator(auth),
-  mLocalForwarder(NULL),
   mOHSessionManager(oh_sess_mgr),
   mObjectSessionManager(obj_sess_mgr),
   mShutdownRequested(false),
   mObjectHostConnectionManager(NULL),
   mRouteObjectMessage(Sirikata::SizedResourceMonitor(GetOptionValue<size_t>("route-object-message-buffer")))
 {
-    using std::tr1::placeholders::_1;
-    using std::tr1::placeholders::_2;
-
-    mContext->sstConnectionManager()->createDatagramLayer(
-            SpaceObjectReference(SpaceID::null(), ObjectReference::spaceServiceID()), mContext, this
-        );
-
-    mContext->sstConnectionManager()->listen(
-        std::tr1::bind(&Server::newStream, this, _1, _2),
-        SST::EndPoint<SpaceObjectReference>(SpaceObjectReference(SpaceID::null(), ObjectReference::spaceServiceID()), OBJECT_SPACE_PORT)
-    );
     // ObjectHostConnectionManager takes care of listening for raw connections
     // and setting up SST connections with them.
     mObjectHostConnectionManager = new ObjectHostConnectionManager(
@@ -98,9 +84,6 @@ Server::Server(SpaceContext* ctx, Authenticator* auth, Address4 oh_listen_addr, 
         static_cast<OHDP::Service*>(this),
         static_cast<ObjectHostConnectionManager::Listener*>(this)
     );
-
-    mLocalForwarder = new LocalForwarder(mContext);
-
     mCount = 0;
 }
 
@@ -126,44 +109,6 @@ Server::~Server()
     mObjects.clear();
     delete mObjectHostConnectionManager;
 }
-
-ODP::DelegatePort* Server::createDelegateODPPort(ODP::DelegateService*, const SpaceObjectReference& sor, ODP::PortID port) {
-    using std::tr1::placeholders::_1;
-    using std::tr1::placeholders::_2;
-
-    ODP::Endpoint port_ep(sor, port);
-    return new ODP::DelegatePort(
-        (ODP::DelegateService*)this,
-        port_ep,
-        std::tr1::bind(
-            &Server::delegateODPPortSend, this, port_ep, _1, _2
-        )
-    );
-}
-
-bool Server::delegateODPPortSend(const ODP::Endpoint& source_ep, const ODP::Endpoint& dest_ep, MemoryReference payload) {
-    // Create new ObjectMessage
-    Sirikata::Protocol::Object::ObjectMessage* msg =
-        createObjectMessage(
-            mContext->id(),
-            source_ep.object().getAsUUID(), source_ep.port(),
-            dest_ep.object().getAsUUID(), dest_ep.port(),
-            String((char*)payload.data(), payload.size())
-        );
-
-
-    // This call needs to be thread safe, and we shouldn't be using this
-    // ODP::Service to communicate with any non-local objects, so just use the
-    // local forwarder.
-    bool send_success = mLocalForwarder->tryForward(msg);
-
-    // If the send failed, we need to destroy the message.
-    if (!send_success)
-        delete msg;
-
-    return send_success;
-}
-
 
 OHDP::DelegatePort* Server::createDelegateOHDPPort(OHDP::DelegateService*, const OHDP::Endpoint& ept) {
     using std::tr1::placeholders::_1;

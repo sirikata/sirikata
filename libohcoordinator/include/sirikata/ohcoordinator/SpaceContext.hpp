@@ -61,7 +61,7 @@ class ObjectSessionManager;
  */
 class SIRIKATA_OHCOORDINATOR_EXPORT SpaceContext : public Context {
 public:
-    SpaceContext(const String& name, ServerID _id, ODPSST::ConnectionManager* sstConnMgr, OHDPSST::ConnectionManager* ohsstConnMgr, Network::IOService* ios, Network::IOStrand* strand, const Time& epoch, Trace::Trace* _trace, const Duration& duration = Duration::zero());
+    SpaceContext(const String& name, ServerID _id, OHDPSST::ConnectionManager* ohsstConnMgr, Network::IOService* ios, Network::IOStrand* strand, const Time& epoch, Trace::Trace* _trace, const Duration& duration = Duration::zero());
     ~SpaceContext();
 
     const String& name() { return mName; }
@@ -90,10 +90,6 @@ public:
         return mObjectHostSessionManager;
     }
 
-    ODPSST::ConnectionManager* sstConnectionManager() const {
-        return mSSTConnMgr;
-    }
-
     OHDPSST::ConnectionManager* ohSSTConnectionManager() const {
         return mOHSSTConnMgr;
     }
@@ -119,8 +115,6 @@ private:
 
     Sirikata::AtomicValue<ObjectHostSessionManager*> mObjectHostSessionManager;
     Sirikata::AtomicValue<ObjectSessionManager*> mObjectSessionManager;
-
-    Sirikata::AtomicValue<ODPSST::ConnectionManager*> mSSTConnMgr;
 
     Sirikata::AtomicValue<OHDPSST::ConnectionManager*> mOHSSTConnMgr;
 
