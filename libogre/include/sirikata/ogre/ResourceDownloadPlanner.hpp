@@ -69,6 +69,12 @@ protected:
     OgreRenderer* mScene;
     Graphics::Camera *camera;
     int32 mMaxLoaded;
+
+    typedef boost::recursive_mutex RMutex;
+    //prevents multiple threads from simultaneously accessing
+    //mObjects,mLoadedObjects,mWatingObjects,and assetMap.  can always split
+    //this into multiple mutexes if performance suffers.
+    RMutex mDlPlannerMutex;    
 };
 
 } // namespace Graphics

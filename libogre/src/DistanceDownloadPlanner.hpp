@@ -87,7 +87,8 @@ protected:
 
     struct Object {
         Object(Graphics::Entity *m, const Transfer::URI& mesh_uri, ProxyObjectPtr _proxy = ProxyObjectPtr());
-        virtual ~Object(){}
+        virtual ~Object(){          
+        }
 
         const String& id() const { return name; }
 
@@ -125,13 +126,7 @@ protected:
     // Loading has started for these
     ObjectMap mLoadedObjects;
     // Waiting to be important enough to load
-    ObjectMap mWaitingObjects;
-
-    typedef boost::recursive_mutex RMutex;
-    //prevents multiple threads from simultaneously accessing
-    //mObjects,mLoadedObjects,mWatingObjects,and assetMap.  can always split
-    //this into multiple mutexes if performance suffers.
-    RMutex dlPlannerMutex;
+    ObjectMap mWaitingObjects;        
 
 
     // Heap storage for Objects. Choice between min/max heap is at call time.
