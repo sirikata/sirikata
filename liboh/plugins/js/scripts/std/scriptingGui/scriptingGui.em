@@ -176,7 +176,7 @@ system.require('std/core/simpleInput.em');
 
      //reread file first, then send it to visible.
      std.ScriptingGui.prototype.hUpdateAndSendFile =
-         function(filename,visId)
+         function(visId,filename)
      {
          this.controller.rereadFile(visId,filename);
          this.controller.updateFile(visId,filename);
@@ -189,6 +189,13 @@ system.require('std/core/simpleInput.em');
          this.controller.updateAll(visId);
      };
 
+
+     std.ScriptingGui.prototype.hRemoveFile =
+         function(visId,filename)
+     {
+         this.controller.removeFile(visId,filename);
+         this.redraw();
+     };
 
      
      /**
@@ -243,6 +250,9 @@ system.require('std/core/simpleInput.em');
              'updateAndSendAllFiles',
              std.core.bind(scriptingGui.hUpdateAndSendAllFiles,scriptingGui));
 
+         scriptingGui.guiMod.bind(
+             'removeFile',
+             std.core.bind(scriptingGui.hRemoveFile,scriptingGui));
          
          
          scriptingGui.redraw();
@@ -374,6 +384,11 @@ system.require('std/core/simpleInput.em');
          {
              return 'ishmael__updateAndSendAllFilesButtonId__';
          }
+
+         function removeFileButtonId()
+         {
+             return 'ishmael__removeFileButtonId__';
+         }
          
          
          /**
@@ -461,6 +476,9 @@ system.require('std/core/simpleInput.em');
            'update and send all files' +
            '</button>'+
 
+           '<button id="' + removeFileButtonId() + '">' +
+           'remove file' +
+           '</button>'   +
            
            '</div>' //end div at top.
           ).attr({id:ishmaelWindowId(),title:'ishmael'}).appendTo('body');
@@ -630,7 +648,8 @@ system.require('std/core/simpleInput.em');
                      return;
                  }
                  sirikata.event(
-                     'updateAndSendFile',currentlySelectedFile,currentlySelectedVisible);
+                     'updateAndSendFile',currentlySelectedVisible,
+                     currentlySelectedFile);
              });
 
 
@@ -642,6 +661,20 @@ system.require('std/core/simpleInput.em');
 
                  sirikata.event(
                      'updateAndSendAllFiles',currentlySelectedVisible);
+             });
+
+         $('#' + removeFileButtonId()).click(
+             function()
+             {
+                 if ((typeof(currentlySelectedVisible) == 'undefined') ||
+                     (typeof(currentlySelectedFile) == 'undefined'))
+                 {
+                     return;
+                 }
+
+                 sirikata.event(
+                     'removeFile',currentlySelectedVisible,currentlySelectedFile);
+
              });
          
          
