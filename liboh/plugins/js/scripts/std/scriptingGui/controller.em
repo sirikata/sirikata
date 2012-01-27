@@ -283,7 +283,7 @@
     };
 
     /**
-     @param vis
+     @param vis (can be string or visible)
      @param {String} filename (optional).  If undefined, will reread
      all files associated with this visible from disk.
      */
@@ -297,7 +297,20 @@
 
         return scriptedVisMap[vis.toString()].rereadFile(filename);
     };
-     
+
+
+    std.ScriptingGui.Controller.prototype.rereadAllFiles =
+        function(visId)
+    {
+        if (!this.scriptedVisExists(vis))
+        {
+            throw new Error ('Error in FileManager.reareadAllFiles.  '+
+                             'Do not have record for this visible.');
+        }
+
+        return scriptedVisMap[vis.toString()].rereadAllFiles();
+    };
+    
 
     /**
      @returns {object: <string (visibleId):

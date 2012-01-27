@@ -120,7 +120,6 @@
                  this.fileMap[s].readFile();
              return;    
          }
-
          
          if (!this.checkFileExists(filename))
          {
@@ -133,6 +132,14 @@
 
      };
 
+     std.FileManager.FileManagerElement.prototype.rereadAllFiles =
+         function()
+     {
+         for (var s in this.fileMap)
+             this.fileMap[s].readFile();
+     };
+
+     
      //checks to see if file exists.  if does, then use the text from
      //that file.  if does not, then creates it with empty string of text.     
      std.FileManager.FileManagerElement.prototype.addExistingFileIfCan =

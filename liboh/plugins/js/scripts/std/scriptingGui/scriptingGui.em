@@ -165,12 +165,30 @@ system.require('std/core/simpleInput.em');
              std.core.bind(addFileInputCB,undefined,this,visId));
      };
 
+     
      function addFileInputCB(scriptingGui,visId,userResp_filename)
      {
          scriptingGui.controller.addExistingFileIfCan(
              visId,userResp_filename);
          scriptingGui.redraw();
      }
+
+
+     //reread file first, then send it to visible.
+     std.ScriptingGui.prototype.hUpdateAndSendFile =
+         function(filename,visId)
+     {
+         this.controller.rereadFile(visId,filename);
+         this.controller.updateFile(visId,filename);
+     };
+
+     std.ScriptingGui.prototype.hUpdateAndSendAllFiles =
+         function(visId)
+     {
+         this.controller.rereadAllFiles(visId);
+         this.controller.updateAll(visId);
+     };
+
 
      
      /**
@@ -216,6 +234,15 @@ system.require('std/core/simpleInput.em');
          scriptingGui.guiMod.bind(
              'addFile',
              std.core.bind(scriptingGui.hAddFile,scriptingGui));
+
+         scriptingGui.guiMod.bind(
+             'updateAndSendFile',
+             std.core.bind(scriptingGui.hUpdateAndSendFile,scriptingGui));
+
+         scriptingGui.guiMod.bind(
+             'updateAndSendAllFiles',
+             std.core.bind(scriptingGui.hUpdateAndSendAllFiles,scriptingGui));
+
          
          
          scriptingGui.redraw();
@@ -337,6 +364,16 @@ system.require('std/core/simpleInput.em');
          {
              return 'ishmael__addFileButtonId__';
          }
+
+         function updateAndSendFileButtonId()
+         {
+             return 'ishmael__updateAndSendFileButtonId__';
+         }
+
+         function updateAndSendAllFilesButtonId()
+         {
+             return 'ishmael__updateAndSendAllFilesButtonId__';
+         }
          
          
          /**
@@ -416,9 +453,14 @@ system.require('std/core/simpleInput.em');
            'add file' +
            '</button>'+
 
-           // '<button id="'+ sendFileButtonId() + '">' +
-           // 'send file' +
-           // '</button>'+
+           '<button id="'+ updateAndSendFileButtonId() + '">' +
+           'update and send file' +
+           '</button>'+
+
+           '<button id="'+ updateAndSendAllFilesButtonId() + '">' +
+           'update and send all files' +
+           '</button>'+
+
            
            '</div>' //end div at top.
           ).attr({id:ishmaelWindowId(),title:'ishmael'}).appendTo('body');
@@ -578,6 +620,30 @@ system.require('std/core/simpleInput.em');
 
                  sirikata.event('addFile',currentlySelectedVisible);
              });
+
+         $('#' + updateAndSendFileButtonId()).click(
+             function()
+             {
+                 if ((typeof(currentlySelectedVisible) == 'undefined') ||
+                     (typeof(currentlySelectedFile) == 'undefined'))
+                 {
+                     return;
+                 }
+                 sirikata.event(
+                     'updateAndSendFile',currentlySelectedFile,currentlySelectedVisible);
+             });
+
+
+         $('#' + updateAndSendAllFilesButtonId()).click(
+             function()
+             {
+                 if (typeof(currentlySelectedVisible) == 'undefined')
+                     return;
+
+                 sirikata.event(
+                     'updateAndSendAllFiles',currentlySelectedVisible);
+             });
+         
          
          var inputWindow = new sirikata.ui.window(
              '#' + ishmaelWindowId(),
