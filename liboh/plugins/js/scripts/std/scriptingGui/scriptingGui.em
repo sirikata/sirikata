@@ -459,6 +459,7 @@ system.require('std/core/simpleInput.em');
 
          $('<div>'   +
 
+           
            //which presences are available
            '<b>Scripted presences</b><br/>' +
            '<select id="'     + scriptedListId() + '" size=5>' +
@@ -475,12 +476,15 @@ system.require('std/core/simpleInput.em');
            '<hr/>'            + 
 
            //action gui
+           '<table><tr><td>'+
            '<select id="'     + actionListId() + '" size=5>'   +
            '</select>'        +
-
-           '<textarea id="'   + actionTareaId()         + '">' +
-           '</textarea>'      +
-
+           '</td><td>' +
+           
+           '<div id="'   + actionTareaId()+ '"  style="min-width:400px;min-height:100px;max-width:400px;position:relative;margin:0;padding:0;">' +
+           '</div>'      + //closes actionTareaDiv
+           '</td></tr></table>' +
+           
            '<button id="'     + saveActionButtonId()    + '">' +
            'save action'      +
            '</button>'        +
@@ -519,10 +523,21 @@ system.require('std/core/simpleInput.em');
            '<button id="' + removeFileButtonId() + '">' +
            'remove file' +
            '</button>'   +
+
+           '<hr/>' +
+           
            
            '</div>' //end div at top.
           ).attr({id:ishmaelWindowId(),title:'ishmael'}).appendTo('body');
 
+
+         var jsMode = require('ace/mode/javascript').Mode;
+         var actionEditor = ace.edit(actionTareaId());
+         actionEditor.setTheme('ace/theme/dawn');
+         actionEditor.getSession().setMode(new jsMode());
+
+         
+         
          
          //The id of the visible that the scripter has selected to
          //program.
@@ -621,8 +636,10 @@ system.require('std/core/simpleInput.em');
                      (currentlySelectedAction === null))
                      return;
 
-                 var toSaveText = $('#' + actionTareaId()).val();
 
+                 //var toSaveText = $('#' + actionTareaId()).val();
+                 var toSaveText = actionEditor.getSession().getValue();
+                 
                  //saving action does not force a redraw.  must
                  //preserve new text in allActions on our end. (takes
                  //care of failure case where save an action, then
@@ -649,7 +666,9 @@ system.require('std/core/simpleInput.em');
                  }
 
                  //see comments in click handler for saveActionButton.
-                 var toSaveText = $('#' + actionTareaId()).val();
+//                 var toSaveText = $('#' + actionTareaId()).val();
+                 var toSaveText = actionEditor.getSession().getValue();
+
                  allActions[currentlySelectedAction].text = toSaveText;
                  sirikata.event(
                      'saveAndExecuteAction',currentlySelectedAction,
@@ -800,7 +819,8 @@ system.require('std/core/simpleInput.em');
              }
 
              //actually update textarea with correct text
-             $('#' + actionTareaId()).val(textToSetTo);
+             actionEditor.getSession().setValue(textToSetTo);
+             //$('#' + actionTareaId()).val(textToSetTo);
          }
          
          
@@ -889,7 +909,8 @@ system.require('std/core/simpleInput.em');
              {
                  prevCurAct = allActions[currentlySelectedAction];
                  //update with text that had entered in tarea.
-                 prevCurAct.text = $('#' + actionTareaId()).val();
+                 //prevCurAct.text = $('#' + actionTareaId()).val();
+                 prevCurAct.text = actionEditor.getSession().getValue();
              }
 
              allActions = actionMap;
