@@ -914,6 +914,10 @@ SET(TEST_CASSANDRA FALSE
 
 # -- Compile-time debugging settings --
 # Space session message delay
+# NOTE: When you set this, keep in mind that it takes a connect request +
+# connect success ack before messages are forwarded (which in turn allows the
+# base SST stream to get connected), meaning you should expect double this delay
+# for objects to finish connecting
 SET(SPACE_DELAY_HANDLE_SESSION_MESSAGE ""
   CACHE STRING "If non-empty, apply this much delay (in seconds) to handling session messages on the space server."
 )

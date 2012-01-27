@@ -164,7 +164,7 @@ private:
     void sendConnectError(const ObjectHostConnectionID& oh_conn_id, const UUID& obj_id, uint64 session_request_seqno);
 
     // Handle connection ack message from object
-    void handleConnectAck(const ObjectHostConnectionID& oh_conn_id, const Sirikata::Protocol::Object::ObjectMessage& container);
+    void handleConnectAck(const ObjectHostConnectionID& oh_conn_id, const Sirikata::Protocol::Object::ObjectMessage& container, uint64 session_request_seqno);
 
     // Handle Migrate message from object
     void handleMigrate(const ObjectHostConnectionID& oh_conn_id, const Sirikata::Protocol::Object::ObjectMessage& container, const Sirikata::Protocol::Session::Connect& migrate_msg, uint64 seqno);
@@ -172,8 +172,8 @@ private:
     // Performs actual migration after all the necessary information is available.
     void handleMigration(const UUID& obj_id);
 
-    // Handle a disconnection
-    void handleDisconnect(UUID obj_id, ObjectConnection* conn);
+    // Handle a disconnection.
+    void handleDisconnect(UUID obj_id, ObjectConnection* conn, uint64 session_request_seqno);
 
     //finally deletes any object connections to obj_id
     void killObjectConnection(const UUID& obj_id);
@@ -218,11 +218,7 @@ private:
                                   // properly
     // Information to be able to respond to a migration request *from
     // the object*.
-    struct MigrationRequestInfo {
-        ObjectConnection* conn;
-        uint64 session_seqno;
-    };
-    typedef std::tr1::unordered_map<UUID, MigrationRequestInfo, UUID::Hasher> MigrationRequestMap;
+    typedef ObjectConnectionMap MigrationRequestMap;
     MigrationRequestMap mObjectsAwaitingMigration;
 
 

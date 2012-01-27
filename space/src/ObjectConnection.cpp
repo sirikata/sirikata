@@ -34,16 +34,21 @@
 
 namespace Sirikata {
 
-ObjectConnection::ObjectConnection(const UUID& _id, ObjectHostConnectionManager* conn_mgr, const ObjectHostConnectionID& conn_id)
+ObjectConnection::ObjectConnection(const UUID& _id, ObjectHostConnectionManager* conn_mgr, const ObjectHostConnectionID& conn_id, uint64 session_seqno)
  : mID(_id),
    mConnectionManager(conn_mgr),
    mOHConnection(conn_id),
+   mSessionSeqno(session_seqno),
    mEnabled(false)
 {
 }
 
 UUID ObjectConnection::id() const {
     return mID;
+}
+
+uint64 ObjectConnection::sessionID() const {
+    return mSessionSeqno;
 }
 
 bool ObjectConnection::send(Sirikata::Protocol::Object::ObjectMessage* msg) {

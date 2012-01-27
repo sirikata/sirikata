@@ -46,10 +46,15 @@ class Server;
  */
 class ObjectConnection {
 public:
-    ObjectConnection(const UUID& _id, ObjectHostConnectionManager* conn_mgr, const ObjectHostConnectionID& conn_id);
+    ObjectConnection(const UUID& _id, ObjectHostConnectionManager* conn_mgr, const ObjectHostConnectionID& conn_id, uint64 session_seqno);
 
     // Get the UUID of the object associated with this connection.
     UUID id() const;
+
+    /// Get a "session ID", which is just the session sequence number that
+    /// requested the connection. This, combined with the
+    /// ObjectHostConnectionID, uniquely identifies the connection.
+    uint64 sessionID() const;
 
     WARN_UNUSED
     bool send(Sirikata::Protocol::Object::ObjectMessage* msg);
@@ -65,6 +70,7 @@ private:
     UUID mID;
     ObjectHostConnectionManager* mConnectionManager;
     ObjectHostConnectionID mOHConnection;
+    const uint64 mSessionSeqno;
     bool mEnabled;
 };
 
