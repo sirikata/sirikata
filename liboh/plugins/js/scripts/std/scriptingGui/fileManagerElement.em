@@ -133,6 +133,22 @@
 
      };
 
+     //checks to see if file exists.  if does, then use the text from
+     //that file.  if does not, then creates it with empty string of text.     
+     std.FileManager.FileManagerElement.prototype.addExistingFileIfCan =
+         function(filename)
+     {
+         if (this.checkFileExists(filename))
+         {
+             throw new Error('Error already have that file, ' +
+                             'can\'t add it again.');
+         }
+
+         this.fileMap[filename] = new std.FileManager.File(
+             filename,'',this.filedir,true);
+     };
+
+     
      /**
       sends the file to visible.
       If file sending is successful, then call onSuccess with filename.

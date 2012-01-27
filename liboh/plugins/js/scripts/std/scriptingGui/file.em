@@ -2,7 +2,16 @@
 
 (function()
 {
-    std.FileManager.File = function(name,text,filedir)
+
+    /**
+     @param{string} text (optional) -- text to enter into file.
+
+     @param{bool} useExistingFirst (optional) -- if set to true, then
+     first try to read file from hd.  If that fails, then create a new
+     file intead.
+     */
+    std.FileManager.File =
+        function(name,text,filedir,useExistingFirst)
     {
         this.version = 0;
         this.name    = name;
@@ -10,10 +19,27 @@
         this.text    = text;
         this.remoteVersionText = '';
 
-        if (this.text == undefined)
-            this.readFile();
+        if (useExistingFirst)
+        {
+            //if reading file throws an exception, it means that the
+            //file does not exist. instead, try to create new file
+            //through write operation in exception.
+            try
+            {
+                this.readFile();
+            }
+            catch(excep)
+            {
+                this.writeFile();
+            }
+        }
         else
-            this.writeFile();
+        {
+            if (this.text == undefined)
+                this.readFile();
+            else
+                this.writeFile();                
+        }
     };
 
 

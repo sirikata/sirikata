@@ -155,6 +155,23 @@ system.require('std/core/simpleInput.em');
          this.redraw();
      };
      
+
+     std.ScriptingGui.prototype.hAddFile =
+         function(visId)
+     {
+         var newInput = std.core.SimpleInput(
+             std.core.SimpleInput.ENTER_TEXT,
+             'Enter new file\'s name',
+             std.core.bind(addFileInputCB,undefined,this,visId));
+     };
+
+     function addFileInputCB(scriptingGui,visId,userResp_filename)
+     {
+         scriptingGui.controller.addExistingFileIfCan(
+             visId,userResp_filename);
+         scriptingGui.redraw();
+     }
+
      
      /**
       @param {std.ScriptingGui} 
@@ -196,6 +213,10 @@ system.require('std/core/simpleInput.em');
              'removeAction',
              std.core.bind(scriptingGui.hRemoveAction,scriptingGui));
 
+         scriptingGui.guiMod.bind(
+             'addFile',
+             std.core.bind(scriptingGui.hAddFile,scriptingGui));
+         
          
          scriptingGui.redraw();
      }
@@ -310,7 +331,12 @@ system.require('std/core/simpleInput.em');
          {
              return 'ishmael__fileSelectId__';
          }
-         
+
+
+         function addFileButtonId()
+         {
+             return 'ishmael__addFileButtonId__';
+         }
          
          
          /**
@@ -385,6 +411,14 @@ system.require('std/core/simpleInput.em');
            '<b>Files</b><br/>'  +
            '<select id="'     + fileSelectId() + '" size=5>'   +
            '</select>'        +
+
+           '<button id="'+ addFileButtonId() + '">' +
+           'add file' +
+           '</button>'+
+
+           // '<button id="'+ sendFileButtonId() + '">' +
+           // 'send file' +
+           // '</button>'+
            
            '</div>' //end div at top.
           ).attr({id:ishmaelWindowId(),title:'ishmael'}).appendTo('body');
@@ -535,6 +569,15 @@ system.require('std/core/simpleInput.em');
                  currentlySelectedFile = $('#' + fileSelectId()).val();
              });
          
+
+         $('#' + addFileButtonId()).click(
+             function()
+             {
+                 if (typeof(currentlySelectedVisible)=='undefined')
+                     return;
+
+                 sirikata.event('addFile',currentlySelectedVisible);
+             });
          
          var inputWindow = new sirikata.ui.window(
              '#' + ishmaelWindowId(),

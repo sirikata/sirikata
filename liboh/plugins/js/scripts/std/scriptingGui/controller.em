@@ -328,7 +328,21 @@
 
         return scriptedVisMap[vis.toString()].addFile(filename,text);
     };
-     
+
+
+    //checks to see if file exists.  if does, then use the text from
+    //that file.  if does not, then creates it with empty string of text.
+    std.ScriptingGui.Controller.prototype.addExistingFileIfCan =
+        function(vis,filename)
+    {
+        if (!this.scriptedVisExists(vis))
+        {
+            throw new Error ('Error in FileManager.addExistingFileIfCan.  ' +
+                             'Do not have record for this visible.');
+        }
+
+        return scriptedVisMap[vis.toString()].addExistingFileIfCan(filename);
+    };
      
 
     std.ScriptingGui.Controller.prototype.checkFileExists = function(vis,filename)
