@@ -37,6 +37,9 @@ system.require('std/core/simpleInput.em');
          this.actionMap        = actionMap;
          this.console          = console;
 
+         this.nameMap          ={};
+         this.nameMap[system.self.toString()] = 'self';
+
          
          this.guiMod = simulator._simulator.addGUITextModule(
              guiName(),
@@ -55,7 +58,7 @@ system.require('std/core/simpleInput.em');
          //trigger redraw call
          this.guiMod.call(
              'ishmaelRedraw',toHtmlNearbyMap(this),toHtmlScriptedMap(this),
-             toHtmlActionMap(this),toHtmlFileMap(this));
+             toHtmlActionMap(this),toHtmlFileMap(this),toHtmlNameMap(this));
      };
 
      
@@ -93,7 +96,26 @@ system.require('std/core/simpleInput.em');
                          'in scriptingGui');
      };
 
+     std.ScriptingGui.prototype.hRenameVisible = function (visId,visName)
+     {
+         var userQuery =
+             'Enter new name for visible previously named ' + visName +
+             ' and with id: ' + visId;
+         
+         var newInput = std.core.SimpleInput(
+             std.core.SimpleInput.ENTER_TEXT,
+             userQuery,
+             std.core.bind(renameVisibleInputCB,undefined,this,visId));
+     };
 
+
+     function renameVisibleInputCB(scriptingGui,visId,newName)
+     {
+         scriptingGui.nameMap[visId] = newName;
+         scriptingGui.redraw();
+     }
+         
+     
      /**
       @param {String?} actId -- Should be parsedInt to get an index
       into actionMap
@@ -217,6 +239,10 @@ system.require('std/core/simpleInput.em');
              'removeVisible',
              std.core.bind(scriptingGui.hRemoveVisible,scriptingGui));
 
+         scriptingGui.guiMod.bind(
+             'renameVisible',
+             std.core.bind(scriptingGui.hRenameVisible,scriptingGui));
+         
          //when a user updates a particular action, and clicks to save
          //the new action text.
          scriptingGui.guiMod.bind(
@@ -299,6 +325,11 @@ system.require('std/core/simpleInput.em');
      function toHtmlFileMap(scriptingGui)
      {
          return scriptingGui.controller.htmlFileMap();
+     }
+
+     function toHtmlNameMap(scriptingGui)
+     {
+         return scriptingGui.nameMap;
      }
      
      
@@ -390,6 +421,11 @@ system.require('std/core/simpleInput.em');
              return 'ishmael__removeFileButtonId__';
          }
          
+
+         function renameVisibleButtonId()
+         {
+             return 'ishmael__renameVisibleId__';
+         }
          
          /**
           \param {String} nearbyObj (id of visible that we are
@@ -432,6 +468,10 @@ system.require('std/core/simpleInput.em');
            '<select id="'     + nearbyListId() + '" size=5>'   +
            '</select><br/>'   +
 
+           '<button id="' + renameVisibleButtonId() + '">' +
+           'rename' +
+           '</button>'    + 
+           
            '<hr/>'            + 
 
            //action gui
@@ -556,6 +596,20 @@ system.require('std/core/simpleInput.em');
              //ensures that file list gets updated as well.
              redrawFileSelect(allFiles); 
          }
+
+
+         $('#' + renameVisibleButtonId()).click(
+             function()
+             {
+                 if (typeof(currentlySelectedVisible)== 'undefined')
+                     return;
+
+                 var currentName =
+                     $('#' + generateScriptedDivId(currentlySelectedVisible)).html();
+                 
+                 sirikata.event(
+                     'renameVisible',currentlySelectedVisible,currentName);
+             });
          
          //when hit save, sends the action text through to controller
          //to save it.
@@ -758,12 +812,14 @@ system.require('std/core/simpleInput.em');
               object: <string(filename):string(filename)>>} fileMap --
           keyed by visible id, elements are maps of files that each
           remote visible has on it.
+
+          \param {object: <string visId: actual name>}
           */
          ishmaelRedraw = function(
-             nearbyObjs,scriptedObjs,actionMap,fileMap)
+             nearbyObjs,scriptedObjs,actionMap,fileMap,nameMap)
          {
-             redrawNearby(nearbyObjs);
-             redrawScriptedObjs(scriptedObjs);
+             redrawNearby(nearbyObjs,nameMap);
+             redrawScriptedObjs(scriptedObjs,nameMap);
              redrawActionList(actionMap);
              redrawFileSelect(fileMap);
          };
@@ -772,8 +828,10 @@ system.require('std/core/simpleInput.em');
          /**
           \param {object: <string (visibleId): string (visibleId)>}
           nearbyObjs -- all objects that are in vicinity.
+
+          \param {object: <string (visId): string (name)>} nameMap
           */
-         function redrawNearby(nearbyObjs)
+         function redrawNearby(nearbyObjs, nameMap)
          {
              var newHtml = '';
              for (var s in nearbyObjs)
@@ -785,7 +843,10 @@ system.require('std/core/simpleInput.em');
 
                  newHtml += 'value="' + s + '" ';
                  newHtml += 'id="' + generateNearbyDivId(s) + '">';
-                 newHtml += s;
+                 if (s in nameMap)
+                     newHtml += nameMap[s];
+                 else
+                     newHtml += s;
                  newHtml += '</option>';
              }
              $('#' + nearbyListId()).html(newHtml);
@@ -797,7 +858,7 @@ system.require('std/core/simpleInput.em');
           scriptedObjs -- all objects that we have a scripting
           relationship with.
           */
-         function redrawScriptedObjs(scriptedObjs)
+         function redrawScriptedObjs(scriptedObjs,nameMap)
          {
              var newHtml = '';
              for (var s in scriptedObjs)
@@ -807,8 +868,13 @@ system.require('std/core/simpleInput.em');
                  else
                      newHtml += '<option ';
                  
-                 newHtml += 'value="' +s +  '">';
-                 newHtml += s;
+                 newHtml += 'value="' +s +  '" ';
+                 newHtml += 'id="' + generateScriptedDivId(s) + '">';
+                 
+                 if (s in nameMap)
+                     newHtml += nameMap[s];
+                 else
+                     newHtml += s;
                  newHtml += '</option>';
              }
              $('#' + scriptedListId()).html(newHtml);
