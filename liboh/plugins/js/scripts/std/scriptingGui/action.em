@@ -50,13 +50,21 @@ std.ScriptingGui.Action.prototype.getConsoleDescription =
 std.ScriptingGui.Action.prototype.getConsoleResponseDescription =
     function(respMsg, responderId)
 {
-    throw new Error('Error getting console response description.  '+
-                    'Still must fill in this code.');
+    return {
+        type: 'ACTION_RESPONSE',
+        name: this.name,
+        visId: responderId,
+        value: respMsg.value,
+        exception: respMsg.exception
+    };
 };
 
 std.ScriptingGui.Action.prototype.getConsoleNoResponseDescription =
     function(respMsg, responderId)
 {
-    throw new Error('Error getting console no response description.  '+
-                    'Still must fill in this code.');
+    return{
+        type: 'ACTION_NO_RESPONSE',
+        visId:responderId,
+        name: this.name
+    };
 };

@@ -16,6 +16,9 @@
          this.fileMap = {};
          this.errorFunction = errorFunction;
          this.filedir = filedir;
+
+         //keeps track of all history of an individual scripted object.
+         this.consoleHistory = [];
      };
 
      std.FileManager.FileManagerElement.prototype.addFile = function(name,text)

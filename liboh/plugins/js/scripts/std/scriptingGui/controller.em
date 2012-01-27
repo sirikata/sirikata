@@ -23,7 +23,7 @@
     //basic constructor
     std.ScriptingGui.Controller = function(presScripter)
     {
-        console = new std.ScriptingGui.Console(this);
+        console = new std.ScriptingGui.Console(scriptedVisMap);
         
         scripter = presScripter;
         if (typeof(presScripter) === 'undefined')
@@ -176,19 +176,6 @@
     
     
     //************** VISIBLES ***********************//
-    // if (typeof(system.self) == 'undefined')
-    // {
-    //     system.onPresenceConnected(
-    //         function(newPres,clearable)
-    //         {
-    //             instantiateProxHandlers();
-    //             clearable.clear();
-    //         });
-    // }
-    // else
-    // {
-    //     instantiateProxHandlers();
-    // }
 
     function instantiateProxHandlers()
     {
@@ -381,8 +368,8 @@
         var updateFileId = std.ScriptingGui.Util.uniqueId();
         var consMsg = scriptedVisMap[vis.toString()].updateAll(
             updateFileId,
-            std.core.bind(onFileUpdateSuccess,undefined,this,updateFileId),
-            std.core.bind(onFileUpdateFailure,undefined,this,updateFileId));
+            std.core.bind(onFileUpdateSuccess,undefined,this,updateFileId,vis.toString()),
+            std.core.bind(onFileUpdateFailure,undefined,this,updateFileId,vis.toString()));
         
         console.fileEvent(consMsg);
     };
@@ -398,28 +385,30 @@
         var updateFileId = std.ScriptingGui.Util.uniqueId();
         var consMsg = scriptedVisMap[vis.toString()].updateFile(
             filename,updateFileId,
-            std.core.bind(onFileUpdateSuccess,undefined,this,updateFileId),
-            std.core.bind(onFileUpdateFailure,undefined,this,updateFileId));
+            std.core.bind(onFileUpdateSuccess,undefined,this,updateFileId,vis.toString()),
+            std.core.bind(onFileUpdateFailure,undefined,this,updateFileId,vis.toString()));
 
         console.fileEvent(consMsg);
     };
 
-    function onFileUpdateSuccess(controller,updateId,filename)
+    function onFileUpdateSuccess(controller,updateId,visId,filename)
     {
         var consMsg = {
             type: 'FILE_UPDATE_SUCCESS',
             filename: filename,
-            updateId: updateId
+            updateId: updateId,
+            visId: visId
         };
         console.fileEvent(consMsg);
     }
 
-    function onFileUpdateFailure(controller,updateId,filename)
+    function onFileUpdateFailure(controller,updateId,visId,filename)
     {
         var consMsg = {
             type: 'FILE_UPDATE_FAIL',
             filename: filename,
-            updateId: updateId
+            updateId: updateId,
+            visId: visId
         };
         console.fileEvent(consMsg);        
     }
@@ -464,6 +453,27 @@
         return 'ishmael_scripting/' + visible.toString();
     }
 
+
+    //************ Handles print messages ***************//
+    handlePrint << {'request':'print':};
+
+    function handlePrint(msg,sender)
+    {
+        //note, will eventually remove this if can print to self.
+        if (sender.toString() == system.self.toString())
+            return;
+
+        
+        if (console === null)
+            return;
+
+        var printMsg = {
+            type: 'PRINT_MESSAGE',
+            visId: sender.toString(),
+            value: msg.print
+        };
+        console.printEvent(printMsg);
+    }
     
     //************** CONSOLES ***********************//
 

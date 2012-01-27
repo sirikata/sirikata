@@ -36,7 +36,8 @@ system.require('std/core/simpleInput.em');
          this.scriptedVisMap   = scriptedVisMap;
          this.actionMap        = actionMap;
          this.console          = console;
-
+         this.console.setScriptingGui(this);
+         
          this.nameMap          ={};
          this.nameMap[system.self.toString()] = 'self';
 
@@ -58,7 +59,8 @@ system.require('std/core/simpleInput.em');
          //trigger redraw call
          this.guiMod.call(
              'ishmaelRedraw',toHtmlNearbyMap(this),toHtmlScriptedMap(this),
-             toHtmlActionMap(this),toHtmlFileMap(this),toHtmlNameMap(this));
+             toHtmlActionMap(this),toHtmlFileMap(this),toHtmlNameMap(this),
+             toHtmlConsoleMap(this));
      };
 
      
@@ -331,6 +333,11 @@ system.require('std/core/simpleInput.em');
      {
          return scriptingGui.nameMap;
      }
+
+     function toHtmlConsoleMap(scriptingGui)
+     {
+         return scriptingGui.console.toHtmlMap();
+     }
      
      
      function guiName()
@@ -426,6 +433,11 @@ system.require('std/core/simpleInput.em');
          {
              return 'ishmael__renameVisibleId__';
          }
+
+         function consoleId()
+         {
+             return 'ishmael__consoleId__';
+         }
          
          /**
           \param {String} nearbyObj (id of visible that we are
@@ -458,7 +470,6 @@ system.require('std/core/simpleInput.em');
          
 
          $('<div>'   +
-
            
            //which presences are available
            '<b>Scripted presences</b><br/>' +
@@ -476,6 +487,7 @@ system.require('std/core/simpleInput.em');
            '<hr/>'            + 
 
            //action gui
+           '<b>Actions</b><br/>' +
            '<table><tr><td>'+
            '<select id="'     + actionListId() + '" size=5>'   +
            '</select>'        +
@@ -525,7 +537,11 @@ system.require('std/core/simpleInput.em');
            '</button>'   +
 
            '<hr/>' +
-           
+           //console
+           '<b>Console</b><br/>' +
+           '<div id="' + consoleId() + '" style="min-width:500px;max-width:550px;min-height:250px;position:relative;margin:0;padding:0;">'  +
+           '</div>' +
+
            
            '</div>' //end div at top.
           ).attr({id:ishmaelWindowId(),title:'ishmael'}).appendTo('body');
@@ -536,7 +552,11 @@ system.require('std/core/simpleInput.em');
          actionEditor.setTheme('ace/theme/dawn');
          actionEditor.getSession().setMode(new jsMode());
 
-         
+         var consoleEditor = ace.edit(consoleId());
+         consoleEditor.setTheme('ace/theme/dawn');
+         consoleEditor.getSession().setMode(new jsMode());
+         consoleEditor.renderer.setShowGutter(true);
+         consoleEditor.setReadOnly(true);
          
          
          //The id of the visible that the scripter has selected to
@@ -556,6 +576,8 @@ system.require('std/core/simpleInput.em');
 
          var currentlySelectedFile = undefined;
          var allFiles = undefined;
+
+         var allConsoleHistories = undefined;
          
          $('#' + scriptedListId()).change(
              function()
@@ -609,7 +631,8 @@ system.require('std/core/simpleInput.em');
          {
              currentlySelectedVisible = newVisible;
              //ensures that file list gets updated as well.
-             redrawFileSelect(allFiles); 
+             redrawFileSelect(allFiles);
+             redrawConsole(allConsoleHistories);
          }
 
 
@@ -666,7 +689,6 @@ system.require('std/core/simpleInput.em');
                  }
 
                  //see comments in click handler for saveActionButton.
-//                 var toSaveText = $('#' + actionTareaId()).val();
                  var toSaveText = actionEditor.getSession().getValue();
 
                  allActions[currentlySelectedAction].text = toSaveText;
@@ -757,7 +779,7 @@ system.require('std/core/simpleInput.em');
 	             autoOpen: true,
 	             height: 'auto',
 	             width: 600,
-                     height: 600,
+                     height: 850,
                      position: 'right'
                  }
              );
@@ -820,7 +842,6 @@ system.require('std/core/simpleInput.em');
 
              //actually update textarea with correct text
              actionEditor.getSession().setValue(textToSetTo);
-             //$('#' + actionTareaId()).val(textToSetTo);
          }
          
          
@@ -833,15 +854,20 @@ system.require('std/core/simpleInput.em');
           keyed by visible id, elements are maps of files that each
           remote visible has on it.
 
-          \param {object: <string visId: actual name>}
+          \param {object: <string visId: actual name>} nameMap
+
+          \param {object: <string visId: array of console history>}
+          consoleMap.
           */
          ishmaelRedraw = function(
-             nearbyObjs,scriptedObjs,actionMap,fileMap,nameMap)
+             nearbyObjs,scriptedObjs,actionMap,fileMap,
+             nameMap,consoleMap)
          {
              redrawNearby(nearbyObjs,nameMap);
              redrawScriptedObjs(scriptedObjs,nameMap);
              redrawActionList(actionMap);
              redrawFileSelect(fileMap);
+             redrawConsole(consoleMap);
          };
 
          
@@ -996,6 +1022,37 @@ system.require('std/core/simpleInput.em');
          }
          
 
+
+         /**         
+         can be called from ishmaelRedraw (using new consoleHistories)
+         or from changeCurrentlySelectedVisible (using old
+         allConsoleHistories).
+          */
+         function redrawConsole(consoleMap)
+         {
+             allConsoleHistories = consoleMap;
+             
+             if ((typeof(currentlySelectedVisible) == 'undefined') ||
+                (!(currentlySelectedVisible in allConsoleHistories))) 
+             {
+                 consoleEditor.getSession().setValue('');
+                 return;
+             }
+
+             
+             var consoleEntry =
+                 allConsoleHistories[currentlySelectedVisible];
+             var consMsg = '';
+             
+             for (var s in consoleEntry)
+             {
+                 consMsg += consoleEntry[s];
+                 consMsg += '\\n\\n';
+             }
+             consoleEditor.getSession().setValue(consMsg);
+         }
+
+         
          @;
          
          returner += '});';         
