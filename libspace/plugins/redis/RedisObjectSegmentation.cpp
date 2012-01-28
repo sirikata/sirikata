@@ -111,9 +111,6 @@ void globalRedisLookupObjectReadFinished(redisAsyncContext* c, void* _reply, voi
     }
 
     delete wi;
-
-    if (reply != NULL)
-        freeReplyObject(reply);
 }
 
 
@@ -156,9 +153,6 @@ void globalRedisAddNewObjectWriteFinished(redisAsyncContext* c, void* _reply, vo
     }
 
     delete wi;
-
-    if (reply != NULL)
-        freeReplyObject(reply);
 }
 
 void globalRedisAddMigratedObjectWriteFinished(redisAsyncContext* c, void* _reply, void* privdata) {
@@ -182,9 +176,6 @@ void globalRedisAddMigratedObjectWriteFinished(redisAsyncContext* c, void* _repl
     }
 
     delete wi;
-
-    if (reply != NULL)
-        freeReplyObject(reply);
 }
 
 void globalRedisDeleteFinished(redisAsyncContext* c, void* _reply, void* privdata) {
@@ -207,9 +198,6 @@ void globalRedisDeleteFinished(redisAsyncContext* c, void* _reply, void* privdat
     }
 
     delete wi;
-
-    if (reply != NULL)
-        freeReplyObject(reply);
 }
 
 } // namespace
@@ -254,12 +242,12 @@ void RedisObjectSegmentation::connect() {
     redisAsyncSetConnectCallback(mRedisContext, globalRedisConnectHandler);
     redisAsyncSetDisconnectCallback(mRedisContext, globalRedisDisconnectHandler);
 
-    mRedisContext->evAddRead = globalRedisAddRead;
-    mRedisContext->evDelRead = globalRedisDelRead;
-    mRedisContext->evAddWrite = globalRedisAddWrite;
-    mRedisContext->evDelWrite = globalRedisDelWrite;
-    mRedisContext->evCleanup = globalRedisCleanup;
-    mRedisContext->_adapter_data = this;
+    mRedisContext->ev.addRead = globalRedisAddRead;
+    mRedisContext->ev.delRead = globalRedisDelRead;
+    mRedisContext->ev.addWrite = globalRedisAddWrite;
+    mRedisContext->ev.delWrite = globalRedisDelWrite;
+    mRedisContext->ev.cleanup = globalRedisCleanup;
+    mRedisContext->ev.data = this;
 
     // Wrap this connections file descripter in ASIO
     using boost::asio::posix::stream_descriptor;
