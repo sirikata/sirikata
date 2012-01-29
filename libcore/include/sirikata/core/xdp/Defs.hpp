@@ -48,6 +48,9 @@ public:
     bool operator<(const PortID& rhs) const;
     bool operator<=(const PortID& rhs) const;
 
+    PortID& operator++ ();
+    PortID operator++ (int);
+
     /** Returns true if the ports match, i.e. if they are equal or
      *  one of them is any().
      */
