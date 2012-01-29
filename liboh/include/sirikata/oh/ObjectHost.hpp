@@ -237,6 +237,12 @@ public:
     /* Notify the ObjectHost that . Only called by HostedObject. */
     void hostedObjectDestroyed(const UUID& objid);
 
+    /** Lookup HostedObject by one of it's presence IDs. This may return an
+     *  empty pointer if no objects have tried to connect. The returned object
+     *  may also still be in the process of connecting that presence.
+     */
+    HostedObjectPtr getHostedObject(const SpaceObjectReference &id) const;
+
     /** Lookup the SST stream for a particular object. */
     typedef SST::Stream<SpaceObjectReference> SSTStream;
     typedef SSTStream::Ptr SSTStreamPtr;
@@ -258,9 +264,6 @@ public:
     ObjectScriptManager* getScriptManager(const String& id);
 
   private:
-
-    /** Lookup HostedObject by private UUID. */
-    HostedObjectPtr getHostedObject(const SpaceObjectReference &id) const;
 
     // SpaceNodeSessionListener Interface -- forwards on to real listeners
     virtual void onSpaceNodeSession(const OHDP::SpaceNodeID& id, OHDPSST::Stream::Ptr sn_stream) { fireSpaceNodeSession(id, sn_stream); }
