@@ -90,9 +90,9 @@ public:
     /** Disconnect the object from the space. */
     void disconnect(Object* obj);
 
-    bool send(const Object* src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload);
+    bool send(const Object* src, const ObjectMessagePort src_port, const UUID& dest, const ObjectMessagePort dest_port, const std::string& payload);
 
-    //bool send(const uint16 src_port, const UUID& src, const uint16 dest_port, const UUID& dest,const std::string& payload);
+    //bool send(const ObjectMessagePort src_port, const UUID& src, const ObjectMessagePort dest_port, const UUID& dest,const std::string& payload);
 
     /* Ping Utility Methods. */
     // Fill the basic parameters in a ping message.  This is reentrant.

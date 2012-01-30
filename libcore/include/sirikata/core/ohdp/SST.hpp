@@ -67,7 +67,7 @@ class SIRIKATA_EXPORT BaseDatagramLayer<OHDP::SpaceNodeID>
     }
 
     void listenOn(EndPoint<EndPointType>& listeningEndPoint, DataCallback cb) {
-        OHDP::Port* port = allocatePort(listeningEndPoint);
+      OHDP::Port* port = allocatePort(listeningEndPoint);
         port->receive(
             std::tr1::bind(&BaseDatagramLayer<EndPointType>::receiveMessageToCallback, this,
                 std::tr1::placeholders::_1,
@@ -163,7 +163,7 @@ class SIRIKATA_EXPORT BaseDatagramLayer<OHDP::SpaceNodeID>
     }
 
     void receiveMessageToCallback(const OHDP::Endpoint &src, const OHDP::Endpoint &dst, MemoryReference payload, DataCallback cb) {
-        cb((void*) payload.data(), payload.size() );
+      cb((void*) payload.data(), payload.size() );
     }
 
 

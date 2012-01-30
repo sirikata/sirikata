@@ -41,6 +41,7 @@
 #include <sirikata/core/service/Context.hpp>
 
 #include <sirikata/core/network/Message.hpp>
+#include <sirikata/core/network/ObjectMessage.hpp>
 #include "Protocol_SSTHeader.pbj.hpp"
 
 #include <boost/lexical_cast.hpp>
@@ -55,12 +56,12 @@ template <typename EndObjectType>
 class EndPoint {
 public:
   EndObjectType endPoint;
-  uint16 port;
+  ObjectMessagePort port;
 
   EndPoint() {
   }
 
-  EndPoint(EndObjectType endPoint, uint16 port) {
+  EndPoint(EndObjectType endPoint, ObjectMessagePort port) {
     this->endPoint = endPoint;
     this->port = port;
   }
@@ -121,7 +122,7 @@ public:
 
 typedef UUID USID;
 
-typedef uint16 LSID;
+typedef uint32 LSID;
 
 template <class EndPointType>
 class ConnectionVariables {
@@ -132,16 +133,16 @@ public:
     typedef typename CBTypes::ConnectionReturnCallbackFunction ConnectionReturnCallbackFunction;
     typedef typename CBTypes::StreamReturnCallbackFunction StreamReturnCallbackFunction;
 
-  /* Returns -1 if no channel is available. Otherwise returns the lowest
+  /* Returns 0 if no channel is available. Otherwise returns the lowest
      available channel. */
-    int getAvailableChannel(EndPointType& endPointType) {
+    uint32 getAvailableChannel(EndPointType& endPointType) {
       BaseDatagramLayerPtr datagramLayer = getDatagramLayer(endPointType);
       assert (datagramLayer != BaseDatagramLayerPtr());
 
       return datagramLayer->getUnusedPort(endPointType);
     }
 
-    void releaseChannel(EndPointType& ept, uint16 channel) {
+    void releaseChannel(EndPointType& ept, uint32 channel) {
 
       BaseDatagramLayerPtr datagramLayer = getDatagramLayer(ept);
       if (datagramLayer != BaseDatagramLayerPtr()) {
@@ -194,7 +195,9 @@ public:
 
 };
 
-
+// This is just a template definition. The real implementation of BaseDatagramLayer 
+// lies in libcore/include/sirikata/core/odp/SST.hpp and 
+// libcore/include/sirikata/core/ohdp/SST.hpp.
 template <typename EndPointType>
 class SIRIKATA_EXPORT BaseDatagramLayer
 {
@@ -239,9 +242,10 @@ class SIRIKATA_EXPORT BaseDatagramLayer
     }
 
     /** Get a port that isn't currently in use. */
-    uint32 getUnusedPort(const EndPointType& ep) {
-        return 0;
+    uint32 getUnusedPort(const EndPointType& ep) {      
+      return 0;
     }
+        
 
     /** Stop listening to the specified endpoint and also remove from the
      *  ConnectionVariables datagram layer map.
@@ -347,8 +351,8 @@ private:
   BaseDatagramLayerPtr mDatagramLayer;
 
   int mState;
-  uint16 mRemoteChannelID;
-  uint16 mLocalChannelID;
+  uint32 mRemoteChannelID;
+  uint32 mLocalChannelID;
 
   uint64 mTransmitSequenceNumber;
   uint64 mLastReceivedSequenceNumber;   //the last transmit sequence number received from the other side
@@ -357,13 +361,13 @@ private:
   std::map<LSID, std::tr1::shared_ptr< Stream<EndPointType> > > mOutgoingSubstreamMap;
   std::map<LSID, std::tr1::shared_ptr< Stream<EndPointType> > > mIncomingSubstreamMap;
 
-  std::map<uint16, StreamReturnCallbackFunction> mListeningStreamsCallbackMap;
-  std::map<uint16, std::vector<ReadDatagramCallback> > mReadDatagramCallbacks;
+  std::map<uint32, StreamReturnCallbackFunction> mListeningStreamsCallbackMap;
+  std::map<uint32, std::vector<ReadDatagramCallback> > mReadDatagramCallbacks;
   typedef std::vector<std::string> PartialPayloadList;
   typedef std::map<LSID, PartialPayloadList> PartialPayloadMap;
   PartialPayloadMap mPartialReadDatagrams;
 
-  uint16 mNumStreams;
+  uint32 mNumStreams;
 
   std::deque< std::tr1::shared_ptr<ChannelSegment> > mQueuedSegments;
   std::deque< std::tr1::shared_ptr<ChannelSegment> > mOutstandingSegments;
@@ -434,7 +438,7 @@ private:
 
     std::string buffer = serializePBJMessage(sstMsg);
     mDatagramLayer->send(&mLocalEndPoint, &mRemoteEndPoint, (void*) buffer.data(),
-				       buffer.size());
+				       buffer.size());    
   }
 
   const Context* getContext() {
@@ -611,7 +615,7 @@ private:
       return false;
     }
 
-    uint16 availableChannel = sstConnVars->getAvailableChannel(localEndPoint.endPoint);
+    uint32 availableChannel = sstConnVars->getAvailableChannel(localEndPoint.endPoint);
 
     if (availableChannel == 0)
       return false;
@@ -627,8 +631,8 @@ private:
     conn->setWeakThis(conn);
     conn->setState(CONNECTION_PENDING_CONNECT);
 
-    uint16 payload[1];
-    payload[0] = htons(availableChannel);
+    uint32 payload[1];
+    payload[0] = htonl(availableChannel);
 
     conn->setLocalChannelID(availableChannel);
     conn->sendData(payload, sizeof(payload), false);
@@ -662,11 +666,11 @@ private:
     return true;
   }
 
-  void listenStream(uint16 port, StreamReturnCallbackFunction scb) {
+  void listenStream(uint32 port, StreamReturnCallbackFunction scb) {
     mListeningStreamsCallbackMap[port] = scb;
   }
 
-  void unlistenStream(uint16 port) {
+  void unlistenStream(uint32 port) {
     mListeningStreamsCallbackMap.erase(port);
   }
 
@@ -695,13 +699,13 @@ private:
     @return the number of bytes queued from the initial data buffer, or -1 if there was an error.
   */
   virtual int stream(StreamReturnCallbackFunction cb, void* initial_data, int length,
-		      uint16 local_port, uint16 remote_port)
+		      uint32 local_port, uint32 remote_port)
   {
     return stream(cb, initial_data, length, local_port, remote_port, 0);
   }
 
   virtual int stream(StreamReturnCallbackFunction cb, void* initial_data, int length,
-                      uint16 local_port, uint16 remote_port, LSID parentLSID)
+                      uint32 local_port, uint32 remote_port, LSID parentLSID)
   {
     USID usid = createNewUSID();
     LSID lsid = ++mNumStreams;
@@ -769,11 +773,11 @@ private:
     return mState;
   }
 
-  void setLocalChannelID(int channelID) {
+  void setLocalChannelID(uint32 channelID) {
     this->mLocalChannelID = channelID;
   }
 
-  void setRemoteChannelID(int channelID) {
+  void setRemoteChannelID(uint32 channelID) {
     this->mRemoteChannelID = channelID;
   }
 
@@ -965,7 +969,7 @@ private:
       }
       else {
           // Extract dispatch information
-          uint16 dest_port = received_stream_msg->dest_port();
+          uint32 dest_port = received_stream_msg->dest_port();
           std::vector<ReadDatagramCallback> datagramCallbacks;
           if (mReadDatagramCallbacks.find(dest_port) != mReadDatagramCallbacks.end()) {
               datagramCallbacks = mReadDatagramCallbacks[dest_port];
@@ -1031,10 +1035,10 @@ private:
 
       EndPoint<EndPointType> originalListeningEndPoint(mRemoteEndPoint.endPoint, mRemoteEndPoint.port);
 
-      uint16* received_payload = (uint16*) received_msg->payload().data();
+      uint32* received_payload = (uint32*) received_msg->payload().data();
 
-      setRemoteChannelID( ntohs(received_payload[0]));
-      mRemoteEndPoint.port = ntohs(received_payload[1]);
+      setRemoteChannelID( ntohl(received_payload[0]));
+      mRemoteEndPoint.port = ntohl(received_payload[1]);
 
       sendData( received_payload, 0, false );
 
@@ -1173,7 +1177,7 @@ private:
  	return;
        }
        std::tr1::shared_ptr<Connection<EndPointType> > conn = connectionMap[localEndPoint];
-
+       
        conn->receiveMessage(data, len);
      }
      else if (channelID == 0) {
@@ -1182,28 +1186,29 @@ private:
 
        StreamReturnCallbackMap& listeningConnectionsCallbackMap = sstConnVars->sListeningConnectionsCallbackMap;
        if (listeningConnectionsCallbackMap.find(localEndPoint) != listeningConnectionsCallbackMap.end()) {
-         uint16* received_payload = (uint16*) received_msg->payload().data();
+         uint32* received_payload = (uint32*) received_msg->payload().data();
 
-         uint16 payload[2];
+         uint32 payload[2];
 
-         uint16 availableChannel = sstConnVars->getAvailableChannel(localEndPoint.endPoint);
-         payload[0] = htons(availableChannel);
-         uint16 availablePort = availableChannel; //availableChannel is picked from the same 16-bit
+         uint32 availableChannel = sstConnVars->getAvailableChannel(localEndPoint.endPoint);
+         payload[0] = htonl(availableChannel);
+         uint32 availablePort = availableChannel; //availableChannel is picked from the same 16-bit
                                                   //address space and has to be unique. So why not use
                                                   //use it to identify the port as well...
-         payload[1] = htons(availablePort);
+         payload[1] = htonl(availablePort);
 
          EndPoint<EndPointType> newLocalEndPoint(localEndPoint.endPoint, availablePort);
          std::tr1::shared_ptr<Connection>  conn =
                     std::tr1::shared_ptr<Connection>(
                          new Connection(sstConnVars, newLocalEndPoint, remoteEndPoint));
 
- 	       conn->listenStream(newLocalEndPoint.port, listeningConnectionsCallbackMap[localEndPoint]);
+
+         conn->listenStream(newLocalEndPoint.port, listeningConnectionsCallbackMap[localEndPoint]);
          conn->setWeakThis(conn);
          connectionMap[newLocalEndPoint] = conn;
 
          conn->setLocalChannelID(availableChannel);
-         conn->setRemoteChannelID(ntohs(received_payload[0]));
+         conn->setRemoteChannelID(ntohl(received_payload[0]));
          conn->setState(CONNECTION_PENDING_RECEIVE_CONNECT);
 
          conn->sendData(payload, sizeof(payload), false);
@@ -1243,7 +1248,7 @@ private:
 
      @return false if there's an immediate failure while enqueuing the datagram; true, otherwise.
   */
-  virtual bool datagram( void* data, int length, uint16 local_port, uint16 remote_port,
+  virtual bool datagram( void* data, int length, uint32 local_port, uint32 remote_port,
 			 DatagramSendDoneCallback cb) {
     int currOffset = 0;
 
@@ -1332,7 +1337,7 @@ private:
            while the 'int' field will contain its size.
     @return true if the callback was successfully registered.
   */
-  virtual bool registerReadDatagramCallback(uint16 port, ReadDatagramCallback cb) {
+  virtual bool registerReadDatagramCallback(uint32 port, ReadDatagramCallback cb) {
     if (mReadDatagramCallbacks.find(port) == mReadDatagramCallbacks.end()) {
       mReadDatagramCallbacks[port] = std::vector<ReadDatagramCallback>();
     }
@@ -1479,7 +1484,7 @@ public:
               SST_LOG(error,"Tried to connect stream without calling createDatagramLayer for the endpoint.");
               return false;
           }
-          localEndPoint.port = bdl->getUnusedPort(localEndPoint.endPoint);
+          localEndPoint.port = bdl->getUnusedPort(localEndPoint.endPoint);          
       }
 
       StreamReturnCallbackMap& streamReturnCallbackMap = sstConnVars->mStreamReturnCallbackMap;
@@ -1523,7 +1528,7 @@ public:
     @param port the endpoint where SST will accept new incoming
            streams.
   */
-  void listenSubstream(uint16 port, StreamReturnCallbackFunction scb) {
+  void listenSubstream(uint32 port, StreamReturnCallbackFunction scb) {
     std::tr1::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
     if (!conn) {
       scb(SST_IMPL_FAILURE, StreamPtr() );
@@ -1533,7 +1538,7 @@ public:
     conn->listenStream(port, scb);
   }
 
-  void unlistenSubstream(uint16 port) {
+  void unlistenSubstream(uint32 port) {
     std::tr1::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
 
     if (conn)
@@ -1737,7 +1742,7 @@ public:
      -1 if an error occurred.
   */
   virtual int createChildStream(StreamReturnCallbackFunction cb, void* data, int length,
-				 uint16 local_port, uint16 remote_port)
+				 uint32 local_port, uint32 remote_port)
   {
     std::tr1::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
     if (conn) {
@@ -1782,7 +1787,7 @@ public:
 
 private:
   Stream(LSID parentLSID, std::tr1::weak_ptr<Connection<EndPointType> > conn,
-	 uint16 local_port, uint16 remote_port,
+	 uint32 local_port, uint32 remote_port,
 	 USID usid, LSID lsid, StreamReturnCallbackFunction cb, ConnectionVariables<EndPointType>* sstConnVars)
     :
     mState(NOT_FINISHED_CONSTRUCTING__CALL_INIT),
@@ -2397,8 +2402,8 @@ private:
 
   uint8 mState;
 
-  uint16 mLocalPort;
-  uint16 mRemotePort;
+  uint32 mLocalPort;
+  uint32 mRemotePort;
 
   uint64 mNumBytesSent;
 

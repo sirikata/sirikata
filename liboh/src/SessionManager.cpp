@@ -697,8 +697,8 @@ bool SessionManager::delegateOHDPPortSend(const OHDP::Endpoint& source_ep, const
     // ObjectMessage) and the source NodeID is just null (always null for
     // local).
     return send(
-        SpaceObjectReference(source_ep.space(), ObjectReference(UUID::null())), (uint16)source_ep.port(),
-        UUID::null(), (uint16)dest_ep.port(),
+        SpaceObjectReference(source_ep.space(), ObjectReference(UUID::null())), source_ep.port(),
+        UUID::null(), dest_ep.port(),
         String((char*)payload.data(), payload.size()),
         (ServerID)dest_ep.node()
     );
@@ -709,7 +709,7 @@ void SessionManager::timeSyncUpdated() {
     mObjectConnections.invokeDeferredCallbacks();
 }
 
-bool SessionManager::send(const SpaceObjectReference& sporef_src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload, ServerID dest_server) {
+bool SessionManager::send(const SpaceObjectReference& sporef_src, const ObjectMessagePort src_port, const UUID& dest, const ObjectMessagePort dest_port, const std::string& payload, ServerID dest_server) {
     Sirikata::SerializationCheck::Scoped sc(&mSerialization);
 
     if (mShuttingDown)
@@ -745,7 +745,7 @@ bool SessionManager::send(const SpaceObjectReference& sporef_src, const uint16 s
     return pushed;
 }
 
-void SessionManager::sendRetryingMessage(const SpaceObjectReference& sporef_src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload, ServerID dest_server, Network::IOStrand* strand, const Duration& rate) {
+void SessionManager::sendRetryingMessage(const SpaceObjectReference& sporef_src, const ObjectMessagePort src_port, const UUID& dest, const ObjectMessagePort dest_port, const std::string& payload, ServerID dest_server, Network::IOStrand* strand, const Duration& rate) {
     bool sent = send(
         sporef_src, src_port,
         dest, dest_port,

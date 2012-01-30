@@ -120,12 +120,11 @@ void DelegateService::registerDefaultOHDPHandler(const MessageHandler& cb) {
 
 bool DelegateService::deliver(const Endpoint& src, const Endpoint& dst, MemoryReference data) const {
     // Check from most to least specific
-
     SpaceIDNodeID snid(dst.space(), dst.node());
     PortMap const* pm = getPortMap(snid);
     if (pm != NULL) {
         PortMap::const_iterator it = pm->find(dst.port());
-
+        
         if (it != pm->end())
         {
             DelegatePort* port = it->second;

@@ -42,7 +42,7 @@
 
 namespace Sirikata {
 
-typedef uint16 ObjectMessagePort;
+typedef uint32 ObjectMessagePort;
 
 // List of well known object ports.
 #define OBJECT_PORT_SESSION       1
@@ -52,15 +52,15 @@ typedef uint16 ObjectMessagePort;
 #define OBJECT_SPACE_PORT         253
 #define OBJECT_PORT_PING          254
 
-#define OBJECT_PORT_SYSTEM_RESERVED_MAX 255
-#define OBJECT_PORT_SYSTEM_MAX    65535
+#define OBJECT_PORT_SYSTEM_RESERVED_MAX 1024
+#define OBJECT_PORT_SYSTEM_MAX 0xFFFFFFFF
 
 #define MESSAGE_ID_SERVER_SHIFT 52
 #define MESSAGE_ID_SERVER_BITS 0xFFF0000000000000LL
 
-SIRIKATA_FUNCTION_EXPORT Sirikata::Protocol::Object::ObjectMessage* createObjectMessage(ServerID source_server, const SpaceObjectReference& sporef_src, uint16 src_port, const UUID& dest, uint16 dest_port, const std::string& payload);
+SIRIKATA_FUNCTION_EXPORT Sirikata::Protocol::Object::ObjectMessage* createObjectMessage(ServerID source_server, const SpaceObjectReference& sporef_src, ObjectMessagePort src_port, const UUID& dest, ObjectMessagePort dest_port, const std::string& payload);
 
-SIRIKATA_FUNCTION_EXPORT Sirikata::Protocol::Object::ObjectMessage* createObjectMessage(ServerID source_server, const UUID& src, uint16 src_port, const UUID& dest, uint16 dest_port, const std::string& payload);
+SIRIKATA_FUNCTION_EXPORT Sirikata::Protocol::Object::ObjectMessage* createObjectMessage(ServerID source_server, const UUID& src, ObjectMessagePort src_port, const UUID& dest, ObjectMessagePort dest_port, const std::string& payload);
 
 
 // Wrapper class for Protocol::Object::Message which provides it some missing methods
@@ -81,9 +81,9 @@ public:
 }; // class ObjectMessage
 
 // FIXME get rid of this
-SIRIKATA_FUNCTION_EXPORT void createObjectHostMessage(ObjectHostID source_server, const SpaceObjectReference& sporef_src, uint16 src_port, const UUID& dest, uint16 dest_port, const std::string& payload, ObjectMessage* result);
+SIRIKATA_FUNCTION_EXPORT void createObjectHostMessage(ObjectHostID source_server, const SpaceObjectReference& sporef_src, ObjectMessagePort src_port, const UUID& dest, ObjectMessagePort dest_port, const std::string& payload, ObjectMessage* result);
 
-SIRIKATA_FUNCTION_EXPORT void createObjectHostMessage(ObjectHostID source_server, const UUID& src, uint16 src_port, const UUID& dest, uint16 dest_port, const std::string& payload, ObjectMessage* result);
+SIRIKATA_FUNCTION_EXPORT void createObjectHostMessage(ObjectHostID source_server, const UUID& src, ObjectMessagePort src_port, const UUID& dest, ObjectMessagePort dest_port, const std::string& payload, ObjectMessage* result);
 
 
 } // namespace Sirikata

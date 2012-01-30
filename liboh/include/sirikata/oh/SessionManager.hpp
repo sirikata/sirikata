@@ -164,7 +164,7 @@ class SIRIKATA_OH_EXPORT SessionManager
     // allow this to act as an OHDP::Service while still in the connecting phase
     // (no callback from SpaceNodeConnection yet) so we can build OHDP::SST
     // streams as part of the connection process.
-    bool send(const SpaceObjectReference& sporef_objid, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload, ServerID dest_server = NullServerID);
+    bool send(const SpaceObjectReference& sporef_objid, const ObjectMessagePort src_port, const UUID& dest, const ObjectMessagePort dest_port, const std::string& payload, ServerID dest_server = NullServerID);
 
     SSTStreamPtr getSpaceStream(const ObjectReference& objectID);
 
@@ -231,7 +231,7 @@ private:
     void sendDisconnectMessage(const SpaceObjectReference& sporef, ServerID connected_to, uint64 session_seqno);
 
     // Utility method which keeps trying to resend a message
-    void sendRetryingMessage(const SpaceObjectReference& sporef_src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload, ServerID dest_server, Network::IOStrand* strand, const Duration& rate);
+    void sendRetryingMessage(const SpaceObjectReference& sporef_src, const ObjectMessagePort src_port, const UUID& dest, const ObjectMessagePort dest_port, const std::string& payload, ServerID dest_server, Network::IOStrand* strand, const Duration& rate);
 
     /** SpaceNodeConnection initiation. */
 

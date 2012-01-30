@@ -221,8 +221,8 @@ public:
     Time currentLocalTime();
 
     /** Primary ODP send function. */
-    bool send(SpaceObjectReference& sporefsrc, const SpaceID& space, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload);
-    bool send(SpaceObjectReference& sporefsrc, const SpaceID& space, const uint16 src_port, const UUID& dest, const uint16 dest_port, MemoryReference payload);
+    bool send(SpaceObjectReference& sporefsrc, const SpaceID& space, const ObjectMessagePort src_port, const UUID& dest, const ObjectMessagePort dest_port, const std::string& payload);
+    bool send(SpaceObjectReference& sporefsrc, const SpaceID& space, const ObjectMessagePort src_port, const UUID& dest, const ObjectMessagePort dest_port, MemoryReference payload);
 
 
 
