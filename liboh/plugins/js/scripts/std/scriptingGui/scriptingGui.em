@@ -518,7 +518,7 @@ system.require('std/core/simpleInput.em');
            //file gui
            '<b>Files</b><br/>'  +
            '<select id="'     + fileSelectId() + '" size=5 style="min-width:200px">'   +
-           '</select>'        +
+           '</select><br/>'        +
 
            '<button id="'+ addFileButtonId() + '">' +
            'add file' +
