@@ -14,6 +14,8 @@ namespace Sirikata {
 namespace OH {
 namespace Manual {
 
+class ManualObjectQueryProcessor;
+
 /** This class manages queries registered with servers. It accepts aggregated
  *  requests from the parent ManualObjectQueryProcessor, registers them with the
  *  server, and manages receiving results and forwarding them for further
@@ -26,7 +28,7 @@ class ServerQueryHandler :
         OrphanLocUpdateManager::Listener<OHDP::SpaceNodeID>
 {
 public:
-    ServerQueryHandler(ObjectHostContext* ctx);
+    ServerQueryHandler(ObjectHostContext* ctx, ManualObjectQueryProcessor* parent, Network::IOStrandPtr strand);
 
     // Service Interface
     virtual void start();
@@ -43,11 +45,13 @@ public:
 
 private:
     ObjectHostContext* mContext;
+    ManualObjectQueryProcessor* mParent;
+    Network::IOStrandPtr mStrand;
 
     // Queries we've registered with servers so that we can resolve
     // object queries
     struct ServerQueryState {
-        ServerQueryState(Context* ctx, OHDPSST::Stream::Ptr base)
+        ServerQueryState(Context* ctx, Network::IOStrandPtr strand, OHDPSST::Stream::Ptr base)
          : nconnected(0),
            base_stream(base),
            prox_stream(),
@@ -57,7 +61,7 @@ private:
            orphans(ctx, ctx->mainStrand, Duration::seconds(10))
         {
             orphans.start();
-            objects = OHLocationServiceCachePtr(new OHLocationServiceCache(ctx->mainStrand /* FIXME should be prox querying strand */));
+            objects = OHLocationServiceCachePtr(new OHLocationServiceCache(strand));
         }
         ~ServerQueryState() {
             orphans.stop();

@@ -13,6 +13,8 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
 
+#include "ManualObjectQueryProcessor.hpp"
+
 #define QPLOG(lvl, msg) SILOG(manual-query-processor, lvl, msg)
 
 namespace Sirikata {
@@ -96,48 +98,6 @@ String coarsenRequest(const std::vector<ObjectReference>& aggs) {
     }
 }
 
-
-void addAdditionResult(Sirikata::Protocol::Prox::ProximityUpdate& obj_results, const SpaceObjectReference& observed, const SequencedPresenceProperties& props) {
-    Sirikata::Protocol::Prox::IObjectAddition addition = obj_results.add_addition();
-    addition.set_object(observed.object().getAsUUID());
-
-    addition.set_seqno(props.maxSeqNo());
-
-    Sirikata::Protocol::ITimedMotionVector motion = addition.mutable_location();
-    TimedMotionVector3f loc = props.location();
-    motion.set_t(loc.updateTime());
-    motion.set_position(loc.position());
-    motion.set_velocity(loc.velocity());
-
-    TimedMotionQuaternion orient = props.orientation();
-    Sirikata::Protocol::ITimedMotionQuaternion msg_orient = addition.mutable_orientation();
-    msg_orient.set_t(orient.updateTime());
-    msg_orient.set_position(orient.position());
-    msg_orient.set_velocity(orient.velocity());
-
-    addition.set_bounds( props.bounds() );
-    const String& mesh = props.mesh().toString();
-    if (mesh.size() > 0)
-        addition.set_mesh(mesh);
-    const String& phy = props.physics();
-    if (phy.size() > 0)
-        addition.set_physics(phy);
-
-    // FIXME parent?
-    // FIXME should we expose whether the object is an aggregate?
-}
-
-void addRemovalResult(Sirikata::Protocol::Prox::ProximityUpdate& obj_results, const SpaceObjectReference& observed, uint64 seqno, bool permanent) {
-    Sirikata::Protocol::Prox::IObjectRemoval removal = obj_results.add_removal();
-    removal.set_object(observed.object().getAsUUID());
-    removal.set_seqno(seqno);
-    removal.set_type(
-        permanent ?
-        Sirikata::Protocol::Prox::ObjectRemoval::Permanent :
-        Sirikata::Protocol::Prox::ObjectRemoval::Transient
-    );
-}
-
 } // namespace
 
 
@@ -146,8 +106,10 @@ using std::tr1::placeholders::_2;
 using std::tr1::placeholders::_3;
 
 
-ServerQueryHandler::ServerQueryHandler(ObjectHostContext* ctx)
- : mContext(ctx)
+ServerQueryHandler::ServerQueryHandler(ObjectHostContext* ctx, ManualObjectQueryProcessor* parent, Network::IOStrandPtr strand)
+ : mContext(ctx),
+   mParent(parent),
+   mStrand(strand)
 {
 }
 
@@ -164,11 +126,10 @@ void ServerQueryHandler::stop() {
 void ServerQueryHandler::onSpaceNodeSession(const OHDP::SpaceNodeID& id, OHDPSST::Stream::Ptr sn_stream) {
     QPLOG(detailed, "New space node session " << id);
     assert(mServerQueries.find(id) == mServerQueries.end());
+
+    ServerQueryStatePtr sqs(new ServerQueryState(mContext, mStrand, sn_stream));
     mServerQueries.insert(
-        ServerQueryMap::value_type(
-            id,
-            ServerQueryStatePtr(new ServerQueryState(mContext, sn_stream))
-        )
+        ServerQueryMap::value_type(id, sqs)
     );
 
     sn_stream->listenSubstream(OBJECT_PORT_LOCATION,
@@ -176,10 +137,13 @@ void ServerQueryHandler::onSpaceNodeSession(const OHDP::SpaceNodeID& id, OHDPSST
             id, _1, _2
         )
     );
+
+    mParent->createdServerQuery(id, sqs->objects);
 }
 
 void ServerQueryHandler::onSpaceNodeSessionEnded(const OHDP::SpaceNodeID& id) {
     mServerQueries.erase(id);
+    mParent->removedServerQuery(id);
 }
 
 
@@ -389,14 +353,6 @@ void ServerQueryHandler::handleProximityMessage(const OHDP::SpaceNodeID& snid, c
     for(int32 idx = 0; idx < contents.update_size(); idx++) {
         Sirikata::Protocol::Prox::ProximityUpdate update = contents.update(idx);
 
-        // TODO(ewencp) this is temporary code to actually get
-        // results to objects, without actually doing real querying. We
-        // shouldn't even do this in here, we should trigger some code in a
-        // query handler which will then trigger the results for the object.
-        // Note that we generate a new update so that we are sure to use the
-        // most up-to-date loc information.
-        Sirikata::Protocol::Prox::ProximityUpdate obj_update;
-
         for(int32 aidx = 0; aidx < update.addition_size(); aidx++) {
             Sirikata::Protocol::Prox::ObjectAddition addition = update.addition(aidx);
             ProxProtocolLocUpdate add(addition);
@@ -419,9 +375,6 @@ void ServerQueryHandler::handleProximityMessage(const OHDP::SpaceNodeID& snid, c
             // Replay orphans
             query_state->orphans.invokeOrphanUpdates(snid, observed, this);
 
-            // TODO(ewencp) temporary code to get results out. See note above.
-            addAdditionResult(obj_update, observed, query_state->objects->properties(observed_oref));
-
             // TODO(ewencp) this is a temporary way to trigger refinement -- we
             // just always refine whenver we see. Obviously this is inefficient
             // and won't scale, but it's useful to get some tests running.
@@ -439,23 +392,8 @@ void ServerQueryHandler::handleProximityMessage(const OHDP::SpaceNodeID& snid, c
                 observed_oref
             );
 
-            // TODO(ewencp) temporary code to get results out. See note above.
-            addRemovalResult(
-                obj_update, observed,
-                removal.seqno(),
-                (removal.has_type() && (removal.type() == Sirikata::Protocol::Prox::ObjectRemoval::Permanent))
-            );
         }
 
-        // TODO(ewencp) temporary to get results to objects. See note above.
-        // FIXME this also isn't even right. we need to track which objects
-        // should get results from this query.
-        for(ObjectStateMap::const_iterator obj_it = mObjectState.begin(); obj_it != mObjectState.end(); obj_it++) {
-            HostedObjectPtr ho = obj_it->second.who.lock();
-            if (!ho) continue;
-            const SpaceObjectReference& sporef = obj_it->first;
-            deliverProximityUpdate(ho, sporef, obj_update);
-        }
     }
 
 }

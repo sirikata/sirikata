@@ -2389,6 +2389,8 @@ SET(LIBOH_PLUGIN_MANUAL_QUERY_SOURCES
   ${LIBOH_PLUGIN_MANUAL_QUERY_DIR}/ProxSimulationTraits.cpp
  ${LIBOH_PLUGIN_MANUAL_QUERY_DIR}/OHLocationServiceCache.cpp
  ${LIBOH_PLUGIN_MANUAL_QUERY_DIR}/ServerQueryHandler.cpp
+ ${LIBOH_PLUGIN_MANUAL_QUERY_DIR}/ObjectQueryHandlerBase.cpp
+ ${LIBOH_PLUGIN_MANUAL_QUERY_DIR}/ObjectQueryHandler.cpp
  ${LIBOH_PLUGIN_MANUAL_QUERY_DIR}/ManualObjectQueryProcessor.cpp
  ${LIBOH_PLUGIN_MANUAL_QUERY_DIR}/PluginInterface.cpp
     )

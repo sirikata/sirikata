@@ -18,7 +18,7 @@ float32 maxSizeFromBounds(const BoundingSphere3f& bnds) {
 
 typedef Prox::LocationServiceCache<ObjectProxSimulationTraits> LocationServiceCache;
 
-OHLocationServiceCache::OHLocationServiceCache(Network::IOStrand* strand)
+OHLocationServiceCache::OHLocationServiceCache(Network::IOStrandPtr strand)
  : LocationServiceCache(),
    mStrand(strand),
    mListeners(),

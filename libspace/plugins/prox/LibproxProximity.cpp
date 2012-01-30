@@ -36,7 +36,7 @@
 
 #include <algorithm>
 
-#include <sirikata/space/QueryHandlerFactory.hpp>
+#include <sirikata/core/prox/QueryHandlerFactory.hpp>
 
 #include "Protocol_Prox.pbj.hpp"
 #include "Protocol_ServerProx.pbj.hpp"

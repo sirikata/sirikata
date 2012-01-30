@@ -38,7 +38,7 @@
 #include <sirikata/core/network/Message.hpp> // parse/serializePBJMessage
 #include "Protocol_MasterPinto.pbj.hpp"
 
-#include <sirikata/space/QueryHandlerFactory.hpp>
+#include <sirikata/core/prox/QueryHandlerFactory.hpp>
 
 using namespace Sirikata::Network;
 

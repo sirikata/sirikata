@@ -253,6 +253,7 @@ void AggregateManager::generateAggregateMeshAsyncIgnoreErrors(const UUID uuid, T
 }
 
 bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime, bool generateSiblings) {
+    return true;
   Time curTime = Timer::now();
 
   /* Get the aggregate object corresponding to UUID 'uuid'.  */

@@ -10,11 +10,9 @@
 #include <sirikata/core/util/PresenceProperties.hpp>
 #include "OHLocationUpdateListener.hpp"
 #include <boost/thread.hpp>
+#include <sirikata/core/network/IOStrand.hpp>
 
 namespace Sirikata {
-namespace Network {
-class IOStrand;
-}
 
 class OHLocationServiceCache;
 typedef std::tr1::shared_ptr<OHLocationServiceCache> OHLocationServiceCachePtr;
@@ -41,7 +39,7 @@ class OHLocationServiceCache :
 public:
     typedef Prox::LocationUpdateListener<ObjectProxSimulationTraits> LocationUpdateListener;
 
-    OHLocationServiceCache(Network::IOStrand* strand);
+    OHLocationServiceCache(Network::IOStrandPtr strand);
     virtual ~OHLocationServiceCache();
 
     // External data input.
@@ -112,7 +110,7 @@ private:
     typedef boost::lock_guard<Mutex> Lock;
     Mutex mMutex;
 
-    Network::IOStrand* mStrand;
+    Network::IOStrandPtr mStrand;
 
     typedef std::set<LocationUpdateListener*> ListenerSet;
     ListenerSet mListeners;
