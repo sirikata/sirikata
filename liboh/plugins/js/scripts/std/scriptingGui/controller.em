@@ -1,4 +1,4 @@
-
+system.require('scriptingGuiUtil.em');
 
 (function()
 {
@@ -8,6 +8,10 @@
     var actionMap = {};
 
 
+    var guiScriptActionId = std.ScriptingGui.Util.uniqueId();
+    var scriptAction =
+        new std.ScriptingGui.Action('script action','',guiScriptActionId);
+    
     //map from visible id to visible object
     //which visibles are near me
     var nearbyVisMap   = {};
@@ -24,7 +28,7 @@
     std.ScriptingGui.Controller = function(presScripter)
     {
         console = new std.ScriptingGui.Console(scriptedVisMap);
-        
+
         scripter = presScripter;
         if (typeof(presScripter) === 'undefined')
             scripter = system.self;
@@ -42,6 +46,28 @@
         return (id in actionMap);
     }
     
+
+    std.ScriptingGui.Controller.prototype.getScriptActionId =
+        function()
+    {
+        return guiScriptActionId;
+    };
+
+    std.ScriptingGui.Controller.prototype.execScriptAction =
+        function(visId,text)
+    {
+
+        if (! this.scriptedVisExists(visId))
+        {
+            throw new Error('Error executing script action.  ' +
+                            'Have no record of visId: ' + visId.toString());
+        }
+
+        scriptAction.edit(text);
+        var vis = scriptedVisMap[visId].vis;
+        return internalExecAction(this,scriptAction,vis);
+    };
+
     
     std.ScriptingGui.Controller.prototype.addAction =
         function(name,text)
@@ -95,16 +121,23 @@
                              visId + ' have no record of.');
         }
 
-        var action = actionMap[actId];
-        scripter # action.createScriptMsg() >> vis >>
-            [std.core.bind(onActResp,undefined,this,action),
-             TIME_TO_WAIT_FOR_RESPONSE,
-             std.core.bind(onNoActResp,undefined,this,action,visId)];
-
-        var consDescription = actionMap[actId].getConsoleDescription(visId);
-        console.scriptSentEvent(consDescription);
+        internalExecAction(this,action,vis);
     };
 
+    
+    function internalExecAction(controller,action,vis)
+    {
+        var visId = vis.toString();
+
+        scripter # action.createScriptMsg() >> vis >>
+            [std.core.bind(onActResp,undefined,controller,action),
+             TIME_TO_WAIT_FOR_RESPONSE,
+             std.core.bind(onNoActResp,undefined,controller,action,visId)];
+
+        var consDescription = action.getConsoleDescription(visId);
+        console.scriptSentEvent(consDescription);
+    }
+    
 
     
     /**
@@ -473,10 +506,9 @@
             value: msg.print
         };
         console.printEvent(printMsg);
+        gui.redraw();
     }
     
-    //************** CONSOLES ***********************//
-
     
 })();
 

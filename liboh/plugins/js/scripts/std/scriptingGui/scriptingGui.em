@@ -221,6 +221,14 @@ system.require('std/core/simpleInput.em');
          this.redraw();
      };
 
+
+     std.ScriptingGui.prototype.hExecScript =
+         function(visId,toExec)
+     {
+         this.controller.execScriptAction(visId,toExec);
+     };
+
+     
      
      /**
       @param {std.ScriptingGui} 
@@ -281,7 +289,11 @@ system.require('std/core/simpleInput.em');
          scriptingGui.guiMod.bind(
              'removeFile',
              std.core.bind(scriptingGui.hRemoveFile,scriptingGui));
-         
+
+         scriptingGui.guiMod.bind(
+             'execScript',
+             std.core.bind(scriptingGui.hExecScript,scriptingGui));
+
          
          scriptingGui.redraw();
      }
@@ -458,6 +470,23 @@ system.require('std/core/simpleInput.em');
          {
              return 'ishmael__nearbyScriptedTabId__';
          }
+
+         function scriptConsoleDivId()
+         {
+             return 'ishmael__scriptConsoleDivId__';
+         }
+         
+         function execScriptButtonId()
+         {
+             return 'ishmael__execScriptButtonId__';
+         }
+
+
+         function execTareaId()
+         {
+             return 'ishmael__execTareaId__';
+         }
+
          
          /**
           \param {String} nearbyObj (id of visible that we are
@@ -518,6 +547,7 @@ system.require('std/core/simpleInput.em');
            '<ul>' +
 		'<li><a href="#' + actionDivId() +'">Actions</a></li>' +
 		'<li><a href="#' + fileDivId() +'">Files</a></li>' +
+                '<li><a href="#' + scriptConsoleDivId() + '"> Instant script</a></li>' +
 	   '</ul>' +
            
               //action gui
@@ -572,6 +602,17 @@ system.require('std/core/simpleInput.em');
 
               '</div>' + //closes file div
 
+              //script console
+              '<div id="' + scriptConsoleDivId() + '">' +
+
+                 '<div id="'   + execTareaId()+ '"  style="min-width:400px;min-height:100px;max-width:400px;position:relative;margin:0;padding:0;">' +
+                 '</div>'      + //closes actionTareaDiv
+           
+                 '<button id="' + execScriptButtonId() + '">' +
+                 'run' +
+                 '</button>' +
+              '</div>' +
+           
 
            '</div>' + //closes tab div
            
@@ -596,6 +637,12 @@ system.require('std/core/simpleInput.em');
          consoleEditor.renderer.setShowGutter(true);
          consoleEditor.setReadOnly(true);
 
+         var execEditor = ace.edit(execTareaId());
+         execEditor.setTheme('ace/theme/dawn');
+         execEditor.getSession().setMode(new jsMode());
+         execEditor.renderer.setShowGutter(true);
+         
+         
          var $tabs = $('#' +actionFileTabId());
          $tabs.tabs();
 
@@ -815,6 +862,20 @@ system.require('std/core/simpleInput.em');
                      'removeFile',currentlySelectedVisible,currentlySelectedFile);
 
              });
+
+
+         $('#' + execScriptButtonId()).click(
+             function()
+             {
+                 if (typeof(currentlySelectedVisible) == 'undefined')
+                     return;
+                 
+                 var toExec = execEditor.getSession().getValue();
+                 execEditor.getSession().setValue('');
+                 sirikata.event(
+                     'execScript',currentlySelectedVisible,toExec);
+             });
+
          
          
          var inputWindow = new sirikata.ui.window(
@@ -1107,7 +1168,7 @@ system.require('std/core/simpleInput.em');
 
 
 //do all further imports for file and gui control.
-system.require('controller.em');
 system.require('action.em');
 system.require('console.em');
+system.require('controller.em');
 system.require('fileManagerElement.em');
