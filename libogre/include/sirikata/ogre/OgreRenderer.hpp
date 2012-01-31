@@ -105,7 +105,7 @@ public:
         return simStrand;
     }
 
-    
+
     Ogre::SceneManager* getSceneManager() {
         return mSceneManager;
     }
@@ -191,15 +191,14 @@ public:
     ///all the things that should happen once the frame finishes
     virtual void postFrame(Task::LocalTime, Duration);
 
-    void iPoll(Liveness::Token rendererAlive);
     void iStop(Liveness::Token rendererAlive);
-    
+
     void parseMeshWork(
         Liveness::Token rendererAlive,
         const Transfer::RemoteFileMetadata& metadata,
         const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data,
         ParseMeshCallback cb);
-    
+
     Mesh::VisualPtr parseMeshWorkSync(const Transfer::RemoteFileMetadata& metadata, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data);
 
 
@@ -287,7 +286,7 @@ public:
     String mNextFrameScreenshotFile;
     bool initialized;
     bool stopped;
-    
+
 };
 
 } // namespace Graphics

@@ -336,7 +336,7 @@ SessionManager::SessionManager(
     ObjectConnectedCallback conn_cb, ObjectMigratedCallback mig_cb,
     ObjectMessageHandlerCallback msg_cb, ObjectDisconnectedCallback disconn_cb
 )
- : PollingService(ctx->mainStrand, Duration::seconds(1.f), ctx, "Space Server"),
+ : PollingService(ctx->mainStrand, Duration::seconds(1.f), ctx, "Session Manager"),
    OHDP::DelegateService( std::tr1::bind(&SessionManager::createDelegateOHDPPort, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2) ),
    mContext( ctx ),
    mSpace(space),

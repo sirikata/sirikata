@@ -846,25 +846,13 @@ void OgreRenderer::postFrame(Task::LocalTime current, Duration frameTime) {
 
 void OgreRenderer::poll()
 {
-    simStrand->post(
-        std::tr1::bind(&OgreRenderer::iPoll,this,
-            livenessToken()));
-}
-
-void OgreRenderer::iPoll(Liveness::Token rendererAlive)
-{
-    if (!rendererAlive) return;
-    Liveness::Lock locked(rendererAlive);
-    if (!locked)
-        return;
-
     if (!initialized)
         return;
 
     if (stopped)
         return;
 
-    
+
     Task::LocalTime curFrameTime(Task::LocalTime::now());
 
     Duration frameTime=curFrameTime-mLastFrameTime;
@@ -896,9 +884,9 @@ void OgreRenderer::iStop(Liveness::Token rendererAlive)
     Liveness::Lock locked(rendererAlive);
     if (!locked)
         return;
-    
+
     while (! initialized){}
-    
+
     delete mParsingWork;
     TimeSteppedSimulation::stop();
     stopped = true;
@@ -1022,10 +1010,10 @@ void OgreRenderer::parseMeshWork(
     if (!locked)
         return;
 
-    
+
     if (stopped)
         return;
-    
+
     Mesh::VisualPtr parsed = parseMeshWorkSync(metadata, fp, data);
     simStrand->post(std::tr1::bind(cb,parsed));
 }
