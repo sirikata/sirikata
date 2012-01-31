@@ -438,6 +438,21 @@ system.require('std/core/simpleInput.em');
          {
              return 'ishmael__consoleId__';
          }
+
+         function actionDivId()
+         {
+             return 'ishmael__actionDivId__';
+         }
+
+         function fileDivId()
+         {
+             return 'ishmael__fileDivId__';
+         }
+
+         function actionFileTabId()
+         {
+             return 'ishmael__actionFileTabId__';
+         }
          
          /**
           \param {String} nearbyObj (id of visible that we are
@@ -451,6 +466,7 @@ system.require('std/core/simpleInput.em');
          }
 
 
+         
          /**
           \param {String} scriptedObj (id of visible that we are
           communicating with).
@@ -483,60 +499,70 @@ system.require('std/core/simpleInput.em');
            '<button id="' + renameVisibleButtonId() + '">' +
            'rename' +
            '</button>'    + 
+
+           //action file gui
+           '<div id="' + actionFileTabId() + '">' +
+
+           '<ul>' +
+		'<li><a href="#' + actionDivId() +'">Actions</a></li>' +
+		'<li><a href="#' + fileDivId() +'">Files</a></li>' +
+	   '</ul>' +
            
-           '<hr/>'            + 
-
-           //action gui
-           '<b>Actions</b><br/>' +
-           '<table><tr><td>'+
-           '<select id="'     + actionListId() + '" size=5>'   +
-           '</select>'        +
-           '</td><td>' +
+              //action gui
+              '<div id="'+actionDivId() + '">' + 
+              '<table><tr><td>'+
+              '<select id="'     + actionListId() + '" size=5>'   +
+              '</select>'        +
+              '</td><td>' +
            
-           '<div id="'   + actionTareaId()+ '"  style="min-width:400px;min-height:100px;max-width:400px;position:relative;margin:0;padding:0;">' +
-           '</div>'      + //closes actionTareaDiv
-           '</td></tr></table>' +
+              '<div id="'   + actionTareaId()+ '"  style="min-width:400px;min-height:100px;max-width:400px;position:relative;margin:0;padding:0;">' +
+              '</div>'      + //closes actionTareaDiv
+              '</td></tr></table>' +
            
-           '<button id="'     + saveActionButtonId()    + '">' +
-           'save action'      +
-           '</button>'        +
+              '<button id="'     + saveActionButtonId()    + '">' +
+              'save action'      +
+              '</button>'        +
 
-           '<button id="'     + execActionButtonId()    + '">' +
-           'exec&save action' +
-           '</button>'        +
+              '<button id="'     + execActionButtonId()    + '">' +
+              'exec&save action' +
+              '</button>'        +
 
-           '<button id="'     + newActionButtonId()     + '">' +
-           'new action'       +
-           '</button>'        +
+              '<button id="'     + newActionButtonId()     + '">' +
+              'new action'       +
+              '</button>'        +
 
-           '<button id="'     + removeActionButtonId()  + '">' +
-           'remove action'    +
-           '</button>'        +
+              '<button id="'     + removeActionButtonId()  + '">' +
+              'remove action'    +
+              '</button>'        +
+              '</div>'   + //closes action div
 
-           '<hr/>'            +
 
-           //file gui
-           '<b>Files</b><br/>'  +
-           '<select id="'     + fileSelectId() + '" size=5 style="min-width:200px">'   +
-           '</select><br/>'        +
+              //file gui
+              '<div id="' +fileDivId() + '">' +
+              '<select id="'     + fileSelectId() + '" size=5 style="min-width:200px">'   +
+              '</select><br/>'        +
 
-           '<button id="'+ addFileButtonId() + '">' +
-           'add file' +
-           '</button>'+
+              '<button id="'+ addFileButtonId() + '">' +
+              'add file' +
+              '</button>'+
 
-           '<button id="'+ updateAndSendFileButtonId() + '">' +
-           'update and send file' +
-           '</button>'+
+              '<button id="'+ updateAndSendFileButtonId() + '">' +
+              'update and send file' +
+              '</button>'+
 
-           '<button id="'+ updateAndSendAllFilesButtonId() + '">' +
-           'update and send all files' +
-           '</button>'+
+              '<button id="'+ updateAndSendAllFilesButtonId() + '">' +
+              'update and send all files' +
+              '</button>'+
 
-           '<button id="' + removeFileButtonId() + '">' +
-           'remove file' +
-           '</button>'   +
+              '<button id="' + removeFileButtonId() + '">' +
+              'remove file' +
+              '</button>'   +
 
-           '<hr/>' +
+              '</div>' + //closes file div
+
+
+           '</div>' + //closes tab div
+           
            //console
            '<b>Console</b><br/>' +
            '<div id="' + consoleId() + '" style="min-width:500px;max-width:550px;min-height:250px;position:relative;margin:0;padding:0;">'  +
@@ -557,7 +583,12 @@ system.require('std/core/simpleInput.em');
          consoleEditor.getSession().setMode(new jsMode());
          consoleEditor.renderer.setShowGutter(true);
          consoleEditor.setReadOnly(true);
-         
+
+         var $tabs = $('#' +actionFileTabId());
+         $tabs.tabs();
+         //$tabs.tabs('add','#' + fileDivId(), 'Files');
+         //$tabs.tabs('add','#' + actionDivId(), 'Actions');
+
          
          //The id of the visible that the scripter has selected to
          //program.
@@ -786,6 +817,7 @@ system.require('std/core/simpleInput.em');
          inputWindow.show();
 
 
+         
 
          /**
           changes selection in updateNearby to the one associated with
