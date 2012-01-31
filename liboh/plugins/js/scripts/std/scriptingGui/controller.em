@@ -33,11 +33,13 @@ system.require('scriptingGuiUtil.em');
         if (typeof(presScripter) === 'undefined')
             scripter = system.self;
 
+        
         gui = new std.ScriptingGui(
             this,simulator,nearbyVisMap,
             scriptedVisMap,actionMap,console);
         
         instantiateProxHandlers();
+        this.addVisible(scripter);
     };
 
 
