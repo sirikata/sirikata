@@ -271,6 +271,10 @@ bool Server::isObjectConnecting(const UUID& object_id) const {
 void Server::sendSessionMessageWithRetry(const ObjectHostConnectionID& conn, Sirikata::Protocol::Object::ObjectMessage* msg, const Duration& retry_rate) {
     bool sent = mObjectHostConnectionManager->send( conn, msg );
     if (!sent) {
+        // It's possible we failed due to disconnection, don't keep retrying in
+        // that case
+        if (!mObjectHostConnectionManager->validConnection(conn)) return;
+
         mContext->mainStrand->post(
             retry_rate,
             std::tr1::bind(&Server::sendSessionMessageWithRetry, this, conn, msg, retry_rate)
