@@ -453,6 +453,11 @@ system.require('std/core/simpleInput.em');
          {
              return 'ishmael__actionFileTabId__';
          }
+
+         function nearbyScriptedTabId()
+         {
+             return 'ishmael__nearbyScriptedTabId__';
+         }
          
          /**
           \param {String} nearbyObj (id of visible that we are
@@ -488,18 +493,25 @@ system.require('std/core/simpleInput.em');
          $('<div>'   +
            
            //which presences are available
-           '<b>Scripted presences</b><br/>' +
-           '<select id="'     + scriptedListId() + '" size=5>' +
-           '</select><br/>'   +
+           '<div id="' + nearbyScriptedTabId() + '">' +
+           '<ul>' +
+		'<li><a href="#' + scriptedListId() +'">Scripted</a></li>' +
+		'<li><a href="#' + nearbyListId() +'">Nearby</a></li>' +
+	   '</ul>' +
 
-           '<b>Nearby presences</b><br/>'      +
-           '<select id="'     + nearbyListId() + '" size=5>'   +
-           '</select><br/>'   +
+              '<select id="'     + scriptedListId() + '" size=5>' +
+              '</select><br/>'   +
 
-           '<button id="' + renameVisibleButtonId() + '">' +
-           'rename' +
-           '</button>'    + 
+              '<select id="'     + nearbyListId() + '" size=5>'   +
+              '</select><br/>'   +
 
+              '<button id="' + renameVisibleButtonId() + '">' +
+              'rename' +
+              '</button>'    +
+ 
+           '</div>' + //closes scripted/nearby tab div
+
+           
            //action file gui
            '<div id="' + actionFileTabId() + '">' +
 
@@ -586,9 +598,10 @@ system.require('std/core/simpleInput.em');
 
          var $tabs = $('#' +actionFileTabId());
          $tabs.tabs();
-         //$tabs.tabs('add','#' + fileDivId(), 'Files');
-         //$tabs.tabs('add','#' + actionDivId(), 'Actions');
 
+         $tabs = $('#' + nearbyScriptedTabId());
+         $tabs.tabs();
+         
          
          //The id of the visible that the scripter has selected to
          //program.
