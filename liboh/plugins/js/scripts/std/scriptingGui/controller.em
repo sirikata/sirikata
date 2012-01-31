@@ -25,7 +25,7 @@ system.require('scriptingGuiUtil.em');
     
 
     //basic constructor
-    std.ScriptingGui.Controller = function(presScripter)
+    std.ScriptingGui.Controller = function(simulator,presScripter)
     {
         console = new std.ScriptingGui.Console(scriptedVisMap);
 
@@ -34,7 +34,8 @@ system.require('scriptingGuiUtil.em');
             scripter = system.self;
 
         gui = new std.ScriptingGui(
-            this,nearbyVisMap,scriptedVisMap,actionMap,console);
+            this,simulator,nearbyVisMap,
+            scriptedVisMap,actionMap,console);
         
         instantiateProxHandlers();
     };
@@ -508,7 +509,20 @@ system.require('scriptingGuiUtil.em');
         console.printEvent(printMsg);
         gui.redraw();
     }
-    
+
+
+    //************ External interface ***************//
+    std.ScriptingGui.Controller.prototype.script = function (visOrPres)
+    {
+        var visibler = getVisAndChangeToUsed(visOrPres.toString(),this);
+        if (visibler === null)
+        {
+            throw new Error('Error scripting: no record of visible with id ' +
+                            visOrPres.toString() + ' to script.');
+        }
+        
+        gui.redraw(visOrPres.toString());
+    };
     
 })();
 

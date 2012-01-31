@@ -1,11 +1,13 @@
-
 system.require('std/core/simpleInput.em');
+
 
 (function()
  {
 
      /**
-      @param {std.ScriptingGui.Controller}
+      @param {std.ScriptingGui.Controller} controller
+
+      @param {std.client.Default} simulator
       
       @param {object: <String(visibleId):visible object>} nearbyVisMap
       -- all the visible objects that satisfy scripter's proximity
@@ -22,7 +24,8 @@ system.require('std/core/simpleInput.em');
       scripting events.
       */
      std.ScriptingGui =
-         function(controller,nearbyVisMap,scriptedVisMap,actionMap,console)
+         function(controller,simulator,nearbyVisMap,
+                  scriptedVisMap,actionMap,console)
      {
          if (typeof(simulator) == 'undefined')
          {
@@ -38,31 +41,53 @@ system.require('std/core/simpleInput.em');
          this.console          = console;
          this.console.setScriptingGui(this);
          
-         this.nameMap          ={};
+         this.nameMap          = {};
          this.nameMap[system.self.toString()] = 'self';
 
          
-         this.guiMod = simulator._simulator.addGUITextModule(
+         this.guiMod = simulator.addGUITextModule(
              guiName(),
              getGuiText(),
              std.core.bind(guiInitFunc,undefined,this));
          this.hasInited = false;
+         this.isReady = false;
+         
+         //if get message that we should redraw with a particular
+         //selected, then change heldSelected to not be undefined
+         this.heldSelected = undefined;
      };
 
      system.require('scriptingGuiUtil.em');
-     
-     std.ScriptingGui.prototype.redraw = function()
+
+
+     /**
+      @param {String: vis/presId} selected (optional).  If called with
+      this field, then gui should actually change currentlySelectedVisible
+      */
+     std.ScriptingGui.prototype.redraw = function(selected)
      {
          if (!this.hasInited)
              return;
+
+         //have to wait for ace libraries to load.  after they do, js
+         //will send an amReady event back to emerson code.  emerson
+         //code will redraw with the last not undefined heldSelected.
+         if (!this.isReady)
+         {
+             if (typeof(selected) != 'undefined')
+                 this.heldSelected =selected;
+             return;
+         }
          
          //trigger redraw call
          this.guiMod.call(
              'ishmaelRedraw',toHtmlNearbyMap(this),toHtmlScriptedMap(this),
              toHtmlActionMap(this),toHtmlFileMap(this),toHtmlNameMap(this),
-             toHtmlConsoleMap(this));
+             toHtmlConsoleMap(this),selected);
      };
 
+
+     
      
      /**
       @param {String} visId -- Id of visible.
@@ -228,6 +253,14 @@ system.require('std/core/simpleInput.em');
          this.controller.execScriptAction(visId,toExec);
      };
 
+     std.ScriptingGui.prototype.hAmReady =
+         function()
+     {
+         this.isReady =true;
+         this.redraw(this.heldSelected);
+         this.heldSelected  = undefined;
+     };
+
      
      
      /**
@@ -293,6 +326,11 @@ system.require('std/core/simpleInput.em');
          scriptingGui.guiMod.bind(
              'execScript',
              std.core.bind(scriptingGui.hExecScript,scriptingGui));
+
+
+         scriptingGui.guiMod.bind(
+             'amReady',
+             std.core.bind(scriptingGui.hAmReady,scriptingGui));
 
          
          scriptingGui.redraw();
@@ -366,6 +404,20 @@ system.require('std/core/simpleInput.em');
 
          returner += @
 
+
+        $LAB
+            .script("../ace/build/src/ace-uncompressed.js")
+            .script("../ace/build/src/theme-dawn.js")
+            .script("../ace/build/src/mode-javascript.js").wait(
+                function()
+                {
+
+
+
+
+
+
+         
          function ishmaelWindowId()
          {
              return 'ishmael__windowID_';
@@ -964,11 +1016,25 @@ system.require('std/core/simpleInput.em');
 
           \param {object: <string visId: array of console history>}
           consoleMap.
+
+          \param {String (visId or presId)} selected (optional).  If
+          not undefined, then change currentlySelectedVsible to this
+          field before continuing.
           */
          ishmaelRedraw = function(
              nearbyObjs,scriptedObjs,actionMap,fileMap,
-             nameMap,consoleMap)
+             nameMap,consoleMap,selected)
          {
+             //do not need to use changeCurrentlySelected function,
+             //because know that the associated redraws of console +
+             //files will be automatically handled in following redraw
+             //call.  danger in calling changeCurrentlySelected is that
+             //may not have a record of this visible in allFiles yet,
+             //causing a problem.
+             if (typeof(selected) != 'undefined')
+                 currentlySelectedVisible = selected;
+
+             
              redrawNearby(nearbyObjs,nameMap);
              redrawScriptedObjs(scriptedObjs,nameMap);
              redrawActionList(actionMap);
@@ -1157,6 +1223,11 @@ system.require('std/core/simpleInput.em');
              }
              consoleEditor.getSession().setValue(consMsg);
          }
+
+
+                    sirikata.event('amReady');
+                    
+                }); //closes function waiting for ace to load through lab
 
          
          @;
