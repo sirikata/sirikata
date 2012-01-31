@@ -521,14 +521,6 @@ void Server::handleObjectHostConnectionClosed(const ObjectHostConnectionID& oh_c
     mContext->timeSeries->report(mTimeSeriesObjects, mObjects.size());
 }
 
-void Server::retryHandleConnect(const ObjectHostConnectionID& oh_conn_id, Sirikata::Protocol::Object::ObjectMessage* obj_response) {
-    if (!mObjectHostConnectionManager->send(oh_conn_id,obj_response)) {
-        mContext->mainStrand->post(Duration::seconds(0.05),std::tr1::bind(&Server::retryHandleConnect,this,oh_conn_id,obj_response));
-    }else {
-
-    }
-}
-
 void Server::sendConnectError(const ObjectHostConnectionID& oh_conn_id, const UUID& obj_id, uint64 session_request_seqno) {
     Sirikata::Protocol::Session::Container response_container;
     if (session_request_seqno != 0) response_container.set_seqno(session_request_seqno);
@@ -543,10 +535,7 @@ void Server::sendConnectError(const ObjectHostConnectionID& oh_conn_id, const UU
         serializePBJMessage(response_container)
     );
 
-    // Sent directly via object host connection manager because we don't have an ObjectConnection
-    if (!mObjectHostConnectionManager->send( oh_conn_id, obj_response )) {
-        mContext->mainStrand->post(Duration::seconds(0.05),std::tr1::bind(&Server::retryHandleConnect,this,oh_conn_id,obj_response));
-    }
+    sendSessionMessageWithRetry(oh_conn_id, obj_response, Duration::seconds(0.05));
 }
 
 // Handle Connect message from object
@@ -595,11 +584,7 @@ void Server::handleConnect(const ObjectHostConnectionID& oh_conn_id, const Sirik
             serializePBJMessage(response_container)
         );
 
-
-        // Sent directly via object host connection manager because we don't have an ObjectConnection
-        if (!mObjectHostConnectionManager->send( oh_conn_id, obj_response )) {
-            mContext->mainStrand->post(Duration::seconds(0.05),std::tr1::bind(&Server::retryHandleConnect,this,oh_conn_id,obj_response));
-        }
+        sendSessionMessageWithRetry(oh_conn_id, obj_response, Duration::seconds(0.05));
         return;
     }
 
