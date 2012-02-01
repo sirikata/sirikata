@@ -412,10 +412,9 @@ system.require('std/core/simpleInput.em');
                 function()
                 {
 
-
-
-
-
+	            var newcsslink =
+                        $("<link />").attr({rel:'stylesheet', type:'text/css', href:'../scripting/prompt.css'});
+	            $("head").append(newcsslink);
 
          
          function ishmaelWindowId()
@@ -569,9 +568,10 @@ system.require('std/core/simpleInput.em');
          {
              return visId.replace(':','');
          }
-         
 
-         $('<div>'   +
+
+
+         $('<div style="font-size:.9em">'   +
            
            //which presences are available
            '<div id="' + nearbyScriptedTabId() + '">' +
@@ -581,10 +581,12 @@ system.require('std/core/simpleInput.em');
 	   '</ul>' +
 
               '<select id="'     + scriptedListId() + '" size=5>' +
-              '</select><br/>'   +
+              '</select>'   +
 
               '<select id="'     + nearbyListId() + '" size=5>'   +
-              '</select><br/>'   +
+              '</select>'   +
+
+           '<br/>' +
 
               '<button id="' + renameVisibleButtonId() + '">' +
               'rename' +
@@ -605,7 +607,7 @@ system.require('std/core/simpleInput.em');
               //action gui
               '<div id="'+actionDivId() + '">' + 
               '<table><tr><td>'+
-              '<select id="'     + actionListId() + '" size=5>'   +
+              '<select id="'     + actionListId() + '" size=5 style="min-width:100px">'   +
               '</select>'        +
               '</td><td>' +
            
@@ -670,7 +672,7 @@ system.require('std/core/simpleInput.em');
            
            //console
            '<b>Console</b><br/>' +
-           '<div id="' + consoleId() + '" style="min-width:500px;max-width:550px;min-height:250px;position:relative;margin:0;padding:0;">'  +
+           '<div id="' + consoleId() + '" style="min-width:500px;max-width:550px;min-height:200px;position:relative;margin:0;padding:0;">'  +
            '</div>' +
 
            
@@ -682,17 +684,18 @@ system.require('std/core/simpleInput.em');
          var actionEditor = ace.edit(actionTareaId());
          actionEditor.setTheme('ace/theme/dawn');
          actionEditor.getSession().setMode(new jsMode());
-
+         actionEditor.renderer.setShowGutter(false);
+                    
          var consoleEditor = ace.edit(consoleId());
          consoleEditor.setTheme('ace/theme/dawn');
          consoleEditor.getSession().setMode(new jsMode());
-         consoleEditor.renderer.setShowGutter(true);
+         consoleEditor.renderer.setShowGutter(false);
          consoleEditor.setReadOnly(true);
 
          var execEditor = ace.edit(execTareaId());
          execEditor.setTheme('ace/theme/dawn');
          execEditor.getSession().setMode(new jsMode());
-         execEditor.renderer.setShowGutter(true);
+         execEditor.renderer.setShowGutter(false);
          
          
          var $tabs = $('#' +actionFileTabId());
@@ -936,7 +939,7 @@ system.require('std/core/simpleInput.em');
 	             autoOpen: true,
 	             height: 'auto',
 	             width: 600,
-                     height: 850,
+                     height: 650,
                      position: 'right'
                  }
              );

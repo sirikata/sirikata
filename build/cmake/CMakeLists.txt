@@ -935,6 +935,18 @@ IF(SPACE_DELAY_APPLY_LOC_UPDATE_LENGTH GREATER 0)
 ENDIF()
 
 
+
+SET(BERKELIUM_REMOTE_DEBUG FALSE
+  CACHE BOOL "If non-empty, apply this much delay (in seconds) to applying loc update requests on the space server."
+)
+IF(BERKELIUM_REMOTE_DEBUG)
+  ADD_DEFINITIONS(-DBERKELIUM_REMOTE_DEBUGGING=1)
+ELSE()
+  ADD_DEFINITIONS(-DBERKELIUM_REMOTE_DEBUGGING=0)
+ENDIF()
+
+
+
 #variable which contains list of plugin targets we want to install
 SET(PLUGIN_INSTALL_LIST)
 

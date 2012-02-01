@@ -124,6 +124,7 @@ system.require('scriptingGuiUtil.em');
                              visId + ' have no record of.');
         }
 
+        var action = actionMap[actId];
         internalExecAction(this,action,vis);
     };
 
@@ -495,11 +496,6 @@ system.require('scriptingGuiUtil.em');
 
     function handlePrint(msg,sender)
     {
-        //note, will eventually remove this if can print to self.
-        if (sender.toString() == system.self.toString())
-            return;
-
-        
         if (console === null)
             return;
 

@@ -1,9 +1,9 @@
-.ace_scroller {
-    overflow-x: auto;
-}
-.ace_editor .ace_sb {
-    overflow-y: auto;
-}
+/* .ace_scroller { */
+/*     overflow-x: auto; */
+/* } */
+/* .ace_editor .ace_sb { */
+/*     overflow-y: auto; */
+/* } */
 
 div.codeedit {
     min-width: 200px;
