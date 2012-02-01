@@ -67,9 +67,9 @@ function() {
         scriptReplyHandler << scriptReplyPattern;
 
         // Listen for print events
-        var printPattern = new util.Pattern("request", "print");
-        var printHandler = std.core.bind(this._handlePrint, this);
-        printHandler << printPattern;
+        // var printPattern = new util.Pattern("request", "print");
+        // var printHandler = std.core.bind(this._handlePrint, this);
+        // printHandler << printPattern;
     };
 
     ns.Scripter.prototype.onReset = function(reset_cb) {

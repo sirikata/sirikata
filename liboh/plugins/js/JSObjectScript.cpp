@@ -65,7 +65,8 @@
 #include "JSObjectStructs/JSUtilStruct.hpp"
 #include <boost/lexical_cast.hpp>
 #include "JSObjectStructs/JSCapabilitiesConsts.hpp"
-
+#include <boost/algorithm/string.hpp>
+#include <boost/algorithm/string/erase.hpp>
 #include <sirikata/core/util/Paths.hpp>
 
 #include <sys/stat.h>
@@ -392,7 +393,6 @@ void JSObjectScript::shimImportAndEvalScript(JSContextStruct* jscont, const Stri
 }
 
 /**
-   lkjs;
    FIXME: instead of posting jscont through, instead post its id through.  That
    way, it can't get deleted out from under us.
  */
@@ -896,6 +896,51 @@ void JSObjectScript::setRestoreScriptCallback(
 }
 
 
+v8::Handle<v8::Value> JSObjectScript::pushEvalContextScopeDirectory(
+    const String& newDir)
+{
+    JSSCRIPT_SERIAL_CHECK();
+    if (mEvalContextStack.empty())
+    {
+        V8_EXCEPTION_CSTR(
+            "Error when pushing context scope.  Have no surrounding scope.");
+    }
+
+    boost::filesystem::path baseDir  =
+        Path::SubstitutePlaceholders(Path::Placeholders::RESOURCE(JS_PLUGINS_DIR,JS_SCRIPTS_DIR));
+
+    String newerDir(newDir);
+    boost::erase_all(newerDir,"..");
+    boost::filesystem::path fullPath =
+        baseDir / newerDir;
+
+    JSLOG(detailed,"Pushing new path "<<fullPath<<" onto scope stack.");
+    
+    EvalContext ec(mEvalContextStack.top());
+    ec.currentScriptDir = fullPath;
+
+    mEvalContextStack.push(ec);
+    return v8::Undefined();
+}
+
+v8::Handle<v8::Value> JSObjectScript::popEvalContextScopeDirectory()
+{
+    JSSCRIPT_SERIAL_CHECK();
+    if (mEvalContextStack.empty())
+    {
+        V8_EXCEPTION_CSTR(
+            "Error when popping context scope.  Have no surrounding scope.");
+    }
+
+    JSLOG(detailed,
+        "Popping new path "<<mEvalContextStack.top().currentScriptDir<< \
+        " from scope stack.");
+    
+    mEvalContextStack.pop();
+    return v8::Undefined();
+}
+    
+
 
 //can instantly finish the clear operation in JSObjectScript because not in the
 //midst of handling any events that might invalidate iterators.
@@ -952,11 +997,22 @@ void JSObjectScript::eSetRestoreScript(
     mPersistedObjectSet->requestPersistedObject(mInternalID, script_type, "", script, wrapped_cb);
 }
 
-
-v8::Handle<v8::Value> JSObjectScript::debug_fileRead(const String& filename)
+v8::Handle<v8::Value> JSObjectScript::debug_fileRead(String& filename)
 {
     JSSCRIPT_SERIAL_CHECK();
-    std::ifstream fRead(filename.c_str(), std::ios::binary | std::ios::in);
+    boost::filesystem::path baseDir  =
+        Path::SubstitutePlaceholders(Path::Placeholders::RESOURCE(JS_PLUGINS_DIR,JS_SCRIPTS_DIR));
+
+    boost::erase_all(filename,"..");
+    boost::filesystem::path fullPath =
+        baseDir / filename;
+
+    if (!boost::filesystem::is_regular_file(fullPath))
+        V8_EXCEPTION_CSTR("No such file to read from");
+
+    
+    std::ifstream fRead(fullPath.string().c_str(),
+        std::ios::binary | std::ios::in);
     std::ifstream::pos_type begin, end;
 
     begin = fRead.tellg();
@@ -976,10 +1032,47 @@ v8::Handle<v8::Value> JSObjectScript::debug_fileRead(const String& filename)
 }
 
 
-v8::Handle<v8::Value> JSObjectScript::debug_fileWrite(const String& strToWrite,const String& filename)
+v8::Handle<v8::Value> JSObjectScript::debug_fileWrite(String& strToWrite,String& filename)
 {
     JSSCRIPT_SERIAL_CHECK();
-    std::ofstream fWriter (filename.c_str(),  std::ios::out | std::ios::binary);
+    
+    boost::filesystem::path baseDir  =
+        Path::SubstitutePlaceholders(Path::Placeholders::RESOURCE(JS_PLUGINS_DIR,JS_SCRIPTS_DIR));
+
+    boost::erase_all(filename,"..");
+    boost::filesystem::path fullPath =
+        baseDir / filename;
+
+    
+    String splitval;
+// We need to use filesystem2 on Windows because boost 1.44 doesn't expose slash through the boost::filesystem namespace.
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS
+    splitval += boost::filesystem2::slash<boost::filesystem::path>::value;
+#else
+    splitval += boost::filesystem::slash<boost::filesystem::path>::value;
+#endif
+    std::vector<String> pathParts;
+    boost::algorithm::split(
+        pathParts,fullPath.string(),
+        boost::is_any_of(splitval.c_str()));
+
+    boost::filesystem::path partialPath("/");
+    for (uint64 s= 0; s < pathParts.size() -1; ++s)
+    {
+        partialPath = partialPath / pathParts[s];
+
+        if (boost::filesystem::is_regular_file(partialPath))
+            V8_EXCEPTION_CSTR("Error writing file already have file with directory name");
+            
+        if ((!boost::filesystem::is_directory(partialPath)) &&
+            (!boost::filesystem::is_regular_file(partialPath)))
+        {
+            boost::filesystem::create_directory(partialPath);
+        }
+    }
+
+    std::ofstream fWriter (fullPath.string().c_str(),
+        std::ios::out | std::ios::binary);
 
     for (String::size_type s = 0; s < strToWrite.size(); ++s)
     {
@@ -1476,6 +1569,7 @@ void JSObjectScript::resolveImport(const String& filename, boost::filesystem::pa
     {
 
         path fq =  ctx.currentScriptDir / filename_as_path;
+        JSLOG(detailed,"Attempting to resolve import for "<<fq);
 
         try
         {
@@ -1693,8 +1787,11 @@ v8::Handle<v8::Value> JSObjectScript::import(const String& filename,  bool isJS)
 
     if(fileToFind == NULL)
     {
-      std::string errMsg = "Cannot import " + filename + ". Illegal file extension.";
-      return v8::ThrowException( v8::Exception::Error(v8::String::New(errMsg.c_str()) ) );;
+        std::string errMsg = "Cannot import " +
+            filename + ". Illegal file extension.";
+        
+        return v8::ThrowException(
+            v8::Exception::Error(v8::String::New(errMsg.c_str()) ) );
     }
     boost::filesystem::path full_filename, full_base;
     resolveImport(*fileToFind, &full_filename, &full_base);

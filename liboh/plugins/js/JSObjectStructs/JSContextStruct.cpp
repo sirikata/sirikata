@@ -187,6 +187,15 @@ v8::Handle<v8::Value> JSContextStruct::struct_evalInGlobal(const String& native_
 }
 
 
+v8::Handle<v8::Value> JSContextStruct::pushEvalContextScopeDirectory(const String& newDir)
+{
+    return jsObjScript->pushEvalContextScopeDirectory(newDir);
+}
+
+v8::Handle<v8::Value> JSContextStruct::popEvalContextScopeDirectory()
+{
+    return jsObjScript->popEvalContextScopeDirectory();
+}
 
 
 v8::Handle<v8::Value> JSContextStruct::emersonCompileString(const String& toCompile)
@@ -238,12 +247,12 @@ v8::Handle<v8::Value> JSContextStruct::setRestoreScript(const String& key, v8::H
 }
 
 
-v8::Handle<v8::Value>JSContextStruct::debug_fileWrite(const String& strToWrite,const String& filename)
+v8::Handle<v8::Value>JSContextStruct::debug_fileWrite(String& strToWrite,String& filename)
 {
     return jsObjScript->debug_fileWrite(strToWrite,filename);
 }
 
-v8::Handle<v8::Value> JSContextStruct::debug_fileRead(const String& filename)
+v8::Handle<v8::Value> JSContextStruct::debug_fileRead(String& filename)
 {
     return jsObjScript->debug_fileRead(filename);
 }

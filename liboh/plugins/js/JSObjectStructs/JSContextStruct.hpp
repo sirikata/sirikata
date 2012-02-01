@@ -95,6 +95,9 @@ struct JSContextStruct : public JSSuspendable, public Liveness
         JSVisibleStruct* jsvis,bool isGone);
 
 
+    v8::Handle<v8::Value> pushEvalContextScopeDirectory(const String& newDir);
+    v8::Handle<v8::Value> popEvalContextScopeDirectory();
+    
     v8::Handle<v8::Value> storageBeginTransaction();
     v8::Handle<v8::Value> storageCommit(v8::Handle<v8::Function> cb);
     v8::Handle<v8::Value> storageWrite(const OH::Storage::Key& key, const String& toWrite, v8::Handle<v8::Function> cb);
@@ -126,8 +129,8 @@ struct JSContextStruct : public JSSuspendable, public Liveness
     v8::Handle<v8::Value> struct_setReset(const std::map<SpaceObjectReference, std::vector<SpaceObjectReference> > & proxResSet);
     v8::Handle<v8::Value> struct_setScript(const String& script);
     v8::Handle<v8::Value> struct_getScript();
-    v8::Handle<v8::Value> debug_fileWrite(const String& strToWrite,const String& filename);
-    v8::Handle<v8::Value> debug_fileRead(const String& filename);
+    v8::Handle<v8::Value> debug_fileWrite(String& strToWrite,String& filename);
+    v8::Handle<v8::Value> debug_fileRead(String& filename);
 
 
     v8::Handle<v8::Value> deserialize(const String& toDeserialize);

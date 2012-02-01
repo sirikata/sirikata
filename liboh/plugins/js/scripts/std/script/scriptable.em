@@ -33,12 +33,18 @@
 system.require('std/core/bind.em');
 system.require('std/core/deepCopy.em');
 
+system.require('std/scriptingGui/fileReceiver.em');
+
 if (typeof(std) === "undefined") std = {};
 if (typeof(std.script) === "undefined") std.script = {};
+
 
 (
 function() {
 
+    
+    return;
+    
     var ns = std.script;
 
     

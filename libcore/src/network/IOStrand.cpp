@@ -40,6 +40,11 @@ namespace Network {
 
 IOStrand::IOStrand(IOService& io)
  : mService(io)
+#ifdef SIRIKATA_TRACK_STRAND_QUEUE_LENGTH
+   ,
+   mTimersEnqueued(0),
+   mEnqueued(0)
+#endif
 {
     mImpl = new InternalIOStrand(io);
 }
@@ -53,20 +58,60 @@ IOService& IOStrand::service() const {
 }
 
 void IOStrand::dispatch(const IOCallback& handler) {
+#ifdef SIRIKATA_TRACK_STRAND_QUEUE_LENGTH
+    mEnqueued++;
+    mService.dispatch(
+        mImpl->wrap(
+            std::tr1::bind(&IOStrand::decrementCount, this, handler)
+        )
+    );
+#else
     mService.dispatch( mImpl->wrap( handler ) );
+#endif
 }
 
 void IOStrand::post(const IOCallback& handler) {
+#ifdef SIRIKATA_TRACK_STRAND_QUEUE_LENGTH
+    mEnqueued++;
+    mService.post(
+        mImpl->wrap(
+            std::tr1::bind(&IOStrand::decrementCount, this, handler)
+        )
+    );
+#else
     mService.post( mImpl->wrap( handler ) );
+#endif
 }
 
 void IOStrand::post(const Duration& waitFor, const IOCallback& handler) {
+#ifdef SIRIKATA_TRACK_STRAND_QUEUE_LENGTH
+    mTimersEnqueued++;
+    mService.post(
+        waitFor,
+        mImpl->wrap(
+            std::tr1::bind(&IOStrand::decrementTimerCount, this, handler)
+        )
+    );
+#else
     mService.post(waitFor, mImpl->wrap( handler ) );
+#endif
 }
 
 IOCallback IOStrand::wrap(const IOCallback& handler) {
     return mImpl->wrap(handler);
 }
 
+
+#ifdef SIRIKATA_TRACK_STRAND_QUEUE_LENGTH
+void IOStrand::decrementTimerCount(const IOCallback& cb) {
+    mTimersEnqueued--;
+    cb();
+}
+
+void IOStrand::decrementCount(const IOCallback& cb) {
+    mEnqueued--;
+    cb();
+}
+#endif
 } // namespace Network
 } // namespace Sirikata

@@ -239,7 +239,7 @@ INCLUDE(GitRevision)
 #  * Revisions also only have additions and are very minor.
 SET(SIRIKATA_VERSION_MAJOR "0" CACHE STRING "Sirikata's major version" FORCE)
 SET(SIRIKATA_VERSION_MINOR "0" CACHE STRING "Sirikata's minor version" FORCE)
-SET(SIRIKATA_VERSION_REVISION "19" CACHE STRING "Sirikata's revision version" FORCE)
+SET(SIRIKATA_VERSION_REVISION "20" CACHE STRING "Sirikata's revision version" FORCE)
 
 # These get translated into two settings: the VERSION and
 # SOVERSION. The SOVERSION includes just the major number so anything
@@ -933,6 +933,18 @@ STRING(LENGTH "${SPACE_DELAY_APPLY_LOC_UPDATE}" SPACE_DELAY_APPLY_LOC_UPDATE_LEN
 IF(SPACE_DELAY_APPLY_LOC_UPDATE_LENGTH GREATER 0)
   ADD_DEFINITIONS(-DSIRIKATA_SPACE_DELAY_APPLY_LOC_UPDATE=${SPACE_DELAY_APPLY_LOC_UPDATE})
 ENDIF()
+
+
+
+SET(BERKELIUM_REMOTE_DEBUG FALSE
+  CACHE BOOL "If non-empty, apply this much delay (in seconds) to applying loc update requests on the space server."
+)
+IF(BERKELIUM_REMOTE_DEBUG)
+  ADD_DEFINITIONS(-DBERKELIUM_REMOTE_DEBUGGING=1)
+ELSE()
+  ADD_DEFINITIONS(-DBERKELIUM_REMOTE_DEBUGGING=0)
+ENDIF()
+
 
 
 #variable which contains list of plugin targets we want to install

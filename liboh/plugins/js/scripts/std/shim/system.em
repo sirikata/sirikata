@@ -116,6 +116,9 @@ PresenceEntry.prototype.proxRemovedEvent = function (visibleObj,visTo)
      var proxManager = null;
      var sboxMessageManager = null;
      var presMessageManager = null;
+
+
+     var entityToken = baseSystem.getUniqueToken();
      
      system = {};
 
@@ -191,6 +194,24 @@ PresenceEntry.prototype.proxRemovedEvent = function (visibleObj,visTo)
      };     
 
 
+     /**
+      Changes the directory from which we look for scripts.
+      
+      @param {String} newDir Directory we check first when resolving
+      imports/requires.
+      */
+     system.__pushEvalContextScopeDirectory = function (newDir)
+     {
+         return baseSystem.__pushEvalContextScopeDirectory.apply(
+             baseSystem,arguments);
+     };
+
+     system.__popEvalContextScopeDirectory = function()
+     {
+         return baseSystem.__popEvalContextScopeDirectory.apply(
+             baseSystem,arguments);
+     };
+     
      /**
       @ignore
 
@@ -700,6 +721,8 @@ PresenceEntry.prototype.proxRemovedEvent = function (visibleObj,visTo)
          baseSystem.sendMessageUnreliable.apply(baseSystem,arguments);
      };
      
+
+
      
       /** @function
        *  @description Loads a file and evaluates its contents. Note
@@ -713,7 +736,7 @@ PresenceEntry.prototype.proxRemovedEvent = function (visibleObj,visTo)
        */
       system.import = function(/** String */ scriptFile)
       {
-          baseSystem.import.apply(baseSystem, arguments);
+          baseSystem.import(scriptFile);
       };
 
       /** @function
@@ -1203,6 +1226,7 @@ PresenceEntry.prototype.proxRemovedEvent = function (visibleObj,visTo)
 
      var onPresConnFunc = function(pres)
      {
+         
          for (var s in presConnectedManager)
              presConnectedManager[s](pres, new ClearablePresConnected(s));                 
      };
@@ -1364,9 +1388,16 @@ PresenceEntry.prototype.proxRemovedEvent = function (visibleObj,visTo)
        */
       system.require = function(/** String */ filename)
       {
-          baseSystem.require.apply(baseSystem, arguments);
+          baseSystem.require(filename);
       };
 
+     
+     system.__entityToken = function()
+     {
+         return entityToken;
+     };
+
+     
       /** @function
        @description Destroys all created objects, except presences in the root context. Then executes script associated with root context. (Use system.setScript to set this script.)
        @see system.setScript

@@ -41,7 +41,7 @@ var Editor = function(objid) {
 
     var theme = "ace/theme/dawn";
     var JavaScriptMode = require("ace/mode/javascript").Mode;
-
+    
     this.editor = ace.edit(tabeditor);
     this.editor.setTheme(theme);
     this.editor.getSession().setMode(new JavaScriptMode());

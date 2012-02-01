@@ -86,6 +86,12 @@ public:
     ObjectHostConnectionManager(SpaceContext* ctx, const Address4& listen_addr, OHDP::Service* ohdp_service, Listener* listener);
     ~ObjectHostConnectionManager();
 
+    // Return true if the connection ID is valid. This is useful in determining
+    // whether a send is failing because the connection has closed or just
+    // because some queue is full.
+    bool validConnection(const ObjectHostConnectionID& conn_id) const;
+    bool validConnection(const ShortObjectHostConnectionID& short_conn_id) const;
+
     /** NOTE: Must be used from within the main strand.  Currently this is required since we have the return value... */
     WARN_UNUSED
     bool send(const ObjectHostConnectionID& conn_id, Sirikata::Protocol::Object::ObjectMessage* msg);

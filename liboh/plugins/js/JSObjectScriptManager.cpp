@@ -64,6 +64,7 @@
 
 #include <sirikata/core/util/Paths.hpp>
 
+
 namespace Sirikata {
 namespace JS {
 
@@ -109,6 +110,7 @@ JSObjectScriptManager::JSObjectScriptManager(ObjectHostContext* ctx, const Sirik
         }
     }
 
+
     OptionValue* default_import_paths;
     OptionValue* import_paths;
     OptionValue* v8_flags_opt;
@@ -121,7 +123,7 @@ JSObjectScriptManager::JSObjectScriptManager(ObjectHostContext* ctx, const Sirik
         // absolutely know what you're doing
         default_import_paths = new OptionValue("default-import-paths",
             Path::Placeholders::DIR_SYSTEM_CONFIG + "/js/scripts" + "," +
-            Path::Placeholders::RESOURCE("liboh/plugins", "js/scripts") + "," +
+            Path::Placeholders::RESOURCE(JS_PLUGINS_DIR, JS_SCRIPTS_DIR) + "," +
             Path::Placeholders::DIR_CURRENT,
             OptionValueType<std::list<String> >(),"Comma separated list of paths to import files from, searched in order for the requested import."),
         // These are additional import paths. Generally if you need to
@@ -283,7 +285,14 @@ void JSObjectScriptManager::createSystemTemplate()
     mSystemTemplate->Set(v8::String::New("setRestoreScript"),v8::FunctionTemplate::New(JSSystem::setRestoreScript));
     mSystemTemplate->Set(v8::String::New("__emersonCompileString"), v8::FunctionTemplate::New(JSSystem::emersonCompileString));
 
-
+    mSystemTemplate->Set(v8::String::New("__pushEvalContextScopeDirectory"),
+        v8::FunctionTemplate::New(JSSystem::pushEvalContextScopeDirectory));
+    mSystemTemplate->Set(v8::String::New("__popEvalContextScopeDirectory"),
+        v8::FunctionTemplate::New(JSSystem::popEvalContextScopeDirectory));
+    
+    mSystemTemplate->Set(v8::String::New("getUniqueToken"),
+        v8::FunctionTemplate::New(JSSystem::getUniqueToken));
+    
     mSystemTemplate->Set(v8::String::New("createVisible"),v8::FunctionTemplate::New(JSSystem::root_createVisible));
 
     //check what permissions fake root is loaded with

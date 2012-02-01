@@ -34,9 +34,14 @@
 
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/network/IODefs.hpp>
+#include <sirikata/core/util/AtomicTypes.hpp>
 
 namespace Sirikata {
 namespace Network {
+
+// Enable this to track queue length -- number of outstanding timers
+// and number of waiting-to-be-invoked callback.
+//#define SIRIKATA_TRACK_STRAND_QUEUE_LENGTH
 
 /** IOStrands provide guaranteed serialized event handling.  Strands
  *  allow you to wrap events so that they may be dispatched to any
@@ -54,11 +59,19 @@ namespace Network {
 class SIRIKATA_EXPORT IOStrand {
     IOService& mService;
     InternalIOStrand* mImpl;
-
+#ifdef SIRIKATA_TRACK_STRAND_QUEUE_LENGTH
+    AtomicValue<uint32> mTimersEnqueued;
+    AtomicValue<uint32> mEnqueued;
+#endif
     friend class IOService;
 
     /** Construct an IOStrand associated with the given IOService. */
     IOStrand(IOService& io);
+
+#ifdef SIRIKATA_TRACK_STRAND_QUEUE_LENGTH
+    void decrementTimerCount(const IOCallback& cb);
+    void decrementCount(const IOCallback& cb);
+#endif
 
   protected:
 

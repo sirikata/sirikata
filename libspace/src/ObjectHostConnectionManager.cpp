@@ -87,6 +87,19 @@ ObjectHostConnectionManager::~ObjectHostConnectionManager() {
     delete mIOStrand;
 }
 
+bool ObjectHostConnectionManager::validConnection(const ObjectHostConnectionID& conn_id) const {
+    return (!mContext->stopped() &&
+        mConnections.find(conn_id.conn) != mConnections.end() &&
+        conn_id.conn != NULL
+    );
+}
+
+bool ObjectHostConnectionManager::validConnection(const ShortObjectHostConnectionID& short_conn_id) const {
+    return (!mContext->stopped() &&
+        mShortConnections.find(short_conn_id) != mShortConnections.end() &&
+        mShortConnections.find(short_conn_id)->second != NULL
+    );
+}
 
 bool ObjectHostConnectionManager::send(const ObjectHostConnectionID& conn_id, Sirikata::Protocol::Object::ObjectMessage* msg) {
     // If its not in the connection list we're probably chasing bad
