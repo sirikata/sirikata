@@ -138,6 +138,10 @@ if (typeof(std.core.SimpleInput) != 'undefined')
 
          returner += @
 
+         var newcsslink =
+             $("<link />").attr({rel:'stylesheet', type:'text/css', href:'../scripting/prompt.css'});
+	 $("head").append(newcsslink);
+
          //keeps track of all open windows requiring input events.
          var existingWindows = { };
                   
