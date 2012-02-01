@@ -12,6 +12,8 @@
 
 #include "Protocol_Prox.pbj.hpp"
 
+#include <sirikata/proxyobject/PresencePropertiesLocUpdate.hpp>
+
 // Property tree for old API for queries
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
@@ -67,7 +69,6 @@ ObjectQueryHandler::ObjectQueryHandler(ObjectHostContext* ctx, ManualObjectQuery
    mObjectHandlerPoller(mProxStrand.get(), std::tr1::bind(&ObjectQueryHandler::tickQueryHandler, this, mObjectQueryHandler), Duration::milliseconds((int64)100)),
    mStaticRebuilderPoller(mProxStrand.get(), std::tr1::bind(&ObjectQueryHandler::rebuildHandler, this, OBJECT_CLASS_STATIC), Duration::seconds(3600.f)),
    mDynamicRebuilderPoller(mProxStrand.get(), std::tr1::bind(&ObjectQueryHandler::rebuildHandler, this, OBJECT_CLASS_DYNAMIC), Duration::seconds(3600.f)),
-   mSeqnoSource(1),
    mObjectResults( std::tr1::bind(&ObjectQueryHandler::handleDeliverEvents, this) )
 {
     using std::tr1::placeholders::_1;
@@ -107,6 +108,8 @@ ObjectQueryHandler::~ObjectQueryHandler() {
 // MAIN Thread Methods: The following should only be called from the main thread.
 
 void ObjectQueryHandler::start() {
+    mLocCache->addListener(this);
+
     mObjectHandlerPoller.start();
     mStaticRebuilderPoller.start();
     mDynamicRebuilderPoller.start();
@@ -116,6 +119,8 @@ void ObjectQueryHandler::stop() {
     mObjectHandlerPoller.stop();
     mStaticRebuilderPoller.stop();
     mDynamicRebuilderPoller.stop();
+
+    mLocCache->removeListener(this);
 }
 
 void ObjectQueryHandler::presenceConnected(const ObjectReference& objid) {
@@ -181,8 +186,41 @@ void ObjectQueryHandler::handleDeliverEvents() {
     while(!object_results_copy.empty()) {
         ProximityResultInfo info = object_results_copy.front();
         object_results_copy.pop_front();
+
+        // Deal with subscriptions
+        for(int aidx = 0; aidx < info.results->addition_size(); aidx++) {
+            Sirikata::Protocol::Prox::ObjectAddition addition = info.results->addition(aidx);
+            ObjectReference viewed(addition.object());
+            if (!mSubscribers[viewed]) mSubscribers[viewed] = SubscriberSetPtr(new SubscriberSet());
+            if (mSubscribers[viewed]->find(info.querier) == mSubscribers[viewed]->end())
+                mSubscribers[viewed]->insert(info.querier);
+        }
+        for(int ridx = 0; ridx < info.results->removal_size(); ridx++) {
+            Sirikata::Protocol::Prox::ObjectRemoval removal = info.results->removal(ridx);
+            ObjectReference viewed(removal.object());
+            if (mSubscribers.find(viewed) == mSubscribers.end()) continue;
+            if (mSubscribers[viewed]->find(info.querier) != mSubscribers[viewed]->end()) {
+                mSubscribers[viewed]->erase(info.querier);
+                if (mSubscribers[viewed]->empty()) mSubscribers.erase(viewed);
+            }
+        }
+
+        // And deliver the results
         mParent->deliverProximityResult(SpaceObjectReference(mSpace, info.querier), *(info.results));
         delete info.results;
+    }
+}
+
+void ObjectQueryHandler::handleNotifySubscribersLocUpdate(const ObjectReference& oref) {
+    SubscribersMap::iterator it = mSubscribers.find(oref);
+    if (it == mSubscribers.end()) return;
+    SubscriberSetPtr subscribers = it->second;
+
+    PresencePropertiesLocUpdate lu( oref, mLocCache->properties(oref) );
+
+    for(SubscriberSet::iterator sub_it = subscribers->begin(); sub_it != subscribers->end(); sub_it++) {
+        const ObjectReference& querier = *sub_it;
+        mParent->deliverLocationResult(SpaceObjectReference(mSpace, querier), lu);
     }
 }
 
@@ -205,19 +243,36 @@ void ObjectQueryHandler::onLocationUpdated(const ObjectReference& obj) {
     updateQuery(obj, mLocCache->location(obj), mLocCache->bounds(obj), NoUpdateSolidAngle, NoUpdateMaxResults);
     if (mSeparateDynamicObjects)
         checkObjectClass(obj, mLocCache->location(obj));
+
+    mContext->mainStrand->post(
+        std::tr1::bind(&ObjectQueryHandler::handleNotifySubscribersLocUpdate, this, obj)
+    );
 }
 
 void ObjectQueryHandler::onOrientationUpdated(const ObjectReference& obj) {
+    mContext->mainStrand->post(
+        std::tr1::bind(&ObjectQueryHandler::handleNotifySubscribersLocUpdate, this, obj)
+    );
 }
 
 void ObjectQueryHandler::onBoundsUpdated(const ObjectReference& obj) {
     updateQuery(obj, mLocCache->location(obj), mLocCache->bounds(obj), NoUpdateSolidAngle, NoUpdateMaxResults);
+
+    mContext->mainStrand->post(
+        std::tr1::bind(&ObjectQueryHandler::handleNotifySubscribersLocUpdate, this, obj)
+    );
 }
 
 void ObjectQueryHandler::onMeshUpdated(const ObjectReference& obj) {
+    mContext->mainStrand->post(
+        std::tr1::bind(&ObjectQueryHandler::handleNotifySubscribersLocUpdate, this, obj)
+    );
 }
 
 void ObjectQueryHandler::onPhysicsUpdated(const ObjectReference& obj) {
+    mContext->mainStrand->post(
+        std::tr1::bind(&ObjectQueryHandler::handleNotifySubscribersLocUpdate, this, obj)
+    );
 }
 
 
@@ -260,8 +315,7 @@ void ObjectQueryHandler::generateObjectQueryEvents(Query* query) {
                 Sirikata::Protocol::Prox::IObjectAddition addition = event_results->add_addition();
                 addition.set_object( objid.getAsUUID() );
 
-
-                uint64 seqNo = mSeqnoSource++;
+                uint64 seqNo = mLocCache->properties(objid).maxSeqNo();
                 addition.set_seqno (seqNo);
 
 
@@ -296,7 +350,7 @@ void ObjectQueryHandler::generateObjectQueryEvents(Query* query) {
 
             Sirikata::Protocol::Prox::IObjectRemoval removal = event_results->add_removal();
             removal.set_object( objid.getAsUUID() );
-            uint64 seqNo = mSeqnoSource++;
+            uint64 seqNo = mLocCache->properties(objid).maxSeqNo();
             removal.set_seqno (seqNo);
             removal.set_type(
                 (evt.removals()[ridx].permanent() == QueryEvent::Permanent)

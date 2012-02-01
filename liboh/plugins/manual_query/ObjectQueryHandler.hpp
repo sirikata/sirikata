@@ -86,6 +86,12 @@ private:
     // Update queries based on current state.
     void handleDeliverEvents();
 
+    // Update subscribed queriers that the given object was updated. This
+    // currently takes the brute force approach of updating all properties and
+    // uses the most up-to-date info, even if that's actually newer than the
+    // update that triggered this.
+    void handleNotifySubscribersLocUpdate(const ObjectReference& oref);
+
     // Object queries
     void updateQuery(HostedObjectPtr ho, const SpaceObjectReference& sporef, SolidAngle sa, uint32 max_results);
     void updateQuery(const ObjectReference& obj, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, SolidAngle sa, uint32 max_results);
@@ -119,6 +125,16 @@ private:
 
     // MAIN Thread - Should only be accessed in methods used by the main thread
 
+    // We track subscriptions in the main thread since loc events need to be
+    // executed in the main thread. This let's us just create one update and
+    // reuse it across all subscribers.
+    // Set of subscribers
+    typedef std::tr1::unordered_set<ObjectReference, ObjectReference::Hasher> SubscriberSet;
+    typedef std::tr1::shared_ptr<SubscriberSet> SubscriberSetPtr;
+    // Map of object -> subscribers to that object
+    typedef std::tr1::unordered_map<ObjectReference, SubscriberSetPtr, ObjectReference::Hasher> SubscribersMap;
+    SubscribersMap mSubscribers;
+
 
     // PROX Thread - Should only be accessed in methods used by the prox thread
 
@@ -136,9 +152,6 @@ private:
     // Pollers that trigger rebuilding of query data structures
     PollerService mStaticRebuilderPoller;
     PollerService mDynamicRebuilderPoller;
-
-    // Source for sequence numbers to insert into proximity results & location updates.
-    uint64 mSeqnoSource;
 
     // Threads: Thread-safe data used for exchange between threads
     struct ProximityResultInfo {
