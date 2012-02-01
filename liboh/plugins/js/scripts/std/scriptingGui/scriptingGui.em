@@ -974,7 +974,7 @@ system.require('std/core/simpleInput.em');
                      'In updatenearbyselection attempting '+
                      'to set selector to none.';
                  
-                 sirikatal.log('error',errMsg);
+                 sirikata.log('error',errMsg);
                  $('#' + nearbyListId()).val(null);                     
              }
          }

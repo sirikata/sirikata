@@ -36,8 +36,6 @@ system.require('std/core/pretty.em');
     std.ScriptingGui.Console.prototype.scriptSentEvent =
         function(sseObj)
     {
-        system.__debugPrint('\n\nGot a scirpt sent event\n\n');
-        
         if (!this.checkVisExists(sseObj.visId))
         {
             throw new Error('Error processing script sent event.  ' +
@@ -149,20 +147,20 @@ system.require('std/core/pretty.em');
     std.ScriptingGui.Console.prototype.nearbyEvent =
         function(nearbyObj)
     {
-        std.ScriptingGui.Util.dPrint('\nGot a nearbyEvent object\n');
+        //std.ScriptingGui.Util.dPrint('\nGot a nearbyEvent object\n');
     };
 
     std.ScriptingGui.Console.prototype.scriptedObjEvent =
         function(nearbyObj)
     {
-        std.ScriptingGui.Util.dPrint('\nGot a scriptedObjEvent object\n');
+        //std.ScriptingGui.Util.dPrint('\nGot a scriptedObjEvent object\n');
     };
 
 
     std.ScriptingGui.Console.prototype.guiEvent =
         function(guiObj)
     {
-        std.ScriptingGui.Util.dPrint('\nGot a gui event object\n');
+        //std.ScriptingGui.Util.dPrint('\nGot a gui event object\n');
     };
     
     std.ScriptingGui.Console.prototype.toHtmlMap =
