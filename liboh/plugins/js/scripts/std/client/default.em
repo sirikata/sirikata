@@ -34,7 +34,6 @@ system.require('std/core/namespace.em');
 system.require('std/graphics/graphics.em');
 system.require('std/graphics/undo.em');
 system.require('std/movement/pursue.em');
-//system.require('std/script/scripter.em');
 system.require('std/graphics/inputbinding.em');
 system.require('std/graphics/defaultcamera.em');
 system.require('std/graphics/drag/move.em');
