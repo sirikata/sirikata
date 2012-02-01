@@ -518,7 +518,7 @@ system.require('scriptingGuiUtil.em');
             throw new Error('Error scripting: no record of visible with id ' +
                             visOrPres.toString() + ' to script.');
         }
-        
+
         gui.redraw(visOrPres.toString());
     };
     

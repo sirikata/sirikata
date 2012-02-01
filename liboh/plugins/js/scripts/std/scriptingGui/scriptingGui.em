@@ -66,19 +66,16 @@ system.require('std/core/simpleInput.em');
       */
      std.ScriptingGui.prototype.redraw = function(selected)
      {
-         if (!this.hasInited)
-             return;
-
          //have to wait for ace libraries to load.  after they do, js
          //will send an amReady event back to emerson code.  emerson
          //code will redraw with the last not undefined heldSelected.
-         if (!this.isReady)
+         if ((!this.hasInited) || (!this.isReady))
          {
              if (typeof(selected) != 'undefined')
                  this.heldSelected =selected;
              return;
          }
-         
+
          //trigger redraw call
          this.guiMod.call(
              'ishmaelRedraw',toHtmlNearbyMap(this),toHtmlScriptedMap(this),
@@ -1035,7 +1032,8 @@ system.require('std/core/simpleInput.em');
              //may not have a record of this visible in allFiles yet,
              //causing a problem.
              if (typeof(selected) != 'undefined')
-                 currentlySelectedVisible = selected;
+                 currentlySelectedVisible = selected;                     
+
 
              
              redrawNearby(nearbyObjs,nameMap);

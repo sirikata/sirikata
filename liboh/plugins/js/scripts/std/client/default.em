@@ -360,7 +360,6 @@ function() {
             system.require('std/scriptingGui/scriptingGui.em');
             this._scripter = new std.ScriptingGui.Controller(this);
         }
-
         
         this._scripter.script(system.self);
     };
