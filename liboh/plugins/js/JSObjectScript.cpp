@@ -1045,7 +1045,12 @@ v8::Handle<v8::Value> JSObjectScript::debug_fileWrite(String& strToWrite,String&
 
     
     String splitval;
+// We need to use filesystem2 on Windows because boost 1.44 doesn't expose slash through the boost::filesystem namespace.
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS
+    splitval += boost::filesystem2::slash<boost::filesystem::path>::value;
+#else
     splitval += boost::filesystem::slash<boost::filesystem::path>::value;
+#endif
     std::vector<String> pathParts;
     boost::algorithm::split(
         pathParts,fullPath.string(),
