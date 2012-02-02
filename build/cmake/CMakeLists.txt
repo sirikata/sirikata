@@ -1843,6 +1843,7 @@ ${TEST_LIBCORE_SOURCE_DIR}/TransferTest.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/AnyTest.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/AtomicTest.hpp
 #${TEST_LIBCORE_SOURCE_DIR}/CacheLayerTest.hpp
+${TEST_LIBCORE_SOURCE_DIR}/CircularBufferTest.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/ExtrapolationTest.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/FactoryTest.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/FairQueueTest.hpp
