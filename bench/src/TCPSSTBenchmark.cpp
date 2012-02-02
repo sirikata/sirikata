@@ -70,7 +70,7 @@ SSTBenchmark::SSTBenchmark(const FinishedCallback& finished_cb, const String&par
     OptionValue*whichPlugin;
     OptionValue*numPings;
     mIOService = Sirikata::Network::IOServiceFactory::makeIOService();
-    mIOStrand = mIOService->createStrand();
+    mIOStrand = mIOService->createStrand("SSTBenchmark Main");
     Sirikata::InitializeClassOptions ico("SSTBenchmark",this,
                                          port=new OptionValue("port","4091",Sirikata::OptionValueType<String>(),"port to connect/listen on"),
                                          host=new OptionValue("host","",Sirikata::OptionValueType<String>(),"host to connect to (blank for listen)"),

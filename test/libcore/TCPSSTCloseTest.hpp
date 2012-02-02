@@ -144,9 +144,9 @@ private:
         mChunks=3;
         mOffset=1;
         mSendService = new IOServicePool(4);
-        mSendStrand = mSendService->service()->createStrand();
+        mSendStrand = mSendService->service()->createStrand("SstCloseTest Send");
         mRecvService = new IOServicePool(4);
-        mRecvStrand = mRecvService->service()->createStrand();
+        mRecvStrand = mRecvService->service()->createStrand("SstCloseTest Receive");
         mListener = StreamListenerFactory::getSingleton().getDefaultConstructor()(mRecvStrand,StreamListenerFactory::getSingleton().getDefaultOptionParser()(String()));
         using std::tr1::placeholders::_1;
         using std::tr1::placeholders::_2;

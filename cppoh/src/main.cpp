@@ -127,7 +127,7 @@ int main (int argc, char** argv) {
     srand( GetOptionValue<uint32>("rand-seed") );
 
     Network::IOService* ios = Network::IOServiceFactory::makeIOService();
-    Network::IOStrand* mainStrand = ios->createStrand();
+    Network::IOStrand* mainStrand = ios->createStrand("Object Host Main");
 
     ODPSST::ConnectionManager* sstConnMgr = new ODPSST::ConnectionManager();
     OHDPSST::ConnectionManager* ohSstConnMgr = new OHDPSST::ConnectionManager();

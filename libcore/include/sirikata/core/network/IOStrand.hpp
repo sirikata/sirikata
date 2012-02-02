@@ -56,6 +56,8 @@ namespace Network {
 class SIRIKATA_EXPORT IOStrand : public Noncopyable {
     IOService& mService;
     InternalIOStrand* mImpl;
+    const String mName;
+
 #ifdef SIRIKATA_TRACK_EVENT_QUEUES
     AtomicValue<uint32> mTimersEnqueued;
     AtomicValue<uint32> mEnqueued;
@@ -63,7 +65,7 @@ class SIRIKATA_EXPORT IOStrand : public Noncopyable {
     friend class IOService;
 
     /** Construct an IOStrand associated with the given IOService. */
-    IOStrand(IOService& io);
+    IOStrand(IOService& io, const String& name);
 
 #ifdef SIRIKATA_TRACK_EVENT_QUEUES
     void decrementTimerCount(const IOCallback& cb);
@@ -83,6 +85,11 @@ class SIRIKATA_EXPORT IOStrand : public Noncopyable {
      *  handled safely, i.e. non-concurrently.
      */
     ~IOStrand();
+
+    /** Get the name of this IOStrand. Not necessarily unique, but
+     *  ideally it will be.
+     */
+    const String& name() const { return mName; }
 
     /** Get an IOService associated with this strand. */
     IOService& service() const;

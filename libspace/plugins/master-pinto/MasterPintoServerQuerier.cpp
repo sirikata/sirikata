@@ -47,7 +47,7 @@ namespace Sirikata {
 
 MasterPintoServerQuerier::MasterPintoServerQuerier(SpaceContext* ctx, const String& params)
  : mContext(ctx),
-   mIOStrand(ctx->ioService->createStrand()),
+   mIOStrand(ctx->ioService->createStrand("MasterPintoServerQuerier")),
    mConnecting(false),
    mConnected(false),
    mGaveID(false),

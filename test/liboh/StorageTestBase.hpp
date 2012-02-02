@@ -92,7 +92,7 @@ public:
         ObjectHostID oh_id(1);
         _trace = new Trace::Trace("dummy.trace");
         _ios = Network::IOServiceFactory::makeIOService();
-        _mainStrand = _ios->createStrand();
+        _mainStrand = _ios->createStrand("StorageTest");
         _work = new Network::IOWork(*_ios, "StorageTest");
         Time start_time = Timer::now(); // Just for stats in ObjectHostContext.
         Duration duration = Duration::zero(); // Indicates to run forever.

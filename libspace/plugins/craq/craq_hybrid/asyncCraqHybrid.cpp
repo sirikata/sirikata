@@ -42,8 +42,8 @@ namespace Sirikata
 
   AsyncCraqHybrid::AsyncCraqHybrid(SpaceContext* con, Network::IOStrand* strand_to_post_results_to, CraqObjectSegmentation* oseg)
   : ctx(con),
-    mGetStrand(con->ioService->createStrand()),
-    mSetStrand(con->ioService->createStrand()),
+    mGetStrand(con->ioService->createStrand("AsyncCraqHybrid GetStrand")),
+    mSetStrand(con->ioService->createStrand("AsyncCraqHybrid SetStrand")),
     aCraqGet(con,mGetStrand,strand_to_post_results_to,oseg),
     aCraqSet(con,mSetStrand,strand_to_post_results_to,oseg)
   {

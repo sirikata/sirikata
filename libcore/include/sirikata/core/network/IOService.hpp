@@ -100,7 +100,7 @@ public:
     }
 
     /** Creates a new IOStrand. */
-    IOStrand* createStrand();
+    IOStrand* createStrand(const String& name);
 
     /** Run at most one handler in the event queue.
      *  \returns the number of handlers executed

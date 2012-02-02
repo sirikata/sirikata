@@ -42,7 +42,7 @@ int main(int argc, char** argv) {
     InitOptions();
 
     Network::IOService* ios = Network::IOServiceFactory::makeIOService();
-    Network::IOStrand* mainStrand = ios->createStrand();
+    Network::IOStrand* mainStrand = ios->createStrand("CDN Nameserver Main");
 
     delete mainStrand;
     Network::IOServiceFactory::destroyIOService(ios);

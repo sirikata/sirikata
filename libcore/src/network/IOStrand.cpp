@@ -38,8 +38,9 @@
 namespace Sirikata {
 namespace Network {
 
-IOStrand::IOStrand(IOService& io)
- : mService(io)
+IOStrand::IOStrand(IOService& io, const String& name)
+ : mService(io),
+   mName(name)
 #ifdef SIRIKATA_TRACK_EVENT_QUEUES
    ,
    mTimersEnqueued(0),

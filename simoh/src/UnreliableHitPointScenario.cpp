@@ -362,7 +362,7 @@ void UnreliableHitPointScenario::initialize(ObjectHostContext*ctx) {
         Duration::seconds(1./mNumHitPointsPerSecond));
 */
     mGeneratePingProfiler = mContext->profiler->addStage("Object Host Generate Pings");
-    mGeneratePingsStrand = mContext->ioService->createStrand();
+    mGeneratePingsStrand = mContext->ioService->createStrand("UnreliableHitPointScenario GeneratePings");
     mGeneratePingPoller = new Poller(
         mGeneratePingsStrand,
         std::tr1::bind(&UnreliableHitPointScenario::generatePings, this),

@@ -127,7 +127,7 @@ void OSegScenario::initialize(ObjectHostContext*ctx) {
     );
 
     mGeneratePingProfiler = mContext->profiler->addStage("Object Host Generate Pings");
-    mGeneratePingsStrand = mContext->ioService->createStrand();
+    mGeneratePingsStrand = mContext->ioService->createStrand("OSegScenario Generate Pings");
     mGeneratePingPoller = new Poller(
         mGeneratePingsStrand,
         std::tr1::bind(&OSegScenario::generatePings, this),

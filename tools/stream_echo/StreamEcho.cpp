@@ -140,7 +140,7 @@ int main(int argc, char** argv) {
     ReportVersion(); // After options so log goes to the right place
 
     Network::IOService* ios = Network::IOServiceFactory::makeIOService();
-    Network::IOStrand* iostrand = ios->createStrand();
+    Network::IOStrand* iostrand = ios->createStrand("StreamEcho Main");
 
     String stream_type = GetOptionValue<String>("ohstreamlib");
     String stream_opts = GetOptionValue<String>("ohstreamoptions");

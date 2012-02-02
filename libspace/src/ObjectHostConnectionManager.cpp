@@ -62,7 +62,7 @@ ObjectHostConnectionManager::Listener::~Listener() {
 
 ObjectHostConnectionManager::ObjectHostConnectionManager(SpaceContext* ctx, const Address4& listen_addr, OHDP::Service* ohdp_service, Listener* listener)
  : mContext(ctx),
-   mIOStrand( ctx->ioService->createStrand() ),
+   mIOStrand( ctx->ioService->createStrand("ObjectHostConnectionManager") ),
    mAcceptor(NULL),
    mShortIDSource(1),
    mListener(listener)

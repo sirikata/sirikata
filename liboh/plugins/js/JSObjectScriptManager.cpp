@@ -289,10 +289,10 @@ void JSObjectScriptManager::createSystemTemplate()
         v8::FunctionTemplate::New(JSSystem::pushEvalContextScopeDirectory));
     mSystemTemplate->Set(v8::String::New("__popEvalContextScopeDirectory"),
         v8::FunctionTemplate::New(JSSystem::popEvalContextScopeDirectory));
-    
+
     mSystemTemplate->Set(v8::String::New("getUniqueToken"),
         v8::FunctionTemplate::New(JSSystem::getUniqueToken));
-    
+
     mSystemTemplate->Set(v8::String::New("createVisible"),v8::FunctionTemplate::New(JSSystem::root_createVisible));
 
     //check what permissions fake root is loaded with
@@ -632,7 +632,7 @@ JSObjectScript* JSObjectScriptManager::createHeadless(const String& args, const 
 ObjectScript* JSObjectScriptManager::createObjectScript(HostedObjectPtr ho, const String& args, const String& script)
 {
     JSCtx* jsctx =
-        new JSCtx(mContext,Network::IOStrandPtr(mContext->ioService->createStrand()),mIsolate);
+        new JSCtx(mContext,Network::IOStrandPtr(mContext->ioService->createStrand("EmersonScript " + ho->id().toString())),mIsolate);
 
     EmersonScript* new_script =new EmersonScript(
         ho, args, script, this,jsctx);

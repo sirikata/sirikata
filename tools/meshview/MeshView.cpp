@@ -110,14 +110,14 @@ int main(int argc, char** argv) {
     ReportVersion(); // After options so log goes to the right place
 
     Network::IOService* ios = Network::IOServiceFactory::makeIOService();
-    Network::IOStrand* iostrand = ios->createStrand();
+    Network::IOStrand* iostrand = ios->createStrand("MeshView Main");
 
     Trace::Trace* trace = new Trace::Trace("meshview.log");
     Time epoch = Timer::now();
 
     Context* ctx = new Context("MeshView", ios, iostrand, trace, epoch);
 
-    OgreRenderer* renderer = new OgreRenderer(ctx,Network::IOStrandPtr(ios->createStrand()));
+    OgreRenderer* renderer = new OgreRenderer(ctx,Network::IOStrandPtr(ios->createStrand("OgreRenderer")));
     renderer->initialize("", false);
 
     MeshViewCamera* cam = new MeshViewCamera(renderer);

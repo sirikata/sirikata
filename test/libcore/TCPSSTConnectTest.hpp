@@ -275,7 +275,7 @@ public:
         mPort = boost::lexical_cast<std::string>(randport);
 
         mServicePool = new IOServicePool(4);
-        mServiceStrand = mServicePool->service()->createStrand();
+        mServiceStrand = mServicePool->service()->createStrand("SstTest");
 
         mListener = StreamListenerFactory::getSingleton().getDefaultConstructor()(mServiceStrand,StreamListenerFactory::getSingleton().getDefaultOptionParser()(String()));
         using std::tr1::placeholders::_1;

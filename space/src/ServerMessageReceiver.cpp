@@ -39,7 +39,7 @@ namespace Sirikata {
 
 ServerMessageReceiver::ServerMessageReceiver(SpaceContext* ctx, SpaceNetwork* net, Listener* listener)
         : mContext(ctx),
-          mReceiverStrand(ctx->ioService->createStrand()),
+          mReceiverStrand(ctx->ioService->createStrand("ServerMessageReceiver ReceiverStrand")),
           mNetwork(net),
           mListener(listener),
           mUsedWeightSum(0.0),

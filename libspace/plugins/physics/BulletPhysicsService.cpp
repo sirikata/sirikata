@@ -57,7 +57,7 @@ void bulletPhysicsInternalTickCallback(btDynamicsWorld *world, btScalar timeStep
 
 BulletPhysicsService::BulletPhysicsService(SpaceContext* ctx, LocationUpdatePolicy* update_policy)
  : LocationService(ctx, update_policy),
-   mParsingStrand( ctx->ioService->createStrand() )
+   mParsingStrand( ctx->ioService->createStrand("BulletPhysicsService Parsing") )
 {
 
     mBroadphase = new btDbvtBroadphase();

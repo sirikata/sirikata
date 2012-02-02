@@ -66,7 +66,7 @@ AggregateManager::AggregateManager( LocationService* loc) :
     mTransferMediator = &(Transfer::TransferMediator::getSingleton());
 
     mAggregationService = Network::IOServiceFactory::makeIOService();
-    mAggregationStrand = mAggregationService->createStrand();
+    mAggregationStrand = mAggregationService->createStrand("AggregateManager");
     mIOWork = new Network::IOWork(mAggregationService, "Aggregation Work");
 
     static char x = '1';

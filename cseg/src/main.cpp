@@ -77,7 +77,7 @@ int main(int argc, char** argv) {
                         + GetOptionValue<Duration>("wait-additional");
 
     Network::IOService* ios = Network::IOServiceFactory::makeIOService();
-    Network::IOStrand* mainStrand = ios->createStrand();
+    Network::IOStrand* mainStrand = ios->createStrand("CSeg Main");
 
 
     CSegContext* cseg_context = new CSegContext(server_id, ios, mainStrand, trace, start_time, duration);

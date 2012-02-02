@@ -65,8 +65,8 @@ IOService::~IOService(){
     delete mImpl;
 }
 
-IOStrand* IOService::createStrand() {
-    return new IOStrand(*this);
+IOStrand* IOService::createStrand(const String& name) {
+    return new IOStrand(*this, name);
 }
 
 uint32 IOService::pollOne() {

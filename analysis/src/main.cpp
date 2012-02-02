@@ -104,7 +104,7 @@ int main(int argc, char** argv) {
     Duration duration = GetOptionValue<Duration>("duration");
 
     Network::IOService* ios = Network::IOServiceFactory::makeIOService();
-    Network::IOStrand* mainStrand = ios->createStrand();
+    Network::IOStrand* mainStrand = ios->createStrand("Analysis Main");
 
     Vector3ui32 layout = GetOptionValue<Vector3ui32>("layout");
 

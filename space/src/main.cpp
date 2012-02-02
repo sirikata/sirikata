@@ -158,7 +158,7 @@ int main(int argc, char** argv) {
     Duration duration = GetOptionValue<Duration>("duration");
 
     Network::IOService* ios = Network::IOServiceFactory::makeIOService();
-    Network::IOStrand* mainStrand = ios->createStrand();
+    Network::IOStrand* mainStrand = ios->createStrand("Space Main");
 
     ODPSST::ConnectionManager* sstConnMgr = new ODPSST::ConnectionManager();
     OHDPSST::ConnectionManager* ohSstConnMgr = new OHDPSST::ConnectionManager();
@@ -273,7 +273,7 @@ int main(int argc, char** argv) {
     //Create OSeg
     std::string oseg_type = GetOptionValue<String>(OSEG);
     std::string oseg_options = GetOptionValue<String>(OSEG_OPTIONS);
-    Network::IOStrand* osegStrand = space_context->ioService->createStrand();
+    Network::IOStrand* osegStrand = space_context->ioService->createStrand("OSeg");
     ObjectSegmentation* oseg =
         OSegFactory::getSingleton().getConstructor(oseg_type)(space_context, osegStrand, cseg, oseg_cache, oseg_options);
     //end create oseg

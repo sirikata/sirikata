@@ -502,7 +502,7 @@ int main(int argc, char** argv) {
     // Basic app setup
 
     Network::IOService* ios = Network::IOServiceFactory::makeIOService();
-    Network::IOStrand* iostrand = ios->createStrand();
+    Network::IOStrand* iostrand = ios->createStrand("slauncher Main");
     startWork(ios);
 
     Trace::Trace* trace = new Trace::Trace("slauncher.log");

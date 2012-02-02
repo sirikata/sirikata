@@ -340,7 +340,7 @@ SessionManager::SessionManager(
    OHDP::DelegateService( std::tr1::bind(&SessionManager::createDelegateOHDPPort, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2) ),
    mContext( ctx ),
    mSpace(space),
-   mIOStrand( ctx->ioService->createStrand() ),
+   mIOStrand( ctx->ioService->createStrand("SessionManager") ),
    mServerIDMap(sidmap),
    mObjectConnectedCallback(conn_cb),
    mObjectMigratedCallback(mig_cb),

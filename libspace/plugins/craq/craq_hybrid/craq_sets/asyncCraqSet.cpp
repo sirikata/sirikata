@@ -95,7 +95,7 @@ namespace Sirikata
 
     for (int s=0; s < STREAM_CRAQ_NUM_CONNECTIONS_SET; ++s)
     {
-      Network::IOStrand* tmpStrand = ctx->ioService->createStrand();
+      Network::IOStrand* tmpStrand = ctx->ioService->createStrand("AsyncCraqSet Temporary Strand");
       mConnectionsStrands.push_back(tmpStrand);
 
       AsyncConnectionSet* tmpConn = new AsyncConnectionSet(ctx,                     //space context

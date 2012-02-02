@@ -78,7 +78,7 @@ int main(int argc, char** argv) {
                         + GetOptionValue<Duration>("wait-additional");
 
     Network::IOService* ios = Network::IOServiceFactory::makeIOService();
-    Network::IOStrand* mainStrand = ios->createStrand();
+    Network::IOStrand* mainStrand = ios->createStrand("Pinto Main");
 
     PintoContext* pinto_context = new PintoContext(ios, mainStrand, trace, start_time, duration);
 

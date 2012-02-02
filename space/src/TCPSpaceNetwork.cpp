@@ -273,7 +273,7 @@ TCPSpaceNetwork::TCPSpaceNetwork(SpaceContext* ctx)
     mListenOptions = StreamListenerFactory::getSingleton().getOptionParser(mStreamPlugin)(GetOptionValue<String>("spacestreamoptions"));
     mSendOptions = StreamFactory::getSingleton().getOptionParser(mStreamPlugin)(GetOptionValue<String>("spacestreamoptions"));
 
-    mIOStrand = mContext->ioService->createStrand();
+    mIOStrand = mContext->ioService->createStrand("TCPSpaceNetwork IO");
     mIOWork = new Network::IOWork(mContext->ioService, "TCPSpaceNetwork Work");
 
     mListener = StreamListenerFactory::getSingleton().getConstructor(mStreamPlugin)(mIOStrand,mListenOptions);

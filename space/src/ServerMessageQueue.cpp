@@ -38,7 +38,7 @@ namespace Sirikata {
 
 ServerMessageQueue::ServerMessageQueue(SpaceContext* ctx, SpaceNetwork* net, Sender* sender)
         : mContext(ctx),
-          mSenderStrand(ctx->ioService->createStrand()),
+          mSenderStrand(ctx->ioService->createStrand("ServerMessageQueue SenderStrand")),
           mNetwork(net),
           mSender(sender),
           mUsedWeightSum(0.0),

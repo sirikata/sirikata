@@ -151,7 +151,7 @@ void LibproxProximityBase::ProxStreamInfo<EndpointType, StreamType>::proxSubstre
 
 LibproxProximityBase::LibproxProximityBase(SpaceContext* ctx, LocationService* locservice, CoordinateSegmentation* cseg, SpaceNetwork* net, AggregateManager* aggmgr)
  : Proximity(ctx, locservice, cseg, net, aggmgr, Duration::milliseconds((int64)100)),
-   mProxStrand(ctx->ioService->createStrand()),
+   mProxStrand(ctx->ioService->createStrand("LibproxProximityBase Prox Strand")),
    mLocCache(NULL)
 {
     mProxServerMessageService = mContext->serverRouter()->createServerMessageService("proximity");
