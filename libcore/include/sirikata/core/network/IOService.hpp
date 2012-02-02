@@ -100,12 +100,6 @@ public:
         return *mImpl;
     }
 
-    /** Generated an IOService wrapper from the internal version.  The
-     *  generated IOService will *not* take ownership.  This should only
-     *  be used to allow IO objects to return a reference to their owner.
-     */
-    IOService(InternalIOService* bs);
-
     /** Creates a new IOStrand. */
     IOStrand* createStrand();
 

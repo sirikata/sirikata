@@ -86,10 +86,6 @@ class SIRIKATA_EXPORT TCPSocket: public InternalTCPSocket {
     TCPSocket(IOService&io);
     TCPSocket(IOService* io);
     virtual ~TCPSocket(); // Users of subclasses may use TCPSocket interface directly
-
-    IOService service() {
-        return IOService(&(this->get_io_service()));
-    }
 };
 
 /** Simple wrapper around Boost.Asio's tcp::acceptor, allowing for safe,
@@ -100,10 +96,6 @@ public:
     TCPListener(IOService&io, const boost::asio::ip::tcp::endpoint&);
     TCPListener(IOService* io, const boost::asio::ip::tcp::endpoint&);
     virtual ~TCPListener(); // Users of subclasses may use TCPListener interface directly
-
-    IOService service() {
-        return IOService(&(this->get_io_service()));
-    }
 
     void async_accept(TCPSocket&socket,
                       const std::tr1::function<void(const boost::system::error_code& ) > &cb);
@@ -117,10 +109,6 @@ class SIRIKATA_EXPORT TCPResolver : public InternalTCPResolver {
     TCPResolver(IOService&io);
     TCPResolver(IOService* io);
     virtual ~TCPResolver(); // Users of subclasses may use TCPResolver interface directly
-
-    IOService service() {
-        return IOService(&(this->get_io_service()));
-    }
 };
 
 
@@ -137,10 +125,6 @@ class SIRIKATA_EXPORT UDPSocket: public InternalUDPSocket {
     UDPSocket(IOService&io);
     UDPSocket(IOService* io);
     virtual ~UDPSocket(); // Users of subclasses may use UDPSocket interface directly
-
-    IOService service() {
-        return IOService(&(this->get_io_service()));
-    }
 };
 
 /** Simple wrapper around Boost.Asio's udp::resolver, allowing for safe,
@@ -151,10 +135,6 @@ class SIRIKATA_EXPORT UDPResolver : public InternalUDPResolver {
     UDPResolver(IOService&io);
     UDPResolver(IOService* io);
     virtual ~UDPResolver(); // Users of subclasses may use UDPResolver interface directly
-
-    IOService service() {
-        return IOService(&(this->get_io_service()));
-    }
 };
 
 /** Simple wrapper around Boost.Asio's deadline_timer, allowing for error-prone,
@@ -168,9 +148,6 @@ public:
     DeadlineTimer(IOService& io);
     DeadlineTimer(IOService* io);
     virtual ~DeadlineTimer();
-    IOService service() {
-        return IOService(&(this->get_io_service()));
-    }
     /**
      * Sometimes cancels the callback. Often does nothing. Expect your function to get called
      */

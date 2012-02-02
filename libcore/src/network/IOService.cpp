@@ -62,17 +62,6 @@ IOService::IOService()
     mOwn = true;
 }
 
-IOService::IOService(InternalIOService* bs)
- : mImpl(bs),
-   mOwn(false)
-#ifdef SIRIKATA_TRACK_EVENT_QUEUES
-   ,
-   mTimersEnqueued(0),
-   mEnqueued(0)
-#endif
-{
-}
-
 IOService::~IOService(){
     if (mOwn)
         delete mImpl;
