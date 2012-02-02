@@ -59,12 +59,10 @@ IOService::IOService()
 #endif
 {
     mImpl = new boost::asio::io_service(1);
-    mOwn = true;
 }
 
 IOService::~IOService(){
-    if (mOwn)
-        delete mImpl;
+    delete mImpl;
 }
 
 IOStrand* IOService::createStrand() {

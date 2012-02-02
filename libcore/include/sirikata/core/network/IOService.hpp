@@ -51,7 +51,6 @@ namespace Network {
  */
 class SIRIKATA_EXPORT IOService : public Noncopyable {
     InternalIOService* mImpl;
-    bool mOwn;
 
 #ifdef SIRIKATA_TRACK_EVENT_QUEUES
     typedef std::tr1::function<void(const boost::system::error_code& e)> IOCallbackWithError;
