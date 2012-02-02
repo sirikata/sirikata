@@ -35,6 +35,7 @@
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/network/IODefs.hpp>
 #include <sirikata/core/util/AtomicTypes.hpp>
+#include <sirikata/core/util/Noncopyable.hpp>
 
 namespace Sirikata {
 namespace Network {
@@ -52,7 +53,7 @@ namespace Network {
  *  Note that strands are never directly allocated -- instead, they
  *  are acquired from an existing IOService.
  */
-class SIRIKATA_EXPORT IOStrand {
+class SIRIKATA_EXPORT IOStrand : public Noncopyable {
     IOService& mService;
     InternalIOStrand* mImpl;
 #ifdef SIRIKATA_TRACK_EVENT_QUEUES

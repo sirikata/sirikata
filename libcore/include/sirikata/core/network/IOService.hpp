@@ -35,6 +35,7 @@
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/network/IODefs.hpp>
 #include <sirikata/core/util/AtomicTypes.hpp>
+#include <sirikata/core/util/Noncopyable.hpp>
 
 namespace Sirikata {
 namespace Network {
@@ -48,7 +49,7 @@ namespace Network {
  *  is via the existing mechanisms -- the default implementations for
  *  sockets and timers or via periodic tasks.
  */
-class SIRIKATA_EXPORT IOService {
+class SIRIKATA_EXPORT IOService : public Noncopyable {
     InternalIOService* mImpl;
     bool mOwn;
 
@@ -60,6 +61,7 @@ class SIRIKATA_EXPORT IOService {
 #endif
 
     IOService();
+    IOService(const IOService&); // Disabled
     ~IOService();
 
     friend class IOServiceFactory;
@@ -103,14 +105,6 @@ public:
      *  be used to allow IO objects to return a reference to their owner.
      */
     IOService(InternalIOService* bs);
-
-    /* Copies the IOService.  The underlying resources remain owned by the
-     * original and will be controlled by its lifetime.
-     * \param cpy the original IOService to copy
-     */
-    IOService(const IOService& cpy);
-
-    IOService& operator=(IOService& rhs);
 
     /** Creates a new IOStrand. */
     IOStrand* createStrand();
