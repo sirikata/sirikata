@@ -62,6 +62,27 @@ void OHLocationServiceCache::stopTracking(const Iterator& id) {
     tryRemoveObject(it);
 }
 
+bool OHLocationServiceCache::startSimpleTracking(const ObjectID& id) {
+    Lock lck(mMutex);
+
+    ObjectDataMap::iterator it = mObjects.find(id);
+    if (it == mObjects.end()) return false;
+
+    it->second.tracking++;
+    return true;
+}
+
+void OHLocationServiceCache::stopSimpleTracking(const ObjectID& id) {
+    Lock lck(mMutex);
+
+    ObjectDataMap::iterator it = mObjects.find(id);
+    assert (it != mObjects.end());
+
+    it->second.tracking--;
+    tryRemoveObject(it);
+}
+
+
 bool OHLocationServiceCache::tracking(const ObjectReference& id) {
     Lock lck(mMutex);
 
@@ -174,9 +195,13 @@ void OHLocationServiceCache::objectAdded(
     Lock lck(mMutex);
 
     ObjectDataMap::iterator it = mObjects.find(uuid);
-    if (it != mObjects.end()) return;
+    assert(it == mObjects.end() || (it->second.exists == false));
 
-    it = mObjects.insert( ObjectDataMap::value_type(uuid, ObjectData()) ).first;
+    if (it == mObjects.end())
+        it = mObjects.insert( ObjectDataMap::value_type(uuid, ObjectData()) ).first;
+    else
+        it->second.props = SequencedPresenceProperties(); // reset
+    it->second.exists = true;
     it->second.props.setLocation(loc, loc_seqno);
     it->second.props.setOrientation(orient, orient_seqno);
     it->second.props.setBounds(bounds, bounds_seqno);

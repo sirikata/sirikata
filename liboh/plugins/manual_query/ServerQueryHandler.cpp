@@ -387,7 +387,13 @@ void ServerQueryHandler::handleProximityMessage(const OHDP::SpaceNodeID& snid, c
             ObjectReference observed_oref(removal.object());
             SpaceObjectReference observed(snid.space(), observed_oref);
             // Backup data for orphans and then destroy
-            query_state->orphans.addUpdateFromExisting(observed, query_state->objects->properties(observed_oref));
+            // TODO(ewencp) Seems like we shouldn't actually need this
+            // since we shouldn't get a removal with having had an
+            // addition first...
+            if (query_state->objects->startSimpleTracking(observed_oref)) {
+                query_state->orphans.addUpdateFromExisting(observed, query_state->objects->properties(observed_oref));
+                query_state->objects->stopSimpleTracking(observed_oref);
+            }
             query_state->objects->objectRemoved(
                 observed_oref
             );

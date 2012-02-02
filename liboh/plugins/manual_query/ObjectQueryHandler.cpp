@@ -216,11 +216,17 @@ void ObjectQueryHandler::handleNotifySubscribersLocUpdate(const ObjectReference&
     if (it == mSubscribers.end()) return;
     SubscriberSetPtr subscribers = it->second;
 
-    PresencePropertiesLocUpdate lu( oref, mLocCache->properties(oref) );
+    // Make sure the object is still available and remains available
+    // throughout all updates
+    if (mLocCache->startSimpleTracking(oref)) {
+        PresencePropertiesLocUpdate lu( oref, mLocCache->properties(oref) );
 
-    for(SubscriberSet::iterator sub_it = subscribers->begin(); sub_it != subscribers->end(); sub_it++) {
-        const ObjectReference& querier = *sub_it;
-        mParent->deliverLocationResult(SpaceObjectReference(mSpace, querier), lu);
+        for(SubscriberSet::iterator sub_it = subscribers->begin(); sub_it != subscribers->end(); sub_it++) {
+            const ObjectReference& querier = *sub_it;
+            mParent->deliverLocationResult(SpaceObjectReference(mSpace, querier), lu);
+        }
+
+        mLocCache->stopSimpleTracking(oref);
     }
 }
 
@@ -306,7 +312,7 @@ void ObjectQueryHandler::generateObjectQueryEvents(Query* query) {
 
         for(uint32 aidx = 0; aidx < evt.additions().size(); aidx++) {
             ObjectReference objid = evt.additions()[aidx].id();
-            if (mLocCache->tracking(objid)) { // If the cache already lost it, we can't do anything
+            if (mLocCache->startSimpleTracking(objid)) { // If the cache already lost it, we can't do anything
 
                 mContext->mainStrand->post(
                     std::tr1::bind(&ObjectQueryHandler::handleAddObjectLocSubscription, this, query_id, objid)
@@ -338,6 +344,8 @@ void ObjectQueryHandler::generateObjectQueryEvents(Query* query) {
                 String phy = mLocCache->physics(objid);
                 if (phy.size() > 0)
                     addition.set_physics(phy);
+
+                mLocCache->stopSimpleTracking(objid);
             }
         }
         for(uint32 ridx = 0; ridx < evt.removals().size(); ridx++) {
@@ -350,8 +358,16 @@ void ObjectQueryHandler::generateObjectQueryEvents(Query* query) {
 
             Sirikata::Protocol::Prox::IObjectRemoval removal = event_results->add_removal();
             removal.set_object( objid.getAsUUID() );
-            uint64 seqNo = mLocCache->properties(objid).maxSeqNo();
-            removal.set_seqno (seqNo);
+
+            // It'd be nice if we didn't need this but the seqno might
+            // not be available anymore and we still want to send the
+            // removal.
+            if (mLocCache->startSimpleTracking(objid)) {
+                uint64 seqNo = mLocCache->properties(objid).maxSeqNo();
+                removal.set_seqno (seqNo);
+                mLocCache->stopSimpleTracking(objid);
+            }
+
             removal.set_type(
                 (evt.removals()[ridx].permanent() == QueryEvent::Permanent)
                 ? Sirikata::Protocol::Prox::ObjectRemoval::Permanent

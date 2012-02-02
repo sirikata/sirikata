@@ -59,6 +59,14 @@ public:
     /* LocationServiceCache members. */
     virtual Iterator startTracking(const ObjectID& id);
     virtual void stopTracking(const Iterator& id);
+    // These are an alternative form of marking objects as
+    // tracked. The do basically the same thing as above but are used
+    // when you want to access properties by ObjectID rather than by
+    // iterator.  startSimpleTracking is also safe to call even if
+    // you're not sure the object is still available, and returns true
+    // only if it is still available.
+    bool startSimpleTracking(const ObjectID& id);
+    void stopSimpleTracking(const ObjectID& id);
 
     bool tracking(const ObjectID& id);
 
