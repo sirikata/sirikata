@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 system.require("std/library.em");
-system.require("std/script/scripter.em");
+
 
 /** The PresList class brings up a UI for scripting and seeing 
  * already scripted and visible presences.
