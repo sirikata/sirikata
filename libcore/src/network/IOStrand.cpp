@@ -40,7 +40,7 @@ namespace Network {
 
 IOStrand::IOStrand(IOService& io)
  : mService(io)
-#ifdef SIRIKATA_TRACK_STRAND_QUEUE_LENGTH
+#ifdef SIRIKATA_TRACK_EVENT_QUEUES
    ,
    mTimersEnqueued(0),
    mEnqueued(0)
@@ -58,7 +58,7 @@ IOService& IOStrand::service() const {
 }
 
 void IOStrand::dispatch(const IOCallback& handler) {
-#ifdef SIRIKATA_TRACK_STRAND_QUEUE_LENGTH
+#ifdef SIRIKATA_TRACK_EVENT_QUEUES
     mEnqueued++;
     mService.dispatch(
         mImpl->wrap(
@@ -71,7 +71,7 @@ void IOStrand::dispatch(const IOCallback& handler) {
 }
 
 void IOStrand::post(const IOCallback& handler) {
-#ifdef SIRIKATA_TRACK_STRAND_QUEUE_LENGTH
+#ifdef SIRIKATA_TRACK_EVENT_QUEUES
     mEnqueued++;
     mService.post(
         mImpl->wrap(
@@ -84,7 +84,7 @@ void IOStrand::post(const IOCallback& handler) {
 }
 
 void IOStrand::post(const Duration& waitFor, const IOCallback& handler) {
-#ifdef SIRIKATA_TRACK_STRAND_QUEUE_LENGTH
+#ifdef SIRIKATA_TRACK_EVENT_QUEUES
     mTimersEnqueued++;
     mService.post(
         waitFor,
@@ -102,7 +102,7 @@ IOCallback IOStrand::wrap(const IOCallback& handler) {
 }
 
 
-#ifdef SIRIKATA_TRACK_STRAND_QUEUE_LENGTH
+#ifdef SIRIKATA_TRACK_EVENT_QUEUES
 void IOStrand::decrementTimerCount(const IOCallback& cb) {
     mTimersEnqueued--;
     cb();

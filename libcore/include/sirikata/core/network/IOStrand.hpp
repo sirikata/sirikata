@@ -39,10 +39,6 @@
 namespace Sirikata {
 namespace Network {
 
-// Enable this to track queue length -- number of outstanding timers
-// and number of waiting-to-be-invoked callback.
-//#define SIRIKATA_TRACK_STRAND_QUEUE_LENGTH
-
 /** IOStrands provide guaranteed serialized event handling.  Strands
  *  allow you to wrap events so that they may be dispatched to any
  *  currently running IOService (in thread), but guarantees that no
@@ -59,7 +55,7 @@ namespace Network {
 class SIRIKATA_EXPORT IOStrand {
     IOService& mService;
     InternalIOStrand* mImpl;
-#ifdef SIRIKATA_TRACK_STRAND_QUEUE_LENGTH
+#ifdef SIRIKATA_TRACK_EVENT_QUEUES
     AtomicValue<uint32> mTimersEnqueued;
     AtomicValue<uint32> mEnqueued;
 #endif
@@ -68,7 +64,7 @@ class SIRIKATA_EXPORT IOStrand {
     /** Construct an IOStrand associated with the given IOService. */
     IOStrand(IOService& io);
 
-#ifdef SIRIKATA_TRACK_STRAND_QUEUE_LENGTH
+#ifdef SIRIKATA_TRACK_EVENT_QUEUES
     void decrementTimerCount(const IOCallback& cb);
     void decrementCount(const IOCallback& cb);
 #endif

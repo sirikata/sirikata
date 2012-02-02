@@ -34,6 +34,7 @@
 
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/network/IODefs.hpp>
+#include <sirikata/core/util/AtomicTypes.hpp>
 
 namespace Sirikata {
 namespace Network {
@@ -51,10 +52,22 @@ class SIRIKATA_EXPORT IOService {
     InternalIOService* mImpl;
     bool mOwn;
 
+#ifdef SIRIKATA_TRACK_EVENT_QUEUES
+    typedef std::tr1::function<void(const boost::system::error_code& e)> IOCallbackWithError;
+
+    AtomicValue<uint32> mTimersEnqueued;
+    AtomicValue<uint32> mEnqueued;
+#endif
+
     IOService();
     ~IOService();
 
     friend class IOServiceFactory;
+
+#ifdef SIRIKATA_TRACK_EVENT_QUEUES
+    void decrementTimerCount(const boost::system::error_code&e, const IOCallbackWithError& cb);
+    void decrementCount(const IOCallback& cb);
+#endif
 
   protected:
 

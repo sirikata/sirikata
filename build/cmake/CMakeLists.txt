@@ -913,6 +913,13 @@ SET(TEST_CASSANDRA FALSE
 )
 
 # -- Compile-time debugging settings --
+#
+SET(SIRIKATA_TRACK_EVENT_QUEUES FALSE
+  CACHE BOOL "If true, track how many outstanding events are enqueued on IOServices and IOStrands."
+)
+IF(SIRIKATA_TRACK_EVENT_QUEUES)
+  ADD_DEFINITIONS(-DSIRIKATA_TRACK_EVENT_QUEUES)
+ENDIF()
 # Space session message delay
 # NOTE: When you set this, keep in mind that it takes a connect request +
 # connect success ack before messages are forwarded (which in turn allows the
@@ -933,11 +940,9 @@ STRING(LENGTH "${SPACE_DELAY_APPLY_LOC_UPDATE}" SPACE_DELAY_APPLY_LOC_UPDATE_LEN
 IF(SPACE_DELAY_APPLY_LOC_UPDATE_LENGTH GREATER 0)
   ADD_DEFINITIONS(-DSIRIKATA_SPACE_DELAY_APPLY_LOC_UPDATE=${SPACE_DELAY_APPLY_LOC_UPDATE})
 ENDIF()
-
-
-
+# Berkelium remote debugging support. Enables passing the special parameter enabling port 9222 as a debugger server
 SET(BERKELIUM_REMOTE_DEBUG FALSE
-  CACHE BOOL "If non-empty, apply this much delay (in seconds) to applying loc update requests on the space server."
+  CACHE BOOL "If true, enables the remote debugging port for Berkelium windows."
 )
 IF(BERKELIUM_REMOTE_DEBUG)
   ADD_DEFINITIONS(-DBERKELIUM_REMOTE_DEBUGGING=1)
