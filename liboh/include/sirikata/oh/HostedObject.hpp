@@ -259,7 +259,7 @@ public:
     virtual void requestQueryUpdate(const SpaceID& space, const ObjectReference& oref, const String& new_query);
     // Shortcut for requestQueryUpdate("")
     virtual void requestQueryRemoval(const SpaceID& space, const ObjectReference& oref);
-    virtual const String& requestQuery(const SpaceID& space, const ObjectReference& oref);
+    virtual String requestQuery(const SpaceID& space, const ObjectReference& oref);
 
 
     // ObjectQuerier Interface

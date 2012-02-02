@@ -175,7 +175,7 @@ void HostedObject::destroy(bool need_self)
     if (mNumOutstandingConnections>0) {
         mDestroyWhenConnected=true;
         return;//don't destroy during delicate connection process
-    }        
+    }
 
     // Make sure that we survive the entire duration of this call. Otherwise all
     // references may be lost, resulting in the destructor getting called
@@ -532,7 +532,7 @@ void HostedObject::iHandleDisconnected(
         if (--self->mNumOutstandingConnections==0&&self->mDestroyWhenConnected) {
             self->mDestroyWhenConnected=false;
             self->destroy(true);
-        }        
+        }
     }
 }
 
@@ -927,7 +927,7 @@ void HostedObject::requestMeshUpdate(const SpaceID& space, const ObjectReference
     updateLocUpdateRequest(space, oref, NULL, NULL, NULL, &mesh, NULL);
 }
 
-const String& HostedObject::requestQuery(const SpaceID& space, const ObjectReference& oref)
+String HostedObject::requestQuery(const SpaceID& space, const ObjectReference& oref)
 {
     Mutex::scoped_lock lock(presenceDataMutex);
     PresenceDataMap::iterator iter = mPresenceData.find(SpaceObjectReference(space,oref));

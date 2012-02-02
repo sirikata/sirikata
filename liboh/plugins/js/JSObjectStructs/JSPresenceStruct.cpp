@@ -352,7 +352,7 @@ v8::Handle<v8::Value>JSPresenceStruct::setVisualFunction(String urilocation)
 
 
 
-const String& JSPresenceStruct::getQuery()
+String JSPresenceStruct::getQuery()
 {
     if (isConnected) {
         assert(jpp);
@@ -365,7 +365,7 @@ const String& JSPresenceStruct::getQuery()
 v8::Handle<v8::Value> JSPresenceStruct::struct_getQuery()
 {
     INLINE_CHECK_IS_CONNECTED_ERROR("getQueryAngle");
-    const String& q = getQuery();
+    String q = getQuery();
     return v8::String::New(q.c_str(), q.size());
 }
 

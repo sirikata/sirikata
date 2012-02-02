@@ -228,7 +228,7 @@ public:
     void setBounds(const SpaceObjectReference sporef, const BoundingSphere3f& bounds);
     void setVisual(const SpaceObjectReference sporef, const std::string& newMeshString);
 
-    const String& getQuery(const SpaceObjectReference& sporef) const;
+    String getQuery(const SpaceObjectReference& sporef) const;
     void setQueryFunction(const SpaceObjectReference sporef, const String& query);
 
     void setPhysicsFunction(const SpaceObjectReference sporef, const String& newPhysicsString);

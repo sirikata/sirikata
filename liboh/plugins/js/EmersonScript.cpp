@@ -1480,10 +1480,7 @@ void EmersonScript::setQueryFunction(
     );
 }
 
-const String& EmersonScript::getQuery(const SpaceObjectReference& sporef) const {
-    JSLOG(error,"Calling getQuery function in "<<\
-        "EmersonScript.cpp is unsafe.  Must fix");
-
+String EmersonScript::getQuery(const SpaceObjectReference& sporef) const {
     return mParent->requestQuery(sporef.space(),sporef.object());
 }
 
