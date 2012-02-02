@@ -674,7 +674,7 @@ system.require('std/core/simpleInput.em');
               '<div id="' + scriptConsoleDivId() + '">' +
 
                  '<div id="'   + execTareaId()+ '"  style="min-width:400px;min-height:100px;max-width:400px;position:relative;margin:0;padding:0;">' +
-                 '</div>'      + //closes actionTareaDiv
+                 '</div>'      + //closes execTareaDiv
            
                  '<button id="' + execScriptButtonId() + '">' +
                  'run' +
@@ -1265,6 +1265,21 @@ system.require('std/core/simpleInput.em');
              consoleEditor.getSession().setValue(consMsg);
          }
 
+
+                    //shortcut keybinding: shift+enter executes
+                    //instant script if you're focus is on instant
+                    //scripter.
+                    var handleInstantScriptingTareaKeyUp = function(evt)
+                    {
+                        //13 represents keycode for enter, submits whatever's in
+                        //the text box if user hits enter.
+                        if ((evt.keyCode == 13) && (evt.shiftKey))
+                            $('#' + execScriptButtonId()).click();
+                    };
+
+                    document.getElementById(execTareaId()).onkeyup = handleInstantScriptingTareaKeyUp;
+
+
                     //tells the emerson controlling code that ace
                     //libraries are loaded and can now begin doing
                     //handling script input, etc.
@@ -1286,3 +1301,8 @@ system.require('action.em');
 system.require('console.em');
 system.require('controller.em');
 system.require('fileManagerElement.em');
+
+
+
+
+
