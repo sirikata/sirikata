@@ -36,6 +36,7 @@
 #include <sirikata/core/network/IOStrand.hpp>
 #include <boost/version.hpp>
 #include <boost/asio.hpp>
+#include <sirikata/core/util/Timer.hpp>
 
 namespace Sirikata {
 namespace Network {
@@ -67,7 +68,9 @@ IOService::IOService(const String& name)
 #ifdef SIRIKATA_TRACK_EVENT_QUEUES
    ,
    mTimersEnqueued(0),
-   mEnqueued(0)
+   mEnqueued(0),
+   mWindowedTimerLatencyStats(100),
+   mWindowedHandlerLatencyStats(100)
 #endif
 {
     mImpl = new boost::asio::io_service(1);
@@ -132,7 +135,7 @@ void IOService::post(const IOCallback& handler) {
 #ifdef SIRIKATA_TRACK_EVENT_QUEUES
     mEnqueued++;
     mImpl->post(
-        std::tr1::bind(&IOService::decrementCount, this, handler)
+        std::tr1::bind(&IOService::decrementCount, this, Timer::now(), handler)
     );
 #else
     mImpl->post(handler);
@@ -163,7 +166,7 @@ void IOService::post(const Duration& waitFor, const IOCallback& handler) {
     IOCallbackWithError orig_cb = std::tr1::bind(&handle_deadline_timer, _1, timer, handler);
     timer->async_wait(
         std::tr1::bind(&IOService::decrementTimerCount, this,
-            _1, orig_cb
+            _1, Timer::now(), waitFor, orig_cb
         )
     );
 #else
@@ -174,13 +177,23 @@ void IOService::post(const Duration& waitFor, const IOCallback& handler) {
 
 
 #ifdef SIRIKATA_TRACK_EVENT_QUEUES
-void IOService::decrementTimerCount(const boost::system::error_code& e, const IOCallbackWithError& cb) {
+void IOService::decrementTimerCount(const boost::system::error_code& e, const Time& start, const Duration& timer_duration, const IOCallbackWithError& cb) {
     mTimersEnqueued--;
+    Time end = Timer::now();
+    {
+        LockGuard lock(mMutex);
+        mWindowedTimerLatencyStats.sample((end - start) - timer_duration);
+    }
     cb(e);
 }
 
-void IOService::decrementCount(const IOCallback& cb) {
+void IOService::decrementCount(const Time& start, const IOCallback& cb) {
     mEnqueued--;
+    Time end = Timer::now();
+    {
+        LockGuard lock(mMutex);
+        mWindowedHandlerLatencyStats.sample(end - start);
+    }
     cb();
 }
 
@@ -194,13 +207,13 @@ void IOService::reportStats() const {
     LockGuard lock(const_cast<Mutex&>(mMutex));
 
     SILOG(ioservice, info, "'" << name() <<  "' IOService Statistics");
-    SILOG(ioservice, info, "  Number of outstanding timers enqueued: " << numTimersEnqueued());
-    SILOG(ioservice, info, "  Number of outstanding event handlers enqueued: " << numEnqueued());
+    SILOG(ioservice, info, "  Timers: " << numTimersEnqueued() << " with " << timerLatency() << " recent latency");
+    SILOG(ioservice, info, "  Event handlers: " << numEnqueued() << " with " << handlerLatency() << " recent latency");
 
     for(StrandSet::const_iterator it = mStrands.begin(); it != mStrands.end(); it++) {
         SILOG(ioservice, info, "  Child '" << (*it)->name() << "'");
-        SILOG(ioservice, info, "    Number of outstanding timers enqueued: " << (*it)->numTimersEnqueued());
-        SILOG(ioservice, info, "    Number of outstanding event handlers enqueued: " << (*it)->numEnqueued());
+        SILOG(ioservice, info, "    Timers: " << (*it)->numTimersEnqueued() << " with " << (*it)->timerLatency() << " recent latency");
+        SILOG(ioservice, info, "    Event handlers: " << (*it)->numEnqueued() << " with " << (*it)->handlerLatency() << " recent latency");
     }
 
 }

@@ -81,6 +81,30 @@ public:
     inline void operator/=(float64 rhs) {
         mDeltaTime = (int64)((float64)mDeltaTime / (float64)rhs);
     }
+    inline DeltaTime operator/(int32 rhs) const {
+        return (*this)/(float64)rhs;
+    }
+    inline void operator/=(int32 rhs) {
+        (*this) /= (float64)rhs;
+    }
+    inline DeltaTime operator/(uint32 rhs) const {
+        return (*this)/(float64)rhs;
+    }
+    inline void operator/=(uint32 rhs) {
+        (*this) /= (float64)rhs;
+    }
+    inline DeltaTime operator/(int64 rhs) const {
+        return (*this)/(float64)rhs;
+    }
+    inline void operator/=(int64 rhs) {
+        (*this) /= (float64)rhs;
+    }
+    inline DeltaTime operator/(uint64 rhs) const {
+        return (*this)/(float64)rhs;
+    }
+    inline void operator/=(uint64 rhs) {
+        (*this) /= (float64)rhs;
+    }
 
     inline DeltaTime operator*(float32 rhs) const {
         return DeltaTime((int64)((float64)mDeltaTime * (float64)rhs));
@@ -93,6 +117,30 @@ public:
     }
     inline void operator*=(float64 rhs) {
         mDeltaTime = (int64)((float64)mDeltaTime * (float64)rhs);
+    }
+    inline DeltaTime operator*(int32 rhs) const {
+        return (*this) * (float64)rhs;
+    }
+    inline void operator*=(int32 rhs) {
+        (*this) *= (float64)rhs;
+    }
+    inline DeltaTime operator*(uint32 rhs) const {
+        return (*this) * (float64)rhs;
+    }
+    inline void operator*=(uint32 rhs) {
+        (*this) *= (float64)rhs;
+    }
+    inline DeltaTime operator*(int64 rhs) const {
+        return (*this) * (float64)rhs;
+    }
+    inline void operator*=(int64 rhs) {
+        (*this) *= (float64)rhs;
+    }
+    inline DeltaTime operator*(uint64 rhs) const {
+        return (*this) * (float64)rhs;
+    }
+    inline void operator*=(uint64 rhs) {
+        (*this) *= (float64)rhs;
     }
 
     static DeltaTime seconds(double s) {

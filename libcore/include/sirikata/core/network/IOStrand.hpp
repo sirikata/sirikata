@@ -36,6 +36,9 @@
 #include <sirikata/core/network/IODefs.hpp>
 #include <sirikata/core/util/AtomicTypes.hpp>
 #include <sirikata/core/util/Noncopyable.hpp>
+#include <sirikata/core/trace/WindowedStats.hpp>
+#include <sirikata/core/task/Time.hpp>
+#include <boost/thread.hpp>
 
 namespace Sirikata {
 namespace Network {
@@ -59,17 +62,28 @@ class SIRIKATA_EXPORT IOStrand : public Noncopyable {
     const String mName;
 
 #ifdef SIRIKATA_TRACK_EVENT_QUEUES
+    // Track all strands that have been allocated. This needs to be
+    // thread safe.
+    typedef boost::mutex Mutex;
+    typedef boost::lock_guard<Mutex> LockGuard;
+    Mutex mMutex;
+
     AtomicValue<uint32> mTimersEnqueued;
     AtomicValue<uint32> mEnqueued;
+
+    // Tracks the latency of recent handlers through the queue
+    Trace::WindowedStats<Duration> mWindowedTimerLatencyStats;
+    Trace::WindowedStats<Duration> mWindowedHandlerLatencyStats;
 #endif
+
     friend class IOService;
 
     /** Construct an IOStrand associated with the given IOService. */
     IOStrand(IOService& io, const String& name);
 
 #ifdef SIRIKATA_TRACK_EVENT_QUEUES
-    void decrementTimerCount(const IOCallback& cb);
-    void decrementCount(const IOCallback& cb);
+    void decrementTimerCount(const Time& start, const Duration& timer_duration, const IOCallback& cb);
+    void decrementCount(const Time& start, const IOCallback& cb);
 #endif
 
   protected:
@@ -137,6 +151,9 @@ class SIRIKATA_EXPORT IOStrand : public Noncopyable {
 #ifdef SIRIKATA_TRACK_EVENT_QUEUES
     uint32 numTimersEnqueued() const { return mTimersEnqueued.read(); }
     uint32 numEnqueued() const { return mEnqueued.read(); }
+
+    Duration timerLatency() const { return mWindowedTimerLatencyStats.average(); }
+    Duration handlerLatency() const { return mWindowedHandlerLatencyStats.average(); }
 #endif
 
 };

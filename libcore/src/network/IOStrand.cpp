@@ -34,6 +34,7 @@
 #include <sirikata/core/network/IOStrand.hpp>
 #include <sirikata/core/network/IOService.hpp>
 #include <sirikata/core/network/Asio.hpp>
+#include <sirikata/core/util/Timer.hpp>
 
 namespace Sirikata {
 namespace Network {
@@ -44,7 +45,9 @@ IOStrand::IOStrand(IOService& io, const String& name)
 #ifdef SIRIKATA_TRACK_EVENT_QUEUES
    ,
    mTimersEnqueued(0),
-   mEnqueued(0)
+   mEnqueued(0),
+   mWindowedTimerLatencyStats(100),
+   mWindowedHandlerLatencyStats(100)
 #endif
 {
     mImpl = new InternalIOStrand(io);
@@ -66,7 +69,7 @@ void IOStrand::dispatch(const IOCallback& handler) {
     mEnqueued++;
     mService.dispatch(
         mImpl->wrap(
-            std::tr1::bind(&IOStrand::decrementCount, this, handler)
+            std::tr1::bind(&IOStrand::decrementCount, this, Timer::now(), handler)
         )
     );
 #else
@@ -79,7 +82,7 @@ void IOStrand::post(const IOCallback& handler) {
     mEnqueued++;
     mService.post(
         mImpl->wrap(
-            std::tr1::bind(&IOStrand::decrementCount, this, handler)
+            std::tr1::bind(&IOStrand::decrementCount, this, Timer::now(), handler)
         )
     );
 #else
@@ -93,7 +96,7 @@ void IOStrand::post(const Duration& waitFor, const IOCallback& handler) {
     mService.post(
         waitFor,
         mImpl->wrap(
-            std::tr1::bind(&IOStrand::decrementTimerCount, this, handler)
+            std::tr1::bind(&IOStrand::decrementTimerCount, this, Timer::now(), waitFor, handler)
         )
     );
 #else
@@ -107,13 +110,23 @@ IOCallback IOStrand::wrap(const IOCallback& handler) {
 
 
 #ifdef SIRIKATA_TRACK_EVENT_QUEUES
-void IOStrand::decrementTimerCount(const IOCallback& cb) {
+void IOStrand::decrementTimerCount(const Time& start, const Duration& timer_duration, const IOCallback& cb) {
     mTimersEnqueued--;
+    Time end = Timer::now();
+    {
+        LockGuard lock(mMutex);
+        mWindowedTimerLatencyStats.sample((end - start) - timer_duration);
+    }
     cb();
 }
 
-void IOStrand::decrementCount(const IOCallback& cb) {
+void IOStrand::decrementCount(const Time& start, const IOCallback& cb) {
     mEnqueued--;
+    Time end = Timer::now();
+    {
+        LockGuard lock(mMutex);
+        mWindowedHandlerLatencyStats.sample(end - start);
+    }
     cb();
 }
 #endif

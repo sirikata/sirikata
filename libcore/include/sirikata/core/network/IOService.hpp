@@ -37,6 +37,8 @@
 #include <sirikata/core/util/AtomicTypes.hpp>
 #include <sirikata/core/util/Noncopyable.hpp>
 #include <boost/thread.hpp>
+#include <sirikata/core/trace/WindowedStats.hpp>
+#include <sirikata/core/task/Time.hpp>
 
 namespace Sirikata {
 namespace Network {
@@ -57,9 +59,6 @@ class SIRIKATA_EXPORT IOService : public Noncopyable {
 #ifdef SIRIKATA_TRACK_EVENT_QUEUES
     typedef std::tr1::function<void(const boost::system::error_code& e)> IOCallbackWithError;
 
-    AtomicValue<uint32> mTimersEnqueued;
-    AtomicValue<uint32> mEnqueued;
-
     // Track all strands that have been allocated. This needs to be
     // thread safe.
     typedef boost::mutex Mutex;
@@ -67,6 +66,13 @@ class SIRIKATA_EXPORT IOService : public Noncopyable {
     Mutex mMutex;
     typedef std::tr1::unordered_set<IOStrand*> StrandSet;
     StrandSet mStrands;
+
+    AtomicValue<uint32> mTimersEnqueued;
+    AtomicValue<uint32> mEnqueued;
+
+    // Tracks the latency of recent handlers through the queue
+    Trace::WindowedStats<Duration> mWindowedTimerLatencyStats;
+    Trace::WindowedStats<Duration> mWindowedHandlerLatencyStats;
 #endif
 
     IOService(const IOService&); // Disabled
@@ -77,8 +83,8 @@ class SIRIKATA_EXPORT IOService : public Noncopyable {
     friend class IOStrand;
 
 #ifdef SIRIKATA_TRACK_EVENT_QUEUES
-    void decrementTimerCount(const boost::system::error_code&e, const IOCallbackWithError& cb);
-    void decrementCount(const IOCallback& cb);
+    void decrementTimerCount(const boost::system::error_code&e, const Time& start, const Duration& timer_duration, const IOCallbackWithError& cb);
+    void decrementCount(const Time& start, const IOCallback& cb);
 
     // Invoked by strands when they are being destroyed so we can
     // track which ones are alive.
@@ -180,6 +186,9 @@ public:
 #ifdef SIRIKATA_TRACK_EVENT_QUEUES
     uint32 numTimersEnqueued() const { return mTimersEnqueued.read(); }
     uint32 numEnqueued() const { return mEnqueued.read(); }
+
+    Duration timerLatency() const { return mWindowedTimerLatencyStats.average(); }
+    Duration handlerLatency() const { return mWindowedHandlerLatencyStats.average(); }
 
     /** Report statistics about this IOService and it's child
      *  IOStrands.

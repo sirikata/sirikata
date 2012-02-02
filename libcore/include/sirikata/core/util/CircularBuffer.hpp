@@ -93,7 +93,7 @@ public:
     }
 
 private:
-    inline std::size_t safeIdx(std::size_t i, int32 offset) {
+    inline std::size_t safeIdx(std::size_t i, int32 offset) const {
         while(offset < 0)
             offset += capacity();
         return ((i+offset) % capacity());
