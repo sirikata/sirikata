@@ -51,6 +51,16 @@ typedef std::tr1::shared_ptr<deadline_timer> deadline_timer_ptr;
 typedef boost::posix_time::microseconds posix_microseconds;
 using std::tr1::placeholders::_1;
 
+#ifdef SIRIKATA_TRACK_EVENT_QUEUES
+namespace {
+typedef boost::mutex AllIOServicesMutex;
+typedef boost::lock_guard<AllIOServicesMutex> AllIOServicesLockGuard;
+AllIOServicesMutex gAllIOServicesMutex;
+typedef std::tr1::unordered_set<IOService*> AllIOServicesSet;
+AllIOServicesSet gAllIOServices;
+} // namespace
+#endif
+
 
 IOService::IOService(const String& name)
  : mName(name)
@@ -61,10 +71,20 @@ IOService::IOService(const String& name)
 #endif
 {
     mImpl = new boost::asio::io_service(1);
+
+#ifdef SIRIKATA_TRACK_EVENT_QUEUES
+    AllIOServicesLockGuard lock(gAllIOServicesMutex);
+    gAllIOServices.insert(this);
+#endif
 }
 
 IOService::~IOService(){
     delete mImpl;
+
+#ifdef SIRIKATA_TRACK_EVENT_QUEUES
+    AllIOServicesLockGuard lock(gAllIOServicesMutex);
+    gAllIOServices.erase(this);
+#endif
 }
 
 IOStrand* IOService::createStrand(const String& name) {
@@ -185,6 +205,12 @@ void IOService::reportStats() const {
 
 }
 
+
+void IOService::reportAllStats() {
+    AllIOServicesLockGuard lock(gAllIOServicesMutex);
+    for(AllIOServicesSet::const_iterator it = gAllIOServices.begin(); it != gAllIOServices.end(); it++)
+        (*it)->reportStats();
+}
 #endif
 
 } // namespace Network

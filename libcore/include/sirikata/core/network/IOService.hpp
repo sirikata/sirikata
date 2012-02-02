@@ -185,6 +185,8 @@ public:
      *  IOStrands.
      */
     void reportStats() const;
+
+    static void reportAllStats();
 #endif
 };
 
