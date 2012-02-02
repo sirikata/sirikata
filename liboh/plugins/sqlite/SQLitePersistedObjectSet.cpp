@@ -31,7 +31,6 @@
  */
 
 #include "SQLitePersistedObjectSet.hpp"
-#include <sirikata/core/network/IOServiceFactory.hpp>
 #include <sirikata/core/network/IOService.hpp>
 #include <sirikata/core/network/IOWork.hpp>
 
@@ -55,7 +54,7 @@ void SQLitePersistedObjectSet::start() {
     // Initialize and start the thread for IO work. This is only separated as a
     // thread rather than strand because we don't have proper multithreading in
     // cppoh.
-    mIOService = Network::IOServiceFactory::makeIOService();
+    mIOService = new Network::IOService("SQLitePersistedObjectSet");
     mWork = new Network::IOWork(*mIOService, "SQLitePersistedObjectSet IO Thread");
     mThread = new Sirikata::Thread(std::tr1::bind(&Network::IOService::runNoReturn, mIOService));
 
@@ -94,7 +93,7 @@ void SQLitePersistedObjectSet::stop() {
     mThread->join();
     delete mThread;
     mThread = NULL;
-    Network::IOServiceFactory::destroyIOService(mIOService);
+    delete mIOService;
     mIOService = NULL;
 }
 

@@ -44,8 +44,6 @@
 #include <sirikata/core/trace/Trace.hpp>
 #include <sirikata/core/network/ServerIDMap.hpp>
 
-#include <sirikata/core/network/IOServiceFactory.hpp>
-
 void *main_loop(void *);
 int main(int argc, char** argv) {
     using namespace Sirikata;
@@ -94,7 +92,7 @@ int main(int argc, char** argv) {
 
     srand( GetOptionValue<uint32>("rand-seed") );
 
-    Network::IOService* ios = Network::IOServiceFactory::makeIOService();
+    Network::IOService* ios = new Network::IOService("simoh");
     Network::IOStrand* mainStrand = ios->createStrand("simoh Main");
 
     ODPSST::ConnectionManager* sstConnMgr = new ODPSST::ConnectionManager();
@@ -165,7 +163,7 @@ int main(int argc, char** argv) {
     gTrace = NULL;
 
     delete mainStrand;
-    Network::IOServiceFactory::destroyIOService(ios);
+    delete ios;
 
     sync.stop();
 

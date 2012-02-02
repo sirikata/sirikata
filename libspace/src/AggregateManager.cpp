@@ -34,7 +34,6 @@
 
 #include <sirikata/mesh/ModelsSystemFactory.hpp>
 
-#include <sirikata/core/network/IOServiceFactory.hpp>
 #include <sirikata/core/network/IOStrandImpl.hpp>
 #include <sirikata/core/network/IOWork.hpp>
 
@@ -65,7 +64,7 @@ AggregateManager::AggregateManager( LocationService* loc) :
 
     mTransferMediator = &(Transfer::TransferMediator::getSingleton());
 
-    mAggregationService = Network::IOServiceFactory::makeIOService();
+    mAggregationService = new Network::IOService("AggregateManager");
     mAggregationStrand = mAggregationService->createStrand("AggregateManager");
     mIOWork = new Network::IOWork(mAggregationService, "Aggregation Work");
 
@@ -89,7 +88,7 @@ AggregateManager::~AggregateManager() {
     }
 
     delete mAggregationStrand;
-    Network::IOServiceFactory::destroyIOService(mAggregationService);
+    delete mAggregationService;
     mAggregationService = NULL;
 
     delete mAggregationThread;

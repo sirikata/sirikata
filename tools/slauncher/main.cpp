@@ -4,7 +4,6 @@
 
 
 #include <sirikata/core/service/Context.hpp>
-#include <sirikata/core/network/IOServiceFactory.hpp>
 #include <sirikata/core/network/IOWork.hpp>
 #include <sirikata/core/network/IOStrandImpl.hpp>
 #include <sirikata/core/trace/Trace.hpp>
@@ -501,7 +500,7 @@ int main(int argc, char** argv) {
 
     // Basic app setup
 
-    Network::IOService* ios = Network::IOServiceFactory::makeIOService();
+    Network::IOService* ios = new Network::IOService("slauncher");
     Network::IOStrand* iostrand = ios->createStrand("slauncher Main");
     startWork(ios);
 
@@ -529,7 +528,7 @@ int main(int argc, char** argv) {
     delete trace;
 
     delete iostrand;
-    Network::IOServiceFactory::destroyIOService(ios);
+    delete ios;
 
     return retval;
 }

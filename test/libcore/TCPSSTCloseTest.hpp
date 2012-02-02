@@ -34,7 +34,6 @@
 #include <sirikata/core/network/StreamListener.hpp>
 #include <sirikata/core/network/StreamFactory.hpp>
 #include <sirikata/core/network/StreamListenerFactory.hpp>
-#include <sirikata/core/network/IOServiceFactory.hpp>
 #include <sirikata/core/network/IOServicePool.hpp>
 #include <sirikata/core/network/IOService.hpp>
 #include <sirikata/core/network/IOStrand.hpp>
@@ -143,9 +142,9 @@ private:
         mBytes=65536;
         mChunks=3;
         mOffset=1;
-        mSendService = new IOServicePool(4);
+        mSendService = new IOServicePool("SstCloseTest Send", 4);
         mSendStrand = mSendService->service()->createStrand("SstCloseTest Send");
-        mRecvService = new IOServicePool(4);
+        mRecvService = new IOServicePool("SstCloseTest Receive", 4);
         mRecvStrand = mRecvService->service()->createStrand("SstCloseTest Receive");
         mListener = StreamListenerFactory::getSingleton().getDefaultConstructor()(mRecvStrand,StreamListenerFactory::getSingleton().getDefaultOptionParser()(String()));
         using std::tr1::placeholders::_1;

@@ -30,7 +30,6 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sirikata/core/network/IOServiceFactory.hpp>
 #include <sirikata/core/network/IOService.hpp>
 #include <sirikata/core/network/StreamFactory.hpp>
 #include <sirikata/core/network/StreamListenerFactory.hpp>
@@ -69,7 +68,7 @@ SSTBenchmark::SSTBenchmark(const FinishedCallback& finished_cb, const String&par
     OptionValue*listenOptions;
     OptionValue*whichPlugin;
     OptionValue*numPings;
-    mIOService = Sirikata::Network::IOServiceFactory::makeIOService();
+    mIOService = new Sirikata::Network::IOService("SSTBenchmark");
     mIOStrand = mIOService->createStrand("SSTBenchmark Main");
     Sirikata::InitializeClassOptions ico("SSTBenchmark",this,
                                          port=new OptionValue("port","4091",Sirikata::OptionValueType<String>(),"port to connect/listen on"),
@@ -241,7 +240,7 @@ void SSTBenchmark::stop() {
     if (mIOStrand)
         delete mIOStrand;
     if (mIOService)
-        Network::IOServiceFactory::destroyIOService(mIOService);
+        delete mIOService;
     mIOService=NULL;
     mStream=NULL;
     mListener=NULL;

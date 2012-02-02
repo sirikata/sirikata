@@ -32,7 +32,6 @@
 
 #include <sirikata/core/util/Standard.hh>
 #include <sirikata/core/service/Context.hpp>
-#include <sirikata/core/network/IOServiceFactory.hpp>
 #include <sirikata/core/network/IOStrandImpl.hpp>
 #include <boost/asio.hpp>
 #include <sirikata/core/service/Breakpad.hpp>
@@ -158,7 +157,7 @@ void Context::cleanup() {
 
         mKillThread->join();
 
-        Network::IOServiceFactory::destroyIOService(mKillService);
+        delete mKillService;
         mKillService = NULL;
         mKillThread.reset();
     }
@@ -168,7 +167,7 @@ void Context::startForceQuitTimer() {
     // Note that we need to do this on another thread, with another IOService.
     // This is necessary to ensure that *this* doesn't keep things from
     // exiting.
-    mKillService = Network::IOServiceFactory::makeIOService();
+    mKillService = new Network::IOService("Context Kill Service");
     mKillTimer = Network::IOTimer::create(mKillService);
     mKillTimer->wait(
         Duration::seconds(5),

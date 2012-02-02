@@ -35,7 +35,6 @@
 #include <sirikata/oh/HostedObject.hpp>
 #include <sirikata/oh/ObjectHost.hpp>
 #include <boost/thread.hpp>
-#include <sirikata/core/network/IOServiceFactory.hpp>
 #include <sirikata/core/util/AtomicTypes.hpp>
 #include <sirikata/core/util/PluginManager.hpp>
 #include <sirikata/core/task/WorkQueue.hpp>

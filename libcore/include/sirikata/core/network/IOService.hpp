@@ -52,6 +52,7 @@ namespace Network {
  */
 class SIRIKATA_EXPORT IOService : public Noncopyable {
     InternalIOService* mImpl;
+    const String mName;
 
 #ifdef SIRIKATA_TRACK_EVENT_QUEUES
     typedef std::tr1::function<void(const boost::system::error_code& e)> IOCallbackWithError;
@@ -68,9 +69,7 @@ class SIRIKATA_EXPORT IOService : public Noncopyable {
     StrandSet mStrands;
 #endif
 
-    IOService();
     IOService(const IOService&); // Disabled
-    ~IOService();
 
     // For construction
     friend class IOServiceFactory;
@@ -99,6 +98,12 @@ class SIRIKATA_EXPORT IOService : public Noncopyable {
     friend class IOTimer;
 
 public:
+
+    IOService(const String& name);
+    ~IOService();
+
+    /** Get the name of this IOService. */
+    const String& name() const { return mName; }
 
     /** Get the underlying IOService.  Only made available to allow for
      *  efficient implementation of ASIO provided functionality such as

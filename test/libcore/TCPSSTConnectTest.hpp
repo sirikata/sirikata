@@ -34,7 +34,6 @@
 #include <sirikata/core/network/StreamListener.hpp>
 #include <sirikata/core/network/StreamFactory.hpp>
 #include <sirikata/core/network/StreamListenerFactory.hpp>
-#include <sirikata/core/network/IOServiceFactory.hpp>
 #include <sirikata/core/network/IOServicePool.hpp>
 #include <sirikata/core/network/IOService.hpp>
 #include <sirikata/core/network/IOStrand.hpp>
@@ -274,7 +273,7 @@ public:
         uint32 randport = 3000 + (uint32)(Sirikata::Task::LocalTime::now().raw() % 20000);
         mPort = boost::lexical_cast<std::string>(randport);
 
-        mServicePool = new IOServicePool(4);
+        mServicePool = new IOServicePool("SstTest", 4);
         mServiceStrand = mServicePool->service()->createStrand("SstTest");
 
         mListener = StreamListenerFactory::getSingleton().getDefaultConstructor()(mServiceStrand,StreamListenerFactory::getSingleton().getDefaultOptionParser()(String()));

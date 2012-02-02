@@ -91,7 +91,7 @@ public:
         // Storage is tied to the main event loop, which requires quite a bit of setup
         ObjectHostID oh_id(1);
         _trace = new Trace::Trace("dummy.trace");
-        _ios = Network::IOServiceFactory::makeIOService();
+        _ios = new Network::IOService("StorageTest");
         _mainStrand = _ios->createStrand("StorageTest");
         _work = new Network::IOWork(*_ios, "StorageTest");
         Time start_time = Timer::now(); // Just for stats in ObjectHostContext.
@@ -138,7 +138,7 @@ public:
 
         delete _mainStrand;
         _mainStrand = NULL;
-        Network::IOServiceFactory::destroyIOService(_ios);
+        delete _ios;
         _ios = NULL;
     }
 

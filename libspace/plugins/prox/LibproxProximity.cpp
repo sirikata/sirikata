@@ -41,8 +41,6 @@
 #include "Protocol_Prox.pbj.hpp"
 #include "Protocol_ServerProx.pbj.hpp"
 
-#include <sirikata/core/network/IOServiceFactory.hpp>
-
 #include <sirikata/space/AggregateManager.hpp>
 
 // Property tree for old API for queries

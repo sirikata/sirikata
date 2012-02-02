@@ -31,7 +31,6 @@
  */
 
 #include <sirikata/core/service/Context.hpp>
-#include <sirikata/core/network/IOServiceFactory.hpp>
 #include <sirikata/core/network/IOService.hpp>
 
 #include <sirikata/core/options/Options.hpp>
@@ -109,7 +108,7 @@ int main(int argc, char** argv) {
 
     ReportVersion(); // After options so log goes to the right place
 
-    Network::IOService* ios = Network::IOServiceFactory::makeIOService();
+    Network::IOService* ios = new Network::IOService("MeshView");
     Network::IOStrand* iostrand = ios->createStrand("MeshView Main");
 
     Trace::Trace* trace = new Trace::Trace("meshview.log");
@@ -146,7 +145,7 @@ int main(int argc, char** argv) {
     delete trace;
 
     delete iostrand;
-    Network::IOServiceFactory::destroyIOService(ios);
+    delete ios;
 
     return 0;
 }

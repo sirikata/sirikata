@@ -31,7 +31,6 @@
  */
 
 #include "CassandraStorage.hpp"
-#include <sirikata/core/network/IOServiceFactory.hpp>
 #include <sirikata/core/network/IOService.hpp>
 #include <sirikata/core/network/IOWork.hpp>
 
@@ -105,7 +104,7 @@ CassandraStorage::~CassandraStorage()
 
 void CassandraStorage::start() {
 
-    mIOService = Network::IOServiceFactory::makeIOService();
+    mIOService = new Network::IOService("CassandraStorage IO Thread");
     mWork = new Network::IOWork(*mIOService, "CassandraStorage IO Thread");
     mThread = new Sirikata::Thread(std::tr1::bind(&Network::IOService::runNoReturn, mIOService));
 
@@ -150,7 +149,7 @@ void CassandraStorage::stop() {
     mThread->join();
     delete mThread;
     mThread = NULL;
-    Network::IOServiceFactory::destroyIOService(mIOService);
+    delete mIOService;
     mIOService = NULL;
 }
 

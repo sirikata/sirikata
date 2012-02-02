@@ -38,7 +38,6 @@
 #include <sirikata/ogre/Camera.hpp>
 #include <sirikata/ogre/Entity.hpp>
 
-#include <sirikata/core/network/IOServiceFactory.hpp>
 #include <sirikata/core/network/IOService.hpp>
 #include <sirikata/core/network/IOWork.hpp>
 #include <sirikata/core/options/Options.hpp>
@@ -289,7 +288,7 @@ OgreRenderer::OgreRenderer(Context* ctx,Network::IOStrandPtr sStrand)
 bool OgreRenderer::initialize(const String& options, bool with_berkelium) {
     ++sNumOgreSystems;
 
-    mParsingIOService = Network::IOServiceFactory::makeIOService();
+    mParsingIOService = new Network::IOService("Ogre Mesh Parsing");
     mParsingWork = new Network::IOWork(*mParsingIOService, "Ogre Mesh Parsing");
     mParsingThread = new Sirikata::Thread(std::tr1::bind(&Network::IOService::runNoReturn, mParsingIOService));
 
@@ -635,7 +634,7 @@ bool OgreRenderer::loadBuiltinPlugins () {
 OgreRenderer::~OgreRenderer() {
     mParsingThread->join();
     delete mParsingThread;
-    Network::IOServiceFactory::destroyIOService(mParsingIOService);
+    delete mParsingIOService;
 
     {
         SceneEntitiesMap toDelete;

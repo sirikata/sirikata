@@ -35,7 +35,6 @@
 #include <sirikata/core/util/Timer.hpp>
 #include <sirikata/core/network/NTPTimeSync.hpp>
 
-#include <sirikata/core/network/IOServiceFactory.hpp>
 #include <sirikata/core/network/IOStrandImpl.hpp>
 
 #include <sirikata/space/ObjectHostSession.hpp>
@@ -157,7 +156,7 @@ int main(int argc, char** argv) {
 
     Duration duration = GetOptionValue<Duration>("duration");
 
-    Network::IOService* ios = Network::IOServiceFactory::makeIOService();
+    Network::IOService* ios = new Network::IOService("Space");
     Network::IOStrand* mainStrand = ios->createStrand("Space Main");
 
     ODPSST::ConnectionManager* sstConnMgr = new ODPSST::ConnectionManager();
@@ -393,7 +392,7 @@ int main(int argc, char** argv) {
     delete mainStrand;
     delete osegStrand;
 
-    Network::IOServiceFactory::destroyIOService(ios);
+    delete ios;
 
     delete sstConnMgr;
     delete ohSstConnMgr;

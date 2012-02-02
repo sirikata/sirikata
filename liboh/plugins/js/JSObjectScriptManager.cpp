@@ -54,7 +54,6 @@
 
 #include "JSLogging.hpp"
 
-#include <sirikata/core/network/IOServiceFactory.hpp>
 #include <sirikata/core/network/IOService.hpp>
 #include <sirikata/core/network/IOWork.hpp>
 #include <sirikata/mesh/ModelsSystemFactory.hpp>
@@ -90,7 +89,8 @@ JSObjectScriptManager::JSObjectScriptManager(ObjectHostContext* ctx, const Sirik
     if (mContext != NULL) {
         mTransferPool = Transfer::TransferMediator::getSingleton().registerClient<Transfer::AggregatedTransferPool>("JSObjectScriptManager");
 
-        mParsingIOService = Network::IOServiceFactory::makeIOService();
+        // TODO(ewencp) This should just be a strand on the main service
+        mParsingIOService = new Network::IOService("JSObjectScriptManager Parsing");
         mParsingWork = new Network::IOWork(*mParsingIOService, "JSObjectScriptManager Mesh Parsing");
         mParsingThread = new Sirikata::Thread(std::tr1::bind(&Network::IOService::runNoReturn, mParsingIOService));
 
@@ -609,7 +609,7 @@ JSObjectScriptManager::~JSObjectScriptManager()
 
         mParsingThread->join();
         delete mParsingThread;
-        Network::IOServiceFactory::destroyIOService(mParsingIOService);
+        delete mParsingIOService;
 
         delete mModelFilter;
         delete mModelParser;

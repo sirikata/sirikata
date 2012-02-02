@@ -32,7 +32,6 @@
 
 #include "MasterPintoServerQuerier.hpp"
 
-#include <sirikata/core/network/IOServiceFactory.hpp>
 #include <sirikata/core/network/StreamFactory.hpp>
 #include <sirikata/core/options/CommonOptions.hpp>
 #include <sirikata/core/options/Options.hpp>

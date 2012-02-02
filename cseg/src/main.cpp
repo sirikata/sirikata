@@ -39,8 +39,6 @@
 #include <sirikata/core/network/ServerIDMap.hpp>
 #include "DistributedCoordinateSegmentation.hpp"
 
-#include <sirikata/core/network/IOServiceFactory.hpp>
-
 int main(int argc, char** argv) {
     using namespace Sirikata;
 
@@ -76,7 +74,7 @@ int main(int argc, char** argv) {
                         + GetOptionValue<Duration>("additional-cseg-duration")
                         + GetOptionValue<Duration>("wait-additional");
 
-    Network::IOService* ios = Network::IOServiceFactory::makeIOService();
+    Network::IOService* ios = new Network::IOService("CSeg");
     Network::IOStrand* mainStrand = ios->createStrand("CSeg Main");
 
 
@@ -134,7 +132,7 @@ int main(int argc, char** argv) {
     delete time_series;
 
     delete mainStrand;
-    Network::IOServiceFactory::destroyIOService(ios);
+    delete ios;
 
     plugins.gc();
 

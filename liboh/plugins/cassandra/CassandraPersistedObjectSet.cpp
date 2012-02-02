@@ -31,7 +31,6 @@
  */
 
 #include "CassandraPersistedObjectSet.hpp"
-#include <sirikata/core/network/IOServiceFactory.hpp>
 #include <sirikata/core/network/IOService.hpp>
 #include <sirikata/core/network/IOWork.hpp>
 
@@ -57,7 +56,7 @@ void CassandraPersistedObjectSet::start() {
     // Initialize and start the thread for IO work. This is only separated as a
     // thread rather than strand because we don't have proper multithreading in
     // cppoh.
-    mIOService = Network::IOServiceFactory::makeIOService();
+    mIOService = new Network::IOService("CassandraPersistedObjectSet");
     mWork = new Network::IOWork(*mIOService, "CassandraPersistedObjectSet IO Thread");
     mThread = new Sirikata::Thread(std::tr1::bind(&Network::IOService::runNoReturn, mIOService));
 
@@ -77,7 +76,7 @@ void CassandraPersistedObjectSet::stop() {
     mThread->join();
     delete mThread;
     mThread = NULL;
-    Network::IOServiceFactory::destroyIOService(mIOService);
+    delete mIOService;
     mIOService = NULL;
 }
 

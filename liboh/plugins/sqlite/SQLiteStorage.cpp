@@ -31,7 +31,6 @@
  */
 
 #include "SQLiteStorage.hpp"
-#include <sirikata/core/network/IOServiceFactory.hpp>
 #include <sirikata/core/network/IOService.hpp>
 #include <sirikata/core/network/IOWork.hpp>
 
@@ -186,7 +185,7 @@ void SQLiteStorage::start() {
     // Initialize and start the thread for IO work. This is only separated as a
     // thread rather than strand because we don't have proper multithreading in
     // cppoh.
-    mIOService = Network::IOServiceFactory::makeIOService();
+    mIOService = new Network::IOService("SQLiteStorage");
     mWork = new Network::IOWork(*mIOService, "SQLiteStorage IO Thread");
     mThread = new Sirikata::Thread(std::tr1::bind(&Network::IOService::runNoReturn, mIOService));
 
@@ -282,7 +281,7 @@ void SQLiteStorage::stop() {
     mThread->join();
     delete mThread;
     mThread = NULL;
-    Network::IOServiceFactory::destroyIOService(mIOService);
+    delete mIOService;
     mIOService = NULL;
 
     // Clean up data from any outstanding pending transactions

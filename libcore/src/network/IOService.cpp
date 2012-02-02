@@ -52,9 +52,11 @@ typedef boost::posix_time::microseconds posix_microseconds;
 using std::tr1::placeholders::_1;
 
 
-IOService::IOService()
+IOService::IOService(const String& name)
+ : mName(name)
 #ifdef SIRIKATA_TRACK_EVENT_QUEUES
- : mTimersEnqueued(0),
+   ,
+   mTimersEnqueued(0),
    mEnqueued(0)
 #endif
 {
@@ -171,7 +173,7 @@ void IOService::destroyingStrand(IOStrand* child) {
 void IOService::reportStats() const {
     LockGuard lock(const_cast<Mutex&>(mMutex));
 
-    SILOG(ioservice, info, "Current IOService Statistics");
+    SILOG(ioservice, info, "'" << name() <<  "' IOService Statistics");
     SILOG(ioservice, info, "  Number of outstanding timers enqueued: " << numTimersEnqueued());
     SILOG(ioservice, info, "  Number of outstanding event handlers enqueued: " << numEnqueued());
 

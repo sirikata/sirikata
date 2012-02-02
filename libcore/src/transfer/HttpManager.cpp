@@ -66,7 +66,7 @@ HttpManager::HttpManager()
     EMPTY_PARSER_SETTINGS.on_message_complete = 0;
 
     //Making a single thread IOService to handle requests
-    mServicePool = new IOServicePool(2);
+    mServicePool = new IOServicePool("HttpManager", 2);
 
     //Add a dummy IOWork so that the IOService stays running
     mServicePool->startWork();
