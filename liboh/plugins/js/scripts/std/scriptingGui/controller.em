@@ -326,7 +326,7 @@ system.require('scriptingGuiUtil.em');
     std.ScriptingGui.Controller.prototype.rereadAllFiles =
         function(visId)
     {
-        if (!this.scriptedVisExists(vis))
+        if (!this.scriptedVisExists(visId))
         {
             throw new Error ('Error in FileManager.reareadAllFiles.  '+
                              'Do not have record for this visible.');

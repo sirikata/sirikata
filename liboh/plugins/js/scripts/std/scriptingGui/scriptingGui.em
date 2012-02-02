@@ -139,6 +139,18 @@ system.require('std/core/simpleInput.em');
          scriptingGui.redraw();
      }
          
+
+     /**
+      @param{String} text -- gets displayed as a warning message to
+      user.
+      */
+     std.ScriptingGui.prototype.hWarn = function (text)
+     {
+         var newInput = std.core.SimpleInput(
+             std.core.SimpleInput.NO_INPUT,
+             text,function(){});
+     };
+
      
      /**
       @param {String?} actId -- Should be parsedInt to get an index
@@ -328,6 +340,11 @@ system.require('std/core/simpleInput.em');
          scriptingGui.guiMod.bind(
              'amReady',
              std.core.bind(scriptingGui.hAmReady,scriptingGui));
+
+
+         scriptingGui.guiMod.bind(
+             'warn',
+             std.core.bind(scriptingGui.hWarn,scriptingGui));
 
          
          scriptingGui.redraw();
@@ -747,7 +764,6 @@ system.require('std/core/simpleInput.em');
                  var val = 
                      $('#' + actionListId()).val();
                  changeActionText(parseInt(val));
-                 sirikata.log('error', 'Selected action: '  + val.toString());
              });
 
          
@@ -783,7 +799,11 @@ system.require('std/core/simpleInput.em');
              function()
              {
                  if (typeof(currentlySelectedVisible)== 'undefined')
+                 {
+                     sirikata.event('warn','Please select visible first.');
                      return;
+                 }
+
 
                  var currentName =
                      $('#' + generateScriptedDivId(currentlySelectedVisible)).html();
@@ -800,7 +820,11 @@ system.require('std/core/simpleInput.em');
                  //no action is selected
                  if ((typeof(currentlySelectedAction) == 'undefined') ||
                      (currentlySelectedAction === null))
+                 {
+                     sirikata.event('warn','Please select visible and action first.');
                      return;
+                 }
+
 
 
                  //var toSaveText = $('#' + actionTareaId()).val();
@@ -825,9 +849,7 @@ system.require('std/core/simpleInput.em');
                  if ((typeof(currentlySelectedAction)  == 'undefined') ||
                      (typeof(currentlySelectedVisible) == 'undefined'))
                  {
-                     sirikata.log(
-                         'error','Cannot execute action.  ' +
-                             'No vis or action selected.');
+                     sirikata.event('warn','Please select visible or action first.');
                      return;
                  }
 
@@ -854,7 +876,11 @@ system.require('std/core/simpleInput.em');
              function()
              {
                  if (typeof(currentlySelectedAction) == 'undefined')
-                     return;
+                 {
+                     sirikata.event('warn', 'Please select action to remove first.');
+                     return;                         
+                 }
+
                  
                  sirikata.event('removeAction',currentlySelectedAction);
                  currentlySelectedAction = undefined;
@@ -872,7 +898,11 @@ system.require('std/core/simpleInput.em');
              function()
              {
                  if (typeof(currentlySelectedVisible)=='undefined')
-                     return;
+                 {
+                     sirikata.event('warn','Please select visible first.');
+                     return;                         
+                 }
+
 
                  sirikata.event('addFile',currentlySelectedVisible);
              });
@@ -883,6 +913,7 @@ system.require('std/core/simpleInput.em');
                  if ((typeof(currentlySelectedVisible) == 'undefined') ||
                      (typeof(currentlySelectedFile) == 'undefined'))
                  {
+                     sirikata.event('warn','Please select visible and file first.');                     
                      return;
                  }
                  sirikata.event(
@@ -895,7 +926,11 @@ system.require('std/core/simpleInput.em');
              function()
              {
                  if (typeof(currentlySelectedVisible) == 'undefined')
+                 {
+                     sirikata.event('warn','Please select visible first.');
                      return;
+                 }
+
 
                  sirikata.event(
                      'updateAndSendAllFiles',currentlySelectedVisible);
@@ -907,6 +942,7 @@ system.require('std/core/simpleInput.em');
                  if ((typeof(currentlySelectedVisible) == 'undefined') ||
                      (typeof(currentlySelectedFile) == 'undefined'))
                  {
+                     sirikata.event('warn','Please select visible and file first.');                     
                      return;
                  }
 
@@ -920,7 +956,11 @@ system.require('std/core/simpleInput.em');
              function()
              {
                  if (typeof(currentlySelectedVisible) == 'undefined')
+                 {
+                     sirikata.event('warn','Please select visible first.');
                      return;
+                 }
+
                  
                  var toExec = execEditor.getSession().getValue();
                  execEditor.getSession().setValue('');
@@ -990,7 +1030,7 @@ system.require('std/core/simpleInput.em');
              if (typeof(idActSelected) !='undefined')
              {
                  if (! idActSelected in allActions)
-                 {
+                 {                     
                      sirikata.log('error','action ids out of ' +
                                   'sync with actions in scripting gui.');
                      return;
@@ -1034,8 +1074,6 @@ system.require('std/core/simpleInput.em');
              if (typeof(selected) != 'undefined')
                  currentlySelectedVisible = selected;                     
 
-
-             
              redrawNearby(nearbyObjs,nameMap);
              redrawScriptedObjs(scriptedObjs,nameMap);
              redrawActionList(actionMap);
@@ -1166,6 +1204,7 @@ system.require('std/core/simpleInput.em');
              if (typeof(currentlySelectedVisible) == 'undefined')
              {
                  currentlySelectedFile = undefined;
+                 sirikata.event('warn','Please select visible first.');
                  return;                     
              }
 
@@ -1209,6 +1248,7 @@ system.require('std/core/simpleInput.em');
                 (!(currentlySelectedVisible in allConsoleHistories))) 
              {
                  consoleEditor.getSession().setValue('');
+                 sirikata.event('warn','Please select visible first.');
                  return;
              }
 
@@ -1225,7 +1265,9 @@ system.require('std/core/simpleInput.em');
              consoleEditor.getSession().setValue(consMsg);
          }
 
-
+                    //tells the emerson controlling code that ace
+                    //libraries are loaded and can now begin doing
+                    //handling script input, etc.
                     sirikata.event('amReady');
                     
                 }); //closes function waiting for ace to load through lab
