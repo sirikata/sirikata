@@ -51,6 +51,9 @@ IOStrand::IOStrand(IOService& io, const String& name)
 }
 
 IOStrand::~IOStrand() {
+#ifdef SIRIKATA_TRACK_EVENT_QUEUES
+    mService.destroyingStrand(this);
+#endif
     delete mImpl;
 }
 

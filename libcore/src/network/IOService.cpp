@@ -66,7 +66,12 @@ IOService::~IOService(){
 }
 
 IOStrand* IOService::createStrand(const String& name) {
-    return new IOStrand(*this, name);
+    IOStrand* res = new IOStrand(*this, name);
+#ifdef SIRIKATA_TRACK_EVENT_QUEUES
+    LockGuard lock(mMutex);
+    mStrands.insert(res);
+#endif
+    return res;
 }
 
 uint32 IOService::pollOne() {
@@ -156,6 +161,28 @@ void IOService::decrementCount(const IOCallback& cb) {
     mEnqueued--;
     cb();
 }
+
+void IOService::destroyingStrand(IOStrand* child) {
+    LockGuard lock(mMutex);
+    assert(mStrands.find(child) != mStrands.end());
+    mStrands.erase(child);
+}
+
+void IOService::reportStats() const {
+    LockGuard lock(const_cast<Mutex&>(mMutex));
+
+    SILOG(ioservice, info, "Current IOService Statistics");
+    SILOG(ioservice, info, "  Number of outstanding timers enqueued: " << numTimersEnqueued());
+    SILOG(ioservice, info, "  Number of outstanding event handlers enqueued: " << numEnqueued());
+
+    for(StrandSet::const_iterator it = mStrands.begin(); it != mStrands.end(); it++) {
+        SILOG(ioservice, info, "  Child '" << (*it)->name() << "'");
+        SILOG(ioservice, info, "    Number of outstanding timers enqueued: " << (*it)->numTimersEnqueued());
+        SILOG(ioservice, info, "    Number of outstanding event handlers enqueued: " << (*it)->numEnqueued());
+    }
+
+}
+
 #endif
 
 } // namespace Network

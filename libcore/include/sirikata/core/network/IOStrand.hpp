@@ -131,6 +131,14 @@ class SIRIKATA_EXPORT IOStrand : public Noncopyable {
      */
     template<typename CallbackType>
     WrappedHandler<CallbackType> wrap(const CallbackType& handler);
+
+
+
+#ifdef SIRIKATA_TRACK_EVENT_QUEUES
+    uint32 numTimersEnqueued() const { return mTimersEnqueued.read(); }
+    uint32 numEnqueued() const { return mEnqueued.read(); }
+#endif
+
 };
 
 typedef std::tr1::shared_ptr<IOStrand> IOStrandPtr;

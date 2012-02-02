@@ -36,6 +36,7 @@
 #include <sirikata/core/network/IODefs.hpp>
 #include <sirikata/core/util/AtomicTypes.hpp>
 #include <sirikata/core/util/Noncopyable.hpp>
+#include <boost/thread.hpp>
 
 namespace Sirikata {
 namespace Network {
@@ -57,17 +58,32 @@ class SIRIKATA_EXPORT IOService : public Noncopyable {
 
     AtomicValue<uint32> mTimersEnqueued;
     AtomicValue<uint32> mEnqueued;
+
+    // Track all strands that have been allocated. This needs to be
+    // thread safe.
+    typedef boost::mutex Mutex;
+    typedef boost::lock_guard<Mutex> LockGuard;
+    Mutex mMutex;
+    typedef std::tr1::unordered_set<IOStrand*> StrandSet;
+    StrandSet mStrands;
 #endif
 
     IOService();
     IOService(const IOService&); // Disabled
     ~IOService();
 
+    // For construction
     friend class IOServiceFactory;
+    // For callbacks to track their lifetimes
+    friend class IOStrand;
 
 #ifdef SIRIKATA_TRACK_EVENT_QUEUES
     void decrementTimerCount(const boost::system::error_code&e, const IOCallbackWithError& cb);
     void decrementCount(const IOCallback& cb);
+
+    // Invoked by strands when they are being destroyed so we can
+    // track which ones are alive.
+    void destroyingStrand(IOStrand* child);
 #endif
 
   protected:
@@ -155,6 +171,16 @@ public:
      *  \param handler the handler callback to be called
      */
     void post(const Duration& waitFor, const IOCallback& handler);
+
+#ifdef SIRIKATA_TRACK_EVENT_QUEUES
+    uint32 numTimersEnqueued() const { return mTimersEnqueued.read(); }
+    uint32 numEnqueued() const { return mEnqueued.read(); }
+
+    /** Report statistics about this IOService and it's child
+     *  IOStrands.
+     */
+    void reportStats() const;
+#endif
 };
 
 } // namespace Network
