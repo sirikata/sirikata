@@ -195,7 +195,11 @@ void ByteTransferScenario::generatePings() {
             mSourceObject=objA;
             mDestinationObject=objB->uuid();
         }
-        mContext->mainStrand->post(Duration::milliseconds(10.0),mGeneratePings);
+        mContext->mainStrand->post(
+            Duration::milliseconds(10.0),
+            mGeneratePings,
+            "ByteTransferScenario Generate Pings"
+        );
     }else {
         std::string buffer;
         if (mPacketSize>8) {
@@ -225,7 +229,11 @@ void ByteTransferScenario::generatePings() {
         mOutstandingPackets.pop_back();//did not push the last guy
         mPingProfiler->finished();
         if (!mReturned) {
-            mContext->mainStrand->post(Duration::microseconds(100),mGeneratePings);
+            mContext->mainStrand->post(
+                Duration::microseconds(100),
+                mGeneratePings,
+                "ByteTransferScenario Generate Pings"
+            );
         }
 
     }

@@ -142,7 +142,7 @@ void SSTBenchmark::pingPoller(){
             }
         }
         if (mPingRate.toSeconds()!=0) {
-            mIOService->post(mPingRate,mPingFunction);
+            mIOService->post(mPingRate,mPingFunction,"SSTBenchmark Ping");
         }
     }
 
@@ -151,7 +151,7 @@ void SSTBenchmark::connected(Sirikata::Network::Stream::ConnectionStatus connect
     if (connectionStatus==Sirikata::Network::Stream::Connected) {
        //FIXME start pinging
         mStartTime = Time::now(Duration::zero());
-        mIOService->post(mPingRate,mPingFunction);
+        mIOService->post(mPingRate,mPingFunction,"SSTBenchmark Ping");
     }
 }
 void SSTBenchmark::remoteConnected(Sirikata::Network::Stream*strm, Sirikata::Network::Stream::ConnectionStatus connectionStatus,const std::string&reason){
@@ -223,7 +223,7 @@ void SSTBenchmark::start() {
         mListener->listen(Sirikata::Network::Address("127.0.0.1",mPort),
                           std::tr1::bind(&SSTBenchmark::newStream,this,std::tr1::placeholders::_1,std::tr1::placeholders::_2));
 
-        mIOService->post(Duration::seconds(10000000.),&noop);
+        mIOService->post(Duration::seconds(10000000.),&noop,"SSTBenchmark noop");
 
     }
     mIOService->run();

@@ -101,7 +101,7 @@ class SstCloseTest : public CxxTest::TestSuite
         if (rand()<RAND_MAX/5||pause)
             pause=!pause;
         if (pause) {
-            mRecvService->service()->post(std::tr1::bind(&Stream::readyRead,s));
+            mRecvService->service()->post(std::tr1::bind(&Stream::readyRead,s), "TCPSSTCloseTest");
             pauseReceive();
             return;
         }

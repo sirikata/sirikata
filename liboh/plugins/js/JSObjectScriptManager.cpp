@@ -524,7 +524,7 @@ void JSObjectScriptManager::loadMesh(const Transfer::URI& uri, MeshLoadCallback 
                 JSLOG(warn, "Load mesh called after shutdown request, ignoring successful callback...");
                 return;
             }
-            mContext->mainStrand->post(std::tr1::bind(cb, mesh));
+            mContext->mainStrand->post(std::tr1::bind(cb, mesh), "JSObjectScriptManager::loadMesh");
             return;
         }
     }
@@ -552,7 +552,8 @@ void JSObjectScriptManager::loadMesh(const Transfer::URI& uri, MeshLoadCallback 
 void JSObjectScriptManager::meshDownloaded(Transfer::ResourceDownloadTaskPtr taskptr, Transfer::TransferRequestPtr request, Transfer::DenseDataPtr data) {
     Transfer::ChunkRequestPtr chunkreq = std::tr1::static_pointer_cast<Transfer::ChunkRequest>(request);
     mParsingIOService->post(
-        std::tr1::bind(&JSObjectScriptManager::parseMeshWork, this, chunkreq->getMetadata(), chunkreq->getMetadata().getFingerprint(), data)
+        std::tr1::bind(&JSObjectScriptManager::parseMeshWork, this, chunkreq->getMetadata(), chunkreq->getMetadata().getFingerprint(), data),
+        "JSObjectScriptManager::parseMeshWork"
     );
 }
 
@@ -566,7 +567,10 @@ void JSObjectScriptManager::parseMeshWork(const Transfer::RemoteFileMetadata& me
         parsed = output_data->get();
     }
 
-    mContext->mainStrand->post(std::tr1::bind(&JSObjectScriptManager::finishMeshDownload, this, metadata.getURI(), parsed));
+    mContext->mainStrand->post(
+        std::tr1::bind(&JSObjectScriptManager::finishMeshDownload, this, metadata.getURI(), parsed),
+        "JSObjectScriptManager::finishMeshDownload"
+    );
 }
 
 void JSObjectScriptManager::finishMeshDownload(const Transfer::URI& uri, VisualPtr mesh) {
@@ -579,7 +583,10 @@ void JSObjectScriptManager::finishMeshDownload(const Transfer::URI& uri, VisualP
     mMeshCallbacks.erase(uri);
 
     for(MeshLoadCallbackList::iterator it = cbs.begin(); it != cbs.end(); it++)
-        mContext->mainStrand->post(std::tr1::bind(*it, mesh));
+        mContext->mainStrand->post(
+            std::tr1::bind(*it, mesh),
+            "JSObjectScriptManager::finishMeshDownload"
+        );
 }
 
 JSObjectScriptManager::~JSObjectScriptManager()

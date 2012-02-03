@@ -48,7 +48,7 @@ namespace Sirikata {
 namespace Graphics {
 
 ResourceDownloadPlanner::ResourceDownloadPlanner(Context *c, OgreRenderer* renderer)
- : PollingService(c->mainStrand, Duration::seconds(frequency), c, "Resource Download Planner Poll"),
+ : PollingService(c->mainStrand, "Resource Download Planner Poll", Duration::seconds(frequency), c, "Resource Download Planner Poll"),
    mContext(c),
    mScene(renderer),
    mMaxLoaded(2500)

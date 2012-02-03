@@ -64,40 +64,61 @@ IOService& IOStrand::service() const {
     return mService;
 }
 
-void IOStrand::dispatch(const IOCallback& handler) {
+void IOStrand::dispatch(const IOCallback& handler, const char* tag) {
 #ifdef SIRIKATA_TRACK_EVENT_QUEUES
     mEnqueued++;
+    {
+        LockGuard lock(mMutex);
+        if (mTagCounts.find(tag) == mTagCounts.end())
+            mTagCounts[tag] = 0;
+        mTagCounts[tag]++;
+    }
     mService.dispatch(
         mImpl->wrap(
-            std::tr1::bind(&IOStrand::decrementCount, this, Timer::now(), handler)
-        )
+            std::tr1::bind(&IOStrand::decrementCount, this, Timer::now(), handler, tag)
+        ),
+        tag
     );
 #else
     mService.dispatch( mImpl->wrap( handler ) );
 #endif
 }
 
-void IOStrand::post(const IOCallback& handler) {
+void IOStrand::post(const IOCallback& handler, const char* tag) {
 #ifdef SIRIKATA_TRACK_EVENT_QUEUES
     mEnqueued++;
+    {
+        LockGuard lock(mMutex);
+        if (mTagCounts.find(tag) == mTagCounts.end())
+            mTagCounts[tag] = 0;
+        mTagCounts[tag]++;
+    }
     mService.post(
         mImpl->wrap(
-            std::tr1::bind(&IOStrand::decrementCount, this, Timer::now(), handler)
-        )
+            std::tr1::bind(&IOStrand::decrementCount, this, Timer::now(), handler, tag)
+        ),
+        tag
     );
 #else
     mService.post( mImpl->wrap( handler ) );
 #endif
 }
 
-void IOStrand::post(const Duration& waitFor, const IOCallback& handler) {
+void IOStrand::post(const Duration& waitFor, const IOCallback& handler, const char* tag) {
 #ifdef SIRIKATA_TRACK_EVENT_QUEUES
     mTimersEnqueued++;
+    {
+        LockGuard lock(mMutex);
+        if (mTagCounts.find(tag) == mTagCounts.end())
+            mTagCounts[tag] = 0;
+        mTagCounts[tag]++;
+    }
     mService.post(
         waitFor,
         mImpl->wrap(
-            std::tr1::bind(&IOStrand::decrementTimerCount, this, Timer::now(), waitFor, handler)
-        )
+            std::tr1::bind(&IOStrand::decrementTimerCount, this, Timer::now(), waitFor, handler, tag)
+        ),
+        tag
     );
 #else
     mService.post(waitFor, mImpl->wrap( handler ) );
@@ -110,25 +131,37 @@ IOCallback IOStrand::wrap(const IOCallback& handler) {
 
 
 #ifdef SIRIKATA_TRACK_EVENT_QUEUES
-void IOStrand::decrementTimerCount(const Time& start, const Duration& timer_duration, const IOCallback& cb) {
+void IOStrand::decrementTimerCount(const Time& start, const Duration& timer_duration, const IOCallback& cb, const char* tag) {
     mTimersEnqueued--;
     Time end = Timer::now();
     {
         LockGuard lock(mMutex);
         mWindowedTimerLatencyStats.sample((end - start) - timer_duration);
+
+        assert(mTagCounts.find(tag) != mTagCounts.end());
+        mTagCounts[tag]--;
     }
     cb();
 }
 
-void IOStrand::decrementCount(const Time& start, const IOCallback& cb) {
+void IOStrand::decrementCount(const Time& start, const IOCallback& cb, const char* tag) {
     mEnqueued--;
     Time end = Timer::now();
     {
         LockGuard lock(mMutex);
         mWindowedHandlerLatencyStats.sample(end - start);
+
+        assert(mTagCounts.find(tag) != mTagCounts.end());
+        mTagCounts[tag]--;
     }
     cb();
 }
+
+IOStrand::TagCountMap IOStrand::enqueuedTags() const {
+    LockGuard lock(const_cast<Mutex&>(mMutex));
+    return mTagCounts;
+};
+
 #endif
 } // namespace Network
 } // namespace Sirikata

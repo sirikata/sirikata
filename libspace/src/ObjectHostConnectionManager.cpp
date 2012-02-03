@@ -188,7 +188,8 @@ void ObjectHostConnectionManager::shutdown() {
     mAcceptor->close();
 
     mContext->mainStrand->post(
-        std::tr1::bind(&ObjectHostConnectionManager::closeAllConnections, this)
+        std::tr1::bind(&ObjectHostConnectionManager::closeAllConnections, this),
+        "ObjectHostConnectionManager::closeAllConnections"
     );
 }
 
@@ -220,7 +221,8 @@ void ObjectHostConnectionManager::handleNewConnection(Sirikata::Network::Stream*
     );
 
     mContext->mainStrand->post(
-        std::tr1::bind(&ObjectHostConnectionManager::insertConnection, this, conn)
+        std::tr1::bind(&ObjectHostConnectionManager::insertConnection, this, conn),
+        "ObjectHostConnectionManager::insertConnection"
     );
 }
 
@@ -247,7 +249,8 @@ void ObjectHostConnectionManager::handleConnectionEvent(ObjectHostConnection* co
     if (status == Network::Stream::Disconnected) {
         // Close out all associated connections
         mContext->mainStrand->post(
-            std::tr1::bind(&ObjectHostConnectionManager::destroyConnection, this, conn)
+            std::tr1::bind(&ObjectHostConnectionManager::destroyConnection, this, conn),
+            "ObjectHostConnectionManager::destroyConnection"
         );
     }
 }

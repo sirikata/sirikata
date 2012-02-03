@@ -80,7 +80,10 @@ void LibproxProximityBase::ProxStreamInfo<EndpointType, StreamType>::writeSomeOb
     if (prox_stream->outstanding.empty())
         prox_stream->writing = false;
     else
-        ctx->mainStrand->post(retry_rate, prox_stream->writecb);
+        ctx->mainStrand->post(
+            retry_rate, prox_stream->writecb,
+            "LibproxProximityBase::ProxStreamInfo<EndpointType, StreamType>::writeSomeObjectResults"
+        );
 }
 
 template<typename EndpointType, typename StreamType>
@@ -107,7 +110,8 @@ void LibproxProximityBase::ProxStreamInfo<EndpointType, StreamType>::requestProx
     if (!base_stream) {
         ctx->mainStrand->post(
             Duration::milliseconds((int64)5),
-            std::tr1::bind(&LibproxProximityBase::ProxStreamInfo<EndpointType,StreamType>::requestProxSubstream, parent, ctx, ep, prox_stream)
+            std::tr1::bind(&LibproxProximityBase::ProxStreamInfo<EndpointType,StreamType>::requestProxSubstream, parent, ctx, ep, prox_stream),
+            "LibproxProximityBase::ProxStreamInfo<EndpointType, StreamType>::requestProxSubstream"
         );
         return;
     }
@@ -384,7 +388,8 @@ void LibproxProximityBase::aggregateCreated(const UUID& objid) {
             BoundingSphere3f(),
             "",
             ""
-        )
+        ),
+        "LocationService::addLocalAggregateObject"
     );
 
     mAggregateManager->addAggregate(objid);
@@ -395,7 +400,8 @@ void LibproxProximityBase::aggregateChildAdded(const UUID& objid, const UUID& ch
         std::tr1::bind(
             &LibproxProximityBase::updateAggregateLoc, this,
             objid, bnds
-        )
+        ),
+        "LibproxProximityBase::updateAggregateLoc"
     );
 
     mAggregateManager->addChild(objid, child);
@@ -407,7 +413,8 @@ void LibproxProximityBase::aggregateChildRemoved(const UUID& objid, const UUID& 
         std::tr1::bind(
             &LibproxProximityBase::updateAggregateLoc, this,
             objid, bnds
-        )
+        ),
+        "LibproxProximityBase::updateAggregateLoc"
     );
 
     mAggregateManager->removeChild(objid, child);
@@ -418,7 +425,8 @@ void LibproxProximityBase::aggregateBoundsUpdated(const UUID& objid, const Bound
         std::tr1::bind(
             &LibproxProximityBase::updateAggregateLoc, this,
             objid, bnds
-        )
+        ),
+        "LibproxProximityBase::updateAggregateLoc"
     );
 
     mAggregateManager->generateAggregateMesh(objid, Duration::seconds(300.0+rand()%300));
@@ -428,7 +436,8 @@ void LibproxProximityBase::aggregateDestroyed(const UUID& objid) {
     mContext->mainStrand->post(
         std::tr1::bind(
             &LocationService::removeLocalAggregateObject, mLocService, objid
-        )
+        ),
+        "LocationService::removeLocalAggregateObject"
     );
     mAggregateManager->removeAggregate(objid);
 }

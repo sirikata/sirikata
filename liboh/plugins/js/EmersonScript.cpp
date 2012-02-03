@@ -197,7 +197,9 @@ void  EmersonScript::notifyProximateGone(ProxyObjectPtr proximateObject, const S
 
     JSObjectScript::mCtx->objStrand->post(
         std::tr1::bind(&EmersonScript::iNotifyProximateGone,this,
-            proximateObject,querier,Liveness::livenessToken()));
+            proximateObject,querier,Liveness::livenessToken()),
+        "EmersonScript::iNotifyProximateGone"
+    );
 }
 
 void EmersonScript::iNotifyProximateGone(
@@ -276,7 +278,9 @@ boost::any EmersonScript::invokeInvokable(
 {
     JSObjectScript::mCtx->objStrand->post(
         std::tr1::bind(&EmersonScript::iInvokeInvokable,this,
-            params,function_,Liveness::livenessToken()));
+            params,function_,Liveness::livenessToken()),
+        "EmersonScript::iInvokeInvokable"
+    );
 
     return boost::any_cast<bool>(true);
 }
@@ -387,7 +391,9 @@ void  EmersonScript::notifyProximate(ProxyObjectPtr proximateObject, const Space
 
     JSObjectScript::mCtx->objStrand->post(
         std::tr1::bind(&EmersonScript::iNotifyProximate,this,
-            proximateObject,querier,Liveness::livenessToken()));
+            proximateObject,querier,Liveness::livenessToken()),
+        "EmersonScript::iNotifyProximate"
+    );
 }
 
 
@@ -474,7 +480,9 @@ void EmersonScript::killScript()
     iStop(false);
     JSObjectScript::mCtx->objStrand->post(
         std::tr1::bind(&EmersonScript::postDestroy,this,
-            livenessToken()));
+            livenessToken()),
+        "EmersonScript::postDestroy"
+    );
 }
 
 
@@ -507,7 +515,9 @@ void EmersonScript::onConnected(SessionEventProviderPtr from,
 {
     JSObjectScript::mCtx->objStrand->post(
         std::tr1::bind(&EmersonScript::iOnConnected,this,
-            from,name,token,false,Liveness::livenessToken()));
+            from,name,token,false,Liveness::livenessToken()),
+        "EmersonScript::iOnConnected"
+    );
 }
 
 void EmersonScript::iOnConnected(SessionEventProviderPtr from,
@@ -614,7 +624,9 @@ void EmersonScript::onDisconnected(
     //post message
     JSObjectScript::mCtx->objStrand->post(
         std::tr1::bind(&EmersonScript::iOnDisconnected,this,
-            from,name,Liveness::livenessToken()));
+            from,name,Liveness::livenessToken()),
+        "EmersonScript::iOnDisconnected"
+    );
 }
 
 //should be called from mStrand
@@ -666,7 +678,9 @@ void EmersonScript::create_entity(EntityCreateInfo& eci)
     //on mainStrand so that object creation does not interfere with other
     //operations on the oh.
     JSObjectScript::mCtx->mainStrand->post(std::tr1::bind(
-            &EmersonScript::eCreateEntityFinish,this,oh,eci));
+            &EmersonScript::eCreateEntityFinish,this,oh,eci),
+        "EmersonScript::eCreateEntityFinish"
+    );
 }
 
 //called from within mainStrand
@@ -700,7 +714,9 @@ void EmersonScript::stop()
 {
     JSObjectScript::mCtx->stop();
     JSObjectScript::mCtx->objStrand->post(
-        std::tr1::bind(&EmersonScript::iStop,this,true));
+        std::tr1::bind(&EmersonScript::iStop,this,true),
+        "EmersonScript::iStop"
+    );
 }
 
 //called from mStrand
@@ -799,7 +815,9 @@ v8::Handle<v8::Value> EmersonScript::create_event(
      */
     JSObjectScript::mCtx->objStrand->post(
         std::tr1::bind(&EmersonScript::invokeCallbackInContext, this,
-            livenessToken(), cb, jscont));
+            livenessToken(), cb, jscont),
+        "EmersonScript::invokeCallbackInContext"
+    );
     return v8::Boolean::New(true);
 }
 
@@ -937,7 +955,9 @@ bool EmersonScript::handleScriptCommRead(
 
     JSObjectScript::mCtx->objStrand->post(
         std::tr1::bind(&EmersonScript::iHandleScriptCommRead,this,
-            src,dst,payload,Liveness::livenessToken()));
+            src,dst,payload,Liveness::livenessToken()),
+        "EmersonScript::iHandleScriptCommRead"
+    );
     return true;
 }
 
@@ -1090,7 +1110,9 @@ void EmersonScript::handleScriptCommUnreliable (
 
     JSObjectScript::mCtx->objStrand->post(
         std::tr1::bind(&EmersonScript::iHandleScriptCommUnreliable,this,
-            src,dst,payload,Liveness::livenessToken()));
+            src,dst,payload,Liveness::livenessToken()),
+        "EmersonScript::iHandleScriptCommUnreliable"
+    );
 }
 
 //called from within mStrand
@@ -1124,7 +1146,9 @@ v8::Handle<v8::Value> EmersonScript::sendSandbox(const String& msgToSend, uint32
     //posting task so that still get asynchronous messages.
     JSObjectScript::mCtx->objStrand->post(
         std::tr1::bind(&EmersonScript::processSandboxMessage, this,
-            msgToSend,senderID,receiverID,Liveness::livenessToken()));
+            msgToSend,senderID,receiverID,Liveness::livenessToken()),
+        "EmersonScript::processSandboxMessage"
+    );
 
     return v8::Undefined();
 }
@@ -1370,7 +1394,9 @@ v8::Handle<v8::Value> EmersonScript::restorePresence(PresStructRestoreParams& ps
     {
         JSObjectScript::mCtx->mainStrand->post(
             std::tr1::bind(&EmersonScript::mainStrandCompletePresConnect,this,
-                newLoc,bs,psrp,presToke,Liveness::livenessToken()));
+                newLoc,bs,psrp,presToke,Liveness::livenessToken()),
+            "EmersonScript::mainStrandCompletePresConnect"
+        );
 
         mUnconnectedPresences.push_back(jspres);
         return v8::Null();

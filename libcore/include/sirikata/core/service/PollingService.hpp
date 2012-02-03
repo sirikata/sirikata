@@ -46,7 +46,7 @@ class Context;
  */
 class SIRIKATA_EXPORT PollingService : public PollerService {
 public:
-    PollingService(Network::IOStrand* str, const Duration& max_rate = Duration::microseconds(0), Context* ctx = NULL, const String& name = "", bool accurate=false);
+    PollingService(Network::IOStrand* str, const char* cb_tag, const Duration& max_rate = Duration::microseconds(0), Context* ctx = NULL, const String& name = "", bool accurate=false);
     ~PollingService();
 
     virtual void start();

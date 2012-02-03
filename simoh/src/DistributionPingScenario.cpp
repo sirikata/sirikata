@@ -105,6 +105,7 @@ void DistributionPingScenario::initialize(ObjectHostContext*ctx) {
     mPingPoller = new Poller(
         ctx->mainStrand,
         std::tr1::bind(&DistributionPingScenario::sendPings, this),
+        "DistributionPingScenario Ping Poller",
         Duration::seconds(1.0/mNumPingsPerSecond)
     );
 
@@ -113,6 +114,7 @@ void DistributionPingScenario::initialize(ObjectHostContext*ctx) {
     mGeneratePingPoller = new Poller(
         mGeneratePingsStrand,
         std::tr1::bind(&DistributionPingScenario::generatePings, this),
+        "DistributionPingScenario Generate Ping Poller",
         Duration::seconds(1.0/mNumPingsPerSecond)
     );
 }

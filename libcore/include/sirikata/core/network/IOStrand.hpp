@@ -57,6 +57,10 @@ namespace Network {
  *  are acquired from an existing IOService.
  */
 class SIRIKATA_EXPORT IOStrand : public Noncopyable {
+  public:
+    typedef std::tr1::unordered_map<const char*, uint32> TagCountMap;
+
+  private:
     IOService& mService;
     InternalIOStrand* mImpl;
     const String mName;
@@ -74,6 +78,9 @@ class SIRIKATA_EXPORT IOStrand : public Noncopyable {
     // Tracks the latency of recent handlers through the queue
     Trace::WindowedStats<Duration> mWindowedTimerLatencyStats;
     Trace::WindowedStats<Duration> mWindowedHandlerLatencyStats;
+
+    // Track tags that trigger events
+    TagCountMap mTagCounts;
 #endif
 
     friend class IOService;
@@ -82,8 +89,8 @@ class SIRIKATA_EXPORT IOStrand : public Noncopyable {
     IOStrand(IOService& io, const String& name);
 
 #ifdef SIRIKATA_TRACK_EVENT_QUEUES
-    void decrementTimerCount(const Time& start, const Duration& timer_duration, const IOCallback& cb);
-    void decrementCount(const Time& start, const IOCallback& cb);
+    void decrementTimerCount(const Time& start, const Duration& timer_duration, const IOCallback& cb, const char* tag);
+    void decrementCount(const Time& start, const IOCallback& cb, const char* tag);
 #endif
 
   protected:
@@ -111,24 +118,27 @@ class SIRIKATA_EXPORT IOStrand : public Noncopyable {
     /** Request that the given handler be invoked, possibly before
      *  returning, on this strand.
      *  \param handler the handler callback to be called
+     *  \param tag a string descriptor of the handler for debugging
      */
-    void dispatch(const IOCallback& handler);
+    void dispatch(const IOCallback& handler, const char* tag = NULL);
 
     /** Request that the given handler be appended to the event queue
      *  and invoked on this strand at a later time.  The handler is
      *  guaranteed not to be invoked will not be invoked during this
      *  method call.
      *  \param handler the handler callback to be called
+     *  \param tag a string descriptor of the handler for debugging
      */
-    void post(const IOCallback& handler);
+    void post(const IOCallback& handler, const char* tag = NULL);
     /** Request that the given handler be appended to the event queue
      *  and invoked on this strand at a later time. Regardless of the
      *  wait duration requested, the handler is guaranteed not to be
      *  invoked during this method call.
      *  \param waitFor the length of time to wait before invoking the handler
      *  \param handler the handler callback to be called
+     *  \param tag a string descriptor of the handler for debugging
      */
-    void post(const Duration& waitFor, const IOCallback& handler);
+    void post(const Duration& waitFor, const IOCallback& handler, const char* tag = NULL);
 
     /** Wrap the given handler so that it will be handled in this strand.
      *  \param handler the handler which should be wrapped
@@ -154,6 +164,8 @@ class SIRIKATA_EXPORT IOStrand : public Noncopyable {
 
     Duration timerLatency() const { return mWindowedTimerLatencyStats.average(); }
     Duration handlerLatency() const { return mWindowedHandlerLatencyStats.average(); }
+
+    TagCountMap enqueuedTags() const;
 #endif
 
 };

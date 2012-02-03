@@ -55,7 +55,7 @@ namespace Sirikata
     std::cout<<"\n\nReceived a stop in async craq get\n";
 #endif
     for (int s=0; s < (int) mConnections.size(); ++s)
-      mConnectionsStrands[s]->post(std::tr1::bind(&AsyncConnectionGet::stop,mConnections[s]));
+        mConnectionsStrands[s]->post(std::tr1::bind(&AsyncConnectionGet::stop,mConnections[s]), "AsyncConnectionGet::stop");
   }
 
   AsyncCraqGet::~AsyncCraqGet()
@@ -137,7 +137,7 @@ namespace Sirikata
         boost::asio::ip::tcp::resolver::iterator iterator = resolver.resolve(query);  //creates a list of endpoints that we can try to connect to.
 
         passSocket   = new Sirikata::Network::TCPSocket((*ctx->ioService));
-        mConnectionsStrands[s]->post(std::tr1::bind(&AsyncConnectionGet::initialize, mConnections[s],passSocket, iterator));
+        mConnectionsStrands[s]->post(std::tr1::bind(&AsyncConnectionGet::initialize, mConnections[s],passSocket, iterator), "AsyncConnectionGet::initialize");
       }
     }
     else
@@ -163,7 +163,7 @@ namespace Sirikata
         }
 
         passSocket   = new Sirikata::Network::TCPSocket((*ctx->ioService));
-        mConnectionsStrands[s]->post(std::tr1::bind(&AsyncConnectionGet::initialize, mConnections[s],passSocket, iterator));
+        mConnectionsStrands[s]->post(std::tr1::bind(&AsyncConnectionGet::initialize, mConnections[s],passSocket, iterator), "AsyncConnectionGet::initialize");
       }
     }
   }
@@ -305,7 +305,7 @@ bool AsyncCraqGet::checkConnections(int s)
         CraqObjectID tmpCraqID;
         memcpy(tmpCraqID.cdk, cdSG->dataKey, CRAQ_DATA_KEY_SIZE);
         mConnections[s]->setProcessing();
-        mConnectionsStrands[s]->post(std::tr1::bind(&AsyncConnectionGet::getBound,mConnections[s],tmpCraqID, qVal->traceToken));
+        mConnectionsStrands[s]->post(std::tr1::bind(&AsyncConnectionGet::getBound,mConnections[s],tmpCraqID, qVal->traceToken), "AsyncConnectionGet::getBound");
 
       }
       else if (cdSG->messageType == CraqDataSetGet::SET)
@@ -351,7 +351,7 @@ void AsyncCraqGet::reInitializeNode(int s)
 
     passSocket   =  new Sirikata::Network::TCPSocket(*ctx->ioService);
 
-    mConnectionsStrands[s]->post(std::tr1::bind(&AsyncConnectionGet::initialize, mConnections[s],passSocket, iterator));
+    mConnectionsStrands[s]->post(std::tr1::bind(&AsyncConnectionGet::initialize, mConnections[s],passSocket, iterator), "AsyncConnectionGet::initialize");
   }
   else
   {
@@ -368,7 +368,7 @@ void AsyncCraqGet::reInitializeNode(int s)
 
     passSocket   =  new Sirikata::Network::TCPSocket(*ctx->ioService);
 
-    mConnectionsStrands[s]->post(std::tr1::bind(&AsyncConnectionGet::initialize, mConnections[s],passSocket, iterator));
+    mConnectionsStrands[s]->post(std::tr1::bind(&AsyncConnectionGet::initialize, mConnections[s],passSocket, iterator), "AsyncConnectionGet::initialize");
   }
 }
 

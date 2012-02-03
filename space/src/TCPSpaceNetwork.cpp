@@ -117,7 +117,8 @@ Chunk* TCPSpaceNetwork::RemoteStream::pop(Network::IOStrand* ios) {
         // readyRead() will be processed after the stream has actually
         // been paused.
         ios->post(
-            std::tr1::bind(&Sirikata::Network::Stream::readyRead, stream)
+            std::tr1::bind(&Sirikata::Network::Stream::readyRead, stream),
+            "Sirikata::Network::Stream::readyRead"
         );
     }
     return result;

@@ -109,6 +109,7 @@ void PingDelugeScenario::initialize(ObjectHostContext*ctx) {
     mPingPoller = new Poller(
         ctx->mainStrand,
         std::tr1::bind(&PingDelugeScenario::sendPings, this),
+        "PingDelugeScenario Ping Poller",
         mNumPingsPerSecond > 1000 ? // Try to amortize out some of the
                                     // scheduling cost
         Duration::seconds(10.0/mNumPingsPerSecond) :
@@ -120,6 +121,7 @@ void PingDelugeScenario::initialize(ObjectHostContext*ctx) {
     mGeneratePingPoller = new Poller(
         mGeneratePingsStrand,
         std::tr1::bind(&PingDelugeScenario::generatePings, this),
+        "PingDelugeScenario Generate Ping Poller",
         mNumPingsPerSecond > 1000 ? // Try to amortize out some of the
                                     // scheduling cost
         Duration::seconds(10.0/mNumPingsPerSecond) :
@@ -131,7 +133,8 @@ void PingDelugeScenario::start() {
     Duration connect_phase = GetOptionValue<Duration>(OBJECT_CONNECT_PHASE);
     mContext->mainStrand->post(
         connect_phase,
-        std::tr1::bind(&PingDelugeScenario::delayedStart, this)
+        std::tr1::bind(&PingDelugeScenario::delayedStart, this),
+        "PingDelugeScenario::delayedStart"
     );
 }
 void PingDelugeScenario::delayedStart() {

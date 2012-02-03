@@ -187,7 +187,11 @@ void AggregateManager::addChild(const UUID& uuid, const UUID& child_uuid) {
 
     AGG_LOG(detailed, "addChild:  "  << uuid.toString() << " CHILD " << child_uuid.toString());
 
-    mAggregationStrand->post(Duration::seconds(20), std::tr1::bind(&AggregateManager::generateMeshesFromQueue, this, mAggregateGenerationStartTime));
+    mAggregationStrand->post(
+        Duration::seconds(20),
+        std::tr1::bind(&AggregateManager::generateMeshesFromQueue, this, mAggregateGenerationStartTime),
+        "AggregateManager::generateMeshesFromQueue"
+    );
   }
 }
 
@@ -214,7 +218,11 @@ void AggregateManager::removeChild(const UUID& uuid, const UUID& child_uuid) {
 
     mAggregateGenerationStartTime =  Timer::now();
 
-    mAggregationStrand->post(Duration::seconds(20), std::tr1::bind(&AggregateManager::generateMeshesFromQueue, this, mAggregateGenerationStartTime));
+    mAggregationStrand->post(
+        Duration::seconds(20),
+        std::tr1::bind(&AggregateManager::generateMeshesFromQueue, this, mAggregateGenerationStartTime),
+        "AggregateManager::generateMeshesFromQueue"
+    );
   }
 }
 
@@ -241,7 +249,11 @@ void AggregateManager::generateAggregateMesh(const UUID& uuid, AggregateObjectPt
   aggObject->mLastGenerateTime = Timer::now();
 
   AGG_LOG(detailed,"Setting up aggregate " << uuid << " to generate aggregate mesh with " << aggObject->mChildren.size() << " in " << delayFor);
-  mAggregationStrand->post( delayFor, std::tr1::bind(&AggregateManager::generateAggregateMeshAsyncIgnoreErrors, this, uuid, aggObject->mLastGenerateTime, true)  );
+  mAggregationStrand->post(
+      delayFor,
+      std::tr1::bind(&AggregateManager::generateAggregateMeshAsyncIgnoreErrors, this, uuid, aggObject->mLastGenerateTime, true),
+      "AggregateManager::generateAggregateMeshAsyncIgnoreErrors"
+  );
 }
 
 void AggregateManager::generateAggregateMeshAsyncIgnoreErrors(const UUID uuid, Time postTime, bool generateSiblings) {
@@ -795,7 +807,11 @@ void AggregateManager::generateMeshesFromQueue(Time postTime) {
 
     if (mObjectsByPriority.size() > 0) {
       Duration dur = (returner) ? Duration::milliseconds(1.0) : Duration::milliseconds(200.0);
-      mAggregationStrand->post(dur, std::tr1::bind(&AggregateManager::generateMeshesFromQueue, this, curTime));
+      mAggregationStrand->post(
+          dur,
+          std::tr1::bind(&AggregateManager::generateMeshesFromQueue, this, curTime),
+          "AggregateManager::generateMeshesFromQueue"
+      );
     }
 }
 

@@ -358,7 +358,8 @@ void EmersonMessagingManager::writeData(Liveness::Token alive, SSTStreamPtr stre
         String restToWrite = msg.substr(bytesWritten);
         mMainContext->mainStrand->post(
             Duration::milliseconds((int64)20),
-            std::tr1::bind(&EmersonMessagingManager::writeData, this, livenessToken(), streamPtr, restToWrite, sender, receiver)
+            std::tr1::bind(&EmersonMessagingManager::writeData, this, livenessToken(), streamPtr, restToWrite, sender, receiver),
+            "EmersonMessagingManager::writeData"
         );
         JSLOG(detailed,"More sript data to write to stream.  Queueing future write operation.");
     }

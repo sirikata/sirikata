@@ -46,7 +46,7 @@ bool loadInfoComparator(const ServerLoadInfo sli1, const ServerLoadInfo sli2) {
 }
 
 LoadMonitor::LoadMonitor(SpaceContext* ctx, CoordinateSegmentation* cseg)
- : PollingService(ctx->mainStrand, Duration::seconds(5)),
+ : PollingService(ctx->mainStrand, "LoadMonitor Poll", Duration::seconds(5)),
    mContext(ctx),
    mCoordinateSegmentation(cseg),
    mCurrentLoadReading(0),

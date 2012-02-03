@@ -336,7 +336,7 @@ SessionManager::SessionManager(
     ObjectConnectedCallback conn_cb, ObjectMigratedCallback mig_cb,
     ObjectMessageHandlerCallback msg_cb, ObjectDisconnectedCallback disconn_cb
 )
- : PollingService(ctx->mainStrand, Duration::seconds(1.f), ctx, "Session Manager"),
+ : PollingService(ctx->mainStrand, "SessionManager Poll", Duration::seconds(1.f), ctx, "Session Manager"),
    OHDP::DelegateService( std::tr1::bind(&SessionManager::createDelegateOHDPPort, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2) ),
    mContext( ctx ),
    mSpace(space),
@@ -581,14 +581,19 @@ void SessionManager::openConnectionStartSession(const SpaceObjectReference& spor
               serializePBJMessage(session_msg),
             conn->server()
             )) {
-        mContext->mainStrand->post(Duration::seconds(0.05),std::tr1::bind(&SessionManager::retryOpenConnection,this,sporef_uuid,conn->server()));
+        mContext->mainStrand->post(
+            Duration::seconds(0.05),
+            std::tr1::bind(&SessionManager::retryOpenConnection,this,sporef_uuid,conn->server()),
+            "&SessionManager::retryOpenConnection"
+        );
     }
     else {
         // Setup a retry in case something gets dropped -- must check status and
         // retries entire connection process
         mContext->mainStrand->post(
             Duration::seconds(3),
-            std::tr1::bind(&SessionManager::checkConnectedAndRetry, this, sporef_uuid, conn->server())
+            std::tr1::bind(&SessionManager::checkConnectedAndRetry, this, sporef_uuid, conn->server()),
+            "SessionManager::checkConnectedAndRetry"
         );
     }
 }
@@ -666,7 +671,9 @@ void SessionManager::openConnectionStartMigration(const SpaceObjectReference& sp
                    std::tr1::bind(&SessionManager::getSpaceConnection,
                                   this,
                                   sid,
-                                  retry));
+                       retry),
+                "SessionManager::getSpaceConnection"
+            );
 
         SESSION_LOG(warn,"Could not send start migration message in"\
             "openConnectionStartMigration.  Re-trying");
@@ -760,7 +767,8 @@ void SessionManager::sendRetryingMessage(const SpaceObjectReference& sporef_src,
                 dest, dest_port,
                 payload,
                 dest_server,
-                strand, rate)
+                strand, rate),
+            "SessionManager::sendRetryingMessage"
         );
     }
 }
@@ -942,7 +950,8 @@ void SessionManager::handleSpaceSession(ServerID sid, SpaceNodeConnection* conn)
 
 void SessionManager::scheduleHandleServerMessages(SpaceNodeConnection* conn) {
     mContext->mainStrand->post(
-        std::tr1::bind(&SessionManager::handleServerMessages, this, conn)
+        std::tr1::bind(&SessionManager::handleServerMessages, this, conn),
+        "SessionManager::handleServerMessages"
     );
 }
 

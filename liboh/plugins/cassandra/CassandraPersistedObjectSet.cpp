@@ -60,7 +60,7 @@ void CassandraPersistedObjectSet::start() {
     mWork = new Network::IOWork(*mIOService, "CassandraPersistedObjectSet IO Thread");
     mThread = new Sirikata::Thread(std::tr1::bind(&Network::IOService::runNoReturn, mIOService));
 
-    mIOService->post(std::tr1::bind(&CassandraPersistedObjectSet::initDB, this));
+    mIOService->post(std::tr1::bind(&CassandraPersistedObjectSet::initDB, this), "CassandraPersistedObjectSet::initDB");
 }
 
 void CassandraPersistedObjectSet::initDB() {
@@ -83,7 +83,8 @@ void CassandraPersistedObjectSet::stop() {
 
 void CassandraPersistedObjectSet::requestPersistedObject(const UUID& internal_id, const String& script_type, const String& script_args, const String& script_contents, RequestCallback cb, const String& timestamp) {
     mIOService->post(
-        std::tr1::bind(&CassandraPersistedObjectSet::performUpdate, this, internal_id, script_type, script_args, script_contents, cb, timestamp)
+        std::tr1::bind(&CassandraPersistedObjectSet::performUpdate, this, internal_id, script_type, script_args, script_contents, cb, timestamp),
+        "CassandraPersistedObjectSet::performUpdate"
     );
 }
 
@@ -104,7 +105,7 @@ void CassandraPersistedObjectSet::performUpdate(const UUID& internal_id, const S
     }
 
     if (cb != 0)
-        mContext->mainStrand->post(std::tr1::bind(cb, success));
+        mContext->mainStrand->post(std::tr1::bind(cb, success), "CassandraPersistedObjectSet::performUpdate callback");
 }
 
 } //end namespace OH

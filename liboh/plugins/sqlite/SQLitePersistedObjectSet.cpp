@@ -58,7 +58,7 @@ void SQLitePersistedObjectSet::start() {
     mWork = new Network::IOWork(*mIOService, "SQLitePersistedObjectSet IO Thread");
     mThread = new Sirikata::Thread(std::tr1::bind(&Network::IOService::runNoReturn, mIOService));
 
-    mIOService->post(std::tr1::bind(&SQLitePersistedObjectSet::initDB, this));
+    mIOService->post(std::tr1::bind(&SQLitePersistedObjectSet::initDB, this), "SQLitePersistedObjectSet::initDB");
 }
 
 void SQLitePersistedObjectSet::initDB() {
@@ -99,7 +99,8 @@ void SQLitePersistedObjectSet::stop() {
 
 void SQLitePersistedObjectSet::requestPersistedObject(const UUID& internal_id, const String& script_type, const String& script_args, const String& script_contents, RequestCallback cb, const String& timestamp) {
     mIOService->post(
-        std::tr1::bind(&SQLitePersistedObjectSet::performUpdate, this, internal_id, script_type, script_args, script_contents, cb)
+        std::tr1::bind(&SQLitePersistedObjectSet::performUpdate, this, internal_id, script_type, script_args, script_contents, cb),
+        "SQLitePersistedObjectSet::performUpdate"
     );
 }
 
@@ -141,7 +142,7 @@ void SQLitePersistedObjectSet::performUpdate(const UUID& internal_id, const Stri
     success = success && !SQLite::check_sql_error(mDB->db(), rc, NULL, "Error finalizing value insert statement");
 
     if (cb != 0)
-        mContext->mainStrand->post(std::tr1::bind(cb, success));
+        mContext->mainStrand->post(std::tr1::bind(cb, success), "SQLitePersistedObjectSet::performUpdate callback");
 }
 
 } //end namespace OH

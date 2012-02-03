@@ -28,7 +28,7 @@ using std::tr1::placeholders::_2;
 LibproxManualProximity::LibproxManualProximity(SpaceContext* ctx, LocationService* locservice, CoordinateSegmentation* cseg, SpaceNetwork* net, AggregateManager* aggmgr)
  : LibproxProximityBase(ctx, locservice, cseg, net, aggmgr),
    mOHQueries(),
-   mOHHandlerPoller(mProxStrand, std::tr1::bind(&LibproxManualProximity::tickQueryHandler, this, mOHQueryHandler), Duration::milliseconds((int64)100))
+   mOHHandlerPoller(mProxStrand, std::tr1::bind(&LibproxManualProximity::tickQueryHandler, this, mOHQueryHandler), "LibproxManualProximity ObjectHost Handler Poll", Duration::milliseconds((int64)100))
 {
 
     // OH Queries
@@ -142,7 +142,8 @@ void LibproxManualProximity::handleObjectHostSubstream(int success, OHDPSST::Str
 
 void LibproxManualProximity::onObjectHostSessionEnded(const OHDP::NodeID& id) {
     mProxStrand->post(
-        std::tr1::bind(&LibproxManualProximity::handleObjectHostSessionEnded, this, id)
+        std::tr1::bind(&LibproxManualProximity::handleObjectHostSessionEnded, this, id),
+        "LibproxManualProximity::handleObjectHostSessionEnded"
     );
 }
 
@@ -294,7 +295,8 @@ void LibproxManualProximity::destroyQuery(const OHDP::NodeID& id) {
 
     eraseSeqNoInfo(id);
     mContext->mainStrand->post(
-        std::tr1::bind(&LibproxManualProximity::handleRemoveAllOHLocSubscription, this, id)
+        std::tr1::bind(&LibproxManualProximity::handleRemoveAllOHLocSubscription, this, id),
+        "LibproxManualProximity::handleRemoveAllOHLocSubscription"
     );
 
 }
@@ -367,7 +369,8 @@ void LibproxManualProximity::queryHasEvents(ProxQuery* query) {
                     count++;
 
                     mContext->mainStrand->post(
-                        std::tr1::bind(&LibproxManualProximity::handleAddOHLocSubscription, this, query_id, objid)
+                        std::tr1::bind(&LibproxManualProximity::handleAddOHLocSubscription, this, query_id, objid),
+                        "LibproxManualProximity::handleAddOHLocSubscription"
                     );
 
                     Sirikata::Protocol::Prox::IObjectAddition addition = event_results.add_addition();
@@ -417,7 +420,8 @@ void LibproxManualProximity::queryHasEvents(ProxQuery* query) {
                 // subcription
 
                 mContext->mainStrand->post(
-                    std::tr1::bind(&LibproxManualProximity::handleRemoveOHLocSubscription, this, query_id, objid)
+                    std::tr1::bind(&LibproxManualProximity::handleRemoveOHLocSubscription, this, query_id, objid),
+                    "LibproxManualProximity::handleRemoveOHLocSubscription"
                 );
 
                 Sirikata::Protocol::Prox::IObjectRemoval removal = event_results.add_removal();

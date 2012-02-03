@@ -58,7 +58,7 @@ namespace Sirikata {
  */
 class SIRIKATA_EXPORT Poller {
 public:
-    Poller(Network::IOStrand* str, const Network::IOCallback& cb, const Duration& max_rate = Duration::microseconds(0), bool accurate = false);
+    Poller(Network::IOStrand* str, const Network::IOCallback& cb, const char* cb_tag, const Duration& max_rate = Duration::microseconds(0), bool accurate = false);
     virtual ~Poller();
 
     /** Start polling this service on this strand at the given maximum rate. */
@@ -81,6 +81,7 @@ private:
     bool mUnschedule;
     Network::IOCallback mCB; // Our callback, just saves us from reconstructing it all the time
     Network::IOCallback mUserCB; // The user's callback
+    const char* mCBTag;
 }; // class Poller
 
 } // namespace Sirikata

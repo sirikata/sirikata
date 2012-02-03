@@ -254,7 +254,7 @@ public:
 
 
 OgreRenderer::OgreRenderer(Context* ctx,Network::IOStrandPtr sStrand)
- : TimeSteppedSimulation(ctx, Duration::seconds(1.f/60.f), "Ogre Graphics", sStrand,true),
+ : TimeSteppedSimulation(ctx, Duration::seconds(1.f/60.f), "Ogre Graphics", sStrand, "Ogre Graphics", true),
    simStrand(sStrand),
    mContext(ctx),
    mQuitRequested(false),
@@ -874,7 +874,8 @@ void OgreRenderer::stop()
 {
     simStrand->post(
         std::tr1::bind(&OgreRenderer::iStop, this,
-            livenessToken()));
+            livenessToken()),
+        "OgreRenderer::iStop");
 }
 
 void OgreRenderer::iStop(Liveness::Token rendererAlive)
@@ -994,7 +995,8 @@ void OgreRenderer::parseMesh(
 {
     mParsingIOService->post(
         std::tr1::bind(&OgreRenderer::parseMeshWork, this,
-            livenessToken(),metadata, fp, data, cb)
+            livenessToken(),metadata, fp, data, cb),
+        "OgreRenderer::parseMeshWork"
     );
 }
 
@@ -1014,7 +1016,9 @@ void OgreRenderer::parseMeshWork(
         return;
 
     Mesh::VisualPtr parsed = parseMeshWorkSync(metadata, fp, data);
-    simStrand->post(std::tr1::bind(cb,parsed));
+    simStrand->post(std::tr1::bind(cb,parsed),
+        "OgreRenderer::parseMeshWork callback"
+    );
 }
 
 Mesh::VisualPtr OgreRenderer::parseMeshWorkSync(const Transfer::RemoteFileMetadata& metadata, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data) {

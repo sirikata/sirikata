@@ -95,7 +95,8 @@ AsyncConnectionSet::AsyncConnectionSet(SpaceContext* con, Network::IOStrand* str
 
   void AsyncConnectionSet::stop()
   {
-    mStrand->post(std::tr1::bind(&AsyncConnectionSet::clear_all_deadline_timers, this));
+      mStrand->post(std::tr1::bind(&AsyncConnectionSet::clear_all_deadline_timers, this),
+          "AsyncConnectionSet::clear_all_deadline_timers");
 
     mReceivedStopRequest = true;
     if (mSocket!= NULL)
@@ -149,7 +150,7 @@ AsyncConnectionSet::AsyncConnectionSet(SpaceContext* con, Network::IOStrand* str
       delete mSocket;
       mSocket = NULL;
       mReady = NEED_NEW_SOCKET;
-      mErrorStrand->post(mReadyStateChangedCallback);
+      mErrorStrand->post(mReadyStateChangedCallback, "AsyncConnectionSet::connect_handler");
       std::cout<<"\n\nError in connection\n\n";
       return;
     }
@@ -158,7 +159,7 @@ AsyncConnectionSet::AsyncConnectionSet(SpaceContext* con, Network::IOStrand* str
     std::cout<<"\n\nbftm debug: asyncConnection: connected\n\n";
 #endif
     mReady = READY;
-    mErrorStrand->post(mReadyStateChangedCallback);
+    mErrorStrand->post(mReadyStateChangedCallback, "AsyncConnectionSet::connect_handler");
     set_generic_stored_not_found_error_handler();
   }
 
@@ -276,7 +277,7 @@ Ready needs to be set as soon as the posting thread posts the set message so tha
       return;
 
     mReady = NEED_NEW_SOCKET;
-    mErrorStrand->post(mReadyStateChangedCallback);
+    mErrorStrand->post(mReadyStateChangedCallback, "AsyncConnectionSet::killSequence");
     mSocket->cancel();
     mSocket->close();
     delete mSocket;
@@ -361,7 +362,7 @@ void AsyncConnectionSet::processStoredValue(std::string dataKey)
                                                           outQueriesIter->second->is_tracking); //this is a not_found, means that we add 0 for the id found
 
       cor->objID[CRAQ_DATA_KEY_SIZE -1] = '\0';
-      mResultsStrand->post(std::tr1::bind(&CraqObjectSegmentation::craqSetResult,mOSeg,cor));
+      mResultsStrand->post(std::tr1::bind(&CraqObjectSegmentation::craqSetResult,mOSeg,cor), "CraqObjectSegmentation::craqSetResult");
 
 
 
@@ -627,7 +628,7 @@ void AsyncConnectionSet::queryTimedOutCallbackSet(const boost::system::error_cod
                                                           outQueriesIter->second->is_tracking);
 
       cor->objID[CRAQ_DATA_KEY_SIZE -1] = '\0';
-      mErrorStrand->post(std::tr1::bind(&AsyncCraqScheduler::erroredSetValue, mSchedulerMaster, cor));
+      mErrorStrand->post(std::tr1::bind(&AsyncCraqScheduler::erroredSetValue, mSchedulerMaster, cor), "AsyncCraqScheduler::erroredSetValue");
 
 #ifdef ASYNC_CONNECTION_DEBUG
       std::cout<<"\n\nSending error from set\n\n";

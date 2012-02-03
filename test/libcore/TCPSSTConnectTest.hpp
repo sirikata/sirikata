@@ -113,7 +113,7 @@ public:
             return;
         }
         mServicePool->service()->post(Duration::microseconds(100),
-            std::tr1::bind(&SstTest::lockReadyRead,this,s));
+            std::tr1::bind(&SstTest::lockReadyRead,this,s), "TCPSSTConnectTest");
         pauseReceive();
     }
     void lockReadyRead(Network::Stream*s) {

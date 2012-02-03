@@ -189,7 +189,7 @@ void SQLiteStorage::start() {
     mWork = new Network::IOWork(*mIOService, "SQLiteStorage IO Thread");
     mThread = new Sirikata::Thread(std::tr1::bind(&Network::IOService::runNoReturn, mIOService));
 
-    mIOService->post(std::tr1::bind(&SQLiteStorage::initDB, this));
+    mIOService->post(std::tr1::bind(&SQLiteStorage::initDB, this), "SQLiteStorage::initDB");
 }
 
 void SQLiteStorage::initDB() {
@@ -322,7 +322,8 @@ void SQLiteStorage::commitTransaction(const Bucket& bucket, const CommitCallback
     }
 
     mIOService->post(
-        std::tr1::bind(&SQLiteStorage::executeCommit, this, bucket, trans, cb)
+        std::tr1::bind(&SQLiteStorage::executeCommit, this, bucket, trans, cb),
+        "SQLiteStorage::executeCommit"
     );
 }
 
@@ -351,7 +352,10 @@ void SQLiteStorage::executeCommit(const Bucket& bucket, Transaction* trans, Comm
     }
 
 
-    mContext->mainStrand->post(std::tr1::bind(&SQLiteStorage::completeCommit, this, bucket, trans, cb, success, rs));
+    mContext->mainStrand->post(
+        std::tr1::bind(&SQLiteStorage::completeCommit, this, bucket, trans, cb, success, rs),
+        "SQLiteStorage::completeCommit"
+    );
 }
 
 
@@ -417,8 +421,11 @@ bool SQLiteStorage::rangeRead(const Bucket& bucket, const Key& start, const Key&
     value_query += "\"" TABLE_NAME "\"";
     value_query += " WHERE object == \'" + bucket.rawHexData() + "\' AND key BETWEEN ? AND ?";
 
-    mIOService->post(std::tr1::bind(&SQLiteStorage::executeRangeRead, this, value_query, start, finish, cb));
-	return true;
+    mIOService->post(
+        std::tr1::bind(&SQLiteStorage::executeRangeRead, this, value_query, start, finish, cb),
+        "SQLiteStorage::executeRangeRead"
+    );
+    return true;
 }
 void SQLiteStorage::executeRangeRead(const String value_query, const Key& start, const Key& finish, CommitCallback cb) {
 	bool success = true;
@@ -460,7 +467,10 @@ void SQLiteStorage::executeRangeRead(const String value_query, const Key& start,
     rc = sqlite3_finalize(value_query_stmt);
     success = success && !SQLite::check_sql_error(mDB->db(), rc, NULL, "Error finalizing value query statement");
 
-    mContext->mainStrand->post(std::tr1::bind(&SQLiteStorage::completeRange, this, cb, success, rs));
+    mContext->mainStrand->post(
+        std::tr1::bind(&SQLiteStorage::completeRange, this, cb, success, rs),
+        "SQLiteStorage::completeRange"
+    );
 }
 void SQLiteStorage::completeRange(CommitCallback cb, bool success, ReadSet* rs) {
     if (cb) cb(success, rs);
@@ -471,8 +481,11 @@ bool SQLiteStorage::rangeErase(const Bucket& bucket, const Key& start, const Key
     value_delete += "\"" TABLE_NAME "\"";
     value_delete += " WHERE object = \'" + bucket.rawHexData() + "\' AND key BETWEEN ? AND ?";
 
-    mIOService->post(std::tr1::bind(&SQLiteStorage::executeRangeErase, this, value_delete, start, finish, cb));
-	return true;
+    mIOService->post(
+        std::tr1::bind(&SQLiteStorage::executeRangeErase, this, value_delete, start, finish, cb),
+        "SQLiteStorage::executeRangeErase"
+    );
+    return true;
 }
 
 void SQLiteStorage::executeRangeErase(const String value_delete, const Key& start, const Key& finish, CommitCallback cb)
@@ -498,7 +511,10 @@ void SQLiteStorage::executeRangeErase(const String value_delete, const Key& star
     rc = sqlite3_finalize(value_delete_stmt);
     success = success && !SQLite::check_sql_error(mDB->db(), rc, NULL, "Error finalizing value delete statement");
 
-    mContext->mainStrand->post(std::tr1::bind(&SQLiteStorage::completeRange, this, cb, success, rs));
+    mContext->mainStrand->post(
+        std::tr1::bind(&SQLiteStorage::completeRange, this, cb, success, rs),
+        "SQLiteStorage::completeRange"
+    );
 }
 
 bool SQLiteStorage::count(const Bucket& bucket, const Key& start, const Key& finish, const CountCallback& cb, const String& timestamp) {
@@ -506,8 +522,11 @@ bool SQLiteStorage::count(const Bucket& bucket, const Key& start, const Key& fin
     value_count += "\"" TABLE_NAME "\"";
     value_count += " WHERE object = \'" + bucket.rawHexData() + "\' AND key BETWEEN ? AND ?";
 
-    mIOService->post(std::tr1::bind(&SQLiteStorage::executeCount, this, value_count, start, finish, cb));
-	return true;
+    mIOService->post(
+        std::tr1::bind(&SQLiteStorage::executeCount, this, value_count, start, finish, cb),
+        "SQLiteStorage::executeCount"
+    );
+    return true;
 }
 
 void SQLiteStorage::executeCount(const String value_count, const Key& start, const Key& finish, CountCallback cb)
@@ -537,7 +556,10 @@ void SQLiteStorage::executeCount(const String value_count, const Key& start, con
     rc = sqlite3_finalize(value_count_stmt);
     success = success && !SQLite::check_sql_error(mDB->db(), rc, NULL, "Error finalizing value delete statement");
 
-    mContext->mainStrand->post(std::tr1::bind(&SQLiteStorage::completeCount, this, cb, success, count));
+    mContext->mainStrand->post(
+        std::tr1::bind(&SQLiteStorage::completeCount, this, cb, success, count),
+        "SQLiteStorage::completeCount"
+    );
 }
 
 void SQLiteStorage::completeCount(CountCallback cb, bool success, int32 count) {

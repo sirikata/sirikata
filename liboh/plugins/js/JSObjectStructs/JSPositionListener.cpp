@@ -214,7 +214,9 @@ v8::Handle<v8::Value> JSPositionListener::loadMesh(
 
     mCtx->mainStrand->post(
         std::tr1::bind(&JSPositionListener::eLoadMesh,this,
-            ctx,v8::Persistent<v8::Function>::New(cb)));
+            ctx,v8::Persistent<v8::Function>::New(cb)),
+        "JSPositionListener::eLoadMesh"
+    );
 
     return v8::Undefined();
 }
@@ -240,7 +242,9 @@ void JSPositionListener::finishLoadMesh(
 
     mCtx->objStrand->post(
         std::tr1::bind(&JSPositionListener::iFinishLoadMesh,this,
-            alive,ctx_alive,ctx,cb,data));
+            alive,ctx_alive,ctx,cb,data),
+        "JSPositionListener::iFinishLoadMesh"
+    );
 }
 
 

@@ -169,6 +169,7 @@ void LoadPacketTrace::initialize(ObjectHostContext*ctx) {
     mPingPoller = new Poller(
         ctx->mainStrand,
         std::tr1::bind(&LoadPacketTrace::sendPings, this),
+        "LoadPacketTrace Ping Poller",
         mNumPingsPerSecond > 1000 ? // Try to amortize out some of the
                                     // scheduling cost
         Duration::seconds(10.0/mNumPingsPerSecond) :
@@ -180,6 +181,7 @@ void LoadPacketTrace::initialize(ObjectHostContext*ctx) {
     mGeneratePingPoller = new Poller(
         mGeneratePingsStrand,
         std::tr1::bind(&LoadPacketTrace::generatePings, this),
+        "LoadPacketTrace Generate Ping Poller",
         mNumPingsPerSecond > 1000 ? // Try to amortize out some of the
                                     // scheduling cost
         Duration::seconds(10.0/mNumPingsPerSecond) :
@@ -191,7 +193,8 @@ void LoadPacketTrace::start() {
     Duration connect_phase = GetOptionValue<Duration>(OBJECT_CONNECT_PHASE);
     mContext->mainStrand->post(
         connect_phase,
-        std::tr1::bind(&LoadPacketTrace::delayedStart, this)
+        std::tr1::bind(&LoadPacketTrace::delayedStart, this),
+        "LoadPacketTrace::delayedStart"
     );
 }
 void LoadPacketTrace::delayedStart() {

@@ -81,7 +81,9 @@ void TCPStream::readyRead() {
     socket_copy->getStrand()->post(
                                std::tr1::bind(&MultiplexedSocket::ioReactorThreadResumeRead,
                                               mpsocket,
-                                              mID));
+                                   mID),
+                               "MultiplexedSocket::ioReactorThreadResumeRead"
+    );
 }
 
 void TCPStream::requestReadySendCallback() {
@@ -95,7 +97,9 @@ void TCPStream::requestReadySendCallback() {
     socket_copy->getStrand()->post(
                                std::tr1::bind(&MultiplexedSocket::ioReactorThreadPauseSend,
                                               mpsocket,
-                                              mID));
+                                   mID),
+                               "MultiplexedSocket::ioReactorThreadPauseSend"
+    );
 }
 bool TCPStream::canSend(size_t dataSize)const {
     MultiplexedSocketPtr socket_copy = mSocket;

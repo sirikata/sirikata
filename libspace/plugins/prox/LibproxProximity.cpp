@@ -98,12 +98,12 @@ LibproxProximity::LibproxProximity(SpaceContext* ctx, LocationService* locservic
    mMaxMaxCount(1),
    mServerQueries(),
    mServerDistance(false),
-   mServerHandlerPoller(mProxStrand, std::tr1::bind(&LibproxProximity::tickQueryHandler, this, mServerQueryHandler), Duration::milliseconds((int64)100)),
+   mServerHandlerPoller(mProxStrand, std::tr1::bind(&LibproxProximity::tickQueryHandler, this, mServerQueryHandler), "LibproxProximity ServerHandler Poll", Duration::milliseconds((int64)100)),
    mObjectQueries(),
    mObjectDistance(false),
-   mObjectHandlerPoller(mProxStrand, std::tr1::bind(&LibproxProximity::tickQueryHandler, this, mObjectQueryHandler), Duration::milliseconds((int64)100)),
-   mStaticRebuilderPoller(mProxStrand, std::tr1::bind(&LibproxProximity::rebuildHandler, this, OBJECT_CLASS_STATIC), Duration::seconds(3600.f)),
-   mDynamicRebuilderPoller(mProxStrand, std::tr1::bind(&LibproxProximity::rebuildHandler, this, OBJECT_CLASS_DYNAMIC), Duration::seconds(3600.f))
+   mObjectHandlerPoller(mProxStrand, std::tr1::bind(&LibproxProximity::tickQueryHandler, this, mObjectQueryHandler), "LibproxProximity ObjectHandler Poll", Duration::milliseconds((int64)100)),
+   mStaticRebuilderPoller(mProxStrand, std::tr1::bind(&LibproxProximity::rebuildHandler, this, OBJECT_CLASS_STATIC), "LibproxProximity Static Rebuilder Poll", Duration::seconds(3600.f)),
+   mDynamicRebuilderPoller(mProxStrand, std::tr1::bind(&LibproxProximity::rebuildHandler, this, OBJECT_CLASS_DYNAMIC), "LibproxProximity Dynamic Rebuilder Poll", Duration::seconds(3600.f))
 {
     using std::tr1::placeholders::_1;
     using std::tr1::placeholders::_2;
@@ -206,7 +206,8 @@ void LibproxProximity::newSession(ObjectSession* session) {
 void LibproxProximity::sessionClosed(ObjectSession* session) {
     // Prox strand may  have some state to clean up
     mProxStrand->post(
-        std::tr1::bind(&LibproxProximity::handleDisconnectedObject, this, session->id().getAsUUID())
+        std::tr1::bind(&LibproxProximity::handleDisconnectedObject, this, session->id().getAsUUID()),
+        "LibproxProximity::handleDisconnectedObject"
     );
 
     ObjectProxStreamMap::iterator prox_stream_it = mObjectProxStreams.find(session->id().getAsUUID());
@@ -447,26 +448,30 @@ void LibproxProximity::aggregateObserved(ProxAggregator* handler, const UUID& ob
 
 void LibproxProximity::onSpaceNetworkConnected(ServerID sid) {
     mProxStrand->post(
-        std::tr1::bind(&LibproxProximity::handleConnectedServer, this, sid)
+        std::tr1::bind(&LibproxProximity::handleConnectedServer, this, sid),
+        "LibproxProximity::handleConnectedServer"
     );
 }
 
 void LibproxProximity::onSpaceNetworkDisconnected(ServerID sid) {
     mProxStrand->post(
-        std::tr1::bind(&LibproxProximity::handleDisconnectedServer, this, sid)
+        std::tr1::bind(&LibproxProximity::handleDisconnectedServer, this, sid),
+        "LibproxProximity::handleDisconnectedServer"
     );
 }
 
 
 void LibproxProximity::updateQuery(ServerID sid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const SolidAngle& sa, uint32 max_results) {
     mProxStrand->post(
-        std::tr1::bind(&LibproxProximity::handleUpdateServerQuery, this, sid, loc, bounds, sa, max_results)
+        std::tr1::bind(&LibproxProximity::handleUpdateServerQuery, this, sid, loc, bounds, sa, max_results),
+        "LibproxProximity::handleUpdateServerQuery"
     );
 }
 
 void LibproxProximity::removeQuery(ServerID sid) {
     mProxStrand->post(
-        std::tr1::bind(&LibproxProximity::handleRemoveServerQuery, this, sid)
+        std::tr1::bind(&LibproxProximity::handleRemoveServerQuery, this, sid),
+        "LibproxProximity::handleRemoveServerQuery"
     );
 }
 
@@ -486,7 +491,8 @@ void LibproxProximity::updateQuery(UUID obj, const TimedMotionVector3f& loc, con
 
     // Update the prox thread
     mProxStrand->post(
-        std::tr1::bind(&LibproxProximity::handleUpdateObjectQuery, this, obj, loc, bounds, sa, max_results, obj_seqno)
+        std::tr1::bind(&LibproxProximity::handleUpdateObjectQuery, this, obj, loc, bounds, sa, max_results, obj_seqno),
+        "LibproxProximity::handleUpdateObjectQuery"
     );
 
     bool update_remote_queries = false;
@@ -528,7 +534,8 @@ void LibproxProximity::removeQuery(UUID obj) {
 
     // Update the prox thread
     mProxStrand->post(
-        std::tr1::bind(&LibproxProximity::handleRemoveObjectQuery, this, obj, true)
+        std::tr1::bind(&LibproxProximity::handleRemoveObjectQuery, this, obj, true),
+        "LibproxProximity::handleRemoveObjectQuery"
     );
 
     // Update min query angle, and update remote queries if necessary
@@ -584,7 +591,8 @@ void LibproxProximity::removeObjectSize(const UUID& obj) {
 
 void LibproxProximity::checkObjectClass(bool is_local, const UUID& objid, const TimedMotionVector3f& newval) {
     mProxStrand->post(
-        std::tr1::bind(&LibproxProximity::handleCheckObjectClass, this, is_local, objid, newval)
+        std::tr1::bind(&LibproxProximity::handleCheckObjectClass, this, is_local, objid, newval),
+        "LibproxProximity::handleCheckObjectClass"
     );
 }
 
@@ -717,7 +725,8 @@ void LibproxProximity::generateServerQueryEvents(Query* query) {
                     count++;
 
                     mContext->mainStrand->post(
-                        std::tr1::bind(&LibproxProximity::handleAddServerLocSubscription, this, sid, objid, seqNoPtr)
+                        std::tr1::bind(&LibproxProximity::handleAddServerLocSubscription, this, sid, objid, seqNoPtr),
+                        "LibproxProximity::handleAddServerLocSubscription"
                     );
 
                     Sirikata::Protocol::Prox::IObjectAddition addition = event_results.add_addition();
@@ -752,7 +761,8 @@ void LibproxProximity::generateServerQueryEvents(Query* query) {
                 count++;
 
                 mContext->mainStrand->post(
-                    std::tr1::bind(&LibproxProximity::handleRemoveServerLocSubscription, this, sid, objid)
+                    std::tr1::bind(&LibproxProximity::handleRemoveServerLocSubscription, this, sid, objid),
+                    "LibproxProximity::handleRemoveServerLocSubscription"
                 );
 
                 Sirikata::Protocol::Prox::IObjectRemoval removal = event_results.add_removal();
@@ -809,7 +819,8 @@ void LibproxProximity::generateObjectQueryEvents(Query* query) {
                     count++;
 
                     mContext->mainStrand->post(
-                        std::tr1::bind(&LibproxProximity::handleAddObjectLocSubscription, this, query_id, objid)
+                        std::tr1::bind(&LibproxProximity::handleAddObjectLocSubscription, this, query_id, objid),
+                        "LibproxProximity::handleAddObjectLocSubscription"
                     );
 
                     Sirikata::Protocol::Prox::IObjectAddition addition = event_results.add_addition();
@@ -849,7 +860,8 @@ void LibproxProximity::generateObjectQueryEvents(Query* query) {
                 // Clear out seqno and let main strand remove loc
                 // subcription
                 mContext->mainStrand->post(
-                    std::tr1::bind(&LibproxProximity::handleRemoveObjectLocSubscription, this, query_id, objid)
+                    std::tr1::bind(&LibproxProximity::handleRemoveObjectLocSubscription, this, query_id, objid),
+                    "LibproxProximity::handleRemoveObjectLocSubscription"
                 );
 
                 Sirikata::Protocol::Prox::IObjectRemoval removal = event_results.add_removal();
@@ -964,7 +976,8 @@ void LibproxProximity::handleRemoveServerQuery(const ServerID& server) {
     eraseSeqNoInfo(server);
 
     mContext->mainStrand->post(
-        std::tr1::bind(&LibproxProximity::handleRemoveAllServerLocSubscription, this, server)
+        std::tr1::bind(&LibproxProximity::handleRemoveAllServerLocSubscription, this, server),
+        "LibproxProximity::handleRemoveAllServerLocSubscription"
     );
 }
 
@@ -1064,7 +1077,8 @@ void LibproxProximity::handleRemoveObjectQuery(const UUID& object, bool notify_m
         // There's no corresponding removeAllSeqNoPtr because we
         // should have erased it above.
         mContext->mainStrand->post(
-            std::tr1::bind(&LibproxProximity::handleRemoveAllObjectLocSubscription, this, object)
+            std::tr1::bind(&LibproxProximity::handleRemoveAllObjectLocSubscription, this, object),
+            "LibproxProximity::handleRemoveAllObjectLocSubscription"
         );
     }
 }

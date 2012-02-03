@@ -77,7 +77,8 @@ boost::any EnvironmentSimulation::invoke(std::vector<boost::any>& params) {
         mListener = listener;
         // Also trigger a (delayed) callback immediately
         mParent->context()->mainStrand->post(
-            std::tr1::bind(&EnvironmentSimulation::notifyListener, this)
+            std::tr1::bind(&EnvironmentSimulation::notifyListener, this),
+            "EnvironmentSimulation::notifyListener"
         );
         return Invokable::asAny(true);
     }

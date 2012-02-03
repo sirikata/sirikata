@@ -379,7 +379,8 @@ void HostedObject::handleConnected(const HostedObjectWPtr& weakSelf, const Space
     // We have to manually do what mContext->mainStrand->wrap( ... ) should be
     // doing because it can't handle > 5 arguments.
     self->mContext->mainStrand->post(
-        std::tr1::bind(&HostedObject::handleConnectedIndirect, weakSelf, space, obj, info, baseDatagramLayer)
+        std::tr1::bind(&HostedObject::handleConnectedIndirect, weakSelf, space, obj, info, baseDatagramLayer),
+        "HostedObject::handleConnectedIndirect"
     );
 }
 
@@ -505,7 +506,9 @@ void HostedObject::handleDisconnected(
 
     self->mContext->mainStrand->post(
         std::tr1::bind(&HostedObject::iHandleDisconnected,self.get(),
-            weakSelf, spaceobj, cc));
+            weakSelf, spaceobj, cc),
+        "HostedObject::iHandleDisconnected"
+    );
 }
 
 void HostedObject::iHandleDisconnected(

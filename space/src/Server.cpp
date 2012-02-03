@@ -277,7 +277,8 @@ void Server::sendSessionMessageWithRetry(const ObjectHostConnectionID& conn, Sir
 
         mContext->mainStrand->post(
             retry_rate,
-            std::tr1::bind(&Server::sendSessionMessageWithRetry, this, conn, msg, retry_rate)
+            std::tr1::bind(&Server::sendSessionMessageWithRetry, this, conn, msg, retry_rate),
+            "Server::sendSessionMessageWithRetry"
         );
     }
 }
@@ -309,7 +310,8 @@ bool Server::onObjectHostMessageReceived(const ObjectHostConnectionID& conn_id, 
             std::tr1::bind(
                 &Server::handleSessionMessage, this,
                 conn_id, obj_msg
-            )
+            ),
+            "Server::handleSessionMessage"
         );
         return true;
     }
@@ -360,7 +362,10 @@ void Server::onObjectHostConnected(const ObjectHostConnectionID& conn_id, const 
 }
 
 void Server::onObjectHostDisconnected(const ObjectHostConnectionID& oh_conn_id, const ShortObjectHostConnectionID short_conn_id) {
-    mContext->mainStrand->post( std::tr1::bind(&Server::handleObjectHostConnectionClosed, this, oh_conn_id) );
+    mContext->mainStrand->post(
+        std::tr1::bind(&Server::handleObjectHostConnectionClosed, this, oh_conn_id),
+        "Server::handleObjectHostConnectionClosed"
+    );
     mOHSessionManager->fireObjectHostSessionEnded( OHDP::NodeID(short_conn_id) );
 }
 
@@ -368,7 +373,9 @@ void Server::scheduleObjectHostMessageRouting() {
     mContext->mainStrand->post(
         std::tr1::bind(
             &Server::handleObjectHostMessageRouting,
-            this));
+            this),
+        "Server::handleObjectHostMessageRouting"
+    );
 }
 
 void Server::handleObjectHostMessageRouting() {
@@ -840,7 +847,8 @@ void Server::osegAddNewFinished(const UUID& id, OSegAddNewStatus status) {
     // Indicates an update to OSeg finished, meaning a migration can
     // continue.
     mContext->mainStrand->post(
-        std::tr1::bind(&Server::finishAddObject, this, id, status)
+        std::tr1::bind(&Server::finishAddObject, this, id, status),
+        "Server::finishAddObject"
                                );
 }
 
@@ -848,7 +856,8 @@ void Server::osegMigrationAcknowledged(const UUID& id) {
     // Indicates its safe to destroy the object connection since the migration
     // was successful
     mContext->mainStrand->post(
-        std::tr1::bind(&Server::killObjectConnection, this, id)
+        std::tr1::bind(&Server::killObjectConnection, this, id),
+        "Server::killObjectConnection"
                                );
 }
 
@@ -1125,7 +1134,8 @@ void Server::trySendMigrationMessages() {
 
     // Otherwise, we need to set ourselves up to try again later
     mContext->mainStrand->post(
-        std::tr1::bind(&Server::trySendMigrationMessages, this)
+        std::tr1::bind(&Server::trySendMigrationMessages, this),
+        "Server::trySendMigrationMessages"
     );
 }
 

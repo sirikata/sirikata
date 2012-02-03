@@ -90,7 +90,7 @@ void ChunkRequest::execute(std::tr1::shared_ptr<TransferRequest> req, ExecuteFin
 void ChunkRequest::execute_finished(std::tr1::shared_ptr<const DenseData> response, ExecuteFinished cb) {
     SILOG(transfer, detailed, "execute_finished in ChunkRequest called");
     mDenseData = response;
-    HttpManager::getSingleton().postCallback(cb);
+    HttpManager::getSingleton().postCallback(cb, "ChunkRequest::execute_finished callback");
     SILOG(transfer, detailed, "done ChunkRequest execute_finished");
 }
 
@@ -127,7 +127,7 @@ void ChunkRequest::notifyCaller(TransferRequestPtr me, TransferRequestPtr from, 
     }
 
     // To pass back the original request, we need to copy data over
-    HttpManager::getSingleton().postCallback(std::tr1::bind(mCallback, meC, data));
+    HttpManager::getSingleton().postCallback(std::tr1::bind(mCallback, meC, data), "ChunkRequest::notifyCaller callback");
     SILOG(transfer, detailed, "done ChunkRequest notifyCaller");
 }
 
@@ -142,7 +142,7 @@ void DirectChunkRequest::execute(std::tr1::shared_ptr<TransferRequest> req, Exec
 void DirectChunkRequest::execute_finished(std::tr1::shared_ptr<const DenseData> response, ExecuteFinished cb) {
     SILOG(transfer, detailed, "execute_finished in DirectChunkRequest called");
     mDenseData = response;
-    HttpManager::getSingleton().postCallback(cb);
+    HttpManager::getSingleton().postCallback(cb, "DirectChunkRequest::execute_finished callback");
     SILOG(transfer, detailed, "done DirectChunkRequest execute_finished");
 }
 
@@ -159,7 +159,7 @@ void DirectChunkRequest::notifyCaller(TransferRequestPtr me, TransferRequestPtr 
         std::tr1::static_pointer_cast<DirectChunkRequest, TransferRequest>(from);
 
     // To pass back the original request, we need to copy data over
-    HttpManager::getSingleton().postCallback(std::tr1::bind(mCallback, meC, data));
+    HttpManager::getSingleton().postCallback(std::tr1::bind(mCallback, meC, data), "DirectChunkRequest::notifyCaller callback");
     SILOG(transfer, detailed, "done DirectChunkRequest notifyCaller");
 }
 

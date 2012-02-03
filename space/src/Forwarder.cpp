@@ -110,11 +110,13 @@ Forwarder::Forwarder(SpaceContext* ctx)
              mServerWeightPoller(
                  ctx->mainStrand,
                  std::tr1::bind(&Forwarder::updateServerWeights, this),
+                 "Forwarder::updateServerWeights",
                  Duration::milliseconds((int64)10)),
              mReceivedMessages(Sirikata::SizedResourceMonitor(GetOptionValue<uint32>(FORWARDER_RECEIVE_QUEUE_SIZE))),
              mTimeSeriesPoller(
                  ctx->mainStrand,
                  std::tr1::bind(&Forwarder::reportStats, this),
+                 "Forwarder::reportStats",
                  Duration::seconds((int64)1)),
              mLastStatsTime(ctx->simTime()),
              mTimeSeriesForwardedPerSecondName(String("space.server") + boost::lexical_cast<String>(ctx->id()) + ".forwarded.remote"),
@@ -558,7 +560,8 @@ bool Forwarder::routeObjectMessageToServer(Sirikata::Protocol::Object::ObjectMes
     // This is rare, so we suffer the cost of posting back to the main thread.
     if (dest_serv.server() == mContext->id()) {
         mContext->mainStrand->post(
-            std::tr1::bind(&Forwarder::handleObjectMessageLoop, this, obj_msg)
+            std::tr1::bind(&Forwarder::handleObjectMessageLoop, this, obj_msg),
+            "Forwarder::handleObjectMessageLoop"
         );
         return true;
     }
@@ -709,7 +712,8 @@ void Forwarder::serverMessageReceived(Message* msg) {
 
 void Forwarder::scheduleProcessReceivedServerMessages() {
     mContext->mainStrand->post(
-        std::tr1::bind(&Forwarder::processReceivedServerMessages, this)
+        std::tr1::bind(&Forwarder::processReceivedServerMessages, this),
+        "Forwarder::processReceivedServerMessages"
     );
 }
 

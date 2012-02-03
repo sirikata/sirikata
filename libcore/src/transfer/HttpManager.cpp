@@ -92,8 +92,8 @@ HttpManager::~HttpManager() {
     delete mServicePool;
 }
 
-void HttpManager::postCallback(IOCallback cb) {
-    mServicePool->service()->post(cb);
+void HttpManager::postCallback(IOCallback cb, const char* tag) {
+    mServicePool->service()->post(cb, tag);
 }
 
 String HttpManager::methodAsString(HTTP_METHOD m) {
@@ -128,7 +128,10 @@ void HttpManager::makeRequest(Sirikata::Network::Address addr, HTTP_METHOD metho
     if (nparsed != req.length()) {
         SILOG(transfer, warning, "Parsing http request failed");
         boost::system::error_code ec;
-        postCallback(std::tr1::bind(cb, std::tr1::shared_ptr<HttpResponse>(), REQUEST_PARSING_FAILED, ec));
+        postCallback(
+            std::tr1::bind(cb, std::tr1::shared_ptr<HttpResponse>(), REQUEST_PARSING_FAILED, ec),
+            "HttpManager::makeRequest callback"
+        );
         return;
     }
 

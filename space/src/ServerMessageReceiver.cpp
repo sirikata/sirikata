@@ -85,7 +85,8 @@ void ServerMessageReceiver::updateSenderStats(ServerID sid, double total_weight,
         std::tr1::bind(
             &ServerMessageReceiver::handleUpdateSenderStats, this,
             sid, total_weight, used_weight
-        )
+        ),
+        "ServerMessageReceiver::handleUpdateSenderStats"
     );
 }
 

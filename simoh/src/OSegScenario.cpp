@@ -120,6 +120,7 @@ void OSegScenario::initialize(ObjectHostContext*ctx) {
     mPingPoller = new Poller(
         ctx->mainStrand,
         std::tr1::bind(&OSegScenario::sendPings, this),
+        "OSegScenario Ping Poller",
         mNumPingsPerSecond > 1000 ? // Try to amortize out some of the
                                     // scheduling cost
         Duration::seconds(10.0/mNumPingsPerSecond) :
@@ -131,6 +132,7 @@ void OSegScenario::initialize(ObjectHostContext*ctx) {
     mGeneratePingPoller = new Poller(
         mGeneratePingsStrand,
         std::tr1::bind(&OSegScenario::generatePings, this),
+        "OSegScenario Generate Ping Poller",
         mNumPingsPerSecond > 1000 ? // Try to amortize out some of the
                                     // scheduling cost
         Duration::seconds(10.0/mNumPingsPerSecond) :
@@ -142,7 +144,8 @@ void OSegScenario::start() {
     Duration connect_phase = GetOptionValue<Duration>(OBJECT_CONNECT_PHASE);
     mContext->mainStrand->post(
         connect_phase,
-        std::tr1::bind(&OSegScenario::delayedStart, this)
+        std::tr1::bind(&OSegScenario::delayedStart, this),
+        "OSegScenario::delayedStart"
     );
 }
 void OSegScenario::delayedStart() {

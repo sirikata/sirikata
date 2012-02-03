@@ -421,7 +421,7 @@ public:
     /*
      * Posts a callback on the service pool
      */
-    void postCallback(IOCallback cb);
+    void postCallback(IOCallback cb, const char* tag);
 
 };
 

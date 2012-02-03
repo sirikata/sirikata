@@ -110,7 +110,8 @@ void SQLiteAuthenticator::deleteTicket(const String& ticket) {
 
 void SQLiteAuthenticator::respond(Callback cb, bool result) {
     mContext->mainStrand->post(
-        std::tr1::bind(cb, result)
+        std::tr1::bind(cb, result),
+        "SQLiteAuthenticator::respond"
     );
 }
 

@@ -180,7 +180,7 @@ void FileStorage::commitTransaction(const Bucket& bucket, const CommitCallback& 
     ReadSet* rs = NULL;
 
     if(!haveUnflushedEvents(bucket))
-        if (cb) mContext->mainStrand->post(std::tr1::bind(cb, false, rs));
+        if (cb) mContext->mainStrand->post(std::tr1::bind(cb, false, rs), "FileStorage::commitTransaction callback");
 
     rs = new ReadSet;
     std::vector<FileStorageEvent*> fbeVec = unflushedEvents[bucket];
@@ -195,7 +195,7 @@ void FileStorage::commitTransaction(const Bucket& bucket, const CommitCallback& 
         rs = NULL;
     }
 
-    if (cb) mContext->mainStrand->post(std::tr1::bind(cb, success, rs));
+    if (cb) mContext->mainStrand->post(std::tr1::bind(cb, success, rs), "FileStorage::commitTransaction callback");
 }
 
 bool FileStorage::haveUnflushedEvents(const Bucket& bucket)

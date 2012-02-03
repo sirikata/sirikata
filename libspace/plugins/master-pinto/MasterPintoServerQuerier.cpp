@@ -111,14 +111,20 @@ void MasterPintoServerQuerier::updateRegion(const BoundingBox3f& region) {
     MP_LOG(debug, "Updating region " << region);
     mRegion = region;
     mRegionDirty = true;
-    mIOStrand->post(std::tr1::bind(&MasterPintoServerQuerier::tryServerUpdate, this));
+    mIOStrand->post(
+        std::tr1::bind(&MasterPintoServerQuerier::tryServerUpdate, this),
+        "MasterPintoServerQuerier::tryServerUpdate"
+    );
 }
 
 void MasterPintoServerQuerier::updateLargestObject(float max_radius) {
     MP_LOG(debug, "Updating largest object " << max_radius);
     mMaxRadius = max_radius;
     mMaxRadiusDirty = true;
-    mIOStrand->post(std::tr1::bind(&MasterPintoServerQuerier::tryServerUpdate, this));
+    mIOStrand->post(
+        std::tr1::bind(&MasterPintoServerQuerier::tryServerUpdate, this),
+        "MasterPintoServerQuerier::tryServerUpdate"
+    );
 }
 
 void MasterPintoServerQuerier::updateQuery(const SolidAngle& min_angle, uint32 max_results) {
@@ -126,7 +132,10 @@ void MasterPintoServerQuerier::updateQuery(const SolidAngle& min_angle, uint32 m
     mAggregateQuery = min_angle;
     mAggregateQueryMaxResults = max_results;
     mAggregateQueryDirty = true;
-    mIOStrand->post(std::tr1::bind(&MasterPintoServerQuerier::tryServerUpdate, this));
+    mIOStrand->post(
+        std::tr1::bind(&MasterPintoServerQuerier::tryServerUpdate, this),
+        "MasterPintoServerQuerier::tryServerUpdate"
+    );
 }
 
 void MasterPintoServerQuerier::tryServerUpdate() {

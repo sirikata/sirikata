@@ -315,10 +315,10 @@ void BulletPhysicsService::getMeshCallback(Transfer::ResourceDownloadTaskPtr tas
             assert(output_data->single());
             mesh = std::tr1::dynamic_pointer_cast<Meshdata>(output_data->get());
         }
-        mContext->mainStrand->post(std::tr1::bind(cb, mesh));
+        mContext->mainStrand->post(std::tr1::bind(cb, mesh), "BulletPhysicsService::getMeshCallback");
     }
     else {
-        mContext->mainStrand->post(std::tr1::bind(cb, MeshdataPtr()));
+        mContext->mainStrand->post(std::tr1::bind(cb, MeshdataPtr()), "BulletPhysicsService::getMeshCallback");
     }
 }
 

@@ -142,7 +142,7 @@ void Context::handleSignal(Signal::Type stype) {
     // actually running it here. This makes the extent of the signal
     // handling known completely in this method, whereas calling
     // shutdown can cause a cascade of cleanup.
-    ioService->post( std::tr1::bind(&Context::shutdown, this) );
+    ioService->post( std::tr1::bind(&Context::shutdown, this), "Context::shutdown" );
 }
 
 void Context::cleanup() {

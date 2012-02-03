@@ -77,7 +77,7 @@ void LocationServiceFactory::destroy() {
 }
 
 LocationService::LocationService(SpaceContext* ctx, LocationUpdatePolicy* update_policy)
- : PollingService(ctx->mainStrand, Duration::milliseconds((int64)10)),
+ : PollingService(ctx->mainStrand, "LocationService Poll", Duration::milliseconds((int64)10)),
    mContext(ctx),
    mUpdatePolicy(update_policy)
 {

@@ -97,9 +97,11 @@ void EmersonHttpManager::receiveHttpResponse(EmersonHttpToken respToken,HttpResp
     //it back to the object strand.  Should instead re-post and try again.
     while(!mContext->initialized())
     {    }
-    
+
     mContext->objStrand->post(
-        std::tr1::bind(&EmersonHttpManager::postReceiveResp, this, respToken,hrp, error, boost_error));
+        std::tr1::bind(&EmersonHttpManager::postReceiveResp, this, respToken,hrp, error, boost_error),
+        "EmersonHttpManager::postReceiveResp"
+    );
 }
 
 void EmersonHttpManager::debugPrintContextMap()

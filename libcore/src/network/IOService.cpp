@@ -127,15 +127,34 @@ void IOService::reset() {
     mImpl->reset();
 }
 
-void IOService::dispatch(const IOCallback& handler) {
-    mImpl->dispatch(handler);
-}
-
-void IOService::post(const IOCallback& handler) {
+void IOService::dispatch(const IOCallback& handler, const char* tag) {
 #ifdef SIRIKATA_TRACK_EVENT_QUEUES
     mEnqueued++;
+    {
+        LockGuard lock(mMutex);
+        if (mTagCounts.find(tag) == mTagCounts.end())
+            mTagCounts[tag] = 0;
+        mTagCounts[tag]++;
+    }
+    mImpl->dispatch(
+        std::tr1::bind(&IOService::decrementCount, this, Timer::now(), handler, tag)
+    );
+#else
+    mImpl->dispatch(handler);
+#endif
+}
+
+void IOService::post(const IOCallback& handler, const char* tag) {
+#ifdef SIRIKATA_TRACK_EVENT_QUEUES
+    mEnqueued++;
+    {
+        LockGuard lock(mMutex);
+        if (mTagCounts.find(tag) == mTagCounts.end())
+            mTagCounts[tag] = 0;
+        mTagCounts[tag]++;
+    }
     mImpl->post(
-        std::tr1::bind(&IOService::decrementCount, this, Timer::now(), handler)
+        std::tr1::bind(&IOService::decrementCount, this, Timer::now(), handler, tag)
     );
 #else
     mImpl->post(handler);
@@ -151,7 +170,7 @@ void handle_deadline_timer(const boost::system::error_code&e, const deadline_tim
 }
 } // namespace
 
-void IOService::post(const Duration& waitFor, const IOCallback& handler) {
+void IOService::post(const Duration& waitFor, const IOCallback& handler, const char* tag) {
 #if BOOST_VERSION==103900
     static bool warnOnce=true;
     if (warnOnce) {
@@ -163,10 +182,16 @@ void IOService::post(const Duration& waitFor, const IOCallback& handler) {
 
 #ifdef SIRIKATA_TRACK_EVENT_QUEUES
     mTimersEnqueued++;
+    {
+        LockGuard lock(mMutex);
+        if (mTagCounts.find(tag) == mTagCounts.end())
+            mTagCounts[tag] = 0;
+        mTagCounts[tag]++;
+    }
     IOCallbackWithError orig_cb = std::tr1::bind(&handle_deadline_timer, _1, timer, handler);
     timer->async_wait(
         std::tr1::bind(&IOService::decrementTimerCount, this,
-            _1, Timer::now(), waitFor, orig_cb
+            _1, Timer::now(), waitFor, orig_cb, tag
         )
     );
 #else
@@ -177,22 +202,28 @@ void IOService::post(const Duration& waitFor, const IOCallback& handler) {
 
 
 #ifdef SIRIKATA_TRACK_EVENT_QUEUES
-void IOService::decrementTimerCount(const boost::system::error_code& e, const Time& start, const Duration& timer_duration, const IOCallbackWithError& cb) {
+void IOService::decrementTimerCount(const boost::system::error_code& e, const Time& start, const Duration& timer_duration, const IOCallbackWithError& cb, const char* tag) {
     mTimersEnqueued--;
     Time end = Timer::now();
     {
         LockGuard lock(mMutex);
         mWindowedTimerLatencyStats.sample((end - start) - timer_duration);
+
+        assert(mTagCounts.find(tag) != mTagCounts.end());
+        mTagCounts[tag]--;
     }
     cb(e);
 }
 
-void IOService::decrementCount(const Time& start, const IOCallback& cb) {
+void IOService::decrementCount(const Time& start, const IOCallback& cb, const char* tag) {
     mEnqueued--;
     Time end = Timer::now();
     {
         LockGuard lock(mMutex);
         mWindowedHandlerLatencyStats.sample(end - start);
+
+        assert(mTagCounts.find(tag) != mTagCounts.end());
+        mTagCounts[tag]--;
     }
     cb();
 }
@@ -203,17 +234,56 @@ void IOService::destroyingStrand(IOStrand* child) {
     mStrands.erase(child);
 }
 
+namespace {
+// The original data
+typedef std::tr1::unordered_map<const char*, uint32> TagCountMap;
+// Reduced version, where different char*'s are converted to Strings so they
+// will be aggregated
+typedef std::tr1::unordered_map<String, uint32> ReducedTagCountMap;
+// Inverted data, kept as a map so it's in sorted order
+typedef std::multimap<uint32, String, std::greater<uint32> > InvertedReducedTagCountMap;
+
+void reportOffenders(TagCountMap orig_tags) {
+    // We need to reduce these in case we have 2 identical strings but they have
+    // different char*'s.
+    ReducedTagCountMap tags;
+    for(TagCountMap::iterator it = orig_tags.begin(); it != orig_tags.end(); it++) {
+        String key;
+        if (it->first == NULL)
+            key = "(NULL)";
+        else
+            key = it->first;
+        if (tags.find(key) == tags.end()) tags[key] = 0;
+        tags[key] += it->second;
+    }
+    // Invert and get sorted
+    InvertedReducedTagCountMap tags_by_count;
+    for(ReducedTagCountMap::iterator it = tags.begin(); it != tags.end(); it++)
+        tags_by_count.insert(
+            InvertedReducedTagCountMap::value_type(it->second, it->first)
+        );
+
+    // Then report
+    for(InvertedReducedTagCountMap::iterator it = tags_by_count.begin(); it != tags_by_count.end(); it++)
+        if (it->first > 0) SILOG(ioservice, info, "      " << it->second << " (" << it->first << ")");
+}
+}
+
 void IOService::reportStats() const {
     LockGuard lock(const_cast<Mutex&>(mMutex));
 
+    SILOG(ioservice, info, "=======================================================");
     SILOG(ioservice, info, "'" << name() <<  "' IOService Statistics");
     SILOG(ioservice, info, "  Timers: " << numTimersEnqueued() << " with " << timerLatency() << " recent latency");
     SILOG(ioservice, info, "  Event handlers: " << numEnqueued() << " with " << handlerLatency() << " recent latency");
+    reportOffenders(mTagCounts);
 
     for(StrandSet::const_iterator it = mStrands.begin(); it != mStrands.end(); it++) {
+        SILOG(ioservice, info, "-------------------------------------------------------");
         SILOG(ioservice, info, "  Child '" << (*it)->name() << "'");
         SILOG(ioservice, info, "    Timers: " << (*it)->numTimersEnqueued() << " with " << (*it)->timerLatency() << " recent latency");
         SILOG(ioservice, info, "    Event handlers: " << (*it)->numEnqueued() << " with " << (*it)->handlerLatency() << " recent latency");
+        reportOffenders((*it)->enqueuedTags());
     }
 
 }

@@ -108,7 +108,7 @@ void CassandraStorage::start() {
     mWork = new Network::IOWork(*mIOService, "CassandraStorage IO Thread");
     mThread = new Sirikata::Thread(std::tr1::bind(&Network::IOService::runNoReturn, mIOService));
 
-    mIOService->post(std::tr1::bind(&CassandraStorage::initDB, this));
+    mIOService->post(std::tr1::bind(&CassandraStorage::initDB, this), "CassandraStorage::initDB");
 }
 
 void CassandraStorage::initDB() {
@@ -181,7 +181,8 @@ void CassandraStorage::commitTransaction(const Bucket& bucket, const CommitCallb
     }
 
     mIOService->post(
-        std::tr1::bind(&CassandraStorage::executeCommit, this, bucket, trans, cb, timestamp)
+        std::tr1::bind(&CassandraStorage::executeCommit, this, bucket, trans, cb, timestamp),
+        "CassandraStorage::executeCommit"
     );
 }
 
@@ -205,7 +206,10 @@ void CassandraStorage::executeCommit(const Bucket& bucket, Transaction* trans, C
         rs = NULL;
     }
 
-    mContext->mainStrand->post(std::tr1::bind(&CassandraStorage::completeCommit, this, trans, cb, success, rs));
+    mContext->mainStrand->post(
+        std::tr1::bind(&CassandraStorage::completeCommit, this, trans, cb, success, rs),
+        "CassandraStorage::completeCommit"
+    );
 }
 
 // Complete a commit back in the main thread, cleaning it up and dispatching
@@ -266,7 +270,10 @@ bool CassandraStorage::rangeRead(const Bucket& bucket, const Key& start, const K
     range.start = start;
     range.finish = finish;
     range.count = 100000; // currently, set large enough to read all the data
-    mIOService->post(std::tr1::bind(&CassandraStorage::executeRangeRead, this, bucket, range, cb, timestamp));
+    mIOService->post(
+        std::tr1::bind(&CassandraStorage::executeRangeRead, this, bucket, range, cb, timestamp),
+        "CassandraStorage::executeRangeRead"
+    );
     return true;
 }
 
@@ -282,7 +289,10 @@ void CassandraStorage::executeRangeRead(const Bucket& bucket, SliceRange& range,
     if (rs->size()==0)
     	success = false;
 
-    mContext->mainStrand->post(std::tr1::bind(&CassandraStorage::completeRange, this, cb, success, rs));
+    mContext->mainStrand->post(
+        std::tr1::bind(&CassandraStorage::completeRange, this, cb, success, rs),
+        "CassandraStorage::completeRange"
+    );
 }
 
 void CassandraStorage::completeRange(CommitCallback cb, bool success, ReadSet* rs) {
@@ -296,7 +306,10 @@ bool CassandraStorage::rangeErase(const Bucket& bucket, const Key& start, const 
     range.finish = finish;
     range.count = 100000; // currently, set large enough to read all the data
 
-    mIOService->post(std::tr1::bind(&CassandraStorage::executeRangeErase_p1, this, bucket, range, cb, timestamp));
+    mIOService->post(
+        std::tr1::bind(&CassandraStorage::executeRangeErase_p1, this, bucket, range, cb, timestamp),
+        "CassandraStorage::executeRangeErase_p1"
+    );
 
     return true;
 }
@@ -311,9 +324,15 @@ void CassandraStorage::executeRangeErase_p1(const Bucket& bucket, SliceRange& ra
        	success = false;
     }
     if (!success)
-    	mContext->mainStrand->post(std::tr1::bind(&CassandraStorage::completeRange, this, cb, success, rs));
+    	mContext->mainStrand->post(
+            std::tr1::bind(&CassandraStorage::completeRange, this, cb, success, rs),
+            "CassandraStorage::completeRange"
+        );
     else
-    	mIOService->post(std::tr1::bind(&CassandraStorage::executeRangeErase_p2, this, bucket, cb, rs, timestamp));
+    	mIOService->post(
+            std::tr1::bind(&CassandraStorage::executeRangeErase_p2, this, bucket, cb, rs, timestamp),
+            "CassandraStorage::executeRangeErase_p2"
+        );
 }
 
 void CassandraStorage::executeRangeErase_p2(const Bucket& bucket, CommitCallback cb, ReadSet* rs, const String& timestamp) {
@@ -322,7 +341,10 @@ void CassandraStorage::executeRangeErase_p2(const Bucket& bucket, CommitCallback
         String key = it->first;
         erase(bucket, key);
     }
-    mIOService->post(std::tr1::bind(&CassandraStorage::commitTransaction, this, bucket, cb, timestamp));
+    mIOService->post(
+        std::tr1::bind(&CassandraStorage::commitTransaction, this, bucket, cb, timestamp),
+        "CassandraStorage::commitTransaction"
+    );
 }
 
 bool CassandraStorage::count(const Bucket& bucket, const Key& start, const Key& finish, const CountCallback& cb, const String& timestamp) {
@@ -340,7 +362,10 @@ bool CassandraStorage::count(const Bucket& bucket, const Key& start, const Key& 
     predicate.__isset.slice_range=true;
     predicate.slice_range=range;
 
-    mIOService->post(std::tr1::bind(&CassandraStorage::executeCount, this, bucket, col_parent, predicate, cb, timestamp));
+    mIOService->post(
+        std::tr1::bind(&CassandraStorage::executeCount, this, bucket, col_parent, predicate, cb, timestamp),
+        "CassandraStorage::executeCount"
+    );
 
     return true;
 }
@@ -354,7 +379,10 @@ void CassandraStorage::executeCount(const Bucket& bucket, ColumnParent& parent, 
     }
     catch(...) {success = false;}
 
-    mContext->mainStrand->post(std::tr1::bind(&CassandraStorage::completeCount, this, cb, success, count));
+    mContext->mainStrand->post(
+        std::tr1::bind(&CassandraStorage::completeCount, this, cb, success, count),
+        "CassandraStorage::completeCount"
+    );
 }
 
 void CassandraStorage::completeCount(CountCallback cb, bool success, int32 count) {
