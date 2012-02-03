@@ -35,7 +35,7 @@ JSCtx::~JSCtx()
     mQuaternionTemplate.Dispose();
     mPatternTemplate.Dispose();
 
-    if (v8::Isolate::GetCurrent())
+    if (mIsolate == v8::Isolate::GetCurrent())
         mIsolate->Exit();
     
     mIsolate->Dispose();
