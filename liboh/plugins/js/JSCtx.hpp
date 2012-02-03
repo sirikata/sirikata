@@ -22,7 +22,7 @@ public:
     ~JSCtx();
     
     Network::IOStrandPtr objStrand;
-    Network::IOStrandPtr mainStrand;
+    Network::IOStrand* mainStrand;
     
     v8::Isolate* mIsolate;
     bool stopped();
