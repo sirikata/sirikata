@@ -263,7 +263,7 @@ void JSObjectScript::initialize(const String& args, const String& script,int32 m
     mContext =
         new JSContextStruct(
             this, NULL,sporef, Capabilities::getFullCapabilities(),
-            mManager->mContextGlobalTemplate,contIDTracker,NULL,mCtx);
+            mCtx->mContextGlobalTemplate,contIDTracker,NULL,mCtx);
 
     // By default, our eval context has:
     // 1. Empty currentScriptDir, indicating it should only use explicitly
@@ -1862,10 +1862,10 @@ v8::Local<v8::Object> JSObjectScript::createContext(JSPresenceStruct* jspres,con
     JSSCRIPT_SERIAL_CHECK();
     v8::HandleScope handle_scope;
 
-    v8::Local<v8::Object> returner =mManager->mContextTemplate->NewInstance();
+    v8::Local<v8::Object> returner =mCtx->mContextTemplate->NewInstance();
     internalContextField =
         new JSContextStruct(
-            this,jspres,canSendTo,capNum,mManager->mContextGlobalTemplate,
+            this,jspres,canSendTo,capNum,mCtx->mContextGlobalTemplate,
             contIDTracker,creator,mCtx);
 
     mContStructMap[contIDTracker] = internalContextField;

@@ -170,7 +170,7 @@ inline v8::Handle<v8::Value> AnyToV8(
     else if(Invokable::anyIsInvokable(val)) {
         if (!parent) return v8::Handle<v8::Value>();
         Invokable* newInvokableObj = Invokable::anyAsInvokable(val);
-        Local<Object> tmpObj = parent->manager()->mInvokableObjectTemplate->NewInstance();
+        Local<Object> tmpObj = parent->JSObjectScript::mCtx->mInvokableObjectTemplate->NewInstance();
         Persistent<Object>tmpObjP = Persistent<Object>::New(tmpObj);
         tmpObjP->SetInternalField(JSINVOKABLE_OBJECT_JSOBJSCRIPT_FIELD,External::New(parent));
         tmpObjP->SetInternalField(JSINVOKABLE_OBJECT_SIMULATION_FIELD,External::New( new JSInvokableObject::JSInvokableObjectInt(newInvokableObj) ));

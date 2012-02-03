@@ -19,10 +19,25 @@ JSCtx::JSCtx(Context* ctx,Network::IOStrandPtr oStrand,v8::Isolate* is)
 
 JSCtx::~JSCtx()
 {
-    // if (v8::Isolate::GetCurrent())
-    //     mIsolate->Exit();
+    mVisibleTemplate.Dispose();
+    mPresenceTemplate.Dispose();
+    mContextTemplate.Dispose();
+    mUtilTemplate.Dispose();
+    mInvokableObjectTemplate.Dispose();
+    mSystemTemplate.Dispose();
+    mTimerTemplate.Dispose();
+    mContextGlobalTemplate.Dispose();
+
+    // The manager tracks the templates so they can be reused by all the
+    // individual scripts.
+    mVec3Template.Dispose();
+    mQuaternionTemplate.Dispose();
+    mPatternTemplate.Dispose();
+
+    if (v8::Isolate::GetCurrent())
+        mIsolate->Exit();
     
-    // mIsolate->Dispose();
+    mIsolate->Dispose();
 }
 
 Sirikata::SerializationCheck* JSCtx::serializationCheck()

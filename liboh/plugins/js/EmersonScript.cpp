@@ -343,7 +343,7 @@ v8::Local<v8::Object> EmersonScript::createVisibleWeakPersistent(JSVisibleStruct
 {
     EMERSCRIPT_SERIAL_CHECK();
     v8::HandleScope handle_scope;
-    v8::Local<v8::Object> returner = mManager->mVisibleTemplate->GetFunction()->NewInstance();
+    v8::Local<v8::Object> returner = JSObjectScript::mCtx->mVisibleTemplate->GetFunction()->NewInstance();
     returner->SetInternalField(VISIBLE_JSVISIBLESTRUCT_FIELD,v8::External::New(jsvis));
     returner->SetInternalField(TYPEID_FIELD,v8::External::New(new String(VISIBLE_TYPEID_STRING)));
 
@@ -820,7 +820,7 @@ v8::Handle<v8::Value> EmersonScript::create_timeout(double period,v8::Persistent
     v8::HandleScope handle_scope;
 
     //create an object
-    v8::Local<v8::Object> localReturner = mManager->mTimerTemplate->NewInstance();
+    v8::Local<v8::Object> localReturner = JSObjectScript::mCtx->mTimerTemplate->NewInstance();
 
     v8::Persistent<v8::Object> returner = v8::Persistent<v8::Object>::New(localReturner);
 
@@ -1196,7 +1196,7 @@ void EmersonScript::processSandboxMessage(
         argv[1] =  v8::Null();
     else
     {
-        v8::Local<v8::Object> senderObj =mManager->mContextTemplate->NewInstance();
+        v8::Local<v8::Object> senderObj =JSObjectScript::mCtx->mContextTemplate->NewInstance();
         senderObj->SetInternalField(CONTEXT_FIELD_CONTEXT_STRUCT, External::New(sender));
         senderObj->SetInternalField(TYPEID_FIELD,External::New(new String(CONTEXT_TYPEID_STRING)));
         argv[1] = senderObj;
@@ -1307,7 +1307,7 @@ v8::Local<v8::Object> EmersonScript::wrapPresence(
     v8::Handle<v8::Context> ctx = (ctxToWrapIn == NULL) ? mContext->mContext : *ctxToWrapIn;
     v8::Context::Scope context_scope(ctx);
 
-    Local<Object> js_pres = mManager->mPresenceTemplate->GetFunction()->NewInstance();
+    Local<Object> js_pres = JSObjectScript::mCtx->mPresenceTemplate->GetFunction()->NewInstance();
     js_pres->SetInternalField(PRESENCE_FIELD_PRESENCE,External::New(presToWrap));
     js_pres->SetInternalField(TYPEID_FIELD,External::New(new String(PRESENCE_TYPEID_STRING)));
 
