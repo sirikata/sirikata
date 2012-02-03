@@ -15,14 +15,15 @@ namespace JS
    Note: trace, epoch, and simlen
  */
 
-class JSCtx : public Context
+class JSCtx 
 {
 public:    
     JSCtx(Context* ctx,Network::IOStrandPtr oStrand,v8::Isolate* is);
     ~JSCtx();
     
     Network::IOStrandPtr objStrand;
-
+    Network::IOStrandPtr mainStrand;
+    
     v8::Isolate* mIsolate;
     bool stopped();
     void stop();
@@ -30,7 +31,8 @@ public:
     bool initialized();
 
     Sirikata::SerializationCheck* serializationCheck();
-
+    Network::IOService* getIOService();
+    
     v8::Persistent<v8::FunctionTemplate> mVisibleTemplate;
     v8::Persistent<v8::FunctionTemplate> mPresenceTemplate;
     v8::Persistent<v8::ObjectTemplate>   mContextTemplate;
@@ -48,6 +50,7 @@ public:
     
     
 private:
+    Context* internalContext;
     bool isStopped;
     bool isInitialized;
     Sirikata::SerializationCheck mCheck;

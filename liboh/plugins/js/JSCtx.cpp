@@ -8,9 +8,10 @@ namespace JS
 
 
 JSCtx::JSCtx(Context* ctx,Network::IOStrandPtr oStrand,v8::Isolate* is)
- : Context("JS", ctx->ioService, ctx->mainStrand, NULL,Time::null()),
-   objStrand(oStrand),
+ : objStrand(oStrand),
+   mainStrand(ctx->mainStrand),
    mIsolate(is),
+   internalContext(ctx),
    isStopped(false),
    isInitialized(false),
    mCheck()
@@ -64,6 +65,12 @@ void JSCtx::stop()
 {
     isStopped = true;
 }
+
+Network::IOService* JSCtx::getIOService()
+{
+    return internalContext->ioService;
+}
+
 
 
 } //end namespace JS

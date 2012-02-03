@@ -22,7 +22,7 @@ JSTimerStruct::JSTimerStruct(EmersonScript* eobj, Duration dur, v8::Persistent<v
   cb(callback),
   jsContStruct(jscont),
   mCtx(jsctx),
-  mDeadlineTimer(Sirikata::Network::IOTimer::create(*jsctx->ioService)),
+  mDeadlineTimer(Sirikata::Network::IOTimer::create(*jsctx->getIOService())),
   timeUntil(dur),
   mTimeRemaining(timeRemaining),
   amExecuting(false),
