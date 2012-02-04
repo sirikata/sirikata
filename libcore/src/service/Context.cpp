@@ -84,7 +84,7 @@ void Context::run(uint32 nthreads, ExecutionThreads exthreads) {
 
     uint32 nworkers = (exthreads == IncludeOriginal ? nthreads-1 : nthreads);
     // Start workers
-    for(uint32 i = 1; i < nworkers; i++) {
+    for(uint32 i = 0; i < nworkers; i++) {
         mWorkerThreads.push_back(
             new Thread( std::tr1::bind(&Context::workerThread, this) )
         );

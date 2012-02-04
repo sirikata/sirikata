@@ -1370,7 +1370,6 @@ SET(SIRIKATA_CORE_SOURCES
 	${LIBCORE_SOURCE_DIR}/queue/ThreadSafeQueue.cpp
         ${LIBCORE_SOURCE_DIR}/util/Platform.cpp
 	${LIBCORE_SOURCE_DIR}/util/UUID.cpp
-        ${LIBCORE_SOURCE_DIR}/util/ThreadId.cpp
 	${LIBCORE_SOURCE_DIR}/util/BoundingInfo.cpp
         ${LIBCORE_SOURCE_DIR}/util/Hash.cpp
         ${LIBCORE_SOURCE_DIR}/util/Timer.cpp
@@ -1432,7 +1431,6 @@ ELSE()
  ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/Transform.hpp
  ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/BoundingInfo.hpp
  ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/UUID.hpp
- ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/ThreadId.hpp
  ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/Vector3.hpp
  ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/Vector4.hpp
  ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/SolidAngle.hpp

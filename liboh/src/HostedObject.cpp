@@ -44,7 +44,6 @@
 #include <sirikata/oh/ObjectScriptManagerFactory.hpp>
 #include <sirikata/oh/ObjectQueryProcessor.hpp>
 
-#include <sirikata/core/util/ThreadId.hpp>
 #include <sirikata/core/util/PluginManager.hpp>
 
 #include <sirikata/core/odp/Exceptions.hpp>
@@ -294,8 +293,6 @@ void HostedObject::initializeScript(const String& script_type, const String& arg
 
     HO_LOG(detailed,"Creating a script object for object");
 
-    static ThreadIdCheck scriptId=ThreadId::registerThreadGroup(NULL);
-    assertThreadGroup(scriptId);
     if (!ObjectScriptManagerFactory::getSingleton().hasConstructor(script_type)) {
         HO_LOG(debug,"[HO] Failed to create script for object because incorrect script type");
         return;

@@ -194,7 +194,7 @@ int main (int argc, char** argv) {
     }
 
 
-    ctx->run(2);
+    ctx->run(1);
 
     ctx->cleanup();
 
