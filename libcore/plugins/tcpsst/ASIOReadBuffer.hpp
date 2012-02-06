@@ -83,7 +83,9 @@ private:
     Chunk *mCachedRejectedChunk;
     ///The StreamID of a new, partially examined new chunk
     Stream::StreamID mNewChunkID;
-    // Local copy of the stream type to avoid locking.
+    /// WebSocket permits packets to be XORed by a repeating 32-bit value. We need to store it after reading a partial packet.
+    uint8 mDataMask[4];
+    /// Local copy of the stream type to avoid locking.
     TCPStream::StreamType mStreamType;
     ///The shared structure responsible for holding state about the associated TCPStream that this class reads and interprets data from
     std::tr1::weak_ptr<MultiplexedSocket> mParentSocket;

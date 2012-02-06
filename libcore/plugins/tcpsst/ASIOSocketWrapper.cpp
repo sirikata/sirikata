@@ -446,6 +446,16 @@ Chunk*ASIOSocketWrapper::constructControlPacket(const MultiplexedSocketPtr &thus
       } break;
     }
 }
+Chunk* ASIOSocketWrapper::constructPing(const MultiplexedSocketPtr& thus, MemoryReference data, bool isPong) {
+    assert (thus->getStreamType() != TCPStream::LENGTH_DELIM &&
+            thus->getStreamType() != TCPStream::BASE64_ZERODELIM);
+    assert (data.length() <= 125);
+    Chunk *chunk = new Chunk(2 + data.length());
+    (*chunk)[0] = 0x80 | (isPong ? 0x0a : 0x09);
+    (*chunk)[1] = data.length();
+    memcpy(&(*chunk)[2], data.data(), data.length());
+    return chunk;
+}
 UUID ASIOSocketWrapper::massageUUID(const UUID&uuid) {
     unsigned char data[UUID::static_size];
     for (int i=0;i<UUID::static_size;++i) {

@@ -108,6 +108,12 @@ void ASIOReadBuffer::processError(MultiplexedSocket*parentSocket, const boost::s
     delete this;
 }
 ASIOReadBuffer::ReceivedResponse ASIOReadBuffer::processFullChunk(const MultiplexedSocketPtr &parentSocket, unsigned int whichSocket, const Stream::StreamID&id, Chunk&newChunk, const Stream::PauseReceiveCallback& pauseReceive){
+    if (*(int*)mDataMask) {
+        for (unsigned int i = 0; i < newChunk.size(); i++) {
+            newChunk[i] ^= mDataMask[i & 3];
+        }
+    }
+    *(int*)mDataMask = 0; // Mask no longer applies after one packet.
     bool user_paused_stream = false;
     parentSocket->receiveFullChunk(
         whichSocket,id,newChunk,
@@ -323,7 +329,23 @@ void ASIOReadBuffer::readIntoZeroDelimChunk(const MultiplexedSocketPtr &parentSo
 Stream::StreamID ASIOReadBuffer::processPartialChunk(uint8* dataBuffer, uint32 packetLength, uint32 &bufferReceived, Chunk&retval) {
     unsigned int headerLength=bufferReceived;
     Stream::StreamID retid;
-    retid.unserialize(dataBuffer,headerLength);
+    if (*(int*)mDataMask) {
+        uint8 tempId[16];
+        unsigned int i;
+        for (i = 0; i < 16 && i < headerLength; i++) {
+            tempId[i] = dataBuffer[i] ^ mDataMask[i & 3];
+        }
+        retid.unserialize(tempId,headerLength);
+        for (i = 0; i < (headerLength & 3); i++) {
+            uint8 tmpMask = mDataMask[0];
+            mDataMask[0] = mDataMask[1];
+            mDataMask[1] = mDataMask[2];
+            mDataMask[2] = mDataMask[3];
+            mDataMask[3] = tmpMask;
+        }
+    } else {
+        retid.unserialize(dataBuffer,headerLength);
+    }
     assert(headerLength<=bufferReceived&&"High water mark must be greater than maximum StreamID size");
     bufferReceived-=headerLength;
     assert(headerLength<=packetLength&&"High water mark must be greater than maximum StreamID size");
@@ -339,7 +361,7 @@ void ASIOReadBuffer::translateBuffer(const MultiplexedSocketPtr &thus) {
     VariableLength packetLength;
     bool delimitedPacket=false;
     while (mBufferPos!=chunkPos) {
-        if (mBuffer[chunkPos]<=127) {//if this is a 0xff delimited packet
+        if (mStreamType == TCPStream::BASE64_ZERODELIM && mBuffer[chunkPos]<=127) {//if this is a 0xff delimited packet
             uint8*where=std::find(mBuffer+chunkPos+1,mBuffer+mBufferPos,0xff);
             if (where==mBuffer+mBufferPos) {
                 unsigned int remainder = mBufferPos-chunkPos;
@@ -362,6 +384,90 @@ void ASIOReadBuffer::translateBuffer(const MultiplexedSocketPtr &thus) {
                     chunkPos=(where-mBuffer)+1;
                 }
                 else { // Paused
+                    break;
+                }
+            }
+        }else if (mStreamType == TCPStream::RFC_6455) {
+            if (mBufferPos - chunkPos < 2) {
+                break;
+            }
+            uint8 flags = mBuffer[chunkPos];
+            uint8 type = flags & 0x0f;
+            bool fin = (flags & 0x80) ? true : false;
+            if (type == 0x00) {
+                // FIXME: Continuation frame.
+            }
+            if (!fin) {
+                // FIXME: We are reading a partial packet.
+            }
+            unsigned int length = mBuffer[chunkPos + 1];
+            bool masked = (length & 0x80) ? true: false;
+            uint8 mask[4] = {0};
+            length &= 0x7f;
+            if (type >= 0x08) {
+                // Control packet -- not fragmented; length <= 125
+                if (mBufferPos - chunkPos < 2 + length) {
+                    break;
+                }
+                if (type == 0x09) { // ping
+                    thus->receivePing(mWhichBuffer, MemoryReference(&mBuffer[chunkPos + 2], length), false);
+                }
+                if (type == 0x0a) { // pong
+                    thus->receivePing(mWhichBuffer, MemoryReference(&mBuffer[chunkPos + 2], length), true);
+                }
+                chunkPos += (2 + length);
+                continue;
+            }
+            unsigned int packetHeaderLength = 2 + (masked ? 4 : 0) + (length == 127 ? 8 : (length == 126 ? 2 : 0));
+            if (mBufferPos - chunkPos < packetHeaderLength) {
+                break;
+            }
+            chunkPos += 2;
+            if (length == 126) {
+                length = (mBuffer[chunkPos] << 8) | mBuffer[chunkPos + 1];
+                chunkPos += 2;
+            } else if (length == 127) {
+                // Ignore higher-order bits since we assume 32-bit lengths.
+                length = //(mBuffer[chunkPos] << 56) | (mBuffer[chunkPos + 1] << 48) |
+                         //(mBuffer[chunkPos + 2] << 40) | (mBuffer[chunkPos + 3] << 32) |
+                         (mBuffer[chunkPos + 4] << 24) | (mBuffer[chunkPos + 5] << 16) |
+                         (mBuffer[chunkPos + 6] << 8) | mBuffer[chunkPos + 7];
+                chunkPos += 8;
+            }
+            if (masked) {
+                *(int*)mDataMask = *(int*)(&mBuffer[chunkPos]);
+                chunkPos += 4;
+            } else {
+                *(int*)mDataMask = 0;
+            }
+
+            if (mBufferPos-chunkPos<length) {
+                if (mBufferPos-chunkPos<sLowWaterMark) {
+                    chunkPos -= packetHeaderLength;
+                    break;//go directly to memmov code and move remnants to beginning of buffer to read a large portion at a time
+                }else {
+                    mBufferPos-=chunkPos;
+                    assert(mNewChunk.size()==0);
+                    mNewChunkID = processPartialChunk(mBuffer+chunkPos,length,mBufferPos,mNewChunk);
+                    readIntoChunk(thus);
+                    return;
+                }
+            }else {
+                Chunk resultChunk;
+                unsigned int bufferReceived = length;
+                Stream::StreamID resultID = processPartialChunk(mBuffer+chunkPos,length,bufferReceived,resultChunk);
+                size_t vectorSize = resultChunk.size();
+
+// UNMASK!!!!
+                ReceivedResponse process_resp = processFullChunk(
+                    thus,mWhichBuffer,resultID,resultChunk,
+                    std::tr1::bind(ASIOReadBufferUtil::_pause_receive_callback__status_full, &mReadStatus, PAUSED_FIXED_BUFFER, &readBufferFull)
+                );
+                if (process_resp == AcceptedData) {
+                    chunkPos += length;
+                } else { // Paused, most work already handled by callback
+                    chunkPos -= packetHeaderLength;
+                    assert(resultChunk.size()==vectorSize);//if the user rejects the packet they should not munge it
                     break;
                 }
             }
@@ -534,6 +640,7 @@ void ASIOReadBuffer::asioReadIntoFixedBuffer(const ErrorCode&error,std::size_t b
     }
 }
 ASIOReadBuffer::ASIOReadBuffer(const MultiplexedSocketPtr &parentSocket,unsigned int whichSocket, TCPStream::StreamType type):mParentSocket(parentSocket){
+    *(int*)mDataMask = 0;
     IOStrand* strand = parentSocket->getStrand();
     bindFunctions(strand);
     mReadStatus=READING_FIXED_BUFFER;

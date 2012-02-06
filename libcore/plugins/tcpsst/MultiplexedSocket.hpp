@@ -192,6 +192,12 @@ public:
      * to the appropriate callback
      */
     void receiveFullChunk(unsigned int whichSocket, Stream::StreamID id, Chunk&newChunk, const Stream::PauseReceiveCallback& pauseReceive);
+
+    /**
+     * Process a socket-level ping. If expectPong, send a pong as a reply.
+     */
+    void receivePing(unsigned int whichSocket, MemoryReference data, bool isPong);
+
    /**
     * The a particular socket's connection failed
     * This function will call all substreams disconnected methods

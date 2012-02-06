@@ -414,6 +414,13 @@ void MultiplexedSocket::receiveFullChunk(unsigned int whichSocket, Stream::Strea
         }
     }
 }
+void MultiplexedSocket::receivePing(unsigned int whichSocket, MemoryReference data, bool isPong) {
+    if (!isPong) {
+        Chunk *toSend = ASIOSocketWrapper::constructPing(getSharedPtr(), data, true);
+        mSockets[whichSocket].rawSend(getSharedPtr(), toSend, true);
+    }
+}
+
 void MultiplexedSocket::connectionFailureOrSuccessCallback(SocketConnectionPhase status, Stream::ConnectionStatus reportedProblem, const std::string&errorMessage) {
     Stream::ConnectionStatus stat=reportedProblem;
     std::deque<StreamIDCallbackPair> registrations;
