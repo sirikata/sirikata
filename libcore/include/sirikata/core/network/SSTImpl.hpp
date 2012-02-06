@@ -1850,6 +1850,7 @@ private:
   }
 
   int init(void* initial_data, uint32 length, bool remotelyInitiated, LSID remoteLSID) {
+    mNumInitRetransmissions = 1;
     if (remotelyInitiated) {
         mRemoteLSID = remoteLSID;
         mConnected = true;
@@ -1880,7 +1881,6 @@ private:
       sendInitPacket(mInitialData, mInitialDataLength);
     }
 
-    mNumInitRetransmissions = 1;
     mNumBytesSent = mInitialDataLength;
 
     if (length > mInitialDataLength) {
