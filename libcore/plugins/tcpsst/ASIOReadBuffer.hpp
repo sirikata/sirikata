@@ -42,9 +42,9 @@ struct ASIOReadBufferUtil;
      *  \param parentSocket the MultiplexedSocket which defines the whole connection (if the weak_ptr fails, the connection is bunk
      *  \param whichSocket indicates which substream this read buffer is for, so the appropriate ASIO socket can be retrieved
      */
-ASIOReadBuffer* MakeASIOReadBuffer(const MultiplexedSocketPtr &parentSocket,unsigned int whichSocket, const MemoryReference &strayBytesAfterHeader);
+ASIOReadBuffer* MakeASIOReadBuffer(const MultiplexedSocketPtr &parentSocket,unsigned int whichSocket, const MemoryReference &strayBytesAfterHeader, TCPStream::StreamType streamType);
 class ASIOReadBuffer {
-    friend ASIOReadBuffer* MakeASIOReadBuffer(const MultiplexedSocketPtr &parentSocket,unsigned int whichSocket, const MemoryReference &strayBytesAfterHeader);
+    friend ASIOReadBuffer* MakeASIOReadBuffer(const MultiplexedSocketPtr &parentSocket,unsigned int whichSocket, const MemoryReference &strayBytesAfterHeader, TCPStream::StreamType streamType);
 public:
     enum {
         ///The length of the fixed buffer.  This should only affect the largest chunk of data delivered at once,
@@ -83,6 +83,8 @@ private:
     Chunk *mCachedRejectedChunk;
     ///The StreamID of a new, partially examined new chunk
     Stream::StreamID mNewChunkID;
+    // Local copy of the stream type to avoid locking.
+    TCPStream::StreamType mStreamType;
     ///The shared structure responsible for holding state about the associated TCPStream that this class reads and interprets data from
     std::tr1::weak_ptr<MultiplexedSocket> mParentSocket;
     typedef boost::system::error_code ErrorCode;
@@ -189,7 +191,7 @@ private:
      */
     void asioReadIntoFixedBuffer(const ErrorCode&error,std::size_t bytes_read);
 
-    ASIOReadBuffer(const MultiplexedSocketPtr &parentSocket,unsigned int whichSocket);
+    ASIOReadBuffer(const MultiplexedSocketPtr &parentSocket,unsigned int whichSocket, TCPStream::StreamType streamType);
     ///unimplemented: will fail due to bound function
     ASIOReadBuffer(const ASIOReadBuffer&);
 public:

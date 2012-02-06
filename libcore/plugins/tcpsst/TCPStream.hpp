@@ -105,6 +105,12 @@ public:
         TCPStreamCloseStream=1,
         TCPStreamAckCloseStream=2
     };
+    enum StreamType{
+        UNKNOWN,
+        BASE64_ZERODELIM,
+        LENGTH_DELIM,
+        RFC_6455
+    };
 private:
     friend class MultiplexedSocket;
     friend class TCPSetCallbacks;
@@ -124,13 +130,13 @@ private:
     std::tr1::shared_ptr<AtomicValue<int> >mSendStatus;
     unsigned char mNumSimultaneousSockets;
     bool mNoDelay;
-    bool mZeroDelim;
+    StreamType mStreamType;
     unsigned int mSendBufferSize;
     unsigned int mKernelSendBufferSize;
     unsigned int mKernelReceiveBufferSize;
 
     ///Constructor which leaves socket in a disconnection state, prepared for a connect() or a clone() called internally from factory
-    TCPStream(IOStrand*,unsigned char mNumSimultaneousSockets, unsigned int mSendBufferSize, bool noDelay, bool zeroDelim, unsigned int kernelSendBufferSize, unsigned int kernelReceiveBufferSize);
+    TCPStream(IOStrand*,unsigned char mNumSimultaneousSockets, unsigned int mSendBufferSize, bool noDelay, StreamType streamType, unsigned int kernelSendBufferSize, unsigned int kernelReceiveBufferSize);
 
 
 public:

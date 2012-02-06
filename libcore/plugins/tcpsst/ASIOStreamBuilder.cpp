@@ -33,8 +33,8 @@
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/network/Asio.hpp>
 #include <sirikata/core/network/IOStrandImpl.hpp>
-#include "Hash.hpp"
-#include "Base64.hpp"
+#include <sirikata/core/util/Hash.hpp>
+#include <sirikata/core/util/Base64.hpp>
 #include "TCPStream.hpp"
 #include "ASIOSocketWrapper.hpp"
 #include "MultiplexedSocket.hpp"
@@ -138,17 +138,15 @@ void buildStream(TcpSstHeaderArray *buffer,
     // Sanity check end: 8 bytes from WebSocket spec after headers, then
     // \r\n\r\n before that.
     std::string buffer_str((const char*)buffer->begin(), bytes_transferred);
-    if (buffer_str[ bytes_transferred - 12] != '\r' ||
-        buffer_str[ bytes_transferred - 11] != '\n' ||
-        buffer_str[ bytes_transferred - 10] != '\r' ||
-        buffer_str[ bytes_transferred - 9] != '\n')
-    {
+
+    std::string::size_type pos = buffer_str.find("\r\n\r\n");
+    if (pos == std::string::npos || pos < buffer_str.size() - 12) {
         SILOG(tcpsst,warning,"Request doesn't end properly:\n" << buffer_str << "\n");
         delete socket;
         return;
     }
+    std::string headers_str = buffer_str.substr(0, pos + 2);
 
-    std::string headers_str = buffer_str.substr(0, bytes_transferred - 10);
     // Parse headers
     UUID context;
     std::map<std::string, std::string> headers;
@@ -207,7 +205,8 @@ void buildStream(TcpSstHeaderArray *buffer,
 
     int wsversion = 0;
     {
-        std::istringstream str(headers["Sec-WebSocket-Version"]);
+        const std::string &verstr = headers["sec-websocket-version"];
+        std::istringstream str(verstr);
         str >> wsversion;
     }
     if (headers.find("host") == headers.end() ||
@@ -222,9 +221,8 @@ void buildStream(TcpSstHeaderArray *buffer,
     std::string protocol = "wssst1";
     if (headers.find("sec-websocket-protocol") != headers.end())
         protocol = headers["sec-websocket-protocol"];
-'\0'
     std::string reply_str;
-    MultiplexedSocket::StreamType streamType = MultiplexedSocket::LENGTHDELIM;
+    TCPStream::StreamType streamType = TCPStream::LENGTH_DELIM;
     if (wsversion == 0)
     {
         if (headers.find("sec-websocket-key1") == headers.end() ||
@@ -236,12 +234,16 @@ void buildStream(TcpSstHeaderArray *buffer,
         }
         std::string key1 = headers["sec-websocket-key1"];
         std::string key2 = headers["sec-websocket-key2"];
+        // FIXME: This is safe because we check that these 8 bytes exist if
+        // no Sec-WebSocket-Version header is present.
+        // See CheckWebSocketRequest.
         std::string key3 = buffer_str.substr(bytes_transferred - 8);
         assert(key3.size() == 8);
         reply_str = getWebSocketSecReply(key1, key2, key3);
         bool binaryStream=protocol.find("sst")==0;
         if (!binaryStream) {
-            streamType = MultiplexedSocket::BASE64_ZERODELIM;
+            streamType = TCPStream::BASE64_ZERODELIM;
+        }
     }
     else if (wsversion >= 13)
     {
@@ -251,8 +253,18 @@ void buildStream(TcpSstHeaderArray *buffer,
             delete socket;
             return;
         }
-        reply_str = Base64::encode(Sha1(headers["sec-websocket-key"] + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"));
-        streamType = MultiplexedSocket::WS13;
+        std::string key = headers["sec-websocket-key"] + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+        unsigned int shasum[5] = {0};
+        std::string shasumbytes(20, '\0');
+        Sha1(key.data(), key.length(), shasum);
+        for (int i = 0; i < 5; i++) {
+            shasumbytes[(i * 4)] = (shasum[i] >> 24);
+            shasumbytes[(i * 4) + 1] = ((shasum[i] >> 16) & 0xff);
+            shasumbytes[(i * 4) + 2] = ((shasum[i] >> 8) & 0xff);
+            shasumbytes[(i * 4) + 3] = (shasum[i] & 0xff);
+        }
+        reply_str = Base64::encode(shasumbytes);
+        streamType = TCPStream::RFC_6455;
     } else {
         SILOG(tcpsst,warning,"Unsupported Websocket Version " << wsversion);
         // FIXME: Send 400 Bad Request with "Sec-WebSocket-Version: 13" to tell clients to renegotiate an older version.
@@ -306,7 +318,7 @@ void buildStream(TcpSstHeaderArray *buffer,
             shared_socket->initFromSockets(where->second.mSockets,data->mSendBufferSize);
             std::string port=shared_socket->getASIOSocketWrapper(0).getLocalEndpoint().getService();
             std::string resource_name='/'+context.toString();
-            MultiplexedSocket::sendAllProtocolHeaders(shared_socket,origin,host,port,resource_name,protocol, where->second.mWebSocketResponses);
+            MultiplexedSocket::sendAllProtocolHeaders(shared_socket,origin,host,port,resource_name,protocol, where->second.mWebSocketResponses,streamType);
             sIncompleteStreams.erase(where);
 
 
@@ -326,6 +338,13 @@ void buildStream(TcpSstHeaderArray *buffer,
 }
 
 namespace {
+
+class CaseInsensitive {
+public:
+    bool operator() (const uint8 &left, const uint8 &right) {
+        return std::toupper(left) == std::toupper(right);
+    }
+};
 
 class CheckWebSocketRequest {
     const Array<uint8,TCPStream::MaxWebSocketHeaderSize> *mArray;
@@ -348,6 +367,40 @@ public:
             (*mArray)[mTotal - 9] == '\n')
         {
             return 0;
+        }
+        if (mTotal >= 24 &&
+            (*mArray)[mTotal - 4] == '\r' &&
+            (*mArray)[mTotal - 3] == '\n' &&
+            (*mArray)[mTotal - 2] == '\r' &&
+            (*mArray)[mTotal - 1] == '\n')
+        {
+            // Newer handshakes do not have data in the body.
+            // We need to allow these to complete *before* data is received.
+
+            // We check case-insensitive for Sec-WebSocket-Version: 13
+            // Dumbed down due to lack of cross-platform case-insensitive
+            // string functions
+
+            // This code can be removed once the old handshake is obsoleted.
+
+            const char *ersion = strstr((const char*)&((*mArray)[16]), (const char*)"ersion");
+            const char *header = ersion - 15;
+            if (std::equal(header, header + 15, "sec-websocket-version", CaseInsensitive())) {
+                const char *colon = ersion + 6;
+                while(*colon != '\r' && isspace(*colon)) {
+                    colon++;
+                }
+                if (*colon == ':') {
+                    colon++;
+                    while(*colon != '\r' && isspace(*colon)) {
+                        colon++;
+                    }
+                    const char *endptr = (const char*)&(*mArray)[0] + mTotal;
+                    if (*colon >= '1' && *colon <= '9') {
+                        return 0;
+                    }
+                }
+            }
         }
         return 65536;
     }

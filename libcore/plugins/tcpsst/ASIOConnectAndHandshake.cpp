@@ -106,7 +106,7 @@ public:
                 // Note we shift an additional 16 bytes, ignoring the required
                 // WebSocket md5 response
                 MemoryReference mb(buffer->begin()+whereHeaderEnds+1+16,bytes_received-(whereHeaderEnds+1+16));
-                MakeASIOReadBuffer(connection,whichSocket,mb);
+                MakeASIOReadBuffer(connection,whichSocket,mb, connection->getStreamType());
             }else {
                 mFinishedCheckCount-=1;
             }

@@ -388,7 +388,8 @@ bool ASIOSocketWrapper::rawSend(const MultiplexedSocketPtr&parentMultiSocket, Ch
 }
 Chunk*ASIOSocketWrapper::constructControlPacket(const MultiplexedSocketPtr &thus, TCPStream::TCPStreamControlCodes code,const Stream::StreamID&sid){
     const unsigned int max_size=16;
-    if (thus->isZeroDelim()) {
+    switch (thus->getStreamType()) {
+      case TCPStream::BASE64_ZERODELIM: {
         uint8 dataStream[max_size+Stream::StreamID::MAX_HEX_SERIALIZED_LENGTH+1];
         Stream::StreamID controlStream;//control packet
         unsigned int streamidsize=0;
@@ -401,7 +402,30 @@ Chunk*ASIOSocketWrapper::constructControlPacket(const MultiplexedSocketPtr &thus
         assert(size+cur<=max_size);
         MemoryReference serializedStreamId(dataStream,streamidsize);
         return toBase64ZeroDelim(MemoryReference(dataStream+streamidsize,size+cur-streamidsize),MemoryReference(NULL,0),MemoryReference(NULL,0),&serializedStreamId);
-    }else {
+      } break;
+      case TCPStream::RFC_6455: {
+        uint8 dataStream[max_size + Stream::StreamID::MAX_SERIALIZED_LENGTH + 2];
+        unsigned int packetHeaderLength = 2;
+        unsigned int size = max_size;
+        unsigned int cur = packetHeaderLength;
+        Stream::StreamID controlStream;
+
+        unsigned int streamidsize = controlStream.serialize(&dataStream[cur], max_size);
+        assert(streamidsize < max_size);
+        cur += streamidsize;
+        dataStream[cur++] = code;
+        size = max_size - cur;
+        size = sid.serialize(&dataStream[cur], size);
+        assert(size + cur <= max_size);
+        MemoryReference serializedStreamId(&dataStream[packetHeaderLength], streamidsize);
+
+        dataStream[0] = 0x7f | 0x02 ; // Flags = FIN/Unfragmented, Opcode = 2: binary data
+        dataStream[1] = size + cur - packetHeaderLength; // Less than 125.
+
+        return new Chunk(dataStream, dataStream + size + cur);
+      } break;
+      case TCPStream::LENGTH_DELIM:
+      default: {
         uint8 dataStream[max_size+VariableLength::MAX_SERIALIZED_LENGTH+Stream::StreamID::MAX_SERIALIZED_LENGTH];
         unsigned int size=max_size;
         Stream::StreamID controlStream;//control packet
@@ -419,6 +443,7 @@ Chunk*ASIOSocketWrapper::constructControlPacket(const MultiplexedSocketPtr &thus
             assert(retval==actualHeaderLength);
         }
         return new Chunk(dataStream+VariableLength::MAX_SERIALIZED_LENGTH-actualHeaderLength,dataStream+size+cur);
+      } break;
     }
 }
 UUID ASIOSocketWrapper::massageUUID(const UUID&uuid) {
@@ -457,27 +482,19 @@ void ASIOSocketWrapper::sendServerProtocolHeader(const MultiplexedSocketPtr& thu
     header << "HTTP/1.1 101 Web Socket Protocol Handshake\r\n";
     header << "Upgrade: WebSocket\r\n";
     header << "Connection: Upgrade\r\n";
-    header << "Sec-WebSocket-Origin: " << origin << "\r\n";
-    header << "Sec-WebSocket-Location: ws://" << host << resource_name << "\r\n";
-    header << "WebSocket-Protocol: " << subprotocol << "\r\n";
-    header << "\r\n";
-    header << response;
-
-    std::string finalHeader(header.str());
-    Chunk * headerData= new Chunk(finalHeader.begin(),finalHeader.end());
-    rawSend(thus,headerData,true);
-}
-
-void ASIOSocketWrapper::sendServerProtocolHeader13(const MultiplexedSocketPtr& thus, const std::string&origin, const std::string&host, const std::string&port, const std::string&resource_name, const std::string&subprotocol, const std::string& response){
-    std::stringstream header;
-    header << "HTTP/1.1 101 Switching Protocols\r\n";
-    header << "Upgrade: websocket\r\n";
-    header << "Connection: Upgrade\r\n";
-    header << "Access-Control-Allow-Origin: " << origin << "\r\n";
-    header << "Location: ws://" << host << resource_name << "\r\n";
-    header << "Sec-WebSocket-Accept: " << response << "\r\n";
-    header << "Sec-WebSocket-Protocol: " << subprotocol << "\r\n";
-    header << "\r\n";
+    if (thus->getStreamType() == TCPStream::RFC_6455) {
+        header << "Access-Control-Allow-Origin: " << origin << "\r\n";
+        header << "Location: ws://" << host << resource_name << "\r\n";
+        header << "Sec-WebSocket-Accept: " << response << "\r\n";
+        header << "Sec-WebSocket-Protocol: " << subprotocol << "\r\n";
+        header << "\r\n";
+    } else {
+        header << "Sec-WebSocket-Origin: " << origin << "\r\n";
+        header << "Sec-WebSocket-Location: ws://" << host << resource_name << "\r\n";
+        header << "WebSocket-Protocol: " << subprotocol << "\r\n";
+        header << "\r\n";
+        header << response;
+    }
 
     std::string finalHeader(header.str());
     Chunk * headerData= new Chunk(finalHeader.begin(),finalHeader.end());
@@ -505,7 +522,7 @@ void ASIOSocketWrapper::sendProtocolHeader(const MultiplexedSocketPtr&parentMult
         header << "Sec-WebSocket-Key1: x!|6 j9  U 1 guf  36Y04  |   4\r\n";
         header << "Sec-WebSocket-Key2: 3   59   2 E4   _11  x80      \r\n";
         header << "Sec-WebSocket-Protocol: "
-               << (parentMultiSocket->isZeroDelim()?"wssst":"sst")
+               << (parentMultiSocket->getStreamType()==TCPStream::BASE64_ZERODELIM?"wssst":"sst")
                << numConnections << "\r\n";
         header << "\r\n";
         header << "abcdefgh";

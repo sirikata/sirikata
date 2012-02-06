@@ -92,8 +92,8 @@ void ASIOReadBuffer::bindFunctions(IOStrand* strand) {
 }
 
 void BufferPrint(void * pointerkey, const char extension[16], const void * vbuf, size_t size) ;
-ASIOReadBuffer* MakeASIOReadBuffer(const MultiplexedSocketPtr &parentSocket,unsigned int whichSocket, const MemoryReference &strayBytesAfterHeader) {
-    ASIOReadBuffer *retval= parentSocket->getASIOSocketWrapper(whichSocket).setReadBuffer(new ASIOReadBuffer(parentSocket,whichSocket));
+ASIOReadBuffer* MakeASIOReadBuffer(const MultiplexedSocketPtr &parentSocket,unsigned int whichSocket, const MemoryReference &strayBytesAfterHeader, TCPStream::StreamType type) {
+    ASIOReadBuffer *retval= parentSocket->getASIOSocketWrapper(whichSocket).setReadBuffer(new ASIOReadBuffer(parentSocket,whichSocket,type));
     if (strayBytesAfterHeader.size()) {
         memcpy(retval->mBuffer, strayBytesAfterHeader.data(),strayBytesAfterHeader.size());
         retval->asioReadIntoFixedBuffer(ASIOReadBuffer::ErrorCode(),strayBytesAfterHeader.size());//fake callback with real data from past header
@@ -533,13 +533,14 @@ void ASIOReadBuffer::asioReadIntoFixedBuffer(const ErrorCode&error,std::size_t b
         delete this;// the socket is deleted
     }
 }
-ASIOReadBuffer::ASIOReadBuffer(const MultiplexedSocketPtr &parentSocket,unsigned int whichSocket):mParentSocket(parentSocket){
+ASIOReadBuffer::ASIOReadBuffer(const MultiplexedSocketPtr &parentSocket,unsigned int whichSocket, TCPStream::StreamType type):mParentSocket(parentSocket){
     IOStrand* strand = parentSocket->getStrand();
     bindFunctions(strand);
     mReadStatus=READING_FIXED_BUFFER;
     mBufferPos=0;
     mWhichBuffer=whichSocket;
     mCachedRejectedChunk=NULL;
+    mStreamType = type;
 }
 
 } }

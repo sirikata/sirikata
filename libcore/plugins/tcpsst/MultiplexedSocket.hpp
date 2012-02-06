@@ -36,6 +36,7 @@
 #include <sirikata/core/util/SerializationCheck.hpp>
 #include <boost/thread.hpp>
 #include "TCPSSTDecls.hpp"
+#include "TCPStream.hpp"
 
 namespace Sirikata {
 namespace Network {
@@ -62,12 +63,6 @@ public:
         WAITCONNECTING,//need to fetch the lock, but about to connect
         CONNECTED,
         DISCONNECTED
-    };
-    enum StreamType{
-        UNKNOWN,
-        BASE64_ZERODELIM,
-        LENGTHDELIM,
-        WS13
     };
 private:
 
@@ -103,7 +98,7 @@ private:
     ///a map of ID to callback, only to be touched by the io reactor thread
     CallbackMap mCallbacks;
     ///Whether the streams are zero delimited and in a base64 encoding (useful for interaction with web sockets)
-    StreamType mStreamType;
+    TCPStream::StreamType mStreamType;
     ///a map from StreamID to count of number of acked close requests--to avoid any unordered packets coming in
     std::tr1::unordered_map<Stream::StreamID,unsigned int,Stream::StreamID::Hasher>mAckedClosingStreams;
     ///a set of StreamIDs to hold the streams that were requested closed but have not been acknowledged, to prevent received packets triggering NewStream callbacks as if a new ID were received
@@ -151,7 +146,7 @@ private:
     */
     void hostDisconnectedCallback(const std::string& error);
 public:
-    StreamType getStreamType() const {
+    TCPStream::StreamType getStreamType() const {
         return mStreamType;
     }
     ///public io service accessor for new stream construction
@@ -180,13 +175,13 @@ public:
     ///function that searches mFreeStreamIDs or uses the mHighestStreamID to find the next unused free stream ID
     Stream::StreamID getNewID();
     ///Constructor for a connecting stream
-    MultiplexedSocket(IOStrand*io, const Stream::SubstreamCallback&substreamCallback, StreamType type);
+    MultiplexedSocket(IOStrand*io, const Stream::SubstreamCallback&substreamCallback, TCPStream::StreamType type);
     ///Constructor for a listening stream with a prebuilt connection of ASIO sockets
-    MultiplexedSocket(IOStrand*io, const UUID&uuid, const Stream::SubstreamCallback &substreamCallback, StreamType type);
+    MultiplexedSocket(IOStrand*io, const UUID&uuid, const Stream::SubstreamCallback &substreamCallback, TCPStream::StreamType type);
     ///call after construction to setup mSockets
     void initFromSockets(const std::vector<TCPSocket*>&sockets, size_t max_send_buffer_size);
     ///Sends the protocol headers to all ASIO socket wrappers when a known fully open connection has been listened for
-    static void sendAllProtocolHeaders(const MultiplexedSocketPtr& thus, const std::string&origin, const std::string&host, const std::string&port, const std::string&resource_name, const std::string&subprotocol, const std::map<TCPSocket*,std::string>& response);
+    static void sendAllProtocolHeaders(const MultiplexedSocketPtr& thus, const std::string&origin, const std::string&host, const std::string&port, const std::string&resource_name, const std::string&subprotocol, const std::map<TCPSocket*,std::string>& response, TCPStream::StreamType streamType);
     ///erase all sockets and callbacks since the refcount is now zero;
     ~MultiplexedSocket();
     ///a stream that has been closed and the other side has agreed not to send any more packets using that ID

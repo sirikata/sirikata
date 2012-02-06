@@ -252,7 +252,7 @@ Stream::StreamID MultiplexedSocket::getNewID() {
     assert(retval>1);
     return Stream::StreamID(retval);
 }
-MultiplexedSocket::MultiplexedSocket(IOStrand*io, const Stream::SubstreamCallback&substreamCallback, StreamType streamType)
+MultiplexedSocket::MultiplexedSocket(IOStrand*io, const Stream::SubstreamCallback&substreamCallback, TCPStream::StreamType streamType)
  : SerializationCheck(),
    mIO(io),
    mNewSubstreamCallback(substreamCallback),
@@ -262,7 +262,7 @@ MultiplexedSocket::MultiplexedSocket(IOStrand*io, const Stream::SubstreamCallbac
     mNewRequests=NULL;
     mSocketConnectionPhase=PRECONNECTION;
 }
-MultiplexedSocket::MultiplexedSocket(IOStrand*io,const UUID&uuid,const Stream::SubstreamCallback &substreamCallback, StreamType streamType)
+MultiplexedSocket::MultiplexedSocket(IOStrand*io,const UUID&uuid,const Stream::SubstreamCallback &substreamCallback, TCPStream::StreamType streamType)
  :SerializationCheck(),
   mIO(io),
      mNewSubstreamCallback(substreamCallback),
@@ -278,7 +278,7 @@ void MultiplexedSocket::initFromSockets(const std::vector<TCPSocket*>&sockets, s
         mSockets.back().bindFunctions(getSharedPtr());
     }
 }
-void MultiplexedSocket::sendAllProtocolHeaders(const MultiplexedSocketPtr& thus, const std::string&origin, const std::string&host, const std::string&port, const std::string&resource_name, const std::string&subprotocol, const std::map<TCPSocket*,std::string>& responses){
+void MultiplexedSocket::sendAllProtocolHeaders(const MultiplexedSocketPtr& thus, const std::string&origin, const std::string&host, const std::string&port, const std::string&resource_name, const std::string&subprotocol, const std::map<TCPSocket*,std::string>& responses, TCPStream::StreamType streamType){
     unsigned int numSockets=(unsigned int)thus->mSockets.size();
     for (std::vector<ASIOSocketWrapper>::iterator i=thus->mSockets.begin(),ie=thus->mSockets.end();i!=ie;++i) {
         i->sendServerProtocolHeader(thus,origin,host,port,resource_name,subprotocol,responses.find(&(i->getSocket()))->second);
@@ -286,7 +286,7 @@ void MultiplexedSocket::sendAllProtocolHeaders(const MultiplexedSocketPtr& thus,
     boost::lock_guard<boost::mutex> connectingMutex(sConnectingMutex);
     thus->mSocketConnectionPhase=CONNECTED;
     for (unsigned int i=0,ie=thus->mSockets.size();i!=ie;++i) {
-        MakeASIOReadBuffer(thus,i,MemoryReference(NULL,0));
+        MakeASIOReadBuffer(thus,i,MemoryReference(NULL,0), (TCPStream::StreamType)streamType);
     }
     assert (thus->mNewRequests==NULL||thus->mNewRequests->probablyEmpty());//would otherwise need to empty out new requests--but no one should have a reference to us here
 }
