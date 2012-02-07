@@ -242,6 +242,10 @@ void EmersonScript::fireProxEvent(const SpaceObjectReference& localPresSporef,
     JSVisibleStruct* jsvis, JSContextStruct* jscont, bool isGone)
 {
     EMERSCRIPT_SERIAL_CHECK();
+    
+    if (mEvalContextStack.empty())
+        assert(false);
+    
     //this entire pre-amble is gross.
     EvalContext& ctx = mEvalContextStack.top();
     EvalContext new_ctx(ctx,jscont);
@@ -344,6 +348,7 @@ v8::Local<v8::Object> EmersonScript::createVisibleWeakPersistent(const SpaceObje
     JSVisibleStruct* jsvis = createVisStruct(this, visibleObj, addParams);
     return handle_scope.Close(createVisibleWeakPersistent(jsvis));
 }
+
 
 //should already be in a context by the time this is called
 v8::Local<v8::Object> EmersonScript::createVisibleWeakPersistent(JSVisibleStruct* jsvis)
