@@ -99,7 +99,7 @@ std::istream& operator>>(std::istream& is, DeltaTime& rhs) {
     else if (type == 'u') {
         is >> type;
         assert(type == 's');
-        rhs = DeltaTime::microseconds((uint64)v);
+        rhs = DeltaTime::microseconds((int64)v);
     }
 
     return is;

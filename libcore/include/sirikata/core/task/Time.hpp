@@ -152,11 +152,41 @@ public:
     static DeltaTime milliseconds(int64 ms) {
         return DeltaTime(ms*1000);
     }
+    static DeltaTime milliseconds(uint64 ms) {
+        return DeltaTime(ms*1000);
+    }
+    static DeltaTime milliseconds(int32 ms) {
+        return DeltaTime(((int64)ms)*1000);
+    }
+    static DeltaTime milliseconds(uint32 ms) {
+        return DeltaTime(((int64)ms)*1000);
+    }
+    static DeltaTime microseconds(double us) {
+        return DeltaTime((int64)us);
+    }
     static DeltaTime microseconds(int64 us) {
         return DeltaTime(us);
     }
+    static DeltaTime microseconds(uint64 us) {
+        return DeltaTime(us);
+    }
+    static DeltaTime microseconds(int32 us) {
+        return DeltaTime((int64)us);
+    }
+    static DeltaTime microseconds(uint32 us) {
+        return DeltaTime((int64)us);
+    }
     static DeltaTime nanoseconds(int64 ns) {
         return DeltaTime(ns/1000);
+    }
+    static DeltaTime nanoseconds(uint64 ns) {
+        return DeltaTime(ns/1000);
+    }
+    static DeltaTime nanoseconds(int32 ns) {
+        return DeltaTime(((int64)ns)/1000);
+    }
+    static DeltaTime nanoseconds(uint32 ns) {
+        return DeltaTime(((int64)ns)/1000);
     }
 
     /** Return a zero length duration. */

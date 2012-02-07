@@ -45,6 +45,13 @@ class SIRIKATA_EXPORT Timer {
     static Sirikata::AtomicValue<Duration> sOffset;
 
 public:
+    /** Sleep for approximately the given duration.
+     *
+     *  \note Use this carefully: unless you're running on threads you've
+     *  allocated yourself, using this is probably the wrong thing to do.
+     */
+    static void sleep(const Duration& dt);
+
     static void setSystemClockOffset(const Duration &skew);
     static Duration getSystemClockOffset();
     static Time getSpecifiedDate(const std::string&datestring);

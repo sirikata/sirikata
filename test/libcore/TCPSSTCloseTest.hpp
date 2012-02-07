@@ -45,7 +45,7 @@
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/locks.hpp>
 #include <boost/lexical_cast.hpp>
-#include <time.h>
+#include <sirikata/core/util/Timer.hpp>
 
 using namespace Sirikata::Network;
 using namespace Sirikata;
@@ -152,12 +152,7 @@ private:
         mListener->listen(Address("127.0.0.1",mPort),std::tr1::bind(&SstCloseTest::listenerNewStreamCallback,this,_1,_2));
 
         mRecvService->run();
-#ifdef _WIN32
-        Sleep(1000);
-#else
-        sleep(1);
-#endif
-
+        Timer::sleep(Duration::seconds(1));
     }
 public:
     void closeStreamRun(bool fork, bool doSleep=false) {
@@ -188,11 +183,7 @@ public:
         }
         mSendService->reset();
         mSendService->run();
-#ifdef _WIN32
-        //Sleep(1000);
-#else
-        sleep(1);
-#endif
+        Timer::sleep(Duration::seconds(1));
 
         int sentSoFar=0;
         for (int c=0;c<mChunks;++c) {
@@ -220,20 +211,12 @@ public:
 
             }
             if (doSleep) {
-#ifdef _WIN32
-                Sleep(1000);
-#else
-//                sleep(1);
-#endif
+                Timer::sleep(Duration::seconds(1));
             }
             sentSoFar=willHaveSent;
         }
         if (!doSleep) {
-#ifdef _WIN32
-            Sleep(1000);
-#else
-//            sleep(1);
-#endif
+            Timer::sleep(Duration::seconds(1));
         }
         //SILOG(tcpsst,error,"CLOSING");
         for (int i=mOffset;i<NUM_TEST_STREAMS;++i) {
@@ -253,11 +236,7 @@ public:
                 }
             }
             if (counter>4997&&!done) {
-#ifdef _WIN32
-                Sleep(1000);
-#else
-                sleep (1);
-#endif
+                Timer::sleep(Duration::seconds(1));
             }
             ++counter;
         }while (counter<5000&&!done);

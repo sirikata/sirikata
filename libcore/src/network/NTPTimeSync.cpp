@@ -58,7 +58,7 @@ void TimeSync_sync_thread(int ntp_ctl_pipes[], int ntp_data_pipes[], bool* synce
             int scanned = fscanf(ntp_data_fp, "%f", &offset);
             if (scanned == EOF) break;
             if (scanned == 0) {
-                usleep(100000);
+                Timer::sleep(Duration::milliseconds(100));
                 continue;
             }
             //printf("Got offset %f\n", offset); fflush(stdout);
@@ -135,7 +135,7 @@ void NTPTimeSync::start(const String& server) {
 
         // Wait for it to sync at least once
         while(mSyncedOnce == false)
-            usleep(10000);
+                Timer::sleep(Duration::milliseconds(100));
     }
 #endif
 }

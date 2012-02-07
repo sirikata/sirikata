@@ -97,5 +97,12 @@ Duration Timer::elapsed() const{
     return Duration::microseconds( since_start.total_microseconds() );
 }
 
+void Timer::sleep(const Duration& dt) {
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS
+    Sleep(dt.toMilliseconds());
+#else
+    usleep(dt.toMicroseconds());
+#endif
+}
 
 } // namespace Sirikata
