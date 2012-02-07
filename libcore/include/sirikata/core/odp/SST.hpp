@@ -66,7 +66,7 @@ class SIRIKATA_EXPORT BaseDatagramLayer<SpaceObjectReference>
         bdl->unlisten(listeningEndPoint);
     }
 
-    void listenOn(EndPoint<EndPointType>& listeningEndPoint, DataCallback cb) {      
+    void listenOn(EndPoint<EndPointType>& listeningEndPoint, DataCallback cb) {
         ODP::Port* port = allocatePort(listeningEndPoint);
         port->receive(
             std::tr1::bind(&BaseDatagramLayer<EndPointType>::receiveMessageToCallback, this,
@@ -153,7 +153,7 @@ class SIRIKATA_EXPORT BaseDatagramLayer<SpaceObjectReference>
         return result;
     }
 
-    void receiveMessage(const ODP::Endpoint &src, const ODP::Endpoint &dst, MemoryReference payload) {        
+    void receiveMessage(const ODP::Endpoint &src, const ODP::Endpoint &dst, MemoryReference payload) {
         Connection<EndPointType>::handleReceive(
             mSSTConnVars,
             EndPoint<EndPointType> (SpaceObjectReference(src.space(), src.object()), src.port()),
@@ -180,7 +180,7 @@ class SIRIKATA_EXPORT BaseDatagramLayer<SpaceObjectReference>
     EndPointType mEndpoint;
 };
 
-#if SIRIKATA_PLATFORM == SIRIKATA_WINDOWS
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS
   // These exports keep Windows happy by forcing the export of these
   // types. BaseDatagramLayer is now excluded because it is explicitly
   // specialized, which, for some reason, keeps things working

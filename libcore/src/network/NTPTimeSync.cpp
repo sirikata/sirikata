@@ -41,7 +41,7 @@ namespace Sirikata {
 #define HEARTBEAT 'h'
 #define KILLSYNC  'k'
 
-#if SIRIKATA_PLATFORM != SIRIKATA_WINDOWS
+#if SIRIKATA_PLATFORM != SIRIKATA_PLATFORM_WINDOWS
 void TimeSync_sync_thread(int ntp_ctl_pipes[], int ntp_data_pipes[], bool* synced, bool* done) {
         // Close the endpoints that the cbr process doesn't use
         close(ntp_ctl_pipes[STDIN]);
@@ -95,7 +95,7 @@ NTPTimeSync::NTPTimeSync()
 }
 
 void NTPTimeSync::start(const String& server) {
-#if SIRIKATA_PLATFORM == SIRIKATA_WINDOWS
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS
 	// FIXME #92
 	mDone = true;
 #else
