@@ -73,7 +73,6 @@ void MeerkatNameHandler::resolve(std::tr1::shared_ptr<MetadataRequest> request, 
         }
         Network::Address given_addr(host_name, service);
         cdn_addr = given_addr;
-        dns_uri_prefix = "";
     }
 
     HttpManager::Headers headers;
@@ -263,7 +262,6 @@ void MeerkatChunkHandler::cache_check_callback(const SparseData* data, const URI
             }
             Network::Address given_addr(host_name, service);
             cdn_addr = given_addr;
-            download_uri_prefix = "";
         }
 
         HttpManager::Headers headers;
