@@ -635,7 +635,16 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
       }
 
       if (generated_uri.empty()) {
-          AGG_LOG(error, "Failed to upload aggregate mesh " << localMeshName);
+          AGG_LOG(error, "Failed to upload aggregate mesh " << localMeshName << ", composed of these children meshes:");
+
+          boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
+          for (uint32 i= 0; i < children.size(); i++) {
+              UUID child_uuid = children[i];
+              if ( mAggregateObjects.find(child_uuid) == mAggregateObjects.end())
+                  continue;
+              String meshName = mLoc->mesh(child_uuid);
+              AGG_LOG(error, "   " << meshName);
+          }
           return true;
       }
 
