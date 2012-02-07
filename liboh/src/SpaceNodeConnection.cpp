@@ -136,15 +136,15 @@ void SpaceNodeConnection::handleRead(Chunk& chunk, const Sirikata::Network::Stre
 void SpaceNodeConnection::connect(const Network::Address& addr) {
     mAddr = addr;
 
-    using std::tr1::placeholders::_1;
-    using std::tr1::placeholders::_2;
+    // using std::tr1::placeholders::_1;
+    // using std::tr1::placeholders::_2;
 
     mConnecting = true;
 
     socket->connect(mAddr,
         &Sirikata::Network::Stream::ignoreSubstreamCallback,
         mContext->mainStrand->wrap( std::tr1::bind(&SpaceNodeConnection::handleConnectionEvent, this, _1, _2) ),
-        mContext->mainStrand->wrap(std::tr1::bind(&SpaceNodeConnection::handleRead, this, _1, _2)),
+        mContext->mainStrand->wrap( std::tr1::bind(&SpaceNodeConnection::handleRead, this, _1, _2) ),
         &Sirikata::Network::Stream::ignoreReadySendCallback
     );
 }
