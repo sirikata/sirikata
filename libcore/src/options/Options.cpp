@@ -409,7 +409,7 @@ void OptionSet::parseFile(const std::string& file, bool required, bool use_defau
         if (required) exit(0);
         return;
     }
-    boost::program_options::store( boost::program_options::parse_config_file(cf_fp, options), output);
+    boost::program_options::store( boost::program_options::parse_config_file(cf_fp, options, true), output);
     cf_fp.close();
     bool dienow=false;
     {
