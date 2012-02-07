@@ -92,7 +92,8 @@ EmersonScript::EmersonScript(HostedObjectPtr ho, const String& args,
    presenceToken(HostedObject::DEFAULT_PRESENCE_TOKEN +1),
    emHttpPtr(EmersonHttpManager::construct<EmersonHttpManager> (ctx))
 {
-    v8::Isolate::Scope iscope(JSObjectScript::mCtx->mIsolate);
+    //v8::Isolate::Scope iscope(JSObjectScript::mCtx->mIsolate);
+    JSObjectScript::mCtx->mIsolate->Enter();
 
     int32 resourceMax = mManager->getOptions()->referenceOption("emer-resource-max")->as<int32> ();
     JSObjectScript::initialize(args, script,resourceMax);
@@ -109,6 +110,8 @@ EmersonScript::EmersonScript(HostedObjectPtr ho, const String& args,
     for(HostedObject::SpaceObjRefVec::const_iterator space_it = spaceobjrefs.begin(); space_it != spaceobjrefs.end(); space_it++)
         iOnConnected(mParent, *space_it, HostedObject::DEFAULT_PRESENCE_TOKEN,true,Liveness::livenessToken());
 
+
+    JSObjectScript::mCtx->mIsolate->Exit();
     JSObjectScript::mCtx->initialize();
 }
 

@@ -1140,15 +1140,15 @@ v8::Handle<v8::Value> JSObjectScript::invokeCallback(
     JSContextStruct* ctx, v8::Handle<v8::Function>& cb,
     int argc, v8::Handle<v8::Value> argv[])
 {
-    v8::Isolate::Scope iscope(mCtx->mIsolate);
     JSSCRIPT_SERIAL_CHECK();
+    v8::Isolate::Scope iscope(mCtx->mIsolate);
     return invokeCallback(ctx, NULL, cb, argc, argv);
 }
 
 v8::Handle<v8::Value> JSObjectScript::invokeCallback(JSContextStruct* ctx, v8::Handle<v8::Function>& cb)
 {
-    v8::Isolate::Scope iscope(mCtx->mIsolate);
     JSSCRIPT_SERIAL_CHECK();
+    v8::Isolate::Scope iscope(mCtx->mIsolate);
     return invokeCallback(ctx, NULL, cb, 0, NULL);
 }
 
