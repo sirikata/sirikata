@@ -93,7 +93,7 @@ bool SpaceNodeConnection::empty() {
     return receive_queue.empty();
 }
 
-void SpaceNodeConnection::handleRead(Chunk& chunk, const Sirikata::Network::Stream::PauseReceiveCallback& pause) {
+void SpaceNodeConnection::handleRead(const Chunk& chunk, const Sirikata::Network::Stream::PauseReceiveCallback& pause) {
     mHandleReadStage->started();
 
     // Parse
@@ -141,6 +141,9 @@ void SpaceNodeConnection::connect(const Network::Address& addr) {
 
     mConnecting = true;
 
+    // TODO wrap()ing handleRead means we have to copy the data. This could at
+    // least be more efficient by making sure we manually swap it into something
+    // we allocate ourselves, then dispatch the real handler ourselves.
     socket->connect(mAddr,
         &Sirikata::Network::Stream::ignoreSubstreamCallback,
         mContext->mainStrand->wrap( std::tr1::bind(&SpaceNodeConnection::handleConnectionEvent, this, _1, _2) ),
