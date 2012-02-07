@@ -77,6 +77,15 @@
 
 #define OPT_MODULES                "modules"
 
+// AggregateManager options
+#define OPT_AGGMGR_HOSTNAME          "aggmgr.host"
+#define OPT_AGGMGR_SERVICE           "aggmgr.service"
+#define OPT_AGGMGR_CONSUMER_KEY      "aggmgr.consumer-key"
+#define OPT_AGGMGR_CONSUMER_SECRET   "aggmgr.consumer-secret"
+#define OPT_AGGMGR_ACCESS_KEY        "aggmgr.access-key"
+#define OPT_AGGMGR_ACCESS_SECRET     "aggmgr.access-secret"
+#define OPT_AGGMGR_USERNAME          "aggmgr.username"
+
 namespace Sirikata {
 
 void InitSpaceOptions();

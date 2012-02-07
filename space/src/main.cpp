@@ -281,7 +281,27 @@ int main(int argc, char** argv) {
     // We have all the info to initialize the forwarder now
     forwarder->initialize(oseg, sq, server_message_receiver, loc_service);
 
-    AggregateManager* aggmgr = new AggregateManager(loc_service);
+    String aggmgr_hostname = GetOptionValue<String>(OPT_AGGMGR_HOSTNAME);
+    String aggmgr_service = GetOptionValue<String>(OPT_AGGMGR_SERVICE);
+    String aggmgr_consumer_key = GetOptionValue<String>(OPT_AGGMGR_CONSUMER_KEY);
+    String aggmgr_consumer_secret = GetOptionValue<String>(OPT_AGGMGR_CONSUMER_SECRET);
+    String aggmgr_access_key = GetOptionValue<String>(OPT_AGGMGR_ACCESS_KEY);
+    String aggmgr_access_secret = GetOptionValue<String>(OPT_AGGMGR_ACCESS_SECRET);
+    String aggmgr_username = GetOptionValue<String>(OPT_AGGMGR_USERNAME);
+    Transfer::OAuthParamsPtr aggmgr_oauth;
+    // Currently you need to explicitly override hostname to enable upload
+    if (!aggmgr_hostname.empty()&&
+        !aggmgr_consumer_key.empty() && !aggmgr_consumer_secret.empty() &&
+        !aggmgr_access_key.empty() && !aggmgr_access_secret.empty()) {
+        aggmgr_oauth = Transfer::OAuthParamsPtr(
+            new Transfer::OAuthParams(
+                aggmgr_hostname, aggmgr_service,
+                aggmgr_consumer_key, aggmgr_consumer_secret,
+                aggmgr_access_key, aggmgr_access_secret
+            )
+        );
+    }
+    AggregateManager* aggmgr = new AggregateManager(loc_service, aggmgr_oauth, aggmgr_username);
 
     std::string prox_type = GetOptionValue<String>(OPT_PROX);
     std::string prox_options = GetOptionValue<String>(OPT_PROX_OPTIONS);

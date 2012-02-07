@@ -120,6 +120,11 @@ private:
   std::map<float, std::deque<std::tr1::shared_ptr<AggregateObject> > > mObjectsByPriority;
 
   std::vector<UUID>& getChildren(const UUID& uuid);
+
+
+  Transfer::OAuthParamsPtr mOAuth;
+  const String mCDNUsername;
+
   void updateChildrenTreeLevel(const UUID& uuid, uint16 treeLevel);
   void addDirtyAggregates(UUID uuid);
 
@@ -128,13 +133,17 @@ private:
   bool generateAggregateMeshAsync(const UUID uuid, Time postTime, bool generateSiblings = true);
   void aggregationThreadMain();
 
+  // Helper that handles the upload callback and sets flags to let the request
+  // from the aggregation thread to continue
+  void handleUploadFinished(Transfer::UploadRequestPtr request, const Transfer::URI& path, AtomicValue<bool>* finished_out, Transfer::URI* generated_uri_out);
+
   // Helper for cleaning out parent state from child, or deleting it if it is an
   // abandoned leaf object (non-aggregate). Returns true if the object was
   // removed.
   bool cleanUpChild(const UUID& child_id);
 public:
 
-  AggregateManager( LocationService* loc) ;
+  AggregateManager(LocationService* loc, Transfer::OAuthParamsPtr oauth, const String& username);
 
   ~AggregateManager();
 

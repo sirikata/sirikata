@@ -55,8 +55,11 @@ namespace Sirikata {
 
 using namespace Mesh;
 
-AggregateManager::AggregateManager( LocationService* loc) :
-  mAggregationThread(NULL), mLoc(loc)
+AggregateManager::AggregateManager(LocationService* loc, Transfer::OAuthParamsPtr oauth, const String& username)
+  : mAggregationThread(NULL),
+    mLoc(loc),
+    mOAuth(oauth),
+    mCDNUsername(username)
 {
     mModelsSystem = NULL;
     if (ModelsSystemFactory::getSingleton().hasConstructor("any"))
@@ -581,34 +584,101 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
     mAggregateObjects[child_uuid]->mMeshdata = std::tr1::shared_ptr<Meshdata>();
   }
 
-  const int MESHNAME_LEN = 1024;
-  char localMeshName[MESHNAME_LEN];
-  snprintf(localMeshName, MESHNAME_LEN, "%d_aggregate_mesh_%s.dae", aggObject->mTreeLevel, uuid.toString().c_str());
-  std::string cdnMeshName = "meerkat:///tahir/" + std::string(localMeshName);
-  agg_mesh->uri = cdnMeshName;
-
   //Simplify the mesh...
   mMeshSimplifier.simplify(agg_mesh, 600);
 
+  String localMeshName = boost::lexical_cast<String>(aggObject->mTreeLevel) + "_aggregate_mesh_" + uuid.toString() + ".dae";
+
   //... and now create the collada file, upload to the CDN and update LOC.
-  String modelFilename = std::string("/home/tahir/merucdn/meru/dump/") + localMeshName;
-  std::ofstream model_ostream(modelFilename.c_str(), std::ofstream::out | std::ofstream::binary);
-  bool converted = mModelsSystem->convertVisual(agg_mesh, "colladamodels", model_ostream);
-  model_ostream.close();
-  if (!converted) {
-      AGG_LOG(error, "Failed to save aggregate mesh " << localMeshName << ", it won't be displayed.");
-      // Here the return value isn't success, it's "should I remove this
-      // aggregate object from the queue for processing." Failure to save is
-      // effectively fatal for the aggregate, so tell it to get removed.
-      return true;
+  // We have two paths here, the real CDN upload and the old, local approach
+  // where we dump the file and run a script to "upload" it, which may just mean
+  // moving it somewhere locally
+  if (mOAuth && !mCDNUsername.empty()) {
+      // TODO(ewencp,tazim) Because we have to return true here and it
+      // seems like things rely on all the data filled in, we have to
+      // hack our way around the async upload process here. This is
+      // bad for a number of reasons, not least because this could
+      // potentially block up threads for quite awhile. However, this
+      // isn't currently *that* bad since we know we're on a different
+      // strand anyway.
+
+      std::stringstream model_ostream(std::ofstream::out | std::ofstream::binary);
+      bool converted = mModelsSystem->convertVisual(agg_mesh, "colladamodels", model_ostream);
+
+      Transfer::UploadRequest::StringMap files;
+      files[localMeshName] = model_ostream.str();
+
+      String upload_path = "aggregates/" + localMeshName;
+      Transfer::UploadRequest::StringMap params;
+      params["username"] = mCDNUsername;
+      params["title"] = String("Aggregate Mesh ") + uuid.toString();
+      params["main_filename"] = localMeshName;
+
+      AtomicValue<bool> finished(false);
+      Transfer::URI generated_uri;
+      Transfer::TransferRequestPtr req(
+          new Transfer::UploadRequest(
+              mOAuth,
+              files, upload_path, params, 1.0f,
+              std::tr1::bind(
+                  &AggregateManager::handleUploadFinished, this,
+                  std::tr1::placeholders::_1, std::tr1::placeholders::_2,
+                  &finished, &generated_uri
+              )
+          )
+      );
+      mTransferPool->addRequest(req);
+
+      // Busy wait until request finishes
+      while(!finished.read()) {
+      }
+
+      if (generated_uri.empty()) {
+          AGG_LOG(error, "Failed to upload aggregate mesh " << localMeshName);
+          return true;
+      }
+
+      // The current CDN URL layout is kind of a pain. We'll get back something
+      // like:
+      // meerkat://localhost/echeslack/apiupload/multimtl.dae/13
+      // and the target model will look something like:
+      // meerkat://localhost/echeslack/apiupload/multimtl.dae/original/13/multimtl.dae
+      // so we need to extract the number at the end so we can insert it between
+      // the format and the filename.
+      String cdnMeshName = generated_uri.toString();
+      std::size_t upload_num_pos = cdnMeshName.rfind("/");
+      assert(upload_num_pos != String::npos);
+      String mesh_num_part = cdnMeshName.substr(upload_num_pos+1);
+      cdnMeshName = cdnMeshName.substr(0, upload_num_pos);
+      cdnMeshName = cdnMeshName + "/original/" + mesh_num_part + "/" + localMeshName;
+      agg_mesh->uri = cdnMeshName;
+
+      //Update loc
+      mLoc->updateLocalAggregateMesh(uuid, cdnMeshName);
   }
+  else {
+      std::string cdnMeshName = "meerkat:///tahir/" + localMeshName;
+      agg_mesh->uri = cdnMeshName;
 
-  //Upload to CDN
-  std::string cmdline = std::string("./upload_to_cdn.sh ") +  localMeshName;
-  system( cmdline.c_str()  );
+      String modelFilename = std::string("/home/tahir/merucdn/meru/dump/") + localMeshName;
+      std::ofstream model_ostream(modelFilename.c_str(), std::ofstream::out | std::ofstream::binary);
+      bool converted = mModelsSystem->convertVisual(agg_mesh, "colladamodels", model_ostream);
+      model_ostream.close();
+      if (!converted) {
+          AGG_LOG(error, "Failed to save aggregate mesh " << localMeshName << ", it won't be displayed.");
+          // Here the return value isn't success, it's "should I remove this
+          // aggregate object from the queue for processing." Failure to save is
+          // effectively fatal for the aggregate, so tell it to get removed.
+          return true;
+      }
 
-  //Update loc
-  mLoc->updateLocalAggregateMesh(uuid, cdnMeshName);
+      //Upload to CDN
+      std::string cmdline = std::string("./upload_to_cdn.sh ") +  localMeshName;
+      system( cmdline.c_str()  );
+
+      //Update loc
+      mLoc->updateLocalAggregateMesh(uuid, cdnMeshName);
+  }
 
   // Code to generate scene files for each level of the tree.
   /*char scenefilename[MESHNAME_LEN];
@@ -629,6 +699,11 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
   aggObject->mLeaves.clear();
 
   return true;
+}
+
+void AggregateManager::handleUploadFinished(Transfer::UploadRequestPtr request, const Transfer::URI& path, AtomicValue<bool>* finished_out, Transfer::URI* generated_uri_out) {
+    *generated_uri_out = path;
+    *finished_out = true;
 }
 
 void AggregateManager::metadataFinished(Time t, const UUID uuid, const UUID child_uuid, std::string meshName,
