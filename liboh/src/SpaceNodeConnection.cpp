@@ -144,10 +144,11 @@ void SpaceNodeConnection::connect(const Network::Address& addr) {
     socket->connect(mAddr,
         &Sirikata::Network::Stream::ignoreSubstreamCallback,
         mContext->mainStrand->wrap( std::tr1::bind(&SpaceNodeConnection::handleConnectionEvent, this, _1, _2) ),
-        std::tr1::bind(&SpaceNodeConnection::handleRead, this, _1, _2),
+        mContext->mainStrand->wrap(std::tr1::bind(&SpaceNodeConnection::handleRead, this, _1, _2)),
         &Sirikata::Network::Stream::ignoreReadySendCallback
     );
 }
+
 
 void SpaceNodeConnection::handleConnectionEvent(
     const Network::Stream::ConnectionStatus status,
