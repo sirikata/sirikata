@@ -121,7 +121,9 @@ bool SimpleObjectQueryProcessor::handleProximityMessage(HostedObjectPtr self, co
             SpaceObjectReference observed(spaceobj.space(), ObjectReference(removal.object()));
             ProxyObjectPtr proxy_obj = proxy_manager->getProxyObject(observed);
 
-            obj_state->orphans.addUpdateFromExisting(proxy_obj);
+            // Somehow, it's possible we don't have a proxy for this object...
+            if (proxy_obj)
+                obj_state->orphans.addUpdateFromExisting(proxy_obj);
         }
 
         // Then deliver the results....

@@ -6,7 +6,7 @@
 #define _SIRIKATA_LIBCORE_OAUTH_HTTP_MANAGER_HPP_
 
 #include <sirikata/core/transfer/HttpManager.hpp>
-#include <liboauthcpp/liboauthcpp.h>
+#include <sirikata/core/transfer/OAuthParams.hpp>
 
 namespace Sirikata {
 namespace Transfer {
@@ -17,8 +17,10 @@ namespace Transfer {
  */
 class SIRIKATA_EXPORT OAuthHttpManager {
 public:
-    OAuthHttpManager(const String& hostname, const String& consumer_key, const String& consumer_secret);
-    OAuthHttpManager(const String& hostname, const String& consumer_key, const String& consumer_secret, const String& token_key, const String& token_secret);
+    OAuthHttpManager(OAuthParamsPtr oauth)
+        : mOAuth(oauth),
+          mClient(oauth->consumerPtr(), oauth->tokenPtr())
+    {}
 
     void head(
         Sirikata::Network::Address addr, const String& path,
@@ -56,9 +58,10 @@ public:
     );
 
 private:
-    const String mHostname;
-    OAuth::Consumer mConsumer;
-    OAuth::Token mToken;
+    OAuthParamsPtr mOAuth;
+    // The OAuth client uses mutable state, so it's not stored with the
+    // params. It needs to be locked for thread safety
+    boost::mutex mMutex;
     OAuth::Client mClient;
 };
 

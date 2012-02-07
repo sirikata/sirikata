@@ -1319,7 +1319,7 @@ SET(SIRIKATA_CORE_SOURCES
 	${LIBCORE_SOURCE_DIR}/transfer/FileTransferHandler.cpp
 	${LIBCORE_SOURCE_DIR}/transfer/HttpTransferHandler.cpp
 	${LIBCORE_SOURCE_DIR}/transfer/DataTransferHandler.cpp
-	${LIBCORE_SOURCE_DIR}/transfer/TransferPool.cpp
+	${LIBCORE_SOURCE_DIR}/transfer/TransferRequest.cpp
 	${LIBCORE_SOURCE_DIR}/transfer/HttpManager.cpp
         ${LIBCORE_SOURCE_DIR}/transfer/ResourceDownloadTask.cpp
 	${LIBCORE_SOURCE_DIR}/transfer/OAuthHttpManager.cpp
@@ -1838,6 +1838,7 @@ SET(BENCH_SOURCES
 #test source files
 SET(CXXTESTSources
 ${TEST_LIBCORE_SOURCE_DIR}/TransferTest.hpp
+#${TEST_LIBCORE_SOURCE_DIR}/TransferUploadTest.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/AnyTest.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/AtomicTest.hpp
 #${TEST_LIBCORE_SOURCE_DIR}/CacheLayerTest.hpp

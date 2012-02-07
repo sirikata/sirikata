@@ -1,5 +1,3 @@
-#include <map>
-#include <string>
 #include <sirikata/core/util/Standard.hh>
 #include <sirikata/core/options/Options.hpp>
 #include <sirikata/core/transfer/TransferPool.hpp>
@@ -9,11 +7,16 @@
 #include <sirikata/core/options/CommonOptions.hpp>
 #include <boost/bind.hpp>
 #include <sirikata/core/transfer/MeerkatTransferHandler.hpp>
+#include <sirikata/core/transfer/OAuthHttpManager.hpp>
 #include <sirikata/core/transfer/URL.hpp>
 #include <boost/lexical_cast.hpp>
 
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/json_parser.hpp>
+
 AUTO_SINGLETON_INSTANCE(Sirikata::Transfer::MeerkatNameHandler);
 AUTO_SINGLETON_INSTANCE(Sirikata::Transfer::MeerkatChunkHandler);
+AUTO_SINGLETON_INSTANCE(Sirikata::Transfer::MeerkatUploadHandler);
 
 namespace Sirikata {
 namespace Transfer {
@@ -31,6 +34,14 @@ MeerkatChunkHandler& MeerkatChunkHandler::getSingleton() {
 }
 void MeerkatChunkHandler::destroy() {
     AutoSingleton<MeerkatChunkHandler>::destroy();
+}
+
+
+MeerkatUploadHandler& MeerkatUploadHandler::getSingleton() {
+    return AutoSingleton<MeerkatUploadHandler>::getSingleton();
+}
+void MeerkatUploadHandler::destroy() {
+    AutoSingleton<MeerkatUploadHandler>::destroy();
 }
 
 
@@ -62,7 +73,6 @@ void MeerkatNameHandler::resolve(std::tr1::shared_ptr<MetadataRequest> request, 
         }
         Network::Address given_addr(host_name, service);
         cdn_addr = given_addr;
-        dns_uri_prefix = "";
     }
 
     HttpManager::Headers headers;
@@ -252,7 +262,6 @@ void MeerkatChunkHandler::cache_check_callback(const SparseData* data, const URI
             }
             Network::Address given_addr(host_name, service);
             cdn_addr = given_addr;
-            download_uri_prefix = "";
         }
 
         HttpManager::Headers headers;
@@ -379,6 +388,298 @@ void MeerkatChunkHandler::request_finished(std::tr1::shared_ptr<HttpManager::Htt
 
     callback(response->getData());
     SILOG(transfer, detailed, "done http chunk handler request_finished");
+}
+
+
+
+
+
+
+MeerkatUploadHandler::MeerkatUploadHandler()
+ : CDN_HOST_NAME(GetOptionValue<String>(OPT_CDN_HOST)),
+   CDN_SERVICE(GetOptionValue<String>(OPT_CDN_SERVICE)),
+   CDN_UPLOAD_URI_PREFIX(GetOptionValue<String>(OPT_CDN_UPLOAD_URI_PREFIX)),
+   CDN_UPLOAD_STATUS_URI_PREFIX(GetOptionValue<String>(OPT_CDN_UPLOAD_STATUS_URI_PREFIX)),
+   mCdnAddr(CDN_HOST_NAME, CDN_SERVICE)
+{
+}
+
+MeerkatUploadHandler::~MeerkatUploadHandler() {
+}
+
+namespace {
+// Return true if the service is a default value
+bool ServiceIsDefault(const String& s) {
+    if (!s.empty() && s != "http" && s != "80")
+        return false;
+    return true;
+}
+// Return empty if this is already empty or the default for this
+// service. Otherwise, return the old value
+String ServiceIfNotDefault(const String& s) {
+    if (!ServiceIsDefault(s))
+        return s;
+    return "";
+}
+}
+
+void MeerkatUploadHandler::getServerProps(UploadRequestPtr request, Network::Address& cdn_addr, String& full_oauth_hostinfo) {
+    std::string host_name = CDN_HOST_NAME;
+    String host_service = ServiceIfNotDefault(CDN_SERVICE);
+    cdn_addr = mCdnAddr;
+
+    // FIXME this sort of matches name + chunk approach, but there's not upload
+    // URL for a resource, so there's no way to extract all the info we would
+    // need. We need some other way of specifying that through the request,
+    // i.e. a more generic version of OAuthParams
+    String oauth_hostname(request->oauth()->hostname);
+    String oauth_service(request->oauth()->service);
+    if (oauth_hostname != "") {
+        host_name = oauth_hostname;
+        host_service = ServiceIfNotDefault(oauth_service);
+        Network::Address given_addr(host_name, host_service);
+        cdn_addr = given_addr;
+    }
+
+    full_oauth_hostinfo = host_name;
+    if (!ServiceIsDefault(host_service))
+        full_oauth_hostinfo += ":" + host_service;
+}
+
+void MeerkatUploadHandler::upload(UploadRequestPtr request, UploadCallback callback) {
+    String upload_uri_prefix = CDN_UPLOAD_URI_PREFIX;
+    Network::Address cdn_addr = mCdnAddr;
+    String full_oauth_hostinfo;
+    getServerProps(request, cdn_addr, full_oauth_hostinfo);
+
+    HttpManager::Headers headers;
+    headers["Host"] = full_oauth_hostinfo;
+
+    // We handle the regular request parameters in the query string. This isn't
+    // ideal, but since some servers sign non-file parameters from multipart
+    // form-data (despite the spec saying you only add items to the base
+    // signature string if a number of specific conditions are met and they
+    // aren't for those fields) we need to keep them somewhere else. This is
+    // probably better anyway since it ends up resulting in signing those fields
+    // as well.
+    //
+    // We need to include both the requested path and the user specified args in
+    // the query string.
+    HttpManager::QueryParameters query_params;
+    // Form data consists of parameters
+    for(UploadRequest::StringMap::const_iterator it = request->params().begin(); it != request->params().end(); it++)
+        query_params[it->first] = it->second;
+    // Requested path
+    query_params["path"] = request->path();
+
+    // The multipart data just includes files
+    HttpManager::MultipartDataList multipart_post_data;
+    for(UploadRequest::StringMap::const_iterator it = request->files().begin(); it != request->files().end(); it++) {
+        // Field, value, filename. We assume the field and filename are the same
+        multipart_post_data.push_back( HttpManager::MultipartData(it->first, it->second, it->first) );
+    }
+
+    OAuthHttpManager oauth_http(request->oauth());
+    oauth_http.postMultipartForm(
+        cdn_addr, upload_uri_prefix,
+        multipart_post_data,
+        std::tr1::bind(&MeerkatUploadHandler::request_finished, this, _1, _2, _3, request, callback),
+        headers, query_params
+    );
+}
+
+void MeerkatUploadHandler::request_finished(std::tr1::shared_ptr<HttpManager::HttpResponse> response,
+    HttpManager::ERR_TYPE error, const boost::system::error_code& boost_error,
+    UploadRequestPtr request, UploadCallback callback) {
+
+    Transfer::URI bad;
+
+    if (error == Transfer::HttpManager::REQUEST_PARSING_FAILED) {
+        SILOG(transfer, error, "Request parsing failed during an HTTP upload (" << request->getIdentifier() << ")");
+        callback(bad);
+        return;
+    } else if (error == Transfer::HttpManager::RESPONSE_PARSING_FAILED) {
+        SILOG(transfer, error, "Response parsing failed during an HTTP upload (" << request->getIdentifier() << ")");
+        callback(bad);
+        return;
+    } else if (error == Transfer::HttpManager::BOOST_ERROR) {
+        SILOG(transfer, error, "A boost error happened during an HTTP upload (" << request->getIdentifier() << "). Boost error = " << boost_error.message());
+        callback(bad);
+        return;
+    } else if (error != HttpManager::SUCCESS) {
+        SILOG(transfer, error, "An unknown error happened during an HTTP upload. (" << request->getIdentifier() << ")");
+        callback(bad);
+        return;
+    }
+
+    if (response->getHeaders().size() == 0) {
+        SILOG(transfer, error, "There were no headers returned during an HTTP upload (" << request->getIdentifier() << ")");
+        callback(bad);
+        return;
+    }
+
+    if (response->getStatusCode() != 200) {
+        SILOG(transfer, error, "HTTP status code = " << response->getStatusCode() << " instead of 200 during an HTTP upload (" << request->getIdentifier() << ")");
+        callback(bad);
+        return;
+    }
+
+    HttpManager::Headers::const_iterator it;
+    it = response->getHeaders().find("Content-Length");
+    if (it != response->getHeaders().end()) {
+        SILOG(transfer, error, "Content-Length header was present when it shouldn't be during an HTTP upload (" << request->getIdentifier() << ")");
+        callback(bad);
+        return;
+    }
+
+    DenseDataPtr response_data = response->getData();
+
+    // Parse the JSON response
+    using namespace boost::property_tree;
+    ptree pt;
+    try {
+        std::stringstream resp_json(response_data->asString());
+        read_json(resp_json, pt);
+    }
+    catch(json_parser::json_parser_error exc) {
+        SILOG(transfer, error, "Failed to parse upload response as JSON: " << response_data->asString() << " (" << exc.what() << ")  (" << request->getIdentifier() << ")");
+        return;
+    }
+
+    // Basic success check
+    boost::optional<bool> reported_success = pt.get_optional<bool>("success");
+    if (!reported_success) {
+        SILOG(transfer, error, "Upload response didn't contain boolean success flag (" << request->getIdentifier() << ")");
+        callback(bad);
+        return;
+    }
+    if (!(reported_success.get())) {
+        String reported_error = pt.get("error", "(No error message reported)");
+        SILOG(transfer, error, "Upload failed: " << reported_error << " (" << request->getIdentifier() << ")");
+        callback(bad);
+        return;
+    }
+
+    // Task ID
+    boost::optional<String> reported_task_id = pt.get_optional<String>("task_id");
+    if (!reported_task_id) {
+        SILOG(transfer, error, "Upload indicated initial success, but couldn't find task (" << request->getIdentifier() << ")");
+        callback(bad);
+        return;
+    }
+
+    SILOG(transfer, detailed, "Upload succeeded, starting to track task id = " << reported_task_id.get() << " (" << request->getIdentifier() << ")");
+    // 30 retries * .5s = 15s
+    requestStatus(request, reported_task_id.get(), callback, 30);
+}
+
+void MeerkatUploadHandler::requestStatus(UploadRequestPtr request, const String& task_id, UploadCallback callback, int32 retries) {
+    String upload_status_uri_prefix = CDN_UPLOAD_STATUS_URI_PREFIX;
+    Network::Address cdn_addr = mCdnAddr;
+    String full_oauth_hostinfo;
+    getServerProps(request, cdn_addr, full_oauth_hostinfo);
+
+
+    HttpManager::QueryParameters query_params;
+    query_params["api"] = "true";
+    //TODO(ewencp) This is kind of gross -- we need to extract the username
+    //parameter because this is currently required by the CDN
+    if (request->params().find("username") != request->params().end())
+        query_params["username"] = request->params().find("username")->second;
+
+    HttpManager::getSingleton().get(
+        cdn_addr, upload_status_uri_prefix + "/" + task_id,
+        std::tr1::bind(&MeerkatUploadHandler::handleRequestStatusResult, this, _1, _2, _3, request, task_id, callback, retries),
+        HttpManager::Headers(), query_params
+    );
+}
+
+void MeerkatUploadHandler::handleRequestStatusResult(
+    std::tr1::shared_ptr<HttpManager::HttpResponse> response,
+    HttpManager::ERR_TYPE error, const boost::system::error_code& boost_error,
+    UploadRequestPtr request, const String& task_id, UploadCallback callback,
+    int32 retries
+)
+{
+    Transfer::URI bad;
+
+    if (error == Transfer::HttpManager::REQUEST_PARSING_FAILED) {
+        SILOG(transfer, error, "Request parsing failed during an HTTP upload status check (" << request->getIdentifier() << ")");
+        callback(bad);
+        return;
+    } else if (error == Transfer::HttpManager::RESPONSE_PARSING_FAILED) {
+        SILOG(transfer, error, "Response parsing failed during an HTTP upload status check (" << request->getIdentifier() << ")");
+        callback(bad);
+        return;
+    } else if (error == Transfer::HttpManager::BOOST_ERROR) {
+        SILOG(transfer, error, "A boost error happened during an HTTP upload status check (" << request->getIdentifier() << "). Boost error = " << boost_error.message());
+        callback(bad);
+        return;
+    } else if (error != HttpManager::SUCCESS) {
+        SILOG(transfer, error, "An unknown error happened during an HTTP upload status check. (" << request->getIdentifier() << ")");
+        callback(bad);
+        return;
+    }
+
+    if (response->getStatusCode() != 200) {
+        SILOG(transfer, error, "HTTP status code = " << response->getStatusCode() << " instead of 200 during an HTTP upload status check (" << request->getIdentifier() << ")");
+        callback(bad);
+        return;
+    }
+
+    DenseDataPtr response_data = response->getData();
+    // Parse the JSON response
+    using namespace boost::property_tree;
+    ptree pt;
+    try {
+        std::stringstream resp_json(response_data->asString());
+        read_json(resp_json, pt);
+    }
+    catch(json_parser::json_parser_error exc) {
+        SILOG(transfer, error, "Failed to parse upload status check response as JSON: " << response_data->asString() << " (" << exc.what() << ")  (" << request->getIdentifier() << ")");
+        return;
+    }
+
+    boost::optional<String> reported_state = pt.get_optional<String>("state");
+    if (!reported_state) {
+        SILOG(transfer, error, "No state reported in status check (" << request->getIdentifier() << ")");
+        callback(bad);
+        return;
+    }
+
+    if (reported_state.get() != "SUCCESS" && reported_state.get() != "FAILED") {
+        // Some other notice, like PENDING, keep waiting until we get something
+        // different
+        SILOG(transfer, detailed, "Upload still processing: " << reported_state.get() << " (" << request->getIdentifier() << ")");
+        HttpManager::getSingleton().postCallback(
+            Duration::seconds(0.5),
+            std::tr1::bind(&MeerkatUploadHandler::requestStatus, this, request, task_id, callback, --retries),
+            "MeerkatUploadHandler::requestStatus"
+        );
+        return;
+    }
+
+    if (reported_state.get() == "FAILED") {
+        SILOG(transfer, error, "Upload failed during processing (" << request->getIdentifier() << ")");
+        callback(bad);
+        return;
+    }
+
+    String asset_path = pt.get<String>("path");
+    SILOG(transfer, detailed, "Upload succeeded and got path " << asset_path << " (" << request->getIdentifier() << ")");
+
+    // Construct the meerkat:// URL for this asset. We need server
+    // info to ensure we specify the right server
+    Network::Address cdn_addr = mCdnAddr;
+    String full_oauth_hostinfo;
+    getServerProps(request, cdn_addr, full_oauth_hostinfo);
+    // TODO(ewencp) we need the full URI to the model here, maybe
+    // automatically selecting optimized?
+    String generated_uri_str = "meerkat://" + full_oauth_hostinfo + asset_path;
+
+    Transfer::URI generated_uri(generated_uri_str);
+    callback(generated_uri);
+    SILOG(transfer, detailed, "done http upload handler request_finished");
 }
 
 }

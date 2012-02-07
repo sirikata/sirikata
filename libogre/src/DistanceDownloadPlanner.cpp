@@ -768,7 +768,7 @@ void DistanceDownloadPlanner::updateAssetPriority(Asset* asset) {
     // the asset.
     if (!asset->downloadTask) return;
 
-    std::vector<TransferRequest::PriorityType> priorities;
+    std::vector<Priority> priorities;
     for(ObjectSet::iterator obj_it = asset->waitingObjects.begin(); obj_it != asset->waitingObjects.end(); obj_it++) {
         RMutex::scoped_lock lock(mDlPlannerMutex);
         String objid = *obj_it;
