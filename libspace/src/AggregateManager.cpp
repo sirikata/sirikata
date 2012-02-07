@@ -631,6 +631,7 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
 
       // Busy wait until request finishes
       while(!finished.read()) {
+          Timer::sleep(Duration::milliseconds(100));
       }
 
       if (generated_uri.empty()) {
