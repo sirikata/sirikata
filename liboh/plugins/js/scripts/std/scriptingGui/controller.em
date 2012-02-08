@@ -216,6 +216,9 @@ system.require('scriptingGuiUtil.em');
 
     function instantiateProxHandlers()
     {
+        //short-circuit
+        return;
+        
         system.self.onProxAdded(addToNearby,true);
         system.self.onProxRemoved(removeFromNearby);
         function addToNearby(newVis)
