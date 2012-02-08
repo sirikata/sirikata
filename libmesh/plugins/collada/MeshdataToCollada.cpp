@@ -160,6 +160,8 @@ const String PARAM_TYPE_WEIGHT = "WEIGHT";
           COLLADASW::EffectProfile effectProfile(streamWriter);
 
           bool effectProfileEmpty = true;
+          bool effectHasDiffuse = false, effectHasSpecular = false, effectHasAmbient = false,
+              effectHasEmission = false, effectHasOpacity = false, effectHasReflective = false;
           //dealing with texture.
           for (uint32 j=0; j<meshdata.materials[i].textures.size(); j++) {
             const MaterialEffectInfo::Texture& texture = meshdata.materials[i].textures[j];
@@ -222,11 +224,36 @@ const String PARAM_TYPE_WEIGHT = "WEIGHT";
             switch(texture.affecting) {
               case MaterialEffectInfo::Texture::DIFFUSE:
                 effectProfile.setDiffuse(colorOrTexture);
+                effectHasDiffuse = true;
                 effectProfileEmpty = false;
                 break;
               case MaterialEffectInfo::Texture::SPECULAR:
                 effectProfile.setSpecular(colorOrTexture);
+                effectHasSpecular = true;
                 effectProfileEmpty = false;
+                break;
+              case MaterialEffectInfo::Texture::EMISSION:
+                effectProfile.setEmission(colorOrTexture);
+                effectHasEmission = true;
+                effectProfileEmpty = false;
+                break;
+              case MaterialEffectInfo::Texture::AMBIENT:
+                effectProfile.setAmbient(colorOrTexture);
+                effectHasAmbient = true;
+                effectProfileEmpty = false;
+                break;
+              case MaterialEffectInfo::Texture::REFLECTIVE:
+                effectProfile.setReflective(colorOrTexture);
+                effectHasReflective = true;
+                effectProfileEmpty = false;
+                break;
+              case MaterialEffectInfo::Texture::OPACITY:
+                // TODO(ewencp) There's a setTransparent, but its not clear
+                // that's what we want given that we use
+                // CommonEffect::getOpacity() to get this info when loading a
+                // collada file. Just ignore opacity for the time being.
+                // effectHasOpacity = true;
+                // effectProfileEmpty = false;
                 break;
               default:
                 SILOG(collada, error, "[COLLADA] Unhandled texture type during effect export:" << (int32)texture.affecting);
@@ -248,9 +275,20 @@ const String PARAM_TYPE_WEIGHT = "WEIGHT";
 
             openEffect(effectName+"-effect");
 
-            effectProfile.setShininess(meshdata.materials[i].shininess);
-            effectProfile.setReflectivity(meshdata.materials[i].reflectivity);
-            effectProfile.setShaderType(COLLADASW::EffectProfile::PHONG);
+            // Select the type of shader based on the affected channels and
+            // possibly set a few extra parameters
+            if (effectHasSpecular) {
+                effectProfile.setShininess(meshdata.materials[i].shininess);
+                effectProfile.setReflectivity(meshdata.materials[i].reflectivity);
+                effectProfile.setShaderType(COLLADASW::EffectProfile::PHONG);
+            }
+            else if (effectHasDiffuse) {
+                effectProfile.setShaderType(COLLADASW::EffectProfile::LAMBERT);
+            }
+            else {
+                assert(effectHasEmission || effectHasOpacity || effectHasReflective || effectHasAmbient);
+                effectProfile.setShaderType(COLLADASW::EffectProfile::CONSTANT);
+            }
 
             //
             addEffectProfile(effectProfile);

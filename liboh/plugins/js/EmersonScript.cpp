@@ -1389,7 +1389,7 @@ v8::Handle<v8::Value> EmersonScript::restorePresence(PresStructRestoreParams& ps
     float newAngVel;
     psrp.orientVelocity.toAngleAxis(newAngVel,newAngAxis);
 
-    BoundingSphere3f bs = BoundingSphere3f(psrp.position, psrp.scale);
+    BoundingSphere3f bs = BoundingSphere3f(Vector3f(0,0,0), psrp.scale);
 
     Location newLoc(newPosD,psrp.orient,psrp.velocity, newAngAxis,newAngVel);
 

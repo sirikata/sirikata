@@ -186,7 +186,7 @@ String Get(Key key) {
 
       case DIR_USER_HIDDEN:
           {
-#if SIRIKATA_PLATFORM == SIRIKATA_WINDOWS
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS
               // On windows there's no difference from the user-specific data directory since that's already hidden.
               return Get(DIR_USER);
 #else

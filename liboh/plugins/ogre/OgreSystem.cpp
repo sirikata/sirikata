@@ -126,7 +126,7 @@ void OgreSystem::instantiateAllObjects(ProxyManagerPtr pman)
     for (std::vector<SpaceObjectReference>::iterator iter = allORefs.begin(); iter != allORefs.end(); ++iter)
     {
         //instantiate each object in graphics system separately.
-        ProxyObjectPtr toAdd = pman->getProxyObject(*iter);
+      ProxyObjectPtr toAdd = pman->getProxyObject(*iter);
         iOnCreateProxy(livenessToken(),toAdd,true);
     }
 }
@@ -331,6 +331,10 @@ void OgreSystem::iOnCreateProxy(
         return;
     }
 
+    if ( !p->isValid() ) {
+      return;
+    }
+    
     //busy wait until initialized.  note that the initialization code actually
     //calls iOnCreateProxy itself (through instantiateAllObjects).  If the
     //inInit param is true then we know that the initialization code called this

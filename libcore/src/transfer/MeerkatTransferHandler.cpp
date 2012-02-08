@@ -647,7 +647,7 @@ void MeerkatUploadHandler::handleRequestStatusResult(
         return;
     }
 
-    if (reported_state.get() != "SUCCESS" && reported_state.get() != "FAILED") {
+    if (reported_state.get() != "SUCCESS" && reported_state.get() != "FAILURE") {
         // Some other notice, like PENDING, keep waiting until we get something
         // different
         SILOG(transfer, detailed, "Upload still processing: " << reported_state.get() << " (" << request->getIdentifier() << ")");
@@ -659,7 +659,7 @@ void MeerkatUploadHandler::handleRequestStatusResult(
         return;
     }
 
-    if (reported_state.get() == "FAILED") {
+    if (reported_state.get() == "FAILURE") {
         SILOG(transfer, error, "Upload failed during processing (" << request->getIdentifier() << ")");
         callback(bad);
         return;

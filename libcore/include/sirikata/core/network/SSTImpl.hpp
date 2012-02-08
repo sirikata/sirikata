@@ -1623,7 +1623,7 @@ public:
     return -1;
   }
 
-#if SIRIKATA_PLATFORM != SIRIKATA_WINDOWS
+#if SIRIKATA_PLATFORM != SIRIKATA_PLATFORM_WINDOWS
   /* Gathers data from the buffers described in 'vec',
      which is taken to be 'count' structures long, and
      writes them to the stream. As each buffer is
