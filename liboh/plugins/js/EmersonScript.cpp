@@ -92,7 +92,8 @@ EmersonScript::EmersonScript(HostedObjectPtr ho, const String& args,
    presenceToken(HostedObject::DEFAULT_PRESENCE_TOKEN +1),
    emHttpPtr(EmersonHttpManager::construct<EmersonHttpManager> (ctx))
 {
-    v8::Isolate::Scope iscope(JSObjectScript::mCtx->mIsolate);
+    //v8::Isolate::Scope iscope(JSObjectScript::mCtx->mIsolate);
+    JSObjectScript::mCtx->mIsolate->Enter();
 
     int32 resourceMax = mManager->getOptions()->referenceOption("emer-resource-max")->as<int32> ();
     JSObjectScript::initialize(args, script,resourceMax);
@@ -109,6 +110,8 @@ EmersonScript::EmersonScript(HostedObjectPtr ho, const String& args,
     for(HostedObject::SpaceObjRefVec::const_iterator space_it = spaceobjrefs.begin(); space_it != spaceobjrefs.end(); space_it++)
         iOnConnected(mParent, *space_it, HostedObject::DEFAULT_PRESENCE_TOKEN,true,Liveness::livenessToken());
 
+
+    JSObjectScript::mCtx->mIsolate->Exit();
     JSObjectScript::mCtx->initialize();
 }
 
@@ -239,6 +242,10 @@ void EmersonScript::fireProxEvent(const SpaceObjectReference& localPresSporef,
     JSVisibleStruct* jsvis, JSContextStruct* jscont, bool isGone)
 {
     EMERSCRIPT_SERIAL_CHECK();
+    
+    if (mEvalContextStack.empty())
+        assert(false);
+    
     //this entire pre-amble is gross.
     EvalContext& ctx = mEvalContextStack.top();
     EvalContext new_ctx(ctx,jscont);
@@ -341,6 +348,7 @@ v8::Local<v8::Object> EmersonScript::createVisibleWeakPersistent(const SpaceObje
     JSVisibleStruct* jsvis = createVisStruct(this, visibleObj, addParams);
     return handle_scope.Close(createVisibleWeakPersistent(jsvis));
 }
+
 
 //should already be in a context by the time this is called
 v8::Local<v8::Object> EmersonScript::createVisibleWeakPersistent(JSVisibleStruct* jsvis)

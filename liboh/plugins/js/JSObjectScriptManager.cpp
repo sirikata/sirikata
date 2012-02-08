@@ -392,7 +392,7 @@ void JSObjectScriptManager::createVisibleTemplate(JSCtx* jsctx)
     //these function calls are defined in JSObjects/JSVisible.hpp
 
     proto_t->Set(v8::String::New("__debugRef"),v8::FunctionTemplate::New(JSVisible::__debugRef));
-    proto_t->Set(v8::String::New("toString"),v8::FunctionTemplate::New(JSVisible::toString));
+    proto_t->Set(v8::String::New("__toString"),v8::FunctionTemplate::New(JSVisible::toString));
 
     proto_t->Set(v8::String::New("getPosition"),v8::FunctionTemplate::New(JSVisible::getPosition));
     proto_t->Set(v8::String::New("getVelocity"),v8::FunctionTemplate::New(JSVisible::getVelocity));
@@ -439,7 +439,7 @@ void JSObjectScriptManager::createPresenceTemplate(JSCtx* jsctx)
 
   //These are not just accessors because we need to ensure that we can deal with
   //their failure conditions.  (Have callbacks).
-  proto_t->Set(v8::String::New("toString"), v8::FunctionTemplate::New(JSPresence::toString));
+  proto_t->Set(v8::String::New("__toString"), v8::FunctionTemplate::New(JSPresence::toString));
 
   proto_t->Set(v8::String::New("getSpaceID"),v8::FunctionTemplate::New(JSPresence::getSpace));
   proto_t->Set(v8::String::New("getPresenceID"),v8::FunctionTemplate::New(JSPresence::getOref));

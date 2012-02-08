@@ -170,6 +170,19 @@ void JSContextStruct::proximateEvent(const SpaceObjectReference& goneFrom,
     if (getIsSuspended() || getIsCleared())
         return;
 
+    if (cbOnConnected.IsEmpty() && !isGone)
+    {
+        JSLOG(warn,"Ignoring proximity addition because have no callback");
+        return;
+    }
+
+    if (cbOnDisconnected.IsEmpty() && isGone)
+    {
+        JSLOG(warn,"Ignoring proximity removal because have no callback");
+        return;
+    }
+
+    
     CHECK_EMERSON_SCRIPT_RETURN(emerScript,notifyProximateGone,jsObjScript);
 
     if (((associatedPresence != NULL) &&

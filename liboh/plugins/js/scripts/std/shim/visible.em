@@ -1,4 +1,7 @@
 
+
+
+
 {
 
     // NOTE: These are just for documentation
@@ -242,4 +245,13 @@
      };
 
 
+     visible.prototype.toString = function()
+     {
+         if (typeof(this.stringified)  == 'undefined')
+             this.stringified = this.__toString();
+
+         return this.stringified;
+     };
+
+     
 })();
