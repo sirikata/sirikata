@@ -466,6 +466,68 @@ public:
         waitForTransaction();
     }
 
+
+    void testAllTransaction() {
+        // Test that all operations work together in a transaction. Importantly,
+        // this ensures that the expected read operations come back when you
+        // group different types of operations.
+        //
+        // This was added because some operations weren't following the
+        // transactional semantics properly, so it tries to test that operations
+        // aren't performed independently of the rest of the transaction.
+
+        using std::tr1::placeholders::_1;
+        using std::tr1::placeholders::_2;
+
+        // Setup some data
+        _storage->beginTransaction(_buckets[0]);
+        _storage->write(_buckets[0], "foo", "bar");
+        _storage->write(_buckets[0], "baz", "baz");
+        _storage->write(_buckets[0], "map:all:a", "abcde");
+        _storage->write(_buckets[0], "map:all:f", "fghij");
+        _storage->write(_buckets[0], "map:all:k", "klmno");
+        _storage->write(_buckets[0], "map:todelete:a", "xyzw");
+        _storage->write(_buckets[0], "map:todelete:c", "xyzw");
+        _storage->commitTransaction(_buckets[0],
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, true, ReadSet(), _1, _2)
+        );
+        waitForTransaction();
+
+        ReadSet rs;
+        // These are values we'll read via rangeRead
+        rs["map:all:a"] = "abcde";
+        rs["map:all:f"] = "fghij";
+        rs["map:all:k"] = "klmno";
+        // And an individual key we'll read back.
+        rs["foo"] = "bar";
+
+        // We don't care about order here, just that if reads occur before the
+        // commitTransaction, they won't properly be included in the results.
+        _storage->beginTransaction(_buckets[0]);
+        // Read existing data
+        _storage->read(_buckets[0], "foo");
+        // Range read existing data
+        _storage->rangeRead(_buckets[0], "map:all", "map:all@");
+        // Write some new data, verified below
+        _storage->write(_buckets[0], "y", "z");
+        // Delete individual key
+        _storage->erase(_buckets[0], "baz");
+        // Delete a range of data
+        _storage->rangeErase(_buckets[0], "map:todelete", "map:todelete@");
+        _storage->commitTransaction(_buckets[0],
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, true, rs, _1, _2)
+        );
+        waitForTransaction();
+
+
+        // Verify data written in above transaction
+        ReadSet rs2;
+        rs2["y"] = "z";
+        _storage->read(_buckets[0], "y",
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, true, rs2, _1, _2)
+        );
+        waitForTransaction();
+    }
 };
 
 const OH::Storage::Bucket StorageTestBase::_buckets[2] = {

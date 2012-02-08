@@ -63,6 +63,8 @@ public:
     void testRangeRead() {_base.testRangeRead(); }
     void testCount() {_base.testCount(); }
     void testRangeErase() {_base.testRangeErase(); }
+
+    void testAllTransaction() {_base.testAllTransaction(); }
 };
 
 const String SQLiteStorageTest::dbfile("test.db");
