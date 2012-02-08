@@ -92,10 +92,11 @@ system.require('featureObject.em');
      system.onPresenceConnected(
          function(newPres)
          {
-             sporefToPresences[newPres.toString()] = newPres;
-             pResultSet[newPres.toString()]        = {};
-             pAddCB[newPres.toString()]            = [];
-             pRemCB[newPres.toString()]            = [];
+             var nString = newPres.toString();
+             sporefToPresences[nString] = newPres;
+             pResultSet[nString]        = {};
+             pAddCB[nString]            = [];
+             pRemCB[nString]            = [];
          });
 
      
@@ -108,23 +109,25 @@ system.require('featureObject.em');
 
      ProxManager.prototype.getProxResultSet = function(pres)
      {
-         if (!(pres.toString() in pResultSet))
+         var pString = pres.toString();
+         if (!(pString in pResultSet))
              throw new Error('Error getting prox result set.  ' +
                              'No record of presence.');
 
-         return pResultSet[pres.toString()];
+         return pResultSet[pString];
      };
      
      ProxManager.prototype.setProxAddCB = function(pres,proxAddCB)
      {
-         if (!(pres.toString() in pAddCB))
+         var pString = pres.toString();
+         if (!(pString in pAddCB))
          {
              throw new Error('Cannot add prox callback because do ' +
                              'Not have associated presence in ProxManager.');
          }
 
          
-         var pArray = pAddCB[pres.toString()];
+         var pArray = pAddCB[pString];
          
 	 for (var i = 0; i <= pArray.length; i++)
 	 {
@@ -142,13 +145,14 @@ system.require('featureObject.em');
 
      ProxManager.prototype.setProxRemCB = function (pres,proxRemCB)
      {
-         if (!(pres.toString() in pRemCB))
+         var pString = pres.toString();
+         if (!(pString in pRemCB))
          {
              throw new Error('Cannot add prox rem callback because do ' +
                              'not have associated presence in ProxManager.');
          }
 
-         var pArray = pRemCB[pres.toString()];
+         var pArray = pRemCB[pString];
          
 	 for (var i = 0; i <= pArray.length; i++)
 	 {
@@ -167,13 +171,14 @@ system.require('featureObject.em');
 
      ProxManager.prototype.delProxAddCB = function(pres,addID)
      {
-         if (!(pres.toString() in pAddCB))
+         var pString = pres.toString();
+         if (!(pString in pAddCB))
          {
              throw new Error('Cannot del prox add callback because do ' +
                              'not have associated presence in ProxManager.');
          }
 
-         var pArray = pAddCB[pres.toString()];
+         var pArray = pAddCB[pString];
          
          if (!(typeof(pArray[addID]) == 'undefined'))
              pArray[addID] = null;
@@ -181,13 +186,15 @@ system.require('featureObject.em');
 
      ProxManager.prototype.delProxRemCB = function(pres,remID)
      {
-         if (!(pres.toString() in pRemCB))
+         var pString = pres.toString();
+         
+         if (!(pString in pRemCB))
          {
              throw new Error('Cannot del prox rem callback because do ' +
                              'not have associated presence in ProxManager.');
          }
 
-         var pArray = pRemCB[pres.toString()];
+         var pArray = pRemCB[pString];
          
          
          if (!(typeof(pArray[addID]) == 'undefined'))
@@ -195,6 +202,10 @@ system.require('featureObject.em');
      };
 
 
+         // lkjs;
+         // var subElement = new SubscriptionElement(visibleObj,pres,pres);
+
+     
      /**
       Gets called by system whenever visibleObj is within proximity
       range of pres.  Will trigger proxadded callbacks to be called
@@ -203,21 +214,23 @@ system.require('featureObject.em');
       */
      ProxManager.prototype.proxAddedEvent = function (pres,visibleObj)
      {
+         var pString = pres.toString();
+         var vString = visibleObj.toString();
          //ignore events where you have entered your own prox set.
-         if (pres.toString() == visibleObj.toString())
+         if (pString == vString)
              return;
          
-         if (!(pres.toString() in pAddCB))
+         if (!(pString in pAddCB))
          {
              throw new Error('Cannot call add event callback because do ' +
                              'not have associated presence in ProxManager.');
          }
          
-         if (visibleObj.toString() in haveFeatureDataFor)
+         if (vString in haveFeatureDataFor)
          {
              //we already have feature data for this visible.  add pres
              //as subscriber to haveFeatureDataFor map and trigger callback.
-             var subElement = haveFeatureDataFor[visibleObj.toString()];
+             var subElement = haveFeatureDataFor[vString];
              subElement.addSubscriber(pres);
              this.triggerAddCallback(pres,subElement.vis);
          }
@@ -229,20 +242,72 @@ system.require('featureObject.em');
              //are not, initiate feature object subscription using
              //pres as the requester.  If we are, waiting, then add
              //pres as a subscriber for this feature data.
-             if (visibleObj.toString() in awaitingFeatureData)
+             if (vString in awaitingFeatureData)
              {
-                 var subElement = awaitingFeatureData[visibleObj.toString()];
+                 var subElement = awaitingFeatureData[vString];
                  subElement.addSubscriber(pres);
              }
              else
              {
                  var subElement = new SubscriptionElement(visibleObj,pres,pres);
                  this.beginFeatureSubscribe(pres, visibleObj);
-                 awaitingFeatureData[visibleObj.toString()] = subElement;
+                 awaitingFeatureData[vString] = subElement;
              }
          }
      };
 
+
+     /**
+      Gets called by system whenever visibleObj is within proximity
+      range of pres.  Will trigger proxadded callbacks to be called
+      if we already have the featureData for visibleObj.  Otherwise,
+      queue visibleObj onto awaitingFeatureData.
+      */
+     // ProxManager.prototype.proxAddedEvent = function (pres,visibleObj)
+     // {
+     //     //ignore events where you have entered your own prox set.
+     //     if (pres.toString() == visibleObj.toString())
+     //         return;
+         
+     //     if (!(pres.toString() in pAddCB))
+     //     {
+     //         throw new Error('Cannot call add event callback because do ' +
+     //                         'not have associated presence in ProxManager.');
+     //     }
+
+
+         
+     //     if (visibleObj.toString() in haveFeatureDataFor)
+     //     {
+     //         //we already have feature data for this visible.  add pres
+     //         //as subscriber to haveFeatureDataFor map and trigger callback.
+     //         var subElement = haveFeatureDataFor[visibleObj.toString()];
+     //         subElement.addSubscriber(pres);
+     //         this.triggerAddCallback(pres,subElement.vis);
+     //     }
+     //     else
+     //     {
+     //         //we do not already have feature data for this visible.
+     //         //Check if we're waiting on feature data for this object.
+     //         //If we are, then, just add pres as a subscriber.  If we
+     //         //are not, initiate feature object subscription using
+     //         //pres as the requester.  If we are, waiting, then add
+     //         //pres as a subscriber for this feature data.
+     //         if (visibleObj.toString() in awaitingFeatureData)
+     //         {
+     //             var subElement = awaitingFeatureData[visibleObj.toString()];
+     //             subElement.addSubscriber(pres);
+     //         }
+     //         else
+     //         {
+     //             var subElement = new SubscriptionElement(visibleObj,pres,pres);
+     //             this.beginFeatureSubscribe(pres, visibleObj);
+     //             awaitingFeatureData[visibleObj.toString()] = subElement;
+     //         }
+     //     }
+     // };
+
+     
      //tells pres to listen for feature vector from visibleObj.
      //numTriesLeft should be left blank except when this function
      //calls itself.  (the idea is that it tries to get feature object
@@ -308,15 +373,17 @@ system.require('featureObject.em');
      ProxManager.prototype.subscribeComplete =
          function(pres,visibleObj,featureData)
      {
+         var vString = visibleObj.toString();
+         
          visibleObj.featureObject= featureData;
-         if (!(visibleObj.toString() in awaitingFeatureData))
+         if (!(vString in awaitingFeatureData))
          {
              throw new Error('Error in subscribeComplete.  No longer '+
                              'have visibleObj in awaitingFeatureData.');                 
          }
 
-         var subElement = awaitingFeatureData[visibleObj.toString()];
-         delete awaitingFeatureData[visibleObj.toString()];
+         var subElement = awaitingFeatureData[vString];
+         delete awaitingFeatureData[vString];
 
          
          if (subElement.noSubscribers())
@@ -332,7 +399,7 @@ system.require('featureObject.em');
          //and notify all subscribers that visibleObj (with
          //featureData) is in its prox result set and add visibleObj
          //to result set.
-         haveFeatureDataFor[visibleObj.toString()] = subElement;
+         haveFeatureDataFor[vString] = subElement;
          for (var s in subElement.subscribers)
          {
              this.triggerAddCallback(subElement.subscribers[s],
@@ -344,8 +411,9 @@ system.require('featureObject.em');
      //and add visibleObj to result set.
      ProxManager.prototype.triggerAddCallback = function(pres,visibleObj)
      {
-         pResultSet[pres.toString()][visibleObj.toString()] = visibleObj;
-         var pArray = pAddCB[pres.toString()];
+         var pString = pres.toString();
+         pResultSet[pString][visibleObj.toString()] = visibleObj;
+         var pArray = pAddCB[pString];
          //trigger all non-null non-undefined callbacks
          system.changeSelf(pres);
 	 for (var i in pArray)
@@ -366,25 +434,29 @@ system.require('featureObject.em');
      //haveFeatureDataFor.
      ProxManager.prototype.proxRemovedEvent = function (pres,visibleObj)
      {
+         var pString = pres.toString();
+         var vString = visibleObj.toString();
+
+         
          //ignore events where you have entered your own prox set.
-         if (pres.toString() == visibleObj.toString())
+         if (pString == vString)
              return;
 
          
-         if (visibleObj.toString() in awaitingFeatureData)
-             awaitingFeatureData[visibleObj.toString()].removeSubscriber(pres);                 
+         if (vString in awaitingFeatureData)
+             awaitingFeatureData[vString].removeSubscriber(pres);                 
          else
          {
              //this line ensures that visibleObj will maintain
              //featureData associated with stored vis.
-             visibleObj = haveFeatureDataFor[visibleObj.toString()].vis;
-             var subElem = haveFeatureDataFor[visibleObj.toString()];
+             visibleObj = haveFeatureDataFor[vString].vis;
+             var subElem = haveFeatureDataFor[vString];
              subElem.removeSubscriber(pres);
 
              if (subElem.noSubscribers())
              {
                  this.killSubscription(pres,visibleObj);
-                 delete haveFeatureDataFor[visibleObj.toString()];
+                 delete haveFeatureDataFor[vString];
              }
 
              //actually fire removed callback.
@@ -396,22 +468,24 @@ system.require('featureObject.em');
 
      ProxManager.prototype.triggerRemoveCallback = function(pres,visibleObj)
      {
-         if (!(pres.toString() in pRemCB))
+         var pString = pres.toString();
+         
+         if (!(pString in pRemCB))
          {
              throw new Error('Cannot call rem event callback because do ' +
                              'not have associated presence in ProxManager.');
          }
-         if (!(pres.toString() in pResultSet))
+         if (!(pString in pResultSet))
          {
              throw new Error('Cannot call rem event callback for presence ' +
                              'because no presence in pResultSet matches.');
          }
 
          //remove from to proxResultSet
-         delete pResultSet[pres.toString()][visibleObj.toString()];
+         delete pResultSet[pString][visibleObj.toString()];
 
          //actually issue callbacks
-         var pArray = pRemCB[pres.toString()];
+         var pArray = pRemCB[pString];
          system.changeSelf(pres);
          //trigger all non-null non-undefined callbacks
 
@@ -430,16 +504,16 @@ system.require('featureObject.em');
      function handleFeatureObjUpdates(updateMsg,sender)
      {
          var update = updateMsg.featureObjUpdate;
-
+         var sString = sender.toString();
          
-         if (!(sender.toString() in haveFeatureDataFor))
+         if (!(sString in haveFeatureDataFor))
          {
              throw new Error('Error upon reception of feature object ' +
                              'update.  Had no subscription to sender ' +
                              'of message.');
          }
 
-         var localVis = haveFeatureDataFor[sender.toString()].vis;
+         var localVis = haveFeatureDataFor[sString].vis;
          localVis.featureObject = update;
 
          //sends ack to other side so update sender knows we're still
