@@ -52,6 +52,8 @@ public:
     void testSingleWrite() {_base.testSingleWrite(); }
     void testSingleRead() {_base.testSingleRead(); }
     void testSingleInvalidRead() {_base.testSingleInvalidRead(); }
+    void testSingleCompare() {_base.testSingleCompare(); }
+    void testSingleInvalidCompare() {_base.testSingleInvalidCompare(); }
     void testSingleErase() {_base.testSingleErase(); }
 
     void testMultiWrite() {_base.testMultiWrite(); }

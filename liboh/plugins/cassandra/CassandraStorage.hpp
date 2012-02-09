@@ -57,6 +57,7 @@ public:
     virtual bool read(const Bucket& bucket, const Key& key, const CommitCallback& cb = 0, const String& timestamp="current");
     virtual bool rangeRead(const Bucket& bucket, const Key& start, const Key& finish, const CommitCallback& cb = 0, const String& timestamp="current");
     virtual bool rangeErase(const Bucket& bucket, const Key& start, const Key& finish, const CommitCallback& cb = 0, const String& timestamp="current");
+    virtual bool compare(const Bucket& bucket, const Key& key, const String& value, const CommitCallback& cb = 0, const String& timestamp="current");
     virtual bool count(const Bucket& bucket, const Key& start, const Key& finish, const CountCallback& cb = 0, const String& timestamp="current");
 
 
@@ -69,7 +70,6 @@ private:
     typedef std::vector<SliceRange> SliceRanges;
     typedef org::apache::cassandra::ColumnParent ColumnParent;
     typedef org::apache::cassandra::SlicePredicate SlicePredicate;
-
 
     typedef std::tr1::tuple<String,   //column family
                             String,   //row key
@@ -85,6 +85,7 @@ private:
         enum Type {
             Read,
             ReadRange,
+            Compare,
             Write,
             Erase,
             EraseRange,
@@ -98,7 +99,7 @@ private:
         StorageAction& operator=(const StorageAction& rhs);
 
         // Executes this action: push action to lists and wait for commitment
-        void execute(const Bucket& bucket, Columns* columns, Keys* eraseKeys, Keys* readKeys, SliceRanges* readRanges, SliceRanges* eraseRanges, const String& timestamp);
+        void execute(const Bucket& bucket, Columns* columns, Keys* eraseKeys, Keys* readKeys, SliceRanges* readRanges, ReadSet* compares, SliceRanges* eraseRanges, const String& timestamp);
 
         // Bucket is implicit, passed into execute
         Type type;
@@ -126,11 +127,10 @@ private:
 
     // Complete a commit back in the main thread, cleaning it up and dispatching the callback
     void completeCommit(Transaction* trans, CommitCallback cb, bool success, ReadSet* rs);
-    void completeRange(CommitCallback cb, bool success, ReadSet* rs);
     void completeCount(CountCallback cb, bool success, int32 count);
 
     // Call libcassandra methods to commit transcation
-    bool CassandraCommit(CassandraDBPtr db, const Bucket& bucket, Columns* columns, Keys* eraseKeys, Keys* readKeys, SliceRanges* readRanges, SliceRanges* eraseRanges, ReadSet* rs, const String& timestamp);
+    bool CassandraCommit(CassandraDBPtr db, const Bucket& bucket, Columns* columns, Keys* eraseKeys, Keys* readKeys, SliceRanges* readRanges, ReadSet* compares, SliceRanges* eraseRanges, ReadSet* rs, const String& timestamp);
 
     ObjectHostContext* mContext;
     BucketTransactions mTransactions;

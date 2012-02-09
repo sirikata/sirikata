@@ -67,7 +67,7 @@ CassandraStorage::StorageAction& CassandraStorage::StorageAction::operator=(cons
     return *this;
 }
 
-void CassandraStorage::StorageAction::execute(const Bucket& bucket, Columns* columns, Keys* eraseKeys, Keys* readKeys, SliceRanges* readRanges, SliceRanges* eraseRanges, const String& timestamp) {
+void CassandraStorage::StorageAction::execute(const Bucket& bucket, Columns* columns, Keys* eraseKeys, Keys* readKeys, SliceRanges* readRanges, ReadSet* compares, SliceRanges* eraseRanges, const String& timestamp) {
     switch(type) {
       case Read:
         {
@@ -82,6 +82,12 @@ void CassandraStorage::StorageAction::execute(const Bucket& bucket, Columns* col
             range.count = 100000; // currently, set large enough to read all the data
             readRanges->push_back(range);
         }
+        break;
+      case Compare:
+          {
+              (*readKeys).push_back(key);
+              (*compares)[key] = *value;
+          }
         break;
       case Write:
         {
@@ -135,10 +141,11 @@ void CassandraStorage::initDB() {
     mDB = db;
 }
 
-bool CassandraStorage::CassandraCommit(CassandraDBPtr db, const Bucket& bucket, Columns* columns, Keys* eraseKeys, Keys* readKeys, SliceRanges* readRanges, SliceRanges* eraseRanges, ReadSet* rs, const String& timestamp) {
+bool CassandraStorage::CassandraCommit(CassandraDBPtr db, const Bucket& bucket, Columns* columns, Keys* eraseKeys, Keys* readKeys, SliceRanges* readRanges, ReadSet* compares, SliceRanges* eraseRanges, ReadSet* rs, const String& timestamp) {
     // FIXME *THIS ISN'T EVEN TRYING TO BE ATOMIC*
 
     bool success = true;
+
     if((*readKeys).size()>0) {
         try{
             *rs=db->db()->getColumnsValues(bucket.rawHexData(),CF_NAME, timestamp, *readKeys);  // batch read
@@ -147,6 +154,18 @@ bool CassandraStorage::CassandraCommit(CassandraDBPtr db, const Bucket& bucket, 
             success = false;
         }
     }
+    // Compare keys come out with the read set. We compare values and remove
+    // them from the results
+    for(ReadSet::iterator it = compares->begin(); success && it != compares->end(); it++) {
+        ReadSet::iterator read_it = rs->find(it->first);
+        if (read_it == rs->end() ||
+            read_it->second != it->second) {
+            success = false;
+            break;
+        }
+        rs->erase(read_it);
+    }
+
     for(uint32 i = 0; success && i < readRanges->size(); i++) {
         try{
             ReadSet rangeData = db->db()->getColumnsValues(bucket.rawHexData(),CF_NAME, timestamp, (*readRanges)[i]);
@@ -246,13 +265,14 @@ void CassandraStorage::executeCommit(const Bucket& bucket, Transaction* trans, C
     Keys* readKeys = new Keys;
     SliceRanges* readRanges = new SliceRanges;
     SliceRanges* eraseRanges = new SliceRanges;
+    ReadSet* compares = new ReadSet;
 
     for (Transaction::iterator it = trans->begin(); it != trans->end(); it++) {
-        (*it).execute(bucket, columns, eraseKeys, readKeys, readRanges, eraseRanges, timestamp);
+        (*it).execute(bucket, columns, eraseKeys, readKeys, readRanges, compares, eraseRanges, timestamp);
     }
 
     bool success = true;
-    success = CassandraCommit(mDB, bucket, columns, eraseKeys, readKeys, readRanges, eraseRanges, rs, timestamp);
+    success = CassandraCommit(mDB, bucket, columns, eraseKeys, readKeys, readRanges, compares, eraseRanges, rs, timestamp);
 
     if (rs->empty() || !success) {
         delete rs;
@@ -310,6 +330,22 @@ bool CassandraStorage::read(const Bucket& bucket, const Key& key, const CommitCa
     StorageAction& action = trans->back();
     action.type = StorageAction::Read;
     action.key = key;
+
+    // Run commit if this is a one-off transaction
+    if (is_new)
+        commitTransaction(bucket, cb, timestamp);
+
+    return true;
+}
+
+bool CassandraStorage::compare(const Bucket& bucket, const Key& key, const String& value, const CommitCallback& cb, const String& timestamp) {
+    bool is_new = false;
+    Transaction* trans = getTransaction(bucket, &is_new);
+    trans->push_back(StorageAction());
+    StorageAction& action = trans->back();
+    action.type = StorageAction::Compare;
+    action.key = key;
+    action.value = new String(value);
 
     // Run commit if this is a one-off transaction
     if (is_new)

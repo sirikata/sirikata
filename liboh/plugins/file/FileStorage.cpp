@@ -266,6 +266,10 @@ bool FileStorage::read(const Bucket& bucket, const Key& key, const CommitCallbac
     return true;
 }
 
+bool FileStorage::compare(const Bucket& bucket, const Key& key, const String& value, const CommitCallback& cb, const String& timestamp) {
+    return true;
+}
+
 bool FileStorage::rangeRead(const Bucket& bucket, const Key& start, const Key& finish, const CommitCallback& cb, const String& timestamp) {
 	return true;
 }

@@ -222,6 +222,28 @@ public:
         waitForTransaction();
     }
 
+    void testSingleCompare() {
+        // NOTE: Depends on above write
+        using std::tr1::placeholders::_1;
+        using std::tr1::placeholders::_2;
+
+        _storage->compare(_buckets[0], "a", "abcde",
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, true, ReadSet(), _1, _2)
+        );
+        waitForTransaction();
+    }
+
+    void testSingleInvalidCompare() {
+        // NOTE: Depends on above write
+        using std::tr1::placeholders::_1;
+        using std::tr1::placeholders::_2;
+
+        _storage->compare(_buckets[0], "a", "wrong_key_value",
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, false, ReadSet(), _1, _2)
+        );
+        waitForTransaction();
+    }
+
     void testSingleErase() {
         using std::tr1::placeholders::_1;
         using std::tr1::placeholders::_2;

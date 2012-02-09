@@ -70,7 +70,10 @@ SQLiteStorage::StorageAction& SQLiteStorage::StorageAction::operator=(const Stor
 bool SQLiteStorage::StorageAction::execute(SQLiteDBPtr db, const Bucket& bucket, ReadSet* rs) {
     bool success = true;
     switch(type) {
+        // Read and Compare are identical except that read stores the value and
+        // compare checks against its reference data.
       case Read:
+      case Compare:
           {
               String value_query = "SELECT value FROM ";
               value_query += "\"" TABLE_NAME "\"";
@@ -89,10 +92,20 @@ bool SQLiteStorage::StorageAction::execute(SQLiteDBPtr db, const Bucket& bucket,
                       int step_rc = sqlite3_step(value_query_stmt);
                       while(step_rc == SQLITE_ROW) {
                           newStep = false;
-                          (*rs)[key] = String(
-                              (const char*)sqlite3_column_text(value_query_stmt, 0),
-                              sqlite3_column_bytes(value_query_stmt, 0)
-                          );
+                          if (type == Read) {
+                              (*rs)[key] = String(
+                                  (const char*)sqlite3_column_text(value_query_stmt, 0),
+                                  sqlite3_column_bytes(value_query_stmt, 0)
+                              );
+                          }
+                          else if (type == Compare) {
+                              assert(value != NULL);
+                              String db_val(
+                                  (const char*)sqlite3_column_text(value_query_stmt, 0),
+                                  sqlite3_column_bytes(value_query_stmt, 0)
+                              );
+                              success = success && (db_val == *value);
+                          }
                           step_rc = sqlite3_step(value_query_stmt);
                       }
                       if (step_rc != SQLITE_DONE) {
@@ -485,6 +498,25 @@ bool SQLiteStorage::read(const Bucket& bucket, const Key& key, const CommitCallb
     }
 
     return true;
+}
+
+bool SQLiteStorage::compare(const Bucket& bucket, const Key& key, const String& value, const CommitCallback& cb, const String& timestamp) {
+    bool is_new = false;
+    Transaction* trans = getTransaction(bucket, &is_new);
+    trans->push_back(StorageAction());
+    StorageAction& action = trans->back();
+    action.type = StorageAction::Compare;
+    action.key = key;
+    action.value = new String(value);
+
+    // Run commit if this is a one-off transaction
+    if (is_new)
+    {
+        commitTransaction(bucket, cb);
+    }
+
+    return true;
+
 }
 
 bool SQLiteStorage::rangeRead(const Bucket& bucket, const Key& start, const Key& finish, const CommitCallback& cb, const String& timestamp) {
