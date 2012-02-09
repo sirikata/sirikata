@@ -44,9 +44,10 @@ public:
      *  \param oh the ObjectHost to use to convert the times
      *  \param from_space the space to convert the time from
      */
-    TimedMotionVector3f locationWithLocalTime(ObjectHost* oh, const SpaceID& from_space) const;
+    virtual TimedMotionVector3f locationWithLocalTime(ObjectHost* oh, const SpaceID& from_space) const;
     /** Get the location in the update but convert it so the time is in local
-     *  time, using the given space as the source.
+     *  time, using the given space as the source. These are wrappers around the
+     *  version that takes an ObjectHost.
      *  \param ho the HostedObject to use to convert the times
      *  \param from_space the space to convert the time from
      */
@@ -62,9 +63,10 @@ public:
      *  \param oh the ObjectHost to use to convert the times
      *  \param from_space the space to convert the time from
      */
-    TimedMotionQuaternion orientationWithLocalTime(ObjectHost* oh, const SpaceID& from_space) const;
+    virtual TimedMotionQuaternion orientationWithLocalTime(ObjectHost* oh, const SpaceID& from_space) const;
     /** Get the orientation in the update but convert it so the time is in local
-     *  time, using the given space as the source.
+     *  time, using the given space as the source. These are wrappers around the
+     *  versions that take an ObjectHost.
      *  \param ho the HostedObject to use to convert the times
      *  \param from_space the space to convert the time from
      */
