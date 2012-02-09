@@ -657,6 +657,11 @@ void LibproxProximity::localObjectAdded(const UUID& uuid, bool agg, const TimedM
 }
 void LibproxProximity::localObjectRemoved(const UUID& uuid, bool agg) {
     removeObjectSize(uuid);
+
+    mProxStrand->post(
+        std::tr1::bind(&LibproxProximity::removeStaticObjectTimeout, this, uuid),
+        "LibproxProximity::removeStaticObjectTimeout"
+    );
 }
 void LibproxProximity::localLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval) {
     updateQuery(uuid, newval, mLocService->bounds(uuid), NoUpdateSolidAngle, NoUpdateMaxResults);
@@ -666,6 +671,12 @@ void LibproxProximity::localLocationUpdated(const UUID& uuid, bool agg, const Ti
 void LibproxProximity::localBoundsUpdated(const UUID& uuid, bool agg, const BoundingSphere3f& newval) {
     updateQuery(uuid, mLocService->location(uuid), newval, NoUpdateSolidAngle, NoUpdateMaxResults);
     updateObjectSize(uuid, newval.radius());
+}
+void LibproxProximity::replicaObjectRemoved(const UUID& uuid) {
+    mProxStrand->post(
+        std::tr1::bind(&LibproxProximity::removeStaticObjectTimeout, this, uuid),
+        "LibproxProximity::removeStaticObjectTimeout"
+    );
 }
 void LibproxProximity::replicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) {
     if (mSeparateDynamicObjects)
@@ -682,6 +693,11 @@ void LibproxProximity::updatedSegmentation(CoordinateSegmentation* cseg, const s
 // PROX Thread: Everything after this should only be called from within the prox thread.
 
 void LibproxProximity::tickQueryHandler(ProxQueryHandler* qh[NUM_OBJECT_CLASSES]) {
+    // Not really any better place to do this. We'll call this more frequently
+    // than necessary by putting it here, but hopefully it doesn't matter since
+    // most of the time nothing will be done.
+    processExpiredStaticObjectTimeouts();
+
     Time simT = mContext->simTime();
     for(int i = 0; i < NUM_OBJECT_CLASSES; i++) {
         if (qh[i] != NULL)
@@ -1132,6 +1148,29 @@ void LibproxProximity::handleCheckObjectClassForHandlers(const UUID& objid, bool
     handlers[swap_in]->addObject(objid);
 }
 
+void LibproxProximity::trySwapHandlers(bool is_local, const UUID& objid, bool is_static) {
+    handleCheckObjectClassForHandlers(objid, is_static, mObjectQueryHandler);
+    if (is_local)
+        handleCheckObjectClassForHandlers(objid, is_static, mServerQueryHandler);
+}
+
+void LibproxProximity::removeStaticObjectTimeout(const UUID& objid) {
+    StaticObjectsByID& by_id = mStaticObjectTimeouts.get<objid_tag>();
+    StaticObjectsByID::iterator it = by_id.find(objid);
+    if (it == by_id.end()) return;
+    by_id.erase(it);
+}
+
+void LibproxProximity::processExpiredStaticObjectTimeouts() {
+    Time curt = mLocService->context()->recentSimTime();
+    StaticObjectsByExpiration& by_expires = mStaticObjectTimeouts.get<expires_tag>();
+    while(!by_expires.empty() &&
+        by_expires.begin()->expires < curt) {
+        trySwapHandlers(by_expires.begin()->local, by_expires.begin()->objid, true);
+        by_expires.erase(by_expires.begin());
+    }
+}
+
 void LibproxProximity::handleCheckObjectClass(bool is_local, const UUID& objid, const TimedMotionVector3f& newval) {
     assert(mSeparateDynamicObjects == true);
 
@@ -1139,9 +1178,20 @@ void LibproxProximity::handleCheckObjectClass(bool is_local, const UUID& objid, 
     // static/dynamic. We need to do this for both the local (object query) and
     // global (server query) handlers.
     bool is_static = velocityIsStatic(newval.velocity());
-    handleCheckObjectClassForHandlers(objid, is_static, mObjectQueryHandler);
-    if (is_local)
-        handleCheckObjectClassForHandlers(objid, is_static, mServerQueryHandler);
+    // If it's moving, do the check immediately since we need to move it into
+    // the dynamic tree right away; also make sure it's not in the queue for
+    // being moved to the static tree. Otherwise queue it up to be processed
+    // after a delay
+    if (!is_static) {
+        trySwapHandlers(is_local, objid, is_static);
+        removeStaticObjectTimeout(objid);
+    }
+    else {
+        // Make sure previous entry is cleared out
+        removeStaticObjectTimeout(objid);
+        // And insert a new one
+        mStaticObjectTimeouts.insert(StaticObjectTimeout(objid, mContext->recentSimTime() + mMoveToStaticDelay, is_local));
+    }
 }
 
 } // namespace Sirikata

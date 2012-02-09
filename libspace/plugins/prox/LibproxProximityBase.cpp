@@ -166,6 +166,7 @@ LibproxProximityBase::LibproxProximityBase(SpaceContext* ctx, LocationService* l
     // Deal with static/dynamic split
     mSeparateDynamicObjects = GetOptionValue<bool>(OPT_PROX_SPLIT_DYNAMIC);
     mNumQueryHandlers = (mSeparateDynamicObjects ? 2 : 1);
+    mMoveToStaticDelay = Duration::minutes(1);
 }
 
 LibproxProximityBase::~LibproxProximityBase() {
