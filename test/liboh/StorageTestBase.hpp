@@ -340,7 +340,7 @@ public:
 
     }
 
-    void testAtmoicWrite() {
+    void testAtomicWrite() {
         using std::tr1::placeholders::_1;
         using std::tr1::placeholders::_2;
 
@@ -382,7 +382,7 @@ public:
         waitForTransaction();
     }
 
-    void testAtmoicWriteErase() {
+    void testAtomicWriteErase() {
         using std::tr1::placeholders::_1;
         using std::tr1::placeholders::_2;
 
@@ -392,6 +392,14 @@ public:
         ReadSet rs2;
         rs2["k"] = "klmno";
 
+        // To erase and ensure avoiding an error, first write to make
+        // sure the value is there, then erase. Otherwise, erasing
+        // could fail on the first run (empty db) and succeed
+        // otherwise.
+        _storage->write(_buckets[0], "k", "x",
+             std::tr1::bind(&StorageTestBase::checkReadValues, this, true, ReadSet(), _1, _2)
+         );
+         waitForTransaction();
         _storage->erase(_buckets[0], "k",
              std::tr1::bind(&StorageTestBase::checkReadValues, this, true, ReadSet(), _1, _2)
          );

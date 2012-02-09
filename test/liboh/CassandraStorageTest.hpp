@@ -63,8 +63,8 @@ public:
     void testMultiSomeInvalidRead() {_base.testMultiSomeInvalidRead(); }
     void testMultiErase() {_base.testMultiErase(); }
 
-    void testAtmoicWrite() {_base.testAtmoicWrite(); }
-    void testAtmoicWriteErase() {_base.testAtmoicWriteErase(); }
+    void testAtomicWrite() {_base.testAtomicWrite(); }
+    void testAtomicWriteErase() {_base.testAtomicWriteErase(); }
 
     void testRangeRead() {_base.testRangeRead(); }
     void testCount() {_base.testCount(); }
