@@ -77,7 +77,7 @@ void IOStrand::dispatch(const IOCallback& handler, const char* tag) {
         mImpl->wrap(
             std::tr1::bind(&IOStrand::decrementCount, this, Timer::now(), handler, tag)
         ),
-        "(IOStrands)"
+        "(IOStrands)",tag
     );
 #else
     mService.dispatch( mImpl->wrap( handler ) );
@@ -97,7 +97,7 @@ void IOStrand::post(const IOCallback& handler, const char* tag) {
         mImpl->wrap(
             std::tr1::bind(&IOStrand::decrementCount, this, Timer::now(), handler, tag)
         ),
-        "(IOStrands)"
+        "(IOStrands)", tag
     );
 #else
     mService.post( mImpl->wrap( handler ) );
@@ -118,7 +118,7 @@ void IOStrand::post(const Duration& waitFor, const IOCallback& handler, const ch
         mImpl->wrap(
             std::tr1::bind(&IOStrand::decrementTimerCount, this, Timer::now(), waitFor, handler, tag)
         ),
-        "(IOStrands)"
+        "(IOStrands)",tag
     );
 #else
     mService.post(waitFor, mImpl->wrap( handler ) );
