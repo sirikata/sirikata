@@ -225,7 +225,7 @@ system.require('featureObject.em');
              throw new Error('Cannot call add event callback because do ' +
                              'not have associated presence in ProxManager.');
          }
-         
+
          if (vString in haveFeatureDataFor)
          {
              //we already have feature data for this visible.  add pres
@@ -236,23 +236,10 @@ system.require('featureObject.em');
          }
          else
          {
-             //we do not already have feature data for this visible.
-             //Check if we're waiting on feature data for this object.
-             //If we are, then, just add pres as a subscriber.  If we
-             //are not, initiate feature object subscription using
-             //pres as the requester.  If we are, waiting, then add
-             //pres as a subscriber for this feature data.
-             if (vString in awaitingFeatureData)
-             {
-                 var subElement = awaitingFeatureData[vString];
-                 subElement.addSubscriber(pres);
-             }
-             else
-             {
-                 var subElement = new SubscriptionElement(visibleObj,pres,pres);
-                 this.beginFeatureSubscribe(pres, visibleObj);
-                 awaitingFeatureData[vString] = subElement;
-             }
+             //short-circuits: does not send message to get feature data.
+             var subElement = new SubscriptionElement(visibleObj,pres,pres);
+             haveFeatureDataFor[vString] = subElement;
+             this.triggerAddCallback(pres,subElement.vis);
          }
      };
 
@@ -359,6 +346,9 @@ system.require('featureObject.em');
      //feature data from visibleObj.
      ProxManager.prototype.killSubscription = function(pres,visibleObj)
      {
+         //short-circuits.
+         return;
+         
          //see handleFeautreObjectRequestUnsubscribe message handler
          //in featureObject.em to see what the format of a
          //killSubscription message should look like.
