@@ -582,6 +582,7 @@ public:
         _storage->commitTransaction(_buckets[0],
             std::tr1::bind(&StorageTestBase::checkReadValues, this, true, rs, _1, _2)
         );
+        waitForTransaction();
     }
     void testRollback() {
         // Test that rollbacks work correctly if a request fails.
@@ -608,7 +609,8 @@ public:
         _storage->commitTransaction(_buckets[0],
             std::tr1::bind(&StorageTestBase::checkReadValues, this, false, ReadSet(), _1, _2)
         );
-        verifyRollbackData("foo", "baz");
+        waitForTransaction();
+        verifyRollbackData("foo", "bar");
         // Variant with different key ordering
         resetRollbackData();
         _storage->beginTransaction(_buckets[0]);
@@ -617,6 +619,7 @@ public:
         _storage->commitTransaction(_buckets[0],
             std::tr1::bind(&StorageTestBase::checkReadValues, this, false, ReadSet(), _1, _2)
         );
+        waitForTransaction();
         verifyRollbackData("baz", "baz");
     }
 
