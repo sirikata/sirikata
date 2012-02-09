@@ -70,6 +70,8 @@ public:
     void testRangeErase() {_base.testRangeErase(); }
 
     void testAllTransaction() {_base.testAllTransaction(); }
+
+    void testRollback() {_base.testRollback(); }
 };
 
 const String SQLiteStorageTest::dbfile("test.db");

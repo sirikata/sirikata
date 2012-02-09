@@ -558,6 +558,68 @@ public:
         );
         waitForTransaction();
     }
+
+
+    void resetRollbackData() {
+        using std::tr1::placeholders::_1;
+        using std::tr1::placeholders::_2;
+        // Setup some data
+        _storage->beginTransaction(_buckets[0]);
+        _storage->write(_buckets[0], "foo", "bar");
+        _storage->write(_buckets[0], "baz", "baz");
+        _storage->commitTransaction(_buckets[0],
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, true, ReadSet(), _1, _2)
+        );
+        waitForTransaction();
+    }
+    void verifyRollbackData(String key, String value) {
+        using std::tr1::placeholders::_1;
+        using std::tr1::placeholders::_2;
+        ReadSet rs;
+        rs[key] = value;
+        _storage->beginTransaction(_buckets[0]);
+        _storage->read(_buckets[0], key);
+        _storage->commitTransaction(_buckets[0],
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, true, rs, _1, _2)
+        );
+    }
+    void testRollback() {
+        // Test that rollbacks work correctly if a request fails.
+        // This is a bit tricky to test because operations can be
+        // grouped so that, e.g., reads and compares are verified
+        // before any changes occur.
+        //
+        // To test it, we run a few different tests involving
+        // combinations of valid and invalid writes/erases. To try to
+        // be robust, we also change the order of the keys being
+        // operated on so that the order in which the parts of the
+        // request are performed doesn't affect the results: one of
+        // each pair should fail (we do this by testing with, e.g.,
+        // keys [a, b], and [c, b]).
+
+        using std::tr1::placeholders::_1;
+        using std::tr1::placeholders::_2;
+
+        // Valid write, invalid erase -> should get original value
+        resetRollbackData();
+        _storage->beginTransaction(_buckets[0]);
+        _storage->write(_buckets[0], "foo", "xxx");
+        _storage->erase(_buckets[0], "car");
+        _storage->commitTransaction(_buckets[0],
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, false, ReadSet(), _1, _2)
+        );
+        verifyRollbackData("foo", "baz");
+        // Variant with different key ordering
+        resetRollbackData();
+        _storage->beginTransaction(_buckets[0]);
+        _storage->write(_buckets[0], "baz", "xxx");
+        _storage->erase(_buckets[0], "car");
+        _storage->commitTransaction(_buckets[0],
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, false, ReadSet(), _1, _2)
+        );
+        verifyRollbackData("baz", "baz");
+    }
+
 };
 
 const OH::Storage::Bucket StorageTestBase::_buckets[2] = {
