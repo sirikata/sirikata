@@ -168,6 +168,9 @@ public:
      */
     virtual bool rangeErase(const Bucket& bucket, const Key& start, const Key& finish, const CommitCallback& cb = 0, const String& timestamp="current") = 0;
 
+    // TODO(ewencp) this interface seems broken -- because it uses a different
+    // callback, it doesn't fit in with transactions. This currently *has* to be
+    // handled separately from other actions...
     /**
        @param {Key} from the start key of range of keys to count
        @param {Key} finish the end key of range of keys to count
