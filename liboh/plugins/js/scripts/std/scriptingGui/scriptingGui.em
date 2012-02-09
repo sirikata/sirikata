@@ -763,6 +763,10 @@ system.require('std/core/simpleInput.em');
              {
                  var val = 
                      $('#' + actionListId()).val();
+
+                 //if nothing is selected, then parseInt(val) will
+                 //return NaN, which won't be in actionList, and will
+                 //have no effect in changeActionText.
                  changeActionText(parseInt(val));
              });
 
@@ -825,8 +829,6 @@ system.require('std/core/simpleInput.em');
                      return;
                  }
 
-
-
                  //var toSaveText = $('#' + actionTareaId()).val();
                  var toSaveText = actionEditor.getSession().getValue();
                  
@@ -855,7 +857,7 @@ system.require('std/core/simpleInput.em');
 
                  //see comments in click handler for saveActionButton.
                  var toSaveText = actionEditor.getSession().getValue();
-
+                 
                  allActions[currentlySelectedAction].text = toSaveText;
                  sirikata.event(
                      'saveAndExecuteAction',currentlySelectedAction,
@@ -1024,24 +1026,30 @@ system.require('std/core/simpleInput.em');
           */
          function changeActionText(idActSelected)
          {
+             //takes care of case where you may have stray clicks in
+             //action selector
+             if (typeof(allActions) == 'undefined')
+                 return;
+             
              currentlySelectedAction = idActSelected;
              var textToSetTo = '';
-             
+
              if (typeof(idActSelected) !='undefined')
              {
-                 if (! idActSelected in allActions)
+                 if (! (idActSelected in allActions))
                  {                     
-                     sirikata.log('error','action ids out of ' +
-                                  'sync with actions in scripting gui.');
+                     sirikata.log('error','action ids out of '      +
+                                  'sync with actions in scripting ' +
+                                  'gui, or received stray action click.');
                      return;
                  }
                  textToSetTo = allActions[idActSelected].text;
              }
-
+             
              //actually update textarea with correct text
              actionEditor.getSession().setValue(textToSetTo);
          }
-         
+
          
          /**
           \param {object: <int:std.ScriptingGui.Action>} actionMap
