@@ -58,6 +58,7 @@ SQLiteStorage::StorageAction::~StorageAction() {
 SQLiteStorage::StorageAction& SQLiteStorage::StorageAction::operator=(const StorageAction& rhs) {
     type = rhs.type;
     key = rhs.key;
+    keyEnd = rhs.keyEnd;
     if (rhs.value != NULL)
         value = new String(*(rhs.value));
     else
@@ -69,7 +70,10 @@ SQLiteStorage::StorageAction& SQLiteStorage::StorageAction::operator=(const Stor
 bool SQLiteStorage::StorageAction::execute(SQLiteDBPtr db, const Bucket& bucket, ReadSet* rs) {
     bool success = true;
     switch(type) {
+        // Read and Compare are identical except that read stores the value and
+        // compare checks against its reference data.
       case Read:
+      case Compare:
           {
               String value_query = "SELECT value FROM ";
               value_query += "\"" TABLE_NAME "\"";
@@ -88,10 +92,20 @@ bool SQLiteStorage::StorageAction::execute(SQLiteDBPtr db, const Bucket& bucket,
                       int step_rc = sqlite3_step(value_query_stmt);
                       while(step_rc == SQLITE_ROW) {
                           newStep = false;
-                          (*rs)[key] = String(
-                              (const char*)sqlite3_column_text(value_query_stmt, 0),
-                              sqlite3_column_bytes(value_query_stmt, 0)
-                          );
+                          if (type == Read) {
+                              (*rs)[key] = String(
+                                  (const char*)sqlite3_column_text(value_query_stmt, 0),
+                                  sqlite3_column_bytes(value_query_stmt, 0)
+                              );
+                          }
+                          else if (type == Compare) {
+                              assert(value != NULL);
+                              String db_val(
+                                  (const char*)sqlite3_column_text(value_query_stmt, 0),
+                                  sqlite3_column_bytes(value_query_stmt, 0)
+                              );
+                              success = success && (db_val == *value);
+                          }
                           step_rc = sqlite3_step(value_query_stmt);
                       }
                       if (step_rc != SQLITE_DONE) {
@@ -111,6 +125,51 @@ bool SQLiteStorage::StorageAction::execute(SQLiteDBPtr db, const Bucket& bucket,
               }
           }
         break;
+      case ReadRange:
+          {
+              String value_query = "SELECT key, value FROM ";
+              value_query += "\"" TABLE_NAME "\"";
+              value_query += " WHERE object == \'" + bucket.rawHexData() + "\' AND key BETWEEN ? AND ?";
+
+              int rc;
+              char* remain;
+              sqlite3_stmt* value_query_stmt;
+              rc = sqlite3_prepare_v2(db->db(), value_query.c_str(), -1, &value_query_stmt, (const char**)&remain);
+              SQLite::check_sql_error(db->db(), rc, NULL, "Error preparing value query statement");
+              if (rc==SQLITE_OK){
+                  rc = sqlite3_bind_text(value_query_stmt, 1, key.c_str(), (int)key.size(), SQLITE_TRANSIENT);
+                  success = success && !SQLite::check_sql_error(db->db(), rc, NULL, "Error binding start key to value query statement");
+                  rc = sqlite3_bind_text(value_query_stmt, 2, keyEnd.c_str(), (int)keyEnd.size(), SQLITE_TRANSIENT);
+                  success = success && !SQLite::check_sql_error(db->db(), rc, NULL, "Error binding finish key to value query statement");
+                  if (rc==SQLITE_OK) {
+                      int step_rc = sqlite3_step(value_query_stmt);
+                      int nread = 0;
+                      while(step_rc == SQLITE_ROW) {
+                          nread++;
+                          String key(
+                              (const char*)sqlite3_column_text(value_query_stmt, 0),
+                              sqlite3_column_bytes(value_query_stmt, 0)
+                          );
+                          String value(
+                              (const char*)sqlite3_column_text(value_query_stmt, 1),
+                              sqlite3_column_bytes(value_query_stmt, 1)
+                          );
+                          (*rs)[key] = value;
+                          step_rc = sqlite3_step(value_query_stmt);
+                      }
+                      if (nread == 0)
+                          success = false;
+                      if (step_rc != SQLITE_DONE) {
+                          // reset the statement so it'll clean up properly
+                          rc = sqlite3_reset(value_query_stmt);
+                          success = success && !SQLite::check_sql_error(db->db(), rc, NULL, "Error finalizing value query statement");
+                      }
+                  }
+              }
+              rc = sqlite3_finalize(value_query_stmt);
+              success = success && !SQLite::check_sql_error(db->db(), rc, NULL, "Error finalizing value query statement");
+          }
+    break;
       case Write:
       case Erase:
           {
@@ -163,6 +222,31 @@ bool SQLiteStorage::StorageAction::execute(SQLiteDBPtr db, const Bucket& bucket,
               success = success && !SQLite::check_sql_error(db->db(), rc, NULL, "Error finalizing value insert statement");
           }
         break;
+      case EraseRange:
+          {
+              String value_delete = "DELETE FROM ";
+              value_delete += "\"" TABLE_NAME "\"";
+              value_delete += " WHERE object = \'" + bucket.rawHexData() + "\' AND key BETWEEN ? AND ?";
+
+              int rc;
+              char* remain;
+              sqlite3_stmt* value_delete_stmt;
+              rc = sqlite3_prepare_v2(db->db(), value_delete.c_str(), -1, &value_delete_stmt, (const char**)&remain);
+              success = success && !SQLite::check_sql_error(db->db(), rc, NULL, "Error preparing value delete statement");
+
+              rc = sqlite3_bind_text(value_delete_stmt, 1, key.c_str(), (int)key.size(), SQLITE_TRANSIENT);
+              success = success && !SQLite::check_sql_error(db->db(), rc, NULL, "Error binding start key to value delete statement");
+              rc = sqlite3_bind_text(value_delete_stmt, 2, keyEnd.c_str(), (int)keyEnd.size(), SQLITE_TRANSIENT);
+              success = success && !SQLite::check_sql_error(db->db(), rc, NULL, "Error binding finish key to value delete statement");
+
+              int step_rc = sqlite3_step(value_delete_stmt);
+              if (step_rc != SQLITE_OK && step_rc != SQLITE_DONE)
+                  sqlite3_reset(value_delete_stmt); // allow this to be cleaned up
+
+              rc = sqlite3_finalize(value_delete_stmt);
+              success = success && !SQLite::check_sql_error(db->db(), rc, NULL, "Error finalizing value delete statement");
+          }
+          break;
       case Error:
         SILOG(sqlite-storage, fatal, "Tried to execute an invalid StorageAction.");
         break;
@@ -416,108 +500,61 @@ bool SQLiteStorage::read(const Bucket& bucket, const Key& key, const CommitCallb
     return true;
 }
 
-bool SQLiteStorage::rangeRead(const Bucket& bucket, const Key& start, const Key& finish, const CommitCallback& cb, const String& timestamp) {
-	String value_query = "SELECT key, value FROM ";
-    value_query += "\"" TABLE_NAME "\"";
-    value_query += " WHERE object == \'" + bucket.rawHexData() + "\' AND key BETWEEN ? AND ?";
+bool SQLiteStorage::compare(const Bucket& bucket, const Key& key, const String& value, const CommitCallback& cb, const String& timestamp) {
+    bool is_new = false;
+    Transaction* trans = getTransaction(bucket, &is_new);
+    trans->push_back(StorageAction());
+    StorageAction& action = trans->back();
+    action.type = StorageAction::Compare;
+    action.key = key;
+    action.value = new String(value);
 
-    mIOService->post(
-        std::tr1::bind(&SQLiteStorage::executeRangeRead, this, value_query, start, finish, cb),
-        "SQLiteStorage::executeRangeRead"
-    );
-    return true;
-}
-void SQLiteStorage::executeRangeRead(const String value_query, const Key& start, const Key& finish, CommitCallback cb) {
-	bool success = true;
-	ReadSet* rs = new ReadSet;
-
-    int rc;
-    char* remain;
-    sqlite3_stmt* value_query_stmt;
-    rc = sqlite3_prepare_v2(mDB->db(), value_query.c_str(), -1, &value_query_stmt, (const char**)&remain);
-    SQLite::check_sql_error(mDB->db(), rc, NULL, "Error preparing value query statement");
-    if (rc==SQLITE_OK){
-        rc = sqlite3_bind_text(value_query_stmt, 1, start.c_str(), (int)start.size(), SQLITE_TRANSIENT);
-        success = success && !SQLite::check_sql_error(mDB->db(), rc, NULL, "Error binding start key to value query statement");
-        rc = sqlite3_bind_text(value_query_stmt, 2, finish.c_str(), (int)finish.size(), SQLITE_TRANSIENT);
-        success = success && !SQLite::check_sql_error(mDB->db(), rc, NULL, "Error binding finish key to value query statement");
-        if (rc==SQLITE_OK) {
-        	int step_rc = sqlite3_step(value_query_stmt);
-        	while(step_rc == SQLITE_ROW) {
-        		String key(
-        				(const char*)sqlite3_column_text(value_query_stmt, 0),
-        				sqlite3_column_bytes(value_query_stmt, 0)
-        		);
-        		String value(
-        				(const char*)sqlite3_column_text(value_query_stmt, 1),
-        				sqlite3_column_bytes(value_query_stmt, 1)
-        		);
-        		(*rs)[key] = value;
-        		step_rc = sqlite3_step(value_query_stmt);
-        	}
-        	if(rs->size()==0)
-        		success = false;
-            if (step_rc != SQLITE_DONE) {
-                // reset the statement so it'll clean up properly
-                rc = sqlite3_reset(value_query_stmt);
-                success = success && !SQLite::check_sql_error(mDB->db(), rc, NULL, "Error finalizing value query statement");
-            }
-        }
+    // Run commit if this is a one-off transaction
+    if (is_new)
+    {
+        commitTransaction(bucket, cb);
     }
-    rc = sqlite3_finalize(value_query_stmt);
-    success = success && !SQLite::check_sql_error(mDB->db(), rc, NULL, "Error finalizing value query statement");
 
-    mContext->mainStrand->post(
-        std::tr1::bind(&SQLiteStorage::completeRange, this, cb, success, rs),
-        "SQLiteStorage::completeRange"
-    );
+    return true;
+
 }
-void SQLiteStorage::completeRange(CommitCallback cb, bool success, ReadSet* rs) {
-    if (cb) cb(success, rs);
+
+bool SQLiteStorage::rangeRead(const Bucket& bucket, const Key& start, const Key& finish, const CommitCallback& cb, const String& timestamp) {
+    bool is_new = false;
+    Transaction* trans = getTransaction(bucket, &is_new);
+    trans->push_back(StorageAction());
+    StorageAction& action = trans->back();
+    action.type = StorageAction::ReadRange;
+    action.key = start;
+    action.keyEnd = finish;
+    // Run commit if this is a one-off transaction
+    if (is_new)
+    {
+        commitTransaction(bucket, cb);
+    }
+
+    return true;
 }
 
 bool SQLiteStorage::rangeErase(const Bucket& bucket, const Key& start, const Key& finish, const CommitCallback& cb, const String& timestamp) {
-    String value_delete = "DELETE FROM ";
-    value_delete += "\"" TABLE_NAME "\"";
-    value_delete += " WHERE object = \'" + bucket.rawHexData() + "\' AND key BETWEEN ? AND ?";
+    bool is_new = false;
+    Transaction* trans = getTransaction(bucket, &is_new);
+    trans->push_back(StorageAction());
+    StorageAction& action = trans->back();
+    action.type = StorageAction::EraseRange;
+    action.key = start;
+    action.keyEnd = finish;
+    // Run commit if this is a one-off transaction
+    if (is_new)
+    {
+        commitTransaction(bucket, cb);
+    }
 
-    mIOService->post(
-        std::tr1::bind(&SQLiteStorage::executeRangeErase, this, value_delete, start, finish, cb),
-        "SQLiteStorage::executeRangeErase"
-    );
     return true;
 }
 
-void SQLiteStorage::executeRangeErase(const String value_delete, const Key& start, const Key& finish, CommitCallback cb)
-{
-	bool success = true;
-	ReadSet* rs = new ReadSet;
-
-	int rc;
-    char* remain;
-    sqlite3_stmt* value_delete_stmt;
-    rc = sqlite3_prepare_v2(mDB->db(), value_delete.c_str(), -1, &value_delete_stmt, (const char**)&remain);
-    success = success && !SQLite::check_sql_error(mDB->db(), rc, NULL, "Error preparing value delete statement");
-
-    rc = sqlite3_bind_text(value_delete_stmt, 1, start.c_str(), (int)start.size(), SQLITE_TRANSIENT);
-    success = success && !SQLite::check_sql_error(mDB->db(), rc, NULL, "Error binding start key to value delete statement");
-    rc = sqlite3_bind_text(value_delete_stmt, 2, finish.c_str(), (int)finish.size(), SQLITE_TRANSIENT);
-    success = success && !SQLite::check_sql_error(mDB->db(), rc, NULL, "Error binding finish key to value delete statement");
-
-    int step_rc = sqlite3_step(value_delete_stmt);
-    if (step_rc != SQLITE_OK && step_rc != SQLITE_DONE)
-        sqlite3_reset(value_delete_stmt); // allow this to be cleaned up
-
-    rc = sqlite3_finalize(value_delete_stmt);
-    success = success && !SQLite::check_sql_error(mDB->db(), rc, NULL, "Error finalizing value delete statement");
-
-    mContext->mainStrand->post(
-        std::tr1::bind(&SQLiteStorage::completeRange, this, cb, success, rs),
-        "SQLiteStorage::completeRange"
-    );
-}
-
 bool SQLiteStorage::count(const Bucket& bucket, const Key& start, const Key& finish, const CountCallback& cb, const String& timestamp) {
+    // FIXME doesn't fit into transactions...
     String value_count = "SELECT COUNT(*) FROM ";
     value_count += "\"" TABLE_NAME "\"";
     value_count += " WHERE object = \'" + bucket.rawHexData() + "\' AND key BETWEEN ? AND ?";

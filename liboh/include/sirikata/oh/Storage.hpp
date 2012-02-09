@@ -155,6 +155,23 @@ public:
      */
     virtual bool rangeRead(const Bucket& bucket, const Key& start, const Key& finish, const CommitCallback& cb = 0, const String& timestamp="current") = 0;
 
+
+    /** Add a comparison operation to the transaction. The given key is read and
+        compared to the value. If the comparison is false, it causes the entire
+        transaction to fail.
+
+       @param {Key} key the key to compare to
+       @param {String} value What should be written into that item
+       @param {CommitCallback} cb optional commit callback which is
+                      invoked if this is a single operation transaction.
+       @param {String} timestamp the timestamp of the operation
+
+       @return {bool} true if the read is queued, false
+                     otherwise. Does not indicated success of actual
+                     read operation.
+     */
+    virtual bool compare(const Bucket& bucket, const Key& key, const String& value, const CommitCallback& cb = 0, const String& timestamp="current") = 0;
+
     /**
        @param {Key} from the start key of range of keys to erase
        @param {Key} finish the end key of range of keys to erase
@@ -168,6 +185,9 @@ public:
      */
     virtual bool rangeErase(const Bucket& bucket, const Key& start, const Key& finish, const CommitCallback& cb = 0, const String& timestamp="current") = 0;
 
+    // TODO(ewencp) this interface seems broken -- because it uses a different
+    // callback, it doesn't fit in with transactions. This currently *has* to be
+    // handled separately from other actions...
     /**
        @param {Key} from the start key of range of keys to count
        @param {Key} finish the end key of range of keys to count

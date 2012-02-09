@@ -56,6 +56,7 @@ public:
     virtual bool erase(const Bucket& bucket, const Key& key, const CommitCallback& cb = 0, const String& timestamp="current");
     virtual bool write(const Bucket& bucket, const Key& key, const String& value, const CommitCallback& cb = 0, const String& timestamp="current");
     virtual bool read(const Bucket& bucket, const Key& key, const CommitCallback& cb = 0, const String& timestamp="current");
+    virtual bool compare(const Bucket& bucket, const Key& key, const String& value, const CommitCallback& cb = 0, const String& timestamp="current");
     virtual bool rangeRead(const Bucket& bucket, const Key& start, const Key& finish, const CommitCallback& cb = 0, const String& timestamp="current");
     virtual bool rangeErase(const Bucket& bucket, const Key& start, const Key& finish, const CommitCallback& cb = 0, const String& timestamp="current");
     virtual bool count(const Bucket& bucket, const Key& start, const Key& finish, const CountCallback& cb = 0, const String& timestamp="current");
@@ -67,8 +68,11 @@ private:
     struct StorageAction {
         enum Type {
             Read,
+            ReadRange,
+            Compare,
             Write,
             Erase,
+            EraseRange,
             Error
         };
 
@@ -84,6 +88,7 @@ private:
         // Bucket is implicit, passed into execute
         Type type;
         Key key;
+        Key keyEnd; // Only relevant for *Range and Count
         String* value;
     };
 
@@ -104,15 +109,12 @@ private:
     // passed in directly
     void executeCommit(const Bucket& bucket, Transaction* trans, CommitCallback cb);
 
-    void executeRangeRead(const String value_query, const Key& start, const Key& finish, CommitCallback cb);
-    void executeRangeErase(const String value_delete, const Key& start, const Key& finish, CommitCallback cb);
     void executeCount(const String value_count, const Key& start, const Key& finish, CountCallback cb);
 
     // Complete a commit back in the main thread, cleaning it up and dispatching
     // the callback
     void completeCommit(const Bucket& bucket, Transaction* trans, CommitCallback cb, bool success, ReadSet* rs);
 
-    void completeRange(CommitCallback cb, bool success, ReadSet* rs);
     void completeCount(CountCallback cb, bool success, int32 count);
 
     // A few helper methods that wrap sql operations.

@@ -143,6 +143,12 @@ public:
         (*this) *= (float64)rhs;
     }
 
+    static DeltaTime hours(double s) {
+        return minutes(s*60);
+    }
+    static DeltaTime minutes(double s) {
+        return seconds(s*60);
+    }
     static DeltaTime seconds(double s) {
         return DeltaTime((int64)(s*1000000.));
     }

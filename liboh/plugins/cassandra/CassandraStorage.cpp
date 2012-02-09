@@ -58,6 +58,7 @@ CassandraStorage::StorageAction::~StorageAction() {
 CassandraStorage::StorageAction& CassandraStorage::StorageAction::operator=(const StorageAction& rhs) {
     type = rhs.type;
     key = rhs.key;
+    keyEnd = rhs.keyEnd;
     if (rhs.value != NULL)
         value = new String(*(rhs.value));
     else
@@ -66,12 +67,27 @@ CassandraStorage::StorageAction& CassandraStorage::StorageAction::operator=(cons
     return *this;
 }
 
-void CassandraStorage::StorageAction::execute(const Bucket& bucket, Columns* columns, Keys* eraseKeys, Keys* readKeys, const String& timestamp) {
+void CassandraStorage::StorageAction::execute(const Bucket& bucket, Columns* columns, Keys* eraseKeys, Keys* readKeys, SliceRanges* readRanges, ReadSet* compares, SliceRanges* eraseRanges, const String& timestamp) {
     switch(type) {
       case Read:
         {
             (*readKeys).push_back(key);
         }
+        break;
+      case ReadRange:
+        {
+            SliceRange range;
+            range.start = key;
+            range.finish = keyEnd;
+            range.count = 100000; // currently, set large enough to read all the data
+            readRanges->push_back(range);
+        }
+        break;
+      case Compare:
+          {
+              (*readKeys).push_back(key);
+              (*compares)[key] = *value;
+          }
         break;
       case Write:
         {
@@ -82,6 +98,15 @@ void CassandraStorage::StorageAction::execute(const Bucket& bucket, Columns* col
       case Erase:
         {
             (*eraseKeys).push_back(key);
+        }
+        break;
+      case EraseRange:
+        {
+            SliceRange range;
+            range.start = key;
+            range.finish = keyEnd;
+            range.count = 100000; // currently, set large enough to read all the data
+            eraseRanges->push_back(range);
         }
         break;
       case Error:
@@ -116,29 +141,74 @@ void CassandraStorage::initDB() {
     mDB = db;
 }
 
-bool CassandraStorage::CassandraCommit(CassandraDBPtr db, const Bucket& bucket, Columns* columns, Keys* eraseKeys, Keys* readKeys, ReadSet* rs, const String& timestamp) {
-    if((*readKeys).size()>0){
+bool CassandraStorage::CassandraCommit(CassandraDBPtr db, const Bucket& bucket, Columns* columns, Keys* eraseKeys, Keys* readKeys, SliceRanges* readRanges, ReadSet* compares, SliceRanges* eraseRanges, ReadSet* rs, const String& timestamp) {
+    // FIXME *THIS ISN'T EVEN TRYING TO BE ATOMIC*
+
+    bool success = true;
+
+    if((*readKeys).size()>0) {
         try{
             *rs=db->db()->getColumnsValues(bucket.rawHexData(),CF_NAME, timestamp, *readKeys);  // batch read
         }
         catch(...){
-            return false;
+            success = false;
         }
     }
-    if((*columns).size()>0 || (*eraseKeys).size()>0){
+    // Compare keys come out with the read set. We compare values and remove
+    // them from the results
+    for(ReadSet::iterator it = compares->begin(); success && it != compares->end(); it++) {
+        ReadSet::iterator read_it = rs->find(it->first);
+        if (read_it == rs->end() ||
+            read_it->second != it->second) {
+            success = false;
+            break;
+        }
+        rs->erase(read_it);
+    }
+
+    for(uint32 i = 0; success && i < readRanges->size(); i++) {
+        try{
+            ReadSet rangeData = db->db()->getColumnsValues(bucket.rawHexData(),CF_NAME, timestamp, (*readRanges)[i]);
+            for(ReadSet::iterator it = rangeData.begin(); it != rangeData.end(); it++)
+                (*rs)[it->first] = it->second;
+            if (rangeData.size() == 0)
+                success = false;
+        }
+        catch(...){
+            success = false;
+        }
+    }
+
+    // Erase ranges are processed before erases -- they just look up the keys to
+    // erase and add them to the erase set
+    for(uint32 i = 0; success && i < eraseRanges->size(); i++) {
+        try {
+            ReadSet rangeData = mDB->db()->getColumnsValues(bucket.rawHexData(), CF_NAME, timestamp, (*eraseRanges)[i]);
+            for(ReadSet::iterator it = rangeData.begin(); it != rangeData.end(); it++)
+                eraseKeys->push_back(it->first);
+        }
+        catch(...){
+            success = false;
+        }
+    }
+
+    if(success && (((*columns).size()>0) || ((*eraseKeys).size()>0))){
         try{
             batchTuple tuple=batchTuple(CF_NAME, bucket.rawHexData(), timestamp, *columns, *eraseKeys);
             db->db()->batchMutate(tuple);
         }
-        catch(...){
-            std::cout <<"Exception Caught when Batch Write/Erase"<<std::endl;
-            return false;
+        catch(...) {
+            SILOG(cassandra-storage, fatal, "Exception Caught when Batch Write/Erase");
+            success = false;
         }
     }
+
     delete columns;
     delete eraseKeys;
     delete readKeys;
-    return true;
+    delete readRanges;
+    delete eraseRanges;
+    return success;
 }
 
 void CassandraStorage::stop() {
@@ -193,13 +263,16 @@ void CassandraStorage::executeCommit(const Bucket& bucket, Transaction* trans, C
     Columns* columns = new Columns;
     Keys* eraseKeys = new Keys;
     Keys* readKeys = new Keys;
+    SliceRanges* readRanges = new SliceRanges;
+    SliceRanges* eraseRanges = new SliceRanges;
+    ReadSet* compares = new ReadSet;
 
     for (Transaction::iterator it = trans->begin(); it != trans->end(); it++) {
-        (*it).execute(bucket, columns, eraseKeys, readKeys, timestamp);
+        (*it).execute(bucket, columns, eraseKeys, readKeys, readRanges, compares, eraseRanges, timestamp);
     }
 
     bool success = true;
-    success = CassandraCommit(mDB, bucket, columns, eraseKeys, readKeys, rs, timestamp);
+    success = CassandraCommit(mDB, bucket, columns, eraseKeys, readKeys, readRanges, compares, eraseRanges, rs, timestamp);
 
     if (rs->empty() || !success) {
         delete rs;
@@ -265,86 +338,52 @@ bool CassandraStorage::read(const Bucket& bucket, const Key& key, const CommitCa
     return true;
 }
 
-bool CassandraStorage::rangeRead(const Bucket& bucket, const Key& start, const Key& finish, const CommitCallback& cb, const String& timestamp) {
-    SliceRange range;
-    range.start = start;
-    range.finish = finish;
-    range.count = 100000; // currently, set large enough to read all the data
-    mIOService->post(
-        std::tr1::bind(&CassandraStorage::executeRangeRead, this, bucket, range, cb, timestamp),
-        "CassandraStorage::executeRangeRead"
-    );
+bool CassandraStorage::compare(const Bucket& bucket, const Key& key, const String& value, const CommitCallback& cb, const String& timestamp) {
+    bool is_new = false;
+    Transaction* trans = getTransaction(bucket, &is_new);
+    trans->push_back(StorageAction());
+    StorageAction& action = trans->back();
+    action.type = StorageAction::Compare;
+    action.key = key;
+    action.value = new String(value);
+
+    // Run commit if this is a one-off transaction
+    if (is_new)
+        commitTransaction(bucket, cb, timestamp);
+
     return true;
 }
 
-void CassandraStorage::executeRangeRead(const Bucket& bucket, SliceRange& range, CommitCallback cb, const String& timestamp) {
-	ReadSet* rs = new ReadSet;
-    bool success = true;
-    try {
-    	*rs = mDB->db()->getColumnsValues(bucket.rawHexData(),CF_NAME, timestamp, range);
-    }
-    catch(...){
-       	success = false;
-    }
-    if (rs->size()==0)
-    	success = false;
+bool CassandraStorage::rangeRead(const Bucket& bucket, const Key& start, const Key& finish, const CommitCallback& cb, const String& timestamp) {
+    bool is_new = false;
+    Transaction* trans = getTransaction(bucket, &is_new);
+    trans->push_back(StorageAction());
+    StorageAction& action = trans->back();
+    action.type = StorageAction::ReadRange;
+    action.key = start;
+    action.keyEnd = finish;
 
-    mContext->mainStrand->post(
-        std::tr1::bind(&CassandraStorage::completeRange, this, cb, success, rs),
-        "CassandraStorage::completeRange"
-    );
-}
+    // Run commit if this is a one-off transaction
+    if (is_new)
+        commitTransaction(bucket, cb, timestamp);
 
-void CassandraStorage::completeRange(CommitCallback cb, bool success, ReadSet* rs) {
-    if (cb) cb(success, rs);
+    return true;
 }
 
 bool CassandraStorage::rangeErase(const Bucket& bucket, const Key& start, const Key& finish, const CommitCallback& cb, const String& timestamp) {
-    // TODO Ranged deletion is not supported in Cassandra yet. Current implementation is inefficient
-    SliceRange range;
-    range.start = start;
-    range.finish = finish;
-    range.count = 100000; // currently, set large enough to read all the data
+    bool is_new = false;
+    Transaction* trans = getTransaction(bucket, &is_new);
+    trans->push_back(StorageAction());
+    StorageAction& action = trans->back();
+    action.type = StorageAction::EraseRange;
+    action.key = start;
+    action.keyEnd = finish;
 
-    mIOService->post(
-        std::tr1::bind(&CassandraStorage::executeRangeErase_p1, this, bucket, range, cb, timestamp),
-        "CassandraStorage::executeRangeErase_p1"
-    );
+    // Run commit if this is a one-off transaction
+    if (is_new)
+        commitTransaction(bucket, cb, timestamp);
 
     return true;
-}
-
-void CassandraStorage::executeRangeErase_p1(const Bucket& bucket, SliceRange& range, CommitCallback cb, const String& timestamp) {
-	ReadSet* rs = new ReadSet;
-    bool success = true;
-    try {
-    	*rs = mDB->db()->getColumnsValues(bucket.rawHexData(), CF_NAME, timestamp, range);
-    }
-    catch(...){
-       	success = false;
-    }
-    if (!success)
-    	mContext->mainStrand->post(
-            std::tr1::bind(&CassandraStorage::completeRange, this, cb, success, rs),
-            "CassandraStorage::completeRange"
-        );
-    else
-    	mIOService->post(
-            std::tr1::bind(&CassandraStorage::executeRangeErase_p2, this, bucket, cb, rs, timestamp),
-            "CassandraStorage::executeRangeErase_p2"
-        );
-}
-
-void CassandraStorage::executeRangeErase_p2(const Bucket& bucket, CommitCallback cb, ReadSet* rs, const String& timestamp) {
-	beginTransaction(bucket);
-    for(ReadSet::iterator it = (*rs).begin(); it != (*rs).end(); it++) {
-        String key = it->first;
-        erase(bucket, key);
-    }
-    mIOService->post(
-        std::tr1::bind(&CassandraStorage::commitTransaction, this, bucket, cb, timestamp),
-        "CassandraStorage::commitTransaction"
-    );
 }
 
 bool CassandraStorage::count(const Bucket& bucket, const Key& start, const Key& finish, const CountCallback& cb, const String& timestamp) {
