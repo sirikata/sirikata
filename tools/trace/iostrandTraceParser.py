@@ -124,13 +124,14 @@ class IOService():
 
     def printStatistics(self):
         total = 0.;
-        maxTime = 0.;
+        maxSample =  SampleTag('noTag',0);
         for s in self.samples:
             total += s.time;
-            if (maxTime < s.time):
-                maxTime = s.time;
+            if (maxSample.time < s.time):
+                maxSample.time = s.time;
+                maxSample.tag  = s.tag;
                 
-        print('\n\n');
+        print('\n');
         print('-----------------');
         print(self.header);
         print('\n');
@@ -139,7 +140,7 @@ class IOService():
         medianTimeMsg = 'No samples: median meaningless';
         if (len(self.samples) != 0):
             avgTimeMsg = str(total/float(len(self.samples)));
-            maxTimeMsg = str(maxTime);
+            maxTimeMsg = str(maxSample.time) + '  for  ' + maxSample.tag;
             timeList = [x.time for x in self.samples];
             timeList.sort();
             medianIndex = int(math.floor(len(timeList)/2));
