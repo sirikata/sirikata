@@ -80,6 +80,37 @@ HostedObject::HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID
     );
 }
 
+void HostedObject::killSimulation(
+    const SpaceObjectReference& sporef, const String& simName)
+{
+    if (stopped())
+        return;
+    
+    PerPresenceData* pd = NULL;
+    {
+        Mutex::scoped_lock locker(presenceDataMutex);
+        PresenceDataMap::iterator psd_it = mPresenceData.find(sporef);
+        if (psd_it == mPresenceData.end())
+        {
+            HO_LOG(error, "Error requesting to stop a "<<        \
+                "simulation for a presence that does not exist.");
+            return;
+        }
+
+        pd = psd_it->second;
+
+        if (pd->sims.find(simName) != pd->sims.end())
+        {
+            Simulation* simToKill = pd->sims[simName];
+            simToKill->stop();
+            delete simToKill;
+            pd->sims.erase(simName);
+        }
+        else
+            HO_LOG(error,"No simulation with name "<<simName<<" to remove");
+    }
+}
+
 Simulation* HostedObject::runSimulation(
     const SpaceObjectReference& sporef, const String& simName,
     Network::IOStrandPtr simStrand)
@@ -109,6 +140,7 @@ Simulation* HostedObject::runSimulation(
     // access the HostedObject and call methods which need the
     // lock.
     HO_LOG(info,String("[OH] Initializing ") + simName);
+
     try {
         sim = SimulationFactory::getSingleton().getConstructor ( simName ) (
             mContext, static_cast<ConnectionEventProvider*>(mObjectHost),
@@ -128,11 +160,8 @@ Simulation* HostedObject::runSimulation(
     {
         Mutex::scoped_lock locker(presenceDataMutex);
         pd->sims[simName] = sim;
+        sim->start();
     }
-
-    HO_LOG(detailed, "Adding simulation to context");
-    mContext->add(sim);
-
     return sim;
 }
 

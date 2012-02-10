@@ -455,6 +455,11 @@ private:
         std::vector<boost::any>& params,v8::Persistent<v8::Function> function_,
         Liveness::Token alive);
 
+
+    //simname, sporef
+    typedef std::vector< std::pair<String,SpaceObjectReference> > SimVec;
+    SimVec mSimulations;
+    
 };
 
 #define EMERSCRIPT_SERIAL_CHECK()\

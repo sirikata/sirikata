@@ -447,20 +447,20 @@ void EmersonScript::iNotifyProximateHelper(
 }
 
 
-JSInvokableObject::JSInvokableObjectInt* EmersonScript::runSimulation(const SpaceObjectReference& sporef, const String& simname)
+JSInvokableObject::JSInvokableObjectInt* EmersonScript::runSimulation(
+    const SpaceObjectReference& sporef, const String& simname)
 {
-    /**
-       FIXME: lkjs;
-       Call into runSimulation should either be in mainStrand, or take locks in hostedobject.
-     */
     EMERSCRIPT_SERIAL_CHECK();
-
+    
     Simulation* sim =
         mParent->runSimulation(sporef,simname,JSObjectScript::mCtx->objStrand);
 
 
     if (sim == NULL) return NULL;
 
+    mSimulations.push_back(
+        std::pair<String,SpaceObjectReference>(simname,sporef));
+    
     return new JSInvokableObject::JSInvokableObjectInt(sim);
 }
 
@@ -740,9 +740,18 @@ void EmersonScript::iStop(bool letDie)
     if (letDie)
         Liveness::letDie();
 
+    
     JSObjectScript::mCtx->stop();
     v8::Isolate::Scope iscope(JSObjectScript::mCtx->mIsolate);
 
+    for (SimVec::iterator svIt = mSimulations.begin();
+         svIt != mSimulations.end(); ++svIt)
+    {
+        mParent->killSimulation(svIt->second,svIt->first);
+    }
+    mSimulations.clear();
+    
+    
     // Clean up ProxyCreationListeners. We subscribe for each presence in
     // onConnected, so we need to run through all presences (stored in the
     // HostedObject) and clear out ourselfs as a listener. Note that we have to

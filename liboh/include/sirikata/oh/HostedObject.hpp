@@ -181,6 +181,8 @@ public:
         const SpaceObjectReference& sporef, const String& simName,
         Network::IOStrandPtr simStrand);
 
+    void killSimulation(
+        const SpaceObjectReference& sporef, const String& simName);
 
     virtual ProxyManagerPtr getProxyManager(const SpaceID& space,const ObjectReference& oref);
 
