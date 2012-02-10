@@ -111,12 +111,6 @@ private:
 
     void executeCount(const String value_count, const Key& start, const Key& finish, CountCallback cb);
 
-    // Complete a commit back in the main thread, cleaning it up and dispatching
-    // the callback
-    void completeCommit(const Bucket& bucket, Transaction* trans, CommitCallback cb, bool success, ReadSet* rs);
-
-    void completeCount(CountCallback cb, bool success, int32 count);
-
     // A few helper methods that wrap sql operations.
     bool sqlBeginTransaction();
     bool sqlCommit();

@@ -401,7 +401,7 @@ void SQLiteStorage::commitTransaction(const Bucket& bucket, const CommitCallback
     // Short cut for empty transactions. Or maybe these should cause exceptions?
     if(trans->empty()) {
         ReadSet* rs = NULL;
-        completeCommit(bucket, trans, cb, false, rs);
+        if (cb) cb(false, rs);
         return;
     }
 
@@ -435,21 +435,13 @@ void SQLiteStorage::executeCommit(const Bucket& bucket, Transaction* trans, Comm
         rs = NULL;
     }
 
-
-    mContext->mainStrand->post(
-        std::tr1::bind(&SQLiteStorage::completeCommit, this, bucket, trans, cb, success, rs),
-        "SQLiteStorage::completeCommit"
-    );
-}
-
-
-
-// Complete a commit back in the main thread, cleaning it up and dispatching
-// the callback
-void SQLiteStorage::completeCommit(const Bucket& bucket, Transaction* trans, CommitCallback cb, bool success, ReadSet* rs) {
-
     delete trans;
-    if (cb) cb(success, rs);
+    if (cb) {
+        mContext->mainStrand->post(
+            std::tr1::bind(cb, success, rs),
+            "SQLiteStorage completeCommit"
+        );
+    }
 }
 
 bool SQLiteStorage::erase(const Bucket& bucket, const Key& key, const CommitCallback& cb, const String& timestamp) {
@@ -593,14 +585,12 @@ void SQLiteStorage::executeCount(const String value_count, const Key& start, con
     rc = sqlite3_finalize(value_count_stmt);
     success = success && !SQLite::check_sql_error(mDB->db(), rc, NULL, "Error finalizing value delete statement");
 
-    mContext->mainStrand->post(
-        std::tr1::bind(&SQLiteStorage::completeCount, this, cb, success, count),
-        "SQLiteStorage::completeCount"
-    );
-}
-
-void SQLiteStorage::completeCount(CountCallback cb, bool success, int32 count) {
-    if (cb) cb(success, count);
+    if (cb) {
+        mContext->mainStrand->post(
+            std::tr1::bind(cb, success, count),
+            "SQLiteStorage completeCount"
+        );
+    }
 }
 
 } //end namespace OH
