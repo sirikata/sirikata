@@ -254,7 +254,12 @@ public:
 
 
 OgreRenderer::OgreRenderer(Context* ctx,Network::IOStrandPtr sStrand)
- : TimeSteppedSimulation(ctx, Duration::seconds(1.f/60.f), "Ogre Graphics", sStrand, "Ogre Graphics", true),
+ //note use of .get when passing iostrand pointer.  we need to insure that the
+ //lifetime of sstrand is greater than the polling service.  from emerson, this
+ //should be feasible if delete simulations before shut down an object.  Be very
+ //careful here though.
+ : TimeSteppedSimulation(ctx, Duration::seconds(1.f/60.f),
+     "Ogre Graphics", sStrand.get(), "Ogre Graphics", true),
    simStrand(sStrand),
    mContext(ctx),
    mQuitRequested(false),
