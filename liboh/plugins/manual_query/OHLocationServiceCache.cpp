@@ -149,6 +149,11 @@ void OHLocationServiceCache::removeUpdateListener(LocationUpdateListener* listen
     ObjectDataMap::const_iterator it = mObjects.find(id);       \
     assert(it != mObjects.end())
 
+uint64 OHLocationServiceCache::epoch(const ObjectID& id) {
+    GET_OBJ_ENTRY(id);
+    return it->second.epoch;
+}
+
 TimedMotionVector3f OHLocationServiceCache::location(const ObjectID& id) {
     GET_OBJ_ENTRY(id);
     return it->second.props.location();
@@ -268,6 +273,37 @@ void OHLocationServiceCache::notifyObjectRemoved(const ObjectReference& uuid) {
         (*listener_it)->locationDisconnected(uuid);
 
     OHLocationUpdateProvider::notify(&OHLocationUpdateListener::onObjectRemoved, uuid);
+
+    ObjectDataMap::iterator obj_it = mObjects.find(uuid);
+    obj_it->second.tracking--;
+    tryRemoveObject(obj_it);
+}
+
+void OHLocationServiceCache::epochUpdated(const ObjectReference& uuid, const uint64 ep) {
+    Lock lck(mMutex);
+
+    ObjectDataMap::iterator it = mObjects.find(uuid);
+    if (it == mObjects.end()) return;
+
+    it->second.epoch = std::max(it->second.epoch, ep);
+
+    bool agg = it->second.aggregate;
+    if (!agg) {
+        it->second.tracking++;
+        mStrand->post(
+            std::tr1::bind(
+                &OHLocationServiceCache::notifyEpochUpdated, this,
+                uuid, ep
+            ),
+            "OHLocationServiceCache::notifyEpochUpdated"
+        );
+    }
+}
+
+void OHLocationServiceCache::notifyEpochUpdated(const ObjectReference& uuid, const uint64 val) {
+    Lock lck(mMutex);
+
+    OHLocationUpdateProvider::notify(&OHLocationUpdateListener::onEpochUpdated, uuid);
 
     ObjectDataMap::iterator obj_it = mObjects.find(uuid);
     obj_it->second.tracking--;

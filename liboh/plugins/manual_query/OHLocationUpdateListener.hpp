@@ -24,6 +24,7 @@ public:
 
     virtual void onObjectAdded(const ObjectReference& obj) = 0;
     virtual void onObjectRemoved(const ObjectReference& obj) = 0;
+    virtual void onEpochUpdated(const ObjectReference& obj) = 0;
     virtual void onLocationUpdated(const ObjectReference& obj) = 0;
     virtual void onOrientationUpdated(const ObjectReference& obj) = 0;
     virtual void onBoundsUpdated(const ObjectReference& obj) = 0;

@@ -434,6 +434,8 @@ void ServerQueryHandler::handleLocationSubstreamRead(const OHDP::SpaceNodeID& sn
 namespace {
 // Helper for applying an update to
 void applyLocUpdate(const ObjectReference& objid, OHLocationServiceCachePtr loccache, const LocUpdate& lu) {
+    if (lu.has_epoch())
+        loccache->epochUpdated(objid, lu.epoch());
     if (lu.has_location())
         loccache->locationUpdated(objid, lu.location(), lu.location_seqno());
     if (lu.has_orientation())

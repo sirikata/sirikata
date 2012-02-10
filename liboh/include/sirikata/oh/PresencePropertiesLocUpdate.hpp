@@ -66,6 +66,33 @@ private:
     const SequencedPresenceProperties& mUpdate;
 };
 
+/** Implementation of LocUpdate which collects its information from
+ *  stored SequencedPresenceProperties and optionally provides an epoch. Useful
+ *  for updates where you want to expose epochs (e.g. because you cache results
+ *  and then forward results to local queriers), but epochs are tracked
+ *  separately.
+ */
+class PresencePropertiesLocUpdateWithEpoch : public PresencePropertiesLocUpdate {
+public:
+    /** Construct a PresencePropertiesLocUpdate from a
+     *  SequencedPresenceProperties. Note that this assumes the times are
+     *  already local.
+     */
+    PresencePropertiesLocUpdateWithEpoch(const ObjectReference& o, const SequencedPresenceProperties& lu, bool has_ep, uint64 ep)
+     : PresencePropertiesLocUpdate(o, lu),
+       mHasEpoch(has_ep),
+       mEpoch(ep)
+    {}
+    virtual ~PresencePropertiesLocUpdateWithEpoch() {}
+
+    virtual bool has_epoch() const { return mHasEpoch; }
+    virtual uint64 epoch() const { return mEpoch; }
+
+private:
+    const bool mHasEpoch;
+    const uint64 mEpoch;
+};
+
 } // namespace Sirikata
 
 #endif //_SIRIKATA_PRESENCE_PROPERTIES_LOC_UPDATE_HPP_

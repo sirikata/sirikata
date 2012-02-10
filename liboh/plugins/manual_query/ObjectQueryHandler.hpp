@@ -66,6 +66,7 @@ public:
     // to generate LocUpdates for queriers that are subscribed to the object.
     virtual void onObjectAdded(const ObjectReference& obj);
     virtual void onObjectRemoved(const ObjectReference& obj);
+    virtual void onEpochUpdated(const ObjectReference& obj);
     virtual void onLocationUpdated(const ObjectReference& obj);
     virtual void onOrientationUpdated(const ObjectReference& obj);
     virtual void onBoundsUpdated(const ObjectReference& obj);

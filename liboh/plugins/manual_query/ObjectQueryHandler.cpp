@@ -226,7 +226,16 @@ void ObjectQueryHandler::handleNotifySubscribersLocUpdate(const ObjectReference&
 
         for(SubscriberSet::iterator sub_it = subscribers->begin(); sub_it != subscribers->end(); sub_it++) {
             const ObjectReference& querier = *sub_it;
-            mParent->deliverLocationResult(SpaceObjectReference(mSpace, querier), lu);
+
+            // If we're delivering a result to ourselves, we want to include
+            // epoch information.
+            if (querier == oref) {
+                PresencePropertiesLocUpdateWithEpoch lu_ep( oref, mLocCache->properties(oref), true, mLocCache->epoch(oref) );
+                mParent->deliverLocationResult(SpaceObjectReference(mSpace, querier), lu_ep);
+            }
+            else {
+                mParent->deliverLocationResult(SpaceObjectReference(mSpace, querier), lu);
+            }
         }
 
         mLocCache->stopSimpleTracking(oref);
@@ -246,6 +255,13 @@ void ObjectQueryHandler::onObjectAdded(const ObjectReference& obj) {
 }
 
 void ObjectQueryHandler::onObjectRemoved(const ObjectReference& obj) {
+}
+
+void ObjectQueryHandler::onEpochUpdated(const ObjectReference& obj) {
+    mContext->mainStrand->post(
+        std::tr1::bind(&ObjectQueryHandler::handleNotifySubscribersLocUpdate, this, obj),
+        "ObjectQueryHandler::handleNotifySubscribersLocUpdate"
+    );
 }
 
 void ObjectQueryHandler::onLocationUpdated(const ObjectReference& obj) {
