@@ -572,14 +572,7 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
   }
   
    
-  String localMeshName = boost::lexical_cast<String>(aggObject->mTreeLevel) + "_aggregate_mesh_" + uuid.toString() + ".dae";    
-
-  //Debugging code until the simplify call below: write the original mesh before writing the simplified mesh.  
-  std::ofstream model_ostream1( (std::string("/home/tahir/Desktop/aggregates_meshes/")+localMeshName+"orig.dae").c_str(), std::ofstream::out | std::ofstream::binary);
-  bool converted1 = mModelsSystem->convertVisual(agg_mesh, "colladamodels", model_ostream1);
-  model_ostream1.close();  
-  //End debugging code...
-
+  String localMeshName = boost::lexical_cast<String>(aggObject->mTreeLevel) + "_aggregate_mesh_" + uuid.toString() + ".dae";
   //Simplify the mesh...
   mMeshSimplifier.simplify(agg_mesh, 5000);
 
@@ -681,16 +674,6 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
       mLoc->updateLocalAggregateMesh(uuid, cdnMeshName);
   }
 
-  // Code to generate scene files for each level of the tree.
-  /*char scenefilename[MESHNAME_LEN];
-  snprintf(scenefilename, MESHNAME_LEN, "%d_scene.db", aggObject->mTreeLevel);
-  std::fstream scenefile(scenefilename, std::fstream::out | std::fstream::app);
-  char sceneline[MESHNAME_LEN];
-  snprintf(sceneline, MESHNAME_LEN,
-           "\"mesh\",\"graphiconly\",\"tetrahedron\",,,,%f,%f,%f,%f,%f,%f,%f,0,0,0,0,1,0,0,1,1,1,1,1,1,1,0.3,0.1,0,0,1,\"%s\",,,,,,,,,,,,,,,,,,%f,,,,\n",
-           bndsX, bndsY, bndsZ, 0.0, 0.0, 0.0, 1.0, cdnMeshName.c_str(), bnds.radius());
-  scenefile.write(sceneline,strlen(sceneline));
-  scenefile.close();*/
 
   //Keep the meshstore's memory usage under control.
   {
