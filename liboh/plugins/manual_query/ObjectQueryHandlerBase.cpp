@@ -46,11 +46,7 @@ const String& ObjectQueryHandlerBase::ObjectClassToString(ObjectClass c) {
 bool ObjectQueryHandlerBase::velocityIsStatic(const Vector3f& vel) {
     // These values are arbitrary, just meant to indicate that the object is,
     // for practical purposes, not moving.
-    return (
-        vel.x < .05f &&
-        vel.y < .05f &&
-        vel.z < .05f
-    );
+    return (vel.lengthSquared() < 0.01f* 0.01f);
 }
 
 
