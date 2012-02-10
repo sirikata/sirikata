@@ -75,7 +75,7 @@ v8::Handle<v8::Value> JSPositionListener::struct_getMesh()
 bool JSPositionListener::getStillVisible()
 {
     CHECK_JPP_INIT_THROW_LOG_CPP_ERROR(funcIn,false);
-    return mParentScript->isVisible(jpp->id());
+    return mParentScript->jsVisMan.isVisible(jpp->id());
 }
 
 v8::Handle<v8::Value> JSPositionListener::struct_getStillVisible()

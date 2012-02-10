@@ -18,10 +18,14 @@ namespace JS
 class JSCtx 
 {
 public:    
-    JSCtx(Context* ctx,Network::IOStrandPtr oStrand,v8::Isolate* is);
+    JSCtx(
+        Context* ctx,Network::IOStrandPtr oStrand,
+        Network::IOStrandPtr vmStrand,v8::Isolate* is);
+    
     ~JSCtx();
     
     Network::IOStrandPtr objStrand;
+    Network::IOStrandPtr visManStrand;
     Network::IOStrand* mainStrand;
     
     v8::Isolate* mIsolate;

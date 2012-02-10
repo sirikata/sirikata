@@ -39,7 +39,7 @@ JSPresenceStruct::JSPresenceStruct(EmersonScript* parent, v8::Handle<v8::Functio
 //use this constructor if we already have a presence that is connected to the
 //space with spaceObjectRecference _sporef
 JSPresenceStruct::JSPresenceStruct(EmersonScript* parent, const SpaceObjectReference& _sporef, JSContextStruct* ctx,HostedObject::PresenceToken presenceToken, JSCtx* jsctx)
- : JSPositionListener(parent, parent->getOrCreateVisible(_sporef),jsctx),
+ : JSPositionListener(parent, parent->jsVisMan.getOrCreateVisible(_sporef),jsctx),
    JSSuspendable(),
    mParent(parent),
    mContID(ctx->getContextID()),
@@ -60,7 +60,7 @@ JSPresenceStruct::JSPresenceStruct(EmersonScript* parent, const SpaceObjectRefer
 
 //use this constructor when we are restoring a presence.
 JSPresenceStruct::JSPresenceStruct(EmersonScript* parent, PresStructRestoreParams& psrp, Vector3f center, HostedObject::PresenceToken presToken,JSContextStruct* jscont, const TimedMotionVector3f& tmv, const TimedMotionQuaternion& tmq, JSCtx* jsctx)
- : JSPositionListener(parent, parent->getOrCreateVisible(psrp.sporef), jsctx),
+ : JSPositionListener(parent, parent->jsVisMan.getOrCreateVisible(psrp.sporef), jsctx),
    JSSuspendable(),
    mParent(parent),
    isConnected(false),
@@ -247,7 +247,7 @@ void JSPresenceStruct::connect(const SpaceObjectReference& _sporef)
 {
     // We need to update our JSVisibleDataPtr since before the connect we didn't even
     // know what our SpaceObjectReference would be.
-    jpp = mParent->getOrCreateVisible(_sporef);
+    jpp = mParent->jsVisMan.getOrCreateVisible(_sporef);
 
     v8::HandleScope handle_scope;
 

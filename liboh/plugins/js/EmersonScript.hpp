@@ -66,7 +66,6 @@ namespace JS {
 
 
 class EmersonScript : public JSObjectScript,
-                      public JSVisibleManager,
                       public SessionEventListener,
                       public EmersonMessagingManager
 {
@@ -277,6 +276,9 @@ public:
 
     JSContextStruct* rootContext() const { return mContext; }
 
+
+    JSVisibleManager jsVisMan;
+    
     HostedObjectPtr mParent;
 
 /**

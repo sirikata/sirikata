@@ -194,6 +194,8 @@ JSCtx* JSObjectScriptManager::createJSCtx(HostedObjectPtr ho)
         new JSCtx(mContext,
             Network::IOStrandPtr(
                 mContext->ioService->createStrand("EmersonScript " + ho->id().toString())),
+            Network::IOStrandPtr(
+                mContext->ioService->createStrand("VisManager "    + ho->id().toString())),
             v8::Isolate::New());
 
     

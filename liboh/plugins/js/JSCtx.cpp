@@ -7,8 +7,11 @@ namespace JS
 {
 
 
-JSCtx::JSCtx(Context* ctx,Network::IOStrandPtr oStrand,v8::Isolate* is)
+JSCtx::JSCtx(
+    Context* ctx,Network::IOStrandPtr oStrand,
+    Network::IOStrandPtr vmStrand,v8::Isolate* is)
  : objStrand(oStrand),
+   visManStrand(vmStrand),
    mainStrand(ctx->mainStrand),
    mIsolate(is),
    internalContext(ctx),
