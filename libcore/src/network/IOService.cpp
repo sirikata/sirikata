@@ -70,7 +70,8 @@ IOService::IOService(const String& name)
    mTimersEnqueued(0),
    mEnqueued(0),
    mWindowedTimerLatencyStats(100),
-   mWindowedHandlerLatencyStats(100)
+   mWindowedHandlerLatencyStats(100),
+   mWindowedLatencyTagStats(40000)
 #endif
 {
     mImpl = new boost::asio::io_service(1);
@@ -127,7 +128,9 @@ void IOService::reset() {
     mImpl->reset();
 }
 
-void IOService::dispatch(const IOCallback& handler, const char* tag) {
+void IOService::dispatch(
+    const IOCallback& handler, const char* tag, const char* tagStat)
+{
 #ifdef SIRIKATA_TRACK_EVENT_QUEUES
     mEnqueued++;
     {
@@ -137,14 +140,16 @@ void IOService::dispatch(const IOCallback& handler, const char* tag) {
         mTagCounts[tag]++;
     }
     mImpl->dispatch(
-        std::tr1::bind(&IOService::decrementCount, this, Timer::now(), handler, tag)
+        std::tr1::bind(&IOService::decrementCount, this, Timer::now(), handler, tag,tagStat)
     );
 #else
     mImpl->dispatch(handler);
 #endif
 }
 
-void IOService::post(const IOCallback& handler, const char* tag) {
+void IOService::post(
+    const IOCallback& handler, const char* tag, const char* tagStat)
+{
 #ifdef SIRIKATA_TRACK_EVENT_QUEUES
     mEnqueued++;
     {
@@ -154,7 +159,7 @@ void IOService::post(const IOCallback& handler, const char* tag) {
         mTagCounts[tag]++;
     }
     mImpl->post(
-        std::tr1::bind(&IOService::decrementCount, this, Timer::now(), handler, tag)
+        std::tr1::bind(&IOService::decrementCount, this, Timer::now(), handler, tag,tagStat)
     );
 #else
     mImpl->post(handler);
@@ -170,7 +175,7 @@ void handle_deadline_timer(const boost::system::error_code&e, const deadline_tim
 }
 } // namespace
 
-void IOService::post(const Duration& waitFor, const IOCallback& handler, const char* tag) {
+void IOService::post(const Duration& waitFor, const IOCallback& handler, const char* tag, const char* tagStat) {
 #if BOOST_VERSION==103900
     static bool warnOnce=true;
     if (warnOnce) {
@@ -191,7 +196,7 @@ void IOService::post(const Duration& waitFor, const IOCallback& handler, const c
     IOCallbackWithError orig_cb = std::tr1::bind(&handle_deadline_timer, _1, timer, handler);
     timer->async_wait(
         std::tr1::bind(&IOService::decrementTimerCount, this,
-            _1, Timer::now(), waitFor, orig_cb, tag
+            _1, Timer::now(), waitFor, orig_cb, tag,tagStat
         )
     );
 #else
@@ -202,31 +207,57 @@ void IOService::post(const Duration& waitFor, const IOCallback& handler, const c
 
 
 #ifdef SIRIKATA_TRACK_EVENT_QUEUES
-void IOService::decrementTimerCount(const boost::system::error_code& e, const Time& start, const Duration& timer_duration, const IOCallbackWithError& cb, const char* tag) {
+void IOService::decrementTimerCount(const boost::system::error_code& e, const Time& start, const Duration& timer_duration, const IOCallbackWithError& cb, const char* tag, const char* tagStat) {
     mTimersEnqueued--;
     Time end = Timer::now();
     {
         LockGuard lock(mMutex);
+
         mWindowedTimerLatencyStats.sample((end - start) - timer_duration);
 
+        
         assert(mTagCounts.find(tag) != mTagCounts.end());
         mTagCounts[tag]--;
     }
+
+    Time begin = Timer::now();
     cb(e);
+    end = Timer::now();
+
+    TagDuration td;
+    
+    td.tag = tagStat == NULL ? tag : tagStat;
+    td.dur = end-begin;
+    {
+        LockGuard lock(mMutex);
+        mWindowedLatencyTagStats.sample(td);
+    }
 }
 
-void IOService::decrementCount(const Time& start, const IOCallback& cb, const char* tag) {
+void IOService::decrementCount(const Time& start, const IOCallback& cb, const char* tag,const char* tagStat) {
     mEnqueued--;
     Time end = Timer::now();
     {
         LockGuard lock(mMutex);
         mWindowedHandlerLatencyStats.sample(end - start);
-
         assert(mTagCounts.find(tag) != mTagCounts.end());
         mTagCounts[tag]--;
     }
+
+    
+    Time begin = Timer::now();
     cb();
+    end = Timer::now();
+
+    TagDuration td;
+    td.tag = tagStat == NULL ? tag : tagStat;
+    td.dur = end-begin;
+    {
+        LockGuard lock(mMutex);
+        mWindowedLatencyTagStats.sample(td);
+    }
 }
+
 
 void IOService::destroyingStrand(IOStrand* child) {
     LockGuard lock(mMutex);
@@ -285,8 +316,41 @@ void IOService::reportStats() const {
         SILOG(ioservice, info, "    Event handlers: " << (*it)->numEnqueued() << " with " << (*it)->handlerLatency() << " recent latency");
         reportOffenders((*it)->enqueuedTags());
     }
-
 }
+
+void IOService::reportStatsFile(const char* filename,bool detailed) const {
+    LockGuard lock(const_cast<Mutex&>(mMutex));
+
+    std::ofstream fileWriter(filename,std::ios::out|std::ios::app);
+    fileWriter<<"=======================================================\n";
+    fileWriter<< "'" << name() <<  "' IOService Statistics\n";
+    fileWriter<<"  Timers: " << numTimersEnqueued() << " with " << timerLatency() << " recent latency\n";
+    fileWriter<<"  Event handlers: " << numEnqueued() << " with " << handlerLatency() << " recent latency\n";
+
+    for(StrandSet::const_iterator it = mStrands.begin();
+        it != mStrands.end(); it++)
+    {
+        fileWriter<<"-------------------------------------------------------\n";
+        fileWriter<<"  Child '" << (*it)->name() << "'\n";
+        fileWriter<<"    Timers: " << (*it)->numTimersEnqueued() << " with " << (*it)->timerLatency() << " recent latency\n";
+        fileWriter<<"    Event handlers: " << (*it)->numEnqueued() << " with " << (*it)->handlerLatency() << " recent latency\n";
+    }
+    
+    if (detailed)
+    {
+        const CircularBuffer<TagDuration>& samples = mWindowedLatencyTagStats.getSamples();
+        fileWriter<<"Sample size: "<<samples.size()<<"\n";
+        for (std::size_t s = 0; s < samples.size(); ++s)
+        {
+            const TagDuration& data = samples[s];
+            fileWriter<<" sample: "<< data.tag<<"  "<<data.dur<<"\n";
+        }
+    }
+    
+    fileWriter.flush();
+    fileWriter.close();
+}
+
 
 
 void IOService::reportAllStats() {
@@ -294,6 +358,16 @@ void IOService::reportAllStats() {
     for(AllIOServicesSet::const_iterator it = gAllIOServices.begin(); it != gAllIOServices.end(); it++)
         (*it)->reportStats();
 }
+
+void IOService::reportAllStatsFile(const char* filename,bool detailed) {
+    AllIOServicesLockGuard lock(gAllIOServicesMutex);
+    for(AllIOServicesSet::const_iterator it = gAllIOServices.begin(); it != gAllIOServices.end(); it++)
+        (*it)->reportStatsFile(filename, detailed);
+}
+
+
+
+
 #endif
 
 } // namespace Network

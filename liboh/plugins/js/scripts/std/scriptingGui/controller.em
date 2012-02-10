@@ -216,30 +216,35 @@ system.require('scriptingGuiUtil.em');
 
     function instantiateProxHandlers()
     {
-        //short-circuit
-        return;
-        
         system.self.onProxAdded(addToNearby,true);
         system.self.onProxRemoved(removeFromNearby);
         function addToNearby(newVis)
         {            
             nearbyVisMap[newVis.toString()] = newVis;
 
-            var consMsg = {
-                    type: 'NEARBY_ADDED',
-                    addedVis: newVis
-                };
-            console.nearbyEvent(consMsg);
+            //trying to remove as much overhead as possible associated
+            //with proximity handlers + this console messages do not
+            //actually do anything.
+            
+            // var consMsg = {
+            //         type: 'NEARBY_ADDED',
+            //         addedVis: newVis
+            //     };
+            // console.nearbyEvent(consMsg);
         }
         function removeFromNearby(oldVis)
         {
             delete nearbyVisMap[oldVis.toString()];
 
-            var consMsg = {
-                    type: 'NEARBY_REMOVED',
-                    removedVis: oldVis
-                };
-            console.nearbyEvent(consMsg);
+            //trying to remove as much overhead as possible associated
+            //with proximity handlers + this console messages do not
+            //actually do anything.
+            
+            // var consMsg = {
+            //         type: 'NEARBY_REMOVED',
+            //         removedVis: oldVis
+            //     };
+            // console.nearbyEvent(consMsg);
         }
     }
 

@@ -74,6 +74,15 @@ class SIRIKATA_EXPORT IOService : public Noncopyable {
     Trace::WindowedStats<Duration> mWindowedTimerLatencyStats;
     Trace::WindowedStats<Duration> mWindowedHandlerLatencyStats;
 
+
+    struct TagDuration
+    {
+        const char* tag;
+        Duration dur;
+    };
+    Trace::WindowedStats<TagDuration> mWindowedLatencyTagStats;
+  
+    
     // Track tags that trigger events
     typedef std::tr1::unordered_map<const char*, uint32> TagCountMap;
     TagCountMap mTagCounts;
@@ -87,8 +96,8 @@ class SIRIKATA_EXPORT IOService : public Noncopyable {
     friend class IOStrand;
 
 #ifdef SIRIKATA_TRACK_EVENT_QUEUES
-    void decrementTimerCount(const boost::system::error_code&e, const Time& start, const Duration& timer_duration, const IOCallbackWithError& cb, const char* tag);
-    void decrementCount(const Time& start, const IOCallback& cb, const char* tag);
+    void decrementTimerCount(const boost::system::error_code&e, const Time& start, const Duration& timer_duration, const IOCallbackWithError& cb, const char* tag, const char* tagStat=NULL);
+    void decrementCount(const Time& start, const IOCallback& cb, const char* tag, const char* tagStat=NULL);
 
     // Invoked by strands when they are being destroyed so we can
     // track which ones are alive.
@@ -109,6 +118,7 @@ class SIRIKATA_EXPORT IOService : public Noncopyable {
 
 public:
 
+    
     IOService(const String& name);
     ~IOService();
 
@@ -172,7 +182,8 @@ public:
      *  \param handler the handler callback to be called
      *  \param tag a string descriptor of the handler for debugging
      */
-    void dispatch(const IOCallback& handler, const char* tag = NULL);
+    void dispatch(const IOCallback& handler, const char* tag = NULL,
+        const char* tagStat = NULL);
 
     /** Request that the given handler be appended to the event queue
      *  and invoked later.  The handler will not be invoked during
@@ -180,7 +191,8 @@ public:
      *  \param handler the handler callback to be called
      *  \param tag a string descriptor of the handler for debugging
      */
-    void post(const IOCallback& handler, const char* tag = NULL);
+    void post(const IOCallback& handler, const char* tag = NULL,
+        const char* tagStat = NULL);
     /** Request that the given handler be appended to the event queue
      *  and invoked later.  Regardless of the wait duration requested,
      *  the handler will never be invoked during this method call.
@@ -188,7 +200,8 @@ public:
      *  \param handler the handler callback to be called
      *  \param tag a string descriptor of the handler for debugging
      */
-    void post(const Duration& waitFor, const IOCallback& handler, const char* tag = NULL);
+    void post(const Duration& waitFor, const IOCallback& handler,
+        const char* tag = NULL, const char* tagStat=NULL);
 
 #ifdef SIRIKATA_TRACK_EVENT_QUEUES
     uint32 numTimersEnqueued() const { return mTimersEnqueued.read(); }
@@ -201,8 +214,10 @@ public:
      *  IOStrands.
      */
     void reportStats() const;
-
+    void reportStatsFile(const char* filename, bool detailed) const;
+    
     static void reportAllStats();
+    static void reportAllStatsFile(const char* filename, bool detailed = false);
 #endif
 };
 

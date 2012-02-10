@@ -35,6 +35,11 @@ public:
         return sum / mSamples.size();
     }
 
+    const CircularBuffer<SampleType>& getSamples() const
+    {
+        return mSamples;
+    }
+    
 private:
     CircularBuffer<SampleType> mSamples;
 }; // class RecentStats

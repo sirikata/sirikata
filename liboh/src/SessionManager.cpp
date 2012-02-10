@@ -929,7 +929,9 @@ void SessionManager::handleSpaceConnection(const Sirikata::Network::Stream::Conn
         SESSION_LOG(error,"Disconnected from server " << sid << ": " << reason);
         delete conn;
         mConnections.erase(sid);
-        mTimeSyncClient->removeNode(OHDP::NodeID(sid));
+        if (mTimeSyncClient != NULL)
+            mTimeSyncClient->removeNode(OHDP::NodeID(sid));
+        
         // Notify connected objects
         mObjectConnections.handleUnderlyingDisconnect(sid, reason);
         // If we have no connections left, we have to give up on TimeSync
