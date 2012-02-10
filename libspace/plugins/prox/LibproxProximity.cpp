@@ -716,7 +716,7 @@ void LibproxProximity::tickQueryHandler(ProxQueryHandlerData qh[NUM_OBJECT_CLASS
     for(int i = 0; i < NUM_OBJECT_CLASSES; i++) {
         if (qh[i].handler != NULL) {
             for(ObjectIDSet::iterator it = qh[i].removals.begin(); it != qh[i].removals.end(); it++)
-                qh[i].handler->removeObject(*it);
+                qh[i].handler->removeObject(*it, true);
             qh[i].removals.clear();
 
             qh[i].handler->tick(simT);
