@@ -589,12 +589,6 @@ void LibproxProximity::removeObjectSize(const UUID& obj) {
     }
 }
 
-void LibproxProximity::checkObjectClass(bool is_local, const UUID& objid, const TimedMotionVector3f& newval) {
-    mProxStrand->post(
-        std::tr1::bind(&LibproxProximity::handleCheckObjectClass, this, is_local, objid, newval),
-        "LibproxProximity::handleCheckObjectClass"
-    );
-}
 
 int32 LibproxProximity::objectQueries() const {
     return mObjectQueries[OBJECT_CLASS_STATIC].size();
@@ -1175,46 +1169,6 @@ void LibproxProximity::trySwapHandlers(bool is_local, const UUID& objid, bool is
     handleCheckObjectClassForHandlers(objid, is_static, mObjectQueryHandler);
     if (is_local)
         handleCheckObjectClassForHandlers(objid, is_static, mServerQueryHandler);
-}
-
-void LibproxProximity::removeStaticObjectTimeout(const UUID& objid) {
-    StaticObjectsByID& by_id = mStaticObjectTimeouts.get<objid_tag>();
-    StaticObjectsByID::iterator it = by_id.find(objid);
-    if (it == by_id.end()) return;
-    by_id.erase(it);
-}
-
-void LibproxProximity::processExpiredStaticObjectTimeouts() {
-    Time curt = mLocService->context()->recentSimTime();
-    StaticObjectsByExpiration& by_expires = mStaticObjectTimeouts.get<expires_tag>();
-    while(!by_expires.empty() &&
-        by_expires.begin()->expires < curt) {
-        trySwapHandlers(by_expires.begin()->local, by_expires.begin()->objid, true);
-        by_expires.erase(by_expires.begin());
-    }
-}
-
-void LibproxProximity::handleCheckObjectClass(bool is_local, const UUID& objid, const TimedMotionVector3f& newval) {
-    assert(mSeparateDynamicObjects == true);
-
-    // Basic approach: we need to check if the object has switched between
-    // static/dynamic. We need to do this for both the local (object query) and
-    // global (server query) handlers.
-    bool is_static = velocityIsStatic(newval.velocity());
-    // If it's moving, do the check immediately since we need to move it into
-    // the dynamic tree right away; also make sure it's not in the queue for
-    // being moved to the static tree. Otherwise queue it up to be processed
-    // after a delay
-    if (!is_static) {
-        trySwapHandlers(is_local, objid, is_static);
-        removeStaticObjectTimeout(objid);
-    }
-    else {
-        // Make sure previous entry is cleared out
-        removeStaticObjectTimeout(objid);
-        // And insert a new one
-        mStaticObjectTimeouts.insert(StaticObjectTimeout(objid, mContext->recentSimTime() + mMoveToStaticDelay, is_local));
-    }
 }
 
 } // namespace Sirikata

@@ -44,11 +44,6 @@
 
 #include <sirikata/space/PintoServerQuerier.hpp>
 
-#include <boost/multi_index_container.hpp>
-#include <boost/multi_index/member.hpp>
-#include <boost/multi_index/ordered_index.hpp>
-
-
 namespace Sirikata {
 
 class ProximityInputEvent;
@@ -151,9 +146,6 @@ private:
     void updateObjectSize(const UUID& obj, float rad);
     void removeObjectSize(const UUID& obj);
 
-    // Takes care of switching objects between static/dynamic
-    void checkObjectClass(bool is_local, const UUID& objid, const TimedMotionVector3f& newval);
-
     // Setup all known servers for a server query update
     void addAllServersForUpdate();
 
@@ -180,11 +172,8 @@ private:
     // Decides whether a query handler should handle a particular object.
     bool handlerShouldHandleObject(bool is_static_handler, bool is_global_handler, const UUID& obj_id, bool local, const TimedMotionVector3f& pos, const BoundingSphere3f& region, float maxSize);
     // The real handler for moving objects between static/dynamic
-    void handleCheckObjectClass(bool is_local, const UUID& objid, const TimedMotionVector3f& newval);
     void handleCheckObjectClassForHandlers(const UUID& objid, bool is_static, ProxQueryHandlerData handlers[NUM_OBJECT_CLASSES]);
-    void trySwapHandlers(bool is_local, const UUID& objid, bool is_static);
-    void removeStaticObjectTimeout(const UUID& objid);
-    void processExpiredStaticObjectTimeouts();
+    virtual void trySwapHandlers(bool is_local, const UUID& objid, bool is_static);
 
     /**
        @param {uuid} obj_id The uuid of the object that we're sending proximity
@@ -294,34 +283,6 @@ private:
     ServerSeqNoInfoMap mServerSeqNos;
     typedef std::tr1::unordered_map<UUID, SeqNoPtr, UUID::Hasher> ObjectSeqNoInfoMap;
     ObjectSeqNoInfoMap mObjectSeqNos;
-
-    // Track objects that have become static and, after a delay, need to be
-    // moved between trees. We track them by ID (to cancel due to movement or
-    // disconnect) and time (to process them efficiently as their timeouts
-    // expire).
-    struct StaticObjectTimeout {
-        StaticObjectTimeout(UUID id, Time _expires, bool l)
-         : objid(id),
-           expires(_expires),
-           local(l)
-        {}
-        UUID objid;
-        Time expires;
-        bool local;
-    };
-    // Tags used by ObjectInfoSet
-    struct objid_tag {};
-    struct expires_tag {};
-    typedef boost::multi_index_container<
-        StaticObjectTimeout,
-        boost::multi_index::indexed_by<
-            boost::multi_index::ordered_unique< boost::multi_index::tag<objid_tag>, BOOST_MULTI_INDEX_MEMBER(StaticObjectTimeout,UUID,objid) >,
-            boost::multi_index::ordered_non_unique< boost::multi_index::tag<expires_tag>, BOOST_MULTI_INDEX_MEMBER(StaticObjectTimeout,Time,expires) >
-            >
-        > StaticObjectTimeouts;
-    typedef StaticObjectTimeouts::index<objid_tag>::type StaticObjectsByID;
-    typedef StaticObjectTimeouts::index<expires_tag>::type StaticObjectsByExpiration;
-    StaticObjectTimeouts mStaticObjectTimeouts;
 
 
     // Threads: Thread-safe data used for exchange between threads

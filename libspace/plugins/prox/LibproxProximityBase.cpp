@@ -371,6 +371,14 @@ void LibproxProximityBase::handleRemoveAllServerLocSubscription(const ServerID& 
 
 
 
+void LibproxProximityBase::checkObjectClass(bool is_local, const UUID& objid, const TimedMotionVector3f& newval) {
+    mProxStrand->post(
+        std::tr1::bind(&LibproxProximityBase::handleCheckObjectClass, this, is_local, objid, newval),
+        "LibproxProximityBase::handleCheckObjectClass"
+    );
+}
+
+
 // PROX Thread
 
 void LibproxProximityBase::aggregateCreated(const UUID& objid) {
@@ -442,6 +450,51 @@ void LibproxProximityBase::aggregateDestroyed(const UUID& objid) {
 void LibproxProximityBase::aggregateObserved(const UUID& objid, uint32 nobservers) {
     mAggregateManager->aggregateObserved(objid, nobservers);
 }
+
+
+
+void LibproxProximityBase::removeStaticObjectTimeout(const UUID& objid) {
+    StaticObjectsByID& by_id = mStaticObjectTimeouts.get<objid_tag>();
+    StaticObjectsByID::iterator it = by_id.find(objid);
+    if (it == by_id.end()) return;
+    by_id.erase(it);
+}
+
+
+void LibproxProximityBase::processExpiredStaticObjectTimeouts() {
+    Time curt = mLocService->context()->recentSimTime();
+    StaticObjectsByExpiration& by_expires = mStaticObjectTimeouts.get<expires_tag>();
+    while(!by_expires.empty() &&
+        by_expires.begin()->expires < curt) {
+        trySwapHandlers(by_expires.begin()->local, by_expires.begin()->objid, true);
+        by_expires.erase(by_expires.begin());
+    }
+}
+
+void LibproxProximityBase::handleCheckObjectClass(bool is_local, const UUID& objid, const TimedMotionVector3f& newval) {
+    assert(mSeparateDynamicObjects == true);
+
+    // Basic approach: we need to check if the object has switched between
+    // static/dynamic. We need to do this for both the local (object query) and
+    // global (server query) handlers.
+    bool is_static = velocityIsStatic(newval.velocity());
+    // If it's moving, do the check immediately since we need to move it into
+    // the dynamic tree right away; also make sure it's not in the queue for
+    // being moved to the static tree. Otherwise queue it up to be processed
+    // after a delay
+    if (!is_static) {
+        trySwapHandlers(is_local, objid, is_static);
+        removeStaticObjectTimeout(objid);
+    }
+    else {
+        // Make sure previous entry is cleared out
+        removeStaticObjectTimeout(objid);
+        // And insert a new one
+        mStaticObjectTimeouts.insert(StaticObjectTimeout(objid, mContext->recentSimTime() + mMoveToStaticDelay, is_local));
+    }
+}
+
+
 
 // MAIN strand
 void LibproxProximityBase::updateAggregateLoc(const UUID& objid, const BoundingSphere3f& bnds) {

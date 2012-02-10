@@ -34,13 +34,13 @@ LibproxManualProximity::LibproxManualProximity(SpaceContext* ctx, LocationServic
     // OH Queries
     for(int i = 0; i < NUM_OBJECT_CLASSES; i++) {
         if (i >= mNumQueryHandlers) {
-            mOHQueryHandler[i] = NULL;
+            mOHQueryHandler[i].handler = NULL;
             continue;
         }
-        mOHQueryHandler[i] = new Prox::RTreeManualQueryHandler<ObjectProxSimulationTraits>(10);
-        mOHQueryHandler[i]->setAggregateListener(this); // *Must* be before handler->initialize
+        mOHQueryHandler[i].handler = new Prox::RTreeManualQueryHandler<ObjectProxSimulationTraits>(10);
+        mOHQueryHandler[i].handler->setAggregateListener(this); // *Must* be before handler->initialize
         bool object_static_objects = (mSeparateDynamicObjects && i == OBJECT_CLASS_STATIC);
-        mOHQueryHandler[i]->initialize(
+        mOHQueryHandler[i].handler->initialize(
             mLocCache, mLocCache, object_static_objects,
             std::tr1::bind(&LibproxManualProximity::handlerShouldHandleObject, this, object_static_objects, false, _1, _2, _3, _4, _5)
         );
@@ -49,7 +49,7 @@ LibproxManualProximity::LibproxManualProximity(SpaceContext* ctx, LocationServic
 
 LibproxManualProximity::~LibproxManualProximity() {
     for(int i = 0; i < NUM_OBJECT_CLASSES; i++) {
-        delete mOHQueryHandler[i];
+        delete mOHQueryHandler[i].handler;
     }
 }
 
@@ -87,6 +87,32 @@ void LibproxManualProximity::addQuery(UUID obj, const String& params) {
 void LibproxManualProximity::removeQuery(UUID obj) {
     // Ignored, this query handler only deals with ObjectHost queries
 }
+
+
+// Note: LocationServiceListener interface is only used in order to get updates on objects which have
+// registered queries, allowing us to update those queries as appropriate.  All updating of objects
+// in the prox data structure happens via the LocationServiceCache
+void LibproxManualProximity::localObjectRemoved(const UUID& uuid, bool agg) {
+    mProxStrand->post(
+        std::tr1::bind(&LibproxManualProximity::removeStaticObjectTimeout, this, uuid),
+        "LibproxManualProximity::removeStaticObjectTimeout"
+    );
+}
+void LibproxManualProximity::localLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval) {
+    if (mSeparateDynamicObjects)
+        checkObjectClass(true, uuid, newval);
+}
+void LibproxManualProximity::replicaObjectRemoved(const UUID& uuid) {
+    mProxStrand->post(
+        std::tr1::bind(&LibproxManualProximity::removeStaticObjectTimeout, this, uuid),
+        "LibproxManualProximity::removeStaticObjectTimeout"
+    );
+}
+void LibproxManualProximity::replicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) {
+    if (mSeparateDynamicObjects)
+        checkObjectClass(false, uuid, newval);
+}
+
 
 // Migration management
 
@@ -184,11 +210,39 @@ void LibproxManualProximity::aggregateObserved(ProxAggregator* handler, const UU
 }
 
 
-void LibproxManualProximity::tickQueryHandler(ProxQueryHandler* qh[NUM_OBJECT_CLASSES]) {
+void LibproxManualProximity::tickQueryHandler(ProxQueryHandlerData qh[NUM_OBJECT_CLASSES]) {
+    // Not really any better place to do this. We'll call this more frequently
+    // than necessary by putting it here, but hopefully it doesn't matter since
+    // most of the time nothing will be done.
+    processExpiredStaticObjectTimeouts();
+
+    // We need to actually swap any objects that the previous step
+    // found. However, we need to be careful because just performing
+    // the addObject() and removeObject() can result in incorrect
+    // results: because each class is ticked separately we could do
+    // the addition and removal, then tick the handlers in the wrong
+    // order such that querier q which already has object o in the
+    // result set gets messages [add o, remove o] when they really
+    // needed to get [remove o, add o].
+    //
+    // To handle this, we just do all the removals, perform a tick,
+    // then do all the additions. This forces this step to only
+    // generate removals, then lets the next tick generate the
+    // additions.
+
     Time simT = mContext->simTime();
     for(int i = 0; i < NUM_OBJECT_CLASSES; i++) {
-        if (qh[i] != NULL)
-            qh[i]->tick(simT);
+        if (qh[i].handler != NULL) {
+            for(ObjectIDSet::iterator it = qh[i].removals.begin(); it != qh[i].removals.end(); it++)
+                qh[i].handler->removeObject(*it, true);
+            qh[i].removals.clear();
+
+            qh[i].handler->tick(simT);
+
+            for(ObjectIDSet::iterator it = qh[i].additions.begin(); it != qh[i].additions.end(); it++)
+                qh[i].handler->addObject(*it);
+            qh[i].additions.clear();
+        }
     }
 }
 
@@ -217,7 +271,7 @@ void LibproxManualProximity::handleObjectHostProxMessage(const OHDP::NodeID& id,
         PROXLOG(detailed, "Init query for " << id);
 
         for(int i = 0; i < NUM_OBJECT_CLASSES; i++) {
-            if (mOHQueryHandler[i] == NULL) continue;
+            if (mOHQueryHandler[i].handler == NULL) continue;
 
             // FIXME we need some way of specifying the basic query
             // parameters for OH queries (or maybe just get rid of
@@ -226,7 +280,7 @@ void LibproxManualProximity::handleObjectHostProxMessage(const OHDP::NodeID& id,
             TimedMotionVector3f pos(mContext->simTime(), MotionVector3f(Vector3f(0, 0, 0), Vector3f(0, 0, 0)));
             BoundingSphere3f bounds(Vector3f(0, 0, 0), 0);
             float max_size = 0.f;
-            ProxQuery* q = mOHQueryHandler[i]->registerQuery(pos, bounds, max_size);
+            ProxQuery* q = mOHQueryHandler[i].handler->registerQuery(pos, bounds, max_size);
             mOHQueries[i][id] = q;
             mInvertedOHQueries[q] = id;
             // Set the listener last since it can trigger callbacks
@@ -243,7 +297,7 @@ void LibproxManualProximity::handleObjectHostProxMessage(const OHDP::NodeID& id,
             refine_nodes.push_back(UUID(v.first, UUID::HumanReadable()));
 
         for(int kls = 0; kls < NUM_OBJECT_CLASSES; kls++) {
-            if (mOHQueryHandler[kls] == NULL) continue;
+            if (mOHQueryHandler[kls].handler == NULL) continue;
             OHQueryMap::iterator query_it = mOHQueries[kls].find(id);
             if (query_it == mOHQueries[kls].end()) continue;
             ProxQuery* q = query_it->second;
@@ -261,7 +315,7 @@ void LibproxManualProximity::handleObjectHostProxMessage(const OHDP::NodeID& id,
             coarsen_nodes.push_back(UUID(v.first, UUID::HumanReadable()));
 
         for(int kls = 0; kls < NUM_OBJECT_CLASSES; kls++) {
-            if (mOHQueryHandler[kls] == NULL) continue;
+            if (mOHQueryHandler[kls].handler == NULL) continue;
             OHQueryMap::iterator query_it = mOHQueries[kls].find(id);
             if (query_it == mOHQueries[kls].end()) continue;
             ProxQuery* q = query_it->second;
@@ -282,7 +336,7 @@ void LibproxManualProximity::handleObjectHostSessionEnded(const OHDP::NodeID& id
 void LibproxManualProximity::destroyQuery(const OHDP::NodeID& id) {
     PROXLOG(detailed, "Destroy query for " << id);
     for(int i = 0; i < NUM_OBJECT_CLASSES; i++) {
-        if (mOHQueryHandler[i] == NULL) continue;
+        if (mOHQueryHandler[i].handler == NULL) continue;
 
         OHQueryMap::iterator it = mOHQueries[i].find(id);
         if (it == mOHQueries[i].end()) continue;
@@ -327,6 +381,32 @@ bool LibproxManualProximity::handlerShouldHandleObject(bool is_static_handler, b
     else
         return false;
 }
+
+
+void LibproxManualProximity::handleCheckObjectClassForHandlers(const UUID& objid, bool is_static, ProxQueryHandlerData handlers[NUM_OBJECT_CLASSES]) {
+    if ( (is_static && handlers[OBJECT_CLASS_STATIC].handler->containsObject(objid)) ||
+        (!is_static && handlers[OBJECT_CLASS_DYNAMIC].handler->containsObject(objid)) )
+        return;
+
+    // Validate that the other handler has the object.
+    assert(
+        (is_static && handlers[OBJECT_CLASS_DYNAMIC].handler->containsObject(objid)) ||
+        (!is_static && handlers[OBJECT_CLASS_STATIC].handler->containsObject(objid))
+    );
+
+    // If it wasn't in the right place, switch it.
+    int swap_out = is_static ? OBJECT_CLASS_DYNAMIC : OBJECT_CLASS_STATIC;
+    int swap_in = is_static ? OBJECT_CLASS_STATIC : OBJECT_CLASS_DYNAMIC;
+    PROXLOG(debug, "Swapping " << objid.toString() << " from " << ObjectClassToString((ObjectClass)swap_out) << " to " << ObjectClassToString((ObjectClass)swap_in));
+    handlers[swap_out].removals.insert(objid);
+    handlers[swap_in].additions.insert(objid);
+}
+
+void LibproxManualProximity::trySwapHandlers(bool is_local, const UUID& objid, bool is_static) {
+    handleCheckObjectClassForHandlers(objid, is_static, mOHQueryHandler);
+}
+
+
 
 SeqNoPtr LibproxManualProximity::getSeqNoInfo(const OHDP::NodeID& node)
 {

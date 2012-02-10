@@ -8,6 +8,10 @@
 #include <sirikata/space/Proximity.hpp>
 #include "CBRLocationServiceCache.hpp"
 
+#include <boost/multi_index_container.hpp>
+#include <boost/multi_index/member.hpp>
+#include <boost/multi_index/ordered_index.hpp>
+
 namespace Sirikata {
 
 /** Base class for Libprox-based Proximity implementations, providing a bit of
@@ -155,6 +159,10 @@ protected:
     void handleRemoveServerLocSubscription(const ServerID& subscriber, const UUID& observed);
     void handleRemoveAllServerLocSubscription(const ServerID& subscriber);
 
+    // Takes care of switching objects between static/dynamic
+    void checkObjectClass(bool is_local, const UUID& objid, const TimedMotionVector3f& newval);
+
+
     typedef std::tr1::unordered_map<UUID, ProxObjectStreamInfoPtr, UUID::Hasher> ObjectProxStreamMap;
     ObjectProxStreamMap mObjectProxStreams;
 
@@ -166,6 +174,39 @@ protected:
     Network::IOStrand* mProxStrand;
 
     CBRLocationServiceCache* mLocCache;
+
+    // Track objects that have become static and, after a delay, need to be
+    // moved between trees. We track them by ID (to cancel due to movement or
+    // disconnect) and time (to process them efficiently as their timeouts
+    // expire).
+    struct StaticObjectTimeout {
+        StaticObjectTimeout(UUID id, Time _expires, bool l)
+         : objid(id),
+           expires(_expires),
+           local(l)
+        {}
+        UUID objid;
+        Time expires;
+        bool local;
+    };
+    // Tags used by ObjectInfoSet
+    struct objid_tag {};
+    struct expires_tag {};
+    typedef boost::multi_index_container<
+        StaticObjectTimeout,
+        boost::multi_index::indexed_by<
+            boost::multi_index::ordered_unique< boost::multi_index::tag<objid_tag>, BOOST_MULTI_INDEX_MEMBER(StaticObjectTimeout,UUID,objid) >,
+            boost::multi_index::ordered_non_unique< boost::multi_index::tag<expires_tag>, BOOST_MULTI_INDEX_MEMBER(StaticObjectTimeout,Time,expires) >
+            >
+        > StaticObjectTimeouts;
+    typedef StaticObjectTimeouts::index<objid_tag>::type StaticObjectsByID;
+    typedef StaticObjectTimeouts::index<expires_tag>::type StaticObjectsByExpiration;
+    StaticObjectTimeouts mStaticObjectTimeouts;
+
+    void removeStaticObjectTimeout(const UUID& objid);
+    virtual void trySwapHandlers(bool is_local, const UUID& objid, bool is_static) = 0;
+    void handleCheckObjectClass(bool is_local, const UUID& objid, const TimedMotionVector3f& newval);
+    void processExpiredStaticObjectTimeouts();
 
     // Query-Type-Agnostic AggregateListener Interface -- manages adding to Loc
     // and passing to AggregateManager, but you need to delegate to these

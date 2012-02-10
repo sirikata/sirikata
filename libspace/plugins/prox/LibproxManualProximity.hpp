@@ -46,6 +46,13 @@ public:
     // PollingService Interface
     virtual void poll();
 
+    // LocationServiceListener Interface - Used for deciding when to switch
+    // objects between static/dynamic
+    virtual void localObjectRemoved(const UUID& uuid, bool agg);
+    virtual void localLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval);
+    virtual void replicaObjectRemoved(const UUID& uuid);
+    virtual void replicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval);
+
     // MigrationDataClient Interface
     virtual std::string migrationClientTag();
     virtual std::string generateMigrationData(const UUID& obj, ServerID source_server, ServerID dest_server);
@@ -70,6 +77,7 @@ public:
     void queryHasEvents(ProxQuery* query);
 
 private:
+    struct ProxQueryHandlerData;
 
     // MAIN Thread:
 
@@ -83,7 +91,7 @@ private:
 
     // PROX Thread:
 
-    void tickQueryHandler(ProxQueryHandler* qh[NUM_OBJECT_CLASSES]);
+    void tickQueryHandler(ProxQueryHandlerData qh[NUM_OBJECT_CLASSES]);
 
     // Real handler for OH requests, in the prox thread
     void handleObjectHostProxMessage(const OHDP::NodeID& id, const String& data, SeqNoPtr seqNo);
@@ -93,6 +101,9 @@ private:
 
     // Decides whether a query handler should handle a particular object.
     bool handlerShouldHandleObject(bool is_static_handler, bool is_global_handler, const UUID& obj_id, bool is_local, const TimedMotionVector3f& pos, const BoundingSphere3f& region, float maxSize);
+    // The real handler for moving objects between static/dynamic
+    void handleCheckObjectClassForHandlers(const UUID& objid, bool is_static, ProxQueryHandlerData handlers[NUM_OBJECT_CLASSES]);
+    virtual void trySwapHandlers(bool is_local, const UUID& objid, bool is_static);
 
     SeqNoPtr getSeqNoInfo(const OHDP::NodeID& node);
     void eraseSeqNoInfo(const OHDP::NodeID& node);
@@ -100,10 +111,23 @@ private:
     typedef std::tr1::unordered_map<OHDP::NodeID, ProxQuery*, OHDP::NodeID::Hasher> OHQueryMap;
     typedef std::tr1::unordered_map<ProxQuery*, OHDP::NodeID> InvertedOHQueryMap;
 
+    typedef std::tr1::unordered_set<UUID, UUID::Hasher> ObjectIDSet;
+    struct ProxQueryHandlerData {
+        ProxQueryHandler* handler;
+        // Additions and removals that need to be processed on the
+        // next tick. These need to be handled carefully since they
+        // can be due to swapping between handlers. If they are
+        // processed in the wrong order we could end up generating
+        // [addition, removal] instead of [removal, addition] for
+        // queriers.
+        ObjectIDSet additions;
+        ObjectIDSet removals;
+    };
+
     // These track objects on this server and respond to OH queries.
     OHQueryMap mOHQueries[NUM_OBJECT_CLASSES];
     InvertedOHQueryMap mInvertedOHQueries;
-    ProxQueryHandler* mOHQueryHandler[NUM_OBJECT_CLASSES];
+    ProxQueryHandlerData mOHQueryHandler[NUM_OBJECT_CLASSES];
     PollerService mOHHandlerPoller;
     Sirikata::ThreadSafeQueue<OHResult> mOHResults;
     typedef std::tr1::unordered_map<OHDP::NodeID, SeqNoPtr, OHDP::NodeID::Hasher> OHSeqNoInfoMap;
