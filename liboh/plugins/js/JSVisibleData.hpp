@@ -180,6 +180,11 @@ private:
     typedef std::map<SpaceObjectReference, JSVisibleDataPtr> ChildMap;
     ChildMap mChildren;
     SpaceObjectReference mBest;
+
+    typedef boost::mutex Mutex;
+    Mutex childMutex;
+
+    
 };
 
 } // namespace JS
