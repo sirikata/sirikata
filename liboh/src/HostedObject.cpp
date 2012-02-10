@@ -50,7 +50,7 @@
 
 #include <sirikata/core/network/IOStrandImpl.hpp>
 #include <sirikata/oh/SimulationFactory.hpp>
-#include "PerPresenceData.hpp"
+#include <sirikata/oh/PerPresenceData.hpp>
 
 #include <sirikata/oh/LocUpdate.hpp>
 #include <sirikata/oh/ProtocolLocUpdate.hpp>
