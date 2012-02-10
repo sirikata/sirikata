@@ -125,13 +125,13 @@ LibproxProximity::LibproxProximity(SpaceContext* ctx, LocationService* locservic
     String server_handler_options = GetOptionValue<String>(OPT_PROX_SERVER_QUERY_HANDLER_OPTIONS);
     for(int i = 0; i < NUM_OBJECT_CLASSES; i++) {
         if (i >= mNumQueryHandlers) {
-            mServerQueryHandler[i] = NULL;
+            mServerQueryHandler[i].handler = NULL;
             continue;
         }
-        mServerQueryHandler[i] = QueryHandlerFactory<ObjectProxSimulationTraits>(server_handler_type, server_handler_options);
-        mServerQueryHandler[i]->setAggregateListener(this); // *Must* be before handler->initialize
+        mServerQueryHandler[i].handler = QueryHandlerFactory<ObjectProxSimulationTraits>(server_handler_type, server_handler_options);
+        mServerQueryHandler[i].handler->setAggregateListener(this); // *Must* be before handler->initialize
         bool server_static_objects = (mSeparateDynamicObjects && i == OBJECT_CLASS_STATIC);
-        mServerQueryHandler[i]->initialize(
+        mServerQueryHandler[i].handler->initialize(
             mLocCache, mLocCache, server_static_objects,
             std::tr1::bind(&LibproxProximity::handlerShouldHandleObject, this, server_static_objects, false, _1, _2, _3, _4, _5)
         );
@@ -143,13 +143,13 @@ LibproxProximity::LibproxProximity(SpaceContext* ctx, LocationService* locservic
     String object_handler_options = GetOptionValue<String>(OPT_PROX_OBJECT_QUERY_HANDLER_OPTIONS);
     for(int i = 0; i < NUM_OBJECT_CLASSES; i++) {
         if (i >= mNumQueryHandlers) {
-            mObjectQueryHandler[i] = NULL;
+            mObjectQueryHandler[i].handler = NULL;
             continue;
         }
-        mObjectQueryHandler[i] = QueryHandlerFactory<ObjectProxSimulationTraits>(object_handler_type, object_handler_options);
-        mObjectQueryHandler[i]->setAggregateListener(this); // *Must* be before handler->initialize
+        mObjectQueryHandler[i].handler = QueryHandlerFactory<ObjectProxSimulationTraits>(object_handler_type, object_handler_options);
+        mObjectQueryHandler[i].handler->setAggregateListener(this); // *Must* be before handler->initialize
         bool object_static_objects = (mSeparateDynamicObjects && i == OBJECT_CLASS_STATIC);
-        mObjectQueryHandler[i]->initialize(
+        mObjectQueryHandler[i].handler->initialize(
             mLocCache, mLocCache, object_static_objects,
             std::tr1::bind(&LibproxProximity::handlerShouldHandleObject, this, object_static_objects, true, _1, _2, _3, _4, _5)
         );
@@ -159,8 +159,8 @@ LibproxProximity::LibproxProximity(SpaceContext* ctx, LocationService* locservic
 
 LibproxProximity::~LibproxProximity() {
     for(int i = 0; i < NUM_OBJECT_CLASSES; i++) {
-        delete mObjectQueryHandler[i];
-        delete mServerQueryHandler[i];
+        delete mObjectQueryHandler[i].handler;
+        delete mServerQueryHandler[i].handler;
     }
 
     delete mServerQuerier;
@@ -640,8 +640,8 @@ void LibproxProximity::poll() {
 
 void LibproxProximity::queryHasEvents(Query* query) {
     if (
-        query->handler() == mServerQueryHandler[OBJECT_CLASS_STATIC] ||
-        query->handler() == mServerQueryHandler[OBJECT_CLASS_DYNAMIC]
+        query->handler() == mServerQueryHandler[OBJECT_CLASS_STATIC].handler ||
+        query->handler() == mServerQueryHandler[OBJECT_CLASS_DYNAMIC].handler
     )
         generateServerQueryEvents(query);
     else
@@ -692,24 +692,47 @@ void LibproxProximity::updatedSegmentation(CoordinateSegmentation* cseg, const s
 
 // PROX Thread: Everything after this should only be called from within the prox thread.
 
-void LibproxProximity::tickQueryHandler(ProxQueryHandler* qh[NUM_OBJECT_CLASSES]) {
+void LibproxProximity::tickQueryHandler(ProxQueryHandlerData qh[NUM_OBJECT_CLASSES]) {
     // Not really any better place to do this. We'll call this more frequently
     // than necessary by putting it here, but hopefully it doesn't matter since
     // most of the time nothing will be done.
     processExpiredStaticObjectTimeouts();
 
+    // We need to actually swap any objects that the previous step
+    // found. However, we need to be careful because just performing
+    // the addObject() and removeObject() can result in incorrect
+    // results: because each class is ticked separately we could do
+    // the addition and removal, then tick the handlers in the wrong
+    // order such that querier q which already has object o in the
+    // result set gets messages [add o, remove o] when they really
+    // needed to get [remove o, add o].
+    //
+    // To handle this, we just do all the removals, perform a tick,
+    // then do all the additions. This forces this step to only
+    // generate removals, then lets the next tick generate the
+    // additions.
+
     Time simT = mContext->simTime();
     for(int i = 0; i < NUM_OBJECT_CLASSES; i++) {
-        if (qh[i] != NULL)
-            qh[i]->tick(simT);
+        if (qh[i].handler != NULL) {
+            for(ObjectIDSet::iterator it = qh[i].removals.begin(); it != qh[i].removals.end(); it++)
+                qh[i].handler->removeObject(*it);
+            qh[i].removals.clear();
+
+            qh[i].handler->tick(simT);
+
+            for(ObjectIDSet::iterator it = qh[i].additions.begin(); it != qh[i].additions.end(); it++)
+                qh[i].handler->addObject(*it);
+            qh[i].additions.clear();
+        }
     }
 }
 
 void LibproxProximity::rebuildHandler(ObjectClass objtype) {
-    if (mServerQueryHandler[objtype] != NULL)
-        mServerQueryHandler[objtype]->rebuild();
-    if (mObjectQueryHandler[objtype] != NULL)
-        mObjectQueryHandler[objtype]->rebuild();
+    if (mServerQueryHandler[objtype].handler != NULL)
+        mServerQueryHandler[objtype].handler->rebuild();
+    if (mObjectQueryHandler[objtype].handler != NULL)
+        mObjectQueryHandler[objtype].handler->rebuild();
 }
 
 void LibproxProximity::generateServerQueryEvents(Query* query) {
@@ -944,15 +967,15 @@ void LibproxProximity::handleUpdateServerQuery(const ServerID& server, const Tim
     float ms = bounds.radius();
 
     for(int i = 0; i < NUM_OBJECT_CLASSES; i++) {
-        if (mServerQueryHandler[i] == NULL) continue;
+        if (mServerQueryHandler[i].handler == NULL) continue;
 
         ServerQueryMap::iterator it = mServerQueries[i].find(server);
         if (it == mServerQueries[i].end()) {
             PROXLOG(debug,"Add server query from " << server << ", min angle " << angle.asFloat() << ", object class " << ObjectClassToString((ObjectClass)i));
 
             Query* q = mServerDistance ?
-                mServerQueryHandler[i]->registerQuery(loc, region, ms, SolidAngle::Min, mDistanceQueryDistance) :
-                mServerQueryHandler[i]->registerQuery(loc, region, ms, angle) ;
+                mServerQueryHandler[i].handler->registerQuery(loc, region, ms, SolidAngle::Min, mDistanceQueryDistance) :
+                mServerQueryHandler[i].handler->registerQuery(loc, region, ms, angle) ;
             if (max_results != NoUpdateMaxResults && max_results > 0)
                 q->maxResults(max_results);
             mServerQueries[i][server] = q;
@@ -977,7 +1000,7 @@ void LibproxProximity::handleRemoveServerQuery(const ServerID& server) {
     PROXLOG(debug,"Remove server query from " << server);
 
     for(int i = 0; i < NUM_OBJECT_CLASSES; i++) {
-        if (mServerQueryHandler[i] == NULL) continue;
+        if (mServerQueryHandler[i].handler == NULL) continue;
 
         ServerQueryMap::iterator it = mServerQueries[i].find(server);
         if (it == mServerQueries[i].end()) continue;
@@ -1039,7 +1062,7 @@ void LibproxProximity::handleUpdateObjectQuery(const UUID& object, const TimedMo
         mObjectSeqNos.insert( ObjectSeqNoInfoMap::value_type(object, seqno) );
 
     for(int i = 0; i < NUM_OBJECT_CLASSES; i++) {
-        if (mObjectQueryHandler[i] == NULL) continue;
+        if (mObjectQueryHandler[i].handler == NULL) continue;
 
         ObjectQueryMap::iterator it = mObjectQueries[i].find(object);
 
@@ -1049,8 +1072,8 @@ void LibproxProximity::handleUpdateObjectQuery(const UUID& object, const TimedMo
             // which don't have subscriptions.
             if (angle != NoUpdateSolidAngle) {
                 Query* q = mObjectDistance ?
-                    mObjectQueryHandler[i]->registerQuery(loc, region, ms, SolidAngle::Min, mDistanceQueryDistance) :
-                    mObjectQueryHandler[i]->registerQuery(loc, region, ms, angle);
+                    mObjectQueryHandler[i].handler->registerQuery(loc, region, ms, SolidAngle::Min, mDistanceQueryDistance) :
+                    mObjectQueryHandler[i].handler->registerQuery(loc, region, ms, angle);
                 if (max_results != NoUpdateMaxResults && max_results > 0)
                     q->maxResults(max_results);
                 mObjectQueries[i][object] = q;
@@ -1074,7 +1097,7 @@ void LibproxProximity::handleUpdateObjectQuery(const UUID& object, const TimedMo
 void LibproxProximity::handleRemoveObjectQuery(const UUID& object, bool notify_main_thread) {
     // Clear out queries
     for(int i = 0; i < NUM_OBJECT_CLASSES; i++) {
-        if (mObjectQueryHandler[i] == NULL) continue;
+        if (mObjectQueryHandler[i].handler == NULL) continue;
 
         ObjectQueryMap::iterator it = mObjectQueries[i].find(object);
         if (it == mObjectQueries[i].end()) continue;
@@ -1129,23 +1152,23 @@ bool LibproxProximity::handlerShouldHandleObject(bool is_static_handler, bool is
         return false;
 }
 
-void LibproxProximity::handleCheckObjectClassForHandlers(const UUID& objid, bool is_static, ProxQueryHandler* handlers[NUM_OBJECT_CLASSES]) {
-    if ( (is_static && handlers[OBJECT_CLASS_STATIC]->containsObject(objid)) ||
-        (!is_static && handlers[OBJECT_CLASS_DYNAMIC]->containsObject(objid)) )
+void LibproxProximity::handleCheckObjectClassForHandlers(const UUID& objid, bool is_static, ProxQueryHandlerData handlers[NUM_OBJECT_CLASSES]) {
+    if ( (is_static && handlers[OBJECT_CLASS_STATIC].handler->containsObject(objid)) ||
+        (!is_static && handlers[OBJECT_CLASS_DYNAMIC].handler->containsObject(objid)) )
         return;
 
     // Validate that the other handler has the object.
     assert(
-        (is_static && handlers[OBJECT_CLASS_DYNAMIC]->containsObject(objid)) ||
-        (!is_static && handlers[OBJECT_CLASS_STATIC]->containsObject(objid))
+        (is_static && handlers[OBJECT_CLASS_DYNAMIC].handler->containsObject(objid)) ||
+        (!is_static && handlers[OBJECT_CLASS_STATIC].handler->containsObject(objid))
     );
 
     // If it wasn't in the right place, switch it.
     int swap_out = is_static ? OBJECT_CLASS_DYNAMIC : OBJECT_CLASS_STATIC;
     int swap_in = is_static ? OBJECT_CLASS_STATIC : OBJECT_CLASS_DYNAMIC;
     PROXLOG(debug, "Swapping " << objid.toString() << " from " << ObjectClassToString((ObjectClass)swap_out) << " to " << ObjectClassToString((ObjectClass)swap_in));
-    handlers[swap_out]->removeObject(objid);
-    handlers[swap_in]->addObject(objid);
+    handlers[swap_out].removals.insert(objid);
+    handlers[swap_in].additions.insert(objid);
 }
 
 void LibproxProximity::trySwapHandlers(bool is_local, const UUID& objid, bool is_static) {
