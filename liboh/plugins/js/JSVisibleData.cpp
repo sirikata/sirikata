@@ -123,25 +123,27 @@ const SpaceObjectReference& JSAggregateVisibleData::observer() {
 }
 
 // IPresencePropertiesRead Interface
-const TimedMotionVector3f& JSAggregateVisibleData::location() const {
+TimedMotionVector3f JSAggregateVisibleData::location() const{
     return getBestChild()->location();
 }
 
-const TimedMotionQuaternion& JSAggregateVisibleData::orientation() const {
+TimedMotionQuaternion JSAggregateVisibleData::orientation() const{
     return getBestChild()->orientation();
 }
 
-const BoundingSphere3f& JSAggregateVisibleData::bounds() const {
+BoundingSphere3f JSAggregateVisibleData::bounds() const{
     return getBestChild()->bounds();
 }
 
-const Transfer::URI& JSAggregateVisibleData::mesh() const {
+Transfer::URI JSAggregateVisibleData::mesh() const{
     return getBestChild()->mesh();
 }
 
-const String& JSAggregateVisibleData::physics() const {
+String JSAggregateVisibleData::physics() const{
     return getBestChild()->physics();
 }
+
+
 
 void JSAggregateVisibleData::removeVisibleData(JSVisibleData* data) {
     mChildren.erase(data->observer());

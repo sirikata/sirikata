@@ -239,8 +239,9 @@ const String& BulletPhysicsService::physics(const UUID& uuid) {
     LocationMap::iterator it = mLocations.find(uuid);
     assert(it != mLocations.end());
 
-    const LocationInfo& locinfo = it->second;
-    return locinfo.props.physics();
+    LocationInfo& locinfo = it->second;
+    locinfo.physics_copied_str = locinfo.props.physics();
+    return locinfo.physics_copied_str;
 }
 
 bool BulletPhysicsService::isFixed(const UUID& uuid) {

@@ -86,7 +86,8 @@ private:
         // only used for the accessor, when returning by const& since we don't have
         // a String version within props. DO NOT use anywhere else.
         String mesh_copied_str;
-
+        String physics_copied_str;
+        
         bool local;
         bool aggregate;
     };
