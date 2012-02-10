@@ -589,7 +589,7 @@ void HostedObject::processLocationUpdate(const SpaceObjectReference& sporef, Pro
     }
 
     if (update.has_location()) {
-        loc = update.locationWithLocalTime(this, sporef.space());
+        loc = update.location();
 
         CONTEXT_OHTRACE(objectLoc,
             sporef.object().getAsUUID(),
@@ -602,7 +602,7 @@ void HostedObject::processLocationUpdate(const SpaceObjectReference& sporef, Pro
     }
 
     if (update.has_orientation()) {
-        orient = update.orientationWithLocalTime(this, sporef.space());
+        orient = update.orientation();
         orientptr = &orient;
     }
 
@@ -678,11 +678,11 @@ void HostedObject::handleProximityUpdate(const SpaceObjectReference& spaceobj, c
 
     for(int32 aidx = 0; aidx < update.addition_size(); aidx++) {
         Sirikata::Protocol::Prox::ObjectAddition addition = update.addition(aidx);
-        ProxProtocolLocUpdate add(addition);
+        ProxProtocolLocUpdate add(addition, mObjectHost, spaceobj.space());
 
         SpaceObjectReference proximateID(spaceobj.space(), add.object());
 
-        TimedMotionVector3f loc(add.locationWithLocalTime(this, spaceobj.space()));
+        TimedMotionVector3f loc = add.location();
 
         CONTEXT_OHTRACE(prox,
             spaceobj.object().getAsUUID(),
@@ -692,7 +692,7 @@ void HostedObject::handleProximityUpdate(const SpaceObjectReference& spaceobj, c
             loc
         );
 
-        TimedMotionQuaternion orient(add.orientationWithLocalTime(this, spaceobj.space()));
+        TimedMotionQuaternion orient = add.orientation();
         BoundingSphere3f bnds = add.bounds();
         String mesh = add.meshOrDefault();
         String phy = add.physicsOrDefault();

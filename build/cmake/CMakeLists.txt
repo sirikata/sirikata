@@ -1519,7 +1519,6 @@ SET(LIBPROXYOBJECT_SOURCES
                   ${LIBPROXYOBJECT_SOURCE_DIR}/ProxyObject.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/ProxyManager.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/VWObject.cpp
-                  ${LIBPROXYOBJECT_SOURCE_DIR}/OrphanLocUpdateManager.cpp
     )
 SET(LIBOH_SOURCES
                   ${LIBOH_SOURCE_DIR}/SpaceNodeConnection.cpp
@@ -1534,8 +1533,9 @@ SET(LIBOH_SOURCES
                   ${LIBOH_SOURCE_DIR}/Storage.cpp
                   ${LIBOH_SOURCE_DIR}/PersistedObjectSet.cpp
                   ${LIBOH_SOURCE_DIR}/ObjectQueryProcessor.cpp
-                  ${LIBOH_SOURCE_DIR}/LocUpdate.cpp
+                  ${LIBOH_SOURCE_DIR}/ProtocolLocUpdate.cpp
                   ${LIBOH_SOURCE_DIR}/SimulationFactory.cpp
+                  ${LIBOH_SOURCE_DIR}/OrphanLocUpdateManager.cpp
                    )
 
 SET(LIBMESH_PLUGIN_COLLADAMODELS_DIR ${LIBMESH_PLUGIN_DIR}/collada)

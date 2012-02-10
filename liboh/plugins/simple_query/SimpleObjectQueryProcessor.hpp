@@ -7,7 +7,7 @@
 
 #include <sirikata/oh/ObjectQueryProcessor.hpp>
 
-#include <sirikata/proxyobject/OrphanLocUpdateManager.hpp>
+#include <sirikata/oh/OrphanLocUpdateManager.hpp>
 
 namespace Sirikata {
 namespace OH {

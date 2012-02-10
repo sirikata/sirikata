@@ -11,7 +11,7 @@
 
 #include "Protocol_Prox.pbj.hpp"
 
-#include <sirikata/proxyobject/PresencePropertiesLocUpdate.hpp>
+#include <sirikata/oh/PresencePropertiesLocUpdate.hpp>
 
 // Property tree for old API for queries
 #include <boost/property_tree/ptree.hpp>

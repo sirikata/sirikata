@@ -1,7 +1,11 @@
+// Copyright (c) 2012 Sirikata Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can
+// be found in the LICENSE file.
+
 #ifndef _SIRIKATA_PRESENCE_PROPERTIES_LOC_UPDATE_HPP_
 #define _SIRIKATA_PRESENCE_PROPERTIES_LOC_UPDATE_HPP_
 
-#include <sirikata/proxyobject/Platform.hpp>
+#include <sirikata/oh/Platform.hpp>
 #include <sirikata/oh/LocUpdate.hpp>
 
 namespace Sirikata {
@@ -11,6 +15,10 @@ namespace Sirikata {
  */
 class PresencePropertiesLocUpdate : public LocUpdate {
 public:
+    /** Construct a PresencePropertiesLocUpdate from a
+     *  SequencedPresenceProperties. Note that this assumes the times are
+     *  already local.
+     */
     PresencePropertiesLocUpdate(const ObjectReference& o, const SequencedPresenceProperties& lu)
      : mObject(o),
        mUpdate(lu)
@@ -31,16 +39,10 @@ public:
     virtual TimedMotionVector3f location() const { return mUpdate.location(); }
     virtual uint64 location_seqno() const { return mUpdate.getUpdateSeqNo(SequencedPresenceProperties::LOC_POS_PART); }
 
-    // Overridden because PresenceProperties work with local time
-    virtual TimedMotionVector3f locationWithLocalTime(ObjectHost* oh, const SpaceID& from_space) const { return location(); }
-
     // Orientation
     virtual bool has_orientation() const { return true; }
     virtual TimedMotionQuaternion orientation() const { return mUpdate.orientation(); }
     virtual uint64 orientation_seqno() const { return mUpdate.getUpdateSeqNo(SequencedPresenceProperties::LOC_ORIENT_PART); }
-
-    // Overridden because PresenceProperties work with local time
-    virtual TimedMotionQuaternion orientationWithLocalTime(ObjectHost* oh, const SpaceID& from_space) const { return orientation(); }
 
     // Bounds
     virtual bool has_bounds() const { return true; }

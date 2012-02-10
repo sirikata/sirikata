@@ -14,10 +14,22 @@ namespace Sirikata {
 /** Implementation of LocUpdate which collects its information from a PBJ
  *  LocationUpdate object.
  */
-class LocProtocolLocUpdate : public LocUpdate {
+class SIRIKATA_OH_EXPORT LocProtocolLocUpdate : public LocUpdate {
 public:
-    LocProtocolLocUpdate(const Sirikata::Protocol::Loc::LocationUpdate& lu)
-     : mUpdate(lu)
+    /** Construct a LocProtocolLocUpdate using the given raw LocationUpdate and
+     *  the OH and space to adjust times to the local timeframe.
+     *
+     *  \param lu the raw LocationUpdate
+     *  \param oh the OH this update originated from
+     *  \param space the space the update originated from
+     *
+     *  \note the references passed in here must remain valid for the lifetime
+     *  of this object.
+     */
+    LocProtocolLocUpdate(const Sirikata::Protocol::Loc::LocationUpdate& lu, const ObjectHost* oh, const SpaceID& space)
+     : mUpdate(lu),
+       mOH(oh),
+       mSpace(space)
     {}
     virtual ~LocProtocolLocUpdate() {}
 
@@ -29,18 +41,12 @@ public:
 
     // Location
     virtual bool has_location() const { return mUpdate.has_location(); }
-    virtual TimedMotionVector3f location() const {
-        Sirikata::Protocol::TimedMotionVector update_loc = mUpdate.location();
-        return TimedMotionVector3f(update_loc.t(), MotionVector3f(update_loc.position(), update_loc.velocity()));
-    }
+    virtual TimedMotionVector3f location() const;
     virtual uint64 location_seqno() const { return seqno(); }
 
     // Orientation
     virtual bool has_orientation() const { return mUpdate.has_orientation(); }
-    virtual TimedMotionQuaternion orientation() const {
-        Sirikata::Protocol::TimedMotionQuaternion update_orient = mUpdate.orientation();
-        return TimedMotionQuaternion(update_orient.t(), MotionQuaternion(update_orient.position(), update_orient.velocity()));
-    }
+    virtual TimedMotionQuaternion orientation() const;
     virtual uint64 orientation_seqno() const { return seqno(); }
 
     // Bounds
@@ -64,15 +70,29 @@ private:
     uint64 seqno() const { return (mUpdate.has_seqno() ? mUpdate.seqno() : 0); }
 
     const Sirikata::Protocol::Loc::LocationUpdate& mUpdate;
+    const ObjectHost* mOH;
+    const SpaceID& mSpace;
 };
 
 /** Implementation of LocUpdate which collects its information from a PBJ
  *  ProximityUpdate object.
  */
-class ProxProtocolLocUpdate : public LocUpdate {
+class SIRIKATA_OH_EXPORT ProxProtocolLocUpdate : public LocUpdate {
 public:
-    ProxProtocolLocUpdate(const Sirikata::Protocol::Prox::ObjectAddition& lu)
-     : mUpdate(lu)
+    /** Construct a ProxProtocolLocUpdate using the given raw ProximityAddition
+     *  and the OH and space to adjust times to the local timeframe.
+     *
+     *  \param lu the raw LocationUpdate
+     *  \param oh the OH this update originated from
+     *  \param space the space the update originated from
+     *
+     *  \note the references passed in here must remain valid for the lifetime
+     *  of this object.
+     */
+    ProxProtocolLocUpdate(const Sirikata::Protocol::Prox::ObjectAddition& lu, const ObjectHost* oh, const SpaceID& space)
+     : mUpdate(lu),
+       mOH(oh),
+       mSpace(space)
     {}
     virtual ~ProxProtocolLocUpdate() {}
 
@@ -84,18 +104,12 @@ public:
 
     // Location
     virtual bool has_location() const { return true; }
-    virtual TimedMotionVector3f location() const {
-        Sirikata::Protocol::TimedMotionVector update_loc = mUpdate.location();
-        return TimedMotionVector3f(update_loc.t(), MotionVector3f(update_loc.position(), update_loc.velocity()));
-    }
+    virtual TimedMotionVector3f location() const;
     virtual uint64 location_seqno() const { return seqno(); }
 
     // Orientation
     virtual bool has_orientation() const { return true; }
-    virtual TimedMotionQuaternion orientation() const {
-        Sirikata::Protocol::TimedMotionQuaternion update_orient = mUpdate.orientation();
-        return TimedMotionQuaternion(update_orient.t(), MotionQuaternion(update_orient.position(), update_orient.velocity()));
-    }
+    virtual TimedMotionQuaternion orientation() const;
     virtual uint64 orientation_seqno() const { return seqno(); }
 
     // Bounds
@@ -119,6 +133,8 @@ private:
     uint64 seqno() const { return (mUpdate.has_seqno() ? mUpdate.seqno() : 0); }
 
     const Sirikata::Protocol::Prox::ObjectAddition& mUpdate;
+    const ObjectHost* mOH;
+    const SpaceID& mSpace;
 };
 
 } // namespace Sirikata

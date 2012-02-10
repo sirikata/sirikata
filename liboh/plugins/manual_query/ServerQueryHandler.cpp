@@ -356,7 +356,7 @@ void ServerQueryHandler::handleProximityMessage(const OHDP::SpaceNodeID& snid, c
 
         for(int32 aidx = 0; aidx < update.addition_size(); aidx++) {
             Sirikata::Protocol::Prox::ObjectAddition addition = update.addition(aidx);
-            ProxProtocolLocUpdate add(addition);
+            ProxProtocolLocUpdate add(addition, mContext->objectHost, snid.space());
 
             ObjectReference observed_oref(addition.object());
             SpaceObjectReference observed(snid.space(), observed_oref);
@@ -366,15 +366,15 @@ void ServerQueryHandler::handleProximityMessage(const OHDP::SpaceNodeID& snid, c
             // Store the data
             query_state->objects->objectAdded(
                 observed_oref, is_agg,
-                add.locationWithLocalTime(mContext->objectHost, snid.space()), add.location_seqno(),
-                add.orientationWithLocalTime(mContext->objectHost, snid.space()), add.orientation_seqno(),
+                add.location(), add.location_seqno(),
+                add.orientation(), add.orientation_seqno(),
                 add.bounds(), add.bounds_seqno(),
                 Transfer::URI(add.meshOrDefault()), add.mesh_seqno(),
                 add.physicsOrDefault(), add.physics_seqno()
             );
 
             // Replay orphans
-            query_state->orphans.invokeOrphanUpdates(snid, observed, this);
+            query_state->orphans.invokeOrphanUpdates(mContext->objectHost, snid, observed, this);
 
             // TODO(ewencp) this is a temporary way to trigger refinement -- we
             // just always refine whenver we see. Obviously this is inefficient
@@ -433,11 +433,11 @@ void ServerQueryHandler::handleLocationSubstreamRead(const OHDP::SpaceNodeID& sn
 
 namespace {
 // Helper for applying an update to
-void applyLocUpdate(const ObjectReference& objid, OHLocationServiceCachePtr loccache, const LocUpdate& lu, ObjectHost* oh, const SpaceID& space) {
+void applyLocUpdate(const ObjectReference& objid, OHLocationServiceCachePtr loccache, const LocUpdate& lu) {
     if (lu.has_location())
-        loccache->locationUpdated(objid, lu.locationWithLocalTime(oh, space), lu.location_seqno());
+        loccache->locationUpdated(objid, lu.location(), lu.location_seqno());
     if (lu.has_orientation())
-        loccache->orientationUpdated(objid, lu.orientationWithLocalTime(oh, space), lu.orientation_seqno());
+        loccache->orientationUpdated(objid, lu.orientation(), lu.orientation_seqno());
     if (lu.has_bounds())
         loccache->boundsUpdated(objid, lu.bounds(), lu.bounds_seqno());
     if (lu.has_mesh())
@@ -472,8 +472,8 @@ bool ServerQueryHandler::handleLocationMessage(const OHDP::SpaceNodeID& snid, co
             query_state->orphans.addOrphanUpdate(observed, update);
         }
         else {
-            LocProtocolLocUpdate llu(update);
-            applyLocUpdate(observed_oref, query_state->objects, llu, mContext->objectHost, snid.space());
+            LocProtocolLocUpdate llu(update, mContext->objectHost, snid.space());
+            applyLocUpdate(observed_oref, query_state->objects, llu);
         }
     }
 
@@ -491,7 +491,7 @@ void ServerQueryHandler::onOrphanLocUpdate(const OHDP::SpaceNodeID& observer, co
 
     SpaceObjectReference observed(observer.space(), lu.object());
     assert(query_state->objects->tracking(lu.object()));
-    applyLocUpdate(lu.object(), query_state->objects, lu, mContext->objectHost, observer.space());
+    applyLocUpdate(lu.object(), query_state->objects, lu);
 }
 
 } // namespace Manual

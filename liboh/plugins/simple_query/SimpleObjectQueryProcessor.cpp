@@ -135,7 +135,7 @@ bool SimpleObjectQueryProcessor::handleProximityMessage(HostedObjectPtr self, co
 
             SpaceObjectReference observed(spaceobj.space(), ObjectReference(addition.object()));
 
-            obj_state->orphans.invokeOrphanUpdates(spaceobj, observed, this);
+            obj_state->orphans.invokeOrphanUpdates(mContext->objectHost, spaceobj, observed, this);
         }
     }
 
@@ -224,7 +224,7 @@ bool SimpleObjectQueryProcessor::handleLocationMessage(const HostedObjectPtr& se
             obj_state->orphans.addOrphanUpdate(observed, update);
         }
         else {
-            LocProtocolLocUpdate llu(update);
+            LocProtocolLocUpdate llu(update, mContext->objectHost, spaceobj.space());
             deliverLocationUpdate(self, spaceobj, llu);
         }
     }

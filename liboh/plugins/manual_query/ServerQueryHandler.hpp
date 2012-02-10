@@ -7,7 +7,7 @@
 
 #include <sirikata/oh/ObjectHostContext.hpp>
 #include <sirikata/oh/SpaceNodeSession.hpp>
-#include <sirikata/proxyobject/OrphanLocUpdateManager.hpp>
+#include <sirikata/oh/OrphanLocUpdateManager.hpp>
 #include "OHLocationServiceCache.hpp"
 
 namespace Sirikata {
