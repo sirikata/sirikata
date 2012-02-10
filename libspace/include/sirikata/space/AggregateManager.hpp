@@ -69,11 +69,11 @@ private:
     UUID mUUID;
     UUID mParentUUID;
 
-    std::vector<UUID> mChildren;
-
-      // Whether this is actually a leaf object (i.e. added implicitly as
-      // AggregateObject when added as a child of a true aggregate).
-      bool leaf;
+    std::vector< std::tr1::shared_ptr<struct AggregateObject>  > mChildren;
+    
+    // Whether this is actually a leaf object (i.e. added implicitly as
+    // AggregateObject when added as a child of a true aggregate).
+    bool leaf;
 
     Time mLastGenerateTime;
 
@@ -85,7 +85,8 @@ private:
        mUUID(uuid), mParentUUID(parentUUID),
        leaf(is_leaf),
        mLastGenerateTime(Time::null()),
-       mTreeLevel(0),  mNumObservers(0)
+       mTreeLevel(0),  mNumObservers(0),
+       mNumFailedGenerationAttempts(0)
     {
       mMeshdata = Mesh::MeshdataPtr();
       generatedLastRound = false;
@@ -93,8 +94,8 @@ private:
     }
 
     uint16 mTreeLevel;
-
     uint32 mNumObservers;
+    uint32 mNumFailedGenerationAttempts;
 
     std::vector<UUID> mLeaves;
     double mDistance;  //MINIMUM distance at which this object could be part of a cut
@@ -106,7 +107,7 @@ private:
 
 
   boost::mutex mAggregateObjectsMutex;
-  std::tr1::unordered_map<UUID, std::tr1::shared_ptr<AggregateObject>, UUID::Hasher > mAggregateObjects;
+  std::tr1::unordered_map<UUID, AggregateObjectPtr, UUID::Hasher > mAggregateObjects;
 
   boost::mutex mMeshStoreMutex;
   std::tr1::unordered_map<String, Mesh::MeshdataPtr> mMeshStore;
@@ -116,10 +117,10 @@ private:
 
   Time mAggregateGenerationStartTime;
 
-  std::tr1::unordered_map<UUID, std::tr1::shared_ptr<AggregateObject>, UUID::Hasher> mDirtyAggregateObjects;
-  std::map<float, std::deque<std::tr1::shared_ptr<AggregateObject> > > mObjectsByPriority;
+  std::tr1::unordered_map<UUID, AggregateObjectPtr, UUID::Hasher> mDirtyAggregateObjects;
+  std::map<float, std::deque<AggregateObjectPtr > > mObjectsByPriority;
 
-  std::vector<UUID>& getChildren(const UUID& uuid);
+  std::vector<AggregateObjectPtr>& getChildren(const UUID& uuid) ;
 
 
   Transfer::OAuthParamsPtr mOAuth;
@@ -140,7 +141,10 @@ private:
   // Helper for cleaning out parent state from child, or deleting it if it is an
   // abandoned leaf object (non-aggregate). Returns true if the object was
   // removed.
-  bool cleanUpChild(const UUID& child_id);
+  bool cleanUpChild(const UUID& parent_uuid, const UUID& child_id);
+
+  void removeStaleLeaves();
+
 public:
 
   AggregateManager(LocationService* loc, Transfer::OAuthParamsPtr oauth, const String& username);
@@ -157,13 +161,18 @@ public:
 
   void aggregateObserved(const UUID& objid, uint32 nobservers);
 
+  bool findChild(std::vector<AggregateObjectPtr>& v, const UUID& uuid) ;
+
+  void removeChild(std::vector<AggregateObjectPtr>& v, const UUID& uuid) ;
+    
+
   // This version requires locking to get at the AggregateObjectPtr
   // for the object. This isn't safe if you already hold that lock.
   void generateAggregateMesh(const UUID& uuid, const Duration& delayFor = Duration::milliseconds(1.0f) );
   // This version doesn't require a lock.
   void generateAggregateMesh(const UUID& uuid, AggregateObjectPtr aggObject, const Duration& delayFor = Duration::milliseconds(1.0f) );
 
-  void metadataFinished(Time t, const UUID uuid, const UUID child_uuid, std::string meshName,
+  void metadataFinished(Time t, const UUID uuid, const UUID child_uuid, std::string meshName,uint8 attemptNo,
                         std::tr1::shared_ptr<Transfer::MetadataRequest> request,
                         std::tr1::shared_ptr<Transfer::RemoteFileMetadata> response)  ;
 
