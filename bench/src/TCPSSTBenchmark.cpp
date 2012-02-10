@@ -30,7 +30,6 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sirikata/core/network/IOServiceFactory.hpp>
 #include <sirikata/core/network/IOService.hpp>
 #include <sirikata/core/network/StreamFactory.hpp>
 #include <sirikata/core/network/StreamListenerFactory.hpp>
@@ -69,8 +68,8 @@ SSTBenchmark::SSTBenchmark(const FinishedCallback& finished_cb, const String&par
     OptionValue*listenOptions;
     OptionValue*whichPlugin;
     OptionValue*numPings;
-    mIOService = Sirikata::Network::IOServiceFactory::makeIOService();
-    mIOStrand = mIOService->createStrand();
+    mIOService = new Sirikata::Network::IOService("SSTBenchmark");
+    mIOStrand = mIOService->createStrand("SSTBenchmark Main");
     Sirikata::InitializeClassOptions ico("SSTBenchmark",this,
                                          port=new OptionValue("port","4091",Sirikata::OptionValueType<String>(),"port to connect/listen on"),
                                          host=new OptionValue("host","",Sirikata::OptionValueType<String>(),"host to connect to (blank for listen)"),
@@ -143,7 +142,7 @@ void SSTBenchmark::pingPoller(){
             }
         }
         if (mPingRate.toSeconds()!=0) {
-            mIOService->post(mPingRate,mPingFunction);
+            mIOService->post(mPingRate,mPingFunction,"SSTBenchmark Ping");
         }
     }
 
@@ -152,7 +151,7 @@ void SSTBenchmark::connected(Sirikata::Network::Stream::ConnectionStatus connect
     if (connectionStatus==Sirikata::Network::Stream::Connected) {
        //FIXME start pinging
         mStartTime = Time::now(Duration::zero());
-        mIOService->post(mPingRate,mPingFunction);
+        mIOService->post(mPingRate,mPingFunction,"SSTBenchmark Ping");
     }
 }
 void SSTBenchmark::remoteConnected(Sirikata::Network::Stream*strm, Sirikata::Network::Stream::ConnectionStatus connectionStatus,const std::string&reason){
@@ -224,7 +223,7 @@ void SSTBenchmark::start() {
         mListener->listen(Sirikata::Network::Address("127.0.0.1",mPort),
                           std::tr1::bind(&SSTBenchmark::newStream,this,std::tr1::placeholders::_1,std::tr1::placeholders::_2));
 
-        mIOService->post(Duration::seconds(10000000.),&noop);
+        mIOService->post(Duration::seconds(10000000.),&noop,"SSTBenchmark noop");
 
     }
     mIOService->run();
@@ -241,7 +240,7 @@ void SSTBenchmark::stop() {
     if (mIOStrand)
         delete mIOStrand;
     if (mIOService)
-        Network::IOServiceFactory::destroyIOService(mIOService);
+        delete mIOService;
     mIOService=NULL;
     mStream=NULL;
     mListener=NULL;

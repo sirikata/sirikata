@@ -40,7 +40,7 @@ std.simpleStorage.setScript(
     function()
     {
         system.require('std/shim/restore/persistService.em');
-        system.require('std/script/scriptable.em');
+        system.require('std/scriptingGui/fileReceiver.em');
         system.require('std/movement/movable.em');
         system.require('std/movement/animatable.em');
         system.require('std/client/default.em');

@@ -256,7 +256,7 @@ public:
 
     static String formatURLEncodedDictionary(const StringDictionary& query_params);
     static String formatPath(const String& path, const QueryParameters& query_params);
-    static String formatURL(const String& host, const String& path, const QueryParameters& query_params);
+    static String formatURL(const String& host, const String& service, const String& path, const QueryParameters& query_params);
 
     void head(
         Sirikata::Network::Address addr, const String& path,
@@ -421,7 +421,8 @@ public:
     /*
      * Posts a callback on the service pool
      */
-    void postCallback(IOCallback cb);
+    void postCallback(IOCallback cb, const char* tag);
+    void postCallback(const Duration& waitFor, IOCallback cb, const char* tag);
 
 };
 

@@ -141,7 +141,7 @@ struct JSPresenceStruct : public JSPositionListener,
 
     HostedObject::PresenceToken getPresenceToken();
 
-    const String& getQuery();
+    String getQuery();
     v8::Handle<v8::Value> struct_getQuery();
     v8::Handle<v8::Value> setQueryFunction(const String& new_query);
 

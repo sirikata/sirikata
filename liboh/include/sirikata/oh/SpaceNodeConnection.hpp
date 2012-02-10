@@ -101,7 +101,7 @@ struct SIRIKATA_OH_EXPORT SpaceNodeConnection {
     void handleStreamConnected(const Network::Stream::ConnectionStatus status, const std::string& reason, int err, OHSSTStreamPtr strm);
 
     // Callback for when the connection receives data
-    void handleRead(Sirikata::Network::Chunk& chunk, const Sirikata::Network::Stream::PauseReceiveCallback& pause);
+    void handleRead(const Sirikata::Network::Chunk& chunk, const Sirikata::Network::Stream::PauseReceiveCallback& pause);
 
     // Main Strand
     typedef std::vector<GotSpaceConnectionCallback> ConnectionCallbackList;

@@ -33,15 +33,14 @@
 #include <sirikata/core/util/Standard.hh>
 #include <sirikata/core/network/IOServicePool.hpp>
 #include <sirikata/core/network/IOService.hpp>
-#include <sirikata/core/network/IOServiceFactory.hpp>
 #include <sirikata/core/network/IOWork.hpp>
 #include <sirikata/core/util/Thread.hpp>
 
 namespace Sirikata {
 namespace Network {
 
-IOServicePool::IOServicePool(uint32 nthreads)
- : mIO(IOServiceFactory::makeIOService()),
+IOServicePool::IOServicePool(const String& name, uint32 nthreads)
+ : mIO(new IOService(name)),
    mThreads(nthreads, NULL),
    mWork(NULL)
 {
@@ -51,7 +50,7 @@ IOServicePool::~IOServicePool() {
     if (mWork) stopWork();
     for(ThreadList::iterator it = mThreads.begin(); it != mThreads.end(); it++)
         delete *it;
-    IOServiceFactory::destroyIOService(mIO);
+    delete mIO;
 }
 
 namespace {

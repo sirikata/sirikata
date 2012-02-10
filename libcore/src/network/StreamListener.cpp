@@ -32,7 +32,6 @@
 
 #include <sirikata/core/util/Standard.hh>
 #include <sirikata/core/network/Address.hpp>
-#include <sirikata/core/network/IOServiceFactory.hpp>
 #include <sirikata/core/network/Stream.hpp>
 #include <sirikata/core/network/StreamListener.hpp>
 

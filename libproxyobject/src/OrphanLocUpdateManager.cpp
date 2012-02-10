@@ -45,7 +45,7 @@ OrphanLocUpdateManager::UpdateInfo::~UpdateInfo() {
 }
 
 OrphanLocUpdateManager::OrphanLocUpdateManager(Context* ctx, Network::IOStrand* strand, const Duration& timeout)
- : PollingService(strand, timeout, ctx, "OrphanLocUpdateManager"),
+ : PollingService(strand, "OrphanLocUpdateManager Poll", timeout, ctx, "OrphanLocUpdateManager"),
    mContext(ctx),
    mTimeout(timeout)
 {

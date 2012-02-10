@@ -120,6 +120,7 @@ void DelugePairScenario::initialize(ObjectHostContext*ctx) {
     mPingPoller = new Poller(
         ctx->mainStrand,
         std::tr1::bind(&DelugePairScenario::sendPings, this),
+        "DelugePairScenario Ping Poller",
         mNumPingsPerSecond > 1000 ? // Try to amortize out some of the
                                     // scheduling cost
         Duration::seconds(10.0/mNumPingsPerSecond) :
@@ -127,10 +128,11 @@ void DelugePairScenario::initialize(ObjectHostContext*ctx) {
     );
 
     mGeneratePingProfiler = mContext->profiler->addStage("Object Host Generate Pings");
-    mGeneratePingsStrand = mContext->ioService->createStrand();
+    mGeneratePingsStrand = mContext->ioService->createStrand("DelugePairScenario GeneratePings");
     mGeneratePingPoller = new Poller(
         mGeneratePingsStrand,
         std::tr1::bind(&DelugePairScenario::generatePings, this),
+        "DelugePairScenario Generate Ping Poller",
         mNumPingsPerSecond > 1000 ? // Try to amortize out some of the
                                     // scheduling cost
         Duration::seconds(10.0/mNumPingsPerSecond) :
@@ -142,7 +144,8 @@ void DelugePairScenario::start() {
     Duration connect_phase = GetOptionValue<Duration>(OBJECT_CONNECT_PHASE);
     mContext->mainStrand->post(
         connect_phase,
-        std::tr1::bind(&DelugePairScenario::delayedStart, this)
+        std::tr1::bind(&DelugePairScenario::delayedStart, this),
+        "DelugePairScenario::delayedStart"
     );
 }
 void DelugePairScenario::delayedStart() {

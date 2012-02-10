@@ -85,12 +85,8 @@ std.movement.MoveAndRotate = system.Class.extend(
             var scaled_vel = vel.mul(scaling);
             if (overwrite) {
                 this._localVel = scaled_vel;
-                this._pres.velocity = this._pres.orientation.mul(scaled_vel);
             }else {
                 this._localVel = this._localVel.add(scaled_vel);
-                this._pres.velocity = this._pres.velocity.add(
-                    this._pres.orientation.mul(scaled_vel)
-                );
             }
             this._startReeval(true);
         },

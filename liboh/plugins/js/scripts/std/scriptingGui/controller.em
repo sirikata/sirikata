@@ -222,21 +222,29 @@ system.require('scriptingGuiUtil.em');
         {            
             nearbyVisMap[newVis.toString()] = newVis;
 
-            var consMsg = {
-                    type: 'NEARBY_ADDED',
-                    addedVis: newVis
-                };
-            console.nearbyEvent(consMsg);
+            //trying to remove as much overhead as possible associated
+            //with proximity handlers + this console messages do not
+            //actually do anything.
+            
+            // var consMsg = {
+            //         type: 'NEARBY_ADDED',
+            //         addedVis: newVis
+            //     };
+            // console.nearbyEvent(consMsg);
         }
         function removeFromNearby(oldVis)
         {
             delete nearbyVisMap[oldVis.toString()];
 
-            var consMsg = {
-                    type: 'NEARBY_REMOVED',
-                    removedVis: oldVis
-                };
-            console.nearbyEvent(consMsg);
+            //trying to remove as much overhead as possible associated
+            //with proximity handlers + this console messages do not
+            //actually do anything.
+            
+            // var consMsg = {
+            //         type: 'NEARBY_REMOVED',
+            //         removedVis: oldVis
+            //     };
+            // console.nearbyEvent(consMsg);
         }
     }
 
@@ -326,7 +334,7 @@ system.require('scriptingGuiUtil.em');
     std.ScriptingGui.Controller.prototype.rereadAllFiles =
         function(visId)
     {
-        if (!this.scriptedVisExists(vis))
+        if (!this.scriptedVisExists(visId))
         {
             throw new Error ('Error in FileManager.reareadAllFiles.  '+
                              'Do not have record for this visible.');
@@ -518,7 +526,7 @@ system.require('scriptingGuiUtil.em');
             throw new Error('Error scripting: no record of visible with id ' +
                             visOrPres.toString() + ' to script.');
         }
-        
+
         gui.redraw(visOrPres.toString());
     };
     

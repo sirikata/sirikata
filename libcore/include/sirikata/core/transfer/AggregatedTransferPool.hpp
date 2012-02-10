@@ -73,6 +73,20 @@ public:
                     )
                 );
             }
+            UploadRequestPtr upload_req = std::tr1::dynamic_pointer_cast<UploadRequest>(req);
+            if (upload_req) {
+                data.aggregateRequest = TransferRequestPtr(
+                    new UploadRequest(
+                        upload_req->oauth(), upload_req->files(), upload_req->path(), upload_req->params(), upload_req->getPriority(),
+                        std::tr1::bind(&AggregatedTransferPool::handleUpload, this, req->getIdentifier(), _1, _2)
+                    )
+                );
+            }
+
+            if (!data.aggregateRequest) {
+                SILOG(transfer, error, "Failed to add request to AggregatedTransferPool: unhandled request type.");
+                return;
+            }
 
             mRequestData[req->getIdentifier()] = data;
             it = mRequestData.find(req->getIdentifier());
@@ -91,7 +105,7 @@ public:
     }
 
     //Updates priority of a request in the pool
-    virtual void updatePriority(TransferRequestPtr req, TransferRequest::PriorityType p) {
+    virtual void updatePriority(TransferRequestPtr req, Priority p) {
         boost::unique_lock<boost::mutex> lock(mMutex);
 
         RequestDataMap::iterator it = mRequestData.find(req->getIdentifier());
@@ -254,6 +268,26 @@ private:
             in_it++) {
             DirectChunkRequestPtr direct_chunk_req = std::tr1::dynamic_pointer_cast<DirectChunkRequest>(*in_it);
             direct_chunk_req->notifyCaller(direct_chunk_req, req, response);
+        }
+    }
+
+    void handleUpload(const String input_identifier, UploadRequestPtr req, const Transfer::URI& response) {
+        TransferRequestList inputRequests;
+        {
+            boost::unique_lock<boost::mutex> lock(mMutex);
+            RequestDataMap::iterator it = mRequestData.find(input_identifier);
+            if (it == mRequestData.end()) return;
+            inputRequests.swap(it->second.inputRequests);
+            mRequestData.erase(it);
+        }
+
+        for(TransferRequestList::iterator in_it = inputRequests.begin();
+            in_it != inputRequests.end();
+            in_it++) {
+            UploadRequestPtr upload_req = std::tr1::dynamic_pointer_cast<UploadRequest>(*in_it);
+            // notifyCaller copies info into upload_req, so response doesn't
+            // need to be passed through
+            upload_req->notifyCaller(upload_req, req);
         }
     }
 

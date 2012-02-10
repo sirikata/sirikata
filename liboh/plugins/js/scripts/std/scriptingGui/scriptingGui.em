@@ -66,19 +66,16 @@ system.require('std/core/simpleInput.em');
       */
      std.ScriptingGui.prototype.redraw = function(selected)
      {
-         if (!this.hasInited)
-             return;
-
          //have to wait for ace libraries to load.  after they do, js
          //will send an amReady event back to emerson code.  emerson
          //code will redraw with the last not undefined heldSelected.
-         if (!this.isReady)
+         if ((!this.hasInited) || (!this.isReady))
          {
              if (typeof(selected) != 'undefined')
                  this.heldSelected =selected;
              return;
          }
-         
+
          //trigger redraw call
          this.guiMod.call(
              'ishmaelRedraw',toHtmlNearbyMap(this),toHtmlScriptedMap(this),
@@ -142,6 +139,18 @@ system.require('std/core/simpleInput.em');
          scriptingGui.redraw();
      }
          
+
+     /**
+      @param{String} text -- gets displayed as a warning message to
+      user.
+      */
+     std.ScriptingGui.prototype.hWarn = function (text)
+     {
+         var newInput = std.core.SimpleInput(
+             std.core.SimpleInput.NO_INPUT,
+             text,function(){});
+     };
+
      
      /**
       @param {String?} actId -- Should be parsedInt to get an index
@@ -332,6 +341,11 @@ system.require('std/core/simpleInput.em');
              'amReady',
              std.core.bind(scriptingGui.hAmReady,scriptingGui));
 
+
+         scriptingGui.guiMod.bind(
+             'warn',
+             std.core.bind(scriptingGui.hWarn,scriptingGui));
+
          
          scriptingGui.redraw();
      }
@@ -345,10 +359,17 @@ system.require('std/core/simpleInput.em');
       */
      function toHtmlNearbyMap(scriptingGui)
      {
-         var returner = { };
-         for (var s in scriptingGui.nearbyVisMap)
-             returner[s] = s;
-         return returner;
+         //for now, we recognize that for a large scene, this approach
+         //may be infeasible, and instead display a message to that
+         //effect.
+         return 'Because of the size of large scenes, we are '         +
+             'not displaying all nearby visibles.  <br/>To re-enable ' +
+             'this feature, please change std/scriptingGui/scriptingGui.em';
+         
+         // var returner = { };
+         // for (var s in scriptingGui.nearbyVisMap)
+         //     returner[s] = s;
+         // return returner;
      }
 
 
@@ -416,7 +437,19 @@ system.require('std/core/simpleInput.em');
                         $("<link />").attr({rel:'stylesheet', type:'text/css', href:'../scripting/prompt.css'});
 	            $("head").append(newcsslink);
 
-         
+
+
+         /**
+          Visible ids are displayed in nearby tab as well as in
+          scripted objs tab.  It's a little overwhelming to get a full
+          32-bit identifier, so this change restricts us to only the
+          first so many characters.
+          */
+         function maxVisIdDispDigits()
+         {
+             return 6;
+         }
+                    
          function ishmaelWindowId()
          {
              return 'ishmael__windowID_';
@@ -434,6 +467,11 @@ system.require('std/core/simpleInput.em');
              return 'ishmael__scriptedListID__';
          }
 
+         function garbageNearbyVal()
+         {
+             return 'ishmael__garbageVal';
+         }
+                    
 
          function actionListId()
          {
@@ -580,10 +618,11 @@ system.require('std/core/simpleInput.em');
 		'<li><a href="#' + nearbyListId() +'">Nearby</a></li>' +
 	   '</ul>' +
 
-              '<select id="'     + scriptedListId() + '" size=5>' +
+
+              '<select id="'     + scriptedListId() + '" size=5 style="width:300px;overflow:auto">' +
               '</select>'   +
 
-              '<select id="'     + nearbyListId() + '" size=5>'   +
+              '<select id="'     + nearbyListId() + '" size=5 style="min-width:300px;overflow:auto;">'   +
               '</select>'   +
 
            '<br/>' +
@@ -660,7 +699,7 @@ system.require('std/core/simpleInput.em');
               '<div id="' + scriptConsoleDivId() + '">' +
 
                  '<div id="'   + execTareaId()+ '"  style="min-width:400px;min-height:100px;max-width:400px;position:relative;margin:0;padding:0;">' +
-                 '</div>'      + //closes actionTareaDiv
+                 '</div>'      + //closes execTareaDiv
            
                  '<button id="' + execScriptButtonId() + '">' +
                  'run' +
@@ -749,15 +788,29 @@ system.require('std/core/simpleInput.em');
              {
                  var val = 
                      $('#' + actionListId()).val();
+
+                 //if nothing is selected, then parseInt(val) will
+                 //return NaN, which won't be in actionList, and will
+                 //have no effect in changeActionText.
                  changeActionText(parseInt(val));
-                 sirikata.log('error', 'Selected action: '  + val.toString());
              });
 
+                    
          
          $('#' + nearbyListId()).change(
              function()
              {
                  var val = $('#'+nearbyListId()).val();
+
+                 //we ran into a problem where we don't want
+                 //to actually display all nearby visibles.
+                 //code now can display an error message to this
+                 //effect.  if the user clicks on the error messsage,
+                 //then the condition below will be true, and we'll do
+                 //nothing.
+                 if (val == garbageNearbyVal())
+                     return;
+                 
                  //updates currentlySelectedVisible and the display of
                  //the files that should be associated with it.
                  changeCurrentlySelectedVisible(val);
@@ -786,7 +839,11 @@ system.require('std/core/simpleInput.em');
              function()
              {
                  if (typeof(currentlySelectedVisible)== 'undefined')
+                 {
+                     sirikata.event('warn','Please select visible first.');
                      return;
+                 }
+
 
                  var currentName =
                      $('#' + generateScriptedDivId(currentlySelectedVisible)).html();
@@ -803,8 +860,10 @@ system.require('std/core/simpleInput.em');
                  //no action is selected
                  if ((typeof(currentlySelectedAction) == 'undefined') ||
                      (currentlySelectedAction === null))
+                 {
+                     sirikata.event('warn','Please select visible and action first.');
                      return;
-
+                 }
 
                  //var toSaveText = $('#' + actionTareaId()).val();
                  var toSaveText = actionEditor.getSession().getValue();
@@ -828,15 +887,13 @@ system.require('std/core/simpleInput.em');
                  if ((typeof(currentlySelectedAction)  == 'undefined') ||
                      (typeof(currentlySelectedVisible) == 'undefined'))
                  {
-                     sirikata.log(
-                         'error','Cannot execute action.  ' +
-                             'No vis or action selected.');
+                     sirikata.event('warn','Please select visible or action first.');
                      return;
                  }
 
                  //see comments in click handler for saveActionButton.
                  var toSaveText = actionEditor.getSession().getValue();
-
+                 
                  allActions[currentlySelectedAction].text = toSaveText;
                  sirikata.event(
                      'saveAndExecuteAction',currentlySelectedAction,
@@ -857,7 +914,11 @@ system.require('std/core/simpleInput.em');
              function()
              {
                  if (typeof(currentlySelectedAction) == 'undefined')
-                     return;
+                 {
+                     sirikata.event('warn', 'Please select action to remove first.');
+                     return;                         
+                 }
+
                  
                  sirikata.event('removeAction',currentlySelectedAction);
                  currentlySelectedAction = undefined;
@@ -875,7 +936,11 @@ system.require('std/core/simpleInput.em');
              function()
              {
                  if (typeof(currentlySelectedVisible)=='undefined')
-                     return;
+                 {
+                     sirikata.event('warn','Please select visible first.');
+                     return;                         
+                 }
+
 
                  sirikata.event('addFile',currentlySelectedVisible);
              });
@@ -886,6 +951,7 @@ system.require('std/core/simpleInput.em');
                  if ((typeof(currentlySelectedVisible) == 'undefined') ||
                      (typeof(currentlySelectedFile) == 'undefined'))
                  {
+                     sirikata.event('warn','Please select visible and file first.');                     
                      return;
                  }
                  sirikata.event(
@@ -898,7 +964,11 @@ system.require('std/core/simpleInput.em');
              function()
              {
                  if (typeof(currentlySelectedVisible) == 'undefined')
+                 {
+                     sirikata.event('warn','Please select visible first.');
                      return;
+                 }
+
 
                  sirikata.event(
                      'updateAndSendAllFiles',currentlySelectedVisible);
@@ -910,6 +980,7 @@ system.require('std/core/simpleInput.em');
                  if ((typeof(currentlySelectedVisible) == 'undefined') ||
                      (typeof(currentlySelectedFile) == 'undefined'))
                  {
+                     sirikata.event('warn','Please select visible and file first.');                     
                      return;
                  }
 
@@ -923,7 +994,11 @@ system.require('std/core/simpleInput.em');
              function()
              {
                  if (typeof(currentlySelectedVisible) == 'undefined')
+                 {
+                     sirikata.event('warn','Please select visible first.');
                      return;
+                 }
+
                  
                  var toExec = execEditor.getSession().getValue();
                  execEditor.getSession().setValue('');
@@ -987,24 +1062,30 @@ system.require('std/core/simpleInput.em');
           */
          function changeActionText(idActSelected)
          {
+             //takes care of case where you may have stray clicks in
+             //action selector
+             if (typeof(allActions) == 'undefined')
+                 return;
+             
              currentlySelectedAction = idActSelected;
              var textToSetTo = '';
-             
+
              if (typeof(idActSelected) !='undefined')
              {
-                 if (! idActSelected in allActions)
-                 {
-                     sirikata.log('error','action ids out of ' +
-                                  'sync with actions in scripting gui.');
+                 if (! (idActSelected in allActions))
+                 {                     
+                     sirikata.log('error','action ids out of '      +
+                                  'sync with actions in scripting ' +
+                                  'gui, or received stray action click.');
                      return;
                  }
                  textToSetTo = allActions[idActSelected].text;
              }
-
+             
              //actually update textarea with correct text
              actionEditor.getSession().setValue(textToSetTo);
          }
-         
+
          
          /**
           \param {object: <int:std.ScriptingGui.Action>} actionMap
@@ -1035,9 +1116,8 @@ system.require('std/core/simpleInput.em');
              //may not have a record of this visible in allFiles yet,
              //causing a problem.
              if (typeof(selected) != 'undefined')
-                 currentlySelectedVisible = selected;
+                 currentlySelectedVisible = selected;                     
 
-             
              redrawNearby(nearbyObjs,nameMap);
              redrawScriptedObjs(scriptedObjs,nameMap);
              redrawActionList(actionMap);
@@ -1048,28 +1128,48 @@ system.require('std/core/simpleInput.em');
          
          /**
           \param {object: <string (visibleId): string (visibleId)>}
-          nearbyObjs -- all objects that are in vicinity.
+          nearbyObjs -- all objects that are in vicinity.  (can also
+          be a string if instead want to write a message explaining
+          that displaying all nearby visibles is too onerous).
 
           \param {object: <string (visId): string (name)>} nameMap
           */
          function redrawNearby(nearbyObjs, nameMap)
          {
              var newHtml = '';
-             for (var s in nearbyObjs)
-             {
-                 if (s===currentlySelectedVisible)
-                     newHtml += '<option selected ';
-                 else
-                     newHtml += '<option ';
 
-                 newHtml += 'value="' + s + '" ';
-                 newHtml += 'id="' + generateNearbyDivId(s) + '">';
-                 if (s in nameMap)
-                     newHtml += nameMap[s];
-                 else
-                     newHtml += s;
+             if (typeof(nearbyObjs) == 'string')
+             {
+                 //case where we aren't displaying any nearby
+                 //visibles, and instead displaying a message to that
+                 //effect.
+                 newHtml += '<option selected ';
+                 newHtml += 'value="' + garbageNearbyVal() + '" ';
+                 newHtml += 'id="' + generateNearbyDivId('garbage') + '">';
+                 newHtml += nearbyObjs;
                  newHtml += '</option>';
              }
+             else
+             {
+                 //we have a small enough scene that we don't mind the
+                 //cost of displaying all nearby visibles.
+                 for (var s in nearbyObjs)
+                 {
+                     if (s===currentlySelectedVisible)
+                         newHtml += '<option selected ';
+                     else
+                         newHtml += '<option ';
+
+                     newHtml += 'value="' + s + '" ';
+                     newHtml += 'id="' + generateNearbyDivId(s) + '">';
+                     if (s in nameMap)
+                         newHtml += nameMap[s];
+                     else
+                         newHtml += s.substr(0,maxVisIdDispDigits());
+                     newHtml += '</option>';
+                 }
+             }
+
              $('#' + nearbyListId()).html(newHtml);
          }
 
@@ -1095,7 +1195,7 @@ system.require('std/core/simpleInput.em');
                  if (s in nameMap)
                      newHtml += nameMap[s];
                  else
-                     newHtml += s;
+                     newHtml += s.substr(0,maxVisIdDispDigits());
                  newHtml += '</option>';
              }
              $('#' + scriptedListId()).html(newHtml);
@@ -1168,6 +1268,7 @@ system.require('std/core/simpleInput.em');
              if (typeof(currentlySelectedVisible) == 'undefined')
              {
                  currentlySelectedFile = undefined;
+                 sirikata.event('warn','Please select visible first.');
                  return;                     
              }
 
@@ -1211,6 +1312,7 @@ system.require('std/core/simpleInput.em');
                 (!(currentlySelectedVisible in allConsoleHistories))) 
              {
                  consoleEditor.getSession().setValue('');
+                 sirikata.event('warn','Please select visible first.');
                  return;
              }
 
@@ -1228,6 +1330,23 @@ system.require('std/core/simpleInput.em');
          }
 
 
+                    //shortcut keybinding: shift+enter executes
+                    //instant script if you're focus is on instant
+                    //scripter.
+                    var handleInstantScriptingTareaKeyUp = function(evt)
+                    {
+                        //13 represents keycode for enter, submits whatever's in
+                        //the text box if user hits enter.
+                        if ((evt.keyCode == 13) && (evt.shiftKey))
+                            $('#' + execScriptButtonId()).click();
+                    };
+
+                    document.getElementById(execTareaId()).onkeyup = handleInstantScriptingTareaKeyUp;
+
+
+                    //tells the emerson controlling code that ace
+                    //libraries are loaded and can now begin doing
+                    //handling script input, etc.
                     sirikata.event('amReady');
                     
                 }); //closes function waiting for ace to load through lab
@@ -1246,3 +1365,8 @@ system.require('action.em');
 system.require('console.em');
 system.require('controller.em');
 system.require('fileManagerElement.em');
+
+
+
+
+

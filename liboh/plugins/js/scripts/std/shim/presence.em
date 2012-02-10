@@ -187,7 +187,12 @@ system.__presence_constructor__.prototype.__getType = function()
   return 'presence';
 };
 
-
+system.__presence_constructor__.prototype.toString = function()
+{
+    if (typeof(this.stringified)  == 'undefined')
+        this.stringified = this.__toString();
+    return this.stringified;
+};
 
 
 {

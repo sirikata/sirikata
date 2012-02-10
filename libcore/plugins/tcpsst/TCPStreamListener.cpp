@@ -72,7 +72,8 @@ TCPStreamListener::Data::~Data() {
 void TCPStreamListener::Data::start(DataPtr shared_this) {
     assert(shared_this.get() == this);
     strand->post(
-        std::tr1::bind(&TCPStreamListener::Data::startAccept, shared_this)
+        std::tr1::bind(&TCPStreamListener::Data::startAccept, shared_this),
+        "TCPStreamListener::Data::startAccept"
         );
 }
 

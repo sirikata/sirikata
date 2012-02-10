@@ -44,7 +44,6 @@
 #include <sirikata/oh/ObjectScriptManagerFactory.hpp>
 #include <sirikata/oh/ObjectQueryProcessor.hpp>
 
-#include <sirikata/core/util/ThreadId.hpp>
 #include <sirikata/core/util/PluginManager.hpp>
 
 #include <sirikata/core/odp/Exceptions.hpp>
@@ -175,7 +174,7 @@ void HostedObject::destroy(bool need_self)
     if (mNumOutstandingConnections>0) {
         mDestroyWhenConnected=true;
         return;//don't destroy during delicate connection process
-    }        
+    }
 
     // Make sure that we survive the entire duration of this call. Otherwise all
     // references may be lost, resulting in the destructor getting called
@@ -294,8 +293,6 @@ void HostedObject::initializeScript(const String& script_type, const String& arg
 
     HO_LOG(detailed,"Creating a script object for object");
 
-    static ThreadIdCheck scriptId=ThreadId::registerThreadGroup(NULL);
-    assertThreadGroup(scriptId);
     if (!ObjectScriptManagerFactory::getSingleton().hasConstructor(script_type)) {
         HO_LOG(debug,"[HO] Failed to create script for object because incorrect script type");
         return;
@@ -379,7 +376,8 @@ void HostedObject::handleConnected(const HostedObjectWPtr& weakSelf, const Space
     // We have to manually do what mContext->mainStrand->wrap( ... ) should be
     // doing because it can't handle > 5 arguments.
     self->mContext->mainStrand->post(
-        std::tr1::bind(&HostedObject::handleConnectedIndirect, weakSelf, space, obj, info, baseDatagramLayer)
+        std::tr1::bind(&HostedObject::handleConnectedIndirect, weakSelf, space, obj, info, baseDatagramLayer),
+        "HostedObject::handleConnectedIndirect"
     );
 }
 
@@ -505,7 +503,9 @@ void HostedObject::handleDisconnected(
 
     self->mContext->mainStrand->post(
         std::tr1::bind(&HostedObject::iHandleDisconnected,self.get(),
-            weakSelf, spaceobj, cc));
+            weakSelf, spaceobj, cc),
+        "HostedObject::iHandleDisconnected"
+    );
 }
 
 void HostedObject::iHandleDisconnected(
@@ -532,7 +532,7 @@ void HostedObject::iHandleDisconnected(
         if (--self->mNumOutstandingConnections==0&&self->mDestroyWhenConnected) {
             self->mDestroyWhenConnected=false;
             self->destroy(true);
-        }        
+        }
     }
 }
 
@@ -927,7 +927,7 @@ void HostedObject::requestMeshUpdate(const SpaceID& space, const ObjectReference
     updateLocUpdateRequest(space, oref, NULL, NULL, NULL, &mesh, NULL);
 }
 
-const String& HostedObject::requestQuery(const SpaceID& space, const ObjectReference& oref)
+String HostedObject::requestQuery(const SpaceID& space, const ObjectReference& oref)
 {
     Mutex::scoped_lock lock(presenceDataMutex);
     PresenceDataMap::iterator iter = mPresenceData.find(SpaceObjectReference(space,oref));

@@ -913,6 +913,13 @@ SET(TEST_CASSANDRA FALSE
 )
 
 # -- Compile-time debugging settings --
+#
+SET(SIRIKATA_TRACK_EVENT_QUEUES FALSE
+  CACHE BOOL "If true, track how many outstanding events are enqueued on IOServices and IOStrands."
+)
+IF(SIRIKATA_TRACK_EVENT_QUEUES)
+  ADD_DEFINITIONS(-DSIRIKATA_TRACK_EVENT_QUEUES)
+ENDIF()
 # Space session message delay
 # NOTE: When you set this, keep in mind that it takes a connect request +
 # connect success ack before messages are forwarded (which in turn allows the
@@ -933,11 +940,9 @@ STRING(LENGTH "${SPACE_DELAY_APPLY_LOC_UPDATE}" SPACE_DELAY_APPLY_LOC_UPDATE_LEN
 IF(SPACE_DELAY_APPLY_LOC_UPDATE_LENGTH GREATER 0)
   ADD_DEFINITIONS(-DSIRIKATA_SPACE_DELAY_APPLY_LOC_UPDATE=${SPACE_DELAY_APPLY_LOC_UPDATE})
 ENDIF()
-
-
-
+# Berkelium remote debugging support. Enables passing the special parameter enabling port 9222 as a debugger server
 SET(BERKELIUM_REMOTE_DEBUG FALSE
-  CACHE BOOL "If non-empty, apply this much delay (in seconds) to applying loc update requests on the space server."
+  CACHE BOOL "If true, enables the remote debugging port for Berkelium windows."
 )
 IF(BERKELIUM_REMOTE_DEBUG)
   ADD_DEFINITIONS(-DBERKELIUM_REMOTE_DEBUGGING=1)
@@ -1314,7 +1319,7 @@ SET(SIRIKATA_CORE_SOURCES
 	${LIBCORE_SOURCE_DIR}/transfer/FileTransferHandler.cpp
 	${LIBCORE_SOURCE_DIR}/transfer/HttpTransferHandler.cpp
 	${LIBCORE_SOURCE_DIR}/transfer/DataTransferHandler.cpp
-	${LIBCORE_SOURCE_DIR}/transfer/TransferPool.cpp
+	${LIBCORE_SOURCE_DIR}/transfer/TransferRequest.cpp
 	${LIBCORE_SOURCE_DIR}/transfer/HttpManager.cpp
         ${LIBCORE_SOURCE_DIR}/transfer/ResourceDownloadTask.cpp
 	${LIBCORE_SOURCE_DIR}/transfer/OAuthHttpManager.cpp
@@ -1332,7 +1337,6 @@ SET(SIRIKATA_CORE_SOURCES
    	${LIBCORE_SOURCE_DIR}/options/CommonOptions.cpp
         ${LIBCORE_SOURCE_DIR}/network/Address4.cpp
 	${LIBCORE_SOURCE_DIR}/network/IOService.cpp
-	${LIBCORE_SOURCE_DIR}/network/IOServiceFactory.cpp
 	${LIBCORE_SOURCE_DIR}/network/IOServicePool.cpp
 	${LIBCORE_SOURCE_DIR}/network/IOWork.cpp
 	${LIBCORE_SOURCE_DIR}/network/IOStrand.cpp
@@ -1366,7 +1370,6 @@ SET(SIRIKATA_CORE_SOURCES
 	${LIBCORE_SOURCE_DIR}/queue/ThreadSafeQueue.cpp
         ${LIBCORE_SOURCE_DIR}/util/Platform.cpp
 	${LIBCORE_SOURCE_DIR}/util/UUID.cpp
-        ${LIBCORE_SOURCE_DIR}/util/ThreadId.cpp
 	${LIBCORE_SOURCE_DIR}/util/BoundingInfo.cpp
         ${LIBCORE_SOURCE_DIR}/util/Hash.cpp
         ${LIBCORE_SOURCE_DIR}/util/Timer.cpp
@@ -1428,7 +1431,6 @@ ELSE()
  ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/Transform.hpp
  ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/BoundingInfo.hpp
  ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/UUID.hpp
- ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/ThreadId.hpp
  ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/Vector3.hpp
  ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/Vector4.hpp
  ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/SolidAngle.hpp
@@ -1836,9 +1838,11 @@ SET(BENCH_SOURCES
 #test source files
 SET(CXXTESTSources
 ${TEST_LIBCORE_SOURCE_DIR}/TransferTest.hpp
+#${TEST_LIBCORE_SOURCE_DIR}/TransferUploadTest.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/AnyTest.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/AtomicTest.hpp
 #${TEST_LIBCORE_SOURCE_DIR}/CacheLayerTest.hpp
+${TEST_LIBCORE_SOURCE_DIR}/CircularBufferTest.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/ExtrapolationTest.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/FactoryTest.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/FairQueueTest.hpp
@@ -2330,20 +2334,6 @@ ADD_PLUGIN_TARGET(csvfactory
 		    )
 SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} csvfactory)
 
-
-SET(LIBOH_PLUGIN_FILE_DIR ${LIBOH_PLUGIN_DIR}/file)
-SET(LIBOH_PLUGIN_FILE_SOURCES
- ${LIBOH_PLUGIN_FILE_DIR}/FileStorage.cpp
- ${LIBOH_PLUGIN_FILE_DIR}/PluginInterface.cpp
-    )
-ADD_PLUGIN_TARGET(oh-file
-                    SOURCES ${LIBOH_PLUGIN_FILE_SOURCES}
-                    TARGET_LDFLAGS ${sirikata_LDFLAGS}
-                    TARGET_LIBRARIES ${SIRIKATA_OH_LIB} ${SIRIKATA_CORE_LIB}
-                    LIBRARIES ${SIRIKATA_OH_LIB} ${SIRIKATA_CORE_LIB}
-		    VERSION_INFO ${SIRIKATA_VERSION_SETTINGS}
-		    )
-SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} oh-file)
 
 IF(BUILD_SQLITE_OH)
   SET(LIBOH_PLUGIN_SQLITE_DIR ${LIBOH_PLUGIN_DIR}/sqlite)

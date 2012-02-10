@@ -206,7 +206,8 @@ void Object::handleSpaceConnection(const SpaceID& space, const ObjectReference& 
     // We need to manually wrap this for the main strand because IOStrand
     // doesn't support > 5 arguments, which the original callback has
     mContext->mainStrand->post(
-        std::tr1::bind(&Object::handleSpaceConnectionIndirect, this, space, obj, sid)
+        std::tr1::bind(&Object::handleSpaceConnectionIndirect, this, space, obj, sid),
+        "Object::handleSpaceConnectionIndirect"
     );
 }
 void Object::handleSpaceConnectionIndirect(const SpaceID& space, const ObjectReference& obj, ServerID sid) {
@@ -227,7 +228,8 @@ void Object::handleSpaceConnectionIndirect(const SpaceID& space, const ObjectRef
 
     // Start normal processing
     mContext->mainStrand->post(
-        std::tr1::bind(&Object::scheduleNextLocUpdate, this)
+        std::tr1::bind(&Object::scheduleNextLocUpdate, this),
+        "Object::scheduleNextLocUpdate"
     );
 }
 

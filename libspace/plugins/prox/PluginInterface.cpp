@@ -52,7 +52,7 @@ static void InitPluginOptions() {
 
         .addOption(new OptionValue(PROX_MAX_PER_RESULT, "5", Sirikata::OptionValueType<uint32>(), "Maximum number of changes to report in each result message."))
 
-        .addOption(new OptionValue(OPT_PROX_SPLIT_DYNAMIC, "false", Sirikata::OptionValueType<bool>(), "If true, separate query handlers will be used for static and dynamic objects."))
+        .addOption(new OptionValue(OPT_PROX_SPLIT_DYNAMIC, "true", Sirikata::OptionValueType<bool>(), "If true, separate query handlers will be used for static and dynamic objects."))
 
         .addOption(new OptionValue(OPT_PROX_QUERY_RANGE, "100", Sirikata::OptionValueType<float32>(), "The range of queries when using range queries instead of solid angle queries."))
 

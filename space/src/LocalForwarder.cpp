@@ -37,7 +37,7 @@ namespace Sirikata {
 
 
 LocalForwarder::LocalForwarder(SpaceContext* ctx)
- : PollingService(ctx->mainStrand, Duration::seconds((int64)1), ctx, "Local Forwarder"),
+ : PollingService(ctx->mainStrand, "LocalForwarder Poll", Duration::seconds((int64)1), ctx, "Local Forwarder"),
    mContext(ctx),
    mLastStatsTime(ctx->simTime()),
    mTimeSeriesForwardedName(String("space.server") + boost::lexical_cast<String>(ctx->id()) + ".forwarded.locally"),

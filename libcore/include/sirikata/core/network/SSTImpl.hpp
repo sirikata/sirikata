@@ -195,8 +195,8 @@ public:
 
 };
 
-// This is just a template definition. The real implementation of BaseDatagramLayer 
-// lies in libcore/include/sirikata/core/odp/SST.hpp and 
+// This is just a template definition. The real implementation of BaseDatagramLayer
+// lies in libcore/include/sirikata/core/odp/SST.hpp and
 // libcore/include/sirikata/core/ohdp/SST.hpp.
 template <typename EndPointType>
 class SIRIKATA_EXPORT BaseDatagramLayer
@@ -242,10 +242,10 @@ class SIRIKATA_EXPORT BaseDatagramLayer
     }
 
     /** Get a port that isn't currently in use. */
-    uint32 getUnusedPort(const EndPointType& ep) {      
+    uint32 getUnusedPort(const EndPointType& ep) {
       return 0;
     }
-        
+
 
     /** Stop listening to the specified endpoint and also remove from the
      *  ConnectionVariables datagram layer map.
@@ -430,7 +430,9 @@ private:
     }
 
     getContext()->mainStrand->post(Duration::seconds(300),
-                                   std::tr1::bind(&Connection<EndPointType>::checkIfAlive, this, conn) );
+        std::tr1::bind(&Connection<EndPointType>::checkIfAlive, this, conn),
+        "Connection<EndPointType>::checkIfAlive"
+    );
   }
 
   void sendSSTChannelPacket(Sirikata::Protocol::SST::SSTChannelHeader& sstMsg) {
@@ -438,7 +440,7 @@ private:
 
     std::string buffer = serializePBJMessage(sstMsg);
     mDatagramLayer->send(&mLocalEndPoint, &mRemoteEndPoint, (void*) buffer.data(),
-				       buffer.size());    
+				       buffer.size());
   }
 
   const Context* getContext() {
@@ -523,7 +525,9 @@ private:
 
       if (!mInSendingMode || mState == CONNECTION_PENDING_CONNECT) {
         getContext()->mainStrand->post(Duration::microseconds(mRTOMicroseconds*pow(2.0,mNumInitialRetransmissionAttempts)),
-                                       std::tr1::bind(&Connection<EndPointType>::serviceConnectionNoReturn, this, mWeakThis.lock()) );
+            std::tr1::bind(&Connection<EndPointType>::serviceConnectionNoReturn, this, mWeakThis.lock()),
+            "Connection<EndPointType>::serviceConnectionNoReturn"
+        );
       }
     }
     else {
@@ -551,7 +555,9 @@ private:
       mInSendingMode = true;
 
       getContext()->mainStrand->post(Duration::microseconds(1),
-                                     std::tr1::bind(&Connection<EndPointType>::serviceConnectionNoReturn, this, mWeakThis.lock()) );
+          std::tr1::bind(&Connection<EndPointType>::serviceConnectionNoReturn, this, mWeakThis.lock()),
+          "Connection<EndPointType>::serviceConnectionNoReturn"
+      );
     }
 
     return true;
@@ -753,7 +759,9 @@ private:
 
         if (mInSendingMode) {
           getContext()->mainStrand->post(Duration::milliseconds(1.0),
-                                         std::tr1::bind(&Connection::serviceConnectionNoReturn, this, mWeakThis.lock()) );
+              std::tr1::bind(&Connection::serviceConnectionNoReturn, this, mWeakThis.lock()),
+              "Connection::serviceConnectionNoReturn"
+          );
         }
       }
     }
@@ -785,7 +793,9 @@ private:
     mWeakThis = conn;
 
     getContext()->mainStrand->post(Duration::seconds(300),
-                                   std::tr1::bind(&Connection<EndPointType>::checkIfAlive, this, conn) );
+        std::tr1::bind(&Connection<EndPointType>::checkIfAlive, this, conn),
+        "Connection<EndPointType>::checkIfAlive"
+    );
   }
 
   USID createNewUSID() {
@@ -827,7 +837,9 @@ private:
           std::tr1::shared_ptr<Connection<EndPointType> > conn = mWeakThis.lock();
           if (conn) {
             getContext()->mainStrand->post(
-                                         std::tr1::bind(&Connection<EndPointType>::serviceConnectionNoReturn, this, conn) );
+                std::tr1::bind(&Connection<EndPointType>::serviceConnectionNoReturn, this, conn),
+                "Connection<EndPointType>::serviceConnectionNoReturn"
+            );
           }
 
           if (rand() % mCwnd == 0)  {
@@ -1177,7 +1189,7 @@ private:
  	return;
        }
        std::tr1::shared_ptr<Connection<EndPointType> > conn = connectionMap[localEndPoint];
-       
+
        conn->receiveMessage(data, len);
      }
      else if (channelID == 0) {
@@ -1484,7 +1496,7 @@ public:
               SST_LOG(error,"Tried to connect stream without calling createDatagramLayer for the endpoint.");
               return false;
           }
-          localEndPoint.port = bdl->getUnusedPort(localEndPoint.endPoint);          
+          localEndPoint.port = bdl->getUnusedPort(localEndPoint.endPoint);
       }
 
       StreamReturnCallbackMap& streamReturnCallbackMap = sstConnVars->mStreamReturnCallbackMap;
@@ -1572,7 +1584,9 @@ public:
       std::tr1::shared_ptr<Connection<EndPointType> > conn =  mConnection.lock();
       if (conn)
         getContext()->mainStrand->post(Duration::seconds(0.01),
-          std::tr1::bind(&Stream<EndPointType>::serviceStreamNoReturn, this, mWeakThis.lock(), conn) );
+            std::tr1::bind(&Stream<EndPointType>::serviceStreamNoReturn, this, mWeakThis.lock(), conn),
+            "Stream<EndPointType>::serviceStreamNoReturn"
+        );
 
       return len;
     }
@@ -1599,7 +1613,9 @@ public:
       std::tr1::shared_ptr<Connection<EndPointType> > conn =  mConnection.lock();
       if (conn)
         getContext()->mainStrand->post(Duration::seconds(0.01),
-          std::tr1::bind(&Stream<EndPointType>::serviceStreamNoReturn, this, mWeakThis.lock(), conn) );
+            std::tr1::bind(&Stream<EndPointType>::serviceStreamNoReturn, this, mWeakThis.lock(), conn),
+            "Stream<EndPointType>::serviceStreamNoReturn"
+        );
 
       return currOffset;
     }
@@ -1607,7 +1623,7 @@ public:
     return -1;
   }
 
-#if SIRIKATA_PLATFORM != SIRIKATA_WINDOWS
+#if SIRIKATA_PLATFORM != SIRIKATA_PLATFORM_WINDOWS
   /* Gathers data from the buffers described in 'vec',
      which is taken to be 'count' structures long, and
      writes them to the stream. As each buffer is
@@ -1686,7 +1702,8 @@ public:
       mState = PENDING_DISCONNECT;
       if (conn) {
           getContext()->mainStrand->post(
-              std::tr1::bind(&Stream<EndPointType>::serviceStreamNoReturn, this, mWeakThis.lock(), conn)
+              std::tr1::bind(&Stream<EndPointType>::serviceStreamNoReturn, this, mWeakThis.lock(), conn),
+              "Stream<EndPointType>::serviceStreamNoReturn"
           );
       }
       return true;
@@ -1833,6 +1850,7 @@ private:
   }
 
   int init(void* initial_data, uint32 length, bool remotelyInitiated, LSID remoteLSID) {
+    mNumInitRetransmissions = 1;
     if (remotelyInitiated) {
         mRemoteLSID = remoteLSID;
         mConnected = true;
@@ -1863,7 +1881,6 @@ private:
       sendInitPacket(mInitialData, mInitialDataLength);
     }
 
-    mNumInitRetransmissions = 1;
     mNumBytesSent = mInitialDataLength;
 
     if (length > mInitialDataLength) {
@@ -1878,7 +1895,9 @@ private:
     std::tr1::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
     if (conn) {
       getContext()->mainStrand->post(Duration::seconds(60),
-                                     std::tr1::bind(&Stream<EndPointType>::sendKeepAlive, this, mWeakThis, conn) );
+          std::tr1::bind(&Stream<EndPointType>::sendKeepAlive, this, mWeakThis, conn),
+          "Stream<EndPointType>::sendKeepAlive"
+      );
     }
 
     return numBytesBuffered;
@@ -1916,7 +1935,9 @@ private:
     write(buf, 0);
 
     getContext()->mainStrand->post(Duration::seconds(60),
-                                   std::tr1::bind(&Stream<EndPointType>::sendKeepAlive, this, wstrm, conn) );
+        std::tr1::bind(&Stream<EndPointType>::sendKeepAlive, this, wstrm, conn),
+        "Stream<EndPointType>::sendKeepAlive"
+    );
   }
 
   static void connectionCreated( int errCode, std::tr1::shared_ptr<Connection<EndPointType> > c) {
@@ -2008,7 +2029,10 @@ private:
         // connection request.
         std::tr1::shared_ptr<Connection<EndPointType> > conn =  mConnection.lock();
         if (conn)
-            getContext()->mainStrand->post(std::tr1::bind(&Stream<EndPointType>::serviceStreamNoReturn, this, mWeakThis.lock(), conn) );
+            getContext()->mainStrand->post(
+                std::tr1::bind(&Stream<EndPointType>::serviceStreamNoReturn, this, mWeakThis.lock(), conn),
+                "Stream<EndPointType>::serviceStreamNoReturn"
+            );
       }
     }
     else {
@@ -2072,7 +2096,9 @@ private:
           std::tr1::shared_ptr<Connection<EndPointType> > conn =  mConnection.lock();
           if (conn)
             getContext()->mainStrand->post(Duration::microseconds(2*mStreamRTOMicroseconds),
-              std::tr1::bind(&Stream<EndPointType>::serviceStreamNoReturn, this, mWeakThis.lock(), conn) );
+                std::tr1::bind(&Stream<EndPointType>::serviceStreamNoReturn, this, mWeakThis.lock(), conn),
+                "Stream<EndPointType>::serviceStreamNoReturn"
+            );
         }
       }
     }
@@ -2103,7 +2129,9 @@ private:
     std::tr1::shared_ptr<Connection<EndPointType> > conn =  mConnection.lock();
     if (conn)
       getContext()->mainStrand->post(Duration::seconds(0.01),
-        std::tr1::bind(&Stream<EndPointType>::serviceStreamNoReturn, this, mWeakThis.lock(), conn) );
+          std::tr1::bind(&Stream<EndPointType>::serviceStreamNoReturn, this, mWeakThis.lock(), conn),
+          "Stream<EndPointType>::serviceStreamNoReturn"
+      );
 
     if (mChannelToBufferMap.empty() && !mQueuedBuffers.empty()) {
       std::tr1::shared_ptr<StreamBuffer> buffer = mQueuedBuffers.front();
@@ -2337,9 +2365,11 @@ private:
 
     conn->sendData( buffer.data(), buffer.size(), false );
 
-    getContext()->mainStrand->post(Duration::microseconds(pow(2.0,mNumInitRetransmissions)*mStreamRTOMicroseconds),
-
-        std::tr1::bind(&Stream<EndPointType>::serviceStreamNoReturn, this, mWeakThis.lock(), conn) );
+    getContext()->mainStrand->post(
+        Duration::microseconds(pow(2.0,mNumInitRetransmissions)*mStreamRTOMicroseconds),
+        std::tr1::bind(&Stream<EndPointType>::serviceStreamNoReturn, this, mWeakThis.lock(), conn),
+        "Stream<EndPointType>::serviceStreamNoReturn"
+    );
 
   }
 

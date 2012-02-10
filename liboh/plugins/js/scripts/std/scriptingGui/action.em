@@ -60,7 +60,7 @@ std.ScriptingGui.Action.prototype.getConsoleResponseDescription =
 };
 
 std.ScriptingGui.Action.prototype.getConsoleNoResponseDescription =
-    function(respMsg, responderId)
+    function(responderId)
 {
     return{
         type: 'ACTION_NO_RESPONSE',

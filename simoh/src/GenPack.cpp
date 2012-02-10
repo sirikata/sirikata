@@ -41,8 +41,6 @@
 #include <sirikata/core/trace/Trace.hpp>
 #include <sirikata/oh/Trace.hpp>
 
-#include <sirikata/core/network/IOServiceFactory.hpp>
-
 #include <sirikata/oh/ObjectHostContext.hpp>
 
 void *main_loop(void *);
@@ -70,8 +68,8 @@ int main(int argc, char** argv) {
 
     srand( GetOptionValue<uint32>("rand-seed") );
 
-    Network::IOService* ios = Network::IOServiceFactory::makeIOService();
-    Network::IOStrand* mainStrand = ios->createStrand();
+    Network::IOService* ios = new Network::IOService("GenPack");
+    Network::IOStrand* mainStrand = ios->createStrand("GenPack Main");
 
     ODPSST::ConnectionManager* sstConnMgr = new ODPSST::ConnectionManager();
     OHDPSST::ConnectionManager* ohSSTConnMgr = new OHDPSST::ConnectionManager();
@@ -94,7 +92,7 @@ int main(int argc, char** argv) {
     gTrace = NULL;
 
     delete mainStrand;
-    Network::IOServiceFactory::destroyIOService(ios);
+    delete ios;
 
     return 0;
 }

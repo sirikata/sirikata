@@ -38,7 +38,7 @@ namespace Sirikata {
 
 ServerMessageQueue::ServerMessageQueue(SpaceContext* ctx, SpaceNetwork* net, Sender* sender)
         : mContext(ctx),
-          mSenderStrand(ctx->ioService->createStrand()),
+          mSenderStrand(ctx->ioService->createStrand("ServerMessageQueue SenderStrand")),
           mNetwork(net),
           mSender(sender),
           mUsedWeightSum(0.0),
@@ -72,7 +72,7 @@ uint32 ServerMessageQueue::trySend(const ServerID& dest, const Message* msg) {
     SendStreamMap::iterator it = mSendStreams.find(dest);
     if (it == mSendStreams.end()) {
         mSendStreams[dest]=NULL;
-        mSenderStrand->post(std::tr1::bind(&ServerMessageQueue::connect,this,dest));
+        mSenderStrand->post(std::tr1::bind(&ServerMessageQueue::connect,this,dest), "ServerMessageQueue::connect");
         return 0;
     }
 
@@ -119,7 +119,8 @@ void ServerMessageQueue::updateReceiverStats(ServerID sid, double total_weight, 
         std::tr1::bind(
             &ServerMessageQueue::handleUpdateReceiverStats, this,
             sid, total_weight, used_weight
-        )
+        ),
+        "ServerMessageQueue::handleUpdateReceiverStats"
     );
 }
 

@@ -86,7 +86,8 @@ void FairServerMessageQueue::scheduleServicing() {
     if (!mServiceScheduled.read()) {
         mServiceScheduled = true;
         mSenderStrand->post(
-            std::tr1::bind(&FairServerMessageQueue::service, this)
+            std::tr1::bind(&FairServerMessageQueue::service, this),
+            "FairServerMessageQueue::service"
         );
     }
 }

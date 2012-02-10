@@ -64,8 +64,9 @@ JSAggregateVisibleDataPtr JSVisibleManager::getOrCreateVisible(const SpaceObject
 void JSVisibleManager::onCreateProxy(ProxyObjectPtr p)
 {
     mCtx->objStrand->post(
-        std::tr1::bind(&JSVisibleManager::iOnCreateProxy,this,
-            p));
+        std::tr1::bind(&JSVisibleManager::iOnCreateProxy,this,p),
+        "JSVisibleManager::iOnCreateProxy"
+    );
 }
 
 void JSVisibleManager::iOnCreateProxy(ProxyObjectPtr p)
@@ -82,8 +83,9 @@ void JSVisibleManager::iOnCreateProxy(ProxyObjectPtr p)
 void JSVisibleManager::onDestroyProxy(ProxyObjectPtr p)
 {
     mCtx->objStrand->post(
-        std::tr1::bind(&JSVisibleManager::iOnDestroyProxy,this,
-            p));
+        std::tr1::bind(&JSVisibleManager::iOnDestroyProxy,this,p),
+        "JSVisibleManager::iOnDestroyProxy"
+    );
 }
 
 void JSVisibleManager::iOnDestroyProxy(ProxyObjectPtr p)
@@ -98,19 +100,31 @@ void JSVisibleManager::iOnDestroyProxy(ProxyObjectPtr p)
 }
 
 void JSVisibleManager::updateLocation(ProxyObjectPtr proxy, const TimedMotionVector3f &newLocation, const TimedMotionQuaternion& newOrient, const BoundingSphere3f& newBounds,const SpaceObjectReference& sporef) {
-    mCtx->objStrand->post(std::tr1::bind(&JSVisibleManager::iUpdatedProxy, this, proxy));
+    mCtx->objStrand->post(
+        std::tr1::bind(&JSVisibleManager::iUpdatedProxy, this, proxy),
+        "JSVisibleManager::iUpdatedProxy"
+    );
 }
 
 void JSVisibleManager::onSetMesh(ProxyObjectPtr proxy, Transfer::URI const& newMesh,const SpaceObjectReference& sporef) {
-    mCtx->objStrand->post(std::tr1::bind(&JSVisibleManager::iUpdatedProxy, this, proxy));
+    mCtx->objStrand->post(
+        std::tr1::bind(&JSVisibleManager::iUpdatedProxy, this, proxy),
+        "JSVisibleManager::iUpdatedProxy"
+    );
 }
 
 void JSVisibleManager::onSetScale(ProxyObjectPtr proxy, float32 newScale ,const SpaceObjectReference& sporef) {
-    mCtx->objStrand->post(std::tr1::bind(&JSVisibleManager::iUpdatedProxy, this, proxy));
+    mCtx->objStrand->post(
+        std::tr1::bind(&JSVisibleManager::iUpdatedProxy, this, proxy),
+        "JSVisibleManager::iUpdatedProxy"
+    );
 }
 
 void JSVisibleManager::onSetPhysics(ProxyObjectPtr proxy, const String& newphy,const SpaceObjectReference& sporef) {
-    mCtx->objStrand->post(std::tr1::bind(&JSVisibleManager::iUpdatedProxy, this, proxy));
+    mCtx->objStrand->post(
+        std::tr1::bind(&JSVisibleManager::iUpdatedProxy, this, proxy),
+        "JSVisibleManager::iUpdatedProxy"
+    );
 }
 
 void JSVisibleManager::iUpdatedProxy(ProxyObjectPtr p) {

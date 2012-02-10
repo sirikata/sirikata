@@ -94,6 +94,15 @@ void InitSpaceOptions() {
 
         .addOption(new OptionValue(OPT_MODULES, "environment", Sirikata::OptionValueType< std::vector<String> >(), "Additional SpaceModules to load"))
 
+
+        .addOption(new OptionValue(OPT_AGGMGR_HOSTNAME, "", Sirikata::OptionValueType<String>(), "AggregateManager upload hostname"))
+        .addOption(new OptionValue(OPT_AGGMGR_SERVICE, "", Sirikata::OptionValueType<String>(), "AggregateManager upload service (port)"))
+        .addOption(new OptionValue(OPT_AGGMGR_CONSUMER_KEY, "", Sirikata::OptionValueType<String>(), "AggregateManager upload OAuth consumer key"))
+        .addOption(new OptionValue(OPT_AGGMGR_CONSUMER_SECRET, "", Sirikata::OptionValueType<String>(), "AggregateManager upload OAuth consumer secret"))
+        .addOption(new OptionValue(OPT_AGGMGR_ACCESS_KEY, "", Sirikata::OptionValueType<String>(), "AggregateManager upload OAuth access key"))
+        .addOption(new OptionValue(OPT_AGGMGR_ACCESS_SECRET, "", Sirikata::OptionValueType<String>(), "AggregateManager upload OAuth access secret"))
+        .addOption(new OptionValue(OPT_AGGMGR_USERNAME, "", Sirikata::OptionValueType<String>(), "AggregateManager upload CDN username"))
+
       ;
 }
 

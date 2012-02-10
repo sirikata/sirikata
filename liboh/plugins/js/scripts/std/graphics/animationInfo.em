@@ -45,13 +45,14 @@ std.graphics.AnimationInfo = system.Class.extend(
             this._pres = pres;
             this._subscription_group = [];
 
-            if (sim) {
-              this._simulator = sim;
-              var animationRequestHandler = std.core.bind(this.onAnimationMessage, this);
-              animationRequestHandler << [{"animationInfo"::}];
-            }
+            //short-circuit
+            // if (sim) {
+            //   this._simulator = sim;
+            //   var animationRequestHandler = std.core.bind(this.onAnimationMessage, this);
+            //   animationRequestHandler << [{"animationInfo"::}];
+            // }
 
-            this._pres.onProxAdded(std.core.bind(this.proxAddedCallback, this), true);
+//            this._pres.onProxAdded(std.core.bind(this.proxAddedCallback, this), true);
         },
 
 

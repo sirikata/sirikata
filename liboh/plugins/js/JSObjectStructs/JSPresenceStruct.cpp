@@ -352,7 +352,7 @@ v8::Handle<v8::Value>JSPresenceStruct::setVisualFunction(String urilocation)
 
 
 
-const String& JSPresenceStruct::getQuery()
+String JSPresenceStruct::getQuery()
 {
     if (isConnected) {
         assert(jpp);
@@ -365,7 +365,7 @@ const String& JSPresenceStruct::getQuery()
 v8::Handle<v8::Value> JSPresenceStruct::struct_getQuery()
 {
     INLINE_CHECK_IS_CONNECTED_ERROR("getQueryAngle");
-    const String& q = getQuery();
+    String q = getQuery();
     return v8::String::New(q.c_str(), q.size());
 }
 
@@ -450,7 +450,7 @@ v8::Handle<v8::Value> JSPresenceStruct::runSimulation(String simname)
     if (invokableObj == NULL)
         return scope.Close(v8::Undefined());
 
-    v8::Local<v8::Object> tmpObj = mParent->manager()->mInvokableObjectTemplate->NewInstance();
+    v8::Local<v8::Object> tmpObj = mParent->JSObjectScript::mCtx->mInvokableObjectTemplate->NewInstance();
     tmpObj->SetInternalField(JSSIMOBJECT_JSOBJSCRIPT_FIELD,External::New(mParent));
     tmpObj->SetInternalField(JSSIMOBJECT_SIMULATION_FIELD,External::New(invokableObj));
     tmpObj->SetInternalField(TYPEID_FIELD, External::New(new String(JSSIMOBJECT_TYPEID_STRING)));

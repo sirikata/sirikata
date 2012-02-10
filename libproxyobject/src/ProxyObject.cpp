@@ -58,12 +58,12 @@ ProxyObject::ProxyObject(ProxyManagerPtr man, const SpaceObjectReference& id)
      ProxyObjectProvider(),
      MeshProvider (),
      mID(id),
-     mParent(man)
-{
+     mParent(man),
+     mValid(true)
+{  
     assert(mParent);
 
-    reset();
-
+    reset();        
     // Validate is forced in ProxyObject::construct
 }
 
@@ -73,16 +73,18 @@ ProxyObject::~ProxyObject() {
 }
 
 void ProxyObject::reset() {
-    SequencedPresenceProperties::reset();
+    SequencedPresenceProperties::reset();    
 }
 
 void ProxyObject::validate() {
-    ProxyObjectPtr ptr = getSharedPtr();
-    assert(ptr);
-    ProxyObjectProvider::notify(&ProxyObjectListener::validated, ptr);
+  mValid = true;
+  ProxyObjectPtr ptr = getSharedPtr();
+  assert(ptr);
+  ProxyObjectProvider::notify(&ProxyObjectListener::validated, ptr);
 }
 
 void ProxyObject::invalidate(bool permanent) {
+    mValid = false;
     ProxyObjectPtr ptr = getSharedPtr();
     assert(ptr);
     ProxyObjectProvider::notify(&ProxyObjectListener::invalidated, ptr, permanent);

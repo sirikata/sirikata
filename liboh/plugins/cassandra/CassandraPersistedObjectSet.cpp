@@ -31,7 +31,6 @@
  */
 
 #include "CassandraPersistedObjectSet.hpp"
-#include <sirikata/core/network/IOServiceFactory.hpp>
 #include <sirikata/core/network/IOService.hpp>
 #include <sirikata/core/network/IOWork.hpp>
 
@@ -57,11 +56,11 @@ void CassandraPersistedObjectSet::start() {
     // Initialize and start the thread for IO work. This is only separated as a
     // thread rather than strand because we don't have proper multithreading in
     // cppoh.
-    mIOService = Network::IOServiceFactory::makeIOService();
+    mIOService = new Network::IOService("CassandraPersistedObjectSet");
     mWork = new Network::IOWork(*mIOService, "CassandraPersistedObjectSet IO Thread");
     mThread = new Sirikata::Thread(std::tr1::bind(&Network::IOService::runNoReturn, mIOService));
 
-    mIOService->post(std::tr1::bind(&CassandraPersistedObjectSet::initDB, this));
+    mIOService->post(std::tr1::bind(&CassandraPersistedObjectSet::initDB, this), "CassandraPersistedObjectSet::initDB");
 }
 
 void CassandraPersistedObjectSet::initDB() {
@@ -77,14 +76,15 @@ void CassandraPersistedObjectSet::stop() {
     mThread->join();
     delete mThread;
     mThread = NULL;
-    Network::IOServiceFactory::destroyIOService(mIOService);
+    delete mIOService;
     mIOService = NULL;
 }
 
 
 void CassandraPersistedObjectSet::requestPersistedObject(const UUID& internal_id, const String& script_type, const String& script_args, const String& script_contents, RequestCallback cb, const String& timestamp) {
     mIOService->post(
-        std::tr1::bind(&CassandraPersistedObjectSet::performUpdate, this, internal_id, script_type, script_args, script_contents, cb, timestamp)
+        std::tr1::bind(&CassandraPersistedObjectSet::performUpdate, this, internal_id, script_type, script_args, script_contents, cb, timestamp),
+        "CassandraPersistedObjectSet::performUpdate"
     );
 }
 
@@ -105,7 +105,7 @@ void CassandraPersistedObjectSet::performUpdate(const UUID& internal_id, const S
     }
 
     if (cb != 0)
-        mContext->mainStrand->post(std::tr1::bind(cb, success));
+        mContext->mainStrand->post(std::tr1::bind(cb, success), "CassandraPersistedObjectSet::performUpdate callback");
 }
 
 } //end namespace OH

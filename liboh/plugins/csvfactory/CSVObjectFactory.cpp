@@ -350,7 +350,8 @@ void CSVObjectFactory::connectObjects()
     if (!mIncompleteObjects.empty())
         mContext->mainStrand->post(
             Duration::seconds(1.f),
-            std::tr1::bind(&CSVObjectFactory::connectObjects, this)
+            std::tr1::bind(&CSVObjectFactory::connectObjects, this),
+            "CSVObjectFactory::connectObjects"
         );
 }
 

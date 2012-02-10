@@ -40,7 +40,7 @@
 namespace Sirikata {
 
 TimeSyncClient::TimeSyncClient(Context* ctx, OHDP::Service* ohdp_service, const SpaceID& space, const Duration& polling_interval, UpdatedCallback cb)
- : PollingService(ctx->mainStrand, polling_interval, ctx, "TimeSync"),
+ : PollingService(ctx->mainStrand, "TimeSync", polling_interval, ctx, "TimeSync"),
    mContext(ctx),
    mSeqno(0),
    mHasBeenInitialized(false),

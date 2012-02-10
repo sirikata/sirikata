@@ -105,7 +105,7 @@ void SimpleCameraObjectScript::onConnected(SessionEventProviderPtr from, const S
        Right now, not cleaning up allocated strand passed into runSimulation
      */
 
-    mGraphics = mParent->runSimulation(name, "ogregraphics", Network::IOStrandPtr(context()->ioService->createStrand()));
+    mGraphics = mParent->runSimulation(name, "ogregraphics", Network::IOStrandPtr(context()->ioService->createStrand("SimpleCameraObjectScript OgreRenderer")));
     Invokable::Array args;
     args.push_back( Invokable::asAny((String)"setInputHandler") );
     args.push_back( Invokable::asAny((Invokable*)this) );

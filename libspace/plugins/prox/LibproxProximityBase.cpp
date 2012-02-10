@@ -80,7 +80,10 @@ void LibproxProximityBase::ProxStreamInfo<EndpointType, StreamType>::writeSomeOb
     if (prox_stream->outstanding.empty())
         prox_stream->writing = false;
     else
-        ctx->mainStrand->post(retry_rate, prox_stream->writecb);
+        ctx->mainStrand->post(
+            retry_rate, prox_stream->writecb,
+            "LibproxProximityBase::ProxStreamInfo<EndpointType, StreamType>::writeSomeObjectResults"
+        );
 }
 
 template<typename EndpointType, typename StreamType>
@@ -107,7 +110,8 @@ void LibproxProximityBase::ProxStreamInfo<EndpointType, StreamType>::requestProx
     if (!base_stream) {
         ctx->mainStrand->post(
             Duration::milliseconds((int64)5),
-            std::tr1::bind(&LibproxProximityBase::ProxStreamInfo<EndpointType,StreamType>::requestProxSubstream, parent, ctx, ep, prox_stream)
+            std::tr1::bind(&LibproxProximityBase::ProxStreamInfo<EndpointType,StreamType>::requestProxSubstream, parent, ctx, ep, prox_stream),
+            "LibproxProximityBase::ProxStreamInfo<EndpointType, StreamType>::requestProxSubstream"
         );
         return;
     }
@@ -151,7 +155,7 @@ void LibproxProximityBase::ProxStreamInfo<EndpointType, StreamType>::proxSubstre
 
 LibproxProximityBase::LibproxProximityBase(SpaceContext* ctx, LocationService* locservice, CoordinateSegmentation* cseg, SpaceNetwork* net, AggregateManager* aggmgr)
  : Proximity(ctx, locservice, cseg, net, aggmgr, Duration::milliseconds((int64)100)),
-   mProxStrand(ctx->ioService->createStrand()),
+   mProxStrand(ctx->ioService->createStrand("LibproxProximityBase Prox Strand")),
    mLocCache(NULL)
 {
     mProxServerMessageService = mContext->serverRouter()->createServerMessageService("proximity");
@@ -162,6 +166,7 @@ LibproxProximityBase::LibproxProximityBase(SpaceContext* ctx, LocationService* l
     // Deal with static/dynamic split
     mSeparateDynamicObjects = GetOptionValue<bool>(OPT_PROX_SPLIT_DYNAMIC);
     mNumQueryHandlers = (mSeparateDynamicObjects ? 2 : 1);
+    mMoveToStaticDelay = Duration::minutes(1);
 }
 
 LibproxProximityBase::~LibproxProximityBase() {
@@ -193,11 +198,7 @@ BoundingBox3f LibproxProximityBase::aggregateBBoxes(const BoundingBoxList& bboxe
 bool LibproxProximityBase::velocityIsStatic(const Vector3f& vel) {
     // These values are arbitrary, just meant to indicate that the object is,
     // for practical purposes, not moving.
-    return (
-        vel.x < .05f &&
-        vel.y < .05f &&
-        vel.z < .05f
-    );
+    return (vel.lengthSquared() < (0.01f*0.01f));
 }
 
 
@@ -384,7 +385,8 @@ void LibproxProximityBase::aggregateCreated(const UUID& objid) {
             BoundingSphere3f(),
             "",
             ""
-        )
+        ),
+        "LocationService::addLocalAggregateObject"
     );
 
     mAggregateManager->addAggregate(objid);
@@ -395,7 +397,8 @@ void LibproxProximityBase::aggregateChildAdded(const UUID& objid, const UUID& ch
         std::tr1::bind(
             &LibproxProximityBase::updateAggregateLoc, this,
             objid, bnds
-        )
+        ),
+        "LibproxProximityBase::updateAggregateLoc"
     );
 
     mAggregateManager->addChild(objid, child);
@@ -407,7 +410,8 @@ void LibproxProximityBase::aggregateChildRemoved(const UUID& objid, const UUID& 
         std::tr1::bind(
             &LibproxProximityBase::updateAggregateLoc, this,
             objid, bnds
-        )
+        ),
+        "LibproxProximityBase::updateAggregateLoc"
     );
 
     mAggregateManager->removeChild(objid, child);
@@ -418,7 +422,8 @@ void LibproxProximityBase::aggregateBoundsUpdated(const UUID& objid, const Bound
         std::tr1::bind(
             &LibproxProximityBase::updateAggregateLoc, this,
             objid, bnds
-        )
+        ),
+        "LibproxProximityBase::updateAggregateLoc"
     );
 
     mAggregateManager->generateAggregateMesh(objid, Duration::seconds(300.0+rand()%300));
@@ -428,7 +433,8 @@ void LibproxProximityBase::aggregateDestroyed(const UUID& objid) {
     mContext->mainStrand->post(
         std::tr1::bind(
             &LocationService::removeLocalAggregateObject, mLocService, objid
-        )
+        ),
+        "LocationService::removeLocalAggregateObject"
     );
     mAggregateManager->removeAggregate(objid);
 }

@@ -81,6 +81,30 @@ public:
     inline void operator/=(float64 rhs) {
         mDeltaTime = (int64)((float64)mDeltaTime / (float64)rhs);
     }
+    inline DeltaTime operator/(int32 rhs) const {
+        return (*this)/(float64)rhs;
+    }
+    inline void operator/=(int32 rhs) {
+        (*this) /= (float64)rhs;
+    }
+    inline DeltaTime operator/(uint32 rhs) const {
+        return (*this)/(float64)rhs;
+    }
+    inline void operator/=(uint32 rhs) {
+        (*this) /= (float64)rhs;
+    }
+    inline DeltaTime operator/(int64 rhs) const {
+        return (*this)/(float64)rhs;
+    }
+    inline void operator/=(int64 rhs) {
+        (*this) /= (float64)rhs;
+    }
+    inline DeltaTime operator/(uint64 rhs) const {
+        return (*this)/(float64)rhs;
+    }
+    inline void operator/=(uint64 rhs) {
+        (*this) /= (float64)rhs;
+    }
 
     inline DeltaTime operator*(float32 rhs) const {
         return DeltaTime((int64)((float64)mDeltaTime * (float64)rhs));
@@ -94,7 +118,37 @@ public:
     inline void operator*=(float64 rhs) {
         mDeltaTime = (int64)((float64)mDeltaTime * (float64)rhs);
     }
+    inline DeltaTime operator*(int32 rhs) const {
+        return (*this) * (float64)rhs;
+    }
+    inline void operator*=(int32 rhs) {
+        (*this) *= (float64)rhs;
+    }
+    inline DeltaTime operator*(uint32 rhs) const {
+        return (*this) * (float64)rhs;
+    }
+    inline void operator*=(uint32 rhs) {
+        (*this) *= (float64)rhs;
+    }
+    inline DeltaTime operator*(int64 rhs) const {
+        return (*this) * (float64)rhs;
+    }
+    inline void operator*=(int64 rhs) {
+        (*this) *= (float64)rhs;
+    }
+    inline DeltaTime operator*(uint64 rhs) const {
+        return (*this) * (float64)rhs;
+    }
+    inline void operator*=(uint64 rhs) {
+        (*this) *= (float64)rhs;
+    }
 
+    static DeltaTime hours(double s) {
+        return minutes(s*60);
+    }
+    static DeltaTime minutes(double s) {
+        return seconds(s*60);
+    }
     static DeltaTime seconds(double s) {
         return DeltaTime((int64)(s*1000000.));
     }
@@ -104,11 +158,41 @@ public:
     static DeltaTime milliseconds(int64 ms) {
         return DeltaTime(ms*1000);
     }
+    static DeltaTime milliseconds(uint64 ms) {
+        return DeltaTime(ms*1000);
+    }
+    static DeltaTime milliseconds(int32 ms) {
+        return DeltaTime(((int64)ms)*1000);
+    }
+    static DeltaTime milliseconds(uint32 ms) {
+        return DeltaTime(((int64)ms)*1000);
+    }
+    static DeltaTime microseconds(double us) {
+        return DeltaTime((int64)us);
+    }
     static DeltaTime microseconds(int64 us) {
         return DeltaTime(us);
     }
+    static DeltaTime microseconds(uint64 us) {
+        return DeltaTime(us);
+    }
+    static DeltaTime microseconds(int32 us) {
+        return DeltaTime((int64)us);
+    }
+    static DeltaTime microseconds(uint32 us) {
+        return DeltaTime((int64)us);
+    }
     static DeltaTime nanoseconds(int64 ns) {
         return DeltaTime(ns/1000);
+    }
+    static DeltaTime nanoseconds(uint64 ns) {
+        return DeltaTime(ns/1000);
+    }
+    static DeltaTime nanoseconds(int32 ns) {
+        return DeltaTime(((int64)ns)/1000);
+    }
+    static DeltaTime nanoseconds(uint32 ns) {
+        return DeltaTime(((int64)ns)/1000);
     }
 
     /** Return a zero length duration. */

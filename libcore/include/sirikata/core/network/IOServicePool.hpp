@@ -46,7 +46,7 @@ namespace Network {
  */
 class SIRIKATA_EXPORT IOServicePool {
   public:
-    IOServicePool(uint32 nthreads);
+    IOServicePool(const String& name, uint32 nthreads);
     ~IOServicePool();
 
     /** Run the thread pool. */

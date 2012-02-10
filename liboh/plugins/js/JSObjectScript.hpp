@@ -215,12 +215,9 @@ public:
     v8::Handle<v8::Value> evalInGlobal(const String& contents, v8::ScriptOrigin* em_script_name,JSContextStruct* jscs);
 
 
-protected:
-
-
-
-
     JSCtx* mCtx;
+
+protected:
 
     // Object host internal identifier for the object associated with
     // this script. We copy this information here because this base

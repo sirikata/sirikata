@@ -41,7 +41,7 @@ void DataNameHandler::resolve(std::tr1::shared_ptr<MetadataRequest> request, Nam
     DataURI data(request->getURI().toString());
     if (data.empty()) {
         std::tr1::shared_ptr<RemoteFileMetadata> bad;
-        HttpManager::getSingleton().postCallback(std::tr1::bind(callback,bad));
+        HttpManager::getSingleton().postCallback(std::tr1::bind(callback,bad), "DataNameHandler::resolve callback");
         return;
     }
 
@@ -61,7 +61,7 @@ void DataNameHandler::resolve(std::tr1::shared_ptr<MetadataRequest> request, Nam
                 file_size, chunkList, emptyHeaders)
     );
 
-    HttpManager::getSingleton().postCallback(std::tr1::bind(callback, met));
+    HttpManager::getSingleton().postCallback(std::tr1::bind(callback, met), "DataNameHandler::resolve callback");
 }
 
 
@@ -91,14 +91,14 @@ void DataChunkHandler::get(std::tr1::shared_ptr<RemoteFileMetadata> file,
 
     DataURI data(file->getURI().toString());
     if (data.empty()) {
-        HttpManager::getSingleton().postCallback(std::tr1::bind(callback,bad));
+        HttpManager::getSingleton().postCallback(std::tr1::bind(callback,bad), "DataChunkHandler::resolve callback");
         return;
     }
 
     FileHeaders emptyHeaders;
     DenseDataPtr fileContents(new DenseData(data.data()));
 
-    HttpManager::getSingleton().postCallback(std::tr1::bind(callback, fileContents));
+    HttpManager::getSingleton().postCallback(std::tr1::bind(callback, fileContents), "DataChunkHandler::resolve callback");
 }
 
 }

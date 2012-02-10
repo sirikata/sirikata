@@ -116,10 +116,10 @@ bool OSegLookupQueue::lookup(Sirikata::Protocol::Object::ObjectMessage* msg, con
 
   //FIXME: hardcoded here
   #define MAX_OSEG_PUSHBACK_PARAMETER 3
-  
+
   if (mOSeg->getPushback() > MAX_OSEG_PUSHBACK_PARAMETER)
       return false;
-  
+
   //  otherwise, do full oseg lookup;
   destServer = mOSeg->lookup(dest_obj);
   // If we already have a server, handle the callback right away
@@ -140,7 +140,8 @@ bool OSegLookupQueue::lookup(Sirikata::Protocol::Object::ObjectMessage* msg, con
 
 void OSegLookupQueue::osegLookupCompleted(const UUID& id, const OSegEntry& dest) {
     mNetworkStrand->post(
-        std::tr1::bind(&OSegLookupQueue::handleLookupCompleted, this, id, dest)
+        std::tr1::bind(&OSegLookupQueue::handleLookupCompleted, this, id, dest),
+        "OSegLookupQueue::handleLookupCompleted"
     );
 }
 

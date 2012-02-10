@@ -281,7 +281,8 @@ void ServerQueryHandler::writeSomeProxData(ServerQueryStatePtr data) {
         static Duration retry_rate = Duration::milliseconds((int64)1);
         mContext->mainStrand->post(
             retry_rate,
-            std::tr1::bind(&ServerQueryHandler::writeSomeProxData, this, data)
+            std::tr1::bind(&ServerQueryHandler::writeSomeProxData, this, data),
+            "ServerQueryHandler::writeSomeProxData"
         );
     }
 }

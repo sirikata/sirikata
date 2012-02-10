@@ -34,245 +34,12 @@
 #ifndef SIRIKATA_TransferPool_HPP__
 #define SIRIKATA_TransferPool_HPP__
 
-#include <sirikata/core/task/WorkQueue.hpp>
+#include <sirikata/core/transfer/Defs.hpp>
 #include <sirikata/core/queue/ThreadSafeQueue.hpp>
-#include <sirikata/core/transfer/TransferData.hpp>
-#include "RemoteFileMetadata.hpp"
-#include "URI.hpp"
-#include <stdio.h>
-#include <time.h>
-#include <stdlib.h>
-
+#include <sirikata/core/transfer/TransferRequest.hpp>
 
 namespace Sirikata {
 namespace Transfer {
-
-class TransferRequest;
-typedef std::tr1::shared_ptr<TransferRequest> TransferRequestPtr;
-
-/*
- * Base class for a request going into the transfer pool to set
- * the priority of a request
- */
-class SIRIKATA_EXPORT TransferRequest {
-
-public:
-    typedef std::tr1::function<void()> ExecuteFinished;
-    typedef float PriorityType;
-
-	//Return the priority of the request
-	inline PriorityType getPriority() const {
-		return mPriority;
-	}
-
-	//Returns true if this request is for deletion
-	inline bool isDeletionRequest() const {
-	    return mDeletionRequest;
-	}
-
-	/// Get an identifier for the data referred to by this
-	/// TransferRequest. The identifier is not unique for each
-	/// TransferRequest. Instead, it identifies the asset data: if two
-	/// identifiers are equal, they refer to the same data. (Two different
-	/// identifiers may *ultimately* refer to the same data because two
-	/// names could point to the same underlying hash).
-	virtual const std::string& getIdentifier() const = 0;
-
-	inline const std::string& getClientID() const {
-		return mClientID;
-	}
-
-	virtual void execute(std::tr1::shared_ptr<TransferRequest> req, ExecuteFinished cb) = 0;
-
-    virtual void notifyCaller(TransferRequestPtr me, TransferRequestPtr from) = 0;
-
-	virtual ~TransferRequest() {}
-
-	friend class TransferPool;
-
-protected:
-	inline void setClientID(const std::string& clientID) {
-		mClientID = clientID;
-	}
-
-    //Change the priority of the request
-    inline void setPriority(PriorityType p) {
-        mPriority = p;
-    }
-
-    //Change the priority of the request
-    inline void setDeletion() {
-        mDeletionRequest = true;
-    }
-
-	PriorityType mPriority;
-	std::string mClientID;
-	bool mDeletionRequest;
-
-};
-
-class MetadataRequest;
-typedef std::tr1::shared_ptr<MetadataRequest> MetadataRequestPtr;
-/*
- * Handles requests for metadata of a file when all you have is the URI
- */
-class SIRIKATA_EXPORT MetadataRequest: public TransferRequest {
-
-public:
-    typedef std::tr1::function<void(
-            std::tr1::shared_ptr<MetadataRequest> request,
-            std::tr1::shared_ptr<RemoteFileMetadata> response)> MetadataCallback;
-
-    MetadataRequest(const URI &uri, PriorityType priority, MetadataCallback cb) :
-     mURI(uri), mCallback(cb) {
-        mPriority = priority;
-        mDeletionRequest = false;
-        mID = uri.toString();
-    }
-
-    inline const std::string &getIdentifier() const {
-        return mID;
-    }
-
-    inline const URI& getURI() {
-        return mURI;
-    }
-
-    void execute(std::tr1::shared_ptr<TransferRequest> req, ExecuteFinished cb);
-
-    inline void notifyCaller(TransferRequestPtr me, TransferRequestPtr from) {
-        std::tr1::shared_ptr<MetadataRequest> meC =
-            std::tr1::static_pointer_cast<MetadataRequest, TransferRequest>(me);
-        std::tr1::shared_ptr<MetadataRequest> fromC =
-            std::tr1::static_pointer_cast<MetadataRequest, TransferRequest>(from);
-        mCallback(meC, fromC->mRemoteFileMetadata);
-    }
-    inline void notifyCaller(MetadataRequestPtr me, TransferRequestPtr from, RemoteFileMetadataPtr data) {
-        std::tr1::shared_ptr<MetadataRequest> fromC =
-                std::tr1::static_pointer_cast<MetadataRequest, TransferRequest>(from);
-        mCallback(me, data);
-    }
-
-    inline bool operator==(const MetadataRequest& other) const {
-        return mID == other.mID;
-    }
-    inline bool operator<(const MetadataRequest& other) const {
-        return mID < other.mID;
-    }
-
-    virtual ~MetadataRequest() {}
-
-protected:
-
-    const URI mURI;
-    std::string mID;
-    MetadataCallback mCallback;
-    std::tr1::shared_ptr<RemoteFileMetadata> mRemoteFileMetadata;
-
-    MetadataRequest(const URI &uri, PriorityType priority) :
-        mURI(uri) {
-        mPriority = priority;
-        mDeletionRequest = false;
-
-        mID = uri.toString();
-    }
-
-
-    inline void execute_finished(std::tr1::shared_ptr<RemoteFileMetadata> response, ExecuteFinished cb) {
-        mRemoteFileMetadata = response;
-        cb();
-        SILOG(transfer, detailed, "done MetadataRequest execute_finished");
-    }
-
-};
-
-/*
- * Handles requests for the data associated with a file:chunk pair
- */
-class SIRIKATA_EXPORT DirectChunkRequest : public TransferRequest {
-
-public:
-    typedef std::tr1::function<void(
-            std::tr1::shared_ptr<DirectChunkRequest> request,
-            std::tr1::shared_ptr<const DenseData> response)> DirectChunkCallback;
-
-    DirectChunkRequest(const Chunk &chunk, PriorityType priority, DirectChunkCallback cb)
-            : mChunk(std::tr1::shared_ptr<Chunk>(new Chunk(chunk))),
-            mCallback(cb)
-            {
-                mPriority = priority;
-                mDeletionRequest = false;
-                mID = chunk.toString();
-            }
-
-    inline const Chunk& getChunk() {
-        return *mChunk;
-    }
-
-    inline const std::string &getIdentifier() const {
-        return mID;
-    }
-
-    void execute(std::tr1::shared_ptr<TransferRequest> req, ExecuteFinished cb);
-
-    void execute_finished(std::tr1::shared_ptr<const DenseData> response, ExecuteFinished cb);
-
-    void notifyCaller(TransferRequestPtr me, TransferRequestPtr from);
-    void notifyCaller(TransferRequestPtr me, TransferRequestPtr from, DenseDataPtr data);
-
-protected:
-    std::string mID;
-    std::tr1::shared_ptr<Chunk> mChunk;
-    DirectChunkCallback mCallback;
-    std::tr1::shared_ptr<const DenseData> mDenseData;
-};
-
-typedef std::tr1::shared_ptr<DirectChunkRequest> DirectChunkRequestPtr;
-
-/*
- * Handles requests for the data associated with a file:chunk pair
- */
-class SIRIKATA_EXPORT ChunkRequest : public MetadataRequest {
-
-public:
-    typedef std::tr1::function<void(
-            std::tr1::shared_ptr<ChunkRequest> request,
-            std::tr1::shared_ptr<const DenseData> response)> ChunkCallback;
-
-	ChunkRequest(const URI &uri, const RemoteFileMetadata &metadata, const Chunk &chunk,
-	        PriorityType priority, ChunkCallback cb)
-            : MetadataRequest(uri, priority),
-            mMetadata(std::tr1::shared_ptr<RemoteFileMetadata>(new RemoteFileMetadata(metadata))),
-            mChunk(std::tr1::shared_ptr<Chunk>(new Chunk(chunk))),
-            mCallback(cb)
-            {
-                mDeletionRequest = false;
-                mID = chunk.getHash().toString();
-            }
-
-	inline const RemoteFileMetadata& getMetadata() {
-		return *mMetadata;
-	}
-
-	inline const Chunk& getChunk() {
-		return *mChunk;
-	}
-
-    void execute(std::tr1::shared_ptr<TransferRequest> req, ExecuteFinished cb);
-
-    void execute_finished(std::tr1::shared_ptr<const DenseData> response, ExecuteFinished cb);
-
-    void notifyCaller(TransferRequestPtr me, TransferRequestPtr from);
-    void notifyCaller(TransferRequestPtr me, TransferRequestPtr from, DenseDataPtr data);
-
-protected:
-    std::tr1::shared_ptr<RemoteFileMetadata> mMetadata;
-    std::tr1::shared_ptr<Chunk> mChunk;
-    std::tr1::shared_ptr<const DenseData> mDenseData;
-    ChunkCallback mCallback;
-};
-
-typedef std::tr1::shared_ptr<ChunkRequest> ChunkRequestPtr;
 
 /*
  * Abstract class for providing an algorithm for aggregating priorities from
@@ -282,14 +49,14 @@ class PriorityAggregationAlgorithm {
 
 public:
     // Return an aggregated priority given a list of priorities
-    virtual TransferRequest::PriorityType aggregate(
-        const std::vector<TransferRequest::PriorityType> &) const = 0;
+    virtual Priority aggregate(
+        const std::vector<Priority> &) const = 0;
 
     //Return an aggregated priority given the list of priorities
-    virtual TransferRequest::PriorityType aggregate(
+    virtual Priority aggregate(
         const std::map<std::string, TransferRequestPtr> &) const = 0;
 
-    virtual TransferRequest::PriorityType aggregate(
+    virtual Priority aggregate(
         const std::vector<TransferRequestPtr>&) const = 0;
 
     virtual ~PriorityAggregationAlgorithm() {
@@ -319,7 +86,7 @@ public:
     /// Puts a request into the pool
     virtual void addRequest(TransferRequestPtr req) = 0;
     /// Updates priority of a request in the pool
-    virtual void updatePriority(TransferRequestPtr req, TransferRequest::PriorityType p) = 0;
+    virtual void updatePriority(TransferRequestPtr req, Priority p) = 0;
     /// Updates priority of a request in the pool
     virtual void deleteRequest(TransferRequestPtr req) = 0;
 
@@ -338,7 +105,7 @@ protected:
     void setRequestClientID(TransferRequestPtr req) {
         req->setClientID(mClientID);
     }
-    void setRequestPriority(TransferRequestPtr req, TransferRequest::PriorityType p) {
+    void setRequestPriority(TransferRequestPtr req, Priority p) {
         req->setPriority(p);
     }
     void setRequestDeletion(TransferRequestPtr req) {
@@ -364,7 +131,7 @@ public:
     }
 
     //Updates priority of a request in the pool
-    virtual void updatePriority(TransferRequestPtr req, TransferRequest::PriorityType p) {
+    virtual void updatePriority(TransferRequestPtr req, Priority p) {
         setRequestPriority(req, p);
         mDeltaQueue.push(req);
     }

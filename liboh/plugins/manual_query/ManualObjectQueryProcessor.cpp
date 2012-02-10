@@ -18,7 +18,7 @@ ManualObjectQueryProcessor* ManualObjectQueryProcessor::create(ObjectHostContext
 
 ManualObjectQueryProcessor::ManualObjectQueryProcessor(ObjectHostContext* ctx)
  : mContext(ctx),
-   mStrand(mContext->ioService->createStrand()),
+   mStrand(mContext->ioService->createStrand("ManualObjectQueryProcessor Strand")),
    mServerQueryHandler(ctx, this, mStrand)
 {
 }

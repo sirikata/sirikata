@@ -350,6 +350,7 @@ void UnreliableHitPointScenario::initialize(ObjectHostContext*ctx) {
     mPingPoller = new Poller(
         ctx->mainStrand,
         std::tr1::bind(&UnreliableHitPointScenario::sendPings, this),
+        "UnreliableHitPointScenario Ping Poller",
         (bothpersecond > 1000 ? // Try to amortize out some of the
                                     // scheduling cost
         Duration::seconds(10.0/bothpersecond) :
@@ -362,10 +363,11 @@ void UnreliableHitPointScenario::initialize(ObjectHostContext*ctx) {
         Duration::seconds(1./mNumHitPointsPerSecond));
 */
     mGeneratePingProfiler = mContext->profiler->addStage("Object Host Generate Pings");
-    mGeneratePingsStrand = mContext->ioService->createStrand();
+    mGeneratePingsStrand = mContext->ioService->createStrand("UnreliableHitPointScenario GeneratePings");
     mGeneratePingPoller = new Poller(
         mGeneratePingsStrand,
         std::tr1::bind(&UnreliableHitPointScenario::generatePings, this),
+        "UnreliableHitPointScenario Generate Ping Poller",
         mNumPingsPerSecond > 1000 ? // Try to amortize out some of the
                                     // scheduling cost
         Duration::seconds(10.0/mNumPingsPerSecond) :
@@ -377,7 +379,8 @@ void UnreliableHitPointScenario::start() {
     Duration connect_phase = GetOptionValue<Duration>(OBJECT_CONNECT_PHASE);
     mContext->mainStrand->post(
         connect_phase,
-        std::tr1::bind(&UnreliableHitPointScenario::delayedStart, this)
+        std::tr1::bind(&UnreliableHitPointScenario::delayedStart, this),
+        "UnreliableHitPointScenario::delayedStart"
     );
 }
 void UnreliableHitPointScenario::delayedStart() {
@@ -425,7 +428,8 @@ void UnreliableHitPointScenario::delayedStart() {
         SILOG(oh, debug, "error during connect phase, retrying "<<connect_phase<<" later");
         mContext->mainStrand->post(
             connect_phase,
-            std::tr1::bind(&UnreliableHitPointScenario::delayedStart, this)
+            std::tr1::bind(&UnreliableHitPointScenario::delayedStart, this),
+            "UnreliableHitPointScenario::delayedStart"
             );
 
     }

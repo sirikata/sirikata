@@ -142,10 +142,6 @@ IOTimer::~IOTimer() {
     if (mStrand != NULL) chk.serializedExit();
 }
 
-IOService IOTimer::service() const {
-    return IOService(&mTimer->get_io_service());
-}
-
 void IOTimer::wait(const Duration &num_seconds) {
     mTimer->expires_from_now(boost::posix_time::microseconds(num_seconds.toMicroseconds()));
     IOTimerWPtr weakThisPtr(this->shared_from_this());

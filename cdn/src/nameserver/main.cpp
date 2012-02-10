@@ -33,7 +33,6 @@
 #include <sirikata/core/options/CommonOptions.hpp>
 
 #include <sirikata/core/network/IOService.hpp>
-#include <sirikata/core/network/IOServiceFactory.hpp>
 #include <sirikata/core/network/IOStrand.hpp>
 
 int main(int argc, char** argv) {
@@ -41,11 +40,11 @@ int main(int argc, char** argv) {
 
     InitOptions();
 
-    Network::IOService* ios = Network::IOServiceFactory::makeIOService();
-    Network::IOStrand* mainStrand = ios->createStrand();
+    Network::IOService* ios = new Network::IOService("Nameserver");
+    Network::IOStrand* mainStrand = ios->createStrand("CDN Nameserver Main");
 
     delete mainStrand;
-    Network::IOServiceFactory::destroyIOService(ios);
+    delete ios;
 
     return 0;
 }

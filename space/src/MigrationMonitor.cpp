@@ -222,7 +222,8 @@ void MigrationMonitor::changeNextEventTime(ObjectInfo& objinfo, const Time& newt
 
 void MigrationMonitor::localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& phy) {
     mStrand->post(
-        std::tr1::bind(&MigrationMonitor::handleLocalObjectAdded, this, uuid, loc, bounds)
+        std::tr1::bind(&MigrationMonitor::handleLocalObjectAdded, this, uuid, loc, bounds),
+        "MigrationMonitor::handleLocalObjectAdded"
     );
 }
 
@@ -235,7 +236,8 @@ void MigrationMonitor::handleLocalObjectAdded(const UUID& uuid, const TimedMotio
 
 void MigrationMonitor::localObjectRemoved(const UUID& uuid, bool agg) {
     mStrand->post(
-        std::tr1::bind(&MigrationMonitor::handleLocalObjectRemoved, this, uuid)
+        std::tr1::bind(&MigrationMonitor::handleLocalObjectRemoved, this, uuid),
+        "MigrationMonitor::handleLocalObjectRemoved"
     );
 }
 
@@ -246,7 +248,8 @@ void MigrationMonitor::handleLocalObjectRemoved(const UUID& uuid) {
 
 void MigrationMonitor::localLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval) {
     mStrand->post(
-        std::tr1::bind(&MigrationMonitor::handleLocalLocationUpdated, this, uuid, newval)
+        std::tr1::bind(&MigrationMonitor::handleLocalLocationUpdated, this, uuid, newval),
+        "MigrationMonitor::handleLocalLocationUpdated"
     );
 }
 
@@ -266,7 +269,8 @@ void MigrationMonitor::handleLocalLocationUpdated(const UUID& uuid, const TimedM
 /** CoordinateSegmentation::Listener Interface. */
 void MigrationMonitor::updatedSegmentation(CoordinateSegmentation* cseg, const std::vector<SegmentationInfo>& new_segmentation) {
     mStrand->post(
-        std::tr1::bind(&MigrationMonitor::handleUpdatedSegmentation, this, cseg, new_segmentation)
+        std::tr1::bind(&MigrationMonitor::handleUpdatedSegmentation, this, cseg, new_segmentation),
+        "MigrationMonitor::handleUpdatedSegmentation"
     );
 }
 

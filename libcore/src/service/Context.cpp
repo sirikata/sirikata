@@ -32,7 +32,6 @@
 
 #include <sirikata/core/util/Standard.hh>
 #include <sirikata/core/service/Context.hpp>
-#include <sirikata/core/network/IOServiceFactory.hpp>
 #include <sirikata/core/network/IOStrandImpl.hpp>
 #include <boost/asio.hpp>
 #include <sirikata/core/service/Breakpad.hpp>
@@ -85,7 +84,7 @@ void Context::run(uint32 nthreads, ExecutionThreads exthreads) {
 
     uint32 nworkers = (exthreads == IncludeOriginal ? nthreads-1 : nthreads);
     // Start workers
-    for(uint32 i = 1; i < nworkers; i++) {
+    for(uint32 i = 0; i < nworkers; i++) {
         mWorkerThreads.push_back(
             new Thread( std::tr1::bind(&Context::workerThread, this) )
         );
@@ -143,7 +142,7 @@ void Context::handleSignal(Signal::Type stype) {
     // actually running it here. This makes the extent of the signal
     // handling known completely in this method, whereas calling
     // shutdown can cause a cascade of cleanup.
-    ioService->post( std::tr1::bind(&Context::shutdown, this) );
+    ioService->post( std::tr1::bind(&Context::shutdown, this), "Context::shutdown" );
 }
 
 void Context::cleanup() {
@@ -158,7 +157,7 @@ void Context::cleanup() {
 
         mKillThread->join();
 
-        Network::IOServiceFactory::destroyIOService(mKillService);
+        delete mKillService;
         mKillService = NULL;
         mKillThread.reset();
     }
@@ -168,7 +167,7 @@ void Context::startForceQuitTimer() {
     // Note that we need to do this on another thread, with another IOService.
     // This is necessary to ensure that *this* doesn't keep things from
     // exiting.
-    mKillService = Network::IOServiceFactory::makeIOService();
+    mKillService = new Network::IOService("Context Kill Service");
     mKillTimer = Network::IOTimer::create(mKillService);
     mKillTimer->wait(
         Duration::seconds(5),

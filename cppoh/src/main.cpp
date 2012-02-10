@@ -39,7 +39,6 @@
 #include "ObjectHost.hpp"
 #include <sirikata/mesh/LightInfo.hpp>
 #include <sirikata/oh/HostedObject.hpp>
-#include <sirikata/core/network/IOServiceFactory.hpp>
 #include <sirikata/core/network/IOService.hpp>
 #include <time.h>
 #include <boost/thread.hpp>
@@ -126,8 +125,8 @@ int main (int argc, char** argv) {
 
     srand( GetOptionValue<uint32>("rand-seed") );
 
-    Network::IOService* ios = Network::IOServiceFactory::makeIOService();
-    Network::IOStrand* mainStrand = ios->createStrand();
+    Network::IOService* ios = new Network::IOService("Object Host");
+    Network::IOStrand* mainStrand = ios->createStrand("Object Host Main");
 
     ODPSST::ConnectionManager* sstConnMgr = new ODPSST::ConnectionManager();
     OHDPSST::ConnectionManager* ohSstConnMgr = new OHDPSST::ConnectionManager();
@@ -195,7 +194,7 @@ int main (int argc, char** argv) {
     }
 
 
-    ctx->run(2);
+    ctx->run(1);
 
     ctx->cleanup();
 
@@ -226,7 +225,7 @@ int main (int argc, char** argv) {
     trace = NULL;
 
     delete mainStrand;
-    Network::IOServiceFactory::destroyIOService(ios);
+    delete ios;
 
     delete sstConnMgr;
     delete ohSstConnMgr;

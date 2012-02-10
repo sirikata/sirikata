@@ -58,7 +58,8 @@ protected:
 
     // Helpers for getting event loop setup/torn down
     Trace::Trace* _trace;
-    SSTConnectionManager* _sstConnMgr;
+    ODPSST::ConnectionManager* _sstConnMgr;
+    OHDPSST::ConnectionManager* _ohSstConnMgr;
     Network::IOService* _ios;
     Network::IOStrand* _mainStrand;
     Network::IOWork* _work;
@@ -81,6 +82,7 @@ public:
        _storage(NULL),
        _trace(NULL),
        _sstConnMgr(NULL),
+       _ohSstConnMgr(NULL),
        _mainStrand(NULL),
        _work(NULL),
        _ctx(NULL)
@@ -95,14 +97,15 @@ public:
         // Storage is tied to the main event loop, which requires quite a bit of setup
         ObjectHostID oh_id(1);
         _trace = new Trace::Trace("dummy.trace");
-        _ios = Network::IOServiceFactory::makeIOService();
-        _mainStrand = _ios->createStrand();
+        _ios = new Network::IOService("StressTestBase IOService");
+        _mainStrand = _ios->createStrand("StressTestBase IOStrand");
         _work = new Network::IOWork(*_ios, "StressTest");
         Time start_time = Timer::now(); // Just for stats in ObjectHostContext.
         Duration duration = Duration::zero(); // Indicates to run forever.
-        _sstConnMgr = new SSTConnectionManager();
+        _sstConnMgr = new ODPSST::ConnectionManager();
+        _ohSstConnMgr = new OHDPSST::ConnectionManager();
 
-        _ctx = new ObjectHostContext("test", oh_id, _sstConnMgr, _ios, _mainStrand, _trace, start_time, duration);
+        _ctx = new ObjectHostContext("test", oh_id, _sstConnMgr, _ohSstConnMgr, _ios, _mainStrand, _trace, start_time, duration);
 
         _storage = OH::StorageFactory::getSingleton().getConstructor(_type)(_ctx, _args);
 
@@ -135,7 +138,7 @@ public:
 
         delete _mainStrand;
         _mainStrand = NULL;
-        Network::IOServiceFactory::destroyIOService(_ios);
+        delete _ios;
         _ios = NULL;
     }
 
@@ -181,11 +184,11 @@ public:
     void testSetupTeardown() {
         TS_ASSERT(_storage);
     }
-  
+
     void testSingleWrites(String length, int keyNum, int bucketNum) {
         using std::tr1::placeholders::_1;
         using std::tr1::placeholders::_2;
-	
+
         timeval ts;
         gettimeofday(&ts,NULL);
         long int time1_s = ts.tv_sec;
@@ -243,7 +246,7 @@ public:
         std::cout<<"Read time:  "<<diff_t<<std::endl;
 
     }
-  
+
     void testSingleErases(String length, int keyNum, int bucketNum) {
         // NOTE: Depends on above write
         using std::tr1::placeholders::_1;
@@ -393,9 +396,9 @@ public:
         }
     }
 
-  
+
   void testMultiRounds(String length, int keyNum, int bucketNum, int times){
-    
+
     std::cout<<"dataLength: "<<length<<", keyNum: "<<keyNum<<", bucketNum: "<<bucketNum<<", rounds: "<<times<<"\n\n";
     for (int i=0; i<times; i++){
       std::cout<<"Round "<<i+1<<std::endl;
@@ -414,7 +417,7 @@ public:
       std::cout<<std::endl;
     }
   }
-  
+
 };
 
 const OH::Storage::Bucket StressTestBase::_buckets[100] = DataFiles::buckets;

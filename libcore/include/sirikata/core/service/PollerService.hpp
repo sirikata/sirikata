@@ -17,8 +17,8 @@ namespace Sirikata {
  */
 class SIRIKATA_EXPORT PollerService : public Poller, public Service {
 public:
-    PollerService(Network::IOStrand* str, const Network::IOCallback& cb, const Duration& max_rate = Duration::microseconds(0), bool accurate = false)
-        : Poller(str, cb, max_rate, accurate)
+    PollerService(Network::IOStrand* str, const Network::IOCallback& cb, const char* cb_tag, const Duration& max_rate = Duration::microseconds(0), bool accurate = false)
+        : Poller(str, cb, cb_tag, max_rate, accurate)
     {}
     virtual ~PollerService() {}
 

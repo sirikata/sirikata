@@ -378,7 +378,10 @@ int CraqObjectSegmentation::getPushback()
 
     ++mOSegQueueLen;
     traceToken->osegQLenPostQuery = mOSegQueueLen;
-    oStrand->post(boost::bind(&CraqObjectSegmentation::beginCraqLookup,this,obj_id, traceToken));
+    oStrand->post(
+        boost::bind(&CraqObjectSegmentation::beginCraqLookup,this,obj_id, traceToken),
+        "CraqObjectSegmentation::beginCraqLookup"
+    );
 
     return CraqEntry::null();
   }
@@ -589,7 +592,10 @@ void CraqObjectSegmentation::handleUpdateOSegMessage(const Sirikata::Protocol::O
     if (mStopping)
       return;
 
-    mStrand->post(std::tr1::bind(&CraqObjectSegmentation::processUpdateOSegMessage, this, update_oseg_msg));
+    mStrand->post(
+        std::tr1::bind(&CraqObjectSegmentation::processUpdateOSegMessage, this, update_oseg_msg),
+        "CraqObjectSegmentation::processUpdateOSegMessage"
+    );
 }
 
   //called from within o_strand
@@ -605,7 +611,10 @@ void CraqObjectSegmentation::handleMigrateMessageAck(const Sirikata::Protocol::O
     if (mStopping)
       return;
 
-    mStrand->post(std::tr1::bind(&CraqObjectSegmentation::processMigrateMessageAcknowledge, this, msg));
+    mStrand->post(
+        std::tr1::bind(&CraqObjectSegmentation::processMigrateMessageAcknowledge, this, msg),
+        "CraqObjectSegmentation::processMigrateMessageAcknowledge"
+    );
 }
 
   //called from within o_strand

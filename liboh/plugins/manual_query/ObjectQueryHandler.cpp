@@ -6,7 +6,6 @@
 #include "ManualObjectQueryProcessor.hpp"
 #include "Options.hpp"
 #include <sirikata/core/options/CommonOptions.hpp>
-#include <sirikata/core/network/IOServiceFactory.hpp>
 
 #include <sirikata/core/prox/QueryHandlerFactory.hpp>
 
@@ -66,9 +65,9 @@ ObjectQueryHandler::ObjectQueryHandler(ObjectHostContext* ctx, ManualObjectQuery
  : ObjectQueryHandlerBase(ctx, parent, space, prox_strand, loc_cache),
    mObjectQueries(),
    mObjectDistance(false),
-   mObjectHandlerPoller(mProxStrand.get(), std::tr1::bind(&ObjectQueryHandler::tickQueryHandler, this, mObjectQueryHandler), Duration::milliseconds((int64)100)),
-   mStaticRebuilderPoller(mProxStrand.get(), std::tr1::bind(&ObjectQueryHandler::rebuildHandler, this, OBJECT_CLASS_STATIC), Duration::seconds(3600.f)),
-   mDynamicRebuilderPoller(mProxStrand.get(), std::tr1::bind(&ObjectQueryHandler::rebuildHandler, this, OBJECT_CLASS_DYNAMIC), Duration::seconds(3600.f)),
+   mObjectHandlerPoller(mProxStrand.get(), std::tr1::bind(&ObjectQueryHandler::tickQueryHandler, this, mObjectQueryHandler), "ObjectQueryHandler Poller", Duration::milliseconds((int64)100)),
+   mStaticRebuilderPoller(mProxStrand.get(), std::tr1::bind(&ObjectQueryHandler::rebuildHandler, this, OBJECT_CLASS_STATIC), "ObjectQueryHandler Static Rebuilder Poller", Duration::seconds(3600.f)),
+   mDynamicRebuilderPoller(mProxStrand.get(), std::tr1::bind(&ObjectQueryHandler::rebuildHandler, this, OBJECT_CLASS_DYNAMIC), "ObjectQueryHandler Dynamic Rebuilder Poller", Duration::seconds(3600.f)),
    mObjectResults( std::tr1::bind(&ObjectQueryHandler::handleDeliverEvents, this) )
 {
     using std::tr1::placeholders::_1;
@@ -129,7 +128,8 @@ void ObjectQueryHandler::presenceConnected(const ObjectReference& objid) {
 void ObjectQueryHandler::presenceDisconnected(const ObjectReference& objid) {
     // Prox strand may  have some state to clean up
     mProxStrand->post(
-        std::tr1::bind(&ObjectQueryHandler::handleDisconnectedObject, this, objid)
+        std::tr1::bind(&ObjectQueryHandler::handleDisconnectedObject, this, objid),
+        "ObjectQueryHandler::handleDisconnectedObject"
     );
 }
 
@@ -156,20 +156,23 @@ void ObjectQueryHandler::updateQuery(HostedObjectPtr ho, const SpaceObjectRefere
 void ObjectQueryHandler::updateQuery(const ObjectReference& obj, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, SolidAngle sa, uint32 max_results) {
     // Update the prox thread
     mProxStrand->post(
-        std::tr1::bind(&ObjectQueryHandler::handleUpdateObjectQuery, this, obj, loc, bounds, sa, max_results)
+        std::tr1::bind(&ObjectQueryHandler::handleUpdateObjectQuery, this, obj, loc, bounds, sa, max_results),
+        "ObjectQueryHandler::handleUpdateObjectQuery"
     );
 }
 
 void ObjectQueryHandler::removeQuery(HostedObjectPtr ho, const SpaceObjectReference& obj) {
     // Update the prox thread
     mProxStrand->post(
-        std::tr1::bind(&ObjectQueryHandler::handleRemoveObjectQuery, this, obj.object(), true)
+        std::tr1::bind(&ObjectQueryHandler::handleRemoveObjectQuery, this, obj.object(), true),
+        "ObjectQueryHandler::handleRemoveObjectQuery"
     );
 }
 
 void ObjectQueryHandler::checkObjectClass(const ObjectReference& objid, const TimedMotionVector3f& newval) {
     mProxStrand->post(
-        std::tr1::bind(&ObjectQueryHandler::handleCheckObjectClass, this, objid, newval)
+        std::tr1::bind(&ObjectQueryHandler::handleCheckObjectClass, this, objid, newval),
+        "ObjectQueryHandler::handleCheckObjectClass"
     );
 }
 
@@ -251,13 +254,15 @@ void ObjectQueryHandler::onLocationUpdated(const ObjectReference& obj) {
         checkObjectClass(obj, mLocCache->location(obj));
 
     mContext->mainStrand->post(
-        std::tr1::bind(&ObjectQueryHandler::handleNotifySubscribersLocUpdate, this, obj)
+        std::tr1::bind(&ObjectQueryHandler::handleNotifySubscribersLocUpdate, this, obj),
+        "ObjectQueryHandler::handleNotifySubscribersLocUpdate"
     );
 }
 
 void ObjectQueryHandler::onOrientationUpdated(const ObjectReference& obj) {
     mContext->mainStrand->post(
-        std::tr1::bind(&ObjectQueryHandler::handleNotifySubscribersLocUpdate, this, obj)
+        std::tr1::bind(&ObjectQueryHandler::handleNotifySubscribersLocUpdate, this, obj),
+        "ObjectQueryHandler::handleNotifySubscribersLocUpdate"
     );
 }
 
@@ -265,19 +270,22 @@ void ObjectQueryHandler::onBoundsUpdated(const ObjectReference& obj) {
     updateQuery(obj, mLocCache->location(obj), mLocCache->bounds(obj), NoUpdateSolidAngle, NoUpdateMaxResults);
 
     mContext->mainStrand->post(
-        std::tr1::bind(&ObjectQueryHandler::handleNotifySubscribersLocUpdate, this, obj)
+        std::tr1::bind(&ObjectQueryHandler::handleNotifySubscribersLocUpdate, this, obj),
+        "ObjectQueryHandler::handleNotifySubscribersLocUpdate"
     );
 }
 
 void ObjectQueryHandler::onMeshUpdated(const ObjectReference& obj) {
     mContext->mainStrand->post(
-        std::tr1::bind(&ObjectQueryHandler::handleNotifySubscribersLocUpdate, this, obj)
+        std::tr1::bind(&ObjectQueryHandler::handleNotifySubscribersLocUpdate, this, obj),
+        "ObjectQueryHandler::handleNotifySubscribersLocUpdate"
     );
 }
 
 void ObjectQueryHandler::onPhysicsUpdated(const ObjectReference& obj) {
     mContext->mainStrand->post(
-        std::tr1::bind(&ObjectQueryHandler::handleNotifySubscribersLocUpdate, this, obj)
+        std::tr1::bind(&ObjectQueryHandler::handleNotifySubscribersLocUpdate, this, obj),
+        "ObjectQueryHandler::handleNotifySubscribersLocUpdate"
     );
 }
 
@@ -315,7 +323,8 @@ void ObjectQueryHandler::generateObjectQueryEvents(Query* query) {
             if (mLocCache->startSimpleTracking(objid)) { // If the cache already lost it, we can't do anything
 
                 mContext->mainStrand->post(
-                    std::tr1::bind(&ObjectQueryHandler::handleAddObjectLocSubscription, this, query_id, objid)
+                    std::tr1::bind(&ObjectQueryHandler::handleAddObjectLocSubscription, this, query_id, objid),
+                    "ObjectQueryHandler::handleAddObjectLocSubscription"
                 );
 
                 Sirikata::Protocol::Prox::IObjectAddition addition = event_results->add_addition();
@@ -353,7 +362,8 @@ void ObjectQueryHandler::generateObjectQueryEvents(Query* query) {
             // Clear out seqno and let main strand remove loc
             // subcription
             mContext->mainStrand->post(
-                std::tr1::bind(&ObjectQueryHandler::handleRemoveObjectLocSubscription, this, query_id, objid)
+                std::tr1::bind(&ObjectQueryHandler::handleRemoveObjectLocSubscription, this, query_id, objid),
+                "ObjectQueryHandler::handleRemoveObjectLocSubscription"
             );
 
             Sirikata::Protocol::Prox::IObjectRemoval removal = event_results->add_removal();
@@ -438,7 +448,8 @@ void ObjectQueryHandler::handleRemoveObjectQuery(const ObjectReference& object, 
     // Optionally let the main thread know to clear its communication state
     if (notify_main_thread) {
         mContext->mainStrand->post(
-            std::tr1::bind(&ObjectQueryHandler::handleRemoveAllObjectLocSubscription, this, object)
+            std::tr1::bind(&ObjectQueryHandler::handleRemoveAllObjectLocSubscription, this, object),
+            "ObjectQueryHandler::handleRemoveAllObjectLocSubscription"
         );
     }
 }

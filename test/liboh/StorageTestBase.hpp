@@ -91,8 +91,8 @@ public:
         // Storage is tied to the main event loop, which requires quite a bit of setup
         ObjectHostID oh_id(1);
         _trace = new Trace::Trace("dummy.trace");
-        _ios = Network::IOServiceFactory::makeIOService();
-        _mainStrand = _ios->createStrand();
+        _ios = new Network::IOService("StorageTest");
+        _mainStrand = _ios->createStrand("StorageTest");
         _work = new Network::IOWork(*_ios, "StorageTest");
         Time start_time = Timer::now(); // Just for stats in ObjectHostContext.
         Duration duration = Duration::zero(); // Indicates to run forever.
@@ -138,7 +138,7 @@ public:
 
         delete _mainStrand;
         _mainStrand = NULL;
-        Network::IOServiceFactory::destroyIOService(_ios);
+        delete _ios;
         _ios = NULL;
     }
 
@@ -217,6 +217,28 @@ public:
         using std::tr1::placeholders::_2;
 
         _storage->read(_buckets[0], "key_does_not_exist",
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, false, ReadSet(), _1, _2)
+        );
+        waitForTransaction();
+    }
+
+    void testSingleCompare() {
+        // NOTE: Depends on above write
+        using std::tr1::placeholders::_1;
+        using std::tr1::placeholders::_2;
+
+        _storage->compare(_buckets[0], "a", "abcde",
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, true, ReadSet(), _1, _2)
+        );
+        waitForTransaction();
+    }
+
+    void testSingleInvalidCompare() {
+        // NOTE: Depends on above write
+        using std::tr1::placeholders::_1;
+        using std::tr1::placeholders::_2;
+
+        _storage->compare(_buckets[0], "a", "wrong_key_value",
             std::tr1::bind(&StorageTestBase::checkReadValues, this, false, ReadSet(), _1, _2)
         );
         waitForTransaction();
@@ -318,7 +340,7 @@ public:
 
     }
 
-    void testAtmoicWrite() {
+    void testAtomicWrite() {
         using std::tr1::placeholders::_1;
         using std::tr1::placeholders::_2;
 
@@ -360,7 +382,7 @@ public:
         waitForTransaction();
     }
 
-    void testAtmoicWriteErase() {
+    void testAtomicWriteErase() {
         using std::tr1::placeholders::_1;
         using std::tr1::placeholders::_2;
 
@@ -370,6 +392,14 @@ public:
         ReadSet rs2;
         rs2["k"] = "klmno";
 
+        // To erase and ensure avoiding an error, first write to make
+        // sure the value is there, then erase. Otherwise, erasing
+        // could fail on the first run (empty db) and succeed
+        // otherwise.
+        _storage->write(_buckets[0], "k", "x",
+             std::tr1::bind(&StorageTestBase::checkReadValues, this, true, ReadSet(), _1, _2)
+         );
+         waitForTransaction();
         _storage->erase(_buckets[0], "k",
              std::tr1::bind(&StorageTestBase::checkReadValues, this, true, ReadSet(), _1, _2)
          );
@@ -464,6 +494,133 @@ public:
             std::tr1::bind(&StorageTestBase::checkReadValues, this, false, ReadSet(), _1, _2)
         );
         waitForTransaction();
+    }
+
+
+    void testAllTransaction() {
+        // Test that all operations work together in a transaction. Importantly,
+        // this ensures that the expected read operations come back when you
+        // group different types of operations.
+        //
+        // This was added because some operations weren't following the
+        // transactional semantics properly, so it tries to test that operations
+        // aren't performed independently of the rest of the transaction.
+
+        using std::tr1::placeholders::_1;
+        using std::tr1::placeholders::_2;
+
+        // Setup some data
+        _storage->beginTransaction(_buckets[0]);
+        _storage->write(_buckets[0], "foo", "bar");
+        _storage->write(_buckets[0], "baz", "baz");
+        _storage->write(_buckets[0], "map:all:a", "abcde");
+        _storage->write(_buckets[0], "map:all:f", "fghij");
+        _storage->write(_buckets[0], "map:all:k", "klmno");
+        _storage->write(_buckets[0], "map:todelete:a", "xyzw");
+        _storage->write(_buckets[0], "map:todelete:c", "xyzw");
+        _storage->commitTransaction(_buckets[0],
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, true, ReadSet(), _1, _2)
+        );
+        waitForTransaction();
+
+        ReadSet rs;
+        // These are values we'll read via rangeRead
+        rs["map:all:a"] = "abcde";
+        rs["map:all:f"] = "fghij";
+        rs["map:all:k"] = "klmno";
+        // And an individual key we'll read back.
+        rs["foo"] = "bar";
+
+        // We don't care about order here, just that if reads occur before the
+        // commitTransaction, they won't properly be included in the results.
+        _storage->beginTransaction(_buckets[0]);
+        // Read existing data
+        _storage->read(_buckets[0], "foo");
+        // Range read existing data
+        _storage->rangeRead(_buckets[0], "map:all", "map:all@");
+        // Write some new data, verified below
+        _storage->write(_buckets[0], "y", "z");
+        // Delete individual key
+        _storage->erase(_buckets[0], "baz");
+        // Delete a range of data
+        _storage->rangeErase(_buckets[0], "map:todelete", "map:todelete@");
+        _storage->commitTransaction(_buckets[0],
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, true, rs, _1, _2)
+        );
+        waitForTransaction();
+
+
+        // Verify data written in above transaction
+        ReadSet rs2;
+        rs2["y"] = "z";
+        _storage->read(_buckets[0], "y",
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, true, rs2, _1, _2)
+        );
+        waitForTransaction();
+    }
+
+
+    void resetRollbackData() {
+        using std::tr1::placeholders::_1;
+        using std::tr1::placeholders::_2;
+        // Setup some data
+        _storage->beginTransaction(_buckets[0]);
+        _storage->write(_buckets[0], "foo", "bar");
+        _storage->write(_buckets[0], "baz", "baz");
+        _storage->commitTransaction(_buckets[0],
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, true, ReadSet(), _1, _2)
+        );
+        waitForTransaction();
+    }
+    void verifyRollbackData(String key, String value) {
+        using std::tr1::placeholders::_1;
+        using std::tr1::placeholders::_2;
+        ReadSet rs;
+        rs[key] = value;
+        _storage->beginTransaction(_buckets[0]);
+        _storage->read(_buckets[0], key);
+        _storage->commitTransaction(_buckets[0],
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, true, rs, _1, _2)
+        );
+        waitForTransaction();
+    }
+    void testRollback() {
+        // Test that rollbacks work correctly if a request fails.
+        // This is a bit tricky to test because operations can be
+        // grouped so that, e.g., reads and compares are verified
+        // before any changes occur.
+        //
+        // To test it, we run a few different tests involving
+        // combinations of valid and invalid writes/erases. To try to
+        // be robust, we also change the order of the keys being
+        // operated on so that the order in which the parts of the
+        // request are performed doesn't affect the results: one of
+        // each pair should fail (we do this by testing with, e.g.,
+        // keys [a, b], and [c, b]).
+
+        using std::tr1::placeholders::_1;
+        using std::tr1::placeholders::_2;
+
+        // Valid write, invalid erase -> should get original value
+        resetRollbackData();
+        _storage->beginTransaction(_buckets[0]);
+        _storage->write(_buckets[0], "foo", "xxx");
+        _storage->erase(_buckets[0], "car");
+        _storage->commitTransaction(_buckets[0],
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, false, ReadSet(), _1, _2)
+        );
+        waitForTransaction();
+        verifyRollbackData("foo", "bar");
+        // Variant with different key ordering
+        resetRollbackData();
+        _storage->beginTransaction(_buckets[0]);
+        _storage->write(_buckets[0], "baz", "xxx");
+        _storage->erase(_buckets[0], "car");
+        _storage->commitTransaction(_buckets[0],
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, false, ReadSet(), _1, _2)
+        );
+        waitForTransaction();
+        verifyRollbackData("baz", "baz");
     }
 
 };

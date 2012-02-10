@@ -21,7 +21,7 @@ void ProximityFactory::destroy() {
 
 
 Proximity::Proximity(SpaceContext* ctx, LocationService* locservice, CoordinateSegmentation* cseg, SpaceNetwork* net, AggregateManager* aggmgr, const Duration& poll_freq)
- : PollingService(ctx->mainStrand, poll_freq),
+ : PollingService(ctx->mainStrand, "Proximity Poll", poll_freq),
    mContext(ctx),
    mLocService(locservice),
    mCSeg(cseg),
@@ -29,6 +29,7 @@ Proximity::Proximity(SpaceContext* ctx, LocationService* locservice, CoordinateS
    mStatsPoller(
        ctx->mainStrand,
        std::tr1::bind(&Proximity::reportStats, this),
+       "Proximity Stats Poller",
        Duration::seconds((int64)1)),
    mTimeSeriesObjectQueryCountName(String("space.server") + boost::lexical_cast<String>(ctx->id()) + ".prox.object_queries"),
    mTimeSeriesObjectHostQueryCountName(String("space.server") + boost::lexical_cast<String>(ctx->id()) + ".prox.object_host_queries"),

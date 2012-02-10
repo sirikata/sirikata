@@ -194,7 +194,7 @@ void DistributedCoordinateSegmentation::handleSelfLookup(Address4 my_addr) {
 
 DistributedCoordinateSegmentation::DistributedCoordinateSegmentation(CSegContext* ctx, const BoundingBox3f& region,
                                                                      const Vector3ui32& perdim, int nservers, ServerIDMap * sidmap)
- : PollingService(ctx->mainStrand, Duration::milliseconds((int64)1000)),
+ : PollingService(ctx->mainStrand, "DistributedCoordinateSegmentation Poll", Duration::milliseconds((int64)1000)),
    mContext(ctx),
    mTopLevelRegion(NULL),
    mLastUpdateTime(Time::null()),

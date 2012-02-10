@@ -106,7 +106,7 @@ void DistanceDownloadPlanner::addObject(Object* r)
 {
   RMutex::scoped_lock lock(mDlPlannerMutex);
   DLPLANNER_LOG(detailed,"Request to add object with name "<<r->name);
-  
+
   iAddObject(r, livenessToken());
 }
 
@@ -139,7 +139,7 @@ void DistanceDownloadPlanner::removeObject(const String& name)
 {
     RMutex::scoped_lock lock(mDlPlannerMutex);
     DLPLANNER_LOG(detailed,"Request to remove object with name "<<name);
-    
+
     iRemoveObject(name,livenessToken());
 }
 
@@ -153,7 +153,6 @@ void DistanceDownloadPlanner::iRemoveObject(
     if (it != mObjects.end()) {
         Object* r = it->second;
 
-        std::cout << r << " : r in distancedownloadplanner \n";
         // Make sure we've unloaded it
         if (r->loaded)
             unloadObject(r);
@@ -283,7 +282,7 @@ void DistanceDownloadPlanner::unloadObject(Object* r) {
 void DistanceDownloadPlanner::poll()
 {
   RMutex::scoped_lock lock(mDlPlannerMutex);
-   
+
   iPoll(livenessToken());
 }
 
@@ -388,7 +387,7 @@ void DistanceDownloadPlanner::iPoll(Liveness::Token dpAlive)
 void DistanceDownloadPlanner::stop()
 {
   RMutex::scoped_lock lock(mDlPlannerMutex);
-  
+
   iStop(livenessToken());
 }
 
@@ -768,7 +767,7 @@ void DistanceDownloadPlanner::updateAssetPriority(Asset* asset) {
     // the asset.
     if (!asset->downloadTask) return;
 
-    std::vector<TransferRequest::PriorityType> priorities;
+    std::vector<Priority> priorities;
     for(ObjectSet::iterator obj_it = asset->waitingObjects.begin(); obj_it != asset->waitingObjects.end(); obj_it++) {
         RMutex::scoped_lock lock(mDlPlannerMutex);
         String objid = *obj_it;
@@ -793,7 +792,7 @@ void DistanceDownloadPlanner::unrequestAssetForObject(Object* forObject) {
         asset = mAssets[forObject->file];
     }
 
-    
+
     // Make sure we're not displaying it anymore
     forObject->mesh->unload();
 

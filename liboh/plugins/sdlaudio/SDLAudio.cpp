@@ -53,7 +53,9 @@ AudioSimulation::~AudioSimulation()
 void AudioSimulation::start()
 {
     audioStrand->post(
-        std::tr1::bind(&AudioSimulation::iStart, this,livenessToken()));
+        std::tr1::bind(&AudioSimulation::iStart, this,livenessToken()),
+        "AudioSimulation::iStart"
+    );
 }
 
 void AudioSimulation::iStart(Liveness::Token lt)
@@ -104,7 +106,9 @@ bool AudioSimulation::ready() const {
 void AudioSimulation::stop()
 {
     audioStrand->post(
-        std::tr1::bind(&AudioSimulation::iStop,this,livenessToken()));
+        std::tr1::bind(&AudioSimulation::iStop,this,livenessToken()),
+        "AudioSimulation::iStop"
+    );
 }
 
 void AudioSimulation::iStop(Liveness::Token lt)
@@ -289,7 +293,9 @@ void AudioSimulation::handleFinishedDownload(
 {
     audioStrand->post(
         std::tr1::bind(&AudioSimulation::iHandleFinishedDownload,this,
-            livenessToken(),taskptr,request,response));
+            livenessToken(),taskptr,request,response),
+        "AudioSimulation::iHandleFinishedDownload"
+    );
 }
 
 void AudioSimulation::iHandleFinishedDownload(

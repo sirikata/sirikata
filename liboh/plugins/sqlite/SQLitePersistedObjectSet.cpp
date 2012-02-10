@@ -31,7 +31,6 @@
  */
 
 #include "SQLitePersistedObjectSet.hpp"
-#include <sirikata/core/network/IOServiceFactory.hpp>
 #include <sirikata/core/network/IOService.hpp>
 #include <sirikata/core/network/IOWork.hpp>
 
@@ -55,11 +54,11 @@ void SQLitePersistedObjectSet::start() {
     // Initialize and start the thread for IO work. This is only separated as a
     // thread rather than strand because we don't have proper multithreading in
     // cppoh.
-    mIOService = Network::IOServiceFactory::makeIOService();
+    mIOService = new Network::IOService("SQLitePersistedObjectSet");
     mWork = new Network::IOWork(*mIOService, "SQLitePersistedObjectSet IO Thread");
     mThread = new Sirikata::Thread(std::tr1::bind(&Network::IOService::runNoReturn, mIOService));
 
-    mIOService->post(std::tr1::bind(&SQLitePersistedObjectSet::initDB, this));
+    mIOService->post(std::tr1::bind(&SQLitePersistedObjectSet::initDB, this), "SQLitePersistedObjectSet::initDB");
 }
 
 void SQLitePersistedObjectSet::initDB() {
@@ -94,13 +93,14 @@ void SQLitePersistedObjectSet::stop() {
     mThread->join();
     delete mThread;
     mThread = NULL;
-    Network::IOServiceFactory::destroyIOService(mIOService);
+    delete mIOService;
     mIOService = NULL;
 }
 
 void SQLitePersistedObjectSet::requestPersistedObject(const UUID& internal_id, const String& script_type, const String& script_args, const String& script_contents, RequestCallback cb, const String& timestamp) {
     mIOService->post(
-        std::tr1::bind(&SQLitePersistedObjectSet::performUpdate, this, internal_id, script_type, script_args, script_contents, cb)
+        std::tr1::bind(&SQLitePersistedObjectSet::performUpdate, this, internal_id, script_type, script_args, script_contents, cb),
+        "SQLitePersistedObjectSet::performUpdate"
     );
 }
 
@@ -142,7 +142,7 @@ void SQLitePersistedObjectSet::performUpdate(const UUID& internal_id, const Stri
     success = success && !SQLite::check_sql_error(mDB->db(), rc, NULL, "Error finalizing value insert statement");
 
     if (cb != 0)
-        mContext->mainStrand->post(std::tr1::bind(cb, success));
+        mContext->mainStrand->post(std::tr1::bind(cb, success), "SQLitePersistedObjectSet::performUpdate callback");
 }
 
 } //end namespace OH

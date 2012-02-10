@@ -58,6 +58,8 @@ PerPresenceData::~PerPresenceData() {
         requestLoc->setBounds(proxyobj->verifiedBounds(), 0);
         requestLoc->setMesh(proxyobj->verifiedMesh(), 0);
         requestLoc->setPhysics(proxyobj->verifiedPhysics(), 0);
+
+        proxyobj->isValid();
     }
 
 

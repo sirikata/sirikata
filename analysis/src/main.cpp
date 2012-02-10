@@ -31,7 +31,6 @@
  */
 
 #include <sirikata/core/util/Platform.hpp>
-#include <sirikata/core/network/IOServiceFactory.hpp>
 #include <sirikata/core/network/IOService.hpp>
 #include <sirikata/core/network/IOStrand.hpp>
 
@@ -103,8 +102,8 @@ int main(int argc, char** argv) {
 
     Duration duration = GetOptionValue<Duration>("duration");
 
-    Network::IOService* ios = Network::IOServiceFactory::makeIOService();
-    Network::IOStrand* mainStrand = ios->createStrand();
+    Network::IOService* ios = new Network::IOService("Analysis");
+    Network::IOStrand* mainStrand = ios->createStrand("Analysis Main");
 
     Vector3ui32 layout = GetOptionValue<Vector3ui32>("layout");
 
@@ -370,7 +369,7 @@ int main(int argc, char** argv) {
     }
 
     delete mainStrand;
-    Network::IOServiceFactory::destroyIOService(ios);
+    delete ios;
 
     plugins.gc();
 

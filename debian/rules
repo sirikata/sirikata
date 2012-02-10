@@ -18,7 +18,7 @@ dep-%:
 	cd $(CURDIR)/dependencies; ./install --install-only $*
 
 # These should really be separate packages, but this is much easier
-build-deps: dep-sdl dep-bullet dep-opencollada dep-v8 dep-ogre dep-chromium
+build-deps: dep-ffmpeg dep-sdl dep-bullet dep-opencollada dep-v8 dep-ogre dep-chromium
 
 # dh doesn't detect build properly, so explicity tell it to run "dh build"
 build: build-deps

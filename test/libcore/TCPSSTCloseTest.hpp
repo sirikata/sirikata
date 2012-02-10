@@ -34,7 +34,6 @@
 #include <sirikata/core/network/StreamListener.hpp>
 #include <sirikata/core/network/StreamFactory.hpp>
 #include <sirikata/core/network/StreamListenerFactory.hpp>
-#include <sirikata/core/network/IOServiceFactory.hpp>
 #include <sirikata/core/network/IOServicePool.hpp>
 #include <sirikata/core/network/IOService.hpp>
 #include <sirikata/core/network/IOStrand.hpp>
@@ -46,7 +45,7 @@
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/locks.hpp>
 #include <boost/lexical_cast.hpp>
-#include <time.h>
+#include <sirikata/core/util/Timer.hpp>
 
 using namespace Sirikata::Network;
 using namespace Sirikata;
@@ -102,7 +101,7 @@ class SstCloseTest : public CxxTest::TestSuite
         if (rand()<RAND_MAX/5||pause)
             pause=!pause;
         if (pause) {
-            mRecvService->service()->post(std::tr1::bind(&Stream::readyRead,s));
+            mRecvService->service()->post(std::tr1::bind(&Stream::readyRead,s), "TCPSSTCloseTest");
             pauseReceive();
             return;
         }
@@ -143,22 +142,17 @@ private:
         mBytes=65536;
         mChunks=3;
         mOffset=1;
-        mSendService = new IOServicePool(4);
-        mSendStrand = mSendService->service()->createStrand();
-        mRecvService = new IOServicePool(4);
-        mRecvStrand = mRecvService->service()->createStrand();
+        mSendService = new IOServicePool("SstCloseTest Send", 4);
+        mSendStrand = mSendService->service()->createStrand("SstCloseTest Send");
+        mRecvService = new IOServicePool("SstCloseTest Receive", 4);
+        mRecvStrand = mRecvService->service()->createStrand("SstCloseTest Receive");
         mListener = StreamListenerFactory::getSingleton().getDefaultConstructor()(mRecvStrand,StreamListenerFactory::getSingleton().getDefaultOptionParser()(String()));
         using std::tr1::placeholders::_1;
         using std::tr1::placeholders::_2;
         mListener->listen(Address("127.0.0.1",mPort),std::tr1::bind(&SstCloseTest::listenerNewStreamCallback,this,_1,_2));
 
         mRecvService->run();
-#ifdef _WIN32
-        Sleep(1000);
-#else
-        sleep(1);
-#endif
-
+        Timer::sleep(Duration::seconds(1));
     }
 public:
     void closeStreamRun(bool fork, bool doSleep=false) {
@@ -189,11 +183,7 @@ public:
         }
         mSendService->reset();
         mSendService->run();
-#ifdef _WIN32
-        //Sleep(1000);
-#else
-        sleep(1);
-#endif
+        Timer::sleep(Duration::seconds(1));
 
         int sentSoFar=0;
         for (int c=0;c<mChunks;++c) {
@@ -221,20 +211,12 @@ public:
 
             }
             if (doSleep) {
-#ifdef _WIN32
-                Sleep(1000);
-#else
-//                sleep(1);
-#endif
+                Timer::sleep(Duration::seconds(1));
             }
             sentSoFar=willHaveSent;
         }
         if (!doSleep) {
-#ifdef _WIN32
-            Sleep(1000);
-#else
-//            sleep(1);
-#endif
+            Timer::sleep(Duration::seconds(1));
         }
         //SILOG(tcpsst,error,"CLOSING");
         for (int i=mOffset;i<NUM_TEST_STREAMS;++i) {
@@ -254,11 +236,7 @@ public:
                 }
             }
             if (counter>4997&&!done) {
-#ifdef _WIN32
-                Sleep(1000);
-#else
-                sleep (1);
-#endif
+                Timer::sleep(Duration::seconds(1));
             }
             ++counter;
         }while (counter<5000&&!done);

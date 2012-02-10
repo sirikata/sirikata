@@ -120,8 +120,10 @@ public:
     typedef TimedWeightedExtrapolator<Location,UpdateNeeded> Extrapolator;
 
 private:
+    bool mValid;
     const SpaceObjectReference mID;
     ProxyManagerPtr mParent;
+    
 public:
     /** Constructs a new ProxyObject. After constructing this object, it
         should be wrapped in a shared_ptr and sent to ProxyManager::createObject().
@@ -132,7 +134,10 @@ public:
     */
     ProxyObject(ProxyManagerPtr man, const SpaceObjectReference& id);
 
-
+    
+    inline const bool isValid() const {      
+      return mValid;
+    }
     /// Subclasses can do any necessary cleanup first.
     virtual void destroy();
 

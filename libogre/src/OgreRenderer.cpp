@@ -38,7 +38,6 @@
 #include <sirikata/ogre/Camera.hpp>
 #include <sirikata/ogre/Entity.hpp>
 
-#include <sirikata/core/network/IOServiceFactory.hpp>
 #include <sirikata/core/network/IOService.hpp>
 #include <sirikata/core/network/IOWork.hpp>
 #include <sirikata/core/options/Options.hpp>
@@ -255,7 +254,7 @@ public:
 
 
 OgreRenderer::OgreRenderer(Context* ctx,Network::IOStrandPtr sStrand)
- : TimeSteppedSimulation(ctx, Duration::seconds(1.f/60.f), "Ogre Graphics", sStrand,true),
+ : TimeSteppedSimulation(ctx, Duration::seconds(1.f/60.f), "Ogre Graphics", sStrand, "Ogre Graphics", true),
    simStrand(sStrand),
    mContext(ctx),
    mQuitRequested(false),
@@ -289,7 +288,7 @@ OgreRenderer::OgreRenderer(Context* ctx,Network::IOStrandPtr sStrand)
 bool OgreRenderer::initialize(const String& options, bool with_berkelium) {
     ++sNumOgreSystems;
 
-    mParsingIOService = Network::IOServiceFactory::makeIOService();
+    mParsingIOService = new Network::IOService("Ogre Mesh Parsing");
     mParsingWork = new Network::IOWork(*mParsingIOService, "Ogre Mesh Parsing");
     mParsingThread = new Sirikata::Thread(std::tr1::bind(&Network::IOService::runNoReturn, mParsingIOService));
 
@@ -635,7 +634,7 @@ bool OgreRenderer::loadBuiltinPlugins () {
 OgreRenderer::~OgreRenderer() {
     mParsingThread->join();
     delete mParsingThread;
-    Network::IOServiceFactory::destroyIOService(mParsingIOService);
+    delete mParsingIOService;
 
     {
         SceneEntitiesMap toDelete;
@@ -875,7 +874,8 @@ void OgreRenderer::stop()
 {
     simStrand->post(
         std::tr1::bind(&OgreRenderer::iStop, this,
-            livenessToken()));
+            livenessToken()),
+        "OgreRenderer::iStop");
 }
 
 void OgreRenderer::iStop(Liveness::Token rendererAlive)
@@ -995,7 +995,8 @@ void OgreRenderer::parseMesh(
 {
     mParsingIOService->post(
         std::tr1::bind(&OgreRenderer::parseMeshWork, this,
-            livenessToken(),metadata, fp, data, cb)
+            livenessToken(),metadata, fp, data, cb),
+        "OgreRenderer::parseMeshWork"
     );
 }
 
@@ -1015,7 +1016,9 @@ void OgreRenderer::parseMeshWork(
         return;
 
     Mesh::VisualPtr parsed = parseMeshWorkSync(metadata, fp, data);
-    simStrand->post(std::tr1::bind(cb,parsed));
+    simStrand->post(std::tr1::bind(cb,parsed),
+        "OgreRenderer::parseMeshWork callback"
+    );
 }
 
 Mesh::VisualPtr OgreRenderer::parseMeshWorkSync(const Transfer::RemoteFileMetadata& metadata, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data) {

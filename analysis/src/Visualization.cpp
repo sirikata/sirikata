@@ -222,7 +222,7 @@ void LocationVisualization::mainLoop() {
     }
     glEnd();
     glutSwapBuffers();				/* Complete any pending operations */
-    usleep((int)(mSamplingRate.toMilliseconds()*1000));
+    Timer::sleep(mSamplingRate);
 }
 void main_loop() {
   static LocationVisualization*sVis=gVis;

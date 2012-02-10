@@ -1,23 +1,54 @@
 all:
-	cd build/cmake && \
-	cmake . && \
-	$(MAKE) $(*)
+	case "`uname`" in \
+		*arwin*|*MINGW*|*CYGWIN*|*win32*) \
+			cd build/cmake && \
+			cmake . && \
+			$(MAKE) $(*) \
+			;; \
+		*) \
+			cd build/cmake && \
+			./cmake_with_tools.sh . && \
+			$(MAKE) $(*) \
+			;; \
+	esac ;
 
 release:
-	cd build/cmake && \
-	cmake . -DCMAKE_BUILD_TYPE=Release && \
-	$(MAKE) $(*)
+	case "`uname`" in \
+		*arwin*|*MINGW*|*CYGWIN*|*win32*) \
+			cd build/cmake && \
+			cmake . -DCMAKE_BUILD_TYPE=Release && \
+			$(MAKE) $(*) \
+			;; \
+		*) \
+			cd build/cmake && \
+			./cmake_with_tools.sh . -DCMAKE_BUILD_TYPE=Release && \
+			$(MAKE) $(*) \
+			;; \
+	esac ;
 
+# Leaving out cmake_with_tools since this is probably running in a
+# chroot where the caching is pointless
 debian-release:
 	cd build/cmake && \
 	cmake . -DCMAKE_INSTALL_PREFIX:PATH=/usr -DCMAKE_BUILD_TYPE=Release && \
 	$(MAKE) $(*)
 
 debug:
-	cd build/cmake && \
-	cmake . -DCMAKE_BUILD_TYPE=Debug && \
-	$(MAKE) $(*)
+	case "`uname`" in \
+		*arwin*|*MINGW*|*CYGWIN*|*win32*) \
+			cd build/cmake && \
+			cmake . -DCMAKE_BUILD_TYPE=Debug && \
+			$(MAKE) $(*) \
+			;; \
+		*) \
+			cd build/cmake && \
+			./cmake_with_tools.sh . -DCMAKE_BUILD_TYPE=Debug && \
+			$(MAKE) $(*) \
+			;; \
+	esac ;
 
+# These all assume you've already run one of the standard builds, so
+# they don't need to use cmake_with_tools.
 .PHONY: test
 test:
 	cd build/cmake && \
@@ -40,7 +71,7 @@ clean:
 DEPVC8REV=HEAD
 DEPVC9REV=24
 DEPOSXREV=95
-DEPSOURCE=69
+DEPSOURCE=70
 DEPARCHINDEP=7
 #========== Dependencies ===========
 
