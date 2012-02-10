@@ -953,13 +953,15 @@ void HostedObject::requestQueryUpdate(const SpaceID& space, const ObjectReferenc
     }
 
     SpaceObjectReference sporef(space,oref);
-    Mutex::scoped_lock lock(presenceDataMutex);
-    PresenceDataMap::iterator pdmIter = mPresenceData.find(sporef);
-    if (pdmIter != mPresenceData.end()) {
-        pdmIter->second->query = new_query;
-    }
-    else {
-        SILOG(cppoh,error,"Error in cppoh, requesting solid angle update for presence that doesn't exist in your presence map.");
+    {
+        Mutex::scoped_lock lock(presenceDataMutex);
+        PresenceDataMap::iterator pdmIter = mPresenceData.find(sporef);
+        if (pdmIter != mPresenceData.end()) {
+            pdmIter->second->query = new_query;
+        }
+        else {
+            SILOG(cppoh,error,"Error in cppoh, requesting solid angle update for presence that doesn't exist in your presence map.");
+        }
     }
 
     mObjectHost->getQueryProcessor()->updateQuery(getSharedPtr(), sporef, new_query);

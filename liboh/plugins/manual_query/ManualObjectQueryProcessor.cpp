@@ -90,7 +90,7 @@ void ManualObjectQueryProcessor::presenceConnectedStream(HostedObjectPtr ho, con
         return;
 
     if (obj_it->second.needsRegistration())
-        registerObjectQuery(sporef);
+        registerOrUpdateObjectQuery(sporef);
 }
 
 void ManualObjectQueryProcessor::presenceDisconnected(HostedObjectPtr ho, const SpaceObjectReference& sporef) {
@@ -115,9 +115,9 @@ void ManualObjectQueryProcessor::updateQuery(HostedObjectPtr ho, const SpaceObje
     ObjectStateMap::iterator it = mObjectState.find(sporef);
 
     if (new_query.empty()) { // Cancellation
-        // Remove from server query
-        // FIXME
         // Clear object state if possible
+        if (it->second.registered)
+            unregisterObjectQuery(sporef);
         if (it->second.canRemove())
             mObjectState.erase(it);
     }
@@ -125,8 +125,11 @@ void ManualObjectQueryProcessor::updateQuery(HostedObjectPtr ho, const SpaceObje
         // Track state
         it->second.who = ho;
         it->second.query = new_query;
-        // Update server query
-        // FIXME
+        // (New query and can register) or (already registered, needs
+        // update). If we have a new query but can't yet register, it'll be
+        // checked when the connection succeeds
+        if ( (it->second.needsRegistration() && it->second.canRegister()) || (it->second.registered) )
+            registerOrUpdateObjectQuery(sporef);
     }
 }
 
@@ -160,7 +163,7 @@ void ManualObjectQueryProcessor::removedServerQuery(const OHDP::SpaceNodeID& sni
 
 
 
-void ManualObjectQueryProcessor::registerObjectQuery(const SpaceObjectReference& sporef) {
+void ManualObjectQueryProcessor::registerOrUpdateObjectQuery(const SpaceObjectReference& sporef) {
     // Get query info
     ObjectStateMap::iterator it = mObjectState.find(sporef);
     assert(it != mObjectState.end());
@@ -174,7 +177,7 @@ void ManualObjectQueryProcessor::registerObjectQuery(const SpaceObjectReference&
     ObjectQueryHandlerPtr handler = handler_it->second;
 
     // And register
-    handler->addQuery(ho, sporef, state.query);
+    handler->updateQuery(ho, sporef, state.query);
     state.registered = true;
 }
 

@@ -53,7 +53,9 @@ public:
     // yet. Note that we use SpaceObjectReference here so we can
     // perform lookups in HostedObject, even though everything in this
     // space is specific to a single SpaceID.
-    void addQuery(HostedObjectPtr ho, const SpaceObjectReference& sporef, const String& params);
+    //
+    // There is no addQuery, you always use updateQuery and it registers the
+    // query if necessary
     void updateQuery(HostedObjectPtr ho, const SpaceObjectReference& sporef, const String& params);
     void removeQuery(HostedObjectPtr ho, const SpaceObjectReference& sporef);
     // (Potential) Querier Lifetimes

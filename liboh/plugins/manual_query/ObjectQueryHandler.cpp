@@ -133,10 +133,6 @@ void ObjectQueryHandler::presenceDisconnected(const ObjectReference& objid) {
     );
 }
 
-void ObjectQueryHandler::addQuery(HostedObjectPtr ho, const SpaceObjectReference& obj, const String& params) {
-    updateQuery(ho, obj, params);
-}
-
 void ObjectQueryHandler::updateQuery(HostedObjectPtr ho, const SpaceObjectReference& obj, const String& params) {
     SolidAngle sa;
     uint32 max_results;

@@ -63,7 +63,7 @@ private:
     // Helper that actually registers a query with the underlying query
     // processor. Factored out since we may need to defer registration until
     // after connection completes, so we can hit this from multiple code paths.
-    void registerObjectQuery(const SpaceObjectReference& sporef);
+    void registerOrUpdateObjectQuery(const SpaceObjectReference& sporef);
     void unregisterObjectQuery(const SpaceObjectReference& sporef);
 
     ObjectHostContext* mContext;
@@ -88,6 +88,12 @@ private:
         // haven't registered it yet
         bool needsRegistration() const {
             return (!registered && !query.empty());
+        }
+
+        // Checks whether registration is currently possible, i.e. we're
+        // actually connected.
+        bool canRegister() const {
+            return (node != OHDP::NodeID::null() && !query.empty());
         }
 
 
