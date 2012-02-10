@@ -286,7 +286,8 @@ Time ObjectHost::localTime(const SpaceID& space, const Time& t) const {
     // this (e.g. the loc update stuff) to make sure it handles it correctly by
     // extrapolating to a current time.
     // This is kinda gross, but we need to make sure result >= 0
-    if ( (int64)t.raw() + off.toMicro() < 0) return Time::null();
+    if ( (int64)t.raw() + off.toMicro() < 0)
+        return Time::null();
     return t + off;
 }
 

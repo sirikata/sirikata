@@ -678,7 +678,7 @@ void HostedObject::handleProximityUpdate(const SpaceObjectReference& spaceobj, c
 
     for(int32 aidx = 0; aidx < update.addition_size(); aidx++) {
         Sirikata::Protocol::Prox::ObjectAddition addition = update.addition(aidx);
-        ProxProtocolLocUpdate add(addition, mObjectHost, spaceobj.space());
+        ProxProtocolLocUpdate add(addition);
 
         SpaceObjectReference proximateID(spaceobj.space(), add.object());
 

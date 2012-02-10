@@ -356,7 +356,12 @@ void ServerQueryHandler::handleProximityMessage(const OHDP::SpaceNodeID& snid, c
 
         for(int32 aidx = 0; aidx < update.addition_size(); aidx++) {
             Sirikata::Protocol::Prox::ObjectAddition addition = update.addition(aidx);
-            ProxProtocolLocUpdate add(addition, mContext->objectHost, snid.space());
+            // Convert to local time
+            addition.location().set_t(
+                mContext->objectHost->localTime(snid.space(), addition.location().t())
+            );
+
+            ProxProtocolLocUpdate add(addition);
 
             ObjectReference observed_oref(addition.object());
             SpaceObjectReference observed(snid.space(), observed_oref);

@@ -208,6 +208,7 @@ void ManualObjectQueryProcessor::deliverProximityResult(const SpaceObjectReferen
     HostedObjectPtr ho = it->second.who.lock();
     if (!ho) return;
 
+    // Should already be in local time, so we can deliver directly
     deliverProximityUpdate(ho, sporef, update);
 }
 

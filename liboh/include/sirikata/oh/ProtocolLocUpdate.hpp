@@ -76,6 +76,10 @@ private:
 
 /** Implementation of LocUpdate which collects its information from a PBJ
  *  ProximityUpdate object.
+ *
+ *  Note that this assumes times have been converted to local time
+ *  already because this is used in places where we wouldn't be able
+ *  to tell whether the time had been converted yet.
  */
 class SIRIKATA_OH_EXPORT ProxProtocolLocUpdate : public LocUpdate {
 public:
@@ -83,16 +87,12 @@ public:
      *  and the OH and space to adjust times to the local timeframe.
      *
      *  \param lu the raw LocationUpdate
-     *  \param oh the OH this update originated from
-     *  \param space the space the update originated from
      *
      *  \note the references passed in here must remain valid for the lifetime
      *  of this object.
      */
-    ProxProtocolLocUpdate(const Sirikata::Protocol::Prox::ObjectAddition& lu, const ObjectHost* oh, const SpaceID& space)
-     : mUpdate(lu),
-       mOH(oh),
-       mSpace(space)
+    ProxProtocolLocUpdate(const Sirikata::Protocol::Prox::ObjectAddition& lu)
+     : mUpdate(lu)
     {}
     virtual ~ProxProtocolLocUpdate() {}
 
@@ -104,12 +104,24 @@ public:
 
     // Location
     virtual bool has_location() const { return true; }
-    virtual TimedMotionVector3f location() const;
+    TimedMotionVector3f location() const {
+        Sirikata::Protocol::TimedMotionVector update_loc = mUpdate.location();
+        return TimedMotionVector3f(
+            update_loc.t(),
+            MotionVector3f(update_loc.position(), update_loc.velocity())
+        );
+    }
     virtual uint64 location_seqno() const { return seqno(); }
 
     // Orientation
     virtual bool has_orientation() const { return true; }
-    virtual TimedMotionQuaternion orientation() const;
+    TimedMotionQuaternion orientation() const {
+        Sirikata::Protocol::TimedMotionQuaternion update_orient = mUpdate.orientation();
+        return TimedMotionQuaternion(
+            update_orient.t(),
+            MotionQuaternion(update_orient.position(), update_orient.velocity())
+        );
+    }
     virtual uint64 orientation_seqno() const { return seqno(); }
 
     // Bounds
@@ -133,8 +145,6 @@ private:
     uint64 seqno() const { return (mUpdate.has_seqno() ? mUpdate.seqno() : 0); }
 
     const Sirikata::Protocol::Prox::ObjectAddition& mUpdate;
-    const ObjectHost* mOH;
-    const SpaceID& mSpace;
 };
 
 } // namespace Sirikata

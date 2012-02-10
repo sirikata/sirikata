@@ -23,22 +23,4 @@ TimedMotionQuaternion LocProtocolLocUpdate::orientation() const {
     );
 }
 
-
-TimedMotionVector3f ProxProtocolLocUpdate::location() const {
-    Sirikata::Protocol::TimedMotionVector update_loc = mUpdate.location();
-    return TimedMotionVector3f(
-        mOH->localTime(mSpace, update_loc.t()),
-        MotionVector3f(update_loc.position(), update_loc.velocity())
-    );
-}
-
-TimedMotionQuaternion ProxProtocolLocUpdate::orientation() const {
-    Sirikata::Protocol::TimedMotionQuaternion update_orient = mUpdate.orientation();
-    return TimedMotionQuaternion(
-        mOH->localTime(mSpace, update_orient.t()),
-        MotionQuaternion(update_orient.position(), update_orient.velocity())
-    );
-}
-
-
 } // namespace Sirikata
