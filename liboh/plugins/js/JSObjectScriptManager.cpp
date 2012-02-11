@@ -198,7 +198,7 @@ JSCtx* JSObjectScriptManager::createJSCtx(HostedObjectPtr ho)
                 mContext->ioService->createStrand("VisManager "    + ho->id().toString())),
             v8::Isolate::New());
 
-    
+    v8::Locker locker (jsctx->mIsolate);
     v8::Isolate::Scope iscope(jsctx->mIsolate);
     v8::HandleScope handle_scope;
     jsctx->mVec3Template = v8::Persistent<v8::FunctionTemplate>::New(CreateVec3Template());

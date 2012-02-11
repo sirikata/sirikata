@@ -93,6 +93,7 @@ EmersonScript::EmersonScript(HostedObjectPtr ho, const String& args,
    emHttpPtr(EmersonHttpManager::construct<EmersonHttpManager> (ctx))
 {
     //v8::Isolate::Scope iscope(JSObjectScript::mCtx->mIsolate);
+    v8::Locker locker (mCtx->mIsolate);
     JSObjectScript::mCtx->mIsolate->Enter();
 
     int32 resourceMax = mManager->getOptions()->referenceOption("emer-resource-max")->as<int32> ();
@@ -224,6 +225,7 @@ void EmersonScript::iNotifyProximateGone(
     }
 
     JSLOG(detailed,"Notified that object "<<proximateObject->getObjectReference()<<" went out of query of "<<querier<<".  Mostly just ignoring it.");
+    v8::Locker locker (mCtx->mIsolate);
     v8::Isolate::Scope iscope(JSObjectScript::mCtx->mIsolate);
 
     //FIXME: we aren't ever freeing this memory
@@ -312,6 +314,7 @@ void EmersonScript::iInvokeInvokable(
 
 
     EMERSCRIPT_SERIAL_CHECK();
+    v8::Locker locker (mCtx->mIsolate);
     v8::Isolate::Scope iscope(JSObjectScript::mCtx->mIsolate);
     int argc = params.size();
 
@@ -422,6 +425,7 @@ void  EmersonScript::iNotifyProximate(
     while(!JSObjectScript::mCtx->initialized())
     {}
 
+    v8::Locker locker (mCtx->mIsolate);
     v8::Isolate::Scope iscope(JSObjectScript::mCtx->mIsolate);
     if (JSObjectScript::mCtx->stopped())
     {
@@ -548,6 +552,7 @@ void EmersonScript::iOnConnected(SessionEventProviderPtr from,
     while ((!JSObjectScript::mCtx->initialized()) && (! duringInit))
     {}
 
+    v8::Locker locker (mCtx->mIsolate);
     v8::Isolate::Scope iscope(JSObjectScript::mCtx->mIsolate);
 
     //adding this here because don't want to call onConnected while objStrand is
@@ -653,6 +658,7 @@ void EmersonScript::iOnDisconnected(
     if (!locked) return;
 
     EMERSCRIPT_SERIAL_CHECK();
+    v8::Locker locker (mCtx->mIsolate);
     v8::Isolate::Scope iscope(JSObjectScript::mCtx->mIsolate);
     // We need to mark disconnection here so we don't request
     // disconnection twice, but the callback has to be deferred until later
@@ -742,6 +748,7 @@ void EmersonScript::iStop(bool letDie)
 
     
     JSObjectScript::mCtx->stop();
+    v8::Locker locker (mCtx->mIsolate);
     v8::Isolate::Scope iscope(JSObjectScript::mCtx->mIsolate);
 
     for (SimVec::iterator svIt = mSimulations.begin();
@@ -898,6 +905,7 @@ void EmersonScript::invokeCallbackInContext(
     while(!JSObjectScript::mCtx->initialized())
     {}
 
+    v8::Locker locker (mCtx->mIsolate);
     v8::Isolate::Scope iscope(JSObjectScript::mCtx->mIsolate);
     v8::HandleScope handle_scope;
     v8::Context::Scope(jscontext->mContext);
@@ -994,6 +1002,7 @@ void EmersonScript::iHandleScriptCommRead(
     if (!locked) return;
 
     EMERSCRIPT_SERIAL_CHECK();
+    v8::Locker locker (mCtx->mIsolate);
     v8::Isolate::Scope iscope(JSObjectScript::mCtx->mIsolate);
     if (JSObjectScript::mCtx->stopped())
         return;
@@ -1149,6 +1158,7 @@ void EmersonScript::iHandleScriptCommUnreliable(
 
 
     EMERSCRIPT_SERIAL_CHECK();
+    v8::Locker locker (mCtx->mIsolate);
     v8::Isolate::Scope iscope(JSObjectScript::mCtx->mIsolate);
     if (isStopped())
     {
@@ -1195,6 +1205,7 @@ void EmersonScript::processSandboxMessage(
     while(!JSObjectScript::mCtx->initialized())
     {}
 
+    v8::Locker locker (mCtx->mIsolate);
     v8::Isolate::Scope iscope(JSObjectScript::mCtx->mIsolate);
     //FIXME: there's a chance that when post was called in sendSandbox, the
     //sandbox sender was destroyed and then a new one created with the same

@@ -70,6 +70,7 @@ void JSContextStruct::httpFail(v8::Persistent<v8::Function> cb,const String& fai
         return;
     }
 
+    v8::Locker locker (mCtx->mIsolate);
     v8::Isolate::Scope iscope(mCtx->mIsolate);
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(mContext);
@@ -86,6 +87,7 @@ void JSContextStruct::httpSuccess(v8::Persistent<v8::Function> cb,EmersonHttpMan
         return;
     }
 
+    v8::Locker locker (mCtx->mIsolate);
     v8::Isolate::Scope iscope(mCtx->mIsolate);
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(mContext);

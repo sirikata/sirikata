@@ -241,6 +241,7 @@ JSObjectScript::ScopedEvalContext::~ScopedEvalContext() {
 
 void JSObjectScript::initialize(const String& args, const String& script,int32 maxResThresh)
 {
+    v8::Locker locker (mCtx->mIsolate);
     v8::Isolate::Scope iscope(mCtx->mIsolate);
 
     JSSCRIPT_SERIAL_CHECK();
@@ -333,6 +334,7 @@ void JSObjectScript::iStop(bool letDie)
             Liveness::letDie();
     }
 
+    v8::Locker locker (mCtx->mIsolate);
     v8::Isolate::Scope iscope(mCtx->mIsolate);
 
     JSSCRIPT_SERIAL_CHECK();
@@ -533,6 +535,7 @@ void JSObjectScript::iStorageCommitCallback(
     {}
 
 
+    v8::Locker locker (mCtx->mIsolate);
     v8::Isolate::Scope iscope(mCtx->mIsolate);
 
     v8::HandleScope handle_scope;
@@ -611,6 +614,7 @@ void JSObjectScript::iStorageCountCallback(
     while (!mCtx->initialized())
     {}
 
+    v8::Locker locker (mCtx->mIsolate);
     v8::Isolate::Scope iscope(mCtx->mIsolate);
 
     v8::HandleScope handle_scope;
@@ -1141,6 +1145,7 @@ v8::Handle<v8::Value> JSObjectScript::invokeCallback(
     int argc, v8::Handle<v8::Value> argv[])
 {
     JSSCRIPT_SERIAL_CHECK();
+    v8::Locker locker (mCtx->mIsolate);
     v8::Isolate::Scope iscope(mCtx->mIsolate);
     return invokeCallback(ctx, NULL, cb, argc, argv);
 }
@@ -1148,6 +1153,7 @@ v8::Handle<v8::Value> JSObjectScript::invokeCallback(
 v8::Handle<v8::Value> JSObjectScript::invokeCallback(JSContextStruct* ctx, v8::Handle<v8::Function>& cb)
 {
     JSSCRIPT_SERIAL_CHECK();
+    v8::Locker locker (mCtx->mIsolate);
     v8::Isolate::Scope iscope(mCtx->mIsolate);
     return invokeCallback(ctx, NULL, cb, 0, NULL);
 }
@@ -1499,6 +1505,7 @@ v8::Handle<v8::Value> JSObjectScript::invokeCallback(
     JSContextStruct* ctx, v8::Handle<v8::Object>* target,
     v8::Handle<v8::Function>& cb, int argc, v8::Handle<v8::Value> argv[])
 {
+    v8::Locker locker (mCtx->mIsolate);
     v8::Isolate::Scope iscope(mCtx->mIsolate);
     JSSCRIPT_SERIAL_CHECK();
     if (mEvalContextStack.empty())
