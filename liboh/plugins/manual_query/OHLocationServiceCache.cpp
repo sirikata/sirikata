@@ -242,7 +242,7 @@ void OHLocationServiceCache::notifyObjectAdded(
     tryRemoveObject(obj_it);
 }
 
-void OHLocationServiceCache::objectRemoved(const ObjectReference& uuid) {
+void OHLocationServiceCache::objectRemoved(const ObjectReference& uuid, bool temporary) {
     Lock lck(mMutex);
 
     ObjectDataMap::iterator data_it = mObjects.find(uuid);
@@ -259,18 +259,18 @@ void OHLocationServiceCache::objectRemoved(const ObjectReference& uuid) {
         mStrand->post(
             std::tr1::bind(
                 &OHLocationServiceCache::notifyObjectRemoved, this,
-                uuid
+                uuid, temporary
             ),
             "OHLocationServiceCache::notifyObjectRemoved"
         );
     }
 }
 
-void OHLocationServiceCache::notifyObjectRemoved(const ObjectReference& uuid) {
+void OHLocationServiceCache::notifyObjectRemoved(const ObjectReference& uuid, bool temporary) {
     Lock lck(mMutex);
 
     for(ListenerSet::iterator listener_it = mListeners.begin(); listener_it != mListeners.end(); listener_it++)
-        (*listener_it)->locationDisconnected(uuid);
+        (*listener_it)->locationDisconnected(uuid, temporary);
 
     OHLocationUpdateProvider::notify(&OHLocationUpdateListener::onObjectRemoved, uuid);
 

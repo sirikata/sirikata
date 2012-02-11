@@ -392,6 +392,7 @@ void ServerQueryHandler::handleProximityMessage(const OHDP::SpaceNodeID& snid, c
             Sirikata::Protocol::Prox::ObjectRemoval removal = update.removal(ridx);
             ObjectReference observed_oref(removal.object());
             SpaceObjectReference observed(snid.space(), observed_oref);
+            bool temporary_removal = (!removal.has_type() || (removal.type() == Sirikata::Protocol::Prox::ObjectRemoval::Transient));
             // Backup data for orphans and then destroy
             // TODO(ewencp) Seems like we shouldn't actually need this
             // since we shouldn't get a removal with having had an
@@ -401,7 +402,7 @@ void ServerQueryHandler::handleProximityMessage(const OHDP::SpaceNodeID& snid, c
                 query_state->objects->stopSimpleTracking(observed_oref);
             }
             query_state->objects->objectRemoved(
-                observed_oref
+                observed_oref, temporary_removal
             );
 
         }

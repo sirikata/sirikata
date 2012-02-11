@@ -49,7 +49,7 @@ public:
         const BoundingSphere3f& bounds, uint64 bounds_seqno,
         const Transfer::URI& mesh, uint64 mesh_seqno,
         const String& physics, uint64 physics_seqno);
-    void objectRemoved(const ObjectReference& uuid);
+    void objectRemoved(const ObjectReference& uuid, bool temporary);
     void epochUpdated(const ObjectReference& uuid, const uint64 ep);
     void locationUpdated(const ObjectReference& uuid, const TimedMotionVector3f& newval, uint64 seqno);
     void orientationUpdated(const ObjectReference& uuid, const TimedMotionQuaternion& newval, uint64 seqno);
@@ -104,7 +104,7 @@ private:
     // to notify of a few of the events -- orientation, mesh, and physics are
     // all ignored.)
     void notifyObjectAdded(const ObjectReference& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds);
-    void notifyObjectRemoved(const ObjectReference& uuid);
+    void notifyObjectRemoved(const ObjectReference& uuid, bool temporary);
     void notifyEpochUpdated(const ObjectReference& uuid, const uint64 val);
     void notifyLocationUpdated(const ObjectReference& uuid, const TimedMotionVector3f& oldval, const TimedMotionVector3f& newval);
     void notifyBoundsUpdated(const ObjectReference& uuid, const BoundingSphere3f& oldval, const BoundingSphere3f& newval);
