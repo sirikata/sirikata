@@ -1866,14 +1866,15 @@ ENDIF()
 IF(BUILD_SQLITE_OH)
   SET(CXXTESTSources
     ${CXXTESTSources}
-    ${TEST_LIBOH_SOURCE_DIR}/SQLiteStorageTest.hpp)
+    ${TEST_LIBOH_SOURCE_DIR}/SQLiteStorageTest.hpp
+    ${TEST_LIBOH_SOURCE_DIR}/SQLiteStressTest.hpp)
 ENDIF()
 
 IF(LIBCASSANDRA_FOUND AND TEST_CASSANDRA)
   SET(CXXTESTSources
     ${CXXTESTSources}
     ${TEST_LIBOH_SOURCE_DIR}/CassandraStorageTest.hpp
-    ${TEST_LIBCASSANDRA_SOURCE_DIR}/CassandraStressTest.hpp)
+    ${TEST_LIBOH_SOURCE_DIR}/CassandraStressTest.hpp)
 ENDIF()
 
 ADD_CXXTEST_CPP_TARGET(CXXTEST ${CXXTESTSources}
