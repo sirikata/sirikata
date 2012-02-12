@@ -35,6 +35,7 @@
 
 #include <sirikata/oh/Storage.hpp>
 #include <sirikata/sqlite/SQLite.hpp>
+#include <sirikata/core/queue/ThreadSafeQueueWithNotification.hpp>
 
 namespace Sirikata {
 namespace OH {
@@ -95,6 +96,22 @@ private:
     typedef std::vector<StorageAction> Transaction;
     typedef std::tr1::unordered_map<Bucket, Transaction*, Bucket::Hasher> BucketTransactions;
 
+    // We keep a queue of transactions and trigger handlers, which can process
+    // more than one at a time, on the storage IOService
+    struct TransactionData {
+        TransactionData()
+         : bucket(), trans(NULL), cb()
+        {}
+        TransactionData(const Bucket& b, Transaction* t, CommitCallback c)
+         : bucket(b), trans(t), cb(c)
+        {}
+
+        Bucket bucket;
+        Transaction* trans;
+        CommitCallback cb;
+    };
+    typedef ThreadSafeQueueWithNotification<TransactionData> TransactionQueue;
+
     // Initializes the database. This is separate from the main initialization
     // function because we need to make sure it executes in the right thread so
     // all sqlite requests on the db ptr come from the same thread.
@@ -105,9 +122,16 @@ private:
     // implicit transaction.
     Transaction* getTransaction(const Bucket& bucket, bool* is_new = NULL);
 
-    // Executes a commit. Runs in a separate thread, so the transaction is
-    // passed in directly
-    void executeCommit(const Bucket& bucket, Transaction* trans, CommitCallback cb);
+    // Indirection to get on mIOService
+    void postProcessTransactions();
+    // Process transactions. Runs until queue is empty and is triggered anytime
+    // the queue goes from empty to non-empty.
+    void processTransactions();
+
+    // Tries to execute a commit *assuming it is within a SQL
+    // transaction*. Returns whether it was successful, allowing for
+    // rollback/retrying.
+    bool executeCommit(const Bucket& bucket, Transaction* trans, CommitCallback cb, ReadSet** read_set_out);
 
     void executeCount(const String value_count, const Key& start, const Key& finish, CountCallback cb);
 
@@ -128,6 +152,13 @@ private:
     Network::IOService* mIOService;
     Network::IOWork* mWork;
     Thread* mThread;
+
+    TransactionQueue mTransactionQueue;
+    // Maximum transactions to combine into a single transaction in the
+    // underlying database. TODO(ewencp) this should probably be dynamic, should
+    // increase/decrease based on success/failure and avoid latency getting too
+    // hight. Right now we just have a reasonable, but small, number.
+    uint32 mMaxCoalescedTransactions;
 };
 
 }//end namespace OH

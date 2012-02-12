@@ -257,7 +257,12 @@ bool SQLiteStorage::StorageAction::execute(SQLiteDBPtr db, const Bucket& bucket,
 SQLiteStorage::SQLiteStorage(ObjectHostContext* ctx, const String& dbpath)
  : mContext(ctx),
    mDBFilename(dbpath),
-   mDB()
+   mDB(),
+   mIOService(NULL),
+   mWork(NULL),
+   mThread(NULL),
+   mTransactionQueue(std::tr1::bind(&SQLiteStorage::postProcessTransactions, this)),
+   mMaxCoalescedTransactions(5)
 {
 }
 
@@ -405,29 +410,107 @@ void SQLiteStorage::commitTransaction(const Bucket& bucket, const CommitCallback
         return;
     }
 
-    mIOService->post(
-        std::tr1::bind(&SQLiteStorage::executeCommit, this, bucket, trans, cb),
-        "SQLiteStorage::executeCommit"
+    mTransactionQueue.push(
+        TransactionData(bucket, trans, cb)
     );
+}
+
+void SQLiteStorage::postProcessTransactions() {
+    mIOService->post(std::tr1::bind(&SQLiteStorage::processTransactions, this));
+}
+
+void SQLiteStorage::processTransactions() {
+    while(!mTransactionQueue.empty()) {
+
+        // Try to execute up to the maximum number of coalesced transactions so
+        // long as we don't encounter a failure for some reason.
+        std::vector<TransactionData> transactions;
+        std::vector<ReadSet*> read_sets;
+
+        bool success = true;
+        success = sqlBeginTransaction();
+        for(uint32 i = 0;
+            success && !mTransactionQueue.empty() && i < mMaxCoalescedTransactions;
+            i++)
+        {
+            TransactionData data;
+            bool popped = mTransactionQueue.pop(data);
+            assert(popped);
+            transactions.push_back(data);
+
+            ReadSet* cur_result = NULL;
+            success = success && executeCommit(data.bucket, data.trans, data.cb, &cur_result);
+            if (success) {
+                read_sets.push_back(cur_result);
+            }
+        }
+
+        // If we succeeded so far, try to commit and move on
+        if (success)
+            success = sqlCommit();
+        // If still successful, cleanup, post callbacks, and move on to next
+        // round
+        if (success) {
+            for(uint32 i = 0; i < transactions.size(); i++) {
+                delete transactions[i].trans;
+                if (transactions[i].cb) {
+                    mContext->mainStrand->post(
+                        std::tr1::bind(transactions[i].cb, true, read_sets[i]),
+                        "SQLiteStorage completeCommit"
+                    );
+                }
+            }
+            continue;
+        }
+
+        // We'll only get here if we, for some reason, failed to process all of
+        // these. Rollback, clean up results we had gotten, and work back
+        // through them one at a time.
+        sqlRollback();
+        for(uint32 i = 0; i < read_sets.size(); i++)
+            if (read_sets[i] != NULL) delete read_sets[i];
+        read_sets.clear();
+
+        for(uint32 i = 0; i < transactions.size(); i++) {
+            success = true;
+            success = sqlBeginTransaction();
+
+            ReadSet* rs = NULL;
+            TransactionData& data = transactions[i];
+            success = success && executeCommit(data.bucket, data.trans, data.cb, &rs);
+
+            if (success)
+                success = success && sqlCommit();
+
+            // Either way, we need to clean up the transaction
+            delete data.trans;
+            data.trans = NULL;
+
+            if (!success) {
+                sqlRollback();
+                delete rs;
+                rs = NULL;
+            }
+
+            mContext->mainStrand->post(
+                std::tr1::bind(data.cb, success, rs),
+                "SQLiteStorage completeCommit"
+            );
+        }
+
+    }
 }
 
 // Executes a commit. Runs in a separate thread, so the transaction is
 // passed in directly
-void SQLiteStorage::executeCommit(const Bucket& bucket, Transaction* trans, CommitCallback cb) {
+bool SQLiteStorage::executeCommit(const Bucket& bucket, Transaction* trans, CommitCallback cb, ReadSet** read_set_out) {
     ReadSet* rs = new ReadSet;
 
     bool success = true;
-    success = sqlBeginTransaction();
     for (Transaction::iterator it = trans->begin(); success && it != trans->end(); it++) {
         success = success && (*it).execute(mDB, bucket, rs);
-        if (!success) {
-            sqlRollback();
+        if (!success)
             break;
-        }
-    }
-
-    if (success) {
-        success = sqlCommit();
     }
 
     if (rs->empty() || !success) {
@@ -435,13 +518,8 @@ void SQLiteStorage::executeCommit(const Bucket& bucket, Transaction* trans, Comm
         rs = NULL;
     }
 
-    delete trans;
-    if (cb) {
-        mContext->mainStrand->post(
-            std::tr1::bind(cb, success, rs),
-            "SQLiteStorage completeCommit"
-        );
-    }
+    *read_set_out = rs;
+    return success;
 }
 
 bool SQLiteStorage::erase(const Bucket& bucket, const Key& key, const CommitCallback& cb, const String& timestamp) {
