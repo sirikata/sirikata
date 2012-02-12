@@ -50,7 +50,10 @@ public:
     void testSetupTeardown() {_base.testSetupTeardown(); }
 
     //(dataLength, keyNum, bucketNum, rounds)
-    void testMultiRounds() {_base.testMultiRounds("10", 10, 10, 5); }
+    void testMultiRounds() {
+        _base.testMultiRounds("10", 10, 10, 5, StressTestBase::Latency);
+        _base.testMultiRounds("10", 10, 10, 5, StressTestBase::Throughput);
+    }
 
 };
 
