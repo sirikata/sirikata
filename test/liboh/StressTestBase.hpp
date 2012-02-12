@@ -189,10 +189,7 @@ public:
         using std::tr1::placeholders::_1;
         using std::tr1::placeholders::_2;
 
-        timeval ts;
-        gettimeofday(&ts,NULL);
-        long int time1_s = ts.tv_sec;
-        int time1_us=ts.tv_usec;
+        Time start = Timer::now();
 
         String key;
         for (int i=0; i<bucketNum; i++){
@@ -205,13 +202,8 @@ public:
             }
         }
 
-        gettimeofday(&ts,NULL);
-        long int time2_s = ts.tv_sec;
-        int time2_us=ts.tv_usec;
-        long int diff_s=time2_s - time1_s;
-        int diff_us=time2_us - time1_us;
-        double diff_t=diff_s*1000+diff_us/(double)1000;
-        std::cout<<"Write time: "<<diff_t<<std::endl;
+        Time end = Timer::now();
+        std::cout << "Write time " << (end-start) << std::endl;
     }
 
     void testSingleReads(String length, int keyNum, int bucketNum) {
@@ -221,10 +213,7 @@ public:
 
         ReadSet rs=_data.dataSet;
 
-        timeval ts;
-        gettimeofday(&ts,NULL);
-        long int time1_s = ts.tv_sec;
-        int time1_us=ts.tv_usec;
+        Time start = Timer::now();
 
         String key;
         for (int i=0; i<bucketNum; i++){
@@ -237,14 +226,8 @@ public:
             }
         }
 
-        gettimeofday(&ts,NULL);
-        long int time2_s = ts.tv_sec;
-        int time2_us=ts.tv_usec;
-        long int diff_s=time2_s - time1_s;
-        int diff_us=time2_us - time1_us;
-        double diff_t=diff_s*1000+diff_us/(double)1000;
-        std::cout<<"Read time:  "<<diff_t<<std::endl;
-
+        Time end = Timer::now();
+        std::cout << "Read time " << (end-start) << std::endl;
     }
 
     void testSingleErases(String length, int keyNum, int bucketNum) {
@@ -252,10 +235,7 @@ public:
         using std::tr1::placeholders::_1;
         using std::tr1::placeholders::_2;
 
-        timeval ts;
-        gettimeofday(&ts,NULL);
-        long int time1_s = ts.tv_sec;
-        int time1_us=ts.tv_usec;
+        Time start = Timer::now();
 
         String key;
         for (int i=0; i<bucketNum; i++){
@@ -268,13 +248,8 @@ public:
             }
         }
 
-        gettimeofday(&ts,NULL);
-        long int time2_s = ts.tv_sec;
-        int time2_us=ts.tv_usec;
-        long int diff_s=time2_s - time1_s;
-        int diff_us=time2_us - time1_us;
-        double diff_t=diff_s*1000+diff_us/(double)1000;
-        std::cout<<"Erase time: "<<diff_t<<std::endl;
+        Time end = Timer::now();
+        std::cout << "Erase time " << (end-start) << std::endl;
 
         for (int i=0; i<bucketNum; i++){
             for(int j=0; j<keyNum; j++){
@@ -292,10 +267,7 @@ public:
         using std::tr1::placeholders::_1;
         using std::tr1::placeholders::_2;
 
-        timeval ts;
-        gettimeofday(&ts,NULL);
-        long int time1_s = ts.tv_sec;
-        int time1_us=ts.tv_usec;
+        Time start = Timer::now();
 
         String key;
         for (int i=0; i<bucketNum; i++){
@@ -310,13 +282,8 @@ public:
             waitForTransaction();
         }
 
-        gettimeofday(&ts,NULL);
-        long int time2_s = ts.tv_sec;
-        int time2_us=ts.tv_usec;
-        long int diff_s=time2_s - time1_s;
-        int diff_us=time2_us - time1_us;
-        double diff_t=diff_s*1000+diff_us/(double)1000;
-        std::cout<<"Write time: "<<diff_t<<std::endl;
+        Time end = Timer::now();
+        std::cout << "Batch write time " << (end-start) << std::endl;
     }
 
     void testBatchReads(String length, int keyNum, int bucketNum) {
@@ -326,10 +293,7 @@ public:
 
         ReadSet rs=_data.dataSet;
 
-        timeval ts;
-        gettimeofday(&ts,NULL);
-        long int time1_s = ts.tv_sec;
-        int time1_us=ts.tv_usec;
+        Time start = Timer::now();
 
         String key;
         for (int i=0; i<bucketNum; i++){
@@ -344,14 +308,8 @@ public:
             waitForTransaction();
         }
 
-        gettimeofday(&ts,NULL);
-        long int time2_s = ts.tv_sec;
-        int time2_us=ts.tv_usec;
-        long int diff_s=time2_s - time1_s;
-        int diff_us=time2_us - time1_us;
-        double diff_t=diff_s*1000+diff_us/(double)1000;
-        std::cout<<"Read time:  "<<diff_t<<std::endl;
-
+        Time end = Timer::now();
+        std::cout << "Batch read time " << (end-start) << std::endl;
     }
 
     void testBatchErases(String length, int keyNum, int bucketNum) {
@@ -359,10 +317,7 @@ public:
         using std::tr1::placeholders::_1;
         using std::tr1::placeholders::_2;
 
-        timeval ts;
-        gettimeofday(&ts,NULL);
-        long int time1_s = ts.tv_sec;
-        int time1_us=ts.tv_usec;
+        Time start = Timer::now();
 
         String key;
         for (int i=0; i<bucketNum; i++){
@@ -377,13 +332,8 @@ public:
             waitForTransaction();
         }
 
-        gettimeofday(&ts,NULL);
-        long int time2_s = ts.tv_sec;
-        int time2_us=ts.tv_usec;
-        long int diff_s=time2_s - time1_s;
-        int diff_us=time2_us - time1_us;
-        double diff_t=diff_s*1000+diff_us/(double)1000;
-        std::cout<<"Erase time: "<<diff_t<<std::endl;
+        Time end = Timer::now();
+        std::cout << "Batch erase time " << (end-start) << std::endl;
 
         for (int i=0; i<bucketNum; i++){
             for(int j=0; j<keyNum; j++){
