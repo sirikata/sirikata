@@ -55,6 +55,7 @@ system.require('std/core/simpleInput.em');
          //if get message that we should redraw with a particular
          //selected, then change heldSelected to not be undefined
          this.heldSelected = undefined;
+         this.heldForce    = undefined;
      };
 
      system.require('scriptingGuiUtil.em');
@@ -63,8 +64,11 @@ system.require('std/core/simpleInput.em');
      /**
       @param {String: vis/presId} selected (optional).  If called with
       this field, then gui should actually change currentlySelectedVisible
+
+      @param {bool} force (optional).  If called with this field as
+      true, then forces the gui window to be "shown".  
       */
-     std.ScriptingGui.prototype.redraw = function(selected)
+     std.ScriptingGui.prototype.redraw = function(selected,force)
      {
          //have to wait for ace libraries to load.  after they do, js
          //will send an amReady event back to emerson code.  emerson
@@ -72,15 +76,21 @@ system.require('std/core/simpleInput.em');
          if ((!this.hasInited) || (!this.isReady))
          {
              if (typeof(selected) != 'undefined')
-                 this.heldSelected =selected;
+                 this.heldSelected =selected;                     
+
+             if (typeof(force) != 'undefined')
+                 this.heldForce = force;
+             
              return;
          }
 
+
+         
          //trigger redraw call
          this.guiMod.call(
              'ishmaelRedraw',toHtmlNearbyMap(this),toHtmlScriptedMap(this),
              toHtmlActionMap(this),toHtmlFileMap(this),toHtmlNameMap(this),
-             toHtmlConsoleMap(this),selected);
+             toHtmlConsoleMap(this),selected,force);
      };
 
 
@@ -266,8 +276,9 @@ system.require('std/core/simpleInput.em');
          function()
      {
          this.isReady =true;
-         this.redraw(this.heldSelected);
+         this.redraw(this.heldSelected,this.heldForce);
          this.heldSelected  = undefined;
+         this.heldForce     = undefined;
      };
 
      
@@ -1104,10 +1115,13 @@ system.require('std/core/simpleInput.em');
           \param {String (visId or presId)} selected (optional).  If
           not undefined, then change currentlySelectedVsible to this
           field before continuing.
+
+          \param {bool} force (optional).  If true, then means that we
+          should call .show on ishmael window
           */
          ishmaelRedraw = function(
              nearbyObjs,scriptedObjs,actionMap,fileMap,
-             nameMap,consoleMap,selected)
+             nameMap,consoleMap,selected,force)
          {
              //do not need to use changeCurrentlySelected function,
              //because know that the associated redraws of console +
@@ -1123,6 +1137,9 @@ system.require('std/core/simpleInput.em');
              redrawActionList(actionMap);
              redrawFileSelect(fileMap);
              redrawConsole(consoleMap);
+
+             if (force)
+                 inputWindow.show();
          };
 
          
