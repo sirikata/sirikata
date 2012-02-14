@@ -238,6 +238,13 @@ void BulletRigidBodyObject::applyForcedLocation(const TimedMotionVector3f& loc, 
     LocationInfo& locinfo = mParent->info(mID);
     locinfo.props.setLocation(loc, epoch);
 
+    //mesh for mObjRigidBody may not have been loaded yet before
+    //request to update that occurs
+    //in addRigidBody will overwrite current position anyways, so don't lose
+    //any information from discarding move here.
+    if (mObjRigidBody == NULL)
+      return;
+    
     // Setting the motion state triggers a sync, even if its the same one that
     // was already being used.
     mObjRigidBody->setMotionState(mObjMotionState);
@@ -249,6 +256,14 @@ void BulletRigidBodyObject::applyForcedOrientation(const TimedMotionQuaternion& 
     // Update recorded info
     LocationInfo& locinfo = mParent->info(mID);
     locinfo.props.setOrientation(orient, epoch);
+
+    //mesh for mObjRigidBody may not have been loaded yet before
+    //request to update that occurs
+    //in addRigidBody will overwrite current position anyways, so don't lose
+    //any information from discarding move here.
+    if (mObjRigidBody == NULL)
+      return;
+
 
     // Setting the motion state triggers a sync, even if its the same one that
     // was already being used.

@@ -180,6 +180,13 @@ void BulletCharacterObject::applyForcedLocation(const TimedMotionVector3f& loc, 
     LocationInfo& locinfo = mParent->info(mID);
     locinfo.props.setLocation(loc, epoch);
 
+    //mesh for mGhostObject may not have been loaded yet before person
+    //pressed a key requesting character to move.  update that occurs
+    //in load will overwrite current position anyways, so don't lose
+    //any information from discarding move here.
+    if (mGhostObject == NULL)
+      return;
+    
     // And apply current position. We don't need to apply velocity because it'll
     // be applied at the next tick.
     btTransform xform = mGhostObject->getWorldTransform();
@@ -198,6 +205,14 @@ void BulletCharacterObject::applyForcedOrientation(const TimedMotionQuaternion& 
     // will be ignored if it is out of date, even though this is "forced".
     LocationInfo& locinfo = mParent->info(mID);
     locinfo.props.setOrientation(orient, epoch);
+
+    //mesh for mGhostObject may not have been loaded yet before person
+    //pressed a key requesting character to move.  update that occurs
+    //in load will overwrite current position anyways, so don't lose
+    //any information from discarding move here.
+    if (mGhostObject == NULL)
+      return;
+
 
     // And apply current position. We don't need to apply velocity because it'll
     // be applied at the next tick.
