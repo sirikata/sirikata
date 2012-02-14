@@ -33,7 +33,6 @@
 #ifndef __SIRIKATA_STRESS_TEST_BASE_HPP__
 #define __SIRIKATA_STRESS_TEST_BASE_HPP__
 
-#include <sys/time.h>
 #include <cxxtest/TestSuite.h>
 #include <sirikata/oh/Storage.hpp>
 #include "DataFiles.hpp"
@@ -428,7 +427,7 @@ public:
 
 };
 
-const OH::Storage::Bucket StressTestBase::_buckets[100] = DataFiles::buckets;
+const OH::Storage::Bucket StressTestBase::_buckets[100] = STORAGE_STRESSTEST_OH_BUCKETS;
 const String StressTestBase::_dataIndex[20]={"a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t"};
 
 #endif //__SIRIKATA_STRESS_TEST_BASE_HPP__

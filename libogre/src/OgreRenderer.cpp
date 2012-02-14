@@ -769,7 +769,7 @@ void OgreRenderer::constructSystemLight(const String& name, const Vector3f& dire
 void OgreRenderer::loadSystemLights() {
     if (useModelLights()) return;
 
-    float brightness = 1.f/3;
+    float brightness = 0.8;
     constructSystemLight("forward", Vector3f(0.f, 0.f, 1.f), brightness);
     constructSystemLight("back", Vector3f(0.f, 0.f, -1.f), brightness);
     constructSystemLight("left", Vector3f(-1.f, 0.f, 0.f), brightness);
