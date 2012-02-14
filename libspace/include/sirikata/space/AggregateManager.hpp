@@ -70,7 +70,7 @@ private:
     UUID mParentUUID;
 
     std::vector< std::tr1::shared_ptr<struct AggregateObject>  > mChildren;
-    
+
     // Whether this is actually a leaf object (i.e. added implicitly as
     // AggregateObject when added as a child of a true aggregate).
     bool leaf;
@@ -125,6 +125,8 @@ private:
 
   Transfer::OAuthParamsPtr mOAuth;
   const String mCDNUsername;
+  Duration mModelTTL;
+
 
   void updateChildrenTreeLevel(const UUID& uuid, uint16 treeLevel);
   void addDirtyAggregates(UUID uuid);
@@ -164,7 +166,7 @@ public:
   bool findChild(std::vector<AggregateObjectPtr>& v, const UUID& uuid) ;
 
   void removeChild(std::vector<AggregateObjectPtr>& v, const UUID& uuid) ;
-    
+
 
   // This version requires locking to get at the AggregateObjectPtr
   // for the object. This isn't safe if you already hold that lock.
