@@ -123,31 +123,35 @@ const SpaceObjectReference& JSAggregateVisibleData::observer() {
 }
 
 // IPresencePropertiesRead Interface
-const TimedMotionVector3f& JSAggregateVisibleData::location() const {
+TimedMotionVector3f JSAggregateVisibleData::location() const{
     return getBestChild()->location();
 }
 
-const TimedMotionQuaternion& JSAggregateVisibleData::orientation() const {
+TimedMotionQuaternion JSAggregateVisibleData::orientation() const{
     return getBestChild()->orientation();
 }
 
-const BoundingSphere3f& JSAggregateVisibleData::bounds() const {
+BoundingSphere3f JSAggregateVisibleData::bounds() const{
     return getBestChild()->bounds();
 }
 
-const Transfer::URI& JSAggregateVisibleData::mesh() const {
+Transfer::URI JSAggregateVisibleData::mesh() const{
     return getBestChild()->mesh();
 }
 
-const String& JSAggregateVisibleData::physics() const {
+String JSAggregateVisibleData::physics() const{
     return getBestChild()->physics();
 }
 
+
+
 void JSAggregateVisibleData::removeVisibleData(JSVisibleData* data) {
+    Mutex::scoped_lock locker (childMutex);
     mChildren.erase(data->observer());
 }
 
 void JSAggregateVisibleData::updateFrom(ProxyObjectPtr proxy) {
+    Mutex::scoped_lock locker (childMutex);
     if (mChildren.find(proxy->getObjectReference()) == mChildren.end()) {
         // Note that we currently pass in NULL so we don't get
         // notifications. We'd only get them upon clearing our children list in
@@ -158,6 +162,7 @@ void JSAggregateVisibleData::updateFrom(ProxyObjectPtr proxy) {
 }
 
 void JSAggregateVisibleData::updateFrom(const IPresencePropertiesRead& props) {
+    Mutex::scoped_lock locker (childMutex);
     if (mChildren.find(SpaceObjectReference::null()) != mChildren.end()) {
         std::tr1::dynamic_pointer_cast<JSRestoredVisibleData>(mChildren[SpaceObjectReference::null()])->updateFrom(props);
     }
@@ -165,7 +170,8 @@ void JSAggregateVisibleData::updateFrom(const IPresencePropertiesRead& props) {
     // Proxy, which is preferable.
 }
 
-JSVisibleDataPtr JSAggregateVisibleData::getBestChild() const {
+JSVisibleDataPtr JSAggregateVisibleData::getBestChild() const{
+    Mutex::scoped_lock locker (const_cast<Mutex&>(childMutex));
     assert(!mChildren.empty());
     assert(mChildren.find(mBest) != mChildren.end());
     return mChildren.find(mBest)->second;
@@ -187,6 +193,7 @@ bool JSAggregateVisibleData::visibleToPresence() const {
 }
 
 void JSAggregateVisibleData::disable() {
+    Mutex::scoped_lock locker (childMutex);
     mChildren.clear();
     JSVisibleData::disable();
 }

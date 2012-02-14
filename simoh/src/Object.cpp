@@ -147,7 +147,7 @@ void Object::handleNextLocUpdate(const TimedMotionVector3f& up) {
     scheduleNextLocUpdate();
 }
 
-bool Object::send(uint16 src_port, UUID dest, uint16 dest_port, std::string payload) {
+bool Object::send(ObjectMessagePort src_port, UUID dest, ObjectMessagePort dest_port, std::string payload) {
   bool val = mContext->objectHost->send(
       this, src_port,
       dest, dest_port,
@@ -156,7 +156,7 @@ bool Object::send(uint16 src_port, UUID dest, uint16 dest_port, std::string payl
 
   return val;
 }
-void Object::sendNoReturn(uint16 src_port, UUID dest, uint16 dest_port, std::string payload) {
+void Object::sendNoReturn(ObjectMessagePort src_port, UUID dest, ObjectMessagePort dest_port, std::string payload) {
     send(src_port, dest, dest_port, payload);
 }
 
@@ -206,7 +206,8 @@ void Object::handleSpaceConnection(const SpaceID& space, const ObjectReference& 
     // We need to manually wrap this for the main strand because IOStrand
     // doesn't support > 5 arguments, which the original callback has
     mContext->mainStrand->post(
-        std::tr1::bind(&Object::handleSpaceConnectionIndirect, this, space, obj, sid)
+        std::tr1::bind(&Object::handleSpaceConnectionIndirect, this, space, obj, sid),
+        "Object::handleSpaceConnectionIndirect"
     );
 }
 void Object::handleSpaceConnectionIndirect(const SpaceID& space, const ObjectReference& obj, ServerID sid) {
@@ -227,7 +228,8 @@ void Object::handleSpaceConnectionIndirect(const SpaceID& space, const ObjectRef
 
     // Start normal processing
     mContext->mainStrand->post(
-        std::tr1::bind(&Object::scheduleNextLocUpdate, this)
+        std::tr1::bind(&Object::scheduleNextLocUpdate, this),
+        "Object::scheduleNextLocUpdate"
     );
 }
 
@@ -304,7 +306,7 @@ ODP::DelegatePort* Object::createDelegateODPPort(ODP::DelegateService* parentSer
 
 bool Object::delegateODPPortSend(const ODP::Endpoint& source_ep, const ODP::Endpoint& dest_ep, MemoryReference payload) {
     assert(source_ep.space() == dest_ep.space());
-    return send((uint16)source_ep.port(), dest_ep.object().getAsUUID(), (uint16)dest_ep.port(), String((const char*)payload.data(), payload.size()));
+    return send(source_ep.port(), dest_ep.object().getAsUUID(), dest_ep.port(), String((const char*)payload.data(), payload.size()));
 }
 
 void Object::handleLocationSubstream(int err, SSTStreamPtr s) {

@@ -75,7 +75,8 @@ void FairServerMessageReceiver::scheduleServicing() {
             mServiceTimer->cancel();
             mServiceScheduled = true;
             mReceiverStrand->post(
-                std::tr1::bind(&FairServerMessageReceiver::service, this)
+                std::tr1::bind(&FairServerMessageReceiver::service, this),
+                "FairServerMessageReceiver::service"
             );
             //}
     }

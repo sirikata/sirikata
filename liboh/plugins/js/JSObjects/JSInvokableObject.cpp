@@ -56,7 +56,11 @@ v8::Handle<v8::Value> invoke(const v8::Arguments& args)
 boost::any JSInvokableObjectInt::invoke(std::vector<boost::any> &params)
 {
   /* Invoke the invokable version */
-    SILOG(js,detailed,"JSInvokableObjectInt::invoke(): invokable_ type is " << typeid(invokable_).name());
+    SILOG(js,
+        insane,
+        "JSInvokableObjectInt::invoke(): invokable_ type is " <<\
+        typeid(invokable_).name());
+    
   return invokable_->invoke(params);
 }
 

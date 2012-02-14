@@ -89,6 +89,30 @@ v8::Handle<v8::Value> sendMessage(const v8::Arguments&args, bool reliable)
 }
 
 
+v8::Handle<v8::Value> pushEvalContextScopeDirectory(const v8::Arguments& args)
+{
+    v8::HandleScope handle_scope;
+    if (args.Length() != 1)
+        V8_EXCEPTION_CSTR("Error pushing eval scope directory.  Requires 1 argument: a string.");
+
+    INLINE_SYSTEM_CONV_ERROR(args.This(),getAssociatedPresence,this,jssys);
+    INLINE_STR_CONV_ERROR(args[0],pushEvalContextScopeDirectory,1,newDir);
+    
+    return handle_scope.Close(jssys->pushEvalContextScopeDirectory(newDir));
+}
+
+v8::Handle<v8::Value> popEvalContextScopeDirectory(const v8::Arguments& args)
+{
+    v8::HandleScope handle_scope;
+    if (args.Length() != 0)
+        V8_EXCEPTION_CSTR("Error popping eval scope directory.  Requires 0 arguments");
+
+    INLINE_SYSTEM_CONV_ERROR(args.This(),getAssociatedPresence,this,jssys);
+    
+    return handle_scope.Close(jssys->popEvalContextScopeDirectory());
+}
+
+
 //returns wrapped presence struct that's associated with system's context
 //if system's context is not associated with a presence struct (ie, it's the
 //root context), then return undefined.
@@ -159,6 +183,15 @@ v8::Handle<v8::Value> setPresenceMessageCallback(const v8::Arguments& args)
     return jssys->setPresenceMessageCallback(cb_persist);
 }
 
+
+v8::Handle<v8::Value> getUniqueToken(const v8::Arguments& args)
+{
+    if (args.Length() != 0)
+        V8_EXCEPTION_CSTR("getUniqueToken requires 0 arguments.");
+
+    UUID randUUID = UUID::random();
+    return v8::String::New(randUUID.toString().c_str());
+}
 
 
 /**

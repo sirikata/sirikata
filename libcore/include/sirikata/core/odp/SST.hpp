@@ -180,7 +180,7 @@ class SIRIKATA_EXPORT BaseDatagramLayer<SpaceObjectReference>
     EndPointType mEndpoint;
 };
 
-#if SIRIKATA_PLATFORM == SIRIKATA_WINDOWS
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS
   // These exports keep Windows happy by forcing the export of these
   // types. BaseDatagramLayer is now excluded because it is explicitly
   // specialized, which, for some reason, keeps things working

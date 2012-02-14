@@ -48,7 +48,7 @@ namespace Sirikata {
 namespace Graphics {
 
 ResourceDownloadPlanner::ResourceDownloadPlanner(Context *c, OgreRenderer* renderer)
- : PollingService(c->mainStrand, Duration::seconds(frequency), c, "Resource Download Planner Poll"),
+ : PollingService(c->mainStrand, "Resource Download Planner Poll", Duration::seconds(frequency), c, "Resource Download Planner Poll"),
    mContext(c),
    mScene(renderer),
    mMaxLoaded(2500)
@@ -63,41 +63,46 @@ ResourceDownloadPlanner::~ResourceDownloadPlanner()
 }
 
 void ResourceDownloadPlanner::addNewObject(Graphics::Entity *ent, const Transfer::URI& mesh) {
+  RMutex::scoped_lock lock(mDlPlannerMutex);
 }
 
 void ResourceDownloadPlanner::addNewObject(ProxyObjectPtr p, Entity *mesh)
 {
-
+  RMutex::scoped_lock lock(mDlPlannerMutex);
 }
 
 void ResourceDownloadPlanner::updateObject(ProxyObjectPtr p)
 {
-
+  RMutex::scoped_lock lock(mDlPlannerMutex);
 }
 
 void ResourceDownloadPlanner::removeObject(ProxyObjectPtr p) {
+  RMutex::scoped_lock lock(mDlPlannerMutex);
 }
 
 void ResourceDownloadPlanner::removeObject(Graphics::Entity* mesh) {
+  RMutex::scoped_lock lock(mDlPlannerMutex);
 }
 
 
 void ResourceDownloadPlanner::setCamera(Camera *entity)
 {
+    RMutex::scoped_lock lock(mDlPlannerMutex);
     camera = entity;
 }
 
 void ResourceDownloadPlanner::poll()
 {
-
+  RMutex::scoped_lock lock(mDlPlannerMutex);
 }
 
 void ResourceDownloadPlanner::stop()
 {
-
+  RMutex::scoped_lock lock(mDlPlannerMutex);
 }
 
 void ResourceDownloadPlanner::setMaxObjects(int32 new_max) {
+    RMutex::scoped_lock lock(mDlPlannerMutex);
     mMaxLoaded = new_max;
 }
 

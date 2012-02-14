@@ -367,6 +367,7 @@ void AirTrafficControllerScenario::initialize(ObjectHostContext*ctx) {
     mPingPoller = new Poller(
         ctx->mainStrand,
         std::tr1::bind(&AirTrafficControllerScenario::sendPings, this),
+        "AirTrafficControllerScenario Ping Poller",
         (bothpersecond > 1000 ? // Try to amortize out some of the
                                     // scheduling cost
         Duration::seconds(10.0/bothpersecond) :
@@ -379,10 +380,11 @@ void AirTrafficControllerScenario::initialize(ObjectHostContext*ctx) {
         Duration::seconds(1./mNumHitPointsPerSecond));
 */
     mGeneratePingProfiler = mContext->profiler->addStage("Object Host Generate Pings");
-    mGeneratePingsStrand = mContext->ioService->createStrand();
+    mGeneratePingsStrand = mContext->ioService->createStrand("AirTrafficControllerScenario GeneratePings");
     mGeneratePingPoller = new Poller(
         mGeneratePingsStrand,
         std::tr1::bind(&AirTrafficControllerScenario::generatePings, this),
+        "AirTrafficControllerScenario Generate Ping Poller",
         mNumPingsPerSecond > 1000 ? // Try to amortize out some of the
                                     // scheduling cost
         Duration::seconds(10.0/mNumPingsPerSecond) :
@@ -394,7 +396,8 @@ void AirTrafficControllerScenario::start() {
     Duration connect_phase = GetOptionValue<Duration>(OBJECT_CONNECT_PHASE);
     mContext->mainStrand->post(
         connect_phase,
-        std::tr1::bind(&AirTrafficControllerScenario::delayedStart, this)
+        std::tr1::bind(&AirTrafficControllerScenario::delayedStart, this),
+        "AirTrafficControllerScenario::delayedStart"
     );
 }
 void AirTrafficControllerScenario::delayedStart() {
@@ -436,7 +439,8 @@ void AirTrafficControllerScenario::delayedStart() {
             SILOG(oh, debug, "error during connect phase, retrying "<<connect_phase<<" later");
             mContext->mainStrand->post(
                 connect_phase,
-                std::tr1::bind(&AirTrafficControllerScenario::delayedStart, this)
+                std::tr1::bind(&AirTrafficControllerScenario::delayedStart, this),
+                "AirTrafficControllerScenario::delayedStart"
                 );
 
         }

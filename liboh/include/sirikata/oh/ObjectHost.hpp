@@ -249,8 +249,8 @@ public:
     Time currentLocalTime();
 
     /** Primary ODP send function. */
-    bool send(SpaceObjectReference& sporefsrc, const SpaceID& space, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload);
-    bool send(SpaceObjectReference& sporefsrc, const SpaceID& space, const uint16 src_port, const UUID& dest, const uint16 dest_port, MemoryReference payload);
+    bool send(SpaceObjectReference& sporefsrc, const SpaceID& space, const ObjectMessagePort src_port, const UUID& dest, const ObjectMessagePort dest_port, const std::string& payload);
+    bool send(SpaceObjectReference& sporefsrc, const SpaceID& space, const ObjectMessagePort src_port, const UUID& dest, const ObjectMessagePort dest_port, MemoryReference payload);
 
 
 
@@ -266,6 +266,12 @@ public:
     void hostedObjectDestroyed(const UUID& objid);
     //Feng:
     void updateCoordinator(const SpaceObjectReference &sporef_uuid, const bool& is_connect);
+
+    /** Lookup HostedObject by one of it's presence IDs. This may return an
+     *  empty pointer if no objects have tried to connect. The returned object
+     *  may also still be in the process of connecting that presence.
+     */
+    HostedObjectPtr getHostedObject(const SpaceObjectReference &id) const;
 
     /** Lookup the SST stream for a particular object. */
     typedef SST::Stream<SpaceObjectReference> SSTStream;
@@ -288,9 +294,6 @@ public:
     ObjectScriptManager* getScriptManager(const String& id);
 
   private:
-
-    /** Lookup HostedObject by private UUID. */
-    HostedObjectPtr getHostedObject(const SpaceObjectReference &id) const;
 
     // SpaceNodeSessionListener Interface -- forwards on to real listeners
     virtual void onSpaceNodeSession(const OHDP::SpaceNodeID& id, OHDPSST::Stream::Ptr sn_stream) { fireSpaceNodeSession(id, sn_stream); }

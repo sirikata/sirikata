@@ -32,7 +32,6 @@
 
 #include "MasterPintoServerQuerier.hpp"
 
-#include <sirikata/core/network/IOServiceFactory.hpp>
 #include <sirikata/core/network/StreamFactory.hpp>
 #include <sirikata/core/options/CommonOptions.hpp>
 #include <sirikata/core/options/Options.hpp>
@@ -47,7 +46,7 @@ namespace Sirikata {
 
 MasterPintoServerQuerier::MasterPintoServerQuerier(SpaceContext* ctx, const String& params)
  : mContext(ctx),
-   mIOStrand(ctx->ioService->createStrand()),
+   mIOStrand(ctx->ioService->createStrand("MasterPintoServerQuerier")),
    mConnecting(false),
    mConnected(false),
    mGaveID(false),
@@ -112,14 +111,20 @@ void MasterPintoServerQuerier::updateRegion(const BoundingBox3f& region) {
     MP_LOG(debug, "Updating region " << region);
     mRegion = region;
     mRegionDirty = true;
-    mIOStrand->post(std::tr1::bind(&MasterPintoServerQuerier::tryServerUpdate, this));
+    mIOStrand->post(
+        std::tr1::bind(&MasterPintoServerQuerier::tryServerUpdate, this),
+        "MasterPintoServerQuerier::tryServerUpdate"
+    );
 }
 
 void MasterPintoServerQuerier::updateLargestObject(float max_radius) {
     MP_LOG(debug, "Updating largest object " << max_radius);
     mMaxRadius = max_radius;
     mMaxRadiusDirty = true;
-    mIOStrand->post(std::tr1::bind(&MasterPintoServerQuerier::tryServerUpdate, this));
+    mIOStrand->post(
+        std::tr1::bind(&MasterPintoServerQuerier::tryServerUpdate, this),
+        "MasterPintoServerQuerier::tryServerUpdate"
+    );
 }
 
 void MasterPintoServerQuerier::updateQuery(const SolidAngle& min_angle, uint32 max_results) {
@@ -127,7 +132,10 @@ void MasterPintoServerQuerier::updateQuery(const SolidAngle& min_angle, uint32 m
     mAggregateQuery = min_angle;
     mAggregateQueryMaxResults = max_results;
     mAggregateQueryDirty = true;
-    mIOStrand->post(std::tr1::bind(&MasterPintoServerQuerier::tryServerUpdate, this));
+    mIOStrand->post(
+        std::tr1::bind(&MasterPintoServerQuerier::tryServerUpdate, this),
+        "MasterPintoServerQuerier::tryServerUpdate"
+    );
 }
 
 void MasterPintoServerQuerier::tryServerUpdate() {

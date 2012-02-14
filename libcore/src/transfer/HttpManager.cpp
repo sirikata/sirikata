@@ -66,7 +66,7 @@ HttpManager::HttpManager()
     EMPTY_PARSER_SETTINGS.on_message_complete = 0;
 
     //Making a single thread IOService to handle requests
-    mServicePool = new IOServicePool(2);
+    mServicePool = new IOServicePool("HttpManager", 2);
 
     //Add a dummy IOWork so that the IOService stays running
     mServicePool->startWork();
@@ -92,8 +92,12 @@ HttpManager::~HttpManager() {
     delete mServicePool;
 }
 
-void HttpManager::postCallback(IOCallback cb) {
-    mServicePool->service()->post(cb);
+void HttpManager::postCallback(IOCallback cb, const char* tag) {
+    mServicePool->service()->post(cb, tag);
+}
+
+void HttpManager::postCallback(const Duration& waitFor, IOCallback cb, const char* tag) {
+    mServicePool->service()->post(waitFor, cb, tag);
 }
 
 String HttpManager::methodAsString(HTTP_METHOD m) {
@@ -128,7 +132,10 @@ void HttpManager::makeRequest(Sirikata::Network::Address addr, HTTP_METHOD metho
     if (nparsed != req.length()) {
         SILOG(transfer, warning, "Parsing http request failed");
         boost::system::error_code ec;
-        postCallback(std::tr1::bind(cb, std::tr1::shared_ptr<HttpResponse>(), REQUEST_PARSING_FAILED, ec));
+        postCallback(
+            std::tr1::bind(cb, std::tr1::shared_ptr<HttpResponse>(), REQUEST_PARSING_FAILED, ec),
+            "HttpManager::makeRequest callback"
+        );
         return;
     }
 
@@ -199,8 +206,12 @@ String HttpManager::formatPath(const String& path, const QueryParameters& query_
     return formatted.str();
 }
 
-String HttpManager::formatURL(const String& host, const String& path, const QueryParameters& query_params) {
-    return "http://" + host + formatPath(path, query_params);
+String HttpManager::formatURL(const String& host, const String& service, const String& path, const QueryParameters& query_params) {
+    String service_part = "";
+    // FIXME sanity check service is a port number?
+    if (!service.empty() && service != "http" && service != "80")
+        service_part = ":" + service;
+    return "http://" + host + service_part + formatPath(path, query_params);
 }
 
 void HttpManager::head(

@@ -50,8 +50,8 @@ class TimeSteppedSimulation : public Simulation, public Poller {
 public:
     TimeSteppedSimulation(
         Context* ctx, const Duration& rate, const String& name,
-        Network::IOStrandPtr strand, bool accurate=false)
-     : Poller(ctx->mainStrand, std::tr1::bind(&TimeSteppedSimulation::indirectPoll, this), rate, accurate),
+        Network::IOStrand* strand, const char* cb_tag, bool accurate=false)
+     : Poller(strand, std::tr1::bind(&TimeSteppedSimulation::indirectPoll, this), cb_tag, rate, accurate),
        mProfiler(NULL)
     {
         if (ctx != NULL && !name.empty())

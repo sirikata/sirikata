@@ -38,8 +38,8 @@
 #endif
 namespace Sirikata {
 
-PollingService::PollingService(Network::IOStrand* str, const Duration& max_rate, Context* ctx, const String& name, bool accurate)
- : PollerService(str, std::tr1::bind(&PollingService::indirectPoll, this), max_rate, accurate),
+PollingService::PollingService(Network::IOStrand* str, const char* cb_tag, const Duration& max_rate, Context* ctx, const String& name, bool accurate)
+ : PollerService(str, std::tr1::bind(&PollingService::indirectPoll, this), cb_tag, max_rate, accurate),
    mProfiler(NULL)
 {
     if (ctx != NULL && !name.empty())

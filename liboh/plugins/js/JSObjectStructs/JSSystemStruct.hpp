@@ -38,6 +38,9 @@ struct JSSystemStruct
     v8::Handle<v8::Value> struct_canProxChangeQuery();
     v8::Handle<v8::Value> struct_canImport();
 
+    v8::Handle<v8::Value> pushEvalContextScopeDirectory(const String& newDir);
+    v8::Handle<v8::Value> popEvalContextScopeDirectory();
+    
     v8::Handle<v8::Value> checkResources();
     v8::Handle<v8::Value> struct_evalInGlobal(const String& native_contents, ScriptOrigin* sOrigin);
     v8::Handle<v8::Value> checkHeadless();
@@ -86,8 +89,8 @@ struct JSSystemStruct
     v8::Handle<v8::Value> restorePresence(PresStructRestoreParams& psrp);
 
 
-    v8::Handle<v8::Value> debug_fileWrite(const String& strToWrite,const String& filename);
-    v8::Handle<v8::Value> debug_fileRead(const String& filename);
+    v8::Handle<v8::Value> debug_fileWrite(String& strToWrite,String& filename);
+    v8::Handle<v8::Value> debug_fileRead(String& filename);
 
     v8::Handle<v8::Value> httpRequest(Sirikata::Network::Address addr, Transfer::HttpManager::HTTP_METHOD method, String request, v8::Persistent<v8::Function> cb);
 

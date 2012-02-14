@@ -308,13 +308,24 @@ void EmersonMessagingManager::writeMessage(
     // FIXME we're not pushing data directly here because it doesn't seem like
     // you can actually find out how much data was successfully pushed in. what
     // if we have a very large message?
-    streamPtr->createChildStream(
+    int retCode = streamPtr->createChildStream(
         std::tr1::bind(&EmersonMessagingManager::writeMessageSubstream,
             this, alive, _1, _2, msg, sender, receiver,
             retriesSameStream,retriesNewStream),
         NULL, 0,
         EMERSON_RELIABLE_COMMUNICATION_PORT, EMERSON_RELIABLE_COMMUNICATION_PORT
     );
+
+    
+    if (retCode == -1)
+    {
+        //createChildStream failed.  close streamPtr and create a new stream to
+        //try to send the message.  (Setting the retriesSameStream to zero and
+        //isRetry to true should cause this to happen.)
+        sendScriptCommMessageReliable(
+            sender, receiver, msg, 0,--retriesNewStream,true);
+    }
+    
 }
 
 void EmersonMessagingManager::writeMessageSubstream(
@@ -358,7 +369,8 @@ void EmersonMessagingManager::writeData(Liveness::Token alive, SSTStreamPtr stre
         String restToWrite = msg.substr(bytesWritten);
         mMainContext->mainStrand->post(
             Duration::milliseconds((int64)20),
-            std::tr1::bind(&EmersonMessagingManager::writeData, this, livenessToken(), streamPtr, restToWrite, sender, receiver)
+            std::tr1::bind(&EmersonMessagingManager::writeData, this, livenessToken(), streamPtr, restToWrite, sender, receiver),
+            "EmersonMessagingManager::writeData"
         );
         JSLOG(detailed,"More sript data to write to stream.  Queueing future write operation.");
     }

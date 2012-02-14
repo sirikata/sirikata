@@ -101,7 +101,15 @@ bool CoordinatorSessionManager::ObjectConnections::exists(const SpaceObjectRefer
 }
 
 CoordinatorSessionManager::ConnectingInfo& CoordinatorSessionManager::ObjectConnections::connectingTo(const SpaceObjectReference& sporef_objid, ServerID connecting_to) {
-    mObjectInfo[sporef_objid].connectingTo = connecting_to;
+    if (mObjectInfo[sporef_objid].connectedTo==NullServerID) {
+        mObjectInfo[sporef_objid].connectingTo = connecting_to;
+    }else if (connecting_to!=mObjectInfo[sporef_objid].connectedTo) {
+        // TODO(ewencp) uhhh, this doesn't look right. How can we just unset
+        // connectedTo without requesting a disconnect or migration?
+        mObjectInfo[sporef_objid].connectedTo = NullServerID;
+    }else {
+        //SILOG(oh,error,"Interesting case hit");
+    }
     return mObjectInfo[sporef_objid].connectingInfo;
 }
 
@@ -120,8 +128,7 @@ ServerID CoordinatorSessionManager::ObjectConnections::handleConnectSuccess(cons
         mObjectInfo[sporef_obj].connectedAs = sporef_obj;
 
         parent->mSpaceObjectRef = sporef_obj;
-
-        //SESSION_LOG(info,"Connection success: " << sporef_obj.toRawHexData());
+        SESSION_LOG(info,"Connection success: " << sporef_obj.toRawHexData());
 
         // FIXME shoudl be setting internal/external ID maps here
         // Look up internal ID so the OH can find the right object without
@@ -241,11 +248,11 @@ CoordinatorSessionManager::CoordinatorSessionManager(
     ObjectMigrationCallback objmigrationto_cb,
     ObjectOHMigrationCallback ohmig_cb
 )
- : PollingService(ctx->mainStrand, Duration::seconds(1.f), ctx, "Space Server"),
+ : PollingService(ctx->mainStrand, "CoordinatorSessionManager Poll", Duration::seconds(1.f), ctx, "Coordinator Session Manager"),
    OHDP::DelegateService( std::tr1::bind(&CoordinatorSessionManager::createDelegateOHDPPort, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2) ),
    mContext( ctx ),
    mSpace(space),
-   mIOStrand( ctx->ioService->createStrand() ),
+   mIOStrand( ctx->ioService->createStrand("CoordinatorSessionManager") ),
    mServerIDMap(sidmap),
    mObjectConnectedCallback(conn_cb),
    mObjectMessageHandlerCallback(msg_cb),
@@ -415,8 +422,8 @@ void CoordinatorSessionManager::openConnectionStartSession(const SpaceObjectRefe
     if (conn == NULL) {
         SESSION_LOG(warn,"Couldn't initiate connection for " << sporef_uuid);
         // FIXME disconnect? retry?
-	ConnectingInfo ci;
-        //mObjectConnections.getConnectCallback(sporef_uuid)(mSpace, ObjectReference::null(), NullServerID, ci);
+        ConnectingInfo ci;
+        mObjectConnections.getConnectCallback(sporef_uuid)(mSpace, ObjectReference::null(), NullServerID, ci);
         return;
     }
 
@@ -436,14 +443,19 @@ void CoordinatorSessionManager::openConnectionStartSession(const SpaceObjectRefe
               serializePBJMessage(session_msg),
             conn->server()
             )) {
-        mContext->mainStrand->post(Duration::seconds(0.05),std::tr1::bind(&CoordinatorSessionManager::retryOpenConnection,this,sporef_uuid,conn->server()));
+        mContext->mainStrand->post(
+			Duration::seconds(0.05),
+			std::tr1::bind(&CoordinatorSessionManager::retryOpenConnection,this,sporef_uuid,conn->server()),
+			"CoordinatorSessionManager::retryOpenConnection"
+		);
     }
     else {
         // Setup a retry in case something gets dropped -- must check status and
         // retries entire connection process
         mContext->mainStrand->post(
             Duration::seconds(3),
-            std::tr1::bind(&CoordinatorSessionManager::checkConnectedAndRetry, this, sporef_uuid, conn->server())
+            std::tr1::bind(&CoordinatorSessionManager::checkConnectedAndRetry, this, sporef_uuid, conn->server()),
+			"CoordinatorSessionManager::checkConnectedAndRetry"
         );
     }
 }
@@ -481,8 +493,8 @@ bool CoordinatorSessionManager::delegateOHDPPortSend(const OHDP::Endpoint& sourc
     // ObjectMessage) and the source NodeID is just null (always null for
     // local).
     return send(
-        SpaceObjectReference(source_ep.space(), ObjectReference(UUID::null())), (uint16)source_ep.port(),
-        UUID::null(), (uint16)dest_ep.port(),
+        SpaceObjectReference(source_ep.space(), ObjectReference(UUID::null())), source_ep.port(),
+        UUID::null(), dest_ep.port(),
         String((char*)payload.data(), payload.size()),
         (ServerID)dest_ep.node()
     );
@@ -493,7 +505,7 @@ void CoordinatorSessionManager::timeSyncUpdated() {
     mObjectConnections.invokeDeferredCallbacks();
 }
 
-bool CoordinatorSessionManager::send(const SpaceObjectReference& sporef_src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload, ServerID dest_server) {
+bool CoordinatorSessionManager::send(const SpaceObjectReference& sporef_src, const ObjectMessagePort src_port, const UUID& dest, const ObjectMessagePort dest_port, const std::string& payload, ServerID dest_server) {
     Sirikata::SerializationCheck::Scoped sc(&mSerialization);
 
     if (mShuttingDown)
@@ -529,7 +541,7 @@ bool CoordinatorSessionManager::send(const SpaceObjectReference& sporef_src, con
     return pushed;
 }
 
-void CoordinatorSessionManager::sendRetryingMessage(const SpaceObjectReference& sporef_src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload, ServerID dest_server, Network::IOStrand* strand, const Duration& rate) {
+void CoordinatorSessionManager::sendRetryingMessage(const SpaceObjectReference& sporef_src, const ObjectMessagePort src_port, const UUID& dest, const ObjectMessagePort dest_port, const std::string& payload, ServerID dest_server, Network::IOStrand* strand, const Duration& rate) {
     bool sent = send(
         sporef_src, src_port,
         dest, dest_port,
@@ -544,7 +556,8 @@ void CoordinatorSessionManager::sendRetryingMessage(const SpaceObjectReference& 
                 dest, dest_port,
                 payload,
                 dest_server,
-                strand, rate)
+                strand, rate),
+			"CoordinatorSessionManager::sendRetryingMessage"
         );
     }
 }
@@ -755,7 +768,9 @@ void CoordinatorSessionManager::handleSpaceConnection(const Sirikata::Network::S
         SESSION_LOG(error,"Disconnected from OH Coordinator: " << reason);
         delete conn;
         mConnections.erase(sid);
-        mTimeSyncClient->removeNode(OHDP::NodeID(sid));
+        if (mTimeSyncClient != NULL)
+            mTimeSyncClient->removeNode(OHDP::NodeID(sid));
+        
         // Notify connected objects
         mObjectConnections.handleUnderlyingDisconnect(sid, reason);
         // If we have no connections left, we have to give up on TimeSync
@@ -776,7 +791,8 @@ void CoordinatorSessionManager::handleSpaceSession(ServerID sid, SpaceNodeConnec
 
 void CoordinatorSessionManager::scheduleHandleServerMessages(SpaceNodeConnection* conn) {
     mContext->mainStrand->post(
-        std::tr1::bind(&CoordinatorSessionManager::handleServerMessages, this, conn)
+        std::tr1::bind(&CoordinatorSessionManager::handleServerMessages, this, conn),
+		"CoordinatorSessionManager::handleServerMessages"
     );
 }
 

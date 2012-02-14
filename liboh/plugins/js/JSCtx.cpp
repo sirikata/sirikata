@@ -7,10 +7,14 @@ namespace JS
 {
 
 
-JSCtx::JSCtx(Context* ctx,Network::IOStrandPtr oStrand,v8::Isolate* is)
- : Context("JS", ctx->ioService, ctx->mainStrand, NULL,Time::null()),
-   objStrand(oStrand),
+JSCtx::JSCtx(
+    Context* ctx,Network::IOStrandPtr oStrand,
+    Network::IOStrandPtr vmStrand,v8::Isolate* is)
+ : objStrand(oStrand),
+   visManStrand(vmStrand),
+   mainStrand(ctx->mainStrand),
    mIsolate(is),
+   internalContext(ctx),
    isStopped(false),
    isInitialized(false),
    mCheck()
@@ -19,10 +23,25 @@ JSCtx::JSCtx(Context* ctx,Network::IOStrandPtr oStrand,v8::Isolate* is)
 
 JSCtx::~JSCtx()
 {
-    // if (v8::Isolate::GetCurrent())
-    //     mIsolate->Exit();
+    mVisibleTemplate.Dispose();
+    mPresenceTemplate.Dispose();
+    mContextTemplate.Dispose();
+    mUtilTemplate.Dispose();
+    mInvokableObjectTemplate.Dispose();
+    mSystemTemplate.Dispose();
+    mTimerTemplate.Dispose();
+    mContextGlobalTemplate.Dispose();
+
+    // The manager tracks the templates so they can be reused by all the
+    // individual scripts.
+    mVec3Template.Dispose();
+    mQuaternionTemplate.Dispose();
+    mPatternTemplate.Dispose();
+
+    if (mIsolate == v8::Isolate::GetCurrent())
+        mIsolate->Exit();
     
-    // mIsolate->Dispose();
+    mIsolate->Dispose();
 }
 
 Sirikata::SerializationCheck* JSCtx::serializationCheck()
@@ -49,6 +68,12 @@ void JSCtx::stop()
 {
     isStopped = true;
 }
+
+Network::IOService* JSCtx::getIOService()
+{
+    return internalContext->ioService;
+}
+
 
 
 } //end namespace JS

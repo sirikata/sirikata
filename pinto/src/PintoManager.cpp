@@ -48,7 +48,7 @@ namespace Sirikata {
 
 PintoManager::PintoManager(PintoContext* ctx)
  : mContext(ctx),
-   mStrand(ctx->ioService->createStrand()),
+   mStrand(ctx->ioService->createStrand("PintoManager")),
    mLastTime(Time::null()),
    mDt(Duration::milliseconds((int64)1))
 {

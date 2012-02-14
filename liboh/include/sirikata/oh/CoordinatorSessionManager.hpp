@@ -52,7 +52,13 @@ namespace Sirikata {
 
 class ServerIDMap;
 
-/** CoordinatorSessionManager provides most of the session management functionality for
+namespace Protocol {
+namespace Session {
+class Container;
+}
+}
+
+/** SessionManager provides most of the session management functionality for
  * object hosts. It uses internal object host IDs (UUIDs) to track objects
  * requests and open sessions, and also handles migrating connections between
  * space servers.
@@ -90,7 +96,7 @@ class SIRIKATA_OH_EXPORT CoordinatorSessionManager
     // Notifies the ObjectHost of object connection that was closed, including a
     // reason.
     typedef std::tr1::function<void(const SpaceObjectReference&, Disconnect::Code)> ObjectDisconnectedCallback;
-    //Feng:
+
     typedef std::tr1::function<void(const UUID&, const String&)> ObjectMigrationCallback;
     typedef std::tr1::function<void(const UUID&, const String&, const String&, const String&)> ObjectOHMigrationCallback;
 
@@ -118,7 +124,6 @@ class SIRIKATA_OH_EXPORT CoordinatorSessionManager
     void disconnect(const SpaceObjectReference& id);
     void migrateRequest(const UUID& uuid);
 
-    //Feng
     void updateCoordinator(const SpaceObjectReference& sporef_objid, const UUID& uuid, const String& oh_name, const bool& is_connect);
     void handleEntityMigrationReady(const UUID& entity_id);
 
@@ -143,7 +148,7 @@ class SIRIKATA_OH_EXPORT CoordinatorSessionManager
     // allow this to act as an OHDP::Service while still in the connecting phase
     // (no callback from SpaceNodeConnection yet) so we can build OHDP::SST
     // streams as part of the connection process.
-    bool send(const SpaceObjectReference& sporef_objid, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload, ServerID dest_server = NullServerID);
+    bool send(const SpaceObjectReference& sporef_objid, const ObjectMessagePort src_port, const UUID& dest, const ObjectMessagePort dest_port, const std::string& payload, ServerID dest_server = NullServerID);
 
     SSTStreamPtr getSpaceStream(const ObjectReference& objectID);
 
@@ -191,7 +196,7 @@ private:
     void retryOpenConnection(const SpaceObjectReference& sporef_uuid,ServerID sid);
 
     // Utility method which keeps trying to resend a message
-    void sendRetryingMessage(const SpaceObjectReference& sporef_src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload, ServerID dest_server, Network::IOStrand* strand, const Duration& rate);
+    void sendRetryingMessage(const SpaceObjectReference& sporef_src, const ObjectMessagePort src_port, const UUID& dest, const ObjectMessagePort dest_port, const std::string& payload, ServerID dest_server, Network::IOStrand* strand, const Duration& rate);
 
     /** SpaceNodeConnection initiation. */
 

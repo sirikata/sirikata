@@ -264,7 +264,8 @@ void buildStream(TcpSstHeaderArray *buffer,
         // Setup a timer to clean up the sockets if we don't complete it in time
         data->strand->post(
             Duration::seconds(10),
-            std::tr1::bind(&handleBuildStreamTimeout, context)
+            std::tr1::bind(&handleBuildStreamTimeout, context),
+            "handleBuildStreamTimeout"
         );
     }
     if ((int)numConnections!=where->second.mNumSockets) {

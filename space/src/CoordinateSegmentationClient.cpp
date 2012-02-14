@@ -32,7 +32,6 @@
 
 #include "CoordinateSegmentationClient.hpp"
 #include <sirikata/core/util/Platform.hpp>
-#include <sirikata/core/network/IOServiceFactory.hpp>
 #include <sirikata/core/network/IOStrandImpl.hpp>
 
 #include <algorithm>
@@ -69,7 +68,7 @@ using Sirikata::Network::TCPListener;
 CoordinateSegmentationClient::CoordinateSegmentationClient(SpaceContext* ctx, const BoundingBox3f& region, const Vector3ui32& perdim, ServerIDMap* sidmap)
   : CoordinateSegmentation(ctx),  mBSPTreeValid(false),
     mAvailableServersCount(0), mTopLevelRegion(NULL),
-    mIOService(Network::IOServiceFactory::makeIOService()),
+    mIOService(new Network::IOService("CoordinationSegmentationClient")),
     mSidMap(sidmap), mLeaseExpiryTime(Timer::now() + Duration::milliseconds(60000.0))
 {
   mTopLevelRegion.mBoundingBox = BoundingBox3f( Vector3f(0,0,0), Vector3f(0,0,0));

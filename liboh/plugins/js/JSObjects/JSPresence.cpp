@@ -511,8 +511,8 @@ v8::Handle<v8::Value> setQuery(const v8::Arguments& args)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
 
 
-    if (!NumericValidate(args[0]))
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in setQuery function. Wrong argument: require a number for query angle.")) );
+    if (!StringValidate(args[0]))
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in setQuery function. Wrong argument: require a string for query angle.")) );
     String new_qa(StringExtract(args[0]));
 
     return mStruct->setQueryFunction(new_qa);

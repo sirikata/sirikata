@@ -52,6 +52,12 @@ namespace Sirikata {
 
 class ServerIDMap;
 
+namespace Protocol {
+namespace Session {
+class Container;
+}
+}
+
 /** SessionManager provides most of the session management functionality for
  * object hosts. It uses internal object host IDs (UUIDs) to track objects
  * requests and open sessions, and also handles migrating connections between
@@ -166,7 +172,7 @@ class SIRIKATA_OH_EXPORT SessionManager
     // allow this to act as an OHDP::Service while still in the connecting phase
     // (no callback from SpaceNodeConnection yet) so we can build OHDP::SST
     // streams as part of the connection process.
-    bool send(const SpaceObjectReference& sporef_objid, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload, ServerID dest_server = NullServerID);
+    bool send(const SpaceObjectReference& sporef_objid, const ObjectMessagePort src_port, const UUID& dest, const ObjectMessagePort dest_port, const std::string& payload, ServerID dest_server = NullServerID);
 
     SSTStreamPtr getSpaceStream(const ObjectReference& objectID);
 
@@ -204,7 +210,13 @@ private:
     void handleServerMessage(ObjectMessage* msg, ServerID sid);
 
     // Handles session messages received from the server -- connection replies, migration requests, etc.
-    void handleSessionMessage(Sirikata::Protocol::Object::ObjectMessage* msg);
+    void handleSessionMessage(Sirikata::Protocol::Object::ObjectMessage* msg, ServerID from_server);
+    // Handlers for specific parts of session messages
+    void handleSessionMessageConnectResponseSuccess(ServerID from_server, const SpaceObjectReference& sporef_obj, Sirikata::Protocol::Session::Container& session_msg);
+    void handleSessionMessageConnectResponseRedirect(ServerID from_server, const SpaceObjectReference& sporef_obj, Sirikata::Protocol::Session::Container& session_msg);
+    void handleSessionMessageConnectResponseError(ServerID from_server, const SpaceObjectReference& sporef_obj, Sirikata::Protocol::Session::Container& session_msg);
+    void handleSessionMessageInitMigration(ServerID from_server, const SpaceObjectReference& sporef_obj, Sirikata::Protocol::Session::Container& session_msg);
+
 
     // This gets invoked when the connection really is ready -- after
     // successful response and we have time sync info. It does some
@@ -216,8 +228,18 @@ private:
 
     void retryOpenConnection(const SpaceObjectReference& sporef_uuid,ServerID sid);
 
+    // Utility for sending the connection ack
+    void sendConnectSuccessAck(const SpaceObjectReference& sporef, ServerID connected_to);
+
+    // Utility for sending the disconnection request. Session seqno is passed
+    // explicitly instead of looking it up via the sporef so that this can be
+    // used to request disconnections for sessions we don't have a record for
+    // (e.g. because they were cleared out due to object cleanup and then we got
+    // the connection success response back).
+    void sendDisconnectMessage(const SpaceObjectReference& sporef, ServerID connected_to, uint64 session_seqno);
+
     // Utility method which keeps trying to resend a message
-    void sendRetryingMessage(const SpaceObjectReference& sporef_src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload, ServerID dest_server, Network::IOStrand* strand, const Duration& rate);
+    void sendRetryingMessage(const SpaceObjectReference& sporef_src, const ObjectMessagePort src_port, const UUID& dest, const ObjectMessagePort dest_port, const std::string& payload, ServerID dest_server, Network::IOStrand* strand, const Duration& rate);
 
     /** SpaceNodeConnection initiation. */
 
@@ -241,11 +263,16 @@ private:
 
     /** Object session initiation. */
 
-    // Final callback in session initiation -- we have all the info and now just have to return it to the object
-    void openConnectionStartSession(const SpaceObjectReference& sporef_uuid, SpaceNodeConnection* conn);
+    // Final callback in session initiation -- we have all the info and now just
+    // have to return it to the object. is_retry indicates whether this is
+    // retrying (reuse the existing request ID) or new (generate a new session
+    // ID/seqno)
+    void openConnectionStartSession(const SpaceObjectReference& sporef_uuid, SpaceNodeConnection* conn, bool is_retry);
 
     // Timeout handler for initial session message -- checks if the connection
-    // succeeded and, if necessary, retries
+    // succeeded and, if necessary, retries. Requires a seqno so the identical
+    // request can be identified if it was retransmitted because it took too
+    // long to get a response but was received
     void checkConnectedAndRetry(const SpaceObjectReference& sporef_uuid, ServerID connTo);
 
 
@@ -283,8 +310,6 @@ private:
     TimeProfiler::Stage* mHandleMessageProfiler;
 
     Sirikata::SerializationCheck mSerialization;
-
-    // Main strand only
 
     // Callbacks for parent ObjectHost
     ObjectConnectedCallback mObjectConnectedCallback;
@@ -333,6 +358,12 @@ private:
         );
 
         bool exists(const SpaceObjectReference& sporef_objid);
+
+        void clearSeqno(const SpaceObjectReference& sporef_objid);
+        // Get the seqno for an outstanding request
+        uint64 getSeqno(const SpaceObjectReference& sporef_objid);
+        // Get a new seqno, and store it
+        uint64 updateSeqno(const SpaceObjectReference& sporef_objid);
 
         // Mark the object as connecting to the given server
         ConnectingInfo& connectingTo(const SpaceObjectReference& obj, ServerID connecting_to);
@@ -384,10 +415,24 @@ private:
     private:
         SessionManager* parent;
 
+        // Source for seqnos for Session messages
+        uint64 mSeqnoSource;
+
         struct ObjectInfo {
             ObjectInfo();
 
             ConnectingInfo connectingInfo;
+
+            // This is essentially a unique session ID for this
+            // object. Note that this shouldn't change as long as the
+            // same HostedObject is requesting a session *with the
+            // same space server*. So, it will remain the same for all
+            // session requests while a HostedObject remains alive and
+            // no migrations occur.  This allows us to disambiguate
+            // replies from the space server which may come from
+            // different requests while the ObjectHost remains
+            // connected to the space server.
+            uint64 seqno;
 
             // Server currently being connected to
             ServerID connectingTo;

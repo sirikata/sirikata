@@ -186,10 +186,16 @@ public:
     virtual TimedMotionVector3f location() const { return mUpdate.location(); }
     virtual uint64 location_seqno() const { return mUpdate.getUpdateSeqNo(SequencedPresenceProperties::LOC_POS_PART); }
 
+    // Overridden because PresenceProperties work with local time
+    virtual TimedMotionVector3f locationWithLocalTime(ObjectHost* oh, const SpaceID& from_space) const { return location(); }
+
     // Orientation
     virtual bool has_orientation() const { return true; }
     virtual TimedMotionQuaternion orientation() const { return mUpdate.orientation(); }
     virtual uint64 orientation_seqno() const { return mUpdate.getUpdateSeqNo(SequencedPresenceProperties::LOC_ORIENT_PART); }
+
+    // Overridden because PresenceProperties work with local time
+    virtual TimedMotionQuaternion orientationWithLocalTime(ObjectHost* oh, const SpaceID& from_space) const { return orientation(); }
 
     // Bounds
     virtual bool has_bounds() const { return true; }

@@ -101,7 +101,8 @@ private:
         else
             mStream->getContext()->mainStrand->post(
                 retry_rate,
-                std::tr1::bind(&RecordSSTStream::writeSomeData, this, alive)
+                std::tr1::bind(&RecordSSTStream::writeSomeData, this, alive),
+                "RecordSSTStream::writeSomeData"
             );
     }
 

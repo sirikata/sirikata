@@ -38,16 +38,17 @@
 #endif
 namespace Sirikata {
 
-Poller::Poller(Network::IOStrand* str, const Network::IOCallback& cb, const Duration& max_rate, bool accurate)
+Poller::Poller(Network::IOStrand* str, const Network::IOCallback& cb, const char* cb_tag, const Duration& max_rate, bool accurate)
  : mStrand(str),
    mTimer( Network::IOTimer::create(str->service()) ),
    mMaxRate(max_rate),
    mAccurate(accurate),
    mUnschedule(false),
-   mUserCB(cb)
+   mUserCB(cb),
+   mCBTag(cb_tag)
 {
     Network::IOTimerWPtr wtimer(mTimer->shared_from_this());
-    mCB= mStrand->wrap(std::tr1::bind(&Poller::handleExec, this, wtimer));
+    mCB = mStrand->wrap(std::tr1::bind(&Poller::handleExec, this, wtimer));
     mTimer->setCallback(mCB);
 }
 
@@ -56,7 +57,7 @@ Poller::~Poller() {
 
 void Poller::start() {
     // Always make the first callback run immediately
-    mStrand->post(mCB);
+    mStrand->post(mCB, mCBTag);
 }
 
 void Poller::setupNextTimeout(const Duration& user_time) {
@@ -64,14 +65,14 @@ void Poller::setupNextTimeout(const Duration& user_time) {
         if (user_time > mMaxRate) {
             // Uh oh, looks like we're going slower than the requested rate. If
             // this is hit consistently, you're probably doing it wrong.
-            mStrand->post(mCB);
+            mStrand->post(mCB, mCBTag);
         }
         else {
             mTimer->wait(mMaxRate-user_time);
         }
     }
     else {
-        mStrand->post( mCB );
+        mStrand->post( mCB, mCBTag );
     }
 }
 

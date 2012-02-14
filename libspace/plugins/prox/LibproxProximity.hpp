@@ -44,6 +44,10 @@
 
 #include <sirikata/space/PintoServerQuerier.hpp>
 
+#include <boost/multi_index_container.hpp>
+#include <boost/multi_index/member.hpp>
+#include <boost/multi_index/ordered_index.hpp>
+
 
 namespace Sirikata {
 
@@ -86,6 +90,7 @@ public:
     virtual void localObjectRemoved(const UUID& uuid, bool agg);
     virtual void localLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval);
     virtual void localBoundsUpdated(const UUID& uuid, bool agg, const BoundingSphere3f& newval);
+    virtual void replicaObjectRemoved(const UUID& uuid);
     virtual void replicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval);
 
     // CoordinateSegmentation::Listener Interface
@@ -124,6 +129,7 @@ public:
 
 
 private:
+    struct ProxQueryHandlerData;
 
     void handleObjectProximityMessage(const UUID& objid, void* buffer, uint32 length);
 
@@ -175,7 +181,10 @@ private:
     bool handlerShouldHandleObject(bool is_static_handler, bool is_global_handler, const UUID& obj_id, bool local, const TimedMotionVector3f& pos, const BoundingSphere3f& region, float maxSize);
     // The real handler for moving objects between static/dynamic
     void handleCheckObjectClass(bool is_local, const UUID& objid, const TimedMotionVector3f& newval);
-    void handleCheckObjectClassForHandlers(const UUID& objid, bool is_static, ProxQueryHandler* handlers[NUM_OBJECT_CLASSES]);
+    void handleCheckObjectClassForHandlers(const UUID& objid, bool is_static, ProxQueryHandlerData handlers[NUM_OBJECT_CLASSES]);
+    void trySwapHandlers(bool is_local, const UUID& objid, bool is_static);
+    void removeStaticObjectTimeout(const UUID& objid);
+    void processExpiredStaticObjectTimeouts();
 
     /**
        @param {uuid} obj_id The uuid of the object that we're sending proximity
@@ -242,14 +251,26 @@ private:
 
     // PROX Thread - Should only be accessed in methods used by the prox thread
 
-    void tickQueryHandler(ProxQueryHandler* qh[NUM_OBJECT_CLASSES]);
+    void tickQueryHandler(ProxQueryHandlerData qh[NUM_OBJECT_CLASSES]);
     void rebuildHandler(ObjectClass objtype);
 
+    typedef std::tr1::unordered_set<UUID, UUID::Hasher> ObjectIDSet;
+    struct ProxQueryHandlerData {
+        ProxQueryHandler* handler;
+        // Additions and removals that need to be processed on the
+        // next tick. These need to be handled carefully since they
+        // can be due to swapping between handlers. If they are
+        // processed in the wrong order we could end up generating
+        // [addition, removal] instead of [removal, addition] for
+        // queriers.
+        ObjectIDSet additions;
+        ObjectIDSet removals;
+    };
     // These track local objects and answer queries from other
     // servers.
     ServerQueryMap mServerQueries[NUM_OBJECT_CLASSES];
     InvertedServerQueryMap mInvertedServerQueries;
-    ProxQueryHandler* mServerQueryHandler[NUM_OBJECT_CLASSES];
+    ProxQueryHandlerData mServerQueryHandler[NUM_OBJECT_CLASSES];
     bool mServerDistance; // Using distance queries
     // Results from queries to other servers, so we know what we need to remove
     // on forceful disconnection
@@ -260,7 +281,7 @@ private:
     // answer queries for objects connected to this server.
     ObjectQueryMap mObjectQueries[NUM_OBJECT_CLASSES];
     InvertedObjectQueryMap mInvertedObjectQueries;
-    ProxQueryHandler* mObjectQueryHandler[NUM_OBJECT_CLASSES];
+    ProxQueryHandlerData mObjectQueryHandler[NUM_OBJECT_CLASSES];
     bool mObjectDistance; // Using distance queries
     PollerService mObjectHandlerPoller;
 
@@ -273,6 +294,34 @@ private:
     ServerSeqNoInfoMap mServerSeqNos;
     typedef std::tr1::unordered_map<UUID, SeqNoPtr, UUID::Hasher> ObjectSeqNoInfoMap;
     ObjectSeqNoInfoMap mObjectSeqNos;
+
+    // Track objects that have become static and, after a delay, need to be
+    // moved between trees. We track them by ID (to cancel due to movement or
+    // disconnect) and time (to process them efficiently as their timeouts
+    // expire).
+    struct StaticObjectTimeout {
+        StaticObjectTimeout(UUID id, Time _expires, bool l)
+         : objid(id),
+           expires(_expires),
+           local(l)
+        {}
+        UUID objid;
+        Time expires;
+        bool local;
+    };
+    // Tags used by ObjectInfoSet
+    struct objid_tag {};
+    struct expires_tag {};
+    typedef boost::multi_index_container<
+        StaticObjectTimeout,
+        boost::multi_index::indexed_by<
+            boost::multi_index::ordered_unique< boost::multi_index::tag<objid_tag>, BOOST_MULTI_INDEX_MEMBER(StaticObjectTimeout,UUID,objid) >,
+            boost::multi_index::ordered_non_unique< boost::multi_index::tag<expires_tag>, BOOST_MULTI_INDEX_MEMBER(StaticObjectTimeout,Time,expires) >
+            >
+        > StaticObjectTimeouts;
+    typedef StaticObjectTimeouts::index<objid_tag>::type StaticObjectsByID;
+    typedef StaticObjectTimeouts::index<expires_tag>::type StaticObjectsByExpiration;
+    StaticObjectTimeouts mStaticObjectTimeouts;
 
 
     // Threads: Thread-safe data used for exchange between threads

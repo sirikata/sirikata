@@ -42,8 +42,8 @@ namespace Sirikata
 
   AsyncCraqHybrid::AsyncCraqHybrid(SpaceContext* con, Network::IOStrand* strand_to_post_results_to, CraqObjectSegmentation* oseg)
   : ctx(con),
-    mGetStrand(con->ioService->createStrand()),
-    mSetStrand(con->ioService->createStrand()),
+    mGetStrand(con->ioService->createStrand("AsyncCraqHybrid GetStrand")),
+    mSetStrand(con->ioService->createStrand("AsyncCraqHybrid SetStrand")),
     aCraqGet(con,mGetStrand,strand_to_post_results_to,oseg),
     aCraqSet(con,mSetStrand,strand_to_post_results_to,oseg)
   {
@@ -51,8 +51,8 @@ namespace Sirikata
 
   void AsyncCraqHybrid::initialize(std::vector<CraqInitializeArgs> initArgs)
   {
-    mGetStrand->post(std::tr1::bind(&AsyncCraqGet::initialize,&aCraqGet,initArgs));
-    mSetStrand->post(std::tr1::bind(&AsyncCraqSet::initialize,&aCraqSet,initArgs));
+      mGetStrand->post(std::tr1::bind(&AsyncCraqGet::initialize,&aCraqGet,initArgs), "AsyncCraqGet::initialize");
+      mSetStrand->post(std::tr1::bind(&AsyncCraqSet::initialize,&aCraqSet,initArgs), "AsyncCraqSet::initialize");
   }
 
   void AsyncCraqHybrid::stop()
@@ -70,12 +70,12 @@ namespace Sirikata
 
   void AsyncCraqHybrid::set(CraqDataSetGet cdSet, uint64 trackingNumber)
   {
-    mSetStrand->post(std::tr1::bind(&AsyncCraqSet::set,&aCraqSet,cdSet, trackingNumber));
+      mSetStrand->post(std::tr1::bind(&AsyncCraqSet::set,&aCraqSet,cdSet, trackingNumber),"AsyncCraqSet::set");
   }
 
   void AsyncCraqHybrid::get(CraqDataSetGet cdGet, OSegLookupTraceToken* traceToken)
   {
-    mGetStrand->post(std::tr1::bind(&AsyncCraqGet::get,&aCraqGet, cdGet, traceToken));
+      mGetStrand->post(std::tr1::bind(&AsyncCraqGet::get,&aCraqGet, cdGet, traceToken), "AsyncCraqGet::get");
   }
 
   int AsyncCraqHybrid::queueSize()

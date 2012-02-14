@@ -38,7 +38,6 @@
 #include <sirikata/ogre/Camera.hpp>
 #include <sirikata/ogre/Entity.hpp>
 
-#include <sirikata/core/network/IOServiceFactory.hpp>
 #include <sirikata/core/network/IOService.hpp>
 #include <sirikata/core/network/IOWork.hpp>
 #include <sirikata/core/options/Options.hpp>
@@ -255,7 +254,12 @@ public:
 
 
 OgreRenderer::OgreRenderer(Context* ctx,Network::IOStrandPtr sStrand)
- : TimeSteppedSimulation(ctx, Duration::seconds(1.f/60.f), "Ogre Graphics", sStrand,true),
+ //note use of .get when passing iostrand pointer.  we need to insure that the
+ //lifetime of sstrand is greater than the polling service.  from emerson, this
+ //should be feasible if delete simulations before shut down an object.  Be very
+ //careful here though.
+ : TimeSteppedSimulation(ctx, Duration::seconds(1.f/60.f),
+     "Ogre Graphics", sStrand.get(), "Ogre Graphics", true),
    simStrand(sStrand),
    mContext(ctx),
    mQuitRequested(false),
@@ -289,7 +293,7 @@ OgreRenderer::OgreRenderer(Context* ctx,Network::IOStrandPtr sStrand)
 bool OgreRenderer::initialize(const String& options, bool with_berkelium) {
     ++sNumOgreSystems;
 
-    mParsingIOService = Network::IOServiceFactory::makeIOService();
+    mParsingIOService = new Network::IOService("Ogre Mesh Parsing");
     mParsingWork = new Network::IOWork(*mParsingIOService, "Ogre Mesh Parsing");
     mParsingThread = new Sirikata::Thread(std::tr1::bind(&Network::IOService::runNoReturn, mParsingIOService));
 
@@ -635,7 +639,7 @@ bool OgreRenderer::loadBuiltinPlugins () {
 OgreRenderer::~OgreRenderer() {
     mParsingThread->join();
     delete mParsingThread;
-    Network::IOServiceFactory::destroyIOService(mParsingIOService);
+    delete mParsingIOService;
 
     {
         SceneEntitiesMap toDelete;
@@ -846,25 +850,13 @@ void OgreRenderer::postFrame(Task::LocalTime current, Duration frameTime) {
 
 void OgreRenderer::poll()
 {
-    simStrand->post(
-        std::tr1::bind(&OgreRenderer::iPoll,this,
-            livenessToken()));
-}
-
-void OgreRenderer::iPoll(Liveness::Token rendererAlive)
-{
-    if (!rendererAlive) return;
-    Liveness::Lock locked(rendererAlive);
-    if (!locked)
-        return;
-
     if (!initialized)
         return;
 
     if (stopped)
         return;
 
-    
+
     Task::LocalTime curFrameTime(Task::LocalTime::now());
 
     Duration frameTime=curFrameTime-mLastFrameTime;
@@ -887,7 +879,8 @@ void OgreRenderer::stop()
 {
     simStrand->post(
         std::tr1::bind(&OgreRenderer::iStop, this,
-            livenessToken()));
+            livenessToken()),
+        "OgreRenderer::iStop");
 }
 
 void OgreRenderer::iStop(Liveness::Token rendererAlive)
@@ -896,9 +889,9 @@ void OgreRenderer::iStop(Liveness::Token rendererAlive)
     Liveness::Lock locked(rendererAlive);
     if (!locked)
         return;
-    
+
     while (! initialized){}
-    
+
     delete mParsingWork;
     TimeSteppedSimulation::stop();
     stopped = true;
@@ -1007,7 +1000,8 @@ void OgreRenderer::parseMesh(
 {
     mParsingIOService->post(
         std::tr1::bind(&OgreRenderer::parseMeshWork, this,
-            livenessToken(),metadata, fp, data, cb)
+            livenessToken(),metadata, fp, data, cb),
+        "OgreRenderer::parseMeshWork"
     );
 }
 
@@ -1022,12 +1016,14 @@ void OgreRenderer::parseMeshWork(
     if (!locked)
         return;
 
-    
+
     if (stopped)
         return;
-    
+
     Mesh::VisualPtr parsed = parseMeshWorkSync(metadata, fp, data);
-    simStrand->post(std::tr1::bind(cb,parsed));
+    simStrand->post(std::tr1::bind(cb,parsed),
+        "OgreRenderer::parseMeshWork callback"
+    );
 }
 
 Mesh::VisualPtr OgreRenderer::parseMeshWorkSync(const Transfer::RemoteFileMetadata& metadata, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data) {

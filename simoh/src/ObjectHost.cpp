@@ -164,13 +164,13 @@ void ObjectHost::disconnect(Object* obj) {
     mSessionManager.disconnect(SpaceObjectReference(SpaceID::null(),ObjectReference(obj->uuid())));
 }
 
-bool ObjectHost::send(const Object* src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload) {
+bool ObjectHost::send(const Object* src, const ObjectMessagePort src_port, const UUID& dest, const ObjectMessagePort dest_port, const std::string& payload) {
     Sirikata::SerializationCheck::Scoped sc(&mSerialization);
 
     return mSessionManager.send(SpaceObjectReference(SpaceID::null(),ObjectReference(src->uuid())), src_port, dest, dest_port, payload);
 }
 /*
-bool ObjectHost::send(const uint16 src_port, const UUID& src, const uint16 dest_port, const UUID& dest,const std::string& payload) {
+bool ObjectHost::send(const ObjectMessagePort src_port, const UUID& src, const ObjectMessagePort dest_port, const UUID& dest,const std::string& payload) {
     Sirikata::SerializationCheck::Scoped sc(&mSerialization);
 
     return send(src, src_port, dest, dest_port, payload);

@@ -8,9 +8,8 @@ namespace Sirikata{
 namespace JS{
 
 
-JSVisibleManager::JSVisibleManager(EmersonScript* eScript,JSCtx* ctx)
- : emerScript(eScript),
-   mCtx(ctx)
+JSVisibleManager::JSVisibleManager(JSCtx* ctx)
+ : mCtx(ctx)
 {
 }
 
@@ -20,6 +19,7 @@ JSVisibleManager::~JSVisibleManager()
 }
 
 void JSVisibleManager::clearVisibles() {
+    RMutex::scoped_lock(vmMtx);
     // Stop tracking all known objects to clear out all listeners and state.
     while(!mTrackedObjects.empty()) {
         ProxyObjectPtr toFakeDestroy = *(mTrackedObjects.begin());
@@ -38,20 +38,28 @@ void JSVisibleManager::clearVisibles() {
     mProxies.clear();
 }
 
-JSVisibleStruct* JSVisibleManager::createVisStruct(EmersonScript* parent, const SpaceObjectReference& whatsVisible, JSVisibleDataPtr addParams) {
+JSVisibleStruct* JSVisibleManager::createVisStruct(
+    EmersonScript* parent, const SpaceObjectReference& whatsVisible,
+    JSVisibleDataPtr addParams)
+{
+    RMutex::scoped_lock(vmMtx);
     JSAggregateVisibleDataPtr toCreateFrom = getOrCreateVisible(whatsVisible);
     if (addParams) toCreateFrom->updateFrom(*addParams);
     return new JSVisibleStruct(parent, toCreateFrom,mCtx);
 }
 
 void JSVisibleManager::removeVisibleData(JSVisibleData* data) {
+    RMutex::scoped_lock(vmMtx);
     SporefProxyMapIter proxIter = mProxies.find(data->id());
     assert(proxIter != mProxies.end());
     mProxies.erase(proxIter);
 }
 
 
-JSAggregateVisibleDataPtr JSVisibleManager::getOrCreateVisible(const SpaceObjectReference& whatsVisible) {
+JSAggregateVisibleDataPtr JSVisibleManager::getOrCreateVisible(
+    const SpaceObjectReference& whatsVisible)
+{
+    RMutex::scoped_lock(vmMtx);
     SporefProxyMapIter proxIter = mProxies.find(whatsVisible);
     if (proxIter != mProxies.end())
         return proxIter->second.lock();
@@ -63,13 +71,15 @@ JSAggregateVisibleDataPtr JSVisibleManager::getOrCreateVisible(const SpaceObject
 
 void JSVisibleManager::onCreateProxy(ProxyObjectPtr p)
 {
-    mCtx->objStrand->post(
-        std::tr1::bind(&JSVisibleManager::iOnCreateProxy,this,
-            p));
+    mCtx->visManStrand->post(
+        std::tr1::bind(&JSVisibleManager::iOnCreateProxy,this,p),
+        "JSVisibleManager::iOnCreateProxy"
+    );
 }
 
 void JSVisibleManager::iOnCreateProxy(ProxyObjectPtr p)
 {
+    RMutex::scoped_lock(vmMtx);
     p->PositionProvider::addListener(this);
     p->MeshProvider::addListener(this);
 
@@ -81,13 +91,15 @@ void JSVisibleManager::iOnCreateProxy(ProxyObjectPtr p)
 
 void JSVisibleManager::onDestroyProxy(ProxyObjectPtr p)
 {
-    mCtx->objStrand->post(
-        std::tr1::bind(&JSVisibleManager::iOnDestroyProxy,this,
-            p));
+    mCtx->visManStrand->post(
+        std::tr1::bind(&JSVisibleManager::iOnDestroyProxy,this,p),
+        "JSVisibleManager::iOnDestroyProxy"
+    );
 }
 
 void JSVisibleManager::iOnDestroyProxy(ProxyObjectPtr p)
 {
+    RMutex::scoped_lock(vmMtx);
     p->PositionProvider::removeListener(this);
     p->MeshProvider::removeListener(this);
 
@@ -98,28 +110,44 @@ void JSVisibleManager::iOnDestroyProxy(ProxyObjectPtr p)
 }
 
 void JSVisibleManager::updateLocation(ProxyObjectPtr proxy, const TimedMotionVector3f &newLocation, const TimedMotionQuaternion& newOrient, const BoundingSphere3f& newBounds,const SpaceObjectReference& sporef) {
-    mCtx->objStrand->post(std::tr1::bind(&JSVisibleManager::iUpdatedProxy, this, proxy));
+    mCtx->visManStrand->post(
+        std::tr1::bind(&JSVisibleManager::iUpdatedProxy, this, proxy),
+        "JSVisibleManager::iUpdatedProxy"
+    );
 }
 
+
 void JSVisibleManager::onSetMesh(ProxyObjectPtr proxy, Transfer::URI const& newMesh,const SpaceObjectReference& sporef) {
-    mCtx->objStrand->post(std::tr1::bind(&JSVisibleManager::iUpdatedProxy, this, proxy));
+    mCtx->visManStrand->post(
+        std::tr1::bind(&JSVisibleManager::iUpdatedProxy, this, proxy),
+        "JSVisibleManager::iUpdatedProxy"
+    );
 }
 
 void JSVisibleManager::onSetScale(ProxyObjectPtr proxy, float32 newScale ,const SpaceObjectReference& sporef) {
-    mCtx->objStrand->post(std::tr1::bind(&JSVisibleManager::iUpdatedProxy, this, proxy));
+    mCtx->visManStrand->post(
+        std::tr1::bind(&JSVisibleManager::iUpdatedProxy, this, proxy),
+        "JSVisibleManager::iUpdatedProxy"
+    );
 }
 
 void JSVisibleManager::onSetPhysics(ProxyObjectPtr proxy, const String& newphy,const SpaceObjectReference& sporef) {
-    mCtx->objStrand->post(std::tr1::bind(&JSVisibleManager::iUpdatedProxy, this, proxy));
+    mCtx->visManStrand->post(
+        std::tr1::bind(&JSVisibleManager::iUpdatedProxy, this, proxy),
+        "JSVisibleManager::iUpdatedProxy"
+    );
 }
 
-void JSVisibleManager::iUpdatedProxy(ProxyObjectPtr p) {
+void JSVisibleManager::iUpdatedProxy(ProxyObjectPtr p)
+{
+    RMutex::scoped_lock(vmMtx);
     JSAggregateVisibleDataPtr data = getOrCreateVisible(p->getObjectReference());
     data->updateFrom(p);
 }
 
 bool JSVisibleManager::isVisible(const SpaceObjectReference& sporef)
 {
+    RMutex::scoped_lock(vmMtx);
     // TODO(ewencp) This shouldn't be getOrCreate, it should just be get.
     JSAggregateVisibleDataPtr data = getOrCreateVisible(sporef);
     return data->visibleToPresence();
@@ -127,6 +155,7 @@ bool JSVisibleManager::isVisible(const SpaceObjectReference& sporef)
 
 v8::Handle<v8::Value> JSVisibleManager::isVisibleV8(const SpaceObjectReference& sporef)
 {
+    RMutex::scoped_lock(vmMtx);
     return v8::Boolean::New(isVisible(sporef));
 }
 

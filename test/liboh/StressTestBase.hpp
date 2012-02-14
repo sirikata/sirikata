@@ -40,6 +40,18 @@
 
 class StressTestBase
 {
+public:
+    // Latency submits requests and waits for each one to finish, testing the
+    // time it takes the request to make it through the system and give the
+    // callback. Throughput submits all at once and, once all have returned,
+    // computes how many transactions/s the system can handle.  These won't be
+    // directly related if the underlying storage can coalesce requests or
+    // handle them in parallel.
+    enum TestType {
+        Latency,
+        Throughput
+    };
+
 protected:
     typedef OH::Storage::ReadSet ReadSet;
 
@@ -59,7 +71,7 @@ protected:
     // Helpers for getting event loop setup/torn down
     Trace::Trace* _trace;
     ODPSST::ConnectionManager* _sstConnMgr;
-    OHDPSST::ConnectionManager* _ohSSTConnMgr;
+    OHDPSST::ConnectionManager* _ohSstConnMgr;
     Network::IOService* _ios;
     Network::IOStrand* _mainStrand;
     Network::IOWork* _work;
@@ -70,7 +82,10 @@ protected:
     // CV notifies the main thread as each callback finishes.
     boost::mutex _mutex;
     boost::condition_variable _cond;
-
+    // Since multiple threads can get events, make sure we don't miss
+    // notifications by just tracking when we hit the last one we're waiting
+    // for.
+    int32 _outstanding;
 
 public:
     StressTestBase(String plugin, String type, String args)
@@ -82,10 +97,11 @@ public:
        _storage(NULL),
        _trace(NULL),
        _sstConnMgr(NULL),
-       _ohSSTConnMgr(NULL),
+       _ohSstConnMgr(NULL),
        _mainStrand(NULL),
        _work(NULL),
-       _ctx(NULL)
+       _ctx(NULL),
+       _outstanding(0)
     {}
 
     void setUp() {
@@ -97,15 +113,15 @@ public:
         // Storage is tied to the main event loop, which requires quite a bit of setup
         ObjectHostID oh_id(1);
         _trace = new Trace::Trace("dummy.trace");
-        _ios = Network::IOServiceFactory::makeIOService();
-        _mainStrand = _ios->createStrand();
+        _ios = new Network::IOService("StressTestBase IOService");
+        _mainStrand = _ios->createStrand("StressTestBase IOStrand");
         _work = new Network::IOWork(*_ios, "StressTest");
         Time start_time = Timer::now(); // Just for stats in ObjectHostContext.
         Duration duration = Duration::zero(); // Indicates to run forever.
         _sstConnMgr = new ODPSST::ConnectionManager();
-        _ohSSTConnMgr = new OHDPSST::ConnectionManager();
+        _ohSstConnMgr = new OHDPSST::ConnectionManager();
 
-        _ctx = new ObjectHostContext("test", oh_id, _sstConnMgr, _ohSSTConnMgr, _ios, _mainStrand, _trace, start_time, duration);
+        _ctx = new ObjectHostContext("test", oh_id, _sstConnMgr, _ohSstConnMgr, _ios, _mainStrand, _trace, start_time, duration);
 
         _storage = OH::StorageFactory::getSingleton().getConstructor(_type)(_ctx, _args);
 
@@ -136,15 +152,9 @@ public:
         delete _trace;
         _trace = NULL;
 
-        delete _sstConnMgr;
-        _sstConnMgr = NULL;
-
-        delete _ohSSTConnMgr;
-        _ohSSTConnMgr = NULL;
-
         delete _mainStrand;
         _mainStrand = NULL;
-        Network::IOServiceFactory::destroyIOService(_ios);
+        delete _ios;
         _ios = NULL;
     }
 
@@ -169,7 +179,8 @@ public:
         boost::unique_lock<boost::mutex> lock(_mutex);
         checkReadValuesImpl(expected_success, expected, success, rs);
         delete rs;
-        _cond.notify_one();
+        if (--_outstanding == 0)
+            _cond.notify_one();
     }
 
     void checkSuccessImpl(bool expected_success, ReadSet expected, bool success, ReadSet* rs){
@@ -179,26 +190,29 @@ public:
     void checkSuccess(bool expected_success, ReadSet expected, bool success, ReadSet* rs){
         boost::unique_lock<boost::mutex> lock(_mutex);
         checkSuccessImpl(expected_success, expected, success, rs);
-        _cond.notify_one();
+        if (--_outstanding == 0)
+            _cond.notify_one();
     }
 
-    void waitForTransaction() {
-        boost::unique_lock<boost::mutex> lock(_mutex);
+    void waitForTransaction(boost::unique_lock<boost::mutex>& lock) {
         _cond.wait(lock);
     }
 
     void testSetupTeardown() {
         TS_ASSERT(_storage);
     }
-  
-    void testSingleWrites(String length, int keyNum, int bucketNum) {
+
+    void reportTiming(String name, Time start, Time end, TestType tt, int its) {
+        std::cout << name << " " << (end-start)/its << " per request, " << its / (end-start).seconds() << " transactions per second"  << std::endl;
+    }
+
+    void testSingleWrites(String length, int keyNum, int bucketNum, TestType tt) {
+        boost::unique_lock<boost::mutex> lock(_mutex);
+
         using std::tr1::placeholders::_1;
         using std::tr1::placeholders::_2;
-	
-        timeval ts;
-        gettimeofday(&ts,NULL);
-        long int time1_s = ts.tv_sec;
-        int time1_us=ts.tv_usec;
+
+        Time start = Timer::now();
 
         String key;
         for (int i=0; i<bucketNum; i++){
@@ -207,30 +221,27 @@ public:
                 _storage->write(_buckets[i], key, _data.dataSet[key],
 	                        std::tr1::bind(&StressTestBase::checkSuccess, this, true, ReadSet(), _1, _2)
 	                       );
-                waitForTransaction();
+                ++_outstanding;
+                if (tt == Latency) waitForTransaction(lock);
             }
         }
+        if (tt == Throughput)
+            waitForTransaction(lock);
 
-        gettimeofday(&ts,NULL);
-        long int time2_s = ts.tv_sec;
-        int time2_us=ts.tv_usec;
-        long int diff_s=time2_s - time1_s;
-        int diff_us=time2_us - time1_us;
-        double diff_t=diff_s*1000+diff_us/(double)1000;
-        std::cout<<"Write time: "<<diff_t<<std::endl;
+        Time end = Timer::now();
+        reportTiming("Write time", start, end, tt, bucketNum * keyNum);
     }
 
-    void testSingleReads(String length, int keyNum, int bucketNum) {
+    void testSingleReads(String length, int keyNum, int bucketNum, TestType tt) {
         // NOTE: Depends on above write
+        boost::unique_lock<boost::mutex> lock(_mutex);
+
         using std::tr1::placeholders::_1;
         using std::tr1::placeholders::_2;
 
         ReadSet rs=_data.dataSet;
 
-        timeval ts;
-        gettimeofday(&ts,NULL);
-        long int time1_s = ts.tv_sec;
-        int time1_us=ts.tv_usec;
+        Time start = Timer::now();
 
         String key;
         for (int i=0; i<bucketNum; i++){
@@ -239,29 +250,25 @@ public:
                 _storage->read(_buckets[i], key,
                                std::tr1::bind(&StressTestBase::checkSuccess, this, true, ReadSet(), _1, _2)
                               );
-                waitForTransaction();
+                ++_outstanding;
+                if (tt == Latency) waitForTransaction(lock);
             }
         }
+        if (tt == Throughput)
+            waitForTransaction(lock);
 
-        gettimeofday(&ts,NULL);
-        long int time2_s = ts.tv_sec;
-        int time2_us=ts.tv_usec;
-        long int diff_s=time2_s - time1_s;
-        int diff_us=time2_us - time1_us;
-        double diff_t=diff_s*1000+diff_us/(double)1000;
-        std::cout<<"Read time:  "<<diff_t<<std::endl;
-
+        Time end = Timer::now();
+        reportTiming("Read time", start, end, tt, bucketNum * keyNum);
     }
-  
-    void testSingleErases(String length, int keyNum, int bucketNum) {
+
+    void testSingleErases(String length, int keyNum, int bucketNum, TestType tt) {
         // NOTE: Depends on above write
+        boost::unique_lock<boost::mutex> lock(_mutex);
+
         using std::tr1::placeholders::_1;
         using std::tr1::placeholders::_2;
 
-        timeval ts;
-        gettimeofday(&ts,NULL);
-        long int time1_s = ts.tv_sec;
-        int time1_us=ts.tv_usec;
+        Time start = Timer::now();
 
         String key;
         for (int i=0; i<bucketNum; i++){
@@ -270,17 +277,15 @@ public:
                 _storage->erase(_buckets[i], key,
                                 std::tr1::bind(&StressTestBase::checkSuccess, this, true, ReadSet(), _1, _2)
                                );
-                waitForTransaction();
+                ++_outstanding;
+                if (tt == Latency) waitForTransaction(lock);
             }
         }
+        if (tt == Throughput)
+            waitForTransaction(lock);
 
-        gettimeofday(&ts,NULL);
-        long int time2_s = ts.tv_sec;
-        int time2_us=ts.tv_usec;
-        long int diff_s=time2_s - time1_s;
-        int diff_us=time2_us - time1_us;
-        double diff_t=diff_s*1000+diff_us/(double)1000;
-        std::cout<<"Erase time: "<<diff_t<<std::endl;
+        Time end = Timer::now();
+        reportTiming("Erase time", start, end, tt, bucketNum * keyNum);
 
         for (int i=0; i<bucketNum; i++){
             for(int j=0; j<keyNum; j++){
@@ -288,20 +293,20 @@ public:
                 _storage->read(_buckets[i], key,
                                std::tr1::bind(&StressTestBase::checkSuccess, this, false, ReadSet(), _1, _2)
                               );
-                waitForTransaction();
+                ++_outstanding;
+                waitForTransaction(lock);
             }
         }
 
     }
 
-    void testBatchWrites(String length, int keyNum, int bucketNum) {
+    void testBatchWrites(String length, int keyNum, int bucketNum, TestType tt) {
+        boost::unique_lock<boost::mutex> lock(_mutex);
+
         using std::tr1::placeholders::_1;
         using std::tr1::placeholders::_2;
 
-        timeval ts;
-        gettimeofday(&ts,NULL);
-        long int time1_s = ts.tv_sec;
-        int time1_us=ts.tv_usec;
+        Time start = Timer::now();
 
         String key;
         for (int i=0; i<bucketNum; i++){
@@ -313,29 +318,26 @@ public:
             _storage->commitTransaction(_buckets[i],
                                         std::tr1::bind(&StressTestBase::checkSuccess, this, true, ReadSet(), _1, _2)
                                        );
-            waitForTransaction();
+            ++_outstanding;
+            if (tt == Latency) waitForTransaction(lock);
         }
+        if (tt == Throughput)
+            waitForTransaction(lock);
 
-        gettimeofday(&ts,NULL);
-        long int time2_s = ts.tv_sec;
-        int time2_us=ts.tv_usec;
-        long int diff_s=time2_s - time1_s;
-        int diff_us=time2_us - time1_us;
-        double diff_t=diff_s*1000+diff_us/(double)1000;
-        std::cout<<"Write time: "<<diff_t<<std::endl;
+        Time end = Timer::now();
+        reportTiming("Batch write time", start, end, tt, bucketNum);
     }
 
-    void testBatchReads(String length, int keyNum, int bucketNum) {
+    void testBatchReads(String length, int keyNum, int bucketNum, TestType tt) {
         // NOTE: Depends on above write
+        boost::unique_lock<boost::mutex> lock(_mutex);
+
         using std::tr1::placeholders::_1;
         using std::tr1::placeholders::_2;
 
         ReadSet rs=_data.dataSet;
 
-        timeval ts;
-        gettimeofday(&ts,NULL);
-        long int time1_s = ts.tv_sec;
-        int time1_us=ts.tv_usec;
+        Time start = Timer::now();
 
         String key;
         for (int i=0; i<bucketNum; i++){
@@ -347,28 +349,24 @@ public:
             _storage->commitTransaction(_buckets[i],
                                         std::tr1::bind(&StressTestBase::checkSuccess, this, true, ReadSet(), _1, _2)
                                        );
-            waitForTransaction();
+            ++_outstanding;
+            if (tt == Latency) waitForTransaction(lock);
         }
+        if (tt == Throughput)
+            waitForTransaction(lock);
 
-        gettimeofday(&ts,NULL);
-        long int time2_s = ts.tv_sec;
-        int time2_us=ts.tv_usec;
-        long int diff_s=time2_s - time1_s;
-        int diff_us=time2_us - time1_us;
-        double diff_t=diff_s*1000+diff_us/(double)1000;
-        std::cout<<"Read time:  "<<diff_t<<std::endl;
-
+        Time end = Timer::now();
+        reportTiming("Batch read time", start, end, tt, bucketNum);
     }
 
-    void testBatchErases(String length, int keyNum, int bucketNum) {
+    void testBatchErases(String length, int keyNum, int bucketNum, TestType tt) {
         // NOTE: Depends on above write
+        boost::unique_lock<boost::mutex> lock(_mutex);
+
         using std::tr1::placeholders::_1;
         using std::tr1::placeholders::_2;
 
-        timeval ts;
-        gettimeofday(&ts,NULL);
-        long int time1_s = ts.tv_sec;
-        int time1_us=ts.tv_usec;
+        Time start = Timer::now();
 
         String key;
         for (int i=0; i<bucketNum; i++){
@@ -380,16 +378,14 @@ public:
             _storage->commitTransaction(_buckets[i],
                                         std::tr1::bind(&StressTestBase::checkSuccess, this, true, ReadSet(), _1, _2)
                                        );
-            waitForTransaction();
+            ++_outstanding;
+            if (tt == Latency) waitForTransaction(lock);
         }
+        if (tt == Throughput)
+            waitForTransaction(lock);
 
-        gettimeofday(&ts,NULL);
-        long int time2_s = ts.tv_sec;
-        int time2_us=ts.tv_usec;
-        long int diff_s=time2_s - time1_s;
-        int diff_us=time2_us - time1_us;
-        double diff_t=diff_s*1000+diff_us/(double)1000;
-        std::cout<<"Erase time: "<<diff_t<<std::endl;
+        Time end = Timer::now();
+        reportTiming("Batch erase time", start, end, tt, bucketNum);
 
         for (int i=0; i<bucketNum; i++){
             for(int j=0; j<keyNum; j++){
@@ -397,33 +393,39 @@ public:
                 _storage->read(_buckets[i], key,
                                std::tr1::bind(&StressTestBase::checkSuccess, this, false, ReadSet(), _1, _2)
                               );
-                waitForTransaction();
+                ++_outstanding;
+                waitForTransaction(lock);
             }
         }
     }
 
-  
-  void testMultiRounds(String length, int keyNum, int bucketNum, int times){
-    
+
+  void testMultiRounds(String length, int keyNum, int bucketNum, int times, TestType tt) {
+
+      if (tt == Latency)
+          std::cout << "Latency (seconds from request transaction -> callback)" << std::endl;
+      else if (tt == Throughput)
+          std::cout << "Throughput (transactions per second)" << std::endl;
+
     std::cout<<"dataLength: "<<length<<", keyNum: "<<keyNum<<", bucketNum: "<<bucketNum<<", rounds: "<<times<<"\n\n";
     for (int i=0; i<times; i++){
-    	std::cout<<"Round "<<i+1<<std::endl;
-    	std::cout<<"testSingleWrites -- ";
-    	testSingleWrites(length, keyNum, bucketNum);
-    	std::cout<<"testSingleReads  -- ";
-    	testSingleReads(length, keyNum, bucketNum);
-    	std::cout<<"testSingleErases -- ";
-    	testSingleErases(length, keyNum, bucketNum);
-    	std::cout<<"testBatchWrites  -- ";
-    	testBatchWrites(length, keyNum, bucketNum);
-    	std::cout<<"testBatchReads   -- ";
-      	testBatchReads(length, keyNum, bucketNum);
-      	std::cout<<"testBatchErases  -- ";
-      	testBatchErases(length, keyNum, bucketNum);
-      	std::cout<<std::endl;
+      std::cout<<"Round "<<i+1<<std::endl;
+      std::cout<<"testSingleWrites -- ";
+      testSingleWrites(length, keyNum, bucketNum, tt);
+      std::cout<<"testSingleReads  -- ";
+      testSingleReads(length, keyNum, bucketNum, tt);
+      std::cout<<"testSingleErases -- ";
+      testSingleErases(length, keyNum, bucketNum, tt);
+      std::cout<<"testBatchWrites  -- ";
+      testBatchWrites(length, keyNum, bucketNum, tt);
+      std::cout<<"testBatchReads   -- ";
+      testBatchReads(length, keyNum, bucketNum, tt);
+      std::cout<<"testBatchErases  -- ";
+      testBatchErases(length, keyNum, bucketNum, tt);
+      std::cout<<std::endl;
     }
   }
-  
+
 };
 
 const OH::Storage::Bucket StressTestBase::_buckets[100] = DataFiles::buckets;

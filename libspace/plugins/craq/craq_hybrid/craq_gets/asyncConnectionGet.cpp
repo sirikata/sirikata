@@ -64,7 +64,7 @@ namespace Sirikata
 
   void AsyncConnectionGet::stop()
   {
-    mStrand->post(std::tr1::bind(&AsyncConnectionGet::clear_all_deadline_timers,this));
+      mStrand->post(std::tr1::bind(&AsyncConnectionGet::clear_all_deadline_timers,this), "AsyncConnectionGet::clear_all_deadline_timers");
 
     mReceivedStopRequest = true;
     if (mSocket != NULL)
@@ -175,7 +175,7 @@ void AsyncConnectionGet::queryTimedOutCallbackGet(const boost::system::error_cod
 
       cor->objID[CRAQ_DATA_KEY_SIZE -1] = '\0';
 
-      mPostErrorsStrand->post(std::tr1::bind(&AsyncCraqScheduler::erroredGetValue, mSchedulerMaster, cor));
+      mPostErrorsStrand->post(std::tr1::bind(&AsyncCraqScheduler::erroredGetValue, mSchedulerMaster, cor), "AsyncCraqScheduler::erroredGetValue");
 
 
       if (outQueriesIter->second->deadline_timer != NULL)
@@ -283,7 +283,7 @@ void AsyncConnectionGet::connect_handler(const boost::system::error_code& error)
     delete mSocket;
     mSocket = NULL;
     mReady = NEED_NEW_SOCKET;
-    mPostErrorsStrand->post(mReadyStateChangedCallback);
+    mPostErrorsStrand->post(mReadyStateChangedCallback,"AsyncConnectionGet::connect_handler");
 
     std::cout<<"\n\nError in connection\n\n";
     return;
@@ -294,7 +294,7 @@ void AsyncConnectionGet::connect_handler(const boost::system::error_code& error)
 #endif
 
   mReady = READY;
-  mPostErrorsStrand->post(mReadyStateChangedCallback);
+  mPostErrorsStrand->post(mReadyStateChangedCallback,"AsyncConnectionGet::connect_handler");
 
   set_generic_stored_not_found_error_handler();
 
@@ -448,7 +448,7 @@ void AsyncConnectionGet::write_some_handler_get(  const boost::system::error_cod
   if ( mReceivedStopRequest)
     return;
   mReady=READY;
-  mPostErrorsStrand->post(mReadyStateChangedCallback);
+  mPostErrorsStrand->post(mReadyStateChangedCallback, "AsyncConnectionGet::write_some_handler_get");
   if (error)
   {
     printf("\n\nin write_some_handler_get\n\n");
@@ -467,7 +467,7 @@ void AsyncConnectionGet::killSequence()
     return;
 
   mReady = NEED_NEW_SOCKET;
-  mPostErrorsStrand->post(mReadyStateChangedCallback);
+  mPostErrorsStrand->post(mReadyStateChangedCallback, "AsyncConnectionGet::killSequence");
   mSocket->cancel();
   mSocket->close();
   delete mSocket;
@@ -730,7 +730,10 @@ void AsyncConnectionGet::processValueNotFound(std::string dataKey)
       cor->objID[CRAQ_DATA_KEY_SIZE -1] = '\0';
 
 
-      mResultStrand->post(std::tr1::bind(&CraqObjectSegmentation::craqGetResult, mOSeg, cor));
+      mResultStrand->post(
+          std::tr1::bind(&CraqObjectSegmentation::craqGetResult, mOSeg, cor),
+          "CraqObjectSegmentation::craqGetResult"
+      );
 
 
       if (outQueriesIter->second->deadline_timer != NULL)
@@ -883,7 +886,10 @@ void AsyncConnectionGet::processValueFound(std::string dataKey, const CraqEntry&
 
 
 
-      mResultStrand->post(std::tr1::bind(&CraqObjectSegmentation::craqGetResult, mOSeg, cor));
+      mResultStrand->post(
+          std::tr1::bind(&CraqObjectSegmentation::craqGetResult, mOSeg, cor),
+          "CraqObjectSegmentation::craqGetResult"
+      );
 
 
 
@@ -976,7 +982,10 @@ void AsyncConnectionGet::processStoredValue(std::string dataKey)
 
       cor->objID[CRAQ_DATA_KEY_SIZE -1] = '\0';
 
-      mResultStrand->post(std::tr1::bind(&CraqObjectSegmentation::craqSetResult, mOSeg, cor));
+      mResultStrand->post(
+          std::tr1::bind(&CraqObjectSegmentation::craqSetResult, mOSeg, cor),
+          "CraqObjectSegmentation::craqSetResult"
+      );
 
 
       if (outQueriesIter->second->deadline_timer != NULL)

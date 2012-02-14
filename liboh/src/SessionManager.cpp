@@ -66,7 +66,8 @@ void logVersionInfo(Sirikata::Protocol::Session::VersionInfo vers_info) {
 
 // ObjectInfo Implementation
 SessionManager::ObjectConnections::ObjectInfo::ObjectInfo()
- : connectingTo(0),
+ : seqno(0),
+   connectingTo(0),
    connectedTo(0),
    migratingTo(0),
    connectedAs(SpaceObjectReference::null()),
@@ -77,7 +78,8 @@ SessionManager::ObjectConnections::ObjectInfo::ObjectInfo()
 // ObjectConnections Implementation
 
 SessionManager::ObjectConnections::ObjectConnections(SessionManager* _parent)
- : parent(_parent)
+ : parent(_parent),
+   mSeqnoSource(1)
 {
 }
 
@@ -108,10 +110,32 @@ bool SessionManager::ObjectConnections::exists(const SpaceObjectReference& spore
     return mObjectInfo.find(sporef_objid) != mObjectInfo.end();
 }
 
+void SessionManager::ObjectConnections::clearSeqno(const SpaceObjectReference& sporef_objid) {
+    // Clear should only occur when the session is done, i.e. there
+    // was a disconnection of some sort. Migrations don't cause this
+    // because they just transition directly to a new session seqno.
+    assert(mObjectInfo[sporef_objid].seqno != 0);
+    mObjectInfo[sporef_objid].seqno = 0;
+}
+
+uint64 SessionManager::ObjectConnections::getSeqno(const SpaceObjectReference& sporef_objid) {
+    // Should only request when we have an outstanding request
+    assert(mObjectInfo[sporef_objid].seqno != 0);
+    return mObjectInfo[sporef_objid].seqno;
+}
+
+uint64 SessionManager::ObjectConnections::updateSeqno(const SpaceObjectReference& sporef_objid) {
+    uint64 seqno = mSeqnoSource++;
+    mObjectInfo[sporef_objid].seqno = seqno;
+    return seqno;
+}
+
 SessionManager::ConnectingInfo& SessionManager::ObjectConnections::connectingTo(const SpaceObjectReference& sporef_objid, ServerID connecting_to) {
     if (mObjectInfo[sporef_objid].connectedTo==NullServerID) {
         mObjectInfo[sporef_objid].connectingTo = connecting_to;
     }else if (connecting_to!=mObjectInfo[sporef_objid].connectedTo) {
+        // TODO(ewencp) uhhh, this doesn't look right. How can we just unset
+        // connectedTo without requesting a disconnect or migration?
         mObjectInfo[sporef_objid].connectedTo = NullServerID;
     }else {
         //SILOG(oh,error,"Interesting case hit");
@@ -199,6 +223,8 @@ ServerID SessionManager::ObjectConnections::handleConnectSuccess(const SpaceObje
 
 void SessionManager::ObjectConnections::handleConnectError(const SpaceObjectReference& sporef) {
     mObjectInfo[sporef].connectingTo = NullServerID;
+    // Since the connection failed, the session seqno is no longer valid
+    clearSeqno(sporef);
     //ConnectingInfo ci;
     //mObjectInfo[sporef_objid].connectedCB(parent->mSpace, sporef_objid.object(), NullServerID, ci);
     disconnectWithCode(sporef,sporef,Disconnect::LoginDenied);
@@ -318,11 +344,11 @@ SessionManager::SessionManager(
     ObjectMessageHandlerCallback msg_cb, ObjectDisconnectedCallback disconn_cb, 
     ObjectOHMigrationCallback ohmig_cb, EntityOHMigrationReadyCallback migready_cb
 )
- : PollingService(ctx->mainStrand, Duration::seconds(1.f), ctx, "Space Server"),
+ : PollingService(ctx->mainStrand, "SessionManager Poll", Duration::seconds(1.f), ctx, "Session Manager"),
    OHDP::DelegateService( std::tr1::bind(&SessionManager::createDelegateOHDPPort, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2) ),
    mContext( ctx ),
    mSpace(space),
-   mIOStrand( ctx->ioService->createStrand() ),
+   mIOStrand( ctx->ioService->createStrand("SessionManager") ),
    mServerIDMap(sidmap),
    mObjectConnectedCallback(conn_cb),
    mObjectMigratedCallback(mig_cb),
@@ -452,7 +478,7 @@ bool SessionManager::connect(
     // Get a connection to request
     SESSION_LOG(detailed, "Connection starting for " << sporef_objid);
     getAnySpaceConnection(
-        std::tr1::bind(&SessionManager::openConnectionStartSession, this, sporef_objid, _1)
+        std::tr1::bind(&SessionManager::openConnectionStartSession, this, sporef_objid, _1, false)
     );
     return true;
 }
@@ -461,6 +487,7 @@ void SessionManager::disconnect(const SpaceObjectReference& sporef_objid) {
     Sirikata::SerializationCheck::Scoped sc(&mSerialization);
 
     ServerID connected_to = mObjectConnections.getConnectedServer(sporef_objid);
+    uint64 session_seqno = mObjectConnections.getSeqno(sporef_objid);
     // The caller may be conservative in calling disconnect, especially to make
     // sure disconnections are actually forced (e.g. for safety in the case of a
     // half-complete connection where the initial success is reported but
@@ -468,9 +495,22 @@ void SessionManager::disconnect(const SpaceObjectReference& sporef_objid) {
     if (connected_to == NullServerID)
         return;
 
+    sendDisconnectMessage(sporef_objid, connected_to, session_seqno);
+
+    // TODO(ewencp) we should probably keep around a record of this
+    // and get an ack from the space server. Otherwise we could end up
+    // with connections that get stuck if this OH remains connected to
+    // the OH
+
+    // Notify of disconnect (requested), then remove
+    mObjectConnections.gracefulDisconnect(sporef_objid);
+}
+
+void SessionManager::sendDisconnectMessage(const SpaceObjectReference& sporef_objid, ServerID connected_to, uint64 session_seqno) {
     // Construct and send disconnect message.  This has to happen first so we still have
     // connection information so we know where to send the disconnect
     Sirikata::Protocol::Session::Container session_msg;
+    if (session_seqno != 0) session_msg.set_seqno(session_seqno);
     Sirikata::Protocol::Session::IDisconnect disconnect_msg = session_msg.mutable_disconnect();
     disconnect_msg.set_object(sporef_objid.object().getAsUUID());
     disconnect_msg.set_reason("Quit");
@@ -483,9 +523,6 @@ void SessionManager::disconnect(const SpaceObjectReference& sporef_objid) {
         serializePBJMessage(session_msg),
         connected_to, mContext->mainStrand, Duration::seconds(0.05)
     );
-
-    // Notify of disconnect (requested), then remove
-    mObjectConnections.gracefulDisconnect(sporef_objid);
 }
 
 Duration SessionManager::serverTimeOffset() const {
@@ -505,10 +542,11 @@ void SessionManager::retryOpenConnection(const SpaceObjectReference&sporef_uuid,
 
     getSpaceConnection(
         sid,
-        std::tr1::bind(&SessionManager::openConnectionStartSession, this, sporef_uuid, _1)
+        std::tr1::bind(&SessionManager::openConnectionStartSession, this, sporef_uuid, _1, true)
     );
 }
-void SessionManager::openConnectionStartSession(const SpaceObjectReference& sporef_uuid, SpaceNodeConnection* conn) {
+
+void SessionManager::openConnectionStartSession(const SpaceObjectReference& sporef_uuid, SpaceNodeConnection* conn, bool is_retry) {
     Sirikata::SerializationCheck::Scoped sc(&mSerialization);
 
     if (conn == NULL) {
@@ -524,6 +562,8 @@ void SessionManager::openConnectionStartSession(const SpaceObjectReference& spor
     ConnectingInfo ci = mObjectConnections.connectingTo(sporef_uuid, conn->server());
 
     Sirikata::Protocol::Session::Container session_msg;
+    uint64 seqno = is_retry ? mObjectConnections.getSeqno(sporef_uuid) : mObjectConnections.updateSeqno(sporef_uuid);
+    session_msg.set_seqno(seqno);
     Sirikata::Protocol::Session::IConnect connect_msg = session_msg.mutable_connect();
     fillVersionInfo(connect_msg.mutable_version(), mContext);
     connect_msg.set_type(Sirikata::Protocol::Session::Connect::Fresh);
@@ -553,14 +593,19 @@ void SessionManager::openConnectionStartSession(const SpaceObjectReference& spor
               serializePBJMessage(session_msg),
             conn->server()
             )) {
-        mContext->mainStrand->post(Duration::seconds(0.05),std::tr1::bind(&SessionManager::retryOpenConnection,this,sporef_uuid,conn->server()));
+        mContext->mainStrand->post(
+            Duration::seconds(0.05),
+            std::tr1::bind(&SessionManager::retryOpenConnection,this,sporef_uuid,conn->server()),
+            "&SessionManager::retryOpenConnection"
+        );
     }
     else {
         // Setup a retry in case something gets dropped -- must check status and
         // retries entire connection process
         mContext->mainStrand->post(
             Duration::seconds(3),
-            std::tr1::bind(&SessionManager::checkConnectedAndRetry, this, sporef_uuid, conn->server())
+            std::tr1::bind(&SessionManager::checkConnectedAndRetry, this, sporef_uuid, conn->server()),
+            "SessionManager::checkConnectedAndRetry"
         );
     }
 }
@@ -571,7 +616,7 @@ void SessionManager::checkConnectedAndRetry(const SpaceObjectReference& sporef_u
     if (mObjectConnections.exists(sporef_uuid) && mObjectConnections.getConnectingToServer(sporef_uuid) == connTo) {
         getSpaceConnection(
             connTo,
-            std::tr1::bind(&SessionManager::openConnectionStartSession, this, sporef_uuid, std::tr1::placeholders::_1)
+            std::tr1::bind(&SessionManager::openConnectionStartSession, this, sporef_uuid, std::tr1::placeholders::_1, true)
         );
     }
 }
@@ -615,6 +660,9 @@ void SessionManager::openConnectionStartMigration(const SpaceObjectReference& sp
     }
 
     Sirikata::Protocol::Session::Container session_msg;
+    // Migrations trigger a change in session seqno since we're
+    // working with a new space server
+    session_msg.set_seqno( mObjectConnections.updateSeqno(sporef_obj_id) );
     Sirikata::Protocol::Session::IConnect connect_msg = session_msg.mutable_connect();
     fillVersionInfo(connect_msg.mutable_version(), mContext);
     connect_msg.set_type(Sirikata::Protocol::Session::Connect::Migration);
@@ -635,7 +683,9 @@ void SessionManager::openConnectionStartMigration(const SpaceObjectReference& sp
                    std::tr1::bind(&SessionManager::getSpaceConnection,
                                   this,
                                   sid,
-                                  retry));
+                       retry),
+                "SessionManager::getSpaceConnection"
+            );
 
         SESSION_LOG(warn,"Could not send start migration message in"\
             "openConnectionStartMigration.  Re-trying");
@@ -666,8 +716,8 @@ bool SessionManager::delegateOHDPPortSend(const OHDP::Endpoint& source_ep, const
     // ObjectMessage) and the source NodeID is just null (always null for
     // local).
     return send(
-        SpaceObjectReference(source_ep.space(), ObjectReference(UUID::null())), (uint16)source_ep.port(),
-        UUID::null(), (uint16)dest_ep.port(),
+        SpaceObjectReference(source_ep.space(), ObjectReference(UUID::null())), source_ep.port(),
+        UUID::null(), dest_ep.port(),
         String((char*)payload.data(), payload.size()),
         (ServerID)dest_ep.node()
     );
@@ -678,7 +728,7 @@ void SessionManager::timeSyncUpdated() {
     mObjectConnections.invokeDeferredCallbacks();
 }
 
-bool SessionManager::send(const SpaceObjectReference& sporef_src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload, ServerID dest_server) {
+bool SessionManager::send(const SpaceObjectReference& sporef_src, const ObjectMessagePort src_port, const UUID& dest, const ObjectMessagePort dest_port, const std::string& payload, ServerID dest_server) {
     Sirikata::SerializationCheck::Scoped sc(&mSerialization);
 
     if (mShuttingDown)
@@ -689,7 +739,7 @@ bool SessionManager::send(const SpaceObjectReference& sporef_src, const uint16 s
         dest_server = mObjectConnections.getConnectedServer(sporef_src);
         // And if we still don't have something, give up
         if (dest_server == NullServerID) {
-            //SESSION_LOG(error,"Tried to send message when not connected.");
+            SESSION_LOG(error,"Tried to send message when not connected.");
             return false;
         }
     }
@@ -714,7 +764,7 @@ bool SessionManager::send(const SpaceObjectReference& sporef_src, const uint16 s
     return pushed;
 }
 
-void SessionManager::sendRetryingMessage(const SpaceObjectReference& sporef_src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload, ServerID dest_server, Network::IOStrand* strand, const Duration& rate) {
+void SessionManager::sendRetryingMessage(const SpaceObjectReference& sporef_src, const ObjectMessagePort src_port, const UUID& dest, const ObjectMessagePort dest_port, const std::string& payload, ServerID dest_server, Network::IOStrand* strand, const Duration& rate) {
     bool sent = send(
         sporef_src, src_port,
         dest, dest_port,
@@ -729,7 +779,8 @@ void SessionManager::sendRetryingMessage(const SpaceObjectReference& sporef_src,
                 dest, dest_port,
                 payload,
                 dest_server,
-                strand, rate)
+                strand, rate),
+            "SessionManager::sendRetryingMessage"
         );
     }
 }
@@ -962,7 +1013,9 @@ void SessionManager::handleSpaceConnection(const Sirikata::Network::Stream::Conn
         SESSION_LOG(error,"Disconnected from server " << sid << ": " << reason);
         delete conn;
         mConnections.erase(sid);
-        mTimeSyncClient->removeNode(OHDP::NodeID(sid));
+        if (mTimeSyncClient != NULL)
+            mTimeSyncClient->removeNode(OHDP::NodeID(sid));
+        
         // Notify connected objects
         mObjectConnections.handleUnderlyingDisconnect(sid, reason);
         // If we have no connections left, we have to give up on TimeSync
@@ -983,7 +1036,8 @@ void SessionManager::handleSpaceSession(ServerID sid, SpaceNodeConnection* conn)
 
 void SessionManager::scheduleHandleServerMessages(SpaceNodeConnection* conn) {
     mContext->mainStrand->post(
-        std::tr1::bind(&SessionManager::handleServerMessages, this, conn)
+        std::tr1::bind(&SessionManager::handleServerMessages, this, conn),
+        "SessionManager::handleServerMessages"
     );
 }
 
@@ -1025,7 +1079,7 @@ void SessionManager::handleServerMessage(ObjectMessage* msg, ServerID server_id)
 
     // As a special case, messages dealing with sessions are handled by the object host
     if (msg->source_object() == UUID::null() && msg->dest_port() == OBJECT_PORT_SESSION) {
-        handleSessionMessage(msg);
+        handleSessionMessage(msg, server_id);
     }
     else if (msg->source_object() == UUID::null() && msg->dest_object() == UUID::null()) {
         // Non-session messages between the space and OH, i.e. OHDP. Note that
@@ -1047,7 +1101,7 @@ void SessionManager::handleServerMessage(ObjectMessage* msg, ServerID server_id)
     TIMESTAMP_END(tstamp, Trace::DESTROYED);
 }
 
-void SessionManager::handleSessionMessage(Sirikata::Protocol::Object::ObjectMessage* msg) {
+void SessionManager::handleSessionMessage(Sirikata::Protocol::Object::ObjectMessage* msg, ServerID from_server) {
     Sirikata::SerializationCheck::Scoped sc(&mSerialization);
 
     using std::tr1::placeholders::_1;
@@ -1064,81 +1118,30 @@ void SessionManager::handleSessionMessage(Sirikata::Protocol::Object::ObjectMess
     assert(!session_msg.has_connect());
     SpaceObjectReference sporef_obj(mSpace,ObjectReference(msg->dest_object()));
 
+    // We have to deal with outdated retry messages (as well as just potentially
+    // garbage requests). Each of these possibilities should have 2 paths: one
+    // handles responses that match (object ID, session ID and current state all
+    // match/make sense), the other handles mismatches (we weren't expecting the
+    // reply so we ignore it or take some reasonable action like trying to kill
+    // an unexpected session).
     if (session_msg.has_connect_response()) {
         Sirikata::Protocol::Session::ConnectResponse conn_resp = session_msg.connect_response();
 
         if (conn_resp.has_version())
-            logVersionInfo(conn_resp.version());
+            //logVersionInfo(conn_resp.version());
 
         if (conn_resp.response() == Sirikata::Protocol::Session::ConnectResponse::Success)
-        {
-            // To handle unreliability, we may get extra copies of the reply. If
-            // we're already connected, ignore this.
-            if ((mObjectConnections.getConnectedServer(sporef_obj) != NullServerID) &&
-                (mObjectConnections.getMigratingToServer(sporef_obj) == NullServerID) && 
-                (mObjectConnections.getConnectingToServer(sporef_obj) == NullServerID))
-            {
-                delete msg;
-                return;
-            }
-
-
-            TimedMotionVector3f loc(
-                conn_resp.loc().t(),
-                MotionVector3f(conn_resp.loc().position(), conn_resp.loc().velocity())
-            );
-            TimedMotionQuaternion orient(
-                conn_resp.orientation().t(),
-                MotionQuaternion( conn_resp.orientation().position(), conn_resp.orientation().velocity() )
-            );
-            BoundingSphere3f bnds = conn_resp.bounds();
-            String mesh = "";
-            if(conn_resp.has_mesh())
-               mesh = conn_resp.mesh();
-            String phy = "";
-            if(conn_resp.has_physics())
-               phy = conn_resp.physics();
-            // If we've got proper time syncing setup, we can dispatch the callback
-            // immediately.  Otherwise, we need to delay the callback
-            assert(mTimeSyncClient != NULL);
-            bool time_synced = mTimeSyncClient->valid();
-
-	   		ServerID connected_to = mObjectConnections.handleConnectSuccess(sporef_obj, loc, orient, bnds, mesh, phy, time_synced);
-
-	    	// Send an ack so the server (our first conn or after migrating) can start sending data to us
-	    	Sirikata::Protocol::Session::Container ack_msg;
-	    	Sirikata::Protocol::Session::IConnectAck connect_ack_msg = ack_msg.mutable_connect_ack();
-	    	sendRetryingMessage(
-					sporef_obj, OBJECT_PORT_SESSION,
-					UUID::null(), OBJECT_PORT_SESSION,
-					serializePBJMessage(ack_msg),
-					connected_to,
-					mContext->mainStrand,
-					Duration::seconds(0.05)
-					);
-        }
-        else if (conn_resp.response() == Sirikata::Protocol::Session::ConnectResponse::Redirect) {
-            ServerID redirected = conn_resp.redirect();
-            SESSION_LOG(detailed,"Object connection for " << sporef_obj << " redirected to " << redirected);
-            // Get a connection to request
-            getSpaceConnection(
-                redirected,
-                std::tr1::bind(&SessionManager::openConnectionStartSession, this, sporef_obj, std::tr1::placeholders::_1)
-            );
-        }
-        else if (conn_resp.response() == Sirikata::Protocol::Session::ConnectResponse::Error) {
-            SESSION_LOG(error,"Error connecting " << sporef_obj << " to space");
-            mObjectConnections.handleConnectError(sporef_obj);
-        }
-        else {
+            handleSessionMessageConnectResponseSuccess(from_server, sporef_obj, session_msg);
+        else if (conn_resp.response() == Sirikata::Protocol::Session::ConnectResponse::Redirect)
+            handleSessionMessageConnectResponseRedirect(from_server, sporef_obj, session_msg);
+        else if (conn_resp.response() == Sirikata::Protocol::Session::ConnectResponse::Error)
+            handleSessionMessageConnectResponseError(from_server, sporef_obj, session_msg);
+        else
             SESSION_LOG(error,"Unknown connection response code: " << (int)conn_resp.response());
-        }
     }
 
     if (session_msg.has_init_migration()) {
-        Sirikata::Protocol::Session::InitiateMigration init_migr = session_msg.init_migration();
-        SESSION_LOG(insane,"Received migration request for " << sporef_obj << " to " << init_migr.new_server());
-        migrate(sporef_obj, init_migr.new_server());
+        handleSessionMessageInitMigration(from_server, sporef_obj, session_msg);
     }
 
     if (session_msg.has_disconnect()) {
@@ -1191,7 +1194,164 @@ void SessionManager::handleOHMigrationACK(const UUID& object_id) {
 		SESSION_LOG(error,"Presence "<<object_id.rawHexData()<<" does not belong to a migrating entity");
 }
 
+void SessionManager::handleSessionMessageConnectResponseSuccess(ServerID from_server, const SpaceObjectReference& sporef_obj, Sirikata::Protocol::Session::Container& session_msg) {
+    uint64 seqno = (session_msg.has_seqno() ? session_msg.seqno() : 0);
 
+    Sirikata::Protocol::Session::ConnectResponse conn_resp = session_msg.connect_response();
+
+    // This is the trickiest case because not handling it correctly can leave
+    // us with the space having an active connection for an object that
+    // the object host doesn't have state for, i.e. a sort of ghost object that
+    // will stick around until the object host disconnects.
+    //
+    // Case 1: The response is only truly valid if:
+    // 1. Object ID exists
+    // 2. We're trying to connect or migrate to this server
+    // 3. Matching session ID
+    //
+    // Case 2: However, we want to detect if it is just a retry which doesn't affect
+    // anything:
+    // 1. Object ID exists
+    // 2. We're connected to this server
+    // 3. Matching session ID.
+    //
+    // Case 3: In any other case, we have a response indicating a session we
+    // don't know about.
+
+    bool obj_exists = mObjectConnections.exists(sporef_obj);
+    // Need to be careful about these since they are only valid if
+    // obj_exists. Because they rely on obj_exists implicitly, we can elide
+    // checks of obj_exists below.
+    bool connected_to_server = obj_exists && (mObjectConnections.getConnectedServer(sporef_obj) == from_server);
+    bool connecting_to_server = obj_exists && (mObjectConnections.getConnectingToServer(sporef_obj) == from_server);
+    bool migrating_to_server = obj_exists && (mObjectConnections.getMigratingToServer(sporef_obj) == from_server);
+    bool matches_seqno = obj_exists && (mObjectConnections.getSeqno(sporef_obj) == seqno);
+
+    // Handle the 3 possible cases:
+    if (connected_to_server && matches_seqno) {
+        // Case 2: Existing connection, just reack in case the original ack got lost
+        SESSION_LOG(detailed, "Reacknowledging successful connection for " << sporef_obj << " to server " << from_server << " after receiving duplicate connection success reply.");
+        sendConnectSuccessAck(sporef_obj, from_server);
+    }
+    else if ((connecting_to_server || migrating_to_server) && matches_seqno) {
+        // Case 1: Normal case of connecting or migrating, do normal success steps
+        TimedMotionVector3f loc(
+            conn_resp.loc().t(),
+            MotionVector3f(conn_resp.loc().position(), conn_resp.loc().velocity())
+        );
+        TimedMotionQuaternion orient(
+            conn_resp.orientation().t(),
+            MotionQuaternion( conn_resp.orientation().position(), conn_resp.orientation().velocity() )
+        );
+        BoundingSphere3f bnds = conn_resp.bounds();
+        String mesh = "";
+        if(conn_resp.has_mesh())
+            mesh = conn_resp.mesh();
+        String phy = "";
+        if(conn_resp.has_physics())
+            phy = conn_resp.physics();
+        // If we've got proper time syncing setup, we can dispatch the callback
+        // immediately.  Otherwise, we need to delay the callback
+        assert(mTimeSyncClient != NULL);
+        bool time_synced = mTimeSyncClient->valid();
+
+        ServerID connected_to = mObjectConnections.handleConnectSuccess(sporef_obj, loc, orient, bnds, mesh, phy, time_synced);
+
+        sendConnectSuccessAck(sporef_obj, connected_to);
+    }
+    else {
+        // Case 3: Everything else. We don't want to leave an active but unwanted
+        // connection open, so we explicitly request a disconnect. This is safe
+        // because it's tagged with the same sequence number we just received,
+        // so even if we are currently requesting a connection for this object,
+        // it won't end up disconnecting that object, i.e. the space server
+        // should end up killing..
+        sendDisconnectMessage(sporef_obj, from_server, seqno);
+    }
+}
+
+void SessionManager::handleSessionMessageConnectResponseRedirect(ServerID from_server, const SpaceObjectReference& sporef_obj, Sirikata::Protocol::Session::Container& session_msg) {
+    uint64 seqno = (session_msg.has_seqno() ? session_msg.seqno() : 0);
+
+    // This only applies to us if:
+    // 1. Object ID exists
+    // 2. Connecting to this server (migrating doesn't make sense, shouldn't get redirect)
+    // 3. Matching session ID
+    if (!mObjectConnections.exists(sporef_obj) ||
+        mObjectConnections.getConnectingToServer(sporef_obj) != from_server ||
+        mObjectConnections.getSeqno(sporef_obj) != seqno)
+    {
+        SESSION_LOG(detailed, "Ignoring connection redirect response because matching object session couldn't be found. Response is probably just an outdated retry.");
+        return;
+    }
+
+    Sirikata::Protocol::Session::ConnectResponse conn_resp = session_msg.connect_response();
+    ServerID redirected = conn_resp.redirect();
+    SESSION_LOG(detailed,"Object connection for " << sporef_obj << " redirected to " << redirected);
+    // Old seqno is no longer relevant, clear it out to make way for the
+    // new request
+    mObjectConnections.clearSeqno(sporef_obj);
+    // Get a connection to request
+    getSpaceConnection(
+        redirected,
+        std::tr1::bind(&SessionManager::openConnectionStartSession, this, sporef_obj, std::tr1::placeholders::_1, false)
+    );
+}
+
+void SessionManager::handleSessionMessageConnectResponseError(ServerID from_server, const SpaceObjectReference& sporef_obj, Sirikata::Protocol::Session::Container& session_msg) {
+    uint64 seqno = (session_msg.has_seqno() ? session_msg.seqno() : 0);
+
+    // This only applies to us if:
+    // 1. Object ID exists
+    // 2. Connecting to this server or migrating to this server
+    // 3. Matching session ID
+    if (!mObjectConnections.exists(sporef_obj) ||
+        !( mObjectConnections.getConnectingToServer(sporef_obj) == from_server || mObjectConnections.getMigratingToServer(sporef_obj) == from_server) ||
+        mObjectConnections.getSeqno(sporef_obj) != seqno)
+    {
+        SESSION_LOG(detailed, "Ignoring connection error response because matching object session couldn't be found. Request is probably just an outdated retry.");
+        return;
+    }
+
+    SESSION_LOG(error,"Error connecting " << sporef_obj << " to space");
+    mObjectConnections.handleConnectError(sporef_obj);
+}
+
+void SessionManager::handleSessionMessageInitMigration(ServerID from_server, const SpaceObjectReference& sporef_obj, Sirikata::Protocol::Session::Container& session_msg) {
+    uint64 seqno = (session_msg.has_seqno() ? session_msg.seqno() : 0);
+
+    // Sanity check the request. We should:
+    //  1. Exist
+    //  2. Be connected to this server
+    //  3. Have matching session IDs
+    if (!mObjectConnections.exists(sporef_obj) ||
+        mObjectConnections.getConnectedServer(sporef_obj) != from_server ||
+        mObjectConnections.getSeqno(sporef_obj) != seqno)
+    {
+        SESSION_LOG(detailed, "Ignoring init migration request because matching object session couldn't be found. Request is probably just an outdated retry.");
+        return;
+    }
+
+    Sirikata::Protocol::Session::InitiateMigration init_migr = session_msg.init_migration();
+    SESSION_LOG(insane,"Received migration request for " << sporef_obj << " to " << init_migr.new_server());
+    migrate(sporef_obj, init_migr.new_server());
+}
+
+
+void SessionManager::sendConnectSuccessAck(const SpaceObjectReference& sporef, ServerID connected_to) {
+    // Send an ack so the server (our first conn or after migrating) can start sending data to us
+    Sirikata::Protocol::Session::Container ack_msg;
+    ack_msg.set_seqno( mObjectConnections.getSeqno(sporef) );
+    Sirikata::Protocol::Session::IConnectAck connect_ack_msg = ack_msg.mutable_connect_ack();
+    sendRetryingMessage(
+        sporef, OBJECT_PORT_SESSION,
+        UUID::null(), OBJECT_PORT_SESSION,
+        serializePBJMessage(ack_msg),
+        connected_to,
+        mContext->mainStrand,
+        Duration::seconds(0.05)
+    );
+}
 
 void SessionManager::handleObjectFullyConnected(const SpaceID& space, const ObjectReference& obj, ServerID server, const ConnectingInfo& ci, ConnectedCallback real_cb) {
     // Do the callback even if the connection failed so the object is notified.

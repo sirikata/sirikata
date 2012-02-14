@@ -124,7 +124,7 @@ public:
         return mConnectedTo;
     }
     bool connected();
-    bool send(uint16 src_port, UUID dest, uint16 dest_port, std::string payload);
+    bool send(ObjectMessagePort src_port, UUID dest, ObjectMessagePort dest_port, std::string payload);
 private:
     typedef SST::EndPoint<SpaceObjectReference> EndPointType;
     typedef SST::BaseDatagramLayer<SpaceObjectReference> BaseDatagramLayerType;
@@ -163,7 +163,7 @@ private:
     // Handle a disconnection from the space
     void handleSpaceDisconnection(const SpaceObjectReference& spaceobj, Disconnect::Code);
 
-    void sendNoReturn(uint16 src_port, UUID dest, uint16 dest_port, std::string payload);
+    void sendNoReturn(ObjectMessagePort src_port, UUID dest, ObjectMessagePort dest_port, std::string payload);
 
 
     // ODP::Service Interface

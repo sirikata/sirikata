@@ -32,7 +32,7 @@
 
 #include <sirikata/core/util/Platform.hpp>
 
-#if SIRIKATA_PLATFORM == SIRIKATA_WINDOWS
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS
 #include <winsock2.h>
 #else
 #include <arpa/inet.h>

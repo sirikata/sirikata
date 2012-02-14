@@ -35,7 +35,7 @@
 
 namespace Sirikata {
 
-void createObjectHostMessage(ObjectHostID source_server, const SpaceObjectReference& sporef_src, uint16 src_port, const UUID& dest, uint16 dest_port, const std::string& payload, ObjectMessage* result) {
+void createObjectHostMessage(ObjectHostID source_server, const SpaceObjectReference& sporef_src, ObjectMessagePort src_port, const UUID& dest, ObjectMessagePort dest_port, const std::string& payload, ObjectMessage* result) {
     if (result == NULL) return;
 
     result->set_source_object(sporef_src.object().getAsUUID());
@@ -46,7 +46,7 @@ void createObjectHostMessage(ObjectHostID source_server, const SpaceObjectRefere
     result->set_payload(payload);
 }
 
-Sirikata::Protocol::Object::ObjectMessage* createObjectMessage(ServerID source_server, const SpaceObjectReference& sporef_src, uint16 src_port, const UUID& dest, uint16 dest_port, const std::string& payload) {
+Sirikata::Protocol::Object::ObjectMessage* createObjectMessage(ServerID source_server, const SpaceObjectReference& sporef_src, ObjectMessagePort src_port, const UUID& dest, ObjectMessagePort dest_port, const std::string& payload) {
     Sirikata::Protocol::Object::ObjectMessage* result = new Sirikata::Protocol::Object::ObjectMessage();
 
     result->set_source_object(sporef_src.object().getAsUUID());
@@ -60,7 +60,7 @@ Sirikata::Protocol::Object::ObjectMessage* createObjectMessage(ServerID source_s
 }
 
 
-void createObjectHostMessage(ObjectHostID source_server, const UUID& src, uint16 src_port, const UUID& dest, uint16 dest_port, const std::string& payload, ObjectMessage* result) {
+void createObjectHostMessage(ObjectHostID source_server, const UUID& src, ObjectMessagePort src_port, const UUID& dest, ObjectMessagePort dest_port, const std::string& payload, ObjectMessage* result) {
     if (result == NULL) return;
 
     result->set_source_object(src);
@@ -72,7 +72,7 @@ void createObjectHostMessage(ObjectHostID source_server, const UUID& src, uint16
 }
 
 
-Sirikata::Protocol::Object::ObjectMessage* createObjectMessage(ServerID source_server, const UUID& src, uint16 src_port, const UUID& dest, uint16 dest_port, const std::string& payload) {
+Sirikata::Protocol::Object::ObjectMessage* createObjectMessage(ServerID source_server, const UUID& src, ObjectMessagePort src_port, const UUID& dest, ObjectMessagePort dest_port, const std::string& payload) {
     Sirikata::Protocol::Object::ObjectMessage* result = new Sirikata::Protocol::Object::ObjectMessage();
 
     result->set_source_object(src);

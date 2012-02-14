@@ -76,6 +76,16 @@ bool PortID::operator<=(const PortID& rhs) const {
     return mValue <= rhs.mValue;
 }
 
+PortID& PortID::operator++ () {
+    mValue++;
+    return *this;
+}
+
+PortID PortID::operator++ (int) {
+    return PortID(mValue++);
+
+}
+
 bool PortID::matches(const PortID& rhs) const {
     return (
         mValue == rhs.mValue ||

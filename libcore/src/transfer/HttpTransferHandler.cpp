@@ -52,7 +52,7 @@ void HttpNameHandler::resolve(std::tr1::shared_ptr<MetadataRequest> request, Nam
 
     std::tr1::shared_ptr<RemoteFileMetadata> bad;
     if (url.host() == "") {
-        HttpManager::getSingleton().postCallback(std::tr1::bind(callback,bad));
+        HttpManager::getSingleton().postCallback(std::tr1::bind(callback,bad), "HttpNameHandler::resolve callback");
         return;
     }
 

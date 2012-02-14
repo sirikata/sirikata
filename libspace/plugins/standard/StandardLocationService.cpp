@@ -118,8 +118,9 @@ const String& StandardLocationService::physics(const UUID& uuid) {
     LocationMap::iterator it = mLocations.find(uuid);
     assert(it != mLocations.end());
 
-    const LocationInfo& locinfo = it->second;
-    return locinfo.props.physics();
+    LocationInfo& locinfo = it->second;
+    locinfo.physics_copied_str = locinfo.props.physics();
+    return locinfo.physics_copied_str;
 }
 
 void StandardLocationService::addLocalObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& msh, const String& phy) {

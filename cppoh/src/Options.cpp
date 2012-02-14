@@ -52,7 +52,7 @@ void InitCPPOHOptions() {
 #if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_LINUX
                 ",nvtt"
 #endif
-                ",common-filters,csvfactory,oh-file,oh-sqlite,scripting-js,simplecamera"
+                ",common-filters,csvfactory,oh-sqlite,scripting-js,simplecamera"
 #if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_LINUX || SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_MAC
                 ",oh-cassandra"
 #endif

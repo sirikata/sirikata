@@ -40,7 +40,8 @@ NullAuthenticator::NullAuthenticator(SpaceContext* ctx) {
 
 void NullAuthenticator::authenticate(const UUID& obj_id, MemoryReference auth, Callback cb) {
     mContext->mainStrand->post(
-        std::tr1::bind(cb, true)
+        std::tr1::bind(cb, true),
+        "NullAuthenticator::authenticate"
     );
 }
 

@@ -34,7 +34,6 @@ system.require('std/core/namespace.em');
 system.require('std/graphics/graphics.em');
 system.require('std/graphics/undo.em');
 system.require('std/movement/pursue.em');
-system.require('std/script/scripter.em');
 system.require('std/graphics/inputbinding.em');
 system.require('std/graphics/defaultcamera.em');
 system.require('std/graphics/drag/move.em');
@@ -51,6 +50,7 @@ system.require('std/graphics/characterAnimation.em');
 
 system.require('std/audio/audio.em');
 system.require('std/env/env.em');
+
 
 (
 function() {
@@ -87,7 +87,11 @@ function() {
         if (! this._alreadyInitialized)
         {
             var ui_finish_cb = std.core.bind(this.finishedUIInit, this, cb);
-            this._loadingUIs++; this._scripter = new std.script.Scripter(this, ui_finish_cb);
+//            this._loadingUIs++; this._scripter = new std.script.Scripter(this, ui_finish_cb);
+            //using new scripting gui interface
+            // this._loadingUIs++; this._scripter = new std.ScriptingGui.Controller(this);
+
+            
             //this._loadingUIs++; this._chat = new std.graphics.Chat(this._pres, this._simulator, ui_finish_cb);
             this._loadingUIs++; this._physics = new std.graphics.PhysicsProperties(this._simulator, ui_finish_cb);
             //this._loadingUIs++; this._propertybox = new std.propertybox.PropertyBox(this, ui_finish_cb);
@@ -104,7 +108,8 @@ function() {
         this._camera.reinit();
 
         var ui_finish_cb = std.core.bind(this.finishedUIInit, this);
-        this._loadingUIs++; this._scripter.onReset(ui_finish_cb);
+
+        //this._loadingUIs++; this._scripter.onReset(ui_finish_cb);
         //this._loadingUIs++; this._chat.onReset(ui_finish_cb);
         this._loadingUIs++; this._physics.onReset(ui_finish_cb);
         //this._loadingUIs++; this._propertybox.onReset(ui_finish_cb);
@@ -149,6 +154,7 @@ function() {
             this._binding.addAction('toggleSuspend', std.core.bind(this._simulator.toggleSuspend, this._simulator));
             this._binding.addAction('scriptSelectedObject', std.core.bind(this.scriptSelectedObject, this));
             this._binding.addAction('scriptSelf', std.core.bind(this.scriptSelf, this));
+
             
             this._binding.addAction('togglePropertyBox', std.core.bind(this.togglePropertyBox, this));
             this._binding.addAction('toggleChat', std.core.bind(this.toggleChat, this));
@@ -349,6 +355,12 @@ function() {
 
     /** @function */
     std.client.Default.prototype.scriptSelf = function() {
+        if (typeof(this._scripter) == 'undefined')
+        {
+            system.require('std/scriptingGui/scriptingGui.em');
+            this._scripter = new std.ScriptingGui.Controller(this);
+        }
+        
         this._scripter.script(system.self);
     };
 
@@ -374,6 +386,13 @@ function() {
         if (this._selected == null)
             return;
         //this._presenceList.addObject(this._selected.toString(), 'Scripted');
+        if (typeof(this._scripter) == 'undefined')
+        {
+            //gross way of doing this.  allows us to use simpleInput.em
+            system.require('std/scriptingGui/scriptingGui.em');
+            this._scripter = new std.ScriptingGui.Controller(this);
+        }
+
         this._scripter.script(this._selected);
     };
 

@@ -1,7 +1,7 @@
-/*  Sirikata Network Utilities
- *  IOServiceFactory.cpp
+/*  Sirikata
+ *  SQLiteStressTest.hpp
  *
- *  Copyright (c) 2009, Daniel Reiter Horn
+ *  Copyright (c) 2011, Stanford University
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,20 +30,31 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sirikata/core/util/Standard.hh>
-#include <sirikata/core/network/IOService.hpp>
-#include <sirikata/core/network/IOServiceFactory.hpp>
+#include <cxxtest/TestSuite.h>
+#include "StressTestBase.hpp"
 
-namespace Sirikata {
-namespace Network {
 
-IOService*IOServiceFactory::makeIOService() {
-    return new IOService;
-}
+class SQLiteStressTest : public CxxTest::TestSuite
+{
+    static const String dbfile;
+    StressTestBase _base;
+public:
+    SQLiteStressTest()
+     : _base("oh-sqlite", "sqlite", String("--db=") + dbfile)
+    {
+    }
 
-void IOServiceFactory::destroyIOService(IOService*io) {
-    delete io;
-}
+    void setUp() {_base.setUp(); }
+    void tearDown() {_base.tearDown(); }
 
-} // namespace Network
-} // namespace Sirikata
+    void testSetupTeardown() {_base.testSetupTeardown(); }
+
+    //(dataLength, keyNum, bucketNum, rounds)
+    void testMultiRounds() {
+        _base.testMultiRounds("10", 10, 10, 5, StressTestBase::Latency);
+        _base.testMultiRounds("10", 10, 10, 5, StressTestBase::Throughput);
+    }
+
+};
+
+const String SQLiteStressTest::dbfile("test.db");

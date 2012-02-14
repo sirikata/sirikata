@@ -33,12 +33,13 @@
 #include <sirikata/core/trace/Trace.hpp>
 #include <sirikata/core/network/Message.hpp>
 #include <sirikata/core/options/Options.hpp>
+#include <sirikata/core/util/Timer.hpp>
 
 #include <iostream>
 
 #include <boost/thread/locks.hpp>
 
-#if SIRIKATA_PLATFORM == SIRIKATA_WINDOWS
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS
 #include <io.h>
 #endif
 
@@ -85,16 +86,12 @@ void Trace::storageThread(const String& filename) {
         data.store(of);
         fflush(of);
 
-#if SIRIKATA_PLATFORM == SIRIKATA_WINDOWS
-        Sleep( Duration::seconds(1).toMilliseconds() );
-#else
-        usleep( Duration::seconds(1).toMicroseconds() );
-#endif
+        Timer::sleep(Duration::seconds(1));
     }
     data.store(of);
     fflush(of);
 
-#if SIRIKATA_PLATFORM == SIRIKATA_WINDOWS
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS
     FlushFileBuffers((HANDLE) _get_osfhandle(_fileno(of)));
 #else
     fsync(fileno(of));

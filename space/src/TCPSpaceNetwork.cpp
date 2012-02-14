@@ -117,7 +117,8 @@ Chunk* TCPSpaceNetwork::RemoteStream::pop(Network::IOStrand* ios) {
         // readyRead() will be processed after the stream has actually
         // been paused.
         ios->post(
-            std::tr1::bind(&Sirikata::Network::Stream::readyRead, stream)
+            std::tr1::bind(&Sirikata::Network::Stream::readyRead, stream),
+            "Sirikata::Network::Stream::readyRead"
         );
     }
     return result;
@@ -273,7 +274,7 @@ TCPSpaceNetwork::TCPSpaceNetwork(SpaceContext* ctx)
     mListenOptions = StreamListenerFactory::getSingleton().getOptionParser(mStreamPlugin)(GetOptionValue<String>("spacestreamoptions"));
     mSendOptions = StreamFactory::getSingleton().getOptionParser(mStreamPlugin)(GetOptionValue<String>("spacestreamoptions"));
 
-    mIOStrand = mContext->ioService->createStrand();
+    mIOStrand = mContext->ioService->createStrand("TCPSpaceNetwork IO");
     mIOWork = new Network::IOWork(mContext->ioService, "TCPSpaceNetwork Work");
 
     mListener = StreamListenerFactory::getSingleton().getConstructor(mStreamPlugin)(mIOStrand,mListenOptions);

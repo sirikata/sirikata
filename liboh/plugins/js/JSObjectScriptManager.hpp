@@ -44,13 +44,14 @@
 
 #include <v8.h>
 
-
+#define JS_SCRIPTS_DIR "js/scripts"
+#define JS_PLUGINS_DIR "liboh/plugins"
 
 namespace Sirikata {
 namespace JS {
 
 class JSObjectScript;
-
+class JSCtx;
 class SIRIKATA_SCRIPTING_JS_EXPORT JSObjectScriptManager : public ObjectScriptManager {
 public:
     static ObjectScriptManager* createObjectScriptManager(ObjectHostContext* ctx, const Sirikata::String& arguments);
@@ -67,15 +68,6 @@ public:
 
 
 
-    v8::Persistent<v8::FunctionTemplate> mVisibleTemplate;
-
-    v8::Persistent<v8::FunctionTemplate> mPresenceTemplate;
-    v8::Persistent<v8::ObjectTemplate>   mContextTemplate;
-    v8::Persistent<v8::ObjectTemplate>   mUtilTemplate;
-    v8::Persistent<v8::ObjectTemplate>   mInvokableObjectTemplate;
-    v8::Persistent<v8::ObjectTemplate>   mSystemTemplate;
-    v8::Persistent<v8::ObjectTemplate>   mTimerTemplate;
-    v8::Persistent<v8::ObjectTemplate>   mContextGlobalTemplate;
 
     // Mesh loading functions
     typedef std::tr1::function<void(Mesh::VisualPtr)> MeshLoadCallback;
@@ -83,29 +75,17 @@ public:
 
 private:
     ObjectHostContext* mContext;
-    /**
-       lkjs;
-       FIXME: Who is in charge of deleting the isolate?
-     */
-    v8::Isolate* mIsolate;
+    
+    void createVisibleTemplate(JSCtx*);
+    void createPresenceTemplate(JSCtx*);
+    void createContextTemplate(JSCtx*);
+    void createUtilTemplate(JSCtx*);
+    void createJSInvokableObjectTemplate(JSCtx*);
+    void createSystemTemplate(JSCtx*);
+    void createTimerTemplate(JSCtx*);
+    void createContextGlobalTemplate(JSCtx*);
+    JSCtx* createJSCtx(HostedObjectPtr);
 
-    void createVisibleTemplate();
-    void createPresenceTemplate();
-    void createContextTemplate();
-    void createUtilTemplate();
-    void createJSInvokableObjectTemplate();
-    void createSystemTemplate();
-    void createTimerTemplate();
-    void createContextGlobalTemplate();
-
-
-    void createTemplates();
-
-    // The manager tracks the templates so they can be reused by all the
-    // individual scripts.
-    v8::Persistent<v8::FunctionTemplate> mVec3Template;
-    v8::Persistent<v8::FunctionTemplate> mQuaternionTemplate;
-    v8::Persistent<v8::FunctionTemplate> mPatternTemplate;
 
     OptionSet* mOptions;
 

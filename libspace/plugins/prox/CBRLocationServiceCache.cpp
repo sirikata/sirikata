@@ -255,7 +255,8 @@ void CBRLocationServiceCache::objectAdded(const UUID& uuid, bool islocal, bool a
         std::tr1::bind(
             &CBRLocationServiceCache::processObjectAdded, this,
             uuid, islocal, agg, loc, orient, bounds, mesh, phy
-        )
+        ),
+        "CBRLocationServiceCache::processObjectAdded"
     );
 }
 
@@ -288,7 +289,8 @@ void CBRLocationServiceCache::objectRemoved(const UUID& uuid, bool agg) {
         std::tr1::bind(
             &CBRLocationServiceCache::processObjectRemoved, this,
             uuid, agg
-        )
+        ),
+        "CBRLocationServiceCache::processObjectRemoved"
     );
 }
 
@@ -313,7 +315,8 @@ void CBRLocationServiceCache::locationUpdated(const UUID& uuid, bool agg, const 
         std::tr1::bind(
             &CBRLocationServiceCache::processLocationUpdated, this,
             uuid, agg, newval
-        )
+        ),
+        "CBRLocationServiceCache::processLocationUpdated"
     );
 }
 
@@ -336,7 +339,8 @@ void CBRLocationServiceCache::orientationUpdated(const UUID& uuid, bool agg, con
         std::tr1::bind(
             &CBRLocationServiceCache::processOrientationUpdated, this,
             uuid, agg, newval
-        )
+        ),
+        "CBRLocationServiceCache::processOrientationUpdated"
     );
 }
 
@@ -354,7 +358,8 @@ void CBRLocationServiceCache::boundsUpdated(const UUID& uuid, bool agg, const Bo
         std::tr1::bind(
             &CBRLocationServiceCache::processBoundsUpdated, this,
             uuid, agg, newval
-        )
+        ),
+        "CBRLocationServiceCache::processBoundsUpdated"
     );
 }
 
@@ -384,7 +389,8 @@ void CBRLocationServiceCache::meshUpdated(const UUID& uuid, bool agg, const Stri
         std::tr1::bind(
             &CBRLocationServiceCache::processMeshUpdated, this,
             uuid, agg, newval
-        )
+        ),
+        "CBRLocationServiceCache::processMeshUpdated"
     );
 }
 
@@ -402,7 +408,8 @@ void CBRLocationServiceCache::physicsUpdated(const UUID& uuid, bool agg, const S
         std::tr1::bind(
             &CBRLocationServiceCache::processPhysicsUpdated, this,
             uuid, agg, newval
-        )
+        ),
+        "CBRLocationServiceCache::processPhysicsUpdated"
     );
 }
 

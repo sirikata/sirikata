@@ -34,6 +34,11 @@
 
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/network/IODefs.hpp>
+#include <sirikata/core/util/AtomicTypes.hpp>
+#include <sirikata/core/util/Noncopyable.hpp>
+#include <boost/thread.hpp>
+#include <sirikata/core/trace/WindowedStats.hpp>
+#include <sirikata/core/task/Time.hpp>
 
 namespace Sirikata {
 namespace Network {
@@ -47,14 +52,57 @@ namespace Network {
  *  is via the existing mechanisms -- the default implementations for
  *  sockets and timers or via periodic tasks.
  */
-class SIRIKATA_EXPORT IOService {
+class SIRIKATA_EXPORT IOService : public Noncopyable {
     InternalIOService* mImpl;
-    bool mOwn;
+    const String mName;
 
-    IOService();
-    ~IOService();
+#ifdef SIRIKATA_TRACK_EVENT_QUEUES
+    typedef std::tr1::function<void(const boost::system::error_code& e)> IOCallbackWithError;
 
+    // Track all strands that have been allocated. This needs to be
+    // thread safe.
+    typedef boost::mutex Mutex;
+    typedef boost::lock_guard<Mutex> LockGuard;
+    Mutex mMutex;
+    typedef std::tr1::unordered_set<IOStrand*> StrandSet;
+    StrandSet mStrands;
+
+    AtomicValue<uint32> mTimersEnqueued;
+    AtomicValue<uint32> mEnqueued;
+
+    // Tracks the latency of recent handlers through the queue
+    Trace::WindowedStats<Duration> mWindowedTimerLatencyStats;
+    Trace::WindowedStats<Duration> mWindowedHandlerLatencyStats;
+
+
+    struct TagDuration
+    {
+        const char* tag;
+        Duration dur;
+    };
+    Trace::WindowedStats<TagDuration> mWindowedLatencyTagStats;
+  
+    
+    // Track tags that trigger events
+    typedef std::tr1::unordered_map<const char*, uint32> TagCountMap;
+    TagCountMap mTagCounts;
+#endif
+
+    IOService(const IOService&); // Disabled
+
+    // For construction
     friend class IOServiceFactory;
+    // For callbacks to track their lifetimes
+    friend class IOStrand;
+
+#ifdef SIRIKATA_TRACK_EVENT_QUEUES
+    void decrementTimerCount(const boost::system::error_code&e, const Time& start, const Duration& timer_duration, const IOCallbackWithError& cb, const char* tag, const char* tagStat=NULL);
+    void decrementCount(const Time& start, const IOCallback& cb, const char* tag, const char* tagStat=NULL);
+
+    // Invoked by strands when they are being destroyed so we can
+    // track which ones are alive.
+    void destroyingStrand(IOStrand* child);
+#endif
 
   protected:
 
@@ -69,6 +117,13 @@ class SIRIKATA_EXPORT IOService {
     friend class IOTimer;
 
 public:
+
+    
+    IOService(const String& name);
+    ~IOService();
+
+    /** Get the name of this IOService. */
+    const String& name() const { return mName; }
 
     /** Get the underlying IOService.  Only made available to allow for
      *  efficient implementation of ASIO provided functionality such as
@@ -85,22 +140,8 @@ public:
         return *mImpl;
     }
 
-    /** Generated an IOService wrapper from the internal version.  The
-     *  generated IOService will *not* take ownership.  This should only
-     *  be used to allow IO objects to return a reference to their owner.
-     */
-    IOService(InternalIOService* bs);
-
-    /* Copies the IOService.  The underlying resources remain owned by the
-     * original and will be controlled by its lifetime.
-     * \param cpy the original IOService to copy
-     */
-    IOService(const IOService& cpy);
-
-    IOService& operator=(IOService& rhs);
-
     /** Creates a new IOStrand. */
-    IOStrand* createStrand();
+    IOStrand* createStrand(const String& name);
 
     /** Run at most one handler in the event queue.
      *  \returns the number of handlers executed
@@ -139,22 +180,45 @@ public:
     /** Request that the given handler be invoked, possibly before
      *  returning.
      *  \param handler the handler callback to be called
+     *  \param tag a string descriptor of the handler for debugging
      */
-    void dispatch(const IOCallback& handler);
+    void dispatch(const IOCallback& handler, const char* tag = NULL,
+        const char* tagStat = NULL);
 
     /** Request that the given handler be appended to the event queue
      *  and invoked later.  The handler will not be invoked during
      *  this method call.
      *  \param handler the handler callback to be called
+     *  \param tag a string descriptor of the handler for debugging
      */
-    void post(const IOCallback& handler);
+    void post(const IOCallback& handler, const char* tag = NULL,
+        const char* tagStat = NULL);
     /** Request that the given handler be appended to the event queue
      *  and invoked later.  Regardless of the wait duration requested,
      *  the handler will never be invoked during this method call.
      *  \param waitFor the length of time to wait before invoking the handler
      *  \param handler the handler callback to be called
+     *  \param tag a string descriptor of the handler for debugging
      */
-    void post(const Duration& waitFor, const IOCallback& handler);
+    void post(const Duration& waitFor, const IOCallback& handler,
+        const char* tag = NULL, const char* tagStat=NULL);
+
+#ifdef SIRIKATA_TRACK_EVENT_QUEUES
+    uint32 numTimersEnqueued() const { return mTimersEnqueued.read(); }
+    uint32 numEnqueued() const { return mEnqueued.read(); }
+
+    Duration timerLatency() const { return mWindowedTimerLatencyStats.average(); }
+    Duration handlerLatency() const { return mWindowedHandlerLatencyStats.average(); }
+
+    /** Report statistics about this IOService and it's child
+     *  IOStrands.
+     */
+    void reportStats() const;
+    void reportStatsFile(const char* filename, bool detailed) const;
+    
+    static void reportAllStats();
+    static void reportAllStatsFile(const char* filename, bool detailed = false);
+#endif
 };
 
 } // namespace Network

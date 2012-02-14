@@ -116,6 +116,9 @@ PresenceEntry.prototype.proxRemovedEvent = function (visibleObj,visTo)
      var proxManager = null;
      var sboxMessageManager = null;
      var presMessageManager = null;
+
+
+     var entityToken = baseSystem.getUniqueToken();
      
      system = {};
 
@@ -131,13 +134,15 @@ PresenceEntry.prototype.proxRemovedEvent = function (visibleObj,visTo)
      
 
       //self declarations
-      system.addToSelfMap= function(toAdd)
+      system.addToSelfMapAndPresencesArray = function(toAdd)
       {
           var selfKey = (toAdd == null) ? this.__NULL_TOKEN__ : toAdd.toString();
           if (selfKey in this._selfMap)
               return;
 
           this._selfMap[selfKey] = new PresenceEntry(selfKey,toAdd,proxManager);
+          if (toAdd !== null)
+              system.presences.push(toAdd);
       };
 
      system.printSelfMap = function()
@@ -189,6 +194,24 @@ PresenceEntry.prototype.proxRemovedEvent = function (visibleObj,visTo)
      };     
 
 
+     /**
+      Changes the directory from which we look for scripts.
+      
+      @param {String} newDir Directory we check first when resolving
+      imports/requires.
+      */
+     system.__pushEvalContextScopeDirectory = function (newDir)
+     {
+         return baseSystem.__pushEvalContextScopeDirectory.apply(
+             baseSystem,arguments);
+     };
+
+     system.__popEvalContextScopeDirectory = function()
+     {
+         return baseSystem.__popEvalContextScopeDirectory.apply(
+             baseSystem,arguments);
+     };
+     
      /**
       @ignore
 
@@ -698,6 +721,8 @@ PresenceEntry.prototype.proxRemovedEvent = function (visibleObj,visTo)
          baseSystem.sendMessageUnreliable.apply(baseSystem,arguments);
      };
      
+
+
      
       /** @function
        *  @description Loads a file and evaluates its contents. Note
@@ -711,7 +736,7 @@ PresenceEntry.prototype.proxRemovedEvent = function (visibleObj,visTo)
        */
       system.import = function(/** String */ scriptFile)
       {
-          baseSystem.import.apply(baseSystem, arguments);
+          baseSystem.import(scriptFile);
       };
 
       /** @function
@@ -803,20 +828,6 @@ PresenceEntry.prototype.proxRemovedEvent = function (visibleObj,visTo)
       {
           return baseSystem.create_context.apply(baseSystem, arguments);
       };
-
-
-     /**@ignore
-      Runs through presences array, and determines if should add presConn to that array
-      */
-     system.__addToPresencesArray = function (presConn)
-     {
-         for (var s in system.presences)
-         {
-             if (system.presences[s].toString() == presConn.toString())
-                 return;
-         }
-         system.presences.push(presConn);
-     };
      
       //not exposing
       /** @ignore */
@@ -824,8 +835,7 @@ PresenceEntry.prototype.proxRemovedEvent = function (visibleObj,visTo)
       {
           var returner = function(presConn, /**only for entity-wide onPresenceConnected call*/clearable)
           {
-              system.__addToPresencesArray(presConn);
-              this.addToSelfMap(presConn);
+              this.addToSelfMapAndPresencesArray(presConn);
               this.__setBehindSelf(presConn);
               if (typeof(callback) === 'function')
                   callback(presConn,clearable);
@@ -1216,6 +1226,7 @@ PresenceEntry.prototype.proxRemovedEvent = function (visibleObj,visTo)
 
      var onPresConnFunc = function(pres)
      {
+         
          for (var s in presConnectedManager)
              presConnectedManager[s](pres, new ClearablePresConnected(s));                 
      };
@@ -1377,9 +1388,16 @@ PresenceEntry.prototype.proxRemovedEvent = function (visibleObj,visTo)
        */
       system.require = function(/** String */ filename)
       {
-          baseSystem.require.apply(baseSystem, arguments);
+          baseSystem.require(filename);
       };
 
+     
+     system.__entityToken = function()
+     {
+         return entityToken;
+     };
+
+     
       /** @function
        @description Destroys all created objects, except presences in the root context. Then executes script associated with root context. (Use system.setScript to set this script.)
        @see system.setScript
@@ -1462,11 +1480,11 @@ PresenceEntry.prototype.proxRemovedEvent = function (visibleObj,visTo)
      //presence by default into self.
      if (typeof(baseSystem.getAssociatedPresence()) !== 'undefined')
      {
-             system.addToSelfMap(baseSystem.getAssociatedPresence());
+             system.addToSelfMapAndPresencesArray(baseSystem.getAssociatedPresence());
              system.__setBehindSelf(baseSystem.getAssociatedPresence());             
      }
      else
-         system.addToSelfMap(null);
+         system.addToSelfMapAndPresencesArray(null);
 
 
      // FIXME this shouldn't be in system, but its the only place we

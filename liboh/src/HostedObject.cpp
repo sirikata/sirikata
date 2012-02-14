@@ -44,14 +44,13 @@
 #include <sirikata/oh/ObjectScriptManagerFactory.hpp>
 #include <sirikata/oh/ObjectQueryProcessor.hpp>
 
-#include <sirikata/core/util/ThreadId.hpp>
 #include <sirikata/core/util/PluginManager.hpp>
 
 #include <sirikata/core/odp/Exceptions.hpp>
 
 #include <sirikata/core/network/IOStrandImpl.hpp>
 #include <sirikata/oh/SimulationFactory.hpp>
-#include "PerPresenceData.hpp"
+#include <sirikata/oh/PerPresenceData.hpp>
 
 #include <sirikata/oh/LocUpdate.hpp>
 #include <sirikata/oh/ProtocolLocUpdate.hpp>
@@ -79,6 +78,37 @@ HostedObject::HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID
             _1, _2, _3
         )
     );
+}
+
+void HostedObject::killSimulation(
+    const SpaceObjectReference& sporef, const String& simName)
+{
+    if (stopped())
+        return;
+    
+    PerPresenceData* pd = NULL;
+    {
+        Mutex::scoped_lock locker(presenceDataMutex);
+        PresenceDataMap::iterator psd_it = mPresenceData.find(sporef);
+        if (psd_it == mPresenceData.end())
+        {
+            HO_LOG(error, "Error requesting to stop a "<<        \
+                "simulation for a presence that does not exist.");
+            return;
+        }
+
+        pd = psd_it->second;
+
+        if (pd->sims.find(simName) != pd->sims.end())
+        {
+            Simulation* simToKill = pd->sims[simName];
+            simToKill->stop();
+            delete simToKill;
+            pd->sims.erase(simName);
+        }
+        else
+            HO_LOG(error,"No simulation with name "<<simName<<" to remove");
+    }
 }
 
 Simulation* HostedObject::runSimulation(
@@ -110,6 +140,7 @@ Simulation* HostedObject::runSimulation(
     // access the HostedObject and call methods which need the
     // lock.
     HO_LOG(info,String("[OH] Initializing ") + simName);
+
     try {
         sim = SimulationFactory::getSingleton().getConstructor ( simName ) (
             mContext, static_cast<ConnectionEventProvider*>(mObjectHost),
@@ -129,11 +160,8 @@ Simulation* HostedObject::runSimulation(
     {
         Mutex::scoped_lock locker(presenceDataMutex);
         pd->sims[simName] = sim;
+        sim->start();
     }
-
-    HO_LOG(detailed, "Adding simulation to context");
-    mContext->add(sim);
-
     return sim;
 }
 
@@ -175,7 +203,7 @@ void HostedObject::destroy(bool need_self)
     if (mNumOutstandingConnections>0) {
         mDestroyWhenConnected=true;
         return;//don't destroy during delicate connection process
-    }        
+    }
 
     // Make sure that we survive the entire duration of this call. Otherwise all
     // references may be lost, resulting in the destructor getting called
@@ -294,8 +322,6 @@ void HostedObject::initializeScript(const String& script_type, const String& arg
 
     HO_LOG(detailed,"Creating a script object for object");
 
-    static ThreadIdCheck scriptId=ThreadId::registerThreadGroup(NULL);
-    assertThreadGroup(scriptId);
     if (!ObjectScriptManagerFactory::getSingleton().hasConstructor(script_type)) {
         HO_LOG(debug,"[HO] Failed to create script for object because incorrect script type");
         return;
@@ -379,7 +405,8 @@ void HostedObject::handleConnected(const HostedObjectWPtr& weakSelf, const Space
     // We have to manually do what mContext->mainStrand->wrap( ... ) should be
     // doing because it can't handle > 5 arguments.
     self->mContext->mainStrand->post(
-        std::tr1::bind(&HostedObject::handleConnectedIndirect, weakSelf, space, obj, info, baseDatagramLayer)
+        std::tr1::bind(&HostedObject::handleConnectedIndirect, weakSelf, space, obj, info, baseDatagramLayer),
+        "HostedObject::handleConnectedIndirect"
     );
 }
 
@@ -505,7 +532,9 @@ void HostedObject::handleDisconnected(
 
     self->mContext->mainStrand->post(
         std::tr1::bind(&HostedObject::iHandleDisconnected,self.get(),
-            weakSelf, spaceobj, cc));
+            weakSelf, spaceobj, cc),
+        "HostedObject::iHandleDisconnected"
+    );
 }
 
 void HostedObject::iHandleDisconnected(
@@ -532,7 +561,7 @@ void HostedObject::iHandleDisconnected(
         if (--self->mNumOutstandingConnections==0&&self->mDestroyWhenConnected) {
             self->mDestroyWhenConnected=false;
             self->destroy(true);
-        }        
+        }
     }
     if (cc == Disconnect::Migrated){
         PresenceDataMap::iterator where = self->mPresenceData.find(spaceobj);
@@ -936,7 +965,7 @@ void HostedObject::requestMeshUpdate(const SpaceID& space, const ObjectReference
     updateLocUpdateRequest(space, oref, NULL, NULL, NULL, &mesh, NULL);
 }
 
-const String& HostedObject::requestQuery(const SpaceID& space, const ObjectReference& oref)
+String HostedObject::requestQuery(const SpaceID& space, const ObjectReference& oref)
 {
     Mutex::scoped_lock lock(presenceDataMutex);
     PresenceDataMap::iterator iter = mPresenceData.find(SpaceObjectReference(space,oref));

@@ -34,17 +34,29 @@
 #include <sirikata/core/network/IOStrand.hpp>
 #include <sirikata/core/network/IOService.hpp>
 #include <sirikata/core/network/Asio.hpp>
+#include <sirikata/core/util/Timer.hpp>
 
 namespace Sirikata {
 namespace Network {
 
-IOStrand::IOStrand(IOService& io)
- : mService(io)
+IOStrand::IOStrand(IOService& io, const String& name)
+ : mService(io),
+   mName(name)
+#ifdef SIRIKATA_TRACK_EVENT_QUEUES
+   ,
+   mTimersEnqueued(0),
+   mEnqueued(0),
+   mWindowedTimerLatencyStats(100),
+   mWindowedHandlerLatencyStats(100)
+#endif
 {
     mImpl = new InternalIOStrand(io);
 }
 
 IOStrand::~IOStrand() {
+#ifdef SIRIKATA_TRACK_EVENT_QUEUES
+    mService.destroyingStrand(this);
+#endif
     delete mImpl;
 }
 
@@ -52,21 +64,104 @@ IOService& IOStrand::service() const {
     return mService;
 }
 
-void IOStrand::dispatch(const IOCallback& handler) {
+void IOStrand::dispatch(const IOCallback& handler, const char* tag) {
+#ifdef SIRIKATA_TRACK_EVENT_QUEUES
+    mEnqueued++;
+    {
+        LockGuard lock(mMutex);
+        if (mTagCounts.find(tag) == mTagCounts.end())
+            mTagCounts[tag] = 0;
+        mTagCounts[tag]++;
+    }
+    mService.dispatch(
+        mImpl->wrap(
+            std::tr1::bind(&IOStrand::decrementCount, this, Timer::now(), handler, tag)
+        ),
+        "(IOStrands)",tag
+    );
+#else
     mService.dispatch( mImpl->wrap( handler ) );
+#endif
 }
 
-void IOStrand::post(const IOCallback& handler) {
+void IOStrand::post(const IOCallback& handler, const char* tag) {
+#ifdef SIRIKATA_TRACK_EVENT_QUEUES
+    mEnqueued++;
+    {
+        LockGuard lock(mMutex);
+        if (mTagCounts.find(tag) == mTagCounts.end())
+            mTagCounts[tag] = 0;
+        mTagCounts[tag]++;
+    }
+    mService.post(
+        mImpl->wrap(
+            std::tr1::bind(&IOStrand::decrementCount, this, Timer::now(), handler, tag)
+        ),
+        "(IOStrands)", tag
+    );
+#else
     mService.post( mImpl->wrap( handler ) );
+#endif
 }
 
-void IOStrand::post(const Duration& waitFor, const IOCallback& handler) {
+void IOStrand::post(const Duration& waitFor, const IOCallback& handler, const char* tag) {
+#ifdef SIRIKATA_TRACK_EVENT_QUEUES
+    mTimersEnqueued++;
+    {
+        LockGuard lock(mMutex);
+        if (mTagCounts.find(tag) == mTagCounts.end())
+            mTagCounts[tag] = 0;
+        mTagCounts[tag]++;
+    }
+    mService.post(
+        waitFor,
+        mImpl->wrap(
+            std::tr1::bind(&IOStrand::decrementTimerCount, this, Timer::now(), waitFor, handler, tag)
+        ),
+        "(IOStrands)",tag
+    );
+#else
     mService.post(waitFor, mImpl->wrap( handler ) );
+#endif
 }
 
 IOCallback IOStrand::wrap(const IOCallback& handler) {
     return mImpl->wrap(handler);
 }
 
+
+#ifdef SIRIKATA_TRACK_EVENT_QUEUES
+void IOStrand::decrementTimerCount(const Time& start, const Duration& timer_duration, const IOCallback& cb, const char* tag) {
+    mTimersEnqueued--;
+    Time end = Timer::now();
+    {
+        LockGuard lock(mMutex);
+        mWindowedTimerLatencyStats.sample((end - start) - timer_duration);
+
+        assert(mTagCounts.find(tag) != mTagCounts.end());
+        mTagCounts[tag]--;
+    }
+    cb();
+}
+
+void IOStrand::decrementCount(const Time& start, const IOCallback& cb, const char* tag) {
+    mEnqueued--;
+    Time end = Timer::now();
+    {
+        LockGuard lock(mMutex);
+        mWindowedHandlerLatencyStats.sample(end - start);
+
+        assert(mTagCounts.find(tag) != mTagCounts.end());
+        mTagCounts[tag]--;
+    }
+    cb();
+}
+
+IOStrand::TagCountMap IOStrand::enqueuedTags() const {
+    LockGuard lock(const_cast<Mutex&>(mMutex));
+    return mTagCounts;
+};
+
+#endif
 } // namespace Network
 } // namespace Sirikata

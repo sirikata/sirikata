@@ -35,7 +35,6 @@
 #include <sirikata/core/util/Timer.hpp>
 #include <sirikata/core/network/NTPTimeSync.hpp>
 
-#include <sirikata/core/network/IOServiceFactory.hpp>
 #include <sirikata/core/network/IOStrandImpl.hpp>
 
 #include <sirikata/ohcoordinator/ObjectHostSession.hpp>
@@ -119,8 +118,8 @@ int main(int argc, char** argv) {
 
     Duration duration = GetOptionValue<Duration>("duration");
 
-    Network::IOService* ios = Network::IOServiceFactory::makeIOService();
-    Network::IOStrand* mainStrand = ios->createStrand();
+    Network::IOService* ios = new Network::IOService("Space");
+    Network::IOStrand* mainStrand = ios->createStrand("Space Main");
 
     OHDPSST::ConnectionManager* ohSstConnMgr = new OHDPSST::ConnectionManager();
 
@@ -173,11 +172,7 @@ int main(int argc, char** argv) {
         if (start_time > now_time) {
             Duration sleep_time = start_time - now_time;
             printf("Waiting %f seconds\n", sleep_time.toSeconds() ); fflush(stdout);
-#if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
-            Sleep( sleep_time.toMilliseconds() );
-#else
-            usleep( sleep_time.toMicroseconds() );
-#endif
+            Timer::sleep(sleep_time);
         }
     }
 
@@ -216,7 +211,7 @@ int main(int argc, char** argv) {
 
     delete mainStrand;
 
-    Network::IOServiceFactory::destroyIOService(ios);
+    delete ios;
 
     delete ohSstConnMgr;
 

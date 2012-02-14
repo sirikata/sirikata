@@ -38,6 +38,11 @@ protected:
     // the same one.
     bool mSeparateDynamicObjects;
     int mNumQueryHandlers;
+    // When using separate trees, how long to wait after an object becomes
+    // static to move it into the static tree. This keeps us from moving things
+    // in and out of trees frequently because of short stops (e.g. and avatar
+    // stops for a few seconds while walking).
+    Duration mMoveToStaticDelay;
 
 
     // MAIN Thread: Utility methods that should only be called from the main

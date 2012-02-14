@@ -92,6 +92,16 @@ v8::Handle<v8::Value> JSSystemStruct::sendSandbox(const String& msgToSend, JSCon
 }
 
 
+v8::Handle<v8::Value> JSSystemStruct::pushEvalContextScopeDirectory(const String& newDir)
+{
+    return associatedContext->pushEvalContextScopeDirectory(newDir);
+}
+
+v8::Handle<v8::Value> JSSystemStruct::popEvalContextScopeDirectory()
+{
+    return associatedContext->popEvalContextScopeDirectory();
+}
+
 v8::Handle<v8::Value> JSSystemStruct::setRestoreScript(const String& key, v8::Handle<v8::Function> cb)
 {
     return associatedContext->setRestoreScript(key, cb);
@@ -109,12 +119,12 @@ v8::Handle<v8::Value> JSSystemStruct::checkResources()
 }
 
 
-v8::Handle<v8::Value> JSSystemStruct::debug_fileWrite(const String& strToWrite,const String& filename)
+v8::Handle<v8::Value> JSSystemStruct::debug_fileWrite(String& strToWrite,String& filename)
 {
     return associatedContext->debug_fileWrite(strToWrite,filename);
 }
 
-v8::Handle<v8::Value> JSSystemStruct::debug_fileRead(const String& filename)
+v8::Handle<v8::Value> JSSystemStruct::debug_fileRead(String& filename)
 {
     return associatedContext->debug_fileRead(filename);
 }

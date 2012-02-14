@@ -187,7 +187,12 @@ system.__presence_constructor__.prototype.__getType = function()
   return 'presence';
 };
 
-
+system.__presence_constructor__.prototype.toString = function()
+{
+    if (typeof(this.stringified)  == 'undefined')
+        this.stringified = this.__toString();
+    return this.stringified;
+};
 
 
 {
@@ -558,7 +563,12 @@ system.__presence_constructor__.prototype.__getType = function()
      };
 
      system.__presence_constructor__.prototype.getQuery = function() {
-         return JSON.parse(orig_getQuery.apply(this));
+         var string_query = orig_getQuery.apply(this);
+         try {
+             return JSON.parse(string_query);
+         } catch (x) {
+             return {};
+         }
      };
 
      system.__presence_constructor__.prototype.setQuery = function(v) {
@@ -572,7 +582,11 @@ system.__presence_constructor__.prototype.__getType = function()
      };
 
      system.__presence_constructor__.prototype.getQueryAngle = function() {
-         return this.getQuery()['angle'];
+         var q = this.getQuery();
+         if ('angle' in q)
+             return q['angle'];
+         else
+             return 12.5664;
      };
 
      system.__presence_constructor__.prototype.setQueryAngle = function(v) {
@@ -583,11 +597,15 @@ system.__presence_constructor__.prototype.__getType = function()
 
          var orig_query = this.getQuery();
          orig_query['angle'] = v;
-         return this.setQuery(v);
+         return this.setQuery(orig_query);
      };
 
      system.__presence_constructor__.prototype.getQueryCount = function() {
-         return this.getQuery()['max_results'];
+         var q = this.getQuery();
+         if ('max_results' in q)
+             return q['max_results'];
+         else
+             return 0;
      };
 
      system.__presence_constructor__.prototype.setQueryCount = function(v) {
@@ -598,7 +616,7 @@ system.__presence_constructor__.prototype.__getType = function()
 
          var orig_query = this.getQuery();
          orig_query['max_results'] = v;
-         return this.setQuery(v);
+         return this.setQuery(orig_query);
      };
 
      system.__presence_constructor__.prototype.setPosition = function(v) {

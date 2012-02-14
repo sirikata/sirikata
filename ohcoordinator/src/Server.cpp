@@ -144,9 +144,14 @@ bool Server::isObjectConnecting(const UUID& object_id) const {
 void Server::sendSessionMessageWithRetry(const ObjectHostConnectionID& conn, Sirikata::Protocol::Object::ObjectMessage* msg, const Duration& retry_rate) {
     bool sent = mObjectHostConnectionManager->send( conn, msg );
     if (!sent) {
+        // It's possible we failed due to disconnection, don't keep retrying in
+        // that case
+        if (!mObjectHostConnectionManager->validConnection(conn)) return;
+
         mContext->mainStrand->post(
             retry_rate,
-            std::tr1::bind(&Server::sendSessionMessageWithRetry, this, conn, msg, retry_rate)
+            std::tr1::bind(&Server::sendSessionMessageWithRetry, this, conn, msg, retry_rate),
+            "Server::sendSessionMessageWithRetry"
         );
     }
 }
@@ -170,10 +175,16 @@ bool Server::onObjectHostMessageReceived(const ObjectHostConnectionID& conn_id, 
 
         // FIXME infinite queue
         mContext->mainStrand->post(
+// As a debugging tool for session messages, we can introduce delay in the
+// handling of session messages as a compile-time constant
+#ifdef SIRIKATA_SPACE_DELAY_HANDLE_SESSION_MESSAGE
+            Duration::seconds(SIRIKATA_SPACE_DELAY_HANDLE_SESSION_MESSAGE),
+#endif
             std::tr1::bind(
                 &Server::handleSessionMessage, this,
                 conn_id, obj_msg
-            )
+            ),
+            "Server::handleSessionMessage"
         );
         return true;
     }
@@ -212,7 +223,10 @@ void Server::onObjectHostConnected(const ObjectHostConnectionID& conn_id, const 
 
 void Server::onObjectHostDisconnected(const ObjectHostConnectionID& oh_conn_id, const ShortObjectHostConnectionID short_conn_id) {
 	SPACE_LOG(info, "OH connection "<<short_conn_id<<": "<<mObjectsDistribution[short_conn_id]->ObjectHostName<<" disconnected");
-    mContext->mainStrand->post( std::tr1::bind(&Server::handleObjectHostConnectionClosed, this, oh_conn_id, short_conn_id) );
+    mContext->mainStrand->post( 
+		std::tr1::bind(&Server::handleObjectHostConnectionClosed, this, oh_conn_id, short_conn_id),
+		"Server::handleObjectHostConnectionClosed"
+	 );
     mOHSessionManager->fireObjectHostSessionEnded( OHDP::NodeID(short_conn_id) );
 }
 
@@ -220,7 +234,9 @@ void Server::scheduleObjectHostMessageRouting() {
     mContext->mainStrand->post(
         std::tr1::bind(
             &Server::handleObjectHostMessageRouting,
-            this));
+            this),
+        "Server::handleObjectHostMessageRouting"
+    );
 }
 
 void Server::handleObjectHostMessageRouting() {
@@ -536,14 +552,6 @@ void Server::handleObjectHostConnectionClosed(const ObjectHostConnectionID& oh_c
     }
 }
 
-void Server::retryHandleConnect(const ObjectHostConnectionID& oh_conn_id, Sirikata::Protocol::Object::ObjectMessage* obj_response) {
-    if (!mObjectHostConnectionManager->send(oh_conn_id,obj_response)) {
-        mContext->mainStrand->post(Duration::seconds(0.05),std::tr1::bind(&Server::retryHandleConnect,this,oh_conn_id,obj_response));
-    }else {
-
-    }
-}
-
 void Server::sendConnectError(const ObjectHostConnectionID& oh_conn_id, const UUID& obj_id) {
     Sirikata::Protocol::Session::Container response_container;
     Sirikata::Protocol::Session::IConnectResponse response = response_container.mutable_connect_response();
@@ -556,11 +564,9 @@ void Server::sendConnectError(const ObjectHostConnectionID& oh_conn_id, const UU
         obj_id, OBJECT_PORT_SESSION,
         serializePBJMessage(response_container)
     );
-
-    // Sent directly via object host connection manager because we don't have an ObjectConnection
-    if (!mObjectHostConnectionManager->send( oh_conn_id, obj_response )) {
-        mContext->mainStrand->post(Duration::seconds(0.05),std::tr1::bind(&Server::retryHandleConnect,this,oh_conn_id,obj_response));
-    }
+	
+	// Sent directly via object host connection manager because we don't have an ObjectConnection
+    sendSessionMessageWithRetry(oh_conn_id, obj_response, Duration::seconds(0.05));
 }
 
 void Server::sendDisconnect(const ObjectHostConnectionID& oh_conn_id, const UUID& obj_id, const String& reason) {
@@ -577,9 +583,7 @@ void Server::sendDisconnect(const ObjectHostConnectionID& oh_conn_id, const UUID
     );
 
     // Sent directly via object host connection manager
-    if (!mObjectHostConnectionManager->send( oh_conn_id, obj_disconnect )) {
-        mContext->mainStrand->post(Duration::seconds(0.05),std::tr1::bind(&Server::retryHandleConnect,this,oh_conn_id,obj_disconnect));
-    }
+    sendSessionMessageWithRetry(oh_conn_id, obj_disconnect, Duration::seconds(0.05));
 }
 
 // Handle Connect message from object

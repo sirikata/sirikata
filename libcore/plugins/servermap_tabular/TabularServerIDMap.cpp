@@ -77,11 +77,11 @@ Address4 TabularServerIDMap::lookupInternal(const ServerID& server_id){
 }
 
 void TabularServerIDMap::lookupInternal(const Address4& addr, ServerIDLookupCallback cb) {
-    mContext->ioService->post(std::tr1::bind(cb, lookupInternal(addr)));
+    mContext->ioService->post(std::tr1::bind(cb, lookupInternal(addr)), "TabularServerIDMap::lookupInternal");
 }
 
 void TabularServerIDMap::lookupInternal(const ServerID& sid, Address4LookupCallback cb) {
-    mContext->ioService->post(std::tr1::bind(cb, lookupInternal(sid)));
+    mContext->ioService->post(std::tr1::bind(cb, lookupInternal(sid)), "TabularServerIDMap::lookupInternal");
 }
 
 ServerID TabularServerIDMap::lookupExternal(const Address4& address){
@@ -96,11 +96,11 @@ Address4 TabularServerIDMap::lookupExternal(const ServerID& server_id){
 }
 
 void TabularServerIDMap::lookupExternal(const Address4& addr, ServerIDLookupCallback cb) {
-    mContext->ioService->post(std::tr1::bind(cb, lookupExternal(addr)));
+    mContext->ioService->post(std::tr1::bind(cb, lookupExternal(addr)), "TabularServerIDMap::lookupExternal");
 }
 
 void TabularServerIDMap::lookupExternal(const ServerID& sid, Address4LookupCallback cb) {
-    mContext->ioService->post(std::tr1::bind(cb, lookupExternal(sid)));
+    mContext->ioService->post(std::tr1::bind(cb, lookupExternal(sid)), "TabularServerIDMap::lookupExternal");
 }
 
 }//end namespace sirikata

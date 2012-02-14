@@ -34,6 +34,11 @@
 
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/network/IODefs.hpp>
+#include <sirikata/core/util/AtomicTypes.hpp>
+#include <sirikata/core/util/Noncopyable.hpp>
+#include <sirikata/core/trace/WindowedStats.hpp>
+#include <sirikata/core/task/Time.hpp>
+#include <boost/thread.hpp>
 
 namespace Sirikata {
 namespace Network {
@@ -51,14 +56,42 @@ namespace Network {
  *  Note that strands are never directly allocated -- instead, they
  *  are acquired from an existing IOService.
  */
-class SIRIKATA_EXPORT IOStrand {
+class SIRIKATA_EXPORT IOStrand : public Noncopyable {
+  public:
+    typedef std::tr1::unordered_map<const char*, uint32> TagCountMap;
+
+  private:
     IOService& mService;
     InternalIOStrand* mImpl;
+    const String mName;
+
+#ifdef SIRIKATA_TRACK_EVENT_QUEUES
+    // Track all strands that have been allocated. This needs to be
+    // thread safe.
+    typedef boost::mutex Mutex;
+    typedef boost::lock_guard<Mutex> LockGuard;
+    Mutex mMutex;
+
+    AtomicValue<uint32> mTimersEnqueued;
+    AtomicValue<uint32> mEnqueued;
+
+    // Tracks the latency of recent handlers through the queue
+    Trace::WindowedStats<Duration> mWindowedTimerLatencyStats;
+    Trace::WindowedStats<Duration> mWindowedHandlerLatencyStats;
+
+    // Track tags that trigger events
+    TagCountMap mTagCounts;
+#endif
 
     friend class IOService;
 
     /** Construct an IOStrand associated with the given IOService. */
-    IOStrand(IOService& io);
+    IOStrand(IOService& io, const String& name);
+
+#ifdef SIRIKATA_TRACK_EVENT_QUEUES
+    void decrementTimerCount(const Time& start, const Duration& timer_duration, const IOCallback& cb, const char* tag);
+    void decrementCount(const Time& start, const IOCallback& cb, const char* tag);
+#endif
 
   protected:
 
@@ -74,30 +107,38 @@ class SIRIKATA_EXPORT IOStrand {
      */
     ~IOStrand();
 
+    /** Get the name of this IOStrand. Not necessarily unique, but
+     *  ideally it will be.
+     */
+    const String& name() const { return mName; }
+
     /** Get an IOService associated with this strand. */
     IOService& service() const;
 
     /** Request that the given handler be invoked, possibly before
      *  returning, on this strand.
      *  \param handler the handler callback to be called
+     *  \param tag a string descriptor of the handler for debugging
      */
-    void dispatch(const IOCallback& handler);
+    void dispatch(const IOCallback& handler, const char* tag = NULL);
 
     /** Request that the given handler be appended to the event queue
      *  and invoked on this strand at a later time.  The handler is
      *  guaranteed not to be invoked will not be invoked during this
      *  method call.
      *  \param handler the handler callback to be called
+     *  \param tag a string descriptor of the handler for debugging
      */
-    void post(const IOCallback& handler);
+    void post(const IOCallback& handler, const char* tag = NULL);
     /** Request that the given handler be appended to the event queue
      *  and invoked on this strand at a later time. Regardless of the
      *  wait duration requested, the handler is guaranteed not to be
      *  invoked during this method call.
      *  \param waitFor the length of time to wait before invoking the handler
      *  \param handler the handler callback to be called
+     *  \param tag a string descriptor of the handler for debugging
      */
-    void post(const Duration& waitFor, const IOCallback& handler);
+    void post(const Duration& waitFor, const IOCallback& handler, const char* tag = NULL);
 
     /** Wrap the given handler so that it will be handled in this strand.
      *  \param handler the handler which should be wrapped
@@ -114,6 +155,19 @@ class SIRIKATA_EXPORT IOStrand {
      */
     template<typename CallbackType>
     WrappedHandler<CallbackType> wrap(const CallbackType& handler);
+
+
+
+#ifdef SIRIKATA_TRACK_EVENT_QUEUES
+    uint32 numTimersEnqueued() const { return mTimersEnqueued.read(); }
+    uint32 numEnqueued() const { return mEnqueued.read(); }
+
+    Duration timerLatency() const { return mWindowedTimerLatencyStats.average(); }
+    Duration handlerLatency() const { return mWindowedHandlerLatencyStats.average(); }
+
+    TagCountMap enqueuedTags() const;
+#endif
+
 };
 
 typedef std::tr1::shared_ptr<IOStrand> IOStrandPtr;

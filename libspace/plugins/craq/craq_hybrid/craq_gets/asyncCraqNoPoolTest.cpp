@@ -422,7 +422,7 @@ void runMultiUnLoad(int numTimesLoad)
         iteratedWait(1,&myReader1,allGets,allTrackedSets);
 
       //      else
-      //        usleep(1);
+      //        Timer::sleep(Duration::microseconds(1));
 
     }
   }
@@ -521,7 +521,7 @@ void runMultiUnLoadSpeedMulti(int numTimesLoad)
   std::cout.flush();
   int numgetting  = 0;
 
-  usleep(100);
+  Timer::sleep(Duration::microseconds(100));
 
 
   //initializing timer
@@ -542,7 +542,7 @@ void runMultiUnLoadSpeedMulti(int numTimesLoad)
 
       //      else
       //      {
-      //        usleep(1);
+      //        Timer::sleep(Duration::microseconds(1));
       //      }
 
     }
@@ -559,7 +559,7 @@ void runMultiUnLoadSpeedMulti(int numTimesLoad)
     std::cout<<"This is the size of allGets:  "<<allGets.size()<<"\n\n\n";
     std::cout.flush();
 
-    usleep(100);
+    Timer::sleep(Duration::microseconds(100));
 
     iteratedWait(1000,&myReader1,allGets, allTrackedSets);
     ++numIter;
@@ -639,7 +639,7 @@ void runMultiUnLoadSpeed(int numTimesLoad)
   std::cout.flush();
   int numgetting  = 0;
 
-  usleep(100);
+  Timer::sleep(Duration::microseconds(100));
 
 
   //initializing timer
@@ -660,7 +660,7 @@ void runMultiUnLoadSpeed(int numTimesLoad)
 
       //    else
       //      {
-      //        usleep(1);
+      //        Timer::sleep(Duration::microseconds(1));
       //      }
 
     }
@@ -677,7 +677,7 @@ void runMultiUnLoadSpeed(int numTimesLoad)
     std::cout<<"This is the size of allGets:  "<<allGets.size()<<"\n\n\n";
     std::cout.flush();
 
-    usleep(100);
+    Timer::sleep(Duration::microseconds(100));
 
     iteratedWait(1000,&myReader1,allGets, allTrackedSets);
     ++numIter;

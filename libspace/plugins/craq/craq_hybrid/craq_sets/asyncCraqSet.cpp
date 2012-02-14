@@ -58,7 +58,7 @@ namespace Sirikata
     std::cout<<"\n\nReceived a stop in async craq set\n";
 #endif
     for (int s=0; s < (int) mConnections.size(); ++s)
-      mConnectionsStrands[s]->post(std::tr1::bind(&AsyncConnectionSet::stop,mConnections[s]));
+        mConnectionsStrands[s]->post(std::tr1::bind(&AsyncConnectionSet::stop,mConnections[s]), "AsyncConnectionSet::stop");
   }
 
 
@@ -95,7 +95,7 @@ namespace Sirikata
 
     for (int s=0; s < STREAM_CRAQ_NUM_CONNECTIONS_SET; ++s)
     {
-      Network::IOStrand* tmpStrand = ctx->ioService->createStrand();
+      Network::IOStrand* tmpStrand = ctx->ioService->createStrand("AsyncCraqSet Temporary Strand");
       mConnectionsStrands.push_back(tmpStrand);
 
       AsyncConnectionSet* tmpConn = new AsyncConnectionSet(ctx,                     //space context
@@ -120,7 +120,7 @@ namespace Sirikata
         boost::asio::ip::tcp::resolver::query query(boost::asio::ip::tcp::v4(), ipAddPort[s].ipAdd.c_str(), ipAddPort[s].port.c_str());
         boost::asio::ip::tcp::resolver::iterator iterator = resolver.resolve(query);  //creates a list of endpoints that we can try to connect to.
         passSocket   =  new Sirikata::Network::TCPSocket(*ctx->ioService);
-        mConnectionsStrands[s]->post(std::tr1::bind(&AsyncConnectionSet::initialize, mConnections[s],passSocket,iterator));
+        mConnectionsStrands[s]->post(std::tr1::bind(&AsyncConnectionSet::initialize, mConnections[s],passSocket,iterator), "AsyncConnectionSet::initialize");
 
       }
     }
@@ -148,7 +148,7 @@ namespace Sirikata
         }
 
         passSocket   =  new Sirikata::Network::TCPSocket (*ctx->ioService);
-        mConnectionsStrands[s]->post(std::tr1::bind(&AsyncConnectionSet::initialize, mConnections[s],passSocket,iterator));
+        mConnectionsStrands[s]->post(std::tr1::bind(&AsyncConnectionSet::initialize, mConnections[s],passSocket,iterator), "AsyncConnectionSet::initialize");
 
       }
     }
@@ -285,7 +285,7 @@ namespace Sirikata
           CraqObjectID tmpCraqID;
           memcpy(tmpCraqID.cdk, cdSG.dataKey, CRAQ_DATA_KEY_SIZE);
           mConnections[s]->setProcessing();
-          mConnectionsStrands[s]->post(std::tr1::bind(&AsyncConnectionSet::setBound, mConnections[s], tmpCraqID, cdSG.dataKeyValue, cdSG.trackMessage, cdSG.trackingID));
+          mConnectionsStrands[s]->post(std::tr1::bind(&AsyncConnectionSet::setBound, mConnections[s], tmpCraqID, cdSG.dataKeyValue, cdSG.trackMessage, cdSG.trackingID), "AsyncConnectionSet::setBound");
         }
       }
     }
@@ -323,7 +323,7 @@ void AsyncCraqSet::reInitializeNode(int s)
     boost::asio::ip::tcp::resolver::iterator iterator = resolver.resolve(query);  //creates a list of endpoints that we can try to connect to.
     passSocket   =  new Sirikata::Network::TCPSocket(*ctx->ioService);
 
-    mConnectionsStrands[s]->post(std::tr1::bind(&AsyncConnectionSet::initialize, mConnections[s],passSocket,iterator));
+    mConnectionsStrands[s]->post(std::tr1::bind(&AsyncConnectionSet::initialize, mConnections[s],passSocket,iterator), "AsyncConnectionSet::initialize");
   }
   else
   {
@@ -338,7 +338,7 @@ void AsyncCraqSet::reInitializeNode(int s)
 
 
     passSocket   =  new Sirikata::Network::TCPSocket(*ctx->ioService);
-    mConnectionsStrands[s]->post(std::tr1::bind(&AsyncConnectionSet::initialize, mConnections[s],passSocket,iterator));
+    mConnectionsStrands[s]->post(std::tr1::bind(&AsyncConnectionSet::initialize, mConnections[s],passSocket,iterator), "AsyncConnectionSet::initialize");
   }
 }
 

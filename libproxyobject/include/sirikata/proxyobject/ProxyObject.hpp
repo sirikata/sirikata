@@ -120,8 +120,10 @@ public:
     typedef TimedWeightedExtrapolator<Location,UpdateNeeded> Extrapolator;
 
 private:
+    bool mValid;
     const SpaceObjectReference mID;
     ProxyManagerPtr mParent;
+    
 public:
     /** Constructs a new ProxyObject. After constructing this object, it
         should be wrapped in a shared_ptr and sent to ProxyManager::createObject().
@@ -132,7 +134,10 @@ public:
     */
     ProxyObject(ProxyManagerPtr man, const SpaceObjectReference& id);
 
-
+    
+    inline const bool isValid() const {      
+      return mValid;
+    }
     /// Subclasses can do any necessary cleanup first.
     virtual void destroy();
 
@@ -172,19 +177,19 @@ public:
     bool isStatic() const;
 
     // PresenceProperties Overrides
-    virtual const TimedMotionVector3f& location() const;
-    virtual const TimedMotionQuaternion& orientation() const;
-    virtual const BoundingSphere3f& bounds() const;
-    virtual const Transfer::URI& mesh() const;
-    virtual const String& physics() const;
+    virtual TimedMotionVector3f location() const;
+    virtual TimedMotionQuaternion orientation() const;
+    virtual BoundingSphere3f bounds() const;
+    virtual Transfer::URI mesh() const;
+    virtual String physics() const;
 
     // Alternatives that access only the *verified* location information,
     // i.e. data sent by the space.
-    const TimedMotionVector3f& verifiedLocation() const;
-    const TimedMotionQuaternion& verifiedOrientation() const;
-    const BoundingSphere3f& verifiedBounds() const;
-    const Transfer::URI& verifiedMesh() const;
-    const String& verifiedPhysics() const;
+    TimedMotionVector3f verifiedLocation() const;
+    TimedMotionQuaternion verifiedOrientation() const;
+    BoundingSphere3f verifiedBounds() const;
+    Transfer::URI verifiedMesh() const;
+    String verifiedPhysics() const;
 
     void setLocation(const TimedMotionVector3f& reqloc, uint64 seqno);
     void setOrientation(const TimedMotionQuaternion& reqorient, uint64 seqno);

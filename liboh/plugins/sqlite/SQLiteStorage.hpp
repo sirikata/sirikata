@@ -35,6 +35,7 @@
 
 #include <sirikata/oh/Storage.hpp>
 #include <sirikata/sqlite/SQLite.hpp>
+#include <sirikata/core/queue/ThreadSafeQueueWithNotification.hpp>
 
 namespace Sirikata {
 namespace OH {
@@ -56,6 +57,7 @@ public:
     virtual bool erase(const Bucket& bucket, const Key& key, const CommitCallback& cb = 0, const String& timestamp="current");
     virtual bool write(const Bucket& bucket, const Key& key, const String& value, const CommitCallback& cb = 0, const String& timestamp="current");
     virtual bool read(const Bucket& bucket, const Key& key, const CommitCallback& cb = 0, const String& timestamp="current");
+    virtual bool compare(const Bucket& bucket, const Key& key, const String& value, const CommitCallback& cb = 0, const String& timestamp="current");
     virtual bool rangeRead(const Bucket& bucket, const Key& start, const Key& finish, const CommitCallback& cb = 0, const String& timestamp="current");
     virtual bool rangeErase(const Bucket& bucket, const Key& start, const Key& finish, const CommitCallback& cb = 0, const String& timestamp="current");
     virtual bool count(const Bucket& bucket, const Key& start, const Key& finish, const CountCallback& cb = 0, const String& timestamp="current");
@@ -67,8 +69,11 @@ private:
     struct StorageAction {
         enum Type {
             Read,
+            ReadRange,
+            Compare,
             Write,
             Erase,
+            EraseRange,
             Error
         };
 
@@ -84,11 +89,28 @@ private:
         // Bucket is implicit, passed into execute
         Type type;
         Key key;
+        Key keyEnd; // Only relevant for *Range and Count
         String* value;
     };
 
     typedef std::vector<StorageAction> Transaction;
     typedef std::tr1::unordered_map<Bucket, Transaction*, Bucket::Hasher> BucketTransactions;
+
+    // We keep a queue of transactions and trigger handlers, which can process
+    // more than one at a time, on the storage IOService
+    struct TransactionData {
+        TransactionData()
+         : bucket(), trans(NULL), cb()
+        {}
+        TransactionData(const Bucket& b, Transaction* t, CommitCallback c)
+         : bucket(b), trans(t), cb(c)
+        {}
+
+        Bucket bucket;
+        Transaction* trans;
+        CommitCallback cb;
+    };
+    typedef ThreadSafeQueueWithNotification<TransactionData> TransactionQueue;
 
     // Initializes the database. This is separate from the main initialization
     // function because we need to make sure it executes in the right thread so
@@ -100,20 +122,18 @@ private:
     // implicit transaction.
     Transaction* getTransaction(const Bucket& bucket, bool* is_new = NULL);
 
-    // Executes a commit. Runs in a separate thread, so the transaction is
-    // passed in directly
-    void executeCommit(const Bucket& bucket, Transaction* trans, CommitCallback cb);
+    // Indirection to get on mIOService
+    void postProcessTransactions();
+    // Process transactions. Runs until queue is empty and is triggered anytime
+    // the queue goes from empty to non-empty.
+    void processTransactions();
 
-    void executeRangeRead(const String value_query, const Key& start, const Key& finish, CommitCallback cb);
-    void executeRangeErase(const String value_delete, const Key& start, const Key& finish, CommitCallback cb);
+    // Tries to execute a commit *assuming it is within a SQL
+    // transaction*. Returns whether it was successful, allowing for
+    // rollback/retrying.
+    bool executeCommit(const Bucket& bucket, Transaction* trans, CommitCallback cb, ReadSet** read_set_out);
+
     void executeCount(const String value_count, const Key& start, const Key& finish, CountCallback cb);
-
-    // Complete a commit back in the main thread, cleaning it up and dispatching
-    // the callback
-    void completeCommit(const Bucket& bucket, Transaction* trans, CommitCallback cb, bool success, ReadSet* rs);
-
-    void completeRange(CommitCallback cb, bool success, ReadSet* rs);
-    void completeCount(CountCallback cb, bool success, int32 count);
 
     // A few helper methods that wrap sql operations.
     bool sqlBeginTransaction();
@@ -132,6 +152,13 @@ private:
     Network::IOService* mIOService;
     Network::IOWork* mWork;
     Thread* mThread;
+
+    TransactionQueue mTransactionQueue;
+    // Maximum transactions to combine into a single transaction in the
+    // underlying database. TODO(ewencp) this should probably be dynamic, should
+    // increase/decrease based on success/failure and avoid latency getting too
+    // hight. Right now we just have a reasonable, but small, number.
+    uint32 mMaxCoalescedTransactions;
 };
 
 }//end namespace OH

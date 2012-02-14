@@ -41,7 +41,7 @@ namespace Sirikata {
 #define HEARTBEAT 'h'
 #define KILLSYNC  'k'
 
-#if SIRIKATA_PLATFORM != SIRIKATA_WINDOWS
+#if SIRIKATA_PLATFORM != SIRIKATA_PLATFORM_WINDOWS
 void TimeSync_sync_thread(int ntp_ctl_pipes[], int ntp_data_pipes[], bool* synced, bool* done) {
         // Close the endpoints that the cbr process doesn't use
         close(ntp_ctl_pipes[STDIN]);
@@ -58,7 +58,7 @@ void TimeSync_sync_thread(int ntp_ctl_pipes[], int ntp_data_pipes[], bool* synce
             int scanned = fscanf(ntp_data_fp, "%f", &offset);
             if (scanned == EOF) break;
             if (scanned == 0) {
-                usleep(100000);
+                Timer::sleep(Duration::milliseconds(100));
                 continue;
             }
             //printf("Got offset %f\n", offset); fflush(stdout);
@@ -95,7 +95,7 @@ NTPTimeSync::NTPTimeSync()
 }
 
 void NTPTimeSync::start(const String& server) {
-#if SIRIKATA_PLATFORM == SIRIKATA_WINDOWS
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS
 	// FIXME #92
 	mDone = true;
 #else
@@ -135,7 +135,7 @@ void NTPTimeSync::start(const String& server) {
 
         // Wait for it to sync at least once
         while(mSyncedOnce == false)
-            usleep(10000);
+                Timer::sleep(Duration::milliseconds(100));
     }
 #endif
 }

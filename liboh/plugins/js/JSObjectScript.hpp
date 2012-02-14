@@ -80,8 +80,8 @@ public:
 
     virtual ~JSObjectScript();
 
-    v8::Handle<v8::Value> debug_fileWrite(const String& strToWrite,const String& filename);
-    v8::Handle<v8::Value> debug_fileRead(const String& filename);
+    v8::Handle<v8::Value> debug_fileWrite(String& strToWrite,String& filename);
+    v8::Handle<v8::Value> debug_fileRead(String& filename);
 
 
     v8::Handle<v8::Value> executeInSandbox(JSContextStruct* jscont, v8::Handle<v8::Function> funcToCall,int argc, v8::Handle<v8::Value>* argv);
@@ -137,6 +137,11 @@ public:
 
     v8::Handle<v8::Value> setRestoreScript(JSContextStruct* jscont, const String& script, v8::Handle<v8::Function> cb);
 
+    //creates a new EvalContext with newDir as scripting directory.  Puts that
+    //context on mEvalContextStack.
+    v8::Handle<v8::Value> pushEvalContextScopeDirectory(const String& newDir);
+    v8::Handle<v8::Value> popEvalContextScopeDirectory();
+    
     /**
        Returns true if context eval stack is not empty and if the top context on
        the stack allows operation associated with whatCap on jspres.  Returns
@@ -210,12 +215,9 @@ public:
     v8::Handle<v8::Value> evalInGlobal(const String& contents, v8::ScriptOrigin* em_script_name,JSContextStruct* jscs);
 
 
-protected:
-
-
-
-
     JSCtx* mCtx;
+
+protected:
 
     // Object host internal identifier for the object associated with
     // this script. We copy this information here because this base

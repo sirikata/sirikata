@@ -66,7 +66,6 @@ namespace JS {
 
 
 class EmersonScript : public JSObjectScript,
-                      public JSVisibleManager,
                       public SessionEventListener,
                       public EmersonMessagingManager
 {
@@ -228,7 +227,7 @@ public:
     void setBounds(const SpaceObjectReference sporef, const BoundingSphere3f& bounds);
     void setVisual(const SpaceObjectReference sporef, const std::string& newMeshString);
 
-    const String& getQuery(const SpaceObjectReference& sporef) const;
+    String getQuery(const SpaceObjectReference& sporef) const;
     void setQueryFunction(const SpaceObjectReference sporef, const String& query);
 
     void setPhysicsFunction(const SpaceObjectReference sporef, const String& newPhysicsString);
@@ -277,6 +276,9 @@ public:
 
     JSContextStruct* rootContext() const { return mContext; }
 
+
+    JSVisibleManager jsVisMan;
+    
     HostedObjectPtr mParent;
 
 /**
@@ -453,6 +455,11 @@ private:
         std::vector<boost::any>& params,v8::Persistent<v8::Function> function_,
         Liveness::Token alive);
 
+
+    //simname, sporef
+    typedef std::vector< std::pair<String,SpaceObjectReference> > SimVec;
+    SimVec mSimulations;
+    
 };
 
 #define EMERSCRIPT_SERIAL_CHECK()\

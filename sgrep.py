@@ -29,7 +29,8 @@ ABSOLUTE_EXCLUDES = [
     'liboh/plugins/ogre/data/jquery_plugins',
     'liboh/plugins/ogre/data/jquery',
     'liboh/plugins/js/emerson/alt_regress',
-    'liboh/plugins/js/emerson/regression'
+    'liboh/plugins/js/emerson/regression',
+    'libproxyobject/plugins/ogre/data/ace/build/src'
     ]
 
 if __name__ == "__main__":

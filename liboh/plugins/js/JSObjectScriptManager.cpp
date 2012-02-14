@@ -54,7 +54,6 @@
 
 #include "JSLogging.hpp"
 
-#include <sirikata/core/network/IOServiceFactory.hpp>
 #include <sirikata/core/network/IOService.hpp>
 #include <sirikata/core/network/IOWork.hpp>
 #include <sirikata/mesh/ModelsSystemFactory.hpp>
@@ -63,6 +62,7 @@
 #include <sirikata/core/transfer/AggregatedTransferPool.hpp>
 
 #include <sirikata/core/util/Paths.hpp>
+
 
 namespace Sirikata {
 namespace JS {
@@ -77,7 +77,6 @@ ObjectScriptManager* JSObjectScriptManager::createObjectScriptManager(ObjectHost
 
 JSObjectScriptManager::JSObjectScriptManager(ObjectHostContext* ctx, const Sirikata::String& arguments)
  : mContext(ctx),
-   mIsolate(v8::Isolate::New()),
    mTransferPool(),
    mParsingIOService(NULL),
    mParsingWork(NULL),
@@ -89,7 +88,8 @@ JSObjectScriptManager::JSObjectScriptManager(ObjectHostContext* ctx, const Sirik
     if (mContext != NULL) {
         mTransferPool = Transfer::TransferMediator::getSingleton().registerClient<Transfer::AggregatedTransferPool>("JSObjectScriptManager");
 
-        mParsingIOService = Network::IOServiceFactory::makeIOService();
+        // TODO(ewencp) This should just be a strand on the main service
+        mParsingIOService = new Network::IOService("JSObjectScriptManager Parsing");
         mParsingWork = new Network::IOWork(*mParsingIOService, "JSObjectScriptManager Mesh Parsing");
         mParsingThread = new Sirikata::Thread(std::tr1::bind(&Network::IOService::runNoReturn, mParsingIOService));
 
@@ -109,6 +109,7 @@ JSObjectScriptManager::JSObjectScriptManager(ObjectHostContext* ctx, const Sirik
         }
     }
 
+
     OptionValue* default_import_paths;
     OptionValue* import_paths;
     OptionValue* v8_flags_opt;
@@ -121,7 +122,7 @@ JSObjectScriptManager::JSObjectScriptManager(ObjectHostContext* ctx, const Sirik
         // absolutely know what you're doing
         default_import_paths = new OptionValue("default-import-paths",
             Path::Placeholders::DIR_SYSTEM_CONFIG + "/js/scripts" + "," +
-            Path::Placeholders::RESOURCE("liboh/plugins", "js/scripts") + "," +
+            Path::Placeholders::RESOURCE(JS_PLUGINS_DIR, JS_SCRIPTS_DIR) + "," +
             Path::Placeholders::DIR_CURRENT,
             OptionValueType<std::list<String> >(),"Comma separated list of paths to import files from, searched in order for the requested import."),
         // These are additional import paths. Generally if you need to
@@ -142,261 +143,258 @@ JSObjectScriptManager::JSObjectScriptManager(ObjectHostContext* ctx, const Sirik
     if (!v8_flags.empty()) {
         v8::V8::SetFlagsFromString(v8_flags.c_str(), v8_flags.size());
     }
-
-    createTemplates(); //these templates involve vec, quat, pattern, etc.
 }
 
 /*
   EMERSON!: util
  */
 
-void JSObjectScriptManager::createUtilTemplate()
+void JSObjectScriptManager::createUtilTemplate(JSCtx* jsctx)
 {
 
     v8::HandleScope handle_scope;
-    mUtilTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
+    jsctx->mUtilTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
 
     // An internal field holds the JSObjectScript*
-    mUtilTemplate->SetInternalFieldCount(UTIL_TEMPLATE_FIELD_COUNT);
+    jsctx->mUtilTemplate->SetInternalFieldCount(UTIL_TEMPLATE_FIELD_COUNT);
 
-    mUtilTemplate->Set(JS_STRING(sqrt),v8::FunctionTemplate::New(JSUtilObj::ScriptSqrtFunction));
-    mUtilTemplate->Set(JS_STRING(acos),v8::FunctionTemplate::New(JSUtilObj::ScriptAcosFunction));
-    mUtilTemplate->Set(JS_STRING(asin),v8::FunctionTemplate::New(JSUtilObj::ScriptAsinFunction));
-    mUtilTemplate->Set(JS_STRING(cos),v8::FunctionTemplate::New(JSUtilObj::ScriptCosFunction));
-    mUtilTemplate->Set(JS_STRING(sin),v8::FunctionTemplate::New(JSUtilObj::ScriptSinFunction));
-    mUtilTemplate->Set(JS_STRING(rand),v8::FunctionTemplate::New(JSUtilObj::ScriptRandFunction));
-    mUtilTemplate->Set(JS_STRING(pow),v8::FunctionTemplate::New(JSUtilObj::ScriptPowFunction));
-    mUtilTemplate->Set(JS_STRING(exp),v8::FunctionTemplate::New(JSUtilObj::ScriptExpFunction));
-    mUtilTemplate->Set(JS_STRING(abs),v8::FunctionTemplate::New(JSUtilObj::ScriptAbsFunction));
+    jsctx->mUtilTemplate->Set(JS_STRING(sqrt),v8::FunctionTemplate::New(JSUtilObj::ScriptSqrtFunction));
+    jsctx->mUtilTemplate->Set(JS_STRING(acos),v8::FunctionTemplate::New(JSUtilObj::ScriptAcosFunction));
+    jsctx->mUtilTemplate->Set(JS_STRING(asin),v8::FunctionTemplate::New(JSUtilObj::ScriptAsinFunction));
+    jsctx->mUtilTemplate->Set(JS_STRING(cos),v8::FunctionTemplate::New(JSUtilObj::ScriptCosFunction));
+    jsctx->mUtilTemplate->Set(JS_STRING(sin),v8::FunctionTemplate::New(JSUtilObj::ScriptSinFunction));
+    jsctx->mUtilTemplate->Set(JS_STRING(rand),v8::FunctionTemplate::New(JSUtilObj::ScriptRandFunction));
+    jsctx->mUtilTemplate->Set(JS_STRING(pow),v8::FunctionTemplate::New(JSUtilObj::ScriptPowFunction));
+    jsctx->mUtilTemplate->Set(JS_STRING(exp),v8::FunctionTemplate::New(JSUtilObj::ScriptExpFunction));
+    jsctx->mUtilTemplate->Set(JS_STRING(abs),v8::FunctionTemplate::New(JSUtilObj::ScriptAbsFunction));
 
-    mUtilTemplate->Set(v8::String::New("plus"), v8::FunctionTemplate::New(JSUtilObj::ScriptPlus));
-    mUtilTemplate->Set(v8::String::New("sub"), v8::FunctionTemplate::New(JSUtilObj::ScriptMinus));
-    mUtilTemplate->Set(v8::String::New("identifier"),v8::FunctionTemplate::New(JSUtilObj::ScriptSporef));
+    jsctx->mUtilTemplate->Set(v8::String::New("plus"), v8::FunctionTemplate::New(JSUtilObj::ScriptPlus));
+    jsctx->mUtilTemplate->Set(v8::String::New("sub"), v8::FunctionTemplate::New(JSUtilObj::ScriptMinus));
+    jsctx->mUtilTemplate->Set(v8::String::New("identifier"),v8::FunctionTemplate::New(JSUtilObj::ScriptSporef));
 
-    mUtilTemplate->Set(v8::String::New("div"),v8::FunctionTemplate::New(JSUtilObj::ScriptDiv));
-    mUtilTemplate->Set(v8::String::New("mul"),v8::FunctionTemplate::New(JSUtilObj::ScriptMult));
-    mUtilTemplate->Set(v8::String::New("mod"),v8::FunctionTemplate::New(JSUtilObj::ScriptMod));
-    mUtilTemplate->Set(v8::String::New("equal"),v8::FunctionTemplate::New(JSUtilObj::ScriptEqual));
-    mUtilTemplate->Set(v8::String::New("Quaternion"), mQuaternionTemplate);
-    mUtilTemplate->Set(v8::String::New("Vec3"), mVec3Template);
+    jsctx->mUtilTemplate->Set(v8::String::New("div"),v8::FunctionTemplate::New(JSUtilObj::ScriptDiv));
+    jsctx->mUtilTemplate->Set(v8::String::New("mul"),v8::FunctionTemplate::New(JSUtilObj::ScriptMult));
+    jsctx->mUtilTemplate->Set(v8::String::New("mod"),v8::FunctionTemplate::New(JSUtilObj::ScriptMod));
+    jsctx->mUtilTemplate->Set(v8::String::New("equal"),v8::FunctionTemplate::New(JSUtilObj::ScriptEqual));
+    jsctx->mUtilTemplate->Set(v8::String::New("Quaternion"), jsctx->mQuaternionTemplate);
+    jsctx->mUtilTemplate->Set(v8::String::New("Vec3"), jsctx->mVec3Template);
 
-    mUtilTemplate->Set(v8::String::New("_base64Encode"), v8::FunctionTemplate::New(JSUtilObj::Base64Encode));
-    mUtilTemplate->Set(v8::String::New("_base64EncodeURL"), v8::FunctionTemplate::New(JSUtilObj::Base64EncodeURL));
-    mUtilTemplate->Set(v8::String::New("_base64Decode"), v8::FunctionTemplate::New(JSUtilObj::Base64Decode));
-    mUtilTemplate->Set(v8::String::New("_base64DecodeURL"), v8::FunctionTemplate::New(JSUtilObj::Base64DecodeURL));
+    jsctx->mUtilTemplate->Set(v8::String::New("_base64Encode"), v8::FunctionTemplate::New(JSUtilObj::Base64Encode));
+    jsctx->mUtilTemplate->Set(v8::String::New("_base64EncodeURL"), v8::FunctionTemplate::New(JSUtilObj::Base64EncodeURL));
+    jsctx->mUtilTemplate->Set(v8::String::New("_base64Decode"), v8::FunctionTemplate::New(JSUtilObj::Base64Decode));
+    jsctx->mUtilTemplate->Set(v8::String::New("_base64DecodeURL"), v8::FunctionTemplate::New(JSUtilObj::Base64DecodeURL));
 }
 
-/*
-  EMERSON: additional types
-*/
 
 
 //these templates involve vec, quat, pattern, etc.
-void JSObjectScriptManager::createTemplates()
+JSCtx* JSObjectScriptManager::createJSCtx(HostedObjectPtr ho)
 {
-    v8::Isolate::Scope iscope(mIsolate);
+    JSCtx* jsctx =
+        new JSCtx(mContext,
+            Network::IOStrandPtr(
+                mContext->ioService->createStrand("EmersonScript " + ho->id().toString())),
+            Network::IOStrandPtr(
+                mContext->ioService->createStrand("VisManager "    + ho->id().toString())),
+            v8::Isolate::New());
+
+    v8::Locker locker (jsctx->mIsolate);
+    v8::Isolate::Scope iscope(jsctx->mIsolate);
     v8::HandleScope handle_scope;
-    mVec3Template        = v8::Persistent<v8::FunctionTemplate>::New(CreateVec3Template());
-    mQuaternionTemplate  = v8::Persistent<v8::FunctionTemplate>::New(CreateQuaternionTemplate());
+    jsctx->mVec3Template = v8::Persistent<v8::FunctionTemplate>::New(CreateVec3Template());
+    jsctx->mQuaternionTemplate  = v8::Persistent<v8::FunctionTemplate>::New(CreateQuaternionTemplate());
 
-    createUtilTemplate();
-    createVisibleTemplate();
+    createUtilTemplate(jsctx);
+    createVisibleTemplate(jsctx);
+    createTimerTemplate(jsctx);
+    createJSInvokableObjectTemplate(jsctx);
+    createPresenceTemplate(jsctx);
+    createSystemTemplate(jsctx);
+    createContextTemplate(jsctx);
+    createContextGlobalTemplate(jsctx);
 
-    createTimerTemplate();
-    createJSInvokableObjectTemplate();
-    createPresenceTemplate();
-    createSystemTemplate();
-    createContextTemplate();
-    createContextGlobalTemplate();
+    return jsctx;
 }
 
 
-/*
-  EMERSON!: timer
- */
-void JSObjectScriptManager::createTimerTemplate()
+
+void JSObjectScriptManager::createTimerTemplate(JSCtx* jsctx)
 {
     v8::HandleScope handle_scope;
-    mTimerTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
-    mTimerTemplate->SetInternalFieldCount(TIMER_JSTIMER_TEMPLATE_FIELD_COUNT);
+    jsctx->mTimerTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
+    jsctx->mTimerTemplate->SetInternalFieldCount(TIMER_JSTIMER_TEMPLATE_FIELD_COUNT);
 
-    mTimerTemplate->Set(v8::String::New("resetTimer"),v8::FunctionTemplate::New(JSTimer::resetTimer));
-    mTimerTemplate->Set(v8::String::New("clear"),v8::FunctionTemplate::New(JSTimer::clear));
-    mTimerTemplate->Set(v8::String::New("suspend"),v8::FunctionTemplate::New(JSTimer::suspend));
-    mTimerTemplate->Set(v8::String::New("reset"),v8::FunctionTemplate::New(JSTimer::resume));
-    mTimerTemplate->Set(v8::String::New("isSuspended"),v8::FunctionTemplate::New(JSTimer::isSuspended));
-    mTimerTemplate->Set(v8::String::New("getAllData"), v8::FunctionTemplate::New(JSTimer::getAllData));
-    mTimerTemplate->Set(v8::String::New("__getType"),v8::FunctionTemplate::New(JSTimer::getType));
+    jsctx->mTimerTemplate->Set(v8::String::New("resetTimer"),v8::FunctionTemplate::New(JSTimer::resetTimer));
+    jsctx->mTimerTemplate->Set(v8::String::New("clear"),v8::FunctionTemplate::New(JSTimer::clear));
+    jsctx->mTimerTemplate->Set(v8::String::New("suspend"),v8::FunctionTemplate::New(JSTimer::suspend));
+    jsctx->mTimerTemplate->Set(v8::String::New("reset"),v8::FunctionTemplate::New(JSTimer::resume));
+    jsctx->mTimerTemplate->Set(v8::String::New("isSuspended"),v8::FunctionTemplate::New(JSTimer::isSuspended));
+    jsctx->mTimerTemplate->Set(v8::String::New("getAllData"), v8::FunctionTemplate::New(JSTimer::getAllData));
+    jsctx->mTimerTemplate->Set(v8::String::New("__getType"),v8::FunctionTemplate::New(JSTimer::getType));
 }
 
 
-/*
-  EMERSON!: system
- */
-void JSObjectScriptManager::createSystemTemplate()
+
+void JSObjectScriptManager::createSystemTemplate(JSCtx* jsctx)
 {
     v8::HandleScope handle_scope;
-    mSystemTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
+    jsctx->mSystemTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
 
-    mSystemTemplate->SetInternalFieldCount(SYSTEM_TEMPLATE_FIELD_COUNT);
+    jsctx->mSystemTemplate->SetInternalFieldCount(SYSTEM_TEMPLATE_FIELD_COUNT);
 
-    mSystemTemplate->Set(v8::String::New("registerProxAddedHandler"),v8::FunctionTemplate::New(JSSystem::root_proxAddedHandler));
-    mSystemTemplate->Set(v8::String::New("registerProxRemovedHandler"),v8::FunctionTemplate::New(JSSystem::root_proxRemovedHandler));
-
-
-    mSystemTemplate->Set(v8::String::New("headless"),v8::FunctionTemplate::New(JSSystem::root_headless));
-    mSystemTemplate->Set(v8::String::New("__debugFileWrite"),v8::FunctionTemplate::New(JSSystem::debug_fileWrite));
-    mSystemTemplate->Set(v8::String::New("__debugFileRead"),v8::FunctionTemplate::New(JSSystem::debug_fileRead));
-    mSystemTemplate->Set(v8::String::New("sendHome"),v8::FunctionTemplate::New(JSSystem::root_sendHome));
-    mSystemTemplate->Set(v8::String::New("event"), v8::FunctionTemplate::New(JSSystem::root_event));
-    mSystemTemplate->Set(v8::String::New("timeout"), v8::FunctionTemplate::New(JSSystem::root_timeout));
-    mSystemTemplate->Set(v8::String::New("print"), v8::FunctionTemplate::New(JSSystem::root_print));
-
-    mSystemTemplate->Set(v8::String::New("getAssociatedPresence"), v8::FunctionTemplate::New(JSSystem::getAssociatedPresence));
+    jsctx->mSystemTemplate->Set(v8::String::New("registerProxAddedHandler"),v8::FunctionTemplate::New(JSSystem::root_proxAddedHandler));
+    jsctx->mSystemTemplate->Set(v8::String::New("registerProxRemovedHandler"),v8::FunctionTemplate::New(JSSystem::root_proxRemovedHandler));
 
 
-    mSystemTemplate->Set(v8::String::New("__evalInGlobal"), v8::FunctionTemplate::New(JSSystem::evalInGlobal));
-    mSystemTemplate->Set(v8::String::New("sendSandbox"), v8::FunctionTemplate::New(JSSystem::root_sendSandbox));
+    jsctx->mSystemTemplate->Set(v8::String::New("headless"),v8::FunctionTemplate::New(JSSystem::root_headless));
+    jsctx->mSystemTemplate->Set(v8::String::New("__debugFileWrite"),v8::FunctionTemplate::New(JSSystem::debug_fileWrite));
+    jsctx->mSystemTemplate->Set(v8::String::New("__debugFileRead"),v8::FunctionTemplate::New(JSSystem::debug_fileRead));
+    jsctx->mSystemTemplate->Set(v8::String::New("sendHome"),v8::FunctionTemplate::New(JSSystem::root_sendHome));
+    jsctx->mSystemTemplate->Set(v8::String::New("event"), v8::FunctionTemplate::New(JSSystem::root_event));
+    jsctx->mSystemTemplate->Set(v8::String::New("timeout"), v8::FunctionTemplate::New(JSSystem::root_timeout));
+    jsctx->mSystemTemplate->Set(v8::String::New("print"), v8::FunctionTemplate::New(JSSystem::root_print));
 
-    mSystemTemplate->Set(v8::String::New("js_import"), v8::FunctionTemplate::New(JSSystem::root_jsimport));
-    mSystemTemplate->Set(v8::String::New("js_require"), v8::FunctionTemplate::New(JSSystem::root_jsrequire));
-
-    mSystemTemplate->Set(v8::String::New("sendMessage"), v8::FunctionTemplate::New(JSSystem::sendMessageReliable));
-    mSystemTemplate->Set(v8::String::New("sendMessageUnreliable"),v8::FunctionTemplate::New(JSSystem::sendMessageUnreliable));
-
-    mSystemTemplate->Set(v8::String::New("import"), v8::FunctionTemplate::New(JSSystem::root_import));
-
-    mSystemTemplate->Set(v8::String::New("http"), v8::FunctionTemplate::New(JSSystem::root_http));
-
-    mSystemTemplate->Set(v8::String::New("storageBeginTransaction"),v8::FunctionTemplate::New(JSSystem::storageBeginTransaction));
-    mSystemTemplate->Set(v8::String::New("storageCommit"),v8::FunctionTemplate::New(JSSystem::storageCommit));
-    mSystemTemplate->Set(v8::String::New("storageErase"), v8::FunctionTemplate::New(JSSystem::storageErase));
-    mSystemTemplate->Set(v8::String::New("storageWrite"),v8::FunctionTemplate::New(JSSystem::storageWrite));
-    mSystemTemplate->Set(v8::String::New("storageRead"),v8::FunctionTemplate::New(JSSystem::storageRead));
-    mSystemTemplate->Set(v8::String::New("storageRangeRead"),v8::FunctionTemplate::New(JSSystem::storageRangeRead));
-    mSystemTemplate->Set(v8::String::New("storageRangeErase"),v8::FunctionTemplate::New(JSSystem::storageRangeErase));
-    mSystemTemplate->Set(v8::String::New("storageCount"),v8::FunctionTemplate::New(JSSystem::storageCount));
-
-    mSystemTemplate->Set(v8::String::New("setSandboxMessageCallback"),v8::FunctionTemplate::New(JSSystem::setSandboxMessageCallback));
-    mSystemTemplate->Set(v8::String::New("setPresenceMessageCallback"),v8::FunctionTemplate::New(JSSystem::setPresenceMessageCallback));
-
-    mSystemTemplate->Set(v8::String::New("setRestoreScript"),v8::FunctionTemplate::New(JSSystem::setRestoreScript));
-    mSystemTemplate->Set(v8::String::New("__emersonCompileString"), v8::FunctionTemplate::New(JSSystem::emersonCompileString));
+    jsctx->mSystemTemplate->Set(v8::String::New("getAssociatedPresence"), v8::FunctionTemplate::New(JSSystem::getAssociatedPresence));
 
 
-    mSystemTemplate->Set(v8::String::New("createVisible"),v8::FunctionTemplate::New(JSSystem::root_createVisible));
+    jsctx->mSystemTemplate->Set(v8::String::New("__evalInGlobal"), v8::FunctionTemplate::New(JSSystem::evalInGlobal));
+    jsctx->mSystemTemplate->Set(v8::String::New("sendSandbox"), v8::FunctionTemplate::New(JSSystem::root_sendSandbox));
+
+    jsctx->mSystemTemplate->Set(v8::String::New("js_import"), v8::FunctionTemplate::New(JSSystem::root_jsimport));
+    jsctx->mSystemTemplate->Set(v8::String::New("js_require"), v8::FunctionTemplate::New(JSSystem::root_jsrequire));
+
+    jsctx->mSystemTemplate->Set(v8::String::New("sendMessage"), v8::FunctionTemplate::New(JSSystem::sendMessageReliable));
+    jsctx->mSystemTemplate->Set(v8::String::New("sendMessageUnreliable"),v8::FunctionTemplate::New(JSSystem::sendMessageUnreliable));
+
+    jsctx->mSystemTemplate->Set(v8::String::New("import"), v8::FunctionTemplate::New(JSSystem::root_import));
+
+    jsctx->mSystemTemplate->Set(v8::String::New("http"), v8::FunctionTemplate::New(JSSystem::root_http));
+
+    jsctx->mSystemTemplate->Set(v8::String::New("storageBeginTransaction"),v8::FunctionTemplate::New(JSSystem::storageBeginTransaction));
+    jsctx->mSystemTemplate->Set(v8::String::New("storageCommit"),v8::FunctionTemplate::New(JSSystem::storageCommit));
+    jsctx->mSystemTemplate->Set(v8::String::New("storageErase"), v8::FunctionTemplate::New(JSSystem::storageErase));
+    jsctx->mSystemTemplate->Set(v8::String::New("storageWrite"),v8::FunctionTemplate::New(JSSystem::storageWrite));
+    jsctx->mSystemTemplate->Set(v8::String::New("storageRead"),v8::FunctionTemplate::New(JSSystem::storageRead));
+    jsctx->mSystemTemplate->Set(v8::String::New("storageRangeRead"),v8::FunctionTemplate::New(JSSystem::storageRangeRead));
+    jsctx->mSystemTemplate->Set(v8::String::New("storageRangeErase"),v8::FunctionTemplate::New(JSSystem::storageRangeErase));
+    jsctx->mSystemTemplate->Set(v8::String::New("storageCount"),v8::FunctionTemplate::New(JSSystem::storageCount));
+
+    jsctx->mSystemTemplate->Set(v8::String::New("setSandboxMessageCallback"),v8::FunctionTemplate::New(JSSystem::setSandboxMessageCallback));
+    jsctx->mSystemTemplate->Set(v8::String::New("setPresenceMessageCallback"),v8::FunctionTemplate::New(JSSystem::setPresenceMessageCallback));
+
+    jsctx->mSystemTemplate->Set(v8::String::New("setRestoreScript"),v8::FunctionTemplate::New(JSSystem::setRestoreScript));
+    jsctx->mSystemTemplate->Set(v8::String::New("__emersonCompileString"), v8::FunctionTemplate::New(JSSystem::emersonCompileString));
+
+    jsctx->mSystemTemplate->Set(v8::String::New("__pushEvalContextScopeDirectory"),
+        v8::FunctionTemplate::New(JSSystem::pushEvalContextScopeDirectory));
+    jsctx->mSystemTemplate->Set(v8::String::New("__popEvalContextScopeDirectory"),
+        v8::FunctionTemplate::New(JSSystem::popEvalContextScopeDirectory));
+
+    jsctx->mSystemTemplate->Set(v8::String::New("getUniqueToken"),
+        v8::FunctionTemplate::New(JSSystem::getUniqueToken));
+
+    jsctx->mSystemTemplate->Set(v8::String::New("createVisible"),v8::FunctionTemplate::New(JSSystem::root_createVisible));
 
     //check what permissions fake root is loaded with
-    mSystemTemplate->Set(v8::String::New("canSendMessage"), v8::FunctionTemplate::New(JSSystem::root_canSendMessage));
-    mSystemTemplate->Set(v8::String::New("canRecvMessage"), v8::FunctionTemplate::New(JSSystem::root_canRecvMessage));
-    mSystemTemplate->Set(v8::String::New("canProxCallback"), v8::FunctionTemplate::New(JSSystem::root_canProxCallback));
-    mSystemTemplate->Set(v8::String::New("canProxChangeQuery"), v8::FunctionTemplate::New(JSSystem::root_canProxChangeQuery));
-    mSystemTemplate->Set(v8::String::New("canImport"),v8::FunctionTemplate::New(JSSystem::root_canImport));
+    jsctx->mSystemTemplate->Set(v8::String::New("canSendMessage"), v8::FunctionTemplate::New(JSSystem::root_canSendMessage));
+    jsctx->mSystemTemplate->Set(v8::String::New("canRecvMessage"), v8::FunctionTemplate::New(JSSystem::root_canRecvMessage));
+    jsctx->mSystemTemplate->Set(v8::String::New("canProxCallback"), v8::FunctionTemplate::New(JSSystem::root_canProxCallback));
+    jsctx->mSystemTemplate->Set(v8::String::New("canProxChangeQuery"), v8::FunctionTemplate::New(JSSystem::root_canProxChangeQuery));
+    jsctx->mSystemTemplate->Set(v8::String::New("canImport"),v8::FunctionTemplate::New(JSSystem::root_canImport));
 
-    mSystemTemplate->Set(v8::String::New("canCreatePresence"), v8::FunctionTemplate::New(JSSystem::root_canCreatePres));
-    mSystemTemplate->Set(v8::String::New("canCreateEntity"), v8::FunctionTemplate::New(JSSystem::root_canCreateEnt));
-    mSystemTemplate->Set(v8::String::New("canEval"), v8::FunctionTemplate::New(JSSystem::root_canEval));
+    jsctx->mSystemTemplate->Set(v8::String::New("canCreatePresence"), v8::FunctionTemplate::New(JSSystem::root_canCreatePres));
+    jsctx->mSystemTemplate->Set(v8::String::New("canCreateEntity"), v8::FunctionTemplate::New(JSSystem::root_canCreateEnt));
+    jsctx->mSystemTemplate->Set(v8::String::New("canEval"), v8::FunctionTemplate::New(JSSystem::root_canEval));
 
-    mSystemTemplate->Set(v8::String::New("serialize"), v8::FunctionTemplate::New(JSSystem::root_serialize));
-    mSystemTemplate->Set(v8::String::New("deserialize"), v8::FunctionTemplate::New(JSSystem::root_deserialize));
+    jsctx->mSystemTemplate->Set(v8::String::New("serialize"), v8::FunctionTemplate::New(JSSystem::root_serialize));
+    jsctx->mSystemTemplate->Set(v8::String::New("deserialize"), v8::FunctionTemplate::New(JSSystem::root_deserialize));
 
-    mSystemTemplate->Set(v8::String::New("restorePresence"), v8::FunctionTemplate::New(JSSystem::root_restorePresence));
+    jsctx->mSystemTemplate->Set(v8::String::New("restorePresence"), v8::FunctionTemplate::New(JSSystem::root_restorePresence));
 
-    mSystemTemplate->Set(v8::String::New("getVersion"),v8::FunctionTemplate::New(JSSystem::root_getVersion));
+    jsctx->mSystemTemplate->Set(v8::String::New("getVersion"),v8::FunctionTemplate::New(JSSystem::root_getVersion));
 
-    mSystemTemplate->Set(v8::String::New("killEntity"), v8::FunctionTemplate::New(JSSystem::root_killEntity));
+    jsctx->mSystemTemplate->Set(v8::String::New("killEntity"), v8::FunctionTemplate::New(JSSystem::root_killEntity));
 
     //this doesn't work now.
-    mSystemTemplate->Set(v8::String::New("create_context"),v8::FunctionTemplate::New(JSSystem::root_createContext));
+    jsctx->mSystemTemplate->Set(v8::String::New("create_context"),v8::FunctionTemplate::New(JSSystem::root_createContext));
 
 
-    mSystemTemplate->Set(v8::String::New("create_entity_no_space"), v8::FunctionTemplate::New(JSSystem::root_createEntityNoSpace));
+    jsctx->mSystemTemplate->Set(v8::String::New("create_entity_no_space"), v8::FunctionTemplate::New(JSSystem::root_createEntityNoSpace));
 
-    mSystemTemplate->Set(v8::String::New("create_entity"), v8::FunctionTemplate::New(JSSystem::root_createEntity));
-
-
-    mSystemTemplate->Set(v8::String::New("onPresenceConnected"),v8::FunctionTemplate::New(JSSystem::root_onPresenceConnected));
-    mSystemTemplate->Set(v8::String::New("onPresenceDisconnected"),v8::FunctionTemplate::New(JSSystem::root_onPresenceDisconnected));
+    jsctx->mSystemTemplate->Set(v8::String::New("create_entity"), v8::FunctionTemplate::New(JSSystem::root_createEntity));
 
 
-    mSystemTemplate->Set(JS_STRING(__presence_constructor__), mPresenceTemplate);
-    mSystemTemplate->Set(JS_STRING(__visible_constructor__), mVisibleTemplate);
+    jsctx->mSystemTemplate->Set(v8::String::New("onPresenceConnected"),v8::FunctionTemplate::New(JSSystem::root_onPresenceConnected));
+    jsctx->mSystemTemplate->Set(v8::String::New("onPresenceDisconnected"),v8::FunctionTemplate::New(JSSystem::root_onPresenceDisconnected));
 
-    mSystemTemplate->Set(v8::String::New("require"), v8::FunctionTemplate::New(JSSystem::root_require));
-    mSystemTemplate->Set(v8::String::New("reset"),v8::FunctionTemplate::New(JSSystem::root_reset));
-    mSystemTemplate->Set(v8::String::New("set_script"),v8::FunctionTemplate::New(JSSystem::root_setScript));
-    mSystemTemplate->Set(v8::String::New("getScript"),v8::FunctionTemplate::New(JSSystem::root_getScript));
+
+    jsctx->mSystemTemplate->Set(JS_STRING(__presence_constructor__), jsctx->mPresenceTemplate);
+    jsctx->mSystemTemplate->Set(JS_STRING(__visible_constructor__), jsctx->mVisibleTemplate);
+
+    jsctx->mSystemTemplate->Set(v8::String::New("require"), v8::FunctionTemplate::New(JSSystem::root_require));
+    jsctx->mSystemTemplate->Set(v8::String::New("reset"),v8::FunctionTemplate::New(JSSystem::root_reset));
+    jsctx->mSystemTemplate->Set(v8::String::New("set_script"),v8::FunctionTemplate::New(JSSystem::root_setScript));
+    jsctx->mSystemTemplate->Set(v8::String::New("getScript"),v8::FunctionTemplate::New(JSSystem::root_getScript));
 
 }
 
-/*
-  EMERSON!: context
- */
-void JSObjectScriptManager::createContextTemplate()
+
+void JSObjectScriptManager::createContextTemplate(JSCtx* jsctx)
 {
     v8::HandleScope handle_scope;
     // And we expose some functionality directly
-    mContextTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
+    jsctx->mContextTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
 
     // An internal field holds the JSObjectScript*
-    mContextTemplate->SetInternalFieldCount(CONTEXT_TEMPLATE_FIELD_COUNT);
+    jsctx->mContextTemplate->SetInternalFieldCount(CONTEXT_TEMPLATE_FIELD_COUNT);
 
     // Functions / types
     //suspend,kill,resume,execute
-    mContextTemplate->Set(v8::String::New("execute"), v8::FunctionTemplate::New(JSContext::ScriptExecute));
-    mContextTemplate->Set(v8::String::New("suspend"), v8::FunctionTemplate::New(JSContext::ScriptSuspend));
-    mContextTemplate->Set(v8::String::New("resume"), v8::FunctionTemplate::New(JSContext::ScriptResume));
-    mContextTemplate->Set(v8::String::New("clear"), v8::FunctionTemplate::New(JSContext::ScriptClear));
+    jsctx->mContextTemplate->Set(v8::String::New("execute"), v8::FunctionTemplate::New(JSContext::ScriptExecute));
+    jsctx->mContextTemplate->Set(v8::String::New("suspend"), v8::FunctionTemplate::New(JSContext::ScriptSuspend));
+    jsctx->mContextTemplate->Set(v8::String::New("resume"), v8::FunctionTemplate::New(JSContext::ScriptResume));
+    jsctx->mContextTemplate->Set(v8::String::New("clear"), v8::FunctionTemplate::New(JSContext::ScriptClear));
 
 }
 
 
-void JSObjectScriptManager::createContextGlobalTemplate()
+void JSObjectScriptManager::createContextGlobalTemplate(JSCtx* jsctx)
 {
     v8::HandleScope handle_scope;
     // And we expose some functionality directly
-    mContextGlobalTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
-    mContextGlobalTemplate->SetInternalFieldCount(CONTEXT_GLOBAL_TEMPLATE_FIELD_COUNT);
+    jsctx->mContextGlobalTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
+    jsctx->mContextGlobalTemplate->SetInternalFieldCount(CONTEXT_GLOBAL_TEMPLATE_FIELD_COUNT);
 
-    mContextGlobalTemplate->Set(v8::String::New(JSSystemNames::SYSTEM_OBJECT_NAME),mSystemTemplate);
-    mContextGlobalTemplate->Set(v8::String::New(JSSystemNames::UTIL_OBJECT_NAME), mUtilTemplate);
+    jsctx->mContextGlobalTemplate->Set(v8::String::New(JSSystemNames::SYSTEM_OBJECT_NAME),jsctx->mSystemTemplate);
+    jsctx->mContextGlobalTemplate->Set(v8::String::New(JSSystemNames::UTIL_OBJECT_NAME), jsctx->mUtilTemplate);
 
-    mContextGlobalTemplate->Set(v8::String::New("__checkResources8_8_3_1__"), v8::FunctionTemplate::New(JSGlobal::checkResources));
+    jsctx->mContextGlobalTemplate->Set(v8::String::New("__checkResources8_8_3_1__"), v8::FunctionTemplate::New(JSGlobal::checkResources));
 }
 
 
 
-
-
-
-
-/*
-  EMERSON!: invokable
- */
-void JSObjectScriptManager::createJSInvokableObjectTemplate()
+void JSObjectScriptManager::createJSInvokableObjectTemplate(JSCtx* jsctx)
 {
   v8::HandleScope handle_scope;
 
-  mInvokableObjectTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
-  mInvokableObjectTemplate->SetInternalFieldCount(JSSIMOBJECT_TEMPLATE_FIELD_COUNT);
-  mInvokableObjectTemplate->Set(v8::String::New("invoke"), v8::FunctionTemplate::New(JSInvokableObject::invoke));
+  jsctx->mInvokableObjectTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
+  jsctx->mInvokableObjectTemplate->SetInternalFieldCount(JSSIMOBJECT_TEMPLATE_FIELD_COUNT);
+  jsctx->mInvokableObjectTemplate->Set(v8::String::New("invoke"), v8::FunctionTemplate::New(JSInvokableObject::invoke));
 }
 
 
-/*
-  EMERSON!: visible
- */
-void JSObjectScriptManager::createVisibleTemplate()
+
+void JSObjectScriptManager::createVisibleTemplate(JSCtx* jsctx)
 {
     v8::HandleScope handle_scope;
 
-    mVisibleTemplate = v8::Persistent<v8::FunctionTemplate>::New(v8::FunctionTemplate::New());
+    jsctx->mVisibleTemplate = v8::Persistent<v8::FunctionTemplate>::New(v8::FunctionTemplate::New());
 
-    v8::Local<v8::Template> proto_t = mVisibleTemplate->PrototypeTemplate();
+    v8::Local<v8::Template> proto_t = jsctx->mVisibleTemplate->PrototypeTemplate();
     //these function calls are defined in JSObjects/JSVisible.hpp
 
     proto_t->Set(v8::String::New("__debugRef"),v8::FunctionTemplate::New(JSVisible::__debugRef));
-    proto_t->Set(v8::String::New("toString"),v8::FunctionTemplate::New(JSVisible::toString));
+    proto_t->Set(v8::String::New("__toString"),v8::FunctionTemplate::New(JSVisible::toString));
 
     proto_t->Set(v8::String::New("getPosition"),v8::FunctionTemplate::New(JSVisible::getPosition));
     proto_t->Set(v8::String::New("getVelocity"),v8::FunctionTemplate::New(JSVisible::getVelocity));
@@ -426,30 +424,24 @@ void JSObjectScriptManager::createVisibleTemplate()
 
 
     // For instance templates
-    v8::Local<v8::ObjectTemplate> instance_t = mVisibleTemplate->InstanceTemplate();
+    v8::Local<v8::ObjectTemplate> instance_t = jsctx->mVisibleTemplate->InstanceTemplate();
     instance_t->SetInternalFieldCount(VISIBLE_FIELD_COUNT);
 
 }
 
 
-/*
-  EMERSON!: presence
- */
-void JSObjectScriptManager::createPresenceTemplate()
+void JSObjectScriptManager::createPresenceTemplate(JSCtx* jsctx)
 {
   v8::HandleScope handle_scope;
 
-  mPresenceTemplate = v8::Persistent<v8::FunctionTemplate>::New(v8::FunctionTemplate::New());
+  jsctx->mPresenceTemplate = v8::Persistent<v8::FunctionTemplate>::New(v8::FunctionTemplate::New());
   //mPresenceTemplate->SetInternalFieldCount(PRESENCE_FIELD_COUNT);
 
-  v8::Local<v8::Template> proto_t = mPresenceTemplate->PrototypeTemplate();
+  v8::Local<v8::Template> proto_t = jsctx->mPresenceTemplate->PrototypeTemplate();
 
   //These are not just accessors because we need to ensure that we can deal with
   //their failure conditions.  (Have callbacks).
-
-   //v8::Local<v8::Template> proto_t = mPresenceTemplate->PrototypeTemplate();
-
-  proto_t->Set(v8::String::New("toString"), v8::FunctionTemplate::New(JSPresence::toString));
+  proto_t->Set(v8::String::New("__toString"), v8::FunctionTemplate::New(JSPresence::toString));
 
   proto_t->Set(v8::String::New("getSpaceID"),v8::FunctionTemplate::New(JSPresence::getSpace));
   proto_t->Set(v8::String::New("getPresenceID"),v8::FunctionTemplate::New(JSPresence::getOref));
@@ -516,9 +508,8 @@ void JSObjectScriptManager::createPresenceTemplate()
   proto_t->Set(v8::String::New("getAnimationList"),v8::FunctionTemplate::New(JSPresence::getAnimationList));
 
   // For instance templates
-  v8::Local<v8::ObjectTemplate> instance_t = mPresenceTemplate->InstanceTemplate();
+  v8::Local<v8::ObjectTemplate> instance_t = jsctx->mPresenceTemplate->InstanceTemplate();
   instance_t->SetInternalFieldCount(PRESENCE_FIELD_COUNT);
-
 }
 
 
@@ -535,7 +526,7 @@ void JSObjectScriptManager::loadMesh(const Transfer::URI& uri, MeshLoadCallback 
                 JSLOG(warn, "Load mesh called after shutdown request, ignoring successful callback...");
                 return;
             }
-            mContext->mainStrand->post(std::tr1::bind(cb, mesh));
+            mContext->mainStrand->post(std::tr1::bind(cb, mesh), "JSObjectScriptManager::loadMesh");
             return;
         }
     }
@@ -563,7 +554,8 @@ void JSObjectScriptManager::loadMesh(const Transfer::URI& uri, MeshLoadCallback 
 void JSObjectScriptManager::meshDownloaded(Transfer::ResourceDownloadTaskPtr taskptr, Transfer::TransferRequestPtr request, Transfer::DenseDataPtr data) {
     Transfer::ChunkRequestPtr chunkreq = std::tr1::static_pointer_cast<Transfer::ChunkRequest>(request);
     mParsingIOService->post(
-        std::tr1::bind(&JSObjectScriptManager::parseMeshWork, this, chunkreq->getMetadata(), chunkreq->getMetadata().getFingerprint(), data)
+        std::tr1::bind(&JSObjectScriptManager::parseMeshWork, this, chunkreq->getMetadata(), chunkreq->getMetadata().getFingerprint(), data),
+        "JSObjectScriptManager::parseMeshWork"
     );
 }
 
@@ -577,7 +569,10 @@ void JSObjectScriptManager::parseMeshWork(const Transfer::RemoteFileMetadata& me
         parsed = output_data->get();
     }
 
-    mContext->mainStrand->post(std::tr1::bind(&JSObjectScriptManager::finishMeshDownload, this, metadata.getURI(), parsed));
+    mContext->mainStrand->post(
+        std::tr1::bind(&JSObjectScriptManager::finishMeshDownload, this, metadata.getURI(), parsed),
+        "JSObjectScriptManager::finishMeshDownload"
+    );
 }
 
 void JSObjectScriptManager::finishMeshDownload(const Transfer::URI& uri, VisualPtr mesh) {
@@ -590,7 +585,10 @@ void JSObjectScriptManager::finishMeshDownload(const Transfer::URI& uri, VisualP
     mMeshCallbacks.erase(uri);
 
     for(MeshLoadCallbackList::iterator it = cbs.begin(); it != cbs.end(); it++)
-        mContext->mainStrand->post(std::tr1::bind(*it, mesh));
+        mContext->mainStrand->post(
+            std::tr1::bind(*it, mesh),
+            "JSObjectScriptManager::finishMeshDownload"
+        );
 }
 
 JSObjectScriptManager::~JSObjectScriptManager()
@@ -600,7 +598,7 @@ JSObjectScriptManager::~JSObjectScriptManager()
 
         mParsingThread->join();
         delete mParsingThread;
-        Network::IOServiceFactory::destroyIOService(mParsingIOService);
+        delete mParsingIOService;
 
         delete mModelFilter;
         delete mModelParser;
@@ -620,10 +618,11 @@ JSObjectScript* JSObjectScriptManager::createHeadless(const String& args, const 
     return new_script;
 }
 
-ObjectScript* JSObjectScriptManager::createObjectScript(HostedObjectPtr ho, const String& args, const String& script)
+ObjectScript* JSObjectScriptManager::createObjectScript(
+    HostedObjectPtr ho, const String& args, const String& script)
 {
-    JSCtx* jsctx =
-        new JSCtx(mContext,Network::IOStrandPtr(mContext->ioService->createStrand()),mIsolate);
+    JSCtx* jsctx =createJSCtx(ho);
+
 
     EmersonScript* new_script =new EmersonScript(
         ho, args, script, this,jsctx);

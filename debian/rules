@@ -1,34 +1,41 @@
 #!/usr/bin/make -f
 # -*- makefile -*-
-# Sample debian/rules that uses debhelper.
-#
-# This file was originally written by Joey Hess and Craig Small.
-# As a special exception, when this file is copied by dh-make into a
-# dh-make output file, you may use that output file without restriction.
-# This special exception was added by Craig Small in version 0.37 of dh-make.
-#
-# Modified to make a template file for a multi-binary package with separated
-# build-arch and build-indep targets  by Bill Allombert 2001
 
 # Uncomment this to turn on verbose mode.
-#export DH_VERBOSE=1
+export DH_VERBOSE=1
 
-# This has to be exported to make some magic below work.
-export DH_OPTIONS
+# === Debian Variables === #
+# CURDIR - The package directory
+# DEB_DESTDIR - The directory in which to install the package. This is
+#               automatically set to $(CURDIR)/debian/packagename if there
+#               is one package and $(CURDIR)/debian/tmp if there are multiple
+#               packages.
+#
 
-.PHONY: build
+.PHONY: build build-deps
 
-build:
+dep-%:
+	cd $(CURDIR)/dependencies; ./install --install-only $*
+
+# These should really be separate packages, but this is much easier
+build-deps: dep-ffmpeg dep-sdl dep-bullet dep-opencollada dep-v8 dep-ogre dep-chromium
+
+# dh doesn't detect build properly, so explicity tell it to run "dh build"
+build: build-deps
 	dh build
 
+# By default, just pass through each dh command
 %:
-	dh $@ 
+	dh $@
 
+# Instead of using the auto-build which runs make, override it to run custom target
 override_dh_auto_build:
 	make debian-release
 
+# Sirikata tests require network connection to work, so skip them
 override_dh_auto_test:
 	echo "Skipping tests (requires network)."
 
+# Add sirikata subdir to library path so shlibdeps can find Sirikata shared libs
 override_dh_shlibdeps:
 	LD_LIBRARY_PATH=$(LD_LIBRARY_PATH):/usr/lib/sirikata dh_shlibdeps

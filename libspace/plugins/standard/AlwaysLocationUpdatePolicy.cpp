@@ -50,6 +50,7 @@ AlwaysLocationUpdatePolicy::AlwaysLocationUpdatePolicy(SpaceContext* ctx, const 
    mStatsPoller(
        ctx->mainStrand,
        std::tr1::bind(&AlwaysLocationUpdatePolicy::reportStats, this),
+       "AlwaysLocationUpdatePolicy Stats Poll",
        Duration::seconds((int64)1)
    ),
    mLastStatsTime(ctx->simTime()),

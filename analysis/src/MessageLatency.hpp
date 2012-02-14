@@ -39,13 +39,13 @@ namespace Sirikata {
 
 class MessageLatencyFilters {
   public:
-    MessageLatencyFilters(uint16 *destPort=NULL, const uint32*filterByCreationServer=NULL,const uint32 *filterByDestructionServer=NULL, const uint32*filterByForwardingServer=NULL, const uint32 *filterByDeliveryServer=NULL);
+    MessageLatencyFilters(ObjectMessagePort *destPort=NULL, const uint32*filterByCreationServer=NULL,const uint32 *filterByDestructionServer=NULL, const uint32*filterByForwardingServer=NULL, const uint32 *filterByDeliveryServer=NULL);
 
     const uint32* mFilterByCreationServer;
     const uint32* mFilterByDestructionServer;
     const uint32* mFilterByForwardingServer;
     const uint32* mFilterByDeliveryServer;
-    const uint16* mDestPort;
+    const ObjectMessagePort* mDestPort;
 };
 
 void MessageLatencyAnalysis(const char* opt_name, const uint32 nservers, MessageLatencyFilters f, const String& stage_dump_file = "stage_samples.txt");

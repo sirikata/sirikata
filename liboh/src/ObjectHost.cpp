@@ -35,7 +35,6 @@
 #include <sirikata/oh/HostedObject.hpp>
 #include <sirikata/oh/ObjectHost.hpp>
 #include <boost/thread.hpp>
-#include <sirikata/core/network/IOServiceFactory.hpp>
 #include <sirikata/core/util/AtomicTypes.hpp>
 #include <sirikata/core/util/PluginManager.hpp>
 #include <sirikata/core/task/WorkQueue.hpp>
@@ -421,14 +420,14 @@ Time ObjectHost::currentLocalTime() {
 }
 
 
-bool ObjectHost::send(SpaceObjectReference& sporef_src, const SpaceID& space, const uint16 src_port, const UUID& dest, const uint16 dest_port, MemoryReference payload) {
+bool ObjectHost::send(SpaceObjectReference& sporef_src, const SpaceID& space, const ObjectMessagePort src_port, const UUID& dest, const ObjectMessagePort dest_port, MemoryReference payload) {
     Sirikata::SerializationCheck::Scoped sc(&mSessionSerialization);
 
     std::string payload_str( (char*)payload.begin(), (char*)payload.end() );
     return send(sporef_src, space, src_port, dest, dest_port, payload_str);
 }
 
-bool ObjectHost::send(SpaceObjectReference& sporef_src, const SpaceID& space, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload) {
+bool ObjectHost::send(SpaceObjectReference& sporef_src, const SpaceID& space, const ObjectMessagePort src_port, const UUID& dest, const ObjectMessagePort dest_port, const std::string& payload) {
     Sirikata::SerializationCheck::Scoped sc(&mSessionSerialization);
     return mSessionManagers[space]->send(sporef_src, src_port, dest, dest_port, payload);
 }

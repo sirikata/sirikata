@@ -1,7 +1,7 @@
-/*  Sirikata Utilities -- Sirikata Synchronization Utilities
- *  ThreadId.hpp
+/*  Sirikata
+ *  CassandraStressTest.hpp
  *
- *  Copyright (c) 2009, Daniel Reiter Horn
+ *  Copyright (c) 2011, Stanford University
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -29,13 +29,34 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef _SIRIKATA_THREADID_HPP
-#define _SIRIKATA_THREADID_HPP
-namespace Sirikata {
-class SIRIKATA_EXPORT ThreadId {public:
-    static ThreadIdCheck registerThreadGroup(const char*group=NULL);
-    static bool isInThreadGroup(const ThreadIdCheck &thread_group_id);
+
+#include <cxxtest/TestSuite.h>
+#include "StressTestBase.hpp"
+
+
+class CassandraStressTest : public CxxTest::TestSuite
+{
+    static const String dbhost;
+    static const String dbport;
+    StressTestBase _base;
+public:
+    CassandraStressTest()
+      : _base("oh-cassandra", "cassandra", String("--host=") + dbhost + String(" --port=") + dbport)
+    {
+    }
+
+    void setUp() {_base.setUp(); }
+    void tearDown() {_base.tearDown(); }
+
+    void testSetupTeardown() {_base.testSetupTeardown(); }
+
+    //(dataLength, keyNum, bucketNum, rounds)
+    void testMultiRounds() {
+        _base.testMultiRounds("10", 10, 10, 5, StressTestBase::Latency);
+        _base.testMultiRounds("10", 10, 10, 5, StressTestBase::Throughput);
+    }
+
 };
-}
-#define assertThreadGroup(group_id) assert(ThreadId::isInThreadGroup(group_id))
-#endif
+
+const String CassandraStressTest::dbhost("localhost");
+const String CassandraStressTest::dbport("9160");

@@ -190,7 +190,8 @@ void OHLocationServiceCache::objectAdded(
             std::tr1::bind(
                 &OHLocationServiceCache::notifyObjectAdded, this,
                 uuid, loc, bounds
-            )
+            ),
+            "OHLocationServiceCache::notifyObjectAdded"
         );
     }
 }
@@ -225,7 +226,8 @@ void OHLocationServiceCache::objectRemoved(const ObjectReference& uuid) {
             std::tr1::bind(
                 &OHLocationServiceCache::notifyObjectRemoved, this,
                 uuid
-            )
+            ),
+            "OHLocationServiceCache::notifyObjectRemoved"
         );
     }
 }
@@ -255,7 +257,8 @@ void OHLocationServiceCache::locationUpdated(const ObjectReference& uuid, const 
             std::tr1::bind(
                 &OHLocationServiceCache::notifyLocationUpdated, this,
                 uuid, oldval, newval
-            )
+            ),
+            "OHLocationServiceCache::notifyLocationUpdated"
         );
     }
 }
@@ -294,7 +297,8 @@ void OHLocationServiceCache::boundsUpdated(const ObjectReference& uuid, const Bo
             std::tr1::bind(
                 &OHLocationServiceCache::notifyBoundsUpdated, this,
                 uuid, oldval, newval
-            )
+            ),
+            "OHLocationServiceCache::notifyBoundsUpdated"
         );
     }
 }

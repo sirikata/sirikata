@@ -57,7 +57,7 @@ void bulletPhysicsInternalTickCallback(btDynamicsWorld *world, btScalar timeStep
 
 BulletPhysicsService::BulletPhysicsService(SpaceContext* ctx, LocationUpdatePolicy* update_policy)
  : LocationService(ctx, update_policy),
-   mParsingStrand( ctx->ioService->createStrand() )
+   mParsingStrand( ctx->ioService->createStrand("BulletPhysicsService Parsing") )
 {
 
     mBroadphase = new btDbvtBroadphase();
@@ -239,8 +239,9 @@ const String& BulletPhysicsService::physics(const UUID& uuid) {
     LocationMap::iterator it = mLocations.find(uuid);
     assert(it != mLocations.end());
 
-    const LocationInfo& locinfo = it->second;
-    return locinfo.props.physics();
+    LocationInfo& locinfo = it->second;
+    locinfo.physics_copied_str = locinfo.props.physics();
+    return locinfo.physics_copied_str;
 }
 
 bool BulletPhysicsService::isFixed(const UUID& uuid) {
@@ -315,10 +316,10 @@ void BulletPhysicsService::getMeshCallback(Transfer::ResourceDownloadTaskPtr tas
             assert(output_data->single());
             mesh = std::tr1::dynamic_pointer_cast<Meshdata>(output_data->get());
         }
-        mContext->mainStrand->post(std::tr1::bind(cb, mesh));
+        mContext->mainStrand->post(std::tr1::bind(cb, mesh), "BulletPhysicsService::getMeshCallback");
     }
     else {
-        mContext->mainStrand->post(std::tr1::bind(cb, MeshdataPtr()));
+        mContext->mainStrand->post(std::tr1::bind(cb, MeshdataPtr()), "BulletPhysicsService::getMeshCallback");
     }
 }
 

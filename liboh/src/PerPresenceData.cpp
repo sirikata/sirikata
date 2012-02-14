@@ -4,7 +4,7 @@
 #include <sirikata/core/util/SpaceObjectReference.hpp>
 #include <sirikata/proxyobject/ProxyObject.hpp>
 #include <sirikata/proxyobject/VWObject.hpp>
-#include "PerPresenceData.hpp"
+#include <sirikata/oh/PerPresenceData.hpp>
 #include <sirikata/oh/ObjectHostContext.hpp>
 
 
@@ -58,6 +58,8 @@ PerPresenceData::~PerPresenceData() {
         requestLoc->setBounds(proxyobj->verifiedBounds(), 0);
         requestLoc->setMesh(proxyobj->verifiedMesh(), 0);
         requestLoc->setPhysics(proxyobj->verifiedPhysics(), 0);
+
+        proxyobj->isValid();
     }
 
 

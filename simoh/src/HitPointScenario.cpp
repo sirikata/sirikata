@@ -305,6 +305,7 @@ void HitPointScenario::initialize(ObjectHostContext*ctx) {
     mPingPoller = new Poller(
         ctx->mainStrand,
         std::tr1::bind(&HitPointScenario::sendPings, this),
+        "HitPointScenario Ping Poller",
         mNumPingsPerSecond > 1000 ? // Try to amortize out some of the
                                     // scheduling cost
         Duration::seconds(10.0/mNumPingsPerSecond) :
@@ -314,13 +315,15 @@ void HitPointScenario::initialize(ObjectHostContext*ctx) {
     mHPPoller = new Poller(
         ctx->mainStrand,
         std::tr1::bind(&HitPointScenario::sendHPs, this),
+        "HitPointScenario HP Poller",
         Duration::seconds(1./mNumHitPointsPerSecond));
 
     mGeneratePingProfiler = mContext->profiler->addStage("Object Host Generate Pings");
-    mGeneratePingsStrand = mContext->ioService->createStrand();
+    mGeneratePingsStrand = mContext->ioService->createStrand("HitPointScenario GeneratePings");
     mGeneratePingPoller = new Poller(
         mGeneratePingsStrand,
         std::tr1::bind(&HitPointScenario::generatePings, this),
+        "HitPointScenario Generate Ping Poller",
         mNumPingsPerSecond > 1000 ? // Try to amortize out some of the
                                     // scheduling cost
         Duration::seconds(10.0/mNumPingsPerSecond) :
@@ -332,7 +335,8 @@ void HitPointScenario::start() {
     Duration connect_phase = GetOptionValue<Duration>(OBJECT_CONNECT_PHASE);
     mContext->mainStrand->post(
         connect_phase,
-        std::tr1::bind(&HitPointScenario::delayedStart, this)
+        std::tr1::bind(&HitPointScenario::delayedStart, this),
+        "HitPointScenario::delayedStart"
     );
 }
 void HitPointScenario::delayedStart() {
@@ -369,7 +373,8 @@ void HitPointScenario::delayedStart() {
         SILOG(oh, debug, "error during connect phase, retrying "<<connect_phase<<" later");
         mContext->mainStrand->post(
             connect_phase,
-            std::tr1::bind(&HitPointScenario::delayedStart, this)
+            std::tr1::bind(&HitPointScenario::delayedStart, this),
+            "HitPointScenario::delayedStart"
             );
 
     }

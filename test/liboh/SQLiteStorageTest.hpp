@@ -52,6 +52,8 @@ public:
     void testSingleWrite() {_base.testSingleWrite(); }
     void testSingleRead() {_base.testSingleRead(); }
     void testSingleInvalidRead() {_base.testSingleInvalidRead(); }
+    void testSingleCompare() {_base.testSingleCompare(); }
+    void testSingleInvalidCompare() {_base.testSingleInvalidCompare(); }
     void testSingleErase() {_base.testSingleErase(); }
 
     void testMultiWrite() {_base.testMultiWrite(); }
@@ -60,9 +62,16 @@ public:
     void testMultiSomeInvalidRead() {_base.testMultiSomeInvalidRead(); }
     void testMultiErase() {_base.testMultiErase(); }
 
+    void testAtomicWrite() {_base.testAtomicWrite(); }
+    void testAtomicWriteErase() {_base.testAtomicWriteErase(); }
+
     void testRangeRead() {_base.testRangeRead(); }
     void testCount() {_base.testCount(); }
     void testRangeErase() {_base.testRangeErase(); }
+
+    void testAllTransaction() {_base.testAllTransaction(); }
+
+    void testRollback() {_base.testRollback(); }
 };
 
 const String SQLiteStorageTest::dbfile("test.db");

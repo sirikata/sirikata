@@ -59,6 +59,9 @@ if (typeof(std.core.SimpleInput) != 'undefined')
         option.  The second element should contain a code that gets
         passed back to cb so that the scripter knows what was
         selected.  Code must be text.
+
+        if NO_INPUT is entered as type, then just display message
+        without getting any response back.
       */
      std.core.SimpleInput = function(type, message, cb, additional)
      {
@@ -85,6 +88,8 @@ if (typeof(std.core.SimpleInput) != 'undefined')
              callFunc = 'simpleInputSelectList';
          else if (type == std.core.SimpleInput.ENTER_TEXT)
              callFunc = 'simpleInputSelectText';
+         else if (type == std.core.SimpleInput.NO_INPUT)
+             callFunc = 'simpleInputNoInput';
          else
              throw new Error ('Error: please select a valid type ' +
                               'for SimpleInput');
@@ -98,7 +103,10 @@ if (typeof(std.core.SimpleInput) != 'undefined')
      //of SimpleInput
      std.core.SimpleInput.SELECT_LIST = 0;
      std.core.SimpleInput.ENTER_TEXT  = 1;
-
+     //used just to display a message, not to get any user response
+     //from.
+     std.core.SimpleInput.NO_INPUT = 2;
+     
      std.core.SimpleInput.ready = function()
      {
          return haveInited;
@@ -138,6 +146,10 @@ if (typeof(std.core.SimpleInput) != 'undefined')
 
          returner += @
 
+         var newcsslink =
+             $("<link />").attr({rel:'stylesheet', type:'text/css', href:'../scripting/prompt.css'});
+	 $("head").append(newcsslink);
+
          //keeps track of all open windows requiring input events.
          var existingWindows = { };
                   
@@ -172,7 +184,7 @@ if (typeof(std.core.SimpleInput) != 'undefined')
 
          simpleInputSubmit = function(simpleInputID)
          {
-             var returner = null;
+             var returner = '';
              //first check to see if we got the value for a text element
              var textInputID = generateSimpleInputOptionID(simpleInputID);
              var textInput = $('#' + textInputID);
@@ -189,16 +201,10 @@ if (typeof(std.core.SimpleInput) != 'undefined')
                      returner = radioInput.val();
              }
 
-             
-             if (returner === null)
-             {
-                 sirikata.log('error','In simpleInput, selecting ' +
-                              'an input that does not exist.');
-             }
-             else
-             {
-                 sirikata.event('responseReceived',simpleInputID,returner);                     
-             }
+             //automtaically handles case of noinput type of input by
+             //passing undefined as responseReceived
+             sirikata.event('responseReceived',simpleInputID,returner);                     
+
 
              
              delete existingWindows[simpleInputID];
@@ -240,6 +246,14 @@ if (typeof(std.core.SimpleInput) != 'undefined')
          {
              return 'simpleInputIDOption__' + inputID.toString();
          }
+
+         simpleInputNoInput = function (message,simpleInputID)
+         {
+             var htmlInsert = message + '<br/>';
+             htmlInsert += generateSubmitButtonHtml(simpleInputID);
+             newWindow(htmlInsert,simpleInputID);
+         };
+
          
          simpleInputSelectText = function(message,simpleInputID)
          {

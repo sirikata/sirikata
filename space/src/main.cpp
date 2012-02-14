@@ -35,7 +35,6 @@
 #include <sirikata/core/util/Timer.hpp>
 #include <sirikata/core/network/NTPTimeSync.hpp>
 
-#include <sirikata/core/network/IOServiceFactory.hpp>
 #include <sirikata/core/network/IOStrandImpl.hpp>
 
 #include <sirikata/space/ObjectHostSession.hpp>
@@ -157,8 +156,8 @@ int main(int argc, char** argv) {
 
     Duration duration = GetOptionValue<Duration>("duration");
 
-    Network::IOService* ios = Network::IOServiceFactory::makeIOService();
-    Network::IOStrand* mainStrand = ios->createStrand();
+    Network::IOService* ios = new Network::IOService("Space");
+    Network::IOStrand* mainStrand = ios->createStrand("Space Main");
 
     ODPSST::ConnectionManager* sstConnMgr = new ODPSST::ConnectionManager();
     OHDPSST::ConnectionManager* ohSstConnMgr = new OHDPSST::ConnectionManager();
@@ -273,7 +272,7 @@ int main(int argc, char** argv) {
     //Create OSeg
     std::string oseg_type = GetOptionValue<String>(OSEG);
     std::string oseg_options = GetOptionValue<String>(OSEG_OPTIONS);
-    Network::IOStrand* osegStrand = space_context->ioService->createStrand();
+    Network::IOStrand* osegStrand = space_context->ioService->createStrand("OSeg");
     ObjectSegmentation* oseg =
         OSegFactory::getSingleton().getConstructor(oseg_type)(space_context, osegStrand, cseg, oseg_cache, oseg_options);
     //end create oseg
@@ -282,7 +281,27 @@ int main(int argc, char** argv) {
     // We have all the info to initialize the forwarder now
     forwarder->initialize(oseg, sq, server_message_receiver, loc_service);
 
-    AggregateManager* aggmgr = new AggregateManager(loc_service);
+    String aggmgr_hostname = GetOptionValue<String>(OPT_AGGMGR_HOSTNAME);
+    String aggmgr_service = GetOptionValue<String>(OPT_AGGMGR_SERVICE);
+    String aggmgr_consumer_key = GetOptionValue<String>(OPT_AGGMGR_CONSUMER_KEY);
+    String aggmgr_consumer_secret = GetOptionValue<String>(OPT_AGGMGR_CONSUMER_SECRET);
+    String aggmgr_access_key = GetOptionValue<String>(OPT_AGGMGR_ACCESS_KEY);
+    String aggmgr_access_secret = GetOptionValue<String>(OPT_AGGMGR_ACCESS_SECRET);
+    String aggmgr_username = GetOptionValue<String>(OPT_AGGMGR_USERNAME);
+    Transfer::OAuthParamsPtr aggmgr_oauth;
+    // Currently you need to explicitly override hostname to enable upload
+    if (!aggmgr_hostname.empty()&&
+        !aggmgr_consumer_key.empty() && !aggmgr_consumer_secret.empty() &&
+        !aggmgr_access_key.empty() && !aggmgr_access_secret.empty()) {
+        aggmgr_oauth = Transfer::OAuthParamsPtr(
+            new Transfer::OAuthParams(
+                aggmgr_hostname, aggmgr_service,
+                aggmgr_consumer_key, aggmgr_consumer_secret,
+                aggmgr_access_key, aggmgr_access_secret
+            )
+        );
+    }
+    AggregateManager* aggmgr = new AggregateManager(loc_service, aggmgr_oauth, aggmgr_username);
 
     std::string prox_type = GetOptionValue<String>(OPT_PROX);
     std::string prox_options = GetOptionValue<String>(OPT_PROX_OPTIONS);
@@ -320,11 +339,7 @@ int main(int argc, char** argv) {
         if (start_time > now_time) {
             Duration sleep_time = start_time - now_time;
             printf("Waiting %f seconds\n", sleep_time.toSeconds() ); fflush(stdout);
-#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS
-            Sleep( sleep_time.toMilliseconds() );
-#else
-            usleep( sleep_time.toMicroseconds() );
-#endif
+            Timer::sleep(sleep_time);
         }
     }
 
@@ -393,7 +408,7 @@ int main(int argc, char** argv) {
     delete mainStrand;
     delete osegStrand;
 
-    Network::IOServiceFactory::destroyIOService(ios);
+    delete ios;
 
     delete sstConnMgr;
     delete ohSstConnMgr;

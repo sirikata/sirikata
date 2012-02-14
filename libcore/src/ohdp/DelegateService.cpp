@@ -81,22 +81,36 @@ Port* DelegateService::bindOHDPPort(const SpaceID& space, const NodeID& node) {
 }
 
 PortID DelegateService::unusedOHDPPort(const SpaceID& space, const NodeID& node) {
+    // We want to make this efficient in most cases, but need to make it
+    // exhaustively search for available ports when we can't easily find a free
+    // one. The approach is simple: choose a random port to start with and check
+    // if it's free. From there, perform a linear search (which must wrap and
+    // avoid reserved ports). This won't perform well in extreme cases where we
+    // the port space is almost completely full...
+
+    PortID starting_port_id = (rand() % (OBJECT_PORT_SYSTEM_MAX-OBJECT_PORT_SYSTEM_RESERVED_MAX)) + (OBJECT_PORT_SYSTEM_RESERVED_MAX+1);
+
+    // If we don't have a PortMap yet, then its definitely not allocated
     SpaceIDNodeID snid(space, node);
-    // 10000 is completely arbitrary and probably too high...
-    for(uint32 i = 0; i < 10000; i++) {
-        PortID port_id = (rand() % (OBJECT_PORT_SYSTEM_MAX-OBJECT_PORT_SYSTEM_RESERVED_MAX)) + (OBJECT_PORT_SYSTEM_RESERVED_MAX+1);
+    PortMap* pm = getPortMap(snid);
+    if (pm == NULL) return starting_port_id;
 
-        // If we don't have a PortMap yet, then its definitely not allocated
-        PortMap* pm = getPortMap(snid);
-        if (pm == NULL) return port_id;
-
+    // Loop until we hit the starting point again
+    PortID port_id = starting_port_id;
+    do {
         // This port may be allocated already
         PortMap::iterator it = pm->find(port_id);
-        if (it != pm->end()) continue;
+        if (it == pm->end())
+            return port_id;
 
-        // Otherwise, we're all good
-        return port_id;
-    }
+        // Otherwise we need to move on, ensuring looping of Port IDs.
+        port_id++;
+        if (port_id > PortID(OBJECT_PORT_SYSTEM_MAX))
+            port_id = OBJECT_PORT_SYSTEM_RESERVED_MAX+1;
+    } while(port_id != starting_port_id);
+
+    // If we get here, we're really out of ports
+    SILOG(odp-delegate-service, error, "Exhausted OHDP ports for " << space << ":" << node);
     return PortID::null();
 }
 
@@ -106,12 +120,11 @@ void DelegateService::registerDefaultOHDPHandler(const MessageHandler& cb) {
 
 bool DelegateService::deliver(const Endpoint& src, const Endpoint& dst, MemoryReference data) const {
     // Check from most to least specific
-
     SpaceIDNodeID snid(dst.space(), dst.node());
     PortMap const* pm = getPortMap(snid);
     if (pm != NULL) {
         PortMap::const_iterator it = pm->find(dst.port());
-
+        
         if (it != pm->end())
         {
             DelegatePort* port = it->second;

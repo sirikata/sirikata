@@ -41,7 +41,7 @@ void InitSpaceOptions() {
 
         .addOption(new OptionValue(OPT_CONFIG_FILE,"space.cfg",Sirikata::OptionValueType<String>(),"Configuration file to load."))
 
-        .addOption(new OptionValue(OPT_SPACE_PLUGINS,"weight-exp,weight-sqr,weight-const,space-null,space-local,space-standard,space-prox,colladamodels,mesh-billboard,common-filters,space-bulletphysics,space-environment",Sirikata::OptionValueType<String>(),"Plugin list to load."))
+        .addOption(new OptionValue(OPT_SPACE_PLUGINS,"weight-exp,weight-sqr,weight-const,space-null,space-local,space-standard,space-prox,colladamodels,mesh-billboard,common-filters,space-bulletphysics,space-environment,space-redis",Sirikata::OptionValueType<String>(),"Plugin list to load."))
 
         .addOption(new OptionValue("spacestreamlib","tcpsst",Sirikata::OptionValueType<String>(),"Which library to use to communicate with the object host"))
         .addOption(new OptionValue("spacestreamoptions","--send-buffer-size=32768 --parallel-sockets=1 --no-delay=true",Sirikata::OptionValueType<String>(),"TCPSST stream options such as how many bytes to collect for sending during an ongoing asynchronous send call."))
@@ -93,6 +93,15 @@ void InitSpaceOptions() {
       .addOption(new OptionValue("route-object-message-buffer", "64", Sirikata::OptionValueType<size_t>(), "size of the buffer between network and main strand for space server message routing"))
 
         .addOption(new OptionValue(OPT_MODULES, "environment", Sirikata::OptionValueType< std::vector<String> >(), "Additional SpaceModules to load"))
+
+
+        .addOption(new OptionValue(OPT_AGGMGR_HOSTNAME, "", Sirikata::OptionValueType<String>(), "AggregateManager upload hostname"))
+        .addOption(new OptionValue(OPT_AGGMGR_SERVICE, "", Sirikata::OptionValueType<String>(), "AggregateManager upload service (port)"))
+        .addOption(new OptionValue(OPT_AGGMGR_CONSUMER_KEY, "", Sirikata::OptionValueType<String>(), "AggregateManager upload OAuth consumer key"))
+        .addOption(new OptionValue(OPT_AGGMGR_CONSUMER_SECRET, "", Sirikata::OptionValueType<String>(), "AggregateManager upload OAuth consumer secret"))
+        .addOption(new OptionValue(OPT_AGGMGR_ACCESS_KEY, "", Sirikata::OptionValueType<String>(), "AggregateManager upload OAuth access key"))
+        .addOption(new OptionValue(OPT_AGGMGR_ACCESS_SECRET, "", Sirikata::OptionValueType<String>(), "AggregateManager upload OAuth access secret"))
+        .addOption(new OptionValue(OPT_AGGMGR_USERNAME, "", Sirikata::OptionValueType<String>(), "AggregateManager upload CDN username"))
 
       ;
 }

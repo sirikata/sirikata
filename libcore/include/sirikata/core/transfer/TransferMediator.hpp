@@ -35,8 +35,6 @@
 #define SIRIKATA_TransferMediator_HPP__
 
 #include <sirikata/core/transfer/TransferPool.hpp>
-#include <map>
-#include <vector>
 #include <boost/multi_index_container.hpp>
 #include <boost/multi_index/ordered_index.hpp>
 #include <boost/multi_index/identity.hpp>
@@ -70,7 +68,7 @@ class SIRIKATA_EXPORT TransferMediator
 	class AggregateRequest {
 	public:
 	    //Stores the aggregated priority
-		TransferRequest::PriorityType mPriority;
+		Priority mPriority;
 
 	private:
 		//Maps each client's string ID to the original TransferRequest object
@@ -99,7 +97,7 @@ class SIRIKATA_EXPORT TransferMediator
 		const std::string& getIdentifier() const;
 
 		//Returns the aggregated priority value
-		TransferRequest::PriorityType getPriority() const;
+		Priority getPriority() const;
 
 		//Pass in the first client's request
 		AggregateRequest(std::tr1::shared_ptr<TransferRequest> req);
@@ -121,8 +119,8 @@ class SIRIKATA_EXPORT TransferMediator
 		indexed_by<
 			hashed_unique<tag<tagID>, const_mem_fun<AggregateRequest,const std::string &,&AggregateRequest::getIdentifier> >,
 			ordered_non_unique<tag<tagPriority>,
-			member<AggregateRequest,TransferRequest::PriorityType,&AggregateRequest::mPriority>,
-			std::greater<TransferRequest::PriorityType> >
+			member<AggregateRequest,Priority,&AggregateRequest::mPriority>,
+			std::greater<Priority> >
 		>
 	> AggregateList;
 	AggregateList mAggregateList;

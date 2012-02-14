@@ -129,8 +129,9 @@ void ObjectSegmentation::trySendMigAcks() {
         // We've still got work to do, setup a retry
         mContext->mainStrand->post(
             Duration::microseconds(100),
-            std::tr1::bind(&ObjectSegmentation::trySendMigAcks, this)
-                                   );
+            std::tr1::bind(&ObjectSegmentation::trySendMigAcks, this),
+            "ObjectSegmentation::trySendMigAcks"
+        );
     }
 }
 

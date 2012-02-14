@@ -18,48 +18,6 @@ namespace JS {
 
 struct PresStructRestoreParams
 {
-/*
-    PresStructRestoreParams(const SpaceObjectReference& _sporef,
-        const Nullable<Time>& _positionTime,
-        const Vector3f& _position,
-        const Vector3f& _velocity,
-        const Nullable<Time>& _orientTime,
-        const Quaternion& _orient,
-        const Quaternion& _orientVelocity,
-        const String& _mesh,
-        const String& _physics,
-        const double& _scale,
-        const bool& _isCleared,
-        const Nullable<uint32>& _contID,
-        const bool& _isConnected,
-        const Nullable<v8::Handle<v8::Function> >& _connCallback,
-        const bool& _isSuspended,
-        const Nullable<Vector3f>& _suspendedVelocity,
-        const Nullable<Quaternion>& _suspendedOrientationVelocity,
-        const SolidAngle& _query,
-        uint32 max_results)
-     :     sporef(_sporef),
-           positionTime(_positionTime),
-           position(_position),
-           velocity(_velocity),
-           orientTime(_orientTime),
-           orient(_orient),
-           orientVelocity(_orientVelocity),
-           mesh(_mesh),
-           physics(_physics),
-           scale(_scale),
-           isCleared(_isCleared),
-           contID(_contID),
-           isConnected(_isConnected),
-           connCallback(_connCallback),
-           isSuspended(_isSuspended),
-           suspendedVelocity(_suspendedVelocity),
-           suspendedOrientationVelocity(_suspendedOrientationVelocity),
-           query(_query),
-           queryMaxResults(max_results)
-    {
-    }
-*/
     PresStructRestoreParams(const SpaceObjectReference& _sporef,
         const Nullable<Time>& _positionTime,
         const Vector3f& _position,
@@ -183,7 +141,7 @@ struct JSPresenceStruct : public JSPositionListener,
 
     HostedObject::PresenceToken getPresenceToken();
 
-    const String& getQuery();
+    String getQuery();
     v8::Handle<v8::Value> struct_getQuery();
     v8::Handle<v8::Value> setQueryFunction(const String& new_query);
 
