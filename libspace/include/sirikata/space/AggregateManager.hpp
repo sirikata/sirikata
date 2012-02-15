@@ -49,6 +49,7 @@
 
 #include <sirikata/mesh/MeshSimplifier.hpp>
 
+#include <sirikata/core/transfer/HttpManager.hpp>
 
 namespace Sirikata {
 
@@ -86,7 +87,9 @@ private:
        leaf(is_leaf),
        mLastGenerateTime(Time::null()),
        mTreeLevel(0),  mNumObservers(0),
-       mNumFailedGenerationAttempts(0)
+       mNumFailedGenerationAttempts(0),
+       cdnBaseName(),
+       refreshTTL(Time::null())
     {
       mMeshdata = Mesh::MeshdataPtr();
       generatedLastRound = false;
@@ -100,6 +103,15 @@ private:
     std::vector<UUID> mLeaves;
     double mDistance;  //MINIMUM distance at which this object could be part of a cut
 
+
+      // The basename returned by the CDN. This points at the entire asset
+      // rather than the particular mesh filename. Should include a version
+      // number. Used for refreshing TTLs.
+      String cdnBaseName;
+      // Time at which we should try to refresh the TTL, should be set
+      // a bit less than the actual timeout.
+      Time refreshTTL;
+
   } AggregateObject;
   typedef std::tr1::shared_ptr<AggregateObject> AggregateObjectPtr;
 
@@ -107,7 +119,8 @@ private:
 
 
   boost::mutex mAggregateObjectsMutex;
-  std::tr1::unordered_map<UUID, AggregateObjectPtr, UUID::Hasher > mAggregateObjects;
+  typedef std::tr1::unordered_map<UUID, AggregateObjectPtr, UUID::Hasher > AggregateObjectsMap;
+  AggregateObjectsMap mAggregateObjects;
 
   boost::mutex mMeshStoreMutex;
   std::tr1::unordered_map<String, Mesh::MeshdataPtr> mMeshStore;
@@ -126,7 +139,7 @@ private:
   Transfer::OAuthParamsPtr mOAuth;
   const String mCDNUsername;
   Duration mModelTTL;
-
+  Poller mCDNKeepAlivePoller;
 
   void updateChildrenTreeLevel(const UUID& uuid, uint16 treeLevel);
   void addDirtyAggregates(UUID uuid);
@@ -146,6 +159,14 @@ private:
   bool cleanUpChild(const UUID& parent_uuid, const UUID& child_id);
 
   void removeStaleLeaves();
+
+
+  // Look for any aggregates that need a keep-alive sent to the CDN
+  // and try to send them.
+  void sendKeepAlives();
+  void handleKeepAliveResponse(const UUID& objid,
+      std::tr1::shared_ptr<Transfer::HttpManager::HttpResponse> response,
+      Transfer::HttpManager::ERR_TYPE error, const boost::system::error_code& boost_error);
 
 public:
 

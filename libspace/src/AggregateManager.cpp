@@ -43,6 +43,7 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
 
+#include <sirikata/core/transfer/OAuthHttpManager.hpp>
 
 #if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS
 #define snprintf _snprintf
@@ -62,20 +63,25 @@ using namespace Mesh;
 
 AggregateManager::AggregateManager(LocationService* loc, Transfer::OAuthParamsPtr oauth, const String& username)
   : mAggregationThread(NULL),
+    mAggregationService(new Network::IOService("AggregateManager")),
+    mAggregationStrand(mAggregationService->createStrand("AggregateManager")),
+    mIOWork(new Network::IOWork(mAggregationService, "Aggregation Work")),
     mLoc(loc),
     mOAuth(oauth),
     mCDNUsername(username),
-    mModelTTL(Duration::minutes(10))
+    mModelTTL(Duration::minutes(10)),
+    mCDNKeepAlivePoller(
+        mAggregationStrand,
+        std::tr1::bind(&AggregateManager::sendKeepAlives, this),
+        "AggregateManager CDN Keep-Alive Poller",
+        Duration::seconds(30)
+    )
 {
     mModelsSystem = NULL;
     if (ModelsSystemFactory::getSingleton().hasConstructor("any"))
         mModelsSystem = ModelsSystemFactory::getSingleton().getConstructor("any")("");
 
     mTransferMediator = &(Transfer::TransferMediator::getSingleton());
-
-    mAggregationService = new Network::IOService("AggregateManager");
-    mAggregationStrand = mAggregationService->createStrand("AggregateManager");
-    mIOWork = new Network::IOWork(mAggregationService, "Aggregation Work");
 
     static char x = '1';
     mTransferPool = mTransferMediator->registerClient<Transfer::AggregatedTransferPool>("SpaceAggregator_"+x);
@@ -85,9 +91,13 @@ AggregateManager::AggregateManager(LocationService* loc, Transfer::OAuthParamsPt
     mAggregationThread = new Thread( std::tr1::bind(&AggregateManager::aggregationThreadMain, this) );
 
     removeStaleLeaves();
+
+    mCDNKeepAlivePoller.start();
 }
 
 AggregateManager::~AggregateManager() {
+    mCDNKeepAlivePoller.stop();
+
     // Shut down the main processing thread
     delete mIOWork;
     mIOWork = NULL;
@@ -697,6 +707,12 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
       // so we need to extract the number at the end so we can insert it between
       // the format and the filename.
       String cdnMeshName = generated_uri.toString();
+      // Store this info and mark it for TTL refresh 3/4 through the TTL. We
+      // only want the path part (i.e. /username/foo/model.dae/0) and not the
+      // protocol + host part (i.e. meerkat://foo.com:8000).
+      aggObject->cdnBaseName = Transfer::URL(cdnMeshName).fullpath();
+      aggObject->refreshTTL = mLoc->context()->recentSimTime() + (mModelTTL*.75);
+      // And extract the URL to hand out to users
       std::size_t upload_num_pos = cdnMeshName.rfind("/");
       assert(upload_num_pos != String::npos);
       String mesh_num_part = cdnMeshName.substr(upload_num_pos+1);
@@ -1026,6 +1042,106 @@ void AggregateManager::removeStaleLeaves() {
   );
 
 }
+
+
+namespace {
+// Return true if the service is a default value
+bool ServiceIsDefault(const String& s) {
+    if (!s.empty() && s != "http" && s != "80")
+        return false;
+    return true;
+}
+// Return empty if this is already empty or the default for this
+// service. Otherwise, return the old value
+String ServiceIfNotDefault(const String& s) {
+    if (!ServiceIsDefault(s))
+        return s;
+    return "";
+}
+}
+
+
+void AggregateManager::sendKeepAlives() {
+    // Don't bother unless we're uploading to the real CDN
+    if (!mOAuth || mCDNUsername.empty())
+        return;
+
+    Time tnow = mLoc->context()->recentSimTime();
+
+    // This could definitely be more efficient...
+    boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
+    for(AggregateObjectsMap::iterator it = mAggregateObjects.begin(); it != mAggregateObjects.end(); it++) {
+        if (it->second->refreshTTL != Time::null() &&
+            it->second->refreshTTL < tnow &&
+            !it->second->cdnBaseName.empty())
+        {
+            String keep_alive_path = "/api/keepalive" + it->second->cdnBaseName;
+            // Currently there's no keepalive support in the Transfer
+            // libraries, so we construct and send the http request ourselves.
+
+            Network::Address cdn_addr(mOAuth->hostname, ServiceIfNotDefault(mOAuth->service));
+            String full_oauth_hostinfo = mOAuth->hostname;
+            if (!ServiceIsDefault(mOAuth->service))
+                full_oauth_hostinfo += ":" + mOAuth->service;
+
+            Transfer::HttpManager::Headers headers;
+            headers["Host"] = full_oauth_hostinfo;
+
+            Transfer::HttpManager::QueryParameters query_params;
+            query_params["username"] = mCDNUsername;
+            query_params["ttl"] = boost::lexical_cast<String>(mModelTTL.seconds());
+
+            AGG_LOG(detailed, "Requesting TTL refresh for " << it->first);
+            Transfer::OAuthHttpManager oauth_http(mOAuth);
+            oauth_http.get(
+                cdn_addr, keep_alive_path,
+                std::tr1::bind(&AggregateManager::handleKeepAliveResponse, this, it->first, _1, _2, _3),
+                headers, query_params
+            );
+        }
+    }
+}
+
+void AggregateManager::handleKeepAliveResponse(const UUID& objid,
+    std::tr1::shared_ptr<Transfer::HttpManager::HttpResponse> response,
+    Transfer::HttpManager::ERR_TYPE error, const boost::system::error_code& boost_error)
+{
+    // Check a bunch of error conditions, leaving the refresh TTL setting for
+    // the next iteration is something went wrong.
+
+    if (error == Transfer::HttpManager::REQUEST_PARSING_FAILED) {
+        AGG_LOG(error, "Request parsing failed during aggregate TTL refresh (" << objid << ")");
+        return;
+    } else if (error == Transfer::HttpManager::RESPONSE_PARSING_FAILED) {
+        AGG_LOG(error, "Response parsing failed during aggregate TTL refresh (" << objid << ")");
+        return;
+    } else if (error == Transfer::HttpManager::BOOST_ERROR) {
+        AGG_LOG(error, "A boost error happened during aggregate TTL refresh (" << objid << "). Boost error = " << boost_error.message());
+        return;
+    } else if (error != Transfer::HttpManager::SUCCESS) {
+        AGG_LOG(error, "An unknown error happened during aggregate TTL refresh. (" << objid << ")");
+        return;
+    }
+
+    if (response->getStatusCode() != 200) {
+        AGG_LOG(error, "HTTP status code = " << response->getStatusCode() << " instead of 200 during aggregate TTL refresh (" << objid << ")");
+        return;
+    }
+
+    Transfer::DenseDataPtr response_data = response->getData();
+    if (response_data && response_data->size() != 0) {
+        AGG_LOG(error, "Got non-empty response durring aggregate TTL refresh: " << response_data->asString());
+        return;
+    }
+
+    // If all these passed, then we were successful. Setup next refresh time
+    AGG_LOG(detailed, "Successfully refreshed TTL for " << objid);
+    boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
+    AggregateObjectsMap::iterator it = mAggregateObjects.find(objid);
+    if (it == mAggregateObjects.end()) return;
+    it->second->refreshTTL = mLoc->context()->recentSimTime() + (mModelTTL*.75);
+}
+
 
 
 }
