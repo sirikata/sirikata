@@ -1,5 +1,7 @@
 #!/usr/bin/python
 
+from __future__ import print_function
+import sys
 import os;
 import shutil;
 import time;
@@ -32,36 +34,38 @@ class TestManager:
         for s in testArrayToAdd:
             self.addTest(s);
 
-    def runSomeTests(self, testNames, outputFilename=DEFAULT_OUTPUT_FILENAME,cppohPath=DEFAULT_CPPOH_PATH, cppohBinName=DEFAULT_CPPOH_BIN_NAME,saveOutput=False):
+    def runSomeTests(self, testNames, output=sys.stdout, cppohPath=DEFAULT_CPPOH_PATH, cppohBinName=DEFAULT_CPPOH_BIN_NAME, saveOutput=False):
         numTests = len(testNames);
         count = 1;
 
-        #if the output file already existed, then delete it.
-        if(os.path.exists(outputFilename)):
-            os.remove(outputFilename);
-
         #if the dirty folder already exists then delete it first
         if(os.path.exists(DEFAULT_DIRTY_FOLDER)):
-            print('WARNING: deleting previous output folder at ' + DEFAULT_DIRTY_FOLDER);
+            print('WARNING: deleting previous output folder at ' + DEFAULT_DIRTY_FOLDER, file=output);
             shutil.rmtree(DEFAULT_DIRTY_FOLDER);
 
         for s in testNames:
-            print('\nRunning test ' + str(count) + ' of ' + str(numTests) + '\n');
-            count += 1;
+            print("*" * 40, file=output)
+            print('BEGIN TEST', s, '(' + str(count) + ' of ' + str(numTests) + ')', file=output)
 
             folderName = os.path.join(DEFAULT_DIRTY_FOLDER, s);
             if (os.path.exists(folderName)):
-                print('WARNING: deleting previous output file at ' + folderName);
+                print('WARNING: deleting previous output file at ' + folderName, file=output);
                 shutil.rmtree(folderName);
 
             os.makedirs(folderName);
             test = self._testsByName[s];
-            test.runTest(outputFilename,folderName,cppohPath,cppohBinName);
+            test.runTest(folderName,cppohPath,cppohBinName, output);
+
+            print('END TEST', '(' + str(count) + ' of ' + str(numTests) + ')', file=output)
+            print("*" * 40, file=output)
+            print(file=output)
+
+            count += 1;
 
         if (not saveOutput):
             shutil.rmtree(DEFAULT_DIRTY_FOLDER);
 
 
-    def runAllTests(self, outputFilename=DEFAULT_OUTPUT_FILENAME,cppohPath=DEFAULT_CPPOH_PATH, cppohBinName=DEFAULT_CPPOH_BIN_NAME,saveOutput=False):
+    def runAllTests(self, output=sys.stdout, cppohPath=DEFAULT_CPPOH_PATH, cppohBinName=DEFAULT_CPPOH_BIN_NAME,saveOutput=False):
         testNames = [t.testName for t in self.mTests];
-        self.runSomeTests(testNames, outputFilename=outputFilename, cppohPath=cppohPath, cppohBinName=cppohBinName, saveOutput=saveOutput)
+        self.runSomeTests(testNames, output=output, cppohPath=cppohPath, cppohBinName=cppohBinName, saveOutput=saveOutput)

@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-
+from __future__ import print_function
 import sys
 
 import pyTests.singleTest as singleTest
@@ -32,10 +32,7 @@ class CSVTest(singleTest.SingleTest):
 
 
     '''
-    Space should already be running.
-    
-    @param {String} outputFileName Appends the results of all the
-    error tests to the file with this name.
+    Space should already be running.    
 
     @param {String} dirtyFolderName The testManager guarantees that a
     folder exists with this name that csvTest can write arbitrary
@@ -49,7 +46,7 @@ class CSVTest(singleTest.SingleTest):
     binary/executale to run.
 
     '''
-    def runTest(self,outputFilename,dirtyFolderName,cppohPath, cppohBinName):
+    def runTest(self, dirtyFolderName, cppohPath, cppohBinName, output=sys.stdout):
         dbFilename = os.path.join(dirtyFolderName,CSV_DB_FILENAME);
         runOutputFilename = os.path.join(dirtyFolderName,RUN_OUTPUT_FILENAME);
         
@@ -58,8 +55,6 @@ class CSVTest(singleTest.SingleTest):
         self.additionalCMDLineArgs.append('--object-factory=csv');
         self.additionalCMDLineArgs.append('--object-factory-opts=--db='+ os.path.abspath(dbFilename));
 
-
-        print('Running test ' + self.testName + '\n');
         outputCatcher = open(runOutputFilename,'w');
 
         popenCall =['./'+cppohBinName];
@@ -79,22 +74,19 @@ class CSVTest(singleTest.SingleTest):
             if (((now - start).seconds > self.duration) and (not signalSent)):
                 sys.stdout.flush();
                 signalSent = True;
-                print('Sending sighup to object host');
+                print('Sending sighup to object host', file=output);
                 sys.stderr.flush();
                 proc.send_signal(signal.SIGHUP);
                 proc.wait()
                 # Print a notification that we had to kill this process
-                print >>outputCatcher
-                print >>outputCatcher, 'UNIT_TEST_TIMEOUT'
+                print(file=outputCatcher)
+                print('UNIT_TEST_TIMEOUT', file=outputCatcher)
 
                 
         outputCatcher.close();
         os.chdir(prevDir);
-        
-        print('Analyzing test ' + self.testName + '\n');
-        self.analyzeOutput(runOutputFilename, outputFilename,proc.returncode);
-        print('\nDone with test ' + self.testName + '\n');
-        
+
+        self.analyzeOutput(runOutputFilename, proc.returncode, output=output);
         
         
         

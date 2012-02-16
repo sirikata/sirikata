@@ -2,6 +2,8 @@
 
 import sys;
 
+from pyTests.tee import Tee
+
 import pyTests.testManager as testManager
 import pyTests.csvTest as csvTest
 from dbGen.csvConstructorInfo import CSVConstructorInfo
@@ -201,28 +203,31 @@ def registerTests():
     manager = testManager.TestManager();
     manager.addTestArray(testArray);
 
-def runSome(testNames,saveOutput=False):
+def runSome(testNames, output=sys.stdout, saveOutput=False):
     global manager
-    manager.runSomeTests(testNames, saveOutput=saveOutput);
+    manager.runSomeTests(testNames, output=output, saveOutput=saveOutput);
 
-def runAll(saveOutput=False):
+def runAll(output=sys.stdout, saveOutput=False):
     global manager
-    manager.runAllTests(saveOutput=saveOutput);
+    manager.runAllTests(output=output, saveOutput=saveOutput);
 
 
 if __name__ == "__main__":
 
     saveOutput = False;
+    output = sys.stdout
 
     testsToRun = []
     for s in range (1, len(sys.argv)):
         if (sys.argv[s] == '--saveOutput'):
             saveOutput=True;
+        elif sys.argv[s].startswith('--log='):
+            output = Tee( open( sys.argv[s].split('=', 1)[1], 'w'), sys.stdout )
         else:
             testsToRun.append(sys.argv[s])
 
     registerTests()
     if len(testsToRun):
-        runSome(testsToRun, saveOutput)
+        runSome(testsToRun, output, saveOutput)
     else:
-        runAll(saveOutput);
+        runAll(output, saveOutput);
