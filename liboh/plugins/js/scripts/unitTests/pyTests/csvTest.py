@@ -99,7 +99,7 @@ class CSVTest(singleTest.SingleTest):
         outputCatcher.close();
         os.chdir(prevDir);
 
-        self.analyzeOutput(runOutputFilename, proc.returncode, output=output);
+        return self.analyzeOutput(runOutputFilename, proc.returncode, output=output);
         
         
         

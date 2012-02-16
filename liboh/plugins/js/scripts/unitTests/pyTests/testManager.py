@@ -43,6 +43,8 @@ class TestManager:
             print('WARNING: deleting previous output folder at ' + DEFAULT_DIRTY_FOLDER, file=output);
             shutil.rmtree(DEFAULT_DIRTY_FOLDER);
 
+        succeeded = 0
+        failed = 0
         for s in testNames:
             print("*" * 40, file=output)
             print('BEGIN TEST', s, '(' + str(count) + ' of ' + str(numTests) + ')', file=output)
@@ -54,13 +56,22 @@ class TestManager:
 
             os.makedirs(folderName);
             test = self._testsByName[s];
-            test.runTest(folderName,cppohPath,cppohBinName, output);
+            success = test.runTest(folderName,cppohPath,cppohBinName, output);
+            if success:
+                succeeded += 1
+            else:
+                failed += 1
 
             print('END TEST', '(' + str(count) + ' of ' + str(numTests) + ')', file=output)
             print("*" * 40, file=output)
             print(file=output)
 
             count += 1;
+
+        print(file=output)
+        print("*" * 40, file=output)
+        print("SUMMARY:", succeeded, "succeeded,", failed, "failed", file=output)
+        print("*" * 40, file=output)
 
         if (not saveOutput):
             shutil.rmtree(DEFAULT_DIRTY_FOLDER);

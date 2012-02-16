@@ -112,3 +112,5 @@ class SingleTest:
                 returnCodeErrorName = 'Seg fault';
 
             print("Error exit code:", returnCodeErrorName, "(" + str(returnCode) + ")", file=output)
+
+        return not failed
