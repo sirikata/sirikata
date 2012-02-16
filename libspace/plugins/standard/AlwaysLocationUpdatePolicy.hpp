@@ -125,12 +125,24 @@ private:
 
         struct SubscriberInfo {
             SubscriberInfo(SeqNoPtr seq_number_ptr )
-             : seqnoPtr(seq_number_ptr)
+             : seqnoPtr(seq_number_ptr),
+               numOutstandingMessages(0)
             {}
 
             SeqNoPtr seqnoPtr;
             UUIDSet subscribedTo;
             std::map<UUID, UpdateInfo> outstandingUpdates;
+            // Sometimes a subscriber may stall or hang, leaving the underlying
+            // connection open but not handling loc update substreams. In this
+            // case, we can end up generating a ton of update streams that fail
+            // and eat up a bunch of our processor just looping for
+            // retries. With objects moving, we could get arbitarily many
+            // outstanding updates since once the substream request is started
+            // it frees up the spot in the outstandingUpdates map above,
+            // allowing more for the same object to be sent. To protect against
+            // this, we track how many loc update messages are outstanding and
+            // stall updates while we're waiting for them to return (or fail!).
+            uint8 numOutstandingMessages;
         };
 
         // Forward index: Subscriber -> Objects + Updates
@@ -329,7 +341,10 @@ private:
 
                 bool send_failed = false;
                 std::map<UUID, UpdateInfo>::iterator last_shipped = sub_info->outstandingUpdates.begin();
-                for(std::map<UUID, UpdateInfo>::iterator up_it = sub_info->outstandingUpdates.begin(); up_it != sub_info->outstandingUpdates.end(); up_it++) {
+                for(std::map<UUID, UpdateInfo>::iterator up_it = sub_info->outstandingUpdates.begin();
+                    sub_info->numOutstandingMessages < 25 && up_it != sub_info->outstandingUpdates.end();
+                    up_it++)
+                {
                     Sirikata::Protocol::Loc::ILocationUpdate update = bulk_update.add_update();
                     update.set_object(up_it->first);
 
@@ -366,6 +381,7 @@ private:
                             bulk_update = Sirikata::Protocol::Loc::BulkLocationUpdate(); // clear it out
                             last_shipped = up_it;
                             sent_count++;
+                            sub_info->numOutstandingMessages++;
                         }
                     }
                 }
@@ -376,6 +392,7 @@ private:
                     if (sent) {
                         last_shipped = sub_info->outstandingUpdates.end();
                         sent_count++;
+                        sub_info->numOutstandingMessages++;
                     }
                 }
 
@@ -390,6 +407,13 @@ private:
 
             for(typename std::list<SubscriberType>::iterator it = to_delete.begin(); it != to_delete.end(); it++)
                 mSubscriptions.erase(*it);
+        }
+
+        void decrementOutstandingMessageCount(SubscriberType dest) {
+            typename SubscriberMap::iterator sub_it = mSubscriptions.find(dest);
+            if (sub_it == mSubscriptions.end()) return;
+            assert(sub_it->second->numOutstandingMessages > 0);
+            sub_it->second->numOutstandingMessages--;
         }
 
     };
