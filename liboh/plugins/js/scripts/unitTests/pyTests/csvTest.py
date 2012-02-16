@@ -3,6 +3,8 @@
 from __future__ import print_function
 import sys
 
+from tee import Tee
+
 import pyTests.singleTest as singleTest
 import dbGen.csvGenerator as csvGenerator
 import subprocess
@@ -23,16 +25,15 @@ class CSVTest(singleTest.SingleTest):
     def __init__(self, name, entityConstructorInfo=None, **kwargs):
         singleTest.SingleTest.__init__(self,name=name,**kwargs)
         self.csvGen = csvGenerator.CSVGenerator(entityConstructorInfo);
-        
+
     def addEntityConstructorInfo(self,eci):
         self.csvGen.addEntity(eci);
 
     def addEntityArrayConstructorInfo(self,arrayeci):
         self.csvGen.addArrayOfEntities();
 
-
     '''
-    Space should already be running.    
+    Space should already be running.
 
     @param {String} dirtyFolderName The testManager guarantees that a
     folder exists with this name that csvTest can write arbitrary
@@ -49,24 +50,24 @@ class CSVTest(singleTest.SingleTest):
     def runTest(self, dirtyFolderName, cppohPath, cppohBinName, output=sys.stdout):
         dbFilename = os.path.join(dirtyFolderName,CSV_DB_FILENAME);
         runOutputFilename = os.path.join(dirtyFolderName,RUN_OUTPUT_FILENAME);
-        
+
         #create the db file to read from.
         self.csvGen.writeDB(dbFilename);
         self.additionalCMDLineArgs.append('--object-factory=csv');
         self.additionalCMDLineArgs.append('--object-factory-opts=--db='+ os.path.abspath(dbFilename));
 
-        outputCatcher = open(runOutputFilename,'w');
+        outputCatcher = open(runOutputFilename,'w')
 
         popenCall =['./'+cppohBinName];
         for s in self.additionalCMDLineArgs:
             popenCall.append(s);
-        
+
         prevDir = os.getcwd();
         os.chdir(cppohPath);
         start = datetime.datetime.now();
 
-        
-        proc = subprocess.Popen(popenCall,stdout=outputCatcher, stderr=subprocess.STDOUT);
+
+        proc = subprocess.Popen(popenCall, stdout=outputCatcher, stderr=subprocess.STDOUT);
         signalSent = False;
         while proc.poll() is None:
             time.sleep(1)
@@ -95,17 +96,20 @@ class CSVTest(singleTest.SingleTest):
                 print(file=outputCatcher)
                 print('UNIT_TEST_TIMEOUT', file=outputCatcher)
 
-                
+
         outputCatcher.close();
         os.chdir(prevDir);
 
         return self.analyzeOutput(runOutputFilename, proc.returncode, output=output);
-        
-        
-        
-        
-        
-    
-        
-        
-    
+
+
+    def analyzeOutput(self, filenameToAnalyze, returnCode, output):
+        success = super(CSVTest, self).analyzeOutput(filenameToAnalyze, returnCode, output=output)
+        if not success:
+            print("Execution Log:", file=output)
+            fp = open(filenameToAnalyze, 'r')
+            for line in fp.readlines():
+                print("    ", line, end='', file=output)
+            fp.close()
+            print(file=output)
+        return success

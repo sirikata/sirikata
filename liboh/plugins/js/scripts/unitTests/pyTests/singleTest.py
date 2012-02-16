@@ -5,7 +5,7 @@ import sys
 
 import errorConditions.basicErrors as basicErrors
 
-class SingleTest:
+class SingleTest(object):
     DefaultErrorConditions = [
         basicErrors.ExceptionError,
         basicErrors.TimedOutError,
