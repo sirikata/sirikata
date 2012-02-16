@@ -647,14 +647,46 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
       try {
           ptree pt;
           for (std::tr1::unordered_map<String, String>::iterator it = textureSet.begin(); it != textureSet.end(); it++) {
-              String tex_filename_in_collada = it->first;
+
+              String subfile_name = it->first;
+              {
+                  // The upload expects only the basename, i.e. the actual
+                  // filename. So if we referred to a URL
+                  // (meerkat://foo/bar/texture.png) or filename with
+                  // directories (/foo/bar/texture.png) we'd need to
+                  // extract just the filename.
+
+                  // Use URL to strip of any URL parts to get a normal looking path
+                  Transfer::URL subfile_name_as_url(subfile_name);
+                  if (!subfile_name_as_url.empty())
+                      subfile_name = subfile_name_as_url.fullpath();
+
+                  // Then extract just the last element, i.e. the filename
+                  std::size_t filename_pos = subfile_name.rfind("/");
+                  if (filename_pos != String::npos)
+                      subfile_name = subfile_name.substr(filename_pos+1);
+              }
 
               String tex_path = Transfer::URL(it->second).fullpath();
+              {
+                  // Sigh. Yet again, we need to modify the order of the filename
+                  // and version number again.
+
+                  std::size_t upload_filename_pos = tex_path.rfind("/");
+                  assert(upload_filename_pos != String::npos);
+                  std::size_t upload_num_pos = tex_path.rfind("/", upload_filename_pos-1);
+                  assert(upload_num_pos != String::npos);
+
+                  String num_part = tex_path.substr(upload_num_pos, (upload_filename_pos-upload_num_pos));
+                  String filename_part = tex_path.substr(upload_filename_pos+1);
+                  tex_path = tex_path.substr(0, upload_num_pos+1) + filename_part + num_part;
+              }
+
               // Explicitly override the separator to ensure we don't
               // use parts of the filename to generate a hierarchy,
               // i.e. so that foo.png remains foo.png instead of
               // becoming foo { png : value }.
-              pt.put(ptree::path_type(tex_filename_in_collada, '\0'), tex_path);
+              pt.put(ptree::path_type(subfile_name, '\0'), tex_path);
           }
           std::stringstream data_json;
           write_json(data_json, pt);
