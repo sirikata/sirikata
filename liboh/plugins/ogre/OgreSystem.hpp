@@ -91,6 +91,7 @@ class OgreSystem :
     Invokable* mOnResetReadyCallback;
 
     void handleUIReady();
+    void iHandleUIReady(Liveness::Token osAlive);
     void handleUIResetReady();
     void handleUpdateUIViewport(int32 left, int32 top, int32 right, int32 bottom);
 
