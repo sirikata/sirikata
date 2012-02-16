@@ -74,10 +74,23 @@ class CSVTest(singleTest.SingleTest):
             if (((now - start).seconds > self.duration) and (not signalSent)):
                 sys.stdout.flush();
                 signalSent = True;
-                print('Sending sighup to object host', file=output);
+                print('Sending SIGHUP to object host', file=output);
                 sys.stderr.flush();
-                proc.send_signal(signal.SIGHUP);
-                proc.wait()
+                proc.send_signal(signal.SIGHUP)
+                # In case a SIGHUP isn't enough, wait a bit longer and try to kill
+                while proc.poll() is None:
+                    time.sleep(1)
+                    now = datetime.datetime.now();
+                    if (now - start).seconds > self.duration + 10:
+                        # Send signal twice, in case the first one is
+                        # caught. The second should (in theory) always
+                        # kill the process as it should have disabled
+                        # the handler
+                        print('Sending SIGKILL to object host', file=output);
+                        proc.send_signal(signal.SIGKILL)
+                        proc.send_signal(signal.SIGKILL)
+                        proc.wait()
+
                 # Print a notification that we had to kill this process
                 print(file=outputCatcher)
                 print('UNIT_TEST_TIMEOUT', file=outputCatcher)

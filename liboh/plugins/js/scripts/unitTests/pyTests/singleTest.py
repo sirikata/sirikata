@@ -106,6 +106,8 @@ class SingleTest:
             returnCodeErrorName = 'Unknown'
             if (returnCode == -6):
                 returnCodeErrorName = 'Assert fault';
+            elif(returnCode == -9):
+                returnCodeErrorName = 'Killed';
             elif(returnCode == -11):
                 returnCodeErrorName = 'Seg fault';
 
