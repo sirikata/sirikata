@@ -71,10 +71,12 @@ AggregateManager::AggregateManager(LocationService* loc, Transfer::OAuthParamsPt
     mCDNUsername(username),
     mModelTTL(Duration::minutes(10)),
     mCDNKeepAlivePoller(
-        mAggregationStrand,
-        std::tr1::bind(&AggregateManager::sendKeepAlives, this),
-        "AggregateManager CDN Keep-Alive Poller",
-        Duration::seconds(30)
+        new Poller(
+            mAggregationStrand,
+            std::tr1::bind(&AggregateManager::sendKeepAlives, this),
+            "AggregateManager CDN Keep-Alive Poller",
+            Duration::seconds(30)
+        )
     )
 {
     mModelsSystem = NULL;
@@ -92,11 +94,14 @@ AggregateManager::AggregateManager(LocationService* loc, Transfer::OAuthParamsPt
 
     removeStaleLeaves();
 
-    mCDNKeepAlivePoller.start();
+    mCDNKeepAlivePoller->start();
 }
 
 AggregateManager::~AggregateManager() {
-    mCDNKeepAlivePoller.stop();
+    // We need to make sure we clean this up before the IOService and IOStrand
+    // it's running on.
+    mCDNKeepAlivePoller->stop();
+    delete mCDNKeepAlivePoller;
 
     // Shut down the main processing thread
     delete mIOWork;

@@ -139,7 +139,7 @@ private:
   Transfer::OAuthParamsPtr mOAuth;
   const String mCDNUsername;
   Duration mModelTTL;
-  Poller mCDNKeepAlivePoller;
+  Poller* mCDNKeepAlivePoller;
 
   void updateChildrenTreeLevel(const UUID& uuid, uint16 treeLevel);
   void addDirtyAggregates(UUID uuid);
