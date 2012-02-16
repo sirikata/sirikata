@@ -4,8 +4,12 @@ import os;
 import shutil;
 import time;
 
+import os.path
+
+_this_script_dir = os.path.dirname(__file__)
+
 DEFAULT_OUTPUT_FILENAME = 'unitTestResults.txt';
-DEFAULT_CPPOH_PATH = '../../../../../build/cmake/';
+DEFAULT_CPPOH_PATH = os.path.join(_this_script_dir, '../../../../../../build/cmake/')
 DEFAULT_CPPOH_BIN_NAME = 'cppoh_d';
 
 DEFAULT_DIRTY_FOLDER = 'pyTests/DIRTY_UNIT_TEST_DIR';
