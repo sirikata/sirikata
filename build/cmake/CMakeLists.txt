@@ -1374,6 +1374,8 @@ SET(SIRIKATA_CORE_SOURCES
         ${LIBCORE_SOURCE_DIR}/trace/TimeSeries.cpp
 	${LIBCORE_SOURCE_DIR}/sync/TimeSyncServer.cpp
 	${LIBCORE_SOURCE_DIR}/sync/TimeSyncClient.cpp
+	${LIBCORE_SOURCE_DIR}/command/Command.cpp
+	${LIBCORE_SOURCE_DIR}/command/Commander.cpp
 )
 
 #precompiled header

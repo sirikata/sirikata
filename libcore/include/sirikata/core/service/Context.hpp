@@ -42,6 +42,7 @@
 #include "Service.hpp"
 #include "Signal.hpp"
 #include <sirikata/core/trace/TimeSeries.hpp>
+#include <sirikata/core/command/Commander.hpp>
 
 #define FORCE_MONOTONIC_CLOCK 1
 
@@ -156,6 +157,7 @@ public:
     TimeProfiler* profiler;
 
     Trace::TimeSeries* timeSeries;
+    Command::Commander* commander;
 protected:
 
     // Main Lifetime Management
