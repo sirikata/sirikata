@@ -29,7 +29,7 @@ extern void* myRecoverFromMismatchedToken(struct ANTLR3_BASE_RECOGNIZER_struct*,
 
 
 pEmersonTree _treeParser;
-EmersonInfo* _emersonInfo;
+
 
 pANTLR3_STRING emerson_printAST(pANTLR3_BASE_TREE tree)
 {
@@ -51,7 +51,7 @@ bool EmersonUtil::emerson_compile(
     int& errorNum, EmersonErrorFuncType errorFunction, FILE* dbg, EmersonLineMap* lineMap)
 {
 
-  _emersonInfo = new EmersonInfo();
+  EmersonInfo* _emersonInfo = new EmersonInfo();
   if(_originalFile.size() > 0 )
   {
     _emersonInfo->push(_originalFile);
@@ -64,13 +64,17 @@ bool EmersonUtil::emerson_compile(
 
   _emersonInfo->mismatchTokenFunctionIs(&myRecoverFromMismatchedToken);
 
-  return emerson_compile(em_script_str, toCompileTo,errorNum, dbg, lineMap);
+  bool returner = emerson_compile(
+      em_script_str, toCompileTo,errorNum, dbg, lineMap,_emersonInfo);
+  
+  delete _emersonInfo;
+  return returner;
 }
 
 // This is mor basic version of the function. Should be called from else where
 bool EmersonUtil::emerson_compile(
     const char* em_script_str, std::string& toCompileTo, int& errorNum,
-    FILE* dbg, EmersonLineMap* lineMap)
+    FILE* dbg, EmersonLineMap* lineMap, EmersonInfo* _emersonInfo)
 {
     if (dbg != NULL) fprintf(dbg, "Trying to compile \n %s\n", em_script_str);
 

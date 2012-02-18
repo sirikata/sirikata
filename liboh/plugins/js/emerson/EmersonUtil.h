@@ -31,17 +31,17 @@ public:
         EmersonErrorFuncType error_cb, EmersonLineMap* lineMap);
 
 
-
     static bool emerson_compile(
         std::string _originalFile, const char* em_script_str,
         std::string& toCompileTo, int& errorNum,
-        EmersonErrorFuncType error_cb, FILE* dbg, EmersonLineMap* lineMap);
+        EmersonErrorFuncType error_cb, FILE* dbg,
+        EmersonLineMap* lineMap);
     
 private:
     
     static bool emerson_compile(
         const char*,std::string& toCompileTo, int& errorNum, FILE* dbg,
-        EmersonLineMap* lineMap);
+        EmersonLineMap* lineMap,EmersonInfo* );
 
     
 };
