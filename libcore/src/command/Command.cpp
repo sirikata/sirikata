@@ -10,25 +10,17 @@ namespace Command {
 
 using namespace boost::property_tree;
 
-String Command::sCommandKey("command");
-
-Command::Command(const CommandKey& cmd) {
-    put(sCommandKey, cmd);
+namespace {
+String sCommandKey("command");
 }
 
-Command::Command(const boost::property_tree::ptree& orig)
- : ptree(orig)
-{
-    if (!valid()) throw InvalidCommandException();
+bool CommandIsValid(const Command& cmd) {
+    return (cmd.find(sCommandKey) != cmd.not_found());
 }
 
-Command::Command() {
+void CommandSetName(Command& cmd, const String& name) {
+    cmd.put(sCommandKey, name);
 }
-
-bool Command::valid() const {
-    return (find(sCommandKey) != not_found());
-}
-
 
 } // namespace Command
 } // namespace Sirikata

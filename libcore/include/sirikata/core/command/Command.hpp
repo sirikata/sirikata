@@ -29,44 +29,15 @@ typedef String CommandKey;
  */
 typedef uint32 CommandID;
 
+// We'd prefer a class that inherits from ptree and adds constraints, but
+// boost::property_tree functions don't seem to handle this well.
 /** Commands take the form of property trees. These are pretty generic
  *  tree-structured values, making commands pretty flexible.
  */
-class SIRIKATA_EXPORT Command : public boost::property_tree::ptree {
-  public:
-    /** Construct a blank command using the given command name. */
-    Command(const CommandKey& cmd);
-    /* Constructs a command from the given ptree. Throws if the ptree doesn't
-     * have a valid command key.
-     */
-    Command(const boost::property_tree::ptree& orig);
+typedef boost::property_tree::ptree Command;
+bool SIRIKATA_FUNCTION_EXPORT CommandIsValid(const Command& cmd);
+void SIRIKATA_FUNCTION_EXPORT CommandSetName(Command& cmd, const String& name);
 
-
-  protected:
-
-    friend class Commander;
-    /** Construct a blank (and therefore invalid) command. Restricted to
-     *  Commanders, who may use this to construct a blank command and then fill
-     *  it in.
-     */
-    Command();
-
-    /** Check if this command is valid, i.e. if it has the required structure. */
-    bool valid() const;
-
-    static String sCommandKey;
-};
-
-class InvalidCommandException : public std::exception {
-public:
-    InvalidCommandException() {}
-    virtual ~InvalidCommandException() throw() {}
-
-    char const* what() const throw() {
-        return "Invalid command: command key not found or empty";
-    }
-private:
-};
 
 /** Results are returned by executing a command. These are also generic
  *  tree-structured values, allowing complex data to be returned without

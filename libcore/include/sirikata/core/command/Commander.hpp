@@ -6,6 +6,8 @@
 #define _SIRIKATA_LIBCORE_COMMAND_COMMANDER_HPP_
 
 #include <sirikata/core/command/Command.hpp>
+#include <sirikata/core/util/Factory.hpp>
+#include <sirikata/core/service/Context.hpp>
 #include <boost/thread.hpp>
 
 namespace Sirikata {
@@ -41,7 +43,7 @@ public:
     /** Return a result from a CommandHandler. This will trigger the process of
      *  returning the result to the requestor.
      */
-    virtual void result(CommandID, Result) = 0;
+    virtual void result(CommandID id, const Result& result) = 0;
 
   protected:
     /** Utility for implementations which looks up the appropriate handler for
@@ -69,6 +71,15 @@ public:
 private:
 };
 
+
+class SIRIKATA_EXPORT CommanderFactory :
+        public Factory2<Commander*, Context*, const String&>,
+        public AutoSingleton<CommanderFactory>
+{
+  public:
+    static CommanderFactory& getSingleton();
+    static void destroy();
+};
 
 } // namespace Command
 } // namespace Sirikata

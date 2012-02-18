@@ -5,11 +5,14 @@
 #include <sirikata/core/util/Standard.hh>
 #include <sirikata/core/command/Commander.hpp>
 
+AUTO_SINGLETON_INSTANCE(Sirikata::Command::CommanderFactory);
+
 namespace Sirikata {
 namespace Command {
 
 Commander::Commander() {
 }
+
 Commander::~Commander() {
 }
 
@@ -40,6 +43,16 @@ CommandHandler Commander::getHandler(const CommandKey& name) {
     return mHandlers[name];
 }
 
+
+
+
+CommanderFactory& CommanderFactory::getSingleton() {
+    return AutoSingleton<CommanderFactory>::getSingleton();
+}
+
+void CommanderFactory::destroy() {
+    AutoSingleton<CommanderFactory>::destroy();
+}
 
 } // namespace Command
 } // namespace Sirikata

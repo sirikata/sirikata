@@ -98,6 +98,7 @@ Server::Server(SpaceContext* ctx, Authenticator* auth, Forwarder* forwarder, Loc
 {
     using std::tr1::placeholders::_1;
     using std::tr1::placeholders::_2;
+    using std::tr1::placeholders::_3;
 
     mTimeSyncServer = new TimeSyncServer(mContext, this);
 
@@ -133,6 +134,16 @@ Server::Server(SpaceContext* ctx, Authenticator* auth, Forwarder* forwarder, Loc
     mForwarder->setLocalForwarder(mLocalForwarder);
 
     mMigrationTimer.start();
+
+
+    if (mContext->commander) {
+        mContext->commander->registerCommand(
+            "space.server.objects.count",
+            mContext->mainStrand->wrap(
+                std::tr1::bind(&Server::commandObjectsCount, this, _1, _2, _3)
+            )
+        );
+    }
 }
 
 void Server::newStream(int err, SST::Stream<SpaceObjectReference>::Ptr s) {
@@ -1287,6 +1298,19 @@ void Server::killObjectConnection(const UUID& obj_id)
   }
 }
 
+
+
+
+// Commander commands
+void Server::commandObjectsCount(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {
+    Command::Result result;
+    result.put("objects.active", mObjects.size());
+    result.put("objects.connecting", mStoredConnectionData.size());
+    result.put("objects.migrating_to", mObjectsAwaitingMigration.size());
+    result.put("objects.other_server_requested_migration", mObjectMigrations.size());
+    result.put("objects.migrating_from", mMigratingConnections.size());
+    cmdr->result(cmdid, result);
+}
 
 
 } // namespace Sirikata

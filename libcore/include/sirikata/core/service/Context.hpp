@@ -42,7 +42,6 @@
 #include "Service.hpp"
 #include "Signal.hpp"
 #include <sirikata/core/trace/TimeSeries.hpp>
-#include <sirikata/core/command/Commander.hpp>
 
 #define FORCE_MONOTONIC_CLOCK 1
 
@@ -50,6 +49,10 @@ namespace Sirikata {
 
 namespace Trace {
 class Trace;
+}
+
+namespace Command {
+class Commander;
 }
 
 /** Base class for Contexts, provides basic infrastructure such as IOServices,
