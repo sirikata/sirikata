@@ -36,6 +36,77 @@
 
 #define CF_NAME "persistence"  // Column Family Name
 
+/** Implementation Notes
+ *  ====================
+ *
+ *  Data Layout
+ *  -----------
+ *  See http://wiki.apache.org/cassandra/DataModel for an explanation of the
+ *  Cassandra data
+ *  model. http://arin.me/blog/wtf-is-a-supercolumn-cassandra-data-model may be
+ *  helpful too. In short, Cassandra is a multidimensional map (each ... means a
+ *  set of these elements are maintained):
+ *
+ *   Keyspace {
+ *    Super Column Family {
+ *     Row {
+ *      Super Column {
+ *       Column (each column is key -> value pair w/ timestamp)
+ *       ...
+ *       Column
+ *      } // Super Column
+ *      ...
+ *      Super Column {}
+ *     } // Row
+ *     ...
+ *     Row {}
+ *    } // Super Column Family
+ *    ...
+ *    Super Column Family {}
+ *  } // Keyspace
+ *  ...
+ *  Keyspace {}
+ *
+ *  We map to this model as follows:
+ *   * A keyspace is shared with other Sirikata storage - 'sirikata' by default.
+ *   * A Super Column Family isolates Cassandra Storage - 'persistence' by
+ *     default.
+ *   * Buckets (i.e. HostedObjects) are each a Row in the persistence Super
+ *     Column Family
+ *   * Timestamps are each a Super Column.
+ *   * Individual key -> value pairs are each a Column within the timestamps
+ *     Super Column.
+ *  This means you can think of Cassandra as one giant, 5-dimensional map and we
+ *  use it as:
+ *   Cassandra['sirikata']['persistence'][bucket][timestamp][key] = value;
+ *   |--------fixed by settings---------|
+ *   |-----------get per object storage---------|
+ *   |-------get active timestamp storage for object-------|
+ *
+ *  You can see this structure when you use cassandra-cli to explore the data:
+ *   > cassandra-cli
+ *   >> connect localhost/9160;
+ *   >> use sirikata; # Use 'sirikata' keyspace.
+ *   # Change a few settings that force display to strings, which assumes you're
+ *   # using utf8 keys
+ *   >> assume persistence keys as utf8; # Bucket (row) names
+ *   >> assume persistence comparator as utf8; # Timestamp (super column) names
+ *   >> assume persistence sub_comparator as utf8; # Key (column) names
+ *   # List 2 rows from persistence
+ *   >> list persistence limit 2;
+ *    -------------------
+ *    RowKey: b10c1c63686e6b050000020002000001
+ *    => (super_column=current,
+ *         (column=foo, value=120608c0af271005120608808, timestamp=1329197745156495)
+ *         (column=bar, value=c0af271005120608808, timestamp=1329197738171366))
+ *    -------------------
+ *    RowKey: b10c1c63686e6b050000020002000001
+ *    => (super_column=current,
+ *         (column=foo, value=120608c0af271005120608808, timestamp=1329197745156495)
+ *        (column=bar, value=c0af271005120608808, timestamp=1329197738171366))
+ *
+ */
+
 namespace Sirikata {
 namespace OH {
 
