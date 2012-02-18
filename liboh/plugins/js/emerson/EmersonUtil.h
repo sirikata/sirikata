@@ -7,12 +7,14 @@
 #include <map>
 #include <stdio.h>
 #include <string>
-
+#include <boost/thread/mutex.hpp>
 
 
 pANTLR3_STRING emerson_printAST(pANTLR3_BASE_TREE tree);
 
 typedef std::map<int, int> EmersonLineMap;
+
+
 
 
 class EmersonInfo;

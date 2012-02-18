@@ -13,6 +13,8 @@
 
 using namespace std;
 
+
+
 void myRecoverFromMismatchedSet(struct ANTLR3_BASE_RECOGNIZER_struct* _recognizer, pANTLR3_BITSET_LIST _follow)
 {
 }
@@ -51,6 +53,8 @@ bool EmersonUtil::emerson_compile(
     int& errorNum, EmersonErrorFuncType errorFunction, FILE* dbg, EmersonLineMap* lineMap)
 {
 
+
+    
   EmersonInfo* _emersonInfo = new EmersonInfo();
   if(_originalFile.size() > 0 )
   {
@@ -76,6 +80,9 @@ bool EmersonUtil::emerson_compile(
     const char* em_script_str, std::string& toCompileTo, int& errorNum,
     FILE* dbg, EmersonLineMap* lineMap, EmersonInfo* _emersonInfo)
 {
+    static boost::mutex EmMutex;
+    boost::mutex::scoped_lock locker (EmMutex);
+    
     if (dbg != NULL) fprintf(dbg, "Trying to compile \n %s\n", em_script_str);
 
 
