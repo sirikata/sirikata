@@ -223,10 +223,9 @@ int main	(int argc, char *argv[])
     try
     {
         std::string js_str;
-        bool compileSuccess = emerson_compile(std::string(fName), (const char*)em_script_str_new.c_str(), js_str,
-                                              errorNum, &myDisplayRecognitionError, dbgFile, NULL);
-
-        // char* js_str = emerson_compile(std::string(fName), (const char*)em_script_str_new.c_str(), errorNum, &myDisplayRecognitionError, dbgFile);
+        bool compileSuccess = EmersonUtil::emerson_compile(
+            std::string(fName), (const char*)em_script_str_new.c_str(), js_str,
+            errorNum, &myDisplayRecognitionError, dbgFile, NULL);
 
         if (compileSuccess){
             std::cout<<js_str;
