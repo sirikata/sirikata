@@ -84,7 +84,7 @@ private:
         StorageAction& operator=(const StorageAction& rhs);
 
         // Executes this action. Assumes the owning SQLiteStorage has setup the transaction.
-        bool execute(SQLiteDBPtr db, const Bucket& bucket, ReadSet* rs);
+        Result execute(SQLiteDBPtr db, const Bucket& bucket, ReadSet* rs);
 
         // Bucket is implicit, passed into execute
         Type type;
@@ -131,7 +131,7 @@ private:
     // Tries to execute a commit *assuming it is within a SQL
     // transaction*. Returns whether it was successful, allowing for
     // rollback/retrying.
-    bool executeCommit(const Bucket& bucket, Transaction* trans, CommitCallback cb, ReadSet** read_set_out);
+    Result executeCommit(const Bucket& bucket, Transaction* trans, CommitCallback cb, ReadSet** read_set_out);
 
     void executeCount(const String value_count, const Key& start, const Key& finish, CountCallback cb);
 

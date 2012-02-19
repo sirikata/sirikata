@@ -212,65 +212,65 @@ void CassandraStorage::initDB() {
     mDB = db;
 }
 
-bool CassandraStorage::CassandraCommit(CassandraDBPtr db, const Bucket& bucket, Columns* columns, Keys* eraseKeys, Keys* readKeys, SliceRanges* readRanges, ReadSet* compares, SliceRanges* eraseRanges, ReadSet* rs, const String& timestamp) {
+Storage::Result CassandraStorage::CassandraCommit(CassandraDBPtr db, const Bucket& bucket, Columns* columns, Keys* eraseKeys, Keys* readKeys, SliceRanges* readRanges, ReadSet* compares, SliceRanges* eraseRanges, ReadSet* rs, const String& timestamp) {
     // FIXME *THIS ISN'T EVEN TRYING TO BE ATOMIC*
 
-    bool success = true;
+    Result result = SUCCESS;
 
     if((*readKeys).size()>0) {
         try{
             *rs=db->db()->getColumnsValues(bucket.rawHexData(),CF_NAME, timestamp, *readKeys);  // batch read
         }
         catch(...){
-            success = false;
+            result = TRANSACTION_ERROR;
         }
     }
     // Compare keys come out with the read set. We compare values and remove
     // them from the results
-    for(ReadSet::iterator it = compares->begin(); success && it != compares->end(); it++) {
+    for(ReadSet::iterator it = compares->begin(); result == SUCCESS && it != compares->end(); it++) {
         ReadSet::iterator read_it = rs->find(it->first);
         if (read_it == rs->end() ||
             read_it->second != it->second) {
-            success = false;
+            result = TRANSACTION_ERROR;
             break;
         }
         rs->erase(read_it);
     }
 
-    for(uint32 i = 0; success && i < readRanges->size(); i++) {
+    for(uint32 i = 0; result == SUCCESS && i < readRanges->size(); i++) {
         try{
             ReadSet rangeData = db->db()->getColumnsValues(bucket.rawHexData(),CF_NAME, timestamp, (*readRanges)[i]);
             for(ReadSet::iterator it = rangeData.begin(); it != rangeData.end(); it++)
                 (*rs)[it->first] = it->second;
             if (rangeData.size() == 0)
-                success = false;
+                result = TRANSACTION_ERROR;
         }
         catch(...){
-            success = false;
+            result = TRANSACTION_ERROR;
         }
     }
 
     // Erase ranges are processed before erases -- they just look up the keys to
     // erase and add them to the erase set
-    for(uint32 i = 0; success && i < eraseRanges->size(); i++) {
+    for(uint32 i = 0; result == SUCCESS && i < eraseRanges->size(); i++) {
         try {
             ReadSet rangeData = mDB->db()->getColumnsValues(bucket.rawHexData(), CF_NAME, timestamp, (*eraseRanges)[i]);
             for(ReadSet::iterator it = rangeData.begin(); it != rangeData.end(); it++)
                 eraseKeys->push_back(it->first);
         }
         catch(...){
-            success = false;
+            result = TRANSACTION_ERROR;
         }
     }
 
-    if(success && (((*columns).size()>0) || ((*eraseKeys).size()>0))){
+    if(result == SUCCESS && (((*columns).size()>0) || ((*eraseKeys).size()>0))){
         try{
             batchTuple tuple=batchTuple(CF_NAME, bucket.rawHexData(), timestamp, *columns, *eraseKeys);
             db->db()->batchMutate(tuple);
         }
         catch(...) {
             SILOG(cassandra-storage, fatal, "Exception Caught when Batch Write/Erase");
-            success = false;
+            result = TRANSACTION_ERROR;
         }
     }
 
@@ -279,7 +279,7 @@ bool CassandraStorage::CassandraCommit(CassandraDBPtr db, const Bucket& bucket, 
     delete readKeys;
     delete readRanges;
     delete eraseRanges;
-    return success;
+    return result;
 }
 
 void CassandraStorage::stop() {
@@ -317,7 +317,7 @@ void CassandraStorage::commitTransaction(const Bucket& bucket, const CommitCallb
     // Short cut for empty transactions. Or maybe these should cause exceptions?
     if(trans->empty()) {
         ReadSet* rs = NULL;
-        completeCommit(trans, cb, false, rs);
+        completeCommit(trans, cb, SUCCESS, rs);
         return;
     }
 
@@ -342,23 +342,23 @@ void CassandraStorage::executeCommit(const Bucket& bucket, Transaction* trans, C
         (*it).execute(bucket, columns, eraseKeys, readKeys, readRanges, compares, eraseRanges, timestamp);
     }
 
-    bool success = true;
-    success = CassandraCommit(mDB, bucket, columns, eraseKeys, readKeys, readRanges, compares, eraseRanges, rs, timestamp);
+    Result result = SUCCESS;
+    result = CassandraCommit(mDB, bucket, columns, eraseKeys, readKeys, readRanges, compares, eraseRanges, rs, timestamp);
 
-    if (rs->empty() || !success) {
+    if (rs->empty() || (result != SUCCESS)) {
         delete rs;
         rs = NULL;
     }
 
     mContext->mainStrand->post(
-        std::tr1::bind(&CassandraStorage::completeCommit, this, trans, cb, success, rs),
+        std::tr1::bind(&CassandraStorage::completeCommit, this, trans, cb, result, rs),
         "CassandraStorage::completeCommit"
     );
 }
 
 // Complete a commit back in the main thread, cleaning it up and dispatching
 // the callback
-void CassandraStorage::completeCommit(Transaction* trans, CommitCallback cb, bool success, ReadSet* rs) {
+void CassandraStorage::completeCommit(Transaction* trans, CommitCallback cb, Result success, ReadSet* rs) {
     delete trans;
     if (cb) cb(success, rs);
 }
@@ -482,21 +482,21 @@ bool CassandraStorage::count(const Bucket& bucket, const Key& start, const Key& 
 
 void CassandraStorage::executeCount(const Bucket& bucket, ColumnParent& parent, SlicePredicate& predicate, CountCallback cb, const String& timestamp)
 {
-    bool success = true;
+    Result result = SUCCESS;
     int32 count = 0;
     try{
     	count = mDB->db()->getCount(bucket.rawHexData(), parent, predicate);
     }
-    catch(...) {success = false;}
+    catch(...) {result = TRANSACTION_ERROR;}
 
     mContext->mainStrand->post(
-        std::tr1::bind(&CassandraStorage::completeCount, this, cb, success, count),
+        std::tr1::bind(&CassandraStorage::completeCount, this, cb, result, count),
         "CassandraStorage::completeCount"
     );
 }
 
-void CassandraStorage::completeCount(CountCallback cb, bool success, int32 count) {
-    if (cb) cb(success, count);
+void CassandraStorage::completeCount(CountCallback cb, Result result, int32 count) {
+    if (cb) cb(result, count);
 }
 
 } //end namespace OH

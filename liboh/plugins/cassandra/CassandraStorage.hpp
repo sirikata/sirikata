@@ -126,11 +126,11 @@ private:
     void executeCount(const Bucket& bucket, ColumnParent& parent, SlicePredicate& predicate, CountCallback cb, const String& timestamp);
 
     // Complete a commit back in the main thread, cleaning it up and dispatching the callback
-    void completeCommit(Transaction* trans, CommitCallback cb, bool success, ReadSet* rs);
-    void completeCount(CountCallback cb, bool success, int32 count);
+    void completeCommit(Transaction* trans, CommitCallback cb, Result success, ReadSet* rs);
+    void completeCount(CountCallback cb, Result success, int32 count);
 
     // Call libcassandra methods to commit transcation
-    bool CassandraCommit(CassandraDBPtr db, const Bucket& bucket, Columns* columns, Keys* eraseKeys, Keys* readKeys, SliceRanges* readRanges, ReadSet* compares, SliceRanges* eraseRanges, ReadSet* rs, const String& timestamp);
+    Result CassandraCommit(CassandraDBPtr db, const Bucket& bucket, Columns* columns, Keys* eraseKeys, Keys* readKeys, SliceRanges* readRanges, ReadSet* compares, SliceRanges* eraseRanges, ReadSet* rs, const String& timestamp);
 
     ObjectHostContext* mContext;
     BucketTransactions mTransactions;

@@ -67,8 +67,8 @@ SQLiteStorage::StorageAction& SQLiteStorage::StorageAction::operator=(const Stor
     return *this;
 }
 
-bool SQLiteStorage::StorageAction::execute(SQLiteDBPtr db, const Bucket& bucket, ReadSet* rs) {
-    bool success = true;
+Storage::Result SQLiteStorage::StorageAction::execute(SQLiteDBPtr db, const Bucket& bucket, ReadSet* rs) {
+    Result result = SUCCESS;
     switch(type) {
         // Read and Compare are identical except that read stores the value and
         // compare checks against its reference data.
@@ -84,6 +84,7 @@ bool SQLiteStorage::StorageAction::execute(SQLiteDBPtr db, const Bucket& bucket,
               bool newStep = true;
               bool locked = false;
               rc = sqlite3_prepare_v2(db->db(), value_query.c_str(), -1, &value_query_stmt, (const char**)&remain);
+              bool success = true;
               success = success && !SQLite::check_sql_error(db->db(), rc, NULL, "Error preparing value query statement");
               if (rc==SQLITE_OK) {
                   rc = sqlite3_bind_text(value_query_stmt, 1, key.c_str(), (int)key.size(), SQLITE_TRANSIENT);
@@ -123,6 +124,9 @@ bool SQLiteStorage::StorageAction::execute(SQLiteDBPtr db, const Bucket& bucket,
               if (newStep) { // no rows were found, key is missing
                   success = false;
               }
+
+              if (!success)
+                  result = TRANSACTION_ERROR;
           }
         break;
       case ReadRange:
@@ -135,7 +139,8 @@ bool SQLiteStorage::StorageAction::execute(SQLiteDBPtr db, const Bucket& bucket,
               char* remain;
               sqlite3_stmt* value_query_stmt;
               rc = sqlite3_prepare_v2(db->db(), value_query.c_str(), -1, &value_query_stmt, (const char**)&remain);
-              SQLite::check_sql_error(db->db(), rc, NULL, "Error preparing value query statement");
+              bool success = true;
+              success = success && !SQLite::check_sql_error(db->db(), rc, NULL, "Error preparing value query statement");
               if (rc==SQLITE_OK){
                   rc = sqlite3_bind_text(value_query_stmt, 1, key.c_str(), (int)key.size(), SQLITE_TRANSIENT);
                   success = success && !SQLite::check_sql_error(db->db(), rc, NULL, "Error binding start key to value query statement");
@@ -168,8 +173,10 @@ bool SQLiteStorage::StorageAction::execute(SQLiteDBPtr db, const Bucket& bucket,
               }
               rc = sqlite3_finalize(value_query_stmt);
               success = success && !SQLite::check_sql_error(db->db(), rc, NULL, "Error finalizing value query statement");
+              if (!success)
+                  result = TRANSACTION_ERROR;
           }
-    break;
+          break;
       case Write:
       case Erase:
           {
@@ -192,6 +199,7 @@ bool SQLiteStorage::StorageAction::execute(SQLiteDBPtr db, const Bucket& bucket,
 
               sqlite3_stmt* value_insert_stmt;
               rc = sqlite3_prepare_v2(db->db(), value_insert.c_str(), -1, &value_insert_stmt, (const char**)&remain);
+              bool success = true;
               success = success && !SQLite::check_sql_error(db->db(), rc, NULL, "Error preparing value insert statement");
 
               rc = sqlite3_bind_text(value_insert_stmt, 1, key.c_str(), (int)key.size(), SQLITE_TRANSIENT);
@@ -220,6 +228,9 @@ bool SQLiteStorage::StorageAction::execute(SQLiteDBPtr db, const Bucket& bucket,
 
               rc = sqlite3_finalize(value_insert_stmt);
               success = success && !SQLite::check_sql_error(db->db(), rc, NULL, "Error finalizing value insert statement");
+
+              if (!success)
+                  result = TRANSACTION_ERROR;
           }
         break;
       case EraseRange:
@@ -232,6 +243,7 @@ bool SQLiteStorage::StorageAction::execute(SQLiteDBPtr db, const Bucket& bucket,
               char* remain;
               sqlite3_stmt* value_delete_stmt;
               rc = sqlite3_prepare_v2(db->db(), value_delete.c_str(), -1, &value_delete_stmt, (const char**)&remain);
+              bool success = true;
               success = success && !SQLite::check_sql_error(db->db(), rc, NULL, "Error preparing value delete statement");
 
               rc = sqlite3_bind_text(value_delete_stmt, 1, key.c_str(), (int)key.size(), SQLITE_TRANSIENT);
@@ -245,13 +257,16 @@ bool SQLiteStorage::StorageAction::execute(SQLiteDBPtr db, const Bucket& bucket,
 
               rc = sqlite3_finalize(value_delete_stmt);
               success = success && !SQLite::check_sql_error(db->db(), rc, NULL, "Error finalizing value delete statement");
+
+              if (!success)
+                  result = TRANSACTION_ERROR;
           }
           break;
       case Error:
         SILOG(sqlite-storage, fatal, "Tried to execute an invalid StorageAction.");
         break;
     };
-    return success;
+    return result;
 }
 
 SQLiteStorage::SQLiteStorage(ObjectHostContext* ctx, const String& dbpath)
@@ -406,7 +421,7 @@ void SQLiteStorage::commitTransaction(const Bucket& bucket, const CommitCallback
     // Short cut for empty transactions. Or maybe these should cause exceptions?
     if(trans->empty()) {
         ReadSet* rs = NULL;
-        if (cb) cb(false, rs);
+        if (cb) cb(SUCCESS, rs);
         return;
     }
 
@@ -427,10 +442,11 @@ void SQLiteStorage::processTransactions() {
         std::vector<TransactionData> transactions;
         std::vector<ReadSet*> read_sets;
 
-        bool success = true;
-        success = sqlBeginTransaction();
+        Result result = SUCCESS;
+        if (!sqlBeginTransaction())
+            result = LOCK_ERROR;
         for(uint32 i = 0;
-            success && !mTransactionQueue.empty() && i < mMaxCoalescedTransactions;
+            (result == SUCCESS) && !mTransactionQueue.empty() && i < mMaxCoalescedTransactions;
             i++)
         {
             TransactionData data;
@@ -439,23 +455,25 @@ void SQLiteStorage::processTransactions() {
             transactions.push_back(data);
 
             ReadSet* cur_result = NULL;
-            success = success && executeCommit(data.bucket, data.trans, data.cb, &cur_result);
-            if (success) {
+            result = executeCommit(data.bucket, data.trans, data.cb, &cur_result);
+            if (result == SUCCESS) {
                 read_sets.push_back(cur_result);
             }
         }
 
         // If we succeeded so far, try to commit and move on
-        if (success)
-            success = sqlCommit();
+        if (result == SUCCESS) {
+            if (!sqlCommit())
+                result = LOCK_ERROR;
+        }
         // If still successful, cleanup, post callbacks, and move on to next
         // round
-        if (success) {
+        if (result == SUCCESS) {
             for(uint32 i = 0; i < transactions.size(); i++) {
                 delete transactions[i].trans;
                 if (transactions[i].cb) {
                     mContext->mainStrand->post(
-                        std::tr1::bind(transactions[i].cb, true, read_sets[i]),
+                        std::tr1::bind(transactions[i].cb, SUCCESS, read_sets[i]),
                         "SQLiteStorage completeCommit"
                     );
                 }
@@ -472,28 +490,31 @@ void SQLiteStorage::processTransactions() {
         read_sets.clear();
 
         for(uint32 i = 0; i < transactions.size(); i++) {
-            success = true;
-            success = sqlBeginTransaction();
+            result = SUCCESS;
+            if (!sqlBeginTransaction())
+                result = LOCK_ERROR;
 
             ReadSet* rs = NULL;
             TransactionData& data = transactions[i];
-            success = success && executeCommit(data.bucket, data.trans, data.cb, &rs);
+            result = executeCommit(data.bucket, data.trans, data.cb, &rs);
 
-            if (success)
-                success = success && sqlCommit();
+            if (result == SUCCESS) {
+                if (!sqlCommit())
+                    result = LOCK_ERROR;
+            }
 
             // Either way, we need to clean up the transaction
             delete data.trans;
             data.trans = NULL;
 
-            if (!success) {
+            if (result != SUCCESS) {
                 sqlRollback();
                 delete rs;
                 rs = NULL;
             }
 
             mContext->mainStrand->post(
-                std::tr1::bind(data.cb, success, rs),
+                std::tr1::bind(data.cb, result, rs),
                 "SQLiteStorage completeCommit"
             );
         }
@@ -503,23 +524,21 @@ void SQLiteStorage::processTransactions() {
 
 // Executes a commit. Runs in a separate thread, so the transaction is
 // passed in directly
-bool SQLiteStorage::executeCommit(const Bucket& bucket, Transaction* trans, CommitCallback cb, ReadSet** read_set_out) {
+Storage::Result SQLiteStorage::executeCommit(const Bucket& bucket, Transaction* trans, CommitCallback cb, ReadSet** read_set_out) {
     ReadSet* rs = new ReadSet;
 
-    bool success = true;
-    for (Transaction::iterator it = trans->begin(); success && it != trans->end(); it++) {
-        success = success && (*it).execute(mDB, bucket, rs);
-        if (!success)
-            break;
+    Result result = SUCCESS;
+    for (Transaction::iterator it = trans->begin(); (result == SUCCESS) && it != trans->end(); it++) {
+        result = (*it).execute(mDB, bucket, rs);
     }
 
-    if (rs->empty() || !success) {
+    if (rs->empty() || (result != SUCCESS)) {
         delete rs;
         rs = NULL;
     }
 
     *read_set_out = rs;
-    return success;
+    return result;
 }
 
 bool SQLiteStorage::erase(const Bucket& bucket, const Key& key, const CommitCallback& cb, const String& timestamp) {
@@ -638,8 +657,8 @@ bool SQLiteStorage::count(const Bucket& bucket, const Key& start, const Key& fin
 
 void SQLiteStorage::executeCount(const String value_count, const Key& start, const Key& finish, CountCallback cb)
 {
-	bool success = true;
-	int32 count = 0;
+    bool success = true;
+    int32 count = 0;
 
 	int rc;
     char* remain;
@@ -664,8 +683,9 @@ void SQLiteStorage::executeCount(const String value_count, const Key& start, con
     success = success && !SQLite::check_sql_error(mDB->db(), rc, NULL, "Error finalizing value delete statement");
 
     if (cb) {
+        Result result = (success ? SUCCESS : TRANSACTION_ERROR);
         mContext->mainStrand->post(
-            std::tr1::bind(cb, success, count),
+            std::tr1::bind(cb, result, count),
             "SQLiteStorage completeCount"
         );
     }

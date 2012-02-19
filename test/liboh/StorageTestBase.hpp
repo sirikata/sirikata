@@ -39,6 +39,7 @@
 class StorageTestBase
 {
 protected:
+    typedef OH::Storage::Result Result;
     typedef OH::Storage::ReadSet ReadSet;
 
     static const OH::Storage::Bucket _buckets[2];
@@ -142,9 +143,9 @@ public:
         _ios = NULL;
     }
 
-    void checkReadValuesImpl(bool expected_success, ReadSet expected, bool success, ReadSet* rs) {
-        TS_ASSERT_EQUALS(expected_success, success);
-        if (!success || !expected_success) return;
+    void checkReadValuesImpl(Result expected_result, ReadSet expected, Result result, ReadSet* rs) {
+        TS_ASSERT_EQUALS(expected_result, result);
+        if ((result != OH::Storage::SUCCESS) || (expected_result != OH::Storage::SUCCESS)) return;
 
         if (!rs) {
             TS_ASSERT_EQUALS(expected.size(), 0);
@@ -159,24 +160,24 @@ public:
         }
     }
 
-    void checkReadValues(bool expected_success, ReadSet expected, bool success, ReadSet* rs) {
+    void checkReadValues(Result expected_result, ReadSet expected, Result result, ReadSet* rs) {
         boost::unique_lock<boost::mutex> lock(_mutex);
-        checkReadValuesImpl(expected_success, expected, success, rs);
+        checkReadValuesImpl(expected_result, expected, result, rs);
         delete rs;
         _cond.notify_one();
     }
 
-    void checkReadCountValueImpl(bool expected_success, int32 expected_count, bool success, int32 count) {
-        TS_ASSERT_EQUALS(expected_success, success);
-        if (!success || !expected_success) return;
+    void checkReadCountValueImpl(Result expected_result, int32 expected_count, Result result, int32 count) {
+        TS_ASSERT_EQUALS(expected_result, result);
+        if ((result != OH::Storage::SUCCESS) || (expected_result != OH::Storage::SUCCESS)) return;
 
         TS_ASSERT_EQUALS(expected_count, count);
         if (!count || !expected_count) return;
     }
 
-    void checkCountValue(bool expected_success, int32 expected_count, bool success, int32 count) {
+    void checkCountValue(Result expected_result, int32 expected_count, Result result, int32 count) {
         boost::unique_lock<boost::mutex> lock(_mutex);
-        checkReadCountValueImpl(expected_success, expected_count, success, count);
+        checkReadCountValueImpl(expected_result, expected_count, result, count);
         _cond.notify_one();
     }
 
@@ -194,7 +195,7 @@ public:
         using std::tr1::placeholders::_2;
 
         _storage->write(_buckets[0], "a", "abcde",
-            std::tr1::bind(&StorageTestBase::checkReadValues, this, true, ReadSet(), _1, _2)
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::SUCCESS, ReadSet(), _1, _2)
         );
         waitForTransaction();
     }
@@ -207,7 +208,7 @@ public:
         ReadSet rs;
         rs["a"] = "abcde";
         _storage->read(_buckets[0], "a",
-            std::tr1::bind(&StorageTestBase::checkReadValues, this, true, rs, _1, _2)
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::SUCCESS, rs, _1, _2)
         );
         waitForTransaction();
     }
@@ -217,7 +218,7 @@ public:
         using std::tr1::placeholders::_2;
 
         _storage->read(_buckets[0], "key_does_not_exist",
-            std::tr1::bind(&StorageTestBase::checkReadValues, this, false, ReadSet(), _1, _2)
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::TRANSACTION_ERROR, ReadSet(), _1, _2)
         );
         waitForTransaction();
     }
@@ -228,7 +229,7 @@ public:
         using std::tr1::placeholders::_2;
 
         _storage->compare(_buckets[0], "a", "abcde",
-            std::tr1::bind(&StorageTestBase::checkReadValues, this, true, ReadSet(), _1, _2)
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::SUCCESS, ReadSet(), _1, _2)
         );
         waitForTransaction();
     }
@@ -239,7 +240,7 @@ public:
         using std::tr1::placeholders::_2;
 
         _storage->compare(_buckets[0], "a", "wrong_key_value",
-            std::tr1::bind(&StorageTestBase::checkReadValues, this, false, ReadSet(), _1, _2)
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::TRANSACTION_ERROR, ReadSet(), _1, _2)
         );
         waitForTransaction();
     }
@@ -249,13 +250,13 @@ public:
         using std::tr1::placeholders::_2;
 
         _storage->erase(_buckets[0], "a",
-            std::tr1::bind(&StorageTestBase::checkReadValues, this, true, ReadSet(), _1, _2)
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::SUCCESS, ReadSet(), _1, _2)
         );
         waitForTransaction();
 
         // After erase, a read should fail
         _storage->read(_buckets[0], "a",
-            std::tr1::bind(&StorageTestBase::checkReadValues, this, false, ReadSet(), _1, _2)
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::TRANSACTION_ERROR, ReadSet(), _1, _2)
         );
         waitForTransaction();
     }
@@ -268,7 +269,7 @@ public:
         _storage->write(_buckets[0], "a", "abcde");
         _storage->write(_buckets[0], "f", "fghij");
         _storage->commitTransaction(_buckets[0],
-            std::tr1::bind(&StorageTestBase::checkReadValues, this, true, ReadSet(), _1, _2)
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::SUCCESS, ReadSet(), _1, _2)
         );
         waitForTransaction();
     }
@@ -285,7 +286,7 @@ public:
         _storage->read(_buckets[0], "a");
         _storage->read(_buckets[0], "f");
         _storage->commitTransaction(_buckets[0],
-            std::tr1::bind(&StorageTestBase::checkReadValues, this, true, rs, _1, _2)
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::SUCCESS, rs, _1, _2)
         );
         waitForTransaction();
     }
@@ -298,7 +299,7 @@ public:
         _storage->read(_buckets[0], "key_does_not_exist");
         _storage->read(_buckets[0], "another_key_does_not_exist");
         _storage->commitTransaction(_buckets[0],
-            std::tr1::bind(&StorageTestBase::checkReadValues, this, false, ReadSet(), _1, _2)
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::TRANSACTION_ERROR, ReadSet(), _1, _2)
         );
         waitForTransaction();
     }
@@ -311,7 +312,7 @@ public:
         _storage->read(_buckets[0], "a");
         _storage->read(_buckets[0], "another_key_does_not_exist");
         _storage->commitTransaction(_buckets[0],
-            std::tr1::bind(&StorageTestBase::checkReadValues, this, false, ReadSet(), _1, _2)
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::TRANSACTION_ERROR, ReadSet(), _1, _2)
         );
         waitForTransaction();
     }
@@ -324,17 +325,17 @@ public:
         _storage->erase(_buckets[0], "a");
         _storage->erase(_buckets[0], "f");
         _storage->commitTransaction(_buckets[0],
-            std::tr1::bind(&StorageTestBase::checkReadValues, this, true, ReadSet(), _1, _2)
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::SUCCESS, ReadSet(), _1, _2)
         );
         waitForTransaction();
 
         _storage->read(_buckets[0], "a",
-            std::tr1::bind(&StorageTestBase::checkReadValues, this, false, ReadSet(), _1, _2)
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::TRANSACTION_ERROR, ReadSet(), _1, _2)
         );
         waitForTransaction();
 
         _storage->read(_buckets[0], "f",
-            std::tr1::bind(&StorageTestBase::checkReadValues, this, false, ReadSet(), _1, _2)
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::TRANSACTION_ERROR, ReadSet(), _1, _2)
         );
         waitForTransaction();
 
@@ -349,7 +350,7 @@ public:
         _storage->write(_buckets[0], "f", "fghij");
         _storage->read(_buckets[0], "x");
         _storage->commitTransaction(_buckets[0],
-            std::tr1::bind(&StorageTestBase::checkReadValues, this, false, ReadSet(), _1, _2)
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::TRANSACTION_ERROR, ReadSet(), _1, _2)
         );
         waitForTransaction();
 
@@ -361,7 +362,7 @@ public:
         _storage->read(_buckets[0], "a");
         _storage->read(_buckets[0], "f");
         _storage->commitTransaction(_buckets[0],
-            std::tr1::bind(&StorageTestBase::checkReadValues, this, false, rs, _1, _2)
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::TRANSACTION_ERROR, rs, _1, _2)
         );
         waitForTransaction();
 
@@ -369,7 +370,7 @@ public:
         _storage->write(_buckets[0], "a", "abcde");
         _storage->write(_buckets[0], "f", "fghij");
         _storage->commitTransaction(_buckets[0],
-            std::tr1::bind(&StorageTestBase::checkReadValues, this, true, ReadSet(), _1, _2)
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::SUCCESS, ReadSet(), _1, _2)
         );
         waitForTransaction();
 
@@ -377,7 +378,7 @@ public:
         _storage->read(_buckets[0], "a");
         _storage->read(_buckets[0], "f");
         _storage->commitTransaction(_buckets[0],
-            std::tr1::bind(&StorageTestBase::checkReadValues, this, true, rs, _1, _2)
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::SUCCESS, rs, _1, _2)
         );
         waitForTransaction();
     }
@@ -397,11 +398,11 @@ public:
         // could fail on the first run (empty db) and succeed
         // otherwise.
         _storage->write(_buckets[0], "k", "x",
-             std::tr1::bind(&StorageTestBase::checkReadValues, this, true, ReadSet(), _1, _2)
+             std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::SUCCESS, ReadSet(), _1, _2)
          );
          waitForTransaction();
         _storage->erase(_buckets[0], "k",
-             std::tr1::bind(&StorageTestBase::checkReadValues, this, true, ReadSet(), _1, _2)
+             std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::SUCCESS, ReadSet(), _1, _2)
          );
          waitForTransaction();
 
@@ -411,17 +412,17 @@ public:
         _storage->read(_buckets[0], "x");
         _storage->write(_buckets[0], "k", "klmno");
         _storage->commitTransaction(_buckets[0],
-            std::tr1::bind(&StorageTestBase::checkReadValues, this, false, ReadSet(), _1, _2)
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::TRANSACTION_ERROR, ReadSet(), _1, _2)
         );
         waitForTransaction();
 
         _storage->read(_buckets[0], "a",
-            std::tr1::bind(&StorageTestBase::checkReadValues, this, true, rs1, _1, _2)
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::SUCCESS, rs1, _1, _2)
         );
         waitForTransaction();
 
         _storage->read(_buckets[0], "k",
-            std::tr1::bind(&StorageTestBase::checkReadValues, this, false, rs2, _1, _2)
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::TRANSACTION_ERROR, rs2, _1, _2)
         );
         waitForTransaction();
 
@@ -430,17 +431,17 @@ public:
         _storage->erase(_buckets[0], "f");
         _storage->write(_buckets[0], "k", "klmno");
         _storage->commitTransaction(_buckets[0],
-            std::tr1::bind(&StorageTestBase::checkReadValues, this, true, ReadSet(), _1, _2)
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::SUCCESS, ReadSet(), _1, _2)
         );
         waitForTransaction();
 
         _storage->read(_buckets[0], "a",
-            std::tr1::bind(&StorageTestBase::checkReadValues, this, false, rs1, _1, _2)
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::TRANSACTION_ERROR, rs1, _1, _2)
         );
         waitForTransaction();
 
         _storage->read(_buckets[0], "k",
-            std::tr1::bind(&StorageTestBase::checkReadValues, this, true, rs2, _1, _2)
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::SUCCESS, rs2, _1, _2)
         );
         waitForTransaction();
     }
@@ -454,7 +455,7 @@ public:
         _storage->write(_buckets[0], "map:name:f", "fghij");
         _storage->write(_buckets[0], "map:name:k", "klmno");
         _storage->commitTransaction(_buckets[0],
-            std::tr1::bind(&StorageTestBase::checkReadValues, this, true, ReadSet(), _1, _2)
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::SUCCESS, ReadSet(), _1, _2)
         );
 
         ReadSet rs;
@@ -463,7 +464,7 @@ public:
         rs["map:name:k"] = "klmno";
 
         _storage->rangeRead(_buckets[0],"map:name", "map:name@",
-            std::tr1::bind(&StorageTestBase::checkReadValues, this, true, rs, _1, _2)
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::SUCCESS, rs, _1, _2)
         );
         waitForTransaction();
     }
@@ -474,7 +475,7 @@ public:
         using std::tr1::placeholders::_2;
         int32 count = 3;
     	_storage->count(_buckets[0],"map:name", "map:name@",
-    		std::tr1::bind(&StorageTestBase::checkCountValue, this, true, count, _1, _2)
+    		std::tr1::bind(&StorageTestBase::checkCountValue, this, OH::Storage::SUCCESS, count, _1, _2)
     	);
 
     	waitForTransaction();
@@ -486,12 +487,12 @@ public:
         using std::tr1::placeholders::_2;
 
     	_storage->rangeErase(_buckets[0],"map:name", "map:name@",
-    		std::tr1::bind(&StorageTestBase::checkReadValues, this, true, ReadSet(), _1, _2)
+    		std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::SUCCESS, ReadSet(), _1, _2)
     	);
     	waitForTransaction();
 
         _storage->rangeRead(_buckets[0],"map:name", "map:name@",
-            std::tr1::bind(&StorageTestBase::checkReadValues, this, false, ReadSet(), _1, _2)
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::TRANSACTION_ERROR, ReadSet(), _1, _2)
         );
         waitForTransaction();
     }
@@ -519,7 +520,7 @@ public:
         _storage->write(_buckets[0], "map:todelete:a", "xyzw");
         _storage->write(_buckets[0], "map:todelete:c", "xyzw");
         _storage->commitTransaction(_buckets[0],
-            std::tr1::bind(&StorageTestBase::checkReadValues, this, true, ReadSet(), _1, _2)
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::SUCCESS, ReadSet(), _1, _2)
         );
         waitForTransaction();
 
@@ -545,16 +546,15 @@ public:
         // Delete a range of data
         _storage->rangeErase(_buckets[0], "map:todelete", "map:todelete@");
         _storage->commitTransaction(_buckets[0],
-            std::tr1::bind(&StorageTestBase::checkReadValues, this, true, rs, _1, _2)
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::SUCCESS, rs, _1, _2)
         );
         waitForTransaction();
-
 
         // Verify data written in above transaction
         ReadSet rs2;
         rs2["y"] = "z";
         _storage->read(_buckets[0], "y",
-            std::tr1::bind(&StorageTestBase::checkReadValues, this, true, rs2, _1, _2)
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::SUCCESS, rs2, _1, _2)
         );
         waitForTransaction();
     }
@@ -568,7 +568,7 @@ public:
         _storage->write(_buckets[0], "foo", "bar");
         _storage->write(_buckets[0], "baz", "baz");
         _storage->commitTransaction(_buckets[0],
-            std::tr1::bind(&StorageTestBase::checkReadValues, this, true, ReadSet(), _1, _2)
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::SUCCESS, ReadSet(), _1, _2)
         );
         waitForTransaction();
     }
@@ -580,7 +580,7 @@ public:
         _storage->beginTransaction(_buckets[0]);
         _storage->read(_buckets[0], key);
         _storage->commitTransaction(_buckets[0],
-            std::tr1::bind(&StorageTestBase::checkReadValues, this, true, rs, _1, _2)
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::SUCCESS, rs, _1, _2)
         );
         waitForTransaction();
     }
@@ -607,7 +607,7 @@ public:
         _storage->write(_buckets[0], "foo", "xxx");
         _storage->erase(_buckets[0], "car");
         _storage->commitTransaction(_buckets[0],
-            std::tr1::bind(&StorageTestBase::checkReadValues, this, false, ReadSet(), _1, _2)
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::TRANSACTION_ERROR, ReadSet(), _1, _2)
         );
         waitForTransaction();
         verifyRollbackData("foo", "bar");
@@ -617,7 +617,7 @@ public:
         _storage->write(_buckets[0], "baz", "xxx");
         _storage->erase(_buckets[0], "car");
         _storage->commitTransaction(_buckets[0],
-            std::tr1::bind(&StorageTestBase::checkReadValues, this, false, ReadSet(), _1, _2)
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::TRANSACTION_ERROR, ReadSet(), _1, _2)
         );
         waitForTransaction();
         verifyRollbackData("baz", "baz");

@@ -61,6 +61,14 @@ namespace OH {
  *  guaranteed: if you need to ensure operations happen in order you
  *  should either batch them in a transaction or wait for the callback
  *  for each one before processing the next.
+ *
+ *  Implementations may use locks or leases to implement
+ *  transactions. In that case, it is possible that they fail to
+ *  execute a transaction because the database is currently
+ *  locked. Users are responsible for resolving these problems by
+ *  retrying or dropping the transaction. Implementations can expose
+ *  control over leases and locks via their settings so they can,
+ *  e.g., ensure only one OH accesses a storage bucket at once.
  */
 class SIRIKATA_OH_EXPORT Storage : public Service {
 public:
@@ -73,6 +81,29 @@ public:
     // (e.g. '.') and a bit of escaping.
     typedef String Key;
 
+    /** Small number of results. These indicate a few standard error
+     *  conditions or success.
+     */
+    enum Result {
+        // Successful. Any data read back should be available in
+        // corresponding callback arguments.
+        SUCCESS = 0,
+
+        // Failed to lock database or gain a lease. This rarely
+        // indicates permanent failure. Rather, it indicates that
+        // access to the database was blocked, probably temporarily as
+        // an existing lease is blocking it (possibly to be freed up
+        // when it automatically expires). Retrying is a reasonable
+        // course of action here.
+        LOCK_ERROR = 1,
+
+        // There was an error applying the transaction. This could be due to a
+        // missing key (for reads), a compare error, or and error writing or
+        // erasing a key. The particular error is not specified because
+        // operations can be reordered by the implementation for efficiency.
+        TRANSACTION_ERROR = 2
+    };
+
     typedef std::tr1::unordered_map<Key, String> ReadSet;
     /** CommitCallbacks are invoked when a response is received back
      *  from the underlying storage system (or timeout occurs).  If
@@ -80,8 +111,8 @@ public:
      *  read operations that were requested (or is NULL if none were
      *  requested). If non-empty, ownership transfers to the caller.
      */
-    typedef std::tr1::function<void(bool success, ReadSet* rs)> CommitCallback;
-    typedef std::tr1::function<void(bool success, int32 count)> CountCallback;
+    typedef std::tr1::function<void(Result result, ReadSet* rs)> CommitCallback;
+    typedef std::tr1::function<void(Result result, int32 count)> CountCallback;
 
     virtual ~Storage() {};
 
