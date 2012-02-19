@@ -303,6 +303,13 @@ CassandraStorage::Transaction* CassandraStorage::getTransaction(const Bucket& bu
     return mTransactions[bucket];
 }
 
+
+void CassandraStorage::leaseBucket(const Bucket& bucket) {
+}
+
+void CassandraStorage::releaseBucket(const Bucket& bucket) {
+}
+
 void CassandraStorage::beginTransaction(const Bucket& bucket) {
     // FIXME should probably throw an exception if one already exists
     getTransaction(bucket);

@@ -125,6 +125,9 @@ public:
 
         _storage = OH::StorageFactory::getSingleton().getConstructor(_type)(_ctx, _args);
 
+        for(int i = 0; i < 100; i++)
+            _storage->leaseBucket(_buckets[i]);
+
         _ctx->add(_ctx);
         _ctx->add(_storage);
 
@@ -135,6 +138,9 @@ public:
     }
 
     void tearDown() {
+        for(int i = 0; i < 100; i++)
+            _storage->releaseBucket(_buckets[i]);
+
         delete _work;
         _work = NULL;
 

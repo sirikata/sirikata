@@ -120,6 +120,20 @@ public:
     virtual void start() {}
     virtual void stop() {}
 
+
+    /** Trigger a lease on a bucket. This is just a signal to the storage layer
+     *  that it should try to make sure it can commit transactions for the
+     *  bucket. Depending on the implementation and options, this could mean
+     *  anything from doing nothing (single process, local operation) to a full
+     *  lease or lock (distributed storage).
+     */
+    virtual void leaseBucket(const Bucket& bucket) = 0;
+    /** Release whatever lease or lock was acquired by the corresponding call to
+     *  leaseBucket.
+     */
+    virtual void releaseBucket(const Bucket& bucket) = 0;
+
+
     /** Begin a transaction. */
     virtual void beginTransaction(const Bucket& bucket) = 0;
 

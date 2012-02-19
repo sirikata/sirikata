@@ -51,6 +51,9 @@ public:
     virtual void start();
     virtual void stop();
 
+    virtual void leaseBucket(const Bucket& bucket);
+    virtual void releaseBucket(const Bucket& bucket);
+
     virtual void beginTransaction(const Bucket& bucket);
 
     virtual void commitTransaction(const Bucket& bucket, const CommitCallback& cb = 0, const String& timestamp="current");
