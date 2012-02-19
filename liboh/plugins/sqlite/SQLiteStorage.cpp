@@ -220,10 +220,14 @@ Storage::Result SQLiteStorage::StorageAction::execute(SQLiteDBPtr db, const Buck
               else {
                   // Check the number of changes that the statement actually
                   // made. This is update, insertion, or deletion. This should
-                  // just be 1 since we expect exactly one change on a write or
-                  // erase.
+                  // just be 1 since we expect exactly one change on a
+                  // write. On an erase, we ignore missing keys, but
+                  // we should see either 0 or 1 ops.
                   int changes = sqlite3_changes(db->db());
-                  success = success && (changes == 1);
+                  if (type == Write)
+                      success = success && (changes == 1);
+                  else if (type == Erase)
+                      success = success && (changes == 0 || changes == 1);
               }
 
               rc = sqlite3_finalize(value_insert_stmt);

@@ -140,6 +140,10 @@ public:
 
       Queues the item to be removed from the backend.  Does not actually delete
       until the flush operation is called.
+
+      Erasing a non-existant key does not cause an error -- it's just
+      treated as a noop. If you care that a key is actually erase, use
+      a compare + delete combination.
    */
     virtual bool erase(const Bucket& bucket, const Key& key, const CommitCallback& cb = 0, const String& timestamp="current") = 0;
 

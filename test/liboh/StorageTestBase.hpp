@@ -585,37 +585,35 @@ public:
         waitForTransaction();
     }
     void testRollback() {
-        // Test that rollbacks work correctly if a request fails.
-        // This is a bit tricky to test because operations can be
-        // grouped so that, e.g., reads and compares are verified
-        // before any changes occur.
+        // This test can't be performed completely because an
+        // implementation can collect mutations (writes, erases) into
+        // a single operation, and since none of these should fail for
+        // any reason other than underlying storage limitations
+        // (e.g. limited value sizes) there wouldn't be a need for
+        // rollback.
         //
-        // To test it, we run a few different tests involving
-        // combinations of valid and invalid writes/erases. To try to
-        // be robust, we also change the order of the keys being
-        // operated on so that the order in which the parts of the
-        // request are performed doesn't affect the results: one of
-        // each pair should fail (we do this by testing with, e.g.,
-        // keys [a, b], and [c, b]).
+        // Instead, we just do the best we can, trying to test for
+        // invalid operations even if they could be reordered.
 
         using std::tr1::placeholders::_1;
         using std::tr1::placeholders::_2;
 
-        // Valid write, invalid erase -> should get original value
+        // Valid write, invalid read
         resetRollbackData();
         _storage->beginTransaction(_buckets[0]);
         _storage->write(_buckets[0], "foo", "xxx");
-        _storage->erase(_buckets[0], "car");
+        _storage->read(_buckets[0], "key_that_does_not_exist");
         _storage->commitTransaction(_buckets[0],
             std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::TRANSACTION_ERROR, ReadSet(), _1, _2)
         );
         waitForTransaction();
         verifyRollbackData("foo", "bar");
-        // Variant with different key ordering
+
+        // Valid write, invalid compare
         resetRollbackData();
         _storage->beginTransaction(_buckets[0]);
         _storage->write(_buckets[0], "baz", "xxx");
-        _storage->erase(_buckets[0], "car");
+        _storage->compare(_buckets[0], "foo", "not_bar");
         _storage->commitTransaction(_buckets[0],
             std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::TRANSACTION_ERROR, ReadSet(), _1, _2)
         );
