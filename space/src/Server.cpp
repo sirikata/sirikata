@@ -143,6 +143,18 @@ Server::Server(SpaceContext* ctx, Authenticator* auth, Forwarder* forwarder, Loc
                 std::tr1::bind(&Server::commandObjectsCount, this, _1, _2, _3)
             )
         );
+        mContext->commander->registerCommand(
+            "space.server.objects.list",
+            mContext->mainStrand->wrap(
+                std::tr1::bind(&Server::commandObjectsList, this, _1, _2, _3)
+            )
+        );
+        mContext->commander->registerCommand(
+            "space.server.objects.disconnect",
+            mContext->mainStrand->wrap(
+                std::tr1::bind(&Server::commandObjectsDisconnect, this, _1, _2, _3)
+            )
+        );
     }
 }
 
@@ -1312,5 +1324,36 @@ void Server::commandObjectsCount(const Command::Command& cmd, Command::Commander
     cmdr->result(cmdid, result);
 }
 
+void Server::commandObjectsList(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {
+    Command::Result result;
+    // Make sure we return the objects key set even if there are none
+    result.put_child( String("objects"), Command::Result());
+    // This only lists regular, active objects. Connecting, migrating, etc are
+    // ignored.
+    //
+    // We use a map of object identifiers to themselves currently because
+    // outputting lists in boost::property_tree is difficult.
+    for(ObjectConnectionMap::iterator objit = mObjects.begin(); objit != mObjects.end(); objit++)
+        result.put( String("objects.") + objit->first.toString(), objit->first.toString());
+    cmdr->result(cmdid, result);
+}
+
+void Server::commandObjectsDisconnect(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {
+    UUID objid = cmd.get("object", UUID::null());
+
+    Command::Result result;
+    ObjectConnectionMap::iterator objit = mObjects.find(objid);
+    if (objit == mObjects.end()) {
+        result.put("error", "Object not found");
+    }
+    else {
+        // By passing in the session ID we already have, we guarantee
+        // this will force disconnection
+        handleDisconnect(objit->first, objit->second, objit->second->sessionID());
+        // Lack of 'error' field indicates success
+    }
+
+    cmdr->result(cmdid, result);
+}
 
 } // namespace Sirikata

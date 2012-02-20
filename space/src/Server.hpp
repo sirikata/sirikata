@@ -188,6 +188,8 @@ private:
 
     // Commander commands
     void commandObjectsCount(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
+    void commandObjectsList(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
+    void commandObjectsDisconnect(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
 
     SpaceContext* mContext;
 
