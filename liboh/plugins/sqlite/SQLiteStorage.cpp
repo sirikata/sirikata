@@ -409,7 +409,7 @@ void SQLiteStorage::commitTransaction(const Bucket& bucket, const CommitCallback
         if (cb) cb(false, rs);
         return;
     }
-
+    
     mTransactionQueue.push(
         TransactionData(bucket, trans, cb)
     );
@@ -419,7 +419,10 @@ void SQLiteStorage::postProcessTransactions() {
     mIOService->post(std::tr1::bind(&SQLiteStorage::processTransactions, this));
 }
 
+
 void SQLiteStorage::processTransactions() {
+    
+    
     while(!mTransactionQueue.empty()) {
 
         // Try to execute up to the maximum number of coalesced transactions so
@@ -492,10 +495,14 @@ void SQLiteStorage::processTransactions() {
                 rs = NULL;
             }
 
-            mContext->mainStrand->post(
-                std::tr1::bind(data.cb, success, rs),
-                "SQLiteStorage completeCommit"
-            );
+            //actually have to check if there's a callback here.  otherwise failure.
+            if (data.cb)
+            {
+                mContext->mainStrand->post(
+                    std::tr1::bind(data.cb, success, rs),
+                    "SQLiteStorage completeCommit"
+                );
+            }
         }
 
     }
@@ -628,7 +635,7 @@ bool SQLiteStorage::count(const Bucket& bucket, const Key& start, const Key& fin
     String value_count = "SELECT COUNT(*) FROM ";
     value_count += "\"" TABLE_NAME "\"";
     value_count += " WHERE object = \'" + bucket.rawHexData() + "\' AND key BETWEEN ? AND ?";
-
+    
     mIOService->post(
         std::tr1::bind(&SQLiteStorage::executeCount, this, value_count, start, finish, cb),
         "SQLiteStorage::executeCount"
