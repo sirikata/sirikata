@@ -1218,7 +1218,8 @@ v8::Handle<v8::Value> JSObjectScript::emersonCompileString(const String& toCompi
         int em_compile_err = 0;
 
         String js_script_str;
-        bool successfullyCompiled = emerson_compile(String("eval statement"), em_script_str.c_str(),
+        bool successfullyCompiled = EmersonUtil::emerson_compile(
+            String("eval statement"), em_script_str.c_str(),
             js_script_str, em_compile_err, handleEmersonRecognitionError,
             &lineMap);
 
@@ -1294,9 +1295,10 @@ v8::Handle<v8::Value> JSObjectScript::internalEval(const String& em_script_str, 
             v8::String::Utf8Value parent_script_name(em_script_name->ResourceName());
 
             String js_script_str;
-            bool successfullyCompiled = emerson_compile(FromV8String(parent_script_name), em_script_str_new.c_str(),
-                                                        js_script_str, em_compile_err, handleEmersonRecognitionError,
-                                                        &lineMap);
+            bool successfullyCompiled = EmersonUtil::emerson_compile(
+                FromV8String(parent_script_name), em_script_str_new.c_str(),
+                js_script_str, em_compile_err, handleEmersonRecognitionError,
+                &lineMap);
 
 
             if (successfullyCompiled)
