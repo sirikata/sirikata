@@ -573,6 +573,11 @@ class SIRIKATA_OGRE_EXPORT WebView
 
         // helper for onJavascriptCallback, defaultEvent
         boost::any dispatchToDelegate(const String& name, const JSArguments& args);
+		void dispatchToDelegateNoReturn(const String& name, const JSArguments& args)
+		{
+			dispatchToDelegate(name,args);
+		}
+
 
 #ifdef HAVE_BERKELIUM
         void onAddressBarChanged(Berkelium::Window*, URLString url);
