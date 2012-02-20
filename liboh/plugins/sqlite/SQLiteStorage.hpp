@@ -45,7 +45,7 @@ class FileStorageEvent;
 class SQLiteStorage : public Storage
 {
 public:
-    SQLiteStorage(ObjectHostContext* ctx, const String& dbpath);
+    SQLiteStorage(ObjectHostContext* ctx, const String& dbpath, const Duration& lease_duration);
     ~SQLiteStorage();
 
     virtual void start();
@@ -144,6 +144,26 @@ private:
     bool sqlRollback();
 
 
+    // Helpers for leases:
+    // Get the current lease string, which includes our client ID and
+    // an expiration time based on the current time
+    String getLeaseString();
+    // Parse a lease string read from the DB into the client ID
+    // (owner) and expiration time.
+    void parseLeaseString(const String& ls, String* client_out, Time* expiration_out);
+
+    // Acquire a lease (or update if it's already valid) for the given
+    // bucket. This is part of a transaction -- the first part to
+    // ensure the transaction is valid
+    Result acquireLease(const Bucket& bucket);
+    // Renew a lease that we already have. Verifies we still hold the
+    // lease, then renews it. This is an entire transaction.
+    void renewLease(const Bucket& bucket);
+    // Release the lease if we own it.
+    void releaseLease(const Bucket& bucket);
+
+    // Process renewals at front of queue that need updating.
+    void processRenewals();
 
     ObjectHostContext* mContext;
     BucketTransactions mTransactions;
@@ -156,12 +176,27 @@ private:
     Network::IOWork* mWork;
     Thread* mThread;
 
+    // A unique client ID for leases. These should not include '-' as
+    // those are used to separate the client ID and timestamp
+    const String mSQLClientID;
+    const Duration mLeaseDuration;
+
     TransactionQueue mTransactionQueue;
     // Maximum transactions to combine into a single transaction in the
     // underlying database. TODO(ewencp) this should probably be dynamic, should
     // increase/decrease based on success/failure and avoid latency getting too
     // hight. Right now we just have a reasonable, but small, number.
     uint32 mMaxCoalescedTransactions;
+
+    struct BucketRenewTimeout {
+        BucketRenewTimeout(const Bucket& _b, Time _t)
+         : bucket(_b), t(_t)
+        {}
+        const Bucket bucket;
+        const Time t;
+    };
+    std::queue<BucketRenewTimeout> mRenewTimes;
+    Network::IOTimerPtr mRenewTimer;
 };
 
 }//end namespace OH
