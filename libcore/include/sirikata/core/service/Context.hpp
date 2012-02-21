@@ -155,12 +155,16 @@ public:
         return mTrace;
     }
 
+    Command::Commander* commander() const {
+        return mCommander;
+    }
+    void setCommander(Command::Commander* c);
+
     Network::IOService* ioService;
     Network::IOStrand* mainStrand;
     TimeProfiler* profiler;
 
     Trace::TimeSeries* timeSeries;
-    Command::Commander* commander;
 protected:
 
     // Main Lifetime Management
@@ -187,6 +191,7 @@ protected:
     void handleSignal(Signal::Type stype);
 
     Trace::Trace* mTrace;
+    Command::Commander* mCommander;
 
     Sirikata::AtomicValue<Time> mEpoch;
     Sirikata::AtomicValue<Time> mLastSimTime;

@@ -136,20 +136,20 @@ Server::Server(SpaceContext* ctx, Authenticator* auth, Forwarder* forwarder, Loc
     mMigrationTimer.start();
 
 
-    if (mContext->commander) {
-        mContext->commander->registerCommand(
+    if (mContext->commander()) {
+        mContext->commander()->registerCommand(
             "space.server.objects.count",
             mContext->mainStrand->wrap(
                 std::tr1::bind(&Server::commandObjectsCount, this, _1, _2, _3)
             )
         );
-        mContext->commander->registerCommand(
+        mContext->commander()->registerCommand(
             "space.server.objects.list",
             mContext->mainStrand->wrap(
                 std::tr1::bind(&Server::commandObjectsList, this, _1, _2, _3)
             )
         );
-        mContext->commander->registerCommand(
+        mContext->commander()->registerCommand(
             "space.server.objects.disconnect",
             mContext->mainStrand->wrap(
                 std::tr1::bind(&Server::commandObjectsDisconnect, this, _1, _2, _3)

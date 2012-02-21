@@ -16,13 +16,13 @@ HttpCommander::HttpCommander(Context* ctx, const String& host, uint16 port)
  : mContext(ctx),
    mServer(ctx, host, port)
 {
-    mContext->commander = this;
+    mContext->setCommander(this);
     mServer.addListener(this);
 }
 
 HttpCommander::~HttpCommander() {
     mServer.removeListener(this);
-    mContext->commander = NULL;
+    mContext->setCommander(NULL);
 }
 
 
