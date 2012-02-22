@@ -57,6 +57,7 @@ void bulletPhysicsInternalTickCallback(btDynamicsWorld *world, btScalar timeStep
 
 BulletPhysicsService::BulletPhysicsService(SpaceContext* ctx, LocationUpdatePolicy* update_policy)
  : LocationService(ctx, update_policy),
+   mUpdateIteration(0),
    mParsingStrand( ctx->ioService->createStrand("BulletPhysicsService Parsing") )
 {
 
@@ -179,7 +180,11 @@ void BulletPhysicsService::service() {
     }
     physicsUpdates.clear();
 
-    mUpdatePolicy->service();
+    // See note at declaration of mUpdateIteration. The fastest possible update
+    // rate depends on this constant (10) and the LocationService target tick
+    // period (10ms) -- so we'll get updates at most every 100ms currently.
+    if (mUpdateIteration++ % 10 == 0)
+        mUpdatePolicy->service();
 }
 
 uint64 BulletPhysicsService::epoch(const UUID& uuid) {

@@ -1314,7 +1314,12 @@ v8::Handle<v8::Value> JSObjectScript::internalEval(const String& em_script_str, 
                     {
                         std::stringstream js_script_stream(js_script_str);
                         std::ofstream temp_cache_file(temp_cache_path.c_str());
-                        boost::iostreams::copy(js_script_stream, temp_cache_file);
+                        if (temp_cache_file.fail()) {
+                          JSLOG(error, "Unable to create temporary file to save compiled emerson: " << temp_cache_path);
+                        }
+                        else {
+                          boost::iostreams::copy(js_script_stream, temp_cache_file);
+                        }
                     }
                     // Make sure we have the directories
                     boost::filesystem::create_directories( boost::filesystem::path(cache_path).parent_path() );
