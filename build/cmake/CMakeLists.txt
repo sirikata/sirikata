@@ -765,6 +765,15 @@ SET(LIBOAUTHCPP_ADDED_DEFINITIONS ${ADDED_DEFINITIONS})
 ADD_SUBDIRECTORY(${TOP_LEVEL}/externals/liboauthcpp/build ${CMAKE_CURRENT_BINARY_DIR}/liboauthcpp)
 SET(LIBOAUTHCPP_INCLUDE_DIR ${TOP_LEVEL}/externals/liboauthcpp/include)
 
+# dependency: json-spirit
+SET(JSON_SPIRIT_ADDED_DEFINITIONS ${ADDED_DEFINITIONS})
+SET(JSON_SPIRIT_LIBRARY_TYPE "SHARED")
+SET(JSON_SPIRIT_BUILD_DEMOS FALSE)
+SET(JSON_SPIRIT_BUILD_TESTS FALSE)
+# Note that we don't use a subdirectory for this build so that the dll ends up in the right place on Windows.
+ADD_SUBDIRECTORY(${TOP_LEVEL}/externals/json-spirit/build ${CMAKE_CURRENT_BINARY_DIR})
+SET(JSON_SPIRIT_INCLUDE_DIR ${TOP_LEVEL}/externals/json-spirit/include)
+
 # optional dependency: ffmpeg
 # These could probably be relaxed, but they match the ones in the
 # dependencies for Mac and Linux (Windows doesn't check versions but
@@ -1046,6 +1055,7 @@ SET(INCLUDE_DIRECTORIES
   ${GSL_INCLUDE_DIR}
   ${HTTP_PARSER_INCLUDE_DIR}
   ${LIBOAUTHCPP_INCLUDE_DIR}
+  ${JSON_SPIRIT_INCLUDE_DIR}
   )
 
 IF(BUILD_LIBSQLITE)
@@ -1898,6 +1908,7 @@ SET(SIRIKATA_CORE_LIBRARIES
     http-parser
     ${GOOGLE_PERFTOOLS_SETTING_LIBRARIES}
     oauthcpp
+    json_spirit
     )
 
 IF(BERKELIUM_FOUND)
