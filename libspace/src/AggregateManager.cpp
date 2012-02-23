@@ -40,8 +40,7 @@
 #include <sirikata/core/transfer/AggregatedTransferPool.hpp>
 
 #include <sirikata/core/transfer/URL.hpp>
-#include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/json_parser.hpp>
+#include <json_spirit/json_spirit.h>
 
 #include <sirikata/core/transfer/OAuthHttpManager.hpp>
 
@@ -647,60 +646,52 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
       params["main_filename"] = localMeshName;
       params["ephemeral"] = "1";
       params["ttl_time"] = boost::lexical_cast<String>(mModelTTL.seconds());
-      // Translate subfile map to a ptree, encode in JSON
-      using namespace boost::property_tree;
-      try {
-          ptree pt;
-          for (std::tr1::unordered_map<String, String>::iterator it = textureSet.begin(); it != textureSet.end(); it++) {
+      // Translate subfile map to JSON
+      namespace json = json_spirit;
+      json::Value subfiles = json::Object();
+      for (std::tr1::unordered_map<String, String>::iterator it = textureSet.begin(); it != textureSet.end(); it++) {
 
-              String subfile_name = it->first;
-              {
-                  // The upload expects only the basename, i.e. the actual
-                  // filename. So if we referred to a URL
-                  // (meerkat://foo/bar/texture.png) or filename with
-                  // directories (/foo/bar/texture.png) we'd need to
-                  // extract just the filename.
+          String subfile_name = it->first;
+          {
+              // The upload expects only the basename, i.e. the actual
+              // filename. So if we referred to a URL
+              // (meerkat://foo/bar/texture.png) or filename with
+              // directories (/foo/bar/texture.png) we'd need to
+              // extract just the filename.
 
-                  // Use URL to strip of any URL parts to get a normal looking path
-                  Transfer::URL subfile_name_as_url(subfile_name);
-                  if (!subfile_name_as_url.empty())
-                      subfile_name = subfile_name_as_url.fullpath();
+              // Use URL to strip of any URL parts to get a normal looking path
+              Transfer::URL subfile_name_as_url(subfile_name);
+              if (!subfile_name_as_url.empty())
+                  subfile_name = subfile_name_as_url.fullpath();
 
-                  // Then extract just the last element, i.e. the filename
-                  std::size_t filename_pos = subfile_name.rfind("/");
-                  if (filename_pos != String::npos)
-                      subfile_name = subfile_name.substr(filename_pos+1);
-              }
-
-              String tex_path = Transfer::URL(it->second).fullpath();
-              {
-                  // Sigh. Yet again, we need to modify the order of the filename
-                  // and version number again.
-
-                  std::size_t upload_filename_pos = tex_path.rfind("/");
-                  assert(upload_filename_pos != String::npos);
-                  std::size_t upload_num_pos = tex_path.rfind("/", upload_filename_pos-1);
-                  assert(upload_num_pos != String::npos);
-
-                  String num_part = tex_path.substr(upload_num_pos, (upload_filename_pos-upload_num_pos));
-                  String filename_part = tex_path.substr(upload_filename_pos+1);
-                  tex_path = tex_path.substr(0, upload_num_pos+1) + filename_part + num_part;
-              }
-
-              // Explicitly override the separator to ensure we don't
-              // use parts of the filename to generate a hierarchy,
-              // i.e. so that foo.png remains foo.png instead of
-              // becoming foo { png : value }.
-              pt.put(ptree::path_type(subfile_name, '\0'), tex_path);
+              // Then extract just the last element, i.e. the filename
+              std::size_t filename_pos = subfile_name.rfind("/");
+              if (filename_pos != String::npos)
+                  subfile_name = subfile_name.substr(filename_pos+1);
           }
-          std::stringstream data_json;
-          write_json(data_json, pt);
-          params["subfiles"] = data_json.str();
+
+          String tex_path = Transfer::URL(it->second).fullpath();
+          {
+              // Sigh. Yet again, we need to modify the order of the filename
+              // and version number again.
+
+              std::size_t upload_filename_pos = tex_path.rfind("/");
+              assert(upload_filename_pos != String::npos);
+              std::size_t upload_num_pos = tex_path.rfind("/", upload_filename_pos-1);
+              assert(upload_num_pos != String::npos);
+
+              String num_part = tex_path.substr(upload_num_pos, (upload_filename_pos-upload_num_pos));
+              String filename_part = tex_path.substr(upload_filename_pos+1);
+              tex_path = tex_path.substr(0, upload_num_pos+1) + filename_part + num_part;
+          }
+
+          // Explicitly override the separator to ensure we don't
+          // use parts of the filename to generate a hierarchy,
+          // i.e. so that foo.png remains foo.png instead of
+          // becoming foo { png : value }.
+          subfiles.put(subfile_name, tex_path, '\0');
       }
-      catch(json_parser::json_parser_error exc) {
-          AGG_LOG(error, "Failed to upload aggregate mesh " << localMeshName << " because 'subfiles' parameter couldn't be encoded.");
-          return true;
-      }
+      params["subfiles"] = json::write(subfiles);
 
       AtomicValue<bool> finished(false);
       Transfer::URI generated_uri;
