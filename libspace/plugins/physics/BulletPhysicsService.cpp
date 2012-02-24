@@ -39,9 +39,7 @@
 
 #include "Protocol_Loc.pbj.hpp"
 
-// Property tree for parsing the physics info
-#include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/json_parser.hpp>
+#include <json_spirit/json_spirit.h>
 
 #include <sirikata/core/transfer/AggregatedTransferPool.hpp>
 #include <sirikata/core/network/IOStrandImpl.hpp>
@@ -376,29 +374,25 @@ void BulletPhysicsService::updatePhysicsWorld(const UUID& uuid) {
 
     if (!phy.empty()) {
         // Parsing stage
-        using namespace boost::property_tree;
-        ptree pt;
-        try {
-            std::stringstream phy_json(phy);
-            read_json(phy_json, pt);
-        }
-        catch(json_parser::json_parser_error exc) {
-            BULLETLOG(error, "Error parsing physics properties: " << phy << " (" << exc.what() << ")");
+        namespace json = json_spirit;
+        json::Value settings;
+        if (!json::read(phy, settings)) {
+            BULLETLOG(error, "Error parsing physics properties: " << phy);
             return;
         }
 
-        String objTreatmentString = pt.get("treatment", String("ignore"));
+        String objTreatmentString = settings.getString("treatment", "ignore");
         if (objTreatmentString == "static") objTreatment = BULLET_OBJECT_TREATMENT_STATIC;
         if (objTreatmentString == "dynamic") objTreatment = BULLET_OBJECT_TREATMENT_DYNAMIC;
         if (objTreatmentString == "linear_dynamic") objTreatment = BULLET_OBJECT_TREATMENT_LINEAR_DYNAMIC;
         if (objTreatmentString == "vertical_dynamic") objTreatment = BULLET_OBJECT_TREATMENT_VERTICAL_DYNAMIC;
         if (objTreatmentString == "character") objTreatment = BULLET_OBJECT_TREATMENT_CHARACTER;
 
-        String objBBoxString = pt.get("bounds", String("sphere"));
+        String objBBoxString = settings.getString("bounds", "sphere");
         if (objBBoxString == "box") objBBox = BULLET_OBJECT_BOUNDS_ENTIRE_OBJECT;
         if (objBBoxString == "triangles") objBBox = BULLET_OBJECT_BOUNDS_PER_TRIANGLE;
 
-        mass = pt.get("mass", DEFAULT_MASS);
+        mass = settings.getReal("mass", DEFAULT_MASS);
     }
 
     // Clear out previous state from the simulation.
