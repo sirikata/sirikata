@@ -767,11 +767,17 @@ SET(LIBOAUTHCPP_INCLUDE_DIR ${TOP_LEVEL}/externals/liboauthcpp/include)
 
 # dependency: json-spirit
 SET(JSON_SPIRIT_ADDED_DEFINITIONS ${ADDED_DEFINITIONS})
-SET(JSON_SPIRIT_LIBRARY_TYPE "SHARED")
+# Building under build/cmake/json-spirit causes dll-search issues, use
+# static libs on windows.
+IF(WIN32)
+  SET(JSON_SPIRIT_LIBRARY_TYPE "STATIC")
+ELSE()
+  SET(JSON_SPIRIT_LIBRARY_TYPE "SHARED")
+ENDIF()
 SET(JSON_SPIRIT_BUILD_DEMOS FALSE)
 SET(JSON_SPIRIT_BUILD_TESTS FALSE)
 # Note that we don't use a subdirectory for this build so that the dll ends up in the right place on Windows.
-ADD_SUBDIRECTORY(${TOP_LEVEL}/externals/json-spirit/build ${CMAKE_CURRENT_BINARY_DIR})
+ADD_SUBDIRECTORY(${TOP_LEVEL}/externals/json-spirit/build ${CMAKE_CURRENT_BINARY_DIR}/json-spirit)
 SET(JSON_SPIRIT_INCLUDE_DIR ${TOP_LEVEL}/externals/json-spirit/include)
 
 # optional dependency: ffmpeg
