@@ -475,13 +475,6 @@ void JSObjectScript::eStorageCommit(
 }
 
 
-
-/**
-   lkjs; FIXME
-
-   ERROR: Should not rely on the being around of jscont.  Should
-   pass id through instead, and look it up.;
- */
 void JSObjectScript::storageCommitCallback(
     JSContextStruct* jscont, v8::Persistent<v8::Function> cb,
     bool success, OH::Storage::ReadSet* rs,Liveness::Token objAlive,
@@ -892,7 +885,7 @@ void JSObjectScript::eStorageCount(
     bool returner = mStorage->count(mInternalID, start, finish, wrapped_cb);
 }
 
-void JSObjectScript::setRestoreScriptCallback(
+void JSObjectScript::iSetRestoreScriptCallback(
     JSContextStruct* jscont, v8::Persistent<v8::Function> cb, bool success,
     Liveness::Token objAlive,Liveness::Token ctxAlive)
 {
@@ -903,13 +896,20 @@ void JSObjectScript::setRestoreScriptCallback(
     if (!ctxAlive) return;
     Liveness::Lock lockedCtx(ctxAlive);
     if (!lockedCtx) return;
-
-
+    
+    while (! mCtx->initialized())
+    {}
+    
     JSSCRIPT_SERIAL_CHECK();
     if (isStopped()) {
         JSLOG(warn, "Ignoring restore script callback after shutdown request.");
         return;
     }
+
+
+    
+    v8::Locker locker (mCtx->mIsolate);
+    v8::Isolate::Scope iscope(mCtx->mIsolate);
 
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(mContext->mContext);
@@ -994,6 +994,7 @@ v8::Handle<v8::Value> JSObjectScript::setRestoreScript(
 }
 
 
+
 void JSObjectScript::eSetRestoreScript(
     JSContextStruct* jscont, const String& script,
     v8::Persistent<v8::Function> cb, Liveness::Token objAlive,
@@ -1012,10 +1013,12 @@ void JSObjectScript::eSetRestoreScript(
     if (!cb.IsEmpty())
     {
         wrapped_cb =
-            std::tr1::bind(&JSObjectScript::setRestoreScriptCallback, this,
-                jscont, cb, _1,Liveness::livenessToken(),jscont->livenessToken());
+            mCtx->objStrand->wrap(
+                std::tr1::bind(&JSObjectScript::iSetRestoreScriptCallback, this,
+                    jscont, cb, _1,Liveness::livenessToken(),jscont->livenessToken()));
     }
 
+    
     // FIXME we should really tack on any additional parameters we
     // received initially here
     String script_type = "";
