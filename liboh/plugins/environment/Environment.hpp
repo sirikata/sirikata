@@ -8,9 +8,7 @@
 #include <sirikata/oh/Simulation.hpp>
 #include <sirikata/core/service/Context.hpp>
 
-// JSON for environment data
-#include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/json_parser.hpp>
+#include <json_spirit/value.h>
 
 #include <sirikata/core/odp/SST.hpp>
 #include <sirikata/core/network/RecordSSTStream.hpp>
@@ -46,7 +44,7 @@ private:
     SpaceObjectReference mPresence;
 
     // The environment data
-    boost::property_tree::ptree mEnvironment;
+    json_spirit::Value mEnvironment;
 
     // Communication with the space
     ODPSST::Stream::Ptr mStream;

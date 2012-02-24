@@ -8,8 +8,7 @@
 #include "Protocol_Loc.pbj.hpp"
 #include "Protocol_Frame.pbj.hpp"
 
-#include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/json_parser.hpp>
+#include <json_spirit/json_spirit.h>
 
 #define QPLOG(lvl, msg) SILOG(manual-query-processor, lvl, msg)
 
@@ -26,75 +25,39 @@ namespace {
 
 // Helpers for encoding requests
 String initRequest() {
-    using namespace boost::property_tree;
-    try {
-        ptree pt;
-        pt.put("action", "init");
-        std::stringstream data_json;
-        write_json(data_json, pt);
-        return data_json.str();
-    }
-    catch(json_parser::json_parser_error exc) {
-        QPLOG(detailed, "Failed to encode 'init' request.");
-        return "";
-    }
+    namespace json = json_spirit;
+    json::Value req = json::Object();
+    req.put("action", "init");
+    return json::write(req);
 }
 
 String destroyRequest() {
-    using namespace boost::property_tree;
-    try {
-        ptree pt;
-        pt.put("action", "destroy");
-        std::stringstream data_json;
-        write_json(data_json, pt);
-        return data_json.str();
-    }
-    catch(json_parser::json_parser_error exc) {
-        QPLOG(detailed, "Failed to encode 'destroy' request.");
-        return "";
-    }
+    namespace json = json_spirit;
+    json::Value req = json::Object();
+    req.put("action", "destroy");
+    return json::write(req);
 }
 
 String refineRequest(const std::vector<ObjectReference>& aggs) {
-    using namespace boost::property_tree;
-    try {
-        ptree nodes;
-        for(uint32 i = 0; i < aggs.size(); i++) {
-            nodes.put( aggs[i].toString(), aggs[i].toString() );
-        }
-
-        ptree pt;
-        pt.put("action", "refine");
-        pt.put_child("nodes", nodes);
-        std::stringstream data_json;
-        write_json(data_json, pt);
-        return data_json.str();
-    }
-    catch(json_parser::json_parser_error exc) {
-        QPLOG(detailed, "Failed to encode 'refine' request.");
-        return "";
-    }
+    namespace json = json_spirit;
+    json::Value req = json::Object();
+    req.put("action", "refine");
+    req.put("nodes", json::Array());
+    json::Array& nodes = req.getArray("nodes");
+    for(uint32 i = 0; i < aggs.size(); i++)
+        nodes.push_back( json::Value(aggs[i].toString()) );
+    return json::write(req);
 }
 
 String coarsenRequest(const std::vector<ObjectReference>& aggs) {
-    using namespace boost::property_tree;
-    try {
-        ptree nodes;
-        for(uint32 i = 0; i < aggs.size(); i++) {
-            nodes.put( aggs[i].toString(), aggs[i].toString() );
-        }
-
-        ptree pt;
-        pt.put("action", "coarsen");
-        pt.put_child("nodes", nodes);
-        std::stringstream data_json;
-        write_json(data_json, pt);
-        return data_json.str();
-    }
-    catch(json_parser::json_parser_error exc) {
-        QPLOG(detailed, "Failed to encode 'coarsen' request.");
-        return "";
-    }
+    namespace json = json_spirit;
+    json::Value req = json::Object();
+    req.put("action", "coarsen");
+    req.put("nodes", json::Array());
+    json::Array& nodes = req.getArray("nodes");
+    for(uint32 i = 0; i < aggs.size(); i++)
+        nodes.push_back( json::Value(aggs[i].toString()) );
+    return json::write(req);
 }
 
 

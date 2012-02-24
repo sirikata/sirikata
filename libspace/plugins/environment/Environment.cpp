@@ -3,19 +3,21 @@
 // be found in the LICENSE file.
 
 #include "Environment.hpp"
+#include <json_spirit/json_spirit.h>
 
 #define ENVIRONMENT_SERVICE_PORT 23
 #define ENV_LOG(lvl,msg) SILOG(environment,lvl,msg);
 
 namespace Sirikata {
 
-using namespace boost::property_tree;
+namespace json = json_spirit;
 
 using std::tr1::placeholders::_1;
 using std::tr1::placeholders::_2;
 
 Environment::Environment(SpaceContext* ctx)
- : SpaceModule(ctx)
+ : SpaceModule(ctx),
+   mEnvironment(json::Object())
 {
 }
 
@@ -59,8 +61,15 @@ void Environment::handleStream(int err, ODPSST::Stream::Ptr strm) {
 void Environment::handleMessage(const ObjectReference& id, MemoryReference data) {
     ENV_LOG(insane, "Received message from " << id << ": " << String((char*)data.begin(), data.size()));
     // Currently just receiving whole thing every time
-    std::stringstream env_json(std::string((char*)data.begin(), data.size()));
-    read_json(env_json, mEnvironment);
+    json::Value new_env;
+    bool parsed = json::read( std::string((char*)data.begin(), data.size()), new_env);
+
+    if (!parsed) {
+        ENV_LOG(error, "Couldn't parse new environment: " << String((char*)data.begin(), data.size()));
+        return;
+    }
+
+    mEnvironment = new_env;
 
     // And notifying everyone asap
     for(SubscriberMap::iterator it = mSubscribers.begin(); it != mSubscribers.end(); it++) {
@@ -70,9 +79,7 @@ void Environment::handleMessage(const ObjectReference& id, MemoryReference data)
 
 void Environment::sendUpdate(const ObjectReference& id) {
     // Currently we just always serialize and send the whole thing
-    std::stringstream data_json;
-    write_json(data_json, mEnvironment);
-    String serialized = data_json.str();
+    String serialized = write(mEnvironment);
     ENV_LOG(insane, "Sending update to " << id << ": " << serialized);
     mSubscribers[id]->record_stream.write(MemoryReference(serialized));
 }
