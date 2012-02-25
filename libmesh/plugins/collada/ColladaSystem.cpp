@@ -163,19 +163,7 @@ void ColladaSystem::addHeaderData(const Transfer::RemoteFileMetadata& metadata, 
         Transfer::URL subfile_url(mesh_url.context(), path_it->second);
         String subfile_url_str = subfile_url.toString();
 
-        // The CDN hands back a path with version number such as
-        // /foo/bar/model.dae/optimized/subfile/2 but the actual download only
-        // works if that's structured as /foo/bar/model.dae/optimized/2/subfile,
-        // so we need to rearrange this URL.
-        std::size_t upload_num_pos = subfile_url_str.rfind("/");
-        assert(upload_num_pos != String::npos);
-        std::size_t upload_filename_pos = subfile_url_str.rfind("/", upload_num_pos-1);
-        assert(upload_filename_pos != String::npos);
-
-        String filename_part = subfile_url_str.substr(upload_filename_pos, (upload_num_pos-upload_filename_pos));
-        String num_part = subfile_url_str.substr(upload_num_pos+1);
-
-        subfiles[name_it->second] = subfile_url_str.substr(0, upload_filename_pos+1) + num_part + filename_part;
+        subfiles[name_it->second] = subfile_url_str;
     }
     // Then, if not empty, replace texture names with URLs. There are two places
     // we have texture names. The list of textures:
