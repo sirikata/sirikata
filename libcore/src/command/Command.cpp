@@ -8,14 +8,12 @@
 namespace Sirikata {
 namespace Command {
 
-using namespace boost::property_tree;
-
 namespace {
 String sCommandKey("command");
 }
 
 bool CommandIsValid(const Command& cmd) {
-    return (cmd.find(sCommandKey) != cmd.not_found());
+    return cmd.contains(sCommandKey);
 }
 
 void CommandSetName(Command& cmd, const String& name) {

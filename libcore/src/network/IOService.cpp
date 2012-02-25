@@ -307,12 +307,16 @@ void reportOffenders(TagCountMap orig_tags) {
 void reportOffenders(TagCountMap orig_tags, Command::Result& res_out, const String& path) {
     InvertedReducedTagCountMap tags_by_count;
     getOffenders(orig_tags, tags_by_count);
-    int index = 0;
-    res_out.put_child(path, Command::Result());
+
+    res_out.put(path, Command::Array());
+    Command::Array& items = res_out.getArray(path);
+
     for(InvertedReducedTagCountMap::iterator it = tags_by_count.begin(); it != tags_by_count.end(); it++) {
         if (it->first <= 0) continue;
-        res_out.put(path + "." + boost::lexical_cast<String>(index) + ".tag", it->second);
-        res_out.put(path + "." + boost::lexical_cast<String>(index) + ".count", it->first);
+        Command::Object tag_count;
+        tag_count["tag"] = it->second;
+        tag_count["count"] = it->first;
+        items.push_back(tag_count);
     }
 }
 
@@ -387,22 +391,23 @@ void IOService::reportAllStatsFile(const char* filename,bool detailed) {
 void IOService::fillCommandResultWithStats(Command::Result& res) {
     LockGuard lock(const_cast<Mutex&>(mMutex));
 
-    String top_path = String("ioservices.") + boost::lexical_cast<String>(this) + ".";
-    res.put(top_path + "name", name());
-    res.put(top_path + "timers.enqueued", numTimersEnqueued());
-    res.put(top_path + "timers.latency", timerLatency().toString());
-    res.put(top_path + "handlers.enqueued", numEnqueued());
-    res.put(top_path + "handlers.latency", handlerLatency().toString());
-    reportOffenders(mTagCounts, res, top_path + "offenders");
+    res.put("name", name());
+    res.put("timers.enqueued", numTimersEnqueued());
+    res.put("timers.latency", timerLatency().toString());
+    res.put("handlers.enqueued", numEnqueued());
+    res.put("handlers.latency", handlerLatency().toString());
+    reportOffenders(mTagCounts, res, "offenders");
 
+    res.put("strands", Command::Array());
+    Command::Array& strands = res.getArray("strands");
     for(StrandSet::const_iterator it = mStrands.begin(); it != mStrands.end(); it++) {
-        String strand_path = top_path + "strands." + boost::lexical_cast<String>(*it) + ".";
-        res.put(strand_path + "name", (*it)->name());
-        res.put(strand_path + "timers.enqueued", (*it)->numTimersEnqueued());
-        res.put(strand_path + "timers.latency", (*it)->timerLatency().toString());
-        res.put(strand_path + "handlers.enqueued", (*it)->numEnqueued());
-        res.put(strand_path + "handlers.latency", (*it)->handlerLatency().toString());
-        reportOffenders((*it)->enqueuedTags(), res, strand_path + "offenders");
+        strands.push_back(Command::Object());
+        strands.back().put("name", (*it)->name());
+        strands.back().put("timers.enqueued", (*it)->numTimersEnqueued());
+        strands.back().put("timers.latency", (*it)->timerLatency().toString());
+        strands.back().put("handlers.enqueued", (*it)->numEnqueued());
+        strands.back().put("handlers.latency", (*it)->handlerLatency().toString());
+        reportOffenders((*it)->enqueuedTags(), strands.back(), "offenders");
     }
 
 }
@@ -412,7 +417,7 @@ void IOService::commandReportStats(const Command::Command& cmd, Command::Command
 #ifdef SIRIKATA_TRACK_EVENT_QUEUES
     AllIOServicesLockGuard lock(gAllIOServicesMutex);
 
-    Command::Result result;
+    Command::Result result = Command::EmptyResult();
     fillCommandResultWithStats(result);
     cmdr->result(cmdid, result);
 #endif
@@ -422,12 +427,15 @@ void IOService::commandReportAllStats(const Command::Command& cmd, Command::Comm
 #ifdef SIRIKATA_TRACK_EVENT_QUEUES
     AllIOServicesLockGuard lock(gAllIOServicesMutex);
 
-    Command::Result result;
+    Command::Result result = Command::EmptyResult();
     // Ensure the top-level structure is there
-    result.put_child("ioservices", Command::Result());
+    result.put("ioservices", Command::Array());
+    Command::Array& services = result.getArray("ioservices");
 
-    for(AllIOServicesSet::const_iterator it = gAllIOServices.begin(); it != gAllIOServices.end(); it++)
-        (*it)->fillCommandResultWithStats(result);
+    for(AllIOServicesSet::const_iterator it = gAllIOServices.begin(); it != gAllIOServices.end(); it++) {
+        services.push_back(Command::Object());
+        (*it)->fillCommandResultWithStats(services.back());
+    }
     cmdr->result(cmdid, result);
 #endif
 }

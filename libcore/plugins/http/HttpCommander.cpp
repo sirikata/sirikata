@@ -4,8 +4,6 @@
 
 #include "HttpCommander.hpp"
 
-#include <boost/property_tree/json_parser.hpp>
-
 #define HC_LOG(lvl, msg) SILOG(http-commander, lvl, msg)
 
 namespace Sirikata {
@@ -42,22 +40,22 @@ void HttpCommander::onHttpRequest(HttpServer* server, HttpRequestID id, String& 
     }
 
     Command cmd;
-    using namespace boost::property_tree;
-    try {
-        // The raw POST body as JSON
-        if (!body.empty()) {
-            std::stringstream cmd_json(body);
-            read_json(cmd_json, cmd);
+    namespace json = json_spirit;
+
+    // The raw POST body as JSON
+    if (!body.empty()) {
+        if (!json::read(body, cmd)) {
+            // Failure to parse -> 400 error with message about parse failure
+            HC_LOG(detailed, "Couldn't parse request body, returning 400");
+            Result result = EmptyResult();
+            result.put("error", "Failed to parse body of request");
+            sendResponse(id, 400, result);
+            return;
         }
     }
-    catch(json_parser::json_parser_error exc) {
-        // Failure to parse -> 400 error with message about parse failure
-        HC_LOG(detailed, "Couldn't parse request body, returning 400");
-        Result result;
-        result.put("error", "Failed to parse body of request");
-        sendResponse(id, 400, result);
-        return;
-        return;
+    else {
+        // Empty object if nothing was sent.
+        cmd = Command::Object();
     }
 
     CommandSetName(cmd, command_name);
@@ -69,18 +67,11 @@ void HttpCommander::result(CommandID id, const Result& result) {
 }
 
 void HttpCommander::sendResponse(HttpRequestID id, HttpStatus status, const Result& result) {
-    using namespace boost::property_tree;
-    try {
-        std::stringstream data_json;
-        write_json(data_json, result);
-        HC_LOG(insane, "Sending successful response " << status);
-        mServer.response(id, status, Headers(), data_json.str());
-    }
-    catch(json_parser::json_parser_error exc) {
-        // Failed to encode, log the error and send a 500 instead
-        HC_LOG(detailed, "Failed to encode response, returning 500");
-        mServer.response(id, 500, Headers(), "");
-    }
+    namespace json = json_spirit;
+
+    HC_LOG(insane, "Sending successful response " << status);
+    String serialized_result = json::write(result);
+    mServer.response(id, status, Headers(), serialized_result);
 }
 
 } // namespace Command

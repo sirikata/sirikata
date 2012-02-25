@@ -1315,7 +1315,7 @@ void Server::killObjectConnection(const UUID& obj_id)
 
 // Commander commands
 void Server::commandObjectsCount(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {
-    Command::Result result;
+    Command::Result result = Command::EmptyResult();
     result.put("objects.active", mObjects.size());
     result.put("objects.connecting", mStoredConnectionData.size());
     result.put("objects.migrating_to", mObjectsAwaitingMigration.size());
@@ -1325,23 +1325,30 @@ void Server::commandObjectsCount(const Command::Command& cmd, Command::Commander
 }
 
 void Server::commandObjectsList(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {
-    Command::Result result;
+    Command::Result result = Command::EmptyResult();
     // Make sure we return the objects key set even if there are none
-    result.put_child( String("objects"), Command::Result());
+    result.put( String("objects"), Command::Array());
+    Command::Array& objects_ary = result.getArray("objects");
+
     // This only lists regular, active objects. Connecting, migrating, etc are
     // ignored.
-    //
-    // We use a map of object identifiers to themselves currently because
-    // outputting lists in boost::property_tree is difficult.
     for(ObjectConnectionMap::iterator objit = mObjects.begin(); objit != mObjects.end(); objit++)
-        result.put( String("objects.") + objit->first.toString(), objit->first.toString());
+        objects_ary.push_back(objit->first.toString());
     cmdr->result(cmdid, result);
 }
 
 void Server::commandObjectsDisconnect(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {
-    UUID objid = cmd.get("object", UUID::null());
+    Command::Result result = Command::EmptyResult();
 
-    Command::Result result;
+    String obj_string = cmd.getString("object", "");
+    if (obj_string.empty()) { // not specified
+        result.put("error", "Ill-formatted request: no object specified for disconnect.");
+        cmdr->result(cmdid, result);
+        return;
+    }
+    UUID objid(obj_string, UUID::HumanReadable());
+
+
     ObjectConnectionMap::iterator objit = mObjects.find(objid);
     if (objit == mObjects.end()) {
         result.put("error", "Object not found");
