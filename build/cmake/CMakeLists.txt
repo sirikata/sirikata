@@ -771,6 +771,10 @@ SET(JSON_SPIRIT_ADDED_DEFINITIONS ${ADDED_DEFINITIONS})
 # static libs on windows.
 IF(WIN32)
   SET(JSON_SPIRIT_LIBRARY_TYPE "STATIC")
+  # We need this project to know that json_spirit is static, but properties
+  # from the subdirectory's CMakeLists.txt won't be propagated up here. This
+  # essentially duplicates the setting from there to make the linking work
+  SET(ADDED_DEFINITIONS ${ADDED_DEFINITIONS} -DJSON_SPIRIT_STATIC_LINKED)
 ELSE()
   SET(JSON_SPIRIT_LIBRARY_TYPE "SHARED")
 ENDIF()
