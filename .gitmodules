@@ -22,3 +22,6 @@
 [submodule "liboh/plugins/ogre/data/ace"]
 	path = liboh/plugins/ogre/data/ace
 	url = https://github.com/ajaxorg/ace.git
+[submodule "externals/json-spirit"]
+	path = externals/json-spirit
+	url = git://github.com/sirikata/json-spirit.git

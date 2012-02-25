@@ -347,7 +347,7 @@ protected:
     void storageCountCallback(JSContextStruct* jscont, v8::Persistent<v8::Function> cb,
         bool success, int32 count,Liveness::Token objAlive,Liveness::Token ctxAlive);
 
-    void setRestoreScriptCallback(
+    void iSetRestoreScriptCallback(
         JSContextStruct* jscont, v8::Persistent<v8::Function> cb, bool success,
         Liveness::Token,Liveness::Token ctxAlive);
 

@@ -246,19 +246,25 @@ void computeCosts(Mesh::MeshdataPtr agg_mesh,
                   std::tr1::unordered_map<uint32, std::tr1::unordered_map<uint32, std::vector<uint32> > >& vertexToFacesMap
                  )
 {
-  for (uint32 i = 0; i < agg_mesh->geometry.size(); i++) {
+  
+  for (uint32 i = 0;  i < agg_mesh->geometry.size(); i++) {
 
     SubMeshGeometry& curGeometry = agg_mesh->geometry[i];
     std::tr1::unordered_map<Vector3f, Matrix4x4f, Vector3f::Hasher>& positionQs = submeshPositionQs[i];
     std::tr1::unordered_map<uint32, std::tr1::unordered_set<uint32> >& neighborVertices = submeshNeighborVertices[i];
     std::tr1::unordered_map<uint32, std::vector<uint32> >& submeshVertexToFacesMap = vertexToFacesMap[i];
 
+    
+
     for (uint32 j = 0; j < curGeometry.positions.size(); j++) {
+      
       if (neighborVertices.find(j) == neighborVertices.end()) continue;
 
       bool j_edgeVertex = (submeshVertexToFacesMap[j].size() == 1);
 
       const Vector3f& position = curGeometry.positions[j];
+
+      Matrix4x4f Q = positionQs[position];      
 
       std::tr1::unordered_set<uint32>& neighbors = neighborVertices[j];
 
@@ -268,7 +274,7 @@ void computeCosts(Mesh::MeshdataPtr agg_mesh,
         bool neighbor_edgeVertex = (submeshVertexToFacesMap[neighbor].size() == 1);
 
         double cost = 0;
-        if (j_edgeVertex || neighbor_edgeVertex) {
+        if (false/*j_edgeVertex || neighbor_edgeVertex*/) {
           cost = 1e15;
         }
         else {
@@ -278,13 +284,21 @@ void computeCosts(Mesh::MeshdataPtr agg_mesh,
 
           Vector4f vbar4f (neighborPosition.x, neighborPosition.y, neighborPosition.z, 1);
 
-          cost = (vbar4f.dot(  Q * vbar4f ));
-          cost = (cost < 0.0) ? -cost : cost;
+          cost = (vbar4f.dot(  Q * vbar4f ));          
 
+          if (cost == 0) {
+            /*Deal properly with the case where all faces adjacent to a vertex are coplanar.
+             While this face may have coplanar vertices in this instance, these vertices
+             might connect with other faces in other instances. */
+            /*Q = Q + Matrix4x4f(Vector4f(1e-10, 1e-10, 1e-10, 1e-10),
+                               Vector4f(1e-10, 1e-10, 1e-10, 1e-10),
+                               Vector4f(1e-10, 1e-10, 1e-10, 1e-10),
+                               Vector4f(0.00000, 0.00000, 0.00000, 1), Matrix4x4f::ROWS() );  
 
-          if ( custom_isnan(cost) || (cost < 1e-2 && (position-neighborPosition).length() > cost * 1e2)) {
-            cost = (position-neighborPosition).length();
+             cost = (vbar4f.dot(  Q * vbar4f ));                        */
           }
+
+          cost = (cost < 0.0) ? -cost : cost;          
         }
 
         /* From here to the end of this innermost loop, it takes almost 5 seconds */
@@ -292,8 +306,8 @@ void computeCosts(Mesh::MeshdataPtr agg_mesh,
         gpc.mCost = pairPriorities[gpc];
         vertexPairs.erase(gpc);
 
+        float32 origCost = gpc.mCost;
         gpc.mCost += cost;
-
         pairPriorities[gpc] = gpc.mCost;
         vertexPairs.insert(gpc);
       }
@@ -353,7 +367,7 @@ void computeCosts(Mesh::MeshdataPtr agg_mesh, uint32 geomIdx, uint32 sourcePosit
     bool neighbor_edgeVertex = (submeshVertexToFacesMap[neighborIdx].size() == 1);
 
     float cost = 0;
-    if (is_edgeVertex || neighbor_edgeVertex) {
+    if (false /*is_edgeVertex || neighbor_edgeVertex */) {
       cost = 1e15;
     }
     else {
@@ -363,12 +377,20 @@ void computeCosts(Mesh::MeshdataPtr agg_mesh, uint32 geomIdx, uint32 sourcePosit
 
       Vector4f vbar4f (neighborPosition.x, neighborPosition.y, neighborPosition.z, 1);
       cost = (vbar4f.dot(  Q * vbar4f )) ;
+      
+      if (cost == 0) {
+         /*Deal properly with the case where all faces adjacent to a vertex are coplanar.
+           While this face may have coplanar vertices in this instance, these vertices
+           might connect with other faces in other instances. */
+         /*Q = Q + Matrix4x4f(Vector4f(1e-10, 1e-10, 1e-10, 1e-10),
+                              Vector4f(1e-10, 1e-10, 1e-10, 1e-10),
+                              Vector4f(1e-10, 1e-10, 1e-10, 1e-10),
+                              Vector4f(0.0000000, 0.0000000, 0.0000000, 1), Matrix4x4f::ROWS() );
+
+         cost = (vbar4f.dot(  Q * vbar4f )) ;*/
+      }
 
       cost = (cost < 0.0) ? -cost : cost;
-
-      if ( custom_isnan(cost) || (cost < 1e-2 && (position-neighborPosition).length() > cost * 1e2) ) {
-        cost = (position-neighborPosition).length();
-      }
     }
 
     GeomPairContainer gpc(geomIdx, sourcePositionIdx, neighborIdx);
@@ -544,7 +566,7 @@ void MeshSimplifier::simplify(Mesh::MeshdataPtr agg_mesh, int32 numFacesLeft) {
 
   //Find the list of instances associated with each submesh
   countFaces = 0;
-
+  
   while( geoinst_it.next(&geoinst_idx, &geoinst_pos_xform) ) {
     const GeometryInstance& geomInstance = agg_mesh->instances[geoinst_idx];
     Matrix4x4f geoinst_pos_xform_transpose = geoinst_pos_xform.transpose();
@@ -577,46 +599,53 @@ void MeshSimplifier::simplify(Mesh::MeshdataPtr agg_mesh, int32 numFacesLeft) {
         Vector3f pos2 = geoinst_pos_xform * orig_pos2;
         Vector3f pos3 = geoinst_pos_xform * orig_pos3;
 
-        float A = pos1.y*(pos2.z - pos3.z) + pos2.y*(pos3.z - pos1.z) + pos3.y*(pos1.z - pos2.z);
-        float B = pos1.z*(pos2.x - pos3.x) + pos2.z*(pos3.x - pos1.x) + pos3.z*(pos1.x - pos2.x);
-        float C = pos1.x*(pos2.y - pos3.y) + pos2.x*(pos3.y - pos1.y) + pos3.x*(pos1.y - pos2.y);
-        float D = -1 *( pos1.x*(pos2.y*pos3.z - pos3.y*pos2.z) +
-                         pos2.x*(pos3.y*pos1.z - pos1.y*pos3.z) +
-                         pos3.x*(pos1.y*pos2.z - pos2.y*pos1.z) );
+        double A = pos1.y*(pos2.z - pos3.z) + pos2.y*(pos3.z - pos1.z) + pos3.y*(pos1.z - pos2.z); A*=1000000.0;
+        double B = pos1.z*(pos2.x - pos3.x) + pos2.z*(pos3.x - pos1.x) + pos3.z*(pos1.x - pos2.x);B*=1000000.0;
+        double C = pos1.x*(pos2.y - pos3.y) + pos2.x*(pos3.y - pos1.y) + pos3.x*(pos1.y - pos2.y);C*=1000000.0;
+        double D = ( pos1.x*(pos3.y*pos2.z - pos2.y*pos3.z ) +
+                    pos2.x*(pos1.y*pos3.z - pos3.y*pos1.z ) +
+                    pos3.x*(pos2.y*pos1.z - pos1.y*pos2.z) );        D*=1000000.0;
 
-        float normalizer = sqrtf(A*A+B*B+C*C);
+        double normalizer = sqrt(A*A+B*B+C*C);
 
-        if (normalizer > -0.000001 && normalizer < 0.000001) {
-          A = B = C = D = 0;
+        if (normalizer > -1e-10 && normalizer < 1e-10) {
+          A = B = C = D = 0;          
         }
         else {
           //normalize...
-          A /= normalizer;
-          B /= normalizer;
-          C /= normalizer;
-          D /= normalizer;
-        }
-
+          A  = A / normalizer;
+          B  = B / normalizer;
+          C  = C / normalizer;
+          D  = D / normalizer;
+        }                
+        
         Matrix4x4f Qmat ( Vector4f(A*A, A*B, A*C, A*D),
                           Vector4f(A*B, B*B, B*C, B*D),
                           Vector4f(A*C, B*C, C*C, C*D),
-                          Vector4f(A*D, B*D, C*D, D*D), Matrix4x4f::ROWS() );
+                          Vector4f(A*D, B*D, C*D, D*D), Matrix4x4f::ROWS() );        
+ 
+        Qmat = geoinst_pos_xform_transpose * Qmat * geoinst_pos_xform; //2 seconds on the large scene for this mult        
 
-        Qmat = geoinst_pos_xform_transpose * Qmat * geoinst_pos_xform; //2 seconds on the large scene for this mult
+        double face_area = fabs(pos1.x*(pos2.y - pos3.y) + pos2.x*(pos3.y - pos1.y) + pos3.x*(pos1.y - pos2.y));
+        face_area /= 2.0;
+        Qmat *= face_area;
 
         positionQs[orig_pos1] += Qmat;
         positionQs[orig_pos2] += Qmat;
-        positionQs[orig_pos3] += Qmat;
+        positionQs[orig_pos3] += Qmat;        
 
         countFaces++;
       }
     }
-  }
+  }    
 
-  SIMPLIFY_LOG(detailed, "countFaces = " << countFaces);
-  SIMPLIFY_LOG(detailed, "numFacesLeft = " << numFacesLeft);
+  SIMPLIFY_LOG(warn, "countFaces = " << countFaces);
+  SIMPLIFY_LOG(warn, "numFacesLeft = " << numFacesLeft);
   if (numFacesLeft < countFaces) {
-      SIMPLIFY_LOG(detailed, "numFacesLeft < countFaces: Simplification needed");
+      SIMPLIFY_LOG(warn, "numFacesLeft < countFaces: Simplification needed");
+  }  
+  else {
+    return;
   }
 
   computeCosts(agg_mesh, submeshPositionQs, vertexPairs, pairPriorities, submeshNeighborVertices, vertexToFacesMap);
@@ -643,7 +672,10 @@ void MeshSimplifier::simplify(Mesh::MeshdataPtr agg_mesh, int32 numFacesLeft) {
 
     //Collapse vertex at sourceIdx into targetIdx.
     if (targetIdx != sourceIdx && pos1 != pos2) {
-      vertexMapping[sourceIdx] = targetIdx;
+      vertexMapping[sourceIdx] = targetIdx;      
+      
+      // FIXME: Can add a boundary edge check here by checking if countfaces reduced by 1 or more than 1.
+      // If 1, its a boundary edge.
 
       std::tr1::unordered_map<uint32, std::vector<uint32> >& geomsVertexToFacesMap = vertexToFacesMap[i];
       std::vector<uint32>& ifcVector = geomsVertexToFacesMap[sourceIdx];
@@ -693,8 +725,9 @@ void MeshSimplifier::simplify(Mesh::MeshdataPtr agg_mesh, int32 numFacesLeft) {
       positionQs[ pos1 ] += positionQs[pos2];
 
       //Finally recompute the costs of the neighbors.
-      computeCosts(agg_mesh, i, sourceIdx, targetIdx, vertexMapping, submeshPositionQs, vertexPairs, pairPriorities, submeshNeighborVertices,
-                  vertexToFacesMap);
+      computeCosts(agg_mesh, i, sourceIdx, targetIdx, vertexMapping, 
+                   submeshPositionQs, vertexPairs, pairPriorities, submeshNeighborVertices,
+                   vertexToFacesMap);
     }
 
     vertexPairs.erase(top);

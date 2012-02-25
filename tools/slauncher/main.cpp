@@ -17,8 +17,7 @@
 #include <sirikata/core/transfer/AggregatedTransferPool.hpp>
 #include <sirikata/core/transfer/ResourceDownloadTask.hpp>
 
-#include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/json_parser.hpp>
+#include <json_spirit/json_spirit.h>
 #include <boost/foreach.hpp>
 
 #define LAUNCHER_LOG(lvl, msg) SILOG(launcher, lvl, msg)
@@ -300,30 +299,31 @@ void finishLaunchURI(Transfer::URI config_uri, Transfer::ResourceDownloadTaskPtr
     LAUNCHER_LOG(detailed, "Downloaded config, size " << data->size());
 
     // Parse the data
-    using namespace boost::property_tree;
-    ptree pt;
-    try {
-        std::stringstream data_json(data->asString());
-        read_json(data_json, pt);
-    }
-    catch(json_parser::json_parser_error exc) {
+    namespace json = json_spirit;
+    json::Value config;
+    if (!json::read(data->asString(), config)) {
         LAUNCHER_LOG(error, "Invalid JSON configuration data.");
         eventLoopExit(retval, -1);
         return;
     }
 
     try {
-        app = pt.get<String>("app.name");
-        appDir = pt.get<String>("app.directory");
+        app = config.getString("app.name");
+        appDir = config.getString("app.directory");
         // First, we need to know what app we're executing
-        binary = pt.get<String>("binary.name");
+        binary = config.getString("binary.name");
         // We also take a dictionary of arguments to add to the command
         // line
-        BOOST_FOREACH(ptree::value_type &v,
-            pt.get_child("binary.args"))
-            binaryArgs.push_back( String("--") + v.first + "=" + v.second.data() );
+        BOOST_FOREACH(json::Object::value_type &v, config.getObject("binary.args")) {
+            if (!v.second.isString()) {
+                LAUNCHER_LOG(error, "Non-string binary.args value");
+                eventLoopExit(retval, -1);
+                return;
+            }
+            binaryArgs.push_back( String("--") + v.first + "=" + v.second.getString() );
+        }
     }
-    catch(ptree_bad_data exc) {
+    catch(const json::Value::PathError& path_exc) {
         LAUNCHER_LOG(error, "Required configuration properties not found.");
         eventLoopExit(retval, -1);
         return;
@@ -341,47 +341,56 @@ void finishLaunchURI(Transfer::URI config_uri, Transfer::ResourceDownloadTaskPtr
     LAUNCHER_LOG(info, "Using appliction directory: " << appDirPath());
 
     // This is not required data
-    try {
-        // We allow syncing of data that's required for the app
-        BOOST_FOREACH(ptree::value_type &v,
-            pt.get_child("app.files")) {
-            String data_path(v.first);
-
-            // Handle relative URLs carefullly.
-            // By default, we'll just try handling
-            Transfer::URI data_uri(v.second.data());
-            // And we'll only override it with a relative one if the relative
-            // one can be decoded as a URL.
-            Transfer::URL config_url(config_uri);
-            if (!config_url.empty()) {
-                // Constructor figures out absolute/relative, and just fails if
-                // it can't construct a valid URL.
-                Transfer::URL deriv_url(config_url.context(), v.second.data());
-                if (!deriv_url.empty())
-                    data_uri = Transfer::URI(deriv_url.toString());
-            }
-
-            LAUNCHER_LOG(detailed, "Download resource " << data_path << " from " << data_uri);
-            Transfer::ResourceDownloadTaskPtr dl =
-                Transfer::ResourceDownloadTask::construct(
-                    data_uri, gTransferPool, 1.0,
-                    gContext->mainStrand->wrap(
-                        std::tr1::bind(finishDownloadResource,
-                            data_path,
-                            std::tr1::placeholders::_1, std::tr1::placeholders::_2,
-                            std::tr1::placeholders::_3, retval
-                        )
-                    )
-                );
-            dl->start();
-            resourceDownloads[data_path] = dl;
-        }
-    }
-    catch(ptree_bad_data exc) {
-        // If we didn't queue any, start the app now
+    if (!config.contains("app.files")) {
+        // If we don't have extra files, start the app now
         if (resourceDownloads.empty())
             doExecApp(retval);
+    }
+    const json::Value& app_files = config.get("app.files");
+    if (!app_files.isObject()) {
+        LAUNCHER_LOG(error, "app.files was specified, but doesn't contain a map of files.");
+        eventLoopExit(retval, -1);
         return;
+    }
+
+    // We allow syncing of data that's required for the app
+    BOOST_FOREACH(const json::Object::value_type &v, app_files.getObject()) {
+        String data_path(v.first);
+
+        if (!v.second.isString()) {
+            LAUNCHER_LOG(error, "Non-string filename in app.files.");
+            eventLoopExit(retval, -1);
+            return;
+        }
+
+        // Handle relative URLs carefullly.
+        // By default, we'll just try handling
+        Transfer::URI data_uri(v.second.getString());
+        // And we'll only override it with a relative one if the relative
+        // one can be decoded as a URL.
+        Transfer::URL config_url(config_uri);
+        if (!config_url.empty()) {
+            // Constructor figures out absolute/relative, and just fails if
+            // it can't construct a valid URL.
+            Transfer::URL deriv_url(config_url.context(), v.second.getString());
+            if (!deriv_url.empty())
+                data_uri = Transfer::URI(deriv_url.toString());
+        }
+
+        LAUNCHER_LOG(detailed, "Download resource " << data_path << " from " << data_uri);
+        Transfer::ResourceDownloadTaskPtr dl =
+            Transfer::ResourceDownloadTask::construct(
+                data_uri, gTransferPool, 1.0,
+                gContext->mainStrand->wrap(
+                    std::tr1::bind(finishDownloadResource,
+                        data_path,
+                        std::tr1::placeholders::_1, std::tr1::placeholders::_2,
+                        std::tr1::placeholders::_3, retval
+                    )
+                )
+            );
+        dl->start();
+        resourceDownloads[data_path] = dl;
     }
 }
 
