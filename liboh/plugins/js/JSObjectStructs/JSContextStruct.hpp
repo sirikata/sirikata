@@ -287,7 +287,7 @@ private:
 
     //performs the initialization and population of util object, system object,
     //and system object's presences array.
-    void createContextObjects();
+    void createContextObjects(String* scriptToEval=NULL);
 
     //a function to call within this context for when a presence that was
     //created from within this context gets connected.
