@@ -44,6 +44,7 @@ static void InitPluginOptions() {
     Sirikata::InitializeClassOptions ico("cassandrastorage",NULL,
         new Sirikata::OptionValue("host", "localhost", Sirikata::OptionValueType<String>(), "Host name of Cassandra server"),
         new Sirikata::OptionValue("port", "9160", Sirikata::OptionValueType<int32>(), "Port number"),
+        new Sirikata::OptionValue("lease-duration", "30s", Sirikata::OptionValueType<Duration>(), "Duration to register leases for. Longer times require less overhead, but also mean longer delays if an object or object host dies without cleaning up."),
         NULL);
 
     Sirikata::InitializeClassOptions icop("cassandrapersistedset",NULL,
@@ -65,8 +66,9 @@ static OH::Storage* createCassandraStorage(ObjectHostContext* ctx, const String&
 
     String host = optionsSet->referenceOption("host")->as<String>();
     int32 port = optionsSet->referenceOption("port")->as<int32>();
+    Duration lease_duration = optionsSet->referenceOption("lease-duration")->as<Duration>();
 
-    return new OH::CassandraStorage(ctx, host, port);
+    return new OH::CassandraStorage(ctx, host, port, lease_duration);
 }
 
 static OH::PersistedObjectSet* createCassandraPersistedObjectSet(ObjectHostContext* ctx, const String& args) {

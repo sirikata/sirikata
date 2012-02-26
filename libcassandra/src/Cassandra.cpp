@@ -71,6 +71,12 @@ void CassandraDB::initSchema() {
         cf_def_1.setKeyspaceName("sirikata");
         client->createColumnFamily(cf_def_1);
 
+        libcassandra::ColumnFamilyDefinition cf_def_pl;
+        cf_def_pl.setName("persistence_leases");
+        cf_def_pl.setColumnType("Standard");
+        cf_def_pl.setKeyspaceName("sirikata");
+        client->createColumnFamily(cf_def_pl);
+
         libcassandra::ColumnFamilyDefinition cf_def_2;
         cf_def_2.setName("objects");
         cf_def_2.setColumnType("Super");

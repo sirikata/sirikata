@@ -44,7 +44,7 @@ class FileStorageEvent;
 class CassandraStorage : public Storage
 {
 public:
-    CassandraStorage(ObjectHostContext* ctx, const String& host, int port);
+    CassandraStorage(ObjectHostContext* ctx, const String& host, int port, const Duration& lease_duration);
     ~CassandraStorage();
 
     virtual void start();
@@ -135,6 +135,34 @@ private:
     // Call libcassandra methods to commit transcation
     Result CassandraCommit(CassandraDBPtr db, const Bucket& bucket, Columns* columns, Keys* eraseKeys, Keys* readKeys, SliceRanges* readRanges, ReadSet* compares, SliceRanges* eraseRanges, ReadSet* rs, const String& timestamp);
 
+
+    // Helpers for leases:
+    // The LeaseRequestSet is a client's view of all the lease requests. It's
+    // just a set of client IDs that were found as keys in the request row for
+    // the bucket.
+    typedef std::set<String> LeaseRequestSet;
+    // Get the 'bucket' (Cassandra row) name for lease negotiation for this
+    // object
+    String getLeaseBucketName(const Bucket& bucket);
+    // Read all requests for leases against the given bucket. Returns the other
+    // clients we see requesting a lease (removes our own ID).
+    LeaseRequestSet readLeaseRequests(const Bucket& bucket);
+
+    // Acquire a lease (or update if it's already valid) for the given
+    // bucket. This is part of a transaction -- the first part to
+    // ensure the transaction is valid
+    Result acquireLease(const Bucket& bucket);
+    // Renew a lease that we already have. Verifies we still hold the
+    // lease, then renews it. This is an entire transaction.
+    void renewLease(const Bucket& bucket);
+    // Release the lease if we own it.
+    void releaseLease(const Bucket& bucket);
+
+    // Process renewals at front of queue that need updating.
+    void processRenewals();
+
+
+
     ObjectHostContext* mContext;
     BucketTransactions mTransactions;
     String mDBHost;              //host name of Cassandra server
@@ -144,6 +172,24 @@ private:
     Network::IOService* mIOService;
     Network::IOWork* mWork;
     Thread* mThread;
+
+    // A unique client ID for leases. These should not include '-' as
+    // those are used to separate the client ID and timestamp
+    const String mClientID;
+    const Duration mLeaseDuration;
+    // Track which objects we have active leases on
+    typedef std::tr1::unordered_set<Bucket, Bucket::Hasher> LeaseSet;
+    LeaseSet mLeases;
+
+    struct BucketRenewTimeout {
+        BucketRenewTimeout(const Bucket& _b, Time _t)
+         : bucket(_b), t(_t)
+        {}
+        const Bucket bucket;
+        const Time t;
+    };
+    std::queue<BucketRenewTimeout> mRenewTimes;
+    Network::IOTimerPtr mRenewTimer;
 };
 
 }//end namespace OH
