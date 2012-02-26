@@ -250,6 +250,9 @@ Stream::StreamID MultiplexedSocket::getNewID() {
     }
     unsigned int retval=mHighestStreamID+=2;
     assert(retval>1);
+    if (retval > 127) {
+        SILOG(tcpsst, error,"Stream ids larger than 127 may be fragmented by certain browsers. See FIXME in ASIOReadBuffer::processPartialChunk.");
+    }
     return Stream::StreamID(retval);
 }
 MultiplexedSocket::MultiplexedSocket(IOStrand*io, const Stream::SubstreamCallback&substreamCallback, TCPStream::StreamType streamType)

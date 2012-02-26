@@ -167,7 +167,7 @@ public:
 
         for(int i=0;i<NUM_TEST_STREAMS;++i) {
             if (i==0||!fork) {
-                mSenders[i]=StreamFactory::getSingleton().getDefaultConstructor()(mSendStrand,StreamFactory::getSingleton().getDefaultOptionParser()(String("--parallel-sockets=1")));
+                mSenders[i]=StreamFactory::getSingleton().getDefaultConstructor()(mSendStrand,StreamFactory::getSingleton().getDefaultOptionParser()(String("--parallel-sockets=1 --websocket-draft-76=true")));
                 mSenders[i]->connect(Address("127.0.0.1",mPort),
                                      &Stream::ignoreSubstreamCallback,
                                      std::tr1::bind(&SstCloseTest::connectionCallback,this,i,_1,_2),

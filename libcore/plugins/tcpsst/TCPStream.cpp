@@ -303,7 +303,8 @@ TCPStream::TCPStream(IOStrand* io,OptionSet*options):mSendStatus(new AtomicValue
     OptionValue *kernelSendBufferSize=options->referenceOption("ksend-buffer-size");
     OptionValue *kernelReceiveBufferSize=options->referenceOption("kreceive-buffer-size");
     OptionValue *noDelay=options->referenceOption("no-delay");
-    OptionValue *zeroDelim=options->referenceOption("base64");
+    OptionValue *base64=options->referenceOption("base64");
+    OptionValue *oldLengthDelim=options->referenceOption("websocket-draft-76");
     assert(numSimultSockets&&sendBufferSize);
     mNumSimultaneousSockets=(unsigned char)numSimultSockets->as<unsigned int>();
     assert(mNumSimultaneousSockets);
@@ -311,7 +312,7 @@ TCPStream::TCPStream(IOStrand* io,OptionSet*options):mSendStatus(new AtomicValue
     mKernelSendBufferSize=kernelSendBufferSize->as<unsigned int>();
     mKernelReceiveBufferSize=kernelReceiveBufferSize->as<unsigned int>();
     mNoDelay=noDelay->as<bool>();
-    mStreamType=zeroDelim->as<bool>() ? TCPStream::LENGTH_DELIM : TCPStream::BASE64_ZERODELIM;
+    mStreamType=oldLengthDelim->as<bool>() ? TCPStream::LENGTH_DELIM : TCPStream::RFC_6455;
 }
 
 TCPStream::TCPStream(IOStrand* io,unsigned char numSimultSockets,unsigned int sendBufferSize,bool noDelay, StreamType streamType, unsigned int kernelSendBufferSize,unsigned int kernelReceiveBufferSize):mSendStatus(new AtomicValue<int>(0)) {
