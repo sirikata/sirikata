@@ -191,9 +191,20 @@ void HostedObject::start() {
 }
 
 void HostedObject::stop() {
-    if (mObjectScript)
+    if (mObjectScript) {
+        // We need to clear out the reference in storage, which will also clear
+        // out leases. We do this in here to make sure it happens as we're
+        // stopping. Otherwise we might stop everything, cleanup the storage,
+        // then want to release buckets as we're doing final object cleanup when
+        // it isn't possibly any more. We *also* try to do this during destroy()
+        // because destroy() could be called for objects in the middle of run as
+        // a result of a kill() scripting call rather than due to system shutdown.
+        mObjectHost->getStorage()->releaseBucket(id());
+
         mObjectScript->stop();
+    }
 }
+
 bool HostedObject::stopped() const {
     return (mContext->stopped() || destroyed);
 }

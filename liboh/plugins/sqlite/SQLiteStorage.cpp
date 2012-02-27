@@ -451,7 +451,11 @@ void SQLiteStorage::leaseBucket(const Bucket& bucket) {
 }
 
 void SQLiteStorage::releaseBucket(const Bucket& bucket) {
-    // Have the storage thread release the lease
+    // Have the storage thread release the lease. It's possible to get these
+    // calls on final cleanup (after stop() was called) so we need to make sure
+    // we can still safely do this
+    if (mIOService == NULL) return;
+
     mIOService->post(
         std::tr1::bind(&SQLiteStorage::releaseLease, this, bucket),
         "SQLiteStorage::releaseLease"

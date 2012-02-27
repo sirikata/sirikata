@@ -379,6 +379,11 @@ void CassandraStorage::leaseBucket(const Bucket& bucket) {
 void CassandraStorage::releaseBucket(const Bucket& bucket) {
     // Have the storage thread release the lease
     SILOG(cassandra-storage, detailed, "Received releaseBucket call, dispatching handler to remove lease request.");
+
+    // It's possible to get these calls on final cleanup (after stop() was
+    // called) so we need to make sure we can still safely do this
+    if (mIOService == NULL) return;
+
     mIOService->post(
         std::tr1::bind(&CassandraStorage::releaseLease, this, bucket),
         "SQLiteStorage::releaseLease"
