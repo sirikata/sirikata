@@ -265,6 +265,7 @@ void JSPositionListener::iFinishLoadMesh(
 
     mVisual = data;
 
+    v8::Locker locker(mCtx->mIsolate);
     v8::Isolate::Scope iscope(mCtx->mIsolate);
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(ctx->mContext);

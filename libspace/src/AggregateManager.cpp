@@ -39,6 +39,11 @@
 
 #include <sirikata/core/transfer/AggregatedTransferPool.hpp>
 
+#include <sirikata/core/transfer/URL.hpp>
+#include <json_spirit/json_spirit.h>
+
+#include <sirikata/core/transfer/OAuthHttpManager.hpp>
+
 #if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS
 #define snprintf _snprintf
 #endif
@@ -57,9 +62,21 @@ using namespace Mesh;
 
 AggregateManager::AggregateManager(LocationService* loc, Transfer::OAuthParamsPtr oauth, const String& username)
   : mAggregationThread(NULL),
+    mAggregationService(new Network::IOService("AggregateManager")),
+    mAggregationStrand(mAggregationService->createStrand("AggregateManager")),
+    mIOWork(new Network::IOWork(mAggregationService, "Aggregation Work")),
     mLoc(loc),
     mOAuth(oauth),
-    mCDNUsername(username)
+    mCDNUsername(username),
+    mModelTTL(Duration::minutes(10)),
+    mCDNKeepAlivePoller(
+        new Poller(
+            mAggregationStrand,
+            std::tr1::bind(&AggregateManager::sendKeepAlives, this),
+            "AggregateManager CDN Keep-Alive Poller",
+            Duration::seconds(30)
+        )
+    )
 {
     mModelsSystem = NULL;
     if (ModelsSystemFactory::getSingleton().hasConstructor("any"))
@@ -67,21 +84,24 @@ AggregateManager::AggregateManager(LocationService* loc, Transfer::OAuthParamsPt
 
     mTransferMediator = &(Transfer::TransferMediator::getSingleton());
 
-    mAggregationService = new Network::IOService("AggregateManager");
-    mAggregationStrand = mAggregationService->createStrand("AggregateManager");
-    mIOWork = new Network::IOWork(mAggregationService, "Aggregation Work");
-
     static char x = '1';
     mTransferPool = mTransferMediator->registerClient<Transfer::AggregatedTransferPool>("SpaceAggregator_"+x);
     x++;
 
     // Start the processing thread
-    mAggregationThread = new Thread( std::tr1::bind(&AggregateManager::aggregationThreadMain, this) );        
-    
+    mAggregationThread = new Thread( std::tr1::bind(&AggregateManager::aggregationThreadMain, this) );
+
     removeStaleLeaves();
+
+    mCDNKeepAlivePoller->start();
 }
 
 AggregateManager::~AggregateManager() {
+    // We need to make sure we clean this up before the IOService and IOStrand
+    // it's running on.
+    mCDNKeepAlivePoller->stop();
+    delete mCDNKeepAlivePoller;
+
     // Shut down the main processing thread
     delete mIOWork;
     mIOWork = NULL;
@@ -131,12 +151,12 @@ bool AggregateManager::cleanUpChild(const UUID& parent_id, const UUID& child_id)
     // remove the leaf object or cleanup the parent pointer for the aggregate
     // (since we sometimes walk up parent pointers and it will clearly not be
     // valid anymore).
-    
+
     if (mAggregateObjects.find(child_id) == mAggregateObjects.end()) {
       return true;
-    }        
+    }
 
-    if (!mAggregateObjects[child_id]->leaf) {        
+    if (!mAggregateObjects[child_id]->leaf) {
         // Aggregate that's getting removed because it only has one child
         // left, just remove the parent pointer
         mAggregateObjects[child_id]->mParentUUID = UUID::null();
@@ -163,7 +183,7 @@ void AggregateManager::removeAggregate(const UUID& uuid) {
 void AggregateManager::addChild(const UUID& uuid, const UUID& child_uuid) {
   std::vector<AggregateObjectPtr>& children = getChildren(uuid);
 
-  if ( ! findChild(children, child_uuid) ) {    
+  if ( ! findChild(children, child_uuid) ) {
     boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
 
     if (mAggregateObjects.find(child_uuid) == mAggregateObjects.end()) {
@@ -203,20 +223,20 @@ void AggregateManager::removeChild(const UUID& uuid, const UUID& child_uuid) {
   AGG_LOG(detailed, "removeChild:  "  << uuid.toString() << " CHILD " << child_uuid.toString() << "\n");
 
   std::vector<AggregateObjectPtr>& children = getChildren(uuid);
-  
-  
 
-  if ( findChild(children, child_uuid)  ) {        
-    removeChild( children, child_uuid );    
+
+
+  if ( findChild(children, child_uuid)  ) {
+    removeChild( children, child_uuid );
 
     boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
 
     // Cleans up the child if necessary, or makes sure it doesn't still refer to
     // this object anymore. See cleanUpChild for details.
     bool child_removed = cleanUpChild(uuid, child_uuid);
-    
-    addDirtyAggregates(uuid);        
-    
+
+    addDirtyAggregates(uuid);
+
     mAggregateGenerationStartTime =  Timer::now();
 
     mAggregationStrand->post(
@@ -245,7 +265,7 @@ void AggregateManager::generateAggregateMesh(const UUID& uuid, const Duration& d
 
 void AggregateManager::generateAggregateMesh(const UUID& uuid, AggregateObjectPtr aggObject, const Duration& delayFor) {
   if (mModelsSystem == NULL) return;
-  if (mDirtyAggregateObjects.find(uuid) != mDirtyAggregateObjects.end()) return; 
+  if (mDirtyAggregateObjects.find(uuid) != mDirtyAggregateObjects.end()) return;
 
   AGG_LOG(detailed,"Setting up aggregate " << uuid << " to generate aggregate mesh with " << aggObject->mChildren.size() << " in " << delayFor);
   mAggregationStrand->post(
@@ -257,14 +277,14 @@ void AggregateManager::generateAggregateMesh(const UUID& uuid, AggregateObjectPt
 
 void AggregateManager::generateAggregateMeshAsyncIgnoreErrors(const UUID uuid, Time postTime, bool generateSiblings) {
 	bool retval=generateAggregateMeshAsync(uuid, postTime, generateSiblings);
-	if (!retval) {          
+	if (!retval) {
           SILOG(aggregate,error,"generateAggregateMeshAsync returned false, but no error handling happening" << "\n");
 	}
 }
 
 bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime, bool generateSiblings) {
   Time curTime = Timer::now();
-  
+
   boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
   if (mAggregateObjects.find(uuid) == mAggregateObjects.end()) {
     AGG_LOG(info, uuid.toString() <<" : not found in aggregate objects map" << "\n");
@@ -275,16 +295,16 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
   }
   std::tr1::shared_ptr<AggregateObject> aggObject = mAggregateObjects[uuid];
   lock.unlock();
-  
+
   /*Check if it makes sense to generate the aggregates now. Has the a
     aggregate been updated since the mesh generation command was posted?
     Does LOC contain info about this aggregate and its children?
     Are all the children's meshes available to generate the aggregate? */
-  if (postTime < aggObject->mLastGenerateTime) {        
+  if (postTime < aggObject->mLastGenerateTime) {
     return false;
   }
 
-  if (postTime < mAggregateGenerationStartTime) {    
+  if (postTime < mAggregateGenerationStartTime) {
     return false;
   }
 
@@ -307,7 +327,7 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
 
       return false;
     }
-  }  
+  }
 
   /*Are the meshes of all the children available to generate the aggregate mesh? */
   bool allMeshesAvailable = true;
@@ -348,8 +368,8 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
       }
     }
   }
-  if (!allMeshesAvailable) {   
-    return false;  
+  if (!allMeshesAvailable) {
+    return false;
   }
 
   /* OK to generate the mesh! Go! */
@@ -359,7 +379,7 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
   BoundingSphere3f bnds = mLoc->bounds(uuid);
   float32 bndsX = bnds.center().x;
   float32 bndsY = bnds.center().y;
-  float32 bndsZ = bnds.center().z;  
+  float32 bndsZ = bnds.center().z;
 
   std::tr1::unordered_map<std::string, uint32> meshToStartIdxMapping;
   std::tr1::unordered_map<std::string, uint32> meshToStartMaterialsIdxMapping;
@@ -383,13 +403,15 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
         if (mMeshStore.find(meshName) != mMeshStore.end()) {
           mAggregateObjects[child_uuid]->mMeshdata = mMeshStore[meshName];
         }
-    }    
+    }
   }
 
   // And finally, when we do, perform the merge
-  std::tr1::unordered_set<String> textureSet; // Tracks textures so we can fill in
-                                         // agg_mesh->textures when we're done
-                                         // copying data in.
+
+  // Tracks textures so we can fill in agg_mesh->textures when we're
+  // done copying data in. Also tracks mapping of texture filename ->
+  // original texture URL so we can tell the CDN to reuse that data.
+  std::tr1::unordered_map<String, String> textureSet;
 
   for (uint32 i= 0; i < children.size(); i++) {
     UUID child_uuid = children[i]->mUUID;
@@ -464,12 +486,34 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
       // the texture list when we finish adding all subobjects
       for(MaterialEffectInfoList::const_iterator mat_it = m->materials.begin(); mat_it != m->materials.end(); mat_it++) {
           for(MaterialEffectInfo::TextureList::const_iterator tex_it = mat_it->textures.begin(); tex_it != mat_it->textures.end(); tex_it++)
-              if (!tex_it->uri.empty()) textureSet.insert(tex_it->uri);
+              if (!tex_it->uri.empty()) {
+                  Transfer::URI orig_tex_uri;
+
+                  // We need to handle relative and absolute URIs:
+
+                  // If we can decode a URL, then we may need to handle relative URLs.
+                  Transfer::URL parent_url(meshName);
+                  if (!parent_url.empty()) {
+                      // The URL constructor will figure out absolute/relative, or just fail
+                      // if it can't construct a valid URL.
+                      Transfer::URL deriv_url(parent_url.context(), tex_it->uri);
+                      if (!deriv_url.empty())
+                          orig_tex_uri = Transfer::URI(deriv_url.toString());
+                  }
+
+                  // Otherwise, try to decode as a plain URI, ignoring the original URI. This
+                  // will either succeed with a full URI or fail and return an
+                  // empty URI
+                  if (orig_tex_uri.empty())
+                      orig_tex_uri = Transfer::URI(tex_it->uri);
+
+                  textureSet[tex_it->uri] = orig_tex_uri.toString();
+              }
       }
       // Copy Lights
       agg_mesh->lights.insert(agg_mesh->lights.end(),
           m->lights.begin(),
-          m->lights.end());      
+          m->lights.end());
     }
 
     // And alwasy extract into convenience variables
@@ -561,8 +605,8 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
 
   // We should have all the textures in our textureSet since we looped through
   // all the materials, just fill in the list now.
-  for (std::tr1::unordered_set<String>::iterator it = textureSet.begin(); it != textureSet.end(); it++)
-      agg_mesh->textures.push_back( *it );
+  for (std::tr1::unordered_map<String, String>::iterator it = textureSet.begin(); it != textureSet.end(); it++)
+      agg_mesh->textures.push_back( it->first );
 
   for (uint32 i= 0; i < children.size(); i++) {
     UUID child_uuid = children[i]->mUUID;
@@ -570,8 +614,8 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
     assert( mAggregateObjects.find(child_uuid) != mAggregateObjects.end()) ;
     mAggregateObjects[child_uuid]->mMeshdata = std::tr1::shared_ptr<Meshdata>();
   }
-  
-   
+
+
   String localMeshName = boost::lexical_cast<String>(aggObject->mTreeLevel) + "_aggregate_mesh_" + uuid.toString() + ".dae";
   //Simplify the mesh...
   mMeshSimplifier.simplify(agg_mesh, 5000);
@@ -600,6 +644,54 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
       params["username"] = mCDNUsername;
       params["title"] = String("Aggregate Mesh ") + uuid.toString();
       params["main_filename"] = localMeshName;
+      params["ephemeral"] = "1";
+      params["ttl_time"] = boost::lexical_cast<String>(mModelTTL.seconds());
+      // Translate subfile map to JSON
+      namespace json = json_spirit;
+      json::Value subfiles = json::Object();
+      for (std::tr1::unordered_map<String, String>::iterator it = textureSet.begin(); it != textureSet.end(); it++) {
+
+          String subfile_name = it->first;
+          {
+              // The upload expects only the basename, i.e. the actual
+              // filename. So if we referred to a URL
+              // (meerkat://foo/bar/texture.png) or filename with
+              // directories (/foo/bar/texture.png) we'd need to
+              // extract just the filename.
+
+              // Use URL to strip of any URL parts to get a normal looking path
+              Transfer::URL subfile_name_as_url(subfile_name);
+              if (!subfile_name_as_url.empty())
+                  subfile_name = subfile_name_as_url.fullpath();
+
+              // Then extract just the last element, i.e. the filename
+              std::size_t filename_pos = subfile_name.rfind("/");
+              if (filename_pos != String::npos)
+                  subfile_name = subfile_name.substr(filename_pos+1);
+          }
+
+          String tex_path = Transfer::URL(it->second).fullpath();
+          {
+              // Sigh. Yet again, we need to modify the order of the filename
+              // and version number again.
+
+              std::size_t upload_filename_pos = tex_path.rfind("/");
+              assert(upload_filename_pos != String::npos);
+              std::size_t upload_num_pos = tex_path.rfind("/", upload_filename_pos-1);
+              assert(upload_num_pos != String::npos);
+
+              String num_part = tex_path.substr(upload_num_pos, (upload_filename_pos-upload_num_pos));
+              String filename_part = tex_path.substr(upload_filename_pos+1);
+              tex_path = tex_path.substr(0, upload_num_pos+1) + filename_part + num_part;
+          }
+
+          // Explicitly override the separator to ensure we don't
+          // use parts of the filename to generate a hierarchy,
+          // i.e. so that foo.png remains foo.png instead of
+          // becoming foo { png : value }.
+          subfiles.put(subfile_name, tex_path, '\0');
+      }
+      params["subfiles"] = json::write(subfiles);
 
       AtomicValue<bool> finished(false);
       Transfer::URI generated_uri;
@@ -643,6 +735,12 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
       // so we need to extract the number at the end so we can insert it between
       // the format and the filename.
       String cdnMeshName = generated_uri.toString();
+      // Store this info and mark it for TTL refresh 3/4 through the TTL. We
+      // only want the path part (i.e. /username/foo/model.dae/0) and not the
+      // protocol + host part (i.e. meerkat://foo.com:8000).
+      aggObject->cdnBaseName = Transfer::URL(cdnMeshName).fullpath();
+      aggObject->refreshTTL = mLoc->context()->recentSimTime() + (mModelTTL*.75);
+      // And extract the URL to hand out to users
       std::size_t upload_num_pos = cdnMeshName.rfind("/");
       assert(upload_num_pos != String::npos);
       String mesh_num_part = cdnMeshName.substr(upload_num_pos+1);
@@ -652,14 +750,14 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
 
       //Update loc
       mLoc->updateLocalAggregateMesh(uuid, cdnMeshName);
-      
+
   }
   else {
       std::string cdnMeshName = "file:///home/tahir/Desktop/aggregates_meshes/" + localMeshName;
       agg_mesh->uri = cdnMeshName;
 
       String modelFilename = std::string("/home/tahir/Desktop/aggregates_meshes/") + localMeshName;
-      std::ofstream model_ostream(modelFilename.c_str(), std::ofstream::out | std::ofstream::binary);     
+      std::ofstream model_ostream(modelFilename.c_str(), std::ofstream::out | std::ofstream::binary);
       bool converted = mModelsSystem->convertVisual(agg_mesh, "colladamodels", model_ostream);
       model_ostream.close();
       if (!converted) {
@@ -714,7 +812,7 @@ void AggregateManager::metadataFinished(Time t, const UUID uuid, const UUID chil
     AGG_LOG(warn, "Failed metadata download: Retrying...: Response time: "   << ( Timer::now() - t ) << "\n");
     Transfer::TransferRequestPtr req(
                                        new Transfer::MetadataRequest( Transfer::URI(meshName), 1.0, std::tr1::bind(
-                                       &AggregateManager::metadataFinished, this, t, uuid, child_uuid, meshName, 
+                                       &AggregateManager::metadataFinished, this, t, uuid, child_uuid, meshName,
                                        attemptNo+1, std::tr1::placeholders::_1, std::tr1::placeholders::_2)));
 
     mTransferPool->addRequest(req);
@@ -763,13 +861,13 @@ void AggregateManager::chunkFinished(Time t, const UUID uuid, const UUID child_u
 std::vector<AggregateManager::AggregateObjectPtr >& AggregateManager::getChildren(const UUID& uuid) {
   boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
   static std::vector<AggregateObjectPtr> emptyVector;
-  
+
   if (mAggregateObjects.find(uuid) == mAggregateObjects.end()) {
     return emptyVector;
   }
-  
+
   std::vector<AggregateObjectPtr>& children = mAggregateObjects[uuid]->mChildren;
-  
+
   return children;
 }
 
@@ -864,11 +962,11 @@ void AggregateManager::generateMeshesFromQueue(Time postTime) {
 
         if (aggObject->generatedLastRound) continue;
 
-        returner=generateAggregateMeshAsync(aggObject->mUUID, curTime, false);        
+        returner=generateAggregateMeshAsync(aggObject->mUUID, curTime, false);
 
         if (returner || aggObject->mNumFailedGenerationAttempts > 20) {
           aggObject->mNumFailedGenerationAttempts = 0;
-          it->second.pop_front();          
+          it->second.pop_front();
         }
         else {
           aggObject->mNumFailedGenerationAttempts++;
@@ -923,32 +1021,32 @@ void AggregateManager::addDirtyAggregates(UUID uuid) {
 }
 
 bool AggregateManager::findChild(std::vector<AggregateManager::AggregateObjectPtr>& v,
-                                 const UUID& uuid) 
+                                 const UUID& uuid)
 {
   for (uint32 i=0; i < v.size(); i++) {
     if (v[i]->mUUID == uuid) {
       return true;
     }
   }
-  
+
   return false;
 }
 
 void AggregateManager::removeChild(std::vector<AggregateManager::AggregateObjectPtr>& v,
-                                   const UUID& uuid) 
+                                   const UUID& uuid)
 {
   for (uint32 i=0; i < v.size(); i++) {
     if (v[i]->mUUID == uuid) {
       v.erase(v.begin() + i);
       return;
     }
-  }   
+  }
 }
 
 void AggregateManager::removeStaleLeaves() {
   boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
 
-  std::tr1::unordered_map<UUID, AggregateObjectPtr, UUID::Hasher >::iterator it = 
+  std::tr1::unordered_map<UUID, AggregateObjectPtr, UUID::Hasher >::iterator it =
                                                            mAggregateObjects.begin();
   std::vector<UUID> markedForRemoval;
 
@@ -956,14 +1054,14 @@ void AggregateManager::removeStaleLeaves() {
     if (it->second->leaf && it->second.use_count() == 1) {
       markedForRemoval.push_back(it->first);
     }
-    
+
     it++;
   }
 
   for (uint32 i = 0; i < markedForRemoval.size(); i++) {
-    mAggregateObjects.erase(markedForRemoval[i]);    
+    mAggregateObjects.erase(markedForRemoval[i]);
   }
- 
+
 
   mAggregationStrand->post(
         Duration::seconds(60),
@@ -972,6 +1070,106 @@ void AggregateManager::removeStaleLeaves() {
   );
 
 }
+
+
+namespace {
+// Return true if the service is a default value
+bool ServiceIsDefault(const String& s) {
+    if (!s.empty() && s != "http" && s != "80")
+        return false;
+    return true;
+}
+// Return empty if this is already empty or the default for this
+// service. Otherwise, return the old value
+String ServiceIfNotDefault(const String& s) {
+    if (!ServiceIsDefault(s))
+        return s;
+    return "";
+}
+}
+
+
+void AggregateManager::sendKeepAlives() {
+    // Don't bother unless we're uploading to the real CDN
+    if (!mOAuth || mCDNUsername.empty())
+        return;
+
+    Time tnow = mLoc->context()->recentSimTime();
+
+    // This could definitely be more efficient...
+    boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
+    for(AggregateObjectsMap::iterator it = mAggregateObjects.begin(); it != mAggregateObjects.end(); it++) {
+        if (it->second->refreshTTL != Time::null() &&
+            it->second->refreshTTL < tnow &&
+            !it->second->cdnBaseName.empty())
+        {
+            String keep_alive_path = "/api/keepalive" + it->second->cdnBaseName;
+            // Currently there's no keepalive support in the Transfer
+            // libraries, so we construct and send the http request ourselves.
+
+            Network::Address cdn_addr(mOAuth->hostname, ServiceIfNotDefault(mOAuth->service));
+            String full_oauth_hostinfo = mOAuth->hostname;
+            if (!ServiceIsDefault(mOAuth->service))
+                full_oauth_hostinfo += ":" + mOAuth->service;
+
+            Transfer::HttpManager::Headers headers;
+            headers["Host"] = full_oauth_hostinfo;
+
+            Transfer::HttpManager::QueryParameters query_params;
+            query_params["username"] = mCDNUsername;
+            query_params["ttl"] = boost::lexical_cast<String>(mModelTTL.seconds());
+
+            AGG_LOG(detailed, "Requesting TTL refresh for " << it->first);
+            Transfer::OAuthHttpManager oauth_http(mOAuth);
+            oauth_http.get(
+                cdn_addr, keep_alive_path,
+                std::tr1::bind(&AggregateManager::handleKeepAliveResponse, this, it->first, _1, _2, _3),
+                headers, query_params
+            );
+        }
+    }
+}
+
+void AggregateManager::handleKeepAliveResponse(const UUID& objid,
+    std::tr1::shared_ptr<Transfer::HttpManager::HttpResponse> response,
+    Transfer::HttpManager::ERR_TYPE error, const boost::system::error_code& boost_error)
+{
+    // Check a bunch of error conditions, leaving the refresh TTL setting for
+    // the next iteration is something went wrong.
+
+    if (error == Transfer::HttpManager::REQUEST_PARSING_FAILED) {
+        AGG_LOG(error, "Request parsing failed during aggregate TTL refresh (" << objid << ")");
+        return;
+    } else if (error == Transfer::HttpManager::RESPONSE_PARSING_FAILED) {
+        AGG_LOG(error, "Response parsing failed during aggregate TTL refresh (" << objid << ")");
+        return;
+    } else if (error == Transfer::HttpManager::BOOST_ERROR) {
+        AGG_LOG(error, "A boost error happened during aggregate TTL refresh (" << objid << "). Boost error = " << boost_error.message());
+        return;
+    } else if (error != Transfer::HttpManager::SUCCESS) {
+        AGG_LOG(error, "An unknown error happened during aggregate TTL refresh. (" << objid << ")");
+        return;
+    }
+
+    if (response->getStatusCode() != 200) {
+        AGG_LOG(error, "HTTP status code = " << response->getStatusCode() << " instead of 200 during aggregate TTL refresh (" << objid << ")");
+        return;
+    }
+
+    Transfer::DenseDataPtr response_data = response->getData();
+    if (response_data && response_data->size() != 0) {
+        AGG_LOG(error, "Got non-empty response durring aggregate TTL refresh: " << response_data->asString());
+        return;
+    }
+
+    // If all these passed, then we were successful. Setup next refresh time
+    AGG_LOG(detailed, "Successfully refreshed TTL for " << objid);
+    boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
+    AggregateObjectsMap::iterator it = mAggregateObjects.find(objid);
+    if (it == mAggregateObjects.end()) return;
+    it->second->refreshTTL = mLoc->context()->recentSimTime() + (mModelTTL*.75);
+}
+
 
 
 }

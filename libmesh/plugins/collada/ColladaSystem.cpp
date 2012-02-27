@@ -59,6 +59,8 @@
 #include <boost/iostreams/write.hpp>
 #include <boost/filesystem.hpp>
 
+#include <sirikata/core/transfer/URL.hpp>
+
 #define COLLADA_LOG(lvl,msg) SILOG(collada, lvl, msg);
 
 using namespace std;
@@ -120,11 +122,68 @@ bool ColladaSystem::canLoad(Transfer::DenseDataPtr data) {
     return false;
 }
 
+namespace {
+String normalizeFilename(const String& fname) {
+    String result = fname;
+
+    // Get rid of prefixed ./
+    if (result.size() > 2 && result[0] == '.' && result[1] == '/')
+        result = result.substr(2);
+
+    // There might be more things we should do to this...
+
+    return result;
+}
+}
+
 void ColladaSystem::addHeaderData(const Transfer::RemoteFileMetadata& metadata, Mesh::MeshdataPtr mesh) {
     Mesh::ProgressiveDataPtr progData(new Mesh::ProgressiveData());
 
     const FileHeaders& headers = metadata.getHeaders();
 
+    // Texture "Redirects" - Sometimes textures (or subfiles in general) are
+    // reused from another asset, in which case we can point directly to
+    // it. Using a relative path for download will work, but when trying to
+    // reuse the file again (e.g. in aggregation) you need to refer to the
+    // original. This just swaps out the old filename for the real URL.
+    //
+    // First, reconstruct the subfile map from the headers
+    Transfer::URL mesh_url(metadata.getURI());
+    typedef std::map<String,String> SubfileMap;
+    SubfileMap subfiles;
+    for(int32 i = 0; i < INT_MAX; i++) {
+        String name_str = "Subfile-" + boost::lexical_cast<String>(i) + "-Name";
+        String path_str = "Subfile-" + boost::lexical_cast<String>(i) + "-Path";
+
+        FileHeaders::const_iterator name_it = headers.find(name_str);
+        if (name_it == headers.end()) break;
+        FileHeaders::const_iterator path_it = headers.find(path_str);
+        if (path_it == headers.end()) break;
+
+        Transfer::URL subfile_url(mesh_url.context(), path_it->second);
+        String subfile_url_str = subfile_url.toString();
+
+        subfiles[name_it->second] = subfile_url_str;
+    }
+    // Then, if not empty, replace texture names with URLs. There are two places
+    // we have texture names. The list of textures:
+    for(Sirikata::Mesh::TextureList::iterator tex_it = mesh->textures.begin(); tex_it != mesh->textures.end(); tex_it++) {
+        String normalizedTexName = normalizeFilename(*tex_it);
+        SubfileMap::const_iterator subfile_it = subfiles.find(normalizedTexName);
+        if (subfile_it != subfiles.end())
+            *tex_it = subfile_it->second;
+    }
+    // And the texture names in materials
+    for(Sirikata::Mesh::MaterialEffectInfoList::iterator it = mesh->materials.begin(); it != mesh->materials.end(); it++) {
+        for(Sirikata::Mesh::MaterialEffectInfo::TextureList::iterator tex_it = it->textures.begin(); tex_it != it->textures.end(); tex_it++) {
+            String normalizedTexName = normalizeFilename(tex_it->uri);
+            SubfileMap::const_iterator subfile_it = subfiles.find(normalizedTexName);
+            if (subfile_it != subfiles.end())
+                tex_it->uri = subfile_it->second;
+        }
+    }
+
+    // Progressive Info
     FileHeaders::const_iterator findProgHash = headers.find("Progresive-Stream");
     if (findProgHash == headers.end()) {
         return;

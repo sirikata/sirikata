@@ -141,7 +141,7 @@ public:
     //context on mEvalContextStack.
     v8::Handle<v8::Value> pushEvalContextScopeDirectory(const String& newDir);
     v8::Handle<v8::Value> popEvalContextScopeDirectory();
-    
+
     /**
        Returns true if context eval stack is not empty and if the top context on
        the stack allows operation associated with whatCap on jspres.  Returns
@@ -341,13 +341,13 @@ protected:
 
     void storageCommitCallback(
         JSContextStruct* jscont, v8::Persistent<v8::Function> cb,
-        bool success, OH::Storage::ReadSet* rs,Liveness::Token objAlive,
+        OH::Storage::Result result, OH::Storage::ReadSet* rs,Liveness::Token objAlive,
         Liveness::Token ctxAlive);
 
     void storageCountCallback(JSContextStruct* jscont, v8::Persistent<v8::Function> cb,
         bool success, int32 count,Liveness::Token objAlive,Liveness::Token ctxAlive);
 
-    void setRestoreScriptCallback(
+    void iSetRestoreScriptCallback(
         JSContextStruct* jscont, v8::Persistent<v8::Function> cb, bool success,
         Liveness::Token,Liveness::Token ctxAlive);
 
@@ -407,7 +407,7 @@ protected:
 
     void iStorageCommitCallback(
         JSContextStruct* jscont, v8::Persistent<v8::Function> cb,
-        bool success, OH::Storage::ReadSet* rs,Liveness::Token objAlive,
+        OH::Storage::Result result, OH::Storage::ReadSet* rs,Liveness::Token objAlive,
         Liveness::Token ctxAlive);
     void iStorageCountCallback(
         JSContextStruct* jscont, v8::Persistent<v8::Function> cb,

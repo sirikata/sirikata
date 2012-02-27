@@ -102,7 +102,10 @@ public:
     static ProxyEntity *fromMovableObject(Ogre::MovableObject *obj);
 
     // PositionListener
-    virtual void updateLocation(ProxyObjectPtr proxy, const TimedMotionVector3f &newLocation, const TimedMotionQuaternion& newOrient, const BoundingSphere3f& newBounds,const SpaceObjectReference& sporef);
+    virtual void updateLocation(
+        ProxyObjectPtr proxy, const TimedMotionVector3f &newLocation,
+        const TimedMotionQuaternion& newOrient, const BoundingSphere3f& newBounds,
+        const SpaceObjectReference& sporef);
 
     // ProxyObjectListener
     virtual void validated(ProxyObjectPtr proxy);
@@ -113,8 +116,32 @@ public:
     virtual void onSetMesh (ProxyObjectPtr proxy, Transfer::URI const& newMesh,const SpaceObjectReference& sporef);
     virtual void onSetScale (ProxyObjectPtr proxy, float32 newScale ,const SpaceObjectReference& sporef);
 
-
     void extrapolateLocation(TemporalValue<Location>::Time current);
+
+private:
+
+    void iUpdateLocation(
+        ProxyObjectPtr proxy, const TimedMotionVector3f &newLocation,
+        const TimedMotionQuaternion& newOrient,
+        const BoundingSphere3f& newBounds,
+        const SpaceObjectReference& sporef, Liveness::Token lt);
+
+    // ProxyObjectListener
+    void iValidated(ProxyObjectPtr proxy,Liveness::Token lt);
+    void iInvalidated(ProxyObjectPtr proxy, bool permanent,Liveness::Token lt);
+    void iDestroyed(ProxyObjectPtr proxy,Liveness::Token lt);
+
+    // interface from MeshListener
+    void iOnSetMesh (
+        ProxyObjectPtr proxy, Transfer::URI const& newMesh,
+        const SpaceObjectReference& sporef,Liveness::Token lt);
+    
+    void iOnSetScale (
+        ProxyObjectPtr proxy, float32 newScale,
+        const SpaceObjectReference& sporef,Liveness::Token lt);
+
+    void iHandleDestroyTimeout(Liveness::Token lt);
+    
 };
 typedef std::tr1::shared_ptr<Entity> EntityPtr;
 

@@ -148,6 +148,13 @@ protected:
     // Objects which have outstanding updates to location information
     // from the physics engine.
     UUIDSet physicsUpdates;
+    // TODO(ewencp) This is kind of a hack. If we generate updates too quickly
+    // we can overwhelm the client and the networking, making it hard for more
+    // recent updates to get out. This is common for bullet since it is
+    // constantly updating positions. To avoid this, we trigger the update
+    // policy less frequently, possibly at the cost of higher average latency
+    // for updates to reach the OH.
+    uint32 mUpdateIteration;
 
     typedef std::tr1::unordered_map<UUID, Transfer::ResourceDownloadTaskPtr, UUID::Hasher> MeshDownloadMap;
     MeshDownloadMap mMeshDownloads;

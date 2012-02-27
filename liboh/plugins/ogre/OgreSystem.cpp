@@ -234,7 +234,21 @@ bool OgreSystem::initialize(ConnectionEventProvider* cevtprovider, VWObjectPtr v
 }
 
 
-void OgreSystem::handleUIReady() {
+void OgreSystem::handleUIReady()
+{
+    simStrand->post(
+        std::tr1::bind(&OgreSystem::iHandleUIReady,this,
+            livenessToken()),
+        "OgreSystem::iHandleUIReady"
+    );
+}
+
+
+void OgreSystem::iHandleUIReady(Liveness::Token osAlive)
+{
+    if (!osAlive)
+        return;
+    
     // Currently the only blocker for being ready is that the UI loaded. If we
     // end up with more, we may need to make this just set a flag and then check
     // if all conditions are met.

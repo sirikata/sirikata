@@ -11,8 +11,7 @@
 #include <sirikata/core/transfer/URL.hpp>
 #include <boost/lexical_cast.hpp>
 
-#include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/json_parser.hpp>
+#include <json_spirit/json_spirit.h>
 
 AUTO_SINGLETON_INSTANCE(Sirikata::Transfer::MeerkatNameHandler);
 AUTO_SINGLETON_INSTANCE(Sirikata::Transfer::MeerkatChunkHandler);
@@ -535,42 +534,37 @@ void MeerkatUploadHandler::request_finished(std::tr1::shared_ptr<HttpManager::Ht
     DenseDataPtr response_data = response->getData();
 
     // Parse the JSON response
-    using namespace boost::property_tree;
-    ptree pt;
-    try {
-        std::stringstream resp_json(response_data->asString());
-        read_json(resp_json, pt);
-    }
-    catch(json_parser::json_parser_error exc) {
-        SILOG(transfer, error, "Failed to parse upload response as JSON: " << response_data->asString() << " (" << exc.what() << ")  (" << request->getIdentifier() << ")");
+    namespace json = json_spirit;
+    json::Value parsed;
+    if (!json::read(response_data->asString(), parsed)) {
+        SILOG(transfer, error, "Failed to parse upload response as JSON: " << response_data->asString() << " (" << request->getIdentifier() << ")");
         return;
     }
 
     // Basic success check
-    boost::optional<bool> reported_success = pt.get_optional<bool>("success");
-    if (!reported_success) {
+    if (!parsed.contains("success") || !parsed.get("success").isBool()) {
         SILOG(transfer, error, "Upload response didn't contain boolean success flag (" << request->getIdentifier() << ")");
         callback(bad);
         return;
     }
-    if (!(reported_success.get())) {
-        String reported_error = pt.get("error", "(No error message reported)");
+    if (!parsed.getBool("success")) {
+        String reported_error = parsed.getString("error", "(No error message reported)");
         SILOG(transfer, error, "Upload failed: " << reported_error << " (" << request->getIdentifier() << ")");
         callback(bad);
         return;
     }
 
     // Task ID
-    boost::optional<String> reported_task_id = pt.get_optional<String>("task_id");
-    if (!reported_task_id) {
+    if (!parsed.contains("task_id") || !parsed.get("task_id").isString()) {
         SILOG(transfer, error, "Upload indicated initial success, but couldn't find task (" << request->getIdentifier() << ")");
         callback(bad);
         return;
     }
 
-    SILOG(transfer, detailed, "Upload succeeded, starting to track task id = " << reported_task_id.get() << " (" << request->getIdentifier() << ")");
+    String reported_task_id = parsed.getString("task_id");
+    SILOG(transfer, detailed, "Upload succeeded, starting to track task id = " << reported_task_id << " (" << request->getIdentifier() << ")");
     // 30 retries * .5s = 15s
-    requestStatus(request, reported_task_id.get(), callback, 30);
+    requestStatus(request, reported_task_id, callback, 30);
 }
 
 void MeerkatUploadHandler::requestStatus(UploadRequestPtr request, const String& task_id, UploadCallback callback, int32 retries) {
@@ -629,28 +623,24 @@ void MeerkatUploadHandler::handleRequestStatusResult(
 
     DenseDataPtr response_data = response->getData();
     // Parse the JSON response
-    using namespace boost::property_tree;
-    ptree pt;
-    try {
-        std::stringstream resp_json(response_data->asString());
-        read_json(resp_json, pt);
-    }
-    catch(json_parser::json_parser_error exc) {
-        SILOG(transfer, error, "Failed to parse upload status check response as JSON: " << response_data->asString() << " (" << exc.what() << ")  (" << request->getIdentifier() << ")");
+    namespace json = json_spirit;
+    json::Value parsed;
+    if (!json::read(response_data->asString(), parsed)) {
+        SILOG(transfer, error, "Failed to parse upload status check response as JSON: " << response_data->asString() << " (" << request->getIdentifier() << ")");
         return;
     }
 
-    boost::optional<String> reported_state = pt.get_optional<String>("state");
-    if (!reported_state) {
+    if (!parsed.contains("state") || !parsed.get("state").isString()) {
         SILOG(transfer, error, "No state reported in status check (" << request->getIdentifier() << ")");
         callback(bad);
         return;
     }
 
-    if (reported_state.get() != "SUCCESS" && reported_state.get() != "FAILURE") {
+    String reported_state = parsed.getString("state");
+    if (reported_state != "SUCCESS" && reported_state != "FAILURE") {
         // Some other notice, like PENDING, keep waiting until we get something
         // different
-        SILOG(transfer, detailed, "Upload still processing: " << reported_state.get() << " (" << request->getIdentifier() << ")");
+        SILOG(transfer, detailed, "Upload still processing: " << reported_state << " (" << request->getIdentifier() << ")");
         HttpManager::getSingleton().postCallback(
             Duration::seconds(0.5),
             std::tr1::bind(&MeerkatUploadHandler::requestStatus, this, request, task_id, callback, --retries),
@@ -659,13 +649,13 @@ void MeerkatUploadHandler::handleRequestStatusResult(
         return;
     }
 
-    if (reported_state.get() == "FAILURE") {
+    if (reported_state == "FAILURE") {
         SILOG(transfer, error, "Upload failed during processing (" << request->getIdentifier() << ")");
         callback(bad);
         return;
     }
 
-    String asset_path = pt.get<String>("path");
+    String asset_path = parsed.getString("path");
     SILOG(transfer, detailed, "Upload succeeded and got path " << asset_path << " (" << request->getIdentifier() << ")");
 
     // Construct the meerkat:// URL for this asset. We need server

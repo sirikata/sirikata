@@ -101,8 +101,8 @@ function testEraseUnknown()
     system.storageCommit( function (success)
                    {
                        ++numCallbacks;
-                       if (success)
-                           mTest.fail('Got successful erase for imaginary data');
+                       if (!success)
+                           mTest.fail('Erasing non-existant data failed: ' + success);
 
                        testEraseWrittenField();
                    });
@@ -286,5 +286,3 @@ function compareFieldsInOneToTwo(obj1, obj2, where)
     
     return true;
 }
-
-

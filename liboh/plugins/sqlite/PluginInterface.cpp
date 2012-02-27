@@ -43,6 +43,7 @@ namespace Sirikata {
 static void InitPluginOptions() {
     Sirikata::InitializeClassOptions ico("sqlitestorage",NULL,
         new Sirikata::OptionValue("db", "storage.db", Sirikata::OptionValueType<String>(), "Database file to store data to."),
+        new Sirikata::OptionValue("lease-duration", "30s", Sirikata::OptionValueType<Duration>(), "Duration to register leases for. Longer times require less overhead, but also mean longer delays if an object or object host dies without cleaning up."),
         NULL);
 
     Sirikata::InitializeClassOptions icop("sqlitepersistedset",NULL,
@@ -59,8 +60,9 @@ static OH::Storage* createSQLiteStorage(ObjectHostContext* ctx, const String& ar
     optionsSet->parse(args);
 
     String db = optionsSet->referenceOption("db")->as<String>();
+    Duration lease_duration = optionsSet->referenceOption("lease-duration")->as<Duration>();
 
-    return new OH::SQLiteStorage(ctx, db);
+    return new OH::SQLiteStorage(ctx, db, lease_duration);
 }
 
 static OH::PersistedObjectSet* createSQLitePersistedObjectSet(ObjectHostContext* ctx, const String& args) {

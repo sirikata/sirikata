@@ -35,9 +35,29 @@
 #include <sirikata/core/network/IOWork.hpp>
 
 #define TABLE_NAME "persistence"
+#define LEASE_KEY "_____lease_____"
 
 namespace Sirikata {
 namespace OH {
+
+/** Implementation Notes
+ *  --------------------
+ *
+ *  This implementation is fairly straightforward since SQLite takes
+ *  care of almost everything for us. A single table 'persistence'
+ *  holds all data in rows of (object, key, value). All operations
+ *  except leases are trivially handled through normal SQLite
+ *  transactions.
+ *
+ *  Leases require a little more work since they span transactions. We
+ *  use a special key to keep track of the lessee and expiration. When
+ *  transactions are initiated we make sure we have the lease, and
+ *  also setup renewals. Checking at the beginning of the transaction
+ *  is sufficient because as soon as we read the data, we have a
+ *  reader lock and the transaction won't complete if someone else
+ *  tried to write to it.
+ */
+
 
 SQLiteStorage::StorageAction::StorageAction()
  : type(Error),
@@ -67,8 +87,8 @@ SQLiteStorage::StorageAction& SQLiteStorage::StorageAction::operator=(const Stor
     return *this;
 }
 
-bool SQLiteStorage::StorageAction::execute(SQLiteDBPtr db, const Bucket& bucket, ReadSet* rs) {
-    bool success = true;
+Storage::Result SQLiteStorage::StorageAction::execute(SQLiteDBPtr db, const Bucket& bucket, ReadSet* rs) {
+    Result result = SUCCESS;
     switch(type) {
         // Read and Compare are identical except that read stores the value and
         // compare checks against its reference data.
@@ -84,6 +104,7 @@ bool SQLiteStorage::StorageAction::execute(SQLiteDBPtr db, const Bucket& bucket,
               bool newStep = true;
               bool locked = false;
               rc = sqlite3_prepare_v2(db->db(), value_query.c_str(), -1, &value_query_stmt, (const char**)&remain);
+              bool success = true;
               success = success && !SQLite::check_sql_error(db->db(), rc, NULL, "Error preparing value query statement");
               if (rc==SQLITE_OK) {
                   rc = sqlite3_bind_text(value_query_stmt, 1, key.c_str(), (int)key.size(), SQLITE_TRANSIENT);
@@ -123,6 +144,9 @@ bool SQLiteStorage::StorageAction::execute(SQLiteDBPtr db, const Bucket& bucket,
               if (newStep) { // no rows were found, key is missing
                   success = false;
               }
+
+              if (!success)
+                  result = TRANSACTION_ERROR;
           }
         break;
       case ReadRange:
@@ -135,7 +159,8 @@ bool SQLiteStorage::StorageAction::execute(SQLiteDBPtr db, const Bucket& bucket,
               char* remain;
               sqlite3_stmt* value_query_stmt;
               rc = sqlite3_prepare_v2(db->db(), value_query.c_str(), -1, &value_query_stmt, (const char**)&remain);
-              SQLite::check_sql_error(db->db(), rc, NULL, "Error preparing value query statement");
+              bool success = true;
+              success = success && !SQLite::check_sql_error(db->db(), rc, NULL, "Error preparing value query statement");
               if (rc==SQLITE_OK){
                   rc = sqlite3_bind_text(value_query_stmt, 1, key.c_str(), (int)key.size(), SQLITE_TRANSIENT);
                   success = success && !SQLite::check_sql_error(db->db(), rc, NULL, "Error binding start key to value query statement");
@@ -168,8 +193,10 @@ bool SQLiteStorage::StorageAction::execute(SQLiteDBPtr db, const Bucket& bucket,
               }
               rc = sqlite3_finalize(value_query_stmt);
               success = success && !SQLite::check_sql_error(db->db(), rc, NULL, "Error finalizing value query statement");
+              if (!success)
+                  result = TRANSACTION_ERROR;
           }
-    break;
+          break;
       case Write:
       case Erase:
           {
@@ -192,6 +219,7 @@ bool SQLiteStorage::StorageAction::execute(SQLiteDBPtr db, const Bucket& bucket,
 
               sqlite3_stmt* value_insert_stmt;
               rc = sqlite3_prepare_v2(db->db(), value_insert.c_str(), -1, &value_insert_stmt, (const char**)&remain);
+              bool success = true;
               success = success && !SQLite::check_sql_error(db->db(), rc, NULL, "Error preparing value insert statement");
 
               rc = sqlite3_bind_text(value_insert_stmt, 1, key.c_str(), (int)key.size(), SQLITE_TRANSIENT);
@@ -212,14 +240,21 @@ bool SQLiteStorage::StorageAction::execute(SQLiteDBPtr db, const Bucket& bucket,
               else {
                   // Check the number of changes that the statement actually
                   // made. This is update, insertion, or deletion. This should
-                  // just be 1 since we expect exactly one change on a write or
-                  // erase.
+                  // just be 1 since we expect exactly one change on a
+                  // write. On an erase, we ignore missing keys, but
+                  // we should see either 0 or 1 ops.
                   int changes = sqlite3_changes(db->db());
-                  success = success && (changes == 1);
+                  if (type == Write)
+                      success = success && (changes == 1);
+                  else if (type == Erase)
+                      success = success && (changes == 0 || changes == 1);
               }
 
               rc = sqlite3_finalize(value_insert_stmt);
               success = success && !SQLite::check_sql_error(db->db(), rc, NULL, "Error finalizing value insert statement");
+
+              if (!success)
+                  result = TRANSACTION_ERROR;
           }
         break;
       case EraseRange:
@@ -232,6 +267,7 @@ bool SQLiteStorage::StorageAction::execute(SQLiteDBPtr db, const Bucket& bucket,
               char* remain;
               sqlite3_stmt* value_delete_stmt;
               rc = sqlite3_prepare_v2(db->db(), value_delete.c_str(), -1, &value_delete_stmt, (const char**)&remain);
+              bool success = true;
               success = success && !SQLite::check_sql_error(db->db(), rc, NULL, "Error preparing value delete statement");
 
               rc = sqlite3_bind_text(value_delete_stmt, 1, key.c_str(), (int)key.size(), SQLITE_TRANSIENT);
@@ -245,24 +281,33 @@ bool SQLiteStorage::StorageAction::execute(SQLiteDBPtr db, const Bucket& bucket,
 
               rc = sqlite3_finalize(value_delete_stmt);
               success = success && !SQLite::check_sql_error(db->db(), rc, NULL, "Error finalizing value delete statement");
+
+              if (!success)
+                  result = TRANSACTION_ERROR;
           }
           break;
       case Error:
         SILOG(sqlite-storage, fatal, "Tried to execute an invalid StorageAction.");
         break;
     };
-    return success;
+    return result;
 }
 
-SQLiteStorage::SQLiteStorage(ObjectHostContext* ctx, const String& dbpath)
+SQLiteStorage::SQLiteStorage(ObjectHostContext* ctx, const String& dbpath, const Duration& lease_duration)
  : mContext(ctx),
    mDBFilename(dbpath),
    mDB(),
    mIOService(NULL),
    mWork(NULL),
    mThread(NULL),
+   // A random UUID is good, but including some other identifying
+   // information in here would be better, e.g. process ID, MAC
+   // address, etc.
+   mSQLClientID(UUID::random().rawHexData()),
+   mLeaseDuration(lease_duration),
    mTransactionQueue(std::tr1::bind(&SQLiteStorage::postProcessTransactions, this)),
-   mMaxCoalescedTransactions(5)
+   mMaxCoalescedTransactions(5),
+   mRenewTimer()
 {
 }
 
@@ -279,6 +324,11 @@ void SQLiteStorage::start() {
     mThread = new Sirikata::Thread(std::tr1::bind(&Network::IOService::runNoReturn, mIOService));
 
     mIOService->post(std::tr1::bind(&SQLiteStorage::initDB, this), "SQLiteStorage::initDB");
+
+    mRenewTimer = Network::IOTimer::create(
+        mIOService,
+        std::tr1::bind(&SQLiteStorage::processRenewals, this)
+    );
 }
 
 void SQLiteStorage::initDB() {
@@ -364,10 +414,15 @@ bool SQLiteStorage::sqlCommit() {
 
 void SQLiteStorage::stop() {
     // Just kill the work that keeps the IO thread alive and wait for thread to
-    // finish, i.e. for outstanding transactions to complete
+    // finish, i.e. for outstanding transactions to complete. Stop the renewal
+    // timer immediately to avoid having to wait for it to fire again (possibly
+    // locking things up until it does).
+    mRenewTimer->cancel();
+
     delete mWork;
     mWork = NULL;
     mThread->join();
+    mRenewTimer.reset();
     delete mThread;
     mThread = NULL;
     delete mIOService;
@@ -391,6 +446,22 @@ SQLiteStorage::Transaction* SQLiteStorage::getTransaction(const Bucket& bucket, 
     return mTransactions[bucket];
 }
 
+void SQLiteStorage::leaseBucket(const Bucket& bucket) {
+    // Don't do anything on lease, we'll take care of it within the commit.
+}
+
+void SQLiteStorage::releaseBucket(const Bucket& bucket) {
+    // Have the storage thread release the lease. It's possible to get these
+    // calls on final cleanup (after stop() was called) so we need to make sure
+    // we can still safely do this
+    if (mIOService == NULL) return;
+
+    mIOService->post(
+        std::tr1::bind(&SQLiteStorage::releaseLease, this, bucket),
+        "SQLiteStorage::releaseLease"
+    );
+}
+
 void SQLiteStorage::beginTransaction(const Bucket& bucket) {
     // FIXME should probably throw an exception if one already exists
     getTransaction(bucket);
@@ -406,7 +477,7 @@ void SQLiteStorage::commitTransaction(const Bucket& bucket, const CommitCallback
     // Short cut for empty transactions. Or maybe these should cause exceptions?
     if(trans->empty()) {
         ReadSet* rs = NULL;
-        if (cb) cb(false, rs);
+        if (cb) cb(SUCCESS, rs);
         return;
     }
 
@@ -416,10 +487,16 @@ void SQLiteStorage::commitTransaction(const Bucket& bucket, const CommitCallback
 }
 
 void SQLiteStorage::postProcessTransactions() {
-    mIOService->post(std::tr1::bind(&SQLiteStorage::processTransactions, this));
+    mIOService->post(
+        std::tr1::bind(&SQLiteStorage::processTransactions, this),
+        "SQLiteStorage::processTransactions"
+    );
 }
 
+
 void SQLiteStorage::processTransactions() {
+
+
     while(!mTransactionQueue.empty()) {
 
         // Try to execute up to the maximum number of coalesced transactions so
@@ -427,10 +504,11 @@ void SQLiteStorage::processTransactions() {
         std::vector<TransactionData> transactions;
         std::vector<ReadSet*> read_sets;
 
-        bool success = true;
-        success = sqlBeginTransaction();
+        Result result = SUCCESS;
+        if (!sqlBeginTransaction())
+            result = LOCK_ERROR;
         for(uint32 i = 0;
-            success && !mTransactionQueue.empty() && i < mMaxCoalescedTransactions;
+            (result == SUCCESS) && !mTransactionQueue.empty() && i < mMaxCoalescedTransactions;
             i++)
         {
             TransactionData data;
@@ -439,23 +517,25 @@ void SQLiteStorage::processTransactions() {
             transactions.push_back(data);
 
             ReadSet* cur_result = NULL;
-            success = success && executeCommit(data.bucket, data.trans, data.cb, &cur_result);
-            if (success) {
+            result = executeCommit(data.bucket, data.trans, data.cb, &cur_result);
+            if (result == SUCCESS) {
                 read_sets.push_back(cur_result);
             }
         }
 
         // If we succeeded so far, try to commit and move on
-        if (success)
-            success = sqlCommit();
+        if (result == SUCCESS) {
+            if (!sqlCommit())
+                result = LOCK_ERROR;
+        }
         // If still successful, cleanup, post callbacks, and move on to next
         // round
-        if (success) {
+        if (result == SUCCESS) {
             for(uint32 i = 0; i < transactions.size(); i++) {
                 delete transactions[i].trans;
                 if (transactions[i].cb) {
                     mContext->mainStrand->post(
-                        std::tr1::bind(transactions[i].cb, true, read_sets[i]),
+                        std::tr1::bind(transactions[i].cb, SUCCESS, read_sets[i]),
                         "SQLiteStorage completeCommit"
                     );
                 }
@@ -472,30 +552,37 @@ void SQLiteStorage::processTransactions() {
         read_sets.clear();
 
         for(uint32 i = 0; i < transactions.size(); i++) {
-            success = true;
-            success = sqlBeginTransaction();
+            result = SUCCESS;
+            if (!sqlBeginTransaction())
+                result = LOCK_ERROR;
 
             ReadSet* rs = NULL;
             TransactionData& data = transactions[i];
-            success = success && executeCommit(data.bucket, data.trans, data.cb, &rs);
+            result = executeCommit(data.bucket, data.trans, data.cb, &rs);
 
-            if (success)
-                success = success && sqlCommit();
+            if (result == SUCCESS) {
+                if (!sqlCommit())
+                    result = LOCK_ERROR;
+            }
 
             // Either way, we need to clean up the transaction
             delete data.trans;
             data.trans = NULL;
 
-            if (!success) {
+            if (result != SUCCESS) {
                 sqlRollback();
                 delete rs;
                 rs = NULL;
             }
 
-            mContext->mainStrand->post(
-                std::tr1::bind(data.cb, success, rs),
-                "SQLiteStorage completeCommit"
-            );
+            //actually have to check if there's a callback here.  otherwise failure.
+            if (data.cb)
+            {
+                mContext->mainStrand->post(
+                    std::tr1::bind(data.cb, result, rs),
+                    "SQLiteStorage completeCommit"
+                );
+            }
         }
 
     }
@@ -503,24 +590,262 @@ void SQLiteStorage::processTransactions() {
 
 // Executes a commit. Runs in a separate thread, so the transaction is
 // passed in directly
-bool SQLiteStorage::executeCommit(const Bucket& bucket, Transaction* trans, CommitCallback cb, ReadSet** read_set_out) {
+Storage::Result SQLiteStorage::executeCommit(const Bucket& bucket, Transaction* trans, CommitCallback cb, ReadSet** read_set_out) {
     ReadSet* rs = new ReadSet;
 
-    bool success = true;
-    for (Transaction::iterator it = trans->begin(); success && it != trans->end(); it++) {
-        success = success && (*it).execute(mDB, bucket, rs);
-        if (!success)
-            break;
+    // All these operations check the current result first, so if anything
+    // fails, including acquiring the lease, we'll just fall through, cleanup,
+    // and return the error.
+    Result result = acquireLease(bucket);
+    for (Transaction::iterator it = trans->begin(); (result == SUCCESS) && it != trans->end(); it++) {
+        result = (*it).execute(mDB, bucket, rs);
     }
 
-    if (rs->empty() || !success) {
+    if (rs->empty() || (result != SUCCESS)) {
         delete rs;
         rs = NULL;
     }
 
     *read_set_out = rs;
-    return success;
+    return result;
 }
+
+String SQLiteStorage::getLeaseString() {
+    Time expires = mContext->realTime() + mLeaseDuration;
+    return mSQLClientID + "-" + boost::lexical_cast<String>(expires.raw());
+}
+
+void SQLiteStorage::parseLeaseString(const String& ls, String* client_out, Time* expiration_out) {
+    if (ls.empty()) {
+        *client_out = "";
+        *expiration_out = Time::null();
+        return;
+    }
+
+    std::size_t split_pos = ls.find('-');
+    *client_out = ls.substr(0, split_pos);
+    *expiration_out = Time( boost::lexical_cast<uint64>( ls.substr(split_pos+1) ) );
+}
+
+Storage::Result SQLiteStorage::acquireLease(const Bucket& bucket) {
+    // This happens within the context of a commit (the first one against this
+    // bucket), so we should already be in a transaction.
+
+    // TODO we should probably escape based on the lock key to avoid
+    // conflicts. Maybe prefix \0 for internal and \1 for regular
+    // keys?
+
+    // Look up lease info
+    Result result;
+    ReadSet lease_rs;
+    {
+        StorageAction sa;
+        sa.type = StorageAction::Read;
+        sa.key = LEASE_KEY;
+        result = sa.execute(mDB, bucket, &lease_rs);
+    }
+
+    // Decide the next course of action based on whether the lease key
+    // was there, and if so, what's in its contents.
+    bool already_own_lease = false;
+    bool try_to_acquire_lease = false;
+
+    // If we were successful, parse the lease info
+    if (result == SUCCESS) {
+        String lease_owner;
+        Time lease_expiration;
+        parseLeaseString(lease_rs[LEASE_KEY], &lease_owner, &lease_expiration);
+
+        bool expired = mContext->realTime() > lease_expiration;
+        bool owned = (lease_owner == mSQLClientID);
+
+        if (owned && !expired)
+            already_own_lease = true;
+        else if (lease_owner.empty() || expired)
+            try_to_acquire_lease = true;
+        // Default case covers another owner and default values above
+        // indicate we don't own the lease and shouldn't try to
+        // acquire it.
+    }
+    // If we weren't successful, then the key wasn't even there -- we
+    // can try to acquire it
+    else if (result == TRANSACTION_ERROR) {
+        try_to_acquire_lease = true;
+    }
+
+    // Now we're ready to take some action. In some cases, it's time
+    // to give up:
+    if (!already_own_lease && !try_to_acquire_lease)
+        return LOCK_ERROR;
+    // Or, we may need to try acquiring the lease
+    if (try_to_acquire_lease) {
+        StorageAction sa;
+        sa.type = StorageAction::Write;
+        sa.key = LEASE_KEY;
+        sa.value = new String(getLeaseString());
+        ReadSet no_rs;
+        result = sa.execute(mDB, bucket, &no_rs);
+
+        // If we succeeded here, we got the lease, otherwise we failed
+        // and need to give up.
+        if (result != SUCCESS)
+            return LOCK_ERROR;
+
+        // We now have a new lease, setup renewal process. There's no guarantee
+        // we'll get back to this in time, but we'll make a best effort by
+        // renewing after half the time has expired.
+        mRenewTimes.push( BucketRenewTimeout(bucket, Timer::now() + (mLeaseDuration/2)) );
+        if (mRenewTimes.size() == 1)
+            mRenewTimer->wait(mLeaseDuration/2);
+    }
+
+    // And finally, if we got here then we either had or acquired the
+    // lease, so we can return success and let the transaction continue.
+    return SUCCESS;
+}
+
+void SQLiteStorage::renewLease(const Bucket& bucket) {
+    // Basic idea here is to lookup the lease to verify we still own it, then
+    // update it. We need to wrap this in a SQLite transaction ourselves since
+    // it happens on its own.
+
+    Result result = SUCCESS;
+    if (!sqlBeginTransaction())
+        result = LOCK_ERROR;
+
+    // Look up lease info
+    ReadSet lease_rs;
+    {
+        StorageAction sa;
+        sa.type = StorageAction::Read;
+        sa.key = LEASE_KEY;
+        result = sa.execute(mDB, bucket, &lease_rs);
+    }
+
+    // Nothing in there? releaseLease was called and removed it (or something
+    // else went wrong...). This means we should stop trying to renew at all.
+    if (result == TRANSACTION_ERROR) {
+        sqlRollback();
+        return;
+    }
+
+    // Check our ownership
+    String lease_owner;
+    Time lease_expiration;
+    parseLeaseString(lease_rs[LEASE_KEY], &lease_owner, &lease_expiration);
+    // Disregard the lease timing info, just check if we're current owner
+    if (lease_owner != mSQLClientID) {
+        // Could hit this if we released the lease and someone else took
+        // it. Ignore.
+        sqlRollback();
+        return;
+    }
+
+    // We own it, so just update it.
+    {
+        StorageAction sa;
+        sa.type = StorageAction::Write;
+        sa.key = LEASE_KEY;
+        sa.value = new String(getLeaseString());
+        ReadSet no_rs;
+        result = sa.execute(mDB, bucket, &no_rs);
+    }
+
+    // If we failed to write the new key, give up. This really shouldn't happen.
+    if (result != SUCCESS) {
+        sqlRollback();
+        return;
+    }
+
+    // Do the commit, giving up if we fail to get the commit through.
+    if (!sqlCommit()) {
+        sqlRollback();
+        return;
+    }
+
+    // We now have a new lease, setup renewal process. There's no guarantee
+    // we'll get back to this in time, but we'll make a best effort by
+    // renewing after half the time has expired.
+    mRenewTimes.push( BucketRenewTimeout(bucket, Timer::now() + (mLeaseDuration/2)) );
+}
+
+void SQLiteStorage::releaseLease(const Bucket& bucket) {
+    // Basic idea here is to lookup the lease to verify we still own it, then
+    // clear it if necessary. We need to wrap this in a SQLite transaction
+    // ourselves since it happens on its own.
+
+    Result result = SUCCESS;
+    if (!sqlBeginTransaction())
+        result = LOCK_ERROR;
+
+    // Look up lease info
+    ReadSet lease_rs;
+    {
+        StorageAction sa;
+        sa.type = StorageAction::Read;
+        sa.key = LEASE_KEY;
+        result = sa.execute(mDB, bucket, &lease_rs);
+    }
+
+    // Nothing in there? Nothing to do, although it might indicate a problem
+    // since we shouldn't be trying to release leases we don't have.
+    if (result == TRANSACTION_ERROR) {
+        // However, we don't report an error here because this can also happen
+        // if we never actually acquire the lease. Since we acquire it on
+        // demand, an object which does no transactions may not actually need to
+        // clear out the lease. We could alternatively track which objects we
+        // have leases for and only try to clear it if we had a lease.
+        sqlRollback();
+        return;
+    }
+
+    // Otherwise, check our ownership
+    String lease_owner;
+    Time lease_expiration;
+    parseLeaseString(lease_rs[LEASE_KEY], &lease_owner, &lease_expiration);
+    // Disregard the lease timing info, just check if we're current owner
+    if (lease_owner != mSQLClientID) {
+        // As above, if we never actually took the lease, we could hit this
+        // condition when it's not a real error. We don't report it for that
+        // reason.
+        sqlRollback();
+        return;
+    }
+
+    // Clear the lease key.
+    {
+        StorageAction sa;
+        sa.type = StorageAction::Erase;
+        sa.key = LEASE_KEY;
+        ReadSet no_rs;
+        result = sa.execute(mDB, bucket, &no_rs);
+    }
+
+    if (result != SUCCESS) {
+        SILOG(sqlite-storage, error, "Failed to release valid lease for bucket " << bucket);
+        sqlRollback();
+        return;
+    }
+
+    // Commit
+    if (!sqlCommit())
+        sqlRollback();
+}
+
+
+void SQLiteStorage::processRenewals() {
+    Time tnow = Timer::now();
+
+    while(!mRenewTimes.empty() && mRenewTimes.front().t < tnow) {
+        renewLease(mRenewTimes.front().bucket);
+        mRenewTimes.pop();
+    }
+
+    if (!mRenewTimes.empty())
+        mRenewTimer->wait(mRenewTimes.front().t - tnow);
+}
+
+
 
 bool SQLiteStorage::erase(const Bucket& bucket, const Key& key, const CommitCallback& cb, const String& timestamp) {
     bool is_new = false;
@@ -638,8 +963,8 @@ bool SQLiteStorage::count(const Bucket& bucket, const Key& start, const Key& fin
 
 void SQLiteStorage::executeCount(const String value_count, const Key& start, const Key& finish, CountCallback cb)
 {
-	bool success = true;
-	int32 count = 0;
+    bool success = true;
+    int32 count = 0;
 
 	int rc;
     char* remain;
@@ -664,8 +989,9 @@ void SQLiteStorage::executeCount(const String value_count, const Key& start, con
     success = success && !SQLite::check_sql_error(mDB->db(), rc, NULL, "Error finalizing value delete statement");
 
     if (cb) {
+        Result result = (success ? SUCCESS : TRANSACTION_ERROR);
         mContext->mainStrand->post(
-            std::tr1::bind(cb, success, count),
+            std::tr1::bind(cb, result, count),
             "SQLiteStorage completeCount"
         );
     }

@@ -81,72 +81,79 @@ ENDIF()
 
 
 IF(WIN32)
-ADD_DEFINITIONS(-D_CRT_SECURE_NO_WARNINGS -MP -D_WIN32_WINNT=0x0500 -D_SCL_SECURE_NO_WARNINGS -EHsc -DBOOST_ALL_DYN_LINK)
-SET(CMAKE_CXX_FLAGS "-D_CRT_SECURE_NO_WARNINGS -D_SCL_SECURE_NO_WARNINGS")
-#-fno-rtti
+  ADD_DEFINITIONS(-D_CRT_SECURE_NO_WARNINGS -MP -D_WIN32_WINNT=0x0500 -D_SCL_SECURE_NO_WARNINGS -EHsc -DBOOST_ALL_DYN_LINK)
+  SET(CMAKE_CXX_FLAGS "-D_CRT_SECURE_NO_WARNINGS -D_SCL_SECURE_NO_WARNINGS")
+
+  IF(sirikata_LDFLAGS)
+    SET(sirikata_LDFLAGS "${sirikata_LDFLAGS} /ignore:4099 /LARGEADDRESSAWARE")
+  ELSE()
+    SET(sirikata_LDFLAGS "/ignore:4099 /LARGEADDRESSAWARE")
+  ENDIF()
+  
+  #-fno-rtti
 ELSE()
 
-SET( CMAKE_C_FLAGS_RELEASE "-g2 -O3 -Wall -D_CRT_SECURE_NO_WARNINGS -D_SCL_SECURE_NO_WARNINGS" CACHE STRING
+  SET( CMAKE_C_FLAGS_RELEASE "-g2 -O3 -Wall -D_CRT_SECURE_NO_WARNINGS -D_SCL_SECURE_NO_WARNINGS" CACHE STRING
     "Built cflags with default settings."
     FORCE )
-SET( CMAKE_CXX_FLAGS_RELEASE "-g2 -O3 -Wall -D_CRT_SECURE_NO_WARNINGS -D_SCL_SECURE_NO_WARNINGS" CACHE STRING
+  SET( CMAKE_CXX_FLAGS_RELEASE "-g2 -O3 -Wall -D_CRT_SECURE_NO_WARNINGS -D_SCL_SECURE_NO_WARNINGS" CACHE STRING
     "Built cflags with default settings."
     FORCE )
 
-IF(NOT CMAKE_BUILD_TYPE)
-#the below lines work around a bug when cmake first is configured without <CONFIG>
-  SET(FORCE_USE_DEBUG_LOCATION "TRUE")
-  SET(CMAKE_BUILD_TYPE Debug CACHE STRING
+  IF(NOT CMAKE_BUILD_TYPE)
+    #the below lines work around a bug when cmake first is configured without <CONFIG>
+    SET(FORCE_USE_DEBUG_LOCATION "TRUE")
+    SET(CMAKE_BUILD_TYPE Debug CACHE STRING
       "Build types include: Default Debug Release None RelWithDebInfo." FORCE
       )
-ENDIF()
+  ENDIF()
 
-STRING(TOUPPER ${CMAKE_BUILD_TYPE} UPPERCASE_BUILD_TYPE)
-STRING(COMPARE EQUAL ${UPPERCASE_BUILD_TYPE} "DEBUG" ISDEBUG)
-
-SET(ADDED_DEFINITIONS -Wall -Wno-unused-function -Wno-unused-variable -fvisibility=hidden -fPIC -Wnon-virtual-dtor  -Wreorder -Wstrict-null-sentinel -Wsign-promo )
-
-IF(APPLE)
+  STRING(TOUPPER ${CMAKE_BUILD_TYPE} UPPERCASE_BUILD_TYPE)
+  STRING(COMPARE EQUAL ${UPPERCASE_BUILD_TYPE} "DEBUG" ISDEBUG)
+  
+  SET(ADDED_DEFINITIONS -Wall -Wno-unused-function -Wno-unused-variable -fvisibility=hidden -fPIC -Wnon-virtual-dtor  -Wreorder -Wstrict-null-sentinel -Wsign-promo )
+  
+  IF(APPLE)
     SET(ADDED_DEFINITIONS ${ADDED_DEFINITIONS} -isysroot ${MAC_SDK_DIR} -arch i386 ${MAC_EXTRA_FLAGS} -mmacosx-version-min=${MAC_MIN_VER} )
-
+    
     IF(sirikata_LDFLAGS)
-       SET(sirikata_LDFLAGS "${sirikata_LDFLAGS} ${MAC_EXTRA_FLAGS} -Wl,-syslibroot -Wl,${MAC_SDK_DIR} -arch i386")
+      SET(sirikata_LDFLAGS "${sirikata_LDFLAGS} ${MAC_EXTRA_FLAGS} -Wl,-syslibroot -Wl,${MAC_SDK_DIR} -arch i386")
     ELSE()
-       SET(sirikata_LDFLAGS "${MAC_EXTRA_FLAGS} -Wl,-syslibroot -Wl,${MAC_SDK_DIR} -arch i386")
+      SET(sirikata_LDFLAGS "${MAC_EXTRA_FLAGS} -Wl,-syslibroot -Wl,${MAC_SDK_DIR} -arch i386")
     ENDIF()
-ENDIF()
+  ENDIF()
 
-#-Woverloaded_virtual
-#-Wabi
-#-Wold-style-cast
-#-fno-rtti
-#-fno-rtti
-SET(CMAKE_CXX_FLAGS "-Wall -Wno-unused-function -Wno-unused-variable -fvisibility=hidden -pthread" CACHE STRING
+  #-Woverloaded_virtual
+  #-Wabi
+  #-Wold-style-cast
+  #-fno-rtti
+  #-fno-rtti
+  SET(CMAKE_CXX_FLAGS "-Wall -Wno-unused-function -Wno-unused-variable -fvisibility=hidden -pthread" CACHE STRING
     "cxxflags for all settings."
     FORCE )
-SET( CMAKE_C_FLAGS "-Wall -Wno-unused-function -Wno-unused-variable -fvisibility=hidden -pthread" CACHE STRING
+  SET( CMAKE_C_FLAGS "-Wall -Wno-unused-function -Wno-unused-variable -fvisibility=hidden -pthread" CACHE STRING
     "cflags for all settings."
     FORCE )
 
-SET(CMAKE_EXE_LINKER_FLAGS "-pthread" CACHE STRING
+  SET(CMAKE_EXE_LINKER_FLAGS "-pthread" CACHE STRING
     "exe ldflags for all settings."
     FORCE )
-SET( CMAKE_SHARED_LINKER_FLAGS "-pthread" CACHE STRING
+  SET( CMAKE_SHARED_LINKER_FLAGS "-pthread" CACHE STRING
     "shared ldflags for all settings."
     FORCE )
 
-SET(CMAKE_CXX_FLAGS_DEFAULT "-g" CACHE STRING
+  SET(CMAKE_CXX_FLAGS_DEFAULT "-g" CACHE STRING
     "Built cxxflags with default settings."
     FORCE )
-SET(CMAKE_CXX_FLAGS_DEFAULT "-g" CACHE STRING
+  SET(CMAKE_CXX_FLAGS_DEFAULT "-g" CACHE STRING
     "Built cxxflags with default settings."
     FORCE )
 ENDIF()
 
 SET( CMAKE_EXE_LINKER_FLAGS_DEFAULT
-    "" CACHE STRING
-    "Linking binaries with default settings."
-    FORCE )
+  "" CACHE STRING
+  "Linking binaries with default settings."
+  FORCE )
 SET( CMAKE_SHARED_LINKER_FLAGS_DEFAULT
     "" CACHE STRING
     "Building shared libraries with default settings."
@@ -156,8 +163,9 @@ MARK_AS_ADVANCED(
     CMAKE_C_FLAGS_DEFAULT
     CMAKE_EXE_LINKER_FLAGS_DEFAULT
     CMAKE_SHARED_LINKER_FLAGS_DEFAULT )
-IF(WIN32)
-ELSE()
+
+
+IF(NOT WIN32)
 SET(CMAKE_CXX_FLAGS_DEBUG "-g2 -D_DEBUG" CACHE STRING
     "Built cxxflags with default settings."
     FORCE )
@@ -341,13 +349,7 @@ MESSAGE(STATUS "Using PLATFORM_LIBS=${PLATFORM_LIBS}")
 SET(DISABLE_M32 FALSE)
 SET(FORCE_32BIT FALSE)
 SET(DISABLE_BERKELIUM FALSE)
-IF(WIN32)
-  IF(sirikata_LDFLAGS)
-    SET(sirikata_LDFLAGS ${sirikata_LDFLAGS} /ignore:4099)
-  ELSE()
-    SET(sirikata_LDFLAGS /ignore:4099)
-  ENDIF()
-ENDIF()
+
 IF(ISLINUX)
   IF(FORCE_32BIT OR EXISTS ${PLATFORM_LIBS}/arch-32bit)
     MESSAGE(STATUS "Performing 32-bit build")
@@ -763,6 +765,25 @@ SET(LIBOAUTHCPP_ADDED_DEFINITIONS ${ADDED_DEFINITIONS})
 ADD_SUBDIRECTORY(${TOP_LEVEL}/externals/liboauthcpp/build ${CMAKE_CURRENT_BINARY_DIR}/liboauthcpp)
 SET(LIBOAUTHCPP_INCLUDE_DIR ${TOP_LEVEL}/externals/liboauthcpp/include)
 
+# dependency: json-spirit
+SET(JSON_SPIRIT_ADDED_DEFINITIONS ${ADDED_DEFINITIONS})
+# Building under build/cmake/json-spirit causes dll-search issues, use
+# static libs on windows.
+IF(WIN32)
+  SET(JSON_SPIRIT_LIBRARY_TYPE "STATIC")
+  # We need this project to know that json_spirit is static, but properties
+  # from the subdirectory's CMakeLists.txt won't be propagated up here. This
+  # essentially duplicates the setting from there to make the linking work
+  SET(ADDED_DEFINITIONS ${ADDED_DEFINITIONS} -DJSON_SPIRIT_STATIC_LINKED)
+ELSE()
+  SET(JSON_SPIRIT_LIBRARY_TYPE "SHARED")
+ENDIF()
+SET(JSON_SPIRIT_BUILD_DEMOS FALSE)
+SET(JSON_SPIRIT_BUILD_TESTS FALSE)
+# Note that we don't use a subdirectory for this build so that the dll ends up in the right place on Windows.
+ADD_SUBDIRECTORY(${TOP_LEVEL}/externals/json-spirit/build ${CMAKE_CURRENT_BINARY_DIR}/json-spirit)
+SET(JSON_SPIRIT_INCLUDE_DIR ${TOP_LEVEL}/externals/json-spirit/include)
+
 # optional dependency: ffmpeg
 # These could probably be relaxed, but they match the ones in the
 # dependencies for Mac and Linux (Windows doesn't check versions but
@@ -1051,6 +1072,7 @@ SET(INCLUDE_DIRECTORIES
   ${GSL_INCLUDE_DIR}
   ${HTTP_PARSER_INCLUDE_DIR}
   ${LIBOAUTHCPP_INCLUDE_DIR}
+  ${JSON_SPIRIT_INCLUDE_DIR}
   )
 
 IF(BUILD_LIBSQLITE)
@@ -1919,6 +1941,7 @@ SET(SIRIKATA_CORE_LIBRARIES
     http-parser
     ${GOOGLE_PERFTOOLS_SETTING_LIBRARIES}
     oauthcpp
+    json_spirit
     )
 
 IF(BERKELIUM_FOUND)
