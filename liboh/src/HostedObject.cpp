@@ -789,17 +789,15 @@ void HostedObject::handleProximityUpdate(const SpaceObjectReference& spaceobj, c
     for(int32 ridx = 0; ridx < update.removal_size(); ridx++) {
         Sirikata::Protocol::Prox::ObjectRemoval removal = update.removal(ridx);
 
-        ProxyManagerPtr proxy_manager = self->getProxyManager(spaceobj.space(), spaceobj.object());
-
-        if (!proxy_manager)
-            continue;
-
         SpaceObjectReference removed_obj_ref(spaceobj.space(),
             ObjectReference(removal.object()));
+
         bool permanent = (removal.has_type() && (removal.type() == Sirikata::Protocol::Prox::ObjectRemoval::Permanent));
 
-        Mutex::scoped_lock lock(presenceDataMutex);
-        if (self->mPresenceData.find(removed_obj_ref) != self->mPresenceData.end()) {
+        if (removed_obj_ref == spaceobj) {
+            // We want to ignore removal of ourself -- we should
+            // always be in our result set, and we don't want to
+            // delete our own proxy.
             SILOG(oh,detailed,"Ignoring self removal from proximity results.");
         }
         else {
