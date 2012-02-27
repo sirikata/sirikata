@@ -260,6 +260,9 @@ void CassandraStorage::start() {
 void CassandraStorage::initDB() {
     CassandraDBPtr db = Cassandra::getSingleton().open(mDBHost, mDBPort);
     mDB = db;
+
+    mDB->createColumnFamily("persistence", "Super");
+    mDB->createColumnFamily("persistence_leases", "Standard");
 }
 
 Storage::Result CassandraStorage::CassandraCommit(CassandraDBPtr db, const Bucket& bucket, Columns* columns, Keys* eraseKeys, Keys* readKeys, SliceRanges* readRanges, ReadSet* compares, SliceRanges* eraseRanges, ReadSet* rs, const String& timestamp) {
