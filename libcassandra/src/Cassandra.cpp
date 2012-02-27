@@ -38,15 +38,15 @@ AUTO_SINGLETON_INSTANCE(Sirikata::Cassandra);
 
 namespace Sirikata {
 
-CassandraDB::CassandraDB(const String& host, int port) {
+CassandraDB::CassandraDB(const String& host, int port, const String& keyspace) {
     libcassandra::CassandraFactory cf(host, port);
     client=boost::shared_ptr<libcassandra::Cassandra>(cf.create());
 
     try {
-        client->setKeyspace("sirikata");
+        client->setKeyspace(keyspace);
     }
     catch (org::apache::cassandra::InvalidRequestException &ire) {
-        initSchema();
+        initSchema(keyspace);
     }
 }
 
@@ -57,31 +57,47 @@ CassandraDB::~CassandraDB() {
     return client;
 }
 
-void CassandraDB::initSchema() {
+String CassandraDB::getKeyspace() const {
+    return client->getCurrentKeyspace();
+}
+
+void CassandraDB::initSchema(const String& keyspace) {
     try {
         // create keyspace
         libcassandra::KeyspaceDefinition ks_def;
-        ks_def.setName("sirikata");
+        ks_def.setName(keyspace);
         client->createKeyspace(ks_def);
-        client->setKeyspace("sirikata");
-
-        libcassandra::ColumnFamilyDefinition cf_def_1;
-        cf_def_1.setName("persistence");
-        cf_def_1.setColumnType("Super");
-        cf_def_1.setKeyspaceName("sirikata");
-        client->createColumnFamily(cf_def_1);
-
-        libcassandra::ColumnFamilyDefinition cf_def_2;
-        cf_def_2.setName("objects");
-        cf_def_2.setColumnType("Super");
-        cf_def_2.setKeyspaceName("sirikata");
-        client->createColumnFamily(cf_def_2);
+        client->setKeyspace(keyspace);
     }
     catch (org::apache::cassandra::NotFoundException &ire) {
         SILOG(cassandra, error, "NotFoundException Caught");
     }
     catch (org::apache::cassandra::InvalidRequestException &ire) {
         SILOG(cassandra, error, ire.why);
+    }
+    catch (...) {
+        SILOG(cassandra, error, "Other Exception Caught");
+    }
+}
+
+void CassandraDB::createColumnFamily(const String& name, const String& column_type) {
+    // Make sure persistence and lease column family definitions exist.
+    try {
+        libcassandra::ColumnFamilyDefinition persistence_cf_def;
+        persistence_cf_def.setName(name);
+        persistence_cf_def.setColumnType(column_type);
+        persistence_cf_def.setKeyspaceName(getKeyspace());
+        client->createColumnFamily(persistence_cf_def);
+    }
+    catch (org::apache::cassandra::NotFoundException &ire) {
+        SILOG(cassandra, error, "NotFoundException Caught");
+    }
+    catch (org::apache::cassandra::InvalidRequestException &ire) {
+        // We'll get an InvalidRequest exception with message
+        //  'x already exists in keyspace y'. Ignore those as we already have
+        // the  column family we're trying to create.
+        if (ire.why.find("already exists in keyspace") == std::string::npos)
+            SILOG(cassandra, error, ire.why);
     }
     catch (...) {
         SILOG(cassandra, error, "Other Exception Caught");
@@ -150,7 +166,8 @@ CassandraDBPtr Cassandra::open(const String& host, int port) {
         UpgradedLock upgraded_lock(upgrade_lock);
         db = weak_db_ptr_ptr->lock();
         if (!db) {
-            db = CassandraDBPtr(new CassandraDB(host, port));
+            // TODO(ewencp) make the keyspace configurable
+            db = CassandraDBPtr(new CassandraDB(host, port, "sirikata"));
             *weak_db_ptr_ptr = db;
         }
     }

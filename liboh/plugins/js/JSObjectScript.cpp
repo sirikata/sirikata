@@ -477,7 +477,7 @@ void JSObjectScript::eStorageCommit(
 
 void JSObjectScript::storageCommitCallback(
     JSContextStruct* jscont, v8::Persistent<v8::Function> cb,
-    bool success, OH::Storage::ReadSet* rs,Liveness::Token objAlive,
+    OH::Storage::Result result, OH::Storage::ReadSet* rs,Liveness::Token objAlive,
     Liveness::Token ctxAlive)
 {
     if (!objAlive) return;
@@ -496,14 +496,14 @@ void JSObjectScript::storageCommitCallback(
 
     mCtx->objStrand->post(
         std::tr1::bind(&JSObjectScript::iStorageCommitCallback,this,
-            jscont,cb,success,rs,Liveness::livenessToken(),jscont->livenessToken()),
+            jscont,cb,result,rs,Liveness::livenessToken(),jscont->livenessToken()),
         "JSObjectScript::iStorageCommitCallback"
     );
 }
 
 void JSObjectScript::iStorageCommitCallback(
     JSContextStruct* jscont, v8::Persistent<v8::Function> cb,
-    bool success, OH::Storage::ReadSet* rs,Liveness::Token objAlive,
+    OH::Storage::Result result, OH::Storage::ReadSet* rs,Liveness::Token objAlive,
     Liveness::Token ctxAlive)
 {
     if (!objAlive) return;
@@ -536,7 +536,7 @@ void JSObjectScript::iStorageCommitCallback(
 
     TryCatch try_catch;
 
-    v8::Handle<v8::Boolean> js_success = v8::Boolean::New(success);
+    v8::Handle<v8::Boolean> js_success = v8::Boolean::New((result == OH::Storage::SUCCESS));
     v8::Handle<v8::Value> js_rs = v8::Undefined();
     if (rs && rs->size() > 0) {
         v8::Handle<v8::Object> js_rs_obj = v8::Object::New();

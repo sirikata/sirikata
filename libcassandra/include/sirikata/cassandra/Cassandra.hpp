@@ -52,12 +52,22 @@ namespace Sirikata {
 /** Represents a Cassandra connection. */
 class SIRIKATA_CASSANDRA_EXPORT CassandraDB {
 public:
-    CassandraDB(const String& host, int port);
+    CassandraDB(const String& host, int port, const String& keyspace);
     ~CassandraDB();
 
     boost::shared_ptr<libcassandra::Cassandra> db() const;
+
+    /// Get the name of the keyspace this connection operates within.
+    String getKeyspace() const;
+
+    /** Try to create a column family if it doesn't exist, log errors if it
+     *  fails for a reason besides already existing. Always creates it under the
+     *  current keyspace.
+     */
+    void createColumnFamily(const String& name, const String& column_type);
+
 private:
-    void initSchema();
+    void initSchema(const String& keyspace);
 
     boost::shared_ptr<libcassandra::Cassandra> client;
 };

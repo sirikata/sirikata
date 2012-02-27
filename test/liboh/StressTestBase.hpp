@@ -52,6 +52,7 @@ public:
     };
 
 protected:
+    typedef OH::Storage::Result Result;
     typedef OH::Storage::ReadSet ReadSet;
 
     DataFiles _data;
@@ -124,6 +125,9 @@ public:
 
         _storage = OH::StorageFactory::getSingleton().getConstructor(_type)(_ctx, _args);
 
+        for(int i = 0; i < 100; i++)
+            _storage->leaseBucket(_buckets[i]);
+
         _ctx->add(_ctx);
         _ctx->add(_storage);
 
@@ -134,6 +138,9 @@ public:
     }
 
     void tearDown() {
+        for(int i = 0; i < 100; i++)
+            _storage->releaseBucket(_buckets[i]);
+
         delete _work;
         _work = NULL;
 
@@ -157,9 +164,9 @@ public:
         _ios = NULL;
     }
 
-    void checkReadValuesImpl(bool expected_success, ReadSet expected, bool success, ReadSet* rs) {
-        TS_ASSERT_EQUALS(expected_success, success);
-        if (!success || !expected_success) return;
+    void checkReadValuesImpl(Result expected_result, ReadSet expected, Result result, ReadSet* rs) {
+        TS_ASSERT_EQUALS(expected_result, result);
+        if ((result != OH::Storage::SUCCESS) || (expected_result != OH::Storage::SUCCESS)) return;
 
         if (!rs) {
             TS_ASSERT_EQUALS(expected.size(), 0);
@@ -174,21 +181,21 @@ public:
         }
     }
 
-    void checkReadValues(bool expected_success, ReadSet expected, bool success, ReadSet* rs) {
+    void checkReadValues(Result expected_result, ReadSet expected, Result result, ReadSet* rs) {
         boost::unique_lock<boost::mutex> lock(_mutex);
-        checkReadValuesImpl(expected_success, expected, success, rs);
+        checkReadValuesImpl(expected_result, expected, result, rs);
         delete rs;
         if (--_outstanding == 0)
             _cond.notify_one();
     }
 
-    void checkSuccessImpl(bool expected_success, ReadSet expected, bool success, ReadSet* rs){
-        TS_ASSERT_EQUALS(expected_success, success);
+    void checkSuccessImpl(Result expected_result, ReadSet expected, Result result, ReadSet* rs){
+        TS_ASSERT_EQUALS(expected_result, result);
     }
 
-    void checkSuccess(bool expected_success, ReadSet expected, bool success, ReadSet* rs){
+    void checkSuccess(Result expected_result, ReadSet expected, Result result, ReadSet* rs){
         boost::unique_lock<boost::mutex> lock(_mutex);
-        checkSuccessImpl(expected_success, expected, success, rs);
+        checkSuccessImpl(expected_result, expected, result, rs);
         if (--_outstanding == 0)
             _cond.notify_one();
     }
@@ -218,7 +225,7 @@ public:
             for(int j=0; j<keyNum; j++){
                 key=_dataIndex[j]+"-"+length;
                 _storage->write(_buckets[i], key, _data.dataSet[key],
-	                        std::tr1::bind(&StressTestBase::checkSuccess, this, true, ReadSet(), _1, _2)
+                    std::tr1::bind(&StressTestBase::checkSuccess, this, OH::Storage::SUCCESS, ReadSet(), _1, _2)
 	                       );
                 ++_outstanding;
                 if (tt == Latency) waitForTransaction(lock);
@@ -247,7 +254,7 @@ public:
             for(int j=0; j<keyNum; j++){
                 key=_dataIndex[j]+"-"+length;
                 _storage->read(_buckets[i], key,
-                               std::tr1::bind(&StressTestBase::checkSuccess, this, true, ReadSet(), _1, _2)
+                               std::tr1::bind(&StressTestBase::checkSuccess, this, OH::Storage::SUCCESS, ReadSet(), _1, _2)
                               );
                 ++_outstanding;
                 if (tt == Latency) waitForTransaction(lock);
@@ -274,7 +281,7 @@ public:
             for(int j=0; j<keyNum; j++){
                 key=_dataIndex[j]+"-"+length;
                 _storage->erase(_buckets[i], key,
-                                std::tr1::bind(&StressTestBase::checkSuccess, this, true, ReadSet(), _1, _2)
+                                std::tr1::bind(&StressTestBase::checkSuccess, this, OH::Storage::SUCCESS, ReadSet(), _1, _2)
                                );
                 ++_outstanding;
                 if (tt == Latency) waitForTransaction(lock);
@@ -290,7 +297,7 @@ public:
             for(int j=0; j<keyNum; j++){
                 key=_dataIndex[j]+"-"+length;
                 _storage->read(_buckets[i], key,
-                               std::tr1::bind(&StressTestBase::checkSuccess, this, false, ReadSet(), _1, _2)
+                    std::tr1::bind(&StressTestBase::checkSuccess, this, OH::Storage::TRANSACTION_ERROR, ReadSet(), _1, _2)
                               );
                 ++_outstanding;
                 waitForTransaction(lock);
@@ -315,7 +322,7 @@ public:
                 _storage->write(_buckets[i], key, _data.dataSet[key]);
             }
             _storage->commitTransaction(_buckets[i],
-                                        std::tr1::bind(&StressTestBase::checkSuccess, this, true, ReadSet(), _1, _2)
+                                        std::tr1::bind(&StressTestBase::checkSuccess, this, OH::Storage::SUCCESS, ReadSet(), _1, _2)
                                        );
             ++_outstanding;
             if (tt == Latency) waitForTransaction(lock);
@@ -346,7 +353,7 @@ public:
                 _storage->read(_buckets[i], key);
             }
             _storage->commitTransaction(_buckets[i],
-                                        std::tr1::bind(&StressTestBase::checkSuccess, this, true, ReadSet(), _1, _2)
+                                        std::tr1::bind(&StressTestBase::checkSuccess, this, OH::Storage::SUCCESS, ReadSet(), _1, _2)
                                        );
             ++_outstanding;
             if (tt == Latency) waitForTransaction(lock);
@@ -375,7 +382,7 @@ public:
                 _storage->erase(_buckets[i], key);
             }
             _storage->commitTransaction(_buckets[i],
-                                        std::tr1::bind(&StressTestBase::checkSuccess, this, true, ReadSet(), _1, _2)
+                                        std::tr1::bind(&StressTestBase::checkSuccess, this, OH::Storage::SUCCESS, ReadSet(), _1, _2)
                                        );
             ++_outstanding;
             if (tt == Latency) waitForTransaction(lock);
@@ -390,7 +397,7 @@ public:
             for(int j=0; j<keyNum; j++){
                 key=_dataIndex[j]+"-"+length;
                 _storage->read(_buckets[i], key,
-                               std::tr1::bind(&StressTestBase::checkSuccess, this, false, ReadSet(), _1, _2)
+                               std::tr1::bind(&StressTestBase::checkSuccess, this, OH::Storage::TRANSACTION_ERROR, ReadSet(), _1, _2)
                               );
                 ++_outstanding;
                 waitForTransaction(lock);
