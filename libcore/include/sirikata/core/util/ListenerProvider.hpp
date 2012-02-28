@@ -168,6 +168,77 @@ protected:
             ((&*mListeners[i])->*func)(newA,newB,newC,newD,newE,newF);
         }
     }
+
+    /**
+     *  This function notifies all listeners.
+     *  Listeners may add other listeners or remove themselves,
+     *  though undefined behavior results from removing other listeners during the call.
+     *  \param func which must be a member function of ListenerPtr gets called on all listeners
+     *  \param newA is the first argument passed to func
+     *  \param newB is the second argument passed to func
+     *  \param newC is the third argument passed to func
+     *  \param newD is the fourth argument passed to func
+     *  \param newE is the fifth argument passed to func
+     *  \param newF is the sixth argument passed to func
+     *  \param newG is the seventh argument passed to func
+     */
+    template <typename T, typename A, typename B, typename C, typename D, typename E, typename F, typename G>
+    void notify(T func, A newA, B newB, C newC, D newD, E newE, F newF, G newG){
+        for (int32 i=(int32)mListeners.size()-1;
+             i>=0&&i<(int32)mListeners.size();
+             --i) {
+            ((&*mListeners[i])->*func)(newA,newB,newC,newD,newE,newF,newG);
+        }
+    }
+
+    /**
+     *  This function notifies all listeners.
+     *  Listeners may add other listeners or remove themselves,
+     *  though undefined behavior results from removing other listeners during the call.
+     *  \param func which must be a member function of ListenerPtr gets called on all listeners
+     *  \param newA is the first argument passed to func
+     *  \param newB is the second argument passed to func
+     *  \param newC is the third argument passed to func
+     *  \param newD is the fourth argument passed to func
+     *  \param newE is the fifth argument passed to func
+     *  \param newF is the sixth argument passed to func
+     *  \param newG is the seventh argument passed to func
+     *  \param newH is the eighth argument passed to func
+     */
+    template <typename T, typename A, typename B, typename C, typename D, typename E, typename F, typename G, typename H>
+    void notify(T func, A newA, B newB, C newC, D newD, E newE, F newF, G newG, H newH){
+        for (int32 i=(int32)mListeners.size()-1;
+             i>=0&&i<(int32)mListeners.size();
+             --i) {
+            ((&*mListeners[i])->*func)(newA,newB,newC,newD,newE,newF,newG,newH);
+        }
+    }
+
+    /**
+     *  This function notifies all listeners.
+     *  Listeners may add other listeners or remove themselves,
+     *  though undefined behavior results from removing other listeners during the call.
+     *  \param func which must be a member function of ListenerPtr gets called on all listeners
+     *  \param newA is the first argument passed to func
+     *  \param newB is the second argument passed to func
+     *  \param newC is the third argument passed to func
+     *  \param newD is the fourth argument passed to func
+     *  \param newE is the fifth argument passed to func
+     *  \param newF is the sixth argument passed to func
+     *  \param newG is the seventh argument passed to func
+     *  \param newH is the eighth argument passed to func
+     *  \param newI is the eighth argument passed to func
+     */
+    template <typename T, typename A, typename B, typename C, typename D, typename E, typename F, typename G, typename H, typename I>
+    void notify(T func, A newA, B newB, C newC, D newD, E newE, F newF, G newG, H newH, I newI){
+        for (int32 i=(int32)mListeners.size()-1;
+             i>=0&&i<(int32)mListeners.size();
+             --i) {
+            ((&*mListeners[i])->*func)(newA,newB,newC,newD,newE,newF,newG,newH,newI);
+        }
+    }
+
+
 public:
     /**
      *  This function adds a new listener to listen for notification

@@ -56,6 +56,8 @@
 #define OPT_TRACE_TIMESERIES           "trace.timeseries"
 #define OPT_TRACE_TIMESERIES_OPTIONS   "trace.timeseries-options"
 
+#define OPT_COMMAND_COMMANDER           "command.commander"
+#define OPT_COMMAND_COMMANDER_OPTIONS   "command.commander-options"
 
 namespace Sirikata {
 
