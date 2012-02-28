@@ -980,7 +980,7 @@ void SQLiteStorage::executeCount(const String value_count, const Key& start, con
     	if (rc==SQLITE_OK) {
     		int step_rc = sqlite3_step(value_count_stmt);
     		count = sqlite3_column_int(value_count_stmt, 0);
-    		if (step_rc != SQLITE_OK && step_rc != SQLITE_DONE)
+    		if (step_rc != SQLITE_OK && step_rc != SQLITE_DONE && step_rc != SQLITE_ROW)
     			sqlite3_reset(value_count_stmt); // allow this to be cleaned up
     	}
 
