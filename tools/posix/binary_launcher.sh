@@ -9,17 +9,18 @@ SELF_PATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 # And from that, the path to prefix/
 BASE_PATH=`dirname $SELF_PATH`
 # From that we can determine the library path
-LIBS_PATH=$BASE_PATH/lib/sirikata
+LIBS_PATH=$BASE_PATH/lib
+SIRIKATA_LIBS_PATH=$BASE_PATH/lib/sirikata
 # And the path to use for the binary
-BINARY_PATH=$LIBS_PATH/@BINARY_EXE@
+BINARY_PATH=$SIRIKATA_LIBS_PATH/@BINARY_EXE@
 
 GDB=/usr/bin/gdb
 
 # Set up linker paths for libraries
 if [ "x$@LD_LIBRARY_PATH_NAME@" != "x" ]; then
-    @LD_LIBRARY_PATH_NAME@=@LD_LIBRARY_PATH_NAME@:$LIBS_PATH
+    @LD_LIBRARY_PATH_NAME@=@LD_LIBRARY_PATH_NAME@:$SIRIKATA_LIBS_PATH:$LIBS_PATH
 else
-    @LD_LIBRARY_PATH_NAME@=$LIBS_PATH
+    @LD_LIBRARY_PATH_NAME@=$SIRIKATA_LIBS_PATH:$LIBS_PATH
 fi
 export @LD_LIBRARY_PATH_NAME@
 
