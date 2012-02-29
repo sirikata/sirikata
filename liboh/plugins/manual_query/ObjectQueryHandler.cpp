@@ -13,9 +13,7 @@
 
 #include <sirikata/oh/PresencePropertiesLocUpdate.hpp>
 
-// Property tree for old API for queries
-#include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/json_parser.hpp>
+#include <json_spirit/json_spirit.h>
 
 #define QPLOG(level,msg) SILOG(manual-query-processor,level,msg)
 
@@ -35,26 +33,13 @@ bool parseQueryRequest(const String& query, SolidAngle* qangle_out, uint32* max_
     if (query.empty())
         return false;
 
-    using namespace boost::property_tree;
-    ptree pt;
-    try {
-        std::stringstream data_json(query);
-        read_json(data_json, pt);
-    }
-    catch(json_parser::json_parser_error exc) {
+    namespace json = json_spirit;
+    json::Value parsed_query;
+    if (!json::read(query, parsed_query))
         return false;
-    }
 
-
-    if (pt.find("angle") != pt.not_found())
-        *qangle_out = SolidAngle( pt.get<float32>("angle") );
-    else
-        *qangle_out = SolidAngle::Max;
-
-    if (pt.find("max_results") != pt.not_found())
-        *max_results_out = pt.get<uint32>("max_results");
-    else
-        *max_results_out = 0;
+    *qangle_out = SolidAngle( parsed_query.getReal("angle", SolidAngle::MaxVal) );
+    *max_results_out = parsed_query.getInt("max_results", 0);
 
     return true;
 }
