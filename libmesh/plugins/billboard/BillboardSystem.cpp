@@ -33,9 +33,7 @@
 #include "BillboardSystem.hpp"
 
 #include <sirikata/mesh/Billboard.hpp>
-// Property tree for parsing the billboard description
-#include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/json_parser.hpp>
+#include <json_spirit/json_spirit.h>
 
 namespace Sirikata {
 
@@ -50,39 +48,30 @@ BillboardSystem::BillboardSystem() {
 BillboardSystem::~BillboardSystem() {
 }
 
-using namespace boost::property_tree;
+namespace json = json_spirit;
 
 bool BillboardSystem::canLoad(Transfer::DenseDataPtr data) {
-    // For loading, we make sure we can parse & that there is at least a url field.
-    try {
-        ptree pt;
-        std::stringstream data_json(data->asString());
-        read_json(data_json, pt);
-        return (pt.find("url") != pt.not_found());
-    }
-    catch(json_parser::json_parser_error exc) {
-        return false;
-    }
-
-    return true;
+    // For loading, we make sure we can parse & that there is at least a url
+    // field.
+    json::Value parsed;
+    bool success = json::read(data->asString(), parsed);
+    return (
+        success &&
+        parsed.isObject() &&
+        parsed.contains("url") &&
+        parsed.get("url").type() == json::Value::STRING_TYPE);
 }
 
 Mesh::VisualPtr BillboardSystem::load(const Transfer::RemoteFileMetadata& metadata, const Transfer::Fingerprint& fp,
     Transfer::DenseDataPtr data) {
-    ptree pt;
-    try {
-        std::stringstream data_json(data->asString());
-        read_json(data_json, pt);
-    }
-    catch(json_parser::json_parser_error exc) {
-        return Mesh::VisualPtr();
-    }
 
-    String url = pt.get("url", String(""));
-    float32 aspect = -1;
-    if (pt.find("aspect") != pt.not_found())
-        aspect = pt.get<float32>("aspect");
-    String type = pt.get("facing", String("camera"));
+    json::Value parsed;
+    bool success = json::read(data->asString(), parsed);
+    if (!success) return Mesh::VisualPtr();
+
+    String url = parsed.getString("url", "");
+    float32 aspect = parsed.getReal("aspect", -1.f);
+    String type = parsed.getString("facing", String("camera"));
 
     Mesh::BillboardPtr result(new Mesh::Billboard());
     result->uri = metadata.getURI().toString();

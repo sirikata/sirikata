@@ -75,7 +75,7 @@ v8::Handle<v8::Value> JSPositionListener::struct_getMesh()
 bool JSPositionListener::getStillVisible()
 {
     CHECK_JPP_INIT_THROW_LOG_CPP_ERROR(funcIn,false);
-    return mParentScript->isVisible(jpp->id());
+    return mParentScript->jsVisMan.isVisible(jpp->id());
 }
 
 v8::Handle<v8::Value> JSPositionListener::struct_getStillVisible()
@@ -265,6 +265,7 @@ void JSPositionListener::iFinishLoadMesh(
 
     mVisual = data;
 
+    v8::Locker locker(mCtx->mIsolate);
     v8::Isolate::Scope iscope(mCtx->mIsolate);
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(ctx->mContext);

@@ -98,6 +98,7 @@ Server::Server(SpaceContext* ctx, Authenticator* auth, Forwarder* forwarder, Loc
 {
     using std::tr1::placeholders::_1;
     using std::tr1::placeholders::_2;
+    using std::tr1::placeholders::_3;
 
     mTimeSyncServer = new TimeSyncServer(mContext, this);
 
@@ -133,6 +134,28 @@ Server::Server(SpaceContext* ctx, Authenticator* auth, Forwarder* forwarder, Loc
     mForwarder->setLocalForwarder(mLocalForwarder);
 
     mMigrationTimer.start();
+
+
+    if (mContext->commander()) {
+        mContext->commander()->registerCommand(
+            "space.server.objects.count",
+            mContext->mainStrand->wrap(
+                std::tr1::bind(&Server::commandObjectsCount, this, _1, _2, _3)
+            )
+        );
+        mContext->commander()->registerCommand(
+            "space.server.objects.list",
+            mContext->mainStrand->wrap(
+                std::tr1::bind(&Server::commandObjectsList, this, _1, _2, _3)
+            )
+        );
+        mContext->commander()->registerCommand(
+            "space.server.objects.disconnect",
+            mContext->mainStrand->wrap(
+                std::tr1::bind(&Server::commandObjectsDisconnect, this, _1, _2, _3)
+            )
+        );
+    }
 }
 
 void Server::newStream(int err, SST::Stream<SpaceObjectReference>::Ptr s) {
@@ -1288,5 +1311,56 @@ void Server::killObjectConnection(const UUID& obj_id)
 }
 
 
+
+
+// Commander commands
+void Server::commandObjectsCount(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {
+    Command::Result result = Command::EmptyResult();
+    result.put("objects.active", mObjects.size());
+    result.put("objects.connecting", mStoredConnectionData.size());
+    result.put("objects.migrating_to", mObjectsAwaitingMigration.size());
+    result.put("objects.other_server_requested_migration", mObjectMigrations.size());
+    result.put("objects.migrating_from", mMigratingConnections.size());
+    cmdr->result(cmdid, result);
+}
+
+void Server::commandObjectsList(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {
+    Command::Result result = Command::EmptyResult();
+    // Make sure we return the objects key set even if there are none
+    result.put( String("objects"), Command::Array());
+    Command::Array& objects_ary = result.getArray("objects");
+
+    // This only lists regular, active objects. Connecting, migrating, etc are
+    // ignored.
+    for(ObjectConnectionMap::iterator objit = mObjects.begin(); objit != mObjects.end(); objit++)
+        objects_ary.push_back(objit->first.toString());
+    cmdr->result(cmdid, result);
+}
+
+void Server::commandObjectsDisconnect(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {
+    Command::Result result = Command::EmptyResult();
+
+    String obj_string = cmd.getString("object", "");
+    if (obj_string.empty()) { // not specified
+        result.put("error", "Ill-formatted request: no object specified for disconnect.");
+        cmdr->result(cmdid, result);
+        return;
+    }
+    UUID objid(obj_string, UUID::HumanReadable());
+
+
+    ObjectConnectionMap::iterator objit = mObjects.find(objid);
+    if (objit == mObjects.end()) {
+        result.put("error", "Object not found");
+    }
+    else {
+        // By passing in the session ID we already have, we guarantee
+        // this will force disconnection
+        handleDisconnect(objit->first, objit->second, objit->second->sessionID());
+        // Lack of 'error' field indicates success
+    }
+
+    cmdr->result(cmdid, result);
+}
 
 } // namespace Sirikata

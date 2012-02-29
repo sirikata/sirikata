@@ -527,7 +527,7 @@ system.require('scriptingGuiUtil.em');
                             visOrPres.toString() + ' to script.');
         }
 
-        gui.redraw(visOrPres.toString());
+        gui.redraw(visOrPres.toString(),true);
     };
     
 })();

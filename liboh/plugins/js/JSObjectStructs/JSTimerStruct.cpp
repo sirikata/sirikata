@@ -136,6 +136,7 @@ void JSTimerStruct::timerWeakReferenceCleanup(
  */
 void JSTimerStruct::noReference(const Liveness::Token& alive)
 {
+    v8::Locker locker (mCtx->mIsolate);
     v8::Isolate::Scope iscope(mCtx->mIsolate);
     if (alive) {
         killAfterFire = true;

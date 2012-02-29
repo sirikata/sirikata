@@ -9,8 +9,7 @@
 
 #include "Protocol_Prox.pbj.hpp"
 
-#include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/json_parser.hpp>
+#include <json_spirit/json_spirit.h>
 #include <boost/foreach.hpp>
 
 #include <prox/manual/RTreeManualQueryHandler.hpp>
@@ -254,18 +253,14 @@ void LibproxManualProximity::handleObjectHostProxMessage(const OHDP::NodeID& id,
     Protocol::Prox::QueryRequest request;
     bool parse_success = request.ParseFromString(data);
 
-    using namespace boost::property_tree;
-    ptree pt;
-    try {
-        std::stringstream phy_json(request.query_parameters());
-        read_json(phy_json, pt);
-    }
-    catch(json_parser::json_parser_error exc) {
-        PROXLOG(error, "Error parsing object host query request: " << request.query_parameters() << " (" << exc.what() << ")");
+    namespace json = json_spirit;
+    json::Value query_params;
+    if (!json::read(request.query_parameters(), query_params)) {
+        PROXLOG(error, "Error parsing object host query request: " << request.query_parameters());
         return;
     }
 
-    String action = pt.get("action", String(""));
+    String action = query_params.getString("action", String(""));
     if (action.empty()) return;
     if (action == "init") {
         PROXLOG(detailed, "Init query for " << id);
@@ -291,10 +286,16 @@ void LibproxManualProximity::handleObjectHostProxMessage(const OHDP::NodeID& id,
     else if (action == "refine") {
         PROXLOG(detailed, "Refine query for " << id);
 
+        if (!query_params.contains("nodes") || !query_params.get("nodes").isArray()) {
+            PROXLOG(detailed, "Invalid refine request " << id);
+            return;
+        }
+        json::Array json_nodes = query_params.getArray("nodes");
         std::vector<UUID> refine_nodes;
-        BOOST_FOREACH(ptree::value_type &v,
-            pt.get_child("nodes"))
-            refine_nodes.push_back(UUID(v.first, UUID::HumanReadable()));
+        BOOST_FOREACH(json::Value& v, json_nodes) {
+            if (!v.isString()) return;
+            refine_nodes.push_back(UUID(v.getString(), UUID::HumanReadable()));
+        }
 
         for(int kls = 0; kls < NUM_OBJECT_CLASSES; kls++) {
             if (mOHQueryHandler[kls].handler == NULL) continue;
@@ -309,10 +310,16 @@ void LibproxManualProximity::handleObjectHostProxMessage(const OHDP::NodeID& id,
     else if (action == "coarsen") {
         PROXLOG(detailed, "Coarsen query for " << id);
 
+        if (!query_params.contains("nodes") || !query_params.get("nodes").isArray()) {
+            PROXLOG(detailed, "Invalid coarsen request " << id);
+            return;
+        }
+        json::Array json_nodes = query_params.getArray("nodes");
         std::vector<UUID> coarsen_nodes;
-        BOOST_FOREACH(ptree::value_type &v,
-            pt.get_child("nodes"))
-            coarsen_nodes.push_back(UUID(v.first, UUID::HumanReadable()));
+        BOOST_FOREACH(json::Value& v, json_nodes) {
+            if (!v.isString()) return;
+            coarsen_nodes.push_back(UUID(v.getString(), UUID::HumanReadable()));
+        }
 
         for(int kls = 0; kls < NUM_OBJECT_CLASSES; kls++) {
             if (mOHQueryHandler[kls].handler == NULL) continue;

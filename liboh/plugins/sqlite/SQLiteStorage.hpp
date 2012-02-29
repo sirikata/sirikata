@@ -35,6 +35,7 @@
 
 #include <sirikata/oh/Storage.hpp>
 #include <sirikata/sqlite/SQLite.hpp>
+#include <sirikata/core/queue/ThreadSafeQueueWithNotification.hpp>
 
 namespace Sirikata {
 namespace OH {
@@ -44,11 +45,14 @@ class FileStorageEvent;
 class SQLiteStorage : public Storage
 {
 public:
-    SQLiteStorage(ObjectHostContext* ctx, const String& dbpath);
+    SQLiteStorage(ObjectHostContext* ctx, const String& dbpath, const Duration& lease_duration);
     ~SQLiteStorage();
 
     virtual void start();
     virtual void stop();
+
+    virtual void leaseBucket(const Bucket& bucket);
+    virtual void releaseBucket(const Bucket& bucket);
 
     virtual void beginTransaction(const Bucket& bucket);
 
@@ -83,7 +87,7 @@ private:
         StorageAction& operator=(const StorageAction& rhs);
 
         // Executes this action. Assumes the owning SQLiteStorage has setup the transaction.
-        bool execute(SQLiteDBPtr db, const Bucket& bucket, ReadSet* rs);
+        Result execute(SQLiteDBPtr db, const Bucket& bucket, ReadSet* rs);
 
         // Bucket is implicit, passed into execute
         Type type;
@@ -95,6 +99,22 @@ private:
     typedef std::vector<StorageAction> Transaction;
     typedef std::tr1::unordered_map<Bucket, Transaction*, Bucket::Hasher> BucketTransactions;
 
+    // We keep a queue of transactions and trigger handlers, which can process
+    // more than one at a time, on the storage IOService
+    struct TransactionData {
+        TransactionData()
+         : bucket(), trans(NULL), cb()
+        {}
+        TransactionData(const Bucket& b, Transaction* t, CommitCallback c)
+         : bucket(b), trans(t), cb(c)
+        {}
+
+        Bucket bucket;
+        Transaction* trans;
+        CommitCallback cb;
+    };
+    typedef ThreadSafeQueueWithNotification<TransactionData> TransactionQueue;
+
     // Initializes the database. This is separate from the main initialization
     // function because we need to make sure it executes in the right thread so
     // all sqlite requests on the db ptr come from the same thread.
@@ -105,17 +125,18 @@ private:
     // implicit transaction.
     Transaction* getTransaction(const Bucket& bucket, bool* is_new = NULL);
 
-    // Executes a commit. Runs in a separate thread, so the transaction is
-    // passed in directly
-    void executeCommit(const Bucket& bucket, Transaction* trans, CommitCallback cb);
+    // Indirection to get on mIOService
+    void postProcessTransactions();
+    // Process transactions. Runs until queue is empty and is triggered anytime
+    // the queue goes from empty to non-empty.
+    void processTransactions();
+
+    // Tries to execute a commit *assuming it is within a SQL
+    // transaction*. Returns whether it was successful, allowing for
+    // rollback/retrying.
+    Result executeCommit(const Bucket& bucket, Transaction* trans, CommitCallback cb, ReadSet** read_set_out);
 
     void executeCount(const String value_count, const Key& start, const Key& finish, CountCallback cb);
-
-    // Complete a commit back in the main thread, cleaning it up and dispatching
-    // the callback
-    void completeCommit(const Bucket& bucket, Transaction* trans, CommitCallback cb, bool success, ReadSet* rs);
-
-    void completeCount(CountCallback cb, bool success, int32 count);
 
     // A few helper methods that wrap sql operations.
     bool sqlBeginTransaction();
@@ -123,6 +144,26 @@ private:
     bool sqlRollback();
 
 
+    // Helpers for leases:
+    // Get the current lease string, which includes our client ID and
+    // an expiration time based on the current time
+    String getLeaseString();
+    // Parse a lease string read from the DB into the client ID
+    // (owner) and expiration time.
+    void parseLeaseString(const String& ls, String* client_out, Time* expiration_out);
+
+    // Acquire a lease (or update if it's already valid) for the given
+    // bucket. This is part of a transaction -- the first part to
+    // ensure the transaction is valid
+    Result acquireLease(const Bucket& bucket);
+    // Renew a lease that we already have. Verifies we still hold the
+    // lease, then renews it. This is an entire transaction.
+    void renewLease(const Bucket& bucket);
+    // Release the lease if we own it.
+    void releaseLease(const Bucket& bucket);
+
+    // Process renewals at front of queue that need updating.
+    void processRenewals();
 
     ObjectHostContext* mContext;
     BucketTransactions mTransactions;
@@ -134,6 +175,28 @@ private:
     Network::IOService* mIOService;
     Network::IOWork* mWork;
     Thread* mThread;
+
+    // A unique client ID for leases. These should not include '-' as
+    // those are used to separate the client ID and timestamp
+    const String mSQLClientID;
+    const Duration mLeaseDuration;
+
+    TransactionQueue mTransactionQueue;
+    // Maximum transactions to combine into a single transaction in the
+    // underlying database. TODO(ewencp) this should probably be dynamic, should
+    // increase/decrease based on success/failure and avoid latency getting too
+    // hight. Right now we just have a reasonable, but small, number.
+    uint32 mMaxCoalescedTransactions;
+
+    struct BucketRenewTimeout {
+        BucketRenewTimeout(const Bucket& _b, Time _t)
+         : bucket(_b), t(_t)
+        {}
+        const Bucket bucket;
+        const Time t;
+    };
+    std::queue<BucketRenewTimeout> mRenewTimes;
+    Network::IOTimerPtr mRenewTimer;
 };
 
 }//end namespace OH

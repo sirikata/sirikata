@@ -43,9 +43,7 @@
 
 #include <sirikata/space/AggregateManager.hpp>
 
-// Property tree for old API for queries
-#include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/json_parser.hpp>
+#include <json_spirit/json_spirit.h>
 
 #define PROXLOG(level,msg) SILOG(prox,level,"[PROX] " << msg)
 
@@ -63,26 +61,13 @@ bool parseQueryRequest(const String& query, SolidAngle* qangle_out, uint32* max_
     if (query.empty())
         return false;
 
-    using namespace boost::property_tree;
-    ptree pt;
-    try {
-        std::stringstream data_json(query);
-        read_json(data_json, pt);
-    }
-    catch(json_parser::json_parser_error exc) {
+    namespace json = json_spirit;
+    json::Value parsed;
+    if (!json::read(query, parsed))
         return false;
-    }
 
-
-    if (pt.find("angle") != pt.not_found())
-        *qangle_out = SolidAngle( pt.get<float32>("angle") );
-    else
-        *qangle_out = SolidAngle::Max;
-
-    if (pt.find("max_results") != pt.not_found())
-        *max_results_out = pt.get<uint32>("max_results");
-    else
-        *max_results_out = 0;
+    *qangle_out = SolidAngle( parsed.getReal("angle", SolidAngle::Max.asFloat()) );
+    *max_results_out = parsed.getInt("max_result", 0);
 
     return true;
 }

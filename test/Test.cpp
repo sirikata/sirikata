@@ -35,13 +35,19 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <sirikata/core/options/Options.hpp>
+#include <sirikata/core/options/CommonOptions.hpp>
+#include <sirikata/core/trace/Trace.hpp>
+
 namespace Sirikata {
 
 using namespace CxxTest;
 
 class StandardTestListener : public TestListener {
 public:
-    StandardTestListener() {
+    StandardTestListener(int argc, const char** argv)
+     : m_argc(argc), m_argv(argv)
+    {
     }
     virtual ~StandardTestListener() {
     }
@@ -71,6 +77,15 @@ public:
                                 if ( td->active() ) {
 
                                     tracker().enterTest( *td );
+
+                                    // Make sure options are reparsed for each
+                                    // test suite, in case the test suites
+                                    // themselves (e.g. a test of options) mucks
+                                    // with them
+                                    InitOptions();
+                                    Trace::Trace::InitOptions();
+                                    ParseOptions(m_argc, const_cast<char**>(m_argv));
+
                                     if ( td->setUp() ) {
                                         td->run();
                                         td->tearDown();
@@ -164,6 +179,10 @@ public:
     }
     virtual void leaveSuite( const SuiteDescription & /*desc*/ ) {}
     virtual void leaveWorld( const WorldDescription & /*desc*/ ) {}
+
+private:
+    int m_argc;
+    const char** m_argv;
 };
 
 } // namespace Sirikata
@@ -171,9 +190,9 @@ public:
 
 int main(int argc, const char * argv [])
 {
-	if(argc > 1) {
-		return Sirikata::StandardTestListener().run(argv[1]);
-	} else {
-		return Sirikata::StandardTestListener().run(NULL);
-	}
+    if(argc > 1) {
+        return Sirikata::StandardTestListener(argc, argv).run(argv[1]);
+    } else {
+        return Sirikata::StandardTestListener(argc, argv).run(NULL);
+    }
 }

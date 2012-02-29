@@ -4,7 +4,7 @@
 #include <sirikata/core/util/SpaceObjectReference.hpp>
 #include <sirikata/proxyobject/ProxyObject.hpp>
 #include <sirikata/proxyobject/VWObject.hpp>
-#include "PerPresenceData.hpp"
+#include <sirikata/oh/PerPresenceData.hpp>
 #include <sirikata/oh/ObjectHostContext.hpp>
 
 

@@ -13,6 +13,8 @@
 
 using namespace std;
 
+
+
 void myRecoverFromMismatchedSet(struct ANTLR3_BASE_RECOGNIZER_struct* _recognizer, pANTLR3_BITSET_LIST _follow)
 {
 }
@@ -27,37 +29,33 @@ void* myRecoverFromMismatchedToken(struct ANTLR3_BASE_RECOGNIZER_struct* _recogn
 extern pANTLR3_UINT8  EmersonParserTokenNames[];
 extern void* myRecoverFromMismatchedToken(struct ANTLR3_BASE_RECOGNIZER_struct*, ANTLR3_UINT32, pANTLR3_BITSET_LIST);
 
-EmersonInfo* _emersonInfo;
+
 pEmersonTree _treeParser;
+
 
 pANTLR3_STRING emerson_printAST(pANTLR3_BASE_TREE tree)
 {
     return emerson_printAST(tree,EmersonParserTokenNames);
 }
 
-/*
-bool emerson_compile(const char* em_script_str, std::string& toCompileTo)
-{
-    FILE* no_dbg = NULL;
-    return emerson_compile(em_script_str, toCompileTo,no_dbg);
-}
 
-bool emerson_compile(const char* em_script_str, std::string& toCompileTo, FILE* dbg) {
-    int errorNum;
-    return emerson_compile(em_script_str,toCompileTo, errorNum, dbg, NULL);
-}
-*/
 // This version of the function should be called from the main compiler
 
-bool emerson_compile(std::string _originalFile, const char* em_script_str, std::string& toCompileTo,
-                     int& errorNum, EmersonErrorFuncType error_cb, EmersonLineMap* lineMap) {
+bool EmersonUtil::emerson_compile(
+    std::string _originalFile, const char* em_script_str, std::string& toCompileTo,
+    int& errorNum, EmersonErrorFuncType error_cb, EmersonLineMap* lineMap)
+{
     return emerson_compile(_originalFile, em_script_str, toCompileTo,errorNum, error_cb, NULL, lineMap);
 }
 
-bool emerson_compile(std::string _originalFile, const char* em_script_str, std::string& toCompileTo,
-                     int& errorNum, EmersonErrorFuncType errorFunction, FILE* dbg, EmersonLineMap* lineMap)
+bool EmersonUtil::emerson_compile(
+    std::string _originalFile, const char* em_script_str, std::string& toCompileTo,
+    int& errorNum, EmersonErrorFuncType errorFunction, FILE* dbg, EmersonLineMap* lineMap)
 {
-  _emersonInfo = new EmersonInfo();
+
+
+    
+  EmersonInfo* _emersonInfo = new EmersonInfo();
   if(_originalFile.size() > 0 )
   {
     _emersonInfo->push(_originalFile);
@@ -70,30 +68,26 @@ bool emerson_compile(std::string _originalFile, const char* em_script_str, std::
 
   _emersonInfo->mismatchTokenFunctionIs(&myRecoverFromMismatchedToken);
 
-  return emerson_compile(em_script_str, toCompileTo,errorNum, dbg, lineMap);
-}
-
-bool emerson_compile(const char* em_script_str, std::string& toCompileTo, int& errorNum) {
-    return emerson_compile(em_script_str, toCompileTo,errorNum, NULL, NULL);
+  bool returner = emerson_compile(
+      em_script_str, toCompileTo,errorNum, dbg, lineMap,_emersonInfo);
+  
+  delete _emersonInfo;
+  return returner;
 }
 
 // This is mor basic version of the function. Should be called from else where
-
-bool emerson_compile(const char* em_script_str, std::string& toCompileTo, int& errorNum, FILE* dbg, EmersonLineMap* lineMap)
+bool EmersonUtil::emerson_compile(
+    const char* em_script_str, std::string& toCompileTo, int& errorNum,
+    FILE* dbg, EmersonLineMap* lineMap, EmersonInfo* _emersonInfo)
 {
+    static boost::mutex EmMutex;
+    boost::mutex::scoped_lock locker (EmMutex);
+    
     if (dbg != NULL) fprintf(dbg, "Trying to compile \n %s\n", em_script_str);
 
 
-    /*
-      I tried this..but this doesn't work..didn't go deep into it..
-
-    string em_script_str_new = string(em_script_str);
-    em_script_str_new  = "with ( system ) {\n" + em_script_str_new + "\n}\n";
-    em_script_str = em_script_str_new.c_str();
-    */
     pANTLR3_UINT8 str = (pANTLR3_UINT8)em_script_str;
     pANTLR3_INPUT_STREAM input = antlr3NewAsciiStringCopyStream(str, strlen(em_script_str), NULL);
-//    char* js_str;
     bool returner = false;
     
     pEmersonLexer lxr;
