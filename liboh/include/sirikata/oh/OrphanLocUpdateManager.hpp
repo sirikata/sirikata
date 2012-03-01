@@ -49,7 +49,7 @@ class LocationUpdate;
  *  discarded. In all cases, sequence numbers are still used so possibly trying
  *  to apply old updates isn't an issue.
  */
-class SIRIKATA_PROXYOBJECT_EXPORT OrphanLocUpdateManager : public PollingService {
+class SIRIKATA_OH_EXPORT OrphanLocUpdateManager : public PollingService {
 public:
     template<typename QuerierIDType>
     class Listener {
