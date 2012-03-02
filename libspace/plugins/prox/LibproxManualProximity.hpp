@@ -98,6 +98,7 @@ private:
     void eraseSeqNoInfo(const OHDP::NodeID& node);
 
     // Command handlers
+    virtual void commandProperties(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
     virtual void commandListHandlers(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
     bool parseHandlerName(const String& name, ProxQueryHandler*** handlers_out, ObjectClass* class_out);
     virtual void commandForceRebuild(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);

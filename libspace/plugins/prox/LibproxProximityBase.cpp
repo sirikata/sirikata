@@ -174,6 +174,15 @@ LibproxProximityBase::LibproxProximityBase(SpaceContext* ctx, LocationService* l
     // available. They get dispatched to the prox strand so implementations only
     // need to worry about processing them.
     if (mContext->commander()) {
+        // Get basic properties (both fixed and dynamic debugging
+        // state) about this query processor.
+        mContext->commander()->registerCommand(
+            "space.prox.properties",
+            mProxStrand->wrap(
+                std::tr1::bind(&LibproxProximityBase::commandProperties, this, _1, _2, _3)
+            )
+        );
+
         // Get a list of the handlers by name and their basic properties. The
         // particular names and properties may be implementation dependent.
         mContext->commander()->registerCommand(

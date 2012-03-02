@@ -726,6 +726,54 @@ void LibproxProximity::rebuildHandler(ObjectClass objtype) {
 
 
 // Command handlers
+void LibproxProximity::commandProperties(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {
+    Command::Result result = Command::EmptyResult();
+
+    // Properties/settings
+    result.put("name", "libprox");
+    result.put("settings.handlers", mNumQueryHandlers * 2);
+    result.put("settings.dynamic_separate", mSeparateDynamicObjects);
+    if (mSeparateDynamicObjects)
+        result.put("settings.static_heuristic", mMoveToStaticDelay.toString());
+
+    // Current state. Split into two high level parts, objects and servers, and
+    // further split by properties of connected objects/servers and queries
+    // by them.
+
+    // Properties of objects
+    // We don't get this info from loc, we just figure it out based on what the
+    // query processors report: server queries only have local objects, object
+    // queries have both
+    int32 server_query_objects = (mNumQueryHandlers == 2 ? (mServerQueryHandler[0].handler->numObjects() + mServerQueryHandler[1].handler->numObjects()) : mServerQueryHandler[0].handler->numObjects());
+    int32 object_query_objects = (mNumQueryHandlers == 2 ? (mObjectQueryHandler[0].handler->numObjects() + mObjectQueryHandler[1].handler->numObjects()) : mObjectQueryHandler[0].handler->numObjects());
+    result.put("objects.properties.local_count", server_query_objects);
+    result.put("objects.properties.remote_count", object_query_objects - server_query_objects);
+    result.put("objects.properties.count", object_query_objects);
+    result.put("objects.properties.max_size", mMaxObject);
+
+    // Properties of queries from objects
+    result.put("queries.objects.count", mObjectQueries[0].size());
+    result.put("queries.objects.min_solid_angle", mMinObjectQueryAngle.asFloat());
+    result.put("queries.objects.max_max_count", mMaxMaxCount);
+    if (mObjectDistance)
+        result.put("queries.objects.distance", mDistanceQueryDistance);
+    // Technically not thread safe, but these should be simple
+    // read-only accesses.
+    result.put("queries.objects.messages", mObjectResults.size() + mObjectResultsToSend.size());
+
+
+    // Properties of servers
+    result.put("servers.num_queried", mServersQueried.size());
+
+    // Properties of queries from servers
+    result.put("queries.servers.count", mServerQueries[0].size());
+    if (mServerDistance)
+        result.put("queries.servers.distance", mDistanceQueryDistance);
+    result.put("queries.servers.messages", mServerResults.size() + mServerResultsToSend.size());
+
+    cmdr->result(cmdid, result);
+}
+
 void LibproxProximity::commandListHandlers(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {
     Command::Result result = Command::EmptyResult();
     for(int i = 0; i < NUM_OBJECT_CLASSES; i++) {

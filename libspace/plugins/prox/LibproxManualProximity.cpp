@@ -460,6 +460,33 @@ void LibproxManualProximity::queryHasEvents(ProxQuery* query) {
 
 
 // Command handlers
+void LibproxManualProximity::commandProperties(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {
+    Command::Result result = Command::EmptyResult();
+
+    // Properties
+    result.put("name", "libprox-manual");
+    result.put("settings.handlers", mNumQueryHandlers);
+    result.put("settings.dynamic_separate", mSeparateDynamicObjects);
+    if (mSeparateDynamicObjects)
+        result.put("settings.static_heuristic", mMoveToStaticDelay.toString());
+
+    // Current state
+
+    // Properties of objects
+    int32 oh_query_objects = (mNumQueryHandlers == 2 ? (mOHQueryHandler[0]->numObjects() + mOHQueryHandler[1]->numObjects()) : mOHQueryHandler[0]->numObjects());
+    result.put("objects.properties.local_count", oh_query_objects);
+    result.put("objects.properties.remote_count", 0);
+    result.put("objects.properties.count", oh_query_objects);
+
+    // Properties of queries
+    result.put("queries.oh.count", mOHQueries[0].size());
+    // Technically not thread safe, but these should be simple
+    // read-only accesses.
+    result.put("queries.oh.messages", mOHResults.size() + mOHResultsToSend.size());
+
+    cmdr->result(cmdid, result);
+}
+
 void LibproxManualProximity::commandListHandlers(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {
     Command::Result result = Command::EmptyResult();
     for(int i = 0; i < NUM_OBJECT_CLASSES; i++) {
@@ -468,6 +495,7 @@ void LibproxManualProximity::commandListHandlers(const Command::Command& cmd, Co
             result.put(key + "name", String("oh-queries.") + ObjectClassToString((ObjectClass)i) + "-objects");
             result.put(key + "queries", mOHQueryHandler[i]->numQueries());
             result.put(key + "objects", mOHQueryHandler[i]->numObjects());
+
         }
     }
     cmdr->result(cmdid, result);
