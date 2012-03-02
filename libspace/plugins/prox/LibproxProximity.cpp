@@ -43,6 +43,7 @@
 
 #include <sirikata/space/AggregateManager.hpp>
 
+#include <sirikata/core/command/Commander.hpp>
 #include <json_spirit/json_spirit.h>
 
 #define PROXLOG(level,msg) SILOG(prox,level,"[PROX] " << msg)
@@ -713,12 +714,109 @@ void LibproxProximity::tickQueryHandler(ProxQueryHandlerData qh[NUM_OBJECT_CLASS
     }
 }
 
-void LibproxProximity::rebuildHandler(ObjectClass objtype) {
-    if (mServerQueryHandler[objtype].handler != NULL)
-        mServerQueryHandler[objtype].handler->rebuild();
-    if (mObjectQueryHandler[objtype].handler != NULL)
-        mObjectQueryHandler[objtype].handler->rebuild();
+void LibproxProximity::rebuildHandlerType(ProxQueryHandlerData* handler, ObjectClass objtype) {
+    if (handler[objtype].handler != NULL)
+        handler[objtype].handler->rebuild();
 }
+
+void LibproxProximity::rebuildHandler(ObjectClass objtype) {
+    rebuildHandlerType(mServerQueryHandler, objtype);
+    rebuildHandlerType(mObjectQueryHandler, objtype);
+}
+
+
+// Command handlers
+void LibproxProximity::commandListHandlers(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {
+    Command::Result result = Command::EmptyResult();
+    for(int i = 0; i < NUM_OBJECT_CLASSES; i++) {
+        if (mObjectQueryHandler[i].handler != NULL) {
+            String key = String("handlers.object.") + ObjectClassToString((ObjectClass)i) + ".";
+            result.put(key + "name", String("object-queries.") + ObjectClassToString((ObjectClass)i) + "-objects");
+            result.put(key + "queries", mObjectQueryHandler[i].handler->numQueries());
+            result.put(key + "objects", mObjectQueryHandler[i].handler->numObjects());
+        }
+        if (mServerQueryHandler[i].handler != NULL) {
+            String key = String("handlers.server.") + ObjectClassToString((ObjectClass)i) + ".";
+            result.put(key + "name", String("server-queries.") + ObjectClassToString((ObjectClass)i) + "-objects");
+            result.put(key + "queries", mServerQueryHandler[i].handler->numQueries());
+            result.put(key + "objects", mServerQueryHandler[i].handler->numObjects());
+        }
+    }
+    cmdr->result(cmdid, result);
+}
+
+bool LibproxProximity::parseHandlerName(const String& name, ProxQueryHandlerData** handlers_out, ObjectClass* class_out) {
+    // Should be of the form xxx-queries.yyy-objects, containing only 1 .
+    std::size_t dot_pos = name.find('.');
+    if (dot_pos == String::npos || name.rfind('.') != dot_pos)
+        return false;
+
+    String handler_part = name.substr(0, dot_pos);
+    if (handler_part == "server-queries")
+        *handlers_out = mServerQueryHandler;
+    else if (handler_part == "object-queries")
+        *handlers_out = mObjectQueryHandler;
+    else
+        return false;
+
+    String class_part = name.substr(dot_pos+1);
+    if (class_part == "dynamic-objects")
+        *class_out = OBJECT_CLASS_DYNAMIC;
+    else if (class_part == "static-objects")
+        *class_out = OBJECT_CLASS_STATIC;
+    else
+        return false;
+
+    return true;
+}
+
+void LibproxProximity::commandForceRebuild(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {
+    Command::Result result = Command::EmptyResult();
+
+    ProxQueryHandlerData* handlers = NULL;
+    ObjectClass klass;
+    if (!cmd.contains("handler") ||
+        !parseHandlerName(cmd.getString("handler"), &handlers, &klass))
+    {
+        result.put("error", "Ill-formatted request: handler not specified or invalid.");
+        cmdr->result(cmdid, result);
+        return;
+    }
+
+    rebuildHandlerType(handlers, klass);
+    result.put("success", true);
+    cmdr->result(cmdid, result);
+}
+
+void LibproxProximity::commandListNodes(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {
+    Command::Result result = Command::EmptyResult();
+
+    ProxQueryHandlerData* handlers = NULL;
+    ObjectClass klass;
+    if (!cmd.contains("handler") ||
+        !parseHandlerName(cmd.getString("handler"), &handlers, &klass))
+    {
+        result.put("error", "Ill-formatted request: handler not specified or invalid.");
+        cmdr->result(cmdid, result);
+        return;
+    }
+
+    result.put( String("nodes"), Command::Array());
+    Command::Array& nodes_ary = result.getArray("nodes");
+    for(ProxQueryHandler::NodeIterator nit = handlers[klass].handler->nodesBegin(); nit != handlers[klass].handler->nodesEnd(); nit++) {
+        nodes_ary.push_back( Command::Object() );
+        nodes_ary.back().put("id", nit.id().toString());
+        nodes_ary.back().put("parent", nit.parentId().toString());
+        BoundingSphere3f bounds = nit.bounds(mContext->simTime());
+        nodes_ary.back().put("bounds.center.x", bounds.center().x);
+        nodes_ary.back().put("bounds.center.y", bounds.center().y);
+        nodes_ary.back().put("bounds.center.z", bounds.center().z);
+        nodes_ary.back().put("bounds.radius", bounds.radius());
+    }
+
+    cmdr->result(cmdid, result);
+}
+
 
 void LibproxProximity::generateServerQueryEvents(Query* query) {
     typedef std::deque<QueryEvent> QueryEventList;
