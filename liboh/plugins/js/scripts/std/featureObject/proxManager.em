@@ -12,6 +12,14 @@ system.require('featureObject.em');
      //undefined for the visible's featureObject (if tried that many
      //times, and didn't get a response).
      var TIME_TO_WAIT_FOR_FEATURE_OBJECT_RESP = 10;
+
+
+     //Want to avoid firing prox callbacks in cases where we get a
+     //removal quickly followed by an addition.  (can happen if a
+     //dynamic object switches to static tree, even if object does not
+     //move at all).  To mask this, we wait this number of seconds before
+     //actually firing removal notifications.
+     var TIME_TO_WAIT_BETWEEN_REMOVAL_AND_NOTIFICATION = 1;
      
      //map
      //keys: sporef of presence
@@ -27,20 +35,49 @@ system.require('featureObject.em');
       @param {presence} subscriber (optional) - A presence
       that wants to receive updates on vis.
       */
-     function SubscriptionElement (vis,featGrabber,subscriber)
+     function SubscriptionElement (vis,featGrabber,proxMan,subscriber)
      {
          this.vis = vis;
          this.featGrabber =featGrabber;
+         this.proxMan = proxMan;
          this.subscribers = {};
          if (typeof(subscriber) != 'undefined')
              this.subscribers[subscriber.toString()] = subscriber;
+
+         this.awaitingTimeout  = {};
      }
 
+     /**
+      @return {bool} -- True if should fire a prox callback after this
+      event, false otherwise.
+
+      Note: the reason for the return value here is that we try to
+      mask removals followed by quick additions (reason: the interface
+      that pinto provides us doesn't actually tell us when something
+      has moved out of our proximity query, it tells us when something
+      has moved out of a tree that we were watching).  For instance,
+      if a visible moves from the dynamic tree to the static tree, we
+      get a removal and addition, even if the visible itself has not
+      moved at all.
+      */
      SubscriptionElement.prototype.addSubscriber =
          function(presToAdd)
      {
-         this.subscribers[presToAdd.toString()] = presToAdd;
+         var pString = presToAdd.toString();
+         this.subscribers[pString] = presToAdd;
+
+         //may have gotten a quick removal followed by addition.  if
+         //did, then clear waiting timeout.
+         if (pString in this.awaitingTimeout)
+         {
+             this.awaitingTimeout[pString].clear();
+             delete this.awaitingTimeout[pString];
+             return false;
+         }
+
+         return true;
      };
+     
 
      //returns true if there are no subscribers left.
      SubscriptionElement.prototype.noSubscribers =
@@ -52,12 +89,31 @@ system.require('featureObject.em');
          return true;
      };
      
-     SubscriptionElement.prototype.removeSubscriber =
+     SubscriptionElement.prototype.startRemoveSubscriber =
          function(presToRemove)
      {
-         if (presToRemove.toString() in this.subscribers)
-             delete this.subscribers[presToRemove.toString()];
+         var timer = system.timeout(
+             TIME_TO_WAIT_BETWEEN_REMOVAL_AND_NOTIFICATION,
+             std.core.bind(elemFinalizeRemove,undefined,this,presToRemove));
+
+         //if already had a timer waiting on removing the subscriber,
+         //cancel it first.
+         var pString = presToRemove.toString();
+         if (pString in this.awaitingTimeout)
+             this.awaitingTimeout[pString].clear();
+         
+         this.awaitingTimeout[pString] = timer;
      };
+
+     function elemFinalizeRemove(subElement,presToRemove)
+     {
+         if (presToRemove.toString() in subElement.subscribers)
+             delete subElement.subscribers[presToRemove.toString()];
+
+         finalizeRemove(
+             presToRemove,subElement.vis,subElement.proxMan,subElement);
+     }
+
 
      
      //map
@@ -201,10 +257,6 @@ system.require('featureObject.em');
              pArray[addID] = null;         
      };
 
-
-         // lkjs;
-         // var subElement = new SubscriptionElement(visibleObj,pres,pres);
-
      
      /**
       Gets called by system whenever visibleObj is within proximity
@@ -231,18 +283,21 @@ system.require('featureObject.em');
              //we already have feature data for this visible.  add pres
              //as subscriber to haveFeatureDataFor map and trigger callback.
              var subElement = haveFeatureDataFor[vString];
-             subElement.addSubscriber(pres);
-             this.triggerAddCallback(pres,subElement.vis);
+             var issueCallback = subElement.addSubscriber(pres);
+             if (issueCallback)
+                 this.triggerAddCallback(pres,subElement.vis);
          }
          else
          {
              //short-circuits: does not send message to get feature data.
-             var subElement = new SubscriptionElement(visibleObj,pres,pres);
+             var subElement =
+                 new SubscriptionElement(visibleObj,pres,this,pres);
+             
              haveFeatureDataFor[vString] = subElement;
              this.triggerAddCallback(pres,subElement.vis);
          }
      };
-
+     
 
      /**
       Gets called by system whenever visibleObj is within proximity
@@ -426,32 +481,34 @@ system.require('featureObject.em');
      {
          var pString = pres.toString();
          var vString = visibleObj.toString();
-
-         
-         //ignore events where you have entered your own prox set.
          if (pString == vString)
              return;
-
          
          if (vString in awaitingFeatureData)
-             awaitingFeatureData[vString].removeSubscriber(pres);                 
+             awaitingFeatureData[vString].startRemoveSubscriber(pres);                 
          else
          {
              //this line ensures that visibleObj will maintain
              //featureData associated with stored vis.
              visibleObj = haveFeatureDataFor[vString].vis;
              var subElem = haveFeatureDataFor[vString];
-             subElem.removeSubscriber(pres);
-
-             if (subElem.noSubscribers())
-             {
-                 this.killSubscription(pres,visibleObj);
-                 delete haveFeatureDataFor[vString];
-             }
-
-             //actually fire removed callback.
-             this.triggerRemoveCallback(pres,visibleObj);
+             subElem.startRemoveSubscriber(pres);
          }
+     };
+
+
+
+     //actually call remove callback
+     function finalizeRemove (pres,visibleObj,proxMan,subElem)
+     {
+         if (subElem.noSubscribers())
+         {
+             proxMan.killSubscription(pres,visibleObj);
+             delete haveFeatureDataFor[visibleObj.toString()];
+         }
+
+         //actually fire removed callback.
+         proxMan.triggerRemoveCallback(pres,visibleObj);
      };
 
 

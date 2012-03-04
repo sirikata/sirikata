@@ -16,6 +16,8 @@ if (typeof(std.core.SimpleInput) != 'undefined')
              haveInited = true;
              guiMod.bind('responseReceived',
                          respReceivedFunc);
+             guiMod.bind('htmlSetupComplete',
+                        setupNotificationReceived);
          }
      );
      
@@ -35,6 +37,21 @@ if (typeof(std.core.SimpleInput) != 'undefined')
          var inputter = knownUsed[forWhom];
          knownUsed[forWhom] = null;
          inputter.cb(response);
+     }
+
+     //html sends an event to us, which gets handled by this function.
+     //Tells us that the simpleInput gui has been displayed
+     function setupNotificationReceived(id)
+     {
+         if ((!(id in knownUsed)) ||
+             (knownUsed[id] ===null))
+         {
+             throw new Error ('In setupNotificationReceived, had' +
+                              'have no record of id to complete ' +
+                              'setup for.');
+         }
+
+         knownUsed[id].setupComplete =true;
      }
      
      
@@ -72,7 +89,8 @@ if (typeof(std.core.SimpleInput) != 'undefined')
          this.message    = message;
          this.cb         = cb;
          this.additional = additional;
-
+         this.setupComplete = false;
+         
          if ((type == std.core.SimpleInput.SELECT_LIST) &&
              (typeof(this.additional) == 'undefined'))
          {
@@ -97,6 +115,7 @@ if (typeof(std.core.SimpleInput) != 'undefined')
          guiMod.call(callFunc,message,this.indexUsed,additional);
      };
 
+     
      /*** Types of simple input to get  ***/
      //note: if add to any additional ones of these, then
      //must also add to if-else if statement in constructor
@@ -113,6 +132,49 @@ if (typeof(std.core.SimpleInput) != 'undefined')
      };
 
 
+     std.core.SimpleInput.prototype.clear = function()
+     {
+         
+         if ((!haveInited) || (!this.setupComplete))
+         {
+             //NOTE: this isn't actually safe.  If scripter calls
+             //clear before graphics (for all simpleInputs) are
+             //inited, will still see
+             //the graphics object (briefly), and may be able to
+             //respond to its selection in this way.
+             //Using this solution for now, because it's easy, and
+             //unlikely to actually cause a problem.
+             system.timeout(.1,
+                 std.core.bind(this.clear,this));
+             return;
+         }
+
+         guiMod.call('clearSimpleInputWindow',this.indexUsed);
+         
+         if ((!(this.indexUsed in knownUsed)) ||
+             (knownUsed[this.indexUsed] == null))
+         {
+             throw new Error('\nWarning in simple input clear. ' +
+                             this.indexUsed.toString() + ' when ' +
+                             'have no record for it.\n');
+         }
+
+
+         //actually perform cleanup later so that don't instantly
+         //re-use same id
+         system.timeout(5,
+                        std.core.bind(
+                            function()
+                            {
+                                knownUsed[this.indexUsed] = null;
+                                this.cb                   = null;
+                                this.type                 = null;
+                                this.message              = null;
+                                this.additional           = null;                                
+                            },this));
+     };
+     
+
      /**
       We want to recycle the divs,etc. associ
       */
@@ -121,7 +183,7 @@ if (typeof(std.core.SimpleInput) != 'undefined')
          var indexToUse = null;
          for (var s in knownUsed)
          {
-             if (knownUsed[s] == null)
+             if (knownUsed[s] === null)
              {
                  indexToUse = s;
                  break;
@@ -129,7 +191,7 @@ if (typeof(std.core.SimpleInput) != 'undefined')
          }
 
          //could not find empty index.  Create new element
-         if (indexToUse == null)
+         if (indexToUse === null)
          {
              knownUsed.push(null);
              indexToUse = knownUsed.length - 1;
@@ -205,12 +267,23 @@ if (typeof(std.core.SimpleInput) != 'undefined')
              //passing undefined as responseReceived
              sirikata.event('responseReceived',simpleInputID,returner);                     
 
-
              
-             delete existingWindows[simpleInputID];
+
              //actually remove the window from view after its question has been answered.
              var inputID = generateDivIDFromInputID(simpleInputID);
+             delete existingWindows[inputID];
              $('#'+inputID).remove();
+         };
+
+
+         clearSimpleInputWindow = function(simpleInputID)
+         {
+             var inputID = generateDivIDFromInputID(simpleInputID);
+             if (inputID in existingWindows)
+             {
+                 delete existingWindows[inputID];
+                 $('#' + inputID).remove();
+             }
          };
          
          function generateSubmitButtonHtml(simpleInputID)
@@ -240,6 +313,7 @@ if (typeof(std.core.SimpleInput) != 'undefined')
              }
              htmlInsert += generateSubmitButtonHtml(simpleInputID);
              newWindow(htmlInsert,simpleInputID);
+             sirikata.event('htmlSetupComplete',simpleInputID);
          };
 
          function generateSimpleInputOptionID(inputID)
@@ -252,6 +326,8 @@ if (typeof(std.core.SimpleInput) != 'undefined')
              var htmlInsert = message + '<br/>';
              htmlInsert += generateSubmitButtonHtml(simpleInputID);
              newWindow(htmlInsert,simpleInputID);
+
+             sirikata.event('htmlSetupComplete',simpleInputID);
          };
 
          
@@ -277,6 +353,7 @@ if (typeof(std.core.SimpleInput) != 'undefined')
              var register_area = document.getElementById(
                  generateSimpleInputOptionID(simpleInputID));
              register_area.onkeyup = handleEnterHit;
+             sirikata.event('htmlSetupComplete',simpleInputID);
          };
          @;
 

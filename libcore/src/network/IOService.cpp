@@ -36,7 +36,9 @@
 #include <sirikata/core/network/IOStrand.hpp>
 #include <boost/version.hpp>
 #include <boost/asio.hpp>
+#include <boost/lexical_cast.hpp>
 #include <sirikata/core/util/Timer.hpp>
+#include <sirikata/core/command/Commander.hpp>
 
 namespace Sirikata {
 namespace Network {
@@ -215,7 +217,7 @@ void IOService::decrementTimerCount(const boost::system::error_code& e, const Ti
 
         mWindowedTimerLatencyStats.sample((end - start) - timer_duration);
 
-        
+
         assert(mTagCounts.find(tag) != mTagCounts.end());
         mTagCounts[tag]--;
     }
@@ -225,7 +227,7 @@ void IOService::decrementTimerCount(const boost::system::error_code& e, const Ti
     end = Timer::now();
 
     TagDuration td;
-    
+
     td.tag = tagStat == NULL ? tag : tagStat;
     td.dur = end-begin;
     {
@@ -244,7 +246,7 @@ void IOService::decrementCount(const Time& start, const IOCallback& cb, const ch
         mTagCounts[tag]--;
     }
 
-    
+
     Time begin = Timer::now();
     cb();
     end = Timer::now();
@@ -274,11 +276,11 @@ typedef std::tr1::unordered_map<String, uint32> ReducedTagCountMap;
 // Inverted data, kept as a map so it's in sorted order
 typedef std::multimap<uint32, String, std::greater<uint32> > InvertedReducedTagCountMap;
 
-void reportOffenders(TagCountMap orig_tags) {
+void getOffenders(const TagCountMap& orig_tags, InvertedReducedTagCountMap& tags_by_count_out) {
     // We need to reduce these in case we have 2 identical strings but they have
     // different char*'s.
     ReducedTagCountMap tags;
-    for(TagCountMap::iterator it = orig_tags.begin(); it != orig_tags.end(); it++) {
+    for(TagCountMap::const_iterator it = orig_tags.begin(); it != orig_tags.end(); it++) {
         String key;
         if (it->first == NULL)
             key = "(NULL)";
@@ -287,17 +289,37 @@ void reportOffenders(TagCountMap orig_tags) {
         if (tags.find(key) == tags.end()) tags[key] = 0;
         tags[key] += it->second;
     }
+
     // Invert and get sorted
-    InvertedReducedTagCountMap tags_by_count;
     for(ReducedTagCountMap::iterator it = tags.begin(); it != tags.end(); it++)
-        tags_by_count.insert(
+        tags_by_count_out.insert(
             InvertedReducedTagCountMap::value_type(it->second, it->first)
         );
+}
 
-    // Then report
+void reportOffenders(TagCountMap orig_tags) {
+    InvertedReducedTagCountMap tags_by_count;
+    getOffenders(orig_tags, tags_by_count);
     for(InvertedReducedTagCountMap::iterator it = tags_by_count.begin(); it != tags_by_count.end(); it++)
         if (it->first > 0) SILOG(ioservice, info, "      " << it->second << " (" << it->first << ")");
 }
+
+void reportOffenders(TagCountMap orig_tags, Command::Result& res_out, const String& path) {
+    InvertedReducedTagCountMap tags_by_count;
+    getOffenders(orig_tags, tags_by_count);
+
+    res_out.put(path, Command::Array());
+    Command::Array& items = res_out.getArray(path);
+
+    for(InvertedReducedTagCountMap::iterator it = tags_by_count.begin(); it != tags_by_count.end(); it++) {
+        if (it->first <= 0) continue;
+        Command::Object tag_count;
+        tag_count["tag"] = it->second;
+        tag_count["count"] = it->first;
+        items.push_back(tag_count);
+    }
+}
+
 }
 
 void IOService::reportStats() const {
@@ -335,7 +357,7 @@ void IOService::reportStatsFile(const char* filename,bool detailed) const {
         fileWriter<<"    Timers: " << (*it)->numTimersEnqueued() << " with " << (*it)->timerLatency() << " recent latency\n";
         fileWriter<<"    Event handlers: " << (*it)->numEnqueued() << " with " << (*it)->handlerLatency() << " recent latency\n";
     }
-    
+
     if (detailed)
     {
         const CircularBuffer<TagDuration>& samples = mWindowedLatencyTagStats.getSamples();
@@ -346,7 +368,7 @@ void IOService::reportStatsFile(const char* filename,bool detailed) const {
             fileWriter<<" sample: "<< data.tag<<"  "<<data.dur<<"\n";
         }
     }
-    
+
     fileWriter.flush();
     fileWriter.close();
 }
@@ -366,9 +388,59 @@ void IOService::reportAllStatsFile(const char* filename,bool detailed) {
 }
 
 
+void IOService::fillCommandResultWithStats(Command::Result& res) {
+    LockGuard lock(const_cast<Mutex&>(mMutex));
 
+    res.put("name", name());
+    res.put("timers.enqueued", numTimersEnqueued());
+    res.put("timers.latency", timerLatency().toString());
+    res.put("handlers.enqueued", numEnqueued());
+    res.put("handlers.latency", handlerLatency().toString());
+    reportOffenders(mTagCounts, res, "offenders");
 
+    res.put("strands", Command::Array());
+    Command::Array& strands = res.getArray("strands");
+    for(StrandSet::const_iterator it = mStrands.begin(); it != mStrands.end(); it++) {
+        strands.push_back(Command::Object());
+        strands.back().put("name", (*it)->name());
+        strands.back().put("timers.enqueued", (*it)->numTimersEnqueued());
+        strands.back().put("timers.latency", (*it)->timerLatency().toString());
+        strands.back().put("handlers.enqueued", (*it)->numEnqueued());
+        strands.back().put("handlers.latency", (*it)->handlerLatency().toString());
+        reportOffenders((*it)->enqueuedTags(), strands.back(), "offenders");
+    }
+
+}
 #endif
+
+void IOService::commandReportStats(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {
+#ifdef SIRIKATA_TRACK_EVENT_QUEUES
+    AllIOServicesLockGuard lock(gAllIOServicesMutex);
+
+    Command::Result result = Command::EmptyResult();
+    fillCommandResultWithStats(result);
+    cmdr->result(cmdid, result);
+#endif
+}
+
+void IOService::commandReportAllStats(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {
+#ifdef SIRIKATA_TRACK_EVENT_QUEUES
+    AllIOServicesLockGuard lock(gAllIOServicesMutex);
+
+    Command::Result result = Command::EmptyResult();
+    // Ensure the top-level structure is there
+    result.put("ioservices", Command::Array());
+    Command::Array& services = result.getArray("ioservices");
+
+    for(AllIOServicesSet::const_iterator it = gAllIOServices.begin(); it != gAllIOServices.end(); it++) {
+        services.push_back(Command::Object());
+        (*it)->fillCommandResultWithStats(services.back());
+    }
+    cmdr->result(cmdid, result);
+#endif
+}
+
+
 
 } // namespace Network
 } // namespace Sirikata

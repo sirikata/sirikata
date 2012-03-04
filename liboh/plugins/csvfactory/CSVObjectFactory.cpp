@@ -61,6 +61,9 @@ CSVObjectFactory::CSVObjectFactory(ObjectHostContext* ctx, ObjectHost* oh, const
             // we can't check for its existence.
         }
     }
+
+    if (mFilename.empty())
+        SILOG(csvfactory, error, "Failed to find " << filename << " under any of the search paths. CSVObjectFactory won't generate any objects!");
 }
 
 template<typename T>
@@ -149,6 +152,8 @@ CSVObjectFactory::StringList CSVObjectFactory::sepCommas(String line)
 
 void CSVObjectFactory::generate(const String& timestamp)
 {
+    if (mFilename.empty()) return;
+
     int count =0;
     std::ifstream fp(mFilename.c_str());
     if (!fp) return;
@@ -325,6 +330,7 @@ void CSVObjectFactory::generate(const String& timestamp)
         }
     }
 
+    SILOG(csvfactory, detailed, "Generated " << count << " objects from " << mFilename);
 
     fp.close();
     connectObjects();

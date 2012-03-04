@@ -9,8 +9,8 @@
 
 #include "Protocol_Prox.pbj.hpp"
 
-#include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/json_parser.hpp>
+#include <sirikata/core/command/Commander.hpp>
+#include <json_spirit/json_spirit.h>
 #include <boost/foreach.hpp>
 
 #include <prox/manual/RTreeManualQueryHandler.hpp>
@@ -200,18 +200,14 @@ void LibproxManualProximity::handleObjectHostProxMessage(const OHDP::NodeID& id,
     Protocol::Prox::QueryRequest request;
     bool parse_success = request.ParseFromString(data);
 
-    using namespace boost::property_tree;
-    ptree pt;
-    try {
-        std::stringstream phy_json(request.query_parameters());
-        read_json(phy_json, pt);
-    }
-    catch(json_parser::json_parser_error exc) {
-        PROXLOG(error, "Error parsing object host query request: " << request.query_parameters() << " (" << exc.what() << ")");
+    namespace json = json_spirit;
+    json::Value query_params;
+    if (!json::read(request.query_parameters(), query_params)) {
+        PROXLOG(error, "Error parsing object host query request: " << request.query_parameters());
         return;
     }
 
-    String action = pt.get("action", String(""));
+    String action = query_params.getString("action", String(""));
     if (action.empty()) return;
     if (action == "init") {
         PROXLOG(detailed, "Init query for " << id);
@@ -237,10 +233,16 @@ void LibproxManualProximity::handleObjectHostProxMessage(const OHDP::NodeID& id,
     else if (action == "refine") {
         PROXLOG(detailed, "Refine query for " << id);
 
+        if (!query_params.contains("nodes") || !query_params.get("nodes").isArray()) {
+            PROXLOG(detailed, "Invalid refine request " << id);
+            return;
+        }
+        json::Array json_nodes = query_params.getArray("nodes");
         std::vector<UUID> refine_nodes;
-        BOOST_FOREACH(ptree::value_type &v,
-            pt.get_child("nodes"))
-            refine_nodes.push_back(UUID(v.first, UUID::HumanReadable()));
+        BOOST_FOREACH(json::Value& v, json_nodes) {
+            if (!v.isString()) return;
+            refine_nodes.push_back(UUID(v.getString(), UUID::HumanReadable()));
+        }
 
         for(int kls = 0; kls < NUM_OBJECT_CLASSES; kls++) {
             if (mOHQueryHandler[kls] == NULL) continue;
@@ -255,10 +257,16 @@ void LibproxManualProximity::handleObjectHostProxMessage(const OHDP::NodeID& id,
     else if (action == "coarsen") {
         PROXLOG(detailed, "Coarsen query for " << id);
 
+        if (!query_params.contains("nodes") || !query_params.get("nodes").isArray()) {
+            PROXLOG(detailed, "Invalid coarsen request " << id);
+            return;
+        }
+        json::Array json_nodes = query_params.getArray("nodes");
         std::vector<UUID> coarsen_nodes;
-        BOOST_FOREACH(ptree::value_type &v,
-            pt.get_child("nodes"))
-            coarsen_nodes.push_back(UUID(v.first, UUID::HumanReadable()));
+        BOOST_FOREACH(json::Value& v, json_nodes) {
+            if (!v.isString()) return;
+            coarsen_nodes.push_back(UUID(v.getString(), UUID::HumanReadable()));
+        }
 
         for(int kls = 0; kls < NUM_OBJECT_CLASSES; kls++) {
             if (mOHQueryHandler[kls] == NULL) continue;
@@ -447,5 +455,122 @@ void LibproxManualProximity::queryHasEvents(ProxQuery* query) {
         mOHResults.push( OHResult(query_id, obj_msg) );
     }
 }
+
+
+
+
+// Command handlers
+void LibproxManualProximity::commandProperties(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {
+    Command::Result result = Command::EmptyResult();
+
+    // Properties
+    result.put("name", "libprox-manual");
+    result.put("settings.handlers", mNumQueryHandlers);
+    result.put("settings.dynamic_separate", mSeparateDynamicObjects);
+    if (mSeparateDynamicObjects)
+        result.put("settings.static_heuristic", mMoveToStaticDelay.toString());
+
+    // Current state
+
+    // Properties of objects
+    int32 oh_query_objects = (mNumQueryHandlers == 2 ? (mOHQueryHandler[0]->numObjects() + mOHQueryHandler[1]->numObjects()) : mOHQueryHandler[0]->numObjects());
+    result.put("objects.properties.local_count", oh_query_objects);
+    result.put("objects.properties.remote_count", 0);
+    result.put("objects.properties.count", oh_query_objects);
+
+    // Properties of queries
+    result.put("queries.oh.count", mOHQueries[0].size());
+    // Technically not thread safe, but these should be simple
+    // read-only accesses.
+    result.put("queries.oh.messages", mOHResults.size() + mOHResultsToSend.size());
+
+    cmdr->result(cmdid, result);
+}
+
+void LibproxManualProximity::commandListHandlers(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {
+    Command::Result result = Command::EmptyResult();
+    for(int i = 0; i < NUM_OBJECT_CLASSES; i++) {
+        if (mOHQueryHandler[i] != NULL) {
+            String key = String("handlers.oh.") + ObjectClassToString((ObjectClass)i) + ".";
+            result.put(key + "name", String("oh-queries.") + ObjectClassToString((ObjectClass)i) + "-objects");
+            result.put(key + "queries", mOHQueryHandler[i]->numQueries());
+            result.put(key + "objects", mOHQueryHandler[i]->numObjects());
+
+        }
+    }
+    cmdr->result(cmdid, result);
+}
+
+bool LibproxManualProximity::parseHandlerName(const String& name, ProxQueryHandler*** handlers_out, ObjectClass* class_out) {
+    // Should be of the form xxx-queries.yyy-objects, containing only 1 .
+    std::size_t dot_pos = name.find('.');
+    if (dot_pos == String::npos || name.rfind('.') != dot_pos)
+        return false;
+
+    String handler_part = name.substr(0, dot_pos);
+    if (handler_part == "oh-queries")
+        *handlers_out = mOHQueryHandler;
+    else
+        return false;
+
+    String class_part = name.substr(dot_pos+1);
+    if (class_part == "dynamic-objects")
+        *class_out = OBJECT_CLASS_DYNAMIC;
+    else if (class_part == "static-objects")
+        *class_out = OBJECT_CLASS_STATIC;
+    else
+        return false;
+
+    return true;
+}
+
+void LibproxManualProximity::commandForceRebuild(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {
+    Command::Result result = Command::EmptyResult();
+
+    ProxQueryHandler** handlers = NULL;
+    ObjectClass klass;
+    if (!cmd.contains("handler") ||
+        !parseHandlerName(cmd.getString("handler"), &handlers, &klass))
+    {
+        result.put("error", "Ill-formatted request: handler not specified or invalid.");
+        cmdr->result(cmdid, result);
+        return;
+    }
+
+
+    result.put("error", "Rebuilding manual proximity processors isn't supported yet.");
+    cmdr->result(cmdid, result);
+}
+
+void LibproxManualProximity::commandListNodes(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {
+    Command::Result result = Command::EmptyResult();
+
+    ProxQueryHandler** handlers = NULL;
+    ObjectClass klass;
+    if (!cmd.contains("handler") ||
+        !parseHandlerName(cmd.getString("handler"), &handlers, &klass))
+    {
+        result.put("error", "Ill-formatted request: handler not specified or invalid.");
+        cmdr->result(cmdid, result);
+        return;
+    }
+
+    result.put( String("nodes"), Command::Array());
+    Command::Array& nodes_ary = result.getArray("nodes");
+    for(ProxQueryHandler::NodeIterator nit = handlers[klass]->nodesBegin(); nit != handlers[klass]->nodesEnd(); nit++) {
+        nodes_ary.push_back( Command::Object() );
+        nodes_ary.back().put("id", nit.id().toString());
+        nodes_ary.back().put("parent", nit.parentId().toString());
+        BoundingSphere3f bounds = nit.bounds(mContext->simTime());
+        nodes_ary.back().put("bounds.center.x", bounds.center().x);
+        nodes_ary.back().put("bounds.center.y", bounds.center().y);
+        nodes_ary.back().put("bounds.center.z", bounds.center().z);
+        nodes_ary.back().put("bounds.radius", bounds.radius());
+    }
+
+    cmdr->result(cmdid, result);
+}
+
+
 
 } // namespace Sirikata

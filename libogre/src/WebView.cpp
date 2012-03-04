@@ -426,7 +426,7 @@ void WebView::forwardBrowserNavigatedCallback(Liveness::Token alive, const Strin
 void WebView::defaultEvent(const String& name) {
 #ifndef HAVE_BERKELIUM
     mContext->mainStrand->post(
-        std::tr1::bind(&WebView::dispatchToDelegate, this, name, JSArguments())
+        std::tr1::bind(&WebView::dispatchToDelegateNoReturn, this, name, JSArguments())
     );
 #endif
 }

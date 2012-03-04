@@ -66,9 +66,15 @@ system.require('std/core/simpleInput.em');
       this field, then gui should actually change currentlySelectedVisible
 
       @param {bool} force (optional).  If called with this field as
-      true, then forces the gui window to be "shown".  
+      true, then forces the gui window to be "shown".
+
+      @param {actionId} selectedActionId (option).  If called with this
+      field as true, then forces the gui window to change selected
+      action to the action with this id.  Note: all action changes to
+      this point that had not been saved will be lost.
       */
-     std.ScriptingGui.prototype.redraw = function(selected,force)
+     std.ScriptingGui.prototype.redraw =
+         function(selected,force,selectedActionId)
      {
          //have to wait for ace libraries to load.  after they do, js
          //will send an amReady event back to emerson code.  emerson
@@ -84,18 +90,14 @@ system.require('std/core/simpleInput.em');
              return;
          }
 
-
-         
          //trigger redraw call
          this.guiMod.call(
              'ishmaelRedraw',toHtmlNearbyMap(this),toHtmlScriptedMap(this),
              toHtmlActionMap(this),toHtmlFileMap(this),toHtmlNameMap(this),
-             toHtmlConsoleMap(this),selected,force);
+             toHtmlConsoleMap(this),selected,force,selectedActionId);
      };
 
 
-     
-     
      /**
       @param {String} visId -- Id of visible.
       */
@@ -109,7 +111,6 @@ system.require('std/core/simpleInput.em');
              this.redraw();
              return;
          }
-
 
          if (!(visId in this.nearbyVisMap))
          {
@@ -208,8 +209,10 @@ system.require('std/core/simpleInput.em');
      function addActionInputCB(scriptingGui,userResp_actionName)
      {
          //new action won't have any text in it.
-         scriptingGui.controller.addAction(userResp_actionName,'');
-         scriptingGui.redraw();
+         var actId =
+             scriptingGui.controller.addAction(userResp_actionName,'');
+         
+         scriptingGui.redraw(undefined,undefined,actId);
      }
 
      /**
@@ -1118,10 +1121,13 @@ system.require('std/core/simpleInput.em');
 
           \param {bool} force (optional).  If true, then means that we
           should call .show on ishmael window
+
+          \param {int} selectedActId (optional). If defined, this is
+          the id of the action that we should highlight.
           */
          ishmaelRedraw = function(
              nearbyObjs,scriptedObjs,actionMap,fileMap,
-             nameMap,consoleMap,selected,force)
+             nameMap,consoleMap,selected,force,selectedActId)
          {
              //do not need to use changeCurrentlySelected function,
              //because know that the associated redraws of console +
@@ -1134,7 +1140,7 @@ system.require('std/core/simpleInput.em');
 
              redrawNearby(nearbyObjs,nameMap);
              redrawScriptedObjs(scriptedObjs,nameMap);
-             redrawActionList(actionMap);
+             redrawActionList(actionMap,selectedActId);
              redrawFileSelect(fileMap);
              redrawConsole(consoleMap);
 
@@ -1219,11 +1225,12 @@ system.require('std/core/simpleInput.em');
          }
 
 
-
-         function redrawActionList(actionMap)
+         function redrawActionList(actionMap,selectedActId)
          {
              var prevCurAct = null;
-             if (typeof(currentlySelectedAction) != 'undefined')
+             //system can force over-ride of text in action editor.
+             if ((typeof(currentlySelectedAction) != 'undefined') &&
+                 (typeof(selectedActId) == 'undefined'))
              {
                  prevCurAct = allActions[currentlySelectedAction];
                  //update with text that had entered in tarea.
@@ -1238,6 +1245,8 @@ system.require('std/core/simpleInput.em');
              if (prevCurAct !== null)
                  allActions[prevCurAct.id] = prevCurAct;
 
+             if (typeof(selectedActId) != 'undefined')
+                 currentlySelectedAction = parseInt(selectedActId);
              
              var newHtml = '';
              for (var s in actionMap)
@@ -1253,6 +1262,18 @@ system.require('std/core/simpleInput.em');
              }
 
              $('#' + actionListId()).html(newHtml);
+
+             //set text in action editor to match action.
+             if (typeof(currentlySelectedAction) != 'undefined')
+             {
+                 if (currentlySelectedAction in allActions)
+                 {
+                     var actEditorText =
+                         allActions[currentlySelectedAction].text;
+
+                     actionEditor.getSession().setValue(actEditorText);
+                 }
+             }
          }
 
          /**

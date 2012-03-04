@@ -8,9 +8,7 @@
 #include <sirikata/space/SpaceModule.hpp>
 #include <sirikata/space/ObjectSessionManager.hpp>
 
-// JSON for environment data
-#include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/json_parser.hpp>
+#include <json_spirit/value.h>
 
 #include <sirikata/core/network/RecordSSTStream.hpp>
 
@@ -43,7 +41,7 @@ private:
     void sendUpdate(const ObjectReference& id);
 
     // The environment data
-    boost::property_tree::ptree mEnvironment;
+    json_spirit::Value mEnvironment;
     // Subscribers
     struct SubscriberInfo {
         ODPSST::Stream::Ptr stream;

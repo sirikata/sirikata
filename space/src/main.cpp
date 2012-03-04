@@ -55,6 +55,7 @@
 #include <sirikata/core/options/CommonOptions.hpp>
 #include <sirikata/core/util/PluginManager.hpp>
 #include <sirikata/core/trace/Trace.hpp>
+#include <sirikata/core/command/Commander.hpp>
 #include "TCPSpaceNetwork.hpp"
 #include "FairServerMessageReceiver.hpp"
 #include "FairServerMessageQueue.hpp"
@@ -175,6 +176,14 @@ int main(int argc, char** argv) {
     String timeseries_type = GetOptionValue<String>(OPT_TRACE_TIMESERIES);
     String timeseries_options = GetOptionValue<String>(OPT_TRACE_TIMESERIES_OPTIONS);
     Trace::TimeSeries* time_series = Trace::TimeSeriesFactory::getSingleton().getConstructor(timeseries_type)(space_context, timeseries_options);
+
+    String commander_type = GetOptionValue<String>(OPT_COMMAND_COMMANDER);
+    String commander_options = GetOptionValue<String>(OPT_COMMAND_COMMANDER_OPTIONS);
+    Command::Commander* commander = NULL;
+    if (!commander_type.empty())
+        commander = Command::CommanderFactory::getSingleton().getConstructor(commander_type)(space_context, commander_options);
+
+
 
     Sirikata::SpaceNetwork* gNetwork = NULL;
     String network_type = GetOptionValue<String>(NETWORK_TYPE);
@@ -403,6 +412,7 @@ int main(int argc, char** argv) {
     delete space_context;
     space_context = NULL;
 
+    delete commander;
     delete time_series;
 
     delete mainStrand;

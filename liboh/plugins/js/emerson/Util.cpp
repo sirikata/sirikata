@@ -6,23 +6,13 @@
 using namespace std;
 
 
-keymap* emerson_sysKeys;
 
 // Initialize emerson compiler
 int emerson_init()
 {
-  emerson_sysKeys = new keymap();
-  insertKeywords();
   return 1;
 }
 
-
-void insertKeywords()
-{
-  //cout << "insertKeywords() called\n";
-  emerson_sysKeys->insert(keypair("print", "print"));
-  emerson_sysKeys->insert(keypair("presences", "presences"));
-}
 
 
 int emerson_isImaginaryToken(pANTLR3_COMMON_TOKEN token)
@@ -205,25 +195,3 @@ std::string emerson_escapeMultiline(const char* stringSequence)
 }
 
 
-
-int  emerson_isAKeyword(const char* word)
-{
-  // Check if the keyword is one of the emerson keywords
-
-  /*
-  if( strcmp(word, "print") == 0)
-		{
-		  //cout << "word is print\n";
-
-		}
-	 keymap::iterator it = emerson_sysKeys->find(word);
-	 //keymap::iterator it = emerson_sysKeys->find("print");
-  if( it != emerson_sysKeys->end() )
-		{
-		  cout << "Returning 1\n";
-		  return 1;
-		}
-		*/
-
-  return 0;
-}

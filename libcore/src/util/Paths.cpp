@@ -54,6 +54,36 @@ const PlaceholderPair All[] = {
 };
 } // namespace Placeholders
 
+
+namespace {
+
+// Canonicalize a path, i.e. clean out unnecessary components such as '.'s. If
+// aggressive is true, also removes '..'s. Since that operation isn't always
+// safe, it's not the default.
+boost::filesystem::path canonicalize(const boost::filesystem::path& orig, bool aggressive=false) {
+    using namespace boost::filesystem;
+    path result;
+
+    for(path::iterator it = orig.begin(); it != orig.end(); it++) {
+        if (*it == ".") {
+            // Do nothing to get rid of it
+        }
+        else if (*it == ".." && aggressive) {
+            // If available, pop off the previous thing
+            result = result.parent_path();
+        }
+        else {
+            result /= *it;
+        }
+    }
+
+    return result;
+}
+String canonicalize(const String& p, bool aggressive=false) {
+    return canonicalize( boost::filesystem::path(p), aggressive).string();
+}
+}
+
 String Get(Key key) {
     switch(key) {
 
@@ -70,7 +100,11 @@ String Get(Key key) {
               assert(rv == 0);
               if ((rv != 0) || (executable_path.empty()))
                   return "";
-              return executable_path;
+              // _NSGetExecutablePath will return whatever gets execed, so if
+              // the command line is ./foo, you'll get the '.'. We use the
+              // aggressive mode here to handle '..' parts that could interfere
+              // with finding other paths that start from FILE_EXE.
+              return canonicalize(executable_path, true);
 #elif SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_LINUX
               // boost::filesystem can't chase symlinks, do it manually
               const char* selfExe = "/proc/self/exe";

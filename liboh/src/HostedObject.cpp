@@ -57,6 +57,8 @@
 #include "Protocol_Loc.pbj.hpp"
 #include "Protocol_Prox.pbj.hpp"
 
+#include <sirikata/oh/Storage.hpp>
+
 #define HO_LOG(lvl,msg) SILOG(ho,lvl,msg);
 
 namespace Sirikata {
@@ -85,7 +87,7 @@ void HostedObject::killSimulation(
 {
     if (stopped())
         return;
-    
+
     PerPresenceData* pd = NULL;
     {
         Mutex::scoped_lock locker(presenceDataMutex);
@@ -189,9 +191,20 @@ void HostedObject::start() {
 }
 
 void HostedObject::stop() {
-    if (mObjectScript)
+    if (mObjectScript) {
+        // We need to clear out the reference in storage, which will also clear
+        // out leases. We do this in here to make sure it happens as we're
+        // stopping. Otherwise we might stop everything, cleanup the storage,
+        // then want to release buckets as we're doing final object cleanup when
+        // it isn't possibly any more. We *also* try to do this during destroy()
+        // because destroy() could be called for objects in the middle of run as
+        // a result of a kill() scripting call rather than due to system shutdown.
+        mObjectHost->getStorage()->releaseBucket(id());
+
         mObjectScript->stop();
+    }
 }
+
 bool HostedObject::stopped() const {
     return (mContext->stopped() || destroyed);
 }
@@ -213,6 +226,10 @@ void HostedObject::destroy(bool need_self)
     destroyed = true;
 
     if (mObjectScript) {
+        // We need to clear out the reference in storage, which will also clear
+        // out leases.
+        mObjectHost->getStorage()->releaseBucket(id());
+        // Then clear out the script
         delete mObjectScript;
         mObjectScript=NULL;
     }
@@ -329,6 +346,11 @@ void HostedObject::initializeScript(const String& script_type, const String& arg
     ObjectScriptManager *mgr = mObjectHost->getScriptManager(script_type);
     if (mgr) {
         HO_LOG(insane,"[HO] Creating script for object with args of "<<args);
+        // First, tell storage that we're active. We only do this here because
+        // only scripts use storage -- we don't need to try to activate it until
+        // we have an active script
+        mObjectHost->getStorage()->leaseBucket(id());
+        // Then create the script
         mObjectScript = mgr->createObjectScript(this->getSharedPtr(), args, script);
         mObjectScript->start();
         mObjectScript->scriptTypeIs(script_type);
@@ -767,17 +789,15 @@ void HostedObject::handleProximityUpdate(const SpaceObjectReference& spaceobj, c
     for(int32 ridx = 0; ridx < update.removal_size(); ridx++) {
         Sirikata::Protocol::Prox::ObjectRemoval removal = update.removal(ridx);
 
-        ProxyManagerPtr proxy_manager = self->getProxyManager(spaceobj.space(), spaceobj.object());
-
-        if (!proxy_manager)
-            continue;
-
         SpaceObjectReference removed_obj_ref(spaceobj.space(),
             ObjectReference(removal.object()));
+
         bool permanent = (removal.has_type() && (removal.type() == Sirikata::Protocol::Prox::ObjectRemoval::Permanent));
 
-        Mutex::scoped_lock lock(presenceDataMutex);
-        if (self->mPresenceData.find(removed_obj_ref) != self->mPresenceData.end()) {
+        if (removed_obj_ref == spaceobj) {
+            // We want to ignore removal of ourself -- we should
+            // always be in our result set, and we don't want to
+            // delete our own proxy.
             SILOG(oh,detailed,"Ignoring self removal from proximity results.");
         }
         else {

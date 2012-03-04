@@ -475,16 +475,9 @@ void JSObjectScript::eStorageCommit(
 }
 
 
-
-/**
-   lkjs; FIXME
-
-   ERROR: Should not rely on the being around of jscont.  Should
-   pass id through instead, and look it up.;
- */
 void JSObjectScript::storageCommitCallback(
     JSContextStruct* jscont, v8::Persistent<v8::Function> cb,
-    bool success, OH::Storage::ReadSet* rs,Liveness::Token objAlive,
+    OH::Storage::Result result, OH::Storage::ReadSet* rs,Liveness::Token objAlive,
     Liveness::Token ctxAlive)
 {
     if (!objAlive) return;
@@ -503,14 +496,14 @@ void JSObjectScript::storageCommitCallback(
 
     mCtx->objStrand->post(
         std::tr1::bind(&JSObjectScript::iStorageCommitCallback,this,
-            jscont,cb,success,rs,Liveness::livenessToken(),jscont->livenessToken()),
+            jscont,cb,result,rs,Liveness::livenessToken(),jscont->livenessToken()),
         "JSObjectScript::iStorageCommitCallback"
     );
 }
 
 void JSObjectScript::iStorageCommitCallback(
     JSContextStruct* jscont, v8::Persistent<v8::Function> cb,
-    bool success, OH::Storage::ReadSet* rs,Liveness::Token objAlive,
+    OH::Storage::Result result, OH::Storage::ReadSet* rs,Liveness::Token objAlive,
     Liveness::Token ctxAlive)
 {
     if (!objAlive) return;
@@ -543,7 +536,7 @@ void JSObjectScript::iStorageCommitCallback(
 
     TryCatch try_catch;
 
-    v8::Handle<v8::Boolean> js_success = v8::Boolean::New(success);
+    v8::Handle<v8::Boolean> js_success = v8::Boolean::New((result == OH::Storage::SUCCESS));
     v8::Handle<v8::Value> js_rs = v8::Undefined();
     if (rs && rs->size() > 0) {
         v8::Handle<v8::Object> js_rs_obj = v8::Object::New();
@@ -563,7 +556,7 @@ void JSObjectScript::iStorageCommitCallback(
 
 void JSObjectScript::storageCountCallback(
     JSContextStruct* jscont, v8::Persistent<v8::Function> cb,
-    bool success, int32 count,Liveness::Token objAlive,
+    OH::Storage::Result result, int32 count,Liveness::Token objAlive,
     Liveness::Token ctxAlive)
 {
     if (!objAlive) return;
@@ -582,7 +575,7 @@ void JSObjectScript::storageCountCallback(
 
     mCtx->objStrand->post(
         std::tr1::bind(&JSObjectScript::iStorageCountCallback,this,
-            jscont,cb,success,count,Liveness::livenessToken(),
+            jscont,cb,result,count,Liveness::livenessToken(),
             jscont->livenessToken()),
         "JSObjectScript::iStorageCountCallback"
     );
@@ -591,7 +584,7 @@ void JSObjectScript::storageCountCallback(
 
 void JSObjectScript::iStorageCountCallback(
     JSContextStruct* jscont, v8::Persistent<v8::Function> cb,
-    bool success, int32 count,Liveness::Token objAlive,
+    OH::Storage::Result result, int32 count,Liveness::Token objAlive,
     Liveness::Token ctxAlive)
 {
     if (!objAlive) return;
@@ -621,7 +614,7 @@ void JSObjectScript::iStorageCountCallback(
     v8::Context::Scope context_scope(mContext->mContext);
     TryCatch try_catch;
 
-    v8::Handle<v8::Boolean> js_success = v8::Boolean::New(success);
+    v8::Handle<v8::Boolean> js_success = v8::Boolean::New(result == OH::Storage::SUCCESS);
     v8::Handle<v8::Integer> js_count = v8::Integer::New(count);
 
     int argc = 2;
@@ -892,7 +885,7 @@ void JSObjectScript::eStorageCount(
     bool returner = mStorage->count(mInternalID, start, finish, wrapped_cb);
 }
 
-void JSObjectScript::setRestoreScriptCallback(
+void JSObjectScript::iSetRestoreScriptCallback(
     JSContextStruct* jscont, v8::Persistent<v8::Function> cb, bool success,
     Liveness::Token objAlive,Liveness::Token ctxAlive)
 {
@@ -904,12 +897,19 @@ void JSObjectScript::setRestoreScriptCallback(
     Liveness::Lock lockedCtx(ctxAlive);
     if (!lockedCtx) return;
 
+    while (! mCtx->initialized())
+    {}
 
     JSSCRIPT_SERIAL_CHECK();
     if (isStopped()) {
         JSLOG(warn, "Ignoring restore script callback after shutdown request.");
         return;
     }
+
+
+
+    v8::Locker locker (mCtx->mIsolate);
+    v8::Isolate::Scope iscope(mCtx->mIsolate);
 
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(mContext->mContext);
@@ -994,6 +994,7 @@ v8::Handle<v8::Value> JSObjectScript::setRestoreScript(
 }
 
 
+
 void JSObjectScript::eSetRestoreScript(
     JSContextStruct* jscont, const String& script,
     v8::Persistent<v8::Function> cb, Liveness::Token objAlive,
@@ -1012,9 +1013,11 @@ void JSObjectScript::eSetRestoreScript(
     if (!cb.IsEmpty())
     {
         wrapped_cb =
-            std::tr1::bind(&JSObjectScript::setRestoreScriptCallback, this,
-                jscont, cb, _1,Liveness::livenessToken(),jscont->livenessToken());
+            mCtx->objStrand->wrap(
+                std::tr1::bind(&JSObjectScript::iSetRestoreScriptCallback, this,
+                    jscont, cb, _1,Liveness::livenessToken(),jscont->livenessToken()));
     }
+
 
     // FIXME we should really tack on any additional parameters we
     // received initially here
@@ -1218,7 +1221,8 @@ v8::Handle<v8::Value> JSObjectScript::emersonCompileString(const String& toCompi
         int em_compile_err = 0;
 
         String js_script_str;
-        bool successfullyCompiled = emerson_compile(String("eval statement"), em_script_str.c_str(),
+        bool successfullyCompiled = EmersonUtil::emerson_compile(
+            String("eval statement"), em_script_str.c_str(),
             js_script_str, em_compile_err, handleEmersonRecognitionError,
             &lineMap);
 
@@ -1294,9 +1298,10 @@ v8::Handle<v8::Value> JSObjectScript::internalEval(const String& em_script_str, 
             v8::String::Utf8Value parent_script_name(em_script_name->ResourceName());
 
             String js_script_str;
-            bool successfullyCompiled = emerson_compile(FromV8String(parent_script_name), em_script_str_new.c_str(),
-                                                        js_script_str, em_compile_err, handleEmersonRecognitionError,
-                                                        &lineMap);
+            bool successfullyCompiled = EmersonUtil::emerson_compile(
+                FromV8String(parent_script_name), em_script_str_new.c_str(),
+                js_script_str, em_compile_err, handleEmersonRecognitionError,
+                &lineMap);
 
 
             if (successfullyCompiled)
@@ -1312,7 +1317,12 @@ v8::Handle<v8::Value> JSObjectScript::internalEval(const String& em_script_str, 
                     {
                         std::stringstream js_script_stream(js_script_str);
                         std::ofstream temp_cache_file(temp_cache_path.c_str());
-                        boost::iostreams::copy(js_script_stream, temp_cache_file);
+                        if (temp_cache_file.fail()) {
+                          JSLOG(error, "Unable to create temporary file to save compiled emerson: " << temp_cache_path);
+                        }
+                        else {
+                          boost::iostreams::copy(js_script_stream, temp_cache_file);
+                        }
                     }
                     // Make sure we have the directories
                     boost::filesystem::create_directories( boost::filesystem::path(cache_path).parent_path() );

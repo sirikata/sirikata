@@ -66,6 +66,8 @@ void CassandraPersistedObjectSet::start() {
 void CassandraPersistedObjectSet::initDB() {
     CassandraDBPtr db = Cassandra::getSingleton().open(mDBHost, mDBPort);
     mDB = db;
+
+    mDB->createColumnFamily("objects", "Super");
 }
 
 void CassandraPersistedObjectSet::stop() {

@@ -55,7 +55,7 @@ void InitOptions() {
 
         .addOption(new OptionValue(OPT_CRASHREPORT_URL,"http://crashes.sirikata.com/report",Sirikata::OptionValueType<String>(),"URL to report crashes to."))
 
-        .addOption(new OptionValue(OPT_PLUGINS,"tcpsst,servermap-tabular,core-local,graphite",Sirikata::OptionValueType<String>(),"Plugin list to load."))
+        .addOption(new OptionValue(OPT_PLUGINS,"tcpsst,servermap-tabular,core-local,graphite,core-http",Sirikata::OptionValueType<String>(),"Plugin list to load."))
 
         .addOption(new OptionValue("ohstreamlib","tcpsst",Sirikata::OptionValueType<String>(),"Which library to use to communicate with the object host"))
         .addOption(new OptionValue("ohstreamoptions","--send-buffer-size=16384 --parallel-sockets=1 --no-delay=false",Sirikata::OptionValueType<String>(),"TCPSST stream options such as how many bytes to collect for sending during an ongoing asynchronous send call."))
@@ -97,6 +97,9 @@ void InitOptions() {
 
         .addOption(new OptionValue(OPT_TRACE_TIMESERIES, "null", Sirikata::OptionValueType<String>(), "Service to report TimeSeries data to."))
         .addOption(new OptionValue(OPT_TRACE_TIMESERIES_OPTIONS, "", Sirikata::OptionValueType<String>(), "Options for TimeSeries reporting service."))
+
+        .addOption(new OptionValue(OPT_COMMAND_COMMANDER, "", Sirikata::OptionValueType<String>(), "Commander service to start"))
+        .addOption(new OptionValue(OPT_COMMAND_COMMANDER_OPTIONS, "", Sirikata::OptionValueType<String>(), "Options for the Commander service"))
       ;
 }
 
