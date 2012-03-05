@@ -24,7 +24,7 @@ def registerTests():
     #down.
     basicTest = csvTest.CSVTest("basicTest",
                                 [basicGenerators.KillAfterTenSecondsEntity],
-                                duration=20
+                                duration=25
                                 );
 
     testArray.append(basicTest);
@@ -40,7 +40,7 @@ def registerTests():
                                            'onPresenceConnected',
                                            'Date'],
                                   entityConstructorInfo=[timeoutTestInfo],
-                                  duration=100);
+                                  duration=105);
 
     testArray.append(timeoutTest);
 
@@ -54,7 +54,7 @@ def registerTests():
                                            'timeout'
                                            ],
                                   entityConstructorInfo=[httpTestInfo],
-                                  duration=30);
+                                  duration=35);
 
     testArray.append(httpTest);
 
@@ -82,7 +82,7 @@ def registerTests():
                                          entityConstructorInfo=[otherEntInfo,
                                                                 csvProxAddedEntInfo],
                                          errorConditions = csvTest.CSVTest.TimeOutTestErrorConditions,
-                                         duration=25
+                                         duration=30
                                          );
     testArray.append(proximityAddedTest);
 
@@ -102,7 +102,7 @@ def registerTests():
                                                   'system.presences'
                                                   ],
                                          entityConstructorInfo=[csvCreatePresEntInfo],
-                                         duration=50
+                                         duration=55
                                          );
     testArray.append(createPresenceTest);
 
@@ -120,7 +120,7 @@ def registerTests():
     selfTest = csvTest.CSVTest("selfTest",
                                touches=['system.self'],
                                entityConstructorInfo=[selfTestInfo],
-                               duration=60);
+                               duration=65);
     testArray.append(selfTest);
 
     #presenceEventsTest: tests events triggered on presences' connection and disconnection
@@ -129,7 +129,7 @@ def registerTests():
     presenceEventsTest = csvTest.CSVTest("presenceEventsTest",
                                touches=['system.createPresence', 'system.onPresenceConnected', 'system.onPresenceDisconnected'],
                                entityConstructorInfo=[presenceEventsTestInfo],
-                               duration=10);
+                               duration=15);
     testArray.append(presenceEventsTest);
 
 
@@ -139,7 +139,7 @@ def registerTests():
     serializationTest = csvTest.CSVTest("serializationTest",
                                touches=['system.onPresenceConnected', 'serialize','deserialize','disconnect'],
                                entityConstructorInfo=[serializationTestInfo],
-                               duration=10);
+                               duration=15);
     testArray.append(serializationTest);
     
 
@@ -149,7 +149,7 @@ def registerTests():
     storageTest     = csvTest.CSVTest("storageTest",
                                touches=['storageBeginTransaction', 'storageCommit', 'storageErase', 'storageRead', 'storageWrite', 'serialization', 'timeout', 'killEntity'],
                                entityConstructorInfo=[storageTestInfo],
-                               duration=10);
+                               duration=15);
     testArray.append(storageTest);
     
 
@@ -159,7 +159,7 @@ def registerTests():
     sandboxTest     = csvTest.CSVTest("sandboxTest",
                                touches=['onPresenceConnected', 'capabilities', 'sandbox', 'timeout', 'killEntity'],
                                entityConstructorInfo=[sandboxTestInfo],
-                               duration=7);
+                               duration=15);
     testArray.append(sandboxTest);
 
     #messagingTest: tests onPresenceConnected, message syntax, onPresenceConnected, createPresence,
@@ -171,7 +171,7 @@ def registerTests():
                                         touches=['onPresenceConnected', 'message syntax', 'createPresence',
                                                  'system.presences', 'serialization', 'deserialization','makeReply'],
                                         entityConstructorInfo=[messagingTestInfo],
-                                        duration=15);
+                                        duration=20);
     testArray.append(messagingTest);
 
 
@@ -184,7 +184,7 @@ def registerTests():
                                                   'serialization', 'deserialization','makeReply'],
                                          #should load same script on two entities.
                                          entityConstructorInfo=[csvFeatureObjectEntInfo,csvFeatureObjectEntInfo],
-                                         duration=17);
+                                         duration=25);
     testArray.append(featureObjTest);
 
     
@@ -195,7 +195,7 @@ def registerTests():
     connectionLoadTest     = csvTest.CSVTest("connectionLoadTest",
                                              touches=['onPresenceConnected', 'onPresenceDisconnected'],
                                              entityConstructorInfo=[connectionLoadTestInfo],
-                                             duration=90);
+                                             duration=95);
     testArray.append(connectionLoadTest);
     
 

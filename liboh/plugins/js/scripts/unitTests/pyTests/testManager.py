@@ -11,8 +11,9 @@ import os.path
 _this_script_dir = os.path.dirname(__file__)
 
 DEFAULT_OUTPUT_FILENAME = 'unitTestResults.txt';
-DEFAULT_CPPOH_PATH = os.path.join(_this_script_dir, '../../../../../../build/cmake/')
-DEFAULT_CPPOH_BIN_NAME = 'cppoh_d';
+DEFAULT_BIN_PATH = os.path.join(_this_script_dir, '../../../../../../build/cmake/')
+DEFAULT_CPPOH_BIN_NAME = 'cppoh_d'
+DEFAULT_SPACE_BIN_NAME = 'space_d'
 
 DEFAULT_DIRTY_FOLDER = 'pyTests/DIRTY_UNIT_TEST_DIR';
 
@@ -34,7 +35,7 @@ class TestManager:
         for s in testArrayToAdd:
             self.addTest(s);
 
-    def runSomeTests(self, testNames, output=sys.stdout, cppohPath=DEFAULT_CPPOH_PATH, cppohBinName=DEFAULT_CPPOH_BIN_NAME, saveOutput=False):
+    def runSomeTests(self, testNames, output=sys.stdout, binPath=DEFAULT_BIN_PATH, cppohBinName=DEFAULT_CPPOH_BIN_NAME, spaceBinName=DEFAULT_SPACE_BIN_NAME, saveOutput=False):
         numTests = len(testNames);
         count = 1;
 
@@ -56,7 +57,7 @@ class TestManager:
 
             os.makedirs(folderName);
             test = self._testsByName[s];
-            success = test.runTest(folderName,cppohPath,cppohBinName, output);
+            success = test.runTest(folderName,binPath=binPath, cppohBinName=cppohBinName, spaceBinName=spaceBinName, output=output)
             if success:
                 succeeded += 1
             else:
@@ -77,6 +78,6 @@ class TestManager:
             shutil.rmtree(DEFAULT_DIRTY_FOLDER);
 
 
-    def runAllTests(self, output=sys.stdout, cppohPath=DEFAULT_CPPOH_PATH, cppohBinName=DEFAULT_CPPOH_BIN_NAME,saveOutput=False):
+    def runAllTests(self, output=sys.stdout, binPath=DEFAULT_BIN_PATH, cppohBinName=DEFAULT_CPPOH_BIN_NAME, spaceBinName=DEFAULT_SPACE_BIN_NAME, saveOutput=False):
         testNames = [t.testName for t in self.mTests];
-        self.runSomeTests(testNames, output=output, cppohPath=cppohPath, cppohBinName=cppohBinName, saveOutput=saveOutput)
+        self.runSomeTests(testNames, output=output, binPath=binPath, cppohBinName=cppohBinName, spaceBinName=spaceBinName, saveOutput=saveOutput)

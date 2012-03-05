@@ -30,7 +30,7 @@ class ProcSet:
             del kwargs['at']
 
         if 'default' in kwargs and kwargs['default']:
-            self._defaulProc = len(self._procRequests)
+            self._defaultProc = len(self._procRequests)
             del kwargs['default']
         self._procRequests.append( (args, kwargs, atTime) )
 
@@ -68,7 +68,6 @@ class ProcSet:
             # processes that are still alive
             if waitUntil is not None and waitUntil < now and not sighupped:
                 # SIGHUP processes that haven't shutdown yet
-                print('Sending shutdown signals to processes', file=output);
                 sys.stdout.flush();
                 sys.stderr.flush();
                 output.flush()
@@ -80,7 +79,6 @@ class ProcSet:
 
             # If we've hit the kill time, forcibly kill them
             if killAt is not None and killAt < now:
-                print('Sending shutdown kill signals to processes', file=output);
                 sys.stdout.flush();
                 sys.stderr.flush();
                 output.flush()

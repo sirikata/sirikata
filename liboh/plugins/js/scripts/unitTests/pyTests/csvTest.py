@@ -9,10 +9,6 @@ import os
 import subprocess
 from procset import ProcSet
 
-CSV_DB_FILENAME = 'unit_test_csv_db.db';
-RUN_OUTPUT_FILENAME = 'runOutput';
-
-
 class CSVTest(singleTest.SingleTest):
 
     '''
@@ -36,53 +32,64 @@ class CSVTest(singleTest.SingleTest):
     files to without interfering with anything else that's running.
     The testManager will delete this folder after runTest returns.
 
-    @param {String} cppohPath should be the name of the
+    @param {String} binPath should be the name of the
     directory that cppoh is in.
 
     @param {String} cppohBinName The actual name of the
     binary/executale to run.
 
     '''
-    def runTest(self, dirtyFolderName, cppohPath, cppohBinName, output=sys.stdout):
-        dbFilename = os.path.join(dirtyFolderName,CSV_DB_FILENAME);
-        runOutputFilename = os.path.join(dirtyFolderName,RUN_OUTPUT_FILENAME);
+    def runTest(self, dirtyFolderName, binPath, cppohBinName, spaceBinName, output=sys.stdout):
+        dbFilename = os.path.join(dirtyFolderName, 'unit_test_csv_db.db')
+        cppoh_output_filename = os.path.join(dirtyFolderName, 'cppoh.log')
+        space_output_filename = os.path.join(dirtyFolderName, 'space.log')
 
-        #create the db file to read from.
+        # Space
+        space_cmd = ['./'+spaceBinName]
+        # OH - create the db file to read from.
         self.csvGen.writeDB(dbFilename);
         self.additionalCMDLineArgs.append('--object-factory=csv');
         self.additionalCMDLineArgs.append('--object-factory-opts=--db='+ os.path.abspath(dbFilename));
-
-        outputCatcher = open(runOutputFilename,'w')
-
         popenCall =['./'+cppohBinName];
         for s in self.additionalCMDLineArgs:
             popenCall.append(s);
 
         prevDir = os.getcwd();
-        os.chdir(cppohPath);
+        os.chdir(binPath);
 
         procs = ProcSet()
-        procs.process(popenCall, stdout=outputCatcher, stderr=subprocess.STDOUT, default=True)
+        space_output = open(space_output_filename, 'w')
+        procs.process(space_cmd, stdout=space_output, stderr=subprocess.STDOUT)
+        cppoh_output = open(cppoh_output_filename,'w')
+        procs.process(popenCall, stdout=cppoh_output, stderr=subprocess.STDOUT, at=3, default=True)
+
         procs.run(waitUntil=self.duration, killAt=self.duration+10, output=output)
 
         # Print a notification if we had to kill this process
         if procs.hupped():
-            print(file=outputCatcher)
-            print('UNIT_TEST_TIMEOUT', file=outputCatcher)
+            print(file=cppoh_output)
+            print('UNIT_TEST_TIMEOUT', file=cppoh_output)
 
-        outputCatcher.close();
+        space_output.close();
+        cppoh_output.close();
         os.chdir(prevDir);
 
-        return self.analyzeOutput(runOutputFilename, procs.returncode(), output=output);
+        return self.analyzeOutput(
+            analyze=cppoh_output_filename,
+            report={ 'Object Host': cppoh_output_filename, 'Space Server': space_output_filename},
+            returnCode=procs.returncode(), output=output
+            )
 
 
-    def analyzeOutput(self, filenameToAnalyze, returnCode, output):
-        success = super(CSVTest, self).analyzeOutput(filenameToAnalyze, returnCode, output=output)
+    def analyzeOutput(self, analyze, report, returnCode, output):
+        success = super(CSVTest, self).analyzeOutput(analyze, returnCode, output=output)
         if not success:
             print("Execution Log:", file=output)
-            fp = open(filenameToAnalyze, 'r')
-            for line in fp.readlines():
-                print("    ", line, end='', file=output)
-            fp.close()
-            print(file=output)
+            for report_name, report_file in report.iteritems():
+                print("  ", report_name, file=output)
+                fp = open(report_file, 'r')
+                for line in fp.readlines():
+                    print("    ", line, end='', file=output)
+                fp.close()
+                print(file=output)
         return success
