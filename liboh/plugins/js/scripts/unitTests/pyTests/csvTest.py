@@ -8,6 +8,7 @@ import dbGen.csvGenerator as csvGenerator
 import os
 import subprocess
 from procset import ProcSet
+import random
 
 class CSVTest(singleTest.SingleTest):
 
@@ -44,15 +45,19 @@ class CSVTest(singleTest.SingleTest):
         cppoh_output_filename = os.path.join(dirtyFolderName, 'cppoh.log')
         space_output_filename = os.path.join(dirtyFolderName, 'space.log')
 
+        # Random port to avoid conflicts
+        port = 2000 + random.randint(0, 1000) % 1000
         # Space
         space_cmd = ['./'+spaceBinName]
+        space_cmd.append('--servermap-options=--port=' + str(port))
         # OH - create the db file to read from.
         self.csvGen.writeDB(dbFilename);
-        self.additionalCMDLineArgs.append('--object-factory=csv');
-        self.additionalCMDLineArgs.append('--object-factory-opts=--db='+ os.path.abspath(dbFilename));
-        popenCall =['./'+cppohBinName];
+        cppoh_cmd =['./'+cppohBinName];
+        cppoh_cmd.append('--servermap-options=--port=' + str(port))
         for s in self.additionalCMDLineArgs:
-            popenCall.append(s);
+            cppoh_cmd.append(s);
+        cppoh_cmd.append('--object-factory=csv');
+        cppoh_cmd.append('--object-factory-opts=--db='+ os.path.abspath(dbFilename));
 
         prevDir = os.getcwd();
         os.chdir(binPath);
@@ -61,7 +66,7 @@ class CSVTest(singleTest.SingleTest):
         space_output = open(space_output_filename, 'w')
         procs.process(space_cmd, stdout=space_output, stderr=subprocess.STDOUT)
         cppoh_output = open(cppoh_output_filename,'w')
-        procs.process(popenCall, stdout=cppoh_output, stderr=subprocess.STDOUT, at=3, default=True)
+        procs.process(cppoh_cmd, stdout=cppoh_output, stderr=subprocess.STDOUT, at=3, default=True)
 
         procs.run(waitUntil=self.duration, killAt=self.duration+10, output=output)
 
