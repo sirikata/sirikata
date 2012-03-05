@@ -16,3 +16,7 @@ class Tee(object):
     def write(self, data):
         for f in self.outs:
             f.write(data)
+
+    def flush(self):
+        for f in self.outs:
+            f.flush()

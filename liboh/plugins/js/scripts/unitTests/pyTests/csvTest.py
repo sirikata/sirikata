@@ -3,15 +3,11 @@
 from __future__ import print_function
 import sys
 
-from tee import Tee
-
 import pyTests.singleTest as singleTest
 import dbGen.csvGenerator as csvGenerator
-import subprocess
 import os
-import datetime
-import time
-import signal
+import subprocess
+from procset import ProcSet
 
 CSV_DB_FILENAME = 'unit_test_csv_db.db';
 RUN_OUTPUT_FILENAME = 'runOutput';
@@ -64,43 +60,20 @@ class CSVTest(singleTest.SingleTest):
 
         prevDir = os.getcwd();
         os.chdir(cppohPath);
-        start = datetime.datetime.now();
 
+        procs = ProcSet()
+        procs.process(popenCall, stdout=outputCatcher, stderr=subprocess.STDOUT, default=True)
+        procs.run(waitUntil=self.duration, killAt=self.duration+10, output=output)
 
-        proc = subprocess.Popen(popenCall, stdout=outputCatcher, stderr=subprocess.STDOUT);
-        signalSent = False;
-        while proc.poll() is None:
-            time.sleep(1)
-            now = datetime.datetime.now();
-            if (((now - start).seconds > self.duration) and (not signalSent)):
-                sys.stdout.flush();
-                signalSent = True;
-                print('Sending SIGHUP to object host', file=output);
-                sys.stderr.flush();
-                proc.send_signal(signal.SIGHUP)
-                # In case a SIGHUP isn't enough, wait a bit longer and try to kill
-                while proc.poll() is None:
-                    time.sleep(1)
-                    now = datetime.datetime.now();
-                    if (now - start).seconds > self.duration + 10:
-                        # Send signal twice, in case the first one is
-                        # caught. The second should (in theory) always
-                        # kill the process as it should have disabled
-                        # the handler
-                        print('Sending SIGKILL to object host', file=output);
-                        proc.send_signal(signal.SIGKILL)
-                        proc.send_signal(signal.SIGKILL)
-                        proc.wait()
-
-                # Print a notification that we had to kill this process
-                print(file=outputCatcher)
-                print('UNIT_TEST_TIMEOUT', file=outputCatcher)
-
+        # Print a notification if we had to kill this process
+        if procs.hupped():
+            print(file=outputCatcher)
+            print('UNIT_TEST_TIMEOUT', file=outputCatcher)
 
         outputCatcher.close();
         os.chdir(prevDir);
 
-        return self.analyzeOutput(runOutputFilename, proc.returncode, output=output);
+        return self.analyzeOutput(runOutputFilename, procs.returncode(), output=output);
 
 
     def analyzeOutput(self, filenameToAnalyze, returnCode, output):
