@@ -64,7 +64,7 @@ class CSVTest(singleTest.SingleTest):
 
         procs = ProcSet()
         space_output = open(space_output_filename, 'w')
-        procs.process(space_cmd, stdout=space_output, stderr=subprocess.STDOUT)
+        procs.process(space_cmd, stdout=space_output, stderr=subprocess.STDOUT, wait=False)
         cppoh_output = open(cppoh_output_filename,'w')
         procs.process(cppoh_cmd, stdout=cppoh_output, stderr=subprocess.STDOUT, at=3, default=True)
 

@@ -21,9 +21,17 @@ class ProcSet:
         self._defaultProc = 0
 
     def process(self, *args, **kwargs):
+        """
+        Add a process to be run
+
+        at -- number of seconds to wait before starting this process
+        default -- use this as the default process when checking for
+           sighups, sigkills and returncodes
+        wait -- whether to wait for this process to exit before
+           sending sighups. True by default.
+        """
         # Just queue it up. We'll do the real work in run. Extract a
         # few special arguments we might need
-        # at -- number of seconds to wait before starting this process
         atTime = 0
         if 'at' in kwargs:
             atTime = kwargs['at']
@@ -32,7 +40,13 @@ class ProcSet:
         if 'default' in kwargs and kwargs['default']:
             self._defaultProc = len(self._procRequests)
             del kwargs['default']
-        self._procRequests.append( (args, kwargs, atTime) )
+
+        wait = True
+        if 'wait' in kwargs and not kwargs['wait']:
+            wait = False
+            del kwargs['wait']
+
+        self._procRequests.append( (args, kwargs, atTime, wait) )
 
     def run(self, waitUntil=None, killAt=None, output=sys.stdout):
         """
@@ -60,13 +74,20 @@ class ProcSet:
 
             # Run anything that's now ready to run
             for idx in range(len(self._procRequests)):
-                (args, kwargs, atTime) = self._procRequests[idx]
+                (args, kwargs, atTime, wait) = self._procRequests[idx]
                 if self._procs[idx] is None and atTime < now:
                     self._procs[idx] = subprocess.Popen(*args, **kwargs)
 
             # If we've hit the wait time, send requested signals to
             # processes that are still alive
-            if waitUntil is not None and waitUntil < now and not sighupped:
+            done_waiting = waitUntil is not None and waitUntil < now
+            all_waiting_exited = True
+            for idx in range(len(self._procRequests)):
+                (args, kwargs, atTime, wait) = self._procRequests[idx]
+                if wait and (self._procs[idx] is None or self._procs[idx].poll() is None):
+                    all_waiting_exited = False
+                    break
+            if (done_waiting or all_waiting_exited) and not sighupped:
                 # SIGHUP processes that haven't shutdown yet
                 sys.stdout.flush();
                 sys.stderr.flush();
