@@ -48,19 +48,16 @@ class CSVTest(singleTest.SingleTest):
         # Random port to avoid conflicts
         port = 2000 + random.randint(0, 1000) % 1000
         # Space
-        space_cmd = ['./'+spaceBinName]
+        space_cmd = [os.path.join(binPath, spaceBinName)]
         space_cmd.append('--servermap-options=--port=' + str(port))
         # OH - create the db file to read from.
-        self.csvGen.writeDB(dbFilename);
-        cppoh_cmd =['./'+cppohBinName];
+        self.csvGen.writeDB(dbFilename)
+        cppoh_cmd = [os.path.join(binPath, cppohBinName)]
         cppoh_cmd.append('--servermap-options=--port=' + str(port))
         for s in self.additionalCMDLineArgs:
             cppoh_cmd.append(s);
-        cppoh_cmd.append('--object-factory=csv');
-        cppoh_cmd.append('--object-factory-opts=--db='+ os.path.abspath(dbFilename));
-
-        prevDir = os.getcwd();
-        os.chdir(binPath);
+        cppoh_cmd.append('--object-factory=csv')
+        cppoh_cmd.append('--object-factory-opts=--db='+ os.path.abspath(dbFilename))
 
         procs = ProcSet()
         space_output = open(space_output_filename, 'w')
@@ -75,9 +72,8 @@ class CSVTest(singleTest.SingleTest):
             print(file=cppoh_output)
             print('UNIT_TEST_TIMEOUT', file=cppoh_output)
 
-        space_output.close();
-        cppoh_output.close();
-        os.chdir(prevDir);
+        space_output.close()
+        cppoh_output.close()
 
         return self.analyzeOutput(
             analyze=cppoh_output_filename,
