@@ -2,7 +2,7 @@
 
 import sys
 from framework.pyTests.tee import Tee
-from framework.runner import TestRunner
+from framework.manager import Manager
 import tests
 
 if __name__ == "__main__":
@@ -20,9 +20,9 @@ if __name__ == "__main__":
             testsToRun.append(sys.argv[s])
 
     # Search everywhere in this module for tests
-    runner = TestRunner( sys.modules[__name__] )
-
+    manager = Manager()
+    manager.collect( sys.modules[__name__] )
     if len(testsToRun):
-        runner.runSome(testsToRun, output=output, saveOutput=saveOutput)
+        manager.run(testsToRun, output=output, saveOutput=saveOutput)
     else:
-        runner.runAll(output=output, saveOutput=saveOutput)
+        manager.run(output=output, saveOutput=saveOutput)
