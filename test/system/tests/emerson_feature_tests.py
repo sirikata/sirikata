@@ -19,7 +19,22 @@ class BasicTest(EmersonFeatureTest):
                                         duration=25
                                         )
 
+
+class UserEventTest(EmersonFeatureTest):
+    after = [BasicTest]
+
+    #userEventTest: tests system.event functionality
+    def __init__(self):
+        userEventTestInfo = CSVConstructorInfo(script_type="js",
+                                               script_contents="system.import('userEventTest.em');");
+        super(UserEventTest, self).__init__("userEventTest",
+                                            touches=['system.event'],
+                                            entityConstructorInfo=[userEventTestInfo]);
+
+
 class TimeoutTest(EmersonFeatureTest):
+    after = [BasicTest]
+
     #timeoutTest: see documentation in unitTests/emTests/timeoutTest.em
     #Tests: timeout, self, onPresenceConnected, Date
     def __init__(self):
@@ -33,8 +48,9 @@ class TimeoutTest(EmersonFeatureTest):
                                           entityConstructorInfo=[timeoutTestInfo],
                                           duration=105)
 
-
 class HttpTest(EmersonFeatureTest):
+    after = [BasicTest]
+
     ##httpTest: see documentation in unitTests/emTests/httpTest.em
     def __init__(self):
         httpTestInfo = CSVConstructorInfo(script_type="js",
@@ -46,7 +62,31 @@ class HttpTest(EmersonFeatureTest):
                                        entityConstructorInfo=[httpTestInfo],
                                        duration=35);
 
+class CreatePresenceTest(EmersonFeatureTest):
+    after = [TimeoutTest]
+
+    ##createPresenceTest
+    def __init__(self):
+        csvCreatePresEntInfo = CSVConstructorInfo(
+            script_type="js",
+            script_contents="system.import('createPresenceTest.em');",
+            pos_x=20, pos_y=0, pos_z=0
+            )
+
+        super(CreatePresenceTest, self).__init__("createPresence",
+                                                 touches=['createPresence',
+                                                          'onCreatePresence',
+                                                          'vector and quat syntax',
+                                                          'timeout',
+                                                          'system.presences'
+                                                          ],
+                                                 entityConstructorInfo=[csvCreatePresEntInfo],
+                                                 duration=55
+                                                 )
+
 class ProximityAddedTest(EmersonFeatureTest):
+    after = [TimeoutTest, CreatePresenceTest]
+
     #proximityAdded test: see documentation in unitTests/emTests/proximityAdded.em.
     #Tests: onProxAdded, setQueryAngle, setVelocity, createPresence,
     #       getProxSet, timeout, onPresenceConnected
@@ -72,47 +112,9 @@ class ProximityAddedTest(EmersonFeatureTest):
                                                  duration=30
                                                  )
 
-class CreatePresenceTest(EmersonFeatureTest):
-    ##createPresenceTest
-    def __init__(self):
-        csvCreatePresEntInfo = CSVConstructorInfo(
-            script_type="js",
-            script_contents="system.import('createPresenceTest.em');",
-            pos_x=20, pos_y=0, pos_z=0
-            )
-
-        super(CreatePresenceTest, self).__init__("createPresence",
-                                                 touches=['createPresence',
-                                                          'onCreatePresence',
-                                                          'vector and quat syntax',
-                                                          'timeout',
-                                                          'system.presences'
-                                                          ],
-                                                 entityConstructorInfo=[csvCreatePresEntInfo],
-                                                 duration=55
-                                                 )
-
-class UserEventTest(EmersonFeatureTest):
-    #userEventTest: tests system.event functionality
-    def __init__(self):
-        userEventTestInfo = CSVConstructorInfo(script_type="js",
-                                               script_contents="system.import('userEventTest.em');");
-        super(UserEventTest, self).__init__("userEventTest",
-                                            touches=['system.event'],
-                                            entityConstructorInfo=[userEventTestInfo]);
-
-
-class SelfTest(EmersonFeatureTest):
-    #selfTest: tests system.self value/restoration after various operations
-    def __init__(self):
-        selfTestInfo = CSVConstructorInfo(script_type="js",
-                                          script_contents="system.import('selfTest.em');");
-        super(SelfTest, self).__init__("selfTest",
-                                       touches=['system.self'],
-                                       entityConstructorInfo=[selfTestInfo],
-                                       duration=65)
-
 class PresenceEventsTest(EmersonFeatureTest):
+    after = [TimeoutTest]
+
     #presenceEventsTest: tests events triggered on presences' connection and disconnection
     def __init__(self):
         presenceEventsTestInfo = CSVConstructorInfo(script_type="js",
@@ -123,6 +125,8 @@ class PresenceEventsTest(EmersonFeatureTest):
                                                   duration=15)
 
 class SerializationTest(EmersonFeatureTest):
+    after = [BasicTest]
+
     #serializationTest: tests objects, arrays, and functions serialized.  does not test certain special objects (presences, visibles, etc.).
     def __init__(self):
         serializationTestInfo = CSVConstructorInfo(script_type="js",
@@ -133,6 +137,7 @@ class SerializationTest(EmersonFeatureTest):
                                                 duration=15)
 
 class StorageTest(EmersonFeatureTest):
+    after = [TimeoutTest, SerializationTest]
     #storageTest: tests system.storageBeginTransaction, system.storageCommit, system.storageErase, system.storageRead, system.storageWrite, serialization, timeout,killEntity
     def __init__(self):
         storageTestInfo = CSVConstructorInfo(script_type="js",
@@ -143,6 +148,8 @@ class StorageTest(EmersonFeatureTest):
                                           duration=15)
 
 class SandboxTest(EmersonFeatureTest):
+    after = [PresenceEventsTest]
+
     #sandboxTest: tests onPresenceConnected, all sandbox and capabilities calls, timeout, killEntity
     def __init__(self):
         sandboxTestInfo = CSVConstructorInfo(script_type="js",
@@ -153,6 +160,8 @@ class SandboxTest(EmersonFeatureTest):
                                           duration=15)
 
 class MessagingTest(EmersonFeatureTest):
+    after = [PresenceEventsTest]
+
     #messagingTest: tests onPresenceConnected, message syntax, onPresenceConnected, createPresence,
     #                     system.presences, serialization and deserialization (for messages),
     #                     msg.makeReply.
@@ -165,8 +174,20 @@ class MessagingTest(EmersonFeatureTest):
                                             entityConstructorInfo=[messagingTestInfo],
                                             duration=20)
 
-class CSVFeatureTest(EmersonFeatureTest):
+class SelfTest(EmersonFeatureTest):
+    after = [TimeoutTest, HttpTest, StorageTest, PresenceEventsTest, MessagingTest]
 
+    #selfTest: tests system.self value/restoration after various operations
+    def __init__(self):
+        selfTestInfo = CSVConstructorInfo(script_type="js",
+                                          script_contents="system.import('selfTest.em');");
+        super(SelfTest, self).__init__("selfTest",
+                                       touches=['system.self'],
+                                       entityConstructorInfo=[selfTestInfo],
+                                       duration=65)
+
+class CSVFeatureTest(EmersonFeatureTest):
+    after = [PresenceEventsTest]
     def __init__(self):
         csvFeatureObjectEntInfo = CSVConstructorInfo(
             script_type="js",
@@ -180,6 +201,7 @@ class CSVFeatureTest(EmersonFeatureTest):
                                              duration=25)
 
 class ConnectionLoadTest(EmersonFeatureTest):
+    after = [PresenceEventsTest]
     def __init__(self):
         connectionLoadTestInfo = CSVConstructorInfo(script_type="js",
                                                     script_contents="system.import('connectionLoadTest.em');");

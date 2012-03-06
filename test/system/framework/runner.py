@@ -39,7 +39,25 @@ class TestRunner(object):
             for base_class in test_class.__bases__:
                 if base_class in leaf_test_classes: leaf_test_classes.remove(base_class)
 
-        self.manager.addTestArray([tc() for tc in leaf_test_classes])
+        # Use ordering requests to generate an order for tests using
+        # simple dependency analysis. By using no_deps_left as a
+        # stack, we get a depth first traversal so related tests are
+        # (hopefully) near each other.
+        no_deps_left = [x for x in leaf_test_classes if not x.after]
+        deps_remain = [x for x in leaf_test_classes if x.after]
+        test_classes = []
+        while len(no_deps_left) > 0:
+            klass = no_deps_left.pop()
+            test_classes.append(klass)
+            # Add to no_deps_left if length of deps not already in used is 0
+            no_deps_left = no_deps_left + [x for x in deps_remain if len([True for dep in x.after if dep not in test_classes]) == 0]
+            # Similarly, filter those items out of deps_remain
+            deps_remain = [x for x in deps_remain if len([True for dep in x.after if dep not in test_classes]) > 0]
+
+        if len(deps_remain) != 0:
+            raise RuntimeError("Tests with ordering dependencies remain, but none are candidates to be used next. Check the settings of 'after' in your test classes.")
+
+        self.manager.addTestArray([tc() for tc in test_classes])
 
     def runSome(self, testNames, output=sys.stdout, saveOutput=False):
         self.manager.runSomeTests(testNames, output=output, saveOutput=saveOutput)

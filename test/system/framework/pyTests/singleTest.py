@@ -19,6 +19,11 @@ class SingleTest(object):
         ]
     DefaultDuration = 20
 
+    # Use this to express order dependencies for tests. For example,
+    # if TestSuperBar uses feature Bar, you could have after =
+    # [TestBar] to make sure TestBar runs before TestSuperBar.
+    after = []
+
     '''
 
     @param {String} name identifies the name of the test that
@@ -61,16 +66,6 @@ class SingleTest(object):
             self.touches = [];
         else:
             self.touches = touches;
-
-
-    '''
-    Don't know how to make this function like a purely virtual
-    function in c++.  Instead just going to assert false if it's ever
-    run.  All superclasses of single test need to overwrite this
-    function.
-    '''
-    def runTest(self, output=sys.stdout):
-        print('TEST FAILED: runTest not defined for', self.testName, file=output)
 
     '''
     @param {String} filenameToAnalyze name of a file that contains the
