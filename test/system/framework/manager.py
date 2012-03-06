@@ -26,7 +26,7 @@ class Manager:
 
     def add(self, test):
         self._tests.append(test);
-        self._testsByName[test.testName] = testToAdd
+        self._testsByName[test.name] = testToAdd
 
     def collect(self, searchmod):
         """
@@ -76,14 +76,14 @@ class Manager:
         if len(deps_remain) != 0:
             raise RuntimeError("Tests with ordering dependencies remain, but none are candidates to be used next. Check the settings of 'after' in your test classes.")
 
-        self._tests = [tc() for tc in test_classes]
-        self._testsByName = dict([(t.testName, t) for t in self._tests])
+        self._tests = test_classes
+        self._testsByName = dict([(t.name, t) for t in self._tests])
 
 
     def run(self, testNames=None, output=sys.stdout, binPath=DEFAULT_BIN_PATH, cppohBinName=DEFAULT_CPPOH_BIN_NAME, spaceBinName=DEFAULT_SPACE_BIN_NAME, saveOutput=False):
 
         if not testNames:
-            testNames = [t.testName for t in self._tests]
+            testNames = [t.name for t in self._tests]
         numTests = len(testNames);
         count = 1;
 
@@ -104,7 +104,7 @@ class Manager:
 
             os.makedirs(folderName);
             test = self._testsByName[s];
-            success = test.runTest(folderName,binPath=binPath, cppohBinName=cppohBinName, spaceBinName=spaceBinName, output=output)
+            success = test().runTest(folderName,binPath=binPath, cppohBinName=cppohBinName, spaceBinName=spaceBinName, output=output)
             if success:
                 succeeded += 1
             else:

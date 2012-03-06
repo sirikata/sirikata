@@ -17,8 +17,8 @@ class CSVTest(Test):
     '''
     @see singleTest.SingleTest
     '''
-    def __init__(self, name, entityConstructorInfo=None, **kwargs):
-        super(CSVTest, self).__init__(name=name,**kwargs)
+    def __init__(self, entityConstructorInfo=None, **kwargs):
+        super(CSVTest, self).__init__(**kwargs)
         self.csvGen = csvGenerator.CSVGenerator(entityConstructorInfo);
 
     def addEntityConstructorInfo(self,eci):

@@ -13,8 +13,7 @@ class BasicTest(EmersonFeatureTest):
     #create basic test: single entity runs for 10 seconds and shuts
     #down.
     def __init__(self):
-        super(BasicTest, self).__init__("basicTest",
-                                        [basicGenerators.KillAfterTenSecondsEntity],
+        super(BasicTest, self).__init__([basicGenerators.KillAfterTenSecondsEntity],
                                         duration=25
                                         )
 
@@ -26,8 +25,7 @@ class UserEventTest(EmersonFeatureTest):
     def __init__(self):
         userEventTestInfo = CSVConstructorInfo(script_type="js",
                                                script_contents="system.import('userEventTest.em');");
-        super(UserEventTest, self).__init__("userEventTest",
-                                            touches=['system.event'],
+        super(UserEventTest, self).__init__(touches=['system.event'],
                                             entityConstructorInfo=[userEventTestInfo]);
 
 
@@ -39,8 +37,7 @@ class TimeoutTest(EmersonFeatureTest):
     def __init__(self):
         timeoutTestInfo = CSVConstructorInfo(script_type="js",
                                              script_contents="system.import('timeoutTest.em');");
-        super(TimeoutTest, self).__init__("timeoutTest",
-                                          touches=['timeout',
+        super(TimeoutTest, self).__init__(touches=['timeout',
                                                    'self',
                                                    'onPresenceConnected',
                                                    'Date'],
@@ -54,8 +51,7 @@ class HttpTest(EmersonFeatureTest):
     def __init__(self):
         httpTestInfo = CSVConstructorInfo(script_type="js",
                                           script_contents="system.import('httpTest.em');");
-        super(HttpTest, self).__init__("httpTest",
-                                       touches=['http',
+        super(HttpTest, self).__init__(touches=['http',
                                                 'timeout'
                                                 ],
                                        entityConstructorInfo=[httpTestInfo],
@@ -72,8 +68,7 @@ class CreatePresenceTest(EmersonFeatureTest):
             pos_x=20, pos_y=0, pos_z=0
             )
 
-        super(CreatePresenceTest, self).__init__("createPresence",
-                                                 touches=['createPresence',
+        super(CreatePresenceTest, self).__init__(touches=['createPresence',
                                                           'onCreatePresence',
                                                           'vector and quat syntax',
                                                           'timeout',
@@ -97,8 +92,7 @@ class ProximityAddedTest(EmersonFeatureTest):
             script_contents="system.import('proximityAdded.em');",
             pos_x=0, pos_y=0, pos_z=0, solid_angle=100
             )
-        super(ProximityAddedTest, self).__init__("proximityAdded",
-                                                 touches=['onProxAdded',
+        super(ProximityAddedTest, self).__init__(touches=['onProxAdded',
                                                           'setQueryAngle',
                                                           'setVelocity',
                                                           'createPresence',
@@ -118,10 +112,9 @@ class PresenceEventsTest(EmersonFeatureTest):
     def __init__(self):
         presenceEventsTestInfo = CSVConstructorInfo(script_type="js",
                                                     script_contents="system.import('presenceEventsTest.em');");
-        super(PresenceEventsTest, self).__init__("presenceEventsTest",
-                                                  touches=['system.createPresence', 'system.onPresenceConnected', 'system.onPresenceDisconnected'],
-                                                  entityConstructorInfo=[presenceEventsTestInfo],
-                                                  duration=15)
+        super(PresenceEventsTest, self).__init__(touches=['system.createPresence', 'system.onPresenceConnected', 'system.onPresenceDisconnected'],
+                                                 entityConstructorInfo=[presenceEventsTestInfo],
+                                                 duration=15)
 
 class SerializationTest(EmersonFeatureTest):
     after = [BasicTest]
@@ -130,8 +123,7 @@ class SerializationTest(EmersonFeatureTest):
     def __init__(self):
         serializationTestInfo = CSVConstructorInfo(script_type="js",
                                                    script_contents="system.import('serializationTest.em');");
-        super(SerializationTest, self).__init__("serializationTest",
-                                                touches=['system.onPresenceConnected', 'serialize','deserialize','disconnect'],
+        super(SerializationTest, self).__init__(touches=['system.onPresenceConnected', 'serialize','deserialize','disconnect'],
                                                 entityConstructorInfo=[serializationTestInfo],
                                                 duration=15)
 
@@ -141,8 +133,7 @@ class StorageTest(EmersonFeatureTest):
     def __init__(self):
         storageTestInfo = CSVConstructorInfo(script_type="js",
                                              script_contents="system.import('storageTest.em');");
-        super(StorageTest, self).__init__("storageTest",
-                                          touches=['storageBeginTransaction', 'storageCommit', 'storageErase', 'storageRead', 'storageWrite', 'serialization', 'timeout', 'killEntity'],
+        super(StorageTest, self).__init__(touches=['storageBeginTransaction', 'storageCommit', 'storageErase', 'storageRead', 'storageWrite', 'serialization', 'timeout', 'killEntity'],
                                           entityConstructorInfo=[storageTestInfo],
                                           duration=15)
 
@@ -153,8 +144,7 @@ class SandboxTest(EmersonFeatureTest):
     def __init__(self):
         sandboxTestInfo = CSVConstructorInfo(script_type="js",
                                              script_contents="system.import('sandboxTest.em');");
-        super(SandboxTest, self).__init__("sandboxTest",
-                                          touches=['onPresenceConnected', 'capabilities', 'sandbox', 'timeout', 'killEntity'],
+        super(SandboxTest, self).__init__(touches=['onPresenceConnected', 'capabilities', 'sandbox', 'timeout', 'killEntity'],
                                           entityConstructorInfo=[sandboxTestInfo],
                                           duration=15)
 
@@ -167,8 +157,7 @@ class MessagingTest(EmersonFeatureTest):
     def __init__(self):
         messagingTestInfo = CSVConstructorInfo(script_type="js",
                                                script_contents="system.import('messagingTest.em');");
-        super(MessagingTest, self).__init__("messagingTest",
-                                            touches=['onPresenceConnected', 'message syntax', 'createPresence',
+        super(MessagingTest, self).__init__(touches=['onPresenceConnected', 'message syntax', 'createPresence',
                                                      'system.presences', 'serialization', 'deserialization','makeReply'],
                                             entityConstructorInfo=[messagingTestInfo],
                                             duration=20)
@@ -180,8 +169,7 @@ class SelfTest(EmersonFeatureTest):
     def __init__(self):
         selfTestInfo = CSVConstructorInfo(script_type="js",
                                           script_contents="system.import('selfTest.em');");
-        super(SelfTest, self).__init__("selfTest",
-                                       touches=['system.self'],
+        super(SelfTest, self).__init__(touches=['system.self'],
                                        entityConstructorInfo=[selfTestInfo],
                                        duration=65)
 
@@ -192,8 +180,7 @@ class CSVFeatureTest(EmersonFeatureTest):
             script_type="js",
             script_contents="system.import('featureObjectTest.em');");
 
-        super(CSVFeatureTest, self).__init__("featureObjectTest",
-                                             touches=['onPresenceConnected', 'message syntax', 'featureObject',
+        super(CSVFeatureTest, self).__init__(touches=['onPresenceConnected', 'message syntax', 'featureObject',
                                                       'serialization', 'deserialization','makeReply'],
                                              #should load same script on two entities.
                                              entityConstructorInfo=[csvFeatureObjectEntInfo,csvFeatureObjectEntInfo],
@@ -204,7 +191,6 @@ class ConnectionLoadTest(EmersonFeatureTest):
     def __init__(self):
         connectionLoadTestInfo = CSVConstructorInfo(script_type="js",
                                                     script_contents="system.import('connectionLoadTest.em');");
-        super(ConnectionLoadTest, self).__init__("connectionLoadTest",
-                                                 touches=['onPresenceConnected', 'onPresenceDisconnected'],
+        super(ConnectionLoadTest, self).__init__(touches=['onPresenceConnected', 'onPresenceDisconnected'],
                                                  entityConstructorInfo=[connectionLoadTestInfo],
                                                  duration=95)

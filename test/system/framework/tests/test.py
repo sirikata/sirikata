@@ -6,6 +6,11 @@ import sys
 import framework.tests.errors as TestErrors
 
 class Test(object):
+
+    class classproperty(property):
+        def __get__(self, cls, owner):
+            return self.fget.__get__(None, owner)()
+
     DefaultErrorConditions = [
         TestErrors.ExceptionError,
         TestErrors.TimedOutError,
@@ -19,15 +24,22 @@ class Test(object):
         ]
     DefaultDuration = 20
 
+    # The name of the test. It uses the name of the class by default,
+    # so it usually isn't necessary to override this.
+    _name = None
+    @classproperty
+    @classmethod
+    def name(cls):
+        if not cls._name:
+            return cls.__module__ + '.' + cls.__name__
+        return cls._name
+
     # Use this to express order dependencies for tests. For example,
     # if TestSuperBar uses feature Bar, you could have after =
     # [TestBar] to make sure TestBar runs before TestSuperBar.
     after = []
 
     '''
-
-    @param {String} name identifies the name of the test that
-    we're running.
 
     @param {Array} (optional) errorConditions Each element of the
     errorConditions array should be a CheckError class.  After running
@@ -46,9 +58,7 @@ class Test(object):
     indicates a potential call that could have caused problem if test failed.
     '''
 
-    def __init__(self, name, errorConditions=DefaultErrorConditions, additionalCMDLineArgs=None, duration=DefaultDuration, touches=None):
-        self.testName = name;
-
+    def __init__(self, errorConditions=DefaultErrorConditions, additionalCMDLineArgs=None, duration=DefaultDuration, touches=None):
         if (errorConditions == None):
             self.errorConditions = [];
         else:
