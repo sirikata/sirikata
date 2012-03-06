@@ -3,7 +3,7 @@
 from __future__ import print_function
 import sys
 
-import errorConditions.basicErrors as basicErrors
+import framework.errorConditions.basicErrors as basicErrors
 
 class SingleTest(object):
     DefaultErrorConditions = [

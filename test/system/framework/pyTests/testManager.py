@@ -11,11 +11,11 @@ import os.path
 _this_script_dir = os.path.dirname(__file__)
 
 DEFAULT_OUTPUT_FILENAME = 'unitTestResults.txt';
-DEFAULT_BIN_PATH = os.path.join(_this_script_dir, '../../../../../../build/cmake/')
+DEFAULT_BIN_PATH = os.path.normpath(os.path.join(_this_script_dir, '../../../../build/cmake/'))
 DEFAULT_CPPOH_BIN_NAME = 'cppoh_d'
 DEFAULT_SPACE_BIN_NAME = 'space_d'
 
-DEFAULT_DIRTY_FOLDER = 'pyTests/DIRTY_UNIT_TEST_DIR';
+DEFAULT_OUTPUT_FOLDER = 'output';
 
 
 
@@ -40,9 +40,8 @@ class TestManager:
         count = 1;
 
         #if the dirty folder already exists then delete it first
-        if(os.path.exists(DEFAULT_DIRTY_FOLDER)):
-            print('WARNING: deleting previous output folder at ' + DEFAULT_DIRTY_FOLDER, file=output);
-            shutil.rmtree(DEFAULT_DIRTY_FOLDER);
+        if(os.path.exists(DEFAULT_OUTPUT_FOLDER)):
+            shutil.rmtree(DEFAULT_OUTPUT_FOLDER);
 
         succeeded = 0
         failed = 0
@@ -50,7 +49,7 @@ class TestManager:
             print("*" * 40, file=output)
             print('BEGIN TEST', s, '(' + str(count) + ' of ' + str(numTests) + ')', file=output)
 
-            folderName = os.path.join(DEFAULT_DIRTY_FOLDER, s);
+            folderName = os.path.join(DEFAULT_OUTPUT_FOLDER, s);
             if (os.path.exists(folderName)):
                 print('WARNING: deleting previous output file at ' + folderName, file=output);
                 shutil.rmtree(folderName);
@@ -74,8 +73,8 @@ class TestManager:
         print("SUMMARY:", succeeded, "succeeded,", failed, "failed", file=output)
         print("*" * 40, file=output)
 
-        if (not saveOutput):
-            shutil.rmtree(DEFAULT_DIRTY_FOLDER);
+        if (not saveOutput) and os.path.exists(DEFAULT_OUTPUT_FOLDER):
+            shutil.rmtree(DEFAULT_OUTPUT_FOLDER);
 
 
     def runAllTests(self, output=sys.stdout, binPath=DEFAULT_BIN_PATH, cppohBinName=DEFAULT_CPPOH_BIN_NAME, spaceBinName=DEFAULT_SPACE_BIN_NAME, saveOutput=False):

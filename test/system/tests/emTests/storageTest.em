@@ -16,7 +16,7 @@
  */
 
 
-system.require('unitTests/emTests/helperLibs/util.em');
+system.require('helperLibs/util.em');
 mTest = new UnitTest('storageTest.em');
 var toSerialize = {'x':1,'y':2};
 

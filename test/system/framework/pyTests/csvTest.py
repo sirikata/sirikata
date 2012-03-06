@@ -3,14 +3,16 @@
 from __future__ import print_function
 import sys
 
-import pyTests.singleTest as singleTest
-import dbGen.csvGenerator as csvGenerator
+import singleTest
+import framework.dbGen.csvGenerator as csvGenerator
 import os
 import subprocess
 from procset import ProcSet
 import random
 
 class CSVTest(singleTest.SingleTest):
+
+    script_paths = None
 
     '''
     @see singleTest.SingleTest
@@ -58,11 +60,18 @@ class CSVTest(singleTest.SingleTest):
             cppoh_cmd.append(s);
         cppoh_cmd.append('--object-factory=csv')
         cppoh_cmd.append('--object-factory-opts=--db='+ os.path.abspath(dbFilename))
+        if self.script_paths:
+            cppoh_cmd.append('--objecthost=--scriptManagers=js:{--import-paths=%s}' % (','.join(self.script_paths)))
 
         procs = ProcSet()
         space_output = open(space_output_filename, 'w')
+        print(' '.join(space_cmd), file=space_output)
+        space_output.flush()
         procs.process(space_cmd, stdout=space_output, stderr=subprocess.STDOUT, wait=False)
+
         cppoh_output = open(cppoh_output_filename,'w')
+        print(' '.join(cppoh_cmd), file=cppoh_output)
+        cppoh_output.flush()
         procs.process(cppoh_cmd, stdout=cppoh_output, stderr=subprocess.STDOUT, at=3, default=True)
 
         procs.run(waitUntil=self.duration, killAt=self.duration+10, output=output)

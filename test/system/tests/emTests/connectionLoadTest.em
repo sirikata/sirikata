@@ -3,7 +3,7 @@
   don't cause some sessions to fail.
   */
 
-system.require('unitTests/emTests/helperLibs/util.em');
+system.require('helperLibs/util.em');
 
 //global data needed by functions.
 mTest = new UnitTest('connectionLoadTest');
