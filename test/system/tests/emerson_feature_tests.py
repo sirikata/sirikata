@@ -1,9 +1,8 @@
 #!/usr/bin/python
 
-from framework.pyTests.csvTest import CSVTest
+from framework.tests.csv import CSVTest
 from framework.dbGen.csvConstructorInfo import CSVConstructorInfo
 import framework.dbGen.basicGenerators as basicGenerators
-import framework.errorConditions.basicErrors as basicErrors
 import os
 
 class EmersonFeatureTest(CSVTest):

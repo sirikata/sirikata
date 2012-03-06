@@ -26,7 +26,7 @@ class Error:
     an ErrorReturn object with TRUE as its errorExists parameter if
     there is an error with the output and FALSE if there is no error
     in the output.
-    
+
     '''
     def __init__(self,errorName, errorCheckFunc):
         self.errorName = errorName;
@@ -52,7 +52,7 @@ class Error:
 
 Returns a lambda expression that takes in a single text argument.  If
 the text argument the lambda takes in contains toCheckFor, then the
-lambda expression returns TRUE.  Otherwise, returns FALSE.  
+lambda expression returns TRUE.  Otherwise, returns FALSE.
 
 '''
 def lambda_checkForTextError(toCheckFor):
@@ -99,7 +99,7 @@ def lambda_andErrorHelper(lhs, rhs):
         return ErrorReturn (True, lhs.getErrorMessage() + ' AND ' + rhs.getErrorMessage());
 
     return ErrorReturn (False,'');
-    
+
 
 '''
 One of these conditions have to be true for there to be an error.
@@ -125,9 +125,13 @@ def lambda_orErrorHelper(lhs,rhs):
         return lhs;
     if (rhs.getErrorExists()):
         return rhs;
-    
+
     return ErrorReturn (False,'');
 
+
+UnitTestFailError      = Error("Unit Test Fail Error", lambda_checkForTextError("UNIT_TEST_FAIL"));
+ExceptionError         = Error("Emerson Exception Error", lambda_checkForTextError("Exception"));
+TimedOutError          = Error("Unit Test Timed Out", lambda_checkForTextError("UNIT_TEST_TIMEOUT"));
 
 
 '''
@@ -136,7 +140,7 @@ Testing the testers.
 if __name__ == "__main__":
 
     text = 'behram is writing error checks';
-    
+
     errorFunc  =  lambda_checkForTextError('behram');
     errorFunc2 =  lambda_checkForTextError('behraM');
     # print('\n\n');
@@ -149,7 +153,3 @@ if __name__ == "__main__":
     print('\n\n');
     print(errorFunc3(text).getErrorMessage());
     print('\n\n');
-
-    
-
-

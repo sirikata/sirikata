@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import sys
-from framework.pyTests.tee import Tee
+from framework.tee import Tee
 from framework.manager import Manager
 import tests
 

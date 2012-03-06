@@ -5,7 +5,7 @@ import sys, os, time, types
 import shutil
 import os.path
 
-from pyTests.singleTest import SingleTest
+from tests.test import Test
 
 _this_script_dir = os.path.dirname(__file__)
 
@@ -34,7 +34,7 @@ class Manager:
         order them according to dependencies, and add them to this
         Manager to be instantiated and executed.
         """
-        # Find all subclasses of SingleTest
+        # Find all subclasses of Test
         all_test_classes = set()
         modules = [searchmod]
         considered = set()
@@ -47,7 +47,7 @@ class Manager:
                     modules.append(child)
                     considered.add(child)
                 elif type(child) == types.TypeType:
-                    if issubclass(child, SingleTest):
+                    if issubclass(child, Test):
                         all_test_classes.add(child)
 
         # Remove non-leaf classes, e.g. if you have a helper subclass

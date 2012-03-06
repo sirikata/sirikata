@@ -3,14 +3,14 @@
 from __future__ import print_function
 import sys
 
-import singleTest
+from framework.tests.test import Test
 import framework.dbGen.csvGenerator as csvGenerator
 import os
 import subprocess
-from procset import ProcSet
+from framework.procset import ProcSet
 import random
 
-class CSVTest(singleTest.SingleTest):
+class CSVTest(Test):
 
     script_paths = None
 
@@ -18,7 +18,7 @@ class CSVTest(singleTest.SingleTest):
     @see singleTest.SingleTest
     '''
     def __init__(self, name, entityConstructorInfo=None, **kwargs):
-        singleTest.SingleTest.__init__(self,name=name,**kwargs)
+        super(CSVTest, self).__init__(name=name,**kwargs)
         self.csvGen = csvGenerator.CSVGenerator(entityConstructorInfo);
 
     def addEntityConstructorInfo(self,eci):

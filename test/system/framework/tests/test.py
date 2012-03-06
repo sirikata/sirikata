@@ -3,19 +3,19 @@
 from __future__ import print_function
 import sys
 
-import framework.errorConditions.basicErrors as basicErrors
+import framework.tests.errors as TestErrors
 
-class SingleTest(object):
+class Test(object):
     DefaultErrorConditions = [
-        basicErrors.ExceptionError,
-        basicErrors.TimedOutError,
-        basicErrors.UnitTestFailError
+        TestErrors.ExceptionError,
+        TestErrors.TimedOutError,
+        TestErrors.UnitTestFailError
         ]
     # For tests that expect to timeout because they don't have simple
     # ending criteria.
     TimeOutTestErrorConditions = [
-        basicErrors.ExceptionError,
-        basicErrors.UnitTestFailError
+        TestErrors.ExceptionError,
+        TestErrors.UnitTestFailError
         ]
     DefaultDuration = 20
 
