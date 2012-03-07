@@ -23,7 +23,7 @@ Stage 2:
  */
 
 system.require('std/http/http.em');
-system.require('unitTests/emTests/helperLibs/util.em');
+system.require('helperLibs/util.em');
 mTest = new UnitTest('timeoutTest.em');
 
 successObject = {

@@ -7,7 +7,7 @@
  */
 
 
-system.require('unitTests/emTests/helperLibs/util.em');
+system.require('helperLibs/util.em');
 
 mTest = new UnitTest('presenceEventsTest');
 

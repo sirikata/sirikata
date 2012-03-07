@@ -74,7 +74,7 @@ Stage 9
  */
 
 
-system.require('unitTests/emTests/helperLibs/util.em');
+system.require('helperLibs/util.em');
 mTest = new UnitTest('timeoutTest.em');
 
 system.onPresenceConnected(stage1);

@@ -35,7 +35,7 @@ Stage 4:
  */
 
 
-system.require('unitTests/emTests/helperLibs/util.em');
+system.require('helperLibs/util.em');
 
 //global data needed by functions.
 mTest = new UnitTest('createPresence.em');
