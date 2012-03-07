@@ -184,9 +184,17 @@ void Context::startForceQuitTimer() {
     );
 }
 
+namespace {
+void commandShutdown(Context* ctx, const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {
+    Command::Result result = Command::EmptyResult();
+    cmdr->result(cmdid, result);
+    ctx->shutdown();
+}
+}
 
 void Context::setCommander(Command::Commander* c) {
     if (mCommander != NULL) {
+        mCommander->unregisterCommand("context.shutdown");
         mCommander->unregisterCommand("context.report-stats");
         mCommander->unregisterCommand("context.report-all-stats");
     }
@@ -194,6 +202,11 @@ void Context::setCommander(Command::Commander* c) {
     mCommander = c;
 
     if (mCommander != NULL) {
+        mCommander->registerCommand(
+            "context.shutdown",
+            std::tr1::bind(commandShutdown, this, _1, _2, _3)
+        );
+
         mCommander->registerCommand(
             "context.report-stats",
             std::tr1::bind(&Network::IOService::commandReportStats, ioService, _1, _2, _3)

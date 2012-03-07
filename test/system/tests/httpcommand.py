@@ -63,7 +63,9 @@ class HttpCommandTest(Test):
 
 class SpaceHttpCommandTest(HttpCommandTest):
     '''Runs a space server and checks that '''
-    duration = 10
+
+    duration = 30
+    wait_until_responsive = True
 
     def runTest(self, outputPath, binPath, cppohBinName, spaceBinName, output=sys.stdout):
         space_output_filename = os.path.join(outputPath, 'space.log')
@@ -79,6 +81,11 @@ class SpaceHttpCommandTest(HttpCommandTest):
         space_output.flush()
         procs.process(space_cmd, stdout=space_output, stderr=subprocess.STDOUT, default=True)
 
+        # If requested, block for upto 10 seconds for the process to start responding to commands
+        if self.wait_until_responsive:
+            result = self.command('space', 'meta.commands', retries=40, wait=.25, output=output)
+            if result is None: self.fail('Space server never became responsive to HTTP commands')
+
         # Defer to the implementation for sending and checking test commands
         self.testCommands(procs, output=output)
 
@@ -86,7 +93,7 @@ class SpaceHttpCommandTest(HttpCommandTest):
         # down cleanly. We just make sure we clean up aggressively if
         # necessary.
         if not procs.done():
-            procs.wait(killAt=self.duration, output=output)
+            procs.wait(until=self.duration, killAt=self.duration, output=output)
 
         # Print a notification if we had to kill this process
         if procs.killed():
@@ -108,14 +115,30 @@ class SpaceHttpCommandTest(HttpCommandTest):
             fp.close()
             print(file=self._output)
 
-class SpaceMetaCommands(SpaceHttpCommandTest):
+class SpaceMetaCommandsTest(SpaceHttpCommandTest):
     '''
     Sanity check that the command processor was instantiated and works
     for the simplest command that is always guaranteed to work
     '''
+    duration = 10
+
+    # The one test where we don't want to block until a command gets through
+    wait_until_responsive = False
 
     def testCommands(self, procs, output=sys.stdout):
         # meta.commands is always available, even if empty
         result = self.command('space', 'meta.commands', retries=20, wait=.25, output=output)
         self.assertIsNotNone(result)
         procs.hup(output=output)
+
+class SpaceShutdownTest(SpaceHttpCommandTest):
+    '''
+    Sanity check that the command processor was instantiated and works
+    for the simplest command that is always guaranteed to work
+    '''
+
+    after = [SpaceMetaCommandsTest]
+
+    def testCommands(self, procs, output=sys.stdout):
+        # meta.commands is always available, even if empty
+        self.assertIsNotNone( self.command('space', 'context.shutdown', output=output) )
