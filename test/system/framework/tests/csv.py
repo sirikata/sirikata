@@ -34,11 +34,22 @@ class CSVTest(Test):
         cppoh_output_filename = os.path.join(dirtyFolderName, 'cppoh.log')
         space_output_filename = os.path.join(dirtyFolderName, 'space.log')
 
+        procs = ProcSet()
+
         # Random port to avoid conflicts
-        port = 2000 + random.randint(0, 1000) % 1000
+        port = random.randint(2000, 3000)
         # Space
         space_cmd = [os.path.join(binPath, spaceBinName)]
         space_cmd.append('--servermap-options=--port=' + str(port))
+
+        space_output = open(space_output_filename, 'w')
+        print(' '.join(space_cmd), file=space_output)
+        space_output.flush()
+        procs.process(space_cmd, stdout=space_output, stderr=subprocess.STDOUT, wait=False)
+        # Wait for space to startup
+        procs.sleep(3)
+
+
         # OH - create the db file to read from.
         csvGen = CSVGenerator(self.entities);
         csvGen.write(dbFilename)
@@ -49,18 +60,13 @@ class CSVTest(Test):
         if self.script_paths:
             cppoh_cmd.append('--objecthost=--scriptManagers=js:{--import-paths=%s}' % (','.join(self.script_paths)))
 
-        procs = ProcSet()
-        space_output = open(space_output_filename, 'w')
-        print(' '.join(space_cmd), file=space_output)
-        space_output.flush()
-        procs.process(space_cmd, stdout=space_output, stderr=subprocess.STDOUT, wait=False)
-
         cppoh_output = open(cppoh_output_filename,'w')
         print(' '.join(cppoh_cmd), file=cppoh_output)
         cppoh_output.flush()
-        procs.process(cppoh_cmd, stdout=cppoh_output, stderr=subprocess.STDOUT, at=3, default=True)
+        procs.process(cppoh_cmd, stdout=cppoh_output, stderr=subprocess.STDOUT, default=True)
 
-        procs.run(waitUntil=self.duration, killAt=self.duration+10, output=output)
+        # This type of test expects things to exit cleanly
+        procs.wait(until=self.duration, killAt=self.duration+10, output=output)
 
         # Print a notification if we had to kill this process
         if procs.hupped():

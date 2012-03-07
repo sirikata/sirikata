@@ -16,15 +16,23 @@ class ProcSet:
     don't exit.
     """
 
+    class Proc(object):
+        '''Properties of a process being tracked by this ProcSet'''
+        pass
+
     def __init__(self):
-        self._procRequests = []
-        self._defaultProc = 0
+        self._procs = set()
+        self._defaultProc = None
+
+        # Time we started the first process
+        self._start = None
+        # Whether we've sent sighups out to the processes yet
+        self._sighupped = False
 
     def process(self, *args, **kwargs):
         """
-        Add a process to be run
+        Start a process running
 
-        at -- number of seconds to wait before starting this process
         default -- use this as the default process when checking for
            sighups, sigkills and returncodes
         wait -- whether to wait for this process to exit before
@@ -32,13 +40,10 @@ class ProcSet:
         """
         # Just queue it up. We'll do the real work in run. Extract a
         # few special arguments we might need
-        atTime = 0
-        if 'at' in kwargs:
-            atTime = kwargs['at']
-            del kwargs['at']
 
+        set_default = False
         if 'default' in kwargs and kwargs['default']:
-            self._defaultProc = len(self._procRequests)
+            set_default = True
             del kwargs['default']
 
         wait = True
@@ -46,98 +51,118 @@ class ProcSet:
             wait = False
             del kwargs['wait']
 
-        self._procRequests.append( (args, kwargs, atTime, wait) )
+        p = ProcSet.Proc()
+        p.args = args
+        p.kwargs = kwargs
+        p.wait = wait
+        if not self._start:
+            self._start = datetime.datetime.now()
+        p.proc = subprocess.Popen(*args, **kwargs)
+        p.hupped = False
+        p.killed = False
+        self._procs.add(p)
 
-    def run(self, waitUntil=None, killAt=None, output=sys.stdout):
+        if set_default:
+            self._defaultProc = p
+
+    def sleep(self, duration):
+        # TODO(ewencp) maybe poll, returning early if everything exits?
+        time.sleep(duration)
+
+    def _allTerminated(self):
+        for p in self._procs:
+            if p.proc.poll() is None: return False
+        return True
+
+    def waitingDone(self):
+        '''Returns True if the processes we marked as needing to exit themselves have terminated'''
+        for p in self._procs:
+            if p.wait and p.proc.poll() is None:
+                return False
+        return True
+
+    def done(self):
+        '''Returns True if all processes have terminated'''
+        return self._allTerminated()
+
+    def hup(self, output=sys.stdout):
+        # SIGHUP processes that haven't shutdown yet
+        sys.stdout.flush();
+        sys.stderr.flush();
+        output.flush()
+        for p in self._procs:
+            if p.proc.poll() is None:
+                p.proc.send_signal(signal.SIGHUP)
+                p.hupped = True
+        self._sighupped = True
+
+    def kill(self, output=sys.stdout):
+        sys.stdout.flush();
+        sys.stderr.flush();
+        output.flush()
+        for p in self._procs:
+            if p.proc.poll() is None:
+                # Send signal twice, in case the first one is
+                # caught. The second should (in theory) always
+                # kill the process as it should have disabled
+                # the handler
+                p.proc.send_signal(signal.SIGKILL)
+                p.proc.send_signal(signal.SIGKILL)
+                p.proc.wait()
+                p.killed = True
+
+    def wait(self, until=None, killAt=None, output=sys.stdout):
         """
-        Run the processes.
+        Wait for running processes to exit.
 
-        waitUntil -- wait this long for the processes to run and exit
-           before sending an initial kill request.
+        until -- wait this long for the processes to run and exit
+           before sending an initial kill request. This time is
+           relative to the *starting time*, the time when the first
+           process was spawned, not the current time.
         killAt -- seconds until sending a SIGKILL to the processes.
         """
 
-        def allTerminated(ps):
-            for p in ps:
-                if p is None or p.poll() is None: return False
-            return True
-
-        start = datetime.datetime.now()
-        self._procs = [None] * len(self._procRequests)
-
-        self._hupped = [False] * len(self._procRequests)
-        self._killed = [False] * len(self._procRequests)
-
-        sighupped = False # Whether we've sent the sighup yet
-        while not allTerminated(self._procs):
-            now_dt = datetime.datetime.now() - start
+        while not self._allTerminated():
+            now_dt = datetime.datetime.now() - self._start
             now = now_dt.seconds + (float(now_dt.microseconds)/1000000)
-
-            # Run anything that's now ready to run
-            for idx in range(len(self._procRequests)):
-                (args, kwargs, atTime, wait) = self._procRequests[idx]
-                if self._procs[idx] is None and atTime < now:
-                    self._procs[idx] = subprocess.Popen(*args, **kwargs)
 
             # If we've hit the wait time, send requested signals to
             # processes that are still alive
-            done_waiting = waitUntil is not None and waitUntil < now
-            all_waiting_exited = True
-            for idx in range(len(self._procRequests)):
-                (args, kwargs, atTime, wait) = self._procRequests[idx]
-                if wait and (self._procs[idx] is None or self._procs[idx].poll() is None):
-                    all_waiting_exited = False
-                    break
-            if (done_waiting or all_waiting_exited) and not sighupped:
-                # SIGHUP processes that haven't shutdown yet
-                sys.stdout.flush();
-                sys.stderr.flush();
-                output.flush()
-                for idx in range(len(self._procRequests)):
-                    if self._procs[idx] is not None and self._procs[idx].poll() is None:
-                        self._procs[idx].send_signal(signal.SIGHUP)
-                        self._hupped[idx] = True
-                sighupped = True
+            done_waiting = until is not None and until < now
+            all_waiting_exited = self.waitingDone()
+            if (done_waiting or all_waiting_exited) and not self._sighupped:
+                self.hup(output=output)
 
             # If we've hit the kill time, forcibly kill them
             if killAt is not None and killAt < now:
-                sys.stdout.flush();
-                sys.stderr.flush();
-                output.flush()
-                for idx in range(len(self._procRequests)):
-                    if self._procs[idx] is not None and self._procs[idx].poll() is None:
-                        # Send signal twice, in case the first one is
-                        # caught. The second should (in theory) always
-                        # kill the process as it should have disabled
-                        # the handler
-                        self._procs[idx].send_signal(signal.SIGKILL)
-                        self._procs[idx].send_signal(signal.SIGKILL)
-                        self._procs[idx].wait()
-                        self._killed[idx] = True
+                self.kill(output=output)
 
             # Sleep so it's not busy waiting for the run
             time.sleep(0.1)
 
-    def hupped(self, idx=None):
+    def hupped(self):
         """
         Return true if the given process (by index) was SIGHUPped. If
         no index is specified, returns the default process's result.
         """
-        if idx is None: idx = self._defaultProc
-        return self._hupped[idx]
+        if not self._defaultProc:
+            raise RuntimeError("No process marked as the default, can't determine if it was sent a SIGHUP")
+        return self._defaultProc.hupped
 
     def killed(self, idx=None):
         """
         Return true if the given process (by index) was SIGKILLed. If
         no index is specified, returns the default process's result.
         """
-        if idx is None: idx = self._defaultProc
-        return self._killed[idx]
+        if not self._defaultProc:
+            raise RuntimeError("No process marked as the default, can't determine if it was sent a SIGKILL")
+        return self._defaultProc.killed
 
-    def returncode(self, idx=None):
+    def returncode(self):
         """
         Return the exit code for the given process (by index). If no
         index is specified, returns the default process's result.
         """
-        if idx is None: idx = self._defaultProc
-        return self._procs[idx].returncode
+        if not self._defaultProc:
+            raise RuntimeError("No process marked as the default, can't determine if it was sent a SIGKILL")
+        return self._defaultProc.proc.returncode
