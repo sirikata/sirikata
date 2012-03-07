@@ -59,6 +59,9 @@ class Manager:
             for base_class in test_class.__bases__:
                 if base_class in leaf_test_classes: leaf_test_classes.remove(base_class)
 
+        # Remove any tests marked as disabled
+        leaf_test_classes = set([x for x in leaf_test_classes if not x.disabled])
+
         # Use ordering requests to generate an order for tests using
         # simple dependency analysis. By using no_deps_left as a
         # stack, we get a depth first traversal so related tests are

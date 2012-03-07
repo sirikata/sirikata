@@ -33,6 +33,10 @@ class Test(object):
             return cls.__module__ + '.' + cls.__name__
         return cls._name
 
+    # You can set disabled to True to remove a test from the active
+    # test suite
+    disabled = False
+
     # Use this to express order dependencies for tests. For example,
     # if TestSuperBar uses feature Bar, you could have after =
     # [TestBar] to make sure TestBar runs before TestSuperBar.
