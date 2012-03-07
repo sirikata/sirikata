@@ -100,6 +100,19 @@ class Manager:
         succeeded = 0
         failed = 0
         for s in testNames:
+            if s in self._testsByName:
+                test = self._testsByName[s];
+            else:
+                # Try to find the test with some fuzzy matching
+                found = [x for x in self._tests if x.name.lower().find(s.lower()) != -1]
+                if len(found) == 0:
+                    raise RuntimeError("Couldn't find test matching " + s)
+                elif len(found) > 1:
+                    raise RuntimeError("Found too many tests matching " + s)
+                else:
+                    test = found[0]
+                    s = test.name
+
             start_time = datetime.now()
             print("*" * 40, file=output)
             print('BEGIN TEST', s, '(' + str(count) + ' of ' + str(numTests) + ')', file=output)
@@ -110,7 +123,6 @@ class Manager:
                 shutil.rmtree(folderName);
 
             os.makedirs(folderName);
-            test = self._testsByName[s];
             success = test().runTest(folderName,binPath=binPath, cppohBinName=cppohBinName, spaceBinName=spaceBinName, output=output)
             if success:
                 succeeded += 1
