@@ -61,8 +61,8 @@ class ProximityAddedTest(EmersonFeatureTest):
 
     touches=['onProxAdded', 'setQueryAngle', 'setVelocity',
              'createPresence', 'getProxSet', 'timeout', 'onPresenceConnected']
-    errors = EmersonFeatureTest.TimeOutTestErrorConditions
     duration = 30
+    needs_hup  = True
 
 class PresenceEventsTest(EmersonFeatureTest):
     after = [TimeoutTest]

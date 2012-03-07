@@ -90,8 +90,7 @@ class SpaceHttpCommandTest(HttpCommandTest):
 
         # Print a notification if we had to kill this process
         if procs.killed():
-            print(file=space_output)
-            print('UNIT_TEST_TIMEOUT', file=space_output)
+            self.fail('Timed out')
 
         space_output.close()
         self.report_files = {'Space Server': space_output_filename}

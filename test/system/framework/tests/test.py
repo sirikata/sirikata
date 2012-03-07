@@ -14,13 +14,6 @@ class Test(object):
 
     DefaultErrorConditions = [
         TestErrors.ExceptionError,
-        TestErrors.TimedOutError,
-        TestErrors.UnitTestFailError
-        ]
-    # For tests that expect to timeout because they don't have simple
-    # ending criteria.
-    TimeOutTestErrorConditions = [
-        TestErrors.ExceptionError,
         TestErrors.UnitTestFailError
         ]
 

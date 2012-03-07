@@ -16,6 +16,11 @@ class CSVTest(Test):
     duration = 60
     entities = []
 
+    # Some tests currently need to get the timeout hup() call, so we
+    # don't want to mark them as failed because of it. This toggles
+    # that option.
+    needs_hup = False
+
     '''
     @param {String} dirtyFolderName The testManager guarantees that a
     folder exists with this name that csvTest can write arbitrary
@@ -69,9 +74,8 @@ class CSVTest(Test):
         procs.wait(until=self.duration, killAt=self.duration+10, output=output)
 
         # Print a notification if we had to kill this process
-        if procs.hupped():
-            print(file=cppoh_output)
-            print('UNIT_TEST_TIMEOUT', file=cppoh_output)
+        if (self.needs_hup and procs.killed()) or (not self.needs_hup and procs.hupped()):
+            self.fail('Timed out')
 
         space_output.close()
         cppoh_output.close()
