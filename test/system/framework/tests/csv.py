@@ -4,7 +4,7 @@ from __future__ import print_function
 import sys
 
 from framework.tests.test import Test
-import framework.dbGen.csvGenerator as csvGenerator
+from framework.db.csv import CSVGenerator
 import os
 import subprocess
 from framework.procset import ProcSet
@@ -40,8 +40,8 @@ class CSVTest(Test):
         space_cmd = [os.path.join(binPath, spaceBinName)]
         space_cmd.append('--servermap-options=--port=' + str(port))
         # OH - create the db file to read from.
-        csvGen = csvGenerator.CSVGenerator(self.entities);
-        csvGen.writeDB(dbFilename)
+        csvGen = CSVGenerator(self.entities);
+        csvGen.write(dbFilename)
         cppoh_cmd = [os.path.join(binPath, cppohBinName)]
         cppoh_cmd.append('--servermap-options=--port=' + str(port))
         cppoh_cmd.append('--object-factory=csv')

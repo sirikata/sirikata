@@ -1,20 +1,17 @@
 #!/usr/bin/python
 
-'''
-A ConstructorInfo object contains all information about how to
-initialize an entity.  This eventually gets output to a scene.db file.
-'''
 
-'''
-@param {String} toWrap
-
-@return ""toWrap""
-
-Ie, if you call
-print(self.stringWrap('mesh'));
-> "\"mesh\""
-'''
 def stringWrap(toWrap):
+    '''
+    @param {String} toWrap
+
+    @return ""toWrap""
+
+    Ie, if you call
+    print(self.stringWrap('mesh'));
+    > "\"mesh\""
+    '''
+
     if not toWrap:
         return '""'
     return '"\\"' + toWrap + '\\""'
@@ -55,16 +52,21 @@ def getCSVHeaderAsCSVString():
 
     return returner;
 
-class CSVConstructorInfo:
+class Entity:
     '''
-    @see DEFAULT_VAL_VECTOR for a list of argument names that we can use.
+    An Entity object contains all information about how to
+    initialize an entity.  This eventually gets output to a scene.db file.
     '''
+
     def __init__ (self, *args, **kwargs):
+        '''
+        @see DEFAULT_VAL_VECTOR for a list of argument names that we can use.
+        '''
 
         for s in DEFAULT_VAL_VECTOR:
             self.checkArgsLoadDefaults(s[0],kwargs,s[1],s[2]);
 
-        
+
     def checkArgsLoadDefaults(self,toCheckFor,toCheckIn,default,wrapFn):
         toExec = 'self.' + toCheckFor + '=';
         if (toCheckFor in toCheckIn):
@@ -88,15 +90,15 @@ class CSVConstructorInfo:
             returner += str(self.getSelfData(s[0])) + ',';
 
         return returner;
-            
+
     def getSelfData(self,fieldName):
         exec ('returner = self.' + fieldName);
         return returner;
-    
-            
+
+
 #Only to test to ensure that this code is working correctly.
 if __name__ == "__main__":
-    cInfo1= CSVConstructorInfo(pos_x=-20,pos_y=5,pos_z=1.25, scale=20, meshURI='meerkat:///kittyvision/hedgehog.dae/optimized/0/hedgehog.dae');
+    cInfo1= Entity(pos_x=-20,pos_y=5,pos_z=1.25, scale=20, meshURI='meerkat:///kittyvision/hedgehog.dae/optimized/0/hedgehog.dae');
     print('\n\n');
     print(getCSVHeaderAsCSVString());
     print(cInfo1.getConstructorRow());

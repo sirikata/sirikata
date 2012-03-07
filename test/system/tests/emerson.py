@@ -1,8 +1,7 @@
 #!/usr/bin/python
 
 from framework.tests.csv import CSVTest
-from framework.dbGen.csvConstructorInfo import CSVConstructorInfo
-import framework.dbGen.basicGenerators as basicGenerators
+from framework.db.entity import Entity
 import os
 
 class EmersonFeatureTest(CSVTest):
@@ -12,36 +11,38 @@ class EmersonFeatureTest(CSVTest):
 class BasicTest(EmersonFeatureTest):
     '''Most basic test with Emerson, creating an object and then shutting it down immediately.'''
     duration = 25
-    entities = [basicGenerators.KillAfterTenSecondsEntity]
+    entities = [Entity(script_type="js",
+                       script_contents="system.import('basicPresence.em');")
+                ]
 
 class UserEventTest(EmersonFeatureTest):
     after = [BasicTest]
-    entities = [CSVConstructorInfo(script_type="js",
-                                   script_contents="system.import('userEventTest.em');")
+    entities = [Entity(script_type="js",
+                       script_contents="system.import('userEventTest.em');")
                 ]
     touches=['system.event']
 
 class TimeoutTest(EmersonFeatureTest):
     after = [BasicTest]
-    entities = [CSVConstructorInfo(script_type="js",
-                                   script_contents="system.import('timeoutTest.em');")
+    entities = [Entity(script_type="js",
+                       script_contents="system.import('timeoutTest.em');")
                 ]
     touches = ['timeout', 'self', 'onPresenceConnected', 'Date']
     duration = 105
 
 class HttpTest(EmersonFeatureTest):
     after = [BasicTest]
-    entities = [CSVConstructorInfo(script_type="js",
-                                   script_contents="system.import('httpTest.em');")
+    entities = [Entity(script_type="js",
+                       script_contents="system.import('httpTest.em');")
                 ]
     touches = ['http', 'timeout']
     duration = 35
 
 class CreatePresenceTest(EmersonFeatureTest):
     after = [TimeoutTest]
-    entities = [CSVConstructorInfo(script_type="js",
-                                   script_contents="system.import('createPresenceTest.em');",
-                                   pos_x=20, pos_y=0, pos_z=0)
+    entities = [Entity(script_type="js",
+                       script_contents="system.import('createPresenceTest.em');",
+                       pos_x=20, pos_y=0, pos_z=0)
                 ]
     touches=['createPresence', 'onCreatePresence', 'vector and quat syntax', 'timeout', 'system.presences'],
     duration = 55
@@ -50,8 +51,8 @@ class ProximityAddedTest(EmersonFeatureTest):
     after = [TimeoutTest, CreatePresenceTest]
 
     entities = [
-        CSVConstructorInfo(pos_x=10, pos_y=0, pos_z=0, solid_angle=100),
-        CSVConstructorInfo(
+        Entity(pos_x=10, pos_y=0, pos_z=0, solid_angle=100),
+        Entity(
             script_type="js",
             script_contents="system.import('proximityAdded.em');",
             pos_x=0, pos_y=0, pos_z=0, solid_angle=100
@@ -65,8 +66,8 @@ class ProximityAddedTest(EmersonFeatureTest):
 
 class PresenceEventsTest(EmersonFeatureTest):
     after = [TimeoutTest]
-    entities = [ CSVConstructorInfo(script_type="js",
-                                    script_contents="system.import('presenceEventsTest.em');")
+    entities = [ Entity(script_type="js",
+                        script_contents="system.import('presenceEventsTest.em');")
                  ]
     touches = ['system.createPresence', 'system.onPresenceConnected', 'system.onPresenceDisconnected']
     duration = 15
@@ -74,32 +75,32 @@ class PresenceEventsTest(EmersonFeatureTest):
 class SerializationTest(EmersonFeatureTest):
     #serializationTest: tests objects, arrays, and functions serialized.  does not test certain special objects (presences, visibles, etc.).
     after = [BasicTest]
-    entities = [CSVConstructorInfo(script_type="js",
-                                   script_contents="system.import('serializationTest.em');")
+    entities = [Entity(script_type="js",
+                       script_contents="system.import('serializationTest.em');")
                 ]
     touches = ['system.onPresenceConnected', 'serialize','deserialize','disconnect']
     duration = 15
 
 class StorageTest(EmersonFeatureTest):
     after = [TimeoutTest, SerializationTest]
-    entities = [CSVConstructorInfo(script_type="js",
-                                   script_contents="system.import('storageTest.em');")
+    entities = [Entity(script_type="js",
+                       script_contents="system.import('storageTest.em');")
                 ]
     touches = ['storageBeginTransaction', 'storageCommit', 'storageErase', 'storageRead', 'storageWrite', 'serialization', 'timeout', 'killEntity']
     duration = 15
 
 class SandboxTest(EmersonFeatureTest):
     after = [PresenceEventsTest]
-    entities = [CSVConstructorInfo(script_type="js",
-                                   script_contents="system.import('sandboxTest.em');")
+    entities = [Entity(script_type="js",
+                       script_contents="system.import('sandboxTest.em');")
                 ]
     touches = ['onPresenceConnected', 'capabilities', 'sandbox', 'timeout', 'killEntity']
     duration = 15
 
 class MessagingTest(EmersonFeatureTest):
     after = [PresenceEventsTest]
-    entities = [CSVConstructorInfo(script_type="js",
-                                   script_contents="system.import('messagingTest.em');")
+    entities = [Entity(script_type="js",
+                       script_contents="system.import('messagingTest.em');")
                 ]
     touches = ['onPresenceConnected', 'message syntax', 'createPresence',
                'system.presences', 'serialization', 'deserialization','makeReply']
@@ -107,8 +108,8 @@ class MessagingTest(EmersonFeatureTest):
 
 class SelfTest(EmersonFeatureTest):
     after = [TimeoutTest, HttpTest, StorageTest, PresenceEventsTest, MessagingTest]
-    entities = [CSVConstructorInfo(script_type="js",
-                                   script_contents="system.import('selfTest.em');")
+    entities = [Entity(script_type="js",
+                       script_contents="system.import('selfTest.em');")
                 ]
     touches = ['system.self']
     duration = 65
@@ -116,8 +117,8 @@ class SelfTest(EmersonFeatureTest):
 class CSVFeatureTest(EmersonFeatureTest):
     after = [PresenceEventsTest]
     # should load same script on two entities.
-    _eci = CSVConstructorInfo(script_type="js",
-                              script_contents="system.import('featureObjectTest.em');")
+    _eci = Entity(script_type="js",
+                  script_contents="system.import('featureObjectTest.em');")
     entities = [_eci, _eci]
     touches=['onPresenceConnected', 'message syntax', 'featureObject',
              'serialization', 'deserialization','makeReply']
@@ -125,8 +126,8 @@ class CSVFeatureTest(EmersonFeatureTest):
 
 class ConnectionLoadTest(EmersonFeatureTest):
     after = [PresenceEventsTest]
-    entities = [CSVConstructorInfo(script_type="js",
-                                   script_contents="system.import('connectionLoadTest.em');")
+    entities = [Entity(script_type="js",
+                       script_contents="system.import('connectionLoadTest.em');")
                 ]
     touches = ['onPresenceConnected', 'onPresenceDisconnected']
     duration = 95
