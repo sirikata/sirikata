@@ -88,6 +88,8 @@ class Manager:
         numTests = len(testNames);
         count = 1;
 
+        suite_start_time = datetime.now()
+
         #if the dirty folder already exists then delete it first
         if(os.path.exists(DEFAULT_OUTPUT_FOLDER)):
             shutil.rmtree(DEFAULT_OUTPUT_FOLDER);
@@ -121,9 +123,14 @@ class Manager:
 
             count += 1;
 
+
+        suite_finish_time = datetime.now()
+        elapsed = suite_finish_time - suite_start_time
+        elapsed_str = str(elapsed.seconds + (float(elapsed.microseconds)/1000000.0)) + 's'
+
         print(file=output)
         print("*" * 40, file=output)
-        print("SUMMARY:", succeeded, "succeeded,", failed, "failed", file=output)
+        print("SUMMARY:", succeeded, "succeeded,", failed, "failed, in", elapsed_str, file=output)
         print("*" * 40, file=output)
 
         if (not saveOutput) and os.path.exists(DEFAULT_OUTPUT_FOLDER):
