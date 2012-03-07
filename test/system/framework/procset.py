@@ -70,7 +70,8 @@ class ProcSet:
 
         sighupped = False # Whether we've sent the sighup yet
         while not allTerminated(self._procs):
-            now = (datetime.datetime.now() - start).seconds
+            now_dt = datetime.datetime.now() - start
+            now = now_dt.seconds + (float(now_dt.microseconds)/1000000)
 
             # Run anything that's now ready to run
             for idx in range(len(self._procRequests)):
@@ -115,7 +116,7 @@ class ProcSet:
                         self._killed[idx] = True
 
             # Sleep so it's not busy waiting for the run
-            time.sleep(1)
+            time.sleep(0.1)
 
     def hupped(self, idx=None):
         """
