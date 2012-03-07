@@ -83,6 +83,7 @@ public:
     virtual void onSetMesh (ProxyObjectPtr proxy, Transfer::URI const& newMesh,const SpaceObjectReference& sporef);
     virtual void onSetScale (ProxyObjectPtr proxy, float32 newScale ,const SpaceObjectReference& sporef);
     virtual void onSetPhysics (ProxyObjectPtr proxy, const String& newphy,const SpaceObjectReference& sporef);
+    virtual void onSetIsAggregate(ProxyObjectPtr proxy, bool isAggregate, const SpaceObjectReference& sporef);
 
     // Indicate whether this object is still visible to on of your presences or
     // not.

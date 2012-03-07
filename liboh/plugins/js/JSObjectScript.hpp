@@ -345,7 +345,7 @@ protected:
         Liveness::Token ctxAlive);
 
     void storageCountCallback(JSContextStruct* jscont, v8::Persistent<v8::Function> cb,
-        bool success, int32 count,Liveness::Token objAlive,Liveness::Token ctxAlive);
+        OH::Storage::Result result, int32 count,Liveness::Token objAlive,Liveness::Token ctxAlive);
 
     void iSetRestoreScriptCallback(
         JSContextStruct* jscont, v8::Persistent<v8::Function> cb, bool success,
@@ -411,7 +411,7 @@ protected:
         Liveness::Token ctxAlive);
     void iStorageCountCallback(
         JSContextStruct* jscont, v8::Persistent<v8::Function> cb,
-        bool success, int32 count,Liveness::Token objAlive,
+        OH::Storage::Result result, int32 count,Liveness::Token objAlive,
         Liveness::Token ctxAlive);
     void eStorageErase(
         const OH::Storage::Key& key, v8::Persistent<v8::Function> cb,

@@ -33,6 +33,7 @@
 #include <sirikata/space/AggregateManager.hpp>
 
 #include <sirikata/mesh/ModelsSystemFactory.hpp>
+#include <sirikata/mesh/Bounds.hpp>
 
 #include <sirikata/core/network/IOStrandImpl.hpp>
 #include <sirikata/core/network/IOWork.hpp>
@@ -377,9 +378,9 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
   MeshdataPtr agg_mesh =  MeshdataPtr( new Meshdata() );
   agg_mesh->globalTransform = Matrix4x4f::identity();
   BoundingSphere3f bnds = mLoc->bounds(uuid);
-  float32 bndsX = bnds.center().x;
-  float32 bndsY = bnds.center().y;
-  float32 bndsZ = bnds.center().z;
+  float64 bndsX = bnds.center().x;
+  float64 bndsY = bnds.center().y;
+  float64 bndsZ = bnds.center().z;
 
   std::tr1::unordered_map<std::string, uint32> meshToStartIdxMapping;
   std::tr1::unordered_map<std::string, uint32> meshToStartMaterialsIdxMapping;
@@ -427,38 +428,12 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
 
     /** Find scaling factor **/
     BoundingBox3f3f originalMeshBoundingBox = BoundingBox3f3f::null();
-    bool firstUpdate = true;
-
-    Meshdata::GeometryInstanceIterator geoinst_it = m->getGeometryInstanceIterator();
-    uint32 geoinst_idx;
-    Matrix4x4f geoinst_pos_xform;
-
-     while( geoinst_it.next(&geoinst_idx, &geoinst_pos_xform) ) {
-      const GeometryInstance& geomInstance = m->instances[geoinst_idx];
-      const SubMeshGeometry& smg = m->geometry[geomInstance.geometryIndex];
-
-      uint32 smgPositionsSize = smg.positions.size();
-      for (uint32 j = 0; j < smgPositionsSize; j++) {
-        const Vector3f& v = smg.positions[j];
-
-        Vector4f jth_vertex_4f = geoinst_pos_xform*Vector4f(v.x, v.y, v.z, 1.0f);
-        Vector3f jth_vertex(jth_vertex_4f.x, jth_vertex_4f.y, jth_vertex_4f.z);
-
-        if (firstUpdate) {
-          originalMeshBoundingBox = BoundingBox3f3f(jth_vertex, 0);
-          firstUpdate = false;
-        }
-        else {
-           originalMeshBoundingBox.mergeIn(jth_vertex );
-        }
-      }
-
-    }
-
-    BoundingSphere3f originalMeshBounds = originalMeshBoundingBox.toBoundingSphere();
-    BoundingSphere3f scaledMeshBounds = mLoc->bounds(child_uuid);
-    double scalingfactor = scaledMeshBounds.radius()/(originalMeshBounds.radius());
-
+    double originalMeshBoundsRadius=0;
+    ComputeBounds( m, &originalMeshBoundingBox, &originalMeshBoundsRadius);
+    
+    BoundingSphere3f scaledMeshBounds = mLoc->bounds(child_uuid);    
+    double scalingfactor = scaledMeshBounds.radius() / originalMeshBoundsRadius;
+    
     /** End: find scaling factor **/
 
     // We me reuse more than one of the same mesh, e.g. the aggregate may have
@@ -524,14 +499,16 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
 
     // Extract the loc information we need for this object.
     Vector3f location = mLoc->currentPosition(child_uuid);
-    float32 locationX = location.x;
-    float32 locationY = location.y;
-    float32 locationZ = location.z;
+
+    float64 locationX = location.x ;
+    float64 locationY = location.y ;
+    float64 locationZ = location.z ;
     Quaternion orientation = mLoc->currentOrientation(child_uuid);
 
     // Reuse geoinst_it and geoinst_idx from earlier, but with a new iterator.
-    geoinst_it = m->getGeometryInstanceIterator();
+    Meshdata::GeometryInstanceIterator geoinst_it = m->getGeometryInstanceIterator();
     Matrix4x4f orig_geo_inst_xform;
+    uint32 geoinst_idx;
 
     while( geoinst_it.next(&geoinst_idx, &orig_geo_inst_xform) ) {
       // Copy the instance data.
@@ -542,8 +519,11 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
 
       // Shift indices for
       //  Materials
-      for(GeometryInstance::MaterialBindingMap::iterator mbit = geomInstance.materialBindingMap.begin(); mbit != geomInstance.materialBindingMap.end(); mbit++)
+      for(GeometryInstance::MaterialBindingMap::iterator mbit = geomInstance.materialBindingMap.begin();
+          mbit != geomInstance.materialBindingMap.end(); mbit++)
+      {
           mbit->second += submeshMaterialsOffset;
+      }
       //  Geometry
       geomInstance.geometryIndex += submeshGeomOffset;
       //  Parent node
@@ -553,10 +533,10 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
       geomInstance.parentNode += submeshNodeOffset;
 
       //translation
-      Matrix4x4f trs = Matrix4x4f( Vector4f(1,0,0,locationX - bndsX),
-                                   Vector4f(0,1,0,locationY - bndsY),
-                                   Vector4f(0,0,1,locationZ - bndsZ),
-                                   Vector4f(0,0,0,1),                 Matrix4x4f::ROWS());
+      Matrix4x4f trs = Matrix4x4f( Vector4f(1,0,0, (locationX - bndsX)),
+                                   Vector4f(0,1,0, (locationY - bndsY)),
+                                   Vector4f(0,0,1, (locationZ - bndsZ)),
+                                   Vector4f(0,0,0,1), Matrix4x4f::ROWS());
 
       //rotate
       float ox = orientation.normal().x;
@@ -564,10 +544,13 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
       float oz = orientation.normal().z;
       float ow = orientation.normal().w;
 
-      trs *= Matrix4x4f( Vector4f(1-2*oy*oy - 2*oz*oz , 2*ox*oy - 2*ow*oz, 2*ox*oz + 2*ow*oy, 0),
+      Matrix4x4f rotateMatrix = Matrix4x4f( Vector4f(1-2*oy*oy - 2*oz*oz , 2*ox*oy - 2*ow*oz, 2*ox*oz + 2*ow*oy, 0),
                          Vector4f(2*ox*oy + 2*ow*oz, 1-2*ox*ox-2*oz*oz, 2*oy*oz-2*ow*ox, 0),
                          Vector4f(2*ox*oz-2*ow*oy, 2*oy*oz + 2*ow*ox, 1-2*ox*ox - 2*oy*oy,0),
                          Vector4f(0,0,0,1),                 Matrix4x4f::ROWS());
+      
+      trs *= rotateMatrix;
+      
 
       //scaling
       trs *= Matrix4x4f::scale(scalingfactor);
@@ -616,7 +599,8 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
   }
 
 
-  String localMeshName = boost::lexical_cast<String>(aggObject->mTreeLevel) + "_aggregate_mesh_" + uuid.toString() + ".dae";
+  String localMeshName = boost::lexical_cast<String>(aggObject->mTreeLevel) + "_aggregate_mesh_" + uuid.toString() + ".dae";    
+
   //Simplify the mesh...
   mMeshSimplifier.simplify(agg_mesh, 5000);
 
@@ -768,8 +752,10 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
           return true;
       }
 
+      
+
       //Update loc
-      mLoc->updateLocalAggregateMesh(uuid, cdnMeshName);
+      mLoc->updateLocalAggregateMesh(uuid, cdnMeshName);        
   }
 
 
@@ -801,10 +787,10 @@ void AggregateManager::metadataFinished(Time t, const UUID uuid, const UUID chil
     const Transfer::RemoteFileMetadata metadata = *response;
 
     Transfer::TransferRequestPtr req(new Transfer::ChunkRequest(response->getURI(), metadata,
-                                               response->getChunkList().front(), 1.0,
-                                             std::tr1::bind(&AggregateManager::chunkFinished, this, t,uuid, child_uuid, meshName,
-                                                              std::tr1::placeholders::_1,
-                                                              std::tr1::placeholders::_2) ) );
+                                         response->getChunkList().front(), 1.0,
+                                         std::tr1::bind(&AggregateManager::chunkFinished, this, t,uuid, child_uuid, meshName,
+                                                        std::tr1::placeholders::_1,
+                                                        std::tr1::placeholders::_2) ) );
 
     mTransferPool->addRequest(req);
   }
@@ -909,7 +895,7 @@ void AggregateManager::generateMeshesFromQueue(Time postTime) {
     std::vector<UUID> individualObjects;
 
     if ( mDirtyAggregateObjects.size() > 0 ) {
-      for (std::tr1::unordered_map<UUID, std::tr1::shared_ptr<AggregateObject>, UUID::Hasher >::iterator it = mAggregateObjects.begin();
+      for (std::tr1::unordered_map<UUID, AggregateObjectPtr, UUID::Hasher >::iterator it = mAggregateObjects.begin();
            it != mAggregateObjects.end() ; it++)
       {
           std::tr1::shared_ptr<AggregateObject> aggObject = it->second;
@@ -943,7 +929,7 @@ void AggregateManager::generateMeshesFromQueue(Time postTime) {
     }
 
     //Add objects to generation queue, ordered by priority.
-    for (std::tr1::unordered_map<UUID, std::tr1::shared_ptr<AggregateObject>, UUID::Hasher>::iterator it = mDirtyAggregateObjects.begin();
+    for (std::tr1::unordered_map<UUID, AggregateObjectPtr, UUID::Hasher>::iterator it = mDirtyAggregateObjects.begin();
          it != mDirtyAggregateObjects.end(); it++)
     {
       std::tr1::shared_ptr<AggregateObject> aggObject = it->second;
@@ -954,7 +940,7 @@ void AggregateManager::generateMeshesFromQueue(Time postTime) {
     //Generate the aggregates from the priority queue.
     Time curTime = (mObjectsByPriority.size() > 0) ? Timer::now() : Time::null();
     bool returner = false;
-    for (std::map<float, std::deque<std::tr1::shared_ptr<AggregateObject> > >::reverse_iterator it =  mObjectsByPriority.rbegin();
+    for (std::map<float, std::deque<AggregateObjectPtr> >::reverse_iterator it =  mObjectsByPriority.rbegin();
          it != mObjectsByPriority.rend(); it++)
     {
       if (it->second.size() > 0) {

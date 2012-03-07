@@ -39,6 +39,7 @@
 #include <boost/thread.hpp>
 #include <sirikata/core/trace/WindowedStats.hpp>
 #include <sirikata/core/task/Time.hpp>
+#include <sirikata/core/command/Command.hpp>
 
 namespace Sirikata {
 namespace Network {
@@ -81,8 +82,8 @@ class SIRIKATA_EXPORT IOService : public Noncopyable {
         Duration dur;
     };
     Trace::WindowedStats<TagDuration> mWindowedLatencyTagStats;
-  
-    
+
+
     // Track tags that trigger events
     typedef std::tr1::unordered_map<const char*, uint32> TagCountMap;
     TagCountMap mTagCounts;
@@ -118,7 +119,7 @@ class SIRIKATA_EXPORT IOService : public Noncopyable {
 
 public:
 
-    
+
     IOService(const String& name);
     ~IOService();
 
@@ -215,10 +216,15 @@ public:
      */
     void reportStats() const;
     void reportStatsFile(const char* filename, bool detailed) const;
-    
+
     static void reportAllStats();
     static void reportAllStatsFile(const char* filename, bool detailed = false);
+
+    // Respond to command to report all stats.
+    void fillCommandResultWithStats(Command::Result& res);
 #endif
+    void commandReportStats(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
+    static void commandReportAllStats(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
 };
 
 } // namespace Network

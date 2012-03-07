@@ -53,6 +53,7 @@
 
 #include <sirikata/core/sync/TimeSyncServer.hpp>
 
+#include <sirikata/core/command/Commander.hpp>
 
 namespace Sirikata
 {
@@ -189,6 +190,12 @@ private:
 
     void newStream(int err, SST::Stream<SpaceObjectReference>::Ptr s);
 
+
+    // Commander commands
+    void commandObjectsCount(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
+    void commandObjectsList(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
+    void commandObjectsDisconnect(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
+
     SpaceContext* mContext;
 
     TimeSyncServer* mTimeSyncServer;
@@ -228,9 +235,6 @@ private:
 
     typedef std::tr1::unordered_map<UUID, Sirikata::Protocol::Migration::MigrationMessage*, UUID::Hasher> ObjectMigrationMap;
     ObjectMigrationMap mObjectMigrations;
-
-    typedef std::tr1::unordered_set<ObjectConnection*> ObjectConnectionSet;
-    ObjectConnectionSet mClosingConnections; // Connections that are closing but need to finish delivering some messages
 
     //std::map<UUID,ObjectConnection*>
     struct MigratingObjectConnectionsData

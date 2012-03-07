@@ -9,6 +9,7 @@
    -system.storageErase
    -system.storageRead
    -system.storageWrite
+   -system.storageCount
    -serialization
    -timeout
    -killEntity
@@ -26,7 +27,7 @@ var NUM_TESTS    = 8;
 
 
 //used by testWrite and write field and erase written
-var fieldKey = 'mFieldKey'; 
+var fieldKey = 'mFieldKey';
 
 //if we don't finish all these tests in 10 seconds, then we'll consider this a failure
 system.timeout(10, wrapUp);
@@ -223,12 +224,58 @@ function testTwoOperationTransaction()
                                             compareTwoBasicObjects(system.deserialize(val[fieldKey2]), toSerialize,'testTwoOerationTransaction 2');
                                         }
                                     }
-                                    wrapUp();
+                                    testCount();
                                 }
                             );                            
                                 
                         });
     
+}
+
+
+//write toSerialize
+function testCount()
+{
+    // Write some new data, within a range, we can
+    // count. Values don't matter. Clear out all other data first to
+    // make sure we won't conflict with other tests.
+    system.storageRangeErase(
+        'a', 'z',
+        function(success) {
+            if (!success)
+                mTest.fail('Failed to clear data testCount');
+            
+            system.storageBeginTransaction();
+            system.storageWrite('ddd',system.serialize(toSerialize));
+            system.storageWrite('xxx',system.serialize(toSerialize));
+            system.storageCommit(
+                function(success) {
+                    if (!success)
+                        mTest.fail('Failed to write data for testCount');
+
+                    // Now perform the count
+                    system.storageCount(
+                        'a', 'z',
+                        function(success, count) {
+                            if (!success)
+                                mTest.fail('Failed to execute count request');
+                            if (count !== 2)
+                                mTest.fail('Incorrect number of objects returned: ' + count + ' instead of 2');
+
+                            system.storageRangeErase(
+                                'a', 'z',
+                                function(success) {
+                                    if (!success)
+                                        mTest.fail('Failed to clear data after testCount');
+                                    wrapUp();
+                                }
+                            );
+                        }
+                    );
+                }
+            );
+        }
+    );
 }
 
 

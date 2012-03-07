@@ -180,6 +180,12 @@ protected:
     // Helper for updating aggregates
     void updateAggregateLoc(const UUID& objid, const BoundingSphere3f& bnds);
 
+    // Command handlers
+    virtual void commandProperties(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) = 0;
+    virtual void commandListHandlers(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) = 0;
+    virtual void commandForceRebuild(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) = 0;
+    virtual void commandListNodes(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) = 0;
+
 }; // class LibproxProximityBase
 
 } // namespace Sirikata

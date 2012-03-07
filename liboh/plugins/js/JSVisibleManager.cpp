@@ -138,6 +138,13 @@ void JSVisibleManager::onSetPhysics(ProxyObjectPtr proxy, const String& newphy,c
     );
 }
 
+void JSVisibleManager::onSetIsAggregate(ProxyObjectPtr proxy, bool isAggregate, const SpaceObjectReference& sporef) {
+    mCtx->visManStrand->post(
+        std::tr1::bind(&JSVisibleManager::iUpdatedProxy, this, proxy),
+        "JSVisibleManager::iUpdatedProxy"
+    );
+}
+
 void JSVisibleManager::iUpdatedProxy(ProxyObjectPtr p)
 {
     RMutex::scoped_lock(vmMtx);

@@ -80,6 +80,7 @@ HostedObject::HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID
             _1, _2, _3
         )
     );
+    
 }
 
 void HostedObject::killSimulation(
@@ -312,6 +313,7 @@ ProxyObjectPtr HostedObject::getProxy(const SpaceID& space, const ObjectReferenc
     }
 
     ProxyObjectPtr  proxy_obj = proxy_manager->getProxyObject(SpaceObjectReference(space,oref));
+
     return proxy_obj;
 }
 
@@ -465,7 +467,7 @@ void HostedObject::handleConnectedIndirect(const HostedObjectWPtr& weakSelf, con
     // Convert back to local time
     TimedMotionVector3f local_loc(self->localTime(space, info.loc.updateTime()), info.loc.value());
     TimedMotionQuaternion local_orient(self->localTime(space, info.orient.updateTime()), info.orient.value());
-    ProxyObjectPtr self_proxy = self->createProxy(self_objref, self_objref, Transfer::URI(info.mesh), local_loc, local_orient, info.bnds, info.physics, info.query, 0);
+    ProxyObjectPtr self_proxy = self->createProxy(self_objref, self_objref, Transfer::URI(info.mesh), local_loc, local_orient, info.bnds, info.physics, info.query, false, 0);
 
     // Use to initialize PerSpaceData. This just lets the PerPresenceData know
     // there's a self proxy now.
@@ -756,11 +758,16 @@ void HostedObject::handleProximityUpdate(const SpaceObjectReference& spaceobj, c
         BoundingSphere3f bnds = add.bounds();
         String mesh = add.meshOrDefault();
         String phy = add.physicsOrDefault();
+        bool isAggregate =
+          (addition.type() == Sirikata::Protocol::Prox::ObjectAddition::Aggregate) ?
+            true : false;
+
 
         ProxyObjectPtr proxy_obj = proxy_manager->getProxyObject(proximateID);
         if (!proxy_obj) {
             Transfer::URI meshuri;
             if (addition.has_mesh()) meshuri = Transfer::URI(addition.mesh());
+
 
             // FIXME use weak_ptr instead of raw
             uint64 proxyAddSeqNo = add.location_seqno();
@@ -768,7 +775,8 @@ void HostedObject::handleProximityUpdate(const SpaceObjectReference& spaceobj, c
                  add.location_seqno() == add.bounds_seqno() &&
                 add.location_seqno() == add.mesh_seqno() &&
                 add.location_seqno() == add.physics_seqno());
-            proxy_obj = self->createProxy(proximateID, spaceobj, meshuri, loc, orient, bnds, phy, "", proxyAddSeqNo);
+            proxy_obj = self->createProxy(proximateID, spaceobj, meshuri, loc, orient, bnds, phy, "", 
+                                          isAggregate, proxyAddSeqNo);
         }
         else {
             // We need to handle optional values properly -- they
@@ -807,6 +815,7 @@ void HostedObject::handleProximityUpdate(const SpaceObjectReference& spaceobj, c
             // We want to ignore removal of ourself -- we should
             // always be in our result set, and we don't want to
             // delete our own proxy.
+
             SILOG(oh,detailed,"Ignoring self removal from proximity results.");
         }
         else {
@@ -837,10 +846,10 @@ void HostedObject::handleProximityUpdate(const SpaceObjectReference& spaceobj, c
             TimedMotionVector3f()
         );
     }
+
 }
 
-
-ProxyObjectPtr HostedObject::createProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri, TimedMotionVector3f& tmv, TimedMotionQuaternion& tmq, const BoundingSphere3f& bs, const String& phy, const String& query, uint64 seqNo)
+ProxyObjectPtr HostedObject::createProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri, TimedMotionVector3f& tmv, TimedMotionQuaternion& tmq, const BoundingSphere3f& bs, const String& phy, const String& query, bool isAggregate, uint64 seqNo)
 {
     ProxyManagerPtr proxy_manager = getProxyManager(owner_objref.space(), owner_objref.object());
     Mutex::scoped_lock lock(presenceDataMutex);
@@ -855,7 +864,9 @@ ProxyObjectPtr HostedObject::createProxy(const SpaceObjectReference& objref, con
         proxy_manager = getProxyManager(owner_objref.space(), owner_objref.object());
     }
 
-    ProxyObjectPtr proxy_obj = proxy_manager->createObject(objref, tmv, tmq, bs, meshuri, phy, seqNo);
+    ProxyObjectPtr proxy_obj = proxy_manager->createObject(objref, tmv, tmq, bs, meshuri, phy,
+                                                           isAggregate, seqNo);
+    
     return proxy_obj;
 }
 
@@ -888,6 +899,9 @@ ProxyObjectPtr HostedObject::self(const SpaceObjectReference& sor)
     ProxyManagerPtr proxy_man = presence(sor);
     if (!proxy_man) return ProxyObjectPtr();
     ProxyObjectPtr proxy_obj = proxy_man->getProxyObject(sor);
+
+
+
     return proxy_obj;
 }
 

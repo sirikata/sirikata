@@ -164,7 +164,7 @@ public:
      *  \param data the contents of the
      *  \param cb callback to invoke when parsing is complete
      */
-    void parseMesh(const Transfer::RemoteFileMetadata& metadata, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data, ParseMeshCallback cb);
+    void parseMesh(const Transfer::RemoteFileMetadata& metadata, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data, bool isAggregate, ParseMeshCallback cb);
 
     /** Get the default mesh to present if a model fails to load. This may
      *  return an empty VisualPtr if no default mesh is specified.
@@ -197,9 +197,9 @@ public:
         Liveness::Token rendererAlive,
         const Transfer::RemoteFileMetadata& metadata,
         const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data,
-        ParseMeshCallback cb);
+        bool isAggregate, ParseMeshCallback cb);
 
-    Mesh::VisualPtr parseMeshWorkSync(const Transfer::RemoteFileMetadata& metadata, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data);
+    Mesh::VisualPtr parseMeshWorkSync(const Transfer::RemoteFileMetadata& metadata, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data, bool isAggregate);
 
 
     // Invokable helpers
@@ -262,6 +262,7 @@ public:
 
     ModelsSystem* mModelParser;
     Mesh::Filter* mModelFilter;
+    Mesh::Filter* mCenteringFilter;
 
     Transfer::TransferPoolPtr mTransferPool;
 

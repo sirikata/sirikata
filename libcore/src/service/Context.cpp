@@ -35,6 +35,7 @@
 #include <sirikata/core/network/IOStrandImpl.hpp>
 #include <boost/asio.hpp>
 #include <sirikata/core/service/Breakpad.hpp>
+#include <sirikata/core/command/Commander.hpp>
 
 namespace Sirikata {
 
@@ -45,6 +46,7 @@ Context::Context(const String& name, Network::IOService* ios, Network::IOStrand*
    timeSeries(NULL),
    mFinishedTimer( Network::IOTimer::create(ios) ),
    mTrace(_trace),
+   mCommander(NULL),
    mEpoch(epoch),
    mLastSimTime(Time::null()),
    mSimDuration(simlen),
@@ -54,6 +56,8 @@ Context::Context(const String& name, Network::IOService* ios, Network::IOStrand*
    mStopRequested(false)
 {
   Breakpad::init();
+
+
 }
 
 Context::~Context() {
@@ -180,5 +184,25 @@ void Context::startForceQuitTimer() {
     );
 }
 
+
+void Context::setCommander(Command::Commander* c) {
+    if (mCommander != NULL) {
+        mCommander->unregisterCommand("context.report-stats");
+        mCommander->unregisterCommand("context.report-all-stats");
+    }
+
+    mCommander = c;
+
+    if (mCommander != NULL) {
+        mCommander->registerCommand(
+            "context.report-stats",
+            std::tr1::bind(&Network::IOService::commandReportStats, ioService, _1, _2, _3)
+        );
+        mCommander->registerCommand(
+            "context.report-all-stats",
+            std::tr1::bind(&Network::IOService::commandReportAllStats, _1, _2, _3)
+        );
+    }
+}
 
 } // namespace Sirikata

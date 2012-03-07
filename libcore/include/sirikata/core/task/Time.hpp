@@ -268,6 +268,8 @@ public:
 	inline bool operator>= (const DeltaTime &other) const {
 		return (mDeltaTime >= other.mDeltaTime);
 	}
+
+        String toString() const;
 };
 
 /**

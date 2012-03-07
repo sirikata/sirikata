@@ -448,13 +448,13 @@ void DistanceDownloadPlanner::downloadAsset(Asset* asset, Object* forObject) {
     asset->downloadTask =
         AssetDownloadTask::construct(
             asset->uri, getScene(), forObject->priority,
-            mScene->renderStrand()->wrap(
+            forObject->proxy->isAggregate(),
+            mContext->mainStrand->wrap(
                 std::tr1::bind(&DistanceDownloadPlanner::loadAsset, this, asset->uri)
-            ));
+              ));
 }
 
-void DistanceDownloadPlanner::loadAsset(Transfer::URI asset_uri) {
-
+void DistanceDownloadPlanner::loadAsset(Transfer::URI asset_uri) {  
     DLPLANNER_LOG(detailed, "Finished downloading " << asset_uri);
 
     Asset* asset = NULL;
@@ -494,6 +494,8 @@ void DistanceDownloadPlanner::loadAsset(Transfer::URI asset_uri) {
     // If we got here, we don't know how to load it
     SILOG(ogre, error, "Failed to load asset failed because it doesn't know how to load " << visptr->type());
     finishLoadAsset(asset, false);
+
+    
     return;
 }
 

@@ -97,6 +97,13 @@ private:
     SeqNoPtr getSeqNoInfo(const OHDP::NodeID& node);
     void eraseSeqNoInfo(const OHDP::NodeID& node);
 
+    // Command handlers
+    virtual void commandProperties(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
+    virtual void commandListHandlers(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
+    bool parseHandlerName(const String& name, ProxQueryHandler*** handlers_out, ObjectClass* class_out);
+    virtual void commandForceRebuild(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
+    virtual void commandListNodes(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
+
     typedef std::tr1::unordered_map<OHDP::NodeID, ProxQuery*, OHDP::NodeID::Hasher> OHQueryMap;
     typedef std::tr1::unordered_map<ProxQuery*, OHDP::NodeID> InvertedOHQueryMap;
 
