@@ -62,9 +62,12 @@ class Manager:
         # Use ordering requests to generate an order for tests using
         # simple dependency analysis. By using no_deps_left as a
         # stack, we get a depth first traversal so related tests are
-        # (hopefully) near each other.
-        no_deps_left = [x for x in leaf_test_classes if not x.after]
-        deps_remain = [x for x in leaf_test_classes if x.after]
+        # (hopefully) near each other. By sorting the lists, we add
+        # some predictability to the output ordering instead of
+        # relying on the order we get out of set traversal when
+        # generating the lists.
+        no_deps_left = sorted([x for x in leaf_test_classes if not x.after], key=lambda y: y.__module__ + y.__name__)
+        deps_remain = sorted([x for x in leaf_test_classes if x.after], key=lambda y: y.__module__ + y.__name__)
         test_classes = []
         while len(no_deps_left) > 0:
             klass = no_deps_left.pop()
