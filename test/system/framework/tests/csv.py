@@ -75,23 +75,17 @@ class CSVTest(Test):
 
         space_output.close()
         cppoh_output.close()
+        self.report_files = { 'Object Host': cppoh_output_filename, 'Space Server': space_output_filename}
 
-        return self.analyzeOutput(
-            analyze=cppoh_output_filename,
-            report={ 'Object Host': cppoh_output_filename, 'Space Server': space_output_filename},
-            returnCode=procs.returncode(), output=output
-            )
+        self.assertLogErrorFree(cppoh_output_filename)
+        self.assertReturnCode(procs.returncode())
 
-
-    def analyzeOutput(self, analyze, report, returnCode, output):
-        success = super(CSVTest, self).analyzeOutput(analyze, returnCode, output=output)
-        if not success:
-            print("Execution Log:", file=output)
-            for report_name, report_file in report.iteritems():
-                print("  ", report_name, file=output)
-                fp = open(report_file, 'r')
-                for line in fp.readlines():
-                    print("    ", line, end='', file=output)
-                fp.close()
-                print(file=output)
-        return success
+    def report(self):
+        print("Execution Log:", file=self._output)
+        for report_name, report_file in self.report_files.iteritems():
+            print("  ", report_name, file=self._output)
+            fp = open(report_file, 'r')
+            for line in fp.readlines():
+                print("    ", line, end='', file=self._output)
+            fp.close()
+            print(file=self._output)

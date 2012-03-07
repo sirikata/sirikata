@@ -126,15 +126,21 @@ class Manager:
                 shutil.rmtree(folderName);
 
             os.makedirs(folderName);
-            success = test().runTest(folderName,binPath=binPath, cppohBinName=cppohBinName, spaceBinName=spaceBinName, output=output)
-            if success:
-                succeeded += 1
-            else:
+            test_inst = test()
+            test_inst.setOutput(output)
+            test_inst.runTest(folderName,binPath=binPath, cppohBinName=cppohBinName, spaceBinName=spaceBinName, output=output)
+
+            print("TEST", (test_inst.failed and "FAILED" or "PASSED"), file=output)
+            if test_inst.failed:
                 failed += 1
+                test_inst.report()
+            else:
+                succeeded += 1
 
             finish_time = datetime.now()
             elapsed = finish_time - start_time
             elapsed_str = str(elapsed.seconds + (float(elapsed.microseconds)/1000000.0)) + 's'
+
             print('END TEST', elapsed_str, '(' + str(count) + ' of ' + str(numTests) + ')', file=output)
             print("*" * 40, file=output)
             print(file=output)

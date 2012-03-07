@@ -4,6 +4,7 @@ from __future__ import print_function
 import sys
 
 import framework.tests.errors as TestErrors
+import traceback # For default message to give some info about where the error originated
 
 class Test(object):
 
@@ -52,45 +53,85 @@ class Test(object):
     # exceptions, and no unit test failures indicated by scripts.
     errors = DefaultErrorConditions
 
-    '''
-    @param {String} filenameToAnalyze name of a file that contains the
-    output of a run of the system.  Run through file applying error
-    conditions as we go.
 
-    @param {Int} returnCode the code that the process running the test
-    returned with.  On unix systems, indicates seg faults, bus errors,
-    etc.  On windows, I don't think that this does anything.
-    '''
-    def analyzeOutput(self, filenameToAnalyze, returnCode, output=sys.stdout):
-        fullFile = open(filenameToAnalyze,'r').read();
+    def __init__(self):
+        self._failed = False
+        self._output = None
 
-        failed = returnCode < 0;
+    def setOutput(self, output):
+        self._output = output
+
+    @property
+    def failed(self):
+        return self._failed
+
+
+    def report(self):
+        '''
+        Report extra log information at the end of a run. By default,
+        nothing is recorded here, but tests can override this to
+        present additional information to the user after a failure.
+        '''
+        pass
+
+    def fail(self, msg=None):
+        self._failed = True
+        if msg:
+            print('FAILED:', msg, file=self._output)
+        else:
+            print('FAILED:', 'Test failed with traceback:', file=self._output)
+            # Get stack trace, which comes back as list of strings for
+            # each stack frame. We chop off the last one to get rid of
+            # this frame in fail()
+            print(''.join(traceback.format_stack()[:-1]), file=self._output)
+
+    def assertTrue(self, expr, msg=None):
+        if not expr: self.fail(msg=msg)
+
+    def assertFalse(self, expr, msg=None):
+        if expr: self.fail(msg=msg)
+
+    def assertEqual(self, lhs, rhs, msg=None):
+        if not lhs == rhs: self.fail(msg=msg)
+
+    def assertNotEqual(self, lhs, rhs, msg=None):
+        if lhs == rhs: self.fail(msg=msg)
+
+    def assertIsNone(self, expr, msg=None):
+        if expr is not None: self.fail(msg=msg)
+
+    def assertIsNotNone(self, expr, msg=None):
+        if expr is None: self.fail(msg=msg)
+
+    def assertIsIn(self, val, col, msg=None):
+        if val not in col: self.fail(msg=msg)
+
+    def assertIsNotIn(self, val, col, msg=None):
+        if val in col: self.fail(msg=msg)
+
+    def assertReturnCode(self, code):
+        if code < 0:
+            returnCodeErrorName = 'Unknown'
+            if (code == -6):
+                returnCodeErrorName = 'Assert fault';
+            elif(code == -9):
+                returnCodeErrorName = 'Killed';
+            elif(code == -11):
+                returnCodeErrorName = 'Seg fault';
+            self.fail(msg='Negative return code: ' + returnCodeErrorName + '(' + str(code) + ')')
+
+    def assertLogErrorFree(self, filename):
+        '''
+        @param {String} filename name of a file that contains the
+        output of a run of the system.  Run through file applying error
+        conditions as we go.
+        '''
+
+        fullFile = open(filename,'r').read();
+
         results = [];
         for s in self.errors:
             errorReturner = s.performErrorCheck(fullFile);
             results.append([s.getName(), errorReturner]);
-            failed = (failed or errorReturner.getErrorExists());
-
-        if failed:
-            print("TEST FAILED", file=output)
-            print("  Features used by test: ", ', '.join(self.touches), file=output)
-        else:
-            print("TEST PASSED", file=output)
-
-
-        for s in results:
-            if (s[1].getErrorExists()):
-                print(s[0] + ":", s[1].getErrorExists(), file=output)
-
-        if returnCode < 0:
-            returnCodeErrorName = 'Unknown'
-            if (returnCode == -6):
-                returnCodeErrorName = 'Assert fault';
-            elif(returnCode == -9):
-                returnCodeErrorName = 'Killed';
-            elif(returnCode == -11):
-                returnCodeErrorName = 'Seg fault';
-
-            print("Error exit code:", returnCodeErrorName, "(" + str(returnCode) + ")", file=output)
-
-        return not failed
+            if errorReturner.getErrorExists():
+                self.fail(s.getName() + ': ' + errorReturner.getErrorMessage())
