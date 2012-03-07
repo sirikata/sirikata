@@ -106,6 +106,7 @@ public:
     virtual BoundingSphere3f bounds() const { return proxy->bounds(); }
     virtual Transfer::URI mesh() const { return proxy->mesh(); }
     virtual String physics() const { return proxy->physics(); }
+    virtual bool isAggregate() const { return proxy->isAggregate(); }
 
 private:
     JSProxyVisibleData();
@@ -147,6 +148,7 @@ public:
     virtual BoundingSphere3f bounds() const;
     virtual Transfer::URI mesh() const;
     virtual String physics() const;
+    virtual bool isAggregate() const;
 
     // JSVisibleDataListener
     virtual void removeVisibleData(JSVisibleData* data);

@@ -186,6 +186,11 @@ const String& CBRLocationServiceCache::physics(const ObjectID& id) const {
     return it->second.physics;
 }
 
+const bool CBRLocationServiceCache::isAggregate(const ObjectID& id) const {
+    GET_OBJ_ENTRY(id); // NOTE: should only be accessed by prox thread, shouldn't need lock
+    return it->second.isAggregate;
+}
+
 void CBRLocationServiceCache::localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& phy) {
     objectAdded(uuid, true, agg, loc, orient, bounds, mesh, phy);
 }
@@ -277,6 +282,7 @@ void CBRLocationServiceCache::processObjectAdded(const UUID& uuid, bool islocal,
     data.isLocal = islocal;
     data.exists = true;
     data.tracking = 0;
+    data.isAggregate = agg;
     mObjects[uuid] = data;
 
     if (!agg)

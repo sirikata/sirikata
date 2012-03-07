@@ -25,6 +25,7 @@ public:
     virtual BoundingSphere3f bounds() const = 0;
     virtual Transfer::URI mesh() const = 0;
     virtual String physics() const = 0;
+    virtual bool isAggregate() const = 0;
 };
 typedef std::tr1::shared_ptr<IPresencePropertiesRead> IPresencePropertiesReadPtr;
 
@@ -68,12 +69,16 @@ public:
     virtual String physics() const { return mPhysics; }
     virtual bool setPhysics(const String& p) { mPhysics = p; return true; }
 
+    virtual bool setIsAggregate(bool isAgg) { mIsAggregate = isAgg; return true; }
+    virtual bool isAggregate() const { return mIsAggregate; }
+
 protected:
     TimedMotionVector3f mLoc;
     TimedMotionQuaternion mOrientation;
     BoundingSphere3f mBounds;
     Transfer::URI mMesh;
     String mPhysics;
+    bool mIsAggregate;
 };
 typedef std::tr1::shared_ptr<PresenceProperties> PresencePropertiesPtr;
 
@@ -89,7 +94,8 @@ public:
         LOC_BOUNDS_PART = 2,
         LOC_MESH_PART = 3,
         LOC_PHYSICS_PART = 4,
-        LOC_NUM_PART = 5
+        LOC_IS_AGG_PART = 5,
+        LOC_NUM_PART = 6
     };
 
     SequencedPresenceProperties()
@@ -155,6 +161,16 @@ public:
         return true;
     }
     bool setPhysics(const String& p) { return PresenceProperties::setPhysics(p); }
+
+    bool setIsAggregate(bool isAgg, uint64 seqno) {
+        if (seqno < mUpdateSeqno[LOC_IS_AGG_PART])
+            return false;
+
+        mUpdateSeqno[LOC_IS_AGG_PART] = seqno;
+        mIsAggregate = isAgg;
+        return true;
+    }
+    bool setIsAggregate(bool isAgg) { return PresenceProperties::setIsAggregate(isAgg); }
 
     void reset() {
         memset(mUpdateSeqno, 0, LOC_NUM_PART * sizeof(uint64));

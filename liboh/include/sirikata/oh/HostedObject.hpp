@@ -94,7 +94,7 @@ class SIRIKATA_OH_EXPORT HostedObject
       public Service
 {
   private:
-    struct PrivateCallbacks;
+  struct PrivateCallbacks;
 
     ObjectHostContext* mContext;
     const UUID mID;
@@ -310,7 +310,7 @@ public:
     );
 
     // Helper for creating the correct type of proxy
-    ProxyObjectPtr createProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri, TimedMotionVector3f& tmv, TimedMotionQuaternion& tmvq, const BoundingSphere3f& bounds, const String& physics, const String& query, uint64 seqNo);
+    ProxyObjectPtr createProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri, TimedMotionVector3f& tmv, TimedMotionQuaternion& tmvq, const BoundingSphere3f& bounds, const String& physics, const String& query, bool isAggregate, uint64 seqNo);
 
     // Helper for constructing and sending location update
     void updateLocUpdateRequest(const SpaceID& space, const ObjectReference& oref, const TimedMotionVector3f* const loc, const TimedMotionQuaternion* const orient, const BoundingSphere3f* const bounds, const String* const mesh, const String* const phy);

@@ -78,6 +78,7 @@ void ProxyEntity::initializeToProxy(const ProxyObjectPtr &ppo) {
     assert( ppo );
     assert( !mProxy || (mProxy->getObjectReference() == ppo->getObjectReference()) );
 
+    setIsAggregate(ppo->isAggregate());
     /**
        FIXME: ADDING AND REMOVING LISTENERS COULD INVALIDATE ITERATORS
      */
@@ -197,7 +198,8 @@ void ProxyEntity::iInvalidated(ProxyObjectPtr ptr, bool permanent,Liveness::Toke
     assert(ptr == mProxy);
 
     SILOG(ogre, detailed, "Invalidating ProxyEntity " << ptr->getObjectReference().toString());
-
+    
+    
     if (!mActive) return;
 
     // If the the object really disconnected, it'll be marked as a permanent
@@ -273,7 +275,6 @@ void ProxyEntity::onSetMesh (
             proxy,meshFile,sporef,livenessToken()));
 }
 
-
 void ProxyEntity::iOnSetMesh (
     ProxyObjectPtr proxy, Transfer::URI const& meshFile,
     const SpaceObjectReference& sporef, Liveness::Token lt )
@@ -284,6 +285,24 @@ void ProxyEntity::iOnSetMesh (
     getScene()->downloadPlanner()->updateObject(proxy);
 }
 
+void ProxyEntity::onSetIsAggregate (ProxyObjectPtr proxy, bool isAgg,const SpaceObjectReference& sporef)
+{
+  mScene->renderStrand()->post(
+        std::tr1::bind(&ProxyEntity::iOnSetIsAggregate,this,
+            proxy,isAgg,sporef,livenessToken()));
+}
+
+void ProxyEntity::iOnSetIsAggregate (
+    ProxyObjectPtr proxy, bool isAgg,
+    const SpaceObjectReference& sporef, Liveness::Token lt)
+{
+    if (!lt)
+        return;
+    
+    assert(proxy == mProxy);
+    setIsAggregate(isAgg);
+    getScene()->downloadPlanner()->updateObject(proxy);
+}
 
 void ProxyEntity::onSetScale (
     ProxyObjectPtr proxy, float32 scale,
