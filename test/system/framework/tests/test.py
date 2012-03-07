@@ -22,7 +22,6 @@ class Test(object):
         TestErrors.ExceptionError,
         TestErrors.UnitTestFailError
         ]
-    DefaultDuration = 20
 
     # The name of the test. It uses the name of the class by default,
     # so it usually isn't necessary to override this.
@@ -39,43 +38,15 @@ class Test(object):
     # [TestBar] to make sure TestBar runs before TestSuperBar.
     after = []
 
-    '''
+    # List of features touched by this test, giving an indication of
+    # what parts of the system might have broken. Not functional in
+    # any way, just reported upon failure.
+    touches = []
 
-    @param {Array} (optional) errorConditions Each element of the
-    errorConditions array should be a CheckError class.  After running
-    the test, we run each of the error condition checks agains the
-    output of the test.  If any of the error conditions return true,
-    then we report that the test has failed.  Otherwise, we report a
-    success.
-
-    @param {Array} additionalCMDLineArgs Specify any additional
-    arguments you want to provide to cpp_oh.  Each element of the
-    array should correspond to an arg.
-
-    @param {Int} duration Number of seconds to run test simulation for
-
-    @param {Array} touches An array of strings.  Each element
-    indicates a potential call that could have caused problem if test failed.
-    '''
-
-    def __init__(self, errorConditions=DefaultErrorConditions, additionalCMDLineArgs=None, duration=DefaultDuration, touches=None):
-        if (errorConditions == None):
-            self.errorConditions = [];
-        else:
-            self.errorConditions = errorConditions;
-
-        if (additionalCMDLineArgs == None):
-            self.additionalCMDLineArgs = [];
-        else:
-            self.additionalCMDLineArgs = additionalCMDLineArgs;
-
-
-        self.duration = duration;
-
-        if (touches == None):
-            self.touches = [];
-        else:
-            self.touches = touches;
+    # Error conditions to check upon completion of the test. The
+    # default set checks that the test exited cleanly (no timeout), no
+    # exceptions, and no unit test failures indicated by scripts.
+    errors = DefaultErrorConditions
 
     '''
     @param {String} filenameToAnalyze name of a file that contains the
@@ -91,7 +62,7 @@ class Test(object):
 
         failed = returnCode < 0;
         results = [];
-        for s in self.errorConditions:
+        for s in self.errors:
             errorReturner = s.performErrorCheck(fullFile);
             results.append([s.getName(), errorReturner]);
             failed = (failed or errorReturner.getErrorExists());

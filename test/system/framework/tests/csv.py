@@ -13,23 +13,10 @@ import random
 class CSVTest(Test):
 
     script_paths = None
+    duration = 60
+    entities = []
 
     '''
-    @see singleTest.SingleTest
-    '''
-    def __init__(self, entityConstructorInfo=None, **kwargs):
-        super(CSVTest, self).__init__(**kwargs)
-        self.csvGen = csvGenerator.CSVGenerator(entityConstructorInfo);
-
-    def addEntityConstructorInfo(self,eci):
-        self.csvGen.addEntity(eci);
-
-    def addEntityArrayConstructorInfo(self,arrayeci):
-        self.csvGen.addArrayOfEntities();
-
-    '''
-    Space should already be running.
-
     @param {String} dirtyFolderName The testManager guarantees that a
     folder exists with this name that csvTest can write arbitrary
     files to without interfering with anything else that's running.
@@ -53,11 +40,10 @@ class CSVTest(Test):
         space_cmd = [os.path.join(binPath, spaceBinName)]
         space_cmd.append('--servermap-options=--port=' + str(port))
         # OH - create the db file to read from.
-        self.csvGen.writeDB(dbFilename)
+        csvGen = csvGenerator.CSVGenerator(self.entities);
+        csvGen.writeDB(dbFilename)
         cppoh_cmd = [os.path.join(binPath, cppohBinName)]
         cppoh_cmd.append('--servermap-options=--port=' + str(port))
-        for s in self.additionalCMDLineArgs:
-            cppoh_cmd.append(s);
         cppoh_cmd.append('--object-factory=csv')
         cppoh_cmd.append('--object-factory-opts=--db='+ os.path.abspath(dbFilename))
         if self.script_paths:
