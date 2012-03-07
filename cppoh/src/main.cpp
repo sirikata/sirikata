@@ -36,7 +36,7 @@
 #include <sirikata/core/util/PluginManager.hpp>
 #include <sirikata/oh/SimulationFactory.hpp>
 
-#include "ObjectHost.hpp"
+#include "CppObjectHost.hpp"
 #include <sirikata/mesh/LightInfo.hpp>
 #include <sirikata/oh/HostedObject.hpp>
 #include <sirikata/core/network/IOService.hpp>

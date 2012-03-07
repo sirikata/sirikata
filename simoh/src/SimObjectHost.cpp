@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "ObjectHost.hpp"
+#include "SimObjectHost.hpp"
 #include <sirikata/core/trace/Trace.hpp>
 #include "Object.hpp"
 #include <sirikata/core/network/StreamFactory.hpp>
