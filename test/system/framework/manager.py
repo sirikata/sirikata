@@ -4,6 +4,7 @@ from __future__ import print_function
 import sys, os, time, types
 import shutil
 import os.path
+from datetime import datetime
 
 from tests.test import Test
 
@@ -94,6 +95,7 @@ class Manager:
         succeeded = 0
         failed = 0
         for s in testNames:
+            start_time = datetime.now()
             print("*" * 40, file=output)
             print('BEGIN TEST', s, '(' + str(count) + ' of ' + str(numTests) + ')', file=output)
 
@@ -110,7 +112,10 @@ class Manager:
             else:
                 failed += 1
 
-            print('END TEST', '(' + str(count) + ' of ' + str(numTests) + ')', file=output)
+            finish_time = datetime.now()
+            elapsed = finish_time - start_time
+            elapsed_str = str(elapsed.seconds + (float(elapsed.microseconds)/1000000.0)) + 's'
+            print('END TEST', elapsed_str, '(' + str(count) + ' of ' + str(numTests) + ')', file=output)
             print("*" * 40, file=output)
             print(file=output)
 
