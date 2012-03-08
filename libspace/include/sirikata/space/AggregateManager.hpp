@@ -57,12 +57,12 @@ class SIRIKATA_SPACE_EXPORT AggregateManager {
 private:
 
   Thread* mAggregationThread;
-
   Network::IOService* mAggregationService;
   Network::IOStrand* mAggregationStrand;
   Network::IOWork* mIOWork;
-  LocationService* mLoc;
   
+  
+  LocationService* mLoc;
   ModelsSystem* mModelsSystem;
   Sirikata::Mesh::MeshSimplifier mMeshSimplifier;
   Sirikata::Mesh::Filter* mCenteringFilter;
@@ -70,27 +70,22 @@ private:
   typedef struct AggregateObject{
     UUID mUUID;
     UUID mParentUUID;
-
     std::vector< std::tr1::shared_ptr<struct AggregateObject>  > mChildren;
-
     // Whether this is actually a leaf object (i.e. added implicitly as
     // AggregateObject when added as a child of a true aggregate).
     bool leaf;
-
     Time mLastGenerateTime;
-
     bool generatedLastRound;
-
     Mesh::MeshdataPtr mMeshdata;
 
-      AggregateObject(const UUID& uuid, const UUID& parentUUID, bool is_leaf) :
-       mUUID(uuid), mParentUUID(parentUUID),
-       leaf(is_leaf),
-       mLastGenerateTime(Time::null()),
-       mTreeLevel(0),  mNumObservers(0),
-       mNumFailedGenerationAttempts(0),
-       cdnBaseName(),
-       refreshTTL(Time::null())
+    AggregateObject(const UUID& uuid, const UUID& parentUUID, bool is_leaf) :
+      mUUID(uuid), mParentUUID(parentUUID),
+      leaf(is_leaf),
+      mLastGenerateTime(Time::null()),
+      mTreeLevel(0),  mNumObservers(0),
+      mNumFailedGenerationAttempts(0),
+      cdnBaseName(),
+      refreshTTL(Time::null())
     {
       mMeshdata = Mesh::MeshdataPtr();
       generatedLastRound = false;
@@ -100,77 +95,88 @@ private:
     uint16 mTreeLevel;
     uint32 mNumObservers;
     uint32 mNumFailedGenerationAttempts;
-
     std::vector<UUID> mLeaves;
     double mDistance;  //MINIMUM distance at which this object could be part of a cut
 
-
-      // The basename returned by the CDN. This points at the entire asset
-      // rather than the particular mesh filename. Should include a version
-      // number. Used for refreshing TTLs.
-      String cdnBaseName;
-      // Time at which we should try to refresh the TTL, should be set
-      // a bit less than the actual timeout.
-      Time refreshTTL;
+    // The basename returned by the CDN. This points at the entire asset
+    // rather than the particular mesh filename. Should include a version
+    // number. Used for refreshing TTLs.
+    String cdnBaseName;
+    // Time at which we should try to refresh the TTL, should be set
+    // a bit less than the actual timeout.
+    Time refreshTTL;
 
   } AggregateObject;
   typedef std::tr1::shared_ptr<AggregateObject> AggregateObjectPtr;
 
-  void getLeaves(const std::vector<UUID>& mIndividualObjects);
 
-
+  //Lists of all aggregate objects and dirty aggregate objects.
   boost::mutex mAggregateObjectsMutex;
   typedef std::tr1::unordered_map<UUID, AggregateObjectPtr, UUID::Hasher > AggregateObjectsMap;
   AggregateObjectsMap mAggregateObjects;
-
-  boost::mutex mMeshStoreMutex;
-  std::tr1::unordered_map<String, Mesh::MeshdataPtr> mMeshStore;
-
-  std::tr1::shared_ptr<Transfer::TransferPool> mTransferPool;
-  Transfer::TransferMediator *mTransferMediator;
-
-  Time mAggregateGenerationStartTime;
-
+  Time mAggregateGenerationStartTime;    
   std::tr1::unordered_map<UUID, AggregateObjectPtr, UUID::Hasher> mDirtyAggregateObjects;
   std::map<float, std::deque<AggregateObjectPtr > > mObjectsByPriority;
 
-  bool findChild(std::vector<AggregateObjectPtr>& v, const UUID& uuid) ;
-  void removeChild(std::vector<AggregateObjectPtr>& v, const UUID& uuid) ;
-  std::vector<AggregateObjectPtr>& getChildren(const UUID& uuid);
-  bool isAggregate(const UUID& uuid);
+  //Variables related to downloading and in-memory caching meshes
+  boost::mutex mMeshStoreMutex;
+  std::tr1::unordered_map<String, Mesh::MeshdataPtr> mMeshStore;
+  std::tr1::shared_ptr<Transfer::TransferPool> mTransferPool;
+  Transfer::TransferMediator *mTransferMediator;
 
-
+  //CDN upload-related variables
   Transfer::OAuthParamsPtr mOAuth;
   const String mCDNUsername;
   Duration mModelTTL;
   Poller* mCDNKeepAlivePoller;
 
+  //CDN upload threads' variables
+  enum{NUM_UPLOAD_THREADS = 4};
+  Thread* mUploadThreads[NUM_UPLOAD_THREADS];
+  Network::IOService* mUploadServices[NUM_UPLOAD_THREADS];
+  Network::IOStrand* mUploadStrands[NUM_UPLOAD_THREADS];
+  Network::IOWork* mUploadWorks[NUM_UPLOAD_THREADS];
+  void uploadThreadMain(uint8 i);
+  
+
+  //Various utility functions 
+  bool findChild(std::vector<AggregateObjectPtr>& v, const UUID& uuid) ;
+  void removeChild(std::vector<AggregateObjectPtr>& v, const UUID& uuid) ;
+  std::vector<AggregateObjectPtr>& getChildren(const UUID& uuid);
+  void getLeaves(const std::vector<UUID>& mIndividualObjects);
+  bool isAggregate(const UUID& uuid);
+  
+
+  //Function related to generating and updating aggregates.
   void updateChildrenTreeLevel(const UUID& uuid, uint16 treeLevel);
   void addDirtyAggregates(UUID uuid);
-
   void generateMeshesFromQueue(Time postTime);
   void generateAggregateMeshAsyncIgnoreErrors(const UUID uuid, Time postTime, bool generateSiblings = true);
   bool generateAggregateMeshAsync(const UUID uuid, Time postTime, bool generateSiblings = true);
   void aggregationThreadMain();
 
+
+  //Functions related to uploading aggregates
+  void uploadAggregateMesh(Mesh::MeshdataPtr agg_mesh, AggregateObjectPtr aggObject,
+                           std::tr1::unordered_map<String, String> textureSet);
   // Helper that handles the upload callback and sets flags to let the request
   // from the aggregation thread to continue
-  void handleUploadFinished(Transfer::UploadRequestPtr request, const Transfer::URI& path, AtomicValue<bool>* finished_out, Transfer::URI* generated_uri_out);
+  void handleUploadFinished(Transfer::UploadRequestPtr request, const Transfer::URI& path, AtomicValue<bool>* finished_out, Transfer::URI* generated_uri_out);  
+  // Look for any aggregates that need a keep-alive sent to the CDN
+  // and try to send them.
+  void sendKeepAlives();
+  void handleKeepAliveResponse(const UUID& objid,
+             std::tr1::shared_ptr<Transfer::HttpManager::HttpResponse> response,
+             Transfer::HttpManager::ERR_TYPE error, const boost::system::error_code& boost_error);
+
+
 
   // Helper for cleaning out parent state from child, or deleting it if it is an
   // abandoned leaf object (non-aggregate). Returns true if the object was
   // removed.
   bool cleanUpChild(const UUID& parent_uuid, const UUID& child_id);
-
   void removeStaleLeaves();
-
-
-  // Look for any aggregates that need a keep-alive sent to the CDN
-  // and try to send them.
-  void sendKeepAlives();
-  void handleKeepAliveResponse(const UUID& objid,
-      std::tr1::shared_ptr<Transfer::HttpManager::HttpResponse> response,
-      Transfer::HttpManager::ERR_TYPE error, const boost::system::error_code& boost_error);
+  
 
 public:
 
@@ -187,8 +193,6 @@ public:
   void removeChild(const UUID& uuid, const UUID& child_uuid);
 
   void aggregateObserved(const UUID& objid, uint32 nobservers);
-  
-
 
   // This version requires locking to get at the AggregateObjectPtr
   // for the object. This isn't safe if you already hold that lock.
