@@ -36,7 +36,7 @@
 #include <sirikata/core/util/PluginManager.hpp>
 #include <sirikata/oh/SimulationFactory.hpp>
 
-#include "ObjectHost.hpp"
+#include "CppObjectHost.hpp"
 #include <sirikata/mesh/LightInfo.hpp>
 #include <sirikata/oh/HostedObject.hpp>
 #include <sirikata/core/network/IOService.hpp>
@@ -63,6 +63,9 @@
 #include <sirikata/mesh/Filter.hpp>
 #include <sirikata/mesh/ModelsSystemFactory.hpp>
 #include <sirikata/oh/ObjectScriptManagerFactory.hpp>
+
+#include <sirikata/core/command/Commander.hpp>
+
 #ifdef __GNUC__
 #include <fenv.h>
 #endif
@@ -144,6 +147,12 @@ int main (int argc, char** argv) {
     String timeseries_options = GetOptionValue<String>(OPT_TRACE_TIMESERIES_OPTIONS);
     Trace::TimeSeries* time_series = Trace::TimeSeriesFactory::getSingleton().getConstructor(timeseries_type)(ctx, timeseries_options);
 
+    String commander_type = GetOptionValue<String>(OPT_COMMAND_COMMANDER);
+    String commander_options = GetOptionValue<String>(OPT_COMMAND_COMMANDER_OPTIONS);
+    Command::Commander* commander = NULL;
+    if (!commander_type.empty())
+        commander = Command::CommanderFactory::getSingleton().getConstructor(commander_type)(ctx, commander_options);
+
     SpaceID mainSpace(GetOptionValue<UUID>(OPT_MAIN_SPACE));
 
     String oh_options = GetOptionValue<String>(OPT_OH_OPTIONS);
@@ -218,6 +227,7 @@ int main (int argc, char** argv) {
 
 
     delete ctx;
+    delete commander;
     delete time_series;
 
     trace->shutdown();

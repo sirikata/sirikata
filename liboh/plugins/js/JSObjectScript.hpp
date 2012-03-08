@@ -362,7 +362,7 @@ protected:
      */
     bool stopCalled;
 
-    void iStop(bool letDie);
+    void iStop(Liveness::Token alive, bool letDie);
 
   private:
 

@@ -1562,7 +1562,7 @@ SET(LIBMESH_PLUGIN_COMMONFILTERS_DIR ${LIBMESH_PLUGIN_DIR}/common-filters)
 SET(CPPOH_SOURCES
   ${CPPOH_SOURCE_DIR}/main.cpp
   ${CPPOH_SOURCE_DIR}/Options.cpp
-  ${CPPOH_SOURCE_DIR}/ObjectHost.cpp
+  ${CPPOH_SOURCE_DIR}/CppObjectHost.cpp
   ${ObjectHostBinary_PBJ_CPP_FILES}
  )
 
@@ -1762,7 +1762,7 @@ SET(SIMOH_SOURCES
   ${SIMOH_SOURCE_DIR}/OSegScenario.cpp
   ${SIMOH_SOURCE_DIR}/ByteTransferScenario.cpp
   ${SIMOH_SOURCE_DIR}/NullScenario.cpp
-  ${SIMOH_SOURCE_DIR}/ObjectHost.cpp
+  ${SIMOH_SOURCE_DIR}/SimObjectHost.cpp
   ${SIMOH_SOURCE_DIR}/Options.cpp
   ${SIMOH_SOURCE_DIR}/main.cpp
   )
@@ -1773,7 +1773,7 @@ SET(GENPACK_SOURCES
   ${SIMOH_SOURCE_DIR}/StaticMotionPath.cpp
   ${SIMOH_SOURCE_DIR}/Object.cpp
   ${SIMOH_SOURCE_DIR}/ObjectFactory.cpp
-  ${SIMOH_SOURCE_DIR}/ObjectHost.cpp # for a few symbols
+  ${SIMOH_SOURCE_DIR}/SimObjectHost.cpp # for a few symbols
   ${SIMOH_SOURCE_DIR}/OSegTestMotionPath.cpp # for a few symbols
   ${SIMOH_SOURCE_DIR}/Options.cpp
   ${SIMOH_SOURCE_DIR}/GenPack.cpp

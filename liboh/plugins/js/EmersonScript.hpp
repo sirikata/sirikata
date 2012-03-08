@@ -278,7 +278,7 @@ public:
 
 
     JSVisibleManager jsVisMan;
-    
+
     HostedObjectPtr mParent;
 
 /**
@@ -422,7 +422,7 @@ private:
     //want to call letDie in iStop.  This is because we've already locked
     //liveness of Script.  If letDie is false, then, we don't call letDie until
     //we get to destructor.
-    void iStop(bool letDie);
+    void iStop(Liveness::Token alive, bool letDie);
 
     void iHandleScriptCommRead(
         const SpaceObjectReference& src, const SpaceObjectReference& dst,
@@ -459,7 +459,7 @@ private:
     //simname, sporef
     typedef std::vector< std::pair<String,SpaceObjectReference> > SimVec;
     SimVec mSimulations;
-    
+
 };
 
 #define EMERSCRIPT_SERIAL_CHECK()\

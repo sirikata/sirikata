@@ -1,5 +1,5 @@
 /*  Sirikata
- *  ObjectHost.cpp
+ *  CppObjectHost.cpp
  *
  *  Copyright (c) 2011, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "ObjectHost.hpp"
+#include "CppObjectHost.hpp"
 #include "Options.hpp"
 #include <sirikata/core/options/CommonOptions.hpp>
 
