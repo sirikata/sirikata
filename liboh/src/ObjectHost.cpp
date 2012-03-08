@@ -89,6 +89,13 @@ ObjectHost::ObjectHost(ObjectHostContext* ctx, Network::IOService *ioServ, const
                 mScriptManagers[i->first] = newmgr;
         }
     }
+
+    if (mContext->commander() != NULL) {
+        mContext->commander()->registerCommand(
+            "oh.objects.list",
+            std::tr1::bind(&ObjectHost::commandListObjects, this, _1, _2, _3)
+        );
+    }
 }
 
 ObjectHost::~ObjectHost()
@@ -423,4 +430,21 @@ String ObjectHost::getSimOptions(const String&simName){
     std::string retval=where->second;
     return String(retval);
 }
+
+
+
+void ObjectHost::commandListObjects(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {
+    Command::Result result = Command::EmptyResult();
+    // Make sure we return the objects key set even if there are none
+    result.put( String("objects"), Command::Array());
+    Command::Array& objects_ary = result.getArray("objects");
+
+    // This only lists regular, active objects. Connecting, migrating, etc are
+    // ignored.
+    Sirikata::SerializationCheck::Scoped sc(&mSessionSerialization);
+    for(HostedObjectMap::const_iterator it = mHostedObjects.begin(); it != mHostedObjects.end(); it++)
+        objects_ary.push_back( it->second->id().toString() );
+    cmdr->result(cmdid, result);
+}
+
 } // namespace Sirikata

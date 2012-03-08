@@ -45,6 +45,8 @@
 #include <sirikata/oh/SpaceNodeSession.hpp>
 #include <sirikata/oh/ObjectNodeSession.hpp>
 
+#include <sirikata/core/command/Commander.hpp>
+
 namespace Sirikata {
 class ProxyManager;
 class PluginManager;
@@ -280,6 +282,11 @@ public:
     void wrappedConnectedCallback(HostedObjectWPtr ho_weak, const SpaceID& space, const ObjectReference& obj, const SessionManager::ConnectionInfo& ci, ConnectedCallback cb);
     void wrappedStreamCreatedCallback(HostedObjectWPtr ho_weak, const SpaceObjectReference& sporef, SessionManager::ConnectionEvent after, StreamCreatedCallback cb);
     void wrappedDisconnectedCallback(HostedObjectWPtr ho_weak, const SpaceObjectReference& sporef, Disconnect::Code cause, DisconnectedCallback);
+
+
+    // Commands
+    void commandListObjects(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
+
 
     // Checks serialization of access to SessionManagers
     Sirikata::SerializationCheck mSessionSerialization;
