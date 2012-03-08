@@ -399,18 +399,9 @@ void ObjectHost::stop() {
         sm->stop();
     }
 
-    // HostedObjects may appear multiple times because they may have
-    // multiple presences. Track which we've called stop on so we
-    // don't double-stop any of them.
-    std::tr1::unordered_set<UUID, UUID::Hasher> seen_hosted_objects;
-    for (HostedObjectMap::iterator iter = mHostedObjects.begin();
-         iter != mHostedObjects.end();
-         ++iter) {
-        HostedObjectPtr ho = iter->second;
-        if (seen_hosted_objects.find(ho->id()) == seen_hosted_objects.end()) {
-            seen_hosted_objects.insert(ho->id());
-            ho->stop();
-        }
+    for(InternalIDHostedObjectMap::const_iterator it = mHostedObjectsByID.begin(); it != mHostedObjectsByID.end(); it++) {
+        HostedObjectPtr ho = it->second.lock();
+        if (ho) ho->stop();
     }
 }
 
