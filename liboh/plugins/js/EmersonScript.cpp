@@ -246,10 +246,10 @@ void EmersonScript::fireProxEvent(const SpaceObjectReference& localPresSporef,
     JSVisibleStruct* jsvis, JSContextStruct* jscont, bool isGone)
 {
     EMERSCRIPT_SERIAL_CHECK();
-    
+
     if (mEvalContextStack.empty())
         assert(false);
-    
+
     //this entire pre-amble is gross.
     EvalContext& ctx = mEvalContextStack.top();
     EvalContext new_ctx(ctx,jscont);
@@ -455,7 +455,7 @@ JSInvokableObject::JSInvokableObjectInt* EmersonScript::runSimulation(
     const SpaceObjectReference& sporef, const String& simname)
 {
     EMERSCRIPT_SERIAL_CHECK();
-    
+
     Simulation* sim =
         mParent->runSimulation(sporef,simname,JSObjectScript::mCtx->objStrand);
 
@@ -464,7 +464,7 @@ JSInvokableObject::JSInvokableObjectInt* EmersonScript::runSimulation(
 
     mSimulations.push_back(
         std::pair<String,SpaceObjectReference>(simname,sporef));
-    
+
     return new JSInvokableObject::JSInvokableObjectInt(sim);
 }
 
@@ -494,7 +494,7 @@ void EmersonScript::killScript()
         //storage.
         setRestoreScript(mContext,"",emptyCB);
     }
-    iStop(false);
+    iStop(livenessToken(), false);
     JSObjectScript::mCtx->objStrand->post(
         std::tr1::bind(&EmersonScript::postDestroy,this,
             livenessToken()),
@@ -720,6 +720,13 @@ void EmersonScript::eCreateEntityFinish(ObjectHost* oh,EntityCreateInfo& eci)
 
 EmersonScript::~EmersonScript()
 {
+    // We need to make sure we cleaned up. It's possible we got here before the
+    // initial stop request made it through to processing, so this makes sure we
+    // clean up, one way or another. This *must* be before the
+    // letDie() call.
+    if (!isStopped())
+        iStop(livenessToken(), false);
+
     if (Liveness::livenessAlive())
         Liveness::letDie();
 }
@@ -734,19 +741,20 @@ void EmersonScript::stop()
 {
     JSObjectScript::mCtx->stop();
     JSObjectScript::mCtx->objStrand->post(
-        std::tr1::bind(&EmersonScript::iStop,this,true),
+        std::tr1::bind(&EmersonScript::iStop,this, livenessToken(), true),
         "EmersonScript::iStop"
     );
 }
 
 //called from mStrand
-void EmersonScript::iStop(bool letDie)
+void EmersonScript::iStop(Liveness::Token alive, bool letDie)
 {
+    if (!alive) return;
     EMERSCRIPT_SERIAL_CHECK();
     if (letDie)
         Liveness::letDie();
 
-    
+
     JSObjectScript::mCtx->stop();
     v8::Locker locker (mCtx->mIsolate);
     v8::Isolate::Scope iscope(JSObjectScript::mCtx->mIsolate);
@@ -757,8 +765,8 @@ void EmersonScript::iStop(bool letDie)
         mParent->killSimulation(svIt->second,svIt->first);
     }
     mSimulations.clear();
-    
-    
+
+
     // Clean up ProxyCreationListeners. We subscribe for each presence in
     // onConnected, so we need to run through all presences (stored in the
     // HostedObject) and clear out ourselfs as a listener. Note that we have to
@@ -772,7 +780,7 @@ void EmersonScript::iStop(bool letDie)
     for (PresenceMap::const_iterator it = mPresences.begin(); it != mPresences.end(); it++)
         unsubscribePresenceEvents(it->first);
 
-    JSObjectScript::iStop(letDie);
+    JSObjectScript::iStop(alive, letDie);
 
     mParent->removeListener((SessionEventListener*)this);
 
