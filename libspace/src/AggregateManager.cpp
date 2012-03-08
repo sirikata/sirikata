@@ -34,6 +34,7 @@
 
 #include <sirikata/mesh/ModelsSystemFactory.hpp>
 #include <sirikata/mesh/Bounds.hpp>
+#include <sirikata/mesh/CompositeFilter.hpp>
 
 #include <sirikata/core/network/IOStrandImpl.hpp>
 #include <sirikata/core/network/IOWork.hpp>
@@ -82,6 +83,10 @@ AggregateManager::AggregateManager(LocationService* loc, Transfer::OAuthParamsPt
     mModelsSystem = NULL;
     if (ModelsSystemFactory::getSingleton().hasConstructor("any"))
         mModelsSystem = ModelsSystemFactory::getSingleton().getConstructor("any")("");
+
+    std::vector<String> names_and_args;
+    names_and_args.push_back("center"); names_and_args.push_back("");
+    mCenteringFilter = new Mesh::CompositeFilter(names_and_args);
 
     mTransferMediator = &(Transfer::TransferMediator::getSingleton());
 
@@ -412,7 +417,7 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
   // Tracks textures so we can fill in agg_mesh->textures when we're
   // done copying data in. Also tracks mapping of texture filename ->
   // original texture URL so we can tell the CDN to reuse that data.
-  std::tr1::unordered_map<String, String> textureSet;
+  std::tr1::unordered_map<String, String> textureSet;  
 
   for (uint32 i= 0; i < children.size(); i++) {
     UUID child_uuid = children[i]->mUUID;
@@ -424,17 +429,18 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
     std::string meshName = mLoc->mesh(child_uuid);
     lock.unlock();
 
-    if (!m || meshName == "") continue;
+    if (!m || meshName == "") continue;    
 
-    /** Find scaling factor **/
+    //Center the mesh, as its done on the client side for display.
+    Mesh::MutableFilterDataPtr input_data(new Mesh::FilterData);
+    input_data->push_back(m);
+    Mesh::FilterDataPtr output_data = mCenteringFilter->apply(input_data);
+    m = std::tr1::dynamic_pointer_cast<Mesh::Meshdata> (output_data->get());
+
+    //Compute the bounds for the child's mesh.
     BoundingBox3f3f originalMeshBoundingBox = BoundingBox3f3f::null();
     double originalMeshBoundsRadius=0;
-    ComputeBounds( m, &originalMeshBoundingBox, &originalMeshBoundsRadius);
-    
-    BoundingSphere3f scaledMeshBounds = mLoc->bounds(child_uuid);    
-    double scalingfactor = scaledMeshBounds.radius() / originalMeshBoundsRadius;
-    
-    /** End: find scaling factor **/
+    ComputeBounds( m, &originalMeshBoundingBox, &originalMeshBoundsRadius);    
 
     // We me reuse more than one of the same mesh, e.g. the aggregate may have
     // two identical trees that are at different locations. In that case,
@@ -499,11 +505,31 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
 
     // Extract the loc information we need for this object.
     Vector3f location = mLoc->currentPosition(child_uuid);
+    double scalingfactor = 1.0;
+    
+    //If the child is an aggregate, don't use the information from LOC blindly.
+    //Fix that info up so that it corresponds with the actual position and size 
+    //of the aggregate mesh.
+    if (isAggregate(child_uuid)) {      
+      Vector4f offsetFromCenter = m->globalTransform.getCol(3);
+      offsetFromCenter = offsetFromCenter * -1.f;
 
-    float64 locationX = location.x ;
-    float64 locationY = location.y ;
-    float64 locationZ = location.z ;
-    Quaternion orientation = mLoc->currentOrientation(child_uuid);
+      location.x += offsetFromCenter.x;
+      location.y += offsetFromCenter.y;
+      location.z += offsetFromCenter.z;
+
+      //Scaling factor is set to 1 because an aggregate mesh is generated so that
+      //its size is exactly whats required to be displayed.
+      scalingfactor = 1.0;
+    }
+    else {
+      scalingfactor = (mLoc->bounds(child_uuid)).radius() / originalMeshBoundsRadius;
+    }
+
+    float64 locationX = location.x;
+    float64 locationY = location.y;
+    float64 locationZ = location.z;
+    Quaternion orientation = mLoc->currentOrientation(child_uuid);    
 
     // Reuse geoinst_it and geoinst_idx from earlier, but with a new iterator.
     Meshdata::GeometryInstanceIterator geoinst_it = m->getGeometryInstanceIterator();
@@ -536,7 +562,7 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
       Matrix4x4f trs = Matrix4x4f( Vector4f(1,0,0, (locationX - bndsX)),
                                    Vector4f(0,1,0, (locationY - bndsY)),
                                    Vector4f(0,0,1, (locationZ - bndsZ)),
-                                   Vector4f(0,0,0,1), Matrix4x4f::ROWS());
+                                   Vector4f(0,0,0,1), Matrix4x4f::ROWS());      
 
       //rotate
       float ox = orientation.normal().x;
@@ -549,11 +575,10 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
                          Vector4f(2*ox*oz-2*ow*oy, 2*oy*oz + 2*ow*ox, 1-2*ox*ox - 2*oy*oy,0),
                          Vector4f(0,0,0,1),                 Matrix4x4f::ROWS());
       
-      trs *= rotateMatrix;
-      
+      trs *= rotateMatrix;            
 
       //scaling
-      trs *= Matrix4x4f::scale(scalingfactor);
+      trs *= Matrix4x4f::scale(scalingfactor);      
 
       // Generate a node for this instance
       NodeIndex geom_node_idx = agg_mesh->nodes.size();
@@ -570,7 +595,6 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
       // Overwrite the parent node to make this new one with the correct
       // transform the one we use.
       geomInstance.parentNode = geom_node_idx;
-
 
       // Increase ref count on instanced geometry
       SubMeshGeometry& smgRef = agg_mesh->geometry[geomInstance.geometryIndex];
@@ -599,7 +623,7 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
   }
 
 
-  String localMeshName = boost::lexical_cast<String>(aggObject->mTreeLevel) + "_aggregate_mesh_" + uuid.toString() + ".dae";    
+  String localMeshName = boost::lexical_cast<String>(aggObject->mTreeLevel) + "_aggregate_mesh_" + uuid.toString() + ".dae";  
 
   //Simplify the mesh...
   mMeshSimplifier.simplify(agg_mesh, 5000);
@@ -750,12 +774,10 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
           // aggregate object from the queue for processing." Failure to save is
           // effectively fatal for the aggregate, so tell it to get removed.
           return true;
-      }
-
-      
+      }      
 
       //Update loc
-      mLoc->updateLocalAggregateMesh(uuid, cdnMeshName);        
+      mLoc->updateLocalAggregateMesh(uuid, cdnMeshName);
   }
 
 
@@ -1028,6 +1050,15 @@ void AggregateManager::removeChild(std::vector<AggregateManager::AggregateObject
     }
   }
 }
+
+//Checks if the given UUID is the name of an aggregate object.
+//Note: This function locks mAggregateObjectsMutex.
+bool AggregateManager::isAggregate(const UUID& child_uuid) {
+  boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
+  return (mAggregateObjects.find(child_uuid) != mAggregateObjects.end()
+          && mAggregateObjects[child_uuid]->mChildren.size() > 0);
+}
+
 
 void AggregateManager::removeStaleLeaves() {
   boost::mutex::scoped_lock lock(mAggregateObjectsMutex);

@@ -46,8 +46,8 @@
 
 #include <sirikata/mesh/Meshdata.hpp>
 #include <sirikata/mesh/ModelsSystem.hpp>
-
 #include <sirikata/mesh/MeshSimplifier.hpp>
+#include <sirikata/mesh/Filter.hpp>
 
 #include <sirikata/core/transfer/HttpManager.hpp>
 
@@ -61,10 +61,11 @@ private:
   Network::IOService* mAggregationService;
   Network::IOStrand* mAggregationStrand;
   Network::IOWork* mIOWork;
-
   LocationService* mLoc;
+  
   ModelsSystem* mModelsSystem;
   Sirikata::Mesh::MeshSimplifier mMeshSimplifier;
+  Sirikata::Mesh::Filter* mCenteringFilter;
 
   typedef struct AggregateObject{
     UUID mUUID;
@@ -133,7 +134,10 @@ private:
   std::tr1::unordered_map<UUID, AggregateObjectPtr, UUID::Hasher> mDirtyAggregateObjects;
   std::map<float, std::deque<AggregateObjectPtr > > mObjectsByPriority;
 
-  std::vector<AggregateObjectPtr>& getChildren(const UUID& uuid) ;
+  bool findChild(std::vector<AggregateObjectPtr>& v, const UUID& uuid) ;
+  void removeChild(std::vector<AggregateObjectPtr>& v, const UUID& uuid) ;
+  std::vector<AggregateObjectPtr>& getChildren(const UUID& uuid);
+  bool isAggregate(const UUID& uuid);
 
 
   Transfer::OAuthParamsPtr mOAuth;
@@ -183,10 +187,7 @@ public:
   void removeChild(const UUID& uuid, const UUID& child_uuid);
 
   void aggregateObserved(const UUID& objid, uint32 nobservers);
-
-  bool findChild(std::vector<AggregateObjectPtr>& v, const UUID& uuid) ;
-
-  void removeChild(std::vector<AggregateObjectPtr>& v, const UUID& uuid) ;
+  
 
 
   // This version requires locking to get at the AggregateObjectPtr
