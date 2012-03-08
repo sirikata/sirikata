@@ -97,10 +97,34 @@ class Test(object):
         if expr is None: self.fail(msg=msg)
 
     def assertIsIn(self, val, col, msg=None):
-        if val not in col: self.fail(msg=msg)
+        try:
+            if val not in col: self.fail(msg=msg)
+        except:
+            self.fail(msg=msg)
 
     def assertIsNotIn(self, val, col, msg=None):
-        if val in col: self.fail(msg=msg)
+        try:
+            if val in col: self.fail(msg=msg)
+        except:
+            self.fail(msg=msg)
+
+    def assertEmpty(self, col, msg=None):
+        try:
+            if col is None or len(col) > 0: self.fail(msg=msg)
+        except:
+            self.fail(msg=msg)
+
+    def assertNotEmpty(self, col, msg=None):
+        try:
+            if col is None or len(col) == 0: self.fail(msg=msg)
+        except:
+            self.fail(msg=msg)
+
+    def assertLen(self, col, sz, msg=None):
+        try:
+            if col is None or len(col) != sz: self.fail(msg=msg)
+        except:
+            self.fail(msg=msg)
 
     def assertReturnCode(self, code):
         if code < 0:

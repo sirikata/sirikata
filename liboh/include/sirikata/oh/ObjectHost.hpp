@@ -84,6 +84,9 @@ class SIRIKATA_OH_EXPORT ObjectHost
     typedef std::tr1::unordered_map<SpaceID,SessionManager*,SpaceID::Hasher> SpaceSessionManagerMap;
 
     typedef std::tr1::unordered_map<SpaceObjectReference, HostedObjectPtr, SpaceObjectReference::Hasher> HostedObjectMap;
+    // Save weak references by ID so we can look up objects, but don't force
+    // them to stay alive.
+    typedef std::tr1::unordered_map<UUID, HostedObjectWPtr, UUID::Hasher> InternalIDHostedObjectMap;
 
     OH::Storage* mStorage;
     OH::PersistedObjectSet* mPersistentSet;
@@ -93,6 +96,7 @@ class SIRIKATA_OH_EXPORT ObjectHost
 
     uint32 mActiveHostedObjects;
     HostedObjectMap mHostedObjects;
+    InternalIDHostedObjectMap mHostedObjectsByID;
 
     typedef std::tr1::unordered_map<String, ObjectScriptManager*> ScriptManagerMap;
     ScriptManagerMap mScriptManagers;
@@ -244,6 +248,8 @@ public:
      *  may also still be in the process of connecting that presence.
      */
     HostedObjectPtr getHostedObject(const SpaceObjectReference &id) const;
+    /** Lookup HostedObject by its internal ID. */
+    HostedObjectPtr getHostedObject(const UUID &id) const;
 
     /** Lookup the SST stream for a particular object. */
     typedef SST::Stream<SpaceObjectReference> SSTStream;
@@ -286,7 +292,8 @@ public:
 
     // Commands
     void commandListObjects(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
-
+    void commandCreateObject(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
+    void commandDestroyObject(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
 
     // Checks serialization of access to SessionManagers
     Sirikata::SerializationCheck mSessionSerialization;
