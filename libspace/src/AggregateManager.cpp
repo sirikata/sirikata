@@ -287,7 +287,6 @@ void AggregateManager::aggregateObserved(const UUID& objid, uint32 nobservers) {
     mAggregateObjects[objid]->mNumObservers = nobservers;
 }
 
-
 void AggregateManager::generateAggregateMesh(const UUID& uuid, const Duration& delayFor) {
   boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
   if (mAggregateObjects.find(uuid) == mAggregateObjects.end()) return;
@@ -309,13 +308,13 @@ void AggregateManager::generateAggregateMesh(const UUID& uuid, AggregateObjectPt
 }
 
 void AggregateManager::generateAggregateMeshAsyncIgnoreErrors(const UUID uuid, Time postTime, bool generateSiblings) {
-	bool retval=generateAggregateMeshAsync(uuid, postTime, generateSiblings);
-	if (!retval) {
+	uint32 retval=generateAggregateMeshAsync(uuid, postTime, generateSiblings);
+	if (retval != GEN_SUCCESS) {
           SILOG(aggregate,error,"generateAggregateMeshAsync returned false, but no error handling happening" << "\n");
 	}
 }
 
-bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime, bool generateSiblings) {
+uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime, bool generateSiblings) {
   Time curTime = Timer::now();
 
   boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
@@ -324,7 +323,7 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
 
     /*Returning true here because this aggregate is no longer valid, so it should be
       removed from the list of aggregates whose meshes are pending. */
-    return true;
+    return GEN_SUCCESS;
   }
   std::tr1::shared_ptr<AggregateObject> aggObject = mAggregateObjects[uuid];
   lock.unlock();
@@ -334,18 +333,16 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
     Does LOC contain info about this aggregate and its children?
     Are all the children's meshes available to generate the aggregate? */
   if (postTime < aggObject->mLastGenerateTime) {
-    return false;
+    return OTHER_GEN_FAILURE;
   }
 
   if (postTime < mAggregateGenerationStartTime) {
-    return false;
+    return OTHER_GEN_FAILURE;
   }
-
 
   /* Does LOC contain info about this aggregate and its children? */
   if (!mLoc->contains(uuid)) {
-    generateAggregateMesh(uuid, aggObject, Duration::milliseconds(10.0f));
-    return false;
+    return OTHER_GEN_FAILURE;
   }
 
   std::vector<AggregateObjectPtr>& children = aggObject->mChildren;
@@ -355,10 +352,12 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
   for (uint32 i= 0; i < children.size(); i++) {
     UUID child_uuid = children[i]->mUUID;
 
-    if (!mLoc->contains(child_uuid)) {
-      generateAggregateMesh(uuid, aggObject, Duration::milliseconds(10.0f));
+    if (!mLoc->contains(child_uuid) ) {
+      return OTHER_GEN_FAILURE;
+    }
 
-      return false;
+    if (isAggregate(child_uuid) && mLoc->mesh(child_uuid) == "") {
+      return CHILDREN_NOT_YET_GEN;
     }
   }
 
@@ -390,19 +389,18 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
 
           allMeshesAvailable = false;
 
+	        //Store an empty pointer in mMeshStore so that further transfer requests are
+	        //not made for the same meshname.
           mMeshStore[meshName] = MeshdataPtr();
-
-          break;
         }
         else if (!mMeshStore[meshName]) {
           allMeshesAvailable = false;
-          break;
         }
       }
     }
   }
   if (!allMeshesAvailable) {
-    return false;
+    return OTHER_GEN_FAILURE;
   }
 
   /* OK to generate the mesh! Go! */
@@ -663,11 +661,18 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
   {
     boost::mutex::scoped_lock meshStoreLock(mMeshStoreMutex);
     if (mMeshStore.size() > 200) {
-      mMeshStore.erase(mMeshStore.begin());
-    }
-  }    
+      int randIterations = rand() % mMeshStore.size();
+      std::tr1::unordered_map<String, Mesh::MeshdataPtr>::iterator it = mMeshStore.begin();
+      for (int i = 0; i < randIterations; i++) {
+	      it++;
+      }
 
-  return true;
+      mMeshStore.erase(it);
+    }
+  }
+
+
+  return GEN_SUCCESS;
 }
 
 void AggregateManager::uploadAggregateMesh(Mesh::MeshdataPtr agg_mesh, 
@@ -813,10 +818,10 @@ void AggregateManager::uploadAggregateMesh(Mesh::MeshdataPtr agg_mesh,
 
   }
   else {
-      std::string cdnMeshName = "file:///home/tahir/Desktop/aggregates_meshes/" + localMeshName;
+      std::string cdnMeshName = "http://sns12.cs.princeton.edu:9080/aggregate_meshes/" + localMeshName;
       agg_mesh->uri = cdnMeshName;
 
-      String modelFilename = std::string("/home/tahir/Desktop/aggregates_meshes/") + localMeshName;
+      String modelFilename = std::string("/disk/local/tazim/aggregate_meshes/") + localMeshName;
       std::ofstream model_ostream(modelFilename.c_str(), std::ofstream::out | std::ofstream::binary);
       bool converted = mModelsSystem->convertVisual(agg_mesh, "colladamodels", model_ostream);
       model_ostream.close();
@@ -828,12 +833,15 @@ void AggregateManager::uploadAggregateMesh(Mesh::MeshdataPtr agg_mesh,
           return;
       }      
 
+      //Upload to web server
+      std::string cmdline = std::string("./upload_to_cdn.sh ") +  modelFilename;
+      system( cmdline.c_str()  );
+
       //Update loc
       mLoc->updateLocalAggregateMesh(uuid, cdnMeshName);
   }
 
   aggObject->mLeaves.clear();
-
 }
 
 void AggregateManager::handleUploadFinished(Transfer::UploadRequestPtr request, const Transfer::URI& path, AtomicValue<bool>* finished_out, Transfer::URI* generated_uri_out) {
@@ -1001,9 +1009,11 @@ void AggregateManager::generateMeshesFromQueue(Time postTime) {
         mObjectsByPriority[ aggObject->mNumObservers + (aggObject->mTreeLevel*0.001) ].push_back(aggObject);
     }
 
+  
     //Generate the aggregates from the priority queue.
     Time curTime = (mObjectsByPriority.size() > 0) ? Timer::now() : Time::null();
-    bool returner = false;
+    uint32 returner = GEN_SUCCESS;
+    uint32 numFailedAttempts = 1;
     for (std::map<float, std::deque<AggregateObjectPtr> >::reverse_iterator it =  mObjectsByPriority.rbegin();
          it != mObjectsByPriority.rend(); it++)
     {
@@ -1014,12 +1024,18 @@ void AggregateManager::generateMeshesFromQueue(Time postTime) {
 
         returner=generateAggregateMeshAsync(aggObject->mUUID, curTime, false);
 
-        if (returner || aggObject->mNumFailedGenerationAttempts > 20) {
-          aggObject->mNumFailedGenerationAttempts = 0;
+        if (returner==GEN_SUCCESS || aggObject->mNumFailedGenerationAttempts > 20) {
           it->second.pop_front();
+	        if (aggObject->mNumFailedGenerationAttempts > 25) {
+            AGG_LOG(error, "Could not generate aggregate mesh for " << 
+	                   aggObject->mTreeLevel << "_" << aggObject->mUUID.toString() << "\n");
+          }
+
+          aggObject->mNumFailedGenerationAttempts = 0;
         }
-        else {
+        else if (returner == OTHER_GEN_FAILURE) {
           aggObject->mNumFailedGenerationAttempts++;
+          numFailedAttempts = aggObject->mNumFailedGenerationAttempts;
         }
 
         break;
@@ -1029,13 +1045,14 @@ void AggregateManager::generateMeshesFromQueue(Time postTime) {
     mDirtyAggregateObjects.clear();
 
     if (mObjectsByPriority.size() > 0) {
-      Duration dur = (returner) ? Duration::milliseconds(1.0) : Duration::milliseconds(25.0);
+      Duration dur = (returner == GEN_SUCCESS) ? Duration::milliseconds(1.0) : Duration::milliseconds(10.0*pow(2,numFailedAttempts)) ;
       mAggregationStrand->post(
           dur,
           std::tr1::bind(&AggregateManager::generateMeshesFromQueue, this, curTime),
           "AggregateManager::generateMeshesFromQueue"
       );
     }
+
 }
 
 void AggregateManager::updateChildrenTreeLevel(const UUID& uuid, uint16 treeLevel) {

@@ -131,7 +131,7 @@ private:
   Poller* mCDNKeepAlivePoller;
 
   //CDN upload threads' variables
-  enum{NUM_UPLOAD_THREADS = 4};
+  enum{NUM_UPLOAD_THREADS = 3};
   Thread* mUploadThreads[NUM_UPLOAD_THREADS];
   Network::IOService* mUploadServices[NUM_UPLOAD_THREADS];
   Network::IOStrand* mUploadStrands[NUM_UPLOAD_THREADS];
@@ -152,7 +152,8 @@ private:
   void addDirtyAggregates(UUID uuid);
   void generateMeshesFromQueue(Time postTime);
   void generateAggregateMeshAsyncIgnoreErrors(const UUID uuid, Time postTime, bool generateSiblings = true);
-  bool generateAggregateMeshAsync(const UUID uuid, Time postTime, bool generateSiblings = true);
+  enum{GEN_SUCCESS=1, CHILDREN_NOT_YET_GEN=2, OTHER_GEN_FAILURE=3}; 
+  uint32 generateAggregateMeshAsync(const UUID uuid, Time postTime, bool generateSiblings = true);
   void aggregationThreadMain();
 
 
