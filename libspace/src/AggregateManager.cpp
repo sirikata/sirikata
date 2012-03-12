@@ -1045,7 +1045,7 @@ void AggregateManager::generateMeshesFromQueue(Time postTime) {
     mDirtyAggregateObjects.clear();
 
     if (mObjectsByPriority.size() > 0) {
-      Duration dur = (returner == GEN_SUCCESS) ? Duration::milliseconds(1.0) : Duration::milliseconds(10.0*pow(2,numFailedAttempts)) ;
+      Duration dur = (returner == GEN_SUCCESS) ? Duration::milliseconds(1.0) : Duration::milliseconds(10.0*pow(2.f,(float)numFailedAttempts)) ;
       mAggregationStrand->post(
           dur,
           std::tr1::bind(&AggregateManager::generateMeshesFromQueue, this, curTime),
