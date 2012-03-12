@@ -693,6 +693,11 @@ void OgreSystem::iOnSessionDisconnected(
 
     while(!initialized){}
 
+    //don't do anything if it's just one of the main presence's siblings that
+    //was disconnected.
+    if (name != mPresenceID)
+        return;
+        
     if (stopped)
     {
         SILOG(ogre,error,"Received iOnDisconnecte after having stopped ogre system");
