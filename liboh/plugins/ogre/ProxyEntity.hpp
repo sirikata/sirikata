@@ -115,6 +115,7 @@ public:
     // interface from MeshListener
     virtual void onSetMesh (ProxyObjectPtr proxy, Transfer::URI const& newMesh,const SpaceObjectReference& sporef);
     virtual void onSetScale (ProxyObjectPtr proxy, float32 newScale ,const SpaceObjectReference& sporef);
+    virtual void onSetIsAggregate (ProxyObjectPtr proxy, bool isAgg,const SpaceObjectReference& sporef);
 
     void extrapolateLocation(TemporalValue<Location>::Time current);
 
@@ -139,6 +140,10 @@ private:
     void iOnSetScale (
         ProxyObjectPtr proxy, float32 newScale,
         const SpaceObjectReference& sporef,Liveness::Token lt);
+
+    void iOnSetIsAggregate (
+        ProxyObjectPtr proxy, bool isAgg,
+        const SpaceObjectReference& sporef, Liveness::Token lt);
 
     void iHandleDestroyTimeout(Liveness::Token lt);
     

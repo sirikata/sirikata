@@ -42,17 +42,25 @@ using namespace Sirikata::Transfer;
 using namespace Sirikata::Mesh;
 
 namespace Sirikata {
-std::tr1::shared_ptr<AssetDownloadTask> AssetDownloadTask::construct(const Transfer::URI& uri, Graphics::OgreRenderer* const scene, double priority, FinishedCallback cb){
-    std::tr1::shared_ptr<AssetDownloadTask> retval(SelfWeakPtr<AssetDownloadTask>::internalConstruct(new AssetDownloadTask(uri,scene,priority,cb)));
+  std::tr1::shared_ptr<AssetDownloadTask> AssetDownloadTask::construct(const Transfer::URI& uri, Graphics::OgreRenderer* const scene, double priority, FinishedCallback cb){
+  std::tr1::shared_ptr<AssetDownloadTask> retval(SelfWeakPtr<AssetDownloadTask>::internalConstruct(new AssetDownloadTask(uri,scene,priority,false,cb)));
     retval->downloadAssetFile();
     return retval;
 }
-AssetDownloadTask::AssetDownloadTask(const Transfer::URI& uri, Graphics::OgreRenderer* const scene, double priority, FinishedCallback cb)
+
+std::tr1::shared_ptr<AssetDownloadTask> AssetDownloadTask::construct(const Transfer::URI& uri, Graphics::OgreRenderer* const scene, double priority, bool isAgg, FinishedCallback cb){
+  std::tr1::shared_ptr<AssetDownloadTask> retval(SelfWeakPtr<AssetDownloadTask>::internalConstruct(new AssetDownloadTask(uri,scene,priority,isAgg,cb)));
+    retval->downloadAssetFile();
+    return retval;
+}
+
+AssetDownloadTask::AssetDownloadTask(const Transfer::URI& uri, Graphics::OgreRenderer* const scene, double priority, bool isAgg, FinishedCallback cb)
  : mScene(scene),
    mAssetURI(uri),
    mPriority(priority),
    mCB(cb),
-   mAsset()
+   mAsset(),
+   mIsAggregate(isAgg)
 {
 }
 
@@ -138,7 +146,8 @@ void AssetDownloadTask::assetFileDownloaded(ResourceDownloadTaskPtr taskptr, Tra
     // copy of the raw data any more.
 
     mScene->parseMesh(
-        request->getMetadata(), request->getMetadata().getFingerprint(), response,
+        request->getMetadata(), request->getMetadata().getFingerprint(), 
+        response, mIsAggregate,
         std::tr1::bind(&AssetDownloadTask::weakHandleAssetParsed, getWeakPtr(), _1)
     );
 }
@@ -188,15 +197,13 @@ void AssetDownloadTask::handleAssetParsed(Mesh::VisualPtr vis) {
         // we're probably going to hit some memory constraints
         {
             // Complete arbitrary number
-            if (md->textures.size() > 50) {
+            if (md->textures.size() > 100) {
                 SILOG(ogre,error, "Mesh with excessive number of textures: " << mAssetURI.toString() << " has " << md->textures.size() << " textures. Ignoring this mesh.");
                 mAsset = Mesh::VisualPtr();
                 mCB();
                 return;
             }
         }
-
-
 
         // Special case for no dependent downloads
         if (md->textures.size() == 0) {

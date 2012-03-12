@@ -67,7 +67,7 @@ public:
     virtual ProxyObjectPtr createObject(
         const SpaceObjectReference& id,
         const TimedMotionVector3f& tmv, const TimedMotionQuaternion& tmq, const BoundingSphere3f& bs,
-        const Transfer::URI& meshuri, const String& phy, uint64 seqNo
+        const Transfer::URI& meshuri, const String& phy, bool isAggregate, uint64 seqNo
     );
 
     ///Removes from internal ProxyObject map, calls destruction listeners, and calls newObj->destroy().

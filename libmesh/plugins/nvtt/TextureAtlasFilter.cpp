@@ -156,11 +156,18 @@ MeshdataPtr TextureAtlasFilter::apply(MeshdataPtr md) {
     // We only know how to handle local files
     if (md->uri.size() < 7 || md->uri.substr(0, 7) != "file://") return md;
     String uri_dir = md->uri.substr(7);
+    String uri_sans_protocol = uri_dir;
     size_t slash_pos = uri_dir.rfind("/");
-    if (slash_pos == std::string::npos || slash_pos == uri_dir.size()-1)
+    
+    String file_name="";
+    if (slash_pos == std::string::npos || slash_pos == uri_dir.size()-1) {
         uri_dir = "./";
-    else
+        file_name = uri_sans_protocol;
+    }
+    else {
         uri_dir = uri_dir.substr(0, slash_pos+1);
+        file_name = uri_sans_protocol.substr(slash_pos+1);
+    }    
 
     // If the same texUVs in a SubMeshGeometry are referenced by instances with
     // different materials, then this code doesn't know how to handle them (we'd
@@ -266,7 +273,7 @@ MeshdataPtr TextureAtlasFilter::apply(MeshdataPtr md) {
     }
 
     // Generate the texture atlas
-    String atlas_url = uri_dir + "atlas.png";
+    String atlas_url = uri_dir + file_name + ".atlas.png";
     FreeImage_Save(FIF_PNG, atlas, atlas_url.c_str());
     FreeImage_Unload(atlas);
 

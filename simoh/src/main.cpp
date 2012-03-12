@@ -33,7 +33,7 @@
 #include <sirikata/core/util/Timer.hpp>
 #include <sirikata/core/network/NTPTimeSync.hpp>
 
-#include "ObjectHost.hpp"
+#include "SimObjectHost.hpp"
 #include "Object.hpp"
 #include "ObjectFactory.hpp"
 #include "ScenarioFactory.hpp"

@@ -1021,7 +1021,7 @@ SET(MESH_TOOL_SOURCE_DIR ${TOP_LEVEL}/tools/meshtool)
 SET(MESH_VIEW_SOURCE_DIR ${TOP_LEVEL}/tools/meshview)
 SET(SLAUNCHER_SOURCE_DIR ${TOP_LEVEL}/tools/slauncher)
 
-SET(TEST_SOURCE_DIR ${TOP_LEVEL}/test)
+SET(TEST_SOURCE_DIR ${TOP_LEVEL}/test/unit)
 SET(TEST_LIBCORE_SOURCE_DIR ${TEST_SOURCE_DIR}/libcore)
 SET(TEST_LIBSQLITE_SOURCE_DIR ${TEST_SOURCE_DIR}/libsqlite)
 SET(TEST_LIBCASSANDRA_SOURCE_DIR ${TEST_SOURCE_DIR}/libcassandra)
@@ -1562,7 +1562,7 @@ SET(LIBMESH_PLUGIN_COMMONFILTERS_DIR ${LIBMESH_PLUGIN_DIR}/common-filters)
 SET(CPPOH_SOURCES
   ${CPPOH_SOURCE_DIR}/main.cpp
   ${CPPOH_SOURCE_DIR}/Options.cpp
-  ${CPPOH_SOURCE_DIR}/ObjectHost.cpp
+  ${CPPOH_SOURCE_DIR}/CppObjectHost.cpp
   ${ObjectHostBinary_PBJ_CPP_FILES}
  )
 
@@ -1762,7 +1762,7 @@ SET(SIMOH_SOURCES
   ${SIMOH_SOURCE_DIR}/OSegScenario.cpp
   ${SIMOH_SOURCE_DIR}/ByteTransferScenario.cpp
   ${SIMOH_SOURCE_DIR}/NullScenario.cpp
-  ${SIMOH_SOURCE_DIR}/ObjectHost.cpp
+  ${SIMOH_SOURCE_DIR}/SimObjectHost.cpp
   ${SIMOH_SOURCE_DIR}/Options.cpp
   ${SIMOH_SOURCE_DIR}/main.cpp
   )
@@ -1773,7 +1773,7 @@ SET(GENPACK_SOURCES
   ${SIMOH_SOURCE_DIR}/StaticMotionPath.cpp
   ${SIMOH_SOURCE_DIR}/Object.cpp
   ${SIMOH_SOURCE_DIR}/ObjectFactory.cpp
-  ${SIMOH_SOURCE_DIR}/ObjectHost.cpp # for a few symbols
+  ${SIMOH_SOURCE_DIR}/SimObjectHost.cpp # for a few symbols
   ${SIMOH_SOURCE_DIR}/OSegTestMotionPath.cpp # for a few symbols
   ${SIMOH_SOURCE_DIR}/Options.cpp
   ${SIMOH_SOURCE_DIR}/GenPack.cpp

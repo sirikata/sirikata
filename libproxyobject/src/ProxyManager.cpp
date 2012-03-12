@@ -78,7 +78,7 @@ void ProxyManager::destroy() {
 ProxyObjectPtr ProxyManager::createObject(
     const SpaceObjectReference& id,
     const TimedMotionVector3f& tmv, const TimedMotionQuaternion& tmq, const BoundingSphere3f& bs,
-    const Transfer::URI& meshuri, const String& phy, uint64 seqNo
+    const Transfer::URI& meshuri, const String& phy, bool isAggregate, uint64 seqNo
 )
 {
     PROXYMAN_SERIALIZED();
@@ -135,7 +135,7 @@ ProxyObjectPtr ProxyManager::createObject(
         newObj->setMesh(meshuri, 0);
     if(phy.size() > 0)
         newObj->setPhysics(phy, 0);
-
+    newObj->setIsAggregate(isAggregate, 0);
 
     // Notification of the proxy will have already occured, but
     // updates via, e.g., PositionListener or MeshListener, will go
@@ -149,7 +149,7 @@ ProxyObjectPtr ProxyManager::createObject(
         newObj->setMesh(meshuri, seqNo);
     if(phy.size() > 0)
         newObj->setPhysics(phy, seqNo);
-
+    newObj->setIsAggregate(isAggregate, seqNo);
 
     // Notification has to happen either way
     notify(&ProxyCreationListener::onCreateProxy, newObj);

@@ -88,8 +88,8 @@ LibproxProximity::LibproxProximity(SpaceContext* ctx, LocationService* locservic
    mObjectQueries(),
    mObjectDistance(false),
    mObjectHandlerPoller(mProxStrand, std::tr1::bind(&LibproxProximity::tickQueryHandler, this, mObjectQueryHandler), "LibproxProximity ObjectHandler Poll", Duration::milliseconds((int64)100)),
-   mStaticRebuilderPoller(mProxStrand, std::tr1::bind(&LibproxProximity::rebuildHandler, this, OBJECT_CLASS_STATIC), "LibproxProximity Static Rebuilder Poll", Duration::seconds(3600.f)),
-   mDynamicRebuilderPoller(mProxStrand, std::tr1::bind(&LibproxProximity::rebuildHandler, this, OBJECT_CLASS_DYNAMIC), "LibproxProximity Dynamic Rebuilder Poll", Duration::seconds(3600.f))
+   mStaticRebuilderPoller(mProxStrand, std::tr1::bind(&LibproxProximity::rebuildHandler, this, OBJECT_CLASS_STATIC), "LibproxProximity Static Rebuilder Poll", Duration::seconds(172800.f)),
+   mDynamicRebuilderPoller(mProxStrand, std::tr1::bind(&LibproxProximity::rebuildHandler, this, OBJECT_CLASS_DYNAMIC), "LibproxProximity Dynamic Rebuilder Poll", Duration::seconds(172800.f))
 {
     using std::tr1::placeholders::_1;
     using std::tr1::placeholders::_2;
@@ -996,12 +996,17 @@ void LibproxProximity::generateObjectQueryEvents(Query* query) {
                     Sirikata::Protocol::Prox::IObjectAddition addition = event_results.add_addition();
                     addition.set_object( objid );
 
-
                     //query_id contains the uuid of the object that is receiving
                     //the proximity message that obj_id has been added.
                     uint64 seqNo = (*seqNoPtr);
                     addition.set_seqno (seqNo);
-
+                    
+                    if (mLocCache->isAggregate(objid)) {
+                      addition.set_type(Sirikata::Protocol::Prox::ObjectAddition::Aggregate);
+                    }
+                    else {
+                      addition.set_type(Sirikata::Protocol::Prox::ObjectAddition::Object);
+                    }
 
                     Sirikata::Protocol::ITimedMotionVector motion = addition.mutable_location();
                     TimedMotionVector3f loc = mLocCache->location(objid);

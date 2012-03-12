@@ -32,7 +32,7 @@
 
 #include "ByteTransferScenario.hpp"
 #include "ScenarioFactory.hpp"
-#include "ObjectHost.hpp"
+#include "SimObjectHost.hpp"
 #include "Object.hpp"
 #include <sirikata/core/options/Options.hpp>
 #include <sirikata/core/options/CommonOptions.hpp>

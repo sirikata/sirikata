@@ -105,3 +105,6 @@ cdn/fake_root/test
 
 # CDN client cache
 HttpChunkHandlerCache
+
+# System test output
+test/system/output
