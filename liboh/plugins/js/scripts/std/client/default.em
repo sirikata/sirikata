@@ -73,7 +73,7 @@ function() {
         this._env = new std.env.Environment(pres);
         this._env.listen(std.core.bind(this._environmentChanged, this));
 
-        this._audio = new std.audio.Audio(pres, 'sdlaudio');
+//        this._audio = new std.audio.Audio(pres, 'sdlaudio');
     };
 
     
@@ -639,7 +639,8 @@ function() {
             if (this._env.audio_ambient_clip)
                 this._env.audio_ambient_clip.stop();
             // Default to volume 1, looping
-            this._env.audio_ambient_clip = this._audio.play(audio_ambient, 1, true);
+            if (this._audio)
+                this._env.audio_ambient_clip = this._audio.play(audio_ambient, 1, true);
         }
         var audio_ambient_volume = this._env.get('audio.ambient_volume');
         if (audio_ambient_volume !== undefined && this._env.audio_ambient_clip) {
