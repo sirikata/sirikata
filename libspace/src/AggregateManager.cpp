@@ -815,7 +815,6 @@ void AggregateManager::uploadAggregateMesh(Mesh::MeshdataPtr agg_mesh,
 
       //Update loc
       mLoc->updateLocalAggregateMesh(uuid, cdnMeshName);
-
   }
   else {
       std::string cdnMeshName = "http://sns12.cs.princeton.edu:9080/aggregate_meshes/" + localMeshName;
@@ -1014,19 +1013,21 @@ void AggregateManager::generateMeshesFromQueue(Time postTime) {
     Time curTime = (mObjectsByPriority.size() > 0) ? Timer::now() : Time::null();
     uint32 returner = GEN_SUCCESS;
     uint32 numFailedAttempts = 1;
+    bool noObjectsToGenerate = true;
     for (std::map<float, std::deque<AggregateObjectPtr> >::reverse_iterator it =  mObjectsByPriority.rbegin();
          it != mObjectsByPriority.rend(); it++)
     {
       if (it->second.size() > 0) {
+        noObjectsToGenerate = false;
         std::tr1::shared_ptr<AggregateObject> aggObject = it->second.front();
 
         if (aggObject->generatedLastRound) continue;
 
         returner=generateAggregateMeshAsync(aggObject->mUUID, curTime, false);
 
-        if (returner==GEN_SUCCESS || aggObject->mNumFailedGenerationAttempts > 20) {
+        if (returner==GEN_SUCCESS || aggObject->mNumFailedGenerationAttempts > 25) {
           it->second.pop_front();
-	        if (aggObject->mNumFailedGenerationAttempts > 25) {
+	  if (returner != GEN_SUCCESS) {
             AGG_LOG(error, "Could not generate aggregate mesh for " << 
 	                   aggObject->mTreeLevel << "_" << aggObject->mUUID.toString() << "\n");
           }
@@ -1044,6 +1045,10 @@ void AggregateManager::generateMeshesFromQueue(Time postTime) {
 
     mDirtyAggregateObjects.clear();
 
+    if (noObjectsToGenerate) {
+      mObjectsByPriority.clear();
+    }
+
     if (mObjectsByPriority.size() > 0) {
       Duration dur = (returner == GEN_SUCCESS) ? Duration::milliseconds(1.0) : Duration::milliseconds(10.0*pow(2.f,(float)numFailedAttempts)) ;
       mAggregationStrand->post(
@@ -1052,7 +1057,6 @@ void AggregateManager::generateMeshesFromQueue(Time postTime) {
           "AggregateManager::generateMeshesFromQueue"
       );
     }
-
 }
 
 void AggregateManager::updateChildrenTreeLevel(const UUID& uuid, uint16 treeLevel) {
