@@ -566,6 +566,8 @@ void MeerkatUploadHandler::requestStatus(UploadRequestPtr request, const String&
     String full_oauth_hostinfo;
     getServerProps(request, cdn_addr, full_oauth_hostinfo);
 
+    HttpManager::Headers headers;
+    headers["Host"] = full_oauth_hostinfo;
 
     HttpManager::QueryParameters query_params;
     query_params["api"] = "true";
@@ -577,7 +579,7 @@ void MeerkatUploadHandler::requestStatus(UploadRequestPtr request, const String&
     HttpManager::getSingleton().get(
         cdn_addr, upload_status_uri_prefix + "/" + task_id,
         std::tr1::bind(&MeerkatUploadHandler::handleRequestStatusResult, this, _1, _2, _3, request, task_id, callback, retries),
-        HttpManager::Headers(), query_params
+        headers, query_params
     );
 }
 
