@@ -418,7 +418,7 @@ bool ServiceIsDefault(const String& s) {
 String ServiceIfNotDefault(const String& s) {
     if (!ServiceIsDefault(s))
         return s;
-    return "";
+    return "80";
 }
 }
 
@@ -466,8 +466,9 @@ void MeerkatUploadHandler::upload(UploadRequestPtr request, UploadCallback callb
     // the query string.
     HttpManager::QueryParameters query_params;
     // Form data consists of parameters
-    for(UploadRequest::StringMap::const_iterator it = request->params().begin(); it != request->params().end(); it++)
+    for(UploadRequest::StringMap::const_iterator it = request->params().begin(); it != request->params().end(); it++) {
         query_params[it->first] = it->second;
+    }
     // Requested path
     query_params["path"] = request->path();
 
@@ -521,15 +522,7 @@ void MeerkatUploadHandler::request_finished(std::tr1::shared_ptr<HttpManager::Ht
         SILOG(transfer, error, "HTTP status code = " << response->getStatusCode() << " instead of 200 during an HTTP upload (" << request->getIdentifier() << ")");
         callback(bad);
         return;
-    }
-
-    HttpManager::Headers::const_iterator it;
-    it = response->getHeaders().find("Content-Length");
-    if (it != response->getHeaders().end()) {
-        SILOG(transfer, error, "Content-Length header was present when it shouldn't be during an HTTP upload (" << request->getIdentifier() << ")");
-        callback(bad);
-        return;
-    }
+    }    
 
     DenseDataPtr response_data = response->getData();
 
