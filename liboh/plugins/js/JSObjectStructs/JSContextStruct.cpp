@@ -193,6 +193,11 @@ void JSContextStruct::proximateEvent(const SpaceObjectReference& goneFrom,
     {
         emerScript->fireProxEvent(goneFrom, jsvis,this,isGone);
     }
+    else
+    {
+        //we aren't using jsvis, means no one else will either
+        delete jsvis;
+    }
 }
 
 

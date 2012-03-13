@@ -112,6 +112,7 @@ void JSVisibleStruct::visibleWeakReferenceCleanup(v8::Persistent<v8::Value> cont
     vis->SetInternalField(TYPEID_FIELD,v8::External::New(NULL));
 
     JSLOG(insane,"Freeing memory for jsvisible.");
+    containsVisStruct.Dispose();
 }
 
 

@@ -169,7 +169,7 @@ void EmersonScript::resetScript()
             //issue user-callback that jsvisiblestruct contined in proxSetIter
             //is a member of the proximity result set for the presence that has
             //sporef presIter->first.
-            iNotifyProximateHelper(*proxSetIter, presIter->first);
+            iResetProximateHelper(*proxSetIter,presIter->first);
         }
     }
 
@@ -228,15 +228,16 @@ void EmersonScript::iNotifyProximateGone(
     v8::Locker locker (mCtx->mIsolate);
     v8::Isolate::Scope iscope(JSObjectScript::mCtx->mIsolate);
 
-    //FIXME: we aren't ever freeing this memory
-    //lkjs; what about freeing this memeory?;
-    JSVisibleStruct* jsvis =
-        jsVisMan.createVisStruct(this, proximateObject->getObjectReference());
 
     std::map<uint32, JSContextStruct*>::iterator contIter;
     for (contIter  =  mContStructMap.begin(); contIter != mContStructMap.end();
          ++contIter)
     {
+        //create a separate one for each sandbox.  That way, can garbage collect
+        //across different contexts/objects.
+        JSVisibleStruct* jsvis =
+            jsVisMan.createVisStruct(this, proximateObject->getObjectReference());
+
         contIter->second->proximateEvent(querier, jsvis,true);
     }
 }
@@ -433,14 +434,21 @@ void  EmersonScript::iNotifyProximate(
         return;
     }
 
-    JSVisibleStruct* jsvis =
-        jsVisMan.createVisStruct(this, proximateObject->getObjectReference());
-    iNotifyProximateHelper(jsvis,querier);
+    std::map<uint32, JSContextStruct*>::iterator contIter;
+    for (contIter  =  mContStructMap.begin(); contIter != mContStructMap.end();
+         ++contIter)
+    {
+        //must create a separate visible per sandbox so that garbage collection
+        //destruction in one sandbox does not interfere with another sandbox.
+        JSVisibleStruct* jsvis =
+            jsVisMan.createVisStruct(this, proximateObject->getObjectReference());
+        contIter->second->proximateEvent(querier, jsvis,false);
+    }
 }
 
 
-void EmersonScript::iNotifyProximateHelper(
-    JSVisibleStruct* proxVis, const SpaceObjectReference& proxTo)
+void EmersonScript::iResetProximateHelper(
+    JSVisibleStruct* proxVis,const SpaceObjectReference& proxTo)
 {
     std::map<uint32, JSContextStruct*>::iterator contIter;
     for (contIter  =  mContStructMap.begin(); contIter != mContStructMap.end();

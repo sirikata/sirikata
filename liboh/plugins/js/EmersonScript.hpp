@@ -440,7 +440,7 @@ private:
         ProxyObjectPtr proximateObject, const SpaceObjectReference& querier,
         Liveness::Token alive);
 
-    void iNotifyProximateHelper(
+    void iResetProximateHelper(
         JSVisibleStruct* proxVis, const SpaceObjectReference& proxTo);
 
     void  iNotifyProximate(
