@@ -39,6 +39,7 @@
 #include <sirikata/mesh/Meshdata.hpp>
 #include <sirikata/mesh/Billboard.hpp>
 #include <sirikata/core/util/Liveness.hpp>
+#include <sirikata/core/command/Commander.hpp>
 
 namespace Sirikata {
 namespace Graphics {
@@ -74,6 +75,9 @@ protected:
     void removeObject(const String& sporef);
 
     virtual double calculatePriority(ProxyObjectPtr proxy);
+
+    void commandGetData(
+        const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) ;
 
     void checkShouldLoadNewObject(Object* r);
 
