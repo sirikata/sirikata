@@ -85,6 +85,7 @@ AggregateManager::AggregateManager(LocationService* loc, Transfer::OAuthParamsPt
         mModelsSystem = ModelsSystemFactory::getSingleton().getConstructor("any")("");
 
     std::vector<String> names_and_args;
+    names_and_args.push_back("triangulate"); names_and_args.push_back("all");
     names_and_args.push_back("center"); names_and_args.push_back("");
     mCenteringFilter = new Mesh::CompositeFilter(names_and_args);
 
@@ -146,6 +147,7 @@ AggregateManager::~AggregateManager() {
       delete mUploadThreads[i];
     }
 
+    delete mCenteringFilter;
     //Delete the model system.
     delete mModelsSystem;
 }
