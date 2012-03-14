@@ -119,7 +119,7 @@ void DistanceDownloadPlanner::iAddObject(Object* r, Liveness::Token alive)
     }
 
     RMutex::scoped_lock lock(mDlPlannerMutex);
-    calculatePriority(r->proxy);
+    r->priority = calculatePriority(r->proxy);
     mObjects[r->name] = r;
     mWaitingObjects[r->name] = r;
     DLPLANNER_LOG(detailed, "Adding object " << r->name << " (" << r->file << "), " << mLoadedObjects.size() << " loaded, " << mWaitingObjects.size() << " waiting");
@@ -132,7 +132,6 @@ DistanceDownloadPlanner::Object* DistanceDownloadPlanner::findObject(const Strin
     ObjectMap::iterator it = mObjects.find(name);
     return (it != mObjects.end() ? it->second : NULL);
 }
-
 
 
 void DistanceDownloadPlanner::removeObject(const String& name)
