@@ -183,6 +183,7 @@ int main(int argc, char** argv) {
     if (!commander_type.empty())
         commander = Command::CommanderFactory::getSingleton().getConstructor(commander_type)(space_context, commander_options);
 
+    Transfer::TransferMediator::getSingleton().registerContext(space_context);
 
 
     Sirikata::SpaceNetwork* gNetwork = NULL;
