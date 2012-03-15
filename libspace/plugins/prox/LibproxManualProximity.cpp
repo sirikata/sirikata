@@ -495,7 +495,7 @@ void LibproxManualProximity::commandListHandlers(const Command::Command& cmd, Co
             result.put(key + "name", String("oh-queries.") + ObjectClassToString((ObjectClass)i) + "-objects");
             result.put(key + "queries", mOHQueryHandler[i]->numQueries());
             result.put(key + "objects", mOHQueryHandler[i]->numObjects());
-
+            result.put(key + "nodes", mOHQueryHandler[i]->numNodes());
         }
     }
     cmdr->result(cmdid, result);
