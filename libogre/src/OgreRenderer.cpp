@@ -343,7 +343,7 @@ bool OgreRenderer::initialize(const String& options, bool with_berkelium) {
                            mParallaxSteps=new OptionValue("parallax-steps","1.0",OptionValueType<float>(),"Multiplies the per-material parallax steps by this constant (default 1.0)"),
                            mParallaxShadowSteps=new OptionValue("parallax-shadow-steps","10",OptionValueType<int>(),"Total number of steps for shadow parallax mapping (default 10)"),
                            new OptionValue("nearplane",".125",OptionValueType<float32>(),"The min distance away you can see"),
-                           new OptionValue("farplane","5000",OptionValueType<float32>(),"The max distance away you can see"),
+                           new OptionValue("farplane","20000",OptionValueType<float32>(),"The max distance away you can see"),
                            searchPaths=new OptionValue("search_path","../..",OptionValueType<String>(),"Colon separated list of places to search for Ogre data (eg ogre/data/chrome/js or ogre/data/chrome/ui)"),
                            mModelLights = new OptionValue("model-lights","false",OptionValueType<bool>(),"Whether to use a base set of lights or load lights dynamically from loaded models."),
                            backColor = new OptionValue("back-color","<.71,.785,.91,1>",OptionValueType<Vector4f>(),"Background color to clear render viewport to."),
