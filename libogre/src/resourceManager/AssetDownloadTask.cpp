@@ -128,15 +128,33 @@ void AssetDownloadTask::weakAssetFileDownloaded(std::tr1::weak_ptr<AssetDownload
 void AssetDownloadTask::getDownloadTasks(
     std::vector<String>& finishedDownloads, std::vector<String>& activeDownloads)
 {
-    for (Dependencies::iterator depIter = mDependencies.begin();
-         depIter != mDependencies.end(); ++depIter)
+    for (ActiveDownloadMap::iterator activeIt= mActiveDownloads.begin();
+         activeIt != mActiveDownloads.end(); ++activeIt)
     {
-        if (mActiveDownloads.find(depIter->first.toString()) == mActiveDownloads.end())
-            finishedDownloads.push_back(depIter->first.toString());
-        else
-            activeDownloads.push_back(depIter->first.toString());
+        activeDownloads.push_back(activeIt->first);
     }
+
+    for (std::vector<String>::iterator strIt = mFinishedDownloads.begin();
+         strIt != mFinishedDownloads.end(); ++strIt)
+    {
+        finishedDownloads.push_back(*strIt);
+    }
+    
+    // for (Dependencies::iterator depIter = mDependencies.begin();
+    //      depIter != mDependencies.end(); ++depIter)
+    // {
+    //     if (mActiveDownloads.find(depIter->first.toString()) == mActiveDownloads.end())
+    //         finishedDownloads.push_back(depIter->first.toString());
+    //     else
+    //         activeDownloads.push_back(depIter->first.toString());
+    // }
 }
+
+AssetDownloadTask::ActiveDownloadMap::size_type AssetDownloadTask::getOutstandingDependentDownloads()
+{
+    return mActiveDownloads.size();
+}
+
 
 void AssetDownloadTask::assetFileDownloaded(ResourceDownloadTaskPtr taskptr, Transfer::ChunkRequestPtr request, Transfer::DenseDataPtr response) {
     boost::mutex::scoped_lock lok(mDependentDownloadMutex);
@@ -144,7 +162,8 @@ void AssetDownloadTask::assetFileDownloaded(ResourceDownloadTaskPtr taskptr, Tra
     // Clear from the active download list
     assert(mActiveDownloads.size() == 1);
     mActiveDownloads.erase(taskptr->getIdentifier());
-
+    mFinishedDownloads.push_back(taskptr->getIdentifier());
+    
     // Lack of response data means failure of some sort
     if (!response) {
         SILOG(ogre, warn, "Failed to download resource for " << taskptr->getIdentifier());
@@ -301,10 +320,6 @@ void AssetDownloadTask::addDependentDownload(const Transfer::URI& depUrl, const 
     addDependentDownload(dl);
 }
 
-AssetDownloadTask::ActiveDownloadMap::size_type AssetDownloadTask::getOutstandingDependentDownloads()
-{
-    return mActiveDownloads.size();
-}
 
 void AssetDownloadTask::startDependentDownloads() {
     boost::mutex::scoped_lock lok(mDependentDownloadMutex);
@@ -342,7 +357,8 @@ void AssetDownloadTask::textureDownloaded(Transfer::URI uri, ResourceDownloadTas
 
     // Clear the download task
     mActiveDownloads.erase(taskptr->getIdentifier());
-
+    mFinishedDownloads.push_back(taskptr->getIdentifier());
+    
     // Lack of response data means failure of some sort
     if (!response) {
         SILOG(ogre, warn, "failed response dependent callback " << taskptr->getIdentifier());

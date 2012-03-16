@@ -125,7 +125,8 @@ private:
 
     // Active downloads, for making sure shared_ptrs stick around and for cancelling
     ActiveDownloadMap mActiveDownloads;
-
+    std::vector<String> mFinishedDownloads;
+    
     boost::mutex mDependentDownloadMutex;
 
 public:
