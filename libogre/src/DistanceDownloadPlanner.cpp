@@ -252,7 +252,7 @@ void DistanceDownloadPlanner::commandGetData(
         {
             loadingResources.push_back(*strIt);
         }
-        individualAsset["loadingResources"];
+        individualAsset["loadingResources"] = loadingResources;
         
         
         //how many dependent resources does this asset still have to download
