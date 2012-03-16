@@ -782,12 +782,14 @@ void LibproxProximity::commandListHandlers(const Command::Command& cmd, Command:
             result.put(key + "name", String("object-queries.") + ObjectClassToString((ObjectClass)i) + "-objects");
             result.put(key + "queries", mObjectQueryHandler[i].handler->numQueries());
             result.put(key + "objects", mObjectQueryHandler[i].handler->numObjects());
+            result.put(key + "nodes", mObjectQueryHandler[i].handler->numNodes());
         }
         if (mServerQueryHandler[i].handler != NULL) {
             String key = String("handlers.server.") + ObjectClassToString((ObjectClass)i) + ".";
             result.put(key + "name", String("server-queries.") + ObjectClassToString((ObjectClass)i) + "-objects");
             result.put(key + "queries", mServerQueryHandler[i].handler->numQueries());
             result.put(key + "objects", mServerQueryHandler[i].handler->numObjects());
+            result.put(key + "nodes", mServerQueryHandler[i].handler->numNodes());
         }
     }
     cmdr->result(cmdid, result);
@@ -1000,7 +1002,7 @@ void LibproxProximity::generateObjectQueryEvents(Query* query) {
                     //the proximity message that obj_id has been added.
                     uint64 seqNo = (*seqNoPtr);
                     addition.set_seqno (seqNo);
-                    
+
                     if (mLocCache->isAggregate(objid)) {
                       addition.set_type(Sirikata::Protocol::Prox::ObjectAddition::Aggregate);
                     }

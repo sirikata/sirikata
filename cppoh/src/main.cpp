@@ -64,6 +64,7 @@
 #include <sirikata/mesh/ModelsSystemFactory.hpp>
 #include <sirikata/oh/ObjectScriptManagerFactory.hpp>
 
+#include <sirikata/core/transfer/TransferMediator.hpp>
 #include <sirikata/core/command/Commander.hpp>
 
 #ifdef __GNUC__
@@ -152,6 +153,9 @@ int main (int argc, char** argv) {
     Command::Commander* commander = NULL;
     if (!commander_type.empty())
         commander = Command::CommanderFactory::getSingleton().getConstructor(commander_type)(ctx, commander_options);
+
+    Transfer::TransferMediator::getSingleton().registerContext(ctx);
+
 
     SpaceID mainSpace(GetOptionValue<UUID>(OPT_MAIN_SPACE));
 

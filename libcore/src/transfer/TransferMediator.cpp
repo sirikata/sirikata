@@ -279,5 +279,30 @@ void TransferMediator::PoolWorker::run() {
     }
 }
 
+void TransferMediator::registerContext(Context* ctx) {
+    if (ctx->commander()) {
+        ctx->commander()->registerCommand(
+            "transfer.mediator.requests.list",
+            std::tr1::bind(&TransferMediator::commandListRequests, this, _1, _2, _3)
+        );
+    }
+}
+
+void TransferMediator::commandListRequests(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {
+    Command::Result result = Command::EmptyResult();
+    result.put( String("requests"), Command::Array());
+    Command::Array& requests_ary = result.getArray("requests");
+
+    boost::unique_lock<boost::mutex> lock(mAggMutex);
+    AggregateListByPriority& priorityIndex = mAggregateList.get<tagPriority>();
+    for(AggregateListByPriority::iterator req_it = priorityIndex.begin(); req_it != priorityIndex.end(); req_it++) {
+        requests_ary.push_back(Command::Object());
+        requests_ary.back().put("id", (*req_it)->getIdentifier());
+        requests_ary.back().put("priority", (*req_it)->getPriority());
+    }
+
+    cmdr->result(cmdid, result);
+}
+
 }
 }
