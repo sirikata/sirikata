@@ -166,7 +166,7 @@ protected:
         // Sets of resources this Asset has loaded so we can get
         // ResourceLoader to unload them. Ordered list so we can
         // unload in reverse order we loaded in.
-        typedef std::vector<String> ResourceNameList;
+        typedef std::vector<String > ResourceNameList;
         ResourceNameList loadedResources;
 
         Asset(const Transfer::URI& name);

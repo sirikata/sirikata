@@ -154,22 +154,6 @@ void DistanceDownloadPlanner::commandGetData(
     Command::Result result = Command::EmptyResult();
 
 
-    //run through all objects that we know about
-    Command::Object knownObjects = Command::Object();
-    for (ObjectMap::iterator omIter = mObjects.begin();
-         omIter != mObjects.end(); ++omIter)
-    {
-        Command::Object individualObject = Command::Object();
-        individualObject["priority"] = omIter->second->priority;
-        individualObject["name"] = omIter->second->name;
-        individualObject["file"] = omIter->second->file.toString();
-        individualObject["loaded"] = omIter->second->loaded;
-        //append known object to map of results
-        String index (omIter->first);
-        knownObjects[index.c_str()] = individualObject;        
-    }
-    result.put("ddplanner.known_objects",knownObjects);
-
     //run through all objects that are loaded
     Command::Object loadedObjects = Command::Object();
     for (ObjectMap::iterator omIter = mLoadedObjects.begin();
@@ -178,7 +162,6 @@ void DistanceDownloadPlanner::commandGetData(
         Command::Object individualObject = Command::Object();
         individualObject["priority"] = omIter->second->priority;
         individualObject["name"] = omIter->second->name;
-        individualObject["file"] = omIter->second->file.toString();
         individualObject["loaded"] = omIter->second->loaded;
         //append known object to map of results
         String index (omIter->first);
@@ -195,7 +178,6 @@ void DistanceDownloadPlanner::commandGetData(
         Command::Object individualObject = Command::Object();
         individualObject["priority"] = omIter->second->priority;
         individualObject["name"] = omIter->second->name;
-        individualObject["file"] = omIter->second->file.toString();
         individualObject["loaded"] = omIter->second->loaded;
         //append known object to map of results
         String index (omIter->first);
@@ -211,7 +193,6 @@ void DistanceDownloadPlanner::commandGetData(
     {
         Command::Object individualAsset = Command::Object();
         individualAsset["name"]= assetMIter->second->uri.toString();
-        individualAsset["stillToDownload"] = assetMIter->second->loadingResources;
 
         //add waitingObjects
         Command::Object waitingObjects = Command::Object();
@@ -232,21 +213,50 @@ void DistanceDownloadPlanner::commandGetData(
         individualAsset["usingObjects"] = usingObjects;
         
 
-        //list of loaded resources
-        Command::Array loadedResources = Command::Array();
-        for (std::vector<String>::iterator strIt = assetMIter->second->loadedResources.begin();
-             strIt != assetMIter->second->loadedResources.end(); ++strIt)
+        //list of loaded and loading resources, by uri
+        std::vector<String> finishedDownloads;
+        std::vector<String> activeDownloads;
+
+        Command::Array loadingResources = Command::Array();
+        Command::Array loadedResources = Command::Array();    
+        //priority
+        double priority = -1;
+        AssetDownloadTask::ActiveDownloadMap::size_type stillToDownload = 0;
+        //perform different operations depending on whether still downloading or not.
+        if (assetMIter->second->downloadTask)
+        {
+            priority = assetMIter->second->downloadTask->priority();
+            stillToDownload = assetMIter->second->downloadTask->getOutstandingDependentDownloads();
+
+            assetMIter->second->downloadTask->getDownloadTasks(finishedDownloads,activeDownloads);
+        }
+        else
+        {
+            //use the ogre-ified version of loaded resources
+            finishedDownloads = assetMIter->second->loadedResources;
+        }
+        individualAsset["priority"] = priority;
+
+        //finish downloaded resources
+        for (std::vector<String>::iterator strIt = finishedDownloads.begin();
+             strIt != finishedDownloads.end(); ++strIt)
         {
             loadedResources.push_back(*strIt);
         }
         individualAsset["loadedResources"] = loadedResources;
 
 
-        //priority
-        double priority = -1;
-        if (assetMIter->second->downloadTask)
-            priority = assetMIter->second->downloadTask->priority();
-        individualAsset["priority"] = priority;
+        //finish still-fetching resources
+        for (std::vector<String>::iterator strIt = activeDownloads.begin();
+             strIt != activeDownloads.end(); ++strIt)
+        {
+            loadingResources.push_back(*strIt);
+        }
+        individualAsset["loadingResources"];
+        
+        
+        //how many dependent resources does this asset still have to download
+        individualAsset["stillToDownload"] = stillToDownload;
 
 
         //append known object to map of results
@@ -736,6 +746,8 @@ void DistanceDownloadPlanner::loadMeshdata(Asset* asset, const Mesh::MeshdataPtr
             asset->loadedResources.push_back(matname);
             asset->loadingResources++;
         }
+
+
 
         // Skeleton. Make sure this is submitted first so that the mesh loading
         // can find it by name.

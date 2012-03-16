@@ -125,6 +125,19 @@ void AssetDownloadTask::weakAssetFileDownloaded(std::tr1::weak_ptr<AssetDownload
     }
 }
 
+void AssetDownloadTask::getDownloadTasks(
+    std::vector<String>& finishedDownloads, std::vector<String>& activeDownloads)
+{
+    for (Dependencies::iterator depIter = mDependencies.begin();
+         depIter != mDependencies.end(); ++depIter)
+    {
+        if (mActiveDownloads.find(depIter->first.toString()) == mActiveDownloads.end())
+            finishedDownloads.push_back(depIter->first.toString());
+        else
+            activeDownloads.push_back(depIter->first.toString());
+    }
+}
+
 void AssetDownloadTask::assetFileDownloaded(ResourceDownloadTaskPtr taskptr, Transfer::ChunkRequestPtr request, Transfer::DenseDataPtr response) {
     boost::mutex::scoped_lock lok(mDependentDownloadMutex);
 
@@ -286,6 +299,11 @@ void AssetDownloadTask::addDependentDownload(const Transfer::URI& depUrl, const 
         std::tr1::bind(&AssetDownloadTask::weakTextureDownloaded, getWeakPtr(), depUrl, _1, _2, _3)
     );
     addDependentDownload(dl);
+}
+
+AssetDownloadTask::ActiveDownloadMap::size_type AssetDownloadTask::getOutstandingDependentDownloads()
+{
+    return mActiveDownloads.size();
 }
 
 void AssetDownloadTask::startDependentDownloads() {

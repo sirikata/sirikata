@@ -71,9 +71,17 @@ public:
     const Dependencies& dependencies() const { return mDependencies; }
     float64 priority() const { return mPriority; }
 
+    void getDownloadTasks(
+        std::vector<String>& finishedDownloads, std::vector<String>& activeDownloads);
+
+    
     void updatePriority(float64 priority);
     void cancel();
+
+    typedef std::map<const String, Transfer::ResourceDownloadTaskPtr> ActiveDownloadMap;
+    
 private:
+
     void downloadAssetFile();
     static void weakAssetFileDownloaded(std::tr1::weak_ptr<AssetDownloadTask> thus, Transfer::ResourceDownloadTaskPtr taskptr,
             Transfer::TransferRequestPtr request, Transfer::DenseDataPtr response);
@@ -116,10 +124,15 @@ private:
     bool mIsAggregate;
 
     // Active downloads, for making sure shared_ptrs stick around and for cancelling
-    typedef std::map<const String, Transfer::ResourceDownloadTaskPtr> ActiveDownloadMap;
     ActiveDownloadMap mActiveDownloads;
 
     boost::mutex mDependentDownloadMutex;
+
+public:
+    
+    ActiveDownloadMap::size_type getOutstandingDependentDownloads();
+
+    
 };
 typedef std::tr1::shared_ptr<AssetDownloadTask> AssetDownloadTaskPtr;
 
