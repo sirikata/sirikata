@@ -266,8 +266,6 @@ void AggregateManager::iRemoveChild(const UUID& uuid, const UUID& child_uuid) {
   if ( findChild(children, child_uuid)  ) {
     removeChild( children, child_uuid );
 
-    boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
-
     // Cleans up the child if necessary, or makes sure it doesn't still refer to
     // this object anymore. See cleanUpChild for details.
     bool child_removed = cleanUpChild(uuid, child_uuid);
