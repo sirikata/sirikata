@@ -476,7 +476,6 @@ void SessionManager::disconnect(const SpaceObjectReference& sporef_objid) {
     Sirikata::SerializationCheck::Scoped sc(&mSerialization);
 
     ServerID connected_to = mObjectConnections.getConnectedServer(sporef_objid);
-    uint64 session_seqno = mObjectConnections.getSeqno(sporef_objid);
     // The caller may be conservative in calling disconnect, especially to make
     // sure disconnections are actually forced (e.g. for safety in the case of a
     // half-complete connection where the initial success is reported but
@@ -484,6 +483,7 @@ void SessionManager::disconnect(const SpaceObjectReference& sporef_objid) {
     if (connected_to == NullServerID)
         return;
 
+    uint64 session_seqno = mObjectConnections.getSeqno(sporef_objid);
     sendDisconnectMessage(sporef_objid, connected_to, session_seqno);
 
     // TODO(ewencp) we should probably keep around a record of this
@@ -931,7 +931,7 @@ void SessionManager::handleSpaceConnection(const Sirikata::Network::Stream::Conn
         mConnections.erase(sid);
         if (mTimeSyncClient != NULL)
             mTimeSyncClient->removeNode(OHDP::NodeID(sid));
-        
+
         // Notify connected objects
         mObjectConnections.handleUnderlyingDisconnect(sid, reason);
         // If we have no connections left, we have to give up on TimeSync

@@ -60,18 +60,28 @@ public:
     };
     typedef std::map<Transfer::URI, ResourceData> Dependencies;
 private:
-    AssetDownloadTask(const Transfer::URI& uri, Graphics::OgreRenderer* const scene, double priority, FinishedCallback cb);
+    AssetDownloadTask(const Transfer::URI& uri, Graphics::OgreRenderer* const scene, double priority, bool isAgg, FinishedCallback cb);
 public:
     static std::tr1::shared_ptr<AssetDownloadTask> construct(const Transfer::URI& uri, Graphics::OgreRenderer* const scene, double priority, FinishedCallback cb);
+    static std::tr1::shared_ptr<AssetDownloadTask> construct(const Transfer::URI& uri, Graphics::OgreRenderer* const scene, double priority, bool isAgg, FinishedCallback cb);
+
     ~AssetDownloadTask();
 
     Mesh::VisualPtr asset() const { return mAsset; }
     const Dependencies& dependencies() const { return mDependencies; }
     float64 priority() const { return mPriority; }
 
+    void getDownloadTasks(
+        std::vector<String>& finishedDownloads, std::vector<String>& activeDownloads);
+
+    
     void updatePriority(float64 priority);
     void cancel();
+
+    typedef std::map<const String, Transfer::ResourceDownloadTaskPtr> ActiveDownloadMap;
+    
 private:
+
     void downloadAssetFile();
     static void weakAssetFileDownloaded(std::tr1::weak_ptr<AssetDownloadTask> thus, Transfer::ResourceDownloadTaskPtr taskptr,
             Transfer::TransferRequestPtr request, Transfer::DenseDataPtr response);
@@ -104,19 +114,25 @@ private:
     // needs to be relative or absolute
     Transfer::URI getURL(const Transfer::URI& orig, const String& given_url);
 
-    Graphics::OgreRenderer *const mScene;
+    Graphics::OgreRenderer *const mScene;    
     Transfer::URI mAssetURI;
     double mPriority;
     FinishedCallback mCB;
 
     Mesh::VisualPtr mAsset;
     Dependencies mDependencies;
+    bool mIsAggregate;
 
     // Active downloads, for making sure shared_ptrs stick around and for cancelling
-    typedef std::map<const String, Transfer::ResourceDownloadTaskPtr> ActiveDownloadMap;
     ActiveDownloadMap mActiveDownloads;
 
     boost::mutex mDependentDownloadMutex;
+
+public:
+    
+    ActiveDownloadMap::size_type getOutstandingDependentDownloads();
+
+    
 };
 typedef std::tr1::shared_ptr<AssetDownloadTask> AssetDownloadTaskPtr;
 

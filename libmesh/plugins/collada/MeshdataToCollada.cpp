@@ -103,6 +103,8 @@ const String PARAM_TYPE_WEIGHT = "WEIGHT";
 
       for (uint32 i=0; i < meshdata.materials.size(); i++) {
         //FIXME: this assumes all the texture URIs are the same in materials[i].textures
+        if (meshdata.materials[i].textures.size() == 0) continue;
+
         const MaterialEffectInfo::Texture& texture = meshdata.materials[i].textures[0];
         if (textureURIToEffectIndexMap.find(texture.uri) != textureURIToEffectIndexMap.end() &&
             textureURIToEffectIndexMap[texture.uri] != (int32)i
@@ -165,12 +167,13 @@ const String PARAM_TYPE_WEIGHT = "WEIGHT";
           //dealing with texture.
           for (uint32 j=0; j<meshdata.materials[i].textures.size(); j++) {
             const MaterialEffectInfo::Texture& texture = meshdata.materials[i].textures[j];
+            
 
             COLLADASW::ColorOrTexture colorOrTexture;
             String colorEncoding = "";
 
             if (texture.uri != "") {
-               if (  textureURIToEffectIndexMap.find(texture.uri) != textureURIToEffectIndexMap.end()) {
+               if (textureURIToEffectIndexMap.find(texture.uri) != textureURIToEffectIndexMap.end()) {
                  continue;
                }
 
@@ -256,7 +259,9 @@ const String PARAM_TYPE_WEIGHT = "WEIGHT";
                 // effectProfileEmpty = false;
                 break;
               default:
-                SILOG(collada, error, "[COLLADA] Unhandled texture type during effect export:" << (int32)texture.affecting);
+                effectProfile.setAmbient(colorOrTexture);
+                effectProfileEmpty = false;
+                //                SILOG(collada, error, "[COLLADA] Unhandled texture type during effect export:" << (int32)texture.affecting);
                 break;
             }
 

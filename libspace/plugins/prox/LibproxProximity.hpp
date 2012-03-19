@@ -108,7 +108,6 @@ public:
     virtual void onSpaceNetworkDisconnected(ServerID sid);
 
 
-
     // PROX Thread:
 
     // AggregateListener Interface
@@ -241,7 +240,15 @@ private:
     // PROX Thread - Should only be accessed in methods used by the prox thread
 
     void tickQueryHandler(ProxQueryHandlerData qh[NUM_OBJECT_CLASSES]);
+    void rebuildHandlerType(ProxQueryHandlerData* handler, ObjectClass objtype);
     void rebuildHandler(ObjectClass objtype);
+
+    // Command handlers
+    virtual void commandProperties(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
+    virtual void commandListHandlers(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
+    bool parseHandlerName(const String& name, ProxQueryHandlerData** handlers_out, ObjectClass* class_out);
+    virtual void commandForceRebuild(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
+    virtual void commandListNodes(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
 
     typedef std::tr1::unordered_set<UUID, UUID::Hasher> ObjectIDSet;
     struct ProxQueryHandlerData {

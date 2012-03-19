@@ -319,13 +319,15 @@ void JSObjectScript::start() {
 void JSObjectScript::stop()
 {
     mCtx->objStrand->post(
-        std::tr1::bind(&JSObjectScript::iStop,this,true),
+        std::tr1::bind(&JSObjectScript::iStop,this,livenessToken(),true),
         "JSObjectScript::iStop"
     );
 }
 
-void JSObjectScript::iStop(bool letDie)
+void JSObjectScript::iStop(Liveness::Token alive, bool letDie)
 {
+    if (!alive) return;
+
     // If we're really a subclass, i.e. an EmersonScript, we'll have already
     // called letDie().
     if (letDie)

@@ -51,6 +51,9 @@ public:
      */
     CommandHandler getHandler(const CommandKey& name);
 
+    // Meta commands -- commands the commander implements to allow getting data about itself
+    void commandListCommands(const Command& cmd, Commander* cmdr, CommandID cmdid);
+
     typedef boost::recursive_mutex Mutex;
     typedef boost::lock_guard<Mutex> Lock;
     Mutex mMutex;

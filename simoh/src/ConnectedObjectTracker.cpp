@@ -31,7 +31,7 @@
  */
 
 #include "ConnectedObjectTracker.hpp"
-#include "ObjectHost.hpp"
+#include "SimObjectHost.hpp"
 #include "Object.hpp"
 
 namespace Sirikata {

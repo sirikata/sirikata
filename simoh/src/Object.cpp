@@ -34,7 +34,7 @@
 #include <sirikata/core/network/ObjectMessage.hpp>
 #include <sirikata/core/util/Random.hpp>
 #include <sirikata/oh/ObjectHostContext.hpp>
-#include "ObjectHost.hpp"
+#include "SimObjectHost.hpp"
 #include "ObjectFactory.hpp"
 #include <sirikata/core/trace/Trace.hpp>
 #include <sirikata/oh/Trace.hpp>

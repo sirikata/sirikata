@@ -74,8 +74,6 @@ void JSTimerStruct::setPersistentObject(v8::Persistent<v8::Object>pers)
 void JSTimerStruct::timerWeakReferenceCleanup(
     v8::Persistent<v8::Value> containsTimer, void* otherArg)
 {
-
-
     JSTimerLivenessHolder* jstlh = (JSTimerLivenessHolder*) otherArg;
 
 

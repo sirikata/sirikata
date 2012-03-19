@@ -68,6 +68,7 @@ public:
     virtual BoundingSphere3f region(const Iterator& id);
     virtual float32 maxSize(const Iterator& id);
     virtual bool isLocal(const Iterator& id);
+    
 
     virtual const UUID& iteratorID(const Iterator& id);
 
@@ -81,6 +82,7 @@ public:
     float32 radius(const ObjectID& id) const;
     const String& mesh(const ObjectID& id) const;
     const String& physics(const ObjectID& id) const;
+    const bool isAggregate(const ObjectID& id) const;
 
     /* LocationServiceListener members. */
     virtual void localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics);
@@ -154,6 +156,7 @@ private:
         String physics;
         bool exists; // Exists, i.e. xObjectRemoved hasn't been called
         int16 tracking; // Ref count to support multiple users
+        bool isAggregate;
     };
     typedef std::tr1::unordered_map<UUID, ObjectData, UUID::Hasher> ObjectDataMap;
     ObjectDataMap mObjects;

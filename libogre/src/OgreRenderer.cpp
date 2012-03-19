@@ -34,6 +34,7 @@
 #include <sirikata/mesh/ModelsSystemFactory.hpp>
 #include <sirikata/mesh/Filter.hpp>
 #include <sirikata/mesh/CompositeFilter.hpp>
+#include <sirikata/mesh/Bounds.hpp>
 
 #include <sirikata/ogre/Camera.hpp>
 #include <sirikata/ogre/Entity.hpp>
@@ -280,13 +281,17 @@ OgreRenderer::OgreRenderer(Context* ctx,Network::IOStrandPtr sStrand)
         std::vector<String> names_and_args;
         names_and_args.push_back("triangulate"); names_and_args.push_back("all");
         names_and_args.push_back("compute-normals"); names_and_args.push_back("");
-        names_and_args.push_back("reduce-draw-calls"); names_and_args.push_back("");
-        names_and_args.push_back("center"); names_and_args.push_back("");
+        names_and_args.push_back("reduce-draw-calls"); names_and_args.push_back("");        
         mModelFilter = new Mesh::CompositeFilter(names_and_args);
+
+        names_and_args.clear();
+        names_and_args.push_back("center"); names_and_args.push_back("");
+        mCenteringFilter = new Mesh::CompositeFilter(names_and_args);        
     }
     catch(Mesh::CompositeFilter::Exception e) {
         SILOG(ogre,warning,"Couldn't allocate requested model load filter, will not apply filter to loaded models.");
         mModelFilter = NULL;
+        mCenteringFilter = NULL;
     }
 }
 
@@ -338,7 +343,7 @@ bool OgreRenderer::initialize(const String& options, bool with_berkelium) {
                            mParallaxSteps=new OptionValue("parallax-steps","1.0",OptionValueType<float>(),"Multiplies the per-material parallax steps by this constant (default 1.0)"),
                            mParallaxShadowSteps=new OptionValue("parallax-shadow-steps","10",OptionValueType<int>(),"Total number of steps for shadow parallax mapping (default 10)"),
                            new OptionValue("nearplane",".125",OptionValueType<float32>(),"The min distance away you can see"),
-                           new OptionValue("farplane","5000",OptionValueType<float32>(),"The max distance away you can see"),
+                           new OptionValue("farplane","20000",OptionValueType<float32>(),"The max distance away you can see"),
                            searchPaths=new OptionValue("search_path","../..",OptionValueType<String>(),"Colon separated list of places to search for Ogre data (eg ogre/data/chrome/js or ogre/data/chrome/ui)"),
                            mModelLights = new OptionValue("model-lights","false",OptionValueType<bool>(),"Whether to use a base set of lights or load lights dynamically from loaded models."),
                            backColor = new OptionValue("back-color","<.71,.785,.91,1>",OptionValueType<Vector4f>(),"Background color to clear render viewport to."),
@@ -676,6 +681,7 @@ OgreRenderer::~OgreRenderer() {
     delete mInputManager;
 
     delete mModelFilter;
+    delete mCenteringFilter;
     delete mModelParser;
 }
 
@@ -996,11 +1002,11 @@ void OgreRenderer::removeObject(Entity* ent) {
 
 void OgreRenderer::parseMesh(
     const Transfer::RemoteFileMetadata& metadata, const Transfer::Fingerprint& fp,
-    Transfer::DenseDataPtr data, ParseMeshCallback cb)
+    Transfer::DenseDataPtr data, bool isAggregate, ParseMeshCallback cb)
 {
     mParsingIOService->post(
         std::tr1::bind(&OgreRenderer::parseMeshWork, this,
-            livenessToken(),metadata, fp, data, cb),
+                       livenessToken(),metadata, fp, data, isAggregate, cb),
         "OgreRenderer::parseMeshWork"
     );
 }
@@ -1009,7 +1015,7 @@ void OgreRenderer::parseMeshWork(
     Liveness::Token rendererAlive,
     const Transfer::RemoteFileMetadata& metadata,
     const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data,
-    ParseMeshCallback cb)
+    bool isAggregate, ParseMeshCallback cb)
 {
     if (!rendererAlive) return;
     Liveness::Lock locked(rendererAlive);
@@ -1020,20 +1026,26 @@ void OgreRenderer::parseMeshWork(
     if (stopped)
         return;
 
-    Mesh::VisualPtr parsed = parseMeshWorkSync(metadata, fp, data);
+    Mesh::VisualPtr parsed = parseMeshWorkSync(metadata, fp, data, isAggregate);
     simStrand->post(std::tr1::bind(cb,parsed),
         "OgreRenderer::parseMeshWork callback"
     );
 }
 
-Mesh::VisualPtr OgreRenderer::parseMeshWorkSync(const Transfer::RemoteFileMetadata& metadata, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data) {
+Mesh::VisualPtr OgreRenderer::parseMeshWorkSync(const Transfer::RemoteFileMetadata& metadata, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data, bool isAggregate) {
     Mesh::VisualPtr parsed = mModelParser->load(metadata, fp, data);
     if (parsed && mModelFilter) {
         Mesh::MutableFilterDataPtr input_data(new Mesh::FilterData);
         input_data->push_back(parsed);
-        Mesh::FilterDataPtr output_data = mModelFilter->apply(input_data);
-        assert(output_data->single());
+        Mesh::FilterDataPtr output_data = mModelFilter->apply(input_data);        
+        
         parsed = output_data->get();
+        input_data->clear();
+        input_data->push_back(parsed);
+        output_data = mCenteringFilter->apply(input_data);
+
+        assert(output_data->single());
+        parsed = output_data->get();                      
     }
     return parsed;
 }

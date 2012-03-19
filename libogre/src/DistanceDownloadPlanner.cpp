@@ -87,6 +87,19 @@ DistanceDownloadPlanner::DistanceDownloadPlanner(Context* c, OgreRenderer* rende
  : ResourceDownloadPlanner(c, renderer),
    mStopped(false)
 {
+
+    //listen for commands
+    if (c->commander())
+    {
+        mContext->commander()->registerCommand(
+            "oh.ogre.ddplanner",
+            mContext->mainStrand->wrap(
+                std::tr1::bind(&DistanceDownloadPlanner::commandGetData, this, _1, _2, _3)
+            )
+        );
+    }
+
+    
     mAggregationAlgorithm = new Transfer::MaxPriorityAggregation();
 
     mCDNArchive = CDNArchiveFactory::getSingleton().addArchive();
@@ -119,7 +132,7 @@ void DistanceDownloadPlanner::iAddObject(Object* r, Liveness::Token alive)
     }
 
     RMutex::scoped_lock lock(mDlPlannerMutex);
-    calculatePriority(r->proxy);
+    r->priority = calculatePriority(r->proxy);
     mObjects[r->name] = r;
     mWaitingObjects[r->name] = r;
     DLPLANNER_LOG(detailed, "Adding object " << r->name << " (" << r->file << "), " << mLoadedObjects.size() << " loaded, " << mWaitingObjects.size() << " waiting");
@@ -132,6 +145,131 @@ DistanceDownloadPlanner::Object* DistanceDownloadPlanner::findObject(const Strin
     ObjectMap::iterator it = mObjects.find(name);
     return (it != mObjects.end() ? it->second : NULL);
 }
+
+
+void DistanceDownloadPlanner::commandGetData(
+    const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) 
+{
+    RMutex::scoped_lock lock(mDlPlannerMutex);
+    Command::Result result = Command::EmptyResult();
+
+
+    //run through all objects that are loaded
+    Command::Object loadedObjects = Command::Object();
+    for (ObjectMap::iterator omIter = mLoadedObjects.begin();
+         omIter != mObjects.end(); ++omIter)
+    {
+        Command::Object individualObject = Command::Object();
+        individualObject["priority"] = omIter->second->priority;
+        individualObject["name"] = omIter->second->name;
+        individualObject["loaded"] = omIter->second->loaded;
+        //append known object to map of results
+        String index (omIter->first);
+        loadedObjects[index.c_str()] = individualObject;        
+    }
+    result.put("ddplanner.loaded_objects",loadedObjects);
+    
+
+    //run through all waiting objects
+    Command::Object waitingObjects = Command::Object();
+    for (ObjectMap::iterator omIter = mWaitingObjects.begin();
+         omIter != mObjects.end(); ++omIter)
+    {
+        Command::Object individualObject = Command::Object();
+        individualObject["priority"] = omIter->second->priority;
+        individualObject["name"] = omIter->second->name;
+        individualObject["loaded"] = omIter->second->loaded;
+        //append known object to map of results
+        String index (omIter->first);
+        waitingObjects[index.c_str()] = individualObject;        
+    }
+    result.put("ddplanner.waiting_objects",waitingObjects);
+
+
+    //all loaded assets
+    Command::Object assets = Command::Object();
+    for (AssetMap::iterator assetMIter = mAssets.begin();
+         assetMIter != mAssets.end(); ++assetMIter)
+    {
+        Command::Object individualAsset = Command::Object();
+        individualAsset["name"]= assetMIter->second->uri.toString();
+
+        //add waitingObjects
+        Command::Object waitingObjects = Command::Object();
+        for(ObjectSet::iterator osIter = assetMIter->second->waitingObjects.begin();
+            osIter != assetMIter->second->waitingObjects.end(); ++osIter)
+        {
+            waitingObjects[osIter->c_str()] = *osIter;
+        }
+        individualAsset["waitingObjects"] = waitingObjects;
+        
+        //add usingObjects
+        Command::Object usingObjects = Command::Object();
+        for(ObjectSet::iterator osIter = assetMIter->second->usingObjects.begin();
+            osIter != assetMIter->second->usingObjects.end(); ++osIter)
+        {
+            usingObjects[osIter->c_str()] = *osIter;
+        }
+        individualAsset["usingObjects"] = usingObjects;
+        
+
+        //list of loaded and loading resources, by uri
+        std::vector<String> finishedDownloads;
+        std::vector<String> activeDownloads;
+
+        Command::Array loadingResources = Command::Array();
+        Command::Array loadedResources = Command::Array();    
+        //priority
+        double priority = -1;
+        AssetDownloadTask::ActiveDownloadMap::size_type stillToDownload = 0;
+        //perform different operations depending on whether still downloading or not.
+        if (assetMIter->second->downloadTask)
+        {
+            priority = assetMIter->second->downloadTask->priority();
+            stillToDownload = assetMIter->second->downloadTask->getOutstandingDependentDownloads();
+
+            assetMIter->second->downloadTask->getDownloadTasks(finishedDownloads,activeDownloads);
+        }
+        else
+        {
+            //use the ogre-ified version of loaded resources
+            finishedDownloads = assetMIter->second->loadedResources;
+        }
+        individualAsset["priority"] = priority;
+
+        //finish downloaded resources
+        for (std::vector<String>::iterator strIt = finishedDownloads.begin();
+             strIt != finishedDownloads.end(); ++strIt)
+        {
+            loadedResources.push_back(*strIt);
+        }
+        individualAsset["loadedResources"] = loadedResources;
+
+
+        //finish still-fetching resources
+        for (std::vector<String>::iterator strIt = activeDownloads.begin();
+             strIt != activeDownloads.end(); ++strIt)
+        {
+            loadingResources.push_back(*strIt);
+        }
+        individualAsset["loadingResources"];
+        
+        
+        //how many dependent resources does this asset still have to download
+        individualAsset["stillToDownload"] = stillToDownload;
+
+
+        //append known object to map of results
+        String index (assetMIter->first.toString());
+        assets[index] = individualAsset;
+    }
+    result.put("ddplanner.assets",assets);
+
+    //actually 
+    cmdr->result(cmdid, result);
+}
+
+
 
 
 
@@ -433,6 +571,7 @@ void DistanceDownloadPlanner::requestAssetForObject(Object* forObject) {
 
     assert(asset->waitingObjects.find(forObject->id()) == asset->waitingObjects.end());
     asset->waitingObjects.insert(forObject->id());
+    
 
     // Another Object might have already requested downloading. If it did, we
     // don't need to request anything and polling will update the priorities.
@@ -448,13 +587,13 @@ void DistanceDownloadPlanner::downloadAsset(Asset* asset, Object* forObject) {
     asset->downloadTask =
         AssetDownloadTask::construct(
             asset->uri, getScene(), forObject->priority,
-            mScene->renderStrand()->wrap(
+            forObject->proxy->isAggregate(),
+            mContext->mainStrand->wrap(
                 std::tr1::bind(&DistanceDownloadPlanner::loadAsset, this, asset->uri)
-            ));
+              ));
 }
 
-void DistanceDownloadPlanner::loadAsset(Transfer::URI asset_uri) {
-
+void DistanceDownloadPlanner::loadAsset(Transfer::URI asset_uri) {  
     DLPLANNER_LOG(detailed, "Finished downloading " << asset_uri);
 
     Asset* asset = NULL;
@@ -494,6 +633,8 @@ void DistanceDownloadPlanner::loadAsset(Transfer::URI asset_uri) {
     // If we got here, we don't know how to load it
     SILOG(ogre, error, "Failed to load asset failed because it doesn't know how to load " << visptr->type());
     finishLoadAsset(asset, false);
+
+    
     return;
 }
 
@@ -605,6 +746,8 @@ void DistanceDownloadPlanner::loadMeshdata(Asset* asset, const Mesh::MeshdataPtr
             asset->loadedResources.push_back(matname);
             asset->loadingResources++;
         }
+
+
 
         // Skeleton. Make sure this is submitted first so that the mesh loading
         // can find it by name.

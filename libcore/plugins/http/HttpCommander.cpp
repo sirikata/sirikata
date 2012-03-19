@@ -33,7 +33,7 @@ void HttpCommander::onHttpRequest(HttpServer* server, HttpRequestID id, String& 
     if (!handler) {
         // Generate a 404 with a nice message if we can't find a handler
         HC_LOG(detailed, "Couldn't find handler for " << command_name << ", returning 404");
-        Result result;
+        Result result= EmptyResult();
         result.put("error", String("Handler not found for ") + command_name);
         sendResponse(id, 404, result);
         return;

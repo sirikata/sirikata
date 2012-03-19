@@ -121,6 +121,14 @@ class ThreadSafeQueueWithNotification {
         return probablyEmpty();
     }
 
+    /** Get the current size of the queue. This could immediately change, so
+     *  this is only useful for monitoring the queue: you should not use it, for
+     *  example, to tell whether the queue is empty.
+     */
+    int32 size() {
+        return mQueue.size();
+    }
+
   private:
     // Disable default constructor -- if you're not specifying a callback you
     // shouldn't be using this class.

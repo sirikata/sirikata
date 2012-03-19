@@ -175,7 +175,7 @@ bool OgreSystem::initialize(ConnectionEventProvider* cevtprovider, VWObjectPtr v
     Transfer::DenseDataPtr cube_data = read_file(cube_path);
     Transfer::Fingerprint hash = Transfer::Fingerprint::computeDigest(cube_data->data(), cube_data->size());
     Transfer::RemoteFileMetadata fakeMetadata(hash, Transfer::URI("file:///fake.dae"), cube_data->length(), Transfer::ChunkList(), Transfer::FileHeaders());
-    mDefaultMesh = parseMeshWorkSync(fakeMetadata, Transfer::Fingerprint::null(), cube_data);
+    mDefaultMesh = parseMeshWorkSync(fakeMetadata, Transfer::Fingerprint::null(), cube_data, false);
 
     //finish instantiation here
     instantiateAllObjects(proxyManager);
@@ -693,6 +693,11 @@ void OgreSystem::iOnSessionDisconnected(
 
     while(!initialized){}
 
+    //don't do anything if it's just one of the main presence's siblings that
+    //was disconnected.
+    if (name != mPresenceID)
+        return;
+        
     if (stopped)
     {
         SILOG(ogre,error,"Received iOnDisconnecte after having stopped ogre system");

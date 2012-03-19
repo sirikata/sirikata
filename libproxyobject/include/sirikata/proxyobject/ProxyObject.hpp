@@ -182,6 +182,7 @@ public:
     virtual BoundingSphere3f bounds() const;
     virtual Transfer::URI mesh() const;
     virtual String physics() const;
+    virtual bool isAggregate() const;
 
     // Alternatives that access only the *verified* location information,
     // i.e. data sent by the space.
@@ -196,6 +197,7 @@ public:
     void setBounds(const BoundingSphere3f& bnds, uint64 seqno);
     void setMesh (Transfer::URI const& rhs, uint64 seqno);
     void setPhysics(const String& rhs, uint64 seqno);
+    void setIsAggregate(bool isAggregate, uint64 seqno);
 
 
 

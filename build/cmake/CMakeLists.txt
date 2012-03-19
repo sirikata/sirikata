@@ -247,7 +247,7 @@ INCLUDE(GitRevision)
 #  * Revisions also only have additions and are very minor.
 SET(SIRIKATA_VERSION_MAJOR "0" CACHE STRING "Sirikata's major version" FORCE)
 SET(SIRIKATA_VERSION_MINOR "0" CACHE STRING "Sirikata's minor version" FORCE)
-SET(SIRIKATA_VERSION_REVISION "21" CACHE STRING "Sirikata's revision version" FORCE)
+SET(SIRIKATA_VERSION_REVISION "22" CACHE STRING "Sirikata's revision version" FORCE)
 
 # These get translated into two settings: the VERSION and
 # SOVERSION. The SOVERSION includes just the major number so anything
@@ -603,14 +603,16 @@ ENDIF()
 VERIFY_VERSION(Boost 1 35 0)
 FIND_PACKAGE(SDL)
 
-#optional dependency: prox
-FIND_PACKAGE(PROX)
-IF(NOT PROX_INCLUDE_DIRS)
-  MESSAGE(FATAL_ERROR "PROX submodule not found, go to top level and run:
-git submodule init
-git submodule update
-")
-ENDIF()
+#dependency: prox
+# This should turn all targets off since we just need the includes.
+SET(LIBPROX_BUILD_PROXSIM FALSE)
+SET(LIBPROX_RTREE_DATA "MAXSIZE")
+SET(LIBPROX_RTREE_LIFT_CUTS FALSE)
+SET(LIBPROX_BUILD_DIR ${TOP_LEVEL}/externals/prox/build)
+ADD_SUBDIRECTORY(${LIBPROX_BUILD_DIR} ${CMAKE_CURRENT_BINARY_DIR}/libprox)
+GET_DIRECTORY_PROPERTY(LIBPROX_INCLUDE_DIRS DIRECTORY ${LIBPROX_BUILD_DIR} LIBPROX_INCLUDE_DIRS)
+GET_DIRECTORY_PROPERTY(LIBPROX_EXTRA_DEFINITIONS DIRECTORY ${LIBPROX_BUILD_DIR} LIBPROX_EXTRA_DEFINITIONS)
+ADD_DEFINITIONS(${LIBPROX_EXTRA_DEFINITIONS})
 
 #dependency: glut
 #FIND_PACKAGE(GLUT)
@@ -1020,7 +1022,7 @@ SET(MESH_TOOL_SOURCE_DIR ${TOP_LEVEL}/tools/meshtool)
 SET(MESH_VIEW_SOURCE_DIR ${TOP_LEVEL}/tools/meshview)
 SET(SLAUNCHER_SOURCE_DIR ${TOP_LEVEL}/tools/slauncher)
 
-SET(TEST_SOURCE_DIR ${TOP_LEVEL}/test)
+SET(TEST_SOURCE_DIR ${TOP_LEVEL}/test/unit)
 SET(TEST_LIBCORE_SOURCE_DIR ${TEST_SOURCE_DIR}/libcore)
 SET(TEST_LIBSQLITE_SOURCE_DIR ${TEST_SOURCE_DIR}/libsqlite)
 SET(TEST_LIBCASSANDRA_SOURCE_DIR ${TEST_SOURCE_DIR}/libcassandra)
@@ -1040,7 +1042,6 @@ SET(CBR_GENERATED_DIR ${BUILD_DIR}/generated)
 # FIXME these include directories should be project specific
 SET(INCLUDE_DIRECTORIES
   ${LIBCORE_INCLUDE_DIR}
-  ${LIBCORE_SOURCE_DIR} #FIXME
   ${LIBSQLITE_INCLUDE_DIR}
   ${LIBCASSANDRA_INCLUDE_DIR}
   ${LIBSDL_INCLUDE_DIR}
@@ -1057,7 +1058,7 @@ SET(INCLUDE_DIRECTORIES
   ${CURL_INCLUDE_DIRS}
   ${PROTOCOLBUFFERS_INCLUDE_DIRS}
   ${ANTLR_INCLUDE_DIRS}
-  ${PROX_INCLUDE_DIRS}
+  ${LIBPROX_INCLUDE_DIRS}
   ${CXXTESTRoot}
   ${CMAKE_CURRENT_SOURCE_DIR} #generated files
   ${CBR_GENERATED_DIR} # For generated protocol code
@@ -1562,7 +1563,7 @@ SET(LIBMESH_PLUGIN_COMMONFILTERS_DIR ${LIBMESH_PLUGIN_DIR}/common-filters)
 SET(CPPOH_SOURCES
   ${CPPOH_SOURCE_DIR}/main.cpp
   ${CPPOH_SOURCE_DIR}/Options.cpp
-  ${CPPOH_SOURCE_DIR}/ObjectHost.cpp
+  ${CPPOH_SOURCE_DIR}/CppObjectHost.cpp
   ${ObjectHostBinary_PBJ_CPP_FILES}
  )
 
@@ -1762,7 +1763,7 @@ SET(SIMOH_SOURCES
   ${SIMOH_SOURCE_DIR}/OSegScenario.cpp
   ${SIMOH_SOURCE_DIR}/ByteTransferScenario.cpp
   ${SIMOH_SOURCE_DIR}/NullScenario.cpp
-  ${SIMOH_SOURCE_DIR}/ObjectHost.cpp
+  ${SIMOH_SOURCE_DIR}/SimObjectHost.cpp
   ${SIMOH_SOURCE_DIR}/Options.cpp
   ${SIMOH_SOURCE_DIR}/main.cpp
   )
@@ -1773,7 +1774,7 @@ SET(GENPACK_SOURCES
   ${SIMOH_SOURCE_DIR}/StaticMotionPath.cpp
   ${SIMOH_SOURCE_DIR}/Object.cpp
   ${SIMOH_SOURCE_DIR}/ObjectFactory.cpp
-  ${SIMOH_SOURCE_DIR}/ObjectHost.cpp # for a few symbols
+  ${SIMOH_SOURCE_DIR}/SimObjectHost.cpp # for a few symbols
   ${SIMOH_SOURCE_DIR}/OSegTestMotionPath.cpp # for a few symbols
   ${SIMOH_SOURCE_DIR}/Options.cpp
   ${SIMOH_SOURCE_DIR}/GenPack.cpp

@@ -50,8 +50,13 @@ static unsigned int fromHex(char a) {
 }
 
 UUID::UUID(const std::string & other,HumanReadable ) {
-    boost_::uuid parsed_string(other);
-    mData.initialize(parsed_string.begin(),parsed_string.end());
+    try {
+        boost_::uuid parsed_string(other);
+        mData.initialize(parsed_string.begin(),parsed_string.end());
+    }
+    catch(std::invalid_argument exc) {
+        mData.initialize(UUID::null().mData.begin(), UUID::null().mData.end());
+    }
 }
 UUID::UUID(const std::string & other, HexString) {
     assert(other.size() == 2*static_size);
@@ -114,4 +119,3 @@ std::istream& operator>>(std::istream & is, Sirikata::UUID & uuid) {
 }
 
 } // namespace Sirikata
-

@@ -47,6 +47,7 @@ class SIRIKATA_PROXYOBJECT_EXPORT MeshListener
         virtual void onSetMesh (ProxyObjectPtr proxy, Transfer::URI const& newMesh, const SpaceObjectReference& sporef) = 0;
         virtual void onSetScale (ProxyObjectPtr proxy, float32 newScale,const SpaceObjectReference& sporef ) = 0;
         virtual void onSetPhysics (ProxyObjectPtr proxy, const String& phy,const SpaceObjectReference& sporef ) {};
+        virtual void onSetIsAggregate (ProxyObjectPtr proxy, bool isAggregate, const SpaceObjectReference& sporef ) = 0;
 };
 
 } // namespace Sirikata
