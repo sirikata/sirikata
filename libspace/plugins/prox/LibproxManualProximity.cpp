@@ -553,7 +553,7 @@ void LibproxManualProximity::commandProperties(const Command::Command& cmd, Comm
     // Current state
 
     // Properties of objects
-    int32 oh_query_objects = (mNumQueryHandlers == 2 ? (mOHQueryHandler[0]->numObjects() + mOHQueryHandler[1]->numObjects()) : mOHQueryHandler[0]->numObjects());
+    int32 oh_query_objects = (mNumQueryHandlers == 2 ? (mOHQueryHandler[0].handler->numObjects() + mOHQueryHandler[1].handler->numObjects()) : mOHQueryHandler[0].handler->numObjects());
     result.put("objects.properties.local_count", oh_query_objects);
     result.put("objects.properties.remote_count", 0);
     result.put("objects.properties.count", oh_query_objects);
@@ -570,18 +570,18 @@ void LibproxManualProximity::commandProperties(const Command::Command& cmd, Comm
 void LibproxManualProximity::commandListHandlers(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {
     Command::Result result = Command::EmptyResult();
     for(int i = 0; i < NUM_OBJECT_CLASSES; i++) {
-        if (mOHQueryHandler[i] != NULL) {
+        if (mOHQueryHandler[i].handler != NULL) {
             String key = String("handlers.oh.") + ObjectClassToString((ObjectClass)i) + ".";
             result.put(key + "name", String("oh-queries.") + ObjectClassToString((ObjectClass)i) + "-objects");
-            result.put(key + "queries", mOHQueryHandler[i]->numQueries());
-            result.put(key + "objects", mOHQueryHandler[i]->numObjects());
-            result.put(key + "nodes", mOHQueryHandler[i]->numNodes());
+            result.put(key + "queries", mOHQueryHandler[i].handler->numQueries());
+            result.put(key + "objects", mOHQueryHandler[i].handler->numObjects());
+            result.put(key + "nodes", mOHQueryHandler[i].handler->numNodes());
         }
     }
     cmdr->result(cmdid, result);
 }
 
-bool LibproxManualProximity::parseHandlerName(const String& name, ProxQueryHandler*** handlers_out, ObjectClass* class_out) {
+bool LibproxManualProximity::parseHandlerName(const String& name, ProxQueryHandlerData** handlers_out, ObjectClass* class_out) {
     // Should be of the form xxx-queries.yyy-objects, containing only 1 .
     std::size_t dot_pos = name.find('.');
     if (dot_pos == String::npos || name.rfind('.') != dot_pos)
@@ -607,7 +607,7 @@ bool LibproxManualProximity::parseHandlerName(const String& name, ProxQueryHandl
 void LibproxManualProximity::commandForceRebuild(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {
     Command::Result result = Command::EmptyResult();
 
-    ProxQueryHandler** handlers = NULL;
+    ProxQueryHandlerData* handlers = NULL;
     ObjectClass klass;
     if (!cmd.contains("handler") ||
         !parseHandlerName(cmd.getString("handler"), &handlers, &klass))
@@ -625,7 +625,7 @@ void LibproxManualProximity::commandForceRebuild(const Command::Command& cmd, Co
 void LibproxManualProximity::commandListNodes(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {
     Command::Result result = Command::EmptyResult();
 
-    ProxQueryHandler** handlers = NULL;
+    ProxQueryHandlerData* handlers = NULL;
     ObjectClass klass;
     if (!cmd.contains("handler") ||
         !parseHandlerName(cmd.getString("handler"), &handlers, &klass))
@@ -637,7 +637,7 @@ void LibproxManualProximity::commandListNodes(const Command::Command& cmd, Comma
 
     result.put( String("nodes"), Command::Array());
     Command::Array& nodes_ary = result.getArray("nodes");
-    for(ProxQueryHandler::NodeIterator nit = handlers[klass]->nodesBegin(); nit != handlers[klass]->nodesEnd(); nit++) {
+    for(ProxQueryHandler::NodeIterator nit = handlers[klass].handler->nodesBegin(); nit != handlers[klass].handler->nodesEnd(); nit++) {
         nodes_ary.push_back( Command::Object() );
         nodes_ary.back().put("id", nit.id().toString());
         nodes_ary.back().put("parent", nit.parentId().toString());
