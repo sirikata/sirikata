@@ -231,6 +231,10 @@ void AggregateManager::addChild(const UUID& uuid, const UUID& child_uuid) {
         mAggregateObjects[child_uuid] = std::tr1::shared_ptr<AggregateObject> (new AggregateObject(child_uuid, uuid, true));
     }
     else {
+      if (mAggregateObjects[child_uuid]->mParentUUID != uuid) {        
+        iRemoveChild(mAggregateObjects[child_uuid]->mParentUUID, child_uuid);        
+      }
+
       mAggregateObjects[child_uuid]->mParentUUID = uuid;
     }
 
@@ -254,12 +258,10 @@ void AggregateManager::addChild(const UUID& uuid, const UUID& child_uuid) {
   }
 }
 
-void AggregateManager::removeChild(const UUID& uuid, const UUID& child_uuid) {
+void AggregateManager::iRemoveChild(const UUID& uuid, const UUID& child_uuid) {
   AGG_LOG(detailed, "removeChild:  "  << uuid.toString() << " CHILD " << child_uuid.toString() << "\n");
 
   std::vector<AggregateObjectPtr>& children = getChildren(uuid);
-
-
 
   if ( findChild(children, child_uuid)  ) {
     removeChild( children, child_uuid );
@@ -280,6 +282,12 @@ void AggregateManager::removeChild(const UUID& uuid, const UUID& child_uuid) {
         "AggregateManager::generateMeshesFromQueue"
     );
   }
+}
+
+void AggregateManager::removeChild(const UUID& uuid, const UUID& child_uuid) {
+  boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
+
+  iRemoveChild(uuid, child_uuid);  
 }
 
 void AggregateManager::aggregateObserved(const UUID& objid, uint32 nobservers) {
@@ -346,13 +354,13 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
   if (!mLoc->contains(uuid)) {
     return OTHER_GEN_FAILURE;
   }
-
+  
   std::vector<AggregateObjectPtr>& children = aggObject->mChildren;
                                                    //Set this to mLeaves if you want
                                                    //to generate directly from the leaves of the tree
-
+  
   for (uint32 i= 0; i < children.size(); i++) {
-    UUID child_uuid = children[i]->mUUID;
+    UUID child_uuid = children[i]->mUUID;    
 
     if (!mLoc->contains(child_uuid) ) {
       return OTHER_GEN_FAILURE;
@@ -445,7 +453,7 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
   // done copying data in. Also tracks mapping of texture filename ->
   // original texture URL so we can tell the CDN to reuse that data.
   std::tr1::unordered_map<String, String> textureSet;
-
+  
   for (uint32 i= 0; i < children.size(); i++) {
     UUID child_uuid = children[i]->mUUID;
     boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
@@ -650,7 +658,7 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
   }  
 
   //Simplify the mesh...
-  mMeshSimplifier.simplify(agg_mesh, 5000);
+  mMeshSimplifier.simplify(agg_mesh, 20000);
 
   //... and now create the collada file, upload to the CDN and update LOC.  
   mUploadStrands[rand() % NUM_UPLOAD_THREADS]->post(
@@ -737,7 +745,7 @@ void AggregateManager::uploadAggregateMesh(Mesh::MeshdataPtr agg_mesh,
           }
 
           String tex_path = Transfer::URL(it->second).fullpath();
-          {
+          /*{
               // Sigh. Yet again, we need to modify the order of the filename
               // and version number again.
 
@@ -749,7 +757,7 @@ void AggregateManager::uploadAggregateMesh(Mesh::MeshdataPtr agg_mesh,
               String num_part = tex_path.substr(upload_num_pos, (upload_filename_pos-upload_num_pos));
               String filename_part = tex_path.substr(upload_filename_pos+1);
               tex_path = tex_path.substr(0, upload_num_pos+1) + filename_part + num_part;
-          }
+          }*/
 
           // Explicitly override the separator to ensure we don't
           // use parts of the filename to generate a hierarchy,
@@ -839,7 +847,7 @@ void AggregateManager::uploadAggregateMesh(Mesh::MeshdataPtr agg_mesh,
       system( cmdline.c_str()  );
 
       //Update loc
-      mLoc->updateLocalAggregateMesh(uuid, cdnMeshName);
+      mLoc->updateLocalAggregateMesh(uuid, cdnMeshName);      
   }
 
   aggObject->mLeaves.clear();
@@ -1166,7 +1174,7 @@ bool ServiceIsDefault(const String& s) {
 String ServiceIfNotDefault(const String& s) {
     if (!ServiceIsDefault(s))
         return s;
-    return "";
+    return "80";
 }
 }
 
