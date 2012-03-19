@@ -290,6 +290,7 @@ void AssetDownloadTask::handleAssetParsed(Mesh::VisualPtr vis) {
     mCB();
 }
 
+
 void AssetDownloadTask::addDependentDownload(ResourceDownloadTaskPtr resPtr) {
     boost::mutex::scoped_lock lok(mDependentDownloadMutex);
 
@@ -319,7 +320,6 @@ void AssetDownloadTask::addDependentDownload(const Transfer::URI& depUrl, const 
     );
     addDependentDownload(dl);
 }
-
 
 void AssetDownloadTask::startDependentDownloads() {
     boost::mutex::scoped_lock lok(mDependentDownloadMutex);

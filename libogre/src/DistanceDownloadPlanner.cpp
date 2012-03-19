@@ -73,7 +73,9 @@ DistanceDownloadPlanner::Asset::Asset(const Transfer::URI& name)
  : uri(name),
    loadingResources(0)
 {
+    static uint64 assetId = 0;
     textureFingerprints = TextureBindingsMapPtr(new TextureBindingsMap());
+    internalId = assetId++;
 }
 
 DistanceDownloadPlanner::Asset::~Asset() {
@@ -589,26 +591,43 @@ void DistanceDownloadPlanner::downloadAsset(Asset* asset, Object* forObject) {
             asset->uri, getScene(), forObject->priority,
             forObject->proxy->isAggregate(),
             mContext->mainStrand->wrap(
-                std::tr1::bind(&DistanceDownloadPlanner::loadAsset, this, asset->uri)
+                std::tr1::bind(&DistanceDownloadPlanner::loadAsset, this, asset->uri,asset->internalId)
               ));
 }
 
-void DistanceDownloadPlanner::loadAsset(Transfer::URI asset_uri) {  
+
+void DistanceDownloadPlanner::loadAsset(Transfer::URI asset_uri,uint64 assetId)
+{
+    RMutex::scoped_lock lock(mDlPlannerMutex);
     DLPLANNER_LOG(detailed, "Finished downloading " << asset_uri);
 
     Asset* asset = NULL;
-    {
-        RMutex::scoped_lock lock(mDlPlannerMutex);
-        if (mAssets.find(asset_uri) == mAssets.end()) return;
-        asset = mAssets[asset_uri];
-    }
+
+    if (mAssets.find(asset_uri) == mAssets.end()) return;
+
+    asset = mAssets[asset_uri];
+
+
+    //in certain cases, may have an asset download a mesh, have that asset issue
+    //a callback to DDPlanner::loadAsset, which gets stuck trying to acquire
+    //lock.  In the meantime, the asset gets deleted, and then a new asset is
+    //inserted to replace it.  This new asset does not have valid internal data
+    //(asset->downloadTask->asset() may point to garbage), so that if the
+    //callback issued then acquires the lock and proceeds, we'll run into problems.
+    //As a result, each asset also maintains a 64-bit internal id, which (minus
+    //wraparound) is unique to each asset.  Using the internal id, we can check
+    //whether the callback is for the asset that we currently have stored in our
+    //asset map.
+    if (asset->internalId != assetId)
+        return;
+
 
     DLPLANNER_LOG(detailed, "Loading asset " << asset->uri);
 
     //get the mesh data and check that it is valid.
     bool usingDefault = false;
     Mesh::VisualPtr visptr = asset->downloadTask->asset();
-
+    
     if (!visptr) {
         usingDefault = true;
         visptr = getScene()->defaultMesh();
@@ -967,8 +986,11 @@ void DistanceDownloadPlanner::checkRemoveAsset(Asset* asset,Liveness::Token asse
         return;
 
     if (asset->waitingObjects.empty() && asset->usingObjects.empty()) {
+
         // We need to be careful if a download is in progress.
-        if (asset->downloadTask) return;
+        if (asset->downloadTask)
+            asset->downloadTask->cancel();
+
 
         DLPLANNER_LOG(detailed, "Destroying unused asset " << asset->uri);
 
@@ -980,10 +1002,7 @@ void DistanceDownloadPlanner::checkRemoveAsset(Asset* asset,Liveness::Token asse
         }
 
         // And really erase it
-        {
-            RMutex::scoped_lock lock(mDlPlannerMutex);
-            mAssets.erase(asset->uri);
-        }
+        mAssets.erase(asset->uri);
         delete asset;
     }
 }

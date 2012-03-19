@@ -156,6 +156,16 @@ protected:
         // texture, etc).
         String ogreAssetName;
 
+
+        //Can get into a situation where we fire a callback associated with a
+        //transfer uri, then we delete the associated asset, then create a new
+        //asset with the same uri.  The callback assumes that internal state
+        //for the asset is valid and correct (in particular, downloadTask).
+        //However, in these cases, the data wouldn't be valid.  Use internalId
+        //to check that the callback that is being serviced corresponds to the
+        //correct asset that we have in memory.
+        uint64 internalId;
+        
         TextureBindingsMapPtr textureFingerprints;
         std::set<String> animations;
 
@@ -191,7 +201,7 @@ protected:
     // steps.
     void requestAssetForObject(Object*);
     void downloadAsset(Asset* asset, Object* forObject);
-    void loadAsset(Transfer::URI asset_uri);
+    void loadAsset(Transfer::URI asset_uri,uint64 assetId);
     void finishLoadAsset(Asset* asset, bool success);
 
     void loadMeshdata(Asset* asset, const Mesh::MeshdataPtr& mdptr, bool usingDefault);
