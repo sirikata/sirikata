@@ -230,6 +230,58 @@ void ObjectQueryHandler::queryHasEvents(Query* query) {
 }
 
 
+ObjectQueryHandler::ProxQueryHandler* ObjectQueryHandler::getQueryHandler(const String& handler_name) {
+    if (handler_name.find("object-queries.static-objects") != String::npos)
+        return mObjectQueryHandler[OBJECT_CLASS_STATIC];
+    if (handler_name.find("object-queries.dynamic-objects") != String::npos)
+        return mObjectQueryHandler[OBJECT_CLASS_DYNAMIC];
+
+    return NULL;
+}
+
+void ObjectQueryHandler::commandListInfo(const OHDP::SpaceNodeID& snid, Command::Result& result) {
+    for(int i = 0; i < NUM_OBJECT_CLASSES; i++) {
+        if (mObjectQueryHandler[i] == NULL) continue;
+        String key = String("handlers.object.") + ObjectClassToString((ObjectClass)i) + ".";
+        result.put(key + "name", snid.toString() + "." + String("object-queries.") + ObjectClassToString((ObjectClass)i) + "-objects");
+        result.put(key + "queries", mObjectQueryHandler[i]->numQueries());
+        result.put(key + "objects", mObjectQueryHandler[i]->numObjects());
+        result.put(key + "nodes", mObjectQueryHandler[i]->numNodes());
+    }
+}
+
+void ObjectQueryHandler::commandListNodes(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {
+    Command::Result result = Command::EmptyResult();
+
+    String handler_name = cmd.getString("handler");
+    ProxQueryHandler* handler = getQueryHandler(handler_name);
+    if (handler == NULL) {
+        result.put("error", "Ill-formatted request: handler not specified or invalid.");
+        cmdr->result(cmdid, result);
+    }
+
+    result.put( String("nodes"), Command::Array());
+    Command::Array& nodes_ary = result.getArray("nodes");
+    for(ProxQueryHandler::NodeIterator nit = handler->nodesBegin(); nit != handler->nodesEnd(); nit++) {
+        nodes_ary.push_back( Command::Object() );
+        nodes_ary.back().put("id", nit.id().toString());
+        nodes_ary.back().put("parent", nit.parentId().toString());
+        BoundingSphere3f bounds = nit.bounds(mContext->simTime());
+        nodes_ary.back().put("bounds.center.x", bounds.center().x);
+        nodes_ary.back().put("bounds.center.y", bounds.center().y);
+        nodes_ary.back().put("bounds.center.z", bounds.center().z);
+        nodes_ary.back().put("bounds.radius", bounds.radius());
+    }
+
+    cmdr->result(cmdid, result);
+}
+
+void ObjectQueryHandler::commandForceRebuild(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {
+    Command::Result result = Command::EmptyResult();
+    result.put("error", "Rebuilding manual proximity processors isn't supported yet.");
+    cmdr->result(cmdid, result);
+}
+
 
 
 void ObjectQueryHandler::onObjectAdded(const ObjectReference& obj) {

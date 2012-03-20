@@ -59,12 +59,21 @@ public:
     void deliverProximityResult(const SpaceObjectReference& sporef, const Sirikata::Protocol::Prox::ProximityUpdate& update);
     void deliverLocationResult(const SpaceObjectReference& sporef, const LocUpdate& lu);
 private:
+    typedef std::tr1::shared_ptr<ObjectQueryHandler> ObjectQueryHandlerPtr;
 
     // Helper that actually registers a query with the underlying query
     // processor. Factored out since we may need to defer registration until
     // after connection completes, so we can hit this from multiple code paths.
     void registerOrUpdateObjectQuery(const SpaceObjectReference& sporef);
     void unregisterObjectQuery(const SpaceObjectReference& sporef);
+
+
+    void commandProperties(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
+    void commandListHandlers(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
+    ObjectQueryHandlerPtr lookupCommandHandler(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) const;
+    void commandListNodes(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
+    void commandForceRebuild(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
+
 
     ObjectHostContext* mContext;
     Network::IOStrandPtr mStrand;
@@ -110,7 +119,6 @@ private:
     ObjectStateMap mObjectState;
 
     // This actually performs the queries from each object
-    typedef std::tr1::shared_ptr<ObjectQueryHandler> ObjectQueryHandlerPtr;
     typedef std::tr1::unordered_map<OHDP::SpaceNodeID, ObjectQueryHandlerPtr, OHDP::SpaceNodeID::Hasher> QueryHandlerMap;
     QueryHandlerMap mObjectQueryHandlers;
 

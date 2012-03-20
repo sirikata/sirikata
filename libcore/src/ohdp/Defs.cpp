@@ -28,6 +28,15 @@ NodeID::NodeID(const NodeID& rhs)
 {
 }
 
+NodeID::NodeID(const String& rhs) {
+    try {
+        mValue = boost::lexical_cast<uint32>(rhs);
+    }
+    catch (boost::bad_lexical_cast& blc) {
+        mValue = NULL_NODE_ID;
+    }
+}
+
 const NodeID& NodeID::null() {
     static NodeID null_port(NULL_NODE_ID);
     return null_port;
@@ -109,6 +118,25 @@ SpaceNodeID::SpaceNodeID(const SpaceID& s, const NodeID& n)
  : mSpace(s),
    mNode(n)
 {
+}
+
+SpaceNodeID::SpaceNodeID(const String& rhs)
+ : mSpace(SpaceID::null()),
+   mNode(NodeID::null())
+{
+    std::size_t split = rhs.find(':');
+    if (split == String::npos) return;
+
+    String space_part = rhs.substr(0, split);
+    SpaceID sid(space_part);
+    String node_part = rhs.substr(split+1);
+    NodeID nid(node_part);
+
+    if (sid != SpaceID::null() &&
+        nid != NodeID::null()) {
+        mSpace = sid;
+        mNode = nid;
+    }
 }
 
 const SpaceNodeID& SpaceNodeID::null() {

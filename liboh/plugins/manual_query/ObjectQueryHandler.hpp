@@ -80,6 +80,10 @@ public:
     // QueryEventListener Interface
     void queryHasEvents(Query* query);
 
+    ProxQueryHandler* getQueryHandler(const String& handler_name);
+    void commandListInfo(const OHDP::SpaceNodeID& snid, Command::Result& result);
+    void commandListNodes(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
+    void commandForceRebuild(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
 
 private:
 

@@ -3,6 +3,7 @@
 // be found in the LICENSE file.
 
 #include "ManualObjectQueryProcessor.hpp"
+#include <sirikata/core/network/IOStrandImpl.hpp>
 
 #define QPLOG(lvl, msg) SILOG(manual-query-processor, lvl, msg)
 
@@ -21,6 +22,46 @@ ManualObjectQueryProcessor::ManualObjectQueryProcessor(ObjectHostContext* ctx)
    mStrand(mContext->ioService->createStrand("ManualObjectQueryProcessor Strand")),
    mServerQueryHandler(ctx, this, mStrand)
 {
+    // Implementations may add more commands, but these should always be
+    // available. They get dispatched to the prox strand so implementations only
+    // need to worry about processing them.
+    if (mContext->commander()) {
+        // Get basic properties (both fixed and dynamic debugging
+        // state) about this query processor.
+        mContext->commander()->registerCommand(
+            "oh.prox.properties",
+            mStrand->wrap(
+                std::tr1::bind(&ManualObjectQueryProcessor::commandProperties, this, _1, _2, _3)
+            )
+        );
+
+        // Get a list of the handlers by name and their basic properties. The
+        // particular names and properties may be implementation dependent.
+        mContext->commander()->registerCommand(
+            "oh.prox.handlers",
+            mStrand->wrap(
+                std::tr1::bind(&ManualObjectQueryProcessor::commandListHandlers, this, _1, _2, _3)
+            )
+        );
+
+        // Get a list of nodes within one of the handlers. Must specify the
+        // handler name as part of the request
+        mContext->commander()->registerCommand(
+            "oh.prox.nodes",
+            mStrand->wrap(
+                std::tr1::bind(&ManualObjectQueryProcessor::commandListNodes, this, _1, _2, _3)
+            )
+        );
+
+        // Force a rebuild on one of the handlers. Must specify the handler name
+        // as part of the request.
+        mContext->commander()->registerCommand(
+            "oh.prox.rebuild",
+            mStrand->wrap(
+                std::tr1::bind(&ManualObjectQueryProcessor::commandForceRebuild, this, _1, _2, _3)
+            )
+        );
+    }
 }
 
 ManualObjectQueryProcessor::~ManualObjectQueryProcessor() {
@@ -221,6 +262,64 @@ void ManualObjectQueryProcessor::deliverLocationResult(const SpaceObjectReferenc
     if (!ho) return;
 
     deliverLocationUpdate(ho, sporef, lu);
+}
+
+
+
+void ManualObjectQueryProcessor::commandProperties(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {
+    Command::Result result = Command::EmptyResult();
+    result.put("name", "libprox-manual");
+    result.put("settings.handlers", mObjectQueryHandlers.size());
+    cmdr->result(cmdid, result);
+}
+
+void ManualObjectQueryProcessor::commandListHandlers(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {
+    Command::Result result = Command::EmptyResult();
+    for (QueryHandlerMap::iterator it = mObjectQueryHandlers.begin(); it != mObjectQueryHandlers.end(); it++) {
+        ObjectQueryHandlerPtr hdlr = it->second;
+        hdlr->commandListInfo(it->first, result);
+    }
+
+    cmdr->result(cmdid, result);
+}
+
+ManualObjectQueryProcessor::ObjectQueryHandlerPtr ManualObjectQueryProcessor::lookupCommandHandler(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) const {
+    ObjectQueryHandlerPtr result;
+
+    if (cmd.contains("handler")) {
+        String handler_name = cmd.getString("handler");
+        // Only the first part of the handler name is the SpaceNodeID we need to
+        // look up the ObjectQueryHandler
+        handler_name = handler_name.substr(0, handler_name.find('.'));
+        OHDP::SpaceNodeID snid(handler_name);
+        QueryHandlerMap::const_iterator it = mObjectQueryHandlers.find(snid);
+        if (it != mObjectQueryHandlers.end())
+            result = it->second;
+    }
+
+    if (!result) {
+        Command::Result result = Command::EmptyResult();
+        result.put("error", "Ill-formatted request: handler not specified or invalid.");
+        cmdr->result(cmdid, result);
+    }
+
+    return result;
+}
+
+void ManualObjectQueryProcessor::commandListNodes(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {
+    // Look up or trigger error message
+    ObjectQueryHandlerPtr handler = lookupCommandHandler(cmd, cmdr, cmdid);
+    if (!handler) return;
+
+    handler->commandListNodes(cmd, cmdr, cmdid);
+}
+
+void ManualObjectQueryProcessor::commandForceRebuild(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {
+    // Look up or trigger error message
+    ObjectQueryHandlerPtr handler = lookupCommandHandler(cmd, cmdr, cmdid);
+    if (!handler) return;
+
+    handler->commandForceRebuild(cmd, cmdr, cmdid);
 }
 
 } // namespace Manual

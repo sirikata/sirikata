@@ -17,6 +17,7 @@ public:
     NodeID();
     NodeID(uint32 rhs);
     NodeID(const NodeID& rhs);
+    explicit NodeID(const String& rhs);
 
     /** Get a null NodeID. Equivalent to NodeID(0). */
     static const NodeID& null();
@@ -66,6 +67,9 @@ class SIRIKATA_EXPORT SpaceNodeID : public TotallyOrdered<SpaceNodeID> {
 public:
     SpaceNodeID();
     SpaceNodeID(const SpaceID& s, const NodeID& n);
+    // Construct a SpaceNodeID from the given string, using null() if it cannot
+    // be parsed.
+    explicit SpaceNodeID(const String& rhs);
 
     const SpaceID& space() const { return mSpace; }
     const NodeID& node() const { return mNode; }
