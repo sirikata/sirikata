@@ -144,6 +144,7 @@ private:
   void removeChild(std::vector<AggregateObjectPtr>& v, const UUID& uuid) ;
   void iRemoveChild(const UUID& uuid, const UUID& child_uuid);
   std::vector<AggregateObjectPtr>& getChildren(const UUID& uuid);
+  std::vector<AggregateManager::AggregateObjectPtr >& iGetChildren(const UUID& uuid) ;
   void getLeaves(const std::vector<UUID>& mIndividualObjects);
   bool isAggregate(const UUID& uuid);
   

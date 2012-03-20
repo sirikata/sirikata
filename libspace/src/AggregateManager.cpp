@@ -261,7 +261,7 @@ void AggregateManager::addChild(const UUID& uuid, const UUID& child_uuid) {
 void AggregateManager::iRemoveChild(const UUID& uuid, const UUID& child_uuid) {
   AGG_LOG(detailed, "removeChild:  "  << uuid.toString() << " CHILD " << child_uuid.toString() << "\n");
 
-  std::vector<AggregateObjectPtr>& children = getChildren(uuid);
+  std::vector<AggregateObjectPtr>& children = iGetChildren(uuid);
 
   if ( findChild(children, child_uuid)  ) {
     removeChild( children, child_uuid );
@@ -280,6 +280,7 @@ void AggregateManager::iRemoveChild(const UUID& uuid, const UUID& child_uuid) {
         "AggregateManager::generateMeshesFromQueue"
     );
   }
+
 }
 
 void AggregateManager::removeChild(const UUID& uuid, const UUID& child_uuid) {
@@ -923,8 +924,7 @@ void AggregateManager::chunkFinished(Time t, const UUID uuid, const UUID child_u
     }
 }
 
-std::vector<AggregateManager::AggregateObjectPtr >& AggregateManager::getChildren(const UUID& uuid) {
-  boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
+std::vector<AggregateManager::AggregateObjectPtr >& AggregateManager::iGetChildren(const UUID& uuid) {
   static std::vector<AggregateObjectPtr> emptyVector;
 
   if (mAggregateObjects.find(uuid) == mAggregateObjects.end()) {
@@ -934,6 +934,13 @@ std::vector<AggregateManager::AggregateObjectPtr >& AggregateManager::getChildre
   std::vector<AggregateObjectPtr>& children = mAggregateObjects[uuid]->mChildren;
 
   return children;
+}
+
+
+std::vector<AggregateManager::AggregateObjectPtr >& AggregateManager::getChildren(const UUID& uuid) {
+  boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
+
+  return iGetChildren(uuid);
 }
 
 void AggregateManager::getLeaves(const std::vector<UUID>& individualObjects) {
