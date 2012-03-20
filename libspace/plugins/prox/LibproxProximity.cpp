@@ -612,9 +612,7 @@ void LibproxProximity::poll() {
     mObjectResults.swap(object_results_copy);
     mObjectResultsToSend.insert(mObjectResultsToSend.end(), object_results_copy.begin(), object_results_copy.end());
 
-
-    bool object_sent = true;
-    while(object_sent && !mObjectResultsToSend.empty()) {
+    while(!mObjectResultsToSend.empty()) {
         Sirikata::Protocol::Object::ObjectMessage* msg_front = mObjectResultsToSend.front();
         sendObjectResult(msg_front);
         delete msg_front;
@@ -759,6 +757,9 @@ void LibproxProximity::commandProperties(const Command::Command& cmd, Command::C
         result.put("queries.objects.distance", mDistanceQueryDistance);
     // Technically not thread safe, but these should be simple
     // read-only accesses.
+    uint32 obj_messages = 0;
+    for(ObjectProxStreamMap::iterator prox_stream_it = mObjectProxStreams.begin(); prox_stream_it != mObjectProxStreams.end(); prox_stream_it++)
+        obj_messages += prox_stream_it->second->outstanding.size();
     result.put("queries.objects.messages", mObjectResults.size() + mObjectResultsToSend.size());
 
 

@@ -66,8 +66,7 @@ void LibproxManualProximity::poll() {
     mOHResults.swap(oh_results_copy);
     mOHResultsToSend.insert(mOHResultsToSend.end(), oh_results_copy.begin(), oh_results_copy.end());
 
-    bool oh_sent = true;
-    while(oh_sent && !mOHResultsToSend.empty()) {
+    while(!mOHResultsToSend.empty()) {
         const OHResult& msg_front = mOHResultsToSend.front();
         sendObjectHostResult(OHDP::NodeID(msg_front.first), msg_front.second);
         delete msg_front.second;
@@ -482,7 +481,10 @@ void LibproxManualProximity::commandProperties(const Command::Command& cmd, Comm
     result.put("queries.oh.count", mOHQueries[0].size());
     // Technically not thread safe, but these should be simple
     // read-only accesses.
-    result.put("queries.oh.messages", mOHResults.size() + mOHResultsToSend.size());
+    uint32 oh_messages = 0;
+    for(ObjectHostProxStreamMap::iterator prox_stream_it = mObjectHostProxStreams.begin(); prox_stream_it != mObjectHostProxStreams.end(); prox_stream_it++)
+        oh_messages += prox_stream_it->second->outstanding.size();
+    result.put("queries.oh.messages", oh_messages);
 
     cmdr->result(cmdid, result);
 }
