@@ -760,7 +760,7 @@ void LibproxProximity::commandProperties(const Command::Command& cmd, Command::C
     uint32 obj_messages = 0;
     for(ObjectProxStreamMap::iterator prox_stream_it = mObjectProxStreams.begin(); prox_stream_it != mObjectProxStreams.end(); prox_stream_it++)
         obj_messages += prox_stream_it->second->outstanding.size();
-    result.put("queries.objects.messages", mObjectResults.size() + mObjectResultsToSend.size());
+    result.put("queries.objects.messages", mObjectResults.size() + mObjectResultsToSend.size() + obj_messages);
 
 
     // Properties of servers
