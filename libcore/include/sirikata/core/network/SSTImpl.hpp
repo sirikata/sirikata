@@ -2253,6 +2253,13 @@ private:
 	  sendToApp(0);
 	}
       }
+      else if (len == 0 && (int64)(offset) == mNextByteExpected) {
+          // A zero length packet at the next expected offset. This is a keep
+          // alive, which are just empty packets that we process to keep the
+          // connection running. Send an ack so we don't end up with unacked
+          // keep alive packets.
+          sendAckPacket();
+      }
     }
 
     //handle any ACKS that might be included in the message...
