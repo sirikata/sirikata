@@ -2038,13 +2038,20 @@ private:
     else {
       if (mState != DISCONNECTED) {
 
+        bool sentSomething = false;
+
         //if the stream has been waiting for an ACK for > 2*mStreamRTOMicroseconds,
-        //resend the unacked packets.
+        //resend the unacked packets. We don't actually check if we
+        //have anything to ack here, instead relying on the return
+        //value to block us from constantly rescheduling this -- as
+        //soon as all packets are acked, this will settle in one
+        //iteration since another serviceStream call won't be
+        //scheduled.
         if ( mLastSendTime != Time::null()
              && (curTime - mLastSendTime).toMicroseconds() > 2*mStreamRTOMicroseconds)
         {
-	  resendUnackedPackets();
-	  mLastSendTime = curTime;
+            sentSomething = resendUnackedPackets();
+            mLastSendTime = curTime;
         }
 
 	boost::mutex::scoped_lock lock(mQueueMutex);
@@ -2063,7 +2070,6 @@ private:
 	    return true;
 	}
 
-        bool sentSomething = false;
 	while ( !mQueuedBuffers.empty() ) {
 	  std::tr1::shared_ptr<StreamBuffer> buffer = mQueuedBuffers.front();
 
@@ -2106,7 +2112,7 @@ private:
     return true;
   }
 
-  inline void resendUnackedPackets() {
+  inline bool resendUnackedPackets() {
     boost::mutex::scoped_lock lock(mQueueMutex);
 
     for(std::map<uint64,std::tr1::shared_ptr<StreamBuffer> >::const_reverse_iterator it=mChannelToBufferMap.rbegin(),
@@ -2125,14 +2131,6 @@ private:
        }
      }
 
-
-    std::tr1::shared_ptr<Connection<EndPointType> > conn =  mConnection.lock();
-    if (conn)
-      getContext()->mainStrand->post(Duration::seconds(0.01),
-          std::tr1::bind(&Stream<EndPointType>::serviceStreamNoReturn, this, mWeakThis.lock(), conn),
-          "Stream<EndPointType>::serviceStreamNoReturn"
-      );
-
     if (mChannelToBufferMap.empty() && !mQueuedBuffers.empty()) {
       std::tr1::shared_ptr<StreamBuffer> buffer = mQueuedBuffers.front();
 
@@ -2149,6 +2147,13 @@ private:
       }
       mChannelToBufferMap.clear();
     }
+
+    // Return value should indicate if we processed/sent
+    // something. This should only happen if the channel-to-buffer map
+    // was non-empty, i.e. if we had something to try resending.
+    if (mChannelToBufferMap.empty())
+        return false;
+    return true;
   }
 
   /* This function sends received data up to the application interface.
