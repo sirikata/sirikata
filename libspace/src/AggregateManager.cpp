@@ -500,7 +500,7 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
       // Copy names of textures from the materials into a set so we can fill in
       // the texture list when we finish adding all subobjects
       for(MaterialEffectInfoList::const_iterator mat_it = m->materials.begin(); mat_it != m->materials.end(); mat_it++) {
-          for(MaterialEffectInfo::TextureList::const_iterator tex_it = mat_it->textures.begin(); tex_it != mat_it->textures.end(); tex_it++)
+          for(MaterialEffectInfo::TextureList::const_iterator tex_it = mat_it->textures.begin(); tex_it != mat_it->textures.end(); tex_it++) {
               if (!tex_it->uri.empty()) {
                   Transfer::URI orig_tex_uri;
 
@@ -524,7 +524,10 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
 
                   textureSet[tex_it->uri] = orig_tex_uri.toString();
               }
+	  }
       }
+
+
       // Copy Lights
       agg_mesh->lights.insert(agg_mesh->lights.end(),
           m->lights.begin(),
@@ -644,10 +647,33 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
     }
   }
 
+  //De-duplicate textures from texture set based on just their filenames.. this is obviously a hack for the 4/2/2012 demo!
+  std::tr1::unordered_map<String, String> texFileNameToUrl;
+  for (std::tr1::unordered_map<String, String>::iterator it = textureSet.begin(); it != textureSet.end(); it++) {
+    String url = it->first;
+    
+    size_t indexOfLastSlash = url.find_last_of('/');
+    if (indexOfLastSlash == url.npos) {
+	texFileNameToUrl[url] = url;
+	continue;
+    }
+
+    String substrUrl = url.substr(0, indexOfLastSlash);
+    
+    indexOfLastSlash = substrUrl.find_last_of('/');
+    if (indexOfLastSlash == substrUrl.npos) {
+        texFileNameToUrl[url] = url;
+        continue;
+    }
+
+    String texfilename = substrUrl.substr(indexOfLastSlash+1);
+    texFileNameToUrl[texfilename] = url;
+  }
+
   // We should have all the textures in our textureSet since we looped through
   // all the materials, just fill in the list now.
-  for (std::tr1::unordered_map<String, String>::iterator it = textureSet.begin(); it != textureSet.end(); it++)
-      agg_mesh->textures.push_back( it->first );
+  for (std::tr1::unordered_map<String, String>::iterator it = texFileNameToUrl.begin(); it != texFileNameToUrl.end(); it++)
+      agg_mesh->textures.push_back( it->second );
 
   for (uint32 i= 0; i < children.size(); i++) {
     UUID child_uuid = children[i]->mUUID;
@@ -708,6 +734,12 @@ void AggregateManager::uploadAggregateMesh(Mesh::MeshdataPtr agg_mesh,
 
       std::stringstream model_ostream(std::ofstream::out | std::ofstream::binary);
       bool converted = mModelsSystem->convertVisual(agg_mesh, "colladamodels", model_ostream);
+
+      /* Debugging code: store the file locally for ease of inspection.
+        String modelFilename = std::string("/disk/local/tazim/aggregate_meshes/") + localMeshName;
+        std::ofstream model_ostream2(modelFilename.c_str(), std::ofstream::out | std::ofstream::binary);
+        converted = mModelsSystem->convertVisual(agg_mesh, "colladamodels", model_ostream2);
+        model_ostream2.close();*/
 
       Transfer::UploadRequest::StringMap files;
       files[localMeshName] = model_ostream.str();
@@ -849,6 +881,8 @@ void AggregateManager::uploadAggregateMesh(Mesh::MeshdataPtr agg_mesh,
       mLoc->updateLocalAggregateMesh(uuid, cdnMeshName);      
   }
 
+  AGG_LOG(info, "Uploaded successfully: " << localMeshName << "\n");
+  
   aggObject->mLeaves.clear();
 }
 

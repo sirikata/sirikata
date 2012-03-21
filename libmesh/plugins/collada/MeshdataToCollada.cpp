@@ -66,6 +66,24 @@ const String PARAM_TYPE_WEIGHT = "WEIGHT";
     return str;
   }
 
+  String texfilename(String url) {
+      size_t indexOfLastSlash = url.find_last_of('/');
+      if (indexOfLastSlash == url.npos) {
+        return url;
+      }
+
+      String substrUrl = url.substr(0, indexOfLastSlash);
+
+      indexOfLastSlash = substrUrl.find_last_of('/');
+      if (indexOfLastSlash == substrUrl.npos) {
+        return url;
+      }
+
+      String name = substrUrl.substr(indexOfLastSlash+1);
+      return name;
+  }
+
+
 
   void exportAsset(COLLADASW::StreamWriter*  streamWriter, const Meshdata& meshdata) {
     COLLADASW::Asset asset ( streamWriter );
@@ -106,11 +124,12 @@ const String PARAM_TYPE_WEIGHT = "WEIGHT";
         if (meshdata.materials[i].textures.size() == 0) continue;
 
         const MaterialEffectInfo::Texture& texture = meshdata.materials[i].textures[0];
-        if (textureURIToEffectIndexMap.find(texture.uri) != textureURIToEffectIndexMap.end() &&
-            textureURIToEffectIndexMap[texture.uri] != (int32)i
+	String textureFileName = texfilename(texture.uri);
+        if (textureURIToEffectIndexMap.find(textureFileName) != textureURIToEffectIndexMap.end() &&
+            textureURIToEffectIndexMap[textureFileName] != (int32)i
            )
           {
-            materialRedirectionMap[i] = textureURIToEffectIndexMap[texture.uri];
+            materialRedirectionMap[i] = textureURIToEffectIndexMap[textureFileName];
             continue;
           }
 
@@ -153,6 +172,7 @@ const String PARAM_TYPE_WEIGHT = "WEIGHT";
       {
       }
 
+
     void exportEffect(COLLADASW::StreamWriter*  streamWriter, const Meshdata& meshdata, std::map<String,int>& textureList,
                       std::map<std::string, int>& textureURIToEffectIndexMap)
     {
@@ -172,12 +192,14 @@ const String PARAM_TYPE_WEIGHT = "WEIGHT";
             COLLADASW::ColorOrTexture colorOrTexture;
             String colorEncoding = "";
 
+	    String textureFileName = "";
             if (texture.uri != "") {
-               if (textureURIToEffectIndexMap.find(texture.uri) != textureURIToEffectIndexMap.end()) {
+	       textureFileName = texfilename(texture.uri); 
+               if (textureURIToEffectIndexMap.find(textureFileName) != textureURIToEffectIndexMap.end()) {
                  continue;
                }
 
-              std::string nonAlphaNumericTextureURI = removeNonAlphaNumeric(texture.uri);
+              std::string nonAlphaNumericTextureURI = removeNonAlphaNumeric(textureFileName);
 
               COLLADASW::Texture colladaTexture = COLLADASW::Texture(nonAlphaNumericTextureURI);
 
@@ -185,10 +207,10 @@ const String PARAM_TYPE_WEIGHT = "WEIGHT";
                                                 std::string("sampler-")+ nonAlphaNumericTextureURI,
                                                 std::string("surface-")+ nonAlphaNumericTextureURI);
 
-              int k = 0;
 
+              int k = 0;
               for (std::map<String,int>::iterator it = textureList.begin(); it != textureList.end(); it++ ) {
-                if (it->first == texture.uri) {
+                if (texfilename(it->first) == textureFileName) {
                   const int IMAGE_ID_LEN = 1024;
                   char imageID[IMAGE_ID_LEN];
                   sprintf(imageID, "image_id_%d", k);
@@ -266,7 +288,7 @@ const String PARAM_TYPE_WEIGHT = "WEIGHT";
             }
 
             if (texture.uri != "") {
-              textureURIToEffectIndexMap[texture.uri] = i;
+              textureURIToEffectIndexMap[textureFileName] = i;
             }
             else {
               textureURIToEffectIndexMap[colorEncoding] = i;
