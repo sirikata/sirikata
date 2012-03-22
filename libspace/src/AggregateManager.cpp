@@ -687,7 +687,7 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
 
   //... and now create the collada file, upload to the CDN and update LOC.  
   mUploadStrands[rand() % NUM_UPLOAD_THREADS]->post(
-          std::tr1::bind(&AggregateManager::uploadAggregateMesh, this, agg_mesh, aggObject, textureSet),
+          std::tr1::bind(&AggregateManager::uploadAggregateMesh, this, agg_mesh, aggObject, textureSet, 0),
           "AggregateManager::uploadAggregateMesh"
       );
   
@@ -712,7 +712,8 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
 
 void AggregateManager::uploadAggregateMesh(Mesh::MeshdataPtr agg_mesh, 
                                            AggregateObjectPtr aggObject,
-                                           std::tr1::unordered_map<String, String> textureSet)
+                                           std::tr1::unordered_map<String, String> textureSet,
+                                           uint32 retryAttempt)
 {
   const UUID& uuid = aggObject->mUUID;
 
@@ -830,6 +831,16 @@ void AggregateManager::uploadAggregateMesh(Mesh::MeshdataPtr agg_mesh,
               String meshName = mLoc->mesh(child_uuid);
               AGG_LOG(error, "   " << meshName);
           }
+  
+          AGG_LOG(error, "Failure was retry attempt # " << retryAttempt);
+          //Retry uploading up to 5 times.
+          if (retryAttempt < 5) {  
+            mUploadStrands[rand() % NUM_UPLOAD_THREADS]->post(
+             std::tr1::bind(&AggregateManager::uploadAggregateMesh, this, agg_mesh, aggObject, textureSet, retryAttempt + 1),
+             "AggregateManager::uploadAggregateMesh"
+             );
+          }
+
           return;
       }
 

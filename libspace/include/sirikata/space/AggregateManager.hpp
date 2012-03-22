@@ -161,7 +161,7 @@ private:
 
   //Functions related to uploading aggregates
   void uploadAggregateMesh(Mesh::MeshdataPtr agg_mesh, AggregateObjectPtr aggObject,
-                           std::tr1::unordered_map<String, String> textureSet);
+                           std::tr1::unordered_map<String, String> textureSet, uint32 retryAttempt);
   // Helper that handles the upload callback and sets flags to let the request
   // from the aggregation thread to continue
   void handleUploadFinished(Transfer::UploadRequestPtr request, const Transfer::URI& path, AtomicValue<bool>* finished_out, Transfer::URI* generated_uri_out);  
