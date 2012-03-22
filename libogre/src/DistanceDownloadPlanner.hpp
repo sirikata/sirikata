@@ -210,7 +210,7 @@ protected:
 
     // Helper, notifies when resource has finished loading allowing us
     // to figure out when the entire asset has loaded
-    void handleLoadedResource(Asset* asset);
+    void handleLoadedResource(Asset* asset,Liveness::Token assetAlive);
 
     // Update the priority for an asset from all it's requestors
     void updateAssetPriority(Asset* asset);
