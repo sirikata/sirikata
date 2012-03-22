@@ -2261,6 +2261,7 @@ private:
     //handle any ACKS that might be included in the message...
     boost::mutex::scoped_lock lock(mQueueMutex);
 
+    bool acked_msgs = false;
     if (mChannelToBufferMap.find(offset) != mChannelToBufferMap.end()) {
       uint64 dataOffset = mChannelToBufferMap[offset]->mOffset;
       mNumOutstandingBytes -= mChannelToBufferMap[offset]->mBufferLength;
@@ -2279,6 +2280,7 @@ private:
 
       //printf("REMOVED ack packet at offset %d\n", (int)mChannelToBufferMap[offset]->mOffset);
 
+      acked_msgs = true;
       mChannelToBufferMap.erase(offset);
 
       std::vector <uint64> channelOffsets;
@@ -2298,6 +2300,7 @@ private:
       // ACK received but not found in mChannelToBufferMap
       if (mChannelToStreamOffsetMap.find(offset) != mChannelToStreamOffsetMap.end()) {
         uint64 dataOffset = mChannelToStreamOffsetMap[offset];
+        acked_msgs = true;
         mChannelToStreamOffsetMap.erase(offset);
 
         std::vector <uint64> channelOffsets;
@@ -2313,6 +2316,24 @@ private:
           mChannelToBufferMap.erase(channelOffsets[i]);
         }
       }
+    }
+
+    // If we acked messages, we've cleared space in the transmit
+    // buffer (the receiver cleared something out of its receive
+    // buffer). We can send more data, so schedule servicing if we
+    // have anything queued.
+    // TODO(ewencp) maybe only schedule something new when this
+    // started as a full transmit buffer? Have to be careful about
+    // this though since mTransmitWindowSize might not be 0 even if it
+    // was 'full' since the next packet couldn't fit on.
+    if (acked_msgs && !mQueuedBuffers.empty()) {
+        std::tr1::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
+        if (conn) {
+            getContext()->mainStrand->post(
+                std::tr1::bind(&Stream<EndPointType>::serviceStreamNoReturn, this, mWeakThis.lock(), conn),
+                "Stream<EndPointType>::serviceStreamNoReturn"
+            );
+        }
     }
   }
 
