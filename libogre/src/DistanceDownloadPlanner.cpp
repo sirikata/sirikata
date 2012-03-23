@@ -636,7 +636,7 @@ void DistanceDownloadPlanner::loadAsset(Transfer::URI asset_uri,uint64 assetId)
             return;
         }
     }
-
+    
     Mesh::MeshdataPtr mdptr( std::tr1::dynamic_pointer_cast<Mesh::Meshdata>(visptr) );
     if (mdptr) {
         loadMeshdata(asset, mdptr, usingDefault);
@@ -758,6 +758,7 @@ void DistanceDownloadPlanner::loadMeshdata(Asset* asset, const Mesh::MeshdataPtr
     if (!mdptr->instances.empty()) {
         int index=0;
         for (Mesh::MaterialEffectInfoList::const_iterator mat=mdptr->materials.begin(),mate=mdptr->materials.end();mat!=mate;++mat,++index) {
+            
             std::string matname = ogreMaterialName(meshname, index);
             getScene()->getResourceLoader()->loadMaterial(
                 matname, mdptr, *mat, asset->uri, asset->textureFingerprints,
@@ -877,7 +878,7 @@ void DistanceDownloadPlanner::loadDependentTextures(Asset* asset, bool usingDefa
         const AssetDownloadTask::ResourceData& tex_data = tex_it->second;
 
         if (mActiveCDNArchive && asset->textureFingerprints->find(uri_str) == asset->textureFingerprints->end() ) {
-            String id = uri_str + tex_data.request->getIdentifier();
+            String id = tex_data.request->getIdentifier();          
 
             //OGRE_LOG(warn, "Got asset ID of " << id);
 
