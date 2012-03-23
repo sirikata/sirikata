@@ -260,6 +260,7 @@ public:
 
     String mResourcesDir;
 
+    TimeProfiler::Stage* mParserProfiler;
     ModelsSystem* mModelParser;
     Mesh::Filter* mModelFilter;
     Mesh::Filter* mCenteringFilter;

@@ -269,6 +269,7 @@ OgreRenderer::OgreRenderer(Context* ctx,Network::IOStrandPtr sStrand)
    mFloatingPointOffset(0,0,0),
    mLastFrameTime(Task::LocalTime::now()),
    mOnTickCallback(NULL),
+   mParserProfiler(ctx->profiler->addStage("Ogre Renderer Mesh Parsing")),
    mModelParser( ModelsSystemFactory::getSingleton ().getConstructor ( "any" ) ( "" ) ),
    mDownloadPlanner(NULL),
    mNextFrameScreenshotFile(""),
@@ -281,12 +282,12 @@ OgreRenderer::OgreRenderer(Context* ctx,Network::IOStrandPtr sStrand)
         std::vector<String> names_and_args;
         names_and_args.push_back("triangulate"); names_and_args.push_back("all");
         names_and_args.push_back("compute-normals"); names_and_args.push_back("");
-        names_and_args.push_back("reduce-draw-calls"); names_and_args.push_back("");        
+        names_and_args.push_back("reduce-draw-calls"); names_and_args.push_back("");
         mModelFilter = new Mesh::CompositeFilter(names_and_args);
 
         names_and_args.clear();
         names_and_args.push_back("center"); names_and_args.push_back("");
-        mCenteringFilter = new Mesh::CompositeFilter(names_and_args);        
+        mCenteringFilter = new Mesh::CompositeFilter(names_and_args);
     }
     catch(Mesh::CompositeFilter::Exception e) {
         SILOG(ogre,warning,"Couldn't allocate requested model load filter, will not apply filter to loaded models.");
@@ -1026,10 +1027,12 @@ void OgreRenderer::parseMeshWork(
     if (stopped)
         return;
 
+    mParserProfiler->started();
     Mesh::VisualPtr parsed = parseMeshWorkSync(metadata, fp, data, isAggregate);
     simStrand->post(std::tr1::bind(cb,parsed),
         "OgreRenderer::parseMeshWork callback"
     );
+    mParserProfiler->finished();
 }
 
 Mesh::VisualPtr OgreRenderer::parseMeshWorkSync(const Transfer::RemoteFileMetadata& metadata, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data, bool isAggregate) {
@@ -1037,15 +1040,15 @@ Mesh::VisualPtr OgreRenderer::parseMeshWorkSync(const Transfer::RemoteFileMetada
     if (parsed && mModelFilter) {
         Mesh::MutableFilterDataPtr input_data(new Mesh::FilterData);
         input_data->push_back(parsed);
-        Mesh::FilterDataPtr output_data = mModelFilter->apply(input_data);        
-        
+        Mesh::FilterDataPtr output_data = mModelFilter->apply(input_data);
+
         parsed = output_data->get();
         input_data->clear();
         input_data->push_back(parsed);
         output_data = mCenteringFilter->apply(input_data);
 
         assert(output_data->single());
-        parsed = output_data->get();                      
+        parsed = output_data->get();
     }
     return parsed;
 }
