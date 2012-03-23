@@ -65,6 +65,23 @@ class ResourceDownloadPlanner;
 
 using Input::SDLInputManager;
 
+class ParseMeshTaskInfo {
+public:
+    ParseMeshTaskInfo()
+     : mProcess(true)
+    {}
+
+    void cancel() {
+        mProcess = false;
+    }
+
+    bool process() const { return mProcess; }
+private:
+    bool mProcess;
+};
+typedef std::tr1::shared_ptr<ParseMeshTaskInfo> ParseMeshTaskHandle;
+
+
 /** Represents a SQLite database connection. */
 class SIRIKATA_OGRE_EXPORT OgreRenderer :
         public TimeSteppedSimulation,
@@ -154,6 +171,7 @@ public:
     void removeObject(Entity* ent);
 
     typedef std::tr1::function<void(Mesh::VisualPtr)> ParseMeshCallback;
+
     /** Tries to parse a mesh. Can handle different types of meshes and tries to
      *  find the right parser using magic numbers.  If it is unable to find the
      *  right parser, returns NULL.  Otherwise, returns the parsed mesh as a
@@ -163,8 +181,11 @@ public:
      *            through to the resulting mesh data
      *  \param data the contents of the
      *  \param cb callback to invoke when parsing is complete
+     *
+     *  \returns A handle you can use to cancel the task. You aren't required to
+     *  hold onto it if you don't need to be able to cancel the request.
      */
-    void parseMesh(const Transfer::RemoteFileMetadata& metadata, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data, bool isAggregate, ParseMeshCallback cb);
+    ParseMeshTaskHandle parseMesh(const Transfer::RemoteFileMetadata& metadata, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data, bool isAggregate, ParseMeshCallback cb);
 
     /** Get the default mesh to present if a model fails to load. This may
      *  return an empty VisualPtr if no default mesh is specified.
@@ -195,6 +216,7 @@ public:
 
     void parseMeshWork(
         Liveness::Token rendererAlive,
+        ParseMeshTaskHandle handle,
         const Transfer::RemoteFileMetadata& metadata,
         const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data,
         bool isAggregate, ParseMeshCallback cb);
