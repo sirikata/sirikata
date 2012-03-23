@@ -42,7 +42,7 @@ namespace Sirikata {
 Context::Context(const String& name, Network::IOService* ios, Network::IOStrand* strand, Trace::Trace* _trace, const Time& epoch, const Duration& simlen)
  : ioService(ios),
    mainStrand(strand),
-   profiler( new TimeProfiler(name) ),
+   profiler(NULL),
    timeSeries(NULL),
    mFinishedTimer( Network::IOTimer::create(ios) ),
    mTrace(_trace),
@@ -56,8 +56,7 @@ Context::Context(const String& name, Network::IOService* ios, Network::IOStrand*
    mStopRequested(false)
 {
   Breakpad::init();
-
-
+  profiler = new TimeProfiler(this, name);
 }
 
 Context::~Context() {

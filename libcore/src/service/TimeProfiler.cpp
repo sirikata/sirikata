@@ -32,6 +32,7 @@
 
 #include <sirikata/core/util/Standard.hh>
 #include <sirikata/core/service/TimeProfiler.hpp>
+#include <sirikata/core/service/Context.hpp>
 
 #define PROFILER_LOG(level,msg) SILOG(profiler,level,msg)
 
@@ -100,8 +101,8 @@ void TimeProfiler::Stage::report(const String& indent) const {
     PROFILER_LOG(info,"Stage: " << indent << name() << " -- Avg: " << avg() << " Min: " << minimum() << " Max:" << maximum() << " Sum: " << mSum << "  Its: " << its());
 }
 
-TimeProfiler::TimeProfiler(const String& name)
- : mName(name)
+TimeProfiler::TimeProfiler(const Context* ctx, const String& name)
+ : mContext(ctx), mName(name)
 {
 }
 
@@ -152,7 +153,7 @@ void TimeProfiler::remove(Stage* stage) {
 }
 
 void TimeProfiler::report() const {
-    PROFILER_LOG(info,"Profiler report: " << mName);
+    PROFILER_LOG(info,"Profiler report: " << mName << " (" << mContext->recentSimTime()-Time::null() << ")");
 
     // Group stages
     for(GroupMap::const_iterator git = mGroups.begin(); git != mGroups.end(); git++) {
