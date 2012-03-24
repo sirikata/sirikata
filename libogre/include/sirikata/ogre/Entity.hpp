@@ -86,6 +86,7 @@ protected:
     bool mVisible;
     bool mIsAggregate;
     float mAggregateRadius;
+    Vector3d mAggregateOffset;
 
     // And we track this because it's more efficient than looping through all
     // available animations on the mesh.
