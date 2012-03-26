@@ -70,13 +70,13 @@ AggregateManager::AggregateManager(LocationService* loc, Transfer::OAuthParamsPt
     mLoc(loc),
     mOAuth(oauth),
     mCDNUsername(username),
-    mModelTTL(Duration::minutes(10)),
+    mModelTTL(Duration::minutes(60)),
     mCDNKeepAlivePoller(
         new Poller(
             mAggregationStrand,
             std::tr1::bind(&AggregateManager::sendKeepAlives, this),
             "AggregateManager CDN Keep-Alive Poller",
-            Duration::seconds(30)
+            Duration::minutes(20)
         )
     )
 {
