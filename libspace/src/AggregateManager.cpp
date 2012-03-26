@@ -76,7 +76,7 @@ AggregateManager::AggregateManager(LocationService* loc, Transfer::OAuthParamsPt
             mAggregationStrand,
             std::tr1::bind(&AggregateManager::sendKeepAlives, this),
             "AggregateManager CDN Keep-Alive Poller",
-            Duration::minutes(20)
+            Duration::minutes(5)
         )
     )
 {
