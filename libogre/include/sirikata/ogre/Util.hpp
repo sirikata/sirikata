@@ -7,6 +7,7 @@
 
 #include <sirikata/ogre/Platform.hpp>
 #include <sirikata/core/util/Logging.hpp>
+#include <sirikata/mesh/Visual.hpp>
 
 #define OGRE_LOG(lvl, msg) SILOG(ogre, lvl, msg)
 
@@ -16,6 +17,12 @@ namespace Graphics {
 typedef std::map<String, String> TextureBindingsMap;
 typedef std::tr1::shared_ptr<TextureBindingsMap> TextureBindingsMapPtr;
 
+// Get names for different components of meshes, where possible using hashes in
+// order to enable reuse if the same component is encountered multiple times,
+// even across different meshes. For example, mesh names combine the hash of
+// their dae contents and hashes of textures they depend on to ensure uniqueness
+// while enabling reuse.
+String ogreVisualName(Mesh::VisualPtr vis, TextureBindingsMapPtr bindings);
 String ogreMaterialName(const String& meshname, int32 mat_idx);
 String ogreSkeletonName(const String& meshname);
 String ogreLightName(const String& entityname, const String& meshname, int32 light_idx);
