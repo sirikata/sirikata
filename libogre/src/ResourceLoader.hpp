@@ -49,7 +49,7 @@ public:
 
     void loadSkeleton(const String& name, Mesh::MeshdataPtr mesh, const std::set<String>& animationList, LoadedCallback cb);
 
-    void loadMesh(const String& name, Mesh::MeshdataPtr mesh, const String& skeletonName, LoadedCallback cb);
+    void loadMesh(const String& name, Mesh::MeshdataPtr mesh, const String& skeletonName, TextureBindingsMapPtr textureFingerprints, LoadedCallback cb);
 
     void loadTexture(const String& name, LoadedCallback cb);
 
@@ -71,7 +71,7 @@ private:
 
     void loadSkeletonWork(const String& name, Mesh::MeshdataPtr mesh, const std::set<String>& animationList, LoadedCallback cb);
 
-    void loadMeshWork(const String& name, Mesh::MeshdataPtr mesh, const String& skeletonName, LoadedCallback cb);
+    void loadMeshWork(const String& name, Mesh::MeshdataPtr mesh, const String& skeletonName, TextureBindingsMapPtr textureFingerprints, LoadedCallback cb);
 
     void loadTextureWork(const String& name, LoadedCallback cb);
 

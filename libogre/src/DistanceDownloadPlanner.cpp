@@ -731,7 +731,7 @@ void DistanceDownloadPlanner::loadMeshdata(Asset* asset, const Mesh::MeshdataPtr
         int index=0;
         for (Mesh::MaterialEffectInfoList::const_iterator mat=mdptr->materials.begin(),mate=mdptr->materials.end();mat!=mate;++mat,++index) {
 
-            std::string matname = ogreMaterialName(meshname, index);
+            std::string matname = ogreMaterialName(*mat, asset->uri, asset->textureFingerprints);
             getScene()->getResourceLoader()->loadMaterial(
                 matname, mdptr, *mat, asset->uri, asset->textureFingerprints,
                 std::tr1::bind(&DistanceDownloadPlanner::handleLoadedResource, this, asset,asset->livenessToken())
@@ -746,7 +746,7 @@ void DistanceDownloadPlanner::loadMeshdata(Asset* asset, const Mesh::MeshdataPtr
         // can find it by name.
         String skelname = "";
         if (!mdptr->joints.empty()) {
-            skelname = ogreSkeletonName(meshname);
+            skelname = ogreSkeletonName(mdptr, asset->textureFingerprints);
             getScene()->getResourceLoader()->loadSkeleton(
                 skelname, mdptr, asset->animations,
                 std::tr1::bind(&DistanceDownloadPlanner::handleLoadedResource, this, asset,asset->livenessToken())
@@ -757,7 +757,7 @@ void DistanceDownloadPlanner::loadMeshdata(Asset* asset, const Mesh::MeshdataPtr
 
         // Mesh
         getScene()->getResourceLoader()->loadMesh(
-            meshname, mdptr, skelname,
+            meshname, mdptr, skelname, asset->textureFingerprints,
             std::tr1::bind(&DistanceDownloadPlanner::handleLoadedResource, this, asset,asset->livenessToken())
         );
         asset->loadedResources.push_back(meshname);
@@ -816,7 +816,7 @@ void DistanceDownloadPlanner::loadBillboard(Asset* asset, const Mesh::BillboardP
     String bbname = ogreVisualName(bbptr, asset->textureFingerprints);
 
     // Load the single material
-    std::string matname = ogreMaterialName(bbname, 0);
+    std::string matname = ogreBillboardMaterialName(asset->textureFingerprints);
     asset->ogreAssetName = matname;
     getScene()->getResourceLoader()->loadBillboardMaterial(
         matname, bbptr->image, asset->uri, asset->textureFingerprints,

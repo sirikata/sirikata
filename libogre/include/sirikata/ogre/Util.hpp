@@ -8,6 +8,7 @@
 #include <sirikata/ogre/Platform.hpp>
 #include <sirikata/core/util/Logging.hpp>
 #include <sirikata/mesh/Visual.hpp>
+#include <sirikata/mesh/Meshdata.hpp>
 
 #define OGRE_LOG(lvl, msg) SILOG(ogre, lvl, msg)
 
@@ -23,8 +24,11 @@ typedef std::tr1::shared_ptr<TextureBindingsMap> TextureBindingsMapPtr;
 // their dae contents and hashes of textures they depend on to ensure uniqueness
 // while enabling reuse.
 String ogreVisualName(Mesh::VisualPtr vis, TextureBindingsMapPtr bindings);
-String ogreMaterialName(const String& meshname, int32 mat_idx);
-String ogreSkeletonName(const String& meshname);
+String ogreMaterialName(const Mesh::MaterialEffectInfo& mat, const Transfer::URI& parent_uri, TextureBindingsMapPtr bindings);
+// This version of ogreMaterialName doesn't take a MaterialEffectInfo because
+// billboards have a fixed material setup.
+String ogreBillboardMaterialName(TextureBindingsMapPtr bindings);
+String ogreSkeletonName(Mesh::MeshdataPtr md, TextureBindingsMapPtr bindings);
 String ogreLightName(const String& entityname, const String& meshname, int32 light_idx);
 
 } // namespace Graphics

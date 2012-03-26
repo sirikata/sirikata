@@ -122,12 +122,12 @@ void ResourceLoader::loadSkeletonWork(const String& name, Mesh::MeshdataPtr mesh
 }
 
 
-void ResourceLoader::loadMesh(const String& name, Mesh::MeshdataPtr mesh, const String& skeletonName, LoadedCallback cb) {
+void ResourceLoader::loadMesh(const String& name, Mesh::MeshdataPtr mesh, const String& skeletonName, TextureBindingsMapPtr textureFingerprints, LoadedCallback cb) {
     incRefCount(name, ResourceTypeMesh);
-    mTasks.push( std::tr1::bind(&ResourceLoader::loadMeshWork, this, name, mesh, skeletonName, cb) );
+    mTasks.push( std::tr1::bind(&ResourceLoader::loadMeshWork, this, name, mesh, skeletonName, textureFingerprints, cb) );
 }
 
-void ResourceLoader::loadMeshWork(const String& name, Mesh::MeshdataPtr mesh, const String& skeletonName, LoadedCallback cb) {
+void ResourceLoader::loadMeshWork(const String& name, Mesh::MeshdataPtr mesh, const String& skeletonName, TextureBindingsMapPtr textureFingerprints, LoadedCallback cb) {
     Ogre::MeshManager& mm = Ogre::MeshManager::getSingleton();
     Ogre::MeshPtr mo = mm.getByName(name);
     if (mo.isNull()) {
@@ -143,7 +143,7 @@ void ResourceLoader::loadMeshWork(const String& name, Mesh::MeshdataPtr mesh, co
 #else
                 OGRE_NEW
 #endif
-                ManualMeshLoader(mesh, name)));
+                ManualMeshLoader(mesh, textureFingerprints)));
         reload->prepareResource(&*mo);
         reload->loadResource(&*mo);
 
