@@ -362,7 +362,7 @@ private:
        deserialized message object in it.
      */
     void processSandboxMessage(
-        const String& msgToSend, uint32 senderID, uint32 receiverID,
+        String msgToSend, uint32 senderID, uint32 receiverID,
         Liveness::Token alive);
 
 
