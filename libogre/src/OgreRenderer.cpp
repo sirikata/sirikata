@@ -376,12 +376,16 @@ bool OgreRenderer::initialize(const String& options, bool with_berkelium) {
     // relocating it so logs show up in the expected location and
     // different clients don't overwrite each other's logs if they are
     // run from different locations
-    lm->createLog(ogreLogFile->as<String>(), true, false, false);
+    String temp_ogre_path = Path::Get(Path::DIR_TEMP, "ogre");
+    // Make sure we have the directories
+    boost::filesystem::create_directories( boost::filesystem::path(temp_ogre_path) );
+    String ogreLogFilePath = (boost::filesystem::path(temp_ogre_path) / Path::GetTempFilename(ogreLogFile->as<String>() + "-")).string();
+    lm->createLog(ogreLogFilePath, true, false, false);
 
     // NOTE: However, unlike above, we share the config file. This is
     // nice since you only have to configure once.
     std::string ogreConfigFile = Path::Get(Path::DIR_USER_HIDDEN, configFile->as<String>());
-    static bool success=((sRoot=OGRE_NEW Ogre::Root(pluginFile->as<String>(),ogreConfigFile,ogreLogFile->as<String>()))!=NULL
+    static bool success=((sRoot=OGRE_NEW Ogre::Root(pluginFile->as<String>(),ogreConfigFile,ogreLogFilePath))!=NULL
                          &&loadBuiltinPlugins()
                          &&((purgeConfig->as<bool>()==false&&getRoot()->restoreConfig())
                             || (userAccepted=getRoot()->showConfigDialog())));
