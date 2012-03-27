@@ -129,7 +129,6 @@ function() {
         this._loadingUIs--;
         if (this._loadingUIs > 0) return;
 
-
         if (! this._alreadyInitialized)
             this._simulator.hideLoadScreen();
 
@@ -645,6 +644,20 @@ function() {
         var audio_ambient_volume = this._env.get('audio.ambient_volume');
         if (audio_ambient_volume !== undefined && this._env.audio_ambient_clip) {
             this._env.audio_ambient_clip.volume(parseFloat(audio_ambient_volume));
+        }
+
+        // Skybox
+        var skybox_type = this._env.get('sky.type');
+        var skybox_img = this._env.get('sky.img');
+        if (skybox_type && skybox_img) {
+            var skybox_distance = this._env.get('sky.distance');
+            if (!skybox_distance) skybox_distance = 4000;
+            var skybox_tiling = this._env.get('sky.tiling');
+            if (!skybox_tiling) skybox_tiling = 1;
+            var skybox_curvature = this._env.get('sky.curvature');
+            if (!skybox_curvature) skybox_curvature = 65;
+            var skybox_orientation = this._env.get('sky.orientation');
+            this._simulator.skybox(skybox_type, skybox_img, 4000, skybox_tiling, skybox_curvature, skybox_orientation);
         }
     };
 
