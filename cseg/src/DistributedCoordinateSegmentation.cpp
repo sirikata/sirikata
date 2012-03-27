@@ -187,8 +187,8 @@ void DistributedCoordinateSegmentation::handleSelfLookup(Address4 my_addr) {
 
   startAcceptingLLRequests();
 
-  Thread thrd(boost::bind(&DistributedCoordinateSegmentation::ioServicingLoop, this));
-  Thread thrd2(boost::bind(&DistributedCoordinateSegmentation::llIOServicingLoop, this));
+  Thread thrd("CSeg IO", boost::bind(&DistributedCoordinateSegmentation::ioServicingLoop, this));
+  Thread thrd2("CSeg LL IO", boost::bind(&DistributedCoordinateSegmentation::llIOServicingLoop, this));
 }
 
 

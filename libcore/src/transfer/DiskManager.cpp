@@ -148,7 +148,7 @@ void DiskManager::WriteRequest::execute() {
 
 
 DiskManager::DiskManager() {
-    mWorkerThread = new Thread(std::tr1::bind(&DiskManager::workerThread, this));
+    mWorkerThread = new Thread("DiskManager", std::tr1::bind(&DiskManager::workerThread, this));
 }
 
 DiskManager::~DiskManager() {

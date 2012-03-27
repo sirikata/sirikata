@@ -89,7 +89,7 @@ WorkQueueThread *WorkQueue::createWorkerThreads(int count) {
 	WorkQueueThread *threads = new WorkQueueThread;
 	for (int i = 0; i < count; ++i) {
 		threads->mThreads.push_back(
-			new Thread(std::tr1::bind(&workQueueWorkerThread, this)));
+                    new Thread("WorkQueue Worker", std::tr1::bind(&workQueueWorkerThread, this)));
 	}
 	return threads;
 }

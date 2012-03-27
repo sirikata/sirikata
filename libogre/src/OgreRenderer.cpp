@@ -301,7 +301,7 @@ bool OgreRenderer::initialize(const String& options, bool with_berkelium) {
 
     mParsingIOService = new Network::IOService("Ogre Mesh Parsing");
     mParsingWork = new Network::IOWork(*mParsingIOService, "Ogre Mesh Parsing");
-    mParsingThread = new Sirikata::Thread(std::tr1::bind(&Network::IOService::runNoReturn, mParsingIOService));
+    mParsingThread = new Sirikata::Thread("OgreRenderer Model Parsing", std::tr1::bind(&Network::IOService::runNoReturn, mParsingIOService));
 
     //add ogre system options here
     OptionValue*pluginFile;

@@ -96,15 +96,15 @@ AggregateManager::AggregateManager(LocationService* loc, Transfer::OAuthParamsPt
     x++;
 
     // Start the processing thread
-    mAggregationThread = new Thread( std::tr1::bind(&AggregateManager::aggregationThreadMain, this) );
+    mAggregationThread = new Thread( "AggregateManager", std::tr1::bind(&AggregateManager::aggregationThreadMain, this) );
 
     for (uint8 i = 0; i < NUM_UPLOAD_THREADS; i++) {
       char id = '1';
       mUploadServices[i] = new Network::IOService("AggregateManager::UploadService"+id);
       mUploadStrands[i] = mUploadServices[i]->createStrand("AggregateManager::UploadStrand"+id);
       mUploadWorks[i] =new Network::IOWork(mUploadServices[i], "AggregateManager::UploadWork"+id);
-      mUploadThreads[i] = new Thread(std::tr1::bind(&AggregateManager::uploadThreadMain, this, i));
-      
+      mUploadThreads[i] = new Thread("AggregateManager Upload", std::tr1::bind(&AggregateManager::uploadThreadMain, this, i));
+
       id++;
     }
 
@@ -130,7 +130,7 @@ AggregateManager::~AggregateManager() {
     delete mAggregationStrand;
     delete mAggregationService;
     mAggregationService = NULL;
-    delete mAggregationThread;    
+    delete mAggregationThread;
 
     //Shutdown the upload threads.
     for (uint8 i = 0; i < NUM_UPLOAD_THREADS; i++) {
@@ -140,9 +140,9 @@ AggregateManager::~AggregateManager() {
         mUploadThreads[i]->join();
       }
 
-      delete mUploadWorks[i];      
+      delete mUploadWorks[i];
       delete mUploadStrands[i];
-      delete mUploadServices[i];      
+      delete mUploadServices[i];
 
       delete mUploadThreads[i];
     }
@@ -231,8 +231,8 @@ void AggregateManager::addChild(const UUID& uuid, const UUID& child_uuid) {
         mAggregateObjects[child_uuid] = std::tr1::shared_ptr<AggregateObject> (new AggregateObject(child_uuid, uuid, true));
     }
     else {
-      if (mAggregateObjects[child_uuid]->mParentUUID != uuid) {        
-        iRemoveChild(mAggregateObjects[child_uuid]->mParentUUID, child_uuid);        
+      if (mAggregateObjects[child_uuid]->mParentUUID != uuid) {
+        iRemoveChild(mAggregateObjects[child_uuid]->mParentUUID, child_uuid);
       }
 
       mAggregateObjects[child_uuid]->mParentUUID = uuid;
@@ -286,7 +286,7 @@ void AggregateManager::iRemoveChild(const UUID& uuid, const UUID& child_uuid) {
 void AggregateManager::removeChild(const UUID& uuid, const UUID& child_uuid) {
   boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
 
-  iRemoveChild(uuid, child_uuid);  
+  iRemoveChild(uuid, child_uuid);
 }
 
 void AggregateManager::aggregateObserved(const UUID& objid, uint32 nobservers) {
@@ -353,13 +353,13 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
   if (!mLoc->contains(uuid)) {
     return OTHER_GEN_FAILURE;
   }
-  
+
   std::vector<AggregateObjectPtr>& children = aggObject->mChildren;
                                                    //Set this to mLeaves if you want
                                                    //to generate directly from the leaves of the tree
-  
+
   for (uint32 i= 0; i < children.size(); i++) {
-    UUID child_uuid = children[i]->mUUID;    
+    UUID child_uuid = children[i]->mUUID;
 
     if (!mLoc->contains(child_uuid) ) {
       return OTHER_GEN_FAILURE;
@@ -452,7 +452,7 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
   // done copying data in. Also tracks mapping of texture filename ->
   // original texture URL so we can tell the CDN to reuse that data.
   std::tr1::unordered_map<String, String> textureSet;
-  
+
   for (uint32 i= 0; i < children.size(); i++) {
     UUID child_uuid = children[i]->mUUID;
     boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
@@ -463,7 +463,7 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
     std::string meshName = mLoc->mesh(child_uuid);
     lock.unlock();
 
-    if (!m || meshName == "") continue;    
+    if (!m || meshName == "") continue;
 
     //Center the mesh, as its done on the client side for display.
     Mesh::MutableFilterDataPtr input_data(new Mesh::FilterData);
@@ -474,7 +474,7 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
     //Compute the bounds for the child's mesh.
     BoundingBox3f3f originalMeshBoundingBox = BoundingBox3f3f::null();
     double originalMeshBoundsRadius=0;
-    ComputeBounds( m, &originalMeshBoundingBox, &originalMeshBoundsRadius);    
+    ComputeBounds( m, &originalMeshBoundingBox, &originalMeshBoundsRadius);
 
     // We me reuse more than one of the same mesh, e.g. the aggregate may have
     // two identical trees that are at different locations. In that case,
@@ -543,11 +543,11 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
     // Extract the loc information we need for this object.
     Vector3f location = mLoc->currentPosition(child_uuid);
     double scalingfactor = 1.0;
-    
+
     //If the child is an aggregate, don't use the information from LOC blindly.
-    //Fix that info up so that it corresponds with the actual position and size 
+    //Fix that info up so that it corresponds with the actual position and size
     //of the aggregate mesh.
-    if (isAggregate(child_uuid)) {      
+    if (isAggregate(child_uuid)) {
       Vector4f offsetFromCenter = m->globalTransform.getCol(3);
       offsetFromCenter = offsetFromCenter * -1.f;
 
@@ -566,7 +566,7 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
     float64 locationX = location.x;
     float64 locationY = location.y;
     float64 locationZ = location.z;
-    Quaternion orientation = mLoc->currentOrientation(child_uuid);    
+    Quaternion orientation = mLoc->currentOrientation(child_uuid);
 
     // Reuse geoinst_it and geoinst_idx from earlier, but with a new iterator.
     Meshdata::GeometryInstanceIterator geoinst_it = m->getGeometryInstanceIterator();
@@ -611,11 +611,11 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
                          Vector4f(2*ox*oy + 2*ow*oz, 1-2*ox*ox-2*oz*oz, 2*oy*oz-2*ow*ox, 0),
                          Vector4f(2*ox*oz-2*ow*oy, 2*oy*oz + 2*ow*ox, 1-2*ox*ox - 2*oy*oy,0),
                          Vector4f(0,0,0,1),                 Matrix4x4f::ROWS());
-      
-      trs *= rotateMatrix;            
+
+      trs *= rotateMatrix;
 
       //scaling
-      trs *= Matrix4x4f::scale(scalingfactor);      
+      trs *= Matrix4x4f::scale(scalingfactor);
 
       // Generate a node for this instance
       NodeIndex geom_node_idx = agg_mesh->nodes.size();
@@ -651,7 +651,7 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
   std::tr1::unordered_map<String, String> texFileNameToUrl;
   for (std::tr1::unordered_map<String, String>::iterator it = textureSet.begin(); it != textureSet.end(); it++) {
     String url = it->first;
-    
+
     size_t indexOfLastSlash = url.find_last_of('/');
     if (indexOfLastSlash == url.npos) {
 	texFileNameToUrl[url] = url;
@@ -659,7 +659,7 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
     }
 
     String substrUrl = url.substr(0, indexOfLastSlash);
-    
+
     indexOfLastSlash = substrUrl.find_last_of('/');
     if (indexOfLastSlash == substrUrl.npos) {
         texFileNameToUrl[url] = url;
@@ -680,17 +680,17 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
     boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
     assert( mAggregateObjects.find(child_uuid) != mAggregateObjects.end()) ;
     mAggregateObjects[child_uuid]->mMeshdata = std::tr1::shared_ptr<Meshdata>();
-  }  
+  }
 
   //Simplify the mesh...
   mMeshSimplifier.simplify(agg_mesh, 20000);
 
-  //... and now create the collada file, upload to the CDN and update LOC.  
+  //... and now create the collada file, upload to the CDN and update LOC.
   mUploadStrands[rand() % NUM_UPLOAD_THREADS]->post(
           std::tr1::bind(&AggregateManager::uploadAggregateMesh, this, agg_mesh, aggObject, textureSet, 0),
           "AggregateManager::uploadAggregateMesh"
       );
-  
+
 
   //Keep the meshstore's memory usage under control.
   {
@@ -710,7 +710,7 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
   return GEN_SUCCESS;
 }
 
-void AggregateManager::uploadAggregateMesh(Mesh::MeshdataPtr agg_mesh, 
+void AggregateManager::uploadAggregateMesh(Mesh::MeshdataPtr agg_mesh,
                                            AggregateObjectPtr aggObject,
                                            std::tr1::unordered_map<String, String> textureSet,
                                            uint32 retryAttempt)
@@ -720,7 +720,7 @@ void AggregateManager::uploadAggregateMesh(Mesh::MeshdataPtr agg_mesh,
   String localMeshName = boost::lexical_cast<String>(aggObject->mTreeLevel) +
                          "_aggregate_mesh_" +
                          uuid.toString() + ".dae";
-  
+
   // We have two paths here, the real CDN upload and the old, local approach
   // where we dump the file and run a script to "upload" it, which may just mean
   // moving it somewhere locally
@@ -820,7 +820,7 @@ void AggregateManager::uploadAggregateMesh(Mesh::MeshdataPtr agg_mesh,
       }
 
       if (generated_uri.empty()) {
-          AGG_LOG(error, "Failed to upload aggregate mesh " << localMeshName << ", composed of these children meshes:");          
+          AGG_LOG(error, "Failed to upload aggregate mesh " << localMeshName << ", composed of these children meshes:");
 
           boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
           std::vector<AggregateObjectPtr>& children = aggObject->mChildren;
@@ -831,10 +831,10 @@ void AggregateManager::uploadAggregateMesh(Mesh::MeshdataPtr agg_mesh,
               String meshName = mLoc->mesh(child_uuid);
               AGG_LOG(error, "   " << meshName);
           }
-  
+
           AGG_LOG(error, "Failure was retry attempt # " << retryAttempt);
           //Retry uploading up to 5 times.
-          if (retryAttempt < 5) {  
+          if (retryAttempt < 5) {
             mUploadStrands[rand() % NUM_UPLOAD_THREADS]->post(
              std::tr1::bind(&AggregateManager::uploadAggregateMesh, this, agg_mesh, aggObject, textureSet, retryAttempt + 1),
              "AggregateManager::uploadAggregateMesh"
@@ -882,18 +882,18 @@ void AggregateManager::uploadAggregateMesh(Mesh::MeshdataPtr agg_mesh,
           // aggregate object from the queue for processing." Failure to save is
           // effectively fatal for the aggregate, so tell it to get removed.
           return;
-      }      
+      }
 
       //Upload to web server
       std::string cmdline = std::string("./upload_to_cdn.sh ") +  modelFilename;
       system( cmdline.c_str()  );
 
       //Update loc
-      mLoc->updateLocalAggregateMesh(uuid, cdnMeshName);      
+      mLoc->updateLocalAggregateMesh(uuid, cdnMeshName);
   }
 
   AGG_LOG(info, "Uploaded successfully: " << localMeshName << "\n");
-  
+
   aggObject->mLeaves.clear();
 }
 
@@ -1068,7 +1068,7 @@ void AggregateManager::generateMeshesFromQueue(Time postTime) {
         mObjectsByPriority[ aggObject->mNumObservers + (aggObject->mTreeLevel*0.001) ].push_back(aggObject);
     }
 
-  
+
     //Generate the aggregates from the priority queue.
     Time curTime = (mObjectsByPriority.size() > 0) ? Timer::now() : Time::null();
     uint32 returner = GEN_SUCCESS;
@@ -1088,7 +1088,7 @@ void AggregateManager::generateMeshesFromQueue(Time postTime) {
         if (returner==GEN_SUCCESS || aggObject->mNumFailedGenerationAttempts > 25) {
           it->second.pop_front();
 	  if (returner != GEN_SUCCESS) {
-            AGG_LOG(error, "Could not generate aggregate mesh for " << 
+            AGG_LOG(error, "Could not generate aggregate mesh for " <<
 	                   aggObject->mTreeLevel << "_" << aggObject->mUUID.toString() << "\n");
           }
 

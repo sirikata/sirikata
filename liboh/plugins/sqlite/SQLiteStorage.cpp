@@ -321,7 +321,7 @@ void SQLiteStorage::start() {
     // cppoh.
     mIOService = new Network::IOService("SQLiteStorage");
     mWork = new Network::IOWork(*mIOService, "SQLiteStorage IO Thread");
-    mThread = new Sirikata::Thread(std::tr1::bind(&Network::IOService::runNoReturn, mIOService));
+    mThread = new Sirikata::Thread("SQLiteStorage IO", std::tr1::bind(&Network::IOService::runNoReturn, mIOService));
 
     mIOService->post(std::tr1::bind(&SQLiteStorage::initDB, this), "SQLiteStorage::initDB");
 

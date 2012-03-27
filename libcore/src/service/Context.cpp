@@ -34,13 +34,15 @@
 #include <sirikata/core/service/Context.hpp>
 #include <sirikata/core/network/IOStrandImpl.hpp>
 #include <boost/asio.hpp>
+#include <boost/lexical_cast.hpp>
 #include <sirikata/core/service/Breakpad.hpp>
 #include <sirikata/core/command/Commander.hpp>
 
 namespace Sirikata {
 
-Context::Context(const String& name, Network::IOService* ios, Network::IOStrand* strand, Trace::Trace* _trace, const Time& epoch, const Duration& simlen)
- : ioService(ios),
+Context::Context(const String& name_, Network::IOService* ios, Network::IOStrand* strand, Trace::Trace* _trace, const Time& epoch, const Duration& simlen)
+ : name(name_),
+   ioService(ios),
    mainStrand(strand),
    profiler(NULL),
    timeSeries(NULL),
@@ -89,7 +91,7 @@ void Context::run(uint32 nthreads, ExecutionThreads exthreads) {
     // Start workers
     for(uint32 i = 0; i < nworkers; i++) {
         mWorkerThreads.push_back(
-            new Thread( std::tr1::bind(&Context::workerThread, this) )
+            new Thread( name + " Worker " + boost::lexical_cast<String>(i), std::tr1::bind(&Context::workerThread, this) )
         );
     }
 
@@ -178,6 +180,7 @@ void Context::startForceQuitTimer() {
     );
     mKillThread = std::tr1::shared_ptr<Thread>(
         new Thread(
+            "Context Kill Thread",
             std::tr1::bind(&Network::IOService::runNoReturn, mKillService)
         )
     );

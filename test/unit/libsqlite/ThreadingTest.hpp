@@ -86,14 +86,14 @@ public:
     }
 
     void testThread(void) {
-        Thread t1(std::tr1::bind(&SQLiteThreadingTest::threadMain, this));
+        Thread t1("Test", std::tr1::bind(&SQLiteThreadingTest::threadMain, this));
         t1.join();
     }
 
     void testMultipleThread(void) {
         std::vector<Thread*> threads;
         for(int i = 0; i < 10; i++)
-            threads.push_back(new Thread(std::tr1::bind(&SQLiteThreadingTest::threadMain, this)));
+            threads.push_back(new Thread("TestMultiple", std::tr1::bind(&SQLiteThreadingTest::threadMain, this)));
         for(int i = 0; i < 10; i++) {
             threads[i]->join();
             delete threads[i];

@@ -31,7 +31,7 @@ TransferMediator::TransferMediator() {
     mCleanup = false;
     mNumOutstanding = 0;
     mAggregationAlgorithm = new MaxPriorityAggregation();
-    mThread = new Thread(std::tr1::bind(&TransferMediator::mediatorThread, this));
+    mThread = new Thread("TransferMediator", std::tr1::bind(&TransferMediator::mediatorThread, this));
 }
 
 TransferMediator::~TransferMediator() {
@@ -197,7 +197,7 @@ TransferMediator::AggregateRequest::AggregateRequest(std::tr1::shared_ptr<Transf
 
 TransferMediator::PoolWorker::PoolWorker(std::tr1::shared_ptr<TransferPool> transferPool)
     : mTransferPool(transferPool), mCleanup(false) {
-    mWorkerThread = new Thread(std::tr1::bind(&PoolWorker::run, this));
+    mWorkerThread = new Thread("TransferMediator Worker", std::tr1::bind(&PoolWorker::run, this));
 }
 
 std::tr1::shared_ptr<TransferPool> TransferMediator::PoolWorker::getTransferPool() const {

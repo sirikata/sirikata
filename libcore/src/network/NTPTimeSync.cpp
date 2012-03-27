@@ -124,6 +124,7 @@ void NTPTimeSync::start(const String& server) {
 
         // Start off the syncing thread
         mSyncThread = new Thread(
+            "NTPTimeSync",
             std::tr1::bind(
             TimeSync_sync_thread,
             ntp_ctl_pipes,

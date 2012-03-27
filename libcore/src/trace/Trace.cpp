@@ -65,7 +65,7 @@ Trace::Trace(const String& filename)
    mStorageThread(NULL),
    mFinishStorage(false)
 {
-    mStorageThread = new Thread( std::tr1::bind(&Trace::storageThread, this, filename) );
+    mStorageThread = new Thread( "Trace Storage", std::tr1::bind(&Trace::storageThread, this, filename) );
 }
 
 void Trace::prepareShutdown() {

@@ -61,6 +61,7 @@ void BenchmarkRunner::run(const String& _name, const String& _param) {
                                                    );
 
     Thread bm_thread(
+        "Benchmark Worker",
         std::tr1::bind(&BenchmarkRunner::benchmarkThread, this, bm)
                      );
 
