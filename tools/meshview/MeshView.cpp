@@ -63,7 +63,9 @@ public:
     {
         this->addListener(this);
     }
-    virtual ~MeshViewEntity() {}
+    virtual ~MeshViewEntity() {
+        Liveness::letDie();
+    }
 
     // Entity Interface
     virtual BoundingSphere3f bounds() { return BoundingSphere3f(Vector3f(0,0,0), 1.f); }

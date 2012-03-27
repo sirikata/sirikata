@@ -647,6 +647,9 @@ bool OgreRenderer::loadBuiltinPlugins () {
 
 
 OgreRenderer::~OgreRenderer() {
+    if (Liveness::livenessAlive())
+        Liveness::letDie();
+
     mParsingThread->join();
     delete mParsingThread;
     delete mParsingIOService;
