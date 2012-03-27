@@ -174,7 +174,7 @@ private:
 
     // Generate query events based on results collected from query handlers
     void generateServerQueryEvents(Query* query);
-    void generateObjectQueryEvents(Query* query);
+    void generateObjectQueryEvents(Query* query, bool do_first=false);
 
     // Decides whether a query handler should handle a particular object.
     bool handlerShouldHandleObject(bool is_static_handler, bool is_global_handler, const UUID& obj_id, bool local, const TimedMotionVector3f& pos, const BoundingSphere3f& region, float maxSize);
@@ -200,6 +200,7 @@ private:
     typedef std::tr1::unordered_map<ServerID, Query*> ServerQueryMap;
     typedef std::tr1::unordered_map<Query*, ServerID> InvertedServerQueryMap;
     typedef std::tr1::unordered_map<UUID, Query*, UUID::Hasher> ObjectQueryMap;
+    typedef std::tr1::unordered_set<Query*> FirstIterationObjectSet;
     typedef std::tr1::unordered_map<Query*, UUID> InvertedObjectQueryMap;
 
     typedef std::tr1::shared_ptr<ObjectSet> ObjectSetPtr;
@@ -288,6 +289,7 @@ private:
     // answer queries for objects connected to this server.
     ObjectQueryMap mObjectQueries[NUM_OBJECT_CLASSES];
     InvertedObjectQueryMap mInvertedObjectQueries;
+    FirstIterationObjectSet mObjectQueriesFirstIteration;
     ProxQueryHandlerData mObjectQueryHandler[NUM_OBJECT_CLASSES];
     bool mObjectDistance; // Using distance queries
     PollerService mObjectHandlerPoller;

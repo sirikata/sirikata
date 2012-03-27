@@ -358,8 +358,6 @@ void LibproxManualProximity::eraseSeqNoInfo(const OHDP::NodeID& node)
 }
 
 void LibproxManualProximity::queryHasEvents(ProxQuery* query) {
-    typedef std::deque<ProxQueryEvent> QueryEventList;
-
     uint32 max_count = GetOptionValue<uint32>(PROX_MAX_PER_RESULT);
 
     OHDP::NodeID query_id = mInvertedOHQueries[query];

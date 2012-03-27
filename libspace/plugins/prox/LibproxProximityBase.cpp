@@ -245,6 +245,60 @@ bool LibproxProximityBase::velocityIsStatic(const Vector3f& vel) {
 }
 
 
+void LibproxProximityBase::coalesceEvents(QueryEventList& evts, uint32 per_event) {
+    // We keep two maps from UUID to QueryEvent:
+    // One for additions and one for removals. For each object, we check if we
+    // have a record of it, in the opposite map. If we have a record, this new
+    // one negates it and it's removed. If we don't, we add it into the
+    // map. By processing in order, this leaves us with just the new additions
+    // and removals.
+    typedef std::map<UUID, QueryEvent::Addition> AdditionMap;
+    typedef std::map<UUID, QueryEvent::Removal> RemovalMap;
+    AdditionMap additions;
+    RemovalMap removals;
+    while(!evts.empty()) {
+        const QueryEvent& evt = evts.front();
+
+        for(uint32 aidx = 0; aidx < evt.additions().size(); aidx++) {
+            UUID objid = evt.additions()[aidx].id();
+            if (removals.find(objid) != removals.end())
+                removals.erase(objid);
+            else
+                additions.insert(std::make_pair(objid, evt.additions()[aidx]));
+        }
+        for(uint32 ridx = 0; ridx < evt.removals().size(); ridx++) {
+            UUID objid = evt.removals()[ridx].id();
+            if (additions.find(objid) != additions.end())
+                additions.erase(objid);
+            else
+                removals.insert(std::make_pair(objid, evt.removals()[ridx]));
+        }
+        evts.pop_front();
+    }
+    // Now we just need to repack them.
+    QueryEvent next_evt;
+    while(!additions.empty() || !removals.empty()) {
+        // Get next addition or removal and remove it from our list
+        if (!additions.empty()) {
+            next_evt.additions().push_back(additions.begin()->second);
+            additions.erase(additions.begin());
+        }
+        else {
+            next_evt.removals().push_back(removals.begin()->second);
+            removals.erase(removals.begin());
+        }
+
+        // Push it onto the queue if this event is full or we're about to finish
+        if (next_evt.size() == per_event ||
+            (additions.empty() && removals.empty()))
+        {
+            evts.push_back(next_evt);
+            next_evt = QueryEvent();
+        }
+    }
+}
+
+
 // MAIN Thread
 
 void LibproxProximityBase::readFramesFromObjectStream(const ObjectReference& oref, ProxObjectStreamInfo::FrameReceivedCallback cb) {
