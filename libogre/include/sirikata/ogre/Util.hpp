@@ -15,6 +15,7 @@
 namespace Sirikata {
 namespace Graphics {
 
+// Maps texture URIs -> hashes
 typedef std::map<String, String> TextureBindingsMap;
 typedef std::tr1::shared_ptr<TextureBindingsMap> TextureBindingsMapPtr;
 

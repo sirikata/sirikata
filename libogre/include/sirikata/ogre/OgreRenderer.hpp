@@ -42,6 +42,7 @@
 #include <sirikata/oh/TimeSteppedSimulation.hpp>
 #include <OgreWindowEventUtilities.h>
 #include <sirikata/core/util/Liveness.hpp>
+#include <sirikata/ogre/Skybox.hpp>
 
 namespace Sirikata {
 
@@ -300,6 +301,8 @@ public:
 
     typedef std::tr1::unordered_set<Camera*> CameraSet;
     CameraSet mAttachedCameras;
+
+    SkyboxPtr mSkybox;
 
     friend class Entity; //Entity will insert/delete itself from these arrays.
     friend class Camera; //CameraEntity will insert/delete itself from the scene

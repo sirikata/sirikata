@@ -37,10 +37,10 @@ String ogreMaterialName(const Mesh::MaterialEffectInfo& mat, const Transfer::URI
     data << "shininess_" << mat.shininess << "_";
     data << "reflectivity_" << mat.reflectivity << "_";
 
-    for(int32 texn = 0; texn < mat.textures.size(); texn++) {
+    for(uint32 texn = 0; texn < mat.textures.size(); texn++) {
         data << "tex" << texn << "_(";
         const Mesh::MaterialEffectInfo::Texture& tex = mat.textures[texn];
-        data << "affecting_" << tex.affecting << "_";
+        data << "affecting_" << (int)tex.affecting << "_";
         if (tex.uri.length() == 0) {
             data << "color_" << tex.color << "_";
         }
@@ -54,9 +54,9 @@ String ogreMaterialName(const Mesh::MaterialEffectInfo& mat, const Transfer::URI
 
             data << "texCoord_" << tex.texCoord << "_";
             // filter, sampler type?
-            data << "wrapS_" << tex.wrapS << "_";
-            data << "wrapT_" << tex.wrapT << "_";
-            data << "wrapU_" << tex.wrapU << "_";
+            data << "wrapS_" << (int)tex.wrapS << "_";
+            data << "wrapT_" << (int)tex.wrapT << "_";
+            data << "wrapU_" << (int)tex.wrapU << "_";
             data << "maxMipLevel_" << tex.maxMipLevel << "_";
             data << "mipBias_" << tex.mipBias << "_";
         }

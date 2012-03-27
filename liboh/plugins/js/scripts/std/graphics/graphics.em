@@ -370,6 +370,25 @@ function() {
         this.invoke("setMaxObjects", maxobjs, visible);
     };
 
+    /** Sets the skybox or disables it.
+     *  \param type 'disabled', 'cube', 'dome', or 'plane'
+     *  \param img the image URL to use
+     *  \param distance distance to box
+     *  \param tiling number of times to tile for 'dome'
+     *  \param curvature curvature for the dome
+     *  \param orientation quaternion specifying rotation of the box
+     */
+    std.graphics.Graphics.prototype.skybox = function(type, img, distance, tiling, curvature, orientation) {
+        // We need to only pass in the used arguments. Find the first undefined value and chop off at that point.
+        args = ['setSkybox', type, img, distance, tiling, curvature];
+        if (orientation)
+            args.splice(-1, 0, orientation.x, orientation.y, orientation.z, orientation.w);
+        var arg_undefined_idx = args.indexOf(undefined);
+        if (arg_undefined_idx != -1)
+            args = args.slice(0, arg_undefined_idx);
+        this.invoke.apply(this, args);
+    };
+
 })();
 
 // Import additional utilities that anybody using this class will need.

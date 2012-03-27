@@ -55,7 +55,7 @@ void ResourceLoader::loadMaterialWork(const String& name, Mesh::MeshdataPtr mesh
         reload->prepareResource(&*matPtr);
         reload->loadResource(&*matPtr);
     }
-    cb();
+    if (cb) cb();
 }
 
 void ResourceLoader::loadBillboardMaterial(const String& name, const String& texuri, const Transfer::URI& uri, TextureBindingsMapPtr textureFingerprints, LoadedCallback cb) {
@@ -98,7 +98,7 @@ void ResourceLoader::loadBillboardMaterialWork(const String& name, const String&
         reload->loadResource(&*matPtr);
     }
 
-    cb();
+    if (cb) cb();
 }
 
 
@@ -118,7 +118,7 @@ void ResourceLoader::loadSkeletonWork(const String& name, Mesh::MeshdataPtr mesh
         reload->prepareResource(&*skel);
         reload->loadResource(&*skel);
     }
-    cb();
+    if (cb) cb();
 }
 
 
@@ -154,7 +154,7 @@ void ResourceLoader::loadMeshWork(const String& name, Mesh::MeshdataPtr mesh, co
                 mo->_notifySkeleton(skel);
         }
     }
-    cb();
+    if (cb) cb();
 }
 
 
@@ -166,7 +166,7 @@ void ResourceLoader::loadTexture(const String& name, LoadedCallback cb) {
 void ResourceLoader::loadTextureWork(const String& name, LoadedCallback cb) {
     Ogre::TextureManager& tm = Ogre::TextureManager::getSingleton();
     tm.load(name,Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
-    cb();
+    if (cb) cb();
 }
 
 void ResourceLoader::unloadResource(const String& name) {
