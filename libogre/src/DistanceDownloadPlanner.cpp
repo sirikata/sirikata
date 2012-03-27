@@ -586,10 +586,11 @@ void DistanceDownloadPlanner::downloadAsset(Asset* asset, Object* forObject) {
     RMutex::scoped_lock lock(mDlPlannerMutex);
     DLPLANNER_LOG(detailed, "Starting download of " << asset->uri);
 
+    bool is_aggregate = (forObject->proxy ? forObject->proxy->isAggregate() : false);
     asset->downloadTask =
         AssetDownloadTask::construct(
             asset->uri, getScene(), forObject->priority,
-            forObject->proxy->isAggregate(),
+            is_aggregate,
             mContext->mainStrand->wrap(
                 std::tr1::bind(&DistanceDownloadPlanner::loadAsset, this, asset->uri,asset->internalId)
               ));
