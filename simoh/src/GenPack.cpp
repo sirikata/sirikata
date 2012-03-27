@@ -55,7 +55,9 @@ int main(int argc, char** argv) {
 
     PluginManager plugins;
     plugins.loadList( GetOptionValue<String>(OPT_PLUGINS) );
+    plugins.loadList( GetOptionValue<String>(OPT_EXTRA_PLUGINS) );
     plugins.loadList( GetOptionValue<String>(OPT_OH_PLUGINS) );
+    plugins.loadList( GetOptionValue<String>(OPT_OH_EXTRA_PLUGINS) );
 
     String trace_file = GetPerServerFile(STATS_OH_TRACE_FILE, 1);
     Trace::Trace* gTrace = new Trace::Trace(trace_file);

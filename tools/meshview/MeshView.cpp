@@ -96,6 +96,7 @@ int main(int argc, char** argv) {
 
     PluginManager plugins;
     plugins.loadList( GetOptionValue<String>(OPT_PLUGINS) );
+    plugins.loadList( GetOptionValue<String>(OPT_EXTRA_PLUGINS) );
     // FIXME this should be an option
     plugins.loadList( "colladamodels,mesh-billboard,common-filters,nvtt" );
 

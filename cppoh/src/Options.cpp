@@ -58,6 +58,7 @@ void InitCPPOHOptions() {
 #endif
                 ",oh-simple-query,oh-manual-query,sdlaudio,oh-environment",
                 Sirikata::OptionValueType<String>(),"Plugin list to load."))
+        .addOption(new OptionValue(OPT_OH_EXTRA_PLUGINS,"",Sirikata::OptionValueType<String>(),"Extra list of plugins to load. Useful for using existing defaults as well as some additional plugins."))
         .addOption(new OptionValue(OPT_OH_PLUGIN_SEARCH_PATHS,"",Sirikata::OptionValueType<String>(),"Colon separated list of paths to search for plugins."))
 
         .addOption(new OptionValue("ohid", "1", Sirikata::OptionValueType<ObjectHostID>(), "Object host ID for this server"))

@@ -56,6 +56,7 @@ void InitOptions() {
         .addOption(new OptionValue(OPT_CRASHREPORT_URL,"http://crashes.sirikata.com/report",Sirikata::OptionValueType<String>(),"URL to report crashes to."))
 
         .addOption(new OptionValue(OPT_PLUGINS,"tcpsst,servermap-tabular,core-local,graphite,core-http",Sirikata::OptionValueType<String>(),"Plugin list to load."))
+        .addOption(new OptionValue(OPT_EXTRA_PLUGINS,"",Sirikata::OptionValueType<String>(),"Extra list of plugins to load. Useful for using existing defaults as well as some additional plugins."))
 
         .addOption(new OptionValue("ohstreamlib","tcpsst",Sirikata::OptionValueType<String>(),"Which library to use to communicate with the object host"))
         .addOption(new OptionValue("ohstreamoptions","--send-buffer-size=16384 --parallel-sockets=1 --no-delay=false",Sirikata::OptionValueType<String>(),"TCPSST stream options such as how many bytes to collect for sending during an ongoing asynchronous send call."))

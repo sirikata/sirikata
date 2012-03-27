@@ -36,6 +36,7 @@
 #define OPT_CONFIG_FILE          "cfg"
 
 #define OPT_SPACE_PLUGINS           "space.plugins"
+#define OPT_SPACE_EXTRA_PLUGINS     "space.extra-plugins"
 
 #define SERVER_QUEUE         "server.queue"
 #define SERVER_QUEUE_LENGTH  "server.queue.length"

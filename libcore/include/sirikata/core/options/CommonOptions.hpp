@@ -38,6 +38,7 @@
 #define OPT_CRASHREPORT_URL       "crashreport"
 
 #define OPT_PLUGINS               "plugins"
+#define OPT_EXTRA_PLUGINS         "extra-plugins"
 
 #define OPT_LOG_FILE                  "log-file"
 #define STATS_TRACE_FILE     "stats.trace-filename"
