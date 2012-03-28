@@ -96,7 +96,7 @@ function() {
             this._loadingUIs++; this._physics = new std.graphics.PhysicsProperties(this._simulator, ui_finish_cb);
             //this._loadingUIs++; this._propertybox = new std.propertybox.PropertyBox(this, ui_finish_cb);
             //this._loadingUIs++; this._presenceList = new std.graphics.PresenceList(this._pres, this._simulator, this._scripter, ui_finish_cb);
-            //this._loadingUIs++; this._setMesh = new std.graphics.SetMesh(this._simulator, ui_finish_cb);
+            this._loadingUIs++; this._setMesh = new std.graphics.SetMesh(this._simulator, ui_finish_cb);
             //this._loadingUIs++; this._flatland = new std.fl.FL(this, ui_finish_cb);                
         }
         else
@@ -114,7 +114,7 @@ function() {
         this._loadingUIs++; this._physics.onReset(ui_finish_cb);
         //this._loadingUIs++; this._propertybox.onReset(ui_finish_cb);
         //this._loadingUIs++; this._presenceList.onReset(ui_finish_cb);
-        //this._loadingUIs++; this._setMesh.onReset(ui_finish_cb);
+        this._loadingUIs++; this._setMesh.onReset(ui_finish_cb);
         //this._loadingUIs++; this._flatland.onReset(ui_finish_cb);
     };
 
@@ -159,7 +159,7 @@ function() {
             this._binding.addAction('toggleChat', std.core.bind(this.toggleChat, this));
             this._binding.addAction('togglePhysicsProperties', std.core.bind(this._physics.toggle, this._physics));
             //this._binding.addAction('togglePresenceList', std.core.bind(this._presenceList.toggle, this._presenceList));
-            //this._binding.addAction('toggleSetMesh', std.core.bind(this._setMesh.toggle, this._setMesh));
+            this._binding.addAction('toggleSetMesh', std.core.bind(this._setMesh.toggle, this._setMesh));
             //this._binding.addFloat2Action('showFlatland', std.core.bind(this.showFlatland, this));
             //this._binding.addAction('hideFlatland', std.core.bind(this.hideFlatland, this));
 
@@ -511,6 +511,7 @@ function() {
     std.client.Default.prototype.updatePhysicsProperties = function() {
         // Update even if not selected so display can be disabled
         this._physics.update(this._selected);
+        if (this._setMesh) this._setMesh.update(this._selected);
     };
 
     /** @function */

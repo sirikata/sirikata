@@ -1,156 +1,130 @@
 sirikata.ui(
-    "SetMesh",
-    function() {
+"SetMesh",
+function() {
 
 
-SetMesh = {}; // External interface
-var window; // Our UI window
+    SetMesh = {}; // External interface
+    var window; // Our UI window
 
-/* toggles the window with the key combo ctrl + j */
-var toggleVisible = function() {
-    window.toggle();
-};
-SetMesh.toggleVisible = toggleVisible;
+    SetMesh.toggleVisible = function() {
+        window.toggle();
+    };
 
-                  $('<div id="set-mesh" title="Select Mesh">' +
-          '<div style="position: absolute; left: 10px; top: 10px;"> <img id="img0" src="http://open3dhub.com/download/988525fdc6d8a8baa1e18a9fd796bfe3325c6775540d8a26750f73c5109311a3"></img></div>' +
-          '<div style="position: absolute; left: 110px; top: 10px;"><img id="img1" src="http://open3dhub.com/download/988525fdc6d8a8baa1e18a9fd796bfe3325c6775540d8a26750f73c5109311a3"></img></div>' +
-          '<div style="position: absolute; left: 210px; top: 10px;"><img id="img2" src="http://open3dhub.com/download/988525fdc6d8a8baa1e18a9fd796bfe3325c6775540d8a26750f73c5109311a3"></img></div>' +
-          '<div style="position: absolute; left: 10px; top: 120px;"> <img id="img3" src="http://open3dhub.com/download/988525fdc6d8a8baa1e18a9fd796bfe3325c6775540d8a26750f73c5109311a3"></img></div>' +
-          '<div style="position: absolute; left: 110px; top: 120px;"><img id="img4" src="http://open3dhub.com/download/988525fdc6d8a8baa1e18a9fd796bfe3325c6775540d8a26750f73c5109311a3"></img></div>' +
-          '<div style="position: absolute; left: 210px; top: 120px;"><img id="img5" src="http://open3dhub.com/download/988525fdc6d8a8baa1e18a9fd796bfe3325c6775540d8a26750f73c5109311a3"></img></div>' +
-          '<div style="position: absolute; left: 40px; top: 220px;"><button id="prevButton">Prev</button>' + '<button id="nextButton">Next</button>' + '<input type = "checkbox" id="createNew">Create New Presence?</input>' +
-         /* directions on how to use this tool */
-          '<div id="meshDescriptionText">Select an object in the world, then click on a mesh thumbnail to set the mesh of selected object - or you may create a new mesh by first clicking the checkbox above.</div>' + '<input value="Enter Keyword" id="search"></input>' + '<button id="searchButton">search</button>' + '</div>' +
-          '</div>').appendTo('body');
-       
-       
-       window = new sirikata.ui.window(                     // (2)
-           "#set-mesh",
-           {
-               autoOpen: false,
-               width: 310,
-               height: 360,
-               modal: false
-           }
-        );
+    SetMesh.disable = function() {
+        window.disable();
+    };
 
-        /* Set Mesh Navigation buttons */
-        sirikata.ui.button('#nextButton').click(loadNext);
-        sirikata.ui.button('#prevButton').click(loadPrev);
-        sirikata.ui.button('#searchButton').click(search);
+    SetMesh.enable = function() {
+        window.enable();
+    };
 
-        /* Set Mesh Thumbnail buttons */
-        sirikata.ui.button('#img0').click(function() {
-            setMesh('#img0', 0);
-        });
-        sirikata.ui.button('#img1').click(function() {
-            setMesh('#img1', 1);
-        });
-        sirikata.ui.button('#img2').click(function() {
-            setMesh('#img2', 2);
-        });
-        
-        sirikata.ui.button('#img3').click(function() {
-            setMesh('#img3', 3);
-        });
-        sirikata.ui.button('#img4').click(function() {
-            setMesh('#img4', 4);
-        });
-        sirikata.ui.button('#img5').click(function() {
-            setMesh('#img5', 5);
-        });
-        
-        /*************************** variables ********************************/
+    $('<style type="text/css">'+
+      '.set-mesh-preview { max-width: 95px; max-height: 95px; display: inline; }' +
+      '.set-mesh-preview-box { width: 100px; height: 100px; display: inline-block; }' +
+      '</style>' +
+      '<div id="set-mesh" title="Select Mesh">' +
+      '<div class="set-mesh-preview-box"><img id="img0" class="set-mesh-preview" imgid="0" src=""></img></div>' +
+      '<div class="set-mesh-preview-box"><img id="img1" class="set-mesh-preview" imgid="1" src=""></img></div>' +
+      '<div class="set-mesh-preview-box"><img id="img2" class="set-mesh-preview" imgid="2" src=""></img></div>' +
+      '<div class="set-mesh-preview-box"><img id="img3" class="set-mesh-preview" imgid="3" src=""></img></div>' +
+      '<div class="set-mesh-preview-box"><img id="img4" class="set-mesh-preview" imgid="4" src=""></img></div>' +
+      '<div class="set-mesh-preview-box"><img id="img5" class="set-mesh-preview" imgid="5" src=""></img></div>' +
+      '<div style="">' +
+      '<button id="prevButton">Prev</button>' +
+      '<button id="nextButton">Next</button>' +
+      '<input type = "checkbox" id="createNew">Create New Presence?</input>' +
+      /* directions on how to use this tool */
+      '<div id="meshDescriptionText">Select an object in the world, then click on a mesh thumbnail to set the mesh of selected object - or you may create a new mesh by first clicking the checkbox above.</div>' +
+      '<input value="Enter Keyword" id="search">' +
+      '</input>' +
+      '<button id="searchButton">search</button>' +
+      '</div>' +
+      '</div>').appendTo('body');
 
-        var nextStart = '';
-        var currentMesh = null;
-        var numChoices = 6;
-        var searchResult = 0;
-        displayArray = [];
+
+    window = new sirikata.ui.window(                     // (2)
+        "#set-mesh",
+        {
+            autoOpen: false,
+            width: 310,
+            height: 360,
+            modal: false
+        }
+    );
+
+    /* Set Mesh Navigation buttons */
+    sirikata.ui.button('#nextButton').click(loadNext);
+    sirikata.ui.button('#prevButton').click(loadPrev);
+    sirikata.ui.button('#searchButton').click(search);
+
+    /* Set Mesh Thumbnail buttons */
+    sirikata.ui.button('.set-mesh-preview').click(
+        function() {
+            setMesh( parseInt($(this).attr('imgid')) );
+        }
+    );
+
+    /*************************** variables ********************************/
+
+    var currentMesh = null;
+    var numChoices = 6;
+    var searchResult = 0;
+    var displayArray = [];
+    var allMeshes = [];
+
+    /* retrieving model information from open3dhub */
+    var retrieveModels = function() {
         allMeshes = [];
- 
-        /* retrieving model information from open3dhub */
-        while (true) {
-            $.ajax({
-                url: 'http://open3dhub.com/api/browse/' + nextStart, 
-                type: 'GET',
-                dataType: 'json',
-                async: false,
-                success: allMeshesFunc,
-                crossDomain: true
-            });
-
-            if (nextStart == null) break;
-        }
-
-        /* Function: allMeshesFunc
-         *************************
-         * Callback function for ajax request, pushes each thumbnail, full path, and title into a 2-dimensional array
-         */
-        function allMeshesFunc(dataGotten, status, xhr) {
-            if (!dataGotten) {
-                nextStart = null;
-                return;
-            }
-            nextStart = dataGotten.next_start;
-            for (var s in dataGotten.content_items) {
-                if (typeof(dataGotten.content_items[s].metadata.types.optimized) == 'object' && 
-                    typeof (dataGotten.content_items[s].metadata.types.optimized.thumbnail) != 'undefined') {
-                    allMeshes.push([dataGotten.content_items[s].metadata.types.optimized.thumbnail, dataGotten.content_items[s].full_path, dataGotten.content_items[s].metadata.title]);
+        retrieveModelsWork('', true);
+    };
+    var retrieveModelsWork = function(next, first) {
+        $.ajax({
+            url: 'http://open3dhub.com/api/browse/' + next,
+            type: 'GET',
+            dataType: 'json',
+            success: function(dataGotten) {
+                if (!dataGotten)
+                    return;
+                for (var s in dataGotten.content_items) {
+                    if (typeof(dataGotten.content_items[s].metadata.types.optimized) == 'object' &&
+                        typeof (dataGotten.content_items[s].metadata.types.optimized.thumbnail) != 'undefined') {
+                        allMeshes.push([dataGotten.content_items[s].metadata.types.optimized.thumbnail, dataGotten.content_items[s].full_path, dataGotten.content_items[s].metadata.title]);
+                    }
                 }
-            }
-            loadNext();
-        }
-        
+                // Start displaying models as soon as we have a few
+                if (first) loadNext();
+                // Setup next loading, if we're grabbing more models
+                if (dataGotten.next_start == null || allMeshes.length > 500)
+                    return;
+                retrieveModelsWork(dataGotten.next_start);
+            },
+            crossDomain: true
+        });
+    };
+    // Start loading models.
+    retrieveModels();
+
 
         /* Function: setMesh
         ********************
         * if an object in the world is selected, the object takes on the mesh of the thumbnail clicked afterward. if the "create new presence" option is checked,
-        * then clicking a thumbnail creates an object with that mesh.  
+        * then clicking a thumbnail creates an object with that mesh.
         */
-        function setMesh(name, offset) {
-            toggleBorder(offset);
+        function setMesh(offset) {
             var string = (allMeshes[currentMesh + offset][1]);
             var str1 = string.substring(0, string.length - 2);
             var append = str1.substring(str1.lastIndexOf('/'), str1.length);
             var str2 = string.substring(string.length - 2, string.length);
             string = str1 + '/optimized' + str2 + append;
             string = "meerkat://" + string;
-            
+
             if ($('#createNew').is(":checked")) {
                 sirikata.event("createNewPres", string);
             } else sirikata.event("setmesh", string);
-            
+
             var msg = "Mesh has been set to " + allMeshes[currentMesh + offset][2];
             $('#meshDescriptionText').text(msg);
         }
-      
-        /* Function: toggleBorder
-         ************************
-         * created a border around a thumbnail mesh, given what the offset of 
-         * the thumbnail is relative to the first one shown */
-        function toggleBorder(offset) {
-            var prefix = "#img";
-            for (var i = 0; i < numChoices; i++) {
-                var name = prefix + i;
-                if (i == offset) $(name).attr("border", 5);
-                else $(name).attr("border", 0);
-            }
-        }
-        
-        /* Function: toggleBorder
-         ************************
-         * removes border when another button is clicked
-         */
-        function removeBorders() {
-            var prefix = "#img";
-            for (var i = 0; i < numChoices; i++) {
-                var name = prefix + i;
-                $(name).attr("border", 0);
-            }
-        }
-
 
 
         //Takes a string like this:
@@ -167,42 +141,40 @@ SetMesh.toggleVisible = toggleVisible;
         */
         function loadPrev() {
             updateDisplayArray(0);
-            removeBorders();
             var prefix = "#img";
             for (var i = 0; i < numChoices; i++) {
                 var name = prefix + i;
                 $(name).attr("src", formSource(allMeshes[(displayArray[i])][0]));
             }
         }
-        
+
         /* Function: loadNext
          ********************
          * loads the next page of thumbnails
          */
         function loadNext() {
             updateDisplayArray(1);
-            removeBorders();
             var prefix = "#img";
             for (var i = 0; i < numChoices; i++) {
                 var name = prefix + i;
                 $(name).attr("src", formSource(allMeshes[(displayArray[i])][0]));
             }
-            
+
         }
-        
+
         function searchTemp() {
             window.hide();
         }
-        
-    
+
+
     /* Function: levenshtein
      ***********************
-     * Search function to find minimum edit distance 
-     * source info below 
-     */    
+     * Search function to find minimum edit distance
+     * source info below
+     */
     function levenshtein (s1, s2) {
-    // Calculate Levenshtein distance between two strings  
-    // 
+    // Calculate Levenshtein distance between two strings
+    //
     // version: 1103.1210
     // discuss at: http://phpjs.org/functions/levenshtein
     // +            original by: Carlos R. L. Rodrigues (http://www.jsfromhell.com)
@@ -215,7 +187,7 @@ SetMesh.toggleVisible = toggleVisible;
     if (s1 == s2) {
         return 0;
     }
- 
+
     var s1_len = s1.length;
     var s2_len = s2.length;
     if (s1_len === 0) {
@@ -224,7 +196,7 @@ SetMesh.toggleVisible = toggleVisible;
     if (s2_len === 0) {
         return s1_len;
     }
- 
+
     // BEGIN STATIC
     var split = false;
     try {
@@ -237,10 +209,10 @@ SetMesh.toggleVisible = toggleVisible;
         s1 = s1.split('');
         s2 = s2.split('');
     }
- 
+
     var v0 = new Array(s1_len + 1);
     var v1 = new Array(s1_len + 1);
- 
+
     var s1_idx = 0,
         s2_idx = 0,
         cost = 0;
@@ -252,7 +224,7 @@ SetMesh.toggleVisible = toggleVisible;
     for (s2_idx = 1; s2_idx <= s2_len; s2_idx++) {
         v1[0] = s2_idx;
         char_s2 = s2[s2_idx - 1];
- 
+
         for (s1_idx = 0; s1_idx < s1_len; s1_idx++) {
             char_s1 = s1[s1_idx];
             cost = (char_s1 == char_s2) ? 0 : 1;
@@ -277,7 +249,7 @@ SetMesh.toggleVisible = toggleVisible;
         /* Function: search
          ******************
          * finds the best search result and displays it
-         */        
+         */
         function search() {
             var searchVal = ($('#search').val()).toLowerCase();
             var i = 0;
@@ -297,12 +269,11 @@ SetMesh.toggleVisible = toggleVisible;
                 var name = prefix + i;
                 $(name).attr("src", formSource(allMeshes[(displayArray[i])][0]));
             }
-            toggleBorder(0);
             $('#search').val('');
 
 
         }
-        
+
         /* Function: updateDisplayArray
          ******************************
          * updates the array of thumbnail indexes to be displayed
@@ -311,7 +282,7 @@ SetMesh.toggleVisible = toggleVisible;
             var max = allMeshes.length;
             if (condition == 1) {
                 if (currentMesh == null || currentMesh > (max - (2 * numChoices))) currentMesh = 0;
-                else currentMesh += numChoices;   
+                else currentMesh += numChoices;
             } else if (condition == 0) {
                 if (currentMesh == null || currentMesh < numChoices) currentMesh = max - numChoices;
                 else currentMesh -= numChoices;
@@ -320,9 +291,9 @@ SetMesh.toggleVisible = toggleVisible;
             for (var i = currentMesh; i < currentMesh + numChoices; i++) {
                displayArray[count] = i;
                count++;
-            } 
-        }      
-        
+            }
+        }
+
     }
 
 );
