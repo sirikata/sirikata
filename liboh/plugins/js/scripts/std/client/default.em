@@ -132,6 +132,7 @@ function() {
         if (! this._alreadyInitialized)
             this._simulator.hideLoadScreen();
 
+        this._move_speed = 1;
         this._moverot = new std.movement.MoveAndRotate(this._pres, std.core.bind(this.updateCameraAndAnimation, this), 'rotation');
         this._characterAnimation = new std.graphics.CharacterAnimation(this);
 
@@ -174,6 +175,9 @@ function() {
             this._binding.addToggleAction('moveRight', std.core.bind(this.moveSelf, this, new util.Vec3(1, 0, 0)), 1, -1);
             this._binding.addToggleAction('moveUp', std.core.bind(this.moveSelf, this, new util.Vec3(0, 1, 0)), 1, -1);
             this._binding.addToggleAction('moveDown', std.core.bind(this.moveSelf, this, new util.Vec3(0, -1, 0)), 1, -1);
+            // Movement speed
+            this._binding.addAction('moveSpeedUp', std.core.bind(this.moveSpeedUp, this));
+            this._binding.addAction('moveSpeedDown', std.core.bind(this.moveSpeedDown, this));
 
             this._binding.addToggleAction('rotateUp', std.core.bind(this.rotateSelf, this, new util.Vec3(1, 0, 0), "_rotate_up_handle_"), true, false);
             this._binding.addToggleAction('rotateDown', std.core.bind(this.rotateSelf, this, new util.Vec3(-1, 0, 0), "_rotate_down_handle_"), true, false);
@@ -250,6 +254,9 @@ function() {
                                         { key: ['button', 'd' ], action: 'moveRight' },
                                         { key: ['button', 'q' ], action: 'moveUp' },
                                         { key: ['button', 'z' ], action: 'moveDown' },
+
+                                        { key: ['button', ']' ], action: 'moveSpeedUp' },
+                                        { key: ['button', '[' ], action: 'moveSpeedDown' },
 
                                         { key: ['button', 'up', 'shift' ], action: 'rotateUp' },
                                         { key: ['button', 'down', 'shift' ], action: 'rotateDown' },
@@ -419,9 +426,22 @@ function() {
         this.updateAnimation();
     };
 
+    std.client.Default.prototype.moveSpeed = function() {
+        return this._move_speed;
+    };
+
+    std.client.Default.prototype.moveSpeedUp = function() {
+        this._move_speed *= 1.1;
+    };
+
+    std.client.Default.prototype.moveSpeedDown = function() {
+        this._move_speed /= 1.1;
+        if (this._move_speed == 0) this._move_speed = 0.0001;
+    };
+
     /** @function */
-    std.client.Default.prototype.moveSelf = function(dir, val) {
-        this._moverot.move(dir, this.defaultVelocityScaling * val);
+    std.client.Default.prototype.moveSelf = function(dir, flip) {
+        this._moverot.move(dir, this.defaultVelocityScaling * this.moveSpeed() * flip);
     };
 
     /** @function */
