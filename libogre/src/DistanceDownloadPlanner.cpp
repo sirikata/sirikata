@@ -286,7 +286,7 @@ void DistanceDownloadPlanner::removeObject(const String& name)
 void DistanceDownloadPlanner::iRemoveObject(
     const String& name, Liveness::Token alive)
 {
-    if (!alive)
+    if (!alive || mStopped)
         return;
     RMutex::scoped_lock lock(mDlPlannerMutex);
     ObjectMap::iterator it = mObjects.find(name);
