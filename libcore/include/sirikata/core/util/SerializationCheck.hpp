@@ -102,15 +102,14 @@ public:
 
     inline void serializedExit() const {
 #if SIRIKATA_DEBUG
-        if (mAccessors == (int32)1) {
+        int32 val = --mAccessors;
+        assert(val >= 0);
+        if (val == (int32)0) {
             // We should be the only one left accessing this and a
             // serializedEnter should *not* be getting called, so we
             // can erase the thread ID now.
             mThreadID = boost::thread::id();
         }
-
-        int32 val = --mAccessors;
-        assert(val >= 0);
 #endif //SIRIKATA_DEBUG
     }
 private:
