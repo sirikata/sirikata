@@ -99,6 +99,12 @@ DistanceDownloadPlanner::DistanceDownloadPlanner(Context* c, OgreRenderer* rende
                 std::tr1::bind(&DistanceDownloadPlanner::commandGetData, this, _1, _2, _3)
             )
         );
+        mContext->commander()->registerCommand(
+            "oh.ogre.ddplanner.stats",
+            mContext->mainStrand->wrap(
+                std::tr1::bind(&DistanceDownloadPlanner::commandGetStats, this, _1, _2, _3)
+            )
+        );
     }
 
 
@@ -268,6 +274,54 @@ void DistanceDownloadPlanner::commandGetData(
     result.put("ddplanner.assets",assets);
 
     //actually
+    cmdr->result(cmdid, result);
+}
+
+
+void DistanceDownloadPlanner::commandGetStats(
+    const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid)
+{
+    RMutex::scoped_lock lock(mDlPlannerMutex);
+    Command::Result result = Command::EmptyResult();
+
+    // We don't keep fine-grained stats about the state of
+    // objects/assets at the top-level and some of the names can be a
+    // bit misleading. For example, mLoadedObjects refers to objects
+    // which we've decided to load, and we don't even keep a flag for
+    // whether the object was finally loaded. We need to scan through
+    // the objects and assets to actually figure these properties out
+    // and get accurate stats.
+    result.put("ddplanner.objects.total", mObjects.size());
+    result.put("ddplanner.objects.unloaded", mWaitingObjects.size());
+    uint32 objects_loading = 0, objects_loaded = 0;
+    for(ObjectMap::const_iterator objit = mLoadedObjects.begin(); objit != mLoadedObjects.end(); objit++) {
+        if (objit->second->file.empty()) {
+            objects_loaded++;
+            continue;
+        }
+        assert(mAssets.find(objit->second->file) != mAssets.end());
+        Asset* obj_asset = mAssets[objit->second->file];
+        if (obj_asset->usingObjects.find(objit->second->id()) != obj_asset->usingObjects.end())
+            objects_loaded++;
+        else
+            objects_loading++;
+    }
+    result.put("ddplanner.objects.loading", objects_loading);
+    result.put("ddplanner.objects.loaded", objects_loaded);
+
+
+    result.put("ddplanner.assets.total", mAssets.size());
+    uint32 assets_loading = 0, assets_loaded = 0;
+    for(AssetMap::const_iterator assit = mAssets.begin(); assit != mAssets.end(); assit++) {
+        if (!assit->second->usingObjects.empty())
+            assets_loaded++;
+        else
+            assets_loading++;
+    }
+    result.put("ddplanner.assets.loading", assets_loading);
+    result.put("ddplanner.assets.loaded", assets_loaded);
+
+
     cmdr->result(cmdid, result);
 }
 
@@ -634,7 +688,7 @@ void DistanceDownloadPlanner::loadAsset(Transfer::URI asset_uri,uint64 assetId)
 
 
     DLPLANNER_LOG(detailed, "Loading asset " << asset->uri);
-
+    assert(asset->usingObjects.empty());
     //get the mesh data and check that it is valid.
     bool usingDefault = false;
     Mesh::VisualPtr visptr = asset->downloadTask->asset();

@@ -77,7 +77,9 @@ protected:
     virtual double calculatePriority(ProxyObjectPtr proxy);
 
     void commandGetData(
-        const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) ;
+        const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
+    void commandGetStats(
+        const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
 
     void checkShouldLoadNewObject(Object* r);
 
@@ -91,7 +93,7 @@ protected:
 
     struct Object {
         Object(Graphics::Entity *m, const Transfer::URI& mesh_uri, ProxyObjectPtr _proxy = ProxyObjectPtr());
-        virtual ~Object(){          
+        virtual ~Object(){
         }
 
         const String& id() const { return name; }
@@ -130,7 +132,7 @@ protected:
     // Loading has started for these
     ObjectMap mLoadedObjects;
     // Waiting to be important enough to load
-    ObjectMap mWaitingObjects;        
+    ObjectMap mWaitingObjects;
 
 
     // Heap storage for Objects. Choice between min/max heap is at call time.
@@ -165,7 +167,7 @@ protected:
         //to check that the callback that is being serviced corresponds to the
         //correct asset that we have in memory.
         uint64 internalId;
-        
+
         TextureBindingsMapPtr textureFingerprints;
         std::set<String> animations;
 
