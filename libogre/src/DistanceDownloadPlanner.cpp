@@ -547,6 +547,7 @@ void DistanceDownloadPlanner::iStop(Liveness::Token dpAlive)
         Asset* asset = it->second;
         delete asset;
     }
+    mAssets.clear();
 }
 
 void DistanceDownloadPlanner::requestAssetForObject(Object* forObject) {
