@@ -853,8 +853,8 @@ void OgreRenderer::preFrame(Task::LocalTime currentTime, Duration frameTime) {
 
     std::list<Entity*>::iterator iter;
     Time cur_time = mContext->simTime();
-    for (iter = mMovingEntities.begin(); iter != mMovingEntities.end(); iter++)
-        (*iter)->tick(cur_time, frameTime);
+    for (iter = mMovingEntities.begin(); iter != mMovingEntities.end(); )
+        (*iter++)->tick(cur_time, frameTime);
 
     mResourceLoader->tick();
 }
