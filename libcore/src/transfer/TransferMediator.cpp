@@ -120,19 +120,24 @@ void TransferMediator::checkQueue() {
 
     if(findTop != priorityIndex.end()) {
         std::string topId = (*findTop)->getIdentifier();
-
         SILOG(transfer, detailed, priorityIndex.size() << " length agg list, top priority "
                 << (*findTop)->getPriority() << " id " << topId);
+    }
 
-        std::tr1::shared_ptr<TransferRequest> req = (*findTop)->getSingleRequest();
-
-        if(mNumOutstanding == 0) {
+    // While we have free slots and there are items left, scan for items that
+    // haven't been started yet that we can process.
+    while(findTop != priorityIndex.end() && mNumOutstanding < 10) {
+        if (!(*findTop)->mExecuting) {
             mNumOutstanding++;
-            req->execute(req, std::tr1::bind(&TransferMediator::execute_finished, this, req, topId));
+            (*findTop)->mExecuting = true;
+            std::tr1::shared_ptr<TransferRequest> req = (*findTop)->getSingleRequest();
+            req->execute(
+                req,
+                std::tr1::bind(&TransferMediator::execute_finished, this,
+                    req, (*findTop)->getIdentifier())
+            );
         }
-
-    } else {
-        //SILOG(transfer, detailed, priorityIndex.size() << " length agg list");
+        findTop++;
     }
 
     lock.unlock();
@@ -187,7 +192,9 @@ Priority TransferMediator::AggregateRequest::getPriority() const {
 }
 
 TransferMediator::AggregateRequest::AggregateRequest(std::tr1::shared_ptr<TransferRequest> req)
-    : mIdentifier(req->getIdentifier()) {
+ : mIdentifier(req->getIdentifier()),
+   mExecuting(false)
+{
     setClientPriority(req);
 }
 
