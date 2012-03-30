@@ -685,6 +685,10 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
   //Simplify the mesh...
   mMeshSimplifier.simplify(agg_mesh, 20000);
 
+  //Set the mesh of this aggregate to the empty string until the new version gets uploaded. This is so that
+  //higher level aggregates are not generated from the now out-of-date version of the mesh. 
+  mLoc->updateLocalAggregateMesh(uuid, "");
+
   //... and now create the collada file, upload to the CDN and update LOC.
   mUploadStrands[rand() % NUM_UPLOAD_THREADS]->post(
           std::tr1::bind(&AggregateManager::uploadAggregateMesh, this, agg_mesh, aggObject, textureSet, 0),
