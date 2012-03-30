@@ -294,6 +294,10 @@ public:
     void commandListObjects(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
     void commandCreateObject(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
     void commandDestroyObject(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
+    void commandObjectPresences(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
+    // Helper that gets the object a command is operating on. Returns errors for
+    // you and a NULL pointer on failure.
+    HostedObjectPtr getCommandObject(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
 
     // Checks serialization of access to SessionManagers
     Sirikata::SerializationCheck mSessionSerialization;

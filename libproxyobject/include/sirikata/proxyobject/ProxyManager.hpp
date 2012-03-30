@@ -73,6 +73,9 @@ public:
     ///Removes from internal ProxyObject map, calls destruction listeners, and calls newObj->destroy().
     virtual void destroyObject(const ProxyObjectPtr &newObj);
 
+    /// Get the number of proxies held by this ProxyManager
+    int32 size() { return mProxyMap.size(); }
+
     /// Ask for a proxy object by ID. Returns ProxyObjectPtr() if it doesn't exist.
     virtual ProxyObjectPtr getProxyObject(const SpaceObjectReference &id) const;
 

@@ -105,6 +105,14 @@ ObjectHost::ObjectHost(ObjectHostContext* ctx, Network::IOService *ioServ, const
             "oh.objects.destroy",
             mContext->mainStrand->wrap(std::tr1::bind(&ObjectHost::commandDestroyObject, this, _1, _2, _3))
         );
+
+        // To register only one copy of the command, we register HO commands
+        // here and dispatch them to the appropriate HO.
+        mContext->commander()->registerCommand(
+            "oh.objects.presences",
+            mContext->mainStrand->wrap(std::tr1::bind(&ObjectHost::commandObjectPresences, this, _1, _2, _3))
+        );
+
     }
 }
 
@@ -488,28 +496,43 @@ void ObjectHost::commandCreateObject(const Command::Command& cmd, Command::Comma
     cmdr->result(cmdid, result);
 }
 
-void ObjectHost::commandDestroyObject(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {
-    Command::Result result = Command::EmptyResult();
-
+HostedObjectPtr ObjectHost::getCommandObject(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {
     String obj_string = cmd.getString("object", "");
     UUID objid(obj_string, UUID::HumanReadable());
     if (objid == UUID::null()) { // not specified, not parsed
+        Command::Result result = Command::EmptyResult();
         result.put("error", "Ill-formatted request: no object specified for disconnect.");
         cmdr->result(cmdid, result);
-        return;
+        return HostedObjectPtr();
     }
 
     HostedObjectPtr ho = getHostedObject(objid);
     if (!ho) {
+        Command::Result result = Command::EmptyResult();
         result.put("error", "Object not found");
         cmdr->result(cmdid, result);
-        return;
+        return HostedObjectPtr();
     }
 
+    return ho;
+}
+
+void ObjectHost::commandDestroyObject(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {
+    HostedObjectPtr ho = getCommandObject(cmd, cmdr, cmdid);
+    if (!ho) return;
+
+    Command::Result result = Command::EmptyResult();
     ho->stop();
     ho->destroy();
     result.put("success", true);
     cmdr->result(cmdid, result);
+}
+
+void ObjectHost::commandObjectPresences(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {
+    HostedObjectPtr ho = getCommandObject(cmd, cmdr, cmdid);
+    if (!ho) return;
+
+    ho->commandPresences(cmd, cmdr, cmdid);
 }
 
 } // namespace Sirikata

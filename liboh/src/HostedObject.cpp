@@ -80,7 +80,7 @@ HostedObject::HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID
             _1, _2, _3
         )
     );
-    
+
 }
 
 void HostedObject::killSimulation(
@@ -766,7 +766,7 @@ void HostedObject::handleProximityUpdate(const SpaceObjectReference& spaceobj, c
                  add.location_seqno() == add.bounds_seqno() &&
                 add.location_seqno() == add.mesh_seqno() &&
                 add.location_seqno() == add.physics_seqno());
-            proxy_obj = self->createProxy(proximateID, spaceobj, meshuri, loc, orient, bnds, phy, "", 
+            proxy_obj = self->createProxy(proximateID, spaceobj, meshuri, loc, orient, bnds, phy, "",
                                           isAggregate, proxyAddSeqNo);
         }
         else {
@@ -857,7 +857,7 @@ ProxyObjectPtr HostedObject::createProxy(const SpaceObjectReference& objref, con
 
     ProxyObjectPtr proxy_obj = proxy_manager->createObject(objref, tmv, tmq, bs, meshuri, phy,
                                                            isAggregate, seqNo);
-    
+
     return proxy_obj;
 }
 
@@ -1150,5 +1150,30 @@ void HostedObject::sendLocUpdateRequest(const SpaceID& space, const ObjectRefere
     }
 }
 
+
+
+void HostedObject::commandPresences(
+    const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid)
+{
+    Command::Result result = Command::EmptyResult();
+    // Make sure we return the objects key set even if there are none
+    result.put( String("presences"), Command::Object());
+    Command::Object& presences_map = result.getObject("presences");
+
+    {
+        Mutex::scoped_lock locker(presenceDataMutex);
+        for(PresenceDataMap::const_iterator presit = mPresenceData.begin(); presit != mPresenceData.end(); presit++) {
+            Command::Object presdata;
+            // Should fill in basic presence info but it's a pain to serialize
+            // here (loc, orientation, etc).
+            presdata["mesh"] = presit->second->requestLoc->mesh().toString();
+            presdata["physics"] = presit->second->requestLoc->physics();
+            presdata["proxies"] = presit->second->proxyManager->size();
+            presences_map[presit->first.toString()] = presdata;
+        }
+    }
+
+    cmdr->result(cmdid, result);
+}
 
 }
