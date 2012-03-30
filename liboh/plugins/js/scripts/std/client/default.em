@@ -132,7 +132,8 @@ function() {
         if (! this._alreadyInitialized)
             this._simulator.hideLoadScreen();
 
-        this._move_speed = 1;
+        this._move_speed = 5;
+        this._move_actions = {}; // Track active movements to adjust when speed changes
         this._moverot = new std.movement.MoveAndRotate(this._pres, std.core.bind(this.updateCameraAndAnimation, this), 'rotation');
         this._characterAnimation = new std.graphics.CharacterAnimation(this);
 
@@ -345,10 +346,6 @@ function() {
 
 
 
-    //by default how to scale translational velocity from keypresses.  (movement
-    //is agonizingly slow if just set this to 1.  I really recommend 5.)
-    /** @public */
-    std.client.Default.prototype.defaultVelocityScaling = 5;
     //by default how to scale rotational velocity from keypresses
     /** @public */
     std.client.Default.prototype.defaultRotationalVelocityScaling = .5;
@@ -430,18 +427,39 @@ function() {
         return this._move_speed;
     };
 
+    std.client.Default.prototype._moveSpeedChange = function(factor) {
+        // Undo all active movements
+        for(var dir in this._move_actions)
+            this._moverot.move(this._move_actions[dir], this.moveSpeed() * -1, false, true);
+        
+        // Change the speed
+        this._move_speed *= factor;
+        if (this._move_speed == 0) this._move_speed = 0.00001;
+        
+        // And redo them
+        for(var dir in this._move_actions)
+            this._moverot.move(this._move_actions[dir], this.moveSpeed());
+    };
+    
     std.client.Default.prototype.moveSpeedUp = function() {
-        this._move_speed *= 1.1;
+        this._moveSpeedChange(1.1);
     };
 
     std.client.Default.prototype.moveSpeedDown = function() {
-        this._move_speed /= 1.1;
-        if (this._move_speed == 0) this._move_speed = 0.0001;
+        this._moveSpeedChange(1/1.1);
     };
 
     /** @function */
     std.client.Default.prototype.moveSelf = function(dir, flip) {
-        this._moverot.move(dir, this.defaultVelocityScaling * this.moveSpeed() * flip);
+        if (flip > 0) {
+            if (!this._move_actions[dir]) this._move_actions[dir] = <0, 0, 0>;
+            this._move_actions[dir] += dir;
+        }
+        else {
+            this._move_actions[dir] -= dir;
+            if (this._move_actions[dir].length() < 0.0001) delete this._move_actions[dir];
+        }
+        this._moverot.move(dir, this.moveSpeed() * flip);
     };
 
     /** @function */
