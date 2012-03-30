@@ -95,15 +95,11 @@ DistanceDownloadPlanner::DistanceDownloadPlanner(Context* c, OgreRenderer* rende
     {
         mContext->commander()->registerCommand(
             "oh.ogre.ddplanner",
-            mContext->mainStrand->wrap(
-                std::tr1::bind(&DistanceDownloadPlanner::commandGetData, this, _1, _2, _3)
-            )
+            std::tr1::bind(&DistanceDownloadPlanner::commandGetData, this, _1, _2, _3)
         );
         mContext->commander()->registerCommand(
             "oh.ogre.ddplanner.stats",
-            mContext->mainStrand->wrap(
-                std::tr1::bind(&DistanceDownloadPlanner::commandGetStats, this, _1, _2, _3)
-            )
+            std::tr1::bind(&DistanceDownloadPlanner::commandGetStats, this, _1, _2, _3)
         );
     }
 
@@ -655,9 +651,14 @@ void DistanceDownloadPlanner::downloadAsset(Asset* asset, Object* forObject) {
         AssetDownloadTask::construct(
             asset->uri, getScene(), forObject->priority,
             is_aggregate,
-            mContext->mainStrand->wrap(
+            // We need some indirection because this callback is invoked
+            // with a lock on in AssetDownload task and triggers
+            // calls which need that lock. A post to a service would
+            // be better, posting to a strand works ok
+            mScene->renderStrand()->wrap(
                 std::tr1::bind(&DistanceDownloadPlanner::loadAsset, this, asset->uri,asset->internalId)
-              ));
+            )
+        );
 }
 
 
