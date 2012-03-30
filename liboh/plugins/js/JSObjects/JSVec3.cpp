@@ -137,24 +137,10 @@ Handle<Value> Vec3Constructor(const Arguments& args) {
     return self;
 }
 
-Handle<Value> Vec3ToString(const Arguments& args) {
-    Handle<Object> self = args.This();
-    Vec3CheckAndExtract(self_val, self);
-    String self_val_str = self_val.toString();
-    return v8::String::New( self_val_str.c_str(), self_val_str.size() );
-}
-
 Handle<FunctionTemplate> CreateVec3Template() {
     // Vec3 Constructor
     Local<FunctionTemplate> vec3_constructor_templ = FunctionTemplate::New(Vec3Constructor);
     Vec3ConstructorTemplate = Persistent<FunctionTemplate>::New(vec3_constructor_templ);
-
-    // Vec3 prototype
-    Local<ObjectTemplate> vec3_prototype_templ = vec3_constructor_templ->PrototypeTemplate();
-    vec3_prototype_templ->Set(JS_STRING(toString), v8::FunctionTemplate::New(Vec3ToString));
-
-    // Vec3 instance
-    //Local<ObjectTemplate> vec3_instance_templ = vec3_constructor_templ->InstanceTemplate();
 
     return vec3_constructor_templ;
 }
