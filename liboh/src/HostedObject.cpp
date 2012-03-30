@@ -1168,7 +1168,10 @@ void HostedObject::commandPresences(
             // here (loc, orientation, etc).
             presdata["mesh"] = presit->second->requestLoc->mesh().toString();
             presdata["physics"] = presit->second->requestLoc->physics();
-            presdata["proxies"] = presit->second->proxyManager->size();
+            Command::Object proxy_data;
+            proxy_data["alive"] = presit->second->proxyManager->size();
+            proxy_data["active"] = presit->second->proxyManager->activeSize();
+            presdata["proxies"] = proxy_data;
             presences_map[presit->first.toString()] = presdata;
         }
     }

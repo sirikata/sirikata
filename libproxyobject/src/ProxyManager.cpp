@@ -235,4 +235,16 @@ void ProxyManager::resetAllProxies() {
     }
 }
 
+int32 ProxyManager::size() {
+    return mProxyMap.size();
+}
+
+int32 ProxyManager::activeSize() {
+    int32 count = 0;
+    for (ProxyMap::const_iterator iter = mProxyMap.begin(); iter != mProxyMap.end(); ++iter) {
+        if (iter->second.ptr) count++;
+    }
+    return count;
+}
+
 }
