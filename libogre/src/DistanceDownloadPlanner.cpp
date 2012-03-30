@@ -634,12 +634,30 @@ void DistanceDownloadPlanner::requestAssetForObject(Object* forObject) {
     asset->waitingObjects.insert(forObject->id());
 
 
-    // Another Object might have already requested downloading. If it did, we
-    // don't need to request anything and polling will update the priorities.
-    if (!asset->downloadTask)
-        downloadAsset(asset, forObject);
-    else
+    // The asset could already be in a variety of states:
+    if (!asset->usingObjects.empty()) {
+        // Objects are already using it, meaning it's already
+        // completely done loading. We just need to trigger another
+        // round of moving waiting objects -> using objects by using
+        // the mesh
+        finishLoadAsset(asset, true);
+    }
+    else if (asset->loadingResources > 0) {
+        // We have some resources still loading, meaning we've already
+        // downloaded the data but are still working on loading
+        // it. We're in the waiting queue, so we'll get loaded with
+        // any other objects. Nothing to do.
+    }
+    else if (asset->downloadTask) {
+        // The download is already running. We're already tacked onto
+        // the waiting list, but we can update the priority to account
+        // for us.
         updateAssetPriority(asset);
+    }
+    else {
+        // No download at all yet. Star the whole process.
+        downloadAsset(asset, forObject);
+    }
 }
 
 void DistanceDownloadPlanner::downloadAsset(Asset* asset, Object* forObject) {
@@ -725,7 +743,14 @@ void DistanceDownloadPlanner::loadAsset(Transfer::URI asset_uri,uint64 assetId)
 
 void DistanceDownloadPlanner::finishLoadAsset(Asset* asset, bool success) {
     RMutex::scoped_lock lock(mDlPlannerMutex);
-    DLPLANNER_LOG(detailed, "Finishing load of asset " << asset->uri << " (priority " << asset->downloadTask->priority() << ")");
+    if (asset->downloadTask) {
+        DLPLANNER_LOG(detailed, "Finishing load of asset " << asset->uri << " (priority " << asset->downloadTask->priority() << ")");
+        asset->visual = asset->downloadTask->asset();
+    }
+    else {
+        DLPLANNER_LOG(detailed, "Finishing load of asset " << asset->uri << " (repeat)");
+        assert(asset->visual);
+    }
     // We need to notify all Objects (objects) waiting for this to load that
     // it finished (or failed)
 
@@ -748,12 +773,12 @@ void DistanceDownloadPlanner::finishLoadAsset(Asset* asset, bool success) {
             resource->mesh->loadFailed();
         }
         else {
-            Mesh::MeshdataPtr mdptr( std::tr1::dynamic_pointer_cast<Mesh::Meshdata>(asset->downloadTask->asset()) );
+            Mesh::MeshdataPtr mdptr( std::tr1::dynamic_pointer_cast<Mesh::Meshdata>(asset->visual) );
             if (mdptr) {
                 resource->mesh->loadMesh(mdptr, asset->ogreAssetName, asset->animations);
             }
 
-            Mesh::BillboardPtr bbptr( std::tr1::dynamic_pointer_cast<Mesh::Billboard>(asset->downloadTask->asset()) );
+            Mesh::BillboardPtr bbptr( std::tr1::dynamic_pointer_cast<Mesh::Billboard>(asset->visual) );
             if (bbptr) {
                 resource->mesh->loadBillboard(bbptr, asset->ogreAssetName);
             }

@@ -181,6 +181,10 @@ protected:
         typedef std::vector<String > ResourceNameList;
         ResourceNameList loadedResources;
 
+        // Store a copy so we can release the download task but still
+        // get at the data if another object uses this mesh.
+        Mesh::VisualPtr visual;
+
         Asset(const Transfer::URI& name);
         ~Asset();
     };
