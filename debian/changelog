@@ -1,3 +1,9 @@
+sirikata (0.0.23-0ubuntu1) oneiric; urgency=low
+
+  * New upstream release.
+
+ -- Ewen Cheslack-Postava <ewencp@gmail.com>  Fri, 30 Mar 2012 17:11:13 -0700
+
 sirikata (0.0.22-0ubuntu2) oneiric; urgency=low
 
   * Fix distribution to oneiric.
