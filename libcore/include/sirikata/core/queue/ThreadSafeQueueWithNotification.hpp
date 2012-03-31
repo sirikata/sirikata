@@ -77,17 +77,19 @@ class ThreadSafeQueueWithNotification {
 
     /** \see ThreadSafeQueue::push. */
     void push(const T &value) {
-        bool was_empty = empty();
-        mQueue.push(value);
-        if (was_empty)
+        // We get the new size from the push, which is locked so we know exactly
+        // how big the queue is immediately after the push, guaranteeing we
+        // don't miss it going empty.
+        int32 new_size = mQueue.push(value);
+        if (new_size == 1)
             mCallback();
     }
 
     /** \see ThreadSafeQueue::pushMultiple. */
     void pushMultiple(const std::deque<T> &values) {
-        bool was_empty = empty();
-        mQueue.pushMultiple(values);
-        if (was_empty)
+        int32 nelements = values.size();
+        int32 new_size = mQueue.pushMultiple(values);
+        if (new_size == nelements)
             mCallback();
     }
 
