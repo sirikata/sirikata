@@ -62,7 +62,7 @@ void GraphiteTimeSeries::connect() {
 
     mConnecting = true;
     mResolver = new Network::TCPResolver(mContext->ioService);
-    Network::TCPResolver::query query(mHost, boost::lexical_cast<String>(mPort));
+    Network::TCPResolver::query query(mHost, boost::lexical_cast<String>(mPort), Network::TCPResolver::query::all_matching);
     mResolver->async_resolve(
         query,
         boost::bind(&GraphiteTimeSeries::handleResolve, this, placeholders::error, placeholders::iterator)

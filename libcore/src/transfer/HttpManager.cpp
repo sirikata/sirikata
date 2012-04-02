@@ -348,7 +348,7 @@ void HttpManager::processQueue() {
                         }
 
                         //SILOG(transfer, debug, "Creating a new connection for " << (*req)->addr.toString());
-                        TCPResolver::query query((*req)->addr.getHostName(), (*req)->addr.getService());
+                        TCPResolver::query query((*req)->addr.getHostName(), (*req)->addr.getService(), Network::TCPResolver::query::all_matching);
                         mResolver->async_resolve(query, boost::bind(&HttpManager::handle_resolve, this, *req,
                                                 boost::asio::placeholders::error, boost::asio::placeholders::iterator));
 

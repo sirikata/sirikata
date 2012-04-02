@@ -191,7 +191,7 @@ boost::shared_ptr<TCPSocket> CoordinateSegmentationClient::getLeasedSocket() {
   else {
     TCPResolver resolver(*mIOService);
 
-    TCPResolver::query query(boost::asio::ip::tcp::v4(), mCSEGHost, mCSEGPort);
+    TCPResolver::query query(boost::asio::ip::tcp::v4(), mCSEGHost, mCSEGPort, Network::TCPResolver::query::all_matching);
 
     TCPResolver::iterator endpoint_iterator = resolver.resolve(query);
 
