@@ -34,6 +34,7 @@
 #include <sirikata/core/network/IOService.hpp>
 #include <sirikata/core/transfer/HttpManager.hpp>
 #include <sirikata/core/transfer/URL.hpp>
+#include <sirikata/core/service/Poller.hpp>
 
 #include <stdio.h>
 #include <string.h>
@@ -309,7 +310,7 @@ int main(int argc, char** argv) {
         Poller timeoutPoller(
             strand,
             std::tr1::bind(checkTimeout),
-            "Timeout Poller", Duration::second(1)
+            "Timeout Poller", Duration::seconds(1)
         );
         timeoutPoller.start();
 

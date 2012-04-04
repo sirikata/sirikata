@@ -19,8 +19,6 @@ copy dependencies\bullet-2.74\bin\*.* %RELDEST%
 copy dependencies\ogre-1.7.2\bin\debug\*.* %DEBDEST%
 copy dependencies\ogre-1.7.2\bin\release\*.* %RELDEST%
 
-copy dependencies\installed-curl\*.dll %DEBDEST%
-copy dependencies\installed-curl\*.dll %RELDEST%
 mkdir %DEBDEST%
 
 copy dependencies\opencollada\Externals\expat\win32\bin\Debug\*.dll %DEBDEST%

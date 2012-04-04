@@ -489,22 +489,6 @@ SET(Boost_LIBRARIES
 # Make sure we use boost filesystem v2 if both v2 and v3 are available.
 ADD_DEFINITIONS(-DBOOST_FILESYSTEM_VERSION=2)
 
-#dependency: curl
-IF(NOT CURL_ROOT)
-  IF(EXISTS ${PLATFORM_LIBS}/installed-curl)
-    SET(CURL_ROOT ${PLATFORM_LIBS}/installed-curl)
-  ELSEIF(EXISTS ${PLATFORM_LIBS}/libcurl_7_18_0)
-    SET(CURL_ROOT ${PLATFORM_LIBS}/libcurl_7_18_0)
-  ELSEIF(EXISTS ${PLATFORM_LIBS}/libcurl_7_15_5)
-    SET(CURL_ROOT ${PLATFORM_LIBS}/libcurl_7_15_5)
-  ENDIF()
-  IF(WIN32)
-    GET_FILENAME_COMPONENT(CURL_ROOT ${CURL_ROOT} ABSOLUTE)
-  ENDIF()
-ENDIF()
-
-FIND_PACKAGE(CURL)
-SET(TEST_LIBRARIES ${CURL_LIBRARIES})
 
 #dependency: ogre
 IF(NOT OGRE_ROOT)
@@ -1055,7 +1039,6 @@ SET(INCLUDE_DIRECTORIES
   ${SirikataProtocolDirectory}
 
   ${Boost_INCLUDE_DIRS}
-  ${CURL_INCLUDE_DIRS}
   ${PROTOCOLBUFFERS_INCLUDE_DIRS}
   ${ANTLR_INCLUDE_DIRS}
   ${LIBPROX_INCLUDE_DIRS}
@@ -1392,6 +1375,7 @@ SET(SIRIKATA_CORE_SOURCES
         ${LIBCORE_SOURCE_DIR}/util/RegionWeightCalculator.cpp
         ${LIBCORE_SOURCE_DIR}/util/Liveness.cpp
         ${LIBCORE_SOURCE_DIR}/util/Paths.cpp
+        ${LIBCORE_SOURCE_DIR}/util/Md5.cpp
         ${LIBCORE_SOURCE_DIR}/trace/BatchedBuffer.cpp
         ${LIBCORE_SOURCE_DIR}/trace/Trace.cpp
         ${LIBCORE_SOURCE_DIR}/trace/TimeSeries.cpp
@@ -1923,7 +1907,6 @@ ENDIF()
 
 SET(SIRIKATA_CORE_LIBRARIES
     ${SYSTEM_DL_LIBRARY}
-    ${CURL_LIBRARIES}
     ${Boost_LIBRARIES}
     ${BREAKPAD_LIBRARIES}
     http-parser
@@ -3522,32 +3505,6 @@ ENDIF()
 
 ENDIF()
 
-
-#install curl #MUST BE DONE AFTER MONO to get correct libz
-IF(CURL_ROOT)
-  IF(WIN32)
-    INSTALL(DIRECTORY ${CURL_ROOT}/
-            FILE_PERMISSIONS ${EXEC_PERMS}
-            DESTINATION ${SIRIKATA_INSTALL_BINARY_PATH}
-            PATTERN "*.lib" EXCLUDE
-            PATTERN "*README" EXCLUDE
-            PATTERN "*COPYING" EXCLUDE
-            PATTERN "*Makefile" EXCLUDE
-            PATTERN "*.am" EXCLUDE
-            PATTERN "*.in" EXCLUDE
-            PATTERN "*CHANGES" EXCLUDE
-            PATTERN "*.exp" EXCLUDE
-            PATTERN "*.h" EXCLUDE
-            #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
-            PATTERN "*.exe" EXCLUDE)
-  ELSE()
-    INSTALL(DIRECTORY ${CURL_ROOT}/lib/
-            FILE_PERMISSIONS ${EXEC_PERMS}
-            DESTINATION ${SIRIKATA_INSTALL_LIBRARY_PATH}
-            #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
-            PATTERN "*.exe" EXCLUDE)
-  ENDIF()
-ENDIF()
 
 IF(BUILD_JS_OH)
   # data for ogre, including web views
