@@ -107,6 +107,7 @@ public:
     virtual Transfer::URI mesh() const { return proxy->mesh(); }
     virtual String physics() const { return proxy->physics(); }
     virtual bool isAggregate() const { return proxy->isAggregate(); }
+    virtual ObjectReference parent() const { return proxy->parentAggregate(); }
 
 private:
     JSProxyVisibleData();
@@ -149,6 +150,7 @@ public:
     virtual Transfer::URI mesh() const;
     virtual String physics() const;
     virtual bool isAggregate() const;
+    virtual ObjectReference parent() const;
 
     // JSVisibleDataListener
     virtual void removeVisibleData(JSVisibleData* data);
@@ -186,7 +188,7 @@ private:
     typedef boost::mutex Mutex;
     Mutex childMutex;
 
-    
+
 };
 
 } // namespace JS

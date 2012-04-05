@@ -181,6 +181,11 @@ public:
     virtual bool has_epoch() const { return false; }
     virtual uint64 epoch() const { return 0; }
 
+    // Parent aggregate
+    virtual bool has_parent() const { return (parent() != ObjectReference::null()); }
+    virtual ObjectReference parent() const { return ObjectReference(mUpdate.parent()); }
+    virtual uint64 parent_seqno() const { return mUpdate.getUpdateSeqNo(SequencedPresenceProperties::LOC_PARENT_PART); }
+
     // Location
     virtual bool has_location() const { return true; }
     virtual TimedMotionVector3f location() const { return mUpdate.location(); }
