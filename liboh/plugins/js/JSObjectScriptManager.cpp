@@ -91,7 +91,7 @@ JSObjectScriptManager::JSObjectScriptManager(ObjectHostContext* ctx, const Sirik
         // TODO(ewencp) This should just be a strand on the main service
         mParsingIOService = new Network::IOService("JSObjectScriptManager Parsing");
         mParsingWork = new Network::IOWork(*mParsingIOService, "JSObjectScriptManager Mesh Parsing");
-        mParsingThread = new Sirikata::Thread(std::tr1::bind(&Network::IOService::runNoReturn, mParsingIOService));
+        mParsingThread = new Sirikata::Thread("JSObjectScriptManager Model Parsing", std::tr1::bind(&Network::IOService::runNoReturn, mParsingIOService));
 
         mModelParser = ModelsSystemFactory::getSingleton ().getConstructor ( "any" ) ( "" );
         try {

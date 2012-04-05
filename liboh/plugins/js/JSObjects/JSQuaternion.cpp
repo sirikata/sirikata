@@ -134,25 +134,10 @@ Handle<Value> QuaternionConstructor(const Arguments& args) {
     return self;
 }
 
-Handle<Value> QuaternionToString(const Arguments& args) {
-    Handle<Object> self = args.This();
-    QuaternionCheckAndExtract(self_val, self);
-    String self_val_str = self_val.toString();
-    return v8::String::New( self_val_str.c_str(), self_val_str.size() );
-}
-
 Handle<FunctionTemplate> CreateQuaternionTemplate() {
     // Quaternion Constructor
     Local<FunctionTemplate> quat_constructor_templ = FunctionTemplate::New(QuaternionConstructor);
     QuaternionConstructorTemplate = Persistent<FunctionTemplate>::New(quat_constructor_templ);
-
-    // Quaternion prototype
-    Local<ObjectTemplate> quat_prototype_templ = quat_constructor_templ->PrototypeTemplate();
-
-    quat_prototype_templ->Set(JS_STRING(toString), v8::FunctionTemplate::New(QuaternionToString));
-
-    // Quaternion instance
-    Local<ObjectTemplate> quat_instance_templ = quat_constructor_templ->InstanceTemplate();
 
     return quat_constructor_templ;
 }

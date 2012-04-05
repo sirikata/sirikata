@@ -131,7 +131,8 @@ void ManualMaterialLoader::loadResource(Ogre::Resource *r) {
         { // or textured
             // FIXME other URI schemes besides URL
             Transfer::URL url(mURI);
-            assert(!url.empty());
+            // Non-empty parent URL or absolute texture URL
+            assert(!url.empty() || (!Transfer::URI(tex.uri).empty()) );
             Transfer::URI mat_uri( Transfer::URL(url.context(), tex.uri).toString() );
             TextureBindingsMap::iterator where = mTextureFingerprints->find(mat_uri.toString());
             if (where!=mTextureFingerprints->end()) {

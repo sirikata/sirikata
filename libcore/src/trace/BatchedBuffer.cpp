@@ -81,16 +81,23 @@ void BatchedBuffer::flush() {
 
 // write the buffer to an ostream
 void BatchedBuffer::store(FILE* os) {
-    boost::lock_guard<boost::recursive_mutex> lck(mMutex);
-
     std::deque<ByteBatch*> bufs;
-    batches.swap(bufs);
+
+    {
+        boost::lock_guard<boost::recursive_mutex> lck(mMutex);
+        batches.swap(bufs);
+    }
 
     for(std::deque<ByteBatch*>::iterator it = bufs.begin(); it != bufs.end(); it++) {
         ByteBatch* bb = *it;
         fwrite((void*)&(bb->items[0]), 1, bb->size, os);
         delete bb;
     }
+}
+
+bool BatchedBuffer::empty() {
+    boost::lock_guard<boost::recursive_mutex> lck(mMutex);
+    return (filling == NULL && batches.empty());
 }
 
 } // namespace Sirikata

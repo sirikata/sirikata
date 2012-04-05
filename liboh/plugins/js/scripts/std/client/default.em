@@ -96,7 +96,7 @@ function() {
             this._loadingUIs++; this._physics = new std.graphics.PhysicsProperties(this._simulator, ui_finish_cb);
             //this._loadingUIs++; this._propertybox = new std.propertybox.PropertyBox(this, ui_finish_cb);
             //this._loadingUIs++; this._presenceList = new std.graphics.PresenceList(this._pres, this._simulator, this._scripter, ui_finish_cb);
-            //this._loadingUIs++; this._setMesh = new std.graphics.SetMesh(this._simulator, ui_finish_cb);
+            this._loadingUIs++; this._setMesh = new std.graphics.SetMesh(this._simulator, ui_finish_cb);
             //this._loadingUIs++; this._flatland = new std.fl.FL(this, ui_finish_cb);                
         }
         else
@@ -114,7 +114,7 @@ function() {
         this._loadingUIs++; this._physics.onReset(ui_finish_cb);
         //this._loadingUIs++; this._propertybox.onReset(ui_finish_cb);
         //this._loadingUIs++; this._presenceList.onReset(ui_finish_cb);
-        //this._loadingUIs++; this._setMesh.onReset(ui_finish_cb);
+        this._loadingUIs++; this._setMesh.onReset(ui_finish_cb);
         //this._loadingUIs++; this._flatland.onReset(ui_finish_cb);
     };
 
@@ -129,10 +129,11 @@ function() {
         this._loadingUIs--;
         if (this._loadingUIs > 0) return;
 
-
         if (! this._alreadyInitialized)
             this._simulator.hideLoadScreen();
 
+        this._move_speed = 5;
+        this._move_actions = {}; // Track active movements to adjust when speed changes
         this._moverot = new std.movement.MoveAndRotate(this._pres, std.core.bind(this.updateCameraAndAnimation, this), 'rotation');
         this._characterAnimation = new std.graphics.CharacterAnimation(this);
 
@@ -160,7 +161,7 @@ function() {
             this._binding.addAction('toggleChat', std.core.bind(this.toggleChat, this));
             this._binding.addAction('togglePhysicsProperties', std.core.bind(this._physics.toggle, this._physics));
             //this._binding.addAction('togglePresenceList', std.core.bind(this._presenceList.toggle, this._presenceList));
-            //this._binding.addAction('toggleSetMesh', std.core.bind(this._setMesh.toggle, this._setMesh));
+            this._binding.addAction('toggleSetMesh', std.core.bind(this._setMesh.toggle, this._setMesh));
             //this._binding.addFloat2Action('showFlatland', std.core.bind(this.showFlatland, this));
             //this._binding.addAction('hideFlatland', std.core.bind(this.hideFlatland, this));
 
@@ -175,6 +176,9 @@ function() {
             this._binding.addToggleAction('moveRight', std.core.bind(this.moveSelf, this, new util.Vec3(1, 0, 0)), 1, -1);
             this._binding.addToggleAction('moveUp', std.core.bind(this.moveSelf, this, new util.Vec3(0, 1, 0)), 1, -1);
             this._binding.addToggleAction('moveDown', std.core.bind(this.moveSelf, this, new util.Vec3(0, -1, 0)), 1, -1);
+            // Movement speed
+            this._binding.addAction('moveSpeedUp', std.core.bind(this.moveSpeedUp, this));
+            this._binding.addAction('moveSpeedDown', std.core.bind(this.moveSpeedDown, this));
 
             this._binding.addToggleAction('rotateUp', std.core.bind(this.rotateSelf, this, new util.Vec3(1, 0, 0), "_rotate_up_handle_"), true, false);
             this._binding.addToggleAction('rotateDown', std.core.bind(this.rotateSelf, this, new util.Vec3(-1, 0, 0), "_rotate_down_handle_"), true, false);
@@ -251,6 +255,9 @@ function() {
                                         { key: ['button', 'd' ], action: 'moveRight' },
                                         { key: ['button', 'q' ], action: 'moveUp' },
                                         { key: ['button', 'z' ], action: 'moveDown' },
+
+                                        { key: ['button', ']' ], action: 'moveSpeedUp' },
+                                        { key: ['button', '[' ], action: 'moveSpeedDown' },
 
                                         { key: ['button', 'up', 'shift' ], action: 'rotateUp' },
                                         { key: ['button', 'down', 'shift' ], action: 'rotateDown' },
@@ -339,10 +346,6 @@ function() {
 
 
 
-    //by default how to scale translational velocity from keypresses.  (movement
-    //is agonizingly slow if just set this to 1.  I really recommend 5.)
-    /** @public */
-    std.client.Default.prototype.defaultVelocityScaling = 5;
     //by default how to scale rotational velocity from keypresses
     /** @public */
     std.client.Default.prototype.defaultRotationalVelocityScaling = .5;
@@ -420,9 +423,43 @@ function() {
         this.updateAnimation();
     };
 
+    std.client.Default.prototype.moveSpeed = function() {
+        return this._move_speed;
+    };
+
+    std.client.Default.prototype._moveSpeedChange = function(factor) {
+        // Undo all active movements
+        for(var dir in this._move_actions)
+            this._moverot.move(this._move_actions[dir], this.moveSpeed() * -1, false, true);
+        
+        // Change the speed
+        this._move_speed *= factor;
+        if (this._move_speed == 0) this._move_speed = 0.00001;
+        
+        // And redo them
+        for(var dir in this._move_actions)
+            this._moverot.move(this._move_actions[dir], this.moveSpeed());
+    };
+    
+    std.client.Default.prototype.moveSpeedUp = function() {
+        this._moveSpeedChange(1.1);
+    };
+
+    std.client.Default.prototype.moveSpeedDown = function() {
+        this._moveSpeedChange(1/1.1);
+    };
+
     /** @function */
-    std.client.Default.prototype.moveSelf = function(dir, val) {
-        this._moverot.move(dir, this.defaultVelocityScaling * val);
+    std.client.Default.prototype.moveSelf = function(dir, flip) {
+        if (flip > 0) {
+            if (!this._move_actions[dir]) this._move_actions[dir] = <0, 0, 0>;
+            this._move_actions[dir] += dir;
+        }
+        else {
+            this._move_actions[dir] -= dir;
+            if (this._move_actions[dir].length() < 0.0001) delete this._move_actions[dir];
+        }
+        this._moverot.move(dir, this.moveSpeed() * flip);
     };
 
     /** @function */
@@ -512,6 +549,7 @@ function() {
     std.client.Default.prototype.updatePhysicsProperties = function() {
         // Update even if not selected so display can be disabled
         this._physics.update(this._selected);
+        if (this._setMesh) this._setMesh.update(this._selected);
     };
 
     /** @function */
@@ -645,6 +683,20 @@ function() {
         var audio_ambient_volume = this._env.get('audio.ambient_volume');
         if (audio_ambient_volume !== undefined && this._env.audio_ambient_clip) {
             this._env.audio_ambient_clip.volume(parseFloat(audio_ambient_volume));
+        }
+
+        // Skybox
+        var skybox_type = this._env.get('sky.type');
+        var skybox_img = this._env.get('sky.img');
+        if (skybox_type && skybox_img) {
+            var skybox_distance = this._env.get('sky.distance');
+            if (!skybox_distance) skybox_distance = 4000;
+            var skybox_tiling = this._env.get('sky.tiling');
+            if (!skybox_tiling) skybox_tiling = 1;
+            var skybox_curvature = this._env.get('sky.curvature');
+            if (!skybox_curvature) skybox_curvature = 65;
+            var skybox_orientation = this._env.get('sky.orientation');
+            this._simulator.skybox(skybox_type, skybox_img, 4000, skybox_tiling, skybox_curvature, skybox_orientation);
         }
     };
 

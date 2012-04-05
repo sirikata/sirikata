@@ -284,6 +284,9 @@ void HttpManager::postMultipartForm(
         // Default content-type header for files
         if (!mp.filename.empty() && mp.headers.find("Content-Type") == mp.headers.end())
             request_body << "Content-Type: application/octet-stream\r\n";
+        if (!mp.filename.empty() && mp.headers.find("Content-Transfer-Encoding") == mp.headers.end())
+            request_body << "Content-Transfer-Encoding: binary\r\n";
+
         // Data
         request_body << "\r\n";
         request_body << mp.data;
@@ -348,7 +351,7 @@ void HttpManager::processQueue() {
                         }
 
                         //SILOG(transfer, debug, "Creating a new connection for " << (*req)->addr.toString());
-                        TCPResolver::query query((*req)->addr.getHostName(), (*req)->addr.getService());
+                        TCPResolver::query query((*req)->addr.getHostName(), (*req)->addr.getService(), Network::TCPResolver::query::all_matching);
                         mResolver->async_resolve(query, boost::bind(&HttpManager::handle_resolve, this, *req,
                                                 boost::asio::placeholders::error, boost::asio::placeholders::iterator));
 

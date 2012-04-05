@@ -160,6 +160,7 @@ public:
     }
     void setCommander(Command::Commander* c);
 
+    const String name;
     Network::IOService* ioService;
     Network::IOStrand* mainStrand;
     TimeProfiler* profiler;

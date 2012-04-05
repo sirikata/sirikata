@@ -268,6 +268,12 @@ public:
     void handleProximityUpdate(const SpaceObjectReference& spaceobj, const Sirikata::Protocol::Prox::ProximityUpdate& update);
     void handleLocationUpdate(const SpaceObjectReference& spaceobj, const LocUpdate& lu);
 
+
+
+    // Commands
+    void commandPresences(
+        const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
+
   private:
     /// Private: Use "SelfWeakPtr<HostedObject>::construct(ObjectHost*)"
     /** Create a new HostedObject.
@@ -315,6 +321,7 @@ public:
     // Helper for constructing and sending location update
     void updateLocUpdateRequest(const SpaceID& space, const ObjectReference& oref, const TimedMotionVector3f* const loc, const TimedMotionQuaternion* const orient, const BoundingSphere3f* const bounds, const String* const mesh, const String* const phy);
     void sendLocUpdateRequest(const SpaceID& space, const ObjectReference& oref);
+
 };
 
 }

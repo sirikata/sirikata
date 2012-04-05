@@ -65,7 +65,7 @@ Trace::Trace(const String& filename)
    mStorageThread(NULL),
    mFinishStorage(false)
 {
-    mStorageThread = new Thread( std::tr1::bind(&Trace::storageThread, this, filename) );
+    mStorageThread = new Thread( "Trace Storage", std::tr1::bind(&Trace::storageThread, this, filename) );
 }
 
 void Trace::prepareShutdown() {
@@ -80,23 +80,32 @@ void Trace::shutdown() {
 }
 
 void Trace::storageThread(const String& filename) {
-    FILE* of = fopen(filename.c_str(), "wb");
+    FILE* of = NULL;
 
     while( !mFinishStorage.read() ) {
-        data.store(of);
-        fflush(of);
+        // Open the file in the loop so we never open the file if we never dump
+        // any trace data
+        if (of == NULL && !data.empty())
+            of = fopen(filename.c_str(), "wb");
+
+        if (!data.empty()) {
+            data.store(of);
+            fflush(of);
+        }
 
         Timer::sleep(Duration::seconds(1));
     }
-    data.store(of);
-    fflush(of);
 
+    if (of != NULL) {
+        data.store(of);
+        fflush(of);
 #if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS
-    FlushFileBuffers((HANDLE) _get_osfhandle(_fileno(of)));
+        FlushFileBuffers((HANDLE) _get_osfhandle(_fileno(of)));
 #else
-    fsync(fileno(of));
+        fsync(fileno(of));
 #endif
-    fclose(of);
+        fclose(of);
+    }
 }
 
 void Trace::writeRecord(uint16 type_hint, BatchedBuffer::IOVec* data_orig, uint32 iovcnt) {

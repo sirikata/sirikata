@@ -81,14 +81,19 @@ std.movement.MoveAndRotate = system.Class.extend(
         rotating: function() {
             return !this._pres.orientationVel.isZero();
         },
-        move: function(vel, scaling, overwrite) {
+        move: function(vel, scaling, overwrite, intermediate) {
             var scaled_vel = vel.mul(scaling);
             if (overwrite) {
                 this._localVel = scaled_vel;
             }else {
                 this._localVel = this._localVel.add(scaled_vel);
             }
-            this._startReeval(true);
+            // An intermediate write allows us to make changes without actually
+            // applying the update. This is convenient for making temporary
+            // changes, especially if making the change would affect
+            // animations.
+            if (!intermediate)
+                this._startReeval(true);
         },
         rotate: function(axis, angle) {
             var newDiffVel = new util.Quaternion(axis, angle);

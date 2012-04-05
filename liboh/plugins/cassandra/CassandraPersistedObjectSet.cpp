@@ -58,7 +58,7 @@ void CassandraPersistedObjectSet::start() {
     // cppoh.
     mIOService = new Network::IOService("CassandraPersistedObjectSet");
     mWork = new Network::IOWork(*mIOService, "CassandraPersistedObjectSet IO Thread");
-    mThread = new Sirikata::Thread(std::tr1::bind(&Network::IOService::runNoReturn, mIOService));
+    mThread = new Sirikata::Thread("CassandraPersistedObjectSet IO", std::tr1::bind(&Network::IOService::runNoReturn, mIOService));
 
     mIOService->post(std::tr1::bind(&CassandraPersistedObjectSet::initDB, this), "CassandraPersistedObjectSet::initDB");
 }

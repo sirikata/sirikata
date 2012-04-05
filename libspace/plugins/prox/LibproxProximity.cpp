@@ -408,26 +408,34 @@ void LibproxProximity::removeRelevantServer(ServerID sid) {
 }
 
 void LibproxProximity::aggregateCreated(ProxAggregator* handler, const UUID& objid) {
+    // We ignore aggregates built of dynamic objects, they aren't useful for
+    // creating aggregate meshes
+    if (!static_cast<ProxQueryHandler*>(handler)->staticOnly()) return;
     LibproxProximityBase::aggregateCreated(objid);
 }
 
 void LibproxProximity::aggregateChildAdded(ProxAggregator* handler, const UUID& objid, const UUID& child, const BoundingSphere3f& bnds) {
+    if (!static_cast<ProxQueryHandler*>(handler)->staticOnly()) return;
     LibproxProximityBase::aggregateChildAdded(objid, child, bnds);
 }
 
 void LibproxProximity::aggregateChildRemoved(ProxAggregator* handler, const UUID& objid, const UUID& child, const BoundingSphere3f& bnds) {
+    if (!static_cast<ProxQueryHandler*>(handler)->staticOnly()) return;
     LibproxProximityBase::aggregateChildRemoved(objid, child, bnds);
 }
 
 void LibproxProximity::aggregateBoundsUpdated(ProxAggregator* handler, const UUID& objid, const BoundingSphere3f& bnds) {
+    if (!static_cast<ProxQueryHandler*>(handler)->staticOnly()) return;
     LibproxProximityBase::aggregateBoundsUpdated(objid, bnds);
 }
 
 void LibproxProximity::aggregateDestroyed(ProxAggregator* handler, const UUID& objid) {
+    if (!static_cast<ProxQueryHandler*>(handler)->staticOnly()) return;
     LibproxProximityBase::aggregateDestroyed(objid);
 }
 
 void LibproxProximity::aggregateObserved(ProxAggregator* handler, const UUID& objid, uint32 nobservers) {
+    if (!static_cast<ProxQueryHandler*>(handler)->staticOnly()) return;
     LibproxProximityBase::aggregateObserved(objid, nobservers);
 }
 
@@ -606,9 +614,7 @@ void LibproxProximity::poll() {
     mObjectResults.swap(object_results_copy);
     mObjectResultsToSend.insert(mObjectResultsToSend.end(), object_results_copy.begin(), object_results_copy.end());
 
-
-    bool object_sent = true;
-    while(object_sent && !mObjectResultsToSend.empty()) {
+    while(!mObjectResultsToSend.empty()) {
         Sirikata::Protocol::Object::ObjectMessage* msg_front = mObjectResultsToSend.front();
         sendObjectResult(msg_front);
         delete msg_front;
@@ -706,6 +712,17 @@ void LibproxProximity::tickQueryHandler(ProxQueryHandlerData qh[NUM_OBJECT_CLASS
             qh[i].additions.clear();
         }
     }
+
+    // We wait until the first full iteration is done for queries so we can
+    // coalesce their initial results, skipping intermediate refinement. Now's
+    // the time to mark them as having completed their first iteration and
+    // performing the coalescing.
+
+    // copied for safe iteration
+    FirstIterationObjectSet copied_first_its = mObjectQueriesFirstIteration;
+    for(FirstIterationObjectSet::const_iterator it = copied_first_its.begin(); it != copied_first_its.end(); it++)
+        generateObjectQueryEvents(*it, true);
+    mObjectQueriesFirstIteration.clear();
 }
 
 void LibproxProximity::rebuildHandlerType(ProxQueryHandlerData* handler, ObjectClass objtype) {
@@ -753,7 +770,10 @@ void LibproxProximity::commandProperties(const Command::Command& cmd, Command::C
         result.put("queries.objects.distance", mDistanceQueryDistance);
     // Technically not thread safe, but these should be simple
     // read-only accesses.
-    result.put("queries.objects.messages", mObjectResults.size() + mObjectResultsToSend.size());
+    uint32 obj_messages = 0;
+    for(ObjectProxStreamMap::iterator prox_stream_it = mObjectProxStreams.begin(); prox_stream_it != mObjectProxStreams.end(); prox_stream_it++)
+        obj_messages += prox_stream_it->second->outstanding.size();
+    result.put("queries.objects.messages", mObjectResults.size() + mObjectResultsToSend.size() + obj_messages);
 
 
     // Properties of servers
@@ -863,8 +883,6 @@ void LibproxProximity::commandListNodes(const Command::Command& cmd, Command::Co
 
 
 void LibproxProximity::generateServerQueryEvents(Query* query) {
-    typedef std::deque<QueryEvent> QueryEventList;
-
     Time t = mContext->simTime();
     uint32 max_count = GetOptionValue<uint32>(PROX_MAX_PER_RESULT);
 
@@ -958,8 +976,12 @@ void LibproxProximity::generateServerQueryEvents(Query* query) {
     }
 }
 
-void LibproxProximity::generateObjectQueryEvents(Query* query) {
-    typedef std::deque<QueryEvent> QueryEventList;
+void LibproxProximity::generateObjectQueryEvents(Query* query, bool do_first) {
+    // If we're waiting for the first iteration to finish, we ignore the
+    // notification, waiting until we get out of the first tick to manually
+    // trigger updates.
+    bool is_first = (mObjectQueriesFirstIteration.find(query) != mObjectQueriesFirstIteration.end());
+    if (!do_first && is_first) return;
 
     uint32 max_count = GetOptionValue<uint32>(PROX_MAX_PER_RESULT);
 
@@ -969,6 +991,11 @@ void LibproxProximity::generateObjectQueryEvents(Query* query) {
 
     QueryEventList evts;
     query->popEvents(evts);
+
+    if (is_first) {
+        coalesceEvents(evts, 10);
+        mObjectQueriesFirstIteration.erase(query);
+    }
 
     while(!evts.empty()) {
         Sirikata::Protocol::Prox::ProximityResults prox_results;
@@ -1210,6 +1237,7 @@ void LibproxProximity::handleUpdateObjectQuery(const UUID& object, const TimedMo
                     q->maxResults(max_results);
                 mObjectQueries[i][object] = q;
                 mInvertedObjectQueries[q] = object;
+                mObjectQueriesFirstIteration.insert(q);
                 q->setEventListener(this);
             }
         }
@@ -1237,6 +1265,7 @@ void LibproxProximity::handleRemoveObjectQuery(const UUID& object, bool notify_m
         Query* q = it->second;
         mObjectQueries[i].erase(it);
         mInvertedObjectQueries.erase(q);
+        mObjectQueriesFirstIteration.erase(q);
         delete q; // Note: Deleting query notifies QueryHandler and unsubscribes.
     }
 

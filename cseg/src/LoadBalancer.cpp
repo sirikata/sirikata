@@ -43,7 +43,7 @@ LoadBalancer::LoadBalancer(DistributedCoordinateSegmentation* cseg, int nservers
     ServerAvailability sa;
     sa.mServer = i+1;
     (i < (int)(perdim.x*perdim.y*perdim.z)) ? (sa.mAvailable = 0) : (sa.mAvailable = 1);
-    
+
     mAvailableServers.push_back(sa);
   }
 
@@ -56,14 +56,14 @@ LoadBalancer::~LoadBalancer() {
 
 uint32 LoadBalancer::getAvailableServerIndex() {
   uint32 availableSvrIndex = INT_MAX;
-  
+
   for (uint32 i=0; i<mAvailableServers.size(); i++) {
     if (mAvailableServers[i].mAvailable == true) {
       availableSvrIndex = i;
       break;
     }
   }
-  
+
   return availableSvrIndex;
 }
 
@@ -71,7 +71,7 @@ void LoadBalancer::reportRegionLoad(SegmentedRegion* segRegion, ServerID sid, ui
   boost::mutex::scoped_lock overloadedRegionsListLock(mOverloadedRegionsListMutex);
   boost::mutex::scoped_lock underloadedRegionsListLock(mUnderloadedRegionsListMutex);
 
-  if (segRegion->mLoadValue > OVERLOAD_THRESHOLD) {    
+  if (segRegion->mLoadValue > OVERLOAD_THRESHOLD) {
     std::vector<SegmentedRegion*>::iterator it = std::find(mOverloadedRegionsList.begin(),
                                                            mOverloadedRegionsList.end(), segRegion);
     if (it == mOverloadedRegionsList.end()) {
@@ -105,9 +105,9 @@ void LoadBalancer::reportRegionLoad(SegmentedRegion* segRegion, ServerID sid, ui
   }
 }
 
-void LoadBalancer::handleSegmentationChange(Sirikata::Protocol::CSeg::ChangeMessage segChangeMessage) {  
+void LoadBalancer::handleSegmentationChange(Sirikata::Protocol::CSeg::ChangeMessage segChangeMessage) {
   for (int i=0; i < segChangeMessage.region_size(); i++) {
-    Sirikata::Protocol::CSeg::SplitRegion region = segChangeMessage.region(i); 
+    Sirikata::Protocol::CSeg::SplitRegion region = segChangeMessage.region(i);
 
     for (uint32 i=0; i<mAvailableServers.size(); i++) {
       if (mAvailableServers[i].mServer == region.id() &&
@@ -126,7 +126,7 @@ void LoadBalancer::service() {
 
   //splitting overloaded regions
   for (std::vector<SegmentedRegion*>::iterator it = mOverloadedRegionsList.begin();
-       it != mOverloadedRegionsList.end(); 
+       it != mOverloadedRegionsList.end();
        it++)
   {
     uint32 availableSvrIndex = getAvailableServerIndex();
@@ -155,10 +155,10 @@ void LoadBalancer::service() {
         continue;
       }
       segInfoVector.push_back(segInfo2);
-      
+
 
       mAvailableServers[availableSvrIndex].mAvailable = false;
-     
+
       overloadedRegion->mLeftChild = new SegmentedRegion(overloadedRegion);
       overloadedRegion->mRightChild = new SegmentedRegion(overloadedRegion);
 
@@ -191,17 +191,17 @@ void LoadBalancer::service() {
       std::cout << "Split\n";
       std::cout << overloadedRegion->mServer << " : " << overloadedRegion->mLeftChild->mBoundingBox << "\n";
       std::cout << availableServer << " : " << overloadedRegion->mRightChild->mBoundingBox << "\n";
-      
-      mCSeg->mWholeTreeServerRegionMap.erase(overloadedRegion->mServer);      
+
+      mCSeg->mWholeTreeServerRegionMap.erase(overloadedRegion->mServer);
       mCSeg->mWholeTreeServerRegionMap.erase(availableServer);
       mCSeg->mLowerTreeServerRegionMap.erase(overloadedRegion->mServer);
       mCSeg->mLowerTreeServerRegionMap.erase(availableServer);
-      
 
-      Thread thrd(boost::bind(&DistributedCoordinateSegmentation::notifySpaceServersOfChange,mCSeg,segInfoVector));
-      
+
+      Thread thrd("CSeg Notify Space Servers", boost::bind(&DistributedCoordinateSegmentation::notifySpaceServersOfChange,mCSeg,segInfoVector));
+
       mOverloadedRegionsList.erase(it);
-      
+
       return; //enough work for this iteration. No further splitting or merging.
     }
     else {
@@ -233,9 +233,9 @@ void LoadBalancer::service() {
       sibling = underloadedRegion->mParent->mRightChild;
     }
 
-    std::vector<SegmentedRegion*>::iterator sibling_it = 
+    std::vector<SegmentedRegion*>::iterator sibling_it =
                std::find(mUnderloadedRegionsList.begin(), mUnderloadedRegionsList.end(), sibling);
-    if (sibling_it == mUnderloadedRegionsList.end()) 
+    if (sibling_it == mUnderloadedRegionsList.end())
     {
       mUnderloadedRegionsList.erase(it);
       break;
@@ -276,10 +276,10 @@ void LoadBalancer::service() {
     mCSeg->mWholeTreeServerRegionMap.erase(parent->mRightChild->mServer);
     mCSeg->mLowerTreeServerRegionMap.erase(parent->mRightChild->mServer);
     mCSeg->mWholeTreeServerRegionMap.erase(parent->mLeftChild->mServer);
-    mCSeg->mLowerTreeServerRegionMap.erase(parent->mLeftChild->mServer);     
-   
+    mCSeg->mLowerTreeServerRegionMap.erase(parent->mLeftChild->mServer);
 
-    Thread thrd(boost::bind(&DistributedCoordinateSegmentation::notifySpaceServersOfChange,mCSeg,segInfoVector));
+
+    Thread thrd("CSeg Notify Space Servers", boost::bind(&DistributedCoordinateSegmentation::notifySpaceServersOfChange,mCSeg,segInfoVector));
 
     mUnderloadedRegionsList.erase(it);
     sibling_it = std::find(mUnderloadedRegionsList.begin(), mUnderloadedRegionsList.end(), sibling);

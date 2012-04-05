@@ -71,7 +71,8 @@ class SIRIKATA_EXPORT TransferMediator
 	public:
 	    //Stores the aggregated priority
 		Priority mPriority;
-
+            // Whether we've started processing this request.
+            bool mExecuting;
 	private:
 		//Maps each client's string ID to the original TransferRequest object
 		std::map<std::string, std::tr1::shared_ptr<TransferRequest> > mTransferReqs;

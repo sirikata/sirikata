@@ -34,6 +34,7 @@
 #define _SIRIKATA_SIMOH_OPTIONS_HPP_
 
 #define OPT_OH_PLUGINS           "oh.plugins"
+#define OPT_OH_EXTRA_PLUGINS           "oh.extra-plugins"
 
 #define MAX_EXTRAPOLATOR_DIST "max-extrapolator-dist"
 

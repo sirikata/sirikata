@@ -196,7 +196,7 @@ private:
 
     // Schedules received server messages for handling
     void scheduleHandleServerMessages(SpaceNodeConnection* conn);
-    void handleServerMessages(SpaceNodeConnection* conn);
+    void handleServerMessages(Liveness::Token alive, SpaceNodeConnection* conn);
     // Starting point for handling of all messages from the server -- either handled as a special case, such as
     // for session management, or dispatched to the object
     void handleServerMessage(ObjectMessage* msg, ServerID sid);

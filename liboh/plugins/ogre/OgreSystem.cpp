@@ -230,6 +230,12 @@ bool OgreSystem::initialize(ConnectionEventProvider* cevtprovider, VWObjectPtr v
     mat->getTechnique(0)->getPass(0)->setSelfIllumination(0.25, 0.5, 0.25);
 
     initialized = true;
+
+
+    // If we already set the skybox before initialization, make sure we load it.
+    if (mSkybox && (*mSkybox))
+        mSkybox->load(mSceneManager, mResourceLoader, mTransferPool);
+
     return true;
 }
 
@@ -248,7 +254,7 @@ void OgreSystem::iHandleUIReady(Liveness::Token osAlive)
 {
     if (!osAlive)
         return;
-    
+
     // Currently the only blocker for being ready is that the UI loaded. If we
     // end up with more, we may need to make this just set a flag and then check
     // if all conditions are met.
@@ -348,7 +354,7 @@ void OgreSystem::iOnCreateProxy(
     if ( !p->isValid() ) {
       return;
     }
-    
+
     //busy wait until initialized.  note that the initialization code actually
     //calls iOnCreateProxy itself (through instantiateAllObjects).  If the
     //inInit param is true then we know that the initialization code called this
@@ -697,7 +703,7 @@ void OgreSystem::iOnSessionDisconnected(
     //was disconnected.
     if (name != mPresenceID)
         return;
-        
+
     if (stopped)
     {
         SILOG(ogre,error,"Received iOnDisconnecte after having stopped ogre system");
@@ -800,6 +806,8 @@ boost::any OgreSystem::invoke(vector<boost::any>& params)
         return setInheritScale(params);
     else if (name == "isReady")
         return isReady(params);
+    else if (name == "setSkybox")
+        return setSkybox(params);
     else
         return OgreRenderer::invoke(params);
 
@@ -1427,6 +1435,79 @@ boost::any OgreSystem::axis(vector<boost::any>& params) {
     }
 
     return boost::any();
+}
+
+boost::any OgreSystem::setSkybox(std::vector<boost::any>& params) {
+    if (params.size() < 2) return boost::any();
+    // setSkybox shape image_url
+    if (!Invokable::anyIsString(params[1])) return boost::any();
+
+    // We can accept just one parameter if the user is trying to disable the
+    // skybox
+    String shape_str = Invokable::anyAsString(params[1]);
+    if (shape_str == "disabled") {
+        if (mSkybox && (*mSkybox) && initialized)
+            mSkybox->unload();
+        mSkybox = SkyboxPtr(new Skybox());
+    }
+
+    // Otherwise, we need all the params
+    if (params.size() < 3) return boost::any();
+    if (!Invokable::anyIsString(params[2]))
+        return boost::any();
+
+    if ((params.size() > 3 && !Invokable::anyIsNumeric(params[3])) ||
+        (params.size() > 4 && !Invokable::anyIsNumeric(params[4])) ||
+        (params.size() > 5 && !Invokable::anyIsNumeric(params[5])))
+    {
+        return boost::any();
+    }
+
+    // Orientation
+    if (params.size() > 9 &&
+        !(Invokable::anyIsNumeric(params[6]) &&
+            Invokable::anyIsNumeric(params[7]) &&
+            Invokable::anyIsNumeric(params[8]) &&
+            Invokable::anyIsNumeric(params[9])))
+    {
+        return boost::any();
+    }
+
+    Skybox::SkyboxShape shape;
+    if (shape_str == "cube")
+        shape = Skybox::SKYBOX_CUBE;
+    else if (shape_str == "dome")
+        shape = Skybox::SKYBOX_DOME;
+    else if (shape_str == "plane")
+        shape = Skybox::SKYBOX_PLANE;
+    else
+        return boost::any();
+
+    String image_url = Invokable::anyAsString(params[2]);
+
+    if (mSkybox && (*mSkybox) && initialized)
+        mSkybox->unload();
+
+    mSkybox = SkyboxPtr(new Skybox(shape, image_url));
+    if (params.size() > 3)
+        mSkybox->distance = Invokable::anyAsNumeric(params[3]);
+    if (params.size() > 4)
+        mSkybox->tiling = Invokable::anyAsNumeric(params[4]);
+    if (params.size() > 5)
+        mSkybox->curvature = Invokable::anyAsNumeric(params[5]);
+
+    if (params.size() > 9)
+        mSkybox->orientation = Quaternion(
+            Invokable::anyAsNumeric(params[6]),
+            Invokable::anyAsNumeric(params[7]),
+            Invokable::anyAsNumeric(params[8]),
+            Invokable::anyAsNumeric(params[9])
+        );
+
+    if (mSkybox && (*mSkybox) && initialized)
+        mSkybox->load(mSceneManager, mResourceLoader, mTransferPool);
+
+    return Invokable::asAny(true);
 }
 
 }

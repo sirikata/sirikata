@@ -197,22 +197,26 @@ public:
     /** Push a value onto the queue.
      *  \param value the value to push
      */
-    void push(const T &value) {
+    int32 push(const T &value) {
+        int32 new_size;
         ThreadSafeQueueNS::lock(mLock);
         try {
             mList.push_back(value);
+            new_size = mList.size();
             ThreadSafeQueueNS::notify(mCond);
         } catch (...) {
             ThreadSafeQueueNS::unlock(mLock);
             throw;
         }
         ThreadSafeQueueNS::unlock(mLock);
+        return new_size;
     }
 
     /** Push multiple values onto the queue, only locking once.
      *  \param values queue holding values to push
      */
-    void pushMultiple(const std::deque<T> &values) {
+    int32 pushMultiple(const std::deque<T> &values) {
+        int32 new_size;
         ThreadSafeQueueNS::lock(mLock);
         try {
             while(!values.empty()) {
@@ -220,12 +224,14 @@ public:
                 mList.push_back(value);
                 values.pop();
             }
+            new_size = mList.size();
             ThreadSafeQueueNS::notify(mCond);
         } catch (...) {
             ThreadSafeQueueNS::unlock(mLock);
             throw;
         }
         ThreadSafeQueueNS::unlock(mLock);
+        return new_size;
     }
 
     /** Pops the front element from the queue and places it in ret.

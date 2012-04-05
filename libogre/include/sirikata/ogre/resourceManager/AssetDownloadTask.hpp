@@ -39,6 +39,9 @@
 namespace Sirikata {
 namespace Graphics {
 class OgreRenderer;
+
+class ParseMeshTaskInfo;
+typedef std::tr1::shared_ptr<ParseMeshTaskInfo> ParseMeshTaskHandle;
 }
 
 /** An AssetDownloadTask manages the full download of an asset, including
@@ -74,12 +77,12 @@ public:
     void getDownloadTasks(
         std::vector<String>& finishedDownloads, std::vector<String>& activeDownloads);
 
-    
+
     void updatePriority(float64 priority);
     void cancel();
 
     typedef std::map<const String, Transfer::ResourceDownloadTaskPtr> ActiveDownloadMap;
-    
+
 private:
 
     void downloadAssetFile();
@@ -114,25 +117,27 @@ private:
     // needs to be relative or absolute
     Transfer::URI getURL(const Transfer::URI& orig, const String& given_url);
 
-    Graphics::OgreRenderer *const mScene;    
+    Graphics::OgreRenderer *const mScene;
     Transfer::URI mAssetURI;
     double mPriority;
     FinishedCallback mCB;
 
+    Graphics::ParseMeshTaskHandle mParseMeshHandle;
     Mesh::VisualPtr mAsset;
     Dependencies mDependencies;
     bool mIsAggregate;
 
     // Active downloads, for making sure shared_ptrs stick around and for cancelling
     ActiveDownloadMap mActiveDownloads;
+    std::vector<String> mFinishedDownloads;
 
     boost::mutex mDependentDownloadMutex;
 
 public:
-    
+
     ActiveDownloadMap::size_type getOutstandingDependentDownloads();
 
-    
+
 };
 typedef std::tr1::shared_ptr<AssetDownloadTask> AssetDownloadTaskPtr;
 

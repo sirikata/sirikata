@@ -2039,12 +2039,16 @@ private:
       if (mState != DISCONNECTED) {
 
         //if the stream has been waiting for an ACK for > 2*mStreamRTOMicroseconds,
-        //resend the unacked packets.
+        //resend the unacked packets. We don't actually check if we
+        //have anything to ack here, that happens in resendUnackedPackets. Also,
+        //'resending' really just means sticking them back at the front of
+        //mQueuedBuffers, so the code that follows and actually sends data will
+        //ensure that we trigger a re-servicing sometime in the future.
         if ( mLastSendTime != Time::null()
              && (curTime - mLastSendTime).toMicroseconds() > 2*mStreamRTOMicroseconds)
         {
-	  resendUnackedPackets();
-	  mLastSendTime = curTime;
+            resendUnackedPackets();
+            mLastSendTime = curTime;
         }
 
 	boost::mutex::scoped_lock lock(mQueueMutex);
@@ -2124,14 +2128,6 @@ private:
          mTransmitWindowSize = it->second->mBufferLength;
        }
      }
-
-
-    std::tr1::shared_ptr<Connection<EndPointType> > conn =  mConnection.lock();
-    if (conn)
-      getContext()->mainStrand->post(Duration::seconds(0.01),
-          std::tr1::bind(&Stream<EndPointType>::serviceStreamNoReturn, this, mWeakThis.lock(), conn),
-          "Stream<EndPointType>::serviceStreamNoReturn"
-      );
 
     if (mChannelToBufferMap.empty() && !mQueuedBuffers.empty()) {
       std::tr1::shared_ptr<StreamBuffer> buffer = mQueuedBuffers.front();
@@ -2253,11 +2249,19 @@ private:
 	  sendToApp(0);
 	}
       }
+      else if (len == 0 && (int64)(offset) == mNextByteExpected) {
+          // A zero length packet at the next expected offset. This is a keep
+          // alive, which are just empty packets that we process to keep the
+          // connection running. Send an ack so we don't end up with unacked
+          // keep alive packets.
+          sendAckPacket();
+      }
     }
 
     //handle any ACKS that might be included in the message...
     boost::mutex::scoped_lock lock(mQueueMutex);
 
+    bool acked_msgs = false;
     if (mChannelToBufferMap.find(offset) != mChannelToBufferMap.end()) {
       uint64 dataOffset = mChannelToBufferMap[offset]->mOffset;
       mNumOutstandingBytes -= mChannelToBufferMap[offset]->mBufferLength;
@@ -2276,6 +2280,7 @@ private:
 
       //printf("REMOVED ack packet at offset %d\n", (int)mChannelToBufferMap[offset]->mOffset);
 
+      acked_msgs = true;
       mChannelToBufferMap.erase(offset);
 
       std::vector <uint64> channelOffsets;
@@ -2295,6 +2300,7 @@ private:
       // ACK received but not found in mChannelToBufferMap
       if (mChannelToStreamOffsetMap.find(offset) != mChannelToStreamOffsetMap.end()) {
         uint64 dataOffset = mChannelToStreamOffsetMap[offset];
+        acked_msgs = true;
         mChannelToStreamOffsetMap.erase(offset);
 
         std::vector <uint64> channelOffsets;
@@ -2310,6 +2316,24 @@ private:
           mChannelToBufferMap.erase(channelOffsets[i]);
         }
       }
+    }
+
+    // If we acked messages, we've cleared space in the transmit
+    // buffer (the receiver cleared something out of its receive
+    // buffer). We can send more data, so schedule servicing if we
+    // have anything queued.
+    // TODO(ewencp) maybe only schedule something new when this
+    // started as a full transmit buffer? Have to be careful about
+    // this though since mTransmitWindowSize might not be 0 even if it
+    // was 'full' since the next packet couldn't fit on.
+    if (acked_msgs && !mQueuedBuffers.empty()) {
+        std::tr1::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
+        if (conn) {
+            getContext()->mainStrand->post(
+                std::tr1::bind(&Stream<EndPointType>::serviceStreamNoReturn, this, mWeakThis.lock(), conn),
+                "Stream<EndPointType>::serviceStreamNoReturn"
+            );
+        }
     }
   }
 

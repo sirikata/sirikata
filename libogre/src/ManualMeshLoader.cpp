@@ -14,9 +14,9 @@ namespace Graphics {
 using namespace Sirikata::Mesh;
 
 
-ManualMeshLoader::ManualMeshLoader(MeshdataPtr meshdata, const String& _meshname)
- :mdptr(meshdata),
-  meshname(_meshname)
+ManualMeshLoader::ManualMeshLoader(MeshdataPtr meshdata, TextureBindingsMapPtr textureFingerprints)
+ : mdptr(meshdata),
+   mTextureFingerprints(textureFingerprints)
 {
 }
 
@@ -229,13 +229,15 @@ void ManualMeshLoader::traverseNodes(Ogre::Resource* r, const bool useSharedBuff
             const SubMeshGeometry::Primitive& prim=submesh.primitives[primitive_index];
 
             // FIXME select proper texture/material
+            std::string matname = "baseogremat";
             GeometryInstance::MaterialBindingMap::const_iterator whichMaterial = geoinst.materialBindingMap.find(prim.materialId);
             if (whichMaterial == geoinst.materialBindingMap.end())
                 SILOG(ogre, error, "[OGRE] Invalid MaterialBindingMap: couldn't find " << prim.materialId << " for " << md.uri);
-            std::string matname =
-                whichMaterial != geoinst.materialBindingMap.end() ?
-                ogreMaterialName(meshname, whichMaterial->second) :
-                "baseogremat";
+            else if (whichMaterial->second >= md.materials.size())
+                SILOG(ogre, error, "[OGRE] Invalid MaterialBindingMap: " << prim.materialId << " in " << md.uri << " references material " << whichMaterial->second << " which doesn't exist.");
+            else
+                matname = ogreMaterialName(md.materials[whichMaterial->second], Transfer::URI(md.uri), mTextureFingerprints);
+
             Ogre::SubMesh *osubmesh = mesh->createSubMesh(submesh.name);
 
             osubmesh->setMaterialName(matname);

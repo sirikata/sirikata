@@ -63,7 +63,9 @@ public:
     {
         this->addListener(this);
     }
-    virtual ~MeshViewEntity() {}
+    virtual ~MeshViewEntity() {
+        Liveness::letDie();
+    }
 
     // Entity Interface
     virtual BoundingSphere3f bounds() { return BoundingSphere3f(Vector3f(0,0,0), 1.f); }
@@ -96,6 +98,7 @@ int main(int argc, char** argv) {
 
     PluginManager plugins;
     plugins.loadList( GetOptionValue<String>(OPT_PLUGINS) );
+    plugins.loadList( GetOptionValue<String>(OPT_EXTRA_PLUGINS) );
     // FIXME this should be an option
     plugins.loadList( "colladamodels,mesh-billboard,common-filters,nvtt" );
 

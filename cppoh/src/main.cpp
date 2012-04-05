@@ -98,7 +98,9 @@ int main (int argc, char** argv) {
         }
     }
     plugins.loadList( GetOptionValue<String>(OPT_PLUGINS) );
+    plugins.loadList( GetOptionValue<String>(OPT_EXTRA_PLUGINS) );
     plugins.loadList( GetOptionValue<String>(OPT_OH_PLUGINS) );
+    plugins.loadList( GetOptionValue<String>(OPT_OH_EXTRA_PLUGINS) );
 
     // Fill defaults after plugin loading to ensure plugin-added
     // options get their defaults.

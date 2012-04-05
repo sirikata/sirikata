@@ -41,13 +41,14 @@
 
 #include <sirikata/core/network/Stream.hpp>
 #include <sirikata/core/util/SpaceID.hpp>
+#include <sirikata/core/util/Liveness.hpp>
 
 #include "QueueRouterElement.hpp"
 
 namespace Sirikata {
 
 // Connections to servers
-struct SIRIKATA_OH_EXPORT SpaceNodeConnection {
+struct SIRIKATA_OH_EXPORT SpaceNodeConnection : public Liveness {
   public:
     typedef OHDPSST::Stream OHSSTStream;
     typedef OHSSTStream::Ptr OHSSTStreamPtr;

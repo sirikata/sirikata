@@ -247,7 +247,7 @@ CassandraStorage::~CassandraStorage()
 void CassandraStorage::start() {
     mIOService = new Network::IOService("CassandraStorage IO Thread");
     mWork = new Network::IOWork(*mIOService, "CassandraStorage IO Thread");
-    mThread = new Sirikata::Thread(std::tr1::bind(&Network::IOService::runNoReturn, mIOService));
+    mThread = new Sirikata::Thread("CassandraStorage IO", std::tr1::bind(&Network::IOService::runNoReturn, mIOService));
 
     mIOService->post(std::tr1::bind(&CassandraStorage::initDB, this), "CassandraStorage::initDB");
 

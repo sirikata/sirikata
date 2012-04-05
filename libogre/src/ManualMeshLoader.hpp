@@ -16,7 +16,7 @@ namespace Graphics {
 
 class ManualMeshLoader : public Ogre::ManualResourceLoader {
 public:
-    ManualMeshLoader(Mesh::MeshdataPtr meshdata, const String& _meshname);
+    ManualMeshLoader(Mesh::MeshdataPtr meshdata, TextureBindingsMapPtr textureFingerprints);
 
     void prepareResource(Ogre::Resource*r) {}
     void loadResource(Ogre::Resource *r);
@@ -27,7 +27,7 @@ private:
     void traverseNodes(Ogre::Resource* r, const bool useSharedBuffer, const size_t totalVertexCount);
 
     Mesh::MeshdataPtr mdptr;
-    String meshname;
+    TextureBindingsMapPtr mTextureFingerprints;
 };
 
 } // namespace Graphics

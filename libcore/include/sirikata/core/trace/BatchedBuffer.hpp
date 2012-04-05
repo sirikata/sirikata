@@ -80,6 +80,8 @@ public:
 
     // write the buffer to an ostream
     void store(FILE* os);
+
+    bool empty();
 private:
     // write the specified number of bytes from the pointer to the buffer
     void write(const void* buf, uint32 nbytes);

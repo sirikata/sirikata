@@ -77,7 +77,9 @@ protected:
     virtual double calculatePriority(ProxyObjectPtr proxy);
 
     void commandGetData(
-        const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) ;
+        const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
+    void commandGetStats(
+        const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
 
     void checkShouldLoadNewObject(Object* r);
 
@@ -91,7 +93,7 @@ protected:
 
     struct Object {
         Object(Graphics::Entity *m, const Transfer::URI& mesh_uri, ProxyObjectPtr _proxy = ProxyObjectPtr());
-        virtual ~Object(){          
+        virtual ~Object(){
         }
 
         const String& id() const { return name; }
@@ -130,7 +132,7 @@ protected:
     // Loading has started for these
     ObjectMap mLoadedObjects;
     // Waiting to be important enough to load
-    ObjectMap mWaitingObjects;        
+    ObjectMap mWaitingObjects;
 
 
     // Heap storage for Objects. Choice between min/max heap is at call time.
@@ -156,6 +158,16 @@ protected:
         // texture, etc).
         String ogreAssetName;
 
+
+        //Can get into a situation where we fire a callback associated with a
+        //transfer uri, then we delete the associated asset, then create a new
+        //asset with the same uri.  The callback assumes that internal state
+        //for the asset is valid and correct (in particular, downloadTask).
+        //However, in these cases, the data wouldn't be valid.  Use internalId
+        //to check that the callback that is being serviced corresponds to the
+        //correct asset that we have in memory.
+        uint64 internalId;
+
         TextureBindingsMapPtr textureFingerprints;
         std::set<String> animations;
 
@@ -168,6 +180,10 @@ protected:
         // unload in reverse order we loaded in.
         typedef std::vector<String > ResourceNameList;
         ResourceNameList loadedResources;
+
+        // Store a copy so we can release the download task but still
+        // get at the data if another object uses this mesh.
+        Mesh::VisualPtr visual;
 
         Asset(const Transfer::URI& name);
         ~Asset();
@@ -191,7 +207,7 @@ protected:
     // steps.
     void requestAssetForObject(Object*);
     void downloadAsset(Asset* asset, Object* forObject);
-    void loadAsset(Transfer::URI asset_uri);
+    void loadAsset(Transfer::URI asset_uri,uint64 assetId);
     void finishLoadAsset(Asset* asset, bool success);
 
     void loadMeshdata(Asset* asset, const Mesh::MeshdataPtr& mdptr, bool usingDefault);
@@ -200,7 +216,7 @@ protected:
 
     // Helper, notifies when resource has finished loading allowing us
     // to figure out when the entire asset has loaded
-    void handleLoadedResource(Asset* asset);
+    void handleLoadedResource(Asset* asset,Liveness::Token assetAlive);
 
     // Update the priority for an asset from all it's requestors
     void updateAssetPriority(Asset* asset);

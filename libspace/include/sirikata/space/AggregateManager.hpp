@@ -95,8 +95,8 @@ private:
     uint16 mTreeLevel;
     uint32 mNumObservers;
     uint32 mNumFailedGenerationAttempts;
-    std::vector<UUID> mLeaves;
     double mDistance;  //MINIMUM distance at which this object could be part of a cut
+    std::vector<UUID> mLeaves;
 
     // The basename returned by the CDN. This points at the entire asset
     // rather than the particular mesh filename. Should include a version
@@ -142,7 +142,9 @@ private:
   //Various utility functions 
   bool findChild(std::vector<AggregateObjectPtr>& v, const UUID& uuid) ;
   void removeChild(std::vector<AggregateObjectPtr>& v, const UUID& uuid) ;
+  void iRemoveChild(const UUID& uuid, const UUID& child_uuid);
   std::vector<AggregateObjectPtr>& getChildren(const UUID& uuid);
+  std::vector<AggregateManager::AggregateObjectPtr >& iGetChildren(const UUID& uuid) ;
   void getLeaves(const std::vector<UUID>& mIndividualObjects);
   bool isAggregate(const UUID& uuid);
   
@@ -159,7 +161,7 @@ private:
 
   //Functions related to uploading aggregates
   void uploadAggregateMesh(Mesh::MeshdataPtr agg_mesh, AggregateObjectPtr aggObject,
-                           std::tr1::unordered_map<String, String> textureSet);
+                           std::tr1::unordered_map<String, String> textureSet, uint32 retryAttempt);
   // Helper that handles the upload callback and sets flags to let the request
   // from the aggregation thread to continue
   void handleUploadFinished(Transfer::UploadRequestPtr request, const Transfer::URI& path, AtomicValue<bool>* finished_out, Transfer::URI* generated_uri_out);  

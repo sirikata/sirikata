@@ -64,7 +64,17 @@ std.graphics.SetMesh = system.Class.extend(
         toggle: function() {
             this._ui.call('SetMesh.toggleVisible');
         },
-        
+
+        update: function(vis) {
+            this._selected = vis;
+            if (this._selected) {
+                this._ui.call('SetMesh.enable');
+            }
+            else {
+                this._ui.call('SetMesh.disable');
+            }
+        },
+
     handleSetMesh: function(meshurl) {				
 		var scriptToSend = 'system.self.mesh = \"' + meshurl + '\"';
 		var msgHandler = {request:'script', script: scriptToSend

@@ -69,9 +69,9 @@ clean:
 	( test -e Makefile && $(MAKE) clean $(*) ) || true
 
 DEPVC8REV=HEAD
-DEPVC9REV=25
-DEPOSXREV=95
-DEPSOURCE=70
+DEPVC9REV=27
+DEPOSXREV=99
+DEPSOURCE=75
 DEPARCHINDEP=7
 #========== Dependencies ===========
 
@@ -124,9 +124,6 @@ update-dependencies: distributions
 	esac ; \
 	svn co -r$(DEPARCHINDEP) http://sirikatamachindep.googlecode.com/svn/trunk/ machindependencies
 
-# deprecated
-minimaldepends: update-dependencies
-	$(MAKE) -C dependencies minimaldepends $(*)
 
 minimal-depends: update-dependencies
 	$(MAKE) -C dependencies minimal-depends $(*)
@@ -137,12 +134,14 @@ minimal-graphics-depends: update-dependencies
 minimal-depends-with-root: update-dependencies
 	$(MAKE) -C dependencies minimalrootdepends minimaldepends $(*)
 
+headless-depends: update-dependencies
+	$(MAKE) -C dependencies headless-depends $(*)
+
 depends: update-dependencies
 	$(MAKE) -C dependencies depends $(*)
 
-# deprecated
-fulldepends: update-dependencies
-	$(MAKE) -C dependencies fulldepends $(*)
+full-headless-depends: update-dependencies
+	$(MAKE) -C dependencies full-headless-depends $(*)
 
 full-depends: update-dependencies
 	$(MAKE) -C dependencies full-depends $(*)

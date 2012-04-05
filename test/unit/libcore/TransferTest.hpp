@@ -1055,9 +1055,9 @@ public:
 		mSampleClient2 = new SampleClient(*mTransferMediator, "sample2", list2);
 		mSampleClient3 = new SampleClient(*mTransferMediator, "sample3", list3);
 
-		mClientThread1 = new Thread(std::tr1::bind(&SampleClient::run, mSampleClient1));
-		mClientThread2 = new Thread(std::tr1::bind(&SampleClient::run, mSampleClient2));
-		mClientThread3 = new Thread(std::tr1::bind(&SampleClient::run, mSampleClient3));
+		mClientThread1 = new Thread("Client1", std::tr1::bind(&SampleClient::run, mSampleClient1));
+		mClientThread2 = new Thread("Client2", std::tr1::bind(&SampleClient::run, mSampleClient2));
+		mClientThread3 = new Thread("Client3", std::tr1::bind(&SampleClient::run, mSampleClient3));
 	}
 
 	void tearDown() {

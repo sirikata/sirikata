@@ -314,6 +314,11 @@ util.Quaternion.fromLookAt = function(direction, up) {
 }
 
 
+
+util.Quaternion.prototype.toString = function() {
+    return '<' + this.x + ', ' + this.y + ', ' + this.z + ', ' + this.w + '>';
+};
+
 util.Quaternion.prototype.__prettyPrintFieldsData__ = ["x", "y", "z", "w"];
 util.Quaternion.prototype.__prettyPrintFields__ = function() {
     return this.__prettyPrintFieldsData__;

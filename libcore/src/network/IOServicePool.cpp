@@ -63,7 +63,7 @@ void IOServicePool::reset() {
 }
 void IOServicePool::run() {
     for(ThreadList::iterator it = mThreads.begin(); it != mThreads.end(); it++)
-        (*it) = new Thread( std::tr1::bind(runWrapper, mIO) );
+        (*it) = new Thread( mIO->name() + " Worker", std::tr1::bind(runWrapper, mIO) );
 }
 
 void IOServicePool::join() {

@@ -55,7 +55,7 @@ void ResourceLoader::loadMaterialWork(const String& name, Mesh::MeshdataPtr mesh
         reload->prepareResource(&*matPtr);
         reload->loadResource(&*matPtr);
     }
-    cb();
+    if (cb) cb();
 }
 
 void ResourceLoader::loadBillboardMaterial(const String& name, const String& texuri, const Transfer::URI& uri, TextureBindingsMapPtr textureFingerprints, LoadedCallback cb) {
@@ -98,7 +98,7 @@ void ResourceLoader::loadBillboardMaterialWork(const String& name, const String&
         reload->loadResource(&*matPtr);
     }
 
-    cb();
+    if (cb) cb();
 }
 
 
@@ -118,16 +118,16 @@ void ResourceLoader::loadSkeletonWork(const String& name, Mesh::MeshdataPtr mesh
         reload->prepareResource(&*skel);
         reload->loadResource(&*skel);
     }
-    cb();
+    if (cb) cb();
 }
 
 
-void ResourceLoader::loadMesh(const String& name, Mesh::MeshdataPtr mesh, const String& skeletonName, LoadedCallback cb) {
+void ResourceLoader::loadMesh(const String& name, Mesh::MeshdataPtr mesh, const String& skeletonName, TextureBindingsMapPtr textureFingerprints, LoadedCallback cb) {
     incRefCount(name, ResourceTypeMesh);
-    mTasks.push( std::tr1::bind(&ResourceLoader::loadMeshWork, this, name, mesh, skeletonName, cb) );
+    mTasks.push( std::tr1::bind(&ResourceLoader::loadMeshWork, this, name, mesh, skeletonName, textureFingerprints, cb) );
 }
 
-void ResourceLoader::loadMeshWork(const String& name, Mesh::MeshdataPtr mesh, const String& skeletonName, LoadedCallback cb) {
+void ResourceLoader::loadMeshWork(const String& name, Mesh::MeshdataPtr mesh, const String& skeletonName, TextureBindingsMapPtr textureFingerprints, LoadedCallback cb) {
     Ogre::MeshManager& mm = Ogre::MeshManager::getSingleton();
     Ogre::MeshPtr mo = mm.getByName(name);
     if (mo.isNull()) {
@@ -143,7 +143,7 @@ void ResourceLoader::loadMeshWork(const String& name, Mesh::MeshdataPtr mesh, co
 #else
                 OGRE_NEW
 #endif
-                ManualMeshLoader(mesh, name)));
+                ManualMeshLoader(mesh, textureFingerprints)));
         reload->prepareResource(&*mo);
         reload->loadResource(&*mo);
 
@@ -154,7 +154,7 @@ void ResourceLoader::loadMeshWork(const String& name, Mesh::MeshdataPtr mesh, co
                 mo->_notifySkeleton(skel);
         }
     }
-    cb();
+    if (cb) cb();
 }
 
 
@@ -166,7 +166,7 @@ void ResourceLoader::loadTexture(const String& name, LoadedCallback cb) {
 void ResourceLoader::loadTextureWork(const String& name, LoadedCallback cb) {
     Ogre::TextureManager& tm = Ogre::TextureManager::getSingleton();
     tm.load(name,Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
-    cb();
+    if (cb) cb();
 }
 
 void ResourceLoader::unloadResource(const String& name) {

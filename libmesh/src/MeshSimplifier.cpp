@@ -433,6 +433,8 @@ void MeshSimplifier::simplify(Mesh::MeshdataPtr agg_mesh, int32 numFacesLeft) {
 
   std::tr1::unordered_map<uint32, std::tr1::unordered_map<uint32, std::tr1::unordered_set<uint32> > > submeshNeighborVertices;
 
+  bool meshChangedDuringPreprocess = false;
+
   /* Make every index in prims specification point to the earliest occurrence of the corresponding position vector */
   for (uint32 i = 0; i < agg_mesh->geometry.size(); i++) {
     SubMeshGeometry& curGeometry = agg_mesh->geometry[i];
@@ -488,6 +490,10 @@ void MeshSimplifier::simplify(Mesh::MeshdataPtr agg_mesh, int32 numFacesLeft) {
           it != deletedIndices.end(); it++)
     {
       curGeometry.positions[*it] = SIMPLIFIER_INVALID_VECTOR;
+    }
+		
+    if (deletedIndices.size() > 0) {
+	meshChangedDuringPreprocess = true;
     }
   }
 
@@ -643,12 +649,11 @@ void MeshSimplifier::simplify(Mesh::MeshdataPtr agg_mesh, int32 numFacesLeft) {
   SIMPLIFY_LOG(warn, "numFacesLeft = " << numFacesLeft);
   if (numFacesLeft < countFaces) {
       SIMPLIFY_LOG(warn, "numFacesLeft < countFaces: Simplification needed");
-  }  
-  else {
+      computeCosts(agg_mesh, submeshPositionQs, vertexPairs, pairPriorities, submeshNeighborVertices, vertexToFacesMap);
+  } 
+  else if (!meshChangedDuringPreprocess) {
     return;
   }
-
-  computeCosts(agg_mesh, submeshPositionQs, vertexPairs, pairPriorities, submeshNeighborVertices, vertexToFacesMap);
 
   std::tr1::unordered_map<int, std::tr1::unordered_map<int,int>  > vertexMapping1;
 

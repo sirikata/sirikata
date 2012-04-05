@@ -56,7 +56,7 @@ void SQLitePersistedObjectSet::start() {
     // cppoh.
     mIOService = new Network::IOService("SQLitePersistedObjectSet");
     mWork = new Network::IOWork(*mIOService, "SQLitePersistedObjectSet IO Thread");
-    mThread = new Sirikata::Thread(std::tr1::bind(&Network::IOService::runNoReturn, mIOService));
+    mThread = new Sirikata::Thread("SQLitePersistedObjectSet IO", std::tr1::bind(&Network::IOService::runNoReturn, mIOService));
 
     mIOService->post(std::tr1::bind(&SQLitePersistedObjectSet::initDB, this), "SQLitePersistedObjectSet::initDB");
 }

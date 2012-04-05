@@ -952,12 +952,16 @@ void SessionManager::handleSpaceSession(ServerID sid, SpaceNodeConnection* conn)
 
 void SessionManager::scheduleHandleServerMessages(SpaceNodeConnection* conn) {
     mContext->mainStrand->post(
-        std::tr1::bind(&SessionManager::handleServerMessages, this, conn),
+        std::tr1::bind(&SessionManager::handleServerMessages, this, conn->livenessToken(), conn),
         "SessionManager::handleServerMessages"
     );
 }
 
-void SessionManager::handleServerMessages(SpaceNodeConnection* conn) {
+void SessionManager::handleServerMessages(Liveness::Token alive, SpaceNodeConnection* conn) {
+    Liveness::Lock conn_lock(alive);
+    if (!conn_lock)
+        return;
+
 #define MAX_HANDLE_SERVER_MESSAGES 20
     mHandleMessageProfiler->started();
 

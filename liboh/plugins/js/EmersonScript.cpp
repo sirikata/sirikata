@@ -1024,10 +1024,6 @@ void EmersonScript::iHandleScriptCommRead(
         return;
 
 
-    /**
-       lkjs;
-       FIXME: May want to check liveness here as well.
-     */
     Sirikata::JS::Protocol::JSMessage jsMsg;
     Sirikata::JS::Protocol::JSFieldValue jsFieldVal;
     bool isJSMsg   = jsMsg.ParseFromString(payload);
@@ -1204,7 +1200,7 @@ v8::Handle<v8::Value> EmersonScript::sendSandbox(const String& msgToSend, uint32
 
 //called from within mStrand
 void EmersonScript::processSandboxMessage(
-    const String& msgToSend, uint32 senderID, uint32 receiverID,
+    String payload, uint32 senderID, uint32 receiverID,
     Liveness::Token alive)
 {
     if (!alive) return;
@@ -1220,6 +1216,7 @@ void EmersonScript::processSandboxMessage(
 
     while(!JSObjectScript::mCtx->initialized())
     {}
+
 
     v8::Locker locker (mCtx->mIsolate);
     v8::Isolate::Scope iscope(JSObjectScript::mCtx->mIsolate);
@@ -1248,23 +1245,63 @@ void EmersonScript::processSandboxMessage(
         return;
 
 
-    //deserialize the message to an object
-    Sirikata::JS::Protocol::JSMessage js_msg;
-    bool parsed = js_msg.ParseFromArray(msgToSend.data(), msgToSend.size());
-    if (!parsed)
+
+    ////Try to decode the message
+    Sirikata::JS::Protocol::JSMessage jsMsg;
+    Sirikata::JS::Protocol::JSFieldValue jsFieldVal;
+
+    bool isJSMsg   = jsMsg.ParseFromString(payload);
+    if (! isJSMsg)
+        isJSMsg = jsMsg.ParseFromArray(payload.data(),payload.size());
+
+    bool isJSField = false;
+    if (!isJSMsg)
+    {
+        isJSField = jsFieldVal.ParseFromString(payload);
+        if (!isJSField)
+            isJSField = jsFieldVal.ParseFromArray(payload.data(), payload.size());
+    }
+
+    //if can't decode the payload as a jsmessage or
+    //a jsfieldval, then return false;
+    if (!(isJSMsg || isJSField))
         return;
 
+
+
+    //Above: Message has decoded to be complete
+    //Below: Try to turn the message into an Emerson object
+    mEvalContextStack.push(EvalContext(receiver));
     v8::HandleScope handle_scope;
-    v8::Context::Scope context_scope(receiver->mContext);
+    v8::Context::Scope context_scope (receiver->mContext);
 
-    bool deserializeWorks;
-    v8::Handle<v8::Object> msgObj = JSSerializer::deserializeObject( this, js_msg,deserializeWorks);
+    bool deserializeWorks = false;
+    v8::Handle<v8::Value> msgVal;
+    if (isJSMsg)
+    {
+        //try to decode as object.
+        msgVal = JSSerializer::deserializeObject( this, jsMsg,
+            deserializeWorks);        
+    }
+    else
+    {
+        //try to decode as a value.
+        msgVal = JSSerializer::deserializeMessage(this,jsFieldVal,
+            deserializeWorks);
+    }
+
     if (! deserializeWorks)
+    {
+        mEvalContextStack.pop();
         return;
+    }
 
+    //Turned into an Emerson object, now try executing any handlers that
+    //match
+    mHandlingEvent = true;
 
     v8::Handle<v8::Value> argv[2];
-    argv[0] =msgObj;
+    argv[0] =msgVal;
 
     if (receiver->mParentContext == sender)
         argv[1] =  v8::Null();
@@ -1276,7 +1313,10 @@ void EmersonScript::processSandboxMessage(
         argv[1] = senderObj;
     }
 
+    
     invokeCallback(receiver,receiver->sandboxMessageCallback,2,argv);
+    mHandlingEvent = false;
+    mEvalContextStack.pop();
     postCallbackChecks();
 }
 

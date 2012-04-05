@@ -189,7 +189,7 @@ DiskCacheLayer::DiskCacheLayer(CachePolicy *policy, const std::string &prefix, C
         mPrefix += '/';
 
     mFiles.setOwner(this);
-    mWorkerThread=new Thread(std::tr1::bind(&DiskCacheLayer::workerThread, this));
+    mWorkerThread=new Thread("DiskCacheLayer", std::tr1::bind(&DiskCacheLayer::workerThread, this));
     try {
         unserialize();
     } catch (...) {

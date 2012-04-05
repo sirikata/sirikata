@@ -37,6 +37,8 @@
 
 namespace Sirikata {
 
+class Context;
+
 /** A simple class which helps to time profiling to determine
  *  what fraction of time each component of a loop is taking.
  *  It assumes each step is performed every time.  Events with
@@ -78,7 +80,7 @@ public:
         bool mValid;
     };
 
-    TimeProfiler(const String& name);
+    TimeProfiler(const Context* ctx, const String& name);
     ~TimeProfiler();
 
     /** Add a stage for profiling, not categorized under any group. Returns a
@@ -100,6 +102,7 @@ private:
 
     void remove(Stage* stage);
 
+    const Context* mContext;
     String mName;
     typedef std::vector<Stage*> StageList;
     typedef std::map<String, StageList> GroupMap;

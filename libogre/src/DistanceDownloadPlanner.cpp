@@ -73,7 +73,9 @@ DistanceDownloadPlanner::Asset::Asset(const Transfer::URI& name)
  : uri(name),
    loadingResources(0)
 {
+    static uint64 assetId = 0;
     textureFingerprints = TextureBindingsMapPtr(new TextureBindingsMap());
+    internalId = assetId++;
 }
 
 DistanceDownloadPlanner::Asset::~Asset() {
@@ -93,13 +95,15 @@ DistanceDownloadPlanner::DistanceDownloadPlanner(Context* c, OgreRenderer* rende
     {
         mContext->commander()->registerCommand(
             "oh.ogre.ddplanner",
-            mContext->mainStrand->wrap(
-                std::tr1::bind(&DistanceDownloadPlanner::commandGetData, this, _1, _2, _3)
-            )
+            std::tr1::bind(&DistanceDownloadPlanner::commandGetData, this, _1, _2, _3)
+        );
+        mContext->commander()->registerCommand(
+            "oh.ogre.ddplanner.stats",
+            std::tr1::bind(&DistanceDownloadPlanner::commandGetStats, this, _1, _2, _3)
         );
     }
 
-    
+
     mAggregationAlgorithm = new Transfer::MaxPriorityAggregation();
 
     mCDNArchive = CDNArchiveFactory::getSingleton().addArchive();
@@ -148,7 +152,7 @@ DistanceDownloadPlanner::Object* DistanceDownloadPlanner::findObject(const Strin
 
 
 void DistanceDownloadPlanner::commandGetData(
-    const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) 
+    const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid)
 {
     RMutex::scoped_lock lock(mDlPlannerMutex);
     Command::Result result = Command::EmptyResult();
@@ -165,10 +169,10 @@ void DistanceDownloadPlanner::commandGetData(
         individualObject["loaded"] = omIter->second->loaded;
         //append known object to map of results
         String index (omIter->first);
-        loadedObjects[index.c_str()] = individualObject;        
+        loadedObjects[index.c_str()] = individualObject;
     }
     result.put("ddplanner.loaded_objects",loadedObjects);
-    
+
 
     //run through all waiting objects
     Command::Object waitingObjects = Command::Object();
@@ -181,7 +185,7 @@ void DistanceDownloadPlanner::commandGetData(
         individualObject["loaded"] = omIter->second->loaded;
         //append known object to map of results
         String index (omIter->first);
-        waitingObjects[index.c_str()] = individualObject;        
+        waitingObjects[index.c_str()] = individualObject;
     }
     result.put("ddplanner.waiting_objects",waitingObjects);
 
@@ -202,7 +206,7 @@ void DistanceDownloadPlanner::commandGetData(
             waitingObjects[osIter->c_str()] = *osIter;
         }
         individualAsset["waitingObjects"] = waitingObjects;
-        
+
         //add usingObjects
         Command::Object usingObjects = Command::Object();
         for(ObjectSet::iterator osIter = assetMIter->second->usingObjects.begin();
@@ -211,14 +215,14 @@ void DistanceDownloadPlanner::commandGetData(
             usingObjects[osIter->c_str()] = *osIter;
         }
         individualAsset["usingObjects"] = usingObjects;
-        
+
 
         //list of loaded and loading resources, by uri
         std::vector<String> finishedDownloads;
         std::vector<String> activeDownloads;
 
         Command::Array loadingResources = Command::Array();
-        Command::Array loadedResources = Command::Array();    
+        Command::Array loadedResources = Command::Array();
         //priority
         double priority = -1;
         AssetDownloadTask::ActiveDownloadMap::size_type stillToDownload = 0;
@@ -252,9 +256,9 @@ void DistanceDownloadPlanner::commandGetData(
         {
             loadingResources.push_back(*strIt);
         }
-        individualAsset["loadingResources"];
-        
-        
+        individualAsset["loadingResources"] = loadingResources;
+
+
         //how many dependent resources does this asset still have to download
         individualAsset["stillToDownload"] = stillToDownload;
 
@@ -265,7 +269,55 @@ void DistanceDownloadPlanner::commandGetData(
     }
     result.put("ddplanner.assets",assets);
 
-    //actually 
+    //actually
+    cmdr->result(cmdid, result);
+}
+
+
+void DistanceDownloadPlanner::commandGetStats(
+    const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid)
+{
+    RMutex::scoped_lock lock(mDlPlannerMutex);
+    Command::Result result = Command::EmptyResult();
+
+    // We don't keep fine-grained stats about the state of
+    // objects/assets at the top-level and some of the names can be a
+    // bit misleading. For example, mLoadedObjects refers to objects
+    // which we've decided to load, and we don't even keep a flag for
+    // whether the object was finally loaded. We need to scan through
+    // the objects and assets to actually figure these properties out
+    // and get accurate stats.
+    result.put("ddplanner.objects.total", mObjects.size());
+    result.put("ddplanner.objects.unloaded", mWaitingObjects.size());
+    uint32 objects_loading = 0, objects_loaded = 0;
+    for(ObjectMap::const_iterator objit = mLoadedObjects.begin(); objit != mLoadedObjects.end(); objit++) {
+        if (objit->second->file.empty()) {
+            objects_loaded++;
+            continue;
+        }
+        assert(mAssets.find(objit->second->file) != mAssets.end());
+        Asset* obj_asset = mAssets[objit->second->file];
+        if (obj_asset->usingObjects.find(objit->second->id()) != obj_asset->usingObjects.end())
+            objects_loaded++;
+        else
+            objects_loading++;
+    }
+    result.put("ddplanner.objects.loading", objects_loading);
+    result.put("ddplanner.objects.loaded", objects_loaded);
+
+
+    result.put("ddplanner.assets.total", mAssets.size());
+    uint32 assets_loading = 0, assets_loaded = 0;
+    for(AssetMap::const_iterator assit = mAssets.begin(); assit != mAssets.end(); assit++) {
+        if (!assit->second->usingObjects.empty())
+            assets_loaded++;
+        else
+            assets_loading++;
+    }
+    result.put("ddplanner.assets.loading", assets_loading);
+    result.put("ddplanner.assets.loaded", assets_loaded);
+
+
     cmdr->result(cmdid, result);
 }
 
@@ -284,7 +336,7 @@ void DistanceDownloadPlanner::removeObject(const String& name)
 void DistanceDownloadPlanner::iRemoveObject(
     const String& name, Liveness::Token alive)
 {
-    if (!alive)
+    if (!alive || mStopped)
         return;
     RMutex::scoped_lock lock(mDlPlannerMutex);
     ObjectMap::iterator it = mObjects.find(name);
@@ -545,9 +597,20 @@ void DistanceDownloadPlanner::iStop(Liveness::Token dpAlive)
         Asset* asset = it->second;
         delete asset;
     }
+    mAssets.clear();
+
+    for(ObjectMap::iterator it = mObjects.begin(); it != mObjects.end(); it++)
+    {
+        Object* obj = it->second;
+        delete obj;
+    }
+    mObjects.clear();
+    mLoadedObjects.clear();
+    mWaitingObjects.clear();
 }
 
 void DistanceDownloadPlanner::requestAssetForObject(Object* forObject) {
+    RMutex::scoped_lock lock(mDlPlannerMutex);
     DLPLANNER_LOG(detailed, "Requesting " << forObject->file << " for " << forObject->name);
     if (forObject->file.empty()) {
         DLPLANNER_LOG(detailed,"Empty file for requested asset object");
@@ -557,54 +620,94 @@ void DistanceDownloadPlanner::requestAssetForObject(Object* forObject) {
 
     Asset* asset = NULL;
     // First make sure we have an Asset for this
-    {
-        RMutex::scoped_lock lock(mDlPlannerMutex);
-        AssetMap::iterator asset_it = mAssets.find(forObject->file);
-        if (asset_it == mAssets.end()) {
-            asset = new Asset(forObject->file);
-            mAssets.insert( AssetMap::value_type(forObject->file, asset) );
-        }
-        else {
-            asset = asset_it->second;
-        }
+    AssetMap::iterator asset_it = mAssets.find(forObject->file);
+    if (asset_it == mAssets.end()) {
+        asset = new Asset(forObject->file);
+        mAssets.insert( AssetMap::value_type(forObject->file, asset) );
     }
+    else {
+        asset = asset_it->second;
+    }
+
 
     assert(asset->waitingObjects.find(forObject->id()) == asset->waitingObjects.end());
     asset->waitingObjects.insert(forObject->id());
-    
 
-    // Another Object might have already requested downloading. If it did, we
-    // don't need to request anything and polling will update the priorities.
-    if (!asset->downloadTask)
-        downloadAsset(asset, forObject);
-    else
+
+    // The asset could already be in a variety of states:
+    if (!asset->usingObjects.empty()) {
+        // Objects are already using it, meaning it's already
+        // completely done loading. We just need to trigger another
+        // round of moving waiting objects -> using objects by using
+        // the mesh
+        finishLoadAsset(asset, true);
+    }
+    else if (asset->loadingResources > 0) {
+        // We have some resources still loading, meaning we've already
+        // downloaded the data but are still working on loading
+        // it. We're in the waiting queue, so we'll get loaded with
+        // any other objects. Nothing to do.
+    }
+    else if (asset->downloadTask) {
+        // The download is already running. We're already tacked onto
+        // the waiting list, but we can update the priority to account
+        // for us.
         updateAssetPriority(asset);
+    }
+    else {
+        // No download at all yet. Star the whole process.
+        downloadAsset(asset, forObject);
+    }
 }
 
 void DistanceDownloadPlanner::downloadAsset(Asset* asset, Object* forObject) {
+    RMutex::scoped_lock lock(mDlPlannerMutex);
     DLPLANNER_LOG(detailed, "Starting download of " << asset->uri);
 
+    bool is_aggregate = (forObject->proxy ? forObject->proxy->isAggregate() : false);
     asset->downloadTask =
         AssetDownloadTask::construct(
             asset->uri, getScene(), forObject->priority,
-            forObject->proxy->isAggregate(),
-            mContext->mainStrand->wrap(
-                std::tr1::bind(&DistanceDownloadPlanner::loadAsset, this, asset->uri)
-              ));
+            is_aggregate,
+            // We need some indirection because this callback is invoked
+            // with a lock on in AssetDownload task and triggers
+            // calls which need that lock. A post to a service would
+            // be better, posting to a strand works ok
+            mScene->renderStrand()->wrap(
+                std::tr1::bind(&DistanceDownloadPlanner::loadAsset, this, asset->uri,asset->internalId)
+            )
+        );
 }
 
-void DistanceDownloadPlanner::loadAsset(Transfer::URI asset_uri) {  
+
+void DistanceDownloadPlanner::loadAsset(Transfer::URI asset_uri,uint64 assetId)
+{
+    RMutex::scoped_lock lock(mDlPlannerMutex);
     DLPLANNER_LOG(detailed, "Finished downloading " << asset_uri);
 
     Asset* asset = NULL;
-    {
-        RMutex::scoped_lock lock(mDlPlannerMutex);
-        if (mAssets.find(asset_uri) == mAssets.end()) return;
-        asset = mAssets[asset_uri];
-    }
+
+    if (mAssets.find(asset_uri) == mAssets.end()) return;
+
+    asset = mAssets[asset_uri];
+
+
+    //in certain cases, may have an asset download a mesh, have that asset issue
+    //a callback to DDPlanner::loadAsset, which gets stuck trying to acquire
+    //lock.  In the meantime, the asset gets deleted, and then a new asset is
+    //inserted to replace it.  This new asset does not have valid internal data
+    //(asset->downloadTask->asset() may point to garbage), so that if the
+    //callback issued then acquires the lock and proceeds, we'll run into problems.
+    //As a result, each asset also maintains a 64-bit internal id, which (minus
+    //wraparound) is unique to each asset.  Using the internal id, we can check
+    //whether the callback is for the asset that we currently have stored in our
+    //asset map.
+    if (asset->internalId != assetId)
+        return;
+
 
     DLPLANNER_LOG(detailed, "Loading asset " << asset->uri);
-
+    assert(asset->usingObjects.empty());
     //get the mesh data and check that it is valid.
     bool usingDefault = false;
     Mesh::VisualPtr visptr = asset->downloadTask->asset();
@@ -634,12 +737,20 @@ void DistanceDownloadPlanner::loadAsset(Transfer::URI asset_uri) {
     SILOG(ogre, error, "Failed to load asset failed because it doesn't know how to load " << visptr->type());
     finishLoadAsset(asset, false);
 
-    
+
     return;
 }
 
 void DistanceDownloadPlanner::finishLoadAsset(Asset* asset, bool success) {
-    DLPLANNER_LOG(detailed, "Finishing load of asset " << asset->uri << " (priority " << asset->downloadTask->priority() << ")");
+    RMutex::scoped_lock lock(mDlPlannerMutex);
+    if (asset->downloadTask) {
+        DLPLANNER_LOG(detailed, "Finishing load of asset " << asset->uri << " (priority " << asset->downloadTask->priority() << ")");
+        asset->visual = asset->downloadTask->asset();
+    }
+    else {
+        DLPLANNER_LOG(detailed, "Finishing load of asset " << asset->uri << " (repeat)");
+        assert(asset->visual);
+    }
     // We need to notify all Objects (objects) waiting for this to load that
     // it finished (or failed)
 
@@ -649,7 +760,7 @@ void DistanceDownloadPlanner::finishLoadAsset(Asset* asset, bool success) {
         DLPLANNER_LOG(detailed, "Using asset " << asset->uri << " for " << resource_id);
         // It may not even need it anymore if its not in the set of objects we
         // currently wnat loaded anymore (or not even exist anymore)
-        RMutex::scoped_lock lock(mDlPlannerMutex);
+
         ObjectMap::iterator rit = mObjects.find(resource_id);
         if (rit == mObjects.end()) continue;
         Object* resource = rit->second;
@@ -662,12 +773,12 @@ void DistanceDownloadPlanner::finishLoadAsset(Asset* asset, bool success) {
             resource->mesh->loadFailed();
         }
         else {
-            Mesh::MeshdataPtr mdptr( std::tr1::dynamic_pointer_cast<Mesh::Meshdata>(asset->downloadTask->asset()) );
+            Mesh::MeshdataPtr mdptr( std::tr1::dynamic_pointer_cast<Mesh::Meshdata>(asset->visual) );
             if (mdptr) {
                 resource->mesh->loadMesh(mdptr, asset->ogreAssetName, asset->animations);
             }
 
-            Mesh::BillboardPtr bbptr( std::tr1::dynamic_pointer_cast<Mesh::Billboard>(asset->downloadTask->asset()) );
+            Mesh::BillboardPtr bbptr( std::tr1::dynamic_pointer_cast<Mesh::Billboard>(asset->visual) );
             if (bbptr) {
                 resource->mesh->loadBillboard(bbptr, asset->ogreAssetName);
             }
@@ -680,37 +791,8 @@ void DistanceDownloadPlanner::finishLoadAsset(Asset* asset, bool success) {
     checkRemoveAsset(asset,asset->livenessToken());
 }
 
-namespace {
-
-// Utility to compute full hash of the content of a visual. This is needed
-// because the hash of some date (e.g. a collada file) may be the same, but
-// some textures may differ (the relative names are the same, but the data
-// the absolute names point to differs).
-SHA256 computeVisualHash(const Mesh::VisualPtr& visptr, AssetDownloadTaskPtr assetDownload) {
-    // To compute a hash of the entire visual, we just combine the hashes of the
-    // original and all the dependent resources, then hash the result. The
-    // approach right now uses strings and could do somethiing like xor'ing
-    // everything instead, but this is easy and shouldn't happen all that often.
-    String data = visptr->hash.toString();
-
-    for(AssetDownloadTask::Dependencies::const_iterator tex_it = assetDownload->dependencies().begin(); tex_it != assetDownload->dependencies().end(); tex_it++) {
-        const AssetDownloadTask::ResourceData& tex_data = tex_it->second;
-        data += tex_data.request->getIdentifier();
-    }
-
-    return SHA256::computeDigest(data);
-}
-
-bool ogreHasMesh(const String& meshname) {
-    Ogre::MeshPtr mp = Ogre::MeshManager::getSingleton().getByName(meshname);
-    return !mp.isNull();
-}
-
-}
-
-
 void DistanceDownloadPlanner::loadMeshdata(Asset* asset, const Mesh::MeshdataPtr& mdptr, bool usingDefault) {
-    AssetDownloadTaskPtr assetDownload = asset->downloadTask;
+    RMutex::scoped_lock lock(mDlPlannerMutex);
 
     //Extract any animations from the new mesh.
     for (uint32 i=0;  i < mdptr->nodes.size(); i++) {
@@ -723,25 +805,27 @@ void DistanceDownloadPlanner::loadMeshdata(Asset* asset, const Mesh::MeshdataPtr
         }
     }
 
-
-    SHA256 sha = mdptr->hash;
-    String hash = sha.convertToHexString();
-    String meshname = computeVisualHash(mdptr, assetDownload).toString();
-    asset->ogreAssetName = meshname;
-
     // Note that we don't check if the mesh exists here. Even if it does, we
     // still submit everything for loading so it can be ref counted by
     // ResourceLoader.
 
+    // We load textures first to setup the texture bindings map, used when
+    // computing the mesh name.
     loadDependentTextures(asset, usingDefault);
+
+    SHA256 sha = mdptr->hash;
+    String hash = sha.convertToHexString();
+    String meshname = ogreVisualName(mdptr, asset->textureFingerprints);
+    asset->ogreAssetName = meshname;
 
     if (!mdptr->instances.empty()) {
         int index=0;
         for (Mesh::MaterialEffectInfoList::const_iterator mat=mdptr->materials.begin(),mate=mdptr->materials.end();mat!=mate;++mat,++index) {
-            std::string matname = ogreMaterialName(meshname, index);
+
+            std::string matname = ogreMaterialName(*mat, asset->uri, asset->textureFingerprints);
             getScene()->getResourceLoader()->loadMaterial(
                 matname, mdptr, *mat, asset->uri, asset->textureFingerprints,
-                std::tr1::bind(&DistanceDownloadPlanner::handleLoadedResource, this, asset)
+                std::tr1::bind(&DistanceDownloadPlanner::handleLoadedResource, this, asset,asset->livenessToken())
             );
             asset->loadedResources.push_back(matname);
             asset->loadingResources++;
@@ -753,10 +837,10 @@ void DistanceDownloadPlanner::loadMeshdata(Asset* asset, const Mesh::MeshdataPtr
         // can find it by name.
         String skelname = "";
         if (!mdptr->joints.empty()) {
-            skelname = ogreSkeletonName(meshname);
+            skelname = ogreSkeletonName(mdptr, asset->textureFingerprints);
             getScene()->getResourceLoader()->loadSkeleton(
                 skelname, mdptr, asset->animations,
-                std::tr1::bind(&DistanceDownloadPlanner::handleLoadedResource, this, asset)
+                std::tr1::bind(&DistanceDownloadPlanner::handleLoadedResource, this, asset,asset->livenessToken())
             );
             asset->loadedResources.push_back(skelname);
             asset->loadingResources++;
@@ -764,8 +848,8 @@ void DistanceDownloadPlanner::loadMeshdata(Asset* asset, const Mesh::MeshdataPtr
 
         // Mesh
         getScene()->getResourceLoader()->loadMesh(
-            meshname, mdptr, skelname,
-            std::tr1::bind(&DistanceDownloadPlanner::handleLoadedResource, this, asset)
+            meshname, mdptr, skelname, asset->textureFingerprints,
+            std::tr1::bind(&DistanceDownloadPlanner::handleLoadedResource, this, asset,asset->livenessToken())
         );
         asset->loadedResources.push_back(meshname);
         asset->loadingResources++;
@@ -811,20 +895,23 @@ void DistanceDownloadPlanner::loadMeshdata(Asset* asset, const Mesh::MeshdataPtr
 }
 
 void DistanceDownloadPlanner::loadBillboard(Asset* asset, const Mesh::BillboardPtr& bbptr, bool usingDefault) {
-    AssetDownloadTaskPtr assetDownload = asset->downloadTask;
+    RMutex::scoped_lock lock(mDlPlannerMutex);
 
-    SHA256 sha = bbptr->hash;
-    String hash = sha.convertToHexString();
-    String bbname = computeVisualHash(bbptr, assetDownload).toString();
-
+    // We load textures first to setup the texture bindings map, used when
+    // computing the mesh name.
     loadDependentTextures(asset, usingDefault);
 
+    // Then we can compute names
+    SHA256 sha = bbptr->hash;
+    String hash = sha.convertToHexString();
+    String bbname = ogreVisualName(bbptr, asset->textureFingerprints);
+
     // Load the single material
-    std::string matname = ogreMaterialName(bbname, 0);
+    std::string matname = ogreBillboardMaterialName(asset->textureFingerprints);
     asset->ogreAssetName = matname;
     getScene()->getResourceLoader()->loadBillboardMaterial(
         matname, bbptr->image, asset->uri, asset->textureFingerprints,
-        std::tr1::bind(&DistanceDownloadPlanner::handleLoadedResource, this, asset)
+        std::tr1::bind(&DistanceDownloadPlanner::handleLoadedResource, this, asset,asset->livenessToken())
     );
     asset->loadedResources.push_back(matname);
     asset->loadingResources++;
@@ -843,6 +930,7 @@ static void fixOgreURI(String &uri) {
 }
 
 void DistanceDownloadPlanner::loadDependentTextures(Asset* asset, bool usingDefault) {
+    RMutex::scoped_lock lock(mDlPlannerMutex);
     // we currently assume no dependencies for default
     if (usingDefault) return;
 
@@ -855,7 +943,7 @@ void DistanceDownloadPlanner::loadDependentTextures(Asset* asset, bool usingDefa
         const AssetDownloadTask::ResourceData& tex_data = tex_it->second;
 
         if (mActiveCDNArchive && asset->textureFingerprints->find(uri_str) == asset->textureFingerprints->end() ) {
-            String id = uri_str + tex_data.request->getIdentifier();
+            String id = tex_data.request->getIdentifier();
 
             //OGRE_LOG(warn, "Got asset ID of " << id);
 
@@ -876,7 +964,8 @@ void DistanceDownloadPlanner::loadDependentTextures(Asset* asset, bool usingDefa
                 // across many frames
                 getScene()->getResourceLoader()->loadTexture(
                     id,
-                    std::tr1::bind(&DistanceDownloadPlanner::handleLoadedResource, this, asset)
+                    std::tr1::bind(&DistanceDownloadPlanner::handleLoadedResource, this, asset,
+                        asset->livenessToken())
                 );
                 asset->loadedResources.push_back(id);
                 asset->loadingResources++;
@@ -897,7 +986,13 @@ void DistanceDownloadPlanner::loadDependentTextures(Asset* asset, bool usingDefa
 }
 
 
-void DistanceDownloadPlanner::handleLoadedResource(Asset* asset) {
+void DistanceDownloadPlanner::handleLoadedResource(Asset* asset,Liveness::Token assetAlive)
+{
+    if (!assetAlive)
+        return;
+
+    RMutex::scoped_lock lock(mDlPlannerMutex);
+
     asset->loadingResources--;
     if (asset->loadingResources == 0) {
         finishLoadAsset(asset, true);
@@ -906,13 +1001,13 @@ void DistanceDownloadPlanner::handleLoadedResource(Asset* asset) {
 
 
 void DistanceDownloadPlanner::updateAssetPriority(Asset* asset) {
+    RMutex::scoped_lock lock(mDlPlannerMutex);
     // We only care about updating priorities when we're still downloading
     // the asset.
     if (!asset->downloadTask) return;
 
     std::vector<Priority> priorities;
     for(ObjectSet::iterator obj_it = asset->waitingObjects.begin(); obj_it != asset->waitingObjects.end(); obj_it++) {
-        RMutex::scoped_lock lock(mDlPlannerMutex);
         String objid = *obj_it;
         assert(mObjects.find(objid) != mObjects.end());
         Object* obj = mObjects[objid];
@@ -924,16 +1019,17 @@ void DistanceDownloadPlanner::updateAssetPriority(Asset* asset) {
 }
 
 void DistanceDownloadPlanner::unrequestAssetForObject(Object* forObject) {
+    //use the scoped mutex up here so that don't invalidate waiting objects
+    //while running.
+    RMutex::scoped_lock lock(mDlPlannerMutex);
     if (forObject->file.empty()) return;
 
     DLPLANNER_LOG(detailed, "Unrequesting " << forObject->file << " for " << forObject->name);
 
     Asset* asset = NULL;
-    {
-        RMutex::scoped_lock lock(mDlPlannerMutex);
-        assert(mAssets.find(forObject->file) != mAssets.end());
-        asset = mAssets[forObject->file];
-    }
+    assert(mAssets.find(forObject->file) != mAssets.end());
+    asset = mAssets[forObject->file];
+
 
 
     // Make sure we're not displaying it anymore
@@ -967,8 +1063,11 @@ void DistanceDownloadPlanner::checkRemoveAsset(Asset* asset,Liveness::Token asse
         return;
 
     if (asset->waitingObjects.empty() && asset->usingObjects.empty()) {
+
         // We need to be careful if a download is in progress.
-        if (asset->downloadTask) return;
+        if (asset->downloadTask)
+            asset->downloadTask->cancel();
+
 
         DLPLANNER_LOG(detailed, "Destroying unused asset " << asset->uri);
 
@@ -980,10 +1079,10 @@ void DistanceDownloadPlanner::checkRemoveAsset(Asset* asset,Liveness::Token asse
         }
 
         // And really erase it
-        {
-            RMutex::scoped_lock lock(mDlPlannerMutex);
-            mAssets.erase(asset->uri);
-        }
+        if (mAssets.find(asset->uri) == mAssets.end())
+            assert(false);
+
+        mAssets.erase(asset->uri);
         delete asset;
     }
 }

@@ -59,6 +59,8 @@ SpaceNodeConnection::SpaceNodeConnection(ObjectHostContext* ctx, Network::IOStra
 }
 
 SpaceNodeConnection::~SpaceNodeConnection() {
+    Liveness::letDie();
+
     delete socket;
 }
 

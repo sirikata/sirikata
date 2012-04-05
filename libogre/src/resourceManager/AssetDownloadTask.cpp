@@ -101,6 +101,10 @@ void AssetDownloadTask::cancelNoLock() {
     for(ActiveDownloadMap::iterator it = mActiveDownloads.begin(); it != mActiveDownloads.end(); it++)
         it->second->cancel();
     mActiveDownloads.clear();
+    if (mParseMeshHandle) {
+        mParseMeshHandle->cancel();
+        mParseMeshHandle.reset();
+    }
 }
 
 void AssetDownloadTask::downloadAssetFile() {
@@ -128,15 +132,33 @@ void AssetDownloadTask::weakAssetFileDownloaded(std::tr1::weak_ptr<AssetDownload
 void AssetDownloadTask::getDownloadTasks(
     std::vector<String>& finishedDownloads, std::vector<String>& activeDownloads)
 {
-    for (Dependencies::iterator depIter = mDependencies.begin();
-         depIter != mDependencies.end(); ++depIter)
+    for (ActiveDownloadMap::iterator activeIt= mActiveDownloads.begin();
+         activeIt != mActiveDownloads.end(); ++activeIt)
     {
-        if (mActiveDownloads.find(depIter->first.toString()) == mActiveDownloads.end())
-            finishedDownloads.push_back(depIter->first.toString());
-        else
-            activeDownloads.push_back(depIter->first.toString());
+        activeDownloads.push_back(activeIt->first);
     }
+
+    for (std::vector<String>::iterator strIt = mFinishedDownloads.begin();
+         strIt != mFinishedDownloads.end(); ++strIt)
+    {
+        finishedDownloads.push_back(*strIt);
+    }
+
+    // for (Dependencies::iterator depIter = mDependencies.begin();
+    //      depIter != mDependencies.end(); ++depIter)
+    // {
+    //     if (mActiveDownloads.find(depIter->first.toString()) == mActiveDownloads.end())
+    //         finishedDownloads.push_back(depIter->first.toString());
+    //     else
+    //         activeDownloads.push_back(depIter->first.toString());
+    // }
 }
+
+AssetDownloadTask::ActiveDownloadMap::size_type AssetDownloadTask::getOutstandingDependentDownloads()
+{
+    return mActiveDownloads.size();
+}
+
 
 void AssetDownloadTask::assetFileDownloaded(ResourceDownloadTaskPtr taskptr, Transfer::ChunkRequestPtr request, Transfer::DenseDataPtr response) {
     boost::mutex::scoped_lock lok(mDependentDownloadMutex);
@@ -144,6 +166,7 @@ void AssetDownloadTask::assetFileDownloaded(ResourceDownloadTaskPtr taskptr, Tra
     // Clear from the active download list
     assert(mActiveDownloads.size() == 1);
     mActiveDownloads.erase(taskptr->getIdentifier());
+    mFinishedDownloads.push_back(taskptr->getIdentifier());
 
     // Lack of response data means failure of some sort
     if (!response) {
@@ -158,8 +181,8 @@ void AssetDownloadTask::assetFileDownloaded(ResourceDownloadTaskPtr taskptr, Tra
     // beneficial since Ogre may have a copy even if we don't have a
     // copy of the raw data any more.
 
-    mScene->parseMesh(
-        request->getMetadata(), request->getMetadata().getFingerprint(), 
+    mParseMeshHandle = mScene->parseMesh(
+        request->getMetadata(), request->getMetadata().getFingerprint(),
         response, mIsAggregate,
         std::tr1::bind(&AssetDownloadTask::weakHandleAssetParsed, getWeakPtr(), _1)
     );
@@ -271,6 +294,7 @@ void AssetDownloadTask::handleAssetParsed(Mesh::VisualPtr vis) {
     mCB();
 }
 
+
 void AssetDownloadTask::addDependentDownload(ResourceDownloadTaskPtr resPtr) {
     boost::mutex::scoped_lock lok(mDependentDownloadMutex);
 
@@ -299,11 +323,6 @@ void AssetDownloadTask::addDependentDownload(const Transfer::URI& depUrl, const 
         std::tr1::bind(&AssetDownloadTask::weakTextureDownloaded, getWeakPtr(), depUrl, _1, _2, _3)
     );
     addDependentDownload(dl);
-}
-
-AssetDownloadTask::ActiveDownloadMap::size_type AssetDownloadTask::getOutstandingDependentDownloads()
-{
-    return mActiveDownloads.size();
 }
 
 void AssetDownloadTask::startDependentDownloads() {
@@ -342,6 +361,7 @@ void AssetDownloadTask::textureDownloaded(Transfer::URI uri, ResourceDownloadTas
 
     // Clear the download task
     mActiveDownloads.erase(taskptr->getIdentifier());
+    mFinishedDownloads.push_back(taskptr->getIdentifier());
 
     // Lack of response data means failure of some sort
     if (!response) {

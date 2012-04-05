@@ -132,7 +132,10 @@ btCollisionShape* BulletObject::computeCollisionShape(const UUID& id, bulletObjB
               printf("argument 6: %d\n", (int) sizeof(btVector3));
               btTriangleIndexVertexArray* indexVertexArrays = new btTriangleIndexVertexArray((int) gIndices.size()/3, &gIndices[0], (int) 3*sizeof(int), gVertices.size(), (btScalar *) &gVertices[0].x, (int) sizeof(btVector3));*/
         }
-        for(unsigned int j=0; j < gIndices.size(); j+=3) {
+        // Note the condition on the loop. Sometimes we get lists with weird
+        // setups, e.g. only 2 indices, so we need to make sure all 3 indices
+        // we'll use are in range.
+        for(unsigned int j=0; j+2 < gIndices.size(); j+=3) {
             //printf("triangle %d: %d, %d, %d\n", j/3, j, j+1, j+2);
             //printf("triangle %d:\n",  j/3);
             //printf("vertex 1: %f, %f, %f\n", gVertices[gIndices[j]].x, gVertices[gIndices[j]].y, gVertices[gIndices[j]].z);
