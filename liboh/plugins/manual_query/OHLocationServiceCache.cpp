@@ -184,6 +184,11 @@ String OHLocationServiceCache::physics(const ObjectID& id) {
     return it->second.props.physics();
 }
 
+ObjectReference OHLocationServiceCache::parent(const ObjectID& id) {
+    GET_OBJ_ENTRY(id);
+    return it->second.parent;
+}
+
 const SequencedPresenceProperties& OHLocationServiceCache::properties(const ObjectID& id) {
     GET_OBJ_ENTRY(id);
     return it->second.props;
@@ -191,6 +196,7 @@ const SequencedPresenceProperties& OHLocationServiceCache::properties(const Obje
 
 void OHLocationServiceCache::objectAdded(
     const ObjectReference& uuid, bool agg,
+    const ObjectReference& parent,
     const TimedMotionVector3f& loc, uint64 loc_seqno,
     const TimedMotionQuaternion& orient, uint64 orient_seqno,
     const BoundingSphere3f& bounds, uint64 bounds_seqno,
@@ -213,6 +219,7 @@ void OHLocationServiceCache::objectAdded(
     it->second.props.setMesh(mesh, mesh_seqno);
     it->second.props.setPhysics(physics, physics_seqno);
     it->second.aggregate = agg;
+    it->second.parent = parent;
 
     if (!agg) {
         it->second.tracking++;
@@ -463,6 +470,38 @@ void OHLocationServiceCache::notifyPhysicsUpdated(const ObjectReference& uuid) {
     Lock lck(mMutex);
 
     OHLocationUpdateProvider::notify(&OHLocationUpdateListener::onPhysicsUpdated, uuid);
+
+    ObjectDataMap::iterator obj_it = mObjects.find(uuid);
+    obj_it->second.tracking--;
+    tryRemoveObject(obj_it);
+}
+
+void OHLocationServiceCache::parentUpdated(const ObjectReference& uuid, const ObjectReference& newval, uint64 seqno) {
+    Lock lck(mMutex);
+
+    ObjectDataMap::iterator it = mObjects.find(uuid);
+    if (it == mObjects.end()) return;
+    ObjectReference oldval = it->second.parent;
+    it->second.parent = newval; // FIXME seqno?
+
+    bool agg = it->second.aggregate;
+    if (!agg) {
+        it->second.tracking++;
+        mStrand->post(
+            std::tr1::bind(
+                &OHLocationServiceCache::notifyParentUpdated, this, uuid, oldval, newval
+            )
+        );
+    }
+}
+
+void OHLocationServiceCache::notifyParentUpdated(const ObjectReference& uuid, const ObjectReference& oldval, const ObjectReference& newval) {
+    Lock lck(mMutex);
+
+    //for(ListenerSet::iterator listener_it = mListeners.begin(); listener_it != mListeners.end(); listener_it++)
+    //    (*listener_it)->locationParentUpdated(uuid, oldval, newval);
+
+    OHLocationUpdateProvider::notify(&OHLocationUpdateListener::onParentUpdated, uuid);
 
     ObjectDataMap::iterator obj_it = mObjects.find(uuid);
     obj_it->second.tracking--;

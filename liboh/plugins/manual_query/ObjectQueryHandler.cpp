@@ -290,6 +290,9 @@ void ObjectQueryHandler::onObjectAdded(const ObjectReference& obj) {
 void ObjectQueryHandler::onObjectRemoved(const ObjectReference& obj) {
 }
 
+void ObjectQueryHandler::onParentUpdated(const ObjectReference& obj) {
+}
+
 void ObjectQueryHandler::onEpochUpdated(const ObjectReference& obj) {
     mContext->mainStrand->post(
         std::tr1::bind(&ObjectQueryHandler::handleNotifySubscribersLocUpdate, this, obj),

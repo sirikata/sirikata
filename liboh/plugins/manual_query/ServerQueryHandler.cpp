@@ -331,9 +331,12 @@ void ServerQueryHandler::handleProximityMessage(const OHDP::SpaceNodeID& snid, c
 
             bool is_agg = (addition.has_type() && addition.type() == Sirikata::Protocol::Prox::ObjectAddition::Aggregate);
 
+            ObjectReference parent_oref(addition.parent());
+
             // Store the data
             query_state->objects->objectAdded(
                 observed_oref, is_agg,
+                parent_oref,
                 add.location(), add.location_seqno(),
                 add.orientation(), add.orientation_seqno(),
                 add.bounds(), add.bounds_seqno(),
@@ -405,6 +408,8 @@ namespace {
 void applyLocUpdate(const ObjectReference& objid, OHLocationServiceCachePtr loccache, const LocUpdate& lu) {
     if (lu.has_epoch())
         loccache->epochUpdated(objid, lu.epoch());
+    if (lu.has_parent())
+        loccache->parentUpdated(objid, lu.parent(), lu.parent_seqno());
     if (lu.has_location())
         loccache->locationUpdated(objid, lu.location(), lu.location_seqno());
     if (lu.has_orientation())

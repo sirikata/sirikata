@@ -44,6 +44,7 @@ public:
 
     // External data input.
     void objectAdded(const ObjectReference& uuid, bool agg,
+        const ObjectReference& parent,
         const TimedMotionVector3f& loc, uint64 loc_seqno,
         const TimedMotionQuaternion& orient, uint64 orient_seqno,
         const BoundingSphere3f& bounds, uint64 bounds_seqno,
@@ -56,6 +57,7 @@ public:
     void boundsUpdated(const ObjectReference& uuid, const BoundingSphere3f& newval, uint64 seqno);
     void meshUpdated(const ObjectReference& uuid, const Transfer::URI& newval, uint64 seqno);
     void physicsUpdated(const ObjectReference& uuid, const String& newval, uint64 seqno);
+    void parentUpdated(const ObjectReference& uuid, const ObjectReference& newval, uint64 seqno);
 
     /* LocationServiceCache members. */
     virtual Iterator startTracking(const ObjectID& id);
@@ -91,6 +93,7 @@ public:
     float32 radius(const ObjectID& id);
     Transfer::URI mesh(const ObjectID& id);
     String physics(const ObjectID& id);
+    ObjectReference parent(const ObjectID& id);
     // And raw access to the underlying SequencedPresenceProperties
     const SequencedPresenceProperties& properties(const ObjectID& id);
 
@@ -104,6 +107,7 @@ private:
     // to notify of a few of the events -- orientation, mesh, and physics are
     // all ignored.)
     void notifyObjectAdded(const ObjectReference& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds);
+    void notifyParentUpdated(const ObjectReference& uuid, const ObjectReference& oldval, const ObjectReference& newval);
     void notifyObjectRemoved(const ObjectReference& uuid, bool temporary);
     void notifyEpochUpdated(const ObjectReference& uuid, const uint64 val);
     void notifyLocationUpdated(const ObjectReference& uuid, const TimedMotionVector3f& oldval, const TimedMotionVector3f& newval);
@@ -139,6 +143,7 @@ private:
         SequencedPresenceProperties props;
         uint64 epoch; // Only valid for presences
         bool aggregate;
+        ObjectReference parent;
 
         bool exists; // Exists, i.e. ObjectRemoved hasn't been called
         int16 tracking; // Ref count to support multiple users
