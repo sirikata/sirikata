@@ -489,6 +489,12 @@ SET(Boost_LIBRARIES
 # Make sure we use boost filesystem v2 if both v2 and v3 are available.
 ADD_DEFINITIONS(-DBOOST_FILESYSTEM_VERSION=2)
 
+# dependency: zlib
+# We provide gzip support in HttpManager, which requires zlib. Only
+# Mac seems to not have this linked in already
+IF(APPLE)
+  FIND_PACKAGE(ZLIB)
+ENDIF()
 
 #dependency: ogre
 IF(NOT OGRE_ROOT)
@@ -1039,6 +1045,7 @@ SET(INCLUDE_DIRECTORIES
   ${SirikataProtocolDirectory}
 
   ${Boost_INCLUDE_DIRS}
+  ${ZLIB_INCLUDE_DIRS}
   ${PROTOCOLBUFFERS_INCLUDE_DIRS}
   ${ANTLR_INCLUDE_DIRS}
   ${LIBPROX_INCLUDE_DIRS}
@@ -1908,6 +1915,7 @@ ENDIF()
 SET(SIRIKATA_CORE_LIBRARIES
     ${SYSTEM_DL_LIBRARY}
     ${Boost_LIBRARIES}
+    ${ZLIB_LIBRARIES}
     ${BREAKPAD_LIBRARIES}
     http-parser
     ${GOOGLE_PERFTOOLS_SETTING_LIBRARIES}
