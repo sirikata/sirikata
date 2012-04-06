@@ -285,9 +285,11 @@ void CBRLocationServiceCache::processObjectAdded(const UUID& uuid, bool islocal,
     data.isAggregate = agg;
     mObjects[uuid] = data;
 
+    // TODO(ewencp) at some point, we might want to (optionally) use aggregates
+    // here, especially if we're reconstructing entire trees.
     if (!agg)
         for(ListenerSet::iterator it = mListeners.begin(); it != mListeners.end(); it++)
-            (*it)->locationConnected(uuid, islocal, loc, data.region, data.maxSize);
+            (*it)->locationConnected(uuid, false, islocal, loc, data.region, data.maxSize);
 }
 
 void CBRLocationServiceCache::objectRemoved(const UUID& uuid, bool agg) {

@@ -226,26 +226,27 @@ void OHLocationServiceCache::objectAdded(
     it->second.aggregate = agg;
     it->second.parent = parent;
 
-    if (!agg) {
-        it->second.tracking++;
-        mStrand->post(
-            std::tr1::bind(
-                &OHLocationServiceCache::notifyObjectAdded, this,
-                uuid, loc, bounds
-            ),
-            "OHLocationServiceCache::notifyObjectAdded"
-        );
-    }
+
+    it->second.tracking++;
+    mStrand->post(
+        std::tr1::bind(
+            &OHLocationServiceCache::notifyObjectAdded, this,
+            uuid, parent, agg, loc, bounds
+        ),
+        "OHLocationServiceCache::notifyObjectAdded"
+    );
 }
 
 void OHLocationServiceCache::notifyObjectAdded(
-    const ObjectReference& uuid, const TimedMotionVector3f& loc,
+    const ObjectReference& uuid,
+    const ObjectReference& parent, bool agg,
+    const TimedMotionVector3f& loc,
     const BoundingSphere3f& bounds
 ) {
     Lock lck(mMutex);
 
     for(ListenerSet::iterator listener_it = mListeners.begin(); listener_it != mListeners.end(); listener_it++)
-        (*listener_it)->locationConnected(uuid, true, loc, regionFromBounds(bounds), maxSizeFromBounds(bounds));
+        (*listener_it)->locationConnectedWithParent(uuid, parent, agg, true, loc, regionFromBounds(bounds), maxSizeFromBounds(bounds));
 
     OHLocationUpdateProvider::notify(&OHLocationUpdateListener::onObjectAdded, uuid);
 
@@ -266,16 +267,15 @@ void OHLocationServiceCache::objectRemoved(const ObjectReference& uuid, bool tem
 
     tryRemoveObject(data_it);
 
-    if (!agg) {
-        data_it->second.tracking++;
-        mStrand->post(
-            std::tr1::bind(
-                &OHLocationServiceCache::notifyObjectRemoved, this,
-                uuid, temporary
-            ),
-            "OHLocationServiceCache::notifyObjectRemoved"
-        );
-    }
+
+    data_it->second.tracking++;
+    mStrand->post(
+        std::tr1::bind(
+            &OHLocationServiceCache::notifyObjectRemoved, this,
+            uuid, temporary
+        ),
+        "OHLocationServiceCache::notifyObjectRemoved"
+    );
 }
 
 void OHLocationServiceCache::notifyObjectRemoved(const ObjectReference& uuid, bool temporary) {
@@ -300,16 +300,15 @@ void OHLocationServiceCache::epochUpdated(const ObjectReference& uuid, const uin
     it->second.epoch = std::max(it->second.epoch, ep);
 
     bool agg = it->second.aggregate;
-    if (!agg) {
-        it->second.tracking++;
-        mStrand->post(
-            std::tr1::bind(
-                &OHLocationServiceCache::notifyEpochUpdated, this,
-                uuid, ep
-            ),
-            "OHLocationServiceCache::notifyEpochUpdated"
-        );
-    }
+
+    it->second.tracking++;
+    mStrand->post(
+        std::tr1::bind(
+            &OHLocationServiceCache::notifyEpochUpdated, this,
+            uuid, ep
+        ),
+        "OHLocationServiceCache::notifyEpochUpdated"
+    );
 }
 
 void OHLocationServiceCache::notifyEpochUpdated(const ObjectReference& uuid, const uint64 val) {
@@ -332,16 +331,15 @@ void OHLocationServiceCache::locationUpdated(const ObjectReference& uuid, const 
     it->second.props.setLocation(newval, seqno);
 
     bool agg = it->second.aggregate;
-    if (!agg) {
-        it->second.tracking++;
-        mStrand->post(
-            std::tr1::bind(
-                &OHLocationServiceCache::notifyLocationUpdated, this,
-                uuid, oldval, newval
-            ),
-            "OHLocationServiceCache::notifyLocationUpdated"
-        );
-    }
+
+    it->second.tracking++;
+    mStrand->post(
+        std::tr1::bind(
+            &OHLocationServiceCache::notifyLocationUpdated, this,
+            uuid, oldval, newval
+        ),
+        "OHLocationServiceCache::notifyLocationUpdated"
+    );
 }
 
 void OHLocationServiceCache::notifyLocationUpdated(const ObjectReference& uuid, const TimedMotionVector3f& oldval, const TimedMotionVector3f& newval) {
@@ -366,14 +364,13 @@ void OHLocationServiceCache::orientationUpdated(const ObjectReference& uuid, con
     it->second.props.setOrientation(newval, seqno);
 
     bool agg = it->second.aggregate;
-    if (!agg) {
-        it->second.tracking++;
-        mStrand->post(
-            std::tr1::bind(
-                &OHLocationServiceCache::notifyOrientationUpdated, this, uuid
-            )
-        );
-    }
+
+    it->second.tracking++;
+    mStrand->post(
+        std::tr1::bind(
+            &OHLocationServiceCache::notifyOrientationUpdated, this, uuid
+        )
+    );
 }
 
 void OHLocationServiceCache::notifyOrientationUpdated(const ObjectReference& uuid) {
@@ -396,16 +393,15 @@ void OHLocationServiceCache::boundsUpdated(const ObjectReference& uuid, const Bo
     it->second.props.setBounds(newval, seqno);
 
     bool agg = it->second.aggregate;
-    if (!agg) {
-        it->second.tracking++;
-        mStrand->post(
-            std::tr1::bind(
-                &OHLocationServiceCache::notifyBoundsUpdated, this,
-                uuid, oldval, newval
-            ),
-            "OHLocationServiceCache::notifyBoundsUpdated"
-        );
-    }
+
+    it->second.tracking++;
+    mStrand->post(
+        std::tr1::bind(
+            &OHLocationServiceCache::notifyBoundsUpdated, this,
+            uuid, oldval, newval
+        ),
+        "OHLocationServiceCache::notifyBoundsUpdated"
+    );
 }
 
 void OHLocationServiceCache::notifyBoundsUpdated(const ObjectReference& uuid, const BoundingSphere3f& oldval, const BoundingSphere3f& newval) {
@@ -432,14 +428,13 @@ void OHLocationServiceCache::meshUpdated(const ObjectReference& uuid, const Tran
     it->second.props.setMesh(newval, seqno);
 
     bool agg = it->second.aggregate;
-    if (!agg) {
-        it->second.tracking++;
-        mStrand->post(
-            std::tr1::bind(
-                &OHLocationServiceCache::notifyMeshUpdated, this, uuid
-            )
-        );
-    }
+
+    it->second.tracking++;
+    mStrand->post(
+        std::tr1::bind(
+            &OHLocationServiceCache::notifyMeshUpdated, this, uuid
+        )
+    );
 }
 
 void OHLocationServiceCache::notifyMeshUpdated(const ObjectReference& uuid) {
@@ -461,14 +456,13 @@ void OHLocationServiceCache::physicsUpdated(const ObjectReference& uuid, const S
     it->second.props.setPhysics(newval, seqno);
 
     bool agg = it->second.aggregate;
-    if (!agg) {
-        it->second.tracking++;
-        mStrand->post(
-            std::tr1::bind(
-                &OHLocationServiceCache::notifyPhysicsUpdated, this, uuid
-            )
-        );
-    }
+
+    it->second.tracking++;
+    mStrand->post(
+        std::tr1::bind(
+            &OHLocationServiceCache::notifyPhysicsUpdated, this, uuid
+        )
+    );
 }
 
 void OHLocationServiceCache::notifyPhysicsUpdated(const ObjectReference& uuid) {
@@ -490,21 +484,20 @@ void OHLocationServiceCache::parentUpdated(const ObjectReference& uuid, const Ob
     it->second.parent = newval; // FIXME seqno?
 
     bool agg = it->second.aggregate;
-    if (!agg) {
-        it->second.tracking++;
-        mStrand->post(
-            std::tr1::bind(
-                &OHLocationServiceCache::notifyParentUpdated, this, uuid, oldval, newval
-            )
-        );
-    }
+
+    it->second.tracking++;
+    mStrand->post(
+        std::tr1::bind(
+            &OHLocationServiceCache::notifyParentUpdated, this, uuid, oldval, newval
+        )
+    );
 }
 
 void OHLocationServiceCache::notifyParentUpdated(const ObjectReference& uuid, const ObjectReference& oldval, const ObjectReference& newval) {
     Lock lck(mMutex);
 
-    //for(ListenerSet::iterator listener_it = mListeners.begin(); listener_it != mListeners.end(); listener_it++)
-    //    (*listener_it)->locationParentUpdated(uuid, oldval, newval);
+    for(ListenerSet::iterator listener_it = mListeners.begin(); listener_it != mListeners.end(); listener_it++)
+        (*listener_it)->locationParentUpdated(uuid, oldval, newval);
 
     OHLocationUpdateProvider::notify(&OHLocationUpdateListener::onParentUpdated, uuid);
 

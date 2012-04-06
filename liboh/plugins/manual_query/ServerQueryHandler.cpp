@@ -316,7 +316,6 @@ void ServerQueryHandler::handleProximityMessage(const OHDP::SpaceNodeID& snid, c
     QPLOG(detailed, "Received proximity message with " << contents.update_size() << " updates");
     for(int32 idx = 0; idx < contents.update_size(); idx++) {
         Sirikata::Protocol::Prox::ProximityUpdate update = contents.update(idx);
-
         for(int32 aidx = 0; aidx < update.addition_size(); aidx++) {
             Sirikata::Protocol::Prox::ObjectAddition addition = update.addition(aidx);
             // Convert to local time
@@ -367,10 +366,16 @@ void ServerQueryHandler::handleProximityMessage(const OHDP::SpaceNodeID& snid, c
                 query_state->orphans.addUpdateFromExisting(observed, query_state->objects->properties(observed_oref));
                 query_state->objects->stopSimpleTracking(observed_oref);
             }
+/*
+   TODO(ewencp) this doesn't actually work. we need to remove these aggregates
+   eventually, but we want to keep them around until the cut actually moves
+   above them, rather than due to refinement. This should be fixed once the
+   query processor on the space is actually returning enough information for us
+   to differentiate between those cases.
             query_state->objects->objectRemoved(
                 observed_oref, temporary_removal
             );
-
+*/
         }
 
     }

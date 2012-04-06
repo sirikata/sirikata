@@ -61,7 +61,7 @@ void PintoManagerLocationServiceCache::addSpaceServer(ServerID sid, const TimedM
 
     if (!alreadyHad) {
         for(ListenerSet::iterator it = mListeners.begin(); it != mListeners.end(); it++)
-            (*it)->locationConnected(sid, false, loc, region, ms);
+            (*it)->locationConnected(sid, false, false, loc, region, ms);
     }
     else {
         for(ListenerSet::iterator it = mListeners.begin(); it != mListeners.end(); it++) {

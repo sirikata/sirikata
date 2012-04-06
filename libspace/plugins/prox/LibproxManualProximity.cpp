@@ -42,7 +42,7 @@ LibproxManualProximity::LibproxManualProximity(SpaceContext* ctx, LocationServic
         bool object_static_objects = (mSeparateDynamicObjects && i == OBJECT_CLASS_STATIC);
         mOHQueryHandler[i].handler->initialize(
             mLocCache, mLocCache, object_static_objects,
-            std::tr1::bind(&LibproxManualProximity::handlerShouldHandleObject, this, object_static_objects, false, _1, _2, _3, _4, _5)
+            std::tr1::bind(&LibproxManualProximity::handlerShouldHandleObject, this, object_static_objects, false, _1, _2, _3, _4, _5, _6)
         );
     }
 }
@@ -372,7 +372,7 @@ void LibproxManualProximity::destroyQuery(const OHDP::NodeID& id) {
 
 
 
-bool LibproxManualProximity::handlerShouldHandleObject(bool is_static_handler, bool is_global_handler, const UUID& obj_id, bool is_local, const TimedMotionVector3f& pos, const BoundingSphere3f& region, float maxSize) {
+bool LibproxManualProximity::handlerShouldHandleObject(bool is_static_handler, bool is_global_handler, const UUID& obj_id, bool is_local, bool is_aggregate, const TimedMotionVector3f& pos, const BoundingSphere3f& region, float maxSize) {
     // We just need to decide whether the query handler should handle
     // the object. We need to consider local vs. replica and static
     // vs. dynamic.  All must 'vote' for handling the object for us to

@@ -60,6 +60,7 @@ ObjectQueryHandler::ObjectQueryHandler(ObjectHostContext* ctx, ManualObjectQuery
     using std::tr1::placeholders::_3;
     using std::tr1::placeholders::_4;
     using std::tr1::placeholders::_5;
+    using std::tr1::placeholders::_6;
 
     // Object Queries
     String object_handler_type = GetOptionValue<String>(OPT_MANUAL_QUERY_HANDLER_TYPE);
@@ -76,7 +77,7 @@ ObjectQueryHandler::ObjectQueryHandler(ObjectHostContext* ctx, ManualObjectQuery
         bool object_static_objects = (mSeparateDynamicObjects && i == OBJECT_CLASS_STATIC);
         mObjectQueryHandler[i]->initialize(
             mLocCache.get(), mLocCache.get(), object_static_objects,
-            std::tr1::bind(&ObjectQueryHandler::handlerShouldHandleObject, this, object_static_objects, true, _1, _2, _3, _4, _5)
+            std::tr1::bind(&ObjectQueryHandler::handlerShouldHandleObject, this, object_static_objects, true, _1, _2, _3, _4, _5, _6)
         );
     }
     if (object_handler_type == "dist" || object_handler_type == "rtreedist") mObjectDistance = true;
@@ -511,7 +512,7 @@ void ObjectQueryHandler::handleDisconnectedObject(const ObjectReference& object)
     handleRemoveObjectQuery(object, false);
 }
 
-bool ObjectQueryHandler::handlerShouldHandleObject(bool is_static_handler, bool is_global_handler, const ObjectReference& obj_id, bool is_local, const TimedMotionVector3f& pos, const BoundingSphere3f& region, float maxSize) {
+bool ObjectQueryHandler::handlerShouldHandleObject(bool is_static_handler, bool is_global_handler, const ObjectReference& obj_id, bool is_local, bool is_aggregate, const TimedMotionVector3f& pos, const BoundingSphere3f& region, float maxSize) {
     // We just need to decide whether the query handler should handle
     // the object. We need to consider local vs. replica and static
     // vs. dynamic.  All must 'vote' for handling the object for us to
@@ -551,8 +552,25 @@ void ObjectQueryHandler::handleCheckObjectClassForHandlers(const ObjectReference
     int swap_out = is_static ? OBJECT_CLASS_DYNAMIC : OBJECT_CLASS_STATIC;
     int swap_in = is_static ? OBJECT_CLASS_STATIC : OBJECT_CLASS_DYNAMIC;
     QPLOG(debug, "Swapping " << objid.toString() << " from " << ObjectClassToString((ObjectClass)swap_out) << " to " << ObjectClassToString((ObjectClass)swap_in));
-    handlers[swap_out]->removeObject(objid);
-    handlers[swap_in]->addObject(objid);
+
+    bool agg = mLocCache->aggregate(objid);
+    ObjectReference parentid = mLocCache->parent(objid);
+
+    // FIXME parentid could be null because there is no parent
+    // information or because this is a root. Need to somehow
+    // distinguish between these two. Or only support this with parent
+    // info?
+    if (agg) {
+        handlers[swap_out]->removeNode(objid);
+        handlers[swap_in]->addNode(objid, parentid);
+    }
+    else {
+        handlers[swap_out]->removeObject(objid);
+        if (parentid == ObjectReference::null())
+            handlers[swap_in]->addObject(objid);
+        else
+            handlers[swap_in]->addObject(objid, parentid);
+    }
 }
 
 void ObjectQueryHandler::handleCheckObjectClass(const ObjectReference& objid, const TimedMotionVector3f& newval) {

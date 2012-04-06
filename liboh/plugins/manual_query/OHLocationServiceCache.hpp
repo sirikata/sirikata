@@ -107,7 +107,7 @@ private:
     // (Since these are only used for Prox LocationUpdateListener, we only need
     // to notify of a few of the events -- orientation, mesh, and physics are
     // all ignored.)
-    void notifyObjectAdded(const ObjectReference& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds);
+    void notifyObjectAdded(const ObjectReference& uuid, const ObjectReference& parent, bool agg, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds);
     void notifyParentUpdated(const ObjectReference& uuid, const ObjectReference& oldval, const ObjectReference& newval);
     void notifyObjectRemoved(const ObjectReference& uuid, bool temporary);
     void notifyEpochUpdated(const ObjectReference& uuid, const uint64 val);

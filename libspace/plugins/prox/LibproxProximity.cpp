@@ -119,7 +119,7 @@ LibproxProximity::LibproxProximity(SpaceContext* ctx, LocationService* locservic
         bool server_static_objects = (mSeparateDynamicObjects && i == OBJECT_CLASS_STATIC);
         mServerQueryHandler[i].handler->initialize(
             mLocCache, mLocCache, server_static_objects,
-            std::tr1::bind(&LibproxProximity::handlerShouldHandleObject, this, server_static_objects, false, _1, _2, _3, _4, _5)
+            std::tr1::bind(&LibproxProximity::handlerShouldHandleObject, this, server_static_objects, false, _1, _2, _3, _4, _5, _6)
         );
     }
     if (server_handler_type == "dist" || server_handler_type == "rtreedist") mServerDistance = true;
@@ -137,7 +137,7 @@ LibproxProximity::LibproxProximity(SpaceContext* ctx, LocationService* locservic
         bool object_static_objects = (mSeparateDynamicObjects && i == OBJECT_CLASS_STATIC);
         mObjectQueryHandler[i].handler->initialize(
             mLocCache, mLocCache, object_static_objects,
-            std::tr1::bind(&LibproxProximity::handlerShouldHandleObject, this, object_static_objects, true, _1, _2, _3, _4, _5)
+            std::tr1::bind(&LibproxProximity::handlerShouldHandleObject, this, object_static_objects, true, _1, _2, _3, _4, _5, _6)
         );
     }
     if (object_handler_type == "dist" || object_handler_type == "rtreedist") mObjectDistance = true;
@@ -1288,7 +1288,7 @@ void LibproxProximity::handleDisconnectedObject(const UUID& object) {
     handleRemoveObjectQuery(object, false);
 }
 
-bool LibproxProximity::handlerShouldHandleObject(bool is_static_handler, bool is_global_handler, const UUID& obj_id, bool is_local, const TimedMotionVector3f& pos, const BoundingSphere3f& region, float maxSize) {
+bool LibproxProximity::handlerShouldHandleObject(bool is_static_handler, bool is_global_handler, const UUID& obj_id, bool is_local, bool is_aggregate, const TimedMotionVector3f& pos, const BoundingSphere3f& region, float maxSize) {
     // We just need to decide whether the query handler should handle
     // the object. We need to consider local vs. replica and static
     // vs. dynamic.  All must 'vote' for handling the object for us to
