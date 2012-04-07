@@ -7,6 +7,7 @@
 
 #include "ProxSimulationTraits.hpp"
 #include <prox/base/LocationServiceCache.hpp>
+#include <prox/base/ZernikeDescriptor.hpp>
 #include <sirikata/core/util/MotionQuaternion.hpp>
 #include <sirikata/core/util/PresenceProperties.hpp>
 #include <boost/thread.hpp>
@@ -66,6 +67,8 @@ public:
     virtual BoundingSphere3f region(const Iterator& id);
     virtual float32 maxSize(const Iterator& id);
     virtual bool isLocal(const Iterator& id);
+    virtual String mesh(const Iterator& id);
+    virtual Prox::ZernikeDescriptor& zernikeDescriptor(const Iterator& id);
 
     virtual const ObjectReference& iteratorID(const Iterator& id);
 

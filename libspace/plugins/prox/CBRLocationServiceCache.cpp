@@ -93,7 +93,6 @@ bool CBRLocationServiceCache::tracking(const UUID& id) {
     return (mObjects.find(id) != mObjects.end());
 }
 
-
 TimedMotionVector3f CBRLocationServiceCache::location(const Iterator& id) {
     // NOTE: Only accesses via iterator, shouldn't need a lock
     IteratorData* itdat = (IteratorData*)id.data;
@@ -102,7 +101,25 @@ TimedMotionVector3f CBRLocationServiceCache::location(const Iterator& id) {
     return it->second.location;
 }
 
-BoundingSphere3f CBRLocationServiceCache::region(const Iterator& id) {
+Prox::ZernikeDescriptor& CBRLocationServiceCache::zernikeDescriptor(const Iterator& id)  {
+  // NOTE: Only accesses via iterator, shouldn't need a lock
+  IteratorData* itdat = (IteratorData*)id.data;
+  ObjectDataMap::iterator it = itdat->it;
+  assert(it != mObjects.end());
+
+  return it->second.zernike; 
+}
+
+String CBRLocationServiceCache::mesh(const Iterator& id)  {
+  // NOTE: Only accesses via iterator, shouldn't need a lock
+  IteratorData* itdat = (IteratorData*)id.data;
+  ObjectDataMap::iterator it = itdat->it;
+  assert(it != mObjects.end());
+
+  return it->second.mesh;
+}
+
+BoundingSphere3f CBRLocationServiceCache::region(const Iterator& id)  {
     // NOTE: Only accesses via iterator, shouldn't need a lock
     // "Region" for individual objects is the degenerate bounding sphere about
     // their center.
@@ -186,13 +203,15 @@ const String& CBRLocationServiceCache::physics(const ObjectID& id) const {
     return it->second.physics;
 }
 
+
 const bool CBRLocationServiceCache::isAggregate(const ObjectID& id) const {
     GET_OBJ_ENTRY(id); // NOTE: should only be accessed by prox thread, shouldn't need lock
     return it->second.isAggregate;
 }
 
-void CBRLocationServiceCache::localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& phy) {
-    objectAdded(uuid, true, agg, loc, orient, bounds, mesh, phy);
+
+void CBRLocationServiceCache::localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& phy, const String& zernike) {
+  objectAdded(uuid, true, agg, loc, orient, bounds, mesh, phy, zernike);
 }
 
 void CBRLocationServiceCache::localObjectRemoved(const UUID& uuid, bool agg) {
@@ -219,9 +238,9 @@ void CBRLocationServiceCache::localPhysicsUpdated(const UUID& uuid, bool agg, co
     physicsUpdated(uuid, agg, newval);
 }
 
-void CBRLocationServiceCache::replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& phy) {
+  void CBRLocationServiceCache::replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& phy, const String& zernike) {
     if (mWithReplicas)
-        objectAdded(uuid, false, false, loc, orient, bounds, mesh, phy);
+      objectAdded(uuid, false, false, loc, orient, bounds, mesh, phy, zernike);
 }
 
 void CBRLocationServiceCache::replicaObjectRemoved(const UUID& uuid) {
@@ -255,17 +274,18 @@ void CBRLocationServiceCache::replicaPhysicsUpdated(const UUID& uuid, const Stri
 }
 
 
-void CBRLocationServiceCache::objectAdded(const UUID& uuid, bool islocal, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& phy) {
+  void CBRLocationServiceCache::objectAdded(const UUID& uuid, bool islocal, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& phy, const String& zernike) {
     mStrand->post(
         std::tr1::bind(
             &CBRLocationServiceCache::processObjectAdded, this,
-            uuid, islocal, agg, loc, orient, bounds, mesh, phy
+
+            uuid, islocal, agg, loc, orient, bounds, mesh, phy, zernike
         ),
         "CBRLocationServiceCache::processObjectAdded"
     );
 }
 
-void CBRLocationServiceCache::processObjectAdded(const UUID& uuid, bool islocal, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& phy) {
+void CBRLocationServiceCache::processObjectAdded(const UUID& uuid, bool islocal, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& phy, const String& zernike) {     
     Lock lck(mMutex);
 
     if (mObjects.find(uuid) != mObjects.end())
@@ -279,6 +299,7 @@ void CBRLocationServiceCache::processObjectAdded(const UUID& uuid, bool islocal,
     data.maxSize = bounds.radius();
     data.mesh = mesh;
     data.physics = phy;
+    data.zernike = zernike;
     data.isLocal = islocal;
     data.exists = true;
     data.tracking = 0;

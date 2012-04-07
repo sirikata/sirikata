@@ -59,6 +59,9 @@
 
 #include <sirikata/oh/Storage.hpp>
 
+// Transfer mediator added to download objects' Zernike descriptors
+#include <sirikata/core/transfer/AggregatedTransferPool.hpp>
+
 #define HO_LOG(lvl,msg) SILOG(ho,lvl,msg);
 
 namespace Sirikata {
@@ -81,7 +84,11 @@ HostedObject::HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID
         )
     );
 
+    mTransferMediator = &(Transfer::TransferMediator::getSingleton());
+    mTransferPool = mTransferMediator->registerClient<Transfer::AggregatedTransferPool>("HostedObject_"+mID.toString());
 }
+
+
 
 void HostedObject::killSimulation(
     const SpaceObjectReference& sporef, const String& simName)
@@ -360,6 +367,121 @@ void HostedObject::initializeScript(const String& script_type, const String& arg
     }
 }
 
+bool HostedObject::downloadZernikeDescriptor(const SpaceID&spaceID,
+        const Location&startingLocation,
+        const BoundingSphere3f &meshBounds,
+        const String& mesh,
+        const String& physics,
+        const String& query,        
+        const ObjectReference& orefID,
+        PresenceToken token)
+{
+  Transfer::TransferRequestPtr req(new Transfer::MetadataRequest( Transfer::URI(mesh), 1.0, std::tr1::bind(
+                                       &HostedObject::metadataDownloaded, this, spaceID,
+                                       startingLocation,
+                                       meshBounds,
+                                       mesh,
+                                       physics,
+                                       query,                                       
+                                       orefID,
+                                       token, 0,
+                                       std::tr1::placeholders::_1, std::tr1::placeholders::_2)));
+
+  mTransferPool->addRequest(req);
+
+  return true;
+}
+
+void HostedObject::metadataDownloaded(const SpaceID&spaceID,
+                                    const Location&startingLocation,
+                                    const BoundingSphere3f &meshBounds,
+                                    const String& mesh,
+                                    const String& physics,
+                                    const String& query,                                    
+                                    const ObjectReference& orefID,
+                                    PresenceToken token,
+                                    uint8_t retryCount, 
+                                    std::tr1::shared_ptr<Transfer::MetadataRequest> request,
+                                    std::tr1::shared_ptr<Transfer::RemoteFileMetadata> response)
+{
+  if (response != NULL || retryCount >= 3) {
+    const Sirikata::Transfer::FileHeaders& headers = response->getHeaders();
+    
+    String zernike = "";
+    if (headers.find("Zernike") != headers.end()) {
+      zernike = (headers.find("Zernike"))->second;
+    }
+
+    std::tr1::shared_ptr<OHConnectInfo> ocip = std::tr1::shared_ptr<OHConnectInfo>(new OHConnectInfo);
+    
+    ocip->spaceID=spaceID;
+    ocip->startingLocation = startingLocation;
+    ocip->meshBounds = meshBounds;
+    ocip->mesh = mesh;
+    ocip->physics = physics;
+    ocip->query =query;
+    ocip->orefID = orefID;
+    ocip->token = token;
+    ocip->zernike = zernike;    
+    
+    mContext->mainStrand->post(std::tr1::bind(&HostedObject::objectHostConnectIndirect, this, ocip));    
+  }
+  else if (retryCount < 3) {
+    Transfer::TransferRequestPtr req(
+                                       new Transfer::MetadataRequest( Transfer::URI(mesh), 1.0, std::tr1::bind(
+                                       &HostedObject::metadataDownloaded, this, spaceID,
+                                       startingLocation,
+                                       meshBounds,
+                                       mesh,
+                                       physics,
+                                       query,                                       
+                                       orefID,
+                                       token, retryCount+1,
+                                       std::tr1::placeholders::_1, std::tr1::placeholders::_2)));
+
+    mTransferPool->addRequest(req);
+  }
+}
+
+bool HostedObject::objectHostConnect(const SpaceID spaceID,
+        const Location startingLocation,
+        const BoundingSphere3f meshBounds,
+        const String mesh,
+        const String physics,
+        const String query,
+        const String zernike,        
+        const ObjectReference orefID,
+        PresenceToken token)
+{
+  ObjectReference oref = (orefID == ObjectReference::null()) ? ObjectReference(UUID::random()) : orefID;
+
+  SpaceObjectReference connectingSporef (spaceID,oref);
+
+  // Note: we always use Time::null() here.  The server will fill in the
+  // appropriate value.  When we get the callback, we can fix this up.
+  Time approx_server_time = Time::null();
+  if (mObjectHost->connect(
+                           getSharedPtr(),
+                           connectingSporef, spaceID,
+                           TimedMotionVector3f(approx_server_time, MotionVector3f( Vector3f(startingLocation.getPosition()), startingLocation.getVelocity()) ),
+                           TimedMotionQuaternion(approx_server_time,MotionQuaternion(startingLocation.getOrientation().normal(),Quaternion(startingLocation.getAxisOfRotation(),startingLocation.getAngularSpeed()))),  //normalize orientations
+                           meshBounds,
+                           mesh,
+                           physics,
+                           query,
+                           zernike,
+                           std::tr1::bind(&HostedObject::handleConnected, getWeakPtr(), _1, _2, _3),
+                           std::tr1::bind(&HostedObject::handleMigrated, getWeakPtr(), _1, _2, _3),
+                           std::tr1::bind(&HostedObject::handleStreamCreated, getWeakPtr(), _1, _2, token),
+                           std::tr1::bind(&HostedObject::handleDisconnected, getWeakPtr(), _1, _2)
+                           )) {
+    mObjectHost->registerHostedObject(connectingSporef,getSharedPtr());
+    return true;
+  }else {
+    return false;
+  }
+}
+
 bool HostedObject::connect(
         const SpaceID&spaceID,
         const Location&startingLocation,
@@ -377,32 +499,24 @@ bool HostedObject::connect(
     if (spaceID == SpaceID::null())
         return false;
 
-    ObjectReference oref = (orefID == ObjectReference::null()) ? ObjectReference(UUID::random()) : orefID;
+    // Download the Zernike descriptor from the CDN metadata first. Once that is done,
+    // connect() will be invoked on the object host to actually connect the object to the
+    // space.
 
-    SpaceObjectReference connectingSporef (spaceID,oref);
-
-    // Note: we always use Time::null() here.  The server will fill in the
-    // appropriate value.  When we get the callback, we can fix this up.
-    Time approx_server_time = Time::null();
-    if (mObjectHost->connect(
-            getSharedPtr(),
-        connectingSporef, spaceID,
-        TimedMotionVector3f(approx_server_time, MotionVector3f( Vector3f(startingLocation.getPosition()), startingLocation.getVelocity()) ),
-        TimedMotionQuaternion(approx_server_time,MotionQuaternion(startingLocation.getOrientation().normal(),Quaternion(startingLocation.getAxisOfRotation(),startingLocation.getAngularSpeed()))),  //normalize orientations
-        meshBounds,
-        mesh,
-        physics,
-        query,
-        std::tr1::bind(&HostedObject::handleConnected, getWeakPtr(), _1, _2, _3),
-        std::tr1::bind(&HostedObject::handleMigrated, getWeakPtr(), _1, _2, _3),
-        std::tr1::bind(&HostedObject::handleStreamCreated, getWeakPtr(), _1, _2, token),
-        mContext->mainStrand->wrap(std::tr1::bind(&HostedObject::handleDisconnected, getWeakPtr(), _1, _2))
-        )) {
-        mObjectHost->registerHostedObject(connectingSporef,getSharedPtr());
-        mNumOutstandingConnections++;
-        return true;
-    }else {
-        return false;
+    if (mesh.find("meerkat:") == 0) {      
+      downloadZernikeDescriptor(spaceID,
+                              startingLocation,
+                              meshBounds,
+                              mesh,
+                              physics,
+                              query,                              
+                              orefID,
+                              token);    
+    
+      return false;
+    }
+    else {
+      return objectHostConnect(spaceID, startingLocation, meshBounds, mesh, physics, query, "", orefID, token);
     }
 }
 
@@ -469,6 +583,7 @@ void HostedObject::handleConnectedIndirect(const HostedObjectWPtr& weakSelf, con
     TimedMotionQuaternion local_orient(self->localTime(space, info.orient.updateTime()), info.orient.value());
     ProxyObjectPtr self_proxy = self->createProxy(self_objref, self_objref, Transfer::URI(info.mesh), local_loc, local_orient, info.bnds, info.physics, info.query, false, 0);
 
+
     // Use to initialize PerSpaceData. This just lets the PerPresenceData know
     // there's a self proxy now.
     {
@@ -478,6 +593,7 @@ void HostedObject::handleConnectedIndirect(const HostedObjectWPtr& weakSelf, con
         psd.initializeAs(self_proxy);
     }
     HO_LOG(detailed,"Connected object " << obj << " to space " << space << " waiting on notice");
+
 }
 
 void HostedObject::handleMigrated(const HostedObjectWPtr& weakSelf, const SpaceID& space, const ObjectReference& obj, ServerID server)

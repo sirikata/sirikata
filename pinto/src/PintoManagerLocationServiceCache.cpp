@@ -166,9 +166,19 @@ TimedMotionVector3f PintoManagerLocationServiceCache::location(const Iterator& i
     return dat.location;
 }
 
+
 BoundingSphere3f PintoManagerLocationServiceCache::region(const Iterator& id) {
     SpaceServerData& dat = EXTRACT_ITERATOR_DATA(id);
     return dat.region;
+}
+
+
+Prox::ZernikeDescriptor& PintoManagerLocationServiceCache::zernikeDescriptor(const Iterator& i) {
+  return Prox::ZernikeDescriptor::null();
+}
+
+String PintoManagerLocationServiceCache::mesh(const Iterator& i) {
+  return String("");
 }
 
 float32 PintoManagerLocationServiceCache::maxSize(const Iterator& id) {
