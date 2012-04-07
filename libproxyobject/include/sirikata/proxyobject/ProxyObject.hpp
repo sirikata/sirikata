@@ -123,7 +123,7 @@ private:
     bool mValid;
     const SpaceObjectReference mID;
     ProxyManagerPtr mParent;
-    
+
 public:
     /** Constructs a new ProxyObject. After constructing this object, it
         should be wrapped in a shared_ptr and sent to ProxyManager::createObject().
@@ -134,8 +134,8 @@ public:
     */
     ProxyObject(ProxyManagerPtr man, const SpaceObjectReference& id);
 
-    
-    inline const bool isValid() const {      
+
+    inline const bool isValid() const {
       return mValid;
     }
     /// Subclasses can do any necessary cleanup first.
@@ -183,6 +183,7 @@ public:
     virtual Transfer::URI mesh() const;
     virtual String physics() const;
     virtual bool isAggregate() const;
+    virtual ObjectReference parentAggregate() const;
 
     // Alternatives that access only the *verified* location information,
     // i.e. data sent by the space.
@@ -198,7 +199,6 @@ public:
     void setMesh (Transfer::URI const& rhs, uint64 seqno);
     void setPhysics(const String& rhs, uint64 seqno);
     void setIsAggregate(bool isAggregate, uint64 seqno);
-
 
 
     /** Retuns the local location of this object at the current timestamp. */

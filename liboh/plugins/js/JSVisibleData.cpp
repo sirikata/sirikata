@@ -147,6 +147,10 @@ bool JSAggregateVisibleData::isAggregate() const{
     return getBestChild()->isAggregate();
 }
 
+ObjectReference JSAggregateVisibleData::parent() const{
+    return getBestChild()->parent();
+}
+
 void JSAggregateVisibleData::removeVisibleData(JSVisibleData* data) {
     Mutex::scoped_lock locker (childMutex);
     mChildren.erase(data->observer());

@@ -30,16 +30,15 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-// NOTE: This is only to determine platform. Don't use libcore types.
 #include <sirikata/core/util/Platform.hpp>
+#include <sirikata/core/network/IOService.hpp>
+#include <sirikata/core/transfer/HttpManager.hpp>
+#include <sirikata/core/transfer/URL.hpp>
+#include <sirikata/core/service/Poller.hpp>
 
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
-
-#include <curl/curl.h>
-#include <curl/types.h>
-#include <curl/easy.h>
 
 #include <string>
 
@@ -54,62 +53,77 @@
 #endif
 #endif
 
-size_t writehandler(void*ptr, size_t size, size_t nmemb, std::string* userdata) {
-    *userdata += std::string((const char*)ptr, size*nmemb);
-    return size*nmemb;
+using namespace Sirikata;
+using namespace Sirikata::Network;
+using namespace Sirikata::Transfer;
+
+IOService* service = NULL;
+
+
+void finishReportCrash(
+    std::tr1::shared_ptr<HttpManager::HttpResponse> response,
+    HttpManager::ERR_TYPE error,
+    const boost::system::error_code& boost_error)
+{
+    service->stop();
+
+    if (error != HttpManager::SUCCESS) {
+        printf("Error uploading crash report\n");
+        return;
+    }
+
+    String resultStr = response->getData()->asString();
+    if (!resultStr.empty()) {
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_LINUX
+        execlp("xdg-open", "xdg-open", resultStr.c_str(), (char*)NULL);
+#elif SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS
+        ShellExecute(NULL, "open", resultStr.c_str(), NULL, NULL, SW_SHOWNORMAL);
+#endif
+    }
 }
 
-void reportCrash(const std::string& report_url, const std::string&dumpfilename,  const std::string& fulldumpfile, const std::string& sirikata_version, const std::string& sirikata_git_hash) {
-    CURL* curl;
+void reportCrash(const std::string& _report_url, const std::string&dumpfilename,  const std::string& fulldumpfile, const std::string& sirikata_version, const std::string& sirikata_git_hash) {
+    Transfer::URL report_url(_report_url);
 
-    curl_httppost* formpost = NULL;
-    curl_httppost* lastptr = NULL;
+    Network::Address addr(report_url.host(), report_url.proto());
+    String path = report_url.fullpath();
 
-    curl_global_init(CURL_GLOBAL_ALL);
-
-    curl_formadd(&formpost, &lastptr,
-        CURLFORM_COPYNAME, "dump",
-        CURLFORM_FILE, fulldumpfile.c_str(),
-        CURLFORM_END);
-    curl_formadd(&formpost, &lastptr,
-        CURLFORM_COPYNAME, "dumpname",
-        CURLFORM_COPYCONTENTS, dumpfilename.c_str(),
-        CURLFORM_END);
-    curl_formadd(&formpost, &lastptr,
-        CURLFORM_COPYNAME, "version",
-        CURLFORM_COPYCONTENTS, sirikata_version.c_str(),
-        CURLFORM_END);
-    curl_formadd(&formpost, &lastptr,
-        CURLFORM_COPYNAME, "githash",
-        CURLFORM_COPYCONTENTS, sirikata_git_hash.c_str(),
-        CURLFORM_END);
-
-    curl_formadd(&formpost, &lastptr,
-        CURLFORM_COPYNAME, "submit",
-        CURLFORM_COPYCONTENTS, "send",
-        CURLFORM_END);
-
-    curl = curl_easy_init();
-    if (curl) {
-        std::string resultStr;
-
-        curl_easy_setopt(curl, CURLOPT_URL, report_url.c_str());
-        curl_easy_setopt(curl, CURLOPT_HTTPPOST, formpost);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &resultStr);
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writehandler);
-        curl_easy_perform(curl);
-
-        curl_easy_cleanup(curl);
-        curl_formfree(formpost);
-
-        if (!resultStr.empty()) {
-#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_LINUX
-            execlp("xdg-open", "xdg-open", resultStr.c_str(), (char*)NULL);
-#elif SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS
-	    ShellExecute(NULL, "open", resultStr.c_str(), NULL, NULL, SW_SHOWNORMAL);
-#endif
+    HttpManager::MultipartDataList data;
+    String dumpfiledata;
+    {
+        FILE* fp = fopen(fulldumpfile.c_str(), "rb");
+        if (!fp) {
+            printf("Couldn't open dump file %s\n", fulldumpfile.c_str());
+            return;
         }
+        fseek(fp, 0, SEEK_END);
+        int fp_len = ftell(fp);
+        fseek(fp, 0, SEEK_SET);
+        dumpfiledata.resize(fp_len);
+        fread(&dumpfiledata[0], 1, fp_len, fp);
+        fclose(fp);
     }
+    data.push_back(HttpManager::MultipartData("dump", dumpfiledata, "dump"));
+    data.push_back(HttpManager::MultipartData("dumpname", dumpfilename));
+    data.push_back(HttpManager::MultipartData("version", sirikata_version));
+    data.push_back(HttpManager::MultipartData("githash", sirikata_git_hash));
+    data.push_back(HttpManager::MultipartData("submit", "send"));
+
+    // We need to make sure we actually specify the host. HttpManager won't add
+    // it because the address it has might not be the host it wants (could be an
+    // IP address), but we need to make sure the server knows which vhost to
+    // handle the request with.
+    HttpManager::Headers headers;
+    headers["Host"] = report_url.host();
+
+    using std::tr1::placeholders::_1;
+    using std::tr1::placeholders::_2;
+    using std::tr1::placeholders::_3;
+    HttpManager::getSingleton().postMultipartForm(
+        addr, path, data,
+        std::tr1::bind(&finishReportCrash, _1, _2, _3),
+        headers
+    );
 }
 
 // All crash generation server code is only relevant with breakpad
@@ -152,6 +166,7 @@ static google_breakpad::CrashGenerationServer* breakpad_server = NULL;
 static int n_connected = 0; // Current total connections
 static int n_sessions = 0; // Sessions seen so far
 static int n_work = 0;
+static int n_empty_its = 0;
 static std::string g_report_url;
 static std::string g_dump_path;
 
@@ -161,6 +176,8 @@ void OnClientConnected(void* context,
     // FIXME thread safety
     n_connected++;
     n_sessions++;
+
+    n_empty_its = 0;
 }
 
 void OnClientExited(void* context,
@@ -178,6 +195,7 @@ void OnClientDumpRequest(void* context,
     using namespace google_breakpad;
 
     n_work++;
+    n_empty_its = 0;
 
     if (file_path == NULL || client_info == NULL) {
         n_work--;
@@ -212,10 +230,33 @@ void OnClientDumpRequest(void* context,
     n_work--;
 }
 
+void checkTimeout() {
+    // "Processing" loop, server manages everything in the
+    // background. The condition for exit is a bit confusing.
+    // When we start things up, we need to wait for a connection,
+    // in which case the *normal* exit condition -- no connections
+    // and no on-going work -- will be true. Therefore, we also
+    // keep track of total sessions seen and number of times we've
+    // run through the loop and found no clients or work, allowing
+    // us to exit if we don't get clients in a reasonable time
+    // period, but exit promptly if we've already seen clients and
+    // they are just gone.
+    if (n_connected == 0 && n_work == 0) {
+        n_empty_its++;
+        // Arbitrary 15 second wait for client that triggered us
+        if ((n_sessions == 0 && n_empty_its > 15) || n_sessions > 0)
+            service->stop();
+    }
+}
+
 #endif // SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS
 #endif // HAVE_BREAKPAD
 
 int main(int argc, char** argv) {
+    service = new IOService("crashreporter");
+    IOStrand* strand = service->createStrand("Main Strand");
+    IOWork work(service);
+
     // We can run crashreporter in one of two ways. First, as just the
     // crashreporter, triggered by in-process minidump generation.  In this case
     // we run with the command line:
@@ -229,8 +270,10 @@ int main(int argc, char** argv) {
         std::string sirikata_version = std::string(argv[4]);
         std::string sirikata_git_hash = std::string(argv[5]);
         reportCrash(report_url, dumpfilename, fulldumpfile, sirikata_version, sirikata_git_hash);
+        service->run();
         return 0;
     }
+
 #ifdef HAVE_BREAKPAD // All crash generation server code is only relevant with breakpad
 #if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS // windows only OOP right now
     else {
@@ -263,26 +306,15 @@ int main(int argc, char** argv) {
             return -1;
         }
 
-        // "Processing" loop, server manages everything in the
-        // background. The condition for exit is a bit confusing.
-        // When we start things up, we need to wait for a connection,
-        // in which case the *normal* exit condition -- no connections
-        // and no on-going work -- will be true. Therefore, we also
-        // keep track of total sessions seen and number of times we've
-        // run through the loop and found no clients or work, allowing
-        // us to exit if we don't get clients in a reasonable time
-        // period, but exit promptly if we've already seen clients and
-        // they are just gone.
-        int n_empty_its = 0;
-        while(true) {
-            if (n_connected == 0 && n_work == 0) {
-                n_empty_its++;
-                // Arbitrary 15 second wait for client that triggered us
-                if ((n_sessions == 0 && n_empty_its > 15) || n_sessions > 0)
-                    break;
-            }
-            Sleep(1000);
-        }
+        // Start a poller to kill things after a long enough timeout
+        Poller timeoutPoller(
+            strand,
+            std::tr1::bind(checkTimeout),
+            "Timeout Poller", Duration::seconds(1)
+        );
+        timeoutPoller.start();
+
+        service->run();
     }
 #endif // WINDOWS
 #endif // HAVE_BREAKPAD

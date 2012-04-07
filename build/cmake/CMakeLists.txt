@@ -489,22 +489,12 @@ SET(Boost_LIBRARIES
 # Make sure we use boost filesystem v2 if both v2 and v3 are available.
 ADD_DEFINITIONS(-DBOOST_FILESYSTEM_VERSION=2)
 
-#dependency: curl
-IF(NOT CURL_ROOT)
-  IF(EXISTS ${PLATFORM_LIBS}/installed-curl)
-    SET(CURL_ROOT ${PLATFORM_LIBS}/installed-curl)
-  ELSEIF(EXISTS ${PLATFORM_LIBS}/libcurl_7_18_0)
-    SET(CURL_ROOT ${PLATFORM_LIBS}/libcurl_7_18_0)
-  ELSEIF(EXISTS ${PLATFORM_LIBS}/libcurl_7_15_5)
-    SET(CURL_ROOT ${PLATFORM_LIBS}/libcurl_7_15_5)
-  ENDIF()
-  IF(WIN32)
-    GET_FILENAME_COMPONENT(CURL_ROOT ${CURL_ROOT} ABSOLUTE)
-  ENDIF()
+# dependency: zlib
+# We provide gzip support in HttpManager, which requires zlib. Only
+# Mac seems to not have this linked in already
+IF(APPLE)
+  FIND_PACKAGE(ZLIB)
 ENDIF()
-
-FIND_PACKAGE(CURL)
-SET(TEST_LIBRARIES ${CURL_LIBRARIES})
 
 #dependency: ogre
 IF(NOT OGRE_ROOT)
@@ -1055,7 +1045,7 @@ SET(INCLUDE_DIRECTORIES
   ${SirikataProtocolDirectory}
 
   ${Boost_INCLUDE_DIRS}
-  ${CURL_INCLUDE_DIRS}
+  ${ZLIB_INCLUDE_DIRS}
   ${PROTOCOLBUFFERS_INCLUDE_DIRS}
   ${ANTLR_INCLUDE_DIRS}
   ${LIBPROX_INCLUDE_DIRS}
@@ -1392,6 +1382,7 @@ SET(SIRIKATA_CORE_SOURCES
         ${LIBCORE_SOURCE_DIR}/util/RegionWeightCalculator.cpp
         ${LIBCORE_SOURCE_DIR}/util/Liveness.cpp
         ${LIBCORE_SOURCE_DIR}/util/Paths.cpp
+        ${LIBCORE_SOURCE_DIR}/util/Md5.cpp
         ${LIBCORE_SOURCE_DIR}/trace/BatchedBuffer.cpp
         ${LIBCORE_SOURCE_DIR}/trace/Trace.cpp
         ${LIBCORE_SOURCE_DIR}/trace/TimeSeries.cpp
@@ -1923,8 +1914,8 @@ ENDIF()
 
 SET(SIRIKATA_CORE_LIBRARIES
     ${SYSTEM_DL_LIBRARY}
-    ${CURL_LIBRARIES}
     ${Boost_LIBRARIES}
+    ${ZLIB_LIBRARIES}
     ${BREAKPAD_LIBRARIES}
     http-parser
     ${GOOGLE_PERFTOOLS_SETTING_LIBRARIES}
@@ -2680,16 +2671,19 @@ SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} mesh-billboard)
 
 #binaries
 SET(BUILDING_CRASHREPORTER FALSE)
-IF(CURL_FOUND AND NOT APPLE)
+IF(NOT APPLE)
   SET(BUILDING_CRASHREPORTER TRUE)
   ADD_EXECUTABLE(${CRASHREPORTER_BINARY} ${CRASHREPORTER_SOURCES})
   SET_TARGET_PROPERTIES(${CRASHREPORTER_BINARY} PROPERTIES ${COMPILE_DEFS_OPT})
   SET_TARGET_PROPERTIES(${CRASHREPORTER_BINARY} PROPERTIES ${SIRIKATA_VERSION_SETTINGS})
   TARGET_LINK_LIBRARIES(${CRASHREPORTER_BINARY}
     ${Boost_LIBRARIES}
-    ${CURL_LIBRARIES}
+    ${SIRIKATA_CORE_LIB}
     ${BREAKPAD_LIBRARIES}
     )
+  IF(sirikata_LDFLAGS)
+    SET_TARGET_PROPERTIES(${CRASHREPORTER_BINARY} PROPERTIES LINK_FLAGS ${sirikata_LDFLAGS})
+  ENDIF()
 ENDIF()
 
 ADD_EXECUTABLE(${TEST_BINARY} ${TEST_SOURCES})# EXCLUDE_FROM_ALL
@@ -3519,32 +3513,6 @@ ENDIF()
 
 ENDIF()
 
-
-#install curl #MUST BE DONE AFTER MONO to get correct libz
-IF(CURL_ROOT)
-  IF(WIN32)
-    INSTALL(DIRECTORY ${CURL_ROOT}/
-            FILE_PERMISSIONS ${EXEC_PERMS}
-            DESTINATION ${SIRIKATA_INSTALL_BINARY_PATH}
-            PATTERN "*.lib" EXCLUDE
-            PATTERN "*README" EXCLUDE
-            PATTERN "*COPYING" EXCLUDE
-            PATTERN "*Makefile" EXCLUDE
-            PATTERN "*.am" EXCLUDE
-            PATTERN "*.in" EXCLUDE
-            PATTERN "*CHANGES" EXCLUDE
-            PATTERN "*.exp" EXCLUDE
-            PATTERN "*.h" EXCLUDE
-            #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
-            PATTERN "*.exe" EXCLUDE)
-  ELSE()
-    INSTALL(DIRECTORY ${CURL_ROOT}/lib/
-            FILE_PERMISSIONS ${EXEC_PERMS}
-            DESTINATION ${SIRIKATA_INSTALL_LIBRARY_PATH}
-            #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
-            PATTERN "*.exe" EXCLUDE)
-  ENDIF()
-ENDIF()
 
 IF(BUILD_JS_OH)
   # data for ogre, including web views
