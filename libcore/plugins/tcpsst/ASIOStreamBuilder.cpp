@@ -45,7 +45,7 @@
 #include <sirikata/core/util/Md5.hpp>
 
 #include <boost/lexical_cast.hpp>
-
+#include "CheckWebSocketHeader.hpp"
 namespace Sirikata {
 namespace Network {
 namespace ASIOStreamBuilder{
@@ -337,86 +337,13 @@ void buildStream(TcpSstHeaderArray *buffer,
     }
 }
 
-namespace {
-
-class CaseInsensitive {
-public:
-    bool operator() (const uint8 &left, const uint8 &right) {
-        return std::toupper(left) == std::toupper(right);
-    }
-};
-
-class CheckWebSocketRequest {
-    const Array<uint8,TCPStream::MaxWebSocketHeaderSize> *mArray;
-    typedef boost::system::error_code ErrorCode;
-    uint32 mTotal;
-public:
-    CheckWebSocketRequest(const Array<uint8,TCPStream::MaxWebSocketHeaderSize>*array) {
-        mArray=array;
-        mTotal = 0;
-    }
-    size_t operator() (const ErrorCode& error, size_t bytes_transferred) {
-        if (error) return 0;
-
-        mTotal += bytes_transferred;
-
-        if (mTotal >= 12 &&
-            (*mArray)[mTotal - 12] == '\r' &&
-            (*mArray)[mTotal - 11] == '\n' &&
-            (*mArray)[mTotal - 10] == '\r' &&
-            (*mArray)[mTotal - 9] == '\n')
-        {
-            return 0;
-        }
-        if (mTotal >= 24 &&
-            (*mArray)[mTotal - 4] == '\r' &&
-            (*mArray)[mTotal - 3] == '\n' &&
-            (*mArray)[mTotal - 2] == '\r' &&
-            (*mArray)[mTotal - 1] == '\n')
-        {
-            // Newer handshakes do not have data in the body.
-            // We need to allow these to complete *before* data is received.
-
-            // We check case-insensitive for Sec-WebSocket-Version: 13
-            // Dumbed down due to lack of cross-platform case-insensitive
-            // string functions
-
-            // This code can be removed once the old handshake is obsoleted.
-
-            const char *ersion = strstr((const char*)&((*mArray)[16]), (const char*)"ersion");
-            if (ersion == NULL) {
-                return 0;
-            }
-            const char *header = ersion - 15;
-            if (std::equal(header, header + 15, "sec-websocket-version", CaseInsensitive())) {
-                const char *colon = ersion + 6;
-                while(*colon != '\r' && isspace(*colon)) {
-                    colon++;
-                }
-                if (*colon == ':') {
-                    colon++;
-                    while(*colon != '\r' && isspace(*colon)) {
-                        colon++;
-                    }
-                    const char *endptr = (const char*)&(*mArray)[0] + mTotal;
-                    if (*colon >= '1' && *colon <= '9') {
-                        return 0;
-                    }
-                }
-            }
-        }
-        return 65536;
-    }
-};
-} // namespace
-
 void beginNewStream(TCPSocket*socket, std::tr1::shared_ptr<TCPStreamListener::Data> data) {
 
     TcpSstHeaderArray *buffer = new TcpSstHeaderArray;
 
     boost::asio::async_read(*socket,
                             boost::asio::buffer(buffer->begin(),(int)TCPStream::MaxWebSocketHeaderSize>(int)ASIOReadBuffer::sBufferLength?(int)ASIOReadBuffer::sBufferLength:(int)TCPStream::MaxWebSocketHeaderSize),
-                            CheckWebSocketRequest (buffer),
+                            CheckWebSocketHeader (buffer,false),
         data->strand->wrap( std::tr1::bind(&ASIOStreamBuilder::buildStream,buffer,socket,data,_1,_2) )
         );
 }
