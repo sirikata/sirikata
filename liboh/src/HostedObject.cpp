@@ -40,6 +40,7 @@
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/oh/ObjectScriptManager.hpp>
 #include <sirikata/core/options/Options.hpp>
+#include <sirikata/core/options/CommonOptions.hpp>
 #include <sirikata/oh/ObjectScript.hpp>
 #include <sirikata/oh/ObjectScriptManagerFactory.hpp>
 #include <sirikata/oh/ObjectQueryProcessor.hpp>
@@ -503,7 +504,7 @@ bool HostedObject::connect(
     // connect() will be invoked on the object host to actually connect the object to the
     // space.
 
-    if (mesh.find("meerkat:") == 0) {      
+    if (mesh.find("meerkat:") == 0 && GetOptionValue<bool>("specify-zernike-descriptor")) {
       downloadZernikeDescriptor(spaceID,
                               startingLocation,
                               meshBounds,

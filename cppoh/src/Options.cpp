@@ -89,6 +89,7 @@ void InitCPPOHOptions() {
         .addOption(new OptionValue(OPT_DEFAULT_SCRIPT_TYPE,"js",OptionValueType<String>(),"If a script is not specified, this type will be instantiated automatically at object creation. If left blank, no script will be started."))
         .addOption(new OptionValue(OPT_DEFAULT_SCRIPT_OPTIONS,"",OptionValueType<String>(),"If a script is not specified, these options will be passed to the default script type."))
         .addOption(new OptionValue(OPT_DEFAULT_SCRIPT_CONTENTS,"system.import('std/default.em');",OptionValueType<String>(),"If a script is not specified, this script will be executed as the default."))
+        .addOption(new OptionValue("specify-zernike-descriptor","false",OptionValueType<bool>(),"Whether or not specify Zernike descriptors in connection requests."))
         ;
 }
 
