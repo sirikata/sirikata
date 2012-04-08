@@ -167,7 +167,7 @@ bool TCPStream::send(MemoryReference firstChunk, MemoryReference secondChunk, St
         totalSize+=streamIdLength;
         uint8 packetHeader[12];
         unsigned int packetHeaderLength = 2;
-        packetHeader[0] = 0x7f | 0x02 ; // Flags = FIN/Unfragmented, Opcode = 2: binary data
+        packetHeader[0] = 0x80 | 0x02 ; // Flags = FIN/Unfragmented, Opcode = 2: binary data
         if (totalSize <= 125) {
           packetHeader[1] = totalSize;
         } else if (totalSize <= 65535) {

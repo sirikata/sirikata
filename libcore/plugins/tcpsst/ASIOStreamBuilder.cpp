@@ -384,6 +384,9 @@ public:
             // This code can be removed once the old handshake is obsoleted.
 
             const char *ersion = strstr((const char*)&((*mArray)[16]), (const char*)"ersion");
+            if (ersion == NULL) {
+                return 0;
+            }
             const char *header = ersion - 15;
             if (std::equal(header, header + 15, "sec-websocket-version", CaseInsensitive())) {
                 const char *colon = ersion + 6;

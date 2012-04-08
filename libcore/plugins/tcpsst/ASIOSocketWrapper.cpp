@@ -419,7 +419,7 @@ Chunk*ASIOSocketWrapper::constructControlPacket(const MultiplexedSocketPtr &thus
         assert(size + cur <= max_size);
         MemoryReference serializedStreamId(&dataStream[packetHeaderLength], streamidsize);
 
-        dataStream[0] = 0x7f | 0x02 ; // Flags = FIN/Unfragmented, Opcode = 2: binary data
+        dataStream[0] = 0x80 | 0x02 ; // Flags = FIN/Unfragmented, Opcode = 2: binary data
         dataStream[1] = size + cur - packetHeaderLength; // Less than 125.
 
         return new Chunk(dataStream, dataStream + size + cur);
@@ -529,13 +529,20 @@ void ASIOSocketWrapper::sendProtocolHeader(const MultiplexedSocketPtr&parentMult
 
         header << "Origin: " << address.getHostName() << "\r\n";
 
-        header << "Sec-WebSocket-Key1: x!|6 j9  U 1 guf  36Y04  |   4\r\n";
-        header << "Sec-WebSocket-Key2: 3   59   2 E4   _11  x80      \r\n";
+        if (parentMultiSocket->getStreamType()!= TCPStream::RFC_6455) {
+            header << "Sec-WebSocket-Key1: x!|6 j9  U 1 guf  36Y04  |   4\r\n";
+            header << "Sec-WebSocket-Key2: 3   59   2 E4   _11  x80      \r\n";
+        }else {
+            header << "Sec-WebSocket-Version: 13\r\n";
+            header << "Sec-WebSocket-Key: MTIzNDU2Nzg5MGFiY2RlZg==\r\n";
+        }
         header << "Sec-WebSocket-Protocol: "
                << (parentMultiSocket->getStreamType()==TCPStream::BASE64_ZERODELIM?"wssst":"sst")
                << numConnections << "\r\n";
         header << "\r\n";
-        header << "abcdefgh";
+        if (parentMultiSocket->getStreamType()!= TCPStream::RFC_6455) {
+            header << "abcdefgh";
+        }
 
         std::string finalHeader(header.str());
         Chunk * headerData= new Chunk(finalHeader.begin(),finalHeader.end());
