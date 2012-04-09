@@ -368,24 +368,10 @@ void HostedObject::initializeScript(const String& script_type, const String& arg
     }
 }
 
-bool HostedObject::downloadZernikeDescriptor(const SpaceID&spaceID,
-        const Location&startingLocation,
-        const BoundingSphere3f &meshBounds,
-        const String& mesh,
-        const String& physics,
-        const String& query,        
-        const ObjectReference& orefID,
-        PresenceToken token)
+bool HostedObject::downloadZernikeDescriptor(OHConnectInfoPtr ocip, uint8 n_retry)
 {
-  Transfer::TransferRequestPtr req(new Transfer::MetadataRequest( Transfer::URI(mesh), 1.0, std::tr1::bind(
-                                       &HostedObject::metadataDownloaded, this, spaceID,
-                                       startingLocation,
-                                       meshBounds,
-                                       mesh,
-                                       physics,
-                                       query,                                       
-                                       orefID,
-                                       token, 0,
+  Transfer::TransferRequestPtr req(new Transfer::MetadataRequest( Transfer::URI(ocip->mesh), 1.0, std::tr1::bind(
+                                       &HostedObject::metadataDownloaded, this, ocip, n_retry,
                                        std::tr1::placeholders::_1, std::tr1::placeholders::_2)));
 
   mTransferPool->addRequest(req);
@@ -393,15 +379,8 @@ bool HostedObject::downloadZernikeDescriptor(const SpaceID&spaceID,
   return true;
 }
 
-void HostedObject::metadataDownloaded(const SpaceID&spaceID,
-                                    const Location&startingLocation,
-                                    const BoundingSphere3f &meshBounds,
-                                    const String& mesh,
-                                    const String& physics,
-                                    const String& query,                                    
-                                    const ObjectReference& orefID,
-                                    PresenceToken token,
-                                    uint8_t retryCount, 
+void HostedObject::metadataDownloaded(OHConnectInfoPtr ocip,
+                                    uint8 retryCount, 
                                     std::tr1::shared_ptr<Transfer::MetadataRequest> request,
                                     std::tr1::shared_ptr<Transfer::RemoteFileMetadata> response)
 {
@@ -413,34 +392,12 @@ void HostedObject::metadataDownloaded(const SpaceID&spaceID,
       zernike = (headers.find("Zernike"))->second;
     }
 
-    std::tr1::shared_ptr<OHConnectInfo> ocip = std::tr1::shared_ptr<OHConnectInfo>(new OHConnectInfo);
-    
-    ocip->spaceID=spaceID;
-    ocip->startingLocation = startingLocation;
-    ocip->meshBounds = meshBounds;
-    ocip->mesh = mesh;
-    ocip->physics = physics;
-    ocip->query =query;
-    ocip->orefID = orefID;
-    ocip->token = token;
     ocip->zernike = zernike;    
     
     mContext->mainStrand->post(std::tr1::bind(&HostedObject::objectHostConnectIndirect, this, ocip));    
   }
   else if (retryCount < 3) {
-    Transfer::TransferRequestPtr req(
-                                       new Transfer::MetadataRequest( Transfer::URI(mesh), 1.0, std::tr1::bind(
-                                       &HostedObject::metadataDownloaded, this, spaceID,
-                                       startingLocation,
-                                       meshBounds,
-                                       mesh,
-                                       physics,
-                                       query,                                       
-                                       orefID,
-                                       token, retryCount+1,
-                                       std::tr1::placeholders::_1, std::tr1::placeholders::_2)));
-
-    mTransferPool->addRequest(req);
+      downloadZernikeDescriptor(ocip, retryCount+1);
   }
 }
 
@@ -505,16 +462,17 @@ bool HostedObject::connect(
     // space.
 
     if (mesh.find("meerkat:") == 0 && GetOptionValue<bool>("specify-zernike-descriptor")) {
-      downloadZernikeDescriptor(spaceID,
-                              startingLocation,
-                              meshBounds,
-                              mesh,
-                              physics,
-                              query,                              
-                              orefID,
-                              token);    
-    
-      return false;
+        OHConnectInfoPtr ocip(new OHConnectInfo);
+        ocip->spaceID=spaceID;
+        ocip->startingLocation = startingLocation;
+        ocip->meshBounds = meshBounds;
+        ocip->mesh = mesh;
+        ocip->physics = physics;
+        ocip->query =query;
+        ocip->orefID = orefID;
+        ocip->token = token;
+        downloadZernikeDescriptor(ocip);
+        return false;
     }
     else {
       return objectHostConnect(spaceID, startingLocation, meshBounds, mesh, physics, query, "", orefID, token);

@@ -113,10 +113,8 @@ private:
       ObjectReference orefID;
       int64 token;
       String zernike;
-
-      
-
       } OHConnectInfo;
+    typedef std::tr1::shared_ptr<OHConnectInfo> OHConnectInfoPtr;
 
 protected:
 
@@ -243,12 +241,10 @@ public:
         PresenceToken token = DEFAULT_PRESENCE_TOKEN);
 
 
-    bool objectHostConnectIndirect(std::tr1::shared_ptr<OHConnectInfo> oci) {
+    void objectHostConnectIndirect(OHConnectInfoPtr oci) {
       bool ret = objectHostConnect(oci->spaceID, oci->startingLocation, oci->meshBounds,
                                    oci->mesh, oci->physics, oci->query, oci->zernike, 
-                                   oci->orefID, oci->token); 
-      
-      return ret;
+                                   oci->orefID, oci->token);
     }
 
     
@@ -264,27 +260,11 @@ public:
         const ObjectReference orefID,
         PresenceToken token = DEFAULT_PRESENCE_TOKEN);
 
-    bool downloadZernikeDescriptor(
-        const SpaceID&spaceID,
-        const Location&startingLocation,
-        const BoundingSphere3f &meshBounds,
-        const String& mesh,
-        const String& physics,
-        const String& query,        
-        const ObjectReference& orefID,
-        PresenceToken token = DEFAULT_PRESENCE_TOKEN);
-
+    bool downloadZernikeDescriptor(OHConnectInfoPtr ocip, uint8 n_retry=0);
 
     void metadataDownloaded(
-        const SpaceID&spaceID,
-        const Location&startingLocation,
-        const BoundingSphere3f &meshBounds,
-        const String& mesh,
-        const String& physics,
-        const String& query,        
-        const ObjectReference& orefID,
-        PresenceToken token,
-        uint8_t retryCount,
+        OHConnectInfoPtr ocip,
+        uint8 retryCount,
         std::tr1::shared_ptr<Transfer::MetadataRequest> request,
         std::tr1::shared_ptr<Transfer::RemoteFileMetadata> response);
 
