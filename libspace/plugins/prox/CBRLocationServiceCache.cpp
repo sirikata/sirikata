@@ -107,7 +107,7 @@ Prox::ZernikeDescriptor& CBRLocationServiceCache::zernikeDescriptor(const Iterat
   ObjectDataMap::iterator it = itdat->it;
   assert(it != mObjects.end());
 
-  return it->second.zernike; 
+  return it->second.zernike;
 }
 
 String CBRLocationServiceCache::mesh(const Iterator& id)  {
@@ -274,23 +274,7 @@ void CBRLocationServiceCache::replicaPhysicsUpdated(const UUID& uuid, const Stri
 }
 
 
-  void CBRLocationServiceCache::objectAdded(const UUID& uuid, bool islocal, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& phy, const String& zernike) {
-    mStrand->post(
-        std::tr1::bind(
-            &CBRLocationServiceCache::processObjectAdded, this,
-
-            uuid, islocal, agg, loc, orient, bounds, mesh, phy, zernike
-        ),
-        "CBRLocationServiceCache::processObjectAdded"
-    );
-}
-
-void CBRLocationServiceCache::processObjectAdded(const UUID& uuid, bool islocal, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& phy, const String& zernike) {     
-    Lock lck(mMutex);
-
-    if (mObjects.find(uuid) != mObjects.end())
-        return;
-
+void CBRLocationServiceCache::objectAdded(const UUID& uuid, bool islocal, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& phy, const String& zernike) {
     ObjectData data;
     data.location = loc;
     data.orientation = orient;
@@ -304,11 +288,27 @@ void CBRLocationServiceCache::processObjectAdded(const UUID& uuid, bool islocal,
     data.exists = true;
     data.tracking = 0;
     data.isAggregate = agg;
+
+    mStrand->post(
+        std::tr1::bind(
+            &CBRLocationServiceCache::processObjectAdded, this,
+            uuid, data
+        ),
+        "CBRLocationServiceCache::processObjectAdded"
+    );
+}
+
+void CBRLocationServiceCache::processObjectAdded(const UUID& uuid, ObjectData data) {
+    Lock lck(mMutex);
+
+    if (mObjects.find(uuid) != mObjects.end())
+        return;
+
     mObjects[uuid] = data;
 
-    if (!agg)
+    if (!data.isAggregate)
         for(ListenerSet::iterator it = mListeners.begin(); it != mListeners.end(); it++)
-            (*it)->locationConnected(uuid, islocal, loc, data.region, data.maxSize);
+            (*it)->locationConnected(uuid, data.isLocal, data.location, data.region, data.maxSize);
 }
 
 void CBRLocationServiceCache::objectRemoved(const UUID& uuid, bool agg) {

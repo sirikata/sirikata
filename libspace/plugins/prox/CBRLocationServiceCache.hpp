@@ -68,8 +68,8 @@ public:
     virtual TimedMotionVector3f location(const Iterator& id);
     virtual BoundingSphere3f region(const Iterator& id);
     virtual float32 maxSize(const Iterator& id);
-    virtual bool isLocal(const Iterator& id);    
-    Prox::ZernikeDescriptor& zernikeDescriptor(const Iterator& id); 
+    virtual bool isLocal(const Iterator& id);
+    Prox::ZernikeDescriptor& zernikeDescriptor(const Iterator& id);
     String mesh(const Iterator& id);
 
     virtual const UUID& iteratorID(const Iterator& id);
@@ -105,42 +105,6 @@ public:
     virtual void replicaPhysicsUpdated(const UUID& uuid, const String& newval);
 
 private:
-
-    // These generate and queue up updates from the main thread
-  void objectAdded(const UUID& uuid, bool islocal, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics, const String& zernike);
-    void objectRemoved(const UUID& uuid, bool agg);
-    void locationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval);
-    void orientationUpdated(const UUID& uuid, bool agg, const TimedMotionQuaternion& newval);
-    void boundsUpdated(const UUID& uuid, bool agg, const BoundingSphere3f& newval);
-    void meshUpdated(const UUID& uuid, bool agg, const String& newval);
-    void physicsUpdated(const UUID& uuid, bool agg, const String& newval);
-
-    // These do the actual work for the LocationServiceListener methods.  Local versions always
-    // call these, replica versions only call them if replica tracking is
-    // on. Although we now have to lock in these, we put them on the strand
-    // instead of processing directly in the methods above so that they don't
-    // block any other work.
-  void processObjectAdded(const UUID& uuid, bool islocal, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics, const String& zernike);
-    void processObjectRemoved(const UUID& uuid, bool agg);
-    void processLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval);
-    void processOrientationUpdated(const UUID& uuid, bool agg, const TimedMotionQuaternion& newval);
-    void processBoundsUpdated(const UUID& uuid, bool agg, const BoundingSphere3f& newval);
-    void processMeshUpdated(const UUID& uuid, bool agg, const String& newval);
-    void processPhysicsUpdated(const UUID& uuid, bool agg, const String& newval);
-
-
-    CBRLocationServiceCache();
-
-    typedef boost::recursive_mutex Mutex;
-    typedef boost::lock_guard<Mutex> Lock;
-    Mutex mMutex;
-
-    Network::IOStrand* mStrand;
-    LocationService* mLoc;
-
-    typedef std::set<LocationUpdateListener*> ListenerSet;
-    ListenerSet mListeners;
-
     // Object data is only accessed in the prox thread (by libprox
     // and by this class when updates are passed by the main thread).
     // Therefore, this data does *NOT* need to be locked for access.
@@ -163,6 +127,43 @@ private:
         int16 tracking; // Ref count to support multiple users
         bool isAggregate;
     };
+
+
+    // These generate and queue up updates from the main thread
+  void objectAdded(const UUID& uuid, bool islocal, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics, const String& zernike);
+    void objectRemoved(const UUID& uuid, bool agg);
+    void locationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval);
+    void orientationUpdated(const UUID& uuid, bool agg, const TimedMotionQuaternion& newval);
+    void boundsUpdated(const UUID& uuid, bool agg, const BoundingSphere3f& newval);
+    void meshUpdated(const UUID& uuid, bool agg, const String& newval);
+    void physicsUpdated(const UUID& uuid, bool agg, const String& newval);
+
+    // These do the actual work for the LocationServiceListener methods.  Local versions always
+    // call these, replica versions only call them if replica tracking is
+    // on. Although we now have to lock in these, we put them on the strand
+    // instead of processing directly in the methods above so that they don't
+    // block any other work.
+    void processObjectAdded(const UUID& uuid, ObjectData data);
+    void processObjectRemoved(const UUID& uuid, bool agg);
+    void processLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval);
+    void processOrientationUpdated(const UUID& uuid, bool agg, const TimedMotionQuaternion& newval);
+    void processBoundsUpdated(const UUID& uuid, bool agg, const BoundingSphere3f& newval);
+    void processMeshUpdated(const UUID& uuid, bool agg, const String& newval);
+    void processPhysicsUpdated(const UUID& uuid, bool agg, const String& newval);
+
+
+    CBRLocationServiceCache();
+
+    typedef boost::recursive_mutex Mutex;
+    typedef boost::lock_guard<Mutex> Lock;
+    Mutex mMutex;
+
+    Network::IOStrand* mStrand;
+    LocationService* mLoc;
+
+    typedef std::set<LocationUpdateListener*> ListenerSet;
+    ListenerSet mListeners;
+
     typedef std::tr1::unordered_map<UUID, ObjectData, UUID::Hasher> ObjectDataMap;
     ObjectDataMap mObjects;
     bool mWithReplicas;
