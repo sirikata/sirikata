@@ -94,6 +94,7 @@ public:
     Transfer::URI mesh(const ObjectID& id);
     String physics(const ObjectID& id);
     ObjectReference parent(const ObjectID& id);
+    bool aggregate(const ObjectID& id);
     // And raw access to the underlying SequencedPresenceProperties
     const SequencedPresenceProperties& properties(const ObjectID& id);
 

@@ -189,6 +189,11 @@ ObjectReference OHLocationServiceCache::parent(const ObjectID& id) {
     return it->second.parent;
 }
 
+bool OHLocationServiceCache::aggregate(const ObjectID& id) {
+    GET_OBJ_ENTRY(id);
+    return it->second.aggregate;
+}
+
 const SequencedPresenceProperties& OHLocationServiceCache::properties(const ObjectID& id) {
     GET_OBJ_ENTRY(id);
     return it->second.props;
