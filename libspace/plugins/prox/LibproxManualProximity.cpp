@@ -41,7 +41,8 @@ LibproxManualProximity::LibproxManualProximity(SpaceContext* ctx, LocationServic
         mOHQueryHandler[i].handler->setAggregateListener(this); // *Must* be before handler->initialize
         bool object_static_objects = (mSeparateDynamicObjects && i == OBJECT_CLASS_STATIC);
         mOHQueryHandler[i].handler->initialize(
-            mLocCache, mLocCache, object_static_objects,
+            mLocCache, mLocCache,
+            object_static_objects, false /* not replicated */,
             std::tr1::bind(&LibproxManualProximity::handlerShouldHandleObject, this, object_static_objects, false, _1, _2, _3, _4, _5, _6)
         );
     }

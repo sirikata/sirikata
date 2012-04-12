@@ -76,7 +76,8 @@ ObjectQueryHandler::ObjectQueryHandler(ObjectHostContext* ctx, ManualObjectQuery
         //mObjectQueryHandler[i]->setAggregateListener(this); // *Must* be before handler->initialize
         bool object_static_objects = (mSeparateDynamicObjects && i == OBJECT_CLASS_STATIC);
         mObjectQueryHandler[i]->initialize(
-            mLocCache.get(), mLocCache.get(), object_static_objects,
+            mLocCache.get(), mLocCache.get(),
+            object_static_objects, true /* replicated */,
             std::tr1::bind(&ObjectQueryHandler::handlerShouldHandleObject, this, object_static_objects, true, _1, _2, _3, _4, _5, _6)
         );
     }

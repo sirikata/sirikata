@@ -118,7 +118,8 @@ LibproxProximity::LibproxProximity(SpaceContext* ctx, LocationService* locservic
         mServerQueryHandler[i].handler->setAggregateListener(this); // *Must* be before handler->initialize
         bool server_static_objects = (mSeparateDynamicObjects && i == OBJECT_CLASS_STATIC);
         mServerQueryHandler[i].handler->initialize(
-            mLocCache, mLocCache, server_static_objects,
+            mLocCache, mLocCache,
+            server_static_objects, false /* not replicated */,
             std::tr1::bind(&LibproxProximity::handlerShouldHandleObject, this, server_static_objects, false, _1, _2, _3, _4, _5, _6)
         );
     }
@@ -136,7 +137,8 @@ LibproxProximity::LibproxProximity(SpaceContext* ctx, LocationService* locservic
         mObjectQueryHandler[i].handler->setAggregateListener(this); // *Must* be before handler->initialize
         bool object_static_objects = (mSeparateDynamicObjects && i == OBJECT_CLASS_STATIC);
         mObjectQueryHandler[i].handler->initialize(
-            mLocCache, mLocCache, object_static_objects,
+            mLocCache, mLocCache,
+            object_static_objects, false /* not replicated */,
             std::tr1::bind(&LibproxProximity::handlerShouldHandleObject, this, object_static_objects, true, _1, _2, _3, _4, _5, _6)
         );
     }
@@ -338,7 +340,7 @@ void LibproxProximity::receiveMessage(Message* msg) {
                     TimedMotionQuaternion( addition.orientation().t(), MotionQuaternion(addition.orientation().position(), addition.orientation().velocity()) ),
                     addition.bounds(),
                     (addition.has_mesh() ? addition.mesh() : ""),
-                    (addition.has_physics() ? addition.physics() : ""), 
+                    (addition.has_physics() ? addition.physics() : ""),
                      ""  //no Zernike descriptor in Proximity message. is this ok to do? TAHIR.
                 );
             }
