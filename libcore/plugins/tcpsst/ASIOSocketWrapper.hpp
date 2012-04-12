@@ -217,6 +217,10 @@ public:
     bool canSend(size_t dataSize)const;
     static Chunk*constructControlPacket(const MultiplexedSocketPtr&parentMultiSocket, TCPStream::TCPStreamControlCodes code,const Stream::StreamID&sid);
     /**
+     * Sends a WebSocket ping/pong with the passed data.
+     */
+    static Chunk* constructPing(const MultiplexedSocketPtr&parentMultiSocket, MemoryReference data, bool isPong);
+    /**
      *  Sends a streamID #0 packet with further control data on it.
      *  To start with only stream disconnect and the ack thereof are allowed
      */

@@ -725,7 +725,10 @@ void Server::finishAddObject(const UUID& obj_id, OSegAddNewStatus status)
           // Add object as local object to LocationService
           String obj_mesh = sc.conn_msg.has_mesh() ? sc.conn_msg.mesh() : "";
           String obj_phy = sc.conn_msg.has_physics() ? sc.conn_msg.physics() : "";
-          mLocationService->addLocalObject(obj_id, loc, orient, bnds, obj_mesh, obj_phy);
+          String obj_zernike = sc.conn_msg.has_zernike() ? sc.conn_msg.zernike() : "";
+          
+
+          mLocationService->addLocalObject(obj_id, loc, orient, bnds, obj_mesh, obj_phy, obj_zernike);
 
           // Register proximity query
           // Currently, the preferred way to register the query is to send the
@@ -960,7 +963,8 @@ void Server::handleMigration(const UUID& obj_id)
 
 
     // Update LOC to indicate we have this object locally
-    mLocationService->addLocalObject(obj_id, obj_loc, obj_orient, obj_bounds, obj_mesh, obj_phy);
+    mLocationService->addLocalObject(obj_id, obj_loc, obj_orient, obj_bounds, obj_mesh, obj_phy, ""); 
+    //TAHIR assuming empty zernike descriptor for migrated objects.
 
     //update our oseg to show that we know that we have this object now.
     ServerID idOSegAckTo = (ServerID)migrate_msg->source_server();
@@ -1213,7 +1217,8 @@ void Server::processAlreadyMigrating(const UUID& obj_id)
 
 
     // Update LOC to indicate we have this object locally
-    mLocationService->addLocalObject(obj_id, obj_loc, obj_orient, obj_bounds, obj_mesh, obj_phy);
+    mLocationService->addLocalObject(obj_id, obj_loc, obj_orient, obj_bounds, obj_mesh, obj_phy, ""); 
+    //Assuming empty zernike descriptor for migrating objects: TAHIR
 
     //update our oseg to show that we know that we have this object now.
     OSegEntry idOSegAckTo ((ServerID)migrate_msg->source_server(),migrate_msg->bounds().radius());

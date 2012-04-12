@@ -59,7 +59,7 @@ class SIRIKATA_SPACE_EXPORT LocationServiceListener {
 public:
     virtual ~LocationServiceListener();
 
-    virtual void localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics) {}
+    virtual void localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics, const String& zernike) {}
     virtual void localObjectRemoved(const UUID& uuid, bool agg) {}
     virtual void localLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval) {}
     virtual void localOrientationUpdated(const UUID& uuid, bool agg, const TimedMotionQuaternion& newval) {}
@@ -67,7 +67,7 @@ public:
     virtual void localMeshUpdated(const UUID& uuid, bool agg, const String& newval) {}
     virtual void localPhysicsUpdated(const UUID& uuid, bool agg, const String& newval) {}
 
-    virtual void replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics) {}
+    virtual void replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics, const String& zernike) {}
     virtual void replicaObjectRemoved(const UUID& uuid) {}
     virtual void replicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) {}
     virtual void replicaOrientationUpdated(const UUID& uuid, const TimedMotionQuaternion& newval) {}
@@ -159,7 +159,7 @@ public:
     virtual const String& physics(const UUID& uuid) = 0;
 
     /** Methods dealing with local objects. */
-    virtual void addLocalObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics) = 0;
+    virtual void addLocalObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics, const String& zernike) = 0;
     virtual void removeLocalObject(const UUID& uuid) = 0;
 
     /** Aggregate objects are handled separately from other local objects.  All
@@ -179,7 +179,7 @@ public:
     virtual void updateLocalAggregatePhysics(const UUID& uuid, const String& newval) = 0;
 
     /** Methods dealing with replica objects. */
-    virtual void addReplicaObject(const Time& t, const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics) = 0;
+    virtual void addReplicaObject(const Time& t, const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics, const String& zernike) = 0;
     virtual void removeReplicaObject(const Time& t, const UUID& uuid) = 0;
 
     /** Methods dealing with listeners. */
@@ -216,7 +216,7 @@ protected:
     virtual void poll();
     virtual void service() = 0;
 
-    void notifyLocalObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics) const;
+    void notifyLocalObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics, const String& zernike) const;
     void notifyLocalObjectRemoved(const UUID& uuid, bool agg) const;
     void notifyLocalLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval) const;
     void notifyLocalOrientationUpdated(const UUID& uuid, bool agg, const TimedMotionQuaternion& newval) const;
@@ -224,7 +224,7 @@ protected:
     void notifyLocalMeshUpdated(const UUID& uuid, bool agg, const String& newval) const;
     void notifyLocalPhysicsUpdated(const UUID& uuid, bool agg, const String& newval) const;
 
-    void notifyReplicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics) const;
+    void notifyReplicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics, const String& zernike) const;
     void notifyReplicaObjectRemoved(const UUID& uuid) const;
     void notifyReplicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) const;
     void notifyReplicaOrientationUpdated(const UUID& uuid, const TimedMotionQuaternion& newval) const;

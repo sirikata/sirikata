@@ -64,6 +64,11 @@
 #include <boost/asio.hpp> //htons, ntohs
 
 
+#include <sirikata/core/transfer/TransferData.hpp>
+#include <sirikata/core/transfer/RemoteFileMetadata.hpp>
+#include <sirikata/core/transfer/TransferPool.hpp>
+#include <sirikata/core/transfer/TransferMediator.hpp>
+
 namespace Sirikata {
 
 class LocUpdate;
@@ -89,12 +94,29 @@ class PerPresenceData;
 typedef std::tr1::weak_ptr<HostedObject> HostedObjectWPtr;
 typedef std::tr1::shared_ptr<HostedObject> HostedObjectPtr;
 
+
 class SIRIKATA_OH_EXPORT HostedObject
     : public VWObject,
       public Service
 {
-  private:
-  struct PrivateCallbacks;
+private:
+  struct PrivateCallbacks; 
+
+    typedef struct OHConnectInfo{
+    public:
+      SpaceID spaceID;
+      Location startingLocation;
+      BoundingSphere3f meshBounds;
+      String mesh;
+      String physics;
+      String query;      
+      ObjectReference orefID;
+      int64 token;
+      String zernike;
+      } OHConnectInfo;
+    typedef std::tr1::shared_ptr<OHConnectInfo> OHConnectInfoPtr;
+
+protected:
 
     ObjectHostContext* mContext;
     const UUID mID;
@@ -110,7 +132,10 @@ class SIRIKATA_OH_EXPORT HostedObject
 
     typedef boost::mutex Mutex;
     Mutex presenceDataMutex;
-    Mutex notifyMutex;
+    Mutex notifyMutex;    
+
+    std::tr1::shared_ptr<Transfer::TransferPool> mTransferPool;
+    Transfer::TransferMediator *mTransferMediator;
 
     friend class ::Sirikata::SelfWeakPtr<VWObject>;
     friend class PerPresenceData;
@@ -215,6 +240,35 @@ public:
         const ObjectReference& orefID = ObjectReference::null(),
         PresenceToken token = DEFAULT_PRESENCE_TOKEN);
 
+
+    void objectHostConnectIndirect(OHConnectInfoPtr oci) {
+      bool ret = objectHostConnect(oci->spaceID, oci->startingLocation, oci->meshBounds,
+                                   oci->mesh, oci->physics, oci->query, oci->zernike, 
+                                   oci->orefID, oci->token);
+    }
+
+    
+
+    bool objectHostConnect(
+        const SpaceID spaceID,
+        const Location startingLocation,
+        const BoundingSphere3f meshBounds,
+        const String mesh,
+        const String physics,
+        const String query,
+        const String zernike,        
+        const ObjectReference orefID,
+        PresenceToken token = DEFAULT_PRESENCE_TOKEN);
+
+    bool downloadZernikeDescriptor(OHConnectInfoPtr ocip, uint8 n_retry=0);
+
+    void metadataDownloaded(
+        OHConnectInfoPtr ocip,
+        uint8 retryCount,
+        std::tr1::shared_ptr<Transfer::MetadataRequest> request,
+        std::tr1::shared_ptr<Transfer::RemoteFileMetadata> response);
+
+ 
     /// Disconnects from the given space by terminating the corresponding substream.
     void disconnectFromSpace(const SpaceID &spaceID, const ObjectReference& oref);
 

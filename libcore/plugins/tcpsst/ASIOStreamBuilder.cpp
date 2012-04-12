@@ -33,6 +33,8 @@
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/network/Asio.hpp>
 #include <sirikata/core/network/IOStrandImpl.hpp>
+#include <sirikata/core/util/Hash.hpp>
+#include <sirikata/core/util/Base64.hpp>
 #include "TCPStream.hpp"
 #include "ASIOSocketWrapper.hpp"
 #include "MultiplexedSocket.hpp"
@@ -43,7 +45,7 @@
 #include <sirikata/core/util/Md5.hpp>
 
 #include <boost/lexical_cast.hpp>
-
+#include "CheckWebSocketHeader.hpp"
 namespace Sirikata {
 namespace Network {
 namespace ASIOStreamBuilder{
@@ -136,17 +138,15 @@ void buildStream(TcpSstHeaderArray *buffer,
     // Sanity check end: 8 bytes from WebSocket spec after headers, then
     // \r\n\r\n before that.
     std::string buffer_str((const char*)buffer->begin(), bytes_transferred);
-    if (buffer_str[ bytes_transferred - 12] != '\r' ||
-        buffer_str[ bytes_transferred - 11] != '\n' ||
-        buffer_str[ bytes_transferred - 10] != '\r' ||
-        buffer_str[ bytes_transferred - 9] != '\n')
-    {
+
+    std::string::size_type pos = buffer_str.find("\r\n\r\n");
+    if (pos == std::string::npos || pos < buffer_str.size() - 12) {
         SILOG(tcpsst,warning,"Request doesn't end properly:\n" << buffer_str << "\n");
         delete socket;
         return;
     }
+    std::string headers_str = buffer_str.substr(0, pos + 2);
 
-    std::string headers_str = buffer_str.substr(0, bytes_transferred - 10);
     // Parse headers
     UUID context;
     std::map<std::string, std::string> headers;
@@ -183,13 +183,18 @@ void buildStream(TcpSstHeaderArray *buffer,
             continue;
         }
 
-        std::string::size_type colon = line.find(":");
+        // FIXME: We should be stripping whitespace properly...
+        std::string::size_type colon = line.find(": ");
         if (colon == std::string::npos) {
             SILOG(tcpsst,warning,"Error parsing headers: missing colon.");
             delete socket;
             return;
         }
         std::string head = line.substr(0, colon);
+        for (std::string::size_type i = 0; i < head.length(); ++i)
+        {
+            head[i] = tolower(head[i]);
+        }
         std::string val = line.substr(colon+2);
 
         headers[head] = val;
@@ -198,30 +203,74 @@ void buildStream(TcpSstHeaderArray *buffer,
         offset += 2;
     }
 
-    if (headers.find("Host") == headers.end() ||
-        headers.find("Origin") == headers.end() ||
-        headers.find("Sec-WebSocket-Key1") == headers.end() ||
-        headers.find("Sec-WebSocket-Key2") == headers.end())
+    int wsversion = 0;
+    {
+        const std::string &verstr = headers["sec-websocket-version"];
+        std::istringstream str(verstr);
+        str >> wsversion;
+    }
+    if (headers.find("host") == headers.end() ||
+        headers.find("origin") == headers.end())
     {
         SILOG(tcpsst,warning,"Connection request didn't specify all required fields.");
         delete socket;
         return;
     }
-
-    std::string host = headers["Host"];
-    std::string origin = headers["Origin"];
+    std::string host = headers["host"];
+    std::string origin = headers["origin"];
     std::string protocol = "wssst1";
-    if (headers.find("Sec-WebSocket-Protocol") != headers.end())
-        protocol = headers["Sec-WebSocket-Protocol"];
-    std::string key1 = headers["Sec-WebSocket-Key1"];
-    std::string key2 = headers["Sec-WebSocket-Key2"];
-    std::string key3 = buffer_str.substr(bytes_transferred - 8);
-    assert(key3.size() == 8);
-
-    std::string reply_str = getWebSocketSecReply(key1, key2, key3);
-
-    bool binaryStream=protocol.find("sst")==0;
-    bool base64Stream=!binaryStream;
+    if (headers.find("sec-websocket-protocol") != headers.end())
+        protocol = headers["sec-websocket-protocol"];
+    std::string reply_str;
+    TCPStream::StreamType streamType = TCPStream::LENGTH_DELIM;
+    if (wsversion == 0)
+    {
+        if (headers.find("sec-websocket-key1") == headers.end() ||
+            headers.find("sec-websocket-key2") == headers.end())
+        {
+            SILOG(tcpsst,warning,"WS-76 connection request didn't specify key.");
+            delete socket;
+            return;
+        }
+        std::string key1 = headers["sec-websocket-key1"];
+        std::string key2 = headers["sec-websocket-key2"];
+        // FIXME: This is safe because we check that these 8 bytes exist if
+        // no Sec-WebSocket-Version header is present.
+        // See CheckWebSocketRequest.
+        std::string key3 = buffer_str.substr(bytes_transferred - 8);
+        assert(key3.size() == 8);
+        reply_str = getWebSocketSecReply(key1, key2, key3);
+        bool binaryStream=protocol.find("sst")==0;
+        if (!binaryStream) {
+            streamType = TCPStream::BASE64_ZERODELIM;
+        }
+    }
+    else if (wsversion >= 13)
+    {
+        if (headers.find("sec-websocket-key") == headers.end())
+        {
+            SILOG(tcpsst,warning,"WS Version " << wsversion << " connection request didn't specify key.");
+            delete socket;
+            return;
+        }
+        std::string key = headers["sec-websocket-key"] + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+        unsigned int shasum[5] = {0};
+        std::string shasumbytes(20, '\0');
+        Sha1(key.data(), key.length(), shasum);
+        for (int i = 0; i < 5; i++) {
+            shasumbytes[(i * 4)] = (shasum[i] >> 24);
+            shasumbytes[(i * 4) + 1] = ((shasum[i] >> 16) & 0xff);
+            shasumbytes[(i * 4) + 2] = ((shasum[i] >> 8) & 0xff);
+            shasumbytes[(i * 4) + 3] = (shasum[i] & 0xff);
+        }
+        reply_str = Base64::encode(shasumbytes);
+        streamType = TCPStream::RFC_6455;
+    } else {
+        SILOG(tcpsst,warning,"Unsupported Websocket Version " << wsversion);
+        // FIXME: Send 400 Bad Request with "Sec-WebSocket-Version: 13" to tell clients to renegotiate an older version.
+        delete socket;
+        return;
+    }
     boost::asio::ip::tcp::no_delay option(data->mNoDelay);
     socket->set_option(option);
     IncompleteStreamMap::iterator where=sIncompleteStreams.find(context);
@@ -265,11 +314,11 @@ void buildStream(TcpSstHeaderArray *buffer,
         where->second.mWebSocketResponses[socket] = reply_str;
         if (numConnections==(unsigned int)where->second.mSockets.size()) {
             MultiplexedSocketPtr shared_socket(
-                MultiplexedSocket::construct<MultiplexedSocket>(data->strand,context,data->cb,base64Stream));
+                MultiplexedSocket::construct<MultiplexedSocket>(data->strand,context,data->cb,streamType));
             shared_socket->initFromSockets(where->second.mSockets,data->mSendBufferSize);
             std::string port=shared_socket->getASIOSocketWrapper(0).getLocalEndpoint().getService();
             std::string resource_name='/'+context.toString();
-            MultiplexedSocket::sendAllProtocolHeaders(shared_socket,origin,host,port,resource_name,protocol, where->second.mWebSocketResponses);
+            MultiplexedSocket::sendAllProtocolHeaders(shared_socket,origin,host,port,resource_name,protocol, where->second.mWebSocketResponses,streamType);
             sIncompleteStreams.erase(where);
 
 
@@ -288,42 +337,13 @@ void buildStream(TcpSstHeaderArray *buffer,
     }
 }
 
-namespace {
-
-class CheckWebSocketRequest {
-    const Array<uint8,TCPStream::MaxWebSocketHeaderSize> *mArray;
-    typedef boost::system::error_code ErrorCode;
-    uint32 mTotal;
-public:
-    CheckWebSocketRequest(const Array<uint8,TCPStream::MaxWebSocketHeaderSize>*array) {
-        mArray=array;
-        mTotal = 0;
-    }
-    size_t operator() (const ErrorCode& error, size_t bytes_transferred) {
-        if (error) return 0;
-
-        mTotal += bytes_transferred;
-
-        if (mTotal >= 12 &&
-            (*mArray)[mTotal - 12] == '\r' &&
-            (*mArray)[mTotal - 11] == '\n' &&
-            (*mArray)[mTotal - 10] == '\r' &&
-            (*mArray)[mTotal - 9] == '\n')
-        {
-            return 0;
-        }
-        return 65536;
-    }
-};
-} // namespace
-
 void beginNewStream(TCPSocket*socket, std::tr1::shared_ptr<TCPStreamListener::Data> data) {
 
     TcpSstHeaderArray *buffer = new TcpSstHeaderArray;
 
     boost::asio::async_read(*socket,
                             boost::asio::buffer(buffer->begin(),(int)TCPStream::MaxWebSocketHeaderSize>(int)ASIOReadBuffer::sBufferLength?(int)ASIOReadBuffer::sBufferLength:(int)TCPStream::MaxWebSocketHeaderSize),
-                            CheckWebSocketRequest (buffer),
+                            CheckWebSocketHeader (buffer,false),
         data->strand->wrap( std::tr1::bind(&ASIOStreamBuilder::buildStream,buffer,socket,data,_1,_2) )
         );
 }

@@ -114,7 +114,7 @@ void ObjectHost::connect(
     }
 
     mSessionManager.connect(
-        sporef, init_loc, init_orient, init_bounds, "", "", query,
+        sporef, init_loc, init_orient, init_bounds, "", "", query,"",
 	std::tr1::bind(&ObjectHost::dispatchConnectedCallback, this, _1, _2, _3, connect_cb),
 	migrate_cb, stream_created_cb, disconnected_cb
     );
@@ -138,7 +138,7 @@ void ObjectHost::connect(
     SpaceObjectReference sporef(SpaceID::null(),ObjectReference(obj->uuid()));
 
     mSessionManager.connect(
-        sporef, init_loc, init_orient, init_bounds, "", "", "",
+        sporef, init_loc, init_orient, init_bounds, "", "", "", "",
 	std::tr1::bind(&ObjectHost::dispatchConnectedCallback, this, _1, _2, _3, connect_cb),
         migrate_cb, stream_created_cb, disconnected_cb
     );

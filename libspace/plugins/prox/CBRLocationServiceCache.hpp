@@ -36,6 +36,7 @@
 #include "ProxSimulationTraits.hpp"
 #include <sirikata/space/LocationService.hpp>
 #include <prox/base/LocationServiceCache.hpp>
+#include <prox/base/ZernikeDescriptor.hpp>
 
 namespace Sirikata {
 
@@ -68,7 +69,8 @@ public:
     virtual BoundingSphere3f region(const Iterator& id);
     virtual float32 maxSize(const Iterator& id);
     virtual bool isLocal(const Iterator& id);
-    
+    Prox::ZernikeDescriptor& zernikeDescriptor(const Iterator& id);
+    String mesh(const Iterator& id);
 
     virtual const UUID& iteratorID(const Iterator& id);
 
@@ -82,17 +84,19 @@ public:
     float32 radius(const ObjectID& id) const;
     const String& mesh(const ObjectID& id) const;
     const String& physics(const ObjectID& id) const;
+
     const bool isAggregate(const ObjectID& id) const;
 
+
     /* LocationServiceListener members. */
-    virtual void localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics);
+  virtual void localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics, const String& zernike);
     virtual void localObjectRemoved(const UUID& uuid, bool agg);
     virtual void localLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval);
     virtual void localOrientationUpdated(const UUID& uuid, bool agg, const TimedMotionQuaternion& newval);
     virtual void localBoundsUpdated(const UUID& uuid, bool agg, const BoundingSphere3f& newval);
     virtual void localMeshUpdated(const UUID& uuid, bool agg, const String& newval);
     virtual void localPhysicsUpdated(const UUID& uuid, bool agg, const String& newval);
-    virtual void replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics);
+  virtual void replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics, const String& zernike);
     virtual void replicaObjectRemoved(const UUID& uuid);
     virtual void replicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval);
     virtual void replicaOrientationUpdated(const UUID& uuid, const TimedMotionQuaternion& newval);
@@ -101,9 +105,32 @@ public:
     virtual void replicaPhysicsUpdated(const UUID& uuid, const String& newval);
 
 private:
+    // Object data is only accessed in the prox thread (by libprox
+    // and by this class when updates are passed by the main thread).
+    // Therefore, this data does *NOT* need to be locked for access.
+    struct ObjectData {
+        TimedMotionVector3f location;
+        TimedMotionQuaternion orientation;
+        // The raw bounding volume.
+        BoundingSphere3f bounds;
+        // "Region" is the center of the object's bounding region, with 0 size
+        // for the bounding sphere.
+        BoundingSphere3f region;
+        // MaxSize is the size of the object, stored upon bounding region updates.
+        float32 maxSize;
+        // Whether the object is local or a replica
+        bool isLocal;
+        String mesh;
+        String physics;
+        Prox::ZernikeDescriptor zernike;
+        bool exists; // Exists, i.e. xObjectRemoved hasn't been called
+        int16 tracking; // Ref count to support multiple users
+        bool isAggregate;
+    };
+
 
     // These generate and queue up updates from the main thread
-    void objectAdded(const UUID& uuid, bool islocal, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics);
+  void objectAdded(const UUID& uuid, bool islocal, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics, const String& zernike);
     void objectRemoved(const UUID& uuid, bool agg);
     void locationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval);
     void orientationUpdated(const UUID& uuid, bool agg, const TimedMotionQuaternion& newval);
@@ -116,7 +143,7 @@ private:
     // on. Although we now have to lock in these, we put them on the strand
     // instead of processing directly in the methods above so that they don't
     // block any other work.
-    void processObjectAdded(const UUID& uuid, bool islocal, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics);
+    void processObjectAdded(const UUID& uuid, ObjectData data);
     void processObjectRemoved(const UUID& uuid, bool agg);
     void processLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval);
     void processOrientationUpdated(const UUID& uuid, bool agg, const TimedMotionQuaternion& newval);
@@ -137,27 +164,6 @@ private:
     typedef std::set<LocationUpdateListener*> ListenerSet;
     ListenerSet mListeners;
 
-    // Object data is only accessed in the prox thread (by libprox
-    // and by this class when updates are passed by the main thread).
-    // Therefore, this data does *NOT* need to be locked for access.
-    struct ObjectData {
-        TimedMotionVector3f location;
-        TimedMotionQuaternion orientation;
-        // The raw bounding volume.
-        BoundingSphere3f bounds;
-        // "Region" is the center of the object's bounding region, with 0 size
-        // for the bounding sphere.
-        BoundingSphere3f region;
-        // MaxSize is the size of the object, stored upon bounding region updates.
-        float32 maxSize;
-        // Whether the object is local or a replica
-        bool isLocal;
-        String mesh;
-        String physics;
-        bool exists; // Exists, i.e. xObjectRemoved hasn't been called
-        int16 tracking; // Ref count to support multiple users
-        bool isAggregate;
-    };
     typedef std::tr1::unordered_map<UUID, ObjectData, UUID::Hasher> ObjectDataMap;
     ObjectDataMap mObjects;
     bool mWithReplicas;

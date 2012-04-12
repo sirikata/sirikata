@@ -696,21 +696,6 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
       );
 
 
-  //Keep the meshstore's memory usage under control.
-  {
-    boost::mutex::scoped_lock meshStoreLock(mMeshStoreMutex);
-    if (mMeshStore.size() > 200) {
-      int randIterations = rand() % mMeshStore.size();
-      std::tr1::unordered_map<String, Mesh::MeshdataPtr>::iterator it = mMeshStore.begin();
-      for (int i = 0; i < randIterations; i++) {
-	      it++;
-      }
-
-      mMeshStore.erase(it);
-    }
-  }
-
-
   return GEN_SUCCESS;
 }
 
@@ -820,7 +805,7 @@ void AggregateManager::uploadAggregateMesh(Mesh::MeshdataPtr agg_mesh,
 
       // Busy wait until request finishes
       while(!finished.read()) {
-          Timer::sleep(Duration::milliseconds(100));
+          Timer::sleep(Duration::milliseconds(30));
       }
 
       if (generated_uri.empty()) {
@@ -955,6 +940,24 @@ void AggregateManager::chunkFinished(Time t, const UUID uuid, const UUID child_u
 
         {
           boost::mutex::scoped_lock meshStoreLock(mMeshStoreMutex);
+
+          //Store the mesh but keep the meshstore's size under control.
+          if (mMeshStore.size() > 10000) {
+            std::vector<String> listOfMeshes;
+            std::tr1::unordered_map<String, Mesh::MeshdataPtr>::iterator it = mMeshStore.begin();
+            for (; it != mMeshStore.end(); it++) {
+              listOfMeshes.push_back(it->first);
+            }
+
+            while (mMeshStore.size() > 10000) {
+              String randomMeshName = listOfMeshes[rand() % listOfMeshes.size()];
+
+              MeshdataPtr m = mMeshStore[randomMeshName];
+              if (m) {
+                mMeshStore.erase(randomMeshName);
+              }
+            }
+          }
 
           mMeshStore[request->getURI().toString()] = m;
 

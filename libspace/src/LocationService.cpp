@@ -227,10 +227,10 @@ void LocationService::unsubscribe(const UUID& remote) {
     mUpdatePolicy->unsubscribe(remote);
 }
 
-void LocationService::notifyLocalObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics) const {
+void LocationService::notifyLocalObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics, const String& zernike) const {
     for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++)
         if (!agg || it->wantAggregates)
-            it->listener->localObjectAdded(uuid, agg, loc, orient, bounds, mesh, physics);
+          it->listener->localObjectAdded(uuid, agg, loc, orient, bounds, mesh, physics, zernike);
 }
 
 void LocationService::notifyLocalObjectRemoved(const UUID& uuid, bool agg) const {
@@ -272,9 +272,9 @@ void LocationService::notifyLocalPhysicsUpdated(const UUID& uuid, bool agg, cons
 }
 
 
-void LocationService::notifyReplicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics) const {
+void LocationService::notifyReplicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics, const String& zernike) const {
     for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++)
-        it->listener->replicaObjectAdded(uuid, loc, orient, bounds, mesh, physics);
+      it->listener->replicaObjectAdded(uuid, loc, orient, bounds, mesh, physics, zernike);
 }
 
 void LocationService::notifyReplicaObjectRemoved(const UUID& uuid) const {

@@ -41,36 +41,9 @@
 #include "TCPStream.hpp"
 #include "MultiplexedSocket.hpp"
 #include "ASIOConnectAndHandshake.hpp"
+#include "CheckWebSocketHeader.hpp"
 namespace Sirikata { namespace Network {
 using namespace boost::asio::ip;
-
-namespace {
-class CheckWebSocketReply {
-    const Array<uint8,TCPStream::MaxWebSocketHeaderSize> *mArray;
-    typedef boost::system::error_code ErrorCode;
-    uint32 mTotal;
-public:
-    CheckWebSocketReply(const Array<uint8,TCPStream::MaxWebSocketHeaderSize>*array) {
-        mArray=array;
-        mTotal = 0;
-    }
-    size_t operator() (const ErrorCode& error, size_t bytes_transferred) {
-        if (error) return 0;
-
-        mTotal += bytes_transferred;
-
-        if (mTotal >= 20 &&
-            (*mArray)[mTotal - 20] == '\r' &&
-            (*mArray)[mTotal - 19] == '\n' &&
-            (*mArray)[mTotal - 18] == '\r' &&
-            (*mArray)[mTotal - 17] == '\n')
-        {
-            return 0;
-        }
-        return 65536;
-    }
-};
-} // namespace
 
     void ASIOConnectAndHandshake::checkHeaderContents(const std::tr1::shared_ptr<MultiplexedSocket>&connection,
 						      bool noDelay,
@@ -79,11 +52,10 @@ public:
                                                   const ErrorCode&error,
                                                   std::size_t bytes_received) {
     if (connection) {
-        char normalMode[]={0x48, 0x54, 0x54, 0x50, 0x2F, 0x31, 0x2E, 0x31, 0x20, 0x31, 0x30, 0x31, 0x20, 0x57, 0x65, 0x62,
-                           0x20, 0x53, 0x6F, 0x63, 0x6B, 0x65, 0x74, 0x20, 0x50, 0x72, 0x6F, 0x74, 0x6F, 0x63, 0x6F, 0x6C,
-                           0x20, 0x48, 0x61, 0x6E, 0x64, 0x73, 0x68, 0x61, 0x6B, 0x65, 0x0D, 0x0A,'\0'};
+        char normalMode[]="HTTP/1.1 101 Web Socket Protocol Handshake\r\n";
+
         size_t whereHeaderEnds=3;
-        for (;whereHeaderEnds<bytes_received;++whereHeaderEnds) {
+        for (;whereHeaderEnds+1<bytes_received;++whereHeaderEnds) {
             if ((*buffer)[whereHeaderEnds]=='\n'&&
                 (*buffer)[whereHeaderEnds-1]=='\r'&&
                 (*buffer)[whereHeaderEnds-2]=='\n'&&
@@ -102,11 +74,20 @@ public:
                 if (mFinishedCheckCount==0) {
                     connection->connectedCallback();
                 }
-
-                // Note we shift an additional 16 bytes, ignoring the required
-                // WebSocket md5 response
-                MemoryReference mb(buffer->begin()+whereHeaderEnds+1+16,bytes_received-(whereHeaderEnds+1+16));
-                MakeASIOReadBuffer(connection,whichSocket,mb);
+                if (connection->getStreamType()==Sirikata::Network::TCPStream::RFC_6455) {
+                    ptrdiff_t diff = whereHeaderEnds+1;
+                    MemoryReference mb(buffer->begin()+diff,bytes_received-diff);
+                    MakeASIOReadBuffer(connection,whichSocket,mb, connection->getStreamType());
+                }else {
+                    // Note we shift an additional 16 bytes, ignoring the required
+                    // WebSocket md5 response
+                    ptrdiff_t diff = whereHeaderEnds+1+16;
+                    if ((ptrdiff_t)bytes_received<diff) {
+                        diff = bytes_received;
+                    }
+                    MemoryReference mb(buffer->begin()+diff,bytes_received-diff);
+                    MakeASIOReadBuffer(connection,whichSocket,mb, connection->getStreamType());
+                }
             }else {
                 mFinishedCheckCount-=1;
             }
@@ -169,7 +150,7 @@ void ASIOConnectAndHandshake::connectToIPAddress(const ASIOConnectAndHandshakePt
                                 thus->mHeaderUUID,
                                 connection->numSockets());
         Array<uint8,TCPStream::MaxWebSocketHeaderSize> *header=new Array<uint8,TCPStream::MaxWebSocketHeaderSize>;
-        CheckWebSocketReply headerCheck(header);
+        CheckWebSocketHeader headerCheck(header,true);
         boost::asio::async_read(connection->getASIOSocketWrapper(whichSocket).getSocket(),
                                 boost::asio::buffer(header->begin(),(int)TCPStream::MaxWebSocketHeaderSize>(int)ASIOReadBuffer::sBufferLength?(int)ASIOReadBuffer::sBufferLength:(int)TCPStream::MaxWebSocketHeaderSize),
                                 headerCheck,

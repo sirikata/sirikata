@@ -229,9 +229,11 @@ MD5::MD5(unsigned char *string, unsigned int input_length) {
 
 unsigned char *MD5::raw_digest(){
     if (!finalized){
+        static unsigned char null_digest[16]={0};
         std::cerr << "MD5::raw_digest:  Can't get digest if you haven't "<<
             "finalized the digest!" << std::endl;
-        return ( (unsigned char*) "");
+        assert(false);
+        return null_digest;
     }
 
     return digest;
@@ -242,11 +244,12 @@ unsigned char *MD5::raw_digest(){
 char *MD5::hex_digest(){
 
     int i;
-
     if (!finalized){
+        static char null_digest[33]={0};
         std::cerr << "MD5::hex_digest:  Can't get digest if you haven't "<<
             "finalized the digest!" << std::endl;
-        return "";
+        assert(false);
+        return null_digest;
     }
 
     for (i=0; i<16; i++)

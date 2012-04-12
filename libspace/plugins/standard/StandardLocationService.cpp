@@ -123,7 +123,7 @@ const String& StandardLocationService::physics(const UUID& uuid) {
     return locinfo.physics_copied_str;
 }
 
-void StandardLocationService::addLocalObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& msh, const String& phy) {
+  void StandardLocationService::addLocalObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& msh, const String& phy, const String& zernike) {
     LocationMap::iterator it = mLocations.find(uuid);
 
     // Add or update the information to the cache
@@ -152,7 +152,7 @@ void StandardLocationService::addLocalObject(const UUID& uuid, const TimedMotion
 
     // Add to the list of local objects
     CONTEXT_SPACETRACE(serverObjectEvent, mContext->id(), mContext->id(), uuid, true, loc);
-    notifyLocalObjectAdded(uuid, false, location(uuid), orientation(uuid), bounds(uuid), mesh(uuid), physics(uuid));
+    notifyLocalObjectAdded(uuid, false, location(uuid), orientation(uuid), bounds(uuid), mesh(uuid), physics(uuid), zernike);
 }
 
 void StandardLocationService::removeLocalObject(const UUID& uuid) {
@@ -193,7 +193,7 @@ void StandardLocationService::addLocalAggregateObject(const UUID& uuid, const Ti
     locinfo.aggregate = true;
 
     // Add to the list of local objects
-    notifyLocalObjectAdded(uuid, true, location(uuid), orientation(uuid), bounds(uuid), mesh(uuid), physics(uuid));
+    notifyLocalObjectAdded(uuid, true, location(uuid), orientation(uuid), bounds(uuid), mesh(uuid), physics(uuid), "");
 }
 
 void StandardLocationService::removeLocalAggregateObject(const UUID& uuid) {
@@ -242,7 +242,7 @@ void StandardLocationService::updateLocalAggregatePhysics(const UUID& uuid, cons
     notifyLocalPhysicsUpdated( uuid, true, newval );
 }
 
-void StandardLocationService::addReplicaObject(const Time& t, const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& msh, const String& phy) {
+  void StandardLocationService::addReplicaObject(const Time& t, const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& msh, const String& phy, const String& zernike) {
     // FIXME we should do checks on timestamps to decide which setting is "more" sane
     LocationMap::iterator it = mLocations.find(uuid);
 
@@ -277,7 +277,7 @@ void StandardLocationService::addReplicaObject(const Time& t, const UUID& uuid, 
 
         // We only run this notification when the object actually is new
         CONTEXT_SPACETRACE(serverObjectEvent, 0, mContext->id(), uuid, true, loc); // FIXME add remote server ID
-        notifyReplicaObjectAdded(uuid, location(uuid), orientation(uuid), bounds(uuid), mesh(uuid), physics(uuid));
+        notifyReplicaObjectAdded(uuid, location(uuid), orientation(uuid), bounds(uuid), mesh(uuid), physics(uuid), zernike);
     }
 }
 

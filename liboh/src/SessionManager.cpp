@@ -420,7 +420,7 @@ void SessionManager::poll() {
 bool SessionManager::connect(
     const SpaceObjectReference& sporef_objid,
     const TimedMotionVector3f& init_loc, const TimedMotionQuaternion& init_orient, const BoundingSphere3f& init_bounds,
-    const String& init_mesh, const String& init_phy, const String& init_query,
+    const String& init_mesh, const String& init_phy, const String& init_query, const String& init_zernike,
     ConnectedCallback connect_cb, MigratedCallback migrate_cb,
     StreamCreatedCallback stream_created_cb, DisconnectedCallback disconn_cb
 )
@@ -447,6 +447,7 @@ bool SessionManager::connect(
     ci.query = init_query;
     ci.mesh = init_mesh;
     ci.physics = init_phy;
+    ci.zernike = init_zernike;
 
 
     // connect_cb gets wrapped so we can start some automatic steps (initial
@@ -575,6 +576,9 @@ void SessionManager::openConnectionStartSession(const SpaceObjectReference& spor
 
     if (ci.query.size() > 0)
         connect_msg.set_query_parameters( ci.query );
+
+    if (ci.zernike.size() > 0)
+      connect_msg.set_zernike( ci.zernike );
 
     if (!send(sporef_uuid, OBJECT_PORT_SESSION,
               UUID::null(), OBJECT_PORT_SESSION,
