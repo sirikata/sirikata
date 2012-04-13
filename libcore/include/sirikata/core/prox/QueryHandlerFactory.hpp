@@ -22,7 +22,7 @@ namespace Sirikata {
  *  specified and passes them to the query handler constructor.
  */
 template<typename SimulationTraits>
-Prox::QueryHandler<SimulationTraits>* QueryHandlerFactory(const String& type, const String& args) {
+Prox::QueryHandler<SimulationTraits>* QueryHandlerFactory(const String& type, const String& args, bool rebuilding = true) {
     static OptionValue* branching = NULL;
     static OptionValue* rebuild_batch_size = NULL;
     if (branching == NULL) {
@@ -44,29 +44,45 @@ Prox::QueryHandler<SimulationTraits>* QueryHandlerFactory(const String& type, co
     optionsSet->parse(args);
 
     if (type == "brute") {
-        return new Prox::RebuildingQueryHandler<SimulationTraits>(
-            Prox::BruteForceQueryHandler<SimulationTraits>::Constructor(), rebuild_batch_size->unsafeAs<uint32>()
-        );
+        if (rebuilding)
+            return new Prox::RebuildingQueryHandler<SimulationTraits>(
+                Prox::BruteForceQueryHandler<SimulationTraits>::Constructor(), rebuild_batch_size->unsafeAs<uint32>()
+            );
+        else
+            return new Prox::BruteForceQueryHandler<SimulationTraits>();
+
     }
     else if (type == "rtree") {
-        return new Prox::RebuildingQueryHandler<SimulationTraits>(
-            Prox::RTreeAngleQueryHandler<SimulationTraits>::Constructor(branching->unsafeAs<uint32>()), rebuild_batch_size->unsafeAs<uint32>()
-        );
+        if (rebuilding)
+            return new Prox::RebuildingQueryHandler<SimulationTraits>(
+                Prox::RTreeAngleQueryHandler<SimulationTraits>::Constructor(branching->unsafeAs<uint32>()), rebuild_batch_size->unsafeAs<uint32>()
+            );
+        else
+            return new Prox::RTreeAngleQueryHandler<SimulationTraits>(branching->unsafeAs<uint32>());
     }
     else if (type == "rtreedist" || type == "dist") {
-        return new Prox::RebuildingQueryHandler<SimulationTraits>(
-            Prox::RTreeDistanceQueryHandler<SimulationTraits>::Constructor(branching->unsafeAs<uint32>()), rebuild_batch_size->unsafeAs<uint32>()
-        );
+        if (rebuilding)
+            return new Prox::RebuildingQueryHandler<SimulationTraits>(
+                Prox::RTreeDistanceQueryHandler<SimulationTraits>::Constructor(branching->unsafeAs<uint32>()), rebuild_batch_size->unsafeAs<uint32>()
+            );
+        else
+            return new Prox::RTreeDistanceQueryHandler<SimulationTraits>(branching->unsafeAs<uint32>());
     }
     else if (type == "rtreecut") {
-        return new Prox::RebuildingQueryHandler<SimulationTraits>(
-            Prox::RTreeCutQueryHandler<SimulationTraits>::Constructor(branching->unsafeAs<uint32>(), false), rebuild_batch_size->unsafeAs<uint32>()
-        );
+        if (rebuilding)
+            return new Prox::RebuildingQueryHandler<SimulationTraits>(
+                Prox::RTreeCutQueryHandler<SimulationTraits>::Constructor(branching->unsafeAs<uint32>(), false), rebuild_batch_size->unsafeAs<uint32>()
+            );
+        else
+            return new Prox::RTreeCutQueryHandler<SimulationTraits>(branching->unsafeAs<uint32>(), false);
     }
     else if (type == "rtreecutagg") {
-        return new Prox::RebuildingQueryHandler<SimulationTraits>(
-            Prox::RTreeCutQueryHandler<SimulationTraits>::Constructor(branching->unsafeAs<uint32>(), true), rebuild_batch_size->unsafeAs<uint32>()
-        );
+        if (rebuilding)
+            return new Prox::RebuildingQueryHandler<SimulationTraits>(
+                Prox::RTreeCutQueryHandler<SimulationTraits>::Constructor(branching->unsafeAs<uint32>(), true), rebuild_batch_size->unsafeAs<uint32>()
+            );
+        else
+            return new Prox::RTreeCutQueryHandler<SimulationTraits>(branching->unsafeAs<uint32>(), true);
     }
     else {
         return NULL;

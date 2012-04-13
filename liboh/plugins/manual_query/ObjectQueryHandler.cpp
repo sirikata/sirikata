@@ -51,8 +51,6 @@ ObjectQueryHandler::ObjectQueryHandler(ObjectHostContext* ctx, ManualObjectQuery
    mObjectQueries(),
    mObjectDistance(false),
    mObjectHandlerPoller(mProxStrand.get(), std::tr1::bind(&ObjectQueryHandler::tickQueryHandler, this, mObjectQueryHandler), "ObjectQueryHandler Poller", Duration::milliseconds((int64)100)),
-   mStaticRebuilderPoller(mProxStrand.get(), std::tr1::bind(&ObjectQueryHandler::rebuildHandler, this, OBJECT_CLASS_STATIC), "ObjectQueryHandler Static Rebuilder Poller", Duration::seconds(3600.f)),
-   mDynamicRebuilderPoller(mProxStrand.get(), std::tr1::bind(&ObjectQueryHandler::rebuildHandler, this, OBJECT_CLASS_DYNAMIC), "ObjectQueryHandler Dynamic Rebuilder Poller", Duration::seconds(3600.f)),
    mObjectResults( std::tr1::bind(&ObjectQueryHandler::handleDeliverEvents, this) )
 {
     using std::tr1::placeholders::_1;
@@ -70,7 +68,7 @@ ObjectQueryHandler::ObjectQueryHandler(ObjectHostContext* ctx, ManualObjectQuery
             mObjectQueryHandler[i] = NULL;
             continue;
         }
-        mObjectQueryHandler[i] = QueryHandlerFactory<ObjectProxSimulationTraits>(object_handler_type, object_handler_options);
+        mObjectQueryHandler[i] = QueryHandlerFactory<ObjectProxSimulationTraits>(object_handler_type, object_handler_options, false);
         // No tracking of aggregates -- querying should be using the tree
         // replicated from the server.
         //mObjectQueryHandler[i]->setAggregateListener(this); // *Must* be before handler->initialize
@@ -97,14 +95,10 @@ void ObjectQueryHandler::start() {
     mLocCache->addListener(this);
 
     mObjectHandlerPoller.start();
-    mStaticRebuilderPoller.start();
-    mDynamicRebuilderPoller.start();
 }
 
 void ObjectQueryHandler::stop() {
     mObjectHandlerPoller.stop();
-    mStaticRebuilderPoller.stop();
-    mDynamicRebuilderPoller.stop();
 
     mLocCache->removeListener(this);
 }
@@ -280,7 +274,7 @@ void ObjectQueryHandler::commandListNodes(const Command::Command& cmd, Command::
 
 void ObjectQueryHandler::commandForceRebuild(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {
     Command::Result result = Command::EmptyResult();
-    result.put("error", "Rebuilding manual proximity processors isn't supported yet.");
+    result.put("error", "Rebuilding manual proximity processors doesn't make sense, they use replicated trees.");
     cmdr->result(cmdid, result);
 }
 
@@ -354,10 +348,6 @@ void ObjectQueryHandler::tickQueryHandler(ProxQueryHandler* qh[NUM_OBJECT_CLASSE
     }
 }
 
-void ObjectQueryHandler::rebuildHandler(ObjectClass objtype) {
-    if (mObjectQueryHandler[objtype] != NULL)
-        mObjectQueryHandler[objtype]->rebuild();
-}
 
 void ObjectQueryHandler::generateObjectQueryEvents(Query* query) {
     typedef std::deque<QueryEvent> QueryEventList;

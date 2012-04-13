@@ -147,7 +147,6 @@ private:
     // PROX Thread - Should only be accessed in methods used by the prox thread
 
     void tickQueryHandler(ProxQueryHandler* qh[NUM_OBJECT_CLASSES]);
-    void rebuildHandler(ObjectClass objtype);
 
     // These track all objects being reported to this server and
     // answer queries for objects connected to this server.
@@ -156,10 +155,6 @@ private:
     ProxQueryHandler* mObjectQueryHandler[NUM_OBJECT_CLASSES];
     bool mObjectDistance; // Using distance queries
     PollerService mObjectHandlerPoller;
-
-    // Pollers that trigger rebuilding of query data structures
-    PollerService mStaticRebuilderPoller;
-    PollerService mDynamicRebuilderPoller;
 
     // Threads: Thread-safe data used for exchange between threads
     struct ProximityResultInfo {
