@@ -50,6 +50,9 @@
 
 #include <sirikata/core/network/IOStrandImpl.hpp>
 
+// Transfer mediator added to download objects' Zernike descriptors
+#include <sirikata/core/transfer/AggregatedTransferPool.hpp>
+
 #define OH_LOG(lvl,msg) SILOG(oh,lvl,msg)
 
 namespace Sirikata {
@@ -114,6 +117,9 @@ ObjectHost::ObjectHost(ObjectHostContext* ctx, Network::IOService *ioServ, const
         );
 
     }
+
+    mTransferMediator = &(Transfer::TransferMediator::getSingleton());
+    mTransferPool = mTransferMediator->registerClient<Transfer::AggregatedTransferPool>("ObjectHost");
 }
 
 ObjectHost::~ObjectHost()

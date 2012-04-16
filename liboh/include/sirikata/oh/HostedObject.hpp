@@ -132,10 +132,7 @@ protected:
 
     typedef boost::mutex Mutex;
     Mutex presenceDataMutex;
-    Mutex notifyMutex;    
-
-    std::tr1::shared_ptr<Transfer::TransferPool> mTransferPool;
-    Transfer::TransferMediator *mTransferMediator;
+    Mutex notifyMutex;   
 
     friend class ::Sirikata::SelfWeakPtr<VWObject>;
     friend class PerPresenceData;
