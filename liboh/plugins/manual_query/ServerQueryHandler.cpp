@@ -376,6 +376,38 @@ void ServerQueryHandler::handleProximityMessage(const OHDP::SpaceNodeID& snid, c
 }
 
 
+
+// Proximity tracking updates in local queries to trigger adjustments to server query
+void ServerQueryHandler::queriersAreObserving(const OHDP::SpaceNodeID& snid, const ObjectReference& objid) {
+    ServerQueryMap::iterator serv_it = mServerQueries.find(snid);
+    if (serv_it == mServerQueries.end()) {
+        QPLOG(debug, "Received update about object queries on server query that doesn't exist. Query may have recently been destroyed.");
+        return;
+    }
+    ServerQueryStatePtr& query_state = serv_it->second;
+
+    // Someone is observing this node, we should try to refine it
+    sendRefineRequest(serv_it, objid);
+
+    // And make sure we don't have it lined up for coarsening
+
+}
+
+void ServerQueryHandler::queriersStoppedObserving(const OHDP::SpaceNodeID& snid, const ObjectReference& objid) {
+    ServerQueryMap::iterator serv_it = mServerQueries.find(snid);
+    if (serv_it == mServerQueries.end()) {
+        QPLOG(debug, "Received update about object queries on server query that doesn't exist. Query may have recently been destroyed.");
+        return;
+    }
+    ServerQueryStatePtr& query_state = serv_it->second;
+
+    // Nobody is observing this node, we should try to coarsen it after awhile,
+    // but only if it doesn't have children.
+}
+
+
+
+
 // Location
 
 

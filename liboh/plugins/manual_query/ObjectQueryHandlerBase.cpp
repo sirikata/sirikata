@@ -15,10 +15,10 @@ namespace Sirikata {
 namespace OH {
 namespace Manual {
 
-ObjectQueryHandlerBase::ObjectQueryHandlerBase(ObjectHostContext* ctx, ManualObjectQueryProcessor* parent, const SpaceID& space, Network::IOStrandPtr prox_strand, OHLocationServiceCachePtr loc_cache)
+ObjectQueryHandlerBase::ObjectQueryHandlerBase(ObjectHostContext* ctx, ManualObjectQueryProcessor* parent, const OHDP::SpaceNodeID& space, Network::IOStrandPtr prox_strand, OHLocationServiceCachePtr loc_cache)
  : mContext(ctx),
    mParent(parent),
-   mSpace(space),
+   mSpaceNodeID(space),
    mProxStrand(prox_strand),
    mLocCache(loc_cache)
 {

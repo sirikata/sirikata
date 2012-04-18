@@ -19,7 +19,7 @@ class ManualObjectQueryProcessor;
  */
 class ObjectQueryHandlerBase : public Service {
 public:
-    ObjectQueryHandlerBase(ObjectHostContext* ctx, ManualObjectQueryProcessor* parent, const SpaceID& space, Network::IOStrandPtr prox_strand, OHLocationServiceCachePtr loc_cache);
+    ObjectQueryHandlerBase(ObjectHostContext* ctx, ManualObjectQueryProcessor* parent, const OHDP::SpaceNodeID& space, Network::IOStrandPtr prox_strand, OHLocationServiceCachePtr loc_cache);
     ~ObjectQueryHandlerBase();
 
 protected:
@@ -35,7 +35,7 @@ protected:
     // BOTH Threads: These are read-only.
 
     ObjectHostContext* mContext;
-    const SpaceID mSpace;
+    const OHDP::SpaceNodeID mSpaceNodeID;
 
     // To support a static/dynamic split but also support mixing them for
     // comparison purposes track which we are doing and, for most places, use a

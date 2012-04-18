@@ -182,7 +182,7 @@ void ManualObjectQueryProcessor::createdServerQuery(const OHDP::SpaceNodeID& sni
     // can use this to setup the query processor for objects connected to that
     // space server.
     ObjectQueryHandlerPtr obj_query_handler(
-        new ObjectQueryHandler(mContext, this, snid.space(), mStrand, loc_cache)
+        new ObjectQueryHandler(mContext, this, snid, mStrand, loc_cache)
     );
     mObjectQueryHandlers.insert(
         QueryHandlerMap::value_type(
@@ -199,6 +199,16 @@ void ManualObjectQueryProcessor::removedServerQuery(const OHDP::SpaceNodeID& sni
     ObjectQueryHandlerPtr obj_query_handler = it->second;
     mObjectQueryHandlers.erase(it);
     obj_query_handler->stop();
+}
+
+
+
+void ManualObjectQueryProcessor::queriersAreObserving(const OHDP::SpaceNodeID& snid, const ObjectReference& objid) {
+    mServerQueryHandler.queriersAreObserving(snid, objid);
+}
+
+void ManualObjectQueryProcessor::queriersStoppedObserving(const OHDP::SpaceNodeID& snid, const ObjectReference& objid) {
+    mServerQueryHandler.queriersStoppedObserving(snid, objid);
 }
 
 

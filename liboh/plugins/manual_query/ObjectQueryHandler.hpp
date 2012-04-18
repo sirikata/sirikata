@@ -9,6 +9,7 @@
 #include "ProxSimulationTraits.hpp"
 #include "OHLocationUpdateListener.hpp"
 #include <prox/geom/QueryHandler.hpp>
+#include <prox/base/AggregateListener.hpp>
 #include <sirikata/core/queue/ThreadSafeQueueWithNotification.hpp>
 #include <sirikata/core/service/PollerService.hpp>
 #include <sirikata/oh/HostedObject.hpp>
@@ -28,16 +29,18 @@ namespace Manual {
 class ObjectQueryHandler :
         public ObjectQueryHandlerBase,
         Prox::QueryEventListener<ObjectProxSimulationTraits, Prox::Query<ObjectProxSimulationTraits> >,
+        Prox::AggregateListener<ObjectProxSimulationTraits>,
         public OHLocationUpdateListener
 {
 private:
     typedef Prox::QueryHandler<ObjectProxSimulationTraits> ProxQueryHandler;
+    typedef Prox::Aggregator<ObjectProxSimulationTraits> ProxAggregator;
 public:
     // MAIN Thread: All public interface is expected to be called only from the main thread.
     typedef Prox::Query<ObjectProxSimulationTraits> Query;
     typedef Prox::QueryEvent<ObjectProxSimulationTraits> QueryEvent;
 
-    ObjectQueryHandler(ObjectHostContext* ctx, ManualObjectQueryProcessor* parent, const SpaceID& space, Network::IOStrandPtr prox_strand, OHLocationServiceCachePtr loc_cache);
+    ObjectQueryHandler(ObjectHostContext* ctx, ManualObjectQueryProcessor* parent, const OHDP::SpaceNodeID& space, Network::IOStrandPtr prox_strand, OHLocationServiceCachePtr loc_cache);
     ~ObjectQueryHandler();
 
     // MAIN Thread:
@@ -81,7 +84,16 @@ public:
     // QueryEventListener Interface
     void queryHasEvents(Query* query);
 
+    // AggregateListener Interface
+    virtual void aggregateCreated(ProxAggregator* handler, const ObjectReference& objid);
+    virtual void aggregateChildAdded(ProxAggregator* handler, const ObjectReference& objid, const ObjectReference& child, const BoundingSphere3f& bnds);
+    virtual void aggregateChildRemoved(ProxAggregator* handler, const ObjectReference& objid, const ObjectReference& child, const BoundingSphere3f& bnds);
+    virtual void aggregateBoundsUpdated(ProxAggregator* handler, const ObjectReference& objid, const BoundingSphere3f& bnds);
+    virtual void aggregateDestroyed(ProxAggregator* handler, const ObjectReference& objid);
+    virtual void aggregateObserved(ProxAggregator* handler, const ObjectReference& objid, uint32 nobservers);
+
     ProxQueryHandler* getQueryHandler(const String& handler_name);
+
     void commandListInfo(const OHDP::SpaceNodeID& snid, Command::Result& result);
     void commandListNodes(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
     void commandForceRebuild(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);

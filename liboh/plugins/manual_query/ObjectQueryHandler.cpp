@@ -46,7 +46,7 @@ bool parseQueryRequest(const String& query, SolidAngle* qangle_out, uint32* max_
 
 }
 
-ObjectQueryHandler::ObjectQueryHandler(ObjectHostContext* ctx, ManualObjectQueryProcessor* parent, const SpaceID& space, Network::IOStrandPtr prox_strand, OHLocationServiceCachePtr loc_cache)
+ObjectQueryHandler::ObjectQueryHandler(ObjectHostContext* ctx, ManualObjectQueryProcessor* parent, const OHDP::SpaceNodeID& space, Network::IOStrandPtr prox_strand, OHLocationServiceCachePtr loc_cache)
  : ObjectQueryHandlerBase(ctx, parent, space, prox_strand, loc_cache),
    mObjectQueries(),
    mObjectDistance(false),
@@ -69,9 +69,10 @@ ObjectQueryHandler::ObjectQueryHandler(ObjectHostContext* ctx, ManualObjectQuery
             continue;
         }
         mObjectQueryHandler[i] = QueryHandlerFactory<ObjectProxSimulationTraits>(object_handler_type, object_handler_options, false);
-        // No tracking of aggregates -- querying should be using the tree
-        // replicated from the server.
-        //mObjectQueryHandler[i]->setAggregateListener(this); // *Must* be before handler->initialize
+        // Aggregate listening -- really used to learn about queries
+        // observing/no longer observing nodes in the tree so we know when to
+        // coarsen/refine
+        mObjectQueryHandler[i]->setAggregateListener(this); // *Must* be before handler->initialize
         bool object_static_objects = (mSeparateDynamicObjects && i == OBJECT_CLASS_STATIC);
         mObjectQueryHandler[i]->initialize(
             mLocCache.get(), mLocCache.get(),
@@ -186,7 +187,7 @@ void ObjectQueryHandler::handleDeliverEvents() {
         }
 
         // And deliver the results
-        mParent->deliverProximityResult(SpaceObjectReference(mSpace, info.querier), *(info.results));
+        mParent->deliverProximityResult(SpaceObjectReference(mSpaceNodeID.space(), info.querier), *(info.results));
         delete info.results;
     }
 }
@@ -208,10 +209,10 @@ void ObjectQueryHandler::handleNotifySubscribersLocUpdate(const ObjectReference&
             // epoch information.
             if (querier == oref) {
                 PresencePropertiesLocUpdateWithEpoch lu_ep( oref, mLocCache->properties(oref), true, mLocCache->epoch(oref) );
-                mParent->deliverLocationResult(SpaceObjectReference(mSpace, querier), lu_ep);
+                mParent->deliverLocationResult(SpaceObjectReference(mSpaceNodeID.space(), querier), lu_ep);
             }
             else {
-                mParent->deliverLocationResult(SpaceObjectReference(mSpace, querier), lu);
+                mParent->deliverLocationResult(SpaceObjectReference(mSpaceNodeID.space(), querier), lu);
             }
         }
 
@@ -223,6 +224,36 @@ void ObjectQueryHandler::handleNotifySubscribersLocUpdate(const ObjectReference&
 
 void ObjectQueryHandler::queryHasEvents(Query* query) {
     generateObjectQueryEvents(query);
+}
+
+// AggregateListener Interface
+// This class only uses this information to track observed nodes so we can
+// let the parent class know when to refine/coarsen the query with the server.
+void ObjectQueryHandler::aggregateCreated(ProxAggregator* handler, const ObjectReference& objid) {}
+
+void ObjectQueryHandler::aggregateChildAdded(ProxAggregator* handler, const ObjectReference& objid, const ObjectReference& child, const BoundingSphere3f& bnds) {}
+
+void ObjectQueryHandler::aggregateChildRemoved(ProxAggregator* handler, const ObjectReference& objid, const ObjectReference& child, const BoundingSphere3f& bnds) {}
+
+void ObjectQueryHandler::aggregateBoundsUpdated(ProxAggregator* handler, const ObjectReference& objid, const BoundingSphere3f& bnds) {}
+
+void ObjectQueryHandler::aggregateDestroyed(ProxAggregator* handler, const ObjectReference& objid) {}
+
+void ObjectQueryHandler::aggregateObserved(ProxAggregator* handler, const ObjectReference& objid, uint32 nobservers) {
+    // We care about nodes being observed (i.e. having cuts through them)
+    // because it means that somebody local still cares about them, so we should
+    // try to keep it around as long as the server lets us. The two events we
+    // care about is when the number of observers becomes 0 (all observers have
+    // left) or 1 (we have an observer, so we start trying to keep it around).
+    //
+    // Note that we don't have to post anything here currently because we should
+    // be in the same strand as the parent
+    if (nobservers == 1) {
+        mParent->queriersAreObserving(mSpaceNodeID, objid);
+    }
+    else if (nobservers == 0) {
+        mParent->queriersStoppedObserving(mSpaceNodeID, objid);
+    }
 }
 
 

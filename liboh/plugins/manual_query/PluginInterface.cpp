@@ -19,7 +19,7 @@ static void InitPluginOptions() {
     InitializeClassOptions::module(SIRIKATA_OPTIONS_MODULE)
         .addOption(new OptionValue(OPT_MANUAL_QUERY_SPLIT_DYNAMIC, "false", Sirikata::OptionValueType<bool>(), "If true, separate query handlers will be used for static and dynamic objects."))
 
-        .addOption(new OptionValue(OPT_MANUAL_QUERY_HANDLER_TYPE, "rtreecut", Sirikata::OptionValueType<String>(), "Type of libprox query handler to use for object queries."))
+        .addOption(new OptionValue(OPT_MANUAL_QUERY_HANDLER_TYPE, "rtreecutagg", Sirikata::OptionValueType<String>(), "Type of libprox query handler to use for object queries."))
         .addOption(new OptionValue(OPT_MANUAL_QUERY_HANDLER_OPTIONS, "", Sirikata::OptionValueType<String>(), "Options for the query handler."))
 
         ;
