@@ -879,6 +879,7 @@ void LibproxProximity::commandListNodes(const Command::Command& cmd, Command::Co
         nodes_ary.back().put("bounds.center.y", bounds.center().y);
         nodes_ary.back().put("bounds.center.z", bounds.center().z);
         nodes_ary.back().put("bounds.radius", bounds.radius());
+        nodes_ary.back().put("cuts", nit.cuts());
     }
 
     cmdr->result(cmdid, result);
