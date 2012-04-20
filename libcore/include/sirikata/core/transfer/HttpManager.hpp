@@ -190,6 +190,7 @@ public:
 
         friend class HttpManager;
     };
+    typedef std::tr1::shared_ptr<HttpResponse> HttpResponsePtr;
 
     //Type of errors that can be given to callback
     enum ERR_TYPE {

@@ -47,6 +47,9 @@
 
 #include <sirikata/core/command/Commander.hpp>
 
+#include <sirikata/core/transfer/TransferPool.hpp>
+#include <sirikata/core/transfer/TransferMediator.hpp>
+
 namespace Sirikata {
 class ProxyManager;
 class PluginManager;
@@ -100,6 +103,9 @@ class SIRIKATA_OH_EXPORT ObjectHost
 
     typedef std::tr1::unordered_map<String, ObjectScriptManager*> ScriptManagerMap;
     ScriptManagerMap mScriptManagers;
+
+    std::tr1::shared_ptr<Transfer::TransferPool> mTransferPool;
+    Transfer::TransferMediator *mTransferMediator;
 
     std::tr1::unordered_map<String,OptionSet*> mSpaceConnectionProtocolOptions;
     ///options passed to initialization of scripts (usually path information)
@@ -176,6 +182,8 @@ public:
     // Get and set the storage backend to use for queries.
     void setQueryProcessor(OH::ObjectQueryProcessor* proc) { mQueryProcessor = proc; }
     OH::ObjectQueryProcessor* getQueryProcessor() { return mQueryProcessor; }
+
+    std::tr1::shared_ptr<Transfer::TransferPool> getTransferPool() { return mTransferPool; }
 
     // Primary HostedObject API
 

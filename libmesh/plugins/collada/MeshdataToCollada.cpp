@@ -368,7 +368,7 @@ const String PARAM_TYPE_WEIGHT = "WEIGHT";
         }
 
         if (!hasTriangles) {
-          std::cout << "Skipping this one in generation: " << geometryName   << "\n";
+          SILOG(collada, detailed,  "[COLLADA] Skipping this one in generation: " << geometryName);
           continue;
         }
 

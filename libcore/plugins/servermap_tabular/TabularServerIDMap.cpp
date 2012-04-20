@@ -55,48 +55,28 @@ TabularServerIDMap::TabularServerIDMap(Context* ctx, std::istream&filestream)
 
         Address4 internal_addy(Sirikata::Network::Address(ip,service));
         mInternalIDMap[count] = internal_addy;
-        mInternalAddressMap[internal_addy] = count;
 
         Address4 external_addy(Sirikata::Network::Address(ip,ohservice));
         mExternalIDMap[count] = external_addy;
-        mExternalAddressMap[external_addy] = count;
 
 	count++;
     }
 }
 
-ServerID TabularServerIDMap::lookupInternal(const Address4& address){
-    if (mInternalAddressMap.find(address)!=mInternalAddressMap.end())
-        return mInternalAddressMap.find(address)->second;
-    return NullServerID;
-}
 Address4 TabularServerIDMap::lookupInternal(const ServerID& server_id){
     if (mInternalIDMap.find(server_id)!=mInternalIDMap.end())
         return mInternalIDMap.find(server_id)->second;
     return Address4::Null;
 }
 
-void TabularServerIDMap::lookupInternal(const Address4& addr, ServerIDLookupCallback cb) {
-    mContext->ioService->post(std::tr1::bind(cb, lookupInternal(addr)), "TabularServerIDMap::lookupInternal");
-}
-
 void TabularServerIDMap::lookupInternal(const ServerID& sid, Address4LookupCallback cb) {
     mContext->ioService->post(std::tr1::bind(cb, lookupInternal(sid)), "TabularServerIDMap::lookupInternal");
 }
 
-ServerID TabularServerIDMap::lookupExternal(const Address4& address){
-    if (mExternalAddressMap.find(address)!=mExternalAddressMap.end())
-        return mExternalAddressMap.find(address)->second;
-    return NullServerID;
-}
 Address4 TabularServerIDMap::lookupExternal(const ServerID& server_id){
     if (mExternalIDMap.find(server_id)!=mExternalIDMap.end())
         return mExternalIDMap.find(server_id)->second;
     return Address4::Null;
-}
-
-void TabularServerIDMap::lookupExternal(const Address4& addr, ServerIDLookupCallback cb) {
-    mContext->ioService->post(std::tr1::bind(cb, lookupExternal(addr)), "TabularServerIDMap::lookupExternal");
 }
 
 void TabularServerIDMap::lookupExternal(const ServerID& sid, Address4LookupCallback cb) {

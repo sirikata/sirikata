@@ -50,14 +50,10 @@ public:
     LocalServerIDMap(Context* ctx, const String& server_host, uint16 server_port);
     virtual ~LocalServerIDMap() {}
 
-    virtual ServerID lookupInternal(const Address4& pos);
     virtual Address4 lookupInternal(const ServerID& obj_id);
-    virtual void lookupInternal(const Address4& addr, ServerIDLookupCallback cb);
     virtual void lookupInternal(const ServerID& sid, Address4LookupCallback cb);
 
-    virtual ServerID lookupExternal(const Address4& pos);
     virtual Address4 lookupExternal(const ServerID& obj_id);
-    virtual void lookupExternal(const Address4& addr, ServerIDLookupCallback cb);
     virtual void lookupExternal(const ServerID& sid, Address4LookupCallback cb);
 };
 

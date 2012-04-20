@@ -60,9 +60,6 @@
 
 #include <sirikata/oh/Storage.hpp>
 
-// Transfer mediator added to download objects' Zernike descriptors
-#include <sirikata/core/transfer/AggregatedTransferPool.hpp>
-
 #define HO_LOG(lvl,msg) SILOG(ho,lvl,msg);
 
 namespace Sirikata {
@@ -83,10 +80,7 @@ HostedObject::HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID
             &HostedObject::createDelegateODPPort, this,
             _1, _2, _3
         )
-    );
-
-    mTransferMediator = &(Transfer::TransferMediator::getSingleton());
-    mTransferPool = mTransferMediator->registerClient<Transfer::AggregatedTransferPool>("HostedObject_"+mID.toString());
+    );    
 }
 
 
@@ -374,7 +368,7 @@ bool HostedObject::downloadZernikeDescriptor(OHConnectInfoPtr ocip, uint8 n_retr
                                        &HostedObject::metadataDownloaded, this, ocip, n_retry,
                                        std::tr1::placeholders::_1, std::tr1::placeholders::_2)));
 
-  mTransferPool->addRequest(req);
+  mObjectHost->getTransferPool()->addRequest(req);
 
   return true;
 }
@@ -808,7 +802,7 @@ void HostedObject::handleProximityUpdate(const SpaceObjectReference& spaceobj, c
         Sirikata::Protocol::Prox::ObjectAddition addition = update.addition(aidx);
         ProxProtocolLocUpdate add(addition);
 
-        SpaceObjectReference proximateID(spaceobj.space(), add.object());
+        SpaceObjectReference proximateID(spaceobj.space(), add.object());        
 
         TimedMotionVector3f loc = add.location();
 
@@ -827,7 +821,6 @@ void HostedObject::handleProximityUpdate(const SpaceObjectReference& spaceobj, c
         bool isAggregate =
           (addition.type() == Sirikata::Protocol::Prox::ObjectAddition::Aggregate) ?
             true : false;
-
 
         ProxyObjectPtr proxy_obj = proxy_manager->getProxyObject(proximateID);
         if (!proxy_obj) {
