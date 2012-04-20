@@ -10,6 +10,10 @@
 #include <sirikata/oh/OrphanLocUpdateManager.hpp>
 #include "OHLocationServiceCache.hpp"
 
+#include <boost/multi_index_container.hpp>
+#include <boost/multi_index/member.hpp>
+#include <boost/multi_index/ordered_index.hpp>
+
 namespace Sirikata {
 namespace OH {
 namespace Manual {
@@ -54,23 +58,47 @@ private:
     Network::IOStrandPtr mStrand;
 
 
+    // Track nodes which are no longer observed by any queriers,
+    // making them candidates for coarsening.
+    struct UnobservedNodeTimeout {
+        UnobservedNodeTimeout(const ObjectReference& id, Time _expires)
+         : objid(id),
+           expires(_expires)
+        {}
+        ObjectReference objid;
+        Time expires;
+    };
+    struct objid_tag {};
+    struct expires_tag {};
+    typedef boost::multi_index_container<
+        UnobservedNodeTimeout,
+        boost::multi_index::indexed_by<
+            boost::multi_index::ordered_unique< boost::multi_index::tag<objid_tag>, BOOST_MULTI_INDEX_MEMBER(UnobservedNodeTimeout,ObjectReference,objid) >,
+            boost::multi_index::ordered_non_unique< boost::multi_index::tag<expires_tag>, BOOST_MULTI_INDEX_MEMBER(UnobservedNodeTimeout,Time,expires) >
+            >
+        > UnobservedNodeTimeouts;
+    typedef UnobservedNodeTimeouts::index<objid_tag>::type UnobservedNodesByID;
+    typedef UnobservedNodeTimeouts::index<expires_tag>::type UnobservedNodesByExpiration;
+
     // Queries we've registered with servers so that we can resolve
     // object queries
     struct ServerQueryState {
-        ServerQueryState(Context* ctx, Network::IOStrandPtr strand, OHDPSST::Stream::Ptr base)
+        ServerQueryState(Context* ctx, Network::IOStrandPtr strand, OHDPSST::Stream::Ptr base, Network::IOTimerPtr unobs_timer)
          : nconnected(0),
            base_stream(base),
            prox_stream(),
            prox_stream_requested(false),
            outstanding(),
            writing(false),
-           orphans(ctx, ctx->mainStrand, Duration::seconds(10))
+           orphans(ctx, ctx->mainStrand, Duration::seconds(10)),
+           unobservedTimer(unobs_timer)
         {
             orphans.start();
             objects = OHLocationServiceCachePtr(new OHLocationServiceCache(strand));
         }
         ~ServerQueryState() {
             orphans.stop();
+            unobservedTimer->cancel();
         }
 
         // Returns true if the *query* can be removed (not if this
@@ -93,6 +121,9 @@ private:
 
         OHLocationServiceCachePtr objects;
         OrphanLocUpdateManager orphans;
+
+        UnobservedNodeTimeouts unobservedTimeouts;
+        Network::IOTimerPtr unobservedTimer;
     };
     typedef std::tr1::shared_ptr<ServerQueryState> ServerQueryStatePtr;
     typedef std::tr1::unordered_map<OHDP::SpaceNodeID, ServerQueryStatePtr, OHDP::SpaceNodeID::Hasher> ServerQueryMap;
@@ -140,6 +171,10 @@ private:
     // Handlers for substream read events for space-managed updates
     void handleLocationSubstreamRead(const OHDP::SpaceNodeID& snid, OHDPSST::Stream::Ptr s, std::stringstream* prevdata, uint8* buffer, int length);
     bool handleLocationMessage(const OHDP::SpaceNodeID& snid, const std::string& payload);
+
+
+    // Cut management
+    void processExpiredNodes(const OHDP::SpaceNodeID& snid);
 };
 
 } // namespace Manual

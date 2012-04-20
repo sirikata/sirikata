@@ -90,7 +90,13 @@ void ServerQueryHandler::onSpaceNodeSession(const OHDP::SpaceNodeID& id, OHDPSST
     QPLOG(detailed, "New space node session " << id);
     assert(mServerQueries.find(id) == mServerQueries.end());
 
-    ServerQueryStatePtr sqs(new ServerQueryState(mContext, mStrand, sn_stream));
+    Network::IOTimerPtr unobserved_timer(
+        Network::IOTimer::create(
+            mStrand.get(),
+            std::tr1::bind(&ServerQueryHandler::processExpiredNodes, this, id)
+        )
+    );
+    ServerQueryStatePtr sqs(new ServerQueryState(mContext, mStrand, sn_stream, unobserved_timer));
     mServerQueries.insert(
         ServerQueryMap::value_type(id, sqs)
     );
@@ -345,12 +351,6 @@ void ServerQueryHandler::handleProximityMessage(const OHDP::SpaceNodeID& snid, c
 
             // Replay orphans
             query_state->orphans.invokeOrphanUpdates(mContext->objectHost, snid, observed, this);
-
-            // TODO(ewencp) this is a temporary way to trigger refinement -- we
-            // just always refine whenver we see. Obviously this is inefficient
-            // and won't scale, but it's useful to get some tests running.
-            if (addition.has_type() && addition.type() == Sirikata::Protocol::Prox::ObjectAddition::Aggregate)
-                sendRefineRequest(serv_it, observed_oref);
         }
 
         for(int32 ridx = 0; ridx < update.removal_size(); ridx++) {
@@ -390,7 +390,10 @@ void ServerQueryHandler::queriersAreObserving(const OHDP::SpaceNodeID& snid, con
     sendRefineRequest(serv_it, objid);
 
     // And make sure we don't have it lined up for coarsening
-
+    UnobservedNodesByID& by_id = query_state->unobservedTimeouts.get<objid_tag>();
+    UnobservedNodesByID::iterator it = by_id.find(objid);
+    if (it == by_id.end()) return;
+    by_id.erase(it);
 }
 
 void ServerQueryHandler::queriersStoppedObserving(const OHDP::SpaceNodeID& snid, const ObjectReference& objid) {
@@ -403,10 +406,32 @@ void ServerQueryHandler::queriersStoppedObserving(const OHDP::SpaceNodeID& snid,
 
     // Nobody is observing this node, we should try to coarsen it after awhile,
     // but only if it doesn't have children.
+    query_state->unobservedTimeouts.insert(UnobservedNodeTimeout(objid, mContext->recentSimTime() + Duration::seconds(15)));
+    // And restart the timeout for the most recent
+    Duration next_timeout = query_state->unobservedTimeouts.get<expires_tag>().begin()->expires - mContext->recentSimTime();
+    query_state->unobservedTimer->cancel();
+    query_state->unobservedTimer->wait(next_timeout);
 }
 
+void ServerQueryHandler::processExpiredNodes(const OHDP::SpaceNodeID& snid) {
+    ServerQueryMap::iterator serv_it = mServerQueries.find(snid);
+    if (serv_it == mServerQueries.end()) return;
+    ServerQueryStatePtr& query_state = serv_it->second;
 
+    Time curt = mContext->recentSimTime();
+    UnobservedNodesByExpiration& by_expires = query_state->unobservedTimeouts.get<expires_tag>();
+    while(!by_expires.empty() &&
+        by_expires.begin()->expires < curt)
+    {
+        sendCoarsenRequest(serv_it, by_expires.begin()->objid);
+        by_expires.erase(by_expires.begin());
+    }
 
+    if (!by_expires.empty()) {
+        Duration next_timeout = query_state->unobservedTimeouts.get<expires_tag>().begin()->expires - mContext->recentSimTime();
+        query_state->unobservedTimer->wait(next_timeout);
+    }
+}
 
 // Location
 
