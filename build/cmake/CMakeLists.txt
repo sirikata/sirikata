@@ -1376,7 +1376,6 @@ SET(SIRIKATA_CORE_SOURCES
 	${LIBCORE_SOURCE_DIR}/queue/ThreadSafeQueue.cpp
         ${LIBCORE_SOURCE_DIR}/util/Platform.cpp
 	${LIBCORE_SOURCE_DIR}/util/UUID.cpp
-	${LIBCORE_SOURCE_DIR}/util/BoundingInfo.cpp
         ${LIBCORE_SOURCE_DIR}/util/Hash.cpp
         ${LIBCORE_SOURCE_DIR}/util/Timer.cpp
         ${LIBCORE_SOURCE_DIR}/util/RegionWeightCalculator.cpp
@@ -1438,7 +1437,6 @@ ELSE()
  ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/Standard.hh
  ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/TotallyOrdered.hpp
  ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/Transform.hpp
- ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/BoundingInfo.hpp
  ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/UUID.hpp
  ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/Vector3.hpp
  ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/Vector4.hpp
