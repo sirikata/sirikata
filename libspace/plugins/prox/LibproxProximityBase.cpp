@@ -497,13 +497,13 @@ void LibproxProximityBase::aggregateCreated(const UUID& objid) {
     mAggregateManager->addAggregate(objid);
 }
 
-void LibproxProximityBase::aggregateChildAdded(const UUID& objid, const UUID& child, const BoundingSphere3f& bnds) {
+void LibproxProximityBase::aggregateChildAdded(const UUID& objid, const UUID& child, const Vector3f& pos, const AggregateBoundingInfo& bnds) {
     // FIXME the AggregateBoundingInfo is wrong here because we don't get all
     // the information we need about the aggregate.
     mContext->mainStrand->post(
         std::tr1::bind(
             &LibproxProximityBase::updateAggregateLoc, this,
-            objid, bnds.center(), AggregateBoundingInfo(Vector3f::zero(), 0, bnds.radius())
+            objid, pos, bnds
         ),
         "LibproxProximityBase::updateAggregateLoc"
     );
@@ -511,14 +511,14 @@ void LibproxProximityBase::aggregateChildAdded(const UUID& objid, const UUID& ch
     mAggregateManager->addChild(objid, child);
 }
 
-void LibproxProximityBase::aggregateChildRemoved(const UUID& objid, const UUID& child, const BoundingSphere3f& bnds) {
+void LibproxProximityBase::aggregateChildRemoved(const UUID& objid, const UUID& child, const Vector3f& pos, const AggregateBoundingInfo& bnds) {
     // Loc cares only about this chance to update state of aggregate
     // FIXME the AggregateBoundingInfo is wrong here because we don't get all
     // the information we need about the aggregate.
     mContext->mainStrand->post(
         std::tr1::bind(
             &LibproxProximityBase::updateAggregateLoc, this,
-            objid, bnds.center(), AggregateBoundingInfo(Vector3f::zero(), 0, bnds.radius())
+            objid, pos, bnds
         ),
         "LibproxProximityBase::updateAggregateLoc"
     );
@@ -526,13 +526,11 @@ void LibproxProximityBase::aggregateChildRemoved(const UUID& objid, const UUID& 
     mAggregateManager->removeChild(objid, child);
 }
 
-void LibproxProximityBase::aggregateBoundsUpdated(const UUID& objid, const BoundingSphere3f& bnds) {
-    // FIXME the AggregateBoundingInfo is wrong here because we don't get all
-    // the information we need about the aggregate.
+void LibproxProximityBase::aggregateBoundsUpdated(const UUID& objid, const Vector3f& pos, const AggregateBoundingInfo& bnds) {
     mContext->mainStrand->post(
         std::tr1::bind(
             &LibproxProximityBase::updateAggregateLoc, this,
-            objid, bnds.center(), AggregateBoundingInfo(Vector3f::zero(), 0, bnds.radius())
+            objid, pos, bnds
         ),
         "LibproxProximityBase::updateAggregateLoc"
     );

@@ -232,11 +232,11 @@ void ObjectQueryHandler::queryHasEvents(Query* query) {
 // let the parent class know when to refine/coarsen the query with the server.
 void ObjectQueryHandler::aggregateCreated(ProxAggregator* handler, const ObjectReference& objid) {}
 
-void ObjectQueryHandler::aggregateChildAdded(ProxAggregator* handler, const ObjectReference& objid, const ObjectReference& child, const BoundingSphere3f& bnds) {}
+void ObjectQueryHandler::aggregateChildAdded(ProxAggregator* handler, const ObjectReference& objid, const ObjectReference& child, const Vector3f& bnds_center, const float32 bnds_center_radius, const float32 max_obj_size) {}
 
-void ObjectQueryHandler::aggregateChildRemoved(ProxAggregator* handler, const ObjectReference& objid, const ObjectReference& child, const BoundingSphere3f& bnds) {}
+void ObjectQueryHandler::aggregateChildRemoved(ProxAggregator* handler, const ObjectReference& objid, const ObjectReference& child, const Vector3f& bnds_center, const float32 bnds_center_radius, const float32 max_obj_size) {}
 
-void ObjectQueryHandler::aggregateBoundsUpdated(ProxAggregator* handler, const ObjectReference& objid, const BoundingSphere3f& bnds) {}
+void ObjectQueryHandler::aggregateBoundsUpdated(ProxAggregator* handler, const ObjectReference& objid, const Vector3f& bnds_center, const float32 bnds_center_radius, const float32 max_obj_size) {}
 
 void ObjectQueryHandler::aggregateDestroyed(ProxAggregator* handler, const ObjectReference& objid) {}
 

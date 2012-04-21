@@ -227,9 +227,9 @@ protected:
     // yourself since the AggregateListener interface depends on the type of
     // query/query handler being used.
     virtual void aggregateCreated(const UUID& objid);
-    virtual void aggregateChildAdded(const UUID& objid, const UUID& child, const BoundingSphere3f& bnds);
-    virtual void aggregateChildRemoved(const UUID& objid, const UUID& child, const BoundingSphere3f& bnds);
-    virtual void aggregateBoundsUpdated(const UUID& objid, const BoundingSphere3f& bnds);
+    virtual void aggregateChildAdded(const UUID& objid, const UUID& child, const Vector3f& pos, const AggregateBoundingInfo& bnds);
+    virtual void aggregateChildRemoved(const UUID& objid, const UUID& child, const Vector3f& pos, const AggregateBoundingInfo& bnds);
+    virtual void aggregateBoundsUpdated(const UUID& objid, const Vector3f& pos, const AggregateBoundingInfo& bnds);
     virtual void aggregateDestroyed(const UUID& objid);
     virtual void aggregateObserved(const UUID& objid, uint32 nobservers);
     // Helper for updating aggregates

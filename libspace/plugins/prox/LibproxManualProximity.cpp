@@ -192,19 +192,19 @@ void LibproxManualProximity::aggregateCreated(ProxAggregator* handler, const UUI
     LibproxProximityBase::aggregateCreated(objid);
 }
 
-void LibproxManualProximity::aggregateChildAdded(ProxAggregator* handler, const UUID& objid, const UUID& child, const BoundingSphere3f& bnds) {
+void LibproxManualProximity::aggregateChildAdded(ProxAggregator* handler, const UUID& objid, const UUID& child, const Vector3f& bnds_center, const float32 bnds_center_radius, const float32 max_obj_size) {
     if (!static_cast<ProxQueryHandler*>(handler)->staticOnly()) return;
-    LibproxProximityBase::aggregateChildAdded(objid, child, bnds);
+    LibproxProximityBase::aggregateChildAdded(objid, child, bnds_center, AggregateBoundingInfo(Vector3f::zero(), bnds_center_radius, max_obj_size));
 }
 
-void LibproxManualProximity::aggregateChildRemoved(ProxAggregator* handler, const UUID& objid, const UUID& child, const BoundingSphere3f& bnds) {
+void LibproxManualProximity::aggregateChildRemoved(ProxAggregator* handler, const UUID& objid, const UUID& child, const Vector3f& bnds_center, const float32 bnds_center_radius, const float32 max_obj_size) {
     if (!static_cast<ProxQueryHandler*>(handler)->staticOnly()) return;
-    LibproxProximityBase::aggregateChildRemoved(objid, child, bnds);
+    LibproxProximityBase::aggregateChildRemoved(objid, child, bnds_center, AggregateBoundingInfo(Vector3f::zero(), bnds_center_radius, max_obj_size));
 }
 
-void LibproxManualProximity::aggregateBoundsUpdated(ProxAggregator* handler, const UUID& objid, const BoundingSphere3f& bnds) {
+void LibproxManualProximity::aggregateBoundsUpdated(ProxAggregator* handler, const UUID& objid, const Vector3f& bnds_center, const float32 bnds_center_radius, const float32 max_obj_size) {
     if (!static_cast<ProxQueryHandler*>(handler)->staticOnly()) return;
-    LibproxProximityBase::aggregateBoundsUpdated(objid, bnds);
+    LibproxProximityBase::aggregateBoundsUpdated(objid, bnds_center, AggregateBoundingInfo(Vector3f::zero(), bnds_center_radius, max_obj_size));
 }
 
 void LibproxManualProximity::aggregateDestroyed(ProxAggregator* handler, const UUID& objid) {
