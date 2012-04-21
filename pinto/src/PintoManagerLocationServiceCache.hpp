@@ -58,7 +58,8 @@ public:
 
 
     virtual TimedMotionVector3f location(const Iterator& id);
-    virtual BoundingSphere3f region(const Iterator& id);
+    virtual Vector3 centerOffset(const Iterator& id);
+    virtual float32 centerBoundsRadius(const Iterator& id);
     virtual float32 maxSize(const Iterator& id);
     virtual bool isLocal(const Iterator& id);
     Prox::ZernikeDescriptor& zernikeDescriptor(const Iterator& id);

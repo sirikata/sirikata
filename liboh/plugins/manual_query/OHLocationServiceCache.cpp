@@ -89,14 +89,22 @@ TimedMotionVector3f OHLocationServiceCache::location(const Iterator& id) {
     return it->second.props.location();
 }
 
-BoundingSphere3f OHLocationServiceCache::region(const Iterator& id) {
+Vector3f OHLocationServiceCache::centerOffset(const Iterator& id) {
     // NOTE: Only accesses via iterator, shouldn't need a lock
-    // "Region" for individual objects is the degenerate bounding sphere about
-    // their center.
+    // Max size is just the size of the object.
     IteratorData* itdat = (IteratorData*)id.data;
     ObjectDataMap::iterator it = itdat->it;
     assert(it != mObjects.end());
-    return it->second.props.bounds().centerBounds();
+    return it->second.props.bounds().centerOffset;
+}
+
+float32 OHLocationServiceCache::centerBoundsRadius(const Iterator& id) {
+    // NOTE: Only accesses via iterator, shouldn't need a lock
+    // Max size is just the size of the object.
+    IteratorData* itdat = (IteratorData*)id.data;
+    ObjectDataMap::iterator it = itdat->it;
+    assert(it != mObjects.end());
+    return it->second.props.bounds().centerBoundsRadius;
 }
 
 float32 OHLocationServiceCache::maxSize(const Iterator& id) {

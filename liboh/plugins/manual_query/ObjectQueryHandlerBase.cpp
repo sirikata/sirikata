@@ -17,8 +17,8 @@ namespace Manual {
 
 ObjectQueryHandlerBase::ObjectQueryHandlerBase(ObjectHostContext* ctx, ManualObjectQueryProcessor* parent, const OHDP::SpaceNodeID& space, Network::IOStrandPtr prox_strand, OHLocationServiceCachePtr loc_cache)
  : mContext(ctx),
-   mParent(parent),
    mSpaceNodeID(space),
+   mParent(parent),
    mProxStrand(prox_strand),
    mLocCache(loc_cache)
 {

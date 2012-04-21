@@ -119,14 +119,22 @@ String CBRLocationServiceCache::mesh(const Iterator& id)  {
   return it->second.mesh;
 }
 
-BoundingSphere3f CBRLocationServiceCache::region(const Iterator& id)  {
+Vector3f CBRLocationServiceCache::centerOffset(const Iterator& id) {
     // NOTE: Only accesses via iterator, shouldn't need a lock
-    // "Region" for individual objects is the degenerate bounding sphere about
-    // their center.
+    // Max size is just the size of the object.
     IteratorData* itdat = (IteratorData*)id.data;
     ObjectDataMap::iterator it = itdat->it;
     assert(it != mObjects.end());
-    return it->second.bounds.centerBounds();
+    return it->second.bounds.centerOffset;
+}
+
+float32 CBRLocationServiceCache::centerBoundsRadius(const Iterator& id) {
+    // NOTE: Only accesses via iterator, shouldn't need a lock
+    // Max size is just the size of the object.
+    IteratorData* itdat = (IteratorData*)id.data;
+    ObjectDataMap::iterator it = itdat->it;
+    assert(it != mObjects.end());
+    return it->second.bounds.centerBoundsRadius;
 }
 
 float32 CBRLocationServiceCache::maxSize(const Iterator& id) {
