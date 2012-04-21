@@ -10,6 +10,7 @@
 #include <sirikata/core/util/MotionVector.hpp>
 #include <sirikata/core/util/MotionQuaternion.hpp>
 #include <sirikata/core/util/ObjectReference.hpp>
+#include <sirikata/core/util/AggregateBoundingInfo.hpp>
 
 namespace Sirikata {
 
@@ -55,7 +56,7 @@ public:
 
     // Bounds
     virtual bool has_bounds() const = 0;
-    virtual BoundingSphere3f bounds() const = 0;
+    virtual AggregateBoundingInfo bounds() const = 0;
     virtual uint64 bounds_seqno() const = 0;
 
     // Mesh

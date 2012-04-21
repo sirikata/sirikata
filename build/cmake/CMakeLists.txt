@@ -1141,6 +1141,7 @@ SET(SirikataProtocolRoot ${TOP_LEVEL}/externals/sirikata-protocol)
 SET(ProtocolBuffersSourcesCore
   ${SirikataProtocolRoot}/TimedMotionVector
   ${SirikataProtocolRoot}/TimedMotionQuaternion
+  ${SirikataProtocolRoot}/AggregateBoundingInfo
 )
 SET(ProtocolBuffersSourcesPublic
   # Core protocol messages

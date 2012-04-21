@@ -42,6 +42,7 @@
 #include <sirikata/core/queue/SizedThreadSafeQueue.hpp>
 
 #include <sirikata/core/util/MotionVector.hpp>
+#include <sirikata/core/util/AggregateBoundingInfo.hpp>
 
 #include "Protocol_Session.pbj.hpp"
 #include "Protocol_Migration.pbj.hpp"
@@ -238,7 +239,7 @@ private:
       int milliseconds;
       ServerID migratingTo;
       TimedMotionVector3f loc;
-      BoundingSphere3f bnds;
+        AggregateBoundingInfo bnds;
       uint64 uniqueConnId;
       bool serviceConnection;
     };

@@ -80,7 +80,7 @@ HostedObject::HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID
             &HostedObject::createDelegateODPPort, this,
             _1, _2, _3
         )
-    );    
+    );
 }
 
 
@@ -374,21 +374,21 @@ bool HostedObject::downloadZernikeDescriptor(OHConnectInfoPtr ocip, uint8 n_retr
 }
 
 void HostedObject::metadataDownloaded(OHConnectInfoPtr ocip,
-                                    uint8 retryCount, 
+                                    uint8 retryCount,
                                     std::tr1::shared_ptr<Transfer::MetadataRequest> request,
                                     std::tr1::shared_ptr<Transfer::RemoteFileMetadata> response)
 {
   if (response != NULL || retryCount >= 3) {
     const Sirikata::Transfer::FileHeaders& headers = response->getHeaders();
-    
+
     String zernike = "";
     if (headers.find("Zernike") != headers.end()) {
       zernike = (headers.find("Zernike"))->second;
     }
 
-    ocip->zernike = zernike;    
-    
-    mContext->mainStrand->post(std::tr1::bind(&HostedObject::objectHostConnectIndirect, this, ocip));    
+    ocip->zernike = zernike;
+
+    mContext->mainStrand->post(std::tr1::bind(&HostedObject::objectHostConnectIndirect, this, ocip));
   }
   else if (retryCount < 3) {
       downloadZernikeDescriptor(ocip, retryCount+1);
@@ -401,7 +401,7 @@ bool HostedObject::objectHostConnect(const SpaceID spaceID,
         const String mesh,
         const String physics,
         const String query,
-        const String zernike,        
+        const String zernike,
         const ObjectReference orefID,
         PresenceToken token)
 {
@@ -534,7 +534,7 @@ void HostedObject::handleConnectedIndirect(const HostedObjectWPtr& weakSelf, con
     // Convert back to local time
     TimedMotionVector3f local_loc(self->localTime(space, info.loc.updateTime()), info.loc.value());
     TimedMotionQuaternion local_orient(self->localTime(space, info.orient.updateTime()), info.orient.value());
-    ProxyObjectPtr self_proxy = self->createProxy(self_objref, self_objref, Transfer::URI(info.mesh), local_loc, local_orient, info.bnds, info.physics, info.query, false, 0);
+    ProxyObjectPtr self_proxy = self->createProxy(self_objref, self_objref, Transfer::URI(info.mesh), local_loc, local_orient, AggregateBoundingInfo(info.bnds), info.physics, info.query, false, 0);
 
 
     // Use to initialize PerSpaceData. This just lets the PerPresenceData know
@@ -684,7 +684,7 @@ void HostedObject::receiveMessage(const SpaceID& space, const Protocol::Object::
 void HostedObject::processLocationUpdate(const SpaceObjectReference& sporef, ProxyObjectPtr proxy_obj, const LocUpdate& update) {
     TimedMotionVector3f loc;
     TimedMotionQuaternion orient;
-    BoundingSphere3f bounds;
+    AggregateBoundingInfo bounds;
     String mesh;
     String phy;
 
@@ -692,7 +692,7 @@ void HostedObject::processLocationUpdate(const SpaceObjectReference& sporef, Pro
     uint64 location_seqno = update.location_seqno();
     TimedMotionQuaternion* orientptr = NULL;
     uint64 orient_seqno = update.orientation_seqno();
-    BoundingSphere3f* boundsptr = NULL;
+    AggregateBoundingInfo* boundsptr = NULL;
     uint64 bounds_seqno = update.bounds_seqno();
     String* meshptr = NULL;
     uint64 mesh_seqno = update.mesh_seqno();
@@ -754,7 +754,7 @@ void HostedObject::processLocationUpdate(
         const SpaceID& space, ProxyObjectPtr proxy_obj, bool predictive,
         TimedMotionVector3f* loc, uint64 loc_seqno,
         TimedMotionQuaternion* orient, uint64 orient_seqno,
-        BoundingSphere3f* bounds, uint64 bounds_seqno,
+        AggregateBoundingInfo* bounds, uint64 bounds_seqno,
         String* mesh, uint64 mesh_seqno,
         String* phy, uint64 phy_seqno
 ) {
@@ -802,7 +802,7 @@ void HostedObject::handleProximityUpdate(const SpaceObjectReference& spaceobj, c
         Sirikata::Protocol::Prox::ObjectAddition addition = update.addition(aidx);
         ProxProtocolLocUpdate add(addition);
 
-        SpaceObjectReference proximateID(spaceobj.space(), add.object());        
+        SpaceObjectReference proximateID(spaceobj.space(), add.object());
 
         TimedMotionVector3f loc = add.location();
 
@@ -815,7 +815,7 @@ void HostedObject::handleProximityUpdate(const SpaceObjectReference& spaceobj, c
         );
 
         TimedMotionQuaternion orient = add.orientation();
-        BoundingSphere3f bnds = add.bounds();
+        AggregateBoundingInfo bnds = add.bounds();
         String mesh = add.meshOrDefault();
         String phy = add.physicsOrDefault();
         bool isAggregate =
@@ -908,7 +908,7 @@ void HostedObject::handleProximityUpdate(const SpaceObjectReference& spaceobj, c
 
 }
 
-ProxyObjectPtr HostedObject::createProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri, TimedMotionVector3f& tmv, TimedMotionQuaternion& tmq, const BoundingSphere3f& bs, const String& phy, const String& query, bool isAggregate, uint64 seqNo)
+ProxyObjectPtr HostedObject::createProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri, TimedMotionVector3f& tmv, TimedMotionQuaternion& tmq, const AggregateBoundingInfo& bs, const String& phy, const String& query, bool isAggregate, uint64 seqNo)
 {
     ProxyManagerPtr proxy_manager = getProxyManager(owner_objref.space(), owner_objref.object());
     Mutex::scoped_lock lock(presenceDataMutex);
@@ -1120,7 +1120,7 @@ void HostedObject::updateLocUpdateRequest(const SpaceID& space, const ObjectRefe
         // updated when the request is sent
         if (loc != NULL) { pd.requestLoc->setLocation(*loc); pd.updateFields |= PerPresenceData::LOC_FIELD_LOC; }
         if (orient != NULL) { pd.requestLoc->setOrientation(*orient); pd.updateFields |= PerPresenceData::LOC_FIELD_ORIENTATION; }
-        if (bounds != NULL) { pd.requestLoc->setBounds(*bounds); pd.updateFields |= PerPresenceData::LOC_FIELD_BOUNDS; }
+        if (bounds != NULL) { pd.requestLoc->setBounds(AggregateBoundingInfo(*bounds)); pd.updateFields |= PerPresenceData::LOC_FIELD_BOUNDS; }
         if (mesh != NULL) { pd.requestLoc->setMesh(Transfer::URI(*mesh)); pd.updateFields |= PerPresenceData::LOC_FIELD_MESH; }
         if (phy != NULL) { pd.requestLoc->setPhysics(*phy); pd.updateFields |= PerPresenceData::LOC_FIELD_PHYSICS; }
 
@@ -1178,7 +1178,12 @@ void HostedObject::sendLocUpdateRequest(const SpaceID& space, const ObjectRefere
         pd.requestLoc->setOrientation(pd.requestLoc->orientation(), epoch);
     }
     if (pd.updateFields & PerPresenceData::LOC_FIELD_BOUNDS) {
-        loc_request.set_bounds(pd.requestLoc->bounds());
+        // We store a full AggregateBoundingInfo because that simplifies the
+        // implementation so we can reuse a bunch of code, but requests for
+        // objects can't include all this information -- they just contain
+        // normal bounds info.
+        assert(pd.requestLoc->bounds().singleObject());
+        loc_request.set_bounds(pd.requestLoc->bounds().fullBounds());
         // Save value but bump the epoch
         pd.requestLoc->setBounds(pd.requestLoc->bounds(), epoch);
     }

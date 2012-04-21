@@ -127,8 +127,9 @@ void ObjectQueryHandler::updateQuery(HostedObjectPtr ho, const SpaceObjectRefere
     // there yet
     SequencedPresencePropertiesPtr querier_props = ho->presenceRequestedLocation(obj);
     TimedMotionVector3f loc = querier_props->location();
-    BoundingSphere3f bounds = querier_props->bounds();
-    updateQuery(obj.object(), loc, bounds, sa, max_results);
+    AggregateBoundingInfo bounds = querier_props->bounds();
+    assert(bounds.singleObject());
+    updateQuery(obj.object(), loc, bounds.fullBounds(), sa, max_results);
 }
 
 void ObjectQueryHandler::updateQuery(const ObjectReference& obj, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, SolidAngle sa, uint32 max_results) {
@@ -329,7 +330,7 @@ void ObjectQueryHandler::onEpochUpdated(const ObjectReference& obj) {
 }
 
 void ObjectQueryHandler::onLocationUpdated(const ObjectReference& obj) {
-    updateQuery(obj, mLocCache->location(obj), mLocCache->bounds(obj), NoUpdateSolidAngle, NoUpdateMaxResults);
+    updateQuery(obj, mLocCache->location(obj), mLocCache->bounds(obj).fullBounds(), NoUpdateSolidAngle, NoUpdateMaxResults);
     if (mSeparateDynamicObjects)
         checkObjectClass(obj, mLocCache->location(obj));
 
@@ -347,7 +348,7 @@ void ObjectQueryHandler::onOrientationUpdated(const ObjectReference& obj) {
 }
 
 void ObjectQueryHandler::onBoundsUpdated(const ObjectReference& obj) {
-    updateQuery(obj, mLocCache->location(obj), mLocCache->bounds(obj), NoUpdateSolidAngle, NoUpdateMaxResults);
+    updateQuery(obj, mLocCache->location(obj), mLocCache->bounds(obj).fullBounds(), NoUpdateSolidAngle, NoUpdateMaxResults);
 
     mContext->mainStrand->post(
         std::tr1::bind(&ObjectQueryHandler::handleNotifySubscribersLocUpdate, this, obj),
@@ -422,7 +423,12 @@ void ObjectQueryHandler::generateObjectQueryEvents(Query* query) {
                 msg_orient.set_position(orient.position());
                 msg_orient.set_velocity(orient.velocity());
 
-                addition.set_bounds( mLocCache->bounds(objid) );
+                Sirikata::Protocol::IAggregateBoundingInfo msg_bounds = addition.mutable_aggregate_bounds();
+                AggregateBoundingInfo bnds = mLocCache->bounds(objid);
+                msg_bounds.set_center_offset(bnds.centerOffset);
+                msg_bounds.set_center_bounds_radius(bnds.centerBoundsRadius);
+                msg_bounds.set_max_object_size(bnds.maxObjectRadius);
+
                 Transfer::URI mesh = mLocCache->mesh(objid);
                 if (!mesh.empty())
                     addition.set_mesh(mesh.toString());

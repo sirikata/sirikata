@@ -57,9 +57,9 @@ ProxyObject::ProxyObject(ProxyManagerPtr man, const SpaceObjectReference& id)
  :   SelfWeakPtr<ProxyObject>(),
      ProxyObjectProvider(),
      MeshProvider (),
+     mValid(true),
      mID(id),
-     mParent(man),
-     mValid(true)
+     mParent(man)
 {
     assert(mParent);
 
@@ -134,7 +134,7 @@ TimedMotionQuaternion ProxyObject::orientation() const {
     return req->orientation();
 }
 
-BoundingSphere3f ProxyObject::bounds() const {
+AggregateBoundingInfo ProxyObject::bounds() const {
     PROXY_SERIALIZED();
     if (!isPresence())
         return SequencedPresenceProperties::bounds();
@@ -193,7 +193,7 @@ TimedMotionQuaternion ProxyObject::verifiedOrientation() const {
     return SequencedPresenceProperties::orientation();
 }
 
-BoundingSphere3f ProxyObject::verifiedBounds() const {
+AggregateBoundingInfo ProxyObject::verifiedBounds() const {
     PROXY_SERIALIZED();
     return SequencedPresenceProperties::bounds();
 }
@@ -228,13 +228,13 @@ void ProxyObject::setOrientation(const TimedMotionQuaternion& reqorient, uint64 
     }
 }
 
-void ProxyObject::setBounds(const BoundingSphere3f& bnds, uint64 seqno) {
+void ProxyObject::setBounds(const AggregateBoundingInfo& bnds, uint64 seqno) {
     PROXY_SERIALIZED();
     if (SequencedPresenceProperties::setBounds(bnds, seqno)) {
         ProxyObjectPtr ptr = getSharedPtr();
         assert(ptr);
         PositionProvider::notify(&PositionListener::updateLocation, ptr, mLoc, mOrientation, mBounds, mID);
-        MeshProvider::notify (&MeshListener::onSetScale, ptr, mBounds.radius(), mID);
+        MeshProvider::notify (&MeshListener::onSetScale, ptr, mBounds.fullRadius(), mID);
     }
 }
 

@@ -218,14 +218,14 @@ void LibproxProximity::handleObjectProximityMessage(const UUID& objid, void* buf
         SolidAngle sa;
         uint32 max_results;
         if (parseQueryRequest(prox_update.query_parameters(), &sa, &max_results))
-            updateQuery(objid, mLocService->location(objid), mLocService->bounds(objid), sa, max_results);
+            updateQuery(objid, mLocService->location(objid), mLocService->bounds(objid).fullBounds(), sa, max_results);
     }
     else {
         if (!prox_update.has_query_angle()) return;
 
         SolidAngle query_angle(prox_update.query_angle());
         uint32 query_max_results = (prox_update.has_query_max_count() ? prox_update.query_max_count() : NoUpdateMaxResults);
-        updateQuery(objid, mLocService->location(objid), mLocService->bounds(objid), query_angle, query_max_results);
+        updateQuery(objid, mLocService->location(objid), mLocService->bounds(objid).fullBounds(), query_angle, query_max_results);
     }
 }
 
@@ -333,12 +333,18 @@ void LibproxProximity::receiveMessage(Message* msg) {
             for(int32 aidx = 0; aidx < update.addition_size(); aidx++) {
                 Sirikata::Protocol::Prox::ObjectAddition addition = update.addition(aidx);
                 mServerQueryResults[source_server]->insert(addition.object());
+
+                assert(addition.has_aggregate_bounds());
+                Vector3f center = addition.aggregate_bounds().has_center_offset() ? addition.aggregate_bounds().center_offset() : Vector3f(0,0,0);
+                float32 center_rad = addition.aggregate_bounds().has_center_bounds_radius() ? addition.aggregate_bounds().center_bounds_radius() : 0.f;
+                float32 max_object_size = addition.aggregate_bounds().has_max_object_size() ? addition.aggregate_bounds().max_object_size() : 0.f;
+
                 mLocService->addReplicaObject(
                     t,
                     addition.object(),
                     TimedMotionVector3f( addition.location().t(), MotionVector3f(addition.location().position(), addition.location().velocity()) ),
                     TimedMotionQuaternion( addition.orientation().t(), MotionQuaternion(addition.orientation().position(), addition.orientation().velocity()) ),
-                    addition.bounds(),
+                    AggregateBoundingInfo(center, center_rad, max_object_size),
                     (addition.has_mesh() ? addition.mesh() : ""),
                     (addition.has_physics() ? addition.physics() : ""),
                      ""  //no Zernike descriptor in Proximity message. is this ok to do? TAHIR.
@@ -473,14 +479,14 @@ void LibproxProximity::removeQuery(ServerID sid) {
 }
 
 void LibproxProximity::addQuery(UUID obj, SolidAngle sa, uint32 max_results) {
-    updateQuery(obj, mLocService->location(obj), mLocService->bounds(obj), sa, max_results);
+    updateQuery(obj, mLocService->location(obj), mLocService->bounds(obj).fullBounds(), sa, max_results);
 }
 
 void LibproxProximity::addQuery(UUID obj, const String& params) {
     SolidAngle sa;
     uint32 max_results;
     if (parseQueryRequest(params, &sa, &max_results))
-        updateQuery(obj, mLocService->location(obj), mLocService->bounds(obj), sa, max_results);
+        updateQuery(obj, mLocService->location(obj), mLocService->bounds(obj).fullBounds(), sa, max_results);
 }
 
 void LibproxProximity::updateQuery(UUID obj, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, SolidAngle sa, uint32 max_results) {
@@ -641,8 +647,8 @@ void LibproxProximity::queryHasEvents(Query* query) {
 // Note: LocationServiceListener interface is only used in order to get updates on objects which have
 // registered queries, allowing us to update those queries as appropriate.  All updating of objects
 // in the prox data structure happens via the LocationServiceCache
-  void LibproxProximity::localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics, const String& zernike) {
-    updateObjectSize(uuid, bounds.radius());
+void LibproxProximity::localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics, const String& zernike) {
+    updateObjectSize(uuid, bounds.fullRadius());
 }
 void LibproxProximity::localObjectRemoved(const UUID& uuid, bool agg) {
     removeObjectSize(uuid);
@@ -653,13 +659,13 @@ void LibproxProximity::localObjectRemoved(const UUID& uuid, bool agg) {
     );
 }
 void LibproxProximity::localLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval) {
-    updateQuery(uuid, newval, mLocService->bounds(uuid), NoUpdateSolidAngle, NoUpdateMaxResults);
+    updateQuery(uuid, newval, mLocService->bounds(uuid).fullBounds(), NoUpdateSolidAngle, NoUpdateMaxResults);
     if (mSeparateDynamicObjects)
         checkObjectClass(true, uuid, newval);
 }
-void LibproxProximity::localBoundsUpdated(const UUID& uuid, bool agg, const BoundingSphere3f& newval) {
-    updateQuery(uuid, mLocService->location(uuid), newval, NoUpdateSolidAngle, NoUpdateMaxResults);
-    updateObjectSize(uuid, newval.radius());
+void LibproxProximity::localBoundsUpdated(const UUID& uuid, bool agg, const AggregateBoundingInfo& newval) {
+    updateQuery(uuid, mLocService->location(uuid), newval.fullBounds(), NoUpdateSolidAngle, NoUpdateMaxResults);
+    updateObjectSize(uuid, newval.fullRadius());
 }
 void LibproxProximity::replicaObjectRemoved(const UUID& uuid) {
     mProxStrand->post(
@@ -935,7 +941,12 @@ void LibproxProximity::generateServerQueryEvents(Query* query) {
                     msg_orient.set_position(orient.position());
                     msg_orient.set_velocity(orient.velocity());
 
-                    addition.set_bounds( mLocCache->bounds(objid) );
+                    Sirikata::Protocol::IAggregateBoundingInfo msg_bounds = addition.mutable_aggregate_bounds();
+                    AggregateBoundingInfo bnds = mLocCache->bounds(objid);
+                    msg_bounds.set_center_offset(bnds.centerOffset);
+                    msg_bounds.set_center_bounds_radius(bnds.centerBoundsRadius);
+                    msg_bounds.set_max_object_size(bnds.maxObjectRadius);
+
                     const String& mesh = mLocCache->mesh(objid);
                     if (mesh.size() > 0)
                         addition.set_mesh(mesh);
@@ -1047,7 +1058,12 @@ void LibproxProximity::generateObjectQueryEvents(Query* query, bool do_first) {
                     msg_orient.set_position(orient.position());
                     msg_orient.set_velocity(orient.velocity());
 
-                    addition.set_bounds( mLocCache->bounds(objid) );
+                    Sirikata::Protocol::IAggregateBoundingInfo msg_bounds = addition.mutable_aggregate_bounds();
+                    AggregateBoundingInfo bnds = mLocCache->bounds(objid);
+                    msg_bounds.set_center_offset(bnds.centerOffset);
+                    msg_bounds.set_center_bounds_radius(bnds.centerBoundsRadius);
+                    msg_bounds.set_max_object_size(bnds.maxObjectRadius);
+
                     const String& mesh = mLocCache->mesh(objid);
                     if (mesh.size() > 0)
                         addition.set_mesh(mesh);

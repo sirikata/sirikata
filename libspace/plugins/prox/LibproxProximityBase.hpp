@@ -233,7 +233,7 @@ protected:
     virtual void aggregateDestroyed(const UUID& objid);
     virtual void aggregateObserved(const UUID& objid, uint32 nobservers);
     // Helper for updating aggregates
-    void updateAggregateLoc(const UUID& objid, const BoundingSphere3f& bnds);
+    void updateAggregateLoc(const UUID& objid, const Vector3f& pos, const AggregateBoundingInfo& bnds);
 
     // Command handlers
     virtual void commandProperties(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) = 0;

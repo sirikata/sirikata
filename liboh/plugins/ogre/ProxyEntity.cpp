@@ -61,7 +61,7 @@ ProxyEntity::~ProxyEntity()
 {
     bool mobileVal =!getProxy().isStatic();
     removeFromScene(&mobileVal);
-    
+
     SILOG(ogre, detailed, "Killing ProxyEntity " << mProxy->getObjectReference().toString());
     Liveness::letDie();
 
@@ -95,7 +95,7 @@ void ProxyEntity::initializeToProxy(const ProxyObjectPtr &ppo) {
 }
 
 BoundingSphere3f ProxyEntity::bounds() {
-    return getProxy().bounds();
+    return getProxy().bounds().fullBounds();
 }
 
 void ProxyEntity::tick(const Time& t, const Duration& deltaTime) {
@@ -119,7 +119,7 @@ ProxyEntity *ProxyEntity::fromMovableObject(Ogre::MovableObject *movable) {
 
 void ProxyEntity::updateLocation(
     ProxyObjectPtr proxy, const TimedMotionVector3f &newLocation,
-    const TimedMotionQuaternion& newOrient, const BoundingSphere3f& newBounds,
+    const TimedMotionQuaternion& newOrient, const AggregateBoundingInfo& newBounds,
     const SpaceObjectReference& sporef)
 {
     mScene->renderStrand()->post(
@@ -131,18 +131,18 @@ void ProxyEntity::updateLocation(
 
 void ProxyEntity::iUpdateLocation(
     ProxyObjectPtr proxy, const TimedMotionVector3f &newLocation,
-    const TimedMotionQuaternion& newOrient, const BoundingSphere3f& newBounds,
+    const TimedMotionQuaternion& newOrient, const AggregateBoundingInfo& newBounds,
     const SpaceObjectReference& sporef, Liveness::Token lt)
 {
     if (!lt)
         return;
-    
+
     assert(proxy == mProxy);
     SILOG(ogre,detailed,"UpdateLocation "<<this<<" to "<<newLocation.position()<<"; "<<newOrient.position());
 
     setOgrePosition(Vector3d(newLocation.position()));
     setOgreOrientation(newOrient.position());
-    updateScale( newBounds.radius() );
+    updateScale( newBounds.fullRadius() );
     checkDynamic();
 }
 
@@ -159,7 +159,7 @@ void ProxyEntity::iValidated(ProxyObjectPtr ptr,Liveness::Token lt)
 {
     if (!lt)
         return;
-    
+
     assert(ptr == mProxy);
 
     SILOG(ogre, detailed, "Validating ProxyEntity " << ptr->getObjectReference().toString());
@@ -194,12 +194,12 @@ void ProxyEntity::iInvalidated(ProxyObjectPtr ptr, bool permanent,Liveness::Toke
 {
     if (!lt)
         return;
-    
+
     assert(ptr == mProxy);
 
     SILOG(ogre, detailed, "Invalidating ProxyEntity " << ptr->getObjectReference().toString());
-    
-    
+
+
     if (!mActive) return;
 
     // If the the object really disconnected, it'll be marked as a permanent
@@ -228,7 +228,7 @@ void ProxyEntity::iHandleDestroyTimeout(Liveness::Token lt)
 {
     if (!lt)
         return;
-    
+
     SILOG(ogre, detailed, "Handling destruction timeout for ProxyEntity " << mProxy->getObjectReference().toString());
 
     assert(mProxy);
@@ -251,7 +251,7 @@ void ProxyEntity::iDestroyed(ProxyObjectPtr ptr, Liveness::Token lt)
 {
     if (!lt)
         return;
-    
+
     assert(ptr == mProxy);
 
     // Not explicitly deleted here, we just mark it as a candidate for
@@ -298,7 +298,7 @@ void ProxyEntity::iOnSetIsAggregate (
 {
     if (!lt)
         return;
-    
+
     assert(proxy == mProxy);
     setIsAggregate(isAgg);
     getScene()->downloadPlanner()->updateObject(proxy);
@@ -319,7 +319,7 @@ void ProxyEntity::iOnSetScale (
 {
     if (!lt)
         return;
-    
+
     assert(proxy == mProxy);
     updateScale(scale);
     getScene()->downloadPlanner()->updateObject(proxy);

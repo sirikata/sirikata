@@ -487,7 +487,7 @@ void LibproxProximityBase::aggregateCreated(const UUID& objid) {
             objid,
             TimedMotionVector3f(mContext->simTime(), MotionVector3f()),
             TimedMotionQuaternion(mContext->simTime(), MotionQuaternion()),
-            BoundingSphere3f(),
+            AggregateBoundingInfo(),
             "",
             ""
         ),
@@ -498,10 +498,12 @@ void LibproxProximityBase::aggregateCreated(const UUID& objid) {
 }
 
 void LibproxProximityBase::aggregateChildAdded(const UUID& objid, const UUID& child, const BoundingSphere3f& bnds) {
+    // FIXME the AggregateBoundingInfo is wrong here because we don't get all
+    // the information we need about the aggregate.
     mContext->mainStrand->post(
         std::tr1::bind(
             &LibproxProximityBase::updateAggregateLoc, this,
-            objid, bnds
+            objid, bnds.center(), AggregateBoundingInfo(Vector3f::zero(), 0, bnds.radius())
         ),
         "LibproxProximityBase::updateAggregateLoc"
     );
@@ -511,10 +513,12 @@ void LibproxProximityBase::aggregateChildAdded(const UUID& objid, const UUID& ch
 
 void LibproxProximityBase::aggregateChildRemoved(const UUID& objid, const UUID& child, const BoundingSphere3f& bnds) {
     // Loc cares only about this chance to update state of aggregate
+    // FIXME the AggregateBoundingInfo is wrong here because we don't get all
+    // the information we need about the aggregate.
     mContext->mainStrand->post(
         std::tr1::bind(
             &LibproxProximityBase::updateAggregateLoc, this,
-            objid, bnds
+            objid, bnds.center(), AggregateBoundingInfo(Vector3f::zero(), 0, bnds.radius())
         ),
         "LibproxProximityBase::updateAggregateLoc"
     );
@@ -523,10 +527,12 @@ void LibproxProximityBase::aggregateChildRemoved(const UUID& objid, const UUID& 
 }
 
 void LibproxProximityBase::aggregateBoundsUpdated(const UUID& objid, const BoundingSphere3f& bnds) {
+    // FIXME the AggregateBoundingInfo is wrong here because we don't get all
+    // the information we need about the aggregate.
     mContext->mainStrand->post(
         std::tr1::bind(
             &LibproxProximityBase::updateAggregateLoc, this,
-            objid, bnds
+            objid, bnds.center(), AggregateBoundingInfo(Vector3f::zero(), 0, bnds.radius())
         ),
         "LibproxProximityBase::updateAggregateLoc"
     );
@@ -594,20 +600,17 @@ void LibproxProximityBase::handleCheckObjectClass(bool is_local, const UUID& obj
 
 
 // MAIN strand
-void LibproxProximityBase::updateAggregateLoc(const UUID& objid, const BoundingSphere3f& bnds) {
-    // TODO(ewencp) This comparison looks wrong, but might be due to
-    // the way we're setting location and bounds and both are using
-    // bnds.center(). Shouldn't we be using the center for position
-    // and make bounds origin centered? But apparently this was
-    // working, so leaving it for now...
-    if (mLocService->contains(objid) && mLocService->bounds(objid) != bnds) {
+void LibproxProximityBase::updateAggregateLoc(const UUID& objid, const Vector3f& pos, const AggregateBoundingInfo& bnds) {
+    if (mLocService->contains(objid) &&
+        (mLocService->location(objid).position() != pos || mLocService->bounds(objid) != bnds))
+    {
         mLocService->updateLocalAggregateLocation(
             objid,
-            TimedMotionVector3f(mContext->simTime(), MotionVector3f(bnds.center(), Vector3f(0,0,0)))
+            TimedMotionVector3f(mContext->simTime(), MotionVector3f(pos, Vector3f(0,0,0)))
         );
         mLocService->updateLocalAggregateBounds(
             objid,
-            BoundingSphere3f(bnds.center(), bnds.radius())
+            bnds
         );
     }
 }

@@ -55,8 +55,8 @@ btCollisionShape* BulletObject::computeCollisionShape(const UUID& id, bulletObjB
 
     // Spheres can be handled trivially
     if(shape_type == BULLET_OBJECT_BOUNDS_SPHERE || !retrievedMesh) {
-        BULLETLOG(detailed, "sphere radius: " << locinfo.props.bounds().radius());
-        btCollisionShape* shape = new btSphereShape(locinfo.props.bounds().radius());
+        BULLETLOG(detailed, "sphere radius: " << locinfo.props.bounds().fullRadius());
+        btCollisionShape* shape = new btSphereShape(locinfo.props.bounds().fullRadius());
         return shape;
     }
 
@@ -76,7 +76,7 @@ btCollisionShape* BulletObject::computeCollisionShape(const UUID& id, bulletObjB
     //objBBox enum defined in header file
     //using if/elseif here to avoid switch/case compiler complaints (initializing variables in a case)
     if(shape_type == BULLET_OBJECT_BOUNDS_ENTIRE_OBJECT) {
-        double scalingFactor = locinfo.props.bounds().radius()/mesh_rad;
+        double scalingFactor = locinfo.props.bounds().fullRadius()/mesh_rad;
         BULLETLOG(detailed, "bbox half extents: " << fabs(diff.x/2)*scalingFactor << ", " << fabs(diff.y/2)*scalingFactor << ", " << fabs(diff.z/2)*scalingFactor);
         btCollisionShape* shape = new btBoxShape(btVector3(fabs((diff.x/2)*scalingFactor), fabs((diff.y/2)*scalingFactor), fabs((diff.z/2)*scalingFactor)));
         return shape;
@@ -155,7 +155,7 @@ btCollisionShape* BulletObject::computeCollisionShape(const UUID& id, bulletObjB
     btCollisionShape* shape = new btBvhTriangleMeshShape(meshToConstruct,true);
     // Apply additional scaling factor to get from unit
     // scale up to requested scale.
-    float32 rad_scale = locinfo.props.bounds().radius();
+    float32 rad_scale = locinfo.props.bounds().fullRadius();
     shape->setLocalScaling(btVector3(rad_scale, rad_scale, rad_scale));
 
     //FIXME bug somewhere else? bnds.radius()/mesh_rad should be

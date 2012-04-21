@@ -51,7 +51,7 @@ public:
 
     // Bounds
     virtual bool has_bounds() const { return true; }
-    virtual BoundingSphere3f bounds() const { return mUpdate.bounds(); }
+    virtual AggregateBoundingInfo bounds() const { return mUpdate.bounds(); }
     virtual uint64 bounds_seqno() const { return mUpdate.getUpdateSeqNo(SequencedPresenceProperties::LOC_BOUNDS_PART); }
 
     // Mesh

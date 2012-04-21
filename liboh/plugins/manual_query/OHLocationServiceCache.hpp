@@ -48,14 +48,14 @@ public:
         const ObjectReference& parent,
         const TimedMotionVector3f& loc, uint64 loc_seqno,
         const TimedMotionQuaternion& orient, uint64 orient_seqno,
-        const BoundingSphere3f& bounds, uint64 bounds_seqno,
+        const AggregateBoundingInfo& bounds, uint64 bounds_seqno,
         const Transfer::URI& mesh, uint64 mesh_seqno,
         const String& physics, uint64 physics_seqno);
     void objectRemoved(const ObjectReference& uuid, bool temporary);
     void epochUpdated(const ObjectReference& uuid, const uint64 ep);
     void locationUpdated(const ObjectReference& uuid, const TimedMotionVector3f& newval, uint64 seqno);
     void orientationUpdated(const ObjectReference& uuid, const TimedMotionQuaternion& newval, uint64 seqno);
-    void boundsUpdated(const ObjectReference& uuid, const BoundingSphere3f& newval, uint64 seqno);
+    void boundsUpdated(const ObjectReference& uuid, const AggregateBoundingInfo& newval, uint64 seqno);
     void meshUpdated(const ObjectReference& uuid, const Transfer::URI& newval, uint64 seqno);
     void physicsUpdated(const ObjectReference& uuid, const String& newval, uint64 seqno);
     void parentUpdated(const ObjectReference& uuid, const ObjectReference& newval, uint64 seqno);
@@ -92,7 +92,7 @@ public:
     uint64 epoch(const ObjectID& id);
     TimedMotionVector3f location(const ObjectID& id);
     TimedMotionQuaternion orientation(const ObjectID& id);
-    BoundingSphere3f bounds(const ObjectID& id);
+    AggregateBoundingInfo bounds(const ObjectID& id);
     float32 radius(const ObjectID& id);
     Transfer::URI mesh(const ObjectID& id);
     String physics(const ObjectID& id);
@@ -110,12 +110,12 @@ private:
     // (Since these are only used for Prox LocationUpdateListener, we only need
     // to notify of a few of the events -- orientation, mesh, and physics are
     // all ignored.)
-    void notifyObjectAdded(const ObjectReference& uuid, const ObjectReference& parent, bool agg, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds);
+    void notifyObjectAdded(const ObjectReference& uuid, const ObjectReference& parent, bool agg, const TimedMotionVector3f& loc, const AggregateBoundingInfo& bounds);
     void notifyParentUpdated(const ObjectReference& uuid, const ObjectReference& oldval, const ObjectReference& newval);
     void notifyObjectRemoved(const ObjectReference& uuid, bool temporary);
     void notifyEpochUpdated(const ObjectReference& uuid, const uint64 val);
     void notifyLocationUpdated(const ObjectReference& uuid, const TimedMotionVector3f& oldval, const TimedMotionVector3f& newval);
-    void notifyBoundsUpdated(const ObjectReference& uuid, const BoundingSphere3f& oldval, const BoundingSphere3f& newval);
+    void notifyBoundsUpdated(const ObjectReference& uuid, const AggregateBoundingInfo& oldval, const AggregateBoundingInfo& newval);
     // These are only used by OHLocationUpdateListener so they don't need values
     // with them (see comments for that class)
     void notifyOrientationUpdated(const ObjectReference& uuid);

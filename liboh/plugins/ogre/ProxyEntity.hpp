@@ -104,7 +104,7 @@ public:
     // PositionListener
     virtual void updateLocation(
         ProxyObjectPtr proxy, const TimedMotionVector3f &newLocation,
-        const TimedMotionQuaternion& newOrient, const BoundingSphere3f& newBounds,
+        const TimedMotionQuaternion& newOrient, const AggregateBoundingInfo& newBounds,
         const SpaceObjectReference& sporef);
 
     // ProxyObjectListener
@@ -124,7 +124,7 @@ private:
     void iUpdateLocation(
         ProxyObjectPtr proxy, const TimedMotionVector3f &newLocation,
         const TimedMotionQuaternion& newOrient,
-        const BoundingSphere3f& newBounds,
+        const AggregateBoundingInfo& newBounds,
         const SpaceObjectReference& sporef, Liveness::Token lt);
 
     // ProxyObjectListener
@@ -136,7 +136,7 @@ private:
     void iOnSetMesh (
         ProxyObjectPtr proxy, Transfer::URI const& newMesh,
         const SpaceObjectReference& sporef,Liveness::Token lt);
-    
+
     void iOnSetScale (
         ProxyObjectPtr proxy, float32 newScale,
         const SpaceObjectReference& sporef,Liveness::Token lt);
@@ -146,7 +146,7 @@ private:
         const SpaceObjectReference& sporef, Liveness::Token lt);
 
     void iHandleDestroyTimeout(Liveness::Token lt);
-    
+
 };
 typedef std::tr1::shared_ptr<Entity> EntityPtr;
 

@@ -126,7 +126,7 @@ BoundingSphere3f CBRLocationServiceCache::region(const Iterator& id)  {
     IteratorData* itdat = (IteratorData*)id.data;
     ObjectDataMap::iterator it = itdat->it;
     assert(it != mObjects.end());
-    return it->second.region;
+    return it->second.bounds.centerBounds();
 }
 
 float32 CBRLocationServiceCache::maxSize(const Iterator& id) {
@@ -135,7 +135,7 @@ float32 CBRLocationServiceCache::maxSize(const Iterator& id) {
     IteratorData* itdat = (IteratorData*)id.data;
     ObjectDataMap::iterator it = itdat->it;
     assert(it != mObjects.end());
-    return it->second.maxSize;
+    return it->second.bounds.maxObjectRadius;
 }
 
 bool CBRLocationServiceCache::isLocal(const Iterator& id) {
@@ -183,14 +183,14 @@ const TimedMotionQuaternion& CBRLocationServiceCache::orientation(const ObjectID
     return it->second.orientation;
 }
 
-const BoundingSphere3f& CBRLocationServiceCache::bounds(const ObjectID& id) const {
+const AggregateBoundingInfo& CBRLocationServiceCache::bounds(const ObjectID& id) const {
     GET_OBJ_ENTRY(id); // NOTE: should only be accessed by prox thread, shouldn't need lock
     return it->second.bounds;
 }
 
 float32 CBRLocationServiceCache::radius(const ObjectID& id) const {
     GET_OBJ_ENTRY(id); // NOTE: should only be accessed by prox thread, shouldn't need lock
-    return it->second.bounds.radius();
+    return it->second.bounds.maxObjectRadius;
 }
 
 const String& CBRLocationServiceCache::mesh(const ObjectID& id) const {
@@ -210,7 +210,7 @@ const bool CBRLocationServiceCache::isAggregate(const ObjectID& id) const {
 }
 
 
-void CBRLocationServiceCache::localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& phy, const String& zernike) {
+void CBRLocationServiceCache::localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& phy, const String& zernike) {
   objectAdded(uuid, true, agg, loc, orient, bounds, mesh, phy, zernike);
 }
 
@@ -226,7 +226,7 @@ void CBRLocationServiceCache::localOrientationUpdated(const UUID& uuid, bool agg
     orientationUpdated(uuid, agg, newval);
 }
 
-void CBRLocationServiceCache::localBoundsUpdated(const UUID& uuid, bool agg, const BoundingSphere3f& newval) {
+void CBRLocationServiceCache::localBoundsUpdated(const UUID& uuid, bool agg, const AggregateBoundingInfo& newval) {
     boundsUpdated(uuid, agg, newval);
 }
 
@@ -238,7 +238,7 @@ void CBRLocationServiceCache::localPhysicsUpdated(const UUID& uuid, bool agg, co
     physicsUpdated(uuid, agg, newval);
 }
 
-  void CBRLocationServiceCache::replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& phy, const String& zernike) {
+void CBRLocationServiceCache::replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& phy, const String& zernike) {
     if (mWithReplicas)
       objectAdded(uuid, false, false, loc, orient, bounds, mesh, phy, zernike);
 }
@@ -258,7 +258,7 @@ void CBRLocationServiceCache::replicaOrientationUpdated(const UUID& uuid, const 
         orientationUpdated(uuid, false, newval);
 }
 
-void CBRLocationServiceCache::replicaBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) {
+void CBRLocationServiceCache::replicaBoundsUpdated(const UUID& uuid, const AggregateBoundingInfo& newval) {
     if (mWithReplicas)
         boundsUpdated(uuid, false, newval);
 }
@@ -274,13 +274,11 @@ void CBRLocationServiceCache::replicaPhysicsUpdated(const UUID& uuid, const Stri
 }
 
 
-void CBRLocationServiceCache::objectAdded(const UUID& uuid, bool islocal, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& phy, const String& zernike) {
+void CBRLocationServiceCache::objectAdded(const UUID& uuid, bool islocal, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& phy, const String& zernike) {
     ObjectData data;
     data.location = loc;
     data.orientation = orient;
     data.bounds = bounds;
-    data.region = BoundingSphere3f(bounds.center(), 0.f);
-    data.maxSize = bounds.radius();
     data.mesh = mesh;
     data.physics = phy;
     data.zernike = zernike;
@@ -310,7 +308,7 @@ void CBRLocationServiceCache::processObjectAdded(const UUID& uuid, ObjectData da
     // here, especially if we're reconstructing entire trees.
     if (!data.isAggregate)
         for(ListenerSet::iterator it = mListeners.begin(); it != mListeners.end(); it++)
-            (*it)->locationConnected(uuid, false, data.isLocal, data.location, data.region, data.maxSize);
+            (*it)->locationConnected(uuid, false, data.isLocal, data.location, data.bounds.centerBounds(), data.bounds.maxObjectRadius);
 }
 
 void CBRLocationServiceCache::objectRemoved(const UUID& uuid, bool agg) {
@@ -382,7 +380,7 @@ void CBRLocationServiceCache::processOrientationUpdated(const UUID& uuid, bool a
     it->second.orientation = newval;
 }
 
-void CBRLocationServiceCache::boundsUpdated(const UUID& uuid, bool agg, const BoundingSphere3f& newval) {
+void CBRLocationServiceCache::boundsUpdated(const UUID& uuid, bool agg, const AggregateBoundingInfo& newval) {
     mStrand->post(
         std::tr1::bind(
             &CBRLocationServiceCache::processBoundsUpdated, this,
@@ -392,23 +390,19 @@ void CBRLocationServiceCache::boundsUpdated(const UUID& uuid, bool agg, const Bo
     );
 }
 
-void CBRLocationServiceCache::processBoundsUpdated(const UUID& uuid, bool agg, const BoundingSphere3f& newval) {
+void CBRLocationServiceCache::processBoundsUpdated(const UUID& uuid, bool agg, const AggregateBoundingInfo& newval) {
     Lock lck(mMutex);
 
     ObjectDataMap::iterator it = mObjects.find(uuid);
     if (it == mObjects.end()) return;
 
+    AggregateBoundingInfo oldval = it->second.bounds;
     it->second.bounds = newval;
-
-    BoundingSphere3f old_region = it->second.region;
-    it->second.region = BoundingSphere3f(newval.center(), 0.f);
-    float32 old_maxSize = it->second.maxSize;
-    it->second.maxSize = newval.radius();
 
     if (!agg) {
         for(ListenerSet::iterator listen_it = mListeners.begin(); listen_it != mListeners.end(); listen_it++) {
-            (*listen_it)->locationRegionUpdated(uuid, old_region, it->second.region);
-            (*listen_it)->locationMaxSizeUpdated(uuid, old_maxSize, it->second.maxSize);
+            (*listen_it)->locationRegionUpdated(uuid, oldval.centerBounds(), it->second.bounds.centerBounds());
+            (*listen_it)->locationMaxSizeUpdated(uuid, oldval.maxObjectRadius, it->second.bounds.maxObjectRadius);
         }
     }
 }

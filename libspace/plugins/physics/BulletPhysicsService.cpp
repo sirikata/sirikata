@@ -221,7 +221,7 @@ Quaternion BulletPhysicsService::currentOrientation(const UUID& uuid) {
     return orient.extrapolate(mContext->simTime()).position();
 }
 
-BoundingSphere3f BulletPhysicsService::bounds(const UUID& uuid) {
+AggregateBoundingInfo BulletPhysicsService::bounds(const UUID& uuid) {
     LocationMap::iterator it = mLocations.find(uuid);
     assert(it != mLocations.end());
 
@@ -326,7 +326,7 @@ void BulletPhysicsService::getMeshCallback(Transfer::ResourceDownloadTaskPtr tas
     }
 }
 
-  void BulletPhysicsService::addLocalObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& msh, const String& phy, const String& zernike) {
+  void BulletPhysicsService::addLocalObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bnds, const String& msh, const String& phy, const String& zernike) {
     LocationMap::iterator it = mLocations.find(uuid);
 
     // Add or update the information to the cache
@@ -561,7 +561,7 @@ void BulletPhysicsService::internalTickCallback() {
     }
 }
 
-void BulletPhysicsService::addLocalAggregateObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& msh, const String& phy) {
+void BulletPhysicsService::addLocalAggregateObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bnds, const String& msh, const String& phy) {
     // Aggregates get randomly assigned IDs -- if there's a conflict either we
     // got a true conflict (incredibly unlikely) or somebody (prox/query
     // handler) screwed up.
@@ -611,11 +611,11 @@ void BulletPhysicsService::updateLocalAggregateOrientation(const UUID& uuid, con
     loc_it->second.props.setOrientation(newval, 0); // no epochs for aggregates
     notifyLocalOrientationUpdated( uuid, true, newval );
 }
-void BulletPhysicsService::updateLocalAggregateBounds(const UUID& uuid, const BoundingSphere3f& newval) {
+void BulletPhysicsService::updateLocalAggregateBounds(const UUID& uuid, const AggregateBoundingInfo& newval) {
     LocationMap::iterator loc_it = mLocations.find(uuid);
     assert(loc_it != mLocations.end());
     assert(loc_it->second.aggregate == true);
-    BoundingSphere3f oldval = loc_it->second.props.bounds();
+    AggregateBoundingInfo oldval = loc_it->second.props.bounds();
     loc_it->second.props.setBounds(newval, 0); // no epochs for aggregates
     notifyLocalBoundsUpdated( uuid, true, newval );
     if (oldval != newval) updatePhysicsWorld(uuid);
@@ -639,7 +639,7 @@ void BulletPhysicsService::updateLocalAggregatePhysics(const UUID& uuid, const S
     if (oldval != newval) updatePhysicsWorld(uuid);
 }
 
-  void BulletPhysicsService::addReplicaObject(const Time& t, const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& msh, const String& phy, const String& zernike) {
+  void BulletPhysicsService::addReplicaObject(const Time& t, const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bnds, const String& msh, const String& phy, const String& zernike) {
     // FIXME we should do checks on timestamps to decide which setting is "more" sane
     LocationMap::iterator it = mLocations.find(uuid);
 
@@ -771,9 +771,15 @@ void BulletPhysicsService::receiveMessage(Message* msg) {
                 notifyReplicaOrientationUpdated( update.object(), loc_it->second.props.orientation());
             }
 
-            if (update.has_bounds()) {
-                BoundingSphere3f oldbounds = loc_it->second.props.bounds();
-                BoundingSphere3f newbounds = update.bounds();
+
+            if (update.has_aggregate_bounds()) {
+                AggregateBoundingInfo oldbounds = loc_it->second.props.bounds();
+
+                Vector3f center = update.aggregate_bounds().has_center_offset() ? update.aggregate_bounds().center_offset() : Vector3f(0,0,0);
+                float32 center_rad = update.aggregate_bounds().has_center_bounds_radius() ? update.aggregate_bounds().center_bounds_radius() : 0.f;
+                float32 max_object_size = update.aggregate_bounds().has_max_object_size() ? update.aggregate_bounds().max_object_size() : 0.f;
+                AggregateBoundingInfo newbounds(center, center_rad, max_object_size);
+
                 loc_it->second.props.setBounds(newbounds, epoch);
                 notifyReplicaBoundsUpdated( update.object(), loc_it->second.props.bounds() );
                 if (oldbounds != newbounds) updatePhysics = true;
@@ -881,8 +887,8 @@ bool BulletPhysicsService::locationUpdate(UUID source, void* buffer, uint32 leng
             }
 
             if (request.has_bounds()) {
-                BoundingSphere3f oldbounds = loc_it->second.props.bounds();
-                BoundingSphere3f newbounds = request.bounds();
+                AggregateBoundingInfo oldbounds = loc_it->second.props.bounds();
+                AggregateBoundingInfo newbounds(request.bounds());
                 loc_it->second.props.setBounds(newbounds, epoch);
                 notifyLocalBoundsUpdated( source, loc_it->second.aggregate, loc_it->second.props.bounds() );
                 if (oldbounds != newbounds) updatePhysics = true;

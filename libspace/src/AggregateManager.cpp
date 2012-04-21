@@ -416,7 +416,7 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
   aggObject->mLastGenerateTime = curTime;
   MeshdataPtr agg_mesh =  MeshdataPtr( new Meshdata() );
   agg_mesh->globalTransform = Matrix4x4f::identity();
-  BoundingSphere3f bnds = mLoc->bounds(uuid);
+  BoundingSphere3f bnds = mLoc->bounds(uuid).fullBounds();
   float64 bndsX = bnds.center().x;
   float64 bndsY = bnds.center().y;
   float64 bndsZ = bnds.center().z;
@@ -560,7 +560,7 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
       scalingfactor = 1.0;
     }
     else {
-      scalingfactor = (mLoc->bounds(child_uuid)).radius() / originalMeshBoundsRadius;
+      scalingfactor = (mLoc->bounds(child_uuid)).fullRadius() / originalMeshBoundsRadius;
     }
 
     float64 locationX = location.x;
@@ -1004,7 +1004,7 @@ void AggregateManager::getLeaves(const std::vector<UUID>& individualObjects) {
 
     if (!mLoc->contains(uuid)) continue;
 
-    float radius = mLoc->bounds(uuid).radius();
+    float radius = mLoc->bounds(uuid).fullRadius();
 
     while (uuid != UUID::null()) {
       if (mDirtyAggregateObjects.find(uuid) != mDirtyAggregateObjects.end()) {
@@ -1052,9 +1052,9 @@ void AggregateManager::generateMeshesFromQueue(Time postTime) {
 
             if (!mLoc->contains(child_uuid)) continue;
 
-            BoundingSphere3f bnds = mLoc->bounds(child_uuid);
-            if (bnds.radius() < radius) {
-              radius = bnds.radius();
+            float32 bnds_rad = mLoc->bounds(child_uuid).fullRadius();
+            if (bnds_rad < radius) {
+              radius = bnds_rad;
             }
           }
 

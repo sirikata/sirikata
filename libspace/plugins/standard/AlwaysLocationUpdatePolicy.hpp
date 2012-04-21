@@ -68,19 +68,19 @@ public:
     virtual void unsubscribe(const UUID& remote, const UUID& uuid);
     virtual void unsubscribe(const UUID& remote);
 
-    virtual void localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics);
+    virtual void localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics);
     virtual void localObjectRemoved(const UUID& uuid, bool agg);
     virtual void localLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval);
     virtual void localOrientationUpdated(const UUID& uuid, bool agg, const TimedMotionQuaternion& newval);
-    virtual void localBoundsUpdated(const UUID& uuid, bool agg, const BoundingSphere3f& newval);
+    virtual void localBoundsUpdated(const UUID& uuid, bool agg, const AggregateBoundingInfo& newval);
     virtual void localMeshUpdated(const UUID& uuid, bool agg, const String& newval);
     virtual void localPhysicsUpdated(const UUID& uuid, bool agg, const String& newval);
 
-    virtual void replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics);
+    virtual void replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics);
     virtual void replicaObjectRemoved(const UUID& uuid);
     virtual void replicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval);
     virtual void replicaOrientationUpdated(const UUID& uuid, const TimedMotionQuaternion& newval);
-    virtual void replicaBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval);
+    virtual void replicaBoundsUpdated(const UUID& uuid, const AggregateBoundingInfo& newval);
     virtual void replicaMeshUpdated(const UUID& uuid, const String& newval);
     virtual void replicaPhysicsUpdated(const UUID& uuid, const String& newval);
 
@@ -110,7 +110,7 @@ private:
         uint64 epoch;
         TimedMotionVector3f location;
         TimedMotionQuaternion orientation;
-        BoundingSphere3f bounds;
+        AggregateBoundingInfo bounds;
         String mesh;
         String physics;
     };
@@ -276,7 +276,7 @@ private:
 
         static void setUILocation(UpdateInfo& ui, const TimedMotionVector3f& newval) {ui.location = newval; }
         static void setUIOrientation(UpdateInfo& ui, const TimedMotionQuaternion& newval) { ui.orientation = newval; }
-        static void setUIBounds(UpdateInfo& ui, const BoundingSphere3f& newval) { ui.bounds = newval; }
+        static void setUIBounds(UpdateInfo& ui, const AggregateBoundingInfo& newval) { ui.bounds = newval; }
         static void setUIMesh(UpdateInfo& ui, const String& newval) {ui.mesh = newval;}
         static void setUIPhysics(UpdateInfo& ui, const String& newval) {ui.physics = newval;}
 
@@ -294,7 +294,7 @@ private:
             );
         }
 
-        void boundsUpdated(const UUID& uuid, const BoundingSphere3f& newval, LocationService* locservice) {
+        void boundsUpdated(const UUID& uuid, const AggregateBoundingInfo& newval, LocationService* locservice) {
             propertyUpdated(
                 uuid, locservice,
                 std::tr1::bind(&setUIBounds, std::tr1::placeholders::_1, newval)
@@ -365,7 +365,10 @@ private:
                     orientation.set_position(up_it->second.orientation.position());
                     orientation.set_velocity(up_it->second.orientation.velocity());
 
-                    update.set_bounds(up_it->second.bounds);
+                    Sirikata::Protocol::IAggregateBoundingInfo msg_bounds = update.mutable_aggregate_bounds();
+                    msg_bounds.set_center_offset(up_it->second.bounds.centerOffset);
+                    msg_bounds.set_center_bounds_radius(up_it->second.bounds.centerBoundsRadius);
+                    msg_bounds.set_max_object_size(up_it->second.bounds.maxObjectRadius);
 
                     update.set_mesh(up_it->second.mesh);
                     update.set_physics(up_it->second.physics);

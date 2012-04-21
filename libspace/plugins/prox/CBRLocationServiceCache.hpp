@@ -80,7 +80,7 @@ public:
     // We also provide accessors by ID for Proximity generate results.
     const TimedMotionVector3f& location(const ObjectID& id) const;
     const TimedMotionQuaternion& orientation(const ObjectID& id) const;
-    const BoundingSphere3f& bounds(const ObjectID& id) const;
+    const AggregateBoundingInfo& bounds(const ObjectID& id) const;
     float32 radius(const ObjectID& id) const;
     const String& mesh(const ObjectID& id) const;
     const String& physics(const ObjectID& id) const;
@@ -89,18 +89,18 @@ public:
 
 
     /* LocationServiceListener members. */
-  virtual void localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics, const String& zernike);
+    virtual void localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics, const String& zernike);
     virtual void localObjectRemoved(const UUID& uuid, bool agg);
     virtual void localLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval);
     virtual void localOrientationUpdated(const UUID& uuid, bool agg, const TimedMotionQuaternion& newval);
-    virtual void localBoundsUpdated(const UUID& uuid, bool agg, const BoundingSphere3f& newval);
+    virtual void localBoundsUpdated(const UUID& uuid, bool agg, const AggregateBoundingInfo& newval);
     virtual void localMeshUpdated(const UUID& uuid, bool agg, const String& newval);
     virtual void localPhysicsUpdated(const UUID& uuid, bool agg, const String& newval);
-  virtual void replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics, const String& zernike);
+    virtual void replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics, const String& zernike);
     virtual void replicaObjectRemoved(const UUID& uuid);
     virtual void replicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval);
     virtual void replicaOrientationUpdated(const UUID& uuid, const TimedMotionQuaternion& newval);
-    virtual void replicaBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval);
+    virtual void replicaBoundsUpdated(const UUID& uuid, const AggregateBoundingInfo& newval);
     virtual void replicaMeshUpdated(const UUID& uuid, const String& newval);
     virtual void replicaPhysicsUpdated(const UUID& uuid, const String& newval);
 
@@ -111,13 +111,7 @@ private:
     struct ObjectData {
         TimedMotionVector3f location;
         TimedMotionQuaternion orientation;
-        // The raw bounding volume.
-        BoundingSphere3f bounds;
-        // "Region" is the center of the object's bounding region, with 0 size
-        // for the bounding sphere.
-        BoundingSphere3f region;
-        // MaxSize is the size of the object, stored upon bounding region updates.
-        float32 maxSize;
+        AggregateBoundingInfo bounds;
         // Whether the object is local or a replica
         bool isLocal;
         String mesh;
@@ -130,11 +124,11 @@ private:
 
 
     // These generate and queue up updates from the main thread
-  void objectAdded(const UUID& uuid, bool islocal, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics, const String& zernike);
+    void objectAdded(const UUID& uuid, bool islocal, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics, const String& zernike);
     void objectRemoved(const UUID& uuid, bool agg);
     void locationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval);
     void orientationUpdated(const UUID& uuid, bool agg, const TimedMotionQuaternion& newval);
-    void boundsUpdated(const UUID& uuid, bool agg, const BoundingSphere3f& newval);
+    void boundsUpdated(const UUID& uuid, bool agg, const AggregateBoundingInfo& newval);
     void meshUpdated(const UUID& uuid, bool agg, const String& newval);
     void physicsUpdated(const UUID& uuid, bool agg, const String& newval);
 
@@ -147,7 +141,7 @@ private:
     void processObjectRemoved(const UUID& uuid, bool agg);
     void processLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval);
     void processOrientationUpdated(const UUID& uuid, bool agg, const TimedMotionQuaternion& newval);
-    void processBoundsUpdated(const UUID& uuid, bool agg, const BoundingSphere3f& newval);
+    void processBoundsUpdated(const UUID& uuid, bool agg, const AggregateBoundingInfo& newval);
     void processMeshUpdated(const UUID& uuid, bool agg, const String& newval);
     void processPhysicsUpdated(const UUID& uuid, bool agg, const String& newval);
 

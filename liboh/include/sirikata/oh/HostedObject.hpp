@@ -39,8 +39,6 @@
 #include <sirikata/core/odp/DelegateService.hpp>
 #include <sirikata/oh/ObjectScriptManager.hpp>
 
-#include <map>
-#include <list>
 #include <utility>
 
 #include <sirikata/core/network/ObjectMessage.hpp>
@@ -100,7 +98,7 @@ class SIRIKATA_OH_EXPORT HostedObject
       public Service
 {
 private:
-  struct PrivateCallbacks; 
+  struct PrivateCallbacks;
 
     typedef struct OHConnectInfo{
     public:
@@ -109,7 +107,7 @@ private:
       BoundingSphere3f meshBounds;
       String mesh;
       String physics;
-      String query;      
+      String query;
       ObjectReference orefID;
       int64 token;
       String zernike;
@@ -132,7 +130,7 @@ protected:
 
     typedef boost::mutex Mutex;
     Mutex presenceDataMutex;
-    Mutex notifyMutex;   
+    Mutex notifyMutex;
 
     friend class ::Sirikata::SelfWeakPtr<VWObject>;
     friend class PerPresenceData;
@@ -240,11 +238,11 @@ public:
 
     void objectHostConnectIndirect(OHConnectInfoPtr oci) {
       bool ret = objectHostConnect(oci->spaceID, oci->startingLocation, oci->meshBounds,
-                                   oci->mesh, oci->physics, oci->query, oci->zernike, 
+                                   oci->mesh, oci->physics, oci->query, oci->zernike,
                                    oci->orefID, oci->token);
     }
 
-    
+
 
     bool objectHostConnect(
         const SpaceID spaceID,
@@ -253,7 +251,7 @@ public:
         const String mesh,
         const String physics,
         const String query,
-        const String zernike,        
+        const String zernike,
         const ObjectReference orefID,
         PresenceToken token = DEFAULT_PRESENCE_TOKEN);
 
@@ -265,7 +263,7 @@ public:
         std::tr1::shared_ptr<Transfer::MetadataRequest> request,
         std::tr1::shared_ptr<Transfer::RemoteFileMetadata> response);
 
- 
+
     /// Disconnects from the given space by terminating the corresponding substream.
     void disconnectFromSpace(const SpaceID &spaceID, const ObjectReference& oref);
 
@@ -361,13 +359,13 @@ public:
         const SpaceID& space, ProxyObjectPtr proxy_obj, bool predictive,
         TimedMotionVector3f* loc, uint64 loc_seqno,
         TimedMotionQuaternion* orient, uint64 orient_seqno,
-        BoundingSphere3f* bounds, uint64 bounds_seqno,
+        AggregateBoundingInfo* bounds, uint64 bounds_seqno,
         String* mesh, uint64 mesh_seqno,
         String* phy, uint64 phy_seqno
     );
 
     // Helper for creating the correct type of proxy
-    ProxyObjectPtr createProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri, TimedMotionVector3f& tmv, TimedMotionQuaternion& tmvq, const BoundingSphere3f& bounds, const String& physics, const String& query, bool isAggregate, uint64 seqNo);
+    ProxyObjectPtr createProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri, TimedMotionVector3f& tmv, TimedMotionQuaternion& tmvq, const AggregateBoundingInfo& bounds, const String& physics, const String& query, bool isAggregate, uint64 seqNo);
 
     // Helper for constructing and sending location update
     void updateLocUpdateRequest(const SpaceID& space, const ObjectReference& oref, const TimedMotionVector3f* const loc, const TimedMotionQuaternion* const orient, const BoundingSphere3f* const bounds, const String* const mesh, const String* const phy);

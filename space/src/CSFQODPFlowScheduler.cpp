@@ -352,7 +352,7 @@ BoundingBox3f CSFQODPFlowScheduler::getObjectWeightRegion(const UUID& objid, con
     // We might have exact info
     if (mLoc->contains(objid)) {
         Vector3f pos = mLoc->currentPosition(objid);
-        BoundingSphere3f bounds = mLoc->bounds(objid);
+        BoundingSphere3f bounds = mLoc->bounds(objid).fullBounds();
         BoundingBox3f bb(pos + bounds.center(), bounds.radius());
         return bb;
     }

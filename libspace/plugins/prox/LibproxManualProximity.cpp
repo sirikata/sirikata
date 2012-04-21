@@ -489,7 +489,12 @@ void LibproxManualProximity::queryHasEvents(ProxQuery* query) {
                     msg_orient.set_position(orient.position());
                     msg_orient.set_velocity(orient.velocity());
 
-                    addition.set_bounds( mLocCache->bounds(objid) );
+                    Sirikata::Protocol::IAggregateBoundingInfo msg_bounds = addition.mutable_aggregate_bounds();
+                    AggregateBoundingInfo bnds = mLocCache->bounds(objid);
+                    msg_bounds.set_center_offset(bnds.centerOffset);
+                    msg_bounds.set_center_bounds_radius(bnds.centerBoundsRadius);
+                    msg_bounds.set_max_object_size(bnds.maxObjectRadius);
+
                     const String& mesh = mLocCache->mesh(objid);
                     if (mesh.size() > 0)
                         addition.set_mesh(mesh);

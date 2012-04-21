@@ -46,11 +46,11 @@ class JSVisibleManager :
 public:
     JSVisibleManager(JSCtx* ctx);
     virtual ~JSVisibleManager();
-    
+
     typedef boost::recursive_mutex RMutex;
     RMutex vmMtx;
 
-    
+
     /**
        Creates a new visible struct with sporef whatsVisible.  First checks if
        already have visible with sporef whatsVisible in mProxies.  If do,
@@ -76,7 +76,7 @@ public:
     // PositionListener
     //  - Updates JSProxyData state
     //  - Destruction ignored, handled by onDestroyProxy
-    virtual void updateLocation (ProxyObjectPtr proxy, const TimedMotionVector3f &newLocation, const TimedMotionQuaternion& newOrient, const BoundingSphere3f& newBounds,const SpaceObjectReference& sporef);
+    virtual void updateLocation (ProxyObjectPtr proxy, const TimedMotionVector3f &newLocation, const TimedMotionQuaternion& newOrient, const AggregateBoundingInfo& newBounds,const SpaceObjectReference& sporef);
 
     // MeshListener Interface
     //  - Updates JSProxyData state
@@ -104,7 +104,7 @@ private:
     void iOnCreateProxy(ProxyObjectPtr p);
     void clearVisibles();
 
-    
+
 
     // Clean up our references to a JSVisibleData. Only ever invoked by
     // JSVisibleData's destructor when there are no more references to

@@ -60,7 +60,7 @@ double SAngleDownloadPlanner::calculatePriority(ProxyObjectPtr proxy)
 {
     if (camera == NULL || !proxy) return 0;
 
-    float radius = proxy->bounds().radius();
+    float radius = proxy->bounds().fullRadius();
     Vector3d objLoc(proxy->location().position());
     Vector3d cameraLoc = camera->getPosition();
 

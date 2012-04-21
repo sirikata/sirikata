@@ -7,15 +7,6 @@
 
 namespace Sirikata {
 
-namespace {
-BoundingSphere3f regionFromBounds(const BoundingSphere3f& bnds) {
-    return BoundingSphere3f(bnds.center(), 0.f);
-}
-float32 maxSizeFromBounds(const BoundingSphere3f& bnds) {
-    return bnds.radius();
-}
-} // namespace
-
 typedef Prox::LocationServiceCache<ObjectProxSimulationTraits> LocationServiceCache;
 
 OHLocationServiceCache::OHLocationServiceCache(Network::IOStrandPtr strand)
@@ -105,7 +96,7 @@ BoundingSphere3f OHLocationServiceCache::region(const Iterator& id) {
     IteratorData* itdat = (IteratorData*)id.data;
     ObjectDataMap::iterator it = itdat->it;
     assert(it != mObjects.end());
-    return regionFromBounds(it->second.props.bounds());
+    return it->second.props.bounds().centerBounds();
 }
 
 float32 OHLocationServiceCache::maxSize(const Iterator& id) {
@@ -114,7 +105,7 @@ float32 OHLocationServiceCache::maxSize(const Iterator& id) {
     IteratorData* itdat = (IteratorData*)id.data;
     ObjectDataMap::iterator it = itdat->it;
     assert(it != mObjects.end());
-    return maxSizeFromBounds(it->second.props.bounds());
+    return it->second.props.bounds().maxObjectRadius;
 }
 
 bool OHLocationServiceCache::isLocal(const Iterator& id) {
@@ -175,14 +166,14 @@ TimedMotionQuaternion OHLocationServiceCache::orientation(const ObjectID& id) {
     return it->second.props.orientation();
 }
 
-BoundingSphere3f OHLocationServiceCache::bounds(const ObjectID& id) {
+AggregateBoundingInfo OHLocationServiceCache::bounds(const ObjectID& id) {
     GET_OBJ_ENTRY(id);
     return it->second.props.bounds();
 }
 
 float32 OHLocationServiceCache::radius(const ObjectID& id) {
     GET_OBJ_ENTRY(id);
-    return it->second.props.bounds().radius();
+    return it->second.props.bounds().fullRadius();
 }
 
 Transfer::URI OHLocationServiceCache::mesh(const ObjectID& id) {
@@ -215,7 +206,7 @@ void OHLocationServiceCache::objectAdded(
     const ObjectReference& parent,
     const TimedMotionVector3f& loc, uint64 loc_seqno,
     const TimedMotionQuaternion& orient, uint64 orient_seqno,
-    const BoundingSphere3f& bounds, uint64 bounds_seqno,
+    const AggregateBoundingInfo& bounds, uint64 bounds_seqno,
     const Transfer::URI& mesh, uint64 mesh_seqno,
     const String& physics, uint64 physics_seqno
 ) {
@@ -252,12 +243,12 @@ void OHLocationServiceCache::notifyObjectAdded(
     const ObjectReference& uuid,
     const ObjectReference& parent, bool agg,
     const TimedMotionVector3f& loc,
-    const BoundingSphere3f& bounds
+    const AggregateBoundingInfo& bounds
 ) {
     Lock lck(mMutex);
 
     for(ListenerSet::iterator listener_it = mListeners.begin(); listener_it != mListeners.end(); listener_it++)
-        (*listener_it)->locationConnectedWithParent(uuid, parent, agg, true, loc, regionFromBounds(bounds), maxSizeFromBounds(bounds));
+        (*listener_it)->locationConnectedWithParent(uuid, parent, agg, true, loc, bounds.centerBounds(), bounds.maxObjectRadius);
 
     OHLocationUpdateProvider::notify(&OHLocationUpdateListener::onObjectAdded, uuid);
 
@@ -394,13 +385,13 @@ void OHLocationServiceCache::notifyOrientationUpdated(const ObjectReference& uui
     tryRemoveObject(obj_it);
 }
 
-void OHLocationServiceCache::boundsUpdated(const ObjectReference& uuid, const BoundingSphere3f& newval, uint64 seqno) {
+void OHLocationServiceCache::boundsUpdated(const ObjectReference& uuid, const AggregateBoundingInfo& newval, uint64 seqno) {
     Lock lck(mMutex);
 
     ObjectDataMap::iterator it = mObjects.find(uuid);
     if (it == mObjects.end()) return;
 
-    BoundingSphere3f oldval = it->second.props.bounds();
+    AggregateBoundingInfo oldval = it->second.props.bounds();
     it->second.props.setBounds(newval, seqno);
 
     bool agg = it->second.aggregate;
@@ -415,12 +406,12 @@ void OHLocationServiceCache::boundsUpdated(const ObjectReference& uuid, const Bo
     );
 }
 
-void OHLocationServiceCache::notifyBoundsUpdated(const ObjectReference& uuid, const BoundingSphere3f& oldval, const BoundingSphere3f& newval) {
+void OHLocationServiceCache::notifyBoundsUpdated(const ObjectReference& uuid, const AggregateBoundingInfo& oldval, const AggregateBoundingInfo& newval) {
     Lock lck(mMutex);
 
     for(ListenerSet::iterator listen_it = mListeners.begin(); listen_it != mListeners.end(); listen_it++) {
-        (*listen_it)->locationRegionUpdated(uuid, regionFromBounds(oldval), regionFromBounds(newval));
-        (*listen_it)->locationMaxSizeUpdated(uuid, maxSizeFromBounds(oldval), maxSizeFromBounds(newval));
+        (*listen_it)->locationRegionUpdated(uuid, oldval.centerBounds(), newval.centerBounds());
+        (*listen_it)->locationMaxSizeUpdated(uuid, oldval.maxObjectRadius, newval.maxObjectRadius);
     }
 
     OHLocationUpdateProvider::notify(&OHLocationUpdateListener::onBoundsUpdated, uuid);

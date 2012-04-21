@@ -55,8 +55,13 @@ public:
     virtual uint64 orientation_seqno() const { return seqno(); }
 
     // Bounds
-    virtual bool has_bounds() const { return mUpdate.has_bounds(); }
-    virtual BoundingSphere3f bounds() const { return mUpdate.bounds(); }
+    virtual bool has_bounds() const { return mUpdate.has_aggregate_bounds(); }
+    virtual AggregateBoundingInfo bounds() const {
+        Vector3f center = mUpdate.aggregate_bounds().has_center_offset() ? mUpdate.aggregate_bounds().center_offset() : Vector3f(0,0,0);
+        float32 center_rad = mUpdate.aggregate_bounds().has_center_bounds_radius() ? mUpdate.aggregate_bounds().center_bounds_radius() : 0.f;
+        float32 max_object_size = mUpdate.aggregate_bounds().has_max_object_size() ? mUpdate.aggregate_bounds().max_object_size() : 0.f;
+        return AggregateBoundingInfo(center, center_rad, max_object_size);
+    }
     virtual uint64 bounds_seqno() const { return seqno(); }
 
     // Mesh
@@ -135,8 +140,13 @@ public:
     virtual uint64 orientation_seqno() const { return seqno(); }
 
     // Bounds
-    virtual bool has_bounds() const { return true; }
-    virtual BoundingSphere3f bounds() const { return mUpdate.bounds(); }
+    virtual bool has_bounds() const { return mUpdate.has_aggregate_bounds(); }
+    virtual AggregateBoundingInfo bounds() const {
+        Vector3f center = mUpdate.aggregate_bounds().has_center_offset() ? mUpdate.aggregate_bounds().center_offset() : Vector3f(0,0,0);
+        float32 center_rad = mUpdate.aggregate_bounds().has_center_bounds_radius() ? mUpdate.aggregate_bounds().center_bounds_radius() : 0.f;
+        float32 max_object_size = mUpdate.aggregate_bounds().has_max_object_size() ? mUpdate.aggregate_bounds().max_object_size() : 0.f;
+        return AggregateBoundingInfo(center, center_rad, max_object_size);
+    }
     virtual uint64 bounds_seqno() const { return seqno(); }
 
     // Mesh
