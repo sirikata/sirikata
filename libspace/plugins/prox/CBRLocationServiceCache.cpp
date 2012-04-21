@@ -188,11 +188,6 @@ const AggregateBoundingInfo& CBRLocationServiceCache::bounds(const ObjectID& id)
     return it->second.bounds;
 }
 
-float32 CBRLocationServiceCache::radius(const ObjectID& id) const {
-    GET_OBJ_ENTRY(id); // NOTE: should only be accessed by prox thread, shouldn't need lock
-    return it->second.bounds.maxObjectRadius;
-}
-
 const String& CBRLocationServiceCache::mesh(const ObjectID& id) const {
     GET_OBJ_ENTRY(id); // NOTE: should only be accessed by prox thread, shouldn't need lock
     return it->second.mesh;

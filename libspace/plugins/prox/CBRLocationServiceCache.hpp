@@ -81,7 +81,6 @@ public:
     const TimedMotionVector3f& location(const ObjectID& id) const;
     const TimedMotionQuaternion& orientation(const ObjectID& id) const;
     const AggregateBoundingInfo& bounds(const ObjectID& id) const;
-    float32 radius(const ObjectID& id) const;
     const String& mesh(const ObjectID& id) const;
     const String& physics(const ObjectID& id) const;
 

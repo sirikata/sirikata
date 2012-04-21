@@ -93,7 +93,6 @@ public:
     TimedMotionVector3f location(const ObjectID& id);
     TimedMotionQuaternion orientation(const ObjectID& id);
     AggregateBoundingInfo bounds(const ObjectID& id);
-    float32 radius(const ObjectID& id);
     Transfer::URI mesh(const ObjectID& id);
     String physics(const ObjectID& id);
     ObjectReference parent(const ObjectID& id);

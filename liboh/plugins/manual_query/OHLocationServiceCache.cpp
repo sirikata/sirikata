@@ -171,11 +171,6 @@ AggregateBoundingInfo OHLocationServiceCache::bounds(const ObjectID& id) {
     return it->second.props.bounds();
 }
 
-float32 OHLocationServiceCache::radius(const ObjectID& id) {
-    GET_OBJ_ENTRY(id);
-    return it->second.props.bounds().fullRadius();
-}
-
 Transfer::URI OHLocationServiceCache::mesh(const ObjectID& id) {
     GET_OBJ_ENTRY(id);
     return it->second.props.mesh();
