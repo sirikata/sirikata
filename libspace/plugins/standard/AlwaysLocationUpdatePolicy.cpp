@@ -324,9 +324,15 @@ bool AlwaysLocationUpdatePolicy::trySend(const UUID& dest, const Sirikata::Proto
     std::string bluMsg = serializePBJMessage(blu);
 
     ObjectSession* session = mLocService->context()->objectSessionManager()->getSession(ObjectReference(dest));
-    if (session == NULL) return false;
+    if (session == NULL) {
+        mObjectSubscriptions.decrementOutstandingMessageCount(dest);
+        return false;
+    }
     ODPSST::Stream::Ptr locServiceStream = session->getStream();
-    if (!locServiceStream) return false;
+    if (!locServiceStream) {
+        mObjectSubscriptions.decrementOutstandingMessageCount(dest);
+        return false;
+    }
 
     Sirikata::Protocol::Frame msg_frame;
     msg_frame.set_payload(bluMsg);
@@ -340,9 +346,15 @@ bool AlwaysLocationUpdatePolicy::trySend(const OHDP::NodeID& dest, const Sirikat
     std::string bluMsg = serializePBJMessage(blu);
 
     ObjectHostSessionPtr session = mLocService->context()->ohSessionManager()->getSession(dest);
-    if (!session) return false;
+    if (!session) {
+        mOHSubscriptions.decrementOutstandingMessageCount(dest);
+        return false;
+    }
     OHDPSST::Stream::Ptr locServiceStream = session->stream();
-    if (!locServiceStream) return false;
+    if (!locServiceStream) {
+        mOHSubscriptions.decrementOutstandingMessageCount(dest);
+        return false;
+    }
 
     Sirikata::Protocol::Frame msg_frame;
     msg_frame.set_payload(bluMsg);

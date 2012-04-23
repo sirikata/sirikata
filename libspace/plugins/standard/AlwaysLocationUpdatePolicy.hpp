@@ -372,6 +372,7 @@ private:
 
                     // If we hit the limit for this update, try to send it out
                     if (bulk_update.update_size() > (int32)max_updates) {
+                        sub_info->numOutstandingMessages++;
                         bool sent = parent->trySend(sid, bulk_update);
                         if (!sent) {
                             send_failed = true;
@@ -381,18 +382,17 @@ private:
                             bulk_update = Sirikata::Protocol::Loc::BulkLocationUpdate(); // clear it out
                             last_shipped = up_it;
                             sent_count++;
-                            sub_info->numOutstandingMessages++;
                         }
                     }
                 }
 
                 // Try to send the last few if necessary/possible
                 if (!send_failed && bulk_update.update_size() > 0) {
+                    sub_info->numOutstandingMessages++;
                     bool sent = parent->trySend(sid, bulk_update);
                     if (sent) {
                         last_shipped = sub_info->outstandingUpdates.end();
                         sent_count++;
-                        sub_info->numOutstandingMessages++;
                     }
                 }
 
