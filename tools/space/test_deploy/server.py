@@ -7,16 +7,6 @@ import subprocess
 # script which deals with common configuration and generating
 # per-instance configuration options.
 
-# Some static configuration options for convenience
-
-plugins = {
-    'core' : 'tcpsst,servermap-tabular,core-local,graphite',
-    'space' : 'weight-exp,weight-sqr,weight-const,space-null,space-craq,space-local,space-standard,space-master-pinto,colladamodels,mesh-billboard,space-redis,space-prox',
-    'cseg' : 'weight-exp,weight-sqr,weight-const',
-    'pinto' : '',
-    'oh' : 'weight-exp,weight-sqr,weight-const,tcpsst,sqlite,weight-const,ogregraphics,colladamodels,mesh-billboard,csvfactory,scripting-js,simplecamera'
-}
-
 
 def AddStandardParams(appname, idx, args, env, **kwargs):
     if ('with_xterm' in kwargs and kwargs['with_xterm']):
@@ -41,21 +31,21 @@ def AddStandardParams(appname, idx, args, env, **kwargs):
             env['HEAP_PROFILE_ALLOCATION_INTERVAL'] = str(kwargs['heapprofile_interval'])
 
 
-def RunApp(appname, idx, plugins, args, **kwargs):
+def RunApp(appname, idx, args, **kwargs):
     full_args = []
     full_env = {}
     AddStandardParams(appname, idx, full_args, full_env, **kwargs)
     full_args.extend(['./' + appname])
     full_args.extend(args)
-    if plugins:
-        full_args.extend([ plugins ])
+    if 'plugins' in kwargs and kwargs['plugins'] is not None:
+        full_args.extend([ kwargs['plugins'] ])
     print 'Running:', full_args, 'with environment:', full_env
     # Clear full_env if its empty
     if not full_env: full_env = None
     subprocess.Popen(full_args, env=full_env)
 
 def RunPinto(args, **kwargs):
-    RunApp('pinto_d', 0, None, args, **kwargs)
+    RunApp('pinto_d', 0, args, **kwargs)
 
 def RunSpace(ssid, args, **kwargs):
-    RunApp('space_d', ssid, '--space.plugins=' + plugins['space'], args, **kwargs)
+    RunApp('space_d', ssid, args, **kwargs)
