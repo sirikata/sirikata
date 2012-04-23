@@ -243,7 +243,7 @@ private:
 
     // Set up a space connection to the given server
     void setupSpaceConnection(ServerID server, SpaceNodeConnection::GotSpaceConnectionCallback cb);
-    void finishSetupSpaceConnection(ServerID server, Address4 addr);
+    void finishSetupSpaceConnection(ServerID server, ServerID resolved_server, Address4 addr);
 
     // Handle a connection event, i.e. the socket either successfully connected or failed
     void handleSpaceConnection(const Sirikata::Network::Stream::ConnectionStatus status,

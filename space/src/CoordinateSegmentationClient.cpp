@@ -79,14 +79,16 @@ CoordinateSegmentationClient::CoordinateSegmentationClient(SpaceContext* ctx, co
     mSidMap->lookupExternal(
       mContext->id(),
       mContext->mainStrand->wrap(
-          std::tr1::bind(&CoordinateSegmentationClient::handleSelfLookup, this, _1)
+          std::tr1::bind(&CoordinateSegmentationClient::handleSelfLookup, this, _1, _2)
       )
     );
   }
 }
 
 
-void CoordinateSegmentationClient::handleSelfLookup(Address4 my_addr) {
+void CoordinateSegmentationClient::handleSelfLookup(ServerID my_sid, Address4 my_addr) {
+    assert(my_sid == mContext->id());
+
     mAcceptor = boost::shared_ptr<TCPListener>(new TCPListener(*mIOService,boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), my_addr.port+10000)));
 
     startAccepting();

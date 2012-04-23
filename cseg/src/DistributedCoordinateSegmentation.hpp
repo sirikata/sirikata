@@ -79,23 +79,23 @@ typedef struct SocketContainer {
   SocketContainer(SocketPtr socket) {
     mSocket = socket;
   }
-  
+
   size_t size() {
     return 1;
   }
-  
+
   SocketPtr socket() {
     return mSocket;
   }
-  
+
   SocketPtr mSocket;
 
 } SocketContainer;
 
-typedef std::tr1::function< void(std::map<ServerID, SocketContainer>) > ResponseCompletionFunction;  
+typedef std::tr1::function< void(std::map<ServerID, SocketContainer>) > ResponseCompletionFunction;
 
 typedef boost::shared_ptr<Sirikata::SizedThreadSafeQueue<SocketContainer> > SocketQueuePtr;
-  
+
 /** Distributed kd-tree based implementation of CoordinateSegmentation. */
 class DistributedCoordinateSegmentation : public PollingService {
 public:
@@ -103,7 +103,7 @@ public:
     virtual ~DistributedCoordinateSegmentation();
 
     virtual BoundingBoxList serverRegionCached(const ServerID& server);
-    void getServerRegionUncached(const ServerID& server, 
+    void getServerRegionUncached(const ServerID& server,
                           boost::shared_ptr<tcp::socket> socket);
     virtual BoundingBox3f region() ;
     virtual uint32 numServers() ;
@@ -111,27 +111,27 @@ public:
     virtual void poll();
     virtual void stop();
 
-    void handleSelfLookup(Address4 my_addr);
+    void handleSelfLookup(ServerID my_sid, Address4 my_addr);
 
 private:
-    void service();    
- 
+    void service();
+
     CSegContext* mContext;
 
     SegmentedRegion mTopLevelRegion;
     Time mLastUpdateTime;
-  
+
     LoadBalancer mLoadBalancer;
 
     std::vector<SegmentationChangeListener> mSpacePeers;
-    
+
 
     boost::asio::io_service mIOService;  //creates an io service
     boost::asio::io_service mLLIOService;  //creates an io service
 
     boost::shared_ptr<tcp::acceptor> mAcceptor;
-    boost::shared_ptr<tcp::socket> mSocket;    
-    
+    boost::shared_ptr<tcp::socket> mSocket;
+
 
     boost::shared_ptr<tcp::acceptor> mLLTreeAcceptor;
     boost::shared_ptr<tcp::socket> mLLTreeAcceptorSocket;
@@ -155,7 +155,7 @@ private:
     void acceptLLTreeRequestHandler();
 
    /* Functions to do the initial kd-tree partitioning of the virtual world into regions, and
-      divide the kd-tree into upper and lower trees.     
+      divide the kd-tree into upper and lower trees.
    */
     void generateHierarchicalTrees(SegmentedRegion* region, int depth, int& numLLTreesSoFar);
     void subdivideTopLevelRegion(SegmentedRegion* region,
@@ -165,9 +165,9 @@ private:
 
 
     /* Functions to contact another CSEG server, create sockets to them and/or forward calls to them.
-       These should go away later when calls to CSEG no longer remain recursive. */    
-    
-    void callLowerLevelCSEGServer(boost::shared_ptr<tcp::socket> socket, ServerID, const Vector3f& searchVec, 
+       These should go away later when calls to CSEG no longer remain recursive. */
+
+    void callLowerLevelCSEGServer(boost::shared_ptr<tcp::socket> socket, ServerID, const Vector3f& searchVec,
                                       const BoundingBox3f& boundingBox,
                                       BoundingBox3f& returningBBox);
   void callLowerLevelCSEGServersForServerRegions(boost::shared_ptr<tcp::socket> socket,
@@ -198,12 +198,12 @@ private:
 				    SegmentedRegion** sibling,
 				    SegmentedRegion** parent);
 
-    
 
-    
+
+
     /* Functions to read from a socket.  */
-    
-    void asyncRead(boost::shared_ptr<tcp::socket> socket, 
+
+    void asyncRead(boost::shared_ptr<tcp::socket> socket,
 		   uint8* asyncBufferArray,
 		   const boost::system::error_code& ec,
 		   std::size_t bytes_transferred);
@@ -212,16 +212,16 @@ private:
               const boost::system::error_code& ec,
               std::size_t bytes_transferred);
 
-    
+
     void writeCSEGMessage(boost::shared_ptr<tcp::socket> socket, Sirikata::Protocol::CSeg::CSegMessage& csegMessage);
 
-    void readCSEGMessage(boost::shared_ptr<tcp::socket> socket, 
+    void readCSEGMessage(boost::shared_ptr<tcp::socket> socket,
                           Sirikata::Protocol::CSeg::CSegMessage& csegMessage,
                           uint8* bufferSoFar,
-                          uint32 bufferSoFarSize 
+                          uint32 bufferSoFarSize
                          );
 
-    void readCSEGMessage(boost::shared_ptr<tcp::socket> socket, 
+    void readCSEGMessage(boost::shared_ptr<tcp::socket> socket,
                          Sirikata::Protocol::CSeg::CSegMessage& csegMessage);
 
     /* Functions to serialize the whole CSEG tree. */
@@ -229,10 +229,10 @@ private:
     void traverseAndStoreTree(SegmentedRegion* region, uint32& idx,
 			      SerializedBSPTree* serializedTree);
 
-    
+
 
     ServerIDMap *  mSidMap;
-    
+
 
     /* Key value maps for fast lookup of bounding boxes managed by space servers. */
     std::map<ServerID, BoundingBoxList > mWholeTreeServerRegionMap;
@@ -245,16 +245,17 @@ private:
 
     friend class LoadBalancer;
 
-    
+
     SocketContainer getSocketToCSEGServer(ServerID server_id);
 
 
-  void doSocketCreation(ServerID server_id, 
+  void doSocketCreation(ServerID server_id,
                         std::vector<ServerID> server_id_List,
                         std::map<ServerID, SocketContainer>* socketMapPtr,
                         ResponseCompletionFunction func,
+                        ServerID resolved_id,
                         Address4 addy
-                        );    
+                        );
 
   void createSocketContainers(std::vector<ServerID> server_id_List,
                               std::map<ServerID, SocketContainer>* socketMap,
@@ -271,13 +272,13 @@ private:
   void writeLookupResponse(boost::shared_ptr<tcp::socket> socket, BoundingBox3f& bbox, ServerID sid) ;
 
 
-  
 
-  void requestServerRegionsOnSockets(boost::shared_ptr<tcp::socket> socket, ServerID server_id, 
+
+  void requestServerRegionsOnSockets(boost::shared_ptr<tcp::socket> socket, ServerID server_id,
                                      BoundingBoxList bbList,
                                      std::map<ServerID, SocketContainer> socketList);
 
-  void writeServerRegionResponse(boost::shared_ptr<tcp::socket> socket, 
+  void writeServerRegionResponse(boost::shared_ptr<tcp::socket> socket,
                                  BoundingBoxList boundingBoxlist);
 
   bool handleLookupBBox(const BoundingBox3f& bbox, boost::shared_ptr<tcp::socket> socket);

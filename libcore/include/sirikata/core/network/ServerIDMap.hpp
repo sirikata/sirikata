@@ -44,7 +44,7 @@ namespace Sirikata {
  */
 class SIRIKATA_EXPORT ServerIDMap {
 public:
-    typedef std::tr1::function<void(Address4)> Address4LookupCallback;
+    typedef std::tr1::function<void(ServerID, Address4)> Address4LookupCallback;
 
     ServerIDMap(Context* ctx)
         : mContext(ctx)
@@ -64,6 +64,11 @@ public:
      *  the server can't be found.
      */
     virtual void lookupExternal(const ServerID& sid, Address4LookupCallback cb) = 0;
+
+    /** Lookup a random external addres, e.g. to find any node to bootstrap a
+     *  connection to the space.
+     */
+    virtual void lookupRandomExternal(Address4LookupCallback cb) = 0;
 
   protected:
     Context* mContext;

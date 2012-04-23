@@ -178,7 +178,9 @@ void DistributedCoordinateSegmentation::subdivideTopLevelRegion(SegmentedRegion*
   CSEG servers at that port number+10000. This function also starts off threads for the IOServices
   that handle requests from space servers and other CSEG servers.
 */
-void DistributedCoordinateSegmentation::handleSelfLookup(Address4 my_addr) {
+void DistributedCoordinateSegmentation::handleSelfLookup(ServerID my_sid, Address4 my_addr) {
+    assert(my_sid == mContext->id());
+
   uint16 cseg_server_ll_port = my_addr.getPort()+10000;
 
   std::cout << "Listening on  LL: " << cseg_server_ll_port << "\n";
@@ -235,7 +237,7 @@ DistributedCoordinateSegmentation::DistributedCoordinateSegmentation(CSegContext
   sidmap->lookupInternal(ctx->id(),
                          ctx->mainStrand->wrap(
                          std::tr1::bind(&DistributedCoordinateSegmentation::handleSelfLookup, this,
-                                        std::tr1::placeholders::_1)
+                             std::tr1::placeholders::_1, std::tr1::placeholders::_2)
       ) );
 }
 
@@ -1027,6 +1029,7 @@ void DistributedCoordinateSegmentation::doSocketCreation(ServerID server_id,
                                                          std::vector<ServerID> server_id_list,
                                                          std::map<ServerID, SocketContainer>* socketMapPtr,
                                                          ResponseCompletionFunction func,
+                                                         ServerID resolved_id,
                                                          Address4 addy
                                                          )
 {
@@ -1118,7 +1121,8 @@ void DistributedCoordinateSegmentation::createSocketContainers(std::vector<Serve
     mSidMap->lookupInternal(server_id,
                             mContext->mainStrand->wrap(
                                std::tr1::bind(&DistributedCoordinateSegmentation::doSocketCreation, this,
-                               server_id, server_id_list, socketMap, func, std::tr1::placeholders::_1)
+                                   server_id, server_id_list, socketMap, func,
+                                   std::tr1::placeholders::_1, std::tr1::placeholders::_2)
                           ));
 
   }

@@ -836,6 +836,7 @@ void SessionManager::setupSpaceConnection(ServerID server, SpaceNodeConnection::
     Sirikata::SerializationCheck::Scoped sc(&mSerialization);
 
     using std::tr1::placeholders::_1;
+    using std::tr1::placeholders::_2;
 
     // Mark us as looking this up, store our callback
     assert(mConnectingConnections.find(server) == mConnectingConnections.end());
@@ -864,13 +865,13 @@ void SessionManager::setupSpaceConnection(ServerID server, SpaceNodeConnection::
         server,
         mContext->mainStrand->wrap(
             std::tr1::bind(&SessionManager::finishSetupSpaceConnection, this,
-                server, _1
+                server, _1, _2
             )
         )
     );
 }
 
-void SessionManager::finishSetupSpaceConnection(ServerID server, Address4 addr) {
+void SessionManager::finishSetupSpaceConnection(ServerID server, ServerID resolved_server, Address4 addr) {
     Sirikata::SerializationCheck::Scoped sc(&mSerialization);
 
     using std::tr1::placeholders::_1;

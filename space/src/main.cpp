@@ -91,7 +91,7 @@ struct ServerData {
     ObjectHostSessionManager* oh_sess_mgr;
     ObjectSessionManager* obj_sess_mgr;
 };
-void createServer(Server** server_out, ModuleList* modules_out, ServerData sd, Address4 addr) {
+void createServer(Server** server_out, ModuleList* modules_out, ServerData sd, ServerID resolved_sid, Address4 addr) {
     if (addr == Address4::Null) {
         SILOG(space, fatal, "The requested server ID isn't in ServerIDMap");
         sd.space_context->shutdown();
@@ -326,6 +326,7 @@ int main(int argc, char** argv) {
     // registered. We pass storage for the Server to the callback so we can
     // handle cleaning it up ourselves.
     using std::tr1::placeholders::_1;
+    using std::tr1::placeholders::_2;
     Server* server = NULL;
     ModuleList modules;
     ServerData sd;
@@ -341,7 +342,7 @@ int main(int argc, char** argv) {
     server_id_map->lookupExternal(
         space_context->id(),
         space_context->mainStrand->wrap(
-            std::tr1::bind( &createServer, &server, &modules, sd, _1)
+            std::tr1::bind( &createServer, &server, &modules, sd, _1, _2)
         )
     );
 

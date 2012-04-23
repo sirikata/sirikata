@@ -55,6 +55,7 @@ public:
 
     virtual Address4 lookupExternal(const ServerID& obj_id);
     virtual void lookupExternal(const ServerID& sid, Address4LookupCallback cb);
+    virtual void lookupRandomExternal(Address4LookupCallback cb);
 };
 
 } // namespace Sirikata
