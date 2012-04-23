@@ -630,7 +630,7 @@ bool OgreRenderer::loadBuiltinPlugins () {
 		SILOG(ogre,warn,"Received an Internal Error when loading the Direct3D9 plugin, falling back to OpenGL. Check that you have the latest version of DirectX installed from microsoft.com/directx");
 	}
 #endif
-    retval=ogreLoadPlugin("Plugin_CgProgramManager" OGRE_DEBUG_MACRO, exeDir) && retval;
+        //retval=ogreLoadPlugin("Plugin_CgProgramManager" OGRE_DEBUG_MACRO, exeDir) && retval;
     retval=ogreLoadPlugin("Plugin_ParticleFX" OGRE_DEBUG_MACRO, exeDir) && retval;
     retval=ogreLoadPlugin("Plugin_OctreeSceneManager" OGRE_DEBUG_MACRO, exeDir) && retval;
 	if (!retval) {
