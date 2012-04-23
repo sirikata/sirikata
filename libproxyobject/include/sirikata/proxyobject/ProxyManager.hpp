@@ -51,6 +51,8 @@ class SIRIKATA_PROXYOBJECT_EXPORT ProxyManager
       SerializationCheck
 {
 public:
+    typedef std::vector<SpaceObjectReference> ObjectReferenceList;
+
     static ProxyManagerPtr construct(VWObjectPtr parent, const SpaceObjectReference& _id);
     virtual ~ProxyManager();
 
