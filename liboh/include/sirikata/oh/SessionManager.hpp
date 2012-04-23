@@ -240,10 +240,18 @@ private:
     void getAnySpaceConnection(SpaceNodeConnection::GotSpaceConnectionCallback cb);
     // Get the connection to the specified space node
     void getSpaceConnection(ServerID sid, SpaceNodeConnection::GotSpaceConnectionCallback cb);
+    // If we have an existing connection or request, get it. Helper
+    // for getSpaceConnection and setupRandomSpaceConnection
+    bool getExistingSpaceConnection(ServerID sid, SpaceNodeConnection::GotSpaceConnectionCallback cb);
 
     // Set up a space connection to the given server
     void setupSpaceConnection(ServerID server, SpaceNodeConnection::GotSpaceConnectionCallback cb);
     void finishSetupSpaceConnection(ServerID server, ServerID resolved_server, Address4 addr);
+    // And a random server
+    void setupRandomSpaceConnection(ServerID resolved_server, Address4 addr, SpaceNodeConnection::GotSpaceConnectionCallback cb);
+    // Helper for setting up an in-progress connection
+    void registerSpaceNodeConnection(ServerID server, SpaceNodeConnection::GotSpaceConnectionCallback cb);
+
 
     // Handle a connection event, i.e. the socket either successfully connected or failed
     void handleSpaceConnection(const Sirikata::Network::Stream::ConnectionStatus status,
