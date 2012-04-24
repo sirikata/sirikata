@@ -47,5 +47,8 @@ def RunApp(appname, idx, args, **kwargs):
 def RunPinto(args, **kwargs):
     RunApp('pinto_d', 0, args, **kwargs)
 
+def RunCSeg(args, **kwargs):
+    RunApp('cseg_d', 0, args, **kwargs)
+
 def RunSpace(ssid, args, **kwargs):
     RunApp('space_d', ssid, args, **kwargs)
