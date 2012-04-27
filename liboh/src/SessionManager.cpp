@@ -1164,8 +1164,8 @@ void SessionManager::handleSessionMessageConnectResponseSuccess(ServerID from_se
             phy = conn_resp.physics();
         // If we've got proper time syncing setup, we can dispatch the callback
         // immediately.  Otherwise, we need to delay the callback
-        assert(mTimeSyncClient != NULL);
-        bool time_synced = mTimeSyncClient->valid();
+
+        bool time_synced = mTimeSyncClient != NULL && mTimeSyncClient->valid();
 
         ServerID connected_to = mObjectConnections.handleConnectSuccess(sporef_obj, loc, orient, bnds, mesh, phy, time_synced);
 
@@ -1336,8 +1336,7 @@ void SessionManager::spaceConnectCallback(int err, SSTStreamPtr s, SpaceObjectRe
     mObjectToSpaceStreams[spaceobj.object()] = s;
 
 
-    assert(mTimeSyncClient != NULL);
-    bool time_synced = mTimeSyncClient->valid();
+    bool time_synced = mTimeSyncClient != NULL && mTimeSyncClient->valid();
     mObjectConnections.handleConnectStream(spaceobj, after, time_synced);
 }
 
