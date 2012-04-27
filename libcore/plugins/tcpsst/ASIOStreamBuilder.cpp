@@ -263,7 +263,7 @@ void buildStream(TcpSstHeaderArray *buffer,
             shasumbytes[(i * 4) + 2] = ((shasum[i] >> 8) & 0xff);
             shasumbytes[(i * 4) + 3] = (shasum[i] & 0xff);
         }
-        reply_str = Base64::encode(shasumbytes);
+        reply_str = Base64::encode(shasumbytes,true);
         streamType = TCPStream::RFC_6455;
     } else {
         SILOG(tcpsst,warning,"Unsupported Websocket Version " << wsversion);
