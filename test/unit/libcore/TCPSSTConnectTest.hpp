@@ -518,13 +518,25 @@ public:
             std::tr1::bind(&SstTest::connectorDataRecvCallback,this,stream,-2000000000,_1,_2),
             &Stream::ignoreReadySendCallback);
     }
-    void testConnectSend (void )
+    void testConnectSend() {
+        doConnectSend("2");
+        {
+            SstTest one;//realistic fragmentation
+            one.doConnectSend("1");
+        }
+        {
+            SstTest zero;//no fragmentation
+            zero.doConnectSend("0");
+        }
+        
+    }
+    void doConnectSend (std::string fragmentLevel="0" )
     {
         dedStreams.clear();
         Stream*z=NULL;
         bool doSubstreams=true;
         {
-            Stream *r=StreamFactory::getSingleton().getDefaultConstructor()(mServiceStrand,StreamFactory::getSingleton().getDefaultOptionParser()(String("--websocket-draft-76=false")));
+            Stream *r=StreamFactory::getSingleton().getDefaultConstructor()(mServiceStrand,StreamFactory::getSingleton().getDefaultOptionParser()(String("--websocket-draft-76=false --test-fragment-packet-level=")+fragmentLevel));
             simpleConnect(r,Address("127.0.0.1",mPort));
             runRoutine(r);
             if (doSubstreams) {

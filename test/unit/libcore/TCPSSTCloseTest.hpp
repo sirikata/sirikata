@@ -88,7 +88,7 @@ class SstCloseTest : public CxxTest::TestSuite
     void connectionCallback(int id, Stream::ConnectionStatus stat, const std::string&reason) {
         if (stat!=Stream::Connected) {
             TS_ASSERT(false);
-            printf ("CONNECTION FAIL\n");
+            printf ("CONNECTION FAIL %s\n",reason.c_str());
         }else {
             //printf ("ACTIVE\n");
         }
@@ -155,7 +155,7 @@ private:
         Timer::sleep(Duration::seconds(1));
     }
 public:
-    void closeStreamRun(bool fork, bool doSleep=false) {
+    void closeStreamRun(bool fork, bool doSleep=false, const std::string &fragmentPacketLevel="0") {
         using std::tr1::placeholders::_1;
         using std::tr1::placeholders::_2;
 
@@ -167,7 +167,7 @@ public:
 
         for(int i=0;i<NUM_TEST_STREAMS;++i) {
             if (i==0||!fork) {
-                mSenders[i]=StreamFactory::getSingleton().getDefaultConstructor()(mSendStrand,StreamFactory::getSingleton().getDefaultOptionParser()(String("--parallel-sockets=1 --websocket-draft-76=true")));
+                mSenders[i]=StreamFactory::getSingleton().getDefaultConstructor()(mSendStrand,StreamFactory::getSingleton().getDefaultOptionParser()(String("--parallel-sockets=1 --websocket-draft-76=false --test-fragment-packet-level=")+fragmentPacketLevel));
                 mSenders[i]->connect(Address("127.0.0.1",mPort),
                                      &Stream::ignoreSubstreamCallback,
                                      std::tr1::bind(&SstCloseTest::connectionCallback,this,i,_1,_2),
@@ -266,13 +266,39 @@ public:
         mOffset=1;
         closeStreamRun(true);
     }
-    void xestCloseSomeStreamSleep() {
+    void testCloseSomeStreamSleep() {
         mOffset=1;
         closeStreamRun(false,true);
     }
-    void xestCloseSomeStreamsSleep() {
+    void testCloseSomeStreamsSleep() {
         mOffset=1;
         closeStreamRun(true,true);
+    }
+
+
+    void testCloseAllStreamFrag() {
+        mOffset=0;
+        closeStreamRun(false,false,"1");
+    }
+    void testCloseAllStreamsFrag() {
+        mOffset=0;
+        closeStreamRun(true,false,"2");
+    }
+    void testCloseSomeStreamFrag() {
+        mOffset=1;
+        closeStreamRun(false,false,"1");
+    }
+    void testCloseSomeStreamsFrag() {
+        mOffset=1;
+        closeStreamRun(true,false,"2");
+    }
+    void testCloseSomeStreamSleepFrag() {
+        mOffset=1;
+        closeStreamRun(false,true,"1");
+    }
+    void testCloseSomeStreamsSleepFrag() {
+        mOffset=1;
+        closeStreamRun(true,true,"2");
     }
     ~SstCloseTest() {
 

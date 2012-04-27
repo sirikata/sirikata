@@ -322,7 +322,7 @@ void buildStream(TcpSstHeaderArray *buffer,
             sIncompleteStreams.erase(where);
 
 
-            Stream::StreamID newID=Stream::StreamID(1);
+            Stream::StreamID newID=MultiplexedSocket::getFirstStreamID(true);
             TCPStream * strm=new TCPStream(shared_socket,newID);
 
             TCPSetCallbacks setCallbackFunctor(&*shared_socket,strm);

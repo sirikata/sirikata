@@ -241,7 +241,13 @@ MultiplexedSocket::SocketConnectionPhase MultiplexedSocket::addCallbacks(const S
     return mSocketConnectionPhase;
 }
 
-
+Stream::StreamID MultiplexedSocket::getFirstStreamID(bool connector) { 
+    if (connector) {
+        return TCPStream::sFragmentPackets?16383:1;
+    }else {
+        return TCPStream::sFragmentPackets?16382:0;
+    }
+}
 Stream::StreamID MultiplexedSocket::getNewID() {
     if (!mFreeStreamIDs.probablyEmpty()) {
         Stream::StreamID retval;
@@ -251,7 +257,8 @@ Stream::StreamID MultiplexedSocket::getNewID() {
     unsigned int retval=mHighestStreamID+=2;
     assert(retval>1);
     if (retval > 127) {
-        SILOG(tcpsst, error,"Stream ids larger than 127 may be fragmented by certain browsers. See FIXME in ASIOReadBuffer::processPartialChunk.");
+//        SILOG(tcpsst, error,"Stream ids larger than 127 may be fragmented by certain browsers. See FIXME in ASIOReadBuffer::processPartialChunk.");
+        //fixed this bug
     }
     return Stream::StreamID(retval);
 }
@@ -259,7 +266,7 @@ MultiplexedSocket::MultiplexedSocket(IOStrand*io, const Stream::SubstreamCallbac
  : SerializationCheck(),
    mIO(io),
    mNewSubstreamCallback(substreamCallback),
-   mHighestStreamID(1)
+  mHighestStreamID(getFirstStreamID(true).read())
 {
     mStreamType = streamType;
     mNewRequests=NULL;
@@ -269,7 +276,7 @@ MultiplexedSocket::MultiplexedSocket(IOStrand*io,const UUID&uuid,const Stream::S
  :SerializationCheck(),
   mIO(io),
      mNewSubstreamCallback(substreamCallback),
-     mHighestStreamID(0) {
+    mHighestStreamID(getFirstStreamID(false).read()) {
     mStreamType = streamType;
     mNewRequests=NULL;
     mSocketConnectionPhase=PRECONNECTION;
