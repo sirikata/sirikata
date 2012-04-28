@@ -1048,9 +1048,10 @@ private:
       EndPoint<EndPointType> originalListeningEndPoint(mRemoteEndPoint.endPoint, mRemoteEndPoint.port);
 
       uint32* received_payload = (uint32*) received_msg->payload().data();
-
-      setRemoteChannelID( ntohl(received_payload[0]));
-      mRemoteEndPoint.port = ntohl(received_payload[1]);
+      if (received_msg->payload().size()>=sizeof(uint32)*2) {
+          setRemoteChannelID( ntohl(received_payload[0]));
+          mRemoteEndPoint.port = ntohl(received_payload[1]);
+      }
 
       sendData( received_payload, 0, false );
 
@@ -1220,7 +1221,9 @@ private:
          connectionMap[newLocalEndPoint] = conn;
 
          conn->setLocalChannelID(availableChannel);
-         conn->setRemoteChannelID(ntohl(received_payload[0]));
+         if (received_msg->payload().size()>=sizeof(uint32)) {
+             conn->setRemoteChannelID(ntohl(received_payload[0]));
+         }
          conn->setState(CONNECTION_PENDING_RECEIVE_CONNECT);
 
          conn->sendData(payload, sizeof(payload), false);
