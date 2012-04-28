@@ -5,7 +5,8 @@ from framework.db.entity import Entity
 import os
 
 class EmersonFeatureTest(CSVTest):
-    script_paths = [ os.path.join(os.path.dirname(__file__), 'emTests') ]
+    script_paths = [ os.path.dirname(__file__),
+                     os.path.join(os.path.dirname(__file__), 'emTests') ]
 
 
 class BasicTest(EmersonFeatureTest):

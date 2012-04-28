@@ -5,7 +5,7 @@
  */
 
 
-system.require('helperLibs/util.em');
+system.require('emUtil/util.em');
 system.require('std/http/http.em');
 system.require('std/core/bind.em');
 

@@ -1,4 +1,4 @@
-system.require('helperLibs/util.em');
+system.require('emUtil/util.em');
 
 /**
  Just creates a singly-presenced entity that kills itslef after 10
