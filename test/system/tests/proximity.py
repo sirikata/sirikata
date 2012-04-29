@@ -61,7 +61,9 @@ class ProximityTest(HttpCommandTest):
             service_output = open(service_output_filename, 'w')
             print(' '.join(service_cmd), file=service_output)
             service_output.flush()
-            procs.process(service_cmd, stdout=service_output, stderr=subprocess.STDOUT, default=True)
+            default_proc = (('default' in svc) and svc['default']) or False
+            wait_proc = ('wait' not in svc) or svc['wait']
+            procs.process(service_cmd, stdout=service_output, stderr=subprocess.STDOUT, default=default_proc, wait=wait_proc)
 
             self._outputs[svc_name] = service_output
             self.report_files[svc_name] = service_output_filename
@@ -78,13 +80,6 @@ class ProximityTest(HttpCommandTest):
             self.testBody(procs, output=output)
         except:
             self.fail(msg='Uncaught exception during test:\n' + traceback.format_exc())
-
-        # Try to shut down all spaces, which wouldn't shut down on
-        # their own. We *require* that OH's shut down cleanly when the
-        # complete tests successfully in order to indicate that they
-        # were successful.
-        for svc in self.services:
-            if svc['type'] == 'space': self.assertIsNotNone( self.command(svc['name'], 'context.shutdown', output=output) )
 
         # The implementation should know whether things are shutting
         # down cleanly. We just make sure we clean up aggressively if
@@ -145,12 +140,14 @@ class OneSS(object):
         {
             'name' : 'space',
             'type' : 'space',
-            'args' : lambda x: x.spaceArgs()
+            'args' : lambda x: x.spaceArgs(),
+            'wait' : False
             },
         {
             'name' : 'oh',
             'type' : 'cppoh',
-            'args' : lambda x: x.ohArgs()
+            'args' : lambda x: x.ohArgs(),
+            'default' : True
             }
         ]
 
@@ -163,7 +160,8 @@ class OneSS(object):
     def ohArgs(self):
         return {
             'servermap-options' : '--port=' + str(self.port),
-            'object-factory-opts': '--db=not-a-real-db.db' # Disable loading objects from db
+            'object-factory-opts': '--db=not-a-real-db.db', # Disable loading objects from db
+            'mainspace' : '12345678-1111-1111-1111-DEFA01759ACE'
             }
 
 

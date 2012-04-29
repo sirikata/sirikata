@@ -42,13 +42,15 @@ class ProcSet:
         # few special arguments we might need
 
         set_default = False
-        if 'default' in kwargs and kwargs['default']:
-            set_default = True
+        if 'default' in kwargs:
+            if kwargs['default']:
+                set_default = True
             del kwargs['default']
 
         wait = True
-        if 'wait' in kwargs and not kwargs['wait']:
-            wait = False
+        if 'wait' in kwargs:
+            if not kwargs['wait']:
+                wait = False
             del kwargs['wait']
 
         p = ProcSet.Proc()
