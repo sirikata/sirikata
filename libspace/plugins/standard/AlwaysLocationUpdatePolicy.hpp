@@ -318,6 +318,8 @@ private:
 
         void service() {
             uint32 max_updates = GetOptionValue<uint32>(ALWAYS_POLICY_OPTIONS, LOC_MAX_PER_RESULT);
+            const uint32 outstanding_message_hard_limit = 64;
+            const uint32 outstanding_message_soft_limit = 25;
 
             std::list<SubscriberType> to_delete;
 
@@ -342,7 +344,7 @@ private:
                 bool send_failed = false;
                 std::map<UUID, UpdateInfo>::iterator last_shipped = sub_info->outstandingUpdates.begin();
                 for(std::map<UUID, UpdateInfo>::iterator up_it = sub_info->outstandingUpdates.begin();
-                    sub_info->numOutstandingMessages < 25 && up_it != sub_info->outstandingUpdates.end();
+                    sub_info->numOutstandingMessages < outstanding_message_soft_limit && up_it != sub_info->outstandingUpdates.end();
                     up_it++)
                 {
                     Sirikata::Protocol::Loc::ILocationUpdate update = bulk_update.add_update();
@@ -387,7 +389,7 @@ private:
                 }
 
                 // Try to send the last few if necessary/possible
-                if (!send_failed && bulk_update.update_size() > 0) {
+                if (sub_info->numOutstandingMessages < outstanding_message_hard_limit && !send_failed && bulk_update.update_size() > 0) {
                     sub_info->numOutstandingMessages++;
                     bool sent = parent->trySend(sid, bulk_update);
                     if (sent) {
