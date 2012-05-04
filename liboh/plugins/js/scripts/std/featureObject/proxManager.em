@@ -253,8 +253,8 @@ system.require('featureObject.em');
          var pArray = pRemCB[pString];
          
          
-         if (!(typeof(pArray[addID]) == 'undefined'))
-             pArray[addID] = null;         
+         if (!(typeof(pArray[remID]) == 'undefined'))
+             pArray[remID] = null;         
      };
 
      
