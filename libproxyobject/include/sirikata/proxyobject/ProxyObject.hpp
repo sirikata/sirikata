@@ -101,7 +101,6 @@ public:
  */
 class SIRIKATA_PROXYOBJECT_EXPORT ProxyObject
     : public SelfWeakPtr<ProxyObject>,
-      public SequencedPresenceProperties,
       public ProxyObjectProvider,
       public PositionProvider,
       public MeshProvider,
@@ -121,8 +120,10 @@ public:
 
 private:
     bool mValid;
+    bool mIsAggregate;
     const SpaceObjectReference mID;
     ProxyManagerPtr mParent;
+    SequencedPresenceProperties mPresenceProperties;
 
 public:
     /** Constructs a new ProxyObject. After constructing this object, it
@@ -177,13 +178,13 @@ public:
     bool isStatic() const;
 
     // PresenceProperties Overrides
-    virtual TimedMotionVector3f location() const;
-    virtual TimedMotionQuaternion orientation() const;
-    virtual BoundingSphere3f bounds() const;
-    virtual Transfer::URI mesh() const;
-    virtual String physics() const;
-    virtual bool isAggregate() const;
-    virtual ObjectReference parentAggregate() const;
+    TimedMotionVector3f location() const;
+    TimedMotionQuaternion orientation() const;
+    BoundingSphere3f bounds() const;
+    Transfer::URI mesh() const;
+    String physics() const;
+    bool isAggregate() const;
+    ObjectReference parentAggregate() const;
 
     // Alternatives that access only the *verified* location information,
     // i.e. data sent by the space.
@@ -200,6 +201,13 @@ public:
     void setPhysics(const String& rhs, uint64 seqno);
     void setIsAggregate(bool isAggregate, uint64 seqno);
 
+    SequencedPresenceProperties& getPresenceProperties() {
+        return mPresenceProperties;
+    }
+
+    const SequencedPresenceProperties& getPresenceProperties() const {
+        return mPresenceProperties;
+    }
 
     /** Retuns the local location of this object at the current timestamp. */
     Location extrapolateLocation(TemporalValue<Location>::Time current) const {

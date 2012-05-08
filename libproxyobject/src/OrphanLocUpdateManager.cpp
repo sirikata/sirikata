@@ -73,7 +73,7 @@ void OrphanLocUpdateManager::addUpdateFromExisting(
 void OrphanLocUpdateManager::addUpdateFromExisting(ProxyObjectPtr proxyPtr) {
     addUpdateFromExisting(
         proxyPtr->getObjectReference(),
-        *(dynamic_cast<SequencedPresenceProperties*>(proxyPtr.get()))
+        proxyPtr->getPresenceProperties()
     );
 }
 

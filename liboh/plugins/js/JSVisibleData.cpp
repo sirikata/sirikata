@@ -70,6 +70,13 @@ JSRestoredVisibleData::JSRestoredVisibleData(JSVisibleDataListener* parent, cons
     updateFrom(orig);
 }
 
+JSRestoredVisibleData::JSRestoredVisibleData(JSVisibleDataListener* parent, const SpaceObjectReference& from, const PresenceProperties& orig)
+ : JSVisibleData(parent),
+   sporefToListenTo(from)
+{
+    updateFrom(orig);
+}
+
 JSRestoredVisibleData::~JSRestoredVisibleData() {
     clearFromParent();
 }
@@ -85,12 +92,19 @@ const SpaceObjectReference& JSRestoredVisibleData::observer() {
 }
 
 void JSRestoredVisibleData::updateFrom(const IPresencePropertiesRead& orig) {
-    setLocation(orig.location());
-    setOrientation(orig.orientation());
-    setBounds(orig.bounds());
-    setMesh(orig.mesh());
-    setPhysics(orig.physics());
+    mPresenceProperties.setLocation(orig.location());
+    mPresenceProperties.setOrientation(orig.orientation());
+    mPresenceProperties.setBounds(orig.bounds());
+    mPresenceProperties.setMesh(orig.mesh());
+    mPresenceProperties.setPhysics(orig.physics());
+}
 
+void JSRestoredVisibleData::updateFrom(const PresenceProperties& orig) {
+    mPresenceProperties.setLocation(orig.location());
+    mPresenceProperties.setOrientation(orig.orientation());
+    mPresenceProperties.setBounds(orig.bounds());
+    mPresenceProperties.setMesh(orig.mesh());
+    mPresenceProperties.setPhysics(orig.physics());
 }
 
 
@@ -168,6 +182,15 @@ void JSAggregateVisibleData::updateFrom(ProxyObjectPtr proxy) {
 }
 
 void JSAggregateVisibleData::updateFrom(const IPresencePropertiesRead& props) {
+    Mutex::scoped_lock locker (childMutex);
+    if (mChildren.find(SpaceObjectReference::null()) != mChildren.end()) {
+        std::tr1::dynamic_pointer_cast<JSRestoredVisibleData>(mChildren[SpaceObjectReference::null()])->updateFrom(props);
+    }
+    // We don't update mBest because either it's already this, or we have a
+    // Proxy, which is preferable.
+}
+
+void JSAggregateVisibleData::updateFrom(const PresenceProperties& props) {
     Mutex::scoped_lock locker (childMutex);
     if (mChildren.find(SpaceObjectReference::null()) != mChildren.end()) {
         std::tr1::dynamic_pointer_cast<JSRestoredVisibleData>(mChildren[SpaceObjectReference::null()])->updateFrom(props);

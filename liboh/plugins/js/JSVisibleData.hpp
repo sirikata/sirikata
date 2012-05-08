@@ -12,6 +12,23 @@
 namespace Sirikata{
 namespace JS{
 
+/** Read-only interface for PresenceProperties.
+ */
+class IPresencePropertiesRead {
+public:
+    virtual ~IPresencePropertiesRead() {}
+
+    virtual TimedMotionVector3f location() const = 0;
+    virtual TimedMotionQuaternion orientation() const = 0;
+    virtual BoundingSphere3f bounds() const = 0;
+    virtual Transfer::URI mesh() const = 0;
+    virtual String physics() const = 0;
+    virtual bool isAggregate() const = 0;
+    virtual ObjectReference parent() const = 0;
+};
+
+typedef std::tr1::shared_ptr<IPresencePropertiesRead> IPresencePropertiesReadPtr;
+
 class JSVisibleStruct;
 
 class JSVisibleData;
@@ -39,7 +56,7 @@ public:
  *  which case we'd just get an identifier) or just be the origin of a message
  *  (again, meaning only the ID will be valid).
  */
-class JSVisibleData : public virtual IPresencePropertiesRead {
+class JSVisibleData : public IPresencePropertiesRead {
 public:
     JSVisibleData(JSVisibleDataListener* parent)
      : mParent(parent)
@@ -67,21 +84,44 @@ protected:
 class JSRestoredVisibleData;
 typedef std::tr1::shared_ptr<JSRestoredVisibleData> JSRestoredVisibleDataPtr;
 /** JSVisibleData that uses static data. */
-class JSRestoredVisibleData : public JSVisibleData, public PresenceProperties {
+class JSRestoredVisibleData : public JSVisibleData {
+    PresenceProperties mPresenceProperties;
 public:
     // Regular constructors representing real data (although possibly from
     // restored data, i.e. not valid according to the space).
     JSRestoredVisibleData(JSVisibleDataListener* parent, const SpaceObjectReference& from, JSVisibleDataPtr fromData = JSVisibleDataPtr());
     JSRestoredVisibleData(JSVisibleDataListener* parent, const SpaceObjectReference& from, const IPresencePropertiesRead& orig);
+    JSRestoredVisibleData(JSVisibleDataListener* parent, const SpaceObjectReference& from, const PresenceProperties& orig);
 
     virtual ~JSRestoredVisibleData();
+
+    virtual TimedMotionVector3f location() const {
+        return mPresenceProperties.location();
+    }
+    virtual TimedMotionQuaternion orientation() const {
+        return mPresenceProperties.orientation();
+    }
+    virtual BoundingSphere3f bounds() const {
+        return mPresenceProperties.bounds();
+    }
+    virtual Transfer::URI mesh() const {
+        return mPresenceProperties.mesh();
+    }
+    virtual String physics() const {
+        return mPresenceProperties.physics();
+    }
+    virtual bool isAggregate() const {
+        return mPresenceProperties.isAggregate();
+    }
+    virtual ObjectReference parent() const {
+        return mPresenceProperties.parent();
+    }
 
     virtual const SpaceObjectReference& id();
     virtual const SpaceObjectReference& observer();
 
-    // IPresencePropertiesRead Interface is implemented by PresenceProperties
-
     void updateFrom(const IPresencePropertiesRead& orig);
+    void updateFrom(const PresenceProperties& orig);
 private:
     SpaceObjectReference sporefToListenTo;
 
@@ -157,6 +197,7 @@ public:
 
     void updateFrom(ProxyObjectPtr proxy);
     void updateFrom(const IPresencePropertiesRead& props);
+    void updateFrom(const PresenceProperties& props);
 
     // Called for *ProxyObject* references.
     void incref(JSVisibleDataPtr self);

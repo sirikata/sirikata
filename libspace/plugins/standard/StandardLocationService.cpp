@@ -128,8 +128,7 @@ const String& StandardLocationService::physics(const UUID& uuid) {
 
     // Add or update the information to the cache
     if (it == mLocations.end()) {
-        mLocations[uuid] = LocationInfo();
-        it = mLocations.find(uuid);
+        it = mLocations.insert(LocationMap::value_type(uuid, LocationInfo())).first;
     } else {
         // It was already in there as a replica, notify its removal
         assert(it->second.local == false);
@@ -178,8 +177,7 @@ void StandardLocationService::addLocalAggregateObject(const UUID& uuid, const Ti
     // handler) screwed up.
     assert(mLocations.find(uuid) == mLocations.end());
 
-    mLocations[uuid] = LocationInfo();
-    LocationMap::iterator it = mLocations.find(uuid);
+    LocationMap::iterator it = mLocations.insert(LocationMap::value_type(uuid, LocationInfo())).first;
 
     LocationInfo& locinfo = it->second;
     locinfo.props.reset();
@@ -264,7 +262,7 @@ void StandardLocationService::updateLocalAggregatePhysics(const UUID& uuid, cons
     }
     else {
         // Its a new replica, just insert it
-        LocationInfo locinfo;
+        LocationInfo& locinfo = mLocations[uuid];
         locinfo.props.reset();
         locinfo.props.setLocation(loc, 0);
         locinfo.props.setOrientation(orient, 0);
@@ -273,7 +271,6 @@ void StandardLocationService::updateLocalAggregatePhysics(const UUID& uuid, cons
         locinfo.props.setPhysics(phy, 0);
         locinfo.local = false;
         locinfo.aggregate = false;
-        mLocations[uuid] = locinfo;
 
         // We only run this notification when the object actually is new
         CONTEXT_SPACETRACE(serverObjectEvent, 0, mContext->id(), uuid, true, loc); // FIXME add remote server ID

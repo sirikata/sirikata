@@ -10,41 +10,39 @@
 #include <sirikata/core/util/MotionQuaternion.hpp>
 #include <sirikata/core/transfer/URI.hpp>
 #include <sirikata/core/util/ObjectReference.hpp>
+#include "pbj.hpp"
+#include <google/protobuf/unknown_field_set.h>
 
 namespace Sirikata {
 
-/** Read-only interface for PresenceProperties.  Copies internal data on calls
- * instead of passing references to allow multiple threads to use without huge
- * amounts of coordination.
- */
-class IPresencePropertiesRead {
-public:
-    virtual ~IPresencePropertiesRead() {}
+namespace Protocol {
 
-    virtual TimedMotionVector3f location() const = 0;
-    virtual TimedMotionQuaternion orientation() const = 0;
-    virtual BoundingSphere3f bounds() const = 0;
-    virtual Transfer::URI mesh() const = 0;
-    virtual String physics() const = 0;
-    virtual bool isAggregate() const = 0;
-    virtual ObjectReference parent() const = 0;
+class LocationExtensions {
+public:
+    enum {
+        mesh = 1000,
+        physics = 1001,
+        aggregate = 1002,
+        parent = 1003,
+        zernike = 1004
+    };
 };
-typedef std::tr1::shared_ptr<IPresencePropertiesRead> IPresencePropertiesReadPtr;
+
+}
 
 /** Stores the basic properties provided for objects, i.e. location,
  *  orientation, mesh, etc. This is intentionally bare-bones: it can be used in
  *  a variety of places to minimally track the properties for an object.
  */
-class PresenceProperties : public virtual IPresencePropertiesRead {
+class PresenceProperties {
 public:
+    typedef google::protobuf::UnknownField UnknownField;
+    typedef google::protobuf::UnknownFieldSet UnknownFieldSet;
+
     PresenceProperties()
      : mLoc(Time::null(), MotionVector3f(Vector3f::zero(), Vector3f::zero())),
        mOrientation(Time::null(), MotionQuaternion(Quaternion::identity(), Quaternion::identity())),
-       mBounds(Vector3f::zero(), 0),
-       mMesh(),
-       mPhysics(),
-       mIsAggregate(false),
-       mParent(ObjectReference::null())
+       mBounds(Vector3f::zero(), 0)
     {}
     PresenceProperties(
         const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient,
@@ -52,40 +50,161 @@ public:
     )
      : mLoc(loc),
        mOrientation(orient),
-       mBounds(bnds),
-       mMesh(msh),
-       mPhysics(phy)
-    {}
-    virtual ~PresenceProperties() {}
+       mBounds(bnds)
+    {
+        if (!msh.empty()) {
+            setMesh(msh);
+        }
+        if (!phy.empty()) {
+            setPhysics(phy);
+        }
+    }
 
-    virtual TimedMotionVector3f location() const { return mLoc; }
-    virtual bool setLocation(const TimedMotionVector3f& l) { mLoc = l; return true; }
+    PresenceProperties(const PresenceProperties& oth)
+        : mLoc(oth.mLoc),
+         mOrientation(oth.mOrientation),
+         mBounds(oth.mBounds),
+         mUnknownFieldIndices(oth.mUnknownFieldIndices)
+    {
+        mUnknownFieldSet.MergeFrom(oth.mUnknownFieldSet);
+    }
 
-    virtual TimedMotionQuaternion orientation() const { return mOrientation; }
-    virtual bool setOrientation(const TimedMotionQuaternion& o) { mOrientation = o; return true; }
+    const TimedMotionVector3f& location() const { return mLoc; }
+    bool setLocation(const TimedMotionVector3f& l) { mLoc = l; return true; }
 
-    virtual BoundingSphere3f bounds() const { return mBounds; }
-    virtual bool setBounds(const BoundingSphere3f& b) { mBounds = b; return true; }
+    const TimedMotionQuaternion& orientation() const { return mOrientation; }
+    bool setOrientation(const TimedMotionQuaternion& o) { mOrientation = o; return true; }
 
-    virtual Transfer::URI mesh() const { return mMesh; }
-    virtual bool setMesh(const Transfer::URI& m) { mMesh = m; return true; }
+    const BoundingSphere3f& bounds() const { return mBounds; }
+    bool setBounds(const BoundingSphere3f& b) { mBounds = b; return true; }
 
-    virtual String physics() const { return mPhysics; }
-    virtual bool setPhysics(const String& p) { mPhysics = p; return true; }
+    bool setExtensionVarint(int id, int64 value) {
+        UnknownFieldIndexMap::const_iterator iter = mUnknownFieldIndices.upper_bound(id);
+        if (iter != mUnknownFieldIndices.begin()) {
+            --iter;
+            if (iter->first == id) {
+                UnknownField* field = mUnknownFieldSet.mutable_field(iter->second);
+                field->set_varint(value);
+                return true;
+            }
+        }
+        // We get the field_count() before adding to the UnknownFieldSet.
+        mUnknownFieldIndices.insert(UnknownFieldIndexMap::value_type
+                                    (id, mUnknownFieldSet.field_count()));
+        mUnknownFieldSet.AddVarint(id, value);
+        return true;
+    }
 
-    virtual bool setIsAggregate(bool isAgg) { mIsAggregate = isAgg; return true; }
-    virtual bool isAggregate() const { return mIsAggregate; }
+    bool setExtensionLengthDelim(int id, const String& value) {
+        UnknownFieldIndexMap::const_iterator iter = mUnknownFieldIndices.upper_bound(id);
+        if (iter != mUnknownFieldIndices.begin()) {
+            --iter;
+            if (iter->first == id) {
+                UnknownField* field = mUnknownFieldSet.mutable_field(iter->second);
+                field->set_length_delimited(value);
+                return true;
+            }
+        }
+        // We get the field_count() before adding to the UnknownFieldSet.
+        mUnknownFieldIndices.insert(UnknownFieldIndexMap::value_type
+                                    (id, mUnknownFieldSet.field_count()));
+        mUnknownFieldSet.AddLengthDelimited(id, value);
+        return true;
+    }
 
-    virtual bool setParent(const ObjectReference& par) { mParent = par; return true; }
-    virtual ObjectReference parent() const { return mParent; }
+    const UnknownField * getExtension(int id) const {
+        UnknownFieldIndexMap::const_iterator iter = mUnknownFieldIndices.upper_bound(id);
+        if (iter != mUnknownFieldIndices.begin()) {
+            --iter;
+            if (iter->first == id) {
+                return &mUnknownFieldSet.field(iter->second);
+            }
+        }
+        return NULL;
+    }
+
+    UnknownField * getExtension(int id) {
+        UnknownFieldIndexMap::iterator iter = mUnknownFieldIndices.upper_bound(id);
+        if (iter != mUnknownFieldIndices.begin()) {
+            --iter;
+            if (iter->first == id) {
+                return mUnknownFieldSet.mutable_field(iter->second);
+            }
+        }
+        return NULL;
+    }
+
+    Transfer::URI mesh() const {
+        const UnknownField* field = getExtension(Protocol::LocationExtensions::mesh);
+        if (field && field->type() == UnknownField::TYPE_LENGTH_DELIMITED) {
+            return Transfer::URI(field->length_delimited());
+        }
+        return Transfer::URI();
+    }
+    bool setMesh(const Transfer::URI& m) {
+        setExtensionLengthDelim(Protocol::LocationExtensions::mesh, m.toString());
+        return true;
+    }
+
+    const String& physics() const {
+        const UnknownField* field = getExtension(Protocol::LocationExtensions::physics);
+        if (field && field->type() == UnknownField::TYPE_LENGTH_DELIMITED) {
+            return field->length_delimited();
+        }
+        {
+            static String def;
+            return def;
+        }
+    }
+    bool setPhysics(const String& phys) {
+        setExtensionLengthDelim(Protocol::LocationExtensions::physics, phys);
+        return true;
+    }
+
+    bool setIsAggregate(bool isAgg) {
+        setExtensionVarint(Protocol::LocationExtensions::aggregate, isAgg ? 1 : 0);
+        return true;
+    }
+    bool isAggregate() const {
+        const UnknownField* field = getExtension(Protocol::LocationExtensions::aggregate);
+        if (field && field->type() == UnknownField::TYPE_VARINT) {
+            return !!field->varint();
+        }
+        return false;
+    }
+
+    bool setParent(const ObjectReference& par) {
+        UUID::Data bytes = par.toRawBytes();
+        setExtensionLengthDelim(Protocol::LocationExtensions::parent,
+                String(bytes.begin(), bytes.end()));
+        return true;
+    }
+    ObjectReference parent() const {
+        const UnknownField* field = getExtension(Protocol::LocationExtensions::parent);
+        if (field && field->type() == UnknownField::TYPE_LENGTH_DELIMITED) {
+            const String& s = field->length_delimited();
+            UUID::Data data;
+            size_t i;
+            for (i = 0; i < s.length() && i < UUID::static_size; ++i) {
+                data[i] = s[i];
+            }
+            for (; i < UUID::static_size; ++i) {
+                data[i] = 0;
+            }
+            return ObjectReference(UUID(data));
+        }
+        return ObjectReference::null();
+    }
+
 protected:
     TimedMotionVector3f mLoc;
     TimedMotionQuaternion mOrientation;
     BoundingSphere3f mBounds;
-    Transfer::URI mMesh;
-    String mPhysics;
-    bool mIsAggregate;
-    ObjectReference mParent;
+
+    typedef std::multimap<int, int> UnknownFieldIndexMap;
+    UnknownFieldIndexMap mUnknownFieldIndices;
+
+    UnknownFieldSet mUnknownFieldSet;
 };
 typedef std::tr1::shared_ptr<PresenceProperties> PresencePropertiesPtr;
 
@@ -96,29 +215,28 @@ typedef std::tr1::shared_ptr<PresenceProperties> PresencePropertiesPtr;
 class SequencedPresenceProperties : public PresenceProperties {
 public:
     enum LOC_PARTS {
-        LOC_POS_PART = 0,
-        LOC_ORIENT_PART = 1,
-        LOC_BOUNDS_PART = 2,
-        LOC_MESH_PART = 3,
-        LOC_PHYSICS_PART = 4,
-        LOC_IS_AGG_PART = 5,
-        LOC_PARENT_PART = 6,
-        LOC_NUM_PART = 7
+        LOC_POS_PART = 2, // DANGER: Must be same as protocol
+        LOC_ORIENT_PART = 3, // DANGER: Must be same as protocol
+        LOC_BOUNDS_PART = 4, // DANGER: Must be same as protocol
+        LOC_MESH_PART = Protocol::LocationExtensions::mesh,
+        LOC_PHYSICS_PART = Protocol::LocationExtensions::physics,
+        LOC_IS_AGG_PART = Protocol::LocationExtensions::aggregate,
+        LOC_PARENT_PART = Protocol::LocationExtensions::parent
     };
 
     SequencedPresenceProperties()
     {
         reset();
     }
-    virtual ~SequencedPresenceProperties() {}
 
     uint64 getUpdateSeqNo(LOC_PARTS whichPart) const {
-        if (whichPart >= LOC_NUM_PART)
+        SeqnoMap::const_iterator iter = mUpdateSeqno.find(whichPart);
+        if (iter == mUpdateSeqno.end())
         {
             SILOG(proxyobject, error, "Error in getUpdateSeqNo of proxy.  Requesting an update sequence number for a field that does not exist.  Returning 0");
             return 0;
         }
-        return mUpdateSeqno[whichPart];
+        return iter->second;
     }
 
     bool setLocation(const TimedMotionVector3f& reqloc, uint64 seqno) {
@@ -126,8 +244,7 @@ public:
             return false;
 
         mUpdateSeqno[LOC_POS_PART] = seqno;
-        mLoc = reqloc;
-        return true;
+        return PresenceProperties::setLocation(reqloc);
     }
     bool setLocation(const TimedMotionVector3f& l) { return PresenceProperties::setLocation(l); }
 
@@ -135,8 +252,7 @@ public:
         if (seqno < mUpdateSeqno[LOC_ORIENT_PART]) return false;
 
         mUpdateSeqno[LOC_ORIENT_PART] = seqno;
-        mOrientation = reqorient;
-        return true;
+        return PresenceProperties::setOrientation(reqorient);
     }
     bool setOrientation(const TimedMotionQuaternion& o) { return PresenceProperties::setOrientation(o); }
 
@@ -145,8 +261,7 @@ public:
             return false;
 
         mUpdateSeqno[LOC_BOUNDS_PART] = seqno;
-        mBounds = b;
-        return true;
+        return PresenceProperties::setBounds(b);
     }
     bool setBounds(const BoundingSphere3f& b) { return PresenceProperties::setBounds(b); }
 
@@ -155,8 +270,7 @@ public:
             return false;
 
         mUpdateSeqno[LOC_MESH_PART] = seqno;
-        mMesh = m;
-        return true;
+        return PresenceProperties::setMesh(m);
     }
     bool setMesh(const Transfer::URI& m) { return PresenceProperties::setMesh(m); }
 
@@ -165,8 +279,7 @@ public:
             return false;
 
         mUpdateSeqno[LOC_PHYSICS_PART] = seqno;
-        mPhysics = p;
-        return true;
+        return PresenceProperties::setPhysics(p);
     }
     bool setPhysics(const String& p) { return PresenceProperties::setPhysics(p); }
 
@@ -175,8 +288,7 @@ public:
             return false;
 
         mUpdateSeqno[LOC_IS_AGG_PART] = seqno;
-        mIsAggregate = isAgg;
-        return true;
+        return PresenceProperties::setIsAggregate(isAgg);
     }
     bool setIsAggregate(bool isAgg) { return PresenceProperties::setIsAggregate(isAgg); }
 
@@ -186,24 +298,26 @@ public:
             return false;
 
         mUpdateSeqno[LOC_PARENT_PART] = seqno;
-        mParent = parent;
-        return true;
+        return PresenceProperties::setParent(parent);
     }
     bool setParent(const ObjectReference& parent) { return PresenceProperties::setParent(parent); }
 
 
     void reset() {
-        memset(mUpdateSeqno, 0, LOC_NUM_PART * sizeof(uint64));
+        mUpdateSeqno.clear();
     }
 
     uint64 maxSeqNo() const {
-        uint64 maxseqno = mUpdateSeqno[0];
-        for(uint32 i = 1; i < LOC_NUM_PART; i++)
-            maxseqno = std::max(maxseqno, mUpdateSeqno[i]);
+        uint64 maxseqno = 0;
+        for(SeqnoMap::const_iterator iter = mUpdateSeqno.begin(); iter != mUpdateSeqno.end(); ++iter)
+        {
+            maxseqno = std::max(maxseqno, iter->second);
+        }
         return maxseqno;
     }
 private:
-    uint64 mUpdateSeqno[LOC_NUM_PART];
+    typedef std::map<int, uint64> SeqnoMap;
+    SeqnoMap mUpdateSeqno;
 };
 typedef std::tr1::shared_ptr<SequencedPresenceProperties> SequencedPresencePropertiesPtr;
 
