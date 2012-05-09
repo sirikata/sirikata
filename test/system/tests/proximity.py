@@ -170,5 +170,12 @@ class ConnectionTest(ProximityTest):
     def testBody(self, procs, output):
         response = self.createObject('oh', 'proximityTests/connectionTest.em');
 
+class BasicQueryTest(ProximityTest):
+    def testBody(self, procs, output):
+        response = self.createObject('oh', 'proximityTests/basicQueryTest.em');
+
 class OneSSConnectionTest(ConnectionTest, OneSS):
     pass
+
+class OneSSBasicQueryTest(BasicQueryTest, OneSS):
+    after = [OneSSConnectionTest]
