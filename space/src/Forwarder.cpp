@@ -541,7 +541,7 @@ bool Forwarder::tryCacheForward(Sirikata::Protocol::Object::ObjectMessage* msg) 
 }
 
 void Forwarder::routeObjectMessageToServerNoReturn(Sirikata::Protocol::Object::ObjectMessage* obj_msg, const OSegEntry &dest_serv, OSegLookupQueue::ResolvedFrom resolved_from, ServerID forwardFrom) {
-    routeObjectMessageToServer(obj_msg, dest_serv, resolved_from, forwardFrom);
+    (void) routeObjectMessageToServer(obj_msg, dest_serv, resolved_from, forwardFrom);
 }
 
 bool Forwarder::routeObjectMessageToServer(Sirikata::Protocol::Object::ObjectMessage* obj_msg, const OSegEntry &dest_serv, OSegLookupQueue::ResolvedFrom resolved_from, ServerID forwardFrom)
