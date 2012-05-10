@@ -115,6 +115,21 @@ void unregisterHandler(HandlerID& handler) {
 #endif
 }
 
+String typeAsString(Type t) {
+    switch(t) {
+      case INT:
+        return "SIGINT"; break;
+      case HUP:
+        return "SIGHUP"; break;
+      case ABORT:
+        return "SIGABORT"; break;
+      case TERM:
+        return "SIGTERM"; break;
+      case KILL:
+        return "SIGKILL"; break;
+    };
+    return "<unknown>";
+}
 
 } // namespace Signal
 } // namespace Sirikata

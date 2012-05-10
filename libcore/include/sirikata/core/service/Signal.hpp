@@ -57,6 +57,8 @@ typedef int32 HandlerID;
 SIRIKATA_EXPORT HandlerID registerHandler(Handler handler);
 SIRIKATA_EXPORT void unregisterHandler(HandlerID& handler);
 
+SIRIKATA_EXPORT String typeAsString(Type t);
+
 } // namespace Signal
 } // namespace Sirikata
 
