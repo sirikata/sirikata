@@ -828,6 +828,17 @@ PresenceEntry.prototype.proxRemovedEvent = function (visibleObj,visTo)
       {
           return baseSystem.create_context.apply(baseSystem, arguments);
       };
+
+      // Allow shim layer hook for presence connection events, allowing some
+      // setup to be performed per-connection, ensuring things are in a good
+      // state before passing control to user code. These are permanent as this
+      // should only be used for built-in functionality which requires that it
+      // is always notified before any user code. Note that the callback may be
+      // invoked multiple times per connection.
+      var prePresConnCBList = [];
+      system.__addPrePresConnCB = function(cb) {
+          prePresConnCBList.push(cb);
+      };
      
       //not exposing
       /** @ignore */
@@ -837,6 +848,11 @@ PresenceEntry.prototype.proxRemovedEvent = function (visibleObj,visTo)
           {
               this.addToSelfMapAndPresencesArray(presConn);
               this.__setBehindSelf(presConn);
+              // Allow code hooked in to this process to do setup before any
+              // user code is invoked
+              for(var hook_cb_i in prePresConnCBList)
+                  prePresConnCBList[hook_cb_i](presConn);
+              // And now to the user code
               if (typeof(callback) === 'function')
                   callback(presConn,clearable);
           };

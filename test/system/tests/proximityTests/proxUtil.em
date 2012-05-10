@@ -16,11 +16,7 @@ var connectDefaultQuerier = function(cb) {
             'space' : '12345678-1111-1111-1111-DEFA01759ACE',
             'pos' : <0, 0, 0>,
             'solidAngleQuery' : .0000001,
-            'callback' : function() {
-                // Currently need this because system.getProxSet isn't valid in the
-                // createPresence callback (see bug #506).
-                system.event(cb);
-            }
+            'callback' : cb
         }
     );
 };
