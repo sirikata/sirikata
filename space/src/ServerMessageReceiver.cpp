@@ -91,7 +91,7 @@ void ServerMessageReceiver::updateSenderStats(ServerID sid, double total_weight,
 }
 
 void ServerMessageReceiver::updatedSegmentation(CoordinateSegmentation* cseg, const std::vector<SegmentationInfo>& new_segmentation) {
-    NOT_IMPLEMENTED();
+    NOT_IMPLEMENTED(smreceiver);
 }
 
 } // namespace Sirikata

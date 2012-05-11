@@ -57,7 +57,7 @@ ServerMessageQueue::~ServerMessageQueue() {
 
 
 void ServerMessageQueue::updatedSegmentation(CoordinateSegmentation* cseg, const std::vector<SegmentationInfo>& new_segmentation) {
-    NOT_IMPLEMENTED();
+    NOT_IMPLEMENTED(smqueue);
 }
 
 void ServerMessageQueue::connect(const ServerID& dest) {
