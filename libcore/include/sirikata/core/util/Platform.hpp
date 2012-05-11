@@ -281,6 +281,14 @@ class ThreadIdCheck { public:
 };
 #endif
 class OptionSet;
+
+namespace Task {
+class LocalTime;
+class DeltaTime;
+}
+class Time;
+typedef Task::DeltaTime Duration;
+
 } // namespace Sirikata
 #include "Version.hpp"
 #include "MemoryReference.hpp"
@@ -323,12 +331,6 @@ template<class T> void aligned_free(T* data) {
         free(bloc-offset);
     }
 }
-namespace Task {
-class LocalTime;
-class DeltaTime;
-}
-class Time;
-typedef Task::DeltaTime Duration;
 
 typedef Vector2<float32> Vector2f;
 typedef Vector2<float64> Vector2d;

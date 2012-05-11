@@ -33,6 +33,7 @@
 #include <sirikata/core/util/Platform.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <sirikata/core/util/Timer.hpp>
+#include <sirikata/core/util/AtomicTypes.hpp>
 
 namespace Sirikata {
 
@@ -48,7 +49,18 @@ Timer::~Timer() {
     delete mStart;
 }
 
+// Our global epoch, which is completely arbitrary
 static boost::posix_time::ptime gEpoch(boost::posix_time::time_from_string(std::string("2009-03-12 23:59:59.000")));
+// Process epoch, which is recorded the first time we get a time value. This is
+// mostly useful for logging purposes. (Default to the gEpoch just to ensure we
+// have a value there, although using it uninitialized might lead to odd
+// behavior).
+static Sirikata::AtomicValue<Time> processEpoch(Time::null());
+// Also track the most recent time looked up. This lets us give a recent value
+// without actually checking the clock. Generally other things in the process
+// should keep the timer progressing, so this should be good enough in a lot of
+// cases.
+static Sirikata::AtomicValue<Time> recentNowTime(Time::null());
 
 Duration Timer::getUTCOffset() {
     // There is probably a better way to get this offset, but hopefully this covers
@@ -80,8 +92,29 @@ Duration Timer::getSystemClockOffset(){
 }
 
 Time Timer::now() {
+    static bool inited_process_epoch = false;
     boost::posix_time::time_duration since_start = boost::posix_time::microsec_clock::local_time()-gEpoch;
-    return Time::null() + Duration::microseconds( since_start.total_microseconds() ) + sOffset.read();
+    Time res = Time::null() + Duration::microseconds( since_start.total_microseconds() ) + sOffset.read();
+
+    if (!inited_process_epoch) {
+        processEpoch = res;
+        inited_process_epoch = true;
+    }
+    recentNowTime = res;
+
+    return res;
+}
+
+Time Timer::recentNow() {
+    return recentNowTime.read();
+}
+
+Duration Timer::processElapsed() {
+    return (now() - processEpoch.read());
+}
+
+Duration Timer::recentProcessElapsed() {
+    return (recentNowTime.read() - processEpoch.read());
 }
 
 String Timer::nowAsString() {

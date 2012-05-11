@@ -33,6 +33,9 @@
 #ifndef _SIRIKATA_LOGGING_HPP_
 #define _SIRIKATA_LOGGING_HPP_
 
+#include <sirikata/core/util/Timer.hpp>
+#include <iomanip>
+
 extern "C" SIRIKATA_EXPORT void* Sirikata_Logging_OptionValue_defaultLevel;
 extern "C" SIRIKATA_EXPORT void* Sirikata_Logging_OptionValue_atLeastLevel;
 extern "C" SIRIKATA_EXPORT void* Sirikata_Logging_OptionValue_moduleLevel;
@@ -89,7 +92,7 @@ SIRIKATA_FUNCTION_EXPORT void finishLog();
 # define SILOGBARE(module,lvl,value)
 #endif
 
-#define SILOG(module,lvl,value) SILOGBARE(module,lvl, "[" << Sirikata::Logging::LogModuleString(#module) << "] " << Sirikata::Logging::LogLevelString(Sirikata::Logging::lvl, #lvl) << ": " << value)
+#define SILOG(module,lvl,value) SILOGBARE(module,lvl, "[" << std::setw(9) << std::setprecision(3) << std::fixed << Timer::recentProcessElapsed().seconds() << ":" << Sirikata::Logging::LogModuleString(#module) << "] " << Sirikata::Logging::LogLevelString(Sirikata::Logging::lvl, #lvl) << ": " << std::resetiosflags(std::ios_base::floatfield | std::ios_base::adjustfield) << value)
 
 #if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_LINUX
 // FIXME only works on GCC
