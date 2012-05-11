@@ -90,6 +90,7 @@ SQLiteStorage::StorageAction& SQLiteStorage::StorageAction::operator=(const Stor
 Storage::Result SQLiteStorage::StorageAction::execute(SQLiteDBPtr db, const Bucket& bucket, ReadSet* rs) {
     Result result = SUCCESS;
     switch(type) {
+
         // Read and Compare are identical except that read stores the value and
         // compare checks against its reference data.
       case Read:
@@ -102,7 +103,6 @@ Storage::Result SQLiteStorage::StorageAction::execute(SQLiteDBPtr db, const Buck
               char* remain;
               sqlite3_stmt* value_query_stmt;
               bool newStep = true;
-              bool locked = false;
               rc = sqlite3_prepare_v2(db->db(), value_query.c_str(), -1, &value_query_stmt, (const char**)&remain);
               bool success = true;
               success = success && !checkSQLiteError(db, rc, "Error preparing value query statement");
@@ -133,8 +133,10 @@ Storage::Result SQLiteStorage::StorageAction::execute(SQLiteDBPtr db, const Buck
                           // reset the statement so it'll clean up properly
                           rc = sqlite3_reset(value_query_stmt);
                           success = success && !checkSQLiteError(db, rc, "Error finalizing value query statement");
-                          if (rc==SQLITE_LOCKED||rc==SQLITE_BUSY)
-                              locked = true;
+                          // Make sure we notify of temporary failures in case
+                          // retrying is worth it
+                          if (step_rc == SQLITE_LOCKED || step_rc == SQLITE_BUSY)
+                              result = LOCK_ERROR;
                       }
                   }
               }
@@ -148,10 +150,13 @@ Storage::Result SQLiteStorage::StorageAction::execute(SQLiteDBPtr db, const Buck
                   // SILOG(sqlite-storage, error, "Read or compare key not found");
               }
 
-              if (!success)
+              // If no other error condition is indicated yet, mark transaction
+              // error for failures
+              if (!success && result == SUCCESS)
                   result = TRANSACTION_ERROR;
           }
         break;
+
       case ReadRange:
           {
               String value_query = "SELECT key, value FROM ";
@@ -196,15 +201,22 @@ Storage::Result SQLiteStorage::StorageAction::execute(SQLiteDBPtr db, const Buck
                           // reset the statement so it'll clean up properly
                           rc = sqlite3_reset(value_query_stmt);
                           success = success && !checkSQLiteError(db, rc, "Error finalizing value query statement");
+                          // Make sure we notify of temporary failures in case
+                          // retrying is worth it
+                          if (step_rc == SQLITE_LOCKED || step_rc == SQLITE_BUSY)
+                              result = LOCK_ERROR;
                       }
                   }
               }
               rc = sqlite3_finalize(value_query_stmt);
               success = success && !checkSQLiteError(db, rc, "Error finalizing value query statement");
-              if (!success)
+              // If no other error condition is indicated yet, mark transaction
+              // error for failures
+              if (!success && result == SUCCESS)
                   result = TRANSACTION_ERROR;
           }
           break;
+
       case Write:
       case Erase:
           {
@@ -244,7 +256,12 @@ Storage::Result SQLiteStorage::StorageAction::execute(SQLiteDBPtr db, const Buck
               if (step_rc != SQLITE_OK && step_rc != SQLITE_DONE) {
                   sqlite3_reset(value_insert_stmt); // allow this to be cleaned up
                   success = false;
-                  SILOG(sqlite-storage, error, "Write or erase error: " << SQLite::resultAsString(step_rc));
+                  // Make sure we notify of temporary failures in case
+                  // retrying is worth it
+                  if (step_rc == SQLITE_LOCKED || step_rc == SQLITE_BUSY)
+                      result = LOCK_ERROR;
+                  else
+                      SILOG(sqlite-storage, error, "Write or erase error: " << SQLite::resultAsString(step_rc));
               }
               else {
                   // Check the number of changes that the statement actually
@@ -271,10 +288,13 @@ Storage::Result SQLiteStorage::StorageAction::execute(SQLiteDBPtr db, const Buck
               rc = sqlite3_finalize(value_insert_stmt);
               success = success && !checkSQLiteError(db, rc, "Error finalizing value insert statement");
 
-              if (!success)
+              // If no other error condition is indicated yet, mark transaction
+              // error for failures
+              if (!success && result == SUCCESS)
                   result = TRANSACTION_ERROR;
           }
         break;
+
       case EraseRange:
           {
               String value_delete = "DELETE FROM ";
@@ -294,21 +314,42 @@ Storage::Result SQLiteStorage::StorageAction::execute(SQLiteDBPtr db, const Buck
               success = success && !checkSQLiteError(db, rc, "Error binding finish key to value delete statement");
 
               int step_rc = sqlite3_step(value_delete_stmt);
-              if (step_rc != SQLITE_OK && step_rc != SQLITE_DONE)
+              if (step_rc != SQLITE_OK && step_rc != SQLITE_DONE) {
                   sqlite3_reset(value_delete_stmt); // allow this to be cleaned up
-
+                  // Make sure we notify of temporary failures in case
+                  // retrying is worth it
+                  if (step_rc == SQLITE_LOCKED || step_rc == SQLITE_BUSY)
+                      result = LOCK_ERROR;
+              }
               rc = sqlite3_finalize(value_delete_stmt);
               success = success && !checkSQLiteError(db, rc, "Error finalizing value delete statement");
 
-              if (!success)
+              // If no other error condition is indicated yet, mark transaction
+              // error for failures
+              if (!success && result == SUCCESS)
                   result = TRANSACTION_ERROR;
           }
           break;
+
       case Error:
         SILOG(sqlite-storage, fatal, "Tried to execute an invalid StorageAction.");
         break;
     };
+
     return result;
+}
+
+Storage::Result SQLiteStorage::StorageAction::executeWithRetry(SQLiteDBPtr db, const Bucket& bucket, ReadSet* rs, int32 retries, const Duration& retry_wait) {
+    Storage::Result res = LOCK_ERROR;
+    for(int32 i = 0; i < retries && res == LOCK_ERROR; i++) {
+        if (i != 0) Timer::sleep(retry_wait);
+
+        res = execute(db, bucket, rs);
+    }
+
+    if (res == LOCK_ERROR)
+        SILOG(sqlite-storage, error, "Couldn't execute StorageAction after " << retries << " retries, database was busy.");
+    return res;
 }
 
 SQLiteStorage::SQLiteStorage(ObjectHostContext* ctx, const String& dbpath, const Duration& lease_duration)
@@ -325,6 +366,9 @@ SQLiteStorage::SQLiteStorage(ObjectHostContext* ctx, const String& dbpath, const
    mLeaseDuration(lease_duration),
    mTransactionQueue(std::tr1::bind(&SQLiteStorage::postProcessTransactions, this)),
    mMaxCoalescedTransactions(5),
+   mRetrySleepDuration(Duration::milliseconds(25)),
+   mNormalOpRetries(20),
+   mLeaseOpRetries(100),
    mRenewTimer()
 {
 }
@@ -359,7 +403,6 @@ bool SQLiteStorage::checkSQLiteError(SQLiteDBPtr db, int rc, const String& msg) 
 
 void SQLiteStorage::initDB() {
     SQLiteDBPtr db = SQLite::getSingleton().open(mDBFilename);
-    sqlite3_busy_timeout(db->db(), 1000);
 
     // Create the table for this object if it doesn't exist yet
     String table_create = "CREATE TABLE IF NOT EXISTS ";
@@ -629,7 +672,7 @@ Storage::Result SQLiteStorage::executeCommit(const Bucket& bucket, Transaction* 
     // and return the error.
     Result result = acquireLease(bucket);
     for (Transaction::iterator it = trans->begin(); (result == SUCCESS) && it != trans->end(); it++) {
-        result = (*it).execute(mDB, bucket, rs);
+        result = (*it).executeWithRetry(mDB, bucket, rs, mNormalOpRetries, mRetrySleepDuration);
     }
 
     if (rs->empty() || (result != SUCCESS)) {
@@ -673,7 +716,7 @@ Storage::Result SQLiteStorage::acquireLease(const Bucket& bucket) {
         StorageAction sa;
         sa.type = StorageAction::Read;
         sa.key = LEASE_KEY;
-        result = sa.execute(mDB, bucket, &lease_rs);
+        result = sa.executeWithRetry(mDB, bucket, &lease_rs, mLeaseOpRetries, mRetrySleepDuration);
     }
 
     // Decide the next course of action based on whether the lease key
@@ -715,7 +758,7 @@ Storage::Result SQLiteStorage::acquireLease(const Bucket& bucket) {
         sa.key = LEASE_KEY;
         sa.value = new String(getLeaseString());
         ReadSet no_rs;
-        result = sa.execute(mDB, bucket, &no_rs);
+        result = sa.executeWithRetry(mDB, bucket, &no_rs, mLeaseOpRetries, mRetrySleepDuration);
 
         // If we succeeded here, we got the lease, otherwise we failed
         // and need to give up.
@@ -750,12 +793,13 @@ void SQLiteStorage::renewLease(const Bucket& bucket) {
         StorageAction sa;
         sa.type = StorageAction::Read;
         sa.key = LEASE_KEY;
-        result = sa.execute(mDB, bucket, &lease_rs);
+        result = sa.executeWithRetry(mDB, bucket, &lease_rs, mLeaseOpRetries, mRetrySleepDuration);
     }
 
-    // Nothing in there? releaseLease was called and removed it (or something
-    // else went wrong...). This means we should stop trying to renew at all.
-    if (result == TRANSACTION_ERROR) {
+    // Nothing in there or database was busy? releaseLease was called and
+    // removed it (or something else went wrong...). This means we should stop
+    // trying to renew at all.
+    if (result != SUCCESS) {
         sqlRollback();
         return;
     }
@@ -779,7 +823,7 @@ void SQLiteStorage::renewLease(const Bucket& bucket) {
         sa.key = LEASE_KEY;
         sa.value = new String(getLeaseString());
         ReadSet no_rs;
-        result = sa.execute(mDB, bucket, &no_rs);
+        result = sa.executeWithRetry(mDB, bucket, &no_rs, mLeaseOpRetries, mRetrySleepDuration);
     }
 
     // If we failed to write the new key, give up. This really shouldn't happen.
@@ -815,12 +859,13 @@ void SQLiteStorage::releaseLease(const Bucket& bucket) {
         StorageAction sa;
         sa.type = StorageAction::Read;
         sa.key = LEASE_KEY;
-        result = sa.execute(mDB, bucket, &lease_rs);
+        result = sa.executeWithRetry(mDB, bucket, &lease_rs, mLeaseOpRetries, mRetrySleepDuration);
     }
 
-    // Nothing in there? Nothing to do, although it might indicate a problem
-    // since we shouldn't be trying to release leases we don't have.
-    if (result == TRANSACTION_ERROR) {
+    // Nothing in there or database was busy? Nothing to do, although it might
+    // indicate a problem since we shouldn't be trying to release leases we
+    // don't have.
+    if (result != SUCCESS) {
         // However, we don't report an error here because this can also happen
         // if we never actually acquire the lease. Since we acquire it on
         // demand, an object which does no transactions may not actually need to
@@ -849,7 +894,7 @@ void SQLiteStorage::releaseLease(const Bucket& bucket) {
         sa.type = StorageAction::Erase;
         sa.key = LEASE_KEY;
         ReadSet no_rs;
-        result = sa.execute(mDB, bucket, &no_rs);
+        result = sa.executeWithRetry(mDB, bucket, &no_rs, mLeaseOpRetries, mRetrySleepDuration);
     }
 
     if (result != SUCCESS) {

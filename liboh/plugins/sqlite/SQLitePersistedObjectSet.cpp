@@ -71,7 +71,6 @@ bool SQLitePersistedObjectSet::checkSQLiteError(int rc, const String& msg) const
 
 void SQLitePersistedObjectSet::initDB() {
     SQLiteDBPtr db = SQLite::getSingleton().open(mDBFilename);
-    sqlite3_busy_timeout(db->db(), 1000);
 
     // Create the table for this object if it doesn't exist yet
     String table_create = "CREATE TABLE IF NOT EXISTS ";
@@ -111,12 +110,28 @@ void SQLitePersistedObjectSet::stop() {
 
 void SQLitePersistedObjectSet::requestPersistedObject(const UUID& internal_id, const String& script_type, const String& script_args, const String& script_contents, RequestCallback cb, const String& timestamp) {
     mIOService->post(
-        std::tr1::bind(&SQLitePersistedObjectSet::performUpdate, this, internal_id, script_type, script_args, script_contents, cb),
+        std::tr1::bind(&SQLitePersistedObjectSet::performUpdateWithRetry, this, internal_id, script_type, script_args, script_contents, cb),
         "SQLitePersistedObjectSet::performUpdate"
     );
 }
 
-void SQLitePersistedObjectSet::performUpdate(const UUID& internal_id, const String& script_type, const String& script_args, const String& script_contents, RequestCallback cb) {
+void SQLitePersistedObjectSet::performUpdateWithRetry(const UUID& internal_id, const String& script_type, const String& script_args, const String& script_contents, RequestCallback cb) {
+    UpdateResult res = LOCK_ERROR;
+    for(int32 i = 0; i < 100 && res == LOCK_ERROR; i++) {
+        if (i != 0) Timer::sleep(Duration::milliseconds(25));
+        res = performUpdate(internal_id, script_type, script_args, script_contents, cb);
+    }
+
+    if (res == LOCK_ERROR)
+        SILOG(sqlite-persisted-object-set, error, "Couldn't perform update after 100 retries, database was busy.");
+
+    if (cb != 0)
+        mContext->mainStrand->post(std::tr1::bind(cb, (res == SUCCESS)), "SQLitePersistedObjectSet::performUpdate callback");
+}
+
+SQLitePersistedObjectSet::UpdateResult SQLitePersistedObjectSet::performUpdate(const UUID& internal_id, const String& script_type, const String& script_args, const String& script_contents, RequestCallback cb) {
+    SQLitePersistedObjectSet::UpdateResult result;
+
     bool success = true;
 
     int rc;
@@ -148,14 +163,19 @@ void SQLitePersistedObjectSet::performUpdate(const UUID& internal_id, const Stri
         success = false;
         sqlite3_reset(value_insert_stmt); // allow this to be cleaned
                                           // up
-        SILOG(sqlite-persisted-object-set, error, "Update failed: " << SQLite::resultAsString(step_rc));
+        if (step_rc == SQLITE_LOCKED || step_rc == SQLITE_BUSY)
+            result = LOCK_ERROR;
+        else
+            SILOG(sqlite-persisted-object-set, error, "Update failed: " << SQLite::resultAsString(step_rc));
     }
 
     rc = sqlite3_finalize(value_insert_stmt);
     success = success && !checkSQLiteError(rc, "Error finalizing value insert statement");
 
-    if (cb != 0)
-        mContext->mainStrand->post(std::tr1::bind(cb, success), "SQLitePersistedObjectSet::performUpdate callback");
+    if (!success && result == SUCCESS)
+        result = TRANSACTION_ERROR;
+
+    return result;
 }
 
 } //end namespace OH
