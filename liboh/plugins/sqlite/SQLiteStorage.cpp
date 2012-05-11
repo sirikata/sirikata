@@ -105,10 +105,10 @@ Storage::Result SQLiteStorage::StorageAction::execute(SQLiteDBPtr db, const Buck
               bool locked = false;
               rc = sqlite3_prepare_v2(db->db(), value_query.c_str(), -1, &value_query_stmt, (const char**)&remain);
               bool success = true;
-              success = success && !SQLite::check_sql_error(db->db(), rc, NULL, "Error preparing value query statement");
+              success = success && !checkSQLiteError(db, rc, "Error preparing value query statement");
               if (rc==SQLITE_OK) {
                   rc = sqlite3_bind_text(value_query_stmt, 1, key.c_str(), (int)key.size(), SQLITE_TRANSIENT);
-                  success = success && !SQLite::check_sql_error(db->db(), rc, NULL, "Error binding key name to value query statement");
+                  success = success && !checkSQLiteError(db, rc, "Error binding key name to value query statement");
                   if (rc==SQLITE_OK) {
                       int step_rc = sqlite3_step(value_query_stmt);
                       while(step_rc == SQLITE_ROW) {
@@ -132,17 +132,20 @@ Storage::Result SQLiteStorage::StorageAction::execute(SQLiteDBPtr db, const Buck
                       if (step_rc != SQLITE_DONE) {
                           // reset the statement so it'll clean up properly
                           rc = sqlite3_reset(value_query_stmt);
-                          success = success && !SQLite::check_sql_error(db->db(), rc, NULL, "Error finalizing value query statement");
+                          success = success && !checkSQLiteError(db, rc, "Error finalizing value query statement");
                           if (rc==SQLITE_LOCKED||rc==SQLITE_BUSY)
                               locked = true;
                       }
                   }
               }
               rc = sqlite3_finalize(value_query_stmt);
-              success = success && !SQLite::check_sql_error(db->db(), rc, NULL, "Error finalizing value query statement");
+              success = success && !checkSQLiteError(db, rc, "Error finalizing value query statement");
 
               if (newStep) { // no rows were found, key is missing
                   success = false;
+                  // No message here because this is common for checking if a
+                  // key exists.
+                  // SILOG(sqlite-storage, error, "Read or compare key not found");
               }
 
               if (!success)
@@ -160,12 +163,12 @@ Storage::Result SQLiteStorage::StorageAction::execute(SQLiteDBPtr db, const Buck
               sqlite3_stmt* value_query_stmt;
               rc = sqlite3_prepare_v2(db->db(), value_query.c_str(), -1, &value_query_stmt, (const char**)&remain);
               bool success = true;
-              success = success && !SQLite::check_sql_error(db->db(), rc, NULL, "Error preparing value query statement");
+              success = success && !checkSQLiteError(db, rc, "Error preparing value query statement");
               if (rc==SQLITE_OK){
                   rc = sqlite3_bind_text(value_query_stmt, 1, key.c_str(), (int)key.size(), SQLITE_TRANSIENT);
-                  success = success && !SQLite::check_sql_error(db->db(), rc, NULL, "Error binding start key to value query statement");
+                  success = success && !checkSQLiteError(db, rc, "Error binding start key to value query statement");
                   rc = sqlite3_bind_text(value_query_stmt, 2, keyEnd.c_str(), (int)keyEnd.size(), SQLITE_TRANSIENT);
-                  success = success && !SQLite::check_sql_error(db->db(), rc, NULL, "Error binding finish key to value query statement");
+                  success = success && !checkSQLiteError(db, rc, "Error binding finish key to value query statement");
                   if (rc==SQLITE_OK) {
                       int step_rc = sqlite3_step(value_query_stmt);
                       int nread = 0;
@@ -182,17 +185,22 @@ Storage::Result SQLiteStorage::StorageAction::execute(SQLiteDBPtr db, const Buck
                           (*rs)[key] = value;
                           step_rc = sqlite3_step(value_query_stmt);
                       }
-                      if (nread == 0)
+                      if (nread == 0) {
                           success = false;
+                          // No message here because this is ok -- it just
+                          // indicates to the user that there were no elements
+                          // in the range requested.
+                          // SILOG(sqlite-storage, error, "RangeRead found 0 keys in range");
+                      }
                       if (step_rc != SQLITE_DONE) {
                           // reset the statement so it'll clean up properly
                           rc = sqlite3_reset(value_query_stmt);
-                          success = success && !SQLite::check_sql_error(db->db(), rc, NULL, "Error finalizing value query statement");
+                          success = success && !checkSQLiteError(db, rc, "Error finalizing value query statement");
                       }
                   }
               }
               rc = sqlite3_finalize(value_query_stmt);
-              success = success && !SQLite::check_sql_error(db->db(), rc, NULL, "Error finalizing value query statement");
+              success = success && !checkSQLiteError(db, rc, "Error finalizing value query statement");
               if (!success)
                   result = TRANSACTION_ERROR;
           }
@@ -220,15 +228,15 @@ Storage::Result SQLiteStorage::StorageAction::execute(SQLiteDBPtr db, const Buck
               sqlite3_stmt* value_insert_stmt;
               rc = sqlite3_prepare_v2(db->db(), value_insert.c_str(), -1, &value_insert_stmt, (const char**)&remain);
               bool success = true;
-              success = success && !SQLite::check_sql_error(db->db(), rc, NULL, "Error preparing value insert statement");
+              success = success && !checkSQLiteError(db, rc, "Error preparing value insert statement");
 
               rc = sqlite3_bind_text(value_insert_stmt, 1, key.c_str(), (int)key.size(), SQLITE_TRANSIENT);
-              success = success && !SQLite::check_sql_error(db->db(), rc, NULL, "Error binding key name to value insert statement");
+              success = success && !checkSQLiteError(db, rc, "Error binding key name to value insert statement");
               if (rc==SQLITE_OK) {
                   if (type == Write) {
                       assert(value != NULL);
                       rc = sqlite3_bind_blob(value_insert_stmt, 2, value->c_str(), (int)value->size(), SQLITE_TRANSIENT);
-                      success = success && !SQLite::check_sql_error(db->db(), rc, NULL, "Error binding value to value insert statement");
+                      success = success && !checkSQLiteError(db, rc, "Error binding value to value insert statement");
                   }
               }
 
@@ -236,6 +244,7 @@ Storage::Result SQLiteStorage::StorageAction::execute(SQLiteDBPtr db, const Buck
               if (step_rc != SQLITE_OK && step_rc != SQLITE_DONE) {
                   sqlite3_reset(value_insert_stmt); // allow this to be cleaned up
                   success = false;
+                  SILOG(sqlite-storage, error, "Write or erase error: " << SQLite::resultAsString(step_rc));
               }
               else {
                   // Check the number of changes that the statement actually
@@ -244,14 +253,23 @@ Storage::Result SQLiteStorage::StorageAction::execute(SQLiteDBPtr db, const Buck
                   // write. On an erase, we ignore missing keys, but
                   // we should see either 0 or 1 ops.
                   int changes = sqlite3_changes(db->db());
-                  if (type == Write)
+                  if (type == Write) {
+                      if (changes != 1) {
+                          success = false;
+                          SILOG(sqlite-storage, error, "Incorrect number of changes for write: " << changes);
+                      }
                       success = success && (changes == 1);
-                  else if (type == Erase)
-                      success = success && (changes == 0 || changes == 1);
+                  }
+                  else if (type == Erase) {
+                      if (changes != 0 && changes != 1) {
+                          success = false;
+                          SILOG(sqlite-storage, error, "Incorrect number of changes for erase: " << changes);
+                      }
+                  }
               }
 
               rc = sqlite3_finalize(value_insert_stmt);
-              success = success && !SQLite::check_sql_error(db->db(), rc, NULL, "Error finalizing value insert statement");
+              success = success && !checkSQLiteError(db, rc, "Error finalizing value insert statement");
 
               if (!success)
                   result = TRANSACTION_ERROR;
@@ -268,19 +286,19 @@ Storage::Result SQLiteStorage::StorageAction::execute(SQLiteDBPtr db, const Buck
               sqlite3_stmt* value_delete_stmt;
               rc = sqlite3_prepare_v2(db->db(), value_delete.c_str(), -1, &value_delete_stmt, (const char**)&remain);
               bool success = true;
-              success = success && !SQLite::check_sql_error(db->db(), rc, NULL, "Error preparing value delete statement");
+              success = success && !checkSQLiteError(db, rc, "Error preparing value delete statement");
 
               rc = sqlite3_bind_text(value_delete_stmt, 1, key.c_str(), (int)key.size(), SQLITE_TRANSIENT);
-              success = success && !SQLite::check_sql_error(db->db(), rc, NULL, "Error binding start key to value delete statement");
+              success = success && !checkSQLiteError(db, rc, "Error binding start key to value delete statement");
               rc = sqlite3_bind_text(value_delete_stmt, 2, keyEnd.c_str(), (int)keyEnd.size(), SQLITE_TRANSIENT);
-              success = success && !SQLite::check_sql_error(db->db(), rc, NULL, "Error binding finish key to value delete statement");
+              success = success && !checkSQLiteError(db, rc, "Error binding finish key to value delete statement");
 
               int step_rc = sqlite3_step(value_delete_stmt);
               if (step_rc != SQLITE_OK && step_rc != SQLITE_DONE)
                   sqlite3_reset(value_delete_stmt); // allow this to be cleaned up
 
               rc = sqlite3_finalize(value_delete_stmt);
-              success = success && !SQLite::check_sql_error(db->db(), rc, NULL, "Error finalizing value delete statement");
+              success = success && !checkSQLiteError(db, rc, "Error finalizing value delete statement");
 
               if (!success)
                   result = TRANSACTION_ERROR;
@@ -331,6 +349,14 @@ void SQLiteStorage::start() {
     );
 }
 
+bool SQLiteStorage::checkSQLiteError(SQLiteDBPtr db, int rc, const String& msg) {
+    std::pair<bool, String> res = SQLite::check_sql_error(db->db(), rc, NULL, msg);
+    if (res.first) {
+        SILOG(sqlite-storage, error, res.second);
+    }
+    return res.first;
+}
+
 void SQLiteStorage::initDB() {
     SQLiteDBPtr db = SQLite::getSingleton().open(mDBFilename);
     sqlite3_busy_timeout(db->db(), 1000);
@@ -344,15 +370,20 @@ void SQLiteStorage::initDB() {
     char* remain;
     sqlite3_stmt* table_create_stmt;
 
+    mDB = db;
+
+    bool success = true;
+
     rc = sqlite3_prepare_v2(db->db(), table_create.c_str(), -1, &table_create_stmt, (const char**)&remain);
-    SQLite::check_sql_error(db->db(), rc, NULL, "Error preparing table create statement");
+    success = success && !checkSQLiteError(db, rc, "Error preparing table create statement");
 
     rc = sqlite3_step(table_create_stmt);
-    SQLite::check_sql_error(db->db(), rc, NULL, "Error executing table create statement");
+    success = success && !checkSQLiteError(db, rc, "Error executing table create statement");
     rc = sqlite3_finalize(table_create_stmt);
-    SQLite::check_sql_error(db->db(), rc, NULL, "Error finalizing table create statement");
+    success = success && !checkSQLiteError(db, rc, "Error finalizing table create statement");
 
-    mDB = db;
+    if (!success)
+        mDB.reset();
 }
 
 bool SQLiteStorage::sqlBeginTransaction() {
@@ -364,12 +395,12 @@ bool SQLiteStorage::sqlBeginTransaction() {
     bool success = true;
 
     rc = sqlite3_prepare_v2(mDB->db(), begin.c_str(), -1, &begin_stmt, (const char**)&remain);
-    success = success && !SQLite::check_sql_error(mDB->db(), rc, NULL, "Error preparing begin transaction statement");
+    success = success && !checkSQLiteError(mDB, rc, "Error preparing begin transaction statement");
 
     rc = sqlite3_step(begin_stmt);
-    success = success && !SQLite::check_sql_error(mDB->db(), rc, NULL, "Error executing begin statement");
+    success = success && !checkSQLiteError(mDB, rc, "Error executing begin statement");
     rc = sqlite3_finalize(begin_stmt);
-    success = success && !SQLite::check_sql_error(mDB->db(), rc, NULL, "Error finalizing begin statement");
+    success = success && !checkSQLiteError(mDB, rc, "Error finalizing begin statement");
 
     return success;
 }
@@ -383,12 +414,12 @@ bool SQLiteStorage::sqlRollback() {
     bool success = true;
 
     rc = sqlite3_prepare_v2(mDB->db(), rollback.c_str(), -1, &rollback_stmt, (const char**)&remain);
-    success = success && !SQLite::check_sql_error(mDB->db(), rc, NULL, "Error preparing rollback transaction statement");
+    success = success && !checkSQLiteError(mDB, rc, "Error preparing rollback transaction statement");
 
     rc = sqlite3_step(rollback_stmt);
-    success = success && !SQLite::check_sql_error(mDB->db(), rc, NULL, "Error executing rollback statement");
+    success = success && !checkSQLiteError(mDB, rc, "Error executing rollback statement");
     rc = sqlite3_finalize(rollback_stmt);
-    success = success && !SQLite::check_sql_error(mDB->db(), rc, NULL, "Error finalizing rollback statement");
+    success = success && !checkSQLiteError(mDB, rc, "Error finalizing rollback statement");
 
     return success;
 }
@@ -402,12 +433,12 @@ bool SQLiteStorage::sqlCommit() {
     bool success = true;
 
     rc = sqlite3_prepare_v2(mDB->db(), commit.c_str(), -1, &commit_stmt, (const char**)&remain);
-    success = success && !SQLite::check_sql_error(mDB->db(), rc, NULL, "Error preparing commit transaction statement");
+    success = success && !checkSQLiteError(mDB, rc, "Error preparing commit transaction statement");
 
     rc = sqlite3_step(commit_stmt);
-    success = success && !SQLite::check_sql_error(mDB->db(), rc, NULL, "Error executing commit statement");
+    success = success && !checkSQLiteError(mDB, rc, "Error executing commit statement");
     rc = sqlite3_finalize(commit_stmt);
-    success = success && !SQLite::check_sql_error(mDB->db(), rc, NULL, "Error finalizing commit statement");
+    success = success && !checkSQLiteError(mDB, rc, "Error finalizing commit statement");
 
     return success;
 }
@@ -970,13 +1001,13 @@ void SQLiteStorage::executeCount(const String value_count, const Key& start, con
     char* remain;
     sqlite3_stmt* value_count_stmt;
     rc = sqlite3_prepare_v2(mDB->db(), value_count.c_str(), -1, &value_count_stmt, (const char**)&remain);
-    success = success && !SQLite::check_sql_error(mDB->db(), rc, NULL, "Error preparing value count statement");
+    success = success && !checkSQLiteError(mDB, rc, "Error preparing value count statement");
 
     if (rc==SQLITE_OK) {
     	rc = sqlite3_bind_text(value_count_stmt, 1, start.c_str(), (int)start.size(), SQLITE_TRANSIENT);
-    	success = success && !SQLite::check_sql_error(mDB->db(), rc, NULL, "Error binding start key to value count statement");
+    	success = success && !checkSQLiteError(mDB, rc, "Error binding start key to value count statement");
     	rc = sqlite3_bind_text(value_count_stmt, 2, finish.c_str(), (int)finish.size(), SQLITE_TRANSIENT);
-    	success = success && !SQLite::check_sql_error(mDB->db(), rc, NULL, "Error binding finish key to value count statement");
+    	success = success && !checkSQLiteError(mDB, rc, "Error binding finish key to value count statement");
     	if (rc==SQLITE_OK) {
     		int step_rc = sqlite3_step(value_count_stmt);
     		count = sqlite3_column_int(value_count_stmt, 0);
@@ -986,7 +1017,7 @@ void SQLiteStorage::executeCount(const String value_count, const Key& start, con
 
     }
     rc = sqlite3_finalize(value_count_stmt);
-    success = success && !SQLite::check_sql_error(mDB->db(), rc, NULL, "Error finalizing value delete statement");
+    success = success && !checkSQLiteError(mDB, rc, "Error finalizing value delete statement");
 
     if (cb) {
         Result result = (success ? SUCCESS : TRANSACTION_ERROR);

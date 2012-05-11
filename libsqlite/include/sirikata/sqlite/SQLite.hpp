@@ -72,7 +72,9 @@ public:
     SQLiteDBPtr open(const String& name);
     // Check and report errors in SQLite. Returns true if there was an error,
     // false otherwise.
-    static bool check_sql_error(sqlite3* db, int rc, char** sql_error_msg, std::string msg);
+    static std::pair<bool, String> check_sql_error(sqlite3* db, int rc, char** sql_error_msg, const String& msg);
+    // Get a string description of a result code
+    static const String& resultAsString(int rc);
 
     static SQLite& getSingleton();
     static void destroy();

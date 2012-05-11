@@ -115,6 +115,10 @@ private:
     };
     typedef ThreadSafeQueueWithNotification<TransactionData> TransactionQueue;
 
+    // Helper that checks and logs errors, then returns bool indicating
+    // success/failure
+    static bool checkSQLiteError(SQLiteDBPtr db, int rc, const String& msg);
+
     // Initializes the database. This is separate from the main initialization
     // function because we need to make sure it executes in the right thread so
     // all sqlite requests on the db ptr come from the same thread.

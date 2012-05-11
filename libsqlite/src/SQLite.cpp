@@ -32,26 +32,75 @@
 
 #include <sirikata/sqlite/SQLite.hpp>
 #include <boost/thread.hpp>
+#include <boost/thread/once.hpp>
 
 AUTO_SINGLETON_INSTANCE(Sirikata::SQLite);
 
 namespace Sirikata {
-bool SQLite::check_sql_error(sqlite3* db, int rc, char** sql_error_msg, std::string msg) {
+
+std::pair<bool, String> SQLite::check_sql_error(sqlite3* db, int rc, char** sql_error_msg, const String& msg) {
+    String result_msg;
     if (rc != SQLITE_OK && rc != SQLITE_ROW && rc != SQLITE_DONE) {
-        std::cout << msg << " ... ";
+        result_msg = msg + " ... ";
         if (sql_error_msg && *sql_error_msg) {
-            std::cout << *sql_error_msg;
+            result_msg += *sql_error_msg;
             sqlite3_free(*sql_error_msg);
             *sql_error_msg = NULL;
         }
         else {
-            std::cout << sqlite3_errmsg(db);
+            result_msg += sqlite3_errmsg(db);
         }
-        std::cout << std::endl;
-        return true;
+        return std::make_pair(true, result_msg);
     }
-    return false;
+    return std::make_pair(false, result_msg);
 }
+
+static std::tr1::unordered_map<int, String> rcStrings;
+static boost::once_flag rcStringsInitialized = BOOST_ONCE_INIT;
+static void initResultCodeStrings() {
+    // Unknown values
+    rcStrings[-1] = "Unknown";
+    // Normal values
+
+    rcStrings[SQLITE_OK] = "SQLITE_OK - Ok";
+    rcStrings[SQLITE_ERROR] = "SQLITE_ERROR - SQL error or missing database";
+    rcStrings[SQLITE_INTERNAL] = "SQLITE_INTERNAL - Internal logic error in SQLite";
+    rcStrings[SQLITE_PERM] = "SQLITE_PERM - Access permission denied";
+    rcStrings[SQLITE_ABORT] = "SQLITE_ABORT - Callback routine requested an abort";
+    rcStrings[SQLITE_BUSY] = "SQLITE_BUSY - The database file is locked";
+    rcStrings[SQLITE_LOCKED] = "SQLITE_LOCKED - A table in the database is locked";
+    rcStrings[SQLITE_NOMEM] = "SQLITE_NOMEM - A malloc() failed";
+    rcStrings[SQLITE_READONLY] = "SQLITE_READONLY - Attempt to write a readonly database";
+    rcStrings[SQLITE_INTERRUPT] = "SQLITE_INTERRUPT - Operation terminated by sqlite3_interrupt()";
+    rcStrings[SQLITE_IOERR] = "SQLITE_IOERR - Some kind of disk I/O error occurred";
+    rcStrings[SQLITE_CORRUPT] = "SQLITE_CORRUPT - The database disk image is malformed";
+    rcStrings[SQLITE_NOTFOUND] = "SQLITE_NOTFOUND - Unknown opcode in sqlite3_file_control()";
+    rcStrings[SQLITE_FULL] = "SQLITE_FULL - Insertion failed because database is full";
+    rcStrings[SQLITE_CANTOPEN] = "SQLITE_CANTOPEN - Unable to open the database file";
+    rcStrings[SQLITE_PROTOCOL] = "SQLITE_PROTOCOL - Database lock protocol error";
+    rcStrings[SQLITE_EMPTY] = "SQLITE_EMPTY - Database is empty";
+    rcStrings[SQLITE_SCHEMA] = "SQLITE_SCHEMA - The database schema changed";
+    rcStrings[SQLITE_TOOBIG] = "SQLITE_TOOBIG - String or BLOB exceeds size limit";
+    rcStrings[SQLITE_CONSTRAINT] = "SQLITE_CONSTRAINT - Abort due to constraint violation";
+    rcStrings[SQLITE_MISMATCH] = "SQLITE_MISMATCH - Data type mismatch";
+    rcStrings[SQLITE_MISUSE] = "SQLITE_MISUSE - Library used incorrectly";
+    rcStrings[SQLITE_NOLFS] = "SQLITE_NOLFS - Uses OS features not supported on host";
+    rcStrings[SQLITE_AUTH] = "SQLITE_AUTH - Authorization denied";
+    rcStrings[SQLITE_FORMAT] = "SQLITE_FORMAT - Auxiliary database format error";
+    rcStrings[SQLITE_RANGE] = "SQLITE_RANGE - 2nd parameter to sqlite3_bind out of range";
+    rcStrings[SQLITE_NOTADB] = "SQLITE_NOTADB - File opened that is not a database file";
+    rcStrings[SQLITE_ROW] = "SQLITE_ROW - sqlite3_step() has another row ready";
+    rcStrings[SQLITE_DONE] = "SQLITE_DONE - sqlite3_step() has finished executing";
+}
+
+const String& SQLite::resultAsString(int rc) {
+    boost::call_once(rcStringsInitialized, initResultCodeStrings);
+
+    std::tr1::unordered_map<int, String>::iterator it = rcStrings.find(rc);
+    if (it != rcStrings.end()) return it->second;
+    return rcStrings[-1];
+}
+
 SQLiteDB::SQLiteDB(const String& name) {
     int rc;
 

@@ -65,6 +65,10 @@ public:
     virtual void requestPersistedObject(const UUID& internal_id, const String& script_type, const String& script_args, const String& script_contents, RequestCallback cb, const String& timestamp="current");
 
 private:
+    // Helper that checks and logs errors, then returns bool indicating
+    // success/failure
+    bool checkSQLiteError(int rc, const String& msg) const;
+
     void initDB();
     void performUpdate(const UUID& internal_id, const String& script_type, const String& script_args, const String& script_contents, RequestCallback cb);
 

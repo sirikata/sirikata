@@ -49,6 +49,10 @@ public:
     virtual void authenticate(const UUID& obj_id, MemoryReference auth, Callback cb);
 
 private:
+    // Helper that checks and logs errors, then returns bool indicating
+    // success/failure
+    bool checkSQLiteError(int rc, const String& msg) const;
+
     // Check if the ticket is valid
     bool checkTicket(const String& ticket);
     // Delete a ticket from the db
