@@ -76,7 +76,7 @@ SIRIKATA_FUNCTION_EXPORT void finishLog();
 		   || (reinterpret_cast<Sirikata::OptionValue*>(Sirikata_Logging_OptionValue_moduleLevel)->unsafeAs<std::tr1::unordered_map<std::string,Sirikata::Logging::LOGGING_LEVEL> >().find(#module)!=reinterpret_cast<Sirikata::OptionValue*>(Sirikata_Logging_OptionValue_moduleLevel)->unsafeAs<std::tr1::unordered_map<std::string,Sirikata::Logging::LOGGING_LEVEL> >().end() && \
               reinterpret_cast<Sirikata::OptionValue*>(Sirikata_Logging_OptionValue_moduleLevel)->unsafeAs<std::tr1::unordered_map<std::string,Sirikata::Logging::LOGGING_LEVEL> >()[#module]>=Sirikata::Logging::lvl)))
 # endif
-# define SILOGNOCR(module,lvl,value)                                    \
+# define SILOGBARE(module,lvl,value)                                    \
     do {                                                                \
         if (SILOGP(module,lvl)) {                                       \
             std::ostringstream __log_stream;                            \
@@ -84,10 +84,8 @@ SIRIKATA_FUNCTION_EXPORT void finishLog();
             (*Sirikata::Logging::SirikataLogStream) << __log_stream.str() << std::endl; \
         }                                                               \
     } while (0)
-# define SILOGBARE(module,lvl,value) SILOGNOCR(module,lvl,value)
 #else
 # define SILOGP(module,lvl) false
-# define SILOGNOCR(module,lvl,value)
 # define SILOGBARE(module,lvl,value)
 #endif
 

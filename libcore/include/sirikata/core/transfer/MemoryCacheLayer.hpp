@@ -67,12 +67,11 @@ protected:
 					CacheData *cdata = static_cast<CacheData*>(*writer);
 					cdata->mSparse.addValidData(respondData);
                     if (SILOGP(transfer,detailed)) {
-                        SILOGNOCR(transfer,detailed,fileId << " already exists: ");
                         std::stringstream rangeListStream;
                         Range::printRangeList(rangeListStream,
                             static_cast<DenseDataList&>(cdata->mSparse),
                             static_cast<Range>(*respondData));
-                        SILOGNOCR(transfer,detailed,rangeListStream.str());
+                        SILOG(transfer,detailed,fileId << " already exists: " << rangeListStream.str());
                     }
 					writer.update(cdata->mSparse.getSpaceUsed());
 				}
@@ -111,12 +110,11 @@ public:
 			if (iter.find(fileId)) {
 				const SparseData &sparseData = static_cast<const CacheData*>(*iter)->mSparse;
                 if (SILOGP(transfer,detailed)) {
-                    SILOGNOCR(transfer,detailed,"Found " << fileId << "; ranges=");
                         std::stringstream rangeListStream;
                         Range::printRangeList(rangeListStream,
                             static_cast<const DenseDataList&>(sparseData),
                             requestedRange);
-                    SILOG(transfer,detailed,rangeListStream.str());
+                        SILOG(transfer,detailed,"Found " << fileId << "; ranges=" << rangeListStream.str());
                 }
 				if (sparseData.contains(requestedRange)) {
 					haveData = true;
