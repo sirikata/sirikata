@@ -216,7 +216,10 @@ function testTwoOperationTransaction()
                                         mTest.fail('Error in testTwoOperationTransactions: did not get an object back.');
                                     else
                                     {
-                                        if ((!(fieldKey in val)) && (!(fieldKey2 in val)))
+                                        if (!(fieldKey in val) ||
+                                            !(fieldKey2 in val) ||
+                                            val[fieldKey] === undefined ||
+                                            val[fieldKey2] === undefined)
                                             mTest.fail('Error in testTwoOperaionTransactions: returned object does not have correct keys');
                                         else
                                         {
