@@ -130,7 +130,7 @@ void SQLitePersistedObjectSet::performUpdateWithRetry(const UUID& internal_id, c
 }
 
 SQLitePersistedObjectSet::UpdateResult SQLitePersistedObjectSet::performUpdate(const UUID& internal_id, const String& script_type, const String& script_args, const String& script_contents, RequestCallback cb) {
-    SQLitePersistedObjectSet::UpdateResult result;
+    SQLitePersistedObjectSet::UpdateResult result = SUCCESS;
 
     bool success = true;
 
