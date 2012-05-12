@@ -80,7 +80,7 @@ HostedObject::HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID
             &HostedObject::createDelegateODPPort, this,
             _1, _2, _3
         )
-    );    
+    );
 }
 
 
@@ -374,21 +374,21 @@ bool HostedObject::downloadZernikeDescriptor(OHConnectInfoPtr ocip, uint8 n_retr
 }
 
 void HostedObject::metadataDownloaded(OHConnectInfoPtr ocip,
-                                    uint8 retryCount, 
+                                    uint8 retryCount,
                                     std::tr1::shared_ptr<Transfer::MetadataRequest> request,
                                     std::tr1::shared_ptr<Transfer::RemoteFileMetadata> response)
 {
   if (response != NULL || retryCount >= 3) {
     const Sirikata::Transfer::FileHeaders& headers = response->getHeaders();
-    
+
     String zernike = "";
     if (headers.find("Zernike") != headers.end()) {
       zernike = (headers.find("Zernike"))->second;
     }
 
-    ocip->zernike = zernike;    
-    
-    mContext->mainStrand->post(std::tr1::bind(&HostedObject::objectHostConnectIndirect, this, ocip));    
+    ocip->zernike = zernike;
+
+    mContext->mainStrand->post(std::tr1::bind(&HostedObject::objectHostConnectIndirect, this, ocip));
   }
   else if (retryCount < 3) {
       downloadZernikeDescriptor(ocip, retryCount+1);
@@ -401,7 +401,7 @@ bool HostedObject::objectHostConnect(const SpaceID spaceID,
         const String mesh,
         const String physics,
         const String query,
-        const String zernike,        
+        const String zernike,
         const ObjectReference orefID,
         PresenceToken token)
 {
@@ -422,7 +422,7 @@ bool HostedObject::objectHostConnect(const SpaceID spaceID,
                            physics,
                            query,
                            zernike,
-                           std::tr1::bind(&HostedObject::handleConnected, getWeakPtr(), _1, _2, _3),
+                           std::tr1::bind(&HostedObject::handleConnected, getWeakPtr(), mObjectHost, _1, _2, _3),
                            std::tr1::bind(&HostedObject::handleMigrated, getWeakPtr(), _1, _2, _3),
                            std::tr1::bind(&HostedObject::handleStreamCreated, getWeakPtr(), _1, _2, token),
                            std::tr1::bind(&HostedObject::handleDisconnected, getWeakPtr(), _1, _2)
@@ -473,13 +473,31 @@ bool HostedObject::connect(
     }
 }
 
+void HostedObject::disconnectDeadPresence(ObjectHost* parentOH, const SpaceID& space, const ObjectReference& obj) {
+    // We can get connection callbacks from the session manager after we have
+    // already been stopped/destroyed since the script can kill things at any
+    // time. However, we need to make sure we clean these up properly,
+    // disconnecting the presence so a) it doesn't hang around in the space and
+    // b) so that we can clean up the HostedObject locally/don't keep garbage in
+    // the SessionManager.
 
-void HostedObject::handleConnected(const HostedObjectWPtr& weakSelf, const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info)
+    // The cleanup is mostly like we were disconnecting normally. The NULL value
+    // passed to unregisterHostedObject indicates that we no longer have the
+    // pointer because the object using the ID has been stopped.
+    parentOH->disconnectObject(space,obj);
+    parentOH->unregisterHostedObject(SpaceObjectReference(space,obj), NULL);
+    return;
+}
+
+void HostedObject::handleConnected(const HostedObjectWPtr& weakSelf, ObjectHost* parentOH, const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info)
 {
     HostedObjectPtr self(weakSelf.lock());
     if ((!self)||self->stopped()) {
         HO_LOG(detailed,"Ignoring connection success after system stop requested.");
-
+        parentOH->context()->mainStrand->post(
+            std::tr1::bind(&HostedObject::disconnectDeadPresence, parentOH, space, obj),
+            "HostedObject::disconnectDeadPresence"
+        );
         return;
     }
     if (info.server == NullServerID)
@@ -496,13 +514,13 @@ void HostedObject::handleConnected(const HostedObjectWPtr& weakSelf, const Space
     // We have to manually do what mContext->mainStrand->wrap( ... ) should be
     // doing because it can't handle > 5 arguments.
     self->mContext->mainStrand->post(
-        std::tr1::bind(&HostedObject::handleConnectedIndirect, weakSelf, space, obj, info, baseDatagramLayer),
+        std::tr1::bind(&HostedObject::handleConnectedIndirect, weakSelf, parentOH, space, obj, info, baseDatagramLayer),
         "HostedObject::handleConnectedIndirect"
     );
 }
 
 
-void HostedObject::handleConnectedIndirect(const HostedObjectWPtr& weakSelf, const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, const BaseDatagramLayerPtr& baseDatagramLayer)
+void HostedObject::handleConnectedIndirect(const HostedObjectWPtr& weakSelf, ObjectHost* parentOH, const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, const BaseDatagramLayerPtr& baseDatagramLayer)
 {
     if (info.server == NullServerID)
     {
@@ -511,8 +529,13 @@ void HostedObject::handleConnectedIndirect(const HostedObjectWPtr& weakSelf, con
     }
 
     HostedObjectPtr self(weakSelf.lock());
-    if (!self)
+    if (!self) {
+        parentOH->context()->mainStrand->post(
+            std::tr1::bind(&HostedObject::disconnectDeadPresence, parentOH, space, obj),
+            "HostedObject::disconnectDeadPresence"
+        );
         return;
+    }
 
     SpaceObjectReference self_objref(space, obj);
 
@@ -802,7 +825,7 @@ void HostedObject::handleProximityUpdate(const SpaceObjectReference& spaceobj, c
         Sirikata::Protocol::Prox::ObjectAddition addition = update.addition(aidx);
         ProxProtocolLocUpdate add(addition);
 
-        SpaceObjectReference proximateID(spaceobj.space(), add.object());        
+        SpaceObjectReference proximateID(spaceobj.space(), add.object());
 
         TimedMotionVector3f loc(add.locationWithLocalTime(this, spaceobj.space()));
 

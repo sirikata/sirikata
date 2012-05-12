@@ -145,6 +145,8 @@ public:
     /// The ObjectHost must be destroyed after all HostedObject instances.
     ~ObjectHost();
 
+    ObjectHostContext* context() const { return mContext; }
+
     /** Create an object with the specified script. This version allows you to
      *  specify the unique identifier manually, so it should only be used if you
      *  need an exact ID, e.g. if you are restoring an object.
