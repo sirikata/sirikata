@@ -110,7 +110,8 @@ Time Timer::recentNow() {
 }
 
 Duration Timer::processElapsed() {
-    return (now() - processEpoch.read());
+    Time n = now();
+    return (n - processEpoch.read());
 }
 
 Duration Timer::recentProcessElapsed() {
