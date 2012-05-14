@@ -1,3 +1,9 @@
+sirikata (0.0.24-0ubuntu1) precise; urgency=low
+
+  * New upstream release 0.0.24.
+
+ -- Ewen Cheslack-Postava <echeslack@gmail.com>  Mon, 14 May 2012 10:33:00 -0700
+
 sirikata (0.0.23-0ubuntu1) oneiric; urgency=low
 
   * New upstream release.
