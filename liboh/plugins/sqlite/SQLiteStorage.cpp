@@ -403,6 +403,7 @@ bool SQLiteStorage::checkSQLiteError(SQLiteDBPtr db, int rc, const String& msg) 
 
 void SQLiteStorage::initDB() {
     SQLiteDBPtr db = SQLite::getSingleton().open(mDBFilename);
+    sqlite3_busy_timeout(db->db(), 1000);
 
     // Create the table for this object if it doesn't exist yet
     String table_create = "CREATE TABLE IF NOT EXISTS ";
