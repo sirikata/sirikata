@@ -100,11 +100,6 @@ $(document).ready(function() {
                     else
                         $('#render-stats-display').hide();
 		}
-		
-		if(action_clicked == 'action_cdn_upload') {
-			$( "#cdn-choose-file" ).dialog( "open" );
-		}
-
 	}};  
 	$('#menuone').menu(options);
 	
