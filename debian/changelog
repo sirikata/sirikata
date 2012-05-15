@@ -1,3 +1,9 @@
+sirikata (0.0.24-0ubuntu2) precise; urgency=low
+
+  * Fixes for Ubuntu Precise.
+
+ -- Ewen Cheslack-Postava <echeslack@gmail.com>  Mon, 14 May 2012 20:10:32 -0700
+
 sirikata (0.0.24-0ubuntu1) precise; urgency=low
 
   * New upstream release 0.0.24.
