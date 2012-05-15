@@ -653,7 +653,7 @@ boost::any OgreSystemMouseHandler::onUIAction(WebView* webview, const JSArgument
 
     printf("UI Action triggered. action = '%s'.\n", action_triggered.c_str());
 
-    if(action_triggered == "action_exit") {
+    if(action_triggered == "exit") {
         mParent->quit();
     } else if(action_triggered == "action_directory_list_request") {
         if(args.size() != 2) {
