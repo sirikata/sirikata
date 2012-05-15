@@ -60,6 +60,10 @@ public:
     virtual void poll();
     virtual void stop();
 
+    void setPrioritizationMetric(PriorityDownloadPlannerMetricPtr metric) {
+        mMetric = metric;
+    }
+
 protected:
     bool mStopped;
     PriorityDownloadPlannerMetricPtr mMetric;
