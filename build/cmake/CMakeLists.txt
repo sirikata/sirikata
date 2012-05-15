@@ -1481,8 +1481,7 @@ SET(LIBOGRE_SOURCES
   ${LIBOGRE_SOURCE_DIR}/ResourceLoader.cpp
   ${LIBOGRE_SOURCE_DIR}/Entity.cpp
   ${LIBOGRE_SOURCE_DIR}/ResourceDownloadPlanner.cpp
-  ${LIBOGRE_SOURCE_DIR}/DistanceDownloadPlanner.cpp
-  ${LIBOGRE_SOURCE_DIR}/SAngleDownloadPlanner.cpp
+  ${LIBOGRE_SOURCE_DIR}/PriorityDownloadPlanner.cpp
   ${LIBOGRE_SOURCE_DIR}/OgreRenderer.cpp
   ${LIBOGRE_SOURCE_DIR}/OverlayPosition.cpp
   ${LIBOGRE_SOURCE_DIR}/ViewportOverlay.cpp

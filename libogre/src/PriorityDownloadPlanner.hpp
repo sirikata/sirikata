@@ -1,37 +1,9 @@
-/*  Meru
- *  ResourceDownloadTask.cpp
- *
- *  Copyright (c) 2009, Stanford University
- *  All rights reserved.
- *
- *  Redistribution and use in source and binary forms, with or without
- *  modification, are permitted provided that the following conditions are
- *  met:
- *  * Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- *  * Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in
- *    the documentation and/or other materials provided with the
- *    distribution.
- *  * Neither the name of Sirikata nor the names of its contributors may
- *    be used to endorse or promote products derived from this software
- *    without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
- * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
- * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
- * PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
- * OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
- * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
- * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
- * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
- * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
- * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- */
+// Copyright (c) 2009 Sirikata Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can
+// be found in the LICENSE file.
 
-#ifndef _DISTANCE_DOWNLOAD_PLANNER_HPP
-#define _DISTANCE_DOWNLOAD_PLANNER_HPP
+#ifndef _SIRIKATA_OGRE_PRIORITY_DOWNLOAD_PLANNER_HPP
+#define _SIRIKATA_OGRE_PRIORITY_DOWNLOAD_PLANNER_HPP
 
 #include <sirikata/ogre/ResourceDownloadPlanner.hpp>
 #include <sirikata/ogre/resourceManager/AssetDownloadTask.hpp>
@@ -46,12 +18,37 @@ namespace Graphics {
 
 class WebView;
 
-class DistanceDownloadPlanner : public ResourceDownloadPlanner,
+/** Interface for a metric that can be used with PriorityDownloadPlanner. */
+class PriorityDownloadPlannerMetric {
+public:
+    virtual ~PriorityDownloadPlannerMetric() {}
+    virtual double calculatePriority(Graphics::Camera *camera, ProxyObjectPtr proxy) = 0;
+};
+typedef std::tr1::shared_ptr<PriorityDownloadPlannerMetric> PriorityDownloadPlannerMetricPtr;
+
+class DistanceDownloadPlannerMetric : public PriorityDownloadPlannerMetric {
+public:
+    virtual ~DistanceDownloadPlannerMetric() {}
+    virtual double calculatePriority(Graphics::Camera *camera, ProxyObjectPtr proxy);
+};
+
+class SolidAngleDownloadPlannerMetric : public PriorityDownloadPlannerMetric {
+public:
+    virtual ~SolidAngleDownloadPlannerMetric() {}
+    virtual double calculatePriority(Graphics::Camera *camera, ProxyObjectPtr proxy);
+};
+
+
+/** Implementation of ResourceDownloadPlanner that orders loading by a priority
+ *  metric computed on each object. The priority metric is pluggable and a
+ *  maximum number of objects can also be enforced.
+ */
+class PriorityDownloadPlanner : public ResourceDownloadPlanner,
                                 public virtual Liveness
 {
 public:
-    DistanceDownloadPlanner(Context* c, OgreRenderer* renderer);
-    ~DistanceDownloadPlanner();
+    PriorityDownloadPlanner(Context* c, OgreRenderer* renderer, PriorityDownloadPlannerMetricPtr metric);
+    ~PriorityDownloadPlanner();
 
     virtual void addNewObject(Graphics::Entity *ent, const Transfer::URI& mesh);
     virtual void addNewObject(ProxyObjectPtr p, Graphics::Entity *mesh);
@@ -65,6 +62,7 @@ public:
 
 protected:
     bool mStopped;
+    PriorityDownloadPlannerMetricPtr mMetric;
     struct Object;
 
     void iUpdateObject(ProxyObjectPtr p,Liveness::Token lt);
@@ -74,7 +72,7 @@ protected:
     Object* findObject(const String& sporef);
     void removeObject(const String& sporef);
 
-    virtual double calculatePriority(ProxyObjectPtr proxy);
+    double calculatePriority(ProxyObjectPtr proxy);
 
     void commandGetData(
         const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
@@ -239,4 +237,4 @@ protected:
 } // namespace Graphics
 } // namespace Sirikata
 
-#endif
+#endif //_SIRIKATA_OGRE_PRIORITY_DOWNLOAD_PLANNER_HPP

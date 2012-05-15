@@ -61,8 +61,7 @@
 #include <sirikata/ogre/WebViewManager.hpp>
 
 #include "ResourceLoader.hpp"
-#include "DistanceDownloadPlanner.hpp"
-#include "SAngleDownloadPlanner.hpp"
+#include "PriorityDownloadPlanner.hpp"
 
 
 //volatile char assert_thread_support_is_gequal_2[OGRE_THREAD_SUPPORT*2-3]={0};
@@ -531,7 +530,8 @@ bool OgreRenderer::initialize(const String& options, bool with_berkelium) {
     sActiveOgreScenes.push_back(this);
 
     mResourceLoader = new ResourceLoader(mContext, frameLoadDuration->as<Duration>());
-    mDownloadPlanner = new SAngleDownloadPlanner(mContext, this);
+    PriorityDownloadPlannerMetricPtr metric(new SolidAngleDownloadPlannerMetric());
+    mDownloadPlanner = new PriorityDownloadPlanner(mContext, this, metric);
 
     if (with_berkelium)
         new WebViewManager(0, mInputManager, getBerkeliumBinaryDir(mSearchPaths), getOgreResourcesDir(mSearchPaths));
