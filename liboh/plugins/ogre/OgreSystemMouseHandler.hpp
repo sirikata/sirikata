@@ -102,9 +102,6 @@ private:
 
     void renderStatsUpdateTick(const Task::LocalTime& t);
 
-    void onUIDirectoryListingFinished(String initial_path,
-        std::tr1::shared_ptr<Transfer::DiskManager::ScanRequest::DirectoryListing> dirListing);
-
     boost::any onUIAction(WebView* webview, const JSArguments& args);
 
     OgreSystem *mParent;
