@@ -37,6 +37,7 @@
 #include "OgreMeshRaytrace.hpp"
 #include <sirikata/core/transfer/DiskManager.hpp>
 #include <sirikata/ogre/input/InputListener.hpp>
+#include <sirikata/ogre/input/InputEventCompletion.hpp>
 
 namespace Sirikata {
 
@@ -83,11 +84,10 @@ private:
 
     // InputListener Interface
     virtual Input::EventResponse onInputDeviceEvent(Input::InputDeviceEventPtr ev);
-    virtual Input::EventResponse onKeyPressedEvent(Input::ButtonPressedPtr ev) { return onKeyEvent(ev); }
-    virtual Input::EventResponse onKeyRepeatedEvent(Input::ButtonRepeatedPtr ev) { return onKeyEvent(ev); }
-    virtual Input::EventResponse onKeyReleasedEvent(Input::ButtonReleasedPtr ev) { return onKeyEvent(ev); }
-    virtual Input::EventResponse onKeyDownEvent(Input::ButtonDownPtr ev) { return onKeyEvent(ev); }
-    Input::EventResponse onKeyEvent(Input::ButtonEventPtr ev);
+    virtual Input::EventResponse onKeyPressedEvent(Input::ButtonPressedPtr ev);
+    virtual Input::EventResponse onKeyRepeatedEvent(Input::ButtonRepeatedPtr ev);
+    virtual Input::EventResponse onKeyReleasedEvent(Input::ButtonReleasedPtr ev);
+    virtual Input::EventResponse onKeyDownEvent(Input::ButtonDownPtr ev);
     virtual Input::EventResponse onAxisEvent(Input::AxisEventPtr ev);
     virtual Input::EventResponse onTextInputEvent(Input::TextInputEventPtr ev);
     virtual Input::EventResponse onMouseHoverEvent(Input::MouseHoverEventPtr ev);
@@ -103,19 +103,71 @@ private:
 
     boost::any onUIAction(WebView* webview, const JSArguments& args);
 
+
+    class WebViewInputListener : public Input::InputListener {
+    public:
+        WebViewInputListener(OgreSystemMouseHandler* par)
+         : mParent(par)
+        {}
+
+        virtual Input::EventResponse onInputDeviceEvent(Input::InputDeviceEventPtr ev) { return Input::EventResponse::nop(); }
+        virtual Input::EventResponse onKeyPressedEvent(Input::ButtonPressedPtr ev) { return onKeyEvent(ev); }
+        virtual Input::EventResponse onKeyRepeatedEvent(Input::ButtonRepeatedPtr ev) { return onKeyEvent(ev); }
+        virtual Input::EventResponse onKeyReleasedEvent(Input::ButtonReleasedPtr ev) { return onKeyEvent(ev); }
+        virtual Input::EventResponse onKeyDownEvent(Input::ButtonDownPtr ev) { return onKeyEvent(ev); }
+        Input::EventResponse onKeyEvent(Input::ButtonEventPtr ev);
+        virtual Input::EventResponse onAxisEvent(Input::AxisEventPtr ev);
+        virtual Input::EventResponse onTextInputEvent(Input::TextInputEventPtr ev);
+        virtual Input::EventResponse onMouseHoverEvent(Input::MouseHoverEventPtr ev);
+        virtual Input::EventResponse onMousePressedEvent(Input::MousePressedEventPtr ev);
+        virtual Input::EventResponse onMouseReleasedEvent(Input::MouseReleasedEventPtr ev);
+        virtual Input::EventResponse onMouseClickEvent(Input::MouseClickEventPtr ev);
+        virtual Input::EventResponse onMouseDragEvent(Input::MouseDragEventPtr ev);
+        virtual Input::EventResponse onWebViewEvent(Input::WebViewEventPtr ev) { return Input::EventResponse::nop(); }
+
+        OgreSystemMouseHandler* mParent;
+        std::set<int> mWebViewActiveButtons;
+    };
+    friend class WebViewInputListener;
+    class DelegateInputListener : public Input::InputListener {
+    public:
+        DelegateInputListener(OgreSystemMouseHandler* par)
+         : mParent(par)
+        {}
+
+        virtual Input::EventResponse onInputDeviceEvent(Input::InputDeviceEventPtr ev) { return Input::EventResponse::cancel(); }
+        virtual Input::EventResponse onKeyPressedEvent(Input::ButtonPressedPtr ev) { delegateEvent(ev); return Input::EventResponse::cancel(); }
+        virtual Input::EventResponse onKeyRepeatedEvent(Input::ButtonRepeatedPtr ev) { delegateEvent(ev); return Input::EventResponse::cancel(); }
+        virtual Input::EventResponse onKeyReleasedEvent(Input::ButtonReleasedPtr ev) { delegateEvent(ev); return Input::EventResponse::cancel(); }
+        virtual Input::EventResponse onKeyDownEvent(Input::ButtonDownPtr ev) { delegateEvent(ev); return Input::EventResponse::cancel(); }
+        virtual Input::EventResponse onAxisEvent(Input::AxisEventPtr ev) { delegateEvent(ev); return Input::EventResponse::cancel(); }
+        virtual Input::EventResponse onTextInputEvent(Input::TextInputEventPtr ev) { delegateEvent(ev); return Input::EventResponse::cancel(); }
+        virtual Input::EventResponse onMouseHoverEvent(Input::MouseHoverEventPtr ev) { delegateEvent(ev); return Input::EventResponse::cancel(); }
+        virtual Input::EventResponse onMousePressedEvent(Input::MousePressedEventPtr ev) { delegateEvent(ev); return Input::EventResponse::cancel(); }
+        virtual Input::EventResponse onMouseReleasedEvent(Input::MouseReleasedEventPtr ev) { delegateEvent(ev); return Input::EventResponse::cancel(); }
+        virtual Input::EventResponse onMouseClickEvent(Input::MouseClickEventPtr ev) { delegateEvent(ev); return Input::EventResponse::cancel(); }
+        virtual Input::EventResponse onMouseDragEvent(Input::MouseDragEventPtr ev) { delegateEvent(ev); return Input::EventResponse::cancel(); }
+        virtual Input::EventResponse onWebViewEvent(Input::WebViewEventPtr ev) { delegateEvent(ev); return Input::EventResponse::cancel(); }
+
+        void delegateEvent(Input::InputEventPtr inputev);
+
+        OgreSystemMouseHandler* mParent;
+        //key and value are same.
+        std::map<Invokable*,Invokable*> mDelegates;
+    };
+    friend class DelegateInputListener;
+
     OgreSystem *mParent;
 
-    //key and value are same.
-    std::map<Invokable*,Invokable*> mDelegates;
-
+    WebViewInputListener mWebViewInputListener;
+    DelegateInputListener mDelegateInputListener;
+    Input::InputEventCompletion mEventCompleter;
 
     int mWhichRayObject;
 
     int mLastHitCount;
     float mLastHitX;
     float mLastHitY;
-
-    std::set<int> mWebViewActiveButtons;
 
     Task::LocalTime mLastCameraTime;
     Task::LocalTime mLastFpsTime;

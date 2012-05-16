@@ -60,6 +60,261 @@ using namespace Input;
 using namespace Task;
 using namespace std;
 
+
+// == WebViewInputListener ==
+
+Input::EventResponse OgreSystemMouseHandler::WebViewInputListener::onKeyEvent(Input::ButtonEventPtr ev) {
+    return WebViewManager::getSingleton().onButton(ev);
+}
+
+Input::EventResponse OgreSystemMouseHandler::WebViewInputListener::onAxisEvent(Input::AxisEventPtr axisev) {
+    float multiplier = mParent->mParent->mInputManager->wheelToAxis();
+
+    if (axisev->mAxis == SDLMouse::WHEELY) {
+        bool used = WebViewManager::getSingleton().injectMouseWheel(WebViewCoord(0, axisev->mValue.getCentered()/multiplier));
+        if (used)
+            return EventResponse::cancel();
+    }
+    if (axisev->mAxis == SDLMouse::WHEELX) {
+        bool used = WebViewManager::getSingleton().injectMouseWheel(WebViewCoord(axisev->mValue.getCentered()/multiplier, 0));
+        if (used)
+            return EventResponse::cancel();
+    }
+
+    return EventResponse::nop();
+}
+
+Input::EventResponse OgreSystemMouseHandler::WebViewInputListener::onTextInputEvent(Input::TextInputEventPtr textev) {
+    return WebViewManager::getSingleton().onKeyTextInput(textev);
+}
+
+Input::EventResponse OgreSystemMouseHandler::WebViewInputListener::onMouseHoverEvent(Input::MouseHoverEventPtr mouseev) {
+    return WebViewManager::getSingleton().onMouseHover(mouseev);
+}
+
+Input::EventResponse OgreSystemMouseHandler::WebViewInputListener::onMousePressedEvent(Input::MousePressedEventPtr mouseev) {
+    EventResponse browser_resp = WebViewManager::getSingleton().onMousePressed(mouseev);
+    if (browser_resp == EventResponse::cancel())
+        mWebViewActiveButtons.insert(mouseev->mButton);
+    return browser_resp;
+}
+
+Input::EventResponse OgreSystemMouseHandler::WebViewInputListener::onMouseReleasedEvent(Input::MouseReleasedEventPtr ev) {
+    return WebViewManager::getSingleton().onMouseReleased(ev);
+}
+
+Input::EventResponse OgreSystemMouseHandler::WebViewInputListener::onMouseClickEvent(Input::MouseClickEventPtr mouseev) {
+    EventResponse browser_resp = WebViewManager::getSingleton().onMouseClick(mouseev);
+    if (mWebViewActiveButtons.find(mouseev->mButton) != mWebViewActiveButtons.end()) {
+        mWebViewActiveButtons.erase(mouseev->mButton);
+        return EventResponse::cancel();
+    }
+    return browser_resp;
+}
+
+Input::EventResponse OgreSystemMouseHandler::WebViewInputListener::onMouseDragEvent(Input::MouseDragEventPtr ev) {
+    std::set<int>::iterator iter = mWebViewActiveButtons.find(ev->mButton);
+    if (iter == mWebViewActiveButtons.end()) return EventResponse::nop();
+
+    // Give the browser a chance to use this input
+    EventResponse browser_resp = WebViewManager::getSingleton().onMouseDrag(ev);
+
+    if (ev->mType == Input::DRAG_END)
+        mWebViewActiveButtons.erase(iter);
+
+    return browser_resp;
+}
+
+
+// == DelegateInputListener ==
+
+
+namespace {
+
+// Fills in modifier fields
+void fillModifiers(Invokable::Dict& event_data, Input::Modifier m) {
+    Invokable::Dict mods;
+    mods["shift"] = Invokable::asAny((bool)(m & MOD_SHIFT));
+    mods["ctrl"] = Invokable::asAny((bool)(m & MOD_CTRL));
+    mods["alt"] = Invokable::asAny((bool)(m & MOD_ALT));
+    mods["super"] = Invokable::asAny((bool)(m & MOD_GUI));
+    event_data["modifier"] = Invokable::asAny(mods);
+}
+
+}
+
+void OgreSystemMouseHandler::DelegateInputListener::delegateEvent(InputEventPtr inputev) {
+    if (mDelegates.empty())
+        return;
+
+    Invokable::Dict event_data;
+    {
+        ButtonPressedEventPtr button_pressed_ev (std::tr1::dynamic_pointer_cast<ButtonPressed>(inputev));
+        if (button_pressed_ev) {
+
+            event_data["msg"] = Invokable::asAny(String("button-pressed"));
+            event_data["button"] = Invokable::asAny(keyButtonString(button_pressed_ev->mButton));
+            event_data["keycode"] = Invokable::asAny((int32)button_pressed_ev->mButton);
+            fillModifiers(event_data, button_pressed_ev->mModifier);
+        }
+    }
+
+    {
+        ButtonRepeatedEventPtr button_pressed_ev (std::tr1::dynamic_pointer_cast<ButtonRepeated>(inputev));
+        if (button_pressed_ev) {
+
+            event_data["msg"] = Invokable::asAny(String("button-repeat"));
+            event_data["button"] = Invokable::asAny(keyButtonString(button_pressed_ev->mButton));
+            event_data["keycode"] = Invokable::asAny((int32)button_pressed_ev->mButton);
+            fillModifiers(event_data, button_pressed_ev->mModifier);
+        }
+    }
+
+    {
+        ButtonReleasedEventPtr button_released_ev (std::tr1::dynamic_pointer_cast<ButtonReleased>(inputev));
+        if (button_released_ev) {
+
+            event_data["msg"] = Invokable::asAny(String("button-up"));
+            event_data["button"] = Invokable::asAny(keyButtonString(button_released_ev->mButton));
+            event_data["keycode"] = Invokable::asAny((int32)button_released_ev->mButton);
+            fillModifiers(event_data, button_released_ev->mModifier);
+        }
+    }
+
+    {
+        ButtonDownEventPtr button_down_ev (std::tr1::dynamic_pointer_cast<ButtonDown>(inputev));
+        if (button_down_ev) {
+            event_data["msg"] = Invokable::asAny(String("button-down"));
+            event_data["button"] = Invokable::asAny(keyButtonString(button_down_ev->mButton));
+            event_data["keycode"] = Invokable::asAny((int32)button_down_ev->mButton);
+            fillModifiers(event_data, button_down_ev->mModifier);
+        }
+    }
+
+    {
+        AxisEventPtr axis_ev (std::tr1::dynamic_pointer_cast<AxisEvent>(inputev));
+        if (axis_ev) {
+            event_data["msg"] = Invokable::asAny(String("axis"));
+            event_data["axis"] = Invokable::asAny((int32)axis_ev->mAxis);
+            event_data["value"] = Invokable::asAny(axis_ev->mValue.value);
+        }
+    }
+
+    {
+        TextInputEventPtr text_input_ev (std::tr1::dynamic_pointer_cast<TextInputEvent>(inputev));
+        if (text_input_ev) {
+            event_data["msg"] = Invokable::asAny(String("text"));
+            event_data["value"] = Invokable::asAny(text_input_ev->mText);
+        }
+    }
+
+    {
+        MouseHoverEventPtr mouse_hover_ev (std::tr1::dynamic_pointer_cast<MouseHoverEvent>(inputev));
+        if (mouse_hover_ev) {
+            event_data["msg"] = Invokable::asAny(String("mouse-hover"));
+            float32 x, y;
+            bool valid = mParent->mParent->translateToDisplayViewport(mouse_hover_ev->mX, mouse_hover_ev->mY, &x, &y);
+            if (!valid) return;
+            event_data["x"] = Invokable::asAny(x);
+            event_data["y"] = Invokable::asAny(y);
+            fillModifiers(event_data, mParent->getCurrentModifiers());
+        }
+    }
+
+    {
+        MousePressedEventPtr mouse_press_ev (std::tr1::dynamic_pointer_cast<MousePressedEvent>(inputev));
+        if (mouse_press_ev) {
+            event_data["msg"] = Invokable::asAny(String("mouse-press"));
+            event_data["button"] = Invokable::asAny((int32)mouse_press_ev->mButton);
+            float32 x, y;
+            bool valid = mParent->mParent->translateToDisplayViewport(mouse_press_ev->mX, mouse_press_ev->mY, &x, &y);
+            if (!valid) return;
+            event_data["x"] = Invokable::asAny(x);
+            event_data["y"] = Invokable::asAny(y);
+            fillModifiers(event_data, mParent->getCurrentModifiers());
+        }
+    }
+
+    {
+        MouseReleasedEventPtr mouse_release_ev (std::tr1::dynamic_pointer_cast<MouseReleasedEvent>(inputev));
+        if (mouse_release_ev) {
+            event_data["msg"] = Invokable::asAny(String("mouse-release"));
+            event_data["button"] = Invokable::asAny((int32)mouse_release_ev->mButton);
+            float32 x, y;
+            bool valid = mParent->mParent->translateToDisplayViewport(mouse_release_ev->mX, mouse_release_ev->mY, &x, &y);
+            if (!valid) return;
+            event_data["x"] = Invokable::asAny(x);
+            event_data["y"] = Invokable::asAny(y);
+            fillModifiers(event_data, mParent->getCurrentModifiers());
+        }
+    }
+
+    {
+        MouseClickEventPtr mouse_click_ev (std::tr1::dynamic_pointer_cast<MouseClickEvent>(inputev));
+        if (mouse_click_ev) {
+            event_data["msg"] = Invokable::asAny(String("mouse-click"));
+            event_data["button"] = Invokable::asAny((int32)mouse_click_ev->mButton);
+            float32 x, y;
+            bool valid = mParent->mParent->translateToDisplayViewport(mouse_click_ev->mX, mouse_click_ev->mY, &x, &y);
+            if (!valid) return;
+            event_data["x"] = Invokable::asAny(x);
+            event_data["y"] = Invokable::asAny(y);
+            fillModifiers(event_data, mParent->getCurrentModifiers());
+        }
+    }
+
+    {
+        MouseDragEventPtr mouse_drag_ev (std::tr1::dynamic_pointer_cast<MouseDragEvent>(inputev));
+        if (mouse_drag_ev) {
+            event_data["msg"] = Invokable::asAny(String("mouse-drag"));
+            event_data["button"] = Invokable::asAny((int32)mouse_drag_ev->mButton);
+            float32 x, y;
+            bool valid = mParent->mParent->translateToDisplayViewport(mouse_drag_ev->mX, mouse_drag_ev->mY, &x, &y);
+            if (!valid) return;
+            event_data["x"] = Invokable::asAny(x);
+            event_data["y"] = Invokable::asAny(y);
+            event_data["dx"] = Invokable::asAny(mouse_drag_ev->deltaX());
+            event_data["dy"] = Invokable::asAny(mouse_drag_ev->deltaY());
+            fillModifiers(event_data, mParent->getCurrentModifiers());
+        }
+    }
+
+    {
+        DragAndDropEventPtr dd_ev (std::tr1::dynamic_pointer_cast<DragAndDropEvent>(inputev));
+        if (dd_ev) {
+            event_data["msg"] = Invokable::asAny(String("dragdrop"));
+        }
+    }
+
+    {
+        WebViewEventPtr wv_ev (std::tr1::dynamic_pointer_cast<WebViewEvent>(inputev));
+        if (wv_ev) {
+            event_data["msg"] = Invokable::asAny((String("webview")));
+            event_data["webview"] = Invokable::asAny((wv_ev->webview));
+            event_data["name"] = Invokable::asAny((wv_ev->name));
+            Invokable::Array wv_args;
+            for(uint32 ii = 0; ii < wv_ev->args.size(); ii++)
+                wv_args.push_back(wv_ev->args[ii]);
+            event_data["args"] = Invokable::asAny(wv_args);
+        }
+    }
+
+    if (event_data.empty()) return;
+
+    std::vector<boost::any> args;
+    args.push_back(Invokable::asAny(event_data));
+
+
+    for (std::map<Invokable*, Invokable*>::iterator delIter = mDelegates.begin();
+         delIter != mDelegates.end(); ++delIter)
+    {
+        delIter->first->invoke(args);
+    }
+}
+
+
+// == OgreSystemMouseHandler ==
+
 Vector3f pixelToDirection(Camera *cam, float xPixel, float yPixel) {
     float xRadian, yRadian;
     //pixelToRadians(cam, xPixel/2, yPixel/2, xRadian, yRadian);
@@ -150,134 +405,169 @@ EventResponse OgreSystemMouseHandler::onInputDeviceEvent(InputDeviceEventPtr ev)
     return EventResponse::nop();
 }
 
-EventResponse OgreSystemMouseHandler::onKeyEvent(ButtonEventPtr buttonev) {
-    // Give the browsers a chance to use this input first
-    EventResponse browser_resp = WebViewManager::getSingleton().onButton(buttonev);
-    if (browser_resp == EventResponse::cancel())
-        return EventResponse::cancel();
-
-    delegateEvent(buttonev);
-
-    return EventResponse::nop();
-}
-
-EventResponse OgreSystemMouseHandler::onAxisEvent(AxisEventPtr axisev) {
-    float multiplier = mParent->mInputManager->wheelToAxis();
-
-    if (axisev->mAxis == SDLMouse::WHEELY) {
-        bool used = WebViewManager::getSingleton().injectMouseWheel(WebViewCoord(0, axisev->mValue.getCentered()/multiplier));
-        if (used)
-            return EventResponse::cancel();
-    }
-    if (axisev->mAxis == SDLMouse::WHEELX) {
-        bool used = WebViewManager::getSingleton().injectMouseWheel(WebViewCoord(axisev->mValue.getCentered()/multiplier, 0));
-        if (used)
-            return EventResponse::cancel();
+EventResponse OgreSystemMouseHandler::onKeyPressedEvent(Input::ButtonPressedPtr ev) {
+    EventResponse resp = mWebViewInputListener.onKeyPressedEvent(ev);
+    if (resp == EventResponse::cancel()) {
+        mEventCompleter.updateTarget(&mWebViewInputListener);
+        mEventCompleter.onKeyPressedEvent(ev);
+        return resp;
     }
 
-    delegateEvent(axisev);
-
+    mDelegateInputListener.onKeyPressedEvent(ev);
+    mEventCompleter.updateTarget(&mDelegateInputListener);
+    mEventCompleter.onKeyPressedEvent(ev);
     return EventResponse::cancel();
 }
 
-EventResponse OgreSystemMouseHandler::onTextInputEvent(TextInputEventPtr textev) {
-    // Give the browsers a chance to use this input first
-    EventResponse browser_resp = WebViewManager::getSingleton().onKeyTextInput(textev);
-    if (browser_resp == EventResponse::cancel())
-        return EventResponse::cancel();
+EventResponse OgreSystemMouseHandler::onKeyRepeatedEvent(Input::ButtonRepeatedPtr ev) {
+    EventResponse resp = mWebViewInputListener.onKeyRepeatedEvent(ev);
+    if (resp == EventResponse::cancel()) {
+        mEventCompleter.updateTarget(&mWebViewInputListener);
+        mEventCompleter.onKeyRepeatedEvent(ev);
+        return resp;
+    }
 
-    delegateEvent(textev);
-
-    return EventResponse::nop();
+    mDelegateInputListener.onKeyRepeatedEvent(ev);
+    mEventCompleter.updateTarget(&mDelegateInputListener);
+    mEventCompleter.onKeyRepeatedEvent(ev);
+    return EventResponse::cancel();
 }
 
-EventResponse OgreSystemMouseHandler::onMouseHoverEvent(MouseHoverEventPtr mouseev) {
-    // Give the browsers a chance to use this input first
-    EventResponse browser_resp = WebViewManager::getSingleton().onMouseHover(mouseev);
-    if (browser_resp == EventResponse::cancel())
-        return EventResponse::cancel();
+EventResponse OgreSystemMouseHandler::onKeyReleasedEvent(Input::ButtonReleasedPtr ev) {
+    EventResponse resp = mWebViewInputListener.onKeyReleasedEvent(ev);
+    if (resp == EventResponse::cancel()) {
+        mEventCompleter.updateTarget(&mWebViewInputListener);
+        mEventCompleter.onKeyReleasedEvent(ev);
+        return resp;
+    }
 
-    delegateEvent(mouseev);
-
-    return EventResponse::nop();
+    mDelegateInputListener.onKeyReleasedEvent(ev);
+    mEventCompleter.updateTarget(&mDelegateInputListener);
+    mEventCompleter.onKeyReleasedEvent(ev);
+    return EventResponse::cancel();
 }
 
-EventResponse OgreSystemMouseHandler::onMousePressedEvent(MousePressedEventPtr mouseev) {
-    // Give the browsers a chance to use this input first
-    EventResponse browser_resp = WebViewManager::getSingleton().onMousePressed(mouseev);
-    if (browser_resp == EventResponse::cancel()) {
-        mWebViewActiveButtons.insert(mouseev->mButton);
-        return EventResponse::cancel();
+EventResponse OgreSystemMouseHandler::onKeyDownEvent(Input::ButtonDownPtr ev) {
+    EventResponse resp = mWebViewInputListener.onKeyDownEvent(ev);
+    if (resp == EventResponse::cancel()) {
+        mEventCompleter.updateTarget(&mWebViewInputListener);
+        return resp;
+    }
+
+    mDelegateInputListener.onKeyDownEvent(ev);
+    mEventCompleter.updateTarget(&mDelegateInputListener);
+    return EventResponse::cancel();
+}
+
+EventResponse OgreSystemMouseHandler::onAxisEvent(AxisEventPtr ev) {
+    EventResponse resp = mWebViewInputListener.onAxisEvent(ev);
+    if (resp == EventResponse::cancel()) {
+        mEventCompleter.updateTarget(&mWebViewInputListener);
+        return resp;
+    }
+
+    mDelegateInputListener.onAxisEvent(ev);
+    mEventCompleter.updateTarget(&mDelegateInputListener);
+    return EventResponse::cancel();
+}
+
+EventResponse OgreSystemMouseHandler::onTextInputEvent(TextInputEventPtr ev) {
+    EventResponse resp = mWebViewInputListener.onTextInputEvent(ev);
+    if (resp == EventResponse::cancel()) {
+        mEventCompleter.updateTarget(&mWebViewInputListener);
+        return resp;
+    }
+
+    mDelegateInputListener.onTextInputEvent(ev);
+    mEventCompleter.updateTarget(&mDelegateInputListener);
+    return EventResponse::cancel();
+}
+
+EventResponse OgreSystemMouseHandler::onMouseHoverEvent(MouseHoverEventPtr ev) {
+    // Hover doesn't trigger changing of target because of the way it is
+    // intended to support hovering over both a webview (transparent) and an
+    // object. Since the webview always returns nop(), we have to just dispatch
+    // to both.
+    mWebViewInputListener.onMouseHoverEvent(ev);
+    mDelegateInputListener.onMouseHoverEvent(ev);
+    return EventResponse::cancel();
+}
+
+EventResponse OgreSystemMouseHandler::onMousePressedEvent(MousePressedEventPtr ev) {
+    EventResponse resp = mWebViewInputListener.onMousePressedEvent(ev);
+    if (resp == EventResponse::cancel()) {
+        mEventCompleter.updateTarget(&mWebViewInputListener);
+        mEventCompleter.onMousePressedEvent(ev);
+        return resp;
     }
 
     if (mParent->mPrimaryCamera) {
         Camera *camera = mParent->mPrimaryCamera;
         Time time = mParent->simTime();
         int lhc=mLastHitCount;
-        hoverEntity(camera, time, mouseev->mXStart, mouseev->mYStart, true, &lhc, mWhichRayObject);
+        hoverEntity(camera, time, ev->mXStart, ev->mYStart, true, &lhc, mWhichRayObject);
     }
 
-    delegateEvent(mouseev);
-
-    return EventResponse::nop();
+    mDelegateInputListener.onMousePressedEvent(ev);
+    mEventCompleter.updateTarget(&mDelegateInputListener);
+    mEventCompleter.onMousePressedEvent(ev);
+    return EventResponse::cancel();
 }
 
-EventResponse OgreSystemMouseHandler::onMouseReleasedEvent(MouseReleasedEventPtr mouseev) {
+EventResponse OgreSystemMouseHandler::onMouseReleasedEvent(MouseReleasedEventPtr ev) {
+    EventResponse resp = mWebViewInputListener.onMouseReleasedEvent(ev);
+    if (resp == EventResponse::cancel()) {
+        mEventCompleter.updateTarget(&mWebViewInputListener);
+        mEventCompleter.onMouseReleasedEvent(ev);
+        return resp;
+    }
+
     if (mParent->mPrimaryCamera) {
         Camera *camera = mParent->mPrimaryCamera;
         Time time = mParent->simTime();
         int lhc=mLastHitCount;
-        hoverEntity(camera, time, mouseev->mXStart, mouseev->mYStart, true, &lhc, mWhichRayObject);
+        hoverEntity(camera, time, ev->mXStart, ev->mYStart, true, &lhc, mWhichRayObject);
     }
 
-    delegateEvent(mouseev);
-
-    return EventResponse::nop();
+    mDelegateInputListener.onMouseReleasedEvent(ev);
+    mEventCompleter.updateTarget(&mDelegateInputListener);
+    mEventCompleter.onMouseReleasedEvent(ev);
+    return EventResponse::cancel();
 }
 
-EventResponse OgreSystemMouseHandler::onMouseClickEvent(MouseClickEventPtr mouseev) {
-    // Give the browsers a chance to use this input first
-    EventResponse browser_resp = WebViewManager::getSingleton().onMouseClick(mouseev);
-    if (mWebViewActiveButtons.find(mouseev->mButton) != mWebViewActiveButtons.end()) {
-        mWebViewActiveButtons.erase(mouseev->mButton);
-        return EventResponse::cancel();
-    }
-    if (browser_resp == EventResponse::cancel()) {
-        return EventResponse::cancel();
+EventResponse OgreSystemMouseHandler::onMouseClickEvent(MouseClickEventPtr ev) {
+    EventResponse resp = mWebViewInputListener.onMouseClickEvent(ev);
+    if (resp == EventResponse::cancel()) {
+        mEventCompleter.updateTarget(&mWebViewInputListener);
+        return resp;
     }
 
-    delegateEvent(mouseev);
-
-    return EventResponse::nop();
+    mDelegateInputListener.onMouseClickEvent(ev);
+    mEventCompleter.updateTarget(&mDelegateInputListener);
+    return EventResponse::cancel();
 }
 
 EventResponse OgreSystemMouseHandler::onMouseDragEvent(MouseDragEventPtr ev) {
-    if (!mParent||!mParent->mPrimaryCamera) return EventResponse::nop();
-    std::set<int>::iterator iter = mWebViewActiveButtons.find(ev->mButton);
-    if (iter != mWebViewActiveButtons.end()) {
-        // Give the browser a chance to use this input
-        EventResponse browser_resp = WebViewManager::getSingleton().onMouseDrag(ev);
+    if (!mParent || !mParent->mPrimaryCamera) return EventResponse::nop();
 
-        if (ev->mType == Input::DRAG_END) {
-            mWebViewActiveButtons.erase(iter);
-        }
-
-        if (browser_resp == EventResponse::cancel()) {
-            return EventResponse::cancel();
-        }
+    EventResponse resp = mWebViewInputListener.onMouseDragEvent(ev);
+    if (resp == EventResponse::cancel()) {
+        mEventCompleter.updateTarget(&mWebViewInputListener);
+        mEventCompleter.onMouseDragEvent(ev);
+        return resp;
     }
 
-    delegateEvent(ev);
-
-    return EventResponse::nop();
+    mDelegateInputListener.onMouseDragEvent(ev);
+    mEventCompleter.updateTarget(&mDelegateInputListener);
+    mEventCompleter.onMouseDragEvent(ev);
+    return EventResponse::cancel();
 }
 
 EventResponse OgreSystemMouseHandler::onWebViewEvent(WebViewEventPtr webview_ev) {
     // For everything else we let the browser go first, but in this case it should have
     // had its chance, so we just let it go
-    delegateEvent(webview_ev);
-
-    return EventResponse::nop();
+    mDelegateInputListener.onWebViewEvent(webview_ev);
+    return EventResponse::cancel();
 }
 
 
@@ -316,6 +606,8 @@ void OgreSystemMouseHandler::renderStatsUpdateTick(const Task::LocalTime& t) {
 OgreSystemMouseHandler::OgreSystemMouseHandler(OgreSystem *parent)
  : mUIWidgetView(NULL),
    mParent(parent),
+   mWebViewInputListener(this),
+   mDelegateInputListener(this),
    mWhichRayObject(0),
    mLastCameraTime(Task::LocalTime::now()),
    mLastFpsTime(Task::LocalTime::now()),
@@ -340,14 +632,14 @@ OgreSystemMouseHandler::~OgreSystemMouseHandler() {
 }
 
 void OgreSystemMouseHandler::addDelegate(Invokable* del) {
-    mDelegates[del] = del;
+    mDelegateInputListener.mDelegates[del] = del;
 }
 
 void OgreSystemMouseHandler::removeDelegate(Invokable* del)
 {
-    std::map<Invokable*,Invokable*>::iterator delIter = mDelegates.find(del);
-    if (delIter != mDelegates.end())
-        mDelegates.erase(delIter);
+    std::map<Invokable*,Invokable*>::iterator delIter = mDelegateInputListener.mDelegates.find(del);
+    if (delIter != mDelegateInputListener.mDelegates.end())
+        mDelegateInputListener.mDelegates.erase(delIter);
     else
         SILOG(input,error,"Error in OgreSystemMouseHandler::removeDelegate.  Attempting to remove delegate that does not exist.");
 }
@@ -369,189 +661,6 @@ Input::Modifier OgreSystemMouseHandler::getCurrentModifiers() const {
         result |= MOD_GUI;
 
         return result;
-}
-
-namespace {
-
-// Fills in modifier fields
-void fillModifiers(Invokable::Dict& event_data, Input::Modifier m) {
-    Invokable::Dict mods;
-    mods["shift"] = Invokable::asAny((bool)(m & MOD_SHIFT));
-    mods["ctrl"] = Invokable::asAny((bool)(m & MOD_CTRL));
-    mods["alt"] = Invokable::asAny((bool)(m & MOD_ALT));
-    mods["super"] = Invokable::asAny((bool)(m & MOD_GUI));
-    event_data["modifier"] = Invokable::asAny(mods);
-}
-
-}
-
-void OgreSystemMouseHandler::delegateEvent(InputEventPtr inputev) {
-    if (mDelegates.empty())
-        return;
-
-    Invokable::Dict event_data;
-    {
-        ButtonPressedEventPtr button_pressed_ev (std::tr1::dynamic_pointer_cast<ButtonPressed>(inputev));
-        if (button_pressed_ev) {
-
-            event_data["msg"] = Invokable::asAny(String("button-pressed"));
-            event_data["button"] = Invokable::asAny(keyButtonString(button_pressed_ev->mButton));
-            event_data["keycode"] = Invokable::asAny((int32)button_pressed_ev->mButton);
-            fillModifiers(event_data, button_pressed_ev->mModifier);
-        }
-    }
-
-    {
-        ButtonRepeatedEventPtr button_pressed_ev (std::tr1::dynamic_pointer_cast<ButtonRepeated>(inputev));
-        if (button_pressed_ev) {
-
-            event_data["msg"] = Invokable::asAny(String("button-repeat"));
-            event_data["button"] = Invokable::asAny(keyButtonString(button_pressed_ev->mButton));
-            event_data["keycode"] = Invokable::asAny((int32)button_pressed_ev->mButton);
-            fillModifiers(event_data, button_pressed_ev->mModifier);
-        }
-    }
-
-    {
-        ButtonReleasedEventPtr button_released_ev (std::tr1::dynamic_pointer_cast<ButtonReleased>(inputev));
-        if (button_released_ev) {
-
-            event_data["msg"] = Invokable::asAny(String("button-up"));
-            event_data["button"] = Invokable::asAny(keyButtonString(button_released_ev->mButton));
-            event_data["keycode"] = Invokable::asAny((int32)button_released_ev->mButton);
-            fillModifiers(event_data, button_released_ev->mModifier);
-        }
-    }
-
-    {
-        ButtonDownEventPtr button_down_ev (std::tr1::dynamic_pointer_cast<ButtonDown>(inputev));
-        if (button_down_ev) {
-            event_data["msg"] = Invokable::asAny(String("button-down"));
-            event_data["button"] = Invokable::asAny(keyButtonString(button_down_ev->mButton));
-            event_data["keycode"] = Invokable::asAny((int32)button_down_ev->mButton);
-            fillModifiers(event_data, button_down_ev->mModifier);
-        }
-    }
-
-    {
-        AxisEventPtr axis_ev (std::tr1::dynamic_pointer_cast<AxisEvent>(inputev));
-        if (axis_ev) {
-            event_data["msg"] = Invokable::asAny(String("axis"));
-            event_data["axis"] = Invokable::asAny((int32)axis_ev->mAxis);
-            event_data["value"] = Invokable::asAny(axis_ev->mValue.value);
-        }
-    }
-
-    {
-        TextInputEventPtr text_input_ev (std::tr1::dynamic_pointer_cast<TextInputEvent>(inputev));
-        if (text_input_ev) {
-            event_data["msg"] = Invokable::asAny(String("text"));
-            event_data["value"] = Invokable::asAny(text_input_ev->mText);
-        }
-    }
-
-    {
-        MouseHoverEventPtr mouse_hover_ev (std::tr1::dynamic_pointer_cast<MouseHoverEvent>(inputev));
-        if (mouse_hover_ev) {
-            event_data["msg"] = Invokable::asAny(String("mouse-hover"));
-            float32 x, y;
-            bool valid = mParent->translateToDisplayViewport(mouse_hover_ev->mX, mouse_hover_ev->mY, &x, &y);
-            if (!valid) return;
-            event_data["x"] = Invokable::asAny(x);
-            event_data["y"] = Invokable::asAny(y);
-            fillModifiers(event_data, getCurrentModifiers());
-        }
-    }
-
-    {
-        MousePressedEventPtr mouse_press_ev (std::tr1::dynamic_pointer_cast<MousePressedEvent>(inputev));
-        if (mouse_press_ev) {
-            event_data["msg"] = Invokable::asAny(String("mouse-press"));
-            event_data["button"] = Invokable::asAny((int32)mouse_press_ev->mButton);
-            float32 x, y;
-            bool valid = mParent->translateToDisplayViewport(mouse_press_ev->mX, mouse_press_ev->mY, &x, &y);
-            if (!valid) return;
-            event_data["x"] = Invokable::asAny(x);
-            event_data["y"] = Invokable::asAny(y);
-            fillModifiers(event_data, getCurrentModifiers());
-        }
-    }
-
-    {
-        MouseReleasedEventPtr mouse_release_ev (std::tr1::dynamic_pointer_cast<MouseReleasedEvent>(inputev));
-        if (mouse_release_ev) {
-            event_data["msg"] = Invokable::asAny(String("mouse-release"));
-            event_data["button"] = Invokable::asAny((int32)mouse_release_ev->mButton);
-            float32 x, y;
-            bool valid = mParent->translateToDisplayViewport(mouse_release_ev->mX, mouse_release_ev->mY, &x, &y);
-            if (!valid) return;
-            event_data["x"] = Invokable::asAny(x);
-            event_data["y"] = Invokable::asAny(y);
-            fillModifiers(event_data, getCurrentModifiers());
-        }
-    }
-
-    {
-        MouseClickEventPtr mouse_click_ev (std::tr1::dynamic_pointer_cast<MouseClickEvent>(inputev));
-        if (mouse_click_ev) {
-            event_data["msg"] = Invokable::asAny(String("mouse-click"));
-            event_data["button"] = Invokable::asAny((int32)mouse_click_ev->mButton);
-            float32 x, y;
-            bool valid = mParent->translateToDisplayViewport(mouse_click_ev->mX, mouse_click_ev->mY, &x, &y);
-            if (!valid) return;
-            event_data["x"] = Invokable::asAny(x);
-            event_data["y"] = Invokable::asAny(y);
-            fillModifiers(event_data, getCurrentModifiers());
-        }
-    }
-
-    {
-        MouseDragEventPtr mouse_drag_ev (std::tr1::dynamic_pointer_cast<MouseDragEvent>(inputev));
-        if (mouse_drag_ev) {
-            event_data["msg"] = Invokable::asAny(String("mouse-drag"));
-            event_data["button"] = Invokable::asAny((int32)mouse_drag_ev->mButton);
-            float32 x, y;
-            bool valid = mParent->translateToDisplayViewport(mouse_drag_ev->mX, mouse_drag_ev->mY, &x, &y);
-            if (!valid) return;
-            event_data["x"] = Invokable::asAny(x);
-            event_data["y"] = Invokable::asAny(y);
-            event_data["dx"] = Invokable::asAny(mouse_drag_ev->deltaX());
-            event_data["dy"] = Invokable::asAny(mouse_drag_ev->deltaY());
-            fillModifiers(event_data, getCurrentModifiers());
-        }
-    }
-
-    {
-        DragAndDropEventPtr dd_ev (std::tr1::dynamic_pointer_cast<DragAndDropEvent>(inputev));
-        if (dd_ev) {
-            event_data["msg"] = Invokable::asAny(String("dragdrop"));
-        }
-    }
-
-    {
-        WebViewEventPtr wv_ev (std::tr1::dynamic_pointer_cast<WebViewEvent>(inputev));
-        if (wv_ev) {
-            event_data["msg"] = Invokable::asAny((String("webview")));
-            event_data["webview"] = Invokable::asAny((wv_ev->webview));
-            event_data["name"] = Invokable::asAny((wv_ev->name));
-            Invokable::Array wv_args;
-            for(uint32 ii = 0; ii < wv_ev->args.size(); ii++)
-                wv_args.push_back(wv_ev->args[ii]);
-            event_data["args"] = Invokable::asAny(wv_args);
-        }
-    }
-
-    if (event_data.empty()) return;
-
-    std::vector<boost::any> args;
-    args.push_back(Invokable::asAny(event_data));
-
-
-    for (std::map<Invokable*, Invokable*>::iterator delIter = mDelegates.begin();
-         delIter != mDelegates.end(); ++delIter)
-    {
-        delIter->first->invoke(args);
-    }
 }
 
 

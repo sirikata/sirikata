@@ -1466,6 +1466,7 @@ SET(LIBSDL_SOURCES
 SET(LIBOGRE_SOURCES
   ${LIBOGRE_SOURCE_DIR}/input/InputEvents.cpp
   ${LIBOGRE_SOURCE_DIR}/input/InputDevice.cpp
+  ${LIBOGRE_SOURCE_DIR}/input/InputEventCompletion.cpp
   ${LIBOGRE_SOURCE_DIR}/input/SDLInputDevice.cpp
   ${LIBOGRE_SOURCE_DIR}/input/SDLInputManager.cpp
   ${LIBOGRE_SOURCE_DIR}/resourceManager/AssetDownloadTask.cpp

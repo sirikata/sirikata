@@ -320,6 +320,7 @@ public:
     Input::EventResponse onMouseHover(Input::MouseHoverEventPtr evt);
     Input::EventResponse onMousePressed(Input::MousePressedEventPtr evt);
     Input::EventResponse onMouseDrag(Input::MouseDragEventPtr evt);
+    Input::EventResponse onMouseReleased(Input::MouseReleasedEventPtr evt);
     Input::EventResponse onMouseClick(Input::MouseClickEventPtr evt);
     Input::EventResponse onButton(Input::ButtonEventPtr evt);
     Input::EventResponse onKeyTextInput(Input::TextInputEventPtr evt);
