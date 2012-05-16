@@ -72,30 +72,6 @@ Vector3f pixelToDirection(Camera *cam, float xPixel, float yPixel) {
                     orient.yAxis() * yRadian);
 }
 
-void OgreSystemMouseHandler::mouseOverWebView(Camera *cam, Time time, float xPixel, float yPixel, bool mousedown, bool mouseup) {
-    Vector3d pos = cam->getPosition();
-    Vector3f dir (pixelToDirection(cam, xPixel, yPixel));
-    Ogre::Ray traceFrom(toOgre(pos, mParent->getOffset()), toOgre(dir));
-    ProxyObjectPtr obj(mMouseDownObject.lock());
-    Entity *ent = obj ? mParent->getEntity(obj->getObjectReference()) : NULL;
-    if (mMouseDownTri.intersected && ent) {
-        Entity *me = ent;
-        IntersectResult res = mMouseDownTri;
-        res.distance = 1.0e38;
-/* fixme */
-        Ogre::Node *node = ent->getSceneNode();
-        const Ogre::Vector3 &position = node->_getDerivedPosition();
-        const Ogre::Quaternion &orient = node->_getDerivedOrientation();
-        const Ogre::Vector3 &scale = node->_getDerivedScale();
-        Triangle newt = res.tri;
-        newt.v1.coord = (orient * (newt.v1.coord * scale)) + position;
-        newt.v2.coord = (orient * (newt.v2.coord * scale)) + position;
-        newt.v3.coord = (orient * (newt.v3.coord * scale)) + position;
-/* */
-        OgreMesh::intersectTri(OgreMesh::transformRay(ent->getSceneNode(), traceFrom), res, &newt, true); // &res.tri
-    }
-}
-
 ProxyEntity* OgreSystemMouseHandler::hoverEntity (Camera *cam, Time time, float xPixel, float yPixel, bool mousedown, int *hitCount,int which, Vector3f* hitPointOut, SpaceObjectReference ignore) {
     Vector3d pos = cam->getPosition();
     Vector3f dir (pixelToDirection(cam, xPixel, yPixel));
@@ -107,14 +83,6 @@ ProxyEntity* OgreSystemMouseHandler::hoverEntity (Camera *cam, Time time, float 
     int subent=-1;
     Ogre::Ray traceFrom(toOgre(pos, mParent->getOffset()), toOgre(dir));
     ProxyEntity *mouseOverEntity = mParent->internalRayTrace(traceFrom, false, *hitCount, dist, normal, subent, &res, mousedown, which, ignore);
-    if (mousedown && mouseOverEntity) {
-        ProxyEntity *me = mouseOverEntity;
-        if (me) {
-            mMouseDownTri = res;
-            mMouseDownObject = me->getProxyPtr();
-            mMouseDownSubEntity = subent;
-        }
-    }
     if (mouseOverEntity) {
         if (hitPointOut != NULL) *hitPointOut = Vector3f(pos) + dir.normal()*dist;
         return mouseOverEntity;
@@ -231,13 +199,6 @@ EventResponse OgreSystemMouseHandler::onMouseHoverEvent(MouseHoverEventPtr mouse
 
     delegateEvent(mouseev);
 
-    if (mParent->mPrimaryCamera) {
-        Camera *camera = mParent->mPrimaryCamera;
-        Time time = mParent->simTime();
-        int lhc=mLastHitCount;
-        mouseOverWebView(camera, time, mouseev->mX, mouseev->mY, false, false);
-    }
-
     return EventResponse::nop();
 }
 
@@ -254,7 +215,6 @@ EventResponse OgreSystemMouseHandler::onMousePressedEvent(MousePressedEventPtr m
         Time time = mParent->simTime();
         int lhc=mLastHitCount;
         hoverEntity(camera, time, mouseev->mXStart, mouseev->mYStart, true, &lhc, mWhichRayObject);
-        mouseOverWebView(camera, time, mouseev->mXStart, mouseev->mYStart, true, false);
     }
 
     delegateEvent(mouseev);
@@ -268,7 +228,6 @@ EventResponse OgreSystemMouseHandler::onMouseReleasedEvent(MouseReleasedEventPtr
         Time time = mParent->simTime();
         int lhc=mLastHitCount;
         hoverEntity(camera, time, mouseev->mXStart, mouseev->mYStart, true, &lhc, mWhichRayObject);
-        mouseOverWebView(camera, time, mouseev->mXStart, mouseev->mYStart, true, false);
     }
 
     delegateEvent(mouseev);
@@ -286,13 +245,6 @@ EventResponse OgreSystemMouseHandler::onMouseClickEvent(MouseClickEventPtr mouse
     if (browser_resp == EventResponse::cancel()) {
         return EventResponse::cancel();
     }
-    if (mParent->mPrimaryCamera) {
-        Camera *camera = mParent->mPrimaryCamera;
-        Time time = mParent->simTime();
-        int lhc=mLastHitCount;
-        mouseOverWebView(camera, time, mouseev->mX, mouseev->mY, false, true);
-    }
-    mMouseDownObject.reset();
 
     delegateEvent(mouseev);
 
@@ -313,16 +265,6 @@ EventResponse OgreSystemMouseHandler::onMouseDragEvent(MouseDragEventPtr ev) {
         if (browser_resp == EventResponse::cancel()) {
             return EventResponse::cancel();
         }
-    }
-
-    if (mParent->mPrimaryCamera) {
-        Camera *camera = mParent->mPrimaryCamera;
-        Time time = mParent->simTime();
-        int lhc=mLastHitCount;
-        mouseOverWebView(camera, time, ev->mX, ev->mY, false, ev->mType == Input::DRAG_END);
-    }
-    if (ev->mType == Input::DRAG_END) {
-        mMouseDownObject.reset();
     }
 
     delegateEvent(ev);

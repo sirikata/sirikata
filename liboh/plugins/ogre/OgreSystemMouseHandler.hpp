@@ -75,7 +75,6 @@ private:
     // don't come with modifiers.
     Sirikata::Input::Modifier getCurrentModifiers() const;
 
-    void mouseOverWebView(Camera *cam, Time time, float xPixel, float yPixel, bool mousedown, bool mouseup);
     ProxyEntity* hoverEntity (Camera *cam, Time time, float xPixel, float yPixel, bool mousedown, int *hitCount,int which=0, Vector3f* hitPointOut=NULL, SpaceObjectReference ignore = SpaceObjectReference::null());
 
     bool recentMouseInRange(float x, float y, float *lastX, float *lastY);
@@ -112,9 +111,6 @@ private:
 
     int mWhichRayObject;
 
-    IntersectResult mMouseDownTri;
-    ProxyObjectWPtr mMouseDownObject;
-    int mMouseDownSubEntity; // not dereferenced.
     int mLastHitCount;
     float mLastHitX;
     float mLastHitY;
