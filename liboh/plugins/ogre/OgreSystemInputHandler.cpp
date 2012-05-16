@@ -1,36 +1,8 @@
-/*  Sirikata libproxyobject -- Ogre Graphics Plugin
- *  OgreSystemMouseHandler.cpp
- *
- *  Copyright (c) 2009, Patrick Reiter Horn
- *  All rights reserved.
- *
- *  Redistribution and use in source and binary forms, with or without
- *  modification, are permitted provided that the following conditions are
- *  met:
- *  * Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- *  * Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in
- *    the documentation and/or other materials provided with the
- *    distribution.
- *  * Neither the name of Sirikata nor the names of its contributors may
- *    be used to endorse or promote products derived from this software
- *    without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
- * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
- * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
- * PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
- * OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
- * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
- * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
- * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
- * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
- * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
+// Copyright (c) 2009 Sirikata Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can
+// be found in the LICENSE file.
 
-#include "OgreSystemMouseHandler.hpp"
+#include "OgreSystemInputHandler.hpp"
 
 #include "OgreSystem.hpp"
 #include <sirikata/ogre/Camera.hpp>
@@ -63,11 +35,11 @@ using namespace std;
 
 // == WebViewInputListener ==
 
-Input::EventResponse OgreSystemMouseHandler::WebViewInputListener::onKeyEvent(Input::ButtonEventPtr ev) {
+Input::EventResponse OgreSystemInputHandler::WebViewInputListener::onKeyEvent(Input::ButtonEventPtr ev) {
     return WebViewManager::getSingleton().onButton(ev);
 }
 
-Input::EventResponse OgreSystemMouseHandler::WebViewInputListener::onAxisEvent(Input::AxisEventPtr axisev) {
+Input::EventResponse OgreSystemInputHandler::WebViewInputListener::onAxisEvent(Input::AxisEventPtr axisev) {
     float multiplier = mParent->mParent->mInputManager->wheelToAxis();
 
     if (axisev->mAxis == SDLMouse::WHEELY) {
@@ -84,26 +56,26 @@ Input::EventResponse OgreSystemMouseHandler::WebViewInputListener::onAxisEvent(I
     return EventResponse::nop();
 }
 
-Input::EventResponse OgreSystemMouseHandler::WebViewInputListener::onTextInputEvent(Input::TextInputEventPtr textev) {
+Input::EventResponse OgreSystemInputHandler::WebViewInputListener::onTextInputEvent(Input::TextInputEventPtr textev) {
     return WebViewManager::getSingleton().onKeyTextInput(textev);
 }
 
-Input::EventResponse OgreSystemMouseHandler::WebViewInputListener::onMouseHoverEvent(Input::MouseHoverEventPtr mouseev) {
+Input::EventResponse OgreSystemInputHandler::WebViewInputListener::onMouseHoverEvent(Input::MouseHoverEventPtr mouseev) {
     return WebViewManager::getSingleton().onMouseHover(mouseev);
 }
 
-Input::EventResponse OgreSystemMouseHandler::WebViewInputListener::onMousePressedEvent(Input::MousePressedEventPtr mouseev) {
+Input::EventResponse OgreSystemInputHandler::WebViewInputListener::onMousePressedEvent(Input::MousePressedEventPtr mouseev) {
     EventResponse browser_resp = WebViewManager::getSingleton().onMousePressed(mouseev);
     if (browser_resp == EventResponse::cancel())
         mWebViewActiveButtons.insert(mouseev->mButton);
     return browser_resp;
 }
 
-Input::EventResponse OgreSystemMouseHandler::WebViewInputListener::onMouseReleasedEvent(Input::MouseReleasedEventPtr ev) {
+Input::EventResponse OgreSystemInputHandler::WebViewInputListener::onMouseReleasedEvent(Input::MouseReleasedEventPtr ev) {
     return WebViewManager::getSingleton().onMouseReleased(ev);
 }
 
-Input::EventResponse OgreSystemMouseHandler::WebViewInputListener::onMouseClickEvent(Input::MouseClickEventPtr mouseev) {
+Input::EventResponse OgreSystemInputHandler::WebViewInputListener::onMouseClickEvent(Input::MouseClickEventPtr mouseev) {
     EventResponse browser_resp = WebViewManager::getSingleton().onMouseClick(mouseev);
     if (mWebViewActiveButtons.find(mouseev->mButton) != mWebViewActiveButtons.end()) {
         mWebViewActiveButtons.erase(mouseev->mButton);
@@ -112,7 +84,7 @@ Input::EventResponse OgreSystemMouseHandler::WebViewInputListener::onMouseClickE
     return browser_resp;
 }
 
-Input::EventResponse OgreSystemMouseHandler::WebViewInputListener::onMouseDragEvent(Input::MouseDragEventPtr ev) {
+Input::EventResponse OgreSystemInputHandler::WebViewInputListener::onMouseDragEvent(Input::MouseDragEventPtr ev) {
     std::set<int>::iterator iter = mWebViewActiveButtons.find(ev->mButton);
     if (iter == mWebViewActiveButtons.end()) return EventResponse::nop();
 
@@ -143,7 +115,7 @@ void fillModifiers(Invokable::Dict& event_data, Input::Modifier m) {
 
 }
 
-void OgreSystemMouseHandler::DelegateInputListener::delegateEvent(InputEventPtr inputev) {
+void OgreSystemInputHandler::DelegateInputListener::delegateEvent(InputEventPtr inputev) {
     if (mDelegates.empty())
         return;
 
@@ -313,7 +285,7 @@ void OgreSystemMouseHandler::DelegateInputListener::delegateEvent(InputEventPtr 
 }
 
 
-// == OgreSystemMouseHandler ==
+// == OgreSystemInputHandler ==
 
 Vector3f pixelToDirection(Camera *cam, float xPixel, float yPixel) {
     float xRadian, yRadian;
@@ -327,10 +299,10 @@ Vector3f pixelToDirection(Camera *cam, float xPixel, float yPixel) {
                     orient.yAxis() * yRadian);
 }
 
-ProxyEntity* OgreSystemMouseHandler::hoverEntity (Camera *cam, Time time, float xPixel, float yPixel, bool mousedown, int *hitCount,int which, Vector3f* hitPointOut, SpaceObjectReference ignore) {
+ProxyEntity* OgreSystemInputHandler::hoverEntity (Camera *cam, Time time, float xPixel, float yPixel, bool mousedown, int *hitCount,int which, Vector3f* hitPointOut, SpaceObjectReference ignore) {
     Vector3d pos = cam->getPosition();
     Vector3f dir (pixelToDirection(cam, xPixel, yPixel));
-    SILOG(input,detailed,"OgreSystemMouseHandler::hoverEntity: X is "<<xPixel<<"; Y is "<<yPixel<<"; pos = "<<pos<<"; dir = "<<dir);
+    SILOG(input,detailed,"OgreSystemInputHandler::hoverEntity: X is "<<xPixel<<"; Y is "<<yPixel<<"; pos = "<<pos<<"; dir = "<<dir);
 
     double dist;
     Vector3f normal;
@@ -345,7 +317,7 @@ ProxyEntity* OgreSystemMouseHandler::hoverEntity (Camera *cam, Time time, float 
     return NULL;
 }
 
-bool OgreSystemMouseHandler::recentMouseInRange(float x, float y, float *lastX, float *lastY) {
+bool OgreSystemInputHandler::recentMouseInRange(float x, float y, float *lastX, float *lastY) {
     float delx = x-*lastX;
     float dely = y-*lastY;
 
@@ -360,7 +332,7 @@ bool OgreSystemMouseHandler::recentMouseInRange(float x, float y, float *lastX, 
     return true;
 }
 
-SpaceObjectReference OgreSystemMouseHandler::pick(Vector2f p, int direction, const SpaceObjectReference& ignore, Vector3f* hitPointOut) {
+SpaceObjectReference OgreSystemInputHandler::pick(Vector2f p, int direction, const SpaceObjectReference& ignore, Vector3f* hitPointOut) {
     if (!mParent||!mParent->mPrimaryCamera) SpaceObjectReference::null();
 
     Camera *camera = mParent->mPrimaryCamera;
@@ -377,7 +349,7 @@ SpaceObjectReference OgreSystemMouseHandler::pick(Vector2f p, int direction, con
 }
 
 /** Create a UI element using a web view. */
-void OgreSystemMouseHandler::createUIAction(const String& ui_page)
+void OgreSystemInputHandler::createUIAction(const String& ui_page)
 {
     WebView* ui_wv =
         WebViewManager::getSingleton().createWebView(
@@ -395,7 +367,7 @@ inline Vector3f direction(Quaternion cameraAngle) {
 
 ///// Top Level Input Event Handlers //////
 
-EventResponse OgreSystemMouseHandler::onInputDeviceEvent(InputDeviceEventPtr ev) {
+EventResponse OgreSystemInputHandler::onInputDeviceEvent(InputDeviceEventPtr ev) {
     switch (ev->mType) {
       case InputDeviceEvent::ADDED:
         break;
@@ -405,7 +377,7 @@ EventResponse OgreSystemMouseHandler::onInputDeviceEvent(InputDeviceEventPtr ev)
     return EventResponse::nop();
 }
 
-EventResponse OgreSystemMouseHandler::onKeyPressedEvent(Input::ButtonPressedPtr ev) {
+EventResponse OgreSystemInputHandler::onKeyPressedEvent(Input::ButtonPressedPtr ev) {
     EventResponse resp = mWebViewInputListener.onKeyPressedEvent(ev);
     if (resp == EventResponse::cancel()) {
         mEventCompleter.updateTarget(&mWebViewInputListener);
@@ -419,7 +391,7 @@ EventResponse OgreSystemMouseHandler::onKeyPressedEvent(Input::ButtonPressedPtr 
     return EventResponse::cancel();
 }
 
-EventResponse OgreSystemMouseHandler::onKeyRepeatedEvent(Input::ButtonRepeatedPtr ev) {
+EventResponse OgreSystemInputHandler::onKeyRepeatedEvent(Input::ButtonRepeatedPtr ev) {
     EventResponse resp = mWebViewInputListener.onKeyRepeatedEvent(ev);
     if (resp == EventResponse::cancel()) {
         mEventCompleter.updateTarget(&mWebViewInputListener);
@@ -433,7 +405,7 @@ EventResponse OgreSystemMouseHandler::onKeyRepeatedEvent(Input::ButtonRepeatedPt
     return EventResponse::cancel();
 }
 
-EventResponse OgreSystemMouseHandler::onKeyReleasedEvent(Input::ButtonReleasedPtr ev) {
+EventResponse OgreSystemInputHandler::onKeyReleasedEvent(Input::ButtonReleasedPtr ev) {
     EventResponse resp = mWebViewInputListener.onKeyReleasedEvent(ev);
     if (resp == EventResponse::cancel()) {
         mEventCompleter.updateTarget(&mWebViewInputListener);
@@ -447,7 +419,7 @@ EventResponse OgreSystemMouseHandler::onKeyReleasedEvent(Input::ButtonReleasedPt
     return EventResponse::cancel();
 }
 
-EventResponse OgreSystemMouseHandler::onKeyDownEvent(Input::ButtonDownPtr ev) {
+EventResponse OgreSystemInputHandler::onKeyDownEvent(Input::ButtonDownPtr ev) {
     EventResponse resp = mWebViewInputListener.onKeyDownEvent(ev);
     if (resp == EventResponse::cancel()) {
         mEventCompleter.updateTarget(&mWebViewInputListener);
@@ -459,7 +431,7 @@ EventResponse OgreSystemMouseHandler::onKeyDownEvent(Input::ButtonDownPtr ev) {
     return EventResponse::cancel();
 }
 
-EventResponse OgreSystemMouseHandler::onAxisEvent(AxisEventPtr ev) {
+EventResponse OgreSystemInputHandler::onAxisEvent(AxisEventPtr ev) {
     EventResponse resp = mWebViewInputListener.onAxisEvent(ev);
     if (resp == EventResponse::cancel()) {
         mEventCompleter.updateTarget(&mWebViewInputListener);
@@ -471,7 +443,7 @@ EventResponse OgreSystemMouseHandler::onAxisEvent(AxisEventPtr ev) {
     return EventResponse::cancel();
 }
 
-EventResponse OgreSystemMouseHandler::onTextInputEvent(TextInputEventPtr ev) {
+EventResponse OgreSystemInputHandler::onTextInputEvent(TextInputEventPtr ev) {
     EventResponse resp = mWebViewInputListener.onTextInputEvent(ev);
     if (resp == EventResponse::cancel()) {
         mEventCompleter.updateTarget(&mWebViewInputListener);
@@ -483,7 +455,7 @@ EventResponse OgreSystemMouseHandler::onTextInputEvent(TextInputEventPtr ev) {
     return EventResponse::cancel();
 }
 
-EventResponse OgreSystemMouseHandler::onMouseHoverEvent(MouseHoverEventPtr ev) {
+EventResponse OgreSystemInputHandler::onMouseHoverEvent(MouseHoverEventPtr ev) {
     // Hover doesn't trigger changing of target because of the way it is
     // intended to support hovering over both a webview (transparent) and an
     // object. Since the webview always returns nop(), we have to just dispatch
@@ -493,7 +465,7 @@ EventResponse OgreSystemMouseHandler::onMouseHoverEvent(MouseHoverEventPtr ev) {
     return EventResponse::cancel();
 }
 
-EventResponse OgreSystemMouseHandler::onMousePressedEvent(MousePressedEventPtr ev) {
+EventResponse OgreSystemInputHandler::onMousePressedEvent(MousePressedEventPtr ev) {
     EventResponse resp = mWebViewInputListener.onMousePressedEvent(ev);
     if (resp == EventResponse::cancel()) {
         mEventCompleter.updateTarget(&mWebViewInputListener);
@@ -514,7 +486,7 @@ EventResponse OgreSystemMouseHandler::onMousePressedEvent(MousePressedEventPtr e
     return EventResponse::cancel();
 }
 
-EventResponse OgreSystemMouseHandler::onMouseReleasedEvent(MouseReleasedEventPtr ev) {
+EventResponse OgreSystemInputHandler::onMouseReleasedEvent(MouseReleasedEventPtr ev) {
     EventResponse resp = mWebViewInputListener.onMouseReleasedEvent(ev);
     if (resp == EventResponse::cancel()) {
         mEventCompleter.updateTarget(&mWebViewInputListener);
@@ -535,7 +507,7 @@ EventResponse OgreSystemMouseHandler::onMouseReleasedEvent(MouseReleasedEventPtr
     return EventResponse::cancel();
 }
 
-EventResponse OgreSystemMouseHandler::onMouseClickEvent(MouseClickEventPtr ev) {
+EventResponse OgreSystemInputHandler::onMouseClickEvent(MouseClickEventPtr ev) {
     EventResponse resp = mWebViewInputListener.onMouseClickEvent(ev);
     if (resp == EventResponse::cancel()) {
         mEventCompleter.updateTarget(&mWebViewInputListener);
@@ -547,7 +519,7 @@ EventResponse OgreSystemMouseHandler::onMouseClickEvent(MouseClickEventPtr ev) {
     return EventResponse::cancel();
 }
 
-EventResponse OgreSystemMouseHandler::onMouseDragEvent(MouseDragEventPtr ev) {
+EventResponse OgreSystemInputHandler::onMouseDragEvent(MouseDragEventPtr ev) {
     if (!mParent || !mParent->mPrimaryCamera) return EventResponse::nop();
 
     EventResponse resp = mWebViewInputListener.onMouseDragEvent(ev);
@@ -563,7 +535,7 @@ EventResponse OgreSystemMouseHandler::onMouseDragEvent(MouseDragEventPtr ev) {
     return EventResponse::cancel();
 }
 
-EventResponse OgreSystemMouseHandler::onWebViewEvent(WebViewEventPtr webview_ev) {
+EventResponse OgreSystemInputHandler::onWebViewEvent(WebViewEventPtr webview_ev) {
     // For everything else we let the browser go first, but in this case it should have
     // had its chance, so we just let it go
     mDelegateInputListener.onWebViewEvent(webview_ev);
@@ -572,7 +544,7 @@ EventResponse OgreSystemMouseHandler::onWebViewEvent(WebViewEventPtr webview_ev)
 
 
 
-void OgreSystemMouseHandler::fpsUpdateTick(const Task::LocalTime& t) {
+void OgreSystemInputHandler::fpsUpdateTick(const Task::LocalTime& t) {
     if(mUIWidgetView) {
         Task::DeltaTime dt = t - mLastFpsTime;
         if(dt.toSeconds() > 1) {
@@ -585,7 +557,7 @@ void OgreSystemMouseHandler::fpsUpdateTick(const Task::LocalTime& t) {
     }
 }
 
-void OgreSystemMouseHandler::renderStatsUpdateTick(const Task::LocalTime& t) {
+void OgreSystemInputHandler::renderStatsUpdateTick(const Task::LocalTime& t) {
     if(mUIWidgetView) {
         Task::DeltaTime dt = t - mLastRenderStatsTime;
         if(dt.toSeconds() > 1) {
@@ -603,7 +575,7 @@ void OgreSystemMouseHandler::renderStatsUpdateTick(const Task::LocalTime& t) {
 }
 
 
-OgreSystemMouseHandler::OgreSystemMouseHandler(OgreSystem *parent)
+OgreSystemInputHandler::OgreSystemInputHandler(OgreSystem *parent)
  : mUIWidgetView(NULL),
    mParent(parent),
    mWebViewInputListener(this),
@@ -621,7 +593,7 @@ OgreSystemMouseHandler::OgreSystemMouseHandler(OgreSystem *parent)
     mParent->mInputManager->addListener(this);
 }
 
-OgreSystemMouseHandler::~OgreSystemMouseHandler() {
+OgreSystemInputHandler::~OgreSystemInputHandler() {
 
     mParent->mInputManager->removeListener(this);
 
@@ -631,24 +603,24 @@ OgreSystemMouseHandler::~OgreSystemMouseHandler() {
     }
 }
 
-void OgreSystemMouseHandler::addDelegate(Invokable* del) {
+void OgreSystemInputHandler::addDelegate(Invokable* del) {
     mDelegateInputListener.mDelegates[del] = del;
 }
 
-void OgreSystemMouseHandler::removeDelegate(Invokable* del)
+void OgreSystemInputHandler::removeDelegate(Invokable* del)
 {
     std::map<Invokable*,Invokable*>::iterator delIter = mDelegateInputListener.mDelegates.find(del);
     if (delIter != mDelegateInputListener.mDelegates.end())
         mDelegateInputListener.mDelegates.erase(delIter);
     else
-        SILOG(input,error,"Error in OgreSystemMouseHandler::removeDelegate.  Attempting to remove delegate that does not exist.");
+        SILOG(input,error,"Error in OgreSystemInputHandler::removeDelegate.  Attempting to remove delegate that does not exist.");
 }
 
-void OgreSystemMouseHandler::uiReady() {
+void OgreSystemInputHandler::uiReady() {
     mUIReady = true;
 }
 
-Input::Modifier OgreSystemMouseHandler::getCurrentModifiers() const {
+Input::Modifier OgreSystemInputHandler::getCurrentModifiers() const {
     Input::Modifier result = MOD_NONE;
 
     if (mParent->getInputManager()->isModifierDown(Input::MOD_SHIFT))
@@ -664,13 +636,13 @@ Input::Modifier OgreSystemMouseHandler::getCurrentModifiers() const {
 }
 
 
-void OgreSystemMouseHandler::alert(const String& title, const String& text) {
+void OgreSystemInputHandler::alert(const String& title, const String& text) {
     if (!mUIWidgetView) return;
 
     mUIWidgetView->evaluateJS("alert_permanent('" + title + "', '" + text + "');");
 }
 
-boost::any OgreSystemMouseHandler::onUIAction(WebView* webview, const JSArguments& args) {
+boost::any OgreSystemInputHandler::onUIAction(WebView* webview, const JSArguments& args) {
     SILOG(ogre, detailed, "ui action event fired arg length = " << (int)args.size());
     if (args.size() < 1) {
         SILOG(ogre, detailed, "expected at least 1 argument, returning.");
@@ -688,7 +660,7 @@ boost::any OgreSystemMouseHandler::onUIAction(WebView* webview, const JSArgument
     return boost::any();
 }
 
-void OgreSystemMouseHandler::ensureUI() {
+void OgreSystemInputHandler::ensureUI() {
     if(!mUIWidgetView) {
         SILOG(ogre, info, "Creating UI Widget");
         mUIWidgetView = WebViewManager::getSingleton().createWebView(
@@ -699,20 +671,20 @@ void OgreSystemMouseHandler::ensureUI() {
             mParent->renderStrand(),
             false,70, TIER_BACK, 0,
             WebView::WebViewBorderSize(0,0,0,0));
-        mUIWidgetView->bind("ui-action", std::tr1::bind(&OgreSystemMouseHandler::onUIAction, this, _1, _2));
+        mUIWidgetView->bind("ui-action", std::tr1::bind(&OgreSystemInputHandler::onUIAction, this, _1, _2));
         mUIWidgetView->loadFile("chrome/ui.html");
         mUIWidgetView->setTransparent(true);
     }
 }
 
-void OgreSystemMouseHandler::windowResized(uint32 w, uint32 h) {
+void OgreSystemInputHandler::windowResized(uint32 w, uint32 h) {
     // Make sure our widget overlay gets scaled appropriately.
     if (mUIWidgetView) {
         mUIWidgetView->resize(w, h);
     }
 }
 
-void OgreSystemMouseHandler::tick(const Task::LocalTime& t) {
+void OgreSystemInputHandler::tick(const Task::LocalTime& t) {
     if (mUIReady) {
         fpsUpdateTick(t);
         renderStatsUpdateTick(t);
