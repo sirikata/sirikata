@@ -96,4 +96,15 @@ var setScriptInfo = function() {
 
         // Disable by default
         disable();
+
+        // Add Options -> Physics Settings
+        sirikata.ui.menu({
+            'id' : 'physics-settings',
+            'text' : 'Physics Settings',
+            'parent' : 'options',
+            'click' : function() {
+                toggleVisible();
+            }
+        });
+
 });

@@ -23,6 +23,7 @@ class PriorityDownloadPlannerMetric {
 public:
     virtual ~PriorityDownloadPlannerMetric() {}
     virtual double calculatePriority(Graphics::Camera *camera, ProxyObjectPtr proxy) = 0;
+    virtual String name() const = 0;
 };
 typedef std::tr1::shared_ptr<PriorityDownloadPlannerMetric> PriorityDownloadPlannerMetricPtr;
 
@@ -30,12 +31,14 @@ class DistanceDownloadPlannerMetric : public PriorityDownloadPlannerMetric {
 public:
     virtual ~DistanceDownloadPlannerMetric() {}
     virtual double calculatePriority(Graphics::Camera *camera, ProxyObjectPtr proxy);
+    virtual String name() const { return "distance"; }
 };
 
 class SolidAngleDownloadPlannerMetric : public PriorityDownloadPlannerMetric {
 public:
     virtual ~SolidAngleDownloadPlannerMetric() {}
     virtual double calculatePriority(Graphics::Camera *camera, ProxyObjectPtr proxy);
+    virtual String name() const { return "solid_angle"; }
 };
 
 
@@ -60,6 +63,9 @@ public:
     virtual void poll();
     virtual void stop();
 
+    PriorityDownloadPlannerMetricPtr prioritizationMetric() {
+        return mMetric;
+    }
     void setPrioritizationMetric(PriorityDownloadPlannerMetricPtr metric) {
         mMetric = metric;
     }

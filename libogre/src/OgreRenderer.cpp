@@ -926,10 +926,10 @@ boost::any OgreRenderer::invoke(std::vector<boost::any>& params) {
 
     if (name == "onTick")
         return setOnTick(params);
-    else if (name == "setMaxObjects")
-        return setMaxObjects(params);
-    else if (name == "setObjectPrioritization")
-        return setObjectPrioritization(params);
+    else if (name == "maxObjects")
+        return maxObjects(params);
+    else if (name == "objectPrioritization")
+        return objectPrioritization(params);
     else
         SILOG(ogre, warn, "Function " << name << " was invoked but this function was not found.");
 
@@ -945,33 +945,34 @@ boost::any OgreRenderer::setOnTick(std::vector<boost::any>& params) {
     return boost::any();
 }
 
-boost::any OgreRenderer::setMaxObjects(std::vector<boost::any>& params) {
-    if (params.size() < 2) return boost::any();
-    if (!Invokable::anyIsNumeric(params[1])) return boost::any();
-    uint32 new_max_objects = Invokable::anyAsNumeric(params[1]);
-
-    mDownloadPlanner->setMaxObjects(new_max_objects);
-
-    return boost::any();
+boost::any OgreRenderer::maxObjects(std::vector<boost::any>& params) {
+    if (params.size() >= 2) {
+        if (!Invokable::anyIsNumeric(params[1])) return boost::any();
+        uint32 new_max_objects = Invokable::anyAsNumeric(params[1]);
+        mDownloadPlanner->setMaxObjects(new_max_objects);
+    }
+    return Invokable::asAny(mDownloadPlanner->maxObjects());
 }
 
-boost::any OgreRenderer::setObjectPrioritization(std::vector<boost::any>& params) {
-    if (params.size() < 2) return boost::any();
-    if (!Invokable::anyIsString(params[1])) return boost::any();
-    String new_prioritization = Invokable::anyAsString(params[1]);
+boost::any OgreRenderer::objectPrioritization(std::vector<boost::any>& params) {
+    if (params.size() >= 2) {
+        if (!Invokable::anyIsString(params[1])) return boost::any();
+        String new_prioritization = Invokable::anyAsString(params[1]);
 
-    if (new_prioritization == "distance") {
-        PriorityDownloadPlannerMetricPtr metric(new DistanceDownloadPlannerMetric());
-        mDownloadPlanner->setPrioritizationMetric(metric);
-        return Invokable::asAny(true);
+        if (new_prioritization == "distance") {
+            PriorityDownloadPlannerMetricPtr metric(new DistanceDownloadPlannerMetric());
+            mDownloadPlanner->setPrioritizationMetric(metric);
+        }
+        else if (new_prioritization == "solid_angle") {
+            PriorityDownloadPlannerMetricPtr metric(new SolidAngleDownloadPlannerMetric());
+            mDownloadPlanner->setPrioritizationMetric(metric);
+        }
+        else {
+            // exception
+            return boost::any();
+        }
     }
-    else if (new_prioritization == "solid_angle") {
-        PriorityDownloadPlannerMetricPtr metric(new SolidAngleDownloadPlannerMetric());
-        mDownloadPlanner->setPrioritizationMetric(metric);
-        return Invokable::asAny(true);
-    }
-
-    return Invokable::asAny(false);
+    return Invokable::asAny(mDownloadPlanner->prioritizationMetric()->name());
 }
 
 void OgreRenderer::injectWindowResized(uint32 w, uint32 h) {

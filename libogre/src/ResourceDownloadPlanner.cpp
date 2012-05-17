@@ -101,6 +101,11 @@ void ResourceDownloadPlanner::stop()
   RMutex::scoped_lock lock(mDlPlannerMutex);
 }
 
+int32 ResourceDownloadPlanner::maxObjects() {
+    RMutex::scoped_lock lock(mDlPlannerMutex);
+    return mMaxLoaded;
+}
+
 void ResourceDownloadPlanner::setMaxObjects(int32 new_max) {
     RMutex::scoped_lock lock(mDlPlannerMutex);
     mMaxLoaded = new_max;

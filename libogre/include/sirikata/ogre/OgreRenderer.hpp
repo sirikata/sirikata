@@ -230,8 +230,8 @@ public:
 
     // Set handler to be called on each tick, i.e. before each frame
     boost::any setOnTick(std::vector<boost::any>& params);
-    boost::any setMaxObjects(std::vector<boost::any>& params);
-    boost::any setObjectPrioritization(std::vector<boost::any>& params);
+    boost::any maxObjects(std::vector<boost::any>& params);
+    boost::any objectPrioritization(std::vector<boost::any>& params);
 
     static Ogre::Root* sRoot;
     static Ogre::Plugin* sCDNArchivePlugin;

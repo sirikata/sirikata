@@ -64,6 +64,16 @@ function() {
         }
     );
 
+    // Add Options -> Mesh Settings
+    sirikata.ui.menu({
+        'id' : 'mesh-settings',
+        'text' : 'Mesh Settings',
+        'parent' : 'options',
+        'click' : function() {
+            SetMesh.toggleVisible();
+        }
+    });
+
     /*************************** variables ********************************/
 
     var currentMesh = null;

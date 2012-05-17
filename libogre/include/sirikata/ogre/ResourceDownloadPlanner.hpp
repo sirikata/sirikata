@@ -40,6 +40,7 @@ public:
     virtual void poll();
     virtual void stop();
 
+    virtual int32 maxObjects();
     virtual void setMaxObjects(int32 new_max);
 
     OgreRenderer* getScene() const { return mScene; }
