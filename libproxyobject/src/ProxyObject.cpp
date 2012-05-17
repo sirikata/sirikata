@@ -57,9 +57,9 @@ ProxyObject::ProxyObject(ProxyManagerPtr man, const SpaceObjectReference& id)
  :   SelfWeakPtr<ProxyObject>(),
      ProxyObjectProvider(),
      MeshProvider (),
+     mValid(true),
      mID(id),
-     mParent(man),
-     mValid(true)
+     mParent(man)
 {
     assert(mParent);
 

@@ -192,8 +192,8 @@ Priority TransferMediator::AggregateRequest::getPriority() const {
 }
 
 TransferMediator::AggregateRequest::AggregateRequest(std::tr1::shared_ptr<TransferRequest> req)
- : mIdentifier(req->getIdentifier()),
-   mExecuting(false)
+ : mExecuting(false),
+   mIdentifier(req->getIdentifier())
 {
     setClientPriority(req);
 }
