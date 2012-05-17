@@ -40,7 +40,7 @@ Input::EventResponse OgreSystemInputHandler::WebViewInputListener::onKeyEvent(In
 }
 
 Input::EventResponse OgreSystemInputHandler::WebViewInputListener::onAxisEvent(Input::AxisEventPtr axisev) {
-    float multiplier = mParent->mParent->mInputManager->wheelToAxis();
+    float multiplier = mParent->mParent->getInputManager()->wheelToAxis();
 
     if (axisev->mAxis == SDLMouse::WHEELY) {
         bool used = WebViewManager::getSingleton().injectMouseWheel(WebViewCoord(0, axisev->mValue.getCentered()/multiplier));
