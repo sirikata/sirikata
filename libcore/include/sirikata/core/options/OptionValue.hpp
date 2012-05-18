@@ -34,6 +34,7 @@
 #define _SIRIKATA_OPTIONVALUE_HPP_
 
 #include <sirikata/core/util/Any.hpp>
+#include <typeinfo>
 
 namespace Sirikata {
 class OptionSet;
@@ -175,6 +176,7 @@ class OptionValue{
     std::string mDefaultValue;
     const char *mDefaultChar;
     const char* mDescription;
+    const char* mTypeName;
     std::tr1::function<Any(std::string)> mParser;
     std::tr1::function<void(const std::string&,Any,Any)>mChangeFunction;
     const char* mName;
@@ -211,6 +213,9 @@ public:
     const char *defaultValue() const{
         return mDefaultChar?mDefaultChar:mDefaultValue.c_str();
     }
+    const char* typeName() const {
+        return mTypeName;
+    }
     ///changes the option value and invokes mChangeFunction message
     OptionValue& operator=(const OptionValue&other);
 
@@ -229,6 +234,7 @@ public:
      * \param pointer holds a pointer to an OptionValue that will get set to the newly constructed class
      */
     template<class T>OptionValue(const char*option, const std::string&defaultValue, T type, const char*description, OptionValue**pointer=NULL):mDefaultChar(NULL){
+        mTypeName = mParser(defaultValue).typeOf().name();
         mParser=std::tr1::function<Any(std::string)>(&T::lexical_cast);
         mName=option;
         mDefaultValue=defaultValue;
@@ -248,6 +254,7 @@ public:
      */
     template<class T>OptionValue(const char* option, const std::string&defaultValue, T xtype, const char*description, std::tr1::function<void(const std::string&,Any,Any)>&changeFunction, OptionValue**pointer=NULL) :mDefaultChar(NULL){
         mParser=std::tr1::function<Any(std::string)>(&T::lexical_cast);
+        mTypeName = mParser(defaultValue).typeOf().name();
         mName=option;
         mDescription=description;
         mDefaultValue=defaultValue;
@@ -265,6 +272,7 @@ public:
      */
     OptionValue(const char* option, const std::string&defaultValue, const char *description, const std::tr1::function<Any(std::string)>& parser, OptionValue**pointer=NULL) :mDefaultChar(NULL){
         mParser=parser;
+        mTypeName = mParser(defaultValue).typeOf().name();
         mName=option;
         mDescription=description;
         mDefaultValue=defaultValue;
@@ -283,6 +291,7 @@ public:
      */
     OptionValue(const char* option, const std::string&defaultValue, const char* description, const std::tr1::function<Any(std::string)>& parser,  const std::tr1::function<void(const std::string&, Any, Any)> &changeFunction, OptionValue**pointer=NULL) :mDefaultChar(NULL){
         mParser=parser;
+        mTypeName = mParser(defaultValue).typeOf().name();
         mName=option;
         mDescription=description;
         mDefaultValue=defaultValue;
@@ -307,6 +316,7 @@ public:
      */
     template<class T>OptionValue(const char*option, const char*defaultValue, T type, const char*description, OptionValue**pointer=NULL){
         mParser=std::tr1::function<Any(std::string)>(&T::lexical_cast);
+        mTypeName = mParser(defaultValue).typeOf().name();
         mName=option;
         mDefaultChar=defaultValue;
         mDescription=description;
@@ -325,6 +335,7 @@ public:
      */
     template<class T>OptionValue(const char* option, const char*defaultValue, T xtype, const char*description, std::tr1::function<void(const std::string&,Any,Any)>&changeFunction, OptionValue**pointer=NULL) {
         mParser=std::tr1::function<Any(std::string)>(&T::lexical_cast);
+        mTypeName = mParser(defaultValue).typeOf().name();
         mName=option;
         mDescription=description;
         mDefaultChar=defaultValue;
@@ -342,6 +353,7 @@ public:
      */
     OptionValue(const char* option, const char*defaultValue, const char *description, const std::tr1::function<Any(std::string)>& parser, OptionValue**pointer=NULL) {
         mParser=parser;
+        mTypeName = mParser(defaultValue).typeOf().name();
         mName=option;
         mDescription=description;
         mDefaultChar=defaultValue;
@@ -360,6 +372,7 @@ public:
      */
     OptionValue(const char* option, const char*defaultValue, const char* description, const std::tr1::function<Any(std::string)>& parser,  const std::tr1::function<void(const std::string&, Any, Any)> &changeFunction, OptionValue**pointer=NULL) {
         mParser=parser;
+        mTypeName = mParser(defaultValue).typeOf().name();
         mName=option;
         mDescription=description;
         mDefaultChar=defaultValue;
