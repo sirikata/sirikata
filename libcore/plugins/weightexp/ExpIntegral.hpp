@@ -32,6 +32,23 @@
 
 #ifndef EXPINTEGRAL_HPP_
 #define EXPINTEGRAL_HPP_
+
+
+// Version 1.46 of Boost (at least) has a bad version of Boost.Math
+// that makes it unusable (Boost issue #5934). We need to detect this
+// and adjust for it. We can't fix the compilation issue and maintain
+// functionality, so we skip registering with the factory to cause an
+// error and leave a warning if the plugin is loaded.
+#include <boost/version.hpp>
+
+#define SIRIKATA_BOOST_MAJOR_VERSION BOOST_VERSION / 100000
+#define SIRIKATA_BOOST_MINOR_VERSION BOOST_VERSION / 100 % 1000
+
+#if SIRIKATA_BOOST_MAJOR_VERSION == 1 && SIRIKATA_BOOST_MINOR_VERSION == 46
+#define SIRIKATA_BAD_BOOST_ERF 1
+#endif
+
+
 namespace Sirikata {
 double integralExpFunction(double k, const Vector3d& xymin, const Vector3d& xymax, const Vector3d& uvmin, const Vector3d& uvmax);
 }
