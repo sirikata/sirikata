@@ -355,8 +355,8 @@ private:
     boost::mutex mRequestQueueLock;
 
     //TODO: should get these from settings
-    static const uint32 MAX_CONNECTIONS_PER_ENDPOINT = 2;
-    static const uint32 MAX_TOTAL_CONNECTIONS = 10;
+    static const uint32 MAX_CONNECTIONS_PER_ENDPOINT = 8;  
+    static const uint32 MAX_TOTAL_CONNECTIONS = 40;  
     static const uint32 SOCKET_BUFFER_SIZE = 10240;
 
     //Keeps track of the total number of connections currently open

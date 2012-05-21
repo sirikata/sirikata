@@ -592,6 +592,12 @@ void MeerkatUploadHandler::handleRequestStatusResult(
 {
     Transfer::URI bad;
 
+    if (retries <= 0) {
+	SILOG(transfer, error, "Failed to upload (" << request->getIdentifier() << ") -- status-check retries exceeded");
+        callback(bad);
+        return;
+    }
+
     if (error == Transfer::HttpManager::REQUEST_PARSING_FAILED) {
         SILOG(transfer, error, "Request parsing failed during an HTTP upload status check (" << request->getIdentifier() << ")");
         callback(bad);
