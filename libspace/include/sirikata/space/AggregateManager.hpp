@@ -63,7 +63,10 @@ private:
   
   
   LocationService* mLoc;
+
+  boost::mutex mModelsSystemMutex;
   ModelsSystem* mModelsSystem;
+
   Sirikata::Mesh::MeshSimplifier mMeshSimplifier;
   Sirikata::Mesh::Filter* mCenteringFilter;
 
@@ -123,6 +126,7 @@ private:
   std::tr1::unordered_map<String, Mesh::MeshdataPtr> mMeshStore;
   std::tr1::shared_ptr<Transfer::TransferPool> mTransferPool;
   Transfer::TransferMediator *mTransferMediator;
+  void addToInMemoryCache(const String& meshName, const Mesh::MeshdataPtr mdptr);
 
   //CDN upload-related variables
   Transfer::OAuthParamsPtr mOAuth;
@@ -131,12 +135,15 @@ private:
   Poller* mCDNKeepAlivePoller;
 
   //CDN upload threads' variables
-  enum{NUM_UPLOAD_THREADS = 3};
+  enum{NUM_UPLOAD_THREADS = 8};
   Thread* mUploadThreads[NUM_UPLOAD_THREADS];
   Network::IOService* mUploadServices[NUM_UPLOAD_THREADS];
   Network::IOStrand* mUploadStrands[NUM_UPLOAD_THREADS];
   Network::IOWork* mUploadWorks[NUM_UPLOAD_THREADS];
+  std::tr1::unordered_map<UUID, bool, UUID::Hasher> mPendingUploads;
   void uploadThreadMain(uint8 i);
+  void checkIfUploaded(Mesh::MeshdataPtr agg_mesh, AggregateObjectPtr aggObject,
+                           std::tr1::unordered_map<String, String> textureSet, uint32 retryAttempt);
   
 
   //Various utility functions 
@@ -164,7 +171,9 @@ private:
                            std::tr1::unordered_map<String, String> textureSet, uint32 retryAttempt);
   // Helper that handles the upload callback and sets flags to let the request
   // from the aggregation thread to continue
-  void handleUploadFinished(Transfer::UploadRequestPtr request, const Transfer::URI& path, AtomicValue<bool>* finished_out, Transfer::URI* generated_uri_out);  
+  void handleUploadFinished(Transfer::UploadRequestPtr request, const Transfer::URI& path, Mesh::MeshdataPtr agg_mesh,
+			    AggregateObjectPtr aggObject, std::tr1::unordered_map<String, String> textureSet,
+			    uint32 retryAttempt);  
   // Look for any aggregates that need a keep-alive sent to the CDN
   // and try to send them.
   void sendKeepAlives();
