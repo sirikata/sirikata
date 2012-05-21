@@ -33,6 +33,8 @@
 #include <sirikata/core/options/Options.hpp>
 #include <sirikata/core/options/CommonOptions.hpp>
 #include <sirikata/core/util/PluginManager.hpp>
+#include <json_spirit/writer.h>
+#include <json_spirit/value.h>
 #include <iostream>
 
 /*
@@ -60,30 +62,44 @@ const std::string demangle(const char* name) {
 }
 #endif
 
+typedef json_spirit::Object Object;
+
 int main(int argc, char** argv) {
     using namespace Sirikata;
 
     InitOptions();
 
     PluginManager plugins;
-        plugins.loadList("colladamodels");
-        plugins.loadList("mesh-billboard");
-        plugins.loadList("common-filters");
-        plugins.loadList("nvtt");
 
+    Object allNamespaces;
     const OptionSet::NamedOptionSetMapPtr m = OptionSet::optionSets();
 
     for (OptionSet::NamedOptionSetMap::const_iterator setit = m->begin(); setit != m->end(); setit++) {
-        std::cout << "NameSpace (" << setit->first.getString() << ")" << std::endl;
+
+        //std::cout << "NameSpace (" << setit->first.getString() << ")" << std::endl;
+        Object namespaceObj;
         const OptionSet::OptionNameMap& nameMap = setit->second->getOptionsMap();
+
         for (OptionSet::OptionNameMap::const_iterator optionit = nameMap.begin(); optionit != nameMap.end(); optionit++) {
             std::string typeName = optionit->second->typeName() == NULL ? "Unknown" : demangle(optionit->second->typeName());
-            std::cout << "  --" << optionit->first << " (" << typeName << ")" << std::endl;
-            std::cout << "    " << optionit->second->description() << std::endl;
-            std::cout << "    Default: \"" << optionit->second->defaultValue() << "\"" << std::endl;
+
+            Object configObj;
+            configObj["type"] = typeName;
+            configObj["description"] = optionit->second->description();
+            configObj["default"] = optionit->second->defaultValue();
+            namespaceObj[optionit->first] = configObj;
+
+            //std::cout << "  --" << optionit->first << " (" << typeName << ")" << std::endl;
+            //std::cout << "    " << optionit->second->description() << std::endl;
+            //std::cout << "    Default: \"" << optionit->second->defaultValue() << "\"" << std::endl;
         }
-        std::cout << std::endl;
+
+        allNamespaces[setit->first.getString()] = namespaceObj;
+        //std::cout << std::endl;
     }
+
+    json_spirit::write(allNamespaces, std::cout, json_spirit::pretty_print);
+    std::cout << std::endl;
 
     return 0;
 }
