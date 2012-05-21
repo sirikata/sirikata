@@ -82,6 +82,21 @@ Mesh::VisualPtr AnyModelsSystem::load(const Transfer::RemoteFileMetadata& metada
     return result;
 }
 
+Mesh::VisualPtr AnyModelsSystem::load(Transfer::DenseDataPtr data) {
+    Mesh::VisualPtr result;
+    for(SystemsMap::iterator it = mModelsSystems.begin(); it != mModelsSystems.end(); it++) {
+        ModelsSystem* ms = it->second;
+        if (ms->canLoad(data)) {
+            result = ms->load(data);
+            if (result) return result;
+        }
+    }
+    SILOG(AnyModelsSystem,error,"Couldn't find parser for model data without a URI");
+    return result;
+
+}
+
+
 bool AnyModelsSystem::convertVisual(const Mesh::VisualPtr& visual, const String& format, std::ostream& vout) {
     SystemsMap::iterator it = mModelsSystems.find(format);
     if (it == mModelsSystems.end()) {

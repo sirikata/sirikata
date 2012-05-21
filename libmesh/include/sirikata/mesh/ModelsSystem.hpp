@@ -70,6 +70,8 @@ class SIRIKATA_MESH_EXPORT ModelsSystem
         virtual Mesh::VisualPtr load(const Transfer::RemoteFileMetadata& metadata, const Transfer::Fingerprint& fp,
             Transfer::DenseDataPtr data) = 0;
 
+        virtual Mesh::VisualPtr load(Transfer::DenseDataPtr data) = 0;
+
 
         /** Convert a Visual to the format for this ModelsSystem.
          *  \param visual the Visual to save to disk

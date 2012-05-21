@@ -82,6 +82,25 @@ Mesh::VisualPtr BillboardSystem::load(const Transfer::RemoteFileMetadata& metada
     return result;
 }
 
+Mesh::VisualPtr BillboardSystem::load(Transfer::DenseDataPtr data) {
+    json::Value parsed;
+    bool success = json::read(data->asString(), parsed);
+    if (!success) return Mesh::VisualPtr();
+
+    String url = parsed.getString("url", "");
+    float32 aspect = parsed.getReal("aspect", -1.f);
+    String type = parsed.getString("facing", String("camera"));
+
+    Mesh::BillboardPtr result(new Mesh::Billboard());
+    result->uri = Transfer::URI("");
+    result->hash = Transfer::Fingerprint::null();
+    result->image = url;
+    result->aspectRatio = aspect;
+    result->facing = (type == "fixed") ? Mesh::Billboard::FACING_FIXED : Mesh::Billboard::FACING_CAMERA;
+    return result;
+}
+
+
 bool BillboardSystem::convertVisual(const Mesh::VisualPtr& meshdata, const String& format, std::ostream& vout) {
     return false;
 }
