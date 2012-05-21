@@ -35,6 +35,31 @@
 #include <sirikata/core/util/PluginManager.hpp>
 #include <iostream>
 
+/*
+ * The name() method of std::type_info returns a non-standard value. On gnu
+ * platforms, it is a mangled name, so the internal cxa_demangle function can
+ * be used. This probably doesn't exist on other platforms, so the ifdef checks
+ * to see if the platform is GNU first. This is not guaranteed to work properly
+ * but it seems to work.
+ *
+ * The method to demangle is taken from http://stackoverflow.com/q/281818/624900
+ */
+#ifdef __GNUG__
+#include <cxxabi.h>
+const std::string demangle(const char* name) {
+    int status = -4;
+    char* res = abi::__cxa_demangle(name, NULL, NULL, &status);
+    const char* const demangled_name = (status == 0) ? res : name;
+    std::string ret_val(demangled_name);
+    free(res);
+    return ret_val;
+}
+#else
+const std::string demangle(const char* name) {
+    return name;
+}
+#endif
+
 int main(int argc, char** argv) {
     using namespace Sirikata;
 
@@ -52,9 +77,10 @@ int main(int argc, char** argv) {
         std::cout << "NameSpace (" << setit->first.getString() << ")" << std::endl;
         const OptionSet::OptionNameMap& nameMap = setit->second->getOptionsMap();
         for (OptionSet::OptionNameMap::const_iterator optionit = nameMap.begin(); optionit != nameMap.end(); optionit++) {
-            std::string typeName = optionit->second->typeName() == NULL ? "Unknown" : optionit->second->typeName();
-            std::cout << "  " << optionit->first << " (" << typeName << ")" << std::endl;
+            std::string typeName = optionit->second->typeName() == NULL ? "Unknown" : demangle(optionit->second->typeName());
+            std::cout << "  --" << optionit->first << " (" << typeName << ")" << std::endl;
             std::cout << "    " << optionit->second->description() << std::endl;
+            std::cout << "    Default: \"" << optionit->second->defaultValue() << "\"" << std::endl;
         }
         std::cout << std::endl;
     }
