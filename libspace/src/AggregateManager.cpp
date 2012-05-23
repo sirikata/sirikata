@@ -709,19 +709,6 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
   return GEN_SUCCESS;
 }
 
-void AggregateManager::checkIfUploaded(Mesh::MeshdataPtr agg_mesh,
-                                           AggregateObjectPtr aggObject,
-                                           std::tr1::unordered_map<String, String> textureSet,
-                                           uint32 retryAttempt)
-{
-  if (mPendingUploads.find(aggObject->mUUID) != mPendingUploads.end()) {
-	//re-post the upload process
-
-  }
-
-}
-
-
 void AggregateManager::uploadAggregateMesh(Mesh::MeshdataPtr agg_mesh,
                                            AggregateObjectPtr aggObject,
                                            std::tr1::unordered_map<String, String> textureSet,
@@ -889,11 +876,12 @@ void AggregateManager::handleUploadFinished(Transfer::UploadRequestPtr request, 
       boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
       std::vector<AggregateObjectPtr>& children = aggObject->mChildren;
       for (uint32 i= 0; i < children.size(); i++) {
-	UUID child_uuid = children[i]->mUUID;
-	if ( mAggregateObjects.find(child_uuid) == mAggregateObjects.end())
-	  continue;
-	String meshName = mLoc->mesh(child_uuid);
-	AGG_LOG(error, "   " << meshName);
+	      UUID child_uuid = children[i]->mUUID;
+	      if ( mAggregateObjects.find(child_uuid) == mAggregateObjects.end() )
+	        continue;
+	      String meshName = (mLoc->contains(child_uuid)) ? mLoc->mesh(child_uuid) : 
+                                                         "LOC does not have meshname for " + child_uuid.toString();
+	      AGG_LOG(error, "   " << meshName);
       }
       
       AGG_LOG(error, "Failure was retry attempt # " << retryAttempt);
@@ -930,9 +918,13 @@ void AggregateManager::handleUploadFinished(Transfer::UploadRequestPtr request, 
     agg_mesh->uri = cdnMeshName;
     
     //Update loc                                                                                                                 
-    mLoc->updateLocalAggregateMesh(uuid, cdnMeshName);
+     if ( mLoc->contains(uuid) ) {
+       AGG_LOG(warn, "After upload, LOC no longer contains entry for " << uuid);
+       mLoc->updateLocalAggregateMesh(uuid, cdnMeshName);
+    }
     
     AGG_LOG(info, "Uploaded successfully: " << localMeshName << "\n");
+    std::cout << "CDN mesh name is " << cdnMeshName << "\n";;
     
     addToInMemoryCache(cdnMeshName, agg_mesh);
     

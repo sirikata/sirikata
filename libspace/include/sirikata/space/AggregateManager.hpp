@@ -140,10 +140,7 @@ private:
   Network::IOService* mUploadServices[NUM_UPLOAD_THREADS];
   Network::IOStrand* mUploadStrands[NUM_UPLOAD_THREADS];
   Network::IOWork* mUploadWorks[NUM_UPLOAD_THREADS];
-  std::tr1::unordered_map<UUID, bool, UUID::Hasher> mPendingUploads;
   void uploadThreadMain(uint8 i);
-  void checkIfUploaded(Mesh::MeshdataPtr agg_mesh, AggregateObjectPtr aggObject,
-                           std::tr1::unordered_map<String, String> textureSet, uint32 retryAttempt);
   
 
   //Various utility functions 
