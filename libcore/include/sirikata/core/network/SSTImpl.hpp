@@ -1133,14 +1133,16 @@ private:
 
    // This version should only be called by the destructor!
    void finalCleanup() {
+     boost::mutex::scoped_lock lock(mSSTConnVars->sStaticMembersLock.getMutex());
+
      mDatagramLayer->unlisten(mLocalEndPoint);
 
      if (mState != CONNECTION_DISCONNECTED) {
-         close(true);
+         iClose(true);
          mState = CONNECTION_DISCONNECTED;
      }
 
-     mSSTConnVars->releaseChannel(mLocalEndPoint.endPoint, mLocalChannelID);
+     mSSTConnVars->releaseChannel(mLocalEndPoint.endPoint, mLocalChannelID); 
    }
 
    static void closeConnections(ConnectionVariables<EndPointType>* sstConnVars) {
@@ -1387,10 +1389,16 @@ private:
              remote end point.
   */
   virtual void close(bool force) {
+      boost::mutex::scoped_lock lock(mSSTConnVars->sStaticMembersLock.getMutex());
+      iClose(force);
+  }
+
+  /* Internal, non-locking implementation of close().
+     Lock mSSTConnVars->sStaticMembersLock before calling this function */
+  virtual void iClose(bool force) {
     /* (mState != CONNECTION_DISCONNECTED) implies close() wasnt called
        through the destructor. */
     if (force && mState != CONNECTION_DISCONNECTED) {
-      boost::mutex::scoped_lock lock(mSSTConnVars->sStaticMembersLock.getMutex());
       mSSTConnVars->sConnectionMap.erase(mLocalEndPoint);
     }
 
@@ -1401,6 +1409,7 @@ private:
       mState = CONNECTION_PENDING_DISCONNECT;
     }
   }
+
 
 
   /*
