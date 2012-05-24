@@ -53,20 +53,72 @@
 
 namespace Sirikata {
 
-class SIRIKATA_SPACE_EXPORT AggregateManager {
+class SIRIKATA_SPACE_EXPORT AggregateManager : public LocationServiceListener {
 private:
 
   Thread* mAggregationThread;
   Network::IOService* mAggregationService;
   Network::IOStrand* mAggregationStrand;
-  Network::IOWork* mIOWork;
+  Network::IOWork* mIOWork;  
   
+  typedef struct LocationInfo {
+    Vector3f currentPosition;
+    BoundingSphere3f bounds;
+    Quaternion currentOrientation;
+    String mesh;
+
+    LocationInfo(Vector3f curPos, BoundingSphere3f bnds,
+                 Quaternion curOrient, String msh) :
+      currentPosition(curPos), bounds(bnds),
+      currentOrientation(curOrient), mesh(msh)
+    {
+    }
+
+  } LocationInfo;
+  std::tr1::shared_ptr<LocationInfo> getCachedLocInfo(const UUID& uuid) ;
+
+  class LocationServiceCache {
+    public:
+      LocationServiceCache() { }
+      
+      std::tr1::shared_ptr<LocationInfo> getLocationInfo(const UUID& uuid) {        
+        if (mLocMap.find(uuid) == mLocMap.end()){
+          return std::tr1::shared_ptr<LocationInfo>();
+        }
+
+        return mLocMap[uuid];
+      }
+
+      void insertLocationInfo(const UUID& uuid, std::tr1::shared_ptr<LocationInfo> locinfo) {
+        mLocMap[uuid] = locinfo;
+      }
+    
+      void removeLocationInfo(const UUID& uuid) {
+        mLocMap.erase(uuid);
+      }
+    
+    private:
+      std::tr1::unordered_map<UUID, std::tr1::shared_ptr<LocationInfo> , UUID::Hasher> mLocMap;
+  };
+
+  LocationServiceCache mLocationServiceCache;
+  boost::mutex mLocCacheMutex;
+  LocationService* mLoc; 
+
+  //Part of the LocationServiceListener interface.
+  virtual void localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient,
+                              const BoundingSphere3f& bounds, const String& mesh, const String& physics, 
+                                const String& zernike);  
+  virtual void localObjectRemoved(const UUID& uuid, bool agg) ;
+  virtual void localLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval); 
+  virtual void localOrientationUpdated(const UUID& uuid, bool agg, const TimedMotionQuaternion& newval);
+  virtual void localBoundsUpdated(const UUID& uuid, bool agg, const BoundingSphere3f& newval) ;
+  virtual void localMeshUpdated(const UUID& uuid, bool agg, const String& newval) ;
+
   
-  LocationService* mLoc;
 
   boost::mutex mModelsSystemMutex;
   ModelsSystem* mModelsSystem;
-
   Sirikata::Mesh::MeshSimplifier mMeshSimplifier;
   Sirikata::Mesh::Filter* mCenteringFilter;
 
@@ -161,6 +213,7 @@ private:
   enum{GEN_SUCCESS=1, CHILDREN_NOT_YET_GEN=2, OTHER_GEN_FAILURE=3}; 
   uint32 generateAggregateMeshAsync(const UUID uuid, Time postTime, bool generateSiblings = true);
   void aggregationThreadMain();
+  void updateAggregateLocMesh(UUID uuid, String mesh);
 
 
   //Functions related to uploading aggregates
@@ -189,7 +242,7 @@ private:
 
 public:
 
-  AggregateManager(LocationService* loc, Transfer::OAuthParamsPtr oauth, const String& username);
+  AggregateManager( LocationService* loc, Transfer::OAuthParamsPtr oauth, const String& username);
 
   ~AggregateManager();
 

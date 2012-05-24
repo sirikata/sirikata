@@ -83,6 +83,7 @@ AggregateManager::AggregateManager(LocationService* loc, Transfer::OAuthParamsPt
     mModelsSystem = NULL;
     if (ModelsSystemFactory::getSingleton().hasConstructor("any"))
         mModelsSystem = ModelsSystemFactory::getSingleton().getConstructor("any")("");
+    mLoc->addListener(this, true);
 
     std::vector<String> names_and_args;
     names_and_args.push_back("triangulate"); names_and_args.push_back("all");
@@ -348,10 +349,16 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
   if (postTime < mAggregateGenerationStartTime) {
     return OTHER_GEN_FAILURE;
   }
+ 
+  std::tr1::unordered_map<UUID, std::tr1::shared_ptr<LocationInfo> , UUID::Hasher> currentLocMap;
 
+  std::tr1::shared_ptr<LocationInfo> locInfoForUUID = getCachedLocInfo(uuid);
   /* Does LOC contain info about this aggregate and its children? */
-  if (!mLoc->contains(uuid)) {
+  if (!locInfoForUUID) {
     return OTHER_GEN_FAILURE;
+  }
+  else {
+    currentLocMap[uuid] = locInfoForUUID;
   }
 
   std::vector<AggregateObjectPtr>& children = aggObject->mChildren;
@@ -361,12 +368,14 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
   for (uint32 i= 0; i < children.size(); i++) {
     UUID child_uuid = children[i]->mUUID;
 
-    if (!mLoc->contains(child_uuid) ) {
+    std::tr1::shared_ptr<LocationInfo> locInfoForChildUUID = getCachedLocInfo(child_uuid);
+    if (!locInfoForChildUUID ) {
       return OTHER_GEN_FAILURE;
     }
+    currentLocMap[child_uuid] = locInfoForChildUUID;
 
-    if (isAggregate(child_uuid) && mLoc->mesh(child_uuid) == "") {
-      //std::cout << "Not yet generated: " << child_uuid << "\n";
+    if (isAggregate(child_uuid) && locInfoForChildUUID->mesh == "") {
+      AGG_LOG(detailed,  "Not yet generated: " << child_uuid);
       return CHILDREN_NOT_YET_GEN;
     }
   }
@@ -384,7 +393,7 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
 
     if (!m) {
       //request a download or generation of the mesh
-      std::string meshName = mLoc->mesh(child_uuid);
+      std::string meshName = currentLocMap[child_uuid]->mesh;
 
       if (meshName != "") {
         boost::mutex::scoped_lock meshStoreLock(mMeshStoreMutex);
@@ -417,7 +426,7 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
   aggObject->mLastGenerateTime = curTime;
   MeshdataPtr agg_mesh =  MeshdataPtr( new Meshdata() );
   agg_mesh->globalTransform = Matrix4x4f::identity();
-  BoundingSphere3f bnds = mLoc->bounds(uuid);
+  BoundingSphere3f bnds = locInfoForUUID->bounds;
   float64 bndsX = bnds.center().x;
   float64 bndsY = bnds.center().y;
   float64 bndsZ = bnds.center().z;
@@ -438,7 +447,7 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
     }
     MeshdataPtr m = mAggregateObjects[child_uuid]->mMeshdata;
 
-    std::string meshName = mLoc->mesh(child_uuid);
+    std::string meshName = currentLocMap[child_uuid]->mesh;
     if (!m && meshName != "") {
         boost::mutex::scoped_lock meshStoreLock(mMeshStoreMutex);
         if (mMeshStore.find(meshName) != mMeshStore.end()) {
@@ -461,7 +470,7 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
       continue;
     }
     MeshdataPtr m = mAggregateObjects[child_uuid]->mMeshdata;
-    std::string meshName = mLoc->mesh(child_uuid);
+    std::string meshName = currentLocMap[child_uuid]->mesh;
     lock.unlock();
 
     if (!m || meshName == "") continue;
@@ -542,7 +551,7 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
     uint32 submeshNodeOffset = meshToStartNodeIdxMapping[meshName];
 
     // Extract the loc information we need for this object.
-    Vector3f location = mLoc->currentPosition(child_uuid);
+    Vector3f location = currentLocMap[child_uuid]->currentPosition;
     double scalingfactor = 1.0;
 
     //If the child is an aggregate, don't use the information from LOC blindly.
@@ -561,13 +570,13 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
       scalingfactor = 1.0;
     }
     else {
-      scalingfactor = (mLoc->bounds(child_uuid)).radius() / originalMeshBoundsRadius;
+      scalingfactor = (currentLocMap[child_uuid]->bounds).radius() / originalMeshBoundsRadius;
     }
 
     float64 locationX = location.x;
     float64 locationY = location.y;
     float64 locationZ = location.z;
-    Quaternion orientation = mLoc->currentOrientation(child_uuid);
+    Quaternion orientation = currentLocMap[child_uuid]->currentOrientation;
 
     // Reuse geoinst_it and geoinst_idx from earlier, but with a new iterator.
     Meshdata::GeometryInstanceIterator geoinst_it = m->getGeometryInstanceIterator();
@@ -690,7 +699,13 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
 
   //Set the mesh of this aggregate to the empty string until the new version gets uploaded. This is so that
   //higher level aggregates are not generated from the now out-of-date version of the mesh. 
-  mLoc->updateLocalAggregateMesh(uuid, "");
+  mLoc->context()->mainStrand->post(
+        std::tr1::bind(
+            &AggregateManager::updateAggregateLocMesh, this,
+            uuid, ""
+        ),
+        "AggregateManager::updateAggregateLocMesh"
+  );  
 
   //... and now create the collada file, upload to the CDN and update LOC.
   mUploadStrands[rand() % NUM_UPLOAD_THREADS]->post(
@@ -703,8 +718,8 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
                          "_aggregate_mesh_" +
                          uuid.toString() + ".dae";
 
-  //AGG_LOG(info, "Generated aggregate: " << localMeshName << "\n");
-  //std::cout << "Time to generate: " << (Timer::now() - curTime).toMilliseconds() << "\n";
+  AGG_LOG(info, "Generated aggregate: " << localMeshName << "\n");
+  AGG_LOG(insane, "Time to generate: " << (Timer::now() - curTime).toMilliseconds() );
 
   return GEN_SUCCESS;
 }
@@ -721,7 +736,7 @@ void AggregateManager::uploadAggregateMesh(Mesh::MeshdataPtr agg_mesh,
                          uuid.toString() + ".dae";
   String cdnMeshName = "";
 
-  //std::cout << "Trying  to upload : " << localMeshName << "\n";
+  AGG_LOG(insane, "Trying  to upload : " << localMeshName);
 
   Time curTime = Timer::now();
 
@@ -741,10 +756,11 @@ void AggregateManager::uploadAggregateMesh(Mesh::MeshdataPtr agg_mesh,
       bool converted = mModelsSystem->convertVisual(agg_mesh, "colladamodels", model_ostream);
 
       /* Debugging code: store the file locally for ease of inspection.
-        String modelFilename = std::string("/disk/local/tazim/aggregate_meshes/") + localMeshName;
+        String modelFilename = std::string("/tmp/") + localMeshName;
         std::ofstream model_ostream2(modelFilename.c_str(), std::ofstream::out | std::ofstream::binary);
         converted = mModelsSystem->convertVisual(agg_mesh, "colladamodels", model_ostream2);
-        model_ostream2.close();*/
+        model_ostream2.close();
+      */
 
       Transfer::UploadRequest::StringMap files;
       files[localMeshName] = model_ostream.str();
@@ -813,7 +829,7 @@ void AggregateManager::uploadAggregateMesh(Mesh::MeshdataPtr agg_mesh,
         // FIXME handle non-Meshdata formats
       MeshdataPtr m = std::tr1::dynamic_pointer_cast<Meshdata>(v);
 
-      //std::cout << localMeshName << " : upload started\n";
+      AGG_LOG(insane, localMeshName << " : upload started");
       Transfer::TransferRequestPtr req(
           new Transfer::UploadRequest(
               mOAuth,
@@ -849,8 +865,14 @@ void AggregateManager::uploadAggregateMesh(Mesh::MeshdataPtr agg_mesh,
       std::string cmdline = std::string("./upload_to_cdn.sh ") +  modelFilename;
       system( cmdline.c_str()  );
 
-      //Update loc                                                                                                                 
-      mLoc->updateLocalAggregateMesh(uuid, cdnMeshName);
+      //Update loc
+      mLoc->context()->mainStrand->post(
+        std::tr1::bind(
+            &AggregateManager::updateAggregateLocMesh, this,
+            uuid, cdnMeshName
+        ),
+        "AggregateManager::updateAggregateLocMesh"
+      );  
 
       AGG_LOG(info, "Uploaded successfully: " << localMeshName << "\n");
 
@@ -876,12 +898,15 @@ void AggregateManager::handleUploadFinished(Transfer::UploadRequestPtr request, 
       boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
       std::vector<AggregateObjectPtr>& children = aggObject->mChildren;
       for (uint32 i= 0; i < children.size(); i++) {
-	      UUID child_uuid = children[i]->mUUID;
-	      if ( mAggregateObjects.find(child_uuid) == mAggregateObjects.end() )
-	        continue;
-	      String meshName = (mLoc->contains(child_uuid)) ? mLoc->mesh(child_uuid) : 
-                                                         "LOC does not have meshname for " + child_uuid.toString();
-	      AGG_LOG(error, "   " << meshName);
+        UUID child_uuid = children[i]->mUUID;
+        if ( mAggregateObjects.find(child_uuid) == mAggregateObjects.end() )
+          continue;
+        
+        std::tr1::shared_ptr<LocationInfo> locInfo = getCachedLocInfo(child_uuid); 
+        
+        String meshName = (locInfo) ? locInfo->mesh : 
+                                      "LOC does not have meshname for " + child_uuid.toString();
+        AGG_LOG(error, "   " << meshName);
       }
       
       AGG_LOG(error, "Failure was retry attempt # " << retryAttempt);
@@ -917,14 +942,18 @@ void AggregateManager::handleUploadFinished(Transfer::UploadRequestPtr request, 
     cdnMeshName = cdnMeshName + "/original/" + mesh_num_part + "/" + localMeshName;
     agg_mesh->uri = cdnMeshName;
     
-    //Update loc                                                                                                                 
-     if ( mLoc->contains(uuid) ) {
-       AGG_LOG(warn, "After upload, LOC no longer contains entry for " << uuid);
-       mLoc->updateLocalAggregateMesh(uuid, cdnMeshName);
-    }
+    //Update loc     
+    mLoc->context()->mainStrand->post(
+        std::tr1::bind(
+            &AggregateManager::updateAggregateLocMesh, this,
+            uuid, cdnMeshName
+        ),
+        "AggregateManager::updateAggregateLocMesh"
+    );
+
     
-    AGG_LOG(info, "Uploaded successfully: " << localMeshName << "\n");
-    std::cout << "CDN mesh name is " << cdnMeshName << "\n";;
+    AGG_LOG(info, "Uploaded successfully: " << localMeshName);
+    AGG_LOG(insane,  "CDN mesh name is " << cdnMeshName);
     
     addToInMemoryCache(cdnMeshName, agg_mesh);
     
@@ -1053,9 +1082,10 @@ void AggregateManager::getLeaves(const std::vector<UUID>& individualObjects) {
 
     std::tr1::shared_ptr<AggregateObject> obj = mAggregateObjects[uuid];
 
-    if (!mLoc->contains(uuid)) continue;
+    std::tr1::shared_ptr<LocationInfo> locInfo = getCachedLocInfo(uuid);
+    if (!locInfo) continue;
 
-    float radius = mLoc->bounds(uuid).radius();
+    float radius = locInfo->bounds.radius();
 
     while (uuid != UUID::null()) {
       if (mDirtyAggregateObjects.find(uuid) != mDirtyAggregateObjects.end()) {
@@ -1101,9 +1131,10 @@ void AggregateManager::generateMeshesFromQueue(Time postTime) {
           for (uint32 i=0; i < aggObject->mChildren.size(); i++) {
             UUID& child_uuid = aggObject->mChildren[i]->mUUID;
 
-            if (!mLoc->contains(child_uuid)) continue;
+            std::tr1::shared_ptr<LocationInfo> locInfo = getCachedLocInfo(child_uuid);
+            if (!locInfo) continue;
 
-            BoundingSphere3f bnds = mLoc->bounds(child_uuid);
+            BoundingSphere3f bnds = locInfo->bounds;
             if (bnds.radius() < radius) {
               radius = bnds.radius();
             }
@@ -1277,103 +1308,168 @@ void AggregateManager::removeStaleLeaves() {
 
 }
 
+void AggregateManager::updateAggregateLocMesh(UUID uuid, String mesh) {
+  if (mLoc->contains(uuid)) {
+    mLoc->updateLocalAggregateMesh(uuid, mesh);
+  }
+}
+
+void AggregateManager::localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, 
+                                                const TimedMotionQuaternion& orient,
+                                                const BoundingSphere3f& bounds, const String& mesh, const String& physics, 
+                                                const String& zernike) 
+{
+  boost::mutex::scoped_lock lock(mLocCacheMutex);
+  mLocationServiceCache.insertLocationInfo(uuid, std::tr1::shared_ptr<LocationInfo>(
+                                           new LocationInfo(loc.position(), bounds, orient.position(), mesh)));
+}
+
+void AggregateManager::localObjectRemoved(const UUID& uuid, bool agg) {
+  boost::mutex::scoped_lock lock(mLocCacheMutex);
+  mLocationServiceCache.removeLocationInfo(uuid);
+}
+
+void AggregateManager::localLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval) {
+  boost::mutex::scoped_lock lock(mLocCacheMutex);
+
+  std::tr1::shared_ptr<LocationInfo> locinfo = mLocationServiceCache.getLocationInfo(uuid);
+  if (!locinfo) return;
+
+  locinfo->currentPosition = newval.position();
+}
+
+void AggregateManager::localOrientationUpdated(const UUID& uuid, bool agg, const TimedMotionQuaternion& newval) {
+  boost::mutex::scoped_lock lock(mLocCacheMutex);
+
+  std::tr1::shared_ptr<LocationInfo> locinfo = mLocationServiceCache.getLocationInfo(uuid);
+  if (!locinfo) return;
+
+  locinfo->currentOrientation = newval.position();    
+}
+
+void AggregateManager::localBoundsUpdated(const UUID& uuid, bool agg, const BoundingSphere3f& newval) {
+  boost::mutex::scoped_lock lock(mLocCacheMutex);
+
+  std::tr1::shared_ptr<LocationInfo> locinfo = mLocationServiceCache.getLocationInfo(uuid);
+  if (!locinfo) return;
+
+  locinfo->bounds = newval;
+}
+
+void AggregateManager::localMeshUpdated(const UUID& uuid, bool agg, const String& newval) {
+  boost::mutex::scoped_lock lock(mLocCacheMutex);
+
+  std::tr1::shared_ptr<LocationInfo> locinfo = mLocationServiceCache.getLocationInfo(uuid);
+  if (!locinfo) return;
+    
+  locinfo->mesh = newval;
+}
+
+std::tr1::shared_ptr<AggregateManager::LocationInfo> AggregateManager::getCachedLocInfo(const UUID& uuid) {
+  boost::mutex::scoped_lock lock(mLocCacheMutex);
+    
+  std::tr1::shared_ptr<LocationInfo> locinfo = mLocationServiceCache.getLocationInfo(uuid);
+
+  return locinfo;
+}
+
 
 namespace {
-// Return true if the service is a default value
-bool ServiceIsDefault(const String& s) {
+  // Return true if the service is a default value
+  bool ServiceIsDefault(const String& s) {
     if (!s.empty() && s != "http" && s != "80")
-        return false;
+      return false;
     return true;
-}
-// Return empty if this is already empty or the default for this
-// service. Otherwise, return the old value
-String ServiceIfNotDefault(const String& s) {
+  }
+  // Return empty if this is already empty or the default for this
+  // service. Otherwise, return the old value
+  String ServiceIfNotDefault(const String& s) {
     if (!ServiceIsDefault(s))
-        return s;
+      return s;
     return "80";
-}
+  }
 }
 
 
 void AggregateManager::sendKeepAlives() {
-    // Don't bother unless we're uploading to the real CDN
-    if (!mOAuth || mCDNUsername.empty())
-        return;
+  // Don't bother unless we're uploading to the real CDN
+  if (!mOAuth || mCDNUsername.empty())
+    return;
 
-    Time tnow = mLoc->context()->recentSimTime();
+  Time tnow = mLoc->context()->recentSimTime();
 
-    // This could definitely be more efficient...
-    boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
-    for(AggregateObjectsMap::iterator it = mAggregateObjects.begin(); it != mAggregateObjects.end(); it++) {
-        if (it->second->refreshTTL != Time::null() &&
-            it->second->refreshTTL < tnow &&
-            !it->second->cdnBaseName.empty())
-        {
-            String keep_alive_path = "/api/keepalive" + it->second->cdnBaseName;
-            // Currently there's no keepalive support in the Transfer
-            // libraries, so we construct and send the http request ourselves.
+  // This could definitely be more efficient...
+  boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
+  for(AggregateObjectsMap::iterator it = mAggregateObjects.begin(); it != mAggregateObjects.end(); it++) {
+    if (it->second->refreshTTL != Time::null() &&
+        it->second->refreshTTL < tnow &&
+        !it->second->cdnBaseName.empty())
+      {
+        String keep_alive_path = "/api/keepalive" + it->second->cdnBaseName;
+        // Currently there's no keepalive support in the Transfer
+        // libraries, so we construct and send the http request ourselves.
 
-            Network::Address cdn_addr(mOAuth->hostname, ServiceIfNotDefault(mOAuth->service));
-            String full_oauth_hostinfo = mOAuth->hostname;
-            if (!ServiceIsDefault(mOAuth->service))
-                full_oauth_hostinfo += ":" + mOAuth->service;
+        Network::Address cdn_addr(mOAuth->hostname, ServiceIfNotDefault(mOAuth->service));
+        String full_oauth_hostinfo = mOAuth->hostname;
+        if (!ServiceIsDefault(mOAuth->service))
+          full_oauth_hostinfo += ":" + mOAuth->service;
 
-            Transfer::HttpManager::Headers headers;
-            headers["Host"] = full_oauth_hostinfo;
+        Transfer::HttpManager::Headers headers;
+        headers["Host"] = full_oauth_hostinfo;
 
-            Transfer::HttpManager::QueryParameters query_params;
-            query_params["username"] = mCDNUsername;
-            query_params["ttl"] = boost::lexical_cast<String>(mModelTTL.seconds());
+        Transfer::HttpManager::QueryParameters query_params;
+        query_params["username"] = mCDNUsername;
+        query_params["ttl"] = boost::lexical_cast<String>(mModelTTL.seconds());
 
-            AGG_LOG(detailed, "Requesting TTL refresh for " << it->first);
-            Transfer::OAuthHttpManager oauth_http(mOAuth);
-            oauth_http.get(
-                cdn_addr, keep_alive_path,
-                std::tr1::bind(&AggregateManager::handleKeepAliveResponse, this, it->first, _1, _2, _3),
-                headers, query_params
-            );
-        }
-    }
+        AGG_LOG(detailed, "Requesting TTL refresh for " << it->first);
+        Transfer::OAuthHttpManager oauth_http(mOAuth);
+        oauth_http.get(
+                       cdn_addr, keep_alive_path,
+                       std::tr1::bind(&AggregateManager::handleKeepAliveResponse, this, it->first, _1, _2, _3),
+                       headers, query_params
+                       );
+      }
+  }
 }
 
 void AggregateManager::handleKeepAliveResponse(const UUID& objid,
-    std::tr1::shared_ptr<Transfer::HttpManager::HttpResponse> response,
-    Transfer::HttpManager::ERR_TYPE error, const boost::system::error_code& boost_error)
+                                               std::tr1::shared_ptr<Transfer::HttpManager::HttpResponse> response,
+                                               Transfer::HttpManager::ERR_TYPE error, const boost::system::error_code& boost_error)
 {
-    // Check a bunch of error conditions, leaving the refresh TTL setting for
-    // the next iteration is something went wrong.
+  // Check a bunch of error conditions, leaving the refresh TTL setting for
+  // the next iteration is something went wrong.
 
-    if (error == Transfer::HttpManager::REQUEST_PARSING_FAILED) {
-        AGG_LOG(error, "Request parsing failed during aggregate TTL refresh (" << objid << ")");
-        return;
-    } else if (error == Transfer::HttpManager::RESPONSE_PARSING_FAILED) {
-        AGG_LOG(error, "Response parsing failed during aggregate TTL refresh (" << objid << ")");
-        return;
-    } else if (error == Transfer::HttpManager::BOOST_ERROR) {
-        AGG_LOG(error, "A boost error happened during aggregate TTL refresh (" << objid << "). Boost error = " << boost_error.message());
-        return;
-    } else if (error != Transfer::HttpManager::SUCCESS) {
-        AGG_LOG(error, "An unknown error happened during aggregate TTL refresh. (" << objid << ")");
-        return;
-    }
+  if (error == Transfer::HttpManager::REQUEST_PARSING_FAILED) {
+    AGG_LOG(error, "Request parsing failed during aggregate TTL refresh (" << objid << ")");
+    return;
+  } else if (error == Transfer::HttpManager::RESPONSE_PARSING_FAILED) {
+    AGG_LOG(error, "Response parsing failed during aggregate TTL refresh (" << objid << ")");
+    return;
+  } else if (error == Transfer::HttpManager::BOOST_ERROR) {
+    AGG_LOG(error, "A boost error happened during aggregate TTL refresh (" << objid << "). Boost error = " << boost_error.message());
+    return;
+  } else if (error != Transfer::HttpManager::SUCCESS) {
+    AGG_LOG(error, "An unknown error happened during aggregate TTL refresh. (" << objid << ")");
+    return;
+  }
 
-    if (response->getStatusCode() != 200) {
-        AGG_LOG(error, "HTTP status code = " << response->getStatusCode() << " instead of 200 during aggregate TTL refresh (" << objid << ")");
-        return;
-    }
+  if (response->getStatusCode() != 200) {
+    AGG_LOG(error, "HTTP status code = " << response->getStatusCode() << " instead of 200 during aggregate TTL refresh (" << objid << ")");
+    return;
+  }
 
-    Transfer::DenseDataPtr response_data = response->getData();
-    if (response_data && response_data->size() != 0) {
-        AGG_LOG(error, "Got non-empty response durring aggregate TTL refresh: " << response_data->asString());
-        return;
-    }
+  Transfer::DenseDataPtr response_data = response->getData();
+  if (response_data && response_data->size() != 0) {
+    AGG_LOG(error, "Got non-empty response durring aggregate TTL refresh: " << response_data->asString());
+    return;
+  }
 
-    // If all these passed, then we were successful. Setup next refresh time
-    AGG_LOG(detailed, "Successfully refreshed TTL for " << objid);
-    boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
-    AggregateObjectsMap::iterator it = mAggregateObjects.find(objid);
-    if (it == mAggregateObjects.end()) return;
-    it->second->refreshTTL = mLoc->context()->recentSimTime() + (mModelTTL*.75);
+  // If all these passed, then we were successful. Setup next refresh time
+  AGG_LOG(detailed, "Successfully refreshed TTL for " << objid);
+  boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
+  AggregateObjectsMap::iterator it = mAggregateObjects.find(objid);
+  if (it == mAggregateObjects.end()) return;
+  it->second->refreshTTL = mLoc->context()->recentSimTime() + (mModelTTL*.75);
 }
 
 
