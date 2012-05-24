@@ -144,7 +144,7 @@ Simulation* HostedObject::runSimulation(
     // This is kept outside the lock because the constructor can
     // access the HostedObject and call methods which need the
     // lock.
-    HO_LOG(info,String("[OH] Initializing ") + simName);
+    HO_LOG(info,String("Initializing ") + simName);
 
     try {
         sim = SimulationFactory::getSingleton().getConstructor ( simName ) (
@@ -344,12 +344,12 @@ void HostedObject::initializeScript(const String& script_type, const String& arg
     HO_LOG(detailed,"Creating a script object for object");
 
     if (!ObjectScriptManagerFactory::getSingleton().hasConstructor(script_type)) {
-        HO_LOG(debug,"[HO] Failed to create script for object because incorrect script type");
+        HO_LOG(debug,"Failed to create script for object because incorrect script type");
         return;
     }
     ObjectScriptManager *mgr = mObjectHost->getScriptManager(script_type);
     if (mgr) {
-        HO_LOG(insane,"[HO] Creating script for object with args of "<<args);
+        HO_LOG(insane,"Creating script for object with args of "<<args);
         // First, tell storage that we're active. We only do this here because
         // only scripts use storage -- we don't need to try to activate it until
         // we have an active script
