@@ -70,9 +70,13 @@ SIRIKATA_PLUGIN_EXPORT_C void init() {
     if (weightexp_plugin_refcount==0) {
         InitPluginOptions();
         using std::tr1::placeholders::_1;
+#ifdef SIRIKATA_BAD_BOOST_ERF
+	SILOG(exp, warn, "Not registering 'gaussian' with RegionWeightCalculatorFactory due to bad Boost.Math library.");
+#else
         RegionWeightCalculatorFactory::getSingleton()
             .registerConstructor("gaussian",
                 std::tr1::bind(&createRegionWeightCalculator, _1));
+#endif
     }
     weightexp_plugin_refcount++;
 }
@@ -88,7 +92,9 @@ SIRIKATA_PLUGIN_EXPORT_C int decrefcount() {
 SIRIKATA_PLUGIN_EXPORT_C void destroy() {
     using namespace Sirikata;
     if (weightexp_plugin_refcount==0) {
+#ifndef SIRIKATA_BAD_BOOST_ERF
         RegionWeightCalculatorFactory::getSingleton().unregisterConstructor("gaussian");
+#endif
     }
 }
 

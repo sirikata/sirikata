@@ -1,3 +1,9 @@
+sirikata (0.0.24-0ubuntu3) precise; urgency=low
+
+  * Fix build to work with Boost 1.46.
+
+ -- Ewen Cheslack-Postava <echeslack@gmail.com>  Fri, 18 May 2012 00:23:32 -0700
+
 sirikata (0.0.24-0ubuntu2) precise; urgency=low
 
   * Fixes for Ubuntu Precise.
