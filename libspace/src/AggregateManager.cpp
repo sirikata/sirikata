@@ -195,7 +195,7 @@ bool AggregateManager::cleanUpChild(const UUID& parent_id, const UUID& child_id)
     if (!mAggregateObjects[child_id]->leaf) {
         // Aggregate that's getting removed because it only has one child
         // left, just remove the parent pointer
-        mAggregateObjects[child_id]->mParentUUID = UUID::null();
+        mAggregateObjects[child_id]->mParentUUIDs.erase(parent_id);
         return false;
     }
 
@@ -232,11 +232,7 @@ void AggregateManager::addChild(const UUID& uuid, const UUID& child_uuid) {
         mAggregateObjects[child_uuid] = std::tr1::shared_ptr<AggregateObject> (new AggregateObject(child_uuid, uuid, true));
     }
     else {
-      if (mAggregateObjects[child_uuid]->mParentUUID != uuid) {
-        iRemoveChild(mAggregateObjects[child_uuid]->mParentUUID, child_uuid);
-      }
-
-      mAggregateObjects[child_uuid]->mParentUUID = uuid;
+      mAggregateObjects[child_uuid]->mParentUUIDs.insert(uuid);
     }
 
     children.push_back(mAggregateObjects[child_uuid]);
@@ -1075,33 +1071,33 @@ std::vector<AggregateManager::AggregateObjectPtr >& AggregateManager::getChildre
   return iGetChildren(uuid);
 }
 
+void AggregateManager::addLeavesUpTree(UUID leaf_uuid, UUID uuid) {
+  if (uuid == UUID::null()) return;
+  if (mAggregateObjects.find(uuid) == mAggregateObjects.end()) return;
+
+  std::tr1::shared_ptr<AggregateObject> obj = mAggregateObjects[uuid];
+  if (!obj) return;
+  std::tr1::shared_ptr<LocationInfo> locInfo = getCachedLocInfo(uuid);
+  if (!locInfo) return;
+  
+  if (mDirtyAggregateObjects.find(uuid) != mDirtyAggregateObjects.end()) {  
+    float radius = locInfo->bounds.radius();
+    float solid_angle = TWO_PI * (1-sqrt(1- pow(radius/obj->mDistance,2)));
+    
+    if (solid_angle > ONE_PIXEL_SOLID_ANGLE) {
+      obj->mLeaves.push_back(leaf_uuid);
+    }
+  }
+  
+  for (std::set<UUID>::iterator it = obj->mParentUUIDs.begin(); it != obj->mParentUUIDs.end(); it++) {
+    addLeavesUpTree(leaf_uuid, *it);
+  }
+}
+
 void AggregateManager::getLeaves(const std::vector<UUID>& individualObjects) {
   for (uint32 i=0; i<individualObjects.size(); i++) {
-    const  UUID& indl_uuid = individualObjects[i];
-    UUID uuid = indl_uuid;
-
-    std::tr1::shared_ptr<AggregateObject> obj = mAggregateObjects[uuid];
-
-    std::tr1::shared_ptr<LocationInfo> locInfo = getCachedLocInfo(uuid);
-    if (!locInfo) continue;
-
-    float radius = locInfo->bounds.radius();
-
-    while (uuid != UUID::null()) {
-      if (mDirtyAggregateObjects.find(uuid) != mDirtyAggregateObjects.end()) {
-
-        float solid_angle = TWO_PI * (1-sqrt(1- pow(radius/obj->mDistance,2)));
-
-        if (solid_angle > ONE_PIXEL_SOLID_ANGLE) {
-          obj->mLeaves.push_back(indl_uuid);
-        }
-      }
-
-      uuid = obj->mParentUUID;
-
-      if (mAggregateObjects.find(uuid) != mAggregateObjects.end())
-        obj = mAggregateObjects[uuid];
-    }
+    UUID indl_uuid = individualObjects[i];
+    addLeavesUpTree(indl_uuid, indl_uuid);
   }
 }
 
@@ -1235,17 +1231,18 @@ void AggregateManager::updateChildrenTreeLevel(const UUID& uuid, uint16 treeLeve
 //Recursively add uuid and all nodes upto the root to the dirty aggregates map.
 void AggregateManager::addDirtyAggregates(UUID uuid) {
   //mAggregateObjectsMutex MUST be locked BEFORE calling this function.
-
-  while (uuid != UUID::null()) {
+  if (uuid != UUID::null() && mAggregateObjects.find(uuid) != mAggregateObjects.end() ) {    
     std::tr1::shared_ptr<AggregateObject> aggObj = mAggregateObjects[uuid];
 
-    if (aggObj->mChildren.size() > 0) {
+    if (aggObj && aggObj->mChildren.size() > 0) {
       mDirtyAggregateObjects[uuid] = aggObj;
-      aggObj->generatedLastRound = false;
-    }
+      aggObj->generatedLastRound = false;    
 
-    uuid = aggObj->mParentUUID;
-  }
+      for (std::set<UUID>::iterator it = aggObj->mParentUUIDs.begin(); it != aggObj->mParentUUIDs.end(); it++) {
+        addDirtyAggregates(*it);
+      }
+    }
+  }  
 }
 
 bool AggregateManager::findChild(std::vector<AggregateManager::AggregateObjectPtr>& v,

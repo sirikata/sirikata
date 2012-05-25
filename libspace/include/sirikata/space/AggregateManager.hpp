@@ -124,7 +124,7 @@ private:
 
   typedef struct AggregateObject{
     UUID mUUID;
-    UUID mParentUUID;
+    std::set<UUID> mParentUUIDs;
     std::vector< std::tr1::shared_ptr<struct AggregateObject>  > mChildren;
     // Whether this is actually a leaf object (i.e. added implicitly as
     // AggregateObject when added as a child of a true aggregate).
@@ -134,7 +134,7 @@ private:
     Mesh::MeshdataPtr mMeshdata;
 
     AggregateObject(const UUID& uuid, const UUID& parentUUID, bool is_leaf) :
-      mUUID(uuid), mParentUUID(parentUUID),
+      mUUID(uuid),
       leaf(is_leaf),
       mLastGenerateTime(Time::null()),
       mTreeLevel(0),  mNumObservers(0),
@@ -142,6 +142,7 @@ private:
       cdnBaseName(),
       refreshTTL(Time::null())
     {
+      mParentUUIDs.insert(parentUUID);
       mMeshdata = Mesh::MeshdataPtr();
       generatedLastRound = false;
       mDistance = 0.01;
@@ -202,6 +203,7 @@ private:
   std::vector<AggregateObjectPtr>& getChildren(const UUID& uuid);
   std::vector<AggregateManager::AggregateObjectPtr >& iGetChildren(const UUID& uuid) ;
   void getLeaves(const std::vector<UUID>& mIndividualObjects);
+  void addLeavesUpTree(UUID leaf_uuid, UUID uuid);
   bool isAggregate(const UUID& uuid);
   
 
