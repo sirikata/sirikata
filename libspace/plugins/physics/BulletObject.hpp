@@ -92,7 +92,7 @@ public:
 protected:
 
     // Helper for computing the collision
-    btCollisionShape* computeCollisionShape(const UUID& id, bulletObjBBox shape_type, Mesh::MeshdataPtr retrievedMesh);
+    btCollisionShape* computeCollisionShape(const UUID& id, bulletObjBBox shape_type, bulletObjTreatment treatment, Mesh::MeshdataPtr retrievedMesh);
 
     BulletPhysicsService* mParent;
 }; // class BulletObject

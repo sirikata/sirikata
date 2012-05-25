@@ -74,7 +74,7 @@ BulletRigidBodyObject::~BulletRigidBodyObject() {
 }
 
 void BulletRigidBodyObject::load(MeshdataPtr retrievedMesh) {
-    mObjShape = computeCollisionShape(mID, mBBox, retrievedMesh);
+    mObjShape = computeCollisionShape(mID, mBBox, mTreatment, retrievedMesh);
     assert(mObjShape != NULL);
     addRigidBody();
 }
@@ -244,7 +244,7 @@ void BulletRigidBodyObject::applyForcedLocation(const TimedMotionVector3f& loc, 
     //any information from discarding move here.
     if (mObjRigidBody == NULL)
       return;
-    
+
     // Setting the motion state triggers a sync, even if its the same one that
     // was already being used.
     mObjRigidBody->setMotionState(mObjMotionState);

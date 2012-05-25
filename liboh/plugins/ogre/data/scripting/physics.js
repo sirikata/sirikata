@@ -69,7 +69,7 @@ var setScriptInfo = function() {
           ' <form>' +
 	  '  <input type="radio" id="sphere" name="radio" checked="checked" /><label for="sphere">Bounding Sphere</label>' +
 	  '  <input type="radio" id="box" name="radio" /><label for="box">Bounding Box</label>' +
-	  '  <input type="radio" id="triangles" name="radio" /><label for="triangles">Triangles (static only)</label>' +
+	  '  <input type="radio" id="triangles" name="radio" /><label for="triangles">Triangles</label>' +
           ' </form>' +
           ' </div>' +
           ' <div id="mass">' +
