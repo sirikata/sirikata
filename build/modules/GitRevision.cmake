@@ -18,7 +18,7 @@
 
 function(GetGitHeadRef _git_head_result _root_dir)
   set(GIT_DIR "${_root_dir}/.git")
-  if(NOT EXISTS "${GIT_DIR}")
+  if(NOT EXISTS "${GIT_DIR}" OR NOT IS_DIRECTORY "${GIT_DIR}")
     # not in git
     set(${_git_head_result} "-1" PARENT_SCOPE)
     return()
@@ -32,7 +32,7 @@ endfunction()
 
 function(GetGitRevision _git_rev_result _root_dir _git_ref)
   set(GIT_DIR "${_root_dir}/.git")
-  if(NOT EXISTS "${GIT_DIR}")
+  if(NOT EXISTS "${GIT_DIR}" OR NOT IS_DIRECTORY "${GIT_DIR}")
     # not in git
     set(${_git_rev_result} "-1" PARENT_SCOPE)
     return()

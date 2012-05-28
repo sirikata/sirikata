@@ -92,7 +92,7 @@ SIRIKATA_FUNCTION_EXPORT void finishLog();
 # define SILOGBARE(module,lvl,value)
 #endif
 
-#define SILOG(module,lvl,value) SILOGBARE(module,lvl, "[" << std::setw(9) << std::setprecision(3) << std::fixed << Timer::processElapsed().seconds() << ":" << Sirikata::Logging::LogModuleString(#module) << "] " << Sirikata::Logging::LogLevelString(Sirikata::Logging::lvl, #lvl) << ": " << std::resetiosflags(std::ios_base::floatfield | std::ios_base::adjustfield) << value)
+#define SILOG(module,lvl,value) SILOGBARE(module,lvl, "[" << std::setw(9) << std::setprecision(3) << std::fixed << Sirikata::Timer::processElapsed().seconds() << ":" << Sirikata::Logging::LogModuleString(#module) << "] " << Sirikata::Logging::LogLevelString(Sirikata::Logging::lvl, #lvl) << ": " << std::resetiosflags(std::ios_base::floatfield | std::ios_base::adjustfield) << value)
 
 #if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_LINUX
 // FIXME only works on GCC
