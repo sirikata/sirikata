@@ -468,7 +468,8 @@ void doExecApp(int* retval) {
     binaryArgs.insert(binaryArgs.begin(), appExe);
     String cmd = "";
     for(int i = 0; i < binaryArgs.size(); i++)
-        cmd = cmd + " " + binaryArgs[i];
+        cmd = cmd + " \"" + binaryArgs[i] + "\"";
+    SILOG(launcher, info, "Launching " << cmd);
     /* Helpful for debugging
     int msgboxID = MessageBox(
         NULL,
@@ -533,6 +534,7 @@ int main(int argc, char** argv) {
     // Cleanup
     gContext->cleanup();
     trace->prepareShutdown();
+    
     delete gContext;
     delete trace;
 
