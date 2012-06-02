@@ -480,7 +480,9 @@ void doExecApp(int* retval) {
     */
     STARTUPINFO info={sizeof(info)};
     PROCESS_INFORMATION processInfo;
-    CreateProcess(appExe.c_str(), (LPSTR)cmd.c_str(), NULL, NULL, TRUE, 0, NULL, appCurrDir.c_str(), &info, &processInfo);
+    BOOL created = CreateProcess(appExe.c_str(), (LPSTR)cmd.c_str(), NULL, NULL, FALSE, DETACHED_PROCESS, NULL, appCurrDir.c_str(), &info, &processInfo);
+    if (!created)
+        SILOG(launcher, fatal, "CreateProcess failed.");
 #endif
     eventLoopExit(retval, 0);
 }
@@ -532,14 +534,23 @@ int main(int argc, char** argv) {
     gContext->run(1);
 
     // Cleanup
+    rdl.reset();
+    resourceDownloads.clear();
+    gTransferPool.reset();
     gContext->cleanup();
+
     trace->prepareShutdown();
     
     delete gContext;
+
+    trace->shutdown();
     delete trace;
 
     delete iostrand;
     delete ios;
+
+    Transfer::TransferMediator::destroy();
+    Sirikata::Logging::finishLog();
 
     return retval;
 }

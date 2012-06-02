@@ -4,6 +4,7 @@
 #include <sirikata/core/transfer/MaxPriorityAggregation.hpp>
 #include <sirikata/core/util/Timer.hpp>
 #include <stdio.h>
+#include <sirikata/core/transfer/TransferHandlers.hpp>
 
 using namespace std;
 
@@ -25,6 +26,7 @@ TransferMediator& TransferMediator::getSingleton() {
 }
 void TransferMediator::destroy() {
     AutoSingleton<TransferMediator>::destroy();
+    SharedChunkCache::destroy();
 }
 
 TransferMediator::TransferMediator() {
@@ -35,7 +37,9 @@ TransferMediator::TransferMediator() {
 }
 
 TransferMediator::~TransferMediator() {
+    cleanup();
     delete mAggregationAlgorithm;
+    delete mThread;
 }
 
 void TransferMediator::mediatorThread() {
@@ -75,6 +79,8 @@ void TransferMediator::registerPool(TransferPoolPtr pool) {
 }
 
 void TransferMediator::cleanup() {
+    if (mCleanup) return;
+
     mCleanup = true;
     mThread->join();
 }
