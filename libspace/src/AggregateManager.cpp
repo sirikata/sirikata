@@ -729,7 +729,6 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
   AGG_LOG(insane, "Time to generate: " << (Timer::now() - curTime).toMilliseconds() );
 
 
-  delete [] meshURIs;
   return GEN_SUCCESS;
 }
 
