@@ -1,3 +1,9 @@
+sirikata (0.0.24-0ubuntu4) precise; urgency=low
+
+  * Remove unnecessary nvidia-cg-toolkit dependency.
+
+ -- Ewen Cheslack-Postava <echeslack@gmail.com>  Mon, 04 Jun 2012 10:58:07 -0700
+
 sirikata (0.0.24-0ubuntu3) precise; urgency=low
 
   * Fix build to work with Boost 1.46.
