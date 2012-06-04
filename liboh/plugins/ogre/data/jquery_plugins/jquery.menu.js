@@ -19,11 +19,11 @@
 	var menus = [], //list of all menus
 		visibleMenus = [], //list of all visible menus
 		activeMenu = activeItem = null,
-		menuDIVElement = $('<div class="menu-div outerbox" style="position:absolute;top:0;left:0;display:none;"><div class="shadowbox1"></div><div class="shadowbox2"></div><div class="shadowbox3"></div></div>')[0],
+		menuDIVElement = $('<div class="ui-widget-content menu-div outerbox" style="position:absolute;top:0;left:0;display:none;"><div class="shadowbox1"></div><div class="shadowbox2"></div><div class="shadowbox3"></div></div>')[0],
 		menuULElement = $('<ul class="menu-ul innerbox"></ul>')[0],
 		menuItemElement = $('<li style="position:relative;"><div class="menu-item"></div></li>')[0],
 		arrowElement = $('<img class="menu-item-arrow" />')[0],
-		$rootDiv = $('<div id="root-menu-div" style="position:absolute;top:0;left:0;"></div>'), //create main menu div
+		$rootDiv = $('<div id="root-menu-div" class="ui-widget" style="position:absolute;top:0;left:0;"></div>'), //create main menu div
 		defaults = {
 			// $.Menu options
 			showDelay : 200,
