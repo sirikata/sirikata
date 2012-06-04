@@ -56,10 +56,11 @@ namespace Sirikata {
 class SIRIKATA_SPACE_EXPORT AggregateManager : public LocationServiceListener {
 private:
 
-  Thread* mAggregationThread;
-  Network::IOService* mAggregationService;
-  Network::IOStrand* mAggregationStrand;
-  Network::IOWork* mIOWork;  
+  enum{NUM_GENERATION_THREADS=4};
+  Thread* mAggregationThreads[NUM_GENERATION_THREADS];
+  Network::IOService* mAggregationServices[NUM_GENERATION_THREADS];
+  Network::IOStrand* mAggregationStrands[NUM_GENERATION_THREADS];
+  Network::IOWork* mIOWorks[NUM_GENERATION_THREADS];  
   
   typedef struct LocationInfo {
     Vector3f currentPosition;
@@ -172,7 +173,7 @@ private:
   AggregateObjectsMap mAggregateObjects;
   Time mAggregateGenerationStartTime;    
   std::tr1::unordered_map<UUID, AggregateObjectPtr, UUID::Hasher> mDirtyAggregateObjects;
-  std::map<float, std::deque<AggregateObjectPtr > > mObjectsByPriority;
+  std::map<float, std::deque<AggregateObjectPtr > > mObjectsByPriority[NUM_GENERATION_THREADS];
 
   //Variables related to downloading and in-memory caching meshes
   boost::mutex mMeshStoreMutex;
@@ -188,7 +189,7 @@ private:
   Poller* mCDNKeepAlivePoller;
 
   //CDN upload threads' variables
-  enum{NUM_UPLOAD_THREADS = 8};
+  enum{NUM_UPLOAD_THREADS = 4};
   Thread* mUploadThreads[NUM_UPLOAD_THREADS];
   Network::IOService* mUploadServices[NUM_UPLOAD_THREADS];
   Network::IOStrand* mUploadStrands[NUM_UPLOAD_THREADS];
@@ -210,11 +211,13 @@ private:
   //Function related to generating and updating aggregates.
   void updateChildrenTreeLevel(const UUID& uuid, uint16 treeLevel);
   void addDirtyAggregates(UUID uuid);
-  void generateMeshesFromQueue(Time postTime);
+  void queueDirtyAggregates(Time postTime);
+  void generateMeshesFromQueue(uint8 i);
+
   void generateAggregateMeshAsyncIgnoreErrors(const UUID uuid, Time postTime, bool generateSiblings = true);
   enum{GEN_SUCCESS=1, CHILDREN_NOT_YET_GEN=2, OTHER_GEN_FAILURE=3}; 
   uint32 generateAggregateMeshAsync(const UUID uuid, Time postTime, bool generateSiblings = true);
-  void aggregationThreadMain();
+  void aggregationThreadMain(uint8 i);
   void updateAggregateLocMesh(UUID uuid, String mesh);
 
 
