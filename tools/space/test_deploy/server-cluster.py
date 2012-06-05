@@ -21,8 +21,8 @@ pinto_port = 6665
 n_cseg_servers = 1
 n_cseg_upper_servers = 1
 cseg_ip = hostname
-cseg_port_base = 6234
-
+cseg_port_base = 6235
+cseg_service_tcp_port = 6234 # The port space servers connect on
 oseg_prefix = 'myspace-'
 
 
@@ -30,8 +30,20 @@ oseg_prefix = 'myspace-'
 # they go into a file that is only read once
 def generate_ip_file():
     f = open('servermap.txt', 'w')
+    # And the real data
     for ss in range(nservers):
         internal_port = port_base + 2*ss
+        external_port = internal_port + 1
+        print >>f, hostname + ':' + str(internal_port) + ':' + str(external_port)
+    f.close()
+
+def generate_cseg_ip_file():
+    # This servermap is used for cseg servers to contact each other (separate
+    # from the port used for space servers to connect to them)
+    f = open('cseg_servermap.txt', 'w')
+    # And the real data
+    for cs in range(n_cseg_servers):
+        internal_port = cseg_port_base + 2*cs
         external_port = internal_port + 1
         print >>f, hostname + ':' + str(internal_port) + ':' + str(external_port)
     f.close()
@@ -48,19 +60,22 @@ def get_region_and_layout():
 
 
 def startCSeg(**kwargs):
+    generate_cseg_ip_file()
     region, layout = get_region_and_layout()
 
     for cs in range(n_cseg_servers):
         args = [
+            # CSeg server IDs can't overlap with space server
+            # IDs. Also, they must be the smallest IDs
             '--cseg-id=%d' % (cs+1),
 
             '--servermap=tabular',
-            '--cseg-servermap-options=--filename=servermap.txt',
+            '--cseg-servermap-options=--filename=cseg_servermap.txt',
 
             '--layout=%s' % (layout),
             '--region=%s' % (region),
 
-            '--cseg-service-tcp-port=' + str(cseg_port_base + cs),
+            '--cseg-service-tcp-port=' + str(cseg_service_tcp_port),
             '--num-cseg-servers=' + str(n_cseg_servers),
             '--num-upper-tree-cseg-servers=' + str(n_cseg_upper_servers)
             ]
@@ -81,7 +96,7 @@ def startSpace(**kwargs):
         region, layout = get_region_and_layout()
 
         args = [
-            '--id=%d' % (ss+1), # Server ID's start at 0, not one
+            '--id=%d' % (ss+1),
 
             '--servermap=tabular',
             '--servermap-options=--filename=servermap.txt',
@@ -91,7 +106,7 @@ def startSpace(**kwargs):
 
             '--cseg=client',
             '--cseg-service-host=' + str(cseg_ip),
-            '--cseg-service-tcp-port=' + str(cseg_port_base + (ss % n_cseg_servers)),
+            '--cseg-service-tcp-port=' + str(cseg_service_tcp_port),
 
             '--pinto=master',
             '--pinto-options=' + '--host=' + str(pinto_ip) + ' --port=' + str(pinto_port),
