@@ -49,10 +49,20 @@ TabularServerIDMap::TabularServerIDMap(Context* ctx, std::istream&filestream)
         char ohservice[1025];
         ohservice[1024]='\0';
         filestream.getline(ip,1024,':');
+        int32 host_length = filestream.gcount();
         if (filestream.eof()) break;
         filestream.getline(service,1024,':');
+        int32 service_length = filestream.gcount();
         if (filestream.eof()) break;
         filestream.getline(ohservice,1024,'\n');
+        int32 oh_service_length = filestream.gcount();
+
+        // If any of the parts are empty, ignore this line. Note that we check
+        // for length 1 since the ':' or '\n' are counted
+        if (host_length == 1 || service_length == 1 || oh_service_length == 1) {
+            count++;
+            continue;
+        }
 
         Address4 internal_addy(Sirikata::Network::Address(ip,service));
         mInternalIDMap[count] = internal_addy;
