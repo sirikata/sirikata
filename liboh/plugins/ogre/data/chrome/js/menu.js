@@ -63,17 +63,10 @@ function alert_message(title, text) {
 
     var menu_callbacks = {};
 
-    var menu_item_id = function(menu_item_name) {
-        return 'sirikata-global-menu-' + menu_item_name;
-    };
-    var menu_item_selector = function(menu_item_name) {
-        return '#' + menu_item_id(menu_item_name);
-    };
-
     var menu_options = {
         copyClassAttr: true,
         minWidth: 120,
-        arrowSrc: 'arrow_right.gif',
+        arrowClass: 'ui-icon-triangle-1-e',
         onClick: function(e, menuItem) {
 	    $.Menu.closeAll();
 
@@ -86,6 +79,11 @@ function alert_message(title, text) {
             }
 	}
     };
+    // Track menu items, the actual entries
+    var menu_items = {};
+    // Also track entire menus. A menu_item can be turned into an entire menu to
+    // generate submenus
+    var menus = {};
 
     /** Create a menu item. This takes an object with parameter settings. The
      *  parameters include:
@@ -99,31 +97,33 @@ function alert_message(title, text) {
      */
     sirikata.ui.menu = function(params) {
         $(document).ready(function() {
-            var parent, main_menu;
+            var parent;
             if (params.parent !== undefined) {
-                parent = $(menu_item_selector(params.parent));
-                main_menu = false;
+                // Child of existing menu or submenu
+                parent = menus[params.parent];
+                if (parent === undefined) {
+                    menus[params.parent] = new $.Menu(menu_items[params.parent]);
+                    parent = menus[params.parent];
+                }
+
+                // addClass adds the class to the menu item. We use
+                // this to find callbacks. We have to use classes
+                // because their the only property of the node we have
+                // control over
+                menu_items[params.id] = new $.MenuItem({src: params.text, addClass: params.id}, menu_options);
+                parent.addItem(menu_items[params.id]);
             }
             else {
-                parent = $('#sirikata-global-menu-div');
-                main_menu = true;
+                // New root menu
+                var menu_li = $('<li>' + params.text + '</li>')
+                    .appendTo('#sirikata-global-menu')
+                    .addClass('menumain')
+                    .addClass(params.id); // class is the only attr copied
+                menus[params.id] = new $.Menu(menu_li, null, menu_options);
             }
 
+            // In both cases, we want to register a click handler
             menu_callbacks[params.id] = params.click;
-
-            // Find or create the ul for holding this node
-            var parent_ul = parent.children('ul');
-            if (parent_ul.length == 0)
-                parent_ul = $('<ul class="menu"/>').appendTo(parent);
-            // Add our li for the menu item
-            var menu_li = $('<li>' + params.text + '</li>')
-                .appendTo(parent_ul)
-                .attr('class', params.id) // class is the only attr copied
-                .attr('id', menu_item_id(params.id));
-            if (main_menu)
-                menu_li.addClass('menumain');
-            // And regenerate the menu
-            $('#sirikata-global-menu').menu(menu_options);
         });
 
         return {
@@ -136,13 +136,9 @@ function alert_message(title, text) {
     // Static method for removing a menu item by selector
     sirikata.ui.menu.remove = function(selector) {
         $(selector).remove();
-        $('#sirikata-global-menu').menu(menu_options);
     };
 
     $(document).ready(function() {
-        // Do initial menu setup
-        $('#sirikata-global-menu').menu(menu_options);
-
         // Then register our default menu items.
         sirikata.ui.menu({
             'id' : 'file',
@@ -168,9 +164,15 @@ function alert_message(title, text) {
         });
 
         sirikata.ui.menu({
+            'id' : 'options-display',
+            'text' : 'Display',
+            'parent' : 'options'
+        });
+        
+        sirikata.ui.menu({
             'id' : 'toggle-clock',
             'text' : 'Toggle Clock',
-            'parent' : 'options',
+            'parent' : 'options-display',
             'click' : function() {
                 if(timeClockEnabled) {
 		    timeClockEnabled = false;
@@ -186,7 +188,7 @@ function alert_message(title, text) {
         sirikata.ui.menu({
             'id' : 'toggle-fps',
             'text' : 'Toggle FPS Display',
-            'parent' : 'options',
+            'parent' : 'options-display',
             'click' : function() {
                 if(fpsDisplayEnabled) {
 		    fpsDisplayEnabled = false;
@@ -201,7 +203,7 @@ function alert_message(title, text) {
         sirikata.ui.menu({
             'id' : 'toggle-render-stats',
             'text' : 'Toggle Render Stats Display',
-            'parent' : 'options',
+            'parent' : 'options-display',
             'click' : function() {
                 renderStatsDisplayEnabled = !renderStatsDisplayEnabled;
                 if (renderStatsDisplayEnabled)

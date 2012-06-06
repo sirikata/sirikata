@@ -57,6 +57,11 @@ img.menu-item-arrow{
 	right: 4px;
 	top: 8px;
 }
+span.menu-item-arrow{
+	position: absolute;
+	right: 4px;
+	top: 0px;
+}
 li.menu-separator{
 	border-bottom: 1px solid;
 	height: 0;
