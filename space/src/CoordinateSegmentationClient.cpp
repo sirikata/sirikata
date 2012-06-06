@@ -43,6 +43,8 @@
 #include <sirikata/space/ServerMessage.hpp>
 #include <sirikata/core/network/ServerIDMap.hpp>
 
+#define CSEG_LOG(lvl, msg) SILOG(cseg, lvl, msg)
+
 namespace Sirikata {
 
 template<typename T>
@@ -128,9 +130,7 @@ void CoordinateSegmentationClient::accept_handler() {
   for (std::map<ServerID, SegmentationInfo>::iterator it = segmentationInfoMap.begin();
        it != segmentationInfoMap.end(); it++)
   {
-    printf("segInfo.server=%d, segInfo.region.size=%d\n", it->second.server, (int)it->second.region.size());
-    fflush(stdout);
-
+      CSEG_LOG(info, "segInfo.server=" << it->second.server << ", segInfo.region.size=" << it->second.region.size());
     segInfoVector.push_back(it->second);
   }
 
@@ -153,13 +153,13 @@ void CoordinateSegmentationClient::sendSegmentationListenMessage(const Address4&
   char* addr = inet_ntoa(ip_addr);
 
   csegMessage.mutable_segmentation_listen_message().set_host(std::string(addr));
-  printf("host=%s, port=%d\n", addr, my_addr.port+10000);
+  CSEG_LOG(info, "host=" << addr << ", port=" << my_addr.port+10000);
 
   boost::mutex::scoped_lock scopedLock(mMutex);
   boost::shared_ptr<TCPSocket> socket = getLeasedSocket();
 
   if (socket == boost::shared_ptr<TCPSocket>()) {
-    std::cout << "Error connecting to CSEG server for segmentation listen subscription\n";
+      CSEG_LOG(info, "Error connecting to CSEG server for segmentation listen subscription");
     return ;
   }
 
@@ -177,7 +177,7 @@ void CoordinateSegmentationClient::reportLoad(ServerID sid, const BoundingBox3f&
   boost::shared_ptr<TCPSocket> socket = getLeasedSocket();
 
   if (socket == boost::shared_ptr<TCPSocket>()) {
-    std::cout << "Error connecting to CSEG server for load reporting\n";
+      CSEG_LOG(error, "Error connecting to CSEG server for load reporting");
     return ;
   }
 
@@ -211,8 +211,7 @@ boost::shared_ptr<TCPSocket> CoordinateSegmentationClient::getLeasedSocket() {
     if (error) {
       mLeasedSocket->close();
 
-      std::cout << "Error connecting to  CSEG server for lookup...: " << error.message() << "\n";
-      fflush(stdout);
+      CSEG_LOG(error, "Error connecting to  CSEG server for lookup...: " << error.message());
 
       return boost::shared_ptr<TCPSocket>();
     }
@@ -267,7 +266,7 @@ ServerID CoordinateSegmentationClient::lookup(const Vector3f& pos)  {
     mLookupCache.push_back( LookupCacheEntry(retval, csegMessage.lookup_response_message().server_bbox()) );
   }
 
-  std::cout << "Lookup : " << pos << " : " << retval << "\n";
+  CSEG_LOG(info, "Lookup : " << pos << " : " << retval);
 
   return retval;
 }
@@ -430,7 +429,7 @@ void CoordinateSegmentationClient::service() {
 
     boost::mutex::scoped_lock scopedLock(mMutex);
     if (mLeasedSocket.get() != 0 && mLeasedSocket->is_open() && Timer::now() > mLeaseExpiryTime ) {
-      std::cout << "EXPIRED LEASE; CLOSED CONNECTION AT CLIENT\n"; fflush(stdout);
+        CSEG_LOG(info, "EXPIRED LEASE; CLOSED CONNECTION AT CLIENT");
 
       mLeasedSocket->close();
     }
