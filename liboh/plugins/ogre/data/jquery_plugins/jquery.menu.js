@@ -293,11 +293,9 @@
 			},
 			setActive : function()
 			{
-				if ( !this.parentMenuItem )
+				if ( this.parentMenuItem )
                                     this.active = true;
-			    $(this.target).addClass('ui-state-active');
-
-
+				$(this.target).addClass('ui-state-active');
 			},
 			addItem : function(item)
 			{

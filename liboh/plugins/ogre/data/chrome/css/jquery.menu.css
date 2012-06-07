@@ -42,12 +42,19 @@ li.active {
 .activetarget{
 }
 
-li.menumain {
+ul.menu-ul>li.ui-state-hover {
+    border: 0px; /* Disable border of hover state for menu items so they don't change size */
+}
+
+li.menumain{
+    border: 0px; /* Disable border of hover state for menu items so they don't change size */
 	float: left;
 	padding: 0 10px;
 	cursor: pointer;
 }
-li.menumain:hover {
+li.menumain.ui-state-active {
+    border: 0px; /* Disable border of hover state for menu items so they don't change size */
+    font-weight: bold; /* ui-state-active overrides the bold we had for top-level menus */
 }
 div.menu-item {
 	padding: 1px 10px 1px 4px;
