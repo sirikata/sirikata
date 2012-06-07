@@ -278,7 +278,7 @@
 						}
 					}, function(){
 						if ( !self.visible )
-							$(this).removeClass('activetarget');
+							$(this).removeClass('ui-state-active');
 
 						if ( self.openTimer )
 							clearTimeout(self.openTimer);
@@ -294,9 +294,10 @@
 			setActive : function()
 			{
 				if ( !this.parentMenuItem )
-					$(this.target).addClass('activetarget');
-				else
-					this.active = true;
+                                    this.active = true;
+			    $(this.target).addClass('ui-state-active');
+
+
 			},
 			addItem : function(item)
 			{
@@ -344,7 +345,7 @@
 					visibleMenus.splice(pos, 1);
 				this.visible = this.active = false;
 
-				$(this.target).removeClass('activetarget');
+				$(this.target).removeClass('ui-state-active');
 
 				//hide all submenus
 				for ( i = 0; i < this.subMenus.length; i++ )
@@ -753,6 +754,7 @@
 			{
 				this.active = true;
 				this.$eLI.addClass('active');
+				this.$eLI.addClass('ui-state-hover');
 
 				//set the parent menu item active too if necessary
 				var pmi = this.parentMenu.parentMenuItem;
@@ -765,6 +767,7 @@
 			{
 				this.active = false;
 				this.$eLI.removeClass('active');
+				this.$eLI.removeClass('ui-state-hover');
 				if ( this == activeItem )
 					activeItem = null;
 			},
