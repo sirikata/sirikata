@@ -189,7 +189,7 @@ private:
   Poller* mCDNKeepAlivePoller;
 
   //CDN upload threads' variables
-  enum{NUM_UPLOAD_THREADS = 4};
+  enum{NUM_UPLOAD_THREADS = 8};
   Thread* mUploadThreads[NUM_UPLOAD_THREADS];
   Network::IOService* mUploadServices[NUM_UPLOAD_THREADS];
   Network::IOStrand* mUploadStrands[NUM_UPLOAD_THREADS];

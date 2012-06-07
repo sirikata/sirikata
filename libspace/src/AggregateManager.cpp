@@ -100,9 +100,9 @@ AggregateManager::AggregateManager(LocationService* loc, Transfer::OAuthParamsPt
     id = '1';
     for (uint8 i = 0; i < NUM_GENERATION_THREADS; i++) {
       mAggregationServices[i] = new Network::IOService("AggregateManager::AggregationService"+id);
-      mAggregationStrands[i] = mUploadServices[i]->createStrand("AggregateManager::AggregationStrand"+id);
-      mIOWorks[i] =new Network::IOWork(mUploadServices[i], "AggregateManager::AggregationWork"+id);
-      mAggregationThreads[i] = new Thread("AggregateManager Thread "+id, std::tr1::bind(&AggregateManager::uploadThreadMain, this, i));
+      mAggregationStrands[i] = mAggregationServices[i]->createStrand("AggregateManager::AggregationStrand"+id);
+      mIOWorks[i] =new Network::IOWork(mAggregationServices[i], "AggregateManager::AggregationWork"+id);
+      mAggregationThreads[i] = new Thread("AggregateManager Thread "+id, std::tr1::bind(&AggregateManager::aggregationThreadMain, this, i));
 
       id++;
     }
@@ -761,7 +761,7 @@ void AggregateManager::uploadAggregateMesh(Mesh::MeshdataPtr agg_mesh,
       // strand anyway.
 
       std::stringstream model_ostream(std::ofstream::out | std::ofstream::binary);
-      bool converted = mModelsSystem->convertVisual(agg_mesh, "colladamodels", model_ostream);
+      bool converted = mModelsSystem->convertVisual( agg_mesh, "colladamodels", model_ostream);
 
       /* Debugging code: store the file locally for ease of inspection.
         String modelFilename = std::string("/tmp/") + localMeshName;
@@ -834,7 +834,7 @@ void AggregateManager::uploadAggregateMesh(Mesh::MeshdataPtr agg_mesh,
 
         v = mModelsSystem->load(uploaded_mesh);
       }
-        // FIXME handle non-Meshdata formats
+      // FIXME handle non-Meshdata formats
       MeshdataPtr m = std::tr1::dynamic_pointer_cast<Meshdata>(v);
 
       AGG_LOG(insane, localMeshName << " : upload started");
@@ -924,6 +924,21 @@ void AggregateManager::handleUploadFinished(Transfer::UploadRequestPtr request, 
 		  std::tr1::bind(&AggregateManager::uploadAggregateMesh, this, agg_mesh, aggObject, textureSet, retryAttempt + 1),
 		  "AggregateManager::uploadAggregateMesh"
 		);
+      }
+      else if (retryAttempt < 10) {
+       //Could not upload -- CDN might be overloaded, try again in 30 seconds.
+       mUploadStrands[rand() % NUM_UPLOAD_THREADS]->post(Duration::seconds(15),
+                  std::tr1::bind(&AggregateManager::uploadAggregateMesh, this, agg_mesh, aggObject, textureSet, retryAttempt + 1),
+                  "AggregateManager::uploadAggregateMesh"
+                );
+      }
+      else if (retryAttempt < 15) {
+        //Still cannot upload - just upload an empty mesh so remaining meshes higher up in the tree can be generated.
+       MeshdataPtr m = MeshdataPtr(new Meshdata);
+        mUploadStrands[rand() % NUM_UPLOAD_THREADS]->post(Duration::seconds(15),
+                  std::tr1::bind(&AggregateManager::uploadAggregateMesh, this, m, aggObject, textureSet, retryAttempt + 1),
+                  "AggregateManager::uploadAggregateMesh"
+                );
       }
       
       return;
