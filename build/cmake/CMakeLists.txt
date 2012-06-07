@@ -566,6 +566,7 @@ IF(WIN32)
   SET(OpenCOLLADA_ROOT ${PLATFORM_LIBS}/installed-opencollada)
 ELSE()
   SET(OpenCOLLADA_ROOT ${PLATFORM_LIBS}/installed-opencollada)
+  SET(OpenCOLLADA_LIBRARY_SEARCH_DIRS ${PLATFORM_LIBS}/installed-pcre/lib)
 ENDIF()
 
 SET(OpenCOLLADA_MINIMUM_VERSION 1.1.0)
