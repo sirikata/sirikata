@@ -121,9 +121,9 @@ std.graphics.DisplayProperties = system.Class.extend({
 
                 // Add Options -> Display Settings
                 sirikata.ui.menu({
-                    'id' : 'display-settings',
-                    'text' : 'Display Settings',
-                    'parent' : 'options',
+                    'id' : 'renderer-settings',
+                    'text' : 'Renderer Settings',
+                    'parent' : 'options-display',
                     'click' : function() {
                         toggleVisible();
                     }
