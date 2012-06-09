@@ -47,6 +47,7 @@ system.require('std/graphics/setMesh.em');
 system.require('std/graphics/axes.em');
 system.require('std/graphics/flatlandViewer.em');
 system.require('std/graphics/characterAnimation.em');
+system.require('std/graphics/display.em');
 
 system.require('std/audio/audio.em');
 system.require('std/env/env.em');
@@ -97,7 +98,8 @@ function() {
             //this._loadingUIs++; this._propertybox = new std.propertybox.PropertyBox(this, ui_finish_cb);
             //this._loadingUIs++; this._presenceList = new std.graphics.PresenceList(this._pres, this._simulator, this._scripter, ui_finish_cb);
             this._loadingUIs++; this._setMesh = new std.graphics.SetMesh(this._simulator, ui_finish_cb);
-            //this._loadingUIs++; this._flatland = new std.fl.FL(this, ui_finish_cb);                
+            //this._loadingUIs++; this._flatland = new std.fl.FL(this, ui_finish_cb);
+            this._loadingUIs++; this._displayProperties = new std.graphics.DisplayProperties(this._simulator, ui_finish_cb);
         }
         else
             this.finishedUIInit(cb);
@@ -116,6 +118,7 @@ function() {
         //this._loadingUIs++; this._presenceList.onReset(ui_finish_cb);
         this._loadingUIs++; this._setMesh.onReset(ui_finish_cb);
         //this._loadingUIs++; this._flatland.onReset(ui_finish_cb);
+        this._loadingUIs++; this._displayProperties.onReset(ui_finish_cb);
     };
 
 
@@ -652,6 +655,16 @@ function() {
 
     std.client.Default.prototype.setMaxObjects = function(maxobjs) {
         this._simulator.setMaxObjects(maxobjs);
+    };
+    std.client.Default.prototype.maxObjects = function() {
+        this._simulator.maxObjects();
+    };
+
+    std.client.Default.prototype.setObjectPrioritization = function(pri) {
+        this._simulator.setObjectPrioritization(pri);
+    };
+    std.client.Default.prototype.objectPrioritization = function() {
+        this._simulator.objectPrioritization();
     };
 
 

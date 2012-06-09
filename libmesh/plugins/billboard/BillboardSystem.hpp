@@ -48,6 +48,8 @@ public:
     virtual bool canLoad(Transfer::DenseDataPtr data);
     virtual Mesh::VisualPtr load(const Transfer::RemoteFileMetadata& metadata, const Transfer::Fingerprint& fp,
         Transfer::DenseDataPtr data);
+    virtual Mesh::VisualPtr load(Transfer::DenseDataPtr data) ;
+
     virtual bool convertVisual(const Mesh::VisualPtr& meshdata, const String& format, std::ostream& vout);
     virtual bool convertVisual(const Mesh::VisualPtr& meshdata, const String& format, const String& filename);
 };

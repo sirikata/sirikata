@@ -62,7 +62,7 @@ void BulletCharacterObject::load(Mesh::MeshdataPtr mesh) {
 
     // Currently only support spheres, TODO(ewencp) we might want to support
     // capsules instead.
-    mCollisionShape = computeCollisionShape(mID, mBBox, Mesh::MeshdataPtr());
+    mCollisionShape = computeCollisionShape(mID, mBBox, BULLET_OBJECT_TREATMENT_CHARACTER, Mesh::MeshdataPtr());
     mGhostObject->setCollisionShape(mCollisionShape);
     mGhostObject->setCollisionFlags(btCollisionObject::CF_CHARACTER_OBJECT);
 
@@ -186,7 +186,7 @@ void BulletCharacterObject::applyForcedLocation(const TimedMotionVector3f& loc, 
     //any information from discarding move here.
     if (mGhostObject == NULL)
       return;
-    
+
     // And apply current position. We don't need to apply velocity because it'll
     // be applied at the next tick.
     btTransform xform = mGhostObject->getWorldTransform();

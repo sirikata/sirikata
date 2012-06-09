@@ -32,7 +32,11 @@
 
 #include <sirikata/core/util/Platform.hpp>
 #include "ExpIntegral.hpp"
+
+#ifndef SIRIKATA_BAD_BOOST_ERF
 #include <boost/math/special_functions/erf.hpp>
+#endif
+
 #include <iostream>
 #include <string.h>
 
@@ -44,7 +48,11 @@ static double expFunction(double k,double x, double y, double u, double v) {
     return exp(-k*(square(x-u)+square(y-v)));
 }
 static double myerf(double value) {
+#ifndef SIRIKATA_BAD_BOOST_ERF
     return boost::math::erf(value);
+#else
+    return 0;
+#endif
 }
 static double integralExpFunction(double k, double xmin, double xmax, double ymin, double ymax, double umin, double umax, double vmin, double vmax) {
     double e=2.7182818284590451;

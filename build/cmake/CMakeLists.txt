@@ -247,7 +247,7 @@ INCLUDE(GitRevision)
 #  * Revisions also only have additions and are very minor.
 SET(SIRIKATA_VERSION_MAJOR "0" CACHE STRING "Sirikata's major version" FORCE)
 SET(SIRIKATA_VERSION_MINOR "0" CACHE STRING "Sirikata's minor version" FORCE)
-SET(SIRIKATA_VERSION_REVISION "23" CACHE STRING "Sirikata's revision version" FORCE)
+SET(SIRIKATA_VERSION_REVISION "25" CACHE STRING "Sirikata's revision version" FORCE)
 
 # These get translated into two settings: the VERSION and
 # SOVERSION. The SOVERSION includes just the major number so anything
@@ -566,6 +566,7 @@ IF(WIN32)
   SET(OpenCOLLADA_ROOT ${PLATFORM_LIBS}/installed-opencollada)
 ELSE()
   SET(OpenCOLLADA_ROOT ${PLATFORM_LIBS}/installed-opencollada)
+  SET(OpenCOLLADA_LIBRARY_SEARCH_DIRS ${PLATFORM_LIBS}/installed-pcre/lib)
 ENDIF()
 
 SET(OpenCOLLADA_MINIMUM_VERSION 1.1.0)
@@ -769,6 +770,9 @@ IF(WIN32)
   SET(ADDED_DEFINITIONS ${ADDED_DEFINITIONS} -DJSON_SPIRIT_STATIC_LINKED)
 ELSE()
   SET(JSON_SPIRIT_LIBRARY_TYPE "SHARED")
+ENDIF()
+IF(APPLE)
+  SET(JSON_SPIRIT_ADDED_LDFLAGS "-arch i386 -m32")
 ENDIF()
 SET(JSON_SPIRIT_BUILD_DEMOS FALSE)
 SET(JSON_SPIRIT_BUILD_TESTS FALSE)
@@ -1465,6 +1469,7 @@ SET(LIBSDL_SOURCES
 SET(LIBOGRE_SOURCES
   ${LIBOGRE_SOURCE_DIR}/input/InputEvents.cpp
   ${LIBOGRE_SOURCE_DIR}/input/InputDevice.cpp
+  ${LIBOGRE_SOURCE_DIR}/input/InputEventCompletion.cpp
   ${LIBOGRE_SOURCE_DIR}/input/SDLInputDevice.cpp
   ${LIBOGRE_SOURCE_DIR}/input/SDLInputManager.cpp
   ${LIBOGRE_SOURCE_DIR}/resourceManager/AssetDownloadTask.cpp
@@ -1480,8 +1485,7 @@ SET(LIBOGRE_SOURCES
   ${LIBOGRE_SOURCE_DIR}/ResourceLoader.cpp
   ${LIBOGRE_SOURCE_DIR}/Entity.cpp
   ${LIBOGRE_SOURCE_DIR}/ResourceDownloadPlanner.cpp
-  ${LIBOGRE_SOURCE_DIR}/DistanceDownloadPlanner.cpp
-  ${LIBOGRE_SOURCE_DIR}/SAngleDownloadPlanner.cpp
+  ${LIBOGRE_SOURCE_DIR}/PriorityDownloadPlanner.cpp
   ${LIBOGRE_SOURCE_DIR}/OgreRenderer.cpp
   ${LIBOGRE_SOURCE_DIR}/OverlayPosition.cpp
   ${LIBOGRE_SOURCE_DIR}/ViewportOverlay.cpp
@@ -2508,7 +2512,7 @@ SET(LIBOH_PLUGIN_OGREGRAPHICS_SOURCES
   ${LIBOH_PLUGIN_OGREGRAPHICS_DIR}/OgreSystem.cpp
   ${LIBOH_PLUGIN_OGREGRAPHICS_DIR}/OgreMeshRaytrace.cpp
   ${LIBOH_PLUGIN_OGREGRAPHICS_DIR}/CubeMap.cpp
-  ${LIBOH_PLUGIN_OGREGRAPHICS_DIR}/OgreSystemMouseHandler.cpp
+  ${LIBOH_PLUGIN_OGREGRAPHICS_DIR}/OgreSystemInputHandler.cpp
   ${LIBOH_PLUGIN_OGREGRAPHICS_DIR}/ProxyEntity.cpp
   ${LIBOH_PLUGIN_OGREGRAPHICS_DIR}/OgrePlugin.cpp
   )
@@ -2918,6 +2922,7 @@ IF(APPLE)
   INSTALL(DIRECTORY
     ${SLAUNCHER_SOURCE_DIR}/slauncher_helper.app/
     DESTINATION ${SIRIKATA_INSTALL_BINARY_PATH}/slauncher_helper.app/
+    USE_SOURCE_PERMISSIONS
     )
 ENDIF()
 

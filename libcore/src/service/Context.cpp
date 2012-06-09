@@ -38,6 +38,8 @@
 #include <sirikata/core/service/Breakpad.hpp>
 #include <sirikata/core/command/Commander.hpp>
 
+#define CTX_LOG(lvl, msg) SILOG(context, lvl, msg)
+
 namespace Sirikata {
 
 Context::Context(const String& name_, Network::IOService* ios, Network::IOStrand* strand, Trace::Trace* _trace, const Time& epoch, const Duration& simlen)
@@ -57,11 +59,13 @@ Context::Context(const String& name_, Network::IOService* ios, Network::IOStrand
    mKillTimer(),
    mStopRequested(false)
 {
+    CTX_LOG(info, "Creating context");
   Breakpad::init();
   profiler = new TimeProfiler(this, name);
 }
 
 Context::~Context() {
+    CTX_LOG(info, "Destroying context");
     delete profiler;
 }
 
@@ -85,6 +89,8 @@ void Context::start() {
 }
 
 void Context::run(uint32 nthreads, ExecutionThreads exthreads) {
+    CTX_LOG(info, "Starting context execution with " << nthreads << " threads");
+
     mExecutionThreadsType = exthreads;
 
     uint32 nworkers = (exthreads == IncludeOriginal ? nthreads-1 : nthreads);
@@ -121,6 +127,8 @@ void Context::cleanupWorkerThreads() {
 }
 
 void Context::shutdown() {
+    CTX_LOG(info, "Handling shutdown request");
+
     // If the original thread wasn't running this context as well, then it won't
     // be able to wait for the worker threads it created.
     if (mExecutionThreadsType != IncludeOriginal)
@@ -143,6 +151,7 @@ void Context::stop() {
 
 
 void Context::handleSignal(Signal::Type stype) {
+    CTX_LOG(info, "Requesting shutdown in response to " << Signal::typeAsString(stype));
     // Try to keep this minimal. Post the shutdown process rather than
     // actually running it here. This makes the extent of the signal
     // handling known completely in this method, whereas calling

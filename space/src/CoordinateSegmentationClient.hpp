@@ -111,7 +111,7 @@ private:
     String mCSEGHost;
     String mCSEGPort;
 
-    void handleSelfLookup(Address4 my_addr);
+    void handleSelfLookup(ServerID my_sid, Address4 my_addr);
 
     void startAccepting();
     void accept_handler();

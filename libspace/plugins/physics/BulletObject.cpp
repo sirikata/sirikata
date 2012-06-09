@@ -6,6 +6,7 @@
 #include "BulletPhysicsService.hpp"
 
 #include "btBulletDynamicsCommon.h"
+#include "BulletCollision/CollisionShapes/btShapeHull.h"
 
 #include <sirikata/mesh/Bounds.hpp>
 
@@ -50,7 +51,7 @@ void BulletObject::getCollisionMask(bulletObjTreatment treatment, bulletObjColli
 }
 
 
-btCollisionShape* BulletObject::computeCollisionShape(const UUID& id, bulletObjBBox shape_type, Mesh::MeshdataPtr retrievedMesh) {
+btCollisionShape* BulletObject::computeCollisionShape(const UUID& id, bulletObjBBox shape_type, bulletObjTreatment treatment, Mesh::MeshdataPtr retrievedMesh) {
     const LocationInfo& locinfo = mParent->info(id);
 
     // Spheres can be handled trivially
@@ -82,8 +83,14 @@ btCollisionShape* BulletObject::computeCollisionShape(const UUID& id, bulletObjB
         return shape;
     }
 
-    //do NOT attempt to collide two btBvhTriangleMeshShapes, it will not work
-    //else if(shape_type == BULLET_OBJECT_BOUNDS_PER_TRIANGLE) {
+    // The rest of the modes require working with the actual mesh. Currently
+    // there are two options. If the object is static, we can use the full mesh
+    // (a BVH). If it's dynamic, we need to simplify to a convex hull.
+    //
+    // We *can't* collide to btBvhTriangleMeshShapes, which is why we need to
+    // use convex hulls. For bullet that would be too expensive.
+    assert(shape_type == BULLET_OBJECT_BOUNDS_PER_TRIANGLE);
+
     //we found the bounding box and radius, so let's scale the mesh down by the radius and up by the scaling factor from the scene file (bnds.radius())
     //initialize the world transformation
     // The raw mesh data is scaled down to unit size, see below
@@ -112,12 +119,12 @@ btCollisionShape* BulletObject::computeCollisionShape(const UUID& id, bulletObjB
         for(unsigned int i = 0; i < numOfPrimitives; i++) {
             //create bullet triangle array from our data structure
             Vector3f transformedVertex;
-            BULLETLOG(detailed, "subgeom indices: ");
+            BULLETLOG(insane, "subgeom indices: ");
             for(unsigned int j=0; j < subGeom->primitives[i].indices.size(); j++) {
                 gIndices.push_back((int)(subGeom->primitives[i].indices[j]));
-                BULLETLOG(detailed, (int)(subGeom->primitives[i].indices[j]) << ", ");
+                BULLETLOG(insane, (int)(subGeom->primitives[i].indices[j]) << ", ");
             }
-            BULLETLOG(detailed, "gIndices size: " << (int) gIndices.size());
+            BULLETLOG(insane, "gIndices size: " << (int) gIndices.size());
             for(unsigned int j=0; j < subGeom->positions.size(); j++) {
                 //printf("preTransform Vertex: %f, %f, %f\n", subGeom->positions[j].x, subGeom->positions[j].y, subGeom->positions[j].z);
                 transformedVertex = transformInstance * subGeom->positions[j];
@@ -151,8 +158,59 @@ btCollisionShape* BulletObject::computeCollisionShape(const UUID& id, bulletObjB
     BULLETLOG(detailed, "total bounds: " << bbox);
     BULLETLOG(detailed, "bounds radius: " << mesh_rad);
     BULLETLOG(detailed, "Num of triangles in mesh: " << meshToConstruct->getNumTriangles());
-    //btVector3 aabbMin(-1000,-1000,-1000),aabbMax(1000,1000,1000);
-    btCollisionShape* shape = new btBvhTriangleMeshShape(meshToConstruct,true);
+
+    // Now select which to build based on the treatment
+    btCollisionShape* shape = NULL;
+    switch(treatment) {
+      case BULLET_OBJECT_TREATMENT_STATIC:
+          {
+              shape = new btBvhTriangleMeshShape(meshToConstruct,true);
+          }
+          break;
+
+      case BULLET_OBJECT_TREATMENT_DYNAMIC:
+      case BULLET_OBJECT_TREATMENT_LINEAR_DYNAMIC:
+      case BULLET_OBJECT_TREATMENT_VERTICAL_DYNAMIC:
+          {
+              btConvexShape* tmpConvexShape = new btConvexTriangleMeshShape(meshToConstruct);
+
+              BULLETLOG(detailed, "Building simplified convex hull for dynamic per-triangle collisions");
+              BULLETLOG(detailed, " original numTriangles = " << meshToConstruct->getNumTriangles());
+              BULLETLOG(detailed, " original numIndices = " << meshToConstruct->getNumTriangles()*3);
+              //BULLETLOG(detailed, " original numVertices = " << wo.mVertexCount);
+
+              //create a hull approximation
+              btShapeHull* hull = new btShapeHull(tmpConvexShape);
+              btScalar margin = tmpConvexShape->getMargin();
+              hull->buildHull(margin);
+              tmpConvexShape->setUserPointer(hull);
+
+              BULLETLOG(detailed, " new numTriangles = " << hull->numTriangles());
+              BULLETLOG(detailed, " new numIndices = " << hull->numIndices());
+              BULLETLOG(detailed, " new numVertices = " << hull->numVertices());
+
+              btConvexHullShape* convexShape = new btConvexHullShape();
+              for (int32 i = 0; i < hull->numVertices(); i++)
+                  convexShape->addPoint(hull->getVertexPointer()[i]);
+
+              delete tmpConvexShape;
+              delete hull;
+
+              shape = convexShape;
+          }
+          break;
+
+      case BULLET_OBJECT_TREATMENT_IGNORE:
+      case BULLET_OBJECT_TREATMENT_CHARACTER:
+        assert(false && "Shouldn't be computing per-triangle collision shape for 'ignore' or 'character' treatments");
+        break;
+      default:
+        assert(false && "Unhandled treatment type when building per-triangle collision shape");
+        break;
+    }
+
+    assert(shape != NULL);
+
     // Apply additional scaling factor to get from unit
     // scale up to requested scale.
     float32 rad_scale = locinfo.props.bounds().fullRadius();

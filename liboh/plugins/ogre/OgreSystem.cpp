@@ -34,7 +34,7 @@
 #include <sirikata/core/util/Thread.hpp>
 
 #include "OgreSystem.hpp"
-#include "OgreSystemMouseHandler.hpp"
+#include "OgreSystemInputHandler.hpp"
 #include "OgrePlugin.hpp"
 #include <sirikata/proxyobject/ProxyManager.hpp>
 #include <sirikata/proxyobject/ProxyObject.hpp>
@@ -74,7 +74,7 @@ OgreSystem::OgreSystem(Context* ctx,Network::IOStrandPtr sStrand)
     mRenderTarget=NULL;
     mRenderWindow = NULL;
     mSceneManager=NULL;
-    mMouseHandler=NULL;
+    mInputHandler=NULL;
     mRayQuery=NULL;
 }
 
@@ -167,7 +167,7 @@ bool OgreSystem::initialize(ConnectionEventProvider* cevtprovider, VWObjectPtr v
     mViewer->addListener((SessionEventListener*)this);
     proxyManager->addListener(this);
 
-    allocMouseHandler();
+    allocInputHandler();
 
     // The default mesh is just loaded from a known local file
     using namespace boost::filesystem;
@@ -179,9 +179,9 @@ bool OgreSystem::initialize(ConnectionEventProvider* cevtprovider, VWObjectPtr v
 
     //finish instantiation here
     instantiateAllObjects(proxyManager);
-    mMouseHandler->mUIWidgetView->setReadyCallback( std::tr1::bind(&OgreSystem::handleUIReady, this) );
-    mMouseHandler->mUIWidgetView->setResetReadyCallback( std::tr1::bind(&OgreSystem::handleUIResetReady, this) );
-    mMouseHandler->mUIWidgetView->setUpdateViewportCallback( std::tr1::bind(&OgreSystem::handleUpdateUIViewport, this, _1, _2, _3, _4) );
+    mInputHandler->mUIWidgetView->setReadyCallback( std::tr1::bind(&OgreSystem::handleUIReady, this) );
+    mInputHandler->mUIWidgetView->setResetReadyCallback( std::tr1::bind(&OgreSystem::handleUIResetReady, this) );
+    mInputHandler->mUIWidgetView->setUpdateViewportCallback( std::tr1::bind(&OgreSystem::handleUpdateUIViewport, this, _1, _2, _3, _4) );
 
     vector<boost::any> temp;
     setMat(temp);
@@ -259,7 +259,7 @@ void OgreSystem::iHandleUIReady(Liveness::Token osAlive)
     // end up with more, we may need to make this just set a flag and then check
     // if all conditions are met.
     if (mOnReadyCallback != NULL) mOnReadyCallback->invoke();
-    mMouseHandler->uiReady();
+    mInputHandler->uiReady();
     mReady= true;
 }
 
@@ -268,7 +268,7 @@ void OgreSystem::handleUIResetReady() {
     // end up with more, we may need to make this just set a flag and then check
     // if all conditions are met.
     if (mOnResetReadyCallback != NULL) mOnResetReadyCallback->invoke();
-    mMouseHandler->uiReady(); // Probably not really necessary since
+    mInputHandler->uiReady(); // Probably not really necessary since
                               // it's been called once already?
 }
 
@@ -279,7 +279,7 @@ void OgreSystem::handleUpdateUIViewport(int32 left, int32 top, int32 right, int3
 
 void OgreSystem::windowResized(Ogre::RenderWindow *rw) {
     OgreRenderer::windowResized(rw);
-    mMouseHandler->windowResized(rw->getWidth(), rw->getHeight());
+    mInputHandler->windowResized(rw->getWidth(), rw->getHeight());
 }
 
 bool OgreSystem::translateToDisplayViewport(float32 x, float32 y, float32* ox, float32* oy) {
@@ -302,7 +302,7 @@ bool OgreSystem::translateToDisplayViewport(float32 x, float32 y, float32* ox, f
 OgreSystem::~OgreSystem() {
     Liveness::letDie();
     decrefcount();
-    destroyMouseHandler();
+    destroyInputHandler();
 }
 
 void OgreSystem::stop()
@@ -712,23 +712,23 @@ void OgreSystem::iOnSessionDisconnected(
 
     mViewer->removeListener((SessionEventListener*)this);
     SILOG(ogre,info,"Got disconnected from space server.");
-    mMouseHandler->alert("Disconnected", "Lost connection to space server...");
+    mInputHandler->alert("Disconnected", "Lost connection to space server...");
 }
 
 
-void OgreSystem::allocMouseHandler() {
-    mMouseHandler = new OgreSystemMouseHandler(this);
-    mMouseHandler->ensureUI();
+void OgreSystem::allocInputHandler() {
+    mInputHandler = new OgreSystemInputHandler(this);
+    mInputHandler->ensureUI();
 }
-void OgreSystem::destroyMouseHandler() {
-    if (mMouseHandler) {
-        delete mMouseHandler;
+void OgreSystem::destroyInputHandler() {
+    if (mInputHandler) {
+        delete mInputHandler;
     }
 }
 
 void OgreSystem::tickInputHandler(const Task::LocalTime& t) const {
-    if (mMouseHandler != NULL)
-        mMouseHandler->tick(t);
+    if (mInputHandler != NULL)
+        mInputHandler->tick(t);
 }
 
 
@@ -839,7 +839,7 @@ boost::any OgreSystem::evalInUI(std::vector<boost::any>& params) {
     if (params.size() < 2) return boost::any();
     if (!Invokable::anyIsString(params[1])) return boost::any();
 
-    mMouseHandler->mUIWidgetView->evaluateJS(Invokable::anyAsString(params[1]));
+    mInputHandler->mUIWidgetView->evaluateJS(Invokable::anyAsString(params[1]));
 
     return boost::any();
 }
@@ -897,12 +897,12 @@ boost::any OgreSystem::addModuleToUI(std::vector<boost::any>& params) {
     String window_name = anyAsString(params[1]);
     String html_url = anyAsString(params[2]);
 
-    if (!mMouseHandler) return boost::any();
+    if (!mInputHandler) return boost::any();
 
     // Note the ../, this is because that loadModule executes from within data/chrome
-    mMouseHandler->mUIWidgetView->evaluateJS("loadModule('../" + html_url + "')");
-    mMouseHandler->mUIWidgetView->defaultEvent(window_name + "-__ready");
-    Invokable* inn = mMouseHandler->mUIWidgetView;
+    mInputHandler->mUIWidgetView->evaluateJS("loadModule('../" + html_url + "')");
+    mInputHandler->mUIWidgetView->defaultEvent(window_name + "-__ready");
+    Invokable* inn = mInputHandler->mUIWidgetView;
     return Invokable::asAny(inn);
 }
 
@@ -913,12 +913,12 @@ boost::any OgreSystem::addTextModuleToUI(std::vector<boost::any>& params) {
     String window_name = anyAsString(params[1]);
     String module_js = anyAsString(params[2]);
 
-    if (!mMouseHandler) return boost::any();
+    if (!mInputHandler) return boost::any();
 
     // Note that we assume escaped js
-    mMouseHandler->mUIWidgetView->evaluateJS("loadModuleText(" + module_js + ")");
-    mMouseHandler->mUIWidgetView->defaultEvent(window_name + "-__ready");
-    Invokable* inn = mMouseHandler->mUIWidgetView;
+    mInputHandler->mUIWidgetView->evaluateJS("loadModuleText(" + module_js + ")");
+    mInputHandler->mUIWidgetView->defaultEvent(window_name + "-__ready");
+    Invokable* inn = mInputHandler->mUIWidgetView;
     return Invokable::asAny(inn);
 }
 
@@ -940,7 +940,7 @@ boost::any OgreSystem::addInputHandler(std::vector<boost::any>& params) {
     if (!Invokable::anyIsInvokable(params[1])) return boost::any();
 
     Invokable* handler = Invokable::anyAsInvokable(params[1]);
-    mMouseHandler->addDelegate(handler);
+    mInputHandler->addDelegate(handler);
     return boost::any();
 }
 
@@ -951,7 +951,7 @@ boost::any OgreSystem::removeInputHandler(std::vector<boost::any>& params)
     if (!Invokable::anyIsInvokable(params[1])) return boost::any();
 
     Invokable* handler = Invokable::anyAsInvokable(params[1]);
-    mMouseHandler->removeDelegate(handler);
+    mInputHandler->removeDelegate(handler);
     return boost::any();
 }
 
@@ -972,7 +972,7 @@ boost::any OgreSystem::pick(vector<boost::any>& params) {
             ignore = Invokable::anyAsObject(params[3]);
     }
     Vector3f hitPoint;
-    SpaceObjectReference result = mMouseHandler->pick(Vector2f(x,y), 1, ignore, &hitPoint);
+    SpaceObjectReference result = mInputHandler->pick(Vector2f(x,y), 1, ignore, &hitPoint);
 
     Invokable::Dict pick_result;
     pick_result["object"] = Invokable::asAny(result);

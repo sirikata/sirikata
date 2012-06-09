@@ -181,7 +181,7 @@ protected:
     // invoked after waiting a sufficient period after an initial stop
     // request.
     void forceQuit() {
-        SILOG(forcequit,fatal,"[FORCEQUIT] Fatal error: Quit forced by timeout.");
+        SILOG(forcequit,fatal,"Fatal error: Quit forced by timeout.");
         ioService->stop();
     }
 

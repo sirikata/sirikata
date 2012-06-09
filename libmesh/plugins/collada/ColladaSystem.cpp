@@ -312,6 +312,23 @@ Mesh::VisualPtr ColladaSystem::load(const Transfer::RemoteFileMetadata& metadata
     return mesh;
 }
 
+Mesh::VisualPtr ColladaSystem::load(Transfer::DenseDataPtr data) {
+    ColladaDocumentLoader loader(Transfer::URI(""), Transfer::Fingerprint::null() );
+
+    SparseData data_reflatten = SparseData();
+    data_reflatten.addValidData(data);
+
+    Transfer::DenseDataPtr flatData = data_reflatten.flatten();
+
+    char const* buffer = reinterpret_cast<char const*>(flatData->begin());
+    loader.load(buffer, flatData->length());
+
+    Mesh::MeshdataPtr mesh = loader.getMeshdata();
+
+    return mesh;
+
+}
+
 bool ColladaSystem::convertVisual(const Mesh::VisualPtr& visual, const String& format, std::ostream& vout) {
     // Currently OpenCOLLADA only seems to support writing to files, despite
     // having a generic StreamWriter interface. To save to a stream, we save to

@@ -5,7 +5,7 @@
  */
 
 
-system.require('helperLibs/util.em');
+system.require('emUtil/util.em');
 
 mTest = new UnitTest('userEventTest');
 

@@ -1,37 +1,8 @@
-/*  Meru
- *  ResourceDownloadTask.cpp
- *
- *  Copyright (c) 2009, Stanford University
- *  All rights reserved.
- *
- *  Redistribution and use in source and binary forms, with or without
- *  modification, are permitted provided that the following conditions are
- *  met:
- *  * Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- *  * Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in
- *    the documentation and/or other materials provided with the
- *    distribution.
- *  * Neither the name of Sirikata nor the names of its contributors may
- *    be used to endorse or promote products derived from this software
- *    without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
- * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
- * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
- * PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
- * OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
- * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
- * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
- * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
- * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
- * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- */
+// Copyright (c) 2009 Sirikata Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can
+// be found in the LICENSE file.
 
-
-#include "DistanceDownloadPlanner.hpp"
+#include "PriorityDownloadPlanner.hpp"
 #include <sirikata/ogre/Entity.hpp>
 #include <stdlib.h>
 #include <algorithm>
@@ -60,7 +31,50 @@ using namespace Sirikata::Graphics;
 namespace Sirikata {
 namespace Graphics {
 
-DistanceDownloadPlanner::Object::Object(Graphics::Entity *m, const Transfer::URI& mesh_uri, ProxyObjectPtr _proxy)
+double DistanceDownloadPlannerMetric::calculatePriority(Graphics::Camera *camera, ProxyObjectPtr proxy)
+{
+    if (camera == NULL || !proxy) return 0;
+
+    Vector3d cameraLoc = camera->getPosition();
+    Vector3d objLoc(proxy->location().position());
+    Vector3d diff = cameraLoc - objLoc;
+
+    if (diff.length() <= 0) return 1.0;
+
+    double priority = 1/(diff.length());
+
+    return priority;
+}
+
+static bool withinBound(float radius, Vector3d objLoc, Vector3d cameraLoc)
+{
+    if (cameraLoc.x < objLoc.x - radius || cameraLoc.x > objLoc.x + radius) return false;
+    if (cameraLoc.y < objLoc.y - radius || cameraLoc.y > objLoc.y + radius) return false;
+    if (cameraLoc.z < objLoc.z - radius || cameraLoc.z > objLoc.z + radius) return false;
+    return true;
+}
+
+double SolidAngleDownloadPlannerMetric::calculatePriority(Graphics::Camera *camera, ProxyObjectPtr proxy)
+{
+    if (camera == NULL || !proxy) return 0;
+
+    float radius = proxy->bounds().fullRadius();
+    Vector3d objLoc(proxy->location().position());
+    Vector3d cameraLoc = camera->getPosition();
+
+    if (withinBound(radius, objLoc, cameraLoc)) return 0.99;
+
+    Vector3d diff = cameraLoc - objLoc;
+    SolidAngle sa = SolidAngle::fromCenterRadius((Vector3f)diff, radius);
+    float priority = (sa.asFloat())/(SolidAngle::Max.asFloat());
+    return (double)priority;
+}
+
+
+
+
+
+PriorityDownloadPlanner::Object::Object(Graphics::Entity *m, const Transfer::URI& mesh_uri, ProxyObjectPtr _proxy)
 : file(mesh_uri),
   mesh(m),
   name(m->id()),
@@ -69,7 +83,7 @@ DistanceDownloadPlanner::Object::Object(Graphics::Entity *m, const Transfer::URI
   proxy(_proxy)
 {}
 
-DistanceDownloadPlanner::Asset::Asset(const Transfer::URI& name)
+PriorityDownloadPlanner::Asset::Asset(const Transfer::URI& name)
  : uri(name),
    loadingResources(0)
 {
@@ -78,28 +92,30 @@ DistanceDownloadPlanner::Asset::Asset(const Transfer::URI& name)
     internalId = assetId++;
 }
 
-DistanceDownloadPlanner::Asset::~Asset() {
+PriorityDownloadPlanner::Asset::~Asset() {
     for(WebMaterialList::iterator it = webMaterials.begin(); it != webMaterials.end(); it++)
         WebViewManager::getSingleton().destroyWebView(*it);
     webMaterials.clear();
     Liveness::letDie();
 }
 
-DistanceDownloadPlanner::DistanceDownloadPlanner(Context* c, OgreRenderer* renderer)
+PriorityDownloadPlanner::PriorityDownloadPlanner(Context* c, OgreRenderer* renderer, PriorityDownloadPlannerMetricPtr metric)
  : ResourceDownloadPlanner(c, renderer),
-   mStopped(false)
+   mStopped(false),
+   mMetric(metric)
 {
+    assert(mMetric);
 
     //listen for commands
     if (c->commander())
     {
         mContext->commander()->registerCommand(
             "oh.ogre.ddplanner",
-            std::tr1::bind(&DistanceDownloadPlanner::commandGetData, this, _1, _2, _3)
+            std::tr1::bind(&PriorityDownloadPlanner::commandGetData, this, _1, _2, _3)
         );
         mContext->commander()->registerCommand(
             "oh.ogre.ddplanner.stats",
-            std::tr1::bind(&DistanceDownloadPlanner::commandGetStats, this, _1, _2, _3)
+            std::tr1::bind(&PriorityDownloadPlanner::commandGetStats, this, _1, _2, _3)
         );
     }
 
@@ -110,7 +126,7 @@ DistanceDownloadPlanner::DistanceDownloadPlanner(Context* c, OgreRenderer* rende
     mActiveCDNArchive = true;
 }
 
-DistanceDownloadPlanner::~DistanceDownloadPlanner()
+PriorityDownloadPlanner::~PriorityDownloadPlanner()
 {
     delete mAggregationAlgorithm;
     if (mActiveCDNArchive) {
@@ -119,7 +135,7 @@ DistanceDownloadPlanner::~DistanceDownloadPlanner()
     }
 }
 
-void DistanceDownloadPlanner::addObject(Object* r)
+void PriorityDownloadPlanner::addObject(Object* r)
 {
   RMutex::scoped_lock lock(mDlPlannerMutex);
   DLPLANNER_LOG(detailed,"Request to add object with name "<<r->name);
@@ -127,7 +143,7 @@ void DistanceDownloadPlanner::addObject(Object* r)
   iAddObject(r, livenessToken());
 }
 
-void DistanceDownloadPlanner::iAddObject(Object* r, Liveness::Token alive)
+void PriorityDownloadPlanner::iAddObject(Object* r, Liveness::Token alive)
 {
     if (!alive)
     {
@@ -136,14 +152,14 @@ void DistanceDownloadPlanner::iAddObject(Object* r, Liveness::Token alive)
     }
 
     RMutex::scoped_lock lock(mDlPlannerMutex);
-    r->priority = calculatePriority(r->proxy);
+    r->priority = mMetric->calculatePriority(camera, r->proxy);
     mObjects[r->name] = r;
     mWaitingObjects[r->name] = r;
     DLPLANNER_LOG(detailed, "Adding object " << r->name << " (" << r->file << "), " << mLoadedObjects.size() << " loaded, " << mWaitingObjects.size() << " waiting");
     checkShouldLoadNewObject(r);
 }
 
-DistanceDownloadPlanner::Object* DistanceDownloadPlanner::findObject(const String& name)
+PriorityDownloadPlanner::Object* PriorityDownloadPlanner::findObject(const String& name)
 {
     RMutex::scoped_lock lock(mDlPlannerMutex);
     ObjectMap::iterator it = mObjects.find(name);
@@ -151,7 +167,7 @@ DistanceDownloadPlanner::Object* DistanceDownloadPlanner::findObject(const Strin
 }
 
 
-void DistanceDownloadPlanner::commandGetData(
+void PriorityDownloadPlanner::commandGetData(
     const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid)
 {
     RMutex::scoped_lock lock(mDlPlannerMutex);
@@ -274,7 +290,7 @@ void DistanceDownloadPlanner::commandGetData(
 }
 
 
-void DistanceDownloadPlanner::commandGetStats(
+void PriorityDownloadPlanner::commandGetStats(
     const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid)
 {
     RMutex::scoped_lock lock(mDlPlannerMutex);
@@ -325,7 +341,7 @@ void DistanceDownloadPlanner::commandGetStats(
 
 
 
-void DistanceDownloadPlanner::removeObject(const String& name)
+void PriorityDownloadPlanner::removeObject(const String& name)
 {
     RMutex::scoped_lock lock(mDlPlannerMutex);
     DLPLANNER_LOG(detailed,"Request to remove object with name "<<name);
@@ -333,7 +349,7 @@ void DistanceDownloadPlanner::removeObject(const String& name)
     iRemoveObject(name,livenessToken());
 }
 
-void DistanceDownloadPlanner::iRemoveObject(
+void PriorityDownloadPlanner::iRemoveObject(
     const String& name, Liveness::Token alive)
 {
     if (!alive || mStopped)
@@ -358,16 +374,16 @@ void DistanceDownloadPlanner::iRemoveObject(
     }
 }
 
-void DistanceDownloadPlanner::addNewObject(Entity *ent, const Transfer::URI& mesh) {
+void PriorityDownloadPlanner::addNewObject(Entity *ent, const Transfer::URI& mesh) {
     addObject(new Object(ent, mesh));
 }
 
-void DistanceDownloadPlanner::addNewObject(ProxyObjectPtr p, Entity *mesh) {
+void PriorityDownloadPlanner::addNewObject(ProxyObjectPtr p, Entity *mesh) {
     addObject(new Object(mesh, p->mesh(), p));
 }
 
 
-void DistanceDownloadPlanner::updateObject(ProxyObjectPtr p)
+void PriorityDownloadPlanner::updateObject(ProxyObjectPtr p)
 {
   RMutex::scoped_lock lock(mDlPlannerMutex);
 
@@ -378,7 +394,7 @@ void DistanceDownloadPlanner::updateObject(ProxyObjectPtr p)
 }
 
 
-void DistanceDownloadPlanner::iUpdateObject(
+void PriorityDownloadPlanner::iUpdateObject(
     ProxyObjectPtr p, Liveness::Token alive)
 {
     if (!alive)
@@ -398,54 +414,37 @@ void DistanceDownloadPlanner::iUpdateObject(
         unrequestAssetForObject(r);
     }
     r->file = new_file;
-    r->priority = calculatePriority(p);
+    r->priority = mMetric->calculatePriority(camera, p);
     if (new_file != last_file && r->loaded) {
         requestAssetForObject(r);
     }
 }
 
-void DistanceDownloadPlanner::removeObject(ProxyObjectPtr p) {
+void PriorityDownloadPlanner::removeObject(ProxyObjectPtr p) {
     removeObject(p->getObjectReference().toString());
 }
 
-void DistanceDownloadPlanner::removeObject(Graphics::Entity* mesh) {
+void PriorityDownloadPlanner::removeObject(Graphics::Entity* mesh) {
     removeObject(mesh->id());
 }
 
 
-double DistanceDownloadPlanner::calculatePriority(ProxyObjectPtr proxy)
-{
-    if (camera == NULL || !proxy) return 0;
 
-    Vector3d cameraLoc = camera->getPosition();
-    Vector3d objLoc(proxy->location().position());
-    Vector3d diff = cameraLoc - objLoc;
-
-    /*double diff2d = sqrt(pow(diff.x, 2) + pow(diff.y, 2));
-      double diff3d = sqrt(pow(diff2d, 2) + pow(diff.x, 2));*/
-
-    if (diff.length() <= 0) return 1.0;
-
-    double priority = 1/(diff.length());
-
-    return priority;
-}
-
-void DistanceDownloadPlanner::checkShouldLoadNewObject(Object* r) {
+void PriorityDownloadPlanner::checkShouldLoadNewObject(Object* r) {
     if ((int32)mLoadedObjects.size() < mMaxLoaded) {
         DLPLANNER_LOG(detailed, "Loading " << r->name << " immediately because we are under budget");
         loadObject(r);
     }
 }
 
-bool DistanceDownloadPlanner::budgetRequiresChange() const {
+bool PriorityDownloadPlanner::budgetRequiresChange() const {
     return
         ((int32)mLoadedObjects.size() < mMaxLoaded && !mWaitingObjects.empty()) ||
         ((int32)mLoadedObjects.size() > mMaxLoaded && !mLoadedObjects.empty());
 
 }
 
-void DistanceDownloadPlanner::loadObject(Object* r) {
+void PriorityDownloadPlanner::loadObject(Object* r) {
     RMutex::scoped_lock lock(mDlPlannerMutex);
     mWaitingObjects.erase(r->name);
     mLoadedObjects[r->name] = r;
@@ -457,7 +456,7 @@ void DistanceDownloadPlanner::loadObject(Object* r) {
     requestAssetForObject(r);
 }
 
-void DistanceDownloadPlanner::unloadObject(Object* r) {
+void PriorityDownloadPlanner::unloadObject(Object* r) {
     RMutex::scoped_lock lock(mDlPlannerMutex);
     mLoadedObjects.erase(r->name);
     mWaitingObjects[r->name] = r;
@@ -469,14 +468,14 @@ void DistanceDownloadPlanner::unloadObject(Object* r) {
     unrequestAssetForObject(r);
 }
 
-void DistanceDownloadPlanner::poll()
+void PriorityDownloadPlanner::poll()
 {
   RMutex::scoped_lock lock(mDlPlannerMutex);
 
   iPoll(livenessToken());
 }
 
-void DistanceDownloadPlanner::iPoll(Liveness::Token dpAlive)
+void PriorityDownloadPlanner::iPoll(Liveness::Token dpAlive)
 {
     if (!dpAlive)
         return;
@@ -491,7 +490,7 @@ void DistanceDownloadPlanner::iPoll(Liveness::Token dpAlive)
     float32 mMinLoadedPriority = 1000000, mMaxWaitingPriority = 0;
     for (ObjectMap::iterator it = mObjects.begin(); it != mObjects.end(); it++) {
         Object* r = it->second;
-        r->priority = calculatePriority(r->proxy);
+        r->priority = mMetric->calculatePriority(camera, r->proxy);
 
         if (r->loaded)
             mMinLoadedPriority = std::min(mMinLoadedPriority, (float32)r->priority);
@@ -574,14 +573,14 @@ void DistanceDownloadPlanner::iPoll(Liveness::Token dpAlive)
     }
 }
 
-void DistanceDownloadPlanner::stop()
+void PriorityDownloadPlanner::stop()
 {
   RMutex::scoped_lock lock(mDlPlannerMutex);
 
   iStop(livenessToken());
 }
 
-void DistanceDownloadPlanner::iStop(Liveness::Token dpAlive)
+void PriorityDownloadPlanner::iStop(Liveness::Token dpAlive)
 {
     if (!dpAlive)
     {
@@ -609,7 +608,7 @@ void DistanceDownloadPlanner::iStop(Liveness::Token dpAlive)
     mWaitingObjects.clear();
 }
 
-void DistanceDownloadPlanner::requestAssetForObject(Object* forObject) {
+void PriorityDownloadPlanner::requestAssetForObject(Object* forObject) {
     RMutex::scoped_lock lock(mDlPlannerMutex);
     DLPLANNER_LOG(detailed, "Requesting " << forObject->file << " for " << forObject->name);
     if (forObject->file.empty()) {
@@ -660,7 +659,7 @@ void DistanceDownloadPlanner::requestAssetForObject(Object* forObject) {
     }
 }
 
-void DistanceDownloadPlanner::downloadAsset(Asset* asset, Object* forObject) {
+void PriorityDownloadPlanner::downloadAsset(Asset* asset, Object* forObject) {
     RMutex::scoped_lock lock(mDlPlannerMutex);
     DLPLANNER_LOG(detailed, "Starting download of " << asset->uri);
 
@@ -674,13 +673,13 @@ void DistanceDownloadPlanner::downloadAsset(Asset* asset, Object* forObject) {
             // calls which need that lock. A post to a service would
             // be better, posting to a strand works ok
             mScene->renderStrand()->wrap(
-                std::tr1::bind(&DistanceDownloadPlanner::loadAsset, this, asset->uri,asset->internalId)
+                std::tr1::bind(&PriorityDownloadPlanner::loadAsset, this, asset->uri,asset->internalId)
             )
         );
 }
 
 
-void DistanceDownloadPlanner::loadAsset(Transfer::URI asset_uri,uint64 assetId)
+void PriorityDownloadPlanner::loadAsset(Transfer::URI asset_uri,uint64 assetId)
 {
     RMutex::scoped_lock lock(mDlPlannerMutex);
     DLPLANNER_LOG(detailed, "Finished downloading " << asset_uri);
@@ -741,7 +740,7 @@ void DistanceDownloadPlanner::loadAsset(Transfer::URI asset_uri,uint64 assetId)
     return;
 }
 
-void DistanceDownloadPlanner::finishLoadAsset(Asset* asset, bool success) {
+void PriorityDownloadPlanner::finishLoadAsset(Asset* asset, bool success) {
     RMutex::scoped_lock lock(mDlPlannerMutex);
     if (asset->downloadTask) {
         DLPLANNER_LOG(detailed, "Finishing load of asset " << asset->uri << " (priority " << asset->downloadTask->priority() << ")");
@@ -791,7 +790,7 @@ void DistanceDownloadPlanner::finishLoadAsset(Asset* asset, bool success) {
     checkRemoveAsset(asset,asset->livenessToken());
 }
 
-void DistanceDownloadPlanner::loadMeshdata(Asset* asset, const Mesh::MeshdataPtr& mdptr, bool usingDefault) {
+void PriorityDownloadPlanner::loadMeshdata(Asset* asset, const Mesh::MeshdataPtr& mdptr, bool usingDefault) {
     RMutex::scoped_lock lock(mDlPlannerMutex);
 
     //Extract any animations from the new mesh.
@@ -825,7 +824,7 @@ void DistanceDownloadPlanner::loadMeshdata(Asset* asset, const Mesh::MeshdataPtr
             std::string matname = ogreMaterialName(*mat, asset->uri, asset->textureFingerprints);
             getScene()->getResourceLoader()->loadMaterial(
                 matname, mdptr, *mat, asset->uri, asset->textureFingerprints,
-                std::tr1::bind(&DistanceDownloadPlanner::handleLoadedResource, this, asset,asset->livenessToken())
+                std::tr1::bind(&PriorityDownloadPlanner::handleLoadedResource, this, asset,asset->livenessToken())
             );
             asset->loadedResources.push_back(matname);
             asset->loadingResources++;
@@ -840,7 +839,7 @@ void DistanceDownloadPlanner::loadMeshdata(Asset* asset, const Mesh::MeshdataPtr
             skelname = ogreSkeletonName(mdptr, asset->textureFingerprints);
             getScene()->getResourceLoader()->loadSkeleton(
                 skelname, mdptr, asset->animations,
-                std::tr1::bind(&DistanceDownloadPlanner::handleLoadedResource, this, asset,asset->livenessToken())
+                std::tr1::bind(&PriorityDownloadPlanner::handleLoadedResource, this, asset,asset->livenessToken())
             );
             asset->loadedResources.push_back(skelname);
             asset->loadingResources++;
@@ -849,7 +848,7 @@ void DistanceDownloadPlanner::loadMeshdata(Asset* asset, const Mesh::MeshdataPtr
         // Mesh
         getScene()->getResourceLoader()->loadMesh(
             meshname, mdptr, skelname, asset->textureFingerprints,
-            std::tr1::bind(&DistanceDownloadPlanner::handleLoadedResource, this, asset,asset->livenessToken())
+            std::tr1::bind(&PriorityDownloadPlanner::handleLoadedResource, this, asset,asset->livenessToken())
         );
         asset->loadedResources.push_back(meshname);
         asset->loadingResources++;
@@ -894,7 +893,7 @@ void DistanceDownloadPlanner::loadMeshdata(Asset* asset, const Mesh::MeshdataPtr
     */
 }
 
-void DistanceDownloadPlanner::loadBillboard(Asset* asset, const Mesh::BillboardPtr& bbptr, bool usingDefault) {
+void PriorityDownloadPlanner::loadBillboard(Asset* asset, const Mesh::BillboardPtr& bbptr, bool usingDefault) {
     RMutex::scoped_lock lock(mDlPlannerMutex);
 
     // We load textures first to setup the texture bindings map, used when
@@ -911,7 +910,7 @@ void DistanceDownloadPlanner::loadBillboard(Asset* asset, const Mesh::BillboardP
     asset->ogreAssetName = matname;
     getScene()->getResourceLoader()->loadBillboardMaterial(
         matname, bbptr->image, asset->uri, asset->textureFingerprints,
-        std::tr1::bind(&DistanceDownloadPlanner::handleLoadedResource, this, asset,asset->livenessToken())
+        std::tr1::bind(&PriorityDownloadPlanner::handleLoadedResource, this, asset,asset->livenessToken())
     );
     asset->loadedResources.push_back(matname);
     asset->loadingResources++;
@@ -929,7 +928,7 @@ static void fixOgreURI(String &uri) {
 }
 }
 
-void DistanceDownloadPlanner::loadDependentTextures(Asset* asset, bool usingDefault) {
+void PriorityDownloadPlanner::loadDependentTextures(Asset* asset, bool usingDefault) {
     RMutex::scoped_lock lock(mDlPlannerMutex);
     // we currently assume no dependencies for default
     if (usingDefault) return;
@@ -964,7 +963,7 @@ void DistanceDownloadPlanner::loadDependentTextures(Asset* asset, bool usingDefa
                 // across many frames
                 getScene()->getResourceLoader()->loadTexture(
                     id,
-                    std::tr1::bind(&DistanceDownloadPlanner::handleLoadedResource, this, asset,
+                    std::tr1::bind(&PriorityDownloadPlanner::handleLoadedResource, this, asset,
                         asset->livenessToken())
                 );
                 asset->loadedResources.push_back(id);
@@ -986,7 +985,7 @@ void DistanceDownloadPlanner::loadDependentTextures(Asset* asset, bool usingDefa
 }
 
 
-void DistanceDownloadPlanner::handleLoadedResource(Asset* asset,Liveness::Token assetAlive)
+void PriorityDownloadPlanner::handleLoadedResource(Asset* asset,Liveness::Token assetAlive)
 {
     if (!assetAlive)
         return;
@@ -1000,7 +999,7 @@ void DistanceDownloadPlanner::handleLoadedResource(Asset* asset,Liveness::Token 
 }
 
 
-void DistanceDownloadPlanner::updateAssetPriority(Asset* asset) {
+void PriorityDownloadPlanner::updateAssetPriority(Asset* asset) {
     RMutex::scoped_lock lock(mDlPlannerMutex);
     // We only care about updating priorities when we're still downloading
     // the asset.
@@ -1018,7 +1017,7 @@ void DistanceDownloadPlanner::updateAssetPriority(Asset* asset) {
         asset->downloadTask->updatePriority( mAggregationAlgorithm->aggregate(priorities) );
 }
 
-void DistanceDownloadPlanner::unrequestAssetForObject(Object* forObject) {
+void PriorityDownloadPlanner::unrequestAssetForObject(Object* forObject) {
     //use the scoped mutex up here so that don't invalidate waiting objects
     //while running.
     RMutex::scoped_lock lock(mDlPlannerMutex);
@@ -1051,7 +1050,7 @@ void DistanceDownloadPlanner::unrequestAssetForObject(Object* forObject) {
     checkRemoveAsset(asset,asset->livenessToken());
 }
 
-void DistanceDownloadPlanner::checkRemoveAsset(Asset* asset,Liveness::Token assetAlive)
+void PriorityDownloadPlanner::checkRemoveAsset(Asset* asset,Liveness::Token assetAlive)
 {
     RMutex::scoped_lock lock(mDlPlannerMutex);
 

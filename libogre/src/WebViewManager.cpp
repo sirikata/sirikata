@@ -205,7 +205,7 @@ WebView* WebViewManager::createWebView(
                 webViewPosition, (Ogre::uchar)zOrder, tier,
                 viewport? viewport : defaultViewport,postStrand,
                 border);
-        
+
         newWebView->createWebView(false);
 	activeWebViews[webViewName] = newWebView;
         newWebView->bind("event", std::tr1::bind(&WebViewManager::onRaiseWebViewEvent, this, _1, _2));
@@ -240,14 +240,14 @@ WebView* WebViewManager::createWebViewPopup(
 		zOrder = highestZOrder + 1;
 
 
-        
+
         WebView* newWebView =
             new WebView(
                 ctx, webViewName, "___popup___", width,
                 height, webViewPosition, (Ogre::uchar)zOrder, tier,
                 viewport? viewport : defaultViewport, postingStrand);
 
-        
+
         newWebView->initializeWebView(newwin, false);
 	activeWebViews[webViewName] = newWebView;
         newWebView->bind("event", std::tr1::bind(&WebViewManager::onRaiseWebViewEvent, this, _1, _2));
@@ -267,11 +267,11 @@ WebView* WebViewManager::createWebViewMaterial(
 			"An attempt was made to create a WebView named '" + webViewName + "' when a WebView by the same name already exists!",
 			"WebViewManager::createWebViewMaterial");
 
-        
+
         WebView* newWebView =
             new WebView(ctx, webViewName, "___material___",
                 width, height, texFiltering,postingStrand);
-        
+
         newWebView->createWebView(false);
         activeWebViews[webViewName] = newWebView;
         newWebView->bind("event", std::tr1::bind(&WebViewManager::onRaiseWebViewEvent, this, _1, _2));
@@ -752,6 +752,15 @@ Input::EventResponse WebViewManager::onMouseDrag(Input::MouseDragEventPtr evt)
         return Input::EventResponse::cancel();
     else
         return Input::EventResponse::nop();
+}
+
+Input::EventResponse WebViewManager::onMouseReleased(Input::MouseReleasedEventPtr evt)
+{
+    // The release is actually generated when we get the onMouseClick
+    // event. Since the web views don't distinguish these different steps, we
+    // just do a mouse move here to check whether the input would be consumed.
+    bool success = this->injectMouseMove(InputCoordToWebViewCoord(evt, evt->mX, evt->mY));
+    return success ? Input::EventResponse::cancel() : Input::EventResponse::nop();
 }
 
 Input::EventResponse WebViewManager::onButton(Input::ButtonEventPtr evt)

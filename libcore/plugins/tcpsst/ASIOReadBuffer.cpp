@@ -243,41 +243,47 @@ void ASIOReadBuffer::readIntoChunk(const MultiplexedSocketPtr &parentSocket){
 
 
 void ASIOReadBuffer::processPartialChunk(uint8* dataBuffer, uint32 packetLength, uint32 &bufferReceived, Chunk&currentChunk) {
-    unsigned int headerLength=bufferReceived;
-    if (mFirstFrame) {
-        Stream::StreamID retid;
-        if (*(int*)mDataMask) {
-            uint8 tempId[16];
-            unsigned int i;
-            for (i = 0; i < 16 && i < headerLength; i++) {
-                tempId[i] = dataBuffer[i] ^ mDataMask[i & 3];
-            }
-            retid.unserialize(tempId,headerLength);
-            for (i = 0; i < (headerLength & 3); i++) {
-                uint8 tmpMask = mDataMask[0];
-                mDataMask[0] = mDataMask[1];
-                mDataMask[1] = mDataMask[2];
-                mDataMask[2] = mDataMask[3];
-                mDataMask[3] = tmpMask;
-            }
-        } else {
-            retid.unserialize(dataBuffer,headerLength);
+    unsigned int numHeaderBytesFromThisPacket=bufferReceived;
+    unsigned int partialHeaderSize = mPartialStreamId.size();
+    if (mFirstFrame||partialHeaderSize) {//if there's a partial header or this is the first frame, set the newChunkId and figure out how much was used by the header
+        Stream::StreamID retid=(Stream::StreamID)-1;
+        uint8 tempId[16];
+        std::copy(mPartialStreamId.begin(),mPartialStreamId.end(),tempId);
+        unsigned int i;
+        for (i = 0; i < 16-partialHeaderSize && i < numHeaderBytesFromThisPacket; i++) {
+            tempId[i+partialHeaderSize] = dataBuffer[i] ^ mDataMask[i & 3];//first mask the data 
         }
-        if (headerLength > bufferReceived) {
+        unsigned int aggregateHeaderSize=i+partialHeaderSize;
+        bool incompleteHeader=false;
+        if (!retid.unserialize(tempId,aggregateHeaderSize)) {//if failed to parse header, there's not enough data here
+            numHeaderBytesFromThisPacket = bufferReceived;
+            incompleteHeader=true;
+            mPartialStreamId.resize(i+partialHeaderSize);//resize to everything that's in tempId so far to hold the stream ID
+            std::copy(tempId,tempId+i+partialHeaderSize,mPartialStreamId.begin());//copy the stream ID into the partial header variable
+        }else {
+            numHeaderBytesFromThisPacket = aggregateHeaderSize-partialHeaderSize;
+            mPartialStreamId.clear();
+        }
+        for (i = 0; i < (numHeaderBytesFromThisPacket & 3); i++) {//adjust the mask to fit with the headerLength
+            uint8 tmpMask = mDataMask[0];
+            mDataMask[0] = mDataMask[1];
+            mDataMask[1] = mDataMask[2];
+            mDataMask[2] = mDataMask[3];
+            mDataMask[3] = tmpMask;
+        }
+        if (incompleteHeader&&mLastFrame) {
             retid = 0;
-            headerLength = 0;
+            numHeaderBytesFromThisPacket = 0;
             SILOG(network,debug,"High water mark must be greater than maximum StreamID size");
         }
         mNewChunkID = retid;
-        bufferReceived-=headerLength;
+        bufferReceived-=numHeaderBytesFromThisPacket;
     } else {
-        headerLength = 0; // FIXME: Need to deal with header split over continuation frames
-        // This can happen if the browser decides to split a frame into a size smaller than the length
-        // of the full stream id.
+        numHeaderBytesFromThisPacket = 0;
     }
-    currentChunk.resize(mChunkBufferPos + packetLength - headerLength);
-    if (packetLength>headerLength) {
-        std::memcpy(&*currentChunk.begin() + mChunkBufferPos, dataBuffer + headerLength, bufferReceived);
+    currentChunk.resize(mChunkBufferPos + packetLength - numHeaderBytesFromThisPacket);
+    if (packetLength>numHeaderBytesFromThisPacket) {
+        std::memcpy(&*currentChunk.begin() + mChunkBufferPos, dataBuffer + numHeaderBytesFromThisPacket, bufferReceived);
     }
 }
 void ASIOReadBuffer::translateFixedBuffer(const MultiplexedSocketPtr &thus) {

@@ -41,8 +41,9 @@ namespace Sirikata {
 /* Represents the physical network addresses of servers
  */
 class TabularServerIDMap : public ServerIDMap {
-    std::tr1::unordered_map<ServerID,Address4> mInternalIDMap;
-    std::tr1::unordered_map<ServerID,Address4> mExternalIDMap;
+    typedef std::tr1::unordered_map<ServerID,Address4> ServerToAddressMap;
+    ServerToAddressMap mInternalIDMap;
+    ServerToAddressMap mExternalIDMap;
 
 public:
     TabularServerIDMap(Context* ctx, std::istream&filestream);
@@ -53,6 +54,7 @@ public:
 
     virtual Address4 lookupExternal(const ServerID& obj_id);
     virtual void lookupExternal(const ServerID& sid, Address4LookupCallback cb);
+    virtual void lookupRandomExternal(Address4LookupCallback cb);
 };
 
 } // namespace Sirikata

@@ -12,7 +12,7 @@ class HttpCommandTest(Test):
         super(HttpCommandTest, self).__init__()
         self._nodes = {}
 
-    def add(self, name):
+    def add_http(self, name):
         '''Add an http endpoint, i.e. a node you'll contact to execute commands'''
         self._nodes[name] = random.randint(3000, 4000)
 
@@ -74,7 +74,7 @@ class SingleHttpServerTest(HttpCommandTest):
     def runTest(self, outputPath, binPath, cppohBinName, spaceBinName, output=sys.stdout):
         service_output_filename = os.path.join(outputPath, self.service_name + '.log')
 
-        self.add(self.service_name)
+        self.add_http(self.service_name)
         if self.service_name == 'space':
             service_bin = spaceBinName
         elif self.service_name == 'cppoh':

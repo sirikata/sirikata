@@ -66,6 +66,14 @@ const String& LogModuleString(const char* base) {
     if (it == LogModuleStrings.end()) {
         String base_str(base);
         boost::to_upper(base_str);
+
+        // Cap/extend
+#define LOGGING_MAX_MODULE_LENGTH 10
+        if (base_str.size() > LOGGING_MAX_MODULE_LENGTH)
+            base_str = base_str.substr(0, LOGGING_MAX_MODULE_LENGTH);
+        if (base_str.size() < LOGGING_MAX_MODULE_LENGTH)
+            base_str = String(LOGGING_MAX_MODULE_LENGTH-base_str.size(), ' ') + base_str;
+
         std::pair<CapsNameMap::iterator, bool> inserted = LogModuleStrings.insert(std::make_pair(base, base_str));
         return (inserted.first)->second;
     }
@@ -75,14 +83,16 @@ const String& LogModuleString(const char* base) {
 
 const char* LogLevelString(LOGGING_LEVEL lvl, const char* lvl_as_string) {
     switch(lvl) {
-      case fatal: return "FATAL"; break;
-      case error: return "ERROR"; break;
-      case warning: return "WARNING"; break;
-      case info: return "INFO"; break;
-      case debug: return "DEBUG"; break;
+        // Note these are all setup to be aligned/the same length. The default
+        // case, which represents an unexpected level, will break this padding.
+      case fatal:    return "FATAL   "; break;
+      case error:    return "ERROR   "; break;
+      case warning:  return "WARNING "; break;
+      case info:     return "INFO    "; break;
+      case debug:    return "DEBUG   "; break;
       case detailed: return "DETAILED"; break;
-      case insane: return "INSANE"; break;
-      default: return lvl_as_string; break;
+      case insane:   return "INSANE  "; break;
+      default:       return lvl_as_string; break;
     }
 }
 

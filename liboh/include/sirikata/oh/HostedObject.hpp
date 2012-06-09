@@ -341,13 +341,19 @@ public:
         const HostedObjectWPtr& weakSelf, const SpaceObjectReference& spaceobj,
         Disconnect::Code cc);
 
-    static void handleConnected(const HostedObjectWPtr &weakSelf, const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info);
-    static void handleConnectedIndirect(const HostedObjectWPtr &weakSelf, const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, const BaseDatagramLayerPtr&);
+    static void handleConnected(const HostedObjectWPtr &weakSelf, ObjectHost* parentOH, const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info);
+    static void handleConnectedIndirect(const HostedObjectWPtr &weakSelf, ObjectHost* parentOH, const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, const BaseDatagramLayerPtr&);
 
 //    static bool handleEntityCreateMessage(const HostedObjectWPtr &weakSelf, const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference bodyData);
     static void handleMigrated(const HostedObjectWPtr &weakSelf, const SpaceID& space, const ObjectReference& obj, ServerID server);
     static void handleStreamCreated(const HostedObjectWPtr &weakSelf, const SpaceObjectReference& spaceobj, SessionManager::ConnectionEvent after, PresenceToken token);
     static void handleDisconnected(const HostedObjectWPtr &weakSelf, const SpaceObjectReference& spaceobj, Disconnect::Code cc);
+
+    // Helper that disconnects presences that were completed after the
+    // HostedObject was stopped/destroyed. Only invoke indirectly (via posting)
+    // since we don't want to muck with the connection within the connection
+    // callback.
+    static void disconnectDeadPresence(ObjectHost* parentOH, const SpaceID& space, const ObjectReference& obj);
 
     ODP::DelegatePort* createDelegateODPPort(ODP::DelegateService* parentService, const SpaceObjectReference& spaceobj, ODP::PortID port);
     bool delegateODPPortSend(const ODP::Endpoint& source_ep, const ODP::Endpoint& dest_ep, MemoryReference payload);

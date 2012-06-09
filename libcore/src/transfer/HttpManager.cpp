@@ -87,6 +87,11 @@ HttpManager::~HttpManager() {
     //Stop the IOService and make sure its thread exist
     mServicePool->join();
 
+    //Clean up any data we still have to make sure anything
+    //referencing the service pool is dead
+    mRequestQueue.clear();
+    mRecycleBin.clear();
+
     //Delete dummy worker and service pool
     mServicePool->stopWork();
     delete mServicePool;

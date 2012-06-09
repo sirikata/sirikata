@@ -145,15 +145,18 @@ system.require('featureObject.em');
      //values: presences themselves.
      var sporefToPresences = {};
 
-     system.onPresenceConnected(
+     system.__addPrePresConnCB(
          function(newPres)
          {
              var nString = newPres.toString();
+             if (sporefToPresences[nString] !== undefined) return;
+
              sporefToPresences[nString] = newPres;
              pResultSet[nString]        = {};
              pAddCB[nString]            = [];
              pRemCB[nString]            = [];
-         });
+         }
+     );
 
      
      //Does not hold internal data.  Instead, has private-like
@@ -253,8 +256,8 @@ system.require('featureObject.em');
          var pArray = pRemCB[pString];
          
          
-         if (!(typeof(pArray[addID]) == 'undefined'))
-             pArray[addID] = null;         
+         if (!(typeof(pArray[remID]) == 'undefined'))
+             pArray[remID] = null;         
      };
 
      

@@ -59,7 +59,7 @@ void InitCSegOptions() {
 
       .addOption(new OptionValue("cseg-id", "1", Sirikata::OptionValueType<ServerID>(), "Server ID for this CSEG server"))
 
-      .addOption(new OptionValue("additional-cseg-duration", "60s", Sirikata::OptionValueType<Duration>(), "Additional duration to run CSEG after the simulation"))
+      .addOption(new OptionValue("additional-cseg-duration", "0s", Sirikata::OptionValueType<Duration>(), "Additional duration to run CSEG after the simulation"))
 
       .addOption(new OptionValue("cseg-service-tcp-port", "6234", Sirikata::OptionValueType<String>(), "TCP listening port number on host running the CSEG service (running with --cseg=distributed)"))
 

@@ -32,6 +32,7 @@
 
 #include <sirikata/core/network/Address4.hpp>
 #include "TabularServerIDMap.hpp"
+#include <sirikata/core/util/Random.hpp>
 
 namespace Sirikata {
 
@@ -48,10 +49,20 @@ TabularServerIDMap::TabularServerIDMap(Context* ctx, std::istream&filestream)
         char ohservice[1025];
         ohservice[1024]='\0';
         filestream.getline(ip,1024,':');
+        int32 host_length = filestream.gcount();
         if (filestream.eof()) break;
         filestream.getline(service,1024,':');
+        int32 service_length = filestream.gcount();
         if (filestream.eof()) break;
         filestream.getline(ohservice,1024,'\n');
+        int32 oh_service_length = filestream.gcount();
+
+        // If any of the parts are empty, ignore this line. Note that we check
+        // for length 1 since the ':' or '\n' are counted
+        if (host_length == 1 || service_length == 1 || oh_service_length == 1) {
+            count++;
+            continue;
+        }
 
         Address4 internal_addy(Sirikata::Network::Address(ip,service));
         mInternalIDMap[count] = internal_addy;
@@ -70,7 +81,7 @@ Address4 TabularServerIDMap::lookupInternal(const ServerID& server_id){
 }
 
 void TabularServerIDMap::lookupInternal(const ServerID& sid, Address4LookupCallback cb) {
-    mContext->ioService->post(std::tr1::bind(cb, lookupInternal(sid)), "TabularServerIDMap::lookupInternal");
+    mContext->ioService->post(std::tr1::bind(cb, sid, lookupInternal(sid)), "TabularServerIDMap::lookupInternal");
 }
 
 Address4 TabularServerIDMap::lookupExternal(const ServerID& server_id){
@@ -80,7 +91,14 @@ Address4 TabularServerIDMap::lookupExternal(const ServerID& server_id){
 }
 
 void TabularServerIDMap::lookupExternal(const ServerID& sid, Address4LookupCallback cb) {
-    mContext->ioService->post(std::tr1::bind(cb, lookupExternal(sid)), "TabularServerIDMap::lookupExternal");
+    mContext->ioService->post(std::tr1::bind(cb, sid, lookupExternal(sid)), "TabularServerIDMap::lookupExternal");
+}
+
+void TabularServerIDMap::lookupRandomExternal(Address4LookupCallback cb) {
+    int32 selected_server = randInt<int32>(0, mExternalIDMap.size()-1);
+    ServerToAddressMap::iterator it = mExternalIDMap.begin();
+    for(int32 i = 0; i < selected_server; i++) it++;
+    mContext->ioService->post(std::tr1::bind(cb, it->first, it->second), "TabularServerIDMap::lookupExternal");
 }
 
 }//end namespace sirikata

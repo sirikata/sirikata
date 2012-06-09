@@ -234,13 +234,13 @@ class TCPSpaceNetwork : public SpaceNetwork {
     RemoteStreamMap mClosingStreams;
     TimerSet mClosingStreamTimers; // Timers for streams that are still closing.
 
-    void finishListen(Address4 addr, ReceiveListener* receive_listener);
+    void finishListen(ServerID resolved_sid, Address4 addr, ReceiveListener* receive_listener);
 
     // Open a new connection.  Should be called when an existing connection
     // isn't available.
     TCPSendStream* openConnection(Network::IOStrand* strand, const ServerID& dest);
     // Finish opening the connection
-    void finishOpenConnection(const ServerID& dest, Address4 addr);
+    void finishOpenConnection(const ServerID& dest, ServerID resolved_dest, Address4 addr);
 
     // Add stream to system, possibly resolving conflicting sets of
     // streams. Return corresponding TCPReceiveStream*

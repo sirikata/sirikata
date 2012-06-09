@@ -3,7 +3,7 @@
 <title>UI</title>
 
 <link href="css/jquery.menu.css" rel="stylesheet" type="text/css" />
-<link href="../jquery_themes/redmond/jquery-ui-1.8.6.custom.css" rel="stylesheet" type="text/css" />
+<link href="../jquery_themes/vader_sharp/jquery-ui-1.8.20.custom.css" rel="stylesheet" type="text/css" />
 <link href="css/dockablewindow.css" rel="stylesheet" type="text/css" />
 <link href="css/ui.css" rel="stylesheet" type="text/css" />
 
@@ -34,9 +34,7 @@ $LAB
 .script("js/loading.js").wait()
 .script("js/dockablewindow.js").wait() // js/ui.js requires dockablewindow
 .script("js/ui.js").wait()
-.script("js/menu.js").wait()
-.script("js/open_file.js").wait()
-.script("js/cdn_upload.js")
+.script("js/menu.js")
 .wait(function() {
     $('#ui-box').show();
     sirikata.__event('__ready');
@@ -62,29 +60,13 @@ function loadModuleText(js_text) {
 <body>
 <div id='transparency'>
 </div>
-<div id='ui-container'>
+<div id='ui-container' class="ui-widget">
 
-<div id='ui-box'>
+<div id='ui-box' class="ui-widget-header">
 
-<ul id="menuone" class="menu">
-	<li class="menumain">File
-		<ul>
-			<li class='action_exit'>Exit</li>
-		</ul>
-	</li>
-	<li class="menumain">Actions
-		<ul>
-			<li class='action_cdn_upload'>CDN Upload Tool</li>
-		</ul>
-	</li>
-	<li class="menumain">Options
-		<ul>
-			<li class='action_toggle_clock'>Toggle Clock</li>
-			<li class='action_toggle_fps'>Toggle FPS Display</li>
-			<li class='action_toggle_render_stats'>Toggle Render Stats Display</li>
-		</ul>
-	</li>
-</ul>
+<div id="sirikata-global-menu-div">
+<ul id="sirikata-global-menu" class="menu"></ul>
+</div>
 
 &nbsp;
 

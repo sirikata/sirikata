@@ -556,8 +556,8 @@ void MeerkatUploadHandler::request_finished(std::tr1::shared_ptr<HttpManager::Ht
 
     String reported_task_id = parsed.getString("task_id");
     SILOG(transfer, detailed, "Upload succeeded, starting to track task id = " << reported_task_id << " (" << request->getIdentifier() << ")");
-    // 30 retries * .5s = 15s
-    requestStatus(request, reported_task_id, callback, 30);
+    // 60 retries * .5s = 30s
+    requestStatus(request, reported_task_id, callback, 60);
 }
 
 void MeerkatUploadHandler::requestStatus(UploadRequestPtr request, const String& task_id, UploadCallback callback, int32 retries) {
@@ -591,6 +591,12 @@ void MeerkatUploadHandler::handleRequestStatusResult(
 )
 {
     Transfer::URI bad;
+
+    if (retries <= 0) {
+	SILOG(transfer, error, "Failed to upload (" << request->getIdentifier() << ") -- status-check retries exceeded");
+        callback(bad);
+        return;
+    }
 
     if (error == Transfer::HttpManager::REQUEST_PARSING_FAILED) {
         SILOG(transfer, error, "Request parsing failed during an HTTP upload status check (" << request->getIdentifier() << ")");
@@ -650,7 +656,16 @@ void MeerkatUploadHandler::handleRequestStatusResult(
         return;
     }
 
-    String asset_path = parsed.getString("path");
+    String asset_path = "";
+    try {
+      asset_path = parsed.getString("path");
+    }
+    catch(std::runtime_error& e) {
+      SILOG(transfer, error, "Error uploading (" << request->getIdentifier() <<
+	                     ") -- No path returned in upload response");
+      callback(bad);
+      return;
+    } 
     SILOG(transfer, detailed, "Upload succeeded and got path " << asset_path << " (" << request->getIdentifier() << ")");
 
     // Construct the meerkat:// URL for this asset. We need server

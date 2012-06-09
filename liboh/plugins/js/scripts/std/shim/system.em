@@ -828,6 +828,17 @@ PresenceEntry.prototype.proxRemovedEvent = function (visibleObj,visTo)
       {
           return baseSystem.create_context.apply(baseSystem, arguments);
       };
+
+      // Allow shim layer hook for presence connection events, allowing some
+      // setup to be performed per-connection, ensuring things are in a good
+      // state before passing control to user code. These are permanent as this
+      // should only be used for built-in functionality which requires that it
+      // is always notified before any user code. Note that the callback may be
+      // invoked multiple times per connection.
+      var prePresConnCBList = [];
+      system.__addPrePresConnCB = function(cb) {
+          prePresConnCBList.push(cb);
+      };
      
       //not exposing
       /** @ignore */
@@ -837,6 +848,11 @@ PresenceEntry.prototype.proxRemovedEvent = function (visibleObj,visTo)
           {
               this.addToSelfMapAndPresencesArray(presConn);
               this.__setBehindSelf(presConn);
+              // Allow code hooked in to this process to do setup before any
+              // user code is invoked
+              for(var hook_cb_i in prePresConnCBList)
+                  prePresConnCBList[hook_cb_i](presConn);
+              // And now to the user code
               if (typeof(callback) === 'function')
                   callback(presConn,clearable);
           };
@@ -1062,15 +1078,32 @@ PresenceEntry.prototype.proxRemovedEvent = function (visibleObj,visTo)
          */
         system.createPresence = function (firstArg, callback, position, space)
         {
-            var sporef  = util.identifier(system.self.getSpaceID());
-            var pos = system.self.getPosition();
+            var has_opts_var = (typeof(firstArg) == 'object');
+
+            var sporef = undefined;
+            var pos = undefined;
             var connectedCallback = this.__wrapPresConnCB(function(){  });
-            var mesh = this.self.getMesh();
+            var mesh = undefined;
             
             if ((typeof(space) != 'undefined') && (space !== null))
                 sporef = util.identifier(space);
+            else if (has_opts_var && 'space' in firstArg)
+                sporef = util.identifier(firstArg['space']);
+            else if (system.self !== undefined)
+                sporef = util.identifier(system.self.getSpaceID());
+            else
+                throw new Error('No space specified and system.self is not defined');
+            
             if ((typeof(position) != 'undefined') && (position !== null))
                 pos = position;
+            else if (has_opts_var && 'pos' in firstArg)
+                pos = firstArg['pos'];
+            else if (has_opts_var && 'position' in firstArg)
+                pos = firstArg['position'];
+            else if (system.self !== undefined)
+                pos = system.self.getPosition();
+            else
+                throw new Error('No position specified and system.self is not defined');            
 
             if ((typeof(callback) != 'undefined'))
                 connectedCallback = this.__wrapPresConnCB(callback);
@@ -1078,7 +1111,24 @@ PresenceEntry.prototype.proxRemovedEvent = function (visibleObj,visTo)
             if (typeof(firstArg) == 'string')
                 mesh = firstArg;
 
-            var orient = system.self.getOrientation();
+            var orient = undefined;
+
+            if (has_opts_var && 'orient' in firstArg)
+                orient = firstArg['orient'];
+            else if (has_opts_var && 'orientation' in firstArg)
+                orient = firstArg['orientation'];
+            else if (system.self !== undefined)
+                orient = system.self.getOrientation();
+            else
+                orient = new util.Quaternion(0,0,0,1);
+            
+            if (has_opts_var && 'mesh' in firstArg)
+                mesh = firstArg['mesh'];
+            else if (system.self !== undefined)
+                mesh = system.self.getMesh();
+            else
+                mesh = '';
+            
             var vel = new util.Vec3(0,0,0);
             var posTime = null;
             var orientVel = new util.Quaternion (0,0,0,1); //identity.
@@ -1096,17 +1146,8 @@ PresenceEntry.prototype.proxRemovedEvent = function (visibleObj,visTo)
             var query = "";
 
             
-            if (typeof(firstArg) == 'object')
+            if (has_opts_var)
             {
-                if ('space' in firstArg)
-                    sporef = util.identifier(firstArg['space']);
-
-                if ('pos' in firstArg)
-                    pos = firstArg['pos'];
-
-                if ('position' in firstArg)
-                    pos = firstArg['position'];
-
                 if ('vel' in firstArg)
                     vel = firstArg['vel'];
 
@@ -1118,15 +1159,6 @@ PresenceEntry.prototype.proxRemovedEvent = function (visibleObj,visTo)
 
                 if ('orientationVel' in firstArg)
                     orientVel = firstArg['orientationVel'];
-
-                if ('orient' in firstArg)
-                    orient = firstArg['orient'];
-
-                if ('orientation' in firstArg)
-                    orient = firstArg['orientation'];
-
-                if ('mesh' in firstArg)
-                    mesh = firstArg['mesh'];
 
                 if ('physics' in firstArg)
                     physics = firstArg['physics'];

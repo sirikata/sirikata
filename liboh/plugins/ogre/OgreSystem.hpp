@@ -58,7 +58,7 @@ namespace Graphics {
 class ProxyEntity;
 class CubeMap;
 struct IntersectResult;
-class OgreSystemMouseHandler;
+class OgreSystemInputHandler;
 
 /** Represents one OGRE SceneManager, a single environment. */
 class OgreSystem :
@@ -72,10 +72,10 @@ class OgreSystem :
     SpaceObjectReference mPresenceID;
 
 
-    friend class OgreSystemMouseHandler;
-    OgreSystemMouseHandler *mMouseHandler;
-    void allocMouseHandler();
-    void destroyMouseHandler();
+    friend class OgreSystemInputHandler;
+    OgreSystemInputHandler *mInputHandler;
+    void allocInputHandler();
+    void destroyInputHandler();
     void tickInputHandler(const Task::LocalTime& t) const;
 
 

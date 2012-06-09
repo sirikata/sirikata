@@ -359,7 +359,10 @@ void ObjectHost::unregisterHostedObject(const SpaceObjectReference& sporef_uuid,
     HostedObjectMap::iterator iter = mHostedObjects.find(sporef_uuid);
     if (iter != mHostedObjects.end()) {
         HostedObjectPtr obj (iter->second);
-        if (obj.get()==key_obj)
+        // The NULL case covers the possibility that the connection finishes
+        // after the HostedObject requests destruction and stops paying
+        // attention to connection events
+        if (key_obj == NULL || obj.get()==key_obj)
             mHostedObjects.erase(iter);
         else
             SILOG(oh,error,"Two objects having the same internal name in the mHostedObjects map on disconnect "<<sporef_uuid.toString());

@@ -144,7 +144,7 @@ Simulation* HostedObject::runSimulation(
     // This is kept outside the lock because the constructor can
     // access the HostedObject and call methods which need the
     // lock.
-    HO_LOG(info,String("[OH] Initializing ") + simName);
+    HO_LOG(info,String("Initializing ") + simName);
 
     try {
         sim = SimulationFactory::getSingleton().getConstructor ( simName ) (
@@ -344,12 +344,12 @@ void HostedObject::initializeScript(const String& script_type, const String& arg
     HO_LOG(detailed,"Creating a script object for object");
 
     if (!ObjectScriptManagerFactory::getSingleton().hasConstructor(script_type)) {
-        HO_LOG(debug,"[HO] Failed to create script for object because incorrect script type");
+        HO_LOG(debug,"Failed to create script for object because incorrect script type");
         return;
     }
     ObjectScriptManager *mgr = mObjectHost->getScriptManager(script_type);
     if (mgr) {
-        HO_LOG(insane,"[HO] Creating script for object with args of "<<args);
+        HO_LOG(insane,"Creating script for object with args of "<<args);
         // First, tell storage that we're active. We only do this here because
         // only scripts use storage -- we don't need to try to activate it until
         // we have an active script
@@ -422,7 +422,7 @@ bool HostedObject::objectHostConnect(const SpaceID spaceID,
                            physics,
                            query,
                            zernike,
-                           std::tr1::bind(&HostedObject::handleConnected, getWeakPtr(), _1, _2, _3),
+                           std::tr1::bind(&HostedObject::handleConnected, getWeakPtr(), mObjectHost, _1, _2, _3),
                            std::tr1::bind(&HostedObject::handleMigrated, getWeakPtr(), _1, _2, _3),
                            std::tr1::bind(&HostedObject::handleStreamCreated, getWeakPtr(), _1, _2, token),
                            std::tr1::bind(&HostedObject::handleDisconnected, getWeakPtr(), _1, _2)
@@ -473,13 +473,31 @@ bool HostedObject::connect(
     }
 }
 
+void HostedObject::disconnectDeadPresence(ObjectHost* parentOH, const SpaceID& space, const ObjectReference& obj) {
+    // We can get connection callbacks from the session manager after we have
+    // already been stopped/destroyed since the script can kill things at any
+    // time. However, we need to make sure we clean these up properly,
+    // disconnecting the presence so a) it doesn't hang around in the space and
+    // b) so that we can clean up the HostedObject locally/don't keep garbage in
+    // the SessionManager.
 
-void HostedObject::handleConnected(const HostedObjectWPtr& weakSelf, const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info)
+    // The cleanup is mostly like we were disconnecting normally. The NULL value
+    // passed to unregisterHostedObject indicates that we no longer have the
+    // pointer because the object using the ID has been stopped.
+    parentOH->disconnectObject(space,obj);
+    parentOH->unregisterHostedObject(SpaceObjectReference(space,obj), NULL);
+    return;
+}
+
+void HostedObject::handleConnected(const HostedObjectWPtr& weakSelf, ObjectHost* parentOH, const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info)
 {
     HostedObjectPtr self(weakSelf.lock());
     if ((!self)||self->stopped()) {
         HO_LOG(detailed,"Ignoring connection success after system stop requested.");
-
+        parentOH->context()->mainStrand->post(
+            std::tr1::bind(&HostedObject::disconnectDeadPresence, parentOH, space, obj),
+            "HostedObject::disconnectDeadPresence"
+        );
         return;
     }
     if (info.server == NullServerID)
@@ -496,13 +514,13 @@ void HostedObject::handleConnected(const HostedObjectWPtr& weakSelf, const Space
     // We have to manually do what mContext->mainStrand->wrap( ... ) should be
     // doing because it can't handle > 5 arguments.
     self->mContext->mainStrand->post(
-        std::tr1::bind(&HostedObject::handleConnectedIndirect, weakSelf, space, obj, info, baseDatagramLayer),
+        std::tr1::bind(&HostedObject::handleConnectedIndirect, weakSelf, parentOH, space, obj, info, baseDatagramLayer),
         "HostedObject::handleConnectedIndirect"
     );
 }
 
 
-void HostedObject::handleConnectedIndirect(const HostedObjectWPtr& weakSelf, const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, const BaseDatagramLayerPtr& baseDatagramLayer)
+void HostedObject::handleConnectedIndirect(const HostedObjectWPtr& weakSelf, ObjectHost* parentOH, const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, const BaseDatagramLayerPtr& baseDatagramLayer)
 {
     if (info.server == NullServerID)
     {
@@ -511,8 +529,13 @@ void HostedObject::handleConnectedIndirect(const HostedObjectWPtr& weakSelf, con
     }
 
     HostedObjectPtr self(weakSelf.lock());
-    if (!self)
+    if (!self) {
+        parentOH->context()->mainStrand->post(
+            std::tr1::bind(&HostedObject::disconnectDeadPresence, parentOH, space, obj),
+            "HostedObject::disconnectDeadPresence"
+        );
         return;
+    }
 
     SpaceObjectReference self_objref(space, obj);
 

@@ -10,7 +10,7 @@
 namespace Sirikata {
 namespace Base64 {
 
-SIRIKATA_FUNCTION_EXPORT String encode(const String& orig);
+SIRIKATA_FUNCTION_EXPORT String encode(const String& orig, bool padWithEquals);
 SIRIKATA_FUNCTION_EXPORT String encodeURL(const String& orig);
 SIRIKATA_FUNCTION_EXPORT String decode(const String& orig);
 SIRIKATA_FUNCTION_EXPORT String decodeURL(const String& orig);

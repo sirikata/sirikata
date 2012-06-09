@@ -13,16 +13,21 @@
 namespace Sirikata {
 namespace Base64 {
 
-String encode(const String& orig) {
+String encode(const String& orig, bool padWithEqual) {
     using namespace boost::archive::iterators;
     typedef base64_from_binary< transform_width< const char *, 6, 8 > > base64_text;
-
+    size_t origSize = orig.size();
     std::stringstream os;
     std::copy(
-        base64_text(orig.c_str()),
-        base64_text(orig.c_str() + orig.size()),
+        base64_text(orig.data()),
+        base64_text(orig.data() + origSize),
         std::ostream_iterator<char>(os)
     );
+    origSize%=3;
+    if (origSize==1)
+        os<<'='<<'=';
+    if (origSize==2)
+        os<<'=';
     return os.str();
 }
 
@@ -30,7 +35,7 @@ String encodeURL(const String& orig) {
     // To properly encode, we need to buffer the end of the string so that the
     // number of bits works out.  Append = until we get a total number of bits
     // divisible by 8.
-    String data_part = encode(orig);
+    String data_part = encode(orig,false);
     // We get back encoded_bytes * 6 bits.
     uint32 nbits = data_part.size() * 6;
     // We need it to be divisible by 8.
@@ -45,11 +50,11 @@ String encodeURL(const String& orig) {
 String decode(const String& orig) {
     using namespace boost::archive::iterators;
     typedef transform_width< binary_from_base64< const char * >, 8, 6 > base64_text;
-
+    size_t origSize = orig.size();
     std::stringstream os;
     std::copy(
-        base64_text(orig.c_str()),
-        base64_text(orig.c_str() + orig.size()),
+        base64_text(orig.data()),
+        base64_text(orig.data() + origSize),
         std::ostream_iterator<char>(os)
     );
     return os.str();

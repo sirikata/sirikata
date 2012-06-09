@@ -89,6 +89,11 @@ private:
         // Executes this action. Assumes the owning SQLiteStorage has setup the transaction.
         Result execute(SQLiteDBPtr db, const Bucket& bucket, ReadSet* rs);
 
+        // Executes this action, retrying the given number of times if there's a
+        // temporary failure to lock the database. Assumes the owning
+        // SQLiteStorage has setup the transaction.
+        Result executeWithRetry(SQLiteDBPtr db, const Bucket& bucket, ReadSet* rs, int32 retries, const Duration& retry_wait);
+
         // Bucket is implicit, passed into execute
         Type type;
         Key key;
@@ -114,6 +119,10 @@ private:
         CommitCallback cb;
     };
     typedef ThreadSafeQueueWithNotification<TransactionData> TransactionQueue;
+
+    // Helper that checks and logs errors, then returns bool indicating
+    // success/failure
+    static bool checkSQLiteError(SQLiteDBPtr db, int rc, const String& msg);
 
     // Initializes the database. This is separate from the main initialization
     // function because we need to make sure it executes in the right thread so
@@ -187,6 +196,17 @@ private:
     // increase/decrease based on success/failure and avoid latency getting too
     // hight. Right now we just have a reasonable, but small, number.
     uint32 mMaxCoalescedTransactions;
+
+    // Amount of time to sleep between retries. Shouldn't be too big or you can
+    // back up all storage, but should be long enough that transient errors such
+    // as waiting for other threads to unlock are likely to be resolved.
+    const Duration mRetrySleepDuration;
+    // Number of times to retry a normal operation (user transaction requests)
+    // and lease operations (acquiring/releasing locks). The latter should be
+    // more aggressive about retrying, whereas the former can rely on
+    // application-level retries when transient errors are detected.
+    const int32 mNormalOpRetries;
+    const int32 mLeaseOpRetries;
 
     struct BucketRenewTimeout {
         BucketRenewTimeout(const Bucket& _b, Time _t)

@@ -39,6 +39,14 @@ void HttpServerIDMap::lookupExternal(const ServerID& sid, Address4LookupCallback
     );
 }
 
+void HttpServerIDMap::lookupRandomExternal(Address4LookupCallback cb) {
+    // NullServerID indicates pick randomly
+    startLookup(
+        NullServerID, cb,
+        mExternalHost, mExternalService, mExternalPath
+    );
+}
+
 void HttpServerIDMap::startLookup(
     const ServerID& sid, Address4LookupCallback cb,
     const String& host,
@@ -50,7 +58,9 @@ void HttpServerIDMap::startLookup(
     HttpManager::Headers request_headers;
     request_headers["Host"] = host;
     HttpManager::QueryParameters query_params;
-    query_params["server"] = boost::lexical_cast<String>(sid);
+    // Empty query params if 0, i.e. random, is requested
+    if (sid != NullServerID)
+        query_params["server"] = boost::lexical_cast<String>(sid);
     HttpManager::getSingleton().get(
         addr, path,
         std::tr1::bind(&HttpServerIDMap::finishLookup, this, sid, cb, _1, _2, _3),
@@ -67,26 +77,29 @@ void HttpServerIDMap::finishLookup(
     // Error conditions
     if (error != HttpManager::SUCCESS) {
         SILOG(http-serverid-map, error, "Failed to lookup server " << sid);
-        mContext->ioService->post(std::tr1::bind(cb, Address4::Null), "HttpServerIDMap::finishLookup");
+        mContext->ioService->post(std::tr1::bind(cb, sid, Address4::Null), "HttpServerIDMap::finishLookup");
         return;
     }
 
-    // Parse the response. Currently we assume we have (host):(service).
+    // Parse the response. Currently we assume we have (serverid)\n(host):(service).
     // TODO(ewencp) we could decide how to parse based on content type (e.g. for
     // json)
     String resp = response->getData()->asString();
+    String::size_type line_split_pos = resp.find("\n");
     String::size_type split_pos = resp.find(":");
-    if (split_pos == String::npos) {
+    if (line_split_pos == String::npos || split_pos == String::npos) {
         SILOG(http-serverid-map, error, "Couldn't parse response for server lookup " << sid << ": " << resp);
-        mContext->ioService->post(std::tr1::bind(cb, Address4::Null), "HttpServerIDMap::finishLookup");
+        mContext->ioService->post(std::tr1::bind(cb, sid, Address4::Null), "HttpServerIDMap::finishLookup");
         return;
     }
 
+    ServerID resolved_sid = boost::lexical_cast<ServerID>( resp.substr(0,line_split_pos) );
+    assert(resolved_sid == sid || sid == NullServerID);
     Network::Address retval(
-        resp.substr(0,split_pos),
+        resp.substr(line_split_pos+1,split_pos-line_split_pos-1),
         resp.substr(split_pos+1)
     );
-    mContext->ioService->post(std::tr1::bind(cb, retval), "HttpServerIDMap::finishLookup");
+    mContext->ioService->post(std::tr1::bind(cb, resolved_sid, retval), "HttpServerIDMap::finishLookup");
 }
 
 }//end namespace sirikata

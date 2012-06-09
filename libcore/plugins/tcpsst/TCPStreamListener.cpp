@@ -127,6 +127,10 @@ TCPStreamListener::TCPStreamListener(IOStrand* io, OptionSet*options)
     OptionValue *noDelay=options->referenceOption("no-delay");
     OptionValue *kernelSendBufferSize=options->referenceOption("ksend-buffer-size");
     OptionValue *kernelReceiveBufferSize=options->referenceOption("kreceive-buffer-size");
+    OptionValue *fragmentPackets=options->referenceOption("test-fragment-packet-level");
+    if (fragmentPackets->as<int>()!=-1) {
+        TCPStream::sFragmentPackets = fragmentPackets->as<int>();
+    }
 
     assert(maxSimultSockets&&sendBufferSize);
     DataPtr data (new Data(io,

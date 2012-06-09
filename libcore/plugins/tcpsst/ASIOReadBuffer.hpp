@@ -75,7 +75,8 @@ private:
     ///Where is ASIO writing to in mBuffer
     unsigned int mFixedBufferPos;
     unsigned int mChunkBufferPos;
-
+    ///if a header is delivered in a chunk that's too small to contain it, need to hold the bytes temporarily
+    std::vector<uint8> mPartialStreamId;
     bool mFirstFrame; ///< First frame in a series of continuations (has stream id)
     bool mLastFrame; ///< Last frame in a series of continuations (we actually process)
 

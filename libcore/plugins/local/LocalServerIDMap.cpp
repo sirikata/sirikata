@@ -51,7 +51,7 @@ Address4 LocalServerIDMap::lookupInternal(const ServerID& server_id) {
 }
 
 void LocalServerIDMap::lookupInternal(const ServerID& sid, Address4LookupCallback cb) {
-    mContext->ioService->post(std::tr1::bind(cb, lookupInternal(sid)), "LocalServerIDMap::lookupInternal");
+    mContext->ioService->post(std::tr1::bind(cb, sid, lookupInternal(sid)), "LocalServerIDMap::lookupInternal");
 }
 
 Address4 LocalServerIDMap::lookupExternal(const ServerID& server_id) {
@@ -63,7 +63,11 @@ Address4 LocalServerIDMap::lookupExternal(const ServerID& server_id) {
 }
 
 void LocalServerIDMap::lookupExternal(const ServerID& sid, Address4LookupCallback cb) {
-    mContext->ioService->post(std::tr1::bind(cb, lookupExternal(sid)), "LocalServerIDMap::lookupExternal");
+    mContext->ioService->post(std::tr1::bind(cb, sid, lookupExternal(sid)), "LocalServerIDMap::lookupExternal");
+}
+
+void LocalServerIDMap::lookupRandomExternal(Address4LookupCallback cb) {
+    mContext->ioService->post(std::tr1::bind(cb, mID, mAddress), "LocalServerIDMap::lookupExternal");
 }
 
 }

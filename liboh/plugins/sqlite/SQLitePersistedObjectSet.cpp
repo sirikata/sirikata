@@ -61,6 +61,14 @@ void SQLitePersistedObjectSet::start() {
     mIOService->post(std::tr1::bind(&SQLitePersistedObjectSet::initDB, this), "SQLitePersistedObjectSet::initDB");
 }
 
+bool SQLitePersistedObjectSet::checkSQLiteError(int rc, const String& msg) const {
+    std::pair<bool, String> res = SQLite::check_sql_error(mDB->db(), rc, NULL, msg);
+    if (res.first) {
+        SILOG(sqlite-persisted-object-set, error, res.second);
+    }
+    return res.first;
+}
+
 void SQLitePersistedObjectSet::initDB() {
     SQLiteDBPtr db = SQLite::getSingleton().open(mDBFilename);
     sqlite3_busy_timeout(db->db(), 1000);
@@ -74,15 +82,19 @@ void SQLitePersistedObjectSet::initDB() {
     char* remain;
     sqlite3_stmt* table_create_stmt;
 
+    mDB = db;
+    bool success = true;
+
     rc = sqlite3_prepare_v2(db->db(), table_create.c_str(), -1, &table_create_stmt, (const char**)&remain);
-    SQLite::check_sql_error(db->db(), rc, NULL, "Error preparing table create statement");
+    success = success && !checkSQLiteError(rc, "Error preparing table create statement");
 
     rc = sqlite3_step(table_create_stmt);
-    SQLite::check_sql_error(db->db(), rc, NULL, "Error executing table create statement");
+    success = success && !checkSQLiteError(rc, "Error executing table create statement");
     rc = sqlite3_finalize(table_create_stmt);
-    SQLite::check_sql_error(db->db(), rc, NULL, "Error finalizing table create statement");
+    success = success && !checkSQLiteError(rc, "Error finalizing table create statement");
 
-    mDB = db;
+    if (!success)
+        mDB.reset();
 }
 
 void SQLitePersistedObjectSet::stop() {
@@ -99,12 +111,28 @@ void SQLitePersistedObjectSet::stop() {
 
 void SQLitePersistedObjectSet::requestPersistedObject(const UUID& internal_id, const String& script_type, const String& script_args, const String& script_contents, RequestCallback cb, const String& timestamp) {
     mIOService->post(
-        std::tr1::bind(&SQLitePersistedObjectSet::performUpdate, this, internal_id, script_type, script_args, script_contents, cb),
+        std::tr1::bind(&SQLitePersistedObjectSet::performUpdateWithRetry, this, internal_id, script_type, script_args, script_contents, cb),
         "SQLitePersistedObjectSet::performUpdate"
     );
 }
 
-void SQLitePersistedObjectSet::performUpdate(const UUID& internal_id, const String& script_type, const String& script_args, const String& script_contents, RequestCallback cb) {
+void SQLitePersistedObjectSet::performUpdateWithRetry(const UUID& internal_id, const String& script_type, const String& script_args, const String& script_contents, RequestCallback cb) {
+    UpdateResult res = LOCK_ERROR;
+    for(int32 i = 0; i < 100 && res == LOCK_ERROR; i++) {
+        if (i != 0) Timer::sleep(Duration::milliseconds(25));
+        res = performUpdate(internal_id, script_type, script_args, script_contents, cb);
+    }
+
+    if (res == LOCK_ERROR)
+        SILOG(sqlite-persisted-object-set, error, "Couldn't perform update after 100 retries, database was busy.");
+
+    if (cb != 0)
+        mContext->mainStrand->post(std::tr1::bind(cb, (res == SUCCESS)), "SQLitePersistedObjectSet::performUpdate callback");
+}
+
+SQLitePersistedObjectSet::UpdateResult SQLitePersistedObjectSet::performUpdate(const UUID& internal_id, const String& script_type, const String& script_args, const String& script_contents, RequestCallback cb) {
+    SQLitePersistedObjectSet::UpdateResult result = SUCCESS;
+
     bool success = true;
 
     int rc;
@@ -116,17 +144,17 @@ void SQLitePersistedObjectSet::performUpdate(const UUID& internal_id, const Stri
 
     sqlite3_stmt* value_insert_stmt;
     rc = sqlite3_prepare_v2(mDB->db(), value_insert.c_str(), -1, &value_insert_stmt, (const char**)&remain);
-    success = success && !SQLite::check_sql_error(mDB->db(), rc, NULL, "Error preparing value insert statement");
+    success = success && !checkSQLiteError(rc, "Error preparing value insert statement");
 
     String id_str = internal_id.rawHexData();
     rc = sqlite3_bind_text(value_insert_stmt, 1, id_str.c_str(), (int)id_str.size(), SQLITE_TRANSIENT);
-    success = success && !SQLite::check_sql_error(mDB->db(), rc, NULL, "Error binding object internal ID to value insert statement");
+    success = success && !checkSQLiteError(rc, "Error binding object internal ID to value insert statement");
     rc = sqlite3_bind_text(value_insert_stmt, 2, script_type.c_str(), (int)script_type.size(), SQLITE_TRANSIENT);
-    success = success && !SQLite::check_sql_error(mDB->db(), rc, NULL, "Error binding script_type name to value insert statement");
+    success = success && !checkSQLiteError(rc, "Error binding script_type name to value insert statement");
     rc = sqlite3_bind_blob(value_insert_stmt, 3, script_args.c_str(), (int)script_args.size(), SQLITE_TRANSIENT);
-    success = success && !SQLite::check_sql_error(mDB->db(), rc, NULL, "Error binding script_args to value insert statement");
+    success = success && !checkSQLiteError(rc, "Error binding script_args to value insert statement");
     rc = sqlite3_bind_blob(value_insert_stmt, 4, script_contents.c_str(), (int)script_contents.size(), SQLITE_TRANSIENT);
-    success = success && !SQLite::check_sql_error(mDB->db(), rc, NULL, "Error binding script_contents to value insert statement");
+    success = success && !checkSQLiteError(rc, "Error binding script_contents to value insert statement");
 
     int step_rc = SQLITE_OK;
     while(step_rc == SQLITE_OK) {
@@ -136,13 +164,19 @@ void SQLitePersistedObjectSet::performUpdate(const UUID& internal_id, const Stri
         success = false;
         sqlite3_reset(value_insert_stmt); // allow this to be cleaned
                                           // up
+        if (step_rc == SQLITE_LOCKED || step_rc == SQLITE_BUSY)
+            result = LOCK_ERROR;
+        else
+            SILOG(sqlite-persisted-object-set, error, "Update failed: " << SQLite::resultAsString(step_rc));
     }
 
     rc = sqlite3_finalize(value_insert_stmt);
-    success = success && !SQLite::check_sql_error(mDB->db(), rc, NULL, "Error finalizing value insert statement");
+    success = success && !checkSQLiteError(rc, "Error finalizing value insert statement");
 
-    if (cb != 0)
-        mContext->mainStrand->post(std::tr1::bind(cb, success), "SQLitePersistedObjectSet::performUpdate callback");
+    if (!success && result == SUCCESS)
+        result = TRANSACTION_ERROR;
+
+    return result;
 }
 
 } //end namespace OH

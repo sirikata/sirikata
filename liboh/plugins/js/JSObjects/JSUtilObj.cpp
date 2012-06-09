@@ -433,7 +433,7 @@ v8::Handle<v8::Value> Base64Encode(const v8::Arguments& args) {
     if (!decodeString(args[0], unencoded, errmsg))
         return v8::ThrowException(v8::Exception::Error(v8::String::New("Got non-string in Base64Encode.")));
 
-    String encoded = Base64::encode(unencoded);
+    String encoded = Base64::encode(unencoded,true);
     return v8::String::New(encoded.c_str(), encoded.size());
 }
 

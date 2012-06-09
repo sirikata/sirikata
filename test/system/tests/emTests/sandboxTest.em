@@ -8,7 +8,7 @@
  
  */
 
-system.require('helperLibs/util.em');
+system.require('emUtil/util.em');
 mTest = new UnitTest('sandboxTest');
 
 system.onPresenceConnected(runTests);
@@ -46,7 +46,7 @@ function testIsolation()
     newSandbox.execute(
         function()
         {
-            system.require('helperLibs/util.em');
+            system.require('emUtil/util.em');
             mTest = new UnitTest('sandboxTest');
 
             if (typeof(x) !== 'undefined')
@@ -91,13 +91,13 @@ function testTimeoutInSandbox()
                            {
                                if (typeof(haveExecutedTimeout) == 'undefined')
                                {
-                                   system.require('helperLibs/util.em');
+                                   system.require('emUtil/util.em');
                                    mTest = new UnitTest('sandboxTest');
                                    mTest.fail('Failure when calling timeout from sandbox.  Data does not persist between sandbox executions.');
                                }
                                else if (!haveExecutedTimeout)
                                {
-                                   system.require('helperLibs/util.em');
+                                   system.require('emUtil/util.em');
                                    mTest = new UnitTest('sandboxTest');
                                    mTest.fail('Failure when calling timeout from sandbox.  Timeout event never got called.');
                                }
@@ -129,7 +129,7 @@ function testPassedThroughSelf()
                 system.print(system.self.position.z);
                 system.print('\n\n');
                 
-                system.require('helperLibs/util.em');
+                system.require('emUtil/util.em');
                 mTest = new UnitTest('sandboxTest');
                 mTest.fail('Error in testPassedThroughSelf.  self inside of sandbox should be identical to presence passed through.');
             }
@@ -153,7 +153,7 @@ function testTryExceedCaps()
         function()
         {
             //import failure code
-            system.require('helperLibs/util.em');
+            system.require('emUtil/util.em');
             mTest = new UnitTest('sandboxTest');
             
             //send message

@@ -217,24 +217,24 @@ void AlwaysLocationUpdatePolicy::service() {
     mObjectSubscriptions.service();
 }
 
-void AlwaysLocationUpdatePolicy::tryCreateChildStream(const UUID& dest, ODPSST::Stream::Ptr parent_stream, std::string* msg, int count) {
+void AlwaysLocationUpdatePolicy::tryCreateChildStream(const UUID& dest, ODPSST::Stream::Ptr parent_stream, std::string* msg, int count, const SubscriberInfoPtr&numOutstandingMessageCount) {
     if (!validSubscriber(dest)) {
-        mObjectSubscriptions.decrementOutstandingMessageCount(dest);
+        //mObjectSubscriptions.decrementOutstandingMessageCount(dest);
         delete msg;
         return;
     }
 
     parent_stream->createChildStream(
-        std::tr1::bind(&AlwaysLocationUpdatePolicy::objectLocSubstreamCallback, this, _1, _2, dest, parent_stream, msg, count+1),
+        std::tr1::bind(&AlwaysLocationUpdatePolicy::objectLocSubstreamCallback, this, _1, _2, dest, parent_stream, msg, count+1, numOutstandingMessageCount),
         (void*)msg->data(), msg->size(),
         OBJECT_PORT_LOCATION, OBJECT_PORT_LOCATION
     );
 }
 
-void AlwaysLocationUpdatePolicy::objectLocSubstreamCallback(int x, ODPSST::Stream::Ptr substream, const UUID& dest, ODPSST::Stream::Ptr parent_stream, std::string* msg, int count) {
+void AlwaysLocationUpdatePolicy::objectLocSubstreamCallback(int x, ODPSST::Stream::Ptr substream, const UUID& dest, ODPSST::Stream::Ptr parent_stream, std::string* msg, int count, const SubscriberInfoPtr &numOutstandingMessageCount) {
     // If we got it, the data got sent and we can drop the stream
     if (substream) {
-        mObjectSubscriptions.decrementOutstandingMessageCount(dest);
+        //mObjectSubscriptions.decrementOutstandingMessageCount(dest);
         delete msg;
         substream->close(false);
         return;
@@ -243,33 +243,33 @@ void AlwaysLocationUpdatePolicy::objectLocSubstreamCallback(int x, ODPSST::Strea
     // If we didn't get it and we haven't retried too many times, try
     // again. Otherwise, report error and give up.
     if (count < 5) {
-        tryCreateChildStream(dest, parent_stream, msg, count);
+        tryCreateChildStream(dest, parent_stream, msg, count, numOutstandingMessageCount);
     }
     else {
         SILOG(always_loc,error,"Failed multiple times to open loc update substream.");
-        mObjectSubscriptions.decrementOutstandingMessageCount(dest);
+        //mObjectSubscriptions.decrementOutstandingMessageCount(dest);
         delete msg;
     }
 }
 
-void AlwaysLocationUpdatePolicy::tryCreateChildStream(const OHDP::NodeID& dest, OHDPSST::Stream::Ptr parent_stream, std::string* msg, int count) {
+void AlwaysLocationUpdatePolicy::tryCreateChildStream(const OHDP::NodeID& dest, OHDPSST::Stream::Ptr parent_stream, std::string* msg, int count, const SubscriberInfoPtr&numOutstandingMessageCount) {
     if (!validSubscriber(dest)) {
-        mOHSubscriptions.decrementOutstandingMessageCount(dest);
+        //mOHSubscriptions.decrementOutstandingMessageCount(dest);
         delete msg;
         return;
     }
 
     parent_stream->createChildStream(
-        std::tr1::bind(&AlwaysLocationUpdatePolicy::ohLocSubstreamCallback, this, _1, _2, dest, parent_stream, msg, count+1),
+        std::tr1::bind(&AlwaysLocationUpdatePolicy::ohLocSubstreamCallback, this, _1, _2, dest, parent_stream, msg, count+1, numOutstandingMessageCount),
         (void*)msg->data(), msg->size(),
         OBJECT_PORT_LOCATION, OBJECT_PORT_LOCATION
     );
 }
 
-void AlwaysLocationUpdatePolicy::ohLocSubstreamCallback(int x, OHDPSST::Stream::Ptr substream, const OHDP::NodeID& dest, OHDPSST::Stream::Ptr parent_stream, std::string* msg, int count) {
+void AlwaysLocationUpdatePolicy::ohLocSubstreamCallback(int x, OHDPSST::Stream::Ptr substream, const OHDP::NodeID& dest, OHDPSST::Stream::Ptr parent_stream, std::string* msg, int count, const SubscriberInfoPtr&numOutstandingMessageCount) {
     // If we got it, the data got sent and we can drop the stream
     if (substream) {
-        mOHSubscriptions.decrementOutstandingMessageCount(dest);
+        //mOHSubscriptions.decrementOutstandingMessageCount(dest);
         delete msg;
         substream->close(false);
         return;
@@ -278,10 +278,10 @@ void AlwaysLocationUpdatePolicy::ohLocSubstreamCallback(int x, OHDPSST::Stream::
     // If we didn't get it and we haven't retried too many times, try
     // again. Otherwise, report error and give up.
     if (count < 5) {
-        tryCreateChildStream(dest, parent_stream, msg, count);
+        tryCreateChildStream(dest, parent_stream, msg, count, numOutstandingMessageCount);
     }
     else {
-        mOHSubscriptions.decrementOutstandingMessageCount(dest);
+        //mOHSubscriptions.decrementOutstandingMessageCount(dest);
         SILOG(always_loc,error,"Failed multiple times to open loc update substream.");
         delete msg;
     }
@@ -319,39 +319,51 @@ bool AlwaysLocationUpdatePolicy::isSelfSubscriber(const ServerID& sid, const UUI
     return false;
 }
 
-bool AlwaysLocationUpdatePolicy::trySend(const UUID& dest, const Sirikata::Protocol::Loc::BulkLocationUpdate& blu)
+bool AlwaysLocationUpdatePolicy::trySend(const UUID& dest, const Sirikata::Protocol::Loc::BulkLocationUpdate& blu, const SubscriberInfoPtr& numOutstandingMessageCount)
 {
     std::string bluMsg = serializePBJMessage(blu);
 
     ObjectSession* session = mLocService->context()->objectSessionManager()->getSession(ObjectReference(dest));
-    if (session == NULL) return false;
+    if (session == NULL) {
+        //mObjectSubscriptions.decrementOutstandingMessageCount(dest);
+        return false;
+    }
     ODPSST::Stream::Ptr locServiceStream = session->getStream();
-    if (!locServiceStream) return false;
+    if (!locServiceStream) {
+        //mObjectSubscriptions.decrementOutstandingMessageCount(dest);
+        return false;
+    }
 
     Sirikata::Protocol::Frame msg_frame;
     msg_frame.set_payload(bluMsg);
     std::string* framed_loc_msg = new std::string(serializePBJMessage(msg_frame));
-    tryCreateChildStream(dest, locServiceStream, framed_loc_msg, 0);
+    tryCreateChildStream(dest, locServiceStream, framed_loc_msg, 0, numOutstandingMessageCount);
     return true;
 }
 
-bool AlwaysLocationUpdatePolicy::trySend(const OHDP::NodeID& dest, const Sirikata::Protocol::Loc::BulkLocationUpdate& blu)
+bool AlwaysLocationUpdatePolicy::trySend(const OHDP::NodeID& dest, const Sirikata::Protocol::Loc::BulkLocationUpdate& blu, const SubscriberInfoPtr& numOutstandingMessageCount)
 {
     std::string bluMsg = serializePBJMessage(blu);
 
     ObjectHostSessionPtr session = mLocService->context()->ohSessionManager()->getSession(dest);
-    if (!session) return false;
+    if (!session) {
+        //mOHSubscriptions.decrementOutstandingMessageCount(dest);
+        return false;
+    }
     OHDPSST::Stream::Ptr locServiceStream = session->stream();
-    if (!locServiceStream) return false;
+    if (!locServiceStream) {
+        //mOHSubscriptions.decrementOutstandingMessageCount(dest);
+        return false;
+    }
 
     Sirikata::Protocol::Frame msg_frame;
     msg_frame.set_payload(bluMsg);
     std::string* framed_loc_msg = new std::string(serializePBJMessage(msg_frame));
-    tryCreateChildStream(dest, locServiceStream, framed_loc_msg, 0);
+    tryCreateChildStream(dest, locServiceStream, framed_loc_msg, 0, numOutstandingMessageCount);
     return true;
 }
 
-bool AlwaysLocationUpdatePolicy::trySend(const ServerID& dest, const Sirikata::Protocol::Loc::BulkLocationUpdate& blu) {
+bool AlwaysLocationUpdatePolicy::trySend(const ServerID& dest, const Sirikata::Protocol::Loc::BulkLocationUpdate& blu, const SubscriberInfoPtr& numOutstandingMessageCount) {
     Message* msg = new Message(
         mLocService->context()->id(),
         SERVER_PORT_LOCATION,
@@ -363,7 +375,7 @@ bool AlwaysLocationUpdatePolicy::trySend(const ServerID& dest, const Sirikata::P
     // There's no retries/async step for servers since they either get on the
     // queues or they don't and everything after that is reliable. Therefore, we
     // immediately adjust the number of oustanding messages back.
-    mServerSubscriptions.decrementOutstandingMessageCount(dest);
+    //mServerSubscriptions.decrementOutstandingMessageCount(dest);
 
     return mLocMessageRouter->route(msg);
 }

@@ -76,6 +76,21 @@ public:
     void start();
     Time getTimerStarted()const;
     static Time now();
+    /** Get the value returned by a recent call to now(). Avoids the overhead of
+     *  actually checking the time if you know something else is checking it
+     *  frequently enough
+     */
+    static Time recentNow();
+
+    /** Get the (approximate) amount of time elapsed since the process started. */
+    static Duration processElapsed();
+    /** Get the (approximate) amount of time elapsed since the process started
+     *  based on a recent check of the timer. This can be out of date, but is
+     *  fairly accurate if you regularly check the time and much faster than
+     *  processElapsed().
+     */
+    static Duration recentProcessElapsed();
+
     Duration elapsed()const;
 
 private:

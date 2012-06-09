@@ -174,6 +174,8 @@ public:
     SocketConnectionPhase addCallbacks(const Stream::StreamID&sid, TCPStream::Callbacks* cb);
     ///function that searches mFreeStreamIDs or uses the mHighestStreamID to find the next unused free stream ID
     Stream::StreamID getNewID();
+    ///gets the first stream ID for a newly created stream
+    static Stream::StreamID getFirstStreamID(bool connector);
     ///Constructor for a connecting stream
     MultiplexedSocket(IOStrand*io, const Stream::SubstreamCallback&substreamCallback, TCPStream::StreamType type);
     ///Constructor for a listening stream with a prebuilt connection of ASIO sockets

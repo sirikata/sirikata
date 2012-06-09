@@ -184,7 +184,7 @@ void JSContextStruct::proximateEvent(const SpaceObjectReference& goneFrom,
         return;
     }
 
-    
+
     CHECK_EMERSON_SCRIPT_RETURN(emerScript,notifyProximateGone,jsObjScript);
 
     if (((associatedPresence != NULL) &&
@@ -1076,7 +1076,7 @@ void JSContextStruct::jsscript_print(const String& msg)
 
 void JSContextStruct::presenceDied()
 {
-    JSLOG(error,"[JS] Incorrectly handling presence destructions in context struct.  Need additional code.");
+    JSLOG(error,"Incorrectly handling presence destructions in context struct.  Need additional code.");
 }
 
 

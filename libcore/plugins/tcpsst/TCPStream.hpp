@@ -111,6 +111,8 @@ public:
         LENGTH_DELIM,
         RFC_6455
     };
+    //if !=0 and type is RFC_6455, arbitrarily fragment packets 2 indicates more aggressive testing of fragmentation than 1 (testing option)
+    static int sFragmentPackets;
 private:
     friend class MultiplexedSocket;
     friend class TCPSetCallbacks;

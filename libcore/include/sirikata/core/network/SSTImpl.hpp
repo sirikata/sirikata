@@ -1048,9 +1048,10 @@ private:
       EndPoint<EndPointType> originalListeningEndPoint(mRemoteEndPoint.endPoint, mRemoteEndPoint.port);
 
       uint32* received_payload = (uint32*) received_msg->payload().data();
-
-      setRemoteChannelID( ntohl(received_payload[0]));
-      mRemoteEndPoint.port = ntohl(received_payload[1]);
+      if (received_msg->payload().size()>=sizeof(uint32)*2) {
+          setRemoteChannelID( ntohl(received_payload[0]));
+          mRemoteEndPoint.port = ntohl(received_payload[1]);
+      }
 
       sendData( received_payload, 0, false );
 
@@ -1132,14 +1133,16 @@ private:
 
    // This version should only be called by the destructor!
    void finalCleanup() {
+     boost::mutex::scoped_lock lock(mSSTConnVars->sStaticMembersLock.getMutex());
+
      mDatagramLayer->unlisten(mLocalEndPoint);
 
      if (mState != CONNECTION_DISCONNECTED) {
-         close(true);
+         iClose(true);
          mState = CONNECTION_DISCONNECTED;
      }
 
-     mSSTConnVars->releaseChannel(mLocalEndPoint.endPoint, mLocalChannelID);
+     mSSTConnVars->releaseChannel(mLocalEndPoint.endPoint, mLocalChannelID); 
    }
 
    static void closeConnections(ConnectionVariables<EndPointType>* sstConnVars) {
@@ -1220,7 +1223,9 @@ private:
          connectionMap[newLocalEndPoint] = conn;
 
          conn->setLocalChannelID(availableChannel);
-         conn->setRemoteChannelID(ntohl(received_payload[0]));
+         if (received_msg->payload().size()>=sizeof(uint32)) {
+             conn->setRemoteChannelID(ntohl(received_payload[0]));
+         }
          conn->setState(CONNECTION_PENDING_RECEIVE_CONNECT);
 
          conn->sendData(payload, sizeof(payload), false);
@@ -1384,10 +1389,16 @@ private:
              remote end point.
   */
   virtual void close(bool force) {
+      boost::mutex::scoped_lock lock(mSSTConnVars->sStaticMembersLock.getMutex());
+      iClose(force);
+  }
+
+  /* Internal, non-locking implementation of close().
+     Lock mSSTConnVars->sStaticMembersLock before calling this function */
+  virtual void iClose(bool force) {
     /* (mState != CONNECTION_DISCONNECTED) implies close() wasnt called
        through the destructor. */
     if (force && mState != CONNECTION_DISCONNECTED) {
-      boost::mutex::scoped_lock lock(mSSTConnVars->sStaticMembersLock.getMutex());
       mSSTConnVars->sConnectionMap.erase(mLocalEndPoint);
     }
 
@@ -1398,6 +1409,7 @@ private:
       mState = CONNECTION_PENDING_DISCONNECT;
     }
   }
+
 
 
   /*

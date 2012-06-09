@@ -367,9 +367,30 @@ function() {
      *  larger objects are displayed instead of distant & small ones.
      */
     std.graphics.Graphics.prototype.setMaxObjects = function(maxobjs) {
-        this.invoke("setMaxObjects", maxobjs, visible);
+        return this.invoke("maxObjects", maxobjs);
+    };
+    /** Get the maximum number of objects that will be
+     *  displayed. Objects are prioritized intelligently, so nearer &
+     *  larger objects are displayed instead of distant & small ones.
+     */
+    std.graphics.Graphics.prototype.maxObjects = function() {
+        return this.invoke("maxObjects");
     };
 
+    /** Set the prioritization metric used for downloading and displaying
+     *  (distance or solid_angle).
+     */
+    std.graphics.Graphics.prototype.setObjectPrioritization = function(pri) {
+        return this.invoke("objectPrioritization", pri);
+    };
+    /** Get the prioritization metric used for downloading and displaying
+     *  (distance or solid_angle).
+     */
+    std.graphics.Graphics.prototype.objectPrioritization = function() {
+        return this.invoke("objectPrioritization");
+    };
+
+    
     /** Sets the skybox or disables it.
      *  \param type 'disabled', 'cube', 'dome', or 'plane'
      *  \param img the image URL to use

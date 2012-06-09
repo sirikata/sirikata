@@ -55,7 +55,7 @@ Stage 5
  If have not yet printed error, then print success.
  */
 
-system.require('helperLibs/util.em');
+system.require('emUtil/util.em');
 
 //global data needed by functions.
 mTest = new UnitTest('proximityAdded.em');

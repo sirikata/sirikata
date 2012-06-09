@@ -89,11 +89,11 @@ protected:
 
 public:
     StressTestBase(String plugin, String type, String args)
-     : _initialized(0),
+     : _data(),
+       _initialized(0),
        _plugin(plugin),
        _type(type),
        _args(args),
-       _data(),
        _storage(NULL),
        _trace(NULL),
        _sstConnMgr(NULL),
