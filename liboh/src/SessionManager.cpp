@@ -848,7 +848,12 @@ bool SessionManager::getExistingSpaceConnection(ServerID sid, SpaceNodeConnectio
     // Check if we have the connection already
     ServerConnectionMap::iterator it = mConnections.find(sid);
     if (it != mConnections.end()) {
-        cb(it->second);
+        // The connection can be in mConnections but still be in the progress of
+        // connecting.
+        if (!it->second->connecting())
+            cb(it->second);
+        else
+            it->second->addCallback(cb);
         return true;
     }
 
