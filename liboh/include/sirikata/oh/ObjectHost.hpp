@@ -59,9 +59,6 @@ class ObjectScriptManager;
 
 class ServerIDMap;
 
-namespace Task {
-class WorkQueue;
-}
 class HostedObject;
 typedef std::tr1::weak_ptr<HostedObject> HostedObjectWPtr;
 typedef std::tr1::shared_ptr<HostedObject> HostedObjectPtr;

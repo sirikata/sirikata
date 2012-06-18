@@ -37,7 +37,6 @@
 #include <boost/thread.hpp>
 #include <sirikata/core/util/AtomicTypes.hpp>
 #include <sirikata/core/util/PluginManager.hpp>
-#include <sirikata/core/task/WorkQueue.hpp>
 #include <sirikata/oh/ObjectScriptManager.hpp>
 #include <sirikata/oh/ObjectScript.hpp>
 #include <sirikata/oh/ObjectScriptManagerFactory.hpp>

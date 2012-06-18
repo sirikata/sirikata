@@ -47,7 +47,6 @@
 #include <shellapi.h>
 #endif
 
-#include <sirikata/core/task/WorkQueue.hpp>
 #include <sirikata/core/util/Time.hpp>
 #include <sirikata/core/options/Options.hpp>
 

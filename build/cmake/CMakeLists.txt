@@ -1333,8 +1333,6 @@ SET(SIRIKATA_CORE_SOURCES
 	${LIBCORE_SOURCE_DIR}/transfer/HttpManager.cpp
         ${LIBCORE_SOURCE_DIR}/transfer/ResourceDownloadTask.cpp
 	${LIBCORE_SOURCE_DIR}/transfer/OAuthHttpManager.cpp
-	${LIBCORE_SOURCE_DIR}/task/DependencyTask.cpp
-	${LIBCORE_SOURCE_DIR}/task/WorkQueue.cpp
 	${LIBCORE_SOURCE_DIR}/task/Time.cpp
 	${LIBCORE_SOURCE_DIR}/network/Asio.cpp
         ${LIBCORE_SOURCE_DIR}/xdp/Defs.cpp
