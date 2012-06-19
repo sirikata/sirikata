@@ -22,6 +22,26 @@ OHLocationServiceCache::~OHLocationServiceCache() {
     mObjects.clear();
 }
 
+void OHLocationServiceCache::addPlaceholderImposter(
+    const ObjectID& uuid,
+    const Vector3f& center_offset,
+    const float32 center_bounds_radius,
+    const float32 max_size,
+    const String& zernike,
+    const String& mesh
+) {
+    // We only deal with replicated trees, so you might expect this not to pop
+    // up. But for manual queries we're going to have an aggregate listener
+    // registered, which triggers these calls. So we can't assert(false), but we
+    // will just ignore the call. In fact, we can check that we don't get any
+    // unexpected calls here since any objects getting nodes created for them
+    // should *already* exist in here, making the call useless anyway.
+
+    Lock lck(mMutex);
+    ObjectDataMap::iterator it = mObjects.find(uuid);
+    assert(it != mObjects.end());
+}
+
 LocationServiceCache::Iterator OHLocationServiceCache::startTracking(const ObjectReference& id) {
     Lock lck(mMutex);
 

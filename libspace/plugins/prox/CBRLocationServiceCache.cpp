@@ -56,6 +56,24 @@ CBRLocationServiceCache::~CBRLocationServiceCache() {
     mObjects.clear();
 }
 
+void CBRLocationServiceCache::addPlaceholderImposter(
+    const ObjectID& uuid,
+    const Vector3f& center_offset,
+    const float32 center_bounds_radius,
+    const float32 max_size,
+    const String& zernike,
+    const String& mesh
+) {
+    TimedMotionVector3f loc(mLoc->context()->simTime(), MotionVector3f(center_offset, Vector3f(0,0,0)));
+    TimedMotionQuaternion orient;
+    AggregateBoundingInfo bounds(Vector3f(0, 0, 0), center_bounds_radius, max_size);
+    String phy;
+    objectAdded(
+        uuid, true, true, loc, orient, bounds, mesh, phy, zernike
+    );
+}
+
+
 LocationServiceCache::Iterator CBRLocationServiceCache::startTracking(const UUID& id) {
     Lock lck(mMutex);
 

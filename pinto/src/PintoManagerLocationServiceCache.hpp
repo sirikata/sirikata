@@ -53,6 +53,15 @@ public:
     void updateSpaceServerMaxSize(ServerID sid, float32 ms);
     void removeSpaceServer(ServerID sid);
 
+    virtual void addPlaceholderImposter(
+        const ObjectID& uuid,
+        const Vector3f& center_offset,
+        const float32 center_bounds_radius,
+        const float32 max_size,
+        const String& zernike,
+        const String& mesh
+    );
+
     virtual Iterator startTracking(const ObjectID& id);
     virtual void stopTracking(const Iterator& id);
 
