@@ -38,9 +38,6 @@
 #include <sirikata/core/util/SpaceObjectReference.hpp>
 #include "Protocol_Session.pbj.hpp"
 #include <sirikata/core/util/Platform.hpp>
-#ifdef _WIN32
-#pragma warning (disable:4355)//this within constructor initializer
-#endif
 
 #define SESSION_LOG(level,msg) SILOG(session,level,msg)
 

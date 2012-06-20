@@ -81,9 +81,19 @@ ENDIF()
 
 
 IF(WIN32)
-  ADD_DEFINITIONS(-D_CRT_SECURE_NO_WARNINGS -MP -D_WIN32_WINNT=0x0500 -D_SCL_SECURE_NO_WARNINGS -EHsc -DBOOST_ALL_DYN_LINK)
+  ADD_DEFINITIONS("-D_CRT_SECURE_NO_WARNINGS -MP -D_WIN32_WINNT=0x0500 -D_SCL_SECURE_NO_WARNINGS -EHsc -DBOOST_ALL_DYN_LINK")
   SET(CMAKE_CXX_FLAGS "-D_CRT_SECURE_NO_WARNINGS -D_SCL_SECURE_NO_WARNINGS")
-
+  # Get rid of useless logo output
+  ADD_DEFINITIONS("/nologo")
+  # Disable some very annoying, not important warnings:
+  # 4099 -- missing pdb, linking w/o debug info. We can't actually get rid of this until MS stops forcing it on us...
+  # 4355 -- 'this' used in base member initializer list. This *can* be unsafe, but is too important and useful
+  # 4251 -- disable type needs to have dll-interface to be used byu clients due to STL member variables which are not public
+  # 4661 -- disable warning about no suitable definition provided for explicit template instantiation request which seems to have no resolution nor cause any problems
+  # 4275 -- disable non dll-interface class used as base for dll-interface class when deriving from singleton
+  # 4786 -- warning about truncated symbol names which cause problems for the debugger
+  ADD_DEFINITIONS("/wd4099 /wo4099 /wd4355 /wd4251 /wd4661 /wd4275 /wd4786")
+  
   IF(sirikata_LDFLAGS)
     SET(sirikata_LDFLAGS "${sirikata_LDFLAGS} /ignore:4099 /LARGEADDRESSAWARE")
   ELSE()

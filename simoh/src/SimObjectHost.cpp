@@ -45,9 +45,7 @@
 
 using namespace Sirikata;
 using namespace Sirikata::Network;
-#ifdef _WIN32
-#pragma warning (disable:4355)//this within constructor initializer
-#endif
+
 namespace Sirikata {
 
 using std::tr1::placeholders::_1;
