@@ -129,48 +129,48 @@ public:
     	printf("\n\n========================================\n");
         printf("BEGIN TEST %s.%s\n", desc.suiteName(), desc.testName());
     }
-    virtual void trace( const char * /*file*/, unsigned /*line*/,
+    virtual void trace( const char * /*file*/, int /*line*/,
         const char * /*expression*/ ) {}
-    virtual void warning( const char * file, unsigned line, const char * expression ) {
+    virtual void warning( const char * file, int line, const char * expression ) {
         printf("Warning: At %s:%d: %s\n", file, line, expression);
     }
-    virtual void failedTest( const char * file, unsigned line, const char * expression ) {
+    virtual void failedTest( const char * file, int line, const char * expression ) {
         printf("Error: At %s:%d: %s\n", file, line, expression);
     }
-    virtual void failedAssert( const char * file, unsigned line, const char * expression ) {
+    virtual void failedAssert( const char * file, int line, const char * expression ) {
         printf("Error: Assert failed at %s:%d: %s\n", file, line, expression);
     }
-    virtual void failedAssertEquals( const char * file, unsigned line, const char * xStr,
+    virtual void failedAssertEquals( const char * file, int line, const char * xStr,
         const char * yStr, const char * x, const char * y ) {
         printf("Error: Assert failed at %s:%d: (%s == %s), was (%s == %s)\n", file, line, xStr, yStr, x, y);
     }
-    virtual void failedAssertSameData( const char * file, unsigned line, const char * xStr,
+    virtual void failedAssertSameData( const char * file, int line, const char * xStr,
         const char * yStr, const char * sizeStr, const void * x, const void * y, unsigned size) {
         printf("Error: Assert failed at %s:%d: (%s same as %s, size = %s)\n", file, line, xStr, yStr, sizeStr);
     }
-    virtual void failedAssertDelta( const char * file, unsigned line, const char * xStr,
+    virtual void failedAssertDelta( const char * file, int line, const char * xStr,
         const char * yStr, const char * dStr, const char * x, const char * y, const char * d) {
         printf("Error: Assert failed at %s:%d: (%s == %s, delta = %s), was (%s == %s, delta = %s)\n", file, line, xStr, yStr, dStr, x, y, d);
     }
-    virtual void failedAssertDiffers( const char * file, unsigned line, const char * xStr,
+    virtual void failedAssertDiffers( const char * file, int line, const char * xStr,
         const char * yStr, const char * value) {
         printf("Error: Assert failed at %s:%d: (%s != %s), value: %s\n", file, line, xStr, yStr, value);
     }
-    virtual void failedAssertLessThan( const char * /*file*/, unsigned /*line*/,
+    virtual void failedAssertLessThan( const char * /*file*/, int /*line*/,
         const char * /*xStr*/, const char * /*yStr*/,
         const char * /*x*/, const char * /*y*/ ) {}
-    virtual void failedAssertLessThanEquals( const char * /*file*/, unsigned /*line*/,
+    virtual void failedAssertLessThanEquals( const char * /*file*/, int /*line*/,
         const char * /*xStr*/, const char * /*yStr*/,
         const char * /*x*/, const char * /*y*/ ) {}
-    virtual void failedAssertPredicate( const char * /*file*/, unsigned /*line*/,
+    virtual void failedAssertPredicate( const char * /*file*/, int /*line*/,
         const char * /*predicate*/, const char * /*xStr*/, const char * /*x*/ ) {}
-    virtual void failedAssertRelation( const char * /*file*/, unsigned /*line*/,
+    virtual void failedAssertRelation( const char * /*file*/, int /*line*/,
         const char * /*relation*/, const char * /*xStr*/, const char * /*yStr*/,
         const char * /*x*/, const char * /*y*/ ) {}
-    virtual void failedAssertThrows( const char * /*file*/, unsigned /*line*/,
+    virtual void failedAssertThrows( const char * /*file*/, int /*line*/,
         const char * /*expression*/, const char * /*type*/,
         bool /*otherThrown*/ ) {}
-    virtual void failedAssertThrowsNot( const char * /*file*/, unsigned /*line*/,
+    virtual void failedAssertThrowsNot( const char * /*file*/, int /*line*/,
         const char * /*expression*/ ) {}
     virtual void failedAssertSameFiles( const char* , unsigned , const char* , const char*, const char* ) {}
     virtual void leaveTest( const TestDescription & desc ) {
