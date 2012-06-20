@@ -116,6 +116,8 @@ public:
         printf("\n\n========================================\n");
         printf("SUMMARY: %d failed, %d warnings.\n",
             tracker().failedTests(), tracker().warnings());
+        for(int i = 0; i < mFailedTests.size(); i++)
+            printf(" - %s\n", mFailedTests[i].c_str());
         printf("========================================\n");
         return tracker().failedTests();
     }
@@ -128,33 +130,41 @@ public:
     virtual void enterTest( const TestDescription & desc ) {
     	printf("\n\n========================================\n");
         printf("BEGIN TEST %s.%s\n", desc.suiteName(), desc.testName());
+        mCurrentTest = std::string(desc.suiteName()) + "." + std::string(desc.testName());
     }
-    virtual void trace( const char * /*file*/, int /*line*/,
-        const char * /*expression*/ ) {}
+    virtual void trace( const char * file, int line, const char * expression ) {
+        printf("Trace: At %s:%d: %s\n", file, line, expression);
+    }
     virtual void warning( const char * file, int line, const char * expression ) {
         printf("Warning: At %s:%d: %s\n", file, line, expression);
     }
     virtual void failedTest( const char * file, int line, const char * expression ) {
         printf("Error: At %s:%d: %s\n", file, line, expression);
+        mFailedTests.push_back(mCurrentTest);
     }
     virtual void failedAssert( const char * file, int line, const char * expression ) {
         printf("Error: Assert failed at %s:%d: %s\n", file, line, expression);
+        mFailedTests.push_back(mCurrentTest);
     }
     virtual void failedAssertEquals( const char * file, int line, const char * xStr,
         const char * yStr, const char * x, const char * y ) {
         printf("Error: Assert failed at %s:%d: (%s == %s), was (%s == %s)\n", file, line, xStr, yStr, x, y);
+        mFailedTests.push_back(mCurrentTest);
     }
     virtual void failedAssertSameData( const char * file, int line, const char * xStr,
         const char * yStr, const char * sizeStr, const void * x, const void * y, unsigned size) {
         printf("Error: Assert failed at %s:%d: (%s same as %s, size = %s)\n", file, line, xStr, yStr, sizeStr);
+        mFailedTests.push_back(mCurrentTest);
     }
     virtual void failedAssertDelta( const char * file, int line, const char * xStr,
         const char * yStr, const char * dStr, const char * x, const char * y, const char * d) {
         printf("Error: Assert failed at %s:%d: (%s == %s, delta = %s), was (%s == %s, delta = %s)\n", file, line, xStr, yStr, dStr, x, y, d);
+        mFailedTests.push_back(mCurrentTest);
     }
     virtual void failedAssertDiffers( const char * file, int line, const char * xStr,
         const char * yStr, const char * value) {
         printf("Error: Assert failed at %s:%d: (%s != %s), value: %s\n", file, line, xStr, yStr, value);
+        mFailedTests.push_back(mCurrentTest);
     }
     virtual void failedAssertLessThan( const char * /*file*/, int /*line*/,
         const char * /*xStr*/, const char * /*yStr*/,
@@ -176,6 +186,7 @@ public:
     virtual void leaveTest( const TestDescription & desc ) {
     	printf("END TEST %s.%s\n", desc.suiteName(), desc.testName());
     	printf("========================================\n");
+        mCurrentTest = "";
     }
     virtual void leaveSuite( const SuiteDescription & /*desc*/ ) {}
     virtual void leaveWorld( const WorldDescription & /*desc*/ ) {}
@@ -183,6 +194,9 @@ public:
 private:
     int m_argc;
     const char** m_argv;
+    std::string mCurrentTest;
+    // Track list of failed tests for summary output
+    std::vector<std::string> mFailedTests;
 };
 
 } // namespace Sirikata
