@@ -8,6 +8,7 @@
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/util/UUID.hpp>
 #include <sirikata/core/util/MotionVector.hpp>
+#include <sirikata/core/util/UniqueID.hpp>
 
 namespace Sirikata {
 
@@ -28,6 +29,8 @@ public:
 
     const static realType InfiniteRadius;
     const static intType InfiniteResults;
+
+    typedef UniqueID32 UniqueIDGeneratorType;
 }; // class ProxSimulationTraits
 
 class ObjectProxSimulationTraits : public ProxSimulationTraits {

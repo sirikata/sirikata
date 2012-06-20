@@ -246,6 +246,8 @@ bool LibproxProximityBase::velocityIsStatic(const Vector3f& vel) {
 
 
 void LibproxProximityBase::coalesceEvents(QueryEventList& evts, uint32 per_event) {
+    if (evts.empty()) return;
+
     // We keep two maps from UUID to QueryEvent:
     // One for additions and one for removals. For each object, we check if we
     // have a record of it, in the opposite map. If we have a record, this new
@@ -256,8 +258,10 @@ void LibproxProximityBase::coalesceEvents(QueryEventList& evts, uint32 per_event
     typedef std::map<UUID, QueryEvent::Removal> RemovalMap;
     AdditionMap additions;
     RemovalMap removals;
+    Prox::QueryHandlerIndexID qhiid = evts.front().indexID();
     while(!evts.empty()) {
         const QueryEvent& evt = evts.front();
+        assert(qhiid == evt.indexID());
 
         for(uint32 aidx = 0; aidx < evt.additions().size(); aidx++) {
             UUID objid = evt.additions()[aidx].id();
@@ -276,7 +280,7 @@ void LibproxProximityBase::coalesceEvents(QueryEventList& evts, uint32 per_event
         evts.pop_front();
     }
     // Now we just need to repack them.
-    QueryEvent next_evt;
+    QueryEvent next_evt(qhiid);
     while(!additions.empty() || !removals.empty()) {
         // Get next addition or removal and remove it from our list
         if (!additions.empty()) {
@@ -293,7 +297,7 @@ void LibproxProximityBase::coalesceEvents(QueryEventList& evts, uint32 per_event
             (additions.empty() && removals.empty()))
         {
             evts.push_back(next_evt);
-            next_evt = QueryEvent();
+            next_evt = QueryEvent(qhiid);
         }
     }
 }
