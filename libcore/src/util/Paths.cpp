@@ -121,7 +121,13 @@ String Get(Key key) {
               char system_buffer[MAX_PATH];
               system_buffer[0] = 0;
               GetModuleFileName(NULL, system_buffer, MAX_PATH);
-              return String(system_buffer);
+              // Go through boost::filesystem to canonicalize our formatting.
+              // If we don't, we can get \ or / in filenames depending on where
+              // they came from/whether we went through boost::filesystem
+              String exe_file(system_buffer);
+              if (exe_file.empty()) return "";
+              boost::filesystem::path exe_file_path(exe_file);
+              return exe_file_path.string();
 #else
               return "";
 #endif
