@@ -871,7 +871,7 @@ public:
     }
 
     void tearDown() {
-
+        Transfer::DiskManager::destroy();
     }
 
     void scanCallback(std::tr1::shared_ptr<Transfer::DiskManager::ScanRequest::DirectoryListing> dirListing) {
@@ -1066,8 +1066,18 @@ public:
         mClientThread2->join();
         mClientThread3->join();
 
+        delete mClientThread1;
+        delete mClientThread2;
+        delete mClientThread3;
+
+        delete mSampleClient1;
+        delete mSampleClient2;
+        delete mSampleClient3;
+
         //Wait for transfer mediator thread to exit
         mTransferMediator->cleanup();
+        mTransferMediator = NULL;
+        Transfer::TransferMediator::destroy();
 	}
 
 	void testTransferRequests() {
