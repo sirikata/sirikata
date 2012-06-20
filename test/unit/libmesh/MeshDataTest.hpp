@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include <cxxtest/TestSuite.h>
-#include <sirikata/mesh/MeshData.hpp>
+#include <sirikata/mesh/Meshdata.hpp>
 
 using namespace Sirikata;
 using namespace Sirikata::Mesh;
