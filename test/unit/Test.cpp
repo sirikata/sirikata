@@ -104,8 +104,12 @@ public:
             tracker().leaveWorld( wd );
 
             TestRunner::setListener(NULL);
+
+            if (!foundTest) {
+                printf("Test suite %s not found, aborting\n", singleSuite);
+            }
     	}
-    	if (singleSuite==NULL || !foundTest) {
+    	if (singleSuite==NULL) {
             printf("\n\n========================================\n");
             printf("RUNNING ALL SUITES\n");
             printf("========================================\n\n");
