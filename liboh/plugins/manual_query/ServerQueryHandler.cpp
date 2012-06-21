@@ -322,6 +322,24 @@ void ServerQueryHandler::handleProximityMessage(const OHDP::SpaceNodeID& snid, c
     QPLOG(detailed, "Received proximity message with " << contents.update_size() << " updates");
     for(int32 idx = 0; idx < contents.update_size(); idx++) {
         Sirikata::Protocol::Prox::ProximityUpdate update = contents.update(idx);
+
+        // We may have to trigger creation of a new replicated tree if this is a
+        // new root. We should always extract the ID of the tree this update
+        // applies to
+        assert(update.has_index_properties());
+        Sirikata::Protocol::Prox::IndexProperties index_props = update.index_properties();
+        assert(index_props.has_id());
+        uint32 index_unique_id = index_props.id();
+        QPLOG(detailed, "-Update for tree index ID: " << index_unique_id);
+        if (index_props.has_index_id() || index_props.has_dynamic_classification()) {
+            QPLOG(detailed, "New replicated tree:");
+            QPLOG(detailed, " ID: " << index_props.id());
+            if (index_props.has_index_id())
+                QPLOG(detailed, " Tree ID: " << index_props.index_id());
+            if (index_props.has_dynamic_classification())
+                QPLOG(detailed, " Class: " << ((index_props.dynamic_classification() == Sirikata::Protocol::Prox::IndexProperties::Static) ? "static" : "dynamic"));
+        }
+
         for(int32 aidx = 0; aidx < update.addition_size(); aidx++) {
             Sirikata::Protocol::Prox::ObjectAddition addition = update.addition(aidx);
             // Convert to local time

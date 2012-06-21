@@ -457,6 +457,11 @@ void LibproxManualProximity::queryHasEvents(ProxQuery* query) {
             const ProxQueryEvent& evt = evts.front();
             Sirikata::Protocol::Prox::IProximityUpdate event_results = prox_results.add_update();
 
+            // We always want to tag this with the unique query handler index ID
+            // so the client can properly group the replicas
+            Sirikata::Protocol::Prox::IIndexProperties index_props = event_results.mutable_index_properties();
+            index_props.set_id(evt.indexID());
+
             for(uint32 aidx = 0; aidx < evt.additions().size(); aidx++) {
                 UUID objid = evt.additions()[aidx].id();
                 if (mLocCache->tracking(objid)) { // If the cache already lost it, we can't do anything
@@ -502,9 +507,48 @@ void LibproxManualProximity::queryHasEvents(ProxQuery* query) {
                     if (phy.size() > 0)
                         addition.set_physics(phy);
 
+                    // We should either include the parent ID, or if it's empty,
+                    // then this is a root and we should include basic tree
+                    // properties. However, we only need to include the details
+                    // if this is the first time we're seeing the root, in which
+                    // case we'll get a lone addition of the root.
                     UUID parentid = evt.additions()[aidx].parent();
-                    if (parentid != UUID::null())
+                    if (parentid != UUID::null()) {
                         addition.set_parent(parentid);
+                    }
+                    else if (/*lone addition*/ aidx == 0 && evt.additions().size() == 1 && evt.removals().size() == 0) {
+                        // We need to figure out which query handler this came
+                        // from. FIXME currently we can use this simple approach
+                        // of just checking the static/dynamic from the OH query
+                        // handlers since we're only handling objects on this
+                        // server. When we deal with top-level pinto + other
+                        // trees, we might need a real index to figure out which
+                        // query processor this is coming from.
+
+                        // The tree ID identifies where this tree goes in some
+                        // larger structure. In our case it'll be a server ID
+                        // indicating which server the objects (and tree) are
+                        // replicated from or NullServerID to fit with.
+                        // FIXME when we have results from multiple trees (local
+                        // objects & against replicated trees) we'll need to
+                        // actually figure out what ID is right here. Currently
+                        // we only return local results
+                        index_props.set_index_id( boost::lexical_cast<String>(mContext->id()) );
+
+                        // And whether it's static or not, which actually also
+                        // is important in determining a "full" tree id
+                        // (e.g. objects from server A that are dynamic) but
+                        // which we want to keep separate and explicit so the
+                        // other side can perform optimizations for static
+                        // object trees
+                        if (query->handler() == mOHQueryHandler[OBJECT_CLASS_STATIC].handler) {
+                            index_props.set_dynamic_classification(Sirikata::Protocol::Prox::IndexProperties::Static);
+                        }
+                        else {
+                            assert(query->handler() == mOHQueryHandler[OBJECT_CLASS_DYNAMIC].handler);
+                            index_props.set_dynamic_classification(Sirikata::Protocol::Prox::IndexProperties::Dynamic);
+                        }
+                    }
                     addition.set_type(
                         (evt.additions()[aidx].type() == ProxQueryEvent::Normal) ?
                         Sirikata::Protocol::Prox::ObjectAddition::Object :
