@@ -350,7 +350,6 @@ bool Meshdata::GeometryInstanceIterator::next(uint32* geo_idx, Matrix4x4f* xform
             mStack.push(st);
             continue;
         }
-
         if (node.step == NodeState::InstanceGeometries) {
             // FIXME this step is inefficient because each node doesn't have a
             // list of instance geometries. Instead, we have to iterate over all
@@ -503,7 +502,7 @@ bool Meshdata::LightInstanceIterator::next(uint32* light_idx, Matrix4x4f* xform)
             st.index = mMesh->rootNodes[mRoot];
             st.step = NodeState::Nodes;
             st.currentChild = -1;
-            st.transform = mMesh->globalTransform;
+            st.transform = mMesh->globalTransform * mMesh->nodes[st.index].transform;
             mStack.push(st);
         }
 
