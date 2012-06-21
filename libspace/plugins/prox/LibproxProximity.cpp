@@ -338,7 +338,7 @@ void LibproxProximity::receiveMessage(Message* msg) {
                     TimedMotionQuaternion( addition.orientation().t(), MotionQuaternion(addition.orientation().position(), addition.orientation().velocity()) ),
                     addition.bounds(),
                     (addition.has_mesh() ? addition.mesh() : ""),
-                    (addition.has_physics() ? addition.physics() : ""), 
+                    (addition.has_physics() ? addition.physics() : ""),
                      ""  //no Zernike descriptor in Proximity message. is this ok to do? TAHIR.
                 );
             }
@@ -1028,7 +1028,7 @@ void LibproxProximity::generateObjectQueryEvents(Query* query, bool do_first) {
 
                     //query_id contains the uuid of the object that is receiving
                     //the proximity message that obj_id has been added.
-                    uint64 seqNo = (*seqNoPtr);
+                    uint64 seqNo = (*seqNoPtr)++;
                     addition.set_seqno (seqNo);
 
                     if (mLocCache->isAggregate(objid)) {
