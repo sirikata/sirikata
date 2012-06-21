@@ -311,6 +311,8 @@ struct SIRIKATA_MESH_EXPORT Meshdata : public Visual {
     static String sType;
 
   public:
+	Meshdata();
+
     virtual ~Meshdata();
 
     virtual const String& type() const;

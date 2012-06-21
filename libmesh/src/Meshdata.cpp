@@ -216,7 +216,13 @@ bool MaterialEffectInfo::operator!=(const MaterialEffectInfo& rhs) const {
 
 String Meshdata::sType("Meshdata");
 
-Meshdata::~Meshdata() {
+Meshdata::Meshdata()
+:globalTransform(Matrix4x4f::identity())
+{
+
+}
+
+Meshdata::~Meshdata(){
 }
 
 const String& Meshdata::type() const {
@@ -289,7 +295,7 @@ uint32 Meshdata::getInstancedLightCount() const {
 
 Meshdata::GeometryInstanceIterator::GeometryInstanceIterator(const Meshdata* const mesh)
  : mMesh(mesh),
-   mRoot(-1)
+   mRoot(-1)	
 {
 }
 
@@ -518,7 +524,7 @@ bool Meshdata::LightInstanceIterator::next(uint32* light_idx, Matrix4x4f* xform)
             st.transform = node.transform * mMesh->nodes[ st.index ].transform;
             mStack.push(st);
             continue;
-        }
+		}
 
         if (node.step == NodeState::InstanceNodes) {
             node.currentChild++;
