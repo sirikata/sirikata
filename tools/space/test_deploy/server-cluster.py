@@ -125,11 +125,24 @@ def startSpace(**kwargs):
 
         server.RunSpace(ss, args, **kwargs)
 
+def printOHTemplate(**kwargs):
+    print
+    print
+    print "To start an object host connecting to this space, use at least the following parameters:"
+    print
+    print "    cppoh %s %s" % (
+        '--servermap=tabular',
+        '--servermap-options=--filename=servermap.txt',
+        )
+    print
+
 def start(**kwargs):
     startCSeg(**kwargs)
     startPinto(**kwargs)
     time.sleep(5)
     startSpace(**kwargs)
+
+    printOHTemplate(**kwargs)
 
 # Options:
 # with_xterm - run services in terminals
