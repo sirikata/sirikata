@@ -13,6 +13,7 @@
 #include <sirikata/core/queue/ThreadSafeQueueWithNotification.hpp>
 #include <sirikata/core/service/PollerService.hpp>
 #include <sirikata/oh/HostedObject.hpp>
+#include <sirikata/core/prox/Defs.hpp>
 
 namespace Sirikata {
 
@@ -40,7 +41,7 @@ public:
     typedef Prox::Query<ObjectProxSimulationTraits> Query;
     typedef Prox::QueryEvent<ObjectProxSimulationTraits> QueryEvent;
 
-    ObjectQueryHandler(ObjectHostContext* ctx, ManualObjectQueryProcessor* parent, const OHDP::SpaceNodeID& space, Network::IOStrandPtr prox_strand, OHLocationServiceCachePtr loc_cache);
+    ObjectQueryHandler(ObjectHostContext* ctx, ManualObjectQueryProcessor* parent, const OHDP::SpaceNodeID& space, Network::IOStrandPtr prox_strand);
     ~ObjectQueryHandler();
 
     // MAIN Thread:
@@ -48,6 +49,11 @@ public:
     // Service Interface overrides
     virtual void start();
     virtual void stop();
+
+
+    // Index/Tree replication events from server queries
+    void createdReplicatedIndex(ProxIndexID iid, OHLocationServiceCachePtr loc_cache, ServerID objects_from_server, bool dynamic_objects);
+    void removedReplicatedIndex(ProxIndexID iid);
 
     // Query settings. These pass in the HostedObject so they don't
     // have to rely on the OHLocationServiceCache for implicit
@@ -69,17 +75,20 @@ public:
     // We override this for two reasons. First, a few callbacks are used to
     // update query parameters (location & bounds). Second, we use these updates
     // to generate LocUpdates for queriers that are subscribed to the object.
-    virtual void onObjectAdded(const ObjectReference& obj);
-    virtual void onObjectRemoved(const ObjectReference& obj);
-    virtual void onParentUpdated(const ObjectReference& obj);
-    virtual void onEpochUpdated(const ObjectReference& obj);
-    virtual void onLocationUpdated(const ObjectReference& obj);
-    virtual void onOrientationUpdated(const ObjectReference& obj);
-    virtual void onBoundsUpdated(const ObjectReference& obj);
-    virtual void onMeshUpdated(const ObjectReference& obj);
-    virtual void onPhysicsUpdated(const ObjectReference& obj);
+    virtual void onObjectAdded(OHLocationServiceCache* loccache, const ObjectReference& obj);
+    virtual void onObjectRemoved(OHLocationServiceCache* loccache, const ObjectReference& obj);
+    virtual void onParentUpdated(OHLocationServiceCache* loccache, const ObjectReference& obj);
+    virtual void onEpochUpdated(OHLocationServiceCache* loccache, const ObjectReference& obj);
+    virtual void onLocationUpdated(OHLocationServiceCache* loccache, const ObjectReference& obj);
+    virtual void onOrientationUpdated(OHLocationServiceCache* loccache, const ObjectReference& obj);
+    virtual void onBoundsUpdated(OHLocationServiceCache* loccache, const ObjectReference& obj);
+    virtual void onMeshUpdated(OHLocationServiceCache* loccache, const ObjectReference& obj);
+    virtual void onPhysicsUpdated(OHLocationServiceCache* loccache, const ObjectReference& obj);
 
     // PROX Thread:
+
+    void handleCreatedReplicatedIndex(ProxIndexID iid, OHLocationServiceCachePtr loc_cache, ServerID objects_from_server, bool dynamic_objects);
+    void handleRemovedReplicatedIndex(ProxIndexID iid);
 
     // QueryEventListener Interface
     void queryHasEvents(Query* query);
@@ -110,19 +119,20 @@ private:
     // currently takes the brute force approach of updating all properties and
     // uses the most up-to-date info, even if that's actually newer than the
     // update that triggered this.
-    void handleNotifySubscribersLocUpdate(const ObjectReference& oref);
+    void handleNotifySubscribersLocUpdate(OHLocationServiceCache* loccache, const ObjectReference& oref);
 
     // Object queries
     void updateQuery(HostedObjectPtr ho, const SpaceObjectReference& sporef, SolidAngle sa, uint32 max_results);
     void updateQuery(const ObjectReference& obj, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, SolidAngle sa, uint32 max_results);
 
-    // Takes care of switching objects between static/dynamic
-    void checkObjectClass(const ObjectReference& objid, const TimedMotionVector3f& newval);
-
-
 
     // PROX Thread: These are utility methods which should only be called from the prox thread.
 
+    // Reusable utility for registering the query with a particular
+    // index. Useful since we may need to register in different conditions --
+    // new query, new index, index becomes relevant to query, etc.
+    void registerObjectQueryWithIndex(const ObjectReference& object, ProxIndexID index_id, ProxQueryHandler* handler, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const SolidAngle& angle, uint32 max_results);
+    // Events on queries/objects
     void handleUpdateObjectQuery(const ObjectReference& object, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const SolidAngle& angle, uint32 max_results);
     void handleRemoveObjectQuery(const ObjectReference& object, bool notify_main_thread);
     void handleDisconnectedObject(const ObjectReference& object);
@@ -131,14 +141,48 @@ private:
     void generateObjectQueryEvents(Query* query);
 
     // Decides whether a query handler should handle a particular object.
-    bool handlerShouldHandleObject(bool is_static_handler, bool is_global_handler, const ObjectReference& obj_id, bool local, bool aggregate, const TimedMotionVector3f& pos, const BoundingSphere3f& region, float maxSize);
-    // The real handler for moving objects between static/dynamic
-    void handleCheckObjectClass(const ObjectReference& objid, const TimedMotionVector3f& newval);
-    void handleCheckObjectClassForHandlers(const ObjectReference& objid, bool is_static, ProxQueryHandler* handlers[NUM_OBJECT_CLASSES]);
+    bool handlerShouldHandleObject(const ObjectReference& obj_id, bool local, bool aggregate, const TimedMotionVector3f& pos, const BoundingSphere3f& region, float maxSize);
 
     typedef std::set<ObjectReference> ObjectSet;
-    typedef std::tr1::unordered_map<ObjectReference, Query*, ObjectReference::Hasher> ObjectQueryMap;
-    typedef std::tr1::unordered_map<Query*, ObjectReference> InvertedObjectQueryMap;
+    typedef std::tr1::unordered_map<ProxIndexID, Query*> IndexQueryMap;
+    // A single object query may have queries registered against many query
+    // handlers for different replicated trees.
+    struct ObjectQueryData {
+        // We need to store the query parameters because a query may get
+        // registered when no trees have been replicated yet.
+        TimedMotionVector3f loc;
+        BoundingSphere3f bounds;
+        SolidAngle angle;
+        uint32 max_results;
+        // And we also keep track of all the individual queries against
+        // replicated indices.
+        IndexQueryMap queries;
+    };
+    typedef std::tr1::shared_ptr<ObjectQueryData> ObjectQueryDataPtr;
+    typedef std::tr1::unordered_map<ObjectReference, ObjectQueryDataPtr, ObjectReference::Hasher> ObjectQueryMap;
+    // Individual libprox queries are keyed by both the object who registered a
+    // query and the replicated index the individual query operates on
+    typedef std::pair<ObjectReference, ProxIndexID> ObjectIndexQueryKey;
+    typedef std::tr1::unordered_map<Query*, ObjectIndexQueryKey> InvertedObjectQueryMap;
+
+    // We replicate many object indices, so we need to generate many query
+    // handlers, one for each replicated index. We'll track them by their unique
+    // index IDs. Since the query handler can't track all the info we might care
+    // about, we put it in a struct with a bit more metadata
+    struct ReplicatedIndexQueryHandler {
+        ReplicatedIndexQueryHandler(ProxQueryHandler* handler_, OHLocationServiceCachePtr loccache_, ServerID from_, bool dynamic_)
+         : handler(handler_), loccache(loccache_), from(from_), dynamic(dynamic_) {}
+        ReplicatedIndexQueryHandler()
+         : handler(NULL), loccache(), from(NullServerID), dynamic(true) {}
+
+        ProxQueryHandler* handler;
+        OHLocationServiceCachePtr loccache;
+        // The Server this tree was replicated from. This may not be unique.
+        ServerID from;
+        // Whether this tree includes dynamic objects
+        bool dynamic;
+    };
+    typedef std::tr1::unordered_map<ProxIndexID, ReplicatedIndexQueryHandler> ReplicatedIndexQueryHandlerMap;
 
     typedef std::tr1::shared_ptr<ObjectSet> ObjectSetPtr;
 
@@ -158,13 +202,13 @@ private:
 
     // PROX Thread - Should only be accessed in methods used by the prox thread
 
-    void tickQueryHandler(ProxQueryHandler* qh[NUM_OBJECT_CLASSES]);
+    void tickQueryHandler();
 
     // These track all objects being reported to this server and
     // answer queries for objects connected to this server.
-    ObjectQueryMap mObjectQueries[NUM_OBJECT_CLASSES];
+    ObjectQueryMap mObjectQueries;
     InvertedObjectQueryMap mInvertedObjectQueries;
-    ProxQueryHandler* mObjectQueryHandler[NUM_OBJECT_CLASSES];
+    ReplicatedIndexQueryHandlerMap mObjectQueryHandlers;
     bool mObjectDistance; // Using distance queries
     PollerService mObjectHandlerPoller;
 

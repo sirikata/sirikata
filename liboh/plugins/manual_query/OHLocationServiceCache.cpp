@@ -273,7 +273,7 @@ void OHLocationServiceCache::notifyObjectAdded(
     for(ListenerSet::iterator listener_it = mListeners.begin(); listener_it != mListeners.end(); listener_it++)
         (*listener_it)->locationConnectedWithParent(uuid, parent, agg, true, loc, bounds.centerBounds(), bounds.maxObjectRadius);
 
-    OHLocationUpdateProvider::notify(&OHLocationUpdateListener::onObjectAdded, uuid);
+    OHLocationUpdateProvider::notify(&OHLocationUpdateListener::onObjectAdded, this, uuid);
 
     ObjectDataMap::iterator obj_it = mObjects.find(uuid);
     obj_it->second.tracking--;
@@ -309,7 +309,7 @@ void OHLocationServiceCache::notifyObjectRemoved(const ObjectReference& uuid, bo
     for(ListenerSet::iterator listener_it = mListeners.begin(); listener_it != mListeners.end(); listener_it++)
         (*listener_it)->locationDisconnected(uuid, temporary);
 
-    OHLocationUpdateProvider::notify(&OHLocationUpdateListener::onObjectRemoved, uuid);
+    OHLocationUpdateProvider::notify(&OHLocationUpdateListener::onObjectRemoved, this, uuid);
 
     ObjectDataMap::iterator obj_it = mObjects.find(uuid);
     obj_it->second.tracking--;
@@ -339,7 +339,7 @@ void OHLocationServiceCache::epochUpdated(const ObjectReference& uuid, const uin
 void OHLocationServiceCache::notifyEpochUpdated(const ObjectReference& uuid, const uint64 val) {
     Lock lck(mMutex);
 
-    OHLocationUpdateProvider::notify(&OHLocationUpdateListener::onEpochUpdated, uuid);
+    OHLocationUpdateProvider::notify(&OHLocationUpdateListener::onEpochUpdated, this, uuid);
 
     ObjectDataMap::iterator obj_it = mObjects.find(uuid);
     obj_it->second.tracking--;
@@ -373,7 +373,7 @@ void OHLocationServiceCache::notifyLocationUpdated(const ObjectReference& uuid, 
     for(ListenerSet::iterator listener_it = mListeners.begin(); listener_it != mListeners.end(); listener_it++)
         (*listener_it)->locationPositionUpdated(uuid, oldval, newval);
 
-    OHLocationUpdateProvider::notify(&OHLocationUpdateListener::onLocationUpdated, uuid);
+    OHLocationUpdateProvider::notify(&OHLocationUpdateListener::onLocationUpdated, this, uuid);
 
     ObjectDataMap::iterator obj_it = mObjects.find(uuid);
     obj_it->second.tracking--;
@@ -401,7 +401,7 @@ void OHLocationServiceCache::orientationUpdated(const ObjectReference& uuid, con
 void OHLocationServiceCache::notifyOrientationUpdated(const ObjectReference& uuid) {
     Lock lck(mMutex);
 
-    OHLocationUpdateProvider::notify(&OHLocationUpdateListener::onOrientationUpdated, uuid);
+    OHLocationUpdateProvider::notify(&OHLocationUpdateListener::onOrientationUpdated, this, uuid);
 
     ObjectDataMap::iterator obj_it = mObjects.find(uuid);
     obj_it->second.tracking--;
@@ -437,7 +437,7 @@ void OHLocationServiceCache::notifyBoundsUpdated(const ObjectReference& uuid, co
         (*listen_it)->locationMaxSizeUpdated(uuid, oldval.maxObjectRadius, newval.maxObjectRadius);
     }
 
-    OHLocationUpdateProvider::notify(&OHLocationUpdateListener::onBoundsUpdated, uuid);
+    OHLocationUpdateProvider::notify(&OHLocationUpdateListener::onBoundsUpdated, this, uuid);
 
     ObjectDataMap::iterator obj_it = mObjects.find(uuid);
     obj_it->second.tracking--;
@@ -465,7 +465,7 @@ void OHLocationServiceCache::meshUpdated(const ObjectReference& uuid, const Tran
 void OHLocationServiceCache::notifyMeshUpdated(const ObjectReference& uuid) {
     Lock lck(mMutex);
 
-    OHLocationUpdateProvider::notify(&OHLocationUpdateListener::onMeshUpdated, uuid);
+    OHLocationUpdateProvider::notify(&OHLocationUpdateListener::onMeshUpdated, this, uuid);
 
     ObjectDataMap::iterator obj_it = mObjects.find(uuid);
     obj_it->second.tracking--;
@@ -493,7 +493,7 @@ void OHLocationServiceCache::physicsUpdated(const ObjectReference& uuid, const S
 void OHLocationServiceCache::notifyPhysicsUpdated(const ObjectReference& uuid) {
     Lock lck(mMutex);
 
-    OHLocationUpdateProvider::notify(&OHLocationUpdateListener::onPhysicsUpdated, uuid);
+    OHLocationUpdateProvider::notify(&OHLocationUpdateListener::onPhysicsUpdated, this, uuid);
 
     ObjectDataMap::iterator obj_it = mObjects.find(uuid);
     obj_it->second.tracking--;
@@ -524,7 +524,7 @@ void OHLocationServiceCache::notifyParentUpdated(const ObjectReference& uuid, co
     for(ListenerSet::iterator listener_it = mListeners.begin(); listener_it != mListeners.end(); listener_it++)
         (*listener_it)->locationParentUpdated(uuid, oldval, newval);
 
-    OHLocationUpdateProvider::notify(&OHLocationUpdateListener::onParentUpdated, uuid);
+    OHLocationUpdateProvider::notify(&OHLocationUpdateListener::onParentUpdated, this, uuid);
 
     ObjectDataMap::iterator obj_it = mObjects.find(uuid);
     obj_it->second.tracking--;
@@ -537,6 +537,19 @@ bool OHLocationServiceCache::tryRemoveObject(ObjectDataMap::iterator& obj_it) {
         return false;
 
     mObjects.erase(obj_it);
+    return true;
+}
+
+bool OHLocationServiceCache::empty() {
+    // Indicates if we have any objects with exists == true, so we can just scan
+    // through looking for them. If we need something faster we can keep track
+    // of a count based on addObject/removeObject calls
+
+    Lock lck(mMutex);
+
+    for(ObjectDataMap::iterator obj_it = mObjects.begin(); obj_it != mObjects.end(); obj_it++)
+        if (obj_it->second.exists) return false;
+
     return true;
 }
 

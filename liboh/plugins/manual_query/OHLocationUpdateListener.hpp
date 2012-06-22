@@ -10,6 +10,8 @@
 
 namespace Sirikata {
 
+class OHLocationServiceCache;
+
 /** Listener interface for OHLocationServiceCache. This is similar to the
  *  Prox::LocationUpdateListener interface, but differs in two ways. First, it
  *  handles all properties instead of just the few used by the query
@@ -22,15 +24,15 @@ class OHLocationUpdateListener {
 public:
     virtual ~OHLocationUpdateListener() {}
 
-    virtual void onObjectAdded(const ObjectReference& obj) = 0;
-    virtual void onObjectRemoved(const ObjectReference& obj) = 0;
-    virtual void onParentUpdated(const ObjectReference& obj) = 0;
-    virtual void onEpochUpdated(const ObjectReference& obj) = 0;
-    virtual void onLocationUpdated(const ObjectReference& obj) = 0;
-    virtual void onOrientationUpdated(const ObjectReference& obj) = 0;
-    virtual void onBoundsUpdated(const ObjectReference& obj) = 0;
-    virtual void onMeshUpdated(const ObjectReference& obj) = 0;
-    virtual void onPhysicsUpdated(const ObjectReference& obj) = 0;
+    virtual void onObjectAdded(OHLocationServiceCache* loccache, const ObjectReference& obj) = 0;
+    virtual void onObjectRemoved(OHLocationServiceCache* loccache, const ObjectReference& obj) = 0;
+    virtual void onParentUpdated(OHLocationServiceCache* loccache, const ObjectReference& obj) = 0;
+    virtual void onEpochUpdated(OHLocationServiceCache* loccache, const ObjectReference& obj) = 0;
+    virtual void onLocationUpdated(OHLocationServiceCache* loccache, const ObjectReference& obj) = 0;
+    virtual void onOrientationUpdated(OHLocationServiceCache* loccache, const ObjectReference& obj) = 0;
+    virtual void onBoundsUpdated(OHLocationServiceCache* loccache, const ObjectReference& obj) = 0;
+    virtual void onMeshUpdated(OHLocationServiceCache* loccache, const ObjectReference& obj) = 0;
+    virtual void onPhysicsUpdated(OHLocationServiceCache* loccache, const ObjectReference& obj) = 0;
 };
 
 typedef Provider<OHLocationUpdateListener*> OHLocationUpdateProvider;

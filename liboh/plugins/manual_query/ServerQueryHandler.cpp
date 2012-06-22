@@ -107,7 +107,7 @@ void ServerQueryHandler::onSpaceNodeSession(const OHDP::SpaceNodeID& id, OHDPSST
         )
     );
 
-    mParent->createdServerQuery(id, sqs->objects);
+    mParent->createdServerQuery(id);
 }
 
 void ServerQueryHandler::onSpaceNodeSessionEnded(const OHDP::SpaceNodeID& id) {
@@ -334,12 +334,24 @@ void ServerQueryHandler::handleProximityMessage(const OHDP::SpaceNodeID& snid, c
         if (index_props.has_index_id() || index_props.has_dynamic_classification()) {
             QPLOG(detailed, "New replicated tree:");
             QPLOG(detailed, " ID: " << index_props.id());
-            if (index_props.has_index_id())
+            ServerID index_from_server = NullServerID;
+            if (index_props.has_index_id()) {
                 QPLOG(detailed, " Tree ID: " << index_props.index_id());
-            if (index_props.has_dynamic_classification())
-                QPLOG(detailed, " Class: " << ((index_props.dynamic_classification() == Sirikata::Protocol::Prox::IndexProperties::Static) ? "static" : "dynamic"));
+                index_from_server = boost::lexical_cast<ServerID>(index_props.index_id());
+            }
+            bool dynamic_objects = true;
+            if (index_props.has_dynamic_classification()) {
+                dynamic_objects = !(index_props.dynamic_classification() == Sirikata::Protocol::Prox::IndexProperties::Static);
+                QPLOG(detailed, " Class: " << (dynamic_objects ? "dynamic" : "static"));
+            }
+
+            // Create a new loccache for this new tree
+            query_state->createLocCache(index_unique_id);
+            mParent->createdReplicatedIndex(snid, index_unique_id, query_state->getLocCache(index_unique_id), index_from_server, dynamic_objects);
         }
 
+        OHLocationServiceCachePtr loccache = query_state->getLocCache(index_unique_id);
+        OrphanLocUpdateManagerPtr orphan_manager = query_state->getOrphanLocUpdateManager(index_unique_id);
         for(int32 aidx = 0; aidx < update.addition_size(); aidx++) {
             Sirikata::Protocol::Prox::ObjectAddition addition = update.addition(aidx);
             // Convert to local time
@@ -357,7 +369,7 @@ void ServerQueryHandler::handleProximityMessage(const OHDP::SpaceNodeID& snid, c
             ObjectReference parent_oref(addition.parent());
 
             // Store the data
-            query_state->objects->objectAdded(
+            loccache->objectAdded(
                 observed_oref, is_agg,
                 parent_oref,
                 add.location(), add.location_seqno(),
@@ -368,7 +380,7 @@ void ServerQueryHandler::handleProximityMessage(const OHDP::SpaceNodeID& snid, c
             );
 
             // Replay orphans
-            query_state->orphans.invokeOrphanUpdates(mContext->objectHost, snid, observed, this);
+            orphan_manager->invokeOrphanUpdatesWithExtra(mContext->objectHost, snid, observed, this, index_unique_id);
         }
 
         for(int32 ridx = 0; ridx < update.removal_size(); ridx++) {
@@ -380,15 +392,23 @@ void ServerQueryHandler::handleProximityMessage(const OHDP::SpaceNodeID& snid, c
             // TODO(ewencp) Seems like we shouldn't actually need this
             // since we shouldn't get a removal with having had an
             // addition first...
-            if (query_state->objects->startSimpleTracking(observed_oref)) {
-                query_state->orphans.addUpdateFromExisting(observed, query_state->objects->properties(observed_oref));
-                query_state->objects->stopSimpleTracking(observed_oref);
+            if (loccache->startSimpleTracking(observed_oref)) {
+                orphan_manager->addUpdateFromExisting(observed, loccache->properties(observed_oref));
+                loccache->stopSimpleTracking(observed_oref);
             }
-            query_state->objects->objectRemoved(
+            loccache->objectRemoved(
                 observed_oref, temporary_removal
             );
         }
 
+        // We may have removed everything from the specified tree. We need to
+        // check if we've hit that condition and clean out any associated
+        // state. If objects from that server reappear, this state will be
+        // created from scratch.
+        if (loccache->empty()) {
+            mParent->removedReplicatedIndex(snid, index_unique_id);
+            query_state->createLocCache(index_unique_id);
+        }
     }
 
 }
@@ -479,6 +499,10 @@ void ServerQueryHandler::handleLocationSubstreamRead(const OHDP::SpaceNodeID& sn
 namespace {
 // Helper for applying an update to
 void applyLocUpdate(const ObjectReference& objid, OHLocationServiceCachePtr loccache, const LocUpdate& lu) {
+    // We can bail immediately if none of the updates are relevant since the
+    // object isn't even being tracked
+    if (!loccache->tracking(objid)) return;
+
     if (lu.has_epoch())
         loccache->epochUpdated(objid, lu.epoch());
     if (lu.has_parent())
@@ -517,12 +541,26 @@ bool ServerQueryHandler::handleLocationMessage(const OHDP::SpaceNodeID& snid, co
 
         // Because of prox/loc ordering, we may or may not have a record of the
         // object yet.
-        if (!query_state->objects->tracking(observed_oref)) {
-            query_state->orphans.addOrphanUpdate(observed, update);
-        }
-        else {
-            LocProtocolLocUpdate llu(update, mContext->objectHost, snid.space());
-            applyLocUpdate(observed_oref, query_state->objects, llu);
+        // FIXME(ewencp) Our current approach is to spray this update across all
+        // replicated trees since we don't know which trees its relevant to (and
+        // may be relevant to more than one, e.g. if a tree is rebuilding). This
+        // will probably become inefficient and means that we're going to track
+        // orphans in all trees that it's *not* relevant to (very
+        // inefficient...). To fix this, we'd need some record of which trees
+        // the update is relevant to, which seems tricky given that we need to
+        // deal with orphan updates. Perhaps track the orphan once for everyone
+        // and always fire updates twice? (we'd need to save the orphan even if
+        // we found the object in one tree since we could get unordered updates
+        // for the *new* tree).
+        for(ServerQueryState::IndexObjectCacheMap::iterator index_it = query_state->objects.begin(); index_it != query_state->objects.end(); index_it++) {
+            ProxIndexID index_id = index_it->first;
+            if (!query_state->getLocCache(index_id)->tracking(observed_oref)) {
+                query_state->getOrphanLocUpdateManager(index_id)->addOrphanUpdate(observed, update);
+            }
+            else {
+                LocProtocolLocUpdate llu(update, mContext->objectHost, snid.space());
+                applyLocUpdate(observed_oref, query_state->getLocCache(index_id), llu);
+            }
         }
     }
 
@@ -530,7 +568,7 @@ bool ServerQueryHandler::handleLocationMessage(const OHDP::SpaceNodeID& snid, co
 }
 
 
-void ServerQueryHandler::onOrphanLocUpdate(const OHDP::SpaceNodeID& observer, const LocUpdate& lu) {
+void ServerQueryHandler::onOrphanLocUpdate(const OHDP::SpaceNodeID& observer, const LocUpdate& lu, ProxIndexID iid) {
     ServerQueryMap::iterator serv_it = mServerQueries.find(observer);
     if (serv_it == mServerQueries.end()) {
         QPLOG(debug, "Received proximity message without query. Query may have recently been destroyed.");
@@ -539,8 +577,8 @@ void ServerQueryHandler::onOrphanLocUpdate(const OHDP::SpaceNodeID& observer, co
     ServerQueryStatePtr& query_state = serv_it->second;
 
     SpaceObjectReference observed(observer.space(), lu.object());
-    assert(query_state->objects->tracking(lu.object()));
-    applyLocUpdate(lu.object(), query_state->objects, lu);
+    assert(query_state->getLocCache(iid)->tracking(lu.object()));
+    applyLocUpdate(lu.object(), query_state->getLocCache(iid), lu);
 }
 
 } // namespace Manual

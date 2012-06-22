@@ -43,6 +43,13 @@ public:
     OHLocationServiceCache(Network::IOStrandPtr strand);
     virtual ~OHLocationServiceCache();
 
+    // Returns true if this has no objects that still exist. Note that this
+    // isn't quite like a regular empty() method. We might still be tracking
+    // data, but only because something is asking for data to be tracked and
+    // maintained -- according to the inputs, we've got no real, live data
+    // left.
+    bool empty();
+
     // External data input.
     void objectAdded(const ObjectReference& uuid, bool agg,
         const ObjectReference& parent,

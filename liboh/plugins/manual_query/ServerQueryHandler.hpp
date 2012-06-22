@@ -9,6 +9,7 @@
 #include <sirikata/oh/SpaceNodeSession.hpp>
 #include <sirikata/oh/OrphanLocUpdateManager.hpp>
 #include "OHLocationServiceCache.hpp"
+#include <sirikata/core/prox/Defs.hpp>
 
 #include <boost/multi_index_container.hpp>
 #include <boost/multi_index/member.hpp>
@@ -52,6 +53,11 @@ public:
     // in the tree so we know how to move the cut on the space server up or down.
     void queriersAreObserving(const OHDP::SpaceNodeID& snid, const ObjectReference& objid);
     void queriersStoppedObserving(const OHDP::SpaceNodeID& snid, const ObjectReference& objid);
+
+
+    // OrphanLocUpdateManager::Listener Interface
+    virtual void onOrphanLocUpdate(const OHDP::SpaceNodeID& observer, const LocUpdate& lu, ProxIndexID iid);
+
 private:
     ObjectHostContext* mContext;
     ManualObjectQueryProcessor* mParent;
@@ -83,21 +89,21 @@ private:
     // Queries we've registered with servers so that we can resolve
     // object queries
     struct ServerQueryState {
-        ServerQueryState(Context* ctx, Network::IOStrandPtr strand, OHDPSST::Stream::Ptr base, Network::IOTimerPtr unobs_timer)
-         : nconnected(0),
+        ServerQueryState(Context* ctx_, Network::IOStrandPtr strand_, OHDPSST::Stream::Ptr base, Network::IOTimerPtr unobs_timer)
+         : ctx(ctx_),
+           strand(strand_),
+           nconnected(0),
            base_stream(base),
            prox_stream(),
            prox_stream_requested(false),
            outstanding(),
            writing(false),
-           orphans(ctx, ctx->mainStrand, Duration::seconds(10)),
            unobservedTimer(unobs_timer)
         {
-            orphans.start();
-            objects = OHLocationServiceCachePtr(new OHLocationServiceCache(strand));
         }
         ~ServerQueryState() {
-            orphans.stop();
+            for(IndexOrphanLocUpdateMap::iterator it = orphans.begin(); it != orphans.end(); it++)
+                it->second->stop();
             unobservedTimer->cancel();
         }
 
@@ -108,6 +114,32 @@ private:
             return nconnected == 0;
         }
 
+        void createLocCache(ProxIndexID iid) {
+            assert(objects.find(iid) == objects.end());
+            objects[iid] = OHLocationServiceCachePtr(new OHLocationServiceCache(strand));
+            assert(orphans.find(iid) == orphans.end());
+            orphans[iid] = OrphanLocUpdateManagerPtr(new OrphanLocUpdateManager(ctx, ctx->mainStrand, Duration::seconds(10)));
+        }
+
+        OHLocationServiceCachePtr getLocCache(ProxIndexID iid) {
+            assert(objects.find(iid) != objects.end());
+            return objects[iid];
+        }
+        OrphanLocUpdateManagerPtr getOrphanLocUpdateManager(ProxIndexID iid) {
+            assert(orphans.find(iid) != orphans.end());
+            return orphans[iid];
+        }
+
+        void removeLocCache(ProxIndexID iid) {
+            assert(objects.find(iid) != objects.end());
+            objects.erase(iid);
+            assert(orphans.find(iid) != orphans.end());
+            orphans.erase(iid);
+        }
+
+        // Strand for OHLocationServiceCaches
+        Context* ctx;
+        Network::IOStrandPtr strand;
         // # of connected objects
         int32 nconnected;
         OHDPSST::Stream::Ptr base_stream;
@@ -119,8 +151,10 @@ private:
         // Whether we're in the process of sending messages
         bool writing;
 
-        OHLocationServiceCachePtr objects;
-        OrphanLocUpdateManager orphans;
+        typedef std::map<ProxIndexID, OHLocationServiceCachePtr> IndexObjectCacheMap;
+        IndexObjectCacheMap objects;
+        typedef std::map<ProxIndexID, OrphanLocUpdateManagerPtr> IndexOrphanLocUpdateMap;
+        IndexOrphanLocUpdateMap orphans;
 
         UnobservedNodeTimeouts unobservedTimeouts;
         Network::IOTimerPtr unobservedTimer;
@@ -134,9 +168,6 @@ private:
     // SpaceNodeSessionListener Interface
     virtual void onSpaceNodeSession(const OHDP::SpaceNodeID& id, OHDPSST::Stream::Ptr sn_stream);
     virtual void onSpaceNodeSessionEnded(const OHDP::SpaceNodeID& id);
-
-    // OrphanLocUpdateManager::Listener Interface
-    virtual void onOrphanLocUpdate(const OHDP::SpaceNodeID& observer, const LocUpdate& lu);
 
     // Helper that updates a server query, possibly sending an
     // initialization message to the server to setup the query

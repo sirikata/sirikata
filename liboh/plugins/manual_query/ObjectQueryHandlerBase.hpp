@@ -19,30 +19,15 @@ class ManualObjectQueryProcessor;
  */
 class ObjectQueryHandlerBase : public Service {
 public:
-    ObjectQueryHandlerBase(ObjectHostContext* ctx, ManualObjectQueryProcessor* parent, const OHDP::SpaceNodeID& space, Network::IOStrandPtr prox_strand, OHLocationServiceCachePtr loc_cache);
+    ObjectQueryHandlerBase(ObjectHostContext* ctx, ManualObjectQueryProcessor* parent, const OHDP::SpaceNodeID& space, Network::IOStrandPtr prox_strand);
     ~ObjectQueryHandlerBase();
 
 protected:
-    // Helper types & methods
-    enum ObjectClass {
-        OBJECT_CLASS_STATIC = 0,
-        OBJECT_CLASS_DYNAMIC = 1,
-        NUM_OBJECT_CLASSES = 2
-    };
-    static const std::string& ObjectClassToString(ObjectClass c);
-    static bool velocityIsStatic(const Vector3f& vel);
 
     // BOTH Threads: These are read-only.
 
     ObjectHostContext* mContext;
     const OHDP::SpaceNodeID mSpaceNodeID;
-
-    // To support a static/dynamic split but also support mixing them for
-    // comparison purposes track which we are doing and, for most places, use a
-    // simple index to control whether they point to different query handlers or
-    // the same one.
-    bool mSeparateDynamicObjects;
-    int mNumQueryHandlers;
 
 
     // MAIN Thread: Utility methods that should only be called from the main
@@ -57,8 +42,6 @@ protected:
 
     // PROX Thread - Should only be accessed in methods used by the prox thread
     Network::IOStrandPtr mProxStrand;
-
-    OHLocationServiceCachePtr mLocCache;
 
 }; // class ObjectQueryHandlerBase
 

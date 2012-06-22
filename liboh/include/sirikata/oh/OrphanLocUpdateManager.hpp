@@ -55,7 +55,14 @@ public:
     class Listener {
     public:
         virtual ~Listener() {}
-        virtual void onOrphanLocUpdate(const QuerierIDType& observer, const LocUpdate& lu) = 0;
+        // You need something like this defined:
+        //  virtual void onOrphanLocUpdate(const QuerierIDType& observer, const
+        //                                 LocUpdate& lu);
+        // in order to get callbacks from invokeOrphanUpdates. In order to
+        //  support passing extra arguments through, however, we can't enforce
+        //  this here, since you could, e.g., instead define
+        //  virtual void onOrphanLocUpdate(const QuerierIDType& observer, const
+        //                                 LocUpdate& lu, Foo foo);
     };
 
     OrphanLocUpdateManager(Context* ctx, Network::IOStrand* strand, const Duration& timeout);
@@ -77,8 +84,10 @@ public:
     );
 
     /** Gets all orphan updates for a given object. */
-    template<typename QuerierIDType>
-    void invokeOrphanUpdates(ObjectHost* oh, const QuerierIDType& observer, const SpaceObjectReference& proximateID, Listener<QuerierIDType>* listener) {
+    // ListenerType would be Listener<QuerierIDType> but we want to support
+    // optional extra params passed through to the callback.
+    template<typename QuerierIDType, typename ListenerType>
+    void invokeOrphanUpdates(ObjectHost* oh, const QuerierIDType& observer, const SpaceObjectReference& proximateID, ListenerType* listener) {
         ObjectUpdateMap::iterator it = mUpdates.find(proximateID);
         if (it == mUpdates.end()) return;
 
@@ -91,6 +100,28 @@ public:
             else if ((*info_it)->opd != NULL) {
                 PresencePropertiesLocUpdate plu( (*info_it)->object.object(), *((*info_it)->opd) );
                 listener->onOrphanLocUpdate( observer, plu );
+            }
+        }
+
+        // Once we've notified of these we can get rid of them -- if they
+        // need the info again they should re-register it with
+        // addUpdateFromExisting before cleaning up the object.
+        mUpdates.erase(it);
+    }
+    template<typename QuerierIDType, typename ListenerType, typename ExtraParamType>
+    void invokeOrphanUpdatesWithExtra(ObjectHost* oh, const QuerierIDType& observer, const SpaceObjectReference& proximateID, ListenerType* listener, ExtraParamType extra) {
+        ObjectUpdateMap::iterator it = mUpdates.find(proximateID);
+        if (it == mUpdates.end()) return;
+
+        const UpdateInfoList& info_list = it->second;
+        for(UpdateInfoList::const_iterator info_it = info_list.begin(); info_it != info_list.end(); info_it++) {
+            if ((*info_it)->value != NULL) {
+                LocProtocolLocUpdate llu( *((*info_it)->value), oh, proximateID.space() );
+                listener->onOrphanLocUpdate( observer, llu, extra );
+            }
+            else if ((*info_it)->opd != NULL) {
+                PresencePropertiesLocUpdate plu( (*info_it)->object.object(), *((*info_it)->opd) );
+                listener->onOrphanLocUpdate( observer, plu, extra );
             }
         }
 
@@ -130,6 +161,8 @@ private:
     Duration mTimeout;
     ObjectUpdateMap mUpdates;
 }; // class OrphanLocUpdateManager
+
+typedef std::tr1::shared_ptr<OrphanLocUpdateManager> OrphanLocUpdateManagerPtr;
 
 } // namespace Sirikata
 

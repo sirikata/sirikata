@@ -177,12 +177,12 @@ void ManualObjectQueryProcessor::updateQuery(HostedObjectPtr ho, const SpaceObje
 
 
 
-void ManualObjectQueryProcessor::createdServerQuery(const OHDP::SpaceNodeID& snid, OHLocationServiceCachePtr loc_cache) {
+void ManualObjectQueryProcessor::createdServerQuery(const OHDP::SpaceNodeID& snid) {
     // We get this when the first object session with a space server starts. We
     // can use this to setup the query processor for objects connected to that
     // space server.
     ObjectQueryHandlerPtr obj_query_handler(
-        new ObjectQueryHandler(mContext, this, snid, mStrand, loc_cache)
+        new ObjectQueryHandler(mContext, this, snid, mStrand)
     );
     mObjectQueryHandlers.insert(
         QueryHandlerMap::value_type(
@@ -199,6 +199,18 @@ void ManualObjectQueryProcessor::removedServerQuery(const OHDP::SpaceNodeID& sni
     ObjectQueryHandlerPtr obj_query_handler = it->second;
     mObjectQueryHandlers.erase(it);
     obj_query_handler->stop();
+}
+
+void ManualObjectQueryProcessor::createdReplicatedIndex(const OHDP::SpaceNodeID& snid, ProxIndexID iid, OHLocationServiceCachePtr loc_cache, ServerID objects_from_server, bool dynamic_objects) {
+    QueryHandlerMap::iterator it = mObjectQueryHandlers.find(snid);
+    assert( it != mObjectQueryHandlers.end() );
+    it->second->createdReplicatedIndex(iid, loc_cache, objects_from_server, dynamic_objects);
+}
+
+void ManualObjectQueryProcessor::removedReplicatedIndex(const OHDP::SpaceNodeID& snid, ProxIndexID iid) {
+    QueryHandlerMap::iterator it = mObjectQueryHandlers.find(snid);
+    assert( it != mObjectQueryHandlers.end() );
+    it->second->removedReplicatedIndex(iid);
 }
 
 
