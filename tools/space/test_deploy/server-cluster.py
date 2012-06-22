@@ -18,7 +18,7 @@ center = (0,0,0)
 pinto_ip = hostname
 pinto_port = 6665
 
-n_cseg_servers = 1
+n_cseg_servers = 0
 n_cseg_upper_servers = 1
 cseg_ip = hostname
 cseg_port_base = 6235
@@ -60,6 +60,8 @@ def get_region_and_layout():
 
 
 def startCSeg(**kwargs):
+    if n_cseg_servers == 0: return;
+
     generate_cseg_ip_file()
     region, layout = get_region_and_layout()
 
@@ -104,16 +106,19 @@ def startSpace(**kwargs):
             '--layout=%s' % (layout),
             '--region=%s' % (region),
 
-            '--cseg=client',
-            '--cseg-service-host=' + str(cseg_ip),
-            '--cseg-service-tcp-port=' + str(cseg_service_tcp_port),
-
             '--pinto=master',
             '--pinto-options=' + '--host=' + str(pinto_ip) + ' --port=' + str(pinto_port),
 
             '--oseg=redis',
             '--oseg-options=' + '--prefix=' + str(oseg_prefix)
             ]
+        if n_cseg_servers > 0:
+            args += [
+                '--cseg=client',
+                '--cseg-service-host=' + str(cseg_ip),
+                '--cseg-service-tcp-port=' + str(cseg_service_tcp_port),
+                ]
+
         server.RunSpace(ss, args, **kwargs)
 
 def start(**kwargs):
