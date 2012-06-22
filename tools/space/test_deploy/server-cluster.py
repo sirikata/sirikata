@@ -25,6 +25,7 @@ cseg_port_base = 6235
 cseg_service_tcp_port = 6234 # The port space servers connect on
 oseg_prefix = 'myspace-'
 
+http_command_port_base = 9000
 
 # Currently we need to generate all of these settings before starting up since
 # they go into a file that is only read once
@@ -110,7 +111,10 @@ def startSpace(**kwargs):
             '--pinto-options=' + '--host=' + str(pinto_ip) + ' --port=' + str(pinto_port),
 
             '--oseg=redis',
-            '--oseg-options=' + '--prefix=' + str(oseg_prefix)
+            '--oseg-options=' + '--prefix=' + str(oseg_prefix),
+
+            '--command.commander=http',
+            '--command.commander-options=--port=' + str(http_command_port_base + ss)
             ]
         if n_cseg_servers > 0:
             args += [
