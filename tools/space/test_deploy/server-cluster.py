@@ -91,6 +91,8 @@ def startCSeg(**kwargs):
             '--num-cseg-servers=' + str(n_cseg_servers),
             '--num-upper-tree-cseg-servers=' + str(n_cseg_upper_servers)
             ]
+        if 'cseg_config' in kwargs and kwargs['cseg_config']:
+            args += [ '--cfg=' + kwargs['cseg_config'] ]
         server.RunCSeg(args, **kwargs)
 
 
@@ -99,6 +101,8 @@ def startPinto(**kwargs):
         '--port=' + str(pinto_port),
         '--handler=rtreecut'
         ]
+    if 'pinto_config' in kwargs and kwargs['pinto_config']:
+        args += [ '--cfg=' + kwargs['pinto_config'] ]
     server.RunPinto(args, **kwargs)
 
 
@@ -131,7 +135,8 @@ def startSpace(**kwargs):
                 '--cseg-service-host=' + str(cseg_ip),
                 '--cseg-service-tcp-port=' + str(cseg_service_tcp_port),
                 ]
-
+        if 'space_config' in kwargs and kwargs['space_config']:
+            args += [ '--cfg=' + kwargs['space_config'] ]
         server.RunSpace(ss, args, **kwargs)
 
 def printOHTemplate(**kwargs):
@@ -164,6 +169,10 @@ parser.add_option("--heap-check", help="Run with perftools heap check", action="
 parser.add_option("--heap-profile", help="Run with perftools heap profiling", action="store_true", dest="heapprofile", default=False)
 parser.add_option("--heap-profile-interval", help="Frequency of heap snapshots (in bytes accumulated over all allocations)", action="store", type="int", dest="heapprofile_interval", default=100*1024*1024)
 
+parser.add_option("--space-config", help="Extra configuration file to load on space servers", action="store", type="string", dest="space_config", default=None)
+parser.add_option("--cseg-config", help="Extra configuration file to load on cseg servers", action="store", type="string", dest="cseg_config", default=None)
+parser.add_option("--pinto-config", help="Extra configuration file to load on pinto servers", action="store", type="string", dest="pinto_config", default=None)
+
 (options, args) = parser.parse_args()
 
 # Options:
@@ -173,4 +182,15 @@ parser.add_option("--heap-profile-interval", help="Frequency of heap snapshots (
 # heapcheck - turn on heap checking to the specified level
 # heapprofile - turn on heap profiling, storing data to the specified destination
 # heapprofile_interval - when heap profiling is on, take a snapshot every time this many bytes (accumulated over all allocations) are allocated (100MB by default)
-start(with_xterm=options.with_xterm, debug=options.debug, valgrind=options.valgrind, heapcheck=options.heapcheck, heapprofile=options.heapprofile, heapprofile_interval=options.heapprofile_interval)
+start(
+    with_xterm=options.with_xterm,
+    debug=options.debug,
+    valgrind=options.valgrind,
+    heapcheck=options.heapcheck,
+    heapprofile=options.heapprofile,
+    heapprofile_interval=options.heapprofile_interval,
+
+    space_config=options.space_config,
+    cseg_config=options.cseg_config,
+    pinto_config=options.pinto_config
+    )
