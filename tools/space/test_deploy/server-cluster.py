@@ -1,10 +1,19 @@
 #!/usr/bin/env python
 
-# This script manages running a bunch of space servers to generate a single space.
+# This script manages running a bunch of space servers to generate a
+# single space. It isn't intended to be very flexible, just a
+# demonstration of how to run a multi-server space. It assumes it will
+# use specific implementations for a variety of features -- Redis
+# backed OSeg, a real Pinto server, HTTP commander enabled for easy
+# debugging, etc. You can customize a bit by specifying an additional
+# configuration file that will be loaded, but if you need to change
+# any of the settings we have hard-coded, you should just use this
+# script as a template.
 
 import server
 import socket
 import time
+from optparse import OptionParser
 
 nservers = 2
 layout = (2, 1, 1)
@@ -144,6 +153,19 @@ def start(**kwargs):
 
     printOHTemplate(**kwargs)
 
+
+parser = OptionParser()
+parser.add_option("--term", help="Run services in terminals", action="store_true", dest="with_xterm", default=True)
+parser.add_option("--no-term", help="Don't run services in terminals", action="store_false", dest="with_xterm")
+parser.add_option("--debug", help="Don't run in a debugger", action="store_true", dest="debug", default=True)
+parser.add_option("--no-debug", help="Don't run in a debugger", action="store_false", dest="debug")
+parser.add_option("--valgrind", help="Run under valgrind", action="store_true", dest="valgrind", default=False)
+parser.add_option("--heap-check", help="Run with perftools heap check", action="store_true", dest="heapcheck", default=False)
+parser.add_option("--heap-profile", help="Run with perftools heap profiling", action="store_true", dest="heapprofile", default=False)
+parser.add_option("--heap-profile-interval", help="Frequency of heap snapshots (in bytes accumulated over all allocations)", action="store", type="int", dest="heapprofile_interval", default=100*1024*1024)
+
+(options, args) = parser.parse_args()
+
 # Options:
 # with_xterm - run services in terminals
 # debug - run services in gdb
@@ -151,4 +173,4 @@ def start(**kwargs):
 # heapcheck - turn on heap checking to the specified level
 # heapprofile - turn on heap profiling, storing data to the specified destination
 # heapprofile_interval - when heap profiling is on, take a snapshot every time this many bytes (accumulated over all allocations) are allocated (100MB by default)
-start(with_xterm=True, debug=True, valgrind=False, heapcheck=False, heapprofile=False, heapprofile_interval=100*1024*1024)
+start(with_xterm=options.with_xterm, debug=options.debug, valgrind=options.valgrind, heapcheck=options.heapcheck, heapprofile=options.heapprofile, heapprofile_interval=options.heapprofile_interval)
