@@ -157,6 +157,7 @@ void LibproxProximityBase::ProxStreamInfo<EndpointType, StreamType>::proxSubstre
 
 LibproxProximityBase::LibproxProximityBase(SpaceContext* ctx, LocationService* locservice, CoordinateSegmentation* cseg, SpaceNetwork* net, AggregateManager* aggmgr)
  : Proximity(ctx, locservice, cseg, net, aggmgr, Duration::milliseconds((int64)100)),
+   mServerQuerier(NULL),
    mProxStrand(ctx->ioService->createStrand("LibproxProximityBase Prox Strand")),
    mLocCache(NULL)
 {
@@ -164,6 +165,12 @@ LibproxProximityBase::LibproxProximityBase(SpaceContext* ctx, LocationService* l
 
     // Location cache, for both types of queries
     mLocCache = new CBRLocationServiceCache(mProxStrand, locservice, true);
+
+    // Server Querier (discover other servers)
+    String pinto_type = GetOptionValue<String>(OPT_PINTO);
+    String pinto_options = GetOptionValue<String>(OPT_PINTO_OPTIONS);
+    mServerQuerier = PintoServerQuerierFactory::getSingleton().getConstructor(pinto_type)(mContext, pinto_options);
+    mServerQuerier->addListener(this);
 
     // Deal with static/dynamic split
     mSeparateDynamicObjects = GetOptionValue<bool>(OPT_PROX_SPLIT_DYNAMIC);
@@ -213,9 +220,24 @@ LibproxProximityBase::LibproxProximityBase(SpaceContext* ctx, LocationService* l
 }
 
 LibproxProximityBase::~LibproxProximityBase() {
+    delete mServerQuerier;
     delete mProxServerMessageService;
     delete mLocCache;
     delete mProxStrand;
+}
+
+// Service Interface overrides
+void LibproxProximityBase::start() {
+    Proximity::start();
+
+    // Always initialize with CSeg's current size
+    BoundingBoxList bboxes = mCSeg->serverRegion(mContext->id());
+    BoundingBox3f bbox = aggregateBBoxes(bboxes);
+    mServerQuerier->updateRegion(bbox);
+}
+
+void LibproxProximityBase::stop() {
+    Proximity::stop();
 }
 
 
@@ -302,8 +324,87 @@ void LibproxProximityBase::coalesceEvents(QueryEventList& evts, uint32 per_event
     }
 }
 
+// Setup all known servers for a server query update
+void LibproxProximityBase::addAllServersForUpdate() {
+    boost::lock_guard<boost::mutex> lck(mServerSetMutex);
+    for(ServerSet::const_iterator it = mServersQueried.begin(); it != mServersQueried.end(); it++)
+        mNeedServerQueryUpdate.insert(*it);
+}
+
+
+
+void LibproxProximityBase::getServersForAggregateQueryUpdate(ServerSet* servers_out) {
+    boost::lock_guard<boost::mutex> lck(mServerSetMutex);
+    servers_out->swap(mNeedServerQueryUpdate);
+}
+
+void LibproxProximityBase::addServerForAggregateQueryUpdate(ServerID sid) {
+    boost::lock_guard<boost::mutex> lck(mServerSetMutex);
+    mNeedServerQueryUpdate.insert(sid);
+}
+
+void LibproxProximityBase::updateAggregateQuery(const SolidAngle sa, uint32 max_count) {
+    PROXLOG(debug,"Query addition initiated server query request.");
+    addAllServersForUpdate();
+    mServerQuerier->updateQuery(sa, max_count);
+}
+
+void LibproxProximityBase::updateAggregateStats(float32 max_radius) {
+    mServerQuerier->updateLargestObject(max_radius);
+}
+
+uint32 LibproxProximityBase::numServersQueried() {
+    boost::lock_guard<boost::mutex> lck(mServerSetMutex);
+    return mServersQueried.size();
+}
 
 // MAIN Thread
+
+// PintoServerQuerierListener Interface
+
+void LibproxProximityBase::addRelevantServer(ServerID sid) {
+    if (sid == mContext->id()) return;
+
+    // Potentially invoked from PintoServerQuerier IO thread
+    boost::lock_guard<boost::mutex> lck(mServerSetMutex);
+    mServersQueried.insert(sid);
+    mNeedServerQueryUpdate.insert(sid);
+}
+
+void LibproxProximityBase::removeRelevantServer(ServerID sid) {
+    if (sid == mContext->id()) return;
+
+    // Potentially invoked from PintoServerQuerier IO thread
+    boost::lock_guard<boost::mutex> lck(mServerSetMutex);
+    mServersQueried.erase(sid);
+}
+
+
+// SpaceNetworkConnectionListener Interface
+
+void LibproxProximityBase::onSpaceNetworkConnected(ServerID sid) {
+    mProxStrand->post(
+        std::tr1::bind(&LibproxProximityBase::handleConnectedServer, this, sid),
+        "LibproxProximityBase::handleConnectedServer"
+    );
+}
+
+void LibproxProximityBase::onSpaceNetworkDisconnected(ServerID sid) {
+    mProxStrand->post(
+        std::tr1::bind(&LibproxProximityBase::handleDisconnectedServer, this, sid),
+        "LibproxProximityBase::handleDisconnectedServer"
+    );
+}
+
+
+// CoordinateSegmentation::Listener Interface
+
+void LibproxProximityBase::updatedSegmentation(CoordinateSegmentation* cseg, const std::vector<SegmentationInfo>& new_seg) {
+    BoundingBoxList bboxes = mCSeg->serverRegion(mContext->id());
+    BoundingBox3f bbox = aggregateBBoxes(bboxes);
+    mServerQuerier->updateRegion(bbox);
+}
+
 
 void LibproxProximityBase::readFramesFromObjectStream(const ObjectReference& oref, ProxObjectStreamInfo::FrameReceivedCallback cb) {
     ObjectProxStreamMap::iterator prox_stream_it = mObjectProxStreams.find(oref.getAsUUID());
@@ -481,6 +582,32 @@ void LibproxProximityBase::checkObjectClass(bool is_local, const UUID& objid, co
 
 
 // PROX Thread
+
+void LibproxProximityBase::handleConnectedServer(ServerID sid) {
+    // Sometimes we may get forcefully disconnected from a server. To
+    // reestablish our previous setup, if that server appears in our queried
+    // set (we were told it was relevant to us by some higher level pinto
+    // service), we mark it as needing another update. In the case that we
+    // are just getting an initial connection, this shouldn't change anything
+    // since it would already be markedas needing an update if we had been told
+    // by pinto that it needed it.
+    boost::lock_guard<boost::mutex> lck(mServerSetMutex);
+    if (mServersQueried.find(sid) != mServersQueried.end())
+        mNeedServerQueryUpdate.insert(sid);
+}
+
+void LibproxProximityBase::handleDisconnectedServer(ServerID sid) {
+    // When we lose a connection, we need to clear out everything related to
+    // that server.
+    PROXLOG(debug, "Handling unexpected disconnection from " << sid << " by clearing out proximity state.");
+    handleForcedDisconnection(sid);
+}
+
+void LibproxProximityBase::handleForcedDisconnection(ServerID server) {
+    // Nothing for base -- implementations should override to clean up
+    // queries and clear out state
+}
+
 
 void LibproxProximityBase::aggregateCreated(const UUID& objid) {
     // On addition, an "aggregate" will have no children, i.e. its zero sized.

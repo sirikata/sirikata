@@ -42,8 +42,6 @@
 #include <sirikata/core/network/SSTImpl.hpp>
 #include <sirikata/core/queue/ThreadSafeQueue.hpp>
 
-#include <sirikata/space/PintoServerQuerier.hpp>
-
 namespace Sirikata {
 
 class ProximityInputEvent;
@@ -52,7 +50,6 @@ class ProximityOutputEvent;
 class LibproxProximity :
         public LibproxProximityBase,
         Prox::QueryEventListener<ObjectProxSimulationTraits, Prox::Query<ObjectProxSimulationTraits> >,
-        PintoServerQuerierListener,
         Prox::AggregateListener<ObjectProxSimulationTraits>
 {
 private:
@@ -88,9 +85,6 @@ public:
     virtual void replicaObjectRemoved(const UUID& uuid);
     virtual void replicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval);
 
-    // CoordinateSegmentation::Listener Interface
-    virtual void updatedSegmentation(CoordinateSegmentation* cseg, const std::vector<SegmentationInfo>& new_seg);
-
     // MessageRecipient Interface
     virtual void receiveMessage(Message* msg);
 
@@ -98,14 +92,6 @@ public:
     virtual std::string migrationClientTag();
     virtual std::string generateMigrationData(const UUID& obj, ServerID source_server, ServerID dest_server);
     virtual void receiveMigrationData(const UUID& obj, ServerID source_server, ServerID dest_server, const std::string& data);
-
-    // PintoServerQuerierListener Interface
-    virtual void addRelevantServer(ServerID sid);
-    virtual void removeRelevantServer(ServerID sid);
-
-    // SpaceNetworkConnectionListener Interface
-    virtual void onSpaceNetworkConnected(ServerID sid);
-    virtual void onSpaceNetworkDisconnected(ServerID sid);
 
 
     // PROX Thread:
@@ -145,10 +131,8 @@ private:
     void updateObjectSize(const UUID& obj, float rad);
     void removeObjectSize(const UUID& obj);
 
-    // Setup all known servers for a server query update
-    void addAllServersForUpdate();
-
-    // Send a query add/update request to all the other servers
+    // Send a query add/update request to any servers we've marked as needing an
+    // update
     void sendQueryRequests();
 
 
@@ -157,8 +141,9 @@ private:
     // Handle various query events from the main thread
     void handleUpdateServerQuery(const ServerID& server, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const SolidAngle& angle, uint32 max_results);
     void handleRemoveServerQuery(const ServerID& server);
-    void handleConnectedServer(ServerID sid);
-    void handleDisconnectedServer(ServerID sid);
+
+    // Override for forced disconnections
+    virtual void handleForcedDisconnection(ServerID server);
 
     void handleUpdateObjectQuery(const UUID& object, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const SolidAngle& angle, uint32 max_results, SeqNoPtr seqno);
     void handleRemoveObjectQuery(const UUID& object, bool notify_main_thread);
@@ -196,8 +181,6 @@ private:
     typedef std::tr1::unordered_map<ServerID, ObjectSetPtr> ServerQueryResultSet;
 
 
-    PintoServerQuerier* mServerQuerier;
-
     // MAIN Thread - Should only be accessed in methods used by the main thread
 
     // The distance to use when doing range queries instead of solid angle queries.
@@ -225,13 +208,6 @@ private:
     // conservative estimate of number of results needed from other servers.
     uint32 mMaxMaxCount;
 
-    typedef std::tr1::unordered_set<ServerID> ServerSet;
-    boost::mutex mServerSetMutex;
-    // This tracks the servers we currently have subscriptions with
-    ServerSet mServersQueried;
-    // And this indicates whether we need to send new requests
-    // out to other servers
-    ServerSet mNeedServerQueryUpdate;
 
     std::deque<Message*> mServerResultsToSend; // server query results waiting to be sent
     std::deque<Sirikata::Protocol::Object::ObjectMessage*> mObjectResultsToSend; // object query results waiting to be sent

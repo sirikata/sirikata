@@ -81,17 +81,33 @@ private:
 
     // MAIN Thread:
 
+    // MAIN Thread  Server-to-server queries:
+
+    // Send a query add/update request to all the other servers
+    void sendQueryRequests();
+
+    // MAIN Thread  OH queries:
+
     virtual int32 objectHostQueries() const;
 
     // ObjectHost message management
     void handleObjectHostSubstream(int success, OHDPSST::Stream::Ptr substream, SeqNoPtr seqNo);
 
-
     std::deque<OHResult> mOHResultsToSend;
+
 
     // PROX Thread:
 
     void tickQueryHandler(ProxQueryHandlerData qh[NUM_OBJECT_CLASSES]);
+
+    // PROX Thread -- Server-to-server and top-level pinto
+
+    // Server events, some from the main thread
+    // Override for forced disconnections
+    virtual void handleForcedDisconnection(ServerID server);
+
+
+    // PROX Thread -- OH queries
 
     // Real handler for OH requests, in the prox thread
     void handleObjectHostProxMessage(const OHDP::NodeID& id, const String& data, SeqNoPtr seqNo);

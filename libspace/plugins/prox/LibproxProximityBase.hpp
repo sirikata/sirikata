@@ -8,6 +8,7 @@
 #include <sirikata/space/Proximity.hpp>
 #include "CBRLocationServiceCache.hpp"
 #include <prox/base/QueryEvent.hpp>
+#include <sirikata/space/PintoServerQuerier.hpp>
 
 #include <boost/multi_index_container.hpp>
 #include <boost/multi_index/member.hpp>
@@ -18,10 +19,14 @@ namespace Sirikata {
 /** Base class for Libprox-based Proximity implementations, providing a bit of
  *  utility code that gets reused across different implementations.
  */
-class LibproxProximityBase : public Proximity {
+class LibproxProximityBase : public Proximity, PintoServerQuerierListener {
 public:
     LibproxProximityBase(SpaceContext* ctx, LocationService* locservice, CoordinateSegmentation* cseg, SpaceNetwork* net, AggregateManager* aggmgr);
     ~LibproxProximityBase();
+
+    // Service Interface overrides
+    virtual void start();
+    virtual void stop();
 
 protected:
     typedef Prox::QueryEvent<ObjectProxSimulationTraits> QueryEvent;
@@ -48,7 +53,7 @@ protected:
     // can pack them however we like.
     void coalesceEvents(QueryEventList& evts, uint32 per_event);
 
-    // BOTH Threads: These are read-only.
+    // BOTH Threads: These are read-only or lock protected.
 
     // To support a static/dynamic split but also support mixing them for
     // comparison purposes track which we are doing and, for most places, use a
@@ -62,9 +67,51 @@ protected:
     // stops for a few seconds while walking).
     Duration mMoveToStaticDelay;
 
+    typedef std::tr1::unordered_set<ServerID> ServerSet;
+private: // So this is used as a service by implementations
+    // Top level Pinto + server interactions. The base class takes
+    // care of querying top level Pinto and tracking which servers
+    // have connections + need queries, but the implementations need
+    // to take it from there (removing items from
+    // mNeedServerQueryUpdate and processing them). Note that unlike the data
+    // below, this is only accessed on the main thread.
+    PintoServerQuerier* mServerQuerier;
+
+    boost::mutex mServerSetMutex;
+    // This tracks the servers we currently have subscriptions with
+    ServerSet mServersQueried;
+    // And this indicates whether we need to send new requests
+    // out to other servers
+    ServerSet mNeedServerQueryUpdate;
+
+    // Utility -- setup all known servers for a server query update
+    void addAllServersForUpdate();
+
+protected:
+    // Get/add servers for sending and update of our aggregate query to
+    void getServersForAggregateQueryUpdate(ServerSet* servers_out);
+    void addServerForAggregateQueryUpdate(ServerID sid);
+    // Initiate updates to aggregate queries and stats over all objects, used to
+    // trigger updated requests to top-level pinto and other servers
+    void updateAggregateQuery(const SolidAngle sa, uint32 max_count);
+    void updateAggregateStats(float32 max_radius);
+    // Number of servers we have active queries to
+    uint32 numServersQueried();
 
     // MAIN Thread: Utility methods that should only be called from the main
     // strand
+
+    // PintoServerQuerierListener Interface
+    virtual void addRelevantServer(ServerID sid);
+    virtual void removeRelevantServer(ServerID sid);
+
+    // SpaceNetworkConnectionListener Interface
+    virtual void onSpaceNetworkConnected(ServerID sid);
+    virtual void onSpaceNetworkDisconnected(ServerID sid);
+
+    // CoordinateSegmentation::Listener Interface
+    virtual void updatedSegmentation(CoordinateSegmentation* cseg, const std::vector<SegmentationInfo>& new_seg);
+
 
     // Server-to-server messages
     Router<Message*>* mProxServerMessageService;
@@ -184,7 +231,12 @@ protected:
     ObjectHostProxStreamMap mObjectHostProxStreams;
 
 
-    // PROX Thread - Should only be accessed in methods used by the prox thread
+
+
+
+
+    // PROX Thread - Should only be accessed in methods used by the
+    // prox thread
     Network::IOStrand* mProxStrand;
 
     CBRLocationServiceCache* mLocCache;
@@ -216,6 +268,17 @@ protected:
     typedef StaticObjectTimeouts::index<objid_tag>::type StaticObjectsByID;
     typedef StaticObjectTimeouts::index<expires_tag>::type StaticObjectsByExpiration;
     StaticObjectTimeouts mStaticObjectTimeouts;
+
+    // Prox thread handlers for connection events. They perform some
+    // basic maintenance (putting server into set that needs update,
+    // removing from that set, etc) and then Implementations can
+    // override these to perform additional operations, but they'll
+    // get other events as a result even if they don't -- new servers
+    // will appear in the set that need to be queried and
+    // handleForcedServerDisconnection will be invoked.
+    void handleConnectedServer(ServerID sid);
+    void handleDisconnectedServer(ServerID sid);
+    virtual void handleForcedDisconnection(ServerID server);
 
     void removeStaticObjectTimeout(const UUID& objid);
     virtual void trySwapHandlers(bool is_local, const UUID& objid, bool is_static) = 0;

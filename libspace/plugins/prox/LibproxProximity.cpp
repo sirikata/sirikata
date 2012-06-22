@@ -77,7 +77,6 @@ bool parseQueryRequest(const String& query, SolidAngle* qangle_out, uint32* max_
 
 LibproxProximity::LibproxProximity(SpaceContext* ctx, LocationService* locservice, CoordinateSegmentation* cseg, SpaceNetwork* net, AggregateManager* aggmgr)
  : LibproxProximityBase(ctx, locservice, cseg, net, aggmgr),
-   mServerQuerier(NULL),
    mDistanceQueryDistance(0.f),
    mMaxObject(0.0f),
    mMinObjectQueryAngle(SolidAngle::Max),
@@ -96,12 +95,6 @@ LibproxProximity::LibproxProximity(SpaceContext* ctx, LocationService* locservic
     using std::tr1::placeholders::_3;
     using std::tr1::placeholders::_4;
     using std::tr1::placeholders::_5;
-
-    // Server Querier (discover other servers)
-    String pinto_type = GetOptionValue<String>(OPT_PINTO);
-    String pinto_options = GetOptionValue<String>(OPT_PINTO_OPTIONS);
-    mServerQuerier = PintoServerQuerierFactory::getSingleton().getConstructor(pinto_type)(mContext, pinto_options);
-    mServerQuerier->addListener(this);
 
     // Generic query parameters
     mDistanceQueryDistance = GetOptionValue<float32>(OPT_PROX_QUERY_RANGE);
@@ -150,20 +143,13 @@ LibproxProximity::~LibproxProximity() {
         delete mObjectQueryHandler[i].handler;
         delete mServerQueryHandler[i].handler;
     }
-
-    delete mServerQuerier;
 }
 
 
 // MAIN Thread Methods: The following should only be called from the main thread.
 
 void LibproxProximity::start() {
-    Proximity::start();
-
-    // Always initialize with CSeg's current size
-    BoundingBoxList bboxes = mCSeg->serverRegion(mContext->id());
-    BoundingBox3f bbox = aggregateBBoxes(bboxes);
-    mServerQuerier->updateRegion(bbox);
+    LibproxProximityBase::start();
 
     mContext->add(&mServerHandlerPoller);
     mContext->add(&mObjectHandlerPoller);
@@ -229,12 +215,6 @@ void LibproxProximity::handleObjectProximityMessage(const UUID& objid, void* buf
     }
 }
 
-// Setup all known servers for a server query update
-void LibproxProximity::addAllServersForUpdate() {
-    boost::lock_guard<boost::mutex> lck(mServerSetMutex);
-    for(ServerSet::const_iterator it = mServersQueried.begin(); it != mServersQueried.end(); it++)
-        mNeedServerQueryUpdate.insert(*it);
-}
 
 void LibproxProximity::sendQueryRequests() {
     TimedMotionVector3f loc;
@@ -245,10 +225,7 @@ void LibproxProximity::sendQueryRequests() {
     BoundingSphere3f bounds = bbox.toBoundingSphere();
 
     ServerSet sub_servers;
-    {
-        boost::lock_guard<boost::mutex> lck(mServerSetMutex);
-        sub_servers.swap(mNeedServerQueryUpdate);
-    }
+    getServersForAggregateQueryUpdate(&sub_servers);
     for(ServerSet::const_iterator it = sub_servers.begin(); it != sub_servers.end(); it++) {
         ServerID sid = *it;
         Sirikata::Protocol::Prox::Container container;
@@ -272,10 +249,7 @@ void LibproxProximity::sendQueryRequests() {
         bool sent = mProxServerMessageService->route(smsg);
         if (!sent) {
             delete smsg;
-            {
-                boost::lock_guard<boost::mutex> lck(mServerSetMutex);
-                mNeedServerQueryUpdate.insert(sid);
-            }
+            addServerForAggregateQueryUpdate(sid);
         }
     }
 }
@@ -397,24 +371,8 @@ void LibproxProximity::receiveMigrationData(const UUID& obj, ServerID source_ser
     addQuery(obj, obj_query_angle, obj_query_max_results);
 }
 
-// PintoServerQuerierListener Interface
 
-void LibproxProximity::addRelevantServer(ServerID sid) {
-    if (sid == mContext->id()) return;
-
-    // Potentially invoked from PintoServerQuerier IO thread
-    boost::lock_guard<boost::mutex> lck(mServerSetMutex);
-    mServersQueried.insert(sid);
-    mNeedServerQueryUpdate.insert(sid);
-}
-
-void LibproxProximity::removeRelevantServer(ServerID sid) {
-    if (sid == mContext->id()) return;
-
-    // Potentially invoked from PintoServerQuerier IO thread
-    boost::lock_guard<boost::mutex> lck(mServerSetMutex);
-    mServersQueried.erase(sid);
-}
+// AggregateListener Interface
 
 void LibproxProximity::aggregateCreated(ProxAggregator* handler, const UUID& objid) {
     // We ignore aggregates built of dynamic objects, they aren't useful for
@@ -449,19 +407,6 @@ void LibproxProximity::aggregateObserved(ProxAggregator* handler, const UUID& ob
 }
 
 
-void LibproxProximity::onSpaceNetworkConnected(ServerID sid) {
-    mProxStrand->post(
-        std::tr1::bind(&LibproxProximity::handleConnectedServer, this, sid),
-        "LibproxProximity::handleConnectedServer"
-    );
-}
-
-void LibproxProximity::onSpaceNetworkDisconnected(ServerID sid) {
-    mProxStrand->post(
-        std::tr1::bind(&LibproxProximity::handleDisconnectedServer, this, sid),
-        "LibproxProximity::handleDisconnectedServer"
-    );
-}
 
 
 void LibproxProximity::updateQuery(ServerID sid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const SolidAngle& sa, uint32 max_results) {
@@ -521,11 +466,8 @@ void LibproxProximity::updateQuery(UUID obj, const TimedMotionVector3f& loc, con
         }
     }
 
-    if (update_remote_queries) {
-        PROXLOG(debug,"Query addition initiated server query request.");
-        addAllServersForUpdate();
-        mServerQuerier->updateQuery(mMinObjectQueryAngle, mMaxMaxCount);
-    }
+    if (update_remote_queries)
+        updateAggregateQuery(mMinObjectQueryAngle, mMaxMaxCount);
 }
 
 void LibproxProximity::removeQuery(UUID obj) {
@@ -559,8 +501,7 @@ void LibproxProximity::removeQuery(UUID obj) {
         if (minangle != mMinObjectQueryAngle || maxcount != mMaxMaxCount) {
             mMinObjectQueryAngle = minangle;
             mMaxMaxCount = maxcount;
-            addAllServersForUpdate();
-            mServerQuerier->updateQuery(mMinObjectQueryAngle, mMaxMaxCount);
+            updateAggregateQuery(mMinObjectQueryAngle, mMaxMaxCount);
         }
     }
 }
@@ -570,7 +511,7 @@ void LibproxProximity::updateObjectSize(const UUID& obj, float rad) {
 
     if (rad > mMaxObject) {
         mMaxObject = rad;
-        mServerQuerier->updateLargestObject(mMaxObject);
+        updateAggregateStats(mMaxObject);
     }
 }
 
@@ -588,7 +529,7 @@ void LibproxProximity::removeObjectSize(const UUID& obj) {
             mMaxObject = std::max(mMaxObject, oit->second);
 
         if (mMaxObject != old_val)
-            mServerQuerier->updateLargestObject(mMaxObject);
+            updateAggregateStats(mMaxObject);
     }
 }
 
@@ -676,12 +617,6 @@ void LibproxProximity::replicaObjectRemoved(const UUID& uuid) {
 void LibproxProximity::replicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) {
     if (mSeparateDynamicObjects)
         checkObjectClass(false, uuid, newval);
-}
-
-void LibproxProximity::updatedSegmentation(CoordinateSegmentation* cseg, const std::vector<SegmentationInfo>& new_seg) {
-    BoundingBoxList bboxes = mCSeg->serverRegion(mContext->id());
-    BoundingBox3f bbox = aggregateBBoxes(bboxes);
-    mServerQuerier->updateRegion(bbox);
 }
 
 
@@ -786,7 +721,7 @@ void LibproxProximity::commandProperties(const Command::Command& cmd, Command::C
 
 
     // Properties of servers
-    result.put("servers.num_queried", mServersQueried.size());
+    result.put("servers.num_queried", numServersQueried());
 
     // Properties of queries from servers
     result.put("queries.servers.count", mServerQueries[0].size());
@@ -1199,24 +1134,8 @@ void LibproxProximity::handleRemoveServerQuery(const ServerID& server) {
     );
 }
 
-void LibproxProximity::handleConnectedServer(ServerID sid) {
-    // Sometimes we may get forcefully disconnected from a server. To
-    // reestablish our previous setup, if that server appears in our queried
-    // set (we were told it was relevant to us by some higher level pinto
-    // service), we mark it as needing another update. In the case that we
-    // are just getting an initial connection, this shouldn't change anything
-    // since it would already be markedas needing an update if we had been told
-    // by pinto that it needed it.
-    boost::lock_guard<boost::mutex> lck(mServerSetMutex);
-    if (mServersQueried.find(sid) != mServersQueried.end())
-        mNeedServerQueryUpdate.insert(sid);
-}
 
-void LibproxProximity::handleDisconnectedServer(ServerID sid) {
-    // When we lose a connection, we need to clear out everything related to
-    // that server.
-    PROXLOG(debug, "Handling unexpected disconnection from " << sid << " by clearing out proximity state.");
-
+void LibproxProximity::handleForcedDisconnection(ServerID sid) {
     // Clear out remote server's query to us
     handleRemoveServerQuery(sid);
 

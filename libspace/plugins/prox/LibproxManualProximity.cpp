@@ -55,12 +55,14 @@ LibproxManualProximity::~LibproxManualProximity() {
 }
 
 void LibproxManualProximity::start() {
-    Proximity::start();
+    LibproxProximityBase::start();
 
     mContext->add(&mOHHandlerPoller);
 }
 
 void LibproxManualProximity::poll() {
+    // Update server-to-server angles if necessary
+    sendQueryRequests();
 
     // Get and ship OH results
     std::deque<OHResult> oh_results_copy;
@@ -132,7 +134,22 @@ void LibproxManualProximity::receiveMigrationData(const UUID& obj, ServerID sour
     assert(data.empty());
 }
 
-// Object host session and message management
+
+
+// MAIN Thread -- Aggregate server-to-server queries and top-level events
+
+void LibproxManualProximity::sendQueryRequests() {
+    ServerSet sub_servers;
+    getServersForAggregateQueryUpdate(&sub_servers);
+    for(ServerSet::const_iterator it = sub_servers.begin(); it != sub_servers.end(); it++) {
+        ServerID sid = *it;
+        PROXLOG(warn, "Ignoring request to send aggregate query update to server " << sid << " because manual queries don't support server-to-server queries yet.");
+        // if failed: addServerForAggregateQueryUpdate(sid);
+    }
+
+}
+
+// MAIN Thread -- Object host session and message management
 
 void LibproxManualProximity::onObjectHostSession(const OHDP::NodeID& id, ObjectHostSessionPtr oh_sess) {
     // Setup listener for requests from object hosts. We should only
@@ -253,6 +270,16 @@ void LibproxManualProximity::tickQueryHandler(ProxQueryHandlerData qh[NUM_OBJECT
         }
     }
 }
+
+
+// PROX Thread -- Server-to-server and top-level pinto
+
+void LibproxManualProximity::handleForcedDisconnection(ServerID server) {
+    PROXLOG(warn, "Ignoring forced disconnection by server " << server << " since manual queries don't support server-to-server queries yet.");
+}
+
+
+// PROX Thread -- OH queries
 
 void LibproxManualProximity::handleObjectHostProxMessage(const OHDP::NodeID& id, const String& data, SeqNoPtr seqNo) {
     // Handle the seqno update
