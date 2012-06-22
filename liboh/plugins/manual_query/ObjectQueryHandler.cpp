@@ -538,9 +538,18 @@ void ObjectQueryHandler::handleUpdateObjectQuery(const ObjectReference& object, 
     BoundingSphere3f region(bounds.center(), 0);
     float ms = bounds.radius();
 
-    QPLOG(detailed,"Update object query from " << object.toString() << ", min angle " << angle.asFloat() << ", max results " << max_results);
+    // In some cases (new queries) we only want to do any work here,
+    // including reporting the update, if the user explicitly made a
+    // change to query parameters since this will get called for all
+    // objects triggering movement.
+    bool explicit_query_params_update = ((angle != NoUpdateSolidAngle) || (max_results != NoUpdateMaxResults));
 
     if (mObjectQueries.find(object) == mObjectQueries.end()) {
+        // If there's no existing query, so this was just because of a
+        // location update -- don't record a query since it wouldn't
+        // do anything anyway.
+        if (!explicit_query_params_update) return;
+
         ObjectQueryDataPtr query_props(new ObjectQueryData());
         query_props->loc = loc;
         query_props->bounds = bounds;
@@ -549,6 +558,10 @@ void ObjectQueryHandler::handleUpdateObjectQuery(const ObjectReference& object, 
         mObjectQueries[object] = query_props;
     }
     ObjectQueryDataPtr query_data = mObjectQueries[object];
+
+    // Log, but only if this isn't just due to object movement
+    if (explicit_query_params_update)
+        QPLOG(detailed,"Update object query from " << object.toString() << ", min angle " << angle.asFloat() << ", max results " << max_results);
 
     // We always need to keep these two up to date as they are updated by
     // location updates to ensure we have up-to-date values if we start out with
