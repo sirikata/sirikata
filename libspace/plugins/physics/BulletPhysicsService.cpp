@@ -916,4 +916,88 @@ bool BulletPhysicsService::locationUpdate(UUID source, void* buffer, uint32 leng
 
 
 
+
+// Command handlers
+
+void BulletPhysicsService::commandProperties(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {
+    Command::Result result = Command::EmptyResult();
+
+    result.put("name", "standard");
+
+    // FIXME we could track these as we add/remove objects so they'd be cheaper
+    // to compute
+    uint32 local_count = 0, aggregate_count = 0, local_aggregate_count = 0;
+    for(LocationMap::iterator it = mLocations.begin(); it != mLocations.end(); it++) {
+        if (it->second.local) local_count++;
+        if (it->second.aggregate) aggregate_count++;
+        if (it->second.local && it->second.aggregate) local_aggregate_count++;
+    }
+    result.put("objects.count", mLocations.size());
+    result.put("objects.local_count", local_count);
+    result.put("objects.aggregate_count", aggregate_count);
+    result.put("objects.local_aggregate_count", local_aggregate_count);
+
+    cmdr->result(cmdid, result);
+}
+
+void BulletPhysicsService::commandObjectProperties(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {
+    Command::Result result = Command::EmptyResult();
+
+    String obj_string = cmd.getString("object", "");
+    if (obj_string.empty()) { // not specified
+        result.put("error", "Ill-formatted request: no object specified.");
+        cmdr->result(cmdid, result);
+        return;
+    }
+    UUID objid(obj_string, UUID::HumanReadable());
+
+    LocationMap::iterator it = mLocations.find(objid);
+    if (it == mLocations.end()) {
+        result.put("error", "Object not found.");
+        cmdr->result(cmdid, result);
+        return;
+    }
+
+    result.put("properties.location.position.x", it->second.props.location().position().x);
+    result.put("properties.location.position.y", it->second.props.location().position().y);
+    result.put("properties.location.position.z", it->second.props.location().position().z);
+    result.put("properties.location.velocity.x", it->second.props.location().velocity().x);
+    result.put("properties.location.velocity.y", it->second.props.location().velocity().y);
+    result.put("properties.location.velocity.z", it->second.props.location().velocity().z);
+    result.put("properties.location.time", it->second.props.location().updateTime().raw());
+
+    result.put("properties.orientation.position.x", it->second.props.orientation().position().x);
+    result.put("properties.orientation.position.y", it->second.props.orientation().position().y);
+    result.put("properties.orientation.position.z", it->second.props.orientation().position().z);
+    result.put("properties.orientation.position.w", it->second.props.orientation().position().w);
+    result.put("properties.orientation.velocity.x", it->second.props.orientation().velocity().x);
+    result.put("properties.orientation.velocity.y", it->second.props.orientation().velocity().y);
+    result.put("properties.orientation.velocity.z", it->second.props.orientation().velocity().z);
+    result.put("properties.orientation.velocity.w", it->second.props.orientation().velocity().w);
+    result.put("properties.orientation.time", it->second.props.orientation().updateTime().raw());
+
+    result.put("properties.bounds.center.x", it->second.props.bounds().center().x);
+    result.put("properties.bounds.center.y", it->second.props.bounds().center().y);
+    result.put("properties.bounds.center.z", it->second.props.bounds().center().z);
+    result.put("properties.bounds.radius", it->second.props.bounds().radius());
+
+    result.put("properties.mesh", it->second.props.mesh().toString());
+    result.put("properties.physics", it->second.props.physics());
+
+    result.put("properties.local", it->second.local);
+    result.put("properties.aggregate", it->second.aggregate);
+
+    // These are included in the encoded physics string, but also include them
+    // in parsed form if the properties are available via a BulletObject
+    if (it->second.simObject != NULL) {
+        result.put("properties.bullet.fixed", it->second.simObject->fixed());
+        result.put("properties.bullet.treatment", ToString(it->second.simObject->treatment()));
+        result.put("properties.bullet.shape", ToString(it->second.simObject->bbox()));
+        result.put("properties.bullet.mass", it->second.simObject->mass());
+    }
+
+    result.put("success", true);
+    cmdr->result(cmdid, result);
+}
+
 } // namespace Sirikata

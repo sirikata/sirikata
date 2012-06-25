@@ -78,6 +78,13 @@ public:
 
     virtual bool locationUpdate(UUID source, void* buffer, uint32 length);
 
+    // Command handlers
+    /// Get basic properties about this location service, e.g. type, number of
+    /// objects tracked, etc.
+    virtual void commandProperties(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
+    /// Get all the properties stored about an object.
+    virtual void commandObjectProperties(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
+
 private:
     struct LocationInfo {
         // Regular location info that we need to maintain for all objects
@@ -87,7 +94,7 @@ private:
         // a String version within props. DO NOT use anywhere else.
         String mesh_copied_str;
         String physics_copied_str;
-        
+
         bool local;
         bool aggregate;
     };
