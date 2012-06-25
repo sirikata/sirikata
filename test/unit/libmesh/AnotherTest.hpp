@@ -43,6 +43,7 @@ public:
     {
     }
     void testAnother( void ) {
+		//dummy test to make sure that more tests can be added
         TS_ASSERT_EQUALS(0,0);
     }
 };

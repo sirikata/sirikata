@@ -219,7 +219,6 @@ String Meshdata::sType("Meshdata");
 Meshdata::Meshdata()
 :globalTransform(Matrix4x4f::identity())
 {
-
 }
 
 Meshdata::~Meshdata(){
