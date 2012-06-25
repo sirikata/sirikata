@@ -99,6 +99,15 @@ public:
 
     virtual bool locationUpdate(UUID source, void* buffer, uint32 length);
 
+
+    // Command handlers
+    /// Get basic properties about this location service, e.g. type, number of
+    /// objects tracked, etc.
+    virtual void commandProperties(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
+    /// Get all the properties stored about an object.
+    virtual void commandObjectProperties(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
+
+
     typedef std::tr1::function<void(MeshdataPtr)> MeshdataParsedCallback;
     void getMesh(const Transfer::URI meshURI, const UUID uuid, MeshdataParsedCallback cb);
     // The last two get set in this callback, indicating that the

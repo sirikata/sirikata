@@ -3,9 +3,6 @@
 #include <iostream>
 #include <fstream>
 #include<cassert>
-#ifdef _WIN32
-#pragma warning(disable:4786)
-#endif
 #include <string>
 #include <iostream>
 

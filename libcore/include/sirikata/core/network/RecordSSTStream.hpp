@@ -19,7 +19,7 @@ namespace Sirikata {
  *  and it uses simple framing to identify the records at the receiver.
  */
 template<typename StreamPtrType>
-class RecordSSTStream : public Liveness {
+class RecordSSTStream : public Liveness, public Noncopyable {
 public:
     typedef std::tr1::function<void(MemoryReference)> RecordCallback;
 
@@ -56,6 +56,9 @@ public:
         mStream->registerReadCallback(0);
     }
 private:
+
+    RecordSSTStream(const RecordSSTStream&);
+    
     void handleRead(uint8* data, int size) {
         partial_frame.append((const char*)data, size);
         while(true) {

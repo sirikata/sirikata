@@ -47,7 +47,7 @@ int main(int argc, char** argv) {
     InitOptions();
     Trace::Trace::InitOptions();
     InitCSegOptions();
-    ParseOptions(argc, argv);
+    ParseOptions(argc, argv, AllowUnregisteredOptions);
 
     PluginManager plugins;
     plugins.loadList( GetOptionValue<String>(OPT_PLUGINS));

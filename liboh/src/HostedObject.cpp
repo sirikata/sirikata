@@ -31,7 +31,6 @@
  */
 
 #include <sirikata/oh/Platform.hpp>
-#include <sirikata/core/task/WorkQueue.hpp>
 #include <sirikata/core/network/Stream.hpp>
 #include <sirikata/core/util/SpaceObjectReference.hpp>
 #include <sirikata/oh/HostedObject.hpp>

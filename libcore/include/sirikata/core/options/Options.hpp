@@ -98,9 +98,9 @@ public:
 
     OptionSet();
     ~OptionSet();
-    void parse(const std::string&, bool use_defaults = true, bool missing_only = false);
-    void parse(int, const char * const *, bool use_defaults = true, bool missing_only = false);
-    void parseFile(const std::string&, bool required, bool use_defaults = true, bool missing_only = false);
+    void parse(const std::string&, bool use_defaults = true, bool missing_only = false, bool allow_unregistered = false);
+    void parse(int, const char * const *, bool use_defaults = true, bool missing_only = false, bool allow_unregistered = false);
+    void parseFile(const std::string&, bool required, bool use_defaults = true, bool missing_only = false, bool allow_unregistered = false);
     /// Fills in defaults for any options that didn't already have values filled
     /// in. Useful if you add options and need to fill in defaults but can't
     /// parse with defaults since that would overwrite already-parsed options.

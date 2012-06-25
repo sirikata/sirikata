@@ -33,9 +33,7 @@
 #include <sirikata/core/util/Standard.hh>
 #include <sirikata/core/service/Poller.hpp>
 #include <sirikata/core/network/IOStrandImpl.hpp>
-#ifdef _WIN32
-#pragma warning (disable:4355)//this within constructor initializer
-#endif
+
 namespace Sirikata {
 
 Poller::Poller(Network::IOStrand* str, const Network::IOCallback& cb, const char* cb_tag, const Duration& max_rate, bool accurate)

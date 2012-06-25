@@ -32,6 +32,7 @@
 
 #include "StandardLocationService.hpp"
 #include <sirikata/core/trace/Trace.hpp>
+#include <sirikata/core/command/Commander.hpp>
 
 #include "Protocol_Loc.pbj.hpp"
 
@@ -441,6 +442,92 @@ bool StandardLocationService::locationUpdate(UUID source, void* buffer, uint32 l
     return true;
 }
 
+
+
+
+// Command handlers
+
+void StandardLocationService::commandProperties(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {
+    Command::Result result = Command::EmptyResult();
+
+    result.put("name", "standard");
+
+    // FIXME we could track these as we add/remove objects so they'd be cheaper
+    // to compute
+    uint32 local_count = 0, aggregate_count = 0, local_aggregate_count = 0;
+    for(LocationMap::iterator it = mLocations.begin(); it != mLocations.end(); it++) {
+        if (it->second.local) local_count++;
+        if (it->second.aggregate) aggregate_count++;
+        if (it->second.local && it->second.aggregate) local_aggregate_count++;
+    }
+    result.put("objects.count", mLocations.size());
+    result.put("objects.local_count", local_count);
+    result.put("objects.aggregate_count", aggregate_count);
+    result.put("objects.local_aggregate_count", local_aggregate_count);
+
+    cmdr->result(cmdid, result);
+}
+
+void StandardLocationService::commandObjectProperties(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {
+    Command::Result result = Command::EmptyResult();
+
+    String obj_string = cmd.getString("object", "");
+    if (obj_string.empty()) { // not specified
+        result.put("error", "Ill-formatted request: no object specified.");
+        cmdr->result(cmdid, result);
+        return;
+    }
+    UUID objid(obj_string, UUID::HumanReadable());
+
+    LocationMap::iterator it = mLocations.find(objid);
+    if (it == mLocations.end()) {
+        result.put("error", "Object not found.");
+        cmdr->result(cmdid, result);
+        return;
+    }
+
+    Time t = mContext->recentSimTime();
+    TimedMotionVector3f pos(t, it->second.props.location().extrapolate(t));
+    result.put("properties.location.position.x", pos.position().x);
+    result.put("properties.location.position.y", pos.position().y);
+    result.put("properties.location.position.z", pos.position().z);
+    result.put("properties.location.velocity.x", pos.velocity().x);
+    result.put("properties.location.velocity.y", pos.velocity().y);
+    result.put("properties.location.velocity.z", pos.velocity().z);
+    result.put("properties.location.time", pos.updateTime().raw());
+
+    TimedMotionQuaternion orient(t, it->second.props.orientation().extrapolate(t));
+    result.put("properties.orientation.position.x", orient.position().x);
+    result.put("properties.orientation.position.y", orient.position().y);
+    result.put("properties.orientation.position.z", orient.position().z);
+    result.put("properties.orientation.position.w", orient.position().w);
+    result.put("properties.orientation.velocity.x", orient.velocity().x);
+    result.put("properties.orientation.velocity.y", orient.velocity().y);
+    result.put("properties.orientation.velocity.z", orient.velocity().z);
+    result.put("properties.orientation.velocity.w", orient.velocity().w);
+    result.put("properties.orientation.time", orient.updateTime().raw());
+
+    // Present the bounds info in a way the consumer can easily draw a bounding
+    // sphere, especially for single objects
+    result.put("properties.bounds.center.x", it->second.props.bounds().centerOffset.x);
+    result.put("properties.bounds.center.y", it->second.props.bounds().centerOffset.y);
+    result.put("properties.bounds.center.z", it->second.props.bounds().centerOffset.z);
+    result.put("properties.bounds.radius", it->second.props.bounds().fullRadius());
+    // But also provide the other info so a correct view of
+    // aggregates. Technically we only need one of these since fullRadius is the
+    // sum of the two, but this is clearer.
+    result.put("properties.bounds.centerBoundsRadius", it->second.props.bounds().centerBoundsRadius);
+    result.put("properties.bounds.maxObjectRadius", it->second.props.bounds().maxObjectRadius);
+
+    result.put("properties.mesh", it->second.props.mesh().toString());
+    result.put("properties.physics", it->second.props.physics());
+
+    result.put("properties.local", it->second.local);
+    result.put("properties.aggregate", it->second.aggregate);
+
+    result.put("success", true);
+    cmdr->result(cmdid, result);
+}
 
 
 } // namespace Sirikata

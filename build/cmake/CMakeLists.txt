@@ -81,9 +81,19 @@ ENDIF()
 
 
 IF(WIN32)
-  ADD_DEFINITIONS(-D_CRT_SECURE_NO_WARNINGS -MP -D_WIN32_WINNT=0x0500 -D_SCL_SECURE_NO_WARNINGS -EHsc -DBOOST_ALL_DYN_LINK)
+  ADD_DEFINITIONS("-D_CRT_SECURE_NO_WARNINGS -MP -D_WIN32_WINNT=0x0500 -D_SCL_SECURE_NO_WARNINGS -EHsc -DBOOST_ALL_DYN_LINK")
   SET(CMAKE_CXX_FLAGS "-D_CRT_SECURE_NO_WARNINGS -D_SCL_SECURE_NO_WARNINGS")
-
+  # Get rid of useless logo output
+  ADD_DEFINITIONS("/nologo")
+  # Disable some very annoying, not important warnings:
+  # 4099 -- missing pdb, linking w/o debug info. We can't actually get rid of this until MS stops forcing it on us...
+  # 4355 -- 'this' used in base member initializer list. This *can* be unsafe, but is too important and useful
+  # 4251 -- disable type needs to have dll-interface to be used byu clients due to STL member variables which are not public
+  # 4661 -- disable warning about no suitable definition provided for explicit template instantiation request which seems to have no resolution nor cause any problems
+  # 4275 -- disable non dll-interface class used as base for dll-interface class when deriving from singleton
+  # 4786 -- warning about truncated symbol names which cause problems for the debugger
+  ADD_DEFINITIONS("/wd4099 /wo4099 /wd4355 /wd4251 /wd4661 /wd4275 /wd4786")
+  
   IF(sirikata_LDFLAGS)
     SET(sirikata_LDFLAGS "${sirikata_LDFLAGS} /ignore:4099 /LARGEADDRESSAWARE")
   ELSE()
@@ -1018,6 +1028,7 @@ SET(SLAUNCHER_SOURCE_DIR ${TOP_LEVEL}/tools/slauncher)
 
 SET(TEST_SOURCE_DIR ${TOP_LEVEL}/test/unit)
 SET(TEST_LIBCORE_SOURCE_DIR ${TEST_SOURCE_DIR}/libcore)
+SET(TEST_LIBMESH_SOURCE_DIR ${TEST_SOURCE_DIR}/libmesh)
 SET(TEST_LIBSQLITE_SOURCE_DIR ${TEST_SOURCE_DIR}/libsqlite)
 SET(TEST_LIBCASSANDRA_SOURCE_DIR ${TEST_SOURCE_DIR}/libcassandra)
 SET(TEST_LIBOH_SOURCE_DIR ${TEST_SOURCE_DIR}/liboh)
@@ -1334,8 +1345,6 @@ SET(SIRIKATA_CORE_SOURCES
 	${LIBCORE_SOURCE_DIR}/transfer/HttpManager.cpp
         ${LIBCORE_SOURCE_DIR}/transfer/ResourceDownloadTask.cpp
 	${LIBCORE_SOURCE_DIR}/transfer/OAuthHttpManager.cpp
-	${LIBCORE_SOURCE_DIR}/task/DependencyTask.cpp
-	${LIBCORE_SOURCE_DIR}/task/WorkQueue.cpp
 	${LIBCORE_SOURCE_DIR}/task/Time.cpp
 	${LIBCORE_SOURCE_DIR}/network/Asio.cpp
         ${LIBCORE_SOURCE_DIR}/xdp/Defs.cpp
@@ -1691,6 +1700,7 @@ SET(LIBSPACE_PLUGIN_STANDARD_SOURCES
 SET(LIBSPACE_PLUGIN_BULLETPHYSICS_DIR ${LIBSPACE_PLUGIN_DIR}/physics)
 SET(LIBSPACE_PLUGIN_BULLETPHYSICS_SOURCES
   ${LIBSPACE_PLUGIN_BULLETPHYSICS_DIR}/PluginInterface.cpp
+  ${LIBSPACE_PLUGIN_BULLETPHYSICS_DIR}/Defs.cpp
   ${LIBSPACE_PLUGIN_BULLETPHYSICS_DIR}/BulletObject.cpp
   ${LIBSPACE_PLUGIN_BULLETPHYSICS_DIR}/BulletCharacterController.cpp
   ${LIBSPACE_PLUGIN_BULLETPHYSICS_DIR}/BulletCharacterObject.cpp
@@ -1879,6 +1889,9 @@ ${TEST_LIBCORE_SOURCE_DIR}/TR1Test.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/Vector3Test.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/BoundingBoxTest.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/PathsTest.hpp
+
+${TEST_LIBMESH_SOURCE_DIR}/AnotherTest.hpp
+${TEST_LIBMESH_SOURCE_DIR}/MeshDataTest.hpp
  )
 IF(BUILD_LIBSQLITE)
   SET(CXXTESTSources
@@ -2694,7 +2707,7 @@ IF(NOT APPLE)
   ENDIF()
 ENDIF()
 
-ADD_EXECUTABLE(${TEST_BINARY} ${TEST_SOURCES})# EXCLUDE_FROM_ALL
+ADD_EXECUTABLE(${TEST_BINARY} ${TEST_SOURCES} ${CXXTESTSources})# EXCLUDE_FROM_ALL
 SET_TARGET_PROPERTIES(${TEST_BINARY} PROPERTIES ${COMPILE_DEFS_OPT})
 SET_TARGET_PROPERTIES(${TEST_BINARY} PROPERTIES ${SIRIKATA_VERSION_SETTINGS})
 SET(TEST_BINARY_DEPENDENCIES ${SIRIKATA_CORE_LIB} ${SIRIKATA_OH_LIB} tcpsst oh-file)

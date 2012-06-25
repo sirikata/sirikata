@@ -971,7 +971,7 @@ void LibproxProximity::generateObjectQueryEvents(Query* query, bool do_first) {
 
                     //query_id contains the uuid of the object that is receiving
                     //the proximity message that obj_id has been added.
-                    uint64 seqNo = (*seqNoPtr);
+                    uint64 seqNo = (*seqNoPtr)++;
                     addition.set_seqno (seqNo);
 
                     if (mLocCache->isAggregate(objid)) {

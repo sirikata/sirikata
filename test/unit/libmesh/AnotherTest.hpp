@@ -1,7 +1,7 @@
-/*  Sirikata Kernel -- Task scheduling system
- *  DependencyTask.hpp
+/*  Sirikata Tests -- Sirikata Test Suite
+ *  MeshDataTest.hpp
  *
- *  Copyright (c) 2008, Patrick Reiter Horn
+ *  Copyright (c) 2008, Daniel Reiter Horn
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -29,42 +29,20 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+#include <cxxtest/TestSuite.h>
+#include <sirikata/mesh/Meshdata.hpp>
 
-#ifndef SIRIKATA_Scheduler_HPP__
-#define SIRIKATA_Scheduler_HPP__
-
-#include <sirikata/core/task/Time.hpp>
-#include <sirikata/core/util/AtomicTypes.hpp>
-#include <sirikata/core/queue/LockFreeQueue.hpp>
-
-namespace Sirikata {
-namespace Task {
-
-class WorkQueue;
-
-/// Scheduler interface
-class SIRIKATA_EXPORT DependentTask {
-	WorkQueue *mWorkQueue;
-    LockFreeQueue <DependentTask*>mDependents;
-    AtomicValue<int> mNumThisWaitingOn;
-    bool mFailure;
-
-    class CallFailed;
-    friend class CallFailed;
-    class CallSuccess;
-    friend class CallSuccess;
+using namespace Sirikata;
+class AnotherTest : public CxxTest::TestSuite
+{
 public:
-    DependentTask(WorkQueue *q);
-    virtual ~DependentTask();
-    void addDepender(DependentTask*);
-    void finish(bool success);
-    virtual void operator() () = 0;
-    ///checks if mNumWaitingOn is 0 and if so sets the event in motion
-    void go();
-
+    void setUp( void )
+    {
+    }
+    void tearDown( void )
+    {
+    }
+    void testAnother( void ) {
+        TS_ASSERT_EQUALS(0,0);
+    }
 };
-
-}
-}
-
-#endif

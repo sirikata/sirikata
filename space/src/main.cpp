@@ -126,7 +126,7 @@ int main(int argc, char** argv) {
     Trace::Trace::InitOptions();
     SpaceTrace::InitOptions();
     InitSpaceOptions();
-    ParseOptions(argc, argv, OPT_CONFIG_FILE);
+    ParseOptions(argc, argv, OPT_CONFIG_FILE, AllowUnregisteredOptions);
 
     PluginManager plugins;
     plugins.loadList( GetOptionValue<String>(OPT_PLUGINS) );

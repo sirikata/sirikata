@@ -127,35 +127,35 @@ void FakeParseOptions() {
     options->parse(argc, argv);
 }
 
-void ParseOptions(int argc, char** argv) {
+void ParseOptions(int argc, char** argv, UnregisteredOptionBehavior unreg) {
     OptionSet* options = OptionSet::getOptions(SIRIKATA_OPTIONS_MODULE,NULL);
-    options->parse(argc, argv);
+    options->parse(argc, argv, true, false, (unreg == AllowUnregisteredOptions));
     setLogOutput();
 }
 
-void ParseOptionsFile(const String& fname, bool required) {
+void ParseOptionsFile(const String& fname, bool required, UnregisteredOptionBehavior unreg) {
     OptionSet* options = OptionSet::getOptions(SIRIKATA_OPTIONS_MODULE,NULL);
-    options->parseFile(fname, required);
+    options->parseFile(fname, required, true, false, (unreg == AllowUnregisteredOptions));
     setLogOutput();
 }
 
-void ParseOptions(int argc, char** argv, const String& config_file_option) {
+void ParseOptions(int argc, char** argv, const String& config_file_option, UnregisteredOptionBehavior unreg) {
     OptionSet* options = OptionSet::getOptions(SIRIKATA_OPTIONS_MODULE,NULL);
 
     // Parse command line once to make sure we have the right config
     // file. On this pass, use defaults so everything gets filled in.
-    options->parse(argc, argv, true);
+    options->parse(argc, argv, true, false, (unreg == AllowUnregisteredOptions));
 
     // Get the config file name and parse it. Don't use defaults to
     // avoid overwriting.
     String fname = GetOptionValue<String>(config_file_option.c_str());
     if (!fname.empty())
-        options->parseFile(fname, false, false);
+        options->parseFile(fname, false, false, false, (unreg == AllowUnregisteredOptions));
 
     // And parse the command line args a second time to overwrite any settings
     // the config file may have overwritten. Don't use defaults to
     // avoid overwriting.
-    options->parse(argc, argv, false);
+    options->parse(argc, argv, false, false, (unreg == AllowUnregisteredOptions));
 
     setLogOutput();
 }

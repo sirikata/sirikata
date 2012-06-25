@@ -216,7 +216,13 @@ bool MaterialEffectInfo::operator!=(const MaterialEffectInfo& rhs) const {
 
 String Meshdata::sType("Meshdata");
 
-Meshdata::~Meshdata() {
+Meshdata::Meshdata()
+:globalTransform(Matrix4x4f::identity())
+{
+
+}
+
+Meshdata::~Meshdata(){
 }
 
 const String& Meshdata::type() const {
@@ -289,7 +295,7 @@ uint32 Meshdata::getInstancedLightCount() const {
 
 Meshdata::GeometryInstanceIterator::GeometryInstanceIterator(const Meshdata* const mesh)
  : mMesh(mesh),
-   mRoot(-1)
+   mRoot(-1)	
 {
 }
 
@@ -344,7 +350,6 @@ bool Meshdata::GeometryInstanceIterator::next(uint32* geo_idx, Matrix4x4f* xform
             mStack.push(st);
             continue;
         }
-
         if (node.step == NodeState::InstanceGeometries) {
             // FIXME this step is inefficient because each node doesn't have a
             // list of instance geometries. Instead, we have to iterate over all
@@ -497,7 +502,7 @@ bool Meshdata::LightInstanceIterator::next(uint32* light_idx, Matrix4x4f* xform)
             st.index = mMesh->rootNodes[mRoot];
             st.step = NodeState::Nodes;
             st.currentChild = -1;
-            st.transform = mMesh->globalTransform;
+            st.transform = mMesh->globalTransform * mMesh->nodes[st.index].transform;
             mStack.push(st);
         }
 
@@ -518,7 +523,7 @@ bool Meshdata::LightInstanceIterator::next(uint32* light_idx, Matrix4x4f* xform)
             st.transform = node.transform * mMesh->nodes[ st.index ].transform;
             mStack.push(st);
             continue;
-        }
+		}
 
         if (node.step == NodeState::InstanceNodes) {
             node.currentChild++;

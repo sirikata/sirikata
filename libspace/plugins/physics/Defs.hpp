@@ -35,6 +35,7 @@ enum bulletObjTreatment {
 	BULLET_OBJECT_TREATMENT_VERTICAL_DYNAMIC,
 	BULLET_OBJECT_TREATMENT_CHARACTER
 };
+String ToString(bulletObjTreatment treatment);
 
 enum bulletObjCollisionMaskGroup {
 	BULLET_OBJECT_COLLISION_GROUP_STATIC = 1,
@@ -51,7 +52,7 @@ enum bulletObjBBox {
 	BULLET_OBJECT_BOUNDS_PER_TRIANGLE,
 	BULLET_OBJECT_BOUNDS_SPHERE
 };
-
+String ToString(bulletObjBBox bnds);
 
 #define DEFAULT_TREATMENT BULLET_OBJECT_TREATMENT_IGNORE
 #define DEFAULT_BOUNDS BULLET_OBJECT_BOUNDS_SPHERE
@@ -74,7 +75,7 @@ struct LocationInfo {
     // a String version within props. DO NOT use anywhere else.
     String mesh_copied_str;
     String physics_copied_str;
-    
+
     bool local;
     bool aggregate;
 
