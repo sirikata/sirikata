@@ -958,23 +958,26 @@ void BulletPhysicsService::commandObjectProperties(const Command::Command& cmd, 
         return;
     }
 
-    result.put("properties.location.position.x", it->second.props.location().position().x);
-    result.put("properties.location.position.y", it->second.props.location().position().y);
-    result.put("properties.location.position.z", it->second.props.location().position().z);
-    result.put("properties.location.velocity.x", it->second.props.location().velocity().x);
-    result.put("properties.location.velocity.y", it->second.props.location().velocity().y);
-    result.put("properties.location.velocity.z", it->second.props.location().velocity().z);
-    result.put("properties.location.time", it->second.props.location().updateTime().raw());
+    Time t = mContext->recentSimTime();
+    TimedMotionVector3f pos(t, it->second.props.location().extrapolate(t));
+    result.put("properties.location.position.x", pos.position().x);
+    result.put("properties.location.position.y", pos.position().y);
+    result.put("properties.location.position.z", pos.position().z);
+    result.put("properties.location.velocity.x", pos.velocity().x);
+    result.put("properties.location.velocity.y", pos.velocity().y);
+    result.put("properties.location.velocity.z", pos.velocity().z);
+    result.put("properties.location.time", pos.updateTime().raw());
 
-    result.put("properties.orientation.position.x", it->second.props.orientation().position().x);
-    result.put("properties.orientation.position.y", it->second.props.orientation().position().y);
-    result.put("properties.orientation.position.z", it->second.props.orientation().position().z);
-    result.put("properties.orientation.position.w", it->second.props.orientation().position().w);
-    result.put("properties.orientation.velocity.x", it->second.props.orientation().velocity().x);
-    result.put("properties.orientation.velocity.y", it->second.props.orientation().velocity().y);
-    result.put("properties.orientation.velocity.z", it->second.props.orientation().velocity().z);
-    result.put("properties.orientation.velocity.w", it->second.props.orientation().velocity().w);
-    result.put("properties.orientation.time", it->second.props.orientation().updateTime().raw());
+    TimedMotionQuaternion orient(t, it->second.props.orientation().extrapolate(t));
+    result.put("properties.orientation.position.x", orient.position().x);
+    result.put("properties.orientation.position.y", orient.position().y);
+    result.put("properties.orientation.position.z", orient.position().z);
+    result.put("properties.orientation.position.w", orient.position().w);
+    result.put("properties.orientation.velocity.x", orient.velocity().x);
+    result.put("properties.orientation.velocity.y", orient.velocity().y);
+    result.put("properties.orientation.velocity.z", orient.velocity().z);
+    result.put("properties.orientation.velocity.w", orient.velocity().w);
+    result.put("properties.orientation.time", orient.updateTime().raw());
 
     result.put("properties.bounds.center.x", it->second.props.bounds().center().x);
     result.put("properties.bounds.center.y", it->second.props.bounds().center().y);
