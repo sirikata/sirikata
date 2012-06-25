@@ -66,14 +66,20 @@ namespace Sirikata {
 SIRIKATA_FUNCTION_EXPORT void ReportVersion();
 
 SIRIKATA_FUNCTION_EXPORT void InitOptions();
-SIRIKATA_FUNCTION_EXPORT void ParseOptions(int argc, char** argv);
-SIRIKATA_FUNCTION_EXPORT void ParseOptionsFile(const String& fname, bool required=true);
+
+enum UnregisteredOptionBehavior {
+    AllowUnregisteredOptions,
+    FailOnUnregisteredOptions
+};
+
+SIRIKATA_FUNCTION_EXPORT void ParseOptions(int argc, char** argv, UnregisteredOptionBehavior unreg = FailOnUnregisteredOptions);
+SIRIKATA_FUNCTION_EXPORT void ParseOptionsFile(const String& fname, bool required=true, UnregisteredOptionBehavior unreg = FailOnUnregisteredOptions);
 
 /** Parse command line options and config files, ensuring the command line
  *  arguments take priority but reading the config file from an option rather
  *  than hard coding it.
  */
-SIRIKATA_FUNCTION_EXPORT void ParseOptions(int argc, char** argv, const String& config_file_option);
+SIRIKATA_FUNCTION_EXPORT void ParseOptions(int argc, char** argv, const String& config_file_option, UnregisteredOptionBehavior unreg = FailOnUnregisteredOptions);
 
 // Parses empty options to get options properly initialized
 SIRIKATA_FUNCTION_EXPORT void FakeParseOptions();

@@ -120,8 +120,12 @@ public:
         printf("\n\n========================================\n");
         printf("SUMMARY: %d failed, %d warnings.\n",
             tracker().failedTests(), tracker().warnings());
-        for(int i = 0; i < mFailedTests.size(); i++)
+        std::map<std::string, std::string> reported_failed_tests;
+        for(uint32 i = 0; i < mFailedTests.size(); i++) {
+            if (reported_failed_tests.find(mFailedTests[i]) != reported_failed_tests.end()) continue;
             printf(" - %s\n", mFailedTests[i].c_str());
+            reported_failed_tests[mFailedTests[i]] = mFailedTests[i];
+        }
         printf("========================================\n");
         return tracker().failedTests();
     }

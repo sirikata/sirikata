@@ -54,7 +54,7 @@ int main(int argc, char** argv) {
     Trace::Trace::InitOptions();
     OHTrace::InitOptions();
     InitSimOHOptions();
-    ParseOptions(argc, argv);
+    ParseOptions(argc, argv, AllowUnregisteredOptions);
 
     PluginManager plugins;
     plugins.loadList( GetOptionValue<String>(OPT_PLUGINS) );

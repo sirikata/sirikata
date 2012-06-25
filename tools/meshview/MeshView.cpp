@@ -94,7 +94,7 @@ int main(int argc, char** argv) {
         .addOption(new OptionValue("screenshot","",Sirikata::OptionValueType<String>(),"If non-empty, trigger a screenshot to the given filename and exit."))
         ;
 
-    ParseOptions(argc, argv);
+    ParseOptions(argc, argv, AllowUnregisteredOptions);
 
     PluginManager plugins;
     plugins.loadList( GetOptionValue<String>(OPT_PLUGINS) );
