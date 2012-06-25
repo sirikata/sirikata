@@ -124,7 +124,7 @@ int main(int argc, char** argv) {
     using std::tr1::placeholders::_2;
 
     InitOptions();
-    ParseOptions(argc, argv);
+    ParseOptions(argc, argv, AllowUnregisteredOptions);
 
     PluginManager plugins;
     plugins.loadList( GetOptionValue<String>(OPT_PLUGINS) );

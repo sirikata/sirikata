@@ -81,7 +81,7 @@ int main (int argc, char** argv) {
     OHTrace::InitOptions();
     InitCPPOHOptions();
 
-    ParseOptions(argc, argv, OPT_CONFIG_FILE);
+    ParseOptions(argc, argv, OPT_CONFIG_FILE, AllowUnregisteredOptions);
 
     PluginManager plugins;
     String search_path=GetOptionValue<String>(OPT_OH_PLUGIN_SEARCH_PATHS);

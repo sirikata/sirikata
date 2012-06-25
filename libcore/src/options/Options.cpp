@@ -363,7 +363,7 @@ OptionSet::~OptionSet() {
     }
 }
 
-void OptionSet::parse(int argc, const char * const *argv, bool use_defaults, bool missing_only) {
+void OptionSet::parse(int argc, const char * const *argv, bool use_defaults, bool missing_only, bool allow_unregistered) {
     if (argc>1)
         mParsingStage=PARSED_UNBLANK_OPTIONS;
     boost::program_options::options_description options;
@@ -373,12 +373,14 @@ void OptionSet::parse(int argc, const char * const *argv, bool use_defaults, boo
         OptionRegistration::register_options(mNames,options);
     }
     options.add_options()("help","Print available options");
-    boost::program_options::parsed_options parsed =
-        boost::program_options::command_line_parser(argc, const_cast<char**>(argv))
+    boost::program_options::command_line_parser cmd_line_parser(argc, const_cast<char**>(argv));
+    cmd_line_parser
         .options(options)
-        .allow_unregistered()
-        .style(boost::program_options::command_line_style::default_style ^ boost::program_options::command_line_style::allow_guessing)
-        .run();
+        .style(boost::program_options::command_line_style::default_style ^ boost::program_options::command_line_style::allow_guessing);
+    if (allow_unregistered)
+        cmd_line_parser.allow_unregistered();
+    boost::program_options::parsed_options parsed =
+        cmd_line_parser.run();
     boost::program_options::store(
         parsed,
         output
@@ -395,7 +397,7 @@ void OptionSet::parse(int argc, const char * const *argv, bool use_defaults, boo
         exit(0);
 }
 
-void OptionSet::parseFile(const std::string& file, bool required, bool use_defaults, bool missing_only) {
+void OptionSet::parseFile(const std::string& file, bool required, bool use_defaults, bool missing_only, bool allow_unregistered) {
     mParsingStage=PARSED_UNBLANK_OPTIONS;
     boost::program_options::options_description options;
     boost::program_options::variables_map output;
@@ -409,7 +411,7 @@ void OptionSet::parseFile(const std::string& file, bool required, bool use_defau
         if (required) exit(0);
         return;
     }
-    boost::program_options::store( boost::program_options::parse_config_file(cf_fp, options, true), output);
+    boost::program_options::store( boost::program_options::parse_config_file(cf_fp, options, allow_unregistered), output);
     cf_fp.close();
     bool dienow=false;
     {
@@ -423,7 +425,7 @@ void OptionSet::parseFile(const std::string& file, bool required, bool use_defau
         exit(0);
 }
 
-void OptionSet::parse(const std::string&args, bool use_defaults, bool missing_only){
+void OptionSet::parse(const std::string&args, bool use_defaults, bool missing_only, bool allow_unregistered){
     if (args.size())
         mParsingStage=PARSED_UNBLANK_OPTIONS;
     boost::program_options::options_description options;
@@ -434,12 +436,14 @@ void OptionSet::parse(const std::string&args, bool use_defaults, bool missing_on
     }
     options.add_options()("help","Print available options");
     std::vector<std::string> args_vec = splice_winmain(args);
-    boost::program_options::store(
-        boost::program_options::command_line_parser(args_vec)
+    boost::program_options::command_line_parser cmd_line_parser(args_vec);
+    cmd_line_parser
         .options(options)
-        .allow_unregistered()
-        .style(boost::program_options::command_line_style::default_style ^ boost::program_options::command_line_style::allow_guessing)
-        .run(),
+        .style(boost::program_options::command_line_style::default_style ^ boost::program_options::command_line_style::allow_guessing);
+    if (allow_unregistered)
+        cmd_line_parser.allow_unregistered();
+    boost::program_options::store(
+        cmd_line_parser.run(),
         output
     );
     bool dienow=false;
