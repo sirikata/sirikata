@@ -156,6 +156,9 @@ void ManualObjectQueryProcessor::updateQuery(HostedObjectPtr ho, const SpaceObje
     ObjectStateMap::iterator it = mObjectState.find(sporef);
 
     if (new_query.empty()) { // Cancellation
+        // Fill in the new query, we may still keep this around so we
+        // want an accurate record.
+        it->second.query = new_query;
         // Clear object state if possible
         if (it->second.registered)
             unregisterObjectQuery(sporef);
@@ -250,7 +253,10 @@ void ManualObjectQueryProcessor::unregisterObjectQuery(const SpaceObjectReferenc
     assert(it != mObjectState.end());
     ObjectState& state = it->second;
     HostedObjectPtr ho = state.who.lock();
-    assert( ho && state.query.empty() && state.node != OHDP::NodeID::null() );
+    // unregisterObjectQuery can happen due to disconnection where we
+    // want to preserve the query info, so we can't assert an empty
+    // query like we assert a non-empty one in registerOrUpdateObjectQuery
+    assert( ho && state.node != OHDP::NodeID::null() );
 
     // Get the appropriate handler
     QueryHandlerMap::iterator handler_it = mObjectQueryHandlers.find(OHDP::SpaceNodeID(sporef.space(), state.node));
