@@ -7,7 +7,7 @@
 
 namespace Sirikata {
 
-AtomicValue<uint16> UniqueID16::sSource(0);
+AtomicValue<uint32> UniqueID16::sSource(0);
 AtomicValue<uint32> UniqueID32::sSource(0);
 
 #if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS

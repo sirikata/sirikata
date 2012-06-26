@@ -26,11 +26,15 @@ public:
         do {
             retval = ++sSource;
         } while (retval == 0);
-        return retval;
+        return (retval % 0xFFFF);
     }
 
 private:
-    static AtomicValue<uint16> sSource;
+    // No 16-bit atomics because not all platforms have support for 16-bit
+    // compare and swap and 16-bit += int16. Instead, use 32-bit and just % the
+    // values (note the different implementation above compared to the 32 and 64
+    // bit versions).
+    static AtomicValue<uint32> sSource;
 }; // class UniqueID16
 
 /** Generates unique IDs of 32-bits. Values will wrap around, so they are not
