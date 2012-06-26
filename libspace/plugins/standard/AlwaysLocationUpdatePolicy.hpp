@@ -296,8 +296,13 @@ private:
             // And then actually clear out the list of subscriptions
             subs->objectIndexes.clear();
 
-            // Might have outstanding updates, so leave it in place and
-            // potentially remove in the tick that actually sends updates.
+            // Just drop any outstanding updates we have left. They
+            // are useless if we're using tree replication since we
+            // just destroyed the information about indices the
+            // updates apply to. Even in basic queries, this doesn't
+            // matter because the querier will just be left with stale
+            // data, which they would have been anyway.
+            mSubscriptions.erase(sub_it);
         }
 
         typedef std::tr1::function<void(UpdateInfo&)> UpdateFunctor;
