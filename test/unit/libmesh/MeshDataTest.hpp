@@ -132,73 +132,6 @@ public:
         TS_ASSERT_EQUALS(success, false);
 
     }
-	void testSubMeshGeometry( void ) {
-		Meshdata md;
-		Node ned;
-		ned.parent = NullNodeIndex;
-		ned.transform = Matrix4x4f::translate(Vector3f(0,10,0));
-		md.nodes.push_back(ned);
-		md.rootNodes.push_back(0);
-
-		GeometryInstance gi;
-		gi.geometryIndex = 0;
-		gi.parentNode = 0;
-		
-		//SubMeshGeometry
-		SubMeshGeometry smg1;
-		//a SubMeshGeometry must have its bounds initilaized
-		smg1.recomputeBounds();
-		TS_ASSERT_EQUALS(smg1.radius, 0);
-		
-		//Adding primitives
-		SubMeshGeometry::Primitive p1;
-		p1.primitiveType = p1.TRIANGLES;
-		for(int i = 0; i < 3; i++) p1.indices.push_back(i);
-
-		SubMeshGeometry::Primitive p2;
-		p2.primitiveType = p2.TRIANGLES;
-		for(int i = 1; i < 4; i++) p2.indices.push_back(i);
-		
-		//first, adding points
-		Vector3f point[4] = {Vector3f(1,2,3), Vector3f(2,3,1), Vector3f(3,1,2), Vector3f(4,6,6)};
-		smg1.positions.push_back(point[0]);
-		smg1.positions.push_back(point[1]);
-		smg1.positions.push_back(point[2]);
-		smg1.positions.push_back(point[3]);
-		smg1.primitives.push_back(p1);
-		smg1.primitives.push_back(p2);
-		//recomputeBounds after adding primitives
-		smg1.recomputeBounds();
-
-		TS_ASSERT_EQUALS(smg1.primitives.size(),2);
-		TS_ASSERT_EQUALS(smg1.aabb.center(),Vector3f(2.5, 3.5, 3.5));
-		TS_ASSERT_EQUALS(smg1.aabb.contains(Vector3f(0,0,0)), false);
-		TS_ASSERT_EQUALS(smg1.aabb.contains(Vector3f(0,0,0), 1), true);
-		TS_ASSERT_EQUALS(smg1.aabb.degenerate(), false);
-		TS_ASSERT_EQUALS(smg1.aabb.diag(), Vector3f(3,5,5));
-
-		md.instances.push_back(gi);
-		md.geometry.push_back(smg1);
-
-		//GeometryInstanceIterator
-		GeometryInstanceIterator gijoe = md.getGeometryInstanceIterator();
-		uint32 ui;
-		Matrix4x4f m;
-		
-		bool success = gijoe.next(&ui, &m);
-        TS_ASSERT_EQUALS(success, true);
-		
-		TS_ASSERT_EQUALS(ui, 0);
-		TS_ASSERT_EQUALS(m, Matrix4x4f::translate(Vector3f(0,10,0)));
-		
-		//computeTransformedBounds after a transformation
-		md.instances[ui].computeTransformedBounds(md, m,
-			&md.geometry[md.instances[ui].geometryIndex].aabb,
-			&md.geometry[md.instances[ui].geometryIndex].radius);
-		TS_ASSERT_EQUALS(md.geometry[md.instances[ui].geometryIndex].aabb.center(),Vector3f(2.5,13.5,3.5));
-		TS_ASSERT_EQUALS(md.geometry[md.instances[ui].geometryIndex].aabb.diag(), Vector3f(3,5,5));
-		
-	}
 	void testGeometryInstanceIteratorInstanceChildren( void ) {
 		Meshdata md;
 		
@@ -332,6 +265,73 @@ public:
 		success = gijoe.next(&ui, &m);
         TS_ASSERT_EQUALS(success, false);
 	}
+	void testSubMeshGeometry( void ) {
+		Meshdata md;
+		Node ned;
+		ned.parent = NullNodeIndex;
+		ned.transform = Matrix4x4f::translate(Vector3f(0,10,0));
+		md.nodes.push_back(ned);
+		md.rootNodes.push_back(0);
+
+		GeometryInstance gi;
+		gi.geometryIndex = 0;
+		gi.parentNode = 0;
+		
+		//SubMeshGeometry
+		SubMeshGeometry smg1;
+		//a SubMeshGeometry must have its bounds initilaized
+		smg1.recomputeBounds();
+		TS_ASSERT_EQUALS(smg1.radius, 0);
+		
+		//Adding primitives
+		SubMeshGeometry::Primitive p1;
+		p1.primitiveType = p1.TRIANGLES;
+		for(int i = 0; i < 3; i++) p1.indices.push_back(i);
+
+		SubMeshGeometry::Primitive p2;
+		p2.primitiveType = p2.TRIANGLES;
+		for(int i = 1; i < 4; i++) p2.indices.push_back(i);
+		
+		//first, adding points
+		Vector3f point[4] = {Vector3f(1,2,3), Vector3f(2,3,1), Vector3f(3,1,2), Vector3f(4,6,6)};
+		smg1.positions.push_back(point[0]);
+		smg1.positions.push_back(point[1]);
+		smg1.positions.push_back(point[2]);
+		smg1.positions.push_back(point[3]);
+		smg1.primitives.push_back(p1);
+		smg1.primitives.push_back(p2);
+		//recomputeBounds after adding primitives
+		smg1.recomputeBounds();
+
+		TS_ASSERT_EQUALS(smg1.primitives.size(),2);
+		TS_ASSERT_EQUALS(smg1.aabb.center(),Vector3f(2.5, 3.5, 3.5));
+		TS_ASSERT_EQUALS(smg1.aabb.contains(Vector3f(0,0,0)), false);
+		TS_ASSERT_EQUALS(smg1.aabb.contains(Vector3f(0,0,0), 1), true);
+		TS_ASSERT_EQUALS(smg1.aabb.degenerate(), false);
+		TS_ASSERT_EQUALS(smg1.aabb.diag(), Vector3f(3,5,5));
+
+		md.instances.push_back(gi);
+		md.geometry.push_back(smg1);
+
+		//GeometryInstanceIterator
+		GeometryInstanceIterator gijoe = md.getGeometryInstanceIterator();
+		uint32 ui;
+		Matrix4x4f m;
+		
+		bool success = gijoe.next(&ui, &m);
+        TS_ASSERT_EQUALS(success, true);
+		
+		TS_ASSERT_EQUALS(ui, 0);
+		TS_ASSERT_EQUALS(m, Matrix4x4f::translate(Vector3f(0,10,0)));
+		
+		//computeTransformedBounds after a transformation
+		md.instances[ui].computeTransformedBounds(md, m,
+			&md.geometry[md.instances[ui].geometryIndex].aabb,
+			&md.geometry[md.instances[ui].geometryIndex].radius);
+		TS_ASSERT_EQUALS(md.geometry[md.instances[ui].geometryIndex].aabb.center(),Vector3f(2.5,13.5,3.5));
+		TS_ASSERT_EQUALS(md.geometry[md.instances[ui].geometryIndex].aabb.diag(), Vector3f(3,5,5));
+		
+	}
 	void testLightInstanceIterator( void ) {
 		Meshdata md;
 		
@@ -370,6 +370,36 @@ public:
 	void testMeshdataSanity( void ) {
 		Meshdata md;
 
+		//nodes
+		Node ned;
+		ned.parent = NullNodeIndex;
+		ned.transform = Matrix4x4f::translate(Vector3f(0,3,0));
+		md.nodes.push_back(ned);
+		md.rootNodes.push_back(0);
+
+		//geometry instance
+		GeometryInstance gi;
+		gi.geometryIndex = 0;
+		gi.parentNode = 0;
+		md.instances.push_back(gi);
+
+		//iterator
+		GeometryInstanceIterator gijoe = md.getGeometryInstanceIterator();
+		uint32 ui;
+		Matrix4x4f m;
+		
+		//success
+		bool success = gijoe.next(&ui, &m);
+        TS_ASSERT_EQUALS(success, true);
+		
+		TS_ASSERT_EQUALS(ui, 0);
+		TS_ASSERT_EQUALS(m, Matrix4x4f::translate(Vector3f(0,3,0)));
+
+		success = gijoe.next(&ui, &m);
+        TS_ASSERT_EQUALS(success, false);
+	}
+	void testInstanceNodes( void ) {
+		Meshdata md;
 		//nodes
 		Node ned;
 		ned.parent = NullNodeIndex;
