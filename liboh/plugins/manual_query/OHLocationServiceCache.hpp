@@ -49,6 +49,9 @@ public:
     // maintained -- according to the inputs, we've got no real, live data
     // left.
     bool empty();
+    // Returns true if this is actually completely empty, i.e. it has no data in
+    // it.
+    bool fullyEmpty();
 
     // External data input.
     void objectAdded(const ObjectReference& uuid, bool agg,

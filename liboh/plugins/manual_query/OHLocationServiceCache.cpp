@@ -553,4 +553,9 @@ bool OHLocationServiceCache::empty() {
     return true;
 }
 
+bool OHLocationServiceCache::fullyEmpty() {
+    Lock lck(mMutex);
+    return mObjects.empty();
+}
+
 } // namespace Sirikata

@@ -72,16 +72,24 @@ using std::tr1::placeholders::_3;
 ServerQueryHandler::ServerQueryHandler(ObjectHostContext* ctx, ManualObjectQueryProcessor* parent, Network::IOStrandPtr strand)
  : mContext(ctx),
    mParent(parent),
-   mStrand(strand)
+   mStrand(strand),
+   mCleanupOrphansPoller(
+       strand.get(),
+       std::tr1::bind(&ServerQueryHandler::cleanupOrphans, this),
+       "ServerQueryHandler::cleanupOrphans",
+       Duration::minutes(1)
+   )
 {
 }
 
 void ServerQueryHandler::start() {
     mContext->objectHost->SpaceNodeSessionManager::addListener(static_cast<SpaceNodeSessionListener*>(this));
+    mCleanupOrphansPoller.start();
 }
 
 void ServerQueryHandler::stop() {
     mContext->objectHost->SpaceNodeSessionManager::removeListener(static_cast<SpaceNodeSessionListener*>(this));
+    mCleanupOrphansPoller.stop();
     mServerQueries.clear();
 }
 
@@ -563,9 +571,10 @@ bool ServerQueryHandler::handleLocationMessage(const OHDP::SpaceNodeID& snid, co
             // to do that. See handleProximityMessage for how this is finally
             // resolved.
             if (index_it == query_state->objects.end()) {
-                // FIXME timeout so we can clean this up in case the prox
-                // message never comes?
                 query_state->createLocCache(index_id);
+                // Add it to a list so we can clean it out eventually
+                // if we never get prox data for it
+                mCachesForOrphans.push_back(std::make_pair(snid, index_id));
             }
             // Then we just continue as normal, sticking it in as an orphan if
             // necessary
@@ -594,6 +603,34 @@ void ServerQueryHandler::onOrphanLocUpdate(const OHDP::SpaceNodeID& observer, co
     SpaceObjectReference observed(observer.space(), lu.object());
     assert(query_state->getLocCache(iid)->tracking(lu.object()));
     applyLocUpdate(lu.object(), query_state->getLocCache(iid), lu);
+}
+
+void ServerQueryHandler::cleanupOrphans() {
+    // Backwards so we can erase as we go
+    for(int i = mCachesForOrphans.size()-1; i >= 0; i--) {
+        // If we don't even have the data anymore, delete and move on
+        if (mServerQueries.find(mCachesForOrphans[i].first) == mServerQueries.end()) {
+            mCachesForOrphans.erase(mCachesForOrphans.begin() + i);
+            continue;
+        }
+        if (mServerQueries[mCachesForOrphans[i].first]->objects.find(mCachesForOrphans[i].second) == mServerQueries[mCachesForOrphans[i].first]->objects.end()) {
+            mCachesForOrphans.erase(mCachesForOrphans.begin() + i);
+            continue;
+        }
+        // If the orphan manager still has entries, we need to wait longer
+        if (!mServerQueries[mCachesForOrphans[i].first]->getOrphanLocUpdateManager(mCachesForOrphans[i].second)->empty())
+            continue;
+        // If the loccache has data, then we've gotten something back from it,
+        // so we can just remove this entry from our list. It should get cleaned
+        // up normally
+        if (!mServerQueries[mCachesForOrphans[i].first]->getLocCache(mCachesForOrphans[i].second)->fullyEmpty()) {
+            mCachesForOrphans.erase(mCachesForOrphans.begin() + i);
+            continue;
+        }
+        // And in any other case, we need to clean up.
+        mServerQueries[mCachesForOrphans[i].first]->removeLocCache(mCachesForOrphans[i].second);
+        mCachesForOrphans.erase(mCachesForOrphans.begin() + i);
+    }
 }
 
 } // namespace Manual

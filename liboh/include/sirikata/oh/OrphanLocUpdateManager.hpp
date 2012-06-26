@@ -131,6 +131,10 @@ public:
         mUpdates.erase(it);
     }
 
+    bool empty() const {
+        return mUpdates.empty();
+    }
+
 private:
     virtual void poll();
 

@@ -163,6 +163,13 @@ private:
     typedef std::tr1::unordered_map<OHDP::SpaceNodeID, ServerQueryStatePtr, OHDP::SpaceNodeID::Hasher> ServerQueryMap;
     ServerQueryMap mServerQueries;
 
+    // These track which loccaches + orphan managers we've created to handle
+    // orphans but never got a prox update before the orphans became
+    // outdated. We use a relatively inefficient implementation because we can
+    // cleanup rarely and there won't be that many entries in the list ever.
+    typedef std::pair<OHDP::SpaceNodeID, ProxIndexID> SpaceNodeProxIndex;
+    std::vector<SpaceNodeProxIndex> mCachesForOrphans;
+    Poller mCleanupOrphansPoller;
 
 
     // SpaceNodeSessionListener Interface
@@ -202,7 +209,8 @@ private:
     // Handlers for substream read events for space-managed updates
     void handleLocationSubstreamRead(const OHDP::SpaceNodeID& snid, OHDPSST::Stream::Ptr s, std::stringstream* prevdata, uint8* buffer, int length);
     bool handleLocationMessage(const OHDP::SpaceNodeID& snid, const std::string& payload);
-
+    // Cleanup data associated with orphans that never got a prox message
+    void cleanupOrphans();
 
     // Cut management
     void processExpiredNodes(const OHDP::SpaceNodeID& snid);
