@@ -115,10 +115,10 @@ private:
         }
 
         void createLocCache(ProxIndexID iid) {
-            assert(objects.find(iid) == objects.end());
-            objects[iid] = OHLocationServiceCachePtr(new OHLocationServiceCache(strand));
-            assert(orphans.find(iid) == orphans.end());
-            orphans[iid] = OrphanLocUpdateManagerPtr(new OrphanLocUpdateManager(ctx, ctx->mainStrand, Duration::seconds(10)));
+            if (objects.find(iid) == objects.end())
+                objects[iid] = OHLocationServiceCachePtr(new OHLocationServiceCache(strand));
+            if (orphans.find(iid) == orphans.end())
+                orphans[iid] = OrphanLocUpdateManagerPtr(new OrphanLocUpdateManager(ctx, ctx->mainStrand, Duration::seconds(10)));
         }
 
         OHLocationServiceCachePtr getLocCache(ProxIndexID iid) {

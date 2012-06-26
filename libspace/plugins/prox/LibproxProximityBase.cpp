@@ -529,8 +529,21 @@ void LibproxProximityBase::handleAddObjectLocSubscription(const UUID& subscriber
     mLocService->subscribe(subscriber, observed);
 }
 
+void LibproxProximityBase::handleAddObjectLocSubscriptionWithID(const UUID& subscriber, const UUID& observed, ProxIndexID index_id) {
+    // We check the cache when we get the request, but also check it here since
+    // the observed object may have been removed between the request to add this
+    // subscription and its actual execution.
+    if (!mLocService->contains(observed)) return;
+
+    mLocService->subscribe(subscriber, observed, index_id);
+}
+
 void LibproxProximityBase::handleRemoveObjectLocSubscription(const UUID& subscriber, const UUID& observed) {
     mLocService->unsubscribe(subscriber, observed);
+}
+
+void LibproxProximityBase::handleRemoveObjectLocSubscriptionWithID(const UUID& subscriber, const UUID& observed, ProxIndexID index_id) {
+    mLocService->unsubscribe(subscriber, observed, index_id);
 }
 
 void LibproxProximityBase::handleRemoveAllObjectLocSubscription(const UUID& subscriber) {
@@ -546,8 +559,21 @@ void LibproxProximityBase::handleAddOHLocSubscription(const OHDP::NodeID& subscr
     mLocService->subscribe(subscriber, observed);
 }
 
+void LibproxProximityBase::handleAddOHLocSubscriptionWithID(const OHDP::NodeID& subscriber, const UUID& observed, ProxIndexID index_id) {
+    // We check the cache when we get the request, but also check it here since
+    // the observed object may have been removed between the request to add this
+    // subscription and its actual execution.
+    if (!mLocService->contains(observed)) return;
+
+    mLocService->subscribe(subscriber, observed, index_id);
+}
+
 void LibproxProximityBase::handleRemoveOHLocSubscription(const OHDP::NodeID& subscriber, const UUID& observed) {
     mLocService->unsubscribe(subscriber, observed);
+}
+
+void LibproxProximityBase::handleRemoveOHLocSubscriptionWithID(const OHDP::NodeID& subscriber, const UUID& observed, ProxIndexID index_id) {
+    mLocService->unsubscribe(subscriber, observed, index_id);
 }
 
 void LibproxProximityBase::handleRemoveAllOHLocSubscription(const OHDP::NodeID& subscriber) {
@@ -563,8 +589,21 @@ void LibproxProximityBase::handleAddServerLocSubscription(const ServerID& subscr
     mLocService->subscribe(subscriber, observed, seqPtr);
 }
 
+void LibproxProximityBase::handleAddServerLocSubscriptionWithID(const ServerID& subscriber, const UUID& observed, ProxIndexID index_id, SeqNoPtr seqPtr) {
+    // We check the cache when we get the request, but also check it here since
+    // the observed object may have been removed between the request to add this
+    // subscription and its actual execution.
+    if (!mLocService->contains(observed)) return;
+
+    mLocService->subscribe(subscriber, observed, index_id, seqPtr);
+}
+
 void LibproxProximityBase::handleRemoveServerLocSubscription(const ServerID& subscriber, const UUID& observed) {
     mLocService->unsubscribe(subscriber, observed);
+}
+
+void LibproxProximityBase::handleRemoveServerLocSubscriptionWithID(const ServerID& subscriber, const UUID& observed, ProxIndexID index_id) {
+    mLocService->unsubscribe(subscriber, observed, index_id);
 }
 
 void LibproxProximityBase::handleRemoveAllServerLocSubscription(const ServerID& subscriber) {

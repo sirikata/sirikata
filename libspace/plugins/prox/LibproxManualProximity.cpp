@@ -495,7 +495,7 @@ void LibproxManualProximity::queryHasEvents(ProxQuery* query) {
                     count++;
 
                     mContext->mainStrand->post(
-                        std::tr1::bind(&LibproxManualProximity::handleAddOHLocSubscription, this, query_id, objid),
+                        std::tr1::bind(&LibproxManualProximity::handleAddOHLocSubscriptionWithID, this, query_id, objid, evt.indexID()),
                         "LibproxManualProximity::handleAddOHLocSubscription"
                     );
 
@@ -590,7 +590,7 @@ void LibproxManualProximity::queryHasEvents(ProxQuery* query) {
                 // subcription
 
                 mContext->mainStrand->post(
-                    std::tr1::bind(&LibproxManualProximity::handleRemoveOHLocSubscription, this, query_id, objid),
+                    std::tr1::bind(&LibproxManualProximity::handleRemoveOHLocSubscriptionWithID, this, query_id, objid, evt.indexID()),
                     "LibproxManualProximity::handleRemoveOHLocSubscription"
                 );
 

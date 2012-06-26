@@ -19,6 +19,8 @@
 #include <sirikata/core/util/Factory.hpp>
 #include <sirikata/space/ObjectSessionManager.hpp>
 
+#include <sirikata/core/prox/Defs.hpp>
+
 namespace Sirikata {
 
 
@@ -65,16 +67,100 @@ public:
     virtual void start() = 0;
     virtual void stop() = 0;
 
+    // Server subscriptions
+
+    /** Subscribe remote for updates about uuid. This version implicitly assumes
+     *  only one index_id since it is omitted (index_id is only relevant for
+     *  replicating multiple trees/indexes).
+     *
+     *  Use seqNo to generate sequence numbers to include in the updates to
+     *  ensure correct ordering.
+     */
     virtual void subscribe(ServerID remote, const UUID& uuid, SeqNoPtr seqNo) = 0;
+    /** Subscribe remote for updates about uuid. The index_id indicates the
+     *  origin of the request and updates will continue until the same index_id
+     *  has a corresponding unsubscribe call. In other words, if you call this
+     *  method twice, it needs to be called twice with the same IDs before it
+     *  stops sending updates. The index_id will be included in updates so the
+     *  client knows what to update.
+     *
+     *  Use seqNo to generate sequence numbers to include in the updates to
+     *  ensure correct ordering.
+     */
+    virtual void subscribe(ServerID remote, const UUID& uuid, ProxIndexID index_id, SeqNoPtr seqNo) = 0;
+    /** Unsubscribe remote for updates about uuid. This version implicitly
+     * assumes only one index_id, i.e. that multiple tree replication is not
+     * being used.
+     */
     virtual void unsubscribe(ServerID remote, const UUID& uuid) = 0;
+    /** Unsubscribe remote for updates about uuid. The index_id indicates the
+     *  origin of the request -- the unsubscription only applies for that
+     *  index_id so if any other index_id's have unmatched subscribe calls,
+     *  updates will still be sent for those indices.
+     */
+    virtual void unsubscribe(ServerID remote, const UUID& uuid, ProxIndexID index_id) = 0;
+    /** Unsubscribe remote for updates about all objects across all indices. */
     virtual void unsubscribe(ServerID remote) = 0;
 
+
+
+    // OH subscriptions
+
+    /** Subscribe remote for updates about uuid. This version implicitly assumes
+     *  only one index_id since it is omitted (index_id is only relevant for
+     *  replicating multiple trees/indexes).
+     */
     virtual void subscribe(const OHDP::NodeID& remote, const UUID& uuid) = 0;
+    /** Subscribe remote for updates about uuid. The index_id indicates the
+     *  origin of the request and updates will continue until the same index_id
+     *  has a corresponding unsubscribe call. In other words, if you call this
+     *  method twice, it needs to be called twice with the same IDs before it
+     *  stops sending updates. The index_id will be included in updates so the
+     *  client knows what to update.
+     */
+    virtual void subscribe(const OHDP::NodeID& remote, const UUID& uuid, ProxIndexID index_id) = 0;
+    /** Unsubscribe remote for updates about uuid. This version implicitly
+     * assumes only one index_id, i.e. that multiple tree replication is not
+     * being used.
+     */
     virtual void unsubscribe(const OHDP::NodeID& remote, const UUID& uuid) = 0;
+    /** Unsubscribe remote for updates about uuid. The index_id indicates the
+     *  origin of the request -- the unsubscription only applies for that
+     *  index_id so if any other index_id's have unmatched subscribe calls,
+     *  updates will still be sent for those indices.
+     */
+    virtual void unsubscribe(const OHDP::NodeID& remote, const UUID& uuid, ProxIndexID index_id) = 0;
+    /** Unsubscribe remote for updates about all objects across all indices. */
     virtual void unsubscribe(const OHDP::NodeID& remote) = 0;
 
+
+    // Object subscriptions
+
+    /** Subscribe remote for updates about uuid. This version implicitly assumes
+     *  only one index_id since it is omitted (index_id is only relevant for
+     *  replicating multiple trees/indexes).
+     */
     virtual void subscribe(const UUID& remote, const UUID& uuid) = 0;
+    /** Subscribe remote for updates about uuid. The index_id indicates the
+     *  origin of the request and updates will continue until the same index_id
+     *  has a corresponding unsubscribe call. In other words, if you call this
+     *  method twice, it needs to be called twice with the same IDs before it
+     *  stops sending updates. The index_id will be included in updates so the
+     *  client knows what to update.
+     */
+    virtual void subscribe(const UUID& remote, const UUID& uuid, ProxIndexID index_id) = 0;
+    /** Unsubscribe remote for updates about uuid. This version implicitly
+     * assumes only one index_id, i.e. that multiple tree replication is not
+     * being used.
+     */
     virtual void unsubscribe(const UUID& remote, const UUID& uuid) = 0;
+    /** Unsubscribe remote for updates about uuid. The index_id indicates the
+     *  origin of the request -- the unsubscription only applies for that
+     *  index_id so if any other index_id's have unmatched subscribe calls,
+     *  updates will still be sent for those indices.
+     */
+    virtual void unsubscribe(const UUID& remote, const UUID& uuid, ProxIndexID index_id) = 0;
+    /** Unsubscribe remote for updates about all objects across all indices. */
     virtual void unsubscribe(const UUID& remote) = 0;
 
     virtual void service() = 0;
@@ -161,19 +247,25 @@ public:
 
     /** Subscriptions for other servers. */
     virtual void subscribe(ServerID remote, const UUID& uuid, SeqNoPtr seq_no_ptr);
+    virtual void subscribe(ServerID remote, const UUID& uuid, ProxIndexID index_id, SeqNoPtr seq_no_ptr);
     virtual void unsubscribe(ServerID remote, const UUID& uuid);
+    virtual void unsubscribe(ServerID remote, const UUID& uuid, ProxIndexID index_id);
     /** Unsubscripe the given server from all its location subscriptions. */
     virtual void unsubscribe(ServerID remote);
 
     /** Subscriptions for connected object hosts. */
     virtual void subscribe(const OHDP::NodeID& remote, const UUID& uuid);
+    virtual void subscribe(const OHDP::NodeID& remote, const UUID& uuid, ProxIndexID index_id);
     virtual void unsubscribe(const OHDP::NodeID& remote, const UUID& uuid);
+    virtual void unsubscribe(const OHDP::NodeID& remote, const UUID& uuid, ProxIndexID index_id);
     /** Unsubscripe the given object host from all its location subscriptions. */
     virtual void unsubscribe(const OHDP::NodeID& remote);
 
     /** Subscriptions for local objects. */
     virtual void subscribe(const UUID& remote, const UUID& uuid);
+    virtual void subscribe(const UUID& remote, const UUID& uuid, ProxIndexID index_id);
     virtual void unsubscribe(const UUID& remote, const UUID& uuid);
+    virtual void unsubscribe(const UUID& remote, const UUID& uuid, ProxIndexID index_id);
     /** Unsubscripe the given server from all its location subscriptions. */
     virtual void unsubscribe(const UUID& remote);
 

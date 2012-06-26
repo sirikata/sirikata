@@ -186,24 +186,46 @@ void LocationService::removeListener(LocationServiceListener* listener) {
 }
 
 
+
+// Server Subscriptions
+
 void LocationService::subscribe(ServerID remote, const UUID& uuid, SeqNoPtr seqnoptr) {
     mUpdatePolicy->subscribe(remote, uuid, seqnoptr);
+}
+
+void LocationService::subscribe(ServerID remote, const UUID& uuid, ProxIndexID index_id, SeqNoPtr seqnoptr) {
+    mUpdatePolicy->subscribe(remote, uuid, index_id, seqnoptr);
 }
 
 void LocationService::unsubscribe(ServerID remote, const UUID& uuid) {
     mUpdatePolicy->unsubscribe(remote, uuid);
 }
 
+void LocationService::unsubscribe(ServerID remote, const UUID& uuid, ProxIndexID index_id) {
+    mUpdatePolicy->unsubscribe(remote, uuid, index_id);
+}
+
 void LocationService::unsubscribe(ServerID remote) {
     mUpdatePolicy->unsubscribe(remote);
 }
+
+
+// OH Subscriptions
 
 void LocationService::subscribe(const OHDP::NodeID& remote, const UUID& uuid) {
     mUpdatePolicy->subscribe(remote, uuid);
 }
 
+void LocationService::subscribe(const OHDP::NodeID& remote, const UUID& uuid, ProxIndexID index_id) {
+    mUpdatePolicy->subscribe(remote, uuid, index_id);
+}
+
 void LocationService::unsubscribe(const OHDP::NodeID& remote, const UUID& uuid) {
     mUpdatePolicy->unsubscribe(remote, uuid);
+}
+
+void LocationService::unsubscribe(const OHDP::NodeID& remote, const UUID& uuid, ProxIndexID index_id) {
+    mUpdatePolicy->unsubscribe(remote, uuid, index_id);
 }
 
 void LocationService::unsubscribe(const OHDP::NodeID& remote) {
@@ -211,17 +233,31 @@ void LocationService::unsubscribe(const OHDP::NodeID& remote) {
 }
 
 
+
+// Object Subscriptions
+
 void LocationService::subscribe(const UUID& remote, const UUID& uuid) {
     mUpdatePolicy->subscribe(remote, uuid);
+}
+
+void LocationService::subscribe(const UUID& remote, const UUID& uuid, ProxIndexID index_id) {
+    mUpdatePolicy->subscribe(remote, uuid, index_id);
 }
 
 void LocationService::unsubscribe(const UUID& remote, const UUID& uuid) {
     mUpdatePolicy->unsubscribe(remote, uuid);
 }
 
+void LocationService::unsubscribe(const UUID& remote, const UUID& uuid, ProxIndexID index_id) {
+    mUpdatePolicy->unsubscribe(remote, uuid, index_id);
+}
+
 void LocationService::unsubscribe(const UUID& remote) {
     mUpdatePolicy->unsubscribe(remote);
 }
+
+
+
 
 void LocationService::notifyLocalObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics, const String& zernike) const {
     for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++)

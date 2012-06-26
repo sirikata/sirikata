@@ -57,15 +57,21 @@ public:
     virtual void stop();
 
     virtual void subscribe(ServerID remote, const UUID& uuid, SeqNoPtr seqno);
+    virtual void subscribe(ServerID remote, const UUID& uuid, ProxIndexID index_id, SeqNoPtr seqno);
     virtual void unsubscribe(ServerID remote, const UUID& uuid);
+    virtual void unsubscribe(ServerID remote, const UUID& uuid, ProxIndexID index_id);
     virtual void unsubscribe(ServerID remote);
 
     virtual void subscribe(const OHDP::NodeID& remote, const UUID& uuid);
+    virtual void subscribe(const OHDP::NodeID& remote, const UUID& uuid, ProxIndexID index_id);
     virtual void unsubscribe(const OHDP::NodeID& remote, const UUID& uuid);
+    virtual void unsubscribe(const OHDP::NodeID& remote, const UUID& uuid, ProxIndexID index_id);
     virtual void unsubscribe(const OHDP::NodeID& remote);
 
     virtual void subscribe(const UUID& remote, const UUID& uuid);
+    virtual void subscribe(const UUID& remote, const UUID& uuid, ProxIndexID index_id);
     virtual void unsubscribe(const UUID& remote, const UUID& uuid);
+    virtual void unsubscribe(const UUID& remote, const UUID& uuid, ProxIndexID index_id);
     virtual void unsubscribe(const UUID& remote);
 
     virtual void localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics);
@@ -100,13 +106,32 @@ private:
     };
 
     typedef std::set<UUID> UUIDSet;
+    typedef std::set<ProxIndexID> ProxIndexSet;
+    typedef std::map<UUID, ProxIndexSet> ObjectIndexesMap;
 
     struct SubscriberInfo {
         SubscriberInfo(SeqNoPtr seq_number_ptr )
             : seqnoPtr(seq_number_ptr)
         {}
         SeqNoPtr seqnoPtr;
-        UUIDSet subscribedTo;
+        // Indexes this subscriber is observing each object in. This acts both
+        // as a set of objects that this subscriber is observing (the keys) and
+        // the list of indexes each object is being observed in.
+        //
+        // This needs to persist permanently between subscribe/unsubscribe calls
+        // so we can specify them with each update we create. We keep them
+        // separately from outstandingUpdates so we can clear out that data as
+        // we use it up but keep this around.
+        //
+        // TODO(ewencp) we might be able to figure out some way to keep this
+        // only as aggregate info, e.g. that an object with UUID has n
+        // subscribers in index i, and always report i as long as n > 0. But
+        // then clients may get updates for indices they aren't replicating and
+        // we need some way to deal with orphan updates vs. extra updates that
+        // aren't real orphans because we used aggregate data.
+        ObjectIndexesMap objectIndexes;
+        // Information about each object that we need to create and send an
+        // update about
         std::map<UUID, UpdateInfo> outstandingUpdates;
         // Sometimes a subscriber may stall or hang, leaving the underlying
         // connection open but not handling loc update substreams. In this
@@ -121,7 +146,12 @@ private:
         long numOutstandingMessages()const {
             return seqnoPtr.use_count()-1;
         }
-        
+
+        // Indicates that there are no subscriptions for this object left,
+        // allowing us to clear out its entry
+        bool noSubscriptionsLeft() const {
+            return objectIndexes.empty();
+        }
     };
 
     template<typename SubscriberType>
@@ -129,7 +159,7 @@ private:
         AlwaysLocationUpdatePolicy* parent;
         AtomicValue<uint32>& sent_count;
         typedef std::set<SubscriberType> SubscriberSet;
-        typedef std::tr1::shared_ptr<SubscriberInfo> SubscriberInfoPtr;        
+        typedef std::tr1::shared_ptr<SubscriberInfo> SubscriberInfoPtr;
         // Forward index: Subscriber -> Objects + Updates
         typedef std::map<SubscriberType, SubscriberInfoPtr> SubscriberMap;
         SubscriberMap mSubscriptions;
@@ -154,7 +184,14 @@ private:
         }
 
         void subscribe(const SubscriberType& remote, const UUID& uuid, SeqNoPtr seqnoPtr) {
-            // Add object to server's subscription list
+            subscribe(remote, uuid, (ProxIndexID*)NULL, seqnoPtr);
+        }
+        void subscribe(const SubscriberType& remote, const UUID& uuid, ProxIndexID index_id, SeqNoPtr seqnoPtr) {
+            subscribe(remote, uuid, &index_id, seqnoPtr);
+        }
+
+        void subscribe(const SubscriberType& remote, const UUID& uuid, ProxIndexID* index_id, SeqNoPtr seqnoPtr) {
+            // Make sure we have a record of this subscriber
             typename SubscriberMap::iterator sub_it = mSubscriptions.find(remote);
             if (sub_it == mSubscriptions.end()) {
                 SubscriberInfoPtr sub_info(new SubscriberInfo(seqnoPtr));
@@ -162,7 +199,24 @@ private:
 
                 sub_it = mSubscriptions.find(remote);
             }
-            sub_it->second->subscribedTo.insert(uuid);
+
+            // Add object to server's subscription list, tracking which index
+            // it's in
+            typename ObjectIndexesMap::iterator indexes_it = sub_it->second->objectIndexes.find(uuid);
+            if (indexes_it == sub_it->second->objectIndexes.end()) {
+                sub_it->second->objectIndexes[uuid] = ProxIndexSet();
+            }
+            else {
+                // If we already have an entry for this subscriber then either
+                // subscribing w/o indices (must have empty list of indices) or
+                // w/ indices (if we already have an entry, the set must be
+                // non-empty).
+                assert((index_id == NULL && sub_it->second->objectIndexes[uuid].empty()) ||
+                    (index_id != NULL && !sub_it->second->objectIndexes[uuid].empty()));
+            }
+            // If we are using indices, add this to the list
+            if (index_id != NULL)
+                sub_it->second->objectIndexes[uuid].insert(*index_id);
 
             // Add server to object's subscribers list
             typename ObjectSubscribersMap::iterator obj_sub_it = mObjectSubscribers.find(uuid);
@@ -181,10 +235,32 @@ private:
         }
 
         void unsubscribe(const SubscriberType& remote, const UUID& uuid) {
+            unsubscribe(remote, uuid, (ProxIndexID*)NULL);
+        }
+        void unsubscribe(const SubscriberType& remote, const UUID& uuid, ProxIndexID index_id) {
+            unsubscribe(remote, uuid, &index_id);
+        }
+        void unsubscribe(const SubscriberType& remote, const UUID& uuid, ProxIndexID* index_id) {
             // Remove object from server's list
             typename SubscriberMap::iterator sub_it = mSubscriptions.find(remote);
             if (sub_it != mSubscriptions.end()) {
-                sub_it->second->subscribedTo.erase(uuid);
+                typename ObjectIndexesMap::iterator indexes_it = sub_it->second->objectIndexes.find(uuid);
+                if (indexes_it != sub_it->second->objectIndexes.end()) {
+                    if (index_id != NULL) {
+                        // If we're using indexes, erase the index and
+                        // completely remove the object as being tracked if we
+                        // hit no indices marked as still tracking
+                        indexes_it->second.erase(*index_id);
+                        if (indexes_it->second.empty())
+                            sub_it->second->objectIndexes.erase(indexes_it);
+                    }
+                    else {
+                        // Otherwise, we have one implicit index we're
+                        // tracking. This call is enough to remove it since we
+                        // can only have 1 subscription to it
+                        sub_it->second->objectIndexes.erase(indexes_it);
+                    }
+                }
             }
 
             // Remove server from object's list
@@ -200,12 +276,25 @@ private:
             if (sub_it == mSubscriptions.end())
                 return;
 
-            std::tr1::shared_ptr<SubscriberInfo> subs = sub_it->second;
-
-            while(!subs->subscribedTo.empty()) {
-                UUID tmp=*(subs->subscribedTo.begin());
-                unsubscribe(remote, tmp);
+            SubscriberInfoPtr subs = sub_it->second;
+            // We just need to clear out this subscriber's objectIndexes
+            // (marking no more object subscriptions, whether we were tracking
+            // indices or not). We don't use individual unsubscription calls
+            // because they require the correct type of call -- with or without
+            // indices. Instead just do the second half of what they would do
+            // manually -- remove references to the objects subscribed to from
+            // mObjectSubscribers' SubscriberSets
+            for(typename ObjectIndexesMap::iterator obj_ind_it = subs->objectIndexes.begin(); obj_ind_it != subs->objectIndexes.end(); obj_ind_it++) {
+                UUID uuid = obj_ind_it->first;
+                // Remove server from object's list
+                typename ObjectSubscribersMap::iterator obj_it = mObjectSubscribers.find(uuid);
+                if (obj_it != mObjectSubscribers.end()) {
+                    SubscriberSet* subs = obj_it->second;
+                    subs->erase(remote);
+                }
             }
+            // And then actually clear out the list of subscriptions
+            subs->objectIndexes.clear();
 
             // Might have outstanding updates, so leave it in place and
             // potentially remove in the tick that actually sends updates.
@@ -222,8 +311,7 @@ private:
 
             SubscriberSet* object_subscribers = obj_sub_it->second;
 
-            for(typename SubscriberSet::iterator subscriber_it = object_subscribers->begin(); subscriber_it != object_subscribers->end(); subscriber_it++)
-            {
+            for(typename SubscriberSet::iterator subscriber_it = object_subscribers->begin(); subscriber_it != object_subscribers->end(); subscriber_it++) {
                 propertyUpdatedForSubscriber(uuid, locservice, *subscriber_it, fup);
             }
         }
@@ -236,8 +324,8 @@ private:
             if (mSubscriptions.find(sub) == mSubscriptions.end()) return; // XXX FIXME
             assert(mSubscriptions.find(sub) != mSubscriptions.end());
             std::tr1::shared_ptr<SubscriberInfo> sub_info = mSubscriptions[sub];
-            if (sub_info->subscribedTo.find(uuid) == sub_info->subscribedTo.end()) return; // XXX FIXME
-            assert(sub_info->subscribedTo.find(uuid) != sub_info->subscribedTo.end());
+            if (sub_info->objectIndexes.find(uuid) == sub_info->objectIndexes.end()) return; // XXX FIXME
+            assert(sub_info->objectIndexes.find(uuid) != sub_info->objectIndexes.end());
 
             if (sub_info->outstandingUpdates.find(uuid) == sub_info->outstandingUpdates.end()) {
                 UpdateInfo new_ui;
@@ -316,7 +404,7 @@ private:
                 // even going to be able to send the messages.
                 if (!parent->validSubscriber(sid)) {
                     sub_info->outstandingUpdates.clear();
-                    if (sub_info->subscribedTo.empty()) {
+                    if (sub_info->noSubscriptionsLeft()) {
                         sub_info.reset();
                         to_delete.push_back(sid);
                     }
@@ -339,6 +427,14 @@ private:
 
                     if (parent->isSelfSubscriber(sid, up_it->first))
                         update.set_epoch(up_it->second.epoch);
+
+                    // If we're tracking indexes (tree replication), add the
+                    // list in
+                    typename ObjectIndexesMap::iterator obj_ind_it = sub_info->objectIndexes.find(up_it->first);
+                    if (obj_ind_it != sub_info->objectIndexes.end()) {
+                        for (typename ProxIndexSet::iterator prox_idx_it = obj_ind_it->second.begin(); prox_idx_it != obj_ind_it->second.end(); prox_idx_it++)
+                            update.add_index_id((uint32)*prox_idx_it);
+                    }
 
                     Sirikata::Protocol::ITimedMotionVector location = update.mutable_location();
                     location.set_t(up_it->second.location.updateTime());
@@ -386,7 +482,7 @@ private:
                 // Finally clear out any entries successfully sent out
                 sub_info->outstandingUpdates.erase( sub_info->outstandingUpdates.begin(), last_shipped);
 
-                if (sub_info->subscribedTo.empty() && sub_info->outstandingUpdates.empty()) {
+                if (sub_info->noSubscriptionsLeft() && sub_info->outstandingUpdates.empty()) {
                     sub_info.reset();
                     to_delete.push_back(sid);
                 }

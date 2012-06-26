@@ -345,7 +345,7 @@ void ServerQueryHandler::handleProximityMessage(const OHDP::SpaceNodeID& snid, c
                 QPLOG(detailed, " Class: " << (dynamic_objects ? "dynamic" : "static"));
             }
 
-            // Create a new loccache for this new tree
+            // Create a new loccache for this new tree. We could be getting this
             query_state->createLocCache(index_unique_id);
             mParent->createdReplicatedIndex(snid, index_unique_id, query_state->getLocCache(index_unique_id), index_from_server, dynamic_objects);
         }
@@ -540,24 +540,39 @@ bool ServerQueryHandler::handleLocationMessage(const OHDP::SpaceNodeID& snid, co
         SpaceObjectReference observed(snid.space(), observed_oref);
 
         // Because of prox/loc ordering, we may or may not have a record of the
-        // object yet.
-        // FIXME(ewencp) Our current approach is to spray this update across all
-        // replicated trees since we don't know which trees its relevant to (and
-        // may be relevant to more than one, e.g. if a tree is rebuilding). This
-        // will probably become inefficient and means that we're going to track
-        // orphans in all trees that it's *not* relevant to (very
-        // inefficient...). To fix this, we'd need some record of which trees
-        // the update is relevant to, which seems tricky given that we need to
-        // deal with orphan updates. Perhaps track the orphan once for everyone
-        // and always fire updates twice? (we'd need to save the orphan even if
-        // we found the object in one tree since we could get unordered updates
-        // for the *new* tree).
-        for(ServerQueryState::IndexObjectCacheMap::iterator index_it = query_state->objects.begin(); index_it != query_state->objects.end(); index_it++) {
-            ProxIndexID index_id = index_it->first;
+        // object yet. We need to send to either OrphanLocUpdateManager or, if
+        // we do already have the object, we can apply it now.
+
+        // However, in the case of replicated trees, we need to make sure we
+        // apply to the right trees. We need the server to have told us which
+        // ones to apply it to
+        if (update.index_id_size() == 0) {
+            QPLOG(error, "LocationUpdate didn't include index_id to indicate which replicated trees need it, this update will be ignored!");
+            continue;
+        }
+
+        for(int32 index_id_idx = 0; index_id_idx < update.index_id_size(); index_id_idx++) {
+            ProxIndexID index_id = update.index_id(index_id_idx);
+            ServerQueryState::IndexObjectCacheMap::iterator index_it = query_state->objects.find(index_id);
+            // If we can't find an index, we may just be getting the update
+            // earlier than we're getting the prox update, i.e. just what
+            // OrphanLocUpdateManager handles. But we haven't necessarily
+            // allocated one yet. We'll allocate the state, but *not* notify the
+            // parent that we createdReplicatedIndex yet since we haven't really
+            // yet and we need the info from the prox update's IndexProperties
+            // to do that. See handleProximityMessage for how this is finally
+            // resolved.
+            if (index_it == query_state->objects.end()) {
+                // FIXME timeout so we can clean this up in case the prox
+                // message never comes?
+                query_state->createLocCache(index_id);
+            }
+            // Then we just continue as normal, sticking it in as an orphan if
+            // necessary
             if (!query_state->getLocCache(index_id)->tracking(observed_oref)) {
                 query_state->getOrphanLocUpdateManager(index_id)->addOrphanUpdate(observed, update);
             }
-            else {
+            else { // or actually applying it
                 LocProtocolLocUpdate llu(update, mContext->objectHost, snid.space());
                 applyLocUpdate(observed_oref, query_state->getLocCache(index_id), llu);
             }

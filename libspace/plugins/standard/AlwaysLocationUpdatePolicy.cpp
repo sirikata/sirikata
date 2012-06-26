@@ -103,45 +103,84 @@ void AlwaysLocationUpdatePolicy::reportStats() {
     mObjectUpdatesPerSecond = 0;
 }
 
+
+// Server subscriptions
+
 void AlwaysLocationUpdatePolicy::subscribe(ServerID remote, const UUID& uuid, SeqNoPtr seqnoPtr)
 {
     if (validSubscriber(remote))
         mServerSubscriptions.subscribe(remote, uuid, seqnoPtr);
 }
 
+void AlwaysLocationUpdatePolicy::subscribe(ServerID remote, const UUID& uuid, ProxIndexID index_id, SeqNoPtr seqnoPtr)
+{
+    if (validSubscriber(remote))
+        mServerSubscriptions.subscribe(remote, uuid, index_id, seqnoPtr);
+}
+
 void AlwaysLocationUpdatePolicy::unsubscribe(ServerID remote, const UUID& uuid) {
     mServerSubscriptions.unsubscribe(remote, uuid);
+}
+
+void AlwaysLocationUpdatePolicy::unsubscribe(ServerID remote, const UUID& uuid, ProxIndexID index_id) {
+    mServerSubscriptions.unsubscribe(remote, uuid, index_id);
 }
 
 void AlwaysLocationUpdatePolicy::unsubscribe(ServerID remote) {
     mServerSubscriptions.unsubscribe(remote);
 }
 
+
+// OH subscriptions
+
 void AlwaysLocationUpdatePolicy::subscribe(const OHDP::NodeID& remote, const UUID& uuid) {
     if (validSubscriber(remote))
         mOHSubscriptions.subscribe(remote, uuid, mLocService->context()->ohSessionManager()->getSession(remote)->seqNoPtr());
+}
+
+void AlwaysLocationUpdatePolicy::subscribe(const OHDP::NodeID& remote, const UUID& uuid, ProxIndexID index_id) {
+    if (validSubscriber(remote))
+        mOHSubscriptions.subscribe(remote, uuid, index_id, mLocService->context()->ohSessionManager()->getSession(remote)->seqNoPtr());
 }
 
 void AlwaysLocationUpdatePolicy::unsubscribe(const OHDP::NodeID& remote, const UUID& uuid) {
     mOHSubscriptions.unsubscribe(remote, uuid);
 }
 
+void AlwaysLocationUpdatePolicy::unsubscribe(const OHDP::NodeID& remote, const UUID& uuid, ProxIndexID index_id) {
+    mOHSubscriptions.unsubscribe(remote, uuid, index_id);
+}
+
 void AlwaysLocationUpdatePolicy::unsubscribe(const OHDP::NodeID& remote) {
     mOHSubscriptions.unsubscribe(remote);
 }
+
+
+// Object subscriptions
 
 void AlwaysLocationUpdatePolicy::subscribe(const UUID& remote, const UUID& uuid) {
     if (validSubscriber(remote))
         mObjectSubscriptions.subscribe(remote, uuid, mLocService->context()->objectSessionManager()->getSession(ObjectReference(remote))->getSeqNoPtr());
 }
 
+void AlwaysLocationUpdatePolicy::subscribe(const UUID& remote, const UUID& uuid, ProxIndexID index_id) {
+    if (validSubscriber(remote))
+        mObjectSubscriptions.subscribe(remote, uuid, index_id, mLocService->context()->objectSessionManager()->getSession(ObjectReference(remote))->getSeqNoPtr());
+}
+
 void AlwaysLocationUpdatePolicy::unsubscribe(const UUID& remote, const UUID& uuid) {
     mObjectSubscriptions.unsubscribe(remote, uuid);
+}
+
+void AlwaysLocationUpdatePolicy::unsubscribe(const UUID& remote, const UUID& uuid, ProxIndexID index_id) {
+    mObjectSubscriptions.unsubscribe(remote, uuid, index_id);
 }
 
 void AlwaysLocationUpdatePolicy::unsubscribe(const UUID& remote) {
     mObjectSubscriptions.unsubscribe(remote);
 }
+
+
 
 
 void AlwaysLocationUpdatePolicy::localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics) {
