@@ -1108,9 +1108,6 @@ PresenceEntry.prototype.proxRemovedEvent = function (visibleObj,visTo)
             if ((typeof(callback) != 'undefined'))
                 connectedCallback = this.__wrapPresConnCB(callback);
 
-            if (typeof(firstArg) == 'string')
-                mesh = firstArg;
-
             var orient = undefined;
 
             if (has_opts_var && 'orient' in firstArg)
@@ -1124,6 +1121,8 @@ PresenceEntry.prototype.proxRemovedEvent = function (visibleObj,visTo)
             
             if (has_opts_var && 'mesh' in firstArg)
                 mesh = firstArg['mesh'];
+            else if (typeof(firstArg) == 'string')
+                mesh = firstArg;
             else if (system.self !== undefined)
                 mesh = system.self.getMesh();
             else
