@@ -415,7 +415,7 @@ void ServerQueryHandler::handleProximityMessage(const OHDP::SpaceNodeID& snid, c
         // created from scratch.
         if (loccache->empty()) {
             mParent->removedReplicatedIndex(snid, index_unique_id);
-            query_state->createLocCache(index_unique_id);
+            query_state->removeLocCache(index_unique_id);
         }
     }
 
