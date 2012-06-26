@@ -232,9 +232,9 @@ void ManualMeshLoader::traverseNodes(Ogre::Resource* r, const bool useSharedBuff
             std::string matname = "baseogremat";
             GeometryInstance::MaterialBindingMap::const_iterator whichMaterial = geoinst.materialBindingMap.find(prim.materialId);
             if (whichMaterial == geoinst.materialBindingMap.end())
-                SILOG(ogre, error, "[OGRE] Invalid MaterialBindingMap: couldn't find " << prim.materialId << " for " << md.uri);
+                SILOG(ogre, error, "Invalid MaterialBindingMap: couldn't find " << prim.materialId << " for " << md.uri);
             else if (whichMaterial->second >= md.materials.size())
-                SILOG(ogre, error, "[OGRE] Invalid MaterialBindingMap: " << prim.materialId << " in " << md.uri << " references material " << whichMaterial->second << " which doesn't exist.");
+                SILOG(ogre, error, "Invalid MaterialBindingMap: " << prim.materialId << " in " << md.uri << " references material " << whichMaterial->second << " which doesn't exist.");
             else
                 matname = ogreMaterialName(md.materials[whichMaterial->second], Transfer::URI(md.uri), mTextureFingerprints);
 

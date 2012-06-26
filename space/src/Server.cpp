@@ -468,11 +468,11 @@ bool Server::handleSingleObjectHostMessageRouting() {
         if (mObjectsAwaitingMigration.find(source_object) == mObjectsAwaitingMigration.end() &&
             mObjectMigrations.find(source_object) == mObjectMigrations.end())
         {
-            SILOG(cbr,warn,"Got message for unknown object: " << source_object.toString());
+            SPACE_LOG(warn,"Got message for unknown object: " << source_object.toString());
         }
         else
         {
-            SILOG(cbr,warn,"Server got message from object after migration started: " << source_object.toString());
+            SPACE_LOG(warn,"Server got message from object after migration started: " << source_object.toString());
         }
 
         delete front.obj_msg;
@@ -518,7 +518,7 @@ void Server::handleSessionMessage(const ObjectHostConnectionID& oh_conn_id, Siri
             handleMigrate(oh_conn_id, *msg, session_msg.connect(), seqno);
         }
         else
-            SILOG(space,error,"Unknown connection message type");
+            SPACE_LOG(error,"Unknown connection message type");
     }
     else if (session_msg.has_connect_ack()) {
         handleConnectAck(oh_conn_id, *msg, seqno);
@@ -590,9 +590,9 @@ void Server::handleConnect(const ObjectHostConnectionID& oh_conn_id, const Sirik
         // (i.e. things were probably clamped invalidly)
 
         if (loc_server == NullServerID)
-            SILOG(cbr,warn,"[SPACE] Connecting object specified location outside of all regions.");
+            SPACE_LOG(warn,"Connecting object specified location outside of all regions.");
         else if (loc_server == mContext->id() && !in_server_region)
-            SILOG(cbr,warn,"[SPACE] Connecting object was incorrectly determined to be in our region.");
+            SPACE_LOG(warn,"Connecting object was incorrectly determined to be in our region.");
 
         // Create and send error reply
         sendConnectError(oh_conn_id, obj_id, seqno);
@@ -726,7 +726,7 @@ void Server::finishAddObject(const UUID& obj_id, OSegAddNewStatus status)
           String obj_mesh = sc.conn_msg.has_mesh() ? sc.conn_msg.mesh() : "";
           String obj_phy = sc.conn_msg.has_physics() ? sc.conn_msg.physics() : "";
           String obj_zernike = sc.conn_msg.has_zernike() ? sc.conn_msg.zernike() : "";
-          
+
 
           mLocationService->addLocalObject(obj_id, loc, orient, bnds, obj_mesh, obj_phy, obj_zernike);
 
@@ -760,7 +760,7 @@ void Server::finishAddObject(const UUID& obj_id, OSegAddNewStatus status)
   }
   else
   {
-      SILOG(space,error,"No stored connection data for object " << obj_id.toString());
+      SPACE_LOG(error,"No stored connection data for object " << obj_id.toString());
   }
 }
 
@@ -816,7 +816,7 @@ void Server::handleMigrate(const ObjectHostConnectionID& oh_conn_id, const Sirik
 
     // Try to handle this migration if all info is available
 
-    SILOG(space,detailed,"Received migration message from " << obj_id.toString());
+    SPACE_LOG(detailed,"Received migration message from " << obj_id.toString());
 
     handleMigration(obj_id);
 }
@@ -827,13 +827,13 @@ void Server::handleConnectAck(const ObjectHostConnectionID& oh_conn_id, const Si
     // Ack must fully match the connection we have
     ObjectConnectionMap::iterator it = mObjects.find(obj_id);
     if (it == mObjects.end()) {
-        SILOG(space, detailed, "Ignoring connection ack for unknown object " << obj_id << ". This ack is probably an outdated retry.");
+        SPACE_LOG(detailed, "Ignoring connection ack for unknown object " << obj_id << ". This ack is probably an outdated retry.");
         return;
     }
 
     ObjectConnection* conn = it->second;
     if (conn->sessionID() != session_request_seqno) {
-        SILOG(space, detailed, "Ignoring connection ack for " << obj_id << " because session request ID " << session_request_seqno << " doesn't match the connection's session ID " << conn->sessionID() << ". This probably means we got an outdated connection ack retry.");
+        SPACE_LOG(detailed, "Ignoring connection ack for " << obj_id << " because session request ID " << session_request_seqno << " doesn't match the connection's session ID " << conn->sessionID() << ". This probably means we got an outdated connection ack retry.");
         return;
     }
 
@@ -847,7 +847,7 @@ void Server::handleConnectAck(const ObjectHostConnectionID& oh_conn_id, const Si
 void Server::handleDisconnect(UUID obj_id, ObjectConnection* conn, uint64 session_request_seqno) {
     assert(conn->id() == obj_id);
     if (conn->sessionID() != session_request_seqno) {
-        SILOG(space, detailed, "Ignoring disconnection request for " << obj_id << " because session request ID " << session_request_seqno << " doesn't match the connection's session ID " << conn->sessionID() << ". This probably means an old disconnection request was retried.");
+        SPACE_LOG(detailed, "Ignoring disconnection request for " << obj_id << " because session request ID " << session_request_seqno << " doesn't match the connection's session ID " << conn->sessionID() << ". This probably means an old disconnection request was retried.");
         return;
     }
 
@@ -899,7 +899,7 @@ void Server::receiveMessage(Message* msg)
         else {
             const UUID obj_id = mig_msg->object();
 
-            SILOG(space,detailed,"Received server migration message for " << obj_id.toString() << " from server " << mig_msg->source_server());
+            SPACE_LOG(detailed,"Received server migration message for " << obj_id.toString() << " from server " << mig_msg->source_server());
 
             mObjectMigrations[obj_id] = mig_msg;
             // Try to handle this migration if all the info is available
@@ -934,7 +934,7 @@ void Server::handleMigration(const UUID& obj_id)
     }
 
 
-    SILOG(space,detailed,"Finishing migration of " << obj_id.toString());
+    SPACE_LOG(detailed,"Finishing migration of " << obj_id.toString());
 
     mObjectSessionManager->addSession(new ObjectSession(ObjectReference(obj_id)));
 
@@ -963,7 +963,7 @@ void Server::handleMigration(const UUID& obj_id)
 
 
     // Update LOC to indicate we have this object locally
-    mLocationService->addLocalObject(obj_id, obj_loc, obj_orient, obj_bounds, obj_mesh, obj_phy, ""); 
+    mLocationService->addLocalObject(obj_id, obj_loc, obj_orient, obj_bounds, obj_mesh, obj_phy, "");
     //TAHIR assuming empty zernike descriptor for migrated objects.
 
     //update our oseg to show that we know that we have this object now.
@@ -981,7 +981,7 @@ void Server::handleMigration(const UUID& obj_id)
             mProximity->receiveMigrationData(obj_id, /* FIXME */NullServerID, mContext->id(), client_data.data());
         }
         else {
-            SILOG(space,error,"Got unknown tag for client migration data");
+            SPACE_LOG(error,"Got unknown tag for client migration data");
         }
     }
 
@@ -1041,7 +1041,7 @@ void Server::handleMigrationEvent(const UUID& obj_id) {
         // but I'm getting inconsistencies, so we have to just trust CSeg to have the final say
         if (new_server_id != mContext->id()) {
 
-            SILOG(space,detailed,"Starting migration of " << obj_id.toString() << " from " << mContext->id() << " to " << new_server_id);
+            SPACE_LOG(detailed,"Starting migration of " << obj_id.toString() << " from " << mContext->id() << " to " << new_server_id);
 
             Sirikata::Protocol::Session::Container session_msg;
             if (obj_conn->sessionID() != 0) session_msg.set_seqno(obj_conn->sessionID());
@@ -1217,7 +1217,7 @@ void Server::processAlreadyMigrating(const UUID& obj_id)
 
 
     // Update LOC to indicate we have this object locally
-    mLocationService->addLocalObject(obj_id, obj_loc, obj_orient, obj_bounds, obj_mesh, obj_phy, ""); 
+    mLocationService->addLocalObject(obj_id, obj_loc, obj_orient, obj_bounds, obj_mesh, obj_phy, "");
     //Assuming empty zernike descriptor for migrating objects: TAHIR
 
     //update our oseg to show that we know that we have this object now.
@@ -1236,7 +1236,7 @@ void Server::processAlreadyMigrating(const UUID& obj_id)
             mProximity->receiveMigrationData(obj_id, /* FIXME */NullServerID, mContext->id(), client_data.data());
         }
         else {
-            SILOG(space,error,"Got unknown tag for client migration data");
+            SPACE_LOG(error,"Got unknown tag for client migration data");
         }
     }
 

@@ -50,13 +50,13 @@ class NetworkQueueWrapper {
 
         if (msg == NULL) {
             // FIXME if this happens we're probably going to never remove the chunk from the network...
-            SILOG(net,warning,"[NET] Couldn't parse message.");
+            SILOG(net,warning,"Couldn't parse message.");
             return NULL;
         }
 
         if (msg->source_server() != mReceiveStream->id()) {
             // FIXME if this happens we're probably going to never remove the chunk from the network...
-            SILOG(net,warning,"[NET] Message source doesn't match connection's ID");
+            SILOG(net,warning,"Message source doesn't match connection's ID");
             delete msg;
             return NULL;
         }

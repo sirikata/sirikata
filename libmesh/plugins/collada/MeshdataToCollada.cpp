@@ -187,14 +187,14 @@ const String PARAM_TYPE_WEIGHT = "WEIGHT";
           //dealing with texture.
           for (uint32 j=0; j<meshdata.materials[i].textures.size(); j++) {
             const MaterialEffectInfo::Texture& texture = meshdata.materials[i].textures[j];
-            
+
 
             COLLADASW::ColorOrTexture colorOrTexture;
             String colorEncoding = "";
 
 	    String textureFileName = "";
             if (texture.uri != "") {
-	       textureFileName = texfilename(texture.uri); 
+	       textureFileName = texfilename(texture.uri);
                if (textureURIToEffectIndexMap.find(textureFileName) != textureURIToEffectIndexMap.end()) {
                  continue;
                }
@@ -283,7 +283,7 @@ const String PARAM_TYPE_WEIGHT = "WEIGHT";
               default:
                 effectProfile.setAmbient(colorOrTexture);
                 effectProfileEmpty = false;
-                //                SILOG(collada, error, "[COLLADA] Unhandled texture type during effect export:" << (int32)texture.affecting);
+                //                SILOG(collada, error, "Unhandled texture type during effect export:" << (int32)texture.affecting);
                 break;
             }
 
@@ -368,7 +368,7 @@ const String PARAM_TYPE_WEIGHT = "WEIGHT";
         }
 
         if (!hasTriangles) {
-          SILOG(collada, detailed,  "[COLLADA] Skipping this one in generation: " << geometryName);
+          SILOG(collada, detailed,  "Skipping this one in generation: " << geometryName);
           continue;
         }
 
@@ -568,7 +568,7 @@ public:
                 light = new COLLADASW::DirectionalLight(streamWriter, light_name);
                 break;
               default:
-                SILOG(collada, error, "[COLLADA] Unhandled light type during light export:" << (int32)light_info.mType);
+                SILOG(collada, error, "Unhandled light type during light export:" << (int32)light_info.mType);
                 break;
             }
 
@@ -1139,7 +1139,7 @@ int meshdataToCollada(const Meshdata& meshdata, const std::string& fileName) {
         return 0;
     }
     catch (COLLADASW::StreamWriterException swexc) {
-        SILOG(collada, error, "[COLLADA] Failed to convert to collada because the requested file couldn't be opened: " << swexc.getMessage());
+        SILOG(collada, error, "Failed to convert to collada because the requested file couldn't be opened: " << swexc.getMessage());
         return -1;
     }
 }

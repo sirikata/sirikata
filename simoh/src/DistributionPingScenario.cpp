@@ -193,7 +193,7 @@ void DistributionPingScenario::sendPings() {
         Time t(mContext->simTime());
         PingInfo result;
         if (!mPings->pop(result)) {
-            SILOG(oh,insane,"[OH] " << "Ping queue underflowed.");
+            SILOG(oh,insane,"Ping queue underflowed.");
             break;
         }
         if (!mContext->objectHost->ping(t, result.objA, result.objB, result.dist, mPingPayloadSize))
@@ -205,7 +205,7 @@ void DistributionPingScenario::sendPings() {
 
     static bool printed=false;
     if ( (i-limit) > (10*(int64)mNumPingsPerSecond) && !printed) {
-        SILOG(oh,debug,"[OH] " << i-limit<<" pending ");
+        SILOG(oh,debug,i-limit<<" pending ");
         printed=true;
     }
 

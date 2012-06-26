@@ -474,13 +474,13 @@ protected:
     Time finishTime(uint32 size, QueueInfo* qi, const Time& last_finish_time) const {
         if (qi->weight == 0) {
             if (!(warn_count++))
-                SILOG(fairqueue,fatal,"[FQ] Encountered 0 weight.");
+                SILOG(fairqueue,fatal,"Encountered 0 weight.");
             return last_finish_time + default_tx_time;
         }
 
         Duration transmitTime = Duration::seconds( size * qi->weight_inv );
         if (transmitTime == zero_time) {
-            SILOG(fairqueue,fatal,"[FQ] Encountered 0 duration transmission");
+            SILOG(fairqueue,fatal,"Encountered 0 duration transmission");
             transmitTime = min_tx_time; // just make sure we take *some* time
         }
         return last_finish_time + transmitTime;

@@ -309,7 +309,7 @@ ProxyObjectPtr HostedObject::getProxy(const SpaceID& space, const ObjectReferenc
     ProxyManagerPtr proxy_manager = getProxyManager(space,oref);
     if (proxy_manager == nullManPtr)
     {
-        SILOG(oh,info, "[HO] In getProxy of HostedObject, have no proxy manager associated with "<<space<<"-"<<oref);
+        SILOG(oh,info, "In getProxy of HostedObject, have no proxy manager associated with "<<space<<"-"<<oref);
         return nullPtr;
     }
 
@@ -696,7 +696,7 @@ void HostedObject::receiveMessage(const SpaceID& space, const Protocol::Object::
         delete msg;
     }
     else {
-        SILOG(cppoh,detailed,"[HO] Undelivered message from " << src_ep << " to " << dst_ep);
+        SILOG(cppoh,detailed,"Undelivered message from " << src_ep << " to " << dst_ep);
         delete msg;
     }
 

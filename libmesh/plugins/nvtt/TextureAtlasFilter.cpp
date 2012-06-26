@@ -158,7 +158,7 @@ MeshdataPtr TextureAtlasFilter::apply(MeshdataPtr md) {
     String uri_dir = md->uri.substr(7);
     String uri_sans_protocol = uri_dir;
     size_t slash_pos = uri_dir.rfind("/");
-    
+
     String file_name="";
     if (slash_pos == std::string::npos || slash_pos == uri_dir.size()-1) {
         uri_dir = "./";
@@ -167,7 +167,7 @@ MeshdataPtr TextureAtlasFilter::apply(MeshdataPtr md) {
     else {
         uri_dir = uri_dir.substr(0, slash_pos+1);
         file_name = uri_sans_protocol.substr(slash_pos+1);
-    }    
+    }
 
     // If the same texUVs in a SubMeshGeometry are referenced by instances with
     // different materials, then this code doesn't know how to handle them (we'd
@@ -199,7 +199,7 @@ MeshdataPtr TextureAtlasFilter::apply(MeshdataPtr md) {
                     tex_set_materials[tex_set_hash] != mat_idx)
                 {
                     // Conflict, can't handle, pass on without any processing
-                    SILOG(textureatlas, error, "[TEXTUREATLAS] Found two instances using different materials referencing the same geometry -- can't safely generate atlas.");
+                    SILOG(textureatlas, error, "Found two instances using different materials referencing the same geometry -- can't safely generate atlas.");
                     return md;
                 }
                 tex_set_materials[tex_set_hash] = mat_idx;

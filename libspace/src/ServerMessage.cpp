@@ -112,7 +112,7 @@ Message* Message::deserialize(const Network::Chunk& wire) {
     bool parsed = result->ParseFromArray( &(wire[0]), wire.size() );
     if (!parsed) {
         hexPrint("Fail",wire);
-        SILOG(msg,warning,"[MSG] Couldn't parse message.");
+        SILOG(msg,warning,"Couldn't parse message.");
         delete result;
         return NULL;
     }

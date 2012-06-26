@@ -14,7 +14,7 @@
 
 #include <sirikata/core/command/Commander.hpp>
 
-#define PROXLOG(level,msg) SILOG(prox,level,"[PROX] " << msg)
+#define PROXLOG(level,msg) SILOG(prox,level,msg)
 
 namespace Sirikata {
 

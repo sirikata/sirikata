@@ -1599,11 +1599,11 @@ boost::any WebView::invoke(std::vector<boost::any>& params)
   if(name == "eval")
   {
       if (params.size() != 2) {
-          SILOG(webview,error,"[WEBVIEW] Invoking 'eval' expects 2 arguments." );
+          SILOG(webview,error,"Invoking 'eval' expects 2 arguments." );
           return boost::any();
       }
       if (!Invokable::anyIsString(params[1])){
-          SILOG(webview,error,"[WEBVIEW] Invoking 'eval' expects string argument." );
+          SILOG(webview,error,"Invoking 'eval' expects string argument." );
           return boost::any();
       }
 

@@ -615,7 +615,7 @@ void AirTrafficControllerScenario::sendPings() {
         }else {
             PingInfo result;
             if (!mPings->pop(result)) {
-                SILOG(oh,insane,"[OH] " << "Ping queue underflowed.");
+                OH_LOG(insane,"Ping queue underflowed.");
                 break;
             }
             sent_success = mContext->objectHost->sendPing(t, result.objA, result.objB, result.ping);
@@ -630,7 +630,7 @@ void AirTrafficControllerScenario::sendPings() {
 
     static bool printed=false;
     if ( (i-limit) > (10*(int64)mNumPingsPerSecond) && !printed) {
-        SILOG(oh,debug,"[OH] " << i-limit<<" pending ");
+        OH_LOG(debug,i-limit<<" pending ");
         printed=true;
     }
 

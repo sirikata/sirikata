@@ -46,7 +46,7 @@
 #include <sirikata/core/command/Commander.hpp>
 #include <json_spirit/json_spirit.h>
 
-#define PROXLOG(level,msg) SILOG(prox,level,"[PROX] " << msg)
+#define PROXLOG(level,msg) SILOG(prox,level,msg)
 
 namespace Sirikata {
 
