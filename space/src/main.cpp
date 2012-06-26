@@ -413,10 +413,11 @@ int main(int argc, char** argv) {
     gTrace = NULL;
 
 
+    delete commander;
+
     delete space_context;
     space_context = NULL;
 
-    delete commander;
     delete time_series;
 
     delete mainStrand;
