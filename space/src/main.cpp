@@ -427,6 +427,8 @@ int main(int argc, char** argv) {
     delete sstConnMgr;
     delete ohSstConnMgr;
 
+    Transfer::TransferMediator::destroy();
+
     sync.stop();
 
     plugins.gc();
