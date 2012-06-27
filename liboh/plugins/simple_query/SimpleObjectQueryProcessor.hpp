@@ -7,7 +7,7 @@
 
 #include <sirikata/oh/ObjectQueryProcessor.hpp>
 
-#include <sirikata/proxyobject/OrphanLocUpdateManager.hpp>
+#include <sirikata/oh/OrphanLocUpdateManager.hpp>
 
 namespace Sirikata {
 namespace OH {
@@ -36,6 +36,10 @@ public:
 
     virtual void updateQuery(HostedObjectPtr ho, const SpaceObjectReference& sporef, const String& new_query);
 
+
+    // OrphanLocUpdateManager::Listener Interface
+    virtual void onOrphanLocUpdate(const SpaceObjectReference& observer, const LocUpdate& lu);
+
 private:
     // Proximity
     void handleProximitySubstream(const HostedObjectWPtr &weakSelf, const SpaceObjectReference& spaceobj, int err, SSTStreamPtr s);
@@ -50,8 +54,6 @@ private:
     bool handleLocationMessage(const HostedObjectPtr& self, const SpaceObjectReference& spaceobj, const std::string& paylod);
 
 
-    // OrphanLocUpdateManager::Listener Interface
-    virtual void onOrphanLocUpdate(const SpaceObjectReference& observer, const LocUpdate& lu);
 
     ObjectHostContext* mContext;
 

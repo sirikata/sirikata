@@ -38,7 +38,7 @@
 #include <sirikata/core/network/Message.hpp> // parse/serializePBJMessage
 #include "Protocol_MasterPinto.pbj.hpp"
 
-#include <sirikata/space/QueryHandlerFactory.hpp>
+#include <sirikata/core/prox/QueryHandlerFactory.hpp>
 
 using namespace Sirikata::Network;
 
@@ -73,7 +73,10 @@ PintoManager::PintoManager(PintoContext* ctx)
     String handler_options = GetOptionValue<String>(OPT_PINTO_HANDLER_OPTIONS);
     mQueryHandler = QueryHandlerFactory<ServerProxSimulationTraits>(handler_type, handler_options);
     bool static_objects = false;
-    mQueryHandler->initialize(mLocCache, mLocCache, static_objects);
+    mQueryHandler->initialize(
+        mLocCache, mLocCache,
+        static_objects, false /* not replicated */
+    );
 }
 
 PintoManager::~PintoManager() {

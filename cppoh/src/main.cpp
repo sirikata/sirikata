@@ -232,8 +232,8 @@ int main (int argc, char** argv) {
 
 
 
-    delete ctx;
     delete commander;
+    delete ctx;
     delete time_series;
 
     trace->shutdown();
@@ -245,6 +245,8 @@ int main (int argc, char** argv) {
 
     delete sstConnMgr;
     delete ohSstConnMgr;
+
+    Transfer::TransferMediator::destroy();
 
     plugins.gc();
     sync.stop();

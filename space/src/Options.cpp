@@ -41,7 +41,13 @@ void InitSpaceOptions() {
 
         .addOption(new OptionValue(OPT_CONFIG_FILE,"space.cfg",Sirikata::OptionValueType<String>(),"Configuration file to load."))
 
-        .addOption(new OptionValue(OPT_SPACE_PLUGINS,"weight-exp,weight-sqr,weight-const,space-null,space-local,space-standard,space-prox,colladamodels,mesh-billboard,common-filters,space-bulletphysics,space-environment,space-redis,space-master-pinto",Sirikata::OptionValueType<String>(),"Plugin list to load."))
+        .addOption(new OptionValue(OPT_SPACE_PLUGINS,
+                "weight-exp,weight-sqr,weight-const,space-null,space-local,space-standard,space-prox,colladamodels,mesh-billboard,common-filters,space-bulletphysics,space-environment"
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_LINUX
+                ",space-redis"
+#endif
+                ",space-master-pinto",
+                Sirikata::OptionValueType<String>(),"Plugin list to load."))
         .addOption(new OptionValue(OPT_SPACE_EXTRA_PLUGINS,"",Sirikata::OptionValueType<String>(),"Extra list of plugins to load. Useful for using existing defaults as well as some additional plugins."))
 
         .addOption(new OptionValue("spacestreamlib","tcpsst",Sirikata::OptionValueType<String>(),"Which library to use to communicate with the object host"))

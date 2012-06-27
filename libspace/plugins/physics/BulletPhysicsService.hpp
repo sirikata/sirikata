@@ -67,7 +67,7 @@ public:
     virtual Vector3f currentPosition(const UUID& uuid);
     virtual TimedMotionQuaternion orientation(const UUID& uuid);
     virtual Quaternion currentOrientation(const UUID& uuid);
-    virtual BoundingSphere3f bounds(const UUID& uuid);
+    virtual AggregateBoundingInfo bounds(const UUID& uuid);
     virtual const String& mesh(const UUID& uuid);
     virtual const String& physics(const UUID& uuid);
     // Added for Bullet implementation
@@ -81,18 +81,18 @@ public:
     void setOrientation(const UUID& uuid, const TimedMotionQuaternion& neworient);
 
 
-  virtual void addLocalObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics, const String& zernike);
+  virtual void addLocalObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics, const String& zernike);
     virtual void removeLocalObject(const UUID& uuid);
 
-    virtual void addLocalAggregateObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics);
+    virtual void addLocalAggregateObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics);
     virtual void removeLocalAggregateObject(const UUID& uuid);
     virtual void updateLocalAggregateLocation(const UUID& uuid, const TimedMotionVector3f& newval);
     virtual void updateLocalAggregateOrientation(const UUID& uuid, const TimedMotionQuaternion& newval);
-    virtual void updateLocalAggregateBounds(const UUID& uuid, const BoundingSphere3f& newval);
+    virtual void updateLocalAggregateBounds(const UUID& uuid, const AggregateBoundingInfo& newval);
     virtual void updateLocalAggregateMesh(const UUID& uuid, const String& newval);
     virtual void updateLocalAggregatePhysics(const UUID& uuid, const String& newval);
 
-  virtual void addReplicaObject(const Time& t, const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics, const String& zernike);
+  virtual void addReplicaObject(const Time& t, const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics, const String& zernike);
     virtual void removeReplicaObject(const Time& t, const UUID& uuid);
 
     virtual void receiveMessage(Message* msg);

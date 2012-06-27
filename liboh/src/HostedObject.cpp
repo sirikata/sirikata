@@ -556,7 +556,7 @@ void HostedObject::handleConnectedIndirect(const HostedObjectWPtr& weakSelf, Obj
     // Convert back to local time
     TimedMotionVector3f local_loc(self->localTime(space, info.loc.updateTime()), info.loc.value());
     TimedMotionQuaternion local_orient(self->localTime(space, info.orient.updateTime()), info.orient.value());
-    ProxyObjectPtr self_proxy = self->createProxy(self_objref, self_objref, Transfer::URI(info.mesh), local_loc, local_orient, info.bnds, info.physics, info.query, false, 0);
+    ProxyObjectPtr self_proxy = self->createProxy(self_objref, self_objref, Transfer::URI(info.mesh), local_loc, local_orient, AggregateBoundingInfo(info.bnds), info.physics, info.query, false, 0);
 
 
     // Use to initialize PerSpaceData. This just lets the PerPresenceData know
@@ -706,7 +706,7 @@ void HostedObject::receiveMessage(const SpaceID& space, const Protocol::Object::
 void HostedObject::processLocationUpdate(const SpaceObjectReference& sporef, ProxyObjectPtr proxy_obj, const LocUpdate& update) {
     TimedMotionVector3f loc;
     TimedMotionQuaternion orient;
-    BoundingSphere3f bounds;
+    AggregateBoundingInfo bounds;
     String mesh;
     String phy;
 
@@ -714,7 +714,7 @@ void HostedObject::processLocationUpdate(const SpaceObjectReference& sporef, Pro
     uint64 location_seqno = update.location_seqno();
     TimedMotionQuaternion* orientptr = NULL;
     uint64 orient_seqno = update.orientation_seqno();
-    BoundingSphere3f* boundsptr = NULL;
+    AggregateBoundingInfo* boundsptr = NULL;
     uint64 bounds_seqno = update.bounds_seqno();
     String* meshptr = NULL;
     uint64 mesh_seqno = update.mesh_seqno();
@@ -733,7 +733,7 @@ void HostedObject::processLocationUpdate(const SpaceObjectReference& sporef, Pro
     }
 
     if (update.has_location()) {
-        loc = update.locationWithLocalTime(this, sporef.space());
+        loc = update.location();
 
         CONTEXT_OHTRACE(objectLoc,
             sporef.object().getAsUUID(),
@@ -746,7 +746,7 @@ void HostedObject::processLocationUpdate(const SpaceObjectReference& sporef, Pro
     }
 
     if (update.has_orientation()) {
-        orient = update.orientationWithLocalTime(this, sporef.space());
+        orient = update.orientation();
         orientptr = &orient;
     }
 
@@ -776,7 +776,7 @@ void HostedObject::processLocationUpdate(
         const SpaceID& space, ProxyObjectPtr proxy_obj, bool predictive,
         TimedMotionVector3f* loc, uint64 loc_seqno,
         TimedMotionQuaternion* orient, uint64 orient_seqno,
-        BoundingSphere3f* bounds, uint64 bounds_seqno,
+        AggregateBoundingInfo* bounds, uint64 bounds_seqno,
         String* mesh, uint64 mesh_seqno,
         String* phy, uint64 phy_seqno
 ) {
@@ -826,7 +826,7 @@ void HostedObject::handleProximityUpdate(const SpaceObjectReference& spaceobj, c
 
         SpaceObjectReference proximateID(spaceobj.space(), add.object());
 
-        TimedMotionVector3f loc(add.locationWithLocalTime(this, spaceobj.space()));
+        TimedMotionVector3f loc = add.location();
 
         CONTEXT_OHTRACE(prox,
             spaceobj.object().getAsUUID(),
@@ -836,8 +836,8 @@ void HostedObject::handleProximityUpdate(const SpaceObjectReference& spaceobj, c
             loc
         );
 
-        TimedMotionQuaternion orient(add.orientationWithLocalTime(this, spaceobj.space()));
-        BoundingSphere3f bnds = add.bounds();
+        TimedMotionQuaternion orient = add.orientation();
+        AggregateBoundingInfo bnds = add.bounds();
         String mesh = add.meshOrDefault();
         String phy = add.physicsOrDefault();
         bool isAggregate =
@@ -930,7 +930,7 @@ void HostedObject::handleProximityUpdate(const SpaceObjectReference& spaceobj, c
 
 }
 
-ProxyObjectPtr HostedObject::createProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri, TimedMotionVector3f& tmv, TimedMotionQuaternion& tmq, const BoundingSphere3f& bs, const String& phy, const String& query, bool isAggregate, uint64 seqNo)
+ProxyObjectPtr HostedObject::createProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri, TimedMotionVector3f& tmv, TimedMotionQuaternion& tmq, const AggregateBoundingInfo& bs, const String& phy, const String& query, bool isAggregate, uint64 seqNo)
 {
     ProxyManagerPtr proxy_manager = getProxyManager(owner_objref.space(), owner_objref.object());
     Mutex::scoped_lock lock(presenceDataMutex);
@@ -1106,13 +1106,15 @@ void HostedObject::requestQueryUpdate(const SpaceID& space, const ObjectReferenc
     }
 
     SpaceObjectReference sporef(space,oref);
-    Mutex::scoped_lock lock(presenceDataMutex);
-    PresenceDataMap::iterator pdmIter = mPresenceData.find(sporef);
-    if (pdmIter != mPresenceData.end()) {
-        pdmIter->second->query = new_query;
-    }
-    else {
-        SILOG(cppoh,error,"Error in cppoh, requesting solid angle update for presence that doesn't exist in your presence map.");
+    {
+        Mutex::scoped_lock lock(presenceDataMutex);
+        PresenceDataMap::iterator pdmIter = mPresenceData.find(sporef);
+        if (pdmIter != mPresenceData.end()) {
+            pdmIter->second->query = new_query;
+        }
+        else {
+            SILOG(cppoh,error,"Error in cppoh, requesting solid angle update for presence that doesn't exist in your presence map.");
+        }
     }
 
     mObjectHost->getQueryProcessor()->updateQuery(getSharedPtr(), sporef, new_query);
@@ -1140,7 +1142,7 @@ void HostedObject::updateLocUpdateRequest(const SpaceID& space, const ObjectRefe
         // updated when the request is sent
         if (loc != NULL) { pd.requestLoc->setLocation(*loc); pd.updateFields |= PerPresenceData::LOC_FIELD_LOC; }
         if (orient != NULL) { pd.requestLoc->setOrientation(*orient); pd.updateFields |= PerPresenceData::LOC_FIELD_ORIENTATION; }
-        if (bounds != NULL) { pd.requestLoc->setBounds(*bounds); pd.updateFields |= PerPresenceData::LOC_FIELD_BOUNDS; }
+        if (bounds != NULL) { pd.requestLoc->setBounds(AggregateBoundingInfo(*bounds)); pd.updateFields |= PerPresenceData::LOC_FIELD_BOUNDS; }
         if (mesh != NULL) { pd.requestLoc->setMesh(Transfer::URI(*mesh)); pd.updateFields |= PerPresenceData::LOC_FIELD_MESH; }
         if (phy != NULL) { pd.requestLoc->setPhysics(*phy); pd.updateFields |= PerPresenceData::LOC_FIELD_PHYSICS; }
 
@@ -1198,7 +1200,12 @@ void HostedObject::sendLocUpdateRequest(const SpaceID& space, const ObjectRefere
         pd.requestLoc->setOrientation(pd.requestLoc->orientation(), epoch);
     }
     if (pd.updateFields & PerPresenceData::LOC_FIELD_BOUNDS) {
-        loc_request.set_bounds(pd.requestLoc->bounds());
+        // We store a full AggregateBoundingInfo because that simplifies the
+        // implementation so we can reuse a bunch of code, but requests for
+        // objects can't include all this information -- they just contain
+        // normal bounds info.
+        assert(pd.requestLoc->bounds().singleObject());
+        loc_request.set_bounds(pd.requestLoc->bounds().fullBounds());
         // Save value but bump the epoch
         pd.requestLoc->setBounds(pd.requestLoc->bounds(), epoch);
     }

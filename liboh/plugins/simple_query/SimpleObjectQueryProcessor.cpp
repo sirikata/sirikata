@@ -111,6 +111,13 @@ bool SimpleObjectQueryProcessor::handleProximityMessage(HostedObjectPtr self, co
     for(int32 idx = 0; idx < contents.update_size(); idx++) {
         Sirikata::Protocol::Prox::ProximityUpdate update = contents.update(idx);
 
+        // We need to convert times to local time
+        for(int32 aidx = 0; aidx < update.addition_size(); aidx++) {
+            update.addition(aidx).location().set_t(
+                self->getObjectHost()->localTime(spaceobj.space(), update.addition(aidx).location().t())
+            );
+        }
+
         // To take care of tracking orphans for the HostedObject, we need to
         // take take a pass through the results ourselves. We backup data for
         // objects that are going to be removed before delivering the
@@ -135,7 +142,7 @@ bool SimpleObjectQueryProcessor::handleProximityMessage(HostedObjectPtr self, co
 
             SpaceObjectReference observed(spaceobj.space(), ObjectReference(addition.object()));
 
-            obj_state->orphans.invokeOrphanUpdates(spaceobj, observed, this);
+            obj_state->orphans.invokeOrphanUpdates(mContext->objectHost, spaceobj, observed, this);
         }
     }
 
@@ -224,7 +231,7 @@ bool SimpleObjectQueryProcessor::handleLocationMessage(const HostedObjectPtr& se
             obj_state->orphans.addOrphanUpdate(observed, update);
         }
         else {
-            LocProtocolLocUpdate llu(update);
+            LocProtocolLocUpdate llu(update, mContext->objectHost, spaceobj.space());
             deliverLocationUpdate(self, spaceobj, llu);
         }
     }

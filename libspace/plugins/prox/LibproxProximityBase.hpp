@@ -8,16 +8,25 @@
 #include <sirikata/space/Proximity.hpp>
 #include "CBRLocationServiceCache.hpp"
 #include <prox/base/QueryEvent.hpp>
+#include <sirikata/space/PintoServerQuerier.hpp>
+
+#include <boost/multi_index_container.hpp>
+#include <boost/multi_index/member.hpp>
+#include <boost/multi_index/ordered_index.hpp>
 
 namespace Sirikata {
 
 /** Base class for Libprox-based Proximity implementations, providing a bit of
  *  utility code that gets reused across different implementations.
  */
-class LibproxProximityBase : public Proximity {
+class LibproxProximityBase : public Proximity, PintoServerQuerierListener {
 public:
     LibproxProximityBase(SpaceContext* ctx, LocationService* locservice, CoordinateSegmentation* cseg, SpaceNetwork* net, AggregateManager* aggmgr);
     ~LibproxProximityBase();
+
+    // Service Interface overrides
+    virtual void start();
+    virtual void stop();
 
 protected:
     typedef Prox::QueryEvent<ObjectProxSimulationTraits> QueryEvent;
@@ -44,7 +53,7 @@ protected:
     // can pack them however we like.
     void coalesceEvents(QueryEventList& evts, uint32 per_event);
 
-    // BOTH Threads: These are read-only.
+    // BOTH Threads: These are read-only or lock protected.
 
     // To support a static/dynamic split but also support mixing them for
     // comparison purposes track which we are doing and, for most places, use a
@@ -58,9 +67,51 @@ protected:
     // stops for a few seconds while walking).
     Duration mMoveToStaticDelay;
 
+    typedef std::tr1::unordered_set<ServerID> ServerSet;
+private: // So this is used as a service by implementations
+    // Top level Pinto + server interactions. The base class takes
+    // care of querying top level Pinto and tracking which servers
+    // have connections + need queries, but the implementations need
+    // to take it from there (removing items from
+    // mNeedServerQueryUpdate and processing them). Note that unlike the data
+    // below, this is only accessed on the main thread.
+    PintoServerQuerier* mServerQuerier;
+
+    boost::mutex mServerSetMutex;
+    // This tracks the servers we currently have subscriptions with
+    ServerSet mServersQueried;
+    // And this indicates whether we need to send new requests
+    // out to other servers
+    ServerSet mNeedServerQueryUpdate;
+
+    // Utility -- setup all known servers for a server query update
+    void addAllServersForUpdate();
+
+protected:
+    // Get/add servers for sending and update of our aggregate query to
+    void getServersForAggregateQueryUpdate(ServerSet* servers_out);
+    void addServerForAggregateQueryUpdate(ServerID sid);
+    // Initiate updates to aggregate queries and stats over all objects, used to
+    // trigger updated requests to top-level pinto and other servers
+    void updateAggregateQuery(const SolidAngle sa, uint32 max_count);
+    void updateAggregateStats(float32 max_radius);
+    // Number of servers we have active queries to
+    uint32 numServersQueried();
 
     // MAIN Thread: Utility methods that should only be called from the main
     // strand
+
+    // PintoServerQuerierListener Interface
+    virtual void addRelevantServer(ServerID sid);
+    virtual void removeRelevantServer(ServerID sid);
+
+    // SpaceNetworkConnectionListener Interface
+    virtual void onSpaceNetworkConnected(ServerID sid);
+    virtual void onSpaceNetworkDisconnected(ServerID sid);
+
+    // CoordinateSegmentation::Listener Interface
+    virtual void updatedSegmentation(CoordinateSegmentation* cseg, const std::vector<SegmentationInfo>& new_seg);
+
 
     // Server-to-server messages
     Router<Message*>* mProxServerMessageService;
@@ -160,14 +211,24 @@ protected:
 
     // Handle various events in the main thread that are triggered in the prox thread
     void handleAddObjectLocSubscription(const UUID& subscriber, const UUID& observed);
+    void handleAddObjectLocSubscriptionWithID(const UUID& subscriber, const UUID& observed, ProxIndexID index_id);
     void handleRemoveObjectLocSubscription(const UUID& subscriber, const UUID& observed);
+    void handleRemoveObjectLocSubscriptionWithID(const UUID& subscriber, const UUID& observed, ProxIndexID index_id);
     void handleRemoveAllObjectLocSubscription(const UUID& subscriber);
     void handleAddOHLocSubscription(const OHDP::NodeID& subscriber, const UUID& observed);
+    void handleAddOHLocSubscriptionWithID(const OHDP::NodeID& subscriber, const UUID& observed, ProxIndexID index_id);
     void handleRemoveOHLocSubscription(const OHDP::NodeID& subscriber, const UUID& observed);
+    void handleRemoveOHLocSubscriptionWithID(const OHDP::NodeID& subscriber, const UUID& observed, ProxIndexID index_id);
     void handleRemoveAllOHLocSubscription(const OHDP::NodeID& subscriber);
     void handleAddServerLocSubscription(const ServerID& subscriber, const UUID& observed, SeqNoPtr seqPtr);
+    void handleAddServerLocSubscriptionWithID(const ServerID& subscriber, const UUID& observed, ProxIndexID index_id, SeqNoPtr seqPtr);
     void handleRemoveServerLocSubscription(const ServerID& subscriber, const UUID& observed);
+    void handleRemoveServerLocSubscriptionWithID(const ServerID& subscriber, const UUID& observed, ProxIndexID index_id);
     void handleRemoveAllServerLocSubscription(const ServerID& subscriber);
+
+    // Takes care of switching objects between static/dynamic
+    void checkObjectClass(bool is_local, const UUID& objid, const TimedMotionVector3f& newval);
+
 
     typedef std::tr1::unordered_map<UUID, ProxObjectStreamInfoPtr, UUID::Hasher> ObjectProxStreamMap;
     ObjectProxStreamMap mObjectProxStreams;
@@ -176,23 +237,72 @@ protected:
     ObjectHostProxStreamMap mObjectHostProxStreams;
 
 
-    // PROX Thread - Should only be accessed in methods used by the prox thread
+
+
+
+
+    // PROX Thread - Should only be accessed in methods used by the
+    // prox thread
     Network::IOStrand* mProxStrand;
 
     CBRLocationServiceCache* mLocCache;
+
+    // Track objects that have become static and, after a delay, need to be
+    // moved between trees. We track them by ID (to cancel due to movement or
+    // disconnect) and time (to process them efficiently as their timeouts
+    // expire).
+    struct StaticObjectTimeout {
+        StaticObjectTimeout(UUID id, Time _expires, bool l)
+         : objid(id),
+           expires(_expires),
+           local(l)
+        {}
+        UUID objid;
+        Time expires;
+        bool local;
+    };
+    // Tags used by ObjectInfoSet
+    struct objid_tag {};
+    struct expires_tag {};
+    typedef boost::multi_index_container<
+        StaticObjectTimeout,
+        boost::multi_index::indexed_by<
+            boost::multi_index::ordered_unique< boost::multi_index::tag<objid_tag>, BOOST_MULTI_INDEX_MEMBER(StaticObjectTimeout,UUID,objid) >,
+            boost::multi_index::ordered_non_unique< boost::multi_index::tag<expires_tag>, BOOST_MULTI_INDEX_MEMBER(StaticObjectTimeout,Time,expires) >
+            >
+        > StaticObjectTimeouts;
+    typedef StaticObjectTimeouts::index<objid_tag>::type StaticObjectsByID;
+    typedef StaticObjectTimeouts::index<expires_tag>::type StaticObjectsByExpiration;
+    StaticObjectTimeouts mStaticObjectTimeouts;
+
+    // Prox thread handlers for connection events. They perform some
+    // basic maintenance (putting server into set that needs update,
+    // removing from that set, etc) and then Implementations can
+    // override these to perform additional operations, but they'll
+    // get other events as a result even if they don't -- new servers
+    // will appear in the set that need to be queried and
+    // handleForcedServerDisconnection will be invoked.
+    void handleConnectedServer(ServerID sid);
+    void handleDisconnectedServer(ServerID sid);
+    virtual void handleForcedDisconnection(ServerID server);
+
+    void removeStaticObjectTimeout(const UUID& objid);
+    virtual void trySwapHandlers(bool is_local, const UUID& objid, bool is_static) = 0;
+    void handleCheckObjectClass(bool is_local, const UUID& objid, const TimedMotionVector3f& newval);
+    void processExpiredStaticObjectTimeouts();
 
     // Query-Type-Agnostic AggregateListener Interface -- manages adding to Loc
     // and passing to AggregateManager, but you need to delegate to these
     // yourself since the AggregateListener interface depends on the type of
     // query/query handler being used.
     virtual void aggregateCreated(const UUID& objid);
-    virtual void aggregateChildAdded(const UUID& objid, const UUID& child, const BoundingSphere3f& bnds);
-    virtual void aggregateChildRemoved(const UUID& objid, const UUID& child, const BoundingSphere3f& bnds);
-    virtual void aggregateBoundsUpdated(const UUID& objid, const BoundingSphere3f& bnds);
+    virtual void aggregateChildAdded(const UUID& objid, const UUID& child, const Vector3f& pos, const AggregateBoundingInfo& bnds);
+    virtual void aggregateChildRemoved(const UUID& objid, const UUID& child, const Vector3f& pos, const AggregateBoundingInfo& bnds);
+    virtual void aggregateBoundsUpdated(const UUID& objid, const Vector3f& pos, const AggregateBoundingInfo& bnds);
     virtual void aggregateDestroyed(const UUID& objid);
     virtual void aggregateObserved(const UUID& objid, uint32 nobservers);
     // Helper for updating aggregates
-    void updateAggregateLoc(const UUID& objid, const BoundingSphere3f& bnds);
+    void updateAggregateLoc(const UUID& objid, const Vector3f& pos, const AggregateBoundingInfo& bnds);
 
     // Command handlers
     virtual void commandProperties(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) = 0;

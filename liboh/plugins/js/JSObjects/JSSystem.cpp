@@ -97,7 +97,7 @@ v8::Handle<v8::Value> pushEvalContextScopeDirectory(const v8::Arguments& args)
 
     INLINE_SYSTEM_CONV_ERROR(args.This(),getAssociatedPresence,this,jssys);
     INLINE_STR_CONV_ERROR(args[0],pushEvalContextScopeDirectory,1,newDir);
-    
+
     return handle_scope.Close(jssys->pushEvalContextScopeDirectory(newDir));
 }
 
@@ -108,7 +108,7 @@ v8::Handle<v8::Value> popEvalContextScopeDirectory(const v8::Arguments& args)
         V8_EXCEPTION_CSTR("Error popping eval scope directory.  Requires 0 arguments");
 
     INLINE_SYSTEM_CONV_ERROR(args.This(),getAssociatedPresence,this,jssys);
-    
+
     return handle_scope.Close(jssys->popEvalContextScopeDirectory());
 }
 
@@ -743,7 +743,7 @@ v8::Handle<v8::Value> root_createVisible(const v8::Arguments& args)
     JSVisibleDataPtr jspd(
         new JSRestoredVisibleData(
             NULL, sporefVisWatching,
-            PresenceProperties(location, orientation, bsph, Transfer::URI(meshString), physicsString)
+            PresenceProperties(location, orientation, AggregateBoundingInfo(bsph), Transfer::URI(meshString), physicsString)
         )
     );
 

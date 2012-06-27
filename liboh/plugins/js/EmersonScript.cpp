@@ -560,6 +560,10 @@ void EmersonScript::iOnConnected(SessionEventProviderPtr from,
     while ((!JSObjectScript::mCtx->initialized()) && (! duringInit))
     {}
 
+    // TODO(ewencp) All this code using the ProxyManagers from a different
+    // strand seems broken given the current implementation of ProxyManager
+    // (which isn't thread-safe).
+
     v8::Locker locker (mCtx->mIsolate);
     v8::Isolate::Scope iscope(JSObjectScript::mCtx->mIsolate);
 
@@ -576,6 +580,18 @@ void EmersonScript::iOnConnected(SessionEventProviderPtr from,
     // But we call iOnCreateProxy because we want it to be synchronous
     // and we're already in the correct strand
     jsVisMan.iOnCreateProxy(self_proxy);
+
+    // Because of the async post for this callback (and also just because of
+    // some ordering decisions in the object host w.r.t. when queries are
+    // registered during/after connection), we might already have some proxies
+    // that we didn't get notified about since we just setup the
+    // listener. Process them now.
+    ProxyManager::ObjectReferenceList existing_proxies;
+    proxy_manager->getAllObjectReferences(existing_proxies);
+    for(ProxyManager::ObjectReferenceList::iterator it = existing_proxies.begin(); it != existing_proxies.end(); it++) {
+        if (*it != name)
+            jsVisMan.iOnCreateProxy(proxy_manager->getProxyObject(*it));
+    }
 
 
     //register for scripting messages from user

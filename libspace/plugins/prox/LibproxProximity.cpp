@@ -36,7 +36,7 @@
 
 #include <algorithm>
 
-#include <sirikata/space/QueryHandlerFactory.hpp>
+#include <sirikata/core/prox/QueryHandlerFactory.hpp>
 
 #include "Protocol_Prox.pbj.hpp"
 #include "Protocol_ServerProx.pbj.hpp"
@@ -77,7 +77,6 @@ bool parseQueryRequest(const String& query, SolidAngle* qangle_out, uint32* max_
 
 LibproxProximity::LibproxProximity(SpaceContext* ctx, LocationService* locservice, CoordinateSegmentation* cseg, SpaceNetwork* net, AggregateManager* aggmgr)
  : LibproxProximityBase(ctx, locservice, cseg, net, aggmgr),
-   mServerQuerier(NULL),
    mDistanceQueryDistance(0.f),
    mMaxObject(0.0f),
    mMinObjectQueryAngle(SolidAngle::Max),
@@ -97,12 +96,6 @@ LibproxProximity::LibproxProximity(SpaceContext* ctx, LocationService* locservic
     using std::tr1::placeholders::_4;
     using std::tr1::placeholders::_5;
 
-    // Server Querier (discover other servers)
-    String pinto_type = GetOptionValue<String>(OPT_PINTO);
-    String pinto_options = GetOptionValue<String>(OPT_PINTO_OPTIONS);
-    mServerQuerier = PintoServerQuerierFactory::getSingleton().getConstructor(pinto_type)(mContext, pinto_options);
-    mServerQuerier->addListener(this);
-
     // Generic query parameters
     mDistanceQueryDistance = GetOptionValue<float32>(OPT_PROX_QUERY_RANGE);
 
@@ -118,8 +111,9 @@ LibproxProximity::LibproxProximity(SpaceContext* ctx, LocationService* locservic
         mServerQueryHandler[i].handler->setAggregateListener(this); // *Must* be before handler->initialize
         bool server_static_objects = (mSeparateDynamicObjects && i == OBJECT_CLASS_STATIC);
         mServerQueryHandler[i].handler->initialize(
-            mLocCache, mLocCache, server_static_objects,
-            std::tr1::bind(&LibproxProximity::handlerShouldHandleObject, this, server_static_objects, false, _1, _2, _3, _4, _5)
+            mLocCache, mLocCache,
+            server_static_objects, false /* not replicated */,
+            std::tr1::bind(&LibproxProximity::handlerShouldHandleObject, this, server_static_objects, false, _1, _2, _3, _4, _5, _6)
         );
     }
     if (server_handler_type == "dist" || server_handler_type == "rtreedist") mServerDistance = true;
@@ -136,8 +130,9 @@ LibproxProximity::LibproxProximity(SpaceContext* ctx, LocationService* locservic
         mObjectQueryHandler[i].handler->setAggregateListener(this); // *Must* be before handler->initialize
         bool object_static_objects = (mSeparateDynamicObjects && i == OBJECT_CLASS_STATIC);
         mObjectQueryHandler[i].handler->initialize(
-            mLocCache, mLocCache, object_static_objects,
-            std::tr1::bind(&LibproxProximity::handlerShouldHandleObject, this, object_static_objects, true, _1, _2, _3, _4, _5)
+            mLocCache, mLocCache,
+            object_static_objects, false /* not replicated */,
+            std::tr1::bind(&LibproxProximity::handlerShouldHandleObject, this, object_static_objects, true, _1, _2, _3, _4, _5, _6)
         );
     }
     if (object_handler_type == "dist" || object_handler_type == "rtreedist") mObjectDistance = true;
@@ -148,20 +143,13 @@ LibproxProximity::~LibproxProximity() {
         delete mObjectQueryHandler[i].handler;
         delete mServerQueryHandler[i].handler;
     }
-
-    delete mServerQuerier;
 }
 
 
 // MAIN Thread Methods: The following should only be called from the main thread.
 
 void LibproxProximity::start() {
-    Proximity::start();
-
-    // Always initialize with CSeg's current size
-    BoundingBoxList bboxes = mCSeg->serverRegion(mContext->id());
-    BoundingBox3f bbox = aggregateBBoxes(bboxes);
-    mServerQuerier->updateRegion(bbox);
+    LibproxProximityBase::start();
 
     mContext->add(&mServerHandlerPoller);
     mContext->add(&mObjectHandlerPoller);
@@ -216,23 +204,17 @@ void LibproxProximity::handleObjectProximityMessage(const UUID& objid, void* buf
         SolidAngle sa;
         uint32 max_results;
         if (parseQueryRequest(prox_update.query_parameters(), &sa, &max_results))
-            updateQuery(objid, mLocService->location(objid), mLocService->bounds(objid), sa, max_results);
+            updateQuery(objid, mLocService->location(objid), mLocService->bounds(objid).fullBounds(), sa, max_results);
     }
     else {
         if (!prox_update.has_query_angle()) return;
 
         SolidAngle query_angle(prox_update.query_angle());
         uint32 query_max_results = (prox_update.has_query_max_count() ? prox_update.query_max_count() : NoUpdateMaxResults);
-        updateQuery(objid, mLocService->location(objid), mLocService->bounds(objid), query_angle, query_max_results);
+        updateQuery(objid, mLocService->location(objid), mLocService->bounds(objid).fullBounds(), query_angle, query_max_results);
     }
 }
 
-// Setup all known servers for a server query update
-void LibproxProximity::addAllServersForUpdate() {
-    boost::lock_guard<boost::mutex> lck(mServerSetMutex);
-    for(ServerSet::const_iterator it = mServersQueried.begin(); it != mServersQueried.end(); it++)
-        mNeedServerQueryUpdate.insert(*it);
-}
 
 void LibproxProximity::sendQueryRequests() {
     TimedMotionVector3f loc;
@@ -243,10 +225,7 @@ void LibproxProximity::sendQueryRequests() {
     BoundingSphere3f bounds = bbox.toBoundingSphere();
 
     ServerSet sub_servers;
-    {
-        boost::lock_guard<boost::mutex> lck(mServerSetMutex);
-        sub_servers.swap(mNeedServerQueryUpdate);
-    }
+    getServersForAggregateQueryUpdate(&sub_servers);
     for(ServerSet::const_iterator it = sub_servers.begin(); it != sub_servers.end(); it++) {
         ServerID sid = *it;
         Sirikata::Protocol::Prox::Container container;
@@ -270,10 +249,7 @@ void LibproxProximity::sendQueryRequests() {
         bool sent = mProxServerMessageService->route(smsg);
         if (!sent) {
             delete smsg;
-            {
-                boost::lock_guard<boost::mutex> lck(mServerSetMutex);
-                mNeedServerQueryUpdate.insert(sid);
-            }
+            addServerForAggregateQueryUpdate(sid);
         }
     }
 }
@@ -331,12 +307,18 @@ void LibproxProximity::receiveMessage(Message* msg) {
             for(int32 aidx = 0; aidx < update.addition_size(); aidx++) {
                 Sirikata::Protocol::Prox::ObjectAddition addition = update.addition(aidx);
                 mServerQueryResults[source_server]->insert(addition.object());
+
+                assert(addition.has_aggregate_bounds());
+                Vector3f center = addition.aggregate_bounds().has_center_offset() ? addition.aggregate_bounds().center_offset() : Vector3f(0,0,0);
+                float32 center_rad = addition.aggregate_bounds().has_center_bounds_radius() ? addition.aggregate_bounds().center_bounds_radius() : 0.f;
+                float32 max_object_size = addition.aggregate_bounds().has_max_object_size() ? addition.aggregate_bounds().max_object_size() : 0.f;
+
                 mLocService->addReplicaObject(
                     t,
                     addition.object(),
                     TimedMotionVector3f( addition.location().t(), MotionVector3f(addition.location().position(), addition.location().velocity()) ),
                     TimedMotionQuaternion( addition.orientation().t(), MotionQuaternion(addition.orientation().position(), addition.orientation().velocity()) ),
-                    addition.bounds(),
+                    AggregateBoundingInfo(center, center_rad, max_object_size),
                     (addition.has_mesh() ? addition.mesh() : ""),
                     (addition.has_physics() ? addition.physics() : ""),
                      ""  //no Zernike descriptor in Proximity message. is this ok to do? TAHIR.
@@ -389,24 +371,8 @@ void LibproxProximity::receiveMigrationData(const UUID& obj, ServerID source_ser
     addQuery(obj, obj_query_angle, obj_query_max_results);
 }
 
-// PintoServerQuerierListener Interface
 
-void LibproxProximity::addRelevantServer(ServerID sid) {
-    if (sid == mContext->id()) return;
-
-    // Potentially invoked from PintoServerQuerier IO thread
-    boost::lock_guard<boost::mutex> lck(mServerSetMutex);
-    mServersQueried.insert(sid);
-    mNeedServerQueryUpdate.insert(sid);
-}
-
-void LibproxProximity::removeRelevantServer(ServerID sid) {
-    if (sid == mContext->id()) return;
-
-    // Potentially invoked from PintoServerQuerier IO thread
-    boost::lock_guard<boost::mutex> lck(mServerSetMutex);
-    mServersQueried.erase(sid);
-}
+// AggregateListener Interface
 
 void LibproxProximity::aggregateCreated(ProxAggregator* handler, const UUID& objid) {
     // We ignore aggregates built of dynamic objects, they aren't useful for
@@ -415,19 +381,19 @@ void LibproxProximity::aggregateCreated(ProxAggregator* handler, const UUID& obj
     LibproxProximityBase::aggregateCreated(objid);
 }
 
-void LibproxProximity::aggregateChildAdded(ProxAggregator* handler, const UUID& objid, const UUID& child, const BoundingSphere3f& bnds) {
+void LibproxProximity::aggregateChildAdded(ProxAggregator* handler, const UUID& objid, const UUID& child, const Vector3f& bnds_center, const float32 bnds_center_radius, const float32 max_obj_size) {
     if (!static_cast<ProxQueryHandler*>(handler)->staticOnly()) return;
-    LibproxProximityBase::aggregateChildAdded(objid, child, bnds);
+    LibproxProximityBase::aggregateChildAdded(objid, child, bnds_center, AggregateBoundingInfo(Vector3f::zero(), bnds_center_radius, max_obj_size));
 }
 
-void LibproxProximity::aggregateChildRemoved(ProxAggregator* handler, const UUID& objid, const UUID& child, const BoundingSphere3f& bnds) {
+void LibproxProximity::aggregateChildRemoved(ProxAggregator* handler, const UUID& objid, const UUID& child, const Vector3f& bnds_center, const float32 bnds_center_radius, const float32 max_obj_size) {
     if (!static_cast<ProxQueryHandler*>(handler)->staticOnly()) return;
-    LibproxProximityBase::aggregateChildRemoved(objid, child, bnds);
+    LibproxProximityBase::aggregateChildRemoved(objid, child, bnds_center, AggregateBoundingInfo(Vector3f::zero(), bnds_center_radius, max_obj_size));
 }
 
-void LibproxProximity::aggregateBoundsUpdated(ProxAggregator* handler, const UUID& objid, const BoundingSphere3f& bnds) {
+void LibproxProximity::aggregateBoundsUpdated(ProxAggregator* handler, const UUID& objid, const Vector3f& bnds_center, const float32 bnds_center_radius, const float32 max_obj_size) {
     if (!static_cast<ProxQueryHandler*>(handler)->staticOnly()) return;
-    LibproxProximityBase::aggregateBoundsUpdated(objid, bnds);
+    LibproxProximityBase::aggregateBoundsUpdated(objid, bnds_center, AggregateBoundingInfo(Vector3f::zero(), bnds_center_radius, max_obj_size));
 }
 
 void LibproxProximity::aggregateDestroyed(ProxAggregator* handler, const UUID& objid) {
@@ -441,19 +407,6 @@ void LibproxProximity::aggregateObserved(ProxAggregator* handler, const UUID& ob
 }
 
 
-void LibproxProximity::onSpaceNetworkConnected(ServerID sid) {
-    mProxStrand->post(
-        std::tr1::bind(&LibproxProximity::handleConnectedServer, this, sid),
-        "LibproxProximity::handleConnectedServer"
-    );
-}
-
-void LibproxProximity::onSpaceNetworkDisconnected(ServerID sid) {
-    mProxStrand->post(
-        std::tr1::bind(&LibproxProximity::handleDisconnectedServer, this, sid),
-        "LibproxProximity::handleDisconnectedServer"
-    );
-}
 
 
 void LibproxProximity::updateQuery(ServerID sid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const SolidAngle& sa, uint32 max_results) {
@@ -471,14 +424,14 @@ void LibproxProximity::removeQuery(ServerID sid) {
 }
 
 void LibproxProximity::addQuery(UUID obj, SolidAngle sa, uint32 max_results) {
-    updateQuery(obj, mLocService->location(obj), mLocService->bounds(obj), sa, max_results);
+    updateQuery(obj, mLocService->location(obj), mLocService->bounds(obj).fullBounds(), sa, max_results);
 }
 
 void LibproxProximity::addQuery(UUID obj, const String& params) {
     SolidAngle sa;
     uint32 max_results;
     if (parseQueryRequest(params, &sa, &max_results))
-        updateQuery(obj, mLocService->location(obj), mLocService->bounds(obj), sa, max_results);
+        updateQuery(obj, mLocService->location(obj), mLocService->bounds(obj).fullBounds(), sa, max_results);
 }
 
 void LibproxProximity::updateQuery(UUID obj, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, SolidAngle sa, uint32 max_results) {
@@ -513,11 +466,8 @@ void LibproxProximity::updateQuery(UUID obj, const TimedMotionVector3f& loc, con
         }
     }
 
-    if (update_remote_queries) {
-        PROXLOG(debug,"Query addition initiated server query request.");
-        addAllServersForUpdate();
-        mServerQuerier->updateQuery(mMinObjectQueryAngle, mMaxMaxCount);
-    }
+    if (update_remote_queries)
+        updateAggregateQuery(mMinObjectQueryAngle, mMaxMaxCount);
 }
 
 void LibproxProximity::removeQuery(UUID obj) {
@@ -551,8 +501,7 @@ void LibproxProximity::removeQuery(UUID obj) {
         if (minangle != mMinObjectQueryAngle || maxcount != mMaxMaxCount) {
             mMinObjectQueryAngle = minangle;
             mMaxMaxCount = maxcount;
-            addAllServersForUpdate();
-            mServerQuerier->updateQuery(mMinObjectQueryAngle, mMaxMaxCount);
+            updateAggregateQuery(mMinObjectQueryAngle, mMaxMaxCount);
         }
     }
 }
@@ -562,7 +511,7 @@ void LibproxProximity::updateObjectSize(const UUID& obj, float rad) {
 
     if (rad > mMaxObject) {
         mMaxObject = rad;
-        mServerQuerier->updateLargestObject(mMaxObject);
+        updateAggregateStats(mMaxObject);
     }
 }
 
@@ -580,16 +529,10 @@ void LibproxProximity::removeObjectSize(const UUID& obj) {
             mMaxObject = std::max(mMaxObject, oit->second);
 
         if (mMaxObject != old_val)
-            mServerQuerier->updateLargestObject(mMaxObject);
+            updateAggregateStats(mMaxObject);
     }
 }
 
-void LibproxProximity::checkObjectClass(bool is_local, const UUID& objid, const TimedMotionVector3f& newval) {
-    mProxStrand->post(
-        std::tr1::bind(&LibproxProximity::handleCheckObjectClass, this, is_local, objid, newval),
-        "LibproxProximity::handleCheckObjectClass"
-    );
-}
 
 int32 LibproxProximity::objectQueries() const {
     return mObjectQueries[OBJECT_CLASS_STATIC].size();
@@ -645,8 +588,8 @@ void LibproxProximity::queryHasEvents(Query* query) {
 // Note: LocationServiceListener interface is only used in order to get updates on objects which have
 // registered queries, allowing us to update those queries as appropriate.  All updating of objects
 // in the prox data structure happens via the LocationServiceCache
-  void LibproxProximity::localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics, const String& zernike) {
-    updateObjectSize(uuid, bounds.radius());
+void LibproxProximity::localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics, const String& zernike) {
+    updateObjectSize(uuid, bounds.fullRadius());
 }
 void LibproxProximity::localObjectRemoved(const UUID& uuid, bool agg) {
     removeObjectSize(uuid);
@@ -657,13 +600,13 @@ void LibproxProximity::localObjectRemoved(const UUID& uuid, bool agg) {
     );
 }
 void LibproxProximity::localLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval) {
-    updateQuery(uuid, newval, mLocService->bounds(uuid), NoUpdateSolidAngle, NoUpdateMaxResults);
+    updateQuery(uuid, newval, mLocService->bounds(uuid).fullBounds(), NoUpdateSolidAngle, NoUpdateMaxResults);
     if (mSeparateDynamicObjects)
         checkObjectClass(true, uuid, newval);
 }
-void LibproxProximity::localBoundsUpdated(const UUID& uuid, bool agg, const BoundingSphere3f& newval) {
-    updateQuery(uuid, mLocService->location(uuid), newval, NoUpdateSolidAngle, NoUpdateMaxResults);
-    updateObjectSize(uuid, newval.radius());
+void LibproxProximity::localBoundsUpdated(const UUID& uuid, bool agg, const AggregateBoundingInfo& newval) {
+    updateQuery(uuid, mLocService->location(uuid), newval.fullBounds(), NoUpdateSolidAngle, NoUpdateMaxResults);
+    updateObjectSize(uuid, newval.fullRadius());
 }
 void LibproxProximity::replicaObjectRemoved(const UUID& uuid) {
     mProxStrand->post(
@@ -674,12 +617,6 @@ void LibproxProximity::replicaObjectRemoved(const UUID& uuid) {
 void LibproxProximity::replicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) {
     if (mSeparateDynamicObjects)
         checkObjectClass(false, uuid, newval);
-}
-
-void LibproxProximity::updatedSegmentation(CoordinateSegmentation* cseg, const std::vector<SegmentationInfo>& new_seg) {
-    BoundingBoxList bboxes = mCSeg->serverRegion(mContext->id());
-    BoundingBox3f bbox = aggregateBBoxes(bboxes);
-    mServerQuerier->updateRegion(bbox);
 }
 
 
@@ -784,7 +721,7 @@ void LibproxProximity::commandProperties(const Command::Command& cmd, Command::C
 
 
     // Properties of servers
-    result.put("servers.num_queried", mServersQueried.size());
+    result.put("servers.num_queried", numServersQueried());
 
     // Properties of queries from servers
     result.put("queries.servers.count", mServerQueries[0].size());
@@ -883,6 +820,7 @@ void LibproxProximity::commandListNodes(const Command::Command& cmd, Command::Co
         nodes_ary.back().put("bounds.center.y", bounds.center().y);
         nodes_ary.back().put("bounds.center.z", bounds.center().z);
         nodes_ary.back().put("bounds.radius", bounds.radius());
+        nodes_ary.back().put("cuts", nit.cuts());
     }
 
     cmdr->result(cmdid, result);
@@ -938,7 +876,12 @@ void LibproxProximity::generateServerQueryEvents(Query* query) {
                     msg_orient.set_position(orient.position());
                     msg_orient.set_velocity(orient.velocity());
 
-                    addition.set_bounds( mLocCache->bounds(objid) );
+                    Sirikata::Protocol::IAggregateBoundingInfo msg_bounds = addition.mutable_aggregate_bounds();
+                    AggregateBoundingInfo bnds = mLocCache->bounds(objid);
+                    msg_bounds.set_center_offset(bnds.centerOffset);
+                    msg_bounds.set_center_bounds_radius(bnds.centerBoundsRadius);
+                    msg_bounds.set_max_object_size(bnds.maxObjectRadius);
+
                     const String& mesh = mLocCache->mesh(objid);
                     if (mesh.size() > 0)
                         addition.set_mesh(mesh);
@@ -1050,7 +993,12 @@ void LibproxProximity::generateObjectQueryEvents(Query* query, bool do_first) {
                     msg_orient.set_position(orient.position());
                     msg_orient.set_velocity(orient.velocity());
 
-                    addition.set_bounds( mLocCache->bounds(objid) );
+                    Sirikata::Protocol::IAggregateBoundingInfo msg_bounds = addition.mutable_aggregate_bounds();
+                    AggregateBoundingInfo bnds = mLocCache->bounds(objid);
+                    msg_bounds.set_center_offset(bnds.centerOffset);
+                    msg_bounds.set_center_bounds_radius(bnds.centerBoundsRadius);
+                    msg_bounds.set_max_object_size(bnds.maxObjectRadius);
+
                     const String& mesh = mLocCache->mesh(objid);
                     if (mesh.size() > 0)
                         addition.set_mesh(mesh);
@@ -1186,24 +1134,8 @@ void LibproxProximity::handleRemoveServerQuery(const ServerID& server) {
     );
 }
 
-void LibproxProximity::handleConnectedServer(ServerID sid) {
-    // Sometimes we may get forcefully disconnected from a server. To
-    // reestablish our previous setup, if that server appears in our queried
-    // set (we were told it was relevant to us by some higher level pinto
-    // service), we mark it as needing another update. In the case that we
-    // are just getting an initial connection, this shouldn't change anything
-    // since it would already be markedas needing an update if we had been told
-    // by pinto that it needed it.
-    boost::lock_guard<boost::mutex> lck(mServerSetMutex);
-    if (mServersQueried.find(sid) != mServersQueried.end())
-        mNeedServerQueryUpdate.insert(sid);
-}
 
-void LibproxProximity::handleDisconnectedServer(ServerID sid) {
-    // When we lose a connection, we need to clear out everything related to
-    // that server.
-    PROXLOG(debug, "Handling unexpected disconnection from " << sid << " by clearing out proximity state.");
-
+void LibproxProximity::handleForcedDisconnection(ServerID sid) {
     // Clear out remote server's query to us
     handleRemoveServerQuery(sid);
 
@@ -1222,10 +1154,25 @@ void LibproxProximity::handleUpdateObjectQuery(const UUID& object, const TimedMo
     BoundingSphere3f region(bounds.center(), 0);
     float ms = bounds.radius();
 
-    PROXLOG(detailed,"Update object query from " << object.toString() << ", min angle " << angle.asFloat() << ", max results " << max_results);
+    // In some cases (new queries) we only want to do any work here,
+    // including reporting the update, if the user explicitly made a
+    // change to query parameters since this will get called for all
+    // objects triggering movement.
+    bool explicit_query_params_update = ((angle != NoUpdateSolidAngle) || (max_results != NoUpdateMaxResults));
 
-    if (mObjectSeqNos.find(object) == mObjectSeqNos.end())
+    if (mObjectSeqNos.find(object) == mObjectSeqNos.end()) {
+        // If there's no existing query, so this was just because of a
+        // location update -- don't record a query since it wouldn't
+        // do anything anyway.
+        if (!explicit_query_params_update) return;
+
         mObjectSeqNos.insert( ObjectSeqNoInfoMap::value_type(object, seqno) );
+    }
+
+    // Log, but only if this isn't just due to object movement
+    if (explicit_query_params_update)
+        PROXLOG(detailed,"Update object query from " << object.toString() << ", min angle " << angle.asFloat() << ", max results " << max_results);
+
 
     for(int i = 0; i < NUM_OBJECT_CLASSES; i++) {
         if (mObjectQueryHandler[i].handler == NULL) continue;
@@ -1295,7 +1242,7 @@ void LibproxProximity::handleDisconnectedObject(const UUID& object) {
     handleRemoveObjectQuery(object, false);
 }
 
-bool LibproxProximity::handlerShouldHandleObject(bool is_static_handler, bool is_global_handler, const UUID& obj_id, bool is_local, const TimedMotionVector3f& pos, const BoundingSphere3f& region, float maxSize) {
+bool LibproxProximity::handlerShouldHandleObject(bool is_static_handler, bool is_global_handler, const UUID& obj_id, bool is_local, bool is_aggregate, const TimedMotionVector3f& pos, const BoundingSphere3f& region, float maxSize) {
     // We just need to decide whether the query handler should handle
     // the object. We need to consider local vs. replica and static
     // vs. dynamic.  All must 'vote' for handling the object for us to
@@ -1343,46 +1290,6 @@ void LibproxProximity::trySwapHandlers(bool is_local, const UUID& objid, bool is
     handleCheckObjectClassForHandlers(objid, is_static, mObjectQueryHandler);
     if (is_local)
         handleCheckObjectClassForHandlers(objid, is_static, mServerQueryHandler);
-}
-
-void LibproxProximity::removeStaticObjectTimeout(const UUID& objid) {
-    StaticObjectsByID& by_id = mStaticObjectTimeouts.get<objid_tag>();
-    StaticObjectsByID::iterator it = by_id.find(objid);
-    if (it == by_id.end()) return;
-    by_id.erase(it);
-}
-
-void LibproxProximity::processExpiredStaticObjectTimeouts() {
-    Time curt = mLocService->context()->recentSimTime();
-    StaticObjectsByExpiration& by_expires = mStaticObjectTimeouts.get<expires_tag>();
-    while(!by_expires.empty() &&
-        by_expires.begin()->expires < curt) {
-        trySwapHandlers(by_expires.begin()->local, by_expires.begin()->objid, true);
-        by_expires.erase(by_expires.begin());
-    }
-}
-
-void LibproxProximity::handleCheckObjectClass(bool is_local, const UUID& objid, const TimedMotionVector3f& newval) {
-    assert(mSeparateDynamicObjects == true);
-
-    // Basic approach: we need to check if the object has switched between
-    // static/dynamic. We need to do this for both the local (object query) and
-    // global (server query) handlers.
-    bool is_static = velocityIsStatic(newval.velocity());
-    // If it's moving, do the check immediately since we need to move it into
-    // the dynamic tree right away; also make sure it's not in the queue for
-    // being moved to the static tree. Otherwise queue it up to be processed
-    // after a delay
-    if (!is_static) {
-        trySwapHandlers(is_local, objid, is_static);
-        removeStaticObjectTimeout(objid);
-    }
-    else {
-        // Make sure previous entry is cleared out
-        removeStaticObjectTimeout(objid);
-        // And insert a new one
-        mStaticObjectTimeouts.insert(StaticObjectTimeout(objid, mContext->recentSimTime() + mMoveToStaticDelay, is_local));
-    }
 }
 
 } // namespace Sirikata

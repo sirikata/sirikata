@@ -77,7 +77,7 @@ void ProxyManager::destroy() {
 
 ProxyObjectPtr ProxyManager::createObject(
     const SpaceObjectReference& id,
-    const TimedMotionVector3f& tmv, const TimedMotionQuaternion& tmq, const BoundingSphere3f& bs,
+    const TimedMotionVector3f& tmv, const TimedMotionQuaternion& tmq, const AggregateBoundingInfo& bs,
     const Transfer::URI& meshuri, const String& phy, bool isAggregate, uint64 seqNo
 )
 {

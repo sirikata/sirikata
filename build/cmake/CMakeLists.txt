@@ -1156,6 +1156,7 @@ SET(SirikataProtocolRoot ${TOP_LEVEL}/externals/sirikata-protocol)
 SET(ProtocolBuffersSourcesCore
   ${SirikataProtocolRoot}/TimedMotionVector
   ${SirikataProtocolRoot}/TimedMotionQuaternion
+  ${SirikataProtocolRoot}/AggregateBoundingInfo
 )
 SET(ProtocolBuffersSourcesPublic
   # Core protocol messages
@@ -1389,13 +1390,13 @@ SET(SIRIKATA_CORE_SOURCES
 	${LIBCORE_SOURCE_DIR}/queue/ThreadSafeQueue.cpp
         ${LIBCORE_SOURCE_DIR}/util/Platform.cpp
 	${LIBCORE_SOURCE_DIR}/util/UUID.cpp
-	${LIBCORE_SOURCE_DIR}/util/BoundingInfo.cpp
         ${LIBCORE_SOURCE_DIR}/util/Hash.cpp
         ${LIBCORE_SOURCE_DIR}/util/Timer.cpp
         ${LIBCORE_SOURCE_DIR}/util/RegionWeightCalculator.cpp
         ${LIBCORE_SOURCE_DIR}/util/Liveness.cpp
         ${LIBCORE_SOURCE_DIR}/util/Paths.cpp
         ${LIBCORE_SOURCE_DIR}/util/Md5.cpp
+        ${LIBCORE_SOURCE_DIR}/util/UniqueID.cpp
         ${LIBCORE_SOURCE_DIR}/trace/BatchedBuffer.cpp
         ${LIBCORE_SOURCE_DIR}/trace/Trace.cpp
         ${LIBCORE_SOURCE_DIR}/trace/TimeSeries.cpp
@@ -1451,7 +1452,6 @@ ELSE()
  ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/Standard.hh
  ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/TotallyOrdered.hpp
  ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/Transform.hpp
- ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/BoundingInfo.hpp
  ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/UUID.hpp
  ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/Vector3.hpp
  ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/Vector4.hpp
@@ -1542,7 +1542,6 @@ SET(LIBPROXYOBJECT_SOURCES
                   ${LIBPROXYOBJECT_SOURCE_DIR}/ProxyObject.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/ProxyManager.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/VWObject.cpp
-                  ${LIBPROXYOBJECT_SOURCE_DIR}/OrphanLocUpdateManager.cpp
     )
 SET(LIBOH_SOURCES
                   ${LIBOH_SOURCE_DIR}/SpaceNodeConnection.cpp
@@ -1557,8 +1556,9 @@ SET(LIBOH_SOURCES
                   ${LIBOH_SOURCE_DIR}/Storage.cpp
                   ${LIBOH_SOURCE_DIR}/PersistedObjectSet.cpp
                   ${LIBOH_SOURCE_DIR}/ObjectQueryProcessor.cpp
-                  ${LIBOH_SOURCE_DIR}/LocUpdate.cpp
+                  ${LIBOH_SOURCE_DIR}/ProtocolLocUpdate.cpp
                   ${LIBOH_SOURCE_DIR}/SimulationFactory.cpp
+                  ${LIBOH_SOURCE_DIR}/OrphanLocUpdateManager.cpp
                    )
 
 SET(LIBMESH_PLUGIN_COLLADAMODELS_DIR ${LIBMESH_PLUGIN_DIR}/collada)
@@ -2462,6 +2462,9 @@ SET(LIBOH_PLUGIN_MANUAL_QUERY_DIR ${LIBOH_PLUGIN_DIR}/manual_query)
 SET(LIBOH_PLUGIN_MANUAL_QUERY_SOURCES
   ${LIBOH_PLUGIN_MANUAL_QUERY_DIR}/ProxSimulationTraits.cpp
  ${LIBOH_PLUGIN_MANUAL_QUERY_DIR}/OHLocationServiceCache.cpp
+ ${LIBOH_PLUGIN_MANUAL_QUERY_DIR}/ServerQueryHandler.cpp
+ ${LIBOH_PLUGIN_MANUAL_QUERY_DIR}/ObjectQueryHandlerBase.cpp
+ ${LIBOH_PLUGIN_MANUAL_QUERY_DIR}/ObjectQueryHandler.cpp
  ${LIBOH_PLUGIN_MANUAL_QUERY_DIR}/ManualObjectQueryProcessor.cpp
  ${LIBOH_PLUGIN_MANUAL_QUERY_DIR}/PluginInterface.cpp
     )

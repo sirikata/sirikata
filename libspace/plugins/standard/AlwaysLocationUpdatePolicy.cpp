@@ -103,40 +103,77 @@ void AlwaysLocationUpdatePolicy::reportStats() {
     mObjectUpdatesPerSecond = 0;
 }
 
+
+// Server subscriptions
+
 void AlwaysLocationUpdatePolicy::subscribe(ServerID remote, const UUID& uuid, SeqNoPtr seqnoPtr)
 {
     if (validSubscriber(remote))
         mServerSubscriptions.subscribe(remote, uuid, seqnoPtr);
 }
 
+void AlwaysLocationUpdatePolicy::subscribe(ServerID remote, const UUID& uuid, ProxIndexID index_id, SeqNoPtr seqnoPtr)
+{
+    if (validSubscriber(remote))
+        mServerSubscriptions.subscribe(remote, uuid, index_id, seqnoPtr);
+}
+
 void AlwaysLocationUpdatePolicy::unsubscribe(ServerID remote, const UUID& uuid) {
     mServerSubscriptions.unsubscribe(remote, uuid);
+}
+
+void AlwaysLocationUpdatePolicy::unsubscribe(ServerID remote, const UUID& uuid, ProxIndexID index_id) {
+    mServerSubscriptions.unsubscribe(remote, uuid, index_id);
 }
 
 void AlwaysLocationUpdatePolicy::unsubscribe(ServerID remote) {
     mServerSubscriptions.unsubscribe(remote);
 }
 
+
+// OH subscriptions
+
 void AlwaysLocationUpdatePolicy::subscribe(const OHDP::NodeID& remote, const UUID& uuid) {
     if (validSubscriber(remote))
         mOHSubscriptions.subscribe(remote, uuid, mLocService->context()->ohSessionManager()->getSession(remote)->seqNoPtr());
+}
+
+void AlwaysLocationUpdatePolicy::subscribe(const OHDP::NodeID& remote, const UUID& uuid, ProxIndexID index_id) {
+    if (validSubscriber(remote))
+        mOHSubscriptions.subscribe(remote, uuid, index_id, mLocService->context()->ohSessionManager()->getSession(remote)->seqNoPtr());
 }
 
 void AlwaysLocationUpdatePolicy::unsubscribe(const OHDP::NodeID& remote, const UUID& uuid) {
     mOHSubscriptions.unsubscribe(remote, uuid);
 }
 
+void AlwaysLocationUpdatePolicy::unsubscribe(const OHDP::NodeID& remote, const UUID& uuid, ProxIndexID index_id) {
+    mOHSubscriptions.unsubscribe(remote, uuid, index_id);
+}
+
 void AlwaysLocationUpdatePolicy::unsubscribe(const OHDP::NodeID& remote) {
     mOHSubscriptions.unsubscribe(remote);
 }
+
+
+// Object subscriptions
 
 void AlwaysLocationUpdatePolicy::subscribe(const UUID& remote, const UUID& uuid) {
     if (validSubscriber(remote))
         mObjectSubscriptions.subscribe(remote, uuid, mLocService->context()->objectSessionManager()->getSession(ObjectReference(remote))->getSeqNoPtr());
 }
 
+void AlwaysLocationUpdatePolicy::subscribe(const UUID& remote, const UUID& uuid, ProxIndexID index_id) {
+    if (validSubscriber(remote))
+        mObjectSubscriptions.subscribe(remote, uuid, index_id, mLocService->context()->objectSessionManager()->getSession(ObjectReference(remote))->getSeqNoPtr());
+}
+
 void AlwaysLocationUpdatePolicy::unsubscribe(const UUID& remote, const UUID& uuid) {
     mObjectSubscriptions.unsubscribe(remote, uuid);
+}
+
+void AlwaysLocationUpdatePolicy::unsubscribe(const UUID& remote, const UUID& uuid, ProxIndexID index_id) {
+    mObjectSubscriptions.unsubscribe(remote, uuid, index_id);
 }
 
 void AlwaysLocationUpdatePolicy::unsubscribe(const UUID& remote) {
@@ -144,7 +181,9 @@ void AlwaysLocationUpdatePolicy::unsubscribe(const UUID& remote) {
 }
 
 
-void AlwaysLocationUpdatePolicy::localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics) {
+
+
+void AlwaysLocationUpdatePolicy::localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics) {
     // Ignore, initial additions will be handled by a prox update
 }
 
@@ -164,7 +203,7 @@ void AlwaysLocationUpdatePolicy::localOrientationUpdated(const UUID& uuid, bool 
     mObjectSubscriptions.orientationUpdated(uuid, newval, mLocService);
 }
 
-void AlwaysLocationUpdatePolicy::localBoundsUpdated(const UUID& uuid, bool agg, const BoundingSphere3f& newval) {
+void AlwaysLocationUpdatePolicy::localBoundsUpdated(const UUID& uuid, bool agg, const AggregateBoundingInfo& newval) {
     mServerSubscriptions.boundsUpdated(uuid, newval, mLocService);
     mOHSubscriptions.boundsUpdated(uuid, newval, mLocService);
     mObjectSubscriptions.boundsUpdated(uuid, newval, mLocService);
@@ -183,7 +222,7 @@ void AlwaysLocationUpdatePolicy::localPhysicsUpdated(const UUID& uuid, bool agg,
 }
 
 
-void AlwaysLocationUpdatePolicy::replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics) {
+void AlwaysLocationUpdatePolicy::replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics) {
     // Ignore, initial additions will be handled by a prox update
 }
 
@@ -199,7 +238,7 @@ void AlwaysLocationUpdatePolicy::replicaOrientationUpdated(const UUID& uuid, con
     mObjectSubscriptions.orientationUpdated(uuid, newval, mLocService);
 }
 
-void AlwaysLocationUpdatePolicy::replicaBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) {
+void AlwaysLocationUpdatePolicy::replicaBoundsUpdated(const UUID& uuid, const AggregateBoundingInfo& newval) {
     mObjectSubscriptions.boundsUpdated(uuid, newval, mLocService);
 }
 

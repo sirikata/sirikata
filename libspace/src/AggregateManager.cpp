@@ -64,7 +64,7 @@ namespace Sirikata {
 using namespace Mesh;
 
 AggregateManager::AggregateManager(LocationService* loc, Transfer::OAuthParamsPtr oauth, const String& username)
-  : 
+  :
     mLoc(loc),
     mOAuth(oauth),
     mCDNUsername(username),
@@ -352,7 +352,7 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
   if (postTime < mAggregateGenerationStartTime) {
     return OTHER_GEN_FAILURE;
   }
- 
+
   std::tr1::unordered_map<UUID, std::tr1::shared_ptr<LocationInfo> , UUID::Hasher> currentLocMap;
 
   std::tr1::shared_ptr<LocationInfo> locInfoForUUID = getCachedLocInfo(uuid);
@@ -429,7 +429,8 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
   aggObject->mLastGenerateTime = curTime;
   MeshdataPtr agg_mesh =  MeshdataPtr( new Meshdata() );
   agg_mesh->globalTransform = Matrix4x4f::identity();
-  BoundingSphere3f bnds = locInfoForUUID->bounds;
+
+  BoundingSphere3f bnds = locInfoForUUID->bounds.fullBounds();
   float64 bndsX = bnds.center().x;
   float64 bndsY = bnds.center().y;
   float64 bndsZ = bnds.center().z;
@@ -462,7 +463,7 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
         }
     }
   }
-  
+
 
   // And finally, when we do, perform the merge
 
@@ -478,7 +479,7 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
       continue;
     }
     MeshdataPtr m = mAggregateObjects[child_uuid]->mMeshdata;
-    std::string meshName = currentLocMap[child_uuid]->mesh;    
+    std::string meshName = currentLocMap[child_uuid]->mesh;
     lock.unlock();
 
     if (!m || meshName == "") continue;
@@ -579,7 +580,7 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
       scalingfactor = 1.0;
     }
     else {
-      scalingfactor = (currentLocMap[child_uuid]->bounds).radius() / originalMeshBoundsRadius;
+      scalingfactor = currentLocMap[child_uuid]->bounds.fullRadius() / originalMeshBoundsRadius;
     }
 
     float64 locationX = location.x;
@@ -705,21 +706,21 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
   mMeshSimplifier.simplify(agg_mesh, 20000);
 
   //Set the mesh of this aggregate to the empty string until the new version gets uploaded. This is so that
-  //higher level aggregates are not generated from the now out-of-date version of the mesh. 
+  //higher level aggregates are not generated from the now out-of-date version of the mesh.
   mLoc->context()->mainStrand->post(
         std::tr1::bind(
             &AggregateManager::updateAggregateLocMesh, this,
             uuid, ""
         ),
         "AggregateManager::updateAggregateLocMesh"
-  );  
+  );
 
   //... and now create the collada file, upload to the CDN and update LOC.
   mUploadStrands[rand() % NUM_UPLOAD_THREADS]->post(
           std::tr1::bind(&AggregateManager::uploadAggregateMesh, this, agg_mesh, aggObject, textureSet, 0),
           "AggregateManager::uploadAggregateMesh"
       );
-  
+
 
   String localMeshName = boost::lexical_cast<String>(aggObject->mTreeLevel) +
                          "_aggregate_mesh_" +
@@ -880,7 +881,7 @@ void AggregateManager::uploadAggregateMesh(Mesh::MeshdataPtr agg_mesh,
             uuid, cdnMeshName
         ),
         "AggregateManager::updateAggregateLocMesh"
-      );  
+      );
 
       AGG_LOG(info, "Uploaded successfully: " << localMeshName << "\n");
 
@@ -898,25 +899,25 @@ void AggregateManager::handleUploadFinished(Transfer::UploadRequestPtr request, 
     String localMeshName = boost::lexical_cast<String>(aggObject->mTreeLevel) +
                          "_aggregate_mesh_" +
                          uuid.toString() + ".dae";
- 
+
     if (generated_uri.empty()) {
       //There was a problem during the upload. Try again!
       AGG_LOG(error, "Failed to upload aggregate mesh " << localMeshName << ", composed of these children meshes:");
-      
+
       boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
       std::vector<AggregateObjectPtr>& children = aggObject->mChildren;
       for (uint32 i= 0; i < children.size(); i++) {
         UUID child_uuid = children[i]->mUUID;
         if ( mAggregateObjects.find(child_uuid) == mAggregateObjects.end() )
           continue;
-        
-        std::tr1::shared_ptr<LocationInfo> locInfo = getCachedLocInfo(child_uuid); 
-        
-        String meshName = (locInfo) ? locInfo->mesh : 
+
+        std::tr1::shared_ptr<LocationInfo> locInfo = getCachedLocInfo(child_uuid);
+
+        String meshName = (locInfo) ? locInfo->mesh :
                                       "LOC does not have meshname for " + child_uuid.toString();
         AGG_LOG(error, "   " << meshName);
       }
-      
+
       AGG_LOG(error, "Failure was retry attempt # " << retryAttempt);
       //Retry uploading up to 5 times.
       if (retryAttempt < 5) {
@@ -940,10 +941,10 @@ void AggregateManager::handleUploadFinished(Transfer::UploadRequestPtr request, 
                   "AggregateManager::uploadAggregateMesh"
                 );
       }
-      
+
       return;
     }
-    
+
     // The current CDN URL layout is kind of a pain. We'll get back something
     // like:
     // meerkat://localhost/echeslack/apiupload/multimtl.dae/13
@@ -964,8 +965,8 @@ void AggregateManager::handleUploadFinished(Transfer::UploadRequestPtr request, 
     cdnMeshName = cdnMeshName.substr(0, upload_num_pos);
     cdnMeshName = cdnMeshName + "/original/" + mesh_num_part + "/" + localMeshName;
     agg_mesh->uri = cdnMeshName;
-    
-    //Update loc     
+
+    //Update loc
     mLoc->context()->mainStrand->post(
         std::tr1::bind(
             &AggregateManager::updateAggregateLocMesh, this,
@@ -974,12 +975,12 @@ void AggregateManager::handleUploadFinished(Transfer::UploadRequestPtr request, 
         "AggregateManager::updateAggregateLocMesh"
     );
 
-    
+
     AGG_LOG(info, "Uploaded successfully: " << localMeshName);
     AGG_LOG(insane,  "CDN mesh name is " << cdnMeshName);
-    
+
     addToInMemoryCache(cdnMeshName, agg_mesh);
-    
+
     aggObject->mLeaves.clear();
 }
 
@@ -1011,7 +1012,7 @@ void AggregateManager::metadataFinished(Time t, const UUID uuid, const UUID chil
 
   }
   else {
-    // Metadata for the file was not found, or the file was not found. 
+    // Metadata for the file was not found, or the file was not found.
     // Use an empty Meshdata in that case.
     MeshdataPtr m = std::tr1::shared_ptr<Meshdata>(new Meshdata);
     m->uri = meshName;
@@ -1077,7 +1078,7 @@ void AggregateManager::addToInMemoryCache(const String& meshName, const Meshdata
 
     if (listOfMeshes.size() > 10000 ) {
       String randomMeshName = listOfMeshes[rand() % listOfMeshes.size()];
-      
+
       MeshdataPtr m = mMeshStore[randomMeshName];
       if (m) {
 	mMeshStore.erase(randomMeshName);
@@ -1085,7 +1086,7 @@ void AggregateManager::addToInMemoryCache(const String& meshName, const Meshdata
     }
 
   }
-  
+
   mMeshStore[meshName] = mdptr;
 
 }
@@ -1118,16 +1119,16 @@ void AggregateManager::addLeavesUpTree(UUID leaf_uuid, UUID uuid) {
   if (!obj) return;
   std::tr1::shared_ptr<LocationInfo> locInfo = getCachedLocInfo(uuid);
   if (!locInfo) return;
-  
-  if (mDirtyAggregateObjects.find(uuid) != mDirtyAggregateObjects.end()) {  
-    float radius = locInfo->bounds.radius();
+
+  if (mDirtyAggregateObjects.find(uuid) != mDirtyAggregateObjects.end()) {
+    float radius = locInfo->bounds.fullRadius();
     float solid_angle = TWO_PI * (1-sqrt(1- pow(radius/obj->mDistance,2)));
-    
+
     if (solid_angle > ONE_PIXEL_SOLID_ANGLE) {
       obj->mLeaves.push_back(leaf_uuid);
     }
   }
-  
+
   for (std::set<UUID>::iterator it = obj->mParentUUIDs.begin(); it != obj->mParentUUIDs.end(); it++) {
     addLeavesUpTree(leaf_uuid, *it);
   }
@@ -1169,9 +1170,9 @@ void AggregateManager::queueDirtyAggregates(Time postTime) {
             std::tr1::shared_ptr<LocationInfo> locInfo = getCachedLocInfo(child_uuid);
             if (!locInfo) continue;
 
-            BoundingSphere3f bnds = locInfo->bounds;
-            if (bnds.radius() < radius) {
-              radius = bnds.radius();
+            float32 bnds_rad = locInfo->bounds.fullRadius();
+            if (bnds_rad < radius) {
+              radius = bnds_rad;
             }
           }
 
@@ -1281,18 +1282,18 @@ void AggregateManager::updateChildrenTreeLevel(const UUID& uuid, uint16 treeLeve
 //Recursively add uuid and all nodes upto the root to the dirty aggregates map.
 void AggregateManager::addDirtyAggregates(UUID uuid) {
   //mAggregateObjectsMutex MUST be locked BEFORE calling this function.
-  if (uuid != UUID::null() && mAggregateObjects.find(uuid) != mAggregateObjects.end() ) {    
+  if (uuid != UUID::null() && mAggregateObjects.find(uuid) != mAggregateObjects.end() ) {
     std::tr1::shared_ptr<AggregateObject> aggObj = mAggregateObjects[uuid];
 
     if (aggObj && aggObj->mChildren.size() > 0) {
       mDirtyAggregateObjects[uuid] = aggObj;
-      aggObj->generatedLastRound = false;    
+      aggObj->generatedLastRound = false;
 
       for (std::set<UUID>::iterator it = aggObj->mParentUUIDs.begin(); it != aggObj->mParentUUIDs.end(); it++) {
         addDirtyAggregates(*it);
       }
     }
-  }  
+  }
 }
 
 bool AggregateManager::findChild(std::vector<AggregateManager::AggregateObjectPtr>& v,
@@ -1361,10 +1362,10 @@ void AggregateManager::updateAggregateLocMesh(UUID uuid, String mesh) {
   }
 }
 
-void AggregateManager::localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, 
+void AggregateManager::localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc,
                                                 const TimedMotionQuaternion& orient,
-                                                const BoundingSphere3f& bounds, const String& mesh, const String& physics, 
-                                                const String& zernike) 
+                                                const AggregateBoundingInfo& bounds, const String& mesh, const String& physics,
+                                                const String& zernike)
 {
   boost::mutex::scoped_lock lock(mLocCacheMutex);
   mLocationServiceCache.insertLocationInfo(uuid, std::tr1::shared_ptr<LocationInfo>(
@@ -1391,10 +1392,10 @@ void AggregateManager::localOrientationUpdated(const UUID& uuid, bool agg, const
   std::tr1::shared_ptr<LocationInfo> locinfo = mLocationServiceCache.getLocationInfo(uuid);
   if (!locinfo) return;
 
-  locinfo->currentOrientation = newval.position();    
+  locinfo->currentOrientation = newval.position();
 }
 
-void AggregateManager::localBoundsUpdated(const UUID& uuid, bool agg, const BoundingSphere3f& newval) {
+void AggregateManager::localBoundsUpdated(const UUID& uuid, bool agg, const AggregateBoundingInfo& newval) {
   boost::mutex::scoped_lock lock(mLocCacheMutex);
 
   std::tr1::shared_ptr<LocationInfo> locinfo = mLocationServiceCache.getLocationInfo(uuid);
@@ -1408,13 +1409,13 @@ void AggregateManager::localMeshUpdated(const UUID& uuid, bool agg, const String
 
   std::tr1::shared_ptr<LocationInfo> locinfo = mLocationServiceCache.getLocationInfo(uuid);
   if (!locinfo) return;
-    
+
   locinfo->mesh = newval;
 }
 
 std::tr1::shared_ptr<AggregateManager::LocationInfo> AggregateManager::getCachedLocInfo(const UUID& uuid) {
   boost::mutex::scoped_lock lock(mLocCacheMutex);
-    
+
   std::tr1::shared_ptr<LocationInfo> locinfo = mLocationServiceCache.getLocationInfo(uuid);
 
   return locinfo;

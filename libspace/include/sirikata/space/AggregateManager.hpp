@@ -60,15 +60,15 @@ private:
   Thread* mAggregationThreads[NUM_GENERATION_THREADS];
   Network::IOService* mAggregationServices[NUM_GENERATION_THREADS];
   Network::IOStrand* mAggregationStrands[NUM_GENERATION_THREADS];
-  Network::IOWork* mIOWorks[NUM_GENERATION_THREADS];  
-  
+  Network::IOWork* mIOWorks[NUM_GENERATION_THREADS];
+
   typedef struct LocationInfo {
     Vector3f currentPosition;
-    BoundingSphere3f bounds;
+    AggregateBoundingInfo bounds;
     Quaternion currentOrientation;
     String mesh;
 
-    LocationInfo(Vector3f curPos, BoundingSphere3f bnds,
+    LocationInfo(Vector3f curPos, AggregateBoundingInfo bnds,
                  Quaternion curOrient, String msh) :
       currentPosition(curPos), bounds(bnds),
       currentOrientation(curOrient), mesh(msh)
@@ -81,8 +81,8 @@ private:
   class LocationServiceCache {
     public:
       LocationServiceCache() { }
-      
-      std::tr1::shared_ptr<LocationInfo> getLocationInfo(const UUID& uuid) {        
+
+      std::tr1::shared_ptr<LocationInfo> getLocationInfo(const UUID& uuid) {
         if (mLocMap.find(uuid) == mLocMap.end()){
           return std::tr1::shared_ptr<LocationInfo>();
         }
@@ -93,30 +93,30 @@ private:
       void insertLocationInfo(const UUID& uuid, std::tr1::shared_ptr<LocationInfo> locinfo) {
         mLocMap[uuid] = locinfo;
       }
-    
+
       void removeLocationInfo(const UUID& uuid) {
         mLocMap.erase(uuid);
       }
-    
+
     private:
       std::tr1::unordered_map<UUID, std::tr1::shared_ptr<LocationInfo> , UUID::Hasher> mLocMap;
   };
 
   LocationServiceCache mLocationServiceCache;
   boost::mutex mLocCacheMutex;
-  LocationService* mLoc; 
+  LocationService* mLoc;
 
   //Part of the LocationServiceListener interface.
   virtual void localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient,
-                              const BoundingSphere3f& bounds, const String& mesh, const String& physics, 
-                                const String& zernike);  
+                              const AggregateBoundingInfo& bounds, const String& mesh, const String& physics,
+                                const String& zernike);
   virtual void localObjectRemoved(const UUID& uuid, bool agg) ;
-  virtual void localLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval); 
+  virtual void localLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval);
   virtual void localOrientationUpdated(const UUID& uuid, bool agg, const TimedMotionQuaternion& newval);
-  virtual void localBoundsUpdated(const UUID& uuid, bool agg, const BoundingSphere3f& newval) ;
+  virtual void localBoundsUpdated(const UUID& uuid, bool agg, const AggregateBoundingInfo& newval) ;
   virtual void localMeshUpdated(const UUID& uuid, bool agg, const String& newval) ;
 
-  
+
 
   boost::mutex mModelsSystemMutex;
   ModelsSystem* mModelsSystem;
@@ -171,7 +171,7 @@ private:
   boost::mutex mAggregateObjectsMutex;
   typedef std::tr1::unordered_map<UUID, AggregateObjectPtr, UUID::Hasher > AggregateObjectsMap;
   AggregateObjectsMap mAggregateObjects;
-  Time mAggregateGenerationStartTime;    
+  Time mAggregateGenerationStartTime;
   std::tr1::unordered_map<UUID, AggregateObjectPtr, UUID::Hasher> mDirtyAggregateObjects;
   std::map<float, std::deque<AggregateObjectPtr > > mObjectsByPriority[NUM_GENERATION_THREADS];
 
@@ -195,9 +195,9 @@ private:
   Network::IOStrand* mUploadStrands[NUM_UPLOAD_THREADS];
   Network::IOWork* mUploadWorks[NUM_UPLOAD_THREADS];
   void uploadThreadMain(uint8 i);
-  
 
-  //Various utility functions 
+
+  //Various utility functions
   bool findChild(std::vector<AggregateObjectPtr>& v, const UUID& uuid) ;
   void removeChild(std::vector<AggregateObjectPtr>& v, const UUID& uuid) ;
   void iRemoveChild(const UUID& uuid, const UUID& child_uuid);
@@ -206,7 +206,7 @@ private:
   void getLeaves(const std::vector<UUID>& mIndividualObjects);
   void addLeavesUpTree(UUID leaf_uuid, UUID uuid);
   bool isAggregate(const UUID& uuid);
-  
+
 
   //Function related to generating and updating aggregates.
   void updateChildrenTreeLevel(const UUID& uuid, uint16 treeLevel);
@@ -215,7 +215,7 @@ private:
   void generateMeshesFromQueue(uint8 i);
 
   void generateAggregateMeshAsyncIgnoreErrors(const UUID uuid, Time postTime, bool generateSiblings = true);
-  enum{GEN_SUCCESS=1, CHILDREN_NOT_YET_GEN=2, OTHER_GEN_FAILURE=3}; 
+  enum{GEN_SUCCESS=1, CHILDREN_NOT_YET_GEN=2, OTHER_GEN_FAILURE=3};
   uint32 generateAggregateMeshAsync(const UUID uuid, Time postTime, bool generateSiblings = true);
   void aggregationThreadMain(uint8 i);
   void updateAggregateLocMesh(UUID uuid, String mesh);
@@ -228,7 +228,7 @@ private:
   // from the aggregation thread to continue
   void handleUploadFinished(Transfer::UploadRequestPtr request, const Transfer::URI& path, Mesh::MeshdataPtr agg_mesh,
 			    AggregateObjectPtr aggObject, std::tr1::unordered_map<String, String> textureSet,
-			    uint32 retryAttempt);  
+			    uint32 retryAttempt);
   // Look for any aggregates that need a keep-alive sent to the CDN
   // and try to send them.
   void sendKeepAlives();
@@ -243,7 +243,7 @@ private:
   // removed.
   bool cleanUpChild(const UUID& parent_uuid, const UUID& child_id);
   void removeStaleLeaves();
-  
+
 
 public:
 

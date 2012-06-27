@@ -39,8 +39,6 @@
 #include <sirikata/core/odp/DelegateService.hpp>
 #include <sirikata/oh/ObjectScriptManager.hpp>
 
-#include <map>
-#include <list>
 #include <utility>
 
 #include <sirikata/core/network/ObjectMessage.hpp>
@@ -367,13 +365,13 @@ public:
         const SpaceID& space, ProxyObjectPtr proxy_obj, bool predictive,
         TimedMotionVector3f* loc, uint64 loc_seqno,
         TimedMotionQuaternion* orient, uint64 orient_seqno,
-        BoundingSphere3f* bounds, uint64 bounds_seqno,
+        AggregateBoundingInfo* bounds, uint64 bounds_seqno,
         String* mesh, uint64 mesh_seqno,
         String* phy, uint64 phy_seqno
     );
 
     // Helper for creating the correct type of proxy
-    ProxyObjectPtr createProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri, TimedMotionVector3f& tmv, TimedMotionQuaternion& tmvq, const BoundingSphere3f& bounds, const String& physics, const String& query, bool isAggregate, uint64 seqNo);
+    ProxyObjectPtr createProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri, TimedMotionVector3f& tmv, TimedMotionQuaternion& tmvq, const AggregateBoundingInfo& bounds, const String& physics, const String& query, bool isAggregate, uint64 seqNo);
 
     // Helper for constructing and sending location update
     void updateLocUpdateRequest(const SpaceID& space, const ObjectReference& oref, const TimedMotionVector3f* const loc, const TimedMotionQuaternion* const orient, const BoundingSphere3f* const bounds, const String* const mesh, const String* const phy);

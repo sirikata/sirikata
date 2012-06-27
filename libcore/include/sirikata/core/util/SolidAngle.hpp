@@ -41,6 +41,12 @@ public:
     static const SolidAngle Min;
     static const SolidAngle Max;
 
+    // Sometimes you need the float value instead of the SolidAngle
+    // directly. These are the values used to generate SolidAngle::Min and
+    // SolidAngle::Max
+    static const float MinVal;
+    static const float MaxVal;
+
     SolidAngle();
     explicit SolidAngle(float sa);
     SolidAngle(const SolidAngle& cpy);
@@ -73,8 +79,6 @@ public:
     /// result in this solid angle.  Effectively the inverse of fromCenterRadius.
     float maxDistance(float obj_radius) const;
 protected:
-    static const float MinVal;
-    static const float MaxVal;
 
     void clamp();
 

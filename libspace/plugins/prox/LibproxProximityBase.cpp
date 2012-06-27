@@ -157,6 +157,7 @@ void LibproxProximityBase::ProxStreamInfo<EndpointType, StreamType>::proxSubstre
 
 LibproxProximityBase::LibproxProximityBase(SpaceContext* ctx, LocationService* locservice, CoordinateSegmentation* cseg, SpaceNetwork* net, AggregateManager* aggmgr)
  : Proximity(ctx, locservice, cseg, net, aggmgr, Duration::milliseconds((int64)100)),
+   mServerQuerier(NULL),
    mProxStrand(ctx->ioService->createStrand("LibproxProximityBase Prox Strand")),
    mLocCache(NULL)
 {
@@ -164,6 +165,12 @@ LibproxProximityBase::LibproxProximityBase(SpaceContext* ctx, LocationService* l
 
     // Location cache, for both types of queries
     mLocCache = new CBRLocationServiceCache(mProxStrand, locservice, true);
+
+    // Server Querier (discover other servers)
+    String pinto_type = GetOptionValue<String>(OPT_PINTO);
+    String pinto_options = GetOptionValue<String>(OPT_PINTO_OPTIONS);
+    mServerQuerier = PintoServerQuerierFactory::getSingleton().getConstructor(pinto_type)(mContext, pinto_options);
+    mServerQuerier->addListener(this);
 
     // Deal with static/dynamic split
     mSeparateDynamicObjects = GetOptionValue<bool>(OPT_PROX_SPLIT_DYNAMIC);
@@ -213,9 +220,24 @@ LibproxProximityBase::LibproxProximityBase(SpaceContext* ctx, LocationService* l
 }
 
 LibproxProximityBase::~LibproxProximityBase() {
+    delete mServerQuerier;
     delete mProxServerMessageService;
     delete mLocCache;
     delete mProxStrand;
+}
+
+// Service Interface overrides
+void LibproxProximityBase::start() {
+    Proximity::start();
+
+    // Always initialize with CSeg's current size
+    BoundingBoxList bboxes = mCSeg->serverRegion(mContext->id());
+    BoundingBox3f bbox = aggregateBBoxes(bboxes);
+    mServerQuerier->updateRegion(bbox);
+}
+
+void LibproxProximityBase::stop() {
+    Proximity::stop();
 }
 
 
@@ -246,6 +268,8 @@ bool LibproxProximityBase::velocityIsStatic(const Vector3f& vel) {
 
 
 void LibproxProximityBase::coalesceEvents(QueryEventList& evts, uint32 per_event) {
+    if (evts.empty()) return;
+
     // We keep two maps from UUID to QueryEvent:
     // One for additions and one for removals. For each object, we check if we
     // have a record of it, in the opposite map. If we have a record, this new
@@ -256,8 +280,10 @@ void LibproxProximityBase::coalesceEvents(QueryEventList& evts, uint32 per_event
     typedef std::map<UUID, QueryEvent::Removal> RemovalMap;
     AdditionMap additions;
     RemovalMap removals;
+    Prox::QueryHandlerIndexID qhiid = evts.front().indexID();
     while(!evts.empty()) {
         const QueryEvent& evt = evts.front();
+        assert(qhiid == evt.indexID());
 
         for(uint32 aidx = 0; aidx < evt.additions().size(); aidx++) {
             UUID objid = evt.additions()[aidx].id();
@@ -276,7 +302,7 @@ void LibproxProximityBase::coalesceEvents(QueryEventList& evts, uint32 per_event
         evts.pop_front();
     }
     // Now we just need to repack them.
-    QueryEvent next_evt;
+    QueryEvent next_evt(qhiid);
     while(!additions.empty() || !removals.empty()) {
         // Get next addition or removal and remove it from our list
         if (!additions.empty()) {
@@ -293,13 +319,92 @@ void LibproxProximityBase::coalesceEvents(QueryEventList& evts, uint32 per_event
             (additions.empty() && removals.empty()))
         {
             evts.push_back(next_evt);
-            next_evt = QueryEvent();
+            next_evt = QueryEvent(qhiid);
         }
     }
 }
 
+// Setup all known servers for a server query update
+void LibproxProximityBase::addAllServersForUpdate() {
+    boost::lock_guard<boost::mutex> lck(mServerSetMutex);
+    for(ServerSet::const_iterator it = mServersQueried.begin(); it != mServersQueried.end(); it++)
+        mNeedServerQueryUpdate.insert(*it);
+}
+
+
+
+void LibproxProximityBase::getServersForAggregateQueryUpdate(ServerSet* servers_out) {
+    boost::lock_guard<boost::mutex> lck(mServerSetMutex);
+    servers_out->swap(mNeedServerQueryUpdate);
+}
+
+void LibproxProximityBase::addServerForAggregateQueryUpdate(ServerID sid) {
+    boost::lock_guard<boost::mutex> lck(mServerSetMutex);
+    mNeedServerQueryUpdate.insert(sid);
+}
+
+void LibproxProximityBase::updateAggregateQuery(const SolidAngle sa, uint32 max_count) {
+    PROXLOG(debug,"Query addition initiated server query request.");
+    addAllServersForUpdate();
+    mServerQuerier->updateQuery(sa, max_count);
+}
+
+void LibproxProximityBase::updateAggregateStats(float32 max_radius) {
+    mServerQuerier->updateLargestObject(max_radius);
+}
+
+uint32 LibproxProximityBase::numServersQueried() {
+    boost::lock_guard<boost::mutex> lck(mServerSetMutex);
+    return mServersQueried.size();
+}
 
 // MAIN Thread
+
+// PintoServerQuerierListener Interface
+
+void LibproxProximityBase::addRelevantServer(ServerID sid) {
+    if (sid == mContext->id()) return;
+
+    // Potentially invoked from PintoServerQuerier IO thread
+    boost::lock_guard<boost::mutex> lck(mServerSetMutex);
+    mServersQueried.insert(sid);
+    mNeedServerQueryUpdate.insert(sid);
+}
+
+void LibproxProximityBase::removeRelevantServer(ServerID sid) {
+    if (sid == mContext->id()) return;
+
+    // Potentially invoked from PintoServerQuerier IO thread
+    boost::lock_guard<boost::mutex> lck(mServerSetMutex);
+    mServersQueried.erase(sid);
+}
+
+
+// SpaceNetworkConnectionListener Interface
+
+void LibproxProximityBase::onSpaceNetworkConnected(ServerID sid) {
+    mProxStrand->post(
+        std::tr1::bind(&LibproxProximityBase::handleConnectedServer, this, sid),
+        "LibproxProximityBase::handleConnectedServer"
+    );
+}
+
+void LibproxProximityBase::onSpaceNetworkDisconnected(ServerID sid) {
+    mProxStrand->post(
+        std::tr1::bind(&LibproxProximityBase::handleDisconnectedServer, this, sid),
+        "LibproxProximityBase::handleDisconnectedServer"
+    );
+}
+
+
+// CoordinateSegmentation::Listener Interface
+
+void LibproxProximityBase::updatedSegmentation(CoordinateSegmentation* cseg, const std::vector<SegmentationInfo>& new_seg) {
+    BoundingBoxList bboxes = mCSeg->serverRegion(mContext->id());
+    BoundingBox3f bbox = aggregateBBoxes(bboxes);
+    mServerQuerier->updateRegion(bbox);
+}
+
 
 void LibproxProximityBase::readFramesFromObjectStream(const ObjectReference& oref, ProxObjectStreamInfo::FrameReceivedCallback cb) {
     ObjectProxStreamMap::iterator prox_stream_it = mObjectProxStreams.find(oref.getAsUUID());
@@ -424,8 +529,21 @@ void LibproxProximityBase::handleAddObjectLocSubscription(const UUID& subscriber
     mLocService->subscribe(subscriber, observed);
 }
 
+void LibproxProximityBase::handleAddObjectLocSubscriptionWithID(const UUID& subscriber, const UUID& observed, ProxIndexID index_id) {
+    // We check the cache when we get the request, but also check it here since
+    // the observed object may have been removed between the request to add this
+    // subscription and its actual execution.
+    if (!mLocService->contains(observed)) return;
+
+    mLocService->subscribe(subscriber, observed, index_id);
+}
+
 void LibproxProximityBase::handleRemoveObjectLocSubscription(const UUID& subscriber, const UUID& observed) {
     mLocService->unsubscribe(subscriber, observed);
+}
+
+void LibproxProximityBase::handleRemoveObjectLocSubscriptionWithID(const UUID& subscriber, const UUID& observed, ProxIndexID index_id) {
+    mLocService->unsubscribe(subscriber, observed, index_id);
 }
 
 void LibproxProximityBase::handleRemoveAllObjectLocSubscription(const UUID& subscriber) {
@@ -441,8 +559,21 @@ void LibproxProximityBase::handleAddOHLocSubscription(const OHDP::NodeID& subscr
     mLocService->subscribe(subscriber, observed);
 }
 
+void LibproxProximityBase::handleAddOHLocSubscriptionWithID(const OHDP::NodeID& subscriber, const UUID& observed, ProxIndexID index_id) {
+    // We check the cache when we get the request, but also check it here since
+    // the observed object may have been removed between the request to add this
+    // subscription and its actual execution.
+    if (!mLocService->contains(observed)) return;
+
+    mLocService->subscribe(subscriber, observed, index_id);
+}
+
 void LibproxProximityBase::handleRemoveOHLocSubscription(const OHDP::NodeID& subscriber, const UUID& observed) {
     mLocService->unsubscribe(subscriber, observed);
+}
+
+void LibproxProximityBase::handleRemoveOHLocSubscriptionWithID(const OHDP::NodeID& subscriber, const UUID& observed, ProxIndexID index_id) {
+    mLocService->unsubscribe(subscriber, observed, index_id);
 }
 
 void LibproxProximityBase::handleRemoveAllOHLocSubscription(const OHDP::NodeID& subscriber) {
@@ -458,8 +589,21 @@ void LibproxProximityBase::handleAddServerLocSubscription(const ServerID& subscr
     mLocService->subscribe(subscriber, observed, seqPtr);
 }
 
+void LibproxProximityBase::handleAddServerLocSubscriptionWithID(const ServerID& subscriber, const UUID& observed, ProxIndexID index_id, SeqNoPtr seqPtr) {
+    // We check the cache when we get the request, but also check it here since
+    // the observed object may have been removed between the request to add this
+    // subscription and its actual execution.
+    if (!mLocService->contains(observed)) return;
+
+    mLocService->subscribe(subscriber, observed, index_id, seqPtr);
+}
+
 void LibproxProximityBase::handleRemoveServerLocSubscription(const ServerID& subscriber, const UUID& observed) {
     mLocService->unsubscribe(subscriber, observed);
+}
+
+void LibproxProximityBase::handleRemoveServerLocSubscriptionWithID(const ServerID& subscriber, const UUID& observed, ProxIndexID index_id) {
+    mLocService->unsubscribe(subscriber, observed, index_id);
 }
 
 void LibproxProximityBase::handleRemoveAllServerLocSubscription(const ServerID& subscriber) {
@@ -468,7 +612,41 @@ void LibproxProximityBase::handleRemoveAllServerLocSubscription(const ServerID& 
 
 
 
+void LibproxProximityBase::checkObjectClass(bool is_local, const UUID& objid, const TimedMotionVector3f& newval) {
+    mProxStrand->post(
+        std::tr1::bind(&LibproxProximityBase::handleCheckObjectClass, this, is_local, objid, newval),
+        "LibproxProximityBase::handleCheckObjectClass"
+    );
+}
+
+
 // PROX Thread
+
+void LibproxProximityBase::handleConnectedServer(ServerID sid) {
+    // Sometimes we may get forcefully disconnected from a server. To
+    // reestablish our previous setup, if that server appears in our queried
+    // set (we were told it was relevant to us by some higher level pinto
+    // service), we mark it as needing another update. In the case that we
+    // are just getting an initial connection, this shouldn't change anything
+    // since it would already be markedas needing an update if we had been told
+    // by pinto that it needed it.
+    boost::lock_guard<boost::mutex> lck(mServerSetMutex);
+    if (mServersQueried.find(sid) != mServersQueried.end())
+        mNeedServerQueryUpdate.insert(sid);
+}
+
+void LibproxProximityBase::handleDisconnectedServer(ServerID sid) {
+    // When we lose a connection, we need to clear out everything related to
+    // that server.
+    PROXLOG(debug, "Handling unexpected disconnection from " << sid << " by clearing out proximity state.");
+    handleForcedDisconnection(sid);
+}
+
+void LibproxProximityBase::handleForcedDisconnection(ServerID server) {
+    // Nothing for base -- implementations should override to clean up
+    // queries and clear out state
+}
+
 
 void LibproxProximityBase::aggregateCreated(const UUID& objid) {
     // On addition, an "aggregate" will have no children, i.e. its zero sized.
@@ -479,7 +657,7 @@ void LibproxProximityBase::aggregateCreated(const UUID& objid) {
             objid,
             TimedMotionVector3f(mContext->simTime(), MotionVector3f()),
             TimedMotionQuaternion(mContext->simTime(), MotionQuaternion()),
-            BoundingSphere3f(),
+            AggregateBoundingInfo(),
             "",
             ""
         ),
@@ -489,11 +667,13 @@ void LibproxProximityBase::aggregateCreated(const UUID& objid) {
     mAggregateManager->addAggregate(objid);
 }
 
-void LibproxProximityBase::aggregateChildAdded(const UUID& objid, const UUID& child, const BoundingSphere3f& bnds) {
+void LibproxProximityBase::aggregateChildAdded(const UUID& objid, const UUID& child, const Vector3f& pos, const AggregateBoundingInfo& bnds) {
+    // FIXME the AggregateBoundingInfo is wrong here because we don't get all
+    // the information we need about the aggregate.
     mContext->mainStrand->post(
         std::tr1::bind(
             &LibproxProximityBase::updateAggregateLoc, this,
-            objid, bnds
+            objid, pos, bnds
         ),
         "LibproxProximityBase::updateAggregateLoc"
     );
@@ -501,12 +681,14 @@ void LibproxProximityBase::aggregateChildAdded(const UUID& objid, const UUID& ch
     mAggregateManager->addChild(objid, child);
 }
 
-void LibproxProximityBase::aggregateChildRemoved(const UUID& objid, const UUID& child, const BoundingSphere3f& bnds) {
+void LibproxProximityBase::aggregateChildRemoved(const UUID& objid, const UUID& child, const Vector3f& pos, const AggregateBoundingInfo& bnds) {
     // Loc cares only about this chance to update state of aggregate
+    // FIXME the AggregateBoundingInfo is wrong here because we don't get all
+    // the information we need about the aggregate.
     mContext->mainStrand->post(
         std::tr1::bind(
             &LibproxProximityBase::updateAggregateLoc, this,
-            objid, bnds
+            objid, pos, bnds
         ),
         "LibproxProximityBase::updateAggregateLoc"
     );
@@ -514,11 +696,11 @@ void LibproxProximityBase::aggregateChildRemoved(const UUID& objid, const UUID& 
     mAggregateManager->removeChild(objid, child);
 }
 
-void LibproxProximityBase::aggregateBoundsUpdated(const UUID& objid, const BoundingSphere3f& bnds) {
+void LibproxProximityBase::aggregateBoundsUpdated(const UUID& objid, const Vector3f& pos, const AggregateBoundingInfo& bnds) {
     mContext->mainStrand->post(
         std::tr1::bind(
             &LibproxProximityBase::updateAggregateLoc, this,
-            objid, bnds
+            objid, pos, bnds
         ),
         "LibproxProximityBase::updateAggregateLoc"
     );
@@ -540,21 +722,63 @@ void LibproxProximityBase::aggregateObserved(const UUID& objid, uint32 nobserver
     mAggregateManager->aggregateObserved(objid, nobservers);
 }
 
+
+
+void LibproxProximityBase::removeStaticObjectTimeout(const UUID& objid) {
+    StaticObjectsByID& by_id = mStaticObjectTimeouts.get<objid_tag>();
+    StaticObjectsByID::iterator it = by_id.find(objid);
+    if (it == by_id.end()) return;
+    by_id.erase(it);
+}
+
+
+void LibproxProximityBase::processExpiredStaticObjectTimeouts() {
+    Time curt = mLocService->context()->recentSimTime();
+    StaticObjectsByExpiration& by_expires = mStaticObjectTimeouts.get<expires_tag>();
+    while(!by_expires.empty() &&
+        by_expires.begin()->expires < curt) {
+        trySwapHandlers(by_expires.begin()->local, by_expires.begin()->objid, true);
+        by_expires.erase(by_expires.begin());
+    }
+}
+
+void LibproxProximityBase::handleCheckObjectClass(bool is_local, const UUID& objid, const TimedMotionVector3f& newval) {
+    assert(mSeparateDynamicObjects == true);
+
+    // Basic approach: we need to check if the object has switched between
+    // static/dynamic. We need to do this for both the local (object query) and
+    // global (server query) handlers.
+    bool is_static = velocityIsStatic(newval.velocity());
+    // If it's moving, do the check immediately since we need to move it into
+    // the dynamic tree right away; also make sure it's not in the queue for
+    // being moved to the static tree. Otherwise queue it up to be processed
+    // after a delay
+    if (!is_static) {
+        trySwapHandlers(is_local, objid, is_static);
+        removeStaticObjectTimeout(objid);
+    }
+    else {
+        // Make sure previous entry is cleared out
+        removeStaticObjectTimeout(objid);
+        // And insert a new one
+        mStaticObjectTimeouts.insert(StaticObjectTimeout(objid, mContext->recentSimTime() + mMoveToStaticDelay, is_local));
+    }
+}
+
+
+
 // MAIN strand
-void LibproxProximityBase::updateAggregateLoc(const UUID& objid, const BoundingSphere3f& bnds) {
-    // TODO(ewencp) This comparison looks wrong, but might be due to
-    // the way we're setting location and bounds and both are using
-    // bnds.center(). Shouldn't we be using the center for position
-    // and make bounds origin centered? But apparently this was
-    // working, so leaving it for now...
-    if (mLocService->contains(objid) && mLocService->bounds(objid) != bnds) {
+void LibproxProximityBase::updateAggregateLoc(const UUID& objid, const Vector3f& pos, const AggregateBoundingInfo& bnds) {
+    if (mLocService->contains(objid) &&
+        (mLocService->location(objid).position() != pos || mLocService->bounds(objid) != bnds))
+    {
         mLocService->updateLocalAggregateLocation(
             objid,
-            TimedMotionVector3f(mContext->simTime(), MotionVector3f(bnds.center(), Vector3f(0,0,0)))
+            TimedMotionVector3f(mContext->simTime(), MotionVector3f(pos, Vector3f(0,0,0)))
         );
         mLocService->updateLocalAggregateBounds(
             objid,
-            BoundingSphere3f(bnds.center(), bnds.radius())
+            bnds
         );
     }
 }

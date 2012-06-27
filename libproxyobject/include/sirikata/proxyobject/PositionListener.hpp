@@ -34,6 +34,7 @@
 
 #include <sirikata/core/util/MotionVector.hpp>
 #include <sirikata/core/util/MotionQuaternion.hpp>
+#include <sirikata/core/util/AggregateBoundingInfo.hpp>
 
 namespace Sirikata {
 
@@ -44,7 +45,7 @@ typedef std::tr1::shared_ptr<ProxyObject> ProxyObjectPtr;
 class SIRIKATA_PROXYOBJECT_EXPORT PositionListener {
 public:
     virtual ~PositionListener() {}
-    virtual void updateLocation (ProxyObjectPtr obj, const TimedMotionVector3f &newLocation, const TimedMotionQuaternion& newOrient, const BoundingSphere3f& newBounds, const SpaceObjectReference& sporef) = 0;
+    virtual void updateLocation (ProxyObjectPtr obj, const TimedMotionVector3f &newLocation, const TimedMotionQuaternion& newOrient, const AggregateBoundingInfo& newBounds, const SpaceObjectReference& sporef) = 0;
 };
 
 }

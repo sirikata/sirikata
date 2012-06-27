@@ -51,6 +51,8 @@ class SIRIKATA_PROXYOBJECT_EXPORT ProxyManager
       SerializationCheck
 {
 public:
+    typedef std::vector<SpaceObjectReference> ObjectReferenceList;
+
     static ProxyManagerPtr construct(VWObjectPtr parent, const SpaceObjectReference& _id);
     virtual ~ProxyManager();
 
@@ -66,7 +68,7 @@ public:
     ///Adds to internal ProxyObject map and calls creation listeners.
     virtual ProxyObjectPtr createObject(
         const SpaceObjectReference& id,
-        const TimedMotionVector3f& tmv, const TimedMotionQuaternion& tmq, const BoundingSphere3f& bs,
+        const TimedMotionVector3f& tmv, const TimedMotionQuaternion& tmq, const AggregateBoundingInfo& bs,
         const Transfer::URI& meshuri, const String& phy, bool isAggregate, uint64 seqNo
     );
 

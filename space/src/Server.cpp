@@ -728,7 +728,7 @@ void Server::finishAddObject(const UUID& obj_id, OSegAddNewStatus status)
           String obj_zernike = sc.conn_msg.has_zernike() ? sc.conn_msg.zernike() : "";
 
 
-          mLocationService->addLocalObject(obj_id, loc, orient, bnds, obj_mesh, obj_phy, obj_zernike);
+          mLocationService->addLocalObject(obj_id, loc, orient, AggregateBoundingInfo(bnds), obj_mesh, obj_phy, obj_zernike);
 
           // Register proximity query
           // Currently, the preferred way to register the query is to send the
@@ -767,7 +767,7 @@ void Server::finishAddObject(const UUID& obj_id, OSegAddNewStatus status)
 void Server::sendConnectSuccess(const ObjectHostConnectionID& oh_conn_id, const UUID& obj_id, uint64 session_request_seqno) {
     TimedMotionVector3f loc = mLocationService->location(obj_id);
     TimedMotionQuaternion orient = mLocationService->orientation(obj_id);
-    BoundingSphere3f bnds = mLocationService->bounds(obj_id);
+    AggregateBoundingInfo bnds = mLocationService->bounds(obj_id);
     String obj_mesh = mLocationService->mesh(obj_id);
 
     // Send reply back indicating that the connection was successful
@@ -784,7 +784,8 @@ void Server::sendConnectSuccess(const ObjectHostConnectionID& oh_conn_id, const 
     resp_orient.set_t( orient.updateTime() );
     resp_orient.set_position( orient.position() );
     resp_orient.set_velocity( orient.velocity() );
-    response.set_bounds(bnds);
+    assert(bnds.singleObject());
+    response.set_bounds(bnds.fullBounds());
     response.set_mesh(obj_mesh);
 
     Sirikata::Protocol::Object::ObjectMessage* obj_response = createObjectMessage(
@@ -963,7 +964,7 @@ void Server::handleMigration(const UUID& obj_id)
 
 
     // Update LOC to indicate we have this object locally
-    mLocationService->addLocalObject(obj_id, obj_loc, obj_orient, obj_bounds, obj_mesh, obj_phy, "");
+    mLocationService->addLocalObject(obj_id, obj_loc, obj_orient, AggregateBoundingInfo(obj_bounds), obj_mesh, obj_phy, "");
     //TAHIR assuming empty zernike descriptor for migrated objects.
 
     //update our oseg to show that we know that we have this object now.
@@ -1055,8 +1056,8 @@ void Server::handleMigrationEvent(const UUID& obj_id) {
             );
             // Sent directly via object host connection manager because ObjectConnection is disappearing
             sendSessionMessageWithRetry(obj_conn->connID(), init_migr_obj_msg, Duration::seconds(0.05));
-            BoundingSphere3f obj_bounds=mLocationService->bounds(obj_id);
-            mOSeg->migrateObject(obj_id,OSegEntry(new_server_id,obj_bounds.radius()));
+            AggregateBoundingInfo obj_bounds = mLocationService->bounds(obj_id);
+            mOSeg->migrateObject(obj_id,OSegEntry(new_server_id,obj_bounds.fullRadius()));
 
             // Send out the migrate message
             Sirikata::Protocol::Migration::MigrationMessage migrate_msg;
@@ -1072,7 +1073,8 @@ void Server::handleMigrationEvent(const UUID& obj_id) {
             migrate_orient.set_t( obj_orient.updateTime() );
             migrate_orient.set_position( obj_orient.position() );
             migrate_orient.set_velocity( obj_orient.velocity() );
-            migrate_msg.set_bounds( obj_bounds );
+            assert(obj_bounds.singleObject());
+            migrate_msg.set_bounds( obj_bounds.fullBounds() );
             String obj_mesh = mLocationService->mesh(obj_id);
             if (obj_mesh.size() > 0)
                 migrate_msg.set_mesh( obj_mesh );
@@ -1217,7 +1219,7 @@ void Server::processAlreadyMigrating(const UUID& obj_id)
 
 
     // Update LOC to indicate we have this object locally
-    mLocationService->addLocalObject(obj_id, obj_loc, obj_orient, obj_bounds, obj_mesh, obj_phy, "");
+    mLocationService->addLocalObject(obj_id, obj_loc, obj_orient, AggregateBoundingInfo(obj_bounds), obj_mesh, obj_phy, "");
     //Assuming empty zernike descriptor for migrating objects: TAHIR
 
     //update our oseg to show that we know that we have this object now.
