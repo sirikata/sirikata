@@ -37,7 +37,7 @@ DOCS_DIR = os.path.join(CURDIR, 'sirikata-docs')
 VERSION_TXT = os.path.join(DOCS_DIR, 'source', 'version.txt')
 EM_TARGET_OUTPUT = os.path.join(DOCS_DIR, 'source', 'api')
 HTML_BUILD_OUTPUT = os.path.join(DOCS_DIR, 'build', 'dirhtml')
-VERSION_H = os.path.join(CURDIR, '..', '..', 'libcore', 'include', 'sirikata', 'core', 'util', 'Version.hpp')
+CMAKE_LISTS = os.path.join(CURDIR, '..', '..', 'build', 'cmake', 'CMakeLists.txt')
 
 def getSirikataDocs():
     if os.path.exists(DOCS_DIR):
@@ -65,6 +65,11 @@ def buildEmersonSphinx(emroot):
                       EM_TARGET_OUTPUT,
                       '--sphinx'],
                      cwd=DOCS_DIR).communicate()
+
+def grep_version(name):
+    ver = subprocess.check_output(['grep', 'SET(%s' % name, CMAKE_LISTS])
+    ver = ver.strip().split()[1][1:-1]
+    return ver
 
 '''
   Must be run with two parameters:
@@ -98,16 +103,16 @@ if __name__ == "__main__":
     getSirikataDocs()
     buildEmersonSphinx(emroot)
     
-    version_num = subprocess.check_output(['grep', 'SIRIKATA_VERSION ', VERSION_H])
-    # --> #define SIRIKATA_VERSION "0.0.25"
-    # --> "0.0.25"
-    # --> 0.0.25
-    version_num = version_num.strip().split()[2][1:-1]
+    major = grep_version('SIRIKATA_VERSION_MAJOR')
+    minor = grep_version('SIRIKATA_VERSION_MINOR')
+    revision = grep_version('SIRIKATA_VERSION_REVISION')
+    version_num = '%s.%s.%s' % (major, minor, revision)
     with open(VERSION_TXT, 'w') as f:
         f.write(version_num)
         f.write('\n')
     
     buildSirikataDocs()
+    subprocess.Popen(['rm', '-rf', outFold]).communicate()
     subprocess.Popen(['cp',
                       '-rv',
                       HTML_BUILD_OUTPUT,
