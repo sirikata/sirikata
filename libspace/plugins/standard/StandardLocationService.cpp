@@ -98,7 +98,7 @@ Quaternion StandardLocationService::currentOrientation(const UUID& uuid) {
     return orient.extrapolate(mContext->simTime()).position();
 }
 
-BoundingSphere3f StandardLocationService::bounds(const UUID& uuid) {
+AggregateBoundingInfo StandardLocationService::bounds(const UUID& uuid) {
     LocationMap::iterator it = mLocations.find(uuid);
     assert(it != mLocations.end());
 
@@ -124,7 +124,7 @@ const String& StandardLocationService::physics(const UUID& uuid) {
     return locinfo.physics_copied_str;
 }
 
-  void StandardLocationService::addLocalObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& msh, const String& phy, const String& zernike) {
+  void StandardLocationService::addLocalObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bnds, const String& msh, const String& phy, const String& zernike) {
     LocationMap::iterator it = mLocations.find(uuid);
 
     // Add or update the information to the cache
@@ -173,7 +173,7 @@ void StandardLocationService::removeLocalObject(const UUID& uuid) {
     // automatically.
 }
 
-void StandardLocationService::addLocalAggregateObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& msh, const String& phy) {
+void StandardLocationService::addLocalAggregateObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bnds, const String& msh, const String& phy) {
     // Aggregates get randomly assigned IDs -- if there's a conflict either we
     // got a true conflict (incredibly unlikely) or somebody (prox/query
     // handler) screwed up.
@@ -221,7 +221,7 @@ void StandardLocationService::updateLocalAggregateOrientation(const UUID& uuid, 
     loc_it->second.props.setOrientation(newval, 0);
     notifyLocalOrientationUpdated( uuid, true, newval );
 }
-void StandardLocationService::updateLocalAggregateBounds(const UUID& uuid, const BoundingSphere3f& newval) {
+void StandardLocationService::updateLocalAggregateBounds(const UUID& uuid, const AggregateBoundingInfo& newval) {
     LocationMap::iterator loc_it = mLocations.find(uuid);
     assert(loc_it != mLocations.end());
     assert(loc_it->second.aggregate == true);
@@ -243,7 +243,7 @@ void StandardLocationService::updateLocalAggregatePhysics(const UUID& uuid, cons
     notifyLocalPhysicsUpdated( uuid, true, newval );
 }
 
-  void StandardLocationService::addReplicaObject(const Time& t, const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& msh, const String& phy, const String& zernike) {
+  void StandardLocationService::addReplicaObject(const Time& t, const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bnds, const String& msh, const String& phy, const String& zernike) {
     // FIXME we should do checks on timestamps to decide which setting is "more" sane
     LocationMap::iterator it = mLocations.find(uuid);
 
@@ -349,8 +349,12 @@ void StandardLocationService::receiveMessage(Message* msg) {
                 notifyReplicaOrientationUpdated( update.object(), loc_it->second.props.orientation() );
             }
 
-            if (update.has_bounds()) {
-                BoundingSphere3f newbounds = update.bounds();
+            if (update.has_aggregate_bounds()) {
+                Vector3f center = update.aggregate_bounds().has_center_offset() ? update.aggregate_bounds().center_offset() : Vector3f(0,0,0);
+                float32 center_rad = update.aggregate_bounds().has_center_bounds_radius() ? update.aggregate_bounds().center_bounds_radius() : 0.f;
+                float32 max_object_size = update.aggregate_bounds().has_max_object_size() ? update.aggregate_bounds().max_object_size() : 0.f;
+
+                AggregateBoundingInfo newbounds(center, center_rad, max_object_size);
                 loc_it->second.props.setBounds(newbounds, epoch);
                 notifyReplicaBoundsUpdated( update.object(), loc_it->second.props.bounds() );
             }
@@ -413,7 +417,7 @@ bool StandardLocationService::locationUpdate(UUID source, void* buffer, uint32 l
             }
 
             if (request.has_bounds()) {
-                BoundingSphere3f newbounds = request.bounds();
+                AggregateBoundingInfo newbounds(request.bounds());
                 loc_it->second.props.setBounds(newbounds, epoch);
                 notifyLocalBoundsUpdated( source, loc_it->second.aggregate, loc_it->second.props.bounds() );
             }
@@ -503,10 +507,17 @@ void StandardLocationService::commandObjectProperties(const Command::Command& cm
     result.put("properties.orientation.velocity.w", orient.velocity().w);
     result.put("properties.orientation.time", orient.updateTime().raw());
 
-    result.put("properties.bounds.center.x", it->second.props.bounds().center().x);
-    result.put("properties.bounds.center.y", it->second.props.bounds().center().y);
-    result.put("properties.bounds.center.z", it->second.props.bounds().center().z);
-    result.put("properties.bounds.radius", it->second.props.bounds().radius());
+    // Present the bounds info in a way the consumer can easily draw a bounding
+    // sphere, especially for single objects
+    result.put("properties.bounds.center.x", it->second.props.bounds().centerOffset.x);
+    result.put("properties.bounds.center.y", it->second.props.bounds().centerOffset.y);
+    result.put("properties.bounds.center.z", it->second.props.bounds().centerOffset.z);
+    result.put("properties.bounds.radius", it->second.props.bounds().fullRadius());
+    // But also provide the other info so a correct view of
+    // aggregates. Technically we only need one of these since fullRadius is the
+    // sum of the two, but this is clearer.
+    result.put("properties.bounds.centerBoundsRadius", it->second.props.bounds().centerBoundsRadius);
+    result.put("properties.bounds.maxObjectRadius", it->second.props.bounds().maxObjectRadius);
 
     result.put("properties.mesh", it->second.props.mesh().toString());
     result.put("properties.physics", it->second.props.physics());

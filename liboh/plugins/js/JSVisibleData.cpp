@@ -131,7 +131,7 @@ TimedMotionQuaternion JSAggregateVisibleData::orientation() const{
     return getBestChild()->orientation();
 }
 
-BoundingSphere3f JSAggregateVisibleData::bounds() const{
+AggregateBoundingInfo JSAggregateVisibleData::bounds() const{
     return getBestChild()->bounds();
 }
 

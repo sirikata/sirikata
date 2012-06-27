@@ -10,6 +10,7 @@
 #include <sirikata/core/util/MotionQuaternion.hpp>
 #include <sirikata/core/transfer/URI.hpp>
 #include <sirikata/core/util/ObjectReference.hpp>
+#include <sirikata/core/util/AggregateBoundingInfo.hpp>
 
 namespace Sirikata {
 
@@ -23,7 +24,7 @@ public:
 
     virtual TimedMotionVector3f location() const = 0;
     virtual TimedMotionQuaternion orientation() const = 0;
-    virtual BoundingSphere3f bounds() const = 0;
+    virtual AggregateBoundingInfo bounds() const = 0;
     virtual Transfer::URI mesh() const = 0;
     virtual String physics() const = 0;
     virtual bool isAggregate() const = 0;
@@ -48,7 +49,7 @@ public:
     {}
     PresenceProperties(
         const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient,
-        const BoundingSphere3f& bnds, const Transfer::URI& msh, const String& phy
+        const AggregateBoundingInfo& bnds, const Transfer::URI& msh, const String& phy
     )
      : mLoc(loc),
        mOrientation(orient),
@@ -64,8 +65,8 @@ public:
     virtual TimedMotionQuaternion orientation() const { return mOrientation; }
     virtual bool setOrientation(const TimedMotionQuaternion& o) { mOrientation = o; return true; }
 
-    virtual BoundingSphere3f bounds() const { return mBounds; }
-    virtual bool setBounds(const BoundingSphere3f& b) { mBounds = b; return true; }
+    virtual AggregateBoundingInfo bounds() const { return mBounds; }
+    virtual bool setBounds(const AggregateBoundingInfo& b) { mBounds = b; return true; }
 
     virtual Transfer::URI mesh() const { return mMesh; }
     virtual bool setMesh(const Transfer::URI& m) { mMesh = m; return true; }
@@ -81,7 +82,7 @@ public:
 protected:
     TimedMotionVector3f mLoc;
     TimedMotionQuaternion mOrientation;
-    BoundingSphere3f mBounds;
+    AggregateBoundingInfo mBounds;
     Transfer::URI mMesh;
     String mPhysics;
     bool mIsAggregate;
@@ -140,7 +141,7 @@ public:
     }
     bool setOrientation(const TimedMotionQuaternion& o) { return PresenceProperties::setOrientation(o); }
 
-    bool setBounds(const BoundingSphere3f& b, uint64 seqno) {
+    bool setBounds(const AggregateBoundingInfo& b, uint64 seqno) {
         if (seqno < mUpdateSeqno[LOC_BOUNDS_PART])
             return false;
 
@@ -148,7 +149,7 @@ public:
         mBounds = b;
         return true;
     }
-    bool setBounds(const BoundingSphere3f& b) { return PresenceProperties::setBounds(b); }
+    bool setBounds(const AggregateBoundingInfo& b) { return PresenceProperties::setBounds(b); }
 
     bool setMesh(const Transfer::URI& m, uint64 seqno) {
         if (seqno < mUpdateSeqno[LOC_MESH_PART])

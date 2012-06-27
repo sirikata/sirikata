@@ -217,14 +217,14 @@ void MigrationMonitor::changeNextEventTime(ObjectInfo& objinfo, const Time& newt
 
 /** LocationServiceListener Interface. */
 
-  void MigrationMonitor::localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& phy, const String& zernike) {
+  void MigrationMonitor::localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& phy, const String& zernike) {
     mStrand->post(
         std::tr1::bind(&MigrationMonitor::handleLocalObjectAdded, this, uuid, loc, bounds),
         "MigrationMonitor::handleLocalObjectAdded"
     );
 }
 
-void MigrationMonitor::handleLocalObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds) {
+void MigrationMonitor::handleLocalObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const AggregateBoundingInfo& bounds) {
     assert( mObjectInfo.get<objid>().find(uuid) == mObjectInfo.get<objid>().end());
 
     mObjectInfo.insert( ObjectInfo(uuid, computeNextEventTime(uuid, loc)) );

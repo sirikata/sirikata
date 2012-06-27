@@ -70,7 +70,7 @@ JSPresenceStruct::JSPresenceStruct(EmersonScript* parent, PresStructRestoreParam
 {
     jpp->updateFrom(
         PresenceProperties(
-            tmv, tmq, BoundingSphere3f(center, psrp.scale), Transfer::URI(psrp.mesh), psrp.physics
+            tmv, tmq, AggregateBoundingInfo(center, psrp.scale), Transfer::URI(psrp.mesh), psrp.physics
         )
     );
 
@@ -337,7 +337,7 @@ v8::Handle<v8::Value> JSPresenceStruct::setVisualScaleFunction(float new_scale)
     INLINE_CHECK_IS_CONNECTED_ERROR("setScale");
     INLINE_CHECK_CAPABILITY_ERROR(Capabilities::MESH,setScale);
 
-    mParent->setBounds(getSporef(), BoundingSphere3f(jpp->bounds().center(), new_scale));
+    mParent->setBounds(getSporef(), BoundingSphere3f(jpp->bounds().centerOffset, new_scale));
 
     return v8::Undefined();
 }

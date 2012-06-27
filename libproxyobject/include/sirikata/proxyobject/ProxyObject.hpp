@@ -179,7 +179,7 @@ public:
     // PresenceProperties Overrides
     virtual TimedMotionVector3f location() const;
     virtual TimedMotionQuaternion orientation() const;
-    virtual BoundingSphere3f bounds() const;
+    virtual AggregateBoundingInfo bounds() const;
     virtual Transfer::URI mesh() const;
     virtual String physics() const;
     virtual bool isAggregate() const;
@@ -189,13 +189,13 @@ public:
     // i.e. data sent by the space.
     TimedMotionVector3f verifiedLocation() const;
     TimedMotionQuaternion verifiedOrientation() const;
-    BoundingSphere3f verifiedBounds() const;
+    AggregateBoundingInfo verifiedBounds() const;
     Transfer::URI verifiedMesh() const;
     String verifiedPhysics() const;
 
     void setLocation(const TimedMotionVector3f& reqloc, uint64 seqno);
     void setOrientation(const TimedMotionQuaternion& reqorient, uint64 seqno);
-    void setBounds(const BoundingSphere3f& bnds, uint64 seqno);
+    void setBounds(const AggregateBoundingInfo& bnds, uint64 seqno);
     void setMesh (Transfer::URI const& rhs, uint64 seqno);
     void setPhysics(const String& rhs, uint64 seqno);
     void setIsAggregate(bool isAggregate, uint64 seqno);

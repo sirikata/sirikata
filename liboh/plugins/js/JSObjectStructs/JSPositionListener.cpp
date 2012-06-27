@@ -124,7 +124,7 @@ Quaternion JSPositionListener::getOrientation()
 BoundingSphere3f JSPositionListener::getBounds()
 {
     CHECK_JPP_INIT_THROW_LOG_CPP_ERROR(getBounds,BoundingSphere3f());
-    return jpp->bounds();
+    return jpp->bounds().fullBounds();
 }
 
 v8::Handle<v8::Value> JSPositionListener::struct_getPosition()

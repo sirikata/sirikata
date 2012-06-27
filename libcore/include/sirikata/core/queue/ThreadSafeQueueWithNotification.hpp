@@ -103,9 +103,14 @@ class ThreadSafeQueueWithNotification {
         mQueue.blockingPop(retval);
     }
 
+    /** \see ThreadSafeQueue::swap. */
+    void swap(std::deque<T>& swapWith) {
+        mQueue.swap(swapWith);
+    }
+
     /** \see ThreadSafeQueue::popAll. */
     void popAll(std::deque<T> *popResults) {
-        mQueue.popAll();
+        mQueue.popAll(popResults);
     }
 
     /** \see ThreadSafeQueue::probablyEmpty. */

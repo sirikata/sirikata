@@ -223,16 +223,16 @@ public:
      *  \param space the space to translate to
      *  \param t the local time to convert
      */
-    Time spaceTime(const SpaceID& space, const Time& t);
+    Time spaceTime(const SpaceID& space, const Time& t) const;
     /** Get the current time in the given space */
-    Time currentSpaceTime(const SpaceID& space);
+    Time currentSpaceTime(const SpaceID& space) const;
     /** Convert a time in the given space to a local time.
      *  \param space the space to translate from
      *  \param t the time in the space to convert to a local time
      */
-    Time localTime(const SpaceID& space, const Time& t);
+    Time localTime(const SpaceID& space, const Time& t) const;
     /** Get the current local time. */
-    Time currentLocalTime();
+    Time currentLocalTime() const;
 
     /** Primary ODP send function. */
     bool send(SpaceObjectReference& sporefsrc, const SpaceID& space, const ObjectMessagePort src_port, const UUID& dest, const ObjectMessagePort dest_port, const std::string& payload);

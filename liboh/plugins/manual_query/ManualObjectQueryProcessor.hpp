@@ -6,12 +6,11 @@
 #define _SIRIKATA_OH_MANUAL_OBJECT_QUERY_PROCESSOR_HPP_
 
 #include <sirikata/oh/ObjectQueryProcessor.hpp>
-#include <sirikata/oh/SpaceNodeSession.hpp>
 #include <sirikata/oh/ObjectNodeSession.hpp>
 
-#include <sirikata/proxyobject/OrphanLocUpdateManager.hpp>
-
 #include "OHLocationServiceCache.hpp"
+#include "ServerQueryHandler.hpp"
+#include "ObjectQueryHandler.hpp"
 
 namespace Sirikata {
 namespace OH {
@@ -24,9 +23,7 @@ namespace Manual {
  */
 class ManualObjectQueryProcessor :
         public ObjectQueryProcessor,
-        public SpaceNodeSessionListener,
-        public ObjectNodeSessionListener,
-        OrphanLocUpdateManager::Listener<OHDP::SpaceNodeID>
+        public ObjectNodeSessionListener
 {
 public:
     static ManualObjectQueryProcessor* create(ObjectHostContext* ctx, const String& args);
@@ -37,26 +34,70 @@ public:
     virtual void start();
     virtual void stop();
 
-    // SpaceNodeSessionListener Interface
-    virtual void onSpaceNodeSession(const OHDP::SpaceNodeID& id, OHDPSST::Stream::Ptr sn_stream);
-    virtual void onSpaceNodeSessionEnded(const OHDP::SpaceNodeID& id);
-
     // ObjectNodeSessionListener Interface
     virtual void onObjectNodeSession(const SpaceID& space, const ObjectReference& oref, const OHDP::NodeID& id);
 
+
+    // ObjectQueryProcessor Overrides
+    virtual void presenceConnected(HostedObjectPtr ho, const SpaceObjectReference& sporef);
+    virtual void presenceConnectedStream(HostedObjectPtr ho, const SpaceObjectReference& sporef, SSTStreamPtr strm);
+    virtual void presenceDisconnected(HostedObjectPtr ho, const SpaceObjectReference& sporef);
     virtual String connectRequest(HostedObjectPtr ho, const SpaceObjectReference& sporef, const String& query);
     virtual void updateQuery(HostedObjectPtr ho, const SpaceObjectReference& sporef, const String& new_query);
 
+
+    // ServerQueryHandler callbacks - Handle new/deleted queries
+    // Notification when a new server query is setup. This occurs whether or not
+    // a query is registered -- it just indicates that there's a connection that
+    // we might care about and prepares us to setup local query
+    // processors using OHLocationServiceCachePtrs provided by
+    // callbacks from the ServerQueryHandler.
+    void createdServerQuery(const OHDP::SpaceNodeID& snid);
+    void removedServerQuery(const OHDP::SpaceNodeID& snid);
+    // And these track when an index(tree) is replicated to the node -- these
+    // calls will occur between createdServerQuery and
+    // removedServerQuery. Creation calls are accompanied by a
+    // LocationServiceCache which will hold replicated object data and info
+    // about the replicated tree.
+    void createdReplicatedIndex(const OHDP::SpaceNodeID& snid, ProxIndexID iid, OHLocationServiceCachePtr loc_cache, ServerID objects_from_server, bool dynamic_objects);
+    void removedReplicatedIndex(const OHDP::SpaceNodeID& snid, ProxIndexID iid);
+
+    // ObjectQueryHandler callbacks - handle notifications about local queries
+    // in the tree so we know how to move the cut on the space server up or down.
+    void queriersAreObserving(const OHDP::SpaceNodeID& snid, const ObjectReference& objid);
+    void queriersStoppedObserving(const OHDP::SpaceNodeID& snid, const ObjectReference& objid);
+
+    // ObjectQueryProcessor callbacks - Handle results coming back for queries
+    void deliverProximityResult(const SpaceObjectReference& sporef, const Sirikata::Protocol::Prox::ProximityUpdate& update);
+    void deliverLocationResult(const SpaceObjectReference& sporef, const LocUpdate& lu);
 private:
+    typedef std::tr1::shared_ptr<ObjectQueryHandler> ObjectQueryHandlerPtr;
+
+    // Helper that actually registers a query with the underlying query
+    // processor. Factored out since we may need to defer registration until
+    // after connection completes, so we can hit this from multiple code paths.
+    void registerOrUpdateObjectQuery(const SpaceObjectReference& sporef);
+    void unregisterObjectQuery(const SpaceObjectReference& sporef);
+
+
+    void commandProperties(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
+    void commandListHandlers(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
+    ObjectQueryHandlerPtr lookupCommandHandler(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) const;
+    void commandListNodes(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
+    void commandForceRebuild(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
+
 
     ObjectHostContext* mContext;
+    Network::IOStrandPtr mStrand;
 
     // Queries registered by objects to be resolved locally and
     // connection state
     struct ObjectState {
         ObjectState()
-         : node(OHDP::NodeID::null()),
-           query()
+         : who(),
+           node(OHDP::NodeID::null()),
+           query(),
+           registered(false)
         {}
 
         // Checks if it is safe to destroy this ObjectState
@@ -64,99 +105,40 @@ private:
             return (node == OHDP::NodeID::null());
         }
 
+        // Checks whether registration is needed, i.e. we have a query and
+        // haven't registered it yet
+        bool needsRegistration() const {
+            return (!registered && !query.empty());
+        }
+
+        // Checks whether registration is currently possible, i.e. we're
+        // actually connected.
+        bool canRegister() const {
+            return (node != OHDP::NodeID::null() && !query.empty());
+        }
+
+
         HostedObjectWPtr who;
         OHDP::NodeID node;
         String query;
+        // Whether we've registered this query with the underlying query
+        // processor. This requires the query processor and a fully connected
+        // object (including connected space SST stream).
+        bool registered;
     };
+    // This stores state about requests from objects we are hosting
     typedef std::tr1::unordered_map<SpaceObjectReference, ObjectState, SpaceObjectReference::Hasher> ObjectStateMap;
     ObjectStateMap mObjectState;
 
-    // Queries we've registered with servers so that we can resolve
-    // object queries
-    struct ServerQueryState {
-        ServerQueryState(Context* ctx, OHDPSST::Stream::Ptr base)
-         : nconnected(0),
-           base_stream(base),
-           prox_stream(),
-           prox_stream_requested(false),
-           outstanding(),
-           writing(false),
-           orphans(ctx, ctx->mainStrand, Duration::seconds(10))
-        {
-            orphans.start();
-            objects = OHLocationServiceCachePtr(new OHLocationServiceCache(ctx->mainStrand /* FIXME should be prox querying strand */));
-        }
-        ~ServerQueryState() {
-            orphans.stop();
-        }
+    // This actually performs the queries from each object
+    typedef std::tr1::unordered_map<OHDP::SpaceNodeID, ObjectQueryHandlerPtr, OHDP::SpaceNodeID::Hasher> QueryHandlerMap;
+    QueryHandlerMap mObjectQueryHandlers;
 
-        // Returns true if the *query* can be removed (not if this
-        // object can be removed, that is tracked by the lifetime of
-        // the session)
-        bool canRemove() const {
-            return nconnected == 0;
-        }
-
-        // # of connected objects
-        int32 nconnected;
-        OHDPSST::Stream::Ptr base_stream;
-        OHDPSST::Stream::Ptr prox_stream;
-        // Whether we've requested the prox_stream
-        bool prox_stream_requested;
-        // Outstanding data to be sent
-        std::queue<String> outstanding;
-        // Whether we're in the process of sending messages
-        bool writing;
-
-        OHLocationServiceCachePtr objects;
-        OrphanLocUpdateManager orphans;
-    };
-    typedef std::tr1::shared_ptr<ServerQueryState> ServerQueryStatePtr;
-    typedef std::tr1::unordered_map<OHDP::SpaceNodeID, ServerQueryStatePtr, OHDP::SpaceNodeID::Hasher> ServerQueryMap;
-    ServerQueryMap mServerQueries;
-
-    // Helper that marks a server with another connected object and may register
-    // a query
-    void incrementServerQuery(ServerQueryMap::iterator serv_it);
-    // Helper that updates a server query, possibly sending an
-    // initialization message to the server to setup the query
-    void updateServerQuery(ServerQueryMap::iterator serv_it, bool is_new);
-    // Helper that tries to remove the server query pointed at by the
-    // iterator, checking if it is referenced at all yet and sending a
-    // message to kill the query
-    void decrementServerQuery(ServerQueryMap::iterator serv_it);
+    // And this performs a single query against each server, getting results
+    // locally that allow the above to process local queries.
+    ServerQueryHandler mServerQueryHandler;
 
 
-    // Proximity
-    // Helpers for sending different types of basic requests
-    void sendInitRequest(ServerQueryMap::iterator serv_it);
-    void sendRefineRequest(ServerQueryMap::iterator serv_it, const ObjectReference& agg);
-    void sendRefineRequest(ServerQueryMap::iterator serv_it, const std::vector<ObjectReference>& aggs);
-    void sendCoarsenRequest(ServerQueryMap::iterator serv_it, const ObjectReference& agg);
-    void sendCoarsenRequest(ServerQueryMap::iterator serv_it, const std::vector<ObjectReference>& aggs);
-    void sendDestroyRequest(ServerQueryMap::iterator serv_it);
-
-    // Send a message to prox, triggering new stream as necessary
-    void sendProxMessage(ServerQueryMap::iterator serv_it, const String& msg);
-    // Utility that triggers writing some more prox data. As long as more is
-    // available, it'll keep looping.
-    void writeSomeProxData(ServerQueryStatePtr data);
-    // Callback from creating proximity substream
-    void handleCreatedProxSubstream(const OHDP::SpaceNodeID& snid, int success, OHDPSST::Stream::Ptr prox_stream);
-    // Data read callback for prox substreams -- translate to proximity events
-    void handleProximitySubstreamRead(const OHDP::SpaceNodeID& snid, OHDPSST::Stream::Ptr prox_stream, String* prevdata, uint8* buffer, int length);
-    // Handle decode proximity message
-    void handleProximityMessage(const OHDP::SpaceNodeID& snid, const String& payload);
-
-    // Location
-    // Handlers for substreams for space-managed updates
-    void handleLocationSubstream(const OHDP::SpaceNodeID& snid, int err, OHDPSST::Stream::Ptr s);
-    // Handlers for substream read events for space-managed updates
-    void handleLocationSubstreamRead(const OHDP::SpaceNodeID& snid, OHDPSST::Stream::Ptr s, std::stringstream* prevdata, uint8* buffer, int length);
-    bool handleLocationMessage(const OHDP::SpaceNodeID& snid, const std::string& payload);
-
-    // OrphanLocUpdateManager::Listener Interface
-    virtual void onOrphanLocUpdate(const OHDP::SpaceNodeID& observer, const LocUpdate& lu);
 };
 
 } // namespace Manual

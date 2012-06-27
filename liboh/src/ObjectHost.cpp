@@ -303,7 +303,7 @@ Duration ObjectHost::clientTimeOffset(const SpaceID& space) const {
     return mSessionManagers.find(space)->second->clientTimeOffset();
 }
 
-Time ObjectHost::spaceTime(const SpaceID& space, const Time& t) {
+Time ObjectHost::spaceTime(const SpaceID& space, const Time& t) const {
     Duration off = serverTimeOffset(space);
     // FIXME we should probably return a negative time and force the code using
     // this (e.g. the loc update stuff) to make sure it handles it correctly by
@@ -313,21 +313,22 @@ Time ObjectHost::spaceTime(const SpaceID& space, const Time& t) {
     return t + off;
 }
 
-Time ObjectHost::currentSpaceTime(const SpaceID& space) {
+Time ObjectHost::currentSpaceTime(const SpaceID& space) const {
     return spaceTime(space, mContext->simTime());
 }
 
-Time ObjectHost::localTime(const SpaceID& space, const Time& t) {
+Time ObjectHost::localTime(const SpaceID& space, const Time& t) const {
     Duration off = clientTimeOffset(space);
     // FIXME we should probably return a negative time and force the code using
     // this (e.g. the loc update stuff) to make sure it handles it correctly by
     // extrapolating to a current time.
     // This is kinda gross, but we need to make sure result >= 0
-    if ( (int64)t.raw() + off.toMicro() < 0) return Time::null();
+    if ( (int64)t.raw() + off.toMicro() < 0)
+        return Time::null();
     return t + off;
 }
 
-Time ObjectHost::currentLocalTime() {
+Time ObjectHost::currentLocalTime() const {
     return mContext->simTime();
 }
 

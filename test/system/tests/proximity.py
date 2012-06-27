@@ -164,18 +164,37 @@ class OneSS(object):
             'mainspace' : '12345678-1111-1111-1111-DEFA01759ACE'
             }
 
+class OneManualSS(OneSS):
+    '''
+    Mixin to specify 1 space server using manual querying, 1 OH
+    '''
+
+    def spaceArgs(self):
+        return dict(OneSS.spaceArgs(self).items() + ({'prox' : 'libprox-manual', 'moduleloglevel' : 'prox=detailed'}).items())
+
+    def ohArgs(self):
+        return dict(OneSS.ohArgs(self).items() + ({'oh.query-processor' : 'manual', 'moduleloglevel' : 'manual-query-processor=detailed'}).items())
+
 
 
 class ConnectionTest(ProximityTest):
     def testBody(self, procs, output):
         response = self.createObject('oh', 'proximityTests/connectionTest.em');
 
+class OneSSConnectionTest(ConnectionTest, OneSS):
+    pass
+
+class OneSSManualConnectionTest(ConnectionTest, OneManualSS):
+    pass
+
+
+
 class BasicQueryTest(ProximityTest):
     def testBody(self, procs, output):
         response = self.createObject('oh', 'proximityTests/basicQueryTest.em');
 
-class OneSSConnectionTest(ConnectionTest, OneSS):
-    pass
-
 class OneSSBasicQueryTest(BasicQueryTest, OneSS):
+    after = [OneSSConnectionTest]
+
+class OneSSManualBasicQueryTest(BasicQueryTest, OneManualSS):
     after = [OneSSConnectionTest]

@@ -109,7 +109,7 @@ void JSVisibleManager::iOnDestroyProxy(ProxyObjectPtr p)
     mTrackedObjects.erase(p);
 }
 
-void JSVisibleManager::updateLocation(ProxyObjectPtr proxy, const TimedMotionVector3f &newLocation, const TimedMotionQuaternion& newOrient, const BoundingSphere3f& newBounds,const SpaceObjectReference& sporef) {
+void JSVisibleManager::updateLocation(ProxyObjectPtr proxy, const TimedMotionVector3f &newLocation, const TimedMotionQuaternion& newOrient, const AggregateBoundingInfo& newBounds,const SpaceObjectReference& sporef) {
     mCtx->visManStrand->post(
         std::tr1::bind(&JSVisibleManager::iUpdatedProxy, this, proxy),
         "JSVisibleManager::iUpdatedProxy"

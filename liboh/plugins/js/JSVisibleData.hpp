@@ -103,7 +103,7 @@ public:
     // IPresencePropertiesRead Interface
     virtual TimedMotionVector3f location() const { return proxy->location(); }
     virtual TimedMotionQuaternion orientation() const { return proxy->orientation(); }
-    virtual BoundingSphere3f bounds() const { return proxy->bounds(); }
+    virtual AggregateBoundingInfo bounds() const { return proxy->bounds(); }
     virtual Transfer::URI mesh() const { return proxy->mesh(); }
     virtual String physics() const { return proxy->physics(); }
     virtual bool isAggregate() const { return proxy->isAggregate(); }
@@ -146,7 +146,7 @@ public:
     // IPresencePropertiesRead Interface
     virtual TimedMotionVector3f location() const;
     virtual TimedMotionQuaternion orientation() const;
-    virtual BoundingSphere3f bounds() const;
+    virtual AggregateBoundingInfo bounds() const;
     virtual Transfer::URI mesh() const;
     virtual String physics() const;
     virtual bool isAggregate() const;

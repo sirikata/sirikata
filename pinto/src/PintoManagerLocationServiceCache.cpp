@@ -61,7 +61,7 @@ void PintoManagerLocationServiceCache::addSpaceServer(ServerID sid, const TimedM
 
     if (!alreadyHad) {
         for(ListenerSet::iterator it = mListeners.begin(); it != mListeners.end(); it++)
-            (*it)->locationConnected(sid, false, loc, region, ms);
+            (*it)->locationConnected(sid, false, false, loc, region, ms);
     }
     else {
         for(ListenerSet::iterator it = mListeners.begin(); it != mListeners.end(); it++) {
@@ -129,6 +129,17 @@ void PintoManagerLocationServiceCache::removeSpaceServer(ServerID sid) {
         (*it)->locationDisconnected(sid);
 }
 
+void PintoManagerLocationServiceCache::addPlaceholderImposter(
+    const ObjectID& uuid,
+    const Vector3f& center_offset,
+    const float32 center_bounds_radius,
+    const float32 max_size,
+    const String& zernike,
+    const String& mesh
+) {
+    // We might get calls here if we have an aggregate listener registered, but
+    // we don't really care about it. We'll just ignore the call.
+}
 
 LocationServiceCache::Iterator PintoManagerLocationServiceCache::startTracking(const ObjectID& id) {
     Lock lck(mMutex);
@@ -166,12 +177,20 @@ TimedMotionVector3f PintoManagerLocationServiceCache::location(const Iterator& i
     return dat.location;
 }
 
-
-BoundingSphere3f PintoManagerLocationServiceCache::region(const Iterator& id) {
+Vector3f PintoManagerLocationServiceCache::centerOffset(const Iterator& id) {
     SpaceServerData& dat = EXTRACT_ITERATOR_DATA(id);
-    return dat.region;
+    return dat.region.center();
 }
 
+float32 PintoManagerLocationServiceCache::centerBoundsRadius(const Iterator& id) {
+    SpaceServerData& dat = EXTRACT_ITERATOR_DATA(id);
+    return dat.region.radius();
+}
+
+float32 PintoManagerLocationServiceCache::maxSize(const Iterator& id) {
+    SpaceServerData& dat = EXTRACT_ITERATOR_DATA(id);
+    return dat.maxSize;
+}
 
 Prox::ZernikeDescriptor& PintoManagerLocationServiceCache::zernikeDescriptor(const Iterator& i) {
   return Prox::ZernikeDescriptor::null();
@@ -179,11 +198,6 @@ Prox::ZernikeDescriptor& PintoManagerLocationServiceCache::zernikeDescriptor(con
 
 String PintoManagerLocationServiceCache::mesh(const Iterator& i) {
   return String("");
-}
-
-float32 PintoManagerLocationServiceCache::maxSize(const Iterator& id) {
-    SpaceServerData& dat = EXTRACT_ITERATOR_DATA(id);
-    return dat.maxSize;
 }
 
 bool PintoManagerLocationServiceCache::isLocal(const Iterator& id) {
