@@ -1,0 +1,21 @@
+<COLLADA xmlns="http://www.collada.org/2005/11/COLLADASchema" version="1.4.1">
+  <asset>
+    <contributor>
+      <authoring_tool>Google SketchUp 8.0.4810</authoring_tool>
+    </contributor>
+    <created>2011-07-11T23:49:55Z</created>
+    <modified>2011-07-11T23:49:55Z</modified>
+    <unit meter="0.0254000" name="inch"/>
+    <up_axis>Z_UP</up_axis>
+  </asset>
+  <library_visual_scenes>
+    <visual_scene id="ID1">
+      <node name="SketchUp">
+        <node id="ID2" name="ID2">
+          <matrix>1.0000000 0.0000000 0.0000000 0.0000000 0.0000000 1.0000000 0.0000000 0.0000000 0.0000000 0.0000000 1.0000000 0.0000000 0.0000000 0.0000000 0.0000000 1.0000000</matrix>
+        </node>
+      </node>
+    </visual_scene>
+  </library_visual_scenes>
+  
+</COLLADA>

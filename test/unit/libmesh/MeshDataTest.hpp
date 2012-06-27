@@ -334,7 +334,6 @@ public:
 	}
 	void testLightInstanceIterator( void ) {
 		Meshdata md;
-		
 		//one node
 		Node ned;
 		ned.parent = NullNodeIndex;

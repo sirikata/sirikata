@@ -31,20 +31,112 @@
  */
 #include <cxxtest/TestSuite.h>
 #include <sirikata/mesh/Meshdata.hpp>
+#include <sirikata/mesh/ModelsSystemFactory.hpp>
+#include <fstream>
+#include <sirikata/core/util/Paths.hpp>
+#include <boost/filesystem.hpp>
 
 using namespace Sirikata;
+using namespace std;
+
+//using namespace Mesh;
 class ColladaLoaderTest : public CxxTest::TestSuite
 {
+protected:
+	int _initialized;
+	String _plugin;
+	PluginManager _pmgr;
+	ModelsSystem *msys;
+	string pikachu;
+	
 public:
+
     void setUp( void )
     {
+		_plugin = "colladamodels";
+		if (!_initialized) {
+            _initialized = 1;
+            _pmgr.load(_plugin);
+        }
+		msys = ModelsSystemFactory::getSingleton ().getConstructor ( "colladamodels" ) ( "" );
+		assert(msys);
     }
     void tearDown( void )
     {
+		delete msys;
+		_pmgr.gc();
     }
     void testColladaLoader( void ) {
 		
+		ifstream fin ("../../../test/unit/libmesh/collada/pikachu.dae");
+		//std::ifstream gill ((std::string)(boost::filesystem::path(Path::Get(Path::DIR_EXE)) / "../../../test/unit/libmesh/collada/pikachu.dae").string());
+		string temp;
+
+		do {
+			fin >> temp;
+			pikachu += temp + ' ';
+		}while(temp != "</COLLADA>");
+
+		//Transfer::RemoteFileMetadata metadata;
 		Meshdata md;
-        TS_ASSERT_EQUALS(0,0);
+
+		//node
+		Node ned;
+		ned.parent = NullNodeIndex;
+		ned.transform = Matrix4x4f::translate(Vector3f(0,-3,0));
+		md.nodes.push_back(ned);
+		md.rootNodes.push_back(0);
+
+		//geometry instance
+		GeometryInstance gi;
+		gi.geometryIndex = 0;
+		gi.parentNode = 0;
+		md.instances.push_back(gi);
+
+		//submeshgeometry
+		SubMeshGeometry smg;
+		SubMeshGeometry::Primitive p1;
+		p1.primitiveType = p1.TRIANGLES;
+		for(int i = 0; i < 3; i++) p1.indices.push_back(i);
+
+		//adding points
+		Vector3f point[3] = {Vector3f(7,2,6), Vector3f(9,5,1), Vector3f(8,4,3)};
+		for(int i = 0; i < 3; i++) smg.positions.push_back(point[i]);
+		smg.primitives.push_back(p1);
+		smg.recomputeBounds();
+		md.geometry.push_back(smg);
+		
+		//note: the collada stuff can just be dumped......h...e...r...e
+		Transfer::DenseData *dd = new Transfer::DenseData(pikachu);
+		
+		Transfer::DenseDataPtr data(dd);
+		
+		Mesh::VisualPtr parsed = msys->load(data);
+		
+		//the parsed should actually be null
+		TS_ASSERT_DIFFERS(parsed, Mesh::VisualPtr());
+		
+		MeshdataPtr mdp(std::tr1::dynamic_pointer_cast<Meshdata>(parsed));
+
+		TS_ASSERT_DIFFERS(mdp->getInstancedGeometryCount(), 0);
+
+		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
     }
+	//void testColladaLoaderNull( void ) {
+	//	//note: the collada stuff can just be dumped......h...e...r...e
+	//	Transfer::DenseData *dd = new Transfer::DenseData("Hello World!");
+	//	
+	//	Transfer::DenseDataPtr data(dd);
+	//	
+	//	Mesh::VisualPtr parsed = msys->load(data);
+	//	
+	//	//the parsed should actually be null
+	//	TS_ASSERT_DIFFERS(parsed, Mesh::VisualPtr());
+	//	
+	//	MeshdataPtr mdp(std::tr1::dynamic_pointer_cast<Meshdata>(parsed));
+
+	//	TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
+
+
+	//}
 };
