@@ -49,7 +49,7 @@ protected:
 	ModelsSystem *msys;
 	string pikachu;
 	string simple;
-	
+
 public:
 
     void setUp( void )
@@ -68,30 +68,48 @@ public:
 		_pmgr.gc();
     }
     void testColladaLoader( void ) {
-		
-		ifstream fin ("../../../test/unit/libmesh/collada/pikachu.dae");
+
+        // For now only support in-tree execution
+        boost::filesystem::path collada_data_dir = boost::filesystem::path(Path::Get(Path::DIR_EXE));
+        // Windows exes are one level deeper due to Debug or RelWithDebInfo
+#if SIRIKATA_PLATFORM == SIRIKATA_WINDOWS
+        collada_data_dir = collada_data_dir / "..";
+#endif
+        collada_data_dir = collada_data_dir / "../../test/unit/libmesh/collada";
+
+        ifstream fin ( (collada_data_dir / "pikachu.dae").string().c_str() );
+        // Warn and bail if we can't find the data
+        if (!fin) {
+            TS_WARN("Unable to find COLLADA data.");
+            return;
+        }
+
 		//std::ifstream gill ((std::string)(boost::filesystem::path(Path::Get(Path::DIR_EXE)) / "../../../test/unit/libmesh/collada/pikachu.dae").string());
 		string temp;
 
 		do {
 			fin >> temp;
 			pikachu += temp + ' ';
-		}while(temp != "</COLLADA>");
+		}while(fin && temp != "</COLLADA>");
 
-		ifstream fin2 ("../../../test/unit/libmesh/collada/simple.dae");
+        ifstream fin2 ( (collada_data_dir / "simple.dae").string().c_str() );
+        if (!fin2) {
+            TS_WARN("Unable to find COLLADA data.");
+            return;
+        }
 
 		do {
 			fin2 >> temp;
 			simple += temp + ' ';
-		}while(temp != "</COLLADA>");
-		
+		}while(fin2 && temp != "</COLLADA>");
+
 		//Test collada file: pikachu.dae
 		Transfer::DenseData *dd = new Transfer::DenseData(pikachu);
 		Transfer::DenseDataPtr data(dd);
 		Mesh::VisualPtr parsed = msys->load(data);
 
 		TS_ASSERT_DIFFERS(parsed, Mesh::VisualPtr());
-		
+
 		MeshdataPtr mdp(tr1::dynamic_pointer_cast<Meshdata>(parsed));
 		TS_ASSERT_DIFFERS(mdp->getInstancedGeometryCount(), 0);
 		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
@@ -100,9 +118,9 @@ public:
 		Transfer::DenseData *dd2 = new Transfer::DenseData(simple);
 		Transfer::DenseDataPtr data2(dd2);
 		parsed = msys->load(data2);
-		
+
 		TS_ASSERT_DIFFERS(parsed, Mesh::VisualPtr());
-		
+
 		MeshdataPtr mdp2(tr1::dynamic_pointer_cast<Meshdata>(parsed));
 		TS_ASSERT_EQUALS(mdp2->getInstancedGeometryCount(), 0);
 		TS_ASSERT_EQUALS(mdp2->getInstancedLightCount(), 0);
@@ -120,14 +138,14 @@ public:
 	//void testColladaLoaderNull( void ) {
 	//	//note: the collada stuff can just be dumped......h...e...r...e
 	//	Transfer::DenseData *dd = new Transfer::DenseData("Hello World!");
-	//	
+	//
 	//	Transfer::DenseDataPtr data(dd);
-	//	
+	//
 	//	Mesh::VisualPtr parsed = msys->load(data);
-	//	
+	//
 	//	//the parsed should actually be null
 	//	TS_ASSERT_DIFFERS(parsed, Mesh::VisualPtr());
-	//	
+	//
 	//	MeshdataPtr mdp(std::tr1::dynamic_pointer_cast<Meshdata>(parsed));
 
 	//	TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
