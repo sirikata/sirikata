@@ -72,7 +72,7 @@ public:
         // For now only support in-tree execution
         boost::filesystem::path collada_data_dir = boost::filesystem::path(Path::Get(Path::DIR_EXE));
         // Windows exes are one level deeper due to Debug or RelWithDebInfo
-#if SIRIKATA_PLATFORM == SIRIKATA_WINDOWS
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS
         collada_data_dir = collada_data_dir / "..";
 #endif
         collada_data_dir = collada_data_dir / "../../test/unit/libmesh/collada";
