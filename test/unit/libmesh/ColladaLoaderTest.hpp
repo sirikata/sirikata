@@ -49,11 +49,14 @@ protected:
 	ModelsSystem *msys;
 	string pikachu;
 	string simple;
+	string simple2;
 
 public:
 
     void setUp( void )
     {
+		
+		
 		_plugin = "colladamodels";
 		if (!_initialized) {
             _initialized = 1;
@@ -66,6 +69,7 @@ public:
     {
 		delete msys;
 		_pmgr.gc();
+		_initialized = 0;
     }
     void testColladaLoader( void ) {
 
@@ -76,7 +80,8 @@ public:
         collada_data_dir = collada_data_dir / "..";
 #endif
         collada_data_dir = collada_data_dir / "../../test/unit/libmesh/collada";
-
+		
+		
         ifstream fin ( (collada_data_dir / "pikachu.dae").string().c_str() );
         // Warn and bail if we can't find the data
         if (!fin) {
@@ -84,7 +89,6 @@ public:
             return;
         }
 
-		//std::ifstream gill ((std::string)(boost::filesystem::path(Path::Get(Path::DIR_EXE)) / "../../../test/unit/libmesh/collada/pikachu.dae").string());
 		string temp;
 
 		do {
@@ -124,6 +128,7 @@ public:
 		MeshdataPtr mdp2(tr1::dynamic_pointer_cast<Meshdata>(parsed));
 		TS_ASSERT_EQUALS(mdp2->getInstancedGeometryCount(), 0);
 		TS_ASSERT_EQUALS(mdp2->getInstancedLightCount(), 0);
+		TS_ASSERT_EQUALS(mdp2->getJointCount(), 0);
 		TS_ASSERT_EQUALS(mdp2->geometry.size(), 0);
 		TS_ASSERT_EQUALS(mdp2->lights.size(), 0);
 		TS_ASSERT_EQUALS(mdp2->textures.size(), 0);
@@ -133,23 +138,27 @@ public:
 		TS_ASSERT_EQUALS(mdp2->nodes[0].transform, Matrix4x4f::identity());
 		TS_ASSERT_EQUALS(mdp2->nodes[1].transform, Matrix4x4f::identity());
 		TS_ASSERT_EQUALS(mdp2->globalTransform, Matrix4x4f::identity());
-
     }
-	//void testColladaLoaderNull( void ) {
-	//	//note: the collada stuff can just be dumped......h...e...r...e
-	//	Transfer::DenseData *dd = new Transfer::DenseData("Hello World!");
-	//
-	//	Transfer::DenseDataPtr data(dd);
-	//
-	//	Mesh::VisualPtr parsed = msys->load(data);
-	//
-	//	//the parsed should actually be null
-	//	TS_ASSERT_DIFFERS(parsed, Mesh::VisualPtr());
-	//
-	//	MeshdataPtr mdp(std::tr1::dynamic_pointer_cast<Meshdata>(parsed));
 
-	//	TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
+	void testColladaLoaderNull( void ) {
+		Transfer::DenseData *dd = new Transfer::DenseData("Hello World!");
+	
+		Transfer::DenseDataPtr data(dd);
+	
+		Mesh::VisualPtr parsed = msys->load(data);
+	
+		//the parsed should actually be null
+		TS_ASSERT_DIFFERS(parsed, Mesh::VisualPtr());
+		MeshdataPtr mdp(std::tr1::dynamic_pointer_cast<Meshdata>(parsed));
+		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 0);
+		TS_ASSERT_EQUALS(mdp->getInstancedLightCount(), 0);
+		TS_ASSERT_EQUALS(mdp->getJointCount(), 0);
+		TS_ASSERT_EQUALS(mdp->geometry.size(), 0);
+		TS_ASSERT_EQUALS(mdp->lights.size(), 0);
+		TS_ASSERT_EQUALS(mdp->textures.size(), 0);
+		TS_ASSERT_EQUALS(mdp->materials.size(), 0);
+		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
+		TS_ASSERT_EQUALS(mdp->nodes.size(), 0);
 
-
-	//}
+	}
 };
