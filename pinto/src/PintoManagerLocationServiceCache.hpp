@@ -36,6 +36,7 @@
 #include <prox/base/LocationServiceCache.hpp>
 #include "ProxSimulationTraits.hpp"
 #include <boost/thread.hpp>
+#include <sirikata/core/util/AggregateBoundingInfo.hpp>
 
 namespace Sirikata {
 
@@ -65,6 +66,7 @@ public:
     virtual Iterator startTracking(const ObjectID& id);
     virtual void stopTracking(const Iterator& id);
 
+    bool tracking(const ObjectID& id);
 
     virtual TimedMotionVector3f location(const Iterator& id);
     virtual Vector3 centerOffset(const Iterator& id);

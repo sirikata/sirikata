@@ -1802,6 +1802,7 @@ SET(PINTO_SOURCES
   ${PINTO_SOURCE_DIR}/ProxSimulationTraits.cpp
   ${PINTO_SOURCE_DIR}/PintoManagerBase.cpp
   ${PINTO_SOURCE_DIR}/PintoManager.cpp
+  ${PINTO_SOURCE_DIR}/ManualPintoManager.cpp
   ${PINTO_SOURCE_DIR}/PintoManagerLocationServiceCache.cpp
   ${PINTO_SOURCE_DIR}/Options.cpp
   ${PINTO_SOURCE_DIR}/main.cpp

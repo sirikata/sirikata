@@ -13,6 +13,7 @@
 
 #include "PintoContext.hpp"
 #include "PintoManager.hpp"
+#include "ManualPintoManager.hpp"
 
 int main(int argc, char** argv) {
     using namespace Sirikata;
@@ -55,11 +56,11 @@ int main(int argc, char** argv) {
     PintoContext* pinto_context = new PintoContext(ios, mainStrand, trace, start_time, duration);
 
     String pinto_mgr_type = GetOptionValue<String>(OPT_PINTO_TYPE);
-    PintoManager* pinto = NULL;
+    PintoManagerBase* pinto = NULL;
     if (pinto_mgr_type == "solidangle")
         pinto = new PintoManager(pinto_context);
-    //else if (pinto_mgr_type == "manual")
-        //pinto = new ManualPintoManager(pinto_context);
+    else if (pinto_mgr_type == "manual")
+        pinto = new ManualPintoManager(pinto_context);
     if (pinto == NULL) {
         SILOG(pinto, fatal, "Unknown pinto type: " << pinto_mgr_type);
         return 1;

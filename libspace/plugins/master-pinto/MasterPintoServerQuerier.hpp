@@ -25,7 +25,7 @@ private:
     // Overrides from base class
     virtual void onConnected();
 
-    virtual void onPintoData(Sirikata::Protocol::MasterPinto::PintoResponse& msg);
+    virtual void onPintoData(const String& data);
 
     // If connected and any properties are marked as dirty, tries to
     // send an update to the server

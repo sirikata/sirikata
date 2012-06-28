@@ -58,13 +58,22 @@ protected:
 
     // Data events for implementations - a message has been received. The data
     // should be processed by the implementation
-    virtual void onPintoData(Sirikata::Protocol::MasterPinto::PintoResponse& msg) {}
+    virtual void onPintoData(const String& data) = 0;
 
+    // Helpers
+    enum QueueUpdateType {
+        QueueUpdate,
+        DoNotQueueUpdate
+    };
+    // Send a query update, or, if not connected yet, possibly queue it to be
+    // sent later
+    void sendQueryUpdate(const String& data, QueueUpdateType queue = QueueUpdate);
+
+private:
     // Connection management
     void connect();
     bool connected() { return mConnected; }
 
-private:
     // Handlers for mServerStream
     void handleServerConnection(Network::Stream::ConnectionStatus status, const std::string &reason);
     void handleServerReceived(Network::Chunk& data, const Network::Stream::PauseReceiveCallback& pause);
@@ -94,6 +103,7 @@ private:
     float32 mMaxRadius;
     bool mMaxRadiusDirty;
 
+    std::vector<String> mQueuedQueryUpdates;
 }; // MasterPintoServerQuerierBase
 
 } // namespace Sirikata

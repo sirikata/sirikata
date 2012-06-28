@@ -171,6 +171,12 @@ void PintoManagerLocationServiceCache::stopTracking(const Iterator& id) {
         mServers.erase( EXTRACT_ITERATOR(id) );
 }
 
+bool PintoManagerLocationServiceCache::tracking(const ObjectID& id) {
+    Lock lck(mMutex);
+
+    return (mServers.find(id) != mServers.end());
+}
+
 
 TimedMotionVector3f PintoManagerLocationServiceCache::location(const Iterator& id) {
     SpaceServerData& dat = EXTRACT_ITERATOR_DATA(id);

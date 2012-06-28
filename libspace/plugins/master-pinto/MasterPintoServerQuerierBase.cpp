@@ -126,6 +126,20 @@ void MasterPintoServerQuerierBase::tryServerUpdate() {
     mServerStream->send( MemoryReference(serialized), ReliableOrdered );
 }
 
+void MasterPintoServerQuerierBase::sendQueryUpdate(const String& data, QueueUpdateType queue) {
+    if (!connected()) {
+        if (queue == QueueUpdate)
+            mQueuedQueryUpdates.push_back(data);
+        connect();
+        return;
+    }
+
+    Sirikata::Protocol::MasterPinto::PintoMessage msg;
+    msg.set_query(data);
+    String serialized = serializePBJMessage(msg);
+    mServerStream->send( MemoryReference(serialized), ReliableOrdered );
+}
+
 void MasterPintoServerQuerierBase::handleServerConnection(Network::Stream::ConnectionStatus status, const std::string &reason) {
     mConnecting = false;
 
@@ -133,6 +147,11 @@ void MasterPintoServerQuerierBase::handleServerConnection(Network::Stream::Conne
         MP_LOG(debug, "Connected to master pinto server.");
         mConnected = true;
         tryServerUpdate();
+        // Process any queued messages
+        std::vector<String> queued_updates;
+        mQueuedQueryUpdates.swap(queued_updates);
+        for(uint32 i = 0; i < queued_updates.size(); i++)
+            sendQueryUpdate(queued_updates[i]);
         // Allow implementations to do some work with the connection
         onConnected();
     }
@@ -149,15 +168,7 @@ void MasterPintoServerQuerierBase::handleServerConnection(Network::Stream::Conne
 }
 
 void MasterPintoServerQuerierBase::handleServerReceived(Chunk& data, const Network::Stream::PauseReceiveCallback& pause) {
-    Sirikata::Protocol::MasterPinto::PintoResponse msg;
-    bool parsed = parsePBJMessage(&msg, data);
-
-    if (!parsed) {
-        MP_LOG(error, "Couldn't parse response from server.");
-        return;
-    }
-
-    onPintoData(msg);
+    onPintoData(String((char*)&data[0], data.size()));
 }
 
 void MasterPintoServerQuerierBase::handleServerReadySend() {

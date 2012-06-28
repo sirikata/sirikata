@@ -21,20 +21,8 @@ public:
     virtual void updateQuery(const String& update);
 
 private:
+    virtual void onPintoData(const String& msg);
 
-    // Overrides from base class
-    virtual void onConnected();
-
-    virtual void onPintoData(Sirikata::Protocol::MasterPinto::PintoResponse& msg);
-
-    // If connected and any properties are marked as dirty, tries to
-    // send an update to the server
-    void updatePintoQuery();
-
-
-    SolidAngle mAggregateQuery;
-    uint32 mAggregateQueryMaxResults;
-    bool mAggregateQueryDirty;
 }; // MasterPintoManualServerQuerier
 
 } // namespace Sirikata

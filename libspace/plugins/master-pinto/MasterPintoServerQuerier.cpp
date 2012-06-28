@@ -52,6 +52,7 @@ void MasterPintoServerQuerier::updateQuery(const String& update) {
 
 void MasterPintoServerQuerier::onConnected() {
     // For a new connection, make sure we try to send any dirty data
+    mAggregateQueryDirty = true;
     mIOStrand->post(
         std::tr1::bind(&MasterPintoServerQuerier::updatePintoQuery, this),
         "MasterPintoServerQuerier::updatePintoQuery"
@@ -62,26 +63,22 @@ void MasterPintoServerQuerier::updatePintoQuery() {
     if (!mAggregateQueryDirty)
         return;
 
-    if (!connected()) {
-        connect();
+    mAggregateQueryDirty = false;
+    Sirikata::Protocol::MasterPinto::QueryUpdate update;
+    update.set_min_angle(mAggregateQuery.asFloat());
+    update.set_max_count(mAggregateQueryMaxResults);
+    sendQueryUpdate(serializePBJMessage(update), DoNotQueueUpdate);
+}
+
+void MasterPintoServerQuerier::onPintoData(const String& data) {
+    Sirikata::Protocol::MasterPinto::PintoResponse msg;
+    bool parsed = parsePBJMessage(&msg, data);
+
+    if (!parsed) {
+        MP_LOG(error, "Couldn't parse response from server.");
         return;
     }
 
-    Sirikata::Protocol::MasterPinto::PintoMessage msg;
-
-    if (mAggregateQueryDirty) {
-        mAggregateQueryDirty = false;
-        Sirikata::Protocol::MasterPinto::QueryUpdate update;
-        update.set_min_angle(mAggregateQuery.asFloat());
-        update.set_max_count(mAggregateQueryMaxResults);
-        msg.set_query(serializePBJMessage(update));
-    }
-
-    String serialized = serializePBJMessage(msg);
-    mServerStream->send( MemoryReference(serialized), ReliableOrdered );
-}
-
-void MasterPintoServerQuerier::onPintoData(Sirikata::Protocol::MasterPinto::PintoResponse& msg) {
     for(int32 idx = 0; idx < msg.update_size(); idx++) {
         Sirikata::Protocol::MasterPinto::PintoUpdate update = msg.update(idx);
         // Translate to Proximity message
