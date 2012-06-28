@@ -146,7 +146,56 @@ LibproxProximity::~LibproxProximity() {
 }
 
 
+
+// BOTH Threads - methods using thread safe data
+
+// Setup all known servers for a server query update
+void LibproxProximity::addAllServersForUpdate() {
+    boost::lock_guard<boost::mutex> lck(mServerSetMutex);
+    for(ServerSet::const_iterator it = mServersQueried.begin(); it != mServersQueried.end(); it++)
+        mNeedServerQueryUpdate.insert(*it);
+}
+
+void LibproxProximity::getServersForAggregateQueryUpdate(ServerSet* servers_out) {
+    boost::lock_guard<boost::mutex> lck(mServerSetMutex);
+    servers_out->swap(mNeedServerQueryUpdate);
+}
+
+void LibproxProximity::addServerForAggregateQueryUpdate(ServerID sid) {
+    boost::lock_guard<boost::mutex> lck(mServerSetMutex);
+    mNeedServerQueryUpdate.insert(sid);
+}
+
+void LibproxProximity::updateAggregateQuery(const SolidAngle sa, uint32 max_count) {
+    PROXLOG(debug,"Query addition initiated server query request.");
+    addAllServersForUpdate();
+
+    // This is a bit ridiculous since we're just passing this data to another
+    // local service that will decode it, but this keeps the PintoServerQuerier
+    // interface generic
+    namespace json = json_spirit;
+    json::Object update_params_obj;
+    json::Value update_params(update_params_obj);
+    update_params.put("angle", sa.asFloat());
+    update_params.put("max_result", max_count);
+    mServerQuerier->updateQuery(json::write(update_params));
+}
+
+void LibproxProximity::updateAggregateStats(float32 max_radius) {
+    mServerQuerier->updateLargestObject(max_radius);
+}
+
+uint32 LibproxProximity::numServersQueried() {
+    boost::lock_guard<boost::mutex> lck(mServerSetMutex);
+    return mServersQueried.size();
+}
+
+
+
+
 // MAIN Thread Methods: The following should only be called from the main thread.
+
+// Service Interface
 
 void LibproxProximity::start() {
     LibproxProximityBase::start();
@@ -157,6 +206,8 @@ void LibproxProximity::start() {
     mContext->add(&mDynamicRebuilderPoller);
 }
 
+
+// ObjectSessionListener Interface
 
 void LibproxProximity::newSession(ObjectSession* session) {
     using std::tr1::placeholders::_1;
@@ -190,6 +241,7 @@ void LibproxProximity::sessionClosed(ObjectSession* session) {
         mObjectProxStreams.erase(prox_stream_it);
     }
 }
+
 
 void LibproxProximity::handleObjectProximityMessage(const UUID& objid, void* buffer, uint32 length) {
     Sirikata::Protocol::Prox::QueryRequest prox_update;
@@ -253,6 +305,34 @@ void LibproxProximity::sendQueryRequests() {
         }
     }
 }
+
+
+// PintoServerQuerierListener Interface
+
+void LibproxProximity::onPintoServerResult(const Sirikata::Protocol::Prox::ProximityUpdate& update) {
+    boost::lock_guard<boost::mutex> lck(mServerSetMutex);
+
+    for(int32 aidx = 0; aidx < update.addition_size(); aidx++) {
+        Sirikata::Protocol::Prox::ObjectAddition addition = update.addition(aidx);
+        ServerID sid = addition.object().asUInt32();
+        if (sid == mContext->id()) continue;
+
+        mServersQueried.insert(sid);
+        mNeedServerQueryUpdate.insert(sid);
+
+    }
+
+    for(int32 ridx = 0; ridx < update.removal_size(); ridx++) {
+        Sirikata::Protocol::Prox::ObjectRemoval removal = update.removal(ridx);
+        ServerID sid = removal.object().asUInt32();
+        if (sid == mContext->id()) continue;
+
+        mServersQueried.erase(sid);
+    }
+}
+
+
+// MessageRecipient Interface
 
 void LibproxProximity::receiveMessage(Message* msg) {
     assert(msg->dest_port() == SERVER_PORT_PROX);
@@ -1135,7 +1215,24 @@ void LibproxProximity::handleRemoveServerQuery(const ServerID& server) {
 }
 
 
-void LibproxProximity::handleForcedDisconnection(ServerID sid) {
+void LibproxProximity::handleConnectedServer(ServerID sid) {
+    // Sometimes we may get forcefully disconnected from a server. To
+    // reestablish our previous setup, if that server appears in our queried
+    // set (we were told it was relevant to us by some higher level pinto
+    // service), we mark it as needing another update. In the case that we
+    // are just getting an initial connection, this shouldn't change anything
+    // since it would already be markedas needing an update if we had been told
+    // by pinto that it needed it.
+    boost::lock_guard<boost::mutex> lck(mServerSetMutex);
+    if (mServersQueried.find(sid) != mServersQueried.end())
+        mNeedServerQueryUpdate.insert(sid);
+}
+
+void LibproxProximity::handleDisconnectedServer(ServerID sid) {
+    // When we lose a connection, we need to clear out everything related to
+    // that server.
+    PROXLOG(debug, "Handling unexpected disconnection from " << sid << " by clearing out proximity state.");
+
     // Clear out remote server's query to us
     handleRemoveServerQuery(sid);
 

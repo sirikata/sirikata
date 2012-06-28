@@ -67,8 +67,7 @@ protected:
     // stops for a few seconds while walking).
     Duration mMoveToStaticDelay;
 
-    typedef std::tr1::unordered_set<ServerID> ServerSet;
-private: // So this is used as a service by implementations
+
     // Top level Pinto + server interactions. The base class takes
     // care of querying top level Pinto and tracking which servers
     // have connections + need queries, but the implementations need
@@ -77,33 +76,13 @@ private: // So this is used as a service by implementations
     // below, this is only accessed on the main thread.
     PintoServerQuerier* mServerQuerier;
 
-    boost::mutex mServerSetMutex;
-    // This tracks the servers we currently have subscriptions with
-    ServerSet mServersQueried;
-    // And this indicates whether we need to send new requests
-    // out to other servers
-    ServerSet mNeedServerQueryUpdate;
 
-    // Utility -- setup all known servers for a server query update
-    void addAllServersForUpdate();
-
-protected:
-    // Get/add servers for sending and update of our aggregate query to
-    void getServersForAggregateQueryUpdate(ServerSet* servers_out);
-    void addServerForAggregateQueryUpdate(ServerID sid);
-    // Initiate updates to aggregate queries and stats over all objects, used to
-    // trigger updated requests to top-level pinto and other servers
-    void updateAggregateQuery(const SolidAngle sa, uint32 max_count);
-    void updateAggregateStats(float32 max_radius);
-    // Number of servers we have active queries to
-    uint32 numServersQueried();
 
     // MAIN Thread: Utility methods that should only be called from the main
     // strand
 
     // PintoServerQuerierListener Interface
-    virtual void addRelevantServer(ServerID sid);
-    virtual void removeRelevantServer(ServerID sid);
+    virtual void onPintoServerResult(const Sirikata::Protocol::Prox::ProximityUpdate& update) = 0;
 
     // SpaceNetworkConnectionListener Interface
     virtual void onSpaceNetworkConnected(ServerID sid);
@@ -282,9 +261,8 @@ protected:
     // get other events as a result even if they don't -- new servers
     // will appear in the set that need to be queried and
     // handleForcedServerDisconnection will be invoked.
-    void handleConnectedServer(ServerID sid);
-    void handleDisconnectedServer(ServerID sid);
-    virtual void handleForcedDisconnection(ServerID server);
+    virtual void handleConnectedServer(ServerID sid);
+    virtual void handleDisconnectedServer(ServerID sid);
 
     void removeStaticObjectTimeout(const UUID& objid);
     virtual void trySwapHandlers(bool is_local, const UUID& objid, bool is_static) = 0;

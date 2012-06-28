@@ -83,6 +83,10 @@ public:
     }
     class GenerateRandom{};
     UUID(GenerateRandom);
+
+    /// Treats an uint32 as a UUID directly. Remaining bytes will be 0.
+    explicit UUID(const uint32 v);
+
     static UUID random();
     const Data& getArray()const{return mData;}
     UUID & operator=(const UUID & other) { mData = other.mData; return *this; }
@@ -114,6 +118,10 @@ public:
     inline std::string toString()const {
       return readableHexData();
     }
+
+    // These are accessor methods instead of cast because we can't currently
+    // make casts explicit
+    uint32 asUInt32() const;
 };
 
 template <> class OptionValueType<UUID> {public:

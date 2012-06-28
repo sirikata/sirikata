@@ -77,6 +77,9 @@ public:
     virtual void addQuery(UUID obj, const String& params);
     virtual void removeQuery(UUID obj);
 
+    // PintoServerQuerierListener Interface
+    virtual void onPintoServerResult(const Sirikata::Protocol::Prox::ProximityUpdate& update);
+
     // LocationServiceListener Interface
   virtual void localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics, const String& zernike);
     virtual void localObjectRemoved(const UUID& uuid, bool agg);
@@ -110,8 +113,25 @@ public:
 
 private:
     struct ProxQueryHandlerData;
+    typedef std::tr1::unordered_set<ServerID> ServerSet;
 
     void handleObjectProximityMessage(const UUID& objid, void* buffer, uint32 length);
+
+    // BOTH Threads - uses thread safe data
+
+    // PintoServerQuerier management
+    // Utility -- setup all known servers for a server query update
+    void addAllServersForUpdate();
+    // Get/add servers for sending and update of our aggregate query to
+    void getServersForAggregateQueryUpdate(ServerSet* servers_out);
+    void addServerForAggregateQueryUpdate(ServerID sid);
+    // Initiate updates to aggregate queries and stats over all objects, used to
+    // trigger updated requests to top-level pinto and other servers
+    void updateAggregateQuery(const SolidAngle sa, uint32 max_count);
+    void updateAggregateStats(float32 max_radius);
+    // Number of servers we have active queries to
+    uint32 numServersQueried();
+
 
     // MAIN Thread: These are utility methods which should only be called from the main thread.
     virtual int32 objectQueries() const;
@@ -143,7 +163,8 @@ private:
     void handleRemoveServerQuery(const ServerID& server);
 
     // Override for forced disconnections
-    virtual void handleForcedDisconnection(ServerID server);
+    virtual void handleConnectedServer(ServerID server);
+    virtual void handleDisconnectedServer(ServerID server);
 
     void handleUpdateObjectQuery(const UUID& object, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const SolidAngle& angle, uint32 max_results, SeqNoPtr seqno);
     void handleRemoveObjectQuery(const UUID& object, bool notify_main_thread);
@@ -179,6 +200,17 @@ private:
 
     typedef std::tr1::shared_ptr<ObjectSet> ObjectSetPtr;
     typedef std::tr1::unordered_map<ServerID, ObjectSetPtr> ServerQueryResultSet;
+
+
+    // BOTH Threads - thread-safe data
+
+    boost::mutex mServerSetMutex;
+    // This tracks the servers we currently have subscriptions with
+    ServerSet mServersQueried;
+    // And this indicates whether we need to send new requests
+    // out to other servers
+    ServerSet mNeedServerQueryUpdate;
+
 
 
     // MAIN Thread - Should only be accessed in methods used by the main thread

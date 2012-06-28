@@ -61,8 +61,6 @@ void LibproxManualProximity::start() {
 }
 
 void LibproxManualProximity::poll() {
-    // Update server-to-server angles if necessary
-    sendQueryRequests();
 
     // Get and ship OH results
     std::deque<OHResult> oh_results_copy;
@@ -88,6 +86,11 @@ void LibproxManualProximity::addQuery(UUID obj, const String& params) {
 
 void LibproxManualProximity::removeQuery(UUID obj) {
     // Ignored, this query handler only deals with ObjectHost queries
+}
+
+
+// PintoServerQuerierListener Interface
+void LibproxManualProximity::onPintoServerResult(const Sirikata::Protocol::Prox::ProximityUpdate& update) {
 }
 
 
@@ -135,19 +138,6 @@ void LibproxManualProximity::receiveMigrationData(const UUID& obj, ServerID sour
 }
 
 
-
-// MAIN Thread -- Aggregate server-to-server queries and top-level events
-
-void LibproxManualProximity::sendQueryRequests() {
-    ServerSet sub_servers;
-    getServersForAggregateQueryUpdate(&sub_servers);
-    for(ServerSet::const_iterator it = sub_servers.begin(); it != sub_servers.end(); it++) {
-        ServerID sid = *it;
-        PROXLOG(warn, "Ignoring request to send aggregate query update to server " << sid << " because manual queries don't support server-to-server queries yet.");
-        // if failed: addServerForAggregateQueryUpdate(sid);
-    }
-
-}
 
 // MAIN Thread -- Object host session and message management
 

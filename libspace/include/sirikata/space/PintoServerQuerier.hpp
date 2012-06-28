@@ -40,23 +40,36 @@
 
 namespace Sirikata {
 
+namespace Protocol {
+namespace Prox {
+class ProximityUpdate;
+}
+}
+
 /** Listener interface for PintoServerQuerier. Receives updates on which
- *  servers need to be queried based on the submitted query information.
+ *  servers need to be queried based on the submitted query information. These
+ *  updates are encoded in the form of ProximityUpdates, which could be used for
+ *  individual results (e.g. add/remove server) or for tree replication. This
+ *  gives *some* flexibility in the format of the results without being
+ *  completely generic (i.e. without just using a byte string).
  */
 class SIRIKATA_SPACE_EXPORT PintoServerQuerierListener {
 public:
     virtual ~PintoServerQuerierListener() {}
 
-    virtual void addRelevantServer(ServerID sid) = 0;
-    virtual void removeRelevantServer(ServerID sid) = 0;
+    virtual void onPintoServerResult(const Sirikata::Protocol::Prox::ProximityUpdate& update) = 0;
 };
 
 /** PintoServerQuerier is an interface for discovering other space servers which
- *  must be queried for Pinto results. It looks a lot like Pinto itself since it
- *  performs similar queries but for discovering servers instead of objects. For
- *  a single server setup, the implementation would be trivial.  Other
- *  implementations might be a single server that the PintoServerQuerier submits
- *  queries to, or perhaps a multiple server service that is fault tolerant.
+ *  must be queried for Pinto results. To support multiple implementations
+ *  (e.g. just getting a list of servers to query based on aggregate solid angle
+ *  query, getting a cut including very high level aggregates based on aggregate
+ *  solid angle query, or replicating part or all of the top-level Pinto tree),
+ *  it only assumes you'll keep the server up-to-date about the region covered
+ *  by this server, the largest object on the server, and send query
+ *  updates. Query updates are flexibly formatted. They may be 'static' queries,
+ *  e.g. a solid angle query containing an angle and maximum number of results,
+ *  or be commands, e.g. to refine or coarsen the current cut.
  */
 class SIRIKATA_SPACE_EXPORT PintoServerQuerier : public Provider<PintoServerQuerierListener*> {
 public:
@@ -74,10 +87,9 @@ public:
     virtual void updateLargestObject(float max_radius) = 0;
 
     /** Update query parameters with the server.
-     *  \param min_angle the smallest query angle requested
-     *  \param max_count the maximum number of results to return
+     *  \param update a string containing the data to send to the server as an update
      */
-    virtual void updateQuery(const SolidAngle& min_angle, uint32 max_count) = 0;
+    virtual void updateQuery(const String& update) = 0;
 
 }; // PintoServerQuerier
 

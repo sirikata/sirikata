@@ -37,6 +37,9 @@
 #include <sirikata/core/options/Options.hpp>
 
 #include "Protocol_MasterPinto.pbj.hpp"
+#include "Protocol_Prox.pbj.hpp"
+
+#include <json_spirit/json_spirit.h>
 
 using namespace Sirikata::Network;
 
@@ -127,7 +130,19 @@ void MasterPintoServerQuerier::updateLargestObject(float max_radius) {
     );
 }
 
-void MasterPintoServerQuerier::updateQuery(const SolidAngle& min_angle, uint32 max_results) {
+void MasterPintoServerQuerier::updateQuery(const String& update) {
+    // Need to parse out parameters
+    if (update.empty())
+        return;
+    namespace json = json_spirit;
+    json::Value parsed;
+    if (!json::read(update, parsed)) {
+        MP_LOG(error, "Invalid query update request from Proximity.");
+        return;
+    }
+    SolidAngle min_angle(parsed.getReal("angle", SolidAngle::Max.asFloat()));
+    uint32 max_results = parsed.getInt("max_result", 0);
+
     MP_LOG(debug, "Updating aggregate query angle " << min_angle << " and " << max_results << " maximum results.");
     mAggregateQuery = min_angle;
     mAggregateQueryMaxResults = max_results;
@@ -207,14 +222,23 @@ void MasterPintoServerQuerier::handleServerReceived(Chunk& data, const Network::
 
     for(int32 idx = 0; idx < msg.update_size(); idx++) {
         Sirikata::Protocol::MasterPinto::PintoUpdate update = msg.update(idx);
+        // Translate to Proximity message
+        Sirikata::Protocol::Prox::ProximityUpdate prox_update;
         for(int32 i = 0; i < update.change_size(); i++) {
             Sirikata::Protocol::MasterPinto::PintoResult result = update.change(i);
             MP_LOG(debug, "Event received from master pinto: " << result.server() << (result.addition() ? " added" : " removed"));
-            if (result.addition())
-                notify(&PintoServerQuerierListener::addRelevantServer, result.server());
-            else
-                notify(&PintoServerQuerierListener::removeRelevantServer, result.server());
+            // We need to shoe-horn the server ID into the update's object ID
+            UUID server_as_objid((int32)result.server());
+            if (result.addition()) {
+                Sirikata::Protocol::Prox::IObjectAddition prox_add = prox_update.add_addition();
+                prox_add.set_object(server_as_objid);
+            }
+            else {
+                Sirikata::Protocol::Prox::IObjectRemoval prox_rem = prox_update.add_removal();
+                prox_rem.set_object(server_as_objid);
+            }
         }
+        notify(&PintoServerQuerierListener::onPintoServerResult, prox_update);
     }
 }
 

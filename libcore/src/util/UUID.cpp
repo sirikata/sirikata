@@ -34,6 +34,7 @@
 #include <sirikata/core/util/UUID.hpp>
 #include "boost_uuid.hpp"
 #include <boost/functional/hash.hpp>
+#include <boost/asio.hpp> // htonl, ntonl
 
 BOOST_STATIC_ASSERT(Sirikata::UUID::static_size==sizeof(boost_::uuid));
 
@@ -71,6 +72,16 @@ UUID::UUID(UUID::GenerateRandom) {
     boost_::uuid randval = boost_::uuid::create();
     mData.initialize(randval.begin(),randval.end());
 }
+
+UUID::UUID(const uint32 v) {
+    uint32 vnet = htonl(v);
+    unsigned int i;
+    for(i = 0; i < sizeof(v); i++)
+        mData[i] = ((const char*)&vnet)[i];
+    for(; i< static_size; i++)
+        mData[i] = 0;
+}
+
 UUID UUID::random() {
     return UUID(UUID::GenerateRandom());
 }
@@ -104,6 +115,10 @@ size_t UUID::hash() const {
     boost::hash_combine(seed, dat[0]);
     boost::hash_combine(seed, dat[1]);
     return seed;
+}
+
+uint32 UUID::asUInt32() const {
+    return ntohl(*((int32*)mData.data()));
 }
 
 std::ostream& operator << (std::ostream &os, const Sirikata::UUID& output) {

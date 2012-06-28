@@ -60,7 +60,7 @@ public:
     // PintoServerQuerier Interface
     virtual void updateRegion(const BoundingBox3f& region);
     virtual void updateLargestObject(float max_radius);
-    virtual void updateQuery(const SolidAngle& min_angle, uint32 max_results);
+    virtual void updateQuery(const String& update);
 
 private:
     // Connection management

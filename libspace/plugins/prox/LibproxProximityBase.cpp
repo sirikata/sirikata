@@ -324,61 +324,8 @@ void LibproxProximityBase::coalesceEvents(QueryEventList& evts, uint32 per_event
     }
 }
 
-// Setup all known servers for a server query update
-void LibproxProximityBase::addAllServersForUpdate() {
-    boost::lock_guard<boost::mutex> lck(mServerSetMutex);
-    for(ServerSet::const_iterator it = mServersQueried.begin(); it != mServersQueried.end(); it++)
-        mNeedServerQueryUpdate.insert(*it);
-}
-
-
-
-void LibproxProximityBase::getServersForAggregateQueryUpdate(ServerSet* servers_out) {
-    boost::lock_guard<boost::mutex> lck(mServerSetMutex);
-    servers_out->swap(mNeedServerQueryUpdate);
-}
-
-void LibproxProximityBase::addServerForAggregateQueryUpdate(ServerID sid) {
-    boost::lock_guard<boost::mutex> lck(mServerSetMutex);
-    mNeedServerQueryUpdate.insert(sid);
-}
-
-void LibproxProximityBase::updateAggregateQuery(const SolidAngle sa, uint32 max_count) {
-    PROXLOG(debug,"Query addition initiated server query request.");
-    addAllServersForUpdate();
-    mServerQuerier->updateQuery(sa, max_count);
-}
-
-void LibproxProximityBase::updateAggregateStats(float32 max_radius) {
-    mServerQuerier->updateLargestObject(max_radius);
-}
-
-uint32 LibproxProximityBase::numServersQueried() {
-    boost::lock_guard<boost::mutex> lck(mServerSetMutex);
-    return mServersQueried.size();
-}
 
 // MAIN Thread
-
-// PintoServerQuerierListener Interface
-
-void LibproxProximityBase::addRelevantServer(ServerID sid) {
-    if (sid == mContext->id()) return;
-
-    // Potentially invoked from PintoServerQuerier IO thread
-    boost::lock_guard<boost::mutex> lck(mServerSetMutex);
-    mServersQueried.insert(sid);
-    mNeedServerQueryUpdate.insert(sid);
-}
-
-void LibproxProximityBase::removeRelevantServer(ServerID sid) {
-    if (sid == mContext->id()) return;
-
-    // Potentially invoked from PintoServerQuerier IO thread
-    boost::lock_guard<boost::mutex> lck(mServerSetMutex);
-    mServersQueried.erase(sid);
-}
-
 
 // SpaceNetworkConnectionListener Interface
 
@@ -623,28 +570,11 @@ void LibproxProximityBase::checkObjectClass(bool is_local, const UUID& objid, co
 // PROX Thread
 
 void LibproxProximityBase::handleConnectedServer(ServerID sid) {
-    // Sometimes we may get forcefully disconnected from a server. To
-    // reestablish our previous setup, if that server appears in our queried
-    // set (we were told it was relevant to us by some higher level pinto
-    // service), we mark it as needing another update. In the case that we
-    // are just getting an initial connection, this shouldn't change anything
-    // since it would already be markedas needing an update if we had been told
-    // by pinto that it needed it.
-    boost::lock_guard<boost::mutex> lck(mServerSetMutex);
-    if (mServersQueried.find(sid) != mServersQueried.end())
-        mNeedServerQueryUpdate.insert(sid);
+    // No default impl
 }
 
 void LibproxProximityBase::handleDisconnectedServer(ServerID sid) {
-    // When we lose a connection, we need to clear out everything related to
-    // that server.
-    PROXLOG(debug, "Handling unexpected disconnection from " << sid << " by clearing out proximity state.");
-    handleForcedDisconnection(sid);
-}
-
-void LibproxProximityBase::handleForcedDisconnection(ServerID server) {
-    // Nothing for base -- implementations should override to clean up
-    // queries and clear out state
+    // No default impl
 }
 
 

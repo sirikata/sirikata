@@ -46,6 +46,9 @@ public:
     // PollingService Interface
     virtual void poll();
 
+    // PintoServerQuerierListener Interface
+    virtual void onPintoServerResult(const Sirikata::Protocol::Prox::ProximityUpdate& update);
+
     // LocationServiceListener Interface - Used for deciding when to switch
     // objects between static/dynamic
     virtual void localObjectRemoved(const UUID& uuid, bool agg);
@@ -83,8 +86,6 @@ private:
 
     // MAIN Thread  Server-to-server queries:
 
-    // Send a query add/update request to all the other servers
-    void sendQueryRequests();
 
     // MAIN Thread  OH queries:
 
