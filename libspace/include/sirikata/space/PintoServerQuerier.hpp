@@ -71,7 +71,7 @@ public:
  *  e.g. a solid angle query containing an angle and maximum number of results,
  *  or be commands, e.g. to refine or coarsen the current cut.
  */
-class SIRIKATA_SPACE_EXPORT PintoServerQuerier : public Provider<PintoServerQuerierListener*> {
+class SIRIKATA_SPACE_EXPORT PintoServerQuerier : public Provider<PintoServerQuerierListener*>, public Service {
 public:
 
     virtual ~PintoServerQuerier() {}

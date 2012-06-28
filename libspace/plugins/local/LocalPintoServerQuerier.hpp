@@ -46,6 +46,11 @@ public:
     LocalPintoServerQuerier(SpaceContext* ctx) {}
     virtual ~LocalPintoServerQuerier() {}
 
+    // Service Interface
+    virtual void start() {}
+    virtual void stop() {}
+
+    // PintoServerQuerier Interface
     virtual void updateRegion(const BoundingBox3f& region) {
     }
     virtual void updateLargestObject(float max_radius) {

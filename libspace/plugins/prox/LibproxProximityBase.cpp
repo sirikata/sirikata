@@ -172,6 +172,7 @@ LibproxProximityBase::LibproxProximityBase(SpaceContext* ctx, LocationService* l
     String pinto_options = GetOptionValue<String>(OPT_PINTO_OPTIONS);
     mServerQuerier = PintoServerQuerierFactory::getSingleton().getConstructor(pinto_type)(mContext, pinto_options);
     mServerQuerier->addListener(this);
+    mContext->add(mServerQuerier);
 
     // Deal with static/dynamic split
     mSeparateDynamicObjects = GetOptionValue<bool>(OPT_PROX_SPLIT_DYNAMIC);

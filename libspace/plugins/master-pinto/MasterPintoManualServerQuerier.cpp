@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can
 // be found in the LICENSE file.
 
-#include "MasterPintoServerQuerier.hpp"
+#include "MasterPintoManualServerQuerier.hpp"
 
 #include "Protocol_MasterPinto.pbj.hpp"
 #include "Protocol_Prox.pbj.hpp"
@@ -15,7 +15,7 @@ using namespace Sirikata::Network;
 
 namespace Sirikata {
 
-MasterPintoServerQuerier::MasterPintoServerQuerier(SpaceContext* ctx, const String& params)
+MasterPintoManualServerQuerier::MasterPintoManualServerQuerier(SpaceContext* ctx, const String& params)
  : MasterPintoServerQuerierBase(ctx, params),
    mAggregateQuery(SolidAngle::Max),
    mAggregateQueryMaxResults(0),
@@ -23,11 +23,11 @@ MasterPintoServerQuerier::MasterPintoServerQuerier(SpaceContext* ctx, const Stri
 {
 }
 
-MasterPintoServerQuerier::~MasterPintoServerQuerier() {
+MasterPintoManualServerQuerier::~MasterPintoManualServerQuerier() {
 }
 
 
-void MasterPintoServerQuerier::updateQuery(const String& update) {
+void MasterPintoManualServerQuerier::updateQuery(const String& update) {
     // Need to parse out parameters
     if (update.empty())
         return;
@@ -45,20 +45,20 @@ void MasterPintoServerQuerier::updateQuery(const String& update) {
     mAggregateQueryMaxResults = max_results;
     mAggregateQueryDirty = true;
     mIOStrand->post(
-        std::tr1::bind(&MasterPintoServerQuerier::updatePintoQuery, this),
-        "MasterPintoServerQuerier::updatePintoQuery"
+        std::tr1::bind(&MasterPintoManualServerQuerier::updatePintoQuery, this),
+        "MasterPintoManualServerQuerier::updatePintoQuery"
     );
 }
 
-void MasterPintoServerQuerier::onConnected() {
+void MasterPintoManualServerQuerier::onConnected() {
     // For a new connection, make sure we try to send any dirty data
     mIOStrand->post(
-        std::tr1::bind(&MasterPintoServerQuerier::updatePintoQuery, this),
-        "MasterPintoServerQuerier::updatePintoQuery"
+        std::tr1::bind(&MasterPintoManualServerQuerier::updatePintoQuery, this),
+        "MasterPintoManualServerQuerier::updatePintoQuery"
     );
 }
 
-void MasterPintoServerQuerier::updatePintoQuery() {
+void MasterPintoManualServerQuerier::updatePintoQuery() {
     if (!mAggregateQueryDirty)
         return;
 
@@ -80,7 +80,7 @@ void MasterPintoServerQuerier::updatePintoQuery() {
     mServerStream->send( MemoryReference(serialized), ReliableOrdered );
 }
 
-void MasterPintoServerQuerier::onPintoData(Sirikata::Protocol::MasterPinto::PintoResponse& msg) {
+void MasterPintoManualServerQuerier::onPintoData(Sirikata::Protocol::MasterPinto::PintoResponse& msg) {
     for(int32 idx = 0; idx < msg.update_size(); idx++) {
         Sirikata::Protocol::MasterPinto::PintoUpdate update = msg.update(idx);
         // Translate to Proximity message

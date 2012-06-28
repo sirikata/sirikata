@@ -33,6 +33,7 @@
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/options/Options.hpp>
 #include "MasterPintoServerQuerier.hpp"
+#include "MasterPintoManualServerQuerier.hpp"
 
 static int space_master_pinto_plugin_refcount = 0;
 
@@ -51,6 +52,10 @@ static PintoServerQuerier* createMasterPintoServerQuerier(SpaceContext* ctx, con
     return new MasterPintoServerQuerier(ctx, args);
 }
 
+static PintoServerQuerier* createMasterPintoManualServerQuerier(SpaceContext* ctx, const String& args) {
+    return new MasterPintoManualServerQuerier(ctx, args);
+}
+
 } // namespace Sirikata
 
 SIRIKATA_PLUGIN_EXPORT_C void init() {
@@ -65,6 +70,9 @@ SIRIKATA_PLUGIN_EXPORT_C void init() {
         PintoServerQuerierFactory::getSingleton()
             .registerConstructor("master",
                 std::tr1::bind(&createMasterPintoServerQuerier, _1, _2));
+        PintoServerQuerierFactory::getSingleton()
+            .registerConstructor("master-manual",
+                std::tr1::bind(&createMasterPintoManualServerQuerier, _1, _2));
     }
     space_master_pinto_plugin_refcount++;
 }
@@ -81,6 +89,7 @@ SIRIKATA_PLUGIN_EXPORT_C void destroy() {
     using namespace Sirikata;
     if (space_master_pinto_plugin_refcount==0) {
         PintoServerQuerierFactory::getSingleton().unregisterConstructor("master");
+        PintoServerQuerierFactory::getSingleton().unregisterConstructor("master-manual");
     }
 }
 
