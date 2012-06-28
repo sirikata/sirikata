@@ -71,9 +71,10 @@ void MasterPintoServerQuerier::updatePintoQuery() {
 
     if (mAggregateQueryDirty) {
         mAggregateQueryDirty = false;
-        Sirikata::Protocol::MasterPinto::IQueryUpdate update = msg.mutable_query();
+        Sirikata::Protocol::MasterPinto::QueryUpdate update;
         update.set_min_angle(mAggregateQuery.asFloat());
         update.set_max_count(mAggregateQueryMaxResults);
+        msg.set_query(serializePBJMessage(update));
     }
 
     String serialized = serializePBJMessage(msg);
