@@ -98,6 +98,7 @@ void LibproxManualProximity::onPintoServerResult(const Sirikata::Protocol::Prox:
 // registered queries, allowing us to update those queries as appropriate.  All updating of objects
 // in the prox data structure happens via the LocationServiceCache
 void LibproxManualProximity::localObjectRemoved(const UUID& uuid, bool agg) {
+    LibproxProximityBase::localObjectRemoved(uuid, agg);
     mProxStrand->post(
         std::tr1::bind(&LibproxManualProximity::removeStaticObjectTimeout, this, uuid),
         "LibproxManualProximity::removeStaticObjectTimeout"
@@ -629,6 +630,7 @@ void LibproxManualProximity::commandProperties(const Command::Command& cmd, Comm
     result.put("objects.properties.local_count", oh_query_objects);
     result.put("objects.properties.remote_count", 0);
     result.put("objects.properties.count", oh_query_objects);
+    result.put("objects.properties.max_size", mMaxObject);
 
     // Properties of queries
     result.put("queries.oh.count", mOHQueries[0].size());

@@ -78,7 +78,6 @@ bool parseQueryRequest(const String& query, SolidAngle* qangle_out, uint32* max_
 LibproxProximity::LibproxProximity(SpaceContext* ctx, LocationService* locservice, CoordinateSegmentation* cseg, SpaceNetwork* net, AggregateManager* aggmgr)
  : LibproxProximityBase(ctx, locservice, cseg, net, aggmgr),
    mDistanceQueryDistance(0.f),
-   mMaxObject(0.0f),
    mMinObjectQueryAngle(SolidAngle::Max),
    mMaxMaxCount(1),
    mServerQueries(),
@@ -179,10 +178,6 @@ void LibproxProximity::updateAggregateQuery(const SolidAngle sa, uint32 max_coun
     update_params.put("angle", sa.asFloat());
     update_params.put("max_result", max_count);
     mServerQuerier->updateQuery(json::write(update_params));
-}
-
-void LibproxProximity::updateAggregateStats(float32 max_radius) {
-    mServerQuerier->updateLargestObject(max_radius);
 }
 
 uint32 LibproxProximity::numServersQueried() {
@@ -586,32 +581,6 @@ void LibproxProximity::removeQuery(UUID obj) {
     }
 }
 
-void LibproxProximity::updateObjectSize(const UUID& obj, float rad) {
-    mObjectSizes[obj] = rad;
-
-    if (rad > mMaxObject) {
-        mMaxObject = rad;
-        updateAggregateStats(mMaxObject);
-    }
-}
-
-void LibproxProximity::removeObjectSize(const UUID& obj) {
-    ObjectSizeMap::iterator it = mObjectSizes.find(obj);
-    assert(it != mObjectSizes.end());
-
-    float32 old_val = it->second;
-    mObjectSizes.erase(it);
-
-    if (old_val == mMaxObject) {
-        // We need to recompute mMaxObject since it may not be accurate anymore
-        mMaxObject = 0.0f;
-        for(ObjectSizeMap::iterator oit = mObjectSizes.begin(); oit != mObjectSizes.end(); oit++)
-            mMaxObject = std::max(mMaxObject, oit->second);
-
-        if (mMaxObject != old_val)
-            updateAggregateStats(mMaxObject);
-    }
-}
 
 
 int32 LibproxProximity::objectQueries() const {
@@ -668,11 +637,8 @@ void LibproxProximity::queryHasEvents(Query* query) {
 // Note: LocationServiceListener interface is only used in order to get updates on objects which have
 // registered queries, allowing us to update those queries as appropriate.  All updating of objects
 // in the prox data structure happens via the LocationServiceCache
-void LibproxProximity::localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics, const String& zernike) {
-    updateObjectSize(uuid, bounds.fullRadius());
-}
 void LibproxProximity::localObjectRemoved(const UUID& uuid, bool agg) {
-    removeObjectSize(uuid);
+    LibproxProximityBase::localObjectRemoved(uuid, agg);
 
     mProxStrand->post(
         std::tr1::bind(&LibproxProximity::removeStaticObjectTimeout, this, uuid),
@@ -685,8 +651,8 @@ void LibproxProximity::localLocationUpdated(const UUID& uuid, bool agg, const Ti
         checkObjectClass(true, uuid, newval);
 }
 void LibproxProximity::localBoundsUpdated(const UUID& uuid, bool agg, const AggregateBoundingInfo& newval) {
+    LibproxProximityBase::localBoundsUpdated(uuid, agg, newval);
     updateQuery(uuid, mLocService->location(uuid), newval.fullBounds(), NoUpdateSolidAngle, NoUpdateMaxResults);
-    updateObjectSize(uuid, newval.fullRadius());
 }
 void LibproxProximity::replicaObjectRemoved(const UUID& uuid) {
     mProxStrand->post(

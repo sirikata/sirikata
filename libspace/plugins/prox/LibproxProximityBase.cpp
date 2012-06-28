@@ -158,6 +158,7 @@ void LibproxProximityBase::ProxStreamInfo<EndpointType, StreamType>::proxSubstre
 LibproxProximityBase::LibproxProximityBase(SpaceContext* ctx, LocationService* locservice, CoordinateSegmentation* cseg, SpaceNetwork* net, AggregateManager* aggmgr)
  : Proximity(ctx, locservice, cseg, net, aggmgr, Duration::milliseconds((int64)100)),
    mServerQuerier(NULL),
+   mMaxObject(0.0f),
    mProxStrand(ctx->ioService->createStrand("LibproxProximityBase Prox Strand")),
    mLocCache(NULL)
 {
@@ -238,6 +239,20 @@ void LibproxProximityBase::start() {
 
 void LibproxProximityBase::stop() {
     Proximity::stop();
+}
+
+
+
+void LibproxProximityBase::localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics, const String& zernike) {
+    updateObjectSize(uuid, bounds.fullRadius());
+}
+
+void LibproxProximityBase::localObjectRemoved(const UUID& uuid, bool agg) {
+    removeObjectSize(uuid);
+}
+
+void LibproxProximityBase::localBoundsUpdated(const UUID& uuid, bool agg, const AggregateBoundingInfo& newval) {
+    updateObjectSize(uuid, newval.fullRadius());
 }
 
 
@@ -351,6 +366,35 @@ void LibproxProximityBase::updatedSegmentation(CoordinateSegmentation* cseg, con
     BoundingBox3f bbox = aggregateBBoxes(bboxes);
     mServerQuerier->updateRegion(bbox);
 }
+
+void LibproxProximityBase::updateObjectSize(const UUID& obj, float rad) {
+    mObjectSizes[obj] = rad;
+
+    if (rad > mMaxObject) {
+        mMaxObject = rad;
+        mServerQuerier->updateLargestObject(mMaxObject);
+    }
+}
+
+void LibproxProximityBase::removeObjectSize(const UUID& obj) {
+    ObjectSizeMap::iterator it = mObjectSizes.find(obj);
+    assert(it != mObjectSizes.end());
+
+    float32 old_val = it->second;
+    mObjectSizes.erase(it);
+
+    if (old_val == mMaxObject) {
+        // We need to recompute mMaxObject since it may not be accurate anymore
+        mMaxObject = 0.0f;
+        for(ObjectSizeMap::iterator oit = mObjectSizes.begin(); oit != mObjectSizes.end(); oit++)
+            mMaxObject = std::max(mMaxObject, oit->second);
+
+        if (mMaxObject != old_val)
+            mServerQuerier->updateLargestObject(mMaxObject);
+    }
+}
+
+
 
 
 void LibproxProximityBase::readFramesFromObjectStream(const ObjectReference& oref, ProxObjectStreamInfo::FrameReceivedCallback cb) {

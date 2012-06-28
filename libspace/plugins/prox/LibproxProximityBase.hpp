@@ -28,6 +28,12 @@ public:
     virtual void start();
     virtual void stop();
 
+    // LocationServiceListener Interface - used here only to track
+    // object sizes for top-level pinto
+    virtual void localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics, const String& zernike);
+    virtual void localObjectRemoved(const UUID& uuid, bool agg);
+    virtual void localBoundsUpdated(const UUID& uuid, bool agg, const AggregateBoundingInfo& newval);
+
 protected:
     typedef Prox::QueryEvent<ObjectProxSimulationTraits> QueryEvent;
     typedef std::deque<QueryEvent> QueryEventList;
@@ -91,6 +97,18 @@ protected:
     // CoordinateSegmentation::Listener Interface
     virtual void updatedSegmentation(CoordinateSegmentation* cseg, const std::vector<SegmentationInfo>& new_seg);
 
+    // Object sizes -- shouldn't be called by subclasses, these are
+    // used to update the server querier. Just make sure you call this
+    // class's implementation of LocationServiceListener methods.
+    void updateObjectSize(const UUID& obj, float rad);
+    void removeObjectSize(const UUID& obj);
+
+private: // Shouldn't be needed by subclasses, only used for server querier
+    // Track object sizes and the maximum of all of them.
+    typedef std::tr1::unordered_map<UUID, float32, UUID::Hasher> ObjectSizeMap;
+    ObjectSizeMap mObjectSizes;
+protected:
+    float32 mMaxObject; // Only exposed for reporting to commands
 
     // Server-to-server messages
     Router<Message*>* mProxServerMessageService;

@@ -81,7 +81,6 @@ public:
     virtual void onPintoServerResult(const Sirikata::Protocol::Prox::ProximityUpdate& update);
 
     // LocationServiceListener Interface
-  virtual void localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics, const String& zernike);
     virtual void localObjectRemoved(const UUID& uuid, bool agg);
     virtual void localLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval);
     virtual void localBoundsUpdated(const UUID& uuid, bool agg, const AggregateBoundingInfo& newval);
@@ -128,7 +127,6 @@ private:
     // Initiate updates to aggregate queries and stats over all objects, used to
     // trigger updated requests to top-level pinto and other servers
     void updateAggregateQuery(const SolidAngle sa, uint32 max_count);
-    void updateAggregateStats(float32 max_radius);
     // Number of servers we have active queries to
     uint32 numServersQueried();
 
@@ -146,10 +144,6 @@ private:
 
     // Object queries
     void updateQuery(UUID obj, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, SolidAngle sa, uint32 max_results);
-
-    // Object sizes
-    void updateObjectSize(const UUID& obj, float rad);
-    void removeObjectSize(const UUID& obj);
 
     // Send a query add/update request to any servers we've marked as needing an
     // update
@@ -228,11 +222,9 @@ private:
     typedef std::map<UUID, uint32> ObjectQueryMaxCountMap;
     ObjectQueryMaxCountMap mObjectQueryMaxCounts;
 
-    // Track object sizes and the maximum of all of them.
-    typedef std::tr1::unordered_map<UUID, float32, UUID::Hasher> ObjectSizeMap;
-    ObjectSizeMap mObjectSizes;
-    float32 mMaxObject;
 
+    // Aggregate query info. Aggregate object stats are managed by
+    // LibproxProximityBase.
     // This tracks the minimum object query size, which is used
     // as the angle for queries to other servers.
     SolidAngle mMinObjectQueryAngle;
