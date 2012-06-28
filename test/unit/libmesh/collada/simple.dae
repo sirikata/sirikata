@@ -5,8 +5,7 @@
     </contributor>
     <created>2011-07-11T23:49:55Z</created>
     <modified>2011-07-11T23:49:55Z</modified>
-    <unit meter="0.0254000" name="inch"/>
-    <up_axis>Z_UP</up_axis>
+    <unit meter="1" name="inch"/>
   </asset>
   <library_visual_scenes>
     <visual_scene id="ID1">
@@ -17,5 +16,7 @@
       </node>
     </visual_scene>
   </library_visual_scenes>
-  
+  <scene>
+    <instance_visual_scene url="#ID1"/>
+  </scene>
 </COLLADA>

@@ -48,6 +48,7 @@ protected:
 	PluginManager _pmgr;
 	ModelsSystem *msys;
 	string pikachu;
+	string simple;
 	
 public:
 
@@ -77,50 +78,44 @@ public:
 			pikachu += temp + ' ';
 		}while(temp != "</COLLADA>");
 
-		//Transfer::RemoteFileMetadata metadata;
-		Meshdata md;
+		ifstream fin2 ("../../../test/unit/libmesh/collada/simple.dae");
 
-		//node
-		Node ned;
-		ned.parent = NullNodeIndex;
-		ned.transform = Matrix4x4f::translate(Vector3f(0,-3,0));
-		md.nodes.push_back(ned);
-		md.rootNodes.push_back(0);
-
-		//geometry instance
-		GeometryInstance gi;
-		gi.geometryIndex = 0;
-		gi.parentNode = 0;
-		md.instances.push_back(gi);
-
-		//submeshgeometry
-		SubMeshGeometry smg;
-		SubMeshGeometry::Primitive p1;
-		p1.primitiveType = p1.TRIANGLES;
-		for(int i = 0; i < 3; i++) p1.indices.push_back(i);
-
-		//adding points
-		Vector3f point[3] = {Vector3f(7,2,6), Vector3f(9,5,1), Vector3f(8,4,3)};
-		for(int i = 0; i < 3; i++) smg.positions.push_back(point[i]);
-		smg.primitives.push_back(p1);
-		smg.recomputeBounds();
-		md.geometry.push_back(smg);
+		do {
+			fin2 >> temp;
+			simple += temp + ' ';
+		}while(temp != "</COLLADA>");
 		
-		//note: the collada stuff can just be dumped......h...e...r...e
+		//Test collada file: pikachu.dae
 		Transfer::DenseData *dd = new Transfer::DenseData(pikachu);
-		
 		Transfer::DenseDataPtr data(dd);
-		
 		Mesh::VisualPtr parsed = msys->load(data);
-		
-		//the parsed should actually be null
+
 		TS_ASSERT_DIFFERS(parsed, Mesh::VisualPtr());
 		
-		MeshdataPtr mdp(std::tr1::dynamic_pointer_cast<Meshdata>(parsed));
-
+		MeshdataPtr mdp(tr1::dynamic_pointer_cast<Meshdata>(parsed));
 		TS_ASSERT_DIFFERS(mdp->getInstancedGeometryCount(), 0);
-
 		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
+
+		//Minimal collada file: simple.dae
+		Transfer::DenseData *dd2 = new Transfer::DenseData(simple);
+		Transfer::DenseDataPtr data2(dd2);
+		parsed = msys->load(data2);
+		
+		TS_ASSERT_DIFFERS(parsed, Mesh::VisualPtr());
+		
+		MeshdataPtr mdp2(tr1::dynamic_pointer_cast<Meshdata>(parsed));
+		TS_ASSERT_EQUALS(mdp2->getInstancedGeometryCount(), 0);
+		TS_ASSERT_EQUALS(mdp2->getInstancedLightCount(), 0);
+		TS_ASSERT_EQUALS(mdp2->geometry.size(), 0);
+		TS_ASSERT_EQUALS(mdp2->lights.size(), 0);
+		TS_ASSERT_EQUALS(mdp2->textures.size(), 0);
+		TS_ASSERT_EQUALS(mdp2->materials.size(), 0);
+		TS_ASSERT_DIFFERS(mdp2, MeshdataPtr());
+		TS_ASSERT_EQUALS(mdp2->nodes.size(), 2);
+		TS_ASSERT_EQUALS(mdp2->nodes[0].transform, Matrix4x4f::identity());
+		TS_ASSERT_EQUALS(mdp2->nodes[1].transform, Matrix4x4f::identity());
+		TS_ASSERT_EQUALS(mdp2->globalTransform, Matrix4x4f::identity());
+
     }
 	//void testColladaLoaderNull( void ) {
 	//	//note: the collada stuff can just be dumped......h...e...r...e
