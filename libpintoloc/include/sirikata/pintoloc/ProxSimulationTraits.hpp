@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can
 // be found in the LICENSE file.
 
-#ifndef _SIRIKATA_LIBOH_MANUAL_QUERY_PINTO_PROX_SIMULATION_TRAITS_HPP_
-#define _SIRIKATA_LIBOH_MANUAL_QUERY_PINTO_PROX_SIMULATION_TRAITS_HPP_
+#ifndef _SIRIKATA_LIBPINTOLOC_PROX_SIMULATION_TRAITS_HPP_
+#define _SIRIKATA_LIBPINTOLOC_PROX_SIMULATION_TRAITS_HPP_
 
-#include <sirikata/core/util/Platform.hpp>
+#include <sirikata/pintoloc/Platform.hpp>
 #include <sirikata/core/util/ObjectReference.hpp>
 #include <sirikata/core/util/MotionVector.hpp>
 #include <sirikata/core/util/UniqueID.hpp>
 
 namespace Sirikata {
 
-class ProxSimulationTraits {
+class SIRIKATA_LIBPINTOLOC_EXPORT ProxSimulationTraits {
 public:
     typedef uint32 intType;
     typedef float32 realType;
@@ -33,7 +33,7 @@ public:
     typedef UniqueID32 UniqueIDGeneratorType;
 }; // class ProxSimulationTraits
 
-class ObjectProxSimulationTraits : public ProxSimulationTraits {
+class SIRIKATA_LIBPINTOLOC_EXPORT ObjectProxSimulationTraits : public ProxSimulationTraits {
 public:
     typedef ObjectReference ObjectIDType;
     typedef ObjectReference::Hasher ObjectIDHasherType;
@@ -43,4 +43,4 @@ public:
 
 } // namespace Sirikata
 
-#endif //_SIRIKATA_LIBOH_MANUAL_QUERY_PINTO_PROX_SIMULATION_TRAITS_HPP_
+#endif //_SIRIKATA_LIBPINTOLOC_PROX_SIMULATION_TRAITS_HPP_

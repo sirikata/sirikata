@@ -7,8 +7,9 @@
 #include "Protocol_Prox.pbj.hpp"
 #include "Protocol_Loc.pbj.hpp"
 #include "Protocol_Frame.pbj.hpp"
-#include <sirikata/oh/ProtocolLocUpdate.hpp>
+#include <sirikata/pintoloc/ProtocolLocUpdate.hpp>
 #include <sirikata/proxyobject/ProxyManager.hpp>
+#include <sirikata/oh/OHSpaceTimeSynced.hpp>
 
 #define SOQP_LOG(lvl, msg) SILOG(simple-object-query-processor, lvl, msg)
 
@@ -142,7 +143,8 @@ bool SimpleObjectQueryProcessor::handleProximityMessage(HostedObjectPtr self, co
 
             SpaceObjectReference observed(spaceobj.space(), ObjectReference(addition.object()));
 
-            obj_state->orphans.invokeOrphanUpdates(mContext->objectHost, spaceobj, observed, this);
+            OHSpaceTimeSynced sync(mContext->objectHost, spaceobj.space());
+            obj_state->orphans.invokeOrphanUpdates(sync, spaceobj, observed, this);
         }
     }
 
@@ -231,7 +233,8 @@ bool SimpleObjectQueryProcessor::handleLocationMessage(const HostedObjectPtr& se
             obj_state->orphans.addOrphanUpdate(observed, update);
         }
         else {
-            LocProtocolLocUpdate llu(update, mContext->objectHost, spaceobj.space());
+            OHSpaceTimeSynced sync(mContext->objectHost, spaceobj.space());
+            LocProtocolLocUpdate llu(update, sync);
             deliverLocationUpdate(self, spaceobj, llu);
         }
     }

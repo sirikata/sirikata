@@ -8,7 +8,7 @@
 #include <sirikata/oh/ObjectQueryProcessor.hpp>
 #include <sirikata/oh/ObjectNodeSession.hpp>
 
-#include "OHLocationServiceCache.hpp"
+#include <sirikata/pintoloc/ReplicatedLocationServiceCache.hpp>
 #include "ServerQueryHandler.hpp"
 #include "ObjectQueryHandler.hpp"
 
@@ -50,7 +50,7 @@ public:
     // Notification when a new server query is setup. This occurs whether or not
     // a query is registered -- it just indicates that there's a connection that
     // we might care about and prepares us to setup local query
-    // processors using OHLocationServiceCachePtrs provided by
+    // processors using ReplicatedLocationServiceCachePtrs provided by
     // callbacks from the ServerQueryHandler.
     void createdServerQuery(const OHDP::SpaceNodeID& snid);
     void removedServerQuery(const OHDP::SpaceNodeID& snid);
@@ -59,7 +59,7 @@ public:
     // removedServerQuery. Creation calls are accompanied by a
     // LocationServiceCache which will hold replicated object data and info
     // about the replicated tree.
-    void createdReplicatedIndex(const OHDP::SpaceNodeID& snid, ProxIndexID iid, OHLocationServiceCachePtr loc_cache, ServerID objects_from_server, bool dynamic_objects);
+    void createdReplicatedIndex(const OHDP::SpaceNodeID& snid, ProxIndexID iid, ReplicatedLocationServiceCachePtr loc_cache, ServerID objects_from_server, bool dynamic_objects);
     void removedReplicatedIndex(const OHDP::SpaceNodeID& snid, ProxIndexID iid);
 
     // ObjectQueryHandler callbacks - handle notifications about local queries

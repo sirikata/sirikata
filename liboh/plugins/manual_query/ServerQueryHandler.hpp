@@ -7,8 +7,8 @@
 
 #include <sirikata/oh/ObjectHostContext.hpp>
 #include <sirikata/oh/SpaceNodeSession.hpp>
-#include <sirikata/oh/OrphanLocUpdateManager.hpp>
-#include "OHLocationServiceCache.hpp"
+#include <sirikata/pintoloc/OrphanLocUpdateManager.hpp>
+#include <sirikata/pintoloc/ReplicatedLocationServiceCache.hpp>
 #include <sirikata/core/prox/Defs.hpp>
 
 #include <boost/multi_index_container.hpp>
@@ -28,7 +28,6 @@ class ManualObjectQueryProcessor;
  *  the parent just gets a stream of updates.
  */
 class ServerQueryHandler :
-        public Service,
         public SpaceNodeSessionListener,
         OrphanLocUpdateManager::Listener<OHDP::SpaceNodeID>
 {
@@ -116,12 +115,12 @@ private:
 
         void createLocCache(ProxIndexID iid) {
             if (objects.find(iid) == objects.end())
-                objects[iid] = OHLocationServiceCachePtr(new OHLocationServiceCache(strand));
+                objects[iid] = ReplicatedLocationServiceCachePtr(new ReplicatedLocationServiceCache(strand));
             if (orphans.find(iid) == orphans.end())
                 orphans[iid] = OrphanLocUpdateManagerPtr(new OrphanLocUpdateManager(ctx, ctx->mainStrand, Duration::seconds(10)));
         }
 
-        OHLocationServiceCachePtr getLocCache(ProxIndexID iid) {
+        ReplicatedLocationServiceCachePtr getLocCache(ProxIndexID iid) {
             assert(objects.find(iid) != objects.end());
             return objects[iid];
         }
@@ -137,7 +136,7 @@ private:
             orphans.erase(iid);
         }
 
-        // Strand for OHLocationServiceCaches
+        // Strand for ReplicatedLocationServiceCaches
         Context* ctx;
         Network::IOStrandPtr strand;
         // # of connected objects
@@ -151,7 +150,7 @@ private:
         // Whether we're in the process of sending messages
         bool writing;
 
-        typedef std::map<ProxIndexID, OHLocationServiceCachePtr> IndexObjectCacheMap;
+        typedef std::map<ProxIndexID, ReplicatedLocationServiceCachePtr> IndexObjectCacheMap;
         IndexObjectCacheMap objects;
         typedef std::map<ProxIndexID, OrphanLocUpdateManagerPtr> IndexOrphanLocUpdateMap;
         IndexOrphanLocUpdateMap orphans;

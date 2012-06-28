@@ -5,7 +5,7 @@
 #ifndef _SIRIKATA_OH_MQ_OBJECT_QUERY_HANDLER_BASE_HPP_
 #define _SIRIKATA_OH_MQ_OBJECT_QUERY_HANDLER_BASE_HPP_
 
-#include "OHLocationServiceCache.hpp"
+#include <sirikata/pintoloc/ReplicatedLocationServiceCache.hpp>
 #include <sirikata/oh/ObjectHostContext.hpp>
 
 namespace Sirikata {

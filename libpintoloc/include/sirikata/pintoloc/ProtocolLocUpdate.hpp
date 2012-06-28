@@ -2,34 +2,33 @@
 // Use of this source code is governed by a BSD-style license that can
 // be found in the LICENSE file.
 
-#ifndef _SIRIKATA_OH_PROTOCOL_LOC_UPDATE_HPP_
-#define _SIRIKATA_OH_PROTOCOL_LOC_UPDATE_HPP_
+#ifndef _SIRIKATA_LIBPINTOLOC_PROTOCOL_LOC_UPDATE_HPP_
+#define _SIRIKATA_LIBPINTOLOC_PROTOCOL_LOC_UPDATE_HPP_
 
-#include <sirikata/oh/LocUpdate.hpp>
+#include <sirikata/pintoloc/LocUpdate.hpp>
 #include "Protocol_Loc.pbj.hpp"
 #include "Protocol_Prox.pbj.hpp"
+#include <sirikata/pintoloc/TimeSynced.hpp>
 
 namespace Sirikata {
 
 /** Implementation of LocUpdate which collects its information from a PBJ
  *  LocationUpdate object.
  */
-class SIRIKATA_OH_EXPORT LocProtocolLocUpdate : public LocUpdate {
+class SIRIKATA_LIBPINTOLOC_EXPORT LocProtocolLocUpdate : public LocUpdate {
 public:
     /** Construct a LocProtocolLocUpdate using the given raw LocationUpdate and
      *  the OH and space to adjust times to the local timeframe.
      *
      *  \param lu the raw LocationUpdate
-     *  \param oh the OH this update originated from
-     *  \param space the space the update originated from
+     *  \param sync TimeSync to use for time conversion
      *
      *  \note the references passed in here must remain valid for the lifetime
      *  of this object.
      */
-    LocProtocolLocUpdate(const Sirikata::Protocol::Loc::LocationUpdate& lu, const ObjectHost* oh, const SpaceID& space)
+    LocProtocolLocUpdate(const Sirikata::Protocol::Loc::LocationUpdate& lu, const TimeSynced& sync)
      : mUpdate(lu),
-       mOH(oh),
-       mSpace(space)
+        mSync(sync)
     {}
     virtual ~LocProtocolLocUpdate() {}
 
@@ -80,8 +79,7 @@ private:
     uint64 seqno() const { return (mUpdate.has_seqno() ? mUpdate.seqno() : 0); }
 
     const Sirikata::Protocol::Loc::LocationUpdate& mUpdate;
-    const ObjectHost* mOH;
-    const SpaceID& mSpace;
+    const TimeSynced& mSync;
 };
 
 /** Implementation of LocUpdate which collects its information from a PBJ
@@ -91,7 +89,7 @@ private:
  *  already because this is used in places where we wouldn't be able
  *  to tell whether the time had been converted yet.
  */
-class SIRIKATA_OH_EXPORT ProxProtocolLocUpdate : public LocUpdate {
+class SIRIKATA_LIBPINTOLOC_EXPORT ProxProtocolLocUpdate : public LocUpdate {
 public:
     /** Construct a ProxProtocolLocUpdate using the given raw ProximityAddition
      *  and the OH and space to adjust times to the local timeframe.
@@ -169,4 +167,4 @@ private:
 
 } // namespace Sirikata
 
-#endif //_SIRIKATA_OH_PROTOCOL_LOC_UPDATE_HPP_
+#endif //_SIRIKATA_LIBPINTOLOC_PROTOCOL_LOC_UPDATE_HPP_

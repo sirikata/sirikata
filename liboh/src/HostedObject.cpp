@@ -52,8 +52,8 @@
 #include <sirikata/oh/SimulationFactory.hpp>
 #include <sirikata/oh/PerPresenceData.hpp>
 
-#include <sirikata/oh/LocUpdate.hpp>
-#include <sirikata/oh/ProtocolLocUpdate.hpp>
+#include <sirikata/pintoloc/LocUpdate.hpp>
+#include <sirikata/pintoloc/ProtocolLocUpdate.hpp>
 #include "Protocol_Loc.pbj.hpp"
 #include "Protocol_Prox.pbj.hpp"
 

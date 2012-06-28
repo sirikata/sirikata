@@ -204,7 +204,7 @@ void ManualObjectQueryProcessor::removedServerQuery(const OHDP::SpaceNodeID& sni
     obj_query_handler->stop();
 }
 
-void ManualObjectQueryProcessor::createdReplicatedIndex(const OHDP::SpaceNodeID& snid, ProxIndexID iid, OHLocationServiceCachePtr loc_cache, ServerID objects_from_server, bool dynamic_objects) {
+void ManualObjectQueryProcessor::createdReplicatedIndex(const OHDP::SpaceNodeID& snid, ProxIndexID iid, ReplicatedLocationServiceCachePtr loc_cache, ServerID objects_from_server, bool dynamic_objects) {
     QueryHandlerMap::iterator it = mObjectQueryHandlers.find(snid);
     assert( it != mObjectQueryHandlers.end() );
     it->second->createdReplicatedIndex(iid, loc_cache, objects_from_server, dynamic_objects);

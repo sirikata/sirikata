@@ -2,25 +2,27 @@
 // Use of this source code is governed by a BSD-style license that can
 // be found in the LICENSE file.
 
-#ifndef _SIRIKATA_OH_OH_LOCATION_SERVICE_CACHE_HPP_
-#define _SIRIKATA_OH_OH_LOCATION_SERVICE_CACHE_HPP_
+#ifndef _SIRIKATA_LIBPINTO_REPLICATED_LOCATION_SERVICE_CACHE_HPP_
+#define _SIRIKATA_LIBPINTO_REPLICATED_LOCATION_SERVICE_CACHE_HPP_
 
-#include "ProxSimulationTraits.hpp"
+#include <sirikata/pintoloc/Platform.hpp>
+#include <sirikata/pintoloc/ProxSimulationTraits.hpp>
 #include <prox/base/LocationServiceCache.hpp>
 #include <prox/base/ZernikeDescriptor.hpp>
 #include <sirikata/core/util/PresenceProperties.hpp>
-#include "OHLocationUpdateListener.hpp"
+#include <sirikata/pintoloc/ReplicatedLocationUpdateListener.hpp>
 #include <boost/thread.hpp>
 #include <sirikata/core/network/IOStrand.hpp>
 
 namespace Sirikata {
 
-class OHLocationServiceCache;
-typedef std::tr1::shared_ptr<OHLocationServiceCache> OHLocationServiceCachePtr;
+class ReplicatedLocationServiceCache;
+typedef std::tr1::shared_ptr<ReplicatedLocationServiceCache> ReplicatedLocationServiceCachePtr;
 
-/** Implementation of LocationServiceCache used on the object host. Tracks state
- *  using SequencedPresenceProperties and avoids duplicating the state -- it
- *  simply holds onto it until it is safe to release it.
+/** Implementation of LocationServiceCache used for tracking replicated data
+ *  from another node. Tracks state using SequencedPresenceProperties and avoids
+ *  duplicating the state -- it simply holds onto it until it is safe to release
+ *  it.
  *
  *  This version is thread-safe. It allows you to update (and access) the data
  *  from any thread. You provide a strand in which listeners are triggered,
@@ -33,15 +35,15 @@ typedef std::tr1::shared_ptr<OHLocationServiceCache> OHLocationServiceCachePtr;
  *  remain available. The updated values are also passed through the post() to
  *  ensure the (non-thread-safe) data remains consistent when reported.
  */
-class OHLocationServiceCache :
+class SIRIKATA_LIBPINTOLOC_EXPORT ReplicatedLocationServiceCache :
         public Prox::LocationServiceCache<ObjectProxSimulationTraits>,
-        public OHLocationUpdateProvider
+        public ReplicatedLocationUpdateProvider
 {
 public:
     typedef Prox::LocationUpdateListener<ObjectProxSimulationTraits> LocationUpdateListener;
 
-    OHLocationServiceCache(Network::IOStrandPtr strand);
-    virtual ~OHLocationServiceCache();
+    ReplicatedLocationServiceCache(Network::IOStrandPtr strand);
+    virtual ~ReplicatedLocationServiceCache();
 
     // Returns true if this has no objects that still exist. Note that this
     // isn't quite like a regular empty() method. We might still be tracking
@@ -136,14 +138,14 @@ private:
     void notifyEpochUpdated(const ObjectReference& uuid, const uint64 val);
     void notifyLocationUpdated(const ObjectReference& uuid, const TimedMotionVector3f& oldval, const TimedMotionVector3f& newval);
     void notifyBoundsUpdated(const ObjectReference& uuid, const AggregateBoundingInfo& oldval, const AggregateBoundingInfo& newval);
-    // These are only used by OHLocationUpdateListener so they don't need values
+    // These are only used by ReplicatedLocationUpdateListener so they don't need values
     // with them (see comments for that class)
     void notifyOrientationUpdated(const ObjectReference& uuid);
     void notifyMeshUpdated(const ObjectReference& uuid);
     void notifyPhysicsUpdated(const ObjectReference& uuid);
 
 
-    OHLocationServiceCache();
+    ReplicatedLocationServiceCache();
 
     typedef boost::recursive_mutex Mutex;
     typedef boost::lock_guard<Mutex> Lock;
@@ -192,4 +194,4 @@ private:
 
 } // namespace Sirikata
 
-#endif //_SIRIKATA_OH_OH_LOCATION_SERVICE_CACHE_HPP_
+#endif //_SIRIKATA_LIBPINTO_REPLICATED_LOCATION_SERVICE_CACHE_HPP_

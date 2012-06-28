@@ -5,8 +5,8 @@
 #ifndef _SIRIKATA_PRESENCE_PROPERTIES_LOC_UPDATE_HPP_
 #define _SIRIKATA_PRESENCE_PROPERTIES_LOC_UPDATE_HPP_
 
-#include <sirikata/oh/Platform.hpp>
-#include <sirikata/oh/LocUpdate.hpp>
+#include <sirikata/pintoloc/Platform.hpp>
+#include <sirikata/pintoloc/LocUpdate.hpp>
 
 namespace Sirikata {
 

@@ -13,14 +13,13 @@
 #include <json_spirit/json_spirit.h>
 
 #include "ManualObjectQueryProcessor.hpp"
+#include <sirikata/oh/OHSpaceTimeSynced.hpp>
 
 #define QPLOG(lvl, msg) SILOG(manual-query-processor, lvl, msg)
 
 namespace Sirikata {
 namespace OH {
 namespace Manual {
-
-
 
 namespace {
 
@@ -358,7 +357,7 @@ void ServerQueryHandler::handleProximityMessage(const OHDP::SpaceNodeID& snid, c
             mParent->createdReplicatedIndex(snid, index_unique_id, query_state->getLocCache(index_unique_id), index_from_server, dynamic_objects);
         }
 
-        OHLocationServiceCachePtr loccache = query_state->getLocCache(index_unique_id);
+        ReplicatedLocationServiceCachePtr loccache = query_state->getLocCache(index_unique_id);
         OrphanLocUpdateManagerPtr orphan_manager = query_state->getOrphanLocUpdateManager(index_unique_id);
         for(int32 aidx = 0; aidx < update.addition_size(); aidx++) {
             Sirikata::Protocol::Prox::ObjectAddition addition = update.addition(aidx);
@@ -388,7 +387,8 @@ void ServerQueryHandler::handleProximityMessage(const OHDP::SpaceNodeID& snid, c
             );
 
             // Replay orphans
-            orphan_manager->invokeOrphanUpdatesWithExtra(mContext->objectHost, snid, observed, this, index_unique_id);
+            OHSpaceTimeSynced sync(mContext->objectHost, snid.space());
+            orphan_manager->invokeOrphanUpdatesWithExtra(sync, snid, observed, this, index_unique_id);
         }
 
         for(int32 ridx = 0; ridx < update.removal_size(); ridx++) {
@@ -506,7 +506,7 @@ void ServerQueryHandler::handleLocationSubstreamRead(const OHDP::SpaceNodeID& sn
 
 namespace {
 // Helper for applying an update to
-void applyLocUpdate(const ObjectReference& objid, OHLocationServiceCachePtr loccache, const LocUpdate& lu) {
+void applyLocUpdate(const ObjectReference& objid, ReplicatedLocationServiceCachePtr loccache, const LocUpdate& lu) {
     // We can bail immediately if none of the updates are relevant since the
     // object isn't even being tracked
     if (!loccache->tracking(objid)) return;
@@ -582,7 +582,8 @@ bool ServerQueryHandler::handleLocationMessage(const OHDP::SpaceNodeID& snid, co
                 query_state->getOrphanLocUpdateManager(index_id)->addOrphanUpdate(observed, update);
             }
             else { // or actually applying it
-                LocProtocolLocUpdate llu(update, mContext->objectHost, snid.space());
+                OHSpaceTimeSynced sync(mContext->objectHost, snid.space());
+                LocProtocolLocUpdate llu(update, sync);
                 applyLocUpdate(observed_oref, query_state->getLocCache(index_id), llu);
             }
         }

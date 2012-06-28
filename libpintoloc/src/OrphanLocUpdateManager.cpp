@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can
 // be found in the LICENSE file.
 
-#include <sirikata/oh/OrphanLocUpdateManager.hpp>
+#include <sirikata/pintoloc/OrphanLocUpdateManager.hpp>
 #include <sirikata/core/service/Context.hpp>
 #include "Protocol_Loc.pbj.hpp"
 #include <sirikata/proxyobject/ProxyObject.hpp>

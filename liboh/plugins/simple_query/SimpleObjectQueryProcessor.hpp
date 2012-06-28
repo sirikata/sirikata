@@ -7,7 +7,7 @@
 
 #include <sirikata/oh/ObjectQueryProcessor.hpp>
 
-#include <sirikata/oh/OrphanLocUpdateManager.hpp>
+#include <sirikata/pintoloc/OrphanLocUpdateManager.hpp>
 
 namespace Sirikata {
 namespace OH {

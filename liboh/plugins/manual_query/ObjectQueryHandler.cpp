@@ -11,7 +11,7 @@
 
 #include "Protocol_Prox.pbj.hpp"
 
-#include <sirikata/oh/PresencePropertiesLocUpdate.hpp>
+#include <sirikata/pintoloc/PresencePropertiesLocUpdate.hpp>
 
 #include <json_spirit/json_spirit.h>
 
@@ -75,7 +75,7 @@ void ObjectQueryHandler::stop() {
 }
 
 
-void ObjectQueryHandler::createdReplicatedIndex(ProxIndexID iid, OHLocationServiceCachePtr loc_cache, ServerID objects_from_server, bool dynamic_objects) {
+void ObjectQueryHandler::createdReplicatedIndex(ProxIndexID iid, ReplicatedLocationServiceCachePtr loc_cache, ServerID objects_from_server, bool dynamic_objects) {
     // Register for loc_cache updates immediately to make sure we don't miss any
     // while waiting for the real event handler to run. They'll just queue up
     // behind that handler.
@@ -177,7 +177,7 @@ void ObjectQueryHandler::handleDeliverEvents() {
     }
 }
 
-void ObjectQueryHandler::handleNotifySubscribersLocUpdate(OHLocationServiceCache* loccache, const ObjectReference& oref) {
+void ObjectQueryHandler::handleNotifySubscribersLocUpdate(ReplicatedLocationServiceCache* loccache, const ObjectReference& oref) {
     SubscribersMap::iterator it = mSubscribers.find(oref);
     if (it == mSubscribers.end()) return;
     SubscriberSetPtr subscribers = it->second;
@@ -298,23 +298,23 @@ void ObjectQueryHandler::commandForceRebuild(const Command::Command& cmd, Comman
 
 
 
-void ObjectQueryHandler::onObjectAdded(OHLocationServiceCache* loccache, const ObjectReference& obj) {
+void ObjectQueryHandler::onObjectAdded(ReplicatedLocationServiceCache* loccache, const ObjectReference& obj) {
 }
 
-void ObjectQueryHandler::onObjectRemoved(OHLocationServiceCache* loccache, const ObjectReference& obj) {
+void ObjectQueryHandler::onObjectRemoved(ReplicatedLocationServiceCache* loccache, const ObjectReference& obj) {
 }
 
-void ObjectQueryHandler::onParentUpdated(OHLocationServiceCache* loccache, const ObjectReference& obj) {
+void ObjectQueryHandler::onParentUpdated(ReplicatedLocationServiceCache* loccache, const ObjectReference& obj) {
 }
 
-void ObjectQueryHandler::onEpochUpdated(OHLocationServiceCache* loccache, const ObjectReference& obj) {
+void ObjectQueryHandler::onEpochUpdated(ReplicatedLocationServiceCache* loccache, const ObjectReference& obj) {
     mContext->mainStrand->post(
         std::tr1::bind(&ObjectQueryHandler::handleNotifySubscribersLocUpdate, this, loccache, obj),
         "ObjectQueryHandler::handleNotifySubscribersLocUpdate"
     );
 }
 
-void ObjectQueryHandler::onLocationUpdated(OHLocationServiceCache* loccache, const ObjectReference& obj) {
+void ObjectQueryHandler::onLocationUpdated(ReplicatedLocationServiceCache* loccache, const ObjectReference& obj) {
     updateQuery(obj, loccache->location(obj), loccache->bounds(obj).fullBounds(), NoUpdateSolidAngle, NoUpdateMaxResults);
 
     mContext->mainStrand->post(
@@ -323,14 +323,14 @@ void ObjectQueryHandler::onLocationUpdated(OHLocationServiceCache* loccache, con
     );
 }
 
-void ObjectQueryHandler::onOrientationUpdated(OHLocationServiceCache* loccache, const ObjectReference& obj) {
+void ObjectQueryHandler::onOrientationUpdated(ReplicatedLocationServiceCache* loccache, const ObjectReference& obj) {
     mContext->mainStrand->post(
         std::tr1::bind(&ObjectQueryHandler::handleNotifySubscribersLocUpdate, this, loccache, obj),
         "ObjectQueryHandler::handleNotifySubscribersLocUpdate"
     );
 }
 
-void ObjectQueryHandler::onBoundsUpdated(OHLocationServiceCache* loccache, const ObjectReference& obj) {
+void ObjectQueryHandler::onBoundsUpdated(ReplicatedLocationServiceCache* loccache, const ObjectReference& obj) {
     updateQuery(obj, loccache->location(obj), loccache->bounds(obj).fullBounds(), NoUpdateSolidAngle, NoUpdateMaxResults);
 
     mContext->mainStrand->post(
@@ -339,14 +339,14 @@ void ObjectQueryHandler::onBoundsUpdated(OHLocationServiceCache* loccache, const
     );
 }
 
-void ObjectQueryHandler::onMeshUpdated(OHLocationServiceCache* loccache, const ObjectReference& obj) {
+void ObjectQueryHandler::onMeshUpdated(ReplicatedLocationServiceCache* loccache, const ObjectReference& obj) {
     mContext->mainStrand->post(
         std::tr1::bind(&ObjectQueryHandler::handleNotifySubscribersLocUpdate, this, loccache, obj),
         "ObjectQueryHandler::handleNotifySubscribersLocUpdate"
     );
 }
 
-void ObjectQueryHandler::onPhysicsUpdated(OHLocationServiceCache* loccache, const ObjectReference& obj) {
+void ObjectQueryHandler::onPhysicsUpdated(ReplicatedLocationServiceCache* loccache, const ObjectReference& obj) {
     mContext->mainStrand->post(
         std::tr1::bind(&ObjectQueryHandler::handleNotifySubscribersLocUpdate, this, loccache, obj),
         "ObjectQueryHandler::handleNotifySubscribersLocUpdate"
@@ -356,7 +356,7 @@ void ObjectQueryHandler::onPhysicsUpdated(OHLocationServiceCache* loccache, cons
 
 // PROX Thread: Everything after this should only be called from within the prox thread.
 
-void ObjectQueryHandler::handleCreatedReplicatedIndex(ProxIndexID iid, OHLocationServiceCachePtr loc_cache, ServerID objects_from_server, bool dynamic_objects) {
+void ObjectQueryHandler::handleCreatedReplicatedIndex(ProxIndexID iid, ReplicatedLocationServiceCachePtr loc_cache, ServerID objects_from_server, bool dynamic_objects) {
     assert(mObjectQueryHandlers.find(iid) == mObjectQueryHandlers.end());
 
     using std::tr1::placeholders::_1;

@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can
 // be found in the LICENSE file.
 
-#ifndef _SIRIKATA_OH_LOC_UPDATE_HPP_
-#define _SIRIKATA_OH_LOC_UPDATE_HPP_
+#ifndef _SIRIKATA_LIBPINTOLOC_LOC_UPDATE_HPP_
+#define _SIRIKATA_LIBPINTOLOC_LOC_UPDATE_HPP_
 
-#include <sirikata/oh/Platform.hpp>
+#include <sirikata/pintoloc/Platform.hpp>
 #include <sirikata/core/util/Noncopyable.hpp>
 #include <sirikata/core/util/MotionVector.hpp>
 #include <sirikata/core/util/MotionQuaternion.hpp>
@@ -28,7 +28,7 @@ typedef std::tr1::shared_ptr<HostedObject> HostedObjectPtr;
  *  Note that this assumes that this assumes times (in location and
  *  orientation) have been converted to the local timeframe.
  */
-class SIRIKATA_OH_EXPORT LocUpdate : Noncopyable {
+class SIRIKATA_LIBPINTOLOC_EXPORT LocUpdate : Noncopyable {
 public:
     virtual ~LocUpdate() {}
 
@@ -74,4 +74,4 @@ public:
 
 } // namespace Sirikata
 
-#endif //_SIRIKATA_OH_LOC_UPDATE_HPP_
+#endif //_SIRIKATA_LIBPINTOLOC_LOC_UPDATE_HPP_

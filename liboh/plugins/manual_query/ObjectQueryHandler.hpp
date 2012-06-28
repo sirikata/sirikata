@@ -6,8 +6,9 @@
 #define _SIRIKATA_OH_MQ_OBJECT_QUERY_HANDLER_HPP_
 
 #include "ObjectQueryHandlerBase.hpp"
-#include "ProxSimulationTraits.hpp"
-#include "OHLocationUpdateListener.hpp"
+#include <sirikata/pintoloc/ProxSimulationTraits.hpp>
+#include <sirikata/pintoloc/ReplicatedLocationUpdateListener.hpp>
+#include <sirikata/pintoloc/ReplicatedLocationServiceCache.hpp>
 #include <prox/geom/QueryHandler.hpp>
 #include <prox/base/AggregateListener.hpp>
 #include <sirikata/core/queue/ThreadSafeQueueWithNotification.hpp>
@@ -31,7 +32,7 @@ class ObjectQueryHandler :
         public ObjectQueryHandlerBase,
         Prox::QueryEventListener<ObjectProxSimulationTraits, Prox::Query<ObjectProxSimulationTraits> >,
         Prox::AggregateListener<ObjectProxSimulationTraits>,
-        public OHLocationUpdateListener
+        public ReplicatedLocationUpdateListener
 {
 private:
     typedef Prox::QueryHandler<ObjectProxSimulationTraits> ProxQueryHandler;
@@ -52,12 +53,12 @@ public:
 
 
     // Index/Tree replication events from server queries
-    void createdReplicatedIndex(ProxIndexID iid, OHLocationServiceCachePtr loc_cache, ServerID objects_from_server, bool dynamic_objects);
+    void createdReplicatedIndex(ProxIndexID iid, ReplicatedLocationServiceCachePtr loc_cache, ServerID objects_from_server, bool dynamic_objects);
     void removedReplicatedIndex(ProxIndexID iid);
 
     // Query settings. These pass in the HostedObject so they don't
-    // have to rely on the OHLocationServiceCache for implicit
-    // settings since it's possible the OHLocationServiceCache hasn't
+    // have to rely on the ReplicatedLocationServiceCache for implicit
+    // settings since it's possible the ReplicatedLocationServiceCache hasn't
     // received (or might not receive!) information about the object
     // yet. Note that we use SpaceObjectReference here so we can
     // perform lookups in HostedObject, even though everything in this
@@ -71,23 +72,23 @@ public:
     void presenceConnected(const ObjectReference& sporef);
     void presenceDisconnected(const ObjectReference& sporef);
 
-    // OHLocationUpdateListener Interface
+    // ReplicatedLocationUpdateListener Interface
     // We override this for two reasons. First, a few callbacks are used to
     // update query parameters (location & bounds). Second, we use these updates
     // to generate LocUpdates for queriers that are subscribed to the object.
-    virtual void onObjectAdded(OHLocationServiceCache* loccache, const ObjectReference& obj);
-    virtual void onObjectRemoved(OHLocationServiceCache* loccache, const ObjectReference& obj);
-    virtual void onParentUpdated(OHLocationServiceCache* loccache, const ObjectReference& obj);
-    virtual void onEpochUpdated(OHLocationServiceCache* loccache, const ObjectReference& obj);
-    virtual void onLocationUpdated(OHLocationServiceCache* loccache, const ObjectReference& obj);
-    virtual void onOrientationUpdated(OHLocationServiceCache* loccache, const ObjectReference& obj);
-    virtual void onBoundsUpdated(OHLocationServiceCache* loccache, const ObjectReference& obj);
-    virtual void onMeshUpdated(OHLocationServiceCache* loccache, const ObjectReference& obj);
-    virtual void onPhysicsUpdated(OHLocationServiceCache* loccache, const ObjectReference& obj);
+    virtual void onObjectAdded(ReplicatedLocationServiceCache* loccache, const ObjectReference& obj);
+    virtual void onObjectRemoved(ReplicatedLocationServiceCache* loccache, const ObjectReference& obj);
+    virtual void onParentUpdated(ReplicatedLocationServiceCache* loccache, const ObjectReference& obj);
+    virtual void onEpochUpdated(ReplicatedLocationServiceCache* loccache, const ObjectReference& obj);
+    virtual void onLocationUpdated(ReplicatedLocationServiceCache* loccache, const ObjectReference& obj);
+    virtual void onOrientationUpdated(ReplicatedLocationServiceCache* loccache, const ObjectReference& obj);
+    virtual void onBoundsUpdated(ReplicatedLocationServiceCache* loccache, const ObjectReference& obj);
+    virtual void onMeshUpdated(ReplicatedLocationServiceCache* loccache, const ObjectReference& obj);
+    virtual void onPhysicsUpdated(ReplicatedLocationServiceCache* loccache, const ObjectReference& obj);
 
     // PROX Thread:
 
-    void handleCreatedReplicatedIndex(ProxIndexID iid, OHLocationServiceCachePtr loc_cache, ServerID objects_from_server, bool dynamic_objects);
+    void handleCreatedReplicatedIndex(ProxIndexID iid, ReplicatedLocationServiceCachePtr loc_cache, ServerID objects_from_server, bool dynamic_objects);
     void handleRemovedReplicatedIndex(ProxIndexID iid);
 
     // QueryEventListener Interface
@@ -119,7 +120,7 @@ private:
     // currently takes the brute force approach of updating all properties and
     // uses the most up-to-date info, even if that's actually newer than the
     // update that triggered this.
-    void handleNotifySubscribersLocUpdate(OHLocationServiceCache* loccache, const ObjectReference& oref);
+    void handleNotifySubscribersLocUpdate(ReplicatedLocationServiceCache* loccache, const ObjectReference& oref);
 
     // Object queries
     void updateQuery(HostedObjectPtr ho, const SpaceObjectReference& sporef, SolidAngle sa, uint32 max_results);
@@ -170,13 +171,13 @@ private:
     // index IDs. Since the query handler can't track all the info we might care
     // about, we put it in a struct with a bit more metadata
     struct ReplicatedIndexQueryHandler {
-        ReplicatedIndexQueryHandler(ProxQueryHandler* handler_, OHLocationServiceCachePtr loccache_, ServerID from_, bool dynamic_)
+        ReplicatedIndexQueryHandler(ProxQueryHandler* handler_, ReplicatedLocationServiceCachePtr loccache_, ServerID from_, bool dynamic_)
          : handler(handler_), loccache(loccache_), from(from_), dynamic(dynamic_) {}
         ReplicatedIndexQueryHandler()
          : handler(NULL), loccache(), from(NullServerID), dynamic(true) {}
 
         ProxQueryHandler* handler;
-        OHLocationServiceCachePtr loccache;
+        ReplicatedLocationServiceCachePtr loccache;
         // The Server this tree was replicated from. This may not be unique.
         ServerID from;
         // Whether this tree includes dynamic objects

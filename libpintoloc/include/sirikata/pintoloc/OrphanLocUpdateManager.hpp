@@ -5,19 +5,18 @@
 #ifndef _SIRIKATA_ORPHAN_LOC_UPDATE_MANAGER_HPP_
 #define _SIRIKATA_ORPHAN_LOC_UPDATE_MANAGER_HPP_
 
-#include <sirikata/proxyobject/Platform.hpp>
+#include <sirikata/pintoloc/Platform.hpp>
 #include <sirikata/core/service/PollingService.hpp>
 #include <sirikata/core/util/SpaceObjectReference.hpp>
 #include <sirikata/proxyobject/Defs.hpp>
-#include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/util/MotionVector.hpp>
 #include <sirikata/core/util/MotionQuaternion.hpp>
 #include <sirikata/core/transfer/URI.hpp>
 #include <sirikata/core/util/BoundingSphere.hpp>
-#include <sirikata/oh/LocUpdate.hpp>
-#include <sirikata/oh/ProtocolLocUpdate.hpp>
+#include <sirikata/pintoloc/LocUpdate.hpp>
+#include <sirikata/pintoloc/ProtocolLocUpdate.hpp>
 #include <sirikata/core/util/PresenceProperties.hpp>
-#include <sirikata/oh/PresencePropertiesLocUpdate.hpp>
+#include <sirikata/pintoloc/PresencePropertiesLocUpdate.hpp>
 
 namespace Sirikata {
 
@@ -49,7 +48,7 @@ class LocationUpdate;
  *  discarded. In all cases, sequence numbers are still used so possibly trying
  *  to apply old updates isn't an issue.
  */
-class SIRIKATA_OH_EXPORT OrphanLocUpdateManager : public PollingService {
+class SIRIKATA_LIBPINTOLOC_EXPORT OrphanLocUpdateManager : public PollingService {
 public:
     template<typename QuerierIDType>
     class Listener {
@@ -87,14 +86,14 @@ public:
     // ListenerType would be Listener<QuerierIDType> but we want to support
     // optional extra params passed through to the callback.
     template<typename QuerierIDType, typename ListenerType>
-    void invokeOrphanUpdates(ObjectHost* oh, const QuerierIDType& observer, const SpaceObjectReference& proximateID, ListenerType* listener) {
+    void invokeOrphanUpdates(const TimeSynced& sync, const QuerierIDType& observer, const SpaceObjectReference& proximateID, ListenerType* listener) {
         ObjectUpdateMap::iterator it = mUpdates.find(proximateID);
         if (it == mUpdates.end()) return;
 
         const UpdateInfoList& info_list = it->second;
         for(UpdateInfoList::const_iterator info_it = info_list.begin(); info_it != info_list.end(); info_it++) {
             if ((*info_it)->value != NULL) {
-                LocProtocolLocUpdate llu( *((*info_it)->value), oh, proximateID.space() );
+                LocProtocolLocUpdate llu( *((*info_it)->value), sync );
                 listener->onOrphanLocUpdate( observer, llu );
             }
             else if ((*info_it)->opd != NULL) {
@@ -109,14 +108,14 @@ public:
         mUpdates.erase(it);
     }
     template<typename QuerierIDType, typename ListenerType, typename ExtraParamType>
-    void invokeOrphanUpdatesWithExtra(ObjectHost* oh, const QuerierIDType& observer, const SpaceObjectReference& proximateID, ListenerType* listener, ExtraParamType extra) {
+    void invokeOrphanUpdatesWithExtra(const TimeSynced& sync, const QuerierIDType& observer, const SpaceObjectReference& proximateID, ListenerType* listener, ExtraParamType extra) {
         ObjectUpdateMap::iterator it = mUpdates.find(proximateID);
         if (it == mUpdates.end()) return;
 
         const UpdateInfoList& info_list = it->second;
         for(UpdateInfoList::const_iterator info_it = info_list.begin(); info_it != info_list.end(); info_it++) {
             if ((*info_it)->value != NULL) {
-                LocProtocolLocUpdate llu( *((*info_it)->value), oh, proximateID.space() );
+                LocProtocolLocUpdate llu( *((*info_it)->value), sync );
                 listener->onOrphanLocUpdate( observer, llu, extra );
             }
             else if ((*info_it)->opd != NULL) {

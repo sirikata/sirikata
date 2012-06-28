@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can
 // be found in the LICENSE file.
 
-#include "OHLocationServiceCache.hpp"
+#include <sirikata/pintoloc/ReplicatedLocationServiceCache.hpp>
 #include <sirikata/core/network/IOStrand.hpp>
 
 namespace Sirikata {
 
 typedef Prox::LocationServiceCache<ObjectProxSimulationTraits> LocationServiceCache;
 
-OHLocationServiceCache::OHLocationServiceCache(Network::IOStrandPtr strand)
+ReplicatedLocationServiceCache::ReplicatedLocationServiceCache(Network::IOStrandPtr strand)
  : LocationServiceCache(),
    mStrand(strand),
    mListeners(),
@@ -17,12 +17,12 @@ OHLocationServiceCache::OHLocationServiceCache(Network::IOStrandPtr strand)
 {
 }
 
-OHLocationServiceCache::~OHLocationServiceCache() {
+ReplicatedLocationServiceCache::~ReplicatedLocationServiceCache() {
     mListeners.clear();
     mObjects.clear();
 }
 
-void OHLocationServiceCache::addPlaceholderImposter(
+void ReplicatedLocationServiceCache::addPlaceholderImposter(
     const ObjectID& uuid,
     const Vector3f& center_offset,
     const float32 center_bounds_radius,
@@ -42,7 +42,7 @@ void OHLocationServiceCache::addPlaceholderImposter(
     assert(it != mObjects.end());
 }
 
-LocationServiceCache::Iterator OHLocationServiceCache::startTracking(const ObjectReference& id) {
+LocationServiceCache::Iterator ReplicatedLocationServiceCache::startTracking(const ObjectReference& id) {
     Lock lck(mMutex);
 
     ObjectDataMap::iterator it = mObjects.find(id);
@@ -53,7 +53,7 @@ LocationServiceCache::Iterator OHLocationServiceCache::startTracking(const Objec
     return Iterator( new IteratorData(id, it) );
 }
 
-void OHLocationServiceCache::stopTracking(const Iterator& id) {
+void ReplicatedLocationServiceCache::stopTracking(const Iterator& id) {
     Lock lck(mMutex);
 
     // In this special case, we ignore the true iterator and do the lookup.
@@ -73,7 +73,7 @@ void OHLocationServiceCache::stopTracking(const Iterator& id) {
     tryRemoveObject(it);
 }
 
-bool OHLocationServiceCache::startSimpleTracking(const ObjectID& id) {
+bool ReplicatedLocationServiceCache::startSimpleTracking(const ObjectID& id) {
     Lock lck(mMutex);
 
     ObjectDataMap::iterator it = mObjects.find(id);
@@ -83,7 +83,7 @@ bool OHLocationServiceCache::startSimpleTracking(const ObjectID& id) {
     return true;
 }
 
-void OHLocationServiceCache::stopSimpleTracking(const ObjectID& id) {
+void ReplicatedLocationServiceCache::stopSimpleTracking(const ObjectID& id) {
     Lock lck(mMutex);
 
     ObjectDataMap::iterator it = mObjects.find(id);
@@ -94,14 +94,14 @@ void OHLocationServiceCache::stopSimpleTracking(const ObjectID& id) {
 }
 
 
-bool OHLocationServiceCache::tracking(const ObjectReference& id) {
+bool ReplicatedLocationServiceCache::tracking(const ObjectReference& id) {
     Lock lck(mMutex);
 
     return (mObjects.find(id) != mObjects.end());
 }
 
 
-TimedMotionVector3f OHLocationServiceCache::location(const Iterator& id) {
+TimedMotionVector3f ReplicatedLocationServiceCache::location(const Iterator& id) {
     // NOTE: Only accesses via iterator, shouldn't need a lock
     IteratorData* itdat = (IteratorData*)id.data;
     ObjectDataMap::iterator it = itdat->it;
@@ -109,7 +109,7 @@ TimedMotionVector3f OHLocationServiceCache::location(const Iterator& id) {
     return it->second.props.location();
 }
 
-Vector3f OHLocationServiceCache::centerOffset(const Iterator& id) {
+Vector3f ReplicatedLocationServiceCache::centerOffset(const Iterator& id) {
     // NOTE: Only accesses via iterator, shouldn't need a lock
     // Max size is just the size of the object.
     IteratorData* itdat = (IteratorData*)id.data;
@@ -118,7 +118,7 @@ Vector3f OHLocationServiceCache::centerOffset(const Iterator& id) {
     return it->second.props.bounds().centerOffset;
 }
 
-float32 OHLocationServiceCache::centerBoundsRadius(const Iterator& id) {
+float32 ReplicatedLocationServiceCache::centerBoundsRadius(const Iterator& id) {
     // NOTE: Only accesses via iterator, shouldn't need a lock
     // Max size is just the size of the object.
     IteratorData* itdat = (IteratorData*)id.data;
@@ -127,7 +127,7 @@ float32 OHLocationServiceCache::centerBoundsRadius(const Iterator& id) {
     return it->second.props.bounds().centerBoundsRadius;
 }
 
-float32 OHLocationServiceCache::maxSize(const Iterator& id) {
+float32 ReplicatedLocationServiceCache::maxSize(const Iterator& id) {
     // NOTE: Only accesses via iterator, shouldn't need a lock
     // Max size is just the size of the object.
     IteratorData* itdat = (IteratorData*)id.data;
@@ -136,11 +136,11 @@ float32 OHLocationServiceCache::maxSize(const Iterator& id) {
     return it->second.props.bounds().maxObjectRadius;
 }
 
-bool OHLocationServiceCache::isLocal(const Iterator& id) {
+bool ReplicatedLocationServiceCache::isLocal(const Iterator& id) {
     return true;
 }
 
-String OHLocationServiceCache::mesh(const Iterator& id) {
+String ReplicatedLocationServiceCache::mesh(const Iterator& id) {
     // NOTE: Only accesses via iterator, shouldn't need a lock
     IteratorData* itdat = (IteratorData*)id.data;
     ObjectDataMap::iterator it = itdat->it;
@@ -148,25 +148,25 @@ String OHLocationServiceCache::mesh(const Iterator& id) {
     return it->second.props.mesh().toString();
 }
 
-Prox::ZernikeDescriptor& OHLocationServiceCache::zernikeDescriptor(const Iterator& id) {
+Prox::ZernikeDescriptor& ReplicatedLocationServiceCache::zernikeDescriptor(const Iterator& id) {
   return Prox::ZernikeDescriptor::null();
 }
 
-const ObjectReference& OHLocationServiceCache::iteratorID(const Iterator& id) {
+const ObjectReference& ReplicatedLocationServiceCache::iteratorID(const Iterator& id) {
     // NOTE: Only accesses via iterator, shouldn't need a lock
     IteratorData* itdat = (IteratorData*)id.data;
     ObjectDataMap::iterator it = itdat->it;
     return it->first;
 }
 
-void OHLocationServiceCache::addUpdateListener(LocationUpdateListener* listener) {
+void ReplicatedLocationServiceCache::addUpdateListener(LocationUpdateListener* listener) {
     Lock lck(mMutex);
 
     assert( mListeners.find(listener) == mListeners.end() );
     mListeners.insert(listener);
 }
 
-void OHLocationServiceCache::removeUpdateListener(LocationUpdateListener* listener) {
+void ReplicatedLocationServiceCache::removeUpdateListener(LocationUpdateListener* listener) {
     Lock lck(mMutex);
 
     ListenerSet::iterator it = mListeners.find(listener);
@@ -179,52 +179,52 @@ void OHLocationServiceCache::removeUpdateListener(LocationUpdateListener* listen
     ObjectDataMap::const_iterator it = mObjects.find(id);       \
     assert(it != mObjects.end())
 
-uint64 OHLocationServiceCache::epoch(const ObjectID& id) {
+uint64 ReplicatedLocationServiceCache::epoch(const ObjectID& id) {
     GET_OBJ_ENTRY(id);
     return it->second.epoch;
 }
 
-TimedMotionVector3f OHLocationServiceCache::location(const ObjectID& id) {
+TimedMotionVector3f ReplicatedLocationServiceCache::location(const ObjectID& id) {
     GET_OBJ_ENTRY(id);
     return it->second.props.location();
 }
 
-TimedMotionQuaternion OHLocationServiceCache::orientation(const ObjectID& id) {
+TimedMotionQuaternion ReplicatedLocationServiceCache::orientation(const ObjectID& id) {
     GET_OBJ_ENTRY(id);
     return it->second.props.orientation();
 }
 
-AggregateBoundingInfo OHLocationServiceCache::bounds(const ObjectID& id) {
+AggregateBoundingInfo ReplicatedLocationServiceCache::bounds(const ObjectID& id) {
     GET_OBJ_ENTRY(id);
     return it->second.props.bounds();
 }
 
-Transfer::URI OHLocationServiceCache::mesh(const ObjectID& id) {
+Transfer::URI ReplicatedLocationServiceCache::mesh(const ObjectID& id) {
     GET_OBJ_ENTRY(id);
     return it->second.props.mesh();
 }
 
-String OHLocationServiceCache::physics(const ObjectID& id) {
+String ReplicatedLocationServiceCache::physics(const ObjectID& id) {
     GET_OBJ_ENTRY(id);
     return it->second.props.physics();
 }
 
-ObjectReference OHLocationServiceCache::parent(const ObjectID& id) {
+ObjectReference ReplicatedLocationServiceCache::parent(const ObjectID& id) {
     GET_OBJ_ENTRY(id);
     return it->second.parent;
 }
 
-bool OHLocationServiceCache::aggregate(const ObjectID& id) {
+bool ReplicatedLocationServiceCache::aggregate(const ObjectID& id) {
     GET_OBJ_ENTRY(id);
     return it->second.aggregate;
 }
 
-const SequencedPresenceProperties& OHLocationServiceCache::properties(const ObjectID& id) {
+const SequencedPresenceProperties& ReplicatedLocationServiceCache::properties(const ObjectID& id) {
     GET_OBJ_ENTRY(id);
     return it->second.props;
 }
 
-void OHLocationServiceCache::objectAdded(
+void ReplicatedLocationServiceCache::objectAdded(
     const ObjectReference& uuid, bool agg,
     const ObjectReference& parent,
     const TimedMotionVector3f& loc, uint64 loc_seqno,
@@ -255,14 +255,14 @@ void OHLocationServiceCache::objectAdded(
     it->second.tracking++;
     mStrand->post(
         std::tr1::bind(
-            &OHLocationServiceCache::notifyObjectAdded, this,
+            &ReplicatedLocationServiceCache::notifyObjectAdded, this,
             uuid, parent, agg, loc, bounds
         ),
-        "OHLocationServiceCache::notifyObjectAdded"
+        "ReplicatedLocationServiceCache::notifyObjectAdded"
     );
 }
 
-void OHLocationServiceCache::notifyObjectAdded(
+void ReplicatedLocationServiceCache::notifyObjectAdded(
     const ObjectReference& uuid,
     const ObjectReference& parent, bool agg,
     const TimedMotionVector3f& loc,
@@ -273,14 +273,14 @@ void OHLocationServiceCache::notifyObjectAdded(
     for(ListenerSet::iterator listener_it = mListeners.begin(); listener_it != mListeners.end(); listener_it++)
         (*listener_it)->locationConnectedWithParent(uuid, parent, agg, true, loc, bounds.centerBounds(), bounds.maxObjectRadius);
 
-    OHLocationUpdateProvider::notify(&OHLocationUpdateListener::onObjectAdded, this, uuid);
+    ReplicatedLocationUpdateProvider::notify(&ReplicatedLocationUpdateListener::onObjectAdded, this, uuid);
 
     ObjectDataMap::iterator obj_it = mObjects.find(uuid);
     obj_it->second.tracking--;
     tryRemoveObject(obj_it);
 }
 
-void OHLocationServiceCache::objectRemoved(const ObjectReference& uuid, bool temporary) {
+void ReplicatedLocationServiceCache::objectRemoved(const ObjectReference& uuid, bool temporary) {
     Lock lck(mMutex);
 
     ObjectDataMap::iterator data_it = mObjects.find(uuid);
@@ -296,27 +296,27 @@ void OHLocationServiceCache::objectRemoved(const ObjectReference& uuid, bool tem
     data_it->second.tracking++;
     mStrand->post(
         std::tr1::bind(
-            &OHLocationServiceCache::notifyObjectRemoved, this,
+            &ReplicatedLocationServiceCache::notifyObjectRemoved, this,
             uuid, temporary
         ),
-        "OHLocationServiceCache::notifyObjectRemoved"
+        "ReplicatedLocationServiceCache::notifyObjectRemoved"
     );
 }
 
-void OHLocationServiceCache::notifyObjectRemoved(const ObjectReference& uuid, bool temporary) {
+void ReplicatedLocationServiceCache::notifyObjectRemoved(const ObjectReference& uuid, bool temporary) {
     Lock lck(mMutex);
 
     for(ListenerSet::iterator listener_it = mListeners.begin(); listener_it != mListeners.end(); listener_it++)
         (*listener_it)->locationDisconnected(uuid, temporary);
 
-    OHLocationUpdateProvider::notify(&OHLocationUpdateListener::onObjectRemoved, this, uuid);
+    ReplicatedLocationUpdateProvider::notify(&ReplicatedLocationUpdateListener::onObjectRemoved, this, uuid);
 
     ObjectDataMap::iterator obj_it = mObjects.find(uuid);
     obj_it->second.tracking--;
     tryRemoveObject(obj_it);
 }
 
-void OHLocationServiceCache::epochUpdated(const ObjectReference& uuid, const uint64 ep) {
+void ReplicatedLocationServiceCache::epochUpdated(const ObjectReference& uuid, const uint64 ep) {
     Lock lck(mMutex);
 
     ObjectDataMap::iterator it = mObjects.find(uuid);
@@ -329,24 +329,24 @@ void OHLocationServiceCache::epochUpdated(const ObjectReference& uuid, const uin
     it->second.tracking++;
     mStrand->post(
         std::tr1::bind(
-            &OHLocationServiceCache::notifyEpochUpdated, this,
+            &ReplicatedLocationServiceCache::notifyEpochUpdated, this,
             uuid, ep
         ),
-        "OHLocationServiceCache::notifyEpochUpdated"
+        "ReplicatedLocationServiceCache::notifyEpochUpdated"
     );
 }
 
-void OHLocationServiceCache::notifyEpochUpdated(const ObjectReference& uuid, const uint64 val) {
+void ReplicatedLocationServiceCache::notifyEpochUpdated(const ObjectReference& uuid, const uint64 val) {
     Lock lck(mMutex);
 
-    OHLocationUpdateProvider::notify(&OHLocationUpdateListener::onEpochUpdated, this, uuid);
+    ReplicatedLocationUpdateProvider::notify(&ReplicatedLocationUpdateListener::onEpochUpdated, this, uuid);
 
     ObjectDataMap::iterator obj_it = mObjects.find(uuid);
     obj_it->second.tracking--;
     tryRemoveObject(obj_it);
 }
 
-void OHLocationServiceCache::locationUpdated(const ObjectReference& uuid, const TimedMotionVector3f& newval, uint64 seqno) {
+void ReplicatedLocationServiceCache::locationUpdated(const ObjectReference& uuid, const TimedMotionVector3f& newval, uint64 seqno) {
     Lock lck(mMutex);
 
     ObjectDataMap::iterator it = mObjects.find(uuid);
@@ -360,27 +360,27 @@ void OHLocationServiceCache::locationUpdated(const ObjectReference& uuid, const 
     it->second.tracking++;
     mStrand->post(
         std::tr1::bind(
-            &OHLocationServiceCache::notifyLocationUpdated, this,
+            &ReplicatedLocationServiceCache::notifyLocationUpdated, this,
             uuid, oldval, newval
         ),
-        "OHLocationServiceCache::notifyLocationUpdated"
+        "ReplicatedLocationServiceCache::notifyLocationUpdated"
     );
 }
 
-void OHLocationServiceCache::notifyLocationUpdated(const ObjectReference& uuid, const TimedMotionVector3f& oldval, const TimedMotionVector3f& newval) {
+void ReplicatedLocationServiceCache::notifyLocationUpdated(const ObjectReference& uuid, const TimedMotionVector3f& oldval, const TimedMotionVector3f& newval) {
     Lock lck(mMutex);
 
     for(ListenerSet::iterator listener_it = mListeners.begin(); listener_it != mListeners.end(); listener_it++)
         (*listener_it)->locationPositionUpdated(uuid, oldval, newval);
 
-    OHLocationUpdateProvider::notify(&OHLocationUpdateListener::onLocationUpdated, this, uuid);
+    ReplicatedLocationUpdateProvider::notify(&ReplicatedLocationUpdateListener::onLocationUpdated, this, uuid);
 
     ObjectDataMap::iterator obj_it = mObjects.find(uuid);
     obj_it->second.tracking--;
     tryRemoveObject(obj_it);
 }
 
-void OHLocationServiceCache::orientationUpdated(const ObjectReference& uuid, const TimedMotionQuaternion& newval, uint64 seqno) {
+void ReplicatedLocationServiceCache::orientationUpdated(const ObjectReference& uuid, const TimedMotionQuaternion& newval, uint64 seqno) {
     Lock lck(mMutex);
 
     ObjectDataMap::iterator it = mObjects.find(uuid);
@@ -393,22 +393,22 @@ void OHLocationServiceCache::orientationUpdated(const ObjectReference& uuid, con
     it->second.tracking++;
     mStrand->post(
         std::tr1::bind(
-            &OHLocationServiceCache::notifyOrientationUpdated, this, uuid
+            &ReplicatedLocationServiceCache::notifyOrientationUpdated, this, uuid
         )
     );
 }
 
-void OHLocationServiceCache::notifyOrientationUpdated(const ObjectReference& uuid) {
+void ReplicatedLocationServiceCache::notifyOrientationUpdated(const ObjectReference& uuid) {
     Lock lck(mMutex);
 
-    OHLocationUpdateProvider::notify(&OHLocationUpdateListener::onOrientationUpdated, this, uuid);
+    ReplicatedLocationUpdateProvider::notify(&ReplicatedLocationUpdateListener::onOrientationUpdated, this, uuid);
 
     ObjectDataMap::iterator obj_it = mObjects.find(uuid);
     obj_it->second.tracking--;
     tryRemoveObject(obj_it);
 }
 
-void OHLocationServiceCache::boundsUpdated(const ObjectReference& uuid, const AggregateBoundingInfo& newval, uint64 seqno) {
+void ReplicatedLocationServiceCache::boundsUpdated(const ObjectReference& uuid, const AggregateBoundingInfo& newval, uint64 seqno) {
     Lock lck(mMutex);
 
     ObjectDataMap::iterator it = mObjects.find(uuid);
@@ -422,14 +422,14 @@ void OHLocationServiceCache::boundsUpdated(const ObjectReference& uuid, const Ag
     it->second.tracking++;
     mStrand->post(
         std::tr1::bind(
-            &OHLocationServiceCache::notifyBoundsUpdated, this,
+            &ReplicatedLocationServiceCache::notifyBoundsUpdated, this,
             uuid, oldval, newval
         ),
-        "OHLocationServiceCache::notifyBoundsUpdated"
+        "ReplicatedLocationServiceCache::notifyBoundsUpdated"
     );
 }
 
-void OHLocationServiceCache::notifyBoundsUpdated(const ObjectReference& uuid, const AggregateBoundingInfo& oldval, const AggregateBoundingInfo& newval) {
+void ReplicatedLocationServiceCache::notifyBoundsUpdated(const ObjectReference& uuid, const AggregateBoundingInfo& oldval, const AggregateBoundingInfo& newval) {
     Lock lck(mMutex);
 
     for(ListenerSet::iterator listen_it = mListeners.begin(); listen_it != mListeners.end(); listen_it++) {
@@ -437,14 +437,14 @@ void OHLocationServiceCache::notifyBoundsUpdated(const ObjectReference& uuid, co
         (*listen_it)->locationMaxSizeUpdated(uuid, oldval.maxObjectRadius, newval.maxObjectRadius);
     }
 
-    OHLocationUpdateProvider::notify(&OHLocationUpdateListener::onBoundsUpdated, this, uuid);
+    ReplicatedLocationUpdateProvider::notify(&ReplicatedLocationUpdateListener::onBoundsUpdated, this, uuid);
 
     ObjectDataMap::iterator obj_it = mObjects.find(uuid);
     obj_it->second.tracking--;
     tryRemoveObject(obj_it);
 }
 
-void OHLocationServiceCache::meshUpdated(const ObjectReference& uuid, const Transfer::URI& newval, uint64 seqno) {
+void ReplicatedLocationServiceCache::meshUpdated(const ObjectReference& uuid, const Transfer::URI& newval, uint64 seqno) {
     Lock lck(mMutex);
 
     ObjectDataMap::iterator it = mObjects.find(uuid);
@@ -457,22 +457,22 @@ void OHLocationServiceCache::meshUpdated(const ObjectReference& uuid, const Tran
     it->second.tracking++;
     mStrand->post(
         std::tr1::bind(
-            &OHLocationServiceCache::notifyMeshUpdated, this, uuid
+            &ReplicatedLocationServiceCache::notifyMeshUpdated, this, uuid
         )
     );
 }
 
-void OHLocationServiceCache::notifyMeshUpdated(const ObjectReference& uuid) {
+void ReplicatedLocationServiceCache::notifyMeshUpdated(const ObjectReference& uuid) {
     Lock lck(mMutex);
 
-    OHLocationUpdateProvider::notify(&OHLocationUpdateListener::onMeshUpdated, this, uuid);
+    ReplicatedLocationUpdateProvider::notify(&ReplicatedLocationUpdateListener::onMeshUpdated, this, uuid);
 
     ObjectDataMap::iterator obj_it = mObjects.find(uuid);
     obj_it->second.tracking--;
     tryRemoveObject(obj_it);
 }
 
-void OHLocationServiceCache::physicsUpdated(const ObjectReference& uuid, const String& newval, uint64 seqno) {
+void ReplicatedLocationServiceCache::physicsUpdated(const ObjectReference& uuid, const String& newval, uint64 seqno) {
     Lock lck(mMutex);
 
     ObjectDataMap::iterator it = mObjects.find(uuid);
@@ -485,22 +485,22 @@ void OHLocationServiceCache::physicsUpdated(const ObjectReference& uuid, const S
     it->second.tracking++;
     mStrand->post(
         std::tr1::bind(
-            &OHLocationServiceCache::notifyPhysicsUpdated, this, uuid
+            &ReplicatedLocationServiceCache::notifyPhysicsUpdated, this, uuid
         )
     );
 }
 
-void OHLocationServiceCache::notifyPhysicsUpdated(const ObjectReference& uuid) {
+void ReplicatedLocationServiceCache::notifyPhysicsUpdated(const ObjectReference& uuid) {
     Lock lck(mMutex);
 
-    OHLocationUpdateProvider::notify(&OHLocationUpdateListener::onPhysicsUpdated, this, uuid);
+    ReplicatedLocationUpdateProvider::notify(&ReplicatedLocationUpdateListener::onPhysicsUpdated, this, uuid);
 
     ObjectDataMap::iterator obj_it = mObjects.find(uuid);
     obj_it->second.tracking--;
     tryRemoveObject(obj_it);
 }
 
-void OHLocationServiceCache::parentUpdated(const ObjectReference& uuid, const ObjectReference& newval, uint64 seqno) {
+void ReplicatedLocationServiceCache::parentUpdated(const ObjectReference& uuid, const ObjectReference& newval, uint64 seqno) {
     Lock lck(mMutex);
 
     ObjectDataMap::iterator it = mObjects.find(uuid);
@@ -513,18 +513,18 @@ void OHLocationServiceCache::parentUpdated(const ObjectReference& uuid, const Ob
     it->second.tracking++;
     mStrand->post(
         std::tr1::bind(
-            &OHLocationServiceCache::notifyParentUpdated, this, uuid, oldval, newval
+            &ReplicatedLocationServiceCache::notifyParentUpdated, this, uuid, oldval, newval
         )
     );
 }
 
-void OHLocationServiceCache::notifyParentUpdated(const ObjectReference& uuid, const ObjectReference& oldval, const ObjectReference& newval) {
+void ReplicatedLocationServiceCache::notifyParentUpdated(const ObjectReference& uuid, const ObjectReference& oldval, const ObjectReference& newval) {
     Lock lck(mMutex);
 
     for(ListenerSet::iterator listener_it = mListeners.begin(); listener_it != mListeners.end(); listener_it++)
         (*listener_it)->locationParentUpdated(uuid, oldval, newval);
 
-    OHLocationUpdateProvider::notify(&OHLocationUpdateListener::onParentUpdated, this, uuid);
+    ReplicatedLocationUpdateProvider::notify(&ReplicatedLocationUpdateListener::onParentUpdated, this, uuid);
 
     ObjectDataMap::iterator obj_it = mObjects.find(uuid);
     obj_it->second.tracking--;
@@ -532,7 +532,7 @@ void OHLocationServiceCache::notifyParentUpdated(const ObjectReference& uuid, co
 }
 
 
-bool OHLocationServiceCache::tryRemoveObject(ObjectDataMap::iterator& obj_it) {
+bool ReplicatedLocationServiceCache::tryRemoveObject(ObjectDataMap::iterator& obj_it) {
     if (obj_it->second.tracking > 0  || obj_it->second.exists)
         return false;
 
@@ -540,7 +540,7 @@ bool OHLocationServiceCache::tryRemoveObject(ObjectDataMap::iterator& obj_it) {
     return true;
 }
 
-bool OHLocationServiceCache::empty() {
+bool ReplicatedLocationServiceCache::empty() {
     // Indicates if we have any objects with exists == true, so we can just scan
     // through looking for them. If we need something faster we can keep track
     // of a count based on addObject/removeObject calls
@@ -553,7 +553,7 @@ bool OHLocationServiceCache::empty() {
     return true;
 }
 
-bool OHLocationServiceCache::fullyEmpty() {
+bool ReplicatedLocationServiceCache::fullyEmpty() {
     Lock lck(mMutex);
     return mObjects.empty();
 }
