@@ -111,6 +111,15 @@ def startSpace(**kwargs):
     for ss in range(nservers):
         region, layout = get_region_and_layout()
 
+        # Kind of gross, but to make it possible to select which type
+        # of pinto config to use (e.g. if you use --pinto-config to
+        # load pinto with the manual plugin), we need to filter out
+        # the --pinto setting if the space config file specifies it
+        no_pinto = False
+        if 'space_config' in kwargs and kwargs['space_config']:
+            with open(kwargs['space_config']) as f:
+                no_pinto = any([x.startswith('pinto=') for x in f.readlines()])
+
         args = [
             '--id=%d' % (ss+1),
 
@@ -120,15 +129,16 @@ def startSpace(**kwargs):
             '--layout=%s' % (layout),
             '--region=%s' % (region),
 
-            '--pinto=master',
-            '--pinto-options=' + '--host=' + str(pinto_ip) + ' --port=' + str(pinto_port),
-
             '--oseg=redis',
             '--oseg-options=' + '--prefix=' + str(oseg_prefix),
 
             '--command.commander=http',
             '--command.commander-options=--port=' + str(http_command_port_base + ss)
             ]
+        if not no_pinto:
+            args += ['--pinto=master']
+        args += ['--pinto-options=' + '--host=' + str(pinto_ip) + ' --port=' + str(pinto_port)]
+
         if n_cseg_servers > 0:
             args += [
                 '--cseg=client',
