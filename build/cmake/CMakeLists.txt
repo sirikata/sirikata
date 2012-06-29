@@ -1568,6 +1568,7 @@ SET(LIBPINTOLOC_SOURCES
   ${LIBPINTOLOC_SOURCE_DIR}/OrphanLocUpdateManager.cpp
   ${LIBPINTOLOC_SOURCE_DIR}/ProtocolLocUpdate.cpp
   ${LIBPINTOLOC_SOURCE_DIR}/ReplicatedLocationServiceCache.cpp
+  ${LIBPINTOLOC_SOURCE_DIR}/ManualReplicatedClient.cpp
   )
 
 SET(LIBMESH_PLUGIN_COLLADAMODELS_DIR ${LIBMESH_PLUGIN_DIR}/collada)

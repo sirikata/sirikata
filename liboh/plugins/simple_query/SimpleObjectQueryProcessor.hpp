@@ -20,7 +20,7 @@ namespace Simple {
  */
 class SimpleObjectQueryProcessor :
         public ObjectQueryProcessor,
-        OrphanLocUpdateManager::Listener<SpaceObjectReference>
+        OrphanLocUpdateManager::Listener
 {
 public:
     static SimpleObjectQueryProcessor* create(ObjectHostContext* ctx, const String& args);
@@ -38,7 +38,7 @@ public:
 
 
     // OrphanLocUpdateManager::Listener Interface
-    virtual void onOrphanLocUpdate(const SpaceObjectReference& observer, const LocUpdate& lu);
+    virtual void onOrphanLocUpdate(const LocUpdate& lu, const SpaceObjectReference& observer);
 
 private:
     // Proximity

@@ -144,7 +144,7 @@ bool SimpleObjectQueryProcessor::handleProximityMessage(HostedObjectPtr self, co
             SpaceObjectReference observed(spaceobj.space(), ObjectReference(addition.object()));
 
             OHSpaceTimeSynced sync(mContext->objectHost, spaceobj.space());
-            obj_state->orphans.invokeOrphanUpdates(sync, spaceobj, observed, this);
+            obj_state->orphans.invokeOrphanUpdates1(sync, observed, this, spaceobj);
         }
     }
 
@@ -242,7 +242,7 @@ bool SimpleObjectQueryProcessor::handleLocationMessage(const HostedObjectPtr& se
     return true;
 }
 
-void SimpleObjectQueryProcessor::onOrphanLocUpdate(const SpaceObjectReference& spaceobj, const LocUpdate& update) {
+void SimpleObjectQueryProcessor::onOrphanLocUpdate(const LocUpdate& update, const SpaceObjectReference& spaceobj) {
     // This is similar to processing a location message except that we know
     // we're ready for these updates -- the proxy will be there and we
     // definitely never have to add it as an orphan

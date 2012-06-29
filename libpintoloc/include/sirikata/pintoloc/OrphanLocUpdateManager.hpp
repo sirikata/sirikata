@@ -50,18 +50,14 @@ class LocationUpdate;
  */
 class SIRIKATA_LIBPINTOLOC_EXPORT OrphanLocUpdateManager : public PollingService {
 public:
-    template<typename QuerierIDType>
     class Listener {
     public:
         virtual ~Listener() {}
         // You need something like this defined:
-        //  virtual void onOrphanLocUpdate(const QuerierIDType& observer, const
-        //                                 LocUpdate& lu);
-        // in order to get callbacks from invokeOrphanUpdates. In order to
-        //  support passing extra arguments through, however, we can't enforce
-        //  this here, since you could, e.g., instead define
-        //  virtual void onOrphanLocUpdate(const QuerierIDType& observer, const
-        //                                 LocUpdate& lu, Foo foo);
+        //  virtual void onOrphanLocUpdate(const LocUpdate& lu, Foo foo);
+        // in order to get callbacks from invokeOrphanUpdates1 or
+        //  virtual void onOrphanLocUpdate(const LocUpdate& lu, Foo foo, Bar bar);
+        // in order to get callbacks from invokeOrphanUpdates2.
     };
 
     OrphanLocUpdateManager(Context* ctx, Network::IOStrand* strand, const Duration& timeout);
@@ -85,8 +81,8 @@ public:
     /** Gets all orphan updates for a given object. */
     // ListenerType would be Listener<QuerierIDType> but we want to support
     // optional extra params passed through to the callback.
-    template<typename QuerierIDType, typename ListenerType>
-    void invokeOrphanUpdates(const TimeSynced& sync, const QuerierIDType& observer, const SpaceObjectReference& proximateID, ListenerType* listener) {
+    template<typename ListenerType, typename ExtraParamType1>
+    void invokeOrphanUpdates1(const TimeSynced& sync, const SpaceObjectReference& proximateID, ListenerType* listener, ExtraParamType1 extra1) {
         ObjectUpdateMap::iterator it = mUpdates.find(proximateID);
         if (it == mUpdates.end()) return;
 
@@ -94,11 +90,11 @@ public:
         for(UpdateInfoList::const_iterator info_it = info_list.begin(); info_it != info_list.end(); info_it++) {
             if ((*info_it)->value != NULL) {
                 LocProtocolLocUpdate llu( *((*info_it)->value), sync );
-                listener->onOrphanLocUpdate( observer, llu );
+                listener->onOrphanLocUpdate( llu, extra1 );
             }
             else if ((*info_it)->opd != NULL) {
                 PresencePropertiesLocUpdate plu( (*info_it)->object.object(), *((*info_it)->opd) );
-                listener->onOrphanLocUpdate( observer, plu );
+                listener->onOrphanLocUpdate( plu, extra1 );
             }
         }
 
@@ -107,8 +103,8 @@ public:
         // addUpdateFromExisting before cleaning up the object.
         mUpdates.erase(it);
     }
-    template<typename QuerierIDType, typename ListenerType, typename ExtraParamType>
-    void invokeOrphanUpdatesWithExtra(const TimeSynced& sync, const QuerierIDType& observer, const SpaceObjectReference& proximateID, ListenerType* listener, ExtraParamType extra) {
+    template<typename ListenerType, typename ExtraParamType1, typename ExtraParamType2>
+    void invokeOrphanUpdates2(const TimeSynced& sync, const SpaceObjectReference& proximateID, ListenerType* listener, ExtraParamType1 extra1, ExtraParamType2 extra2) {
         ObjectUpdateMap::iterator it = mUpdates.find(proximateID);
         if (it == mUpdates.end()) return;
 
@@ -116,11 +112,11 @@ public:
         for(UpdateInfoList::const_iterator info_it = info_list.begin(); info_it != info_list.end(); info_it++) {
             if ((*info_it)->value != NULL) {
                 LocProtocolLocUpdate llu( *((*info_it)->value), sync );
-                listener->onOrphanLocUpdate( observer, llu, extra );
+                listener->onOrphanLocUpdate( llu, extra1, extra2 );
             }
             else if ((*info_it)->opd != NULL) {
                 PresencePropertiesLocUpdate plu( (*info_it)->object.object(), *((*info_it)->opd) );
-                listener->onOrphanLocUpdate( observer, plu, extra );
+                listener->onOrphanLocUpdate( plu, extra1, extra2 );
             }
         }
 
