@@ -38,8 +38,8 @@
 
 using namespace Sirikata;
 using namespace std;
+using namespace Mesh;
 
-//using namespace Mesh;
 class ColladaLoaderTest : public CxxTest::TestSuite
 {
 protected:
@@ -47,9 +47,11 @@ protected:
 	String _plugin;
 	PluginManager _pmgr;
 	ModelsSystem *msys;
-	string pikachu;
 	string simple;
-	string simple2;
+	string line;
+	string square;
+	string cube;
+	string triangles;
 
 public:
 
@@ -71,77 +73,34 @@ public:
 		_pmgr.gc();
 		_initialized = 0;
     }
-    void testColladaLoader( void ) {
+    void testColladaLoaderSimple( void ) {
+        getString("simple", simple);
 
-        // For now only support in-tree execution
-        boost::filesystem::path collada_data_dir = boost::filesystem::path(Path::Get(Path::DIR_EXE));
-        // Windows exes are one level deeper due to Debug or RelWithDebInfo
-#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS
-        collada_data_dir = collada_data_dir / "..";
-#endif
-        collada_data_dir = collada_data_dir / "../../test/unit/libmesh/collada";
-		
-		
-        ifstream fin ( (collada_data_dir / "pikachu.dae").string().c_str() );
-        // Warn and bail if we can't find the data
-        if (!fin) {
-            TS_WARN("Unable to find COLLADA data.");
-            return;
-        }
-
-		string temp;
-
-		do {
-			fin >> temp;
-			pikachu += temp + ' ';
-		}while(fin && temp != "</COLLADA>");
-
-        ifstream fin2 ( (collada_data_dir / "simple.dae").string().c_str() );
-        if (!fin2) {
-            TS_WARN("Unable to find COLLADA data.");
-            return;
-        }
-
-		do {
-			fin2 >> temp;
-			simple += temp + ' ';
-		}while(fin2 && temp != "</COLLADA>");
-
-		//Test collada file: pikachu.dae
-		Transfer::DenseData *dd = new Transfer::DenseData(pikachu);
+		Transfer::DenseData *dd = new Transfer::DenseData(simple);
 		Transfer::DenseDataPtr data(dd);
 		Mesh::VisualPtr parsed = msys->load(data);
 
 		TS_ASSERT_DIFFERS(parsed, Mesh::VisualPtr());
 
 		MeshdataPtr mdp(tr1::dynamic_pointer_cast<Meshdata>(parsed));
-		TS_ASSERT_DIFFERS(mdp->getInstancedGeometryCount(), 0);
+
+		//asserts
+		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 0);
+		TS_ASSERT_EQUALS(mdp->getInstancedLightCount(), 0);
+		TS_ASSERT_EQUALS(mdp->getJointCount(), 0);
+		TS_ASSERT_EQUALS(mdp->geometry.size(), 0);
+		TS_ASSERT_EQUALS(mdp->lights.size(), 0);
+		TS_ASSERT_EQUALS(mdp->textures.size(), 0);
+		TS_ASSERT_EQUALS(mdp->materials.size(), 0);
 		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
-
-		//Minimal collada file: simple.dae
-		Transfer::DenseData *dd2 = new Transfer::DenseData(simple);
-		Transfer::DenseDataPtr data2(dd2);
-		parsed = msys->load(data2);
-
-		TS_ASSERT_DIFFERS(parsed, Mesh::VisualPtr());
-
-		MeshdataPtr mdp2(tr1::dynamic_pointer_cast<Meshdata>(parsed));
-		TS_ASSERT_EQUALS(mdp2->getInstancedGeometryCount(), 0);
-		TS_ASSERT_EQUALS(mdp2->getInstancedLightCount(), 0);
-		TS_ASSERT_EQUALS(mdp2->getJointCount(), 0);
-		TS_ASSERT_EQUALS(mdp2->geometry.size(), 0);
-		TS_ASSERT_EQUALS(mdp2->lights.size(), 0);
-		TS_ASSERT_EQUALS(mdp2->textures.size(), 0);
-		TS_ASSERT_EQUALS(mdp2->materials.size(), 0);
-		TS_ASSERT_DIFFERS(mdp2, MeshdataPtr());
-		TS_ASSERT_EQUALS(mdp2->nodes.size(), 2);
-		TS_ASSERT_EQUALS(mdp2->nodes[0].transform, Matrix4x4f::identity());
-		TS_ASSERT_EQUALS(mdp2->nodes[1].transform, Matrix4x4f::identity());
-		TS_ASSERT_EQUALS(mdp2->globalTransform, Matrix4x4f::identity());
+		TS_ASSERT_EQUALS(mdp->nodes.size(), 1);
+		TS_ASSERT_EQUALS(mdp->nodes[0].transform, Matrix4x4f::identity());
+		TS_ASSERT_EQUALS(mdp->globalTransform, Matrix4x4f::identity());
     }
+	void testColladaLoaderLine( void ) {
+		getString("line", line);
 
-	void testColladaLoaderNull( void ) {
-		Transfer::DenseData *dd = new Transfer::DenseData("Hello World!");
+		Transfer::DenseData *dd = new Transfer::DenseData(line);
 	
 		Transfer::DenseDataPtr data(dd);
 	
@@ -149,7 +108,131 @@ public:
 	
 		//the parsed should actually be null
 		TS_ASSERT_DIFFERS(parsed, Mesh::VisualPtr());
+
 		MeshdataPtr mdp(std::tr1::dynamic_pointer_cast<Meshdata>(parsed));
+		
+		//asserts
+		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 1);
+		TS_ASSERT_EQUALS(mdp->getInstancedLightCount(), 0);
+		TS_ASSERT_EQUALS(mdp->getJointCount(), 0);
+		TS_ASSERT_EQUALS(mdp->geometry.size(), 1);
+		TS_ASSERT_EQUALS(mdp->geometry[0].primitives.size(), 1);
+		TS_ASSERT_EQUALS(mdp->geometry[0].primitives[0].indices.size(), 2);
+		TS_ASSERT_EQUALS(mdp->lights.size(), 0);
+		TS_ASSERT_EQUALS(mdp->textures.size(), 0);
+		TS_ASSERT_EQUALS(mdp->materials.size(), 1);
+		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
+		TS_ASSERT_EQUALS(mdp->nodes.size(), 1);
+		TS_ASSERT_EQUALS(mdp->nodes[0].transform, Matrix4x4f::identity());
+		TS_ASSERT_EQUALS(mdp->globalTransform, Matrix4x4f::identity());
+	}
+	void testColladaLoaderSquare( void ) {
+		getString("square", square);
+
+		Transfer::DenseData *dd = new Transfer::DenseData(square);
+	
+		Transfer::DenseDataPtr data(dd);
+
+		TS_ASSERT_EQUALS(msys->canLoad(data), true);
+		Mesh::VisualPtr parsed = msys->load(data);
+	
+		//the parsed should actually be null
+		TS_ASSERT_DIFFERS(parsed, Mesh::VisualPtr());
+
+		MeshdataPtr mdp(std::tr1::dynamic_pointer_cast<Meshdata>(parsed));
+		
+		//asserts
+		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 1);
+		TS_ASSERT_EQUALS(mdp->getInstancedLightCount(), 0);
+		TS_ASSERT_EQUALS(mdp->getJointCount(), 0);
+		TS_ASSERT_EQUALS(mdp->geometry.size(), 1);
+		TS_ASSERT_EQUALS(mdp->geometry[0].primitives.size(), 1);
+		TS_ASSERT_EQUALS(mdp->geometry[0].primitives[0].indices.size(), 6);
+		TS_ASSERT_EQUALS(mdp->lights.size(), 0);
+		TS_ASSERT_EQUALS(mdp->textures.size(), 0);
+		TS_ASSERT_EQUALS(mdp->materials.size(), 1);
+		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
+		TS_ASSERT_EQUALS(mdp->nodes.size(), 1);
+		TS_ASSERT_EQUALS(mdp->nodes[0].transform, Matrix4x4f::identity());
+		TS_ASSERT_EQUALS(mdp->globalTransform, Matrix4x4f::identity());
+	}
+	void testColladaLoaderCube( void ) {
+		getString("cube", cube);
+
+		Transfer::DenseData *dd = new Transfer::DenseData(cube);
+	
+		Transfer::DenseDataPtr data(dd);
+		
+		TS_ASSERT_EQUALS(msys->canLoad(data), true);
+		Mesh::VisualPtr parsed = msys->load(data);
+	
+		//the parsed should actually be null
+		TS_ASSERT_DIFFERS(parsed, Mesh::VisualPtr());
+
+		MeshdataPtr mdp(std::tr1::dynamic_pointer_cast<Meshdata>(parsed));
+		
+		//asserts
+		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 1);
+		TS_ASSERT_EQUALS(mdp->getInstancedLightCount(), 0);
+		TS_ASSERT_EQUALS(mdp->getJointCount(), 0);
+		TS_ASSERT_EQUALS(mdp->geometry.size(), 1);
+		TS_ASSERT_EQUALS(mdp->geometry[0].primitives.size(), 1);
+		TS_ASSERT_EQUALS(mdp->geometry[0].primitives[0].indices.size(), 36);
+		TS_ASSERT_EQUALS(mdp->lights.size(), 0);
+		TS_ASSERT_EQUALS(mdp->textures.size(), 0);
+		TS_ASSERT_EQUALS(mdp->materials.size(), 1);
+		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
+		TS_ASSERT_EQUALS(mdp->nodes.size(), 1);
+		TS_ASSERT_EQUALS(mdp->nodes[0].transform, Matrix4x4f::identity());
+		TS_ASSERT_EQUALS(mdp->globalTransform, Matrix4x4f::identity());
+	}
+	void testColladaLoaderTriangles( void ) {
+		getString("triangles", triangles);
+
+		Transfer::DenseData *dd = new Transfer::DenseData(triangles);
+	
+		Transfer::DenseDataPtr data(dd);
+		
+		TS_ASSERT_EQUALS(msys->canLoad(data), true);
+		Mesh::VisualPtr parsed = msys->load(data);
+	
+		//the parsed should actually be null
+		TS_ASSERT_DIFFERS(parsed, Mesh::VisualPtr());
+
+		MeshdataPtr mdp(std::tr1::dynamic_pointer_cast<Meshdata>(parsed));
+		
+		//asserts
+		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 2);
+		TS_ASSERT_EQUALS(mdp->getInstancedLightCount(), 0);
+		TS_ASSERT_EQUALS(mdp->getJointCount(), 0);
+		TS_ASSERT_EQUALS(mdp->geometry.size(), 2);
+		TS_ASSERT_EQUALS(mdp->geometry[0].primitives.size(), 1);
+		TS_ASSERT_EQUALS(mdp->geometry[1].primitives.size(), 1);
+		TS_ASSERT_EQUALS(mdp->geometry[0].primitives[0].indices.size(), 3);
+		TS_ASSERT_EQUALS(mdp->geometry[1].primitives[0].indices.size(), 3);
+		TS_ASSERT_EQUALS(mdp->lights.size(), 0);
+		TS_ASSERT_EQUALS(mdp->textures.size(), 0);
+		TS_ASSERT_EQUALS(mdp->materials.size(), 1);
+		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
+		TS_ASSERT_EQUALS(mdp->nodes.size(), 1);
+		TS_ASSERT_EQUALS(mdp->nodes[0].transform, Matrix4x4f::identity());
+		TS_ASSERT_EQUALS(mdp->globalTransform, Matrix4x4f::identity());
+	}
+	void testColladaLoaderNull( void ) {
+		Transfer::DenseData *dd = new Transfer::DenseData("This should not load");
+	
+		Transfer::DenseDataPtr data(dd);
+		
+		TS_ASSERT_EQUALS(msys->canLoad(data), false);
+		//even though canLoad is false, the thing loads anyways
+		Mesh::VisualPtr parsed = msys->load(data);
+	
+		//the parsed should actually be null
+		TS_ASSERT_DIFFERS(parsed, Mesh::VisualPtr());
+
+		MeshdataPtr mdp(std::tr1::dynamic_pointer_cast<Meshdata>(parsed));
+		
+		//asserts
 		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 0);
 		TS_ASSERT_EQUALS(mdp->getInstancedLightCount(), 0);
 		TS_ASSERT_EQUALS(mdp->getJointCount(), 0);
@@ -160,5 +243,31 @@ public:
 		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
 		TS_ASSERT_EQUALS(mdp->nodes.size(), 0);
 
+	}
+	//obtains string of information from the collada file rather than copying
+	//and directly placing the text in the file
+	void getString(string name, string& thing) {
+
+
+		// For now only support in-tree execution
+        boost::filesystem::path collada_data_dir = boost::filesystem::path(Path::Get(Path::DIR_EXE));
+        // Windows exes are one level deeper due to Debug or RelWithDebInfo
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS
+        collada_data_dir = collada_data_dir / "..";
+#endif
+        collada_data_dir = collada_data_dir / "../../test/unit/libmesh/collada";
+
+        ifstream fin ( (collada_data_dir / (name + ".dae")).string().c_str() );
+        if (!fin) {
+            TS_WARN("Unable to find COLLADA data.");
+            return;
+        }
+
+		string temp;
+
+		do {
+			fin >> temp;
+			thing += temp + ' ';
+		}while(fin && temp != "</COLLADA>");
 	}
 };

@@ -1888,7 +1888,6 @@ ${TEST_LIBCORE_SOURCE_DIR}/Vector3Test.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/BoundingBoxTest.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/PathsTest.hpp
 
-${TEST_LIBMESH_SOURCE_DIR}/AnotherTest.hpp
 ${TEST_LIBMESH_SOURCE_DIR}/MeshDataTest.hpp
 ${TEST_LIBMESH_SOURCE_DIR}/LightInfoTest.hpp
  )
