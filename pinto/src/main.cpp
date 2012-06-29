@@ -15,6 +15,8 @@
 #include "PintoManager.hpp"
 #include "ManualPintoManager.hpp"
 
+#include <sirikata/core/command/Commander.hpp>
+
 int main(int argc, char** argv) {
     using namespace Sirikata;
 
@@ -56,6 +58,12 @@ int main(int argc, char** argv) {
 
     PintoContext* pinto_context = new PintoContext(ios, mainStrand, trace, start_time, duration);
 
+    String commander_type = GetOptionValue<String>(OPT_COMMAND_COMMANDER);
+    String commander_options = GetOptionValue<String>(OPT_COMMAND_COMMANDER_OPTIONS);
+    Command::Commander* commander = NULL;
+    if (!commander_type.empty())
+        commander = Command::CommanderFactory::getSingleton().getConstructor(commander_type)(pinto_context, commander_options);
+
     String pinto_mgr_type = GetOptionValue<String>(OPT_PINTO_TYPE);
     PintoManagerBase* pinto = NULL;
     if (pinto_mgr_type == "solidangle")
@@ -92,6 +100,7 @@ int main(int argc, char** argv) {
     delete trace;
     trace = NULL;
 
+    delete commander;
     delete pinto_context;
     pinto_context = NULL;
 

@@ -99,7 +99,10 @@ def startCSeg(**kwargs):
 def startPinto(**kwargs):
     args = [
         '--port=' + str(pinto_port),
-        '--handler=rtreecut'
+        '--handler=rtreecut',
+
+        '--command.commander=http',
+        '--command.commander-options=--port=' + str(http_command_port_base + 100)
         ]
     if 'pinto_config' in kwargs and kwargs['pinto_config']:
         args += [ '--cfg=' + kwargs['pinto_config'] ]
