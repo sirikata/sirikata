@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 from __future__ import print_function
-from httpcommand import HttpCommandTest
+from httpcommand import HttpCommandTest, OHObjectTest
 import sys, os, random, subprocess, traceback, time
 from framework.procset import ProcSet
 
@@ -16,6 +16,8 @@ class ProximityTest(HttpCommandTest):
     duration = 30
     wait_until_responsive = True
     script_paths = [ os.path.dirname(__file__) ]
+
+    after = [ OHObjectTest ]
 
     # You must override these settings
     #services = [
