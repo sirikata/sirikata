@@ -39,6 +39,9 @@ namespace Sirikata {
 
 void InitPintoOptions() {
     InitializeClassOptions::module(SIRIKATA_OPTIONS_MODULE)
+
+        .addOption(new OptionValue(OPT_CONFIG_FILE,"pinto.cfg",Sirikata::OptionValueType<String>(),"Configuration file to load."))
+
         .addOption(new OptionValue(OPT_PINTO_PLUGINS,"",Sirikata::OptionValueType<String>(),"Plugin list to load."))
 
         .addOption(new OptionValue(OPT_PINTO_PROTOCOL, "tcpsst", Sirikata::OptionValueType<String>(), "Protocol to use for connections from space servers."))

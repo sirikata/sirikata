@@ -23,7 +23,8 @@ int main(int argc, char** argv) {
     InitOptions();
     Trace::Trace::InitOptions();
     InitPintoOptions();
-    ParseOptions(argc, argv, AllowUnregisteredOptions);
+
+    ParseOptions(argc, argv, OPT_CONFIG_FILE, AllowUnregisteredOptions);
 
     PluginManager plugins;
     plugins.loadList( GetOptionValue<String>(OPT_PLUGINS));
@@ -35,7 +36,7 @@ int main(int argc, char** argv) {
     FillMissingOptionDefaults();
     // Rerun original parse to make sure any newly added options are
     // properly parsed.
-    ParseOptions(argc, argv);
+    ParseOptions(argc, argv, OPT_CONFIG_FILE);
 
     ReportVersion(); // After options so log goes to the right place
 

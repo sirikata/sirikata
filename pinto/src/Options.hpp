@@ -33,6 +33,8 @@
 #ifndef _SIRIKATA_PINTO_OPTIONS_HPP_
 #define _SIRIKATA_PINTO_OPTIONS_HPP_
 
+#define OPT_CONFIG_FILE          "cfg"
+
 #define OPT_PINTO_PLUGINS           "pinto.plugins"
 
 #define OPT_PINTO_PROTOCOL          "protocol"
