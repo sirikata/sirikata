@@ -148,6 +148,35 @@ void PintoManagerBase::onDisconnected(Stream* stream) {
 
 
 
+
+// AggregateListener Interface
+void PintoManagerBase::aggregateCreated(ProxAggregator* handler, const ServerID& objid) {
+    mLocCache->addAggregate(objid);
+}
+
+void PintoManagerBase::aggregateChildAdded(ProxAggregator* handler, const ServerID& objid, const ServerID& child, const Vector3f& bnds_center, const float32 bnds_center_radius, const float32 max_obj_size) {
+    mLocCache->updateAggregateLocation(objid, TimedMotionVector3f(Time::null(), MotionVector3f(bnds_center, Vector3f(0,0,0))));
+    mLocCache->updateAggregateBounds(objid, AggregateBoundingInfo(Vector3f::zero(), bnds_center_radius, max_obj_size));
+}
+
+void PintoManagerBase::aggregateChildRemoved(ProxAggregator* handler, const ServerID& objid, const ServerID& child, const Vector3f& bnds_center, const float32 bnds_center_radius, const float32 max_obj_size) {
+    mLocCache->updateAggregateLocation(objid, TimedMotionVector3f(Time::null(), MotionVector3f(bnds_center, Vector3f(0,0,0))));
+    mLocCache->updateAggregateBounds(objid, AggregateBoundingInfo(Vector3f::zero(), bnds_center_radius, max_obj_size));
+}
+
+void PintoManagerBase::aggregateBoundsUpdated(ProxAggregator* handler, const ServerID& objid, const Vector3f& bnds_center, const float32 bnds_center_radius, const float32 max_obj_size) {
+    mLocCache->updateAggregateLocation(objid, TimedMotionVector3f(Time::null(), MotionVector3f(bnds_center, Vector3f(0,0,0))));
+    mLocCache->updateAggregateBounds(objid, AggregateBoundingInfo(Vector3f::zero(), bnds_center_radius, max_obj_size));
+}
+
+void PintoManagerBase::aggregateDestroyed(ProxAggregator* handler, const ServerID& objid) {
+    mLocCache->removeAggregate(objid);
+}
+
+void PintoManagerBase::aggregateObserved(ProxAggregator* handler, const ServerID& objid, uint32 nobservers) {
+}
+
+
 ServerID PintoManagerBase::streamServerID(Sirikata::Network::Stream* stream) const {
     StreamServerIDMap::const_iterator it = mStreamServers.find(stream);
     if (it == mStreamServers.end()) return NullServerID;

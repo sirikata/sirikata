@@ -34,7 +34,6 @@
 #define _SIRIKATA_LIBPROX_PROXIMITY_HPP_
 
 #include "LibproxProximityBase.hpp"
-#include "ProxSimulationTraits.hpp"
 #include <prox/geom/QueryHandler.hpp>
 #include <prox/base/LocationUpdateListener.hpp>
 #include <prox/base/AggregateListener.hpp>
@@ -49,16 +48,16 @@ class ProximityOutputEvent;
 
 class LibproxProximity :
         public LibproxProximityBase,
-        Prox::QueryEventListener<ObjectProxSimulationTraits, Prox::Query<ObjectProxSimulationTraits> >,
-        Prox::AggregateListener<ObjectProxSimulationTraits>
+        Prox::QueryEventListener<UUIDProxSimulationTraits, Prox::Query<UUIDProxSimulationTraits> >,
+        Prox::AggregateListener<UUIDProxSimulationTraits>
 {
 private:
-    typedef Prox::QueryHandler<ObjectProxSimulationTraits> ProxQueryHandler;
-    typedef Prox::Aggregator<ObjectProxSimulationTraits> ProxAggregator;
+    typedef Prox::QueryHandler<UUIDProxSimulationTraits> ProxQueryHandler;
+    typedef Prox::Aggregator<UUIDProxSimulationTraits> ProxAggregator;
 public:
     // MAIN Thread: All public interface is expected to be called only from the main thread.
-    typedef Prox::Query<ObjectProxSimulationTraits> Query;
-    typedef Prox::QueryEvent<ObjectProxSimulationTraits> QueryEvent;
+    typedef Prox::Query<UUIDProxSimulationTraits> Query;
+    typedef Prox::QueryEvent<UUIDProxSimulationTraits> QueryEvent;
 
     LibproxProximity(SpaceContext* ctx, LocationService* locservice, CoordinateSegmentation* cseg, SpaceNetwork* net, AggregateManager* aggmgr);
     ~LibproxProximity();

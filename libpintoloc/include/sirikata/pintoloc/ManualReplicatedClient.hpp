@@ -36,6 +36,7 @@ class SIRIKATA_LIBPINTOLOC_EXPORT ReplicatedClient :
      *               will delete it.
      */
     ReplicatedClient(Context* ctx, Network::IOStrandPtr strand, TimeSynced* sync);
+    ReplicatedClient(Context* ctx, Network::IOStrand* strand, TimeSynced* sync);
     virtual ~ReplicatedClient();
 
     // Service Interface
@@ -52,6 +53,7 @@ class SIRIKATA_LIBPINTOLOC_EXPORT ReplicatedClient :
     void destroyQuery();
 
     void proxUpdate(const Sirikata::Protocol::Prox::ProximityResults& results);
+    void proxUpdate(const Sirikata::Protocol::Prox::ProximityUpdate& update);
     void locUpdate(const Sirikata::Protocol::Loc::LocationUpdate& update);
 
     // Notifications about local queries in the tree so we know how to
@@ -112,7 +114,11 @@ class SIRIKATA_LIBPINTOLOC_EXPORT ReplicatedClient :
 
 
     Context* mContext;
-    Network::IOStrandPtr mStrand;
+    // This is unfortunate, but we need to be able to accept both raw
+    // IOStrand*'s and IOStrandPtrs, so we store both, and sometimes the
+    // IOStrandPtr is just empty (we always use the sanely-named raw ptr).
+    Network::IOStrandPtr doNotUse___mStrand;
+    Network::IOStrand* mStrand;
     TimeSynced* mSync;
 
     typedef std::map<ProxIndexID, ReplicatedLocationServiceCachePtr> IndexObjectCacheMap;
@@ -173,6 +179,12 @@ public:
        mParent(parent),
        mID(id_)
     {}
+    ReplicatedClientWithID(Context* ctx, Network::IOStrand* strand, Parent* parent, TimeSynced* sync, const IDType& id_)
+     : ReplicatedClient(ctx, strand, sync),
+       mParent(parent),
+       mID(id_)
+    {}
+
     virtual ~ReplicatedClientWithID() {}
 
     const IDType& id() const { return mID; }

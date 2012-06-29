@@ -10,6 +10,7 @@
 
 #include <prox/manual/RTreeManualQueryHandler.hpp>
 #include <boost/foreach.hpp>
+#include <boost/lexical_cast.hpp>
 
 using namespace Sirikata::Network;
 
@@ -23,10 +24,11 @@ ManualPintoManager::ManualPintoManager(PintoContext* ctx)
    mDt(Duration::milliseconds((int64)1))
 {
     mQueryHandler = new Prox::RTreeManualQueryHandler<ServerProxSimulationTraits>(10);
-    bool static_objects = false;
+    bool static_objects = false, replicated = false;
+    mQueryHandler->setAggregateListener(this); // *Must* be before handler->initialize
     mQueryHandler->initialize(
         mLocCache, mLocCache,
-        static_objects, false /* not replicated */
+        static_objects, replicated
     );
 }
 
@@ -131,6 +133,9 @@ void ManualPintoManager::queryHasEvents(Query* query) {
     query->popEvents(evts);
 
     Sirikata::Protocol::Prox::ProximityResults prox_results;
+    // We currently have to set this even though we don't have real synchronized
+    // timestamps because it's required in the protocol definition
+    prox_results.set_t(Time::null());
     while(!evts.empty()) {
         const QueryEvent& evt = evts.front();
 
@@ -144,6 +149,9 @@ void ManualPintoManager::queryHasEvents(Query* query) {
 
         for(uint32 aidx = 0; aidx < evt.additions().size(); aidx++) {
             ServerID nodeid = evt.additions()[aidx].id();
+            // This is all single threaded, but we still might not have this
+            // node if events weren't pushed until after an aggregate was
+            // already destroyed.
             if (mLocCache->tracking(nodeid)) { // If the cache already lost it, we can't do anything
                 PintoManagerLocationServiceCache::Iterator loccacheit = mLocCache->startTracking(nodeid);
 
@@ -176,11 +184,25 @@ void ManualPintoManager::queryHasEvents(Query* query) {
                 if (mesh.size() > 0)
                     addition.set_mesh(mesh);
 
+                // Either we set a parent, or, if we're adding the root node for
+                // the first time (lone addition), we include tree
+                // properties. Strictly speaking, these shouldn't be necessary,
+                // but including them lets us reuse client code which just
+                // checks if some fields are present to know when it has to
+                // start tracking a new replicated tree
                 ServerID parentid = evt.additions()[aidx].parent();
                 if (parentid != NullServerID) {
                     // Shoe-horn server ID into UUID
                     addition.set_parent(UUID((uint32)parentid));
                 }
+                else if (/*lone addition*/ aidx == 0 && evt.additions().size() == 1 && evt.removals().size() == 0) {
+                    // No good value to put here, but NullServerID should never
+                    // conflict with any space server
+                    index_props.set_index_id( boost::lexical_cast<String>(NullServerID) );
+                    // In TL pinto, we're only tracking static objects (aggregates).
+                    index_props.set_dynamic_classification(Sirikata::Protocol::Prox::IndexProperties::Static);
+                }
+
                 addition.set_type(
                     (evt.additions()[aidx].type() == QueryEvent::Normal) ?
                     Sirikata::Protocol::Prox::ObjectAddition::Object :

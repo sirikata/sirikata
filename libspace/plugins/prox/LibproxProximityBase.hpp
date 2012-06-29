@@ -35,7 +35,7 @@ public:
     virtual void localBoundsUpdated(const UUID& uuid, bool agg, const AggregateBoundingInfo& newval);
 
 protected:
-    typedef Prox::QueryEvent<ObjectProxSimulationTraits> QueryEvent;
+    typedef Prox::QueryEvent<UUIDProxSimulationTraits> QueryEvent;
     typedef std::deque<QueryEvent> QueryEventList;
 
     // Helper types & methods

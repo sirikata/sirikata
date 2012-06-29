@@ -18,6 +18,19 @@ public:
     virtual Time remoteTime(const Time& t) const = 0;
 }; // class TimeSynced
 
+
+/** Trivial implementation of TimeSynced which does no translation -- either
+ *  both components are on the same node or they are already synced in some
+ *  other way.
+ */
+class SIRIKATA_LIBPINTOLOC_EXPORT NopTimeSynced : public TimeSynced {
+public:
+    virtual ~NopTimeSynced() {}
+
+    virtual Time localTime(const Time& t) const { return t; }
+    virtual Time remoteTime(const Time& t) const { return t; }
+}; // class TimeSynced
+
 } // namespace Sirikata
 
 #endif //_SIRIKATA_LIBPINTOLOC_TIME_SYNCED_HPP_

@@ -48,11 +48,17 @@ public:
     PintoManagerLocationServiceCache();
     virtual ~PintoManagerLocationServiceCache();
 
+    // Leaf inputs -- real space servers
     void addSpaceServer(ServerID sid, const TimedMotionVector3f& loc, const BoundingSphere3f& region, float32 maxSize);
     void updateSpaceServerLocation(ServerID sid, const TimedMotionVector3f& loc);
     void updateSpaceServerRegion(ServerID sid, const BoundingSphere3f& region);
     void updateSpaceServerMaxSize(ServerID sid, float32 ms);
     void removeSpaceServer(ServerID sid);
+    // Aggregates -- generated for aggregates
+    void addAggregate(ServerID sid);
+    void updateAggregateLocation(ServerID sid, const TimedMotionVector3f& loc);
+    void updateAggregateBounds(ServerID sid, const AggregateBoundingInfo& bnds);
+    void removeAggregate(ServerID sid);
 
     virtual void addPlaceholderImposter(
         const ObjectID& uuid,
@@ -75,6 +81,7 @@ public:
     virtual bool isLocal(const Iterator& id);
     Prox::ZernikeDescriptor& zernikeDescriptor(const Iterator& id);
     String mesh(const Iterator& id);
+    bool aggregate(const Iterator& id);
 
     virtual const ObjectID& iteratorID(const Iterator& id);
 
@@ -86,6 +93,8 @@ private:
         TimedMotionVector3f location;
         BoundingSphere3f region;
         float32 maxSize;
+
+        bool aggregate;
 
         bool tracking;
         bool removable;

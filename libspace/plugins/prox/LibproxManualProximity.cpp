@@ -37,7 +37,7 @@ LibproxManualProximity::LibproxManualProximity(SpaceContext* ctx, LocationServic
             mOHQueryHandler[i].handler = NULL;
             continue;
         }
-        mOHQueryHandler[i].handler = new Prox::RTreeManualQueryHandler<ObjectProxSimulationTraits>(10);
+        mOHQueryHandler[i].handler = new Prox::RTreeManualQueryHandler<UUIDProxSimulationTraits>(10);
         mOHQueryHandler[i].handler->setAggregateListener(this); // *Must* be before handler->initialize
         bool object_static_objects = (mSeparateDynamicObjects && i == OBJECT_CLASS_STATIC);
         mOHQueryHandler[i].handler->initialize(
@@ -91,6 +91,16 @@ void LibproxManualProximity::removeQuery(UUID obj) {
 
 // PintoServerQuerierListener Interface
 void LibproxManualProximity::onPintoServerResult(const Sirikata::Protocol::Prox::ProximityUpdate& update) {
+    if (!mReplicatedClients[NullServerID]) {
+        mReplicatedClients[NullServerID] = ReplicatedClientPtr(
+            new ReplicatedClient(
+                mContext, mContext->mainStrand,
+                this,
+                new NopTimeSynced(), NullServerID
+            )
+        );
+    }
+    mReplicatedClients[NullServerID]->proxUpdate(update);
 }
 
 
@@ -179,6 +189,22 @@ void LibproxManualProximity::onObjectHostSessionEnded(const OHDP::NodeID& id) {
         std::tr1::bind(&LibproxManualProximity::handleObjectHostSessionEnded, this, id),
         "LibproxManualProximity::handleObjectHostSessionEnded"
     );
+}
+
+
+
+void LibproxManualProximity::onCreatedReplicatedIndex(ReplicatedClient* client, const ServerID& evt_src_server, ProxIndexID proxid, ReplicatedLocationServiceCachePtr loccache, ServerID sid, bool dynamic_objects) {
+    PROXLOG(detailed, "Created replicated index for server " << evt_src_server << " with index ID " << proxid);
+    NOT_IMPLEMENTED(manual-prox);
+}
+
+void LibproxManualProximity::onDestroyedReplicatedIndex(ReplicatedClient* client, const ServerID& evt_src_server, ProxIndexID proxid) {
+    PROXLOG(detailed, "Destroyed replicated index for server " << evt_src_server << " with index ID " << proxid);
+    NOT_IMPLEMENTED(manual-prox);
+}
+
+void LibproxManualProximity::sendReplicatedClientProxMessage(ReplicatedClient* client, const ServerID& evt_src_server, const String& msg) {
+    mServerQuerier->updateQuery(msg);
 }
 
 

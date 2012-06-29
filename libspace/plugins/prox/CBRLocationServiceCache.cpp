@@ -34,7 +34,7 @@
 
 namespace Sirikata {
 
-typedef Prox::LocationServiceCache<ObjectProxSimulationTraits> LocationServiceCache;
+typedef Prox::LocationServiceCache<UUIDProxSimulationTraits> LocationServiceCache;
 
 CBRLocationServiceCache::CBRLocationServiceCache(Network::IOStrand* strand, LocationService* locservice, bool replicas)
  : LocationServiceCache(),

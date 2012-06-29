@@ -72,7 +72,8 @@ using std::tr1::placeholders::_3;
 
 ReplicatedClient::ReplicatedClient(Context* ctx, Network::IOStrandPtr strand, TimeSynced* sync)
  : mContext(ctx),
-   mStrand(strand),
+   doNotUse___mStrand(strand),
+   mStrand(strand.get()),
    mSync(sync),
    mObjects(),
    mOrphans(),
@@ -85,6 +86,29 @@ ReplicatedClient::ReplicatedClient(Context* ctx, Network::IOStrandPtr strand, Ti
    ),
    mCleanupOrphansPoller(
        strand.get(),
+       std::tr1::bind(&ReplicatedClient::cleanupOrphans, this),
+       "ReplicatedClient::cleanupOrphans",
+       Duration::minutes(1)
+   )
+{
+}
+
+ReplicatedClient::ReplicatedClient(Context* ctx, Network::IOStrand* strand, TimeSynced* sync)
+ : mContext(ctx),
+   doNotUse___mStrand(),
+   mStrand(strand),
+   mSync(sync),
+   mObjects(),
+   mOrphans(),
+   mUnobservedTimeouts(),
+   mUnobservedTimer(
+       Network::IOTimer::create(
+           strand,
+           std::tr1::bind(&ReplicatedClient::processExpiredNodes, this)
+       )
+   ),
+   mCleanupOrphansPoller(
+       strand,
        std::tr1::bind(&ReplicatedClient::cleanupOrphans, this),
        "ReplicatedClient::cleanupOrphans",
        Duration::minutes(1)
@@ -200,6 +224,100 @@ void ReplicatedClient::processExpiredNodes() {
     }
 }
 
+void ReplicatedClient::proxUpdate(const Sirikata::Protocol::Prox::ProximityUpdate& update) {
+    // We may have to trigger creation of a new replicated tree if this is a
+    // new root. We should always extract the ID of the tree this update
+    // applies to
+    assert(update.has_index_properties());
+    Sirikata::Protocol::Prox::IndexProperties index_props = update.index_properties();
+    assert(index_props.has_id());
+    uint32 index_unique_id = index_props.id();
+    RCLOG(detailed, "-Update for tree index ID: " << index_unique_id);
+    if (index_props.has_index_id() || index_props.has_dynamic_classification()) {
+        RCLOG(detailed, "New replicated tree:");
+        RCLOG(detailed, " ID: " << index_props.id());
+        ServerID index_from_server = NullServerID;
+        if (index_props.has_index_id()) {
+            RCLOG(detailed, " Tree ID: " << index_props.index_id());
+            index_from_server = boost::lexical_cast<ServerID>(index_props.index_id());
+        }
+        bool dynamic_objects = true;
+        if (index_props.has_dynamic_classification()) {
+            dynamic_objects = !(index_props.dynamic_classification() == Sirikata::Protocol::Prox::IndexProperties::Static);
+            RCLOG(detailed, " Class: " << (dynamic_objects ? "dynamic" : "static"));
+        }
+
+        // Create a new loccache for this new tree. We could be getting this
+        createLocCache(index_unique_id);
+        onCreatedReplicatedIndex(index_unique_id, getLocCache(index_unique_id), index_from_server, dynamic_objects);
+    }
+
+    ReplicatedLocationServiceCachePtr loccache = getLocCache(index_unique_id);
+    OrphanLocUpdateManagerPtr orphan_manager = getOrphanLocUpdateManager(index_unique_id);
+    for(int32 aidx = 0; aidx < update.addition_size(); aidx++) {
+        Sirikata::Protocol::Prox::ObjectAddition addition = update.addition(aidx);
+        // Convert to local time
+        addition.location().set_t(
+            mSync->localTime(addition.location().t())
+        );
+
+        ProxProtocolLocUpdate add(addition);
+
+        ObjectReference observed_oref(addition.object());
+        // NOTE: We don't track the SpaceID here, but we also don't really
+        // need it -- OrphanLocUpdateManager only uses it because it can be
+        // used in places where a single instance covers multiple spaces,
+        // but it doesn't here.
+        SpaceObjectReference observed(SpaceID::null(), observed_oref);
+
+        bool is_agg = (addition.has_type() && addition.type() == Sirikata::Protocol::Prox::ObjectAddition::Aggregate);
+
+        ObjectReference parent_oref(addition.parent());
+
+        // Store the data
+        loccache->objectAdded(
+            observed_oref, is_agg,
+            parent_oref,
+            add.location(), add.location_seqno(),
+            add.orientation(), add.orientation_seqno(),
+            add.bounds(), add.bounds_seqno(),
+            Transfer::URI(add.meshOrDefault()), add.mesh_seqno(),
+            add.physicsOrDefault(), add.physics_seqno()
+        );
+
+        // Replay orphans
+        orphan_manager->invokeOrphanUpdates1(*mSync, observed, this, index_unique_id);
+    }
+
+    for(int32 ridx = 0; ridx < update.removal_size(); ridx++) {
+        Sirikata::Protocol::Prox::ObjectRemoval removal = update.removal(ridx);
+        ObjectReference observed_oref(removal.object());
+        // NOTE: see above note about why SpaceID::null() is ok here
+        SpaceObjectReference observed(SpaceID::null(), observed_oref);
+        bool temporary_removal = (!removal.has_type() || (removal.type() == Sirikata::Protocol::Prox::ObjectRemoval::Transient));
+        // Backup data for orphans and then destroy
+        // TODO(ewencp) Seems like we shouldn't actually need this
+        // since we shouldn't get a removal with having had an
+        // addition first...
+        if (loccache->startSimpleTracking(observed_oref)) {
+            orphan_manager->addUpdateFromExisting(observed, loccache->properties(observed_oref));
+            loccache->stopSimpleTracking(observed_oref);
+        }
+        loccache->objectRemoved(
+            observed_oref, temporary_removal
+        );
+    }
+
+    // We may have removed everything from the specified tree. We need to
+    // check if we've hit that condition and clean out any associated
+    // state. If objects from that server reappear, this state will be
+    // created from scratch.
+    if (loccache->empty()) {
+        onDestroyedReplicatedIndex(index_unique_id);
+        removeLocCache(index_unique_id);
+    }
+
+}
 
 void ReplicatedClient::proxUpdate(const Sirikata::Protocol::Prox::ProximityResults& results) {
     // Proximity messages are handled just by updating our state
@@ -208,100 +326,8 @@ void ReplicatedClient::proxUpdate(const Sirikata::Protocol::Prox::ProximityResul
     RCLOG(detailed, "Received proximity message with " << results.update_size() << " updates");
     for(int32 idx = 0; idx < results.update_size(); idx++) {
         Sirikata::Protocol::Prox::ProximityUpdate update = results.update(idx);
-
-        // We may have to trigger creation of a new replicated tree if this is a
-        // new root. We should always extract the ID of the tree this update
-        // applies to
-        assert(update.has_index_properties());
-        Sirikata::Protocol::Prox::IndexProperties index_props = update.index_properties();
-        assert(index_props.has_id());
-        uint32 index_unique_id = index_props.id();
-        RCLOG(detailed, "-Update for tree index ID: " << index_unique_id);
-        if (index_props.has_index_id() || index_props.has_dynamic_classification()) {
-            RCLOG(detailed, "New replicated tree:");
-            RCLOG(detailed, " ID: " << index_props.id());
-            ServerID index_from_server = NullServerID;
-            if (index_props.has_index_id()) {
-                RCLOG(detailed, " Tree ID: " << index_props.index_id());
-                index_from_server = boost::lexical_cast<ServerID>(index_props.index_id());
-            }
-            bool dynamic_objects = true;
-            if (index_props.has_dynamic_classification()) {
-                dynamic_objects = !(index_props.dynamic_classification() == Sirikata::Protocol::Prox::IndexProperties::Static);
-                RCLOG(detailed, " Class: " << (dynamic_objects ? "dynamic" : "static"));
-            }
-
-            // Create a new loccache for this new tree. We could be getting this
-            createLocCache(index_unique_id);
-            onCreatedReplicatedIndex(index_unique_id, getLocCache(index_unique_id), index_from_server, dynamic_objects);
-        }
-
-        ReplicatedLocationServiceCachePtr loccache = getLocCache(index_unique_id);
-        OrphanLocUpdateManagerPtr orphan_manager = getOrphanLocUpdateManager(index_unique_id);
-        for(int32 aidx = 0; aidx < update.addition_size(); aidx++) {
-            Sirikata::Protocol::Prox::ObjectAddition addition = update.addition(aidx);
-            // Convert to local time
-            addition.location().set_t(
-                mSync->localTime(addition.location().t())
-            );
-
-            ProxProtocolLocUpdate add(addition);
-
-            ObjectReference observed_oref(addition.object());
-            // NOTE: We don't track the SpaceID here, but we also don't really
-            // need it -- OrphanLocUpdateManager only uses it because it can be
-            // used in places where a single instance covers multiple spaces,
-            // but it doesn't here.
-            SpaceObjectReference observed(SpaceID::null(), observed_oref);
-
-            bool is_agg = (addition.has_type() && addition.type() == Sirikata::Protocol::Prox::ObjectAddition::Aggregate);
-
-            ObjectReference parent_oref(addition.parent());
-
-            // Store the data
-            loccache->objectAdded(
-                observed_oref, is_agg,
-                parent_oref,
-                add.location(), add.location_seqno(),
-                add.orientation(), add.orientation_seqno(),
-                add.bounds(), add.bounds_seqno(),
-                Transfer::URI(add.meshOrDefault()), add.mesh_seqno(),
-                add.physicsOrDefault(), add.physics_seqno()
-            );
-
-            // Replay orphans
-            orphan_manager->invokeOrphanUpdates1(*mSync, observed, this, index_unique_id);
-        }
-
-        for(int32 ridx = 0; ridx < update.removal_size(); ridx++) {
-            Sirikata::Protocol::Prox::ObjectRemoval removal = update.removal(ridx);
-            ObjectReference observed_oref(removal.object());
-            // NOTE: see above note about why SpaceID::null() is ok here
-            SpaceObjectReference observed(SpaceID::null(), observed_oref);
-            bool temporary_removal = (!removal.has_type() || (removal.type() == Sirikata::Protocol::Prox::ObjectRemoval::Transient));
-            // Backup data for orphans and then destroy
-            // TODO(ewencp) Seems like we shouldn't actually need this
-            // since we shouldn't get a removal with having had an
-            // addition first...
-            if (loccache->startSimpleTracking(observed_oref)) {
-                orphan_manager->addUpdateFromExisting(observed, loccache->properties(observed_oref));
-                loccache->stopSimpleTracking(observed_oref);
-            }
-            loccache->objectRemoved(
-                observed_oref, temporary_removal
-            );
-        }
-
-        // We may have removed everything from the specified tree. We need to
-        // check if we've hit that condition and clean out any associated
-        // state. If objects from that server reappear, this state will be
-        // created from scratch.
-        if (loccache->empty()) {
-            onDestroyedReplicatedIndex(index_unique_id);
-            removeLocCache(index_unique_id);
-        }
+        proxUpdate(update);
     }
-
 }
 
 

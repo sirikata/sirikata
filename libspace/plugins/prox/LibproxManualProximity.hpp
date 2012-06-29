@@ -10,6 +10,7 @@
 #include <prox/base/LocationUpdateListener.hpp>
 #include <prox/base/AggregateListener.hpp>
 #include <sirikata/core/queue/ThreadSafeQueue.hpp>
+#include <sirikata/pintoloc/ManualReplicatedClient.hpp>
 
 namespace Sirikata {
 
@@ -19,14 +20,15 @@ namespace Sirikata {
  */
 class LibproxManualProximity :
         public LibproxProximityBase,
-        Prox::AggregateListener<ObjectProxSimulationTraits>,
-        Prox::QueryEventListener<ObjectProxSimulationTraits, Prox::ManualQuery<ObjectProxSimulationTraits> >
+        Prox::AggregateListener<UUIDProxSimulationTraits>,
+        Prox::QueryEventListener<UUIDProxSimulationTraits, Prox::ManualQuery<UUIDProxSimulationTraits> >,
+        Pinto::Manual::ReplicatedClientWithID<ServerID>::Parent
 {
 private:
-    typedef Prox::ManualQueryHandler<ObjectProxSimulationTraits> ProxQueryHandler;
-    typedef Prox::Aggregator<ObjectProxSimulationTraits> ProxAggregator;
-    typedef Prox::ManualQuery<ObjectProxSimulationTraits> ProxQuery;
-    typedef Prox::QueryEvent<ObjectProxSimulationTraits> ProxQueryEvent;
+    typedef Prox::ManualQueryHandler<UUIDProxSimulationTraits> ProxQueryHandler;
+    typedef Prox::Aggregator<UUIDProxSimulationTraits> ProxAggregator;
+    typedef Prox::ManualQuery<UUIDProxSimulationTraits> ProxQuery;
+    typedef Prox::QueryEvent<UUIDProxSimulationTraits> ProxQueryEvent;
 
     typedef std::pair<OHDP::NodeID, Sirikata::Protocol::Object::ObjectMessage*> OHResult;
 public:
@@ -81,11 +83,23 @@ public:
 
 private:
     struct ProxQueryHandlerData;
+    typedef Pinto::Manual::ReplicatedClientWithID<ServerID> ReplicatedClient;
+    typedef ReplicatedClient::Parent ReplicatedClientParent;
+    typedef std::tr1::shared_ptr<ReplicatedClient> ReplicatedClientPtr;
 
     // MAIN Thread:
 
-    // MAIN Thread  Server-to-server queries:
 
+    // MAIN Thread  Server-to-server queries (including top-level
+    // pinto):
+
+    // ReplicatedClientWithID Interface
+    virtual void onCreatedReplicatedIndex(ReplicatedClient* client, const ServerID& evt_src_server, ProxIndexID proxid, ReplicatedLocationServiceCachePtr loccache, ServerID sid, bool dynamic_objects);
+    virtual void onDestroyedReplicatedIndex(ReplicatedClient* client, const ServerID& evt_src_server, ProxIndexID proxid);
+    virtual void sendReplicatedClientProxMessage(ReplicatedClient* client, const ServerID& evt_src_server, const String& msg);
+
+    typedef std::tr1::unordered_map<ServerID, ReplicatedClientPtr> ReplicatedClientMap;
+    ReplicatedClientMap mReplicatedClients;
 
     // MAIN Thread  OH queries:
 

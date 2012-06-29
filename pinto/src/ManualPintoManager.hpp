@@ -45,6 +45,7 @@ private:
     // QueryEventListener Interface
     virtual void queryHasEvents(Query* query);
 
+
     // Tick the QueryHandler. We don't actually care about time since Servers
     // won't be in motion. Should only be called when the server data or query
     // data is updated.

@@ -106,7 +106,7 @@ LibproxProximity::LibproxProximity(SpaceContext* ctx, LocationService* locservic
             mServerQueryHandler[i].handler = NULL;
             continue;
         }
-        mServerQueryHandler[i].handler = QueryHandlerFactory<ObjectProxSimulationTraits>(server_handler_type, server_handler_options);
+        mServerQueryHandler[i].handler = QueryHandlerFactory<UUIDProxSimulationTraits>(server_handler_type, server_handler_options);
         mServerQueryHandler[i].handler->setAggregateListener(this); // *Must* be before handler->initialize
         bool server_static_objects = (mSeparateDynamicObjects && i == OBJECT_CLASS_STATIC);
         mServerQueryHandler[i].handler->initialize(
@@ -125,7 +125,7 @@ LibproxProximity::LibproxProximity(SpaceContext* ctx, LocationService* locservic
             mObjectQueryHandler[i].handler = NULL;
             continue;
         }
-        mObjectQueryHandler[i].handler = QueryHandlerFactory<ObjectProxSimulationTraits>(object_handler_type, object_handler_options);
+        mObjectQueryHandler[i].handler = QueryHandlerFactory<UUIDProxSimulationTraits>(object_handler_type, object_handler_options);
         mObjectQueryHandler[i].handler->setAggregateListener(this); // *Must* be before handler->initialize
         bool object_static_objects = (mSeparateDynamicObjects && i == OBJECT_CLASS_STATIC);
         mObjectQueryHandler[i].handler->initialize(
@@ -442,7 +442,7 @@ void LibproxProximity::receiveMigrationData(const UUID& obj, ServerID source_ser
     }
 
     SolidAngle obj_query_angle(migr_data.min_angle());
-    uint32 obj_query_max_results = (migr_data.has_max_count() ? migr_data.max_count() : ObjectProxSimulationTraits::InfiniteResults);
+    uint32 obj_query_max_results = (migr_data.has_max_count() ? migr_data.max_count() : UUIDProxSimulationTraits::InfiniteResults);
     addQuery(obj, obj_query_angle, obj_query_max_results);
 }
 
@@ -566,7 +566,7 @@ void LibproxProximity::removeQuery(UUID obj) {
             if (it->second < minangle) minangle = it->second;
         uint32 maxcount = 1;
         for(ObjectQueryMaxCountMap::iterator it = mObjectQueryMaxCounts.begin(); it != mObjectQueryMaxCounts.end(); it++)
-            if (it->second == ObjectProxSimulationTraits::InfiniteResults || (maxcount > ObjectProxSimulationTraits::InfiniteResults && it->second > maxcount))
+            if (it->second == UUIDProxSimulationTraits::InfiniteResults || (maxcount > UUIDProxSimulationTraits::InfiniteResults && it->second > maxcount))
                 maxcount = it->second;
 
         // NOTE: Even if this condition is satisfied, we could only be increasing

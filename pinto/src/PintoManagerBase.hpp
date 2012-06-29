@@ -13,6 +13,7 @@
 #include "ProxSimulationTraits.hpp"
 
 #include <prox/base/QueryEventListener.hpp>
+#include <prox/base/AggregateListener.hpp>
 
 #include "PintoManagerLocationServiceCache.hpp"
 
@@ -24,9 +25,12 @@ namespace Sirikata {
  *  format of requests and responses to implementations.
  */
 class PintoManagerBase
-    : public Service
+    : public Service,
+      public Prox::AggregateListener<ServerProxSimulationTraits>
 {
 public:
+    typedef Prox::Aggregator<ServerProxSimulationTraits> ProxAggregator;
+
     PintoManagerBase(PintoContext* ctx);
     virtual ~PintoManagerBase();
 
@@ -48,6 +52,16 @@ protected:
     virtual void onMaxSizeUpdate(Sirikata::Network::Stream* stream, float32 ms);
     virtual void onQueryUpdate(Sirikata::Network::Stream* stream, const String& update);
     virtual void onDisconnected(Sirikata::Network::Stream* stream);
+
+
+    // AggregateListener Interface
+    virtual void aggregateCreated(ProxAggregator* handler, const ServerID& objid);
+    virtual void aggregateChildAdded(ProxAggregator* handler, const ServerID& objid, const ServerID& child, const Vector3f& bnds_center, const float32 bnds_center_radius, const float32 max_obj_size);
+    virtual void aggregateChildRemoved(ProxAggregator* handler, const ServerID& objid, const ServerID& child, const Vector3f& bnds_center, const float32 bnds_center_radius, const float32 max_obj_size);
+    virtual void aggregateBoundsUpdated(ProxAggregator* handler, const ServerID& objid, const Vector3f& bnds_center, const float32 bnds_center_radius, const float32 max_obj_size);
+    virtual void aggregateDestroyed(ProxAggregator* handler, const ServerID& objid);
+    virtual void aggregateObserved(ProxAggregator* handler, const ServerID& objid, uint32 nobservers);
+
 
     // Utility for implementations so they don't have to track ServerIDs
     ServerID streamServerID(Sirikata::Network::Stream*) const;

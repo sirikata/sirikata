@@ -43,6 +43,7 @@ public:
     typedef Prox::LocationUpdateListener<ObjectProxSimulationTraits> LocationUpdateListener;
 
     ReplicatedLocationServiceCache(Network::IOStrandPtr strand);
+    ReplicatedLocationServiceCache(Network::IOStrand* strand);
     virtual ~ReplicatedLocationServiceCache();
 
     // Returns true if this has no objects that still exist. Note that this
@@ -151,7 +152,7 @@ private:
     typedef boost::lock_guard<Mutex> Lock;
     Mutex mMutex;
 
-    Network::IOStrandPtr mStrand;
+    Network::IOStrand* mStrand;
 
     typedef std::set<LocationUpdateListener*> ListenerSet;
     ListenerSet mListeners;

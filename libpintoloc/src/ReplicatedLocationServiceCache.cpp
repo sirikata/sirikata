@@ -11,6 +11,13 @@ typedef Prox::LocationServiceCache<ObjectProxSimulationTraits> LocationServiceCa
 
 ReplicatedLocationServiceCache::ReplicatedLocationServiceCache(Network::IOStrandPtr strand)
  : LocationServiceCache(),
+   mStrand(strand.get()),
+   mListeners(),
+   mObjects()
+{
+}
+ReplicatedLocationServiceCache::ReplicatedLocationServiceCache(Network::IOStrand* strand)
+ : LocationServiceCache(),
    mStrand(strand),
    mListeners(),
    mObjects()
