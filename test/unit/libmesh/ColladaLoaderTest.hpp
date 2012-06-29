@@ -57,13 +57,13 @@ public:
 
     void setUp( void )
     {
-		
-		
+		//initialize plugin
 		_plugin = "colladamodels";
 		if (!_initialized) {
             _initialized = 1;
             _pmgr.load(_plugin);
         }
+		//create ModelsSystem
 		msys = ModelsSystemFactory::getSingleton ().getConstructor ( "colladamodels" ) ( "" );
 		assert(msys);
     }
@@ -73,16 +73,11 @@ public:
 		_pmgr.gc();
 		_initialized = 0;
     }
+
     void testColladaLoaderSimple( void ) {
+		//collada file with almost nothing
         getString("simple", simple);
-
-		Transfer::DenseData *dd = new Transfer::DenseData(simple);
-		Transfer::DenseDataPtr data(dd);
-		Mesh::VisualPtr parsed = msys->load(data);
-
-		TS_ASSERT_DIFFERS(parsed, Mesh::VisualPtr());
-
-		MeshdataPtr mdp(tr1::dynamic_pointer_cast<Meshdata>(parsed));
+		MeshdataPtr mdp = loadMDP(simple);
 
 		//asserts
 		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 0);
@@ -97,19 +92,11 @@ public:
 		TS_ASSERT_EQUALS(mdp->nodes[0].transform, Matrix4x4f::identity());
 		TS_ASSERT_EQUALS(mdp->globalTransform, Matrix4x4f::identity());
     }
+
 	void testColladaLoaderLine( void ) {
+		//collada file with only a single line
 		getString("line", line);
-
-		Transfer::DenseData *dd = new Transfer::DenseData(line);
-	
-		Transfer::DenseDataPtr data(dd);
-	
-		Mesh::VisualPtr parsed = msys->load(data);
-	
-		//the parsed should actually be null
-		TS_ASSERT_DIFFERS(parsed, Mesh::VisualPtr());
-
-		MeshdataPtr mdp(std::tr1::dynamic_pointer_cast<Meshdata>(parsed));
+		MeshdataPtr mdp = loadMDP(line);
 		
 		//asserts
 		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 1);
@@ -126,20 +113,11 @@ public:
 		TS_ASSERT_EQUALS(mdp->nodes[0].transform, Matrix4x4f::identity());
 		TS_ASSERT_EQUALS(mdp->globalTransform, Matrix4x4f::identity());
 	}
+
 	void testColladaLoaderSquare( void ) {
+		//collada file with square
 		getString("square", square);
-
-		Transfer::DenseData *dd = new Transfer::DenseData(square);
-	
-		Transfer::DenseDataPtr data(dd);
-
-		TS_ASSERT_EQUALS(msys->canLoad(data), true);
-		Mesh::VisualPtr parsed = msys->load(data);
-	
-		//the parsed should actually be null
-		TS_ASSERT_DIFFERS(parsed, Mesh::VisualPtr());
-
-		MeshdataPtr mdp(std::tr1::dynamic_pointer_cast<Meshdata>(parsed));
+		MeshdataPtr mdp = loadMDP(square);
 		
 		//asserts
 		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 1);
@@ -156,20 +134,11 @@ public:
 		TS_ASSERT_EQUALS(mdp->nodes[0].transform, Matrix4x4f::identity());
 		TS_ASSERT_EQUALS(mdp->globalTransform, Matrix4x4f::identity());
 	}
+
 	void testColladaLoaderCube( void ) {
+		//collada file with cube
 		getString("cube", cube);
-
-		Transfer::DenseData *dd = new Transfer::DenseData(cube);
-	
-		Transfer::DenseDataPtr data(dd);
-		
-		TS_ASSERT_EQUALS(msys->canLoad(data), true);
-		Mesh::VisualPtr parsed = msys->load(data);
-	
-		//the parsed should actually be null
-		TS_ASSERT_DIFFERS(parsed, Mesh::VisualPtr());
-
-		MeshdataPtr mdp(std::tr1::dynamic_pointer_cast<Meshdata>(parsed));
+		MeshdataPtr mdp = loadMDP(cube);
 		
 		//asserts
 		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 1);
@@ -186,20 +155,11 @@ public:
 		TS_ASSERT_EQUALS(mdp->nodes[0].transform, Matrix4x4f::identity());
 		TS_ASSERT_EQUALS(mdp->globalTransform, Matrix4x4f::identity());
 	}
+
 	void testColladaLoaderTriangles( void ) {
+		//collada file with two distinct triangles
 		getString("triangles", triangles);
-
-		Transfer::DenseData *dd = new Transfer::DenseData(triangles);
-	
-		Transfer::DenseDataPtr data(dd);
-		
-		TS_ASSERT_EQUALS(msys->canLoad(data), true);
-		Mesh::VisualPtr parsed = msys->load(data);
-	
-		//the parsed should actually be null
-		TS_ASSERT_DIFFERS(parsed, Mesh::VisualPtr());
-
-		MeshdataPtr mdp(std::tr1::dynamic_pointer_cast<Meshdata>(parsed));
+		MeshdataPtr mdp = loadMDP(triangles);
 		
 		//asserts
 		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 2);
@@ -218,35 +178,24 @@ public:
 		TS_ASSERT_EQUALS(mdp->nodes[0].transform, Matrix4x4f::identity());
 		TS_ASSERT_EQUALS(mdp->globalTransform, Matrix4x4f::identity());
 	}
+
 	void testColladaLoaderNull( void ) {
-		Transfer::DenseData *dd = new Transfer::DenseData("This should not load");
-	
+		Transfer::DenseData *dd = new Transfer::DenseData("Hello world!");
 		Transfer::DenseDataPtr data(dd);
-		
+		//the collada file shouldn't load
 		TS_ASSERT_EQUALS(msys->canLoad(data), false);
-		//even though canLoad is false, the thing loads anyways
+		//so parsed should be null
 		Mesh::VisualPtr parsed = msys->load(data);
-	
-		//the parsed should actually be null
-		TS_ASSERT_DIFFERS(parsed, Mesh::VisualPtr());
-
+		TS_ASSERT_EQUALS(parsed, Mesh::VisualPtr());
+		//and so should mdp
 		MeshdataPtr mdp(std::tr1::dynamic_pointer_cast<Meshdata>(parsed));
-		
-		//asserts
-		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 0);
-		TS_ASSERT_EQUALS(mdp->getInstancedLightCount(), 0);
-		TS_ASSERT_EQUALS(mdp->getJointCount(), 0);
-		TS_ASSERT_EQUALS(mdp->geometry.size(), 0);
-		TS_ASSERT_EQUALS(mdp->lights.size(), 0);
-		TS_ASSERT_EQUALS(mdp->textures.size(), 0);
-		TS_ASSERT_EQUALS(mdp->materials.size(), 0);
-		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
-		TS_ASSERT_EQUALS(mdp->nodes.size(), 0);
-
+		TS_ASSERT_EQUALS(mdp, MeshdataPtr());
 	}
-	//obtains string of information from the collada file rather than copying
-	//and directly placing the text in the file
+	
+	
 	void getString(string name, string& thing) {
+		//obtains string of information from the collada file rather than
+		//copying and directly placing the text in the file
 
 
 		// For now only support in-tree execution
@@ -269,5 +218,17 @@ public:
 			fin >> temp;
 			thing += temp + ' ';
 		}while(fin && temp != "</COLLADA>");
+	}
+	
+	MeshdataPtr loadMDP(string thing) {
+		//loads the MeshdataPtr from the collada string
+		Transfer::DenseData *dd = new Transfer::DenseData(thing);
+		Transfer::DenseDataPtr data(dd);
+		TS_ASSERT_EQUALS(msys->canLoad(data), true);
+
+		Mesh::VisualPtr parsed = msys->load(data);
+		TS_ASSERT_DIFFERS(parsed, Mesh::VisualPtr());
+		MeshdataPtr mdp(std::tr1::dynamic_pointer_cast<Meshdata>(parsed));
+		return mdp;
 	}
 };

@@ -296,7 +296,9 @@ void ColladaSystem::addHeaderData(const Transfer::RemoteFileMetadata& metadata, 
 Mesh::VisualPtr ColladaSystem::load(const Transfer::RemoteFileMetadata& metadata, const Transfer::Fingerprint& fp,
             Transfer::DenseDataPtr data)
 {
-    ColladaDocumentLoader loader(metadata.getURI(), fp);
+	if(!canLoad(data))
+		return Mesh::VisualPtr();
+	ColladaDocumentLoader loader(metadata.getURI(), fp);
 
     SparseData data_reflatten = SparseData();
     data_reflatten.addValidData(data);
@@ -313,6 +315,8 @@ Mesh::VisualPtr ColladaSystem::load(const Transfer::RemoteFileMetadata& metadata
 }
 
 Mesh::VisualPtr ColladaSystem::load(Transfer::DenseDataPtr data) {
+	if(!canLoad(data))
+		return Mesh::VisualPtr();
     ColladaDocumentLoader loader(Transfer::URI(""), Transfer::Fingerprint::null() );
 
     SparseData data_reflatten = SparseData();

@@ -43,15 +43,15 @@ public:
     void tearDown( void )
     {
     }
-	void vEquals(Vector3f v1, Vector3f v2) {
+	void vAssert(Vector3f v1, Vector3f v2) {
 		TS_ASSERT_EQUALS(v1.x, v2.x);
 		TS_ASSERT_EQUALS(v1.y, v2.y);
 		TS_ASSERT_EQUALS(v1.z, v2.z);
 	}
     void testLightInfo( void ) {
+		//test LightInfo functionality
 		Meshdata md;
 		
-		//one node
 		Node ned;
 		ned.parent = NullNodeIndex;
 		md.nodes.push_back(ned);
@@ -92,8 +92,8 @@ public:
 		TS_ASSERT_EQUALS(u, 0);
 
 		TS_ASSERT_EQUALS(md.lights[0].mCastsShadow, true);
-		vEquals(md.lights[0].mAmbientColor, Vector3f(100, 234, 234));
-		vEquals(md.lights[0].mDiffuseColor, Vector3f(5, 78, 186));
+		vAssert(md.lights[0].mAmbientColor, Vector3f(100, 234, 234));
+		vAssert(md.lights[0].mDiffuseColor, Vector3f(5, 78, 186));
 
 		TS_ASSERT_EQUALS(md.lights[0].mConstantFalloff, 32);
 		TS_ASSERT_EQUALS(md.lights[0].mLinearFalloff, 65);
@@ -101,8 +101,8 @@ public:
 		TS_ASSERT_EQUALS(md.lights[0].mPower, 4);
 		TS_ASSERT_EQUALS(md.lights[0].mLightRange, 100);
 
-		vEquals(md.lights[0].mShadowColor, Vector3f(67, 45, 23));
-		vEquals(md.lights[0].mSpecularColor, Vector3f(32, 54, 76));
+		vAssert(md.lights[0].mShadowColor, Vector3f(67, 45, 23));
+		vAssert(md.lights[0].mSpecularColor, Vector3f(32, 54, 76));
 
 		TS_ASSERT_EQUALS(md.lights[0].mConeInnerRadians, 2);
 		TS_ASSERT_EQUALS(md.lights[0].mConeOuterRadians, 4);
