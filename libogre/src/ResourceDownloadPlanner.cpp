@@ -96,9 +96,16 @@ void ResourceDownloadPlanner::poll()
   RMutex::scoped_lock lock(mDlPlannerMutex);
 }
 
+void ResourceDownloadPlanner::start()
+{
+  RMutex::scoped_lock lock(mDlPlannerMutex);
+  PollingService::start();
+}
+
 void ResourceDownloadPlanner::stop()
 {
   RMutex::scoped_lock lock(mDlPlannerMutex);
+  PollingService::stop();
 }
 
 int32 ResourceDownloadPlanner::maxObjects() {

@@ -38,6 +38,7 @@ public:
 
     //PollingService interface
     virtual void poll();
+    virtual void start();
     virtual void stop();
 
     virtual int32 maxObjects();
