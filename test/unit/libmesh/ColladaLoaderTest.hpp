@@ -47,11 +47,6 @@ protected:
 	String _plugin;
 	PluginManager _pmgr;
 	ModelsSystem *msys;
-	string simple;
-	string line;
-	string square;
-	string cube;
-	string triangles;
 
 public:
 
@@ -76,7 +71,7 @@ public:
 
     void testColladaLoaderSimple( void ) {
 		//collada file with almost nothing
-        getString("simple", simple);
+		string simple = getString("simple");
 		MeshdataPtr mdp = loadMDP(simple);
 
 		//asserts
@@ -95,7 +90,7 @@ public:
 
 	void testColladaLoaderLine( void ) {
 		//collada file with only a single line
-		getString("line", line);
+		string line = getString("line");
 		MeshdataPtr mdp = loadMDP(line);
 		
 		//asserts
@@ -108,6 +103,7 @@ public:
 		TS_ASSERT_EQUALS(mdp->lights.size(), 0);
 		TS_ASSERT_EQUALS(mdp->textures.size(), 0);
 		TS_ASSERT_EQUALS(mdp->materials.size(), 1);
+		TS_ASSERT_EQUALS(mdp->materials[0].textures.size(), 0);
 		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
 		TS_ASSERT_EQUALS(mdp->nodes.size(), 1);
 		TS_ASSERT_EQUALS(mdp->nodes[0].transform, Matrix4x4f::identity());
@@ -115,8 +111,8 @@ public:
 	}
 
 	void testColladaLoaderSquare( void ) {
-		//collada file with square
-		getString("square", square);
+		//collada file with square (actually rectangle)
+		string square = getString("square");
 		MeshdataPtr mdp = loadMDP(square);
 		
 		//asserts
@@ -129,6 +125,53 @@ public:
 		TS_ASSERT_EQUALS(mdp->lights.size(), 0);
 		TS_ASSERT_EQUALS(mdp->textures.size(), 0);
 		TS_ASSERT_EQUALS(mdp->materials.size(), 1);
+		TS_ASSERT_EQUALS(mdp->materials[0].textures.size(), 1);
+		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
+		TS_ASSERT_EQUALS(mdp->nodes.size(), 1);
+		TS_ASSERT_EQUALS(mdp->nodes[0].transform, Matrix4x4f::identity());
+		TS_ASSERT_EQUALS(mdp->globalTransform, Matrix4x4f::identity());
+	}
+
+	void testColladaLoaderSquare2s( void ) {
+		//collada file with square with two sides, one of which is specially texturized
+		string square2s = getString("square2s");
+		MeshdataPtr mdp = loadMDP(square2s);
+		
+		//asserts
+		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 1);
+		TS_ASSERT_EQUALS(mdp->getInstancedLightCount(), 0);
+		TS_ASSERT_EQUALS(mdp->getJointCount(), 0);
+		TS_ASSERT_EQUALS(mdp->geometry.size(), 1);
+		TS_ASSERT_EQUALS(mdp->geometry[0].primitives.size(), 2);
+		TS_ASSERT_EQUALS(mdp->geometry[0].primitives[0].indices.size(), 6);
+		TS_ASSERT_EQUALS(mdp->lights.size(), 0);
+		TS_ASSERT_EQUALS(mdp->textures.size(), 1);
+		TS_ASSERT_EQUALS(mdp->materials.size(), 2);
+		for(int i = 0; i < mdp->materials.size(); i++) 
+			TS_ASSERT_EQUALS(mdp->materials[i].textures.size(), 1);
+		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
+		TS_ASSERT_EQUALS(mdp->nodes.size(), 1);
+		TS_ASSERT_EQUALS(mdp->nodes[0].transform, Matrix4x4f::identity());
+		TS_ASSERT_EQUALS(mdp->globalTransform, Matrix4x4f::identity());
+	}
+
+	void testColladaLoaderHex2s( void ) {
+		//collada file with two-sided hexagon
+		string hex2s = getString("hex2s");
+		MeshdataPtr mdp = loadMDP(hex2s);
+		
+		//asserts
+		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 1);
+		TS_ASSERT_EQUALS(mdp->getInstancedLightCount(), 0);
+		TS_ASSERT_EQUALS(mdp->getJointCount(), 0);
+		TS_ASSERT_EQUALS(mdp->geometry.size(), 1);
+		TS_ASSERT_EQUALS(mdp->geometry[0].primitives.size(), 2);
+		TS_ASSERT_EQUALS(mdp->geometry[0].primitives[0].indices.size(), 12);
+		TS_ASSERT_EQUALS(mdp->lights.size(), 0);
+		TS_ASSERT_EQUALS(mdp->textures.size(), 0);
+		TS_ASSERT_EQUALS(mdp->materials.size(), 2);
+		for(int i = 0; i < mdp->materials.size(); i++) 
+			TS_ASSERT_EQUALS(mdp->materials[i].textures.size(), 1);
 		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
 		TS_ASSERT_EQUALS(mdp->nodes.size(), 1);
 		TS_ASSERT_EQUALS(mdp->nodes[0].transform, Matrix4x4f::identity());
@@ -136,8 +179,8 @@ public:
 	}
 
 	void testColladaLoaderCube( void ) {
-		//collada file with cube
-		getString("cube", cube);
+		//collada file with cube (actually a rectangular prism)
+		string cube = getString("cube");
 		MeshdataPtr mdp = loadMDP(cube);
 		
 		//asserts
@@ -150,6 +193,31 @@ public:
 		TS_ASSERT_EQUALS(mdp->lights.size(), 0);
 		TS_ASSERT_EQUALS(mdp->textures.size(), 0);
 		TS_ASSERT_EQUALS(mdp->materials.size(), 1);
+		TS_ASSERT_EQUALS(mdp->materials[0].textures.size(), 1);
+		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
+		TS_ASSERT_EQUALS(mdp->nodes.size(), 1);
+		TS_ASSERT_EQUALS(mdp->nodes[0].transform, Matrix4x4f::identity());
+		TS_ASSERT_EQUALS(mdp->globalTransform, Matrix4x4f::identity());
+	}
+
+	void testColladaLoaderCubes( void ) {
+		//collada file with three identical cubes of different rotations
+		string cubes = getString("cubes");
+		MeshdataPtr mdp = loadMDP(cubes);
+		
+		//asserts
+		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 3);
+		TS_ASSERT_EQUALS(mdp->getInstancedLightCount(), 0);
+		TS_ASSERT_EQUALS(mdp->getJointCount(), 0);
+		TS_ASSERT_EQUALS(mdp->geometry.size(), 3);
+		for(int i = 0; i < mdp->geometry.size(); i++) {
+			TS_ASSERT_EQUALS(mdp->geometry[i].primitives.size(), 1);
+			TS_ASSERT_EQUALS(mdp->geometry[i].primitives[0].indices.size(), 36);
+		}
+		TS_ASSERT_EQUALS(mdp->lights.size(), 0);
+		TS_ASSERT_EQUALS(mdp->textures.size(), 0);
+		TS_ASSERT_EQUALS(mdp->materials.size(), 1);
+		TS_ASSERT_EQUALS(mdp->materials[0].textures.size(), 1);
 		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
 		TS_ASSERT_EQUALS(mdp->nodes.size(), 1);
 		TS_ASSERT_EQUALS(mdp->nodes[0].transform, Matrix4x4f::identity());
@@ -158,7 +226,7 @@ public:
 
 	void testColladaLoaderTriangles( void ) {
 		//collada file with two distinct triangles
-		getString("triangles", triangles);
+		string triangles = getString("triangles");
 		MeshdataPtr mdp = loadMDP(triangles);
 		
 		//asserts
@@ -173,6 +241,122 @@ public:
 		TS_ASSERT_EQUALS(mdp->lights.size(), 0);
 		TS_ASSERT_EQUALS(mdp->textures.size(), 0);
 		TS_ASSERT_EQUALS(mdp->materials.size(), 1);
+		TS_ASSERT_EQUALS(mdp->materials[0].textures.size(), 1);
+		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
+		TS_ASSERT_EQUALS(mdp->nodes.size(), 1);
+		TS_ASSERT_EQUALS(mdp->nodes[0].transform, Matrix4x4f::identity());
+		TS_ASSERT_EQUALS(mdp->globalTransform, Matrix4x4f::identity());
+	}
+
+	void testColladaLoaderTriangles3d( void ) {
+		//collada file with two connected disjoint triangles in 3d
+		string triangles3d = getString("triangles3d");
+		MeshdataPtr mdp = loadMDP(triangles3d);
+		
+		//asserts
+		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 1);
+		TS_ASSERT_EQUALS(mdp->getInstancedLightCount(), 0);
+		TS_ASSERT_EQUALS(mdp->getJointCount(), 0);
+		TS_ASSERT_EQUALS(mdp->geometry.size(), 1);
+		TS_ASSERT_EQUALS(mdp->geometry[0].primitives.size(), 1);
+		TS_ASSERT_EQUALS(mdp->geometry[0].primitives[0].indices.size(), 6);
+		TS_ASSERT_EQUALS(mdp->lights.size(), 0);
+		TS_ASSERT_EQUALS(mdp->textures.size(), 0);
+		TS_ASSERT_EQUALS(mdp->materials.size(), 1);
+		TS_ASSERT_EQUALS(mdp->materials[0].textures.size(), 1);
+		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
+		TS_ASSERT_EQUALS(mdp->nodes.size(), 1);
+		TS_ASSERT_EQUALS(mdp->nodes[0].transform, Matrix4x4f::identity());
+		TS_ASSERT_EQUALS(mdp->globalTransform, Matrix4x4f::identity());
+	}
+	void testColladaLoaderCircle( void ) {
+		//collada file with one circle
+		string circle = getString("circle");
+		MeshdataPtr mdp = loadMDP(circle);
+		
+		//asserts
+		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 1);
+		TS_ASSERT_EQUALS(mdp->getInstancedLightCount(), 0);
+		TS_ASSERT_EQUALS(mdp->getJointCount(), 0);
+		TS_ASSERT_EQUALS(mdp->geometry.size(), 1);
+		TS_ASSERT_EQUALS(mdp->geometry[0].primitives.size(), 1);
+		TS_ASSERT_EQUALS(mdp->geometry[0].primitives[0].indices.size(), 66);
+		TS_ASSERT_EQUALS(mdp->lights.size(), 0);
+		TS_ASSERT_EQUALS(mdp->textures.size(), 0);
+		TS_ASSERT_EQUALS(mdp->materials.size(), 1);
+		TS_ASSERT_EQUALS(mdp->materials[0].textures.size(), 1);
+		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
+		TS_ASSERT_EQUALS(mdp->nodes.size(), 1);
+		TS_ASSERT_EQUALS(mdp->nodes[0].transform, Matrix4x4f::identity());
+		TS_ASSERT_EQUALS(mdp->globalTransform, Matrix4x4f::identity());
+	}
+
+	void testColladaLoaderCircles( void ) {
+		//collada file with two distinct circles
+		string circles = getString("circles");
+		MeshdataPtr mdp = loadMDP(circles);
+		
+		//asserts
+		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 2);
+		TS_ASSERT_EQUALS(mdp->getInstancedLightCount(), 0);
+		TS_ASSERT_EQUALS(mdp->getJointCount(), 0);
+		TS_ASSERT_EQUALS(mdp->geometry.size(), 2);
+		for(int i = 0; i < mdp->geometry.size(); i++) {
+			TS_ASSERT_EQUALS(mdp->geometry[i].primitives.size(), 1);
+			TS_ASSERT_EQUALS(mdp->geometry[i].primitives[0].indices.size(), 66);
+		}
+		TS_ASSERT_EQUALS(mdp->lights.size(), 0);
+		TS_ASSERT_EQUALS(mdp->textures.size(), 0);
+		TS_ASSERT_EQUALS(mdp->materials.size(), 1);
+		TS_ASSERT_EQUALS(mdp->materials[0].textures.size(), 1);
+		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
+		TS_ASSERT_EQUALS(mdp->nodes.size(), 1);
+		TS_ASSERT_EQUALS(mdp->nodes[0].transform, Matrix4x4f::identity());
+		TS_ASSERT_EQUALS(mdp->globalTransform, Matrix4x4f::identity());
+	}
+
+	void testColladaLoaderCircles3d( void ) {
+		//collada file with two distinct intersecting circles in 3d
+		string circles3d = getString("circles3d");
+		MeshdataPtr mdp = loadMDP(circles3d);
+		
+		//asserts
+		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 2);
+		TS_ASSERT_EQUALS(mdp->getInstancedLightCount(), 0);
+		TS_ASSERT_EQUALS(mdp->getJointCount(), 0);
+		TS_ASSERT_EQUALS(mdp->geometry.size(), 2);
+		for(int i = 0; i < mdp->geometry.size(); i++) {
+			TS_ASSERT_EQUALS(mdp->geometry[i].primitives.size(), 1);
+			TS_ASSERT_EQUALS(mdp->geometry[i].primitives[0].indices.size(), 66);
+		}
+		TS_ASSERT_EQUALS(mdp->lights.size(), 0);
+		TS_ASSERT_EQUALS(mdp->textures.size(), 0);
+		TS_ASSERT_EQUALS(mdp->materials.size(), 1);
+		TS_ASSERT_EQUALS(mdp->materials[0].textures.size(), 1);
+		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
+		TS_ASSERT_EQUALS(mdp->nodes.size(), 1);
+		TS_ASSERT_EQUALS(mdp->nodes[0].transform, Matrix4x4f::identity());
+		TS_ASSERT_EQUALS(mdp->globalTransform, Matrix4x4f::identity());
+	}
+
+	void testColladaLoaderCylinders( void ) {
+		//collada file with two distinct cylinders
+		string cylinders = getString("cylinders");
+		MeshdataPtr mdp = loadMDP(cylinders);
+		
+		//asserts
+		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 2);
+		TS_ASSERT_EQUALS(mdp->getInstancedLightCount(), 0);
+		TS_ASSERT_EQUALS(mdp->getJointCount(), 0);
+		TS_ASSERT_EQUALS(mdp->geometry.size(), 2);
+		for(int i = 0; i < mdp->geometry.size(); i++) {
+			TS_ASSERT_EQUALS(mdp->geometry[i].primitives.size(), 1);
+			TS_ASSERT_EQUALS(mdp->geometry[i].primitives[0].indices.size(), 276);
+		}
+		TS_ASSERT_EQUALS(mdp->lights.size(), 0);
+		TS_ASSERT_EQUALS(mdp->textures.size(), 0);
+		TS_ASSERT_EQUALS(mdp->materials.size(), 1);
+		TS_ASSERT_EQUALS(mdp->materials[0].textures.size(), 1);
 		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
 		TS_ASSERT_EQUALS(mdp->nodes.size(), 1);
 		TS_ASSERT_EQUALS(mdp->nodes[0].transform, Matrix4x4f::identity());
@@ -193,10 +377,10 @@ public:
 	}
 	
 	
-	void getString(string name, string& thing) {
+	string getString(string name) {
+		string result;
 		//obtains string of information from the collada file rather than
 		//copying and directly placing the text in the file
-
 
 		// For now only support in-tree execution
         boost::filesystem::path collada_data_dir = boost::filesystem::path(Path::Get(Path::DIR_EXE));
@@ -209,15 +393,16 @@ public:
         ifstream fin ( (collada_data_dir / (name + ".dae")).string().c_str() );
         if (!fin) {
             TS_WARN("Unable to find COLLADA data.");
-            return;
+            return "";
         }
 
 		string temp;
 
 		do {
 			fin >> temp;
-			thing += temp + ' ';
+			result += temp + ' ';
 		}while(fin && temp != "</COLLADA>");
+		return result;
 	}
 	
 	MeshdataPtr loadMDP(string thing) {
