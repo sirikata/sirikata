@@ -183,7 +183,7 @@ public:
     ///call after construction to setup mSockets
     void initFromSockets(const std::vector<TCPSocket*>&sockets, size_t max_send_buffer_size);
     ///Sends the protocol headers to all ASIO socket wrappers when a known fully open connection has been listened for
-    static void sendAllProtocolHeaders(const MultiplexedSocketPtr& thus, const std::string&origin, const std::string&host, const std::string&port, const std::string&resource_name, const std::string&subprotocol, const std::map<TCPSocket*,std::string>& response, TCPStream::StreamType streamType);
+    static void sendAllProtocolHeaders(const MultiplexedSocketPtr& thus, const std::string&origin, const std::string&host, const std::string&port, const std::string&resource_name, const std::string&subprotocol,bool doSendSubProtocol, const std::map<TCPSocket*,std::string>& response, TCPStream::StreamType streamType);
     ///erase all sockets and callbacks since the refcount is now zero;
     ~MultiplexedSocket();
     ///a stream that has been closed and the other side has agreed not to send any more packets using that ID
