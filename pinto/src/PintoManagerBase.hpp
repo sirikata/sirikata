@@ -17,6 +17,8 @@
 
 #include "PintoManagerLocationServiceCache.hpp"
 
+#include <sirikata/pintoloc/BaseProxCommandable.hpp>
+
 namespace Sirikata {
 
 /** PintoManagerBase is the base class for classes the answer queries looking
@@ -26,7 +28,8 @@ namespace Sirikata {
  */
 class PintoManagerBase
     : public Service,
-      public Prox::AggregateListener<ServerProxSimulationTraits>
+      public Prox::AggregateListener<ServerProxSimulationTraits>,
+      Pinto::BaseProxCommandable
 {
 public:
     typedef Prox::Aggregator<ServerProxSimulationTraits> ProxAggregator;

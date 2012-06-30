@@ -240,7 +240,6 @@ protected:
 
     // PROX Thread - Should only be accessed in methods used by the
     // prox thread
-    Network::IOStrand* mProxStrand;
 
     CBRLocationServiceCache* mLocCache;
 
@@ -299,12 +298,6 @@ protected:
     virtual void aggregateObserved(const UUID& objid, uint32 nobservers);
     // Helper for updating aggregates
     void updateAggregateLoc(const UUID& objid, const Vector3f& pos, const AggregateBoundingInfo& bnds);
-
-    // Command handlers
-    virtual void commandProperties(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) = 0;
-    virtual void commandListHandlers(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) = 0;
-    virtual void commandForceRebuild(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) = 0;
-    virtual void commandListNodes(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) = 0;
 
 }; // class LibproxProximityBase
 

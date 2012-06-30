@@ -46,6 +46,7 @@
 #include <sirikata/space/ObjectHostSession.hpp>
 
 #include <sirikata/core/util/Factory.hpp>
+#include <sirikata/pintoloc/BaseProxCommandable.hpp>
 
 namespace Sirikata {
 
@@ -61,7 +62,8 @@ class SIRIKATA_SPACE_EXPORT Proximity :
         public ObjectSessionListener,
         public ObjectHostSessionListener,
         protected LocationServiceListener,
-        protected MessageRecipient
+        protected MessageRecipient,
+        public Pinto::BaseProxCommandable
 {
   public:
     Proximity(SpaceContext* ctx, LocationService* locservice, CoordinateSegmentation* cseg, SpaceNetwork* net, AggregateManager* aggmgr, const Duration& poll_freq);
@@ -126,6 +128,7 @@ class SIRIKATA_SPACE_EXPORT Proximity :
     // Thread safe:
 
     SpaceContext* mContext;
+    Network::IOStrand* mProxStrand;
 
     // NOTE: MAIN Thread access only unless you know the methods are
     // thread-safe

@@ -10,6 +10,8 @@
 #include "Protocol_MasterPinto.pbj.hpp"
 
 #include <sirikata/core/prox/QueryHandlerFactory.hpp>
+#include <sirikata/core/command/Commander.hpp>
+#include <boost/lexical_cast.hpp>
 
 using namespace Sirikata::Network;
 
@@ -125,6 +127,58 @@ void PintoManager::queryHasEvents(Query* query) {
 
     String serialized = serializePBJMessage(msg);
     stream->send( MemoryReference(serialized), ReliableOrdered );
+}
+
+
+
+
+// BaseProxCommandable
+void PintoManager::commandProperties(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {
+    Command::Result result = Command::EmptyResult();
+
+    result.put("name", "pinto-manager");
+    result.put("settings.handlers", 1);
+
+    result.put("servers.properties.count", mClients.size());
+    result.put("queries.servers.count", mClients.size());
+
+    cmdr->result(cmdid, result);
+}
+
+void PintoManager::commandListHandlers(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {
+    Command::Result result = Command::EmptyResult();
+    String key = String("handlers.servers.servers.");
+    result.put(key + "name", String("server-queries"));
+    result.put(key + "queries", mQueryHandler->numQueries());
+    result.put(key + "objects", mQueryHandler->numObjects());
+    result.put(key + "nodes", mQueryHandler->numNodes());
+    cmdr->result(cmdid, result);
+}
+
+void PintoManager::commandListNodes(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {
+    Command::Result result = Command::EmptyResult();
+
+    result.put( String("nodes"), Command::Array());
+    Command::Array& nodes_ary = result.getArray("nodes");
+    for(ProxQueryHandler::NodeIterator nit = mQueryHandler->nodesBegin(); nit != mQueryHandler->nodesEnd(); nit++) {
+        nodes_ary.push_back( Command::Object() );
+        nodes_ary.back().put("id", boost::lexical_cast<String>(nit.id()));
+        nodes_ary.back().put("parent", boost::lexical_cast<String>(nit.parentId()));
+        BoundingSphere3f bounds = nit.bounds(mContext->simTime());
+        nodes_ary.back().put("bounds.center.x", bounds.center().x);
+        nodes_ary.back().put("bounds.center.y", bounds.center().y);
+        nodes_ary.back().put("bounds.center.z", bounds.center().z);
+        nodes_ary.back().put("bounds.radius", bounds.radius());
+        nodes_ary.back().put("cuts", nit.cuts());
+    }
+
+    cmdr->result(cmdid, result);
+}
+
+void PintoManager::commandForceRebuild(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {
+    Command::Result result = Command::EmptyResult();
+    mQueryHandler->rebuild();
+    cmdr->result(cmdid, result);
 }
 
 } // namespace Sirikata

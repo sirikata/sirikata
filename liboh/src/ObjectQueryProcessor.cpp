@@ -10,6 +10,12 @@ AUTO_SINGLETON_INSTANCE(Sirikata::OH::ObjectQueryProcessorFactory);
 namespace Sirikata {
 namespace OH {
 
+ObjectQueryProcessor::ObjectQueryProcessor(Context* ctx)
+ : Pinto::BaseProxCommandable()
+{
+    registerBaseProxCommands(ctx, "oh.prox");
+}
+
 ObjectQueryProcessor::~ObjectQueryProcessor() {
 }
 

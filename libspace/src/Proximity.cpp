@@ -22,7 +22,9 @@ void ProximityFactory::destroy() {
 
 Proximity::Proximity(SpaceContext* ctx, LocationService* locservice, CoordinateSegmentation* cseg, SpaceNetwork* net, AggregateManager* aggmgr, const Duration& poll_freq)
  : PollingService(ctx->mainStrand, "Proximity Poll", poll_freq),
+   BaseProxCommandable(),
    mContext(ctx),
+   mProxStrand(ctx->ioService->createStrand("Proximity Prox Strand")),
    mLocService(locservice),
    mCSeg(cseg),
    mAggregateManager(aggmgr),
@@ -35,6 +37,8 @@ Proximity::Proximity(SpaceContext* ctx, LocationService* locservice, CoordinateS
    mTimeSeriesObjectHostQueryCountName(String("space.server") + boost::lexical_cast<String>(ctx->id()) + ".prox.object_host_queries"),
    mTimeSeriesServerQueryCountName(String("space.server") + boost::lexical_cast<String>(ctx->id()) + ".prox.server_queries")
 {
+    registerBaseProxCommands(ctx, "space.prox", mProxStrand);
+
     net->addListener(this);
     mLocService->addListener(this, false);
     mCSeg->addListener(this);
@@ -44,6 +48,8 @@ Proximity::Proximity(SpaceContext* ctx, LocationService* locservice, CoordinateS
 }
 
 Proximity::~Proximity() {
+    delete mProxStrand;
+
     mContext->ohSessionManager()->removeListener(this);
     mContext->objectSessionManager()->removeListener(this);
     mContext->serverDispatcher()->unregisterMessageRecipient(SERVER_PORT_PROX, this);

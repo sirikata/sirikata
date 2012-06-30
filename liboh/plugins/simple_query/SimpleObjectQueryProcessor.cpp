@@ -23,7 +23,8 @@ SimpleObjectQueryProcessor* SimpleObjectQueryProcessor::create(ObjectHostContext
 
 
 SimpleObjectQueryProcessor::SimpleObjectQueryProcessor(ObjectHostContext* ctx)
- : mContext(ctx)
+ : ObjectQueryProcessor(ctx),
+   mContext(ctx)
 {
 }
 
@@ -257,6 +258,32 @@ void SimpleObjectQueryProcessor::onOrphanLocUpdate(const LocUpdate& update, cons
     ProxyObjectPtr proxy_obj = proxy_manager->getProxyObject(observed);
     assert(proxy_obj);
     deliverLocationUpdate(ho, spaceobj, update);
+}
+
+
+
+
+// BaseProxCommandable
+void SimpleObjectQueryProcessor::commandProperties(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {
+    Command::Result result = Command::EmptyResult();
+    result.put("name", "simple");
+    result.put("settings", Command::Object());
+    cmdr->result(cmdid, result);
+}
+void SimpleObjectQueryProcessor::commandListHandlers(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {
+    Command::Result result = Command::EmptyResult();
+    result.put("handlers", Command::Object());
+    cmdr->result(cmdid, result);
+}
+void SimpleObjectQueryProcessor::commandListNodes(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {
+    Command::Result result = Command::EmptyResult();
+    result.put( String("nodes"), Command::Array());
+    cmdr->result(cmdid, result);
+}
+void SimpleObjectQueryProcessor::commandForceRebuild(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {
+    Command::Result result = Command::EmptyResult();
+    result.put("error", "Simple processors have nothing to rebuild.");
+    cmdr->result(cmdid, result);
 }
 
 } // namespace Simple

@@ -18,50 +18,11 @@ ManualObjectQueryProcessor* ManualObjectQueryProcessor::create(ObjectHostContext
 
 
 ManualObjectQueryProcessor::ManualObjectQueryProcessor(ObjectHostContext* ctx)
- : mContext(ctx),
+ : ObjectQueryProcessor(ctx),
+   mContext(ctx),
    mStrand(mContext->ioService->createStrand("ManualObjectQueryProcessor Strand")),
    mServerQueryHandler(ctx, this, mStrand)
 {
-    // Implementations may add more commands, but these should always be
-    // available. They get dispatched to the prox strand so implementations only
-    // need to worry about processing them.
-    if (mContext->commander()) {
-        // Get basic properties (both fixed and dynamic debugging
-        // state) about this query processor.
-        mContext->commander()->registerCommand(
-            "oh.prox.properties",
-            mStrand->wrap(
-                std::tr1::bind(&ManualObjectQueryProcessor::commandProperties, this, _1, _2, _3)
-            )
-        );
-
-        // Get a list of the handlers by name and their basic properties. The
-        // particular names and properties may be implementation dependent.
-        mContext->commander()->registerCommand(
-            "oh.prox.handlers",
-            mStrand->wrap(
-                std::tr1::bind(&ManualObjectQueryProcessor::commandListHandlers, this, _1, _2, _3)
-            )
-        );
-
-        // Get a list of nodes within one of the handlers. Must specify the
-        // handler name as part of the request
-        mContext->commander()->registerCommand(
-            "oh.prox.nodes",
-            mStrand->wrap(
-                std::tr1::bind(&ManualObjectQueryProcessor::commandListNodes, this, _1, _2, _3)
-            )
-        );
-
-        // Force a rebuild on one of the handlers. Must specify the handler name
-        // as part of the request.
-        mContext->commander()->registerCommand(
-            "oh.prox.rebuild",
-            mStrand->wrap(
-                std::tr1::bind(&ManualObjectQueryProcessor::commandForceRebuild, this, _1, _2, _3)
-            )
-        );
-    }
 }
 
 ManualObjectQueryProcessor::~ManualObjectQueryProcessor() {

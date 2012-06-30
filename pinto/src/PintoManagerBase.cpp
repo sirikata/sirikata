@@ -10,6 +10,8 @@
 #include <sirikata/core/network/Message.hpp> // parse/serializePBJMessage
 #include "Protocol_MasterPinto.pbj.hpp"
 
+#include <sirikata/core/command/Commander.hpp>
+
 using namespace Sirikata::Network;
 
 #define PINTO_LOG(lvl, msg) SILOG(pinto,lvl,msg)
@@ -17,9 +19,12 @@ using namespace Sirikata::Network;
 namespace Sirikata {
 
 PintoManagerBase::PintoManagerBase(PintoContext* ctx)
- : mContext(ctx),
+ : Pinto::BaseProxCommandable(),
+   mContext(ctx),
    mStrand(ctx->ioService->createStrand("PintoManager"))
 {
+    registerBaseProxCommands(ctx, "pinto.prox");
+
     String listener_protocol = GetOptionValue<String>(OPT_PINTO_PROTOCOL);
     String listener_protocol_options = GetOptionValue<String>(OPT_PINTO_PROTOCOL_OPTIONS);
 
