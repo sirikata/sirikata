@@ -33,6 +33,13 @@ void SimpleObjectQueryProcessor::start() {
 }
 
 void SimpleObjectQueryProcessor::stop() {
+    mContext->mainStrand->post(std::tr1::bind(&SimpleObjectQueryProcessor::handleStop, this));
+}
+
+
+void SimpleObjectQueryProcessor::handleStop() {
+    for(ObjectStateMap::iterator it = mObjectStateMap.begin(); it != mObjectStateMap.end(); it++)
+        it->second->stop();
 }
 
 void SimpleObjectQueryProcessor::presenceConnectedStream(HostedObjectPtr ho, const SpaceObjectReference& sporef, HostedObject::SSTStreamPtr strm) {

@@ -41,6 +41,8 @@ public:
     virtual void onOrphanLocUpdate(const SpaceObjectReference& observer, const LocUpdate& lu);
 
 private:
+    void handleStop();
+
     // Proximity
     void handleProximitySubstream(const HostedObjectWPtr &weakSelf, const SpaceObjectReference& spaceobj, int err, SSTStreamPtr s);
     void handleProximitySubstreamRead(const HostedObjectWPtr &weakSelf, const SpaceObjectReference& spaceobj, SSTStreamPtr s, String* prevdata, uint8* buffer, int length);
@@ -65,16 +67,25 @@ private:
     struct ObjectState {
         ObjectState(Context* ctx, HostedObjectPtr _ho)
          : ho(_ho),
-           orphans(ctx, ctx->mainStrand, Duration::seconds(10))
+           orphans(ctx, ctx->mainStrand, Duration::seconds(10)),
+           stopped(false)
         {
             orphans.start();
         }
         ~ObjectState() {
-            orphans.stop();
+            stop();
+        }
+
+        void stop() {
+            if (!stopped) {
+                orphans.stop();
+                stopped = true;
+            }
         }
 
         HostedObjectWPtr ho;
         OrphanLocUpdateManager orphans;
+        bool stopped;
     };
     typedef std::tr1::shared_ptr<ObjectState> ObjectStatePtr;
     typedef std::tr1::unordered_map<SpaceObjectReference, ObjectStatePtr, SpaceObjectReference::Hasher> ObjectStateMap;
