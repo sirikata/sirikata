@@ -491,13 +491,14 @@ void SQLiteStorage::stop() {
     // Just kill the work that keeps the IO thread alive and wait for thread to
     // finish, i.e. for outstanding transactions to complete. Stop the renewal
     // timer immediately to avoid having to wait for it to fire again (possibly
-    // locking things up until it does).
-    mRenewTimer->cancel();
+    // locking things up until it does). Note that we reset here instead of just
+    // canceling because we don't want to continue using the timer from the
+    // other thread, where we don't know that stop has been called.
+    mRenewTimer.reset();
 
     delete mWork;
     mWork = NULL;
     mThread->join();
-    mRenewTimer.reset();
     delete mThread;
     mThread = NULL;
     delete mIOService;
@@ -770,8 +771,12 @@ Storage::Result SQLiteStorage::acquireLease(const Bucket& bucket) {
         // we'll get back to this in time, but we'll make a best effort by
         // renewing after half the time has expired.
         mRenewTimes.push( BucketRenewTimeout(bucket, Timer::now() + (mLeaseDuration/2)) );
-        if (mRenewTimes.size() == 1)
-            mRenewTimer->wait(mLeaseDuration/2);
+        if (mRenewTimes.size() == 1) {
+            // The timer can be reset() by the other thread during stop(), so we
+            // need to make a copy here to ensure we call wait() on a non-NULL.
+            Network::IOTimerPtr renew_timer = mRenewTimer;
+            if (renew_timer) renew_timer->wait(mLeaseDuration/2);
+        }
     }
 
     // And finally, if we got here then we either had or acquired the
@@ -918,8 +923,12 @@ void SQLiteStorage::processRenewals() {
         mRenewTimes.pop();
     }
 
-    if (!mRenewTimes.empty())
-        mRenewTimer->wait(mRenewTimes.front().t - tnow);
+    if (!mRenewTimes.empty()) {
+        // The timer can be reset() by the other thread during stop(), so we
+        // need to make a copy here to ensure we call wait() on a non-NULL.
+        Network::IOTimerPtr renew_timer = mRenewTimer;
+        if (renew_timer) renew_timer->wait(mRenewTimes.front().t - tnow);
+    }
 }
 
 
