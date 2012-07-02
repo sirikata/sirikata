@@ -82,6 +82,11 @@ private:
     Network::IOCallback mCB; // Our callback, just saves us from reconstructing it all the time
     Network::IOCallback mUserCB; // The user's callback
     const char* mCBTag;
+
+#if SIRIKATA_DEBUG
+    // Track +1 on start(), -1 on stop()
+    int8 mPollerRunCount;
+#endif
 }; // class Poller
 
 } // namespace Sirikata
