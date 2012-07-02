@@ -377,10 +377,7 @@ void ObjectQueryHandler::handleCreatedReplicatedIndex(ProxIndexID iid, Replicate
     handler->setAggregateListener(this); // *Must* be before handler->initialize
     handler->initialize(
         loc_cache.get(), loc_cache.get(),
-        !dynamic_objects, true /* replicated */,
-        /* FIXME handlerShouldHandleObject should always return true, we
-           shouldn't need to specify it */
-        std::tr1::bind(&ObjectQueryHandler::handlerShouldHandleObject, this, _1, _2, _3, _4, _5, _6)
+        !dynamic_objects, true /* replicated */
     );
 
     mObjectQueryHandlers[iid] = ReplicatedIndexQueryHandler(handler, loc_cache, objects_from_server, dynamic_objects);
@@ -626,12 +623,6 @@ void ObjectQueryHandler::handleRemoveObjectQuery(const ObjectReference& object, 
 void ObjectQueryHandler::handleDisconnectedObject(const ObjectReference& object) {
     // Clear out query state if it exists
     handleRemoveObjectQuery(object, false);
-}
-
-bool ObjectQueryHandler::handlerShouldHandleObject(const ObjectReference& obj_id, bool is_local, bool is_aggregate, const TimedMotionVector3f& pos, const BoundingSphere3f& region, float maxSize) {
-    // We're dealing with replicated trees -- we should *always* handle the
-    // object.
-    return true;
 }
 
 

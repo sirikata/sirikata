@@ -141,9 +141,6 @@ private:
     // Generate query events based on results collected from query handlers
     void generateObjectQueryEvents(Query* query);
 
-    // Decides whether a query handler should handle a particular object.
-    bool handlerShouldHandleObject(const ObjectReference& obj_id, bool local, bool aggregate, const TimedMotionVector3f& pos, const BoundingSphere3f& region, float maxSize);
-
     typedef std::set<ObjectReference> ObjectSet;
     typedef std::tr1::unordered_map<ProxIndexID, Query*> IndexQueryMap;
     // A single object query may have queries registered against many query
