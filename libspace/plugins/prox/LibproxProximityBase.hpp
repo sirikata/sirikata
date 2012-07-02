@@ -35,7 +35,7 @@ public:
     virtual void localBoundsUpdated(const UUID& uuid, bool agg, const AggregateBoundingInfo& newval);
 
 protected:
-    typedef Prox::QueryEvent<UUIDProxSimulationTraits> QueryEvent;
+    typedef Prox::QueryEvent<ObjectProxSimulationTraits> QueryEvent;
     typedef std::deque<QueryEvent> QueryEventList;
 
     // Helper types & methods
@@ -248,12 +248,12 @@ protected:
     // disconnect) and time (to process them efficiently as their timeouts
     // expire).
     struct StaticObjectTimeout {
-        StaticObjectTimeout(UUID id, Time _expires, bool l)
+        StaticObjectTimeout(ObjectReference id, Time _expires, bool l)
          : objid(id),
            expires(_expires),
            local(l)
         {}
-        UUID objid;
+        ObjectReference objid;
         Time expires;
         bool local;
     };
@@ -263,7 +263,7 @@ protected:
     typedef boost::multi_index_container<
         StaticObjectTimeout,
         boost::multi_index::indexed_by<
-            boost::multi_index::ordered_unique< boost::multi_index::tag<objid_tag>, BOOST_MULTI_INDEX_MEMBER(StaticObjectTimeout,UUID,objid) >,
+            boost::multi_index::ordered_unique< boost::multi_index::tag<objid_tag>, BOOST_MULTI_INDEX_MEMBER(StaticObjectTimeout,ObjectReference,objid) >,
             boost::multi_index::ordered_non_unique< boost::multi_index::tag<expires_tag>, BOOST_MULTI_INDEX_MEMBER(StaticObjectTimeout,Time,expires) >
             >
         > StaticObjectTimeouts;
@@ -281,23 +281,23 @@ protected:
     virtual void handleConnectedServer(ServerID sid);
     virtual void handleDisconnectedServer(ServerID sid);
 
-    void removeStaticObjectTimeout(const UUID& objid);
-    virtual void trySwapHandlers(bool is_local, const UUID& objid, bool is_static) = 0;
-    void handleCheckObjectClass(bool is_local, const UUID& objid, const TimedMotionVector3f& newval);
+    void removeStaticObjectTimeout(const ObjectReference& objid);
+    virtual void trySwapHandlers(bool is_local, const ObjectReference& objid, bool is_static) = 0;
+    void handleCheckObjectClass(bool is_local, const ObjectReference& objid, const TimedMotionVector3f& newval);
     void processExpiredStaticObjectTimeouts();
 
     // Query-Type-Agnostic AggregateListener Interface -- manages adding to Loc
     // and passing to AggregateManager, but you need to delegate to these
     // yourself since the AggregateListener interface depends on the type of
     // query/query handler being used.
-    virtual void aggregateCreated(const UUID& objid);
-    virtual void aggregateChildAdded(const UUID& objid, const UUID& child, const Vector3f& pos, const AggregateBoundingInfo& bnds);
-    virtual void aggregateChildRemoved(const UUID& objid, const UUID& child, const Vector3f& pos, const AggregateBoundingInfo& bnds);
-    virtual void aggregateBoundsUpdated(const UUID& objid, const Vector3f& pos, const AggregateBoundingInfo& bnds);
-    virtual void aggregateDestroyed(const UUID& objid);
-    virtual void aggregateObserved(const UUID& objid, uint32 nobservers);
+    virtual void aggregateCreated(const ObjectReference& objid);
+    virtual void aggregateChildAdded(const ObjectReference& objid, const ObjectReference& child, const Vector3f& pos, const AggregateBoundingInfo& bnds);
+    virtual void aggregateChildRemoved(const ObjectReference& objid, const ObjectReference& child, const Vector3f& pos, const AggregateBoundingInfo& bnds);
+    virtual void aggregateBoundsUpdated(const ObjectReference& objid, const Vector3f& pos, const AggregateBoundingInfo& bnds);
+    virtual void aggregateDestroyed(const ObjectReference& objid);
+    virtual void aggregateObserved(const ObjectReference& objid, uint32 nobservers);
     // Helper for updating aggregates
-    void updateAggregateLoc(const UUID& objid, const Vector3f& pos, const AggregateBoundingInfo& bnds);
+    void updateAggregateLoc(const ObjectReference& objid, const Vector3f& pos, const AggregateBoundingInfo& bnds);
 
 }; // class LibproxProximityBase
 

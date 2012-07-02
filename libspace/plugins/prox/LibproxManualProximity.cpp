@@ -37,7 +37,7 @@ LibproxManualProximity::LibproxManualProximity(SpaceContext* ctx, LocationServic
             mOHQueryHandler[i].handler = NULL;
             continue;
         }
-        mOHQueryHandler[i].handler = new Prox::RTreeManualQueryHandler<UUIDProxSimulationTraits>(10);
+        mOHQueryHandler[i].handler = new Prox::RTreeManualQueryHandler<ObjectProxSimulationTraits>(10);
         mOHQueryHandler[i].handler->setAggregateListener(this); // *Must* be before handler->initialize
         bool object_static_objects = (mSeparateDynamicObjects && i == OBJECT_CLASS_STATIC);
         mOHQueryHandler[i].handler->initialize(
@@ -110,7 +110,7 @@ void LibproxManualProximity::onPintoServerResult(const Sirikata::Protocol::Prox:
 void LibproxManualProximity::localObjectRemoved(const UUID& uuid, bool agg) {
     LibproxProximityBase::localObjectRemoved(uuid, agg);
     mProxStrand->post(
-        std::tr1::bind(&LibproxManualProximity::removeStaticObjectTimeout, this, uuid),
+        std::tr1::bind(&LibproxManualProximity::removeStaticObjectTimeout, this, ObjectReference(uuid)),
         "LibproxManualProximity::removeStaticObjectTimeout"
     );
 }
@@ -120,7 +120,7 @@ void LibproxManualProximity::localLocationUpdated(const UUID& uuid, bool agg, co
 }
 void LibproxManualProximity::replicaObjectRemoved(const UUID& uuid) {
     mProxStrand->post(
-        std::tr1::bind(&LibproxManualProximity::removeStaticObjectTimeout, this, uuid),
+        std::tr1::bind(&LibproxManualProximity::removeStaticObjectTimeout, this, ObjectReference(uuid)),
         "LibproxManualProximity::removeStaticObjectTimeout"
     );
 }
@@ -219,34 +219,34 @@ int32 LibproxManualProximity::objectHostQueries() const {
 
 // PROX Thread
 
-void LibproxManualProximity::aggregateCreated(ProxAggregator* handler, const UUID& objid) {
+void LibproxManualProximity::aggregateCreated(ProxAggregator* handler, const ObjectReference& objid) {
     // We ignore aggregates built of dynamic objects, they aren't useful for
     // creating aggregate meshes
     if (!static_cast<ProxQueryHandler*>(handler)->staticOnly()) return;
     LibproxProximityBase::aggregateCreated(objid);
 }
 
-void LibproxManualProximity::aggregateChildAdded(ProxAggregator* handler, const UUID& objid, const UUID& child, const Vector3f& bnds_center, const float32 bnds_center_radius, const float32 max_obj_size) {
+void LibproxManualProximity::aggregateChildAdded(ProxAggregator* handler, const ObjectReference& objid, const ObjectReference& child, const Vector3f& bnds_center, const float32 bnds_center_radius, const float32 max_obj_size) {
     if (!static_cast<ProxQueryHandler*>(handler)->staticOnly()) return;
     LibproxProximityBase::aggregateChildAdded(objid, child, bnds_center, AggregateBoundingInfo(Vector3f::zero(), bnds_center_radius, max_obj_size));
 }
 
-void LibproxManualProximity::aggregateChildRemoved(ProxAggregator* handler, const UUID& objid, const UUID& child, const Vector3f& bnds_center, const float32 bnds_center_radius, const float32 max_obj_size) {
+void LibproxManualProximity::aggregateChildRemoved(ProxAggregator* handler, const ObjectReference& objid, const ObjectReference& child, const Vector3f& bnds_center, const float32 bnds_center_radius, const float32 max_obj_size) {
     if (!static_cast<ProxQueryHandler*>(handler)->staticOnly()) return;
     LibproxProximityBase::aggregateChildRemoved(objid, child, bnds_center, AggregateBoundingInfo(Vector3f::zero(), bnds_center_radius, max_obj_size));
 }
 
-void LibproxManualProximity::aggregateBoundsUpdated(ProxAggregator* handler, const UUID& objid, const Vector3f& bnds_center, const float32 bnds_center_radius, const float32 max_obj_size) {
+void LibproxManualProximity::aggregateBoundsUpdated(ProxAggregator* handler, const ObjectReference& objid, const Vector3f& bnds_center, const float32 bnds_center_radius, const float32 max_obj_size) {
     if (!static_cast<ProxQueryHandler*>(handler)->staticOnly()) return;
     LibproxProximityBase::aggregateBoundsUpdated(objid, bnds_center, AggregateBoundingInfo(Vector3f::zero(), bnds_center_radius, max_obj_size));
 }
 
-void LibproxManualProximity::aggregateDestroyed(ProxAggregator* handler, const UUID& objid) {
+void LibproxManualProximity::aggregateDestroyed(ProxAggregator* handler, const ObjectReference& objid) {
     if (!static_cast<ProxQueryHandler*>(handler)->staticOnly()) return;
     LibproxProximityBase::aggregateDestroyed(objid);
 }
 
-void LibproxManualProximity::aggregateObserved(ProxAggregator* handler, const UUID& objid, uint32 nobservers) {
+void LibproxManualProximity::aggregateObserved(ProxAggregator* handler, const ObjectReference& objid, uint32 nobservers) {
     if (!static_cast<ProxQueryHandler*>(handler)->staticOnly()) return;
     LibproxProximityBase::aggregateObserved(objid, nobservers);
 }
@@ -344,10 +344,10 @@ void LibproxManualProximity::handleObjectHostProxMessage(const OHDP::NodeID& id,
             return;
         }
         json::Array json_nodes = query_params.getArray("nodes");
-        std::vector<UUID> refine_nodes;
+        std::vector<ObjectReference> refine_nodes;
         BOOST_FOREACH(json::Value& v, json_nodes) {
             if (!v.isString()) return;
-            refine_nodes.push_back(UUID(v.getString(), UUID::HumanReadable()));
+            refine_nodes.push_back(ObjectReference(v.getString()));
         }
 
         for(int kls = 0; kls < NUM_OBJECT_CLASSES; kls++) {
@@ -368,10 +368,10 @@ void LibproxManualProximity::handleObjectHostProxMessage(const OHDP::NodeID& id,
             return;
         }
         json::Array json_nodes = query_params.getArray("nodes");
-        std::vector<UUID> coarsen_nodes;
+        std::vector<ObjectReference> coarsen_nodes;
         BOOST_FOREACH(json::Value& v, json_nodes) {
             if (!v.isString()) return;
-            coarsen_nodes.push_back(UUID(v.getString(), UUID::HumanReadable()));
+            coarsen_nodes.push_back(ObjectReference(v.getString()));
         }
 
         for(int kls = 0; kls < NUM_OBJECT_CLASSES; kls++) {
@@ -417,7 +417,7 @@ void LibproxManualProximity::destroyQuery(const OHDP::NodeID& id) {
 
 
 
-bool LibproxManualProximity::handlerShouldHandleObject(bool is_static_handler, bool is_global_handler, const UUID& obj_id, bool is_local, bool is_aggregate, const TimedMotionVector3f& pos, const BoundingSphere3f& region, float maxSize) {
+bool LibproxManualProximity::handlerShouldHandleObject(bool is_static_handler, bool is_global_handler, const ObjectReference& obj_id, bool is_local, bool is_aggregate, const TimedMotionVector3f& pos, const BoundingSphere3f& region, float maxSize) {
     // We just need to decide whether the query handler should handle
     // the object. We need to consider local vs. replica and static
     // vs. dynamic.  All must 'vote' for handling the object for us to
@@ -443,7 +443,7 @@ bool LibproxManualProximity::handlerShouldHandleObject(bool is_static_handler, b
 }
 
 
-void LibproxManualProximity::handleCheckObjectClassForHandlers(const UUID& objid, bool is_static, ProxQueryHandlerData handlers[NUM_OBJECT_CLASSES]) {
+void LibproxManualProximity::handleCheckObjectClassForHandlers(const ObjectReference& objid, bool is_static, ProxQueryHandlerData handlers[NUM_OBJECT_CLASSES]) {
     if ( (is_static && handlers[OBJECT_CLASS_STATIC].handler->containsObject(objid)) ||
         (!is_static && handlers[OBJECT_CLASS_DYNAMIC].handler->containsObject(objid)) )
         return;
@@ -462,7 +462,7 @@ void LibproxManualProximity::handleCheckObjectClassForHandlers(const UUID& objid
     handlers[swap_in].additions.insert(objid);
 }
 
-void LibproxManualProximity::trySwapHandlers(bool is_local, const UUID& objid, bool is_static) {
+void LibproxManualProximity::trySwapHandlers(bool is_local, const ObjectReference& objid, bool is_static) {
     handleCheckObjectClassForHandlers(objid, is_static, mOHQueryHandler);
 }
 
@@ -507,8 +507,9 @@ void LibproxManualProximity::queryHasEvents(ProxQuery* query) {
             index_props.set_id(evt.indexID());
 
             for(uint32 aidx = 0; aidx < evt.additions().size(); aidx++) {
-                UUID objid = evt.additions()[aidx].id();
-                if (mLocCache->tracking(objid)) { // If the cache already lost it, we can't do anything
+                ObjectReference oobjid = evt.additions()[aidx].id();
+                UUID objid = oobjid.getAsUUID();
+                if (mLocCache->tracking(oobjid)) { // If the cache already lost it, we can't do anything
                     count++;
 
                     mContext->mainStrand->post(
@@ -527,27 +528,27 @@ void LibproxManualProximity::queryHasEvents(ProxQuery* query) {
 
 
                     Sirikata::Protocol::ITimedMotionVector motion = addition.mutable_location();
-                    TimedMotionVector3f loc = mLocCache->location(objid);
+                    TimedMotionVector3f loc = mLocCache->location(oobjid);
                     motion.set_t(loc.updateTime());
                     motion.set_position(loc.position());
                     motion.set_velocity(loc.velocity());
 
-                    TimedMotionQuaternion orient = mLocCache->orientation(objid);
+                    TimedMotionQuaternion orient = mLocCache->orientation(oobjid);
                     Sirikata::Protocol::ITimedMotionQuaternion msg_orient = addition.mutable_orientation();
                     msg_orient.set_t(orient.updateTime());
                     msg_orient.set_position(orient.position());
                     msg_orient.set_velocity(orient.velocity());
 
                     Sirikata::Protocol::IAggregateBoundingInfo msg_bounds = addition.mutable_aggregate_bounds();
-                    AggregateBoundingInfo bnds = mLocCache->bounds(objid);
+                    AggregateBoundingInfo bnds = mLocCache->bounds(oobjid);
                     msg_bounds.set_center_offset(bnds.centerOffset);
                     msg_bounds.set_center_bounds_radius(bnds.centerBoundsRadius);
                     msg_bounds.set_max_object_size(bnds.maxObjectRadius);
 
-                    const String& mesh = mLocCache->mesh(objid);
+                    const String& mesh = mLocCache->mesh(oobjid);
                     if (mesh.size() > 0)
                         addition.set_mesh(mesh);
-                    const String& phy = mLocCache->physics(objid);
+                    const String& phy = mLocCache->physics(oobjid);
                     if (phy.size() > 0)
                         addition.set_physics(phy);
 
@@ -556,9 +557,9 @@ void LibproxManualProximity::queryHasEvents(ProxQuery* query) {
                     // properties. However, we only need to include the details
                     // if this is the first time we're seeing the root, in which
                     // case we'll get a lone addition of the root.
-                    UUID parentid = evt.additions()[aidx].parent();
-                    if (parentid != UUID::null()) {
-                        addition.set_parent(parentid);
+                    ObjectReference parentid = evt.additions()[aidx].parent();
+                    if (parentid != ObjectReference::null()) {
+                        addition.set_parent(parentid.getAsUUID());
                     }
                     else if (/*lone addition*/ aidx == 0 && evt.additions().size() == 1 && evt.removals().size() == 0) {
                         // We need to figure out which query handler this came
@@ -601,7 +602,8 @@ void LibproxManualProximity::queryHasEvents(ProxQuery* query) {
                 }
             }
             for(uint32 ridx = 0; ridx < evt.removals().size(); ridx++) {
-                UUID objid = evt.removals()[ridx].id();
+                ObjectReference oobjid = evt.removals()[ridx].id();
+                UUID objid = oobjid.getAsUUID();
                 count++;
                 // Clear out seqno and let main strand remove loc
                 // subcription

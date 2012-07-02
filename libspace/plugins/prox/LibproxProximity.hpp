@@ -48,16 +48,16 @@ class ProximityOutputEvent;
 
 class LibproxProximity :
         public LibproxProximityBase,
-        Prox::QueryEventListener<UUIDProxSimulationTraits, Prox::Query<UUIDProxSimulationTraits> >,
-        Prox::AggregateListener<UUIDProxSimulationTraits>
+        Prox::QueryEventListener<ObjectProxSimulationTraits, Prox::Query<ObjectProxSimulationTraits> >,
+        Prox::AggregateListener<ObjectProxSimulationTraits>
 {
 private:
-    typedef Prox::QueryHandler<UUIDProxSimulationTraits> ProxQueryHandler;
-    typedef Prox::Aggregator<UUIDProxSimulationTraits> ProxAggregator;
+    typedef Prox::QueryHandler<ObjectProxSimulationTraits> ProxQueryHandler;
+    typedef Prox::Aggregator<ObjectProxSimulationTraits> ProxAggregator;
 public:
     // MAIN Thread: All public interface is expected to be called only from the main thread.
-    typedef Prox::Query<UUIDProxSimulationTraits> Query;
-    typedef Prox::QueryEvent<UUIDProxSimulationTraits> QueryEvent;
+    typedef Prox::Query<ObjectProxSimulationTraits> Query;
+    typedef Prox::QueryEvent<ObjectProxSimulationTraits> QueryEvent;
 
     LibproxProximity(SpaceContext* ctx, LocationService* locservice, CoordinateSegmentation* cseg, SpaceNetwork* net, AggregateManager* aggmgr);
     ~LibproxProximity();
@@ -98,12 +98,12 @@ public:
     // PROX Thread:
 
     // AggregateListener Interface
-    virtual void aggregateCreated(ProxAggregator* handler, const UUID& objid);
-    virtual void aggregateChildAdded(ProxAggregator* handler, const UUID& objid, const UUID& child, const Vector3f& bnds_center, const float32 bnds_center_radius, const float32 max_obj_size);
-    virtual void aggregateChildRemoved(ProxAggregator* handler, const UUID& objid, const UUID& child, const Vector3f& bnds_center, const float32 bnds_center_radius, const float32 max_obj_size);
-    virtual void aggregateBoundsUpdated(ProxAggregator* handler, const UUID& objid, const Vector3f& bnds_center, const float32 bnds_center_radius, const float32 max_obj_size);
-    virtual void aggregateDestroyed(ProxAggregator* handler, const UUID& objid);
-    virtual void aggregateObserved(ProxAggregator* handler, const UUID& objid, uint32 nobservers);
+    virtual void aggregateCreated(ProxAggregator* handler, const ObjectReference& objid);
+    virtual void aggregateChildAdded(ProxAggregator* handler, const ObjectReference& objid, const ObjectReference& child, const Vector3f& bnds_center, const float32 bnds_center_radius, const float32 max_obj_size);
+    virtual void aggregateChildRemoved(ProxAggregator* handler, const ObjectReference& objid, const ObjectReference& child, const Vector3f& bnds_center, const float32 bnds_center_radius, const float32 max_obj_size);
+    virtual void aggregateBoundsUpdated(ProxAggregator* handler, const ObjectReference& objid, const Vector3f& bnds_center, const float32 bnds_center_radius, const float32 max_obj_size);
+    virtual void aggregateDestroyed(ProxAggregator* handler, const ObjectReference& objid);
+    virtual void aggregateObserved(ProxAggregator* handler, const ObjectReference& objid, uint32 nobservers);
 
     // QueryEventListener Interface
     void queryHasEvents(Query* query);
@@ -168,10 +168,10 @@ private:
     void generateObjectQueryEvents(Query* query, bool do_first=false);
 
     // Decides whether a query handler should handle a particular object.
-    bool handlerShouldHandleObject(bool is_static_handler, bool is_global_handler, const UUID& obj_id, bool local, bool aggregate, const TimedMotionVector3f& pos, const BoundingSphere3f& region, float maxSize);
+    bool handlerShouldHandleObject(bool is_static_handler, bool is_global_handler, const ObjectReference& obj_id, bool local, bool aggregate, const TimedMotionVector3f& pos, const BoundingSphere3f& region, float maxSize);
     // The real handler for moving objects between static/dynamic
-    void handleCheckObjectClassForHandlers(const UUID& objid, bool is_static, ProxQueryHandlerData handlers[NUM_OBJECT_CLASSES]);
-    virtual void trySwapHandlers(bool is_local, const UUID& objid, bool is_static);
+    void handleCheckObjectClassForHandlers(const ObjectReference& objid, bool is_static, ProxQueryHandlerData handlers[NUM_OBJECT_CLASSES]);
+    virtual void trySwapHandlers(bool is_local, const ObjectReference& objid, bool is_static);
 
     /**
        @param {uuid} obj_id The uuid of the object that we're sending proximity
@@ -250,7 +250,7 @@ private:
     virtual void commandForceRebuild(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
     virtual void commandListNodes(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
 
-    typedef std::tr1::unordered_set<UUID, UUID::Hasher> ObjectIDSet;
+    typedef std::tr1::unordered_set<ObjectReference, ObjectReference::Hasher> ObjectIDSet;
     struct ProxQueryHandlerData {
         ProxQueryHandler* handler;
         // Additions and removals that need to be processed on the

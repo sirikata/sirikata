@@ -48,9 +48,9 @@ namespace Sirikata {
  * work happens in the proximity thread, with the callbacks just storing
  * information to be picked up in the next iteration.
  */
-class CBRLocationServiceCache : public Prox::LocationServiceCache<UUIDProxSimulationTraits>, public LocationServiceListener {
+class CBRLocationServiceCache : public Prox::LocationServiceCache<ObjectProxSimulationTraits>, public LocationServiceListener {
 public:
-    typedef Prox::LocationUpdateListener<UUIDProxSimulationTraits> LocationUpdateListener;
+    typedef Prox::LocationUpdateListener<ObjectProxSimulationTraits> LocationUpdateListener;
 
     /** Constructs a CBRLocationServiceCache which caches entries from locservice.  If
      *  replicas is true, then it caches replica entries from locservice, in addition
@@ -81,7 +81,7 @@ public:
     Prox::ZernikeDescriptor& zernikeDescriptor(const Iterator& id);
     String mesh(const Iterator& id);
 
-    virtual const UUID& iteratorID(const Iterator& id);
+    virtual const ObjectReference& iteratorID(const Iterator& id);
 
     virtual void addUpdateListener(LocationUpdateListener* listener);
     virtual void removeUpdateListener(LocationUpdateListener* listener);
@@ -145,13 +145,13 @@ private:
     // on. Although we now have to lock in these, we put them on the strand
     // instead of processing directly in the methods above so that they don't
     // block any other work.
-    void processObjectAdded(const UUID& uuid, ObjectData data);
-    void processObjectRemoved(const UUID& uuid, bool agg);
-    void processLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval);
-    void processOrientationUpdated(const UUID& uuid, bool agg, const TimedMotionQuaternion& newval);
-    void processBoundsUpdated(const UUID& uuid, bool agg, const AggregateBoundingInfo& newval);
-    void processMeshUpdated(const UUID& uuid, bool agg, const String& newval);
-    void processPhysicsUpdated(const UUID& uuid, bool agg, const String& newval);
+    void processObjectAdded(const ObjectReference& uuid, ObjectData data);
+    void processObjectRemoved(const ObjectReference& uuid, bool agg);
+    void processLocationUpdated(const ObjectReference& uuid, bool agg, const TimedMotionVector3f& newval);
+    void processOrientationUpdated(const ObjectReference& uuid, bool agg, const TimedMotionQuaternion& newval);
+    void processBoundsUpdated(const ObjectReference& uuid, bool agg, const AggregateBoundingInfo& newval);
+    void processMeshUpdated(const ObjectReference& uuid, bool agg, const String& newval);
+    void processPhysicsUpdated(const ObjectReference& uuid, bool agg, const String& newval);
 
 
     CBRLocationServiceCache();
@@ -166,7 +166,7 @@ private:
     typedef std::set<LocationUpdateListener*> ListenerSet;
     ListenerSet mListeners;
 
-    typedef std::tr1::unordered_map<UUID, ObjectData, UUID::Hasher> ObjectDataMap;
+    typedef std::tr1::unordered_map<ObjectReference, ObjectData, ObjectReference::Hasher> ObjectDataMap;
     ObjectDataMap mObjects;
     bool mWithReplicas;
 
@@ -176,10 +176,10 @@ private:
     // iterator because the iterator can become invalidated due to ordering of
     // events in the prox thread.
     struct IteratorData {
-        IteratorData(const UUID& _objid, ObjectDataMap::iterator _it)
+        IteratorData(const ObjectReference& _objid, ObjectDataMap::iterator _it)
          : objid(_objid), it(_it) {}
 
-        const UUID objid;
+        const ObjectReference objid;
         ObjectDataMap::iterator it;
     };
 

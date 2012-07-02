@@ -34,7 +34,7 @@
 
 namespace Sirikata {
 
-typedef Prox::LocationServiceCache<UUIDProxSimulationTraits> LocationServiceCache;
+typedef Prox::LocationServiceCache<ObjectProxSimulationTraits> LocationServiceCache;
 
 CBRLocationServiceCache::CBRLocationServiceCache(Network::IOStrand* strand, LocationService* locservice, bool replicas)
  : LocationServiceCache(),
@@ -69,12 +69,12 @@ void CBRLocationServiceCache::addPlaceholderImposter(
     AggregateBoundingInfo bounds(Vector3f(0, 0, 0), center_bounds_radius, max_size);
     String phy;
     objectAdded(
-        uuid, true, true, loc, orient, bounds, mesh, phy, zernike
+        uuid.getAsUUID(), true, true, loc, orient, bounds, mesh, phy, zernike
     );
 }
 
 
-LocationServiceCache::Iterator CBRLocationServiceCache::startTracking(const UUID& id) {
+LocationServiceCache::Iterator CBRLocationServiceCache::startTracking(const ObjectReference& id) {
     Lock lck(mMutex);
 
     ObjectDataMap::iterator it = mObjects.find(id);
@@ -105,7 +105,7 @@ void CBRLocationServiceCache::stopTracking(const Iterator& id) {
     tryRemoveObject(it);
 }
 
-bool CBRLocationServiceCache::tracking(const UUID& id) {
+bool CBRLocationServiceCache::tracking(const ObjectReference& id) {
     Lock lck(mMutex);
 
     return (mObjects.find(id) != mObjects.end());
@@ -173,7 +173,7 @@ bool CBRLocationServiceCache::isLocal(const Iterator& id) {
 }
 
 
-const UUID& CBRLocationServiceCache::iteratorID(const Iterator& id) {
+const ObjectReference& CBRLocationServiceCache::iteratorID(const Iterator& id) {
     // NOTE: Only accesses via iterator, shouldn't need a lock
     IteratorData* itdat = (IteratorData*)id.data;
     ObjectDataMap::iterator it = itdat->it;
@@ -311,13 +311,13 @@ void CBRLocationServiceCache::objectAdded(const UUID& uuid, bool islocal, bool a
     mStrand->post(
         std::tr1::bind(
             &CBRLocationServiceCache::processObjectAdded, this,
-            uuid, data
+            ObjectReference(uuid), data
         ),
         "CBRLocationServiceCache::processObjectAdded"
     );
 }
 
-void CBRLocationServiceCache::processObjectAdded(const UUID& uuid, ObjectData data) {
+void CBRLocationServiceCache::processObjectAdded(const ObjectReference& uuid, ObjectData data) {
     Lock lck(mMutex);
 
     if (mObjects.find(uuid) != mObjects.end())
@@ -336,13 +336,13 @@ void CBRLocationServiceCache::objectRemoved(const UUID& uuid, bool agg) {
     mStrand->post(
         std::tr1::bind(
             &CBRLocationServiceCache::processObjectRemoved, this,
-            uuid, agg
+            ObjectReference(uuid), agg
         ),
         "CBRLocationServiceCache::processObjectRemoved"
     );
 }
 
-void CBRLocationServiceCache::processObjectRemoved(const UUID& uuid, bool agg) {
+void CBRLocationServiceCache::processObjectRemoved(const ObjectReference& uuid, bool agg) {
     Lock lck(mMutex);
 
     ObjectDataMap::iterator data_it = mObjects.find(uuid);
@@ -362,13 +362,13 @@ void CBRLocationServiceCache::locationUpdated(const UUID& uuid, bool agg, const 
     mStrand->post(
         std::tr1::bind(
             &CBRLocationServiceCache::processLocationUpdated, this,
-            uuid, agg, newval
+            ObjectReference(uuid), agg, newval
         ),
         "CBRLocationServiceCache::processLocationUpdated"
     );
 }
 
-void CBRLocationServiceCache::processLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval) {
+void CBRLocationServiceCache::processLocationUpdated(const ObjectReference& uuid, bool agg, const TimedMotionVector3f& newval) {
     Lock lck(mMutex);
 
     ObjectDataMap::iterator it = mObjects.find(uuid);
@@ -386,13 +386,13 @@ void CBRLocationServiceCache::orientationUpdated(const UUID& uuid, bool agg, con
     mStrand->post(
         std::tr1::bind(
             &CBRLocationServiceCache::processOrientationUpdated, this,
-            uuid, agg, newval
+            ObjectReference(uuid), agg, newval
         ),
         "CBRLocationServiceCache::processOrientationUpdated"
     );
 }
 
-void CBRLocationServiceCache::processOrientationUpdated(const UUID& uuid, bool agg, const TimedMotionQuaternion& newval) {
+void CBRLocationServiceCache::processOrientationUpdated(const ObjectReference& uuid, bool agg, const TimedMotionQuaternion& newval) {
     Lock lck(mMutex);
 
     ObjectDataMap::iterator it = mObjects.find(uuid);
@@ -405,13 +405,13 @@ void CBRLocationServiceCache::boundsUpdated(const UUID& uuid, bool agg, const Ag
     mStrand->post(
         std::tr1::bind(
             &CBRLocationServiceCache::processBoundsUpdated, this,
-            uuid, agg, newval
+            ObjectReference(uuid), agg, newval
         ),
         "CBRLocationServiceCache::processBoundsUpdated"
     );
 }
 
-void CBRLocationServiceCache::processBoundsUpdated(const UUID& uuid, bool agg, const AggregateBoundingInfo& newval) {
+void CBRLocationServiceCache::processBoundsUpdated(const ObjectReference& uuid, bool agg, const AggregateBoundingInfo& newval) {
     Lock lck(mMutex);
 
     ObjectDataMap::iterator it = mObjects.find(uuid);
@@ -432,13 +432,13 @@ void CBRLocationServiceCache::meshUpdated(const UUID& uuid, bool agg, const Stri
     mStrand->post(
         std::tr1::bind(
             &CBRLocationServiceCache::processMeshUpdated, this,
-            uuid, agg, newval
+            ObjectReference(uuid), agg, newval
         ),
         "CBRLocationServiceCache::processMeshUpdated"
     );
 }
 
-void CBRLocationServiceCache::processMeshUpdated(const UUID& uuid, bool agg, const String& newval) {
+void CBRLocationServiceCache::processMeshUpdated(const ObjectReference& uuid, bool agg, const String& newval) {
     Lock lck(mMutex);
 
     ObjectDataMap::iterator it = mObjects.find(uuid);
@@ -451,13 +451,13 @@ void CBRLocationServiceCache::physicsUpdated(const UUID& uuid, bool agg, const S
     mStrand->post(
         std::tr1::bind(
             &CBRLocationServiceCache::processPhysicsUpdated, this,
-            uuid, agg, newval
+            ObjectReference(uuid), agg, newval
         ),
         "CBRLocationServiceCache::processPhysicsUpdated"
     );
 }
 
-void CBRLocationServiceCache::processPhysicsUpdated(const UUID& uuid, bool agg, const String& newval) {
+void CBRLocationServiceCache::processPhysicsUpdated(const ObjectReference& uuid, bool agg, const String& newval) {
     Lock lck(mMutex);
 
     ObjectDataMap::iterator it = mObjects.find(uuid);

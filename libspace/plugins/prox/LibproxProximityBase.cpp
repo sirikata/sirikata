@@ -259,14 +259,14 @@ void LibproxProximityBase::coalesceEvents(QueryEventList& evts, uint32 per_event
         assert(qhiid == evt.indexID());
 
         for(uint32 aidx = 0; aidx < evt.additions().size(); aidx++) {
-            UUID objid = evt.additions()[aidx].id();
+            UUID objid = evt.additions()[aidx].id().getAsUUID();
             if (removals.find(objid) != removals.end())
                 removals.erase(objid);
             else
                 additions.insert(std::make_pair(objid, evt.additions()[aidx]));
         }
         for(uint32 ridx = 0; ridx < evt.removals().size(); ridx++) {
-            UUID objid = evt.removals()[ridx].id();
+            UUID objid = evt.removals()[ridx].id().getAsUUID();
             if (additions.find(objid) != additions.end())
                 additions.erase(objid);
             else
@@ -563,7 +563,7 @@ void LibproxProximityBase::handleRemoveAllServerLocSubscription(const ServerID& 
 
 void LibproxProximityBase::checkObjectClass(bool is_local, const UUID& objid, const TimedMotionVector3f& newval) {
     mProxStrand->post(
-        std::tr1::bind(&LibproxProximityBase::handleCheckObjectClass, this, is_local, objid, newval),
+        std::tr1::bind(&LibproxProximityBase::handleCheckObjectClass, this, is_local, ObjectReference(objid), newval),
         "LibproxProximityBase::handleCheckObjectClass"
     );
 }
@@ -580,13 +580,13 @@ void LibproxProximityBase::handleDisconnectedServer(ServerID sid) {
 }
 
 
-void LibproxProximityBase::aggregateCreated(const UUID& objid) {
+void LibproxProximityBase::aggregateCreated(const ObjectReference& objid) {
     // On addition, an "aggregate" will have no children, i.e. its zero sized.
 
     mContext->mainStrand->post(
         std::tr1::bind(
             &LocationService::addLocalAggregateObject, mLocService,
-            objid,
+            objid.getAsUUID(),
             TimedMotionVector3f(mContext->simTime(), MotionVector3f()),
             TimedMotionQuaternion(mContext->simTime(), MotionQuaternion()),
             AggregateBoundingInfo(),
@@ -596,10 +596,10 @@ void LibproxProximityBase::aggregateCreated(const UUID& objid) {
         "LocationService::addLocalAggregateObject"
     );
 
-    mAggregateManager->addAggregate(objid);
+    mAggregateManager->addAggregate(objid.getAsUUID());
 }
 
-void LibproxProximityBase::aggregateChildAdded(const UUID& objid, const UUID& child, const Vector3f& pos, const AggregateBoundingInfo& bnds) {
+void LibproxProximityBase::aggregateChildAdded(const ObjectReference& objid, const ObjectReference& child, const Vector3f& pos, const AggregateBoundingInfo& bnds) {
     // FIXME the AggregateBoundingInfo is wrong here because we don't get all
     // the information we need about the aggregate.
     mContext->mainStrand->post(
@@ -610,10 +610,10 @@ void LibproxProximityBase::aggregateChildAdded(const UUID& objid, const UUID& ch
         "LibproxProximityBase::updateAggregateLoc"
     );
 
-    mAggregateManager->addChild(objid, child);
+    mAggregateManager->addChild(objid.getAsUUID(), child.getAsUUID());
 }
 
-void LibproxProximityBase::aggregateChildRemoved(const UUID& objid, const UUID& child, const Vector3f& pos, const AggregateBoundingInfo& bnds) {
+void LibproxProximityBase::aggregateChildRemoved(const ObjectReference& objid, const ObjectReference& child, const Vector3f& pos, const AggregateBoundingInfo& bnds) {
     // Loc cares only about this chance to update state of aggregate
     // FIXME the AggregateBoundingInfo is wrong here because we don't get all
     // the information we need about the aggregate.
@@ -625,10 +625,10 @@ void LibproxProximityBase::aggregateChildRemoved(const UUID& objid, const UUID& 
         "LibproxProximityBase::updateAggregateLoc"
     );
 
-    mAggregateManager->removeChild(objid, child);
+    mAggregateManager->removeChild(objid.getAsUUID(), child.getAsUUID());
 }
 
-void LibproxProximityBase::aggregateBoundsUpdated(const UUID& objid, const Vector3f& pos, const AggregateBoundingInfo& bnds) {
+void LibproxProximityBase::aggregateBoundsUpdated(const ObjectReference& objid, const Vector3f& pos, const AggregateBoundingInfo& bnds) {
     mContext->mainStrand->post(
         std::tr1::bind(
             &LibproxProximityBase::updateAggregateLoc, this,
@@ -637,26 +637,26 @@ void LibproxProximityBase::aggregateBoundsUpdated(const UUID& objid, const Vecto
         "LibproxProximityBase::updateAggregateLoc"
     );
 
-    mAggregateManager->generateAggregateMesh(objid, Duration::seconds(300.0+rand()%300));
+    mAggregateManager->generateAggregateMesh(objid.getAsUUID(), Duration::seconds(300.0+rand()%300));
 }
 
-void LibproxProximityBase::aggregateDestroyed(const UUID& objid) {
+void LibproxProximityBase::aggregateDestroyed(const ObjectReference& objid) {
     mContext->mainStrand->post(
         std::tr1::bind(
-            &LocationService::removeLocalAggregateObject, mLocService, objid
+            &LocationService::removeLocalAggregateObject, mLocService, objid.getAsUUID()
         ),
         "LocationService::removeLocalAggregateObject"
     );
-    mAggregateManager->removeAggregate(objid);
+    mAggregateManager->removeAggregate(objid.getAsUUID());
 }
 
-void LibproxProximityBase::aggregateObserved(const UUID& objid, uint32 nobservers) {
-    mAggregateManager->aggregateObserved(objid, nobservers);
+void LibproxProximityBase::aggregateObserved(const ObjectReference& objid, uint32 nobservers) {
+    mAggregateManager->aggregateObserved(objid.getAsUUID(), nobservers);
 }
 
 
 
-void LibproxProximityBase::removeStaticObjectTimeout(const UUID& objid) {
+void LibproxProximityBase::removeStaticObjectTimeout(const ObjectReference& objid) {
     StaticObjectsByID& by_id = mStaticObjectTimeouts.get<objid_tag>();
     StaticObjectsByID::iterator it = by_id.find(objid);
     if (it == by_id.end()) return;
@@ -674,7 +674,7 @@ void LibproxProximityBase::processExpiredStaticObjectTimeouts() {
     }
 }
 
-void LibproxProximityBase::handleCheckObjectClass(bool is_local, const UUID& objid, const TimedMotionVector3f& newval) {
+void LibproxProximityBase::handleCheckObjectClass(bool is_local, const ObjectReference& objid, const TimedMotionVector3f& newval) {
     assert(mSeparateDynamicObjects == true);
 
     // Basic approach: we need to check if the object has switched between
@@ -700,16 +700,17 @@ void LibproxProximityBase::handleCheckObjectClass(bool is_local, const UUID& obj
 
 
 // MAIN strand
-void LibproxProximityBase::updateAggregateLoc(const UUID& objid, const Vector3f& pos, const AggregateBoundingInfo& bnds) {
-    if (mLocService->contains(objid) &&
-        (mLocService->location(objid).position() != pos || mLocService->bounds(objid) != bnds))
+void LibproxProximityBase::updateAggregateLoc(const ObjectReference& objid, const Vector3f& pos, const AggregateBoundingInfo& bnds) {
+    UUID objid_uuid = objid.getAsUUID();
+    if (mLocService->contains(objid_uuid) &&
+        (mLocService->location(objid_uuid).position() != pos || mLocService->bounds(objid_uuid) != bnds))
     {
         mLocService->updateLocalAggregateLocation(
-            objid,
+            objid_uuid,
             TimedMotionVector3f(mContext->simTime(), MotionVector3f(pos, Vector3f(0,0,0)))
         );
         mLocService->updateLocalAggregateBounds(
-            objid,
+            objid_uuid,
             bnds
         );
     }

@@ -20,15 +20,15 @@ namespace Sirikata {
  */
 class LibproxManualProximity :
         public LibproxProximityBase,
-        Prox::AggregateListener<UUIDProxSimulationTraits>,
-        Prox::QueryEventListener<UUIDProxSimulationTraits, Prox::ManualQuery<UUIDProxSimulationTraits> >,
+        Prox::AggregateListener<ObjectProxSimulationTraits>,
+        Prox::QueryEventListener<ObjectProxSimulationTraits, Prox::ManualQuery<ObjectProxSimulationTraits> >,
         Pinto::Manual::ReplicatedClientWithID<ServerID>::Parent
 {
 private:
-    typedef Prox::ManualQueryHandler<UUIDProxSimulationTraits> ProxQueryHandler;
-    typedef Prox::Aggregator<UUIDProxSimulationTraits> ProxAggregator;
-    typedef Prox::ManualQuery<UUIDProxSimulationTraits> ProxQuery;
-    typedef Prox::QueryEvent<UUIDProxSimulationTraits> ProxQueryEvent;
+    typedef Prox::ManualQueryHandler<ObjectProxSimulationTraits> ProxQueryHandler;
+    typedef Prox::Aggregator<ObjectProxSimulationTraits> ProxAggregator;
+    typedef Prox::ManualQuery<ObjectProxSimulationTraits> ProxQuery;
+    typedef Prox::QueryEvent<ObjectProxSimulationTraits> ProxQueryEvent;
 
     typedef std::pair<OHDP::NodeID, Sirikata::Protocol::Object::ObjectMessage*> OHResult;
 public:
@@ -71,12 +71,12 @@ public:
     // PROX Thread:
 
     // AggregateListener Interface
-    virtual void aggregateCreated(ProxAggregator* handler, const UUID& objid);
-    virtual void aggregateChildAdded(ProxAggregator* handler, const UUID& objid, const UUID& child, const Vector3f& bnds_center, const float32 bnds_center_radius, const float32 max_obj_size);
-    virtual void aggregateChildRemoved(ProxAggregator* handler, const UUID& objid, const UUID& child, const Vector3f& bnds_center, const float32 bnds_center_radius, const float32 max_obj_size);
-    virtual void aggregateBoundsUpdated(ProxAggregator* handler, const UUID& objid, const Vector3f& bnds_center, const float32 bnds_center_radius, const float32 max_obj_size);
-    virtual void aggregateDestroyed(ProxAggregator* handler, const UUID& objid);
-    virtual void aggregateObserved(ProxAggregator* handler, const UUID& objid, uint32 nobservers);
+    virtual void aggregateCreated(ProxAggregator* handler, const ObjectReference& objid);
+    virtual void aggregateChildAdded(ProxAggregator* handler, const ObjectReference& objid, const ObjectReference& child, const Vector3f& bnds_center, const float32 bnds_center_radius, const float32 max_obj_size);
+    virtual void aggregateChildRemoved(ProxAggregator* handler, const ObjectReference& objid, const ObjectReference& child, const Vector3f& bnds_center, const float32 bnds_center_radius, const float32 max_obj_size);
+    virtual void aggregateBoundsUpdated(ProxAggregator* handler, const ObjectReference& objid, const Vector3f& bnds_center, const float32 bnds_center_radius, const float32 max_obj_size);
+    virtual void aggregateDestroyed(ProxAggregator* handler, const ObjectReference& objid);
+    virtual void aggregateObserved(ProxAggregator* handler, const ObjectReference& objid, uint32 nobservers);
 
     // QueryEventListener Interface
     void queryHasEvents(ProxQuery* query);
@@ -131,10 +131,10 @@ private:
     void destroyQuery(const OHDP::NodeID& id);
 
     // Decides whether a query handler should handle a particular object.
-    bool handlerShouldHandleObject(bool is_static_handler, bool is_global_handler, const UUID& obj_id, bool is_local, bool is_aggregate, const TimedMotionVector3f& pos, const BoundingSphere3f& region, float maxSize);
+    bool handlerShouldHandleObject(bool is_static_handler, bool is_global_handler, const ObjectReference& obj_id, bool is_local, bool is_aggregate, const TimedMotionVector3f& pos, const BoundingSphere3f& region, float maxSize);
     // The real handler for moving objects between static/dynamic
-    void handleCheckObjectClassForHandlers(const UUID& objid, bool is_static, ProxQueryHandlerData handlers[NUM_OBJECT_CLASSES]);
-    virtual void trySwapHandlers(bool is_local, const UUID& objid, bool is_static);
+    void handleCheckObjectClassForHandlers(const ObjectReference& objid, bool is_static, ProxQueryHandlerData handlers[NUM_OBJECT_CLASSES]);
+    virtual void trySwapHandlers(bool is_local, const ObjectReference& objid, bool is_static);
 
     SeqNoPtr getSeqNoInfo(const OHDP::NodeID& node);
     void eraseSeqNoInfo(const OHDP::NodeID& node);
@@ -149,7 +149,7 @@ private:
     typedef std::tr1::unordered_map<OHDP::NodeID, ProxQuery*, OHDP::NodeID::Hasher> OHQueryMap;
     typedef std::tr1::unordered_map<ProxQuery*, OHDP::NodeID> InvertedOHQueryMap;
 
-    typedef std::tr1::unordered_set<UUID, UUID::Hasher> ObjectIDSet;
+    typedef std::tr1::unordered_set<ObjectReference, ObjectReference::Hasher> ObjectIDSet;
     struct ProxQueryHandlerData {
         ProxQueryHandler* handler;
         // Additions and removals that need to be processed on the

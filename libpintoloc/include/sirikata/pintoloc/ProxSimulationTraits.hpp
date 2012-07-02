@@ -41,14 +41,6 @@ public:
     typedef ObjectReference::Random ObjectIDRandomType;
 };
 
-class SIRIKATA_LIBPINTOLOC_EXPORT UUIDProxSimulationTraits : public ProxSimulationTraits {
-public:
-    typedef UUID ObjectIDType;
-    typedef UUID::Hasher ObjectIDHasherType;
-    typedef UUID::Null ObjectIDNullType;
-    typedef UUID::Random ObjectIDRandomType;
-};
-
 } // namespace Sirikata
 
 #endif //_SIRIKATA_LIBPINTOLOC_PROX_SIMULATION_TRAITS_HPP_
