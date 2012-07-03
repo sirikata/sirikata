@@ -96,7 +96,8 @@ private:
 
         bool aggregate;
 
-        bool tracking;
+        int16 tracking; // Refcount for multiple users -- query
+                        // handlers and generating results
         bool removable;
     };
 
