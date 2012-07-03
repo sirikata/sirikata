@@ -98,6 +98,17 @@ private:
     redisAsyncContext* mRedisContext;
     boost::asio::posix::stream_descriptor* mRedisFD; // Wrapped hiredis file descriptor
     bool mReading, mWriting;
+
+    // Read and write events can happen concurrently and can generate callbacks
+    // for either type (i.e. when we get a notice that the redis file descriptor
+    // can read and call redisAsyncHandleRead, that can invoke both read and
+    // write callbacks) and as far as I can tell hiredis isn't thread safe at
+    // all. To protect hiredis, we need to add locks in some methods
+    // (e.g. lookup) around just the redis command even though all the other
+    // data is safe since these commands are known to come from only one strand
+    typedef boost::recursive_mutex Mutex;
+    typedef boost::lock_guard<Mutex> Lock;
+    Mutex mMutex;
 };
 
 } // namespace Sirikata
