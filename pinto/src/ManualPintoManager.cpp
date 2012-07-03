@@ -96,8 +96,10 @@ void ManualPintoManager::onQueryUpdate(Stream* stream, const String& data) {
 
         json::Array json_nodes = query_params.getArray("nodes");
         BOOST_FOREACH(json::Value& v, json_nodes) {
-            if (!v.isInt()) continue;
-            cdata.query->refine((ServerID)v.getInt());
+            // The values have been converted to object IDs as
+            // strings, we need to convert them back to server IDs
+            if (!v.isString()) continue;
+            cdata.query->refine((ServerID)(UUID(v.getString(),UUID::HumanReadable()).asUInt32()));
         }
     }
     else if (action == "coarsen") {
@@ -106,8 +108,9 @@ void ManualPintoManager::onQueryUpdate(Stream* stream, const String& data) {
         json::Array json_nodes = query_params.getArray("nodes");
         std::vector<UUID> coarsen_nodes;
         BOOST_FOREACH(json::Value& v, json_nodes) {
-            if (!v.isInt()) continue;
-            cdata.query->coarsen((ServerID)v.getInt());
+            // See above note about format
+            if (!v.isString()) continue;
+            cdata.query->coarsen((ServerID)(UUID(v.getString(),UUID::HumanReadable()).asUInt32()));
         }
     }
 }
