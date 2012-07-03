@@ -929,7 +929,7 @@ void LibproxProximity::generateServerQueryEvents(Query* query) {
                     msg_bounds.set_center_bounds_radius(bnds.centerBoundsRadius);
                     msg_bounds.set_max_object_size(bnds.maxObjectRadius);
 
-                    const String& mesh = mLocCache->mesh(oobjid);
+                    String mesh = mLocCache->mesh(oobjid).toString();
                     if (mesh.size() > 0)
                         addition.set_mesh(mesh);
                     const String& phy = mLocCache->physics(oobjid);
@@ -1048,7 +1048,7 @@ void LibproxProximity::generateObjectQueryEvents(Query* query, bool do_first) {
                     msg_bounds.set_center_bounds_radius(bnds.centerBoundsRadius);
                     msg_bounds.set_max_object_size(bnds.maxObjectRadius);
 
-                    const String& mesh = mLocCache->mesh(oobjid);
+                    String mesh = mLocCache->mesh(oobjid).toString();
                     if (mesh.size() > 0)
                         addition.set_mesh(mesh);
                     const String& phy = mLocCache->physics(oobjid);

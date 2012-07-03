@@ -37,7 +37,7 @@ namespace Sirikata {
 typedef Prox::LocationServiceCache<ObjectProxSimulationTraits> LocationServiceCache;
 
 CBRLocationServiceCache::CBRLocationServiceCache(Network::IOStrand* strand, LocationService* locservice, bool replicas)
- : LocationServiceCache(),
+ : ExtendedLocationServiceCache(),
    LocationServiceListener(),
    mStrand(strand),
    mLoc(locservice),
@@ -199,27 +199,27 @@ void CBRLocationServiceCache::removeUpdateListener(LocationUpdateListener* liste
     ObjectDataMap::const_iterator it = mObjects.find(id);       \
     assert(it != mObjects.end())
 
-const TimedMotionVector3f& CBRLocationServiceCache::location(const ObjectID& id) const {
+TimedMotionVector3f CBRLocationServiceCache::location(const ObjectID& id) {
     GET_OBJ_ENTRY(id); // NOTE: should only be accessed by prox thread, shouldn't need lock
     return it->second.location;
 }
 
-const TimedMotionQuaternion& CBRLocationServiceCache::orientation(const ObjectID& id) const {
+TimedMotionQuaternion CBRLocationServiceCache::orientation(const ObjectID& id) {
     GET_OBJ_ENTRY(id); // NOTE: should only be accessed by prox thread, shouldn't need lock
     return it->second.orientation;
 }
 
-const AggregateBoundingInfo& CBRLocationServiceCache::bounds(const ObjectID& id) const {
+AggregateBoundingInfo CBRLocationServiceCache::bounds(const ObjectID& id) {
     GET_OBJ_ENTRY(id); // NOTE: should only be accessed by prox thread, shouldn't need lock
     return it->second.bounds;
 }
 
-const String& CBRLocationServiceCache::mesh(const ObjectID& id) const {
+Transfer::URI CBRLocationServiceCache::mesh(const ObjectID& id) {
     GET_OBJ_ENTRY(id); // NOTE: should only be accessed by prox thread, shouldn't need lock
-    return it->second.mesh;
+    return Transfer::URI(it->second.mesh);
 }
 
-const String& CBRLocationServiceCache::physics(const ObjectID& id) const {
+String CBRLocationServiceCache::physics(const ObjectID& id) {
     GET_OBJ_ENTRY(id); // NOTE: should only be accessed by prox thread, shouldn't need lock
     return it->second.physics;
 }

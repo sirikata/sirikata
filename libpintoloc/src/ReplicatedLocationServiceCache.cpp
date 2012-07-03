@@ -10,14 +10,14 @@ namespace Sirikata {
 typedef Prox::LocationServiceCache<ObjectProxSimulationTraits> LocationServiceCache;
 
 ReplicatedLocationServiceCache::ReplicatedLocationServiceCache(Network::IOStrandPtr strand)
- : LocationServiceCache(),
+ : ExtendedLocationServiceCache(),
    mStrand(strand.get()),
    mListeners(),
    mObjects()
 {
 }
 ReplicatedLocationServiceCache::ReplicatedLocationServiceCache(Network::IOStrand* strand)
- : LocationServiceCache(),
+ : ExtendedLocationServiceCache(),
    mStrand(strand),
    mListeners(),
    mObjects()

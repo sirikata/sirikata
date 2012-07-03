@@ -33,10 +33,11 @@
 #ifndef _SIRIKATA_CBR_LOCATION_SERVICE_CACHE_HPP_
 #define _SIRIKATA_CBR_LOCATION_SERVICE_CACHE_HPP_
 
-#include <sirikata/pintoloc/ProxSimulationTraits.hpp>
-#include <sirikata/space/LocationService.hpp>
+#include <sirikata/pintoloc/ExtendedLocationServiceCache.hpp>
 #include <prox/base/LocationServiceCache.hpp>
 #include <prox/base/ZernikeDescriptor.hpp>
+#include <sirikata/space/LocationService.hpp>
+#include <boost/thread.hpp>
 
 namespace Sirikata {
 
@@ -48,7 +49,10 @@ namespace Sirikata {
  * work happens in the proximity thread, with the callbacks just storing
  * information to be picked up in the next iteration.
  */
-class CBRLocationServiceCache : public Prox::LocationServiceCache<ObjectProxSimulationTraits>, public LocationServiceListener {
+class CBRLocationServiceCache :
+        public ExtendedLocationServiceCache,
+        public LocationServiceListener
+{
 public:
     typedef Prox::LocationUpdateListener<ObjectProxSimulationTraits> LocationUpdateListener;
 
@@ -71,7 +75,8 @@ public:
     virtual Iterator startTracking(const ObjectID& id);
     virtual void stopTracking(const Iterator& id);
 
-    bool tracking(const ObjectID& id);
+    // ExtendLocationServiceCache
+    virtual bool tracking(const ObjectID& id);
 
     virtual TimedMotionVector3f location(const Iterator& id);
     virtual Vector3f centerOffset(const Iterator& id);
@@ -86,12 +91,13 @@ public:
     virtual void addUpdateListener(LocationUpdateListener* listener);
     virtual void removeUpdateListener(LocationUpdateListener* listener);
 
+    // ExtendLocationServiceCache
     // We also provide accessors by ID for Proximity generate results.
-    const TimedMotionVector3f& location(const ObjectID& id) const;
-    const TimedMotionQuaternion& orientation(const ObjectID& id) const;
-    const AggregateBoundingInfo& bounds(const ObjectID& id) const;
-    const String& mesh(const ObjectID& id) const;
-    const String& physics(const ObjectID& id) const;
+    TimedMotionVector3f location(const ObjectID& id);
+    TimedMotionQuaternion orientation(const ObjectID& id);
+    AggregateBoundingInfo bounds(const ObjectID& id);
+    Transfer::URI mesh(const ObjectID& id);
+    String physics(const ObjectID& id);
 
     const bool isAggregate(const ObjectID& id) const;
 

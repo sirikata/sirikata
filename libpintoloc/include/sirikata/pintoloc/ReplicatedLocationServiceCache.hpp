@@ -5,9 +5,7 @@
 #ifndef _SIRIKATA_LIBPINTO_REPLICATED_LOCATION_SERVICE_CACHE_HPP_
 #define _SIRIKATA_LIBPINTO_REPLICATED_LOCATION_SERVICE_CACHE_HPP_
 
-#include <sirikata/pintoloc/Platform.hpp>
-#include <sirikata/pintoloc/ProxSimulationTraits.hpp>
-#include <prox/base/LocationServiceCache.hpp>
+#include <sirikata/pintoloc/ExtendedLocationServiceCache.hpp>
 #include <prox/base/ZernikeDescriptor.hpp>
 #include <sirikata/core/util/PresenceProperties.hpp>
 #include <sirikata/pintoloc/ReplicatedLocationUpdateListener.hpp>
@@ -36,7 +34,7 @@ typedef std::tr1::shared_ptr<ReplicatedLocationServiceCache> ReplicatedLocationS
  *  ensure the (non-thread-safe) data remains consistent when reported.
  */
 class SIRIKATA_LIBPINTOLOC_EXPORT ReplicatedLocationServiceCache :
-        public Prox::LocationServiceCache<ObjectProxSimulationTraits>,
+        public ExtendedLocationServiceCache,
         public ReplicatedLocationUpdateProvider
 {
 public:
@@ -95,7 +93,8 @@ public:
     bool startSimpleTracking(const ObjectID& id);
     void stopSimpleTracking(const ObjectID& id);
 
-    bool tracking(const ObjectID& id);
+    // ExtendedLocationServiceCache
+    virtual bool tracking(const ObjectID& id);
 
     virtual TimedMotionVector3f location(const Iterator& id);
     virtual Vector3f centerOffset(const Iterator& id);
@@ -110,15 +109,14 @@ public:
     virtual void addUpdateListener(LocationUpdateListener* listener);
     virtual void removeUpdateListener(LocationUpdateListener* listener);
 
+    // ExtendedLocationServiceCache + a few others
     // We also provide accessors by ID for Proximity generate results.
-    // Note: as with the LocationServiceCache interface, these return values to
-    // allow for thread-safety.
     uint64 epoch(const ObjectID& id);
-    TimedMotionVector3f location(const ObjectID& id);
-    TimedMotionQuaternion orientation(const ObjectID& id);
-    AggregateBoundingInfo bounds(const ObjectID& id);
-    Transfer::URI mesh(const ObjectID& id);
-    String physics(const ObjectID& id);
+    virtual TimedMotionVector3f location(const ObjectID& id);
+    virtual TimedMotionQuaternion orientation(const ObjectID& id);
+    virtual AggregateBoundingInfo bounds(const ObjectID& id);
+    virtual Transfer::URI mesh(const ObjectID& id);
+    String virtual physics(const ObjectID& id);
     ObjectReference parent(const ObjectID& id);
     bool aggregate(const ObjectID& id);
     // And raw access to the underlying SequencedPresenceProperties
