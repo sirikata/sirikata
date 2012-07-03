@@ -243,7 +243,30 @@ void ObjectQueryHandler::aggregateObserved(ProxAggregator* handler, const Object
 
 
 ObjectQueryHandler::ProxQueryHandler* ObjectQueryHandler::getQueryHandler(const String& handler_name) {
-    ProxIndexID iid = boost::lexical_cast<ProxIndexID>(handler_name);
+    // We really just need to extract the ProxIndexID from the handler name of
+    // the form "snid.object-queries.fromserver-indexid-staticdynamic", e.g.
+    // "12345678-1111-1111-1111-defa01759ace:1.object-queries.0-5.static-objects"
+
+    // Should be of the form xxx-queries.yyy-objects, containing only 1 .
+    std::size_t dot_pos = handler_name.find('.');
+    if (dot_pos == String::npos) return NULL;
+    std::size_t dot2_pos = handler_name.find('.', dot_pos+1);
+    if (dot2_pos == String::npos) return NULL;
+    std::size_t dot3_pos = handler_name.find('.', dot2_pos+1);
+    if (dot3_pos == String::npos) return NULL;
+
+    //String snid_part = handler_name.substr(0, dot_pos);
+    //String query_type_part = name.substr(dot_pos+1, dot2_pos-dot_pos);
+    String tree_id_part = handler_name.substr(dot2_pos+1, dot3_pos-dot2_pos-1);
+    // Now, within the tree part, after the '-' is the ProxIndexID. We don't
+    // need the other part becuase within this ObjectQueryHandler it is the same
+    // for all handlers
+    std::size_t dash_pos = tree_id_part.find('-');
+    if (dash_pos == String::npos) return NULL;
+
+    String iid_part = tree_id_part.substr(dash_pos+1);
+
+    ProxIndexID iid = boost::lexical_cast<ProxIndexID>(iid_part);
     ReplicatedIndexQueryHandlerMap::iterator it = mObjectQueryHandlers.find(iid);
     if (it != mObjectQueryHandlers.end())
         return it->second.handler;
@@ -254,8 +277,10 @@ void ObjectQueryHandler::commandListInfo(const OHDP::SpaceNodeID& snid, Command:
     for(ReplicatedIndexQueryHandlerMap::iterator it = mObjectQueryHandlers.begin(); it != mObjectQueryHandlers.end(); it++) {
         String key = String("handlers.object.") + boost::lexical_cast<String>(it->first) + ".";
         result.put(key + "name",
+            // Server we're communicating wih, performing object queries
             snid.toString() + "." + String("object-queries.") +
-            boost::lexical_cast<String>(it->second.from) + "-" + (it->second.dynamic ? "dynamic" : "static") +
+            // The server the tree is replicated from - the index ID - static/dynamic
+            boost::lexical_cast<String>(it->second.from) + "-" + boost::lexical_cast<String>(it->first) + "."+ (it->second.dynamic ? "dynamic" : "static") +
             "-objects");
         result.put(key + "queries", it->second.handler->numQueries());
         result.put(key + "objects", it->second.handler->numObjects());
@@ -271,6 +296,7 @@ void ObjectQueryHandler::commandListNodes(const Command::Command& cmd, Command::
     if (handler == NULL) {
         result.put("error", "Ill-formatted request: handler not specified or invalid.");
         cmdr->result(cmdid, result);
+        return;
     }
 
     result.put( String("nodes"), Command::Array());
