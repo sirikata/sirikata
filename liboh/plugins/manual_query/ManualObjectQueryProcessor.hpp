@@ -64,8 +64,8 @@ public:
 
     // ObjectQueryHandler callbacks - handle notifications about local queries
     // in the tree so we know how to move the cut on the space server up or down.
-    void queriersAreObserving(const OHDP::SpaceNodeID& snid, const ObjectReference& objid);
-    void queriersStoppedObserving(const OHDP::SpaceNodeID& snid, const ObjectReference& objid);
+    void queriersAreObserving(const OHDP::SpaceNodeID& snid, const ProxIndexID indexid, const ObjectReference& objid);
+    void queriersStoppedObserving(const OHDP::SpaceNodeID& snid, const ProxIndexID indexid, const ObjectReference& objid);
 
     // ObjectQueryProcessor callbacks - Handle results coming back for queries
     void deliverProximityResult(const SpaceObjectReference& sporef, const Sirikata::Protocol::Prox::ProximityUpdate& update);

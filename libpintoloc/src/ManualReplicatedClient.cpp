@@ -40,10 +40,11 @@ String destroyRequest() {
     return json::write(req);
 }
 
-String refineRequest(const std::vector<ObjectReference>& aggs) {
+String refineRequest(const ProxIndexID proxid, const std::vector<ObjectReference>& aggs) {
     namespace json = json_spirit;
     json::Value req = json::Object();
     req.put("action", "refine");
+    req.put("index", proxid);
     req.put("nodes", json::Array());
     json::Array& nodes = req.getArray("nodes");
     for(uint32 i = 0; i < aggs.size(); i++)
@@ -51,10 +52,11 @@ String refineRequest(const std::vector<ObjectReference>& aggs) {
     return json::write(req);
 }
 
-String coarsenRequest(const std::vector<ObjectReference>& aggs) {
+String coarsenRequest(const ProxIndexID proxid, const std::vector<ObjectReference>& aggs) {
     namespace json = json_spirit;
     json::Value req = json::Object();
     req.put("action", "coarsen");
+    req.put("index", proxid);
     req.put("nodes", json::Array());
     json::Array& nodes = req.getArray("nodes");
     for(uint32 i = 0; i < aggs.size(); i++)
@@ -154,30 +156,30 @@ void ReplicatedClient::destroyQuery() {
 }
 
 
-void ReplicatedClient::sendRefineRequest(const ObjectReference& agg) {
+void ReplicatedClient::sendRefineRequest(const ProxIndexID proxid, const ObjectReference& agg) {
     std::vector<ObjectReference> aggs;
     aggs.push_back(agg);
-    sendRefineRequest(aggs);
+    sendRefineRequest(proxid, aggs);
 }
 
-void ReplicatedClient::sendRefineRequest(const std::vector<ObjectReference>& aggs) {
+void ReplicatedClient::sendRefineRequest(const ProxIndexID proxid, const std::vector<ObjectReference>& aggs) {
     Protocol::Prox::QueryRequest request;
-    request.set_query_parameters(refineRequest(aggs));
+    request.set_query_parameters(refineRequest(proxid, aggs));
     if (request.query_parameters().empty()) return;
     std::string msg_str = serializePBJMessage(request);
     String framed = Network::Frame::write(msg_str);
     sendProxMessage(framed);
 }
 
-void ReplicatedClient::sendCoarsenRequest(const ObjectReference& agg) {
+void ReplicatedClient::sendCoarsenRequest(const ProxIndexID proxid, const ObjectReference& agg) {
     std::vector<ObjectReference> aggs;
     aggs.push_back(agg);
-    sendCoarsenRequest(aggs);
+    sendCoarsenRequest(proxid, aggs);
 }
 
-void ReplicatedClient::sendCoarsenRequest(const std::vector<ObjectReference>& aggs) {
+void ReplicatedClient::sendCoarsenRequest(const ProxIndexID proxid, const std::vector<ObjectReference>& aggs) {
     Protocol::Prox::QueryRequest request;
-    request.set_query_parameters(coarsenRequest(aggs));
+    request.set_query_parameters(coarsenRequest(proxid, aggs));
     if (request.query_parameters().empty()) return;
     std::string msg_str = serializePBJMessage(request);
     String framed = Network::Frame::write(msg_str);
@@ -187,21 +189,21 @@ void ReplicatedClient::sendCoarsenRequest(const std::vector<ObjectReference>& ag
 
 
 // Proximity tracking updates in local queries to trigger adjustments to server query
-void ReplicatedClient::queriersAreObserving(const ObjectReference& objid) {
+void ReplicatedClient::queriersAreObserving(ProxIndexID indexid, const ObjectReference& objid) {
     // Someone is observing this node, we should try to refine it
-    sendRefineRequest(objid);
+    sendRefineRequest(indexid, objid);
 
     // And make sure we don't have it lined up for coarsening
     UnobservedNodesByID& by_id = mUnobservedTimeouts.get<objid_tag>();
-    UnobservedNodesByID::iterator it = by_id.find(objid);
+    UnobservedNodesByID::iterator it = by_id.find(IndexObjectReference(indexid, objid));
     if (it == by_id.end()) return;
     by_id.erase(it);
 }
 
-void ReplicatedClient::queriersStoppedObserving(const ObjectReference& objid) {
+void ReplicatedClient::queriersStoppedObserving(ProxIndexID indexid, const ObjectReference& objid) {
     // Nobody is observing this node, we should try to coarsen it after awhile,
     // but only if it doesn't have children.
-    mUnobservedTimeouts.insert(UnobservedNodeTimeout(objid, mContext->recentSimTime() + Duration::seconds(15)));
+    mUnobservedTimeouts.insert(UnobservedNodeTimeout(IndexObjectReference(indexid, objid), mContext->recentSimTime() + Duration::seconds(15)));
     // And restart the timeout for the most recent
     Duration next_timeout = mUnobservedTimeouts.get<expires_tag>().begin()->expires - mContext->recentSimTime();
     mUnobservedTimer->cancel();
@@ -214,7 +216,7 @@ void ReplicatedClient::processExpiredNodes() {
     while(!by_expires.empty() &&
         by_expires.begin()->expires < curt)
     {
-        sendCoarsenRequest(by_expires.begin()->objid);
+        sendCoarsenRequest(by_expires.begin()->objid.indexid, by_expires.begin()->objid.objid);
         by_expires.erase(by_expires.begin());
     }
 

@@ -234,24 +234,24 @@ void ServerQueryHandler::handleProximityMessage(const OHDP::SpaceNodeID& snid, c
 
 
 // Proximity tracking updates in local queries to trigger adjustments to server query
-void ServerQueryHandler::queriersAreObserving(const OHDP::SpaceNodeID& snid, const ObjectReference& objid) {
+void ServerQueryHandler::queriersAreObserving(const OHDP::SpaceNodeID& snid, const ProxIndexID indexid, const ObjectReference& objid) {
     ServerQueryMap::iterator serv_it = mServerQueries.find(snid);
     if (serv_it == mServerQueries.end()) {
         QPLOG(debug, "Received update about object queries on server query that doesn't exist. Query may have recently been destroyed.");
         return;
     }
     ServerQueryStatePtr& query_state = serv_it->second;
-    query_state->client.queriersAreObserving(objid);
+    query_state->client.queriersAreObserving(indexid, objid);
 }
 
-void ServerQueryHandler::queriersStoppedObserving(const OHDP::SpaceNodeID& snid, const ObjectReference& objid) {
+void ServerQueryHandler::queriersStoppedObserving(const OHDP::SpaceNodeID& snid, const ProxIndexID indexid, const ObjectReference& objid) {
     ServerQueryMap::iterator serv_it = mServerQueries.find(snid);
     if (serv_it == mServerQueries.end()) {
         QPLOG(debug, "Received update about object queries on server query that doesn't exist. Query may have recently been destroyed.");
         return;
     }
     ServerQueryStatePtr& query_state = serv_it->second;
-    query_state->client.queriersStoppedObserving(objid);
+    query_state->client.queriersStoppedObserving(indexid, objid);
 }
 
 // Location

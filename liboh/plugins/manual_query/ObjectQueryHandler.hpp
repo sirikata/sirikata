@@ -181,6 +181,9 @@ private:
         bool dynamic;
     };
     typedef std::tr1::unordered_map<ProxIndexID, ReplicatedIndexQueryHandler> ReplicatedIndexQueryHandlerMap;
+    // Sort of the inverse of the above: aggregator (libprox handler) ->
+    // ProxIndexID lets us get back to the data
+    typedef std::tr1::unordered_map<ProxAggregator*, ProxIndexID> InverseReplicatedIndexQueryHandlerMap;
 
     typedef std::tr1::shared_ptr<ObjectSet> ObjectSetPtr;
 
@@ -207,6 +210,7 @@ private:
     ObjectQueryMap mObjectQueries;
     InvertedObjectQueryMap mInvertedObjectQueries;
     ReplicatedIndexQueryHandlerMap mObjectQueryHandlers;
+    InverseReplicatedIndexQueryHandlerMap mInverseObjectQueryHandlers;
     bool mObjectDistance; // Using distance queries
     PollerService mObjectHandlerPoller;
 

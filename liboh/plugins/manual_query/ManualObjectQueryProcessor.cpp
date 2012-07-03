@@ -179,12 +179,12 @@ void ManualObjectQueryProcessor::removedReplicatedIndex(const OHDP::SpaceNodeID&
 
 
 
-void ManualObjectQueryProcessor::queriersAreObserving(const OHDP::SpaceNodeID& snid, const ObjectReference& objid) {
-    mServerQueryHandler.queriersAreObserving(snid, objid);
+void ManualObjectQueryProcessor::queriersAreObserving(const OHDP::SpaceNodeID& snid, const ProxIndexID indexid, const ObjectReference& objid) {
+    mServerQueryHandler.queriersAreObserving(snid, indexid, objid);
 }
 
-void ManualObjectQueryProcessor::queriersStoppedObserving(const OHDP::SpaceNodeID& snid, const ObjectReference& objid) {
-    mServerQueryHandler.queriersStoppedObserving(snid, objid);
+void ManualObjectQueryProcessor::queriersStoppedObserving(const OHDP::SpaceNodeID& snid, const ProxIndexID indexid, const ObjectReference& objid) {
+    mServerQueryHandler.queriersStoppedObserving(snid, indexid, objid);
 }
 
 

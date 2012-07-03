@@ -58,8 +58,8 @@ class SIRIKATA_LIBPINTOLOC_EXPORT ReplicatedClient :
 
     // Notifications about local queries in the tree so we know how to
     // move the cut on the space server up or down.
-    void queriersAreObserving(const ObjectReference& objid);
-    void queriersStoppedObserving(const ObjectReference& objid);
+    void queriersAreObserving(ProxIndexID indexid, const ObjectReference& objid);
+    void queriersStoppedObserving(ProxIndexID indexid, const ObjectReference& objid);
 
 
     // OrphanLocUpdateManager::Listener Interface (public because
@@ -90,14 +90,31 @@ class SIRIKATA_LIBPINTOLOC_EXPORT ReplicatedClient :
     OrphanLocUpdateManagerPtr getOrphanLocUpdateManager(ProxIndexID iid);
     void removeLocCache(ProxIndexID iid);
 
+    // Unique ID for objects replicated by this client. Objects might
+    // appear in multiple indices, so we need to combine index and
+    // object IDs
+    struct IndexObjectReference {
+        IndexObjectReference() : indexid(-1), objid() {}
+        IndexObjectReference(ProxIndexID idx, const ObjectReference& obj)
+         : indexid(idx), objid(obj)
+        {}
+
+        bool operator<(const IndexObjectReference& rhs) const {
+            return (indexid < rhs.indexid ||
+                (indexid == rhs.indexid && objid < rhs.objid));
+        }
+
+        ProxIndexID indexid;
+        ObjectReference objid;
+    };
     // Track nodes which are no longer observed by any queriers,
     // making them candidates for coarsening.
     struct UnobservedNodeTimeout {
-        UnobservedNodeTimeout(const ObjectReference& id, Time _expires)
+        UnobservedNodeTimeout(const IndexObjectReference& id, Time _expires)
          : objid(id),
            expires(_expires)
         {}
-        ObjectReference objid;
+        IndexObjectReference objid;
         Time expires;
     };
     struct objid_tag {};
@@ -105,7 +122,7 @@ class SIRIKATA_LIBPINTOLOC_EXPORT ReplicatedClient :
     typedef boost::multi_index_container<
         UnobservedNodeTimeout,
         boost::multi_index::indexed_by<
-            boost::multi_index::ordered_unique< boost::multi_index::tag<objid_tag>, BOOST_MULTI_INDEX_MEMBER(UnobservedNodeTimeout,ObjectReference,objid) >,
+            boost::multi_index::ordered_unique< boost::multi_index::tag<objid_tag>, BOOST_MULTI_INDEX_MEMBER(UnobservedNodeTimeout,IndexObjectReference,objid) >,
             boost::multi_index::ordered_non_unique< boost::multi_index::tag<expires_tag>, BOOST_MULTI_INDEX_MEMBER(UnobservedNodeTimeout,Time,expires) >
             >
         > UnobservedNodeTimeouts;
@@ -143,10 +160,10 @@ class SIRIKATA_LIBPINTOLOC_EXPORT ReplicatedClient :
 
     // Proximity
     // Helpers for sending different types of basic requests
-    void sendRefineRequest(const ObjectReference& agg);
-    void sendRefineRequest(const std::vector<ObjectReference>& aggs);
-    void sendCoarsenRequest(const ObjectReference& agg);
-    void sendCoarsenRequest(const std::vector<ObjectReference>& aggs);
+    void sendRefineRequest(const ProxIndexID proxid, const ObjectReference& agg);
+    void sendRefineRequest(const ProxIndexID proxid, const std::vector<ObjectReference>& aggs);
+    void sendCoarsenRequest(const ProxIndexID proxid, const ObjectReference& agg);
+    void sendCoarsenRequest(const ProxIndexID proxid, const std::vector<ObjectReference>& aggs);
 
     // Cleanup data associated with orphans that never got a prox message
     void cleanupOrphans();

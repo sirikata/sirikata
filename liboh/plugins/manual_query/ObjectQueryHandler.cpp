@@ -61,6 +61,7 @@ ObjectQueryHandler::~ObjectQueryHandler() {
     for(ReplicatedIndexQueryHandlerMap::iterator it = mObjectQueryHandlers.begin(); it != mObjectQueryHandlers.end(); it++)
         delete it->second.handler;
     mObjectQueryHandlers.clear();
+    mInverseObjectQueryHandlers.clear();
 }
 
 
@@ -233,11 +234,14 @@ void ObjectQueryHandler::aggregateObserved(ProxAggregator* handler, const Object
     //
     // Note that we don't have to post anything here currently because we should
     // be in the same strand as the parent
+
+    assert(mInverseObjectQueryHandlers.find(handler) != mInverseObjectQueryHandlers.end());
+    ProxIndexID indexid = mInverseObjectQueryHandlers[handler];
     if (nobservers == 1) {
-        mParent->queriersAreObserving(mSpaceNodeID, objid);
+        mParent->queriersAreObserving(mSpaceNodeID, indexid, objid);
     }
     else if (nobservers == 0) {
-        mParent->queriersStoppedObserving(mSpaceNodeID, objid);
+        mParent->queriersStoppedObserving(mSpaceNodeID, indexid, objid);
     }
 }
 
@@ -407,6 +411,7 @@ void ObjectQueryHandler::handleCreatedReplicatedIndex(ProxIndexID iid, Replicate
     );
 
     mObjectQueryHandlers[iid] = ReplicatedIndexQueryHandler(handler, loc_cache, objects_from_server, dynamic_objects);
+    mInverseObjectQueryHandlers[handler] = iid;
 
     // There may already be queries to which this is relevant.
     // FIXME(ewencp) See the note in handleUpdateObjectQuery about all queries
@@ -427,6 +432,10 @@ void ObjectQueryHandler::handleCreatedReplicatedIndex(ProxIndexID iid, Replicate
 
 void ObjectQueryHandler::handleRemovedReplicatedIndex(ProxIndexID iid) {
     assert(mObjectQueryHandlers.find(iid) != mObjectQueryHandlers.end());
+    assert(mInverseObjectQueryHandlers.find( mObjectQueryHandlers[iid].handler ) != mInverseObjectQueryHandlers.end());
+
+    mInverseObjectQueryHandlers.erase( mObjectQueryHandlers[iid].handler );
+
     mObjectQueryHandlers[iid].loccache->removeListener(this);
     delete mObjectQueryHandlers[iid].handler;
     mObjectQueryHandlers.erase(iid);
