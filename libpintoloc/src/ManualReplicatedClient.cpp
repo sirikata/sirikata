@@ -135,20 +135,11 @@ void ReplicatedClient::stop() {
 
 
 void ReplicatedClient::initQuery() {
-    Protocol::Prox::QueryRequest request;
-    request.set_query_parameters(initRequest());
-    if (request.query_parameters().empty()) return;
-    std::string init_msg_str = serializePBJMessage(request);
-
-    sendProxMessage(init_msg_str);
+    sendProxMessage(initRequest());
 }
 
 void ReplicatedClient::destroyQuery() {
-    Protocol::Prox::QueryRequest request;
-    request.set_query_parameters(destroyRequest());
-    if (request.query_parameters().empty()) return;
-    std::string destroy_msg_str = serializePBJMessage(request);
-    sendProxMessage(destroy_msg_str);
+    sendProxMessage(destroyRequest());
 }
 
 
@@ -159,11 +150,7 @@ void ReplicatedClient::sendRefineRequest(const ProxIndexID proxid, const ObjectR
 }
 
 void ReplicatedClient::sendRefineRequest(const ProxIndexID proxid, const std::vector<ObjectReference>& aggs) {
-    Protocol::Prox::QueryRequest request;
-    request.set_query_parameters(refineRequest(proxid, aggs));
-    if (request.query_parameters().empty()) return;
-    std::string msg_str = serializePBJMessage(request);
-    sendProxMessage(msg_str);
+    sendProxMessage(refineRequest(proxid, aggs));
 }
 
 void ReplicatedClient::sendCoarsenRequest(const ProxIndexID proxid, const ObjectReference& agg) {
@@ -173,11 +160,7 @@ void ReplicatedClient::sendCoarsenRequest(const ProxIndexID proxid, const Object
 }
 
 void ReplicatedClient::sendCoarsenRequest(const ProxIndexID proxid, const std::vector<ObjectReference>& aggs) {
-    Protocol::Prox::QueryRequest request;
-    request.set_query_parameters(coarsenRequest(proxid, aggs));
-    if (request.query_parameters().empty()) return;
-    std::string msg_str = serializePBJMessage(request);
-    sendProxMessage(msg_str);
+    sendProxMessage(coarsenRequest(proxid, aggs));
 }
 
 

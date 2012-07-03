@@ -105,7 +105,11 @@ void ServerQueryHandler::sendReplicatedClientProxMessage(Pinto::Manual::Replicat
 
     // We need framing since we just get a raw message in this callback and the
     // space servers expect a framed message
-    String framed = Network::Frame::write(msg);
+    Protocol::Prox::QueryRequest request;
+    request.set_query_parameters(msg);
+    if (request.query_parameters().empty()) return;
+    std::string request_str = serializePBJMessage(request);
+    String framed = Network::Frame::write(request_str);
 
     sendProxMessage(serv_it, framed);
 }
