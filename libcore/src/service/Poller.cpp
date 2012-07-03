@@ -44,6 +44,10 @@ Poller::Poller(Network::IOStrand* str, const Network::IOCallback& cb, const char
    mUnschedule(false),
    mUserCB(cb),
    mCBTag(cb_tag)
+#if SIRIKATA_DEBUG
+   , mPollerRunCount(0)
+#endif
+
 {
     Network::IOTimerWPtr wtimer(mTimer->shared_from_this());
     mCB = mStrand->wrap(std::tr1::bind(&Poller::handleExec, this, wtimer));
@@ -51,9 +55,18 @@ Poller::Poller(Network::IOStrand* str, const Network::IOCallback& cb, const char
 }
 
 Poller::~Poller() {
+#if SIRIKATA_DEBUG
+    if (mPollerRunCount > 0)
+        SILOG(poller, error, "Poller is being destroyed with mismatching start/stop calls: " << (mCBTag ? mCBTag : "(unknown)"));
+#endif
 }
 
 void Poller::start() {
+#if SIRIKATA_DEBUG
+    mPollerRunCount++;
+    if (mPollerRunCount != 1)
+        SILOG(poller, error, "Poller::start() was called twice in a row without Poller::stop(): " << (mCBTag ? mCBTag : "(unknown)"));
+#endif
     // Always make the first callback run immediately
     mStrand->post(mCB, mCBTag);
 }
@@ -75,6 +88,12 @@ void Poller::setupNextTimeout(const Duration& user_time) {
 }
 
 void Poller::stop() {
+#if SIRIKATA_DEBUG
+    mPollerRunCount--;
+    if (mPollerRunCount < 0)
+        SILOG(poller, error, "Poller::stop() was called too many times: " << (mCBTag ? mCBTag : "(unknown)"));
+#endif
+
     mUnschedule = true;
 }
 

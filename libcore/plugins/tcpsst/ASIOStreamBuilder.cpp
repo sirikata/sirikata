@@ -219,8 +219,11 @@ void buildStream(TcpSstHeaderArray *buffer,
     std::string host = headers["host"];
     std::string origin = headers["origin"];
     std::string protocol = "wssst1";
-    if (headers.find("sec-websocket-protocol") != headers.end())
+    bool sendProtocol=false;
+    if (headers.find("sec-websocket-protocol") != headers.end()) {
         protocol = headers["sec-websocket-protocol"];
+        sendProtocol=true;
+    }
     std::string reply_str;
     TCPStream::StreamType streamType = TCPStream::LENGTH_DELIM;
     if (wsversion == 0)
@@ -240,10 +243,12 @@ void buildStream(TcpSstHeaderArray *buffer,
         std::string key3 = buffer_str.substr(bytes_transferred - 8);
         assert(key3.size() == 8);
         reply_str = getWebSocketSecReply(key1, key2, key3);
+/*
         bool binaryStream=protocol.find("sst")==0;
         if (!binaryStream) {
             streamType = TCPStream::BASE64_ZERODELIM;
         }
+*/
     }
     else if (wsversion >= 13)
     {
@@ -318,7 +323,7 @@ void buildStream(TcpSstHeaderArray *buffer,
             shared_socket->initFromSockets(where->second.mSockets,data->mSendBufferSize);
             std::string port=shared_socket->getASIOSocketWrapper(0).getLocalEndpoint().getService();
             std::string resource_name='/'+context.toString();
-            MultiplexedSocket::sendAllProtocolHeaders(shared_socket,origin,host,port,resource_name,protocol, where->second.mWebSocketResponses,streamType);
+            MultiplexedSocket::sendAllProtocolHeaders(shared_socket,origin,host,port,resource_name,protocol, sendProtocol,where->second.mWebSocketResponses,streamType);
             sIncompleteStreams.erase(where);
 
 

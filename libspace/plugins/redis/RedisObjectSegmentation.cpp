@@ -226,6 +226,8 @@ void RedisObjectSegmentation::start() {
 }
 
 void RedisObjectSegmentation::connect() {
+    Lock lck(mMutex);
+
     mRedisContext = redisAsyncConnect(mRedisHost.c_str(), mRedisPort);
     if (mRedisContext->err) {
         REDISOSEG_LOG(error, "Failed to connect to redis: " << mRedisContext->errstr);
@@ -266,6 +268,10 @@ void RedisObjectSegmentation::ensureConnected() {
     if (mRedisContext == NULL) connect();
 }
 
+
+// None of these event handlers need locks in them since they are invoked by
+// redis commands that we've already protected by locks
+
 void RedisObjectSegmentation::disconnected() {
     cleanup();
 }
@@ -281,6 +287,7 @@ void RedisObjectSegmentation::addRead() {
 
 void RedisObjectSegmentation::delRead() {
     REDISOSEG_LOG(insane, "Del read");
+
     assert(mReading);
     mReading = false;
 }
@@ -296,6 +303,7 @@ void RedisObjectSegmentation::addWrite() {
 
 void RedisObjectSegmentation::delWrite() {
     REDISOSEG_LOG(insane, "Del write");
+
     assert(mWriting);
     mWriting = false;
 }
@@ -303,12 +311,20 @@ void RedisObjectSegmentation::delWrite() {
 void RedisObjectSegmentation::cleanup() {
     REDISOSEG_LOG(insane, "Cleanup");
 
+    // This can be invoked by the destructor as well as via callback so it needs
+    // a lock
+    Lock lck(mMutex);
+
     mRedisContext = NULL;
     delete mRedisFD;
     mRedisFD = NULL;
     mReading = false;
     mWriting = false;
 }
+
+
+// startRead and startWrite are safe for locking as they are called either by
+// redis events or from readHandler and writeHandler, which are also protected
 
 void RedisObjectSegmentation::startRead() {
     if (mStopping || !mReading) return;
@@ -322,12 +338,14 @@ void RedisObjectSegmentation::startWrite() {
         boost::bind(&RedisObjectSegmentation::writeHandler, this, boost::asio::placeholders::error));
 }
 
+
 void RedisObjectSegmentation::readHandler(const boost::system::error_code& ec) {
     if (ec) {
         REDISOSEG_LOG(error, "Error in read handler.");
         return;
     }
 
+    Lock lck(mMutex);
     redisAsyncHandleRead(mRedisContext);
     startRead();
 }
@@ -338,14 +356,17 @@ void RedisObjectSegmentation::writeHandler(const boost::system::error_code& ec) 
         return;
     }
 
+    Lock lck(mMutex);
     redisAsyncHandleWrite(mRedisContext);
     startWrite();
 }
+
 
 OSegEntry RedisObjectSegmentation::cacheLookup(const UUID& obj_id) {
     // We only check the cache for statistics purposes
     return mCache->get(obj_id);
 }
+
 
 OSegEntry RedisObjectSegmentation::lookup(const UUID& obj_id) {
     // Check locally
@@ -358,7 +379,10 @@ OSegEntry RedisObjectSegmentation::lookup(const UUID& obj_id) {
     ri->oseg = this;
     ri->obj = obj_id;
     ensureConnected();
-    redisAsyncCommand(mRedisContext, globalRedisLookupObjectReadFinished, ri, "GET %s%s", mRedisPrefix.c_str(), obj_id.toString().c_str());
+    {
+        Lock lck(mMutex);
+        redisAsyncCommand(mRedisContext, globalRedisLookupObjectReadFinished, ri, "GET %s%s", mRedisPrefix.c_str(), obj_id.toString().c_str());
+    }
     return OSegEntry::null();
 }
 
@@ -407,7 +431,10 @@ void RedisObjectSegmentation::addNewObject(const UUID& obj_id, float radius) {
     String valstr = os.str();
     REDISOSEG_LOG(insane, "SETNX " << obj_id.toString() << " " << valstr);
     ensureConnected();
-    redisAsyncCommand(mRedisContext, globalRedisAddNewObjectWriteFinished, wi, "SETNX %s%s %b", mRedisPrefix.c_str(), obj_id.toString().c_str(), valstr.c_str(), valstr.size());
+    {
+        Lock lck(mMutex);
+        redisAsyncCommand(mRedisContext, globalRedisAddNewObjectWriteFinished, wi, "SETNX %s%s %b", mRedisPrefix.c_str(), obj_id.toString().c_str(), valstr.c_str(), valstr.size());
+    }
 }
 
 void RedisObjectSegmentation::finishWriteNewObject(const UUID& obj_id, OSegWriteListener::OSegAddNewStatus status)
@@ -441,7 +468,10 @@ void RedisObjectSegmentation::addMigratedObject(const UUID& obj_id, float radius
     String valstr = os.str();
     REDISOSEG_LOG(insane, "SET " << obj_id.toString() << " " << valstr);
     ensureConnected();
-    redisAsyncCommand(mRedisContext, globalRedisAddMigratedObjectWriteFinished, wi, "SET %s%s %b", mRedisPrefix.c_str(), obj_id.toString().c_str(), valstr.c_str(), valstr.size());
+    {
+        Lock lck(mMutex);
+        redisAsyncCommand(mRedisContext, globalRedisAddMigratedObjectWriteFinished, wi, "SET %s%s %b", mRedisPrefix.c_str(), obj_id.toString().c_str(), valstr.c_str(), valstr.size());
+    }
 }
 
 void RedisObjectSegmentation::finishWriteMigratedObject(const UUID& obj_id, ServerID ackTo) {
@@ -470,7 +500,10 @@ void RedisObjectSegmentation::removeObject(const UUID& obj_id) {
     wi->oseg = this;
     wi->obj = obj_id;
     ensureConnected();
-    redisAsyncCommand(mRedisContext, globalRedisDeleteFinished, wi, "DEL %s%s", mRedisPrefix.c_str(), obj_id.toString().c_str());
+    {
+        Lock lck(mMutex);
+        redisAsyncCommand(mRedisContext, globalRedisDeleteFinished, wi, "DEL %s%s", mRedisPrefix.c_str(), obj_id.toString().c_str());
+    }
 }
 
 bool RedisObjectSegmentation::clearToMigrate(const UUID& obj_id) {
@@ -491,7 +524,6 @@ void RedisObjectSegmentation::migrateObject(const UUID& obj_id, const OSegEntry&
     // We "migrate" the object by removing it. The other server is responsible
     // for updating Redis
     mOSeg.erase(obj_id);
-
 }
 
 void RedisObjectSegmentation::handleMigrateMessageAck(const Sirikata::Protocol::OSeg::MigrateMessageAcknowledge& msg) {

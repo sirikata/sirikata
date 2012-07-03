@@ -650,6 +650,8 @@ OgreRenderer::~OgreRenderer() {
     if (Liveness::livenessAlive())
         Liveness::letDie();
 
+    delete mDownloadPlanner;
+
     mParsingThread->join();
     delete mParsingThread;
     delete mParsingIOService;
@@ -911,6 +913,7 @@ void OgreRenderer::iStop(Liveness::Token rendererAlive)
     while (! initialized){}
 
     delete mParsingWork;
+    mDownloadPlanner->stop();
     TimeSteppedSimulation::stop();
     stopped = true;
 }

@@ -46,6 +46,7 @@ public:
     {
     }
 	void testGeometryInstanceIterator( void ) {
+		//test if GeometryInstanceIterator works over multiple nodes
 		Meshdata md;
 		
 		//nodes
@@ -133,6 +134,7 @@ public:
 
     }
 	void testGeometryInstanceIteratorInstanceChildren( void ) {
+		//test if GeometryInstanceIterator works with instance children
 		Meshdata md;
 		
 		//nodes
@@ -140,6 +142,7 @@ public:
 		ned.parent = NullNodeIndex;
 		ned.transform = Matrix4x4f::translate(Vector3f(0,3,0));
 
+		ned.children.push_back(1);
 		//instanceChildren instead of just children
 		ned.instanceChildren.push_back(1);
 		ned.instanceChildren.push_back(1);
@@ -161,7 +164,7 @@ public:
 		gj.parentNode = 1;
 		md.instances.push_back(gj);
 
-		TS_ASSERT_EQUALS(md.getInstancedGeometryCount(), 4);
+		TS_ASSERT_EQUALS(md.getInstancedGeometryCount(), 6);
 		TS_ASSERT_EQUALS(md.getInstancedLightCount(), 0);
 
 		//GeometryInstanceIterator
@@ -194,67 +197,12 @@ public:
 		TS_ASSERT_EQUALS(ui, 1);
 		TS_ASSERT_EQUALS(m, Matrix4x4f::translate(Vector3f(3,3,0)));
 
-		//there should be no more
 		success = gijoe.next(&ui, &m);
-        TS_ASSERT_EQUALS(success, false);
-
-		
-	}
-	void testGeometryInstanceIteratorInstanceChildren2( void ) {
-		Meshdata md;
-		
-		//nodes
-		Node ned;
-		ned.parent = NullNodeIndex;
-		ned.transform = Matrix4x4f::translate(Vector3f(0,3,0));
-
-		//this time we have one child and one instanceChild
-		ned.children.push_back(1);
-		ned.instanceChildren.push_back(1);
-		md.nodes.push_back(ned);
-		md.rootNodes.push_back(0);
-
-		//more nodes
-		Node nod;
-		nod.parent = 0;
-		nod.transform = Matrix4x4f::translate(Vector3f(3,0,0));
-		md.nodes.push_back(nod);
-	
-		//geometry instances
-		GeometryInstance gi;
-		gi.geometryIndex = 0;
-		gi.parentNode = 1;
-		md.instances.push_back(gi);
-
-		GeometryInstance gj;
-		gj.geometryIndex = 1;
-		gj.parentNode = 1;
-		md.instances.push_back(gj);
-
-		//GeoInstanceIterator
-		GeometryInstanceIterator gijoe = md.getGeometryInstanceIterator();
-		uint32 ui;
-		Matrix4x4f m;
-		
-		//success
-		bool success = gijoe.next(&ui, &m);
         TS_ASSERT_EQUALS(success, true);
-		
+
 		TS_ASSERT_EQUALS(ui, 0);
 		TS_ASSERT_EQUALS(m, Matrix4x4f::translate(Vector3f(3,3,0)));
 
-		success = gijoe.next(&ui, &m);
-        TS_ASSERT_EQUALS(success, true);
-		
-		TS_ASSERT_EQUALS(ui, 1);
-		TS_ASSERT_EQUALS(m, Matrix4x4f::translate(Vector3f(3,3,0)));
-
-		success = gijoe.next(&ui, &m);
-        TS_ASSERT_EQUALS(success, true);
-		
-		TS_ASSERT_EQUALS(ui, 0);
-		TS_ASSERT_EQUALS(m, Matrix4x4f::translate(Vector3f(3,3,0)));
-		
 		success = gijoe.next(&ui, &m);
         TS_ASSERT_EQUALS(success, true);
 
@@ -264,8 +212,11 @@ public:
 		//there should be no more
 		success = gijoe.next(&ui, &m);
         TS_ASSERT_EQUALS(success, false);
+
+		
 	}
 	void testSubMeshGeometry( void ) {
+		//test a SubMeshGeometry and some Primitives
 		Meshdata md;
 		Node ned;
 		ned.parent = NullNodeIndex;
@@ -333,8 +284,8 @@ public:
 		
 	}
 	void testLightInstanceIterator( void ) {
+		//test LightInstanceIterator functionality
 		Meshdata md;
-		
 		//one node
 		Node ned;
 		ned.parent = NullNodeIndex;
@@ -362,45 +313,16 @@ public:
 		TS_ASSERT_EQUALS(m, Matrix4x4f::translate(Vector3f(1,2,3)));
 	}
 	void testMeshDataGlobalTransform( void ) {
+		//simple test to see if globalTransform is set as identity when
+		//initialized
 		Meshdata md;
-		//the globalTransform should start as the identity, otherwise the
-		//transformation will always stay as the null matrix
 		TS_ASSERT_EQUALS(md.globalTransform, Matrix4x4f::identity());
 	}
 	void testMeshdataSanity( void ) {
+		//test a simple Meshdata
 		Meshdata md;
 
-		//nodes
-		Node ned;
-		ned.parent = NullNodeIndex;
-		ned.transform = Matrix4x4f::translate(Vector3f(0,3,0));
-		md.nodes.push_back(ned);
-		md.rootNodes.push_back(0);
-
-		//geometry instance
-		GeometryInstance gi;
-		gi.geometryIndex = 0;
-		gi.parentNode = 0;
-		md.instances.push_back(gi);
-
-		//iterator
-		GeometryInstanceIterator gijoe = md.getGeometryInstanceIterator();
-		uint32 ui;
-		Matrix4x4f m;
-		
-		//success
-		bool success = gijoe.next(&ui, &m);
-        TS_ASSERT_EQUALS(success, true);
-		
-		TS_ASSERT_EQUALS(ui, 0);
-		TS_ASSERT_EQUALS(m, Matrix4x4f::translate(Vector3f(0,3,0)));
-
-		success = gijoe.next(&ui, &m);
-        TS_ASSERT_EQUALS(success, false);
-	}
-	void testInstanceNodes( void ) {
-		Meshdata md;
-		//nodes
+		//one node
 		Node ned;
 		ned.parent = NullNodeIndex;
 		ned.transform = Matrix4x4f::translate(Vector3f(0,3,0));

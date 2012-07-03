@@ -100,7 +100,7 @@ int main(int argc, char** argv) {
     plugins.loadList( GetOptionValue<String>(OPT_PLUGINS) );
     plugins.loadList( GetOptionValue<String>(OPT_EXTRA_PLUGINS) );
     // FIXME this should be an option
-    plugins.loadList( "colladamodels,mesh-billboard,common-filters,nvtt" );
+    plugins.loadList( "colladamodels,mesh-billboard,mesh-ply,common-filters,nvtt" );
 
     // Fill defaults after plugin loading to ensure plugin-added
     // options get their defaults.

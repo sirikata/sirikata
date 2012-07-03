@@ -59,6 +59,11 @@ public:
         {
             parent->serializedEnter();
         }
+        Scoped(SerializationCheck& p)
+         : parent(&p)
+        {
+            parent->serializedEnter();
+        }
 
         ~Scoped() {
             parent->serializedExit();

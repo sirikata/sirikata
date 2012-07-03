@@ -128,6 +128,9 @@ PriorityDownloadPlanner::PriorityDownloadPlanner(Context* c, OgreRenderer* rende
 
 PriorityDownloadPlanner::~PriorityDownloadPlanner()
 {
+    if (Liveness::livenessAlive())
+        Liveness::letDie();
+
     delete mAggregationAlgorithm;
     if (mActiveCDNArchive) {
         CDNArchiveFactory::getSingleton().removeArchive(mCDNArchive);
@@ -578,6 +581,7 @@ void PriorityDownloadPlanner::stop()
   RMutex::scoped_lock lock(mDlPlannerMutex);
 
   iStop(livenessToken());
+  ResourceDownloadPlanner::stop();
 }
 
 void PriorityDownloadPlanner::iStop(Liveness::Token dpAlive)

@@ -48,7 +48,7 @@ void InitCPPOHOptions() {
         // aren't required, so we try to filter them out to reduce the noise
         // output by default.
         .addOption(new OptionValue(OPT_OH_PLUGINS,
-                "weight-exp,weight-sqr,tcpsst,weight-const,ogregraphics,colladamodels,mesh-billboard"
+                "weight-exp,weight-sqr,tcpsst,weight-const,ogregraphics,colladamodels,mesh-billboard,mesh-ply"
 #if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_LINUX
                 ",nvtt"
 #endif
