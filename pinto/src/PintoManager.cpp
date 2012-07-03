@@ -53,18 +53,24 @@ void PintoManager::onInitialMessage(Stream* stream) {
     cdata.query = query;
     mClientsByQuery[query] = stream;
     query->setEventListener(this);
+
+    tick();
 }
 
 void PintoManager::onRegionUpdate(Sirikata::Network::Stream* stream, BoundingSphere3f bounds) {
     assert(mClients.find(stream) != mClients.end());
     ClientData& cdata = mClients[stream];
     cdata.query->region(bounds);
+
+    tick();
 }
 
 void PintoManager::onMaxSizeUpdate(Sirikata::Network::Stream* stream, float32 ms) {
     assert(mClients.find(stream) != mClients.end());
     ClientData& cdata = mClients[stream];
     cdata.query->maxSize(ms);
+
+    tick();
 }
 
 void PintoManager::onQueryUpdate(Stream* stream, const String& data) {
@@ -80,6 +86,8 @@ void PintoManager::onQueryUpdate(Stream* stream, const String& data) {
     ClientData& cdata = mClients[stream];
     cdata.query->angle( SolidAngle(update.min_angle()) );
     // FIXME max results
+
+    tick();
 }
 
 void PintoManager::onDisconnected(Stream* stream) {

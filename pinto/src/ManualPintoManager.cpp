@@ -52,6 +52,8 @@ void ManualPintoManager::onInitialMessage(Stream* stream) {
     cdata.query = query;
     mClientsByQuery[query] = stream;
     query->setEventListener(this);
+
+    tick();
 }
 
 void ManualPintoManager::onRegionUpdate(Sirikata::Network::Stream* stream, BoundingSphere3f bounds) {
@@ -64,6 +66,8 @@ void ManualPintoManager::onMaxSizeUpdate(Sirikata::Network::Stream* stream, floa
     assert(mClients.find(stream) != mClients.end());
     ClientData& cdata = mClients[stream];
     cdata.query->maxSize(ms);
+
+    tick();
 }
 
 void ManualPintoManager::onQueryUpdate(Stream* stream, const String& data) {
@@ -113,6 +117,8 @@ void ManualPintoManager::onQueryUpdate(Stream* stream, const String& data) {
             cdata.query->coarsen((ServerID)(UUID(v.getString(),UUID::HumanReadable()).asUInt32()));
         }
     }
+
+    tick();
 }
 
 void ManualPintoManager::onDisconnected(Stream* stream) {
@@ -215,6 +221,9 @@ void ManualPintoManager::queryHasEvents(Query* query) {
                 );
 
                 mLocCache->stopTracking(loccacheit);
+            }
+            else {
+                PINTO_LOG(error, "Ignored addition because the location cache lost the data.");
             }
         }
         for(uint32 ridx = 0; ridx < evt.removals().size(); ridx++) {
