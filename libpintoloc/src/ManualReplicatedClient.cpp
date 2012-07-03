@@ -7,10 +7,8 @@
 #include <sirikata/core/service/Context.hpp>
 
 #include <sirikata/core/network/Message.hpp> // parse/serializePBJMessage
-#include <sirikata/core/network/Frame.hpp>
 #include "Protocol_Prox.pbj.hpp"
 #include "Protocol_Loc.pbj.hpp"
-#include "Protocol_Frame.pbj.hpp"
 
 #include <json_spirit/json_spirit.h>
 #include <boost/lexical_cast.hpp>
@@ -142,8 +140,7 @@ void ReplicatedClient::initQuery() {
     if (request.query_parameters().empty()) return;
     std::string init_msg_str = serializePBJMessage(request);
 
-    String framed = Network::Frame::write(init_msg_str);
-    sendProxMessage(framed);
+    sendProxMessage(init_msg_str);
 }
 
 void ReplicatedClient::destroyQuery() {
@@ -151,8 +148,7 @@ void ReplicatedClient::destroyQuery() {
     request.set_query_parameters(destroyRequest());
     if (request.query_parameters().empty()) return;
     std::string destroy_msg_str = serializePBJMessage(request);
-    String framed = Network::Frame::write(destroy_msg_str);
-    sendProxMessage(framed);
+    sendProxMessage(destroy_msg_str);
 }
 
 
@@ -167,8 +163,7 @@ void ReplicatedClient::sendRefineRequest(const ProxIndexID proxid, const std::ve
     request.set_query_parameters(refineRequest(proxid, aggs));
     if (request.query_parameters().empty()) return;
     std::string msg_str = serializePBJMessage(request);
-    String framed = Network::Frame::write(msg_str);
-    sendProxMessage(framed);
+    sendProxMessage(msg_str);
 }
 
 void ReplicatedClient::sendCoarsenRequest(const ProxIndexID proxid, const ObjectReference& agg) {
@@ -182,8 +177,7 @@ void ReplicatedClient::sendCoarsenRequest(const ProxIndexID proxid, const std::v
     request.set_query_parameters(coarsenRequest(proxid, aggs));
     if (request.query_parameters().empty()) return;
     std::string msg_str = serializePBJMessage(request);
-    String framed = Network::Frame::write(msg_str);
-    sendProxMessage(framed);
+    sendProxMessage(msg_str);
 }
 
 

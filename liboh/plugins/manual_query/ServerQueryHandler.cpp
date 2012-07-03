@@ -103,7 +103,11 @@ void ServerQueryHandler::sendReplicatedClientProxMessage(Pinto::Manual::Replicat
     // definitely still exist
     assert(serv_it != mServerQueries.end());
 
-    sendProxMessage(serv_it, msg);
+    // We need framing since we just get a raw message in this callback and the
+    // space servers expect a framed message
+    String framed = Network::Frame::write(msg);
+
+    sendProxMessage(serv_it, framed);
 }
 
 
