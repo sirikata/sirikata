@@ -224,14 +224,27 @@ private:
     typedef std::tr1::unordered_map<ServerID, ReplicatedServerData> ReplicatedServerDataMap;
     ReplicatedServerDataMap mReplicatedServerDataMap;
 
-    // Also maintain a map of ProxIndexIDs to their source servers. If we only
-    // have the ProxIndexID, this lets us traverse the above data structure
-    typedef std::tr1::unordered_map<ProxIndexID, ServerID> IndexToServerMap;
-    IndexToServerMap mIndexToServerMap;
+    // Maintain two maps for ProxIndexIDs. We actually get 2
+    // ProxIndexIDs for each replicated tree: 1 from the origin server
+    // and one from the query handler we generate on top of
+    // that. Since we might get the same ID from multiple origin
+    // servers, those are not unique. We always want to report our
+    // locally generated version to clients. However, that also means
+    // we need to be able to map between the two/get back to the
+    // original data.
+    // Maintain a map of *locally generated* ProxIndexIDs to the
+    // source server + remote index ID responsible for them. If we only
+    // have the local ProxIndexID, this lets us traverse the above data
+    // structure
+    typedef std::pair<ServerID, ProxIndexID> NodeProxIndexID;
+    typedef std::tr1::unordered_map<ProxIndexID, NodeProxIndexID> IndexToServerMap;
+    IndexToServerMap mLocalToRemoteIndexMap;
 
-    // And a map from aggregator (libprox handler) -> ProxIndexID for when we
-    // get aggregate callbacks
-    typedef std::tr1::unordered_map<ProxAggregator*, ProxIndexID> InverseReplicatedIndexQueryHandlerMap;
+    // And a map from aggregator (libprox handler) -> (ServerID, ProxIndexID) for when we
+    // get aggregate callbacks. This ProxIndexID is the *origin
+    // server's* identifier since we use it to get back to the
+    // replicated data.
+    typedef std::tr1::unordered_map<ProxAggregator*, NodeProxIndexID> InverseReplicatedIndexQueryHandlerMap;
     InverseReplicatedIndexQueryHandlerMap mAggregatorToIndexMap;
 
     // Now, with all the data replicated and query handlers setup, we

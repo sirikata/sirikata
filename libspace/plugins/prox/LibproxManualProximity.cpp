@@ -253,8 +253,9 @@ void LibproxManualProximity::aggregateObserved(ProxAggregator* handler, const Ob
     }
 
     // Otherwise, get the client and notify it
-    ProxIndexID indexid = mAggregatorToIndexMap[handler];
-    ServerID sid = mIndexToServerMap[indexid];
+    NodeProxIndexID node_indexid = mAggregatorToIndexMap[handler];
+    ServerID sid = node_indexid.first;
+    ProxIndexID indexid = node_indexid.second;
     assert(
         mReplicatedServerDataMap.find(sid) != mReplicatedServerDataMap.end() &&
         mReplicatedServerDataMap[sid].client &&
@@ -373,11 +374,13 @@ void LibproxManualProximity::handleObjectHostProxMessage(const OHDP::NodeID& id,
 
         ProxIndexID indexid = query_params.getInt("index");
         // Either we can find replicated remote data with this index
-        if (mIndexToServerMap.find(indexid) != mIndexToServerMap.end()) {
-            ServerID sid = mIndexToServerMap[indexid];
+        if (mLocalToRemoteIndexMap.find(indexid) != mLocalToRemoteIndexMap.end()) {
+            NodeProxIndexID node_index_id = mLocalToRemoteIndexMap[indexid];
+            ServerID sid = node_index_id.first;
+            ProxIndexID remote_indexid = node_index_id.second;
             if (mOHRemoteQueries.find(id) != mOHRemoteQueries.end() &&
-                mOHRemoteQueries[id][sid].find(indexid) != mOHRemoteQueries[id][sid].end()) {
-                ProxQuery* q = mOHRemoteQueries[id][sid][indexid];
+                mOHRemoteQueries[id][sid].find(remote_indexid) != mOHRemoteQueries[id][sid].end()) {
+                ProxQuery* q = mOHRemoteQueries[id][sid][remote_indexid];
                 for(uint32 i = 0; i < refine_nodes.size(); i++)
                     q->refine(refine_nodes[i]);
             }
@@ -410,11 +413,13 @@ void LibproxManualProximity::handleObjectHostProxMessage(const OHDP::NodeID& id,
 
         ProxIndexID indexid = query_params.getInt("index");
         // Either we can find replicated remote data with this index
-        if (mIndexToServerMap.find(indexid) != mIndexToServerMap.end()) {
-            ServerID sid = mIndexToServerMap[indexid];
+        if (mLocalToRemoteIndexMap.find(indexid) != mLocalToRemoteIndexMap.end()) {
+            NodeProxIndexID node_index_id = mLocalToRemoteIndexMap[indexid];
+            ServerID sid = node_index_id.first;
+            ProxIndexID remote_indexid = node_index_id.second;
             if (mOHRemoteQueries.find(id) != mOHRemoteQueries.end() &&
-                mOHRemoteQueries[id][sid].find(indexid) != mOHRemoteQueries[id][sid].end()) {
-                ProxQuery* q = mOHRemoteQueries[id][sid][indexid];
+                mOHRemoteQueries[id][sid].find(remote_indexid) != mOHRemoteQueries[id][sid].end()) {
+                ProxQuery* q = mOHRemoteQueries[id][sid][remote_indexid];
                 for(uint32 i = 0; i < coarsen_nodes.size(); i++)
                     q->coarsen(coarsen_nodes[i]);
             }
@@ -485,12 +490,6 @@ void LibproxManualProximity::handleOnPintoServerResult(const Sirikata::Protocol:
 void LibproxManualProximity::onCreatedReplicatedIndex(ReplicatedClient* client, const ServerID& evt_src_server, ProxIndexID proxid, ReplicatedLocationServiceCachePtr loccache, ServerID sid, bool dynamic_objects) {
     PROXLOG(detailed, "Replicated index created for server " << evt_src_server << " with index " << proxid);
 
-    // Maintain index of which server this proxid belongs to
-    // FIXME this is almost definitely going to fail because the ID comes from
-    // the remote server, so they're likely to overlap with ours...
-    assert(mIndexToServerMap.find(proxid) == mIndexToServerMap.end());
-    mIndexToServerMap[proxid] = evt_src_server;
-
     // We can create a handler for this index now
     assert(mReplicatedServerDataMap.find(evt_src_server) != mReplicatedServerDataMap.end());
     ReplicatedServerData& replicated_data = mReplicatedServerDataMap[evt_src_server];
@@ -505,8 +504,15 @@ void LibproxManualProximity::onCreatedReplicatedIndex(ReplicatedClient* client, 
     );
     replicated_data.handlers[proxid] = ReplicatedIndexQueryHandler(loccache, new_handler);
 
+    // Maintain index of which server this proxid belongs to. Note
+    // that this *isn't* the proxid provided to this call -- it's the
+    // *new, locally generated* prox ID for the query handler using
+    // this data. This is what lets us map back to the original
+    // server's data
+    assert(mLocalToRemoteIndexMap.find(new_handler->handlerID()) == mLocalToRemoteIndexMap.end());
+    mLocalToRemoteIndexMap[new_handler->handlerID()] = std::make_pair(evt_src_server, proxid);
     // And handler/aggregator -> index ID
-    mAggregatorToIndexMap[new_handler.get()] = proxid;
+    mAggregatorToIndexMap[new_handler.get()] = std::make_pair(evt_src_server, proxid);
 
     // Register any queries which are already on this server
     for (OHQuerierSet::iterator querier_it = replicated_data.queriers.begin(); querier_it != replicated_data.queriers.end(); querier_it++)
