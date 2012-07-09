@@ -118,7 +118,7 @@ public:
     virtual Transfer::URI mesh(const ObjectID& id);
     String virtual physics(const ObjectID& id);
     ObjectReference parent(const ObjectID& id);
-    bool aggregate(const ObjectID& id);
+    virtual bool aggregate(const ObjectID& id);
     // And raw access to the underlying SequencedPresenceProperties
     const SequencedPresenceProperties& properties(const ObjectID& id);
 

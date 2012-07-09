@@ -98,6 +98,7 @@ public:
     AggregateBoundingInfo bounds(const ObjectID& id);
     Transfer::URI mesh(const ObjectID& id);
     String physics(const ObjectID& id);
+    virtual bool aggregate(const ObjectID& id) { return isAggregate(id); }
 
     const bool isAggregate(const ObjectID& id) const;
 

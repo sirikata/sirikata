@@ -142,6 +142,16 @@ void ReplicatedClient::destroyQuery() {
     sendProxMessage(destroyRequest());
 }
 
+namespace {
+String ObjectReferenceListString(const std::vector<ObjectReference>& aggs) {
+    String result = "[ ";
+    for(uint32 i = 0; i < aggs.size(); i++) {
+        result += aggs[i].toString() + ", ";
+    }
+    result += ']';
+    return result;
+}
+}
 
 void ReplicatedClient::sendRefineRequest(const ProxIndexID proxid, const ObjectReference& agg) {
     std::vector<ObjectReference> aggs;
@@ -150,6 +160,7 @@ void ReplicatedClient::sendRefineRequest(const ProxIndexID proxid, const ObjectR
 }
 
 void ReplicatedClient::sendRefineRequest(const ProxIndexID proxid, const std::vector<ObjectReference>& aggs) {
+    RCLOG(detailed, "Requesting refinement in " << proxid << " of nodes " << ObjectReferenceListString(aggs));
     sendProxMessage(refineRequest(proxid, aggs));
 }
 
@@ -160,6 +171,7 @@ void ReplicatedClient::sendCoarsenRequest(const ProxIndexID proxid, const Object
 }
 
 void ReplicatedClient::sendCoarsenRequest(const ProxIndexID proxid, const std::vector<ObjectReference>& aggs) {
+    RCLOG(detailed, "Requesting coarsening in " << proxid << " of nodes " << ObjectReferenceListString(aggs));
     sendProxMessage(coarsenRequest(proxid, aggs));
 }
 
@@ -243,6 +255,7 @@ void ReplicatedClient::proxUpdate(const Sirikata::Protocol::Prox::ProximityUpdat
         ProxProtocolLocUpdate add(addition);
 
         ObjectReference observed_oref(addition.object());
+        RCLOG(insane, " - Addition: " << observed_oref);
         // NOTE: We don't track the SpaceID here, but we also don't really
         // need it -- OrphanLocUpdateManager only uses it because it can be
         // used in places where a single instance covers multiple spaces,
@@ -271,6 +284,7 @@ void ReplicatedClient::proxUpdate(const Sirikata::Protocol::Prox::ProximityUpdat
     for(int32 ridx = 0; ridx < update.removal_size(); ridx++) {
         Sirikata::Protocol::Prox::ObjectRemoval removal = update.removal(ridx);
         ObjectReference observed_oref(removal.object());
+        RCLOG(insane, " - Removal: " << observed_oref);
         // NOTE: see above note about why SpaceID::null() is ok here
         SpaceObjectReference observed(SpaceID::null(), observed_oref);
         bool temporary_removal = (!removal.has_type() || (removal.type() == Sirikata::Protocol::Prox::ObjectRemoval::Transient));
@@ -286,7 +300,7 @@ void ReplicatedClient::proxUpdate(const Sirikata::Protocol::Prox::ProximityUpdat
             observed_oref, temporary_removal
         );
     }
-
+    RCLOG(insane, " ----- Done");
     // We may have removed everything from the specified tree. We need to
     // check if we've hit that condition and clean out any associated
     // state. If objects from that server reappear, this state will be

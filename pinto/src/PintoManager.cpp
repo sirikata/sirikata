@@ -134,7 +134,8 @@ void PintoManager::queryHasEvents(Query* query) {
     }
 
     String serialized = serializePBJMessage(msg);
-    stream->send( MemoryReference(serialized), ReliableOrdered );
+    bool success = stream->send( MemoryReference(serialized), ReliableOrdered );
+    assert(success);
 }
 
 

@@ -246,7 +246,8 @@ void ManualPintoManager::queryHasEvents(Query* query) {
     // could end up with a lot of results initially. Should be queuing
     // these messages up
     String serialized = serializePBJMessage(prox_results);
-    stream->send( MemoryReference(serialized), ReliableOrdered );
+    bool success = stream->send( MemoryReference(serialized), ReliableOrdered );
+    assert(success);
 }
 
 
