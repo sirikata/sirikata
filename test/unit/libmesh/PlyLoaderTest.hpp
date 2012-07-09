@@ -68,13 +68,32 @@ public:
 		_pmgr.gc();
 		_initialized = 0;
     }
+
+	void testPlyLoaderSimple( void ) {
+		//ply file with almost nothing
+		string simple = getString("simple");
+		MeshdataPtr mdp = loadMDP(simple);
+
+		//asserts
+		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 4); //wha? should be 0
+		TS_ASSERT_EQUALS(mdp->getInstancedLightCount(), 0);
+		TS_ASSERT_EQUALS(mdp->getJointCount(), 0);
+		TS_ASSERT_EQUALS(mdp->geometry.size(), 2); //wha? should be 0
+		TS_ASSERT_EQUALS(mdp->lights.size(), 0);
+		TS_ASSERT_EQUALS(mdp->textures.size(), 0);
+		TS_ASSERT_EQUALS(mdp->materials.size(), 0);
+		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
+		TS_ASSERT_EQUALS(mdp->nodes.size(), 2);  //.... should be 1
+		TS_ASSERT_EQUALS(mdp->nodes[0].transform, Matrix4x4f::identity());
+		TS_ASSERT_EQUALS(mdp->globalTransform, Matrix4x4f::identity());
+    }
 	
 	void testPlyLoaderSquare( void ) {
 		string square = getString("square");
 		MeshdataPtr mdp = loadMDP(square);
 
 		//asserts
-		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 0);	//should be 1
+		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 1);
 		TS_ASSERT_EQUALS(mdp->getInstancedLightCount(), 0);
 		TS_ASSERT_EQUALS(mdp->getJointCount(), 0);
 		TS_ASSERT_EQUALS(mdp->geometry.size(), 1);
@@ -86,8 +105,8 @@ public:
 		TS_ASSERT_EQUALS(mdp->materials.size(), 0);			//should be 1
 		//TS_ASSERT_EQUALS(mdp->materials[0].textures.size(), 1);
 		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
-		TS_ASSERT_EQUALS(mdp->nodes.size(), 0);				//should be 1
-		//TS_ASSERT_EQUALS(mdp->nodes[0].transform, Matrix4x4f::identity());
+		TS_ASSERT_EQUALS(mdp->nodes.size(), 1);
+		TS_ASSERT_EQUALS(mdp->nodes[0].transform, Matrix4x4f::identity());
 		TS_ASSERT_EQUALS(mdp->globalTransform, Matrix4x4f::identity());
 	}
 
@@ -95,7 +114,7 @@ public:
 		string line = getString("line");
 		MeshdataPtr mdp = loadMDP(line);
 
-		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 0); //should be 1
+		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 1);
 		TS_ASSERT_EQUALS(mdp->getInstancedLightCount(), 0);
 		TS_ASSERT_EQUALS(mdp->getJointCount(), 0);
 		TS_ASSERT_EQUALS(mdp->geometry.size(), 1);
@@ -107,14 +126,32 @@ public:
 		TS_ASSERT_EQUALS(mdp->materials.size(), 0);   //should be 1
 		//TS_ASSERT_EQUALS(mdp->materials[0].textures.size(), 0);
 		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
-		TS_ASSERT_EQUALS(mdp->nodes.size(), 0);      //should be 1
-		//TS_ASSERT_EQUALS(mdp->nodes[0].transform, Matrix4x4f::identity());
+		TS_ASSERT_EQUALS(mdp->nodes.size(), 1);
+		TS_ASSERT_EQUALS(mdp->nodes[0].transform, Matrix4x4f::identity());
 		TS_ASSERT_EQUALS(mdp->globalTransform, Matrix4x4f::identity());
 	}
 
 	void testPlyLoaderHex2s( void ) {
 		string hex2s = getString("hex2s");
 		MeshdataPtr mdp = loadMDP(hex2s);
+
+		//asserts
+		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 1);
+		TS_ASSERT_EQUALS(mdp->getInstancedLightCount(), 0);
+		TS_ASSERT_EQUALS(mdp->getJointCount(), 0);
+		TS_ASSERT_EQUALS(mdp->geometry.size(), 1);
+		TS_ASSERT_EQUALS(mdp->geometry[0].skinControllers.size(), 0);
+		TS_ASSERT_EQUALS(mdp->geometry[0].primitives.size(), 8); //should be 2
+		TS_ASSERT_EQUALS(mdp->geometry[0].primitives[0].indices.size(), 3); //should be 12
+		TS_ASSERT_EQUALS(mdp->lights.size(), 0);
+		TS_ASSERT_EQUALS(mdp->textures.size(), 0);
+		TS_ASSERT_EQUALS(mdp->materials.size(), 0); //should be 2
+		for(int i = 0; i < mdp->materials.size(); i++) 
+			TS_ASSERT_EQUALS(mdp->materials[i].textures.size(), 1);
+		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
+		TS_ASSERT_EQUALS(mdp->nodes.size(), 1);
+		TS_ASSERT_EQUALS(mdp->nodes[0].transform, Matrix4x4f::identity());
+		TS_ASSERT_EQUALS(mdp->globalTransform, Matrix4x4f::identity());
 	}
 
 	void testPlyLoaderCylinders( void ) {
@@ -122,23 +159,36 @@ public:
 		MeshdataPtr mdp = loadMDP(cylinders);
 
 		//asserts
-		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 0);		//was two
+		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 1);		//was two
 		TS_ASSERT_EQUALS(mdp->getInstancedLightCount(), 0);
 		TS_ASSERT_EQUALS(mdp->getJointCount(), 0);
 		TS_ASSERT_EQUALS(mdp->geometry.size(), 1);					//was two
 		for(int i = 0; i < mdp->geometry.size(); i++) {
 			TS_ASSERT_EQUALS(mdp->geometry[i].skinControllers.size(), 0);
 			TS_ASSERT_EQUALS(mdp->geometry[i].primitives.size(), 184);		//was one
-			TS_ASSERT_EQUALS(mdp->geometry[i].primitives[0].indices.size(), 3);  //was 276 holy cannoli!
+			TS_ASSERT_EQUALS(mdp->geometry[i].primitives[0].indices.size(), 3);  //was 276!
 		}
 		TS_ASSERT_EQUALS(mdp->lights.size(), 0);
 		TS_ASSERT_EQUALS(mdp->textures.size(), 0);
 		TS_ASSERT_EQUALS(mdp->materials.size(), 0);		//was one
 		//TS_ASSERT_EQUALS(mdp->materials[0].textures.size(), 1);
 		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
-		TS_ASSERT_EQUALS(mdp->nodes.size(), 0);			//was one
-		//TS_ASSERT_EQUALS(mdp->nodes[0].transform, Matrix4x4f::identity());
+		TS_ASSERT_EQUALS(mdp->nodes.size(), 1);
+		TS_ASSERT_EQUALS(mdp->nodes[0].transform, Matrix4x4f::identity());
 		TS_ASSERT_EQUALS(mdp->globalTransform, Matrix4x4f::identity());
+	}
+
+	void testPlyLoaderNull( void ) {
+		Transfer::DenseData *dd = new Transfer::DenseData("Hello world!");
+		Transfer::DenseDataPtr data(dd);
+		//the ply file shouldn't load
+		TS_ASSERT_EQUALS(msys->canLoad(data), false);
+		//so parsed should be null
+		Mesh::VisualPtr parsed = msys->load(data);
+		TS_ASSERT_EQUALS(parsed, Mesh::VisualPtr());
+		//and so should mdp
+		MeshdataPtr mdp(std::tr1::dynamic_pointer_cast<Meshdata>(parsed));
+		TS_ASSERT_EQUALS(mdp, MeshdataPtr());
 	}
 
 	string getString(string name) {

@@ -134,6 +134,28 @@ public:
 		TS_ASSERT_EQUALS(mdp->globalTransform, Matrix4x4f::identity());
 	}
 
+	void testColladaLoaderSquarePly( void ) {
+		//collada file with square converted to ply and back to collada
+		string squareply = getString("squareply");
+		MeshdataPtr mdp = loadMDP(squareply);
+		
+		//asserts
+		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 1);
+		TS_ASSERT_EQUALS(mdp->getInstancedLightCount(), 0);
+		TS_ASSERT_EQUALS(mdp->getJointCount(), 0);
+		TS_ASSERT_EQUALS(mdp->geometry.size(), 1);
+		TS_ASSERT_EQUALS(mdp->geometry[0].skinControllers.size(), 0);
+		TS_ASSERT_EQUALS(mdp->geometry[0].primitives.size(), 1);
+		TS_ASSERT_EQUALS(mdp->geometry[0].primitives[0].indices.size(), 6);
+		TS_ASSERT_EQUALS(mdp->lights.size(), 0);
+		TS_ASSERT_EQUALS(mdp->textures.size(), 0);
+		TS_ASSERT_EQUALS(mdp->materials.size(), 0);//conversion eliminates materials, was 1
+		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
+		TS_ASSERT_EQUALS(mdp->nodes.size(), 1);
+		TS_ASSERT_EQUALS(mdp->nodes[0].transform, Matrix4x4f::identity());
+		TS_ASSERT_DIFFERS(mdp->globalTransform, Matrix4x4f::identity());//instead of being the identity, the globalTransform is .0099 * identity.
+	}
+
 	void testColladaLoaderSquare2s( void ) {
 		//collada file with square with two sides, one of which is specially texturized
 		string square2s = getString("square2s");
@@ -156,6 +178,35 @@ public:
 		TS_ASSERT_EQUALS(mdp->nodes.size(), 1);
 		TS_ASSERT_EQUALS(mdp->nodes[0].transform, Matrix4x4f::identity());
 		TS_ASSERT_EQUALS(mdp->globalTransform, Matrix4x4f::identity());
+	}
+
+	void testColladaLoaderSquare2sPly( void ) {
+		//collada file with square with two sides converted to ply and back
+		//something really weird: the program can't find a visual_scene,
+		//even though it is clearly in there.
+		//also, sketchup complained when the file was imported.
+
+
+		//string s2ply = getString("s2ply");
+		//MeshdataPtr mdp = loadMDP(s2ply);
+		//
+		////asserts
+		//TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 1);
+		//TS_ASSERT_EQUALS(mdp->getInstancedLightCount(), 0);
+		//TS_ASSERT_EQUALS(mdp->getJointCount(), 0);
+		//TS_ASSERT_EQUALS(mdp->geometry.size(), 1);
+		//TS_ASSERT_EQUALS(mdp->geometry[0].skinControllers.size(), 0);
+		//TS_ASSERT_EQUALS(mdp->geometry[0].primitives.size(), 2);
+		//TS_ASSERT_EQUALS(mdp->geometry[0].primitives[0].indices.size(), 6);
+		//TS_ASSERT_EQUALS(mdp->lights.size(), 0);
+		//TS_ASSERT_EQUALS(mdp->textures.size(), 1);
+		//TS_ASSERT_EQUALS(mdp->materials.size(), 2);
+		//for(int i = 0; i < mdp->materials.size(); i++) 
+		//	TS_ASSERT_EQUALS(mdp->materials[i].textures.size(), 1);
+		//TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
+		//TS_ASSERT_EQUALS(mdp->nodes.size(), 1);
+		//TS_ASSERT_EQUALS(mdp->nodes[0].transform, Matrix4x4f::identity());
+		//TS_ASSERT_EQUALS(mdp->globalTransform, Matrix4x4f::identity());
 	}
 
 	void testColladaLoaderHex2s( void ) {
