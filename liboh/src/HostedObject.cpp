@@ -928,6 +928,7 @@ void HostedObject::handleProximityUpdate(const SpaceObjectReference& spaceobj, c
         );
     }
 
+    SILOG(ho-proxies-count, insane, "PROXIES-COUNT " << spaceobj << ", " << proxy_manager->activeSize() << " active, " << proxy_manager->size() << " total, " << (mContext->simTime()-Time::null()).microseconds() << " time");
 }
 
 ProxyObjectPtr HostedObject::createProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri, TimedMotionVector3f& tmv, TimedMotionQuaternion& tmq, const AggregateBoundingInfo& bs, const String& phy, const String& query, bool isAggregate, uint64 seqNo)
