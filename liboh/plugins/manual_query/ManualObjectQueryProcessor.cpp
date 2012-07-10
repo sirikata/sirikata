@@ -65,7 +65,7 @@ void ManualObjectQueryProcessor::onObjectNodeSession(const SpaceID& space, const
     // Update state
     // Object no longer has a session, it's no longer relevant
     if (id == OHDP::NodeID::null()) {
-        mObjectState.erase(obj_it);
+        if (obj_it != mObjectState.end()) mObjectState.erase(obj_it);
         return;
     }
     // Otherwise it's new/migrating
