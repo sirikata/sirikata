@@ -177,13 +177,19 @@ void ServerQueryHandler::writeSomeProxData(ServerQueryStatePtr data) {
 }
 
 void ServerQueryHandler::handleCreatedProxSubstream(const OHDP::SpaceNodeID& snid, int success, OHDPSST::Stream::Ptr prox_stream) {
-    if (success != SST_IMPL_SUCCESS)
-        QPLOG(error, "Failed to create proximity substream to " << snid);
-
     // Save the stream for additional writing
     ServerQueryMap::iterator serv_it = mServerQueries.find(snid);
     // We may have lost the session since we requested the connection
     if (serv_it == mServerQueries.end()) return;
+
+    assert(serv_it->second->writing == true);
+    if (success != SST_IMPL_SUCCESS) {
+        QPLOG(error, "Failed to create proximity substream to " << snid);
+        // Turn off writing flag so we'll try again
+        serv_it->second->writing == false;
+        return;
+    }
+
     serv_it->second->prox_stream = prox_stream;
 
     // Register to get data
@@ -195,7 +201,6 @@ void ServerQueryHandler::handleCreatedProxSubstream(const OHDP::SpaceNodeID& sni
     );
 
     // We created the stream to start writing, so start that now
-    assert(serv_it->second->writing == true);
     writeSomeProxData(serv_it->second);
 }
 
