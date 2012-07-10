@@ -48,13 +48,13 @@ def RunApp(appname, idx, args, **kwargs):
     print 'Running:', full_args, 'with environment:', full_env
     # Clear full_env if its empty
     if not full_env: full_env = None
-    subprocess.Popen(full_args, env=full_env)
+    return subprocess.Popen(full_args, env=full_env)
 
 def RunPinto(args, **kwargs):
-    RunApp('pinto_d', 0, args, **kwargs)
+    return RunApp('pinto_d', 0, args, **kwargs)
 
 def RunCSeg(args, **kwargs):
-    RunApp('cseg_d', 0, args, **kwargs)
+    return RunApp('cseg_d', 0, args, **kwargs)
 
 def RunSpace(ssid, args, **kwargs):
-    RunApp('space_d', ssid, args, **kwargs)
+    return RunApp('space_d', ssid, args, **kwargs)

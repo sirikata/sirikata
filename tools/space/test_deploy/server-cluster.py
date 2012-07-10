@@ -70,11 +70,12 @@ def get_region_and_layout():
 
 
 def startCSeg(**kwargs):
-    if n_cseg_servers == 0: return;
+    if n_cseg_servers == 0: return []
 
     generate_cseg_ip_file()
     region, layout = get_region_and_layout()
 
+    ps = []
     for cs in range(n_cseg_servers):
         args = [
             # CSeg server IDs can't overlap with space server
@@ -93,7 +94,8 @@ def startCSeg(**kwargs):
             ]
         if 'cseg_config' in kwargs and kwargs['cseg_config']:
             args += [ '--cfg=' + kwargs['cseg_config'] ]
-        server.RunCSeg(args, **kwargs)
+        ps += [ server.RunCSeg(args, **kwargs) ]
+    return ps
 
 
 def startPinto(**kwargs):
@@ -106,11 +108,12 @@ def startPinto(**kwargs):
         ]
     if 'pinto_config' in kwargs and kwargs['pinto_config']:
         args += [ '--cfg=' + kwargs['pinto_config'] ]
-    server.RunPinto(args, **kwargs)
+    return [ server.RunPinto(args, **kwargs) ]
 
 
 def startSpace(**kwargs):
     generate_ip_file()
+    ps = []
     for ss in range(nservers):
         region, layout = get_region_and_layout()
 
@@ -150,7 +153,8 @@ def startSpace(**kwargs):
                 ]
         if 'space_config' in kwargs and kwargs['space_config']:
             args += [ '--cfg=' + kwargs['space_config'] ]
-        server.RunSpace(ss, args, **kwargs)
+        ps += [ server.RunSpace(ss, args, **kwargs) ]
+    return ps
 
 def printOHTemplate(**kwargs):
     print
@@ -164,13 +168,28 @@ def printOHTemplate(**kwargs):
     print
 
 def start(**kwargs):
-    startCSeg(**kwargs)
-    startPinto(**kwargs)
+    processes = []
+
+    processes += startCSeg(**kwargs)
+    processes += startPinto(**kwargs)
     time.sleep(5)
-    startSpace(**kwargs)
+    processes += startSpace(**kwargs)
 
     printOHTemplate(**kwargs)
 
+    if 'duration' in kwargs and kwargs['duration']:
+        time.sleep(kwargs['duration'])
+        for ps in processes:
+            ps.terminate()
+        for x in range(100):
+            any_running = any([ps.returncode == None for ps in processes])
+            if not any_running: break
+            time.sleep(0.1)
+        if any_running:
+            for ps in processes:
+                ps.kill()
+                time.sleep(0.01)
+                ps.kill()
 
 parser = OptionParser()
 
@@ -188,6 +207,8 @@ parser.add_option("--heap-profile-interval", help="Frequency of heap snapshots (
 parser.add_option("--space-config", help="Extra configuration file to load on space servers", action="store", type="string", dest="space_config", default=None)
 parser.add_option("--cseg-config", help="Extra configuration file to load on cseg servers", action="store", type="string", dest="cseg_config", default=None)
 parser.add_option("--pinto-config", help="Extra configuration file to load on pinto servers", action="store", type="string", dest="pinto_config", default=None)
+
+parser.add_option("--duration", help="Time to wait (and block) before killing child processes", action="store", type="int", dest="duration", default=None)
 
 (options, args) = parser.parse_args()
 
@@ -209,5 +230,7 @@ start(
 
     space_config=options.space_config,
     cseg_config=options.cseg_config,
-    pinto_config=options.pinto_config
+    pinto_config=options.pinto_config,
+
+    duration=options.duration
     )
