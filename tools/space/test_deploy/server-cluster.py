@@ -21,7 +21,7 @@ port_base = 6666
 
 hostname = socket.gethostname()
 
-blocksize = (200, 8000, 8000)
+blocksize = (4000, 8000, 8000)
 center = (0,0,0)
 
 pinto_ip = hostname
@@ -173,6 +173,9 @@ def start(**kwargs):
 
 
 parser = OptionParser()
+
+parser.add_option("--sirikata", help="Path to sirikata binaries", action="store", type="str", dest="sirikata_path", default=None)
+
 parser.add_option("--term", help="Run services in terminals", action="store_true", dest="with_xterm", default=True)
 parser.add_option("--no-term", help="Don't run services in terminals", action="store_false", dest="with_xterm")
 parser.add_option("--debug", help="Don't run in a debugger", action="store_true", dest="debug", default=True)
@@ -196,6 +199,7 @@ parser.add_option("--pinto-config", help="Extra configuration file to load on pi
 # heapprofile - turn on heap profiling, storing data to the specified destination
 # heapprofile_interval - when heap profiling is on, take a snapshot every time this many bytes (accumulated over all allocations) are allocated (100MB by default)
 start(
+    sirikata_path=options.sirikata_path,
     with_xterm=options.with_xterm,
     debug=options.debug,
     valgrind=options.valgrind,

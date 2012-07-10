@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import subprocess
+import os.path
 
 # This script manages running a single server instance given some
 # configuration information.  It will usually be driven by a parent
@@ -30,12 +31,17 @@ def AddStandardParams(appname, idx, args, env, **kwargs):
         if ('heapprofile_interval' in kwargs and kwargs['heapprofile_interval']):
             env['HEAP_PROFILE_ALLOCATION_INTERVAL'] = str(kwargs['heapprofile_interval'])
 
+def GetAppFile(appname, **kwargs):
+    if 'sirikata_path' not in kwargs or not kwargs['sirikata_path']:
+        return './' + appname
+    else:
+        return os.path.join(kwargs['sirikata_path'], appname)
 
 def RunApp(appname, idx, args, **kwargs):
     full_args = []
     full_env = {}
     AddStandardParams(appname, idx, full_args, full_env, **kwargs)
-    full_args.extend(['./' + appname])
+    full_args.extend([GetAppFile(appname, **kwargs)])
     full_args.extend(args)
     if 'plugins' in kwargs and kwargs['plugins'] is not None:
         full_args.extend([ kwargs['plugins'] ])
