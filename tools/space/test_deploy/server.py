@@ -45,6 +45,9 @@ def RunApp(appname, idx, args, **kwargs):
     full_args.extend(args)
     if 'plugins' in kwargs and kwargs['plugins'] is not None:
         full_args.extend([ kwargs['plugins'] ])
+    if 'save_log' in kwargs and kwargs['save_log']:
+        lf = os.path.join(kwargs['save_log'], appname + '-' + str(idx) + '.log')
+        full_args.extend(['--log-file=%s' % (lf)])
     print 'Running:', full_args, 'with environment:', full_env
     # Clear full_env if its empty
     if not full_env: full_env = None

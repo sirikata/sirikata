@@ -209,6 +209,7 @@ parser.add_option("--cseg-config", help="Extra configuration file to load on cse
 parser.add_option("--pinto-config", help="Extra configuration file to load on pinto servers", action="store", type="string", dest="pinto_config", default=None)
 
 parser.add_option("--duration", help="Time to wait (and block) before killing child processes", action="store", type="int", dest="duration", default=None)
+parser.add_option("--save-log", help="If non-empty, saves logs to disk in the specified location with names like 'cseg-1.log'", action="store", type="str", dest="save_log", default="")
 
 (options, args) = parser.parse_args()
 
@@ -232,5 +233,6 @@ start(
     cseg_config=options.cseg_config,
     pinto_config=options.pinto_config,
 
-    duration=options.duration
+    duration=options.duration,
+    save_log=options.save_log
     )
