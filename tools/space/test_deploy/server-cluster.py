@@ -14,6 +14,7 @@ import server
 import socket
 import time
 from optparse import OptionParser
+import signal
 
 nservers = 2
 layout = (2, 1, 1)
@@ -168,17 +169,10 @@ def printOHTemplate(**kwargs):
     print
 
 def start(**kwargs):
+
     processes = []
 
-    processes += startCSeg(**kwargs)
-    processes += startPinto(**kwargs)
-    time.sleep(5)
-    processes += startSpace(**kwargs)
-
-    printOHTemplate(**kwargs)
-
-    if 'duration' in kwargs and kwargs['duration']:
-        time.sleep(kwargs['duration'])
+    def terminate_children():
         for ps in processes:
             ps.terminate()
         for x in range(100):
@@ -190,6 +184,25 @@ def start(**kwargs):
                 ps.kill()
                 time.sleep(0.01)
                 ps.kill()
+
+    def sig_handler(signum, frame):
+        print __file__, 'received signal', signum, ', killing children'
+        terminate_children()
+
+    signal.signal(signal.SIGTERM, sig_handler)
+    signal.signal(signal.SIGHUP, sig_handler)
+
+
+    processes += startCSeg(**kwargs)
+    processes += startPinto(**kwargs)
+    time.sleep(5)
+    processes += startSpace(**kwargs)
+
+    printOHTemplate(**kwargs)
+
+    if 'duration' in kwargs and kwargs['duration']:
+        time.sleep(kwargs['duration'])
+        terminate_children()
 
 parser = OptionParser()
 
