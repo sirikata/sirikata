@@ -239,8 +239,9 @@ void ReplicatedClient::proxUpdate(const Sirikata::Protocol::Prox::ProximityUpdat
         }
 
         // Create a new loccache for this new tree. We could be getting this
-        createLocCache(index_unique_id);
-        onCreatedReplicatedIndex(index_unique_id, getLocCache(index_unique_id), index_from_server, dynamic_objects);
+        bool is_new = createLocCache(index_unique_id);
+        if (is_new)
+            onCreatedReplicatedIndex(index_unique_id, getLocCache(index_unique_id), index_from_server, dynamic_objects);
     }
 
     ReplicatedLocationServiceCachePtr loccache = getLocCache(index_unique_id);
@@ -381,14 +382,14 @@ void ReplicatedClient::locUpdate(const Sirikata::Protocol::Loc::LocationUpdate& 
         // to do that. See proxUpdate for how this is finally
         // resolved.
         if (index_it == mObjects.end()) {
-            createLocCache(index_id);
+            createOrphanLocUpdateManager(index_id);
             // Add it to a list so we can clean it out eventually
             // if we never get prox data for it
             mCachesForOrphans.push_back(index_id);
         }
         // Then we just continue as normal, sticking it in as an orphan if
         // necessary
-        if (!getLocCache(index_id)->tracking(observed_oref)) {
+        if (index_it == mObjects.end() || !getLocCache(index_id)->tracking(observed_oref)) {
             getOrphanLocUpdateManager(index_id)->addOrphanUpdate(observed, update);
         }
         else { // or actually applying it
@@ -405,9 +406,17 @@ void ReplicatedClient::onOrphanLocUpdate(const LocUpdate& lu, ProxIndexID iid) {
 }
 
 
-void ReplicatedClient::createLocCache(ProxIndexID iid) {
-    if (mObjects.find(iid) == mObjects.end())
+bool ReplicatedClient::createLocCache(ProxIndexID iid) {
+    bool is_new = false;
+    if (mObjects.find(iid) == mObjects.end()) {
         mObjects[iid] = ReplicatedLocationServiceCachePtr(new ReplicatedLocationServiceCache(mStrand));
+        is_new = true;
+    }
+    createOrphanLocUpdateManager(iid);
+    return is_new;
+}
+
+void ReplicatedClient::createOrphanLocUpdateManager(ProxIndexID iid) {
     if (mOrphans.find(iid) == mOrphans.end())
         mOrphans[iid] = OrphanLocUpdateManagerPtr(new OrphanLocUpdateManager(mContext, mContext->mainStrand, Duration::seconds(10)));
 }

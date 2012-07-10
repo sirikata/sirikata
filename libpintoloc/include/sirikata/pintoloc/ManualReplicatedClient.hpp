@@ -82,10 +82,11 @@ class SIRIKATA_LIBPINTOLOC_EXPORT ReplicatedClient :
 
   private:
 
-    // Returns true if the *query* can be removed (not if this
-    // object can be removed, that is tracked by the lifetime of
-    // the session)
-    void createLocCache(ProxIndexID iid);
+    // Returns true if the cache was actually created
+    bool createLocCache(ProxIndexID iid);
+    // Creates just the orhpan loc update manager, used when getting
+    // unknown loc updates but we don't want the loc cache yet
+    void createOrphanLocUpdateManager(ProxIndexID iid);
     ReplicatedLocationServiceCachePtr getLocCache(ProxIndexID iid);
     OrphanLocUpdateManagerPtr getOrphanLocUpdateManager(ProxIndexID iid);
     void removeLocCache(ProxIndexID iid);

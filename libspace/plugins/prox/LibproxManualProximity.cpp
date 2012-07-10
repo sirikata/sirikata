@@ -823,6 +823,9 @@ void LibproxManualProximity::queryHasEvents(ProxQuery* query) {
                         addition.set_parent(parentid.getAsUUID());
                     }
                     else if (/*lone addition*/ aidx == 0 && evt.additions().size() == 1 && evt.removals().size() == 0) {
+                        // NOTE: this isn't perfect, you can get this
+                        // if we're adding a new root!
+
                         // The tree ID identifies where this tree goes in some
                         // larger structure. In our case it'll be a server ID
                         // indicating which server the objects (and tree) are
