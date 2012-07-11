@@ -1,0 +1,24 @@
+ply
+format ascii 1.0
+comment VCGLIB generated
+comment TextureFile square2s/texture0.jpg
+element vertex 8
+property float x
+property float y
+property float z
+element face 4
+property list uchar int vertex_indices
+property list uchar float texcoord
+end_header
+27.1668 268.721 0 
+-198.521 134.846 0 
+-198.521 268.721 0 
+27.1668 134.846 0 
+27.1668 134.846 0 
+27.1668 268.721 0 
+-198.521 134.846 0 
+-198.521 268.721 0 
+3 0 1 2 6 7.51282e+033 0 9.56655e-039 0 2.8026e-045 0 
+3 1 0 3 6 7.51282e+033 0 9.56655e-039 0 2.8026e-045 0 
+3 4 5 6 6 -3.39585 8.42786 -3.39585 16.7951 24.8151 8.42786 
+3 7 6 5 6 24.8151 16.7951 24.8151 8.42786 -3.39585 16.7951 

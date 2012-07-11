@@ -19,7 +19,7 @@ SIRIKATA_PLUGIN_EXPORT_C void init ()
     using namespace Sirikata;
     if ( ply_plugin_refcount == 0 )
         ModelsSystemFactory::getSingleton ().registerConstructor
-            ( "ply" , &createPlyModelSystem, true );
+            ( "mesh-ply" , &createPlyModelSystem, true );
 
     ++ply_plugin_refcount;
 }
@@ -46,7 +46,7 @@ SIRIKATA_PLUGIN_EXPORT_C void destroy ()
         assert ( ply_plugin_refcount == 0 );
 
         if ( ply_plugin_refcount == 0 )
-            ModelsSystemFactory::getSingleton ().unregisterConstructor ( "ply" );
+            ModelsSystemFactory::getSingleton ().unregisterConstructor ( "mesh-ply" );
     }
 }
 

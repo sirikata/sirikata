@@ -484,12 +484,6 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
 
     if (!m || meshName == "") continue;
 
-    //Center the mesh, as its done on the client side for display.
-    Mesh::MutableFilterDataPtr input_data(new Mesh::FilterData);
-    input_data->push_back(m);
-    Mesh::FilterDataPtr output_data = mCenteringFilter->apply(input_data);
-    m = std::tr1::dynamic_pointer_cast<Mesh::Meshdata> (output_data->get());
-
     //Compute the bounds for the child's mesh.
     BoundingBox3f3f originalMeshBoundingBox = BoundingBox3f3f::null();
     double originalMeshBoundsRadius=0;
@@ -830,13 +824,21 @@ void AggregateManager::uploadAggregateMesh(Mesh::MeshdataPtr agg_mesh,
 
       std::tr1::shared_ptr<Transfer::DenseData> uploaded_mesh(new Transfer::DenseData(files[localMeshName]));
       VisualPtr v;
+      MeshdataPtr m;
       {
         boost::mutex::scoped_lock modelSystemLock(mModelsSystemMutex);
-
         v = mModelsSystem->load(uploaded_mesh);
+
+        // FIXME handle non-Meshdata formats
+        m = std::tr1::dynamic_pointer_cast<Meshdata>(v);
+        if (m) {
+            //Center the mesh, as its done on the client side for display.
+            Mesh::MutableFilterDataPtr input_data(new Mesh::FilterData);
+            input_data->push_back(m);
+            Mesh::FilterDataPtr output_data = mCenteringFilter->apply(input_data);
+            m = std::tr1::dynamic_pointer_cast<Mesh::Meshdata> (output_data->get());
+        }
       }
-      // FIXME handle non-Meshdata formats
-      MeshdataPtr m = std::tr1::dynamic_pointer_cast<Meshdata>(v);
 
       AGG_LOG(insane, localMeshName << " : upload started");
       Transfer::TransferRequestPtr req(
@@ -1036,12 +1038,21 @@ void AggregateManager::chunkFinished(Time t, const UUID uuid, const UUID child_u
       if (mAggregateObjects[child_uuid]->mMeshdata == MeshdataPtr() ) {
 
         VisualPtr v;
+        MeshdataPtr m;
         {
 	  boost::mutex::scoped_lock modelSystemLock(mModelsSystemMutex);
           v = mModelsSystem->load(request->getMetadata(), request->getMetadata().getFingerprint(), response);
+
+          // FIXME handle non-Meshdata formats
+          m = std::tr1::dynamic_pointer_cast<Meshdata>(v);
+          if (m) {
+              //Center the mesh, as its done on the client side for display.
+              Mesh::MutableFilterDataPtr input_data(new Mesh::FilterData);
+              input_data->push_back(m);
+              Mesh::FilterDataPtr output_data = mCenteringFilter->apply(input_data);
+              m = std::tr1::dynamic_pointer_cast<Mesh::Meshdata> (output_data->get());
+          }
         }
-        // FIXME handle non-Meshdata formats
-        MeshdataPtr m = std::tr1::dynamic_pointer_cast<Meshdata>(v);
 
         mAggregateObjects[child_uuid]->mMeshdata = m;
 
