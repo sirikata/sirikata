@@ -9,7 +9,8 @@
 
 namespace Sirikata {
 
-enum {PLY, VERTEX, FACE, EDGE, X, Y, Z, RED, GREEN, BLUE, ALPHA, VI};
+//too many states, it should be cut down later
+enum {PLY, VERTEX, FACE, EDGE, X, Y, Z, RED, GREEN, BLUE, ALPHA, VI, TC};
 
 
 PlyModelSystem::PlyModelSystem() {
@@ -42,19 +43,25 @@ Mesh::VisualPtr PlyModelSystem::load(const Transfer::RemoteFileMetadata& metadat
 Mesh::VisualPtr PlyModelSystem::load(Transfer::DenseDataPtr data) {
 	if(!canLoad(data))
 		return Mesh::VisualPtr();
-	//data dump right here
-	//std::cout << data->asString() << '\n';
+
+	//stringstream to read data
 	std::stringstream ss (std::stringstream::in | std::stringstream::out);
 	ss << data->asString();
 	String s;
 	ss >> s;
+
 	Mesh::MeshdataPtr mdp(new Mesh::Meshdata);
 	
 	int state = PLY;
 	int vertexNum = 0, faceNum = 0, edgeNum = 0;
 	std::vector<int> propV, propF, propE;
 	
-	while(ss) {
+	bool loop = true;
+	String file;
+	while(ss && loop) {
+		if(s == "TextureFile") {
+			ss >> file;
+		}
 		if(s == "element") {
 			ss >> s;
 			if(s == "vertex") {
@@ -73,7 +80,7 @@ Mesh::VisualPtr PlyModelSystem::load(Transfer::DenseDataPtr data) {
 		if(s == "property") {
 			switch(state) {
 				case VERTEX:
-					ss >> s; //contains the type, I dunno how to deal with it right now...so i won't! :D
+					ss >> s; //contains the type, generally it is a float
 					ss >> s; //contains the name
 					if(s == "x") propV.push_back(X);
 					if(s == "y") propV.push_back(Y);
@@ -82,18 +89,21 @@ Mesh::VisualPtr PlyModelSystem::load(Transfer::DenseDataPtr data) {
 					if(s == "green") propV.push_back(GREEN);
 					if(s == "blue") propV.push_back(BLUE);
 					if(s == "alpha") propV.push_back(ALPHA);
+					//doing this allows us to collect vertex information
+					//even if the data is out of order, for example if
+					//colors somehow appeared before points
 					break;
 				case FACE:
-					ss >> s; //the only thing i see now is list... i havent seen any other cases
+					ss >> s; //For now, I've only seen "list"
 					if(s == "list") {
 						ss >> s; //another type; it usually seems to be uchar
 						ss >> s; //another type; it usually seems to be int
 						ss >> s;
-						if(s == "vertex_indices") {
-							propF.push_back(VI);
-						}
+						if(s == "vertex_indices") propF.push_back(VI);
+						if(s == "texcoord") propF.push_back(TC);
 
-						//very sketchy, if there's ever the occasion where we're one off, we're doomed
+						//there could be the possibility that the program is one string ahead
+						//or behind, causing errors
 					}
 					break;
 				case EDGE:
@@ -102,91 +112,195 @@ Mesh::VisualPtr PlyModelSystem::load(Transfer::DenseDataPtr data) {
 			}
 		}
 		if(s == "end_header") {
-			double (*valueV)[7] = new double[vertexNum][7]; //note: the type should be able to vary
+			if(vertexNum == 0) return Mesh::VisualPtr(); //no vertices means an empty ply file
+			bool hasColor = false;
+			loop = false;
+			double (*valueV)[7] = new double[vertexNum][7]; //note: the type should be able to vary (but does it make a significant difference...?)
 			int (*valueF)[3] = new int[faceNum][3]; //faces can have more than 3 vertices, change later
-			double temp; //note: the type should be able to vary (based on the previous input
+			int (*valueE) = new int[2];
+			double temp; //note: the type should be able to vary (based on the previous input)
 			int index;
 			int numIndices;
+			double texCoord;
+			int numTexCoords;
+			//obtain vertex data
 			for(int i = 0; i < vertexNum; i++) {
 				for(int j = 0; j < propV.size(); j++) {
 					ss >> temp;
-					valueV[i][j] = temp;
+					switch(propV[j]) {
+						case X: valueV[i][0] = temp; break;
+						case Y: valueV[i][1] = temp; break;
+						case Z: valueV[i][2] = temp; break;
+						case RED: valueV[i][3] = temp; hasColor = true; break;
+						case GREEN: valueV[i][4] = temp; hasColor = true; break;
+						case BLUE: valueV[i][5] = temp; hasColor = true; break;
+						case ALPHA: valueV[i][6] = temp; hasColor = true; break;
+					}
 					//std::cout << valueV[i][j] << ' ';
 				}
 				//std::cout << '\n';
 			}
+			//obtain face data
 			for(int i = 0; i < faceNum; i++) {
-				ss >> numIndices; 
+				ss >> numIndices;
 				for(int j = 0; j < numIndices; j++) {
 					ss >> index;
 					valueF[i][j] = index;
-					//std::cout << valueF[i][j] << ' ';
 				}
-				//std::cout << '\n';
+				if(propF.size() > 1) {
+					ss >> numTexCoords;
+					for(int j = 0; j < numTexCoords; j++) {
+						ss >> texCoord; //deal w/ it later
+					}
+				}
 			}
+			//if there are no faces, then add a line (an edge, here)
+			if(faceNum == 0) {
+				for(int i = 0; i < 2; i++) {
+					ss >> index;
+					valueE[i] = index;
+				}
+			}
+			//one node
 			Mesh::Node nod;
 			nod.parent = Mesh::NullNodeIndex;
 			mdp->nodes.push_back(nod);
 			mdp->rootNodes.push_back(0);
+			
 
+			
+			Mesh::SubMeshGeometry smg;
+			
+
+			//make a primitive
+			Mesh::SubMeshGeometry::Primitive p;
+			if(vertexNum >= 3) p.primitiveType = Mesh::SubMeshGeometry::Primitive::TRIANGLES;
+			else p.primitiveType = Mesh::SubMeshGeometry::Primitive::LINES;
+			smg.primitives.push_back(p);
+			mdp->geometry.push_back(smg);
+			//add a geometryinstance for every smg
 			Mesh::GeometryInstance gi;
 			gi.geometryIndex = 0;
 			gi.parentNode = 0;
 			mdp->instances.push_back(gi);
+			
+			//no faces means that there could be just a line
+			if(faceNum == 0)
+				for(int i = 0; i < 2; i++)
+					mdp->geometry[0].primitives[0].indices.push_back(valueE[i]);
+			else {
+				//we have one set of indices to start off...
+				for(int j = 0; j < 3; j++) {
+					mdp->geometry[0].primitives[0].indices.push_back(valueF[0][j]);
+				}
+				//then for each next set of indices, we first see
+				//if a previous primitive has either shared an 
+				//index or shared a point. If yes, we may add to
+				//the same primitive, or we may make a new
+				//submeshgeometry.
+				//LATER: primitives should be differentiated 
+				//based on material/texture.
+				for(int i = 1; i < faceNum; i++) {
+					int counterSMG = 0;
+					bool samePrim = false;
+					while(!samePrim && counterSMG < mdp->geometry.size()) {
+						for(int j = 0; j < 3 && !samePrim; j++) {
+							//iterate through the indices
+							//counterPrim = 0;
+							for(std::vector<Mesh::SubMeshGeometry::Primitive>::iterator it = mdp->geometry[counterSMG].primitives.begin();
+								it < mdp->geometry[counterSMG].primitives.end() && !samePrim;
+								it++) {
+								for(std::vector<unsigned short>::iterator iter = it->indices.begin();
+									iter < it->indices.end() && !samePrim;
+									iter++) {
+									if(*iter == valueF[i][j])
+										samePrim = true;
+									if(valueV[*iter][0] == valueV[valueF[i][j]][0] && 
+										valueV[*iter][1] == valueV[valueF[i][j]][1] &&
+										valueV[*iter][2] == valueV[valueF[i][j]][2]) {
+										samePrim = true;
+										//hitSMG = counterSMG;
+									}
+								}
+								//if(!samePrim) counterPrim++;
+							}
+							
+							
+						}
+						if(!samePrim) counterSMG++;
+					}
+					//add to the primitive if the index or the point is the same
+					if(samePrim) {
+						for(int j = 0; j < 3; j++) 
+							mdp->geometry[counterSMG].primitives[0].indices.push_back(valueF[i][j]);
+					} else {
+						//otherwise, we'll make a new submeshgeometry/geometry set
+						mdp->geometry.push_back(smg);
+						gi.geometryIndex = counterSMG;
+						mdp->instances.push_back(gi);
+						for(int j = 0; j < 3; j++)
+							mdp->geometry[counterSMG].primitives[0].indices.push_back(valueF[i][j]);
+					}
+				}
+			}
+			//note: sometimes the primitives are not sorted the way we want.
+			//thus, there may be the case where two submeshgeometries should
+			//be merged but aren't because the connecting point is not
+			//recorded early enough.
+			//we could try to merge them again... but that may take a while.
 
-			Mesh::SubMeshGeometry smg;
-			//ignore colors for now
+			//color: currently just takes the average of the colors and sets
+			//the color of the figure to this average color
+			int sumRed = 0, sumGreen = 0, sumBlue = 0, sumAlpha = 0;
 			for(int i = 0; i < vertexNum; i++) {
 				Vector3f point = Vector3f(valueV[i][0], valueV[i][1], valueV[i][2]);
-				smg.positions.push_back(point);
+				if(valueV[i][3] >= 0) sumRed += valueV[i][3];
+				if(valueV[i][4] >= 0) sumGreen += valueV[i][4];
+				if(valueV[i][5] >= 0) sumBlue += valueV[i][5];
+				if(valueV[i][6] >= 0) sumAlpha += valueV[i][6];
+				mdp->geometry[0].positions.push_back(point);
 			}
-			for(int i = 0; i < faceNum; i++) {
-				Mesh::SubMeshGeometry::Primitive p;
-				p.primitiveType = p.TRIANGLES;
-				for(int j = 0; j < numIndices; j++)
-					p.indices.push_back(valueF[i][j]);
-				smg.primitives.push_back(p);
+			//we will have to do this in the particular order of the geometries
+			//textures seem to be out of my reach (D:) for now...
+
+			//add material
+			Mesh::MaterialEffectInfo mei;
+			Mesh::MaterialEffectInfo::Texture t;
+			if(file.size() > 0) {
+				//the textured material path!
+				mei.shininess = -128;
+				mei.reflectivity = -1;
+				mdp->textures.push_back(file);
+				//t.uri = file;
+				t.texCoord = 0;
+				t.affecting = t.DIFFUSE;
+				t.samplerType = t.SAMPLER_TYPE_2D;
+				t.minFilter = t.SAMPLER_FILTER_LINEAR;
+				t.magFilter = t.SAMPLER_FILTER_LINEAR;
+				t.wrapS = t.WRAP_MODE_WRAP;
+				t.wrapT = t.WRAP_MODE_WRAP;
+				t.wrapU = t.WRAP_MODE_WRAP;
+				t.maxMipLevel = 255;
+				t.mipBias = 0;
+
+				//it doesn't do anything right now...
+				//but now it will! muaahahahahah!
+
+			} else {
+				Vector4f c;
+				if(vertexNum > 0) c = Vector4f(sumRed / vertexNum / 255.0, sumGreen / vertexNum / 255.0, sumBlue / vertexNum / 255.0, sumAlpha / vertexNum / 255.0);
+				//std::cout << c.x << ' ' << c.y << ' ' << c.z << ' ' << c.w;
+				if(hasColor) {
+					t.color = c;
+					t.affecting = t.DIFFUSE;
+				}
 			}
-			mdp->geometry.push_back(smg);
+			if(faceNum > 0) mei.textures.push_back(t);
+			mdp->materials.push_back(mei);
 		}
 
 		ss >> s;
 	}
-	
-
-
-	//general ply format:
-	//ply										-oh my, it's ply
-	//format ascii 1.0							-format is ascii, ignore 1.0
-	//comment VCGLIP generated					-ignore comments, but this thing was generated by VCGLIP, we should hope minimal comments!
-	//		now, the next few will have elements, each of which is followed by various properties
-	//element vertex 192						-element: vertices, there are 192 of them (a single point)
-	//property float x							-properties: x, y, z
-	//property float y							-all vertices here will have these three properties 
-	//property float z							-note: potentially more if one includes color, for example
-	//element face 184							-element: faces, there are 184 of them (think primitive)
-	//property list uchar int vertex_indices	-property: LIST of INTs, VERTEX_INDICES (contains UCHARs)
-	//end_header								-oooh, almost forgot about this. NOW, it's the numbers.
-	//-6061.9 -2620.84 565.545					-first vertex: note it has three values, x, y, and z
-	//-6061.62 -2659.95 565.545					-second vertex
-	//...										-and so on, until there are 192 vertices
-	//3 0 1 2									-first face: note it consists of 3 indices: 0, 1, and 2
-	//3 1 0 3									-second face
-	//...										-and so on, until there are 184 faces
-	//
-	//it seems as though... we only care about elements, properties, and their following values
-	//the way this program is set up, we can't detect if something is part of a comment or not
-	//
-	//idea:
-	//-move through the stringstream, noting when we hit element
-	//-we store stuff at that point until we reach property
-	//-we store stuff at that point until we reach another property, then we move on
-	//-two cases: we either hit another element or we reach numbers
-	//	-if we reach another element, we may continue our above process
-	//	-otherwise, since we conveniently stored the elements/properties in order, we can
-	//	 store vertices and vertex_indices
-
-	//Mesh::MeshdataPtr mdp(*md);
 
     return mdp;
 }

@@ -4,8 +4,8 @@
         <contributor>
             <authoring_tool>Google SketchUp 8.0.4811</authoring_tool>
         </contributor>
-        <created>2012-06-30T00:06:45Z</created>
-        <modified>2012-06-30T00:06:45Z</modified>
+        <created>2012-07-10T18:33:50Z</created>
+        <modified>2012-07-10T18:33:50Z</modified>
         <unit meter="1" name="inch" />
     </asset>
     <library_visual_scenes>
@@ -89,7 +89,7 @@
                 <technique sid="COMMON">
                     <lambert>
                         <diffuse>
-                            <color>0.09803921568627451 0.09803921568627451 0.4392156862745098 1</color>
+                            <color>0.2745098039215687 0.5098039215686274 0.7058823529411765 1</color>
                         </diffuse>
                     </lambert>
                 </technique>
