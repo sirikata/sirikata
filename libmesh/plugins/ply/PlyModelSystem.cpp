@@ -10,7 +10,7 @@
 namespace Sirikata {
 
 //too many states, it should be cut down later
-enum {PLY, VERTEX, FACE, EDGE, X, Y, Z, RED, GREEN, BLUE, ALPHA, VI, TC};
+enum {PLY, VERTEX, FACE, EDGE, X, Y, Z, RED, GREEN, BLUE, ALPHA, VI, TC, FILLER};
 
 
 PlyModelSystem::PlyModelSystem() {
@@ -37,10 +37,6 @@ bool PlyModelSystem::canLoad(Transfer::DenseDataPtr data) {
 }
 
 Mesh::VisualPtr PlyModelSystem::load(const Transfer::RemoteFileMetadata& metadata, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data) {
-	return load(data);
-}
-
-Mesh::VisualPtr PlyModelSystem::load(Transfer::DenseDataPtr data) {
 	if(!canLoad(data))
 		return Mesh::VisualPtr();
 
@@ -83,12 +79,13 @@ Mesh::VisualPtr PlyModelSystem::load(Transfer::DenseDataPtr data) {
 					ss >> s; //contains the type, generally it is a float
 					ss >> s; //contains the name
 					if(s == "x") propV.push_back(X);
-					if(s == "y") propV.push_back(Y);
-					if(s == "z") propV.push_back(Z);
-					if(s == "red") propV.push_back(RED);
-					if(s == "green") propV.push_back(GREEN);
-					if(s == "blue") propV.push_back(BLUE);
-					if(s == "alpha") propV.push_back(ALPHA);
+					else if(s == "y") propV.push_back(Y);
+					else if(s == "z") propV.push_back(Z);
+					else if(s == "red") propV.push_back(RED);
+					else if(s == "green") propV.push_back(GREEN);
+					else if(s == "blue") propV.push_back(BLUE);
+					else if(s == "alpha") propV.push_back(ALPHA);
+					else propV.push_back(FILLER);
 					//doing this allows us to collect vertex information
 					//even if the data is out of order, for example if
 					//colors somehow appeared before points
@@ -118,10 +115,11 @@ Mesh::VisualPtr PlyModelSystem::load(Transfer::DenseDataPtr data) {
 			double (*valueV)[7] = new double[vertexNum][7]; //note: the type should be able to vary (but does it make a significant difference...?)
 			int (*valueF)[3] = new int[faceNum][3]; //faces can have more than 3 vertices, change later
 			int (*valueE) = new int[2];
+			double (*tc)[2] = new double[vertexNum][2]; //stores the texture coordinates
+			//it's separate from the vertex data because it was stuck with the FACE data for some reason...
 			double temp; //note: the type should be able to vary (based on the previous input)
 			int index;
 			int numIndices;
-			double texCoord;
 			int numTexCoords;
 			//obtain vertex data
 			for(int i = 0; i < vertexNum; i++) {
@@ -143,14 +141,16 @@ Mesh::VisualPtr PlyModelSystem::load(Transfer::DenseDataPtr data) {
 			//obtain face data
 			for(int i = 0; i < faceNum; i++) {
 				ss >> numIndices;
+				//int (*temp) = new int[numIndices];
 				for(int j = 0; j < numIndices; j++) {
 					ss >> index;
 					valueF[i][j] = index;
 				}
 				if(propF.size() > 1) {
-					ss >> numTexCoords;
-					for(int j = 0; j < numTexCoords; j++) {
-						ss >> texCoord; //deal w/ it later
+					ss >> numTexCoords; //doesn't do anything right now
+					for(int j = 0; j < numIndices; j++) {
+						ss >> tc[valueF[i][j]][0];
+						ss >> tc[valueF[i][j]][1];
 					}
 				}
 			}
@@ -167,11 +167,7 @@ Mesh::VisualPtr PlyModelSystem::load(Transfer::DenseDataPtr data) {
 			mdp->nodes.push_back(nod);
 			mdp->rootNodes.push_back(0);
 			
-
-			
 			Mesh::SubMeshGeometry smg;
-			
-
 			//make a primitive
 			Mesh::SubMeshGeometry::Primitive p;
 			if(vertexNum >= 3) p.primitiveType = Mesh::SubMeshGeometry::Primitive::TRIANGLES;
@@ -242,12 +238,26 @@ Mesh::VisualPtr PlyModelSystem::load(Transfer::DenseDataPtr data) {
 							mdp->geometry[counterSMG].primitives[0].indices.push_back(valueF[i][j]);
 					}
 				}
+
+
+
 			}
 			//note: sometimes the primitives are not sorted the way we want.
 			//thus, there may be the case where two submeshgeometries should
 			//be merged but aren't because the connecting point is not
 			//recorded early enough.
 			//we could try to merge them again... but that may take a while.
+
+			//TextureSet created
+			Mesh::SubMeshGeometry::TextureSet ts;
+			ts.stride = 2;
+			for(int i = 0; i < vertexNum; i++) {
+				for(int j = 0; j < 2; j++)  {
+					ts.uvs.push_back(tc[i][j]);
+					//std::cout << tc[i][j];
+				}
+			}
+			mdp->geometry[0].texUVs.push_back(ts);
 
 			//color: currently just takes the average of the colors and sets
 			//the color of the figure to this average color
@@ -260,18 +270,19 @@ Mesh::VisualPtr PlyModelSystem::load(Transfer::DenseDataPtr data) {
 				if(valueV[i][6] >= 0) sumAlpha += valueV[i][6];
 				mdp->geometry[0].positions.push_back(point);
 			}
+			
 			//we will have to do this in the particular order of the geometries
 			//textures seem to be out of my reach (D:) for now...
 
 			//add material
 			Mesh::MaterialEffectInfo mei;
 			Mesh::MaterialEffectInfo::Texture t;
-			if(file.size() > 0) {
+			if(!file.empty()) {
 				//the textured material path!
 				mei.shininess = -128;
 				mei.reflectivity = -1;
 				mdp->textures.push_back(file);
-				//t.uri = file;
+				t.uri = file;
 				t.texCoord = 0;
 				t.affecting = t.DIFFUSE;
 				t.samplerType = t.SAMPLER_TYPE_2D;
@@ -283,13 +294,15 @@ Mesh::VisualPtr PlyModelSystem::load(Transfer::DenseDataPtr data) {
 				t.maxMipLevel = 255;
 				t.mipBias = 0;
 
-				//it doesn't do anything right now...
-				//but now it will! muaahahahahah!
+				mdp->uri = metadata.getURI().toString();
+				
+				//mdp->geometry[0].textures
+				mdp->geometry[0].primitives[0].materialId = 1;
+				mdp->instances[0].materialBindingMap.insert(std::pair<int, int> (1, 0));
 
 			} else {
 				Vector4f c;
-				if(vertexNum > 0) c = Vector4f(sumRed / vertexNum / 255.0, sumGreen / vertexNum / 255.0, sumBlue / vertexNum / 255.0, sumAlpha / vertexNum / 255.0);
-				//std::cout << c.x << ' ' << c.y << ' ' << c.z << ' ' << c.w;
+				if(vertexNum > 0) c = Vector4f(sumRed / vertexNum / 255.0, sumGreen / vertexNum / 255.0, sumBlue / vertexNum / 255.0, sumAlpha / vertexNum / 255.0)
 				if(hasColor) {
 					t.color = c;
 					t.affecting = t.DIFFUSE;
@@ -297,12 +310,21 @@ Mesh::VisualPtr PlyModelSystem::load(Transfer::DenseDataPtr data) {
 			}
 			if(faceNum > 0) mei.textures.push_back(t);
 			mdp->materials.push_back(mei);
+	
+			delete valueV;
+			delete valueF;
+			delete valueE;
+			delete tc;
 		}
 
 		ss >> s;
 	}
 
     return mdp;
+}
+
+Mesh::VisualPtr PlyModelSystem::load(Transfer::DenseDataPtr data) {
+	return Mesh::VisualPtr();
 }
 
 bool PlyModelSystem::convertVisual(const Mesh::VisualPtr& visual, const String& format, std::ostream& vout) {

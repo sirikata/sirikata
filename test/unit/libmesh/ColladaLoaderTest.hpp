@@ -277,6 +277,7 @@ public:
 		TS_ASSERT_EQUALS(mdp->nodes[0].transform, Matrix4x4f::identity());
 		TS_ASSERT_EQUALS(mdp->globalTransform, Matrix4x4f::identity());
 	}
+
 	void testColladaLoaderCircle( void ) {
 		//collada file with one circle
 		string circle = getString("circle");
@@ -300,23 +301,21 @@ public:
 		TS_ASSERT_EQUALS(mdp->globalTransform, Matrix4x4f::identity());
 	}
 
-	void testColladaLoaderCircles( void ) {
-		//collada file with two distinct circles
-		string circles = getString("circles");
-		MeshdataPtr mdp = loadMDP(circles);
+	void testColladaLoaderCircleT( void ) {
+		//collada file with one texturized circle
+		string circleT = getString("circleT");
+		MeshdataPtr mdp = loadMDP(circleT);
 		
 		//asserts
-		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 2);
+		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 1);
 		TS_ASSERT_EQUALS(mdp->getInstancedLightCount(), 0);
 		TS_ASSERT_EQUALS(mdp->getJointCount(), 0);
-		TS_ASSERT_EQUALS(mdp->geometry.size(), 2);
-		for(int i = 0; i < mdp->geometry.size(); i++) {
-			TS_ASSERT_EQUALS(mdp->geometry[i].skinControllers.size(), 0);
-			TS_ASSERT_EQUALS(mdp->geometry[i].primitives.size(), 1);
-			TS_ASSERT_EQUALS(mdp->geometry[i].primitives[0].indices.size(), 66);
-		}
+		TS_ASSERT_EQUALS(mdp->geometry.size(), 1);
+		TS_ASSERT_EQUALS(mdp->geometry[0].skinControllers.size(), 0);
+		TS_ASSERT_EQUALS(mdp->geometry[0].primitives.size(), 1);
+		TS_ASSERT_EQUALS(mdp->geometry[0].primitives[0].indices.size(), 132);
 		TS_ASSERT_EQUALS(mdp->lights.size(), 0);
-		TS_ASSERT_EQUALS(mdp->textures.size(), 0);
+		TS_ASSERT_EQUALS(mdp->textures.size(), 1);
 		TS_ASSERT_EQUALS(mdp->materials.size(), 1);
 		TS_ASSERT_EQUALS(mdp->materials[0].textures.size(), 1);
 		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
@@ -325,10 +324,10 @@ public:
 		TS_ASSERT_EQUALS(mdp->globalTransform, Matrix4x4f::identity());
 	}
 
-	void testColladaLoaderCircles3d( void ) {
-		//collada file with two distinct intersecting circles in 3d
-		string circles3d = getString("circles3d");
-		MeshdataPtr mdp = loadMDP(circles3d);
+	void testColladaLoaderCircles( void ) {
+		//collada file with two distinct circles
+		string circles = getString("circles");
+		MeshdataPtr mdp = loadMDP(circles);
 		
 		//asserts
 		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 2);

@@ -199,6 +199,29 @@ public:
 		TS_ASSERT_EQUALS(mdp->globalTransform, Matrix4x4f::identity());
 	}
 
+	void testPlyLoaderCircleT( void ) {
+		//ply file with one texturized circle
+		string circleT = getString("circleT");
+		MeshdataPtr mdp = loadMDP(circleT);
+		
+		//asserts
+		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 1);
+		TS_ASSERT_EQUALS(mdp->getInstancedLightCount(), 0);
+		TS_ASSERT_EQUALS(mdp->getJointCount(), 0);
+		TS_ASSERT_EQUALS(mdp->geometry.size(), 1);
+		TS_ASSERT_EQUALS(mdp->geometry[0].skinControllers.size(), 0);
+		TS_ASSERT_EQUALS(mdp->geometry[0].primitives.size(), 1);
+		TS_ASSERT_EQUALS(mdp->geometry[0].primitives[0].indices.size(), 132);
+		TS_ASSERT_EQUALS(mdp->lights.size(), 0);
+		TS_ASSERT_EQUALS(mdp->textures.size(), 1);
+		TS_ASSERT_EQUALS(mdp->materials.size(), 1);
+		TS_ASSERT_EQUALS(mdp->materials[0].textures.size(), 1);
+		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
+		TS_ASSERT_EQUALS(mdp->nodes.size(), 1);
+		TS_ASSERT_EQUALS(mdp->nodes[0].transform, Matrix4x4f::identity());
+		TS_ASSERT_EQUALS(mdp->globalTransform, Matrix4x4f::identity());
+	}
+
 	void testPlyLoaderCylinders( void ) {
 		//ply file with two cylinders
 		string cylinders = getString("cylinders");
@@ -244,14 +267,15 @@ public:
 		//copying and directly placing the text in the file
 
 		// For now only support in-tree execution
-        boost::filesystem::path collada_data_dir = boost::filesystem::path(Path::Get(Path::DIR_EXE));
+        boost::filesystem::path ply_data_dir = boost::filesystem::path(Path::Get(Path::DIR_EXE));
+		std::cout << ply_data_dir << '\n';
         // Windows exes are one level deeper due to Debug or RelWithDebInfo
 #if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS
-        collada_data_dir = collada_data_dir / "..";
+        ply_data_dir = ply_data_dir / "..";
 #endif
-        collada_data_dir = collada_data_dir / "../../test/unit/libmesh/ply";
+        ply_data_dir = ply_data_dir / "../../test/unit/libmesh/ply";
 
-        ifstream fin ( (collada_data_dir / (name + ".ply")).string().c_str() );
+        ifstream fin ( (ply_data_dir / (name + ".ply")).string().c_str() );
         if (!fin) {
             TS_WARN("Unable to find ply data.");
             return "";
