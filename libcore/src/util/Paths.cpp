@@ -408,7 +408,7 @@ String GetTempFilename(const String& prefix) {
     static int32 num_random_chars = strlen(random_chars);
 
     String result = prefix;
-    for(uint32 i = 0; i < 8; i++) {
+    for(uint32 i = 0; i < 32; i++) {
         uint32 idx = randInt(0, num_random_chars-1);
         result += random_chars[idx];
     }
