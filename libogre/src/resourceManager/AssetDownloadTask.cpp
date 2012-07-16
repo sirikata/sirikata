@@ -253,7 +253,8 @@ void AssetDownloadTask::handleAssetParsed(Mesh::VisualPtr vis) {
 
             ProgressiveMipmapMap::const_iterator findProgTex;
             if (md->progressiveData) {
-                findProgTex = md->progressiveData->mipmaps.find(texName);
+                //FIXME: Need to remove the hardcoded atlas.jpg and modify the texName properly.
+                findProgTex = md->progressiveData->mipmaps.find("./atlas.jpg");
             }
 
             if (md->progressiveData && findProgTex != md->progressiveData->mipmaps.end()) {
@@ -264,6 +265,8 @@ void AssetDownloadTask::handleAssetParsed(Mesh::VisualPtr vis) {
                         break;
                     }
                 }
+                if (mipmapLevel >= progMipmaps.size() ) mipmapLevel = progMipmaps.size() - 1;
+
                 uint32 offset = progMipmaps.find(mipmapLevel)->second.offset;
                 uint32 length = progMipmaps.find(mipmapLevel)->second.length;
                 Transfer::Fingerprint hash = findProgTex->second.archiveHash;

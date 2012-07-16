@@ -382,8 +382,13 @@ void MeerkatChunkHandler::request_finished(std::tr1::shared_ptr<HttpManager::Htt
         return;
     }
 
+    if (chunk->getRange().startbyte() > 0) {
+      response->getData()->setBase(chunk->getRange().startbyte());
+    }
     SILOG(transfer, detailed, "about to call addToCache with fingerprint ID = " << chunk->getHash().convertToHexString());
     SharedChunkCache::getSingleton().getCache()->addToCache(chunk->getHash(), response->getData());
+
+    SILOG(transfer, detailed, response->getData()->length() << " transferred");
 
     callback(response->getData());
     SILOG(transfer, detailed, "done http chunk handler request_finished");
