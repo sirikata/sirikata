@@ -115,6 +115,12 @@ Mesh::VisualPtr PlyModelSystem::load(const Transfer::RemoteFileMetadata& metadat
 			double (*valueV)[7] = new double[vertexNum][7]; //note: the type should be able to vary (but does it make a significant difference...?)
 			int (*valueF)[3] = new int[faceNum][3]; //faces can have more than 3 vertices, change later
 			int (*valueE) = new int[2];
+			std::map<int, int> indexMap; //will map the original index to the new index
+			std::vector<std::map<int, int>> reverseMap; //will map the new index to the original index (find more efficient way later)
+			std::vector<int> counterIndex; //maybe reverseMap can replace counter
+			for(int i = 0; i < vertexNum; i++) {
+				indexMap[i] = -1;
+			}
 			double (*tc)[2] = new double[vertexNum][2]; //stores the texture coordinates
 			//it's separate from the vertex data because it was stuck with the FACE data for some reason...
 			double temp; //note: the type should be able to vary (based on the previous input)
@@ -173,22 +179,30 @@ Mesh::VisualPtr PlyModelSystem::load(const Transfer::RemoteFileMetadata& metadat
 			if(vertexNum >= 3) p.primitiveType = Mesh::SubMeshGeometry::Primitive::TRIANGLES;
 			else p.primitiveType = Mesh::SubMeshGeometry::Primitive::LINES;
 			smg.primitives.push_back(p);
-			mdp->geometry.push_back(smg);
+
 			//add a geometryinstance for every smg
 			Mesh::GeometryInstance gi;
 			gi.geometryIndex = 0;
 			gi.parentNode = 0;
-			mdp->instances.push_back(gi);
 			
+			//color: currently just takes the average of the colors and sets
+			//the color of the figure to this average color
+			int sumRed = 0, sumGreen = 0, sumBlue = 0, sumAlpha = 0;
+
+
 			//no faces means that there could be just a line
-			if(faceNum == 0)
+			if(faceNum == 0) {
+				mdp->geometry.push_back(smg);
+				mdp->instances.push_back(gi);
 				for(int i = 0; i < 2; i++)
 					mdp->geometry[0].primitives[0].indices.push_back(valueE[i]);
-			else {
+			} else {
 				//we have one set of indices to start off...
-				for(int j = 0; j < 3; j++) {
-					mdp->geometry[0].primitives[0].indices.push_back(valueF[0][j]);
-				}
+				//for(int j = 0; j < 3; j++) {
+				//	mdp->geometry[0].primitives[0].indices.push_back(valueF[0][j]);
+				//	Vector3f point = Vector3f(valueV[valueF[0][j]][0], valueV[valueF[0][j]][1], valueV[valueF[0][j]][2]);
+				//	mdp->positions.push_back(point);
+				//}
 				//then for each next set of indices, we first see
 				//if a previous primitive has either shared an 
 				//index or shared a point. If yes, we may add to
@@ -196,48 +210,84 @@ Mesh::VisualPtr PlyModelSystem::load(const Transfer::RemoteFileMetadata& metadat
 				//submeshgeometry.
 				//LATER: primitives should be differentiated 
 				//based on material/texture.
-				for(int i = 1; i < faceNum; i++) {
+				for(int i = 0; i < faceNum; i++) {
 					int counterSMG = 0;
-					bool samePrim = false;
-					while(!samePrim && counterSMG < mdp->geometry.size()) {
-						for(int j = 0; j < 3 && !samePrim; j++) {
+					bool sameSMG = false;
+					while(!sameSMG && counterSMG < mdp->geometry.size()) {
+						for(int j = 0; j < 3 && !sameSMG; j++) {
 							//iterate through the indices
-							//counterPrim = 0;
 							for(std::vector<Mesh::SubMeshGeometry::Primitive>::iterator it = mdp->geometry[counterSMG].primitives.begin();
-								it < mdp->geometry[counterSMG].primitives.end() && !samePrim;
+								it != mdp->geometry[counterSMG].primitives.end() && !sameSMG;
 								it++) {
+								//note that if we just look at THESE indices, they will point to low values (0, 1, 2)
+								//we have to go backwards and look at the ORIGINAL values first
 								for(std::vector<unsigned short>::iterator iter = it->indices.begin();
-									iter < it->indices.end() && !samePrim;
+									iter != it->indices.end() && !sameSMG;
 									iter++) {
-									if(*iter == valueF[i][j])
-										samePrim = true;
-									if(valueV[*iter][0] == valueV[valueF[i][j]][0] && 
-										valueV[*iter][1] == valueV[valueF[i][j]][1] &&
-										valueV[*iter][2] == valueV[valueF[i][j]][2]) {
-										samePrim = true;
+									//reverseMap is used to, given the NEW index, find the OLD index used in the face array
+									//if the index is the same, then the indices come from the same SMG
+									if(reverseMap[counterSMG][*iter] == valueF[i][j])
+										sameSMG = true;
+									//if the two indices point to the same point, then the indices come from the same SMG
+									if(valueV[reverseMap[counterSMG][*iter]][0] == valueV[valueF[i][j]][0] && 
+										valueV[reverseMap[counterSMG][*iter]][1] == valueV[valueF[i][j]][1] &&
+										valueV[reverseMap[counterSMG][*iter]][2] == valueV[valueF[i][j]][2]) {
+										sameSMG = true;
 										//hitSMG = counterSMG;
 									}
 								}
-								//if(!samePrim) counterPrim++;
+								//if(!sameSMG) counterPrim++;
 							}
 							
 							
 						}
-						if(!samePrim) counterSMG++;
+						if(!sameSMG) {
+							counterSMG++;
+						}
 					}
 					//add to the primitive if the index or the point is the same
-					if(samePrim) {
-						for(int j = 0; j < 3; j++) 
-							mdp->geometry[counterSMG].primitives[0].indices.push_back(valueF[i][j]);
+					if(sameSMG) {
+						for(int j = 0; j < 3; j++) {
+							//int ind = counterIndex[counterSMG];
+							int ind = reverseMap[counterSMG].size();
+							if(indexMap[valueF[i][j]] == -1) {
+								Vector3f point = Vector3f(valueV[valueF[i][j]][0], valueV[valueF[i][j]][1], valueV[valueF[i][j]][2]);
+								mdp->geometry[counterSMG].positions.push_back(point);
+
+								indexMap[valueF[i][j]] = ind;
+								//counterIndex[counterSMG]++;
+								reverseMap[counterSMG].insert(std::pair<int, int>(ind, valueF[i][j]));
+							}
+							mdp->geometry[counterSMG].primitives[0].indices.push_back(indexMap[valueF[i][j]]);
+							
+						}
 					} else {
 						//otherwise, we'll make a new submeshgeometry/geometry set
 						mdp->geometry.push_back(smg);
 						gi.geometryIndex = counterSMG;
 						mdp->instances.push_back(gi);
-						for(int j = 0; j < 3; j++)
-							mdp->geometry[counterSMG].primitives[0].indices.push_back(valueF[i][j]);
+						//counterIndex.push_back(0);
+						reverseMap.push_back(std::map<int, int>());
+						for(int j = 0; j < 3; j++) {
+							//int ind = counterIndex[counterSMG];
+							int ind = reverseMap[counterSMG].size();
+
+							Vector3f point = Vector3f(valueV[valueF[i][j]][0], valueV[valueF[i][j]][1], valueV[valueF[i][j]][2]);
+							mdp->geometry[counterSMG].positions.push_back(point);
+
+							indexMap[valueF[i][j]] = ind;
+							//counterIndex[counterSMG]++;
+							reverseMap[counterSMG].insert(std::pair<int, int>(ind, valueF[i][j]));
+							mdp->geometry[counterSMG].primitives[0].indices.push_back(indexMap[valueF[i][j]]);
+						}
 					}
 				}
+				//int current = 0;
+				//while(current < numIndices) {
+				//	current++;
+				//}
+
+
 
 
 
@@ -248,27 +298,14 @@ Mesh::VisualPtr PlyModelSystem::load(const Transfer::RemoteFileMetadata& metadat
 			//recorded early enough.
 			//we could try to merge them again... but that may take a while.
 
-			//TextureSet created
-			Mesh::SubMeshGeometry::TextureSet ts;
-			ts.stride = 2;
-			for(int i = 0; i < vertexNum; i++) {
-				for(int j = 0; j < 2; j++)  {
-					ts.uvs.push_back(tc[i][j]);
-					//std::cout << tc[i][j];
-				}
-			}
-			mdp->geometry[0].texUVs.push_back(ts);
+			
 
-			//color: currently just takes the average of the colors and sets
-			//the color of the figure to this average color
-			int sumRed = 0, sumGreen = 0, sumBlue = 0, sumAlpha = 0;
+
 			for(int i = 0; i < vertexNum; i++) {
-				Vector3f point = Vector3f(valueV[i][0], valueV[i][1], valueV[i][2]);
 				if(valueV[i][3] >= 0) sumRed += valueV[i][3];
 				if(valueV[i][4] >= 0) sumGreen += valueV[i][4];
 				if(valueV[i][5] >= 0) sumBlue += valueV[i][5];
 				if(valueV[i][6] >= 0) sumAlpha += valueV[i][6];
-				mdp->geometry[0].positions.push_back(point);
 			}
 			
 			//we will have to do this in the particular order of the geometries
@@ -278,6 +315,17 @@ Mesh::VisualPtr PlyModelSystem::load(const Transfer::RemoteFileMetadata& metadat
 			Mesh::MaterialEffectInfo mei;
 			Mesh::MaterialEffectInfo::Texture t;
 			if(!file.empty()) {
+				//TextureSet 
+				Mesh::SubMeshGeometry::TextureSet ts;
+				ts.stride = 2;
+				for(int i = 0; i < vertexNum; i++) {
+					for(int j = 0; j < 2; j++)  {
+						ts.uvs.push_back(tc[i][j]);
+						//std::cout << tc[i][j];
+					}
+				}
+				mdp->geometry[0].texUVs.push_back(ts);
+
 				//the textured material path!
 				mei.shininess = -128;
 				mei.reflectivity = -1;
@@ -302,7 +350,7 @@ Mesh::VisualPtr PlyModelSystem::load(const Transfer::RemoteFileMetadata& metadat
 
 			} else {
 				Vector4f c;
-				if(vertexNum > 0) c = Vector4f(sumRed / vertexNum / 255.0, sumGreen / vertexNum / 255.0, sumBlue / vertexNum / 255.0, sumAlpha / vertexNum / 255.0)
+				if(vertexNum > 0) c = Vector4f(sumRed / vertexNum / 255.0, sumGreen / vertexNum / 255.0, sumBlue / vertexNum / 255.0, sumAlpha / vertexNum / 255.0);
 				if(hasColor) {
 					t.color = c;
 					t.affecting = t.DIFFUSE;
@@ -324,7 +372,8 @@ Mesh::VisualPtr PlyModelSystem::load(const Transfer::RemoteFileMetadata& metadat
 }
 
 Mesh::VisualPtr PlyModelSystem::load(Transfer::DenseDataPtr data) {
-	return Mesh::VisualPtr();
+	Transfer::RemoteFileMetadata rfm(Transfer::Fingerprint(), Transfer::URI(), 0, Transfer::ChunkList(), Transfer::FileHeaders());
+	return load(rfm, Transfer::Fingerprint(), data);
 }
 
 bool PlyModelSystem::convertVisual(const Mesh::VisualPtr& visual, const String& format, std::ostream& vout) {

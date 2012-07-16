@@ -4,8 +4,8 @@
         <contributor>
             <authoring_tool>Google SketchUp 8.0.4811</authoring_tool>
         </contributor>
-        <created>2012-06-28T23:15:23Z</created>
-        <modified>2012-06-28T23:15:23Z</modified>
+        <created>2012-07-16T18:49:02Z</created>
+        <modified>2012-07-16T18:49:02Z</modified>
         <unit meter="1" name="inch" />
     </asset>
     <library_visual_scenes>
@@ -36,7 +36,7 @@
         <geometry id="ID2">
             <mesh>
                 <source id="ID5">
-                    <float_array id="ID8" count="9">-101.8385684207865 21.38014008257969 0 -325.4940883607945 221.3256536615662 0 -157.1683201470783 102.7961089103036 0</float_array>
+                    <float_array id="ID8" count="9">-206.8396053843624 -60.89139588105788 101.0631311131187 -720.002643889178 -69.59828601833283 0 -206.8396053843624 -69.59828601833283 0</float_array>
                     <technique_common>
                         <accessor count="3" source="#ID8" stride="3">
                             <param name="X" type="float" />
@@ -46,7 +46,7 @@
                     </technique_common>
                 </source>
                 <source id="ID6">
-                    <float_array id="ID9" count="9">0 0 -1 0 0 -1 0 0 -1</float_array>
+                    <float_array id="ID9" count="9">-2.06989996887181e-018 -0.9963093640233517 0.08583502291829902 -2.06989996887181e-018 -0.9963093640233517 0.08583502291829902 -2.06989996887181e-018 -0.9963093640233517 0.08583502291829902</float_array>
                     <technique_common>
                         <accessor count="3" source="#ID9" stride="3">
                             <param name="X" type="float" />
@@ -68,7 +68,7 @@
         <geometry id="ID10">
             <mesh>
                 <source id="ID11">
-                    <float_array id="ID14" count="9">-24.96623420597058 27.01645622688407 0 -157.1683201470783 102.7961089103036 -65.36468920613632 -77.51057780168365 54.79981650729903 -65.36468920613629</float_array>
+                    <float_array id="ID14" count="9">-236.1089192061551 34.65368108977098 0 -396.7107609921584 42.88220290073772 0 -236.1089192061551 107.841181089771 0</float_array>
                     <technique_common>
                         <accessor count="3" source="#ID14" stride="3">
                             <param name="X" type="float" />
@@ -78,7 +78,7 @@
                     </technique_common>
                 </source>
                 <source id="ID12">
-                    <float_array id="ID15" count="9">-0.5154246819753634 -0.8554320440109717 0.0507288408088189 -0.5154246819753634 -0.8554320440109717 0.0507288408088189 -0.5154246819753634 -0.8554320440109717 0.0507288408088189</float_array>
+                    <float_array id="ID15" count="9">0 0 -1 0 0 -1 0 0 -1</float_array>
                     <technique_common>
                         <accessor count="3" source="#ID15" stride="3">
                             <param name="X" type="float" />

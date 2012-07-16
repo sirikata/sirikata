@@ -75,6 +75,7 @@ public:
 		MeshdataPtr mdp = loadMDP(simple);
 
 		//asserts
+		TS_ASSERT_DIFFERS(mdp, MeshdataPtr()); //something small is causing them to be slightly different
 		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 0);
 		TS_ASSERT_EQUALS(mdp->getInstancedLightCount(), 0);
 		TS_ASSERT_EQUALS(mdp->getJointCount(), 0);
@@ -82,7 +83,6 @@ public:
 		TS_ASSERT_EQUALS(mdp->lights.size(), 0);
 		TS_ASSERT_EQUALS(mdp->textures.size(), 0);
 		TS_ASSERT_EQUALS(mdp->materials.size(), 0);
-		TS_ASSERT_DIFFERS(mdp, MeshdataPtr()); //something small is causing them to be slightly different
 		TS_ASSERT_EQUALS(mdp->nodes.size(), 0);
 		TS_ASSERT_EQUALS(mdp->globalTransform, Matrix4x4f::identity());
     }
@@ -93,6 +93,7 @@ public:
 		MeshdataPtr mdp = loadMDP(line);
 		
 		//asserts
+		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
 		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 1);
 		TS_ASSERT_EQUALS(mdp->getInstancedLightCount(), 0);
 		TS_ASSERT_EQUALS(mdp->getJointCount(), 0);
@@ -104,7 +105,6 @@ public:
 		TS_ASSERT_EQUALS(mdp->textures.size(), 0);
 		TS_ASSERT_EQUALS(mdp->materials.size(), 1);
 		TS_ASSERT_EQUALS(mdp->materials[0].textures.size(), 0);
-		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
 		TS_ASSERT_EQUALS(mdp->nodes.size(), 1);
 		TS_ASSERT_EQUALS(mdp->nodes[0].transform, Matrix4x4f::identity());
 		TS_ASSERT_EQUALS(mdp->globalTransform, Matrix4x4f::identity());
@@ -116,6 +116,7 @@ public:
 		MeshdataPtr mdp = loadMDP(square);
 		
 		//asserts
+		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
 		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 1);
 		TS_ASSERT_EQUALS(mdp->getInstancedLightCount(), 0);
 		TS_ASSERT_EQUALS(mdp->getJointCount(), 0);
@@ -127,7 +128,6 @@ public:
 		TS_ASSERT_EQUALS(mdp->textures.size(), 0);
 		TS_ASSERT_EQUALS(mdp->materials.size(), 1);
 		TS_ASSERT_EQUALS(mdp->materials[0].textures.size(), 1);
-		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
 		TS_ASSERT_EQUALS(mdp->nodes.size(), 1);
 		TS_ASSERT_EQUALS(mdp->nodes[0].transform, Matrix4x4f::identity());
 		TS_ASSERT_EQUALS(mdp->globalTransform, Matrix4x4f::identity());
@@ -139,6 +139,7 @@ public:
 		MeshdataPtr mdp = loadMDP(square2s);
 		
 		//asserts
+		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
 		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 1);
 		TS_ASSERT_EQUALS(mdp->getInstancedLightCount(), 0);
 		TS_ASSERT_EQUALS(mdp->getJointCount(), 0);
@@ -151,7 +152,6 @@ public:
 		TS_ASSERT_EQUALS(mdp->materials.size(), 2);
 		for(int i = 0; i < mdp->materials.size(); i++) 
 			TS_ASSERT_EQUALS(mdp->materials[i].textures.size(), 1);
-		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
 		TS_ASSERT_EQUALS(mdp->nodes.size(), 1);
 		TS_ASSERT_EQUALS(mdp->nodes[0].transform, Matrix4x4f::identity());
 		TS_ASSERT_EQUALS(mdp->globalTransform, Matrix4x4f::identity());
@@ -163,6 +163,7 @@ public:
 		MeshdataPtr mdp = loadMDP(hex2s);
 		
 		//asserts
+		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
 		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 1);
 		TS_ASSERT_EQUALS(mdp->getInstancedLightCount(), 0);
 		TS_ASSERT_EQUALS(mdp->getJointCount(), 0);
@@ -175,7 +176,6 @@ public:
 		TS_ASSERT_EQUALS(mdp->materials.size(), 2);
 		for(int i = 0; i < mdp->materials.size(); i++) 
 			TS_ASSERT_EQUALS(mdp->materials[i].textures.size(), 1);
-		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
 		TS_ASSERT_EQUALS(mdp->nodes.size(), 1);
 		TS_ASSERT_EQUALS(mdp->nodes[0].transform, Matrix4x4f::identity());
 		TS_ASSERT_EQUALS(mdp->globalTransform, Matrix4x4f::identity());
@@ -187,6 +187,7 @@ public:
 		MeshdataPtr mdp = loadMDP(cube);
 		
 		//asserts
+		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
 		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 1);
 		TS_ASSERT_EQUALS(mdp->getInstancedLightCount(), 0);
 		TS_ASSERT_EQUALS(mdp->getJointCount(), 0);
@@ -198,7 +199,6 @@ public:
 		TS_ASSERT_EQUALS(mdp->textures.size(), 0);
 		TS_ASSERT_EQUALS(mdp->materials.size(), 1);
 		TS_ASSERT_EQUALS(mdp->materials[0].textures.size(), 1);
-		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
 		TS_ASSERT_EQUALS(mdp->nodes.size(), 1);
 		TS_ASSERT_EQUALS(mdp->nodes[0].transform, Matrix4x4f::identity());
 		TS_ASSERT_EQUALS(mdp->globalTransform, Matrix4x4f::identity());
@@ -210,6 +210,7 @@ public:
 		MeshdataPtr mdp = loadMDP(cubes);
 		
 		//asserts
+		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
 		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 3);
 		TS_ASSERT_EQUALS(mdp->getInstancedLightCount(), 0);
 		TS_ASSERT_EQUALS(mdp->getJointCount(), 0);
@@ -223,18 +224,45 @@ public:
 		TS_ASSERT_EQUALS(mdp->textures.size(), 0);
 		TS_ASSERT_EQUALS(mdp->materials.size(), 1);
 		TS_ASSERT_EQUALS(mdp->materials[0].textures.size(), 1);
+		TS_ASSERT_EQUALS(mdp->nodes.size(), 1);
+		TS_ASSERT_EQUALS(mdp->nodes[0].transform, Matrix4x4f::identity());
+		TS_ASSERT_EQUALS(mdp->globalTransform, Matrix4x4f::identity());
+	}
+
+	void testColladaLoaderPrism( void ) {
+		//collada file with partially textured hexagonal prism
+		string prism = getString("prism");
+		MeshdataPtr mdp = loadMDP(prism);
+		
+		//asserts
 		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
+		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 8);//weird... if it is an all-in-one figure, why does it have separate geometries?
+		TS_ASSERT_EQUALS(mdp->getInstancedLightCount(), 0);
+		TS_ASSERT_EQUALS(mdp->getJointCount(), 0);
+		TS_ASSERT_EQUALS(mdp->geometry.size(), 8);
+		for(int i = 0; i < mdp->geometry.size(); i++) {
+			TS_ASSERT_EQUALS(mdp->geometry[i].skinControllers.size(), 0);
+			TS_ASSERT_EQUALS(mdp->geometry[i].primitives.size(), 1);
+			if(i < 2) {
+				TS_ASSERT_EQUALS(mdp->geometry[i].primitives[0].indices.size(), 12);
+			} else TS_ASSERT_EQUALS(mdp->geometry[i].primitives[0].indices.size(), 6);
+		}
+		TS_ASSERT_EQUALS(mdp->lights.size(), 0);
+		TS_ASSERT_EQUALS(mdp->textures.size(), 1);
+		TS_ASSERT_EQUALS(mdp->materials.size(), 3);
+		TS_ASSERT_EQUALS(mdp->materials[0].textures.size(), 1);
 		TS_ASSERT_EQUALS(mdp->nodes.size(), 1);
 		TS_ASSERT_EQUALS(mdp->nodes[0].transform, Matrix4x4f::identity());
 		TS_ASSERT_EQUALS(mdp->globalTransform, Matrix4x4f::identity());
 	}
 
 	void testColladaLoaderTriangles( void ) {
-		//collada file with two distinct triangles
+		//collada file with two distinct texturized triangles
 		string triangles = getString("triangles");
 		MeshdataPtr mdp = loadMDP(triangles);
 		
 		//asserts
+		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
 		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 2);
 		TS_ASSERT_EQUALS(mdp->getInstancedLightCount(), 0);
 		TS_ASSERT_EQUALS(mdp->getJointCount(), 0);
@@ -249,7 +277,6 @@ public:
 		TS_ASSERT_EQUALS(mdp->textures.size(), 0);
 		TS_ASSERT_EQUALS(mdp->materials.size(), 1);
 		TS_ASSERT_EQUALS(mdp->materials[0].textures.size(), 1);
-		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
 		TS_ASSERT_EQUALS(mdp->nodes.size(), 1);
 		TS_ASSERT_EQUALS(mdp->nodes[0].transform, Matrix4x4f::identity());
 		TS_ASSERT_EQUALS(mdp->globalTransform, Matrix4x4f::identity());
@@ -261,6 +288,7 @@ public:
 		MeshdataPtr mdp = loadMDP(triangles3d);
 		
 		//asserts
+		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
 		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 1);
 		TS_ASSERT_EQUALS(mdp->getInstancedLightCount(), 0);
 		TS_ASSERT_EQUALS(mdp->getJointCount(), 0);
@@ -272,7 +300,6 @@ public:
 		TS_ASSERT_EQUALS(mdp->textures.size(), 0);
 		TS_ASSERT_EQUALS(mdp->materials.size(), 1);
 		TS_ASSERT_EQUALS(mdp->materials[0].textures.size(), 1);
-		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
 		TS_ASSERT_EQUALS(mdp->nodes.size(), 1);
 		TS_ASSERT_EQUALS(mdp->nodes[0].transform, Matrix4x4f::identity());
 		TS_ASSERT_EQUALS(mdp->globalTransform, Matrix4x4f::identity());
@@ -284,6 +311,7 @@ public:
 		MeshdataPtr mdp = loadMDP(circle);
 		
 		//asserts
+		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
 		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 1);
 		TS_ASSERT_EQUALS(mdp->getInstancedLightCount(), 0);
 		TS_ASSERT_EQUALS(mdp->getJointCount(), 0);
@@ -295,7 +323,6 @@ public:
 		TS_ASSERT_EQUALS(mdp->textures.size(), 0);
 		TS_ASSERT_EQUALS(mdp->materials.size(), 1);
 		TS_ASSERT_EQUALS(mdp->materials[0].textures.size(), 1);
-		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
 		TS_ASSERT_EQUALS(mdp->nodes.size(), 1);
 		TS_ASSERT_EQUALS(mdp->nodes[0].transform, Matrix4x4f::identity());
 		TS_ASSERT_EQUALS(mdp->globalTransform, Matrix4x4f::identity());
@@ -307,6 +334,7 @@ public:
 		MeshdataPtr mdp = loadMDP(circleT);
 		
 		//asserts
+		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
 		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 1);
 		TS_ASSERT_EQUALS(mdp->getInstancedLightCount(), 0);
 		TS_ASSERT_EQUALS(mdp->getJointCount(), 0);
@@ -318,7 +346,6 @@ public:
 		TS_ASSERT_EQUALS(mdp->textures.size(), 1);
 		TS_ASSERT_EQUALS(mdp->materials.size(), 1);
 		TS_ASSERT_EQUALS(mdp->materials[0].textures.size(), 1);
-		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
 		TS_ASSERT_EQUALS(mdp->nodes.size(), 1);
 		TS_ASSERT_EQUALS(mdp->nodes[0].transform, Matrix4x4f::identity());
 		TS_ASSERT_EQUALS(mdp->globalTransform, Matrix4x4f::identity());
@@ -330,6 +357,7 @@ public:
 		MeshdataPtr mdp = loadMDP(circles);
 		
 		//asserts
+		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
 		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 2);
 		TS_ASSERT_EQUALS(mdp->getInstancedLightCount(), 0);
 		TS_ASSERT_EQUALS(mdp->getJointCount(), 0);
@@ -343,7 +371,6 @@ public:
 		TS_ASSERT_EQUALS(mdp->textures.size(), 0);
 		TS_ASSERT_EQUALS(mdp->materials.size(), 1);
 		TS_ASSERT_EQUALS(mdp->materials[0].textures.size(), 1);
-		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
 		TS_ASSERT_EQUALS(mdp->nodes.size(), 1);
 		TS_ASSERT_EQUALS(mdp->nodes[0].transform, Matrix4x4f::identity());
 		TS_ASSERT_EQUALS(mdp->globalTransform, Matrix4x4f::identity());
@@ -355,6 +382,7 @@ public:
 		MeshdataPtr mdp = loadMDP(cylinders);
 		
 		//asserts
+		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
 		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 2);
 		TS_ASSERT_EQUALS(mdp->getInstancedLightCount(), 0);
 		TS_ASSERT_EQUALS(mdp->getJointCount(), 0);
@@ -368,7 +396,6 @@ public:
 		TS_ASSERT_EQUALS(mdp->textures.size(), 0);
 		TS_ASSERT_EQUALS(mdp->materials.size(), 1);
 		TS_ASSERT_EQUALS(mdp->materials[0].textures.size(), 1);
-		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
 		TS_ASSERT_EQUALS(mdp->nodes.size(), 1);
 		TS_ASSERT_EQUALS(mdp->nodes[0].transform, Matrix4x4f::identity());
 		TS_ASSERT_EQUALS(mdp->globalTransform, Matrix4x4f::identity());
@@ -380,6 +407,7 @@ public:
 		MeshdataPtr mdp = loadMDP(pikachu);
 		
 		//asserts
+		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
 		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 7);
 		TS_ASSERT_EQUALS(mdp->getInstancedLightCount(), 0);
 		TS_ASSERT_EQUALS(mdp->getJointCount(), 0);
@@ -390,7 +418,6 @@ public:
 		TS_ASSERT_EQUALS(mdp->textures.size(), 1);
 		TS_ASSERT_EQUALS(mdp->materials.size(), 1);
 		TS_ASSERT_EQUALS(mdp->materials[0].textures.size(), 1);
-		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
 		TS_ASSERT_EQUALS(mdp->nodes.size(), 3);
 		for(int i = 0; i < mdp->nodes.size(); i++)
 			TS_ASSERT_EQUALS(mdp->nodes[i].transform, Matrix4x4f::identity());
