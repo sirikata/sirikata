@@ -262,7 +262,7 @@ public:
 		for(int i = 0; i < mdp->geometry.size(); i++) {
 			TS_ASSERT_EQUALS(mdp->geometry[i].skinControllers.size(), 0);
 			TS_ASSERT_EQUALS(mdp->geometry[i].primitives.size(), 1);
-			//TS_ASSERT_EQUALS(mdp->geometry[i].primitives[0].indices.size(), 276);  //but it WAS 276!
+			TS_ASSERT_EQUALS(mdp->geometry[i].primitives[0].indices.size(), 276);  //but it WAS 276!
 		}
 		TS_ASSERT_EQUALS(mdp->lights.size(), 0);
 		TS_ASSERT_EQUALS(mdp->textures.size(), 0);

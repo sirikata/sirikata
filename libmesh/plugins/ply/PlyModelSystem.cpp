@@ -114,13 +114,11 @@ Mesh::VisualPtr PlyModelSystem::load(const Transfer::RemoteFileMetadata& metadat
 			loop = false;
 			double (*valueV)[7] = new double[vertexNum][7]; //note: the type should be able to vary (but does it make a significant difference...?)
 			int (*valueF)[3] = new int[faceNum][3]; //faces can have more than 3 vertices, change later
-			int (*valueE) = new int[2];
 			std::map<int, int> indexMap; //will map the original index to the new index
 			std::vector<std::map<int, int>> reverseMap; //will map the new index to the original index (find more efficient way later)
 			std::vector<int> counterIndex; //maybe reverseMap can replace counter
-			for(int i = 0; i < vertexNum; i++) {
+			for(int i = 0; i < vertexNum; i++)
 				indexMap[i] = -1;
-			}
 			double (*tc)[2] = new double[vertexNum][2]; //stores the texture coordinates
 			//it's separate from the vertex data because it was stuck with the FACE data for some reason...
 			double temp; //note: the type should be able to vary (based on the previous input)
@@ -146,25 +144,24 @@ Mesh::VisualPtr PlyModelSystem::load(const Transfer::RemoteFileMetadata& metadat
 			}
 			//obtain face data
 			for(int i = 0; i < faceNum; i++) {
-				ss >> numIndices;
-				//int (*temp) = new int[numIndices];
-				for(int j = 0; j < numIndices; j++) {
-					ss >> index;
-					valueF[i][j] = index;
-				}
-				if(propF.size() > 1) {
-					ss >> numTexCoords; //doesn't do anything right now
-					for(int j = 0; j < numIndices; j++) {
-						ss >> tc[valueF[i][j]][0];
-						ss >> tc[valueF[i][j]][1];
+				for(int j = 0; j < propF.size(); j++) {
+					switch(propF[j]) {
+						case VI:
+							ss >> numIndices;
+							//int (*temp) = new int[numIndices];
+							for(int j = 0; j < numIndices; j++) {
+								ss >> index;
+								valueF[i][j] = index;
+							}
+							break;
+						case TC:
+							ss >> numTexCoords;
+							for(int j = 0; j < numTexCoords / 2; j++) {
+								ss >> tc[valueF[i][j]][0];
+								ss >> tc[valueF[i][j]][1];
+							}
+							break;
 					}
-				}
-			}
-			//if there are no faces, then add a line (an edge, here)
-			if(faceNum == 0) {
-				for(int i = 0; i < 2; i++) {
-					ss >> index;
-					valueE[i] = index;
 				}
 			}
 			//one node
@@ -194,71 +191,108 @@ Mesh::VisualPtr PlyModelSystem::load(const Transfer::RemoteFileMetadata& metadat
 			if(faceNum == 0) {
 				mdp->geometry.push_back(smg);
 				mdp->instances.push_back(gi);
-				for(int i = 0; i < 2; i++)
-					mdp->geometry[0].primitives[0].indices.push_back(valueE[i]);
+				for(int i = 0; i < 2; i++) {
+					mdp->geometry[0].primitives[0].indices.push_back(i);
+					Vector3f point = Vector3f(valueV[i][0], valueV[i][1], valueV[i][2]);
+					mdp->geometry[0].positions.push_back(point);
+				}
 			} else {
-				//we have one set of indices to start off...
-				//for(int j = 0; j < 3; j++) {
-				//	mdp->geometry[0].primitives[0].indices.push_back(valueF[0][j]);
-				//	Vector3f point = Vector3f(valueV[valueF[0][j]][0], valueV[valueF[0][j]][1], valueV[valueF[0][j]][2]);
-				//	mdp->positions.push_back(point);
-				//}
-				//then for each next set of indices, we first see
+				//for each next set of indices, we first see
 				//if a previous primitive has either shared an 
-				//index or shared a point. If yes, we may add to
-				//the same primitive, or we may make a new
+				//index or shared a point. If yes, we may add
+				//to the same primitive, or we may make a new
 				//submeshgeometry.
 				//LATER: primitives should be differentiated 
 				//based on material/texture.
 				for(int i = 0; i < faceNum; i++) {
 					int counterSMG = 0;
+					std::vector<int> hitSMG;
+					int markSMG = -1;
 					bool sameSMG = false;
-					while(!sameSMG && counterSMG < mdp->geometry.size()) {
-						for(int j = 0; j < 3 && !sameSMG; j++) {
+					while(counterSMG < mdp->geometry.size()) {
+						for(int j = 0; j < 3; j++) {
 							//iterate through the indices
-							for(std::vector<Mesh::SubMeshGeometry::Primitive>::iterator it = mdp->geometry[counterSMG].primitives.begin();
-								it != mdp->geometry[counterSMG].primitives.end() && !sameSMG;
-								it++) {
-								//note that if we just look at THESE indices, they will point to low values (0, 1, 2)
-								//we have to go backwards and look at the ORIGINAL values first
-								for(std::vector<unsigned short>::iterator iter = it->indices.begin();
-									iter != it->indices.end() && !sameSMG;
-									iter++) {
-									//reverseMap is used to, given the NEW index, find the OLD index used in the face array
-									//if the index is the same, then the indices come from the same SMG
-									if(reverseMap[counterSMG][*iter] == valueF[i][j])
+							for(int k = 0; k < mdp->geometry[counterSMG].primitives.size(); k++) {
+								for(int l = 0; l < mdp->geometry[counterSMG].primitives[k].indices.size(); l++) {
+									if(reverseMap[counterSMG][mdp->geometry[counterSMG].primitives[k].indices[l]] == valueF[i][j])
 										sameSMG = true;
-									//if the two indices point to the same point, then the indices come from the same SMG
-									if(valueV[reverseMap[counterSMG][*iter]][0] == valueV[valueF[i][j]][0] && 
-										valueV[reverseMap[counterSMG][*iter]][1] == valueV[valueF[i][j]][1] &&
-										valueV[reverseMap[counterSMG][*iter]][2] == valueV[valueF[i][j]][2]) {
-										sameSMG = true;
-										//hitSMG = counterSMG;
+									if(valueV[reverseMap[counterSMG][mdp->geometry[counterSMG].primitives[k].indices[l]]][0] == valueV[valueF[i][j]][0] && 
+										valueV[reverseMap[counterSMG][mdp->geometry[counterSMG].primitives[k].indices[l]]][1] == valueV[valueF[i][j]][1] && 
+										valueV[reverseMap[counterSMG][mdp->geometry[counterSMG].primitives[k].indices[l]]][2] == valueV[valueF[i][j]][2]) {
+											sameSMG = true;
+											bool isThere = false;
+											for(int m = 0; m < hitSMG.size(); m++)
+												if(hitSMG[m] == counterSMG) isThere = true;
+											if(!isThere) hitSMG.push_back(counterSMG);
+											if(markSMG == -1) markSMG = counterSMG;
 									}
 								}
-								//if(!sameSMG) counterPrim++;
 							}
-							
+							//for(std::vector<Mesh::SubMeshGeometry::Primitive>::iterator it = mdp->geometry[counterSMG].primitives.begin();
+							//	it != mdp->geometry[counterSMG].primitives.end();
+							//	it++) {
+							//	//note that if we just look at THESE indices, they will point to low values (0, 1, 2)
+							//	//we have to go backwards and look at the ORIGINAL values first
+							//	for(std::vector<unsigned short>::iterator iter = it->indices.begin();
+							//		iter != it->indices.end();
+							//		iter++) {
+							//		//reverseMap is used to, given the NEW index, find the OLD index used in the face array
+							//		//if the index is the same, then the indices come from the same SMG
+							//		if(reverseMap[counterSMG][*iter] == valueF[i][j])
+							//			sameSMG = true;
+							//		//if the two indices point to the same point, then the indices come from the same SMG
+							//		if(valueV[reverseMap[counterSMG][*iter]][0] == valueV[valueF[i][j]][0] && 
+							//			valueV[reverseMap[counterSMG][*iter]][1] == valueV[valueF[i][j]][1] &&
+							//			valueV[reverseMap[counterSMG][*iter]][2] == valueV[valueF[i][j]][2]) {
+							//			sameSMG = true;
+							//			hitSMG.push_back(counterSMG);
+							//		}
+							//	}
+							//	//if(!sameSMG) counterPrim++;
+							//}
+							//
 							
 						}
-						if(!sameSMG) {
-							counterSMG++;
-						}
+						counterSMG++;
 					}
 					//add to the primitive if the index or the point is the same
 					if(sameSMG) {
+						//for(int j = 0; j < hitSMG.size(); j++) std::cout << hitSMG[j] << ' ';
+						//std::cout << '\n';
+						//if the point hit multiple SMG's, we will have to merge them before adding a point
+						while(hitSMG.size() > 1) {
+							//First, submeshgeometry
+							for(int j = 0; j < mdp->geometry[hitSMG[1]].primitives[0].indices.size(); j++) {
+								int ind = reverseMap[markSMG].size();
+								Vector3f point = Vector3f(valueV[reverseMap[hitSMG[1]][j]][0],
+									valueV[reverseMap[hitSMG[1]][j]][1],
+									valueV[reverseMap[hitSMG[1]][j]][2]);
+								mdp->geometry[markSMG].positions.push_back(point);
+
+								indexMap[reverseMap[hitSMG[1]][j]] = ind;
+
+								reverseMap[markSMG].insert(std::pair<int, int>(ind, reverseMap[hitSMG[1]][j]));
+								mdp->geometry[markSMG].primitives[0].indices.push_back(indexMap[reverseMap[hitSMG[1]][j]]);
+							}
+							mdp->geometry.erase(mdp->geometry.begin() + hitSMG[1]);
+							//then, geometryInstance
+							mdp->instances.erase(mdp->instances.begin() + hitSMG[1]);
+							for(int j = hitSMG[1]; j < mdp->instances.size(); j++)
+								mdp->instances[j].geometryIndex = j;
+							//also, reverseMap
+							reverseMap.erase(reverseMap.begin() + hitSMG[1]);
+							hitSMG.erase(hitSMG.begin() + hitSMG[1]);
+						}
 						for(int j = 0; j < 3; j++) {
-							//int ind = counterIndex[counterSMG];
-							int ind = reverseMap[counterSMG].size();
+							int ind = reverseMap[markSMG].size();
 							if(indexMap[valueF[i][j]] == -1) {
 								Vector3f point = Vector3f(valueV[valueF[i][j]][0], valueV[valueF[i][j]][1], valueV[valueF[i][j]][2]);
-								mdp->geometry[counterSMG].positions.push_back(point);
+								mdp->geometry[markSMG].positions.push_back(point);
 
 								indexMap[valueF[i][j]] = ind;
-								//counterIndex[counterSMG]++;
-								reverseMap[counterSMG].insert(std::pair<int, int>(ind, valueF[i][j]));
+								reverseMap[markSMG].insert(std::pair<int, int>(ind, valueF[i][j]));
 							}
-							mdp->geometry[counterSMG].primitives[0].indices.push_back(indexMap[valueF[i][j]]);
+							mdp->geometry[markSMG].primitives[0].indices.push_back(indexMap[valueF[i][j]]);
 							
 						}
 					} else {
@@ -361,7 +395,6 @@ Mesh::VisualPtr PlyModelSystem::load(const Transfer::RemoteFileMetadata& metadat
 	
 			delete valueV;
 			delete valueF;
-			delete valueE;
 			delete tc;
 		}
 
