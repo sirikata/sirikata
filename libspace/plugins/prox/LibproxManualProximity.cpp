@@ -8,6 +8,7 @@
 #include <sirikata/core/options/CommonOptions.hpp>
 
 #include "Protocol_Prox.pbj.hpp"
+#include "Protocol_ServerProx.pbj.hpp"
 
 #include <sirikata/core/command/Commander.hpp>
 #include <json_spirit/json_spirit.h>
@@ -27,19 +28,19 @@ using std::tr1::placeholders::_2;
 
 LibproxManualProximity::LibproxManualProximity(SpaceContext* ctx, LocationService* locservice, CoordinateSegmentation* cseg, SpaceNetwork* net, AggregateManager* aggmgr)
  : LibproxProximityBase(ctx, locservice, cseg, net, aggmgr),
-   mOHHandlerPoller(mProxStrand, std::tr1::bind(&LibproxManualProximity::tickQueryHandlers, this), "LibproxManualProximity ObjectHost Handler Poll", Duration::milliseconds((int64)100))
+   mLocalHandlerPoller(mProxStrand, std::tr1::bind(&LibproxManualProximity::tickQueryHandlers, this), "LibproxManualProximity ObjectHost Handler Poll", Duration::milliseconds((int64)100))
 {
 
     // OH Queries
     for(int i = 0; i < NUM_OBJECT_CLASSES; i++) {
         if (i >= mNumQueryHandlers) {
-            mOHQueryHandler[i].handler = NULL;
+            mLocalQueryHandler[i].handler = NULL;
             continue;
         }
-        mOHQueryHandler[i].handler = new Prox::RTreeManualQueryHandler<ObjectProxSimulationTraits>(10);
-        mOHQueryHandler[i].handler->setAggregateListener(this); // *Must* be before handler->initialize
+        mLocalQueryHandler[i].handler = new Prox::RTreeManualQueryHandler<ObjectProxSimulationTraits>(10);
+        mLocalQueryHandler[i].handler->setAggregateListener(this); // *Must* be before handler->initialize
         bool object_static_objects = (mSeparateDynamicObjects && i == OBJECT_CLASS_STATIC);
-        mOHQueryHandler[i].handler->initialize(
+        mLocalQueryHandler[i].handler->initialize(
             mLocCache, mLocCache,
             object_static_objects, false /* not replicated */,
             std::tr1::bind(&LibproxManualProximity::handlerShouldHandleObject, this, object_static_objects, false, _1, _2, _3, _4, _5, _6)
@@ -49,14 +50,14 @@ LibproxManualProximity::LibproxManualProximity(SpaceContext* ctx, LocationServic
 
 LibproxManualProximity::~LibproxManualProximity() {
     for(int i = 0; i < NUM_OBJECT_CLASSES; i++) {
-        delete mOHQueryHandler[i].handler;
+        delete mLocalQueryHandler[i].handler;
     }
 }
 
 void LibproxManualProximity::start() {
     LibproxProximityBase::start();
 
-    mContext->add(&mOHHandlerPoller);
+    mContext->add(&mLocalHandlerPoller);
 }
 
 void LibproxManualProximity::poll() {
@@ -73,6 +74,19 @@ void LibproxManualProximity::poll() {
         mOHResultsToSend.pop_front();
     }
 
+
+    // Get and ship Server results/commands
+    std::deque<Message*> server_results_copy;
+    mServerResults.swap(server_results_copy);
+    mServerResultsToSend.insert(mServerResultsToSend.end(), server_results_copy.begin(), server_results_copy.end());
+
+    bool server_sent = true;
+    while(server_sent && !mServerResultsToSend.empty()) {
+        Message* msg_front = mServerResultsToSend.front();
+        server_sent = mProxServerMessageService->route(msg_front);
+        if (server_sent)
+            mServerResultsToSend.pop_front();
+    }
 }
 
 void LibproxManualProximity::addQuery(UUID obj, SolidAngle sa, uint32 max_results) {
@@ -122,6 +136,35 @@ void LibproxManualProximity::replicaLocationUpdated(const UUID& uuid, const Time
         checkObjectClass(false, uuid, newval);
 }
 
+
+// MessageRecipient Interface
+
+void LibproxManualProximity::receiveMessage(Message* msg) {
+    assert(msg->dest_port() == SERVER_PORT_PROX);
+
+    Sirikata::Protocol::Prox::Container prox_container;
+    bool parsed = parsePBJMessage(&prox_container, msg->payload());
+    if (!parsed) {
+        PROXLOG(warn,"Couldn't parse message, ID=" << msg->id());
+        delete msg;
+        return;
+    }
+
+    ServerID source_server = msg->source_server();
+
+    assert(!prox_container.has_query());
+
+    if (prox_container.has_result()) {
+        Sirikata::Protocol::Prox::ProximityResults prox_result_msg = prox_container.result();
+        updateServerQueryResults(source_server, prox_result_msg);
+    }
+
+    if (prox_container.has_raw_query()) {
+        updateServerQuery(source_server, prox_container.raw_query());
+    }
+
+    delete msg;
+}
 
 // Migration management
 
@@ -186,16 +229,43 @@ void LibproxManualProximity::onObjectHostSessionEnded(const OHDP::NodeID& id) {
 
 
 void LibproxManualProximity::sendReplicatedClientProxMessage(ReplicatedClient* client, const ServerID& evt_src_server, const String& msg) {
-    mServerQuerier->updateQuery(msg);
+    assert(evt_src_server != mContext->id());
+
+    if (evt_src_server == NullServerID) {
+        mServerQuerier->updateQuery(msg);
+    }
+    else {
+        Sirikata::Protocol::Prox::Container container;
+        container.set_raw_query(msg);
+        Message* msg = new Message(
+            mContext->id(),
+            SERVER_PORT_PROX,
+            evt_src_server,
+            SERVER_PORT_PROX,
+            serializePBJMessage(container)
+        );
+        mServerResults.push(msg);
+    }
 }
 
 
 int32 LibproxManualProximity::objectHostQueries() const {
     return mOHQueries[OBJECT_CLASS_STATIC].size();
 }
+int32 LibproxManualProximity::serverQueries() const {
+    return mServerQueries[OBJECT_CLASS_STATIC].size();
+}
 
 
+// MAIN Thread: Server queries management
 
+void LibproxManualProximity::updateServerQuery(ServerID sid, const String& raw_query) {
+    mProxStrand->post(std::tr1::bind(&LibproxManualProximity::handleUpdateServerQuery, this, sid, raw_query));
+}
+
+void LibproxManualProximity::updateServerQueryResults(ServerID sid, const Sirikata::Protocol::Prox::ProximityResults& results) {
+    mProxStrand->post(std::tr1::bind(&LibproxManualProximity::handleUpdateServerQueryResults, this, sid, results));
+}
 
 
 
@@ -247,8 +317,8 @@ void LibproxManualProximity::aggregateObserved(ProxAggregator* handler, const Ob
     // have the entire thing here so there's nobody to notify of
     // observations in order to trigger refinement.
     if (mAggregatorToIndexMap.find(handler) == mAggregatorToIndexMap.end()) {
-        assert(static_cast<ProxQueryHandler*>(handler) == mOHQueryHandler[OBJECT_CLASS_STATIC].handler ||
-            static_cast<ProxQueryHandler*>(handler) == mOHQueryHandler[OBJECT_CLASS_DYNAMIC].handler);
+        assert(static_cast<ProxQueryHandler*>(handler) == mLocalQueryHandler[OBJECT_CLASS_STATIC].handler ||
+            static_cast<ProxQueryHandler*>(handler) == mLocalQueryHandler[OBJECT_CLASS_DYNAMIC].handler);
         return;
     }
 
@@ -293,16 +363,16 @@ void LibproxManualProximity::tickQueryHandlers() {
     // Local OH queries
     Time simT = mContext->simTime();
     for(int i = 0; i < NUM_OBJECT_CLASSES; i++) {
-        if (mOHQueryHandler[i].handler != NULL) {
-            for(ObjectIDSet::iterator it = mOHQueryHandler[i].removals.begin(); it != mOHQueryHandler[i].removals.end(); it++)
-                mOHQueryHandler[i].handler->removeObject(*it, true);
-            mOHQueryHandler[i].removals.clear();
+        if (mLocalQueryHandler[i].handler != NULL) {
+            for(ObjectIDSet::iterator it = mLocalQueryHandler[i].removals.begin(); it != mLocalQueryHandler[i].removals.end(); it++)
+                mLocalQueryHandler[i].handler->removeObject(*it, true);
+            mLocalQueryHandler[i].removals.clear();
 
-            mOHQueryHandler[i].handler->tick(simT);
+            mLocalQueryHandler[i].handler->tick(simT);
 
-            for(ObjectIDSet::iterator it = mOHQueryHandler[i].additions.begin(); it != mOHQueryHandler[i].additions.end(); it++)
-                mOHQueryHandler[i].handler->addObject(*it);
-            mOHQueryHandler[i].additions.clear();
+            for(ObjectIDSet::iterator it = mLocalQueryHandler[i].additions.begin(); it != mLocalQueryHandler[i].additions.end(); it++)
+                mLocalQueryHandler[i].handler->addObject(*it);
+            mLocalQueryHandler[i].additions.clear();
         }
     }
 
@@ -326,10 +396,154 @@ void LibproxManualProximity::tickQueryHandlers() {
 }
 
 
+// Helpers -- shared parsing code for query update requests
+namespace {
+struct QueryUpdateRequest {
+    QueryUpdateRequest()
+     : init(false), refine(false), coarsen(false), destroy(false) {}
+    bool init, refine, coarsen, destroy;
+    ProxIndexID indexid;
+    std::vector<ObjectReference> nodes;
+};
+bool parseQueryRequest(const String& data, QueryUpdateRequest* qur_out) {
+    namespace json = json_spirit;
+    json::Value query_params;
+    if (!json::read(data, query_params)) {
+        PROXLOG(error, "Error parsing object host query request: " << data);
+        return false;
+    }
+
+    String action = query_params.getString("action", String(""));
+    if (action.empty()) return false;
+    if (action == "init") {
+        qur_out->init = true;
+    }
+    else if (action == "refine" || action == "coarsen") {
+        if (!query_params.contains("nodes") || !query_params.get("nodes").isArray() || !query_params.contains("index") || !query_params.get("index").isInt()) {
+            PROXLOG(detailed, "Invalid refine or coarsen request");
+            return false;
+        }
+
+        if (action == "refine")
+            qur_out->refine = true;
+        else
+            qur_out->coarsen = true;
+
+        qur_out->indexid = query_params.getInt("index");
+        json::Array json_nodes = query_params.getArray("nodes");
+        BOOST_FOREACH(json::Value& v, json_nodes) {
+            if (!v.isString()) return false;
+            qur_out->nodes.push_back(ObjectReference(v.getString()));
+        }
+    }
+    else if (action == "destroy") {
+        qur_out->destroy = true;
+    }
+
+    return true;
+}
+} // namespace
+
 // PROX Thread -- Server-to-server and top-level pinto
 
 void LibproxManualProximity::handleForcedDisconnection(ServerID server) {
     PROXLOG(warn, "Ignoring forced disconnection by server " << server << " since manual queries don't support server-to-server queries yet.");
+}
+
+
+void LibproxManualProximity::handleUpdateServerQuery(ServerID sid, const String& raw_query) {
+    QueryUpdateRequest qur;
+    bool parsed = parseQueryRequest(raw_query, &qur);
+
+    if (!parsed) {
+        PROXLOG(warn, "Couldn't parse query from server " << sid << ": " << raw_query);
+        return;
+    }
+
+    if (qur.init) {
+        PROXLOG(detailed, "Init query for " << sid);
+        // Start the query off by registering it into the top-level pinto tree
+        registerServerQuery(sid);
+    }
+    else if (qur.refine || qur.coarsen) {
+        PROXLOG(detailed, "Refine query for " << sid);
+        for(int kls = 0; kls < NUM_OBJECT_CLASSES; kls++) {
+            if (mLocalQueryHandler[kls].handler == NULL) continue;
+            ServerQueryMap::iterator query_it = mServerQueries[kls].find(sid);
+            if (query_it == mServerQueries[kls].end()) continue;
+            ProxQuery* q = query_it->second;
+            for(uint32 i = 0; i < qur.nodes.size(); i++) {
+                if (qur.refine)
+                    q->refine(qur.nodes[i]);
+                else
+                    q->coarsen(qur.nodes[i]);
+            }
+        }
+    }
+    else if (qur.destroy) {
+        unregisterServerQuery(sid);
+    }
+}
+
+void LibproxManualProximity::handleUpdateServerQueryResults(ServerID sid, const Sirikata::Protocol::Prox::ProximityResults& results) {
+    ReplicatedServerDataMap::iterator rsit = mReplicatedServerDataMap.find(sid);
+    if (rsit == mReplicatedServerDataMap.end()) {
+        PROXLOG(warn, "Got server-to-server proximity results from " << sid << " but no longer have a record of that server.");
+        return;
+    }
+
+    rsit->second.client->proxUpdate(results);
+}
+
+void LibproxManualProximity::registerServerQuery(const ServerID& querier) {
+    for(int i = 0; i < NUM_OBJECT_CLASSES; i++) {
+        if (mLocalQueryHandler[i].handler == NULL) continue;
+
+        // FIXME we need some way of specifying the basic query
+        // parameters for queries (or maybe just get rid of
+        // these basic properties as they aren't even required for
+        // this type of query?)
+        TimedMotionVector3f pos(mContext->simTime(), MotionVector3f(Vector3f(0, 0, 0), Vector3f(0, 0, 0)));
+        BoundingSphere3f bounds(Vector3f(0, 0, 0), 0);
+        float max_size = 0.f;
+        ProxQuery* q = mLocalQueryHandler[i].handler->registerQuery(pos, bounds, max_size);
+        mServerQueries[i][querier] = q;
+        mInvertedServerQueries[q] = querier;
+        // Set the listener last since it can trigger callbacks
+        // and we want everything to be setup already
+        q->setEventListener(this);
+    }
+}
+
+void LibproxManualProximity::unregisterServerQuery(const ServerID& querier) {
+    for(int i = 0; i < NUM_OBJECT_CLASSES; i++) {
+        if (mLocalQueryHandler[i].handler == NULL) continue;
+
+        ServerQueryMap::iterator it = mServerQueries[i].find(querier);
+        if (it == mServerQueries[i].end()) continue;
+
+        ProxQuery* q = it->second;
+        mServerQueries[i].erase(it);
+        mInvertedServerQueries.erase(q);
+        delete q; // Note: Deleting query notifies QueryHandler and unsubscribes.
+    }
+}
+
+SeqNoPtr LibproxManualProximity::getOrCreateSeqNoInfo(const ServerID server_id)
+{
+    // server_id == querier
+    ServerSeqNoInfoMap::iterator proxSeqNoIt = mServerSeqNos.find(server_id);
+    if (proxSeqNoIt == mServerSeqNos.end())
+        proxSeqNoIt = mServerSeqNos.insert( ServerSeqNoInfoMap::value_type(server_id, SeqNoPtr(new SeqNo())) ).first;
+    return proxSeqNoIt->second;
+}
+
+void LibproxManualProximity::eraseSeqNoInfo(const ServerID server_id)
+{
+    // server_id == querier
+    ServerSeqNoInfoMap::iterator proxSeqNoIt = mServerSeqNos.find(server_id);
+    if (proxSeqNoIt == mServerSeqNos.end()) return;
+    mServerSeqNos.erase(proxSeqNoIt);
 }
 
 
@@ -342,101 +556,53 @@ void LibproxManualProximity::handleObjectHostProxMessage(const OHDP::NodeID& id,
 
     Protocol::Prox::QueryRequest request;
     bool parse_success = request.ParseFromString(data);
+    QueryUpdateRequest qur;
+    bool parsed = parseQueryRequest(request.query_parameters(), &qur);
 
-    namespace json = json_spirit;
-    json::Value query_params;
-    if (!json::read(request.query_parameters(), query_params)) {
-        PROXLOG(error, "Error parsing object host query request: " << request.query_parameters());
+    if (!parsed) {
+        PROXLOG(warn, "Couldn't parse query from OH " << id << ": " << request.query_parameters());
         return;
     }
 
-    String action = query_params.getString("action", String(""));
-    if (action.empty()) return;
-    if (action == "init") {
+    if (qur.init) {
         PROXLOG(detailed, "Init query for " << id);
-
         // Start the query off by registering it into the top-level pinto tree
         registerOHQueryWithServerHandlers(id, NullServerID);
     }
-    else if (action == "refine") {
+    else if (qur.refine || qur.coarsen) {
         PROXLOG(detailed, "Refine query for " << id);
-
-        if (!query_params.contains("nodes") || !query_params.get("nodes").isArray()) {
-            PROXLOG(detailed, "Invalid refine request " << id);
-            return;
-        }
-        json::Array json_nodes = query_params.getArray("nodes");
-        std::vector<ObjectReference> refine_nodes;
-        BOOST_FOREACH(json::Value& v, json_nodes) {
-            if (!v.isString()) return;
-            refine_nodes.push_back(ObjectReference(v.getString()));
-        }
-
-        ProxIndexID indexid = query_params.getInt("index");
         // Either we can find replicated remote data with this index
-        if (mLocalToRemoteIndexMap.find(indexid) != mLocalToRemoteIndexMap.end()) {
-            NodeProxIndexID node_index_id = mLocalToRemoteIndexMap[indexid];
+        if (mLocalToRemoteIndexMap.find(qur.indexid) != mLocalToRemoteIndexMap.end()) {
+            NodeProxIndexID node_index_id = mLocalToRemoteIndexMap[qur.indexid];
             ServerID sid = node_index_id.first;
             ProxIndexID remote_indexid = node_index_id.second;
             if (mOHRemoteQueries.find(id) != mOHRemoteQueries.end() &&
                 mOHRemoteQueries[id][sid].find(remote_indexid) != mOHRemoteQueries[id][sid].end()) {
                 ProxQuery* q = mOHRemoteQueries[id][sid][remote_indexid];
-                for(uint32 i = 0; i < refine_nodes.size(); i++)
-                    q->refine(refine_nodes[i]);
+                for(uint32 i = 0; i < qur.nodes.size(); i++) {
+                    if (qur.refine)
+                        q->refine(qur.nodes[i]);
+                    else
+                        q->coarsen(qur.nodes[i]);
+                }
             }
         }
         else { // Or we must be dealing with our local objects
             for(int kls = 0; kls < NUM_OBJECT_CLASSES; kls++) {
-                if (mOHQueryHandler[kls].handler == NULL) continue;
+                if (mLocalQueryHandler[kls].handler == NULL) continue;
                 OHQueryMap::iterator query_it = mOHQueries[kls].find(id);
                 if (query_it == mOHQueries[kls].end()) continue;
                 ProxQuery* q = query_it->second;
-
-                for(uint32 i = 0; i < refine_nodes.size(); i++)
-                    q->refine(refine_nodes[i]);
+                for(uint32 i = 0; i < qur.nodes.size(); i++) {
+                    if (qur.refine)
+                        q->refine(qur.nodes[i]);
+                    else
+                        q->coarsen(qur.nodes[i]);
+                }
             }
         }
     }
-    else if (action == "coarsen") {
-        PROXLOG(detailed, "Coarsen query for " << id);
-
-        if (!query_params.contains("nodes") || !query_params.get("nodes").isArray()) {
-            PROXLOG(detailed, "Invalid coarsen request " << id);
-            return;
-        }
-        json::Array json_nodes = query_params.getArray("nodes");
-        std::vector<ObjectReference> coarsen_nodes;
-        BOOST_FOREACH(json::Value& v, json_nodes) {
-            if (!v.isString()) return;
-            coarsen_nodes.push_back(ObjectReference(v.getString()));
-        }
-
-        ProxIndexID indexid = query_params.getInt("index");
-        // Either we can find replicated remote data with this index
-        if (mLocalToRemoteIndexMap.find(indexid) != mLocalToRemoteIndexMap.end()) {
-            NodeProxIndexID node_index_id = mLocalToRemoteIndexMap[indexid];
-            ServerID sid = node_index_id.first;
-            ProxIndexID remote_indexid = node_index_id.second;
-            if (mOHRemoteQueries.find(id) != mOHRemoteQueries.end() &&
-                mOHRemoteQueries[id][sid].find(remote_indexid) != mOHRemoteQueries[id][sid].end()) {
-                ProxQuery* q = mOHRemoteQueries[id][sid][remote_indexid];
-                for(uint32 i = 0; i < coarsen_nodes.size(); i++)
-                    q->coarsen(coarsen_nodes[i]);
-            }
-        }
-        else { // Or we must be dealing with our local objects
-            for(int kls = 0; kls < NUM_OBJECT_CLASSES; kls++) {
-                if (mOHQueryHandler[kls].handler == NULL) continue;
-                OHQueryMap::iterator query_it = mOHQueries[kls].find(id);
-                if (query_it == mOHQueries[kls].end()) continue;
-                ProxQuery* q = query_it->second;
-
-                for(uint32 i = 0; i < coarsen_nodes.size(); i++)
-                    q->coarsen(coarsen_nodes[i]);
-            }
-        }
-    }
-    else if (action == "destroy") {
+    else if (qur.destroy) {
         destroyQuery(id);
     }
 }
@@ -472,19 +638,53 @@ void LibproxManualProximity::destroyQuery(const OHDP::NodeID& querier) {
 
 
 void LibproxManualProximity::handleOnPintoServerResult(const Sirikata::Protocol::Prox::ProximityUpdate& update) {
-    ReplicatedServerData& replicated_data = mReplicatedServerDataMap[NullServerID];
-    if (!replicated_data.client) {
-        replicated_data.client = ReplicatedClientPtr(
+    ReplicatedServerData& replicated_tlpinto_data = mReplicatedServerDataMap[NullServerID];
+    if (!replicated_tlpinto_data.client) {
+        replicated_tlpinto_data.client = ReplicatedClientPtr(
             new ReplicatedClient(
                 mContext, mContext->mainStrand,
                 this,
                 new NopTimeSynced(), NullServerID
             )
         );
+        replicated_tlpinto_data.client->start();
     }
 
+    // Before passing this along for processing, which could result in
+    // OH queries refining and hitting leaf pinto nodes, leading to
+    // them wanting to register with the space server, we need to make
+    // sure we're setup for those queries. We need to scan through for
+    // additions of leaf nodes that require us to start replicating
+    // data
+    for(int32 aidx = 0; aidx < update.addition_size(); aidx++) {
+        Sirikata::Protocol::Prox::ObjectAddition addition = update.addition(aidx);
+        if (addition.type() != Sirikata::Protocol::Prox::ObjectAddition::Object) continue;
+
+        ServerID sid = addition.object().asUInt32();
+        if (sid == mContext->id()) continue;
+
+        ReplicatedServerData& replicated_sid_data = mReplicatedServerDataMap[sid];
+        if (!replicated_sid_data.client) {
+            replicated_sid_data.client = ReplicatedClientPtr(
+                new ReplicatedClient(
+                    mContext, mContext->mainStrand,
+                    this,
+                    new NopTimeSynced(), sid
+                )
+            );
+            replicated_sid_data.client->start();
+            replicated_sid_data.client->initQuery();
+        }
+    }
+
+    for(int32 ridx = 0; ridx < update.removal_size(); ridx++) {
+        // FIXME cleanup? Maybe we can remove the tree, but it might
+        // just be temporary movement in TL-pinto...
+    }
+
+
     //  Need to run the prox update to get data in before registering queries
-    replicated_data.client->proxUpdate(update);
+    replicated_tlpinto_data.client->proxUpdate(update);
 }
 
 void LibproxManualProximity::onCreatedReplicatedIndex(ReplicatedClient* client, const ServerID& evt_src_server, ProxIndexID proxid, ReplicatedLocationServiceCachePtr loccache, ServerID sid, bool dynamic_objects) {
@@ -542,7 +742,7 @@ void LibproxManualProximity::registerOHQueryWithServerHandlers(const OHDP::NodeI
     // into a separate set of query handlers
     if (queried_node == mContext->id()) {
         for(int i = 0; i < NUM_OBJECT_CLASSES; i++) {
-            if (mOHQueryHandler[i].handler == NULL) continue;
+            if (mLocalQueryHandler[i].handler == NULL) continue;
 
             // FIXME we need some way of specifying the basic query
             // parameters for OH queries (or maybe just get rid of
@@ -551,7 +751,7 @@ void LibproxManualProximity::registerOHQueryWithServerHandlers(const OHDP::NodeI
             TimedMotionVector3f pos(mContext->simTime(), MotionVector3f(Vector3f(0, 0, 0), Vector3f(0, 0, 0)));
             BoundingSphere3f bounds(Vector3f(0, 0, 0), 0);
             float max_size = 0.f;
-            ProxQuery* q = mOHQueryHandler[i].handler->registerQuery(pos, bounds, max_size);
+            ProxQuery* q = mLocalQueryHandler[i].handler->registerQuery(pos, bounds, max_size);
             mOHQueries[i][querier] = q;
             mInvertedOHQueries[q] = querier;
             // Set the listener last since it can trigger callbacks
@@ -581,7 +781,7 @@ void LibproxManualProximity::unregisterOHQueryWithServerHandlers(const OHDP::Nod
     // into a separate set of query handlers
     if (queried_node == mContext->id()) {
         for(int i = 0; i < NUM_OBJECT_CLASSES; i++) {
-            if (mOHQueryHandler[i].handler == NULL) continue;
+            if (mLocalQueryHandler[i].handler == NULL) continue;
 
             OHQueryMap::iterator it = mOHQueries[i].find(querier);
             if (it == mOHQueries[i].end()) continue;
@@ -704,7 +904,7 @@ void LibproxManualProximity::handleCheckObjectClassForHandlers(const ObjectRefer
 }
 
 void LibproxManualProximity::trySwapHandlers(bool is_local, const ObjectReference& objid, bool is_static) {
-    handleCheckObjectClassForHandlers(objid, is_static, mOHQueryHandler);
+    handleCheckObjectClassForHandlers(objid, is_static, mLocalQueryHandler);
 }
 
 
@@ -726,24 +926,46 @@ void LibproxManualProximity::eraseSeqNoInfo(const OHDP::NodeID& node)
 void LibproxManualProximity::queryHasEvents(ProxQuery* query) {
     uint32 max_count = GetOptionValue<uint32>(PROX_MAX_PER_RESULT);
 
+    // This function handles both OH queries (against remote
+    // replicated trees and the local tree) and server queries
+    // (against the local tree).
+    enum QueryHandlerType {
+        QUERY_HANDLER_TYPE_SERVER,
+        QUERY_HANDLER_TYPE_OH,
+    };
+    QueryHandlerType qhandler_type;
+    ServerID server_query_id;
     OHDP::NodeID query_id;
     bool local_query;
     ServerID object_origin_server;
     assert(mInvertedOHQueries.find(query) != mInvertedOHQueries.end() ||
-        mInvertedOHRemoteQueries.find(query) != mInvertedOHRemoteQueries.end());
+        mInvertedOHRemoteQueries.find(query) != mInvertedOHRemoteQueries.end() ||
+        mInvertedServerQueries.find(query) != mInvertedServerQueries.end() );
     if (mInvertedOHQueries.find(query) != mInvertedOHQueries.end()) {
+        qhandler_type = QUERY_HANDLER_TYPE_OH;
+        server_query_id = NullServerID;
         query_id = mInvertedOHQueries[query];
         local_query = true;
         object_origin_server = mContext->id();
     }
-    else {
+    else if (mInvertedOHRemoteQueries.find(query) != mInvertedOHRemoteQueries.end()) {
         OHRemoteQueryID remote_query_id = mInvertedOHRemoteQueries[query];
+        qhandler_type = QUERY_HANDLER_TYPE_OH;
+        server_query_id = NullServerID;
         query_id = std::tr1::get<0>(remote_query_id);
         local_query = false;
         object_origin_server = std::tr1::get<1>(remote_query_id);
     }
+    else {
+        assert(mInvertedServerQueries.find(query) != mInvertedServerQueries.end());
+        qhandler_type = QUERY_HANDLER_TYPE_SERVER;
+        server_query_id = mInvertedServerQueries[query];
+        query_id = OHDP::NodeID::null();
+        local_query = true;
+        object_origin_server = mContext->id();
+    }
     String object_origin_server_str = boost::lexical_cast<String>(object_origin_server);
-    SeqNoPtr seqNoPtr = getSeqNoInfo(query_id);
+    SeqNoPtr seqNoPtr = (qhandler_type == QUERY_HANDLER_TYPE_SERVER ? getOrCreateSeqNoInfo(server_query_id) : getSeqNoInfo(query_id));
     ExtendedLocationServiceCache* loccache = dynamic_cast<ExtendedLocationServiceCache*>(query->handler()->locationCache());
     assert(loccache);
 
@@ -752,7 +974,15 @@ void LibproxManualProximity::queryHasEvents(ProxQuery* query) {
 
     PROXLOG(detailed, evts.size() << " events for query " << query_id);
     while(!evts.empty()) {
-        Sirikata::Protocol::Prox::ProximityResults prox_results;
+        // We need to support encoding both server messages, which
+        // want a Container, and object messages, which want just
+        // ProximityResults. We'l always put things into a container,
+        // but possibly only encode the ProximityResults if that's all
+        // we need, keeping the code simpler by combining both server
+        // and OH events.
+        Sirikata::Protocol::Prox::Container container;
+        Sirikata::Protocol::Prox::IProximityResults prox_results = container.mutable_result();
+
         prox_results.set_t(mContext->simTime());
 
         uint32 count = 0;
@@ -773,10 +1003,18 @@ void LibproxManualProximity::queryHasEvents(ProxQuery* query) {
 
                     PROXLOG(detailed, "Reporting addition of " << oobjid);
 
-                    mContext->mainStrand->post(
-                        std::tr1::bind(&LibproxManualProximity::handleAddOHLocSubscriptionWithID, this, query_id, objid, evt.indexID()),
-                        "LibproxManualProximity::handleAddOHLocSubscription"
-                    );
+                    if (qhandler_type == QUERY_HANDLER_TYPE_OH) {
+                        mContext->mainStrand->post(
+                            std::tr1::bind(&LibproxManualProximity::handleAddOHLocSubscriptionWithID, this, query_id, objid, evt.indexID()),
+                            "LibproxManualProximity::handleAddOHLocSubscription"
+                        );
+                    }
+                    else if (qhandler_type == QUERY_HANDLER_TYPE_SERVER) {
+                        mContext->mainStrand->post(
+                            std::tr1::bind(&LibproxManualProximity::handleAddServerLocSubscriptionWithID, this, server_query_id, objid, evt.indexID(), seqNoPtr),
+                            "LibproxManualProximity::handleAddServerLocSubscription"
+                        );
+                    }
 
                     Sirikata::Protocol::Prox::IObjectAddition addition = event_results.add_addition();
                     addition.set_object( objid );
@@ -853,14 +1091,11 @@ void LibproxManualProximity::queryHasEvents(ProxQuery* query) {
                     // If we hit a leaf node in the top-level tree, we
                     // need to push down to the next tree
                     if (object_origin_server == NullServerID && evt.additions()[aidx].type() == ProxQueryEvent::Normal) {
+                        assert(qhandler_type == QUERY_HANDLER_TYPE_OH);
                         // Need to unpack real ID from the UUID
                         ServerID leaf_server = (ServerID)objid.asUInt32();
-                        SILOG(detailed, detailed, "Query " << query_id << " reached leaf top-level node " << oobjid << "(SS " << leaf_server << "), registering query against that server");
-                        // Only supporting refining down to this
-                        // node's tree until we have queries against
-                        // remote servers
-                        if (leaf_server == mContext->id())
-                            registerOHQueryWithServerHandlers(query_id, leaf_server);
+                        PROXLOG(detailed, "Query " << query_id << " reached leaf top-level node " << oobjid << "(SS " << leaf_server << "), registering query against that server");
+                        registerOHQueryWithServerHandlers(query_id, leaf_server);
                     }
                 }
                 else {
@@ -877,10 +1112,18 @@ void LibproxManualProximity::queryHasEvents(ProxQuery* query) {
                 // Clear out seqno and let main strand remove loc
                 // subcription
 
-                mContext->mainStrand->post(
-                    std::tr1::bind(&LibproxManualProximity::handleRemoveOHLocSubscriptionWithID, this, query_id, objid, evt.indexID()),
-                    "LibproxManualProximity::handleRemoveOHLocSubscription"
-                );
+                if (qhandler_type == QUERY_HANDLER_TYPE_OH) {
+                    mContext->mainStrand->post(
+                        std::tr1::bind(&LibproxManualProximity::handleRemoveOHLocSubscriptionWithID, this, query_id, objid, evt.indexID()),
+                        "LibproxManualProximity::handleRemoveOHLocSubscription"
+                    );
+                }
+                else if (qhandler_type == QUERY_HANDLER_TYPE_SERVER) {
+                    mContext->mainStrand->post(
+                        std::tr1::bind(&LibproxManualProximity::handleRemoveServerLocSubscriptionWithID, this, query_id, objid, evt.indexID()),
+                        "LibproxManualProximity::handleRemoveServerLocSubscription"
+                    );
+                }
 
                 Sirikata::Protocol::Prox::IObjectRemoval removal = event_results.add_removal();
                 removal.set_object( objid );
@@ -897,14 +1140,11 @@ void LibproxManualProximity::queryHasEvents(ProxQuery* query) {
                 if (object_origin_server == NullServerID &&
                     loccache->tracking(oobjid) && loccache->aggregate(oobjid))
                 {
+                    assert(qhandler_type == QUERY_HANDLER_TYPE_OH);
                     // Need to unpack real ID from the UUID
                     ServerID leaf_server = (ServerID)objid.asUInt32();
-                    SILOG(detailed, detailed, "Query " << query_id << " moved cut above leaf top-level node " << oobjid << "(SS " << leaf_server << "), unregistering query against that server");
-                    // Only supporting refining down to this
-                    // node's tree until we have queries against
-                    // remote servers
-                    if (leaf_server == mContext->id())
-                        unregisterOHQueryWithServerHandlers(query_id, leaf_server);
+                    PROXLOG(detailed, "Query " << query_id << " moved cut above leaf top-level node " << oobjid << "(SS " << leaf_server << "), unregistering query against that server");
+                    unregisterOHQueryWithServerHandlers(query_id, leaf_server);
                 }
             }
 
@@ -915,16 +1155,29 @@ void LibproxManualProximity::queryHasEvents(ProxQuery* query) {
             evts.pop_front();
         }
 
-        // Note null ID's since these are OHDP messages.
-        Sirikata::Protocol::Object::ObjectMessage* obj_msg = createObjectMessage(
-            mContext->id(),
-            UUID::null(), OBJECT_PORT_PROXIMITY,
-            UUID::null(), OBJECT_PORT_PROXIMITY,
-            serializePBJMessage(prox_results)
-        );
-        mOHResults.push( OHResult(query_id, obj_msg) );
+        if (qhandler_type == QUERY_HANDLER_TYPE_OH) {
+            // Note null ID's since these are OHDP messages.
+            Sirikata::Protocol::Object::ObjectMessage* obj_msg = createObjectMessage(
+                mContext->id(),
+                UUID::null(), OBJECT_PORT_PROXIMITY,
+                UUID::null(), OBJECT_PORT_PROXIMITY,
+                serializePBJMessage(prox_results)
+            );
+            mOHResults.push( OHResult(query_id, obj_msg) );
+        }
+        else if (qhandler_type == QUERY_HANDLER_TYPE_SERVER) {
+            Message* msg = new Message(
+                mContext->id(),
+                SERVER_PORT_PROX,
+                server_query_id,
+                SERVER_PORT_PROX,
+                serializePBJMessage(container)
+            );
+            mServerResults.push(msg);
+        }
     }
 }
+
 
 
 
@@ -943,7 +1196,7 @@ void LibproxManualProximity::commandProperties(const Command::Command& cmd, Comm
     // Current state
 
     // Properties of objects
-    int32 oh_query_objects = (mNumQueryHandlers == 2 ? (mOHQueryHandler[0].handler->numObjects() + mOHQueryHandler[1].handler->numObjects()) : mOHQueryHandler[0].handler->numObjects());
+    int32 oh_query_objects = (mNumQueryHandlers == 2 ? (mLocalQueryHandler[0].handler->numObjects() + mLocalQueryHandler[1].handler->numObjects()) : mLocalQueryHandler[0].handler->numObjects());
     result.put("objects.properties.local_count", oh_query_objects);
     result.put("objects.properties.remote_count", 0);
     result.put("objects.properties.count", oh_query_objects);
@@ -966,12 +1219,12 @@ void LibproxManualProximity::commandListHandlers(const Command::Command& cmd, Co
 
     // Handlers over local objects -- OH queries
     for(int i = 0; i < NUM_OBJECT_CLASSES; i++) {
-        if (mOHQueryHandler[i].handler != NULL) {
+        if (mLocalQueryHandler[i].handler != NULL) {
             String key = String("handlers.oh.") + ObjectClassToString((ObjectClass)i) + ".";
             result.put(key + "name", String("oh-queries.") + ObjectClassToString((ObjectClass)i) + "-objects");
-            result.put(key + "queries", mOHQueryHandler[i].handler->numQueries());
-            result.put(key + "objects", mOHQueryHandler[i].handler->numObjects());
-            result.put(key + "nodes", mOHQueryHandler[i].handler->numNodes());
+            result.put(key + "queries", mLocalQueryHandler[i].handler->numQueries());
+            result.put(key + "objects", mLocalQueryHandler[i].handler->numObjects());
+            result.put(key + "nodes", mLocalQueryHandler[i].handler->numNodes());
         }
     }
 
@@ -1012,11 +1265,11 @@ bool LibproxManualProximity::parseHandlerName(const String& name, ProxQueryHandl
     String class_part = name.substr(dot_pos+1);
     // Check for local query handlers
     if (class_part == "dynamic-objects") {
-        *handler_out = mOHQueryHandler[OBJECT_CLASS_DYNAMIC].handler;
+        *handler_out = mLocalQueryHandler[OBJECT_CLASS_DYNAMIC].handler;
         return true;
     }
     if (class_part == "static-objects") {
-        *handler_out = mOHQueryHandler[OBJECT_CLASS_STATIC].handler;
+        *handler_out = mLocalQueryHandler[OBJECT_CLASS_STATIC].handler;
         return true;
     }
 

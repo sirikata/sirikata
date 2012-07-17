@@ -61,6 +61,9 @@ public:
     virtual void replicaObjectRemoved(const UUID& uuid);
     virtual void replicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval);
 
+    // MessageRecipient Interface
+    virtual void receiveMessage(Message* msg);
+
     // MigrationDataClient Interface
     virtual std::string migrationClientTag();
     virtual std::string generateMigrationData(const UUID& obj, ServerID source_server, ServerID dest_server);
@@ -106,12 +109,18 @@ private:
     // MAIN Thread  OH queries:
 
     virtual int32 objectHostQueries() const;
+    virtual int32 serverQueries() const;
 
     // ObjectHost message management
     void handleObjectHostSubstream(int success, OHDPSST::Stream::Ptr substream, SeqNoPtr seqNo);
 
-    std::deque<OHResult> mOHResultsToSend;
+    // Server queries management
+    void updateServerQuery(ServerID sid, const String& raw_query);
+    void updateServerQueryResults(ServerID sid, const Sirikata::Protocol::Prox::ProximityResults& results);
 
+    std::deque<Message*> mServerResultsToSend; // actually both
+                                               // results + commands
+    std::deque<OHResult> mOHResultsToSend;
 
     // PROX Thread:
 
@@ -133,6 +142,16 @@ private:
     // ReplicatedClientWithID -- these generate/destroy LocCaches and
     // Query Handlers
     void handleOnPintoServerResult(const Sirikata::Protocol::Prox::ProximityUpdate& update);
+
+    void handleUpdateServerQuery(ServerID sid, const String& raw_query);
+    void handleUpdateServerQueryResults(ServerID sid, const Sirikata::Protocol::Prox::ProximityResults& results);
+
+    // Helpers for un/registering a server query
+    void registerServerQuery(const ServerID& querier);
+    void unregisterServerQuery(const ServerID& querier);
+
+    SeqNoPtr getOrCreateSeqNoInfo(const ServerID server_id);
+    void eraseSeqNoInfo(const ServerID server_id);
 
     // PROX Thread -- OH queries
 
@@ -158,12 +177,17 @@ private:
     SeqNoPtr getSeqNoInfo(const OHDP::NodeID& node);
     void eraseSeqNoInfo(const OHDP::NodeID& node);
 
+
+
     // Command handlers
     virtual void commandProperties(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
     virtual void commandListHandlers(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
     bool parseHandlerName(const String& name, ProxQueryHandler** handler_out);
     virtual void commandForceRebuild(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
     virtual void commandListNodes(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
+
+
+
 
     // The layout is complicated and nested here because we have many
     // layers -- queriers, space servers, indices, etc. First, we'll
@@ -279,6 +303,30 @@ private:
     // and which space server is it registered with?
     typedef std::tr1::unordered_map<ProxQuery*, OHDP::NodeID> InvertedOHQueryMap;
 
+    // These track objects on this server and respond to OH queries.
+    OHQueryMap mOHQueries[NUM_OBJECT_CLASSES];
+    InvertedOHQueryMap mInvertedOHQueries;
+    // And their results
+    Sirikata::ThreadSafeQueue<OHResult> mOHResults;
+    typedef std::tr1::unordered_map<OHDP::NodeID, SeqNoPtr, OHDP::NodeID::Hasher> OHSeqNoInfoMap;
+    OHSeqNoInfoMap mOHSeqNos;
+
+
+    // Server-to-Server queries
+    typedef std::tr1::unordered_map<ServerID, ProxQuery*> ServerQueryMap;
+    typedef std::tr1::unordered_map<ProxQuery*, ServerID> InvertedServerQueryMap;
+    ServerQueryMap mServerQueries[NUM_OBJECT_CLASSES];
+    InvertedServerQueryMap mInvertedServerQueries;
+    Sirikata::ThreadSafeQueue<Message*> mServerResults; // server query results + commands
+    typedef std::tr1::unordered_map<ServerID, SeqNoPtr> ServerSeqNoInfoMap;
+    ServerSeqNoInfoMap mServerSeqNos;
+
+
+
+    // And these are the actual data structures for local queries --
+    // handling both server queries (their entire query) and OH
+    // queries (when they get into this this tree).
+
     struct ProxQueryHandlerData {
         ProxQueryHandler* handler;
         // Additions and removals that need to be processed on the
@@ -291,17 +339,8 @@ private:
         ObjectIDSet removals;
     };
 
-    // These track objects on this server and respond to OH queries.
-    OHQueryMap mOHQueries[NUM_OBJECT_CLASSES];
-    InvertedOHQueryMap mInvertedOHQueries;
-    ProxQueryHandlerData mOHQueryHandler[NUM_OBJECT_CLASSES];
-
-    PollerService mOHHandlerPoller;
-    Sirikata::ThreadSafeQueue<OHResult> mOHResults;
-
-    typedef std::tr1::unordered_map<OHDP::NodeID, SeqNoPtr, OHDP::NodeID::Hasher> OHSeqNoInfoMap;
-    OHSeqNoInfoMap mOHSeqNos;
-
+    ProxQueryHandlerData mLocalQueryHandler[NUM_OBJECT_CLASSES];
+    PollerService mLocalHandlerPoller;
 }; // class LibproxManualProximity
 
 } // namespace Sirikata

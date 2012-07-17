@@ -62,4 +62,8 @@ message ObjectMigrationData {
 message Container {
     optional ServerQuery query = 1;
     optional ProximityResults result = 2;
+
+    // Raw queries, just byte arrays. Completely flexible version of
+    // the query field.
+    optional bytes raw_query = 3;
 }
