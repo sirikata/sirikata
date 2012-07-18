@@ -115,7 +115,7 @@ Mesh::VisualPtr PlyModelSystem::load(const Transfer::RemoteFileMetadata& metadat
 			double (*valueV)[7] = new double[vertexNum][7]; //note: the type should be able to vary (but does it make a significant difference...?)
 			int (*valueF)[3] = new int[faceNum][3]; //faces can have more than 3 vertices, change later
 			std::map<int, int> indexMap; //will map the original index to the new index
-			std::vector<std::map<int, int>> reverseMap; //will map the new index to the original index (find more efficient way later)
+			std::vector<std::map<int, int> > reverseMap; //will map the new index to the original index (find more efficient way later)
 			std::vector<int> counterIndex; //maybe reverseMap can replace counter
 			for(int i = 0; i < vertexNum; i++)
 				indexMap[i] = -1;
