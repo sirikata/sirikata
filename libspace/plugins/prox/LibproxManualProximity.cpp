@@ -1238,11 +1238,22 @@ void LibproxManualProximity::commandListHandlers(const Command::Command& cmd, Co
         if (mLocalQueryHandler[i].handler != NULL) {
             String key = String("handlers.oh.") + ObjectClassToString((ObjectClass)i) + ".";
             result.put(key + "name", String("oh-queries.") + ObjectClassToString((ObjectClass)i) + "-objects");
-            result.put(key + "queries", mLocalQueryHandler[i].handler->numQueries());
+            result.put(key + "queries", mOHQueries[i].size());
             result.put(key + "objects", mLocalQueryHandler[i].handler->numObjects());
             result.put(key + "nodes", mLocalQueryHandler[i].handler->numNodes());
         }
     }
+    // Handlers over local objects -- Server queries
+    for(int i = 0; i < NUM_OBJECT_CLASSES; i++) {
+        if (mLocalQueryHandler[i].handler != NULL) {
+            String key = String("handlers.server.") + ObjectClassToString((ObjectClass)i) + ".";
+            result.put(key + "name", String("server-queries.") + ObjectClassToString((ObjectClass)i) + "-objects");
+            result.put(key + "queries", mServerQueries[i].size());
+            result.put(key + "objects", mLocalQueryHandler[i].handler->numObjects());
+            result.put(key + "nodes", mLocalQueryHandler[i].handler->numNodes());
+        }
+    }
+
 
     // Handlers over replicated remote trees
     for(ReplicatedServerDataMap::iterator server_data_it = mReplicatedServerDataMap.begin(); server_data_it != mReplicatedServerDataMap.end(); server_data_it++) {
@@ -1251,7 +1262,8 @@ void LibproxManualProximity::commandListHandlers(const Command::Command& cmd, Co
             ProxQueryHandlerPtr handler = handler_it->second.handler;
             String key = String("handlers.oh.replicated-server-") +
                 boost::lexical_cast<String>(server_data_it->first) +
-                String("-index-") + boost::lexical_cast<String>(handler_it->first) + ".";
+                String("-index-") + boost::lexical_cast<String>(handler_it->first) + "-" +
+                (handler->staticOnly() ? "static" : "dynamic") + ".";
             result.put(key + "name",
                 String("oh-queries.replicated-server-") +
                 boost::lexical_cast<String>(server_data_it->first) +
@@ -1276,10 +1288,10 @@ bool LibproxManualProximity::parseHandlerName(const String& name, ProxQueryHandl
         return false;
 
     String handler_part = name.substr(0, dot_pos);
-    if (handler_part != "oh-queries") return false;
+    if (handler_part != "oh-queries" && handler_part != "server-queries") return false;
 
     String class_part = name.substr(dot_pos+1);
-    // Check for local query handlers
+    // Check for local query handlers (both oh-queries and server-queries)
     if (class_part == "dynamic-objects") {
         *handler_out = mLocalQueryHandler[OBJECT_CLASS_DYNAMIC].handler;
         return true;
@@ -1290,13 +1302,16 @@ bool LibproxManualProximity::parseHandlerName(const String& name, ProxQueryHandl
     }
 
     // Otherwise, lookup the replicated tree query handlers
+    if (handler_part == "server-queries") return false;
     // Parse the format replicated-server-yyy-index-zzz
     if (class_part.find("replicated-server-") != 0) return false;
     std::size_t index_pos = class_part.find("-index-");
     if (index_pos == String::npos) return false;
+    std::size_t last_dash_pos = class_part.find("-", index_pos+1);
     String server_str = class_part.substr(String("replicated-server-").size(), index_pos-String("replicated-server-").size());
     ServerID server = boost::lexical_cast<ProxIndexID>(server_str);
-    String index_str = class_part.substr(index_pos + String("-index-").size());
+    std::size_t index_val_pos = index_pos + String("-index-").size();
+    String index_str = class_part.substr(index_val_pos, last_dash_pos-index_val_pos);
     ProxIndexID index = boost::lexical_cast<ProxIndexID>(index_str);
 
     if (mReplicatedServerDataMap.find(server) == mReplicatedServerDataMap.end() ||
