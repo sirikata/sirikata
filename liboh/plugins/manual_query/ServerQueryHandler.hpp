@@ -60,7 +60,7 @@ private:
     struct ServerQueryState {
         ServerQueryState(ServerQueryHandler* parent_, const OHDP::SpaceNodeID& id_, ObjectHostContext* ctx_, Network::IOStrandPtr strand_, OHDPSST::Stream::Ptr base)
          : nconnected(0),
-           client(ctx_, strand_, parent_, new OHSpaceTimeSynced(ctx_->objectHost, id_.space()), id_),
+           client(ctx_, strand_, parent_, new OHSpaceTimeSynced(ctx_->objectHost, id_.space()), id_.toString(), id_),
            base_stream(base),
            prox_stream(),
            prox_stream_requested(false),

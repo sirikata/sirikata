@@ -13,7 +13,7 @@
 #include <json_spirit/json_spirit.h>
 #include <boost/lexical_cast.hpp>
 
-#define RCLOG(lvl, msg) SILOG(replicated-client, lvl, msg)
+#define RCLOG(lvl, msg) SILOG(replicated-client, lvl, "(Server " << mServerID << ") " << msg)
 
 namespace Sirikata {
 namespace Pinto {
@@ -70,11 +70,12 @@ using std::tr1::placeholders::_2;
 using std::tr1::placeholders::_3;
 
 
-ReplicatedClient::ReplicatedClient(Context* ctx, Network::IOStrandPtr strand, TimeSynced* sync)
+ReplicatedClient::ReplicatedClient(Context* ctx, Network::IOStrandPtr strand, TimeSynced* sync, const String& server_id)
  : mContext(ctx),
    doNotUse___mStrand(strand),
    mStrand(strand.get()),
    mSync(sync),
+   mServerID(server_id),
    mObjects(),
    mOrphans(),
    mUnobservedTimeouts(),
@@ -93,11 +94,12 @@ ReplicatedClient::ReplicatedClient(Context* ctx, Network::IOStrandPtr strand, Ti
 {
 }
 
-ReplicatedClient::ReplicatedClient(Context* ctx, Network::IOStrand* strand, TimeSynced* sync)
+ReplicatedClient::ReplicatedClient(Context* ctx, Network::IOStrand* strand, TimeSynced* sync, const String& server_id)
  : mContext(ctx),
    doNotUse___mStrand(),
    mStrand(strand),
    mSync(sync),
+   mServerID(server_id),
    mObjects(),
    mOrphans(),
    mUnobservedTimeouts(),
@@ -225,7 +227,6 @@ void ReplicatedClient::proxUpdate(const Sirikata::Protocol::Prox::ProximityUpdat
     uint32 index_unique_id = index_props.id();
     RCLOG(detailed, "-Update for tree index ID: " << index_unique_id);
     if (index_props.has_index_id() || index_props.has_dynamic_classification()) {
-        RCLOG(detailed, "New replicated tree:");
         RCLOG(detailed, " ID: " << index_props.id());
         ServerID index_from_server = NullServerID;
         if (index_props.has_index_id()) {
@@ -240,8 +241,10 @@ void ReplicatedClient::proxUpdate(const Sirikata::Protocol::Prox::ProximityUpdat
 
         // Create a new loccache for this new tree. We could be getting this
         bool is_new = createLocCache(index_unique_id);
-        if (is_new)
+        if (is_new) {
+            RCLOG(detailed, " Replicated tree is NEW");
             onCreatedReplicatedIndex(index_unique_id, getLocCache(index_unique_id), index_from_server, dynamic_objects);
+        }
     }
 
     ReplicatedLocationServiceCachePtr loccache = getLocCache(index_unique_id);

@@ -32,11 +32,15 @@ class SIRIKATA_LIBPINTOLOC_EXPORT ReplicatedClient :
 {
   public:
     /** Create a ReplicatedClient.
-     *  \params sync TimeSynced to convert times. This class takes ownership and
+     *  \param sync TimeSynced to convert times. This class takes ownership and
      *               will delete it.
+     *  \param server_id string identifier used to uniquely identify
+     *               the server this data is replicated from. Used in
+     *               reporting to allow you to distinguish between
+     *               different replicated clients.
      */
-    ReplicatedClient(Context* ctx, Network::IOStrandPtr strand, TimeSynced* sync);
-    ReplicatedClient(Context* ctx, Network::IOStrand* strand, TimeSynced* sync);
+    ReplicatedClient(Context* ctx, Network::IOStrandPtr strand, TimeSynced* sync, const String& server_id);
+    ReplicatedClient(Context* ctx, Network::IOStrand* strand, TimeSynced* sync, const String& server_id);
     virtual ~ReplicatedClient();
 
     // Service Interface
@@ -138,6 +142,7 @@ class SIRIKATA_LIBPINTOLOC_EXPORT ReplicatedClient :
     Network::IOStrandPtr doNotUse___mStrand;
     Network::IOStrand* mStrand;
     TimeSynced* mSync;
+    const String mServerID;
 
     typedef std::map<ProxIndexID, ReplicatedLocationServiceCachePtr> IndexObjectCacheMap;
     IndexObjectCacheMap mObjects;
@@ -192,13 +197,13 @@ public:
         virtual void sendReplicatedClientProxMessage(ReplicatedClientWithID* client, const IDType& id, const String& msg) = 0;
     };
 
-    ReplicatedClientWithID(Context* ctx, Network::IOStrandPtr strand, Parent* parent, TimeSynced* sync, const IDType& id_)
-     : ReplicatedClient(ctx, strand, sync),
+    ReplicatedClientWithID(Context* ctx, Network::IOStrandPtr strand, Parent* parent, TimeSynced* sync, const String& server_id, const IDType& id_)
+     : ReplicatedClient(ctx, strand, sync, server_id),
        mParent(parent),
        mID(id_)
     {}
-    ReplicatedClientWithID(Context* ctx, Network::IOStrand* strand, Parent* parent, TimeSynced* sync, const IDType& id_)
-     : ReplicatedClient(ctx, strand, sync),
+    ReplicatedClientWithID(Context* ctx, Network::IOStrand* strand, Parent* parent, TimeSynced* sync, const String& server_id, const IDType& id_)
+     : ReplicatedClient(ctx, strand, sync, server_id),
        mParent(parent),
        mID(id_)
     {}

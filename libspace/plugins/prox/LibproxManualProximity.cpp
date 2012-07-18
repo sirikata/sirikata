@@ -659,8 +659,8 @@ void LibproxManualProximity::handleOnPintoServerResult(const Sirikata::Protocol:
         replicated_tlpinto_data.client = ReplicatedClientPtr(
             new ReplicatedClient(
                 mContext, mContext->mainStrand,
-                this,
-                new NopTimeSynced(), NullServerID
+                this, new NopTimeSynced(),
+                boost::lexical_cast<String>(NullServerID), NullServerID
             )
         );
         replicated_tlpinto_data.client->start();
@@ -684,8 +684,8 @@ void LibproxManualProximity::handleOnPintoServerResult(const Sirikata::Protocol:
             replicated_sid_data.client = ReplicatedClientPtr(
                 new ReplicatedClient(
                     mContext, mContext->mainStrand,
-                    this,
-                    new NopTimeSynced(), sid
+                    this, new NopTimeSynced(),
+                    boost::lexical_cast<String>(sid), sid
                 )
             );
             replicated_sid_data.client->start();
