@@ -262,16 +262,30 @@ Mesh::VisualPtr PlyModelSystem::load(const Transfer::RemoteFileMetadata& metadat
 						//if the point hit multiple SMG's, we will have to merge them before adding a point
 						while(hitSMG.size() > 1) {
 							//First, submeshgeometry
-							for(int j = 0; j < mdp->geometry[hitSMG[1]].primitives[0].indices.size(); j++) {
-								int ind = reverseMap[markSMG].size();
-								Vector3f point = Vector3f(valueV[reverseMap[hitSMG[1]][j]][0],
-									valueV[reverseMap[hitSMG[1]][j]][1],
-									valueV[reverseMap[hitSMG[1]][j]][2]);
-								mdp->geometry[markSMG].positions.push_back(point);
+							for(int j = 0; j < mdp->geometry[hitSMG[1]].primitives[0].indices.size(); j++) {//we loop through the indices of the smg to be destroyed
+								int ind = reverseMap[markSMG].size();										//prepare index for boosting the reverseMap size...
+								std::cout << "     " << ind << ' ' << mdp->geometry[hitSMG[1]].primitives[0].indices.size() << ' ';
+								Vector3f point = Vector3f(valueV[reverseMap[hitSMG[1]][mdp->geometry[hitSMG[1]].primitives[0].indices[j]]][0],				//here's a point from the smg to be transferred, at location j
+									valueV[reverseMap[hitSMG[1]][mdp->geometry[hitSMG[1]].primitives[0].indices[j]]][1],
+									valueV[reverseMap[hitSMG[1]][mdp->geometry[hitSMG[1]].primitives[0].indices[j]]][2]);
+								bool addPoint = true;
+								int pos;
+								for(pos = 0; pos < mdp->geometry[markSMG].positions.size() && addPoint; pos++) {//we loop through the other points in the smg to be stuffed
+									if(point.x == mdp->geometry[markSMG].positions[pos].x &&					//and try to see if there is a clone. if there is a clone,
+										point.y == mdp->geometry[markSMG].positions[pos].y &&					//we don't add a point? but if there is, we do add a point?
+										point.z == mdp->geometry[markSMG].positions[pos].z)
+										addPoint = false;
+								}
+								std::cout << pos << ' ' << mdp->geometry[markSMG].positions.size() << ' ' << addPoint << "     ";
+								if(addPoint) {
+									mdp->geometry[markSMG].positions.push_back(point);						//since we need to add a point, we store the point in the smg...
+									indexMap[reverseMap[hitSMG[1]][j]] = ind;								//we map the old point to the new point...
+									reverseMap[markSMG][ind] = reverseMap[hitSMG[1]][j];					//and map the new point in reverse to the old!
+								} else {
+									indexMap[reverseMap[hitSMG[1]][j]] = pos - 1;								//here, a clone already exists... so we map the old point to the clone...
+									//reverseMap[markSMG][pos] = reverseMap[hitSMG[1]][j];					//and that's it! 
+								}
 
-								indexMap[reverseMap[hitSMG[1]][j]] = ind;
-
-								reverseMap[markSMG].insert(std::pair<int, int>(ind, reverseMap[hitSMG[1]][j]));
 								mdp->geometry[markSMG].primitives[0].indices.push_back(indexMap[reverseMap[hitSMG[1]][j]]);
 							}
 							mdp->geometry.erase(mdp->geometry.begin() + hitSMG[1]);
@@ -290,7 +304,8 @@ Mesh::VisualPtr PlyModelSystem::load(const Transfer::RemoteFileMetadata& metadat
 								mdp->geometry[markSMG].positions.push_back(point);
 
 								indexMap[valueF[i][j]] = ind;
-								reverseMap[markSMG].insert(std::pair<int, int>(ind, valueF[i][j]));
+								//reverseMap[markSMG].insert(std::pair<int, int>(ind, valueF[i][j]));
+								reverseMap[markSMG][ind] = valueF[i][j];
 							}
 							mdp->geometry[markSMG].primitives[0].indices.push_back(indexMap[valueF[i][j]]);
 							
@@ -303,15 +318,15 @@ Mesh::VisualPtr PlyModelSystem::load(const Transfer::RemoteFileMetadata& metadat
 						//counterIndex.push_back(0);
 						reverseMap.push_back(std::map<int, int>());
 						for(int j = 0; j < 3; j++) {
-							//int ind = counterIndex[counterSMG];
 							int ind = reverseMap[counterSMG].size();
 
 							Vector3f point = Vector3f(valueV[valueF[i][j]][0], valueV[valueF[i][j]][1], valueV[valueF[i][j]][2]);
 							mdp->geometry[counterSMG].positions.push_back(point);
 
 							indexMap[valueF[i][j]] = ind;
-							//counterIndex[counterSMG]++;
-							reverseMap[counterSMG].insert(std::pair<int, int>(ind, valueF[i][j]));
+							//reverseMap[counterSMG].insert(std::pair<int, int>(ind, valueF[i][j]));
+							reverseMap[counterSMG][ind] = valueF[i][j];
+
 							mdp->geometry[counterSMG].primitives[0].indices.push_back(indexMap[valueF[i][j]]);
 						}
 					}
@@ -320,10 +335,6 @@ Mesh::VisualPtr PlyModelSystem::load(const Transfer::RemoteFileMetadata& metadat
 				//while(current < numIndices) {
 				//	current++;
 				//}
-
-
-
-
 
 			}
 			//note: sometimes the primitives are not sorted the way we want.
@@ -378,7 +389,6 @@ Mesh::VisualPtr PlyModelSystem::load(const Transfer::RemoteFileMetadata& metadat
 
 				mdp->uri = metadata.getURI().toString();
 				
-				//mdp->geometry[0].textures
 				mdp->geometry[0].primitives[0].materialId = 1;
 				mdp->instances[0].materialBindingMap.insert(std::pair<int, int> (1, 0));
 
@@ -400,7 +410,6 @@ Mesh::VisualPtr PlyModelSystem::load(const Transfer::RemoteFileMetadata& metadat
 
 		ss >> s;
 	}
-
     return mdp;
 }
 

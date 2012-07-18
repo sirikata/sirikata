@@ -98,6 +98,7 @@ public:
 		TS_ASSERT_EQUALS(mdp->getInstancedLightCount(), 0);
 		TS_ASSERT_EQUALS(mdp->getJointCount(), 0);
 		TS_ASSERT_EQUALS(mdp->geometry.size(), 1);
+		TS_ASSERT_EQUALS(mdp->geometry[0].positions.size(), 2);
 		TS_ASSERT_EQUALS(mdp->geometry[0].skinControllers.size(), 0);
 		TS_ASSERT_EQUALS(mdp->geometry[0].primitives.size(), 1);
 		TS_ASSERT_EQUALS(mdp->geometry[0].primitives[0].indices.size(), 2);
@@ -121,6 +122,7 @@ public:
 		TS_ASSERT_EQUALS(mdp->getInstancedLightCount(), 0);
 		TS_ASSERT_EQUALS(mdp->getJointCount(), 0);
 		TS_ASSERT_EQUALS(mdp->geometry.size(), 1);
+		TS_ASSERT_EQUALS(mdp->geometry[0].positions.size(), 4);
 		TS_ASSERT_EQUALS(mdp->geometry[0].skinControllers.size(), 0);
 		TS_ASSERT_EQUALS(mdp->geometry[0].primitives.size(), 1);
 		TS_ASSERT_EQUALS(mdp->geometry[0].primitives[0].indices.size(), 6);
@@ -144,6 +146,7 @@ public:
 		TS_ASSERT_EQUALS(mdp->getInstancedLightCount(), 0);
 		TS_ASSERT_EQUALS(mdp->getJointCount(), 0);
 		TS_ASSERT_EQUALS(mdp->geometry.size(), 1);
+		TS_ASSERT_EQUALS(mdp->geometry[0].positions.size(), 8);
 		TS_ASSERT_EQUALS(mdp->geometry[0].skinControllers.size(), 0);
 		TS_ASSERT_EQUALS(mdp->geometry[0].primitives.size(), 2);
 		TS_ASSERT_EQUALS(mdp->geometry[0].primitives[0].indices.size(), 6);
@@ -168,6 +171,7 @@ public:
 		TS_ASSERT_EQUALS(mdp->getInstancedLightCount(), 0);
 		TS_ASSERT_EQUALS(mdp->getJointCount(), 0);
 		TS_ASSERT_EQUALS(mdp->geometry.size(), 1);
+		TS_ASSERT_EQUALS(mdp->geometry[0].positions.size(), 12);
 		TS_ASSERT_EQUALS(mdp->geometry[0].skinControllers.size(), 0);
 		TS_ASSERT_EQUALS(mdp->geometry[0].primitives.size(), 2);
 		TS_ASSERT_EQUALS(mdp->geometry[0].primitives[0].indices.size(), 12);
@@ -192,6 +196,7 @@ public:
 		TS_ASSERT_EQUALS(mdp->getInstancedLightCount(), 0);
 		TS_ASSERT_EQUALS(mdp->getJointCount(), 0);
 		TS_ASSERT_EQUALS(mdp->geometry.size(), 1);
+		TS_ASSERT_EQUALS(mdp->geometry[0].positions.size(), 24);
 		TS_ASSERT_EQUALS(mdp->geometry[0].skinControllers.size(), 0);
 		TS_ASSERT_EQUALS(mdp->geometry[0].primitives.size(), 1);
 		TS_ASSERT_EQUALS(mdp->geometry[0].primitives[0].indices.size(), 36);
@@ -216,6 +221,7 @@ public:
 		TS_ASSERT_EQUALS(mdp->getJointCount(), 0);
 		TS_ASSERT_EQUALS(mdp->geometry.size(), 3);
 		for(int i = 0; i < mdp->geometry.size(); i++) {
+			TS_ASSERT_EQUALS(mdp->geometry[i].positions.size(), 24);
 			TS_ASSERT_EQUALS(mdp->geometry[i].skinControllers.size(), 0);
 			TS_ASSERT_EQUALS(mdp->geometry[i].primitives.size(), 1);
 			TS_ASSERT_EQUALS(mdp->geometry[i].primitives[0].indices.size(), 36);
@@ -244,8 +250,12 @@ public:
 			TS_ASSERT_EQUALS(mdp->geometry[i].skinControllers.size(), 0);
 			TS_ASSERT_EQUALS(mdp->geometry[i].primitives.size(), 1);
 			if(i < 2) {
+				TS_ASSERT_EQUALS(mdp->geometry[i].positions.size(), 6);
 				TS_ASSERT_EQUALS(mdp->geometry[i].primitives[0].indices.size(), 12);
-			} else TS_ASSERT_EQUALS(mdp->geometry[i].primitives[0].indices.size(), 6);
+			} else {
+				TS_ASSERT_EQUALS(mdp->geometry[i].positions.size(), 4);
+				TS_ASSERT_EQUALS(mdp->geometry[i].primitives[0].indices.size(), 6);
+			}
 		}
 		TS_ASSERT_EQUALS(mdp->lights.size(), 0);
 		TS_ASSERT_EQUALS(mdp->textures.size(), 1);
@@ -267,12 +277,12 @@ public:
 		TS_ASSERT_EQUALS(mdp->getInstancedLightCount(), 0);
 		TS_ASSERT_EQUALS(mdp->getJointCount(), 0);
 		TS_ASSERT_EQUALS(mdp->geometry.size(), 2);
-		TS_ASSERT_EQUALS(mdp->geometry[0].skinControllers.size(), 0);
-		TS_ASSERT_EQUALS(mdp->geometry[1].skinControllers.size(), 0);
-		TS_ASSERT_EQUALS(mdp->geometry[0].primitives.size(), 1);
-		TS_ASSERT_EQUALS(mdp->geometry[1].primitives.size(), 1);
-		TS_ASSERT_EQUALS(mdp->geometry[0].primitives[0].indices.size(), 3);
-		TS_ASSERT_EQUALS(mdp->geometry[1].primitives[0].indices.size(), 3);
+		for(int i = 0; i < mdp->geometry.size(); i++) {
+			TS_ASSERT_EQUALS(mdp->geometry[i].positions.size(), 3);
+			TS_ASSERT_EQUALS(mdp->geometry[i].skinControllers.size(), 0);
+			TS_ASSERT_EQUALS(mdp->geometry[i].primitives.size(), 1);
+			TS_ASSERT_EQUALS(mdp->geometry[i].primitives[0].indices.size(), 3);
+		}
 		TS_ASSERT_EQUALS(mdp->lights.size(), 0);
 		TS_ASSERT_EQUALS(mdp->textures.size(), 0);
 		TS_ASSERT_EQUALS(mdp->materials.size(), 1);
@@ -293,6 +303,7 @@ public:
 		TS_ASSERT_EQUALS(mdp->getInstancedLightCount(), 0);
 		TS_ASSERT_EQUALS(mdp->getJointCount(), 0);
 		TS_ASSERT_EQUALS(mdp->geometry.size(), 1);
+		TS_ASSERT_EQUALS(mdp->geometry[0].positions.size(), 6);
 		TS_ASSERT_EQUALS(mdp->geometry[0].skinControllers.size(), 0);
 		TS_ASSERT_EQUALS(mdp->geometry[0].primitives.size(), 1);
 		TS_ASSERT_EQUALS(mdp->geometry[0].primitives[0].indices.size(), 6);
@@ -316,6 +327,7 @@ public:
 		TS_ASSERT_EQUALS(mdp->getInstancedLightCount(), 0);
 		TS_ASSERT_EQUALS(mdp->getJointCount(), 0);
 		TS_ASSERT_EQUALS(mdp->geometry.size(), 1);
+		TS_ASSERT_EQUALS(mdp->geometry[0].positions.size(), 24);
 		TS_ASSERT_EQUALS(mdp->geometry[0].skinControllers.size(), 0);
 		TS_ASSERT_EQUALS(mdp->geometry[0].primitives.size(), 1);
 		TS_ASSERT_EQUALS(mdp->geometry[0].primitives[0].indices.size(), 66);
@@ -339,6 +351,7 @@ public:
 		TS_ASSERT_EQUALS(mdp->getInstancedLightCount(), 0);
 		TS_ASSERT_EQUALS(mdp->getJointCount(), 0);
 		TS_ASSERT_EQUALS(mdp->geometry.size(), 1);
+		TS_ASSERT_EQUALS(mdp->geometry[0].positions.size(), 48);
 		TS_ASSERT_EQUALS(mdp->geometry[0].skinControllers.size(), 0);
 		TS_ASSERT_EQUALS(mdp->geometry[0].primitives.size(), 1);
 		TS_ASSERT_EQUALS(mdp->geometry[0].primitives[0].indices.size(), 132);
@@ -363,6 +376,7 @@ public:
 		TS_ASSERT_EQUALS(mdp->getJointCount(), 0);
 		TS_ASSERT_EQUALS(mdp->geometry.size(), 2);
 		for(int i = 0; i < mdp->geometry.size(); i++) {
+			TS_ASSERT_EQUALS(mdp->geometry[i].positions.size(), 24);
 			TS_ASSERT_EQUALS(mdp->geometry[i].skinControllers.size(), 0);
 			TS_ASSERT_EQUALS(mdp->geometry[i].primitives.size(), 1);
 			TS_ASSERT_EQUALS(mdp->geometry[i].primitives[0].indices.size(), 66);
@@ -388,6 +402,7 @@ public:
 		TS_ASSERT_EQUALS(mdp->getJointCount(), 0);
 		TS_ASSERT_EQUALS(mdp->geometry.size(), 2);
 		for(int i = 0; i < mdp->geometry.size(); i++) {
+			TS_ASSERT_EQUALS(mdp->geometry[i].positions.size(), 96);
 			TS_ASSERT_EQUALS(mdp->geometry[i].skinControllers.size(), 0);
 			TS_ASSERT_EQUALS(mdp->geometry[i].primitives.size(), 1);
 			TS_ASSERT_EQUALS(mdp->geometry[i].primitives[0].indices.size(), 276);
