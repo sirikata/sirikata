@@ -87,11 +87,18 @@ void ManualPintoManager::onQueryUpdate(Stream* stream, const String& data) {
 
     String action = query_params.getString("action", String(""));
     if (action.empty()) return;
+    // We'll get these because it makes implementation easier to always send
+    // them rather than having to filter. In this case they don't mean anything,
+    // but for the local pinto implementation they are important since there
+    // aren't any connection events that are implicit init/destroy messages, so
+    // we just ignore them here.
+    if (action == "init" || action == "destroy")
+        return;
 
     if (action.empty() || (action != "refine" && action != "coarsen") ||
         !query_params.contains("nodes") || !query_params.get("nodes").isArray())
     {
-        PINTO_LOG(detailed, "Invalid refine request " << id);
+        PINTO_LOG(detailed, "Invalid refine/coarsen request " << id);
         return;
     }
 

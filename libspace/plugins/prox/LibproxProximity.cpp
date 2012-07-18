@@ -310,7 +310,9 @@ void LibproxProximity::onPintoServerResult(const Sirikata::Protocol::Prox::Proxi
     for(int32 aidx = 0; aidx < update.addition_size(); aidx++) {
         Sirikata::Protocol::Prox::ObjectAddition addition = update.addition(aidx);
         ServerID sid = addition.object().asUInt32();
+        // Ignore results that are for ourselves or for internal nodes
         if (sid == mContext->id()) continue;
+        if (addition.type() == Sirikata::Protocol::Prox::ObjectAddition::Aggregate) continue;
 
         mServersQueried.insert(sid);
         mNeedServerQueryUpdate.insert(sid);
@@ -320,9 +322,12 @@ void LibproxProximity::onPintoServerResult(const Sirikata::Protocol::Prox::Proxi
     for(int32 ridx = 0; ridx < update.removal_size(); ridx++) {
         Sirikata::Protocol::Prox::ObjectRemoval removal = update.removal(ridx);
         ServerID sid = removal.object().asUInt32();
+        // Ignore results that are for ourselves or for internal nodes
         if (sid == mContext->id()) continue;
+        // Can't check for aggregate (internal) nodes, so we have to rely on
+        // checking whether we've added it as a queried server
 
-        mServersQueried.erase(sid);
+        if (mServersQueried.find(sid) != mServersQueried.end()) mServersQueried.erase(sid);
     }
 }
 
