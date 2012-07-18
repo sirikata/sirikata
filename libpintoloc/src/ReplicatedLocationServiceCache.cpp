@@ -297,9 +297,6 @@ void ReplicatedLocationServiceCache::objectRemoved(const ObjectReference& uuid, 
     data_it->second.exists = false;
     bool agg = data_it->second.aggregate;
 
-    tryRemoveObject(data_it);
-
-
     data_it->second.tracking++;
     mStrand->post(
         std::tr1::bind(
