@@ -133,6 +133,12 @@ private:
     // index. Useful since we may need to register in different conditions --
     // new query, new index, index becomes relevant to query, etc.
     void registerObjectQueryWithIndex(const ObjectReference& object, ProxIndexID index_id, ProxQueryHandler* handler, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const SolidAngle& angle, uint32 max_results);
+    // Utility for registering query with all indices for a ServerID. This just
+    // calls registerObjectQueryWithIndex for each index on the server.
+    void registerObjectQueryWithServer(const ObjectReference& object, ServerID sid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const SolidAngle& angle, uint32 max_results);
+    void unregisterObjectQueryWithIndex(const ObjectReference& object, ProxIndexID index_id);
+    void unregisterObjectQueryWithServer(const ObjectReference& object, ServerID sid);
+
     // Events on queries/objects
     void handleUpdateObjectQuery(const ObjectReference& object, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const SolidAngle& angle, uint32 max_results);
     void handleRemoveObjectQuery(const ObjectReference& object, bool notify_main_thread);
@@ -143,6 +149,7 @@ private:
 
     typedef std::set<ObjectReference> ObjectSet;
     typedef std::tr1::unordered_map<ProxIndexID, Query*> IndexQueryMap;
+    typedef std::tr1::unordered_set<ServerID> ServerIDSet;
     // A single object query may have queries registered against many query
     // handlers for different replicated trees.
     struct ObjectQueryData {
@@ -155,6 +162,8 @@ private:
         // And we also keep track of all the individual queries against
         // replicated indices.
         IndexQueryMap queries;
+        // And which entire Servers they are subscribed to.
+        ServerIDSet servers;
     };
     typedef std::tr1::shared_ptr<ObjectQueryData> ObjectQueryDataPtr;
     typedef std::tr1::unordered_map<ObjectReference, ObjectQueryDataPtr, ObjectReference::Hasher> ObjectQueryMap;

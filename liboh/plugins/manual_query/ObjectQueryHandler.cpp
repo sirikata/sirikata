@@ -414,12 +414,11 @@ void ObjectQueryHandler::handleCreatedReplicatedIndex(ProxIndexID iid, Replicate
     mInverseObjectQueryHandlers[handler] = iid;
 
     // There may already be queries to which this is relevant.
-    // FIXME(ewencp) See the note in handleUpdateObjectQuery about all queries
-    // getting registered with all indices. This needs to be smarter
-    // eventually.
     for(ObjectQueryMap::iterator query_it = mObjectQueries.begin(); query_it != mObjectQueries.end(); query_it++) {
         ObjectReference objid = query_it->first;
         ObjectQueryDataPtr query_props = query_it->second;
+        if (query_props->servers.find(objects_from_server) == query_props->servers.end()) continue;
+
         registerObjectQueryWithIndex(
             objid, iid, handler,
             // FIXME is loccache safe here? what if results for the object
@@ -509,6 +508,15 @@ void ObjectQueryHandler::generateObjectQueryEvents(Query* query) {
                     addition.set_physics(phy);
 
                 handler_data.loccache->stopSimpleTracking(objid);
+
+                // If we've reached a leaf in the TL-Pinto tree, we need to move
+                // down to the next tree
+                if (handler_data.from == NullServerID && evt.additions()[aidx].type() == QueryEvent::Normal) {
+                    // Need to unpack real ID from the UUID
+                    ServerID leaf_server = (ServerID)objid.getAsUUID().asUInt32();
+                    ObjectQueryDataPtr query_data = mObjectQueries[querier_id];
+                    registerObjectQueryWithServer(querier_id, leaf_server, query_data->loc, query_data->bounds, query_data->angle, query_data->max_results);
+                }
             }
         }
         for(uint32 ridx = 0; ridx < evt.removals().size(); ridx++) {
@@ -537,6 +545,14 @@ void ObjectQueryHandler::generateObjectQueryEvents(Query* query) {
                 ? Sirikata::Protocol::Prox::ObjectRemoval::Permanent
                 : Sirikata::Protocol::Prox::ObjectRemoval::Transient
             );
+
+            // If we've moved above a leaf in the TL-Pinto tree, we need to move
+            // away from that tree.
+            if (handler_data.from == NullServerID && evt.additions()[ridx].type() == QueryEvent::Normal) {
+                // Need to unpack real ID from the UUID
+                ServerID leaf_server = (ServerID)objid.getAsUUID().asUInt32();
+                unregisterObjectQueryWithServer(querier_id, leaf_server);
+            }
         }
         evts.pop_front();
 
@@ -566,6 +582,45 @@ void ObjectQueryHandler::registerObjectQueryWithIndex(const ObjectReference& obj
     q->setEventListener(this);
 }
 
+void ObjectQueryHandler::registerObjectQueryWithServer(const ObjectReference& object, ServerID sid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const SolidAngle& angle, uint32 max_results) {
+    // FIXME we don't currently have any index maintaining this information, so
+    // we need to scan through all of them to find ones matching the ServerID
+    for(ReplicatedIndexQueryHandlerMap::iterator it = mObjectQueryHandlers.begin(); it != mObjectQueryHandlers.end(); it++) {
+        ProxIndexID prox_index_id = it->first;
+        ReplicatedIndexQueryHandler& rep_index_query_handler = it->second;
+        if (rep_index_query_handler.from != sid) continue;
+        registerObjectQueryWithIndex(object, prox_index_id, rep_index_query_handler.handler, loc, bounds, angle, max_results);
+    }
+
+    ObjectQueryDataPtr query_data = mObjectQueries[object];
+    query_data->servers.insert(sid);
+}
+
+void ObjectQueryHandler::unregisterObjectQueryWithIndex(const ObjectReference& object, ProxIndexID index_id) {
+    ObjectQueryDataPtr query_data = mObjectQueries[object];
+    assert(query_data->queries.find(index_id) != query_data->queries.end());
+    Query* q = query_data->queries[index_id];
+    delete q;
+    mInvertedObjectQueries.erase(q);
+    query_data->queries.erase(index_id);
+}
+
+void ObjectQueryHandler::unregisterObjectQueryWithServer(const ObjectReference& object, ServerID sid) {
+    // FIXME we don't currently have any index maintaining this information, so
+    // we need to scan through all of them to find ones matching the ServerID
+    // which also have queries registered by the object
+    ObjectQueryDataPtr query_data = mObjectQueries[object];
+    for(ReplicatedIndexQueryHandlerMap::iterator it = mObjectQueryHandlers.begin(); it != mObjectQueryHandlers.end(); it++) {
+        ProxIndexID prox_index_id = it->first;
+        ReplicatedIndexQueryHandler& rep_index_query_handler = it->second;
+        if (rep_index_query_handler.from != sid) continue;
+        if (query_data->queries.find(prox_index_id) == query_data->queries.end()) continue;
+        unregisterObjectQueryWithIndex(object, prox_index_id);
+    }
+
+    query_data->servers.erase(sid);
+}
+
 void ObjectQueryHandler::handleUpdateObjectQuery(const ObjectReference& object, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const SolidAngle& angle, uint32 max_results) {
     BoundingSphere3f region(bounds.center(), 0);
     float ms = bounds.radius();
@@ -575,6 +630,7 @@ void ObjectQueryHandler::handleUpdateObjectQuery(const ObjectReference& object, 
     // change to query parameters since this will get called for all
     // objects triggering movement.
     bool explicit_query_params_update = ((angle != NoUpdateSolidAngle) || (max_results != NoUpdateMaxResults));
+    bool new_query = false;
 
     if (mObjectQueries.find(object) == mObjectQueries.end()) {
         // If there's no existing query, so this was just because of a
@@ -588,6 +644,8 @@ void ObjectQueryHandler::handleUpdateObjectQuery(const ObjectReference& object, 
         query_props->angle = angle;
         query_props->max_results = max_results;
         mObjectQueries[object] = query_props;
+
+        new_query = true;
     }
     ObjectQueryDataPtr query_data = mObjectQueries[object];
 
@@ -606,21 +664,14 @@ void ObjectQueryHandler::handleUpdateObjectQuery(const ObjectReference& object, 
     if (max_results != NoUpdateMaxResults)
         query_data->max_results = max_results;
 
-    // We iterate over all query handlers instead of over just the ones we know
-    // we have registered because this might be an initial
-    // registration.
-    // FIXME(ewencp) this is clearly wrong since we'll end up
-    // registering with all replicated indices but we should only start with the
-    // root. We need to detect and handle new registrations better.
-    for(ReplicatedIndexQueryHandlerMap::iterator handler_it = mObjectQueryHandlers.begin(); handler_it != mObjectQueryHandlers.end(); handler_it++) {
-        ProxIndexID index_id = handler_it->first;
-        IndexQueryMap::iterator it = query_data->queries.find(index_id);
-
-        if (it == query_data->queries.end()) {
-            registerObjectQueryWithIndex(object, index_id, handler_it->second.handler, loc, bounds, angle, max_results);
-        }
-        else {
-            Query* query = it->second;
+    // If we've got a new query, start it at the root. If we already have a
+    // registered query, just update all queries we have a record of.
+    if (new_query) {
+        registerObjectQueryWithServer(object, NullServerID, loc, bounds, angle, max_results);
+    }
+    else {
+        for(IndexQueryMap::iterator index_query_it = query_data->queries.begin(); index_query_it != query_data->queries.end(); index_query_it++) {
+            Query* query = index_query_it->second;
             query->position(loc);
             query->region( region );
             query->maxSize( ms );
