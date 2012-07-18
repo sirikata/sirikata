@@ -49,6 +49,18 @@ LibproxManualProximity::LibproxManualProximity(SpaceContext* ctx, LocationServic
 }
 
 LibproxManualProximity::~LibproxManualProximity() {
+    // Make sure any remaining queries are cleared out before
+    // destroying handlers
+    for(int kls = 0; kls < NUM_OBJECT_CLASSES; kls++) {
+        while(!mServerQueries[kls].empty())
+            unregisterServerQuery( mServerQueries[kls].begin()->first );
+    }
+    // OH queries should be properly handled by disconnection events. Servers
+    // only aren't because disconnections can't really be treated as query
+    // removals since a disconnection can just be due to killing an idle
+    // connection.
+
+    // Then destroy query handlers
     for(int i = 0; i < NUM_OBJECT_CLASSES; i++) {
         delete mLocalQueryHandler[i].handler;
     }
@@ -447,7 +459,11 @@ bool parseQueryRequest(const String& data, QueryUpdateRequest* qur_out) {
 // PROX Thread -- Server-to-server and top-level pinto
 
 void LibproxManualProximity::handleForcedDisconnection(ServerID server) {
-    PROXLOG(warn, "Ignoring forced disconnection by server " << server << " since manual queries don't support server-to-server queries yet.");
+    // Note: we're currently these because a disconnection could just
+    // mean that the other node put the connection to sleep, not that
+    // they don't want updates anymore. FIXME we need a better
+    // approach to SS connectivity
+    PROXLOG(warn, "Ignoring forced disconnection by server " << server);
 }
 
 
