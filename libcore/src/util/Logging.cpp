@@ -34,6 +34,9 @@
 #include <sirikata/core/options/Options.hpp>
 #include <boost/algorithm/string.hpp>
 
+#include <boost/thread/shared_mutex.hpp>
+#include <boost/thread/locks.hpp>
+
 extern "C" {
 void *Sirikata_Logging_OptionValue_defaultLevel;
 void *Sirikata_Logging_OptionValue_atLeastLevel;
@@ -60,7 +63,14 @@ void finishLog() {
 typedef std::tr1::unordered_map<const char*, String> CapsNameMap;
 static CapsNameMap LogModuleStrings;
 
+typedef boost::shared_mutex SharedMutex;
+typedef boost::upgrade_lock<SharedMutex> UpgradeLock;
+typedef boost::upgrade_to_unique_lock<SharedMutex> UpgradedLock;
+SharedMutex LogModuleStringsMutex;
+
 const String& LogModuleString(const char* base) {
+    UpgradeLock upgrade_lock(LogModuleStringsMutex);
+
     CapsNameMap::iterator it = LogModuleStrings.find(base);
 
     if (it == LogModuleStrings.end()) {
@@ -74,6 +84,7 @@ const String& LogModuleString(const char* base) {
         if (base_str.size() < LOGGING_MAX_MODULE_LENGTH)
             base_str = String(LOGGING_MAX_MODULE_LENGTH-base_str.size(), ' ') + base_str;
 
+        UpgradedLock upgraded_lock(upgrade_lock);
         std::pair<CapsNameMap::iterator, bool> inserted = LogModuleStrings.insert(std::make_pair(base, base_str));
         return (inserted.first)->second;
     }

@@ -186,7 +186,7 @@ void ColladaSystem::addHeaderData(const Transfer::RemoteFileMetadata& metadata, 
     // Progressive Info
     FileHeaders::const_iterator findProgHash = headers.find("Progresive-Stream");
     if (findProgHash == headers.end()) {
-        return;
+      //    return;
     }
     FileHeaders::const_iterator findProgNumTriangles = headers.find("Progresive-Stream-Num-Triangles");
     if (findProgNumTriangles == headers.end()) {
@@ -198,7 +198,7 @@ void ColladaSystem::addHeaderData(const Transfer::RemoteFileMetadata& metadata, 
     }
 
     //Parse the hash of the progressive stream
-    Transfer::Fingerprint progHash;
+    /*Transfer::Fingerprint progHash;
     try {
         progHash = Transfer::Fingerprint::convertFromHex(findProgHash->second);
     } catch (std::invalid_argument const&) {
@@ -207,7 +207,7 @@ void ColladaSystem::addHeaderData(const Transfer::RemoteFileMetadata& metadata, 
     }
     COLLADA_LOG(detailed, "adding meshdata hash = " << progHash)
     progData->progressiveHash = progHash;
-
+    */
     //Parse number of triangles in the progressive stream
     uint32 prog_triangles;
     try {
@@ -343,6 +343,23 @@ bool ColladaSystem::convertVisual(const Mesh::VisualPtr& visual, const String& f
 
     // Read it back and get it into the output stream if successful
     if (converted) {
+        int attempts = 5;
+        while (!boost::filesystem::exists(fname) && attempts >= 0) {
+          fname = Path::Get(Path::DIR_TEMP, Path::GetTempFilename("colladasystem.convertVisual."));
+          converted = convertVisual(visual, format, fname);
+
+          if (!converted) {
+            // Regardless of success, make sure we cleanup the file.
+            if (boost::filesystem::exists(fname)) {
+              bool removed = boost::filesystem::remove(fname);
+              if (!removed) COLLADA_LOG(error, "Failed to remove temporary conversion file " << fname);
+            }
+
+            return false;
+          }
+          attempts--;
+        }
+
         assert(boost::filesystem::exists(fname));
         // Sigh. It would be nice to use boost::iostreams::copy, but that closes
         // the output buffer, which may not be what we want.
