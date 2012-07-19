@@ -243,7 +243,7 @@ void StandardLocationService::updateLocalAggregatePhysics(const UUID& uuid, cons
     notifyLocalPhysicsUpdated( uuid, true, newval );
 }
 
-  void StandardLocationService::addReplicaObject(const Time& t, const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bnds, const String& msh, const String& phy, const String& zernike) {
+void StandardLocationService::addReplicaObject(const Time& t, const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bnds, const String& msh, const String& phy, const String& zernike) {
     // FIXME we should do checks on timestamps to decide which setting is "more" sane
     LocationMap::iterator it = mLocations.find(uuid);
 
@@ -273,7 +273,7 @@ void StandardLocationService::updateLocalAggregatePhysics(const UUID& uuid, cons
         locinfo.props.setMesh(Transfer::URI(msh), 0);
         locinfo.props.setPhysics(phy, 0);
         locinfo.local = false;
-        locinfo.aggregate = false;
+        locinfo.aggregate = agg;
         mLocations[uuid] = locinfo;
 
         // We only run this notification when the object actually is new

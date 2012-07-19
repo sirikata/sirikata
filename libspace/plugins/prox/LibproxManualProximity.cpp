@@ -144,8 +144,9 @@ void LibproxManualProximity::replicaObjectRemoved(const UUID& uuid) {
     );
 }
 void LibproxManualProximity::replicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) {
-    if (mSeparateDynamicObjects)
-        checkObjectClass(false, uuid, newval);
+    // State is already in the replicated loc cache + query tree, and
+    // for manual querying we don't need to swap between
+    // static/dynamic, so we can safely ignore this.
 }
 
 
@@ -283,36 +284,41 @@ void LibproxManualProximity::updateServerQueryResults(ServerID sid, const Sirika
 
 // PROX Thread
 
+// General note for aggregate methods: the base class's implementation only
+// cares about *local* *static* aggregates -- it's only passing them to the
+// AggregateManager and to LocationService as local replicated objects
+// so that their info will be available to queriers. We only have two
+// local query handlers -- static and dynamic -- so we filter passing
+// along the call by just checking that one local static handler.
 void LibproxManualProximity::aggregateCreated(ProxAggregator* handler, const ObjectReference& objid) {
-    // We ignore aggregates built of dynamic objects, they aren't useful for
-    // creating aggregate meshes
-    if (!static_cast<ProxQueryHandler*>(handler)->staticOnly()) return;
+    if (static_cast<ProxQueryHandler*>(handler) != mLocalQueryHandler[OBJECT_CLASS_STATIC].handler) return;
     LibproxProximityBase::aggregateCreated(objid);
 }
 
 void LibproxManualProximity::aggregateChildAdded(ProxAggregator* handler, const ObjectReference& objid, const ObjectReference& child, const Vector3f& bnds_center, const float32 bnds_center_radius, const float32 max_obj_size) {
-    if (!static_cast<ProxQueryHandler*>(handler)->staticOnly()) return;
+    if (static_cast<ProxQueryHandler*>(handler) != mLocalQueryHandler[OBJECT_CLASS_STATIC].handler) return;
     LibproxProximityBase::aggregateChildAdded(objid, child, bnds_center, AggregateBoundingInfo(Vector3f::zero(), bnds_center_radius, max_obj_size));
 }
 
 void LibproxManualProximity::aggregateChildRemoved(ProxAggregator* handler, const ObjectReference& objid, const ObjectReference& child, const Vector3f& bnds_center, const float32 bnds_center_radius, const float32 max_obj_size) {
-    if (!static_cast<ProxQueryHandler*>(handler)->staticOnly()) return;
+    if (static_cast<ProxQueryHandler*>(handler) != mLocalQueryHandler[OBJECT_CLASS_STATIC].handler) return;
     LibproxProximityBase::aggregateChildRemoved(objid, child, bnds_center, AggregateBoundingInfo(Vector3f::zero(), bnds_center_radius, max_obj_size));
 }
 
 void LibproxManualProximity::aggregateBoundsUpdated(ProxAggregator* handler, const ObjectReference& objid, const Vector3f& bnds_center, const float32 bnds_center_radius, const float32 max_obj_size) {
-    if (!static_cast<ProxQueryHandler*>(handler)->staticOnly()) return;
+    if (static_cast<ProxQueryHandler*>(handler) != mLocalQueryHandler[OBJECT_CLASS_STATIC].handler) return;
     LibproxProximityBase::aggregateBoundsUpdated(objid, bnds_center, AggregateBoundingInfo(Vector3f::zero(), bnds_center_radius, max_obj_size));
 }
 
 void LibproxManualProximity::aggregateDestroyed(ProxAggregator* handler, const ObjectReference& objid) {
-    if (!static_cast<ProxQueryHandler*>(handler)->staticOnly()) return;
+    if (static_cast<ProxQueryHandler*>(handler) != mLocalQueryHandler[OBJECT_CLASS_STATIC].handler) return;
     LibproxProximityBase::aggregateDestroyed(objid);
 }
 
 void LibproxManualProximity::aggregateObserved(ProxAggregator* handler, const ObjectReference& objid, uint32 nobservers) {
-    if (!static_cast<ProxQueryHandler*>(handler)->staticOnly()) return;
-    LibproxProximityBase::aggregateObserved(objid, nobservers);
+    if (static_cast<ProxQueryHandler*>(handler) == mLocalQueryHandler[OBJECT_CLASS_STATIC].handler) {
+        LibproxProximityBase::aggregateObserved(objid, nobservers);
+    }
 
     // We care about nodes being observed (i.e. having cuts through them)
     // because it means that somebody local still cares about them, so we should
@@ -508,6 +514,48 @@ void LibproxManualProximity::handleUpdateServerQueryResults(ServerID sid, const 
         return;
     }
 
+    // Server results need to go two places: the replicated tree for querying
+    // and this server's location service to be able to send location
+    // updates. This duplication of information is unfortunate but it's easier
+    // than trying to get all the LocationServiceCache's to interact nicely with
+    // the loc service we use for subscriptions + location updates.
+
+    // Generate/destroy replicas in main loc service
+    assert( results.has_t() );
+    Time t = results.t();
+    for(int32 idx = 0; idx < results.update_size(); idx++) {
+        Sirikata::Protocol::Prox::ProximityUpdate update = results.update(idx);
+
+        for(int32 aidx = 0; aidx < update.addition_size(); aidx++) {
+            Sirikata::Protocol::Prox::ObjectAddition addition = update.addition(aidx);
+            //mServerQueryResults[source_server]->insert(addition.object());
+
+            assert(addition.has_aggregate_bounds());
+            Vector3f center = addition.aggregate_bounds().has_center_offset() ? addition.aggregate_bounds().center_offset() : Vector3f(0,0,0);
+            float32 center_rad = addition.aggregate_bounds().has_center_bounds_radius() ? addition.aggregate_bounds().center_bounds_radius() : 0.f;
+            float32 max_object_size = addition.aggregate_bounds().has_max_object_size() ? addition.aggregate_bounds().max_object_size() : 0.f;
+
+            mLocService->addReplicaObject(
+                t,
+                addition.object(),
+                (addition.type() == Sirikata::Protocol::Prox::ObjectAddition::Aggregate),
+                TimedMotionVector3f( addition.location().t(), MotionVector3f(addition.location().position(), addition.location().velocity()) ),
+                TimedMotionQuaternion( addition.orientation().t(), MotionQuaternion(addition.orientation().position(), addition.orientation().velocity()) ),
+                AggregateBoundingInfo(center, center_rad, max_object_size),
+                (addition.has_mesh() ? addition.mesh() : ""),
+                (addition.has_physics() ? addition.physics() : ""),
+                ""  //no Zernike descriptor in Proximity message. is this ok to do? TAHIR.
+            );
+        }
+
+        for(int32 ridx = 0; ridx < update.removal_size(); ridx++) {
+            Sirikata::Protocol::Prox::ObjectRemoval removal = update.removal(ridx);
+            mLocService->removeReplicaObject(t, removal.object());
+            //mServerQueryResults[source_server]->erase(removal.object());
+        }
+    }
+
+    // Notify replicated tree
     rsit->second.client->proxUpdate(results);
 }
 
@@ -1136,7 +1184,7 @@ void LibproxManualProximity::queryHasEvents(ProxQuery* query) {
                 }
                 else if (qhandler_type == QUERY_HANDLER_TYPE_SERVER) {
                     mContext->mainStrand->post(
-                        std::tr1::bind(&LibproxManualProximity::handleRemoveServerLocSubscriptionWithID, this, query_id, objid, evt.indexID()),
+                        std::tr1::bind(&LibproxManualProximity::handleRemoveServerLocSubscriptionWithID, this, server_query_id, objid, evt.indexID()),
                         "LibproxManualProximity::handleRemoveServerLocSubscription"
                     );
                 }

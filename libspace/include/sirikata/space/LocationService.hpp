@@ -238,7 +238,7 @@ public:
     virtual void updateLocalAggregatePhysics(const UUID& uuid, const String& newval) = 0;
 
     /** Methods dealing with replica objects. */
-    virtual void addReplicaObject(const Time& t, const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics, const String& zernike) = 0;
+    virtual void addReplicaObject(const Time& t, const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics, const String& zernike) = 0;
     virtual void removeReplicaObject(const Time& t, const UUID& uuid) = 0;
 
     /** Methods dealing with listeners. */

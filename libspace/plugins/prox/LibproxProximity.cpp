@@ -396,6 +396,7 @@ void LibproxProximity::receiveMessage(Message* msg) {
                 mLocService->addReplicaObject(
                     t,
                     addition.object(),
+                    (addition.type() == Sirikata::Protocol::Prox::ObjectAddition::Aggregate),
                     TimedMotionVector3f( addition.location().t(), MotionVector3f(addition.location().position(), addition.location().velocity()) ),
                     TimedMotionQuaternion( addition.orientation().t(), MotionQuaternion(addition.orientation().position(), addition.orientation().velocity()) ),
                     AggregateBoundingInfo(center, center_rad, max_object_size),

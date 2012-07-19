@@ -232,22 +232,27 @@ void AlwaysLocationUpdatePolicy::replicaObjectRemoved(const UUID& uuid) {
 
 void AlwaysLocationUpdatePolicy::replicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) {
     mObjectSubscriptions.locationUpdated(uuid, newval, mLocService);
+    mOHSubscriptions.locationUpdated(uuid, newval, mLocService);
 }
 
 void AlwaysLocationUpdatePolicy::replicaOrientationUpdated(const UUID& uuid, const TimedMotionQuaternion& newval) {
     mObjectSubscriptions.orientationUpdated(uuid, newval, mLocService);
+    mOHSubscriptions.orientationUpdated(uuid, newval, mLocService);
 }
 
 void AlwaysLocationUpdatePolicy::replicaBoundsUpdated(const UUID& uuid, const AggregateBoundingInfo& newval) {
     mObjectSubscriptions.boundsUpdated(uuid, newval, mLocService);
+    mOHSubscriptions.boundsUpdated(uuid, newval, mLocService);
 }
 
 void AlwaysLocationUpdatePolicy::replicaMeshUpdated(const UUID& uuid, const String& newval) {
     mObjectSubscriptions.meshUpdated(uuid, newval, mLocService);
+    mOHSubscriptions.meshUpdated(uuid, newval, mLocService);
 }
 
 void AlwaysLocationUpdatePolicy::replicaPhysicsUpdated(const UUID& uuid, const String& newval) {
     mObjectSubscriptions.physicsUpdated(uuid, newval, mLocService);
+    mOHSubscriptions.physicsUpdated(uuid, newval, mLocService);
 }
 
 void AlwaysLocationUpdatePolicy::service() {

@@ -92,7 +92,7 @@ public:
     virtual void updateLocalAggregateMesh(const UUID& uuid, const String& newval);
     virtual void updateLocalAggregatePhysics(const UUID& uuid, const String& newval);
 
-  virtual void addReplicaObject(const Time& t, const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics, const String& zernike);
+    virtual void addReplicaObject(const Time& t, const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics, const String& zernike);
     virtual void removeReplicaObject(const Time& t, const UUID& uuid);
 
     virtual void receiveMessage(Message* msg);
