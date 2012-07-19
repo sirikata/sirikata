@@ -293,6 +293,7 @@ void ObjectQueryHandler::commandListInfo(const OHDP::SpaceNodeID& snid, Command:
             // The server the tree is replicated from - the index ID - static/dynamic
             "server-" + boost::lexical_cast<String>(it->second.from) + "-index-" + boost::lexical_cast<String>(it->first) + "." + staticdynamic +
             "-objects");
+        result.put(key + "indexid", it->second.handler->handlerID());
         result.put(key + "queries", it->second.handler->numQueries());
         result.put(key + "objects", it->second.handler->numObjects());
         result.put(key + "nodes", it->second.handler->numNodes());

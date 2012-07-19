@@ -1238,6 +1238,7 @@ void LibproxManualProximity::commandListHandlers(const Command::Command& cmd, Co
         if (mLocalQueryHandler[i].handler != NULL) {
             String key = String("handlers.oh.") + ObjectClassToString((ObjectClass)i) + ".";
             result.put(key + "name", String("oh-queries.") + ObjectClassToString((ObjectClass)i) + "-objects");
+            result.put(key + "indexid", mLocalQueryHandler[i].handler->handlerID());
             result.put(key + "queries", mOHQueries[i].size());
             result.put(key + "objects", mLocalQueryHandler[i].handler->numObjects());
             result.put(key + "nodes", mLocalQueryHandler[i].handler->numNodes());
@@ -1248,6 +1249,7 @@ void LibproxManualProximity::commandListHandlers(const Command::Command& cmd, Co
         if (mLocalQueryHandler[i].handler != NULL) {
             String key = String("handlers.server.") + ObjectClassToString((ObjectClass)i) + ".";
             result.put(key + "name", String("server-queries.") + ObjectClassToString((ObjectClass)i) + "-objects");
+            result.put(key + "indexid", mLocalQueryHandler[i].handler->handlerID());
             result.put(key + "queries", mServerQueries[i].size());
             result.put(key + "objects", mLocalQueryHandler[i].handler->numObjects());
             result.put(key + "nodes", mLocalQueryHandler[i].handler->numNodes());
@@ -1269,6 +1271,7 @@ void LibproxManualProximity::commandListHandlers(const Command::Command& cmd, Co
                 boost::lexical_cast<String>(server_data_it->first) +
                 String("-index-") + boost::lexical_cast<String>(handler_it->first)
             );
+            result.put(key + "indexid", handler->handlerID());
             result.put(key + "queries", handler->numQueries());
             result.put(key + "objects", handler->numObjects());
             result.put(key + "nodes", handler->numNodes());

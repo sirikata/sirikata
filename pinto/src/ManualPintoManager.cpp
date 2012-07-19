@@ -276,6 +276,7 @@ void ManualPintoManager::commandListHandlers(const Command::Command& cmd, Comman
     Command::Result result = Command::EmptyResult();
     String key = String("handlers.servers.servers.");
     result.put(key + "name", String("server-queries"));
+    result.put(key + "indexid", mQueryHandler->handlerID());
     result.put(key + "queries", mQueryHandler->numQueries());
     result.put(key + "objects", mQueryHandler->numObjects());
     result.put(key + "nodes", mQueryHandler->numNodes());
