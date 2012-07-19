@@ -218,6 +218,10 @@ void ReplicatedClient::processExpiredNodes() {
 }
 
 void ReplicatedClient::proxUpdate(const Sirikata::Protocol::Prox::ProximityUpdate& update) {
+    mStrand->post(std::tr1::bind(&ReplicatedClient::handleProxUpdate, this, update));
+}
+void ReplicatedClient::handleProxUpdate(const Sirikata::Protocol::Prox::ProximityUpdate& update) {
+    SerializationCheck::Scoped sc(this);
     // We may have to trigger creation of a new replicated tree if this is a
     // new root. We should always extract the ID of the tree this update
     // applies to
@@ -317,6 +321,9 @@ void ReplicatedClient::proxUpdate(const Sirikata::Protocol::Prox::ProximityUpdat
 }
 
 void ReplicatedClient::proxUpdate(const Sirikata::Protocol::Prox::ProximityResults& results) {
+    mStrand->post(std::tr1::bind(&ReplicatedClient::handleProxUpdateResults, this, results));
+}
+void ReplicatedClient::handleProxUpdateResults(const Sirikata::Protocol::Prox::ProximityResults& results) {
     // Proximity messages are handled just by updating our state
     // tracking the objects, adding or removing the objects or
     // updating their properties.
@@ -355,6 +362,10 @@ void applyLocUpdate(const ObjectReference& objid, ReplicatedLocationServiceCache
 }
 
 void ReplicatedClient::locUpdate(const Sirikata::Protocol::Loc::LocationUpdate& update) {
+    mStrand->post(std::tr1::bind(&ReplicatedClient::handleLocUpdate, this, update));
+}
+void ReplicatedClient::handleLocUpdate(const Sirikata::Protocol::Loc::LocationUpdate& update) {
+    SerializationCheck::Scoped sc(this);
     ObjectReference observed_oref(update.object());
     // NOTE: We don't track the SpaceID here, but we also don't really need it
     // -- OrphanLocUpdateManager only uses it because it can be used in places
@@ -404,6 +415,7 @@ void ReplicatedClient::locUpdate(const Sirikata::Protocol::Loc::LocationUpdate& 
 
 
 void ReplicatedClient::onOrphanLocUpdate(const LocUpdate& lu, ProxIndexID iid) {
+    SerializationCheck::Scoped sc(this);
     assert(getLocCache(iid)->tracking(lu.object()));
     applyLocUpdate(lu.object(), getLocCache(iid), lu);
 }
@@ -442,6 +454,8 @@ void ReplicatedClient::removeLocCache(ProxIndexID iid) {
 }
 
 void ReplicatedClient::cleanupOrphans() {
+    SerializationCheck::Scoped sc(this);
+
     // Backwards so we can erase as we go
     for(int i = mCachesForOrphans.size()-1; i >= 0; i--) {
         // If we don't even have the data anymore, delete and move on

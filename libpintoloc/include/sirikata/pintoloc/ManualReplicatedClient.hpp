@@ -15,6 +15,8 @@
 #include <boost/multi_index/member.hpp>
 #include <boost/multi_index/ordered_index.hpp>
 
+#include <sirikata/core/util/SerializationCheck.hpp>
+
 namespace Sirikata {
 namespace Pinto {
 namespace Manual {
@@ -28,7 +30,7 @@ namespace Manual {
  *  e.g. during rebuilding or when static/dynamic trees are split.
  */
 class SIRIKATA_LIBPINTOLOC_EXPORT ReplicatedClient :
-        public Service, OrphanLocUpdateManager::Listener
+        public Service, OrphanLocUpdateManager::Listener, SerializationCheck
 {
   public:
     /** Create a ReplicatedClient.
@@ -85,6 +87,11 @@ class SIRIKATA_LIBPINTOLOC_EXPORT ReplicatedClient :
     virtual void sendProxMessage(const String& payload) = 0;
 
   private:
+
+    // Handlers in proper strand
+    void handleProxUpdateResults(const Sirikata::Protocol::Prox::ProximityResults& results);
+    void handleProxUpdate(const Sirikata::Protocol::Prox::ProximityUpdate& update);
+    void handleLocUpdate(const Sirikata::Protocol::Loc::LocationUpdate& update);
 
     // Returns true if the cache was actually created
     bool createLocCache(ProxIndexID iid);
