@@ -115,7 +115,7 @@ Mesh::VisualPtr PlyModelSystem::load(const Transfer::RemoteFileMetadata& metadat
 			double (*valueV)[7] = new double[vertexNum][7]; //note: the type should be able to vary (but does it make a significant difference...?)
 			int (*valueF)[3] = new int[faceNum][3]; //faces can have more than 3 vertices, change later
 			std::map<int, int> indexMap; //will map the original index to the new index
-			std::vector<std::map<int, int>> reverseMap; //will map the new index to the original index (find more efficient way later)
+			std::vector<std::map<int, int> > reverseMap; //will map the new index to the original index (find more efficient way later)
 			std::vector<int> counterIndex; //maybe reverseMap can replace counter
 			for(int i = 0; i < vertexNum; i++)
 				indexMap[i] = -1;
@@ -126,6 +126,7 @@ Mesh::VisualPtr PlyModelSystem::load(const Transfer::RemoteFileMetadata& metadat
 			int numIndices;
 			int numTexCoords;
 			//obtain vertex data
+			int lol = 0;
 			for(int i = 0; i < vertexNum; i++) {
 				for(int j = 0; j < propV.size(); j++) {
 					ss >> temp;
@@ -267,7 +268,8 @@ Mesh::VisualPtr PlyModelSystem::load(const Transfer::RemoteFileMetadata& metadat
 								mdp->instances[j].geometryIndex = j;
 							//also, reverseMap
 							reverseMap.erase(reverseMap.begin() + hitSMG[1]);
-							hitSMG.erase(hitSMG.begin() + hitSMG[1]);
+							hitSMG.erase(hitSMG.begin() + 1);
+							for(int i = 1; i < hitSMG.size(); i++) hitSMG[i]--;//since we removed a hitSMG we have to lower the index of the other hits by one
 						}
 						for(int j = 0; j < 3; j++) {
 							int ind = reverseMap[markSMG].size();
@@ -281,7 +283,7 @@ Mesh::VisualPtr PlyModelSystem::load(const Transfer::RemoteFileMetadata& metadat
 							mdp->geometry[markSMG].primitives[0].indices.push_back(indexMap[valueF[i][j]]);
 							
 						}
-					} else {
+					} else { //drill: break at 32
 						//otherwise, we'll make a new submeshgeometry/geometry set
 						mdp->geometry.push_back(smg);
 						gi.geometryIndex = counterSMG;

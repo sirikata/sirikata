@@ -282,6 +282,31 @@ public:
 		TS_ASSERT_EQUALS(mdp->globalTransform, Matrix4x4f::identity());
 	}
 
+	void testPlyLoaderDrill( void ) {
+		//ply file with drill
+		//its results deviate significantly from those of the collada version...
+		//but then again, the two formats are bettter for different things...
+		//also, this loads *very* slowly, showing the inefficiency of the ply plugin
+		string drill = getString("drill/reconstruction/drill_shaft_zip");
+		MeshdataPtr mdp = loadMDP(drill);
+		
+		//asserts
+		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
+		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 49);
+		TS_ASSERT_EQUALS(mdp->getInstancedLightCount(), 0);
+		TS_ASSERT_EQUALS(mdp->getJointCount(), 0);
+		TS_ASSERT_EQUALS(mdp->geometry.size(), 49);
+		TS_ASSERT_EQUALS(mdp->geometry[0].positions.size(), 160);
+		TS_ASSERT_EQUALS(mdp->geometry[0].skinControllers.size(), 0);
+		TS_ASSERT_EQUALS(mdp->geometry[0].primitives.size(), 1);
+		TS_ASSERT_EQUALS(mdp->geometry[0].primitives[0].indices.size(), 1401);
+		TS_ASSERT_EQUALS(mdp->lights.size(), 0);
+		TS_ASSERT_EQUALS(mdp->textures.size(), 0);
+		TS_ASSERT_EQUALS(mdp->materials.size(), 1);
+		TS_ASSERT_EQUALS(mdp->nodes.size(), 1);
+		TS_ASSERT_EQUALS(mdp->nodes[0].transform, Matrix4x4f::identity());
+	}
+
 	void testPlyLoaderNull( void ) {
 		//invalid ply file
 		Transfer::DenseData *dd = new Transfer::DenseData("Hello world!");
