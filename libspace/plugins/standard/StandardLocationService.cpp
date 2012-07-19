@@ -310,6 +310,8 @@ void StandardLocationService::receiveMessage(Message* msg) {
         for(int32 idx = 0; idx < contents.update_size(); idx++) {
             Sirikata::Protocol::Loc::LocationUpdate update = contents.update(idx);
 
+            notifyOnLocationUpdateFromServer(msg->source_server(), update);
+
             // Its possible we'll get an out of date update. We only use this update
             // if (a) we have this object marked as a replica object and (b) we don't
             // have this object marked as a local object

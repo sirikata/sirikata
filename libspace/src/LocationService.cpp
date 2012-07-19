@@ -339,4 +339,9 @@ void LocationService::notifyReplicaPhysicsUpdated(const UUID& uuid, const String
         it->listener->replicaPhysicsUpdated(uuid, newval);
 }
 
+void LocationService::notifyOnLocationUpdateFromServer(const ServerID sid, const Sirikata::Protocol::Loc::LocationUpdate& update) {
+    for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++)
+        it->listener->onLocationUpdateFromServer(sid, update);
+}
+
 } // namespace Sirikata

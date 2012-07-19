@@ -55,11 +55,13 @@ public:
     virtual void onPintoServerResult(const Sirikata::Protocol::Prox::ProximityUpdate& update);
 
     // LocationServiceListener Interface - Used for deciding when to switch
-    // objects between static/dynamic
+    // objects between static/dynamic, get raw loc updates from other
+    // servers so they can be applied to the correct replicated indexes
     virtual void localObjectRemoved(const UUID& uuid, bool agg);
     virtual void localLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval);
     virtual void replicaObjectRemoved(const UUID& uuid);
     virtual void replicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval);
+    virtual void onLocationUpdateFromServer(const ServerID sid, const Sirikata::Protocol::Loc::LocationUpdate& update);
 
     // MessageRecipient Interface
     virtual void receiveMessage(Message* msg);

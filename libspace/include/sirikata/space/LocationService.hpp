@@ -23,7 +23,11 @@
 
 namespace Sirikata {
 
-
+namespace Protocol {
+namespace Loc {
+class LocationUpdate;
+}
+}
 
 class LocationServiceListener;
 class LocationUpdatePolicy;
@@ -49,6 +53,9 @@ public:
     virtual void replicaBoundsUpdated(const UUID& uuid, const AggregateBoundingInfo& newval) {}
     virtual void replicaMeshUpdated(const UUID& uuid, const String& newval) {}
     virtual void replicaPhysicsUpdated(const UUID& uuid, const String& newval) {}
+
+    // Hooks for raw updates received by the LocationService
+    virtual void onLocationUpdateFromServer(const ServerID sid, const Sirikata::Protocol::Loc::LocationUpdate& update) {}
 }; // class LocationServiceListener
 
 
@@ -305,6 +312,8 @@ protected:
     void notifyReplicaBoundsUpdated(const UUID& uuid, const AggregateBoundingInfo& newval) const;
     void notifyReplicaMeshUpdated(const UUID& uuid, const String& newval) const;
     void notifyReplicaPhysicsUpdated(const UUID& uuid, const String& newval) const;
+
+    void notifyOnLocationUpdateFromServer(const ServerID sid, const Sirikata::Protocol::Loc::LocationUpdate& update);
 
     // Helpers for listening to streams
     typedef SST::Stream<SpaceObjectReference> SSTStream;

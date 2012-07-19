@@ -149,6 +149,20 @@ void LibproxManualProximity::replicaLocationUpdated(const UUID& uuid, const Time
     // static/dynamic, so we can safely ignore this.
 }
 
+void LibproxManualProximity::onLocationUpdateFromServer(const ServerID sid, const Sirikata::Protocol::Loc::LocationUpdate& update) {
+    // Instead of relying on individual component updates through the
+    // regular location update interface, we get raw updates and apply
+    // them. This is necessary because the remote server tells us in
+    // the update which indexes we need to apply the update too,
+    // i.e. which indexes it has seen subscriptions requested from.
+
+    // ReplicatedClients already handle this type of update for us, we
+    // just need to dispatch it to the right.
+    ReplicatedServerDataMap::iterator rsit = mReplicatedServerDataMap.find(sid);
+    if (rsit == mReplicatedServerDataMap.end()) return;
+
+    rsit->second.client->locUpdate(update);
+}
 
 // MessageRecipient Interface
 
