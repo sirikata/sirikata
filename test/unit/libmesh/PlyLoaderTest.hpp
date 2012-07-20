@@ -292,14 +292,38 @@ public:
 		
 		//asserts
 		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
-		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 49);
+		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 13);
 		TS_ASSERT_EQUALS(mdp->getInstancedLightCount(), 0);
 		TS_ASSERT_EQUALS(mdp->getJointCount(), 0);
-		TS_ASSERT_EQUALS(mdp->geometry.size(), 49);
-		TS_ASSERT_EQUALS(mdp->geometry[0].positions.size(), 160);
+		TS_ASSERT_EQUALS(mdp->geometry.size(), 13);
+		TS_ASSERT_EQUALS(mdp->geometry[0].positions.size(), 726);
 		TS_ASSERT_EQUALS(mdp->geometry[0].skinControllers.size(), 0);
 		TS_ASSERT_EQUALS(mdp->geometry[0].primitives.size(), 1);
-		TS_ASSERT_EQUALS(mdp->geometry[0].primitives[0].indices.size(), 1401);
+		TS_ASSERT_EQUALS(mdp->geometry[0].primitives[0].indices.size(), 3798);
+		TS_ASSERT_EQUALS(mdp->lights.size(), 0);
+		TS_ASSERT_EQUALS(mdp->textures.size(), 0);
+		TS_ASSERT_EQUALS(mdp->materials.size(), 1);
+		TS_ASSERT_EQUALS(mdp->nodes.size(), 1);
+		TS_ASSERT_EQUALS(mdp->nodes[0].transform, Matrix4x4f::identity());
+	}
+
+	void testPlyLoaderBunny( void ) {
+		//ply file with bunny
+		//EVEN SLOWER!
+		//possibility is to just put them in one by one witout caring if copies show up
+		string bunny = getString("bunny/reconstruction/bun_zipper_res3");
+		MeshdataPtr mdp = loadMDP(bunny);
+		
+		//asserts
+		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
+		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 9);
+		TS_ASSERT_EQUALS(mdp->getInstancedLightCount(), 0);
+		TS_ASSERT_EQUALS(mdp->getJointCount(), 0);
+		TS_ASSERT_EQUALS(mdp->geometry.size(), 9);
+		TS_ASSERT_EQUALS(mdp->geometry[0].positions.size(), 1831);
+		TS_ASSERT_EQUALS(mdp->geometry[0].skinControllers.size(), 0);
+		TS_ASSERT_EQUALS(mdp->geometry[0].primitives.size(), 1);
+		TS_ASSERT_EQUALS(mdp->geometry[0].primitives[0].indices.size(), 11520);
 		TS_ASSERT_EQUALS(mdp->lights.size(), 0);
 		TS_ASSERT_EQUALS(mdp->textures.size(), 0);
 		TS_ASSERT_EQUALS(mdp->materials.size(), 1);

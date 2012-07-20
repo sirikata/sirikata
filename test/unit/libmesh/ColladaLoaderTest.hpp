@@ -460,6 +460,28 @@ public:
 		TS_ASSERT_EQUALS(mdp->nodes[0].transform, Matrix4x4f::identity());
 	}
 
+	void testColladaLoaderBunny( void ) {
+		//collada file with stanford bunny
+		string bunny = getString("bunny");
+		MeshdataPtr mdp = loadMDP(bunny);
+		
+		//asserts
+		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
+		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 1);
+		TS_ASSERT_EQUALS(mdp->getInstancedLightCount(), 0);
+		TS_ASSERT_EQUALS(mdp->getJointCount(), 0);
+		TS_ASSERT_EQUALS(mdp->geometry.size(), 1);
+		TS_ASSERT_EQUALS(mdp->geometry[0].positions.size(), 3864);
+		TS_ASSERT_EQUALS(mdp->geometry[0].skinControllers.size(), 0);
+		TS_ASSERT_EQUALS(mdp->geometry[0].primitives.size(), 1);
+		TS_ASSERT_EQUALS(mdp->geometry[0].primitives[0].indices.size(), 3864);
+		TS_ASSERT_EQUALS(mdp->lights.size(), 0);
+		TS_ASSERT_EQUALS(mdp->textures.size(), 0);
+		TS_ASSERT_EQUALS(mdp->materials.size(), 0);
+		TS_ASSERT_EQUALS(mdp->nodes.size(), 1);
+		TS_ASSERT_EQUALS(mdp->nodes[0].transform, Matrix4x4f::identity());
+	}
+
 	void testColladaLoaderNull( void ) {
 		Transfer::DenseData *dd = new Transfer::DenseData("Hello world!");
 		Transfer::DenseDataPtr data(dd);

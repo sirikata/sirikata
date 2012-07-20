@@ -351,10 +351,9 @@ Mesh::VisualPtr PlyModelSystem::load(const Transfer::RemoteFileMetadata& metadat
 			} else {
 				Vector4f c;
 				if(vertexNum > 0) c = Vector4f(sumRed / vertexNum / 255.0, sumGreen / vertexNum / 255.0, sumBlue / vertexNum / 255.0, sumAlpha / vertexNum / 255.0);
-				if(hasColor) {
-					t.color = c;
-					t.affecting = t.DIFFUSE;
-				}
+				if(hasColor) t.color = c;
+				else t.color = Vector4f(1, 1, 1, 1);
+				t.affecting = t.DIFFUSE;
 			}
 			if(faceNum > 0) mei.textures.push_back(t);
 			mdp->materials.push_back(mei);
