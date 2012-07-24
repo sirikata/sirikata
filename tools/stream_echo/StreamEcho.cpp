@@ -137,6 +137,7 @@ int main(int argc, char** argv) {
     // properly parsed.
     ParseOptions(argc, argv);
 
+    DaemonizeAndSetOutputs();
     ReportVersion(); // After options so log goes to the right place
 
     Network::IOService* ios = new Network::IOService("StreamEcho");

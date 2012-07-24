@@ -61,6 +61,7 @@ int main(int argc, char** argv) {
     // properly parsed.
     ParseOptions(argc, argv);
 
+    DaemonizeAndSetOutputs();
     ReportVersion(); // After options so log goes to the right place
 
     ServerID server_id = GetOptionValue<ServerID>("cseg-id");
