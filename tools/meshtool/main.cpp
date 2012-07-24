@@ -93,6 +93,7 @@ int main(int argc, char** argv) {
                 strcpy(buff, options_args.c_str());
                 char * newargv [] = {argv[0], buff};
                 ParseOptions(2, newargv);
+                DaemonizeAndSetOutputs();
                 delete buff;
             }
         }
