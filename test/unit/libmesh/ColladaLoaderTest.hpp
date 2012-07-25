@@ -210,7 +210,7 @@ public:
 	}
 
 	void testColladaLoaderCubes( void ) {
-		//collada file with three identical cubes of different rotations
+		//collada file with three textured cubes of different rotations
 		string cubes = getString("cubes");
 		MeshdataPtr mdp = loadMDP(cubes);
 		
@@ -227,9 +227,10 @@ public:
 			TS_ASSERT_EQUALS(mdp->geometry[i].primitives[0].indices.size(), 36);
 		}
 		TS_ASSERT_EQUALS(mdp->lights.size(), 0);
-		TS_ASSERT_EQUALS(mdp->textures.size(), 0);
-		TS_ASSERT_EQUALS(mdp->materials.size(), 1);
-		TS_ASSERT_EQUALS(mdp->materials[0].textures.size(), 1);
+		TS_ASSERT_EQUALS(mdp->textures.size(), 2);
+		TS_ASSERT_EQUALS(mdp->materials.size(), 3);
+		for(int i = 0; i < mdp->materials.size(); i++)
+			TS_ASSERT_EQUALS(mdp->materials[i].textures.size(), 2);
 		TS_ASSERT_EQUALS(mdp->nodes.size(), 1);
 		TS_ASSERT_EQUALS(mdp->nodes[0].transform, Matrix4x4f::identity());
 		TS_ASSERT_EQUALS(mdp->globalTransform, Matrix4x4f::identity());

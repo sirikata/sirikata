@@ -335,7 +335,7 @@ public:
 		//ply file with bunny
 		//EVEN SLOWER!
 		//possibility is to just put them in one by one witout caring if copies show up
-		string bunny = getString("bunny/reconstruction/bun_zipper_res3");
+		string bunny = getString("bunny/reconstruction/bun_zipper_res4");
 		MeshdataPtr mdp = loadMDP(bunny);
 		
 		//asserts
