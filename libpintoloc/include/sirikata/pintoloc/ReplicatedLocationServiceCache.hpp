@@ -11,6 +11,7 @@
 #include <sirikata/pintoloc/ReplicatedLocationUpdateListener.hpp>
 #include <boost/thread.hpp>
 #include <sirikata/core/network/IOStrand.hpp>
+#include <sirikata/core/util/Liveness.hpp>
 
 namespace Sirikata {
 
@@ -35,7 +36,8 @@ typedef std::tr1::shared_ptr<ReplicatedLocationServiceCache> ReplicatedLocationS
  */
 class SIRIKATA_LIBPINTOLOC_EXPORT ReplicatedLocationServiceCache :
         public ExtendedLocationServiceCache,
-        public ReplicatedLocationUpdateProvider
+        public ReplicatedLocationUpdateProvider,
+        Liveness
 {
 public:
     typedef Prox::LocationUpdateListener<ObjectProxSimulationTraits> LocationUpdateListener;
@@ -131,17 +133,17 @@ private:
     // (Since these are only used for Prox LocationUpdateListener, we only need
     // to notify of a few of the events -- orientation, mesh, and physics are
     // all ignored.)
-    void notifyObjectAdded(const ObjectReference& uuid, const ObjectReference& parent, bool agg, const TimedMotionVector3f& loc, const AggregateBoundingInfo& bounds);
-    void notifyParentUpdated(const ObjectReference& uuid, const ObjectReference& oldval, const ObjectReference& newval);
-    void notifyObjectRemoved(const ObjectReference& uuid, bool temporary);
-    void notifyEpochUpdated(const ObjectReference& uuid, const uint64 val);
-    void notifyLocationUpdated(const ObjectReference& uuid, const TimedMotionVector3f& oldval, const TimedMotionVector3f& newval);
-    void notifyBoundsUpdated(const ObjectReference& uuid, const AggregateBoundingInfo& oldval, const AggregateBoundingInfo& newval);
+    void notifyObjectAdded(Liveness::Token alive_token, const ObjectReference& uuid, const ObjectReference& parent, bool agg, const TimedMotionVector3f& loc, const AggregateBoundingInfo& bounds);
+    void notifyParentUpdated(Liveness::Token alive_token, const ObjectReference& uuid, const ObjectReference& oldval, const ObjectReference& newval);
+    void notifyObjectRemoved(Liveness::Token alive_token, const ObjectReference& uuid, bool temporary);
+    void notifyEpochUpdated(Liveness::Token alive_token, const ObjectReference& uuid, const uint64 val);
+    void notifyLocationUpdated(Liveness::Token alive_token, const ObjectReference& uuid, const TimedMotionVector3f& oldval, const TimedMotionVector3f& newval);
+    void notifyBoundsUpdated(Liveness::Token alive_token, const ObjectReference& uuid, const AggregateBoundingInfo& oldval, const AggregateBoundingInfo& newval);
     // These are only used by ReplicatedLocationUpdateListener so they don't need values
     // with them (see comments for that class)
-    void notifyOrientationUpdated(const ObjectReference& uuid);
-    void notifyMeshUpdated(const ObjectReference& uuid);
-    void notifyPhysicsUpdated(const ObjectReference& uuid);
+    void notifyOrientationUpdated(Liveness::Token alive_token, const ObjectReference& uuid);
+    void notifyMeshUpdated(Liveness::Token alive_token, const ObjectReference& uuid);
+    void notifyPhysicsUpdated(Liveness::Token alive_token, const ObjectReference& uuid);
 
 
     ReplicatedLocationServiceCache();

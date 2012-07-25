@@ -25,6 +25,8 @@ ReplicatedLocationServiceCache::ReplicatedLocationServiceCache(Network::IOStrand
 }
 
 ReplicatedLocationServiceCache::~ReplicatedLocationServiceCache() {
+    Liveness::letDie();
+
     mListeners.clear();
     mObjects.clear();
 }
@@ -263,6 +265,7 @@ void ReplicatedLocationServiceCache::objectAdded(
     mStrand->post(
         std::tr1::bind(
             &ReplicatedLocationServiceCache::notifyObjectAdded, this,
+            livenessToken(),
             uuid, parent, agg, loc, bounds
         ),
         "ReplicatedLocationServiceCache::notifyObjectAdded"
@@ -270,11 +273,15 @@ void ReplicatedLocationServiceCache::objectAdded(
 }
 
 void ReplicatedLocationServiceCache::notifyObjectAdded(
+    Liveness::Token alive_token,
     const ObjectReference& uuid,
     const ObjectReference& parent, bool agg,
     const TimedMotionVector3f& loc,
     const AggregateBoundingInfo& bounds
 ) {
+    Liveness::Lock alive(alive_token);
+    if (!alive) return;
+
     Lock lck(mMutex);
 
     for(ListenerSet::iterator listener_it = mListeners.begin(); listener_it != mListeners.end(); listener_it++)
@@ -301,13 +308,17 @@ void ReplicatedLocationServiceCache::objectRemoved(const ObjectReference& uuid, 
     mStrand->post(
         std::tr1::bind(
             &ReplicatedLocationServiceCache::notifyObjectRemoved, this,
+            livenessToken(),
             uuid, temporary
         ),
         "ReplicatedLocationServiceCache::notifyObjectRemoved"
     );
 }
 
-void ReplicatedLocationServiceCache::notifyObjectRemoved(const ObjectReference& uuid, bool temporary) {
+void ReplicatedLocationServiceCache::notifyObjectRemoved(Liveness::Token alive_token, const ObjectReference& uuid, bool temporary) {
+    Liveness::Lock alive(alive_token);
+    if (!alive) return;
+
     Lock lck(mMutex);
 
     for(ListenerSet::iterator listener_it = mListeners.begin(); listener_it != mListeners.end(); listener_it++)
@@ -334,13 +345,17 @@ void ReplicatedLocationServiceCache::epochUpdated(const ObjectReference& uuid, c
     mStrand->post(
         std::tr1::bind(
             &ReplicatedLocationServiceCache::notifyEpochUpdated, this,
+            livenessToken(),
             uuid, ep
         ),
         "ReplicatedLocationServiceCache::notifyEpochUpdated"
     );
 }
 
-void ReplicatedLocationServiceCache::notifyEpochUpdated(const ObjectReference& uuid, const uint64 val) {
+void ReplicatedLocationServiceCache::notifyEpochUpdated(Liveness::Token alive_token, const ObjectReference& uuid, const uint64 val) {
+    Liveness::Lock alive(alive_token);
+    if (!alive) return;
+
     Lock lck(mMutex);
 
     ReplicatedLocationUpdateProvider::notify(&ReplicatedLocationUpdateListener::onEpochUpdated, this, uuid);
@@ -365,13 +380,17 @@ void ReplicatedLocationServiceCache::locationUpdated(const ObjectReference& uuid
     mStrand->post(
         std::tr1::bind(
             &ReplicatedLocationServiceCache::notifyLocationUpdated, this,
+            livenessToken(),
             uuid, oldval, newval
         ),
         "ReplicatedLocationServiceCache::notifyLocationUpdated"
     );
 }
 
-void ReplicatedLocationServiceCache::notifyLocationUpdated(const ObjectReference& uuid, const TimedMotionVector3f& oldval, const TimedMotionVector3f& newval) {
+void ReplicatedLocationServiceCache::notifyLocationUpdated(Liveness::Token alive_token, const ObjectReference& uuid, const TimedMotionVector3f& oldval, const TimedMotionVector3f& newval) {
+    Liveness::Lock alive(alive_token);
+    if (!alive) return;
+
     Lock lck(mMutex);
 
     for(ListenerSet::iterator listener_it = mListeners.begin(); listener_it != mListeners.end(); listener_it++)
@@ -397,12 +416,15 @@ void ReplicatedLocationServiceCache::orientationUpdated(const ObjectReference& u
     it->second.tracking++;
     mStrand->post(
         std::tr1::bind(
-            &ReplicatedLocationServiceCache::notifyOrientationUpdated, this, uuid
+            &ReplicatedLocationServiceCache::notifyOrientationUpdated, this, livenessToken(), uuid
         )
     );
 }
 
-void ReplicatedLocationServiceCache::notifyOrientationUpdated(const ObjectReference& uuid) {
+void ReplicatedLocationServiceCache::notifyOrientationUpdated(Liveness::Token alive_token, const ObjectReference& uuid) {
+    Liveness::Lock alive(alive_token);
+    if (!alive) return;
+
     Lock lck(mMutex);
 
     ReplicatedLocationUpdateProvider::notify(&ReplicatedLocationUpdateListener::onOrientationUpdated, this, uuid);
@@ -427,13 +449,17 @@ void ReplicatedLocationServiceCache::boundsUpdated(const ObjectReference& uuid, 
     mStrand->post(
         std::tr1::bind(
             &ReplicatedLocationServiceCache::notifyBoundsUpdated, this,
+            livenessToken(),
             uuid, oldval, newval
         ),
         "ReplicatedLocationServiceCache::notifyBoundsUpdated"
     );
 }
 
-void ReplicatedLocationServiceCache::notifyBoundsUpdated(const ObjectReference& uuid, const AggregateBoundingInfo& oldval, const AggregateBoundingInfo& newval) {
+void ReplicatedLocationServiceCache::notifyBoundsUpdated(Liveness::Token alive_token, const ObjectReference& uuid, const AggregateBoundingInfo& oldval, const AggregateBoundingInfo& newval) {
+    Liveness::Lock alive(alive_token);
+    if (!alive) return;
+
     Lock lck(mMutex);
 
     for(ListenerSet::iterator listen_it = mListeners.begin(); listen_it != mListeners.end(); listen_it++) {
@@ -461,12 +487,15 @@ void ReplicatedLocationServiceCache::meshUpdated(const ObjectReference& uuid, co
     it->second.tracking++;
     mStrand->post(
         std::tr1::bind(
-            &ReplicatedLocationServiceCache::notifyMeshUpdated, this, uuid
+            &ReplicatedLocationServiceCache::notifyMeshUpdated, this, livenessToken(), uuid
         )
     );
 }
 
-void ReplicatedLocationServiceCache::notifyMeshUpdated(const ObjectReference& uuid) {
+void ReplicatedLocationServiceCache::notifyMeshUpdated(Liveness::Token alive_token, const ObjectReference& uuid) {
+    Liveness::Lock alive(alive_token);
+    if (!alive) return;
+
     Lock lck(mMutex);
 
     ReplicatedLocationUpdateProvider::notify(&ReplicatedLocationUpdateListener::onMeshUpdated, this, uuid);
@@ -489,12 +518,15 @@ void ReplicatedLocationServiceCache::physicsUpdated(const ObjectReference& uuid,
     it->second.tracking++;
     mStrand->post(
         std::tr1::bind(
-            &ReplicatedLocationServiceCache::notifyPhysicsUpdated, this, uuid
+            &ReplicatedLocationServiceCache::notifyPhysicsUpdated, this, livenessToken(), uuid
         )
     );
 }
 
-void ReplicatedLocationServiceCache::notifyPhysicsUpdated(const ObjectReference& uuid) {
+void ReplicatedLocationServiceCache::notifyPhysicsUpdated(Liveness::Token alive_token, const ObjectReference& uuid) {
+    Liveness::Lock alive(alive_token);
+    if (!alive) return;
+
     Lock lck(mMutex);
 
     ReplicatedLocationUpdateProvider::notify(&ReplicatedLocationUpdateListener::onPhysicsUpdated, this, uuid);
@@ -517,12 +549,15 @@ void ReplicatedLocationServiceCache::parentUpdated(const ObjectReference& uuid, 
     it->second.tracking++;
     mStrand->post(
         std::tr1::bind(
-            &ReplicatedLocationServiceCache::notifyParentUpdated, this, uuid, oldval, newval
+            &ReplicatedLocationServiceCache::notifyParentUpdated, this, livenessToken(), uuid, oldval, newval
         )
     );
 }
 
-void ReplicatedLocationServiceCache::notifyParentUpdated(const ObjectReference& uuid, const ObjectReference& oldval, const ObjectReference& newval) {
+void ReplicatedLocationServiceCache::notifyParentUpdated(Liveness::Token alive_token, const ObjectReference& uuid, const ObjectReference& oldval, const ObjectReference& newval) {
+    Liveness::Lock alive(alive_token);
+    if (!alive) return;
+
     Lock lck(mMutex);
 
     for(ListenerSet::iterator listener_it = mListeners.begin(); listener_it != mListeners.end(); listener_it++)
