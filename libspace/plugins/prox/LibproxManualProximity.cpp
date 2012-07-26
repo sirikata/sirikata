@@ -497,12 +497,12 @@ void LibproxManualProximity::handleUpdateServerQuery(ServerID sid, const String&
     }
 
     if (qur.init) {
-        PROXLOG(detailed, "Init query for " << sid);
+        PROXLOG(detailed, "Init query for server " << sid);
         // Start the query off by registering it into the top-level pinto tree
         registerServerQuery(sid);
     }
     else if (qur.refine || qur.coarsen) {
-        PROXLOG(detailed, "Refine query for " << sid);
+        PROXLOG(detailed, (qur.refine ? "Refine" : "Coarsen") << " for server query " << sid);
         for(int kls = 0; kls < NUM_OBJECT_CLASSES; kls++) {
             if (mLocalQueryHandler[kls].handler == NULL) continue;
             ServerQueryMap::iterator query_it = mServerQueries[kls].find(sid);
@@ -517,6 +517,7 @@ void LibproxManualProximity::handleUpdateServerQuery(ServerID sid, const String&
         }
     }
     else if (qur.destroy) {
+        PROXLOG(detailed, "Destroy query for server " << sid);
         unregisterServerQuery(sid);
     }
 }
@@ -643,12 +644,12 @@ void LibproxManualProximity::handleObjectHostProxMessage(const OHDP::NodeID& id,
     }
 
     if (qur.init) {
-        PROXLOG(detailed, "Init query for " << id);
+        PROXLOG(detailed, "Init query for object host " << id);
         // Start the query off by registering it into the top-level pinto tree
         registerOHQueryWithServerHandlers(id, NullServerID);
     }
     else if (qur.refine || qur.coarsen) {
-        PROXLOG(detailed, "Refine query for " << id);
+        PROXLOG(detailed, (qur.refine ? "Refine" : "Coarsen") << " query for object host query " << id);
         // Either we can find replicated remote data with this index
         if (mLocalToRemoteIndexMap.find(qur.indexid) != mLocalToRemoteIndexMap.end()) {
             NodeProxIndexID node_index_id = mLocalToRemoteIndexMap[qur.indexid];
@@ -681,6 +682,7 @@ void LibproxManualProximity::handleObjectHostProxMessage(const OHDP::NodeID& id,
         }
     }
     else if (qur.destroy) {
+        PROXLOG(detailed, "Destroy query for object host " << id);
         destroyQuery(id);
     }
 }
@@ -1050,7 +1052,10 @@ void LibproxManualProximity::queryHasEvents(ProxQuery* query) {
     QueryEventList evts;
     query->popEvents(evts);
 
-    PROXLOG(detailed, evts.size() << " events for query " << query_id);
+    if (server_query_id != NullServerID)
+        PROXLOG(detailed, evts.size() << " events for server query " << server_query_id);
+    else
+        PROXLOG(detailed, evts.size() << " events for object host query " << query_id);
     while(!evts.empty()) {
         // We need to support encoding both server messages, which
         // want a Container, and object messages, which want just
