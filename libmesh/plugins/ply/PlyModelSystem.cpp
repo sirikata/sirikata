@@ -128,6 +128,9 @@ Mesh::VisualPtr PlyModelSystem::load(const Transfer::RemoteFileMetadata& metadat
 			for(int i = 0; i < vertexNum; i++)
 				indexMap[i] = -1;
 			double (*tc)[3] = new double[vertexNum][3]; //stores the texture coordinates in 0 and 1, and the texture file num in 2
+			for(int i = 0; i < vertexNum; i++)
+				for(int j = 0; j < 3; j++)
+					tc[i][j] = -1;
 			double temp; //note: the type should be able to vary (based on the previous input)
 			int index;
 			int numIndices;
@@ -172,11 +175,11 @@ Mesh::VisualPtr PlyModelSystem::load(const Transfer::RemoteFileMetadata& metadat
 								ss >> numTex;
 								for(int k = 0; k < numTexCoords / 2; k++) {
 									tc[face[i][k]][2] = numTex;
-									//we set each of the col values to -2 so that it won't be mistaken as a normal colored point
-									col[face[i][k]][0] = -2;
-									col[face[i][k]][1] = -2;
-									col[face[i][k]][2] = -2;
-									col[face[i][k]][3] = -2;
+									//we set each of the col values to -abs(texNum) so that it won't be mistaken as a normal colored point
+									col[face[i][k]][0] = -abs(numTex);
+									col[face[i][k]][1] = -abs(numTex);
+									col[face[i][k]][2] = -abs(numTex);
+									col[face[i][k]][3] = -abs(numTex);
 								}
 							}
 							break;
@@ -243,11 +246,14 @@ Mesh::VisualPtr PlyModelSystem::load(const Transfer::RemoteFileMetadata& metadat
 								//iterate through the indices
 								for(int k = 0; k < mdp->geometry[counterSMG].primitives.size(); k++) {
 									for(int l = 0; l < mdp->geometry[counterSMG].primitives[k].indices.size(); l++) {
-										if(reverseMap[counterSMG][mdp->geometry[counterSMG].primitives[k].indices[l]] == face[i][j])
-											sameSMG = true;
+										//we must check if the point is the same and also if the texture is the same
 										if(vert[reverseMap[counterSMG][mdp->geometry[counterSMG].primitives[k].indices[l]]][0] == vert[face[i][j]][0] && 
 											vert[reverseMap[counterSMG][mdp->geometry[counterSMG].primitives[k].indices[l]]][1] == vert[face[i][j]][1] && 
-											vert[reverseMap[counterSMG][mdp->geometry[counterSMG].primitives[k].indices[l]]][2] == vert[face[i][j]][2]) {
+											vert[reverseMap[counterSMG][mdp->geometry[counterSMG].primitives[k].indices[l]]][2] == vert[face[i][j]][2] &&
+											col[reverseMap[counterSMG][mdp->geometry[counterSMG].primitives[k].indices[l]]][0] == col[face[i][j]][0] &&
+											col[reverseMap[counterSMG][mdp->geometry[counterSMG].primitives[k].indices[l]]][1] == col[face[i][j]][1] &&
+											col[reverseMap[counterSMG][mdp->geometry[counterSMG].primitives[k].indices[l]]][2] == col[face[i][j]][2] &&
+											col[reverseMap[counterSMG][mdp->geometry[counterSMG].primitives[k].indices[l]]][3] == col[face[i][j]][3]) {
 												sameSMG = true;
 												bool isThere = false;
 												for(int m = 0; m < hitSMG.size(); m++)
@@ -330,71 +336,76 @@ Mesh::VisualPtr PlyModelSystem::load(const Transfer::RemoteFileMetadata& metadat
 				}
 				
 			}
-			//splitting primitives based on textures
-			for(int i = 0; i < mdp->geometry.size(); i++) {
-				//we'll go through each of the indices, noting what texture
-				//each one has (none, color, or texture) and sorting them
-				//into different primitives
+			////splitting primitives based on textures
+			//for(int i = 0; i < mdp->geometry.size(); i++) {
+			//	//we'll go through each of the indices, noting what texture
+			//	//each one has (none, color, or texture) and sorting them
+			//	//into different primitives (geometries!?!?)
 
-				//but we can only do this if the primitive type is triangle
-				if(mdp->geometry[i].primitives[0].primitiveType == Mesh::SubMeshGeometry::Primitive::TRIANGLES) {
-					for(int j = 1; j < mdp->geometry[i].primitives[0].indices.size(); j++) {
-						int prim = -1;
-						for(int k = 0; k < mdp->geometry[i].primitives.size() && prim == -1; k++) {
-							if(file.size() > 1) {
-								//texture check
-								if(tc[reverseMap[i][mdp->geometry[i].primitives[k].indices[0]]][2] >= 0
-									&& tc[reverseMap[i][mdp->geometry[i].primitives[k].indices[0]]][2] >= 0
-									&& tc[reverseMap[i][mdp->geometry[i].primitives[k].indices[0]]][2] == tc[reverseMap[i][mdp->geometry[i].primitives[0].indices[j]]][2]) {
-										prim = k;
-								}
-							}
+			//	//but we can only do this if the primitive type is triangle
+			//	if(mdp->geometry[i].primitives[0].primitiveType == Mesh::SubMeshGeometry::Primitive::TRIANGLES) {
+			//		for(int j = 1; j < mdp->geometry[i].primitives[0].indices.size(); j++) {
+			//			int prim = -1;
+			//			for(int k = 0; k < mdp->geometry[i].primitives.size() && prim == -1; k++) {
+			//				//if(file.size() > 1) {
+			//				//	//texture check
+			//				//	if(tc[reverseMap[i][mdp->geometry[i].primitives[k].indices[0]]][2] >= 0
+			//				//		&& tc[reverseMap[i][mdp->geometry[i].primitives[k].indices[0]]][2] >= 0
+			//				//		&& tc[reverseMap[i][mdp->geometry[i].primitives[k].indices[0]]][2] == tc[reverseMap[i][mdp->geometry[i].primitives[0].indices[j]]][2]) {
+			//				//			prim = k;
+			//				//	}
+			//				//}
 
 
 
-							//color check
-							if(col[reverseMap[i][mdp->geometry[i].primitives[k].indices[0]]][0] == col[reverseMap[i][mdp->geometry[i].primitives[0].indices[j]]][0] && 
-								col[reverseMap[i][mdp->geometry[i].primitives[k].indices[0]]][1] == col[reverseMap[i][mdp->geometry[i].primitives[0].indices[j]]][1] && 
-								col[reverseMap[i][mdp->geometry[i].primitives[k].indices[0]]][2] == col[reverseMap[i][mdp->geometry[i].primitives[0].indices[j]]][2] && 
-								col[reverseMap[i][mdp->geometry[i].primitives[k].indices[0]]][3] == col[reverseMap[i][mdp->geometry[i].primitives[0].indices[j]]][3]) {
-									prim = k;
+			//				//color check
+			//				if(col[reverseMap[i][mdp->geometry[i].primitives[k].indices[0]]][0] == col[reverseMap[i][mdp->geometry[i].primitives[0].indices[j]]][0] && 
+			//					col[reverseMap[i][mdp->geometry[i].primitives[k].indices[0]]][1] == col[reverseMap[i][mdp->geometry[i].primitives[0].indices[j]]][1] && 
+			//					col[reverseMap[i][mdp->geometry[i].primitives[k].indices[0]]][2] == col[reverseMap[i][mdp->geometry[i].primitives[0].indices[j]]][2] && 
+			//					col[reverseMap[i][mdp->geometry[i].primitives[k].indices[0]]][3] == col[reverseMap[i][mdp->geometry[i].primitives[0].indices[j]]][3]) {
+			//						prim = k;
 
-							}
-							if(prim > 0) {
-								mdp->geometry[i].primitives[prim].indices.push_back(mdp->geometry[i].primitives[0].indices[j]);
-								mdp->geometry[i].primitives[0].indices.erase(mdp->geometry[i].primitives[0].indices.begin() + j);
-								j--;
-							}
-						}
-						if(prim == -1) {
-							mdp->geometry[i].primitives.push_back(p);
-							mdp->geometry[i].primitives[mdp->geometry[i].primitives.size() - 1].indices.push_back(mdp->geometry[i].primitives[0].indices[j]);
-							mdp->geometry[i].primitives[0].indices.erase(mdp->geometry[i].primitives[0].indices.begin() + j);
-							j--;
-						}
-					}
-				}
-			}
+			//				}
+			//				if(prim > 0) {
+			//					mdp->geometry[i].primitives[prim].indices.push_back(mdp->geometry[i].primitives[0].indices[j]);
+			//					mdp->geometry[i].primitives[0].indices.erase(mdp->geometry[i].primitives[0].indices.begin() + j);
+			//					j--;
+			//				}
+			//			}
+			//			if(prim == -1) {
+			//				mdp->geometry[i].primitives.push_back(p);
+			//				mdp->geometry[i].primitives[mdp->geometry[i].primitives.size() - 1].indices.push_back(mdp->geometry[i].primitives[0].indices[j]);
+			//				mdp->geometry[i].primitives[0].indices.erase(mdp->geometry[i].primitives[0].indices.begin() + j);
+			//				j--;
+			//			}
+			//		}
+			//	}
+			//}
 			int fileCounter = 0;
 			int mapCounter = 0;
 			for(int l = 0; l < mdp->geometry.size(); l++) {
 				Mesh::MaterialEffectInfo mei;
+				//one texture set for the geometry
+				if(tc[0][0] > 0) {
+					Mesh::SubMeshGeometry::TextureSet ts;
+					ts.stride = 2;
+					for(int i = 0; i < mdp->geometry[l].positions.size(); i++) {
+						for(int j = 0; j < 2; j++)  {
+							ts.uvs.push_back(tc[reverseMap[l][i]][j]);
+							//std::cout << tc[i][j];
+						}
+					}
+					mdp->geometry[l].texUVs.push_back(ts);
+				}
 				for(int k = 0; k < mdp->geometry[l].primitives.size(); k++) {
 					//add material
-					Mesh::MaterialEffectInfo::Texture t;
 					if(faceNum > 0) {
-						if((tc[reverseMap[l][mdp->geometry[l].primitives[k].indices[0]]][2] >= 0 || file.size() == 1) //quick fix, more concrete check later
+						Mesh::MaterialEffectInfo::Texture t;
+						if(((tc[reverseMap[l][mdp->geometry[l].primitives[k].indices[0]]][2] >= 0
+							&& tc[reverseMap[l][mdp->geometry[l].primitives[k].indices[0]]][2] < file.size())|| file.size() == 1) //quick fix, more concrete check later
 							&& fileCounter < file.size() && !file[fileCounter].empty()) {
 							//TextureSet
-							Mesh::SubMeshGeometry::TextureSet ts;
-							ts.stride = 2;
-							for(int i = 0; i < vertexNum; i++) {
-								for(int j = 0; j < 2; j++)  {
-									ts.uvs.push_back(tc[i][j]);
-									//std::cout << tc[i][j];
-								}
-							}
-							mdp->geometry[l].texUVs.push_back(ts);
+							
 
 							//the textured material path!
 							mei.shininess = -128;
@@ -432,8 +443,8 @@ Mesh::VisualPtr PlyModelSystem::load(const Transfer::RemoteFileMetadata& metadat
 						mdp->geometry[l].primitives[k].materialId = k + 1;
 						mdp->instances[l].materialBindingMap[k + 1] = mapCounter;
 						mapCounter++;
+						mei.textures.push_back(t);
 					}
-					mei.textures.push_back(t);
 				}
 				mdp->materials.push_back(mei);
 			}
