@@ -37,6 +37,15 @@
 #include <boost/thread/shared_mutex.hpp>
 #include <boost/thread/locks.hpp>
 
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS
+#include <io.h>
+#define fileno_platform _fileno
+#define dup2_platform _dup2
+#else
+#define fileno_platform fileno
+#define dup2_platform dup2
+#endif
+
 extern "C" {
 void *Sirikata_Logging_OptionValue_defaultLevel;
 void *Sirikata_Logging_OptionValue_atLeastLevel;
@@ -45,7 +54,47 @@ void *Sirikata_Logging_OptionValue_moduleLevel;
 namespace Sirikata { namespace Logging {
 
 extern "C" {
-std::ostream* SirikataLogStream = &std::cerr;
+    // Redirect for just SILOG
+    std::ostream* SirikataLogStream = &std::cerr;
+}
+
+namespace {
+// Redirect for entire stdout, stderr. By default we don't do any redirection.
+FILE* SirikataLogFP = NULL;
+
+class RedirectBuf : public std::streambuf {
+public:
+    RedirectBuf() {
+        setp(0, 0);
+    }
+
+    virtual int_type overflow(int_type c = traits_type::eof()) {
+        return fputc(c, stdout) == EOF ? traits_type::eof() : c;
+    }
+
+    virtual int sync() {
+	return fflush(stdout);
+    }
+};
+
+RedirectBuf* SirikataRedirectCPPOut = NULL;
+std::streambuf* orig_cout_buf = NULL;
+std::streambuf* orig_cerr_buf = NULL;
+}
+void setOutputFP(FILE* fp) {
+    int stdout_fileno = fileno_platform(stdout);
+    dup2(fileno_platform(fp), stdout_fileno);
+
+    int stderr_fileno = fileno_platform(stderr);
+    dup2(fileno_platform(stderr), stderr_fileno);
+
+    // In some places, we don't get stdout == cout and stderr == cerr, so we
+    // need to redirect those as well.
+
+    // set std::cout to use my custom streambuf
+    SirikataRedirectCPPOut = new RedirectBuf();
+    orig_cout_buf = std::cout.rdbuf(SirikataRedirectCPPOut);
+    orig_cerr_buf = std::cerr.rdbuf(SirikataRedirectCPPOut);
 }
 
 void setLogStream(std::ostream* logfs) {
@@ -57,6 +106,18 @@ void finishLog() {
     if (SirikataLogStream != &std::cerr) {
         delete SirikataLogStream;
         SirikataLogStream = &std::cerr;
+    }
+
+    if (SirikataLogFP != NULL) {
+        fflush(SirikataLogFP);
+        fclose(SirikataLogFP);
+    }
+
+    if (SirikataRedirectCPPOut) {
+        // make sure to restore the original so we don't get a crash on close!
+        std::cout.rdbuf(orig_cout_buf);
+        std::cerr.rdbuf(orig_cerr_buf);
+        delete SirikataRedirectCPPOut;
     }
 }
 

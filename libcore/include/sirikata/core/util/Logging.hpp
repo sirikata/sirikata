@@ -59,8 +59,17 @@ SIRIKATA_FUNCTION_EXPORT const char* LogLevelString(LOGGING_LEVEL lvl, const cha
 // Public so the macros work efficiently instead of another call
 extern "C" SIRIKATA_EXPORT std::ostream* SirikataLogStream;
 
-
+/** Set the output file pointer for *all* output, not just SILOG output. This
+ *  includes both stdout and stderr.
+ */
+SIRIKATA_FUNCTION_EXPORT void setOutputFP(FILE* fp);
+/** Set the output stream for SILOG output, e.g. to redirect output to a file or
+ * in memory.
+ */
 SIRIKATA_FUNCTION_EXPORT void setLogStream(std::ostream* logfs);
+/** Allow logging to finish, e.g. flush output and cleanup output streams. May
+ * block.
+ */
 SIRIKATA_FUNCTION_EXPORT void finishLog();
 
 } }

@@ -41,6 +41,7 @@
 #define OPT_EXTRA_PLUGINS         "extra-plugins"
 
 #define OPT_LOG_FILE                  "log-file"
+#define OPT_LOG_ALL_TO_FILE           "log-all-to-file"
 #define OPT_DAEMON                    "daemon"
 #define OPT_PID_FILE                    "pid-file"
 
