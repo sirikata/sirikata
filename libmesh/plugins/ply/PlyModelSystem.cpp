@@ -15,6 +15,7 @@ enum {VERTEX, FACE, EDGE};
 enum {X, Y, Z, RED, GREEN, BLUE, ALPHA, VI, TC, FILLER};
 //texture type
 enum {NONE, COLOR, TEXTURE};
+const int BADCOLOR = 256;
 
 PlyModelSystem::PlyModelSystem() {
 }
@@ -114,13 +115,12 @@ Mesh::VisualPtr PlyModelSystem::load(const Transfer::RemoteFileMetadata& metadat
 		}
 		if(s == "end_header") {
 			if(vertexNum == 0) return Mesh::VisualPtr(); //no vertices means an empty ply file
-			bool hasColor = false;
 			loop = false;
 			double (*vert)[3] = new double[vertexNum][3]; //note: the type should be able to vary (but does it make a significant difference...?)
 			double (*col)[4] = new double[vertexNum][4]; //color
 			for(int i = 0; i < vertexNum; i++)
 				for(int j = 0; j < 4; j++)
-					col[i][j] = -1;
+					col[i][j] = BADCOLOR;
 			int (*face)[3] = new int[faceNum][3]; //faces can have more than 3 vertices, change later
 			std::map<int, int> indexMap; //will map the original index to the new index
 			std::vector<std::map<int, int> > reverseMap; //will map the new index to the original index (find more efficient way later)
@@ -144,10 +144,10 @@ Mesh::VisualPtr PlyModelSystem::load(const Transfer::RemoteFileMetadata& metadat
 						case X: vert[i][0] = temp; break;
 						case Y: vert[i][1] = temp; break;
 						case Z: vert[i][2] = temp; break;
-						case RED: col[i][0] = temp; hasColor = true; break;
-						case GREEN: col[i][1] = temp; hasColor = true; break;
-						case BLUE: col[i][2] = temp; hasColor = true; break;
-						case ALPHA: col[i][3] = temp; hasColor = true; break;
+						case RED: col[i][0] = temp; break;
+						case GREEN: col[i][1] = temp; break;
+						case BLUE: col[i][2] = temp;  break;
+						case ALPHA: col[i][3] = temp; break;
 					}
 					//std::cout << vert[i][j] << ' ';
 				}
@@ -176,10 +176,10 @@ Mesh::VisualPtr PlyModelSystem::load(const Transfer::RemoteFileMetadata& metadat
 								for(int k = 0; k < numTexCoords / 2; k++) {
 									tc[face[i][k]][2] = numTex;
 									//we set each of the col values to -abs(texNum) so that it won't be mistaken as a normal colored point
-									col[face[i][k]][0] = -abs(numTex);
-									col[face[i][k]][1] = -abs(numTex);
-									col[face[i][k]][2] = -abs(numTex);
-									col[face[i][k]][3] = -abs(numTex);
+									if(col[face[i][k]][0] == BADCOLOR) col[face[i][k]][0] = -abs(numTex);
+									if(col[face[i][k]][1] == BADCOLOR) col[face[i][k]][1] = -abs(numTex);
+									if(col[face[i][k]][2] == BADCOLOR) col[face[i][k]][2] = -abs(numTex);
+									if(col[face[i][k]][3] == BADCOLOR) col[face[i][k]][3] = -abs(numTex);
 								}
 							}
 							break;
@@ -336,51 +336,7 @@ Mesh::VisualPtr PlyModelSystem::load(const Transfer::RemoteFileMetadata& metadat
 				}
 				
 			}
-			////splitting primitives based on textures
-			//for(int i = 0; i < mdp->geometry.size(); i++) {
-			//	//we'll go through each of the indices, noting what texture
-			//	//each one has (none, color, or texture) and sorting them
-			//	//into different primitives (geometries!?!?)
-
-			//	//but we can only do this if the primitive type is triangle
-			//	if(mdp->geometry[i].primitives[0].primitiveType == Mesh::SubMeshGeometry::Primitive::TRIANGLES) {
-			//		for(int j = 1; j < mdp->geometry[i].primitives[0].indices.size(); j++) {
-			//			int prim = -1;
-			//			for(int k = 0; k < mdp->geometry[i].primitives.size() && prim == -1; k++) {
-			//				//if(file.size() > 1) {
-			//				//	//texture check
-			//				//	if(tc[reverseMap[i][mdp->geometry[i].primitives[k].indices[0]]][2] >= 0
-			//				//		&& tc[reverseMap[i][mdp->geometry[i].primitives[k].indices[0]]][2] >= 0
-			//				//		&& tc[reverseMap[i][mdp->geometry[i].primitives[k].indices[0]]][2] == tc[reverseMap[i][mdp->geometry[i].primitives[0].indices[j]]][2]) {
-			//				//			prim = k;
-			//				//	}
-			//				//}
-
-
-
-			//				//color check
-			//				if(col[reverseMap[i][mdp->geometry[i].primitives[k].indices[0]]][0] == col[reverseMap[i][mdp->geometry[i].primitives[0].indices[j]]][0] && 
-			//					col[reverseMap[i][mdp->geometry[i].primitives[k].indices[0]]][1] == col[reverseMap[i][mdp->geometry[i].primitives[0].indices[j]]][1] && 
-			//					col[reverseMap[i][mdp->geometry[i].primitives[k].indices[0]]][2] == col[reverseMap[i][mdp->geometry[i].primitives[0].indices[j]]][2] && 
-			//					col[reverseMap[i][mdp->geometry[i].primitives[k].indices[0]]][3] == col[reverseMap[i][mdp->geometry[i].primitives[0].indices[j]]][3]) {
-			//						prim = k;
-
-			//				}
-			//				if(prim > 0) {
-			//					mdp->geometry[i].primitives[prim].indices.push_back(mdp->geometry[i].primitives[0].indices[j]);
-			//					mdp->geometry[i].primitives[0].indices.erase(mdp->geometry[i].primitives[0].indices.begin() + j);
-			//					j--;
-			//				}
-			//			}
-			//			if(prim == -1) {
-			//				mdp->geometry[i].primitives.push_back(p);
-			//				mdp->geometry[i].primitives[mdp->geometry[i].primitives.size() - 1].indices.push_back(mdp->geometry[i].primitives[0].indices[j]);
-			//				mdp->geometry[i].primitives[0].indices.erase(mdp->geometry[i].primitives[0].indices.begin() + j);
-			//				j--;
-			//			}
-			//		}
-			//	}
-			//}
+			
 			int fileCounter = 0;
 			int mapCounter = 0;
 			for(int l = 0; l < mdp->geometry.size(); l++) {
@@ -440,13 +396,24 @@ Mesh::VisualPtr PlyModelSystem::load(const Transfer::RemoteFileMetadata& metadat
 							t.affecting = t.DIFFUSE;
 
 						}
-						mdp->geometry[l].primitives[k].materialId = k + 1;
-						mdp->instances[l].materialBindingMap[k + 1] = mapCounter;
-						mapCounter++;
 						mei.textures.push_back(t);
-					}
+						bool addMat = true;
+						int matPos = -1;
+						for(int i = 0; i < mdp->materials.size(); i++)
+							if(mdp->materials[i] == mei) {
+								addMat = false;
+								matPos = i;
+							}
+						mdp->geometry[l].primitives[k].materialId = k + 1;
+						if(addMat) {		
+							mdp->instances[l].materialBindingMap[mdp->geometry[l].primitives[k].materialId] = mapCounter;
+							mapCounter++;
+							mdp->materials.push_back(mei);
+						} else
+							mdp->instances[l].materialBindingMap[mdp->geometry[l].primitives[k].materialId] = matPos;
+
+					} else mdp->materials.push_back(mei);
 				}
-				mdp->materials.push_back(mei);
 			}
 			
 			//for(int i = 0; i < indexMap.size(); i++) std::cout << indexMap[i] << ' ';
