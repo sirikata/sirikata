@@ -88,6 +88,7 @@ void InitOptions() {
         .addOption(new OptionValue("rand-seed", "0", Sirikata::OptionValueType<uint32>(), "The random seed to synchronize all servers"))
 
         .addOption(new OptionValue(OPT_LOG_FILE, "", Sirikata::OptionValueType<String>(), "Filename to log SILOG messages to. If empty or -, uses stderr"))
+        .addOption(new OptionValue(OPT_LOG_ALL_TO_FILE, "true", Sirikata::OptionValueType<bool>(), "If true and a log file is specified, redirect all output o it, including stdout and stderr, instead of just SILOG messages."))
         .addOption(new OptionValue(OPT_DAEMON, "false", Sirikata::OptionValueType<bool>(), "If true, daemonize this process"))
         .addOption(new OptionValue(OPT_PID_FILE, "", Sirikata::OptionValueType<String>(), "Filename to write the process ID to. If empty, no pid file will be written."))
 
@@ -177,13 +178,23 @@ void DaemonizeAndSetOutputs() {
     // Set log output
     {
         String logfile = GetOptionValue<String>(OPT_LOG_FILE);
+        bool log_all_to_file = GetOptionValue<bool>(OPT_LOG_ALL_TO_FILE);
         bool changed = false;
         if (logfile != "" && logfile != "-") {
-            // Try to open the log file
-            std::ostream* logfs = new std::ofstream(logfile.c_str(), std::ios_base::out | std::ios_base::app);
-            if (*logfs) {
-                Sirikata::Logging::setLogStream(logfs);
-                changed = true;
+            if (log_all_to_file) {
+                FILE* fp = fopen(logfile.c_str(), "w");
+                if (fp != NULL) {
+                    Sirikata::Logging::setOutputFP(fp);
+                    changed = true;
+                }
+            }
+            else {
+                // Try to open the log file
+                std::ostream* logfs = new std::ofstream(logfile.c_str(), std::ios_base::out | std::ios_base::app);
+                if (*logfs) {
+                    Sirikata::Logging::setLogStream(logfs);
+                    changed = true;
+                }
             }
         }
         // If that failed, go back to cerr
