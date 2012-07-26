@@ -69,6 +69,7 @@ int main(int argc, char** argv) {
     // properly parsed.
     ParseOptions(argc, argv);
 
+    DaemonizeAndSetOutputs();
     ReportVersion(); // After options so log goes to the right place
 
     std::string time_server=GetOptionValue<String>("time-server");

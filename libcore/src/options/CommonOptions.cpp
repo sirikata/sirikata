@@ -35,6 +35,17 @@
 #include <sirikata/core/util/Time.hpp>
 #include <sirikata/core/util/Timer.hpp>
 
+// daemon() method, getpid
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_MAC
+#include <stdlib.h>
+#include <sys/types.h>
+#include <unistd.h>
+#elif SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_LINUX
+#include <sys/types.h>
+#include <unistd.h>
+#endif
+
+
 namespace Sirikata {
 
 void ReportVersion() {
@@ -77,6 +88,10 @@ void InitOptions() {
         .addOption(new OptionValue("rand-seed", "0", Sirikata::OptionValueType<uint32>(), "The random seed to synchronize all servers"))
 
         .addOption(new OptionValue(OPT_LOG_FILE, "", Sirikata::OptionValueType<String>(), "Filename to log SILOG messages to. If empty or -, uses stderr"))
+        .addOption(new OptionValue(OPT_LOG_ALL_TO_FILE, "true", Sirikata::OptionValueType<bool>(), "If true and a log file is specified, redirect all output o it, including stdout and stderr, instead of just SILOG messages."))
+        .addOption(new OptionValue(OPT_DAEMON, "false", Sirikata::OptionValueType<bool>(), "If true, daemonize this process"))
+        .addOption(new OptionValue(OPT_PID_FILE, "", Sirikata::OptionValueType<String>(), "Filename to write the process ID to. If empty, no pid file will be written."))
+
         .addOption(new OptionValue(STATS_TRACE_FILE, "trace.txt", Sirikata::OptionValueType<String>(), "The filename to save the trace to"))
 
         .addOption(new OptionValue("time-server", "", Sirikata::OptionValueType<String>(), "The server to sync with"))
@@ -104,22 +119,7 @@ void InitOptions() {
       ;
 }
 
-namespace {
-void setLogOutput() {
-    String logfile = GetOptionValue<String>(OPT_LOG_FILE);
-    if (logfile != "" && logfile != "-") {
-        // Try to open the log file
-        std::ostream* logfs = new std::ofstream(logfile.c_str(), std::ios_base::out | std::ios_base::app);
-        if (*logfs) {
-            Sirikata::Logging::setLogStream(logfs);
-            return;
-        }
-    }
-    // If that failed, go back to cerr
-    Sirikata::Logging::SirikataLogStream = &std::cerr;
-}
 
-}
 
 void FakeParseOptions() {
     OptionSet* options = OptionSet::getOptions(SIRIKATA_OPTIONS_MODULE,NULL);
@@ -130,13 +130,11 @@ void FakeParseOptions() {
 void ParseOptions(int argc, char** argv, UnregisteredOptionBehavior unreg) {
     OptionSet* options = OptionSet::getOptions(SIRIKATA_OPTIONS_MODULE,NULL);
     options->parse(argc, argv, true, false, (unreg == AllowUnregisteredOptions));
-    setLogOutput();
 }
 
 void ParseOptionsFile(const String& fname, bool required, UnregisteredOptionBehavior unreg) {
     OptionSet* options = OptionSet::getOptions(SIRIKATA_OPTIONS_MODULE,NULL);
     options->parseFile(fname, required, true, false, (unreg == AllowUnregisteredOptions));
-    setLogOutput();
 }
 
 void ParseOptions(int argc, char** argv, const String& config_file_option, UnregisteredOptionBehavior unreg) {
@@ -156,8 +154,6 @@ void ParseOptions(int argc, char** argv, const String& config_file_option, Unreg
     // the config file may have overwritten. Don't use defaults to
     // avoid overwriting.
     options->parse(argc, argv, false, false, (unreg == AllowUnregisteredOptions));
-
-    setLogOutput();
 }
 
 void FillMissingOptionDefaults() {
@@ -166,6 +162,61 @@ void FillMissingOptionDefaults() {
     // Parse command line once to make sure we have the right config
     // file. On this pass, use defaults so everything gets filled in.
     options->fillMissingDefaults();
+}
+
+void DaemonizeAndSetOutputs() {
+    // We only have daemon() on Unices
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_MAC || SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_LINUX
+    if (GetOptionValue<bool>(OPT_DAEMON)) {
+        // We don't chdir to / because we don't have settings for getting out of
+        // there. The user has to start the daemon in a good location.
+        daemon(1 /* don't chdir to / */, 0 /* do redirect stdin/out/err to
+                                            * /dev/null */);
+    }
+#endif
+
+    // Set log output
+    {
+        String logfile = GetOptionValue<String>(OPT_LOG_FILE);
+        bool log_all_to_file = GetOptionValue<bool>(OPT_LOG_ALL_TO_FILE);
+        bool changed = false;
+        if (logfile != "" && logfile != "-") {
+            if (log_all_to_file) {
+                FILE* fp = fopen(logfile.c_str(), "w");
+                if (fp != NULL) {
+                    Sirikata::Logging::setOutputFP(fp);
+                    changed = true;
+                }
+            }
+            else {
+                // Try to open the log file
+                std::ostream* logfs = new std::ofstream(logfile.c_str(), std::ios_base::out | std::ios_base::app);
+                if (*logfs) {
+                    Sirikata::Logging::setLogStream(logfs);
+                    changed = true;
+                }
+            }
+        }
+        // If that failed, go back to cerr
+        if (!changed)
+            Sirikata::Logging::SirikataLogStream = &std::cerr;
+    }
+
+    // Write pid file if requested
+    {
+        String pidfile = GetOptionValue<String>(OPT_PID_FILE);
+        if (pidfile != "") {
+            std::ofstream pidfs(pidfile.c_str(), std::ios_base::out);
+            if (!pidfs) {
+                SILOG(pid, error, "Couldn't write to requested PID file: " << pidfile);
+            }
+            else {
+#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_MAC || SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_LINUX
+                pidfs << getpid() << std::endl;
+#endif
+            }
+        }
+    }
 }
 
 OptionValue* GetOption(const char* name) {

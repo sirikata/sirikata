@@ -40,6 +40,7 @@ int main(int argc, char** argv) {
     // properly parsed.
     ParseOptions(argc, argv, OPT_CONFIG_FILE);
 
+    DaemonizeAndSetOutputs();
     ReportVersion(); // After options so log goes to the right place
 
     // Currently not distributed, so we just use any ID

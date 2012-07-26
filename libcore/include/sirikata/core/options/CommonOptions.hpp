@@ -41,6 +41,10 @@
 #define OPT_EXTRA_PLUGINS         "extra-plugins"
 
 #define OPT_LOG_FILE                  "log-file"
+#define OPT_LOG_ALL_TO_FILE           "log-all-to-file"
+#define OPT_DAEMON                    "daemon"
+#define OPT_PID_FILE                    "pid-file"
+
 #define STATS_TRACE_FILE     "stats.trace-filename"
 #define PROFILE                    "profile"
 
@@ -84,8 +88,15 @@ SIRIKATA_FUNCTION_EXPORT void ParseOptions(int argc, char** argv, const String& 
 // Parses empty options to get options properly initialized
 SIRIKATA_FUNCTION_EXPORT void FakeParseOptions();
 
-/// Fills in
+/// Fills in default values, used after initial parsing to make sure we don't
+/// block overriding option values from a secondary source (e.g. config files)
+/// after parsing the first source (e.g. cmd line)
 SIRIKATA_FUNCTION_EXPORT void FillMissingOptionDefaults();
+
+
+/// Daemonizes the process if requested and then sets up output, e.g. logfile,
+/// remaps std::err, generates pidfile, etc.
+SIRIKATA_FUNCTION_EXPORT void DaemonizeAndSetOutputs();
 
 // Be careful with GetOption.  Using it and ->as() directly can be dangerous
 // because some types are defined per-library and won't dynamic_cast properly.
