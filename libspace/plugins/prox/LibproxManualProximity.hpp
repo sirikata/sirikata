@@ -107,6 +107,10 @@ private:
     // ReplicatedClientWithID Interface Part I
     virtual void sendReplicatedClientProxMessage(ReplicatedClient* client, const ServerID& evt_src_server, const String& msg);
 
+    // First handling stage of ProximityResults, getting them into
+    // Loc. See handleUpdateServerQueryResultsToReplicatedTrees for
+    // second half
+    void handleUpdateServerQueryResultsToLocService(ServerID sid, const Sirikata::Protocol::Prox::ProximityResults& results);
 
     // MAIN Thread  OH queries:
 
@@ -146,7 +150,7 @@ private:
     void handleOnPintoServerResult(const Sirikata::Protocol::Prox::ProximityUpdate& update);
 
     void handleUpdateServerQuery(ServerID sid, const String& raw_query);
-    void handleUpdateServerQueryResults(ServerID sid, const Sirikata::Protocol::Prox::ProximityResults& results);
+    void handleUpdateServerQueryResultsToReplicatedTrees(ServerID sid, const Sirikata::Protocol::Prox::ProximityResults& results);
 
     // Helpers for un/registering a server query
     void registerServerQuery(const ServerID& querier);

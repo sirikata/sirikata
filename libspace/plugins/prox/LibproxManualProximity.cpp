@@ -275,6 +275,57 @@ void LibproxManualProximity::sendReplicatedClientProxMessage(ReplicatedClient* c
     }
 }
 
+void LibproxManualProximity::handleUpdateServerQueryResultsToLocService(ServerID sid, const Sirikata::Protocol::Prox::ProximityResults& results) {
+    // Server results need to go two places: the replicated tree for querying
+    // and this server's location service to be able to send location
+    // updates. This duplication of information is unfortunate but it's easier
+    // than trying to get all the LocationServiceCache's to interact nicely with
+    // the loc service we use for subscriptions + location updates.
+    //
+    // This is the first half of that process where we get the data
+    // into Loc.
+
+    // Generate/destroy replicas in main loc service
+    assert( results.has_t() );
+    Time t = results.t();
+    for(int32 idx = 0; idx < results.update_size(); idx++) {
+        Sirikata::Protocol::Prox::ProximityUpdate update = results.update(idx);
+
+        for(int32 aidx = 0; aidx < update.addition_size(); aidx++) {
+            Sirikata::Protocol::Prox::ObjectAddition addition = update.addition(aidx);
+            //mServerQueryResults[source_server]->insert(addition.object());
+            SILOG(foo, fatal, "Received addition from " << sid << " of " << addition.object());
+
+            assert(addition.has_aggregate_bounds());
+            Vector3f center = addition.aggregate_bounds().has_center_offset() ? addition.aggregate_bounds().center_offset() : Vector3f(0,0,0);
+            float32 center_rad = addition.aggregate_bounds().has_center_bounds_radius() ? addition.aggregate_bounds().center_bounds_radius() : 0.f;
+            float32 max_object_size = addition.aggregate_bounds().has_max_object_size() ? addition.aggregate_bounds().max_object_size() : 0.f;
+
+            mLocService->addReplicaObject(
+                t,
+                addition.object(),
+                (addition.type() == Sirikata::Protocol::Prox::ObjectAddition::Aggregate),
+                TimedMotionVector3f( addition.location().t(), MotionVector3f(addition.location().position(), addition.location().velocity()) ),
+                TimedMotionQuaternion( addition.orientation().t(), MotionQuaternion(addition.orientation().position(), addition.orientation().velocity()) ),
+                AggregateBoundingInfo(center, center_rad, max_object_size),
+                (addition.has_mesh() ? addition.mesh() : ""),
+                (addition.has_physics() ? addition.physics() : ""),
+                ""  //no Zernike descriptor in Proximity message. is this ok to do? TAHIR.
+            );
+        }
+
+        for(int32 ridx = 0; ridx < update.removal_size(); ridx++) {
+            Sirikata::Protocol::Prox::ObjectRemoval removal = update.removal(ridx);
+            SILOG(foo, fatal, "Received removal from " << sid << " of " << removal.object());
+            mLocService->removeReplicaObject(t, removal.object());
+            //mServerQueryResults[source_server]->erase(removal.object());
+        }
+    }
+
+    // And then get the second half going
+    mProxStrand->post(std::tr1::bind(&LibproxManualProximity::handleUpdateServerQueryResultsToReplicatedTrees, this, sid, results));
+}
+
 
 int32 LibproxManualProximity::objectHostQueries() const {
     return mOHQueries[OBJECT_CLASS_STATIC].size();
@@ -291,7 +342,10 @@ void LibproxManualProximity::updateServerQuery(ServerID sid, const String& raw_q
 }
 
 void LibproxManualProximity::updateServerQueryResults(ServerID sid, const Sirikata::Protocol::Prox::ProximityResults& results) {
-    mProxStrand->post(std::tr1::bind(&LibproxManualProximity::handleUpdateServerQueryResults, this, sid, results));
+    // We need to send this through the main strand first to get it
+    // into Loc, then it'll go to the prox strand to get inserted into
+    // the replicated query handlers
+    mContext->mainStrand->post(std::tr1::bind(&LibproxManualProximity::handleUpdateServerQueryResultsToLocService, this, sid, results));
 }
 
 
@@ -522,7 +576,7 @@ void LibproxManualProximity::handleUpdateServerQuery(ServerID sid, const String&
     }
 }
 
-void LibproxManualProximity::handleUpdateServerQueryResults(ServerID sid, const Sirikata::Protocol::Prox::ProximityResults& results) {
+void LibproxManualProximity::handleUpdateServerQueryResultsToReplicatedTrees(ServerID sid, const Sirikata::Protocol::Prox::ProximityResults& results) {
     ReplicatedServerDataMap::iterator rsit = mReplicatedServerDataMap.find(sid);
     if (rsit == mReplicatedServerDataMap.end()) {
         PROXLOG(warn, "Got server-to-server proximity results from " << sid << " but no longer have a record of that server.");
@@ -534,41 +588,9 @@ void LibproxManualProximity::handleUpdateServerQueryResults(ServerID sid, const 
     // updates. This duplication of information is unfortunate but it's easier
     // than trying to get all the LocationServiceCache's to interact nicely with
     // the loc service we use for subscriptions + location updates.
-
-    // Generate/destroy replicas in main loc service
-    assert( results.has_t() );
-    Time t = results.t();
-    for(int32 idx = 0; idx < results.update_size(); idx++) {
-        Sirikata::Protocol::Prox::ProximityUpdate update = results.update(idx);
-
-        for(int32 aidx = 0; aidx < update.addition_size(); aidx++) {
-            Sirikata::Protocol::Prox::ObjectAddition addition = update.addition(aidx);
-            //mServerQueryResults[source_server]->insert(addition.object());
-
-            assert(addition.has_aggregate_bounds());
-            Vector3f center = addition.aggregate_bounds().has_center_offset() ? addition.aggregate_bounds().center_offset() : Vector3f(0,0,0);
-            float32 center_rad = addition.aggregate_bounds().has_center_bounds_radius() ? addition.aggregate_bounds().center_bounds_radius() : 0.f;
-            float32 max_object_size = addition.aggregate_bounds().has_max_object_size() ? addition.aggregate_bounds().max_object_size() : 0.f;
-
-            mLocService->addReplicaObject(
-                t,
-                addition.object(),
-                (addition.type() == Sirikata::Protocol::Prox::ObjectAddition::Aggregate),
-                TimedMotionVector3f( addition.location().t(), MotionVector3f(addition.location().position(), addition.location().velocity()) ),
-                TimedMotionQuaternion( addition.orientation().t(), MotionQuaternion(addition.orientation().position(), addition.orientation().velocity()) ),
-                AggregateBoundingInfo(center, center_rad, max_object_size),
-                (addition.has_mesh() ? addition.mesh() : ""),
-                (addition.has_physics() ? addition.physics() : ""),
-                ""  //no Zernike descriptor in Proximity message. is this ok to do? TAHIR.
-            );
-        }
-
-        for(int32 ridx = 0; ridx < update.removal_size(); ridx++) {
-            Sirikata::Protocol::Prox::ObjectRemoval removal = update.removal(ridx);
-            mLocService->removeReplicaObject(t, removal.object());
-            //mServerQueryResults[source_server]->erase(removal.object());
-        }
-    }
+    //
+    // This is the second half of that process where we get the info
+    // into the replicated treees.
 
     // Notify replicated tree
     rsit->second.client->proxUpdate(results);
