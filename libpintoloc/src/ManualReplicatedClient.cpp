@@ -330,7 +330,7 @@ void ReplicatedClient::handleProxUpdateResults(const Sirikata::Protocol::Prox::P
     RCLOG(detailed, "Received proximity message with " << results.update_size() << " updates");
     for(int32 idx = 0; idx < results.update_size(); idx++) {
         Sirikata::Protocol::Prox::ProximityUpdate update = results.update(idx);
-        proxUpdate(update);
+        handleProxUpdate(update);
     }
 }
 
