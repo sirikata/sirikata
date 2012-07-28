@@ -28,6 +28,7 @@ using std::tr1::placeholders::_2;
 
 LibproxManualProximity::LibproxManualProximity(SpaceContext* ctx, LocationService* locservice, CoordinateSegmentation* cseg, SpaceNetwork* net, AggregateManager* aggmgr)
  : LibproxProximityBase(ctx, locservice, cseg, net, aggmgr),
+   mOHRequestsManager(ctx, mProxStrand),
    mLocalHandlerPoller(mProxStrand, std::tr1::bind(&LibproxManualProximity::tickQueryHandlers, this), "LibproxManualProximity ObjectHost Handler Poll", Duration::milliseconds((int64)100))
 {
 
@@ -70,6 +71,7 @@ void LibproxManualProximity::start() {
     LibproxProximityBase::start();
 
     mContext->add(&mLocalHandlerPoller);
+    mContext->add(&mOHRequestsManager);
 }
 
 void LibproxManualProximity::poll() {
@@ -417,7 +419,11 @@ void LibproxManualProximity::aggregateObserved(ProxAggregator* handler, const Ob
         mReplicatedServerDataMap[sid].client &&
         mReplicatedServerDataMap[sid].handlers.find(indexid) != mReplicatedServerDataMap[sid].handlers.end()
     );
-    if (nobservers == 1) {
+    // FIXME we should only trigger this on == 1, but right now because of
+    // coarsening unobserved nodes, we can end up wanting to refine something
+    // that has children, but they've been removed and we have no other trigger
+    // to ask for a refinement
+    if (nobservers >= 1) {
         mReplicatedServerDataMap[sid].client->queriersAreObserving(indexid, objid);
     }
     else if (nobservers == 0) {
@@ -594,6 +600,26 @@ void LibproxManualProximity::handleUpdateServerQueryResultsToReplicatedTrees(Ser
 
     // Notify replicated tree
     rsit->second.client->proxUpdate(results);
+
+    // And now that everyone knows about it, try to apply requests that we
+    // weren't able to before.
+    for(int32 idx = 0; idx < results.update_size(); idx++) {
+        Sirikata::Protocol::Prox::ProximityUpdate update = results.update(idx);
+
+        for(int32 aidx = 0; aidx < update.addition_size(); aidx++) {
+            Sirikata::Protocol::Prox::ObjectAddition addition = update.addition(aidx);
+            std::vector<ProxQuery*> waiting_queries;
+            if (addition.has_parent()) {
+                mOHRequestsManager.lookupWaitingQueries(ObjectReference(addition.parent()), &waiting_queries);
+                if (!waiting_queries.empty()) PROXLOG(detailed, "Retrying " << waiting_queries.size() << " requests for " << addition.parent());
+                for(uint32 i = 0; i < waiting_queries.size(); i++) {
+                    bool suc = waiting_queries[i]->refine(ObjectReference(addition.parent()));
+                    PROXLOG(detailed, "  Retry " << (suc ? " succeeded" : " failed"));
+                }
+            }
+        }
+        // Removals wouldn't allow us to refine anything we couldn't before
+    }
 }
 
 void LibproxManualProximity::registerServerQuery(const ServerID& querier) {
@@ -681,10 +707,13 @@ void LibproxManualProximity::handleObjectHostProxMessage(const OHDP::NodeID& id,
                 mOHRemoteQueries[id][sid].find(remote_indexid) != mOHRemoteQueries[id][sid].end()) {
                 ProxQuery* q = mOHRemoteQueries[id][sid][remote_indexid];
                 for(uint32 i = 0; i < qur.nodes.size(); i++) {
-                    if (qur.refine)
-                        q->refine(qur.nodes[i]);
+                    bool command_succeeded = false;
+                    if (qur.refine) {
+                        command_succeeded = q->refine(qur.nodes[i]);
+                        if (!command_succeeded) mOHRequestsManager.addFailedRefine(q, qur.nodes[i]);
+                    }
                     else
-                        q->coarsen(qur.nodes[i]);
+                        command_succeeded = q->coarsen(qur.nodes[i]);
                 }
             }
         }
@@ -744,7 +773,7 @@ void LibproxManualProximity::handleOnPintoServerResult(const Sirikata::Protocol:
     if (!replicated_tlpinto_data.client) {
         replicated_tlpinto_data.client = ReplicatedClientPtr(
             new ReplicatedClient(
-                mContext, mContext->mainStrand,
+                mContext, mProxStrand,
                 this, new NopTimeSynced(),
                 boost::lexical_cast<String>(NullServerID), NullServerID
             )
@@ -769,7 +798,7 @@ void LibproxManualProximity::handleOnPintoServerResult(const Sirikata::Protocol:
         if (!replicated_sid_data.client) {
             replicated_sid_data.client = ReplicatedClientPtr(
                 new ReplicatedClient(
-                    mContext, mContext->mainStrand,
+                    mContext, mProxStrand,
                     this, new NopTimeSynced(),
                     boost::lexical_cast<String>(sid), sid
                 )
@@ -955,6 +984,10 @@ void LibproxManualProximity::unregisterOHQueryWithServerIndexHandler(const OHDP:
 
     queries_by_index.erase(queried_index);
     mInvertedOHRemoteQueries.erase(q);
+    // OH refinement requests can fail and we track them to try applying them
+    // when they won't fail. Make sure we're not holding onto any for this
+    // querier.
+    mOHRequestsManager.removeQuerier(q);
     delete q; // Note: Deleting query notifies QueryHandler and unsubscribes.
 }
 
@@ -1092,6 +1125,7 @@ void LibproxManualProximity::queryHasEvents(ProxQuery* query) {
 
         uint32 count = 0;
         while(count < max_count && !evts.empty()) {
+            PROXLOG(detailed, "Reporting prox event ----- ");
             const ProxQueryEvent& evt = evts.front();
             Sirikata::Protocol::Prox::IProximityUpdate event_results = prox_results.add_update();
 

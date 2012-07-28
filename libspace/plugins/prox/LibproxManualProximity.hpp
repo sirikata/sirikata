@@ -11,6 +11,7 @@
 #include <prox/base/AggregateListener.hpp>
 #include <sirikata/core/queue/ThreadSafeQueue.hpp>
 #include <sirikata/pintoloc/ManualReplicatedClient.hpp>
+#include "ManualReplicatedRequestManager.hpp"
 #include <boost/tr1/tuple.hpp>
 
 namespace Sirikata {
@@ -316,6 +317,11 @@ private:
     Sirikata::ThreadSafeQueue<OHResult> mOHResults;
     typedef std::tr1::unordered_map<OHDP::NodeID, SeqNoPtr, OHDP::NodeID::Hasher> OHSeqNoInfoMap;
     OHSeqNoInfoMap mOHSeqNos;
+    // For object hosts *only* we track requests that failed we we can try to
+    // reapply them if new data comes in. This masks failures that occur when
+    // we're still waiting for a request to another server (or top-level pinto)
+    // to be fulfilled and results to be returned.
+    ManualReplicatedRequestManager mOHRequestsManager;
 
 
     // Server-to-Server queries
@@ -326,7 +332,6 @@ private:
     Sirikata::ThreadSafeQueue<Message*> mServerResults; // server query results + commands
     typedef std::tr1::unordered_map<ServerID, SeqNoPtr> ServerSeqNoInfoMap;
     ServerSeqNoInfoMap mServerSeqNos;
-
 
 
     // And these are the actual data structures for local queries --

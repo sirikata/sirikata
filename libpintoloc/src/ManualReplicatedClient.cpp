@@ -218,7 +218,10 @@ void ReplicatedClient::processExpiredNodes() {
 }
 
 void ReplicatedClient::proxUpdate(const Sirikata::Protocol::Prox::ProximityUpdate& update) {
-    mStrand->post(std::tr1::bind(&ReplicatedClient::handleProxUpdate, this, update));
+    // Sometimes these come from within the right strand and we want to execute
+    // immediately so we see the effects. See, e.g., the request retries in
+    // LibproxManualProximity::handleUpdateServerQueryResultsToReplicatedTrees
+    mStrand->dispatch(std::tr1::bind(&ReplicatedClient::handleProxUpdate, this, update));
 }
 void ReplicatedClient::handleProxUpdate(const Sirikata::Protocol::Prox::ProximityUpdate& update) {
     SerializationCheck::Scoped sc(this);
@@ -321,7 +324,10 @@ void ReplicatedClient::handleProxUpdate(const Sirikata::Protocol::Prox::Proximit
 }
 
 void ReplicatedClient::proxUpdate(const Sirikata::Protocol::Prox::ProximityResults& results) {
-    mStrand->post(std::tr1::bind(&ReplicatedClient::handleProxUpdateResults, this, results));
+    // Sometimes these come from within the right strand and we want to execute
+    // immediately so we see the effects. See, e.g., the request retries in
+    // LibproxManualProximity::handleUpdateServerQueryResultsToReplicatedTrees
+    mStrand->dispatch(std::tr1::bind(&ReplicatedClient::handleProxUpdateResults, this, results));
 }
 void ReplicatedClient::handleProxUpdateResults(const Sirikata::Protocol::Prox::ProximityResults& results) {
     // Proximity messages are handled just by updating our state
@@ -433,7 +439,7 @@ bool ReplicatedClient::createLocCache(ProxIndexID iid) {
 
 void ReplicatedClient::createOrphanLocUpdateManager(ProxIndexID iid) {
     if (mOrphans.find(iid) == mOrphans.end())
-        mOrphans[iid] = OrphanLocUpdateManagerPtr(new OrphanLocUpdateManager(mContext, mContext->mainStrand, Duration::seconds(10)));
+        mOrphans[iid] = OrphanLocUpdateManagerPtr(new OrphanLocUpdateManager(mContext, mStrand, Duration::seconds(10)));
 }
 
 ReplicatedLocationServiceCachePtr ReplicatedClient::getLocCache(ProxIndexID iid) {

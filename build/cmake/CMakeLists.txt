@@ -1726,6 +1726,7 @@ SET(LIBSPACE_PLUGIN_PROX_SOURCES
   ${LIBSPACE_PLUGIN_PROX_DIR}/CBRLocationServiceCache.cpp
   ${LIBSPACE_PLUGIN_PROX_DIR}/LibproxProximityBase.cpp
   ${LIBSPACE_PLUGIN_PROX_DIR}/LibproxProximity.cpp
+  ${LIBSPACE_PLUGIN_PROX_DIR}/ManualReplicatedRequestManager.cpp
   ${LIBSPACE_PLUGIN_PROX_DIR}/LibproxManualProximity.cpp
   )
 
