@@ -696,9 +696,15 @@ void Forwarder::serverMessageReceived(Message* msg) {
     bool got_empty;
     bool push_success;
     {
+        // FIXME currently we force everything that's not an ODP message to be
+        // pushed into the queue, even if it's overflowing. Various code
+        // (e.g. at least proximity) currently relies on no server-to-server
+        // drops to behave properly. A reliability layer would be a better
+        // solution, but this works for now...
+        bool force_push = (msg->dest_port() != SERVER_PORT_OBJECT_MESSAGE_ROUTING);
         boost::lock_guard<boost::mutex> lock(mReceivedMessagesMutex);
         got_empty = mReceivedMessages.probablyEmpty();
-        push_success = mReceivedMessages.push(msg, false);
+        push_success = mReceivedMessages.push(msg, force_push);
     }
 
     if (!push_success) {
