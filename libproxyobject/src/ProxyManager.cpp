@@ -185,7 +185,15 @@ void ProxyManager::proxyDeleted(const ObjectReference& id) {
         return;
     }
 
-    assert(!(iter->second.ptr));
+    // We'd like to
+    //assert(!(iter->second.ptr));
+    // but it's actually not safe. It works fine normally, but the way
+    //ProxyManager::destroy has to work, calling clear(), makes it not
+    //safe. Since that just calls destructors, apparently the shared_ptr still
+    //appears valid even if hitting the destructor made it run out of
+    //references. Calling reset() explicitly has the correct behavior, but using
+    //the destructor does not.
+
     // This is where it's actually safe to erase because everything has lost
     // references to it.
     mProxyMap.erase(iter);
