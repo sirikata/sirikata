@@ -1111,6 +1111,7 @@ void LibproxManualProximity::queryHasEvents(ProxQuery* query) {
         PROXLOG(detailed, evts.size() << " events for server query " << server_query_id);
     else
         PROXLOG(detailed, evts.size() << " events for object host query " << query_id);
+    std::tr1::unordered_set<ObjectReference, ObjectReference::Hasher> ignored_parents;
     while(!evts.empty()) {
         // We need to support encoding both server messages, which
         // want a Container, and object messages, which want just
@@ -1137,116 +1138,127 @@ void LibproxManualProximity::queryHasEvents(ProxQuery* query) {
             for(uint32 aidx = 0; aidx < evt.additions().size(); aidx++) {
                 ObjectReference oobjid = evt.additions()[aidx].id();
                 UUID objid = oobjid.getAsUUID();
-                if (loccache->tracking(oobjid)) { // If the cache already lost it, we can't do anything
-                    count++;
-
-                    PROXLOG(detailed, "Reporting addition of " << oobjid);
-
-                    if (qhandler_type == QUERY_HANDLER_TYPE_OH) {
-                        mContext->mainStrand->post(
-                            std::tr1::bind(&LibproxManualProximity::handleAddOHLocSubscriptionWithID, this, query_id, objid, evt.indexID()),
-                            "LibproxManualProximity::handleAddOHLocSubscription"
-                        );
-                    }
-                    else if (qhandler_type == QUERY_HANDLER_TYPE_SERVER) {
-                        mContext->mainStrand->post(
-                            std::tr1::bind(&LibproxManualProximity::handleAddServerLocSubscriptionWithID, this, server_query_id, objid, evt.indexID(), seqNoPtr),
-                            "LibproxManualProximity::handleAddServerLocSubscription"
-                        );
-                    }
-
-                    Sirikata::Protocol::Prox::IObjectAddition addition = event_results.add_addition();
-                    addition.set_object( objid );
-
-
-                    //query_id contains the uuid of the object that is receiving
-                    //the proximity message that obj_id has been added.
-                    uint64 seqNo = (*seqNoPtr)++;
-                    addition.set_seqno (seqNo);
-
-
-                    Sirikata::Protocol::ITimedMotionVector motion = addition.mutable_location();
-                    TimedMotionVector3f loc = loccache->location(oobjid);
-                    motion.set_t(loc.updateTime());
-                    motion.set_position(loc.position());
-                    motion.set_velocity(loc.velocity());
-
-                    TimedMotionQuaternion orient = loccache->orientation(oobjid);
-                    Sirikata::Protocol::ITimedMotionQuaternion msg_orient = addition.mutable_orientation();
-                    msg_orient.set_t(orient.updateTime());
-                    msg_orient.set_position(orient.position());
-                    msg_orient.set_velocity(orient.velocity());
-
-                    Sirikata::Protocol::IAggregateBoundingInfo msg_bounds = addition.mutable_aggregate_bounds();
-                    AggregateBoundingInfo bnds = loccache->bounds(oobjid);
-                    msg_bounds.set_center_offset(bnds.centerOffset);
-                    msg_bounds.set_center_bounds_radius(bnds.centerBoundsRadius);
-                    msg_bounds.set_max_object_size(bnds.maxObjectRadius);
-
-                    String mesh = loccache->mesh(oobjid).toString();
-                    if (mesh.size() > 0)
-                        addition.set_mesh(mesh);
-                    const String& phy = loccache->physics(oobjid);
-                    if (phy.size() > 0)
-                        addition.set_physics(phy);
-
-                    // We should either include the parent ID, or if it's empty,
-                    // then this is a root and we should include basic tree
-                    // properties. However, we only need to include the details
-                    // if this is the first time we're seeing the root, in which
-                    // case we'll get a lone addition of the root.
-                    ObjectReference parentid = evt.additions()[aidx].parent();
-                    if (parentid != ObjectReference::null()) {
-                        addition.set_parent(parentid.getAsUUID());
-                    }
-                    else if (/*lone addition*/ aidx == 0 && evt.additions().size() == 1 && evt.removals().size() == 0) {
-                        // NOTE: this isn't perfect, you can get this
-                        // if we're adding a new root!
-
-                        // The tree ID identifies where this tree goes in some
-                        // larger structure. In our case it'll be a server ID
-                        // indicating which server the objects (and tree) are
-                        // replicated from or NullServerID to fit with.
-                        index_props.set_index_id(object_origin_server_str);
-
-                        // And whether it's static or not, which actually also
-                        // is important in determining a "full" tree id
-                        // (e.g. objects from server A that are dynamic) but
-                        // which we want to keep separate and explicit so the
-                        // other side can perform optimizations for static
-                        // object trees
-                        index_props.set_dynamic_classification(
-                            query->handler()->staticOnly()
-                            ? Sirikata::Protocol::Prox::IndexProperties::Static
-                            : Sirikata::Protocol::Prox::IndexProperties::Dynamic
-                        );
-                    }
-                    addition.set_type(
-                        (evt.additions()[aidx].type() == ProxQueryEvent::Normal) ?
-                        Sirikata::Protocol::Prox::ObjectAddition::Object :
-                        Sirikata::Protocol::Prox::ObjectAddition::Aggregate
-                    );
-
-                    // If we hit a leaf node in the top-level tree, we
-                    // need to push down to the next tree
-                    if (object_origin_server == NullServerID && evt.additions()[aidx].type() == ProxQueryEvent::Normal) {
-                        assert(qhandler_type == QUERY_HANDLER_TYPE_OH);
-                        // Need to unpack real ID from the UUID
-                        ServerID leaf_server = (ServerID)objid.asUInt32();
-                        PROXLOG(detailed, "Query " << query_id << " reached leaf top-level node " << oobjid << "(SS " << leaf_server << "), registering query against that server");
-                        registerOHQueryWithServerHandlers(query_id, leaf_server);
-                    }
+                // Because we get results in batches, the loc cache may have
+                // already lost it -- if it was an aggregate and enough
+                // operations happened, it may have been destroyed before the
+                // result got through to here. However, this also means that
+                // when replicating a tree, we may not have parents of objects
+                // either, i.e. this issue can cascade but then become a problem
+                // when we hit leaf nodes w/ objects that *are* still in the
+                // cache. Therefore, we need to track this cascading and filter
+                // out all events including those nodes. Note that we need to be
+                // careful when doing this *not* to exclude an object which a)
+                // is added to a parent node where b) the parent node is
+                // subsequently deleted but c) then the object is moved
+                // somewhere else that is valid and can be reported.
+                ObjectReference parentid = evt.additions()[aidx].parent();
+                bool has_parent = (parentid != ObjectReference::null());
+                if (!loccache->tracking(oobjid) || (has_parent && (ignored_parents.find(parentid) != ignored_parents.end()))) {
+                    PROXLOG(detailed, "Ignoring addition of " << ((evt.additions()[aidx].type() == ProxQueryEvent::Normal) ? "object " : "aggregate ") << oobjid << " because it's not available in the location service cache or an ancestor wasn't available in the cache");
+                    ignored_parents.insert(parentid);
+                    continue;
                 }
-                else {
-                    PROXLOG(detailed, "Ignoring object addition " << oobjid << " because it's not available in the location service cache");
+
+                count++;
+
+                if (qhandler_type == QUERY_HANDLER_TYPE_OH) {
+                    mContext->mainStrand->post(
+                        std::tr1::bind(&LibproxManualProximity::handleAddOHLocSubscriptionWithID, this, query_id, objid, evt.indexID()),
+                        "LibproxManualProximity::handleAddOHLocSubscription"
+                    );
+                }
+                else if (qhandler_type == QUERY_HANDLER_TYPE_SERVER) {
+                    mContext->mainStrand->post(
+                        std::tr1::bind(&LibproxManualProximity::handleAddServerLocSubscriptionWithID, this, server_query_id, objid, evt.indexID(), seqNoPtr),
+                        "LibproxManualProximity::handleAddServerLocSubscription"
+                    );
+                }
+
+                Sirikata::Protocol::Prox::IObjectAddition addition = event_results.add_addition();
+                addition.set_object( objid );
+
+
+                //query_id contains the uuid of the object that is receiving
+                //the proximity message that obj_id has been added.
+                uint64 seqNo = (*seqNoPtr)++;
+                addition.set_seqno (seqNo);
+
+
+                Sirikata::Protocol::ITimedMotionVector motion = addition.mutable_location();
+                TimedMotionVector3f loc = loccache->location(oobjid);
+                motion.set_t(loc.updateTime());
+                motion.set_position(loc.position());
+                motion.set_velocity(loc.velocity());
+
+                TimedMotionQuaternion orient = loccache->orientation(oobjid);
+                Sirikata::Protocol::ITimedMotionQuaternion msg_orient = addition.mutable_orientation();
+                msg_orient.set_t(orient.updateTime());
+                msg_orient.set_position(orient.position());
+                msg_orient.set_velocity(orient.velocity());
+
+                Sirikata::Protocol::IAggregateBoundingInfo msg_bounds = addition.mutable_aggregate_bounds();
+                AggregateBoundingInfo bnds = loccache->bounds(oobjid);
+                msg_bounds.set_center_offset(bnds.centerOffset);
+                msg_bounds.set_center_bounds_radius(bnds.centerBoundsRadius);
+                msg_bounds.set_max_object_size(bnds.maxObjectRadius);
+
+                String mesh = loccache->mesh(oobjid).toString();
+                if (mesh.size() > 0)
+                    addition.set_mesh(mesh);
+                const String& phy = loccache->physics(oobjid);
+                if (phy.size() > 0)
+                    addition.set_physics(phy);
+
+                // We should either include the parent ID, or if it's empty,
+                // then this is a root and we should include basic tree
+                // properties. However, we only need to include the details
+                // if this is the first time we're seeing the root, in which
+                // case we'll get a lone addition of the root.
+                if (has_parent) {
+                    addition.set_parent(parentid.getAsUUID());
+                }
+                else if (/*lone addition*/ aidx == 0 && evt.additions().size() == 1 && evt.removals().size() == 0) {
+                    // NOTE: this isn't perfect, you can get this
+                    // if we're adding a new root!
+
+                    // The tree ID identifies where this tree goes in some
+                    // larger structure. In our case it'll be a server ID
+                    // indicating which server the objects (and tree) are
+                    // replicated from or NullServerID to fit with.
+                    index_props.set_index_id(object_origin_server_str);
+
+                    // And whether it's static or not, which actually also
+                    // is important in determining a "full" tree id
+                    // (e.g. objects from server A that are dynamic) but
+                    // which we want to keep separate and explicit so the
+                    // other side can perform optimizations for static
+                    // object trees
+                    index_props.set_dynamic_classification(
+                        query->handler()->staticOnly()
+                        ? Sirikata::Protocol::Prox::IndexProperties::Static
+                        : Sirikata::Protocol::Prox::IndexProperties::Dynamic
+                    );
+                }
+                addition.set_type(
+                    (evt.additions()[aidx].type() == ProxQueryEvent::Normal) ?
+                    Sirikata::Protocol::Prox::ObjectAddition::Object :
+                    Sirikata::Protocol::Prox::ObjectAddition::Aggregate
+                );
+
+                // If we hit a leaf node in the top-level tree, we
+                // need to push down to the next tree
+                if (object_origin_server == NullServerID && evt.additions()[aidx].type() == ProxQueryEvent::Normal) {
+                    assert(qhandler_type == QUERY_HANDLER_TYPE_OH);
+                    // Need to unpack real ID from the UUID
+                    ServerID leaf_server = (ServerID)objid.asUInt32();
+                    PROXLOG(detailed, "Query " << query_id << " reached leaf top-level node " << oobjid << "(SS " << leaf_server << "), registering query against that server");
+                    registerOHQueryWithServerHandlers(query_id, leaf_server);
                 }
             }
             for(uint32 ridx = 0; ridx < evt.removals().size(); ridx++) {
                 ObjectReference oobjid = evt.removals()[ridx].id();
                 UUID objid = oobjid.getAsUUID();
                 count++;
-
-                PROXLOG(detailed, "Reporting removal of " << oobjid);
 
                 // Clear out seqno and let main strand remove loc
                 // subcription
