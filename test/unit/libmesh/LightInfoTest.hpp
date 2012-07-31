@@ -33,6 +33,7 @@
 #include <sirikata/mesh/Meshdata.hpp>
 
 using namespace Sirikata;
+using namespace Mesh;
 class LightInfoTest : public CxxTest::TestSuite
 {
 	typedef Meshdata::LightInstanceIterator LightInstanceIterator;

@@ -25,7 +25,7 @@ public:
             threads.push_back(
                 new Thread(
                     "StrandTest Thread",
-                    std::tr1::bind(&Network::IOService::run, ios)
+					std::tr1::bind(&Network::IOService::runNoReturn, ios)
                 )
             );
         }
