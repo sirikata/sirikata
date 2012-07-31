@@ -62,6 +62,10 @@ LibproxManualProximity::~LibproxManualProximity() {
     // connection.
 
     // Then destroy query handlers
+    for(ReplicatedServerDataMap::iterator it = mReplicatedServerDataMap.begin(); it != mReplicatedServerDataMap.end(); it++) {
+        for(ReplicatedIndexQueryHandlerMap::iterator handler_it = it->second.handlers.begin(); handler_it != it->second.handlers.end(); handler_it++)
+            handler_it->second.handler.reset();
+    }
     for(int i = 0; i < NUM_OBJECT_CLASSES; i++) {
         delete mLocalQueryHandler[i].handler;
     }
@@ -72,6 +76,14 @@ void LibproxManualProximity::start() {
 
     mContext->add(&mLocalHandlerPoller);
     mContext->add(&mOHRequestsManager);
+}
+
+void LibproxManualProximity::stop() {
+    // Stop any outstanding ReplicatedClient services
+    for(ReplicatedServerDataMap::iterator it = mReplicatedServerDataMap.begin(); it != mReplicatedServerDataMap.end(); it++)
+        it->second.client->stop();
+
+    LibproxProximityBase::stop();
 }
 
 void LibproxManualProximity::poll() {

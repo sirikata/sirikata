@@ -43,6 +43,7 @@ public:
 
     // Service Interface overrides
     virtual void start();
+    virtual void stop();
 
     // Objects
     virtual void addQuery(UUID obj, SolidAngle sa, uint32 max_results);
