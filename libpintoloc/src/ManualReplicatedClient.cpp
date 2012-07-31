@@ -201,6 +201,15 @@ void ReplicatedClient::queriersStoppedObserving(ProxIndexID indexid, const Objec
     mUnobservedTimer->wait(next_timeout);
 }
 
+void ReplicatedClient::replicatedNodeRemoved(ProxIndexID indexid, const ObjectReference& objid) {
+    // Clear the object out of the list of unobserved nodes. If we don't do
+    // this, future additions may improperly be coarsened when an existing
+    // timeout finally expires.
+    UnobservedNodesByID& by_id = mUnobservedTimeouts.get<objid_tag>();
+    UnobservedNodesByID::iterator it = by_id.find(IndexObjectReference(indexid, objid));
+    if (it != by_id.end()) by_id.erase(it);
+}
+
 void ReplicatedClient::processExpiredNodes() {
     Time curt = mContext->recentSimTime();
     UnobservedNodesByExpiration& by_expires = mUnobservedTimeouts.get<expires_tag>();
@@ -310,6 +319,16 @@ void ReplicatedClient::handleProxUpdate(const Sirikata::Protocol::Prox::Proximit
         loccache->objectRemoved(
             observed_oref, temporary_removal
         );
+
+        // This seems like a good place to clear unobserved timeouts, which
+        // would keep us from accidentally coarsening a node after the sequence
+        // unobserved -> removed -> added (since the unobserved timeout applied
+        // to the old "version" of the node). However, we can't do this here
+        // because there is some post-ing that happens for events, which means
+        // we haven't yet executed the removal, which means we'll still probably
+        // end up getting a notification that we dropped to 0 observers and
+        // re-register the timeout. It's really only safe to unregister once
+        // we've been told the object has been removed from the tree entirely.
     }
     RCLOG(insane, " ----- Done");
     // We may have removed everything from the specified tree. We need to

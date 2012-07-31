@@ -381,8 +381,27 @@ void LibproxManualProximity::aggregateBoundsUpdated(ProxAggregator* handler, con
 }
 
 void LibproxManualProximity::aggregateDestroyed(ProxAggregator* handler, const ObjectReference& objid) {
-    if (static_cast<ProxQueryHandler*>(handler) != mLocalQueryHandler[OBJECT_CLASS_STATIC].handler) return;
-    LibproxProximityBase::aggregateDestroyed(objid);
+    if (static_cast<ProxQueryHandler*>(handler) == mLocalQueryHandler[OBJECT_CLASS_STATIC].handler) {
+        LibproxProximityBase::aggregateDestroyed(objid);
+    }
+
+    // Only need this for replicated trees, see aggregateObserved notes.
+    if (mAggregatorToIndexMap.find(handler) == mAggregatorToIndexMap.end()) {
+        assert(static_cast<ProxQueryHandler*>(handler) == mLocalQueryHandler[OBJECT_CLASS_STATIC].handler ||
+            static_cast<ProxQueryHandler*>(handler) == mLocalQueryHandler[OBJECT_CLASS_DYNAMIC].handler);
+        return;
+    }
+
+    // Otherwise, get the client and notify it
+    NodeProxIndexID node_indexid = mAggregatorToIndexMap[handler];
+    ServerID sid = node_indexid.first;
+    ProxIndexID indexid = node_indexid.second;
+    assert(
+        mReplicatedServerDataMap.find(sid) != mReplicatedServerDataMap.end() &&
+        mReplicatedServerDataMap[sid].client &&
+        mReplicatedServerDataMap[sid].handlers.find(indexid) != mReplicatedServerDataMap[sid].handlers.end()
+    );
+    mReplicatedServerDataMap[sid].client->replicatedNodeRemoved(indexid, objid);
 }
 
 void LibproxManualProximity::aggregateObserved(ProxAggregator* handler, const ObjectReference& objid, uint32 nobservers) {

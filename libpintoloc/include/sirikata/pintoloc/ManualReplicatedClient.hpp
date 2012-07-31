@@ -66,7 +66,7 @@ class SIRIKATA_LIBPINTOLOC_EXPORT ReplicatedClient :
     // move the cut on the space server up or down.
     void queriersAreObserving(ProxIndexID indexid, const ObjectReference& objid);
     void queriersStoppedObserving(ProxIndexID indexid, const ObjectReference& objid);
-
+    void replicatedNodeRemoved(ProxIndexID indexid, const ObjectReference& objid);
 
     // OrphanLocUpdateManager::Listener Interface (public because
     // OrphanLocUpdateManager requires it)

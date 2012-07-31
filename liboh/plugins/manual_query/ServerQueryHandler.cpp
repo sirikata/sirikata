@@ -267,6 +267,16 @@ void ServerQueryHandler::queriersStoppedObserving(const OHDP::SpaceNodeID& snid,
     query_state->client.queriersStoppedObserving(indexid, objid);
 }
 
+void ServerQueryHandler::replicatedNodeRemoved(const OHDP::SpaceNodeID& snid, const ProxIndexID indexid, const ObjectReference& objid) {
+    ServerQueryMap::iterator serv_it = mServerQueries.find(snid);
+    if (serv_it == mServerQueries.end()) {
+        QPLOG(debug, "Received update about object queries on server query that doesn't exist. Query may have recently been destroyed.");
+        return;
+    }
+    ServerQueryStatePtr& query_state = serv_it->second;
+    query_state->client.replicatedNodeRemoved(indexid, objid);
+}
+
 // Location
 
 

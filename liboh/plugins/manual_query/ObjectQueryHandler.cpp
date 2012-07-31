@@ -223,7 +223,12 @@ void ObjectQueryHandler::aggregateChildRemoved(ProxAggregator* handler, const Ob
 
 void ObjectQueryHandler::aggregateBoundsUpdated(ProxAggregator* handler, const ObjectReference& objid, const Vector3f& bnds_center, const float32 bnds_center_radius, const float32 max_obj_size) {}
 
-void ObjectQueryHandler::aggregateDestroyed(ProxAggregator* handler, const ObjectReference& objid) {}
+void ObjectQueryHandler::aggregateDestroyed(ProxAggregator* handler, const ObjectReference& objid) {
+    // Allow canceling of unobserved timeouts for this node
+    assert(mInverseObjectQueryHandlers.find(handler) != mInverseObjectQueryHandlers.end());
+    ProxIndexID indexid = mInverseObjectQueryHandlers[handler];
+    mParent->replicatedNodeRemoved(mSpaceNodeID, indexid, objid);
+}
 
 void ObjectQueryHandler::aggregateObserved(ProxAggregator* handler, const ObjectReference& objid, uint32 nobservers) {
     // We care about nodes being observed (i.e. having cuts through them)

@@ -187,6 +187,10 @@ void ManualObjectQueryProcessor::queriersStoppedObserving(const OHDP::SpaceNodeI
     mServerQueryHandler.queriersStoppedObserving(snid, indexid, objid);
 }
 
+void ManualObjectQueryProcessor::replicatedNodeRemoved(const OHDP::SpaceNodeID& snid, ProxIndexID indexid, const ObjectReference& objid) {
+    mServerQueryHandler.replicatedNodeRemoved(snid, indexid, objid);
+}
+
 
 
 
