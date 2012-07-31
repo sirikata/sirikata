@@ -100,6 +100,13 @@ class SIRIKATA_EXPORT IOService : public Noncopyable {
     void decrementTimerCount(const boost::system::error_code&e, const Time& start, const Duration& timer_duration, const IOCallbackWithError& cb, const char* tag, const char* tagStat=NULL);
     void decrementCount(const Time& start, const IOCallback& cb, const char* tag, const char* tagStat=NULL);
 
+    // Used to get let us add a record of a strand dispatch/post and provide a
+    // wrapped handler which will let us clean up our record of it. This is
+    // necessary because we can't do the dispatch/post for the strand using
+    // a strand-wrapped handler because that doesn't have the same ordering
+    // guarantees.
+    IOCallback tracking_wrapper(const IOCallback& handler, const char* tag = NULL, const char* tagStat = NULL);
+
     // Invoked by strands when they are being destroyed so we can
     // track which ones are alive.
     void destroyingStrand(IOStrand* child);
