@@ -73,14 +73,14 @@ void IOStrand::dispatch(const IOCallback& handler, const char* tag) {
             mTagCounts[tag] = 0;
         mTagCounts[tag]++;
     }
-    mService.dispatch(
-        mImpl->wrap(
-            std::tr1::bind(&IOStrand::decrementCount, this, Timer::now(), handler, tag)
-        ),
-        "(IOStrands)",tag
+    mImpl->dispatch(
+        mService.tracking_wrapper(
+            std::tr1::bind(&IOStrand::decrementCount, this, Timer::now(), handler, tag),
+            "(IOStrands)",tag
+        )
     );
 #else
-    mService.dispatch( mImpl->wrap( handler ) );
+    mImpl->dispatch( handler );
 #endif
 }
 
@@ -93,14 +93,14 @@ void IOStrand::post(const IOCallback& handler, const char* tag) {
             mTagCounts[tag] = 0;
         mTagCounts[tag]++;
     }
-    mService.post(
-        mImpl->wrap(
-            std::tr1::bind(&IOStrand::decrementCount, this, Timer::now(), handler, tag)
-        ),
-        "(IOStrands)", tag
+    mImpl->post(
+        mService.tracking_wrapper(
+            std::tr1::bind(&IOStrand::decrementCount, this, Timer::now(), handler, tag),
+            "(IOStrands)", tag
+        )
     );
 #else
-    mService.post( mImpl->wrap( handler ) );
+    mImpl->post( handler );
 #endif
 }
 
@@ -121,6 +121,8 @@ void IOStrand::post(const Duration& waitFor, const IOCallback& handler, const ch
         "(IOStrands)",tag
     );
 #else
+    // This is fine because the timeout means we don't have any ordering
+    // constraints, so we can post through the service.
     mService.post(waitFor, mImpl->wrap( handler ) );
 #endif
 }

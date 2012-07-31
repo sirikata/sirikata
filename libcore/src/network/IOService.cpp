@@ -130,10 +130,8 @@ void IOService::reset() {
     mImpl->reset();
 }
 
-void IOService::dispatch(
-    const IOCallback& handler, const char* tag, const char* tagStat)
-{
 #ifdef SIRIKATA_TRACK_EVENT_QUEUES
+IOCallback IOService::tracking_wrapper(const IOCallback& handler, const char* tag, const char* tagStat) {
     mEnqueued++;
     {
         LockGuard lock(mMutex);
@@ -141,8 +139,16 @@ void IOService::dispatch(
             mTagCounts[tag] = 0;
         mTagCounts[tag]++;
     }
+    return std::tr1::bind(&IOService::decrementCount, this, Timer::now(), handler, tag,tagStat);
+}
+#endif
+
+void IOService::dispatch(
+    const IOCallback& handler, const char* tag, const char* tagStat)
+{
+#ifdef SIRIKATA_TRACK_EVENT_QUEUES
     mImpl->dispatch(
-        std::tr1::bind(&IOService::decrementCount, this, Timer::now(), handler, tag,tagStat)
+        tracking_wrapper(handler, tag, tagStat)
     );
 #else
     mImpl->dispatch(handler);
@@ -153,15 +159,8 @@ void IOService::post(
     const IOCallback& handler, const char* tag, const char* tagStat)
 {
 #ifdef SIRIKATA_TRACK_EVENT_QUEUES
-    mEnqueued++;
-    {
-        LockGuard lock(mMutex);
-        if (mTagCounts.find(tag) == mTagCounts.end())
-            mTagCounts[tag] = 0;
-        mTagCounts[tag]++;
-    }
     mImpl->post(
-        std::tr1::bind(&IOService::decrementCount, this, Timer::now(), handler, tag,tagStat)
+        tracking_wrapper(handler, tag, tagStat)
     );
 #else
     mImpl->post(handler);

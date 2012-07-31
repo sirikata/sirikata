@@ -1142,7 +1142,7 @@ private:
          mState = CONNECTION_DISCONNECTED;
      }
 
-     mSSTConnVars->releaseChannel(mLocalEndPoint.endPoint, mLocalChannelID); 
+     mSSTConnVars->releaseChannel(mLocalEndPoint.endPoint, mLocalChannelID);
    }
 
    static void closeConnections(ConnectionVariables<EndPointType>* sstConnVars) {
@@ -1155,15 +1155,20 @@ private:
        // remove it from sConnectionMap, and then get rid of the shared_ptr to
        // allow the connection to be freed.
        //
-       // Note that we don't lock sStaticMembers lock. At this point, that
-       // shouldn't be a problem since we should be the only thread still
-       // modifying this data. If we did lock it, we'd deadlock since the
-       // destructor will also, indirectly, lock it.
-       while(!sstConnVars->sConnectionMap.empty()) {
-           ConnectionMap& connectionMap = sstConnVars->sConnectionMap;
+       // Note the careful locking. Connection::~Connection will acquire the
+       // sStaticMembersLock, so to avoid deadlocking we grab the shared_ptr,
+       // remove it from the list and then only allow the Connection to be
+       // destroyed after we've unlocked.
+       while(true) {
+           ConnectionPtr saved;
+           {
+               boost::mutex::scoped_lock lock(sstConnVars->sStaticMembersLock.getMutex());
+               if (sstConnVars->sConnectionMap.empty()) break;
+               ConnectionMap& connectionMap = sstConnVars->sConnectionMap;
 
-           ConnectionPtr saved = connectionMap.begin()->second;
-           connectionMap.erase(connectionMap.begin());
+               saved = connectionMap.begin()->second;
+               connectionMap.erase(connectionMap.begin());
+           }
            saved.reset();
        }
    }
