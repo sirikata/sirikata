@@ -879,7 +879,12 @@ void LibproxManualProximity::onDestroyedReplicatedIndex(ReplicatedClient* client
     for (OHQuerierSet::iterator querier_it = replicated_data.queriers.begin(); querier_it != replicated_data.queriers.end(); querier_it++)
         unregisterOHQueryWithServerIndexHandler(*querier_it, evt_src_server, proxid);
 
-    // And clear it out of our map. shared_ptrs handle cleanup
+    // And clear it out of our map. We need to explicitly clear the
+    // shared_ptr to allow some stuff to cleanup before we erase
+    // things because some callbacks can be invoked during this
+    // destruction. This approach gets all of those out of the way,
+    // then clears out the data.
+    replicated_data.handlers[proxid].handler.reset();
     replicated_data.handlers.erase(proxid);
 }
 
