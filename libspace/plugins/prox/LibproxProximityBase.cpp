@@ -275,15 +275,15 @@ void LibproxProximityBase::coalesceEvents(QueryEventList& evts, uint32 per_event
         evts.pop_front();
     }
     // Now we just need to repack them.
-    QueryEvent next_evt(qhiid);
+    QueryEvent next_evt(mLocCache, qhiid);
     while(!additions.empty() || !removals.empty()) {
         // Get next addition or removal and remove it from our list
         if (!additions.empty()) {
-            next_evt.additions().push_back(additions.begin()->second);
+            next_evt.addAddition(additions.begin()->second);
             additions.erase(additions.begin());
         }
         else {
-            next_evt.removals().push_back(removals.begin()->second);
+            next_evt.addRemoval(removals.begin()->second);
             removals.erase(removals.begin());
         }
 
@@ -292,7 +292,7 @@ void LibproxProximityBase::coalesceEvents(QueryEventList& evts, uint32 per_event
             (additions.empty() && removals.empty()))
         {
             evts.push_back(next_evt);
-            next_evt = QueryEvent(qhiid);
+            next_evt = QueryEvent(mLocCache, qhiid);
         }
     }
 }

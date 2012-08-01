@@ -308,7 +308,6 @@ void LibproxManualProximity::handleUpdateServerQueryResultsToLocService(ServerID
         for(int32 aidx = 0; aidx < update.addition_size(); aidx++) {
             Sirikata::Protocol::Prox::ObjectAddition addition = update.addition(aidx);
             //mServerQueryResults[source_server]->insert(addition.object());
-            SILOG(foo, fatal, "Received addition from " << sid << " of " << addition.object());
 
             assert(addition.has_aggregate_bounds());
             Vector3f center = addition.aggregate_bounds().has_center_offset() ? addition.aggregate_bounds().center_offset() : Vector3f(0,0,0);
@@ -330,7 +329,7 @@ void LibproxManualProximity::handleUpdateServerQueryResultsToLocService(ServerID
 
         for(int32 ridx = 0; ridx < update.removal_size(); ridx++) {
             Sirikata::Protocol::Prox::ObjectRemoval removal = update.removal(ridx);
-            SILOG(foo, fatal, "Received removal from " << sid << " of " << removal.object());
+
             mLocService->removeReplicaObject(t, removal.object());
             //mServerQueryResults[source_server]->erase(removal.object());
         }
@@ -600,10 +599,12 @@ void LibproxManualProximity::handleUpdateServerQuery(ServerID sid, const String&
             if (query_it == mServerQueries[kls].end()) continue;
             ProxQuery* q = query_it->second;
             for(uint32 i = 0; i < qur.nodes.size(); i++) {
+                bool result = false;
                 if (qur.refine)
-                    q->refine(qur.nodes[i]);
+                    result = q->refine(qur.nodes[i]);
                 else
-                    q->coarsen(qur.nodes[i]);
+                    result = q->coarsen(qur.nodes[i]);
+                PROXLOG(detailed, (qur.refine ? " Refine" : " Coarsen") << " for server query " << sid << " node " << qur.nodes[i] << " " << (result ? "succeeded" : "failed"));
             }
         }
     }
@@ -745,6 +746,7 @@ void LibproxManualProximity::handleObjectHostProxMessage(const OHDP::NodeID& id,
                     }
                     else
                         command_succeeded = q->coarsen(qur.nodes[i]);
+                    PROXLOG(detailed, (qur.refine ? " Refine" : " Coarsen") << " for object host query " << sid << " node " << qur.nodes[i] << " " << (command_succeeded ? "succeeded" : "failed"));
                 }
             }
         }

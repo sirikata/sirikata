@@ -185,7 +185,7 @@ void ObjectQueryHandler::handleNotifySubscribersLocUpdate(ReplicatedLocationServ
 
     // Make sure the object is still available and remains available
     // throughout all updates
-    if (loccache->startSimpleTracking(oref)) {
+    if (loccache->startRefcountTracking(oref)) {
         PresencePropertiesLocUpdate lu( oref, loccache->properties(oref) );
 
         for(SubscriberSet::iterator sub_it = subscribers->begin(); sub_it != subscribers->end(); sub_it++) {
@@ -202,7 +202,7 @@ void ObjectQueryHandler::handleNotifySubscribersLocUpdate(ReplicatedLocationServ
             }
         }
 
-        loccache->stopSimpleTracking(oref);
+        loccache->stopRefcountTracking(oref);
     }
 }
 
@@ -481,7 +481,7 @@ void ObjectQueryHandler::generateObjectQueryEvents(Query* query) {
 
         for(uint32 aidx = 0; aidx < evt.additions().size(); aidx++) {
             ObjectReference objid = evt.additions()[aidx].id();
-            if (handler_data.loccache->startSimpleTracking(objid)) { // If the cache already lost it, we can't do anything
+            if (handler_data.loccache->startRefcountTracking(objid)) { // If the cache already lost it, we can't do anything
 
                 mContext->mainStrand->post(
                     std::tr1::bind(&ObjectQueryHandler::handleAddObjectLocSubscription, this, querier_id, objid),
@@ -520,7 +520,7 @@ void ObjectQueryHandler::generateObjectQueryEvents(Query* query) {
                 if (phy.size() > 0)
                     addition.set_physics(phy);
 
-                handler_data.loccache->stopSimpleTracking(objid);
+                handler_data.loccache->stopRefcountTracking(objid);
 
                 // If we've reached a leaf in the TL-Pinto tree, we need to move
                 // down to the next tree
@@ -547,10 +547,10 @@ void ObjectQueryHandler::generateObjectQueryEvents(Query* query) {
             // It'd be nice if we didn't need this but the seqno might
             // not be available anymore and we still want to send the
             // removal.
-            if (handler_data.loccache->startSimpleTracking(objid)) {
+            if (handler_data.loccache->startRefcountTracking(objid)) {
                 uint64 seqNo = handler_data.loccache->properties(objid).maxSeqNo();
                 removal.set_seqno (seqNo);
-                handler_data.loccache->stopSimpleTracking(objid);
+                handler_data.loccache->stopRefcountTracking(objid);
             }
 
             removal.set_type(

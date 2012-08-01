@@ -82,7 +82,7 @@ void ReplicatedLocationServiceCache::stopTracking(const Iterator& id) {
     tryRemoveObject(it);
 }
 
-bool ReplicatedLocationServiceCache::startSimpleTracking(const ObjectID& id) {
+bool ReplicatedLocationServiceCache::startRefcountTracking(const ObjectID& id) {
     Lock lck(mMutex);
 
     ObjectDataMap::iterator it = mObjects.find(id);
@@ -92,7 +92,7 @@ bool ReplicatedLocationServiceCache::startSimpleTracking(const ObjectID& id) {
     return true;
 }
 
-void ReplicatedLocationServiceCache::stopSimpleTracking(const ObjectID& id) {
+void ReplicatedLocationServiceCache::stopRefcountTracking(const ObjectID& id) {
     Lock lck(mMutex);
 
     ObjectDataMap::iterator it = mObjects.find(id);

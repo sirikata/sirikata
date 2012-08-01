@@ -74,6 +74,8 @@ public:
     );
     virtual Iterator startTracking(const ObjectID& id);
     virtual void stopTracking(const Iterator& id);
+    virtual bool startRefcountTracking(const ObjectID& id);
+    virtual void stopRefcountTracking(const ObjectID& id);
 
     // ExtendLocationServiceCache
     virtual bool tracking(const ObjectID& id);

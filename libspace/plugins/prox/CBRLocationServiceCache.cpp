@@ -85,6 +85,17 @@ LocationServiceCache::Iterator CBRLocationServiceCache::startTracking(const Obje
     return Iterator( new IteratorData(id, it) );
 }
 
+bool CBRLocationServiceCache::startRefcountTracking(const ObjectID& id) {
+    Lock lck(mMutex);
+
+    ObjectDataMap::iterator it = mObjects.find(id);
+    assert(it != mObjects.end());
+
+    it->second.tracking++;
+
+    return true;
+}
+
 void CBRLocationServiceCache::stopTracking(const Iterator& id) {
     Lock lck(mMutex);
 
@@ -93,7 +104,13 @@ void CBRLocationServiceCache::stopTracking(const Iterator& id) {
     // become invalidated.
     IteratorData* itdat = (IteratorData*)id.data;
 
-    ObjectDataMap::iterator it = mObjects.find(itdat->objid);
+    stopRefcountTracking(itdat->objid);
+}
+
+void CBRLocationServiceCache::stopRefcountTracking(const ObjectID& objid) {
+    Lock lck(mMutex);
+
+    ObjectDataMap::iterator it = mObjects.find(objid);
     if (it == mObjects.end()) {
         printf("Warning: stopped tracking unknown object\n");
         return;
@@ -296,6 +313,19 @@ void CBRLocationServiceCache::replicaPhysicsUpdated(const UUID& uuid, const Stri
 
 
 void CBRLocationServiceCache::objectAdded(const UUID& uuid, bool islocal, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& phy, const String& zernike) {
+    // This looks a bit odd compared to some other similar methods. We check for
+    // and insert the object immediately because addPlaceholderImposter needs it
+    // to occur immediately (because imposters need to be added so they can be
+    // refcounted by the query events to ensure they stay alive in this cache as
+    // long as they are needed). TODO(ewencp) We should probably just make this
+    // look more like the other implementations of LocationServiceCache (using
+    // posting only to get notifications in the right strand) but who knows what
+    // kind of fallout that might have...
+    Lock lck(mMutex);
+
+    if (mObjects.find(ObjectReference(uuid)) != mObjects.end())
+        return;
+
     ObjectData data;
     data.location = loc;
     data.orientation = orient;
@@ -308,6 +338,8 @@ void CBRLocationServiceCache::objectAdded(const UUID& uuid, bool islocal, bool a
     data.tracking = 0;
     data.isAggregate = agg;
 
+    mObjects[ObjectReference(uuid)] = data;
+
     mStrand->post(
         std::tr1::bind(
             &CBRLocationServiceCache::processObjectAdded, this,
@@ -318,13 +350,6 @@ void CBRLocationServiceCache::objectAdded(const UUID& uuid, bool islocal, bool a
 }
 
 void CBRLocationServiceCache::processObjectAdded(const ObjectReference& uuid, ObjectData data) {
-    Lock lck(mMutex);
-
-    if (mObjects.find(uuid) != mObjects.end())
-        return;
-
-    mObjects[uuid] = data;
-
     // TODO(ewencp) at some point, we might want to (optionally) use aggregates
     // here, especially if we're reconstructing entire trees.
     if (!data.isAggregate)

@@ -218,6 +218,30 @@ void PintoManagerLocationServiceCache::stopTracking(const Iterator& id) {
         mServers.erase( EXTRACT_ITERATOR(id) );
 }
 
+bool PintoManagerLocationServiceCache::startRefcountTracking(const ObjectID& id) {
+    Lock lck(mMutex);
+
+    ServerMap::iterator it = mServers.find(id);
+    assert( it != mServers.end() );
+    SpaceServerData& dat = it->second;
+
+    dat.tracking++;
+
+    return true;
+}
+
+void PintoManagerLocationServiceCache::stopRefcountTracking(const ObjectID& id) {
+    Lock lck(mMutex);
+
+    ServerMap::iterator it = mServers.find(id);
+    assert( it != mServers.end() );
+    SpaceServerData& dat = it->second;
+    dat.tracking--;
+
+    if (dat.tracking == 0 && dat.removable)
+        mServers.erase(it);
+}
+
 bool PintoManagerLocationServiceCache::tracking(const ObjectID& id) {
     Lock lck(mMutex);
 

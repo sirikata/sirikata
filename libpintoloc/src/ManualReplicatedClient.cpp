@@ -312,9 +312,9 @@ void ReplicatedClient::handleProxUpdate(const Sirikata::Protocol::Prox::Proximit
         // TODO(ewencp) Seems like we shouldn't actually need this
         // since we shouldn't get a removal with having had an
         // addition first...
-        if (loccache->startSimpleTracking(observed_oref)) {
+        if (loccache->startRefcountTracking(observed_oref)) {
             orphan_manager->addUpdateFromExisting(observed, loccache->properties(observed_oref));
-            loccache->stopSimpleTracking(observed_oref);
+            loccache->stopRefcountTracking(observed_oref);
         }
         loccache->objectRemoved(
             observed_oref, temporary_removal
