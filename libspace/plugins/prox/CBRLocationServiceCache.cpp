@@ -213,37 +213,38 @@ void CBRLocationServiceCache::removeUpdateListener(LocationUpdateListener* liste
 }
 
 #define GET_OBJ_ENTRY(objid) \
+    Lock lck(mMutex); \
     ObjectDataMap::const_iterator it = mObjects.find(id);       \
     assert(it != mObjects.end())
 
 TimedMotionVector3f CBRLocationServiceCache::location(const ObjectID& id) {
-    GET_OBJ_ENTRY(id); // NOTE: should only be accessed by prox thread, shouldn't need lock
+    GET_OBJ_ENTRY(id);
     return it->second.location;
 }
 
 TimedMotionQuaternion CBRLocationServiceCache::orientation(const ObjectID& id) {
-    GET_OBJ_ENTRY(id); // NOTE: should only be accessed by prox thread, shouldn't need lock
+    GET_OBJ_ENTRY(id);
     return it->second.orientation;
 }
 
 AggregateBoundingInfo CBRLocationServiceCache::bounds(const ObjectID& id) {
-    GET_OBJ_ENTRY(id); // NOTE: should only be accessed by prox thread, shouldn't need lock
+    GET_OBJ_ENTRY(id);
     return it->second.bounds;
 }
 
 Transfer::URI CBRLocationServiceCache::mesh(const ObjectID& id) {
-    GET_OBJ_ENTRY(id); // NOTE: should only be accessed by prox thread, shouldn't need lock
+    GET_OBJ_ENTRY(id);
     return Transfer::URI(it->second.mesh);
 }
 
 String CBRLocationServiceCache::physics(const ObjectID& id) {
-    GET_OBJ_ENTRY(id); // NOTE: should only be accessed by prox thread, shouldn't need lock
+    GET_OBJ_ENTRY(id);
     return it->second.physics;
 }
 
 
-const bool CBRLocationServiceCache::isAggregate(const ObjectID& id) const {
-    GET_OBJ_ENTRY(id); // NOTE: should only be accessed by prox thread, shouldn't need lock
+const bool CBRLocationServiceCache::isAggregate(const ObjectID& id) {
+    GET_OBJ_ENTRY(id);
     return it->second.isAggregate;
 }
 

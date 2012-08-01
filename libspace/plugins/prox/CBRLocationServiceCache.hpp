@@ -102,7 +102,7 @@ public:
     String physics(const ObjectID& id);
     virtual bool aggregate(const ObjectID& id) { return isAggregate(id); }
 
-    const bool isAggregate(const ObjectID& id) const;
+    const bool isAggregate(const ObjectID& id);
 
 
     /* LocationServiceListener members. */
