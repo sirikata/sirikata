@@ -167,71 +167,64 @@ void ManualPintoManager::queryHasEvents(Query* query) {
 
         for(uint32 aidx = 0; aidx < evt.additions().size(); aidx++) {
             ServerID nodeid = evt.additions()[aidx].id();
-            // This is all single threaded, but we still might not have this
-            // node if events weren't pushed until after an aggregate was
-            // already destroyed.
-            if (mLocCache->tracking(nodeid)) { // If the cache already lost it, we can't do anything
-                PintoManagerLocationServiceCache::Iterator loccacheit = mLocCache->startTracking(nodeid);
+            assert (mLocCache->tracking(nodeid));
+            PintoManagerLocationServiceCache::Iterator loccacheit = mLocCache->startTracking(nodeid);
 
-                Sirikata::Protocol::Prox::IObjectAddition addition = event_results.add_addition();
+            Sirikata::Protocol::Prox::IObjectAddition addition = event_results.add_addition();
+            // Shoe-horn server ID into UUID
+            addition.set_object(UUID((uint32)nodeid));
+
+            addition.set_seqno (update_seqno);
+
+            Sirikata::Protocol::ITimedMotionVector motion = addition.mutable_location();
+            TimedMotionVector3f loc = mLocCache->location(loccacheit);
+            motion.set_t(loc.updateTime());
+            motion.set_position(loc.position());
+            motion.set_velocity(loc.velocity());
+
+            // FIXME(ewencp) We don't track this since we wouldn't modify
+            // any orientations, but it's currently required by the prox
+            // message format...
+            Sirikata::Protocol::ITimedMotionQuaternion msg_orient = addition.mutable_orientation();
+            msg_orient.set_t(Time::null());
+            msg_orient.set_position(Quaternion::identity());
+            msg_orient.set_velocity(Quaternion::identity());
+
+            Sirikata::Protocol::IAggregateBoundingInfo msg_bounds = addition.mutable_aggregate_bounds();
+            msg_bounds.set_center_offset( mLocCache->centerOffset(loccacheit) );
+            msg_bounds.set_center_bounds_radius( mLocCache->centerBoundsRadius(loccacheit) );
+            msg_bounds.set_max_object_size( mLocCache->maxSize(loccacheit) );
+
+            const String& mesh = mLocCache->mesh(loccacheit);
+            if (mesh.size() > 0)
+                addition.set_mesh(mesh);
+
+            // Either we set a parent, or, if we're adding the root node for
+            // the first time (lone addition), we include tree
+            // properties. Strictly speaking, these shouldn't be necessary,
+            // but including them lets us reuse client code which just
+            // checks if some fields are present to know when it has to
+            // start tracking a new replicated tree
+            ServerID parentid = evt.additions()[aidx].parent();
+            if (parentid != NullServerID) {
                 // Shoe-horn server ID into UUID
-                addition.set_object(UUID((uint32)nodeid));
-
-                addition.set_seqno (update_seqno);
-
-                Sirikata::Protocol::ITimedMotionVector motion = addition.mutable_location();
-                TimedMotionVector3f loc = mLocCache->location(loccacheit);
-                motion.set_t(loc.updateTime());
-                motion.set_position(loc.position());
-                motion.set_velocity(loc.velocity());
-
-                // FIXME(ewencp) We don't track this since we wouldn't modify
-                // any orientations, but it's currently required by the prox
-                // message format...
-                Sirikata::Protocol::ITimedMotionQuaternion msg_orient = addition.mutable_orientation();
-                msg_orient.set_t(Time::null());
-                msg_orient.set_position(Quaternion::identity());
-                msg_orient.set_velocity(Quaternion::identity());
-
-                Sirikata::Protocol::IAggregateBoundingInfo msg_bounds = addition.mutable_aggregate_bounds();
-                msg_bounds.set_center_offset( mLocCache->centerOffset(loccacheit) );
-                msg_bounds.set_center_bounds_radius( mLocCache->centerBoundsRadius(loccacheit) );
-                msg_bounds.set_max_object_size( mLocCache->maxSize(loccacheit) );
-
-                const String& mesh = mLocCache->mesh(loccacheit);
-                if (mesh.size() > 0)
-                    addition.set_mesh(mesh);
-
-                // Either we set a parent, or, if we're adding the root node for
-                // the first time (lone addition), we include tree
-                // properties. Strictly speaking, these shouldn't be necessary,
-                // but including them lets us reuse client code which just
-                // checks if some fields are present to know when it has to
-                // start tracking a new replicated tree
-                ServerID parentid = evt.additions()[aidx].parent();
-                if (parentid != NullServerID) {
-                    // Shoe-horn server ID into UUID
-                    addition.set_parent(UUID((uint32)parentid));
-                }
-                else if (/*lone addition*/ aidx == 0 && evt.additions().size() == 1 && evt.removals().size() == 0) {
-                    // No good value to put here, but NullServerID should never
-                    // conflict with any space server
-                    index_props.set_index_id( boost::lexical_cast<String>(NullServerID) );
-                    // In TL pinto, we're only tracking static objects (aggregates).
-                    index_props.set_dynamic_classification(Sirikata::Protocol::Prox::IndexProperties::Static);
-                }
-
-                addition.set_type(
-                    (evt.additions()[aidx].type() == QueryEvent::Normal) ?
-                    Sirikata::Protocol::Prox::ObjectAddition::Object :
-                    Sirikata::Protocol::Prox::ObjectAddition::Aggregate
-                );
-
-                mLocCache->stopTracking(loccacheit);
+                addition.set_parent(UUID((uint32)parentid));
             }
-            else {
-                PINTO_LOG(error, "Ignored addition because the location cache lost the data.");
+            else if (/*lone addition*/ aidx == 0 && evt.additions().size() == 1 && evt.removals().size() == 0) {
+                // No good value to put here, but NullServerID should never
+                // conflict with any space server
+                index_props.set_index_id( boost::lexical_cast<String>(NullServerID) );
+                // In TL pinto, we're only tracking static objects (aggregates).
+                index_props.set_dynamic_classification(Sirikata::Protocol::Prox::IndexProperties::Static);
             }
+
+            addition.set_type(
+                (evt.additions()[aidx].type() == QueryEvent::Normal) ?
+                Sirikata::Protocol::Prox::ObjectAddition::Object :
+                Sirikata::Protocol::Prox::ObjectAddition::Aggregate
+            );
+
+            mLocCache->stopTracking(loccacheit);
         }
         for(uint32 ridx = 0; ridx < evt.removals().size(); ridx++) {
             ServerID nodeid = evt.removals()[ridx].id();

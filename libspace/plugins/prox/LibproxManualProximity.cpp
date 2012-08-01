@@ -1149,7 +1149,6 @@ void LibproxManualProximity::queryHasEvents(ProxQuery* query) {
         PROXLOG(detailed, evts.size() << " events for server query " << server_query_id);
     else
         PROXLOG(detailed, evts.size() << " events for object host query " << query_id);
-    std::tr1::unordered_set<ObjectReference, ObjectReference::Hasher> ignored_parents;
     while(!evts.empty()) {
         // We need to support encoding both server messages, which
         // want a Container, and object messages, which want just
@@ -1176,26 +1175,11 @@ void LibproxManualProximity::queryHasEvents(ProxQuery* query) {
             for(uint32 aidx = 0; aidx < evt.additions().size(); aidx++) {
                 ObjectReference oobjid = evt.additions()[aidx].id();
                 UUID objid = oobjid.getAsUUID();
-                // Because we get results in batches, the loc cache may have
-                // already lost it -- if it was an aggregate and enough
-                // operations happened, it may have been destroyed before the
-                // result got through to here. However, this also means that
-                // when replicating a tree, we may not have parents of objects
-                // either, i.e. this issue can cascade but then become a problem
-                // when we hit leaf nodes w/ objects that *are* still in the
-                // cache. Therefore, we need to track this cascading and filter
-                // out all events including those nodes. Note that we need to be
-                // careful when doing this *not* to exclude an object which a)
-                // is added to a parent node where b) the parent node is
-                // subsequently deleted but c) then the object is moved
-                // somewhere else that is valid and can be reported.
+
+                assert(loccache->tracking(oobjid));
+
                 ObjectReference parentid = evt.additions()[aidx].parent();
                 bool has_parent = (parentid != ObjectReference::null());
-                if (!loccache->tracking(oobjid) || (has_parent && (ignored_parents.find(parentid) != ignored_parents.end()))) {
-                    PROXLOG(detailed, "Ignoring addition of " << ((evt.additions()[aidx].type() == ProxQueryEvent::Normal) ? "object " : "aggregate ") << oobjid << " because it's not available in the location service cache or an ancestor wasn't available in the cache");
-                    ignored_parents.insert(parentid);
-                    continue;
-                }
 
                 count++;
 

@@ -481,55 +481,52 @@ void ObjectQueryHandler::generateObjectQueryEvents(Query* query) {
 
         for(uint32 aidx = 0; aidx < evt.additions().size(); aidx++) {
             ObjectReference objid = evt.additions()[aidx].id();
-            if (handler_data.loccache->startRefcountTracking(objid)) { // If the cache already lost it, we can't do anything
+            assert(handler_data.loccache->tracking(objid));
 
-                mContext->mainStrand->post(
-                    std::tr1::bind(&ObjectQueryHandler::handleAddObjectLocSubscription, this, querier_id, objid),
-                    "ObjectQueryHandler::handleAddObjectLocSubscription"
-                );
+            mContext->mainStrand->post(
+                std::tr1::bind(&ObjectQueryHandler::handleAddObjectLocSubscription, this, querier_id, objid),
+                "ObjectQueryHandler::handleAddObjectLocSubscription"
+            );
 
-                Sirikata::Protocol::Prox::IObjectAddition addition = event_results->add_addition();
-                addition.set_object( objid.getAsUUID() );
+            Sirikata::Protocol::Prox::IObjectAddition addition = event_results->add_addition();
+            addition.set_object( objid.getAsUUID() );
 
-                uint64 seqNo = handler_data.loccache->properties(objid).maxSeqNo();
-                addition.set_seqno (seqNo);
+            uint64 seqNo = handler_data.loccache->properties(objid).maxSeqNo();
+            addition.set_seqno (seqNo);
 
 
-                Sirikata::Protocol::ITimedMotionVector motion = addition.mutable_location();
-                TimedMotionVector3f loc = handler_data.loccache->location(objid);
-                motion.set_t(loc.updateTime());
-                motion.set_position(loc.position());
-                motion.set_velocity(loc.velocity());
+            Sirikata::Protocol::ITimedMotionVector motion = addition.mutable_location();
+            TimedMotionVector3f loc = handler_data.loccache->location(objid);
+            motion.set_t(loc.updateTime());
+            motion.set_position(loc.position());
+            motion.set_velocity(loc.velocity());
 
-                TimedMotionQuaternion orient = handler_data.loccache->orientation(objid);
-                Sirikata::Protocol::ITimedMotionQuaternion msg_orient = addition.mutable_orientation();
-                msg_orient.set_t(orient.updateTime());
-                msg_orient.set_position(orient.position());
-                msg_orient.set_velocity(orient.velocity());
+            TimedMotionQuaternion orient = handler_data.loccache->orientation(objid);
+            Sirikata::Protocol::ITimedMotionQuaternion msg_orient = addition.mutable_orientation();
+            msg_orient.set_t(orient.updateTime());
+            msg_orient.set_position(orient.position());
+            msg_orient.set_velocity(orient.velocity());
 
-                Sirikata::Protocol::IAggregateBoundingInfo msg_bounds = addition.mutable_aggregate_bounds();
-                AggregateBoundingInfo bnds = handler_data.loccache->bounds(objid);
-                msg_bounds.set_center_offset(bnds.centerOffset);
-                msg_bounds.set_center_bounds_radius(bnds.centerBoundsRadius);
-                msg_bounds.set_max_object_size(bnds.maxObjectRadius);
+            Sirikata::Protocol::IAggregateBoundingInfo msg_bounds = addition.mutable_aggregate_bounds();
+            AggregateBoundingInfo bnds = handler_data.loccache->bounds(objid);
+            msg_bounds.set_center_offset(bnds.centerOffset);
+            msg_bounds.set_center_bounds_radius(bnds.centerBoundsRadius);
+            msg_bounds.set_max_object_size(bnds.maxObjectRadius);
 
-                Transfer::URI mesh = handler_data.loccache->mesh(objid);
-                if (!mesh.empty())
-                    addition.set_mesh(mesh.toString());
-                String phy = handler_data.loccache->physics(objid);
-                if (phy.size() > 0)
-                    addition.set_physics(phy);
+            Transfer::URI mesh = handler_data.loccache->mesh(objid);
+            if (!mesh.empty())
+                addition.set_mesh(mesh.toString());
+            String phy = handler_data.loccache->physics(objid);
+            if (phy.size() > 0)
+                addition.set_physics(phy);
 
-                handler_data.loccache->stopRefcountTracking(objid);
-
-                // If we've reached a leaf in the TL-Pinto tree, we need to move
-                // down to the next tree
-                if (handler_data.from == NullServerID && evt.additions()[aidx].type() == QueryEvent::Normal) {
-                    // Need to unpack real ID from the UUID
-                    ServerID leaf_server = (ServerID)objid.getAsUUID().asUInt32();
-                    ObjectQueryDataPtr query_data = mObjectQueries[querier_id];
-                    registerObjectQueryWithServer(querier_id, leaf_server, query_data->loc, query_data->bounds, query_data->angle, query_data->max_results);
-                }
+            // If we've reached a leaf in the TL-Pinto tree, we need to move
+            // down to the next tree
+            if (handler_data.from == NullServerID && evt.additions()[aidx].type() == QueryEvent::Normal) {
+                // Need to unpack real ID from the UUID
+                ServerID leaf_server = (ServerID)objid.getAsUUID().asUInt32();
+                ObjectQueryDataPtr query_data = mObjectQueries[querier_id];
+                registerObjectQueryWithServer(querier_id, leaf_server, query_data->loc, query_data->bounds, query_data->angle, query_data->max_results);
             }
         }
         for(uint32 ridx = 0; ridx < evt.removals().size(); ridx++) {
@@ -547,11 +544,9 @@ void ObjectQueryHandler::generateObjectQueryEvents(Query* query) {
             // It'd be nice if we didn't need this but the seqno might
             // not be available anymore and we still want to send the
             // removal.
-            if (handler_data.loccache->startRefcountTracking(objid)) {
-                uint64 seqNo = handler_data.loccache->properties(objid).maxSeqNo();
-                removal.set_seqno (seqNo);
-                handler_data.loccache->stopRefcountTracking(objid);
-            }
+            assert(handler_data.loccache->tracking(objid));
+            uint64 seqNo = handler_data.loccache->properties(objid).maxSeqNo();
+            removal.set_seqno (seqNo);
 
             removal.set_type(
                 (evt.removals()[ridx].permanent() == QueryEvent::Permanent)

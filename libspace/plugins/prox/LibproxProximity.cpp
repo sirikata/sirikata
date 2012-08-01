@@ -903,45 +903,44 @@ void LibproxProximity::generateServerQueryEvents(Query* query) {
             for(uint32 aidx = 0; aidx < evt.additions().size(); aidx++) {
                 ObjectReference oobjid = evt.additions()[aidx].id();
                 UUID objid = oobjid.getAsUUID();
-                if (mLocCache->tracking(oobjid)) { // If the cache already lost it, we can't do anything
-                    count++;
+                assert(mLocCache->tracking(oobjid));
+                count++;
 
-                    mContext->mainStrand->post(
-                        std::tr1::bind(&LibproxProximity::handleAddServerLocSubscription, this, sid, objid, seqNoPtr),
-                        "LibproxProximity::handleAddServerLocSubscription"
-                    );
+                mContext->mainStrand->post(
+                    std::tr1::bind(&LibproxProximity::handleAddServerLocSubscription, this, sid, objid, seqNoPtr),
+                    "LibproxProximity::handleAddServerLocSubscription"
+                );
 
-                    Sirikata::Protocol::Prox::IObjectAddition addition = event_results.add_addition();
-                    addition.set_object( objid );
+                Sirikata::Protocol::Prox::IObjectAddition addition = event_results.add_addition();
+                addition.set_object( objid );
 
-                    uint64 seqNo = (*seqNoPtr)++;
-                    addition.set_seqno (seqNo);
+                uint64 seqNo = (*seqNoPtr)++;
+                addition.set_seqno (seqNo);
 
-                    TimedMotionVector3f loc = mLocCache->location(oobjid);
-                    Sirikata::Protocol::ITimedMotionVector msg_loc = addition.mutable_location();
-                    msg_loc.set_t(loc.updateTime());
-                    msg_loc.set_position(loc.position());
-                    msg_loc.set_velocity(loc.velocity());
+                TimedMotionVector3f loc = mLocCache->location(oobjid);
+                Sirikata::Protocol::ITimedMotionVector msg_loc = addition.mutable_location();
+                msg_loc.set_t(loc.updateTime());
+                msg_loc.set_position(loc.position());
+                msg_loc.set_velocity(loc.velocity());
 
-                    TimedMotionQuaternion orient = mLocCache->orientation(oobjid);
-                    Sirikata::Protocol::ITimedMotionQuaternion msg_orient = addition.mutable_orientation();
-                    msg_orient.set_t(orient.updateTime());
-                    msg_orient.set_position(orient.position());
-                    msg_orient.set_velocity(orient.velocity());
+                TimedMotionQuaternion orient = mLocCache->orientation(oobjid);
+                Sirikata::Protocol::ITimedMotionQuaternion msg_orient = addition.mutable_orientation();
+                msg_orient.set_t(orient.updateTime());
+                msg_orient.set_position(orient.position());
+                msg_orient.set_velocity(orient.velocity());
 
-                    Sirikata::Protocol::IAggregateBoundingInfo msg_bounds = addition.mutable_aggregate_bounds();
-                    AggregateBoundingInfo bnds = mLocCache->bounds(oobjid);
-                    msg_bounds.set_center_offset(bnds.centerOffset);
-                    msg_bounds.set_center_bounds_radius(bnds.centerBoundsRadius);
-                    msg_bounds.set_max_object_size(bnds.maxObjectRadius);
+                Sirikata::Protocol::IAggregateBoundingInfo msg_bounds = addition.mutable_aggregate_bounds();
+                AggregateBoundingInfo bnds = mLocCache->bounds(oobjid);
+                msg_bounds.set_center_offset(bnds.centerOffset);
+                msg_bounds.set_center_bounds_radius(bnds.centerBoundsRadius);
+                msg_bounds.set_max_object_size(bnds.maxObjectRadius);
 
-                    String mesh = mLocCache->mesh(oobjid).toString();
-                    if (mesh.size() > 0)
-                        addition.set_mesh(mesh);
-                    const String& phy = mLocCache->physics(oobjid);
-                    if (phy.size() > 0)
-                        addition.set_physics(phy);
-                }
+                String mesh = mLocCache->mesh(oobjid).toString();
+                if (mesh.size() > 0)
+                    addition.set_mesh(mesh);
+                const String& phy = mLocCache->physics(oobjid);
+                if (phy.size() > 0)
+                    addition.set_physics(phy);
             }
             for(uint32 ridx = 0; ridx < evt.removals().size(); ridx++) {
                 ObjectReference oobjid = evt.removals()[ridx].id();
@@ -1013,54 +1012,53 @@ void LibproxProximity::generateObjectQueryEvents(Query* query, bool do_first) {
             for(uint32 aidx = 0; aidx < evt.additions().size(); aidx++) {
                 ObjectReference oobjid = evt.additions()[aidx].id();
                 UUID objid = oobjid.getAsUUID();
-                if (mLocCache->tracking(oobjid)) { // If the cache already lost it, we can't do anything
-                    count++;
+                assert(mLocCache->tracking(oobjid));
+                count++;
 
-                    mContext->mainStrand->post(
-                        std::tr1::bind(&LibproxProximity::handleAddObjectLocSubscription, this, query_id, objid),
-                        "LibproxProximity::handleAddObjectLocSubscription"
-                    );
+                mContext->mainStrand->post(
+                    std::tr1::bind(&LibproxProximity::handleAddObjectLocSubscription, this, query_id, objid),
+                    "LibproxProximity::handleAddObjectLocSubscription"
+                );
 
-                    Sirikata::Protocol::Prox::IObjectAddition addition = event_results.add_addition();
-                    addition.set_object( objid );
+                Sirikata::Protocol::Prox::IObjectAddition addition = event_results.add_addition();
+                addition.set_object( objid );
 
-                    //query_id contains the uuid of the object that is receiving
-                    //the proximity message that obj_id has been added.
-                    uint64 seqNo = (*seqNoPtr)++;
-                    addition.set_seqno (seqNo);
+                //query_id contains the uuid of the object that is receiving
+                //the proximity message that obj_id has been added.
+                uint64 seqNo = (*seqNoPtr)++;
+                addition.set_seqno (seqNo);
 
-                    if (mLocCache->isAggregate(oobjid)) {
-                      addition.set_type(Sirikata::Protocol::Prox::ObjectAddition::Aggregate);
-                    }
-                    else {
-                      addition.set_type(Sirikata::Protocol::Prox::ObjectAddition::Object);
-                    }
-
-                    Sirikata::Protocol::ITimedMotionVector motion = addition.mutable_location();
-                    TimedMotionVector3f loc = mLocCache->location(oobjid);
-                    motion.set_t(loc.updateTime());
-                    motion.set_position(loc.position());
-                    motion.set_velocity(loc.velocity());
-
-                    TimedMotionQuaternion orient = mLocCache->orientation(oobjid);
-                    Sirikata::Protocol::ITimedMotionQuaternion msg_orient = addition.mutable_orientation();
-                    msg_orient.set_t(orient.updateTime());
-                    msg_orient.set_position(orient.position());
-                    msg_orient.set_velocity(orient.velocity());
-
-                    Sirikata::Protocol::IAggregateBoundingInfo msg_bounds = addition.mutable_aggregate_bounds();
-                    AggregateBoundingInfo bnds = mLocCache->bounds(oobjid);
-                    msg_bounds.set_center_offset(bnds.centerOffset);
-                    msg_bounds.set_center_bounds_radius(bnds.centerBoundsRadius);
-                    msg_bounds.set_max_object_size(bnds.maxObjectRadius);
-
-                    String mesh = mLocCache->mesh(oobjid).toString();
-                    if (mesh.size() > 0)
-                        addition.set_mesh(mesh);
-                    const String& phy = mLocCache->physics(oobjid);
-                    if (phy.size() > 0)
-                        addition.set_physics(phy);
+                if (mLocCache->isAggregate(oobjid)) {
+                    addition.set_type(Sirikata::Protocol::Prox::ObjectAddition::Aggregate);
                 }
+                else {
+                    addition.set_type(Sirikata::Protocol::Prox::ObjectAddition::Object);
+                }
+
+                Sirikata::Protocol::ITimedMotionVector motion = addition.mutable_location();
+                TimedMotionVector3f loc = mLocCache->location(oobjid);
+                motion.set_t(loc.updateTime());
+                motion.set_position(loc.position());
+                motion.set_velocity(loc.velocity());
+
+                TimedMotionQuaternion orient = mLocCache->orientation(oobjid);
+                Sirikata::Protocol::ITimedMotionQuaternion msg_orient = addition.mutable_orientation();
+                msg_orient.set_t(orient.updateTime());
+                msg_orient.set_position(orient.position());
+                msg_orient.set_velocity(orient.velocity());
+
+                Sirikata::Protocol::IAggregateBoundingInfo msg_bounds = addition.mutable_aggregate_bounds();
+                AggregateBoundingInfo bnds = mLocCache->bounds(oobjid);
+                msg_bounds.set_center_offset(bnds.centerOffset);
+                msg_bounds.set_center_bounds_radius(bnds.centerBoundsRadius);
+                msg_bounds.set_max_object_size(bnds.maxObjectRadius);
+
+                String mesh = mLocCache->mesh(oobjid).toString();
+                if (mesh.size() > 0)
+                    addition.set_mesh(mesh);
+                const String& phy = mLocCache->physics(oobjid);
+                if (phy.size() > 0)
+                    addition.set_physics(phy);
             }
             for(uint32 ridx = 0; ridx < evt.removals().size(); ridx++) {
                 ObjectReference oobjid = evt.removals()[ridx].id();
