@@ -323,10 +323,10 @@ void CBRLocationServiceCache::objectAdded(const UUID& uuid, bool islocal, bool a
     // posting only to get notifications in the right strand) but who knows what
     // kind of fallout that might have...
     Lock lck(mMutex);
+    ObjectReference uuid_obj(uuid);
+    ObjectDataMap::iterator it = mObjects.find(uuid_obj);
 
-    if (mObjects.find(ObjectReference(uuid)) != mObjects.end())
-        return;
-
+    // Construct for both since we'll pass it through the callback
     ObjectData data;
     data.location = loc;
     data.orientation = orient;
@@ -339,8 +339,18 @@ void CBRLocationServiceCache::objectAdded(const UUID& uuid, bool islocal, bool a
     data.tracking = 0;
     data.isAggregate = agg;
 
-    mObjects[ObjectReference(uuid)] = data;
+    if (it != mObjects.end()) {
+        // Mark as exists. It's important we do this since it may be the only
+        // thing that keeps this object alive as we may still be processing
+        // removals in the other strand.
+        it->second.exists = true;
+    }
+    else {
+        mObjects[uuid_obj] = data;
+        it = mObjects.find(uuid_obj);
+    }
 
+    it->second.tracking++;
     mStrand->post(
         std::tr1::bind(
             &CBRLocationServiceCache::processObjectAdded, this,
@@ -356,9 +366,22 @@ void CBRLocationServiceCache::processObjectAdded(const ObjectReference& uuid, Ob
     if (!data.isAggregate)
         for(ListenerSet::iterator it = mListeners.begin(); it != mListeners.end(); it++)
             (*it)->locationConnected(uuid, false, data.isLocal, data.location, data.bounds.centerBounds(), data.bounds.maxObjectRadius);
+
+    ObjectDataMap::iterator data_it = mObjects.find(uuid);
+    data_it->second.tracking--;
+    tryRemoveObject(data_it);
 }
 
 void CBRLocationServiceCache::objectRemoved(const UUID& uuid, bool agg) {
+    Lock lck(mMutex);
+
+    ObjectDataMap::iterator data_it = mObjects.find(ObjectReference(uuid));
+    if (data_it == mObjects.end()) return;
+
+    assert(data_it->second.exists);
+    data_it->second.exists = false;
+
+    data_it->second.tracking++;
     mStrand->post(
         std::tr1::bind(
             &CBRLocationServiceCache::processObjectRemoved, this,
@@ -371,17 +394,13 @@ void CBRLocationServiceCache::objectRemoved(const UUID& uuid, bool agg) {
 void CBRLocationServiceCache::processObjectRemoved(const ObjectReference& uuid, bool agg) {
     Lock lck(mMutex);
 
-    ObjectDataMap::iterator data_it = mObjects.find(uuid);
-    if (data_it == mObjects.end()) return;
-
-    assert(data_it->second.exists);
-    data_it->second.exists = false;
-
-    tryRemoveObject(data_it);
-
     if (!agg)
         for(ListenerSet::iterator it = mListeners.begin(); it != mListeners.end(); it++)
             (*it)->locationDisconnected(uuid);
+
+    ObjectDataMap::iterator data_it = mObjects.find(uuid);
+    data_it->second.tracking--;
+    tryRemoveObject(data_it);
 }
 
 void CBRLocationServiceCache::locationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval) {
