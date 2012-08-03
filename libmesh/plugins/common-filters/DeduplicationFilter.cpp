@@ -52,21 +52,90 @@ bool comp(Vector3f point1, Vector3f point2) {
 FilterDataPtr DeduplicationFilter::apply(FilterDataPtr input) {
 	for(FilterData::const_iterator md_it = input->begin(); md_it != input->end(); md_it++) {
         VisualPtr vis = *md_it;
-
+		
         MeshdataPtr mesh( std::tr1::dynamic_pointer_cast<Meshdata>(vis) );
         if (mesh) {
 			//mixing smg's and increasing # of primitives
 			//general idea: we take two geometries, sort points, see if they are equal (because they should perfectly line up!)
-			//genearlize - should it do partial deduplication? if two meshes are only somewhat similar?
+			//generalize - should it do partial deduplication? if two meshes are only somewhat similar?
 			//look at containers - efficiency
 			//unordered set? unordered map? 
+
+			//two geometries with exactly the same points (but different orientations/textures) should be mixed
+			//currently, they are put into different primitives. however, if the points are completely the same,
+			//we should simply delete one entire geometry.
 			if(mesh->geometry.size() >= 2) {
+				//we sort the positions before hand so they're easier to use... but this may be unnecessary.
 				std::vector<std::vector<Vector3f> > sortedPositions;
 				for(int i = 0; i < mesh->geometry.size(); i++) {
 					std::vector<Vector3f> v = mesh->geometry[i].positions;
 					std::sort(v.begin(), v.begin() + v.size(), comp);
 					sortedPositions.push_back(v);
 				}
+					
+				for(int i = 0; i < mesh->geometry.size(); i++) {
+					for(int j = i + 1; j < mesh->geometry.size(); j++) {
+						bool combine = false;
+						//we compare two of the geometries:
+						//but we do not proceed unless their materials are the same (we can assume only one primitive for now)
+						if(mesh->instances[i].materialBindingMap[1] == mesh->instances[j].materialBindingMap[1]) {
+							for(int k = 0; k < mesh->geometry[i].positions.size(); k++) {
+								for(int l = 0; l < mesh->geometry[j].positions.size(); l++) {
+									//positions have to be the same
+									//either texUVs don't exist at all, or the texUVs are the same
+									if(mesh->geometry[i].positions[k] == mesh->geometry[j].positions[l]) {
+										if(mesh->geometry[i].texUVs.size() == 0 && mesh->geometry[j].texUVs.size() == 0) {
+											combine = true;
+										} else if(mesh->geometry[i].texUVs[0].uvs.size() > 2 * k + 1 &&
+											mesh->geometry[j].texUVs[0].uvs.size() > 2 * l + 1 && 
+											mesh->geometry[i].texUVs[0].uvs[2 * k] == mesh->geometry[j].texUVs[0].uvs[2 * l] &&
+											mesh->geometry[i].texUVs[0].uvs[2 * k + 1] == mesh->geometry[j].texUVs[0].uvs[2 * l + 1]) {
+											combine = true;
+										}
+										//woohoo! they're equal!
+										//we could like record this or something!
+									}
+								}
+							}
+							//and do stuff to them here
+							//this will look very weird
+							if(combine) {
+								for(int l = 0; l < mesh->geometry[j].primitives[0].indices.size(); l++) {
+									bool addPoint = true;
+									int pos = -1;
+									for(int k = 0; k < mesh->geometry[i].primitives[0].indices.size() && addPoint; k++) {
+										if(mesh->geometry[i].positions[mesh->geometry[i].primitives[0].indices[k]] ==
+											mesh->geometry[j].positions[mesh->geometry[j].primitives[0].indices[j]]) {
+											addPoint = false;
+											pos = k;
+										}
+									}
+									if(addPoint) {
+										mesh->geometry[i].positions.push_back(mesh->geometry[j].positions[mesh->geometry[j].primitives[0].indices[l]]);
+										if(mesh->geometry[j].texUVs.size() > 0)
+											mesh->geometry[i].texUVs[0].uvs.push_back(mesh->geometry[j].texUVs[0].uvs[mesh->geometry[j].primitives[0].indices[l]]);
+										mesh->geometry[i].primitives[0].indices.push_back(mesh->geometry[i].positions.size() - 1);
+									} else
+										mesh->geometry[i].primitives[0].indices.push_back(pos);
+								}
+								mesh->geometry.erase(mesh->geometry.begin() + j);
+								mesh->instances.erase(mesh->instances.begin() + j);
+								for(int k = j; k < mesh->instances.size(); k++)
+									mesh->instances[k].geometryIndex = k;
+
+								j--; //or we might go overboard!
+
+								//we have to loop through it again!?!?!
+								//well, we could loop through it and notice that the combo should be hit, so
+								//we could just add it in without worries...
+							}
+
+
+						}
+					}
+				}
+
+
 				for(int i = 0; i < mesh->geometry.size(); i++) {
 					for(int j = i + 1; j < mesh->geometry.size(); j++) {
 						bool same = true;

@@ -57,7 +57,7 @@ public:
 		//initialize plugin
 		if (!_initialized) {
             _initialized = 1;
-            _pmgr.load("mesh-ply");
+            _pmgr.loadList("mesh-ply,common-filters");
         }
 		//create ModelsSystem
 		msys = ModelsSystemFactory::getSingleton ().getConstructor ( "mesh-ply" ) ( "" );
@@ -371,15 +371,35 @@ public:
 		return result;
 	}
 	
+	//MeshdataPtr loadMDP(string thing) {
+	//	//loads the MeshdataPtr from the ply string
+	//	Transfer::DenseData *dd = new Transfer::DenseData(thing);
+	//	Transfer::DenseDataPtr data(dd);
+	//	TS_ASSERT_EQUALS(msys->canLoad(data), true);
+
+	//	Mesh::VisualPtr parsed = msys->load(data);
+	//	TS_ASSERT_DIFFERS(parsed, Mesh::VisualPtr());
+	//	MeshdataPtr mdp(std::tr1::dynamic_pointer_cast<Meshdata>(parsed));
+	//	return mdp;
+	//}
+
 	MeshdataPtr loadMDP(string thing) {
-		//loads the MeshdataPtr from the ply string
+		//loads the MeshdataPtr from the ply string and applies the deduplication filter
+		std::vector<String> names_and_args;
+		names_and_args.push_back("deduplication"); names_and_args.push_back("");
+		Mesh::Filter* filter = new Mesh::CompositeFilter(names_and_args);
+
 		Transfer::DenseData *dd = new Transfer::DenseData(thing);
 		Transfer::DenseDataPtr data(dd);
 		TS_ASSERT_EQUALS(msys->canLoad(data), true);
 
 		Mesh::VisualPtr parsed = msys->load(data);
-		TS_ASSERT_DIFFERS(parsed, Mesh::VisualPtr());
+		Mesh::MutableFilterDataPtr input(new Mesh::FilterData);
+		input->push_back(parsed);
+		Mesh::FilterDataPtr output = filter->apply(input);
+		parsed = output->get();
 		MeshdataPtr mdp(std::tr1::dynamic_pointer_cast<Meshdata>(parsed));
+
 		return mdp;
 	}
 };

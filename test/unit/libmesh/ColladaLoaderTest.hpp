@@ -37,7 +37,6 @@
 #include <boost/filesystem.hpp>
 
 using namespace Sirikata;
-using namespace std;
 using namespace Mesh;
 
 class ColladaLoaderTest : public CxxTest::TestSuite
@@ -71,7 +70,7 @@ public:
 
     void testColladaLoaderSimple( void ) {
 		//collada file with almost nothing
-		string simple = getString("simple");
+		String simple = getString("simple");
 		MeshdataPtr mdp = loadMDP(simple);
 
 		//asserts
@@ -89,7 +88,7 @@ public:
 
 	void testColladaLoaderLine( void ) {
 		//collada file with only a single line
-		string line = getString("line");
+		String line = getString("line");
 		MeshdataPtr mdp = loadMDP(line);
 		
 		//asserts
@@ -113,7 +112,7 @@ public:
 
 	void testColladaLoaderSquare( void ) {
 		//collada file with square (actually rectangle)
-		string square = getString("square");
+		String square = getString("square");
 		MeshdataPtr mdp = loadMDP(square);
 		
 		//asserts
@@ -137,7 +136,7 @@ public:
 
 	void testColladaLoaderSquare2s( void ) {
 		//collada file with square with two sides, one of which is specially texturized
-		string square2s = getString("square2s");
+		String square2s = getString("square2s");
 		MeshdataPtr mdp = loadMDP(square2s);
 		
 		//asserts
@@ -162,7 +161,7 @@ public:
 
 	void testColladaLoaderHex2s( void ) {
 		//collada file with two-sided hexagon
-		string hex2s = getString("hex2s");
+		String hex2s = getString("hex2s");
 		MeshdataPtr mdp = loadMDP(hex2s);
 		
 		//asserts
@@ -187,7 +186,7 @@ public:
 
 	void testColladaLoaderCube( void ) {
 		//collada file with cube (actually a rectangular prism)
-		string cube = getString("cube");
+		String cube = getString("cube");
 		MeshdataPtr mdp = loadMDP(cube);
 		
 		//asserts
@@ -211,7 +210,7 @@ public:
 
 	void testColladaLoaderCubes( void ) {
 		//collada file with three textured cubes of different rotations
-		string cubes = getString("cubes");
+		String cubes = getString("cubes");
 		MeshdataPtr mdp = loadMDP(cubes);
 		
 		//asserts
@@ -236,7 +235,7 @@ public:
 
 	void testColladaLoaderPrism( void ) {
 		//collada file with partially textured hexagonal prism
-		string prism = getString("prism");
+		String prism = getString("prism");
 		MeshdataPtr mdp = loadMDP(prism);
 		
 		//asserts
@@ -260,7 +259,7 @@ public:
 
 	void testColladaLoaderTriangles( void ) {
 		//collada file with two distinct texturized triangles
-		string triangles = getString("triangles");
+		String triangles = getString("triangles");
 		MeshdataPtr mdp = loadMDP(triangles);
 		
 		//asserts
@@ -286,7 +285,7 @@ public:
 
 	void testColladaLoaderTriangles3d( void ) {
 		//collada file with two connected disjoint triangles in 3d
-		string triangles3d = getString("triangles3d");
+		String triangles3d = getString("triangles3d");
 		MeshdataPtr mdp = loadMDP(triangles3d);
 		
 		//asserts
@@ -310,7 +309,7 @@ public:
 
 	void testColladaLoaderCircle( void ) {
 		//collada file with one circle
-		string circle = getString("circle");
+		String circle = getString("circle");
 		MeshdataPtr mdp = loadMDP(circle);
 		
 		//asserts
@@ -334,7 +333,7 @@ public:
 
 	void testColladaLoaderCircleT( void ) {
 		//collada file with one texturized circle
-		string circleT = getString("circleT");
+		String circleT = getString("circleT");
 		MeshdataPtr mdp = loadMDP(circleT);
 		
 		//asserts
@@ -358,7 +357,7 @@ public:
 
 	void testColladaLoaderCircles( void ) {
 		//collada file with two distinct circles
-		string circles = getString("circles");
+		String circles = getString("circles");
 		MeshdataPtr mdp = loadMDP(circles);
 		
 		//asserts
@@ -384,7 +383,7 @@ public:
 
 	void testColladaLoaderCylinders( void ) {
 		//collada file with two distinct cylinders
-		string cylinders = getString("cylinders");
+		String cylinders = getString("cylinders");
 		MeshdataPtr mdp = loadMDP(cylinders);
 		
 		//asserts
@@ -410,7 +409,7 @@ public:
 
 	void testColladaLoaderPikachu( void ) {
 		//collada file with pikachu
-		string pikachu = getString("pikachu/pikachu");
+		String pikachu = getString("pikachu/pikachu");
 		MeshdataPtr mdp = loadMDP(pikachu);
 		
 		//asserts
@@ -432,7 +431,7 @@ public:
 
 	void testColladaLoaderDrill( void ) {
 		//collada file with drill
-		string drill = getString("drill");
+		String drill = getString("drill");
 		MeshdataPtr mdp = loadMDP(drill);
 		
 		//asserts
@@ -454,7 +453,7 @@ public:
 
 	void testColladaLoaderBunny( void ) {
 		//collada file with stanford bunny
-		string bunny = getString("bunny");
+		String bunny = getString("bunny");
 		MeshdataPtr mdp = loadMDP(bunny);
 		
 		//asserts
@@ -488,8 +487,8 @@ public:
 	}
 	
 	
-	string getString(string name) {
-		string result;
+	String getString(String name) {
+		String result;
 		//obtains string of information from the collada file rather than
 		//copying and directly placing the text in the file
 
@@ -507,7 +506,7 @@ public:
             return "";
         }
 
-		string temp;
+		String temp;
 
 		do {
 			fin >> temp;
@@ -516,7 +515,7 @@ public:
 		return result;
 	}
 	
-	MeshdataPtr loadMDP(string thing) {
+	MeshdataPtr loadMDP(String thing) {
 		//loads the MeshdataPtr from the collada string
 		Transfer::DenseData *dd = new Transfer::DenseData(thing);
 		Transfer::DenseDataPtr data(dd);

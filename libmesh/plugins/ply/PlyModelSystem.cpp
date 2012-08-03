@@ -257,6 +257,7 @@ Mesh::VisualPtr PlyModelSystem::load(const Transfer::RemoteFileMetadata& metadat
 								for(int k = 0; k < mdp->geometry[counterSMG].primitives.size(); k++) {
 									for(int l = 0; l < mdp->geometry[counterSMG].primitives[k].indices.size(); l++) {
 										//we must check if the point is the same and also if the texture is the same
+										//something is wrong here! reverseMap is creating new entries (and that shouldn't happen!)
 										if(vert[reverseMap[counterSMG][mdp->geometry[counterSMG].primitives[k].indices[l]]][0] == vert[face[i][j]][0] && 
 											vert[reverseMap[counterSMG][mdp->geometry[counterSMG].primitives[k].indices[l]]][1] == vert[face[i][j]][1] && 
 											vert[reverseMap[counterSMG][mdp->geometry[counterSMG].primitives[k].indices[l]]][2] == vert[face[i][j]][2] &&
@@ -269,8 +270,10 @@ Mesh::VisualPtr PlyModelSystem::load(const Transfer::RemoteFileMetadata& metadat
 												sameSMG = true;
 												bool isThere = false;
 												for(int m = 0; m < hitSMG.size(); m++)
-													if(hitSMG[m] == counterSMG) isThere = true;
+													if(hitSMG[m] == counterSMG) isThere = true; //is there a better way of doing this?
 												if(!isThere) hitSMG.push_back(counterSMG);
+
+												
 										}
 									}
 								}
@@ -278,7 +281,7 @@ Mesh::VisualPtr PlyModelSystem::load(const Transfer::RemoteFileMetadata& metadat
 							}
 							counterSMG++;
 						}
-						//add to the primitive if the index or the point is the same
+						//add to the primitive if the point is the same
 						if(sameSMG) {
 							//if the point hit multiple SMG's, we will have to merge them before adding a point
 							while(hitSMG.size() > 1) {
@@ -317,6 +320,7 @@ Mesh::VisualPtr PlyModelSystem::load(const Transfer::RemoteFileMetadata& metadat
 								//we put the point in
 								Vector3f point = Vector3f(vert[face[i][j]][0], vert[face[i][j]][1], vert[face[i][j]][2]);
 								int ind = reverseMap[hitSMG[0]].size();
+
 								if(indexMap[face[i][j]] == -1) {
 									mdp->geometry[hitSMG[0]].positions.push_back(point);
 									indexMap[face[i][j]] = ind;
@@ -348,60 +352,6 @@ Mesh::VisualPtr PlyModelSystem::load(const Transfer::RemoteFileMetadata& metadat
 				}
 				
 			}
-			////mixing smg's and increasing # of primitives
-			////put this in filter plugin later
-			////general idea: we take two geometries, sort points, see if they are equal (because they should perfectly line up!)
-			//if(mdp->geometry.size() >= 2) {
-			//	std::vector<std::vector<Vector3f> > sortedPositions;
-			//	for(int i = 0; i < mdp->geometry.size(); i++) {
-			//		std::vector<Vector3f> v = mdp->geometry[i].positions;
-			//		std::sort(v.begin(), v.begin() + v.size(), comp);
-			//		sortedPositions.push_back(v);
-			//	}
-			//	for(int i = 0; i < mdp->geometry.size(); i++) {
-			//		for(int j = i + 1; j < mdp->geometry.size(); j++) {
-			//			//std::vector<Vector3f> v1 = mdp->geometry[i].positions;
-			//			//std::sort(v1.begin(), v1.begin() + v1.size(), comp);
-			//			//std::vector<Vector3f> v2 = mdp->geometry[j].positions;
-			//			//std::sort(v2.begin(), v2.begin() + v2.size(), comp);
-			//			bool same = true;
-			//			if(sortedPositions[i].size() == sortedPositions[j].size()) {
-			//				for(int k = 0; k < sortedPositions[i].size(); k++) {
-			//					if(sortedPositions[i][i] != sortedPositions[j][i]) same = false;
-			//				}
-			//			} else same = false;
-			//			if(same) {
-			//				int add = reverseMap[i].size();
-			//				//if same, we make a new primitive
-			//				mdp->geometry[i].primitives.push_back(p);
-			//				for(int k = 0; k < mdp->geometry[j].primitives[0].indices.size(); k++)
-			//					mdp->geometry[i].primitives[mdp->geometry[i].primitives.size() - 1].indices.push_back(mdp->geometry[j].primitives[0].indices[k] + add);
-			//				for(int k = 0; k < mdp->geometry[j].positions.size(); k++)
-			//					mdp->geometry[i].positions.push_back(mdp->geometry[j].positions[k]);
-			//				//submeshgeometry
-			//				mdp->geometry.erase(mdp->geometry.begin() + j);
-			//				
-			//				//goemetryinstance
-			//				mdp->instances.erase(mdp->instances.begin() + j);
-			//				for(int k = j; k < mdp->instances.size(); k++)
-			//					mdp->instances[k].geometryIndex = k;
-
-			//				//reverseMap (!)
-			//				for(int k = 0; k < reverseMap[j].size(); k++)
-			//					reverseMap[i][reverseMap[i].size()] = reverseMap[j][k];
-			//				reverseMap.erase(reverseMap.begin() + j);
-
-			//				//sortedPositions!
-			//				sortedPositions.erase(sortedPositions.begin() + j);
-
-			//				//if we are going to put this in the plugin, we won't have
-			//				//certain values (reverseMap (!)) - that could be a blessing
-			//				//and a curse
-			//				//we would also have to add texUVs, colors, ...
-			//			}
-			//		}
-			//	}
-			//}
 
 
 			int fileCounter = 0;

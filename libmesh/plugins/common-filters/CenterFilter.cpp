@@ -67,9 +67,9 @@ FilterDataPtr CenterFilter::apply(FilterDataPtr input) {
 
             Vector3f center = bbox.center();
 
-			Vector3f across = bbox.across() / 2; //sanity check
+			Vector3f across = bbox.across() / 2;
 			double radius = sqrt(across.x * across.x + across.y * across.y + across.z * across.z);
-			double scale = 1;
+			double scale = 1.0;
 			if(radius != 0) scale = 1.0 / radius;
 
             // We to add a transformation. We can't just insert a root node because
