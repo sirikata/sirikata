@@ -145,11 +145,11 @@ public:
 		TS_ASSERT_EQUALS(mdp->geometry.size(), 1);
 		TS_ASSERT_EQUALS(mdp->geometry[0].positions.size(), 8);
 		TS_ASSERT_EQUALS(mdp->geometry[0].skinControllers.size(), 0);
-		TS_ASSERT_EQUALS(mdp->geometry[0].primitives.size(), 1); //should be 2
-		TS_ASSERT_EQUALS(mdp->geometry[0].primitives[0].indices.size(), 12); //should be 6
+		TS_ASSERT_EQUALS(mdp->geometry[0].primitives.size(), 2);
+		TS_ASSERT_EQUALS(mdp->geometry[0].primitives[0].indices.size(), 6)
 		TS_ASSERT_EQUALS(mdp->lights.size(), 0);
 		TS_ASSERT_EQUALS(mdp->textures.size(), 1);
-		TS_ASSERT_EQUALS(mdp->materials.size(), 1); //should be 2
+		TS_ASSERT_EQUALS(mdp->materials.size(), 2);
 		for(int i = 0; i < mdp->materials.size(); i++) 
 			TS_ASSERT_EQUALS(mdp->materials[i].textures.size(), 1);
 		TS_ASSERT_EQUALS(mdp->nodes.size(), 1);
@@ -386,6 +386,7 @@ public:
 	MeshdataPtr loadMDP(string thing) {
 		//loads the MeshdataPtr from the ply string and applies the deduplication filter
 		std::vector<String> names_and_args;
+		names_and_args.push_back("compute-normals"); names_and_args.push_back("");
 		names_and_args.push_back("deduplication"); names_and_args.push_back("");
 		Mesh::Filter* filter = new Mesh::CompositeFilter(names_and_args);
 

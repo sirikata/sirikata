@@ -186,12 +186,16 @@ Mesh::VisualPtr PlyModelSystem::load(const Transfer::RemoteFileMetadata& metadat
 								for(int k = 0; k < numTexCoords / 2; k++) {
 									tc[face[i][k]][2] = numTex;
 									//we set each of the col values to -abs(texNum) so that it won't be mistaken as a normal colored point
-									if(col[face[i][k]][0] == BADCOLOR) col[face[i][k]][0] = -abs(numTex);
-									if(col[face[i][k]][1] == BADCOLOR) col[face[i][k]][1] = -abs(numTex);
-									if(col[face[i][k]][2] == BADCOLOR) col[face[i][k]][2] = -abs(numTex);
-									if(col[face[i][k]][3] == BADCOLOR) col[face[i][k]][3] = -abs(numTex);
+									if(col[face[i][k]][0] == BADCOLOR) {
+										col[face[i][k]][0] = -abs(numTex);
+										col[face[i][k]][1] = -abs(numTex);
+										col[face[i][k]][2] = -abs(numTex);
+										col[face[i][k]][3] = -abs(numTex);
+									}
 								}
-							}
+							} else if(file.size() == 1)
+								for(int k = 0; k < numTexCoords / 2; k++)
+									tc[face[i][k]][2] = 0;
 							break;
 					}
 				}
@@ -258,15 +262,21 @@ Mesh::VisualPtr PlyModelSystem::load(const Transfer::RemoteFileMetadata& metadat
 									for(int l = 0; l < mdp->geometry[counterSMG].primitives[k].indices.size(); l++) {
 										//we must check if the point is the same and also if the texture is the same
 										//something is wrong here! reverseMap is creating new entries (and that shouldn't happen!)
-										if(vert[reverseMap[counterSMG][mdp->geometry[counterSMG].primitives[k].indices[l]]][0] == vert[face[i][j]][0] && 
-											vert[reverseMap[counterSMG][mdp->geometry[counterSMG].primitives[k].indices[l]]][1] == vert[face[i][j]][1] && 
-											vert[reverseMap[counterSMG][mdp->geometry[counterSMG].primitives[k].indices[l]]][2] == vert[face[i][j]][2] &&
-											((col[reverseMap[counterSMG][mdp->geometry[counterSMG].primitives[k].indices[l]]][0] == col[face[i][j]][0] &&
-											col[reverseMap[counterSMG][mdp->geometry[counterSMG].primitives[k].indices[l]]][1] == col[face[i][j]][1] &&
+										if(reverseMap[counterSMG][mdp->geometry[counterSMG].primitives[k].indices[l]] == face[i][j] &&
+											((col[reverseMap[counterSMG][mdp->geometry[counterSMG].primitives[k].indices[l]]][1] == col[face[i][j]][1] &&
 											col[reverseMap[counterSMG][mdp->geometry[counterSMG].primitives[k].indices[l]]][2] == col[face[i][j]][2] &&
 											col[reverseMap[counterSMG][mdp->geometry[counterSMG].primitives[k].indices[l]]][3] == col[face[i][j]][3]) ||
 											(abs(tc[reverseMap[counterSMG][mdp->geometry[counterSMG].primitives[k].indices[l]]][2]) > file.size() && 
 											abs(tc[face[i][j]][2]) > file.size() && file.size() > 0))) {
+										//if(vert[reverseMap[counterSMG][mdp->geometry[counterSMG].primitives[k].indices[l]]][0] == vert[face[i][j]][0] && 
+										//	vert[reverseMap[counterSMG][mdp->geometry[counterSMG].primitives[k].indices[l]]][1] == vert[face[i][j]][1] && 
+										//	vert[reverseMap[counterSMG][mdp->geometry[counterSMG].primitives[k].indices[l]]][2] == vert[face[i][j]][2] &&
+										//	((col[reverseMap[counterSMG][mdp->geometry[counterSMG].primitives[k].indices[l]]][0] == col[face[i][j]][0] &&
+										//	col[reverseMap[counterSMG][mdp->geometry[counterSMG].primitives[k].indices[l]]][1] == col[face[i][j]][1] &&
+										//	col[reverseMap[counterSMG][mdp->geometry[counterSMG].primitives[k].indices[l]]][2] == col[face[i][j]][2] &&
+										//	col[reverseMap[counterSMG][mdp->geometry[counterSMG].primitives[k].indices[l]]][3] == col[face[i][j]][3]) ||
+										//	(abs(tc[reverseMap[counterSMG][mdp->geometry[counterSMG].primitives[k].indices[l]]][2]) > file.size() && 
+										//	abs(tc[face[i][j]][2]) > file.size() && file.size() > 0))) {
 												sameSMG = true;
 												bool isThere = false;
 												for(int m = 0; m < hitSMG.size(); m++)
@@ -354,7 +364,7 @@ Mesh::VisualPtr PlyModelSystem::load(const Transfer::RemoteFileMetadata& metadat
 			}
 
 
-			int fileCounter = 0;
+			//int fileCounter = 0;
 			int mapCounter = 0;
 			for(int i = 0; i < mdp->geometry.size(); i++) {
 				//one texture set for the geometry
@@ -373,16 +383,14 @@ Mesh::VisualPtr PlyModelSystem::load(const Transfer::RemoteFileMetadata& metadat
 					//add material
 					if(faceNum > 0) {
 						Mesh::MaterialEffectInfo::Texture t;
-						if(((tc[reverseMap[i][mdp->geometry[i].primitives[k].indices[0]]][2] >= 0
-							&& tc[reverseMap[i][mdp->geometry[i].primitives[k].indices[0]]][2] < file.size())|| file.size() == 1)
-							&& fileCounter < file.size() && !file[fileCounter].empty()) {						
+						if((tc[reverseMap[i][mdp->geometry[i].primitives[k].indices[0]]][2] >= 0
+							&& tc[reverseMap[i][mdp->geometry[i].primitives[k].indices[0]]][2] < file.size())|| file.size() == 1) {						
 
 							//we add the texture and typical values
 							mei.shininess = -128;
 							mei.reflectivity = -1;
-							mdp->textures.push_back(file[fileCounter]);
-							t.uri = file[fileCounter];
-							fileCounter++;
+							mdp->textures.push_back(file[tc[reverseMap[i][mdp->geometry[i].primitives[k].indices[0]]][2]]);
+							t.uri = file[tc[reverseMap[i][mdp->geometry[i].primitives[k].indices[0]]][2]];
 							t.texCoord = 0;
 							t.affecting = t.DIFFUSE;
 							t.samplerType = t.SAMPLER_TYPE_2D;
