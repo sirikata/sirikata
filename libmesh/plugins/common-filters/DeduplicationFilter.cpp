@@ -78,7 +78,8 @@ FilterDataPtr DeduplicationFilter::apply(FilterDataPtr input) {
 				for(int i = 0; i < mesh->geometry.size(); i++) {
 					for(int j = i + 1; j < mesh->geometry.size(); j++) {
 						bool same = true;
-						if(sortedPositions[i].size() == sortedPositions[j].size()) {
+						if(mesh->instances[i].materialBindingMap[1] != mesh->instances[j].materialBindingMap[1] &&
+							sortedPositions[i].size() == sortedPositions[j].size()) {
 							for(int k = 0; k < sortedPositions[i].size(); k++) {
 								if(sortedPositions[i][k] != sortedPositions[j][k]) same = false;
 							}

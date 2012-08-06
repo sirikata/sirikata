@@ -176,9 +176,25 @@ Mesh::VisualPtr PlyModelSystem::load(const Transfer::RemoteFileMetadata& metadat
 							break;
 						case TC:
 							ss >> numTexCoords;
+							//(note this only applies if the filesize is 1, due to how annoying ply files are with only one texture)
+							//reasoning here: if the tc hasn't been initilized (it's still -1) then we store the tex in it...
+							//but if it already has a value in it, and it doesn't equal tex, then it's an invalid tc and we
+							//store an invalid value - file.size();
 							for(int k = 0; k < numTexCoords / 2; k++) {
+								double temp1, temp2;
+								temp1 = tc[face[i][k]][0];
 								ss >> tc[face[i][k]][0];
+								temp2 = tc[face[i][k]][1];
 								ss >> tc[face[i][k]][1];
+								
+								if(file.size() == 1) {
+									if((tc[face[i][k]][0] != temp1 && temp1 != -1) &&
+										(tc[face[i][k]][1] != temp2 && temp2 != -1))
+										tc[face[i][k]][2] = file.size();
+									else
+										tc[face[i][k]][2] = 0;
+								}
+								
 							}
 							if(file.size() > 1) {
 								int numTex;
@@ -193,9 +209,7 @@ Mesh::VisualPtr PlyModelSystem::load(const Transfer::RemoteFileMetadata& metadat
 										col[face[i][k]][3] = -abs(numTex);
 									}
 								}
-							} else if(file.size() == 1)
-								for(int k = 0; k < numTexCoords / 2; k++)
-									tc[face[i][k]][2] = 0;
+							}
 							break;
 					}
 				}
@@ -378,67 +392,80 @@ Mesh::VisualPtr PlyModelSystem::load(const Transfer::RemoteFileMetadata& metadat
 					}
 					mdp->geometry[i].texUVs.push_back(ts);
 				}
-				for(int k = 0; k < mdp->geometry[i].primitives.size(); k++) {
-					Mesh::MaterialEffectInfo mei;
-					//add material
-					if(faceNum > 0) {
-						Mesh::MaterialEffectInfo::Texture t;
-						if((tc[reverseMap[i][mdp->geometry[i].primitives[k].indices[0]]][2] >= 0
-							&& tc[reverseMap[i][mdp->geometry[i].primitives[k].indices[0]]][2] < file.size())|| file.size() == 1) {						
+				Mesh::MaterialEffectInfo mei;
+				//add material
+				if(faceNum > 0) {
+					Mesh::MaterialEffectInfo::Texture t;
+					bool hasTexture = false;
+					for(int j = 0; j < mdp->geometry[i].primitives[0].indices.size() && !hasTexture; j++) {
+						if((abs(tc[reverseMap[i][mdp->geometry[i].primitives[0].indices[j]]][0]) > .001 &&
+							abs(tc[reverseMap[i][mdp->geometry[i].primitives[0].indices[j]]][0]) < INT_MAX) ||
+							(abs(tc[reverseMap[i][mdp->geometry[i].primitives[0].indices[j]]][1]) > .001 &&
+							abs(tc[reverseMap[i][mdp->geometry[i].primitives[0].indices[j]]][1]) < INT_MAX))
+							hasTexture = true;
+					}
+					//if the texCoords are all almost zero (or are infinite), then this is not a truly texturized geometry
 
-							//we add the texture and typical values
-							mei.shininess = -128;
-							mei.reflectivity = -1;
-							mdp->textures.push_back(file[tc[reverseMap[i][mdp->geometry[i].primitives[k].indices[0]]][2]]);
-							t.uri = file[tc[reverseMap[i][mdp->geometry[i].primitives[k].indices[0]]][2]];
-							t.texCoord = 0;
-							t.affecting = t.DIFFUSE;
-							t.samplerType = t.SAMPLER_TYPE_2D;
-							t.minFilter = t.SAMPLER_FILTER_LINEAR;
-							t.magFilter = t.SAMPLER_FILTER_LINEAR;
-							t.wrapS = t.WRAP_MODE_WRAP;
-							t.wrapT = t.WRAP_MODE_WRAP;
-							t.wrapU = t.WRAP_MODE_WRAP;
-							t.maxMipLevel = 255;
-							t.mipBias = 0;
+					if(hasTexture && tc[reverseMap[i][mdp->geometry[i].primitives[0].indices[0]]][2] >= 0
+						&& tc[reverseMap[i][mdp->geometry[i].primitives[0].indices[0]]][2] < file.size()) {						
 
-							mdp->uri = metadata.getURI().toString();
+						//we add the texture and typical values
+						mei.shininess = -128;
+						mei.reflectivity = -1;
+						bool newFile = true;
+						for(int l = 0; l < mdp->textures.size(); l++)
+							if(mdp->textures[l] == file[tc[reverseMap[i][mdp->geometry[i].primitives[0].indices[0]]][2]])
+								newFile = false;
+						if(newFile)
+							mdp->textures.push_back(file[tc[reverseMap[i][mdp->geometry[i].primitives[0].indices[0]]][2]]);
+						t.uri = file[tc[reverseMap[i][mdp->geometry[i].primitives[0].indices[0]]][2]];
+						t.texCoord = 0;
+						t.affecting = t.DIFFUSE;
+						t.samplerType = t.SAMPLER_TYPE_2D;
+						t.minFilter = t.SAMPLER_FILTER_LINEAR;
+						t.magFilter = t.SAMPLER_FILTER_LINEAR;
+						t.wrapS = t.WRAP_MODE_WRAP;
+						t.wrapT = t.WRAP_MODE_WRAP;
+						t.wrapU = t.WRAP_MODE_WRAP;
+						t.maxMipLevel = 255;
+						t.mipBias = 0;
 
-						} else {
-							//we add a color
-							Vector4f c;
-							if(mdp->geometry[i].primitives[k].primitiveType == Mesh::SubMeshGeometry::Primitive::TRIANGLES && 
-								col[reverseMap[i][mdp->geometry[i].primitives[k].indices[0]]][0] >= 0) { //we might need a better check here if we get certain files
-								c = Vector4f(col[reverseMap[i][mdp->geometry[i].primitives[k].indices[0]]][0] / 255.0,
-									col[reverseMap[i][mdp->geometry[i].primitives[k].indices[0]]][1] / 255.0,
-									col[reverseMap[i][mdp->geometry[i].primitives[k].indices[0]]][2] / 255.0,
-									col[reverseMap[i][mdp->geometry[i].primitives[k].indices[0]]][3] / 255.0);
-								t.color = c;
-							}
-							else t.color = Vector4f(1, 1, 1, 1); //default color is white
-							t.affecting = t.DIFFUSE;
+						mdp->uri = metadata.getURI().toString();
 
+					} else {
+						//we add a color
+						Vector4f c;
+						if(mdp->geometry[i].primitives[0].primitiveType == Mesh::SubMeshGeometry::Primitive::TRIANGLES && 
+							col[reverseMap[i][mdp->geometry[i].primitives[0].indices[0]]][0] >= 0) { //we might need a better check here if we get certain files
+							c = Vector4f(col[reverseMap[i][mdp->geometry[i].primitives[0].indices[0]]][0] / 255.0,
+								col[reverseMap[i][mdp->geometry[i].primitives[0].indices[0]]][1] / 255.0,
+								col[reverseMap[i][mdp->geometry[i].primitives[0].indices[0]]][2] / 255.0,
+								col[reverseMap[i][mdp->geometry[i].primitives[0].indices[0]]][3] / 255.0);
+							t.color = c;
 						}
-						//we try to see if there is a clone of the material
-						mei.textures.push_back(t);
-						bool addMat = true;
-						int matPos = -1;
-						for(int j = 0; j < mdp->materials.size(); j++)
-							if(mdp->materials[j] == mei) {
-								addMat = false;
-								matPos = j;
-							}
-						mdp->geometry[i].primitives[k].materialId = k + 1;
-						//if there is not, we add it, otherwise we do not
-						if(addMat) {		
-							mdp->instances[i].materialBindingMap[mdp->geometry[i].primitives[k].materialId] = mapCounter;
-							mapCounter++;
-							mdp->materials.push_back(mei);
-						} else
-							mdp->instances[i].materialBindingMap[mdp->geometry[i].primitives[k].materialId] = matPos;
+						else t.color = Vector4f(1, 1, 1, 1); //default color is white
+						t.affecting = t.DIFFUSE;
 
-					} else mdp->materials.push_back(mei);
-				}
+					}
+					//we try to see if there is a clone of the material
+					mei.textures.push_back(t);
+					bool addMat = true;
+					int matPos = -1;
+					for(int j = 0; j < mdp->materials.size(); j++)
+						if(mdp->materials[j] == mei) {
+							addMat = false;
+							matPos = j;
+						}
+					mdp->geometry[i].primitives[0].materialId = 1;
+					//if there is not, we add it, otherwise we do not
+					if(addMat) {		
+						mdp->instances[i].materialBindingMap[mdp->geometry[i].primitives[0].materialId] = mapCounter;
+						mapCounter++;
+						mdp->materials.push_back(mei);
+					} else
+						mdp->instances[i].materialBindingMap[mdp->geometry[i].primitives[0].materialId] = matPos;
+
+				} else mdp->materials.push_back(mei);
 			}
 			
 			delete vert;
