@@ -274,7 +274,7 @@ Mesh::VisualPtr PlyModelSystem::load(const Transfer::RemoteFileMetadata& metadat
 								//iterate through the indices
 								for(int k = 0; k < mdp->geometry[counterSMG].primitives.size(); k++) {
 									for(int l = 0; l < mdp->geometry[counterSMG].primitives[k].indices.size(); l++) {
-										//we must check if the point is the same and also if the texture is the same
+										//we must check if the index is the same and also if the texture is the same
 										//something is wrong here! reverseMap is creating new entries (and that shouldn't happen!)
 										if(reverseMap[counterSMG][mdp->geometry[counterSMG].primitives[k].indices[l]] == face[i][j] &&
 											((col[reverseMap[counterSMG][mdp->geometry[counterSMG].primitives[k].indices[l]]][1] == col[face[i][j]][1] &&
@@ -282,15 +282,6 @@ Mesh::VisualPtr PlyModelSystem::load(const Transfer::RemoteFileMetadata& metadat
 											col[reverseMap[counterSMG][mdp->geometry[counterSMG].primitives[k].indices[l]]][3] == col[face[i][j]][3]) ||
 											(abs(tc[reverseMap[counterSMG][mdp->geometry[counterSMG].primitives[k].indices[l]]][2]) > file.size() && 
 											abs(tc[face[i][j]][2]) > file.size() && file.size() > 0))) {
-										//if(vert[reverseMap[counterSMG][mdp->geometry[counterSMG].primitives[k].indices[l]]][0] == vert[face[i][j]][0] && 
-										//	vert[reverseMap[counterSMG][mdp->geometry[counterSMG].primitives[k].indices[l]]][1] == vert[face[i][j]][1] && 
-										//	vert[reverseMap[counterSMG][mdp->geometry[counterSMG].primitives[k].indices[l]]][2] == vert[face[i][j]][2] &&
-										//	((col[reverseMap[counterSMG][mdp->geometry[counterSMG].primitives[k].indices[l]]][0] == col[face[i][j]][0] &&
-										//	col[reverseMap[counterSMG][mdp->geometry[counterSMG].primitives[k].indices[l]]][1] == col[face[i][j]][1] &&
-										//	col[reverseMap[counterSMG][mdp->geometry[counterSMG].primitives[k].indices[l]]][2] == col[face[i][j]][2] &&
-										//	col[reverseMap[counterSMG][mdp->geometry[counterSMG].primitives[k].indices[l]]][3] == col[face[i][j]][3]) ||
-										//	(abs(tc[reverseMap[counterSMG][mdp->geometry[counterSMG].primitives[k].indices[l]]][2]) > file.size() && 
-										//	abs(tc[face[i][j]][2]) > file.size() && file.size() > 0))) {
 												sameSMG = true;
 												bool isThere = false;
 												for(int m = 0; m < hitSMG.size(); m++)

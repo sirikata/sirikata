@@ -55,17 +55,11 @@ FilterDataPtr DeduplicationFilter::apply(FilterDataPtr input) {
 		
         MeshdataPtr mesh( std::tr1::dynamic_pointer_cast<Meshdata>(vis) );
         if (mesh) {
-			//normals are preferred here
-
-			//mixing smg's and increasing # of primitives
-			//general idea: we take two geometries, sort points, see if they are equal (because they should perfectly line up!)
-			//generalize - should it do partial deduplication? if two meshes are only somewhat similar?
-			//look at containers - efficiency
-			//unordered set? unordered map? 
+			//except for certain files, normals are preferred here
+			//thus the computenormalsfilter should be used before deduplication
 
 			//two geometries with exactly the same points (but different orientations/textures) should be mixed.
-			//currently, they are put into different primitives. however, if the points are completely the same,
-			//we should simply delete one entire geometry.
+			//currently, they are put into different primitives in the same geometry
 			if(mesh->geometry.size() >= 2) {
 				//we sort the positions before hand so they're easier to use... but this may be unnecessary.
 				std::vector<std::vector<Vector3f> > sortedPositions;
@@ -78,7 +72,9 @@ FilterDataPtr DeduplicationFilter::apply(FilterDataPtr input) {
 				for(int i = 0; i < mesh->geometry.size(); i++) {
 					for(int j = i + 1; j < mesh->geometry.size(); j++) {
 						bool same = true;
-						if(mesh->instances[i].materialBindingMap[1] != mesh->instances[j].materialBindingMap[1] &&
+						//use unordered_set here to mix them in O(m + n) rather than O(m * n)
+						if(mesh->instances[i].materialBindingMap[mesh->geometry[i].primitives[0].materialId] !=
+							mesh->instances[j].materialBindingMap[mesh->geometry[j].primitives[0].materialId] &&
 							sortedPositions[i].size() == sortedPositions[j].size()) {
 							for(int k = 0; k < sortedPositions[i].size(); k++) {
 								if(sortedPositions[i][k] != sortedPositions[j][k]) same = false;
@@ -117,13 +113,14 @@ FilterDataPtr DeduplicationFilter::apply(FilterDataPtr input) {
 					}
 				}
 
-				//test if there are some similar points	
+				//then, we see if the geometries have similar points: if they do, they should be mixed
 				for(int i = 0; i < mesh->geometry.size(); i++) {
 					for(int j = i + 1; j < mesh->geometry.size(); j++) {
 						bool combine = false;
 						//we compare two of the geometries:
 						//but we do not proceed unless their materials are the same (we can assume only one primitive for now)
-						if(mesh->instances[i].materialBindingMap[1] == mesh->instances[j].materialBindingMap[1]) {
+						if(mesh->instances[i].materialBindingMap[mesh->geometry[i].primitives[0].materialId] ==
+							mesh->instances[j].materialBindingMap[mesh->geometry[j].primitives[0].materialId]) {
 							for(int k = 0; k < mesh->geometry[i].positions.size(); k++) {
 								for(int l = 0; l < mesh->geometry[j].positions.size(); l++) {
 									//positions have to be the same
@@ -161,7 +158,7 @@ FilterDataPtr DeduplicationFilter::apply(FilterDataPtr input) {
 								for(int k = j; k < mesh->instances.size(); k++)
 									mesh->instances[k].geometryIndex = k;
 
-								j--; //or we might go overboard!
+								j--;
 
 								//we have to loop through it again!?!?!
 								//well, we could loop through it and notice that the combo should be hit, so
