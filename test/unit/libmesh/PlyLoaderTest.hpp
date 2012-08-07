@@ -71,6 +71,10 @@ public:
 		_initialized = 0;
     }
 
+	//the PlyModelSystem needs to be made more efficient, as larger files take
+	//a very long time to load (the second lowest resolution of the stanford bunny
+	//takes around 45 seconds...
+
 	void testPlyLoaderSimple( void ) {
 		//ply file with almost nothing
 		string simple = getString("simple");

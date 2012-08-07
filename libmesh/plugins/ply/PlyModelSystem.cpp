@@ -16,7 +16,23 @@ enum {NONE, COLOR, TEXTURE};
 const int BADCOLOR = 256;
 
 
+
+
+
 namespace Sirikata {
+
+struct SIRIKATA_MESH_EXPORT point {
+	//the geometry of which this point is a member of
+	int geom;
+	//its index in that geometry
+	int index;
+	//x, y, z
+	Vector3f coords;
+	//r, g, b, alpha
+	Vector4f colors;
+	//texCoords and also its material
+	int tc[3];
+};
 
 PlyModelSystem::PlyModelSystem() {
 }
@@ -41,14 +57,8 @@ bool PlyModelSystem::canLoad(Transfer::DenseDataPtr data) {
     return false;
 }
 
-//should be moved into the filter plugin
-bool comp(Vector3f point1, Vector3f point2) {
-	if(point1.x == point2.x) {
-		if(point1.y == point2.y) {
-			return point1.z < point2.z;
-		} else return point1.y < point2.y;
-	} else return point1.x < point2.x;
-}
+bool comp (int l, int r) {return l < r;}
+
 
 Mesh::VisualPtr PlyModelSystem::load(const Transfer::RemoteFileMetadata& metadata, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data) {
 	if(!canLoad(data))
@@ -146,7 +156,6 @@ Mesh::VisualPtr PlyModelSystem::load(const Transfer::RemoteFileMetadata& metadat
 			int numIndices;
 			int numTexCoords;
 			//obtain vertex data
-			int lol = 0;
 			for(int i = 0; i < vertexNum; i++) {
 				for(int j = 0; j < propV.size(); j++) {
 					ss >> temp;
@@ -221,6 +230,7 @@ Mesh::VisualPtr PlyModelSystem::load(const Transfer::RemoteFileMetadata& metadat
 			mdp->rootNodes.push_back(0);
 			
 			Mesh::SubMeshGeometry smg;
+
 			//make a primitive
 			Mesh::SubMeshGeometry::Primitive p;
 			if(vertexNum >= 3) p.primitiveType = Mesh::SubMeshGeometry::Primitive::TRIANGLES;
@@ -248,7 +258,7 @@ Mesh::VisualPtr PlyModelSystem::load(const Transfer::RemoteFileMetadata& metadat
 				}
 			} else {
 				bool quick = false;
-				if(quick) { //millions and millions of times faster! it's beautiful!
+				if(quick) { //for sanity checking
 					mdp->geometry.push_back(smg);
 					gi.geometryIndex = 0;
 					mdp->instances.push_back(gi);
@@ -263,9 +273,11 @@ Mesh::VisualPtr PlyModelSystem::load(const Transfer::RemoteFileMetadata& metadat
 					//index or shared a point. If yes, we may add
 					//to the same primitive, or we may make a new
 					//submeshgeometry.
-					//LATER: primitives should be differentiated 
-					//based on material/texture.
+
 					for(int i = 0; i < faceNum; i++) {
+						//here, instand of looping through each geometry, this should be changed to store successive points into an unordered_set
+						//so that we can just see if an existing point is there.
+
 						int counterSMG = 0;
 						std::vector<int> hitSMG;
 						bool sameSMG = false;
@@ -320,6 +332,7 @@ Mesh::VisualPtr PlyModelSystem::load(const Transfer::RemoteFileMetadata& metadat
 									} 
 									mdp->geometry[hitSMG[0]].primitives[0].indices.push_back(indexMap[reverseMap[hitSMG[1]][mdp->geometry[hitSMG[1]].primitives[0].indices[j]]]);
 								}
+								//proper deletions
 								mdp->geometry.erase(mdp->geometry.begin() + hitSMG[1]);
 								//then, geometryInstance
 								mdp->instances.erase(mdp->instances.begin() + hitSMG[1]);
@@ -384,7 +397,6 @@ Mesh::VisualPtr PlyModelSystem::load(const Transfer::RemoteFileMetadata& metadat
 					mdp->geometry[i].texUVs.push_back(ts);
 				}
 				Mesh::MaterialEffectInfo mei;
-				//add material
 				if(faceNum > 0) {
 					Mesh::MaterialEffectInfo::Texture t;
 					bool hasTexture = false;

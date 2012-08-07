@@ -9,6 +9,8 @@
 
 namespace Sirikata {
 
+
+
 /** Implementation of ModelsSystem that loads and saves PLY files. */
 class PlyModelSystem : public ModelsSystem {
 public:

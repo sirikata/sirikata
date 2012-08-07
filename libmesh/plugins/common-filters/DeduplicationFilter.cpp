@@ -55,8 +55,7 @@ FilterDataPtr DeduplicationFilter::apply(FilterDataPtr input) {
 		
         MeshdataPtr mesh( std::tr1::dynamic_pointer_cast<Meshdata>(vis) );
         if (mesh) {
-			//except for certain files, normals are preferred here
-			//thus the computenormalsfilter should be used before deduplication
+			//normals are necessary, the filter might break without them....
 
 			//two geometries with exactly the same points (but different orientations/textures) should be mixed.
 			//currently, they are put into different primitives in the same geometry
@@ -69,10 +68,12 @@ FilterDataPtr DeduplicationFilter::apply(FilterDataPtr input) {
 					sortedPositions.push_back(v);
 				}
 				//test if all of the points are exactly the same
+				//a better way (possibly) is to put it with the other major loop
+				//and just note whether every single point is the same as the loop runs
 				for(int i = 0; i < mesh->geometry.size(); i++) {
 					for(int j = i + 1; j < mesh->geometry.size(); j++) {
 						bool same = true;
-						//use unordered_set here to mix them in O(m + n) rather than O(m * n)
+						//should switch to unordered_set
 						if(mesh->instances[i].materialBindingMap[mesh->geometry[i].primitives[0].materialId] !=
 							mesh->instances[j].materialBindingMap[mesh->geometry[j].primitives[0].materialId] &&
 							sortedPositions[i].size() == sortedPositions[j].size()) {
@@ -105,7 +106,7 @@ FilterDataPtr DeduplicationFilter::apply(FilterDataPtr input) {
 							for(int k = j; k < mesh->instances.size(); k++)
 								mesh->instances[k].geometryIndex = k;
 
-							//sortedPositions!
+							//sortedPositions
 							sortedPositions.erase(sortedPositions.begin() + j);
 							
 
@@ -128,8 +129,7 @@ FilterDataPtr DeduplicationFilter::apply(FilterDataPtr input) {
 										combine = true;
 								}
 							}
-							//and do stuff to them here
-							//this will look very weird
+							//and mix them (if necessary) here
 							if(combine) {
 								for(int l = 0; l < mesh->geometry[j].primitives[0].indices.size(); l++) {
 									bool addPoint = true;
@@ -153,16 +153,13 @@ FilterDataPtr DeduplicationFilter::apply(FilterDataPtr input) {
 										mesh->geometry[i].primitives[0].indices.push_back(mesh->geometry[i].primitives[0].indices[pos]);
 									}
 								}
+								//proper clean up
 								mesh->geometry.erase(mesh->geometry.begin() + j);
 								mesh->instances.erase(mesh->instances.begin() + j);
 								for(int k = j; k < mesh->instances.size(); k++)
 									mesh->instances[k].geometryIndex = k;
 
 								j--;
-
-								//we have to loop through it again!?!?!
-								//well, we could loop through it and notice that the combo should be hit, so
-								//we could just add it in without worries...
 							}
 
 

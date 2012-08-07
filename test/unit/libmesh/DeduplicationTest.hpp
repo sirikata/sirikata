@@ -71,6 +71,8 @@ public:
 		_initialized = 0;
     }
 
+	//more tests should be added for different files...
+
 	void testFilterTriangles( void ) {
 		//ply file with two distinct texturized triangles
 		string triangles = getString("triangles");
