@@ -151,5 +151,11 @@ int main(int argc, char** argv) {
     delete iostrand;
     delete ios;
 
+    Transfer::TransferMediator::destroy();
+
+    plugins.gc();
+
+    Sirikata::Logging::finishLog();
+
     return 0;
 }
