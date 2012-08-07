@@ -77,7 +77,7 @@ SIRIKATA_PLUGIN_EXPORT_C void init ()
 
         FilterFactory::getSingleton().registerConstructor("compute-normals", ComputeNormalsFilter::create);
 
-		FilterFactory::getSingleton().registerConstructor("deduplication", DeduplicationFilter::create);
+        FilterFactory::getSingleton().registerConstructor("deduplication", DeduplicationFilter::create);
     }
 
     ++common_filters_plugin_refcount;
@@ -114,6 +114,7 @@ SIRIKATA_PLUGIN_EXPORT_C void destroy ()
             FilterFactory::getSingleton().unregisterConstructor("squash-materials");
             FilterFactory::getSingleton().unregisterConstructor("squash-instanced-geometry");
             FilterFactory::getSingleton().unregisterConstructor("single-material-geometry");
+            FilterFactory::getSingleton().unregisterConstructor("reduce-draw-calls");
 
             FilterFactory::getSingleton().unregisterConstructor("translate");
             FilterFactory::getSingleton().unregisterConstructor("rotate");
@@ -125,7 +126,7 @@ SIRIKATA_PLUGIN_EXPORT_C void destroy ()
 
             FilterFactory::getSingleton().unregisterConstructor("compute-normals");
 
-			FilterFactory::getSingleton().unregisterConstructor("deduplication");
+            FilterFactory::getSingleton().unregisterConstructor("deduplication");
         }
     }
 }
