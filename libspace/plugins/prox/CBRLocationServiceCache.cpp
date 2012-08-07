@@ -361,6 +361,8 @@ void CBRLocationServiceCache::objectAdded(const UUID& uuid, bool islocal, bool a
 }
 
 void CBRLocationServiceCache::processObjectAdded(const ObjectReference& uuid, ObjectData data) {
+    Lock lck(mMutex);
+
     // TODO(ewencp) at some point, we might want to (optionally) use aggregates
     // here, especially if we're reconstructing entire trees.
     if (!data.isAggregate)
