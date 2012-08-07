@@ -153,6 +153,7 @@ private:
 
     void handleUpdateServerQuery(ServerID sid, const String& raw_query);
     void handleUpdateServerQueryResultsToReplicatedTrees(ServerID sid, const Sirikata::Protocol::Prox::ProximityResults& results);
+    void handleUpdateServerQueryResultsToRetryRequests(ServerID sid, const Sirikata::Protocol::Prox::ProximityResults& results);
 
     // Helpers for un/registering a server query
     void registerServerQuery(const ServerID& querier);

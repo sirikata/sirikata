@@ -604,7 +604,7 @@ void LibproxManualProximity::handleUpdateServerQuery(ServerID sid, const String&
                     result = q->refine(qur.nodes[i]);
                 else
                     result = q->coarsen(qur.nodes[i]);
-                PROXLOG(detailed, (qur.refine ? " Refine" : " Coarsen") << " for server query " << sid << " node " << qur.nodes[i] << " " << (result ? "succeeded" : "failed"));
+                PROXLOG(detailed, (qur.refine ? " Refine" : " Coarsen") << " for server query " << sid << " node " << qur.nodes[i] << " in " << ObjectClassToString((ObjectClass)kls) << " " << (result ? "succeeded" : "failed"));
             }
         }
     }
@@ -633,6 +633,17 @@ void LibproxManualProximity::handleUpdateServerQueryResultsToReplicatedTrees(Ser
     // Notify replicated tree
     rsit->second.client->proxUpdate(results);
 
+    // We also need to apply requests that we weren't able to before. However,
+    // because the proxUpdate() dispatches results to a LocCache, which then
+    // posts to ensure things get handled in the right strand. To make sure we
+    // wait until that update has been applied, we post here, then handle
+    // retries.
+    mProxStrand->post(
+        std::tr1::bind(&LibproxManualProximity::handleUpdateServerQueryResultsToRetryRequests, this, sid, results)
+    );
+}
+
+void LibproxManualProximity::handleUpdateServerQueryResultsToRetryRequests(ServerID sid, const Sirikata::Protocol::Prox::ProximityResults& results) {
     // And now that everyone knows about it, try to apply requests that we
     // weren't able to before.
     for(int32 idx = 0; idx < results.update_size(); idx++) {
@@ -1163,7 +1174,7 @@ void LibproxManualProximity::queryHasEvents(ProxQuery* query) {
 
         uint32 count = 0;
         while(count < max_count && !evts.empty()) {
-            PROXLOG(detailed, "Reporting prox event ----- ");
+            PROXLOG(insane, "Reporting prox event ----- ");
             const ProxQueryEvent& evt = evts.front();
             Sirikata::Protocol::Prox::IProximityUpdate event_results = prox_results.add_update();
 
@@ -1180,6 +1191,8 @@ void LibproxManualProximity::queryHasEvents(ProxQuery* query) {
 
                 ObjectReference parentid = evt.additions()[aidx].parent();
                 bool has_parent = (parentid != ObjectReference::null());
+
+                PROXLOG(insane, " - Added " << oobjid << " (parent " << parentid << ")");
 
                 count++;
 
@@ -1280,6 +1293,7 @@ void LibproxManualProximity::queryHasEvents(ProxQuery* query) {
             for(uint32 ridx = 0; ridx < evt.removals().size(); ridx++) {
                 ObjectReference oobjid = evt.removals()[ridx].id();
                 UUID objid = oobjid.getAsUUID();
+                PROXLOG(insane, " - Removed " << oobjid);
                 count++;
 
                 // Clear out seqno and let main strand remove loc
@@ -1322,8 +1336,10 @@ void LibproxManualProximity::queryHasEvents(ProxQuery* query) {
             }
 
             if (event_results.addition_size() == 0 && event_results.removal_size() == 0) {
-                PROXLOG(error, "Generated update with no additions or removals, possibly because objects that were removed from the location cache");
+                PROXLOG(error, "Generated update with no additions or removals");
             }
+
+            PROXLOG(insane, "----- Prox event complete");
 
             evts.pop_front();
         }
