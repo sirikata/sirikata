@@ -181,6 +181,8 @@ void ReplicatedClient::sendCoarsenRequest(const ProxIndexID proxid, const std::v
 
 // Proximity tracking updates in local queries to trigger adjustments to server query
 void ReplicatedClient::queriersAreObserving(ProxIndexID indexid, const ObjectReference& objid) {
+    mObservedNodes.insert( IndexObjectReference(indexid, objid) );
+
     // Someone is observing this node, we should try to refine it
     sendRefineRequest(indexid, objid);
 
@@ -192,6 +194,9 @@ void ReplicatedClient::queriersAreObserving(ProxIndexID indexid, const ObjectRef
 }
 
 void ReplicatedClient::queriersStoppedObserving(ProxIndexID indexid, const ObjectReference& objid) {
+    assert( mObservedNodes.find(IndexObjectReference(indexid, objid)) != mObservedNodes.end() );
+    mObservedNodes.erase( IndexObjectReference(indexid, objid) );
+
     // Nobody is observing this node, we should try to coarsen it after awhile,
     // but only if it doesn't have children.
     mUnobservedTimeouts.insert(UnobservedNodeTimeout(IndexObjectReference(indexid, objid), mContext->recentSimTime() + Duration::seconds(15)));
@@ -208,6 +213,17 @@ void ReplicatedClient::replicatedNodeRemoved(ProxIndexID indexid, const ObjectRe
     UnobservedNodesByID& by_id = mUnobservedTimeouts.get<objid_tag>();
     UnobservedNodesByID::iterator it = by_id.find(IndexObjectReference(indexid, objid));
     if (it != by_id.end()) by_id.erase(it);
+
+    // We also might need to try to re-refine some data if we ended up
+    // removing a node which is a child of an observed node. This keeps us
+    // proactively up-to-date with an extra layer of info. Even if we don't get
+    // the info back in time for a request, it at least will have occurred and
+    // we'll be able to retry when the result does come in.
+    ReplicatedLocationServiceCachePtr loccache = getLocCache(indexid);
+    assert(loccache->tracking(objid));
+    ObjectReference parentid = loccache->parent(objid);
+    if (mObservedNodes.find(IndexObjectReference(indexid, parentid)) == mObservedNodes.end())
+        sendRefineRequest(indexid, parentid);
 }
 
 void ReplicatedClient::processExpiredNodes() {

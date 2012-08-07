@@ -449,11 +449,7 @@ void LibproxManualProximity::aggregateObserved(ProxAggregator* handler, const Ob
         mReplicatedServerDataMap[sid].client &&
         mReplicatedServerDataMap[sid].handlers.find(indexid) != mReplicatedServerDataMap[sid].handlers.end()
     );
-    // FIXME we should only trigger this on == 1, but right now because of
-    // coarsening unobserved nodes, we can end up wanting to refine something
-    // that has children, but they've been removed and we have no other trigger
-    // to ask for a refinement
-    if (nobservers >= 1) {
+    if (nobservers == 1) {
         mReplicatedServerDataMap[sid].client->queriersAreObserving(indexid, objid);
     }
     else if (nobservers == 0) {

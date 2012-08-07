@@ -15,6 +15,8 @@
 #include <boost/multi_index/member.hpp>
 #include <boost/multi_index/ordered_index.hpp>
 
+#include <boost/functional/hash.hpp>
+
 #include <sirikata/core/util/SerializationCheck.hpp>
 
 namespace Sirikata {
@@ -116,6 +118,19 @@ class SIRIKATA_LIBPINTOLOC_EXPORT ReplicatedClient :
                 (indexid == rhs.indexid && objid < rhs.objid));
         }
 
+        bool operator==(const IndexObjectReference& rhs) const {
+            return (indexid == rhs.indexid && objid == rhs.objid);
+        }
+        class Hasher {
+        public:
+            size_t operator()(const IndexObjectReference& ior) const {
+                size_t seed = 0;
+                boost::hash_combine(seed, ior.indexid);
+                boost::hash_combine(seed, ior.objid.hash());
+                return seed;
+            }
+        };
+
         ProxIndexID indexid;
         ObjectReference objid;
     };
@@ -155,6 +170,9 @@ class SIRIKATA_LIBPINTOLOC_EXPORT ReplicatedClient :
     IndexObjectCacheMap mObjects;
     typedef std::map<ProxIndexID, OrphanLocUpdateManagerPtr> IndexOrphanLocUpdateMap;
     IndexOrphanLocUpdateMap mOrphans;
+
+    typedef std::tr1::unordered_set<IndexObjectReference, IndexObjectReference::Hasher> ObservedNodeSet;
+    ObservedNodeSet mObservedNodes;
 
     UnobservedNodeTimeouts mUnobservedTimeouts;
     Network::IOTimerPtr mUnobservedTimer;
