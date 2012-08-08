@@ -90,7 +90,7 @@ public:
 		//collada file with only a single line
 		String line = getString("line");
 		MeshdataPtr mdp = loadMDP(line);
-		
+
 		//asserts
 		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
 		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 1);
@@ -114,7 +114,7 @@ public:
 		//collada file with square (actually rectangle)
 		String square = getString("square");
 		MeshdataPtr mdp = loadMDP(square);
-		
+
 		//asserts
 		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
 		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 1);
@@ -138,7 +138,7 @@ public:
 		//collada file with square with two sides, one of which is specially texturized
 		String square2s = getString("square2s");
 		MeshdataPtr mdp = loadMDP(square2s);
-		
+
 		//asserts
 		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
 		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 1);
@@ -152,7 +152,7 @@ public:
 		TS_ASSERT_EQUALS(mdp->lights.size(), 0);
 		TS_ASSERT_EQUALS(mdp->textures.size(), 1);
 		TS_ASSERT_EQUALS(mdp->materials.size(), 2);
-		for(int i = 0; i < mdp->materials.size(); i++) 
+		for(uint32 i = 0; i < mdp->materials.size(); i++)
 			TS_ASSERT_EQUALS(mdp->materials[i].textures.size(), 1);
 		TS_ASSERT_EQUALS(mdp->nodes.size(), 1);
 		TS_ASSERT_EQUALS(mdp->nodes[0].transform, Matrix4x4f::identity());
@@ -163,7 +163,7 @@ public:
 		//collada file with two-sided hexagon
 		String hex2s = getString("hex2s");
 		MeshdataPtr mdp = loadMDP(hex2s);
-		
+
 		//asserts
 		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
 		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 1);
@@ -177,7 +177,7 @@ public:
 		TS_ASSERT_EQUALS(mdp->lights.size(), 0);
 		TS_ASSERT_EQUALS(mdp->textures.size(), 0);
 		TS_ASSERT_EQUALS(mdp->materials.size(), 2);
-		for(int i = 0; i < mdp->materials.size(); i++) 
+		for(uint32 i = 0; i < mdp->materials.size(); i++)
 			TS_ASSERT_EQUALS(mdp->materials[i].textures.size(), 1);
 		TS_ASSERT_EQUALS(mdp->nodes.size(), 1);
 		TS_ASSERT_EQUALS(mdp->nodes[0].transform, Matrix4x4f::identity());
@@ -188,7 +188,7 @@ public:
 		//collada file with cube (actually a rectangular prism)
 		String cube = getString("cube");
 		MeshdataPtr mdp = loadMDP(cube);
-		
+
 		//asserts
 		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
 		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 1);
@@ -212,14 +212,14 @@ public:
 		//collada file with three textured cubes of different rotations
 		String cubes = getString("cubes");
 		MeshdataPtr mdp = loadMDP(cubes);
-		
+
 		//asserts
 		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
 		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 3);
 		TS_ASSERT_EQUALS(mdp->getInstancedLightCount(), 0);
 		TS_ASSERT_EQUALS(mdp->getJointCount(), 0);
 		TS_ASSERT_EQUALS(mdp->geometry.size(), 3);
-		for(int i = 0; i < mdp->geometry.size(); i++) {
+		for(uint32 i = 0; i < mdp->geometry.size(); i++) {
 			TS_ASSERT_EQUALS(mdp->geometry[i].positions.size(), 24);
 			TS_ASSERT_EQUALS(mdp->geometry[i].skinControllers.size(), 0);
 			TS_ASSERT_EQUALS(mdp->geometry[i].primitives.size(), 1);
@@ -237,14 +237,14 @@ public:
 		//collada file with partially textured hexagonal prism
 		String prism = getString("prism");
 		MeshdataPtr mdp = loadMDP(prism);
-		
+
 		//asserts
 		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
 		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 3);
 		TS_ASSERT_EQUALS(mdp->getInstancedLightCount(), 0);
 		TS_ASSERT_EQUALS(mdp->getJointCount(), 0);
 		TS_ASSERT_EQUALS(mdp->geometry.size(), 3);
-		for(int i = 0; i < mdp->geometry.size(); i++) {
+		for(uint32 i = 0; i < mdp->geometry.size(); i++) {
 			TS_ASSERT_EQUALS(mdp->geometry[i].skinControllers.size(), 0);
 			TS_ASSERT_EQUALS(mdp->geometry[i].primitives.size(), 1);
 		}
@@ -261,14 +261,14 @@ public:
 		//collada file with two distinct texturized triangles
 		String triangles = getString("triangles");
 		MeshdataPtr mdp = loadMDP(triangles);
-		
+
 		//asserts
 		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
 		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 2);
 		TS_ASSERT_EQUALS(mdp->getInstancedLightCount(), 0);
 		TS_ASSERT_EQUALS(mdp->getJointCount(), 0);
 		TS_ASSERT_EQUALS(mdp->geometry.size(), 2);
-		for(int i = 0; i < mdp->geometry.size(); i++) {
+		for(uint32 i = 0; i < mdp->geometry.size(); i++) {
 			TS_ASSERT_EQUALS(mdp->geometry[i].positions.size(), 6);
 			TS_ASSERT_EQUALS(mdp->geometry[i].skinControllers.size(), 0);
 			TS_ASSERT_EQUALS(mdp->geometry[i].primitives.size(), 2);
@@ -287,7 +287,7 @@ public:
 		//collada file with two connected disjoint triangles in 3d
 		String triangles3d = getString("triangles3d");
 		MeshdataPtr mdp = loadMDP(triangles3d);
-		
+
 		//asserts
 		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
 		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 1);
@@ -311,7 +311,7 @@ public:
 		//collada file with one circle
 		String circle = getString("circle");
 		MeshdataPtr mdp = loadMDP(circle);
-		
+
 		//asserts
 		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
 		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 1);
@@ -335,7 +335,7 @@ public:
 		//collada file with one texturized circle
 		String circleT = getString("circleT");
 		MeshdataPtr mdp = loadMDP(circleT);
-		
+
 		//asserts
 		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
 		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 1);
@@ -359,14 +359,14 @@ public:
 		//collada file with two distinct circles
 		String circles = getString("circles");
 		MeshdataPtr mdp = loadMDP(circles);
-		
+
 		//asserts
 		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
 		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 2);
 		TS_ASSERT_EQUALS(mdp->getInstancedLightCount(), 0);
 		TS_ASSERT_EQUALS(mdp->getJointCount(), 0);
 		TS_ASSERT_EQUALS(mdp->geometry.size(), 2);
-		for(int i = 0; i < mdp->geometry.size(); i++) {
+		for(uint32 i = 0; i < mdp->geometry.size(); i++) {
 			TS_ASSERT_EQUALS(mdp->geometry[i].positions.size(), 24);
 			TS_ASSERT_EQUALS(mdp->geometry[i].skinControllers.size(), 0);
 			TS_ASSERT_EQUALS(mdp->geometry[i].primitives.size(), 1);
@@ -385,14 +385,14 @@ public:
 		//collada file with two distinct cylinders
 		String cylinders = getString("cylinders");
 		MeshdataPtr mdp = loadMDP(cylinders);
-		
+
 		//asserts
 		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
 		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 2);
 		TS_ASSERT_EQUALS(mdp->getInstancedLightCount(), 0);
 		TS_ASSERT_EQUALS(mdp->getJointCount(), 0);
 		TS_ASSERT_EQUALS(mdp->geometry.size(), 2);
-		for(int i = 0; i < mdp->geometry.size(); i++) {
+		for(uint32 i = 0; i < mdp->geometry.size(); i++) {
 			TS_ASSERT_EQUALS(mdp->geometry[i].positions.size(), 96);
 			TS_ASSERT_EQUALS(mdp->geometry[i].skinControllers.size(), 0);
 			TS_ASSERT_EQUALS(mdp->geometry[i].primitives.size(), 1);
@@ -411,21 +411,21 @@ public:
 		//collada file with pikachu
 		String pikachu = getString("pikachu/pikachu");
 		MeshdataPtr mdp = loadMDP(pikachu);
-		
+
 		//asserts
 		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
 		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 7);
 		TS_ASSERT_EQUALS(mdp->getInstancedLightCount(), 0);
 		TS_ASSERT_EQUALS(mdp->getJointCount(), 0);
 		TS_ASSERT_EQUALS(mdp->geometry.size(), 7);
-		for(int i = 0; i < mdp->geometry.size(); i++)
+		for(uint32 i = 0; i < mdp->geometry.size(); i++)
 			TS_ASSERT_EQUALS(mdp->geometry[i].skinControllers.size(), 0);
 		TS_ASSERT_EQUALS(mdp->lights.size(), 0);
 		TS_ASSERT_EQUALS(mdp->textures.size(), 1);
 		TS_ASSERT_EQUALS(mdp->materials.size(), 1);
 		TS_ASSERT_EQUALS(mdp->materials[0].textures.size(), 1);
 		TS_ASSERT_EQUALS(mdp->nodes.size(), 3);
-		for(int i = 0; i < mdp->nodes.size(); i++)
+		for(uint32 i = 0; i < mdp->nodes.size(); i++)
 			TS_ASSERT_EQUALS(mdp->nodes[i].transform, Matrix4x4f::identity());
 	}
 
@@ -433,7 +433,7 @@ public:
 		//collada file with drill
 		String drill = getString("drill");
 		MeshdataPtr mdp = loadMDP(drill);
-		
+
 		//asserts
 		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
 		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 1);
@@ -455,7 +455,7 @@ public:
 		//collada file with stanford bunny
 		String bunny = getString("bunny");
 		MeshdataPtr mdp = loadMDP(bunny);
-		
+
 		//asserts
 		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
 		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 1);
@@ -485,8 +485,8 @@ public:
 		MeshdataPtr mdp(std::tr1::dynamic_pointer_cast<Meshdata>(parsed));
 		TS_ASSERT_EQUALS(mdp, MeshdataPtr());
 	}
-	
-	
+
+
 	String getString(String name) {
 		String result;
 		//obtains string of information from the collada file rather than
@@ -514,7 +514,7 @@ public:
 		}while(fin && temp != "</COLLADA>");
 		return result;
 	}
-	
+
 	MeshdataPtr loadMDP(String thing) {
 		//loads the MeshdataPtr from the collada string
 		Transfer::DenseData *dd = new Transfer::DenseData(thing);

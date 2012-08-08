@@ -35,7 +35,7 @@ public:
         if (work != NULL) {
             delete work; work = NULL;
         }
-        for(int i = 0; i < threads.size(); i++) {
+        for(uint32 i = 0; i < threads.size(); i++) {
             threads[i]->join();
         }
         threads.clear();
