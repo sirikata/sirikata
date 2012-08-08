@@ -36,14 +36,20 @@
 #include <sirikata/space/ObjectSegmentation.hpp>
 #include <hiredis/async.h>
 
+#include <boost/multi_index_container.hpp>
+#include <boost/multi_index/member.hpp>
+#include <boost/multi_index/ordered_index.hpp>
+#include <boost/multi_index/hashed_index.hpp>
+
 namespace Sirikata {
 
 class RedisObjectSegmentation : public ObjectSegmentation {
 public:
-    RedisObjectSegmentation(SpaceContext* con, Network::IOStrand* o_strand, CoordinateSegmentation* cseg, OSegCache* cache, const String& redis_host, uint32 redis_port, const String& redis_prefix);
+    RedisObjectSegmentation(SpaceContext* con, Network::IOStrand* o_strand, CoordinateSegmentation* cseg, OSegCache* cache, const String& redis_host, uint32 redis_port, const String& redis_prefix, Duration redis_ttl, bool redis_has_transactions);
     ~RedisObjectSegmentation();
 
     virtual void start();
+    virtual void stop();
 
     virtual OSegEntry cacheLookup(const UUID& obj_id);
     virtual OSegEntry lookup(const UUID& obj_id);
@@ -85,6 +91,12 @@ private:
     void readHandler(const boost::system::error_code& ec);
     void writeHandler(const boost::system::error_code& ec);
 
+    // Schedule an object to be refreshed in .5 TTL to keep it's key alive
+    void scheduleObjectRefresh(const UUID& obj_id);
+    void startTimeoutHandler();
+    void processExpiredObjects();
+    void refreshObjectTimeout(const UUID& obj_id);
+
     CoordinateSegmentation* mCSeg;
     OSegCache* mCache;
 
@@ -94,6 +106,8 @@ private:
     String mRedisHost;
     uint16 mRedisPort;
     String mRedisPrefix;
+    Duration mRedisKeyTTL;
+    bool mRedisHasTransactions;
 
     redisAsyncContext* mRedisContext;
     boost::asio::posix::stream_descriptor* mRedisFD; // Wrapped hiredis file descriptor
@@ -109,6 +123,30 @@ private:
     typedef boost::recursive_mutex Mutex;
     typedef boost::lock_guard<Mutex> Lock;
     Mutex mMutex;
+
+
+    // Track objects that need timeouts refreshed in redis
+    struct ObjectTimeout {
+        ObjectTimeout(const UUID& id, Time _expires)
+         : objid(id),
+           expires(_expires)
+        {}
+        UUID objid;
+        Time expires;
+    };
+    struct objid_tag {};
+    struct expires_tag {};
+    typedef boost::multi_index_container<
+        ObjectTimeout,
+        boost::multi_index::indexed_by<
+            boost::multi_index::hashed_unique< boost::multi_index::tag<objid_tag>, BOOST_MULTI_INDEX_MEMBER(ObjectTimeout,UUID,objid), UUID::Hasher >,
+            boost::multi_index::ordered_non_unique< boost::multi_index::tag<expires_tag>, BOOST_MULTI_INDEX_MEMBER(ObjectTimeout,Time,expires) >
+            >
+        > ObjectTimeouts;
+    typedef ObjectTimeouts::index<objid_tag>::type ObjectTimeoutsByID;
+    typedef ObjectTimeouts::index<expires_tag>::type ObjectTimeoutsByExpiration;
+    ObjectTimeouts mTimeouts;
+    Network::IOTimerPtr mExpiryTimer;
 };
 
 } // namespace Sirikata
