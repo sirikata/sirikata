@@ -430,10 +430,10 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
   MeshdataPtr agg_mesh =  MeshdataPtr( new Meshdata() );
   agg_mesh->globalTransform = Matrix4x4f::identity();
 
-  BoundingSphere3f bnds = locInfoForUUID->bounds.fullBounds();
-  float64 bndsX = bnds.center().x;
-  float64 bndsY = bnds.center().y;
-  float64 bndsZ = bnds.center().z;
+  Vector3f& uuidPos = locInfoForUUID->currentPosition;
+  float64 posX = uuidPos.x;
+  float64 posY = uuidPos.y;
+  float64 posZ = uuidPos.z;
 
   std::tr1::unordered_map<std::string, uint32> meshToStartIdxMapping;
   std::tr1::unordered_map<std::string, uint32> meshToStartMaterialsIdxMapping;
@@ -610,9 +610,9 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
       geomInstance.parentNode += submeshNodeOffset;
 
       //translation
-      Matrix4x4f trs = Matrix4x4f( Vector4f(1,0,0, (locationX - bndsX)),
-                                   Vector4f(0,1,0, (locationY - bndsY)),
-                                   Vector4f(0,0,1, (locationZ - bndsZ)),
+      Matrix4x4f trs = Matrix4x4f( Vector4f(1,0,0, (locationX - posX)),
+                                   Vector4f(0,1,0, (locationY - posY)),
+                                   Vector4f(0,0,1, (locationZ - posZ)),
                                    Vector4f(0,0,0,1), Matrix4x4f::ROWS());
 
       //rotate

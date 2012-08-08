@@ -44,6 +44,8 @@ static void InitPluginOptions() {
         new OptionValue("host","127.0.0.1",Sirikata::OptionValueType<String>(),"Redis host to connect to."),
         new OptionValue("port","6379",Sirikata::OptionValueType<uint32>(),"Redis port to connect to."),
         new OptionValue("prefix","",Sirikata::OptionValueType<String>(),"Prefix for redis keys, allowing you to provide 'namespaces' so multiple spaces can share the same redis database."),
+        new OptionValue("ttl","60s",Sirikata::OptionValueType<Duration>(),"Duration for keys to remain valid in Redis before they are automatically removed in case of dead nodes. This is a tradeoff between having to refresh entries and how long it takes before an object identifier can be reclaimed after a server crashes."),
+        new OptionValue("transactions","true",Sirikata::OptionValueType<bool>(),"If false, disables transactions. This isn't really safe as you can fail between commands and get keys stuck, but it allows running against older versions of Redis. Since this isn't safe, transactions are turned on by default."),
         NULL
     );
 }
@@ -55,8 +57,10 @@ static ObjectSegmentation* createRedisOSeg(SpaceContext* ctx, Network::IOStrand*
     String redis_host = optionsSet->referenceOption("host")->as<String>();
     uint32 redis_port = optionsSet->referenceOption("port")->as<uint32>();
     String redis_prefix = optionsSet->referenceOption("prefix")->as<String>();
+    Duration redis_ttl = optionsSet->referenceOption("ttl")->as<Duration>();
+    bool redis_has_transactions = optionsSet->referenceOption("transactions")->as<bool>();
 
-    return new RedisObjectSegmentation(ctx, oseg_strand, cseg, cache, redis_host, redis_port, redis_prefix);
+    return new RedisObjectSegmentation(ctx, oseg_strand, cseg, cache, redis_host, redis_port, redis_prefix, redis_ttl, redis_has_transactions);
 }
 
 } // namespace Sirikata

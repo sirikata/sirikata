@@ -25,7 +25,7 @@ public:
             threads.push_back(
                 new Thread(
                     "StrandTest Thread",
-                    std::tr1::bind(&Network::IOService::run, ios)
+					std::tr1::bind(&Network::IOService::runNoReturn, ios)
                 )
             );
         }
@@ -35,7 +35,7 @@ public:
         if (work != NULL) {
             delete work; work = NULL;
         }
-        for(int i = 0; i < threads.size(); i++) {
+        for(uint32 i = 0; i < threads.size(); i++) {
             threads[i]->join();
         }
         threads.clear();

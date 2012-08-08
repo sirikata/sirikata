@@ -35,6 +35,8 @@
 #include <fstream>
 #include <sirikata/core/util/Paths.hpp>
 #include <boost/filesystem.hpp>
+#include <sirikata/mesh/Filter.hpp>
+#include <sirikata/mesh/CompositeFilter.hpp>
 
 using namespace Sirikata;
 using namespace std;
@@ -53,14 +55,14 @@ public:
     void setUp( void )
     {
 		//initialize plugin
-		_plugin = "mesh-ply";
 		if (!_initialized) {
             _initialized = 1;
-            _pmgr.load(_plugin);
+            _pmgr.loadList("mesh-ply,common-filters");
         }
 		//create ModelsSystem
 		msys = ModelsSystemFactory::getSingleton ().getConstructor ( "mesh-ply" ) ( "" );
 		assert(msys);
+
     }
     void tearDown( void )
     {
@@ -68,6 +70,10 @@ public:
 		_pmgr.gc();
 		_initialized = 0;
     }
+
+	//the PlyModelSystem needs to be made more efficient, as larger files take
+	//a very long time to load (the second lowest resolution of the stanford bunny
+	//takes around 45 seconds...
 
 	void testPlyLoaderSimple( void ) {
 		//ply file with almost nothing
@@ -87,14 +93,14 @@ public:
 		//ply file with a line
 		string line = getString("line");
 		MeshdataPtr mdp = loadMDP(line);
-		
+
 		//asserts
 		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
 		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 1);
 		TS_ASSERT_EQUALS(mdp->getInstancedLightCount(), 0);
 		TS_ASSERT_EQUALS(mdp->getJointCount(), 0);
 		TS_ASSERT_EQUALS(mdp->geometry.size(), 1);
-		TS_ASSERT_EQUALS(mdp->geometry[0].skinControllers.size(), 0); 
+		TS_ASSERT_EQUALS(mdp->geometry[0].skinControllers.size(), 0);
 		TS_ASSERT_EQUALS(mdp->geometry[0].primitives.size(), 1);
 		TS_ASSERT_EQUALS(mdp->geometry[0].primitives[0].indices.size(), 2);
 		TS_ASSERT_EQUALS(mdp->lights.size(), 0);
@@ -106,32 +112,6 @@ public:
 		TS_ASSERT_EQUALS(mdp->globalTransform, Matrix4x4f::identity());
 	}
 
-	void testPlyLoaderTriangles( void ) {
-		//ply file with two distinct texturized triangles
-		string triangles = getString("triangles");
-		MeshdataPtr mdp = loadMDP(triangles);
-		
-		//asserts
-		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
-		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 2);
-		TS_ASSERT_EQUALS(mdp->getInstancedLightCount(), 0);
-		TS_ASSERT_EQUALS(mdp->getJointCount(), 0);
-		TS_ASSERT_EQUALS(mdp->geometry.size(), 2);
-		for(int i = 0; i < mdp->geometry.size(); i++) {
-			TS_ASSERT_EQUALS(mdp->geometry[i].positions.size(), 3);
-			TS_ASSERT_EQUALS(mdp->geometry[i].skinControllers.size(), 0);
-			TS_ASSERT_EQUALS(mdp->geometry[i].primitives.size(), 1);
-			TS_ASSERT_EQUALS(mdp->geometry[i].primitives[0].indices.size(), 3);
-		}
-		TS_ASSERT_EQUALS(mdp->lights.size(), 0);
-		TS_ASSERT_EQUALS(mdp->textures.size(), 0);
-		TS_ASSERT_EQUALS(mdp->materials.size(), 1);
-		TS_ASSERT_EQUALS(mdp->materials[0].textures.size(), 1);
-		TS_ASSERT_EQUALS(mdp->nodes.size(), 1);
-		TS_ASSERT_EQUALS(mdp->nodes[0].transform, Matrix4x4f::identity());
-		TS_ASSERT_EQUALS(mdp->globalTransform, Matrix4x4f::identity());
-	}
-	
 	void testPlyLoaderSquare( void ) {
 		//ply file with a square (actually a rectangle)
 		string square = getString("square");
@@ -160,7 +140,7 @@ public:
 		//ply file with square with two sides, one of which is specially texturized
 		string square2s = getString("square2s");
 		MeshdataPtr mdp = loadMDP(square2s);
-		
+
 		//asserts
 		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
 		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 1);
@@ -169,38 +149,38 @@ public:
 		TS_ASSERT_EQUALS(mdp->geometry.size(), 1);
 		TS_ASSERT_EQUALS(mdp->geometry[0].positions.size(), 8);
 		TS_ASSERT_EQUALS(mdp->geometry[0].skinControllers.size(), 0);
-		TS_ASSERT_EQUALS(mdp->geometry[0].primitives.size(), 1); //should be 2
-		TS_ASSERT_EQUALS(mdp->geometry[0].primitives[0].indices.size(), 12); //should be 6
+		TS_ASSERT_EQUALS(mdp->geometry[0].primitives.size(), 2);
+		TS_ASSERT_EQUALS(mdp->geometry[0].primitives[0].indices.size(), 6)
 		TS_ASSERT_EQUALS(mdp->lights.size(), 0);
 		TS_ASSERT_EQUALS(mdp->textures.size(), 1);
-		TS_ASSERT_EQUALS(mdp->materials.size(), 1); //should be 2
-		for(int i = 0; i < mdp->materials.size(); i++) 
+		TS_ASSERT_EQUALS(mdp->materials.size(), 2);
+		for(uint32 i = 0; i < mdp->materials.size(); i++)
 			TS_ASSERT_EQUALS(mdp->materials[i].textures.size(), 1);
 		TS_ASSERT_EQUALS(mdp->nodes.size(), 1);
 		TS_ASSERT_EQUALS(mdp->nodes[0].transform, Matrix4x4f::identity());
 		TS_ASSERT_EQUALS(mdp->globalTransform, Matrix4x4f::identity());
 	}
 
-	void testPlyLoaderHex2s( void ) {
-		//ply file with a two-sided hexagon
-		string hex2s = getString("hex2s");
-		MeshdataPtr mdp = loadMDP(hex2s);
+	void testPlyLoaderCubes( void ) {
+		//ply file with three textured cubes of different rotations
+		string cubes = getString("cubes");
+		MeshdataPtr mdp = loadMDP(cubes);
 
 		//asserts
 		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
-		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 2);//should be 1
+		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 3);
 		TS_ASSERT_EQUALS(mdp->getInstancedLightCount(), 0);
 		TS_ASSERT_EQUALS(mdp->getJointCount(), 0);
-		TS_ASSERT_EQUALS(mdp->geometry.size(), 2);	//should be 1
-		TS_ASSERT_EQUALS(mdp->geometry[0].positions.size(), 6); //should be 12
-		TS_ASSERT_EQUALS(mdp->geometry[0].skinControllers.size(), 0);
-		TS_ASSERT_EQUALS(mdp->geometry[0].primitives.size(), 1); //should be 2
-		TS_ASSERT_EQUALS(mdp->geometry[0].primitives[0].indices.size(), 12);
+		TS_ASSERT_EQUALS(mdp->geometry.size(), 3);
+		for(uint32 i = 0; i < mdp->geometry.size(); i++) {
+			TS_ASSERT_EQUALS(mdp->geometry[i].positions.size(), 24);
+			TS_ASSERT_EQUALS(mdp->geometry[i].skinControllers.size(), 0);
+			TS_ASSERT_EQUALS(mdp->geometry[i].primitives.size(), 1);
+			TS_ASSERT_EQUALS(mdp->geometry[i].primitives[0].indices.size(), 36);
+		}
 		TS_ASSERT_EQUALS(mdp->lights.size(), 0);
-		TS_ASSERT_EQUALS(mdp->textures.size(), 0);
-		TS_ASSERT_EQUALS(mdp->materials.size(), 2);
-		for(int i = 0; i < mdp->materials.size(); i++) 
-			TS_ASSERT_EQUALS(mdp->materials[i].textures.size(), 1);
+		TS_ASSERT_EQUALS(mdp->textures.size(), 2);
+		TS_ASSERT_EQUALS(mdp->materials.size(), 3);
 		TS_ASSERT_EQUALS(mdp->nodes.size(), 1);
 		TS_ASSERT_EQUALS(mdp->nodes[0].transform, Matrix4x4f::identity());
 		TS_ASSERT_EQUALS(mdp->globalTransform, Matrix4x4f::identity());
@@ -210,20 +190,20 @@ public:
 		//ply file with partially textured hexagonal prism
 		string prism = getString("prism");
 		MeshdataPtr mdp = loadMDP(prism);
-		
+
 		//asserts
 		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
-		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 5); //should be 3
+		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 3);
 		TS_ASSERT_EQUALS(mdp->getInstancedLightCount(), 0);
 		TS_ASSERT_EQUALS(mdp->getJointCount(), 0);
-		TS_ASSERT_EQUALS(mdp->geometry.size(), 5);		//should be 3
-		for(int i = 0; i < mdp->geometry.size(); i++) {
+		TS_ASSERT_EQUALS(mdp->geometry.size(), 3);
+		for(uint32 i = 0; i < mdp->geometry.size(); i++) {
 			TS_ASSERT_EQUALS(mdp->geometry[i].skinControllers.size(), 0);
 			TS_ASSERT_EQUALS(mdp->geometry[i].primitives.size(), 1);
 		}
 		TS_ASSERT_EQUALS(mdp->lights.size(), 0);
 		TS_ASSERT_EQUALS(mdp->textures.size(), 2);
-		TS_ASSERT_EQUALS(mdp->materials.size(), 4);		//should be 3
+		TS_ASSERT_EQUALS(mdp->materials.size(), 3);
 		TS_ASSERT_EQUALS(mdp->materials[0].textures.size(), 1);
 		TS_ASSERT_EQUALS(mdp->nodes.size(), 1);
 		TS_ASSERT_EQUALS(mdp->nodes[0].transform, Matrix4x4f::identity());
@@ -234,7 +214,7 @@ public:
 		//ply file with one texturized circle
 		string circleT = getString("circleT");
 		MeshdataPtr mdp = loadMDP(circleT);
-		
+
 		//asserts
 		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
 		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 1);
@@ -258,14 +238,14 @@ public:
 		//ply file with two distinct circles
 		string circles = getString("circles");
 		MeshdataPtr mdp = loadMDP(circles);
-		
+
 		//asserts
 		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
 		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 2);
 		TS_ASSERT_EQUALS(mdp->getInstancedLightCount(), 0);
 		TS_ASSERT_EQUALS(mdp->getJointCount(), 0);
 		TS_ASSERT_EQUALS(mdp->geometry.size(), 2);
-		for(int i = 0; i < mdp->geometry.size(); i++) {
+		for(uint32 i = 0; i < mdp->geometry.size(); i++) {
 			TS_ASSERT_EQUALS(mdp->geometry[i].positions.size(), 24);
 			TS_ASSERT_EQUALS(mdp->geometry[i].skinControllers.size(), 0);
 			TS_ASSERT_EQUALS(mdp->geometry[i].primitives.size(), 1);
@@ -291,7 +271,7 @@ public:
 		TS_ASSERT_EQUALS(mdp->getInstancedLightCount(), 0);
 		TS_ASSERT_EQUALS(mdp->getJointCount(), 0);
 		TS_ASSERT_EQUALS(mdp->geometry.size(), 2);
-		for(int i = 0; i < mdp->geometry.size(); i++) {
+		for(uint32 i = 0; i < mdp->geometry.size(); i++) {
 			TS_ASSERT_EQUALS(mdp->geometry[i].positions.size(), 96);
 			TS_ASSERT_EQUALS(mdp->geometry[i].skinControllers.size(), 0);
 			TS_ASSERT_EQUALS(mdp->geometry[i].primitives.size(), 1);
@@ -313,7 +293,7 @@ public:
 		//also, this loads *very* slowly, showing the inefficiency of the ply plugin
 		string drill = getString("drill/reconstruction/drill_shaft_zip");
 		MeshdataPtr mdp = loadMDP(drill);
-		
+
 		//asserts
 		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
 		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 7);
@@ -333,11 +313,9 @@ public:
 
 	void testPlyLoaderBunny( void ) {
 		//ply file with bunny
-		//EVEN SLOWER!
-		//possibility is to just put them in one by one witout caring if copies show up
 		string bunny = getString("bunny/reconstruction/bun_zipper_res4");
 		MeshdataPtr mdp = loadMDP(bunny);
-		
+
 		//asserts
 		TS_ASSERT_DIFFERS(mdp, MeshdataPtr());
 		TS_ASSERT_EQUALS(mdp->getInstancedGeometryCount(), 1);
@@ -396,16 +374,37 @@ public:
 		}while(fin);
 		return result;
 	}
-	
+
+	//MeshdataPtr loadMDP(string thing) {
+	//	//loads the MeshdataPtr from the ply string
+	//	Transfer::DenseData *dd = new Transfer::DenseData(thing);
+	//	Transfer::DenseDataPtr data(dd);
+	//	TS_ASSERT_EQUALS(msys->canLoad(data), true);
+
+	//	Mesh::VisualPtr parsed = msys->load(data);
+	//	TS_ASSERT_DIFFERS(parsed, Mesh::VisualPtr());
+	//	MeshdataPtr mdp(std::tr1::dynamic_pointer_cast<Meshdata>(parsed));
+	//	return mdp;
+	//}
+
 	MeshdataPtr loadMDP(string thing) {
-		//loads the MeshdataPtr from the ply string
+		//loads the MeshdataPtr from the ply string and applies the deduplication filter
+		std::vector<String> names_and_args;
+		names_and_args.push_back("compute-normals"); names_and_args.push_back("");
+		names_and_args.push_back("deduplication"); names_and_args.push_back("");
+		Mesh::Filter* filter = new Mesh::CompositeFilter(names_and_args);
+
 		Transfer::DenseData *dd = new Transfer::DenseData(thing);
 		Transfer::DenseDataPtr data(dd);
 		TS_ASSERT_EQUALS(msys->canLoad(data), true);
 
 		Mesh::VisualPtr parsed = msys->load(data);
-		TS_ASSERT_DIFFERS(parsed, Mesh::VisualPtr());
+		Mesh::MutableFilterDataPtr input(new Mesh::FilterData);
+		input->push_back(parsed);
+		Mesh::FilterDataPtr output = filter->apply(input);
+		parsed = output->get();
 		MeshdataPtr mdp(std::tr1::dynamic_pointer_cast<Meshdata>(parsed));
+
 		return mdp;
 	}
 };

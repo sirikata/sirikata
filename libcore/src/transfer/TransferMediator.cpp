@@ -5,6 +5,7 @@
 #include <sirikata/core/util/Timer.hpp>
 #include <stdio.h>
 #include <sirikata/core/transfer/TransferHandlers.hpp>
+#include <sirikata/core/transfer/DiskManager.hpp>
 
 using namespace std;
 
@@ -27,6 +28,7 @@ TransferMediator& TransferMediator::getSingleton() {
 void TransferMediator::destroy() {
     AutoSingleton<TransferMediator>::destroy();
     SharedChunkCache::destroy();
+	DiskManager::destroy();
 }
 
 TransferMediator::TransferMediator() {
