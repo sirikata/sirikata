@@ -167,7 +167,12 @@ private:
 
     typedef boost::recursive_mutex Mutex;
     typedef boost::lock_guard<Mutex> Lock;
-    Mutex mMutex;
+    // Separate listener list and rest of data. Some callbacks to listeners can
+    // be expensive and we don't want to lock during these (e.g. connections
+    // causing insertions with lots of operations and other changes during the
+    // insertion).
+    Mutex mListenerMutex;
+    Mutex mDataMutex;
 
     Network::IOStrand* mStrand;
     LocationService* mLoc;
