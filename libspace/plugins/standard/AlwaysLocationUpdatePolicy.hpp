@@ -133,19 +133,6 @@ private:
         // Information about each object that we need to create and send an
         // update about
         std::map<UUID, UpdateInfo> outstandingUpdates;
-        // Sometimes a subscriber may stall or hang, leaving the underlying
-        // connection open but not handling loc update substreams. In this
-        // case, we can end up generating a ton of update streams that fail
-        // and eat up a bunch of our processor just looping for
-        // retries. With objects moving, we could get arbitarily many
-        // outstanding updates since once the substream request is started
-        // it frees up the spot in the outstandingUpdates map above,
-        // allowing more for the same object to be sent. To protect against
-        // this, we track how many loc update messages are outstanding and
-        // stall updates while we're waiting for them to return (or fail!).
-        long numOutstandingMessages()const {
-            return seqnoPtr.use_count()-1;
-        }
 
         // Indicates that there are no subscriptions for this object left,
         // allowing us to clear out its entry
@@ -153,6 +140,21 @@ private:
             return objectIndexes.empty();
         }
     };
+    typedef std::tr1::shared_ptr<SubscriberInfo> SubscriberInfoPtr;
+
+    // Sometimes a subscriber may stall or hang, leaving the underlying
+    // connection open but not handling loc update substreams. In this
+    // case, we can end up generating a ton of update streams that fail
+    // and eat up a bunch of our processor just looping for
+    // retries. With objects moving, we could get arbitarily many
+    // outstanding updates since once the substream request is started
+    // it frees up the spot in the outstandingUpdates map above,
+    // allowing more for the same object to be sent. To protect against
+    // this, we track how many loc update messages are outstanding and
+    // stall updates while we're waiting for them to return (or fail!).
+    static long numOutstandingMessages(const SubscriberInfoPtr& sub_info) {
+        return sub_info.use_count()-1;
+    }
 
     template<typename SubscriberType>
     struct SubscriberIndex {
@@ -421,7 +423,7 @@ private:
                 bool send_failed = false;
                 std::map<UUID, UpdateInfo>::iterator last_shipped = sub_info->outstandingUpdates.begin();
                 for(std::map<UUID, UpdateInfo>::iterator up_it = sub_info->outstandingUpdates.begin();
-                    sub_info->numOutstandingMessages() < outstanding_message_soft_limit && up_it != sub_info->outstandingUpdates.end();
+                    numOutstandingMessages(sub_info) < outstanding_message_soft_limit && up_it != sub_info->outstandingUpdates.end();
                     up_it++)
                 {
                     Sirikata::Protocol::Loc::ILocationUpdate update = bulk_update.add_update();
@@ -476,7 +478,7 @@ private:
                 }
 
                 // Try to send the last few if necessary/possible
-                if (sub_info->numOutstandingMessages() < outstanding_message_hard_limit && !send_failed && bulk_update.update_size() > 0) {
+                if (numOutstandingMessages(sub_info) < outstanding_message_hard_limit && !send_failed && bulk_update.update_size() > 0) {
                     bool sent = parent->trySend(sid, bulk_update, sub_info);
                     if (sent) {
                         last_shipped = sub_info->outstandingUpdates.end();
@@ -498,7 +500,7 @@ private:
         }
 
     };
-    typedef std::tr1::shared_ptr<SubscriberInfo> SubscriberInfoPtr;
+
     void tryCreateChildStream(const UUID& dest, ODPSST::Stream::Ptr parent_stream, std::string* msg, int count, const SubscriberInfoPtr&numOutstandingMessageCount);
     void objectLocSubstreamCallback(int x, ODPSST::Stream::Ptr substream, const UUID& dest, ODPSST::Stream::Ptr parent_substream, std::string* msg, int count, const SubscriberInfoPtr&numOutstandingMessageCount);
     void tryCreateChildStream(const OHDP::NodeID& dest, OHDPSST::Stream::Ptr parent_stream, std::string* msg, int count, const SubscriberInfoPtr&numOutstandingMessageCount);
