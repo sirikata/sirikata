@@ -803,7 +803,7 @@ void RedisObjectSegmentation::startTimeoutHandler() {
     if (mTimeouts.empty()) return;
 
     Time first_expires = mTimeouts.get<expires_tag>().begin()->expires;
-    Duration tout = mContext->simTime() - first_expires;
+    Duration tout = first_expires - mContext->simTime();
     mExpiryTimer->wait(tout);
 }
 

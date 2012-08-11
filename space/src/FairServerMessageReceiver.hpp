@@ -57,7 +57,6 @@ private:
     virtual void networkReceivedConnection(SpaceNetwork::ReceiveStream* strm);
     virtual void networkReceivedData(SpaceNetwork::ReceiveStream* strm);
 
-    void scheduleServicing();
     // Internal service call -- generated either by a networkReceivedData event
     // or by a timer as we wait for enough bandwidth to be available to service
     // the next packet.
@@ -72,8 +71,10 @@ private:
     typedef std::set<ServerID> ReceiveServerSet;
     ReceiveServerSet mReceiveSet;
 
-
-    Sirikata::AtomicValue<bool> mServiceScheduled;
+    // Protects changes to whether the queue is going to be serviced again. This
+    // *must* be protected by the mMutex lock since it's tied to whether there
+    // are inputs on the queues.
+    bool mServicing;
 
     uint32 mStoppedUnderflow;
     uint32 mStoppedMaxMessages;
@@ -82,8 +83,6 @@ private:
 
     // Protects mReceiveQueues, mReceiveSet
     boost::mutex mMutex;
-    // Protects processing code
-    boost::mutex mServiceMutex;
 };
 
 } // namespace Sirikata

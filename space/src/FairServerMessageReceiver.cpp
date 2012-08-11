@@ -45,7 +45,7 @@ FairServerMessageReceiver::FairServerMessageReceiver(SpaceContext* ctx, SpaceNet
                         ),
           mReceiveQueues(),
           mReceiveSet(),
-          mServiceScheduled(false),
+          mServicing(false),
           mStoppedUnderflow(0),
           mStoppedMaxMessages(0),
           mBytesUsed(0)
@@ -62,32 +62,10 @@ FairServerMessageReceiver::~FairServerMessageReceiver() {
     );
 }
 
-void FairServerMessageReceiver::scheduleServicing() {
-    if (!mServiceScheduled.read()) {
-        // If we can safely do it, just manage the servicing ourselves.  If
-        // we have leftovers, things will get properly rescheduled on the
-        // FSMR strand.
-        //if (!service()) {
-            // We couldn't service, just schedule it
-            mServiceTimer->cancel();
-            mServiceScheduled = true;
-            mReceiverStrand->post(
-                std::tr1::bind(&FairServerMessageReceiver::service, this),
-                "FairServerMessageReceiver::service"
-            );
-            //}
-    }
-}
-
 void FairServerMessageReceiver::service() {
 #define MAX_MESSAGES_PER_ROUND 100
 
-    boost::mutex::scoped_try_lock lock(mServiceMutex);
-    if (!lock.owns_lock()) return;
-
     mProfiler->started();
-
-    mServiceScheduled = false;
 
     Time tcur = mContext->simTime();
 
@@ -102,11 +80,20 @@ void FairServerMessageReceiver::service() {
             boost::lock_guard<boost::mutex> lck(mMutex);
 
             next_recv_msg = mReceiveQueues.pop(&sid);
-        }
 
-        if (next_recv_msg == NULL) {
-            went_empty = true;
-            break;
+            // If this went empty, mark that we're no longer going to service
+            // (or schedule future servicing) ourselves -- if someone pushes to
+            // the queue they'll need to start things up again. This is the only
+            // way we'll stop servicing -- other things may cause us to exit
+            // this loop, but we'll just schedule another round later. This
+            // change *must* happen with mMutex still locked. Also keep track
+            // that we took this path so we don't do the scheduling at the end
+            // of this method.
+            if (next_recv_msg == NULL) {
+                went_empty = true;
+                mServicing = false;
+                break;
+            }
         }
 
         cum_recv_size += next_recv_msg->size();
@@ -180,11 +167,18 @@ void FairServerMessageReceiver::networkReceivedData(SpaceNetwork::ReceiveStream*
         boost::lock_guard<boost::mutex> lck(mMutex);
         // Given the new data we need to update our view of the world
         mReceiveQueues.notifyPushFront(strm->id());
-    }
 
-    // And run service (which will handle setting up
-    // any new service callbacks that may be needed).
-    scheduleServicing();
+        // While still locked, figure out if we need to push a new servicing
+        // event. The corresponding code for when we indicate servicing has
+        // stopped is in service() where data is popped off the queue.
+        if (!mServicing) {
+            mServicing = true;
+            mReceiverStrand->post(
+                std::tr1::bind(&FairServerMessageReceiver::service, this),
+                "FairServerMessageReceiver::service"
+            );
+        }
+    }
 }
 
 } // namespace Sirikata

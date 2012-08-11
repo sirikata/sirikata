@@ -362,7 +362,18 @@ void LibproxProximity::receiveMessage(Message* msg) {
             SolidAngle minangle(prox_query_msg.min_angle());
             uint32 query_max_results = (prox_query_msg.has_max_count() ? prox_query_msg.max_count() : NoUpdateMaxResults);
 
-            updateQuery(source_server, qloc, prox_query_msg.bounds(), minangle, query_max_results);
+            // Figure out whether this is a useful query. To keep the management
+            // of server queries simple, we might get a request for a query but
+            // with angle == SolidAngle::Max. That's an indicator that we
+            // shouldn't return any results, but because objects within the
+            // bounds of the querier will be returned, which can be very large
+            // for a server, we'll actually return stuff if we register these
+            // queries. Instead, here, we just figure out if we should actually
+            // be ignoring/removing a query based on these new values.
+            if (minangle > (SolidAngle::Max/2)) // Conservative to avoid small FP errors
+                removeQuery(source_server);
+            else
+                updateQuery(source_server, qloc, prox_query_msg.bounds(), minangle, query_max_results);
         }
         else if (prox_query_msg.action() == Sirikata::Protocol::Prox::ServerQuery::Remove) {
             removeQuery(source_server);
@@ -1139,7 +1150,7 @@ void LibproxProximity::handleUpdateServerQuery(const ServerID& server, const Tim
 
         ServerQueryMap::iterator it = mServerQueries[i].find(server);
         if (it == mServerQueries[i].end()) {
-            PROXLOG(debug,"Add server query from " << server << ", min angle " << angle.asFloat() << ", object class " << ObjectClassToString((ObjectClass)i));
+            PROXLOG(debug,"Add server query from " << server << ", min angle " << angle.asFloat() << ", object class " << ObjectClassToString((ObjectClass)i) << " (loc: " << loc.position() << ", region: " << region << ", max size: " << ms << ")");
 
             Query* q = mServerDistance ?
                 mServerQueryHandler[i].handler->registerQuery(loc, region, ms, SolidAngle::Min, mDistanceQueryDistance) :
@@ -1151,7 +1162,7 @@ void LibproxProximity::handleUpdateServerQuery(const ServerID& server, const Tim
             q->setEventListener(this);
         }
         else {
-            PROXLOG(debug,"Update server query from " << server << ", min angle " << angle.asFloat() << ", object class " << ObjectClassToString((ObjectClass)i));
+            PROXLOG(debug,"Update server query from " << server << ", min angle " << angle.asFloat() << ", object class " << ObjectClassToString((ObjectClass)i) << " (loc: " << loc.position() << ", region: " << region << ", max size: " << ms << ")");
 
             Query* q = it->second;
             q->position(loc);

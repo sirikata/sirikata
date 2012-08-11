@@ -137,7 +137,9 @@ def startSpace(**kwargs):
             '--region=%s' % (region),
 
             '--oseg=redis',
-            '--oseg-options=' + '--prefix=' + str(oseg_prefix),
+            # Note we turn of transactions in redis for compatibility,
+            # at the cost of potentially leaking some entries
+            '--oseg-options=' + '--prefix=' + str(oseg_prefix) + ' --transactions=false',
 
             '--command.commander=http',
             '--command.commander-options=--port=' + str(http_command_port_base + ss)
