@@ -4,6 +4,7 @@ import argparse
 import BaseHTTPServer
 import threading, signal, time, sys
 import urlparse, random
+import json
 
 parser = argparse.ArgumentParser(description='Runs an HTTP server for handling requests mapping ServerIDs to IP addresses and ports.')
 
@@ -57,51 +58,75 @@ internal_data = {}
 external_server = None
 internal_server = None
 
-def format_response(server_info):
-    return "%s\n%s:%s" % (server_info['server'], server_info['host'], str(server_info['port']))
+def format_response(server_info, fmt='json'):
+    '''Get a response in it's 'native' format, which will be encoded and returned to the client.'''
+    if fmt == 'json':
+        # Make sure we only return the data we need to in case we have any other info in there
+        return {
+                'server' : server_info['server'],
+                'host' : server_info['host'],
+                'port' : str(server_info['port'])
+                }
+    else: # default text/plain
+        return "%s\n%s:%s" % (server_info['server'], server_info['host'], str(server_info['port']))
+
+def format_error(msg, fmt):
+    if fmt == 'json':
+        return { 'error' : msg }
+    else:
+        return msg
 
 class LookupHandler(BaseHTTPServer.BaseHTTPRequestHandler):
+    def _respond(self, code, fmt, body):
+
+        self.send_response(code)
+        if fmt == 'json':
+            self.send_header("Content-Type", "application/json")
+        elif fmt == 'text':
+            self.send_header("Content-Type", "text/plain")
+        self.end_headers()
+
+        if fmt == 'json':
+            self.wfile.write(json.dumps(body))
+        elif fmt == 'text':
+            self.wfile.write(str(body))
+
     def do_GET(self):
         # Figure out which server the request came from and parse the basic request info
         is_internal_server = (self.server is internal_server)
         is_external_server = (self.server is external_server)
         req = urlparse.urlparse( 'http://localhost' + self.path)
 
+        query = urlparse.parse_qs(req.query)
+        fmt = 'json'
+        if 'fmt' in query: fmt = query['fmt'][0]
+        if fmt not in set(['json', 'text']):
+            self._respond(400, 'text', 'Invalid format.')
+            return
+
         if req.path == args.internal_path and is_internal_server:
             data = internal_data
         elif req.path == args.external_path and is_external_server:
             data = external_data
         else:
-            self.send_response(404)
-            self.send_header("Content-Type", "text/plain")
-            self.end_headers()
-            self.wfile.write("Invalid request for this server -- unknown path.")
+            self._respond(400, fmt, format_error("Invalid request for this server -- unknown path.", fmt))
             return
 
-        query = urlparse.parse_qs(req.query)
         server = None
         if 'server' not in query:
             # Select a random server
             server = random.choice(data.values())
         else:
             if len(query['server']) != 1:
-                self.send_response(403)
-                self.send_header("Content-Type", "text/plain")
-                self.end_headers()
-                self.wfile.write("Invalid request -- server improperly specified")
+                self._respond(400, fmt, format_error("Invalid request -- server improperly specified", fmt))
+                return
             server_idx = int(query['server'][0])
             if server_idx in data:
                 server = data[server_idx]
         if not server:
-            self.send_response(404)
-            self.send_header("Content-Type", "text/plain")
-            self.end_headers()
-            self.wfile.write("Requested server ID not found.")
+            self._respond(404, fmt, format_error("Requested server ID not found.", fmt))
 
-        self.send_response(200)
-        self.send_header("Content-Type", "text/plain")
-        self.end_headers()
-        self.wfile.write( format_response(server) )
+        self._respond(200, fmt, format_response(server, fmt))
 
     def do_POST(self): # For updates only
         # Figure out which server the request came from and parse the basic request info
@@ -116,27 +141,18 @@ class LookupHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             data = external_data
             dynamic = args.external_dynamic
         else:
-            self.send_response(404)
-            self.send_header("Content-Type", "text/plain")
-            self.end_headers()
-            self.wfile.write("Invalid request for this server -- unknown path.")
+            self._respond(404, 'text', "Invalid request for this server -- unknown path.")
             return
 
         if not dynamic:
-            self.send_response(404)
-            self.send_header("Content-Type", "text/plain")
-            self.end_headers()
-            self.wfile.write("Invalid update request -- this server map is not dynamic.")
+            self._respond(400, "Invalid update request -- this server map is not dynamic.")
             return
 
         query = urlparse.parse_qs(req.query)
         if ('server' not in query or len(query['server']) != 1 or
             'host' not in query or len(query['host']) != 1 or
             'port' not in query or len(query['port']) != 1):
-            self.send_response(404)
-            self.send_header("Content-Type", "text/plain")
-            self.end_headers()
-            self.wfile.write("Invalid request for this server -- not all update parameters were properly specified.")
+            self._respond(400, 'text', "Invalid request for this server -- not all update parameters were properly specified.")
             return
 
         server_idx = int(query['server'][0])
@@ -147,8 +163,7 @@ class LookupHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             'host' : server_host,
             'port' : str(server_port)
             }
-        self.send_response(200)
-        self.end_headers()
+        self._respond(200, 'text', '')
 
 def run_httpd(host, port, is_external, is_internal):
     global internal_server, external_server

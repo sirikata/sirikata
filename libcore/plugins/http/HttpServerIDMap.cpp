@@ -5,6 +5,7 @@
 #include "HttpServerIDMap.hpp"
 #include <sirikata/core/network/Address4.hpp>
 #include <boost/lexical_cast.hpp>
+#include <json_spirit/json_spirit.h>
 
 namespace Sirikata {
 
@@ -81,25 +82,68 @@ void HttpServerIDMap::finishLookup(
         return;
     }
 
-    // Parse the response. Currently we assume we have (serverid)\n(host):(service).
-    // TODO(ewencp) we could decide how to parse based on content type (e.g. for
-    // json)
     String resp = response->getData()->asString();
-    String::size_type line_split_pos = resp.find("\n");
-    String::size_type split_pos = resp.find(":");
-    if (line_split_pos == String::npos || split_pos == String::npos) {
-        SILOG(http-serverid-map, error, "Couldn't parse response for server lookup " << sid << ": " << resp);
+    // Check response code for failure
+    if (response->getStatusCode() >= 400) {
+        SILOG(http-serverid-map, error, "Request to HTTP server failed when looking up server " << sid << ": " << resp);
         mContext->ioService->post(std::tr1::bind(cb, sid, Address4::Null), "HttpServerIDMap::finishLookup");
         return;
     }
 
-    ServerID resolved_sid = boost::lexical_cast<ServerID>( resp.substr(0,line_split_pos) );
-    assert(resolved_sid == sid || sid == NullServerID);
-    Network::Address retval(
-        resp.substr(line_split_pos+1,split_pos-line_split_pos-1),
-        resp.substr(split_pos+1)
-    );
-    mContext->ioService->post(std::tr1::bind(cb, resolved_sid, retval), "HttpServerIDMap::finishLookup");
-}
+    // Parse the response. Currently support text/plain or application/json. If
+    // not provided, assume text/plain.
+    String content_type = "text/plain";
+    if (response->getHeaders().find("Content-Type") != response->getHeaders().end())
+        content_type = response->getHeaders().find("Content-Type")->second;
 
+    if (content_type == "text/plain") {
+        // Currently we assume we have (serverid)\n(host):(service).
+        String::size_type line_split_pos = resp.find("\n");
+        String::size_type split_pos = resp.find(":");
+        if (line_split_pos == String::npos || split_pos == String::npos) {
+            SILOG(http-serverid-map, error, "Couldn't parse response for server lookup " << sid << ": " << resp);
+            mContext->ioService->post(std::tr1::bind(cb, sid, Address4::Null), "HttpServerIDMap::finishLookup");
+            return;
+        }
+
+        ServerID resolved_sid = boost::lexical_cast<ServerID>( resp.substr(0,line_split_pos) );
+        assert(resolved_sid == sid || sid == NullServerID);
+        Network::Address retval(
+            resp.substr(line_split_pos+1,split_pos-line_split_pos-1),
+            resp.substr(split_pos+1)
+        );
+        mContext->ioService->post(std::tr1::bind(cb, resolved_sid, retval), "HttpServerIDMap::finishLookup");
+    }
+    else if (content_type == "application/json") {
+        namespace json = json_spirit;
+        json::Value json_resp;
+        if (!json::read(resp, json_resp)) {
+            SILOG(http-serverid-map, error, "Couldn't parse response for server lookup " << sid << ": " << resp);
+            mContext->ioService->post(std::tr1::bind(cb, sid, Address4::Null), "HttpServerIDMap::finishLookup");
+            return;
+        }
+
+        if (!json_resp.contains("server") ||
+            !json_resp.contains("host") ||
+            !json_resp.contains("port"))
+        {
+            SILOG(http-serverid-map, error, "Response from server doesn't contain all required fields: " << resp);
+            mContext->ioService->post(std::tr1::bind(cb, sid, Address4::Null), "HttpServerIDMap::finishLookup");
+            return;
+        }
+
+        int32 server = json_resp.getInt("server");
+        String host = json_resp.getString("host");
+        String port_str = json_resp.getString("port");
+
+        ServerID resolved_sid = boost::lexical_cast<ServerID>(server);
+        Network::Address retval( host, port_str );
+        mContext->ioService->post(std::tr1::bind(cb, resolved_sid, retval), "HttpServerIDMap::finishLookup");
+    }
+    else {
+        SILOG(http-serverid-map, error, "Unknown content type for HTTP server map response: " << content_type);
+        mContext->ioService->post(std::tr1::bind(cb, sid, Address4::Null), "HttpServerIDMap::finishLookup");
+        return;
+    }
+}
 }//end namespace sirikata
