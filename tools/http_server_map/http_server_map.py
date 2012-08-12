@@ -185,7 +185,7 @@ def load_servermap_file(filename, data_out, port_type):
             if len(parts) != 3:
                 print "Couldn't parse servermap file %s, it has an improperly formatted line." % (filename)
                 sys.exit(1)
-            ip, internal_port, external_port = tuple(parts)
+            ip, internal_port, external_port = tuple([p.strip() for p in parts])
             if port_type == 'internal':
                 data_out[idx+1] = {
                     'server' : idx+1,
