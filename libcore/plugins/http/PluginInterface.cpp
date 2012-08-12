@@ -47,8 +47,8 @@ static void InitPluginServermapOptions() {
 
 
         // You *must* specify these.
-        new Sirikata::OptionValue("internal-path", "", Sirikata::OptionValueType<String>(), "Path to send internal lookup requests to"),
-        new Sirikata::OptionValue("external-path", "", Sirikata::OptionValueType<String>(), "Path to send external lookup requests to"),
+        new Sirikata::OptionValue("internal-path", "/internal", Sirikata::OptionValueType<String>(), "Path to send internal lookup requests to"),
+        new Sirikata::OptionValue("external-path", "/external", Sirikata::OptionValueType<String>(), "Path to send external lookup requests to"),
 
         NULL);
 }

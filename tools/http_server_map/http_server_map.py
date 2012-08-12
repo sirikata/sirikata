@@ -57,6 +57,9 @@ internal_data = {}
 external_server = None
 internal_server = None
 
+def format_response(server_info):
+    return "%s\n%s:%s" % (server_info['server'], server_info['host'], str(server_info['port']))
+
 class LookupHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     def do_GET(self):
         # Figure out which server the request came from and parse the basic request info
@@ -98,7 +101,7 @@ class LookupHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Content-Type", "text/plain")
         self.end_headers()
-        self.wfile.write(server)
+        self.wfile.write( format_response(server) )
 
     def do_POST(self): # For updates only
         # Figure out which server the request came from and parse the basic request info
@@ -139,8 +142,11 @@ class LookupHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         server_idx = int(query['server'][0])
         server_host = query['host'][0]
         server_port = int(query['port'][0])
-        data[server_idx] = server_host + ':' + str(server_port)
-
+        data[server_idx] = {
+            'server' : server_idx,
+            'host' : server_host,
+            'port' : str(server_port)
+            }
         self.send_response(200)
         self.end_headers()
 
@@ -165,8 +171,18 @@ def load_servermap_file(filename, data_out, port_type):
                 print "Couldn't parse servermap file %s, it has an improperly formatted line." % (filename)
                 sys.exit(1)
             ip, internal_port, external_port = tuple(parts)
-            if port_type == 'internal': data_out[idx+1] = ip + ':' + internal_port
-            if port_type == 'external': data_out[idx+1] = ip + ':' + external_port
+            if port_type == 'internal':
+                data_out[idx+1] = {
+                    'server' : idx+1,
+                    'host' : ip,
+                    'port' : internal_port
+                    }
+            if port_type == 'external':
+                data_out[idx+1] = {
+                    'server' : idx+1,
+                    'host' : ip,
+                    'port' : external_port
+                    }
 
 if args.external_file: load_servermap_file(args.external_file, external_data, 'external')
 if args.internal_file: load_servermap_file(args.internal_file, internal_data, 'internal')
