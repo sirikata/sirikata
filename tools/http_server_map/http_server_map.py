@@ -125,6 +125,7 @@ class LookupHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 server = data[server_idx]
         if not server:
             self._respond(404, fmt, format_error("Requested server ID not found.", fmt))
+            return
 
         self._respond(200, fmt, format_response(server, fmt))
 
