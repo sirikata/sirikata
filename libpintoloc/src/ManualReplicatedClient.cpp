@@ -222,7 +222,7 @@ void ReplicatedClient::replicatedNodeRemoved(ProxIndexID indexid, const ObjectRe
     ReplicatedLocationServiceCachePtr loccache = getLocCache(indexid);
     assert(loccache->tracking(objid));
     ObjectReference parentid = loccache->parent(objid);
-    if (mObservedNodes.find(IndexObjectReference(indexid, parentid)) == mObservedNodes.end())
+    if (mObservedNodes.find(IndexObjectReference(indexid, parentid)) != mObservedNodes.end())
         sendRefineRequest(indexid, parentid);
 }
 
