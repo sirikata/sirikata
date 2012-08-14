@@ -3612,6 +3612,16 @@ INSTALL(DIRECTORY
         PATTERN "*.gch" EXCLUDE
 )
 
+# Scripts/tools
+INSTALL(
+  FILES
+    ${TOP_LEVEL}/tools/crashcollector/crashcollector.py
+    ${TOP_LEVEL}/tools/crashcollector/symbolstore.py
+    ${TOP_LEVEL}/tools/http_server_map/http_server_map.py
+  PERMISSIONS ${EXEC_PERMS}
+  DESTINATION share/sirikata/bin/
+)
+
 # get the name of the binaries for running tests
 IF(WIN32)
   GET_TARGET_PROPERTY(TEST_RUNABLE ${TEST_BINARY} LOCATION)
