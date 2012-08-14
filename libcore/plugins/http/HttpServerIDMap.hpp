@@ -24,22 +24,45 @@ class HttpServerIDMap : public ServerIDMap {
     const String mExternalService;
     const String mExternalPath;
 
+    const uint32 mRetries;
+
+    struct RequestInfo {
+        RequestInfo(
+            const ServerID& _sid, Address4LookupCallback _cb,
+            const String& _host,
+            const String& _service,
+            const String& _path)
+         : sid(_sid), cb(_cb), host(_host), service(_service), path(_path)
+        {}
+
+        const ServerID sid;
+        const Address4LookupCallback cb;
+        const String host;
+        const String service;
+        const String path;
+    };
+
     void startLookup(
-        const ServerID& sid, Address4LookupCallback cb,
-        const String& host,
-        const String& service,
-        const String& path
+        const RequestInfo& ri,
+        const uint32 retry
     );
     void finishLookup(
-        const ServerID& sid, Address4LookupCallback cb,
+        const RequestInfo& ri,
+        const uint32 retry,
         Transfer::HttpManager::HttpResponsePtr response,
         Transfer::HttpManager::ERR_TYPE error,
         const boost::system::error_code &boost_error);
+    // Returns true if retrying. If returns false, caller should report error.
+    bool retryOrFail(
+        const RequestInfo& ri,
+        const uint32 retry
+    );
 public:
     HttpServerIDMap(
         Context* ctx,
         const String& internal_host, const String& internal_service, const String& internal_path,
-        const String& external_host, const String& external_service, const String& external_path
+        const String& external_host, const String& external_service, const String& external_path,
+        uint32 retries
     );
     virtual ~HttpServerIDMap() {}
 

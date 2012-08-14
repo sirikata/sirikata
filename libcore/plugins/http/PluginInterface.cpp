@@ -47,8 +47,10 @@ static void InitPluginServermapOptions() {
 
 
         // You *must* specify these.
-        new Sirikata::OptionValue("internal-path", "", Sirikata::OptionValueType<String>(), "Path to send internal lookup requests to"),
-        new Sirikata::OptionValue("external-path", "", Sirikata::OptionValueType<String>(), "Path to send external lookup requests to"),
+        new Sirikata::OptionValue("internal-path", "/internal", Sirikata::OptionValueType<String>(), "Path to send internal lookup requests to"),
+        new Sirikata::OptionValue("external-path", "/external", Sirikata::OptionValueType<String>(), "Path to send external lookup requests to"),
+
+        new Sirikata::OptionValue("retries", "5", Sirikata::OptionValueType<uint32>(), "Number of retries to perform on a lookup before giving up and assuming the request is invalid."),
 
         NULL);
 }
@@ -70,10 +72,13 @@ static ServerIDMap* createHttpServerIDMap(Context* ctx, const String& args) {
     String internal_path = optionsSet->referenceOption("internal-path")->as<String>();
     String external_path = optionsSet->referenceOption("external-path")->as<String>();
 
+    uint32 retries = optionsSet->referenceOption("retries")->as<uint32>();
+
     return new HttpServerIDMap(
         ctx,
         internal_host, internal_service, internal_path,
-        external_host, external_service, external_path
+        external_host, external_service, external_path,
+        retries
     );
 }
 
