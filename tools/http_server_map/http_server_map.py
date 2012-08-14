@@ -2,7 +2,7 @@
 
 import argparse
 import BaseHTTPServer
-import threading, signal, time, sys
+import threading, signal, time, sys, os
 import urlparse, random
 import json
 
@@ -45,8 +45,60 @@ parser.add_argument('--internal-port', dest='internal_port', action='store',
                     type=int, default=80,
                     help='Port to listen on for internal requests. Can be same as port for external requests.')
 
+parser.add_argument('--daemon', dest='daemon', action='store',
+                    type=bool, default=False,
+                    help='If true, the process will daemonize.')
+parser.add_argument('--pid-file', dest='pidfile', action='store',
+                    type=str, default='http_server_map.pid',
+                    help='Path to save the pid file for a daemon to.')
+
 
 args = parser.parse_args()
+
+# Handle daemonization asap
+if args.daemon:
+    try:
+        pid = os.fork()
+        if pid > 0:
+            # exit first parent
+            sys.exit(0)
+    except OSError, e:
+        sys.stderr.write("fork #1 failed: %d (%s)\n" % (e.errno, e.strerror))
+        sys.exit(1)
+
+    # decouple from parent environment
+    os.setsid()
+    os.umask(0)
+
+    # do second fork
+    try:
+        pid = os.fork()
+        if pid > 0:
+            # exit from second parent
+            sys.exit(0)
+    except OSError, e:
+        sys.stderr.write("fork #2 failed: %d (%s)\n" % (e.errno, e.strerror))
+        sys.exit(1)
+
+    # redirect standard file descriptors
+    sys.stdout.flush()
+    sys.stderr.flush()
+    new_stdin = '/dev/null'
+    new_stdout = '/dev/null'
+    new_stderr = '/dev/null'
+    si = file(new_stdin, 'r')
+    so = file(new_stdout, 'a+')
+    se = file(new_stderr, 'a+', 0)
+    os.dup2(si.fileno(), sys.stdin.fileno())
+    os.dup2(so.fileno(), sys.stdout.fileno())
+    os.dup2(se.fileno(), sys.stderr.fileno())
+
+    # write pidfile
+    pid = str(os.getpid())
+    with file(args.pidfile,'w+') as pidfp:
+        pidfp.write("%s\n" % pid)
+
+
 
 external_thread = None
 internal_thread = None
@@ -248,5 +300,6 @@ if hasattr(signal, 'CTRL_C_EVENT'):
     signal.signal(signal.CTRL_C_EVENT, signal_handler)
 else:
     signal.signal(signal.SIGHUP, signal_handler)
+
 while not quit_requested:
     time.sleep(1)
