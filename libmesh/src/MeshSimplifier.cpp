@@ -326,7 +326,6 @@ void computeCosts(Mesh::MeshdataPtr agg_mesh,
                   std::tr1::unordered_map<GeomPairContainer, uint32, GeomPairContainer::Hasher>& pairFrequency
                  )
 {
-  Matrix4x4f transform( Vector4f(1,0,0,0), Vector4f(0,1,0,0), Vector4f(0,0,1,0), Vector4f(0,0,0,1), Matrix4x4f::COLUMNS());
 
   for (uint32 i = 0;  i < agg_mesh->geometry.size(); i++) {
 
@@ -423,7 +422,7 @@ void computeCosts(Mesh::MeshdataPtr agg_mesh, uint32 geomIdx, uint32 sourcePosit
                   std::tr1::unordered_map<GeomPairContainer, uint32, GeomPairContainer::Hasher>& pairFrequency
                   )
 {
-  Matrix4x4f transform( Vector4f(1,0,0,0), Vector4f(0,1,0,0), Vector4f(0,0,1,0), Vector4f(0,0,0,1), Matrix4x4f::COLUMNS());
+  
   SubMeshGeometry& curGeometry = agg_mesh->geometry[geomIdx];
   std::tr1::unordered_map<uint32, Matrix4x4d>& positionQs = submeshPositionQs[geomIdx];
   std::tr1::unordered_map<uint32, std::tr1::unordered_set<uint32> >& neighborVertices = submeshNeighborVertices[geomIdx];
@@ -668,7 +667,7 @@ void MeshSimplifier::simplify(Mesh::MeshdataPtr agg_mesh, int32 targetFaces) {
         transform(row,col) = geoinst_pos_xform(row,col);        
       }
     } 
-    transform=Matrix4x4d::identity();
+    
     
     int geomIdx = geomInstance.geometryIndex;
     submeshInstanceCount[geomIdx]++;
