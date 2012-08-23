@@ -36,6 +36,9 @@
 #include <sirikata/space/PintoServerQuerier.hpp>
 
 #include "Protocol_Prox.pbj.hpp"
+#include "Protocol_Loc.pbj.hpp"
+
+#include <sirikata/pintoloc/ProtocolLocUpdate.hpp>
 
 namespace Sirikata {
 
@@ -55,7 +58,6 @@ class LocalPintoServerQuerier : public PintoServerQuerier {
 public:
     LocalPintoServerQuerier(SpaceContext* ctx)
      : mContext(ctx),
-       mNotified(false),
        mRegion(),
        mLargest(),
        mRootNodeID(UUID::random()),
@@ -93,9 +95,15 @@ public:
     // PintoServerQuerier Interface
     virtual void updateRegion(const BoundingBox3f& region) {
         mRegion = region;
+        mContext->mainStrand->post(
+            std::tr1::bind(&LocalPintoServerQuerier::notifyLocUpdate, this)
+        );
     }
     virtual void updateLargestObject(float max_radius) {
         mLargest = max_radius;
+        mContext->mainStrand->post(
+            std::tr1::bind(&LocalPintoServerQuerier::notifyLocUpdate, this)
+        );
     }
 
     virtual void updateQuery(const String& update) {
@@ -172,8 +180,42 @@ private:
 
         notify(&PintoServerQuerierListener::onPintoServerResult, prox_update);
     }
+
+    void notifyLocUpdate() {
+        // We don't really need the protocol version of the loc
+        // update, but it's a convenient way to construct the update
+        // we need.
+        Sirikata::Protocol::Loc::LocationUpdate update;
+        update.set_object(UUID((uint32)mContext->id()));
+        update.set_seqno(mSeqnoSource++);
+
+        // Bogus index ID (as used in prox update) so manual queries can route
+        // updates to the right place
+        update.add_index_id(1);
+
+        Sirikata::Protocol::ITimedMotionVector motion = update.mutable_location();
+        motion.set_t(mContext->simTime());
+        motion.set_position(mRegion.center());
+        motion.set_velocity(Vector3f(0,0,0));
+
+        Sirikata::Protocol::ITimedMotionQuaternion msg_orient = update.mutable_orientation();
+        msg_orient.set_t(Time::null());
+        msg_orient.set_position(Quaternion::identity());
+        msg_orient.set_velocity(Quaternion::identity());
+
+        Sirikata::Protocol::IAggregateBoundingInfo msg_bounds = update.mutable_aggregate_bounds();
+        msg_bounds.set_center_offset( Vector3f(0,0,0) );
+        msg_bounds.set_center_bounds_radius( mRegion.toBoundingSphere().radius() );
+        msg_bounds.set_max_object_size(mLargest);
+
+        // notify wants to only pass through values and tries to copy the
+        // LocProtocolLocUpdate by default -- we need to jump through hoops and
+        // specify the exact template types explicitly to make this work
+        notify<void(PintoServerQuerierListener::*)(const Sirikata::LocUpdate&), const LocProtocolLocUpdate&>(&PintoServerQuerierListener::onPintoServerLocUpdate, LocProtocolLocUpdate(update, NopTimeSynced()));
+    }
+
+
     SpaceContext* mContext;
-    bool mNotified;
     BoundingBox3f3f mRegion;
     float32 mLargest;
     UUID mRootNodeID;
