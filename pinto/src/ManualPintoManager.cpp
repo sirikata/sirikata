@@ -6,6 +6,8 @@
 
 #include <sirikata/core/network/Message.hpp> // parse/serializePBJMessage
 #include "Protocol_Prox.pbj.hpp"
+#include "Protocol_Loc.pbj.hpp"
+#include "Protocol_MasterPinto.pbj.hpp"
 #include <json_spirit/json_spirit.h>
 
 #include <prox/manual/RTreeManualQueryHandler.hpp>
@@ -60,6 +62,8 @@ void ManualPintoManager::onRegionUpdate(Sirikata::Network::Stream* stream, Bound
     assert(mClients.find(stream) != mClients.end());
     ClientData& cdata = mClients[stream];
     cdata.query->region(bounds);
+
+    sendLocUpdate(streamServerID(stream));
 }
 
 void ManualPintoManager::onMaxSizeUpdate(Sirikata::Network::Stream* stream, float32 ms) {
@@ -68,6 +72,8 @@ void ManualPintoManager::onMaxSizeUpdate(Sirikata::Network::Stream* stream, floa
     cdata.query->maxSize(ms);
 
     tick();
+
+    sendLocUpdate(streamServerID(stream));
 }
 
 void ManualPintoManager::onQueryUpdate(Stream* stream, const String& data) {
@@ -129,6 +135,10 @@ void ManualPintoManager::onQueryUpdate(Stream* stream, const String& data) {
 }
 
 void ManualPintoManager::onDisconnected(Stream* stream) {
+    // Clean out any subscriptions we have
+    for(ServerSet::const_iterator sub_it = mClients[stream].results.begin(); sub_it != mClients[stream].results.end(); sub_it++)
+        mServerSubscribers[*sub_it].erase(stream);
+    // Then clean out the query itself
     mClientsByQuery.erase( mClients[stream].query );
     delete mClients[stream].query;
     mClients.erase(stream);
@@ -150,7 +160,9 @@ void ManualPintoManager::queryHasEvents(Query* query) {
     QueryEventList evts;
     query->popEvents(evts);
 
-    Sirikata::Protocol::Prox::ProximityResults prox_results;
+    Sirikata::Protocol::MasterPinto::PintoResponse pinto_response;
+
+    Sirikata::Protocol::Prox::IProximityResults prox_results = pinto_response.mutable_prox_results();
     // We currently have to set this even though we don't have real synchronized
     // timestamps because it's required in the protocol definition
     prox_results.set_t(Time::null());
@@ -164,10 +176,20 @@ void ManualPintoManager::queryHasEvents(Query* query) {
         // so the client can properly group the replicas
         Sirikata::Protocol::Prox::IIndexProperties index_props = event_results.mutable_index_properties();
         index_props.set_id(evt.indexID());
+        // Save index IDs so we can include them in loc updates. We only have
+        // the one query handler, so just keep a single list we'll use for all
+        // updates
+        mProxIndices.insert(evt.indexID());
 
         for(uint32 aidx = 0; aidx < evt.additions().size(); aidx++) {
             ServerID nodeid = evt.additions()[aidx].id();
             assert (mLocCache->tracking(nodeid));
+
+            // Track forward and inverse so we can both notify on server event
+            // and remove on query destruction
+            cdata.results.insert(nodeid);
+            mServerSubscribers[nodeid].insert(stream);
+
             PintoManagerLocationServiceCache::Iterator loccacheit = mLocCache->startTracking(nodeid);
 
             Sirikata::Protocol::Prox::IObjectAddition addition = event_results.add_addition();
@@ -229,6 +251,11 @@ void ManualPintoManager::queryHasEvents(Query* query) {
         for(uint32 ridx = 0; ridx < evt.removals().size(); ridx++) {
             ServerID nodeid = evt.removals()[ridx].id();
 
+            // Track forward and inverse so we can both notify on server event
+            // and remove on query destruction
+            cdata.results.erase(nodeid);
+            mServerSubscribers[nodeid].erase(stream);
+
             Sirikata::Protocol::Prox::IObjectRemoval removal = event_results.add_removal();
             // Shoe-horn server ID into UUID
             removal.set_object(UUID((uint32)nodeid));
@@ -245,9 +272,53 @@ void ManualPintoManager::queryHasEvents(Query* query) {
     // FIXME(ewencp) this send could fail, especially given that we
     // could end up with a lot of results initially. Should be queuing
     // these messages up
-    String serialized = serializePBJMessage(prox_results);
+    String serialized = serializePBJMessage(pinto_response);
     bool success = stream->send( MemoryReference(serialized), ReliableOrdered );
     assert(success);
+}
+
+void ManualPintoManager::aggregateBoundsUpdated(ProxAggregator* handler, const ServerID& objid, const Vector3f& bnds_center, const float32 bnds_center_radius, const float32 max_obj_size)
+{
+    PintoManagerBase::aggregateBoundsUpdated(handler, objid, bnds_center, bnds_center_radius, max_obj_size);
+    sendLocUpdate(objid);
+}
+
+void ManualPintoManager::sendLocUpdate(ServerID about) {
+    // All nodes will get the same update, *except* for the seqno
+    Sirikata::Protocol::MasterPinto::PintoResponse msg;
+    Sirikata::Protocol::Loc::IBulkLocationUpdate blu = msg.mutable_loc_updates();
+    Sirikata::Protocol::Loc::ILocationUpdate update = blu.add_update();
+
+    assert (mLocCache->tracking(about));
+    PintoManagerLocationServiceCache::Iterator loccacheit = mLocCache->startTracking(about);
+
+    update.set_object(UUID((uint32)about));
+
+    // Indexes is just a central list since we only have one query handler
+    for(ProxIndexIDSet::iterator prox_idx_it = mProxIndices.begin(); prox_idx_it != mProxIndices.end(); prox_idx_it++)
+        update.add_index_id((uint32)*prox_idx_it);
+
+    Sirikata::Protocol::ITimedMotionVector motion = update.mutable_location();
+    TimedMotionVector3f loc = mLocCache->location(loccacheit);
+    motion.set_t(loc.updateTime());
+    motion.set_position(loc.position());
+    motion.set_velocity(loc.velocity());
+
+    Sirikata::Protocol::IAggregateBoundingInfo msg_bounds = update.mutable_aggregate_bounds();
+    msg_bounds.set_center_offset( mLocCache->centerOffset(loccacheit) );
+    msg_bounds.set_center_bounds_radius( mLocCache->centerBoundsRadius(loccacheit) );
+    msg_bounds.set_max_object_size( mLocCache->maxSize(loccacheit) );
+
+    mLocCache->stopTracking(loccacheit);
+
+    for(ClientStreamSet::iterator cit = mServerSubscribers[about].begin(); cit != mServerSubscribers[about].end(); cit++) {
+        Sirikata::Network::Stream* stream = *cit;
+        ClientData& cdata = mClients[stream];
+        update.set_seqno(cdata.seqno++);
+        String serialized = serializePBJMessage(msg);
+        bool success = stream->send( MemoryReference(serialized), ReliableOrdered );
+        assert(success);
+    }
 }
 
 

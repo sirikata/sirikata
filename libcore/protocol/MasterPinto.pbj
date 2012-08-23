@@ -32,6 +32,9 @@
 
 "pbj-0.0.3"
 
+import "Loc.pbj";
+import "Prox.pbj";
+
 package Sirikata.Protocol.MasterPinto;
 
 
@@ -91,5 +94,13 @@ message PintoUpdate {
 }
 
 message PintoResponse {
+    // Query results for old master pint implementation
     repeated PintoUpdate update = 1;
+
+    // Query results for new, manual master pinto implementation, which just
+    // uses regular query results.
+    optional Sirikata.Protocol.Prox.ProximityResults prox_results = 2;
+
+    // Loc updates can apply to both of them
+    optional Sirikata.Protocol.Loc.BulkLocationUpdate loc_updates = 3;
 }

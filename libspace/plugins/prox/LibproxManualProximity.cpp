@@ -866,6 +866,7 @@ void LibproxManualProximity::handleOnPintoServerResult(const Sirikata::Protocol:
 }
 
 void LibproxManualProximity::handleOnPintoServerLocUpdate(const CopyableLocUpdate& update) {
+    assert(mReplicatedServerDataMap.find(NullServerID) != mReplicatedServerDataMap.end());
     ReplicatedServerData& replicated_tlpinto_data = mReplicatedServerDataMap[NullServerID];
     // We should have received results before getting loc updates, which would
     // trigger the ManualReplicatedClient creation

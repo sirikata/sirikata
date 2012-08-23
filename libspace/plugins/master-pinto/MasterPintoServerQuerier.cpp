@@ -6,8 +6,12 @@
 
 #include "Protocol_MasterPinto.pbj.hpp"
 #include "Protocol_Prox.pbj.hpp"
+#include "Protocol_Loc.pbj.hpp"
 
 #include <json_spirit/json_spirit.h>
+
+#include <sirikata/pintoloc/TimeSynced.hpp>
+#include <sirikata/pintoloc/ProtocolLocUpdate.hpp>
 
 using namespace Sirikata::Network;
 
@@ -98,6 +102,16 @@ void MasterPintoServerQuerier::onPintoData(const String& data) {
             }
         }
         notify(&PintoServerQuerierListener::onPintoServerResult, prox_update);
+    }
+
+    if (msg.has_loc_updates()) {
+        Sirikata::Protocol::Loc::BulkLocationUpdate bu = msg.loc_updates();
+        for(int32 li = 0; li < bu.update_size(); li++) {
+            // notify wants to only pass through values and tries to copy the
+            // LocProtocolLocUpdate by default -- we need to jump through hoops and
+            // specify the exact template types explicitly to make this work
+            notify<void(PintoServerQuerierListener::*)(const Sirikata::LocUpdate&), const LocProtocolLocUpdate&>(&PintoServerQuerierListener::onPintoServerLocUpdate, LocProtocolLocUpdate(bu.update(li), NopTimeSynced()));
+        }
     }
 }
 

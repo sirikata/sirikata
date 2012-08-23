@@ -63,6 +63,9 @@ void PintoManager::onRegionUpdate(Sirikata::Network::Stream* stream, BoundingSph
     cdata.query->region(bounds);
 
     tick();
+    // Note that we don't have this trigger loc updates. This isn't necessary
+    // since clients of this version of pinto just trust that they should
+    // contact the returned servers.
 }
 
 void PintoManager::onMaxSizeUpdate(Sirikata::Network::Stream* stream, float32 ms) {
@@ -71,6 +74,9 @@ void PintoManager::onMaxSizeUpdate(Sirikata::Network::Stream* stream, float32 ms
     cdata.query->maxSize(ms);
 
     tick();
+    // Note that we don't have this trigger loc updates. This isn't necessary
+    // since clients of this version of pinto just trust that they should
+    // contact the returned servers.
 }
 
 void PintoManager::onQueryUpdate(Stream* stream, const String& data) {
