@@ -641,6 +641,8 @@ void LibproxProximity::poll() {
 
 
 void LibproxProximity::queryHasEvents(Query* query) {
+    InstanceMethodNotReentrant nr(mQueryHasEventsNotRentrant);
+
     if (
         query->handler() == mServerQueryHandler[OBJECT_CLASS_STATIC].handler ||
         query->handler() == mServerQueryHandler[OBJECT_CLASS_DYNAMIC].handler

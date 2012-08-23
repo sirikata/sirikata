@@ -14,6 +14,8 @@
 #include <boost/multi_index/member.hpp>
 #include <boost/multi_index/ordered_index.hpp>
 
+#include <sirikata/core/util/InstanceMethodNotReentrant.hpp>
+
 namespace Sirikata {
 
 /** Base class for Libprox-based Proximity implementations, providing a bit of
@@ -270,6 +272,10 @@ protected:
     typedef StaticObjectTimeouts::index<objid_tag>::type StaticObjectsByID;
     typedef StaticObjectTimeouts::index<expires_tag>::type StaticObjectsByExpiration;
     StaticObjectTimeouts mStaticObjectTimeouts;
+
+    // All queryHasEvents calls are going to not be reentrant unless you're very
+    // careful, so the base class provides this so it's easy to verify it.
+    InstanceMethodNotReentrant mQueryHasEventsNotRentrant;
 
     // Prox thread handlers for connection events. They perform some
     // basic maintenance (putting server into set that needs update,

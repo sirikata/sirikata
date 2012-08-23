@@ -15,6 +15,7 @@
 #include <sirikata/core/service/PollerService.hpp>
 #include <sirikata/oh/HostedObject.hpp>
 #include <sirikata/core/prox/Defs.hpp>
+#include <sirikata/core/util/InstanceMethodNotReentrant.hpp>
 
 namespace Sirikata {
 
@@ -213,6 +214,10 @@ private:
     // PROX Thread - Should only be accessed in methods used by the prox thread
 
     void tickQueryHandler();
+
+    // All queryHasEvents calls are going to not be reentrant unless you're very
+    // careful, so the base class provides this so it's easy to verify it.
+    InstanceMethodNotReentrant mQueryHasEventsNotRentrant;
 
     // These track all objects being reported to this server and
     // answer queries for objects connected to this server.

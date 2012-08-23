@@ -1104,6 +1104,8 @@ void LibproxManualProximity::eraseSeqNoInfo(const OHDP::NodeID& node)
 }
 
 void LibproxManualProximity::queryHasEvents(ProxQuery* query) {
+    InstanceMethodNotReentrant nr(mQueryHasEventsNotRentrant);
+
     uint32 max_count = GetOptionValue<uint32>(PROX_MAX_PER_RESULT);
 
     // This function handles both OH queries (against remote
@@ -1283,7 +1285,15 @@ void LibproxManualProximity::queryHasEvents(ProxQuery* query) {
                     // Need to unpack real ID from the UUID
                     ServerID leaf_server = (ServerID)objid.asUInt32();
                     PROXLOG(detailed, "Query " << query_id << " reached leaf top-level node " << oobjid << "(SS " << leaf_server << "), registering query against that server");
-                    registerOHQueryWithServerHandlers(query_id, leaf_server);
+                    // Posted because the registration can trigger
+                    // events which could cause an immediate callback,
+                    // but the ordering of events can get screwed up
+                    // if that happens (we'd have 2 calls to
+                    // queryHasEvents for the same OH on the stack at
+                    // the same time).
+                    mProxStrand->post(
+                        std::tr1::bind(&LibproxManualProximity::registerOHQueryWithServerHandlers, this, query_id, leaf_server)
+                    );
                 }
             }
             for(uint32 ridx = 0; ridx < evt.removals().size(); ridx++) {
@@ -1327,7 +1337,10 @@ void LibproxManualProximity::queryHasEvents(ProxQuery* query) {
                     // Need to unpack real ID from the UUID
                     ServerID leaf_server = (ServerID)objid.asUInt32();
                     PROXLOG(detailed, "Query " << query_id << " moved cut above leaf top-level node " << oobjid << "(SS " << leaf_server << "), unregistering query against that server");
-                    unregisterOHQueryWithServerHandlers(query_id, leaf_server);
+                    // See note about posting at corresponding registration
+                    mProxStrand->post(
+                        std::tr1::bind(&LibproxManualProximity::unregisterOHQueryWithServerHandlers, this, query_id, leaf_server)
+                    );
                 }
             }
 

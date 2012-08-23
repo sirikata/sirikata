@@ -209,6 +209,8 @@ void ObjectQueryHandler::handleNotifySubscribersLocUpdate(ReplicatedLocationServ
 
 
 void ObjectQueryHandler::queryHasEvents(Query* query) {
+    InstanceMethodNotReentrant nr(mQueryHasEventsNotRentrant);
+
     generateObjectQueryEvents(query);
 }
 
