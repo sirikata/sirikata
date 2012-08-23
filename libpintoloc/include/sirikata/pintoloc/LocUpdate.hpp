@@ -11,6 +11,7 @@
 #include <sirikata/core/util/MotionQuaternion.hpp>
 #include <sirikata/core/util/ObjectReference.hpp>
 #include <sirikata/core/util/AggregateBoundingInfo.hpp>
+#include <sirikata/core/prox/Defs.hpp>
 
 namespace Sirikata {
 
@@ -70,6 +71,13 @@ public:
     virtual String physics() const = 0;
     virtual uint64 physics_seqno() const = 0;
     String physicsOrDefault() const { return (has_physics() ? physics() : ""); }
+
+    // IndexIds -- only apply to real protocol loc updates (or copies
+    // of them)
+    bool has_index_idx() const { return index_id_size() > 0; }
+    virtual uint32 index_id_size() const = 0;
+    virtual ProxIndexID index_id(int32 idx) const = 0;
+    virtual uint64 index_id_seqno() const = 0;
 };
 
 } // namespace Sirikata

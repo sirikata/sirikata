@@ -61,7 +61,8 @@ private:
     struct ServerQueryState {
         ServerQueryState(ServerQueryHandler* parent_, const OHDP::SpaceNodeID& id_, ObjectHostContext* ctx_, Network::IOStrandPtr strand_, OHDPSST::Stream::Ptr base)
          : nconnected(0),
-           client(ctx_, strand_, parent_, new OHSpaceTimeSynced(ctx_->objectHost, id_.space()), id_.toString(), id_),
+           sync(new OHSpaceTimeSynced(ctx_->objectHost, id_.space())),
+           client(ctx_, strand_, parent_, sync, id_.toString(), id_),
            base_stream(base),
            prox_stream(),
            prox_stream_requested(false),
@@ -70,11 +71,18 @@ private:
         {
         }
         virtual ~ServerQueryState() {
+            // DO NOT delete sync. See note about ownership below.
         }
 
         bool canRemove() const { return nconnected == 0; }
 
         int32 nconnected;
+        // This sync is stored here and passed into client. client owns it, we
+        // just use to to translate loc updates. Ideally we'd eventually make
+        // ManualReplicatedClient work only with abstract values (i.e. Prox
+        // updates would also be translated here) so we could just be the only
+        // users of it.
+        OHSpaceTimeSynced* sync;
         Pinto::Manual::ReplicatedClientWithID<OHDP::SpaceNodeID> client;
         OHDPSST::Stream::Ptr base_stream;
         OHDPSST::Stream::Ptr prox_stream;

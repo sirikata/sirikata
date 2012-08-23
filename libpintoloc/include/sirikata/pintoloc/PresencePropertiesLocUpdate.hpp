@@ -63,6 +63,12 @@ public:
     virtual bool has_physics() const { return true; }
     virtual String physics() const { return mUpdate.physics(); }
     virtual uint64 physics_seqno() const { return mUpdate.getUpdateSeqNo(SequencedPresenceProperties::LOC_PHYSICS_PART); }
+
+    // Prox IndexIDs
+    virtual uint32 index_id_size() const { return 0; }
+    virtual ProxIndexID index_id(int32 idx) const { assert(false && "Out of bounds index id"); return -1; }
+    virtual uint64 index_id_seqno() const { assert(false && "PresencePropertiesLocUpdate doesn't have index ID support."); }
+
 private:
     PresencePropertiesLocUpdate();
     PresencePropertiesLocUpdate(const PresencePropertiesLocUpdate&);

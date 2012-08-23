@@ -151,8 +151,7 @@ bool SimpleObjectQueryProcessor::handleProximityMessage(HostedObjectPtr self, co
 
             SpaceObjectReference observed(spaceobj.space(), ObjectReference(addition.object()));
 
-            OHSpaceTimeSynced sync(mContext->objectHost, spaceobj.space());
-            obj_state->orphans.invokeOrphanUpdates1(sync, observed, this, spaceobj);
+            obj_state->orphans.invokeOrphanUpdates1(observed, this, spaceobj);
         }
     }
 
@@ -237,12 +236,12 @@ bool SimpleObjectQueryProcessor::handleLocationMessage(const HostedObjectPtr& se
         SpaceObjectReference observed(spaceobj.space(), ObjectReference(update.object()));
         ProxyObjectPtr proxy_obj = proxy_manager->getProxyObject(observed);
 
+        OHSpaceTimeSynced sync(mContext->objectHost, spaceobj.space());
+        LocProtocolLocUpdate llu(update, sync);
         if (!proxy_obj) {
-            obj_state->orphans.addOrphanUpdate(observed, update);
+            obj_state->orphans.addOrphanUpdate(observed, llu);
         }
         else {
-            OHSpaceTimeSynced sync(mContext->objectHost, spaceobj.space());
-            LocProtocolLocUpdate llu(update, sync);
             deliverLocationUpdate(self, spaceobj, llu);
         }
     }

@@ -6,6 +6,7 @@
 #include <sirikata/core/service/Context.hpp>
 #include "Protocol_Loc.pbj.hpp"
 #include <sirikata/proxyobject/ProxyObject.hpp>
+#include <sirikata/pintoloc/CopyableLocUpdate.hpp>
 
 namespace Sirikata {
 
@@ -24,11 +25,11 @@ OrphanLocUpdateManager::OrphanLocUpdateManager(Context* ctx, Network::IOStrand* 
 
 }
 
-void OrphanLocUpdateManager::addOrphanUpdate(const SpaceObjectReference& observed, const Sirikata::Protocol::Loc::LocationUpdate& update) {
+void OrphanLocUpdateManager::addOrphanUpdate(const SpaceObjectReference& observed, const LocUpdate& update) {
     assert( ObjectReference(update.object()) == observed.object() );
     UpdateInfoList& info_list = mUpdates[observed];
     info_list.push_back(
-        UpdateInfoPtr(new UpdateInfo(observed, new Sirikata::Protocol::Loc::LocationUpdate(update), mContext->simTime() + mTimeout))
+        UpdateInfoPtr(new UpdateInfo(observed, new CopyableLocUpdate(update), mContext->simTime() + mTimeout))
     );
 }
 

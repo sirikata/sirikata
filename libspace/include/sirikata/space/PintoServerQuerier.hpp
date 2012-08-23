@@ -37,6 +37,7 @@
 #include <sirikata/space/SpaceContext.hpp>
 #include <sirikata/core/util/Factory.hpp>
 #include <sirikata/core/util/ListenerProvider.hpp>
+#include <sirikata/pintoloc/LocUpdate.hpp>
 
 namespace Sirikata {
 
@@ -58,6 +59,7 @@ public:
     virtual ~PintoServerQuerierListener() {}
 
     virtual void onPintoServerResult(const Sirikata::Protocol::Prox::ProximityUpdate& update) = 0;
+    virtual void onPintoServerLocUpdate(const LocUpdate& update) = 0;
 };
 
 /** PintoServerQuerier is an interface for discovering other space servers which

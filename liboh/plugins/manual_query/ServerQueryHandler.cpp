@@ -11,7 +11,6 @@
 #include "Protocol_Frame.pbj.hpp"
 
 #include "ManualObjectQueryProcessor.hpp"
-#include <sirikata/oh/OHSpaceTimeSynced.hpp>
 
 #define QPLOG(lvl, msg) SILOG(manual-query-processor, lvl, msg)
 
@@ -318,7 +317,7 @@ bool ServerQueryHandler::handleLocationMessage(const OHDP::SpaceNodeID& snid, co
 
     for(int32 idx = 0; idx < contents.update_size(); idx++) {
         Sirikata::Protocol::Loc::LocationUpdate update = contents.update(idx);
-        query_state->client.locUpdate(update);
+        query_state->client.locUpdate(LocProtocolLocUpdate(update, *(query_state->sync)));
     }
 
     return true;

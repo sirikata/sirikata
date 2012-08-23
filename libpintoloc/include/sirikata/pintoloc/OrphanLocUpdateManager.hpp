@@ -65,7 +65,7 @@ public:
     /** Add an orphan update to the queue and set a timeout for it to be cleared
      *  out.
      */
-    void addOrphanUpdate(const SpaceObjectReference& observed, const Sirikata::Protocol::Loc::LocationUpdate& update);
+    void addOrphanUpdate(const SpaceObjectReference& observed, const LocUpdate& update);
     /**
        Take all fields in proxyPtr, and create an struct from
        them.
@@ -82,15 +82,14 @@ public:
     // ListenerType would be Listener<QuerierIDType> but we want to support
     // optional extra params passed through to the callback.
     template<typename ListenerType, typename ExtraParamType1>
-    void invokeOrphanUpdates1(const TimeSynced& sync, const SpaceObjectReference& proximateID, ListenerType* listener, ExtraParamType1 extra1) {
+    void invokeOrphanUpdates1(const SpaceObjectReference& proximateID, ListenerType* listener, ExtraParamType1 extra1) {
         ObjectUpdateMap::iterator it = mUpdates.find(proximateID);
         if (it == mUpdates.end()) return;
 
         const UpdateInfoList& info_list = it->second;
         for(UpdateInfoList::const_iterator info_it = info_list.begin(); info_it != info_list.end(); info_it++) {
             if ((*info_it)->value != NULL) {
-                LocProtocolLocUpdate llu( *((*info_it)->value), sync );
-                listener->onOrphanLocUpdate( llu, extra1 );
+                listener->onOrphanLocUpdate( *((*info_it)->value), extra1 );
             }
             else if ((*info_it)->opd != NULL) {
                 PresencePropertiesLocUpdate plu( (*info_it)->object.object(), *((*info_it)->opd) );
@@ -104,15 +103,14 @@ public:
         mUpdates.erase(it);
     }
     template<typename ListenerType, typename ExtraParamType1, typename ExtraParamType2>
-    void invokeOrphanUpdates2(const TimeSynced& sync, const SpaceObjectReference& proximateID, ListenerType* listener, ExtraParamType1 extra1, ExtraParamType2 extra2) {
+    void invokeOrphanUpdates2(const SpaceObjectReference& proximateID, ListenerType* listener, ExtraParamType1 extra1, ExtraParamType2 extra2) {
         ObjectUpdateMap::iterator it = mUpdates.find(proximateID);
         if (it == mUpdates.end()) return;
 
         const UpdateInfoList& info_list = it->second;
         for(UpdateInfoList::const_iterator info_it = info_list.begin(); info_it != info_list.end(); info_it++) {
             if ((*info_it)->value != NULL) {
-                LocProtocolLocUpdate llu( *((*info_it)->value), sync );
-                listener->onOrphanLocUpdate( llu, extra1, extra2 );
+                listener->onOrphanLocUpdate( *((*info_it)->value), extra1, extra2 );
             }
             else if ((*info_it)->opd != NULL) {
                 PresencePropertiesLocUpdate plu( (*info_it)->object.object(), *((*info_it)->opd) );
@@ -134,7 +132,7 @@ private:
     virtual void poll();
 
     struct UpdateInfo {
-        UpdateInfo(const SpaceObjectReference& obj, Sirikata::Protocol::Loc::LocationUpdate* _v, const Time& t)
+        UpdateInfo(const SpaceObjectReference& obj, LocUpdate* _v, const Time& t)
          : object(obj), value(_v), opd(NULL), expiresAt(t)
         {}
         UpdateInfo(const SpaceObjectReference& obj, SequencedPresenceProperties* _v, const Time& t)
@@ -144,7 +142,7 @@ private:
 
         SpaceObjectReference object;
         //Either value or opd will be non-null.  Never both.
-        Sirikata::Protocol::Loc::LocationUpdate* value;
+        LocUpdate* value;
         SequencedPresenceProperties* opd;
 
         Time expiresAt;

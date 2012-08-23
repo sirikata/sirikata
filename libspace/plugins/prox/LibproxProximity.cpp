@@ -316,7 +316,6 @@ void LibproxProximity::onPintoServerResult(const Sirikata::Protocol::Prox::Proxi
 
         mServersQueried.insert(sid);
         mNeedServerQueryUpdate.insert(sid);
-
     }
 
     for(int32 ridx = 0; ridx < update.removal_size(); ridx++) {
@@ -331,6 +330,11 @@ void LibproxProximity::onPintoServerResult(const Sirikata::Protocol::Prox::Proxi
     }
 }
 
+void LibproxProximity::onPintoServerLocUpdate(const LocUpdate& update) {
+    // Nothing to do here. We don't actually save the resulting data about the
+    // servers, we just care about their membership in the result set from top
+    // level pinto so we can query/update them.
+}
 
 // MessageRecipient Interface
 

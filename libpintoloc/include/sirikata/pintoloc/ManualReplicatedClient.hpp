@@ -7,6 +7,7 @@
 
 #include <sirikata/pintoloc/ReplicatedLocationServiceCache.hpp>
 #include <sirikata/pintoloc/OrphanLocUpdateManager.hpp>
+#include <sirikata/pintoloc/CopyableLocUpdate.hpp>
 #include <sirikata/pintoloc/TimeSynced.hpp>
 #include <sirikata/core/prox/Defs.hpp>
 #include <sirikata/core/service/Service.hpp>
@@ -62,7 +63,7 @@ class SIRIKATA_LIBPINTOLOC_EXPORT ReplicatedClient :
 
     void proxUpdate(const Sirikata::Protocol::Prox::ProximityResults& results);
     void proxUpdate(const Sirikata::Protocol::Prox::ProximityUpdate& update);
-    void locUpdate(const Sirikata::Protocol::Loc::LocationUpdate& update);
+    void locUpdate(const LocUpdate& update);
 
     // Notifications about local queries in the tree so we know how to
     // move the cut on the space server up or down.
@@ -93,7 +94,7 @@ class SIRIKATA_LIBPINTOLOC_EXPORT ReplicatedClient :
     // Handlers in proper strand
     void handleProxUpdateResults(const Sirikata::Protocol::Prox::ProximityResults& results);
     void handleProxUpdate(const Sirikata::Protocol::Prox::ProximityUpdate& update);
-    void handleLocUpdate(const Sirikata::Protocol::Loc::LocationUpdate& update);
+    void handleLocUpdate(const CopyableLocUpdate& update);
 
     // Returns true if the cache was actually created
     bool createLocCache(ProxIndexID iid);

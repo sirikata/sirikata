@@ -91,6 +91,7 @@ protected:
 
     // PintoServerQuerierListener Interface
     virtual void onPintoServerResult(const Sirikata::Protocol::Prox::ProximityUpdate& update) = 0;
+    virtual void onPintoServerLocUpdate(const LocUpdate& update) = 0;
 
     // SpaceNetworkConnectionListener Interface
     virtual void onSpaceNetworkConnected(ServerID sid);

@@ -8,7 +8,6 @@
 
 #include <sirikata/core/network/Message.hpp> // parse/serializePBJMessage
 #include "Protocol_Prox.pbj.hpp"
-#include "Protocol_Loc.pbj.hpp"
 
 #include <json_spirit/json_spirit.h>
 #include <boost/lexical_cast.hpp>
@@ -314,7 +313,7 @@ void ReplicatedClient::handleProxUpdate(const Sirikata::Protocol::Prox::Proximit
         );
 
         // Replay orphans
-        orphan_manager->invokeOrphanUpdates1(*mSync, observed, this, index_unique_id);
+        orphan_manager->invokeOrphanUpdates1(observed, this, index_unique_id);
     }
 
     for(int32 ridx = 0; ridx < update.removal_size(); ridx++) {
@@ -402,10 +401,10 @@ void applyLocUpdate(const ObjectReference& objid, ReplicatedLocationServiceCache
 }
 }
 
-void ReplicatedClient::locUpdate(const Sirikata::Protocol::Loc::LocationUpdate& update) {
-    mStrand->post(std::tr1::bind(&ReplicatedClient::handleLocUpdate, this, update));
+void ReplicatedClient::locUpdate(const LocUpdate& update) {
+    mStrand->post(std::tr1::bind(&ReplicatedClient::handleLocUpdate, this, CopyableLocUpdate(update)));
 }
-void ReplicatedClient::handleLocUpdate(const Sirikata::Protocol::Loc::LocationUpdate& update) {
+void ReplicatedClient::handleLocUpdate(const CopyableLocUpdate& update) {
     SerializationCheck::Scoped sc(this);
     ObjectReference observed_oref(update.object());
     // NOTE: We don't track the SpaceID here, but we also don't really need it
@@ -425,7 +424,7 @@ void ReplicatedClient::handleLocUpdate(const Sirikata::Protocol::Loc::LocationUp
         return;
     }
 
-    for(int32 index_id_idx = 0; index_id_idx < update.index_id_size(); index_id_idx++) {
+    for(uint32 index_id_idx = 0; index_id_idx < update.index_id_size(); index_id_idx++) {
         ProxIndexID index_id = update.index_id(index_id_idx);
         IndexObjectCacheMap::iterator index_it = mObjects.find(index_id);
         // If we can't find an index, we may just be getting the update
@@ -448,8 +447,7 @@ void ReplicatedClient::handleLocUpdate(const Sirikata::Protocol::Loc::LocationUp
             getOrphanLocUpdateManager(index_id)->addOrphanUpdate(observed, update);
         }
         else { // or actually applying it
-            LocProtocolLocUpdate llu(update, *mSync);
-            applyLocUpdate(observed_oref, getLocCache(index_id), llu);
+            applyLocUpdate(observed_oref, getLocCache(index_id), update);
         }
     }
 }

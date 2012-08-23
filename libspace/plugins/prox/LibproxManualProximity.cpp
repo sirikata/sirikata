@@ -136,6 +136,13 @@ void LibproxManualProximity::onPintoServerResult(const Sirikata::Protocol::Prox:
     );
 }
 
+void LibproxManualProximity::onPintoServerLocUpdate(const LocUpdate& update) {
+    mProxStrand->post(
+        std::tr1::bind(&LibproxManualProximity::handleOnPintoServerLocUpdate, this, CopyableLocUpdate(update)),
+        "LibproxManualProximity::handleOnPintoServerLocUpdate"
+    );
+}
+
 
 // Note: LocationServiceListener interface is only used in order to get updates on objects which have
 // registered queries, allowing us to update those queries as appropriate.  All updating of objects
@@ -175,7 +182,7 @@ void LibproxManualProximity::onLocationUpdateFromServer(const ServerID sid, cons
     ReplicatedServerDataMap::iterator rsit = mReplicatedServerDataMap.find(sid);
     if (rsit == mReplicatedServerDataMap.end()) return;
 
-    rsit->second.client->locUpdate(update);
+    rsit->second.client->locUpdate(LocProtocolLocUpdate(update, NopTimeSynced()));
 }
 
 // MessageRecipient Interface
@@ -856,6 +863,15 @@ void LibproxManualProximity::handleOnPintoServerResult(const Sirikata::Protocol:
 
     //  Need to run the prox update to get data in before registering queries
     replicated_tlpinto_data.client->proxUpdate(update);
+}
+
+void LibproxManualProximity::handleOnPintoServerLocUpdate(const CopyableLocUpdate& update) {
+    ReplicatedServerData& replicated_tlpinto_data = mReplicatedServerDataMap[NullServerID];
+    // We should have received results before getting loc updates, which would
+    // trigger the ManualReplicatedClient creation
+    assert(replicated_tlpinto_data.client);
+    //  Need to run the prox update to get data in before registering queries
+    replicated_tlpinto_data.client->locUpdate(update);
 }
 
 void LibproxManualProximity::onCreatedReplicatedIndex(ReplicatedClient* client, const ServerID& evt_src_server, ProxIndexID proxid, ReplicatedLocationServiceCachePtr loccache, ServerID sid, bool dynamic_objects) {

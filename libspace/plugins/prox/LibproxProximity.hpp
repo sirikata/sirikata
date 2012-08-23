@@ -78,6 +78,7 @@ public:
 
     // PintoServerQuerierListener Interface
     virtual void onPintoServerResult(const Sirikata::Protocol::Prox::ProximityUpdate& update);
+    virtual void onPintoServerLocUpdate(const LocUpdate& update);
 
     // LocationServiceListener Interface
     virtual void localObjectRemoved(const UUID& uuid, bool agg);

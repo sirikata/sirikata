@@ -13,6 +13,7 @@
 #include <sirikata/pintoloc/ManualReplicatedClient.hpp>
 #include "ManualReplicatedRequestManager.hpp"
 #include <boost/tr1/tuple.hpp>
+#include <sirikata/pintoloc/CopyableLocUpdate.hpp>
 
 namespace Sirikata {
 
@@ -55,6 +56,7 @@ public:
 
     // PintoServerQuerierListener Interface
     virtual void onPintoServerResult(const Sirikata::Protocol::Prox::ProximityUpdate& update);
+    virtual void onPintoServerLocUpdate(const LocUpdate& update);
 
     // LocationServiceListener Interface - Used for deciding when to switch
     // objects between static/dynamic, get raw loc updates from other
@@ -150,6 +152,7 @@ private:
     // ReplicatedClientWithID -- these generate/destroy LocCaches and
     // Query Handlers
     void handleOnPintoServerResult(const Sirikata::Protocol::Prox::ProximityUpdate& update);
+    void handleOnPintoServerLocUpdate(const CopyableLocUpdate& update);
 
     void handleUpdateServerQuery(ServerID sid, const String& raw_query);
     void handleUpdateServerQueryResultsToReplicatedTrees(ServerID sid, const Sirikata::Protocol::Prox::ProximityResults& results);
