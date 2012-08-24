@@ -51,6 +51,8 @@
 
 #include <sirikata/core/transfer/HttpManager.hpp>
 
+#include <sirikata/core/command/Command.hpp>
+
 namespace Sirikata {
 
 class SIRIKATA_SPACE_EXPORT AggregateManager : public LocationServiceListener {
@@ -260,7 +262,8 @@ private:
   bool cleanUpChild(const UUID& parent_uuid, const UUID& child_id);
   void removeStaleLeaves();
 
-
+  // Command handlers
+  void commandStats(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
 public:
 
   AggregateManager( LocationService* loc, Transfer::OAuthParamsPtr oauth, const String& username);

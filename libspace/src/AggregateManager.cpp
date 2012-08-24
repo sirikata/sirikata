@@ -48,6 +48,8 @@
 #include <sirikata/core/transfer/OAuthHttpManager.hpp>
 #include <prox/rtree/RTreeCore.hpp>
 
+#include <sirikata/core/command/Commander.hpp>
+
 #if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS
 #define snprintf _snprintf
 #endif
@@ -123,6 +125,13 @@ AggregateManager::AggregateManager(LocationService* loc, Transfer::OAuthParamsPt
     removeStaleLeaves();
 
     mCDNKeepAlivePoller->start();
+
+    if (mLoc->context()->commander()) {
+      mLoc->context()->commander()->registerCommand(
+        "space.aggregates.stats",
+        std::tr1::bind(&AggregateManager::commandStats, this, _1, _2, _3)
+      );
+    }
 }
 
 AggregateManager::~AggregateManager() {
@@ -1555,5 +1564,18 @@ void AggregateManager::handleKeepAliveResponse(const UUID& objid,
 }
 
 
+
+void AggregateManager::commandStats(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {
+  Command::Result result = Command::EmptyResult();
+
+  result.put("stats.raw_updates", mRawAggregateUpdates.read());
+  result.put("stats.queued", mAggregatesQueued.read());
+  result.put("stats.generated", mAggregatesGenerated.read());
+  result.put("stats.generation_failed", mAggregatesFailedToGenerate.read());
+  result.put("stats.uploaded", mAggregatesUploaded.read());
+  result.put("stats.upload_failed", mAggregatesFailedToUpload.read());
+
+  cmdr->result(cmdid, result);
+}
 
 }
