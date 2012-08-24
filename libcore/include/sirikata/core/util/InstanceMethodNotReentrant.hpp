@@ -36,7 +36,9 @@ namespace Sirikata {
 class SIRIKATA_EXPORT InstanceMethodNotReentrant {
 public:
     InstanceMethodNotReentrant()
+#if SIRIKATA_DEBUG
         : count(0)
+#endif
     {}
 
     class Token {
