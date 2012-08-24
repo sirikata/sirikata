@@ -66,12 +66,12 @@ namespace Sirikata {
 
 using namespace Mesh;
 
-AggregateManager::AggregateManager(LocationService* loc, Transfer::OAuthParamsPtr oauth, const String& username)
-  :
-    mLoc(loc),
+AggregateManager::AggregateManager(LocationService* loc, Transfer::OAuthParamsPtr oauth, const String& username, bool skip_upload)
+  : mLoc(loc),
     mOAuth(oauth),
     mCDNUsername(username),
     mModelTTL(Duration::minutes(60)),
+    mSkipUpload(skip_upload),
     mRawAggregateUpdates(0),
     mAggregatesQueued(0),
     mAggregatesGenerated(0),
@@ -765,6 +765,31 @@ void AggregateManager::uploadAggregateMesh(Mesh::MeshdataPtr agg_mesh,
   AGG_LOG(insane, "Trying  to upload : " << localMeshName);
 
   Time curTime = Timer::now();
+
+  // "Upload" that doesn't really do anything, useful for testing, required to
+  // do automated tests that don't require a real account on the CDN
+  if (mSkipUpload) {
+    // This is bogus, but we need to fill in some URI
+      cdnMeshName = "http://localhost/aggregate_meshes/" + localMeshName;
+      agg_mesh->uri = cdnMeshName;
+
+      //Update loc
+      mLoc->context()->mainStrand->post(
+        std::tr1::bind(
+            &AggregateManager::updateAggregateLocMesh, this,
+            uuid, cdnMeshName
+        ),
+        "AggregateManager::updateAggregateLocMesh"
+      );
+
+      mAggregatesUploaded++;
+      AGG_LOG(info, "Uploaded successfully: " << localMeshName << "\n");
+
+      addToInMemoryCache(cdnMeshName, agg_mesh);
+
+      aggObject->mLeaves.clear();
+      return;
+  }
 
   // We have two paths here, the real CDN upload and the old, local approach
   // where we dump the file and run a script to "upload" it, which may just mean

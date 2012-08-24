@@ -86,6 +86,7 @@
 #define OPT_AGGMGR_ACCESS_KEY        "aggmgr.access-key"
 #define OPT_AGGMGR_ACCESS_SECRET     "aggmgr.access-secret"
 #define OPT_AGGMGR_USERNAME          "aggmgr.username"
+#define OPT_AGGMGR_SKIP_UPLOAD       "aggmgr.skip-upload"
 
 namespace Sirikata {
 

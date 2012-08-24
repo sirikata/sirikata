@@ -189,6 +189,7 @@ private:
   const String mCDNUsername;
   Duration mModelTTL;
   Poller* mCDNKeepAlivePoller;
+  bool mSkipUpload;
 
   //CDN upload threads' variables
   enum{NUM_UPLOAD_THREADS = 8};
@@ -266,7 +267,7 @@ private:
   void commandStats(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
 public:
 
-  AggregateManager( LocationService* loc, Transfer::OAuthParamsPtr oauth, const String& username);
+  AggregateManager( LocationService* loc, Transfer::OAuthParamsPtr oauth, const String& username, bool skip_upload);
 
   ~AggregateManager();
 
