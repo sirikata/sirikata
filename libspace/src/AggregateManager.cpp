@@ -83,14 +83,14 @@ AggregateManager::AggregateManager(LocationService* loc, Transfer::OAuthParamsPt
     mTransferMediator = &(Transfer::TransferMediator::getSingleton());
 
     static char x = '1';
-    mTransferPool = mTransferMediator->registerClient<Transfer::AggregatedTransferPool>("SpaceAggregator_"+x);
+    mTransferPool = mTransferMediator->registerClient<Transfer::AggregatedTransferPool>(String("SpaceAggregator_")+x);
     x++;
 
     char id='1';
     for (uint8 i = 0; i < NUM_UPLOAD_THREADS; i++) {
-      mUploadServices[i] = new Network::IOService("AggregateManager::UploadService"+id);
-      mUploadStrands[i] = mUploadServices[i]->createStrand("AggregateManager::UploadStrand"+id);
-      mUploadWorks[i] =new Network::IOWork(mUploadServices[i], "AggregateManager::UploadWork"+id);
+      mUploadServices[i] = new Network::IOService(String("AggregateManager::UploadService")+id);
+      mUploadStrands[i] = mUploadServices[i]->createStrand(String("AggregateManager::UploadStrand")+id);
+      mUploadWorks[i] =new Network::IOWork(mUploadServices[i], String("AggregateManager::UploadWork")+id);
       mUploadThreads[i] = new Thread("AggregateManager Upload", std::tr1::bind(&AggregateManager::uploadThreadMain, this, i));
 
       id++;
@@ -99,10 +99,10 @@ AggregateManager::AggregateManager(LocationService* loc, Transfer::OAuthParamsPt
     // Start the processing threads
     id = '1';
     for (uint8 i = 0; i < NUM_GENERATION_THREADS; i++) {
-      mAggregationServices[i] = new Network::IOService("AggregateManager::AggregationService"+id);
-      mAggregationStrands[i] = mAggregationServices[i]->createStrand("AggregateManager::AggregationStrand"+id);
-      mIOWorks[i] =new Network::IOWork(mAggregationServices[i], "AggregateManager::AggregationWork"+id);
-      mAggregationThreads[i] = new Thread("AggregateManager Thread "+id, std::tr1::bind(&AggregateManager::aggregationThreadMain, this, i));
+      mAggregationServices[i] = new Network::IOService(String("AggregateManager::AggregationService")+id);
+      mAggregationStrands[i] = mAggregationServices[i]->createStrand(String("AggregateManager::AggregationStrand")+id);
+      mIOWorks[i] =new Network::IOWork(mAggregationServices[i], String("AggregateManager::AggregationWork")+id);
+      mAggregationThreads[i] = new Thread(String("AggregateManager Thread ")+id, std::tr1::bind(&AggregateManager::aggregationThreadMain, this, i));
 
       id++;
     }
