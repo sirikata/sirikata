@@ -1,3 +1,4 @@
+// -*- c-basic-offset: 2; -*-
 /*  Sirikata
  *  AggregateManager.cpp
  *
@@ -68,7 +69,13 @@ AggregateManager::AggregateManager(LocationService* loc, Transfer::OAuthParamsPt
     mLoc(loc),
     mOAuth(oauth),
     mCDNUsername(username),
-    mModelTTL(Duration::minutes(60))
+    mModelTTL(Duration::minutes(60)),
+    mRawAggregateUpdates(0),
+    mAggregatesQueued(0),
+    mAggregatesGenerated(0),
+    mAggregatesFailedToGenerate(0),
+    mAggregatesUploaded(0),
+    mAggregatesFailedToUpload(0)
 {
     mModelsSystem = NULL;
     if (ModelsSystemFactory::getSingleton().hasConstructor("any"))
@@ -171,6 +178,7 @@ void AggregateManager::uploadThreadMain(uint8 i) {
 
 void AggregateManager::addAggregate(const UUID& uuid) {
   AGG_LOG(detailed, "addAggregate called: uuid=" << uuid.toString() << "\n");
+  mRawAggregateUpdates++;
 
   boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
   mAggregateObjects[uuid] = AggregateObjectPtr (new AggregateObject(uuid, UUID::null(), false));
@@ -211,6 +219,7 @@ bool AggregateManager::cleanUpChild(const UUID& parent_id, const UUID& child_id)
 
 void AggregateManager::removeAggregate(const UUID& uuid) {
   AGG_LOG(detailed, "removeAggregate: " << uuid.toString() << "\n");
+  mRawAggregateUpdates++;
 
   boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
 
@@ -253,6 +262,7 @@ void AggregateManager::addChild(const UUID& uuid, const UUID& child_uuid) {
     lock.unlock();
 
     AGG_LOG(detailed, "addChild:  "  << uuid.toString() << " CHILD " << child_uuid.toString() << "\n");
+    mRawAggregateUpdates++;
 
     mAggregationStrands[0]->post(
         Duration::seconds(5),
@@ -264,6 +274,7 @@ void AggregateManager::addChild(const UUID& uuid, const UUID& child_uuid) {
 
 void AggregateManager::iRemoveChild(const UUID& uuid, const UUID& child_uuid) {
   AGG_LOG(detailed, "removeChild:  "  << uuid.toString() << " CHILD " << child_uuid.toString() << "\n");
+  mRawAggregateUpdates++;
 
   std::vector<AggregateObjectPtr>& children = iGetChildren(uuid);
 
@@ -301,6 +312,7 @@ void AggregateManager::aggregateObserved(const UUID& objid, uint32 nobservers) {
 }
 
 void AggregateManager::generateAggregateMesh(const UUID& uuid, const Duration& delayFor) {
+  mRawAggregateUpdates++;
   boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
   if (mAggregateObjects.find(uuid) == mAggregateObjects.end()) return;
   std::tr1::shared_ptr<AggregateObject> aggObject = mAggregateObjects[uuid];
@@ -313,6 +325,7 @@ void AggregateManager::generateAggregateMesh(const UUID& uuid, AggregateObjectPt
   if (mDirtyAggregateObjects.find(uuid) != mDirtyAggregateObjects.end()) return;
 
   AGG_LOG(detailed,"Setting up aggregate " << uuid << " to generate aggregate mesh with " << aggObject->mChildren.size() << " in " << delayFor);
+  mAggregatesQueued++;
   mAggregationStrands[0]->post(
       delayFor,
       std::tr1::bind(&AggregateManager::generateAggregateMeshAsyncIgnoreErrors, this, uuid, aggObject->mLastGenerateTime, true),
@@ -323,6 +336,7 @@ void AggregateManager::generateAggregateMesh(const UUID& uuid, AggregateObjectPt
 void AggregateManager::generateAggregateMeshAsyncIgnoreErrors(const UUID uuid, Time postTime, bool generateSiblings) {
 	uint32 retval=generateAggregateMeshAsync(uuid, postTime, generateSiblings);
 	if (retval != GEN_SUCCESS) {
+          mAggregatesFailedToGenerate++;
           SILOG(aggregate,error,"generateAggregateMeshAsync returned false, but no error handling happening" << "\n");
 	}
 }
@@ -723,7 +737,7 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
   AGG_LOG(info, "Generated aggregate: " << localMeshName << "\n");
   AGG_LOG(insane, "Time to generate: " << (Timer::now() - curTime).toMilliseconds() );
 
-
+  mAggregatesGenerated++;
   return GEN_SUCCESS;
 }
 
@@ -865,6 +879,7 @@ void AggregateManager::uploadAggregateMesh(Mesh::MeshdataPtr agg_mesh,
       bool converted = mModelsSystem->convertVisual(agg_mesh, "colladamodels", model_ostream);
       model_ostream.close();
       if (!converted) {
+        mAggregatesFailedToUpload++;
           AGG_LOG(error, "Failed to save aggregate mesh " << localMeshName << ", it won't be displayed.");
           // Here the return value isn't success, it's "should I remove this
           // aggregate object from the queue for processing." Failure to save is
@@ -885,6 +900,7 @@ void AggregateManager::uploadAggregateMesh(Mesh::MeshdataPtr agg_mesh,
         "AggregateManager::updateAggregateLocMesh"
       );
 
+      mAggregatesUploaded++;
       AGG_LOG(info, "Uploaded successfully: " << localMeshName << "\n");
 
       addToInMemoryCache(cdnMeshName, agg_mesh);
@@ -943,6 +959,10 @@ void AggregateManager::handleUploadFinished(Transfer::UploadRequestPtr request, 
                   "AggregateManager::uploadAggregateMesh"
                 );
       }
+      else {
+        // It really failed for the last time
+        mAggregatesFailedToUpload++;
+      }
 
       return;
     }
@@ -977,7 +997,7 @@ void AggregateManager::handleUploadFinished(Transfer::UploadRequestPtr request, 
         "AggregateManager::updateAggregateLocMesh"
     );
 
-
+    mAggregatesUploaded++;
     AGG_LOG(info, "Uploaded successfully: " << localMeshName);
     AGG_LOG(insane,  "CDN mesh name is " << cdnMeshName);
 
@@ -1201,9 +1221,11 @@ void AggregateManager::queueDirtyAggregates(Time postTime) {
          it != mDirtyAggregateObjects.end(); it++)
     {
       std::tr1::shared_ptr<AggregateObject> aggObject = it->second;
-      if (aggObject->mTreeLevel >= 0)
+      if (aggObject->mTreeLevel >= 0) {
+        mAggregatesQueued++;
         mObjectsByPriority[i][ aggObject->mNumObservers + (aggObject->mTreeLevel*0.001) ].push_back(aggObject);
         i = (i+1)%NUM_GENERATION_THREADS;
+      }
     }
 
     mDirtyAggregateObjects.clear();
@@ -1235,7 +1257,8 @@ void AggregateManager::generateMeshesFromQueue(uint8 threadNumber) {
 
         if (returner==GEN_SUCCESS || aggObject->mNumFailedGenerationAttempts > 25) {
           it->second.pop_front();
-                if (returner != GEN_SUCCESS) {
+          if (returner != GEN_SUCCESS) {
+            mAggregatesFailedToGenerate++;
             AGG_LOG(error, "Could not generate aggregate mesh for " <<
                            aggObject->mTreeLevel << "_" << aggObject->mUUID.toString() << "\n");
           }

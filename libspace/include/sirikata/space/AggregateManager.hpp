@@ -196,6 +196,22 @@ private:
   Network::IOWork* mUploadWorks[NUM_UPLOAD_THREADS];
   void uploadThreadMain(uint8 i);
 
+  // Stats.
+  // Raw number of aggregate updates that could cause regeneration,
+  // e.g. add/remove children, child moved, child mesh changed, etc.
+  AtomicValue<uint32> mRawAggregateUpdates;
+  // Number of aggregate generation requests we've queued up, even if they
+  // haven't finished.
+  AtomicValue<uint32> mAggregatesQueued;
+  // Number of aggregates that were actually generated, i.e. the mesh was saved
+  // and uploading scheduled.
+  AtomicValue<uint32> mAggregatesGenerated;
+  // Number of aggregates which, even after retries, failed to generate
+  AtomicValue<uint32> mAggregatesFailedToGenerate;
+  // Number of aggregates successfully uploaded to the CDN
+  AtomicValue<uint32> mAggregatesUploaded;
+  // Number of aggregate uploads which failed
+  AtomicValue<uint32> mAggregatesFailedToUpload;
 
   //Various utility functions
   bool findChild(std::vector<AggregateObjectPtr>& v, const UUID& uuid) ;
