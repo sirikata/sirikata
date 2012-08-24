@@ -1328,10 +1328,16 @@ void AggregateManager::addDirtyAggregates(UUID uuid) {
   if (uuid != UUID::null() && mAggregateObjects.find(uuid) != mAggregateObjects.end() ) {
     std::tr1::shared_ptr<AggregateObject> aggObj = mAggregateObjects[uuid];
 
-    if (aggObj && aggObj->mChildren.size() > 0) {
-      mDirtyAggregateObjects[uuid] = aggObj;
-      aggObj->generatedLastRound = false;
-
+    if (aggObj) {
+      // We used to check if there were any children here, but we need to mark
+      // this as dirty (if it's really an aggregate...) no matter what. It may
+      // have gone from having children to not having children. We also must
+      // always mark parents since removal of objects is important to them as
+      // well.
+      if (!aggObj->leaf) {
+        mDirtyAggregateObjects[uuid] = aggObj;
+        aggObj->generatedLastRound = false;
+      }
       for (std::set<UUID>::iterator it = aggObj->mParentUUIDs.begin(); it != aggObj->mParentUUIDs.end(); it++) {
         addDirtyAggregates(*it);
       }
