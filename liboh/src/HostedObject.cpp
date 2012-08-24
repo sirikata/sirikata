@@ -884,6 +884,13 @@ void HostedObject::handleProximityUpdate(const SpaceObjectReference& spaceobj, c
             self->mObjectScript->notifyProximate(proxy_obj,spaceobj);
     }
 
+    // NOTE we ignore reparents here. For now, we are only getting "regular"
+    // queries here, where we just need the nodes along the cut (i.e. we're not
+    // replicating). We can get one of these events because they'll be reported
+    // by any cut query handler, but they don't actually affect our results.
+    // Note that if we extend object host querying to be more flexible then
+    // we'll need to report these.
+
     for(int32 ridx = 0; ridx < update.removal_size(); ridx++) {
         Sirikata::Protocol::Prox::ObjectRemoval removal = update.removal(ridx);
 

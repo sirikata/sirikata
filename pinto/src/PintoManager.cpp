@@ -130,6 +130,10 @@ void PintoManager::queryHasEvents(Query* query) {
             result.set_addition(true);
             result.set_server(evt.additions()[aidx].id());
         }
+        // This doesn't support reparenting, we'd need to update this
+        // protocol to look more like the normal Prox result protocol
+        // (or just use that protocol...)
+        assert(evt.reparents().size() == 0);
         for(uint32 ridx = 0; ridx < evt.removals().size(); ridx++) {
             Sirikata::Protocol::MasterPinto::IPintoResult result = update.add_change();
             result.set_addition(false);

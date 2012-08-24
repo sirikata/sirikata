@@ -248,6 +248,18 @@ void ManualPintoManager::queryHasEvents(Query* query) {
 
             mLocCache->stopTracking(loccacheit);
         }
+        for(uint32 pidx = 0; pidx < evt.reparents().size(); pidx++) {
+            Sirikata::Protocol::Prox::INodeReparent reparent = event_results.add_reparent();
+            reparent.set_object( UUID((uint32)evt.reparents()[pidx].id()) );
+            reparent.set_seqno (update_seqno);
+            reparent.set_old_parent( UUID((uint32)evt.reparents()[pidx].oldParent()) );
+            reparent.set_new_parent( UUID((uint32)evt.reparents()[pidx].newParent()) );
+            reparent.set_type(
+                (evt.reparents()[pidx].type() == QueryEvent::Normal) ?
+                Sirikata::Protocol::Prox::NodeReparent::Object :
+                Sirikata::Protocol::Prox::NodeReparent::Aggregate
+            );
+        }
         for(uint32 ridx = 0; ridx < evt.removals().size(); ridx++) {
             ServerID nodeid = evt.removals()[ridx].id();
 

@@ -316,6 +316,14 @@ void ReplicatedClient::handleProxUpdate(const Sirikata::Protocol::Prox::Proximit
         orphan_manager->invokeOrphanUpdates1(observed, this, index_unique_id);
     }
 
+    for(int32 pidx = 0; pidx < update.reparent_size(); pidx++) {
+        Sirikata::Protocol::Prox::NodeReparent reparent = update.reparent(pidx);
+        ObjectReference reparented(reparent.object());
+        ObjectReference new_parent(reparent.new_parent());
+        RCLOG(insane, " - Reparented: " << reparented << " to " << new_parent);
+        loccache->parentUpdated(reparented, new_parent, reparent.seqno());
+    }
+
     for(int32 ridx = 0; ridx < update.removal_size(); ridx++) {
         Sirikata::Protocol::Prox::ObjectRemoval removal = update.removal(ridx);
         ObjectReference observed_oref(removal.object());

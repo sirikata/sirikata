@@ -318,6 +318,9 @@ void LibproxProximity::onPintoServerResult(const Sirikata::Protocol::Prox::Proxi
         mNeedServerQueryUpdate.insert(sid);
     }
 
+    // We're not replicating the pinto tree, just using results, so we can
+    // ignore reparent events
+
     for(int32 ridx = 0; ridx < update.removal_size(); ridx++) {
         Sirikata::Protocol::Prox::ObjectRemoval removal = update.removal(ridx);
         ServerID sid = removal.object().asUInt32();
@@ -420,6 +423,10 @@ void LibproxProximity::receiveMessage(Message* msg) {
                      ""  //no Zernike descriptor in Proximity message. is this ok to do? TAHIR.
                 );
             }
+
+            // This implementation just uses the cut or leaf results from other
+            // servers, it doesn't perform replication of the tree, so reparent
+            // events can be ignored.
 
             for(int32 ridx = 0; ridx < update.removal_size(); ridx++) {
                 Sirikata::Protocol::Prox::ObjectRemoval removal = update.removal(ridx);
@@ -959,6 +966,19 @@ void LibproxProximity::generateServerQueryEvents(Query* query) {
                 if (phy.size() > 0)
                     addition.set_physics(phy);
             }
+            for(uint32 pidx = 0; pidx < evt.reparents().size(); pidx++) {
+                Sirikata::Protocol::Prox::INodeReparent reparent = event_results.add_reparent();
+                reparent.set_object( evt.reparents()[pidx].id().getAsUUID() );
+                uint64 seqNo = (*seqNoPtr)++;
+                reparent.set_seqno (seqNo);
+                reparent.set_old_parent(evt.reparents()[pidx].oldParent().getAsUUID());
+                reparent.set_new_parent(evt.reparents()[pidx].newParent().getAsUUID());
+                reparent.set_type(
+                    (evt.reparents()[pidx].type() == QueryEvent::Normal) ?
+                    Sirikata::Protocol::Prox::NodeReparent::Object :
+                    Sirikata::Protocol::Prox::NodeReparent::Aggregate
+                );
+            }
             for(uint32 ridx = 0; ridx < evt.removals().size(); ridx++) {
                 ObjectReference oobjid = evt.removals()[ridx].id();
                 UUID objid = oobjid.getAsUUID();
@@ -1076,6 +1096,19 @@ void LibproxProximity::generateObjectQueryEvents(Query* query, bool do_first) {
                 const String& phy = mLocCache->physics(oobjid);
                 if (phy.size() > 0)
                     addition.set_physics(phy);
+            }
+            for(uint32 pidx = 0; pidx < evt.reparents().size(); pidx++) {
+                Sirikata::Protocol::Prox::INodeReparent reparent = event_results.add_reparent();
+                reparent.set_object( evt.reparents()[pidx].id().getAsUUID() );
+                uint64 seqNo = (*seqNoPtr)++;
+                reparent.set_seqno (seqNo);
+                reparent.set_old_parent(evt.reparents()[pidx].oldParent().getAsUUID());
+                reparent.set_new_parent(evt.reparents()[pidx].newParent().getAsUUID());
+                reparent.set_type(
+                    (evt.reparents()[pidx].type() == QueryEvent::Normal) ?
+                    Sirikata::Protocol::Prox::NodeReparent::Object :
+                    Sirikata::Protocol::Prox::NodeReparent::Aggregate
+                );
             }
             for(uint32 ridx = 0; ridx < evt.removals().size(); ridx++) {
                 ObjectReference oobjid = evt.removals()[ridx].id();

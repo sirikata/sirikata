@@ -162,6 +162,8 @@ void ObjectQueryHandler::handleDeliverEvents() {
             if (mSubscribers[viewed]->find(info.querier) == mSubscribers[viewed]->end())
                 mSubscribers[viewed]->insert(info.querier);
         }
+        // These are the end result of regular queries (no replication), so
+        // reparent events can be ignored.
         for(int ridx = 0; ridx < info.results->removal_size(); ridx++) {
             Sirikata::Protocol::Prox::ObjectRemoval removal = info.results->removal(ridx);
             ObjectReference viewed(removal.object());
@@ -530,6 +532,20 @@ void ObjectQueryHandler::generateObjectQueryEvents(Query* query) {
                 ObjectQueryDataPtr query_data = mObjectQueries[querier_id];
                 registerObjectQueryWithServer(querier_id, leaf_server, query_data->loc, query_data->bounds, query_data->angle, query_data->max_results);
             }
+        }
+        for(uint32 pidx = 0; pidx < evt.reparents().size(); pidx++) {
+            ObjectReference objid = evt.reparents()[pidx].id();
+            Sirikata::Protocol::Prox::INodeReparent reparent = event_results->add_reparent();
+            reparent.set_object( objid.getAsUUID() );
+            uint64 seqNo = handler_data.loccache->properties(objid).maxSeqNo();
+            reparent.set_seqno (seqNo);
+            reparent.set_old_parent(evt.reparents()[pidx].oldParent().getAsUUID());
+            reparent.set_new_parent(evt.reparents()[pidx].newParent().getAsUUID());
+            reparent.set_type(
+                (evt.reparents()[pidx].type() == QueryEvent::Normal) ?
+                Sirikata::Protocol::Prox::NodeReparent::Object :
+                Sirikata::Protocol::Prox::NodeReparent::Aggregate
+            );
         }
         for(uint32 ridx = 0; ridx < evt.removals().size(); ridx++) {
             ObjectReference objid = evt.removals()[ridx].id();

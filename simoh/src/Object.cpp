@@ -394,6 +394,9 @@ bool Object::proximityMessage(const std::string& payload) {
             );
         }
 
+        // No tree replication, only use results, so handling reparent events
+        // isn't necessary.
+
         for(int32 ridx = 0; ridx < update.removal_size(); ridx++) {
             Sirikata::Protocol::Prox::ObjectRemoval removal = update.removal(ridx);
 

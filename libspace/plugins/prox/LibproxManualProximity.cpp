@@ -334,6 +334,9 @@ void LibproxManualProximity::handleUpdateServerQueryResultsToLocService(ServerID
             );
         }
 
+        // We can safely ignore reparenting. We're only inserting into this loc
+        // service for loc updates, so parent changes don't matter here.
+
         for(int32 ridx = 0; ridx < update.removal_size(); ridx++) {
             Sirikata::Protocol::Prox::ObjectRemoval removal = update.removal(ridx);
 
@@ -664,7 +667,8 @@ void LibproxManualProximity::handleUpdateServerQueryResultsToRetryRequests(Serve
                 }
             }
         }
-        // Removals wouldn't allow us to refine anything we couldn't before
+        // Reparent events and removals wouldn't allow us to refine anything we
+        // couldn't before since they only move or remove objects/nodes
     }
 }
 
@@ -854,7 +858,8 @@ void LibproxManualProximity::handleOnPintoServerResult(const Sirikata::Protocol:
             replicated_sid_data.client->initQuery();
         }
     }
-
+    // FIXME what's the right thing to do with reparent events here?
+    assert(update.reparent_size() == 0);
     for(int32 ridx = 0; ridx < update.removal_size(); ridx++) {
         // FIXME cleanup? Maybe we can remove the tree, but it might
         // just be temporary movement in TL-pinto...
@@ -1313,6 +1318,21 @@ void LibproxManualProximity::queryHasEvents(ProxQuery* query) {
                     );
                 }
             }
+            for(uint32 pidx = 0; pidx < evt.reparents().size(); pidx++) {
+                ObjectReference oobjid = evt.reparents()[pidx].id();
+                PROXLOG(insane, " - Reparented " << oobjid << " from " << evt.reparents()[pidx].oldParent() << " to " << evt.reparents()[pidx].newParent());
+                Sirikata::Protocol::Prox::INodeReparent reparent = event_results.add_reparent();
+                reparent.set_object( oobjid.getAsUUID() );
+                uint64 seqNo = (*seqNoPtr)++;
+                reparent.set_seqno (seqNo);
+                reparent.set_old_parent(evt.reparents()[pidx].oldParent().getAsUUID());
+                reparent.set_new_parent(evt.reparents()[pidx].newParent().getAsUUID());
+                reparent.set_type(
+                    (evt.reparents()[pidx].type() == ProxQueryEvent::Normal) ?
+                    Sirikata::Protocol::Prox::NodeReparent::Object :
+                    Sirikata::Protocol::Prox::NodeReparent::Aggregate
+                );
+            }
             for(uint32 ridx = 0; ridx < evt.removals().size(); ridx++) {
                 ObjectReference oobjid = evt.removals()[ridx].id();
                 UUID objid = oobjid.getAsUUID();
@@ -1361,7 +1381,7 @@ void LibproxManualProximity::queryHasEvents(ProxQuery* query) {
                 }
             }
 
-            if (event_results.addition_size() == 0 && event_results.removal_size() == 0) {
+            if (event_results.addition_size() == 0 && event_results.reparent_size() == 0 && event_results.removal_size() == 0) {
                 PROXLOG(error, "Generated update with no additions or removals");
             }
 
