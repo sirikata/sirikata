@@ -246,7 +246,7 @@ void LibproxProximity::sendQueryRequests() {
             SERVER_PORT_PROX,
             serializePBJMessage(container)
         );
-        bool sent = mProxServerMessageService->route(smsg);
+        bool sent = sendServerMessage(smsg);
         if (!sent) {
             delete smsg;
             addServerForAggregateQueryUpdate(sid);
@@ -256,6 +256,8 @@ void LibproxProximity::sendQueryRequests() {
 
 void LibproxProximity::receiveMessage(Message* msg) {
     assert(msg->dest_port() == SERVER_PORT_PROX);
+
+    LibproxProximityBase::serverMessageReceived(msg);
 
     Sirikata::Protocol::Prox::Container prox_container;
     bool parsed = parsePBJMessage(&prox_container, msg->payload());
@@ -565,7 +567,7 @@ void LibproxProximity::poll() {
     bool server_sent = true;
     while(server_sent && !mServerResultsToSend.empty()) {
         Message* msg_front = mServerResultsToSend.front();
-        server_sent = mProxServerMessageService->route(msg_front);
+        server_sent = sendServerMessage(msg_front);
         if (server_sent)
             mServerResultsToSend.pop_front();
     }

@@ -216,6 +216,14 @@ LibproxProximityBase::LibproxProximityBase(SpaceContext* ctx, LocationService* l
                 std::tr1::bind(&LibproxProximityBase::commandForceRebuild, this, _1, _2, _3)
             )
         );
+
+        // Get basic properties (both fixed and dynamic debugging
+        // state) about this query processor.
+        mContext->commander()->registerCommand(
+            "space.prox.stats",
+            std::tr1::bind(&LibproxProximityBase::commandStats, this, _1, _2, _3)
+        );
+
     }
 }
 
@@ -406,17 +414,52 @@ void LibproxProximityBase::updatedSegmentation(CoordinateSegmentation* cseg, con
 }
 
 
+bool LibproxProximityBase::sendServerMessage(Message* msg) {
+    uint32 payload_size = msg->payload().size();
+    bool res = mProxServerMessageService->route(msg);
+    if (res) {
+        mStats.spaceSentBytes += payload_size;
+        mStats.spaceSentMessages++;
+    }
+    return res;
+}
+
+void LibproxProximityBase::serverMessageReceived(Message* msg) {
+    mStats.spaceReceivedBytes += msg->payload().size();
+    mStats.spaceReceivedMessages++;
+}
+
 void LibproxProximityBase::readFramesFromObjectStream(const ObjectReference& oref, ProxObjectStreamInfo::FrameReceivedCallback cb) {
     ObjectProxStreamMap::iterator prox_stream_it = mObjectProxStreams.find(oref.getAsUUID());
     assert(prox_stream_it != mObjectProxStreams.end());
-    prox_stream_it->second->readFramesFromStream(prox_stream_it->second, cb);
+    prox_stream_it->second->readFramesFromStream(
+        prox_stream_it->second,
+        std::tr1::bind(&LibproxProximityBase::readObjectStreamFrame, this, _1, cb)
+    );
 }
 
 void LibproxProximityBase::readFramesFromObjectHostStream(const OHDP::NodeID& node, ProxObjectHostStreamInfo::FrameReceivedCallback cb) {
     ObjectHostProxStreamMap::iterator prox_stream_it = mObjectHostProxStreams.find(node);
     assert(prox_stream_it != mObjectHostProxStreams.end());
-    prox_stream_it->second->readFramesFromStream(prox_stream_it->second, cb);
+    prox_stream_it->second->readFramesFromStream(
+        prox_stream_it->second,
+        std::tr1::bind(&LibproxProximityBase::readObjectHostStreamFrame, this, _1, cb)
+    );
 }
+
+
+void LibproxProximityBase::readObjectStreamFrame(String& payload, ProxObjectStreamInfo::FrameReceivedCallback cb) {
+    mStats.objectReceivedBytes += payload.size();
+    mStats.objectReceivedMessages++;
+    cb(payload);
+}
+
+void LibproxProximityBase::readObjectHostStreamFrame(String& payload, ProxObjectStreamInfo::FrameReceivedCallback cb) {
+    mStats.objectHostReceivedBytes += payload.size();
+    mStats.objectHostReceivedMessages++;
+    cb(payload);
+}
+
 
 void LibproxProximityBase::sendObjectResult(Sirikata::Protocol::Object::ObjectMessage* msg) {
     using std::tr1::placeholders::_1;
@@ -440,6 +483,8 @@ void LibproxProximityBase::sendObjectResult(Sirikata::Protocol::Object::ObjectMe
     // FIXME this is an infinite sized queue, but we don't really want to drop
     // proximity results....
     prox_stream->outstanding.push(Network::Frame::write(msg->payload()));
+    mStats.objectSentBytes += msg->payload().size();
+    mStats.objectSentMessages++;
 
     // If writing isn't already in progress, start it up
     if (!prox_stream->writing)
@@ -468,6 +513,8 @@ void LibproxProximityBase::sendObjectHostResult(const OHDP::NodeID& node, Sirika
     // FIXME this is an infinite sized queue, but we don't really want to drop
     // proximity results....
     prox_stream->outstanding.push(Network::Frame::write(msg->payload()));
+    mStats.objectHostSentBytes += msg->payload().size();
+    mStats.objectHostSentMessages++;
 
     // If writing isn't already in progress, start it up
     if (!prox_stream->writing)
@@ -781,6 +828,30 @@ void LibproxProximityBase::updateAggregateLoc(const UUID& objid, const Vector3f&
             bnds
         );
     }
+}
+
+
+
+
+void LibproxProximityBase::commandStats(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {
+    Command::Result result = Command::EmptyResult();
+
+    result.put("stats.object.sent.bytes", mStats.objectSentBytes.read());
+    result.put("stats.object.sent.messages", mStats.objectSentMessages.read());
+    result.put("stats.object.received.bytes", mStats.objectReceivedBytes.read());
+    result.put("stats.object.received.messages", mStats.objectReceivedMessages.read());
+
+    result.put("stats.oh.sent.bytes", mStats.objectHostSentBytes.read());
+    result.put("stats.oh.sent.messages", mStats.objectHostSentMessages.read());
+    result.put("stats.oh.received.bytes", mStats.objectHostReceivedBytes.read());
+    result.put("stats.oh.received.messages", mStats.objectHostReceivedMessages.read());
+
+    result.put("stats.space.sent.bytes", mStats.spaceSentBytes.read());
+    result.put("stats.space.sent.messages", mStats.spaceSentMessages.read());
+    result.put("stats.space.received.bytes", mStats.spaceReceivedBytes.read());
+    result.put("stats.space.received.messages", mStats.spaceReceivedMessages.read());
+
+    cmdr->result(cmdid, result);
 }
 
 } // namespace Sirikata

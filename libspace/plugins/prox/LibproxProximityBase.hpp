@@ -55,6 +55,51 @@ protected:
 
     // BOTH Threads: These are read-only or lock protected.
 
+    struct Stats {
+        Stats()
+         : objectSentBytes(0),
+           objectSentMessages(0),
+           objectReceivedBytes(0),
+           objectReceivedMessages(0),
+           objectHostSentBytes(0),
+           objectHostSentMessages(0),
+           objectHostReceivedBytes(0),
+           objectHostReceivedMessages(0),
+           spaceSentBytes(0),
+           spaceSentMessages(0),
+           spaceReceivedBytes(0),
+           spaceReceivedMessages(0)
+        {}
+
+        // Total number of bytes sent to objects
+        AtomicValue<uint32> objectSentBytes;
+        // Total messages sent to objects (calls to sendObjectResult)
+        AtomicValue<uint32> objectSentMessages;
+        // Total number of bytes received from objects
+        AtomicValue<uint32> objectReceivedBytes;
+        // Total messages received to objects
+        AtomicValue<uint32> objectReceivedMessages;
+
+        // Total number of bytes sent to object hosts
+        AtomicValue<uint32> objectHostSentBytes;
+        // Total messages sent to objects hosts (calls to sendObjectHostResult)
+        AtomicValue<uint32> objectHostSentMessages;
+        // Total number of bytes received to object hosts
+        AtomicValue<uint32> objectHostReceivedBytes;
+        // Total messages received from object hosts
+        AtomicValue<uint32> objectHostReceivedMessages;
+
+        // Total number of bytes sent to other space servers
+        AtomicValue<uint32> spaceSentBytes;
+        // Total messages sent to other space servers
+        AtomicValue<uint32> spaceSentMessages;
+        // Total number of bytes received from other space servers
+        AtomicValue<uint32> spaceReceivedBytes;
+        // Total messages received from other space servers
+        AtomicValue<uint32> spaceReceivedMessages;
+    };
+    Stats mStats;
+
     // To support a static/dynamic split but also support mixing them for
     // comparison purposes track which we are doing and, for most places, use a
     // simple index to control whether they point to different query handlers or
@@ -114,7 +159,14 @@ protected:
 
 
     // Server-to-server messages
+private:
+    // Now private to ensure we get correct accounting, send via the helper
+    // method below
     Router<Message*>* mProxServerMessageService;
+protected:
+    // Helpers to track traffic stats
+    bool sendServerMessage(Message* msg);
+    void serverMessageReceived(Message* msg);
 
     // Server-to-Object, Server-to-ObjectHost streams
 
@@ -193,6 +245,9 @@ protected:
     // read each Network::Frame, emitting a callback for each.
     void readFramesFromObjectStream(const ObjectReference& oref, ProxObjectStreamInfo::FrameReceivedCallback cb);
     void readFramesFromObjectHostStream(const OHDP::NodeID& node, ProxObjectHostStreamInfo::FrameReceivedCallback cb);
+    // Wrappers for FrameReceivedCallbacks that track stats
+    void readObjectStreamFrame(String& payload, ProxObjectStreamInfo::FrameReceivedCallback cb);
+    void readObjectHostStreamFrame(String& payload, ProxObjectStreamInfo::FrameReceivedCallback cb);
 
     // Utility for poll.  Queues a message for delivery, encoding it and putting
     // it on the send stream.  If necessary, starts send processing on the stream.
@@ -309,6 +364,7 @@ protected:
     virtual void commandListHandlers(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) = 0;
     virtual void commandForceRebuild(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) = 0;
     virtual void commandListNodes(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) = 0;
+    virtual void commandStats(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
 
 }; // class LibproxProximityBase
 
