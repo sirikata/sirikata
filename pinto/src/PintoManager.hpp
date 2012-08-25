@@ -50,6 +50,7 @@ private:
     virtual void commandListHandlers(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
     virtual void commandForceRebuild(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
     virtual void commandListNodes(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
+    virtual void commandStats(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
 
 
     // Tick the QueryHandler. We don't actually care about time since Servers

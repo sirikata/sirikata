@@ -42,6 +42,7 @@ public:
     virtual void commandListHandlers(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) = 0;
     virtual void commandListNodes(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) = 0;
     virtual void commandForceRebuild(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) = 0;
+    virtual void commandStats(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) = 0;
 
   private:
     void registerCommands(Context* ctx, const String& prefix, Network::IOStrand* strand);

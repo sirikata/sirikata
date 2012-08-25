@@ -315,6 +315,12 @@ void ManualObjectQueryProcessor::commandForceRebuild(const Command::Command& cmd
     handler->commandForceRebuild(cmd, cmdr, cmdid);
 }
 
+void ManualObjectQueryProcessor::commandStats(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {
+    Command::Result result = Command::EmptyResult();
+    result.put( String("stats"), Command::EmptyResult());
+    cmdr->result(cmdid, result);
+}
+
 } // namespace Manual
 } // namespace OH
 } // namespace Sirikata

@@ -291,6 +291,11 @@ void SimpleObjectQueryProcessor::commandForceRebuild(const Command::Command& cmd
     result.put("error", "Simple processors have nothing to rebuild.");
     cmdr->result(cmdid, result);
 }
+void SimpleObjectQueryProcessor::commandStats(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {
+    Command::Result result = Command::EmptyResult();
+    result.put( String("stats"), Command::EmptyResult());
+    cmdr->result(cmdid, result);
+}
 
 } // namespace Simple
 } // namespace OH

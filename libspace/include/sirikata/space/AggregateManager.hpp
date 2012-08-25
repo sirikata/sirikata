@@ -51,6 +51,8 @@
 
 #include <sirikata/core/transfer/HttpManager.hpp>
 
+#include <sirikata/core/command/Command.hpp>
+
 namespace Sirikata {
 
 class SIRIKATA_SPACE_EXPORT AggregateManager : public LocationServiceListener {
@@ -187,6 +189,7 @@ private:
   const String mCDNUsername;
   Duration mModelTTL;
   Poller* mCDNKeepAlivePoller;
+  bool mSkipUpload;
 
   //CDN upload threads' variables
   enum{NUM_UPLOAD_THREADS = 8};
@@ -196,6 +199,33 @@ private:
   Network::IOWork* mUploadWorks[NUM_UPLOAD_THREADS];
   void uploadThreadMain(uint8 i);
 
+  // Stats.
+  // Raw number of aggregate updates that could cause regeneration,
+  // e.g. add/remove children, child moved, child mesh changed, etc.
+  AtomicValue<uint32> mRawAggregateUpdates;
+  // Number of aggregate generation requests we've queued up, even if they
+  // haven't finished.
+  AtomicValue<uint32> mAggregatesQueued;
+  // Number of aggregates that were actually generated, i.e. the mesh was saved
+  // and uploading scheduled.
+  AtomicValue<uint32> mAggregatesGenerated;
+  // Number of aggregates which, even after retries, failed to generate
+  AtomicValue<uint32> mAggregatesFailedToGenerate;
+  // Number of aggregates successfully uploaded to the CDN
+  AtomicValue<uint32> mAggregatesUploaded;
+  // Number of aggregate uploads which failed
+  AtomicValue<uint32> mAggregatesFailedToUpload;
+  // Some stats need locks
+  boost::mutex mStatsMutex;
+  // Cumulative time spent generating aggregates (across all threads,
+  // so it could be, e.g., 4x wall clock time). Doesn't include failed
+  // calls to generateAggregateMeshAsync
+  Duration mAggregateCumulativeGenerationTime;
+  // And uploading them. Doesn't include failed uploads. This includes
+  // the time spent serializing the mesh.
+  Duration mAggregateCumulativeUploadTime;
+  // And their size after being serialized.
+  uint64 mAggregateCumulativeDataSize;
 
   //Various utility functions
   bool findChild(std::vector<AggregateObjectPtr>& v, const UUID& uuid) ;
@@ -223,12 +253,12 @@ private:
 
   //Functions related to uploading aggregates
   void uploadAggregateMesh(Mesh::MeshdataPtr agg_mesh, AggregateObjectPtr aggObject,
-                           std::tr1::unordered_map<String, String> textureSet, uint32 retryAttempt);
+      std::tr1::unordered_map<String, String> textureSet, uint32 retryAttempt, Time uploadStartTime);
   // Helper that handles the upload callback and sets flags to let the request
   // from the aggregation thread to continue
   void handleUploadFinished(Transfer::UploadRequestPtr request, const Transfer::URI& path, Mesh::MeshdataPtr agg_mesh,
 			    AggregateObjectPtr aggObject, std::tr1::unordered_map<String, String> textureSet,
-			    uint32 retryAttempt);
+                            uint32 retryAttempt, const Time& uploadStartTime);
   // Look for any aggregates that need a keep-alive sent to the CDN
   // and try to send them.
   void sendKeepAlives();
@@ -244,10 +274,11 @@ private:
   bool cleanUpChild(const UUID& parent_uuid, const UUID& child_id);
   void removeStaleLeaves();
 
-
+  // Command handlers
+  void commandStats(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
 public:
 
-  AggregateManager( LocationService* loc, Transfer::OAuthParamsPtr oauth, const String& username);
+  AggregateManager( LocationService* loc, Transfer::OAuthParamsPtr oauth, const String& username, bool skip_upload);
 
   ~AggregateManager();
 

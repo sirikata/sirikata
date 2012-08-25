@@ -67,6 +67,16 @@ void BaseProxCommandable::registerCommands(Context* ctx, const String& prefix, N
             ? Command::CommandHandler(strand->wrap(std::tr1::bind(&BaseProxCommandable::commandForceRebuild, this, _1, _2, _3)))
             : Command::CommandHandler(std::tr1::bind(&BaseProxCommandable::commandForceRebuild, this, _1, _2, _3))
         );
+
+
+        // Get basic properties (both fixed and dynamic debugging
+        // state) about this query processor.
+        ctx->commander()->registerCommand(
+            prefix + ".stats",
+            strand
+            ? Command::CommandHandler(strand->wrap(std::tr1::bind(&BaseProxCommandable::commandStats, this, _1, _2, _3)))
+            : Command::CommandHandler(std::tr1::bind(&BaseProxCommandable::commandStats, this, _1, _2, _3))
+        );
     }
 }
 
