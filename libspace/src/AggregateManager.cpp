@@ -734,7 +734,7 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
 
   //... and now create the collada file, upload to the CDN and update LOC.
   mUploadStrands[rand() % NUM_UPLOAD_THREADS]->post(
-          std::tr1::bind(&AggregateManager::uploadAggregateMesh, this, agg_mesh, aggObject, textureSet, 0),
+    std::tr1::bind(&AggregateManager::uploadAggregateMesh, this, agg_mesh, aggObject, textureSet, 0, Time::null()),
           "AggregateManager::uploadAggregateMesh"
       );
 
@@ -744,16 +744,21 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
                          uuid.toString() + ".dae";
 
   AGG_LOG(info, "Generated aggregate: " << localMeshName << "\n");
-  AGG_LOG(insane, "Time to generate: " << (Timer::now() - curTime).toMilliseconds() );
+  Duration aggregation_duration = (Timer::now() - curTime);
+  AGG_LOG(insane, "Time to generate: " << aggregation_duration.toMilliseconds() );
 
   mAggregatesGenerated++;
+  {
+    boost::mutex::scoped_lock modelSystemLock(mStatsMutex);
+    mAggregateCumulativeGenerationTime += aggregation_duration;
+  }
   return GEN_SUCCESS;
 }
 
 void AggregateManager::uploadAggregateMesh(Mesh::MeshdataPtr agg_mesh,
                                            AggregateObjectPtr aggObject,
                                            std::tr1::unordered_map<String, String> textureSet,
-                                           uint32 retryAttempt)
+                                           uint32 retryAttempt, Time uploadStartTime)
 {
   const UUID& uuid = aggObject->mUUID;
 
@@ -764,7 +769,22 @@ void AggregateManager::uploadAggregateMesh(Mesh::MeshdataPtr agg_mesh,
 
   AGG_LOG(insane, "Trying  to upload : " << localMeshName);
 
-  Time curTime = Timer::now();
+  if (uploadStartTime == Time::null())
+    uploadStartTime = Timer::now();
+
+  std::stringstream model_ostream(std::ofstream::out | std::ofstream::binary);
+  bool converted = mModelsSystem->convertVisual( agg_mesh, "colladamodels", model_ostream);
+  std::string serialized = model_ostream.str();
+  {
+    boost::mutex::scoped_lock modelSystemLock(mStatsMutex);
+    mAggregateCumulativeDataSize += serialized.size();
+  }
+  /* Debugging code: store the file locally for ease of inspection.
+     String modelFilename = std::string("/tmp/") + localMeshName;
+     std::ofstream model_ostream2(modelFilename.c_str(), std::ofstream::out | std::ofstream::binary);
+     converted = mModelsSystem->convertVisual(agg_mesh, "colladamodels", model_ostream2);
+     model_ostream2.close();
+  */
 
   // "Upload" that doesn't really do anything, useful for testing, required to
   // do automated tests that don't require a real account on the CDN
@@ -788,6 +808,13 @@ void AggregateManager::uploadAggregateMesh(Mesh::MeshdataPtr agg_mesh,
       addToInMemoryCache(cdnMeshName, agg_mesh);
 
       aggObject->mLeaves.clear();
+
+      Duration upload_time = Timer::now() - uploadStartTime;
+      {
+        boost::mutex::scoped_lock modelSystemLock(mStatsMutex);
+        mAggregateCumulativeUploadTime += upload_time;
+      }
+
       return;
   }
 
@@ -803,18 +830,11 @@ void AggregateManager::uploadAggregateMesh(Mesh::MeshdataPtr agg_mesh,
       // isn't currently *that* bad since we know we're on a different
       // strand anyway.
 
-      std::stringstream model_ostream(std::ofstream::out | std::ofstream::binary);
-      bool converted = mModelsSystem->convertVisual( agg_mesh, "colladamodels", model_ostream);
-
-      /* Debugging code: store the file locally for ease of inspection.
-        String modelFilename = std::string("/tmp/") + localMeshName;
-        std::ofstream model_ostream2(modelFilename.c_str(), std::ofstream::out | std::ofstream::binary);
-        converted = mModelsSystem->convertVisual(agg_mesh, "colladamodels", model_ostream2);
-        model_ostream2.close();
-      */
-
       Transfer::UploadRequest::StringMap files;
-      files[localMeshName] = model_ostream.str();
+      files[localMeshName] = std::string();
+      // Swap to avoid a full copy, serialized won't be valid anymore
+      // but we did everything else we needed to with it above
+      files[localMeshName].swap(serialized);
 
       String upload_path = "aggregates/" + localMeshName;
       Transfer::UploadRequest::StringMap params;
@@ -896,7 +916,7 @@ void AggregateManager::uploadAggregateMesh(Mesh::MeshdataPtr agg_mesh,
               std::tr1::bind(
                   &AggregateManager::handleUploadFinished, this,
                   std::tr1::placeholders::_1, std::tr1::placeholders::_2,
-		  m, aggObject, textureSet, retryAttempt
+		  m, aggObject, textureSet, retryAttempt, uploadStartTime
               )
           )
       );
@@ -909,10 +929,12 @@ void AggregateManager::uploadAggregateMesh(Mesh::MeshdataPtr agg_mesh,
       agg_mesh->uri = cdnMeshName;
 
       String modelFilename = std::string("/disk/local/tazim/aggregate_meshes/") + localMeshName;
-      std::ofstream model_ostream(modelFilename.c_str(), std::ofstream::out | std::ofstream::binary);
-      bool converted = mModelsSystem->convertVisual(agg_mesh, "colladamodels", model_ostream);
-      model_ostream.close();
-      if (!converted) {
+      std::ofstream model_fs_stream(modelFilename.c_str(), std::ofstream::out | std::ofstream::binary);
+      if (model_fs_stream) {
+        model_fs_stream.write(&serialized[0], serialized.size());
+        model_fs_stream.close();
+      }
+      else {
         mAggregatesFailedToUpload++;
           AGG_LOG(error, "Failed to save aggregate mesh " << localMeshName << ", it won't be displayed.");
           // Here the return value isn't success, it's "should I remove this
@@ -940,11 +962,17 @@ void AggregateManager::uploadAggregateMesh(Mesh::MeshdataPtr agg_mesh,
       addToInMemoryCache(cdnMeshName, agg_mesh);
 
       aggObject->mLeaves.clear();
+
+      Duration upload_time = Timer::now() - uploadStartTime;
+      {
+        boost::mutex::scoped_lock modelSystemLock(mStatsMutex);
+        mAggregateCumulativeUploadTime += upload_time;
+      }
   }
 
 }
 
-void AggregateManager::handleUploadFinished(Transfer::UploadRequestPtr request, const Transfer::URI& path, Mesh::MeshdataPtr agg_mesh, AggregateObjectPtr aggObject, std::tr1::unordered_map<String, String> textureSet, uint32 retryAttempt)
+void AggregateManager::handleUploadFinished(Transfer::UploadRequestPtr request, const Transfer::URI& path, Mesh::MeshdataPtr agg_mesh, AggregateObjectPtr aggObject, std::tr1::unordered_map<String, String> textureSet, uint32 retryAttempt, const Time& uploadStartTime)
 {
     Transfer::URI generated_uri = path;
     const UUID& uuid = aggObject->mUUID;
@@ -974,14 +1002,14 @@ void AggregateManager::handleUploadFinished(Transfer::UploadRequestPtr request, 
       //Retry uploading up to 5 times.
       if (retryAttempt < 5) {
 	mUploadStrands[rand() % NUM_UPLOAD_THREADS]->post(
-		  std::tr1::bind(&AggregateManager::uploadAggregateMesh, this, agg_mesh, aggObject, textureSet, retryAttempt + 1),
+          std::tr1::bind(&AggregateManager::uploadAggregateMesh, this, agg_mesh, aggObject, textureSet, retryAttempt + 1, uploadStartTime),
 		  "AggregateManager::uploadAggregateMesh"
 		);
       }
       else if (retryAttempt < 10) {
        //Could not upload -- CDN might be overloaded, try again in 30 seconds.
        mUploadStrands[rand() % NUM_UPLOAD_THREADS]->post(Duration::seconds(15),
-                  std::tr1::bind(&AggregateManager::uploadAggregateMesh, this, agg_mesh, aggObject, textureSet, retryAttempt + 1),
+         std::tr1::bind(&AggregateManager::uploadAggregateMesh, this, agg_mesh, aggObject, textureSet, retryAttempt + 1, uploadStartTime),
                   "AggregateManager::uploadAggregateMesh"
                 );
       }
@@ -989,7 +1017,7 @@ void AggregateManager::handleUploadFinished(Transfer::UploadRequestPtr request, 
         //Still cannot upload - just upload an empty mesh so remaining meshes higher up in the tree can be generated.
        MeshdataPtr m = MeshdataPtr(new Meshdata);
         mUploadStrands[rand() % NUM_UPLOAD_THREADS]->post(Duration::seconds(15),
-                  std::tr1::bind(&AggregateManager::uploadAggregateMesh, this, m, aggObject, textureSet, retryAttempt + 1),
+          std::tr1::bind(&AggregateManager::uploadAggregateMesh, this, m, aggObject, textureSet, retryAttempt + 1, uploadStartTime),
                   "AggregateManager::uploadAggregateMesh"
                 );
       }
@@ -1038,6 +1066,12 @@ void AggregateManager::handleUploadFinished(Transfer::UploadRequestPtr request, 
     addToInMemoryCache(cdnMeshName, agg_mesh);
 
     aggObject->mLeaves.clear();
+
+    Duration upload_time = Timer::now() - uploadStartTime;
+    {
+      boost::mutex::scoped_lock modelSystemLock(mStatsMutex);
+      mAggregateCumulativeUploadTime += upload_time;
+    }
 }
 
 void AggregateManager::metadataFinished(Time t, const UUID uuid, const UUID child_uuid, std::string meshName, uint8 attemptNo,
@@ -1606,6 +1640,14 @@ void AggregateManager::commandStats(const Command::Command& cmd, Command::Comman
   result.put("stats.uploaded", mAggregatesUploaded.read());
   result.put("stats.upload_failed", mAggregatesFailedToUpload.read());
 
+  {
+    boost::mutex::scoped_lock modelSystemLock(mStatsMutex);
+    result.put("stats.cumulative_generation_time", mAggregateCumulativeGenerationTime.toString());
+    result.put("stats.cumulative_generation_time_seconds", mAggregateCumulativeGenerationTime.toSeconds());
+    result.put("stats.cumulative_upload_time", mAggregateCumulativeUploadTime.toString());
+    result.put("stats.cumulative_upload_time_seconds", mAggregateCumulativeUploadTime.toSeconds());
+    result.put("stats.cumulative_size", mAggregateCumulativeDataSize);
+  }
   cmdr->result(cmdid, result);
 }
 
