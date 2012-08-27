@@ -77,7 +77,10 @@ AggregateManager::AggregateManager(LocationService* loc, Transfer::OAuthParamsPt
     mAggregatesGenerated(0),
     mAggregatesFailedToGenerate(0),
     mAggregatesUploaded(0),
-    mAggregatesFailedToUpload(0)
+    mAggregatesFailedToUpload(0),
+    mAggregateCumulativeGenerationTime(Duration::zero()),
+    mAggregateCumulativeUploadTime(Duration::zero()),
+    mAggregateCumulativeDataSize(0)
 {
     mModelsSystem = NULL;
     if (ModelsSystemFactory::getSingleton().hasConstructor("any"))
