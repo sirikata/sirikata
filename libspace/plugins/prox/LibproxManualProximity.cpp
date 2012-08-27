@@ -1440,13 +1440,19 @@ void LibproxManualProximity::commandProperties(const Command::Command& cmd, Comm
     result.put("objects.properties.max_size", mMaxObject);
 
     // Properties of queries
-    result.put("queries.oh.count", mOHQueries[0].size());
+    // OH Queries
+    result.put("queries.oh.count", objectHostQueries());
     // Technically not thread safe, but these should be simple
     // read-only accesses.
     uint32 oh_messages = 0;
     for(ObjectHostProxStreamMap::iterator prox_stream_it = mObjectHostProxStreams.begin(); prox_stream_it != mObjectHostProxStreams.end(); prox_stream_it++)
         oh_messages += prox_stream_it->second->outstanding.size();
     result.put("queries.oh.messages", oh_messages);
+
+    // Server queries
+    result.put("queries.server.count", serverQueries());
+    result.put("queries.server.messages", mServerResultsToSend.size());
+
 
     cmdr->result(cmdid, result);
 }
