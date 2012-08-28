@@ -345,8 +345,6 @@ void AggregateManager::generateAggregateMesh(const UUID& uuid, AggregateObjectPt
         std::tr1::bind(&AggregateManager::queueDirtyAggregates, this, Timer::now()),
         "AggregateManager::queueDirtyAggregates"
     );
-
-  mAggregatesQueued++;
 }
 
 
