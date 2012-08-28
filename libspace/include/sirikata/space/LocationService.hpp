@@ -192,13 +192,6 @@ class SIRIKATA_SPACE_EXPORT LocationUpdatePolicyFactory
  */
 class SIRIKATA_SPACE_EXPORT LocationService : public MessageRecipient, public PollingService, public ObjectSessionListener {
 public:
-    enum TrackingType {
-        NotTracking,
-        Local,
-        Aggregate,
-        Replica
-    };
-
     LocationService(SpaceContext* ctx, LocationUpdatePolicy* update_policy);
     virtual ~LocationService();
 
@@ -212,7 +205,6 @@ public:
     /** Indicates whether this location service is tracking the given object.  It is only
      *  safe to request information */
     virtual bool contains(const UUID& uuid) const = 0;
-    virtual TrackingType type(const UUID& uuid) const = 0;
 
     /** Methods dealing with information requests. */
     virtual uint64 epoch(const UUID& uuid) = 0;

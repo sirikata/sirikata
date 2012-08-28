@@ -58,7 +58,8 @@ public:
     virtual ~BulletPhysicsService();
 
     virtual bool contains(const UUID& uuid) const;
-    virtual TrackingType type(const UUID& uuid) const;
+    bool isLocal(const UUID& uuid) const;
+    bool isReplica(const UUID& uuid) const { return !isLocal(uuid); }
 
     virtual void service();
 

@@ -119,15 +119,11 @@ bool BulletPhysicsService::contains(const UUID& uuid) const {
     return (mLocations.find(uuid) != mLocations.end());
 }
 
-LocationService::TrackingType BulletPhysicsService::type(const UUID& uuid) const {
+bool BulletPhysicsService::isLocal(const UUID& uuid) const {
     LocationMap::const_iterator it = mLocations.find(uuid);
     if (it == mLocations.end())
-        return NotTracking;
-    if (it->second.aggregate)
-        return Aggregate;
-    if (it->second.local)
-        return Local;
-    return Replica;
+        return false;
+    return it->second.local;
 }
 
 
@@ -712,7 +708,7 @@ void BulletPhysicsService::receiveMessage(Message* msg) {
             // Its possible we'll get an out of date update. We only use this update
             // if (a) we have this object marked as a replica object and (b) we don't
             // have this object marked as a local object
-            if (type(update.object()) != Replica)
+            if (!contains(update.object()) || isLocal(update.object()))
                 continue;
 
             LocationMap::iterator loc_it = mLocations.find( update.object() );
@@ -822,8 +818,7 @@ bool BulletPhysicsService::locationUpdate(UUID source, void* buffer, uint32 leng
     if (loc_container.has_update_request()) {
         Sirikata::Protocol::Loc::LocationUpdateRequest request = loc_container.update_request();
 
-        TrackingType obj_type = type(source);
-        if (obj_type == Local) {
+        if (isLocal(source)) {
             LocationMap::iterator loc_it = mLocations.find( source );
             assert(loc_it != mLocations.end());
 
