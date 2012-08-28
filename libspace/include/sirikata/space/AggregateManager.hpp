@@ -175,6 +175,8 @@ private:
   AggregateObjectsMap mAggregateObjects;
   Time mAggregateGenerationStartTime;
   std::tr1::unordered_map<UUID, AggregateObjectPtr, UUID::Hasher> mDirtyAggregateObjects;
+
+  boost::mutex mObjectsByPriorityLocks[NUM_GENERATION_THREADS];
   std::map<float, std::deque<AggregateObjectPtr > > mObjectsByPriority[NUM_GENERATION_THREADS];
 
   //Variables related to downloading and in-memory caching meshes
@@ -238,13 +240,14 @@ private:
   bool isAggregate(const UUID& uuid);
 
 
+
   //Function related to generating and updating aggregates.
   void updateChildrenTreeLevel(const UUID& uuid, uint16 treeLevel);
   void addDirtyAggregates(UUID uuid);
   void queueDirtyAggregates(Time postTime);
   void generateMeshesFromQueue(uint8 i);
 
-  void generateAggregateMeshAsyncIgnoreErrors(const UUID uuid, Time postTime, bool generateSiblings = true);
+
   enum{GEN_SUCCESS=1, CHILDREN_NOT_YET_GEN=2, OTHER_GEN_FAILURE=3};
   uint32 generateAggregateMeshAsync(const UUID uuid, Time postTime, bool generateSiblings = true);
   void aggregationThreadMain(uint8 i);

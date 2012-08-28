@@ -337,21 +337,16 @@ void AggregateManager::generateAggregateMesh(const UUID& uuid, AggregateObjectPt
   if (mDirtyAggregateObjects.find(uuid) != mDirtyAggregateObjects.end()) return;
 
   AGG_LOG(detailed,"Setting up aggregate " << uuid << " to generate aggregate mesh with " << aggObject->mChildren.size() << " in " << delayFor);
-  mAggregatesQueued++;
+
+  addDirtyAggregates(uuid);
+
   mAggregationStrands[0]->post(
-      delayFor,
-      std::tr1::bind(&AggregateManager::generateAggregateMeshAsyncIgnoreErrors, this, uuid, aggObject->mLastGenerateTime, true),
-      "AggregateManager::generateAggregateMeshAsyncIgnoreErrors"
-  );
+        Duration::seconds(5),
+        std::tr1::bind(&AggregateManager::queueDirtyAggregates, this, Timer::now()),
+        "AggregateManager::queueDirtyAggregates"
+    );
 }
 
-void AggregateManager::generateAggregateMeshAsyncIgnoreErrors(const UUID uuid, Time postTime, bool generateSiblings) {
-	uint32 retval=generateAggregateMeshAsync(uuid, postTime, generateSiblings);
-	if (retval != GEN_SUCCESS) {
-          mAggregatesFailedToGenerate++;
-          SILOG(aggregate,error,"generateAggregateMeshAsync returned false, but no error handling happening" << "\n");
-	}
-}
 
 uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime, bool generateSiblings) {
   Time curTime = Timer::now();
@@ -366,6 +361,8 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
   }
   std::tr1::shared_ptr<AggregateObject> aggObject = mAggregateObjects[uuid];
   lock.unlock();
+  
+
 
   /*Check if it makes sense to generate the aggregates now. Has the a
     aggregate been updated since the mesh generation command was posted?
@@ -1286,14 +1283,21 @@ void AggregateManager::queueDirtyAggregates(Time postTime) {
       getLeaves(individualObjects);
     }
 
+    //Grab locks for all of the generation threads before proceeding.
     uint8 i = 0;
+    boost::mutex::scoped_lock queueLocks[NUM_GENERATION_THREADS];
+    for (uint8 i = 0; i < NUM_GENERATION_THREADS; i++) {
+      queueLocks[i] = boost::mutex::scoped_lock(mObjectsByPriorityLocks[i]);
+    }
+    
+    i=0;
     //Add objects to generation queue, ordered by priority.
     for (std::tr1::unordered_map<UUID, AggregateObjectPtr, UUID::Hasher>::iterator it = mDirtyAggregateObjects.begin();
          it != mDirtyAggregateObjects.end(); it++)
     {
       std::tr1::shared_ptr<AggregateObject> aggObject = it->second;
-      if (aggObject->mTreeLevel >= 0) {
-        mAggregatesQueued++;
+      if (aggObject->mTreeLevel >= 0) {        
+        mAggregatesQueued++;        
         mObjectsByPriority[i][ aggObject->mNumObservers + (aggObject->mTreeLevel*0.001) ].push_back(aggObject);
         i = (i+1)%NUM_GENERATION_THREADS;
       }
@@ -1310,6 +1314,8 @@ void AggregateManager::queueDirtyAggregates(Time postTime) {
 }
 
 void AggregateManager::generateMeshesFromQueue(uint8 threadNumber) {
+    boost::mutex::scoped_lock lock(mObjectsByPriorityLocks[threadNumber]);
+
     //Generate the aggregates from the priority queue.
     Time curTime = (mObjectsByPriority[threadNumber].size() > 0) ? Timer::now() : Time::null();
     uint32 returner = GEN_SUCCESS;
@@ -1630,6 +1636,9 @@ void AggregateManager::handleKeepAliveResponse(const UUID& objid,
   if (it == mAggregateObjects.end()) return;
   it->second->refreshTTL = mLoc->context()->recentSimTime() + (mModelTTL*.75);
 }
+
+
+
 
 
 
