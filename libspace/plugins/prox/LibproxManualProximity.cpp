@@ -1116,6 +1116,11 @@ void LibproxManualProximity::trySwapHandlers(bool is_local, const ObjectReferenc
 SeqNoPtr LibproxManualProximity::getSeqNoInfo(const OHDP::NodeID& node)
 {
     OHSeqNoInfoMap::iterator proxSeqNoIt = mOHSeqNos.find(node);
+    // If there is a forceful disconnection, we can end up having erased the
+    // seqno ptr but still have some results to process. A null seqno ptr
+    // indicates we should ignore the results.
+    if (proxSeqNoIt == mOHSeqNos.end())
+        return SeqNoPtr();
     assert (proxSeqNoIt != mOHSeqNos.end());
     return proxSeqNoIt->second;
 }
@@ -1177,6 +1182,15 @@ void LibproxManualProximity::queryHasEvents(ProxQuery* query) {
 
     QueryEventList evts;
     query->popEvents(evts);
+
+    if (!seqNoPtr) {
+        if (server_query_id != NullServerID)
+            PROXLOG(detailed, "Can't find seqno information due to disconnect, ignoring remaining proximity results for server query " << server_query_id << ".");
+        else
+            PROXLOG(detailed, "Can't find seqno information due to disconnec, ignoring remaining proximity results for object host query " << query_id << ".");
+
+        return;
+    }
 
     if (server_query_id != NullServerID)
         PROXLOG(detailed, evts.size() << " events for server query " << server_query_id);

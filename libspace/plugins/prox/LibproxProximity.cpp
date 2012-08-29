@@ -1034,6 +1034,11 @@ void LibproxProximity::generateObjectQueryEvents(Query* query, bool do_first) {
     QueryEventList evts;
     query->popEvents(evts);
 
+    if (!seqNoPtr) {
+        PROXLOG(detailed, "Can't find seqno information due to disconnect, ignoring remaining proximity results for " << query_id << ".");
+        return;
+    }
+
     if (is_first) {
         coalesceEvents(evts, 10);
         mObjectQueriesFirstIteration.erase(query);
@@ -1169,6 +1174,11 @@ SeqNoPtr LibproxProximity::getSeqNoInfo(const UUID& obj_id)
 {
     // obj_id == querier
     ObjectSeqNoInfoMap::iterator proxSeqNoIt = mObjectSeqNos.find(obj_id);
+    // If there is a forceful disconnection, we can end up having erased the
+    // seqno ptr but still have some results to process. A null seqno ptr
+    // indicates we should ignore the results.
+    if (proxSeqNoIt == mObjectSeqNos.end())
+        return SeqNoPtr();
     assert(proxSeqNoIt != mObjectSeqNos.end());
     return proxSeqNoIt->second;
 }
