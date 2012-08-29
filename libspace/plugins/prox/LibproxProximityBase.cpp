@@ -409,6 +409,7 @@ void LibproxProximityBase::sendObjectResult(Sirikata::Protocol::Object::ObjectMe
     // Try to find stream info for the object
     ObjectProxStreamMap::iterator prox_stream_it = mObjectProxStreams.find(msg->dest_object());
     if (prox_stream_it == mObjectProxStreams.end()) {
+        // NOTE: that addObjectProxStreamInfo needs to match this!
         prox_stream_it = mObjectProxStreams.insert( ObjectProxStreamMap::value_type(msg->dest_object(), ProxObjectStreamInfoPtr(new ProxObjectStreamInfo())) ).first;
         prox_stream_it->second->writecb = std::tr1::bind(
             &LibproxProximityBase::ProxObjectStreamInfo::writeSomeObjectResults, mContext, ProxObjectStreamInfo::WPtr(prox_stream_it->second)
@@ -439,6 +440,7 @@ void LibproxProximityBase::sendObjectHostResult(const OHDP::NodeID& node, Sirika
     // Try to find stream info for the object
     ObjectHostProxStreamMap::iterator prox_stream_it = mObjectHostProxStreams.find(node);
     if (prox_stream_it == mObjectHostProxStreams.end()) {
+        // NOTE: that addObjectHostProxStreamInfo needs to match this!
         prox_stream_it = mObjectHostProxStreams.insert( ObjectHostProxStreamMap::value_type(node, ProxObjectHostStreamInfoPtr(new ProxObjectHostStreamInfo())) ).first;
         prox_stream_it->second->writecb = std::tr1::bind(
             &LibproxProximityBase::ProxObjectHostStreamInfo::writeSomeObjectResults, mContext, ProxObjectHostStreamInfo::WPtr(prox_stream_it->second)
@@ -485,11 +487,14 @@ void LibproxProximityBase::addObjectProxStreamInfo(ODPSST::Stream::Ptr strm) {
     UUID objid = strm->remoteEndPoint().endPoint.object().getAsUUID();
     assert(mObjectProxStreams.find(objid) == mObjectProxStreams.end());
 
-    mObjectProxStreams.insert(
+    ObjectProxStreamMap::iterator prox_stream_it = mObjectProxStreams.insert(
         ObjectProxStreamMap::value_type(
             objid,
             ProxObjectStreamInfoPtr(new ProxObjectStreamInfo(strm))
         )
+    ).first;
+    prox_stream_it->second->writecb = std::tr1::bind(
+        &LibproxProximityBase::ProxObjectStreamInfo::writeSomeObjectResults, mContext, ProxObjectStreamInfo::WPtr(prox_stream_it->second)
     );
 }
 
@@ -497,11 +502,14 @@ void LibproxProximityBase::addObjectHostProxStreamInfo(OHDPSST::Stream::Ptr strm
     OHDP::NodeID nodeid = strm->remoteEndPoint().endPoint.node();
     assert(mObjectHostProxStreams.find(nodeid) == mObjectHostProxStreams.end());
 
-    mObjectHostProxStreams.insert(
+    ObjectHostProxStreamMap::iterator prox_stream_it = mObjectHostProxStreams.insert(
         ObjectHostProxStreamMap::value_type(
             nodeid,
             ProxObjectHostStreamInfoPtr(new ProxObjectHostStreamInfo(strm))
         )
+    ).first;
+    prox_stream_it->second->writecb = std::tr1::bind(
+        &LibproxProximityBase::ProxObjectHostStreamInfo::writeSomeObjectResults, mContext, ProxObjectHostStreamInfo::WPtr(prox_stream_it->second)
     );
 }
 
