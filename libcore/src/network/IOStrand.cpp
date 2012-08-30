@@ -65,6 +65,7 @@ IOService& IOStrand::service() const {
 }
 
 void IOStrand::dispatch(const IOCallback& handler, const char* tag) {
+    assert(handler);
 #ifdef SIRIKATA_TRACK_EVENT_QUEUES
     mEnqueued++;
     {
@@ -85,6 +86,7 @@ void IOStrand::dispatch(const IOCallback& handler, const char* tag) {
 }
 
 void IOStrand::post(const IOCallback& handler, const char* tag) {
+    assert(handler);
 #ifdef SIRIKATA_TRACK_EVENT_QUEUES
     mEnqueued++;
     {
@@ -105,6 +107,7 @@ void IOStrand::post(const IOCallback& handler, const char* tag) {
 }
 
 void IOStrand::post(const Duration& waitFor, const IOCallback& handler, const char* tag) {
+    assert(handler);
 #ifdef SIRIKATA_TRACK_EVENT_QUEUES
     mTimersEnqueued++;
     {
@@ -128,6 +131,7 @@ void IOStrand::post(const Duration& waitFor, const IOCallback& handler, const ch
 }
 
 IOCallback IOStrand::wrap(const IOCallback& handler) {
+    assert(handler);
     return mImpl->wrap(handler);
 }
 

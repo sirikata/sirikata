@@ -146,6 +146,7 @@ IOCallback IOService::tracking_wrapper(const IOCallback& handler, const char* ta
 void IOService::dispatch(
     const IOCallback& handler, const char* tag, const char* tagStat)
 {
+    assert(handler);
 #ifdef SIRIKATA_TRACK_EVENT_QUEUES
     mImpl->dispatch(
         tracking_wrapper(handler, tag, tagStat)
@@ -158,6 +159,7 @@ void IOService::dispatch(
 void IOService::post(
     const IOCallback& handler, const char* tag, const char* tagStat)
 {
+    assert(handler);
 #ifdef SIRIKATA_TRACK_EVENT_QUEUES
     mImpl->post(
         tracking_wrapper(handler, tag, tagStat)
@@ -177,6 +179,7 @@ void handle_deadline_timer(const boost::system::error_code&e, const deadline_tim
 } // namespace
 
 void IOService::post(const Duration& waitFor, const IOCallback& handler, const char* tag, const char* tagStat) {
+    assert(handler);
 #if BOOST_VERSION==103900
     static bool warnOnce=true;
     if (warnOnce) {
