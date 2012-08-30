@@ -290,7 +290,6 @@ void ReplicatedClient::handleProxUpdate(const Sirikata::Protocol::Prox::Proximit
         ProxProtocolLocUpdate add(addition);
 
         ObjectReference observed_oref(addition.object());
-        RCLOG(insane, " - Addition: " << observed_oref);
         // NOTE: We don't track the SpaceID here, but we also don't really
         // need it -- OrphanLocUpdateManager only uses it because it can be
         // used in places where a single instance covers multiple spaces,
@@ -300,6 +299,7 @@ void ReplicatedClient::handleProxUpdate(const Sirikata::Protocol::Prox::Proximit
         bool is_agg = (addition.has_type() && addition.type() == Sirikata::Protocol::Prox::ObjectAddition::Aggregate);
 
         ObjectReference parent_oref(addition.parent());
+        RCLOG(insane, " - Addition: " << observed_oref << " (parent " << parent_oref << ")");
 
         // Store the data
         loccache->objectAdded(
