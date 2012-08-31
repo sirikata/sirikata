@@ -50,7 +50,13 @@ if [ $want_debug -eq 1 ] ; then
     fi
     tmpfile=`mktemp /tmp/@BINARY_NAME@args.XXXXXX` || { echo "Cannot create temporary file" >&2; exit 1; }
     trap " [ -f \"$tmpfile\" ] && /bin/rm -f -- \"$tmpfile\"" 0 1 2 3 13 15
-    echo "set args ${1+"$@"}" > $tmpfile
+    trap " [ -f \"$tmpfile\" ] && /bin/rm -f -- \"$tmpfile\"" 0 1 2 3 13 15
+    gdb_args="set args "
+    for i in "$@"
+    do
+        gdb_args="$gdb_args \"$i\""
+    done
+    echo "$gdb_args" > $tmpfile
     echo "# Env:"
     echo "# @LD_LIBRARY_PATH_NAME@=$@LD_LIBRARY_PATH_NAME@"
     echo "#                PATH=$PATH"
