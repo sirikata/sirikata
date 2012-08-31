@@ -316,7 +316,7 @@ void AggregateManager::removeChild(const UUID& uuid, const UUID& child_uuid) {
   iRemoveChild(uuid, child_uuid);
 }
 
-void AggregateManager::aggregateObserved(const UUID& objid, uint32 nobservers) {
+void AggregateManager::aggregateObserved(const UUID& objid, uint32 nobservers, uint32 nchildren) {
   boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
 
   if (mAggregateObjects.find(objid) != mAggregateObjects.end())
@@ -361,7 +361,7 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
   }
   std::tr1::shared_ptr<AggregateObject> aggObject = mAggregateObjects[uuid];
   lock.unlock();
-  
+
 
 
   /*Check if it makes sense to generate the aggregates now. Has the a
@@ -1289,15 +1289,15 @@ void AggregateManager::queueDirtyAggregates(Time postTime) {
     for (uint8 i = 0; i < NUM_GENERATION_THREADS; i++) {
       queueLocks[i] = boost::mutex::scoped_lock(mObjectsByPriorityLocks[i]);
     }
-    
+
     i=0;
     //Add objects to generation queue, ordered by priority.
     for (std::tr1::unordered_map<UUID, AggregateObjectPtr, UUID::Hasher>::iterator it = mDirtyAggregateObjects.begin();
          it != mDirtyAggregateObjects.end(); it++)
     {
       std::tr1::shared_ptr<AggregateObject> aggObject = it->second;
-      if (aggObject->mTreeLevel >= 0) {        
-        mAggregatesQueued++;        
+      if (aggObject->mTreeLevel >= 0) {
+        mAggregatesQueued++;
         mObjectsByPriority[i][ aggObject->mNumObservers + (aggObject->mTreeLevel*0.001) ].push_back(aggObject);
         i = (i+1)%NUM_GENERATION_THREADS;
       }

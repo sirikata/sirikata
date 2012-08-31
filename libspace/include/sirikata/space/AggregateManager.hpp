@@ -293,7 +293,7 @@ public:
 
   void removeChild(const UUID& uuid, const UUID& child_uuid);
 
-  void aggregateObserved(const UUID& objid, uint32 nobservers);
+  void aggregateObserved(const UUID& objid, uint32 nobservers, uint32 nchildren);
 
   // This version requires locking to get at the AggregateObjectPtr
   // for the object. This isn't safe if you already hold that lock.

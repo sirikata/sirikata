@@ -88,7 +88,7 @@ public:
     virtual void aggregateChildRemoved(ProxAggregator* handler, const ObjectReference& objid, const ObjectReference& child, const Vector3f& bnds_center, const float32 bnds_center_radius, const float32 max_obj_size);
     virtual void aggregateBoundsUpdated(ProxAggregator* handler, const ObjectReference& objid, const Vector3f& bnds_center, const float32 bnds_center_radius, const float32 max_obj_size);
     virtual void aggregateDestroyed(ProxAggregator* handler, const ObjectReference& objid);
-    virtual void aggregateObserved(ProxAggregator* handler, const ObjectReference& objid, uint32 nobservers);
+    virtual void aggregateObserved(ProxAggregator* handler, const ObjectReference& objid, uint32 nobservers, uint32 nchildren);
 
     // QueryEventListener Interface
     void queryHasEvents(ProxQuery* query);

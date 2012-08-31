@@ -427,9 +427,9 @@ void LibproxManualProximity::aggregateDestroyed(ProxAggregator* handler, const O
     mReplicatedServerDataMap[sid].client->replicatedNodeRemoved(indexid, objid);
 }
 
-void LibproxManualProximity::aggregateObserved(ProxAggregator* handler, const ObjectReference& objid, uint32 nobservers) {
+void LibproxManualProximity::aggregateObserved(ProxAggregator* handler, const ObjectReference& objid, uint32 nobservers, uint32 nchildren) {
     if (static_cast<ProxQueryHandler*>(handler) == mLocalQueryHandler[OBJECT_CLASS_STATIC].handler) {
-        LibproxProximityBase::aggregateObserved(objid, nobservers);
+        LibproxProximityBase::aggregateObserved(objid, nobservers, nchildren);
     }
 
     // We care about nodes being observed (i.e. having cuts through them)
@@ -461,10 +461,10 @@ void LibproxManualProximity::aggregateObserved(ProxAggregator* handler, const Ob
         mReplicatedServerDataMap[sid].client &&
         mReplicatedServerDataMap[sid].handlers.find(indexid) != mReplicatedServerDataMap[sid].handlers.end()
     );
-    if (nobservers == 1) {
+    if (nobservers == 1 && nchildren == 0) {
         mReplicatedServerDataMap[sid].client->queriersAreObserving(indexid, objid);
     }
-    else if (nobservers == 0) {
+    else if (nobservers == 0 && nchildren > 0) {
         mReplicatedServerDataMap[sid].client->queriersStoppedObserving(indexid, objid);
     }
 }

@@ -234,7 +234,7 @@ void ObjectQueryHandler::aggregateDestroyed(ProxAggregator* handler, const Objec
     mParent->replicatedNodeRemoved(mSpaceNodeID, indexid, objid);
 }
 
-void ObjectQueryHandler::aggregateObserved(ProxAggregator* handler, const ObjectReference& objid, uint32 nobservers) {
+void ObjectQueryHandler::aggregateObserved(ProxAggregator* handler, const ObjectReference& objid, uint32 nobservers, uint32 nchildren) {
     // We care about nodes being observed (i.e. having cuts through them)
     // because it means that somebody local still cares about them, so we should
     // try to keep it around as long as the server lets us. The two events we
@@ -246,10 +246,10 @@ void ObjectQueryHandler::aggregateObserved(ProxAggregator* handler, const Object
 
     assert(mInverseObjectQueryHandlers.find(handler) != mInverseObjectQueryHandlers.end());
     ProxIndexID indexid = mInverseObjectQueryHandlers[handler];
-    if (nobservers == 1) {
+    if (nobservers == 1 && nchildren == 0) {
         mParent->queriersAreObserving(mSpaceNodeID, indexid, objid);
     }
-    else if (nobservers == 0) {
+    else if (nobservers == 0 && nchildren > 0) {
         mParent->queriersStoppedObserving(mSpaceNodeID, indexid, objid);
     }
 }

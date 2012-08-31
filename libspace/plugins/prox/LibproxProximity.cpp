@@ -506,9 +506,9 @@ void LibproxProximity::aggregateDestroyed(ProxAggregator* handler, const ObjectR
     LibproxProximityBase::aggregateDestroyed(objid);
 }
 
-void LibproxProximity::aggregateObserved(ProxAggregator* handler, const ObjectReference& objid, uint32 nobservers) {
+void LibproxProximity::aggregateObserved(ProxAggregator* handler, const ObjectReference& objid, uint32 nobservers, uint32 nchildren) {
     if (!static_cast<ProxQueryHandler*>(handler)->staticOnly()) return;
-    LibproxProximityBase::aggregateObserved(objid, nobservers);
+    LibproxProximityBase::aggregateObserved(objid, nobservers, nchildren);
 }
 
 

@@ -66,7 +66,11 @@ class SIRIKATA_LIBPINTOLOC_EXPORT ReplicatedClient :
     void locUpdate(const LocUpdate& update);
 
     // Notifications about local queries in the tree so we know how to
-    // move the cut on the space server up or down.
+    // move the cut on the space server up or down. This should actually be
+    // based on more information than just whether the node is being observed --
+    // it's also only worth noting these events if they occur at the edge of the
+    // cut, i.e. if on observed node has no children (needs refining) or an
+    // unobserved node has children (needs coarsening).
     void queriersAreObserving(ProxIndexID indexid, const ObjectReference& objid);
     void queriersStoppedObserving(ProxIndexID indexid, const ObjectReference& objid);
     void replicatedNodeRemoved(ProxIndexID indexid, const ObjectReference& objid);

@@ -697,8 +697,8 @@ void LibproxProximityBase::aggregateDestroyed(const ObjectReference& objid) {
     mAggregateManager->removeAggregate(objid.getAsUUID());
 }
 
-void LibproxProximityBase::aggregateObserved(const ObjectReference& objid, uint32 nobservers) {
-    mAggregateManager->aggregateObserved(objid.getAsUUID(), nobservers);
+void LibproxProximityBase::aggregateObserved(const ObjectReference& objid, uint32 nobservers, uint32 nchildren) {
+    mAggregateManager->aggregateObserved(objid.getAsUUID(), nobservers, nchildren);
 }
 
 

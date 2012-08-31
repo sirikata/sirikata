@@ -178,7 +178,7 @@ void PintoManagerBase::aggregateDestroyed(ProxAggregator* handler, const ServerI
     mLocCache->removeAggregate(objid);
 }
 
-void PintoManagerBase::aggregateObserved(ProxAggregator* handler, const ServerID& objid, uint32 nobservers) {
+void PintoManagerBase::aggregateObserved(ProxAggregator* handler, const ServerID& objid, uint32 nobservers, uint32 nchildren) {
 }
 
 
