@@ -45,6 +45,8 @@
 #define OPT_DAEMON                    "daemon"
 #define OPT_PID_FILE                    "pid-file"
 
+#define OPT_SST_DEFAULT_WINDOW_SIZE  "sst.default-window-size"
+
 #define STATS_TRACE_FILE     "stats.trace-filename"
 #define PROFILE                    "profile"
 
