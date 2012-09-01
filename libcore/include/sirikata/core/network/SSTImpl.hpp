@@ -47,6 +47,8 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/asio.hpp> //htons, ntohs
 
+#include <sirikata/core/options/CommonOptions.hpp>
+
 #define SST_LOG(lvl,msg) SILOG(sst,lvl,msg);
 
 namespace Sirikata {
@@ -1834,7 +1836,7 @@ private:
     mRemoteLSID(-1),
     MAX_PAYLOAD_SIZE(1000),
     MAX_QUEUE_LENGTH(4000000),
-    MAX_RECEIVE_WINDOW(10000),
+    MAX_RECEIVE_WINDOW(GetOptionValue<uint32>(OPT_SST_DEFAULT_WINDOW_SIZE)),
     mFirstRTO(true),
     mStreamRTOMicroseconds(2000000),
     FL_ALPHA(0.8),
