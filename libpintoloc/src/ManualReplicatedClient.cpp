@@ -180,25 +180,40 @@ void ReplicatedClient::sendCoarsenRequest(const ProxIndexID proxid, const std::v
 
 // Proximity tracking updates in local queries to trigger adjustments to server query
 void ReplicatedClient::queriersAreObserving(ProxIndexID indexid, const ObjectReference& objid) {
-    mObservedNodes.insert( IndexObjectReference(indexid, objid) );
+    // See note in queriersStoppedObserving about mismatched calls. Here, for
+    // example, we might get 1 observer + no children (triggering a call to
+    // this), then the cut moves up (0 observers, no children, not triggering
+    // queriersStoppedObserving call), then refine as the first time (resulting
+    // in 2 queriersAreObserving in a row);
+    IndexObjectReference fullid(indexid, objid);
+    if (mObservedNodes.find(fullid) != mObservedNodes.end()) return;
+    mObservedNodes.insert(fullid);
 
     // Someone is observing this node, we should try to refine it
     sendRefineRequest(indexid, objid);
 
     // And make sure we don't have it lined up for coarsening
     UnobservedNodesByID& by_id = mUnobservedTimeouts.get<objid_tag>();
-    UnobservedNodesByID::iterator it = by_id.find(IndexObjectReference(indexid, objid));
+    UnobservedNodesByID::iterator it = by_id.find(fullid);
     if (it == by_id.end()) return;
     by_id.erase(it);
 }
 
 void ReplicatedClient::queriersStoppedObserving(ProxIndexID indexid, const ObjectReference& objid) {
-    assert( mObservedNodes.find(IndexObjectReference(indexid, objid)) != mObservedNodes.end() );
-    mObservedNodes.erase( IndexObjectReference(indexid, objid) );
+    IndexObjectReference fullid(indexid, objid);
+    // It would be nice if we could assert:
+    //  assert( mObservedNodes.find(fullid) != mObservedNodes.end() );
+    // but because we these methods only get called if we have no obervers *and*
+    // the # of children is at a level is right for triggering refine/coarsen,
+    // the calls can actually be mismatched.
+    ObservedNodeSet::iterator obs_it = mObservedNodes.find(fullid);
+    if (obs_it == mObservedNodes.end()) return;
+
+    mObservedNodes.erase(obs_it);
 
     // Nobody is observing this node, we should try to coarsen it after awhile,
     // but only if it doesn't have children.
-    mUnobservedTimeouts.insert(UnobservedNodeTimeout(IndexObjectReference(indexid, objid), mContext->recentSimTime() + Duration::seconds(15)));
+    mUnobservedTimeouts.insert(UnobservedNodeTimeout(fullid, mContext->recentSimTime() + Duration::seconds(15)));
     // And restart the timeout for the most recent
     Duration next_timeout = mUnobservedTimeouts.get<expires_tag>().begin()->expires - mContext->recentSimTime();
     mUnobservedTimer->cancel();

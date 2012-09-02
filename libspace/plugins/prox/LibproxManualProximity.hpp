@@ -197,7 +197,7 @@ private:
     bool parseHandlerName(const String& name, ProxQueryHandler** handler_out);
     virtual void commandForceRebuild(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
     virtual void commandListNodes(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
-
+    virtual void commandListQueriers(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
 
 
 

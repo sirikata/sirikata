@@ -286,6 +286,11 @@ void SimpleObjectQueryProcessor::commandListNodes(const Command::Command& cmd, C
     result.put( String("nodes"), Command::Array());
     cmdr->result(cmdid, result);
 }
+void SimpleObjectQueryProcessor::commandListQueriers(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {
+    Command::Result result = Command::EmptyResult();
+    result.put( String("queriers"), Command::Array());
+    cmdr->result(cmdid, result);
+}
 void SimpleObjectQueryProcessor::commandForceRebuild(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {
     Command::Result result = Command::EmptyResult();
     result.put("error", "Simple processors have nothing to rebuild.");

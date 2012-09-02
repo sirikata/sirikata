@@ -379,6 +379,24 @@ void ManualPintoManager::commandListNodes(const Command::Command& cmd, Command::
     cmdr->result(cmdid, result);
 }
 
+
+void ManualPintoManager::commandListQueriers(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {
+    Command::Result result = Command::EmptyResult();
+    result.put( String("queriers.server"), Command::Object());
+    Command::Result& queriers = result.get("queriers.server");
+    for(ClientDataMap::const_iterator it = mClients.begin(); it != mClients.end(); it++) {
+        // If a node hasn't associated a Server ID yet, ignore it's query
+        ServerID sid = streamServerID(it->first);
+        if (sid == NullServerID) continue;
+
+        Command::Result data = Command::EmptyResult();
+        data.put("server-queries.results", it->second.query->numResults());
+        data.put("server-queries.size", it->second.query->size());
+        queriers.put(boost::lexical_cast<String>(sid), data);
+    }
+    cmdr->result(cmdid, result);
+}
+
 void ManualPintoManager::commandForceRebuild(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {
     Command::Result result = Command::EmptyResult();
     result.put("error", "Rebuilding manual proximity processors isn't supported yet.");

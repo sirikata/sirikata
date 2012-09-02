@@ -59,6 +59,7 @@ private:
     virtual void commandListHandlers(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
     virtual void commandForceRebuild(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
     virtual void commandListNodes(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
+    virtual void commandListQueriers(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
     virtual void commandStats(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
 
 
@@ -79,7 +80,8 @@ private:
         // Track copy of query results so we can clean up subscriptions
         ServerSet results;
     };
-    std::tr1::unordered_map<Sirikata::Network::Stream*, ClientData> mClients;
+    typedef std::tr1::unordered_map<Sirikata::Network::Stream*, ClientData> ClientDataMap;
+    ClientDataMap mClients;
     // Reverse index for queryHasEvents callbacks
     typedef std::tr1::unordered_map<Query*, Sirikata::Network::Stream*> ClientsByQuery;
     ClientsByQuery mClientsByQuery;

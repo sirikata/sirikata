@@ -69,6 +69,14 @@ void BaseProxCommandable::registerCommands(Context* ctx, const String& prefix, N
         );
 
 
+        // Get a list of registered queriers and basic stats about each
+        ctx->commander()->registerCommand(
+            prefix + ".queriers",
+            strand
+            ? Command::CommandHandler(strand->wrap(std::tr1::bind(&BaseProxCommandable::commandListQueriers, this, _1, _2, _3)))
+            : Command::CommandHandler(std::tr1::bind(&BaseProxCommandable::commandListQueriers, this, _1, _2, _3))
+        );
+
         // Get basic properties (both fixed and dynamic debugging
         // state) about this query processor.
         ctx->commander()->registerCommand(

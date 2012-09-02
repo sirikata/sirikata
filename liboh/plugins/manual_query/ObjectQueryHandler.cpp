@@ -109,7 +109,7 @@ void ObjectQueryHandler::presenceDisconnected(const ObjectReference& objid) {
 
 void ObjectQueryHandler::updateQuery(HostedObjectPtr ho, const SpaceObjectReference& obj, const String& params) {
     SolidAngle sa;
-    uint32 max_results;
+    uint32 max_results = 0;
     if (parseQueryRequest(params, &sa, &max_results))
         updateQuery(ho, obj, sa, max_results);
 }
@@ -335,6 +335,37 @@ void ObjectQueryHandler::commandListNodes(const Command::Command& cmd, Command::
     }
 
     cmdr->result(cmdid, result);
+}
+
+void ObjectQueryHandler::commandListQueriers(const OHDP::SpaceNodeID& snid, Command::Result& result) {
+    // NOTE: we're just one of multiple sources of querier info, so we just fill
+    // info in, our parent initializes and finishes by sending the result
+    Command::Result& object_queriers = result.get("queriers.object");
+
+    for(ObjectQueryMap::iterator qit = mObjectQueries.begin(); qit != mObjectQueries.end(); qit++) {
+        // Each object queries a bunch of replicated trees
+        Command::Result data = Command::EmptyResult();
+
+        for(IndexQueryMap::iterator index_it = qit->second->queries.begin(); index_it != qit->second->queries.end(); index_it++) {
+            ProxIndexID index_id = index_it->first;
+            Query* query = index_it->second;
+            // index_it gives us the index we're quering into, but we still need
+            // to look it up
+            assert(mObjectQueryHandlers.find(index_id) != mObjectQueryHandlers.end());
+            ReplicatedIndexQueryHandler& handler_data = mObjectQueryHandlers[index_id];
+
+            String staticdynamic = (handler_data.dynamic ? "dynamic" : "static");
+            String path =
+                // Server we're communicating wih, performing object queries
+                snid.toString() + "_" + String("object-queries_") +
+                // The server the tree is replicated from - the index ID - static/dynamic
+                "server-" + boost::lexical_cast<String>(handler_data.from) + "-index-" + boost::lexical_cast<String>(index_id) + "_" + staticdynamic +
+                "-objects";
+            data.put(path + ".results", query->numResults());
+            data.put(path + ".size", query->size());
+        }
+        object_queriers.put(qit->first.toString(), data);
+    }
 }
 
 void ObjectQueryHandler::commandForceRebuild(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {

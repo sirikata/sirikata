@@ -107,6 +107,7 @@ public:
 
     void commandListInfo(const OHDP::SpaceNodeID& snid, Command::Result& result);
     void commandListNodes(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
+    void commandListQueriers(const OHDP::SpaceNodeID& snid, Command::Result& result);
     void commandForceRebuild(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
 
 private:

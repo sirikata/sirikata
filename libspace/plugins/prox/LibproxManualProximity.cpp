@@ -1613,5 +1613,66 @@ void LibproxManualProximity::commandListNodes(const Command::Command& cmd, Comma
 }
 
 
+void LibproxManualProximity::commandListQueriers(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {
+    Command::Result result = Command::EmptyResult();
+    // Organized as lists under queriers.type, each querier being a dict of query handlers -> stats
+    result.put("queriers.object", Command::Object());
+    result.put("queriers.oh", Command::Object());
+    result.put("queriers.server", Command::Object());
+    Command::Result& object_queriers = result.get("queriers.object");
+    Command::Result& oh_queriers = result.get("queriers.oh");
+    Command::Result& server_queriers = result.get("queriers.server");
+
+    // Server queries are easy, they're only against local trees
+    for(ServerQueryMap::iterator qit = mServerQueries[OBJECT_CLASS_STATIC].begin(); qit != mServerQueries[OBJECT_CLASS_STATIC].end(); qit++) {
+        Command::Result data = Command::EmptyResult();
+        for(int i = 0; i < NUM_OBJECT_CLASSES; i++) {
+            if (mLocalQueryHandler[i].handler == NULL) continue;
+            ServerQueryMap::iterator qcit = mServerQueries[i].find(qit->first);
+            if (qcit == mServerQueries[i].end()) continue;
+
+            String path = String("server-queries_") + ObjectClassToString((ObjectClass)i) + "-objects";
+            data.put(path + ".results", qcit->second->numResults());
+            data.put(path + ".size", qcit->second->size());
+        }
+        server_queriers.put(boost::lexical_cast<String>(qit->first), data);
+    }
+
+    // Object host queries are a bit more complicated. We have the local tree
+    // and replicated trees to lookup.
+    // Outer loops get our list of queriers
+    for(OHQueryMap::iterator qit = mOHQueries[OBJECT_CLASS_STATIC].begin(); qit != mOHQueries[OBJECT_CLASS_STATIC].end(); qit++) {
+        Command::Result data = Command::EmptyResult();
+
+        // Get results from local trees
+        for(int i = 0; i < NUM_OBJECT_CLASSES; i++) {
+            if (mLocalQueryHandler[i].handler == NULL) continue;
+            // Then we need to look up the per-object-class query for the querier
+            OHQueryMap::iterator qcit = mOHQueries[i].find(qit->first);
+            if (qcit == mOHQueries[i].end()) continue;
+
+            String path = String("oh-queries_") + ObjectClassToString((ObjectClass)i) + "-objects";
+            data.put(path + ".results", qcit->second->numResults());
+            data.put(path + ".size", qcit->second->size());
+        }
+
+        // And from replicated trees
+        ServerToIndexToQueryMap& queries_map = mOHRemoteQueries[qit->first];
+        for(ServerToIndexToQueryMap::iterator sit = queries_map.begin(); sit != queries_map.end(); sit++) {
+            for(IndexToQueryMap::iterator index_it = sit->second.begin(); index_it != sit->second.end(); index_it++) {
+                String path = String("oh-queries_replicated-server-") +
+                    boost::lexical_cast<String>(sit->first) +
+                    String("-index-") + boost::lexical_cast<String>(index_it->first);
+                data.put(path + ".results", index_it->second->numResults());
+                data.put(path + ".size", index_it->second->size());
+            }
+        }
+
+        oh_queriers.put(qit->first.toString(), data);
+    }
+    cmdr->result(cmdid, result);
+}
+
+
 
 } // namespace Sirikata

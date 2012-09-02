@@ -194,6 +194,25 @@ void PintoManager::commandListNodes(const Command::Command& cmd, Command::Comman
     cmdr->result(cmdid, result);
 }
 
+
+void PintoManager::commandListQueriers(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {
+    Command::Result result = Command::EmptyResult();
+    // Organized as lists under queriers.type, each querier being a dict of query handlers -> stats
+    result.put("queriers.server", Command::Object());
+    Command::Result& queriers = result.get("queriers.server");
+    for(ClientDataMap::const_iterator it = mClients.begin(); it != mClients.end(); it++) {
+        // If a node hasn't associated a Server ID yet, ignore it's query
+        ServerID sid = streamServerID(it->first);
+        if (sid == NullServerID) continue;
+
+        Command::Result data = Command::EmptyResult();
+        data.put("server-queries.results", it->second.query->numResults());
+        data.put("server-queries.size", it->second.query->size());
+        queriers.put(boost::lexical_cast<String>(sid), data);
+    }
+    cmdr->result(cmdid, result);
+}
+
 void PintoManager::commandForceRebuild(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {
     Command::Result result = Command::EmptyResult();
     mQueryHandler->rebuild();

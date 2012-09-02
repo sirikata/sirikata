@@ -46,6 +46,8 @@
 #include <sirikata/core/command/Commander.hpp>
 #include <json_spirit/json_spirit.h>
 
+#include <boost/lexical_cast.hpp>
+
 #define PROXLOG(level,msg) SILOG(prox,level,msg)
 
 namespace Sirikata {
@@ -827,6 +829,47 @@ void LibproxProximity::commandListHandlers(const Command::Command& cmd, Command:
             result.put(key + "objects", mServerQueryHandler[i].handler->numObjects());
             result.put(key + "nodes", mServerQueryHandler[i].handler->numNodes());
         }
+    }
+    cmdr->result(cmdid, result);
+}
+
+void LibproxProximity::commandListQueriers(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {
+    Command::Result result = Command::EmptyResult();
+    // Organized as lists under queriers.type, each querier being a dict of query handlers -> stats
+    result.put("queriers.object", Command::Object());
+    result.put("queriers.oh", Command::Object());
+    result.put("queriers.server", Command::Object());
+    Command::Result& object_queriers = result.get("queriers.object");
+    Command::Result& oh_queriers = result.get("queriers.oh");
+    Command::Result& server_queriers = result.get("queriers.server");
+
+    // Outer loops get our list of queriers
+    for(ObjectQueryMap::iterator qit = mObjectQueries[OBJECT_CLASS_STATIC].begin(); qit != mObjectQueries[OBJECT_CLASS_STATIC].end(); qit++) {
+        Command::Result data = Command::EmptyResult();
+        for(int i = 0; i < NUM_OBJECT_CLASSES; i++) {
+            if (mObjectQueryHandler[i].handler == NULL) continue;
+            // Then we need to look up the per-object-class query for the querier
+            ObjectQueryMap::iterator qcit = mObjectQueries[i].find(qit->first);
+            if (qcit == mObjectQueries[i].end()) continue;
+
+            String path = String("object-queries_") + ObjectClassToString((ObjectClass)i) + "-objects";
+            data.put(path + ".results", qcit->second->numResults());
+            data.put(path + ".size", qcit->second->size());
+        }
+        object_queriers.put(qit->first.toString(), data);
+    }
+    for(ServerQueryMap::iterator qit = mServerQueries[OBJECT_CLASS_STATIC].begin(); qit != mServerQueries[OBJECT_CLASS_STATIC].end(); qit++) {
+        Command::Result data = Command::EmptyResult();
+        for(int i = 0; i < NUM_OBJECT_CLASSES; i++) {
+            if (mServerQueryHandler[i].handler == NULL) continue;
+            ServerQueryMap::iterator qcit = mServerQueries[i].find(qit->first);
+            if (qcit == mServerQueries[i].end()) continue;
+
+            String path = String("server-queries_") + ObjectClassToString((ObjectClass)i) + "-objects";
+            data.put(path + ".results", qcit->second->numResults());
+            data.put(path + ".size", qcit->second->size());
+        }
+        server_queriers.put(boost::lexical_cast<String>(qit->first), data);
     }
     cmdr->result(cmdid, result);
 }

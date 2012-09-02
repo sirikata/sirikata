@@ -250,6 +250,7 @@ private:
     bool parseHandlerName(const String& name, ProxQueryHandlerData** handlers_out, ObjectClass* class_out);
     virtual void commandForceRebuild(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
     virtual void commandListNodes(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
+    virtual void commandListQueriers(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
 
     typedef std::tr1::unordered_set<ObjectReference, ObjectReference::Hasher> ObjectIDSet;
     struct ProxQueryHandlerData {

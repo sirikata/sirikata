@@ -307,6 +307,21 @@ void ManualObjectQueryProcessor::commandListNodes(const Command::Command& cmd, C
     handler->commandListNodes(cmd, cmdr, cmdid);
 }
 
+void ManualObjectQueryProcessor::commandListQueriers(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {
+    Command::Result result = Command::EmptyResult();
+    // Organized as lists under queriers.type, each querier being a dict of query handlers -> stats
+    result.put("queriers.object", Command::Object());
+    result.put("queriers.oh", Command::Object());
+    result.put("queriers.server", Command::Object());
+
+    // Each object is registered with only one server, so just loop through our
+    // per-server handlers for queriers
+    for(QueryHandlerMap::iterator handler_it = mObjectQueryHandlers.begin(); handler_it != mObjectQueryHandlers.end(); handler_it++)
+        handler_it->second->commandListQueriers(handler_it->first, result);
+
+    cmdr->result(cmdid, result);
+}
+
 void ManualObjectQueryProcessor::commandForceRebuild(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {
     // Look up or trigger error message
     ObjectQueryHandlerPtr handler = lookupCommandHandler(cmd, cmdr, cmdid);
