@@ -61,11 +61,9 @@ private:
 
     struct ClientData {
         ClientData()
-         : server(NullServerID),
-           query(NULL)
+         : query(NULL)
         {}
 
-        ServerID server;
         Query* query;
     };
     typedef std::tr1::unordered_map<Sirikata::Network::Stream*, ClientData> ClientDataMap;
