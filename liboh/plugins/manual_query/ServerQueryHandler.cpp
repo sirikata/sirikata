@@ -249,7 +249,7 @@ void ServerQueryHandler::handleProximityMessage(const OHDP::SpaceNodeID& snid, c
 void ServerQueryHandler::queriersAreObserving(const OHDP::SpaceNodeID& snid, const ProxIndexID indexid, const ObjectReference& objid) {
     ServerQueryMap::iterator serv_it = mServerQueries.find(snid);
     if (serv_it == mServerQueries.end()) {
-        QPLOG(debug, "Received update about object queries on server query that doesn't exist. Query may have recently been destroyed.");
+        QPLOG(detailed, "Received update about object queries on server query that doesn't exist. Query may have recently been destroyed.");
         return;
     }
     ServerQueryStatePtr& query_state = serv_it->second;
@@ -259,7 +259,7 @@ void ServerQueryHandler::queriersAreObserving(const OHDP::SpaceNodeID& snid, con
 void ServerQueryHandler::queriersStoppedObserving(const OHDP::SpaceNodeID& snid, const ProxIndexID indexid, const ObjectReference& objid) {
     ServerQueryMap::iterator serv_it = mServerQueries.find(snid);
     if (serv_it == mServerQueries.end()) {
-        QPLOG(debug, "Received update about object queries on server query that doesn't exist. Query may have recently been destroyed.");
+        QPLOG(detailed, "Received update about object queries on server query that doesn't exist. Query may have recently been destroyed.");
         return;
     }
     ServerQueryStatePtr& query_state = serv_it->second;
@@ -269,7 +269,7 @@ void ServerQueryHandler::queriersStoppedObserving(const OHDP::SpaceNodeID& snid,
 void ServerQueryHandler::replicatedNodeRemoved(const OHDP::SpaceNodeID& snid, const ProxIndexID indexid, const ObjectReference& objid) {
     ServerQueryMap::iterator serv_it = mServerQueries.find(snid);
     if (serv_it == mServerQueries.end()) {
-        QPLOG(debug, "Received update about object queries on server query that doesn't exist. Query may have recently been destroyed.");
+        QPLOG(detailed, "Received update about object queries on server query that doesn't exist. Query may have recently been destroyed.");
         return;
     }
     ServerQueryStatePtr& query_state = serv_it->second;
