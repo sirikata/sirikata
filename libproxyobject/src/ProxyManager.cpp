@@ -51,7 +51,8 @@ ProxyManagerPtr ProxyManager::construct(VWObjectPtr parent, const SpaceObjectRef
 
 ProxyManager::ProxyManager(VWObjectPtr parent, const SpaceObjectReference& _id)
  : mParent(parent),
-   mID(_id)
+   mID(_id),
+   mActiveCount(0)
 {}
 
 ProxyManager::~ProxyManager() {
@@ -97,10 +98,13 @@ ProxyObjectPtr ProxyManager::createObject(
 
             // And either update the strong ref or clear out the entry
             // if its not even valid anymore.
-            if (newObj)
+            if (newObj) {
                 iter->second.ptr = newObj;
-            else
+                mActiveCount++;
+            }
+            else {
                 mProxyMap.erase(iter);
+            }
         }
     }
 
@@ -115,6 +119,7 @@ ProxyObjectPtr ProxyManager::createObject(
             )
         );
         iter = result.first;
+        mActiveCount++;
     }
 
     assert(newObj);
@@ -170,6 +175,7 @@ void ProxyManager::destroyObject(const ProxyObjectPtr &delObj) {
         // destruction of the object which will call proxyDeleted and invalidate
         // it!
         iter->second.ptr.reset();
+        mActiveCount--;
     }
 }
 
@@ -248,11 +254,7 @@ int32 ProxyManager::size() {
 }
 
 int32 ProxyManager::activeSize() {
-    int32 count = 0;
-    for (ProxyMap::const_iterator iter = mProxyMap.begin(); iter != mProxyMap.end(); ++iter) {
-        if (iter->second.ptr) count++;
-    }
-    return count;
+    return mActiveCount;
 }
 
 }

@@ -123,6 +123,11 @@ private:
     };
     typedef std::tr1::unordered_map<ObjectReference, ProxyData, ObjectReference::Hasher> ProxyMap;
     ProxyMap mProxyMap;
+
+    // We explicitly track when we add/remove active proxies because computing
+    // this when you have a large number of aggregates is expensive (requires
+    // scanning through all entries).
+    uint32 mActiveCount;
 };
 
 typedef std::tr1::shared_ptr<ProxyManager> ProxyManagerPtr;
