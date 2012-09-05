@@ -36,6 +36,7 @@
 #include "TimerJitterBenchmark.hpp"
 #include "TimerMonotonicityBenchmark.hpp"
 #include "TCPSSTBenchmark.hpp"
+#include "UUIDSpeedBenchmark.hpp"
 
 #include <sirikata/core/util/DynamicLibrary.hpp>
 
@@ -67,6 +68,9 @@ int main(int argc, char** argv) {
     ADD_BENCHMARK(timer-monotonicity, TimerMonotonicityBenchmark::create);
 
     ADD_BENCHMARK(ping, SSTBenchmark::create);
+
+    ADD_BENCHMARK(uuid-create, UUIDSpeedBenchmark::create);
+
     BenchmarkRunner runner(factory, Duration::seconds(30.f));
 
 

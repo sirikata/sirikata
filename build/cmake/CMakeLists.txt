@@ -1862,6 +1862,7 @@ SET(BENCH_SOURCES
   ${BENCH_SOURCE_DIR}/TimerJitterBenchmark.cpp
   ${BENCH_SOURCE_DIR}/TimerMonotonicityBenchmark.cpp
   ${BENCH_SOURCE_DIR}/TCPSSTBenchmark.cpp
+  ${BENCH_SOURCE_DIR}/UUIDSpeedBenchmark.cpp
   ${BENCH_SOURCE_DIR}/main.cpp
 )
 
