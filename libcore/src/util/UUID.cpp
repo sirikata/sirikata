@@ -37,6 +37,7 @@
 #include <boost/uuid/uuid_io.hpp>
 #include <boost/functional/hash.hpp>
 #include <boost/asio.hpp> // htonl, ntonl
+#include <boost/thread/tss.hpp>
 
 BOOST_STATIC_ASSERT(Sirikata::UUID::static_size==sizeof(boost::uuids::uuid));
 
@@ -72,8 +73,11 @@ UUID::UUID(const boost::uuids::uuid&other){
     mData.initialize(other.begin(),other.end());
 }
 UUID::UUID(UUID::GenerateRandom) {
-    boost::uuids::random_generator rg;
-    boost::uuids::uuid randval = rg();
+    static boost::thread_specific_ptr<boost::uuids::random_generator> s_rng;
+    boost::uuids::random_generator* rg = s_rng.get();
+    if (rg == NULL)
+        s_rng.reset(rg = new boost::uuids::random_generator);
+    boost::uuids::uuid randval = (*rg)();
     mData.initialize(randval.begin(),randval.end());
 }
 
