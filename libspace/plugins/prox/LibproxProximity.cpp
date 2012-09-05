@@ -248,6 +248,9 @@ void LibproxProximity::handleObjectProximityMessage(const UUID& objid, void* buf
         return;
     }
 
+    mStats.objectReceivedBytes += length;
+    mStats.objectReceivedMessages++;
+
     // Need to support old style (angle + max count) and new style.
     if (prox_update.has_query_parameters()) {
         SolidAngle sa;
