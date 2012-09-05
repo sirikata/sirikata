@@ -35,8 +35,10 @@
 
 #include <sirikata/core/util/Platform.hpp>
 
-namespace boost_{
-class uuid;
+namespace boost {
+namespace uuids {
+struct uuid;
+}
 }
 
 namespace Sirikata {
@@ -51,7 +53,7 @@ public:
 private:
     Data mData;
 public:
-    UUID(const boost_::uuid&);
+    UUID(const boost::uuids::uuid&);
     UUID() {}
     UUID (const byte *data,
           unsigned int length){

@@ -32,11 +32,13 @@
 
 #include <sirikata/core/util/Standard.hh>
 #include <sirikata/core/util/UUID.hpp>
-#include "boost_uuid.hpp"
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_generators.hpp>
+#include <boost/uuid/uuid_io.hpp>
 #include <boost/functional/hash.hpp>
 #include <boost/asio.hpp> // htonl, ntonl
 
-BOOST_STATIC_ASSERT(Sirikata::UUID::static_size==sizeof(boost_::uuid));
+BOOST_STATIC_ASSERT(Sirikata::UUID::static_size==sizeof(boost::uuids::uuid));
 
 namespace Sirikata {
 
@@ -52,7 +54,8 @@ static unsigned int fromHex(char a) {
 
 UUID::UUID(const std::string & other,HumanReadable ) {
     try {
-        boost_::uuid parsed_string(other);
+        boost::uuids::string_generator gen;
+        boost::uuids::uuid parsed_string = gen(other);
         mData.initialize(parsed_string.begin(),parsed_string.end());
     }
     catch(std::invalid_argument exc) {
@@ -65,11 +68,12 @@ UUID::UUID(const std::string & other, HexString) {
         mData[i] = fromHex(other[2*i])*16 + fromHex(other[2*i+1]);
     assert(rawHexData() == other);
 }
-UUID::UUID(const boost_::uuid&other){
+UUID::UUID(const boost::uuids::uuid&other){
     mData.initialize(other.begin(),other.end());
 }
 UUID::UUID(UUID::GenerateRandom) {
-    boost_::uuid randval = boost_::uuid::create();
+    boost::uuids::random_generator rg;
+    boost::uuids::uuid randval = rg();
     mData.initialize(randval.begin(),randval.end());
 }
 
@@ -87,7 +91,8 @@ UUID UUID::random() {
 }
 std::string UUID::readableHexData()const{
     std::ostringstream oss;
-    oss<<boost_::uuid(getArray().begin(),getArray().end());
+
+    oss << *reinterpret_cast<boost::uuids::uuid const*>(this);
     return oss.str();
 }
 static char toHex(unsigned int a) {
@@ -122,12 +127,12 @@ uint32 UUID::asUInt32() const {
 }
 
 std::ostream& operator << (std::ostream &os, const Sirikata::UUID& output) {
-    os << boost_::uuid(output.getArray().begin(),output.getArray().end());
+    os << *reinterpret_cast<boost::uuids::uuid const*>(&output);
     return os;
 }
 
 std::istream& operator>>(std::istream & is, Sirikata::UUID & uuid) {
-    boost_::uuid internal;
+    boost::uuids::uuid internal;
     is >> internal;
     uuid = Sirikata::UUID(internal);
     return is;
