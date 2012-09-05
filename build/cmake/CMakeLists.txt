@@ -1455,7 +1455,6 @@ ELSE()
  ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/Vector4.hpp
  ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/SolidAngle.hpp
  ${LIBCORE_SOURCE_DIR}/util/boost_sha1.hpp
- ${LIBCORE_SOURCE_DIR}/util/boost_uuid.hpp
  ${LIBCORE_SOURCE_DIR}/util/valgrind.h
                      COMMENT "${FINAL_COMMAND}")
 #  ADD_DEPENDENCIES(${SIRIKATA_CORE_LIB} ${LIBCORE_STANDARD_HH_GCH})
