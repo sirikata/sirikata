@@ -58,11 +58,12 @@ namespace Sirikata {
 class SIRIKATA_SPACE_EXPORT AggregateManager : public LocationServiceListener {
 private:
 
-  enum{NUM_GENERATION_THREADS=4};
-  Thread* mAggregationThreads[NUM_GENERATION_THREADS];
-  Network::IOService* mAggregationServices[NUM_GENERATION_THREADS];
-  Network::IOStrand* mAggregationStrands[NUM_GENERATION_THREADS];
-  Network::IOWork* mIOWorks[NUM_GENERATION_THREADS];
+  enum{MAX_NUM_GENERATION_THREADS=16};
+  uint16 mNumGenerationThreads;
+  Thread* mAggregationThreads[MAX_NUM_GENERATION_THREADS];
+  Network::IOService* mAggregationServices[MAX_NUM_GENERATION_THREADS];
+  Network::IOStrand* mAggregationStrands[MAX_NUM_GENERATION_THREADS];
+  Network::IOWork* mIOWorks[MAX_NUM_GENERATION_THREADS];
 
   typedef struct LocationInfo {
     Vector3f currentPosition;
@@ -176,8 +177,8 @@ private:
   Time mAggregateGenerationStartTime;
   std::tr1::unordered_map<UUID, AggregateObjectPtr, UUID::Hasher> mDirtyAggregateObjects;
 
-  boost::mutex mObjectsByPriorityLocks[NUM_GENERATION_THREADS];
-  std::map<float, std::deque<AggregateObjectPtr > > mObjectsByPriority[NUM_GENERATION_THREADS];
+  boost::mutex mObjectsByPriorityLocks[MAX_NUM_GENERATION_THREADS];
+  std::map<float, std::deque<AggregateObjectPtr > > mObjectsByPriority[MAX_NUM_GENERATION_THREADS];
 
   //Variables related to downloading and in-memory caching meshes
   boost::mutex mMeshStoreMutex;
@@ -194,11 +195,12 @@ private:
   bool mSkipUpload;
 
   //CDN upload threads' variables
-  enum{NUM_UPLOAD_THREADS = 8};
-  Thread* mUploadThreads[NUM_UPLOAD_THREADS];
-  Network::IOService* mUploadServices[NUM_UPLOAD_THREADS];
-  Network::IOStrand* mUploadStrands[NUM_UPLOAD_THREADS];
-  Network::IOWork* mUploadWorks[NUM_UPLOAD_THREADS];
+  enum{MAX_NUM_UPLOAD_THREADS = 16};
+  uint16 mNumUploadThreads;
+  Thread* mUploadThreads[MAX_NUM_UPLOAD_THREADS];
+  Network::IOService* mUploadServices[MAX_NUM_UPLOAD_THREADS];
+  Network::IOStrand* mUploadStrands[MAX_NUM_UPLOAD_THREADS];
+  Network::IOWork* mUploadWorks[MAX_NUM_UPLOAD_THREADS];
   void uploadThreadMain(uint8 i);
 
   // Stats.
@@ -281,7 +283,7 @@ private:
   void commandStats(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
 public:
 
-  AggregateManager( LocationService* loc, Transfer::OAuthParamsPtr oauth, const String& username, bool skip_upload);
+  AggregateManager( LocationService* loc, Transfer::OAuthParamsPtr oauth, const String& username, uint16 n_gen_threads, uint16 n_upload_threads, bool skip_upload);
 
   ~AggregateManager();
 

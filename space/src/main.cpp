@@ -301,6 +301,8 @@ int main(int argc, char** argv) {
     String aggmgr_access_key = GetOptionValue<String>(OPT_AGGMGR_ACCESS_KEY);
     String aggmgr_access_secret = GetOptionValue<String>(OPT_AGGMGR_ACCESS_SECRET);
     String aggmgr_username = GetOptionValue<String>(OPT_AGGMGR_USERNAME);
+    uint16 aggmgr_gen_threads = GetOptionValue<uint16>(OPT_AGGMGR_GEN_THREADS);
+    uint16 aggmgr_upload_threads = GetOptionValue<uint16>(OPT_AGGMGR_UPLOAD_THREADS);
     bool aggmgr_skip_upload = GetOptionValue<bool>(OPT_AGGMGR_SKIP_UPLOAD);
     Transfer::OAuthParamsPtr aggmgr_oauth;
     // Currently you need to explicitly override hostname to enable upload
@@ -315,7 +317,7 @@ int main(int argc, char** argv) {
             )
         );
     }
-    AggregateManager* aggmgr = new AggregateManager(loc_service, aggmgr_oauth, aggmgr_username, aggmgr_skip_upload);
+    AggregateManager* aggmgr = new AggregateManager(loc_service, aggmgr_oauth, aggmgr_username, aggmgr_gen_threads, aggmgr_upload_threads, aggmgr_skip_upload);
 
     std::string prox_type = GetOptionValue<String>(OPT_PROX);
     std::string prox_options = GetOptionValue<String>(OPT_PROX_OPTIONS);
