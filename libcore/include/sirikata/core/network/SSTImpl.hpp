@@ -76,6 +76,25 @@ public:
     return this->port < ep.port ;
   }
 
+    bool operator==(const EndPoint& ep) const {
+        return (
+            this->port == ep.port &&
+            this->endPoint == ep.endPoint);
+    }
+    std::size_t hash() const {
+        size_t seed = 0;
+        boost::hash_combine(seed, typename EndObjectType::Hasher()(endPoint));
+        boost::hash_combine(seed, port);
+        return seed;
+    }
+
+    class Hasher{
+    public:
+        size_t operator() (const EndPoint& ep) const {
+            return ep.hash();
+        }
+    };
+
     std::string toString() const {
         return endPoint.toString() + boost::lexical_cast<std::string>(port);
     }
@@ -171,7 +190,7 @@ public:
 
     void removeDatagramLayer(EndPointType& endPoint, bool warn = false)
     {
-        typename std::map<EndPointType, BaseDatagramLayerPtr >::iterator wherei = sDatagramLayerMap.find(endPoint);
+        typename std::tr1::unordered_map<EndPointType, BaseDatagramLayerPtr, typename EndPointType::Hasher >::iterator wherei = sDatagramLayerMap.find(endPoint);
         if (wherei != sDatagramLayerMap.end()) {
             sDatagramLayerMap.erase(wherei);
         } else if (warn) {
@@ -180,16 +199,16 @@ public:
     }
 
 private:
-    std::map<EndPointType, BaseDatagramLayerPtr > sDatagramLayerMap;
+    std::tr1::unordered_map<EndPointType, BaseDatagramLayerPtr, typename EndPointType::Hasher > sDatagramLayerMap;
 
 public:
-    typedef std::map<EndPoint<EndPointType>, StreamReturnCallbackFunction> StreamReturnCallbackMap;
+    typedef std::tr1::unordered_map<EndPoint<EndPointType>, StreamReturnCallbackFunction, typename EndPoint<EndPointType>::Hasher> StreamReturnCallbackMap;
     StreamReturnCallbackMap mStreamReturnCallbackMap;
 
-    typedef std::map<EndPoint<EndPointType>, std::tr1::shared_ptr<Connection<EndPointType> > >  ConnectionMap;
+    typedef std::tr1::unordered_map<EndPoint<EndPointType>, std::tr1::shared_ptr<Connection<EndPointType> >, typename EndPoint<EndPointType>::Hasher >  ConnectionMap;
     ConnectionMap sConnectionMap;
 
-    typedef std::map<EndPoint<EndPointType>, ConnectionReturnCallbackFunction>  ConnectionReturnCallbackMap;
+    typedef std::tr1::unordered_map<EndPoint<EndPointType>, ConnectionReturnCallbackFunction, typename EndPoint<EndPointType>::Hasher>  ConnectionReturnCallbackMap;
     ConnectionReturnCallbackMap sConnectionReturnCallbackMap;
 
     StreamReturnCallbackMap  sListeningConnectionsCallbackMap;
@@ -342,9 +361,9 @@ private:
   friend class ConnectionManager<EndPointType>;
   friend class BaseDatagramLayer<EndPointType>;
 
-  typedef std::map<EndPoint<EndPointType>, std::tr1::shared_ptr<Connection> >  ConnectionMap;
-  typedef std::map<EndPoint<EndPointType>, ConnectionReturnCallbackFunction>  ConnectionReturnCallbackMap;
-  typedef std::map<EndPoint<EndPointType>, StreamReturnCallbackFunction> StreamReturnCallbackMap;
+  typedef std::tr1::unordered_map<EndPoint<EndPointType>, std::tr1::shared_ptr<Connection>, typename EndPoint<EndPointType>::Hasher >  ConnectionMap;
+  typedef std::tr1::unordered_map<EndPoint<EndPointType>, ConnectionReturnCallbackFunction, typename EndPoint<EndPointType>::Hasher>  ConnectionReturnCallbackMap;
+  typedef std::tr1::unordered_map<EndPoint<EndPointType>, StreamReturnCallbackFunction, typename EndPoint<EndPointType>::Hasher> StreamReturnCallbackMap;
 
   EndPoint<EndPointType> mLocalEndPoint;
   EndPoint<EndPointType> mRemoteEndPoint;
@@ -1480,7 +1499,7 @@ public:
     typedef typename CBTypes::StreamReturnCallbackFunction StreamReturnCallbackFunction;
     typedef typename CBTypes::ReadCallback ReadCallback;
 
-    typedef std::map<EndPoint<EndPointType>, StreamReturnCallbackFunction> StreamReturnCallbackMap;
+    typedef std::tr1::unordered_map<EndPoint<EndPointType>, StreamReturnCallbackFunction, typename EndPoint<EndPointType>::Hasher> StreamReturnCallbackMap;
 
    enum StreamStates {
        DISCONNECTED = 1,
