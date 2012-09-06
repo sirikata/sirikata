@@ -53,6 +53,7 @@
 #include <sirikata/proxyobject/ProxyManager.hpp>
 
 #include <sirikata/core/util/SerializationCheck.hpp>
+#include <boost/functional/hash.hpp>
 
 namespace Sirikata {
 
@@ -216,7 +217,19 @@ public:
 
 
     unsigned int hash() const {
-        return getOwnerPresenceID().hash() ^ getObjectReference().hash();
+        // NOTE: Be *very* careful with this. It used to be just owner.hash ^
+        // object.hash. That can end up with some really horrible
+        // results. Consider if you end up with a hash_map full of proxies of
+        // just the objects themselves, i.e. for all entries owner ==
+        // object. All end up with hash == 0 because the hashes are equal,
+        // leading to a single bucket holding everything.
+
+        size_t seed = 0;
+
+        boost::hash_combine(seed, getOwnerPresenceID().hash());
+        boost::hash_combine(seed, getObjectReference().hash());
+
+        return seed;
     }
 
     class Hasher{

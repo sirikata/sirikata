@@ -1878,6 +1878,7 @@ SET(BENCH_SOURCES
   ${BENCH_SOURCE_DIR}/TimerJitterBenchmark.cpp
   ${BENCH_SOURCE_DIR}/TimerMonotonicityBenchmark.cpp
   ${BENCH_SOURCE_DIR}/TCPSSTBenchmark.cpp
+  ${BENCH_SOURCE_DIR}/UUIDSpeedBenchmark.cpp
   ${BENCH_SOURCE_DIR}/main.cpp
 )
 
@@ -1904,6 +1905,7 @@ ${TEST_LIBCORE_SOURCE_DIR}/Vector3Test.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/BoundingBoxTest.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/PathsTest.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/StrandTest.hpp
+${TEST_LIBCORE_SOURCE_DIR}/UUIDTest.hpp
 
 ${TEST_LIBMESH_SOURCE_DIR}/DeduplicationTest.hpp
 ${TEST_LIBMESH_SOURCE_DIR}/LightInfoTest.hpp

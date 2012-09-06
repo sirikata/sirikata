@@ -66,12 +66,15 @@ namespace Sirikata {
 
 using namespace Mesh;
 
-AggregateManager::AggregateManager(LocationService* loc, Transfer::OAuthParamsPtr oauth, const String& username, bool skip_upload)
-  : mLoc(loc),
+AggregateManager::AggregateManager(LocationService* loc, Transfer::OAuthParamsPtr oauth, const String& username, uint16 n_gen_threads, uint16 n_upload_threads, bool skip_upload)
+ : mNumGenerationThreads(std::min(n_gen_threads, (uint16)MAX_NUM_GENERATION_THREADS)),
+    mLoc(loc),
     mOAuth(oauth),
     mCDNUsername(username),
     mModelTTL(Duration::minutes(60)),
+    mCDNKeepAlivePoller(NULL),
     mSkipUpload(skip_upload),
+    mNumUploadThreads(std::min(n_upload_threads, (uint16)MAX_NUM_UPLOAD_THREADS)),
     mRawAggregateUpdates(0),
     mAggregatesQueued(0),
     mAggregatesGenerated(0),
@@ -99,7 +102,11 @@ AggregateManager::AggregateManager(LocationService* loc, Transfer::OAuthParamsPt
     x++;
 
     char id='1';
-    for (uint8 i = 0; i < NUM_UPLOAD_THREADS; i++) {
+    memset(mUploadThreads, 0, sizeof(mUploadThreads));
+    memset(mUploadServices, 0, sizeof(mUploadServices));
+    memset(mUploadStrands, 0, sizeof(mUploadStrands));
+    memset(mUploadWorks, 0, sizeof(mUploadWorks));
+    for (uint8 i = 0; i < mNumUploadThreads; i++) {
       mUploadServices[i] = new Network::IOService(String("AggregateManager::UploadService")+id);
       mUploadStrands[i] = mUploadServices[i]->createStrand(String("AggregateManager::UploadStrand")+id);
       mUploadWorks[i] =new Network::IOWork(mUploadServices[i], String("AggregateManager::UploadWork")+id);
@@ -110,7 +117,11 @@ AggregateManager::AggregateManager(LocationService* loc, Transfer::OAuthParamsPt
 
     // Start the processing threads
     id = '1';
-    for (uint8 i = 0; i < NUM_GENERATION_THREADS; i++) {
+    memset(mAggregationThreads, 0, sizeof(mAggregationThreads));
+    memset(mAggregationServices, 0, sizeof(mAggregationServices));
+    memset(mAggregationStrands, 0, sizeof(mAggregationStrands));
+    memset(mIOWorks, 0, sizeof(mIOWorks));
+    for (uint8 i = 0; i < mNumGenerationThreads; i++) {
       mAggregationServices[i] = new Network::IOService(String("AggregateManager::AggregationService")+id);
       mAggregationStrands[i] = mAggregationServices[i]->createStrand(String("AggregateManager::AggregationStrand")+id);
       mIOWorks[i] =new Network::IOWork(mAggregationServices[i], String("AggregateManager::AggregationWork")+id);
@@ -119,15 +130,17 @@ AggregateManager::AggregateManager(LocationService* loc, Transfer::OAuthParamsPt
       id++;
     }
 
-    mCDNKeepAlivePoller =  new Poller( mAggregationStrands[0],
-			    std::tr1::bind(&AggregateManager::sendKeepAlives, this),
-		            "AggregateManager CDN Keep-Alive Poller",
-		            Duration::minutes(5)  );
-
+    if (mAggregationStrands[0]) {
+      mCDNKeepAlivePoller =  new Poller( mAggregationStrands[0],
+        std::tr1::bind(&AggregateManager::sendKeepAlives, this),
+        "AggregateManager CDN Keep-Alive Poller",
+        Duration::minutes(5)  );
+    }
 
     removeStaleLeaves();
 
-    mCDNKeepAlivePoller->start();
+    if (mCDNKeepAlivePoller)
+      mCDNKeepAlivePoller->start();
 
     if (mLoc->context()->commander()) {
       mLoc->context()->commander()->registerCommand(
@@ -138,13 +151,15 @@ AggregateManager::AggregateManager(LocationService* loc, Transfer::OAuthParamsPt
 }
 
 AggregateManager::~AggregateManager() {
-    // We need to make sure we clean this up before the IOService and IOStrand
-    // it's running on.
+  // We need to make sure we clean this up before the IOService and IOStrand
+  // it's running on.
+  if (mCDNKeepAlivePoller) {
     mCDNKeepAlivePoller->stop();
     delete mCDNKeepAlivePoller;
+  }
 
     // Shut down the main processing thread
-    for (uint8 i = 0; i < NUM_GENERATION_THREADS; i++) {
+    for (uint8 i = 0; i < mNumGenerationThreads; i++) {
       if (mAggregationThreads[i] != NULL) {
         if (mAggregationServices[i] != NULL)
             mAggregationServices[i]->stop();
@@ -160,7 +175,7 @@ AggregateManager::~AggregateManager() {
 
 
     //Shutdown the upload threads.
-    for (uint8 i = 0; i < NUM_UPLOAD_THREADS; i++) {
+    for (uint8 i = 0; i < mNumUploadThreads; i++) {
       if (mUploadThreads[i] != NULL) {
         if (mUploadServices[i] != NULL)
             mUploadServices[i]->stop();
@@ -276,11 +291,13 @@ void AggregateManager::addChild(const UUID& uuid, const UUID& child_uuid) {
     AGG_LOG(detailed, "addChild:  "  << uuid.toString() << " CHILD " << child_uuid.toString() << "\n");
     mRawAggregateUpdates++;
 
-    mAggregationStrands[0]->post(
+    if (mAggregationStrands[0]) {
+      mAggregationStrands[0]->post(
         Duration::seconds(5),
         std::tr1::bind(&AggregateManager::queueDirtyAggregates, this, mAggregateGenerationStartTime),
         "AggregateManager::queueDirtyAggregates"
-    );
+      );
+    }
   }
 }
 
@@ -301,11 +318,13 @@ void AggregateManager::iRemoveChild(const UUID& uuid, const UUID& child_uuid) {
 
     mAggregateGenerationStartTime =  Timer::now();
 
-    mAggregationStrands[0]->post(
+    if (mAggregationStrands[0]) {
+      mAggregationStrands[0]->post(
         Duration::seconds(5),
         std::tr1::bind(&AggregateManager::queueDirtyAggregates, this, mAggregateGenerationStartTime),
         "AggregateManager::queueDirtyAggregates"
-    );
+      );
+    }
   }
 
 }
@@ -340,11 +359,13 @@ void AggregateManager::generateAggregateMesh(const UUID& uuid, AggregateObjectPt
 
   addDirtyAggregates(uuid);
 
-  mAggregationStrands[0]->post(
-        Duration::seconds(5),
-        std::tr1::bind(&AggregateManager::queueDirtyAggregates, this, Timer::now()),
-        "AggregateManager::queueDirtyAggregates"
+  if (mAggregationStrands[0]) {
+    mAggregationStrands[0]->post(
+      Duration::seconds(5),
+      std::tr1::bind(&AggregateManager::queueDirtyAggregates, this, Timer::now()),
+      "AggregateManager::queueDirtyAggregates"
     );
+  }
 }
 
 
@@ -733,7 +754,7 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
   );
 
   //... and now create the collada file, upload to the CDN and update LOC.
-  mUploadStrands[rand() % NUM_UPLOAD_THREADS]->post(
+  mUploadStrands[rand() % mNumUploadThreads]->post(
     std::tr1::bind(&AggregateManager::uploadAggregateMesh, this, agg_mesh, aggObject, textureSet, 0, Time::null()),
           "AggregateManager::uploadAggregateMesh"
       );
@@ -1001,14 +1022,14 @@ void AggregateManager::handleUploadFinished(Transfer::UploadRequestPtr request, 
       AGG_LOG(error, "Failure was retry attempt # " << retryAttempt);
       //Retry uploading up to 5 times.
       if (retryAttempt < 5) {
-	mUploadStrands[rand() % NUM_UPLOAD_THREADS]->post(
+	mUploadStrands[rand() % mNumUploadThreads]->post(
           std::tr1::bind(&AggregateManager::uploadAggregateMesh, this, agg_mesh, aggObject, textureSet, retryAttempt + 1, uploadStartTime),
 		  "AggregateManager::uploadAggregateMesh"
 		);
       }
       else if (retryAttempt < 10) {
        //Could not upload -- CDN might be overloaded, try again in 30 seconds.
-       mUploadStrands[rand() % NUM_UPLOAD_THREADS]->post(Duration::seconds(15),
+       mUploadStrands[rand() % mNumUploadThreads]->post(Duration::seconds(15),
          std::tr1::bind(&AggregateManager::uploadAggregateMesh, this, agg_mesh, aggObject, textureSet, retryAttempt + 1, uploadStartTime),
                   "AggregateManager::uploadAggregateMesh"
                 );
@@ -1016,7 +1037,7 @@ void AggregateManager::handleUploadFinished(Transfer::UploadRequestPtr request, 
       else if (retryAttempt < 15) {
         //Still cannot upload - just upload an empty mesh so remaining meshes higher up in the tree can be generated.
        MeshdataPtr m = MeshdataPtr(new Meshdata);
-        mUploadStrands[rand() % NUM_UPLOAD_THREADS]->post(Duration::seconds(15),
+        mUploadStrands[rand() % mNumUploadThreads]->post(Duration::seconds(15),
           std::tr1::bind(&AggregateManager::uploadAggregateMesh, this, m, aggObject, textureSet, retryAttempt + 1, uploadStartTime),
                   "AggregateManager::uploadAggregateMesh"
                 );
@@ -1285,8 +1306,8 @@ void AggregateManager::queueDirtyAggregates(Time postTime) {
 
     //Grab locks for all of the generation threads before proceeding.
     uint8 i = 0;
-    boost::mutex::scoped_lock queueLocks[NUM_GENERATION_THREADS];
-    for (uint8 i = 0; i < NUM_GENERATION_THREADS; i++) {
+    boost::mutex::scoped_lock queueLocks[MAX_NUM_GENERATION_THREADS];
+    for (uint8 i = 0; i < mNumGenerationThreads; i++) {
       queueLocks[i] = boost::mutex::scoped_lock(mObjectsByPriorityLocks[i]);
     }
 
@@ -1299,13 +1320,13 @@ void AggregateManager::queueDirtyAggregates(Time postTime) {
       if (aggObject->mTreeLevel >= 0) {
         mAggregatesQueued++;
         mObjectsByPriority[i][ aggObject->mNumObservers + (aggObject->mTreeLevel*0.001) ].push_back(aggObject);
-        i = (i+1)%NUM_GENERATION_THREADS;
+        i = (i+1) % mNumGenerationThreads;
       }
     }
 
     mDirtyAggregateObjects.clear();
 
-    for (i = 0; i<NUM_GENERATION_THREADS; i++) {
+    for (i = 0; i < mNumGenerationThreads; i++) {
       mAggregationStrands[i]->post(
           std::tr1::bind(&AggregateManager::generateMeshesFromQueue, this, i),
           "AggregateManager::generateMeshesFromQueue"
@@ -1465,11 +1486,13 @@ void AggregateManager::removeStaleLeaves() {
   }
 
 
-  mAggregationStrands[0]->post(
-        Duration::seconds(60),
-        std::tr1::bind(&AggregateManager::removeStaleLeaves, this),
-        "AggregateManager::removeStaleLeaves"
-  );
+  if (mAggregationStrands[0]) {
+    mAggregationStrands[0]->post(
+      Duration::seconds(60),
+      std::tr1::bind(&AggregateManager::removeStaleLeaves, this),
+      "AggregateManager::removeStaleLeaves"
+    );
+  }
 
 }
 

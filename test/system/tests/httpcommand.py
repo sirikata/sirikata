@@ -248,7 +248,7 @@ class OHObjectTest(OHHttpCommandTest):
         self.assertIsNotNone(response)
         self.assertIsIn('error', response)
         #  Invalid request: ID that doesn't exist
-        response = self.command(self.service_name, 'oh.objects.destroy', { 'object' : 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaaa' })
+        response = self.command(self.service_name, 'oh.objects.destroy', { 'object' : 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' })
         self.assertIsNotNone(response)
         self.assertIsIn('error', response)
 

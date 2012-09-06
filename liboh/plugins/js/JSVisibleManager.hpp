@@ -113,7 +113,7 @@ private:
 
     JSCtx* mCtx;
 
-    typedef std::map<SpaceObjectReference, JSAggregateVisibleDataWPtr > SporefProxyMap;
+    typedef std::tr1::unordered_map<SpaceObjectReference, JSAggregateVisibleDataWPtr, SpaceObjectReference::Hasher > SporefProxyMap;
     typedef SporefProxyMap::iterator SporefProxyMapIter;
     SporefProxyMap mProxies;
 

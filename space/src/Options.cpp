@@ -109,6 +109,8 @@ void InitSpaceOptions() {
         .addOption(new OptionValue(OPT_AGGMGR_ACCESS_KEY, "", Sirikata::OptionValueType<String>(), "AggregateManager upload OAuth access key"))
         .addOption(new OptionValue(OPT_AGGMGR_ACCESS_SECRET, "", Sirikata::OptionValueType<String>(), "AggregateManager upload OAuth access secret"))
         .addOption(new OptionValue(OPT_AGGMGR_USERNAME, "", Sirikata::OptionValueType<String>(), "AggregateManager upload CDN username"))
+        .addOption(new OptionValue(OPT_AGGMGR_GEN_THREADS, "4", Sirikata::OptionValueType<uint16>(), "Number of AggregateManager mesh generation threads"))
+        .addOption(new OptionValue(OPT_AGGMGR_UPLOAD_THREADS, "8", Sirikata::OptionValueType<uint16>(), "Number of AggregateManager mesh upload threads"))
         .addOption(new OptionValue(OPT_AGGMGR_SKIP_UPLOAD, "false", Sirikata::OptionValueType<bool>(), "If true, skips uploading but pretends it was always successful. Useful for testing without pushing data to the CDN."))
 
       ;
