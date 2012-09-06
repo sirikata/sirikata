@@ -11,6 +11,25 @@ using namespace Sirikata;
 
 class UUIDTest : public CxxTest::TestSuite {
 public:
+    void testParse() {
+        // This is what we really mean by human readable
+        UUID good1("01234567-8901-2345-6789-012345678901", UUID::HumanReadable());
+        TS_ASSERT_EQUALS(good1.toString(), "01234567-8901-2345-6789-012345678901");
+
+        // We can actually parse this as "human readable", but only test that we
+        // can parse it as hex string
+        UUID good2("01234567890123456789012345678901", UUID::HexString());
+        TS_ASSERT_EQUALS(good2.toString(), "01234567-8901-2345-6789-012345678901");
+    }
+
+    void testInvalidParse() {
+        UUID bogus1("not a uuid", UUID::HumanReadable());
+        TS_ASSERT_EQUALS(bogus1, UUID::null());
+
+        UUID bogus2("", UUID::HumanReadable());
+        TS_ASSERT_EQUALS(bogus2, UUID::null());
+    }
+
     void testNoDuplicates() {
         // Generate a bunch of UUIDs and verify we don't see any duplicates. Not
         // a guarantee, but a good sanity check since we had a broken UUID

@@ -62,6 +62,9 @@ UUID::UUID(const std::string & other,HumanReadable ) {
     catch(std::invalid_argument exc) {
         mData.initialize(UUID::null().mData.begin(), UUID::null().mData.end());
     }
+    catch(std::runtime_error exc) {
+        mData.initialize(UUID::null().mData.begin(), UUID::null().mData.end());
+    }
 }
 UUID::UUID(const std::string & other, HexString) {
     assert(other.size() == 2*static_size);
