@@ -39,6 +39,7 @@
 #include <sirikata/core/service/Service.hpp>
 #include <sirikata/core/util/Timer.hpp>
 #include <sirikata/core/service/Context.hpp>
+#include <sirikata/core/network/IOTimer.hpp>
 
 #include <sirikata/core/network/Message.hpp>
 #include <sirikata/core/network/ObjectMessage.hpp>
@@ -414,6 +415,77 @@ private:
 
   bool mInSendingMode;
 
+
+  // We can schedule servicing from multiple threads, so we need to
+  // lock protect this data.
+  boost::mutex mSchedulingMutex;
+  // One timer to track servicing. Only one servicing should be scheduled at any
+  // time. Scheduling servicing only does something if nothing is scheduled yet
+  // or if the time it's scheduled for is too late, in which case we update the
+  // timer.
+  Network::IOTimerPtr mServiceTimer;
+  // Sometimes we do servicing directly, i.e. just a post. We need to
+  // track this to make sure we don't double-schedule because the
+  // timer expiry won't be meaningful in that case
+  bool mIsAsyncServicing;
+  // We need to keep a strong reference to ourselves while we're waiting for
+  // servicing. We'll also use this as an indicator of whether servicing is
+  // currently scheduled.
+  ConnectionPtr mServiceStrongRef;
+  // Schedules servicing to occur after the given amount of time.
+  void scheduleService() {
+      scheduleService(Duration::zero());
+  }
+  void scheduleService(const Duration& after) {
+      boost::mutex::scoped_lock lock(mSchedulingMutex);
+
+      bool needs_scheduling = false;
+      if (!mServiceStrongRef) {
+          needs_scheduling = true;
+      }
+      else if(!mIsAsyncServicing && mServiceTimer->expiresFromNow() > after) {
+          needs_scheduling = true;
+          uint32 ncancelled = mServiceTimer->cancel();
+          // It's possible it fired while we were trying to
+          // cancel. Just ignore it in that case since the handler
+          // that ran (or will run very, very soon) is good enough.
+          if (ncancelled == 0)
+              needs_scheduling = false;
+      }
+
+      if (needs_scheduling) {
+          mServiceStrongRef = mWeakThis.lock();
+          assert(mServiceStrongRef);
+          if (after == Duration::zero()) {
+              mIsAsyncServicing = true;
+              getContext()->mainStrand->post(
+                  std::tr1::bind(&Connection<EndPointType>::serviceConnectionNoReturn, this),
+                  "Connection<EndPointType>::serviceConnectionNoReturn"
+              );
+          }
+          else {
+              mServiceTimer->wait(after);
+          }
+      }
+  }
+  // Called when servicing is starting to clear out state and allow
+  // the next scheduling. Returns the
+  ConnectionPtr startingService() {
+      // Need to do some basic bookkeeping that makes sure that a) we
+      // have a proper shared_ptr to ourselves, b) we'll hold onto it
+      // for the duration of this call and c) we clear out our
+      // scheduled servicing time so calls to schedule servicing will
+      // work
+      boost::mutex::scoped_lock lock(mSchedulingMutex);
+      ConnectionPtr conn = mServiceStrongRef;
+      assert(conn);
+      // Just clearing the strong ref is enough to let someone else schedule
+      // servicing.
+      mServiceStrongRef.reset();
+      // If this was a plain old async call, make sure we unmark it
+      mIsAsyncServicing = false;
+      return conn;
+  }
 private:
 
   Connection(ConnectionVariables<EndPointType>* sstConnVars,
@@ -421,6 +493,7 @@ private:
              EndPoint<EndPointType> remoteEndPoint)
     : mLocalEndPoint(localEndPoint), mRemoteEndPoint(remoteEndPoint),
       mSSTConnVars(sstConnVars),
+      mDatagramLayer(sstConnVars->getDatagramLayer(localEndPoint.endPoint)),
       mState(CONNECTION_DISCONNECTED),
       mRemoteChannelID(0), mLocalChannelID(1), mTransmitSequenceNumber(1),
       mLastReceivedSequenceNumber(1),
@@ -429,10 +502,16 @@ private:
       MAX_QUEUED_SEGMENTS(3000),
       CC_ALPHA(0.8), mLastTransmitTime(Time::null()),
       mNumInitialRetransmissionAttempts(0),
-      mInSendingMode(true)
+      mInSendingMode(true),
+      mServiceTimer(
+          Network::IOTimer::create(
+              getContext()->mainStrand,
+              std::tr1::bind(&Connection<EndPointType>::serviceConnectionNoReturn, this)
+          )
+      ),
+      mIsAsyncServicing(false),
+      mServiceStrongRef() // Should start NULL
   {
-      mDatagramLayer = sstConnVars->getDatagramLayer(localEndPoint.endPoint);
-
       mDatagramLayer->listenOn(
           localEndPoint,
           std::tr1::bind(
@@ -468,11 +547,13 @@ private:
     return mDatagramLayer->context();
   }
 
-  void serviceConnectionNoReturn(std::tr1::shared_ptr<Connection<EndPointType> > conn) {
-      serviceConnection(conn);
+  void serviceConnectionNoReturn() {
+      serviceConnection();
   }
 
-  bool serviceConnection(std::tr1::shared_ptr<Connection<EndPointType> > conn) {
+  bool serviceConnection() {
+      std::tr1::shared_ptr<Connection<EndPointType> > conn = startingService();
+
     const Time curTime = Timer::now();
 
     boost::mutex::scoped_lock lock(mOutstandingSegmentsMutex);
@@ -545,10 +626,7 @@ private:
       }
 
       if (!mInSendingMode || mState == CONNECTION_PENDING_CONNECT) {
-        getContext()->mainStrand->post(Duration::microseconds(mRTOMicroseconds*pow(2.0,mNumInitialRetransmissionAttempts)),
-            std::tr1::bind(&Connection<EndPointType>::serviceConnectionNoReturn, this, mWeakThis.lock()),
-            "Connection<EndPointType>::serviceConnectionNoReturn"
-        );
+          scheduleService(Duration::microseconds(mRTOMicroseconds*pow(2.0,mNumInitialRetransmissionAttempts)));
       }
     }
     else {
@@ -575,10 +653,7 @@ private:
 
       mInSendingMode = true;
 
-      getContext()->mainStrand->post(Duration::microseconds(1),
-          std::tr1::bind(&Connection<EndPointType>::serviceConnectionNoReturn, this, mWeakThis.lock()),
-          "Connection<EndPointType>::serviceConnectionNoReturn"
-      );
+      scheduleService(Duration::microseconds(1));
     }
 
     return true;
@@ -779,10 +854,7 @@ private:
                                    new ChannelSegment(data, length, mTransmitSequenceNumber, mLastReceivedSequenceNumber) ) );
 
         if (mInSendingMode) {
-          getContext()->mainStrand->post(Duration::milliseconds(1.0),
-              std::tr1::bind(&Connection::serviceConnectionNoReturn, this, mWeakThis.lock()),
-              "Connection::serviceConnectionNoReturn"
-          );
+            scheduleService(Duration::microseconds(1));
         }
       }
     }
@@ -854,14 +926,7 @@ private:
           }
 
           mInSendingMode = true;
-
-          std::tr1::shared_ptr<Connection<EndPointType> > conn = mWeakThis.lock();
-          if (conn) {
-            getContext()->mainStrand->post(
-                std::tr1::bind(&Connection<EndPointType>::serviceConnectionNoReturn, this, conn),
-                "Connection<EndPointType>::serviceConnectionNoReturn"
-            );
-          }
+          scheduleService();
 
           if (rand() % mCwnd == 0)  {
             mCwnd += 1;
