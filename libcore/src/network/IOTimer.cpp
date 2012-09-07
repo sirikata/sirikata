@@ -142,8 +142,8 @@ IOTimer::~IOTimer() {
     if (mStrand != NULL) chk.serializedExit();
 }
 
-void IOTimer::wait(const Duration &num_seconds) {
-    mTimer->expires_from_now(boost::posix_time::microseconds(num_seconds.toMicroseconds()));
+uint32 IOTimer::wait(const Duration &num_seconds) {
+    uint32 ncancelled = mTimer->expires_from_now(boost::posix_time::microseconds(num_seconds.toMicroseconds()));
     IOTimerWPtr weakThisPtr(this->shared_from_this());
     if (mStrand == NULL) {
         mTimer->async_wait(
@@ -167,22 +167,24 @@ void IOTimer::wait(const Duration &num_seconds) {
             )
         );
     }
+    return ncancelled;
 }
 
-void IOTimer::wait(const Duration &num_seconds, const IOCallback& cb) {
+uint32 IOTimer::wait(const Duration &num_seconds, const IOCallback& cb) {
     setCallback(cb);
-    wait(num_seconds);
+    return wait(num_seconds);
 }
 
 void IOTimer::setCallback(const IOCallback& cb) {
     mFunc = cb;
 }
 
-void IOTimer::cancel() {
+uint32 IOTimer::cancel() {
     if (mStrand != NULL) chk.serializedEnter();
     mCanceled++;
-    mTimer->cancel();
+    uint32 ncancelled = mTimer->cancel();
     if (mStrand != NULL) chk.serializedExit();
+    return ncancelled;
 }
 Duration IOTimer::expiresFromNow() {
     return Duration::microseconds(mTimer->expires_from_now().total_microseconds());

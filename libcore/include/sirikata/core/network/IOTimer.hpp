@@ -143,19 +143,22 @@ public:
 
     /** Wait for the specified duration, then call the previously set callback.
      *  \param waitFor the amount of time to wait.
+     *  \returns the number of cancelled handlers, if any
      */
-    void wait(const Duration &waitFor);
+    uint32 wait(const Duration &waitFor);
 
     /** Wait for the specified duration, then call the previously set callback.
      *  \param waitFor the amount of time to wait.
      *  \param cb the callback to set for this, and future, timeout events.
+     *  \returns the number of cancelled handlers, if any
      */
-    void wait(const Duration &waitFor, const IOCallback& cb);
+    uint32 wait(const Duration &waitFor, const IOCallback& cb);
 
     /** Cancel the current timer.  This will cancel the callback that would
      *  have resulted when the timer expired.
+     *  \returns the number of cancelled handlers, if any
      */
-    void cancel();
+    uint32 cancel();
     Duration expiresFromNow();
 };
 
