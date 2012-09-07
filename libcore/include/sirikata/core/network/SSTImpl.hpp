@@ -1627,6 +1627,7 @@ public:
     typedef std::tr1::shared_ptr<Stream> Ptr;
     typedef Ptr StreamPtr;
     typedef Connection<EndPointType> ConnectionType;
+    typedef std::tr1::shared_ptr<ConnectionType> ConnectionPtr;
     typedef EndPoint<EndPointType> EndpointType;
 
     typedef CallbackTypes<EndPointType> CBTypes;
@@ -1752,13 +1753,7 @@ public:
       mCurrentQueueLength += len;
       mNumBytesSent += len;
 
-
-      std::tr1::shared_ptr<Connection<EndPointType> > conn =  mConnection.lock();
-      if (conn)
-        getContext()->mainStrand->post(Duration::seconds(0.01),
-            std::tr1::bind(&Stream<EndPointType>::serviceStreamNoReturn, this, mWeakThis.lock(), conn),
-            "Stream<EndPointType>::serviceStreamNoReturn"
-        );
+      scheduleService(Duration::seconds(0.01));
 
       return len;
     }
@@ -1781,14 +1776,7 @@ public:
 	count++;
       }
 
-
-      std::tr1::shared_ptr<Connection<EndPointType> > conn =  mConnection.lock();
-      if (conn)
-        getContext()->mainStrand->post(Duration::seconds(0.01),
-            std::tr1::bind(&Stream<EndPointType>::serviceStreamNoReturn, this, mWeakThis.lock(), conn),
-            "Stream<EndPointType>::serviceStreamNoReturn"
-        );
-
+      scheduleService(Duration::seconds(0.01));
       return currOffset;
     }
 
@@ -1872,12 +1860,7 @@ public:
     }
     else {
       mState = PENDING_DISCONNECT;
-      if (conn) {
-          getContext()->mainStrand->post(
-              std::tr1::bind(&Stream<EndPointType>::serviceStreamNoReturn, this, mWeakThis.lock(), conn),
-              "Stream<EndPointType>::serviceStreamNoReturn"
-          );
-      }
+      scheduleService();
       return true;
     }
   }
@@ -2003,7 +1986,16 @@ private:
     mStreamReturnCallback(cb),
     mConnected (false),
     MAX_INIT_RETRANSMISSIONS(5),
-    mSSTConnVars(sstConnVars)
+    mSSTConnVars(sstConnVars),
+      mServiceTimer(
+          Network::IOTimer::create(
+              getContext()->mainStrand,
+              std::tr1::bind(&Stream<EndPointType>::serviceStreamNoReturn, this)
+          )
+      ),
+      mIsAsyncServicing(false),
+      mServiceStrongRef(), // Should start NULL
+      mServiceStrongConnRef() // Should start NULL
   {
     mInitialData = NULL;
     mInitialDataLength = 0;
@@ -2132,8 +2124,8 @@ private:
     streamReturnCallbackMap.erase(c->localEndPoint());
   }
 
-  void serviceStreamNoReturn(std::tr1::shared_ptr<Stream<EndPointType> > strm, std::tr1::shared_ptr<Connection<EndPointType> > conn) {
-      serviceStream(strm, conn);
+  void serviceStreamNoReturn() {
+      serviceStream();
   }
 
   /* Returns false only if this is the root stream of a connection and it was
@@ -2141,7 +2133,11 @@ private:
      be closed and the 'false' return value is an indication of this for
      the underlying connection. */
 
-  bool serviceStream(std::tr1::shared_ptr<Stream<EndPointType> > strm, std::tr1::shared_ptr<Connection<EndPointType> > conn) {
+  bool serviceStream() {
+      std::pair<StreamPtr, ConnectionPtr> refs = startServicing();
+      StreamPtr strm = refs.first;
+      ConnectionPtr conn = refs.second;
+
     assert(strm.get() == this);
 
     const Time curTime = Timer::now();
@@ -2199,12 +2195,7 @@ private:
         // Schedule another servicing immediately in case any other operations
         // should occur, e.g. sending data which was added after the initial
         // connection request.
-        std::tr1::shared_ptr<Connection<EndPointType> > conn =  mConnection.lock();
-        if (conn)
-            getContext()->mainStrand->post(
-                std::tr1::bind(&Stream<EndPointType>::serviceStreamNoReturn, this, mWeakThis.lock(), conn),
-                "Stream<EndPointType>::serviceStreamNoReturn"
-            );
+        scheduleService();
       }
     }
     else {
@@ -2269,12 +2260,7 @@ private:
 	}
 
         if (sentSomething) {
-          std::tr1::shared_ptr<Connection<EndPointType> > conn =  mConnection.lock();
-          if (conn)
-            getContext()->mainStrand->post(Duration::microseconds(2*mStreamRTOMicroseconds),
-                std::tr1::bind(&Stream<EndPointType>::serviceStreamNoReturn, this, mWeakThis.lock(), conn),
-                "Stream<EndPointType>::serviceStreamNoReturn"
-            );
+            scheduleService(Duration::microseconds(2*mStreamRTOMicroseconds));
         }
       }
     }
@@ -2499,13 +2485,7 @@ private:
     // this though since mTransmitWindowSize might not be 0 even if it
     // was 'full' since the next packet couldn't fit on.
     if (acked_msgs && !mQueuedBuffers.empty()) {
-        std::tr1::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
-        if (conn) {
-            getContext()->mainStrand->post(
-                std::tr1::bind(&Stream<EndPointType>::serviceStreamNoReturn, this, mWeakThis.lock(), conn),
-                "Stream<EndPointType>::serviceStreamNoReturn"
-            );
-        }
+        scheduleService();
     }
   }
 
@@ -2561,12 +2541,7 @@ private:
 
     conn->sendData( buffer.data(), buffer.size(), false );
 
-    getContext()->mainStrand->post(
-        Duration::microseconds(pow(2.0,mNumInitRetransmissions)*mStreamRTOMicroseconds),
-        std::tr1::bind(&Stream<EndPointType>::serviceStreamNoReturn, this, mWeakThis.lock(), conn),
-        "Stream<EndPointType>::serviceStreamNoReturn"
-    );
-
+    scheduleService(Duration::microseconds(pow(2.0,mNumInitRetransmissions)*mStreamRTOMicroseconds));
   }
 
   void sendAckPacket() {
@@ -2694,6 +2669,85 @@ private:
   EndPoint <EndPointType> mLocalEndPoint;
   EndPoint <EndPointType> mRemoteEndPoint;
 
+
+  // We can schedule servicing from multiple threads, so we need to
+  // lock protect this data.
+  boost::mutex mSchedulingMutex;
+  // One timer to track servicing. Only one servicing should be scheduled at any
+  // time. Scheduling servicing only does something if nothing is scheduled yet
+  // or if the time it's scheduled for is too late, in which case we update the
+  // timer.
+  Network::IOTimerPtr mServiceTimer;
+  // Sometimes we do servicing directly, i.e. just a post. We need to
+  // track this to make sure we don't double-schedule because the
+  // timer expiry won't be meaningful in that case
+  bool mIsAsyncServicing;
+  // We need to keep a strong reference to ourselves while we're waiting for
+  // servicing. We'll also use this as an indicator of whether servicing is
+  // currently scheduled.
+  StreamPtr mServiceStrongRef;
+  ConnectionPtr mServiceStrongConnRef;
+  // Schedules servicing to occur after the given amount of time.
+  void scheduleService() {
+      scheduleService(Duration::zero());
+  }
+  void scheduleService(const Duration& after) {
+      std::tr1::shared_ptr<Connection<EndPointType> > conn =  mConnection.lock();
+      if (!conn) return;
+
+      boost::mutex::scoped_lock lock(mSchedulingMutex);
+
+      bool needs_scheduling = false;
+      if (!mServiceStrongRef) {
+          needs_scheduling = true;
+      }
+      else if(!mIsAsyncServicing && mServiceTimer->expiresFromNow() > after) {
+          needs_scheduling = true;
+          uint32 ncancelled = mServiceTimer->cancel();
+          // It's possible it fired while we were trying to
+          // cancel. Just ignore it in that case since the handler
+          // that ran (or will run very, very soon) is good enough.
+          if (ncancelled == 0)
+              needs_scheduling = false;
+      }
+
+      if (needs_scheduling) {
+          mServiceStrongRef = mWeakThis.lock();
+          assert(mServiceStrongRef);
+          mServiceStrongConnRef = conn;
+          if (after == Duration::zero()) {
+              mIsAsyncServicing = true;
+              getContext()->mainStrand->post(
+                  std::tr1::bind(&Stream<EndPointType>::serviceStreamNoReturn, this),
+                  "Stream<EndPointType>::serviceStreamNoReturn"
+              );
+          }
+          else {
+              mServiceTimer->wait(after);
+          }
+      }
+  }
+  std::pair<StreamPtr, ConnectionPtr> startServicing() {
+      // Need to do some basic bookkeeping that makes sure that a) we
+      // have a proper shared_ptr to ourselves, b) we'll hold onto it
+      // for the duration of this call and c) we clear out our
+      // scheduled servicing time so calls to schedule servicing will
+      // work
+      boost::mutex::scoped_lock lock(mSchedulingMutex);
+      StreamPtr strm = mServiceStrongRef;
+      ConnectionPtr conn = mServiceStrongConnRef;
+      assert(strm);
+      assert(conn);
+      // Just clearing the strong ref is enough to let someone else schedule
+      // servicing.
+      mServiceStrongRef.reset();
+      mServiceStrongConnRef.reset();
+      // Make sure if this was a direct async post that we don't
+      // still have it marked as such.
+      mIsAsyncServicing = false;
+
+      return std::make_pair(strm, conn);
+  }
 };
 
 
