@@ -192,6 +192,7 @@ private:
   const String mCDNUsername;
   Duration mModelTTL;
   Poller* mCDNKeepAlivePoller;
+  const String mLocalPath;
   bool mSkipUpload;
 
   //CDN upload threads' variables
@@ -283,7 +284,23 @@ private:
   void commandStats(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
 public:
 
-  AggregateManager( LocationService* loc, Transfer::OAuthParamsPtr oauth, const String& username, uint16 n_gen_threads, uint16 n_upload_threads, bool skip_upload);
+  /** Create an AggregateManager.
+   *
+   *  \oauth OAuth upload parameters for the CDN. If omitted, uploads will not
+   *         be attempted
+   *  \username User name for account your OAuth params let you upload to on the the CDN
+   *  \param local_path if non-empty and OAuth values are not specified,
+   *         generate local meshes that create file:/// URLs. Useful to avoid
+   *         uploading to the CDN, but in distributed systems will obviously
+   *         cause failures to download meshes on other nodes.
+   *  \param n_gen_threads number of threads to use for creating aggregate meshes
+   *  \param n_upload_threads number of threads to use for uploading
+   *  \param skip_upload if true, skip the upload phase, but pretend it was
+   *         successful. Useful for testing, but since the mesh cache is
+   *         limited, this will eventually cause later aggregates to fail to be
+   *         generated
+   */
+  AggregateManager( LocationService* loc, Transfer::OAuthParamsPtr oauth, const String& username, const String& local_path, uint16 n_gen_threads, uint16 n_upload_threads, bool skip_upload);
 
   ~AggregateManager();
 

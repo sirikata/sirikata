@@ -50,6 +50,8 @@
 
 #include <sirikata/core/command/Commander.hpp>
 
+#include <boost/filesystem.hpp>
+
 #if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS
 #define snprintf _snprintf
 #endif
@@ -66,13 +68,14 @@ namespace Sirikata {
 
 using namespace Mesh;
 
-AggregateManager::AggregateManager(LocationService* loc, Transfer::OAuthParamsPtr oauth, const String& username, uint16 n_gen_threads, uint16 n_upload_threads, bool skip_upload)
+AggregateManager::AggregateManager(LocationService* loc, Transfer::OAuthParamsPtr oauth, const String& username, const String& local_path, uint16 n_gen_threads, uint16 n_upload_threads, bool skip_upload)
  : mNumGenerationThreads(std::min(n_gen_threads, (uint16)MAX_NUM_GENERATION_THREADS)),
     mLoc(loc),
     mOAuth(oauth),
     mCDNUsername(username),
     mModelTTL(Duration::minutes(60)),
     mCDNKeepAlivePoller(NULL),
+    mLocalPath(local_path),
     mSkipUpload(skip_upload),
     mNumUploadThreads(std::min(n_upload_threads, (uint16)MAX_NUM_UPLOAD_THREADS)),
     mRawAggregateUpdates(0),
@@ -946,10 +949,16 @@ void AggregateManager::uploadAggregateMesh(Mesh::MeshdataPtr agg_mesh,
       //the remainder of the upload process is handled in handleUploadFinished.
   }
   else {
-      cdnMeshName = "http://sns12.cs.princeton.edu:9080/aggregate_meshes/" + localMeshName;
+      String modelFilename;
+      if (!mLocalPath.empty()) {
+        modelFilename = (boost::filesystem::path(mLocalPath) / localMeshName).string();
+        cdnMeshName = "file://" + modelFilename;
+      }
+      else {
+        modelFilename = std::string("/disk/local/tazim/aggregate_meshes/") + localMeshName;
+        cdnMeshName = "http://sns12.cs.princeton.edu:9080/aggregate_meshes/" + localMeshName;
+      }
       agg_mesh->uri = cdnMeshName;
-
-      String modelFilename = std::string("/disk/local/tazim/aggregate_meshes/") + localMeshName;
       std::ofstream model_fs_stream(modelFilename.c_str(), std::ofstream::out | std::ofstream::binary);
       if (model_fs_stream) {
         model_fs_stream.write(&serialized[0], serialized.size());
@@ -964,9 +973,11 @@ void AggregateManager::uploadAggregateMesh(Mesh::MeshdataPtr agg_mesh,
           return;
       }
 
-      //Upload to web server
-      std::string cmdline = std::string("./upload_to_cdn.sh ") +  modelFilename;
-      system( cmdline.c_str()  );
+      //Upload to web server ("upload" for local doesn't require doing anything
+      if (mLocalPath.empty()) {
+        std::string cmdline = std::string("./upload_to_cdn.sh ") +  modelFilename;
+        system( cmdline.c_str()  );
+      }
 
       //Update loc
       mLoc->context()->mainStrand->post(
