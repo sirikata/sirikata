@@ -63,7 +63,6 @@ void handle_signal(int signum) {
       case SIGINT: sigtype = INT; validSignal=true; break;
 #ifndef _WIN32
       case SIGHUP: sigtype = HUP; validSignal=true; break;
-      case SIGABRT: sigtype = ABORT; validSignal=true; break;
 #endif
       case SIGTERM: sigtype = TERM; validSignal=true; break;
 #ifndef _WIN32
@@ -90,7 +89,6 @@ HandlerID registerHandler(Handler handler) {
 #ifndef _WIN32
         signal(SIGHUP, handle_signal);
 #endif
-        signal(SIGABRT, handle_signal);
         signal(SIGTERM, handle_signal);
 #ifndef _WIN32
         signal(SIGKILL, handle_signal);
@@ -108,7 +106,6 @@ void unregisterHandler(HandlerID& handler) {
     if (sSignalHandlers.empty()) {
         signal(SIGINT, SIG_DFL);
         signal(SIGHUP, SIG_DFL);
-        signal(SIGABRT, SIG_DFL);
         signal(SIGTERM, SIG_DFL);
         signal(SIGKILL, SIG_DFL);
     }
