@@ -87,6 +87,7 @@
 #define OPT_AGGMGR_ACCESS_SECRET     "aggmgr.access-secret"
 #define OPT_AGGMGR_USERNAME          "aggmgr.username"
 #define OPT_AGGMGR_LOCAL_PATH        "aggmgr.local-path"
+#define OPT_AGGMGR_LOCAL_URL_PREFIX  "aggmgr.local-url-prefix"
 #define OPT_AGGMGR_GEN_THREADS       "aggmgr.gen-threads"
 #define OPT_AGGMGR_UPLOAD_THREADS    "aggmgr.upload-threads"
 #define OPT_AGGMGR_SKIP_UPLOAD       "aggmgr.skip-upload"

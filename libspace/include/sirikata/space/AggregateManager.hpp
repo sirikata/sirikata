@@ -193,6 +193,7 @@ private:
   Duration mModelTTL;
   Poller* mCDNKeepAlivePoller;
   const String mLocalPath;
+  const String mLocalURLPrefix;
   bool mSkipUpload;
 
   //CDN upload threads' variables
@@ -293,6 +294,11 @@ public:
    *         generate local meshes that create file:/// URLs. Useful to avoid
    *         uploading to the CDN, but in distributed systems will obviously
    *         cause failures to download meshes on other nodes.
+   *  \param local_url_prefix used in conjunction with local_path. If provided,
+   *         specifies the URL prefix to prepend to the filename to get the full
+   *         mesh URL, allowing you to publicize the meshes by using something
+   *         other than a file:// URL, e.g. if you run a web server on your
+   *         host.
    *  \param n_gen_threads number of threads to use for creating aggregate meshes
    *  \param n_upload_threads number of threads to use for uploading
    *  \param skip_upload if true, skip the upload phase, but pretend it was
@@ -300,7 +306,7 @@ public:
    *         limited, this will eventually cause later aggregates to fail to be
    *         generated
    */
-  AggregateManager( LocationService* loc, Transfer::OAuthParamsPtr oauth, const String& username, const String& local_path, uint16 n_gen_threads, uint16 n_upload_threads, bool skip_upload);
+  AggregateManager( LocationService* loc, Transfer::OAuthParamsPtr oauth, const String& username, const String& local_path, const String& local_url_prefix, uint16 n_gen_threads, uint16 n_upload_threads, bool skip_upload);
 
   ~AggregateManager();
 

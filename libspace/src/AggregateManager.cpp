@@ -68,7 +68,7 @@ namespace Sirikata {
 
 using namespace Mesh;
 
-AggregateManager::AggregateManager(LocationService* loc, Transfer::OAuthParamsPtr oauth, const String& username, const String& local_path, uint16 n_gen_threads, uint16 n_upload_threads, bool skip_upload)
+AggregateManager::AggregateManager(LocationService* loc, Transfer::OAuthParamsPtr oauth, const String& username, const String& local_path, const String& local_url_prefix, uint16 n_gen_threads, uint16 n_upload_threads, bool skip_upload)
  : mNumGenerationThreads(std::min(n_gen_threads, (uint16)MAX_NUM_GENERATION_THREADS)),
     mLoc(loc),
     mOAuth(oauth),
@@ -76,6 +76,7 @@ AggregateManager::AggregateManager(LocationService* loc, Transfer::OAuthParamsPt
     mModelTTL(Duration::minutes(60)),
     mCDNKeepAlivePoller(NULL),
     mLocalPath(local_path),
+    mLocalURLPrefix(local_url_prefix),
     mSkipUpload(skip_upload),
     mNumUploadThreads(std::min(n_upload_threads, (uint16)MAX_NUM_UPLOAD_THREADS)),
     mRawAggregateUpdates(0),
@@ -952,7 +953,10 @@ void AggregateManager::uploadAggregateMesh(Mesh::MeshdataPtr agg_mesh,
       String modelFilename;
       if (!mLocalPath.empty()) {
         modelFilename = (boost::filesystem::path(mLocalPath) / localMeshName).string();
-        cdnMeshName = "file://" + modelFilename;
+        if (!mLocalURLPrefix.empty())
+          cdnMeshName = mLocalURLPrefix + localMeshName;
+        else
+          cdnMeshName = "file://" + modelFilename;
       }
       else {
         modelFilename = std::string("/disk/local/tazim/aggregate_meshes/") + localMeshName;
