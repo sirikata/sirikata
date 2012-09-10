@@ -1201,9 +1201,13 @@ void SessionManager::handleSessionMessageConnectResponseRedirect(ServerID from_s
     // This only applies to us if:
     // 1. Object ID exists
     // 2. Connecting to this server (migrating doesn't make sense, shouldn't get redirect)
+    // 3. Valid seqno. We can end up with multiple redirect responses because of
+    // long latencies causing a retry, then both end up getting responses. The
+    // first would have reset the seqno
     // 3. Matching session ID
     if (!mObjectConnections.exists(sporef_obj) ||
         mObjectConnections.getConnectingToServer(sporef_obj) != from_server ||
+        !mObjectConnections.validSeqno(sporef_obj) ||
         mObjectConnections.getSeqno(sporef_obj) != seqno)
     {
         SESSION_LOG(detailed, "Ignoring connection redirect response because matching object session couldn't be found. Response is probably just an outdated retry.");
@@ -1232,6 +1236,9 @@ void SessionManager::handleSessionMessageConnectResponseError(ServerID from_serv
     // 3. Matching session ID
     if (!mObjectConnections.exists(sporef_obj) ||
         !( mObjectConnections.getConnectingToServer(sporef_obj) == from_server || mObjectConnections.getMigratingToServer(sporef_obj) == from_server) ||
+        // Seqno should always be valid here because double errors messages
+        // (unlike double redirect messages) clear connectingTo server as well,
+        // which would make previous condition fail.
         mObjectConnections.getSeqno(sporef_obj) != seqno)
     {
         SESSION_LOG(detailed, "Ignoring connection error response because matching object session couldn't be found. Request is probably just an outdated retry.");
