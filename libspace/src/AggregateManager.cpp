@@ -1568,6 +1568,57 @@ void AggregateManager::localMeshUpdated(const UUID& uuid, bool agg, const String
   locinfo->mesh = newval;
 }
 
+void AggregateManager::replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc,
+                                                const TimedMotionQuaternion& orient,
+                                                const AggregateBoundingInfo& bounds, const String& mesh, const String& physics,
+                                                const String& zernike)
+{
+  boost::mutex::scoped_lock lock(mLocCacheMutex);
+  mLocationServiceCache.insertLocationInfo(uuid, std::tr1::shared_ptr<LocationInfo>(
+                                           new LocationInfo(loc.position(), bounds, orient.position(), mesh)));
+}
+
+void AggregateManager::replicaObjectRemoved(const UUID& uuid) {
+  boost::mutex::scoped_lock lock(mLocCacheMutex);
+  mLocationServiceCache.removeLocationInfo(uuid);
+}
+
+void AggregateManager::replicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) {
+  boost::mutex::scoped_lock lock(mLocCacheMutex);
+
+  std::tr1::shared_ptr<LocationInfo> locinfo = mLocationServiceCache.getLocationInfo(uuid);
+  if (!locinfo) return;
+
+  locinfo->currentPosition = newval.position();
+}
+
+void AggregateManager::replicaOrientationUpdated(const UUID& uuid, const TimedMotionQuaternion& newval) {
+  boost::mutex::scoped_lock lock(mLocCacheMutex);
+
+  std::tr1::shared_ptr<LocationInfo> locinfo = mLocationServiceCache.getLocationInfo(uuid);
+  if (!locinfo) return;
+
+  locinfo->currentOrientation = newval.position();
+}
+
+void AggregateManager::replicaBoundsUpdated(const UUID& uuid, const AggregateBoundingInfo& newval) {
+  boost::mutex::scoped_lock lock(mLocCacheMutex);
+
+  std::tr1::shared_ptr<LocationInfo> locinfo = mLocationServiceCache.getLocationInfo(uuid);
+  if (!locinfo) return;
+
+  locinfo->bounds = newval;
+}
+
+void AggregateManager::replicaMeshUpdated(const UUID& uuid, const String& newval) {
+  boost::mutex::scoped_lock lock(mLocCacheMutex);
+
+  std::tr1::shared_ptr<LocationInfo> locinfo = mLocationServiceCache.getLocationInfo(uuid);
+  if (!locinfo) return;
+
+  locinfo->mesh = newval;
+}
+
 std::tr1::shared_ptr<AggregateManager::LocationInfo> AggregateManager::getCachedLocInfo(const UUID& uuid) {
   boost::mutex::scoped_lock lock(mLocCacheMutex);
 
