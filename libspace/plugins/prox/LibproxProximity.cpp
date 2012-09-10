@@ -85,6 +85,7 @@ LibproxProximity::LibproxProximity(SpaceContext* ctx, LocationService* locservic
    mServerQueries(),
    mServerDistance(false),
    mServerHandlerPoller(mProxStrand, std::tr1::bind(&LibproxProximity::tickQueryHandler, this, mServerQueryHandler), "LibproxProximity ServerHandler Poll", Duration::milliseconds((int64)100)),
+   mServerQueryBoundsPoller(mProxStrand, std::tr1::bind(&LibproxProximity::recomputeAggregateQueryBounds, this), "LibproxProximity Aggregate Query Bounds Poll", Duration::seconds((int64)1)),
    mObjectQueries(),
    mObjectDistance(false),
    mObjectHandlerPoller(mProxStrand, std::tr1::bind(&LibproxProximity::tickQueryHandler, this, mObjectQueryHandler), "LibproxProximity ObjectHandler Poll", Duration::milliseconds((int64)100)),
@@ -167,7 +168,7 @@ void LibproxProximity::addServerForAggregateQueryUpdate(ServerID sid) {
     mNeedServerQueryUpdate.insert(sid);
 }
 
-void LibproxProximity::updateAggregateQuery(const SolidAngle sa, uint32 max_count) {
+void LibproxProximity::updateAggregateQuery() {
     PROXLOG(debug,"Query addition initiated server query request.");
     addAllServersForUpdate();
 
@@ -177,8 +178,8 @@ void LibproxProximity::updateAggregateQuery(const SolidAngle sa, uint32 max_coun
     namespace json = json_spirit;
     json::Object update_params_obj;
     json::Value update_params(update_params_obj);
-    update_params.put("angle", sa.asFloat());
-    update_params.put("max_result", max_count);
+    update_params.put("angle", mMinObjectQueryAngle.asFloat());
+    update_params.put("max_result", mMaxMaxCount);
     mServerQuerier->updateQuery(json::write(update_params));
 }
 
@@ -201,6 +202,7 @@ void LibproxProximity::start() {
     mContext->add(&mObjectHandlerPoller);
     mContext->add(&mStaticRebuilderPoller);
     mContext->add(&mDynamicRebuilderPoller);
+    mContext->add(&mServerQueryBoundsPoller);
 }
 
 
@@ -271,11 +273,6 @@ void LibproxProximity::handleObjectProximityMessage(const UUID& objid, void* buf
 void LibproxProximity::sendQueryRequests() {
     TimedMotionVector3f loc;
 
-    // FIXME avoid computing this so much
-    BoundingBoxList bboxes = mCSeg->serverRegion(mContext->id());
-    BoundingBox3f bbox = aggregateBBoxes(bboxes);
-    BoundingSphere3f bounds = bbox.toBoundingSphere();
-
     ServerSet sub_servers;
     getServersForAggregateQueryUpdate(&sub_servers);
     for(ServerSet::const_iterator it = sub_servers.begin(); it != sub_servers.end(); it++) {
@@ -287,7 +284,10 @@ void LibproxProximity::sendQueryRequests() {
         msg_loc.set_t(loc.updateTime());
         msg_loc.set_position(loc.position());
         msg_loc.set_position(loc.velocity());
-        msg.set_bounds(bounds);
+        // This protocol only had bounds, so we just drop some
+        // information, which for this querying shouldn't matter
+        // anyway.
+        msg.set_bounds(mLastAggregateQuerierBounds.fullBounds());
         msg.set_min_angle(mMinObjectQueryAngle.asFloat());
         msg.set_max_count(mMaxMaxCount);
 
@@ -319,6 +319,7 @@ void LibproxProximity::onPintoServerResult(const Sirikata::Protocol::Prox::Proxi
         if (sid == mContext->id()) continue;
         if (addition.type() == Sirikata::Protocol::Prox::ObjectAddition::Aggregate) continue;
 
+        PROXLOG(detailed, "Top-level pinto added server " << sid);
         mServersQueried.insert(sid);
         mNeedServerQueryUpdate.insert(sid);
     }
@@ -334,6 +335,7 @@ void LibproxProximity::onPintoServerResult(const Sirikata::Protocol::Prox::Proxi
         // Can't check for aggregate (internal) nodes, so we have to rely on
         // checking whether we've added it as a queried server
 
+        PROXLOG(detailed, "Top-level pinto removed server " << sid);
         if (mServersQueried.find(sid) != mServersQueried.end()) mServersQueried.erase(sid);
     }
 }
@@ -577,7 +579,7 @@ void LibproxProximity::updateQuery(UUID obj, const TimedMotionVector3f& loc, con
     }
 
     if (update_remote_queries)
-        updateAggregateQuery(mMinObjectQueryAngle, mMaxMaxCount);
+        updateAggregateQuery();
 }
 
 void LibproxProximity::removeQuery(UUID obj) {
@@ -611,7 +613,7 @@ void LibproxProximity::removeQuery(UUID obj) {
         if (minangle != mMinObjectQueryAngle || maxcount != mMaxMaxCount) {
             mMinObjectQueryAngle = minangle;
             mMaxMaxCount = maxcount;
-            updateAggregateQuery(mMinObjectQueryAngle, mMaxMaxCount);
+            updateAggregateQuery();
         }
     }
 }
@@ -762,6 +764,36 @@ void LibproxProximity::rebuildHandler(ObjectClass objtype) {
     rebuildHandlerType(mObjectQueryHandler, objtype);
 }
 
+void LibproxProximity::recomputeAggregateQueryBounds() {
+    Time t = mContext->simTime();
+    AggregateBoundingInfo new_bnds;
+
+    for(ObjectQueryMap::iterator it = mObjectQueries[OBJECT_CLASS_STATIC].begin(); it != mObjectQueries[OBJECT_CLASS_STATIC].end(); it++) {
+        // We know that the query registration makes these individual objects,
+        // gives 0 size bounds and puts the object size in maxSize, so we can
+        // ignore query->region() and give 0 for the center bounds radius.
+        AggregateBoundingInfo querier_bnds(it->second->position(t), 0, it->second->maxSize());
+        new_bnds.mergeIn(querier_bnds);
+    }
+
+    // Since our merging process isn't perfect, we might actually end up with
+    // the entire server bounding box being better.
+    // FIXME avoid computing this so much, could be event driven from CSeg
+    BoundingBoxList bboxes = mCSeg->serverRegion(mContext->id());
+    BoundingBox3f bbox = aggregateBBoxes(bboxes);
+    BoundingSphere3f server_bounds = bbox.toBoundingSphere();
+    if (server_bounds.radius() < new_bnds.centerBoundsRadius) {
+        new_bnds.centerOffset = server_bounds.center();
+        new_bnds.centerBoundsRadius = server_bounds.radius();
+    }
+
+    if (new_bnds == mLastAggregateQuerierBounds)
+        return;
+
+    PROXLOG(detailed, "Updated aggregate querier bounds info " << new_bnds);
+    mLastAggregateQuerierBounds = new_bnds;
+    updateAggregateQuery();
+}
 
 // Command handlers
 void LibproxProximity::commandProperties(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {
@@ -1239,7 +1271,8 @@ void LibproxProximity::eraseSeqNoInfo(const UUID& obj_id)
 
 
 void LibproxProximity::handleUpdateServerQuery(const ServerID& server, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const SolidAngle& angle, const uint32 max_results) {
-    BoundingSphere3f region(bounds.center(), 0);
+    TimedMotionVector3f adjusted_loc(loc.updateTime(), MotionVector3f(loc.position() + bounds.center(), loc.velocity()));
+    BoundingSphere3f region(Vector3f(0,0,0), 0);
     float ms = bounds.radius();
 
     for(int i = 0; i < NUM_OBJECT_CLASSES; i++) {
@@ -1247,11 +1280,11 @@ void LibproxProximity::handleUpdateServerQuery(const ServerID& server, const Tim
 
         ServerQueryMap::iterator it = mServerQueries[i].find(server);
         if (it == mServerQueries[i].end()) {
-            PROXLOG(debug,"Add server query from " << server << ", min angle " << angle.asFloat() << ", object class " << ObjectClassToString((ObjectClass)i) << " (loc: " << loc.position() << ", region: " << region << ", max size: " << ms << ")");
+            PROXLOG(debug,"Add server query from " << server << ", min angle " << angle.asFloat() << ", object class " << ObjectClassToString((ObjectClass)i) << " (loc: " << adjusted_loc.position() << ", region: " << region << ", max size: " << ms << ")");
 
             Query* q = mServerDistance ?
-                mServerQueryHandler[i].handler->registerQuery(loc, region, ms, SolidAngle::Min, mDistanceQueryDistance) :
-                mServerQueryHandler[i].handler->registerQuery(loc, region, ms, angle) ;
+                mServerQueryHandler[i].handler->registerQuery(adjusted_loc, region, ms, SolidAngle::Min, mDistanceQueryDistance) :
+                mServerQueryHandler[i].handler->registerQuery(adjusted_loc, region, ms, angle) ;
             if (max_results != NoUpdateMaxResults && max_results > 0)
                 q->maxResults(max_results);
             mServerQueries[i][server] = q;
@@ -1259,10 +1292,10 @@ void LibproxProximity::handleUpdateServerQuery(const ServerID& server, const Tim
             q->setEventListener(this);
         }
         else {
-            PROXLOG(debug,"Update server query from " << server << ", min angle " << angle.asFloat() << ", object class " << ObjectClassToString((ObjectClass)i) << " (loc: " << loc.position() << ", region: " << region << ", max size: " << ms << ")");
+            PROXLOG(debug,"Update server query from " << server << ", min angle " << angle.asFloat() << ", object class " << ObjectClassToString((ObjectClass)i) << " (loc: " << adjusted_loc.position() << ", region: " << region << ", max size: " << ms << ")");
 
             Query* q = it->second;
-            q->position(loc);
+            q->position(adjusted_loc);
             q->region( region );
             q->maxSize( ms );
             q->angle(angle);

@@ -126,7 +126,7 @@ private:
     void addServerForAggregateQueryUpdate(ServerID sid);
     // Initiate updates to aggregate queries and stats over all objects, used to
     // trigger updated requests to top-level pinto and other servers
-    void updateAggregateQuery(const SolidAngle sa, uint32 max_count);
+    void updateAggregateQuery();
     // Number of servers we have active queries to
     uint32 numServersQueried();
 
@@ -225,6 +225,10 @@ private:
 
     // Aggregate query info. Aggregate object stats are managed by
     // LibproxProximityBase.
+    // Since objects can be moving, we just recompute periodically and update
+    // other servers. We only track the value so we can avoid sending updates
+    // when it doesn't change
+    AggregateBoundingInfo mLastAggregateQuerierBounds;
     // This tracks the minimum object query size, which is used
     // as the angle for queries to other servers.
     SolidAngle mMinObjectQueryAngle;
@@ -243,6 +247,8 @@ private:
     void tickQueryHandler(ProxQueryHandlerData qh[NUM_OBJECT_CLASSES]);
     void rebuildHandlerType(ProxQueryHandlerData* handler, ObjectClass objtype);
     void rebuildHandler(ObjectClass objtype);
+
+    void recomputeAggregateQueryBounds();
 
     // Command handlers
     virtual void commandProperties(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
@@ -274,6 +280,7 @@ private:
     // on forceful disconnection
     ServerQueryResultSet mServerQueryResults;
     PollerService mServerHandlerPoller;
+    PollerService mServerQueryBoundsPoller;
 
     // These track all objects being reported to this server and
     // answer queries for objects connected to this server.

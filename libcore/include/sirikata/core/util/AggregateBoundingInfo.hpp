@@ -39,10 +39,11 @@ public:
     float32 centerBoundsRadius;
     float32 maxObjectRadius;
 
-    /// Default constructor, initializes all values to 0
+    /// Default constructor, initializes to an invalid value, where the bounds
+    /// information is negative.
     AggregateBoundingInfo()
      : centerOffset(0, 0, 0),
-       centerBoundsRadius(0),
+       centerBoundsRadius(-1),
        maxObjectRadius(0)
     {}
 
@@ -88,6 +89,20 @@ public:
         return (centerBoundsRadius == 0);
     }
 
+    bool invalid() const {
+        return (centerBoundsRadius < 0);
+    }
+
+    AggregateBoundingInfo& mergeIn(const AggregateBoundingInfo& rhs) {
+        *this = merge(rhs);
+        return *this;
+    }
+
+    AggregateBoundingInfo merge(const AggregateBoundingInfo& rhs) {
+        BoundingSphere3f new_cbnds = centerBounds().merge(rhs.centerBounds());
+        float32 new_max_rad = std::max(maxObjectRadius, rhs.maxObjectRadius);
+        return AggregateBoundingInfo(new_cbnds.center(), new_cbnds.radius(), new_max_rad);
+    }
 
     bool operator==(const AggregateBoundingInfo& rhs) {
         return (centerOffset == rhs.centerOffset && centerBoundsRadius == rhs.centerBoundsRadius && maxObjectRadius == rhs.maxObjectRadius);
@@ -99,7 +114,6 @@ public:
 private:
 };
 
-template<typename scalar>
 inline std::ostream& operator <<(std::ostream& os, const AggregateBoundingInfo &rhs) {
     os << "< offset: " << rhs.centerOffset << ", center bounds radius: " << rhs.centerBoundsRadius << ", max object size: " << rhs.maxObjectRadius << ">";
     return os;
