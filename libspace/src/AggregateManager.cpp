@@ -1334,7 +1334,7 @@ void AggregateManager::queueDirtyAggregates(Time postTime) {
       std::tr1::shared_ptr<AggregateObject> aggObject = it->second;
       if (aggObject->mTreeLevel >= 0) {
         mAggregatesQueued++;
-        mObjectsByPriority[i][ aggObject->mNumObservers + (aggObject->mTreeLevel*0.001) ].push_back(aggObject);
+        mObjectsByPriority[i][ (aggObject->mTreeLevel*0.001) ].push_back(aggObject);
         i = (i+1) % mNumGenerationThreads;
       }
     }
