@@ -118,7 +118,13 @@ private:
   virtual void localOrientationUpdated(const UUID& uuid, bool agg, const TimedMotionQuaternion& newval);
   virtual void localBoundsUpdated(const UUID& uuid, bool agg, const AggregateBoundingInfo& newval) ;
   virtual void localMeshUpdated(const UUID& uuid, bool agg, const String& newval) ;
-
+  virtual void replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient,
+      const AggregateBoundingInfo& bounds, const String& mesh, const String& physics, const String& zernike);
+  virtual void replicaObjectRemoved(const UUID& uuid);
+  virtual void replicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval);
+  virtual void replicaOrientationUpdated(const UUID& uuid, const TimedMotionQuaternion& newval);
+  virtual void replicaBoundsUpdated(const UUID& uuid, const AggregateBoundingInfo& newval);
+  virtual void replicaMeshUpdated(const UUID& uuid, const String& newval);
 
 
   boost::mutex mModelsSystemMutex;
@@ -192,6 +198,8 @@ private:
   const String mCDNUsername;
   Duration mModelTTL;
   Poller* mCDNKeepAlivePoller;
+  const String mLocalPath;
+  const String mLocalURLPrefix;
   bool mSkipUpload;
 
   //CDN upload threads' variables
@@ -283,7 +291,28 @@ private:
   void commandStats(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
 public:
 
-  AggregateManager( LocationService* loc, Transfer::OAuthParamsPtr oauth, const String& username, uint16 n_gen_threads, uint16 n_upload_threads, bool skip_upload);
+  /** Create an AggregateManager.
+   *
+   *  \oauth OAuth upload parameters for the CDN. If omitted, uploads will not
+   *         be attempted
+   *  \username User name for account your OAuth params let you upload to on the the CDN
+   *  \param local_path if non-empty and OAuth values are not specified,
+   *         generate local meshes that create file:/// URLs. Useful to avoid
+   *         uploading to the CDN, but in distributed systems will obviously
+   *         cause failures to download meshes on other nodes.
+   *  \param local_url_prefix used in conjunction with local_path. If provided,
+   *         specifies the URL prefix to prepend to the filename to get the full
+   *         mesh URL, allowing you to publicize the meshes by using something
+   *         other than a file:// URL, e.g. if you run a web server on your
+   *         host.
+   *  \param n_gen_threads number of threads to use for creating aggregate meshes
+   *  \param n_upload_threads number of threads to use for uploading
+   *  \param skip_upload if true, skip the upload phase, but pretend it was
+   *         successful. Useful for testing, but since the mesh cache is
+   *         limited, this will eventually cause later aggregates to fail to be
+   *         generated
+   */
+  AggregateManager( LocationService* loc, Transfer::OAuthParamsPtr oauth, const String& username, const String& local_path, const String& local_url_prefix, uint16 n_gen_threads, uint16 n_upload_threads, bool skip_upload);
 
   ~AggregateManager();
 

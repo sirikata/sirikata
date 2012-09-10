@@ -354,6 +354,10 @@ private:
         uint64 getSeqno(const SpaceObjectReference& sporef_objid);
         // Get a new seqno, and store it
         uint64 updateSeqno(const SpaceObjectReference& sporef_objid);
+        // Indicates if the seqno we have right now is non-zero, for rare
+        // situations where seqno is reset but other info isn't yet, so it's the
+        // only way to tell if a request failed.
+        bool validSeqno(const SpaceObjectReference& sporef_objid);
 
         // Mark the object as connecting to the given server
         ConnectingInfo& connectingTo(const SpaceObjectReference& obj, ServerID connecting_to);

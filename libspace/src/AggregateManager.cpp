@@ -50,6 +50,8 @@
 
 #include <sirikata/core/command/Commander.hpp>
 
+#include <boost/filesystem.hpp>
+
 #if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS
 #define snprintf _snprintf
 #endif
@@ -66,13 +68,15 @@ namespace Sirikata {
 
 using namespace Mesh;
 
-AggregateManager::AggregateManager(LocationService* loc, Transfer::OAuthParamsPtr oauth, const String& username, uint16 n_gen_threads, uint16 n_upload_threads, bool skip_upload)
+AggregateManager::AggregateManager(LocationService* loc, Transfer::OAuthParamsPtr oauth, const String& username, const String& local_path, const String& local_url_prefix, uint16 n_gen_threads, uint16 n_upload_threads, bool skip_upload)
  : mNumGenerationThreads(std::min(n_gen_threads, (uint16)MAX_NUM_GENERATION_THREADS)),
     mLoc(loc),
     mOAuth(oauth),
     mCDNUsername(username),
     mModelTTL(Duration::minutes(60)),
     mCDNKeepAlivePoller(NULL),
+    mLocalPath(local_path),
+    mLocalURLPrefix(local_url_prefix),
     mSkipUpload(skip_upload),
     mNumUploadThreads(std::min(n_upload_threads, (uint16)MAX_NUM_UPLOAD_THREADS)),
     mRawAggregateUpdates(0),
@@ -946,10 +950,19 @@ void AggregateManager::uploadAggregateMesh(Mesh::MeshdataPtr agg_mesh,
       //the remainder of the upload process is handled in handleUploadFinished.
   }
   else {
-      cdnMeshName = "http://sns12.cs.princeton.edu:9080/aggregate_meshes/" + localMeshName;
+      String modelFilename;
+      if (!mLocalPath.empty()) {
+        modelFilename = (boost::filesystem::path(mLocalPath) / localMeshName).string();
+        if (!mLocalURLPrefix.empty())
+          cdnMeshName = mLocalURLPrefix + localMeshName;
+        else
+          cdnMeshName = "file://" + modelFilename;
+      }
+      else {
+        modelFilename = std::string("/disk/local/tazim/aggregate_meshes/") + localMeshName;
+        cdnMeshName = "http://sns12.cs.princeton.edu:9080/aggregate_meshes/" + localMeshName;
+      }
       agg_mesh->uri = cdnMeshName;
-
-      String modelFilename = std::string("/disk/local/tazim/aggregate_meshes/") + localMeshName;
       std::ofstream model_fs_stream(modelFilename.c_str(), std::ofstream::out | std::ofstream::binary);
       if (model_fs_stream) {
         model_fs_stream.write(&serialized[0], serialized.size());
@@ -964,9 +977,11 @@ void AggregateManager::uploadAggregateMesh(Mesh::MeshdataPtr agg_mesh,
           return;
       }
 
-      //Upload to web server
-      std::string cmdline = std::string("./upload_to_cdn.sh ") +  modelFilename;
-      system( cmdline.c_str()  );
+      //Upload to web server ("upload" for local doesn't require doing anything
+      if (mLocalPath.empty()) {
+        std::string cmdline = std::string("./upload_to_cdn.sh ") +  modelFilename;
+        system( cmdline.c_str()  );
+      }
 
       //Update loc
       mLoc->context()->mainStrand->post(
@@ -1319,7 +1334,7 @@ void AggregateManager::queueDirtyAggregates(Time postTime) {
       std::tr1::shared_ptr<AggregateObject> aggObject = it->second;
       if (aggObject->mTreeLevel >= 0) {
         mAggregatesQueued++;
-        mObjectsByPriority[i][ aggObject->mNumObservers + (aggObject->mTreeLevel*0.001) ].push_back(aggObject);
+        mObjectsByPriority[i][ (aggObject->mTreeLevel*0.001) ].push_back(aggObject);
         i = (i+1) % mNumGenerationThreads;
       }
     }
@@ -1553,6 +1568,57 @@ void AggregateManager::localMeshUpdated(const UUID& uuid, bool agg, const String
   locinfo->mesh = newval;
 }
 
+void AggregateManager::replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc,
+                                                const TimedMotionQuaternion& orient,
+                                                const AggregateBoundingInfo& bounds, const String& mesh, const String& physics,
+                                                const String& zernike)
+{
+  boost::mutex::scoped_lock lock(mLocCacheMutex);
+  mLocationServiceCache.insertLocationInfo(uuid, std::tr1::shared_ptr<LocationInfo>(
+                                           new LocationInfo(loc.position(), bounds, orient.position(), mesh)));
+}
+
+void AggregateManager::replicaObjectRemoved(const UUID& uuid) {
+  boost::mutex::scoped_lock lock(mLocCacheMutex);
+  mLocationServiceCache.removeLocationInfo(uuid);
+}
+
+void AggregateManager::replicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) {
+  boost::mutex::scoped_lock lock(mLocCacheMutex);
+
+  std::tr1::shared_ptr<LocationInfo> locinfo = mLocationServiceCache.getLocationInfo(uuid);
+  if (!locinfo) return;
+
+  locinfo->currentPosition = newval.position();
+}
+
+void AggregateManager::replicaOrientationUpdated(const UUID& uuid, const TimedMotionQuaternion& newval) {
+  boost::mutex::scoped_lock lock(mLocCacheMutex);
+
+  std::tr1::shared_ptr<LocationInfo> locinfo = mLocationServiceCache.getLocationInfo(uuid);
+  if (!locinfo) return;
+
+  locinfo->currentOrientation = newval.position();
+}
+
+void AggregateManager::replicaBoundsUpdated(const UUID& uuid, const AggregateBoundingInfo& newval) {
+  boost::mutex::scoped_lock lock(mLocCacheMutex);
+
+  std::tr1::shared_ptr<LocationInfo> locinfo = mLocationServiceCache.getLocationInfo(uuid);
+  if (!locinfo) return;
+
+  locinfo->bounds = newval;
+}
+
+void AggregateManager::replicaMeshUpdated(const UUID& uuid, const String& newval) {
+  boost::mutex::scoped_lock lock(mLocCacheMutex);
+
+  std::tr1::shared_ptr<LocationInfo> locinfo = mLocationServiceCache.getLocationInfo(uuid);
+  if (!locinfo) return;
+
+  locinfo->mesh = newval;
+}
+
 std::tr1::shared_ptr<AggregateManager::LocationInfo> AggregateManager::getCachedLocInfo(const UUID& uuid) {
   boost::mutex::scoped_lock lock(mLocCacheMutex);
 
@@ -1683,6 +1749,28 @@ void AggregateManager::commandStats(const Command::Command& cmd, Command::Comman
     result.put("stats.cumulative_upload_time_seconds", mAggregateCumulativeUploadTime.toSeconds());
     result.put("stats.cumulative_size", mAggregateCumulativeDataSize);
   }
+
+  {
+    // Waiting count -- queued can count more (its how many requests went in,
+    // not necessarily how many are generated), so things won't necessarily
+    // match up with the counts coming out. Waiting counts how many items we
+    // have sitting in a queue for processing, and it'll drop to 0 when things
+    // settle down.
+    uint32 waiting_count = 0;
+    for (uint8 i = 0; i < mNumGenerationThreads; i++) {
+      boost::mutex::scoped_lock queueLock(mObjectsByPriorityLocks[i]);
+      for (std::map<float, std::deque<AggregateObjectPtr> >::iterator it =  mObjectsByPriority[i].begin();
+           it != mObjectsByPriority[i].end(); it++) {
+        waiting_count += it->second.size();
+      }
+    }
+    // We might be in the wrong thread (mDirtyAggregateObjects should only be
+    // used in the  main strand), but worst case we'll just get incorrect
+    // stats.
+    waiting_count += mDirtyAggregateObjects.size();
+    result.put("stats.waiting", waiting_count);
+  }
+
   cmdr->result(cmdid, result);
 }
 
