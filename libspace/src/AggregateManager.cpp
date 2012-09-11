@@ -394,11 +394,11 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
     Does LOC contain info about this aggregate and its children?
     Are all the children's meshes available to generate the aggregate? */
   if (postTime < aggObject->mLastGenerateTime) {
-    return OTHER_GEN_FAILURE;
+    return NEWER_REQUEST;
   }
 
   if (postTime < mAggregateGenerationStartTime) {
-    return OTHER_GEN_FAILURE;
+    return NEWER_REQUEST;
   }
 
   std::tr1::unordered_map<UUID, std::tr1::shared_ptr<LocationInfo> , UUID::Hasher> currentLocMap;
@@ -406,7 +406,7 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
   std::tr1::shared_ptr<LocationInfo> locInfoForUUID = getCachedLocInfo(uuid);
   /* Does LOC contain info about this aggregate and its children? */
   if (!locInfoForUUID) {
-    return OTHER_GEN_FAILURE;
+    return MISSING_LOC_INFO;
   }
   else {
     currentLocMap[uuid] = locInfoForUUID;
@@ -421,7 +421,8 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
 
     std::tr1::shared_ptr<LocationInfo> locInfoForChildUUID = getCachedLocInfo(child_uuid);
     if (!locInfoForChildUUID ) {
-      return OTHER_GEN_FAILURE;
+      AGG_LOG(detailed, "Missing chlid loc info: " << uuid << ", for child " << child_uuid);
+      return MISSING_CHILD_LOC_INFO;
     }
     currentLocMap[child_uuid] = locInfoForChildUUID;
 
@@ -470,7 +471,7 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
     }
   }
   if (!allMeshesAvailable) {
-    return OTHER_GEN_FAILURE;
+    return MISSING_CHILD_MESHES;
   }
 
   /* OK to generate the mesh! Go! */
@@ -1378,7 +1379,7 @@ void AggregateManager::generateMeshesFromQueue(uint8 threadNumber) {
 
           aggObject->mNumFailedGenerationAttempts = 0;
         }
-        else if (returner == OTHER_GEN_FAILURE) {
+        else if (returner != CHILDREN_NOT_YET_GEN) {
           aggObject->mNumFailedGenerationAttempts++;
           numFailedAttempts = aggObject->mNumFailedGenerationAttempts;
         }
@@ -1393,11 +1394,14 @@ void AggregateManager::generateMeshesFromQueue(uint8 threadNumber) {
 
     if (mObjectsByPriority[threadNumber].size() > 0) {
       Duration dur = Duration::milliseconds(1.0);
-      if (returner == OTHER_GEN_FAILURE) {
-        dur = Duration::milliseconds(10.0*pow(2.f,(float)numFailedAttempts));
+      if (returner == GEN_SUCCESS) {
+        // 1 ms is fine
       }
       else if (returner == CHILDREN_NOT_YET_GEN) {
         dur = Duration::milliseconds(50.0);
+      }
+      else { // need to back off for all other causes
+        dur = Duration::milliseconds(10.0*pow(2.f,(float)numFailedAttempts));
       }
 
       mAggregationStrands[threadNumber]->post(

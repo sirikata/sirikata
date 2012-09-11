@@ -258,7 +258,14 @@ private:
   void generateMeshesFromQueue(uint8 i);
 
 
-  enum{GEN_SUCCESS=1, CHILDREN_NOT_YET_GEN=2, OTHER_GEN_FAILURE=3};
+  enum {
+      GEN_SUCCESS=1,
+      CHILDREN_NOT_YET_GEN=2,
+      NEWER_REQUEST=3, // newer timestamped request for aggregation
+      MISSING_LOC_INFO=4,
+      MISSING_CHILD_LOC_INFO=5,
+      MISSING_CHILD_MESHES=6
+  };
   uint32 generateAggregateMeshAsync(const UUID uuid, Time postTime, bool generateSiblings = true);
   void aggregationThreadMain(uint8 i);
   void updateAggregateLocMesh(UUID uuid, String mesh);
