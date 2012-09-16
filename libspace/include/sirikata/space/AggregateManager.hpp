@@ -200,6 +200,7 @@ private:
   Poller* mCDNKeepAlivePoller;
   const String mLocalPath;
   const String mLocalURLPrefix;
+  bool mSkipGenerate;
   bool mSkipUpload;
 
   //CDN upload threads' variables
@@ -307,12 +308,15 @@ public:
    *         host.
    *  \param n_gen_threads number of threads to use for creating aggregate meshes
    *  \param n_upload_threads number of threads to use for uploading
+   *  \param skip_gen if true, skip the generation phase, but pretend it
+   *         was successful. Useful for testing without spending CPU on
+   *         generating meshes. Forces skip_upload to be true
    *  \param skip_upload if true, skip the upload phase, but pretend it was
    *         successful. Useful for testing, but since the mesh cache is
    *         limited, this will eventually cause later aggregates to fail to be
    *         generated
    */
-  AggregateManager( LocationService* loc, Transfer::OAuthParamsPtr oauth, const String& username, const String& local_path, const String& local_url_prefix, uint16 n_gen_threads, uint16 n_upload_threads, bool skip_upload);
+  AggregateManager( LocationService* loc, Transfer::OAuthParamsPtr oauth, const String& username, const String& local_path, const String& local_url_prefix, uint16 n_gen_threads, uint16 n_upload_threads, bool skip_gen, bool skip_upload);
 
   ~AggregateManager();
 

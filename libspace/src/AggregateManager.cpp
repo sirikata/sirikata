@@ -68,7 +68,7 @@ namespace Sirikata {
 
 using namespace Mesh;
 
-AggregateManager::AggregateManager(LocationService* loc, Transfer::OAuthParamsPtr oauth, const String& username, const String& local_path, const String& local_url_prefix, uint16 n_gen_threads, uint16 n_upload_threads, bool skip_upload)
+AggregateManager::AggregateManager(LocationService* loc, Transfer::OAuthParamsPtr oauth, const String& username, const String& local_path, const String& local_url_prefix, uint16 n_gen_threads, uint16 n_upload_threads, bool skip_gen, bool skip_upload)
  : mNumGenerationThreads(std::min(n_gen_threads, (uint16)MAX_NUM_GENERATION_THREADS)),
     mLoc(loc),
     mOAuth(oauth),
@@ -77,7 +77,8 @@ AggregateManager::AggregateManager(LocationService* loc, Transfer::OAuthParamsPt
     mCDNKeepAlivePoller(NULL),
     mLocalPath(local_path),
     mLocalURLPrefix(local_url_prefix),
-    mSkipUpload(skip_upload),
+    mSkipGenerate(skip_gen),
+    mSkipUpload(skip_gen || skip_upload),
     mNumUploadThreads(std::min(n_upload_threads, (uint16)MAX_NUM_UPLOAD_THREADS)),
     mRawAggregateUpdates(0),
     mAggregatesQueued(0),
@@ -375,6 +376,11 @@ void AggregateManager::generateAggregateMesh(const UUID& uuid, AggregateObjectPt
 
 uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime, bool generateSiblings) {
   Time curTime = Timer::now();
+
+  if (mSkipGenerate) {
+    mAggregatesGenerated++;
+    return GEN_SUCCESS;
+  }
 
   boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
   if (mAggregateObjects.find(uuid) == mAggregateObjects.end()) {

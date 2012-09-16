@@ -113,6 +113,7 @@ void InitSpaceOptions() {
         .addOption(new OptionValue(OPT_AGGMGR_LOCAL_URL_PREFIX, "", Sirikata::OptionValueType<String>(), "Prefix to append to locally saved meshes"))
         .addOption(new OptionValue(OPT_AGGMGR_GEN_THREADS, "4", Sirikata::OptionValueType<uint16>(), "Number of AggregateManager mesh generation threads"))
         .addOption(new OptionValue(OPT_AGGMGR_UPLOAD_THREADS, "8", Sirikata::OptionValueType<uint16>(), "Number of AggregateManager mesh upload threads"))
+        .addOption(new OptionValue(OPT_AGGMGR_SKIP_GENERATE, "false", Sirikata::OptionValueType<bool>(), "If true, skips generating but pretends it was always successful. Useful for testing without the overhead of generating aggregates."))
         .addOption(new OptionValue(OPT_AGGMGR_SKIP_UPLOAD, "false", Sirikata::OptionValueType<bool>(), "If true, skips uploading but pretends it was always successful. Useful for testing without pushing data to the CDN."))
 
       ;
