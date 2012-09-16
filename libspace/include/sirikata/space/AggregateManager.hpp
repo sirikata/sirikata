@@ -53,6 +53,8 @@
 
 #include <sirikata/core/command/Command.hpp>
 
+#include <boost/thread/locks.hpp>
+
 namespace Sirikata {
 
 class SIRIKATA_SPACE_EXPORT AggregateManager : public LocationServiceListener {
@@ -66,18 +68,55 @@ private:
   Network::IOWork* mIOWorks[MAX_NUM_GENERATION_THREADS];
 
   typedef struct LocationInfo {
-    Vector3f currentPosition;
-    AggregateBoundingInfo bounds;
-    Quaternion currentOrientation;
-    String mesh;
+  private:
+      boost::shared_mutex mutex;
 
+    Vector3f mCurrentPosition;
+    AggregateBoundingInfo mBounds;
+    Quaternion mCurrentOrientation;
+    String mMesh;
+
+  public:
     LocationInfo(Vector3f curPos, AggregateBoundingInfo bnds,
                  Quaternion curOrient, String msh) :
-      currentPosition(curPos), bounds(bnds),
-      currentOrientation(curOrient), mesh(msh)
+      mCurrentPosition(curPos), mBounds(bnds),
+      mCurrentOrientation(curOrient), mMesh(msh)
     {
     }
 
+      Vector3f currentPosition() {
+          boost::shared_lock<boost::shared_mutex> read_lock(mutex);
+          return mCurrentPosition;
+      }
+      AggregateBoundingInfo bounds() {
+          boost::shared_lock<boost::shared_mutex> read_lock(mutex);
+          return mBounds;
+      }
+      Quaternion currentOrientation() {
+          boost::shared_lock<boost::shared_mutex> read_lock(mutex);
+          return mCurrentOrientation;
+      }
+      String mesh() {
+          boost::shared_lock<boost::shared_mutex> read_lock(mutex);
+          return mMesh;
+      }
+
+      void currentPosition(Vector3f v) {
+          boost::unique_lock<boost::shared_mutex> write_lock(mutex);
+          mCurrentPosition = v;
+      }
+      void bounds(AggregateBoundingInfo v) {
+          boost::unique_lock<boost::shared_mutex> write_lock(mutex);
+          mBounds = v;
+      }
+      void currentOrientation(Quaternion v) {
+          boost::unique_lock<boost::shared_mutex> write_lock(mutex);
+          mCurrentOrientation = v;
+      }
+      void mesh(const String& v) {
+          boost::unique_lock<boost::shared_mutex> write_lock(mutex);
+          mMesh = v;
+      }
   } LocationInfo;
   std::tr1::shared_ptr<LocationInfo> getCachedLocInfo(const UUID& uuid) ;
 
@@ -132,10 +171,42 @@ private:
   Sirikata::Mesh::MeshSimplifier mMeshSimplifier;
   Sirikata::Mesh::Filter* mCenteringFilter;
 
-  typedef struct AggregateObject{
+  struct AggregateObject;
+  typedef std::tr1::shared_ptr<AggregateObject> AggregateObjectPtr;
+  struct AggregateObject{
     UUID mUUID;
     std::set<UUID> mParentUUIDs;
-    std::vector< std::tr1::shared_ptr<struct AggregateObject>  > mChildren;
+  private:
+      boost::mutex mChildrenMutex;
+      std::vector< std::tr1::shared_ptr<struct AggregateObject>  > mChildren;
+  public:
+      std::vector<AggregateObjectPtr> getChildrenCopy(){
+          boost::mutex::scoped_lock lock(mChildrenMutex);
+          return mChildren;
+      }
+      std::size_t childrenSize() {
+          boost::mutex::scoped_lock lock(mChildrenMutex);
+          return mChildren.size();
+      }
+      void addChild(AggregateObjectPtr child) {
+          boost::mutex::scoped_lock lock(mChildrenMutex);
+          mChildren.push_back(child);
+      }
+      bool hasChild(const UUID& child) {
+          boost::mutex::scoped_lock lock(mChildrenMutex);
+          for (uint32 i=0; i < mChildren.size(); i++)
+              if (mChildren[i]->mUUID == child) return true;
+          return false;
+      }
+      void removeChild(const UUID& child) {
+          boost::mutex::scoped_lock lock(mChildrenMutex);
+          for (uint32 i=0; i < mChildren.size(); i++) {
+              if (mChildren[i]->mUUID == child) {
+                  mChildren.erase(mChildren.begin() + i);
+                  return;
+              }
+          }
+      }
     // Whether this is actually a leaf object (i.e. added implicitly as
     // AggregateObject when added as a child of a true aggregate).
     bool leaf;
@@ -172,8 +243,7 @@ private:
     // a bit less than the actual timeout.
     Time refreshTTL;
 
-  } AggregateObject;
-  typedef std::tr1::shared_ptr<AggregateObject> AggregateObjectPtr;
+  };
 
 
   //Lists of all aggregate objects and dirty aggregate objects.
@@ -244,8 +314,6 @@ private:
   bool findChild(std::vector<AggregateObjectPtr>& v, const UUID& uuid) ;
   void removeChild(std::vector<AggregateObjectPtr>& v, const UUID& uuid) ;
   void iRemoveChild(const UUID& uuid, const UUID& child_uuid);
-  std::vector<AggregateObjectPtr>& getChildren(const UUID& uuid);
-  std::vector<AggregateManager::AggregateObjectPtr >& iGetChildren(const UUID& uuid) ;
   void getLeaves(const std::vector<UUID>& mIndividualObjects);
   void addLeavesUpTree(UUID leaf_uuid, UUID uuid);
   bool isAggregate(const UUID& uuid);
