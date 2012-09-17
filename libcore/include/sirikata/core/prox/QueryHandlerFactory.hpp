@@ -14,6 +14,7 @@
 #include <prox/geom/RTreeAngleQueryHandler.hpp>
 #include <prox/geom/RTreeDistanceQueryHandler.hpp>
 #include <prox/geom/RTreeCutQueryHandler.hpp>
+#include <prox/geom/LevelQueryHandler.hpp>
 #include <prox/geom/RebuildingQueryHandler.hpp>
 
 namespace Sirikata {
@@ -83,6 +84,14 @@ Prox::QueryHandler<SimulationTraits>* QueryHandlerFactory(const String& type, co
             );
         else
             return new Prox::RTreeCutQueryHandler<SimulationTraits>(branching->unsafeAs<uint32>(), true);
+    }
+    else if (type == "level") {
+        if (rebuilding)
+            return new Prox::RebuildingQueryHandler<SimulationTraits>(
+                Prox::LevelQueryHandler<SimulationTraits>::Constructor(branching->unsafeAs<uint32>()), rebuild_batch_size->unsafeAs<uint32>()
+            );
+        else
+            return new Prox::LevelQueryHandler<SimulationTraits>(branching->unsafeAs<uint32>());
     }
     else {
         return NULL;
