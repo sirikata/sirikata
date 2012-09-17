@@ -671,7 +671,16 @@ void HostedObject::iHandleDisconnected(
     if (cc == Disconnect::Forced)
         self->disconnectFromSpace(spaceobj.space(), spaceobj.object());
     if (cc == Disconnect::LoginDenied) {
-        assert(self->mPresenceData.find(spaceobj)==self->mPresenceData.end());
+        // This:
+        //assert(self->mPresenceData.find(spaceobj) == self->mPresenceData.end());
+        // is failing sometimes. It really shouldn't since
+        //SessionManager should only invoke this if an outstanding
+        //connection request failed. Possible explanations:
+        //SessionManager is screwing up when there's a high
+        //latency/retries, or maybe we're somehow getting a proximity
+        //result (creating the mPresenceData entry) and a login error
+        //due to retries. See Issue #519.
+        if (self->mPresenceData.find(spaceobj) != self->mPresenceData.end()) return;
         self->mObjectHost->unregisterHostedObject(spaceobj, self.get());
         if (--self->mNumOutstandingConnections==0&&self->mDestroyWhenConnected) {
             self->mDestroyWhenConnected=false;

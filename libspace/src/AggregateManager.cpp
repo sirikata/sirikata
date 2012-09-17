@@ -68,7 +68,7 @@ namespace Sirikata {
 
 using namespace Mesh;
 
-AggregateManager::AggregateManager(LocationService* loc, Transfer::OAuthParamsPtr oauth, const String& username, const String& local_path, const String& local_url_prefix, uint16 n_gen_threads, uint16 n_upload_threads, bool skip_upload)
+AggregateManager::AggregateManager(LocationService* loc, Transfer::OAuthParamsPtr oauth, const String& username, const String& local_path, const String& local_url_prefix, uint16 n_gen_threads, uint16 n_upload_threads, bool skip_gen, bool skip_upload)
  : mNumGenerationThreads(std::min(n_gen_threads, (uint16)MAX_NUM_GENERATION_THREADS)),
     mLoc(loc),
     mOAuth(oauth),
@@ -77,7 +77,8 @@ AggregateManager::AggregateManager(LocationService* loc, Transfer::OAuthParamsPt
     mCDNKeepAlivePoller(NULL),
     mLocalPath(local_path),
     mLocalURLPrefix(local_url_prefix),
-    mSkipUpload(skip_upload),
+    mSkipGenerate(skip_gen),
+    mSkipUpload(skip_gen || skip_upload),
     mNumUploadThreads(std::min(n_upload_threads, (uint16)MAX_NUM_UPLOAD_THREADS)),
     mRawAggregateUpdates(0),
     mAggregatesQueued(0),
@@ -257,16 +258,23 @@ void AggregateManager::removeAggregate(const UUID& uuid) {
   // Cleans up children if necessary, or makes sure they at least don't refer to
   // this object anymore. See cleanUpChild for details.
   AggregateObjectPtr agg = mAggregateObjects[uuid];
-  for (std::vector<AggregateObjectPtr>::iterator child_it = agg->mChildren.begin(); child_it != agg->mChildren.end(); child_it++)
+  const std::vector<AggregateObjectPtr> children = agg->getChildrenCopy();
+  for (std::vector<AggregateObjectPtr>::const_iterator child_it = children.begin(); child_it != children.end(); child_it++)
     cleanUpChild(uuid, (*child_it)->mUUID);
 
   mAggregateObjects.erase(uuid);
 }
 
 void AggregateManager::addChild(const UUID& uuid, const UUID& child_uuid) {
-  std::vector<AggregateObjectPtr>& children = getChildren(uuid);
+  AggregateObjectPtr agg;
+  {
+    boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
+    assert(mAggregateObjects.find(uuid) != mAggregateObjects.end());
+    agg = mAggregateObjects[uuid];
+    assert(agg);
+  }
 
-  if ( ! findChild(children, child_uuid) ) {
+  if (!agg->hasChild(child_uuid)) {
     boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
 
     if (mAggregateObjects.find(child_uuid) == mAggregateObjects.end()) {
@@ -282,7 +290,7 @@ void AggregateManager::addChild(const UUID& uuid, const UUID& child_uuid) {
       mAggregateObjects[child_uuid]->mParentUUIDs.insert(uuid);
     }
 
-    children.push_back(mAggregateObjects[child_uuid]);
+    agg->addChild(mAggregateObjects[child_uuid]);
 
     updateChildrenTreeLevel(uuid, mAggregateObjects[uuid]->mTreeLevel);
 
@@ -309,10 +317,12 @@ void AggregateManager::iRemoveChild(const UUID& uuid, const UUID& child_uuid) {
   AGG_LOG(detailed, "removeChild:  "  << uuid.toString() << " CHILD " << child_uuid.toString() << "\n");
   mRawAggregateUpdates++;
 
-  std::vector<AggregateObjectPtr>& children = iGetChildren(uuid);
+  assert(mAggregateObjects.find(uuid) != mAggregateObjects.end());
+  AggregateObjectPtr agg = mAggregateObjects[uuid];
+  assert(agg);
 
-  if ( findChild(children, child_uuid)  ) {
-    removeChild( children, child_uuid );
+  if ( agg->hasChild(child_uuid)  ) {
+    agg->removeChild( child_uuid );
 
     // Cleans up the child if necessary, or makes sure it doesn't still refer to
     // this object anymore. See cleanUpChild for details.
@@ -359,9 +369,10 @@ void AggregateManager::generateAggregateMesh(const UUID& uuid, AggregateObjectPt
   if (mModelsSystem == NULL) return;
   if (mDirtyAggregateObjects.find(uuid) != mDirtyAggregateObjects.end()) return;
 
-  AGG_LOG(detailed,"Setting up aggregate " << uuid << " to generate aggregate mesh with " << aggObject->mChildren.size() << " in " << delayFor);
+  AGG_LOG(detailed,"Setting up aggregate " << uuid << " to generate aggregate mesh with " << aggObject->childrenSize() << " in " << delayFor);
 
   addDirtyAggregates(uuid);
+  mAggregateGenerationStartTime = Timer::now();
 
   if (mAggregationStrands[0]) {
     mAggregationStrands[0]->post(
@@ -375,6 +386,11 @@ void AggregateManager::generateAggregateMesh(const UUID& uuid, AggregateObjectPt
 
 uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime, bool generateSiblings) {
   Time curTime = Timer::now();
+
+  if (mSkipGenerate) {
+    mAggregatesGenerated++;
+    return GEN_SUCCESS;
+  }
 
   boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
   if (mAggregateObjects.find(uuid) == mAggregateObjects.end()) {
@@ -412,7 +428,7 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
     currentLocMap[uuid] = locInfoForUUID;
   }
 
-  std::vector<AggregateObjectPtr>& children = aggObject->mChildren;
+  const std::vector<AggregateObjectPtr> children = aggObject->getChildrenCopy();
                                                    //Set this to mLeaves if you want
                                                    //to generate directly from the leaves of the tree
 
@@ -426,7 +442,7 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
     }
     currentLocMap[child_uuid] = locInfoForChildUUID;
 
-    if (isAggregate(child_uuid) && locInfoForChildUUID->mesh == "") {
+    if (isAggregate(child_uuid) && locInfoForChildUUID->mesh() == "") {
       AGG_LOG(detailed,  "Not yet generated: " << child_uuid);
       return CHILDREN_NOT_YET_GEN;
     }
@@ -445,7 +461,7 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
 
     if (!m) {
       //request a download or generation of the mesh
-      std::string meshName = currentLocMap[child_uuid]->mesh;
+      std::string meshName = currentLocMap[child_uuid]->mesh();
 
       if (meshName != "") {
         boost::mutex::scoped_lock meshStoreLock(mMeshStoreMutex);
@@ -479,7 +495,7 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
   MeshdataPtr agg_mesh =  MeshdataPtr( new Meshdata() );
   agg_mesh->globalTransform = Matrix4x4f::identity();
 
-  Vector3f& uuidPos = locInfoForUUID->currentPosition;
+  Vector3f uuidPos = locInfoForUUID->currentPosition();
   float64 posX = uuidPos.x;
   float64 posY = uuidPos.y;
   float64 posZ = uuidPos.z;
@@ -501,10 +517,10 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
       continue;
     }
     MeshdataPtr m = mAggregateObjects[child_uuid]->mMeshdata;
-    if (isLeafAggregate && mAggregateObjects[child_uuid]->mChildren.size() != 0)
+    if (isLeafAggregate && mAggregateObjects[child_uuid]->childrenSize() != 0)
 	isLeafAggregate = false;
 
-    std::string meshName = currentLocMap[child_uuid]->mesh;
+    std::string meshName = currentLocMap[child_uuid]->mesh();
     if (!m && meshName != "") {
         boost::mutex::scoped_lock meshStoreLock(mMeshStoreMutex);
         if (mMeshStore.find(meshName) != mMeshStore.end()) {
@@ -528,7 +544,7 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
       continue;
     }
     MeshdataPtr m = mAggregateObjects[child_uuid]->mMeshdata;
-    std::string meshName = currentLocMap[child_uuid]->mesh;
+    std::string meshName = currentLocMap[child_uuid]->mesh();
     lock.unlock();
 
     if (!m || meshName == "") continue;
@@ -604,7 +620,7 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
     uint32 submeshNodeOffset = meshToStartNodeIdxMapping[meshName];
 
     // Extract the loc information we need for this object.
-    Vector3f location = currentLocMap[child_uuid]->currentPosition;
+    Vector3f location = currentLocMap[child_uuid]->currentPosition();
     double scalingfactor = 1.0;
 
     //If the child is an aggregate, don't use the information from LOC blindly.
@@ -623,13 +639,13 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
       scalingfactor = 1.0;
     }
     else {
-      scalingfactor = currentLocMap[child_uuid]->bounds.fullRadius() / originalMeshBoundsRadius;
+      scalingfactor = currentLocMap[child_uuid]->bounds().fullRadius() / originalMeshBoundsRadius;
     }
 
     float64 locationX = location.x;
     float64 locationY = location.y;
     float64 locationZ = location.z;
-    Quaternion orientation = currentLocMap[child_uuid]->currentOrientation;
+    Quaternion orientation = currentLocMap[child_uuid]->currentOrientation();
 
     // Reuse geoinst_it and geoinst_idx from earlier, but with a new iterator.
     Meshdata::GeometryInstanceIterator geoinst_it = m->getGeometryInstanceIterator();
@@ -741,7 +757,12 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
   for (uint32 i= 0; i < children.size(); i++) {
     UUID child_uuid = children[i]->mUUID;
     boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
-    assert( mAggregateObjects.find(child_uuid) != mAggregateObjects.end()) ;
+    // May have left because of the tree getting shifted around, so we don't
+    // want to assert that the aggregate object still has an entry. // FIXME
+    // even resetting this here isn't currently really a good idea since we can
+    // have multiple threads generating the same object at the same time due to
+    // multiple requests going to different threads...
+    if (mAggregateObjects.find(child_uuid) == mAggregateObjects.end()) continue;
     mAggregateObjects[child_uuid]->mMeshdata = std::tr1::shared_ptr<Meshdata>();
   }
 
@@ -1022,7 +1043,7 @@ void AggregateManager::handleUploadFinished(Transfer::UploadRequestPtr request, 
       AGG_LOG(error, "Failed to upload aggregate mesh " << localMeshName << ", composed of these children meshes:");
 
       boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
-      std::vector<AggregateObjectPtr>& children = aggObject->mChildren;
+      const std::vector<AggregateObjectPtr> children = aggObject->getChildrenCopy();
       for (uint32 i= 0; i < children.size(); i++) {
         UUID child_uuid = children[i]->mUUID;
         if ( mAggregateObjects.find(child_uuid) == mAggregateObjects.end() )
@@ -1030,7 +1051,7 @@ void AggregateManager::handleUploadFinished(Transfer::UploadRequestPtr request, 
 
         std::tr1::shared_ptr<LocationInfo> locInfo = getCachedLocInfo(child_uuid);
 
-        String meshName = (locInfo) ? locInfo->mesh :
+        String meshName = (locInfo) ? locInfo->mesh() :
                                       "LOC does not have meshname for " + child_uuid.toString();
         AGG_LOG(error, "   " << meshName);
       }
@@ -1227,26 +1248,6 @@ void AggregateManager::addToInMemoryCache(const String& meshName, const Meshdata
 
 }
 
-
-std::vector<AggregateManager::AggregateObjectPtr >& AggregateManager::iGetChildren(const UUID& uuid) {
-  static std::vector<AggregateObjectPtr> emptyVector;
-
-  if (mAggregateObjects.find(uuid) == mAggregateObjects.end()) {
-    return emptyVector;
-  }
-
-  std::vector<AggregateObjectPtr>& children = mAggregateObjects[uuid]->mChildren;
-
-  return children;
-}
-
-
-std::vector<AggregateManager::AggregateObjectPtr >& AggregateManager::getChildren(const UUID& uuid) {
-  boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
-
-  return iGetChildren(uuid);
-}
-
 void AggregateManager::addLeavesUpTree(UUID leaf_uuid, UUID uuid) {
   if (uuid == UUID::null()) return;
   if (mAggregateObjects.find(uuid) == mAggregateObjects.end()) return;
@@ -1257,7 +1258,7 @@ void AggregateManager::addLeavesUpTree(UUID leaf_uuid, UUID uuid) {
   if (!locInfo) return;
 
   if (mDirtyAggregateObjects.find(uuid) != mDirtyAggregateObjects.end()) {
-    float radius = locInfo->bounds.fullRadius();
+    float radius = locInfo->bounds().fullRadius();
     float solid_angle = TWO_PI * (1-sqrt(1- pow(radius/obj->mDistance,2)));
 
     if (solid_angle > ONE_PIXEL_SOLID_ANGLE) {
@@ -1291,7 +1292,7 @@ void AggregateManager::queueDirtyAggregates(Time postTime) {
       {
           std::tr1::shared_ptr<AggregateObject> aggObject = it->second;
 
-          if (aggObject->mChildren.size() == 0) {
+          if (aggObject->childrenSize() == 0) {
             individualObjects.push_back(aggObject->mUUID);
           }
 
@@ -1300,13 +1301,14 @@ void AggregateManager::queueDirtyAggregates(Time postTime) {
           }
 
           float radius  = INT_MAX;
-          for (uint32 i=0; i < aggObject->mChildren.size(); i++) {
-            UUID& child_uuid = aggObject->mChildren[i]->mUUID;
+          const std::vector<AggregateObjectPtr> children = aggObject->getChildrenCopy();
+          for (uint32 i=0; i < children.size(); i++) {
+            UUID& child_uuid = children[i]->mUUID;
 
             std::tr1::shared_ptr<LocationInfo> locInfo = getCachedLocInfo(child_uuid);
             if (!locInfo) continue;
 
-            float32 bnds_rad = locInfo->bounds.fullRadius();
+            float32 bnds_rad = locInfo->bounds().fullRadius();
             if (bnds_rad < radius) {
               radius = bnds_rad;
             }
@@ -1425,8 +1427,9 @@ void AggregateManager::updateChildrenTreeLevel(const UUID& uuid, uint16 treeLeve
 
     mAggregateObjects[uuid]->mTreeLevel = treeLevel;
 
-    for (uint32 i = 0; i < mAggregateObjects[uuid]->mChildren.size(); i++) {
-      updateChildrenTreeLevel(mAggregateObjects[uuid]->mChildren[i]->mUUID, treeLevel+1);
+    const std::vector<AggregateObjectPtr> children = mAggregateObjects[uuid]->getChildrenCopy();
+    for (uint32 i = 0; i < children.size(); i++) {
+      updateChildrenTreeLevel(children[i]->mUUID, treeLevel+1);
     }
 }
 
@@ -1465,23 +1468,12 @@ bool AggregateManager::findChild(std::vector<AggregateManager::AggregateObjectPt
   return false;
 }
 
-void AggregateManager::removeChild(std::vector<AggregateManager::AggregateObjectPtr>& v,
-                                   const UUID& uuid)
-{
-  for (uint32 i=0; i < v.size(); i++) {
-    if (v[i]->mUUID == uuid) {
-      v.erase(v.begin() + i);
-      return;
-    }
-  }
-}
-
 //Checks if the given UUID is the name of an aggregate object.
 //Note: This function locks mAggregateObjectsMutex.
 bool AggregateManager::isAggregate(const UUID& child_uuid) {
   boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
   return (mAggregateObjects.find(child_uuid) != mAggregateObjects.end()
-          && mAggregateObjects[child_uuid]->mChildren.size() > 0);
+          && mAggregateObjects[child_uuid]->childrenSize() > 0);
 }
 
 
@@ -1542,7 +1534,7 @@ void AggregateManager::localLocationUpdated(const UUID& uuid, bool agg, const Ti
   std::tr1::shared_ptr<LocationInfo> locinfo = mLocationServiceCache.getLocationInfo(uuid);
   if (!locinfo) return;
 
-  locinfo->currentPosition = newval.position();
+  locinfo->currentPosition(newval.position());
 }
 
 void AggregateManager::localOrientationUpdated(const UUID& uuid, bool agg, const TimedMotionQuaternion& newval) {
@@ -1551,7 +1543,7 @@ void AggregateManager::localOrientationUpdated(const UUID& uuid, bool agg, const
   std::tr1::shared_ptr<LocationInfo> locinfo = mLocationServiceCache.getLocationInfo(uuid);
   if (!locinfo) return;
 
-  locinfo->currentOrientation = newval.position();
+  locinfo->currentOrientation(newval.position());
 }
 
 void AggregateManager::localBoundsUpdated(const UUID& uuid, bool agg, const AggregateBoundingInfo& newval) {
@@ -1560,7 +1552,7 @@ void AggregateManager::localBoundsUpdated(const UUID& uuid, bool agg, const Aggr
   std::tr1::shared_ptr<LocationInfo> locinfo = mLocationServiceCache.getLocationInfo(uuid);
   if (!locinfo) return;
 
-  locinfo->bounds = newval;
+  locinfo->bounds(newval);
 }
 
 void AggregateManager::localMeshUpdated(const UUID& uuid, bool agg, const String& newval) {
@@ -1569,7 +1561,7 @@ void AggregateManager::localMeshUpdated(const UUID& uuid, bool agg, const String
   std::tr1::shared_ptr<LocationInfo> locinfo = mLocationServiceCache.getLocationInfo(uuid);
   if (!locinfo) return;
 
-  locinfo->mesh = newval;
+  locinfo->mesh(newval);
 }
 
 void AggregateManager::replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc,
@@ -1593,7 +1585,7 @@ void AggregateManager::replicaLocationUpdated(const UUID& uuid, const TimedMotio
   std::tr1::shared_ptr<LocationInfo> locinfo = mLocationServiceCache.getLocationInfo(uuid);
   if (!locinfo) return;
 
-  locinfo->currentPosition = newval.position();
+  locinfo->currentPosition(newval.position());
 }
 
 void AggregateManager::replicaOrientationUpdated(const UUID& uuid, const TimedMotionQuaternion& newval) {
@@ -1602,7 +1594,7 @@ void AggregateManager::replicaOrientationUpdated(const UUID& uuid, const TimedMo
   std::tr1::shared_ptr<LocationInfo> locinfo = mLocationServiceCache.getLocationInfo(uuid);
   if (!locinfo) return;
 
-  locinfo->currentOrientation = newval.position();
+  locinfo->currentOrientation(newval.position());
 }
 
 void AggregateManager::replicaBoundsUpdated(const UUID& uuid, const AggregateBoundingInfo& newval) {
@@ -1611,7 +1603,7 @@ void AggregateManager::replicaBoundsUpdated(const UUID& uuid, const AggregateBou
   std::tr1::shared_ptr<LocationInfo> locinfo = mLocationServiceCache.getLocationInfo(uuid);
   if (!locinfo) return;
 
-  locinfo->bounds = newval;
+  locinfo->bounds(newval);
 }
 
 void AggregateManager::replicaMeshUpdated(const UUID& uuid, const String& newval) {
@@ -1620,7 +1612,7 @@ void AggregateManager::replicaMeshUpdated(const UUID& uuid, const String& newval
   std::tr1::shared_ptr<LocationInfo> locinfo = mLocationServiceCache.getLocationInfo(uuid);
   if (!locinfo) return;
 
-  locinfo->mesh = newval;
+  locinfo->mesh(newval);
 }
 
 std::tr1::shared_ptr<AggregateManager::LocationInfo> AggregateManager::getCachedLocInfo(const UUID& uuid) {

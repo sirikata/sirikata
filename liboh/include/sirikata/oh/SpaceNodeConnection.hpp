@@ -98,8 +98,10 @@ struct SIRIKATA_OH_EXPORT SpaceNodeConnection : public Liveness {
     // Callback for connection event
     void handleConnectionEvent(const Network::Stream::ConnectionStatus status, const std::string&reason);
 
+    void setupConnectionStream(const Network::Stream::ConnectionStatus status, const std::string& reason, uint8 retries);
+
     // Callback for stream connection event
-    void handleStreamConnected(const Network::Stream::ConnectionStatus status, const std::string& reason, int err, OHSSTStreamPtr strm);
+    void handleStreamConnected(const Network::Stream::ConnectionStatus status, const std::string& reason, int err, OHSSTStreamPtr strm, uint8 retries);
 
     // Callback for when the connection receives data
     void handleRead(const Sirikata::Network::Chunk& chunk, const Sirikata::Network::Stream::PauseReceiveCallback& pause);

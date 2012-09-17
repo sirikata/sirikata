@@ -166,28 +166,40 @@ void SpaceNodeConnection::handleConnectionEvent(
         mConnectCB(status, reason);
     }
     else {
-        OHDP::SpaceNodeID self_id(mSpace, OHDP::NodeID::self());
-        OHSSTBaseDatagramLayerPtr baseDatagramLayer =
-            mContext->ohSSTConnMgr()->createDatagramLayer(
-                self_id, mContext, mOHDPService
-            );
-        mContext->ohSSTConnMgr()->connectStream(
-            OHSSTEndpoint(self_id, 0), // Local port is random
-            OHSSTEndpoint(OHDP::SpaceNodeID(mSpace, OHDP::NodeID(mServer)), OBJECT_SPACE_PORT),
-            std::tr1::bind( &SpaceNodeConnection::handleStreamConnected, this,
-                status, reason,
-                std::tr1::placeholders::_1, std::tr1::placeholders::_2
-            )
-        );
+        // FIXME fixed number of retries?
+        setupConnectionStream(status, reason, 3);
     }
 }
 
-void SpaceNodeConnection::handleStreamConnected(const Network::Stream::ConnectionStatus status, const std::string& reason, int err, OHSSTStreamPtr strm) {
+void SpaceNodeConnection::setupConnectionStream(const Network::Stream::ConnectionStatus status, const std::string& reason, uint8 retries) {
+    OHDP::SpaceNodeID self_id(mSpace, OHDP::NodeID::self());
+    OHSSTBaseDatagramLayerPtr baseDatagramLayer =
+        mContext->ohSSTConnMgr()->createDatagramLayer(
+            self_id, mContext, mOHDPService
+        );
+    mContext->ohSSTConnMgr()->connectStream(
+        OHSSTEndpoint(self_id, 0), // Local port is random
+        OHSSTEndpoint(OHDP::SpaceNodeID(mSpace, OHDP::NodeID(mServer)), OBJECT_SPACE_PORT),
+        std::tr1::bind( &SpaceNodeConnection::handleStreamConnected, this,
+            status, reason,
+            std::tr1::placeholders::_1, std::tr1::placeholders::_2,
+            retries
+        )
+    );
+}
+
+void SpaceNodeConnection::handleStreamConnected(const Network::Stream::ConnectionStatus status, const std::string& reason, int err, OHSSTStreamPtr strm, uint8 retries) {
     mConnecting = false;
     if (err != SST_IMPL_SUCCESS) {
-        SILOG(space-node-connection,error,"Failed to connect OHDP stream.");
-        invokeAndClearCallbacks(false);
-        mConnectCB(Network::Stream::ConnectionFailed, "Failed to connect OHDP stream.");
+        if (retries > 0) {
+            SILOG(space-node-connection,detailed,"Failed to connect OHDP stream, retrying with " << retries << " more retries");
+            setupConnectionStream(status, reason, retries-1);
+        }
+        else {
+            SILOG(space-node-connection,error,"Failed to connect OHDP stream.");
+            invokeAndClearCallbacks(false);
+            mConnectCB(Network::Stream::ConnectionFailed, "Failed to connect OHDP stream.");
+        }
     }
     else {
         mOHSSTStream = strm;
