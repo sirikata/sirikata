@@ -1422,6 +1422,18 @@ PresenceEntry.prototype.proxRemovedEvent = function (visibleObj,visTo)
           baseSystem.require(filename);
       };
 
+      /** @function
+       *  @description Loads and evaluates a file if it has not
+       *  already been loaded.  Unlike system.import, this ensures
+       *  that each file is imported at most one time. This is usually
+       *  what you want to use.
+       *  @param filename The path to look for the file to include
+       *  @see system.import
+       */
+      system.js_require = function(/** String */ filename)
+      {
+          baseSystem.js_require(filename);
+      };
      
      system.__entityToken = function()
      {
