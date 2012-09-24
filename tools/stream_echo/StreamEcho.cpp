@@ -178,5 +178,7 @@ int main(int argc, char** argv) {
     delete iostrand;
     delete ios;
 
+    DaemonCleanup();
+
     return 0;
 }

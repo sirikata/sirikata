@@ -99,6 +99,7 @@ SIRIKATA_FUNCTION_EXPORT void FillMissingOptionDefaults();
 /// Daemonizes the process if requested and then sets up output, e.g. logfile,
 /// remaps std::err, generates pidfile, etc.
 SIRIKATA_FUNCTION_EXPORT void DaemonizeAndSetOutputs();
+SIRIKATA_FUNCTION_EXPORT void DaemonCleanup();
 
 // Be careful with GetOption.  Using it and ->as() directly can be dangerous
 // because some types are defined per-library and won't dynamic_cast properly.

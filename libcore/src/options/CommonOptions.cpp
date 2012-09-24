@@ -45,6 +45,7 @@
 #include <unistd.h>
 #endif
 
+#include <boost/filesystem.hpp>
 
 namespace Sirikata {
 
@@ -220,6 +221,17 @@ void DaemonizeAndSetOutputs() {
         }
     }
 }
+
+void DaemonCleanup() {
+    // Clean up the PID file if we wrote it
+    String pidfile = GetOptionValue<String>(OPT_PID_FILE);
+    if (pidfile == "") return;
+
+    boost::filesystem::path pidpath(pidfile);
+    if (boost::filesystem::exists(pidpath) && boost::filesystem::is_regular_file(pidpath))
+        boost::filesystem::remove(pidpath);
+}
+
 
 OptionValue* GetOption(const char* name) {
     OptionSet* options = OptionSet::getOptions(SIRIKATA_OPTIONS_MODULE,NULL);

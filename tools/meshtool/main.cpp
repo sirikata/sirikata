@@ -131,5 +131,6 @@ int main(int argc, char** argv) {
         delete filter;
     }
 
+    DaemonCleanup();
     return 0;
 }

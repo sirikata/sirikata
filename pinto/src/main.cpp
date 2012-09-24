@@ -112,5 +112,6 @@ int main(int argc, char** argv) {
 
     Sirikata::Logging::finishLog();
 
+    DaemonCleanup();
     return 0;
 }
