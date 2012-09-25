@@ -236,6 +236,41 @@ bool OgreSystem::initialize(ConnectionEventProvider* cevtprovider, VWObjectPtr v
     if (mSkybox && (*mSkybox))
         mSkybox->load(mSceneManager, mResourceLoader, mTransferPool);
 
+
+    mInvokableHandlers["onReady"] = std::tr1::bind(&OgreSystem::setOnReady, this, _1);
+    mInvokableHandlers["evalInUI"] = std::tr1::bind(&OgreSystem::evalInUI, this, _1);
+    mInvokableHandlers["createWindow"] = std::tr1::bind(&OgreSystem::createWindowURL, this, _1);
+    mInvokableHandlers["createWindowFile"] = std::tr1::bind(&OgreSystem::createWindowFile, this, _1);
+    mInvokableHandlers["addModuleToUI"] = std::tr1::bind(&OgreSystem::addModuleToUI, this, _1);
+    mInvokableHandlers["addTextModuleToUI"] = std::tr1::bind(&OgreSystem::addTextModuleToUI, this, _1);
+    mInvokableHandlers["createWindowHTML"] = std::tr1::bind(&OgreSystem::createWindowHTML, this, _1);
+    mInvokableHandlers["addInputHandler"] = std::tr1::bind(&OgreSystem::addInputHandler, this, _1);
+    mInvokableHandlers["removeInputHandler"] = std::tr1::bind(&OgreSystem::removeInputHandler, this, _1);
+    mInvokableHandlers["quit"] = std::tr1::bind(&OgreSystem::invokeQuit, this, _1);
+    mInvokableHandlers["suspend"] = std::tr1::bind(&OgreSystem::invokeSuspend, this, _1);
+    mInvokableHandlers["toggleSuspend"] = std::tr1::bind(&OgreSystem::invokeToggleSuspend, this, _1);
+    mInvokableHandlers["resume"] = std::tr1::bind(&OgreSystem::invokeResume, this, _1);
+    mInvokableHandlers["screenshot"] = std::tr1::bind(&OgreSystem::invokeScreenshot, this, _1);
+    mInvokableHandlers["pick"] = std::tr1::bind(&OgreSystem::pick, this, _1);
+    mInvokableHandlers["bbox"] = std::tr1::bind(&OgreSystem::bbox, this, _1);
+    mInvokableHandlers["axis"] = std::tr1::bind(&OgreSystem::axis, this, _1);
+    mInvokableHandlers["world2Screen"] = std::tr1::bind(&OgreSystem::world2Screen, this, _1);
+    mInvokableHandlers["newDrawing"] = std::tr1::bind(&OgreSystem::newDrawing, this, _1);
+    mInvokableHandlers["setMat"] = std::tr1::bind(&OgreSystem::setMat, this, _1);
+    mInvokableHandlers["setInheritOrient"] = std::tr1::bind(&OgreSystem::setInheritOrient, this, _1);
+    mInvokableHandlers["setVisible"] = std::tr1::bind(&OgreSystem::setVisible, this, _1);
+    mInvokableHandlers["shape"] = std::tr1::bind(&OgreSystem::shape, this, _1);
+    mInvokableHandlers["visible"] = std::tr1::bind(&OgreSystem::visible, this, _1);
+    mInvokableHandlers["camera"] = std::tr1::bind(&OgreSystem::getCamera, this, _1);
+    mInvokableHandlers["setCameraPosition"] = std::tr1::bind(&OgreSystem::setCameraPosition, this, _1);
+    mInvokableHandlers["setCameraOrientation"] = std::tr1::bind(&OgreSystem::setCameraOrientation, this, _1);
+    mInvokableHandlers["getAnimationList"] = std::tr1::bind(&OgreSystem::getAnimationList, this, _1);
+    mInvokableHandlers["startAnimation"] = std::tr1::bind(&OgreSystem::startAnimation, this, _1);
+    mInvokableHandlers["stopAnimation"] = std::tr1::bind(&OgreSystem::stopAnimation, this, _1);
+    mInvokableHandlers["setInheritScale"] = std::tr1::bind(&OgreSystem::setInheritScale, this, _1);
+    mInvokableHandlers["isReady"] = std::tr1::bind(&OgreSystem::isReady, this, _1);
+    mInvokableHandlers["setSkybox"] = std::tr1::bind(&OgreSystem::setSkybox, this, _1);
+
     return true;
 }
 
@@ -732,91 +767,37 @@ void OgreSystem::tickInputHandler(const Task::LocalTime& t) const {
 }
 
 
-boost::any OgreSystem::invoke(vector<boost::any>& params)
-{
-    // Decode the command. First argument is the "function name"
-    if (params.empty() || !Invokable::anyIsString(params[0]))
-        return boost::any();
-
-    string name = Invokable::anyAsString(params[0]);
-    SILOG(ogre,detailed,"Invoking the function " << name);
-
-
-    if(name == "onReady")
-        return setOnReady(params);
-    else if(name == "evalInUI")
-        return evalInUI(params);
-    else if(name == "createWindow")
-        return createWindow(params);
-    else if(name == "createWindowFile")
-        return createWindowFile(params);
-    else if(name == "addModuleToUI")
-        return addModuleToUI(params);
-    else if(name == "addTextModuleToUI")
-        return addTextModuleToUI(params);
-    else if(name == "createWindowHTML")
-        return createWindowHTML(params);
-    else if(name == "addInputHandler")
-        return addInputHandler(params);
-    else if (name == "removeInputHandler")
-        return removeInputHandler(params);
-    else if(name == "quit")
-        quit();
-    else if (name == "suspend")
-        suspend();
-    else if (name == "toggleSuspend")
-        toggleSuspend();
-    else if (name == "resume")
-        resume();
-    else if (name == "screenshot")
-        screenshot("screenshot.png");
-    else if (name == "pick")
-        return pick(params);
-    else if (name == "bbox")
-        return bbox(params);
-    else if (name == "axis")
-        return axis(params);
-    else if (name == "world2Screen")
-        return world2Screen(params);
-    else if (name == "newDrawing")
-        return newDrawing(params);
-    else if (name == "setMat")
-        return setMat(params);
-    else if (name == "setInheritOrient")
-        return setInheritOrient(params);
-    else if (name == "setVisible")
-        return setVisible(params);
-    else if (name == "shape")
-        return shape(params);
-    else if (name == "visible")
-        return visible(params);
-    else if (name == "camera")
-        return getCamera(params);
-    else if (name == "setCameraPosition")
-        return setCameraPosition(params);
-    else if (name == "setCameraOrientation")
-        return setCameraOrientation(params);
-    else if (name == "getAnimationList")
-        return getAnimationList(params);
-    else if (name == "startAnimation")
-        return startAnimation(params);
-    else if (name == "stopAnimation")
-        return stopAnimation(params);
-    else if (name == "setInheritScale")
-        return setInheritScale(params);
-    else if (name == "isReady")
-        return isReady(params);
-    else if (name == "setSkybox")
-        return setSkybox(params);
-    else
-        return OgreRenderer::invoke(params);
-
-    return boost::any();
-}
 
 boost::any OgreSystem::isReady(std::vector<boost::any>& params)
 {
     return Invokable::asAny(mReady);
+}
+
+
+
+boost::any OgreSystem::invokeQuit(std::vector<boost::any>& params) {
+    quit();
+    return boost::any();
+}
+
+boost::any OgreSystem::invokeSuspend(std::vector<boost::any>& params) {
+    suspend();
+    return boost::any();
+}
+
+boost::any OgreSystem::invokeToggleSuspend(std::vector<boost::any>& params) {
+    toggleSuspend();
+    return boost::any();
+}
+
+boost::any OgreSystem::invokeResume(std::vector<boost::any>& params) {
+    resume();
+    return boost::any();
+}
+
+boost::any OgreSystem::invokeScreenshot(std::vector<boost::any>& params) {
+    screenshot("screenshot.png");
+    return boost::any();
 }
 
 boost::any OgreSystem::setOnReady(std::vector<boost::any>& params) {
@@ -865,7 +846,7 @@ boost::any OgreSystem::createWindow(const String& window_name, bool is_html, boo
     return Invokable::asAny(inn);
 }
 
-boost::any OgreSystem::createWindow(vector<boost::any>& params) {
+boost::any OgreSystem::createWindowURL(vector<boost::any>& params) {
     // Create a window using the specified url
     if (params.size() < 3) return boost::any();
     if (!Invokable::anyIsString(params[1]) || !Invokable::anyIsString(params[2])) return boost::any();

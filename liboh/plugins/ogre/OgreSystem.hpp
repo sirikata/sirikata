@@ -201,9 +201,11 @@ public:
     // SessionEventListener Interface
     virtual void onDisconnected(SessionEventProviderPtr from, const SpaceObjectReference& name);
 
-    // Methods for handling Invokable actions
-    virtual boost::any invoke(std::vector<boost::any>& params);
-
+    boost::any invokeQuit(std::vector<boost::any>& params);
+    boost::any invokeSuspend(std::vector<boost::any>& params);
+    boost::any invokeToggleSuspend(std::vector<boost::any>& params);
+    boost::any invokeResume(std::vector<boost::any>& params);
+    boost::any invokeScreenshot(std::vector<boost::any>& params);
     // Sets the onReady callback, invoked when the basic graphics and UI are
     // ready to be used.
     boost::any setOnReady(std::vector<boost::any>& params);
@@ -212,7 +214,7 @@ public:
     // Helper which creates a WebView window, either
     boost::any createWindow(const String& name, bool is_html, bool is_file, String content, uint32 width, uint32 height);
     // Create a window using a URL
-    boost::any createWindow(std::vector<boost::any>& params);
+    boost::any createWindowURL(std::vector<boost::any>& params);
     // Create a window using a file
     boost::any createWindowFile(std::vector<boost::any>& params);
     // Create a window using HTML

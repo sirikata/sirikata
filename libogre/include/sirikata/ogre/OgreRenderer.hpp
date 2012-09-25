@@ -227,6 +227,9 @@ public:
 
 
     // Invokable helpers
+    typedef std::tr1::function<boost::any(std::vector<boost::any>& params)> InvokableHandler;
+    typedef std::tr1::unordered_map<String, InvokableHandler> InvokableHandlerMap;
+    InvokableHandlerMap mInvokableHandlers;
 
     // Set handler to be called on each tick, i.e. before each frame
     boost::any setOnTick(std::vector<boost::any>& params);

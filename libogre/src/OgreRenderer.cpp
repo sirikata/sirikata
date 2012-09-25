@@ -538,6 +538,12 @@ bool OgreRenderer::initialize(const String& options, bool with_berkelium) {
 
     loadSystemLights();
 
+    // Setup invokable handlers
+    mInvokableHandlers["onTick"] = std::tr1::bind(&OgreRenderer::setOnTick, this, _1);
+    mInvokableHandlers["maxObjects"] = std::tr1::bind(&OgreRenderer::maxObjects, this, _1);
+    mInvokableHandlers["objectPrioritization"] = std::tr1::bind(&OgreRenderer::objectPrioritization, this, _1);
+    mInvokableHandlers["stats"] = std::tr1::bind(&OgreRenderer::rendererStats, this, _1);
+
     initialized = true;
     return true;
 }
@@ -927,18 +933,13 @@ boost::any OgreRenderer::invoke(std::vector<boost::any>& params) {
     std::string name = Invokable::anyAsString(params[0]);
     SILOG(ogre,detailed,"Invoking the function " << name);
 
-    if (name == "onTick")
-        return setOnTick(params);
-    else if (name == "maxObjects")
-        return maxObjects(params);
-    else if (name == "objectPrioritization")
-        return objectPrioritization(params);
-    else if (name == "stats")
-        return rendererStats(params);
-    else
+    InvokableHandlerMap::iterator it = mInvokableHandlers.find(name);
+    if (it == mInvokableHandlers.end()) {
         SILOG(ogre, warn, "Function " << name << " was invoked but this function was not found.");
+        return boost::any();
+    }
 
-    return boost::any();
+    return (it->second(params));
 }
 
 boost::any OgreRenderer::setOnTick(std::vector<boost::any>& params) {
