@@ -691,7 +691,7 @@ TCPSpaceNetwork::TCPReceiveStream* TCPSpaceNetwork::handleConnectedStream(Remote
         session->remote_stream = stream_to_save;
         stream_to_close->shutting_down = true;
 
-        Sirikata::Network::IOTimerPtr timer = Sirikata::Network::IOTimer::create(mIOStrand->service());
+        Sirikata::Network::IOTimerPtr timer = Sirikata::Network::IOTimer::create(mIOStrand);
         timer->wait(
             Duration::seconds(5),
             std::tr1::bind(&TCPSpaceNetwork::handleClosingStreamTimeout, this, timer, stream_to_close)
