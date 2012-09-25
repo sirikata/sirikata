@@ -1604,8 +1604,18 @@ void JSObjectScript::print(const String& str) {
 //takes in a name of a file to read from and execute all instructions within.
 //also takes in a context to do so in.  If this context is null, just use
 //mContext instead.
-void JSObjectScript::resolveImport(const String& filename, boost::filesystem::path* full_file_out, boost::filesystem::path* base_path_out)
-{
+bool JSObjectScript::resolveImport(const String& filename, bool isJS, boost::filesystem::path* full_file_out, boost::filesystem::path* base_path_out) {
+    // Try without extensions
+    if (resolveImport(filename, full_file_out, base_path_out))
+        return true;
+    // And if that failed, with the extra extension
+    if (isJS)
+        return resolveImport(filename + ".js", full_file_out, base_path_out);
+    else
+        return resolveImport(filename + ".em", full_file_out, base_path_out);
+}
+
+bool JSObjectScript::resolveImport(const String& filename, boost::filesystem::path* full_file_out, boost::filesystem::path* base_path_out) {
     JSSCRIPT_SERIAL_CHECK();
     using namespace boost::filesystem;
 
@@ -1626,7 +1636,7 @@ void JSObjectScript::resolveImport(const String& filename, boost::filesystem::pa
             {
                 *full_file_out = fq;
                 *base_path_out = ctx.currentScriptBaseDir;
-                return;
+                return true;
             }
         } catch (boost::filesystem::filesystem_error) {
             // Ignore, this just means we don't have access to some directory so
@@ -1658,7 +1668,7 @@ void JSObjectScript::resolveImport(const String& filename, boost::filesystem::pa
             if (boost::filesystem::exists(fq)) {
                 *full_file_out = fq;
                 *base_path_out = base_path;
-                return;
+                return true;
             }
         } catch (boost::filesystem::filesystem_error) {
             // Ignore, this just means we don't have access to some directory so
@@ -1669,7 +1679,7 @@ void JSObjectScript::resolveImport(const String& filename, boost::filesystem::pa
     *full_file_out = path();
     *base_path_out = path();
 
-    return;
+    return false;
 }
 
 
@@ -1788,26 +1798,6 @@ v8::Handle<v8::Value> JSObjectScript::absoluteImport(const boost::filesystem::pa
     return  handle_scope.Close(returner);
 }
 
-std::string* JSObjectScript::extensionize(const String filename)
-{
-    JSSCRIPT_SERIAL_CHECK();
-    std::string* fileToFind = new std::string(filename);
-    int index = filename.find(".");
-    if(index == -1)
-    {
-      *fileToFind = *fileToFind + ".em";
-    }
-    else
-    {
-      if(filename.substr(index) != ".em")
-      {
-        // found a file with different extenstion
-        return NULL;
-      }
-    }
-    return fileToFind;
-}
-
 v8::Handle<v8::Value> JSObjectScript::evalInGlobal(const String& contents, v8::ScriptOrigin* origin,JSContextStruct* jscs)
 {
     JSSCRIPT_SERIAL_CHECK();
@@ -1827,24 +1817,9 @@ v8::Handle<v8::Value> JSObjectScript::import(const String& filename,  bool isJS)
     JSLOG(detailed, "Importing: " << filename);
     v8::HandleScope handle_scope;
 
-    std::string* fileToFind= NULL;
-
-    if (! isJS)
-        fileToFind =  extensionize(filename);
-    else
-        fileToFind = new String(filename);
-
-    if(fileToFind == NULL)
-    {
-        std::string errMsg = "Cannot import " +
-            filename + ". Illegal file extension.";
-
-        return v8::ThrowException(
-            v8::Exception::Error(v8::String::New(errMsg.c_str()) ) );
-    }
     boost::filesystem::path full_filename, full_base;
-    resolveImport(*fileToFind, &full_filename, &full_base);
-    delete fileToFind;
+    resolveImport(filename, isJS, &full_filename, &full_base);
+
     // If we still haven't filled this in, we just can't find the file.
     if (full_filename.empty())
     {
@@ -1870,21 +1845,10 @@ v8::Handle<v8::Value> JSObjectScript::require(const String& filename,bool isJS)
 
     JSLOG(detailed, "Requiring: " << filename);
     HandleScope handle_scope;
-    std::string* fileToFind= NULL;
-    if (! isJS)
-        fileToFind =  extensionize(filename);
-    else
-        fileToFind = new String(filename);
-
-    if(fileToFind == NULL)
-    {
-      std::string errMsg = "Cannot import " + filename + ". Illegal file extension.";
-      return v8::ThrowException( v8::Exception::Error(v8::String::New(errMsg.c_str()) ) );;
-    }
 
     boost::filesystem::path full_filename, full_base;
-    resolveImport(*fileToFind, &full_filename, &full_base);
-    delete fileToFind;
+    resolveImport(filename, isJS, &full_filename, &full_base);
+
     // If we still haven't filled this in, we just can't find the file.
     if (full_filename.empty())
     {

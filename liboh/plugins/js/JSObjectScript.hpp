@@ -312,13 +312,11 @@ protected:
     ImportedFileMap mImportedFiles;
 
 
-    // add an extenstion to the filename that you get for import/require
-    std::string* extensionize(std::string);
-
     // Resolve a relative path for import to an absolute
     // path. "Returns" the full path of the file as well as the import
     // base path.
-    void resolveImport(const String& filename, boost::filesystem::path* full_file_out, boost::filesystem::path* base_path_out);
+    bool resolveImport(const String& filename, bool isJS, boost::filesystem::path* full_file_out, boost::filesystem::path* base_path_out);
+    bool resolveImport(const String& filename, boost::filesystem::path* full_file_out, boost::filesystem::path* base_path_out);
     // Perform an import on the absolute path filename. This performs no
     // resolution and *always* performs the import, even if the file has already
     // been imported.
