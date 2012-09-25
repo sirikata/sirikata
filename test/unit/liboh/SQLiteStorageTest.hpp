@@ -35,11 +35,11 @@
 
 class SQLiteStorageTest : public CxxTest::TestSuite
 {
-    static const String dbfile;
+    static const Sirikata::String dbfile;
     StorageTestBase _base;
 public:
     SQLiteStorageTest()
-     : _base("oh-sqlite", "sqlite", String("--db=") + dbfile)
+     : _base("oh-sqlite", "sqlite", Sirikata::String("--db=") + dbfile)
     {
     }
 
@@ -74,4 +74,4 @@ public:
     void testRollback() {_base.testRollback(); }
 };
 
-const String SQLiteStorageTest::dbfile("test.db");
+const Sirikata::String SQLiteStorageTest::dbfile("test.db");

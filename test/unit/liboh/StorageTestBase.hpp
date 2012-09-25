@@ -35,32 +35,36 @@
 
 #include <cxxtest/TestSuite.h>
 #include <sirikata/oh/Storage.hpp>
+#include <sirikata/core/util/PluginManager.hpp>
+#include <sirikata/core/network/IOService.hpp>
+#include <sirikata/core/network/IOStrand.hpp>
+#include <sirikata/core/network/IOWork.hpp>
 
 class StorageTestBase
 {
 protected:
-    typedef OH::Storage::Result Result;
-    typedef OH::Storage::ReadSet ReadSet;
+    typedef Sirikata::OH::Storage::Result Result;
+    typedef Sirikata::OH::Storage::ReadSet ReadSet;
 
-    static const OH::Storage::Bucket _buckets[2];
+    static const Sirikata::OH::Storage::Bucket _buckets[2];
 
     int _initialized;
 
-    String _plugin;
-    String _type;
-    String _args;
+    Sirikata::String _plugin;
+    Sirikata::String _type;
+    Sirikata::String _args;
 
-    PluginManager _pmgr;
-    OH::Storage* _storage;
+    Sirikata::PluginManager _pmgr;
+    Sirikata::OH::Storage* _storage;
 
     // Helpers for getting event loop setup/torn down
-    Trace::Trace* _trace;
-    ODPSST::ConnectionManager* _sstConnMgr;
-    OHDPSST::ConnectionManager* _ohSSTConnMgr;
-    Network::IOService* _ios;
-    Network::IOStrand* _mainStrand;
-    Network::IOWork* _work;
-    ObjectHostContext* _ctx;
+    Sirikata::Trace::Trace* _trace;
+    Sirikata::ODPSST::ConnectionManager* _sstConnMgr;
+    Sirikata::OHDPSST::ConnectionManager* _ohSSTConnMgr;
+    Sirikata::Network::IOService* _ios;
+    Sirikata::Network::IOStrand* _mainStrand;
+    Sirikata::Network::IOWork* _work;
+    Sirikata::ObjectHostContext* _ctx;
 
     // Processing happens in another thread, but the main test thread
     // needs to wait for the test to complete before proceeding. This
@@ -69,7 +73,7 @@ protected:
     boost::condition_variable _cond;
 
 public:
-    StorageTestBase(String plugin, String type, String args)
+    StorageTestBase(Sirikata::String plugin, Sirikata::String type, Sirikata::String args)
      : _initialized(0),
        _plugin(plugin),
        _type(type),
@@ -90,19 +94,19 @@ public:
         }
 
         // Storage is tied to the main event loop, which requires quite a bit of setup
-        ObjectHostID oh_id(1);
-        _trace = new Trace::Trace("dummy.trace");
-        _ios = new Network::IOService("StorageTest");
+        Sirikata::ObjectHostID oh_id(1);
+        _trace = new Sirikata::Trace::Trace("dummy.trace");
+        _ios = new Sirikata::Network::IOService("StorageTest");
         _mainStrand = _ios->createStrand("StorageTest");
-        _work = new Network::IOWork(*_ios, "StorageTest");
-        Time start_time = Timer::now(); // Just for stats in ObjectHostContext.
-        Duration duration = Duration::zero(); // Indicates to run forever.
-        _sstConnMgr = new ODPSST::ConnectionManager();
-        _ohSSTConnMgr = new OHDPSST::ConnectionManager();
+        _work = new Sirikata::Network::IOWork(*_ios, "StorageTest");
+        Sirikata::Time start_time = Sirikata::Timer::now(); // Just for stats in ObjectHostContext.
+        Sirikata::Duration duration = Sirikata::Duration::zero(); // Indicates to run forever.
+        _sstConnMgr = new Sirikata::ODPSST::ConnectionManager();
+        _ohSSTConnMgr = new Sirikata::OHDPSST::ConnectionManager();
 
-        _ctx = new ObjectHostContext("test", oh_id, _sstConnMgr, _ohSSTConnMgr, _ios, _mainStrand, _trace, start_time, duration);
+        _ctx = new Sirikata::ObjectHostContext("test", oh_id, _sstConnMgr, _ohSSTConnMgr, _ios, _mainStrand, _trace, start_time, duration);
 
-        _storage = OH::StorageFactory::getSingleton().getConstructor(_type)(_ctx, _args);
+        _storage = Sirikata::OH::StorageFactory::getSingleton().getConstructor(_type)(_ctx, _args);
 
         for(int i = 0; i < 2; i++)
             _storage->leaseBucket(_buckets[i]);
@@ -113,7 +117,7 @@ public:
         // Run the context, but we need to make sure it only lives in other
         // threads, otherwise we'd block up this one.  We include 4 threads to
         // exercise support for multiple threads.
-        _ctx->run(4, Context::AllNew);
+        _ctx->run(4, Sirikata::Context::AllNew);
     }
 
     void tearDown() {
@@ -151,7 +155,7 @@ public:
 
     void checkReadValuesImpl(Result expected_result, ReadSet expected, Result result, ReadSet* rs) {
         TS_ASSERT_EQUALS(expected_result, result);
-        if ((result != OH::Storage::SUCCESS) || (expected_result != OH::Storage::SUCCESS)) return;
+        if ((result != Sirikata::OH::Storage::SUCCESS) || (expected_result != Sirikata::OH::Storage::SUCCESS)) return;
 
         if (!rs) {
             TS_ASSERT_EQUALS(expected.size(), 0);
@@ -160,7 +164,7 @@ public:
 
         TS_ASSERT_EQUALS(expected.size(), rs->size());
         for(ReadSet::iterator it = expected.begin(); it != expected.end(); it++) {
-            String key = it->first; String value = it->second;
+            Sirikata::String key = it->first; Sirikata::String value = it->second;
             TS_ASSERT(rs->find(key) != rs->end());
             TS_ASSERT_EQUALS((*rs)[key], value);
         }
@@ -173,15 +177,15 @@ public:
         _cond.notify_one();
     }
 
-    void checkReadCountValueImpl(Result expected_result, int32 expected_count, Result result, int32 count) {
+    void checkReadCountValueImpl(Result expected_result, Sirikata::int32 expected_count, Result result, Sirikata::int32 count) {
         TS_ASSERT_EQUALS(expected_result, result);
-        if ((result != OH::Storage::SUCCESS) || (expected_result != OH::Storage::SUCCESS)) return;
+        if ((result != Sirikata::OH::Storage::SUCCESS) || (expected_result != Sirikata::OH::Storage::SUCCESS)) return;
 
         TS_ASSERT_EQUALS(expected_count, count);
         if (!count || !expected_count) return;
     }
 
-    void checkCountValue(Result expected_result, int32 expected_count, Result result, int32 count) {
+    void checkCountValue(Result expected_result, Sirikata::int32 expected_count, Result result, Sirikata::int32 count) {
         boost::unique_lock<boost::mutex> lock(_mutex);
         checkReadCountValueImpl(expected_result, expected_count, result, count);
         _cond.notify_one();
@@ -201,7 +205,7 @@ public:
         using std::tr1::placeholders::_2;
 
         _storage->write(_buckets[0], "a", "abcde",
-            std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::SUCCESS, ReadSet(), _1, _2)
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, Sirikata::OH::Storage::SUCCESS, ReadSet(), _1, _2)
         );
         waitForTransaction();
     }
@@ -214,7 +218,7 @@ public:
         ReadSet rs;
         rs["a"] = "abcde";
         _storage->read(_buckets[0], "a",
-            std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::SUCCESS, rs, _1, _2)
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, Sirikata::OH::Storage::SUCCESS, rs, _1, _2)
         );
         waitForTransaction();
     }
@@ -224,7 +228,7 @@ public:
         using std::tr1::placeholders::_2;
 
         _storage->read(_buckets[0], "key_does_not_exist",
-            std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::TRANSACTION_ERROR, ReadSet(), _1, _2)
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, Sirikata::OH::Storage::TRANSACTION_ERROR, ReadSet(), _1, _2)
         );
         waitForTransaction();
     }
@@ -235,7 +239,7 @@ public:
         using std::tr1::placeholders::_2;
 
         _storage->compare(_buckets[0], "a", "abcde",
-            std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::SUCCESS, ReadSet(), _1, _2)
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, Sirikata::OH::Storage::SUCCESS, ReadSet(), _1, _2)
         );
         waitForTransaction();
     }
@@ -246,7 +250,7 @@ public:
         using std::tr1::placeholders::_2;
 
         _storage->compare(_buckets[0], "a", "wrong_key_value",
-            std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::TRANSACTION_ERROR, ReadSet(), _1, _2)
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, Sirikata::OH::Storage::TRANSACTION_ERROR, ReadSet(), _1, _2)
         );
         waitForTransaction();
     }
@@ -256,13 +260,13 @@ public:
         using std::tr1::placeholders::_2;
 
         _storage->erase(_buckets[0], "a",
-            std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::SUCCESS, ReadSet(), _1, _2)
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, Sirikata::OH::Storage::SUCCESS, ReadSet(), _1, _2)
         );
         waitForTransaction();
 
         // After erase, a read should fail
         _storage->read(_buckets[0], "a",
-            std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::TRANSACTION_ERROR, ReadSet(), _1, _2)
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, Sirikata::OH::Storage::TRANSACTION_ERROR, ReadSet(), _1, _2)
         );
         waitForTransaction();
     }
@@ -275,7 +279,7 @@ public:
         _storage->write(_buckets[0], "a", "abcde");
         _storage->write(_buckets[0], "f", "fghij");
         _storage->commitTransaction(_buckets[0],
-            std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::SUCCESS, ReadSet(), _1, _2)
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, Sirikata::OH::Storage::SUCCESS, ReadSet(), _1, _2)
         );
         waitForTransaction();
     }
@@ -292,7 +296,7 @@ public:
         _storage->read(_buckets[0], "a");
         _storage->read(_buckets[0], "f");
         _storage->commitTransaction(_buckets[0],
-            std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::SUCCESS, rs, _1, _2)
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, Sirikata::OH::Storage::SUCCESS, rs, _1, _2)
         );
         waitForTransaction();
     }
@@ -305,7 +309,7 @@ public:
         _storage->read(_buckets[0], "key_does_not_exist");
         _storage->read(_buckets[0], "another_key_does_not_exist");
         _storage->commitTransaction(_buckets[0],
-            std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::TRANSACTION_ERROR, ReadSet(), _1, _2)
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, Sirikata::OH::Storage::TRANSACTION_ERROR, ReadSet(), _1, _2)
         );
         waitForTransaction();
     }
@@ -318,7 +322,7 @@ public:
         _storage->read(_buckets[0], "a");
         _storage->read(_buckets[0], "another_key_does_not_exist");
         _storage->commitTransaction(_buckets[0],
-            std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::TRANSACTION_ERROR, ReadSet(), _1, _2)
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, Sirikata::OH::Storage::TRANSACTION_ERROR, ReadSet(), _1, _2)
         );
         waitForTransaction();
     }
@@ -331,17 +335,17 @@ public:
         _storage->erase(_buckets[0], "a");
         _storage->erase(_buckets[0], "f");
         _storage->commitTransaction(_buckets[0],
-            std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::SUCCESS, ReadSet(), _1, _2)
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, Sirikata::OH::Storage::SUCCESS, ReadSet(), _1, _2)
         );
         waitForTransaction();
 
         _storage->read(_buckets[0], "a",
-            std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::TRANSACTION_ERROR, ReadSet(), _1, _2)
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, Sirikata::OH::Storage::TRANSACTION_ERROR, ReadSet(), _1, _2)
         );
         waitForTransaction();
 
         _storage->read(_buckets[0], "f",
-            std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::TRANSACTION_ERROR, ReadSet(), _1, _2)
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, Sirikata::OH::Storage::TRANSACTION_ERROR, ReadSet(), _1, _2)
         );
         waitForTransaction();
 
@@ -356,7 +360,7 @@ public:
         _storage->write(_buckets[0], "f", "fghij");
         _storage->read(_buckets[0], "x");
         _storage->commitTransaction(_buckets[0],
-            std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::TRANSACTION_ERROR, ReadSet(), _1, _2)
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, Sirikata::OH::Storage::TRANSACTION_ERROR, ReadSet(), _1, _2)
         );
         waitForTransaction();
 
@@ -368,7 +372,7 @@ public:
         _storage->read(_buckets[0], "a");
         _storage->read(_buckets[0], "f");
         _storage->commitTransaction(_buckets[0],
-            std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::TRANSACTION_ERROR, rs, _1, _2)
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, Sirikata::OH::Storage::TRANSACTION_ERROR, rs, _1, _2)
         );
         waitForTransaction();
 
@@ -376,7 +380,7 @@ public:
         _storage->write(_buckets[0], "a", "abcde");
         _storage->write(_buckets[0], "f", "fghij");
         _storage->commitTransaction(_buckets[0],
-            std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::SUCCESS, ReadSet(), _1, _2)
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, Sirikata::OH::Storage::SUCCESS, ReadSet(), _1, _2)
         );
         waitForTransaction();
 
@@ -384,7 +388,7 @@ public:
         _storage->read(_buckets[0], "a");
         _storage->read(_buckets[0], "f");
         _storage->commitTransaction(_buckets[0],
-            std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::SUCCESS, rs, _1, _2)
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, Sirikata::OH::Storage::SUCCESS, rs, _1, _2)
         );
         waitForTransaction();
     }
@@ -404,11 +408,11 @@ public:
         // could fail on the first run (empty db) and succeed
         // otherwise.
         _storage->write(_buckets[0], "k", "x",
-             std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::SUCCESS, ReadSet(), _1, _2)
+             std::tr1::bind(&StorageTestBase::checkReadValues, this, Sirikata::OH::Storage::SUCCESS, ReadSet(), _1, _2)
          );
          waitForTransaction();
         _storage->erase(_buckets[0], "k",
-             std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::SUCCESS, ReadSet(), _1, _2)
+             std::tr1::bind(&StorageTestBase::checkReadValues, this, Sirikata::OH::Storage::SUCCESS, ReadSet(), _1, _2)
          );
          waitForTransaction();
 
@@ -418,17 +422,17 @@ public:
         _storage->read(_buckets[0], "x");
         _storage->write(_buckets[0], "k", "klmno");
         _storage->commitTransaction(_buckets[0],
-            std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::TRANSACTION_ERROR, ReadSet(), _1, _2)
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, Sirikata::OH::Storage::TRANSACTION_ERROR, ReadSet(), _1, _2)
         );
         waitForTransaction();
 
         _storage->read(_buckets[0], "a",
-            std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::SUCCESS, rs1, _1, _2)
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, Sirikata::OH::Storage::SUCCESS, rs1, _1, _2)
         );
         waitForTransaction();
 
         _storage->read(_buckets[0], "k",
-            std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::TRANSACTION_ERROR, rs2, _1, _2)
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, Sirikata::OH::Storage::TRANSACTION_ERROR, rs2, _1, _2)
         );
         waitForTransaction();
 
@@ -437,17 +441,17 @@ public:
         _storage->erase(_buckets[0], "f");
         _storage->write(_buckets[0], "k", "klmno");
         _storage->commitTransaction(_buckets[0],
-            std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::SUCCESS, ReadSet(), _1, _2)
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, Sirikata::OH::Storage::SUCCESS, ReadSet(), _1, _2)
         );
         waitForTransaction();
 
         _storage->read(_buckets[0], "a",
-            std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::TRANSACTION_ERROR, rs1, _1, _2)
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, Sirikata::OH::Storage::TRANSACTION_ERROR, rs1, _1, _2)
         );
         waitForTransaction();
 
         _storage->read(_buckets[0], "k",
-            std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::SUCCESS, rs2, _1, _2)
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, Sirikata::OH::Storage::SUCCESS, rs2, _1, _2)
         );
         waitForTransaction();
     }
@@ -461,7 +465,7 @@ public:
         _storage->write(_buckets[0], "map:name:f", "fghij");
         _storage->write(_buckets[0], "map:name:k", "klmno");
         _storage->commitTransaction(_buckets[0],
-            std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::SUCCESS, ReadSet(), _1, _2)
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, Sirikata::OH::Storage::SUCCESS, ReadSet(), _1, _2)
         );
 
         ReadSet rs;
@@ -470,7 +474,7 @@ public:
         rs["map:name:k"] = "klmno";
 
         _storage->rangeRead(_buckets[0],"map:name", "map:name@",
-            std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::SUCCESS, rs, _1, _2)
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, Sirikata::OH::Storage::SUCCESS, rs, _1, _2)
         );
         waitForTransaction();
     }
@@ -479,9 +483,9 @@ public:
     	// NOTE: Depends on above write
         using std::tr1::placeholders::_1;
         using std::tr1::placeholders::_2;
-        int32 count = 3;
+        Sirikata::int32 count = 3;
     	_storage->count(_buckets[0],"map:name", "map:name@",
-    		std::tr1::bind(&StorageTestBase::checkCountValue, this, OH::Storage::SUCCESS, count, _1, _2)
+    		std::tr1::bind(&StorageTestBase::checkCountValue, this, Sirikata::OH::Storage::SUCCESS, count, _1, _2)
     	);
 
     	waitForTransaction();
@@ -493,12 +497,12 @@ public:
         using std::tr1::placeholders::_2;
 
     	_storage->rangeErase(_buckets[0],"map:name", "map:name@",
-    		std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::SUCCESS, ReadSet(), _1, _2)
+    		std::tr1::bind(&StorageTestBase::checkReadValues, this, Sirikata::OH::Storage::SUCCESS, ReadSet(), _1, _2)
     	);
     	waitForTransaction();
 
         _storage->rangeRead(_buckets[0],"map:name", "map:name@",
-            std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::TRANSACTION_ERROR, ReadSet(), _1, _2)
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, Sirikata::OH::Storage::TRANSACTION_ERROR, ReadSet(), _1, _2)
         );
         waitForTransaction();
     }
@@ -526,7 +530,7 @@ public:
         _storage->write(_buckets[0], "map:todelete:a", "xyzw");
         _storage->write(_buckets[0], "map:todelete:c", "xyzw");
         _storage->commitTransaction(_buckets[0],
-            std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::SUCCESS, ReadSet(), _1, _2)
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, Sirikata::OH::Storage::SUCCESS, ReadSet(), _1, _2)
         );
         waitForTransaction();
 
@@ -552,7 +556,7 @@ public:
         // Delete a range of data
         _storage->rangeErase(_buckets[0], "map:todelete", "map:todelete@");
         _storage->commitTransaction(_buckets[0],
-            std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::SUCCESS, rs, _1, _2)
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, Sirikata::OH::Storage::SUCCESS, rs, _1, _2)
         );
         waitForTransaction();
 
@@ -560,7 +564,7 @@ public:
         ReadSet rs2;
         rs2["y"] = "z";
         _storage->read(_buckets[0], "y",
-            std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::SUCCESS, rs2, _1, _2)
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, Sirikata::OH::Storage::SUCCESS, rs2, _1, _2)
         );
         waitForTransaction();
     }
@@ -574,11 +578,11 @@ public:
         _storage->write(_buckets[0], "foo", "bar");
         _storage->write(_buckets[0], "baz", "baz");
         _storage->commitTransaction(_buckets[0],
-            std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::SUCCESS, ReadSet(), _1, _2)
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, Sirikata::OH::Storage::SUCCESS, ReadSet(), _1, _2)
         );
         waitForTransaction();
     }
-    void verifyRollbackData(String key, String value) {
+    void verifyRollbackData(Sirikata::String key, Sirikata::String value) {
         using std::tr1::placeholders::_1;
         using std::tr1::placeholders::_2;
         ReadSet rs;
@@ -586,7 +590,7 @@ public:
         _storage->beginTransaction(_buckets[0]);
         _storage->read(_buckets[0], key);
         _storage->commitTransaction(_buckets[0],
-            std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::SUCCESS, rs, _1, _2)
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, Sirikata::OH::Storage::SUCCESS, rs, _1, _2)
         );
         waitForTransaction();
     }
@@ -610,7 +614,7 @@ public:
         _storage->write(_buckets[0], "foo", "xxx");
         _storage->read(_buckets[0], "key_that_does_not_exist");
         _storage->commitTransaction(_buckets[0],
-            std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::TRANSACTION_ERROR, ReadSet(), _1, _2)
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, Sirikata::OH::Storage::TRANSACTION_ERROR, ReadSet(), _1, _2)
         );
         waitForTransaction();
         verifyRollbackData("foo", "bar");
@@ -621,7 +625,7 @@ public:
         _storage->write(_buckets[0], "baz", "xxx");
         _storage->compare(_buckets[0], "foo", "not_bar");
         _storage->commitTransaction(_buckets[0],
-            std::tr1::bind(&StorageTestBase::checkReadValues, this, OH::Storage::TRANSACTION_ERROR, ReadSet(), _1, _2)
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, Sirikata::OH::Storage::TRANSACTION_ERROR, ReadSet(), _1, _2)
         );
         waitForTransaction();
         verifyRollbackData("baz", "baz");
@@ -629,9 +633,9 @@ public:
 
 };
 
-const OH::Storage::Bucket StorageTestBase::_buckets[2] = {
-    OH::Storage::Bucket("72a537a6-c18f-48fe-a97d-90b40727062e", OH::Storage::Bucket::HumanReadable()),
-    OH::Storage::Bucket("12345678-9101-1121-3141-516171819202", OH::Storage::Bucket::HumanReadable())
+const Sirikata::OH::Storage::Bucket StorageTestBase::_buckets[2] = {
+    Sirikata::OH::Storage::Bucket("72a537a6-c18f-48fe-a97d-90b40727062e", Sirikata::OH::Storage::Bucket::HumanReadable()),
+    Sirikata::OH::Storage::Bucket("12345678-9101-1121-3141-516171819202", Sirikata::OH::Storage::Bucket::HumanReadable())
 };
 
 #endif //__SIRIKATA_STORAGE_TEST_BASE_HPP__

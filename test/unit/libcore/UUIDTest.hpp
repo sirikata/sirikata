@@ -53,7 +53,7 @@ public:
     }
     void testThreading() {
         // Test threaded creation of random UUIDs
-        IOService* ios = new IOService("UUID Thread Test");
+        Network::IOService* ios = new Network::IOService("UUID Thread Test");
         // A bunch of tasks, each with a bunch of UUIDs to generate
         for(uint32 i = 0; i < 100; i++)
             ios->post(std::tr1::bind(&UUIDTest::generateUUIDs));

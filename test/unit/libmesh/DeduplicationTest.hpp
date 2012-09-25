@@ -37,6 +37,7 @@
 #include <boost/filesystem.hpp>
 #include <sirikata/mesh/Filter.hpp>
 #include <sirikata/mesh/CompositeFilter.hpp>
+#include <sirikata/core/util/PluginManager.hpp>
 
 using namespace Sirikata;
 using namespace std;

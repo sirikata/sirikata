@@ -37,11 +37,11 @@
 class SQLiteThreadingTest : public CxxTest::TestSuite
 {
     //using Sirikata::SQLiteDBPtr;
-    static const String dbfile;
+    static const Sirikata::String dbfile;
 public:
 
     void testOpen(void) {
-        SQLiteDBPtr db = SQLite::getSingleton().open(dbfile);
+        Sirikata::SQLiteDBPtr db = Sirikata::SQLite::getSingleton().open(dbfile);
         TS_ASSERT(db);
         TS_ASSERT_DIFFERS(db->db(), (sqlite3*)NULL);
         // Used throughout as a test that a call to the database actually works.
@@ -50,14 +50,14 @@ public:
 
     void testOpenSequential(void) {
         {
-            SQLiteDBPtr db = SQLite::getSingleton().open(dbfile);
+            Sirikata::SQLiteDBPtr db = Sirikata::SQLite::getSingleton().open(dbfile);
             TS_ASSERT(db);
             TS_ASSERT_DIFFERS(db->db(), (sqlite3*)NULL);
             sqlite3_busy_timeout(db->db(), 1000);
         }
 
         {
-            SQLiteDBPtr db2 = SQLite::getSingleton().open(dbfile);
+            Sirikata::SQLiteDBPtr db2 = Sirikata::SQLite::getSingleton().open(dbfile);
             TS_ASSERT(db2);
             TS_ASSERT_DIFFERS(db2->db(), (sqlite3*)NULL);
             sqlite3_busy_timeout(db2->db(), 1000);
@@ -65,12 +65,12 @@ public:
     }
 
     void testOpenMultiple(void) {
-        SQLiteDBPtr db = SQLite::getSingleton().open(dbfile);
+        Sirikata::SQLiteDBPtr db = Sirikata::SQLite::getSingleton().open(dbfile);
         TS_ASSERT(db);
         TS_ASSERT_DIFFERS(db->db(), (sqlite3*)NULL);
         sqlite3_busy_timeout(db->db(), 1000);
 
-        SQLiteDBPtr db2 = SQLite::getSingleton().open(dbfile);
+        Sirikata::SQLiteDBPtr db2 = Sirikata::SQLite::getSingleton().open(dbfile);
         TS_ASSERT(db2);
         TS_ASSERT_DIFFERS(db2->db(), (sqlite3*)NULL);
         sqlite3_busy_timeout(db2->db(), 1000);
@@ -79,21 +79,21 @@ public:
     }
 
     void threadMain(void) {
-        SQLiteDBPtr db = SQLite::getSingleton().open(dbfile);
+        Sirikata::SQLiteDBPtr db = Sirikata::SQLite::getSingleton().open(dbfile);
         TS_ASSERT(db);
         TS_ASSERT_DIFFERS(db->db(), (sqlite3*)NULL);
         sqlite3_busy_timeout(db->db(), 1000);
     }
 
     void testThread(void) {
-        Thread t1("Test", std::tr1::bind(&SQLiteThreadingTest::threadMain, this));
+        Sirikata::Thread t1("Test", std::tr1::bind(&SQLiteThreadingTest::threadMain, this));
         t1.join();
     }
 
     void testMultipleThread(void) {
-        std::vector<Thread*> threads;
+        std::vector<Sirikata::Thread*> threads;
         for(int i = 0; i < 10; i++)
-            threads.push_back(new Thread("TestMultiple", std::tr1::bind(&SQLiteThreadingTest::threadMain, this)));
+            threads.push_back(new Sirikata::Thread("TestMultiple", std::tr1::bind(&SQLiteThreadingTest::threadMain, this)));
         for(int i = 0; i < 10; i++) {
             threads[i]->join();
             delete threads[i];
@@ -101,4 +101,4 @@ public:
     }
 };
 
-const String SQLiteThreadingTest::dbfile("test.db");
+const Sirikata::String SQLiteThreadingTest::dbfile("test.db");

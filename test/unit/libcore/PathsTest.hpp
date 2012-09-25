@@ -36,7 +36,7 @@ public:
     void testGetExeDirMatchesFile(void) {
         Sirikata::String exe_file = Sirikata::Path::Get(Sirikata::Path::FILE_EXE);
         Sirikata::String exe_dir = Sirikata::Path::Get(Sirikata::Path::DIR_EXE);
-        TS_ASSERT(exe_file.find(exe_dir) != String::npos);
+        TS_ASSERT(exe_file.find(exe_dir) != Sirikata::String::npos);
     }
 
     void testGetDirCurrent(void) {

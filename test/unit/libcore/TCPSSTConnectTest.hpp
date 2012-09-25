@@ -44,6 +44,7 @@
 #include <cxxtest/TestSuite.h>
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/locks.hpp>
+#include <boost/lexical_cast.hpp>
 #include <time.h>
 #undef SILOG
 #define SILOG(...)
@@ -112,11 +113,11 @@ public:
             ++mCount;
             return;
         }
-        mServicePool->service()->post(Duration::microseconds(100),
+        mServicePool->service()->post(Sirikata::Duration::microseconds(100),
             std::tr1::bind(&SstTest::lockReadyRead,this,s), "TCPSSTConnectTest");
         pauseReceive();
     }
-    void lockReadyRead(Network::Stream*s) {
+    void lockReadyRead(Stream*s) {
         unique_mutex_lock lck(mMutex);
         if(std::find(dedStreams.begin(),dedStreams.end(),s)==dedStreams.end())
             s->readyRead();
@@ -270,13 +271,13 @@ public:
     SstTest():mCount(0),mDisconCount(0),mEndCount(0),ENDSTRING("T end"),mAbortTest(false) {
         plugins.load( "tcpsst" );
 
-        uint32 randport = 3000 + (uint32)(Sirikata::Task::LocalTime::now().raw() % 20000);
+        Sirikata::uint32 randport = 3000 + (Sirikata::uint32)(Sirikata::Task::LocalTime::now().raw() % 20000);
         mPort = boost::lexical_cast<std::string>(randport);
 
         mServicePool = new IOServicePool("SstTest", 4);
         mServiceStrand = mServicePool->service()->createStrand("SstTest");
 
-        mListener = StreamListenerFactory::getSingleton().getDefaultConstructor()(mServiceStrand,StreamListenerFactory::getSingleton().getDefaultOptionParser()(String()));
+        mListener = StreamListenerFactory::getSingleton().getDefaultConstructor()(mServiceStrand,StreamListenerFactory::getSingleton().getDefaultOptionParser()(Sirikata::String()));
         using std::tr1::placeholders::_1;
         using std::tr1::placeholders::_2;
         mListener->listen(Address("127.0.0.1",mPort),std::tr1::bind(&SstTest::listenerNewStreamCallback,this,0,_1,_2));
@@ -528,7 +529,7 @@ public:
             SstTest zero;//no fragmentation
             zero.doConnectSend("0");
         }
-        
+
     }
     void doConnectSend (std::string fragmentLevel="0" )
     {
@@ -536,7 +537,7 @@ public:
         Stream*z=NULL;
         bool doSubstreams=true;
         {
-            Stream *r=StreamFactory::getSingleton().getDefaultConstructor()(mServiceStrand,StreamFactory::getSingleton().getDefaultOptionParser()(String("--websocket-draft-76=false --test-fragment-packet-level=")+fragmentLevel));
+            Stream *r=StreamFactory::getSingleton().getDefaultConstructor()(mServiceStrand,StreamFactory::getSingleton().getDefaultOptionParser()(Sirikata::String("--websocket-draft-76=false --test-fragment-packet-level=")+fragmentLevel));
             simpleConnect(r,Address("127.0.0.1",mPort));
             runRoutine(r);
             if (doSubstreams) {

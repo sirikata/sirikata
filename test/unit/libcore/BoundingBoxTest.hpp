@@ -31,10 +31,16 @@
  */
 
 #include <cxxtest/TestSuite.h>
+#include <sirikata/core/util/Platform.hpp>
+
 class BoundingBoxTest : public CxxTest::TestSuite
 {
     typedef Sirikata::Vector3<float> Vector3f;
     typedef Sirikata::Vector3<double> Vector3d;
+    typedef Sirikata::BoundingBox3f3f BoundingBox3f3f;
+    typedef Sirikata::BoundingBox3d3f BoundingBox3d3f;
+    typedef Sirikata::BoundingBox3f BoundingBox3f;
+    typedef Sirikata::BoundingBox3d BoundingBox3d;
 public:
     void testConstruct( void )
     {
@@ -47,7 +53,7 @@ public:
         BoundingBox3f3f bba(bb);
         TS_ASSERT_EQUALS(Vector3f(bb.min()),bba.min());
         TS_ASSERT_EQUALS(Vector3f(bb.max()),bba.max());
-        
+
     }
     void testMerge ( void )
     {
@@ -65,6 +71,6 @@ public:
         TS_ASSERT_EQUALS(bb.max(),bba.max());
         TS_ASSERT_EQUALS(bbc.min(),bbb.min());
         TS_ASSERT_EQUALS(bbc.max(),bba.max());
-        
+
     }
 };

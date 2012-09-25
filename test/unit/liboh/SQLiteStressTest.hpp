@@ -36,11 +36,11 @@
 
 class SQLiteStressTest : public CxxTest::TestSuite
 {
-    static const String dbfile;
+    static const Sirikata::String dbfile;
     StressTestBase _base;
 public:
     SQLiteStressTest()
-     : _base("oh-sqlite", "sqlite", String("--db=") + dbfile)
+     : _base("oh-sqlite", "sqlite", Sirikata::String("--db=") + dbfile)
     {
     }
 
@@ -57,4 +57,4 @@ public:
 
 };
 
-const String SQLiteStressTest::dbfile("test.db");
+const Sirikata::String SQLiteStressTest::dbfile("test.db");

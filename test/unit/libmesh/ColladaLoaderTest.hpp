@@ -35,6 +35,7 @@
 #include <fstream>
 #include <sirikata/core/util/Paths.hpp>
 #include <boost/filesystem.hpp>
+#include <sirikata/core/util/PluginManager.hpp>
 
 using namespace Sirikata;
 using namespace Mesh;
@@ -500,7 +501,7 @@ public:
 #endif
         collada_data_dir = collada_data_dir / "../../test/unit/libmesh/collada";
 
-        ifstream fin ( (collada_data_dir / (name + ".dae")).string().c_str() );
+        std::ifstream fin ( (collada_data_dir / (name + ".dae")).string().c_str() );
         if (!fin) {
             TS_WARN("Unable to find COLLADA data.");
             return "";

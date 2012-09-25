@@ -41,21 +41,21 @@ class FairQueueTest : public CxxTest::TestSuite
 {
 public:
     struct SizedElem {
-        uint32 val;
+        Sirikata::uint32 val;
 
-        SizedElem(uint32 v)
+        SizedElem(Sirikata::uint32 v)
          : val(v) {}
 
-        uint32 size() const {
+        Sirikata::uint32 size() const {
             return val;
         }
     };
-    typedef Queue<SizedElem*> SizedElemQueue;
+    typedef Sirikata::Queue<SizedElem*> SizedElemQueue;
 
 // Simple macro to evaluate popped results: takes a queue
 #define ASSERT_FAIR_QUEUE_POP(queue, expected_key, expected_val)        \
         {                                                               \
-            uint32 result_key;                                          \
+            Sirikata::uint32 result_key;                                          \
             SizedElem* result = test_queue.pop(&result_key);            \
             TS_ASSERT_EQUALS(result_key, expected_key);                 \
             TS_ASSERT_EQUALS(result->val, expected_val);                \
@@ -64,7 +64,7 @@ public:
 
     // Equal weights, different sizes
     void testEqualWeightDifferentSizes(void) {
-        FairQueue<SizedElem, uint32, SizedElemQueue> test_queue;
+        Sirikata::FairQueue<SizedElem, Sirikata::uint32, SizedElemQueue> test_queue;
 
         test_queue.addQueue(new SizedElemQueue(1 << 28), 0, 1.f);
         test_queue.addQueue(new SizedElemQueue(1 << 28), 1, 1.f);
@@ -81,7 +81,7 @@ public:
 
     // Equal weights, different sizes, multiple items per queue
     void testEqualWeightDifferentSizesMultiple(void) {
-        FairQueue<SizedElem, uint32, SizedElemQueue> test_queue;
+        Sirikata::FairQueue<SizedElem, Sirikata::uint32, SizedElemQueue> test_queue;
 
         test_queue.addQueue(new SizedElemQueue(1 << 28), 0, 1.f);
         test_queue.addQueue(new SizedElemQueue(1 << 28), 1, 1.f);
@@ -110,7 +110,7 @@ public:
 
     // Different weights, different sizes, multiple items per queue
     void testDifferentWeightsDifferentSizesMultiple(void) {
-        FairQueue<SizedElem, uint32, SizedElemQueue> test_queue;
+        Sirikata::FairQueue<SizedElem, Sirikata::uint32, SizedElemQueue> test_queue;
 
         test_queue.addQueue(new SizedElemQueue(1 << 28), 0, 0.5f);
         test_queue.addQueue(new SizedElemQueue(1 << 28), 1, 1.f);

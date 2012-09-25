@@ -36,9 +36,11 @@
 #include <cxxtest/TestSuite.h>
 #include <sirikata/oh/Storage.hpp>
 #include "DataFiles.hpp"
+#include <sirikata/core/util/PluginManager.hpp>
+#include <sirikata/core/network/IOService.hpp>
+#include <sirikata/core/network/IOWork.hpp>
 
-class StressTestBase
-{
+class StressTestBase {
 public:
     // Latency submits requests and waits for each one to finish, testing the
     // time it takes the request to make it through the system and give the
@@ -52,30 +54,30 @@ public:
     };
 
 protected:
-    typedef OH::Storage::Result Result;
-    typedef OH::Storage::ReadSet ReadSet;
+    typedef Sirikata::OH::Storage::Result Result;
+    typedef Sirikata::OH::Storage::ReadSet ReadSet;
 
     DataFiles _data;
-    static const OH::Storage::Bucket _buckets[100];
-    static const String _dataIndex[20];
+    static const Sirikata::OH::Storage::Bucket _buckets[100];
+    static const Sirikata::String _dataIndex[20];
 
     int _initialized;
 
-    String _plugin;
-    String _type;
-    String _args;
+    Sirikata::String _plugin;
+    Sirikata::String _type;
+    Sirikata::String _args;
 
-    PluginManager _pmgr;
-    OH::Storage* _storage;
+    Sirikata::PluginManager _pmgr;
+    Sirikata::OH::Storage* _storage;
 
     // Helpers for getting event loop setup/torn down
-    Trace::Trace* _trace;
-    ODPSST::ConnectionManager* _sstConnMgr;
-    OHDPSST::ConnectionManager* _ohSstConnMgr;
-    Network::IOService* _ios;
-    Network::IOStrand* _mainStrand;
-    Network::IOWork* _work;
-    ObjectHostContext* _ctx;
+    Sirikata::Trace::Trace* _trace;
+    Sirikata::ODPSST::ConnectionManager* _sstConnMgr;
+    Sirikata::OHDPSST::ConnectionManager* _ohSstConnMgr;
+    Sirikata::Network::IOService* _ios;
+    Sirikata::Network::IOStrand* _mainStrand;
+    Sirikata::Network::IOWork* _work;
+    Sirikata::ObjectHostContext* _ctx;
 
     // Processing happens in another thread, but the main test thread
     // needs to wait for the test to complete before proceeding. This
@@ -85,10 +87,10 @@ protected:
     // Since multiple threads can get events, make sure we don't miss
     // notifications by just tracking when we hit the last one we're waiting
     // for.
-    int32 _outstanding;
+    Sirikata::int32 _outstanding;
 
 public:
-    StressTestBase(String plugin, String type, String args)
+    StressTestBase(Sirikata::String plugin, Sirikata::String type, Sirikata::String args)
      : _data(),
        _initialized(0),
        _plugin(plugin),
@@ -111,19 +113,19 @@ public:
         }
 
         // Storage is tied to the main event loop, which requires quite a bit of setup
-        ObjectHostID oh_id(1);
-        _trace = new Trace::Trace("dummy.trace");
-        _ios = new Network::IOService("StressTestBase IOService");
+        Sirikata::ObjectHostID oh_id(1);
+        _trace = new Sirikata::Trace::Trace("dummy.trace");
+        _ios = new Sirikata::Network::IOService("StressTestBase IOService");
         _mainStrand = _ios->createStrand("StressTestBase IOStrand");
-        _work = new Network::IOWork(*_ios, "StressTest");
-        Time start_time = Timer::now(); // Just for stats in ObjectHostContext.
-        Duration duration = Duration::zero(); // Indicates to run forever.
-        _sstConnMgr = new ODPSST::ConnectionManager();
-        _ohSstConnMgr = new OHDPSST::ConnectionManager();
+        _work = new Sirikata::Network::IOWork(*_ios, "StressTest");
+        Sirikata::Time start_time = Sirikata::Timer::now(); // Just for stats in ObjectHostContext.
+        Sirikata::Duration duration = Sirikata::Duration::zero(); // Indicates to run forever.
+        _sstConnMgr = new Sirikata::ODPSST::ConnectionManager();
+        _ohSstConnMgr = new Sirikata::OHDPSST::ConnectionManager();
 
-        _ctx = new ObjectHostContext("test", oh_id, _sstConnMgr, _ohSstConnMgr, _ios, _mainStrand, _trace, start_time, duration);
+        _ctx = new Sirikata::ObjectHostContext("test", oh_id, _sstConnMgr, _ohSstConnMgr, _ios, _mainStrand, _trace, start_time, duration);
 
-        _storage = OH::StorageFactory::getSingleton().getConstructor(_type)(_ctx, _args);
+        _storage = Sirikata::OH::StorageFactory::getSingleton().getConstructor(_type)(_ctx, _args);
 
         for(int i = 0; i < 100; i++)
             _storage->leaseBucket(_buckets[i]);
@@ -134,7 +136,7 @@ public:
         // Run the context, but we need to make sure it only lives in other
         // threads, otherwise we'd block up this one.  We include 4 threads to
         // exercise support for multiple threads.
-        _ctx->run(4, Context::AllNew);
+        _ctx->run(4, Sirikata::Context::AllNew);
     }
 
     void tearDown() {
@@ -166,7 +168,7 @@ public:
 
     void checkReadValuesImpl(Result expected_result, ReadSet expected, Result result, ReadSet* rs) {
         TS_ASSERT_EQUALS(expected_result, result);
-        if ((result != OH::Storage::SUCCESS) || (expected_result != OH::Storage::SUCCESS)) return;
+        if ((result != Sirikata::OH::Storage::SUCCESS) || (expected_result != Sirikata::OH::Storage::SUCCESS)) return;
 
         if (!rs) {
             TS_ASSERT_EQUALS(expected.size(), 0);
@@ -175,7 +177,7 @@ public:
 
         TS_ASSERT_EQUALS(expected.size(), rs->size());
         for(ReadSet::iterator it = expected.begin(); it != expected.end(); it++) {
-            String key = it->first; String value = it->second;
+            Sirikata::String key = it->first; Sirikata::String value = it->second;
             TS_ASSERT(rs->find(key) != rs->end());
             TS_ASSERT_EQUALS((*rs)[key], value);
         }
@@ -208,24 +210,24 @@ public:
         TS_ASSERT(_storage);
     }
 
-    void reportTiming(String name, Time start, Time end, TestType tt, int its) {
+    void reportTiming(Sirikata::String name, Sirikata::Time start, Sirikata::Time end, TestType tt, int its) {
         std::cout << name << " " << (end-start)/its << " per request, " << its / (end-start).seconds() << " transactions per second"  << std::endl;
     }
 
-    void testSingleWrites(String length, int keyNum, int bucketNum, TestType tt) {
+    void testSingleWrites(Sirikata::String length, int keyNum, int bucketNum, TestType tt) {
         boost::unique_lock<boost::mutex> lock(_mutex);
 
         using std::tr1::placeholders::_1;
         using std::tr1::placeholders::_2;
 
-        Time start = Timer::now();
+        Sirikata::Time start = Sirikata::Timer::now();
 
-        String key;
+        Sirikata::String key;
         for (int i=0; i<bucketNum; i++){
             for(int j=0; j<keyNum; j++){
                 key=_dataIndex[j]+"-"+length;
                 _storage->write(_buckets[i], key, _data.dataSet[key],
-                    std::tr1::bind(&StressTestBase::checkSuccess, this, OH::Storage::SUCCESS, ReadSet(), _1, _2)
+                    std::tr1::bind(&StressTestBase::checkSuccess, this, Sirikata::OH::Storage::SUCCESS, ReadSet(), _1, _2)
 	                       );
                 ++_outstanding;
                 if (tt == Latency) waitForTransaction(lock);
@@ -234,11 +236,11 @@ public:
         if (tt == Throughput)
             waitForTransaction(lock);
 
-        Time end = Timer::now();
+        Sirikata::Time end = Sirikata::Timer::now();
         reportTiming("Write time", start, end, tt, bucketNum * keyNum);
     }
 
-    void testSingleReads(String length, int keyNum, int bucketNum, TestType tt) {
+    void testSingleReads(Sirikata::String length, int keyNum, int bucketNum, TestType tt) {
         // NOTE: Depends on above write
         boost::unique_lock<boost::mutex> lock(_mutex);
 
@@ -247,14 +249,14 @@ public:
 
         ReadSet rs=_data.dataSet;
 
-        Time start = Timer::now();
+        Sirikata::Time start = Sirikata::Timer::now();
 
-        String key;
+        Sirikata::String key;
         for (int i=0; i<bucketNum; i++){
             for(int j=0; j<keyNum; j++){
                 key=_dataIndex[j]+"-"+length;
                 _storage->read(_buckets[i], key,
-                               std::tr1::bind(&StressTestBase::checkSuccess, this, OH::Storage::SUCCESS, ReadSet(), _1, _2)
+                               std::tr1::bind(&StressTestBase::checkSuccess, this, Sirikata::OH::Storage::SUCCESS, ReadSet(), _1, _2)
                               );
                 ++_outstanding;
                 if (tt == Latency) waitForTransaction(lock);
@@ -263,25 +265,25 @@ public:
         if (tt == Throughput)
             waitForTransaction(lock);
 
-        Time end = Timer::now();
+        Sirikata::Time end = Sirikata::Timer::now();
         reportTiming("Read time", start, end, tt, bucketNum * keyNum);
     }
 
-    void testSingleErases(String length, int keyNum, int bucketNum, TestType tt) {
+    void testSingleErases(Sirikata::String length, int keyNum, int bucketNum, TestType tt) {
         // NOTE: Depends on above write
         boost::unique_lock<boost::mutex> lock(_mutex);
 
         using std::tr1::placeholders::_1;
         using std::tr1::placeholders::_2;
 
-        Time start = Timer::now();
+        Sirikata::Time start = Sirikata::Timer::now();
 
-        String key;
+        Sirikata::String key;
         for (int i=0; i<bucketNum; i++){
             for(int j=0; j<keyNum; j++){
                 key=_dataIndex[j]+"-"+length;
                 _storage->erase(_buckets[i], key,
-                                std::tr1::bind(&StressTestBase::checkSuccess, this, OH::Storage::SUCCESS, ReadSet(), _1, _2)
+                                std::tr1::bind(&StressTestBase::checkSuccess, this, Sirikata::OH::Storage::SUCCESS, ReadSet(), _1, _2)
                                );
                 ++_outstanding;
                 if (tt == Latency) waitForTransaction(lock);
@@ -290,14 +292,14 @@ public:
         if (tt == Throughput)
             waitForTransaction(lock);
 
-        Time end = Timer::now();
+        Sirikata::Time end = Sirikata::Timer::now();
         reportTiming("Erase time", start, end, tt, bucketNum * keyNum);
 
         for (int i=0; i<bucketNum; i++){
             for(int j=0; j<keyNum; j++){
                 key=_dataIndex[j]+"-"+length;
                 _storage->read(_buckets[i], key,
-                    std::tr1::bind(&StressTestBase::checkSuccess, this, OH::Storage::TRANSACTION_ERROR, ReadSet(), _1, _2)
+                    std::tr1::bind(&StressTestBase::checkSuccess, this, Sirikata::OH::Storage::TRANSACTION_ERROR, ReadSet(), _1, _2)
                               );
                 ++_outstanding;
                 waitForTransaction(lock);
@@ -306,15 +308,15 @@ public:
 
     }
 
-    void testBatchWrites(String length, int keyNum, int bucketNum, TestType tt) {
+    void testBatchWrites(Sirikata::String length, int keyNum, int bucketNum, TestType tt) {
         boost::unique_lock<boost::mutex> lock(_mutex);
 
         using std::tr1::placeholders::_1;
         using std::tr1::placeholders::_2;
 
-        Time start = Timer::now();
+        Sirikata::Time start = Sirikata::Timer::now();
 
-        String key;
+        Sirikata::String key;
         for (int i=0; i<bucketNum; i++){
             _storage->beginTransaction(_buckets[i]);
             for(int j=0; j<keyNum; j++){
@@ -322,7 +324,7 @@ public:
                 _storage->write(_buckets[i], key, _data.dataSet[key]);
             }
             _storage->commitTransaction(_buckets[i],
-                                        std::tr1::bind(&StressTestBase::checkSuccess, this, OH::Storage::SUCCESS, ReadSet(), _1, _2)
+                                        std::tr1::bind(&StressTestBase::checkSuccess, this, Sirikata::OH::Storage::SUCCESS, ReadSet(), _1, _2)
                                        );
             ++_outstanding;
             if (tt == Latency) waitForTransaction(lock);
@@ -330,11 +332,11 @@ public:
         if (tt == Throughput)
             waitForTransaction(lock);
 
-        Time end = Timer::now();
+        Sirikata::Time end = Sirikata::Timer::now();
         reportTiming("Batch write time", start, end, tt, bucketNum);
     }
 
-    void testBatchReads(String length, int keyNum, int bucketNum, TestType tt) {
+    void testBatchReads(Sirikata::String length, int keyNum, int bucketNum, TestType tt) {
         // NOTE: Depends on above write
         boost::unique_lock<boost::mutex> lock(_mutex);
 
@@ -343,9 +345,9 @@ public:
 
         ReadSet rs=_data.dataSet;
 
-        Time start = Timer::now();
+        Sirikata::Time start = Sirikata::Timer::now();
 
-        String key;
+        Sirikata::String key;
         for (int i=0; i<bucketNum; i++){
             _storage->beginTransaction(_buckets[i]);
             for(int j=0; j<keyNum; j++){
@@ -353,7 +355,7 @@ public:
                 _storage->read(_buckets[i], key);
             }
             _storage->commitTransaction(_buckets[i],
-                                        std::tr1::bind(&StressTestBase::checkSuccess, this, OH::Storage::SUCCESS, ReadSet(), _1, _2)
+                                        std::tr1::bind(&StressTestBase::checkSuccess, this, Sirikata::OH::Storage::SUCCESS, ReadSet(), _1, _2)
                                        );
             ++_outstanding;
             if (tt == Latency) waitForTransaction(lock);
@@ -361,20 +363,20 @@ public:
         if (tt == Throughput)
             waitForTransaction(lock);
 
-        Time end = Timer::now();
+        Sirikata::Time end = Sirikata::Timer::now();
         reportTiming("Batch read time", start, end, tt, bucketNum);
     }
 
-    void testBatchErases(String length, int keyNum, int bucketNum, TestType tt) {
+    void testBatchErases(Sirikata::String length, int keyNum, int bucketNum, TestType tt) {
         // NOTE: Depends on above write
         boost::unique_lock<boost::mutex> lock(_mutex);
 
         using std::tr1::placeholders::_1;
         using std::tr1::placeholders::_2;
 
-        Time start = Timer::now();
+        Sirikata::Time start = Sirikata::Timer::now();
 
-        String key;
+        Sirikata::String key;
         for (int i=0; i<bucketNum; i++){
             _storage->beginTransaction(_buckets[i]);
             for(int j=0; j<keyNum; j++){
@@ -382,7 +384,7 @@ public:
                 _storage->erase(_buckets[i], key);
             }
             _storage->commitTransaction(_buckets[i],
-                                        std::tr1::bind(&StressTestBase::checkSuccess, this, OH::Storage::SUCCESS, ReadSet(), _1, _2)
+                                        std::tr1::bind(&StressTestBase::checkSuccess, this, Sirikata::OH::Storage::SUCCESS, ReadSet(), _1, _2)
                                        );
             ++_outstanding;
             if (tt == Latency) waitForTransaction(lock);
@@ -390,14 +392,14 @@ public:
         if (tt == Throughput)
             waitForTransaction(lock);
 
-        Time end = Timer::now();
+        Sirikata::Time end = Sirikata::Timer::now();
         reportTiming("Batch erase time", start, end, tt, bucketNum);
 
         for (int i=0; i<bucketNum; i++){
             for(int j=0; j<keyNum; j++){
                 key=_dataIndex[j]+"-"+length;
                 _storage->read(_buckets[i], key,
-                               std::tr1::bind(&StressTestBase::checkSuccess, this, OH::Storage::TRANSACTION_ERROR, ReadSet(), _1, _2)
+                               std::tr1::bind(&StressTestBase::checkSuccess, this, Sirikata::OH::Storage::TRANSACTION_ERROR, ReadSet(), _1, _2)
                               );
                 ++_outstanding;
                 waitForTransaction(lock);
@@ -406,7 +408,7 @@ public:
     }
 
 
-  void testMultiRounds(String length, int keyNum, int bucketNum, int times, TestType tt) {
+  void testMultiRounds(Sirikata::String length, int keyNum, int bucketNum, int times, TestType tt) {
 
       if (tt == Latency)
           std::cout << "Latency (seconds from request transaction -> callback)" << std::endl;
@@ -434,7 +436,7 @@ public:
 
 };
 
-const OH::Storage::Bucket StressTestBase::_buckets[100] = STORAGE_STRESSTEST_OH_BUCKETS;
-const String StressTestBase::_dataIndex[20]={"a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t"};
+const Sirikata::OH::Storage::Bucket StressTestBase::_buckets[100] = STORAGE_STRESSTEST_OH_BUCKETS;
+const Sirikata::String StressTestBase::_dataIndex[20]={"a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t"};
 
 #endif //__SIRIKATA_STRESS_TEST_BASE_HPP__

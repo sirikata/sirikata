@@ -7,7 +7,7 @@
 
 class CircularBufferTest : public CxxTest::TestSuite
 {
-    typedef Sirikata::CircularBuffer<int32> IntCBuffer;
+    typedef Sirikata::CircularBuffer<Sirikata::int32> IntCBuffer;
     typedef IntCBuffer::OptionalReturnData CBufReturn;
 public:
 

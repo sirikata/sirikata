@@ -38,6 +38,7 @@ class Matrix3x3Test : public CxxTest::TestSuite
     typedef Sirikata::Vector3<double> Vector3d;
     typedef Sirikata::Matrix3x3<float> Matrix3x3f;
     typedef Sirikata::Matrix3x3<double> Matrix3x3d;
+    typedef Sirikata::COLUMNS ROWS;
     typedef Sirikata::COLUMNS COLUMNS;
 public:
     void testAdd( void )

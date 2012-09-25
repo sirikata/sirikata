@@ -42,7 +42,7 @@ class OptionValueListTest : public CxxTest::TestSuite
     typedef Sirikata::OptionValueType<StringVector> OptionValueStringVector;
 
     StringVector parse(const std::string& val) {
-        Any any_result = OptionValueStringVector::lexical_cast(val);
+        Sirikata::Any any_result = OptionValueStringVector::lexical_cast(val);
         return any_result.as<StringVector>();
     }
 

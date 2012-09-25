@@ -5,22 +5,23 @@
 #include <cxxtest/TestSuite.h>
 
 #include <sirikata/core/util/Thread.hpp>
+#include <sirikata/core/network/IOService.hpp>
 #include <sirikata/core/network/IOStrand.hpp>
-
+#include <sirikata/core/network/IOWork.hpp>
 
 using namespace Sirikata;
 
 class StrandTest : public CxxTest::TestSuite {
-    IOService* ios;
-    IOStrand* strand;
-    IOWork* work;
+    Network::IOService* ios;
+    Network::IOStrand* strand;
+    Network::IOWork* work;
     std::vector<Thread*> threads;
 
 public:
     void setUp() {
-        ios = new IOService("StrandTest");
+        ios = new Network::IOService("StrandTest");
         strand = ios->createStrand("StrandTest Strand");
-        work = new IOWork(ios);
+        work = new Network::IOWork(ios);
         for(int i = 0; i < 4; i++) {
             threads.push_back(
                 new Thread(
