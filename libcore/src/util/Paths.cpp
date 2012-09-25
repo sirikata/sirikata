@@ -25,6 +25,7 @@
 #endif
 
 #include <sirikata/core/util/Random.hpp>
+#include <boost/lexical_cast.hpp>
 
 namespace Sirikata {
 namespace Path {
@@ -244,9 +245,54 @@ String Get(Key key) {
       case DIR_TEMP:
           {
 #if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_LINUX || SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_MAC
-              // On Mac and Linux we try to work under tmp using our own directory
-              boost::filesystem::path tmp_path("/tmp");
-              if (boost::filesystem::exists(tmp_path) && boost::filesystem::is_directory(tmp_path)) {
+              // On Mac and Linux we try a few different things.
+              // The user (or the OS in the case of Mac) may have
+              // defined TMPDIR env variable
+              boost::filesystem::path tmp_path;
+              char* tmp_dir_name = getenv("TMPDIR");
+              if (tmp_dir_name != NULL) {
+                  tmp_path = tmp_dir_name;
+              }
+              else {
+                  // IF not, we can just try using /tmp. But we don't
+                  // want *just* tmp because we can end up with
+                  // permissions errors because we want to create a
+                  // sirikata/ directory under it to hold our
+                  // stuff.
+                  boost::filesystem::path user_tmp_dir("/tmp");
+                  uid_t user_id = getuid();
+                  passwd* pw = getpwuid(user_id);
+                  if (pw != NULL) {
+                      // Try their login name, and if that's not
+                      // available, use a stringified user id
+                      if (pw->pw_name != NULL)
+                          user_tmp_dir = user_tmp_dir / std::string(pw->pw_name);
+                      else
+                          user_tmp_dir = user_tmp_dir / ( std::string("_user_") + boost::lexical_cast<std::string>((int32)user_id) );
+                  }
+                  // We may need to try creating this directory. If we
+                  // fail, we catch and ignore. In that case we won't
+                  // update tmp_path, so this attempted use of /tmp
+                  // will just fall through the the failure case of
+                  // using . when nothing else works
+                  if (!boost::filesystem::exists(user_tmp_dir)) {
+                      try {
+                          boost::filesystem::create_directories(user_tmp_dir);
+                          tmp_path = user_tmp_dir;
+                      } catch (boost::filesystem::filesystem_error) {
+                          // Ignore error, we just don't have
+                          // permissions or something.
+                      }
+                  }
+                  else {
+                      // Exists, try to use as tmp path. Worst case
+                      // it's not a directory and we bail on this
+                      // option later.
+                      tmp_path = user_tmp_dir;
+                  }
+              }
+
+              if (!tmp_path.empty() && boost::filesystem::exists(tmp_path) && boost::filesystem::is_directory(tmp_path)) {
                   tmp_path /= "sirikata";
                   // If it doesn't exist, try creating it
                   if (!boost::filesystem::exists(tmp_path))
