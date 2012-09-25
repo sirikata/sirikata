@@ -1316,29 +1316,33 @@ v8::Handle<v8::Value> JSObjectScript::internalEval(const String& em_script_str, 
                     // This needs to be atomic -- dump in a temp file and then
                     // rename it.
                     String temp_cache_path = Path::Get(Path::DIR_TEMP, Path::GetTempFilename("emerson-js-cache"));
+                    bool copied = false;
                     {
                         std::stringstream js_script_stream(js_script_str);
                         std::ofstream temp_cache_file(temp_cache_path.c_str());
                         if (temp_cache_file.fail()) {
-                          JSLOG(error, "Unable to create temporary file to save compiled emerson: " << temp_cache_path);
+                          JSLOG(detailed, "Unable to create temporary file to save compiled emerson: " << temp_cache_path);
                         }
                         else {
-                          boost::iostreams::copy(js_script_stream, temp_cache_file);
+                            std::streamsize ncopied = boost::iostreams::copy(js_script_stream, temp_cache_file);
+                            if (ncopied == js_script_str.size()) copied = true;
                         }
                     }
-                    // Make sure we have the directories
-                    boost::filesystem::create_directories( boost::filesystem::path(cache_path).parent_path() );
                     // And finally try to rename. We wrap this in
                     // try/catch because either one could throw an
                     // exception (permissions errors, someone else got
                     // a file in there between our remove and rename,
                     // etc).
-                    try {
-                        boost::filesystem::remove(cache_path);
-                        boost::filesystem::rename(temp_cache_path, cache_path);
-                    } catch (boost::filesystem::filesystem_error) {
-                        // Just give up, somebody else has cached it
-                        // or we're just not going to be able to.
+                    if (copied) {
+                        try {
+                            // Make sure we have the directories
+                            boost::filesystem::create_directories( boost::filesystem::path(cache_path).parent_path() );
+                            boost::filesystem::remove(cache_path);
+                            boost::filesystem::rename(temp_cache_path, cache_path);
+                        } catch (boost::filesystem::filesystem_error) {
+                            // Just give up, somebody else has cached it
+                            // or we're just not going to be able to.
+                        }
                     }
                 }
             }
