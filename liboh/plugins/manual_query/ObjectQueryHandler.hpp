@@ -89,8 +89,8 @@ public:
 
     // PROX Thread:
 
-    void handleCreatedReplicatedIndex(ProxIndexID iid, ReplicatedLocationServiceCachePtr loc_cache, ServerID objects_from_server, bool dynamic_objects);
-    void handleRemovedReplicatedIndex(ProxIndexID iid);
+    void handleCreatedReplicatedIndex(Liveness::Token alive, ProxIndexID iid, ReplicatedLocationServiceCachePtr loc_cache, ServerID objects_from_server, bool dynamic_objects);
+    void handleRemovedReplicatedIndex(Liveness::Token alive, ProxIndexID iid);
 
     // QueryEventListener Interface
     void queryHasEvents(Query* query);
@@ -122,7 +122,7 @@ private:
     // currently takes the brute force approach of updating all properties and
     // uses the most up-to-date info, even if that's actually newer than the
     // update that triggered this.
-    void handleNotifySubscribersLocUpdate(ReplicatedLocationServiceCache* loccache, const ObjectReference& oref);
+    void handleNotifySubscribersLocUpdate(Liveness::Token alive, ReplicatedLocationServiceCache* loccache, const ObjectReference& oref);
 
     // Object queries
     void updateQuery(HostedObjectPtr ho, const SpaceObjectReference& sporef, SolidAngle sa, uint32 max_results);
@@ -142,9 +142,9 @@ private:
     void unregisterObjectQueryWithServer(const ObjectReference& object, ServerID sid);
 
     // Events on queries/objects
-    void handleUpdateObjectQuery(const ObjectReference& object, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const SolidAngle& angle, uint32 max_results);
-    void handleRemoveObjectQuery(const ObjectReference& object, bool notify_main_thread);
-    void handleDisconnectedObject(const ObjectReference& object);
+    void handleUpdateObjectQuery(Liveness::Token alive, const ObjectReference& object, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const SolidAngle& angle, uint32 max_results);
+    void handleRemoveObjectQuery(Liveness::Token alive, const ObjectReference& object, bool notify_main_thread);
+    void handleDisconnectedObject(Liveness::Token alive, const ObjectReference& object);
 
     // Generate query events based on results collected from query handlers
     void generateObjectQueryEvents(Query* query);

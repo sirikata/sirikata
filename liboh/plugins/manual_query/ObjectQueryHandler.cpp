@@ -58,6 +58,7 @@ ObjectQueryHandler::ObjectQueryHandler(ObjectHostContext* ctx, ManualObjectQuery
 }
 
 ObjectQueryHandler::~ObjectQueryHandler() {
+    Liveness::letDie();
     for(ReplicatedIndexQueryHandlerMap::iterator it = mObjectQueryHandlers.begin(); it != mObjectQueryHandlers.end(); it++)
         delete it->second.handler;
     mObjectQueryHandlers.clear();
@@ -81,7 +82,7 @@ void ObjectQueryHandler::createdReplicatedIndex(ProxIndexID iid, ReplicatedLocat
     // while waiting for the real event handler to run. They'll just queue up
     // behind that handler.
     mProxStrand->post(
-        std::tr1::bind(&ObjectQueryHandler::handleCreatedReplicatedIndex, this, iid, loc_cache, objects_from_server, dynamic_objects),
+        std::tr1::bind(&ObjectQueryHandler::handleCreatedReplicatedIndex, this, livenessToken(), iid, loc_cache, objects_from_server, dynamic_objects),
         "ObjectQueryHandler::handleCreatedReplicatedIndex"
     );
     loc_cache->addListener(this);
@@ -89,7 +90,7 @@ void ObjectQueryHandler::createdReplicatedIndex(ProxIndexID iid, ReplicatedLocat
 
 void ObjectQueryHandler::removedReplicatedIndex(ProxIndexID iid) {
     mProxStrand->post(
-        std::tr1::bind(&ObjectQueryHandler::handleRemovedReplicatedIndex, this, iid),
+        std::tr1::bind(&ObjectQueryHandler::handleRemovedReplicatedIndex, this, livenessToken(), iid),
         "ObjectQueryHandler::handleRemovedReplicatedIndex"
     );
 }
@@ -102,7 +103,7 @@ void ObjectQueryHandler::presenceConnected(const ObjectReference& objid) {
 void ObjectQueryHandler::presenceDisconnected(const ObjectReference& objid) {
     // Prox strand may  have some state to clean up
     mProxStrand->post(
-        std::tr1::bind(&ObjectQueryHandler::handleDisconnectedObject, this, objid),
+        std::tr1::bind(&ObjectQueryHandler::handleDisconnectedObject, this, livenessToken(), objid),
         "ObjectQueryHandler::handleDisconnectedObject"
     );
 }
@@ -127,7 +128,7 @@ void ObjectQueryHandler::updateQuery(HostedObjectPtr ho, const SpaceObjectRefere
 void ObjectQueryHandler::updateQuery(const ObjectReference& obj, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, SolidAngle sa, uint32 max_results) {
     // Update the prox thread
     mProxStrand->post(
-        std::tr1::bind(&ObjectQueryHandler::handleUpdateObjectQuery, this, obj, loc, bounds, sa, max_results),
+        std::tr1::bind(&ObjectQueryHandler::handleUpdateObjectQuery, this, livenessToken(), obj, loc, bounds, sa, max_results),
         "ObjectQueryHandler::handleUpdateObjectQuery"
     );
 }
@@ -135,7 +136,7 @@ void ObjectQueryHandler::updateQuery(const ObjectReference& obj, const TimedMoti
 void ObjectQueryHandler::removeQuery(HostedObjectPtr ho, const SpaceObjectReference& obj) {
     // Update the prox thread
     mProxStrand->post(
-        std::tr1::bind(&ObjectQueryHandler::handleRemoveObjectQuery, this, obj.object(), true),
+        std::tr1::bind(&ObjectQueryHandler::handleRemoveObjectQuery, this, livenessToken(), obj.object(), true),
         "ObjectQueryHandler::handleRemoveObjectQuery"
     );
 }
@@ -180,7 +181,11 @@ void ObjectQueryHandler::handleDeliverEvents() {
     }
 }
 
-void ObjectQueryHandler::handleNotifySubscribersLocUpdate(ReplicatedLocationServiceCache* loccache, const ObjectReference& oref) {
+void ObjectQueryHandler::handleNotifySubscribersLocUpdate(Liveness::Token alive, ReplicatedLocationServiceCache* loccache, const ObjectReference& oref) {
+    if (!alive) return;
+    Liveness::Lock lck(alive);
+    if (!lck) return;
+
     SubscribersMap::iterator it = mSubscribers.find(oref);
     if (it == mSubscribers.end()) return;
     SubscriberSetPtr subscribers = it->second;
@@ -387,7 +392,7 @@ void ObjectQueryHandler::onParentUpdated(ReplicatedLocationServiceCache* loccach
 
 void ObjectQueryHandler::onEpochUpdated(ReplicatedLocationServiceCache* loccache, const ObjectReference& obj) {
     mContext->mainStrand->post(
-        std::tr1::bind(&ObjectQueryHandler::handleNotifySubscribersLocUpdate, this, loccache, obj),
+        std::tr1::bind(&ObjectQueryHandler::handleNotifySubscribersLocUpdate, this, livenessToken(), loccache, obj),
         "ObjectQueryHandler::handleNotifySubscribersLocUpdate"
     );
 }
@@ -396,14 +401,14 @@ void ObjectQueryHandler::onLocationUpdated(ReplicatedLocationServiceCache* locca
     updateQuery(obj, loccache->location(obj), loccache->bounds(obj).fullBounds(), NoUpdateSolidAngle, NoUpdateMaxResults);
 
     mContext->mainStrand->post(
-        std::tr1::bind(&ObjectQueryHandler::handleNotifySubscribersLocUpdate, this, loccache, obj),
+        std::tr1::bind(&ObjectQueryHandler::handleNotifySubscribersLocUpdate, this, livenessToken(), loccache, obj),
         "ObjectQueryHandler::handleNotifySubscribersLocUpdate"
     );
 }
 
 void ObjectQueryHandler::onOrientationUpdated(ReplicatedLocationServiceCache* loccache, const ObjectReference& obj) {
     mContext->mainStrand->post(
-        std::tr1::bind(&ObjectQueryHandler::handleNotifySubscribersLocUpdate, this, loccache, obj),
+        std::tr1::bind(&ObjectQueryHandler::handleNotifySubscribersLocUpdate, this, livenessToken(), loccache, obj),
         "ObjectQueryHandler::handleNotifySubscribersLocUpdate"
     );
 }
@@ -412,21 +417,21 @@ void ObjectQueryHandler::onBoundsUpdated(ReplicatedLocationServiceCache* loccach
     updateQuery(obj, loccache->location(obj), loccache->bounds(obj).fullBounds(), NoUpdateSolidAngle, NoUpdateMaxResults);
 
     mContext->mainStrand->post(
-        std::tr1::bind(&ObjectQueryHandler::handleNotifySubscribersLocUpdate, this, loccache, obj),
+        std::tr1::bind(&ObjectQueryHandler::handleNotifySubscribersLocUpdate, this, livenessToken(), loccache, obj),
         "ObjectQueryHandler::handleNotifySubscribersLocUpdate"
     );
 }
 
 void ObjectQueryHandler::onMeshUpdated(ReplicatedLocationServiceCache* loccache, const ObjectReference& obj) {
     mContext->mainStrand->post(
-        std::tr1::bind(&ObjectQueryHandler::handleNotifySubscribersLocUpdate, this, loccache, obj),
+        std::tr1::bind(&ObjectQueryHandler::handleNotifySubscribersLocUpdate, this, livenessToken(), loccache, obj),
         "ObjectQueryHandler::handleNotifySubscribersLocUpdate"
     );
 }
 
 void ObjectQueryHandler::onPhysicsUpdated(ReplicatedLocationServiceCache* loccache, const ObjectReference& obj) {
     mContext->mainStrand->post(
-        std::tr1::bind(&ObjectQueryHandler::handleNotifySubscribersLocUpdate, this, loccache, obj),
+        std::tr1::bind(&ObjectQueryHandler::handleNotifySubscribersLocUpdate, this, livenessToken(), loccache, obj),
         "ObjectQueryHandler::handleNotifySubscribersLocUpdate"
     );
 }
@@ -434,7 +439,11 @@ void ObjectQueryHandler::onPhysicsUpdated(ReplicatedLocationServiceCache* loccac
 
 // PROX Thread: Everything after this should only be called from within the prox thread.
 
-void ObjectQueryHandler::handleCreatedReplicatedIndex(ProxIndexID iid, ReplicatedLocationServiceCachePtr loc_cache, ServerID objects_from_server, bool dynamic_objects) {
+void ObjectQueryHandler::handleCreatedReplicatedIndex(Liveness::Token alive, ProxIndexID iid, ReplicatedLocationServiceCachePtr loc_cache, ServerID objects_from_server, bool dynamic_objects) {
+    if (!alive) return;
+    Liveness::Lock lck(alive);
+    if (!lck) return;
+
     assert(mObjectQueryHandlers.find(iid) == mObjectQueryHandlers.end());
 
     using std::tr1::placeholders::_1;
@@ -477,7 +486,11 @@ void ObjectQueryHandler::handleCreatedReplicatedIndex(ProxIndexID iid, Replicate
     }
 }
 
-void ObjectQueryHandler::handleRemovedReplicatedIndex(ProxIndexID iid) {
+void ObjectQueryHandler::handleRemovedReplicatedIndex(Liveness::Token alive, ProxIndexID iid) {
+    if (!alive) return;
+    Liveness::Lock lck(alive);
+    if (!lck) return;
+
     assert(mObjectQueryHandlers.find(iid) != mObjectQueryHandlers.end());
     assert(mInverseObjectQueryHandlers.find( mObjectQueryHandlers[iid].handler ) != mInverseObjectQueryHandlers.end());
 
@@ -519,7 +532,7 @@ void ObjectQueryHandler::generateObjectQueryEvents(Query* query) {
             assert(handler_data.loccache->tracking(objid));
 
             mContext->mainStrand->post(
-                std::tr1::bind(&ObjectQueryHandler::handleAddObjectLocSubscription, this, querier_id, objid),
+                std::tr1::bind(&ObjectQueryHandler::handleAddObjectLocSubscription, this, livenessToken(), querier_id, objid),
                 "ObjectQueryHandler::handleAddObjectLocSubscription"
             );
 
@@ -583,7 +596,7 @@ void ObjectQueryHandler::generateObjectQueryEvents(Query* query) {
             // Clear out seqno and let main strand remove loc
             // subcription
             mContext->mainStrand->post(
-                std::tr1::bind(&ObjectQueryHandler::handleRemoveObjectLocSubscription, this, querier_id, objid),
+                std::tr1::bind(&ObjectQueryHandler::handleRemoveObjectLocSubscription, this, livenessToken(), querier_id, objid),
                 "ObjectQueryHandler::handleRemoveObjectLocSubscription"
             );
 
@@ -678,7 +691,11 @@ void ObjectQueryHandler::unregisterObjectQueryWithServer(const ObjectReference& 
     query_data->servers.erase(sid);
 }
 
-void ObjectQueryHandler::handleUpdateObjectQuery(const ObjectReference& object, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const SolidAngle& angle, uint32 max_results) {
+void ObjectQueryHandler::handleUpdateObjectQuery(Liveness::Token alive, const ObjectReference& object, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const SolidAngle& angle, uint32 max_results) {
+    if (!alive) return;
+    Liveness::Lock lck(alive);
+    if (!lck) return;
+
     BoundingSphere3f region(bounds.center(), 0);
     float ms = bounds.radius();
 
@@ -740,7 +757,11 @@ void ObjectQueryHandler::handleUpdateObjectQuery(const ObjectReference& object, 
     }
 }
 
-void ObjectQueryHandler::handleRemoveObjectQuery(const ObjectReference& object, bool notify_main_thread) {
+void ObjectQueryHandler::handleRemoveObjectQuery(Liveness::Token alive, const ObjectReference& object, bool notify_main_thread) {
+    if (!alive) return;
+    Liveness::Lock lck(alive);
+    if (!lck) return;
+
     // Clear out queries
     ObjectQueryMap::iterator obj_it = mObjectQueries.find(object);
     if (obj_it == mObjectQueries.end()) return;
@@ -757,15 +778,15 @@ void ObjectQueryHandler::handleRemoveObjectQuery(const ObjectReference& object, 
     // Optionally let the main thread know to clear its communication state
     if (notify_main_thread) {
         mContext->mainStrand->post(
-            std::tr1::bind(&ObjectQueryHandler::handleRemoveAllObjectLocSubscription, this, object),
+            std::tr1::bind(&ObjectQueryHandler::handleRemoveAllObjectLocSubscription, this, livenessToken(), object),
             "ObjectQueryHandler::handleRemoveAllObjectLocSubscription"
         );
     }
 }
 
-void ObjectQueryHandler::handleDisconnectedObject(const ObjectReference& object) {
+void ObjectQueryHandler::handleDisconnectedObject(Liveness::Token alive, const ObjectReference& object) {
     // Clear out query state if it exists
-    handleRemoveObjectQuery(object, false);
+    handleRemoveObjectQuery(alive, object, false);
 }
 
 

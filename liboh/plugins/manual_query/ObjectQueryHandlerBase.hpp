@@ -17,7 +17,10 @@ class ManualObjectQueryProcessor;
 /** Base class for ObjectQueryProcessors, which all use Libprox query
  *  processors. Just provides some utilities and definitions.
  */
-class ObjectQueryHandlerBase : public Service {
+class ObjectQueryHandlerBase :
+        public Service,
+        public Liveness
+{
 public:
     ObjectQueryHandlerBase(ObjectHostContext* ctx, ManualObjectQueryProcessor* parent, const OHDP::SpaceNodeID& space, Network::IOStrandPtr prox_strand);
     ~ObjectQueryHandlerBase();
@@ -36,9 +39,9 @@ protected:
     ManualObjectQueryProcessor* mParent;
 
     // Handle various events in the main thread that are triggered in the prox thread
-    void handleAddObjectLocSubscription(const ObjectReference& subscriber, const ObjectReference& observed);
-    void handleRemoveObjectLocSubscription(const ObjectReference& subscriber, const ObjectReference& observed);
-    void handleRemoveAllObjectLocSubscription(const ObjectReference& subscriber);
+    void handleAddObjectLocSubscription(Liveness::Token alive, const ObjectReference& subscriber, const ObjectReference& observed);
+    void handleRemoveObjectLocSubscription(Liveness::Token alive, const ObjectReference& subscriber, const ObjectReference& observed);
+    void handleRemoveAllObjectLocSubscription(Liveness::Token alive, const ObjectReference& subscriber);
 
     // PROX Thread - Should only be accessed in methods used by the prox thread
     Network::IOStrandPtr mProxStrand;

@@ -29,7 +29,11 @@ ObjectQueryHandlerBase::~ObjectQueryHandlerBase() {
 
 // MAIN Thread
 
-void ObjectQueryHandlerBase::handleAddObjectLocSubscription(const ObjectReference& subscriber, const ObjectReference& observed) {
+void ObjectQueryHandlerBase::handleAddObjectLocSubscription(Liveness::Token alive, const ObjectReference& subscriber, const ObjectReference& observed) {
+    if (!alive) return;
+    Liveness::Lock lck(alive);
+    if (!lck) return;
+
     // We check the cache when we get the request, but also check it here since
     // the observed object may have been removed between the request to add this
     // subscription and its actual execution.
@@ -37,11 +41,19 @@ void ObjectQueryHandlerBase::handleAddObjectLocSubscription(const ObjectReferenc
     //mLocService->subscribe(subscriber, observed);
 }
 
-void ObjectQueryHandlerBase::handleRemoveObjectLocSubscription(const ObjectReference& subscriber, const ObjectReference& observed) {
+void ObjectQueryHandlerBase::handleRemoveObjectLocSubscription(Liveness::Token alive, const ObjectReference& subscriber, const ObjectReference& observed) {
+    if (!alive) return;
+    Liveness::Lock lck(alive);
+    if (!lck) return;
+
     //mLocService->unsubscribe(subscriber, observed);
 }
 
-void ObjectQueryHandlerBase::handleRemoveAllObjectLocSubscription(const ObjectReference& subscriber) {
+void ObjectQueryHandlerBase::handleRemoveAllObjectLocSubscription(Liveness::Token alive, const ObjectReference& subscriber) {
+    if (!alive) return;
+    Liveness::Lock lck(alive);
+    if (!lck) return;
+
     //mLocService->unsubscribe(subscriber);
 }
 
