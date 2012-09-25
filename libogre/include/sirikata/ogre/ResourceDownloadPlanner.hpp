@@ -45,6 +45,18 @@ public:
     virtual void setMaxObjects(int32 new_max);
 
     OgreRenderer* getScene() const { return mScene; }
+
+    struct Stats {
+        uint32 totalObjects;
+        uint32 unloadedObjects;
+        uint32 loadingObjects;
+        uint32 loadedObjects;
+
+        uint32 totalAssets;
+        uint32 loadingAssets;
+        uint32 loadedAssets;
+    };
+    virtual Stats stats() = 0;
 protected:
     Context* mContext;
     OgreRenderer* mScene;

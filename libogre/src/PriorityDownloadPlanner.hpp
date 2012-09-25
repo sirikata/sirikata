@@ -70,6 +70,7 @@ public:
         mMetric = metric;
     }
 
+    virtual Stats stats();
 protected:
     bool mStopped;
     PriorityDownloadPlannerMetricPtr mMetric;

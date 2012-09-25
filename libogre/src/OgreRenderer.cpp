@@ -933,6 +933,8 @@ boost::any OgreRenderer::invoke(std::vector<boost::any>& params) {
         return maxObjects(params);
     else if (name == "objectPrioritization")
         return objectPrioritization(params);
+    else if (name == "stats")
+        return rendererStats(params);
     else
         SILOG(ogre, warn, "Function " << name << " was invoked but this function was not found.");
 
@@ -976,6 +978,26 @@ boost::any OgreRenderer::objectPrioritization(std::vector<boost::any>& params) {
         }
     }
     return Invokable::asAny(mDownloadPlanner->prioritizationMetric()->name());
+}
+
+boost::any OgreRenderer::rendererStats(std::vector<boost::any>& params) {
+    Invokable::Dict result;
+
+    ResourceDownloadPlanner::Stats planner_stats = mDownloadPlanner->stats();
+    Invokable::Dict objects;
+    objects["total"] = Invokable::asAny(planner_stats.totalObjects);
+    objects["unloaded"] = Invokable::asAny(planner_stats.unloadedObjects);
+    objects["loading"] = Invokable::asAny(planner_stats.loadingObjects);
+    objects["loaded"] = Invokable::asAny(planner_stats.loadedObjects);
+    result["objects"] = Invokable::asAny(objects);
+
+    Invokable::Dict assets;
+    assets["total"] = Invokable::asAny(planner_stats.totalAssets);
+    assets["loading"] = Invokable::asAny(planner_stats.loadingAssets);
+    assets["loaded"] = Invokable::asAny(planner_stats.loadedAssets);
+    result["assets"] = Invokable::asAny(objects);
+
+    return Invokable::asAny(result);
 }
 
 void OgreRenderer::injectWindowResized(uint32 w, uint32 h) {

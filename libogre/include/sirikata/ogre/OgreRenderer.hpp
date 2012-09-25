@@ -232,6 +232,7 @@ public:
     boost::any setOnTick(std::vector<boost::any>& params);
     boost::any maxObjects(std::vector<boost::any>& params);
     boost::any objectPrioritization(std::vector<boost::any>& params);
+    boost::any rendererStats(std::vector<boost::any>& params);
 
     static Ogre::Root* sRoot;
     static Ogre::Plugin* sCDNArchivePlugin;

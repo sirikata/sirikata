@@ -390,6 +390,12 @@ function() {
         return this.invoke("objectPrioritization");
     };
 
+    /** Get renderer stats.
+     */
+    std.graphics.Graphics.prototype.stats = function() {
+        return this.invoke("stats");
+    };
+
     
     /** Sets the skybox or disables it.
      *  \param type 'disabled', 'cube', 'dome', or 'plane'

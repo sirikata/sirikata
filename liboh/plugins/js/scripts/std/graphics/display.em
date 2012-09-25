@@ -3,6 +3,7 @@
 // be found in the LICENSE file.
 
 system.require('std/movement/movableremote.em');
+system.require('std/core/repeatingTimer.em');
 
 /** The DisplayProperties class allows you to modify current display
  *  properties.
@@ -18,6 +19,8 @@ std.graphics.DisplayProperties = system.Class.extend({
                 this._ui.bind("requestDisplayUpdate", std.core.bind(this.requestDisplayUpdate, this));
                 this._ui.bind("requestPropertyUpdate", std.core.bind(this.update, this));
                 if (init_cb) init_cb();
+
+                this._statsTimer = std.core.RepeatingTimer(1, std.core.bind(this.updateStats, this));
             }, this)
         );
     },
@@ -37,6 +40,15 @@ std.graphics.DisplayProperties = system.Class.extend({
 
     update: function() {
         this._ui.call('DisplaySettings.setUIInfo', this._sim.maxObjects(), this._sim.objectPrioritization());
+    },
+
+    updateStats: function() {
+        var stats = this._sim.stats();
+        this._ui.call('DisplaySettings.updateStats',
+                      stats.objects.total, stats.objects.unloaded,
+                      stats.objects.loading, stats.objects.loaded,
+                      stats.assets.total, stats.assets.loading, stats.assets.loaded
+                     );
     },
 
     requestDisplayUpdate: function(settings) {
@@ -89,6 +101,22 @@ std.graphics.DisplayProperties = system.Class.extend({
                     return false;
                 };
 
+                // FIXME object instead of params, as above...
+                var updateStats = function(
+                    total_objects, unloaded_objects, loading_objects, loaded_objects,
+                    total_assets, loading_assets, loaded_assets
+                ) {
+                    $('#renderer_settings_total_objects').text(total_objects);
+                    $('#renderer_settings_unloaded_objects').text(unloaded_objects);
+                    $('#renderer_settings_loading_objects').text(loading_objects);
+                    $('#renderer_settings_loaded_objects').text(loaded_objects);
+
+                    $('#renderer_settings_total_assets').text(total_assets);
+                    $('#renderer_settings_loading_assets').text(loading_assets);
+                    $('#renderer_settings_loaded_assets').text(loaded_assets);
+                };
+                DisplaySettings.updateStats = updateStats;
+
                 // UI setup
                 $('<div id="display-settings-dialog">' +
                   ' <div id="max_objects">' +
@@ -101,6 +129,17 @@ std.graphics.DisplayProperties = system.Class.extend({
 	          '  <input type="radio" id="distance" name="radio" /><label for="distance">Distance</label>' +
 	          '  <input type="radio" id="solid_angle" name="radio" /><label for="solid_angle">Solid Angle</label>' +
                   ' </form>' +
+                  ' </div>' +
+                  ' <div id="stats" class="stats">' +
+                  ' <table>' +
+                  '  <tr><td>Total Objects</td><td id="renderer_settings_total_objects"></td></tr>' +
+                  '  <tr><td>Unloaded Objects</td><td id="renderer_settings_unloaded_objects"></td></tr>' +
+                  '  <tr><td>Loading Objects</td><td id="renderer_settings_loading_objects"></td></tr>' +
+                  '  <tr><td>Loaded Objects</td><td id="renderer_settings_loaded_objects"></td></tr>' +
+                  '  <tr><td></td><td></td></tr>' +
+                  '  <tr><td>Total Assets</td><td id="renderer_settings_total_assets"></td></tr>' +
+                  '  <tr><td>Loading Assets</td><td id="renderer_settings_loading_assets"></td></tr>' +
+                  '  <tr><td>Loaded Assets</td><td id="renderer_settings_loaded_assets"></td></tr>' +
                   ' </div>' +
                   '</div>').attr({title:'Display Settings'}).appendTo('body');
 

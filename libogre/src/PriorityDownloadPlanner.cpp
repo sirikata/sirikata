@@ -296,7 +296,7 @@ void PriorityDownloadPlanner::commandGetData(
 void PriorityDownloadPlanner::commandGetStats(
     const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid)
 {
-    RMutex::scoped_lock lock(mDlPlannerMutex);
+    Stats st = stats();
     Command::Result result = Command::EmptyResult();
 
     // We don't keep fine-grained stats about the state of
@@ -306,8 +306,25 @@ void PriorityDownloadPlanner::commandGetStats(
     // whether the object was finally loaded. We need to scan through
     // the objects and assets to actually figure these properties out
     // and get accurate stats.
-    result.put("ddplanner.objects.total", mObjects.size());
-    result.put("ddplanner.objects.unloaded", mWaitingObjects.size());
+    result.put("ddplanner.objects.total", st.totalObjects);
+    result.put("ddplanner.objects.unloaded", st.unloadedObjects);
+    result.put("ddplanner.objects.loading", st.loadingObjects);
+    result.put("ddplanner.objects.loaded", st.loadedObjects);
+
+    result.put("ddplanner.assets.total", st.totalAssets);
+    result.put("ddplanner.assets.loading", st.loadingAssets);
+    result.put("ddplanner.assets.loaded", st.loadedAssets);
+
+    cmdr->result(cmdid, result);
+}
+
+
+ResourceDownloadPlanner::Stats PriorityDownloadPlanner::stats() {
+    RMutex::scoped_lock lock(mDlPlannerMutex);
+    Stats st;
+    st.totalObjects = mObjects.size();
+    st.unloadedObjects = mWaitingObjects.size();
+
     uint32 objects_loading = 0, objects_loaded = 0;
     for(ObjectMap::const_iterator objit = mLoadedObjects.begin(); objit != mLoadedObjects.end(); objit++) {
         if (objit->second->file.empty()) {
@@ -321,11 +338,11 @@ void PriorityDownloadPlanner::commandGetStats(
         else
             objects_loading++;
     }
-    result.put("ddplanner.objects.loading", objects_loading);
-    result.put("ddplanner.objects.loaded", objects_loaded);
+    st.loadingObjects = objects_loading;
+    st.loadedObjects = objects_loaded;
 
 
-    result.put("ddplanner.assets.total", mAssets.size());
+    st.totalAssets = mAssets.size();
     uint32 assets_loading = 0, assets_loaded = 0;
     for(AssetMap::const_iterator assit = mAssets.begin(); assit != mAssets.end(); assit++) {
         if (!assit->second->usingObjects.empty())
@@ -333,13 +350,11 @@ void PriorityDownloadPlanner::commandGetStats(
         else
             assets_loading++;
     }
-    result.put("ddplanner.assets.loading", assets_loading);
-    result.put("ddplanner.assets.loaded", assets_loaded);
+    st.loadingAssets = assets_loading;
+    st.loadedAssets = assets_loaded;
 
-
-    cmdr->result(cmdid, result);
+    return st;
 }
-
 
 
 
