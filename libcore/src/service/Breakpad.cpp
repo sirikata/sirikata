@@ -218,11 +218,10 @@ namespace {
 static google_breakpad::ExceptionHandler* breakpad_handler = NULL;
 static std::string breakpad_url;
 
-bool finishedDump(const char* dump_path,
-    const char* minidump_id,
+bool finishedDump(const google_breakpad::MinidumpDescriptor& descriptor,
     void* context,
     bool succeeded) {
-    printf("Finished breakpad dump at %s/%s.dmp: success %d\n", dump_path, minidump_id, succeeded ? 1 : -1);
+    printf("Finished breakpad dump at %s: success %d\n", descriptor.path(), succeeded ? 1 : -1);
 
 // Only run the reporter in release mode. This is a decent heuristic --
 // generally you'll only run the debug mode when you have a dev environment.
@@ -232,14 +231,21 @@ bool finishedDump(const char* dump_path,
     // If no URL, just finish crashing after the dump.
     if (breakpad_url.empty()) return succeeded;
 
+    // Because we need compatibility with the old version for now (since win32
+    // is still using it) and this keeps the crashreporter code simpler, we need
+    // to split the path into parts -- dump_path/minidump_id.dmp
+    const char* dump_path = descriptor.directory().c_str();
+    const char* minidump_id_start = descriptor.path() + strlen(dump_path) + strlen("/");
+    int minidump_id_len = strlen(minidump_id_start) - strlen(".dmp");
+    std::string minidump_id(minidump_id_start, minidump_id_len);
+
     // Fork and exec the crashreporter
     pid_t pID = fork();
 
     if (pID == 0) {
-
-        execlp(getCrashReporterPath().c_str(), getCrashReporterPath().c_str(), breakpad_url.c_str(), dump_path, minidump_id, SIRIKATA_VERSION, SIRIKATA_GIT_REVISION, (char*)NULL);
+        execlp(getCrashReporterPath().c_str(), getCrashReporterPath().c_str(), breakpad_url.c_str(), dump_path, minidump_id.c_str(), SIRIKATA_VERSION, SIRIKATA_GIT_REVISION, (char*)NULL);
         // If crashreporter not in path, try current directory
-        execl(getCrashReporterPath().c_str(), getCrashReporterPath().c_str(), breakpad_url.c_str(), dump_path, minidump_id, SIRIKATA_VERSION, SIRIKATA_GIT_REVISION, (char*)NULL);
+        execl(getCrashReporterPath().c_str(), getCrashReporterPath().c_str(), breakpad_url.c_str(), dump_path, minidump_id.c_str(), SIRIKATA_VERSION, SIRIKATA_GIT_REVISION, (char*)NULL);
     }
     else if (pID < 0) {
         printf("Failed to fork crashreporter\n");
@@ -259,7 +265,7 @@ void init() {
     breakpad_url = GetOptionValue<String>(OPT_CRASHREPORT_URL);
 
     using namespace google_breakpad;
-    breakpad_handler = new ExceptionHandler("./", NULL, finishedDump, NULL, true);
+    breakpad_handler = new ExceptionHandler(MinidumpDescriptor("."), NULL, finishedDump, NULL, true, -1);
 }
 
 #elif SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_MAC
