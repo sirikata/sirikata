@@ -86,6 +86,14 @@ public:
     void setPosition(const Vector3d& pos);
     Quaternion getOrientation() const;
     void setOrientation(const Quaternion& orient);
+
+    float64 getNearClip() const;
+    void setNearClip(float64 d);
+    float64 getFarClip() const;
+    void setFarClip(float64 d);
+
+    float32 getFOVY() const;
+    void setFOVY(float32 v);
 };
 
 }

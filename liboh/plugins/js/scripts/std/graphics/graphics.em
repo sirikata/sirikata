@@ -56,7 +56,7 @@ function() {
 
         if (typeof(reInitialize) === 'unefined')
             reInitialize = false;
-        
+
         this.presence = pres;
         this._cameraMode = 'first';
         this._simulator = pres.runSimulation(name);
@@ -303,7 +303,22 @@ function() {
     std.graphics.Graphics.prototype.setCameraOrientation = function(orient) {
         this.invoke('setCameraOrientation', orient.x, orient.y, orient.z, orient.w);
     };
-    
+
+    /** Set the camera's near clip plane distance. */
+    std.graphics.Graphics.prototype.setCameraNearClip = function(d) {
+        this.invoke('setCameraNearClipPlane', d);
+    };
+
+    /** Set the camera's far clip plane distance. */
+    std.graphics.Graphics.prototype.setCameraFarClip = function(d) {
+        this.invoke('setCameraFarClipPlane', d);
+    };
+
+    /** Set the camera's far clip plane distance. */
+    std.graphics.Graphics.prototype.setCameraFOVY = function(v) {
+        this.invoke('setCameraFOVY', v);
+    };
+
     std.graphics.Graphics.prototype.axis = function(obj, axis, visible, glbl) {
         this.invoke('axis', obj, axis.toLowerCase(), visible, glbl);
     };

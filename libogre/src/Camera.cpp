@@ -144,5 +144,29 @@ void Camera::windowResized() {
     this->setViewportDimensions(mViewportLeft, mViewportTop, mViewportRight, mViewportBottom);
 }
 
+float64 Camera::getNearClip() const {
+    return mOgreCamera->getNearClipDistance();
+}
+
+void Camera::setNearClip(float64 d) {
+    mOgreCamera->setNearClipDistance(d);
+}
+
+float64 Camera::getFarClip() const {
+    return mOgreCamera->getFarClipDistance();
+}
+
+void Camera::setFarClip(float64 d) {
+    mOgreCamera->setFarClipDistance(d);
+}
+
+float32 Camera::getFOVY() const {
+    return mOgreCamera->getFOVy().valueRadians();
+}
+
+void Camera::setFOVY(float32 v) {
+    mOgreCamera->setFOVy(Ogre::Radian(v));
+}
+
 }
 }

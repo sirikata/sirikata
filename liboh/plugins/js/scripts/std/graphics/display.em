@@ -39,6 +39,8 @@ std.graphics.DisplayProperties = system.Class.extend({
     },
 
     update: function() {
+        var cam = this._sim.camera();
+        this._ui.call('DisplaySettings.setCameraInfo', cam.clip.near, cam.clip.far, cam.fov.y);
         this._ui.call('DisplaySettings.setUIInfo', this._sim.maxObjects(), this._sim.objectPrioritization());
     },
 
@@ -52,6 +54,9 @@ std.graphics.DisplayProperties = system.Class.extend({
     },
 
     requestDisplayUpdate: function(settings) {
+        this._sim.setCameraNearClip(settings.near_clip);
+        this._sim.setCameraFarClip(settings.far_clip);
+        this._sim.setCameraFOVY(settings.fov_y);
         this._sim.setMaxObjects(settings.max_objects);
         this._sim.setObjectPrioritization(settings.object_prioritization);
     },
@@ -86,16 +91,30 @@ std.graphics.DisplayProperties = system.Class.extend({
                 };
                 DisplaySettings.setUIInfo = setUIInfo;
 
+                var setCameraInfo = function(near_clip, far_clip, fov_y) {
+                    $('#near_clip_value').val(near_clip);
+                    $('#far_clip_value').val(far_clip);
+                    $('#fovy_value').val(fov_y);
+                };
+                DisplaySettings.setCameraInfo = setCameraInfo;
+
                 var setDisplayInfo = function() {
                     // Sends info from UI back to the script.
                     // Note that we use ui-state-active because the buttonset doesn't
                     // seem to update the underlying input radio's properly. Since
                     // that gets us the lable, we use the 'for' attr
+                    var near_clip = parseFloat($('#near_clip_value').val());
+                    var far_clip = parseFloat($('#far_clip_value').val());
+                    var fov_y = parseFloat($('#fovy_value').val());
                     var max_objects = parseInt($('#max_objects_value').val());
                     var object_prioritization = $('.object_prioritization label.ui-state-active').attr('for');
                     sirikata.event('requestDisplayUpdate',
-                                   { 'max_objects' : max_objects,
-                                     'object_prioritization' : object_prioritization
+                                   {
+                                       'near_clip' : near_clip,
+                                       'far_clip' : far_clip,
+                                       'fov_y' : fov_y,
+                                       'max_objects' : max_objects,
+                                       'object_prioritization' : object_prioritization
                                    }
                                   );
                     return false;
@@ -130,6 +149,11 @@ std.graphics.DisplayProperties = system.Class.extend({
 	          '  <input type="radio" id="solid_angle" name="radio" /><label for="solid_angle">Solid Angle</label>' +
                   ' </form>' +
                   ' </div>' +
+                  ' <form id="camera_params">' +
+	          '  <input type="number" id="near_clip_value" value="0.9" step="0.1" /><label for="near_clip_value">Near Clip</label>' +
+                  '  <input type="number" id="far_clip_value" value="20000" step="1000" /><label for="far_clip_value">Far Clip</label>' +
+                  '  <input type="number" id="fovy_value" value="0" step="0.1" /><label for="fovy_value">FOV Y</label>' +
+                  ' </form>' +
                   ' <div id="stats" class="stats">' +
                   ' <table>' +
                   '  <tr><td>Total Objects</td><td id="renderer_settings_total_objects"></td></tr>' +
@@ -154,8 +178,8 @@ std.graphics.DisplayProperties = system.Class.extend({
 
                 $( "#object_prioritization" ).buttonset();
 
+                $( '#near_clip_value, #far_clip_value, #fovy_value, #max_objects_value' ).change(setDisplayInfo).bind('input', setDisplayInfo);
                 $( '#object_prioritization, #collision-mesh' ).click(setDisplayInfo);
-                $( '#max_objects_value' ).change(setDisplayInfo);
                 $( '#max_objects_form' ).submit(setDisplayInfo);
 
                 // Add Options -> Display Settings

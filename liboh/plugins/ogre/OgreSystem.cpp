@@ -264,6 +264,9 @@ bool OgreSystem::initialize(ConnectionEventProvider* cevtprovider, VWObjectPtr v
     mInvokableHandlers["camera"] = std::tr1::bind(&OgreSystem::getCamera, this, _1);
     mInvokableHandlers["setCameraPosition"] = std::tr1::bind(&OgreSystem::setCameraPosition, this, _1);
     mInvokableHandlers["setCameraOrientation"] = std::tr1::bind(&OgreSystem::setCameraOrientation, this, _1);
+    mInvokableHandlers["setCameraNearClipPlane"] = std::tr1::bind(&OgreSystem::setCameraNearClipPlane, this, _1);
+    mInvokableHandlers["setCameraFarClipPlane"] = std::tr1::bind(&OgreSystem::setCameraFarClipPlane, this, _1);
+    mInvokableHandlers["setCameraFOVY"] = std::tr1::bind(&OgreSystem::setCameraFOVY, this, _1);
     mInvokableHandlers["getAnimationList"] = std::tr1::bind(&OgreSystem::getAnimationList, this, _1);
     mInvokableHandlers["startAnimation"] = std::tr1::bind(&OgreSystem::startAnimation, this, _1);
     mInvokableHandlers["stopAnimation"] = std::tr1::bind(&OgreSystem::stopAnimation, this, _1);
@@ -1078,6 +1081,11 @@ boost::any OgreSystem::getCamera(vector<boost::any>& params) {
     camera_orient["w"] = Invokable::asAny(orient.w);
     camera_info["orientation"] = Invokable::asAny(camera_orient);
 
+    Invokable::Dict clip_fov;
+    camera_fov["near"] = Invokable::asAny(mPrimaryCamera->getNearClip());
+    camera_fov["far"] = Invokable::asAny(mPrimaryCamera->getFarClip());
+    camera_info["clip"] = Invokable::asAny(camera_fov);
+
     return Invokable::asAny(camera_info);
 }
 
@@ -1108,6 +1116,33 @@ boost::any OgreSystem::setCameraOrientation(vector<boost::any>& params) {
     mPrimaryCamera->setOrientation(Quaternion(x, y, z, w, Quaternion::XYZW()));
 
     return boost::any();
+}
+
+boost::any OgreSystem::setCameraNearClipPlane(std::vector<boost::any>& params) {
+    if (mPrimaryCamera == NULL) return boost::any();
+    if (params.size() < 2) return boost::any();
+    if (!Invokable::anyIsNumeric(params[1])) return boost::any();
+    float64 val = Invokable::anyAsNumeric(params[1]);
+    mPrimaryCamera->setNearClip(val);
+    return Invokable::asAny(true);
+}
+
+boost::any OgreSystem::setCameraFarClipPlane(std::vector<boost::any>& params) {
+    if (mPrimaryCamera == NULL) return boost::any();
+    if (params.size() < 2) return boost::any();
+    if (!Invokable::anyIsNumeric(params[1])) return boost::any();
+    float64 val = Invokable::anyAsNumeric(params[1]);
+    mPrimaryCamera->setFarClip(val);
+    return Invokable::asAny(true);
+}
+
+boost::any OgreSystem::setCameraFOVY(std::vector<boost::any>& params) {
+    if (mPrimaryCamera == NULL) return boost::any();
+    if (params.size() < 2) return boost::any();
+    if (!Invokable::anyIsNumeric(params[1])) return boost::any();
+    float32 val = Invokable::anyAsNumeric(params[1]);
+    mPrimaryCamera->setFOVY(val);
+    return Invokable::asAny(true);
 }
 
 boost::any OgreSystem::world2Screen(vector<boost::any>& params) {

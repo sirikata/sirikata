@@ -244,6 +244,9 @@ public:
     boost::any getCamera(std::vector<boost::any>& params);
     boost::any setCameraPosition(std::vector<boost::any>& params);
     boost::any setCameraOrientation(std::vector<boost::any>& params);
+    boost::any setCameraNearClipPlane(std::vector<boost::any>& params);
+    boost::any setCameraFarClipPlane(std::vector<boost::any>& params);
+    boost::any setCameraFOVY(std::vector<boost::any>& params);
     boost::any getAnimationList(std::vector<boost::any>& params);
 
     boost::any startAnimation(std::vector<boost::any>& params);
