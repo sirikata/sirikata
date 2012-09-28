@@ -52,11 +52,22 @@ public:
     virtual ~StandardTestListener() {
     }
 
-    int run(const char * singleSuite) {
+    int run(const std::string& singleSuite) {
 
     	bool foundTest = false;
 
-    	if (singleSuite != NULL) {
+    	if (!singleSuite.empty()) {
+            std::string suite_name, test_name;
+            size_t dot_pos = singleSuite.find('.');
+            if (dot_pos == std::string::npos) {
+                suite_name = singleSuite;
+                test_name = "";
+            }
+            else {
+                suite_name = singleSuite.substr(0, dot_pos);
+                test_name = singleSuite.substr(dot_pos+1);
+            }
+
             TestRunner::setListener(this);
 
             RealWorldDescription wd;
@@ -64,17 +75,26 @@ public:
             tracker().enterWorld( wd );
             if ( wd.setUp() ) {
                 for ( SuiteDescription *sd = wd.firstSuite(); sd; sd = sd->next() )
-                    if ( sd->active() && strcmp(singleSuite, sd->suiteName())==0 ) {
+                    if ( sd->active() && suite_name == sd->suiteName() ) {
 
-                        foundTest = true;
-                        printf("\n\n========================================\n");
-                        printf("RUNNING SINGLE SUITE\n%s\n", singleSuite);
-                        printf("========================================");
+                        if (test_name.empty()) {
+                            foundTest = true;
+                            printf("\n\n========================================\n");
+                            printf("RUNNING SINGLE SUITE\n%s\n", singleSuite.c_str());
+                            printf("========================================");
+                        }
 
                         tracker().enterSuite( *sd );
                         if ( sd->setUp() ) {
                             for ( TestDescription *td = sd->firstTest(); td; td = td->next() )
-                                if ( td->active() ) {
+                                if ( td->active() && (test_name.empty() || test_name == td->testName())) {
+
+                                    if (!test_name.empty()) {
+                                        foundTest = true;
+                                        printf("\n\n========================================\n");
+                                        printf("RUNNING SINGLE TEST\n%s\n", singleSuite.c_str());
+                                        printf("========================================");
+                                    }
 
                                     tracker().enterTest( *td );
 
@@ -106,10 +126,10 @@ public:
             TestRunner::setListener(NULL);
 
             if (!foundTest) {
-                printf("Test suite %s not found, aborting\n", singleSuite);
+                printf("Test suite %s not found, aborting\n", singleSuite.c_str());
             }
     	}
-    	if (singleSuite==NULL) {
+    	if (singleSuite.empty()) {
             printf("\n\n========================================\n");
             printf("RUNNING ALL SUITES\n");
             printf("========================================\n\n");
@@ -213,8 +233,8 @@ private:
 int main(int argc, const char * argv [])
 {
     if(argc > 1) {
-        return Sirikata::StandardTestListener(argc, argv).run(argv[1]);
+        return Sirikata::StandardTestListener(argc, argv).run(std::string(argv[1]));
     } else {
-        return Sirikata::StandardTestListener(argc, argv).run(NULL);
+        return Sirikata::StandardTestListener(argc, argv).run(std::string());
     }
 }
