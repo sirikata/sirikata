@@ -1,34 +1,6 @@
-/*  Sirikata
- *  SstCloseTest.hpp
- *
- *  Copyright (c) 2010, Daniel Reiter Horn
- *  All rights reserved.
- *
- *  Redistribution and use in source and binary forms, with or without
- *  modification, are permitted provided that the following conditions are
- *  met:
- *  * Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- *  * Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in
- *    the documentation and/or other materials provided with the
- *    distribution.
- *  * Neither the name of Sirikata nor the names of its contributors may
- *    be used to endorse or promote products derived from this software
- *    without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
- * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
- * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
- * PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
- * OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
- * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
- * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
- * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
- * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
- * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- */
+// Copyright (c) 2010 Sirikata Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can
+// be found in the LICENSE file.
 
 #include <sirikata/core/network/Stream.hpp>
 #include <sirikata/core/network/StreamListener.hpp>
@@ -49,7 +21,7 @@
 
 using namespace Sirikata::Network;
 using namespace Sirikata;
-class SstCloseTest : public CxxTest::TestSuite
+class TCPSstCloseTest : public CxxTest::TestSuite
 {
     enum {
         NUM_TEST_STREAMS=3
@@ -115,8 +87,8 @@ class SstCloseTest : public CxxTest::TestSuite
                     mReceivers[i]=newStream;
                     using std::tr1::placeholders::_1;
                     using std::tr1::placeholders::_2;
-                    setCallbacks(std::tr1::bind(&SstCloseTest::listenerConnectionCallback,this,i,_1,_2),
-                        std::tr1::bind(&SstCloseTest::listenerDataRecvCallback,this,newStream,i,_1,_2),
+                    setCallbacks(std::tr1::bind(&TCPSstCloseTest::listenerConnectionCallback,this,i,_1,_2),
+                        std::tr1::bind(&TCPSstCloseTest::listenerDataRecvCallback,this,newStream,i,_1,_2),
                                  &Stream::ignoreReadySendCallback);
                     break;
                 }
@@ -124,16 +96,16 @@ class SstCloseTest : public CxxTest::TestSuite
         }
     }
 public:
-    static SstCloseTest*createSuite() {
-        return new SstCloseTest;
+    static TCPSstCloseTest*createSuite() {
+        return new TCPSstCloseTest;
     }
-    static void destroySuite(SstCloseTest*sst) {
+    static void destroySuite(TCPSstCloseTest*sst) {
         delete sst;
     }
 private:
     Sirikata::PluginManager plugins;
 
-    SstCloseTest() {
+    TCPSstCloseTest() {
         plugins.load( "tcpsst" );
 
         uint32 randport = 3000 + (uint32)(Sirikata::Task::LocalTime::now().raw() % 20000);
@@ -142,14 +114,14 @@ private:
         mBytes=65536;
         mChunks=3;
         mOffset=1;
-        mSendService = new IOServicePool("SstCloseTest Send", 4);
-        mSendStrand = mSendService->service()->createStrand("SstCloseTest Send");
-        mRecvService = new IOServicePool("SstCloseTest Receive", 4);
-        mRecvStrand = mRecvService->service()->createStrand("SstCloseTest Receive");
+        mSendService = new IOServicePool("TCPSstCloseTest Send", 4);
+        mSendStrand = mSendService->service()->createStrand("TCPSstCloseTest Send");
+        mRecvService = new IOServicePool("TCPSstCloseTest Receive", 4);
+        mRecvStrand = mRecvService->service()->createStrand("TCPSstCloseTest Receive");
         mListener = StreamListenerFactory::getSingleton().getDefaultConstructor()(mRecvStrand,StreamListenerFactory::getSingleton().getDefaultOptionParser()(String()));
         using std::tr1::placeholders::_1;
         using std::tr1::placeholders::_2;
-        mListener->listen(Address("127.0.0.1",mPort),std::tr1::bind(&SstCloseTest::listenerNewStreamCallback,this,_1,_2));
+        mListener->listen(Address("127.0.0.1",mPort),std::tr1::bind(&TCPSstCloseTest::listenerNewStreamCallback,this,_1,_2));
 
         mRecvService->run();
         Timer::sleep(Duration::seconds(1));
@@ -170,11 +142,11 @@ public:
                 mSenders[i]=StreamFactory::getSingleton().getDefaultConstructor()(mSendStrand,StreamFactory::getSingleton().getDefaultOptionParser()(String("--parallel-sockets=1 --websocket-draft-76=false --test-fragment-packet-level=")+fragmentPacketLevel));
                 mSenders[i]->connect(Address("127.0.0.1",mPort),
                                      &Stream::ignoreSubstreamCallback,
-                                     std::tr1::bind(&SstCloseTest::connectionCallback,this,i,_1,_2),
+                                     std::tr1::bind(&TCPSstCloseTest::connectionCallback,this,i,_1,_2),
                                      &Stream::ignoreReceivedCallback,
                                      &Stream::ignoreReadySendCallback);
             }else {
-                mSenders[i]=mSenders[0]->clone(  std::tr1::bind(&SstCloseTest::connectionCallback,this,i,_1,_2),
+                mSenders[i]=mSenders[0]->clone(  std::tr1::bind(&TCPSstCloseTest::connectionCallback,this,i,_1,_2),
                                      &Stream::ignoreReceivedCallback,
                                      &Stream::ignoreReadySendCallback);
 
@@ -300,7 +272,7 @@ public:
         mOffset=1;
         closeStreamRun(true,true,"2");
     }
-    ~SstCloseTest() {
+    ~TCPSstCloseTest() {
 
         delete mListener;
         mSendService->join();
