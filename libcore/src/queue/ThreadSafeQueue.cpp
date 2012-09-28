@@ -50,6 +50,16 @@ void wait(Lock*lok,Condition *cond, bool (*check) (void*, void*), void * arg1, v
         cond->wait(lock);
     }
 }
+bool timed_wait(Lock*lok, Condition *cond, Duration timeout, bool (*check) (void*, void*), void * arg1, void * arg2){
+    boost::system_time const stop_at = boost::get_system_time() + boost::posix_time::microseconds(timeout.microseconds());
+    boost::unique_lock<boost::mutex> lock(*lok);
+    while ((*check)(arg1,arg2)){
+        bool got_event = cond->timed_wait(lock, stop_at);
+        if (!got_event) // timeout
+            return false;
+    }
+    return true;
+}
 void notify(Condition *cond){
     cond->notify_one();
 }
