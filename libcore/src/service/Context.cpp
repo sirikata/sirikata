@@ -129,16 +129,16 @@ void Context::cleanupWorkerThreads() {
 void Context::shutdown() {
     CTX_LOG(info, "Handling shutdown request");
 
-    // If the original thread wasn't running this context as well, then it won't
-    // be able to wait for the worker threads it created.
-    if (mExecutionThreadsType != IncludeOriginal)
-        cleanupWorkerThreads();
-
     Signal::unregisterHandler(mSignalHandler);
 
     this->stop();
     for(std::vector<Service*>::iterator it = mServices.begin(); it != mServices.end(); it++)
         (*it)->stop();
+
+    // If the original thread wasn't running this context as well, then it won't
+    // be able to wait for the worker threads it created.
+    if (mExecutionThreadsType != IncludeOriginal)
+        cleanupWorkerThreads();
 }
 
 void Context::stop() {
