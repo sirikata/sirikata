@@ -35,7 +35,7 @@ private:
     virtual void newSession(ObjectSession* session);
     virtual void sessionClosed(ObjectSession *session);
 
-    void handleStream(int err, ODPSST::Stream::Ptr strm);
+    void handleStream(int err, ODPSST::StreamPtr strm);
     void handleMessage(const ObjectReference& id, MemoryReference data);
 
     void sendUpdate(const ObjectReference& id);
@@ -44,8 +44,8 @@ private:
     json_spirit::Value mEnvironment;
     // Subscribers
     struct SubscriberInfo {
-        ODPSST::Stream::Ptr stream;
-        RecordSSTStream<ODPSST::Stream::Ptr> record_stream;
+        ODPSST::StreamPtr stream;
+        RecordSSTStream<ODPSST::StreamPtr> record_stream;
     };
     typedef std::tr1::shared_ptr<SubscriberInfo> SubscriberInfoPtr;
     typedef std::tr1::unordered_map<ObjectReference, SubscriberInfoPtr, ObjectReference::Hasher> SubscriberMap;

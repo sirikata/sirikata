@@ -6,6 +6,7 @@
 #include "JSLogging.hpp"
 #include <sirikata/core/network/Frame.hpp>
 #include "Protocol_Frame.pbj.hpp"
+#include <sirikata/core/odp/SST.hpp>
 
 namespace Sirikata{
 namespace JS{
@@ -316,7 +317,7 @@ void EmersonMessagingManager::writeMessage(
         EMERSON_RELIABLE_COMMUNICATION_PORT, EMERSON_RELIABLE_COMMUNICATION_PORT
     );
 
-    
+
     if (retCode == -1)
     {
         //createChildStream failed.  close streamPtr and create a new stream to
@@ -325,7 +326,7 @@ void EmersonMessagingManager::writeMessage(
         sendScriptCommMessageReliable(
             sender, receiver, msg, 0,--retriesNewStream,true);
     }
-    
+
 }
 
 void EmersonMessagingManager::writeMessageSubstream(

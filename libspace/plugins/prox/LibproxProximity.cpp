@@ -38,6 +38,8 @@
 
 #include <sirikata/core/prox/QueryHandlerFactory.hpp>
 
+#include <sirikata/core/odp/SST.hpp>
+
 #include "Protocol_Prox.pbj.hpp"
 #include "Protocol_ServerProx.pbj.hpp"
 

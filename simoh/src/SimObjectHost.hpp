@@ -38,7 +38,7 @@
 #include <sirikata/core/service/Service.hpp>
 #include <sirikata/core/service/TimeProfiler.hpp>
 #include <sirikata/core/network/ObjectMessage.hpp>
-#include <sirikata/core/odp/SST.hpp>
+#include <sirikata/core/odp/SSTDecls.hpp>
 #include <sirikata/core/util/MotionVector.hpp>
 
 #include <sirikata/core/util/SerializationCheck.hpp>
@@ -104,7 +104,7 @@ public:
     // performed in main strand.
     bool ping(const Time& t, const UUID& src, const UUID&dest, double distance, uint32 payload_size);
 
-    SST::Stream<SpaceObjectReference>::Ptr getSpaceStream(const UUID& objectID);
+    ODPSST::StreamPtr getSpaceStream(const UUID& objectID);
 
     ///Register to intercept all incoming messages on a given port
     bool registerService(uint64 port, const ObjectMessageCallback&cb);

@@ -36,7 +36,8 @@
 #include <sirikata/oh/ObjectHostContext.hpp>
 #include <sirikata/core/service/Service.hpp>
 #include <sirikata/oh/SpaceNodeConnection.hpp>
-#include <sirikata/core/odp/SST.hpp>
+#include <sirikata/core/odp/SSTDecls.hpp>
+#include <sirikata/core/ohdp/SSTDecls.hpp>
 #include <sirikata/core/util/MotionVector.hpp>
 #include <sirikata/core/util/MotionQuaternion.hpp>
 #include <sirikata/core/util/SpaceObjectReference.hpp>
@@ -114,11 +115,9 @@ class SIRIKATA_OH_EXPORT SessionManager
     typedef std::tr1::function<void(const SpaceObjectReference&, Disconnect::Code)> ObjectDisconnectedCallback;
 
     // SST stream related typedefs
-    typedef SST::Stream<SpaceObjectReference> SSTStream;
-    typedef SSTStream::Ptr SSTStreamPtr;
-    typedef SSTStream::EndpointType SSTEndpoint;
-    typedef OHDPSST::Stream OHSSTStream;
-    typedef OHSSTStream::Ptr OHSSTStreamPtr;
+    typedef ODPSST::StreamPtr SSTStreamPtr;
+    typedef ODPSST::Endpoint SSTEndpoint;
+    typedef OHDPSST::StreamPtr OHSSTStreamPtr;
     typedef OHDPSST::Endpoint OHSSTEndpoint;
 
 

@@ -10,6 +10,7 @@
 #include <sirikata/pintoloc/ProtocolLocUpdate.hpp>
 #include <sirikata/proxyobject/ProxyManager.hpp>
 #include <sirikata/oh/OHSpaceTimeSynced.hpp>
+#include <sirikata/core/odp/SST.hpp>
 
 #define SOQP_LOG(lvl, msg) SILOG(simple-object-query-processor, lvl, msg)
 

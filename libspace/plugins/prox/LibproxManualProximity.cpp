@@ -17,6 +17,7 @@
 #include <prox/manual/RTreeManualQueryHandler.hpp>
 
 #include <sirikata/core/network/IOStrandImpl.hpp>
+#include <sirikata/core/ohdp/SST.hpp>
 
 namespace Sirikata {
 

@@ -40,7 +40,8 @@
 #include <sirikata/core/network/IOWork.hpp>
 #include <sirikata/core/network/StreamListener.hpp>
 #include <sirikata/space/ObjectHostConnectionID.hpp>
-#include <sirikata/core/ohdp/SST.hpp>
+#include <sirikata/core/ohdp/SSTDecls.hpp>
+#include <sirikata/core/ohdp/Service.hpp>
 
 namespace Sirikata {
 
@@ -55,7 +56,7 @@ private:
 
     ShortObjectHostConnectionID short_id;
     Sirikata::Network::Stream* socket;
-    OHDPSST::Stream::Ptr base_stream;
+    OHDPSST::StreamPtr base_stream;
 };
 
 /** ObjectHostConnectionManager handles the networking aspects of interacting
@@ -79,7 +80,7 @@ public:
 
         virtual bool onObjectHostMessageReceived(const ObjectHostConnectionID& conn_id, const ShortObjectHostConnectionID short_conn_id, Sirikata::Protocol::Object::ObjectMessage*) = 0;
 
-        virtual void onObjectHostConnected(const ObjectHostConnectionID& conn_id, const ShortObjectHostConnectionID short_conn_id, OHDPSST::Stream::Ptr stream) = 0;
+        virtual void onObjectHostConnected(const ObjectHostConnectionID& conn_id, const ShortObjectHostConnectionID short_conn_id, OHDPSST::StreamPtr stream) = 0;
         virtual void onObjectHostDisconnected(const ObjectHostConnectionID& conn_id, const ShortObjectHostConnectionID short_conn_id) = 0;
     };
 
@@ -118,7 +119,7 @@ private:
 
     Listener* mListener;
 
-    OHDPSST::BaseDatagramLayer::Ptr mOHSSTDatagramLayer;
+    OHDPSST::BaseDatagramLayerPtr mOHSSTDatagramLayer;
 
     static ObjectHostConnectionID conn_id(ObjectHostConnection* c);
 
@@ -131,7 +132,7 @@ private:
     // Handle connection events for entire connections
     void handleConnectionEvent(ObjectHostConnection* conn, Sirikata::Network::Stream::ConnectionStatus status, const std::string& reason);
 
-    void newOHStream(int err, OHDPSST::Stream::Ptr s);
+    void newOHStream(int err, OHDPSST::StreamPtr s);
 
     // Handle async reading callbacks for this connection
     void handleConnectionRead(ObjectHostConnection* conn, Sirikata::Network::Chunk& chunk, const Sirikata::Network::Stream::PauseReceiveCallback& pause);

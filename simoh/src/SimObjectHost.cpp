@@ -266,7 +266,7 @@ bool ObjectHost::unregisterService(uint64 port) {
     return false;
 }
 
-SST::Stream<SpaceObjectReference>::Ptr ObjectHost::getSpaceStream(const UUID& objectID) {
+ODPSST::StreamPtr ObjectHost::getSpaceStream(const UUID& objectID) {
     return mSessionManager.getSpaceStream(ObjectReference(objectID));
 }
 

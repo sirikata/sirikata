@@ -47,6 +47,7 @@
 #include <sirikata/core/util/PluginManager.hpp>
 
 #include <sirikata/core/odp/Exceptions.hpp>
+#include <sirikata/core/odp/SST.hpp>
 
 #include <sirikata/core/network/IOStrandImpl.hpp>
 #include <sirikata/oh/SimulationFactory.hpp>
@@ -1041,7 +1042,7 @@ void HostedObject::registerDefaultODPHandler(const ODP::Service::MessageHandler&
     mDelegateODPService->registerDefaultODPHandler(cb);
 }
 
-ODPSST::Stream::Ptr HostedObject::getSpaceStream(const SpaceObjectReference& sor) {
+ODPSST::StreamPtr HostedObject::getSpaceStream(const SpaceObjectReference& sor) {
     return mObjectHost->getSpaceStream(sor.space(), sor.object());
 }
 
@@ -1172,7 +1173,7 @@ void HostedObject::updateLocUpdateRequest(const SpaceID& space, const ObjectRefe
 
 
 namespace {
-void discardChildStream(int success, SST::Stream<SpaceObjectReference>::Ptr sptr) {
+void discardChildStream(int success, ODPSST::StreamPtr sptr) {
     if (success != SST_IMPL_SUCCESS) return;
     sptr->close(false);
 }

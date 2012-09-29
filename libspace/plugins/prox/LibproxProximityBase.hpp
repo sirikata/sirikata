@@ -234,10 +234,10 @@ protected:
         static void proxSubstreamCallback(LibproxProximityBase* parent, Context* ctx, int x, const EndpointType& oref, StreamTypePtr parent_stream, StreamTypePtr substream, Ptr prox_stream_info);
     };
 
-    typedef ODPSST::Stream::Ptr ProxObjectStreamPtr;
+    typedef ODPSST::StreamPtr ProxObjectStreamPtr;
     typedef ProxStreamInfo<ObjectReference, ODPSST::Stream> ProxObjectStreamInfo;
     typedef std::tr1::shared_ptr<ProxObjectStreamInfo> ProxObjectStreamInfoPtr;
-    typedef OHDPSST::Stream::Ptr ProxObjectHostStreamPtr;
+    typedef OHDPSST::StreamPtr ProxObjectHostStreamPtr;
     typedef ProxStreamInfo<OHDP::NodeID, OHDPSST::Stream> ProxObjectHostStreamInfo;
     typedef std::tr1::shared_ptr<ProxObjectHostStreamInfo> ProxObjectHostStreamInfoPtr;
 
@@ -261,8 +261,8 @@ protected:
     ProxObjectHostStreamPtr getBaseStream(const OHDP::NodeID& node) const;
     // Use these to setup ProxStreamInfo's when the client initiates
     // the stream that will be used to communicate with it.
-    void addObjectProxStreamInfo(ODPSST::Stream::Ptr);
-    void addObjectHostProxStreamInfo(OHDPSST::Stream::Ptr);
+    void addObjectProxStreamInfo(ODPSST::StreamPtr);
+    void addObjectHostProxStreamInfo(OHDPSST::StreamPtr);
 
     // Handle various events in the main thread that are triggered in the prox thread
     void handleAddObjectLocSubscription(const UUID& subscriber, const UUID& observed);

@@ -113,7 +113,7 @@ private:
 
     // ObjectHostConnectionManager::Listener Interface:
 
-    virtual void onObjectHostConnected(const ObjectHostConnectionID& conn_id, const ShortObjectHostConnectionID short_conn_id, OHDPSST::Stream::Ptr stream);
+    virtual void onObjectHostConnected(const ObjectHostConnectionID& conn_id, const ShortObjectHostConnectionID short_conn_id, OHDPSST::StreamPtr stream);
     // Callback which handles messages from object hosts -- mostly just does sanity checking
     // before using the forwarder to do routing.  Operates in the
     // network strand to allow for fast forwarding, see
@@ -184,7 +184,7 @@ private:
     bool checkAlreadyMigrating(const UUID& obj_id);
     void processAlreadyMigrating(const UUID& obj_id);
 
-    void newStream(int err, SST::Stream<SpaceObjectReference>::Ptr s);
+    void newStream(int err, ODPSST::StreamPtr s);
 
 
     // Commander commands

@@ -5,6 +5,7 @@
 #include <sirikata/space/LocationService.hpp>
 #include <sirikata/core/command/Commander.hpp>
 #include <sirikata/core/network/IOStrandImpl.hpp>
+#include <sirikata/core/odp/SST.hpp>
 
 AUTO_SINGLETON_INSTANCE(Sirikata::LocationUpdatePolicyFactory);
 AUTO_SINGLETON_INSTANCE(Sirikata::LocationServiceFactory);

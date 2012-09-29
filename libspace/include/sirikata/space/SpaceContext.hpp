@@ -37,8 +37,8 @@
 #include <sirikata/core/service/Context.hpp>
 #include <sirikata/core/util/SpaceObjectReference.hpp>
 #include <sirikata/space/Trace.hpp>
-#include <sirikata/core/odp/SST.hpp>
-#include <sirikata/core/ohdp/SST.hpp>
+#include <sirikata/core/odp/SSTDecls.hpp>
+#include <sirikata/core/ohdp/SSTDecls.hpp>
 
 namespace Sirikata {
 

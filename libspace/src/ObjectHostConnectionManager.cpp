@@ -38,6 +38,8 @@
 #include <sirikata/core/network/StreamListenerFactory.hpp>
 #include <sirikata/core/util/PluginManager.hpp>
 #include <sirikata/core/trace/Trace.hpp>
+#include <sirikata/core/ohdp/SST.hpp>
+
 #define SPACE_LOG(level,msg) SILOG(space,level,msg)
 
 namespace Sirikata {

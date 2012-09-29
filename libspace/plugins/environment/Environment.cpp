@@ -4,6 +4,7 @@
 
 #include "Environment.hpp"
 #include <json_spirit/json_spirit.h>
+#include <sirikata/core/odp/SST.hpp>
 
 #define ENVIRONMENT_SERVICE_PORT 23
 #define ENV_LOG(lvl,msg) SILOG(environment,lvl,msg);
@@ -30,7 +31,7 @@ void Environment::stop() {
 }
 
 void Environment::newSession(ObjectSession* session) {
-    ODPSST::Stream::Ptr strm = session->getStream();
+    ODPSST::StreamPtr strm = session->getStream();
     strm->listenSubstream(
         ENVIRONMENT_SERVICE_PORT,
         std::tr1::bind(&Environment::handleStream, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2)
@@ -38,11 +39,11 @@ void Environment::newSession(ObjectSession* session) {
 }
 
 void Environment::sessionClosed(ObjectSession *session) {
-    ODPSST::Stream::Ptr strm = session->getStream();
+    ODPSST::StreamPtr strm = session->getStream();
     if (strm) strm->unlistenSubstream(ENVIRONMENT_SERVICE_PORT);
 }
 
-void Environment::handleStream(int err, ODPSST::Stream::Ptr strm) {
+void Environment::handleStream(int err, ODPSST::StreamPtr strm) {
     // Save stream and listen for requests
     ObjectReference id = strm->remoteEndPoint().endPoint.object();
     ENV_LOG(detailed, "Received connection for " << id);

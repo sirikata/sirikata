@@ -34,7 +34,7 @@
 #ifndef SST_IMPL_HPP
 #define SST_IMPL_HPP
 
-#include <sirikata/core/util/Platform.hpp>
+#include <sirikata/core/network/SSTDecls.hpp>
 
 #include <sirikata/core/service/Service.hpp>
 #include <sirikata/core/util/Timer.hpp>
@@ -118,18 +118,6 @@ private:
   boost::mutex mMutex;
 
 };
-
-template <class EndPointType>
-class Connection;
-
-template <class EndPointType>
-class Stream;
-
-template <typename EndPointType>
-class BaseDatagramLayer;
-
-template <typename EndPointType>
-class ConnectionManager;
 
 template <typename EndPointType>
 class CallbackTypes {

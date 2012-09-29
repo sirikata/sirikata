@@ -45,6 +45,7 @@
 #include "Protocol_Prox.pbj.hpp"
 #include "Protocol_Loc.pbj.hpp"
 
+#include <sirikata/core/odp/SST.hpp>
 
 #define OBJ_LOG(level,msg) SILOG(obj,level,msg)
 

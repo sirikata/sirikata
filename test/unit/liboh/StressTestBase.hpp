@@ -39,6 +39,8 @@
 #include <sirikata/core/util/PluginManager.hpp>
 #include <sirikata/core/network/IOService.hpp>
 #include <sirikata/core/network/IOWork.hpp>
+#include <sirikata/core/odp/SST.hpp>
+#include <sirikata/core/ohdp/SST.hpp>
 
 class StressTestBase {
 public:

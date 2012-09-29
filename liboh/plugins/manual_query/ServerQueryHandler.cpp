@@ -5,6 +5,7 @@
 #include "ServerQueryHandler.hpp"
 #include <sirikata/oh/ObjectHost.hpp>
 
+#include <sirikata/core/ohdp/SST.hpp>
 #include <sirikata/core/network/Frame.hpp>
 #include "Protocol_Prox.pbj.hpp"
 #include "Protocol_Loc.pbj.hpp"
@@ -40,7 +41,7 @@ void ServerQueryHandler::stop() {
 }
 
 
-void ServerQueryHandler::onSpaceNodeSession(const OHDP::SpaceNodeID& id, OHDPSST::Stream::Ptr sn_stream) {
+void ServerQueryHandler::onSpaceNodeSession(const OHDP::SpaceNodeID& id, OHDPSST::StreamPtr sn_stream) {
     QPLOG(detailed, "New space node session " << id);
     assert(mServerQueries.find(id) == mServerQueries.end());
 
@@ -175,7 +176,7 @@ void ServerQueryHandler::writeSomeProxData(ServerQueryStatePtr data) {
     }
 }
 
-void ServerQueryHandler::handleCreatedProxSubstream(const OHDP::SpaceNodeID& snid, int success, OHDPSST::Stream::Ptr prox_stream) {
+void ServerQueryHandler::handleCreatedProxSubstream(const OHDP::SpaceNodeID& snid, int success, OHDPSST::StreamPtr prox_stream) {
     // Save the stream for additional writing
     ServerQueryMap::iterator serv_it = mServerQueries.find(snid);
     // We may have lost the session since we requested the connection
@@ -203,7 +204,7 @@ void ServerQueryHandler::handleCreatedProxSubstream(const OHDP::SpaceNodeID& sni
     writeSomeProxData(serv_it->second);
 }
 
-void ServerQueryHandler::handleProximitySubstreamRead(const OHDP::SpaceNodeID& snid, OHDPSST::Stream::Ptr prox_stream, String* prevdata, uint8* buffer, int length) {
+void ServerQueryHandler::handleProximitySubstreamRead(const OHDP::SpaceNodeID& snid, OHDPSST::StreamPtr prox_stream, String* prevdata, uint8* buffer, int length) {
     if (mContext->stopped()) {
         QPLOG(detailed, "Ignoring proximity update after system stop requested.");
         return;
@@ -279,7 +280,7 @@ void ServerQueryHandler::replicatedNodeRemoved(const OHDP::SpaceNodeID& snid, co
 // Location
 
 
-void ServerQueryHandler::handleLocationSubstream(const OHDP::SpaceNodeID& snid, int err, OHDPSST::Stream::Ptr s) {
+void ServerQueryHandler::handleLocationSubstream(const OHDP::SpaceNodeID& snid, int err, OHDPSST::StreamPtr s) {
     s->registerReadCallback(
         std::tr1::bind(
             &ServerQueryHandler::handleLocationSubstreamRead, this,
@@ -288,7 +289,7 @@ void ServerQueryHandler::handleLocationSubstream(const OHDP::SpaceNodeID& snid, 
     );
 }
 
-void ServerQueryHandler::handleLocationSubstreamRead(const OHDP::SpaceNodeID& snid, OHDPSST::Stream::Ptr s, std::stringstream* prevdata, uint8* buffer, int length) {
+void ServerQueryHandler::handleLocationSubstreamRead(const OHDP::SpaceNodeID& snid, OHDPSST::StreamPtr s, std::stringstream* prevdata, uint8* buffer, int length) {
     prevdata->write((const char*)buffer, length);
     if (handleLocationMessage(snid, prevdata->str())) {
         // FIXME we should be getting a callback on stream close instead of

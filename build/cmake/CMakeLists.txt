@@ -1523,6 +1523,8 @@ SET(LIBSPACE_SOURCES
   ${LIBSPACE_SOURCE_DIR}/ObjectHostConnectionID.cpp
   ${LIBSPACE_SOURCE_DIR}/ObjectHostConnectionManager.cpp
   ${LIBSPACE_SOURCE_DIR}/SpaceModule.cpp
+  ${LIBSPACE_SOURCE_DIR}/ObjectSessionManager.cpp
+  ${LIBSPACE_SOURCE_DIR}/ObjectHostSession.cpp
   )
 
 SET(LIBMESH_SOURCES
@@ -1559,6 +1561,7 @@ SET(LIBOH_SOURCES
                   ${LIBOH_SOURCE_DIR}/PersistedObjectSet.cpp
                   ${LIBOH_SOURCE_DIR}/ObjectQueryProcessor.cpp
                   ${LIBOH_SOURCE_DIR}/SimulationFactory.cpp
+                  ${LIBOH_SOURCE_DIR}/SpaceNodeSession.cpp
                    )
 
 SET(LIBPINTOLOC_SOURCES

@@ -42,7 +42,7 @@
 #include <utility>
 
 #include <sirikata/core/network/ObjectMessage.hpp>
-#include <sirikata/core/odp/SST.hpp>
+#include <sirikata/core/odp/SSTDecls.hpp>
 
 #include <sirikata/core/transfer/URI.hpp>
 
@@ -138,13 +138,10 @@ protected:
     bool mDestroyWhenConnected;
 
 public:
-    typedef SST::EndPoint<SpaceObjectReference> EndPointType;
-    typedef SST::BaseDatagramLayer<SpaceObjectReference> BaseDatagramLayerType;
-    typedef BaseDatagramLayerType::Ptr BaseDatagramLayerPtr;
-    typedef SST::Connection<SpaceObjectReference> SSTConnection;
-    typedef SSTConnection::Ptr SSTConnectionPtr;
-    typedef SST::Stream<SpaceObjectReference> SSTStream;
-    typedef SSTStream::Ptr SSTStreamPtr;
+    typedef ODPSST::Endpoint EndPointType;
+    typedef ODPSST::BaseDatagramLayerPtr BaseDatagramLayerPtr;
+    typedef ODPSST::ConnectionPtr SSTConnectionPtr;
+    typedef ODPSST::StreamPtr SSTStreamPtr;
 
     /// Destructor: will only be called from shared_ptr::~shared_ptr.
     virtual ~HostedObject();
@@ -296,7 +293,7 @@ public:
     virtual void registerDefaultODPHandler(const ODP::Service::MessageHandler& cb);
 
     // Access to SST for this object
-    ODPSST::Stream::Ptr getSpaceStream(const SpaceObjectReference& sor);
+    ODPSST::StreamPtr getSpaceStream(const SpaceObjectReference& sor);
 
     // Movement Interface
     //note: location update services both position and velocity

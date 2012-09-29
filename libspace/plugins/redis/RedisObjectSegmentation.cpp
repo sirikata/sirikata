@@ -33,6 +33,7 @@
 #include "RedisObjectSegmentation.hpp"
 #include <boost/algorithm/string.hpp>
 #include <boost/lambda/lambda.hpp>
+#include <boost/lexical_cast.hpp>
 
 #define REDISOSEG_LOG(lvl,msg) SILOG(redis_oseg, lvl, msg)
 

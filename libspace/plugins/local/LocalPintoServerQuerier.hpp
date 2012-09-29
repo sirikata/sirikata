@@ -39,6 +39,7 @@
 #include "Protocol_Loc.pbj.hpp"
 
 #include <sirikata/pintoloc/ProtocolLocUpdate.hpp>
+#include <boost/lexical_cast.hpp>
 
 namespace Sirikata {
 

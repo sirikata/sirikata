@@ -72,6 +72,8 @@
 #include <sirikata/mesh/ModelsSystemFactory.hpp>
 
 #include <sirikata/space/SpaceModule.hpp>
+#include <sirikata/core/odp/SST.hpp>
+#include <sirikata/core/ohdp/SST.hpp>
 
 namespace {
 using namespace Sirikata;

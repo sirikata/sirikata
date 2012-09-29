@@ -42,6 +42,8 @@
 #include <sirikata/oh/Trace.hpp>
 
 #include <sirikata/oh/ObjectHostContext.hpp>
+#include <sirikata/core/odp/SST.hpp>
+#include <sirikata/core/ohdp/SST.hpp>
 
 void *main_loop(void *);
 int main(int argc, char** argv) {

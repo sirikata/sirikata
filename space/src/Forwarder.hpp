@@ -46,7 +46,7 @@
 #include "ServerMessageQueue.hpp"
 #include "ServerMessageReceiver.hpp"
 
-#include <sirikata/core/odp/SST.hpp>
+#include <sirikata/core/odp/SSTDecls.hpp>
 
 #include "ForwarderServiceQueue.hpp"
 
@@ -95,7 +95,7 @@ private:
     // forwarder is the one that actually intercepts messages
     ODP::DelegateService* mDelegateODPService;
     // And here we also maintain the core SST datagram layer for the server
-    SST::BaseDatagramLayer<SpaceObjectReference>::Ptr mSSTDatagramLayer;
+    ODPSST::BaseDatagramLayerPtr mSSTDatagramLayer;
 
 
     // Object connections, identified by a separate unique ID to handle fast migrations
