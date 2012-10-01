@@ -421,10 +421,10 @@ private:
   // currently scheduled.
   ConnectionPtr mServiceStrongRef;
   // Schedules servicing to occur after the given amount of time.
-  void scheduleService() {
-      scheduleService(Duration::zero());
+  void scheduleConnectionService() {
+      scheduleConnectionService(Duration::zero());
   }
-  void scheduleService(const Duration& after) {
+  void scheduleConnectionService(const Duration& after) {
       boost::mutex::scoped_lock lock(mSchedulingMutex);
 
       bool needs_scheduling = false;
@@ -671,12 +671,12 @@ private:
           // Use numattempts - 1 because we've already incremented
           // here. This way we start out with a factor of 2^0 = 1
           // instead of a factor of 2^1 = 2.
-          scheduleService(Duration::microseconds(mRTOMicroseconds*pow(2.0,(mNumInitialRetransmissionAttempts-1))));
+          scheduleConnectionService(Duration::microseconds(mRTOMicroseconds*pow(2.0,(mNumInitialRetransmissionAttempts-1))));
       }
       else {
           // Otherwise, just wait the expected RTT time, plus more to
           // account for jitter.
-          scheduleService(Duration::microseconds(mRTOMicroseconds*2));
+          scheduleConnectionService(Duration::microseconds(mRTOMicroseconds*2));
       }
     }
     else {
@@ -712,7 +712,7 @@ private:
         // packet.
         if (!mQueuedSegments.empty()) {
             mInSendingMode = true;
-            scheduleService();
+            scheduleConnectionService();
         }
     }
 
@@ -919,7 +919,7 @@ private:
         // completes.
         if (mOutstandingSegments.size() <= mCwnd) {
             mInSendingMode = true;
-            scheduleService();
+            scheduleConnectionService();
         }
       }
     }
@@ -999,7 +999,7 @@ private:
           // something left to send, trigger servicing.
           if (!mQueuedSegments.empty()) {
               mInSendingMode = true;
-              scheduleService();
+              scheduleConnectionService();
           }
 
           break;
@@ -1753,7 +1753,7 @@ public:
       mCurrentQueueLength += len;
       mNumBytesSent += len;
 
-      scheduleService(Duration::seconds(0.01));
+      scheduleStreamService(Duration::seconds(0.01));
 
       return len;
     }
@@ -1776,7 +1776,7 @@ public:
 	count++;
       }
 
-      scheduleService(Duration::seconds(0.01));
+      scheduleStreamService(Duration::seconds(0.01));
       return currOffset;
     }
 
@@ -1860,7 +1860,7 @@ public:
     }
     else {
       mState = PENDING_DISCONNECT;
-      scheduleService();
+      scheduleStreamService();
       return true;
     }
   }
@@ -2195,7 +2195,7 @@ private:
         // Schedule another servicing immediately in case any other operations
         // should occur, e.g. sending data which was added after the initial
         // connection request.
-        scheduleService();
+        scheduleStreamService();
       }
     }
     else {
@@ -2260,7 +2260,7 @@ private:
 	}
 
         if (sentSomething) {
-            scheduleService(Duration::microseconds(2*mStreamRTOMicroseconds));
+            scheduleStreamService(Duration::microseconds(2*mStreamRTOMicroseconds));
         }
       }
     }
@@ -2485,7 +2485,7 @@ private:
     // this though since mTransmitWindowSize might not be 0 even if it
     // was 'full' since the next packet couldn't fit on.
     if (acked_msgs && !mQueuedBuffers.empty()) {
-        scheduleService();
+        scheduleStreamService();
     }
   }
 
@@ -2541,7 +2541,7 @@ private:
 
     conn->sendData( buffer.data(), buffer.size(), false );
 
-    scheduleService(Duration::microseconds(pow(2.0,mNumInitRetransmissions)*mStreamRTOMicroseconds));
+    scheduleStreamService(Duration::microseconds(pow(2.0,mNumInitRetransmissions)*mStreamRTOMicroseconds));
   }
 
   void sendAckPacket() {
@@ -2688,10 +2688,10 @@ private:
   StreamPtr mServiceStrongRef;
   ConnectionPtr mServiceStrongConnRef;
   // Schedules servicing to occur after the given amount of time.
-  void scheduleService() {
-      scheduleService(Duration::zero());
+  void scheduleStreamService() {
+      scheduleStreamService(Duration::zero());
   }
-  void scheduleService(const Duration& after) {
+  void scheduleStreamService(const Duration& after) {
       std::tr1::shared_ptr<Connection<EndPointType> > conn =  mConnection.lock();
       if (!conn) return;
 
