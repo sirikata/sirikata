@@ -547,6 +547,12 @@ private:
     boost::mutex::scoped_lock lock(mOutstandingSegmentsMutex);
 
 
+    // Special case: if we've gotten back into serviceConnection while
+    // we're waiting for the connection to get setup, we can just
+    // clear out the outstanding connection packet. Normally
+    // outstanding packets would get cleared by not being in sending
+    // mode, but we never change out of sending mode during connection
+    // setup.
     if (mState == CONNECTION_PENDING_CONNECT) {
       mOutstandingSegments.clear();
     }
@@ -577,8 +583,22 @@ private:
       }
     }
 
+    // For the connection, we are in one of two modes: sending or
+    // waiting for acks. Sending mode essentially just means we have
+    // some packets to send and we've got room in the congestion
+    // window, so we're going to be able to push out at least one more
+    // packet. Otherwise, we're just waiting for a timeout on the
+    // packets to guess that they have been lost, causing the window
+    // size to adjust (or nothing is going on with the connection).
     if (mInSendingMode) {
       boost::mutex::scoped_lock lock(mQueueMutex);
+
+      // NOTE: For our current approach, we should never service in
+      // sending mode unless we're going to be able to send some
+      // data. The correctness of the servicing depends on this since
+      // you need to pass through the loop below at least once to
+      // adjust some properties (e.g. sending mode).
+      assert( !mQueuedSegments.empty() && mOutstandingSegments.size() <= mCwnd);
 
       for (int i = 0; (!mQueuedSegments.empty()) && mOutstandingSegments.size() <= mCwnd; i++) {
 	  std::tr1::shared_ptr<ChannelSegment> segment = mQueuedSegments.front();
@@ -595,53 +615,105 @@ private:
                    mLocalEndPoint.endPoint.toString().c_str()
                    , mRemoteEndPoint.endPoint.toString().c_str());*/
 
-
 	  sendSSTChannelPacket(sstMsg);
-
-          if (mState == CONNECTION_PENDING_CONNECT) {
-            mNumInitialRetransmissionAttempts++;
-          }
 
 	  segment->mTransmitTime = curTime;
 	  mOutstandingSegments.push_back(segment);
 
 	  mLastTransmitTime = curTime;
 
+          // If we're setting up the connection, we hold ourselves in
+          // sending mode and keep the initial connection packet in
+          // the queue so it will get retransmitted if we don't hear
+          // back from the other side. Otherwise, we're going to have
+          // either filled up the congestion window or run out of
+          // packets to send by the time we exit.
           if (mState != CONNECTION_PENDING_CONNECT || mNumInitialRetransmissionAttempts > 5) {
             mInSendingMode = false;
             mQueuedSegments.pop_front();
           }
+          // Stop sending packets after the first one if we're setting
+          // up the connection since we'll just keep sending the first
+          // (unpoppped) packet over and over until the window is
+          // filled otherwise.
+          if (mState == CONNECTION_PENDING_CONNECT) {
+              mNumInitialRetransmissionAttempts++;
+              break;
+          }
       }
 
-      if (!mInSendingMode || mState == CONNECTION_PENDING_CONNECT) {
-          scheduleService(Duration::microseconds(mRTOMicroseconds*pow(2.0,mNumInitialRetransmissionAttempts)));
+      // After sending, we need to decide when to schedule servicing
+      // next. During normal operation, we can end up in two states
+      // where we would enter serviceConnection in sending mode and
+      // exit here: either we sent all our queued packets and have
+      // space in the congestion window or we had to stop because the
+      // window was full. In both cases, we need to set a timeout
+      // after which we assume packets were dropped. If we get an ack
+      // in the meantime, it puts us back in sending mode and
+      // schedules servicing immediately, effectively resetting that
+      // timer.
+      //
+      // Even when starting up, we're essentially in the same state --
+      // we need to use our current backoff and test for drops. In
+      // this case we'll hold ourselves in sending mode (see in the
+      // loop above), keeping us from adjusting the congestion window,
+      // but we still use the timeout to detect the drop, in that case
+      // forcing a retransmit of the connect packet.
+      //
+      // So essentially, no matter what, if we came through servicing
+      // in sending mode, we just use a timeout-drop-detector and
+      // other events will trigger us to service earlier if necessary.
+
+      // During startup, RTO hasn't been estimated so we need to have
+      // a backoff mechanism to allow for RTTs longer than our initial
+      // guess.
+      if (mState == CONNECTION_PENDING_CONNECT) {
+          // Use numattempts - 1 because we've already incremented
+          // here. This way we start out with a factor of 2^0 = 1
+          // instead of a factor of 2^1 = 2.
+          scheduleService(Duration::microseconds(mRTOMicroseconds*pow(2.0,(mNumInitialRetransmissionAttempts-1))));
+      }
+      else {
+          // Otherwise, just wait the expected RTT time, plus more to
+          // account for jitter.
+          scheduleService(Duration::microseconds(mRTOMicroseconds*2));
       }
     }
     else {
-      if (mState == CONNECTION_PENDING_CONNECT) {
-        std::tr1::shared_ptr<Connection<EndPointType> > thus (mWeakThis.lock());
-        if (thus) {
-          cleanup(thus);
-        }else {
-            SILOG(sst,error,"FATAL: pending connection lost weak pointer for Connection<EndPointType> too early to call cleanup on it");
+        // If we are not in sending mode, then we had a timeout after
+        // previous sends.
+
+        // In the case of enough failures during connect, we just have
+        // to give up.
+        if (mState == CONNECTION_PENDING_CONNECT) {
+            std::tr1::shared_ptr<Connection<EndPointType> > thus (mWeakThis.lock());
+            if (thus) {
+                cleanup(thus);
+            } else {
+                SILOG(sst,error,"FATAL: pending connection lost weak pointer for Connection<EndPointType> too early to call cleanup on it");
+            }
+
+            return false; //the connection was unable to contact the other endpoint.
         }
 
-        return false; //the connection was unable to contact the other endpoint.
-      }
+        // Otherwise, adjust the congestion window if we have
+        // oustanding packets left.
+        if (mOutstandingSegments.size() > 0) {
+            mCwnd /= 2;
+            if (mCwnd < 1)
+                mCwnd = 1;
 
-      if (mOutstandingSegments.size() > 0) {
-        mCwnd /= 2;
-
-        if (mCwnd < 1) {
-          mCwnd = 1;
+            mOutstandingSegments.clear();
         }
 
-        mOutstandingSegments.clear();
-      }
-
-      mInSendingMode = true;
-
-      scheduleService(Duration::microseconds(1));
+        // And if we have anything to send, put ourselves back into
+        // sending mode and schedule servicing. Outstanding segments
+        // should be empty, so we're guaranteed to send at least one
+        // packet.
+        if (!mQueuedSegments.empty()) {
+            mInSendingMode = true;
+            scheduleService();
+        }
     }
 
     return true;
@@ -840,9 +912,14 @@ private:
       if (mQueuedSegments.size() < MAX_QUEUED_SEGMENTS) {
         mQueuedSegments.push_back( std::tr1::shared_ptr<ChannelSegment>(
                                    new ChannelSegment(data, length, mTransmitSequenceNumber, mLastReceivedSequenceNumber) ) );
-
-        if (mInSendingMode) {
-            scheduleService(Duration::microseconds(1));
+        // Only service if we're going to be able to send
+        // immediately. Otherwise, we must already have outstanding
+        // packets waiting for a timeout, in which case this new
+        // packet will be dealt with as the existing servicing cycle
+        // completes.
+        if (mOutstandingSegments.size() <= mCwnd) {
+            mInSendingMode = true;
+            scheduleService();
         }
       }
     }
@@ -913,14 +990,18 @@ private:
               (1.0-CC_ALPHA) * (segment->mAckTime - segment->mTransmitTime).toMicroseconds();
           }
 
-          mInSendingMode = true;
-          scheduleService();
+          mOutstandingSegments.erase(it);
 
-          if (rand() % mCwnd == 0)  {
+          if (rand() % mCwnd == 0)
             mCwnd += 1;
+
+          // We freed up some space in the window. If we have
+          // something left to send, trigger servicing.
+          if (!mQueuedSegments.empty()) {
+              mInSendingMode = true;
+              scheduleService();
           }
 
-          mOutstandingSegments.erase(it);
           break;
         }
     }
