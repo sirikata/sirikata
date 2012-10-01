@@ -47,6 +47,9 @@ public:
 #define NODELAY_CHANNEL Duration::zero()
 #define SLOW_CHANNEL Duration::milliseconds(50)
 
+#define SHORT_TIMEOUT Duration::seconds(5)
+#define LONG_TIMEOUT Duration::seconds(15)
+
     SstTest()
      : _trace(NULL),
        _ios(NULL),
@@ -68,9 +71,9 @@ public:
 
     // Helpers for waiting for events to occur:
     // In specific order one at a time:
-    bool waitForEvent(const Event& evt) {
+    bool waitForEvent(const Event& evt, Duration timeout=Duration::seconds(5)) {
         Event read_evt;
-        bool got_event = _events.blockingPop(read_evt, Duration::seconds(5));
+        bool got_event = _events.blockingPop(read_evt, timeout);
         TS_ASSERT(got_event);
         if (!got_event) return false;
         TS_ASSERT_EQUALS(evt, read_evt);
@@ -78,10 +81,10 @@ public:
         return true;
     }
     // In specific order many at a time:
-    bool waitForEventList(const EventList& evts) {
+    bool waitForEventList(const EventList& evts, Duration timeout=Duration::seconds(5)) {
         for(uint idx = 0; idx < evts.size(); idx++) {
             Event read_evt;
-            bool got_event = _events.blockingPop(read_evt, Duration::seconds(5));
+            bool got_event = _events.blockingPop(read_evt, timeout);
             TS_ASSERT(got_event);
             if (!got_event) return false;
             TS_ASSERT_EQUALS(evts[idx], read_evt);
@@ -90,11 +93,11 @@ public:
         return true;
     }
     // In any order many at a time:
-    bool waitForEventSet(const EventSet& evts) {
+    bool waitForEventSet(const EventSet& evts, Duration timeout=Duration::seconds(5)) {
         EventSet read_evts;
         for(uint idx = 0; idx < evts.size(); idx++) {
             Event read_evt;
-            bool got_event = _events.blockingPop(read_evt, Duration::seconds(5));
+            bool got_event = _events.blockingPop(read_evt, timeout);
             TS_ASSERT(got_event);
             if (!got_event) return false;
             read_evts.insert(read_evt);
@@ -262,7 +265,7 @@ public:
     }
 
     // Allows testing different lengths
-    void impl_testSendReceiveOneDirection(String payload, Duration channel_delay, float32 channel_drop_rate) {
+    void impl_testSendReceiveOneDirection(String payload, Duration channel_delay, float32 channel_drop_rate, Duration timeout) {
         using std::tr1::placeholders::_1;
         using std::tr1::placeholders::_2;
 
@@ -285,44 +288,44 @@ public:
         EventSet conn_evts;
         conn_evts.insert("a listening for data");
         conn_evts.insert("b sent");
-        bool success = waitForEventSet(conn_evts);
+        bool success = waitForEventSet(conn_evts, timeout);
         // Then completion when a receives all data
-        if (success) waitForEvent("a received expected");
+        if (success) waitForEvent("a received expected", timeout);
     }
 
     void testSendReceiveOneDirection() {
-        impl_testSendReceiveOneDirection(_small_payload, NODELAY_CHANNEL, LOSSLESS);
+        impl_testSendReceiveOneDirection(_small_payload, NODELAY_CHANNEL, LOSSLESS, SHORT_TIMEOUT);
     }
     void testSendReceiveOneDirectionLarge() {
         String payload = "";
-        impl_testSendReceiveOneDirection(_large_payload, NODELAY_CHANNEL, LOSSLESS);
+        impl_testSendReceiveOneDirection(_large_payload, NODELAY_CHANNEL, LOSSLESS, SHORT_TIMEOUT);
     }
 
 
     // Test over 50% lossy channel
     void testSendReceiveOneDirectionLossy() {
-        impl_testSendReceiveOneDirection(_small_payload, NODELAY_CHANNEL, LOSSY);
+        impl_testSendReceiveOneDirection(_small_payload, NODELAY_CHANNEL, LOSSY, LONG_TIMEOUT);
     }
     void testSendReceiveOneDirectionLargeLossy() {
         String payload = "";
-        impl_testSendReceiveOneDirection(_large_payload, NODELAY_CHANNEL, LOSSY);
+        impl_testSendReceiveOneDirection(_large_payload, NODELAY_CHANNEL, LOSSY, LONG_TIMEOUT);
     }
 
     // Test over slow channel
     void testSendReceiveOneDirectionSlow() {
-        impl_testSendReceiveOneDirection(_small_payload, SLOW_CHANNEL, LOSSLESS);
+        impl_testSendReceiveOneDirection(_small_payload, SLOW_CHANNEL, LOSSLESS, SHORT_TIMEOUT);
     }
     void testSendReceiveOneDirectionLargeSlow() {
         String payload = "";
-        impl_testSendReceiveOneDirection(_large_payload, SLOW_CHANNEL, LOSSLESS);
+        impl_testSendReceiveOneDirection(_large_payload, SLOW_CHANNEL, LOSSLESS, SHORT_TIMEOUT);
     }
 
     // Test over slow, lossy channel
     void testSendReceiveOneDirectionSlowLossy() {
-        impl_testSendReceiveOneDirection(_small_payload, SLOW_CHANNEL, LOSSY);
+        impl_testSendReceiveOneDirection(_small_payload, SLOW_CHANNEL, LOSSY, LONG_TIMEOUT);
     }
     void testSendReceiveOneDirectionLargeSlowLossy() {
         String payload = "";
-        impl_testSendReceiveOneDirection(_large_payload, SLOW_CHANNEL, LOSSY);
+        impl_testSendReceiveOneDirection(_large_payload, SLOW_CHANNEL, LOSSY, LONG_TIMEOUT);
     }
 };
