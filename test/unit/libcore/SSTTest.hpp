@@ -39,6 +39,7 @@ public:
     std::vector<Mock::ID> _endpoints;
     // Sample data
     String _small_payload;
+    String _medium_payload;
     String _large_payload;
 
 #define LOSSLESS 0.0
@@ -63,10 +64,16 @@ public:
             _endpoints.push_back(Mock::ID(String(1, 'a' + i)));
 
         _small_payload = "this is the payload";
-        // FIXME I'd expect large to be even larger, but currently things run
-        // too slow to make it usable with anything larger than this.
-        for(int i = 0; i < 1024*1024*2; i++)
-            _large_payload += ('a' + (rand() % 26));
+#define MEDIUM_PAYLOAD_SIZE 1024*512
+        _medium_payload.resize(MEDIUM_PAYLOAD_SIZE);
+        for(int i = 0; i < MEDIUM_PAYLOAD_SIZE; i++)
+            _medium_payload[i] = ('a' + (i % 26));
+#define LARGE_PAYLOAD_SIZE 1024*1024*20
+        // Reuse medium payload because rand() gets expensive with large
+        // payloads.
+        _large_payload.resize(LARGE_PAYLOAD_SIZE);
+        for(int i = 0; i < LARGE_PAYLOAD_SIZE; i += MEDIUM_PAYLOAD_SIZE)
+            memcpy((void*)(_large_payload.c_str() + i), _medium_payload.c_str(), MEDIUM_PAYLOAD_SIZE);
     }
 
     // Helpers for waiting for events to occur:
@@ -131,7 +138,7 @@ public:
             _events.push(ep.toString() + " connection failed");
     }
     // Connection handler that listens for data
-    void onConnectListenForData(Mock::ID ep, int err, Mock::Stream::Ptr s, String expected) {
+    void onConnectListenForData(Mock::ID ep, int err, Mock::Stream::Ptr s, String* expected) {
         using std::tr1::placeholders::_1;
         using std::tr1::placeholders::_2;
 
@@ -145,22 +152,22 @@ public:
         _events.push(ep.toString() + " listening for data");
     }
     // Connection handler that only sends some data
-    void onConnectSendData(Mock::ID ep, int err, Mock::Stream::Ptr s, String expected) {
+    void onConnectSendData(Mock::ID ep, int err, Mock::Stream::Ptr s, String* expected) {
         if (err != SST_IMPL_SUCCESS) return;
         writeExpectedData(ep, s, expected, 0);
     }
 
     // Handle a read operation, listening for expected data. Match the
     // data and, once we've received all of it, notify
-    void onExpectedRead(Mock::ID ep, uint8* data, int size, String expected, uint32* read_so_far) {
-        TS_ASSERT(*read_so_far + size <= expected.size());
-        if (*read_so_far + size > expected.size()) return;
+    void onExpectedRead(Mock::ID ep, uint8* data, int size, String* expected, uint32* read_so_far) {
+        TS_ASSERT(*read_so_far + size <= expected->size());
+        if (*read_so_far + size > expected->size()) return;
 
-        for(uint32 i = 0; i < (uint32)size; i++)
-            TS_ASSERT(data[i] == expected[*read_so_far + i]);
+        TS_ASSERT_EQUALS(memcmp(data, (expected->c_str() + *read_so_far), size), 0);
         *read_so_far += size;
 
-        if (*read_so_far == expected.size()) {
+        SILOG(test, detailed, "Read progress " << *read_so_far << " of " << expected->size() << " (" << (*read_so_far/(float32)expected->size())*100 << "%)");
+        if (*read_so_far == expected->size()) {
             // We're done
             _events.push(ep.toString() + " received expected");
             delete read_so_far;
@@ -168,17 +175,17 @@ public:
     }
     // Write expected data. Because of buffers, we may need to do this
     // multiple times to get all the data sent
-    void writeExpectedData(Mock::ID ep, Mock::Stream::Ptr s, String expected, uint32 from) {
-        int bytes_written = s->write((uint8*)(expected.c_str() + from), expected.size()-from);
+    void writeExpectedData(Mock::ID ep, Mock::Stream::Ptr s, String* expected, uint32 from) {
+        int bytes_written = s->write((uint8*)(expected->c_str() + from), expected->size()-from);
         from += bytes_written;
-        if (from == expected.size()) {
+        if (from == expected->size()) {
             _events.push(ep.toString() + " sent");
         }
         else {
             // Need to write more, but should delay since we couldn't
             // write it all in there immediately.
             _ctx->mainStrand->post(
-                Duration::milliseconds(10),
+                Duration::milliseconds(1),
                 std::tr1::bind(&SstTest::writeExpectedData, this, ep, s, expected, from)
             );
         }
@@ -265,9 +272,11 @@ public:
     }
 
     // Allows testing different lengths
-    void impl_testSendReceiveOneDirection(String payload, Duration channel_delay, float32 channel_drop_rate, Duration timeout) {
+    void impl_testSendReceiveOneDirection(String* payload, Duration channel_delay, float32 channel_drop_rate, Duration timeout) {
         using std::tr1::placeholders::_1;
         using std::tr1::placeholders::_2;
+
+        Time t_start = Timer::now();
 
         _mock_service->setDelay(channel_delay);
         _mock_service->setDropRate(channel_drop_rate);
@@ -290,42 +299,49 @@ public:
         conn_evts.insert("b sent");
         bool success = waitForEventSet(conn_evts, timeout);
         // Then completion when a receives all data
-        if (success) waitForEvent("a received expected", timeout);
+        if (success) success = waitForEvent("a received expected", timeout);
+
+        if (success) {
+            Time t_end = Timer::now();
+            SILOG(test, info, "Finished in " << (t_end-t_start));
+        }
     }
 
     void testSendReceiveOneDirection() {
-        impl_testSendReceiveOneDirection(_small_payload, NODELAY_CHANNEL, LOSSLESS, SHORT_TIMEOUT);
+        impl_testSendReceiveOneDirection(&_small_payload, NODELAY_CHANNEL, LOSSLESS, SHORT_TIMEOUT);
     }
     void testSendReceiveOneDirectionLarge() {
         String payload = "";
-        impl_testSendReceiveOneDirection(_large_payload, NODELAY_CHANNEL, LOSSLESS, SHORT_TIMEOUT);
+        impl_testSendReceiveOneDirection(&_large_payload, NODELAY_CHANNEL, LOSSLESS, LONG_TIMEOUT);
     }
 
 
     // Test over 50% lossy channel
     void testSendReceiveOneDirectionLossy() {
-        impl_testSendReceiveOneDirection(_small_payload, NODELAY_CHANNEL, LOSSY, LONG_TIMEOUT);
+        impl_testSendReceiveOneDirection(&_small_payload, NODELAY_CHANNEL, LOSSY, LONG_TIMEOUT);
     }
+    // Note medium payload. Large payload with lossy or slow
+    // connections takes too long
     void testSendReceiveOneDirectionLargeLossy() {
         String payload = "";
-        impl_testSendReceiveOneDirection(_large_payload, NODELAY_CHANNEL, LOSSY, LONG_TIMEOUT);
+        impl_testSendReceiveOneDirection(&_medium_payload, NODELAY_CHANNEL, LOSSY, LONG_TIMEOUT);
     }
 
     // Test over slow channel
     void testSendReceiveOneDirectionSlow() {
-        impl_testSendReceiveOneDirection(_small_payload, SLOW_CHANNEL, LOSSLESS, SHORT_TIMEOUT);
+        impl_testSendReceiveOneDirection(&_small_payload, SLOW_CHANNEL, LOSSLESS, SHORT_TIMEOUT);
     }
     void testSendReceiveOneDirectionLargeSlow() {
         String payload = "";
-        impl_testSendReceiveOneDirection(_large_payload, SLOW_CHANNEL, LOSSLESS, SHORT_TIMEOUT);
+        impl_testSendReceiveOneDirection(&_medium_payload, SLOW_CHANNEL, LOSSLESS, LONG_TIMEOUT);
     }
 
     // Test over slow, lossy channel
     void testSendReceiveOneDirectionSlowLossy() {
-        impl_testSendReceiveOneDirection(_small_payload, SLOW_CHANNEL, LOSSY, LONG_TIMEOUT);
+        impl_testSendReceiveOneDirection(&_small_payload, SLOW_CHANNEL, LOSSY, LONG_TIMEOUT);
     }
     void testSendReceiveOneDirectionLargeSlowLossy() {
         String payload = "";
-        impl_testSendReceiveOneDirection(_large_payload, SLOW_CHANNEL, LOSSY, LONG_TIMEOUT);
+        impl_testSendReceiveOneDirection(&_medium_payload, SLOW_CHANNEL, LOSSY, LONG_TIMEOUT);
     }
 };
