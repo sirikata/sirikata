@@ -1781,7 +1781,7 @@ public:
 	count++;
       }
 
-      if (was_empty)
+      if (was_empty && currOffset > 0)
           scheduleStreamService();
 
       return currOffset;
