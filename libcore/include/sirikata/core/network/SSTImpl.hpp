@@ -1744,6 +1744,10 @@ public:
 
     boost::mutex::scoped_lock lock(mQueueMutex);
     int count = 0;
+    // We only need to schedule servicing when the packet queue
+    // goes from empty to non-empty since we should already be working
+    // on sending data if it wasn't
+    bool was_empty = mQueuedBuffers.empty();
 
     if (len <= MAX_PAYLOAD_SIZE) {
       if (mCurrentQueueLength+len > MAX_QUEUE_LENGTH) {
@@ -1753,7 +1757,8 @@ public:
       mCurrentQueueLength += len;
       mNumBytesSent += len;
 
-      scheduleStreamService(Duration::seconds(0.01));
+      if (was_empty)
+          scheduleStreamService();
 
       return len;
     }
@@ -1776,7 +1781,9 @@ public:
 	count++;
       }
 
-      scheduleStreamService(Duration::seconds(0.01));
+      if (was_empty)
+          scheduleStreamService();
+
       return currOffset;
     }
 
@@ -2148,16 +2155,14 @@ private:
       return true;
     }
 
-    if (mState != CONNECTED && mState != DISCONNECTED && mState != PENDING_DISCONNECT) {
+    if (mState == DISCONNECTED) return true;
+
+    if (mState != CONNECTED && mState != PENDING_DISCONNECT) {
 
       if (!mConnected && mNumInitRetransmissions < MAX_INIT_RETRANSMISSIONS ) {
-
         sendInitPacket(mInitialData, mInitialDataLength);
-
 	mLastSendTime = curTime;
-
 	mNumInitRetransmissions++;
-
 	return true;
       }
 
@@ -2173,7 +2178,6 @@ private:
 	// connection associated with it as well.
 	if (mParentLSID == 0) {
           conn->close(true);
-
           Connection<EndPointType>::cleanup(conn);
 	}
 
@@ -2183,7 +2187,6 @@ private:
             mStreamReturnCallback(SST_IMPL_FAILURE, StreamPtr());
             mStreamReturnCallback = NULL;
         }
-
 
         conn->eraseDisconnectedStream(this);
         mState = DISCONNECTED;
@@ -2199,8 +2202,6 @@ private:
       }
     }
     else {
-      if (mState != DISCONNECTED) {
-
         //if the stream has been waiting for an ACK for > 2*mStreamRTOMicroseconds,
         //resend the unacked packets. We don't actually check if we
         //have anything to ack here, that happens in resendUnackedPackets. Also,
@@ -2259,10 +2260,19 @@ private:
 	  mNumOutstandingBytes += buffer->mBufferLength;
 	}
 
-        if (sentSomething) {
-            scheduleStreamService(Duration::microseconds(2*mStreamRTOMicroseconds));
+        // Either we sent something and we need to setup a retransmit
+        // timeout or we passed through without sending anything
+        // because the transmit window is full, in which case we also
+        // need to continue the retransmit timeout.
+        if (sentSomething || !mQueuedBuffers.empty()) {
+            // Since we might run through this after a timeout already
+            // started, make sure we target the exact time, adjusting
+            // for already elapsed time since the last received
+            // packet.
+            assert(Duration::microseconds(2*mStreamRTOMicroseconds) >= (curTime - mLastSendTime));
+            Duration timeout = Duration::microseconds(2*mStreamRTOMicroseconds) - (curTime - mLastSendTime);
+            scheduleStreamService(timeout);
         }
-      }
     }
 
     return true;
@@ -2484,9 +2494,8 @@ private:
     // started as a full transmit buffer? Have to be careful about
     // this though since mTransmitWindowSize might not be 0 even if it
     // was 'full' since the next packet couldn't fit on.
-    if (acked_msgs && !mQueuedBuffers.empty()) {
+    if (acked_msgs && !mQueuedBuffers.empty())
         scheduleStreamService();
-    }
   }
 
   LSID getLSID() {
