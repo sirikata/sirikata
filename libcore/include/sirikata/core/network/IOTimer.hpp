@@ -156,9 +156,18 @@ public:
 
     /** Cancel the current timer.  This will cancel the callback that would
      *  have resulted when the timer expired.
-     *  \returns the number of cancelled handlers, if any
+     *
+     *  \returns the number of cancelled handlers, if any. This essentially
+     *  indicates success. However, note that this only matters if you are using
+     *  multiple threads without strands: with a strand, as long as you know the
+     *  timer hasn't expired, it can always be cancelled from the strand. In the
+     *  other case, it's not a guarantee that cancellation really worked because
+     *  the handler could be in the progress of executing. However, if a
+     *  non-zero number are reported as having been cancelled, you are
+     *  guaranteed that a handler will execute.
      */
     uint32 cancel();
+
     Duration expiresFromNow();
 };
 

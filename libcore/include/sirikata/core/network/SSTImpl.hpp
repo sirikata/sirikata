@@ -433,12 +433,9 @@ private:
       }
       else if(!mIsAsyncServicing && mServiceTimer->expiresFromNow() > after) {
           needs_scheduling = true;
-          uint32 ncancelled = mServiceTimer->cancel();
-          // It's possible it fired while we were trying to
-          // cancel. Just ignore it in that case since the handler
-          // that ran (or will run very, very soon) is good enough.
-          if (ncancelled == 0)
-              needs_scheduling = false;
+          // No need to check success because we're using a strand and we can
+          // only get here if timer->expiresFromNow() is positive.
+          mServiceTimer->cancel();
       }
 
       if (needs_scheduling) {
@@ -2735,12 +2732,9 @@ private:
       }
       else if(!mIsAsyncServicing && mServiceTimer->expiresFromNow() > after) {
           needs_scheduling = true;
-          uint32 ncancelled = mServiceTimer->cancel();
-          // It's possible it fired while we were trying to
-          // cancel. Just ignore it in that case since the handler
-          // that ran (or will run very, very soon) is good enough.
-          if (ncancelled == 0)
-              needs_scheduling = false;
+          // No need to check success because we're using a strand and we can
+          // only get here if timer->expiresFromNow() is positive.
+          mServiceTimer->cancel();
       }
 
       if (needs_scheduling) {

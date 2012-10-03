@@ -184,7 +184,7 @@ uint32 IOTimer::cancel() {
     mCanceled++;
     uint32 ncancelled = mTimer->cancel();
     if (mStrand != NULL) chk.serializedExit();
-    return ncancelled;
+    return (mStrand != NULL ? 1 : ncancelled);
 }
 Duration IOTimer::expiresFromNow() {
     return Duration::microseconds(mTimer->expires_from_now().total_microseconds());
