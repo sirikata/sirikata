@@ -500,7 +500,7 @@ private:
       mDatagramLayer->listenOn(
           localEndPoint,
           std::tr1::bind(
-              &Connection::receiveMessage, this,
+              &Connection::receiveMessageRaw, this,
               std::tr1::placeholders::_1,
               std::tr1::placeholders::_2
           )
@@ -885,13 +885,6 @@ private:
 
     assert(length <= MAX_PAYLOAD_SIZE);
 
-    Sirikata::Protocol::SST::SSTStreamHeader* stream_msg =
-                       new Sirikata::Protocol::SST::SSTStreamHeader();
-
-    std::string str = std::string( (char*)data, length);
-
-    bool parsed = parsePBJMessage(stream_msg, str);
-
     uint64 transmitSequenceNumber =  mTransmitSequenceNumber;
 
     if ( isAck ) {
@@ -922,8 +915,6 @@ private:
     }
 
     mTransmitSequenceNumber++;
-
-    delete stream_msg;
 
     return transmitSequenceNumber;
   }
@@ -1197,14 +1188,16 @@ private:
     mTransmitSequenceNumber++;
   }
 
-  void receiveMessage(void* recv_buff, int len) {
-    uint8* data = (uint8*) recv_buff;
-    std::string str = std::string((char*) data, len);
-
+  void receiveMessageRaw(void* recv_buff, int len) {
     Sirikata::Protocol::SST::SSTChannelHeader* received_msg =
                        new Sirikata::Protocol::SST::SSTChannelHeader();
-    bool parsed = parsePBJMessage(received_msg, str);
-
+    bool parsed = parsePBJMessage(received_msg, MemoryReference(recv_buff, len));
+    receiveMessage(received_msg);
+    delete received_msg;
+  }
+  // NOTE that this does *not* take ownership of received_msg. The caller is
+  // responsible for deleting it.
+  void receiveMessage(Sirikata::Protocol::SST::SSTChannelHeader* received_msg) {
     mLastReceivedSequenceNumber = received_msg->transmit_sequence_number();
 
     uint64 receivedAckNum = received_msg->ack_sequence_number();
@@ -1247,8 +1240,6 @@ private:
         parsePacket(received_msg);
       }
     }
-
-    delete received_msg;
   }
 
   uint64 getRTOMicroseconds() {
@@ -1346,11 +1337,8 @@ private:
                              EndPoint<EndPointType> remoteEndPoint,
                              EndPoint<EndPointType> localEndPoint, void* recv_buffer, int len)
    {
-     char* data = (char*) recv_buffer;
-     std::string str = std::string(data, len);
-
      Sirikata::Protocol::SST::SSTChannelHeader* received_msg = new Sirikata::Protocol::SST::SSTChannelHeader();
-     bool parsed = parsePBJMessage(received_msg, str);
+     bool parsed = parsePBJMessage(received_msg, MemoryReference(recv_buffer, len));
 
      uint8 channelID = received_msg->channel_id();
 
@@ -1367,7 +1355,7 @@ private:
        }
        std::tr1::shared_ptr<Connection<EndPointType> > conn = connectionMap[localEndPoint];
 
-       conn->receiveMessage(data, len);
+       conn->receiveMessage(received_msg);
      }
      else if (channelID == 0) {
        /* it's a new channel request negotiation protocol
