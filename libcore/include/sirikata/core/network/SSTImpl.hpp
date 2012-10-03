@@ -1014,13 +1014,13 @@ private:
     bool parsed = parsePBJMessage(received_stream_msg, received_channel_msg->payload());
 
     if (received_stream_msg->type() == received_stream_msg->INIT) {
-      handleInitPacket(received_stream_msg);
+      handleInitPacket(received_channel_msg, received_stream_msg);
     }
     else if (received_stream_msg->type() == received_stream_msg->REPLY) {
-      handleReplyPacket(received_stream_msg);
+      handleReplyPacket(received_channel_msg, received_stream_msg);
     }
     else if (received_stream_msg->type() == received_stream_msg->DATA) {
-      handleDataPacket(received_stream_msg);
+      handleDataPacket(received_channel_msg, received_stream_msg);
     }
     else if (received_stream_msg->type() == received_stream_msg->ACK) {
       handleAckPacket(received_channel_msg, received_stream_msg);
@@ -1032,7 +1032,9 @@ private:
     delete received_stream_msg ;
   }
 
-  void handleInitPacket(Sirikata::Protocol::SST::SSTStreamHeader* received_stream_msg) {
+  void handleInitPacket(Sirikata::Protocol::SST::SSTChannelHeader* received_channel_msg,
+      Sirikata::Protocol::SST::SSTStreamHeader* received_stream_msg)
+  {
     LSID incomingLsid = received_stream_msg->lsid();
 
     if (mIncomingSubstreamMap.find(incomingLsid) == mIncomingSubstreamMap.end()) {
@@ -1061,6 +1063,10 @@ private:
 	stream->receiveData(received_stream_msg, received_stream_msg->payload().data(),
 			    received_stream_msg->bsn(),
 			    received_stream_msg->payload().size() );
+        stream->receiveAck(
+            received_stream_msg,
+            received_channel_msg->ack_sequence_number()
+        );
       }
       else {
 	SST_LOG(warn, mLocalEndPoint.endPoint.toString()  << " not listening to streams at: " << received_stream_msg->dest_port() << "\n");
@@ -1071,7 +1077,9 @@ private:
     }
   }
 
-  void handleReplyPacket(Sirikata::Protocol::SST::SSTStreamHeader* received_stream_msg) {
+  void handleReplyPacket(Sirikata::Protocol::SST::SSTChannelHeader* received_channel_msg,
+      Sirikata::Protocol::SST::SSTStreamHeader* received_stream_msg)
+  {
     LSID incomingLsid = received_stream_msg->lsid();
 
     if (mIncomingSubstreamMap.find(incomingLsid) == mIncomingSubstreamMap.end()) {
@@ -1088,6 +1096,10 @@ private:
 	  stream->receiveData(received_stream_msg, received_stream_msg->payload().data(),
 			      received_stream_msg->bsn(),
 			      received_stream_msg->payload().size() );
+          stream->receiveAck(
+              received_stream_msg,
+              received_channel_msg->ack_sequence_number()
+          );
 	}
       }
       else {
@@ -1096,7 +1108,9 @@ private:
     }
   }
 
-  void handleDataPacket(Sirikata::Protocol::SST::SSTStreamHeader* received_stream_msg) {
+  void handleDataPacket(Sirikata::Protocol::SST::SSTChannelHeader* received_channel_msg,
+      Sirikata::Protocol::SST::SSTStreamHeader* received_stream_msg)
+  {
     LSID incomingLsid = received_stream_msg->lsid();
 
     if (mIncomingSubstreamMap.find(incomingLsid) != mIncomingSubstreamMap.end()) {
@@ -1107,6 +1121,10 @@ private:
 			       received_stream_msg->bsn(),
 			       received_stream_msg->payload().size()
 			       );
+      stream_ptr->receiveAck(
+          received_stream_msg,
+          received_channel_msg->ack_sequence_number()
+      );
     }
   }
 
@@ -1119,11 +1137,10 @@ private:
     if (mIncomingSubstreamMap.find(incomingLsid) != mIncomingSubstreamMap.end()) {
       std::tr1::shared_ptr< Stream<EndPointType> > stream_ptr =
 	mIncomingSubstreamMap[incomingLsid];
-      stream_ptr->receiveData( received_stream_msg,
-			       received_stream_msg->payload().data(),
-			       received_channel_msg->ack_sequence_number(),
-			       received_stream_msg->payload().size()
-			       );
+      stream_ptr->receiveAck(
+          received_stream_msg,
+          received_channel_msg->ack_sequence_number()
+      );
     }
   }
 
@@ -2355,6 +2372,7 @@ private:
     }
   }
 
+  // Handle reception of data packets (INIT, REPLY, DATA).
   void receiveData( Sirikata::Protocol::SST::SSTStreamHeader* streamMsg,
 		    const void* buffer, uint64 offset, uint32 len )
   {
@@ -2364,7 +2382,8 @@ private:
     if (streamMsg->type() == streamMsg->REPLY) {
       mConnected = true;
     }
-    else if (streamMsg->type() == streamMsg->DATA || streamMsg->type() == streamMsg->INIT) {
+    else { // INIT or DATA
+        assert(streamMsg->type() == streamMsg->DATA || streamMsg->type() == streamMsg->INIT);
       boost::recursive_mutex::scoped_lock lock(mReceiveBufferMutex);
 
       int transmitWindowSize = pow(2.0, streamMsg->window()) - mNumOutstandingBytes;
@@ -2425,18 +2444,22 @@ private:
           sendAckPacket();
       }
     }
+  }
 
+  // Handle reception of ACK packets.
+  void receiveAck( Sirikata::Protocol::SST::SSTStreamHeader* streamMsg, uint64 channelSegmentID) {
     //handle any ACKS that might be included in the message...
     boost::mutex::scoped_lock lock(mQueueMutex);
 
+    const Time curTime = Timer::now();
     bool acked_msgs = false;
-    if (mChannelToBufferMap.find(offset) != mChannelToBufferMap.end()) {
-      uint64 dataOffset = mChannelToBufferMap[offset]->mOffset;
-      mNumOutstandingBytes -= mChannelToBufferMap[offset]->mBufferLength;
+    if (mChannelToBufferMap.find(channelSegmentID) != mChannelToBufferMap.end()) {
+      uint64 dataOffset = mChannelToBufferMap[channelSegmentID]->mOffset;
+      mNumOutstandingBytes -= mChannelToBufferMap[channelSegmentID]->mBufferLength;
 
-      mChannelToBufferMap[offset]->mAckTime = curTime;
+      mChannelToBufferMap[channelSegmentID]->mAckTime = curTime;
 
-      updateRTO(mChannelToBufferMap[offset]->mTransmitTime, mChannelToBufferMap[offset]->mAckTime);
+      updateRTO(mChannelToBufferMap[channelSegmentID]->mTransmitTime, mChannelToBufferMap[channelSegmentID]->mAckTime);
 
       if ( (int) (pow(2.0, streamMsg->window()) - mNumOutstandingBytes) > 0 ) {
         assert( pow(2.0, streamMsg->window()) - mNumOutstandingBytes > 0);
@@ -2446,10 +2469,10 @@ private:
         mTransmitWindowSize = 0;
       }
 
-      //printf("REMOVED ack packet at offset %d\n", (int)mChannelToBufferMap[offset]->mOffset);
+      //printf("REMOVED ack packet at offset %d\n", (int)mChannelToBufferMap[channelSegmentID]->mOffset);
 
       acked_msgs = true;
-      mChannelToBufferMap.erase(offset);
+      mChannelToBufferMap.erase(channelSegmentID);
 
       std::vector <uint64> channelOffsets;
       for(std::map<uint64, std::tr1::shared_ptr<StreamBuffer> >::iterator it = mChannelToBufferMap.begin();
@@ -2466,10 +2489,10 @@ private:
     }
     else {
       // ACK received but not found in mChannelToBufferMap
-      if (mChannelToStreamOffsetMap.find(offset) != mChannelToStreamOffsetMap.end()) {
-        uint64 dataOffset = mChannelToStreamOffsetMap[offset];
+      if (mChannelToStreamOffsetMap.find(channelSegmentID) != mChannelToStreamOffsetMap.end()) {
+        uint64 dataOffset = mChannelToStreamOffsetMap[channelSegmentID];
         acked_msgs = true;
-        mChannelToStreamOffsetMap.erase(offset);
+        mChannelToStreamOffsetMap.erase(channelSegmentID);
 
         std::vector <uint64> channelOffsets;
         for(std::map<uint64, std::tr1::shared_ptr<StreamBuffer> >::iterator it = mChannelToBufferMap.begin();
