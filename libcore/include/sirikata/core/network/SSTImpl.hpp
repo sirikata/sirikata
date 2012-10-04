@@ -403,6 +403,9 @@ private:
 
   bool mInSendingMode;
 
+  // We check periodically if all streams have been removed and clean
+  // up the connection if they have.
+  Network::IOTimerPtr mCheckAliveTimer;
 
   // We can schedule servicing from multiple threads, so we need to
   // lock protect this data.
@@ -488,6 +491,12 @@ private:
       CC_ALPHA(0.8), mLastTransmitTime(Time::null()),
       mNumInitialRetransmissionAttempts(0),
       mInSendingMode(true),
+      mCheckAliveTimer(
+          Network::IOTimer::create(
+              getContext()->mainStrand
+              // Don't set callback yet, we need the shared_ptr to ourselves
+          )
+      ),
       mServiceTimer(
           Network::IOTimer::create(
               getContext()->mainStrand,
@@ -514,10 +523,7 @@ private:
       return;
     }
 
-    getContext()->mainStrand->post(Duration::seconds(300),
-        std::tr1::bind(&Connection<EndPointType>::checkIfAlive, this, conn),
-        "Connection<EndPointType>::checkIfAlive"
-    );
+    mCheckAliveTimer->wait(Duration::seconds(300));
   }
 
   void sendSSTChannelPacket(Sirikata::Protocol::SST::SSTChannelHeader& sstMsg) {
@@ -938,10 +944,10 @@ private:
   void setWeakThis( std::tr1::shared_ptr<Connection>  conn) {
     mWeakThis = conn;
 
-    getContext()->mainStrand->post(Duration::seconds(300),
-        std::tr1::bind(&Connection<EndPointType>::checkIfAlive, this, conn),
-        "Connection<EndPointType>::checkIfAlive"
+    mCheckAliveTimer->setCallback(
+        std::tr1::bind(&Connection<EndPointType>::checkIfAlive, this, conn)
     );
+    mCheckAliveTimer->wait(Duration::seconds(300));
   }
 
   USID createNewUSID() {
@@ -1258,6 +1264,11 @@ private:
 
   // This is the version of cleanup is used from all the normal methods in Connection
   static void cleanup(std::tr1::shared_ptr<Connection<EndPointType> > conn) {
+      // We kill the checkAlive timer in cleanup() and in close()
+      // because both paths appear to be possible to hit alone
+      // depending on how the connection ends up getting shutdown
+      conn->mCheckAliveTimer->cancel();
+
     conn->mDatagramLayer->unlisten(conn->mLocalEndPoint);
 
     int connState = conn->mState;
@@ -1329,6 +1340,9 @@ private:
                saved = connectionMap.begin()->second;
                connectionMap.erase(connectionMap.begin());
            }
+           // Calling close makes sure we kill the check alive timer,
+           // which holds a shared_ptr.
+           saved->close(false);
            saved.reset();
        }
    }
@@ -1558,6 +1572,11 @@ private:
   /* Internal, non-locking implementation of close().
      Lock mSSTConnVars->sStaticMembersLock before calling this function */
   virtual void iClose(bool force) {
+      // We kill the checkAlive timer in cleanup() and in close()
+      // because both paths appear to be possible to hit alone
+      // depending on how the connection ends up getting shutdown
+      mCheckAliveTimer->cancel();
+
     /* (mState != CONNECTION_DISCONNECTED) implies close() wasnt called
        through the destructor. */
     if (force && mState != CONNECTION_DISCONNECTED) {
