@@ -1316,6 +1316,13 @@ private:
      mSSTConnVars->releaseChannel(mLocalEndPoint.endPoint, mLocalChannelID);
    }
 
+   static void stopConnections(ConnectionVariables<EndPointType>* sstConnVars) {
+       // This just passes stop calls along to all the connections
+       boost::mutex::scoped_lock lock(sstConnVars->sStaticMembersLock.getMutex());
+       for(typename ConnectionMap::iterator it = sstConnVars->sConnectionMap.begin(); it != sstConnVars->sConnectionMap.end(); it++)
+           it->second->stop();
+   }
+
    static void closeConnections(ConnectionVariables<EndPointType>* sstConnVars) {
        // We have to be careful with this function. Because it is going to free
        // the connections, we have to make sure not to let them get freed where
@@ -1553,6 +1560,22 @@ private:
   */
   virtual bool registerReadOrderedDatagramCallback( ReadDatagramCallback cb )  {
      return true;
+  }
+
+  /** Stops the connection. This isn't the same as close/cleanup. Rather, it's
+   * an indicator that the Service running SST needs to stop. This should try to
+   * start a clean, quick, but graceful stop.
+   */
+  void stop() {
+      // Request that all streams stop. This may hit some streams twice since
+      // they may be in both incoming and outgoing stream lists
+      for(typename LSIDStreamMap::iterator it = mIncomingSubstreamMap.begin(); it != mIncomingSubstreamMap.end(); it++)
+          it->second->stop();
+      for(typename LSIDStreamMap::iterator it = mOutgoingSubstreamMap.begin(); it != mOutgoingSubstreamMap.end(); it++)
+          it->second->stop();
+
+      // Also, don't hold ourselves alive, no need to track liveness anymore
+      mCheckAliveTimer->cancel();
   }
 
   /*  Closes the connection.
@@ -1862,6 +1885,15 @@ public:
     sendToApp(0);
 
     return true;
+  }
+
+
+  /** Stops the stream. This isn't semantically the same as a request to
+   * close. Rather, it's an indicator that the Service running SST needs to
+   * stop. This should try to start a clean, quick, but graceful stop.
+   */
+  void stop() {
+      close(false);
   }
 
   /* Close this stream. If the 'force' parameter is 'false',
@@ -2814,7 +2846,9 @@ public:
   }
 
   virtual void stop() {
-    Connection<EndPointType>::closeConnections(&mSSTConnVars);
+      // Give the connections a chance to stop, performing specific
+      // cleanup operations and notifying streams
+      Connection<EndPointType>::stopConnections(&mSSTConnVars);
   }
 
   ~ConnectionManager() {
