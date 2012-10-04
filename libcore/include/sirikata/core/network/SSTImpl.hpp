@@ -1872,6 +1872,8 @@ public:
       scheduleStreamService();
       return true;
     }
+    // In both cases, we can stop keepalives
+    mKeepAliveTimer->cancel();
   }
 
   /*
@@ -1996,6 +1998,12 @@ private:
     mConnected (false),
     MAX_INIT_RETRANSMISSIONS(5),
     mSSTConnVars(sstConnVars),
+      mKeepAliveTimer(
+          Network::IOTimer::create(
+              getContext()->mainStrand
+              // Can't create callback yet because we need mWeathThis
+          )
+      ),
       mServiceTimer(
           Network::IOTimer::create(
               getContext()->mainStrand,
@@ -2067,10 +2075,11 @@ private:
     /** Post a keep-alive task...  **/
     std::tr1::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
     if (conn) {
-      getContext()->mainStrand->post(Duration::seconds(60),
-          std::tr1::bind(&Stream<EndPointType>::sendKeepAlive, this, mWeakThis, conn),
-          "Stream<EndPointType>::sendKeepAlive"
-      );
+        assert(mWeakThis.lock());
+        mKeepAliveTimer->setCallback(
+              std::tr1::bind(&Stream<EndPointType>::sendKeepAlive, this, mWeakThis, conn)
+        );
+        mKeepAliveTimer->wait(Duration::seconds(60));
     }
 
     return numBytesBuffered;
@@ -2107,10 +2116,7 @@ private:
 
     write(buf, 0);
 
-    getContext()->mainStrand->post(Duration::seconds(60),
-        std::tr1::bind(&Stream<EndPointType>::sendKeepAlive, this, wstrm, conn),
-        "Stream<EndPointType>::sendKeepAlive"
-    );
+    mKeepAliveTimer->wait(Duration::seconds(60));
   }
 
   static void connectionCreated( int errCode, std::tr1::shared_ptr<Connection<EndPointType> > c) {
@@ -2686,6 +2692,10 @@ private:
   EndPoint <EndPointType> mLocalEndPoint;
   EndPoint <EndPointType> mRemoteEndPoint;
 
+  // We need to transmit keep alives so the stream stays open even if
+  // we don't transmit for a long time. It can still be closed by the
+  // underlying connection being removed.
+  Network::IOTimerPtr mKeepAliveTimer;
 
   // We can schedule servicing from multiple threads, so we need to
   // lock protect this data.
