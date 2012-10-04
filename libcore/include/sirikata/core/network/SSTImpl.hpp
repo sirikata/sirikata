@@ -1663,7 +1663,14 @@ public:
   ~StreamBuffer() {
       delete []mBuffer;
   }
+
+    // This doesn't check the data, just that the StreamBuffers
+    // represent the same portion of the stream.
+    bool operator==(const StreamBuffer& rhs) {
+        return (mOffset == rhs.mOffset && mBufferLength == rhs.mBufferLength);
+    }
 };
+typedef std::tr1::shared_ptr<StreamBuffer> StreamBufferPtr;
 
 template <class EndPointType>
 class SIRIKATA_EXPORT Stream  {
@@ -2278,7 +2285,7 @@ private:
 
 	if (mState == PENDING_DISCONNECT &&
 	    mQueuedBuffers.empty()  &&
-	    mChannelToBufferMap.empty() )
+	    mWaitingForAcks.empty() )
 	{
 	    mState = DISCONNECTED;
 
@@ -2294,6 +2301,17 @@ private:
 	while ( !mQueuedBuffers.empty() ) {
 	  std::tr1::shared_ptr<StreamBuffer> buffer = mQueuedBuffers.front();
 
+          // If we managed to get an ack late, then we will not have
+          // been able to remove the actual buffer that got requeued
+          // for a retry (if it hadn't been processed again). However,
+          // we only ever mark the ack time when we've actually seen
+          // it acked, so we can use that to check if we really still
+          // need to send it.
+          if (buffer->mAckTime != Time::null()) {
+              mQueuedBuffers.pop_front();
+              continue;
+          }
+
 	  if (mTransmitWindowSize < buffer->mBufferLength) {
 	    break;
 	  }
@@ -2305,10 +2323,11 @@ private:
           buffer->mTransmitTime = curTime;
           sentSomething = true;
 
-	  if ( mChannelToBufferMap.find(channelID) == mChannelToBufferMap.end() ) {
-	    mChannelToBufferMap[channelID] = buffer;
-            mChannelToStreamOffsetMap[channelID] = buffer->mOffset;
-	  }
+          // On the first send (or during a resend where we get a new
+          // channel ID) we only mark this as waiting for an ack using
+          // the specified channel segment ID.
+          assert(mWaitingForAcks.find(channelID) == mWaitingForAcks.end());
+          mWaitingForAcks[channelID] = buffer;
 
 	  mQueuedBuffers.pop_front();
 	  mCurrentQueueLength -= buffer->mBufferLength;
@@ -2340,37 +2359,39 @@ private:
   inline void resendUnackedPackets() {
     boost::mutex::scoped_lock lock(mQueueMutex);
 
-    for(std::map<uint64,std::tr1::shared_ptr<StreamBuffer> >::const_reverse_iterator it=mChannelToBufferMap.rbegin(),
-            it_end=mChannelToBufferMap.rend();
-        it != it_end; it++)
-     {
-       mQueuedBuffers.push_front(it->second);
-       mCurrentQueueLength += it->second->mBufferLength;
+    // Requeue outstanding packets for transmission
+    for(typename ChannelToBufferMap::const_reverse_iterator it = mWaitingForAcks.rbegin(),
+            it_end = mWaitingForAcks.rend(); it != it_end; it++)
+    {
+        // Put back in queue
+        mQueuedBuffers.push_front(it->second);
+        mCurrentQueueLength += it->second->mBufferLength;
+        // Save with old channelID to the graveyard
+        mUnackedGraveyard[it->first] = it->second;
+        /*printf("On %d, resending unacked packet at offset %d:%d\n",
+          (int)mLSID, (int)it->first, (int)(it->second->mOffset));fflush(stdout);*/
+    }
 
-       /*printf("On %d, resending unacked packet at offset %d:%d\n",
-         (int)mLSID, (int)it->first, (int)(it->second->mOffset));fflush(stdout);*/
-
-       if (mTransmitWindowSize < it->second->mBufferLength){
-         assert( ((int) it->second->mBufferLength) > 0);
-         mTransmitWindowSize = it->second->mBufferLength;
-       }
-     }
-
-    if (mChannelToBufferMap.empty() && !mQueuedBuffers.empty()) {
-      std::tr1::shared_ptr<StreamBuffer> buffer = mQueuedBuffers.front();
-
-      if (mTransmitWindowSize < buffer->mBufferLength) {
-        mTransmitWindowSize = buffer->mBufferLength;
-      }
+    // And make sure we'll be able to ship the first buffer
+    // immediately.
+    if (!mQueuedBuffers.empty()) {
+        StreamBufferPtr buffer = mQueuedBuffers.front();
+        if (mTransmitWindowSize < buffer->mBufferLength)
+            mTransmitWindowSize = buffer->mBufferLength;
     }
 
     mNumOutstandingBytes = 0;
 
-    if (!mChannelToBufferMap.empty()) {
+    // If we're failing to get acks, we might be estimating the RTT
+    // too low. To make sure it eventually updates, increase it.
+    if (!mWaitingForAcks.empty()) {
       if (mStreamRTOMicroseconds < 20000000) {
         mStreamRTOMicroseconds *= 2;
       }
-      mChannelToBufferMap.clear();
+      // Also clear out the list of buffers waiting for acks since
+      // they've timed out. They've been saved to the graveyard in
+      // case we eventually get an ack back.
+      mWaitingForAcks.clear();
     }
   }
 
@@ -2494,72 +2515,99 @@ private:
     boost::mutex::scoped_lock lock(mQueueMutex);
 
     const Time curTime = Timer::now();
-    bool acked_msgs = false;
-    if (mChannelToBufferMap.find(channelSegmentID) != mChannelToBufferMap.end()) {
-      uint64 dataOffset = mChannelToBufferMap[channelSegmentID]->mOffset;
-      mNumOutstandingBytes -= mChannelToBufferMap[channelSegmentID]->mBufferLength;
+    StreamBufferPtr acked_buffer;
+    // Whether we found it
+    bool normal_ack = false;
+    // First, check if we have the acked channel segment ID waiting
+    // for an ack (i.e. waiting for the ack hasn't timed out). This
+    // should be the normal case.
+    ChannelToBufferMap::iterator to_buffer_it = mWaitingForAcks.find(channelSegmentID);
+    if (to_buffer_it != mWaitingForAcks.end()) {
+        acked_buffer = to_buffer_it->second;
+        normal_ack = true;
 
-      mChannelToBufferMap[channelSegmentID]->mAckTime = curTime;
-
-      updateRTO(mChannelToBufferMap[channelSegmentID]->mTransmitTime, mChannelToBufferMap[channelSegmentID]->mAckTime);
-
-      if ( (int) (pow(2.0, streamMsg->window()) - mNumOutstandingBytes) > 0 ) {
-        assert( pow(2.0, streamMsg->window()) - mNumOutstandingBytes > 0);
-        mTransmitWindowSize = pow(2.0, streamMsg->window()) - mNumOutstandingBytes;
-      }
-      else {
-        mTransmitWindowSize = 0;
-      }
-
-      //printf("REMOVED ack packet at offset %d\n", (int)mChannelToBufferMap[channelSegmentID]->mOffset);
-
-      acked_msgs = true;
-      mChannelToBufferMap.erase(channelSegmentID);
-
-      std::vector <uint64> channelOffsets;
-      for(std::map<uint64, std::tr1::shared_ptr<StreamBuffer> >::iterator it = mChannelToBufferMap.begin();
-          it != mChannelToBufferMap.end(); ++it)
-	{
-	  if (it->second->mOffset == dataOffset) {
-	    channelOffsets.push_back(it->first);
-	  }
-	}
-
-      for (uint32 i=0; i< channelOffsets.size(); i++) {
-        mChannelToBufferMap.erase(channelOffsets[i]);
-      }
+        // Clear out references tracking this buffer for acks. First,
+        // the obvious one here.
+        mWaitingForAcks.erase(channelSegmentID);
+        // Graveyard cleared below
     }
     else {
-      // ACK received but not found in mChannelToBufferMap
-      if (mChannelToStreamOffsetMap.find(channelSegmentID) != mChannelToStreamOffsetMap.end()) {
-        uint64 dataOffset = mChannelToStreamOffsetMap[channelSegmentID];
-        acked_msgs = true;
-        mChannelToStreamOffsetMap.erase(channelSegmentID);
+        // Otherwise, we check the graveyard to see if we had
+        // retransmitted (or scheduled for retransmit) but now got the
+        // the ack anyway.
+        ChannelToBufferMap::iterator unacked_buffer_it = mUnackedGraveyard.find(channelSegmentID);
+        if (unacked_buffer_it != mUnackedGraveyard.end()) {
+            acked_buffer = unacked_buffer_it->second;
 
-        std::vector <uint64> channelOffsets;
-        for(std::map<uint64, std::tr1::shared_ptr<StreamBuffer> >::iterator it = mChannelToBufferMap.begin();
-            it != mChannelToBufferMap.end(); ++it)
-          {
-            if (it->second->mOffset == dataOffset) {
-              channelOffsets.push_back(it->first);
+            // Clear references tracking this buffer.
+            mUnackedGraveyard.erase(unacked_buffer_it);
+            // In this case, we get rid of any entries actively
+            // waiting for acks. We could safely do this no matter
+            // where we found the ack, as we do with the graveyard
+            // below, but we don't since scanning through the list of
+            // waiting for acks is possibly very expensive, and in the
+            // common case much more expensive than scanning through
+            // the graveyard (which should usually be empty).
+            for(typename ChannelToBufferMap::iterator it = mWaitingForAcks.begin(); it != mWaitingForAcks.end(); ++it) {
+                if (*(it->second) == *acked_buffer) {
+                    mWaitingForAcks.erase(it);
+                    break;
+                }
             }
-          }
-
-        for (uint32 i=0; i< channelOffsets.size(); i++) {
-          mChannelToBufferMap.erase(channelOffsets[i]);
         }
-      }
+    }
+
+    // If we found it, update state to reflect ack and deal with any
+    // leftover references to the same buffer due to resends
+    if (acked_buffer) {
+        //printf("REMOVED ack packet at offset %d\n", (int)acked_buffer->mOffset);
+
+        acked_buffer->mAckTime = curTime;
+        // This gets updated regardless of the kind of ack because we
+        // we're removing all trace of that buffer now and the bytes
+        // are not really outstanding anymore since they've been
+        // acked, even though we might still have a packet in flight
+        // with those bytes. If we didn't do this when we ack from the
+        // graveyard, we'd end up never clearing these bytes because
+        // the newer channel ID becomes unackable (no more reference
+        // to them).
+        mNumOutstandingBytes -= acked_buffer->mBufferLength;
+
+        // These operations only work during a normal ack because the
+        // info is either inaccurate (transmit and ack times from
+        // different packets) or outdated (advertised window from old,
+        // delayed packet).
+        if (normal_ack) {
+            updateRTO(acked_buffer->mTransmitTime, acked_buffer->mAckTime);
+
+            if ( (int) (pow(2.0, streamMsg->window()) - mNumOutstandingBytes) > 0 ) {
+                assert( pow(2.0, streamMsg->window()) - mNumOutstandingBytes > 0);
+                mTransmitWindowSize = pow(2.0, streamMsg->window()) - mNumOutstandingBytes;
+            }
+            else {
+                mTransmitWindowSize = 0;
+            }
+        }
+
+        // In either case, if we found the acked packet (we extracted
+        // the buffer), we need to scan the graveyard for ones with
+        // the same offset due to retransmits (even if we found the
+        // acked one in the graveyard since we may have multiple
+        // retransmits)
+        std::vector <uint64> graveyardChannelIDs;
+        for(typename ChannelToBufferMap::iterator graveyard_it = mUnackedGraveyard.begin(); graveyard_it != mUnackedGraveyard.end(); graveyard_it++) {
+            if (*(graveyard_it->second) == *acked_buffer)
+                graveyardChannelIDs.push_back(graveyard_it->first);
+        }
+        for (uint32 i=0; i< graveyardChannelIDs.size(); i++)
+            mUnackedGraveyard.erase(graveyardChannelIDs[i]);
     }
 
     // If we acked messages, we've cleared space in the transmit
     // buffer (the receiver cleared something out of its receive
     // buffer). We can send more data, so schedule servicing if we
     // have anything queued.
-    // TODO(ewencp) maybe only schedule something new when this
-    // started as a full transmit buffer? Have to be careful about
-    // this though since mTransmitWindowSize might not be 0 even if it
-    // was 'full' since the next packet couldn't fit on.
-    if (acked_msgs && !mQueuedBuffers.empty())
+    if (acked_buffer && !mQueuedBuffers.empty())
         scheduleStreamService();
   }
 
@@ -2688,8 +2736,29 @@ private:
   std::tr1::weak_ptr<Connection<EndPointType> > mConnection;
   const Context* mContext;
 
-  std::map<uint64, std::tr1::shared_ptr<StreamBuffer> >  mChannelToBufferMap;
-  std::map<uint64, uint32> mChannelToStreamOffsetMap;
+  // Map from channel segment ID to the actual buffer of data for data
+  // currently in flight. If we resend, this gets cleared, so it is
+  // only tracking the *latest* channel ID for the buffer.
+  typedef std::map<uint64, std::tr1::shared_ptr<StreamBuffer> >  ChannelToBufferMap;
+  ChannelToBufferMap mWaitingForAcks;
+  // Meanwhile, this tracks channel -> buffer for packets that missed
+  // their ack deadline. A buffer can be in both mWaitingForAcks and
+  // mUnackedGraveyard at the same time (and in the graveyard multiple
+  // times) due to resends. The graveyard is used to take advantage of
+  // slow acks, allowing us to avoid resending some data if an ack is
+  // just received late. This doesn't cost us much: the buffer will
+  // have been held onto anyway, the map remains small as long as we
+  // don't have a ton of lost packets, and we only need to do
+  // something relatively expensive (scan through the entire map) when
+  // we handle the hopefully uncommon case of a slow ack.
+  //
+  // Using this approach makes the ack unusable for RTT estimation and
+  // transmit window updates, but this should be an unusual case
+  // anyway. We hold onto the buffer so we can mark the actual buffer
+  // as acked so that if it got requeued for resending but hasn't been
+  // sent yet, it won't be sent again when it does reach the front of
+  // the send queue.
+  ChannelToBufferMap mUnackedGraveyard;
 
   std::deque< std::tr1::shared_ptr<StreamBuffer> > mQueuedBuffers;
   uint32 mCurrentQueueLength;
