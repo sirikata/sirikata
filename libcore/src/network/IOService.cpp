@@ -206,6 +206,11 @@ void IOService::post(const Duration& waitFor, const IOCallback& handler, const c
 #else
     timer->async_wait(std::tr1::bind(&handle_deadline_timer, _1, timer, handler));
 #endif
+
+    static Duration max_post_timeout = Duration::seconds(5);
+    if (waitFor > max_post_timeout) {
+        SILOG(service, error, "Saw \"" << tag << " - " << tagStat << "\" post with timeout of " << waitFor << ". Timeouts this long are a very bad idea since they can hold up shutdown and cannot be canceled.");
+    }
 }
 
 
