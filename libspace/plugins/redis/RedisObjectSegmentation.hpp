@@ -93,6 +93,9 @@ private:
     void readHandler(const boost::system::error_code& ec);
     void writeHandler(const boost::system::error_code& ec);
 
+    void cacheAndNotifyNewObject(const UUID& obj_id, OSegWriteListener::OSegAddNewStatus);
+    void cacheAndAckMigration(const UUID& obj_id, ServerID ackTo);
+
     // Schedule an object to be refreshed in .5 TTL to keep it's key alive
     void scheduleObjectRefresh(const UUID& obj_id);
     void startTimeoutHandler();
