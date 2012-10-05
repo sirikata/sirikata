@@ -1909,7 +1909,11 @@ ${TEST_LIBCORE_SOURCE_DIR}/BoundingBoxTest.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/PathsTest.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/StrandTest.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/UUIDTest.hpp
-${TEST_LIBCORE_SOURCE_DIR}/SSTTest.hpp
+# SSTTest is disabled because it's sensitive to debug/release,
+# non-deterministic, and for some, it's intentionally slow since drops
+# cause backoff. It's very useful for doing basic testing (and
+# debugging) of SST, but we can't reasonably have it enabled by default.
+#${TEST_LIBCORE_SOURCE_DIR}/SSTTest.hpp
 
 ${TEST_LIBMESH_SOURCE_DIR}/DeduplicationTest.hpp
 ${TEST_LIBMESH_SOURCE_DIR}/LightInfoTest.hpp

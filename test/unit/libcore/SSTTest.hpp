@@ -43,7 +43,7 @@ public:
     String _large_payload;
 
 #define LOSSLESS 0.0
-#define LOSSY 0.25
+#define LOSSY 0.1
 
 #define NODELAY_CHANNEL Duration::zero()
 #define SLOW_CHANNEL Duration::milliseconds(50)
@@ -68,7 +68,7 @@ public:
         _medium_payload.resize(MEDIUM_PAYLOAD_SIZE);
         for(int i = 0; i < MEDIUM_PAYLOAD_SIZE; i++)
             _medium_payload[i] = ('a' + (i % 26));
-#define LARGE_PAYLOAD_SIZE 1024*1024*20
+#define LARGE_PAYLOAD_SIZE 1024*1024*200
         // Reuse medium payload because rand() gets expensive with large
         // payloads.
         _large_payload.resize(LARGE_PAYLOAD_SIZE);
@@ -333,7 +333,7 @@ public:
     }
     void testSendReceiveOneDirectionLargeSlow() {
         String payload = "";
-        impl_testSendReceiveOneDirection(&_medium_payload, SLOW_CHANNEL, LOSSLESS, LONG_TIMEOUT);
+        impl_testSendReceiveOneDirection(&_large_payload, SLOW_CHANNEL, LOSSLESS, LONG_TIMEOUT);
     }
 
     // Test over slow, lossy channel
