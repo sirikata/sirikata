@@ -125,34 +125,48 @@ void TCPStreamListener::Data::handleAccept(DataPtr& data, const boost::system::e
 
 
 TCPStreamListener::TCPStreamListener(IOStrand* io, OptionSet*options)
+ : mStrand(io), mOptions(options), mData()
 {
-    OptionValue *maxSimultSockets=options->referenceOption("max-parallel-sockets");
-    OptionValue *sendBufferSize=options->referenceOption("send-buffer-size");
-    OptionValue *noDelay=options->referenceOption("no-delay");
-    OptionValue *kernelSendBufferSize=options->referenceOption("ksend-buffer-size");
-    OptionValue *kernelReceiveBufferSize=options->referenceOption("kreceive-buffer-size");
-    OptionValue *fragmentPackets=options->referenceOption("test-fragment-packet-level");
+
+}
+
+TCPStreamListener::~TCPStreamListener() {
+    // We can take care of this, but this isn't being used properly as a service
+    // if we still have a listener running
+    if (mData)
+        SILOG(tcpss, warning, "Destroying TCPStreamListener before stop() was called.");
+    closeListener();
+}
+
+void TCPStreamListener::start() {
+}
+
+void TCPStreamListener::stop() {
+    closeListener();
+}
+
+bool TCPStreamListener::listen (const Address&address,
+                                const Stream::SubstreamCallback&newStreamCallback) {
+    closeListener();
+
+    OptionValue *maxSimultSockets = mOptions->referenceOption("max-parallel-sockets");
+    OptionValue *sendBufferSize = mOptions->referenceOption("send-buffer-size");
+    OptionValue *noDelay = mOptions->referenceOption("no-delay");
+    OptionValue *kernelSendBufferSize = mOptions->referenceOption("ksend-buffer-size");
+    OptionValue *kernelReceiveBufferSize = mOptions->referenceOption("kreceive-buffer-size");
+    OptionValue *fragmentPackets = mOptions->referenceOption("test-fragment-packet-level");
     if (fragmentPackets->as<int>()!=-1) {
         TCPStream::sFragmentPackets = fragmentPackets->as<int>();
     }
 
-    assert(maxSimultSockets&&sendBufferSize);
-    DataPtr data (new Data(io,
+    assert(maxSimultSockets && sendBufferSize);
+    DataPtr data (new Data(mStrand,
                            (unsigned char)maxSimultSockets->as<unsigned int>(),
                            sendBufferSize->as<unsigned int>(),
                            noDelay->as<bool>(),
                            kernelSendBufferSize->as<unsigned int>(),
                            kernelReceiveBufferSize->as<unsigned int>()));
-    mData=data;
-}
-
-TCPStreamListener::~TCPStreamListener() {
-    close();
-}
-
-bool TCPStreamListener::listen (const Address&address,
-                                const Stream::SubstreamCallback&newStreamCallback) {
-    close();
+    mData = data;
 
     mData->acceptor = new TCPListener(mData->strand->service(),tcp::endpoint(tcp::v4(), atoi(address.getService().c_str())));
     mData->cb = newStreamCallback;
@@ -174,7 +188,9 @@ Address TCPStreamListener::listenAddress() const {
                    port.str());
 }
 
-void TCPStreamListener::close(){
+void TCPStreamListener::closeListener() {
+    if (!mData) return;
+
     mData->builder->stop();
     if (mData->acceptor != NULL) {
         boost::system::error_code ec;
@@ -184,6 +200,7 @@ void TCPStreamListener::close(){
         mData->acceptor->close();
     }
     mData->cb = 0;
+    mData.reset();
 }
 
 } // namespace Network

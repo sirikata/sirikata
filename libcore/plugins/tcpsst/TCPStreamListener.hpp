@@ -54,10 +54,16 @@ public:
         return new TCPStreamListener(io,options);
     }
 
+    virtual void start();
+    virtual void stop();
+
     virtual bool listen(const Address&addr, const Stream::SubstreamCallback&newStreamCallback);
     virtual String listenAddressName()const;
     virtual Address listenAddress()const;
-    virtual void close();
+    void closeListener();
+
+    IOStrand* mStrand;
+    OptionSet* mOptions;
 
     struct Data{ // Data which may be needed in callbacks, so is stored separately in shared_ptr
     private:

@@ -174,6 +174,7 @@ void ObjectHostConnectionManager::listen(const Address4& listen_addr) {
               .getOptionParser(oh_stream_lib)
                (oh_stream_options));
     Sirikata::Network::Address addr(convertAddress4ToSirikata(listen_addr));
+    mAcceptor->start();
     mAcceptor->listen(
         addr,
         //mIOStrand->wrap(
@@ -187,7 +188,7 @@ void ObjectHostConnectionManager::listen(const Address4& listen_addr) {
 
 void ObjectHostConnectionManager::shutdown() {
     // Shut down the listener
-    mAcceptor->close();
+    mAcceptor->stop();
 
     mContext->mainStrand->post(
         std::tr1::bind(&ObjectHostConnectionManager::closeAllConnections, this),

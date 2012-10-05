@@ -226,6 +226,7 @@ void SSTBenchmark::start() {
         mIOService->post(Duration::seconds(10000000.),&noop,"SSTBenchmark noop");
 
     }
+    mListener->start();
     mIOService->run();
 }
 
@@ -234,7 +235,7 @@ void SSTBenchmark::stop() {
     if(mIOService)
         mIOService->stop();
     if (mListener)
-        mListener->close();
+        mListener->stop();
     if(mStream)
         mStream->close();
     if (mIOStrand)
