@@ -1923,15 +1923,17 @@ public:
         conn->eraseDisconnectedStream(this);
       }
 
+      // In both cases, we can stop keepalives
+      mKeepAliveTimer->cancel();
       return true;
     }
     else {
       mState = PENDING_DISCONNECT;
       scheduleStreamService();
+      // In both cases, we can stop keepalives
+      mKeepAliveTimer->cancel();
       return true;
     }
-    // In both cases, we can stop keepalives
-    mKeepAliveTimer->cancel();
   }
 
   /*
