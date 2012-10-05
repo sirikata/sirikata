@@ -37,8 +37,8 @@
 #include <sirikata/core/network/IOService.hpp>
 #include "TCPStream.hpp"
 #include "TCPStreamListener.hpp"
-#include "ASIOStreamBuilder.hpp"
 #include <sirikata/core/options/Options.hpp>
+#include "ASIOStreamBuilder.hpp"
 
 namespace Sirikata {
 namespace Network {
@@ -54,6 +54,7 @@ TCPStreamListener::Data::Data(IOStrand* io,
  : strand(io),
    acceptor(NULL),
      socket(NULL),
+   builder(NULL),
      cb(0),
      mMaxSimultaneousSockets(maxSimultaneousSockets),
      mNoDelay(noDelay),
@@ -61,9 +62,11 @@ TCPStreamListener::Data::Data(IOStrand* io,
      mKernelSendBufferSize(kernelSendBufferSize),
      mKernelReceiveBufferSize(kernelReceiveBufferSize)
 {
+    builder = new ASIOStreamBuilder(this);
 }
 
 TCPStreamListener::Data::~Data() {
+    delete builder;
     delete acceptor;
     delete socket;
 }
@@ -71,6 +74,7 @@ TCPStreamListener::Data::~Data() {
 // Start the listening process.
 void TCPStreamListener::Data::start(DataPtr shared_this) {
     assert(shared_this.get() == this);
+    builder->start();
     strand->post(
         std::tr1::bind(&TCPStreamListener::Data::startAccept, shared_this),
         "TCPStreamListener::Data::startAccept"
@@ -113,7 +117,7 @@ void TCPStreamListener::Data::handleAccept(DataPtr& data, const boost::system::e
     data->socket = NULL;
 
     // Hand off the new connection for sessions initiation
-    ASIOStreamBuilder::beginNewStream(newSocket, data);
+    data->builder->beginNewStream(newSocket, data);
 
     // Continue listening
     startAccept(data);
@@ -171,19 +175,15 @@ Address TCPStreamListener::listenAddress() const {
 }
 
 void TCPStreamListener::close(){
+    mData->builder->stop();
     if (mData->acceptor != NULL) {
-
-		boost::system::error_code ec;
+        boost::system::error_code ec;
         mData->acceptor->cancel(ec);
-		if (ec) {
-			SILOG(tcpsst,error,"Error closing listener "<<ec);
-		}
+        if (ec)
+            SILOG(tcpsst,error,"Error closing listener "<<ec);
         mData->acceptor->close();
-
-        delete mData->acceptor;
-        mData->acceptor = NULL;
-        mData->cb = 0;
     }
+    mData->cb = 0;
 }
 
 } // namespace Network

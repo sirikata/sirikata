@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sirikata/core/util/Platform.hpp>
+#include "ASIOStreamBuilder.hpp"
 #include <sirikata/core/network/Asio.hpp>
 #include <sirikata/core/network/IOStrandImpl.hpp>
 #include <sirikata/core/util/Hash.hpp>
@@ -46,32 +46,18 @@
 
 #include <boost/lexical_cast.hpp>
 #include "CheckWebSocketHeader.hpp"
+
 namespace Sirikata {
 namespace Network {
-namespace ASIOStreamBuilder{
 
-typedef Array<uint8,TCPStream::MaxWebSocketHeaderSize> TcpSstHeaderArray;
-
-class IncompleteStreamState {
-public:
-    int mNumSockets;
-    std::vector<TCPSocket*>mSockets;
-    std::map<TCPSocket*, std::string> mWebSocketResponses;
-
-    // Destroys the sockets associated with this IncompleteStreamState and
-    // clears out the data. Only use this for failed connections.
-    void destroy() {
-        for(std::vector<TCPSocket*>::iterator it = mSockets.begin(); it != mSockets.end(); it++)
-            delete *it;
-        mSockets.clear();
-        mWebSocketResponses.clear();
-    }
-};
+void ASIOStreamBuilder::IncompleteStreamState::destroy() {
+    for(std::vector<TCPSocket*>::iterator it = mSockets.begin(); it != mSockets.end(); it++)
+        delete *it;
+    mSockets.clear();
+    mWebSocketResponses.clear();
+}
 
 namespace {
-typedef std::map<UUID,IncompleteStreamState> IncompleteStreamMap;
-std::deque<UUID> sStaleUUIDs;
-IncompleteStreamMap sIncompleteStreams;
 
 int64 getObscuredNumber(const std::string& key) {
     std::string filtered;
@@ -104,22 +90,40 @@ std::string getWebSocketSecReply(const std::string& key1, const std::string& key
     return std::string((const char*)md5.raw_digest(), MD5_DIGEST_LENGTH);
 }
 
+}
 
-void handleBuildStreamTimeout(UUID context) {
-    IncompleteStreamMap::iterator it = sIncompleteStreams.find(context);
-    // It already finished connecting
-    if (it == sIncompleteStreams.end()) return;
+ASIOStreamBuilder::ASIOStreamBuilder(TCPStreamListener::Data* parent)
+ : mBuildStreamTimer(
+     Network::IOTimer::create(
+         parent->strand,
+         std::tr1::bind(&ASIOStreamBuilder::handleBuildStreamTimeout, this)
+     )
+ )
+{
+}
 
-    // Make sure we clean up the sockets which would otherwise remain open.
-    it->second.destroy();
-    sIncompleteStreams.erase(it);
+void ASIOStreamBuilder::start() {
+}
+
+void ASIOStreamBuilder::stop() {
+    mBuildStreamTimer->cancel();
 }
 
 
+void ASIOStreamBuilder::beginNewStream(TCPSocket*socket, std::tr1::shared_ptr<TCPStreamListener::Data> data) {
+
+    TcpSstHeaderArray *buffer = new TcpSstHeaderArray;
+
+    boost::asio::async_read(
+        *socket,
+        boost::asio::buffer(buffer->begin(),std::min((int)TCPStream::MaxWebSocketHeaderSize, (int)ASIOReadBuffer::sBufferLength)),
+        CheckWebSocketHeader (buffer,false),
+        data->strand->wrap( std::tr1::bind(&ASIOStreamBuilder::buildStream, this, buffer, socket, data, _1, _2) )
+        );
 }
 
 ///gets called when a complete 24 byte header is actually received: uses the UUID within to match up appropriate sockets
-void buildStream(TcpSstHeaderArray *buffer,
+void ASIOStreamBuilder::buildStream(TcpSstHeaderArray *buffer,
                  TCPSocket *socket,
                  std::tr1::shared_ptr<TCPStreamListener::Data> data,
                  const boost::system::error_code &error,
@@ -278,7 +282,7 @@ void buildStream(TcpSstHeaderArray *buffer,
     }
     boost::asio::ip::tcp::no_delay option(data->mNoDelay);
     socket->set_option(option);
-    IncompleteStreamMap::iterator where=sIncompleteStreams.find(context);
+    IncompleteStreamMap::iterator where=mIncompleteStreams.find(context);
 
     unsigned int numConnections=1;
 
@@ -300,20 +304,20 @@ void buildStream(TcpSstHeaderArray *buffer,
         }
     }
 
-    if (where==sIncompleteStreams.end()){
-        sIncompleteStreams[context].mNumSockets=numConnections;
-        where=sIncompleteStreams.find(context);
-        assert(where!=sIncompleteStreams.end());
+    if (where==mIncompleteStreams.end()){
+        mIncompleteStreams[context].mNumSockets=numConnections;
+        where=mIncompleteStreams.find(context);
+        assert(where!=mIncompleteStreams.end());
         // Setup a timer to clean up the sockets if we don't complete it in time
-        data->strand->post(
-            Duration::seconds(10),
-            std::tr1::bind(&handleBuildStreamTimeout, context),
-            "handleBuildStreamTimeout"
-        );
+        Duration timeout = Duration::seconds(10);
+        Time tend = Timer::now() + timeout;
+        mBuildingStreamTimeouts.push(std::make_pair(tend, context));
+        if (mBuildingStreamTimeouts.size() == 1)
+            mBuildStreamTimer->wait(timeout);
     }
     if ((int)numConnections!=where->second.mNumSockets) {
         SILOG(tcpsst,warning,"Single client disagrees on number of connections to establish: "<<numConnections<<" != "<<where->second.mNumSockets);
-        sIncompleteStreams.erase(where);
+        mIncompleteStreams.erase(where);
     }else {
         where->second.mSockets.push_back(socket);
         where->second.mWebSocketResponses[socket] = reply_str;
@@ -324,7 +328,7 @@ void buildStream(TcpSstHeaderArray *buffer,
             std::string port=shared_socket->getASIOSocketWrapper(0).getLocalEndpoint().getService();
             std::string resource_name='/'+context.toString();
             MultiplexedSocket::sendAllProtocolHeaders(shared_socket,origin,host,port,resource_name,protocol, sendProtocol,where->second.mWebSocketResponses,streamType);
-            sIncompleteStreams.erase(where);
+            mIncompleteStreams.erase(where);
 
 
             Stream::StreamID newID=MultiplexedSocket::getFirstStreamID(true);
@@ -337,22 +341,31 @@ void buildStream(TcpSstHeaderArray *buffer,
                 shared_socket->closeStream(shared_socket,newID);
             }
         }else{
-            sStaleUUIDs.push_back(context);
+            mStaleUUIDs.push_back(context);
         }
     }
 }
 
-void beginNewStream(TCPSocket*socket, std::tr1::shared_ptr<TCPStreamListener::Data> data) {
+void ASIOStreamBuilder::handleBuildStreamTimeout() {
+    Time tnow = Timer::now();
 
-    TcpSstHeaderArray *buffer = new TcpSstHeaderArray;
+    while(!mBuildingStreamTimeouts.empty() && tnow >= mBuildingStreamTimeouts.front().first) {
+        UUID context = mBuildingStreamTimeouts.front().second;
+        mBuildingStreamTimeouts.pop();
 
-    boost::asio::async_read(*socket,
-                            boost::asio::buffer(buffer->begin(),(int)TCPStream::MaxWebSocketHeaderSize>(int)ASIOReadBuffer::sBufferLength?(int)ASIOReadBuffer::sBufferLength:(int)TCPStream::MaxWebSocketHeaderSize),
-                            CheckWebSocketHeader (buffer,false),
-        data->strand->wrap( std::tr1::bind(&ASIOStreamBuilder::buildStream,buffer,socket,data,_1,_2) )
-        );
+        IncompleteStreamMap::iterator it = mIncompleteStreams.find(context);
+        // It already finished connecting
+        if (it == mIncompleteStreams.end()) continue;
+
+        // Make sure we clean up the sockets which would otherwise remain open.
+        it->second.destroy();
+        mIncompleteStreams.erase(it);
+    }
+
+    // Setup next timeout
+    if (!mBuildingStreamTimeouts.empty())
+        mBuildStreamTimer->wait(mBuildingStreamTimeouts.front().first - tnow);
 }
 
-} // namespace ASIOStreamBuilder
 } // namespace Network
 } // namespace Sirikata

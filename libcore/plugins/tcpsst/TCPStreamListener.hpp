@@ -39,6 +39,8 @@
 namespace Sirikata {
 namespace Network {
 
+class ASIOStreamBuilder;
+
 /**
  * This class waits on a service and listens for incoming connections
  * It calls the callback whenever such connections are encountered
@@ -74,6 +76,7 @@ public:
         IOStrand* strand;
         TCPListener* acceptor;
         TCPSocket* socket;
+        ASIOStreamBuilder* builder;
         Stream::SubstreamCallback cb;
         uint8 mMaxSimultaneousSockets;
         bool mNoDelay;
