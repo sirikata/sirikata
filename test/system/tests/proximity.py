@@ -35,18 +35,18 @@ class ProximityTest(HttpCommandTest):
         of a services entry'''
         return {}
 
-    def runTest(self, outputPath, binaries, output=sys.stdout):
+    def runTest(self):
         procs = ProcSet()
         self.report_files = {}
         self._outputs = {}
         for svc_idx,svc in enumerate(self.services):
             svc_name = svc['name']
 
-            service_output_filename = os.path.join(outputPath, svc_name + '.log')
+            service_output_filename = os.path.join(self._folder, svc_name + '.log')
 
             # Add with http port
             self.add_http(svc_name)
-            service_cmd = [binaries[svc['type']]]
+            service_cmd = [self._binaries[svc['type']]]
             service_cmd += self.http_settings(svc_name)
             if svc['type'] == 'cppoh':
                 service_cmd.append('--objecthost=--scriptManagers=js:{--import-paths=%s}' % (','.join(self.script_paths)))
@@ -67,14 +67,14 @@ class ProximityTest(HttpCommandTest):
 
             # If requested, block for upto 10 seconds for the process to start responding to commands
             if self.wait_until_responsive:
-                result = self.command(svc_name, 'meta.commands', retries=40, wait=.25, output=output)
+                result = self.command(svc_name, 'meta.commands', retries=40, wait=.25)
                 if result is None: self.fail('Server never became responsive to HTTP commands')
 
         # Defer to the implementation for sending and checking test
         # commands. Catch all errors so we can make sure we cleanup the
         # processes properly and report crashes, etc.
         try:
-            self.testBody(procs, output=output)
+            self.testBody()
         except:
             self.fail(msg='Uncaught exception during test:\n' + traceback.format_exc())
 
@@ -82,7 +82,7 @@ class ProximityTest(HttpCommandTest):
         # down cleanly. We just make sure we clean up aggressively if
         # necessary.
         if not procs.done():
-            procs.wait(until=self.duration, killAt=self.duration, output=output)
+            procs.wait(until=self.duration, killAt=self.duration, output=self.output)
 
         # Print a notification if we had to kill this process
         if procs.killed():
@@ -98,14 +98,14 @@ class ProximityTest(HttpCommandTest):
         #self.report()
 
     def report(self):
-        print("Execution Log:", file=self._output)
+        print("Execution Log:", file=self.output)
         for report_name, report_file in self.report_files.iteritems():
-            print("  ", report_name, file=self._output)
+            print("  ", report_name, file=self.output)
             fp = open(report_file, 'r')
             for line in fp.readlines():
-                print("    ", line, end='', file=self._output)
+                print("    ", line, end='', file=self.output)
             fp.close()
-            print(file=self._output)
+            print(file=self.output)
 
 
     def createObject(self, oh, script_file):
@@ -175,7 +175,7 @@ class OneManualSS(OneSS):
 
 
 class ConnectionTest(ProximityTest):
-    def testBody(self, procs, output):
+    def testBody(self):
         response = self.createObject('oh', 'proximityTests/connectionTest.em');
 
 class OneSSConnectionTest(ConnectionTest, OneSS):
@@ -187,7 +187,7 @@ class OneSSManualConnectionTest(ConnectionTest, OneManualSS):
 
 
 class BasicQueryTest(ProximityTest):
-    def testBody(self, procs, output):
+    def testBody(self):
         response = self.createObject('oh', 'proximityTests/basicQueryTest.em');
 
 class OneSSBasicQueryTest(BasicQueryTest, OneSS):

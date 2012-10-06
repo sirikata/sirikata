@@ -80,7 +80,7 @@ class AggregatesTest(ProximityTest):
         self.assertIsNotNone( self.command('space', 'context.shutdown') )
 
 class GeneratesAggregatesTest(AggregatesTest):
-    def testBody(self, procs, output):
+    def testBody(self):
         # Generate a bunch of objects
         for x in range(25):
             response = self.createObject('oh', 'aggregationTests/object.em')

@@ -125,10 +125,9 @@ class Manager:
                 shutil.rmtree(folderName);
 
             os.makedirs(folderName);
-            test_inst = test()
-            test_inst.setOutput(output)
             full_path_bins = dict([(x, os.path.join(binPath, binaries[x])) for x in binaries])
-            test_inst.runTest(folderName, binaries=full_path_bins, output=output)
+            test_inst = test(folderName, binaries=full_path_bins, output=output)
+            test_inst.runTest()
 
             print("TEST", (test_inst.failed and "FAILED" or "PASSED"), file=output)
             if test_inst.failed:
