@@ -8,8 +8,8 @@ import httplib, socket
 from framework.procset import ProcSet
 
 class HttpCommandTest(Test):
-    def __init__(self):
-        super(HttpCommandTest, self).__init__()
+    def __init__(self, *args, **kwargs):
+        super(HttpCommandTest, self).__init__(*args, **kwargs)
         self._nodes = {}
 
     def add_http(self, name):
@@ -21,7 +21,7 @@ class HttpCommandTest(Test):
                  '--command.commander-options=--port=' + str(self._nodes[name]),
                  ]
 
-    def command(self, name, command, params=None, retries=None, wait=1, output=sys.stdout):
+    def command(self, name, command, params=None, retries=None, wait=1):
         '''
         Execute the given command, with optional JSON params, against the node. Return the response.
 
@@ -51,12 +51,12 @@ class HttpCommandTest(Test):
                     time.sleep(wait)
             except httplib.HTTPException, exc:
                 # Got connection, but it failed. Log and indicate failure
-                #print("HTTP command", command, "to", name, "failed:", str(exc), exc, file=output)
+                #print("HTTP command", command, "to", name, "failed:", str(exc), exc, file=self.output)
                 return None
 
 
         # If we didn't finish successfull, indicate failure
-        #print("HTTP command", command, "to", name, "failed after", tries, "tries", file=output)
+        #print("HTTP command", command, "to", name, "failed after", tries, "tries", file=self.output)
         return None
 
 
@@ -71,11 +71,11 @@ class SingleHttpServerTest(HttpCommandTest):
     service_name = None # e.g., 'space'
     extra_args = {} # Additional command line args for the service
 
-    def runTest(self, outputPath, binaries, output=sys.stdout):
-        service_output_filename = os.path.join(outputPath, self.service_name + '.log')
+    def runTest(self):
+        service_output_filename = os.path.join(self._folder, self.service_name + '.log')
 
         self.add_http(self.service_name)
-        service_cmd = [ binaries[self.service_name] ]
+        service_cmd = [ self._binaries[self.service_name] ]
         service_cmd += self.http_settings(self.service_name)
         service_cmd += ['--' + k + '=' + v for k,v in self.extra_args.iteritems()]
 
@@ -87,14 +87,14 @@ class SingleHttpServerTest(HttpCommandTest):
 
         # If requested, block for upto 10 seconds for the process to start responding to commands
         if self.wait_until_responsive:
-            result = self.command(self.service_name, 'meta.commands', retries=40, wait=.25, output=output)
+            result = self.command(self.service_name, 'meta.commands', retries=40, wait=.25)
             if result is None: self.fail('Server never became responsive to HTTP commands')
 
         # Defer to the implementation for sending and checking test
         # commands. Catch all errors so we can make sure we cleanup the
         # processes properly and report crashes, etc.
         try:
-            self.testCommands(procs, output=output)
+            self.testCommands(procs)
         except:
             self.fail(msg='Uncaught exception during test:\n' + traceback.format_exc())
 
@@ -102,7 +102,7 @@ class SingleHttpServerTest(HttpCommandTest):
         # down cleanly. We just make sure we clean up aggressively if
         # necessary.
         if not procs.done():
-            procs.wait(until=self.duration, killAt=self.duration, output=output)
+            procs.wait(until=self.duration, killAt=self.duration, output=self._output)
 
         # Print a notification if we had to kill this process
         if procs.killed():
@@ -146,12 +146,12 @@ class SpaceMetaCommandsTest(SpaceHttpCommandTest):
     # The one test where we don't want to block until a command gets through
     wait_until_responsive = False
 
-    def testCommands(self, procs, output=sys.stdout):
+    def testCommands(self, procs):
         # meta.commands is always available, even if empty
-        result = self.command(self.service_name, 'meta.commands', retries=40, wait=.25, output=output)
+        result = self.command(self.service_name, 'meta.commands', retries=40, wait=.25)
         self.assertIsNotNone(result)
         # We need to hup this one because we don't try to shutdown cleanly
-        procs.hup(output=output)
+        procs.hup(output=self.output)
 
 class SpaceShutdownTest(SpaceHttpCommandTest):
     '''
@@ -160,8 +160,8 @@ class SpaceShutdownTest(SpaceHttpCommandTest):
 
     after = [SpaceMetaCommandsTest]
 
-    def testCommands(self, procs, output=sys.stdout):
-        self.assertIsNotNone( self.command(self.service_name, 'context.shutdown', output=output) )
+    def testCommands(self, procs):
+        self.assertIsNotNone( self.command(self.service_name, 'context.shutdown') )
 
 
 class OHObjectTest(OHHttpCommandTest):
@@ -173,7 +173,7 @@ class OHObjectTest(OHHttpCommandTest):
         'object-factory-opts': '--db=not-a-real-db.db' # Disable loading objects from db
         }
 
-    def testCommands(self, procs, output=sys.stdout):
+    def testCommands(self, procs):
         # Should start empty
         response = self.command(self.service_name, 'oh.objects.list')
         self.assertIsNotNone(response)

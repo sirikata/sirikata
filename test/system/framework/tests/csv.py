@@ -21,23 +21,17 @@ class CSVTest(Test):
     # that option.
     needs_hup = False
 
-    '''
-    @param {String} dirtyFolderName The testManager guarantees that a
-    folder exists with this name that csvTest can write arbitrary
-    files to without interfering with anything else that's running.
-    The testManager will delete this folder after runTest returns.
-    '''
-    def runTest(self, dirtyFolderName, binaries, output=sys.stdout):
-        dbFilename = os.path.join(dirtyFolderName, 'unit_test_csv_db.db')
-        cppoh_output_filename = os.path.join(dirtyFolderName, 'cppoh.log')
-        space_output_filename = os.path.join(dirtyFolderName, 'space.log')
+    def runTest(self):
+        dbFilename = os.path.join(self._folder, 'unit_test_csv_db.db')
+        cppoh_output_filename = os.path.join(self._folder, 'cppoh.log')
+        space_output_filename = os.path.join(self._folder, 'space.log')
 
         procs = ProcSet()
 
         # Random port to avoid conflicts
         port = random.randint(2000, 3000)
         # Space
-        space_cmd = [ binaries['space'] ]
+        space_cmd = [ self._binaries['space'] ]
         space_cmd.append('--servermap-options=--port=' + str(port))
 
         space_output = open(space_output_filename, 'w')
@@ -51,7 +45,7 @@ class CSVTest(Test):
         # OH - create the db file to read from.
         csvGen = CSVGenerator(self.entities);
         csvGen.write(dbFilename)
-        cppoh_cmd = [ binaries['cppoh'] ]
+        cppoh_cmd = [ self._binaries['cppoh'] ]
         cppoh_cmd.append('--servermap-options=--port=' + str(port))
         cppoh_cmd.append('--object-factory=csv')
         cppoh_cmd.append('--object-factory-opts=--db='+ os.path.abspath(dbFilename))
@@ -64,7 +58,7 @@ class CSVTest(Test):
         procs.process(cppoh_cmd, stdout=cppoh_output, stderr=subprocess.STDOUT, default=True)
 
         # This type of test expects things to exit cleanly
-        procs.wait(until=self.duration, killAt=self.duration+10, output=output)
+        procs.wait(until=self.duration, killAt=self.duration+10, output=self.output)
 
         # Print a notification if we had to kill this process
         if (self.needs_hup and procs.killed()) or (not self.needs_hup and procs.hupped()):
@@ -78,11 +72,11 @@ class CSVTest(Test):
         self.assertReturnCode(procs.returncode())
 
     def report(self):
-        print("Execution Log:", file=self._output)
+        print("Execution Log:", file=self.output)
         for report_name, report_file in self.report_files.iteritems():
-            print("  ", report_name, file=self._output)
+            print("  ", report_name, file=self.output)
             fp = open(report_file, 'r')
             for line in fp.readlines():
-                print("    ", line, end='', file=self._output)
+                print("    ", line, end='', file=self.output)
             fp.close()
-            print(file=self._output)
+            print(file=self.output)

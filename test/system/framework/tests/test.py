@@ -47,9 +47,12 @@ class Test(object):
     errors = DefaultErrorConditions
 
 
-    def __init__(self):
+    def __init__(self, folderName, binaries, output):
         self._failed = False
-        self._output = None
+
+        self._folder = folderName
+        self._binaries = binaries
+        self._output = output
 
     def setOutput(self, output):
         self._output = output
@@ -57,6 +60,10 @@ class Test(object):
     @property
     def failed(self):
         return self._failed
+
+    @property
+    def output(self):
+        return self._output
 
 
     def report(self):
