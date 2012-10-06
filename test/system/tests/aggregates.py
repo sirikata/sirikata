@@ -1,11 +1,10 @@
 #!/usr/bin/env python
 
 from __future__ import print_function
-from proximity import ProximityTest
+from framework.tests.world import WorldHttpTest
 import os, random, time
 
-# FIXME would be nicer if this inherited from something more generic than ProximityTest
-class AggregatesTest(ProximityTest):
+class AggregatesTest(WorldHttpTest):
     duration = 30
     wait_until_responsive = True
     script_paths = [ os.path.dirname(__file__) ]
