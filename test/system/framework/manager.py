@@ -12,8 +12,7 @@ _this_script_dir = os.path.dirname(__file__)
 
 DEFAULT_OUTPUT_FILENAME = 'unitTestResults.txt';
 DEFAULT_BIN_PATH = os.path.normpath(os.path.join(_this_script_dir, '../../../build/cmake/'))
-DEFAULT_CPPOH_BIN_NAME = 'cppoh_d'
-DEFAULT_SPACE_BIN_NAME = 'space_d'
+DEFAULT_BINARIES = dict((bin, bin + '_d') for bin in ['space','cppoh','pinto','cseg'])
 
 DEFAULT_OUTPUT_FOLDER = 'output'
 
@@ -87,7 +86,7 @@ class Manager:
         self._testsByName = dict([(t.name, t) for t in self._tests])
 
 
-    def run(self, testNames=None, output=sys.stdout, binPath=DEFAULT_BIN_PATH, cppohBinName=DEFAULT_CPPOH_BIN_NAME, spaceBinName=DEFAULT_SPACE_BIN_NAME, saveOutput=False):
+    def run(self, testNames=None, output=sys.stdout, binPath=DEFAULT_BIN_PATH, binaries=DEFAULT_BINARIES, saveOutput=False):
 
         if not testNames:
             testNames = [t.name for t in self._tests]
@@ -128,7 +127,8 @@ class Manager:
             os.makedirs(folderName);
             test_inst = test()
             test_inst.setOutput(output)
-            test_inst.runTest(folderName,binPath=binPath, cppohBinName=cppohBinName, spaceBinName=spaceBinName, output=output)
+            full_path_bins = dict([(x, os.path.join(binPath, binaries[x])) for x in binaries])
+            test_inst.runTest(folderName, binaries=full_path_bins, output=output)
 
             print("TEST", (test_inst.failed and "FAILED" or "PASSED"), file=output)
             if test_inst.failed:
