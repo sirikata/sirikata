@@ -71,15 +71,11 @@ class SingleHttpServerTest(HttpCommandTest):
     service_name = None # e.g., 'space'
     extra_args = {} # Additional command line args for the service
 
-    def runTest(self, outputPath, binPath, cppohBinName, spaceBinName, output=sys.stdout):
+    def runTest(self, outputPath, binaries, output=sys.stdout):
         service_output_filename = os.path.join(outputPath, self.service_name + '.log')
 
         self.add_http(self.service_name)
-        if self.service_name == 'space':
-            service_bin = spaceBinName
-        elif self.service_name == 'cppoh':
-            service_bin = cppohBinName
-        service_cmd = [os.path.join(binPath, service_bin)]
+        service_cmd = [ binaries[self.service_name] ]
         service_cmd += self.http_settings(self.service_name)
         service_cmd += ['--' + k + '=' + v for k,v in self.extra_args.iteritems()]
 

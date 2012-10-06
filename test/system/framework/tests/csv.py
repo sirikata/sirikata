@@ -26,15 +26,8 @@ class CSVTest(Test):
     folder exists with this name that csvTest can write arbitrary
     files to without interfering with anything else that's running.
     The testManager will delete this folder after runTest returns.
-
-    @param {String} binPath should be the name of the
-    directory that cppoh is in.
-
-    @param {String} cppohBinName The actual name of the
-    binary/executale to run.
-
     '''
-    def runTest(self, dirtyFolderName, binPath, cppohBinName, spaceBinName, output=sys.stdout):
+    def runTest(self, dirtyFolderName, binaries, output=sys.stdout):
         dbFilename = os.path.join(dirtyFolderName, 'unit_test_csv_db.db')
         cppoh_output_filename = os.path.join(dirtyFolderName, 'cppoh.log')
         space_output_filename = os.path.join(dirtyFolderName, 'space.log')
@@ -44,7 +37,7 @@ class CSVTest(Test):
         # Random port to avoid conflicts
         port = random.randint(2000, 3000)
         # Space
-        space_cmd = [os.path.join(binPath, spaceBinName)]
+        space_cmd = [ binaries['space'] ]
         space_cmd.append('--servermap-options=--port=' + str(port))
 
         space_output = open(space_output_filename, 'w')
@@ -58,7 +51,7 @@ class CSVTest(Test):
         # OH - create the db file to read from.
         csvGen = CSVGenerator(self.entities);
         csvGen.write(dbFilename)
-        cppoh_cmd = [os.path.join(binPath, cppohBinName)]
+        cppoh_cmd = [ binaries['cppoh'] ]
         cppoh_cmd.append('--servermap-options=--port=' + str(port))
         cppoh_cmd.append('--object-factory=csv')
         cppoh_cmd.append('--object-factory-opts=--db='+ os.path.abspath(dbFilename))

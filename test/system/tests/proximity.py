@@ -35,12 +35,7 @@ class ProximityTest(HttpCommandTest):
         of a services entry'''
         return {}
 
-    def runTest(self, outputPath, binPath, cppohBinName, spaceBinName, output=sys.stdout):
-        bins = {
-            'space' : os.path.join(binPath, spaceBinName),
-            'cppoh' : os.path.join(binPath, cppohBinName)
-            }
-
+    def runTest(self, outputPath, binaries, output=sys.stdout):
         procs = ProcSet()
         self.report_files = {}
         self._outputs = {}
@@ -51,7 +46,7 @@ class ProximityTest(HttpCommandTest):
 
             # Add with http port
             self.add_http(svc_name)
-            service_cmd = [bins[svc['type']]]
+            service_cmd = [binaries[svc['type']]]
             service_cmd += self.http_settings(svc_name)
             if svc['type'] == 'cppoh':
                 service_cmd.append('--objecthost=--scriptManagers=js:{--import-paths=%s}' % (','.join(self.script_paths)))
