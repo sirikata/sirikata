@@ -27,7 +27,7 @@ class SingleHttpServerTest(HttpCommandTest):
         service_output = open(service_output_filename, 'w')
         print(' '.join(service_cmd), file=service_output)
         service_output.flush()
-        procs.process(service_cmd, stdout=service_output, stderr=subprocess.STDOUT, default=True)
+        procs.process(self.service_name, service_cmd, stdout=service_output, stderr=subprocess.STDOUT, default=True)
 
         # If requested, block for upto 10 seconds for the process to start responding to commands
         if self.wait_until_responsive:

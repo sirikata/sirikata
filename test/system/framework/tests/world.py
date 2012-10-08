@@ -32,6 +32,12 @@ class WorldHttpTest(HttpCommandTest):
         return {}
 
     def runTest(self):
+        try:
+            if hasattr(self, 'testPre') and callable(self.testPre):
+                self.testPre()
+        except:
+            self.fail(msg='Uncaught exception during pre test:\n' + traceback.format_exc())
+
         procs = ProcSet()
         self.report_files = {}
         self._outputs = {}
@@ -52,11 +58,11 @@ class WorldHttpTest(HttpCommandTest):
                 service_cmd += ['--' + k + '=' + v for k,v in args.iteritems()]
 
             service_output = open(service_output_filename, 'w')
-            print(' '.join(service_cmd), file=service_output)
+            print(service_cmd, file=service_output)
             service_output.flush()
             default_proc = (('default' in svc) and svc['default']) or False
             wait_proc = ('wait' not in svc) or svc['wait']
-            procs.process(service_cmd, stdout=service_output, stderr=subprocess.STDOUT, default=default_proc, wait=wait_proc)
+            procs.process(svc_name, service_cmd, stdout=service_output, stderr=subprocess.STDOUT, default=default_proc, wait=wait_proc)
 
             self._outputs[svc_name] = service_output
             self.report_files[svc_name] = service_output_filename
@@ -64,7 +70,7 @@ class WorldHttpTest(HttpCommandTest):
             # If requested, block for upto 10 seconds for the process to start responding to commands
             if self.wait_until_responsive:
                 result = self.command(svc_name, 'meta.commands', retries=40, wait=.25)
-                if result is None: self.fail('Server never became responsive to HTTP commands')
+                if result is None: self.fail('Server never became responsive to HTTP commands: ' + svc_name)
 
         # Defer to the implementation for sending and checking test
         # commands. Catch all errors so we can make sure we cleanup the
@@ -90,17 +96,27 @@ class WorldHttpTest(HttpCommandTest):
             self.assertLogErrorFree(service_output_filename)
 
         self.assertReturnCode(procs.returncode())
+        self.procs = procs
 
+        try:
+            if hasattr(self, 'testPost') and callable(self.testPost):
+                self.testPost()
+        except:
+            self.fail(msg='Uncaught exception during post test:\n' + traceback.format_exc())
         #self.report()
 
     def report(self):
         print("Execution Log:", file=self.output)
-        for report_name, report_file in self.report_files.iteritems():
+        for svc_idx,svc in enumerate(self.services):
+            report_name = svc['name']
+            report_file = self.report_files[report_name]
             print("  ", report_name, file=self.output)
             fp = open(report_file, 'r')
             for line in fp.readlines():
                 print("    ", line, end='', file=self.output)
             fp.close()
+            print(file=self.output)
+            print("    Exited with code " + str(self.procs.returncode(report_name)), file=self.output)
             print(file=self.output)
 
 

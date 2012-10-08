@@ -14,7 +14,7 @@ var connectDefaultQuerier = function(cb) {
     system.createPresence(
         {
             'space' : '12345678-1111-1111-1111-DEFA01759ACE',
-            'pos' : <0, 0, 0>,
+            'pos' : <-1, 0, 0>,
             'solidAngleQuery' : .0000001,
             'callback' : cb
         }
