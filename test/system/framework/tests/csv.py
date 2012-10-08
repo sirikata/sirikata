@@ -37,7 +37,7 @@ class CSVTest(Test):
         space_output = open(space_output_filename, 'w')
         print(' '.join(space_cmd), file=space_output)
         space_output.flush()
-        procs.process(space_cmd, stdout=space_output, stderr=subprocess.STDOUT, wait=False)
+        procs.process('space', space_cmd, stdout=space_output, stderr=subprocess.STDOUT, wait=False)
         # Wait for space to startup
         procs.sleep(3)
 
@@ -55,7 +55,7 @@ class CSVTest(Test):
         cppoh_output = open(cppoh_output_filename,'w')
         print(' '.join(cppoh_cmd), file=cppoh_output)
         cppoh_output.flush()
-        procs.process(cppoh_cmd, stdout=cppoh_output, stderr=subprocess.STDOUT, default=True)
+        procs.process('cppoh', cppoh_cmd, stdout=cppoh_output, stderr=subprocess.STDOUT, default=True)
 
         # This type of test expects things to exit cleanly
         procs.wait(until=self.duration, killAt=self.duration+10, output=self.output)

@@ -23,13 +23,14 @@ class ProcSet:
     def __init__(self):
         self._procs = set()
         self._defaultProc = None
+        self._named_procs = {}
 
         # Time we started the first process
         self._start = None
         # Whether we've sent sighups out to the processes yet
         self._sighupped = False
 
-    def process(self, *args, **kwargs):
+    def process(self, name, *args, **kwargs):
         """
         Start a process running
 
@@ -63,6 +64,7 @@ class ProcSet:
         p.hupped = False
         p.killed = False
         self._procs.add(p)
+        self._named_procs[name] = p
 
         if set_default:
             self._defaultProc = p
@@ -160,11 +162,14 @@ class ProcSet:
             raise RuntimeError("No process marked as the default, can't determine if it was sent a SIGKILL")
         return self._defaultProc.killed
 
-    def returncode(self):
+    def returncode(self, name=None):
         """
         Return the exit code for the given process (by index). If no
         index is specified, returns the default process's result.
         """
+        if name is not None:
+            return self._named_procs[name].proc.returncode
+
         if not self._defaultProc:
             raise RuntimeError("No process marked as the default, can't determine if it was sent a SIGKILL")
         return self._defaultProc.proc.returncode

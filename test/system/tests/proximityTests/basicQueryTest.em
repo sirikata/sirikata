@@ -4,9 +4,9 @@ system.require('proxUtil.em');
 mTest = new UnitTest('basicQueryTest');
 
 // Test picking up objects connected before and after the
-// querier.
+// querier. When distributed, querier is on server 1 (-x).
 connectObject(
-    <0,0,0>,
+    <-2,0,0>, // On server 1 when distributed
     function() {
         connectDefaultQuerier(
             function() {
@@ -22,7 +22,7 @@ connectObject(
                                 system.killEntity();
                             }
                         );
-                        connectObject(<0,0,0>);
+                        connectObject(<1,0,0>); // On server 2 when distributed
                     }
                 );
             }
