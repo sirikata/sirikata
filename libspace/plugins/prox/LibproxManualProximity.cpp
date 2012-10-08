@@ -767,7 +767,7 @@ void LibproxManualProximity::handleObjectHostProxMessage(const OHDP::NodeID& id,
                     }
                     else
                         command_succeeded = q->coarsen(qur.nodes[i]);
-                    PROXLOG(detailed, (qur.refine ? " Refine" : " Coarsen") << " for object host query " << sid << " node " << qur.nodes[i] << " " << (command_succeeded ? "succeeded" : "failed"));
+                    PROXLOG(detailed, (qur.refine ? " Refine" : " Coarsen") << " for object host query " << sid << " remote node " << qur.nodes[i] << " " << (command_succeeded ? "succeeded" : "failed"));
                 }
             }
         }
@@ -778,10 +778,12 @@ void LibproxManualProximity::handleObjectHostProxMessage(const OHDP::NodeID& id,
                 if (query_it == mOHQueries[kls].end()) continue;
                 ProxQuery* q = query_it->second;
                 for(uint32 i = 0; i < qur.nodes.size(); i++) {
+                    bool command_succeeded = false;
                     if (qur.refine)
-                        q->refine(qur.nodes[i]);
+                        command_succeeded = q->refine(qur.nodes[i]);
                     else
-                        q->coarsen(qur.nodes[i]);
+                        command_succeeded = q->coarsen(qur.nodes[i]);
+                    PROXLOG(detailed, (qur.refine ? " Refine" : " Coarsen") << " for object host query " << " local node " << qur.nodes[i] << " " << (command_succeeded ? "succeeded" : "failed"));
                 }
             }
         }
