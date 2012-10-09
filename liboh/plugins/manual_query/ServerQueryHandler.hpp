@@ -50,6 +50,10 @@ public:
     void queriersStoppedObserving(const OHDP::SpaceNodeID& snid, const ProxIndexID indexid, const ObjectReference& objid);
     void replicatedNodeRemoved(const OHDP::SpaceNodeID& snid, ProxIndexID indexid, const ObjectReference& objid);
 
+
+    // Stats about queries to servers we're managing
+    uint32 numQueries() const;
+    uint32 numQueryMessages() const;
 private:
     ObjectHostContext* mContext;
     ManualObjectQueryProcessor* mParent;

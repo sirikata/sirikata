@@ -326,6 +326,27 @@ bool ServerQueryHandler::handleLocationMessage(const OHDP::SpaceNodeID& snid, co
 
 
 
+// Stats
+
+uint32 ServerQueryHandler::numQueries() const {
+    // We could return mServerQueries.size(), but in some cases we haven't
+    // actually initialized the query yet because the number of connection
+    // clients we have recorded is still 0. Instead, scan and check which have
+    // actually initialized the query
+    uint32 res = 0;
+    for(ServerQueryMap::const_iterator serv_it = mServerQueries.begin(); serv_it != mServerQueries.end(); serv_it++)
+        if (serv_it->second->nconnected > 0) res++;
+    return res;
+}
+
+uint32 ServerQueryHandler::numQueryMessages() const {
+    uint32 res = 0;
+    for(ServerQueryMap::const_iterator serv_it = mServerQueries.begin(); serv_it != mServerQueries.end(); serv_it++)
+        serv_it->second->outstanding.size();
+    return res;
+}
+
+
 } // namespace Manual
 } // namespace OH
 } // namespace Sirikata
