@@ -571,11 +571,14 @@ WARN_LOGFILE           =
 # with spaces.
 
 INPUT                  = doc \
+                       libcassandra \
                        libcore \
                        libmesh \
                        libogre \
                        liboh \
+                       libpintoloc \
                        libproxyobject \
+                       libsdl \
                        libspace \
                        libsqlite \
                        cppoh \
