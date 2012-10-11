@@ -342,7 +342,7 @@ uint32 ServerQueryHandler::numQueries() const {
 uint32 ServerQueryHandler::numQueryMessages() const {
     uint32 res = 0;
     for(ServerQueryMap::const_iterator serv_it = mServerQueries.begin(); serv_it != mServerQueries.end(); serv_it++)
-        serv_it->second->outstanding.size();
+        res += serv_it->second->outstanding.size();
     return res;
 }
 
