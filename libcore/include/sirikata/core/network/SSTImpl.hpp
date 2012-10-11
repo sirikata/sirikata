@@ -2311,6 +2311,7 @@ private:
           // need to send it.
           if (buffer->mAckTime != Time::null()) {
               mQueuedBuffers.pop_front();
+              mCurrentQueueLength -= buffer->mBufferLength;
               continue;
           }
 
