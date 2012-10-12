@@ -800,7 +800,7 @@ private:
     payload[0] = htonl(availableChannel);
 
     conn->setLocalChannelID(availableChannel);
-    conn->sendData(payload, sizeof(payload), false);
+    conn->sendDataWithAutoAck(payload, sizeof(payload), false);
 
     return true;
   }
@@ -879,14 +879,21 @@ private:
       std::tr1::shared_ptr<Stream<EndPointType> >
       ( new Stream<EndPointType>(parentLSID, mWeakThis, local_port, remote_port,  usid, lsid, cb, mSSTConnVars) );
     stream->mWeakThis = stream;
-    int numBytesBuffered = stream->init(initial_data, length, false, 0);
+    int numBytesBuffered = stream->init(initial_data, length, false, 0, 0);
 
     mOutgoingSubstreamMap[lsid]=stream;
 
     return numBytesBuffered;
   }
 
-  uint64 sendData(const void* data, uint32 length, bool isAck) {
+  // Implicit version, used when including ack info in self-generated packet,
+  // i.e. not in response to packet from other endpoint
+  uint64 sendDataWithAutoAck(const void* data, uint32 length, bool isAck) {
+      return sendData(data, length, isAck, mLastReceivedSequenceNumber);
+  }
+
+  // Explicit version, used when acking direct response to a packet
+  uint64 sendData(const void* data, uint32 length, bool isAck, uint64 ack_seqno) {
     boost::mutex::scoped_lock lock(mQueueMutex);
 
     assert(length <= MAX_PAYLOAD_SIZE);
@@ -898,7 +905,7 @@ private:
       sstMsg.set_channel_id( mRemoteChannelID );
       sstMsg.set_transmit_sequence_number(mTransmitSequenceNumber);
       sstMsg.set_ack_count(1);
-      sstMsg.set_ack_sequence_number(mLastReceivedSequenceNumber);
+      sstMsg.set_ack_sequence_number(ack_seqno);
 
       sstMsg.set_payload(data, length);
 
@@ -907,7 +914,7 @@ private:
     else {
       if (mQueuedSegments.size() < MAX_QUEUED_SEGMENTS) {
         mQueuedSegments.push_back( std::tr1::shared_ptr<ChannelSegment>(
-                                   new ChannelSegment(data, length, mTransmitSequenceNumber, mLastReceivedSequenceNumber) ) );
+                                   new ChannelSegment(data, length, mTransmitSequenceNumber, ack_seqno) ) );
         // Only service if we're going to be able to send
         // immediately. Otherwise, we must already have outstanding
         // packets waiting for a timeout, in which case this new
@@ -1001,12 +1008,19 @@ private:
     }
   }
 
-  void parsePacket(Sirikata::Protocol::SST::SSTChannelHeader* received_channel_msg )
+  bool parsePacket(Sirikata::Protocol::SST::SSTChannelHeader* received_channel_msg )
   {
     Sirikata::Protocol::SST::SSTStreamHeader* received_stream_msg =
                        new Sirikata::Protocol::SST::SSTStreamHeader();
     bool parsed = parsePBJMessage(received_stream_msg, received_channel_msg->payload());
 
+    // Easiest to default handled to true here since most of these are trivially
+    // handled, they don't require any resources so as long as we look at them
+    // we're good. DATA packets are the only ones we need to be careful
+    // about. INIT and REPLY can receive data, but we should never have an issue
+    // with them as they are the first data, so we'll always have buffer space
+    // for them.
+    bool handled = true;
     if (received_stream_msg->type() == received_stream_msg->INIT) {
       handleInitPacket(received_channel_msg, received_stream_msg);
     }
@@ -1014,16 +1028,17 @@ private:
       handleReplyPacket(received_channel_msg, received_stream_msg);
     }
     else if (received_stream_msg->type() == received_stream_msg->DATA) {
-      handleDataPacket(received_channel_msg, received_stream_msg);
+      handled = handleDataPacket(received_channel_msg, received_stream_msg);
     }
     else if (received_stream_msg->type() == received_stream_msg->ACK) {
       handleAckPacket(received_channel_msg, received_stream_msg);
     }
     else if (received_stream_msg->type() == received_stream_msg->DATAGRAM) {
-      handleDatagram(received_stream_msg);
+        handleDatagram(received_channel_msg, received_stream_msg);
     }
 
-    delete received_stream_msg ;
+    delete received_stream_msg;
+    return handled;
   }
 
   void handleInitPacket(Sirikata::Protocol::SST::SSTChannelHeader* received_channel_msg,
@@ -1047,14 +1062,15 @@ private:
 				     usid, newLSID,
 				     NULL, mSSTConnVars));
         stream->mWeakThis = stream;
-        stream->init(NULL, 0, true, incomingLsid);
+        stream->init(NULL, 0, true, incomingLsid, received_channel_msg->transmit_sequence_number());
 
 	mOutgoingSubstreamMap[newLSID] = stream;
 	mIncomingSubstreamMap[incomingLsid] = stream;
 
 	mListeningStreamsCallbackMap[received_stream_msg->dest_port()](0, stream);
 
-	stream->receiveData(received_stream_msg, received_stream_msg->payload().data(),
+	stream->receiveData(received_channel_msg,
+                            received_stream_msg, received_stream_msg->payload().data(),
 			    received_stream_msg->bsn(),
 			    received_stream_msg->payload().size() );
         stream->receiveAck(
@@ -1067,7 +1083,7 @@ private:
       }
     }
     else {
-      mIncomingSubstreamMap[incomingLsid]->sendReplyPacket(NULL, 0, incomingLsid);
+        mIncomingSubstreamMap[incomingLsid]->sendReplyPacket(NULL, 0, incomingLsid, received_channel_msg->transmit_sequence_number());
     }
   }
 
@@ -1087,7 +1103,8 @@ private:
 	if (stream->mStreamReturnCallback != NULL){
 	  stream->mStreamReturnCallback(SST_IMPL_SUCCESS, stream);
           stream->mStreamReturnCallback = NULL;
-	  stream->receiveData(received_stream_msg, received_stream_msg->payload().data(),
+	  stream->receiveData(received_channel_msg,
+                              received_stream_msg, received_stream_msg->payload().data(),
 			      received_stream_msg->bsn(),
 			      received_stream_msg->payload().size() );
           stream->receiveAck(
@@ -1102,7 +1119,7 @@ private:
     }
   }
 
-  void handleDataPacket(Sirikata::Protocol::SST::SSTChannelHeader* received_channel_msg,
+  bool handleDataPacket(Sirikata::Protocol::SST::SSTChannelHeader* received_channel_msg,
       Sirikata::Protocol::SST::SSTStreamHeader* received_stream_msg)
   {
     LSID incomingLsid = received_stream_msg->lsid();
@@ -1110,16 +1127,21 @@ private:
     if (mIncomingSubstreamMap.find(incomingLsid) != mIncomingSubstreamMap.end()) {
       std::tr1::shared_ptr< Stream<EndPointType> > stream_ptr =
 	mIncomingSubstreamMap[incomingLsid];
-      stream_ptr->receiveData( received_stream_msg,
-			       received_stream_msg->payload().data(),
-			       received_stream_msg->bsn(),
-			       received_stream_msg->payload().size()
-			       );
+      bool stored = stream_ptr->receiveData(received_channel_msg,
+          received_stream_msg,
+          received_stream_msg->payload().data(),
+          received_stream_msg->bsn(),
+          received_stream_msg->payload().size()
+      );
       stream_ptr->receiveAck(
           received_stream_msg,
           received_channel_msg->ack_sequence_number()
       );
+      return stored;
     }
+    // Not sure what to do here if we don't have the stream -- indicate failure
+    // and block progress or just allow things to progress?
+    return true;
   }
 
   void handleAckPacket(Sirikata::Protocol::SST::SSTChannelHeader* received_channel_msg,
@@ -1138,7 +1160,9 @@ private:
     }
   }
 
-  void handleDatagram(Sirikata::Protocol::SST::SSTStreamHeader* received_stream_msg) {
+  void handleDatagram(Sirikata::Protocol::SST::SSTChannelHeader* received_channel_msg,
+                      Sirikata::Protocol::SST::SSTStreamHeader* received_stream_msg)
+  {
       uint8 msg_flags = received_stream_msg->flags();
 
       if (msg_flags & Sirikata::Protocol::SST::SSTStreamHeader::CONTINUES) {
@@ -1187,7 +1211,7 @@ private:
     sstMsg.set_channel_id( mRemoteChannelID );
     sstMsg.set_transmit_sequence_number(mTransmitSequenceNumber);
     sstMsg.set_ack_count(1);
-    sstMsg.set_ack_sequence_number(mLastReceivedSequenceNumber);
+    sstMsg.set_ack_sequence_number(received_channel_msg->transmit_sequence_number());
 
     sendSSTChannelPacket(sstMsg);
 
@@ -1204,12 +1228,12 @@ private:
   // NOTE that this does *not* take ownership of received_msg. The caller is
   // responsible for deleting it.
   void receiveMessage(Sirikata::Protocol::SST::SSTChannelHeader* received_msg) {
-    mLastReceivedSequenceNumber = received_msg->transmit_sequence_number();
+      uint64 ack_seqno = received_msg->transmit_sequence_number();
 
     uint64 receivedAckNum = received_msg->ack_sequence_number();
-
     markAcknowledgedPacket(receivedAckNum);
 
+    bool handled = false;
     if (mState == CONNECTION_PENDING_CONNECT) {
       mState = CONNECTION_CONNECTED;
 
@@ -1221,7 +1245,7 @@ private:
           mRemoteEndPoint.port = ntohl(received_payload[1]);
       }
 
-      sendData( received_payload, 0, false );
+      sendData(received_payload, 0, false, ack_seqno);
 
       boost::mutex::scoped_lock lock(mSSTConnVars->sStaticMembersLock.getMutex());
 
@@ -1237,15 +1261,25 @@ private:
         }
         connectionReturnCallbackMap.erase(mLocalEndPoint);
       }
+
+      handled = true;
     }
     else if (mState == CONNECTION_PENDING_RECEIVE_CONNECT) {
       mState = CONNECTION_CONNECTED;
+      handled = true;
     }
     else if (mState == CONNECTION_CONNECTED) {
-      if (received_msg->payload().size() > 0) {
-        parsePacket(received_msg);
-      }
+      if (received_msg->payload().size() > 0)
+          handled = parsePacket(received_msg);
+      else
+          handled = true;
     }
+
+    // We can only update the received seqno that we're going to ack if we
+    // actually *fully handled* the packet. This is important, e.g., if we
+    // receive a data packet but it had data outside the receive window
+    if (handled)
+        mLastReceivedSequenceNumber = ack_seqno;
   }
 
   uint64 getRTOMicroseconds() {
@@ -1411,7 +1445,7 @@ private:
          }
          conn->setState(CONNECTION_PENDING_RECEIVE_CONNECT);
 
-         conn->sendData(payload, sizeof(payload), false);
+         conn->sendData(payload, sizeof(payload), false, received_msg->transmit_sequence_number());
        }
        else {
          SST_LOG(warn, "No one listening on this connection\n");
@@ -1510,7 +1544,7 @@ private:
                 continue;
             }
 
-            sendData(  buffer.data(), buffer.size(), false );
+            sendDataWithAutoAck(  buffer.data(), buffer.size(), false );
 
             currOffset += buffLen;
             // If we got to the send, we can break out of the loop
@@ -2090,7 +2124,8 @@ private:
     // Continues in init, when we have mWeakThis set
   }
 
-  int init(void* initial_data, uint32 length, bool remotelyInitiated, LSID remoteLSID) {
+  // ack_seqno is only required when the stream is remotely initiated
+  int init(void* initial_data, uint32 length, bool remotelyInitiated, LSID remoteLSID, uint64 ack_seqno) {
     mNumInitRetransmissions = 1;
     if (remotelyInitiated) {
         mRemoteLSID = remoteLSID;
@@ -2116,7 +2151,7 @@ private:
     }
 
     if (remotelyInitiated) {
-      sendReplyPacket(mInitialData, mInitialDataLength, remoteLSID);
+        sendReplyPacket(mInitialData, mInitialDataLength, remoteLSID, ack_seqno);
     }
     else {
       sendInitPacket(mInitialData, mInitialDataLength);
@@ -2438,15 +2473,18 @@ private:
     }
   }
 
-  // Handle reception of data packets (INIT, REPLY, DATA).
-  void receiveData( Sirikata::Protocol::SST::SSTStreamHeader* streamMsg,
-		    const void* buffer, uint64 offset, uint32 len )
+  // Handle reception of data packets (INIT, REPLY, DATA). Return value
+  // indicates if we actually stored the data (or already had it).
+  bool receiveData( Sirikata::Protocol::SST::SSTChannelHeader* received_channel_msg,
+      Sirikata::Protocol::SST::SSTStreamHeader* streamMsg,
+      const void* buffer, uint64 offset, uint32 len )
   {
     const Time curTime = Timer::now();
     mLastReceiveTime = curTime;
 
     if (streamMsg->type() == streamMsg->REPLY) {
       mConnected = true;
+      return true;
     }
     else { // INIT or DATA
         assert(streamMsg->type() == streamMsg->DATA || streamMsg->type() == streamMsg->INIT);
@@ -2460,6 +2498,8 @@ private:
         mTransmitWindowSize = 0;
       }
 
+      // If we generate an ack, we're acking this
+      uint64 ack_seqno = received_channel_msg->transmit_sequence_number();
 
       /*std::cout << "offset=" << offset << " , mLastContiguousByteReceived=" << mLastContiguousByteReceived
         << " , mNextByteExpected=" << mNextByteExpected <<"\n";*/
@@ -2475,17 +2515,20 @@ private:
 	  sendToApp(len);
 
 	  //send back an ack.
-          sendAckPacket();
+          sendAckPacket(ack_seqno);
+          return true;
 	}
         else {
            //dont ack this packet.. its falling outside the receive window.
 	  sendToApp(0);
+          return false;
         }
       }
       else if (len > 0) {
 	if ( (int64)(offset+len-1) <= (int64)mLastContiguousByteReceived) {
 	  //printf("Acking packet which we had already received previously\n");
-	  sendAckPacket();
+	  sendAckPacket(ack_seqno);
+          return true;
 	}
         else if (offsetInBuffer + len <= MAX_RECEIVE_WINDOW) {
 	  assert (offsetInBuffer + len > 0);
@@ -2495,11 +2538,13 @@ private:
    	  memcpy(receiveBuffer()+offsetInBuffer, buffer, len);
 	  memset(receiveBitmap()+offsetInBuffer, 1, len);
 
-          sendAckPacket();
+          sendAckPacket(ack_seqno);
+          return true;
 	}
 	else {
 	  //dont ack this packet.. its falling outside the receive window.
 	  sendToApp(0);
+          return false;
 	}
       }
       else if (len == 0 && (int64)(offset) == mNextByteExpected) {
@@ -2507,9 +2552,12 @@ private:
           // alive, which are just empty packets that we process to keep the
           // connection running. Send an ack so we don't end up with unacked
           // keep alive packets.
-          sendAckPacket();
+          sendAckPacket(ack_seqno);
+          return true;
       }
     }
+    // Anything else doesn't match what we're expecting, indicate failure
+    return false;
   }
 
   // Handle reception of ACK packets.
@@ -2664,12 +2712,12 @@ private:
 
     if (!conn) return;
 
-    conn->sendData( buffer.data(), buffer.size(), false );
+    conn->sendDataWithAutoAck( buffer.data(), buffer.size(), false );
 
     scheduleStreamService(Duration::microseconds(pow(2.0,mNumInitRetransmissions)*mStreamRTOMicroseconds));
   }
 
-  void sendAckPacket() {
+  void sendAckPacket(uint64 ack_seqno) {
     Sirikata::Protocol::SST::SSTStreamHeader sstMsg;
     sstMsg.set_lsid( mLSID );
     sstMsg.set_type(sstMsg.ACK);
@@ -2683,7 +2731,7 @@ private:
 
     std::tr1::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
     assert(conn);
-    conn->sendData(  buffer.data(), buffer.size(), true);
+    conn->sendData(buffer.data(), buffer.size(), true, ack_seqno);
   }
 
   uint64 sendDataPacket(const void* data, uint32 len, uint64 offset) {
@@ -2703,10 +2751,12 @@ private:
 
     std::tr1::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
     assert(conn);
-    return conn->sendData(  buffer.data(), buffer.size(), false);
+    return conn->sendDataWithAutoAck(  buffer.data(), buffer.size(), false);
   }
 
-  void sendReplyPacket(void* data, uint32 len, LSID remoteLSID) {
+  // Reply packets should be in repsonse to other side initiating connection, so
+  // we should have a seqno to ack for the INIT packet
+  void sendReplyPacket(void* data, uint32 len, LSID remoteLSID, uint64 ack_seqno) {
     Sirikata::Protocol::SST::SSTStreamHeader sstMsg;
     sstMsg.set_lsid( mLSID );
     sstMsg.set_type(sstMsg.REPLY);
@@ -2723,7 +2773,7 @@ private:
 
     std::tr1::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
     assert(conn);
-    conn->sendData(  buffer.data(), buffer.size(), false);
+    conn->sendData(  buffer.data(), buffer.size(), false, ack_seqno);
   }
 
   uint8 mState;
