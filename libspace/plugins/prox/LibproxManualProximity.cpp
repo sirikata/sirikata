@@ -765,8 +765,13 @@ void LibproxManualProximity::handleObjectHostProxMessage(const OHDP::NodeID& id,
                         if (result != Prox::MANUAL_QUERY_OP_OK && result != Prox::MANUAL_QUERY_OP_NODE_IS_LEAF)
                             mOHRequestsManager.addFailedRefine(q, qur.nodes[i]);
                     }
-                    else
+                    else {
                         result = q->coarsen(qur.nodes[i]);
+                        // If we hit the root in a bottom-level tree,
+                        // then we should kill the query in that tree.
+                        if (result == Prox::MANUAL_QUERY_OP_NODE_IS_ROOT && sid != NullServerID)
+                            unregisterOHQueryWithServerIndexHandler(id, sid, remote_indexid);
+                    }
                     PROXLOG(detailed, (qur.refine ? " Refine" : " Coarsen") << " for object host query " << sid << " node " << qur.nodes[i] << ": " << Prox::ManualQueryOpResultAsString(result));
                 }
             }
@@ -781,8 +786,13 @@ void LibproxManualProximity::handleObjectHostProxMessage(const OHDP::NodeID& id,
                     Prox::ManualQueryOpResult result = Prox::MANUAL_QUERY_OP_OK;
                     if (qur.refine)
                         result = q->refine(qur.nodes[i]);
-                    else
+                    else {
                         result = q->coarsen(qur.nodes[i]);
+                        // If we hit the root in a bottom-level tree,
+                        // then we should kill the query in that tree.
+                        if (result == Prox::MANUAL_QUERY_OP_NODE_IS_ROOT)
+                            unregisterOHQueryWithServerHandlers(id, mContext->id());
+                    }
                     PROXLOG(detailed, (qur.refine ? " Refine" : " Coarsen") << " for object host query " << " local " << qur.nodes[i] << ": " << Prox::ManualQueryOpResultAsString(result));
                 }
             }
