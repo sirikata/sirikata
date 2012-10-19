@@ -24,8 +24,12 @@ class SIRIKATA_SPACE_EXPORT ObjectHostSession {
         {
         }
 
-    ~ObjectHostSession() {
+    void destroy() {
         if (mSSTStream) mSSTStream->close(true);
+    }
+
+    ~ObjectHostSession() {
+        destroy();
     }
 
     const OHDP::NodeID& id() const { return mID; }
@@ -67,8 +71,10 @@ class ObjectHostSessionManager : public Provider<ObjectHostSessionListener*> {
     void fireObjectHostSessionEnded(const OHDP::NodeID& id) {
         notify(&ObjectHostSessionListener::onObjectHostSessionEnded, id);
         ObjectHostSessionMap::const_iterator it = mOHSessions.find(id);
-        if (it != mOHSessions.end())
+        if (it != mOHSessions.end()) {
+            it->second->destroy();
             mOHSessions.erase(it);
+        }
     }
 
 
