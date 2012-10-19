@@ -84,7 +84,7 @@ EmersonScript::EmersonScript(HostedObjectPtr ho, const String& args,
      ho->getObjectHost()->getPersistedObjectSet(), ho->id(),
      ctx),
    EmersonMessagingManager(ho->context()),
-   jsVisMan(ctx),
+   jsVisMan(ctx, this),
    mParent(ho),
    mHandlingEvent(false),
    mResetting(false),
@@ -443,6 +443,11 @@ void  EmersonScript::iNotifyProximate(
         JSVisibleStruct* jsvis =
             jsVisMan.createVisStruct(this, proximateObject->getObjectReference());
         contIter->second->proximateEvent(querier, jsvis,false);
+        if (JSObjectScript::mCtx->stopped())
+        {
+            JSLOG(warn, "Ignoring remaining addition callbacks after shutdown request.");
+            return;
+        }
     }
 }
 
@@ -579,7 +584,7 @@ void EmersonScript::iOnConnected(SessionEventProviderPtr from,
     ProxyObjectPtr self_proxy = proxy_manager->getProxyObject(name);
     // But we call iOnCreateProxy because we want it to be synchronous
     // and we're already in the correct strand
-    jsVisMan.iOnCreateProxy(self_proxy);
+    jsVisMan.iOnCreateProxy(livenessToken(), self_proxy);
 
     // Because of the async post for this callback (and also just because of
     // some ordering decisions in the object host w.r.t. when queries are
@@ -590,7 +595,7 @@ void EmersonScript::iOnConnected(SessionEventProviderPtr from,
     proxy_manager->getAllObjectReferences(existing_proxies);
     for(ProxyManager::ObjectReferenceList::iterator it = existing_proxies.begin(); it != existing_proxies.end(); it++) {
         if (*it != name)
-            jsVisMan.iOnCreateProxy(proxy_manager->getProxyObject(*it));
+            jsVisMan.iOnCreateProxy(livenessToken(), proxy_manager->getProxyObject(*it));
     }
 
 
@@ -1297,7 +1302,7 @@ void EmersonScript::processSandboxMessage(
     {
         //try to decode as object.
         msgVal = JSSerializer::deserializeObject( this, jsMsg,
-            deserializeWorks);        
+            deserializeWorks);
     }
     else
     {
@@ -1329,7 +1334,7 @@ void EmersonScript::processSandboxMessage(
         argv[1] = senderObj;
     }
 
-    
+
     invokeCallback(receiver,receiver->sandboxMessageCallback,2,argv);
     mHandlingEvent = false;
     mEvalContextStack.pop();

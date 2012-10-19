@@ -8,8 +8,9 @@ namespace Sirikata{
 namespace JS{
 
 
-JSVisibleManager::JSVisibleManager(JSCtx* ctx)
- : mCtx(ctx)
+JSVisibleManager::JSVisibleManager(JSCtx* ctx, Liveness* parent_liveness)
+ : mCtx(ctx),
+   mParentLiveness(parent_liveness)
 {
 }
 
@@ -23,7 +24,10 @@ void JSVisibleManager::clearVisibles() {
     // Stop tracking all known objects to clear out all listeners and state.
     while(!mTrackedObjects.empty()) {
         ProxyObjectPtr toFakeDestroy = *(mTrackedObjects.begin());
-        iOnDestroyProxy(toFakeDestroy);
+        // We need this special version because EmersonScript calls this after
+        // calling letDie(), but we know in that case that the script
+        // will still be alive
+        iOnDestroyProxyWithoutLiveness(toFakeDestroy);
     }
 
     // Some proxies may not have gotten cleared out if there are still
@@ -72,13 +76,17 @@ JSAggregateVisibleDataPtr JSVisibleManager::getOrCreateVisible(
 void JSVisibleManager::onCreateProxy(ProxyObjectPtr p)
 {
     mCtx->visManStrand->post(
-        std::tr1::bind(&JSVisibleManager::iOnCreateProxy,this,p),
+        std::tr1::bind(&JSVisibleManager::iOnCreateProxy, this, mParentLiveness->livenessToken(), p),
         "JSVisibleManager::iOnCreateProxy"
     );
 }
 
-void JSVisibleManager::iOnCreateProxy(ProxyObjectPtr p)
+void JSVisibleManager::iOnCreateProxy(Liveness::Token alive, ProxyObjectPtr p)
 {
+    if (!alive) return;
+    Liveness::Lock locked(alive);
+    if (!locked) return;
+
     RMutex::scoped_lock(vmMtx);
     p->PositionProvider::addListener(this);
     p->MeshProvider::addListener(this);
@@ -92,12 +100,20 @@ void JSVisibleManager::iOnCreateProxy(ProxyObjectPtr p)
 void JSVisibleManager::onDestroyProxy(ProxyObjectPtr p)
 {
     mCtx->visManStrand->post(
-        std::tr1::bind(&JSVisibleManager::iOnDestroyProxy,this,p),
+        std::tr1::bind(&JSVisibleManager::iOnDestroyProxy, this, mParentLiveness->livenessToken(), p),
         "JSVisibleManager::iOnDestroyProxy"
     );
 }
 
-void JSVisibleManager::iOnDestroyProxy(ProxyObjectPtr p)
+void JSVisibleManager::iOnDestroyProxy(Liveness::Token alive, ProxyObjectPtr p)
+{
+    if (!alive) return;
+    Liveness::Lock locked(alive);
+    if (!locked) return;
+
+    iOnDestroyProxyWithoutLiveness(p);
+}
+void JSVisibleManager::iOnDestroyProxyWithoutLiveness(ProxyObjectPtr p)
 {
     RMutex::scoped_lock(vmMtx);
     p->PositionProvider::removeListener(this);
@@ -111,7 +127,7 @@ void JSVisibleManager::iOnDestroyProxy(ProxyObjectPtr p)
 
 void JSVisibleManager::updateLocation(ProxyObjectPtr proxy, const TimedMotionVector3f &newLocation, const TimedMotionQuaternion& newOrient, const AggregateBoundingInfo& newBounds,const SpaceObjectReference& sporef) {
     mCtx->visManStrand->post(
-        std::tr1::bind(&JSVisibleManager::iUpdatedProxy, this, proxy),
+        std::tr1::bind(&JSVisibleManager::iUpdatedProxy, this, mParentLiveness->livenessToken(), proxy),
         "JSVisibleManager::iUpdatedProxy"
     );
 }
@@ -119,34 +135,38 @@ void JSVisibleManager::updateLocation(ProxyObjectPtr proxy, const TimedMotionVec
 
 void JSVisibleManager::onSetMesh(ProxyObjectPtr proxy, Transfer::URI const& newMesh,const SpaceObjectReference& sporef) {
     mCtx->visManStrand->post(
-        std::tr1::bind(&JSVisibleManager::iUpdatedProxy, this, proxy),
+        std::tr1::bind(&JSVisibleManager::iUpdatedProxy, this, mParentLiveness->livenessToken(), proxy),
         "JSVisibleManager::iUpdatedProxy"
     );
 }
 
 void JSVisibleManager::onSetScale(ProxyObjectPtr proxy, float32 newScale ,const SpaceObjectReference& sporef) {
     mCtx->visManStrand->post(
-        std::tr1::bind(&JSVisibleManager::iUpdatedProxy, this, proxy),
+        std::tr1::bind(&JSVisibleManager::iUpdatedProxy, this, mParentLiveness->livenessToken(), proxy),
         "JSVisibleManager::iUpdatedProxy"
     );
 }
 
 void JSVisibleManager::onSetPhysics(ProxyObjectPtr proxy, const String& newphy,const SpaceObjectReference& sporef) {
     mCtx->visManStrand->post(
-        std::tr1::bind(&JSVisibleManager::iUpdatedProxy, this, proxy),
+        std::tr1::bind(&JSVisibleManager::iUpdatedProxy, this, mParentLiveness->livenessToken(), proxy),
         "JSVisibleManager::iUpdatedProxy"
     );
 }
 
 void JSVisibleManager::onSetIsAggregate(ProxyObjectPtr proxy, bool isAggregate, const SpaceObjectReference& sporef) {
     mCtx->visManStrand->post(
-        std::tr1::bind(&JSVisibleManager::iUpdatedProxy, this, proxy),
+        std::tr1::bind(&JSVisibleManager::iUpdatedProxy, this, mParentLiveness->livenessToken(), proxy),
         "JSVisibleManager::iUpdatedProxy"
     );
 }
 
-void JSVisibleManager::iUpdatedProxy(ProxyObjectPtr p)
+void JSVisibleManager::iUpdatedProxy(Liveness::Token alive, ProxyObjectPtr p)
 {
+    if (!alive) return;
+    Liveness::Lock locked(alive);
+    if (!locked) return;
+
     RMutex::scoped_lock(vmMtx);
     JSAggregateVisibleDataPtr data = getOrCreateVisible(p->getObjectReference());
     data->updateFrom(p);

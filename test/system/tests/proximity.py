@@ -194,3 +194,17 @@ class MultipleSSBasicQueryTest(BasicQueryTest, MultipleSS):
 
 class MultipleSSManualBasicQueryTest(BasicQueryTest, MultipleManualSS):
     after = [MultipleSSManualConnectionTest]
+
+
+
+class MigrationQueryTest(ProximityTest):
+    after = [ OHObjectTest ]
+
+    def testBody(self):
+        response = self.createObject('oh', 'proximityTests/migrationQueryTest.em');
+
+class MultipleSSMigrationQueryTest(MigrationQueryTest, MultipleSS):
+    after = [MultipleSSConnectionTest]
+
+class MultipleSSManualMigrationQueryTest(MigrationQueryTest, MultipleManualSS):
+    after = [MultipleSSManualConnectionTest]

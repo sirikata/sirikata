@@ -8,6 +8,7 @@
 #include "JSUtil.hpp"
 #include "JSCtx.hpp"
 #include "JSVisibleData.hpp"
+#include <sirikata/core/util/Liveness.hpp>
 
 namespace Sirikata{
 namespace JS{
@@ -44,7 +45,7 @@ class JSVisibleManager :
         public MeshListener
 {
 public:
-    JSVisibleManager(JSCtx* ctx);
+    JSVisibleManager(JSCtx* ctx, Liveness* parent_liveness);
     virtual ~JSVisibleManager();
 
     typedef boost::recursive_mutex RMutex;
@@ -93,15 +94,16 @@ public:
 
 
 protected:
-    void iOnDestroyProxy(ProxyObjectPtr p);
+    void iOnDestroyProxy(Liveness::Token alive, ProxyObjectPtr p);
+    void iOnDestroyProxyWithoutLiveness(ProxyObjectPtr p);
 
 
     // Invoked when we received an update on a Proxy, making it the most up-to-date.
-    void iUpdatedProxy(ProxyObjectPtr p);
+    void iUpdatedProxy(Liveness::Token alive, ProxyObjectPtr p);
 
 private:
 
-    void iOnCreateProxy(ProxyObjectPtr p);
+    void iOnCreateProxy(Liveness::Token alive, ProxyObjectPtr p);
     void clearVisibles();
 
 
@@ -112,6 +114,7 @@ private:
     virtual void removeVisibleData(JSVisibleData* data);
 
     JSCtx* mCtx;
+    Liveness* mParentLiveness;
 
     typedef std::tr1::unordered_map<SpaceObjectReference, JSAggregateVisibleDataWPtr, SpaceObjectReference::Hasher > SporefProxyMap;
     typedef SporefProxyMap::iterator SporefProxyMapIter;
