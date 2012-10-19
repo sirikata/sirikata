@@ -607,12 +607,12 @@ void LibproxManualProximity::handleUpdateServerQuery(ServerID sid, const String&
             if (query_it == mServerQueries[kls].end()) continue;
             ProxQuery* q = query_it->second;
             for(uint32 i = 0; i < qur.nodes.size(); i++) {
-                bool result = false;
+                Prox::ManualQueryOpResult result = Prox::MANUAL_QUERY_OP_OK;
                 if (qur.refine)
                     result = q->refine(qur.nodes[i]);
                 else
                     result = q->coarsen(qur.nodes[i]);
-                PROXLOG(detailed, (qur.refine ? " Refine" : " Coarsen") << " for server query " << sid << " node " << qur.nodes[i] << " in " << ObjectClassToString((ObjectClass)kls) << " " << (result ? "succeeded" : "failed"));
+                PROXLOG(detailed, (qur.refine ? " Refine" : " Coarsen") << " for server query " << sid << " node " << qur.nodes[i] << " in " << ObjectClassToString((ObjectClass)kls) << ": " << Prox::ManualQueryOpResultAsString(result));
             }
         }
     }
@@ -664,8 +664,8 @@ void LibproxManualProximity::handleUpdateServerQueryResultsToRetryRequests(Serve
                 mOHRequestsManager.lookupWaitingQueries(ObjectReference(addition.parent()), &waiting_queries);
                 if (!waiting_queries.empty()) PROXLOG(detailed, "Retrying " << waiting_queries.size() << " requests for " << addition.parent());
                 for(uint32 i = 0; i < waiting_queries.size(); i++) {
-                    bool suc = waiting_queries[i]->refine(ObjectReference(addition.parent()));
-                    PROXLOG(detailed, "  Retry " << (suc ? " succeeded" : " failed"));
+                    Prox::ManualQueryOpResult suc = waiting_queries[i]->refine(ObjectReference(addition.parent()));
+                    PROXLOG(detailed, "  Retry: " << Prox::ManualQueryOpResultAsString(suc));
                 }
             }
         }
@@ -759,14 +759,15 @@ void LibproxManualProximity::handleObjectHostProxMessage(const OHDP::NodeID& id,
                 mOHRemoteQueries[id][sid].find(remote_indexid) != mOHRemoteQueries[id][sid].end()) {
                 ProxQuery* q = mOHRemoteQueries[id][sid][remote_indexid];
                 for(uint32 i = 0; i < qur.nodes.size(); i++) {
-                    bool command_succeeded = false;
+                    Prox::ManualQueryOpResult result = Prox::MANUAL_QUERY_OP_OK;
                     if (qur.refine) {
-                        command_succeeded = q->refine(qur.nodes[i]);
-                        if (!command_succeeded) mOHRequestsManager.addFailedRefine(q, qur.nodes[i]);
+                        result = q->refine(qur.nodes[i]);
+                        if (result != Prox::MANUAL_QUERY_OP_OK && result != Prox::MANUAL_QUERY_OP_NODE_IS_LEAF)
+                            mOHRequestsManager.addFailedRefine(q, qur.nodes[i]);
                     }
                     else
-                        command_succeeded = q->coarsen(qur.nodes[i]);
-                    PROXLOG(detailed, (qur.refine ? " Refine" : " Coarsen") << " for object host query " << sid << " node " << qur.nodes[i] << " " << (command_succeeded ? "succeeded" : "failed"));
+                        result = q->coarsen(qur.nodes[i]);
+                    PROXLOG(detailed, (qur.refine ? " Refine" : " Coarsen") << " for object host query " << sid << " node " << qur.nodes[i] << ": " << Prox::ManualQueryOpResultAsString(result));
                 }
             }
         }
@@ -777,10 +778,12 @@ void LibproxManualProximity::handleObjectHostProxMessage(const OHDP::NodeID& id,
                 if (query_it == mOHQueries[kls].end()) continue;
                 ProxQuery* q = query_it->second;
                 for(uint32 i = 0; i < qur.nodes.size(); i++) {
+                    Prox::ManualQueryOpResult result = Prox::MANUAL_QUERY_OP_OK;
                     if (qur.refine)
-                        q->refine(qur.nodes[i]);
+                        result = q->refine(qur.nodes[i]);
                     else
-                        q->coarsen(qur.nodes[i]);
+                        result = q->coarsen(qur.nodes[i]);
+                    PROXLOG(detailed, (qur.refine ? " Refine" : " Coarsen") << " for object host query " << " local " << qur.nodes[i] << ": " << Prox::ManualQueryOpResultAsString(result));
                 }
             }
         }
