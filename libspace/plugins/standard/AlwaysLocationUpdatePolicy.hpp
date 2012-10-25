@@ -501,10 +501,10 @@ private:
 
     };
 
-    void tryCreateChildStream(const UUID& dest, ODPSST::Stream::Ptr parent_stream, std::string* msg, int count, const SubscriberInfoPtr&numOutstandingMessageCount);
-    void objectLocSubstreamCallback(int x, ODPSST::Stream::Ptr substream, const UUID& dest, ODPSST::Stream::Ptr parent_substream, std::string* msg, int count, const SubscriberInfoPtr&numOutstandingMessageCount);
-    void tryCreateChildStream(const OHDP::NodeID& dest, OHDPSST::Stream::Ptr parent_stream, std::string* msg, int count, const SubscriberInfoPtr&numOutstandingMessageCount);
-    void ohLocSubstreamCallback(int x, OHDPSST::Stream::Ptr substream, const OHDP::NodeID& dest, OHDPSST::Stream::Ptr parent_substream, std::string* msg, int count, const SubscriberInfoPtr&numOutstandingMessageCount);
+    void tryCreateChildStream(const UUID& dest, ODPSST::StreamPtr parent_stream, std::string* msg, int count, const SubscriberInfoPtr&numOutstandingMessageCount);
+    void objectLocSubstreamCallback(int x, ODPSST::StreamPtr substream, const UUID& dest, ODPSST::StreamPtr parent_substream, std::string* msg, int count, const SubscriberInfoPtr&numOutstandingMessageCount);
+    void tryCreateChildStream(const OHDP::NodeID& dest, OHDPSST::StreamPtr parent_stream, std::string* msg, int count, const SubscriberInfoPtr&numOutstandingMessageCount);
+    void ohLocSubstreamCallback(int x, OHDPSST::StreamPtr substream, const OHDP::NodeID& dest, OHDPSST::StreamPtr parent_substream, std::string* msg, int count, const SubscriberInfoPtr&numOutstandingMessageCount);
 
     bool validSubscriber(const UUID& dest);
     bool validSubscriber(const OHDP::NodeID& dest);

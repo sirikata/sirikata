@@ -39,6 +39,8 @@
 namespace Sirikata {
 namespace Network {
 
+class ASIOStreamBuilder;
+
 /**
  * This class waits on a service and listens for incoming connections
  * It calls the callback whenever such connections are encountered
@@ -52,10 +54,16 @@ public:
         return new TCPStreamListener(io,options);
     }
 
+    virtual void start();
+    virtual void stop();
+
     virtual bool listen(const Address&addr, const Stream::SubstreamCallback&newStreamCallback);
     virtual String listenAddressName()const;
     virtual Address listenAddress()const;
-    virtual void close();
+    void closeListener();
+
+    IOStrand* mStrand;
+    OptionSet* mOptions;
 
     struct Data{ // Data which may be needed in callbacks, so is stored separately in shared_ptr
     private:
@@ -74,6 +82,7 @@ public:
         IOStrand* strand;
         TCPListener* acceptor;
         TCPSocket* socket;
+        ASIOStreamBuilder* builder;
         Stream::SubstreamCallback cb;
         uint8 mMaxSimultaneousSockets;
         bool mNoDelay;

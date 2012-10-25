@@ -105,7 +105,9 @@ def startPinto(**kwargs):
         '--handler=rtreecut',
 
         '--command.commander=http',
-        '--command.commander-options=--port=' + str(http_command_port_base + 100)
+        '--command.commander-options=--port=' + str(http_command_port_base + 100),
+
+        '--type=manual'
         ]
     if 'pinto_config' in kwargs and kwargs['pinto_config']:
         args += [ '--cfg=' + kwargs['pinto_config'] ]
@@ -142,10 +144,14 @@ def startSpace(**kwargs):
             '--oseg-options=' + '--prefix=' + str(oseg_prefix) + ' --transactions=false',
 
             '--command.commander=http',
-            '--command.commander-options=--port=' + str(http_command_port_base + ss)
+            '--command.commander-options=--port=' + str(http_command_port_base + ss),
+
+            '--prox=libprox-manual',
+            '--pinto=master-manual',
+            '--moduleloglevel=prox=detailed'
             ]
-        if not no_pinto:
-            args += ['--pinto=master']
+#        if not no_pinto:
+#            args += ['--pinto=master']
         args += ['--pinto-options=' + '--host=' + str(pinto_ip) + ' --port=' + str(pinto_port)]
 
         if n_cseg_servers > 0:

@@ -7,7 +7,7 @@
 
 #include <sirikata/space/Platform.hpp>
 #include <sirikata/core/util/ListenerProvider.hpp>
-#include <sirikata/core/ohdp/SST.hpp>
+#include <sirikata/core/ohdp/SSTDecls.hpp>
 #include <sirikata/space/SpaceContext.hpp>
 
 namespace Sirikata {
@@ -17,28 +17,23 @@ namespace Sirikata {
 
 class SIRIKATA_SPACE_EXPORT ObjectHostSession {
   public:
-    ObjectHostSession(const OHDP::NodeID& id, OHDPSST::Stream::Ptr strm)
+    ObjectHostSession(const OHDP::NodeID& id, OHDPSST::StreamPtr strm)
         : mID(id),
         mSSTStream(strm),
         mSeqNo(new SeqNo())
         {
         }
 
-    void destroy() {
-        if (mSSTStream) mSSTStream->close(true);
-    }
-
-    ~ObjectHostSession() {
-        destroy();
-    }
+    void destroy();
+    ~ObjectHostSession();
 
     const OHDP::NodeID& id() const { return mID; }
-    const OHDPSST::Stream::Ptr& stream() const { return mSSTStream; }
+    const OHDPSST::StreamPtr& stream() const { return mSSTStream; }
     const SeqNoPtr& seqNoPtr() const { return mSeqNo; }
 
   private:
     OHDP::NodeID mID;
-    OHDPSST::Stream::Ptr mSSTStream;
+    OHDPSST::StreamPtr mSSTStream;
     SeqNoPtr mSeqNo;
 };
 typedef std::tr1::shared_ptr<ObjectHostSession> ObjectHostSessionPtr;
@@ -62,7 +57,7 @@ class ObjectHostSessionManager : public Provider<ObjectHostSessionListener*> {
     }
 
     // Owner interface
-    void fireObjectHostSession(const OHDP::NodeID& id, OHDPSST::Stream::Ptr oh_stream) {
+    void fireObjectHostSession(const OHDP::NodeID& id, OHDPSST::StreamPtr oh_stream) {
         ObjectHostSessionPtr sess(new ObjectHostSession(id, oh_stream));
         mOHSessions[id] = sess;
         notify(&ObjectHostSessionListener::onObjectHostSession, id, sess);

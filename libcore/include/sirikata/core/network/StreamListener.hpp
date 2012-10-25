@@ -34,16 +34,22 @@
 #define SIRIKATA_StreamListener_HPP__
 
 #include <sirikata/core/network/Stream.hpp>
+#include <sirikata/core/service/Service.hpp>
 
 namespace Sirikata { namespace Network {
 /**
  * This class waits on a service and listens for incoming connections
  * It calls the callback whenever such connections are encountered
  */
-class SIRIKATA_EXPORT StreamListener {
+class SIRIKATA_EXPORT StreamListener : public Service {
 protected:
     StreamListener();
 public:
+
+    // Service Interface
+    virtual void start() = 0;
+    virtual void stop() = 0;
+
     ///subclasses will expose these methods with similar arguments + protocol specific args
     virtual bool listen(
         const Address&addy,
@@ -52,8 +58,7 @@ public:
     virtual String listenAddressName()const=0;
     ///returns thea name of the computer followed by a colon and then the service being listened on
     virtual Address listenAddress()const=0;
-    ///stops listening
-    virtual void close()=0;
+
     virtual ~StreamListener();
 };
 } }

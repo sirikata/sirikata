@@ -4,6 +4,7 @@
 
 
 #include <sirikata/space/Proximity.hpp>
+#include <boost/lexical_cast.hpp>
 
 AUTO_SINGLETON_INSTANCE(Sirikata::ProximityFactory);
 

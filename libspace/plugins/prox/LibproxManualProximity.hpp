@@ -122,7 +122,7 @@ private:
     virtual int32 serverQueries() const;
 
     // ObjectHost message management
-    void handleObjectHostSubstream(int success, OHDPSST::Stream::Ptr substream, SeqNoPtr seqNo);
+    void handleObjectHostSubstream(int success, OHDPSST::StreamPtr substream, SeqNoPtr seqNo);
 
     // Server queries management
     void updateServerQuery(ServerID sid, const String& raw_query);

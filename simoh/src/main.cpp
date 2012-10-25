@@ -43,6 +43,8 @@
 #include <sirikata/core/util/PluginManager.hpp>
 #include <sirikata/core/trace/Trace.hpp>
 #include <sirikata/core/network/ServerIDMap.hpp>
+#include <sirikata/core/odp/SST.hpp>
+#include <sirikata/core/ohdp/SST.hpp>
 
 void *main_loop(void *);
 int main(int argc, char** argv) {

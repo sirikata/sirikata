@@ -35,8 +35,8 @@
 
 #include <sirikata/oh/Platform.hpp>
 #include <sirikata/core/service/Context.hpp>
-#include <sirikata/core/odp/SST.hpp>
-#include <sirikata/core/ohdp/SST.hpp>
+#include <sirikata/core/odp/SSTDecls.hpp>
+#include <sirikata/core/ohdp/SSTDecls.hpp>
 #include "Trace.hpp"
 
 namespace Sirikata {

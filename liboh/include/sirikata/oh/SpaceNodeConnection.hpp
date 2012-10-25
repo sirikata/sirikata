@@ -43,6 +43,8 @@
 #include <sirikata/core/util/SpaceID.hpp>
 #include <sirikata/core/util/Liveness.hpp>
 
+#include <sirikata/core/ohdp/Service.hpp>
+
 #include "QueueRouterElement.hpp"
 
 namespace Sirikata {
@@ -51,10 +53,10 @@ namespace Sirikata {
 struct SIRIKATA_OH_EXPORT SpaceNodeConnection : public Liveness {
   public:
     typedef OHDPSST::Stream OHSSTStream;
-    typedef OHSSTStream::Ptr OHSSTStreamPtr;
+    typedef OHDPSST::StreamPtr OHSSTStreamPtr;
     typedef OHDPSST::Endpoint OHSSTEndpoint;
     typedef OHDPSST::BaseDatagramLayer OHSSTBaseDatagramLayer;
-    typedef OHDPSST::BaseDatagramLayer::Ptr OHSSTBaseDatagramLayerPtr;
+    typedef OHDPSST::BaseDatagramLayerPtr OHSSTBaseDatagramLayerPtr;
 
     typedef std::tr1::function<void(SpaceNodeConnection*)> GotSpaceConnectionCallback;
     typedef std::tr1::function<void(SpaceNodeConnection*)> ReceiveCallback;

@@ -263,6 +263,21 @@ void ManualObjectQueryProcessor::commandProperties(const Command::Command& cmd, 
     Command::Result result = Command::EmptyResult();
     result.put("name", "libprox-manual");
     result.put("settings.handlers", mObjectQueryHandlers.size());
+
+    result.put("queries.server.count", mServerQueryHandler.numQueries());
+    result.put("queries.server.messages", mServerQueryHandler.numQueryMessages());
+
+    {
+        uint32 count = 0, messages = 0;
+        for(QueryHandlerMap::const_iterator it = mObjectQueryHandlers.begin(); it != mObjectQueryHandlers.end(); it++) {
+            count += it->second->objectQueries();
+            messages += it->second->objectQueryMessages();
+        }
+
+        result.put("queries.objects.count", count);
+        result.put("queries.objects.messages", messages);
+    }
+
     cmdr->result(cmdid, result);
 }
 

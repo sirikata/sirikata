@@ -12,7 +12,7 @@
 #include <sirikata/space/ServerMessage.hpp>
 #include <sirikata/core/service/PollingService.hpp>
 
-#include <sirikata/core/network/SSTImpl.hpp>
+#include <sirikata/core/odp/SSTDecls.hpp>
 
 #include <sirikata/space/Platform.hpp>
 
@@ -308,8 +308,7 @@ protected:
     void notifyOnLocationUpdateFromServer(const ServerID sid, const Sirikata::Protocol::Loc::LocationUpdate& update);
 
     // Helpers for listening to streams
-    typedef SST::Stream<SpaceObjectReference> SSTStream;
-    typedef SSTStream::Ptr SSTStreamPtr;
+    typedef ODPSST::StreamPtr SSTStreamPtr;
     void handleLocationUpdateSubstream(const UUID& source, int err, SSTStreamPtr s);
     void handleLocationUpdateSubstreamRead(const UUID& source, SSTStreamPtr s, std::stringstream* prevdata, uint8* buffer, int length);
     void tryHandleLocationUpdate(const UUID& source, SSTStreamPtr s, const String& payload, std::stringstream* prevdata);

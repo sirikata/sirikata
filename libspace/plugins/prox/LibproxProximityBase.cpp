@@ -6,6 +6,8 @@
 
 #include <sirikata/core/network/Frame.hpp>
 #include <sirikata/core/network/IOStrandImpl.hpp>
+#include <sirikata/core/odp/SST.hpp>
+#include <sirikata/core/ohdp/SST.hpp>
 
 #include "Options.hpp"
 #include <sirikata/core/options/CommonOptions.hpp>

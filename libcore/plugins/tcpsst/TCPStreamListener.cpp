@@ -37,8 +37,8 @@
 #include <sirikata/core/network/IOService.hpp>
 #include "TCPStream.hpp"
 #include "TCPStreamListener.hpp"
-#include "ASIOStreamBuilder.hpp"
 #include <sirikata/core/options/Options.hpp>
+#include "ASIOStreamBuilder.hpp"
 
 namespace Sirikata {
 namespace Network {
@@ -54,6 +54,7 @@ TCPStreamListener::Data::Data(IOStrand* io,
  : strand(io),
    acceptor(NULL),
      socket(NULL),
+   builder(NULL),
      cb(0),
      mMaxSimultaneousSockets(maxSimultaneousSockets),
      mNoDelay(noDelay),
@@ -61,9 +62,11 @@ TCPStreamListener::Data::Data(IOStrand* io,
      mKernelSendBufferSize(kernelSendBufferSize),
      mKernelReceiveBufferSize(kernelReceiveBufferSize)
 {
+    builder = new ASIOStreamBuilder(this);
 }
 
 TCPStreamListener::Data::~Data() {
+    delete builder;
     delete acceptor;
     delete socket;
 }
@@ -71,6 +74,7 @@ TCPStreamListener::Data::~Data() {
 // Start the listening process.
 void TCPStreamListener::Data::start(DataPtr shared_this) {
     assert(shared_this.get() == this);
+    builder->start();
     strand->post(
         std::tr1::bind(&TCPStreamListener::Data::startAccept, shared_this),
         "TCPStreamListener::Data::startAccept"
@@ -113,7 +117,7 @@ void TCPStreamListener::Data::handleAccept(DataPtr& data, const boost::system::e
     data->socket = NULL;
 
     // Hand off the new connection for sessions initiation
-    ASIOStreamBuilder::beginNewStream(newSocket, data);
+    data->builder->beginNewStream(newSocket, data);
 
     // Continue listening
     startAccept(data);
@@ -121,34 +125,48 @@ void TCPStreamListener::Data::handleAccept(DataPtr& data, const boost::system::e
 
 
 TCPStreamListener::TCPStreamListener(IOStrand* io, OptionSet*options)
+ : mStrand(io), mOptions(options), mData()
 {
-    OptionValue *maxSimultSockets=options->referenceOption("max-parallel-sockets");
-    OptionValue *sendBufferSize=options->referenceOption("send-buffer-size");
-    OptionValue *noDelay=options->referenceOption("no-delay");
-    OptionValue *kernelSendBufferSize=options->referenceOption("ksend-buffer-size");
-    OptionValue *kernelReceiveBufferSize=options->referenceOption("kreceive-buffer-size");
-    OptionValue *fragmentPackets=options->referenceOption("test-fragment-packet-level");
+
+}
+
+TCPStreamListener::~TCPStreamListener() {
+    // We can take care of this, but this isn't being used properly as a service
+    // if we still have a listener running
+    if (mData)
+        SILOG(tcpss, warning, "Destroying TCPStreamListener before stop() was called.");
+    closeListener();
+}
+
+void TCPStreamListener::start() {
+}
+
+void TCPStreamListener::stop() {
+    closeListener();
+}
+
+bool TCPStreamListener::listen (const Address&address,
+                                const Stream::SubstreamCallback&newStreamCallback) {
+    closeListener();
+
+    OptionValue *maxSimultSockets = mOptions->referenceOption("max-parallel-sockets");
+    OptionValue *sendBufferSize = mOptions->referenceOption("send-buffer-size");
+    OptionValue *noDelay = mOptions->referenceOption("no-delay");
+    OptionValue *kernelSendBufferSize = mOptions->referenceOption("ksend-buffer-size");
+    OptionValue *kernelReceiveBufferSize = mOptions->referenceOption("kreceive-buffer-size");
+    OptionValue *fragmentPackets = mOptions->referenceOption("test-fragment-packet-level");
     if (fragmentPackets->as<int>()!=-1) {
         TCPStream::sFragmentPackets = fragmentPackets->as<int>();
     }
 
-    assert(maxSimultSockets&&sendBufferSize);
-    DataPtr data (new Data(io,
+    assert(maxSimultSockets && sendBufferSize);
+    DataPtr data (new Data(mStrand,
                            (unsigned char)maxSimultSockets->as<unsigned int>(),
                            sendBufferSize->as<unsigned int>(),
                            noDelay->as<bool>(),
                            kernelSendBufferSize->as<unsigned int>(),
                            kernelReceiveBufferSize->as<unsigned int>()));
-    mData=data;
-}
-
-TCPStreamListener::~TCPStreamListener() {
-    close();
-}
-
-bool TCPStreamListener::listen (const Address&address,
-                                const Stream::SubstreamCallback&newStreamCallback) {
-    close();
+    mData = data;
 
     mData->acceptor = new TCPListener(mData->strand->service(),tcp::endpoint(tcp::v4(), atoi(address.getService().c_str())));
     mData->cb = newStreamCallback;
@@ -170,20 +188,19 @@ Address TCPStreamListener::listenAddress() const {
                    port.str());
 }
 
-void TCPStreamListener::close(){
+void TCPStreamListener::closeListener() {
+    if (!mData) return;
+
+    mData->builder->stop();
     if (mData->acceptor != NULL) {
-
-		boost::system::error_code ec;
+        boost::system::error_code ec;
         mData->acceptor->cancel(ec);
-		if (ec) {
-			SILOG(tcpsst,error,"Error closing listener "<<ec);
-		}
+        if (ec)
+            SILOG(tcpsst,error,"Error closing listener "<<ec);
         mData->acceptor->close();
-
-        delete mData->acceptor;
-        mData->acceptor = NULL;
-        mData->cb = 0;
     }
+    mData->cb = 0;
+    mData.reset();
 }
 
 } // namespace Network

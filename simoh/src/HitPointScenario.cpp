@@ -39,6 +39,7 @@
 #include "Options.hpp"
 #include "ConnectedObjectTracker.hpp"
 #include <sirikata/core/util/RegionWeightCalculator.hpp>
+#include <sirikata/core/odp/SST.hpp>
 
 namespace Sirikata {
 
@@ -94,9 +95,8 @@ public:
         UUID mID;
         DamagableObject *mParent;
 
-        typedef SST::EndPoint<SpaceObjectReference> SSTEndpoint;
-        typedef SST::Stream<SpaceObjectReference> SSTStream;
-        typedef SSTStream::Ptr SSTStreamPtr;
+        typedef ODPSST::Endpoint SSTEndpoint;
+        typedef ODPSST::StreamPtr SSTStreamPtr;
 
         SSTStreamPtr mSendStream;
         SSTStreamPtr mReceiveStream;

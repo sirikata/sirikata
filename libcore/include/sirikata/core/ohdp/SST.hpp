@@ -5,19 +5,11 @@
 #ifndef _SIRIKATA_LIBCORE_OHDP_SST_HPP_
 #define _SIRIKATA_LIBCORE_OHDP_SST_HPP_
 
+#include <sirikata/core/ohdp/SSTDecls.hpp>
 #include <sirikata/core/network/SSTImpl.hpp>
 #include <sirikata/core/ohdp/Service.hpp>
 
 namespace Sirikata {
-
-// Convenience typedefs in a separate namespace
-namespace OHDPSST {
-typedef Sirikata::SST::EndPoint<OHDP::SpaceNodeID> Endpoint;
-typedef Sirikata::SST::BaseDatagramLayer<OHDP::SpaceNodeID> BaseDatagramLayer;
-typedef Sirikata::SST::Connection<OHDP::SpaceNodeID> Connection;
-typedef Sirikata::SST::Stream<OHDP::SpaceNodeID> Stream;
-typedef Sirikata::SST::ConnectionManager<OHDP::SpaceNodeID> ConnectionManager;
-} // namespace OHDPSST
 
 // OHDP::SpaceNodeID/OHDP-specific implementation
 namespace SST {

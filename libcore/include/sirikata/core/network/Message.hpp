@@ -53,7 +53,18 @@ bool serializePBJMessage(std::string* payload, const PBJMessageType& contents) {
     return contents.SerializeToString(payload);
 }
 
-/** Parse a PBJ message from the wire, starting at the given offset from the .
+template<typename WireType>
+inline std::pair<const void*, std::size_t> getBufferBoundaries(const WireType& wire) {
+    return std::make_pair(&wire[0], wire.size());
+}
+
+template<>
+inline std::pair<const void*, std::size_t> getBufferBoundaries<MemoryReference>(const MemoryReference& wire) {
+    return std::make_pair(wire.begin(), wire.size());
+}
+
+/** Parse a PBJ message from the wire, starting at the given offset from the
+ *  beginning of the buffer provided.
  *  \param contents pointer to the message to parse from the data
  *  \param wire the raw data to parse from, either a Network::Chunk or std::string
  *  \param offset the number of bytes into the data to start parsing
@@ -63,9 +74,11 @@ bool serializePBJMessage(std::string* payload, const PBJMessageType& contents) {
 template<typename PBJMessageType, typename WireType>
 bool parsePBJMessage(PBJMessageType* contents, const WireType& wire, uint32 offset = 0, int32 length = -1) {
     assert(contents != NULL);
-    uint32 rlen = (length == -1) ? (wire.size() - offset) : length;
-    assert(offset + rlen <= wire.size()); // buffer overrun
-    return contents->ParseFromArray((void*)&wire[offset], rlen);
+    std::pair<const void*, std::size_t> bounds = getBufferBoundaries(wire);
+    std::size_t wire_size = bounds.second;
+    uint32 rlen = (length == -1) ? (wire_size - offset) : length;
+    assert(offset + rlen <= wire_size); // buffer overrun
+    return contents->ParseFromArray(bounds.first, rlen);
 }
 
 

@@ -145,6 +145,12 @@ int32 ObjectQueryHandler::objectQueries() const {
     return mObjectQueries.size();
 }
 
+int32 ObjectQueryHandler::objectQueryMessages() const {
+    // const_cast because mObjectResults needs to take a lock internally, so
+    // size is non-const
+    return const_cast<ObjectQueryHandler*>(this)->mObjectResults.size();
+}
+
 
 void ObjectQueryHandler::handleDeliverEvents() {
     // Get and ship object results

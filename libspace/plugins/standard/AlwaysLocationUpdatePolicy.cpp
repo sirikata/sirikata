@@ -35,6 +35,8 @@
 #include <sirikata/core/options/Options.hpp>
 #include <sirikata/space/ObjectHostSession.hpp>
 
+#include <sirikata/core/odp/SST.hpp>
+#include <sirikata/core/ohdp/SST.hpp>
 #include "Protocol_Frame.pbj.hpp"
 
 namespace Sirikata {
@@ -261,7 +263,7 @@ void AlwaysLocationUpdatePolicy::service() {
     mObjectSubscriptions.service();
 }
 
-void AlwaysLocationUpdatePolicy::tryCreateChildStream(const UUID& dest, ODPSST::Stream::Ptr parent_stream, std::string* msg, int count, const SubscriberInfoPtr&numOutstandingMessageCount) {
+void AlwaysLocationUpdatePolicy::tryCreateChildStream(const UUID& dest, ODPSST::StreamPtr parent_stream, std::string* msg, int count, const SubscriberInfoPtr&numOutstandingMessageCount) {
     if (!validSubscriber(dest)) {
         //mObjectSubscriptions.decrementOutstandingMessageCount(dest);
         delete msg;
@@ -275,7 +277,7 @@ void AlwaysLocationUpdatePolicy::tryCreateChildStream(const UUID& dest, ODPSST::
     );
 }
 
-void AlwaysLocationUpdatePolicy::objectLocSubstreamCallback(int x, ODPSST::Stream::Ptr substream, const UUID& dest, ODPSST::Stream::Ptr parent_stream, std::string* msg, int count, const SubscriberInfoPtr &numOutstandingMessageCount) {
+void AlwaysLocationUpdatePolicy::objectLocSubstreamCallback(int x, ODPSST::StreamPtr substream, const UUID& dest, ODPSST::StreamPtr parent_stream, std::string* msg, int count, const SubscriberInfoPtr &numOutstandingMessageCount) {
     // If we got it, the data got sent and we can drop the stream
     if (substream) {
         //mObjectSubscriptions.decrementOutstandingMessageCount(dest);
@@ -296,7 +298,7 @@ void AlwaysLocationUpdatePolicy::objectLocSubstreamCallback(int x, ODPSST::Strea
     }
 }
 
-void AlwaysLocationUpdatePolicy::tryCreateChildStream(const OHDP::NodeID& dest, OHDPSST::Stream::Ptr parent_stream, std::string* msg, int count, const SubscriberInfoPtr&numOutstandingMessageCount) {
+void AlwaysLocationUpdatePolicy::tryCreateChildStream(const OHDP::NodeID& dest, OHDPSST::StreamPtr parent_stream, std::string* msg, int count, const SubscriberInfoPtr&numOutstandingMessageCount) {
     if (!validSubscriber(dest)) {
         //mOHSubscriptions.decrementOutstandingMessageCount(dest);
         delete msg;
@@ -310,7 +312,7 @@ void AlwaysLocationUpdatePolicy::tryCreateChildStream(const OHDP::NodeID& dest, 
     );
 }
 
-void AlwaysLocationUpdatePolicy::ohLocSubstreamCallback(int x, OHDPSST::Stream::Ptr substream, const OHDP::NodeID& dest, OHDPSST::Stream::Ptr parent_stream, std::string* msg, int count, const SubscriberInfoPtr&numOutstandingMessageCount) {
+void AlwaysLocationUpdatePolicy::ohLocSubstreamCallback(int x, OHDPSST::StreamPtr substream, const OHDP::NodeID& dest, OHDPSST::StreamPtr parent_stream, std::string* msg, int count, const SubscriberInfoPtr&numOutstandingMessageCount) {
     // If we got it, the data got sent and we can drop the stream
     if (substream) {
         //mOHSubscriptions.decrementOutstandingMessageCount(dest);
@@ -372,7 +374,7 @@ bool AlwaysLocationUpdatePolicy::trySend(const UUID& dest, const Sirikata::Proto
         //mObjectSubscriptions.decrementOutstandingMessageCount(dest);
         return false;
     }
-    ODPSST::Stream::Ptr locServiceStream = session->getStream();
+    ODPSST::StreamPtr locServiceStream = session->getStream();
     if (!locServiceStream) {
         //mObjectSubscriptions.decrementOutstandingMessageCount(dest);
         return false;
@@ -394,7 +396,7 @@ bool AlwaysLocationUpdatePolicy::trySend(const OHDP::NodeID& dest, const Sirikat
         //mOHSubscriptions.decrementOutstandingMessageCount(dest);
         return false;
     }
-    OHDPSST::Stream::Ptr locServiceStream = session->stream();
+    OHDPSST::StreamPtr locServiceStream = session->stream();
     if (!locServiceStream) {
         //mOHSubscriptions.decrementOutstandingMessageCount(dest);
         return false;

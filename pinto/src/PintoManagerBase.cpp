@@ -36,6 +36,7 @@ PintoManagerBase::PintoManagerBase(PintoContext* ctx)
     String listener_port = GetOptionValue<String>(OPT_PINTO_PORT);
     Address listenAddress(listener_host, listener_port);
     PINTO_LOG(debug, "Listening on " << listenAddress.toString());
+    mListener->start();
     mListener->listen(
         listenAddress,
         std::tr1::bind(&PintoManagerBase::newStreamCallback,this,_1,_2)
@@ -53,7 +54,7 @@ void PintoManagerBase::start() {
 }
 
 void PintoManagerBase::stop() {
-    mListener->close();
+    mListener->stop();
 }
 
 void PintoManagerBase::newStreamCallback(Stream* newStream, Stream::SetCallbacks& setCallbacks) {

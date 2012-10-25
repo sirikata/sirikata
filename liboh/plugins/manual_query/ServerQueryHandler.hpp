@@ -50,6 +50,10 @@ public:
     void queriersStoppedObserving(const OHDP::SpaceNodeID& snid, const ProxIndexID indexid, const ObjectReference& objid);
     void replicatedNodeRemoved(const OHDP::SpaceNodeID& snid, ProxIndexID indexid, const ObjectReference& objid);
 
+
+    // Stats about queries to servers we're managing
+    uint32 numQueries() const;
+    uint32 numQueryMessages() const;
 private:
     ObjectHostContext* mContext;
     ManualObjectQueryProcessor* mParent;
@@ -59,7 +63,7 @@ private:
     // object queries. Most of the work is performed by the ReplicatedClient,
     // and this just interacts with it and manages communication.
     struct ServerQueryState {
-        ServerQueryState(ServerQueryHandler* parent_, const OHDP::SpaceNodeID& id_, ObjectHostContext* ctx_, Network::IOStrandPtr strand_, OHDPSST::Stream::Ptr base)
+        ServerQueryState(ServerQueryHandler* parent_, const OHDP::SpaceNodeID& id_, ObjectHostContext* ctx_, Network::IOStrandPtr strand_, OHDPSST::StreamPtr base)
          : nconnected(0),
            sync(new OHSpaceTimeSynced(ctx_->objectHost, id_.space())),
            client(ctx_, strand_, parent_, sync, id_.toString(), id_),
@@ -84,8 +88,8 @@ private:
         // users of it.
         OHSpaceTimeSynced* sync;
         Pinto::Manual::ReplicatedClientWithID<OHDP::SpaceNodeID> client;
-        OHDPSST::Stream::Ptr base_stream;
-        OHDPSST::Stream::Ptr prox_stream;
+        OHDPSST::StreamPtr base_stream;
+        OHDPSST::StreamPtr prox_stream;
         // Whether we've requested the prox_stream
         bool prox_stream_requested;
         // Outstanding data to be sent
@@ -98,7 +102,7 @@ private:
     ServerQueryMap mServerQueries;
 
     // SpaceNodeSessionListener Interface
-    virtual void onSpaceNodeSession(const OHDP::SpaceNodeID& id, OHDPSST::Stream::Ptr sn_stream);
+    virtual void onSpaceNodeSession(const OHDP::SpaceNodeID& id, OHDPSST::StreamPtr sn_stream);
     virtual void onSpaceNodeSessionEnded(const OHDP::SpaceNodeID& id);
 
     // ReplicatedClientWithID Interface
@@ -115,17 +119,17 @@ private:
     // available, it'll keep looping.
     void writeSomeProxData(ServerQueryStatePtr data);
     // Callback from creating proximity substream
-    void handleCreatedProxSubstream(const OHDP::SpaceNodeID& snid, int success, OHDPSST::Stream::Ptr prox_stream);
+    void handleCreatedProxSubstream(const OHDP::SpaceNodeID& snid, int success, OHDPSST::StreamPtr prox_stream);
     // Data read callback for prox substreams -- translate to proximity events
-    void handleProximitySubstreamRead(const OHDP::SpaceNodeID& snid, OHDPSST::Stream::Ptr prox_stream, String* prevdata, uint8* buffer, int length);
+    void handleProximitySubstreamRead(const OHDP::SpaceNodeID& snid, OHDPSST::StreamPtr prox_stream, String* prevdata, uint8* buffer, int length);
     // Handle decode proximity message
     void handleProximityMessage(const OHDP::SpaceNodeID& snid, const String& payload);
 
     // Location
     // Handlers for substreams for space-managed updates
-    void handleLocationSubstream(const OHDP::SpaceNodeID& snid, int err, OHDPSST::Stream::Ptr s);
+    void handleLocationSubstream(const OHDP::SpaceNodeID& snid, int err, OHDPSST::StreamPtr s);
     // Handlers for substream read events for space-managed updates
-    void handleLocationSubstreamRead(const OHDP::SpaceNodeID& snid, OHDPSST::Stream::Ptr s, std::stringstream* prevdata, uint8* buffer, int length);
+    void handleLocationSubstreamRead(const OHDP::SpaceNodeID& snid, OHDPSST::StreamPtr s, std::stringstream* prevdata, uint8* buffer, int length);
     bool handleLocationMessage(const OHDP::SpaceNodeID& snid, const std::string& payload);
 
 };

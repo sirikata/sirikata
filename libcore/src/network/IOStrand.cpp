@@ -126,7 +126,7 @@ void IOStrand::post(const Duration& waitFor, const IOCallback& handler, const ch
 #else
     // This is fine because the timeout means we don't have any ordering
     // constraints, so we can post through the service.
-    mService.post(waitFor, mImpl->wrap( handler ) );
+    mService.post(waitFor, mImpl->wrap( handler ), "(IOStrands)", tag);
 #endif
 }
 

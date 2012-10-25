@@ -34,11 +34,12 @@
 #ifndef SST_IMPL_HPP
 #define SST_IMPL_HPP
 
-#include <sirikata/core/util/Platform.hpp>
+#include <sirikata/core/network/SSTDecls.hpp>
 
 #include <sirikata/core/service/Service.hpp>
 #include <sirikata/core/util/Timer.hpp>
 #include <sirikata/core/service/Context.hpp>
+#include <sirikata/core/network/IOTimer.hpp>
 
 #include <sirikata/core/network/Message.hpp>
 #include <sirikata/core/network/ObjectMessage.hpp>
@@ -117,18 +118,6 @@ private:
   boost::mutex mMutex;
 
 };
-
-template <class EndPointType>
-class Connection;
-
-template <class EndPointType>
-class Stream;
-
-template <typename EndPointType>
-class BaseDatagramLayer;
-
-template <typename EndPointType>
-class ConnectionManager;
 
 template <typename EndPointType>
 class CallbackTypes {
@@ -414,6 +403,77 @@ private:
 
   bool mInSendingMode;
 
+  // We check periodically if all streams have been removed and clean
+  // up the connection if they have.
+  Network::IOTimerPtr mCheckAliveTimer;
+
+  // We can schedule servicing from multiple threads, so we need to
+  // lock protect this data.
+  boost::mutex mSchedulingMutex;
+  // One timer to track servicing. Only one servicing should be scheduled at any
+  // time. Scheduling servicing only does something if nothing is scheduled yet
+  // or if the time it's scheduled for is too late, in which case we update the
+  // timer.
+  Network::IOTimerPtr mServiceTimer;
+  // Sometimes we do servicing directly, i.e. just a post. We need to
+  // track this to make sure we don't double-schedule because the
+  // timer expiry won't be meaningful in that case
+  bool mIsAsyncServicing;
+  // We need to keep a strong reference to ourselves while we're waiting for
+  // servicing. We'll also use this as an indicator of whether servicing is
+  // currently scheduled.
+  ConnectionPtr mServiceStrongRef;
+  // Schedules servicing to occur after the given amount of time.
+  void scheduleConnectionService() {
+      scheduleConnectionService(Duration::zero());
+  }
+  void scheduleConnectionService(const Duration& after) {
+      boost::mutex::scoped_lock lock(mSchedulingMutex);
+
+      bool needs_scheduling = false;
+      if (!mServiceStrongRef) {
+          needs_scheduling = true;
+      }
+      else if(!mIsAsyncServicing && mServiceTimer->expiresFromNow() > after) {
+          needs_scheduling = true;
+          // No need to check success because we're using a strand and we can
+          // only get here if timer->expiresFromNow() is positive.
+          mServiceTimer->cancel();
+      }
+
+      if (needs_scheduling) {
+          mServiceStrongRef = mWeakThis.lock();
+          assert(mServiceStrongRef);
+          if (after == Duration::zero()) {
+              mIsAsyncServicing = true;
+              getContext()->mainStrand->post(
+                  std::tr1::bind(&Connection<EndPointType>::serviceConnectionNoReturn, this),
+                  "Connection<EndPointType>::serviceConnectionNoReturn"
+              );
+          }
+          else {
+              mServiceTimer->wait(after);
+          }
+      }
+  }
+  // Called when servicing is starting to clear out state and allow
+  // the next scheduling. Returns the
+  ConnectionPtr startingService() {
+      // Need to do some basic bookkeeping that makes sure that a) we
+      // have a proper shared_ptr to ourselves, b) we'll hold onto it
+      // for the duration of this call and c) we clear out our
+      // scheduled servicing time so calls to schedule servicing will
+      // work
+      boost::mutex::scoped_lock lock(mSchedulingMutex);
+      ConnectionPtr conn = mServiceStrongRef;
+      assert(conn);
+      // Just clearing the strong ref is enough to let someone else schedule
+      // servicing.
+      mServiceStrongRef.reset();
+      // If this was a plain old async call, make sure we unmark it
+      mIsAsyncServicing = false;
+      return conn;
+  }
 private:
 
   Connection(ConnectionVariables<EndPointType>* sstConnVars,
@@ -421,6 +481,7 @@ private:
              EndPoint<EndPointType> remoteEndPoint)
     : mLocalEndPoint(localEndPoint), mRemoteEndPoint(remoteEndPoint),
       mSSTConnVars(sstConnVars),
+      mDatagramLayer(sstConnVars->getDatagramLayer(localEndPoint.endPoint)),
       mState(CONNECTION_DISCONNECTED),
       mRemoteChannelID(0), mLocalChannelID(1), mTransmitSequenceNumber(1),
       mLastReceivedSequenceNumber(1),
@@ -429,14 +490,26 @@ private:
       MAX_QUEUED_SEGMENTS(3000),
       CC_ALPHA(0.8), mLastTransmitTime(Time::null()),
       mNumInitialRetransmissionAttempts(0),
-      mInSendingMode(true)
+      mInSendingMode(true),
+      mCheckAliveTimer(
+          Network::IOTimer::create(
+              getContext()->mainStrand
+              // Don't set callback yet, we need the shared_ptr to ourselves
+          )
+      ),
+      mServiceTimer(
+          Network::IOTimer::create(
+              getContext()->mainStrand,
+              std::tr1::bind(&Connection<EndPointType>::serviceConnectionNoReturn, this)
+          )
+      ),
+      mIsAsyncServicing(false),
+      mServiceStrongRef() // Should start NULL
   {
-      mDatagramLayer = sstConnVars->getDatagramLayer(localEndPoint.endPoint);
-
       mDatagramLayer->listenOn(
           localEndPoint,
           std::tr1::bind(
-              &Connection::receiveMessage, this,
+              &Connection::receiveMessageRaw, this,
               std::tr1::placeholders::_1,
               std::tr1::placeholders::_2
           )
@@ -450,10 +523,7 @@ private:
       return;
     }
 
-    getContext()->mainStrand->post(Duration::seconds(300),
-        std::tr1::bind(&Connection<EndPointType>::checkIfAlive, this, conn),
-        "Connection<EndPointType>::checkIfAlive"
-    );
+    mCheckAliveTimer->wait(Duration::seconds(300));
   }
 
   void sendSSTChannelPacket(Sirikata::Protocol::SST::SSTChannelHeader& sstMsg) {
@@ -468,16 +538,24 @@ private:
     return mDatagramLayer->context();
   }
 
-  void serviceConnectionNoReturn(std::tr1::shared_ptr<Connection<EndPointType> > conn) {
-      serviceConnection(conn);
+  void serviceConnectionNoReturn() {
+      serviceConnection();
   }
 
-  bool serviceConnection(std::tr1::shared_ptr<Connection<EndPointType> > conn) {
+  bool serviceConnection() {
+      std::tr1::shared_ptr<Connection<EndPointType> > conn = startingService();
+
     const Time curTime = Timer::now();
 
     boost::mutex::scoped_lock lock(mOutstandingSegmentsMutex);
 
 
+    // Special case: if we've gotten back into serviceConnection while
+    // we're waiting for the connection to get setup, we can just
+    // clear out the outstanding connection packet. Normally
+    // outstanding packets would get cleared by not being in sending
+    // mode, but we never change out of sending mode during connection
+    // setup.
     if (mState == CONNECTION_PENDING_CONNECT) {
       mOutstandingSegments.clear();
     }
@@ -508,8 +586,22 @@ private:
       }
     }
 
+    // For the connection, we are in one of two modes: sending or
+    // waiting for acks. Sending mode essentially just means we have
+    // some packets to send and we've got room in the congestion
+    // window, so we're going to be able to push out at least one more
+    // packet. Otherwise, we're just waiting for a timeout on the
+    // packets to guess that they have been lost, causing the window
+    // size to adjust (or nothing is going on with the connection).
     if (mInSendingMode) {
       boost::mutex::scoped_lock lock(mQueueMutex);
+
+      // NOTE: For our current approach, we should never service in
+      // sending mode unless we're going to be able to send some
+      // data. The correctness of the servicing depends on this since
+      // you need to pass through the loop below at least once to
+      // adjust some properties (e.g. sending mode).
+      assert( !mQueuedSegments.empty() && mOutstandingSegments.size() <= mCwnd);
 
       for (int i = 0; (!mQueuedSegments.empty()) && mOutstandingSegments.size() <= mCwnd; i++) {
 	  std::tr1::shared_ptr<ChannelSegment> segment = mQueuedSegments.front();
@@ -526,59 +618,105 @@ private:
                    mLocalEndPoint.endPoint.toString().c_str()
                    , mRemoteEndPoint.endPoint.toString().c_str());*/
 
-
 	  sendSSTChannelPacket(sstMsg);
-
-          if (mState == CONNECTION_PENDING_CONNECT) {
-            mNumInitialRetransmissionAttempts++;
-          }
 
 	  segment->mTransmitTime = curTime;
 	  mOutstandingSegments.push_back(segment);
 
 	  mLastTransmitTime = curTime;
 
+          // If we're setting up the connection, we hold ourselves in
+          // sending mode and keep the initial connection packet in
+          // the queue so it will get retransmitted if we don't hear
+          // back from the other side. Otherwise, we're going to have
+          // either filled up the congestion window or run out of
+          // packets to send by the time we exit.
           if (mState != CONNECTION_PENDING_CONNECT || mNumInitialRetransmissionAttempts > 5) {
             mInSendingMode = false;
             mQueuedSegments.pop_front();
           }
+          // Stop sending packets after the first one if we're setting
+          // up the connection since we'll just keep sending the first
+          // (unpoppped) packet over and over until the window is
+          // filled otherwise.
+          if (mState == CONNECTION_PENDING_CONNECT) {
+              mNumInitialRetransmissionAttempts++;
+              break;
+          }
       }
 
-      if (!mInSendingMode || mState == CONNECTION_PENDING_CONNECT) {
-        getContext()->mainStrand->post(Duration::microseconds(mRTOMicroseconds*pow(2.0,mNumInitialRetransmissionAttempts)),
-            std::tr1::bind(&Connection<EndPointType>::serviceConnectionNoReturn, this, mWeakThis.lock()),
-            "Connection<EndPointType>::serviceConnectionNoReturn"
-        );
+      // After sending, we need to decide when to schedule servicing
+      // next. During normal operation, we can end up in two states
+      // where we would enter serviceConnection in sending mode and
+      // exit here: either we sent all our queued packets and have
+      // space in the congestion window or we had to stop because the
+      // window was full. In both cases, we need to set a timeout
+      // after which we assume packets were dropped. If we get an ack
+      // in the meantime, it puts us back in sending mode and
+      // schedules servicing immediately, effectively resetting that
+      // timer.
+      //
+      // Even when starting up, we're essentially in the same state --
+      // we need to use our current backoff and test for drops. In
+      // this case we'll hold ourselves in sending mode (see in the
+      // loop above), keeping us from adjusting the congestion window,
+      // but we still use the timeout to detect the drop, in that case
+      // forcing a retransmit of the connect packet.
+      //
+      // So essentially, no matter what, if we came through servicing
+      // in sending mode, we just use a timeout-drop-detector and
+      // other events will trigger us to service earlier if necessary.
+
+      // During startup, RTO hasn't been estimated so we need to have
+      // a backoff mechanism to allow for RTTs longer than our initial
+      // guess.
+      if (mState == CONNECTION_PENDING_CONNECT) {
+          // Use numattempts - 1 because we've already incremented
+          // here. This way we start out with a factor of 2^0 = 1
+          // instead of a factor of 2^1 = 2.
+          scheduleConnectionService(Duration::microseconds(mRTOMicroseconds*pow(2.0,(mNumInitialRetransmissionAttempts-1))));
+      }
+      else {
+          // Otherwise, just wait the expected RTT time, plus more to
+          // account for jitter.
+          scheduleConnectionService(Duration::microseconds(mRTOMicroseconds*2));
       }
     }
     else {
-      if (mState == CONNECTION_PENDING_CONNECT) {
-        std::tr1::shared_ptr<Connection<EndPointType> > thus (mWeakThis.lock());
-        if (thus) {
-          cleanup(thus);
-        }else {
-            SILOG(sst,error,"FATAL: pending connection lost weak pointer for Connection<EndPointType> too early to call cleanup on it");
+        // If we are not in sending mode, then we had a timeout after
+        // previous sends.
+
+        // In the case of enough failures during connect, we just have
+        // to give up.
+        if (mState == CONNECTION_PENDING_CONNECT) {
+            std::tr1::shared_ptr<Connection<EndPointType> > thus (mWeakThis.lock());
+            if (thus) {
+                cleanup(thus);
+            } else {
+                SILOG(sst,error,"FATAL: pending connection lost weak pointer for Connection<EndPointType> too early to call cleanup on it");
+            }
+
+            return false; //the connection was unable to contact the other endpoint.
         }
 
-        return false; //the connection was unable to contact the other endpoint.
-      }
+        // Otherwise, adjust the congestion window if we have
+        // oustanding packets left.
+        if (mOutstandingSegments.size() > 0) {
+            mCwnd /= 2;
+            if (mCwnd < 1)
+                mCwnd = 1;
 
-      if (mOutstandingSegments.size() > 0) {
-        mCwnd /= 2;
-
-        if (mCwnd < 1) {
-          mCwnd = 1;
+            mOutstandingSegments.clear();
         }
 
-        mOutstandingSegments.clear();
-      }
-
-      mInSendingMode = true;
-
-      getContext()->mainStrand->post(Duration::microseconds(1),
-          std::tr1::bind(&Connection<EndPointType>::serviceConnectionNoReturn, this, mWeakThis.lock()),
-          "Connection<EndPointType>::serviceConnectionNoReturn"
-      );
+        // And if we have anything to send, put ourselves back into
+        // sending mode and schedule servicing. Outstanding segments
+        // should be empty, so we're guaranteed to send at least one
+        // packet.
+        if (!mQueuedSegments.empty()) {
+            mInSendingMode = true;
+            scheduleConnectionService();
+        }
     }
 
     return true;
@@ -662,7 +800,7 @@ private:
     payload[0] = htonl(availableChannel);
 
     conn->setLocalChannelID(availableChannel);
-    conn->sendData(payload, sizeof(payload), false);
+    conn->sendDataWithAutoAck(payload, sizeof(payload), false);
 
     return true;
   }
@@ -741,24 +879,24 @@ private:
       std::tr1::shared_ptr<Stream<EndPointType> >
       ( new Stream<EndPointType>(parentLSID, mWeakThis, local_port, remote_port,  usid, lsid, cb, mSSTConnVars) );
     stream->mWeakThis = stream;
-    int numBytesBuffered = stream->init(initial_data, length, false, 0);
+    int numBytesBuffered = stream->init(initial_data, length, false, 0, 0);
 
     mOutgoingSubstreamMap[lsid]=stream;
 
     return numBytesBuffered;
   }
 
-  uint64 sendData(const void* data, uint32 length, bool isAck) {
+  // Implicit version, used when including ack info in self-generated packet,
+  // i.e. not in response to packet from other endpoint
+  uint64 sendDataWithAutoAck(const void* data, uint32 length, bool isAck) {
+      return sendData(data, length, isAck, mLastReceivedSequenceNumber);
+  }
+
+  // Explicit version, used when acking direct response to a packet
+  uint64 sendData(const void* data, uint32 length, bool isAck, uint64 ack_seqno) {
     boost::mutex::scoped_lock lock(mQueueMutex);
 
     assert(length <= MAX_PAYLOAD_SIZE);
-
-    Sirikata::Protocol::SST::SSTStreamHeader* stream_msg =
-                       new Sirikata::Protocol::SST::SSTStreamHeader();
-
-    std::string str = std::string( (char*)data, length);
-
-    bool parsed = parsePBJMessage(stream_msg, str);
 
     uint64 transmitSequenceNumber =  mTransmitSequenceNumber;
 
@@ -767,7 +905,7 @@ private:
       sstMsg.set_channel_id( mRemoteChannelID );
       sstMsg.set_transmit_sequence_number(mTransmitSequenceNumber);
       sstMsg.set_ack_count(1);
-      sstMsg.set_ack_sequence_number(mLastReceivedSequenceNumber);
+      sstMsg.set_ack_sequence_number(ack_seqno);
 
       sstMsg.set_payload(data, length);
 
@@ -776,20 +914,20 @@ private:
     else {
       if (mQueuedSegments.size() < MAX_QUEUED_SEGMENTS) {
         mQueuedSegments.push_back( std::tr1::shared_ptr<ChannelSegment>(
-                                   new ChannelSegment(data, length, mTransmitSequenceNumber, mLastReceivedSequenceNumber) ) );
-
-        if (mInSendingMode) {
-          getContext()->mainStrand->post(Duration::milliseconds(1.0),
-              std::tr1::bind(&Connection::serviceConnectionNoReturn, this, mWeakThis.lock()),
-              "Connection::serviceConnectionNoReturn"
-          );
+                                   new ChannelSegment(data, length, mTransmitSequenceNumber, ack_seqno) ) );
+        // Only service if we're going to be able to send
+        // immediately. Otherwise, we must already have outstanding
+        // packets waiting for a timeout, in which case this new
+        // packet will be dealt with as the existing servicing cycle
+        // completes.
+        if (mOutstandingSegments.size() <= mCwnd) {
+            mInSendingMode = true;
+            scheduleConnectionService();
         }
       }
     }
 
     mTransmitSequenceNumber++;
-
-    delete stream_msg;
 
     return transmitSequenceNumber;
   }
@@ -813,10 +951,10 @@ private:
   void setWeakThis( std::tr1::shared_ptr<Connection>  conn) {
     mWeakThis = conn;
 
-    getContext()->mainStrand->post(Duration::seconds(300),
-        std::tr1::bind(&Connection<EndPointType>::checkIfAlive, this, conn),
-        "Connection<EndPointType>::checkIfAlive"
+    mCheckAliveTimer->setCallback(
+        std::tr1::bind(&Connection<EndPointType>::checkIfAlive, this, conn)
     );
+    mCheckAliveTimer->wait(Duration::seconds(300));
   }
 
   USID createNewUSID() {
@@ -853,52 +991,59 @@ private:
               (1.0-CC_ALPHA) * (segment->mAckTime - segment->mTransmitTime).toMicroseconds();
           }
 
-          mInSendingMode = true;
-
-          std::tr1::shared_ptr<Connection<EndPointType> > conn = mWeakThis.lock();
-          if (conn) {
-            getContext()->mainStrand->post(
-                std::tr1::bind(&Connection<EndPointType>::serviceConnectionNoReturn, this, conn),
-                "Connection<EndPointType>::serviceConnectionNoReturn"
-            );
-          }
-
-          if (rand() % mCwnd == 0)  {
-            mCwnd += 1;
-          }
-
           mOutstandingSegments.erase(it);
+
+          if (rand() % mCwnd == 0)
+            mCwnd += 1;
+
+          // We freed up some space in the window. If we have
+          // something left to send, trigger servicing.
+          if (!mQueuedSegments.empty()) {
+              mInSendingMode = true;
+              scheduleConnectionService();
+          }
+
           break;
         }
     }
   }
 
-  void parsePacket(Sirikata::Protocol::SST::SSTChannelHeader* received_channel_msg )
+  bool parsePacket(Sirikata::Protocol::SST::SSTChannelHeader* received_channel_msg )
   {
     Sirikata::Protocol::SST::SSTStreamHeader* received_stream_msg =
                        new Sirikata::Protocol::SST::SSTStreamHeader();
     bool parsed = parsePBJMessage(received_stream_msg, received_channel_msg->payload());
 
+    // Easiest to default handled to true here since most of these are trivially
+    // handled, they don't require any resources so as long as we look at them
+    // we're good. DATA packets are the only ones we need to be careful
+    // about. INIT and REPLY can receive data, but we should never have an issue
+    // with them as they are the first data, so we'll always have buffer space
+    // for them.
+    bool handled = true;
     if (received_stream_msg->type() == received_stream_msg->INIT) {
-      handleInitPacket(received_stream_msg);
+      handleInitPacket(received_channel_msg, received_stream_msg);
     }
     else if (received_stream_msg->type() == received_stream_msg->REPLY) {
-      handleReplyPacket(received_stream_msg);
+      handleReplyPacket(received_channel_msg, received_stream_msg);
     }
     else if (received_stream_msg->type() == received_stream_msg->DATA) {
-      handleDataPacket(received_stream_msg);
+      handled = handleDataPacket(received_channel_msg, received_stream_msg);
     }
     else if (received_stream_msg->type() == received_stream_msg->ACK) {
       handleAckPacket(received_channel_msg, received_stream_msg);
     }
     else if (received_stream_msg->type() == received_stream_msg->DATAGRAM) {
-      handleDatagram(received_stream_msg);
+        handleDatagram(received_channel_msg, received_stream_msg);
     }
 
-    delete received_stream_msg ;
+    delete received_stream_msg;
+    return handled;
   }
 
-  void handleInitPacket(Sirikata::Protocol::SST::SSTStreamHeader* received_stream_msg) {
+  void handleInitPacket(Sirikata::Protocol::SST::SSTChannelHeader* received_channel_msg,
+      Sirikata::Protocol::SST::SSTStreamHeader* received_stream_msg)
+  {
     LSID incomingLsid = received_stream_msg->lsid();
 
     if (mIncomingSubstreamMap.find(incomingLsid) == mIncomingSubstreamMap.end()) {
@@ -917,27 +1062,34 @@ private:
 				     usid, newLSID,
 				     NULL, mSSTConnVars));
         stream->mWeakThis = stream;
-        stream->init(NULL, 0, true, incomingLsid);
+        stream->init(NULL, 0, true, incomingLsid, received_channel_msg->transmit_sequence_number());
 
 	mOutgoingSubstreamMap[newLSID] = stream;
 	mIncomingSubstreamMap[incomingLsid] = stream;
 
 	mListeningStreamsCallbackMap[received_stream_msg->dest_port()](0, stream);
 
-	stream->receiveData(received_stream_msg, received_stream_msg->payload().data(),
+	stream->receiveData(received_channel_msg,
+                            received_stream_msg, received_stream_msg->payload().data(),
 			    received_stream_msg->bsn(),
 			    received_stream_msg->payload().size() );
+        stream->receiveAck(
+            received_stream_msg,
+            received_channel_msg->ack_sequence_number()
+        );
       }
       else {
 	SST_LOG(warn, mLocalEndPoint.endPoint.toString()  << " not listening to streams at: " << received_stream_msg->dest_port() << "\n");
       }
     }
     else {
-      mIncomingSubstreamMap[incomingLsid]->sendReplyPacket(NULL, 0, incomingLsid);
+        mIncomingSubstreamMap[incomingLsid]->sendReplyPacket(NULL, 0, incomingLsid, received_channel_msg->transmit_sequence_number());
     }
   }
 
-  void handleReplyPacket(Sirikata::Protocol::SST::SSTStreamHeader* received_stream_msg) {
+  void handleReplyPacket(Sirikata::Protocol::SST::SSTChannelHeader* received_channel_msg,
+      Sirikata::Protocol::SST::SSTStreamHeader* received_stream_msg)
+  {
     LSID incomingLsid = received_stream_msg->lsid();
 
     if (mIncomingSubstreamMap.find(incomingLsid) == mIncomingSubstreamMap.end()) {
@@ -951,9 +1103,14 @@ private:
 	if (stream->mStreamReturnCallback != NULL){
 	  stream->mStreamReturnCallback(SST_IMPL_SUCCESS, stream);
           stream->mStreamReturnCallback = NULL;
-	  stream->receiveData(received_stream_msg, received_stream_msg->payload().data(),
+	  stream->receiveData(received_channel_msg,
+                              received_stream_msg, received_stream_msg->payload().data(),
 			      received_stream_msg->bsn(),
 			      received_stream_msg->payload().size() );
+          stream->receiveAck(
+              received_stream_msg,
+              received_channel_msg->ack_sequence_number()
+          );
 	}
       }
       else {
@@ -962,18 +1119,29 @@ private:
     }
   }
 
-  void handleDataPacket(Sirikata::Protocol::SST::SSTStreamHeader* received_stream_msg) {
+  bool handleDataPacket(Sirikata::Protocol::SST::SSTChannelHeader* received_channel_msg,
+      Sirikata::Protocol::SST::SSTStreamHeader* received_stream_msg)
+  {
     LSID incomingLsid = received_stream_msg->lsid();
 
     if (mIncomingSubstreamMap.find(incomingLsid) != mIncomingSubstreamMap.end()) {
       std::tr1::shared_ptr< Stream<EndPointType> > stream_ptr =
 	mIncomingSubstreamMap[incomingLsid];
-      stream_ptr->receiveData( received_stream_msg,
-			       received_stream_msg->payload().data(),
-			       received_stream_msg->bsn(),
-			       received_stream_msg->payload().size()
-			       );
+      bool stored = stream_ptr->receiveData(received_channel_msg,
+          received_stream_msg,
+          received_stream_msg->payload().data(),
+          received_stream_msg->bsn(),
+          received_stream_msg->payload().size()
+      );
+      stream_ptr->receiveAck(
+          received_stream_msg,
+          received_channel_msg->ack_sequence_number()
+      );
+      return stored;
     }
+    // Not sure what to do here if we don't have the stream -- indicate failure
+    // and block progress or just allow things to progress?
+    return true;
   }
 
   void handleAckPacket(Sirikata::Protocol::SST::SSTChannelHeader* received_channel_msg,
@@ -985,15 +1153,16 @@ private:
     if (mIncomingSubstreamMap.find(incomingLsid) != mIncomingSubstreamMap.end()) {
       std::tr1::shared_ptr< Stream<EndPointType> > stream_ptr =
 	mIncomingSubstreamMap[incomingLsid];
-      stream_ptr->receiveData( received_stream_msg,
-			       received_stream_msg->payload().data(),
-			       received_channel_msg->ack_sequence_number(),
-			       received_stream_msg->payload().size()
-			       );
+      stream_ptr->receiveAck(
+          received_stream_msg,
+          received_channel_msg->ack_sequence_number()
+      );
     }
   }
 
-  void handleDatagram(Sirikata::Protocol::SST::SSTStreamHeader* received_stream_msg) {
+  void handleDatagram(Sirikata::Protocol::SST::SSTChannelHeader* received_channel_msg,
+                      Sirikata::Protocol::SST::SSTStreamHeader* received_stream_msg)
+  {
       uint8 msg_flags = received_stream_msg->flags();
 
       if (msg_flags & Sirikata::Protocol::SST::SSTStreamHeader::CONTINUES) {
@@ -1042,27 +1211,29 @@ private:
     sstMsg.set_channel_id( mRemoteChannelID );
     sstMsg.set_transmit_sequence_number(mTransmitSequenceNumber);
     sstMsg.set_ack_count(1);
-    sstMsg.set_ack_sequence_number(mLastReceivedSequenceNumber);
+    sstMsg.set_ack_sequence_number(received_channel_msg->transmit_sequence_number());
 
     sendSSTChannelPacket(sstMsg);
 
     mTransmitSequenceNumber++;
   }
 
-  void receiveMessage(void* recv_buff, int len) {
-    uint8* data = (uint8*) recv_buff;
-    std::string str = std::string((char*) data, len);
-
+  void receiveMessageRaw(void* recv_buff, int len) {
     Sirikata::Protocol::SST::SSTChannelHeader* received_msg =
                        new Sirikata::Protocol::SST::SSTChannelHeader();
-    bool parsed = parsePBJMessage(received_msg, str);
-
-    mLastReceivedSequenceNumber = received_msg->transmit_sequence_number();
+    bool parsed = parsePBJMessage(received_msg, MemoryReference(recv_buff, len));
+    receiveMessage(received_msg);
+    delete received_msg;
+  }
+  // NOTE that this does *not* take ownership of received_msg. The caller is
+  // responsible for deleting it.
+  void receiveMessage(Sirikata::Protocol::SST::SSTChannelHeader* received_msg) {
+      uint64 ack_seqno = received_msg->transmit_sequence_number();
 
     uint64 receivedAckNum = received_msg->ack_sequence_number();
-
     markAcknowledgedPacket(receivedAckNum);
 
+    bool handled = false;
     if (mState == CONNECTION_PENDING_CONNECT) {
       mState = CONNECTION_CONNECTED;
 
@@ -1074,7 +1245,7 @@ private:
           mRemoteEndPoint.port = ntohl(received_payload[1]);
       }
 
-      sendData( received_payload, 0, false );
+      sendData(received_payload, 0, false, ack_seqno);
 
       boost::mutex::scoped_lock lock(mSSTConnVars->sStaticMembersLock.getMutex());
 
@@ -1090,17 +1261,25 @@ private:
         }
         connectionReturnCallbackMap.erase(mLocalEndPoint);
       }
+
+      handled = true;
     }
     else if (mState == CONNECTION_PENDING_RECEIVE_CONNECT) {
       mState = CONNECTION_CONNECTED;
+      handled = true;
     }
     else if (mState == CONNECTION_CONNECTED) {
-      if (received_msg->payload().size() > 0) {
-        parsePacket(received_msg);
-      }
+      if (received_msg->payload().size() > 0)
+          handled = parsePacket(received_msg);
+      else
+          handled = true;
     }
 
-    delete received_msg;
+    // We can only update the received seqno that we're going to ack if we
+    // actually *fully handled* the packet. This is important, e.g., if we
+    // receive a data packet but it had data outside the receive window
+    if (handled)
+        mLastReceivedSequenceNumber = ack_seqno;
   }
 
   uint64 getRTOMicroseconds() {
@@ -1119,6 +1298,11 @@ private:
 
   // This is the version of cleanup is used from all the normal methods in Connection
   static void cleanup(std::tr1::shared_ptr<Connection<EndPointType> > conn) {
+      // We kill the checkAlive timer in cleanup() and in close()
+      // because both paths appear to be possible to hit alone
+      // depending on how the connection ends up getting shutdown
+      conn->mCheckAliveTimer->cancel();
+
     conn->mDatagramLayer->unlisten(conn->mLocalEndPoint);
 
     int connState = conn->mState;
@@ -1166,6 +1350,13 @@ private:
      mSSTConnVars->releaseChannel(mLocalEndPoint.endPoint, mLocalChannelID);
    }
 
+   static void stopConnections(ConnectionVariables<EndPointType>* sstConnVars) {
+       // This just passes stop calls along to all the connections
+       boost::mutex::scoped_lock lock(sstConnVars->sStaticMembersLock.getMutex());
+       for(typename ConnectionMap::iterator it = sstConnVars->sConnectionMap.begin(); it != sstConnVars->sConnectionMap.end(); it++)
+           it->second->stop();
+   }
+
    static void closeConnections(ConnectionVariables<EndPointType>* sstConnVars) {
        // We have to be careful with this function. Because it is going to free
        // the connections, we have to make sure not to let them get freed where
@@ -1190,6 +1381,9 @@ private:
                saved = connectionMap.begin()->second;
                connectionMap.erase(connectionMap.begin());
            }
+           // Calling close makes sure we kill the check alive timer,
+           // which holds a shared_ptr.
+           saved->close(false);
            saved.reset();
        }
    }
@@ -1198,11 +1392,8 @@ private:
                              EndPoint<EndPointType> remoteEndPoint,
                              EndPoint<EndPointType> localEndPoint, void* recv_buffer, int len)
    {
-     char* data = (char*) recv_buffer;
-     std::string str = std::string(data, len);
-
      Sirikata::Protocol::SST::SSTChannelHeader* received_msg = new Sirikata::Protocol::SST::SSTChannelHeader();
-     bool parsed = parsePBJMessage(received_msg, str);
+     bool parsed = parsePBJMessage(received_msg, MemoryReference(recv_buffer, len));
 
      uint8 channelID = received_msg->channel_id();
 
@@ -1219,7 +1410,7 @@ private:
        }
        std::tr1::shared_ptr<Connection<EndPointType> > conn = connectionMap[localEndPoint];
 
-       conn->receiveMessage(data, len);
+       conn->receiveMessage(received_msg);
      }
      else if (channelID == 0) {
        /* it's a new channel request negotiation protocol
@@ -1254,7 +1445,7 @@ private:
          }
          conn->setState(CONNECTION_PENDING_RECEIVE_CONNECT);
 
-         conn->sendData(payload, sizeof(payload), false);
+         conn->sendData(payload, sizeof(payload), false, received_msg->transmit_sequence_number());
        }
        else {
          SST_LOG(warn, "No one listening on this connection\n");
@@ -1353,7 +1544,7 @@ private:
                 continue;
             }
 
-            sendData(  buffer.data(), buffer.size(), false );
+            sendDataWithAutoAck(  buffer.data(), buffer.size(), false );
 
             currOffset += buffLen;
             // If we got to the send, we can break out of the loop
@@ -1405,6 +1596,22 @@ private:
      return true;
   }
 
+  /** Stops the connection. This isn't the same as close/cleanup. Rather, it's
+   * an indicator that the Service running SST needs to stop. This should try to
+   * start a clean, quick, but graceful stop.
+   */
+  void stop() {
+      // Request that all streams stop. This may hit some streams twice since
+      // they may be in both incoming and outgoing stream lists
+      for(typename LSIDStreamMap::iterator it = mIncomingSubstreamMap.begin(); it != mIncomingSubstreamMap.end(); it++)
+          it->second->stop();
+      for(typename LSIDStreamMap::iterator it = mOutgoingSubstreamMap.begin(); it != mOutgoingSubstreamMap.end(); it++)
+          it->second->stop();
+
+      // Also, don't hold ourselves alive, no need to track liveness anymore
+      mCheckAliveTimer->cancel();
+  }
+
   /*  Closes the connection.
 
       @param force if true, the connection is closed forcibly and
@@ -1422,6 +1629,11 @@ private:
   /* Internal, non-locking implementation of close().
      Lock mSSTConnVars->sStaticMembersLock before calling this function */
   virtual void iClose(bool force) {
+      // We kill the checkAlive timer in cleanup() and in close()
+      // because both paths appear to be possible to hit alone
+      // depending on how the connection ends up getting shutdown
+      mCheckAliveTimer->cancel();
+
     /* (mState != CONNECTION_DISCONNECTED) implies close() wasnt called
        through the destructor. */
     if (force && mState != CONNECTION_DISCONNECTED) {
@@ -1485,7 +1697,14 @@ public:
   ~StreamBuffer() {
       delete []mBuffer;
   }
+
+    // This doesn't check the data, just that the StreamBuffers
+    // represent the same portion of the stream.
+    bool operator==(const StreamBuffer& rhs) {
+        return (mOffset == rhs.mOffset && mBufferLength == rhs.mBufferLength);
+    }
 };
+typedef std::tr1::shared_ptr<StreamBuffer> StreamBufferPtr;
 
 template <class EndPointType>
 class SIRIKATA_EXPORT Stream  {
@@ -1493,6 +1712,7 @@ public:
     typedef std::tr1::shared_ptr<Stream> Ptr;
     typedef Ptr StreamPtr;
     typedef Connection<EndPointType> ConnectionType;
+    typedef std::tr1::shared_ptr<ConnectionType> ConnectionPtr;
     typedef EndPoint<EndPointType> EndpointType;
 
     typedef CallbackTypes<EndPointType> CBTypes;
@@ -1609,6 +1829,10 @@ public:
 
     boost::mutex::scoped_lock lock(mQueueMutex);
     int count = 0;
+    // We only need to schedule servicing when the packet queue
+    // goes from empty to non-empty since we should already be working
+    // on sending data if it wasn't
+    bool was_empty = mQueuedBuffers.empty();
 
     if (len <= MAX_PAYLOAD_SIZE) {
       if (mCurrentQueueLength+len > MAX_QUEUE_LENGTH) {
@@ -1618,13 +1842,8 @@ public:
       mCurrentQueueLength += len;
       mNumBytesSent += len;
 
-
-      std::tr1::shared_ptr<Connection<EndPointType> > conn =  mConnection.lock();
-      if (conn)
-        getContext()->mainStrand->post(Duration::seconds(0.01),
-            std::tr1::bind(&Stream<EndPointType>::serviceStreamNoReturn, this, mWeakThis.lock(), conn),
-            "Stream<EndPointType>::serviceStreamNoReturn"
-        );
+      if (was_empty)
+          scheduleStreamService();
 
       return len;
     }
@@ -1647,13 +1866,8 @@ public:
 	count++;
       }
 
-
-      std::tr1::shared_ptr<Connection<EndPointType> > conn =  mConnection.lock();
-      if (conn)
-        getContext()->mainStrand->post(Duration::seconds(0.01),
-            std::tr1::bind(&Stream<EndPointType>::serviceStreamNoReturn, this, mWeakThis.lock(), conn),
-            "Stream<EndPointType>::serviceStreamNoReturn"
-        );
+      if (was_empty && currOffset > 0)
+          scheduleStreamService();
 
       return currOffset;
     }
@@ -1714,6 +1928,15 @@ public:
     return true;
   }
 
+
+  /** Stops the stream. This isn't semantically the same as a request to
+   * close. Rather, it's an indicator that the Service running SST needs to
+   * stop. This should try to start a clean, quick, but graceful stop.
+   */
+  void stop() {
+      close(false);
+  }
+
   /* Close this stream. If the 'force' parameter is 'false',
      all outstanding data is sent and acknowledged before the stream is closed.
      Otherwise, the stream is closed immediately and outstanding data may be lost.
@@ -1734,16 +1957,15 @@ public:
         conn->eraseDisconnectedStream(this);
       }
 
+      // In both cases, we can stop keepalives
+      mKeepAliveTimer->cancel();
       return true;
     }
     else {
       mState = PENDING_DISCONNECT;
-      if (conn) {
-          getContext()->mainStrand->post(
-              std::tr1::bind(&Stream<EndPointType>::serviceStreamNoReturn, this, mWeakThis.lock(), conn),
-              "Stream<EndPointType>::serviceStreamNoReturn"
-          );
-      }
+      scheduleStreamService();
+      // In both cases, we can stop keepalives
+      mKeepAliveTimer->cancel();
       return true;
     }
   }
@@ -1869,7 +2091,22 @@ private:
     mStreamReturnCallback(cb),
     mConnected (false),
     MAX_INIT_RETRANSMISSIONS(5),
-    mSSTConnVars(sstConnVars)
+    mSSTConnVars(sstConnVars),
+      mKeepAliveTimer(
+          Network::IOTimer::create(
+              getContext()->mainStrand
+              // Can't create callback yet because we need mWeathThis
+          )
+      ),
+      mServiceTimer(
+          Network::IOTimer::create(
+              getContext()->mainStrand,
+              std::tr1::bind(&Stream<EndPointType>::serviceStreamNoReturn, this)
+          )
+      ),
+      mIsAsyncServicing(false),
+      mServiceStrongRef(), // Should start NULL
+      mServiceStrongConnRef() // Should start NULL
   {
     mInitialData = NULL;
     mInitialDataLength = 0;
@@ -1887,7 +2124,8 @@ private:
     // Continues in init, when we have mWeakThis set
   }
 
-  int init(void* initial_data, uint32 length, bool remotelyInitiated, LSID remoteLSID) {
+  // ack_seqno is only required when the stream is remotely initiated
+  int init(void* initial_data, uint32 length, bool remotelyInitiated, LSID remoteLSID, uint64 ack_seqno) {
     mNumInitRetransmissions = 1;
     if (remotelyInitiated) {
         mRemoteLSID = remoteLSID;
@@ -1913,7 +2151,7 @@ private:
     }
 
     if (remotelyInitiated) {
-      sendReplyPacket(mInitialData, mInitialDataLength, remoteLSID);
+        sendReplyPacket(mInitialData, mInitialDataLength, remoteLSID, ack_seqno);
     }
     else {
       sendInitPacket(mInitialData, mInitialDataLength);
@@ -1932,10 +2170,11 @@ private:
     /** Post a keep-alive task...  **/
     std::tr1::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
     if (conn) {
-      getContext()->mainStrand->post(Duration::seconds(60),
-          std::tr1::bind(&Stream<EndPointType>::sendKeepAlive, this, mWeakThis, conn),
-          "Stream<EndPointType>::sendKeepAlive"
-      );
+        assert(mWeakThis.lock());
+        mKeepAliveTimer->setCallback(
+              std::tr1::bind(&Stream<EndPointType>::sendKeepAlive, this, mWeakThis, conn)
+        );
+        mKeepAliveTimer->wait(Duration::seconds(60));
     }
 
     return numBytesBuffered;
@@ -1972,10 +2211,7 @@ private:
 
     write(buf, 0);
 
-    getContext()->mainStrand->post(Duration::seconds(60),
-        std::tr1::bind(&Stream<EndPointType>::sendKeepAlive, this, wstrm, conn),
-        "Stream<EndPointType>::sendKeepAlive"
-    );
+    mKeepAliveTimer->wait(Duration::seconds(60));
   }
 
   static void connectionCreated( int errCode, std::tr1::shared_ptr<Connection<EndPointType> > c) {
@@ -1998,8 +2234,8 @@ private:
     streamReturnCallbackMap.erase(c->localEndPoint());
   }
 
-  void serviceStreamNoReturn(std::tr1::shared_ptr<Stream<EndPointType> > strm, std::tr1::shared_ptr<Connection<EndPointType> > conn) {
-      serviceStream(strm, conn);
+  void serviceStreamNoReturn() {
+      serviceStream();
   }
 
   /* Returns false only if this is the root stream of a connection and it was
@@ -2007,7 +2243,11 @@ private:
      be closed and the 'false' return value is an indication of this for
      the underlying connection. */
 
-  bool serviceStream(std::tr1::shared_ptr<Stream<EndPointType> > strm, std::tr1::shared_ptr<Connection<EndPointType> > conn) {
+  bool serviceStream() {
+      std::pair<StreamPtr, ConnectionPtr> refs = startServicing();
+      StreamPtr strm = refs.first;
+      ConnectionPtr conn = refs.second;
+
     assert(strm.get() == this);
 
     const Time curTime = Timer::now();
@@ -2018,16 +2258,14 @@ private:
       return true;
     }
 
-    if (mState != CONNECTED && mState != DISCONNECTED && mState != PENDING_DISCONNECT) {
+    if (mState == DISCONNECTED) return true;
+
+    if (mState != CONNECTED && mState != PENDING_DISCONNECT) {
 
       if (!mConnected && mNumInitRetransmissions < MAX_INIT_RETRANSMISSIONS ) {
-
         sendInitPacket(mInitialData, mInitialDataLength);
-
 	mLastSendTime = curTime;
-
 	mNumInitRetransmissions++;
-
 	return true;
       }
 
@@ -2043,7 +2281,6 @@ private:
 	// connection associated with it as well.
 	if (mParentLSID == 0) {
           conn->close(true);
-
           Connection<EndPointType>::cleanup(conn);
 	}
 
@@ -2053,7 +2290,6 @@ private:
             mStreamReturnCallback(SST_IMPL_FAILURE, StreamPtr());
             mStreamReturnCallback = NULL;
         }
-
 
         conn->eraseDisconnectedStream(this);
         mState = DISCONNECTED;
@@ -2065,17 +2301,10 @@ private:
         // Schedule another servicing immediately in case any other operations
         // should occur, e.g. sending data which was added after the initial
         // connection request.
-        std::tr1::shared_ptr<Connection<EndPointType> > conn =  mConnection.lock();
-        if (conn)
-            getContext()->mainStrand->post(
-                std::tr1::bind(&Stream<EndPointType>::serviceStreamNoReturn, this, mWeakThis.lock(), conn),
-                "Stream<EndPointType>::serviceStreamNoReturn"
-            );
+        scheduleStreamService();
       }
     }
     else {
-      if (mState != DISCONNECTED) {
-
         //if the stream has been waiting for an ACK for > 2*mStreamRTOMicroseconds,
         //resend the unacked packets. We don't actually check if we
         //have anything to ack here, that happens in resendUnackedPackets. Also,
@@ -2093,7 +2322,7 @@ private:
 
 	if (mState == PENDING_DISCONNECT &&
 	    mQueuedBuffers.empty()  &&
-	    mChannelToBufferMap.empty() )
+	    mWaitingForAcks.empty() )
 	{
 	    mState = DISCONNECTED;
 
@@ -2109,6 +2338,18 @@ private:
 	while ( !mQueuedBuffers.empty() ) {
 	  std::tr1::shared_ptr<StreamBuffer> buffer = mQueuedBuffers.front();
 
+          // If we managed to get an ack late, then we will not have
+          // been able to remove the actual buffer that got requeued
+          // for a retry (if it hadn't been processed again). However,
+          // we only ever mark the ack time when we've actually seen
+          // it acked, so we can use that to check if we really still
+          // need to send it.
+          if (buffer->mAckTime != Time::null()) {
+              mQueuedBuffers.pop_front();
+              mCurrentQueueLength -= buffer->mBufferLength;
+              continue;
+          }
+
 	  if (mTransmitWindowSize < buffer->mBufferLength) {
 	    break;
 	  }
@@ -2120,10 +2361,11 @@ private:
           buffer->mTransmitTime = curTime;
           sentSomething = true;
 
-	  if ( mChannelToBufferMap.find(channelID) == mChannelToBufferMap.end() ) {
-	    mChannelToBufferMap[channelID] = buffer;
-            mChannelToStreamOffsetMap[channelID] = buffer->mOffset;
-	  }
+          // On the first send (or during a resend where we get a new
+          // channel ID) we only mark this as waiting for an ack using
+          // the specified channel segment ID.
+          assert(mWaitingForAcks.find(channelID) == mWaitingForAcks.end());
+          mWaitingForAcks[channelID] = buffer;
 
 	  mQueuedBuffers.pop_front();
 	  mCurrentQueueLength -= buffer->mBufferLength;
@@ -2134,15 +2376,19 @@ private:
 	  mNumOutstandingBytes += buffer->mBufferLength;
 	}
 
-        if (sentSomething) {
-          std::tr1::shared_ptr<Connection<EndPointType> > conn =  mConnection.lock();
-          if (conn)
-            getContext()->mainStrand->post(Duration::microseconds(2*mStreamRTOMicroseconds),
-                std::tr1::bind(&Stream<EndPointType>::serviceStreamNoReturn, this, mWeakThis.lock(), conn),
-                "Stream<EndPointType>::serviceStreamNoReturn"
-            );
+        // Either we sent something and we need to setup a retransmit
+        // timeout or we passed through without sending anything
+        // because the transmit window is full, in which case we also
+        // need to continue the retransmit timeout.
+        if (sentSomething || !mQueuedBuffers.empty()) {
+            // Since we might run through this after a timeout already
+            // started, make sure we target the exact time, adjusting
+            // for already elapsed time since the last received
+            // packet.
+            assert(Duration::microseconds(2*mStreamRTOMicroseconds) >= (curTime - mLastSendTime));
+            Duration timeout = Duration::microseconds(2*mStreamRTOMicroseconds) - (curTime - mLastSendTime);
+            scheduleStreamService(timeout);
         }
-      }
     }
 
     return true;
@@ -2151,37 +2397,39 @@ private:
   inline void resendUnackedPackets() {
     boost::mutex::scoped_lock lock(mQueueMutex);
 
-    for(std::map<uint64,std::tr1::shared_ptr<StreamBuffer> >::const_reverse_iterator it=mChannelToBufferMap.rbegin(),
-            it_end=mChannelToBufferMap.rend();
-        it != it_end; it++)
-     {
-       mQueuedBuffers.push_front(it->second);
-       mCurrentQueueLength += it->second->mBufferLength;
+    // Requeue outstanding packets for transmission
+    for(typename ChannelToBufferMap::const_reverse_iterator it = mWaitingForAcks.rbegin(),
+            it_end = mWaitingForAcks.rend(); it != it_end; it++)
+    {
+        // Put back in queue
+        mQueuedBuffers.push_front(it->second);
+        mCurrentQueueLength += it->second->mBufferLength;
+        // Save with old channelID to the graveyard
+        mUnackedGraveyard[it->first] = it->second;
+        /*printf("On %d, resending unacked packet at offset %d:%d\n",
+          (int)mLSID, (int)it->first, (int)(it->second->mOffset));fflush(stdout);*/
+    }
 
-       /*printf("On %d, resending unacked packet at offset %d:%d\n",
-         (int)mLSID, (int)it->first, (int)(it->second->mOffset));fflush(stdout);*/
-
-       if (mTransmitWindowSize < it->second->mBufferLength){
-         assert( ((int) it->second->mBufferLength) > 0);
-         mTransmitWindowSize = it->second->mBufferLength;
-       }
-     }
-
-    if (mChannelToBufferMap.empty() && !mQueuedBuffers.empty()) {
-      std::tr1::shared_ptr<StreamBuffer> buffer = mQueuedBuffers.front();
-
-      if (mTransmitWindowSize < buffer->mBufferLength) {
-        mTransmitWindowSize = buffer->mBufferLength;
-      }
+    // And make sure we'll be able to ship the first buffer
+    // immediately.
+    if (!mQueuedBuffers.empty()) {
+        StreamBufferPtr buffer = mQueuedBuffers.front();
+        if (mTransmitWindowSize < buffer->mBufferLength)
+            mTransmitWindowSize = buffer->mBufferLength;
     }
 
     mNumOutstandingBytes = 0;
 
-    if (!mChannelToBufferMap.empty()) {
+    // If we're failing to get acks, we might be estimating the RTT
+    // too low. To make sure it eventually updates, increase it.
+    if (!mWaitingForAcks.empty()) {
       if (mStreamRTOMicroseconds < 20000000) {
         mStreamRTOMicroseconds *= 2;
       }
-      mChannelToBufferMap.clear();
+      // Also clear out the list of buffers waiting for acks since
+      // they've timed out. They've been saved to the graveyard in
+      // case we eventually get an ack back.
+      mWaitingForAcks.clear();
     }
   }
 
@@ -2225,16 +2473,21 @@ private:
     }
   }
 
-  void receiveData( Sirikata::Protocol::SST::SSTStreamHeader* streamMsg,
-		    const void* buffer, uint64 offset, uint32 len )
+  // Handle reception of data packets (INIT, REPLY, DATA). Return value
+  // indicates if we actually stored the data (or already had it).
+  bool receiveData( Sirikata::Protocol::SST::SSTChannelHeader* received_channel_msg,
+      Sirikata::Protocol::SST::SSTStreamHeader* streamMsg,
+      const void* buffer, uint64 offset, uint32 len )
   {
     const Time curTime = Timer::now();
     mLastReceiveTime = curTime;
 
     if (streamMsg->type() == streamMsg->REPLY) {
       mConnected = true;
+      return true;
     }
-    else if (streamMsg->type() == streamMsg->DATA || streamMsg->type() == streamMsg->INIT) {
+    else { // INIT or DATA
+        assert(streamMsg->type() == streamMsg->DATA || streamMsg->type() == streamMsg->INIT);
       boost::recursive_mutex::scoped_lock lock(mReceiveBufferMutex);
 
       int transmitWindowSize = pow(2.0, streamMsg->window()) - mNumOutstandingBytes;
@@ -2245,6 +2498,8 @@ private:
         mTransmitWindowSize = 0;
       }
 
+      // If we generate an ack, we're acking this
+      uint64 ack_seqno = received_channel_msg->transmit_sequence_number();
 
       /*std::cout << "offset=" << offset << " , mLastContiguousByteReceived=" << mLastContiguousByteReceived
         << " , mNextByteExpected=" << mNextByteExpected <<"\n";*/
@@ -2260,17 +2515,20 @@ private:
 	  sendToApp(len);
 
 	  //send back an ack.
-          sendAckPacket();
+          sendAckPacket(ack_seqno);
+          return true;
 	}
         else {
            //dont ack this packet.. its falling outside the receive window.
 	  sendToApp(0);
+          return false;
         }
       }
       else if (len > 0) {
 	if ( (int64)(offset+len-1) <= (int64)mLastContiguousByteReceived) {
 	  //printf("Acking packet which we had already received previously\n");
-	  sendAckPacket();
+	  sendAckPacket(ack_seqno);
+          return true;
 	}
         else if (offsetInBuffer + len <= MAX_RECEIVE_WINDOW) {
 	  assert (offsetInBuffer + len > 0);
@@ -2280,11 +2538,13 @@ private:
    	  memcpy(receiveBuffer()+offsetInBuffer, buffer, len);
 	  memset(receiveBitmap()+offsetInBuffer, 1, len);
 
-          sendAckPacket();
+          sendAckPacket(ack_seqno);
+          return true;
 	}
 	else {
 	  //dont ack this packet.. its falling outside the receive window.
 	  sendToApp(0);
+          return false;
 	}
       }
       else if (len == 0 && (int64)(offset) == mNextByteExpected) {
@@ -2292,87 +2552,114 @@ private:
           // alive, which are just empty packets that we process to keep the
           // connection running. Send an ack so we don't end up with unacked
           // keep alive packets.
-          sendAckPacket();
+          sendAckPacket(ack_seqno);
+          return true;
       }
     }
+    // Anything else doesn't match what we're expecting, indicate failure
+    return false;
+  }
 
+  // Handle reception of ACK packets.
+  void receiveAck( Sirikata::Protocol::SST::SSTStreamHeader* streamMsg, uint64 channelSegmentID) {
     //handle any ACKS that might be included in the message...
     boost::mutex::scoped_lock lock(mQueueMutex);
 
-    bool acked_msgs = false;
-    if (mChannelToBufferMap.find(offset) != mChannelToBufferMap.end()) {
-      uint64 dataOffset = mChannelToBufferMap[offset]->mOffset;
-      mNumOutstandingBytes -= mChannelToBufferMap[offset]->mBufferLength;
+    const Time curTime = Timer::now();
+    StreamBufferPtr acked_buffer;
+    // Whether we found it
+    bool normal_ack = false;
+    // First, check if we have the acked channel segment ID waiting
+    // for an ack (i.e. waiting for the ack hasn't timed out). This
+    // should be the normal case.
+    ChannelToBufferMap::iterator to_buffer_it = mWaitingForAcks.find(channelSegmentID);
+    if (to_buffer_it != mWaitingForAcks.end()) {
+        acked_buffer = to_buffer_it->second;
+        normal_ack = true;
 
-      mChannelToBufferMap[offset]->mAckTime = curTime;
-
-      updateRTO(mChannelToBufferMap[offset]->mTransmitTime, mChannelToBufferMap[offset]->mAckTime);
-
-      if ( (int) (pow(2.0, streamMsg->window()) - mNumOutstandingBytes) > 0 ) {
-        assert( pow(2.0, streamMsg->window()) - mNumOutstandingBytes > 0);
-        mTransmitWindowSize = pow(2.0, streamMsg->window()) - mNumOutstandingBytes;
-      }
-      else {
-        mTransmitWindowSize = 0;
-      }
-
-      //printf("REMOVED ack packet at offset %d\n", (int)mChannelToBufferMap[offset]->mOffset);
-
-      acked_msgs = true;
-      mChannelToBufferMap.erase(offset);
-
-      std::vector <uint64> channelOffsets;
-      for(std::map<uint64, std::tr1::shared_ptr<StreamBuffer> >::iterator it = mChannelToBufferMap.begin();
-          it != mChannelToBufferMap.end(); ++it)
-	{
-	  if (it->second->mOffset == dataOffset) {
-	    channelOffsets.push_back(it->first);
-	  }
-	}
-
-      for (uint32 i=0; i< channelOffsets.size(); i++) {
-        mChannelToBufferMap.erase(channelOffsets[i]);
-      }
+        // Clear out references tracking this buffer for acks. First,
+        // the obvious one here.
+        mWaitingForAcks.erase(channelSegmentID);
+        // Graveyard cleared below
     }
     else {
-      // ACK received but not found in mChannelToBufferMap
-      if (mChannelToStreamOffsetMap.find(offset) != mChannelToStreamOffsetMap.end()) {
-        uint64 dataOffset = mChannelToStreamOffsetMap[offset];
-        acked_msgs = true;
-        mChannelToStreamOffsetMap.erase(offset);
+        // Otherwise, we check the graveyard to see if we had
+        // retransmitted (or scheduled for retransmit) but now got the
+        // the ack anyway.
+        ChannelToBufferMap::iterator unacked_buffer_it = mUnackedGraveyard.find(channelSegmentID);
+        if (unacked_buffer_it != mUnackedGraveyard.end()) {
+            acked_buffer = unacked_buffer_it->second;
 
-        std::vector <uint64> channelOffsets;
-        for(std::map<uint64, std::tr1::shared_ptr<StreamBuffer> >::iterator it = mChannelToBufferMap.begin();
-            it != mChannelToBufferMap.end(); ++it)
-          {
-            if (it->second->mOffset == dataOffset) {
-              channelOffsets.push_back(it->first);
+            // Clear references tracking this buffer.
+            mUnackedGraveyard.erase(unacked_buffer_it);
+            // In this case, we get rid of any entries actively
+            // waiting for acks. We could safely do this no matter
+            // where we found the ack, as we do with the graveyard
+            // below, but we don't since scanning through the list of
+            // waiting for acks is possibly very expensive, and in the
+            // common case much more expensive than scanning through
+            // the graveyard (which should usually be empty).
+            for(typename ChannelToBufferMap::iterator it = mWaitingForAcks.begin(); it != mWaitingForAcks.end(); ++it) {
+                if (*(it->second) == *acked_buffer) {
+                    mWaitingForAcks.erase(it);
+                    break;
+                }
             }
-          }
-
-        for (uint32 i=0; i< channelOffsets.size(); i++) {
-          mChannelToBufferMap.erase(channelOffsets[i]);
         }
-      }
+    }
+
+    // If we found it, update state to reflect ack and deal with any
+    // leftover references to the same buffer due to resends
+    if (acked_buffer) {
+        //printf("REMOVED ack packet at offset %d\n", (int)acked_buffer->mOffset);
+
+        acked_buffer->mAckTime = curTime;
+        // This gets updated regardless of the kind of ack because we
+        // we're removing all trace of that buffer now and the bytes
+        // are not really outstanding anymore since they've been
+        // acked, even though we might still have a packet in flight
+        // with those bytes. If we didn't do this when we ack from the
+        // graveyard, we'd end up never clearing these bytes because
+        // the newer channel ID becomes unackable (no more reference
+        // to them).
+        mNumOutstandingBytes -= acked_buffer->mBufferLength;
+
+        // These operations only work during a normal ack because the
+        // info is either inaccurate (transmit and ack times from
+        // different packets) or outdated (advertised window from old,
+        // delayed packet).
+        if (normal_ack) {
+            updateRTO(acked_buffer->mTransmitTime, acked_buffer->mAckTime);
+
+            if ( (int) (pow(2.0, streamMsg->window()) - mNumOutstandingBytes) > 0 ) {
+                assert( pow(2.0, streamMsg->window()) - mNumOutstandingBytes > 0);
+                mTransmitWindowSize = pow(2.0, streamMsg->window()) - mNumOutstandingBytes;
+            }
+            else {
+                mTransmitWindowSize = 0;
+            }
+        }
+
+        // In either case, if we found the acked packet (we extracted
+        // the buffer), we need to scan the graveyard for ones with
+        // the same offset due to retransmits (even if we found the
+        // acked one in the graveyard since we may have multiple
+        // retransmits)
+        std::vector <uint64> graveyardChannelIDs;
+        for(typename ChannelToBufferMap::iterator graveyard_it = mUnackedGraveyard.begin(); graveyard_it != mUnackedGraveyard.end(); graveyard_it++) {
+            if (*(graveyard_it->second) == *acked_buffer)
+                graveyardChannelIDs.push_back(graveyard_it->first);
+        }
+        for (uint32 i=0; i< graveyardChannelIDs.size(); i++)
+            mUnackedGraveyard.erase(graveyardChannelIDs[i]);
     }
 
     // If we acked messages, we've cleared space in the transmit
     // buffer (the receiver cleared something out of its receive
     // buffer). We can send more data, so schedule servicing if we
     // have anything queued.
-    // TODO(ewencp) maybe only schedule something new when this
-    // started as a full transmit buffer? Have to be careful about
-    // this though since mTransmitWindowSize might not be 0 even if it
-    // was 'full' since the next packet couldn't fit on.
-    if (acked_msgs && !mQueuedBuffers.empty()) {
-        std::tr1::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
-        if (conn) {
-            getContext()->mainStrand->post(
-                std::tr1::bind(&Stream<EndPointType>::serviceStreamNoReturn, this, mWeakThis.lock(), conn),
-                "Stream<EndPointType>::serviceStreamNoReturn"
-            );
-        }
-    }
+    if (acked_buffer && !mQueuedBuffers.empty())
+        scheduleStreamService();
   }
 
   LSID getLSID() {
@@ -2425,17 +2712,12 @@ private:
 
     if (!conn) return;
 
-    conn->sendData( buffer.data(), buffer.size(), false );
+    conn->sendDataWithAutoAck( buffer.data(), buffer.size(), false );
 
-    getContext()->mainStrand->post(
-        Duration::microseconds(pow(2.0,mNumInitRetransmissions)*mStreamRTOMicroseconds),
-        std::tr1::bind(&Stream<EndPointType>::serviceStreamNoReturn, this, mWeakThis.lock(), conn),
-        "Stream<EndPointType>::serviceStreamNoReturn"
-    );
-
+    scheduleStreamService(Duration::microseconds(pow(2.0,mNumInitRetransmissions)*mStreamRTOMicroseconds));
   }
 
-  void sendAckPacket() {
+  void sendAckPacket(uint64 ack_seqno) {
     Sirikata::Protocol::SST::SSTStreamHeader sstMsg;
     sstMsg.set_lsid( mLSID );
     sstMsg.set_type(sstMsg.ACK);
@@ -2449,7 +2731,7 @@ private:
 
     std::tr1::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
     assert(conn);
-    conn->sendData(  buffer.data(), buffer.size(), true);
+    conn->sendData(buffer.data(), buffer.size(), true, ack_seqno);
   }
 
   uint64 sendDataPacket(const void* data, uint32 len, uint64 offset) {
@@ -2469,10 +2751,12 @@ private:
 
     std::tr1::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
     assert(conn);
-    return conn->sendData(  buffer.data(), buffer.size(), false);
+    return conn->sendDataWithAutoAck(  buffer.data(), buffer.size(), false);
   }
 
-  void sendReplyPacket(void* data, uint32 len, LSID remoteLSID) {
+  // Reply packets should be in repsonse to other side initiating connection, so
+  // we should have a seqno to ack for the INIT packet
+  void sendReplyPacket(void* data, uint32 len, LSID remoteLSID, uint64 ack_seqno) {
     Sirikata::Protocol::SST::SSTStreamHeader sstMsg;
     sstMsg.set_lsid( mLSID );
     sstMsg.set_type(sstMsg.REPLY);
@@ -2489,7 +2773,7 @@ private:
 
     std::tr1::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
     assert(conn);
-    conn->sendData(  buffer.data(), buffer.size(), false);
+    conn->sendData(  buffer.data(), buffer.size(), false, ack_seqno);
   }
 
   uint8 mState;
@@ -2505,8 +2789,29 @@ private:
   std::tr1::weak_ptr<Connection<EndPointType> > mConnection;
   const Context* mContext;
 
-  std::map<uint64, std::tr1::shared_ptr<StreamBuffer> >  mChannelToBufferMap;
-  std::map<uint64, uint32> mChannelToStreamOffsetMap;
+  // Map from channel segment ID to the actual buffer of data for data
+  // currently in flight. If we resend, this gets cleared, so it is
+  // only tracking the *latest* channel ID for the buffer.
+  typedef std::map<uint64, std::tr1::shared_ptr<StreamBuffer> >  ChannelToBufferMap;
+  ChannelToBufferMap mWaitingForAcks;
+  // Meanwhile, this tracks channel -> buffer for packets that missed
+  // their ack deadline. A buffer can be in both mWaitingForAcks and
+  // mUnackedGraveyard at the same time (and in the graveyard multiple
+  // times) due to resends. The graveyard is used to take advantage of
+  // slow acks, allowing us to avoid resending some data if an ack is
+  // just received late. This doesn't cost us much: the buffer will
+  // have been held onto anyway, the map remains small as long as we
+  // don't have a ton of lost packets, and we only need to do
+  // something relatively expensive (scan through the entire map) when
+  // we handle the hopefully uncommon case of a slow ack.
+  //
+  // Using this approach makes the ack unusable for RTT estimation and
+  // transmit window updates, but this should be an unusual case
+  // anyway. We hold onto the buffer so we can mark the actual buffer
+  // as acked so that if it got requeued for resending but hasn't been
+  // sent yet, it won't be sent again when it does reach the front of
+  // the send queue.
+  ChannelToBufferMap mUnackedGraveyard;
 
   std::deque< std::tr1::shared_ptr<StreamBuffer> > mQueuedBuffers;
   uint32 mCurrentQueueLength;
@@ -2560,6 +2865,86 @@ private:
   EndPoint <EndPointType> mLocalEndPoint;
   EndPoint <EndPointType> mRemoteEndPoint;
 
+  // We need to transmit keep alives so the stream stays open even if
+  // we don't transmit for a long time. It can still be closed by the
+  // underlying connection being removed.
+  Network::IOTimerPtr mKeepAliveTimer;
+
+  // We can schedule servicing from multiple threads, so we need to
+  // lock protect this data.
+  boost::mutex mSchedulingMutex;
+  // One timer to track servicing. Only one servicing should be scheduled at any
+  // time. Scheduling servicing only does something if nothing is scheduled yet
+  // or if the time it's scheduled for is too late, in which case we update the
+  // timer.
+  Network::IOTimerPtr mServiceTimer;
+  // Sometimes we do servicing directly, i.e. just a post. We need to
+  // track this to make sure we don't double-schedule because the
+  // timer expiry won't be meaningful in that case
+  bool mIsAsyncServicing;
+  // We need to keep a strong reference to ourselves while we're waiting for
+  // servicing. We'll also use this as an indicator of whether servicing is
+  // currently scheduled.
+  StreamPtr mServiceStrongRef;
+  ConnectionPtr mServiceStrongConnRef;
+  // Schedules servicing to occur after the given amount of time.
+  void scheduleStreamService() {
+      scheduleStreamService(Duration::zero());
+  }
+  void scheduleStreamService(const Duration& after) {
+      std::tr1::shared_ptr<Connection<EndPointType> > conn =  mConnection.lock();
+      if (!conn) return;
+
+      boost::mutex::scoped_lock lock(mSchedulingMutex);
+
+      bool needs_scheduling = false;
+      if (!mServiceStrongRef) {
+          needs_scheduling = true;
+      }
+      else if(!mIsAsyncServicing && mServiceTimer->expiresFromNow() > after) {
+          needs_scheduling = true;
+          // No need to check success because we're using a strand and we can
+          // only get here if timer->expiresFromNow() is positive.
+          mServiceTimer->cancel();
+      }
+
+      if (needs_scheduling) {
+          mServiceStrongRef = mWeakThis.lock();
+          assert(mServiceStrongRef);
+          mServiceStrongConnRef = conn;
+          if (after == Duration::zero()) {
+              mIsAsyncServicing = true;
+              getContext()->mainStrand->post(
+                  std::tr1::bind(&Stream<EndPointType>::serviceStreamNoReturn, this),
+                  "Stream<EndPointType>::serviceStreamNoReturn"
+              );
+          }
+          else {
+              mServiceTimer->wait(after);
+          }
+      }
+  }
+  std::pair<StreamPtr, ConnectionPtr> startServicing() {
+      // Need to do some basic bookkeeping that makes sure that a) we
+      // have a proper shared_ptr to ourselves, b) we'll hold onto it
+      // for the duration of this call and c) we clear out our
+      // scheduled servicing time so calls to schedule servicing will
+      // work
+      boost::mutex::scoped_lock lock(mSchedulingMutex);
+      StreamPtr strm = mServiceStrongRef;
+      ConnectionPtr conn = mServiceStrongConnRef;
+      assert(strm);
+      assert(conn);
+      // Just clearing the strong ref is enough to let someone else schedule
+      // servicing.
+      mServiceStrongRef.reset();
+      mServiceStrongConnRef.reset();
+      // Make sure if this was a direct async post that we don't
+      // still have it marked as such.
+      mIsAsyncServicing = false;
+
+      return std::make_pair(strm, conn);
+  }
 };
 
 
@@ -2583,7 +2968,9 @@ public:
   }
 
   virtual void stop() {
-    Connection<EndPointType>::closeConnections(&mSSTConnVars);
+      // Give the connections a chance to stop, performing specific
+      // cleanup operations and notifying streams
+      Connection<EndPointType>::stopConnections(&mSSTConnVars);
   }
 
   ~ConnectionManager() {

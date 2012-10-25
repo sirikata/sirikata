@@ -38,6 +38,7 @@
 #include <sirikata/core/util/SpaceObjectReference.hpp>
 #include "Protocol_Session.pbj.hpp"
 #include <sirikata/core/util/Platform.hpp>
+#include <sirikata/core/odp/SST.hpp>
 
 #define SESSION_LOG(level,msg) SILOG(session,level,msg)
 

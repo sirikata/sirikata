@@ -41,9 +41,11 @@
 #include <sirikata/core/util/MotionPath.hpp>
 
 #include <sirikata/core/util/SimpleExtrapolator.hpp>
+#include <sirikata/core/service/Service.hpp>
+#include <sirikata/core/network/IOTimer.hpp>
 
 #include <sirikata/core/odp/DelegateService.hpp>
-#include <sirikata/core/odp/SST.hpp>
+#include <sirikata/core/odp/SSTDecls.hpp>
 
 #include <boost/thread/shared_mutex.hpp>
 
@@ -126,13 +128,10 @@ public:
     bool connected();
     bool send(ObjectMessagePort src_port, UUID dest, ObjectMessagePort dest_port, std::string payload);
 private:
-    typedef SST::EndPoint<SpaceObjectReference> EndPointType;
-    typedef SST::BaseDatagramLayer<SpaceObjectReference> BaseDatagramLayerType;
-    typedef BaseDatagramLayerType::Ptr BaseDatagramLayerPtr;
-    typedef SST::Stream<SpaceObjectReference> SSTStream;
-    typedef SSTStream::Ptr SSTStreamPtr;
-    typedef SST::Connection<SpaceObjectReference> SSTConnection;
-    typedef SSTConnection::Ptr SSTConnectionPtr;
+    typedef ODPSST::Endpoint EndPointType;
+    typedef ODPSST::BaseDatagramLayerPtr BaseDatagramLayerPtr;
+    typedef ODPSST::StreamPtr SSTStreamPtr;
+    typedef ODPSST::ConnectionPtr SSTConnectionPtr;
 
     // Initiate a connection
     void connect();

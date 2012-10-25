@@ -34,7 +34,7 @@
 #define _SIRIKATA_SPACE_OBJECT_SESSION_MANAGER_HPP_
 
 #include <sirikata/space/Platform.hpp>
-#include <sirikata/core/odp/SST.hpp>
+#include <sirikata/core/odp/SSTDecls.hpp>
 #include <sirikata/core/util/ListenerProvider.hpp>
 #include <sirikata/space/SpaceContext.hpp>
 
@@ -50,19 +50,14 @@ class ObjectSessionManager;
  */
 class SIRIKATA_SPACE_EXPORT ObjectSession {
   public:
-    typedef ODPSST::Stream SSTStream;
-    typedef SSTStream::Ptr SSTStreamPtr;
+    typedef ODPSST::StreamPtr SSTStreamPtr;
 
     ObjectSession(const ObjectReference& objid)
         : mID(objid),
         mSSTStream(), // set later by ObjectSessionManager
         mSeqNo(new SeqNo())
     {}
-    ~ObjectSession()
-    {
-        // Force closure, there's no way to get data to the object anymore...
-        if (mSSTStream) mSSTStream->close(true);
-    }
+    ~ObjectSession();
 
     const ObjectReference& id() const { return mID; }
 
@@ -101,11 +96,13 @@ class SIRIKATA_SPACE_EXPORT ObjectSessionManager : public Provider<ObjectSession
     void addSession(ObjectSession* session) {
         mObjectSessions[session->id()] = session;
     }
+
     void completeSession(ObjectReference& obj, ObjectSession::SSTStreamPtr s) {
         ObjectSession* session = mObjectSessions[obj];
         session->mSSTStream = s;
         notify(&ObjectSessionListener::newSession, session);
     }
+
     void removeSession(const ObjectReference& obj) {
         ObjectSessionMap::iterator session_it = mObjectSessions.find(obj);
         if (session_it != mObjectSessions.end()) {

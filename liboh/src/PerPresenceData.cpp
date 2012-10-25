@@ -6,7 +6,7 @@
 #include <sirikata/proxyobject/VWObject.hpp>
 #include <sirikata/oh/PerPresenceData.hpp>
 #include <sirikata/oh/ObjectHostContext.hpp>
-
+#include <sirikata/core/odp/SST.hpp>
 
 namespace Sirikata{
 

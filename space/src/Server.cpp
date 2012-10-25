@@ -54,6 +54,7 @@
 #include <iomanip>
 
 #include <sirikata/core/network/IOStrandImpl.hpp>
+#include <sirikata/core/odp/SST.hpp>
 
 #define SPACE_LOG(lvl,msg) SILOG(space, lvl, msg)
 

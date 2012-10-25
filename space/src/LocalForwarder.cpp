@@ -32,6 +32,7 @@
 
 #include "LocalForwarder.hpp"
 #include <sirikata/core/trace/Trace.hpp>
+#include <boost/lexical_cast.hpp>
 
 namespace Sirikata {
 

@@ -52,6 +52,8 @@ public:
     virtual void start();
     virtual void stop();
 
+    int32 objectQueries() const;
+    int32 objectQueryMessages() const;
 
     // Index/Tree replication events from server queries
     void createdReplicatedIndex(ProxIndexID iid, ReplicatedLocationServiceCachePtr loc_cache, ServerID objects_from_server, bool dynamic_objects);
@@ -113,7 +115,6 @@ public:
 private:
 
     // MAIN Thread: These are utility methods which should only be called from the main thread.
-    int32 objectQueries() const;
 
     // Update queries based on current state.
     void handleDeliverEvents();

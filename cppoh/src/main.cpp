@@ -52,6 +52,7 @@
 #include <sirikata/core/network/NTPTimeSync.hpp>
 
 #include <sirikata/core/odp/SST.hpp>
+#include <sirikata/core/ohdp/SST.hpp>
 
 #include <sirikata/oh/ObjectHostContext.hpp>
 

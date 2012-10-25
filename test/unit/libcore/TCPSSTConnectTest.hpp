@@ -1,34 +1,6 @@
-/*  Sirikata Tests -- Sirikata Test Suite
- *  SstTest.hpp
- *
- *  Copyright (c) 2009, Daniel Reiter Horn
- *  All rights reserved.
- *
- *  Redistribution and use in source and binary forms, with or without
- *  modification, are permitted provided that the following conditions are
- *  met:
- *  * Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- *  * Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in
- *    the documentation and/or other materials provided with the
- *    distribution.
- *  * Neither the name of Sirikata nor the names of its contributors may
- *    be used to endorse or promote products derived from this software
- *    without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
- * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
- * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
- * PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
- * OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
- * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
- * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
- * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
- * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
- * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- */
+// Copyright (c) 2009 Sirikata Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can
+// be found in the LICENSE file.
 
 #include <sirikata/core/network/Stream.hpp>
 #include <sirikata/core/network/StreamListener.hpp>
@@ -50,7 +22,7 @@
 #define SILOG(...)
 
 using namespace Sirikata::Network;
-class SstTest : public CxxTest::TestSuite
+class TCPSstTest : public CxxTest::TestSuite
 {
     std::vector<Stream *> dedStreams;
     typedef boost::unique_lock<boost::mutex> unique_mutex_lock;
@@ -114,7 +86,7 @@ public:
             return;
         }
         mServicePool->service()->post(Sirikata::Duration::microseconds(100),
-            std::tr1::bind(&SstTest::lockReadyRead,this,s), "TCPSSTConnectTest");
+            std::tr1::bind(&TCPSstTest::lockReadyRead,this,s), "TCPSSTConnectTest");
         pauseReceive();
     }
     void lockReadyRead(Stream*s) {
@@ -138,8 +110,8 @@ public:
         }
         using std::tr1::placeholders::_1;
         using std::tr1::placeholders::_2;
-        setCallbacks(std::tr1::bind(&SstTest::connectionCallback,this,newid,_1,_2),
-            std::tr1::bind(&SstTest::connectorDataRecvCallback,this,newStream,newid,_1,_2),
+        setCallbacks(std::tr1::bind(&TCPSstTest::connectionCallback,this,newid,_1,_2),
+            std::tr1::bind(&TCPSstTest::connectorDataRecvCallback,this,newStream,newid,_1,_2),
             &Stream::ignoreReadySendCallback);
         ++newid;
         runRoutine(newStream);
@@ -153,8 +125,8 @@ public:
             }
             using std::tr1::placeholders::_1;
             using std::tr1::placeholders::_2;
-            setCallbacks(std::tr1::bind(&SstTest::connectionCallback,this,newid,_1,_2),
-                std::tr1::bind(&SstTest::listenerDataRecvCallback,this,newStream,newid,_1,_2),
+            setCallbacks(std::tr1::bind(&TCPSstTest::connectionCallback,this,newid,_1,_2),
+                std::tr1::bind(&TCPSstTest::listenerDataRecvCallback,this,newStream,newid,_1,_2),
                 &Stream::ignoreReadySendCallback);
             ++newid;
             runRoutine(newStream);
@@ -268,19 +240,19 @@ public:
 
     Sirikata::PluginManager plugins;
 
-    SstTest():mCount(0),mDisconCount(0),mEndCount(0),ENDSTRING("T end"),mAbortTest(false) {
+    TCPSstTest():mCount(0),mDisconCount(0),mEndCount(0),ENDSTRING("T end"),mAbortTest(false) {
         plugins.load( "tcpsst" );
 
         Sirikata::uint32 randport = 3000 + (Sirikata::uint32)(Sirikata::Task::LocalTime::now().raw() % 20000);
         mPort = boost::lexical_cast<std::string>(randport);
 
-        mServicePool = new IOServicePool("SstTest", 4);
-        mServiceStrand = mServicePool->service()->createStrand("SstTest");
+        mServicePool = new IOServicePool("TCPSstTest", 4);
+        mServiceStrand = mServicePool->service()->createStrand("TCPSstTest");
 
         mListener = StreamListenerFactory::getSingleton().getDefaultConstructor()(mServiceStrand,StreamListenerFactory::getSingleton().getDefaultOptionParser()(Sirikata::String()));
         using std::tr1::placeholders::_1;
         using std::tr1::placeholders::_2;
-        mListener->listen(Address("127.0.0.1",mPort),std::tr1::bind(&SstTest::listenerNewStreamCallback,this,0,_1,_2));
+        mListener->listen(Address("127.0.0.1",mPort),std::tr1::bind(&TCPSstTest::listenerNewStreamCallback,this,0,_1,_2));
 
         mServicePool->run();
 
@@ -401,14 +373,14 @@ public:
         mMessagesToSend.push_back(ToChunk(ENDSTRING));
 
     }
-    static SstTest*createSuite() {
-        return new SstTest;
+    static TCPSstTest*createSuite() {
+        return new TCPSstTest;
     }
-    static void destroySuite(SstTest*sst) {
+    static void destroySuite(TCPSstTest*sst) {
         delete sst;
     }
 
-    ~SstTest() {
+    ~TCPSstTest() {
         {
             unique_mutex_lock lck(mMutex);
             for(std::vector<Stream*>::iterator i=mStreams.begin(),ie=mStreams.end();i!=ie;++i) {
@@ -429,9 +401,9 @@ public:
         using std::tr1::placeholders::_1;
         using std::tr1::placeholders::_2;
         s->connect(addy,
-            std::tr1::bind(&SstTest::connectorNewStreamCallback,this,id,_1,_2),
-            std::tr1::bind(&SstTest::mainStreamConnectionCallback,this,id,_1,_2),
-            std::tr1::bind(&SstTest::connectorDataRecvCallback,this,s,id,_1,_2),
+            std::tr1::bind(&TCPSstTest::connectorNewStreamCallback,this,id,_1,_2),
+            std::tr1::bind(&TCPSstTest::mainStreamConnectionCallback,this,id,_1,_2),
+            std::tr1::bind(&TCPSstTest::connectorDataRecvCallback,this,s,id,_1,_2),
             &Stream::ignoreReadySendCallback);
         --id;
     }
@@ -515,18 +487,18 @@ public:
     void testSubstream(Stream* stream, Stream::SetCallbacks&scb) {
         using std::tr1::placeholders::_1;
         using std::tr1::placeholders::_2;
-        scb(std::tr1::bind(&SstTest::connectionCallback,this,-2000000000,_1,_2),
-            std::tr1::bind(&SstTest::connectorDataRecvCallback,this,stream,-2000000000,_1,_2),
+        scb(std::tr1::bind(&TCPSstTest::connectionCallback,this,-2000000000,_1,_2),
+            std::tr1::bind(&TCPSstTest::connectorDataRecvCallback,this,stream,-2000000000,_1,_2),
             &Stream::ignoreReadySendCallback);
     }
     void testConnectSend() {
         doConnectSend("2");
         {
-            SstTest one;//realistic fragmentation
+            TCPSstTest one;//realistic fragmentation
             one.doConnectSend("1");
         }
         {
-            SstTest zero;//no fragmentation
+            TCPSstTest zero;//no fragmentation
             zero.doConnectSend("0");
         }
 
@@ -544,7 +516,7 @@ public:
 
                 if (true){
                     Stream*zz=r->factory();
-                    zz = r->clone(&SstTest::noopSubstream);
+                    zz = r->clone(&TCPSstTest::noopSubstream);
                     if (zz) {
                         runRoutine(zz);
                         zz->close();
@@ -553,7 +525,7 @@ public:
                 }
                 using std::tr1::placeholders::_1;
                 using std::tr1::placeholders::_2;
-                z=r->clone(std::tr1::bind(&SstTest::testSubstream,this,_1,_2));
+                z=r->clone(std::tr1::bind(&TCPSstTest::testSubstream,this,_1,_2));
                 if (z) {
                     runRoutine(z);
                 }else {

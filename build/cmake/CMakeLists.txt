@@ -93,13 +93,13 @@ IF(WIN32)
   # 4275 -- disable non dll-interface class used as base for dll-interface class when deriving from singleton
   # 4786 -- warning about truncated symbol names which cause problems for the debugger
   ADD_DEFINITIONS("/wd4099 /wo4099 /wd4355 /wd4251 /wd4661 /wd4275 /wd4786")
-  
+
   IF(sirikata_LDFLAGS)
     SET(sirikata_LDFLAGS "${sirikata_LDFLAGS} /ignore:4099 /LARGEADDRESSAWARE")
   ELSE()
     SET(sirikata_LDFLAGS "/ignore:4099 /LARGEADDRESSAWARE")
   ENDIF()
-  
+
   #-fno-rtti
 ELSE()
 
@@ -120,12 +120,12 @@ ELSE()
 
   STRING(TOUPPER ${CMAKE_BUILD_TYPE} UPPERCASE_BUILD_TYPE)
   STRING(COMPARE EQUAL ${UPPERCASE_BUILD_TYPE} "DEBUG" ISDEBUG)
-  
+
   SET(ADDED_DEFINITIONS -Wall -Wno-unused-function -Wno-unused-variable -fvisibility=hidden -fPIC -Wnon-virtual-dtor  -Wreorder -Wstrict-null-sentinel -Wsign-promo )
-  
+
   IF(APPLE)
     SET(ADDED_DEFINITIONS ${ADDED_DEFINITIONS} -isysroot ${MAC_SDK_DIR} -arch i386 ${MAC_EXTRA_FLAGS} -mmacosx-version-min=${MAC_MIN_VER} )
-    
+
     IF(sirikata_LDFLAGS)
       SET(sirikata_LDFLAGS "${sirikata_LDFLAGS} ${MAC_EXTRA_FLAGS} -Wl,-syslibroot -Wl,${MAC_SDK_DIR} -arch i386")
     ELSE()
@@ -1523,6 +1523,8 @@ SET(LIBSPACE_SOURCES
   ${LIBSPACE_SOURCE_DIR}/ObjectHostConnectionID.cpp
   ${LIBSPACE_SOURCE_DIR}/ObjectHostConnectionManager.cpp
   ${LIBSPACE_SOURCE_DIR}/SpaceModule.cpp
+  ${LIBSPACE_SOURCE_DIR}/ObjectSessionManager.cpp
+  ${LIBSPACE_SOURCE_DIR}/ObjectHostSession.cpp
   )
 
 SET(LIBMESH_SOURCES
@@ -1559,6 +1561,7 @@ SET(LIBOH_SOURCES
                   ${LIBOH_SOURCE_DIR}/PersistedObjectSet.cpp
                   ${LIBOH_SOURCE_DIR}/ObjectQueryProcessor.cpp
                   ${LIBOH_SOURCE_DIR}/SimulationFactory.cpp
+                  ${LIBOH_SOURCE_DIR}/SpaceNodeSession.cpp
                    )
 
 SET(LIBPINTOLOC_SOURCES
@@ -1906,6 +1909,11 @@ ${TEST_LIBCORE_SOURCE_DIR}/BoundingBoxTest.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/PathsTest.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/StrandTest.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/UUIDTest.hpp
+# SSTTest is disabled because it's sensitive to debug/release,
+# non-deterministic, and for some, it's intentionally slow since drops
+# cause backoff. It's very useful for doing basic testing (and
+# debugging) of SST, but we can't reasonably have it enabled by default.
+#${TEST_LIBCORE_SOURCE_DIR}/SSTTest.hpp
 
 ${TEST_LIBMESH_SOURCE_DIR}/DeduplicationTest.hpp
 ${TEST_LIBMESH_SOURCE_DIR}/LightInfoTest.hpp

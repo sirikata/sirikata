@@ -37,6 +37,7 @@
 #include <sirikata/core/util/PluginManager.hpp>
 #include <sirikata/core/options/CommonOptions.hpp>
 #include <sirikata/core/network/IOStrandImpl.hpp>
+#include <sirikata/core/ohdp/SST.hpp>
 
 using namespace Sirikata;
 using namespace Sirikata::Network;

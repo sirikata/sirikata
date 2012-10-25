@@ -33,6 +33,7 @@
 #include "RedisObjectSegmentation.hpp"
 #include <boost/algorithm/string.hpp>
 #include <boost/lambda/lambda.hpp>
+#include <boost/lexical_cast.hpp>
 
 #define REDISOSEG_LOG(lvl,msg) SILOG(redis_oseg, lvl, msg)
 
@@ -660,6 +661,16 @@ void RedisObjectSegmentation::finishWriteNewObject(const UUID& obj_id, OSegWrite
     REDISOSEG_LOG(detailed, "Finished writing OSEG entry for object "\
         << obj_id.toString() << " with status " << (int)status);
 
+    // We need to process this in the main thread because we a) need to access
+    // mOSeg to copy the entry into the cache and b) need to schedule an object
+    // refresh, which requires access to the timeouts data
+    mContext->mainStrand->post(
+        std::tr1::bind(&RedisObjectSegmentation::cacheAndNotifyNewObject, this, obj_id, status)
+    );
+}
+
+void RedisObjectSegmentation::cacheAndNotifyNewObject(const UUID& obj_id, OSegWriteListener::OSegAddNewStatus status)
+{
     if (mStopping) return;
 
     //only insert into cache if write was successful.
@@ -708,6 +719,15 @@ void RedisObjectSegmentation::finishWriteMigratedObject(const UUID& obj_id, Serv
     REDISOSEG_LOG(detailed, "Finished writing OSEG entry for migrated object " << obj_id.toString());
     if (mStopping) return;
 
+    // We need to process this in the main thread because we need to access
+    // mOSeg to copy the entry into the cache and fill in the radius part of the
+    // migration ack message
+    mContext->mainStrand->post(
+        std::tr1::bind(&RedisObjectSegmentation::cacheAndAckMigration, this, obj_id, ackTo)
+    );
+}
+
+void RedisObjectSegmentation::cacheAndAckMigration(const UUID& obj_id, ServerID ackTo) {
     mCache->insert(obj_id, mOSeg[obj_id]);
 
     if (ackTo != NullServerID) {

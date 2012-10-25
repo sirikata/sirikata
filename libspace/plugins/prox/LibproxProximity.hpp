@@ -38,7 +38,6 @@
 #include <prox/base/LocationUpdateListener.hpp>
 #include <prox/base/AggregateListener.hpp>
 
-#include <sirikata/core/network/SSTImpl.hpp>
 #include <sirikata/core/queue/ThreadSafeQueue.hpp>
 
 namespace Sirikata {

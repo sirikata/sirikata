@@ -45,6 +45,11 @@ SIRIKATA_EXPORT void wait(Lock*lok,
           Condition* cond,
           bool(*check)(void*, void *),
           void* arg1, void* arg2);
+SIRIKATA_EXPORT bool timed_wait(Lock*lok,
+          Condition* cond,
+          Duration timeout,
+          bool(*check)(void*, void *),
+          void* arg1, void* arg2);
 /// Notifies the condition once
 SIRIKATA_EXPORT void notify(Condition* cond);
 /// release the lock
@@ -262,6 +267,14 @@ public:
      */
     void blockingPop(T& retval) {
         ThreadSafeQueueNS::wait(mLock, mCond, &ThreadSafeQueue<T>::waitCheck, this, &retval);
+    }
+
+    /** Pop an element from the queue, blocking until an element is available if
+     *  the queue is currently empty.
+     *  \param retval storage for the popped element
+     */
+    bool blockingPop(T& retval, const Duration& timeout) {
+        return ThreadSafeQueueNS::timed_wait(mLock, mCond, timeout, &ThreadSafeQueue<T>::waitCheck, this, &retval);
     }
 
     /** Checks if the queue is probably empty, without any locking. Most of the

@@ -260,8 +260,7 @@ public:
     HostedObjectPtr getHostedObject(const UUID &id) const;
 
     /** Lookup the SST stream for a particular object. */
-    typedef SST::Stream<SpaceObjectReference> SSTStream;
-    typedef SSTStream::Ptr SSTStreamPtr;
+    typedef ODPSST::StreamPtr SSTStreamPtr;
     SSTStreamPtr getSpaceStream(const SpaceID& space, const ObjectReference& internalID);
 
     // Service Interface
@@ -282,7 +281,7 @@ public:
   private:
 
     // SpaceNodeSessionListener Interface -- forwards on to real listeners
-    virtual void onSpaceNodeSession(const OHDP::SpaceNodeID& id, OHDPSST::Stream::Ptr sn_stream) { fireSpaceNodeSession(id, sn_stream); }
+    virtual void onSpaceNodeSession(const OHDP::SpaceNodeID& id, OHDPSST::StreamPtr sn_stream) { fireSpaceNodeSession(id, sn_stream); }
     virtual void onSpaceNodeSessionEnded(const OHDP::SpaceNodeID& id) { fireSpaceNodeSessionEnded(id); }
 
     // Session Management Implementation

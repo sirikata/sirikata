@@ -65,6 +65,9 @@
 #include "Protocol_Forwarder.pbj.hpp"
 
 #include <sirikata/core/network/IOStrandImpl.hpp>
+#include <boost/lexical_cast.hpp>
+
+#include <sirikata/core/odp/SST.hpp>
 
 namespace Sirikata
 {
