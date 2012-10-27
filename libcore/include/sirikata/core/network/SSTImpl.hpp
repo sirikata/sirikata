@@ -1706,6 +1706,161 @@ public:
 };
 typedef std::tr1::shared_ptr<StreamBuffer> StreamBufferPtr;
 
+// Tracks segments that have been received in a stream, handling
+// merging them so we can deliver as much data in each callback as
+// possible.
+class ReceivedSegmentList {
+public:
+
+    // Represents a range in the stream of data: start byte + length
+    typedef std::pair<int64, int64> SegmentRange;
+    static int64 StartByte(const SegmentRange& sr) {
+        return sr.first;
+    }
+    // Note that this is 'end' in the container sense, 1 past the last
+    // valid byte
+    static int64 EndByte(const SegmentRange& sr) {
+        return sr.first + sr.second;
+    }
+    static int64 Length(const SegmentRange& sr) {
+        return sr.second;
+    }
+
+    // Insert (or update) a now valid range of bytes in the
+    // stream. This updates our list, merging segments if necessary.
+    void insert(int64 offset, int64 length) {
+        // Simple case: empty list we can just insert directly
+        if (mSegments.empty()) {
+            mSegments.push_back(SegmentRange(offset, length));
+            return;
+        }
+
+        // Might be able to insert it at the front, which the following loop
+        // doesn't catch properly
+        if ((offset+length) <= EndByte(mSegments.front())) {
+            bool merge_first = (offset+length) >= StartByte(mSegments.front());
+            if (merge_first) {
+                // Could be pure overlap. Only need to do anything if this
+                // extends the starting point of the segment to be earlier
+                if (offset < mSegments.front().first)
+                    mSegments.front().first = offset;
+            }
+            else {
+                // No merge, just add a new one
+                mSegments.push_front(SegmentRange(offset, length));
+            }
+            // Either way, we've used this update, so we can skip the rest.
+            return;
+        }
+
+        // Figure out what entry we we can insert after
+        SegmentList::iterator it, next_it;
+        for(next_it = mSegments.begin(), it = next_it++; true; it++, next_it++) {
+            assert(it != mSegments.end());
+            // If the segments start byte is in the current segment,
+            // we've got some overlap
+            if (offset >= StartByte(*it) && offset < EndByte(*it)) {
+                // Currently we only handle complete overlap. Since we
+                // don't ever re-segment things currently, this should
+                // be fine. However, we could have merged, so the
+                // complete overlap on this inserted segment could
+                // only cover a part of the segment we overlap, so we
+                // still have to be careful with this assertion
+                assert(offset + length <= EndByte(*it));
+                // Nothing to do since it's already registered
+                return;
+            }
+
+            // Otherwise we're looking for a place to insert between
+            // other segments, and then possibly merging. We need to
+            // have overlap of an empty region, i.e. between the
+            // current and next segments.
+            if (offset >= EndByte(*it) &&
+                (next_it == mSegments.end() || (offset+length) <= StartByte(*next_it)))
+            {
+                bool merge_previous = (offset == EndByte(*it));
+                bool merge_next = (next_it != mSegments.end() && (offset+length) == StartByte(*next_it));
+                if (merge_previous) {
+                    // Merge previous, might also need to merge next
+                    if (merge_next) {
+                        // Crosses all three, merge into first, remove second
+                        it->second = (it->second + length + next_it->second);
+                        mSegments.erase(next_it);
+                    }
+                    else {
+                        // Crosses just the two, merge in and no insert/remove
+                        it->second = (it->second + length);
+                    }
+                }
+                else if (merge_next) {
+                    // Or only merge next. Need to use start from
+                    // inserted segment and combine their lengths
+                    it->first = offset;
+                    it->second = (it->second + length);
+                }
+                else {
+                    // No merging, just insert (before next_it).
+                    mSegments.insert(next_it, SegmentRange(offset, length));
+                }
+                return;
+            }
+
+            // Otherwise, we need to keep moving along to find the
+            // right spot
+        }
+    }
+
+    // Get the range of ready bytes given that we have a specific next
+    // expected byte. skipCheckLength lets you indicate that you know
+    // you've already added a certain number of bytes that don't need
+    // to be accounted for here because you just received them. This
+    // also *removes this data* from the segment list so it should
+    // only be called when you're going to deliver data.
+    SegmentRange readyRange(int64 nextStartByte, int64 skipCheckLength) {
+        // Start looking at our data from after the skip data
+        int64 skipStartByte = nextStartByte + skipCheckLength;
+        // In case the skip data covers any of our segments, pop
+        // things off the front of the list as long as they are
+        // completely covered.
+        while(!mSegments.empty() && EndByte(mSegments.front()) <= skipStartByte)
+            mSegments.pop_front();
+
+        // If we don't have any ready segments, we can only account for the
+        // skipped data. Otherwise, we're guaranteed only partial coverage,
+        // contiguous, or doesn't reach the first segment. First, handle no
+        // ready segments and non-contiguous since it's simple -- the start of
+        // the first data we know about is beyond the start byte.
+        if (mSegments.empty() ||
+            (mSegments.front().first > skipStartByte))
+        {
+            return SegmentRange(nextStartByte, skipCheckLength);
+        }
+
+        // Then we only have overlap or just contiguous, in which case
+        // we span from the start of the skipData (i.e. nextStartByte)
+        // to the end of the next segment.
+        SegmentRange ready = mSegments.front();
+        mSegments.pop_front();
+        // The next segment shouldn't be contiguous with the ready
+        // range. Note >, not >= since == would imply it is
+        // contiguous. This is really just a sanity check on the
+        // SegmentRange insertion code.
+        assert(mSegments.empty() || mSegments.front().first > EndByte(ready));
+        SegmentRange merged_ready(nextStartByte, EndByte(ready)-nextStartByte);
+        return merged_ready;
+    };
+
+private:
+    // Lists/deques aren't particularly fast, but they let us muck with
+    // the contents easily when we want to insert ranges we've
+    // received, merge entries that a new entry made contiguous, etc.,
+    // and this list shouldn't ever get very big anyway. It ideally is
+    // only at most one entry at a time and even if we drop packets,
+    // should stay small as segments are merged.
+    typedef std::deque<SegmentRange> SegmentList;
+    SegmentList mSegments;
+}; // class ReceivedSegmentList
+
 template <class EndPointType>
 class SIRIKATA_EXPORT Stream  {
 public:
@@ -1736,7 +1891,6 @@ public:
 
     delete [] mInitialData;
     delete [] mReceiveBuffer;
-    delete [] mReceiveBitmap;
 
     mConnection.reset();
   }
@@ -2112,7 +2266,6 @@ private:
     mInitialDataLength = 0;
 
     mReceiveBuffer = NULL;
-    mReceiveBitmap = NULL;
 
     mQueuedBuffers.clear();
     mCurrentQueueLength = 0;
@@ -2184,14 +2337,6 @@ private:
       if (mReceiveBuffer == NULL)
           mReceiveBuffer = new uint8[MAX_RECEIVE_WINDOW];
       return mReceiveBuffer;
-  }
-
-  uint8* receiveBitmap() {
-      if (mReceiveBitmap == NULL) {
-          mReceiveBitmap = new uint8[MAX_RECEIVE_WINDOW];
-          memset(mReceiveBitmap, 0, MAX_RECEIVE_WINDOW);
-      }
-      return mReceiveBitmap;
   }
 
   void initRemoteLSID(LSID remoteLSID) {
@@ -2436,41 +2581,26 @@ private:
   /* This function sends received data up to the application interface.
      mReceiveBufferMutex must be locked before calling this function. */
   void sendToApp(uint32 skipLength) {
-      // Special case: if we're not marking any data as skipped and we
-      // haven't allocated the receive bitmap yet, then we're not
-      // going to send anything anyway. Just ignore this call.
-      if (mReceiveBitmap == NULL && skipLength == 0)
-          return;
+      // Make sure we bail if we can't perform the callback since
+      // checking the ready range will clear that range from the
+      // segment list.
+      if (mReadCallback == NULL) return;
 
-    uint32 readyBufferSize = skipLength;
-    uint8* recv_bmap = receiveBitmap();
-    for (uint32 i=skipLength; i < MAX_RECEIVE_WINDOW; i++) {
-        if (recv_bmap[i] == 1) {
-	readyBufferSize++;
-      }
-      else if (recv_bmap[i] == 0) {
-	break;
-      }
-    }
+      ReceivedSegmentList::SegmentRange nextReadyRange = mReceivedSegments.readyRange(mNextByteExpected, skipLength);
+      int64 readyBufferSize = ReceivedSegmentList::Length(nextReadyRange);
+      if (ReceivedSegmentList::Length(nextReadyRange) == 0) return;
 
-    //pass data up to the app from 0 to readyBufferSize;
-    //
-    if (mReadCallback != NULL && readyBufferSize > 0) {
-        uint8* recv_buf = receiveBuffer();
-        mReadCallback(recv_buf, readyBufferSize);
+
+      uint8* recv_buf = receiveBuffer();
+      mReadCallback(recv_buf, readyBufferSize);
 
       //now move the window forward...
       mLastContiguousByteReceived = mLastContiguousByteReceived + readyBufferSize;
       mNextByteExpected = mLastContiguousByteReceived + 1;
 
-      uint8* recv_bmap = receiveBitmap();
-      memmove(recv_bmap, recv_bmap + readyBufferSize, MAX_RECEIVE_WINDOW - readyBufferSize);
-      memset(recv_bmap + (MAX_RECEIVE_WINDOW - readyBufferSize), 0, readyBufferSize);
-
       memmove(recv_buf, recv_buf + readyBufferSize, MAX_RECEIVE_WINDOW - readyBufferSize);
 
       mReceiveWindowSize += readyBufferSize;
-    }
   }
 
   // Handle reception of data packets (INIT, REPLY, DATA). Return value
@@ -2504,13 +2634,30 @@ private:
       /*std::cout << "offset=" << offset << " , mLastContiguousByteReceived=" << mLastContiguousByteReceived
         << " , mNextByteExpected=" << mNextByteExpected <<"\n";*/
 
-      int64 offsetInBuffer = offset - mLastContiguousByteReceived - 1;
+      // We can get data after we've already received it and moved our window
+      // past it (e.g. retries), so we have to handle this carefully. A simple
+      // case is if we've already moved past this entire packet.
+      if ((int64)(offset + len) <= mNextByteExpected)
+          return true;
+
+      int64 offsetInBuffer = offset - mNextByteExpected;
+      // Currently we shouldn't be resegmenting data, so we should either get an
+      // entire segment before mNextByteExpected (handled already), or an entire
+      // one after. Because of this, we can currently assert at this point that
+      // we shouldn't have negative offsets. If we ever end up sometimes
+      // re-segmenting, then we might have segments that span this boundary and
+      // have to do something more complicated.
+      assert(offsetInBuffer >= 0);
+
       if ( len > 0 &&  (int64)(offset) == mNextByteExpected) {
         if (offsetInBuffer + len <= MAX_RECEIVE_WINDOW) {
 	  mReceiveWindowSize -= len;
 
+          assert(offsetInBuffer >= 0);
+          assert(offsetInBuffer + len <= MAX_RECEIVE_WINDOW);
 	  memcpy(receiveBuffer()+offsetInBuffer, buffer, len);
-	  memset(receiveBitmap()+offsetInBuffer, 1, len);
+          assert((int64)offset >= mNextByteExpected);
+          mReceivedSegments.insert(offset, len);
 
 	  sendToApp(len);
 
@@ -2535,8 +2682,11 @@ private:
 
           mReceiveWindowSize -= len;
 
+          assert(offsetInBuffer >= 0);
+          assert(offsetInBuffer + len <= MAX_RECEIVE_WINDOW);
    	  memcpy(receiveBuffer()+offsetInBuffer, buffer, len);
-	  memset(receiveBitmap()+offsetInBuffer, 1, len);
+          assert((int64)offset >= mNextByteExpected);
+          mReceivedSegments.insert(offset, len);
 
           sendAckPacket(ack_seqno);
           return true;
@@ -2841,7 +2991,7 @@ private:
   Time mLastReceiveTime;
 
   uint8* mReceiveBuffer;
-  uint8* mReceiveBitmap;
+  ReceivedSegmentList mReceivedSegments;
   boost::recursive_mutex mReceiveBufferMutex;
 
   ReadCallback mReadCallback;
