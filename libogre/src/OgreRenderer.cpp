@@ -252,6 +252,11 @@ public:
 } // namespace
 
 
+void OgreRenderer::preinit() {
+    std::vector<String> search_paths;
+    search_paths.push_back("../../");
+    WebViewManager::preinit(getBerkeliumBinaryDir(search_paths));
+}
 
 OgreRenderer::OgreRenderer(Context* ctx,Network::IOStrandPtr sStrand)
  //note use of .get when passing iostrand pointer.  we need to insure that the
@@ -534,7 +539,7 @@ bool OgreRenderer::initialize(const String& options, bool with_berkelium) {
     mDownloadPlanner = new PriorityDownloadPlanner(mContext, this, metric);
 
     if (with_berkelium)
-        new WebViewManager(0, mInputManager, getBerkeliumBinaryDir(mSearchPaths), getOgreResourcesDir(mSearchPaths));
+        new WebViewManager(0, mInputManager, getOgreResourcesDir(mSearchPaths));
 
     loadSystemLights();
 

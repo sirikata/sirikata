@@ -82,6 +82,16 @@ struct WebViewCoord {
 class SIRIKATA_OGRE_EXPORT WebViewManager : public Ogre::Singleton<WebViewManager>
 {
 public:
+    /** Initialization that we can perform a lot earlier (even before creation of
+     *  the WebViewManager singleton) than we want to perform most initialization
+     *  (which may not even be necessary unless someone allocates a renderer)
+     *  because it causes forking (i.e. initialize berkelium).
+     *
+     *  @param binDirectory Path to the binary directory, i.e. the one that
+     *                     holds the berkelium binary, liblibberkelium, etc.
+     */
+    static void preinit(const std::string& binDirectory);
+
 	/**
 	* Creates the WebViewManager singleton.
 	* @param defaultViewport The default Ogre::Viewport to place WebViews
@@ -89,14 +99,12 @@ public:
 	*                        last parameter of
 	*                        WebViewManager::createWebView.
 	* @inputMgr input manager to gather input from
-        * @param binDirectory Path to the binary directory, i.e. the one that
-	*                     holds the berkelium binary, liblibberkelium, etc.
 	* @param baseDirectory The relative path to your base directory. This
 	*                      directory is used by WebView::loadFile and
 	*                      WebView::loadHTML (to resolve relative URLs).
 	* @throws Ogre::Exception::ERR_INTERNAL_ERROR When initialization fails
 	*/
-    WebViewManager(Ogre::Viewport* defaultViewport, Sirikata::Input::InputManager* inputMgr, const std::string& binDirectory, const std::string& baseDirectory);
+    WebViewManager(Ogre::Viewport* defaultViewport, Sirikata::Input::InputManager* inputMgr, const std::string& baseDirectory);
 
 	/**
 	* Destroys any active WebViews, the WebViewMouse singleton (if instantiated).

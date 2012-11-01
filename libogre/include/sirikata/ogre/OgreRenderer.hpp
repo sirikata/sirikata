@@ -68,7 +68,6 @@ class PriorityDownloadPlanner;
 using Input::SDLInputManager;
 
 
-/** Represents a SQLite database connection. */
 class SIRIKATA_OGRE_EXPORT OgreRenderer :
         public TimeSteppedSimulation,
         public Ogre::WindowEventListener,
@@ -76,6 +75,12 @@ class SIRIKATA_OGRE_EXPORT OgreRenderer :
         public virtual Liveness
 {
 public:
+    // Initialization that we can perform a lot earlier (even before creation of
+    // the first OgreRenderer) than we want to perform most initialization
+    // (which may not even be necessary unless someone allocates a renderer)
+    // because it causes forking (i.e. initialize berkelium).
+    static void preinit();
+
     OgreRenderer(Context* ctx,Network::IOStrandPtr sStrand);
     virtual ~OgreRenderer();
 

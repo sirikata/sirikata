@@ -38,6 +38,10 @@ static int core_plugin_refcount = 0;
 SIRIKATA_PLUGIN_EXPORT_C void init() {
     using namespace Sirikata;
     using namespace Sirikata::Graphics;
+
+    // Early initialization that uses fork, see note on preinit().
+    OgreRenderer::preinit();
+
     if (core_plugin_refcount==0)
         SimulationFactory::getSingleton().registerConstructor("ogregraphics",
                                                             &OgreSystem::create,

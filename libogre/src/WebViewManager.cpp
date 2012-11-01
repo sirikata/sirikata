@@ -73,8 +73,19 @@ int InputModifiersToWebViewModifiers(Modifier mod, bool repeat, bool numpad);
 
 }
 
+void WebViewManager::preinit(const std::string& binDirectory) {
+    DynamicLibrary::AddLoadPath(binDirectory);
+#ifdef HAVE_BERKELIUM
+#if BERKELIUM_REMOTE_DEBUGGING
+    unsigned int extra_argc = 1;
+    const char* extra_argv[] = { "--remote-debugging-port=9222", NULL };
+    Berkelium::init(Berkelium::FileString::empty(), Berkelium::FileString::empty(), extra_argc, extra_argv);
+#else
+    Berkelium::init(Berkelium::FileString::empty());
+#endif
+}
 
-WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, InputManager* inputMgr, const std::string& binDirectory, const std::string& baseDirectory)
+WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, InputManager* inputMgr, const std::string& baseDirectory)
 	: focusedWebView(0), tooltipParent(0),
           chromeWebView(NULL), focusedNonChromeWebView(NULL),
 	  defaultViewport(defaultViewport), mouseXPos(0), mouseYPos(0),
@@ -86,15 +97,6 @@ WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, InputManager* in
 
 {
     tooltipWebView = 0;
-    DynamicLibrary::AddLoadPath(binDirectory);
-#ifdef HAVE_BERKELIUM
-#if BERKELIUM_REMOTE_DEBUGGING
-    unsigned int extra_argc = 1;
-    const char* extra_argv[] = { "--remote-debugging-port=9222", NULL };
-    Berkelium::init(Berkelium::FileString::empty(), Berkelium::FileString::empty(), extra_argc, extra_argv);
-#else
-    Berkelium::init(Berkelium::FileString::empty());
-#endif
     bkContext = Berkelium::Context::create();
 #endif
 }
