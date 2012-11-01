@@ -1533,11 +1533,15 @@ PresenceEntry.prototype.proxRemovedEvent = function (visibleObj,visTo)
      // FIXME this shouldn't be in system, but its the only place we
      // can put functions with callbacks right now because we need to
      // get at the context they are running in
-     system.__loadPresenceMesh = function(pres, cb) {
-         pres.__origLoadMesh.apply(pres, [baseSystem, cb]);
+     system.__loadPresenceMesh = function(pres, cb, full) {
+         var args = [baseSystem, cb];
+         if (full !== undefined) args.push(full);
+         pres.__origLoadMesh.apply(pres, args);
      };
-     system.__loadVisibleMesh = function(vis, cb) {
-         vis.__origLoadMesh.apply(vis, [baseSystem, cb]);
+     system.__loadVisibleMesh = function(vis, cb, full) {
+         var args = [baseSystem, cb];
+         if (full !== undefined) args.push(full);
+         vis.__origLoadMesh.apply(vis, args);
      };
      
   })();

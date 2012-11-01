@@ -364,16 +364,16 @@ v8::Handle<v8::Value> getAnimationList(const v8::Arguments& args)
 {
   String errorMessage = "Error in getAnimationList while decoding presence.  ";
   JSVisibleStruct* mStruct = JSVisibleStruct::decodeVisible(args.This() ,errorMessage);
-  
+
   if (mStruct == NULL)
     return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
-  
-  return mStruct->struct_getAnimationList();  
+
+  return mStruct->struct_getAnimationList();
 }
 
 v8::Handle<v8::Value> loadMesh(const v8::Arguments& args)
 {
-    if (args.Length() != 2) // only tell about one, first should be system
+    if (args.Length() != 2 && args.Length() != 3) // only tell about one, first should be system
         return v8::ThrowException ( v8::Exception::Error(v8::String::New("Error calling visible.loadMesh.  Requires 1 argument: the callback to invoke when loading is complete.")));
 
     String errorMessage = "Error in loadMesh while decoding visible.  ";
@@ -388,7 +388,14 @@ v8::Handle<v8::Value> loadMesh(const v8::Arguments& args)
     if (cb.IsEmpty())
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid callback argument to visible.loadMesh.")));
 
-    return visstruct->loadMesh(sysstruct->getContext(), cb);
+    bool downloadFullAsset = false;
+    if (args.Length() >= 3) {
+        errorMessage = "Invalid downloadFullAsset argument.";
+        bool decoded = decodeBool(args[2], downloadFullAsset, errorMessage);
+        if (!decoded) return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid argument to visible.loadMesh.")));
+    }
+
+    return visstruct->loadMesh(sysstruct->getContext(), cb, downloadFullAsset);
 }
 
 v8::Handle<v8::Value> meshBounds(const v8::Arguments& args) {

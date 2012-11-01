@@ -41,6 +41,8 @@
 #include <sirikata/mesh/ModelsSystem.hpp>
 #include <sirikata/mesh/Filter.hpp>
 #include <sirikata/mesh/Visual.hpp>
+#include <sirikata/mesh/AssetDownloadTask.hpp>
+#include <sirikata/mesh/ParserService.hpp>
 
 #include <v8.h>
 
@@ -52,7 +54,10 @@ namespace JS {
 
 class JSObjectScript;
 class JSCtx;
-class SIRIKATA_SCRIPTING_JS_EXPORT JSObjectScriptManager : public ObjectScriptManager {
+class SIRIKATA_SCRIPTING_JS_EXPORT JSObjectScriptManager
+    : public ObjectScriptManager,
+      public Mesh::ParserService
+{
 public:
     static ObjectScriptManager* createObjectScriptManager(ObjectHostContext* ctx, const Sirikata::String& arguments);
 
@@ -71,11 +76,14 @@ public:
 
     // Mesh loading functions
     typedef std::tr1::function<void(Mesh::VisualPtr)> MeshLoadCallback;
-    void loadMesh(const Transfer::URI& uri, MeshLoadCallback cb);
+    // If loadFullAsset is true, loads the complete asset, including dependent
+    // resources like textures. This mainly exists to be able to drive the full
+    // download process from a script without loading a graphics plugin
+    void loadMesh(const Transfer::URI& uri, MeshLoadCallback cb, bool loadFullAsset);
 
 private:
     ObjectHostContext* mContext;
-    
+
     void createVisibleTemplate(JSCtx*);
     void createPresenceTemplate(JSCtx*);
     void createContextTemplate(JSCtx*);
@@ -100,6 +108,8 @@ private:
     // downloads. Note that these are only ever modified in the main thread
     typedef std::tr1::unordered_map<Transfer::URI, Transfer::ResourceDownloadTaskPtr, Transfer::URI::Hasher> MeshDownloads;
     MeshDownloads mMeshDownloads;
+    typedef std::tr1::unordered_map<Transfer::URI, Mesh::AssetDownloadTaskPtr, Transfer::URI::Hasher> FullMeshDownloads;
+    FullMeshDownloads mFullMeshDownloads;
     typedef std::vector<MeshLoadCallback> MeshLoadCallbackList;
     typedef std::tr1::unordered_map<Transfer::URI, MeshLoadCallbackList, Transfer::URI::Hasher> WaitingMeshCallbacks;
     WaitingMeshCallbacks mMeshCallbacks;
@@ -114,8 +124,12 @@ private:
     ModelsSystem* mModelParser;
     Mesh::Filter* mModelFilter;
 
+    // ParserService Implementation
+    virtual Mesh::ParseMeshTaskHandle parseMesh(const Transfer::RemoteFileMetadata& metadata, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data, bool isAggregate, ParseMeshCallback cb);
+
     void meshDownloaded(Transfer::ResourceDownloadTaskPtr taskptr, Transfer::TransferRequestPtr request, Transfer::DenseDataPtr data);
-    void parseMeshWork(const Transfer::RemoteFileMetadata& metadata, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data);
+    typedef std::tr1::function<void(Mesh::VisualPtr)> MeshParsedCallback;
+    void parseMeshWork(const Transfer::RemoteFileMetadata& metadata, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data, MeshParsedCallback cb);
     void meshParsed();
     void finishMeshDownload(const Transfer::URI& uri, Mesh::VisualPtr mesh);
 

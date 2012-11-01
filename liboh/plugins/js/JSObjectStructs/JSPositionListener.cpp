@@ -208,13 +208,13 @@ v8::Handle<v8::Value> JSPositionListener::struct_getAnimationList()
 }
 
 v8::Handle<v8::Value> JSPositionListener::loadMesh(
-    JSContextStruct* ctx, v8::Handle<v8::Function> cb)
+    JSContextStruct* ctx, v8::Handle<v8::Function> cb, bool loadFullAsset)
 {
     CHECK_JPP_INIT_THROW_V8_ERROR(loadMesh);
 
     mCtx->mainStrand->post(
         std::tr1::bind(&JSPositionListener::eLoadMesh,this,
-            ctx,v8::Persistent<v8::Function>::New(cb)),
+            ctx,v8::Persistent<v8::Function>::New(cb), loadFullAsset),
         "JSPositionListener::eLoadMesh"
     );
 
@@ -222,13 +222,13 @@ v8::Handle<v8::Value> JSPositionListener::loadMesh(
 }
 
 void JSPositionListener::eLoadMesh(
-    JSContextStruct* ctx,v8::Persistent<v8::Function>cb)
+    JSContextStruct* ctx,v8::Persistent<v8::Function>cb, bool loadFullAsset)
 {
     JSObjectScriptManager::MeshLoadCallback wrapped_cb =
         std::tr1::bind(&JSPositionListener::finishLoadMesh, this,
             this->livenessToken(), ctx->livenessToken(), ctx,cb, _1);
 
-    mParentScript->manager()->loadMesh(Transfer::URI(getMesh()), wrapped_cb);
+    mParentScript->manager()->loadMesh(Transfer::URI(getMesh()), wrapped_cb, loadFullAsset);
 }
 
 

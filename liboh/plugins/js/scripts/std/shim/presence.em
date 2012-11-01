@@ -725,8 +725,8 @@ system.__presence_constructor__.prototype.toString = function()
      // real, internal system object requires us to route through
      // system right now
      system.__presence_constructor__.prototype.__origLoadMesh = system.__presence_constructor__.prototype.loadMesh;
-     system.__presence_constructor__.prototype.loadMesh = function(cb) {
-         system.__loadPresenceMesh(this, system.wrapCallbackForSelf(cb));
+     system.__presence_constructor__.prototype.loadMesh = function(cb, full) {
+         system.__loadPresenceMesh(this, system.wrapCallbackForSelf(cb), full);
      };
      // No need to override unloadMesh since it takes no special parameters
 

@@ -1060,11 +1060,11 @@ void OgreRenderer::removeObject(Entity* ent) {
     mDownloadPlanner->removeObject(ent);
 }
 
-ParseMeshTaskHandle OgreRenderer::parseMesh(
+Mesh::ParseMeshTaskHandle OgreRenderer::parseMesh(
     const Transfer::RemoteFileMetadata& metadata, const Transfer::Fingerprint& fp,
     Transfer::DenseDataPtr data, bool isAggregate, ParseMeshCallback cb)
 {
-    ParseMeshTaskHandle handle(new ParseMeshTaskInfo);
+    Mesh::ParseMeshTaskHandle handle(new Mesh::ParseMeshTaskInfo);
     mParsingIOService->post(
         std::tr1::bind(&OgreRenderer::parseMeshWork, this,
             livenessToken(), handle, metadata, fp, data, isAggregate, cb),
@@ -1075,7 +1075,7 @@ ParseMeshTaskHandle OgreRenderer::parseMesh(
 
 void OgreRenderer::parseMeshWork(
     Liveness::Token rendererAlive,
-    ParseMeshTaskHandle handle,
+    Mesh::ParseMeshTaskHandle handle,
     const Transfer::RemoteFileMetadata& metadata,
     const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data,
     bool isAggregate, ParseMeshCallback cb)

@@ -1484,7 +1484,6 @@ SET(LIBOGRE_SOURCES
   ${LIBOGRE_SOURCE_DIR}/input/InputEventCompletion.cpp
   ${LIBOGRE_SOURCE_DIR}/input/SDLInputDevice.cpp
   ${LIBOGRE_SOURCE_DIR}/input/SDLInputManager.cpp
-  ${LIBOGRE_SOURCE_DIR}/resourceManager/AssetDownloadTask.cpp
   ${LIBOGRE_SOURCE_DIR}/resourceManager/CDNArchive.cpp
   ${LIBOGRE_SOURCE_DIR}/resourceManager/CDNArchiveFactory.cpp
   ${LIBOGRE_SOURCE_DIR}/resourceManager/CDNArchivePlugin.cpp
@@ -1538,6 +1537,7 @@ SET(LIBMESH_SOURCES
   ${LIBMESH_SOURCE_DIR}/MeshSimplifier.cpp
   ${LIBMESH_SOURCE_DIR}/Bounds.cpp
   ${LIBMESH_SOURCE_DIR}/Raytrace.cpp
+  ${LIBMESH_SOURCE_DIR}/AssetDownloadTask.cpp
   )
 
 SET(LIBPROXYOBJECT_SOURCES

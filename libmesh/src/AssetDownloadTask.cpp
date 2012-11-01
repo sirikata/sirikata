@@ -30,32 +30,34 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sirikata/ogre/OgreRenderer.hpp>
-#include <sirikata/ogre/resourceManager/AssetDownloadTask.hpp>
+#include <sirikata/mesh/AssetDownloadTask.hpp>
 #include <sirikata/core/network/IOStrandImpl.hpp>
 #include <sirikata/mesh/Meshdata.hpp>
 #include <sirikata/mesh/Billboard.hpp>
 #include <sirikata/core/transfer/URL.hpp>
+#include <sirikata/mesh/ParserService.hpp>
 
 using namespace std::tr1::placeholders;
 using namespace Sirikata::Transfer;
-using namespace Sirikata::Mesh;
 
 namespace Sirikata {
-  std::tr1::shared_ptr<AssetDownloadTask> AssetDownloadTask::construct(const Transfer::URI& uri, Graphics::OgreRenderer* const scene, double priority, FinishedCallback cb){
-  std::tr1::shared_ptr<AssetDownloadTask> retval(SelfWeakPtr<AssetDownloadTask>::internalConstruct(new AssetDownloadTask(uri,scene,priority,false,cb)));
+namespace Mesh {
+
+  std::tr1::shared_ptr<AssetDownloadTask> AssetDownloadTask::construct(const Transfer::URI& uri, Transfer::TransferPoolPtr tpool, ParserService* const parser, double priority, FinishedCallback cb){
+      std::tr1::shared_ptr<AssetDownloadTask> retval(SelfWeakPtr<AssetDownloadTask>::internalConstruct(new AssetDownloadTask(uri,tpool,parser,priority,false,cb)));
     retval->downloadAssetFile();
     return retval;
 }
 
-std::tr1::shared_ptr<AssetDownloadTask> AssetDownloadTask::construct(const Transfer::URI& uri, Graphics::OgreRenderer* const scene, double priority, bool isAgg, FinishedCallback cb){
-  std::tr1::shared_ptr<AssetDownloadTask> retval(SelfWeakPtr<AssetDownloadTask>::internalConstruct(new AssetDownloadTask(uri,scene,priority,isAgg,cb)));
+std::tr1::shared_ptr<AssetDownloadTask> AssetDownloadTask::construct(const Transfer::URI& uri, Transfer::TransferPoolPtr tpool, ParserService* const parser, double priority, bool isAgg, FinishedCallback cb){
+    std::tr1::shared_ptr<AssetDownloadTask> retval(SelfWeakPtr<AssetDownloadTask>::internalConstruct(new AssetDownloadTask(uri,tpool,parser,priority,isAgg,cb)));
     retval->downloadAssetFile();
     return retval;
 }
 
-AssetDownloadTask::AssetDownloadTask(const Transfer::URI& uri, Graphics::OgreRenderer* const scene, double priority, bool isAgg, FinishedCallback cb)
- : mScene(scene),
+AssetDownloadTask::AssetDownloadTask(const Transfer::URI& uri, Transfer::TransferPoolPtr tpool, ParserService* const parser, double priority, bool isAgg, FinishedCallback cb)
+ : mTransferPool(tpool),
+   mMeshParser(parser),
    mAssetURI(uri),
    mPriority(priority),
    mCB(cb),
@@ -113,7 +115,7 @@ void AssetDownloadTask::downloadAssetFile() {
     boost::mutex::scoped_lock lok(mDependentDownloadMutex);
 
     ResourceDownloadTaskPtr dl = ResourceDownloadTask::construct(
-        mAssetURI, mScene->transferPool(),
+        mAssetURI, mTransferPool,
         mPriority,
         std::tr1::bind(&AssetDownloadTask::weakAssetFileDownloaded, getWeakPtr(), _1, _2, _3)
     );
@@ -181,7 +183,7 @@ void AssetDownloadTask::assetFileDownloaded(ResourceDownloadTaskPtr taskptr, Tra
     // beneficial since Ogre may have a copy even if we don't have a
     // copy of the raw data any more.
 
-    mParseMeshHandle = mScene->parseMesh(
+    mParseMeshHandle = mMeshParser->parseMesh(
         request->getMetadata(), request->getMetadata().getFingerprint(),
         response, mIsAggregate,
         std::tr1::bind(&AssetDownloadTask::weakHandleAssetParsed, getWeakPtr(), _1)
@@ -312,7 +314,7 @@ void AssetDownloadTask::addDependentDownload(ResourceDownloadTaskPtr resPtr) {
 
 void AssetDownloadTask::addDependentDownload(const Transfer::URI& depUrl) {
     ResourceDownloadTaskPtr dl = ResourceDownloadTask::construct(
-        depUrl, mScene->transferPool(),
+        depUrl, mTransferPool,
         mPriority,
         std::tr1::bind(&AssetDownloadTask::weakTextureDownloaded, getWeakPtr(), depUrl, _1, _2, _3)
     );
@@ -321,7 +323,7 @@ void AssetDownloadTask::addDependentDownload(const Transfer::URI& depUrl) {
 
 void AssetDownloadTask::addDependentDownload(const Transfer::URI& depUrl, const Transfer::Chunk& depChunk) {
     ResourceDownloadTaskPtr dl = ResourceDownloadTask::construct(
-        depChunk, mScene->transferPool(),
+        depChunk, mTransferPool,
         mPriority,
         std::tr1::bind(&AssetDownloadTask::weakTextureDownloaded, getWeakPtr(), depUrl, _1, _2, _3)
     );
@@ -392,4 +394,5 @@ void AssetDownloadTask::failDownload() {
     mCB();
 }
 
+} // namespace Mesh
 } // namespace Sirikata

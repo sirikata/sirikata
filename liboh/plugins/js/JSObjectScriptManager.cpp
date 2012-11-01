@@ -513,7 +513,26 @@ void JSObjectScriptManager::createPresenceTemplate(JSCtx* jsctx)
 }
 
 
-void JSObjectScriptManager::loadMesh(const Transfer::URI& uri, MeshLoadCallback cb) {
+Mesh::ParseMeshTaskHandle JSObjectScriptManager::parseMesh(
+    const Transfer::RemoteFileMetadata& metadata, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data,
+    bool isAggregate, ParseMeshCallback cb)
+{
+    // FIXME we're not respecting cancellations through the handle
+    Mesh::ParseMeshTaskHandle handle(new Mesh::ParseMeshTaskInfo);
+    mParsingIOService->post(
+        std::tr1::bind(
+            &JSObjectScriptManager::parseMeshWork, this,
+            metadata, fp, data,
+            mContext->mainStrand->wrap(cb)
+        ),
+        "JSObjectScriptManager::parseMeshWork"
+    );
+    return handle;
+}
+
+
+
+void JSObjectScriptManager::loadMesh(const Transfer::URI& uri, MeshLoadCallback cb, bool loadFullAsset) {
     // First try to grab out of cache
     MeshCache::iterator it = mMeshCache.find(uri);
     if (it != mMeshCache.end()) {
@@ -537,29 +556,50 @@ void JSObjectScriptManager::loadMesh(const Transfer::URI& uri, MeshLoadCallback 
 
     // Even if we don't have the VisualPtr, the load might be in progress. In
     // that case, we just queue up the callback.
-    if (mMeshDownloads.find(uri) != mMeshDownloads.end())
+    if (mMeshDownloads.find(uri) != mMeshDownloads.end() ||
+        mFullMeshDownloads.find(uri) != mFullMeshDownloads.end())
         return;
 
     // Finally, if none of that worked, we need to download it.
-    Transfer::ResourceDownloadTaskPtr dl = Transfer::ResourceDownloadTask::construct(
-        uri,
-        mTransferPool,
-        1.0,
-        std::tr1::bind(&JSObjectScriptManager::meshDownloaded, this, _1, _2, _3)
-    );
-    mMeshDownloads[uri] = dl;
-    dl->start();
+    if (!loadFullAsset) {
+        Transfer::ResourceDownloadTaskPtr dl = Transfer::ResourceDownloadTask::construct(
+            uri,
+            mTransferPool,
+            1.0,
+            std::tr1::bind(&JSObjectScriptManager::meshDownloaded, this, _1, _2, _3)
+        );
+        mMeshDownloads[uri] = dl;
+        dl->start();
+    }
+    else {
+        SILOG(foo, fatal, "downloading entire asset");
+        Mesh::AssetDownloadTaskPtr dl =
+            Mesh::AssetDownloadTask::construct(
+                uri, mTransferPool, this, 1.0,
+                /* is_aggregate */ false,
+                mContext->mainStrand->wrap(
+                    std::tr1::bind(&JSObjectScriptManager::finishMeshDownload, this, uri, Mesh::VisualPtr())
+                )
+            );
+        mFullMeshDownloads[uri] = dl;
+    }
 }
 
 void JSObjectScriptManager::meshDownloaded(Transfer::ResourceDownloadTaskPtr taskptr, Transfer::TransferRequestPtr request, Transfer::DenseDataPtr data) {
     Transfer::ChunkRequestPtr chunkreq = std::tr1::static_pointer_cast<Transfer::ChunkRequest>(request);
     mParsingIOService->post(
-        std::tr1::bind(&JSObjectScriptManager::parseMeshWork, this, chunkreq->getMetadata(), chunkreq->getMetadata().getFingerprint(), data),
+        std::tr1::bind(
+            &JSObjectScriptManager::parseMeshWork, this,
+            chunkreq->getMetadata(), chunkreq->getMetadata().getFingerprint(), data,
+            mContext->mainStrand->wrap(
+                std::tr1::bind(&JSObjectScriptManager::finishMeshDownload, this, chunkreq->getMetadata().getURI(), _1)
+            )
+        ),
         "JSObjectScriptManager::parseMeshWork"
     );
 }
 
-void JSObjectScriptManager::parseMeshWork(const Transfer::RemoteFileMetadata& metadata, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data) {
+void JSObjectScriptManager::parseMeshWork(const Transfer::RemoteFileMetadata& metadata, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data, MeshParsedCallback cb) {
     Mesh::VisualPtr parsed = mModelParser->load(metadata, fp, data);
     if (parsed && mModelFilter) {
         Mesh::MutableFilterDataPtr input_data(new Mesh::FilterData);
@@ -569,18 +609,26 @@ void JSObjectScriptManager::parseMeshWork(const Transfer::RemoteFileMetadata& me
         parsed = output_data->get();
     }
 
-    mContext->mainStrand->post(
-        std::tr1::bind(&JSObjectScriptManager::finishMeshDownload, this, metadata.getURI(), parsed),
-        "JSObjectScriptManager::finishMeshDownload"
-    );
+    cb(parsed);
 }
 
 void JSObjectScriptManager::finishMeshDownload(const Transfer::URI& uri, VisualPtr mesh) {
     // We need to clean up and invoke callbacks. Make sure we're fully cleaned
     // up (out of member data) before making callbacks in case they do any
     // re-requests.
+
+    // This callback could be due to simple download + parse or full download
+    // and parse.
+    if (mMeshDownloads.find(uri) != mMeshDownloads.end()) {
+        mMeshDownloads.erase(uri);
+    }
+    else {
+        assert(mFullMeshDownloads.find(uri) != mFullMeshDownloads.end());
+        mesh = mFullMeshDownloads[uri]->asset();
+        mFullMeshDownloads.erase(uri);
+    }
+
     mMeshCache[uri] = mesh;
-    mMeshDownloads.erase(uri);
     MeshLoadCallbackList cbs = mMeshCallbacks[uri];
     mMeshCallbacks.erase(uri);
 

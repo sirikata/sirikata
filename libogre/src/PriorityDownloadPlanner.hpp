@@ -6,7 +6,7 @@
 #define _SIRIKATA_OGRE_PRIORITY_DOWNLOAD_PLANNER_HPP
 
 #include <sirikata/ogre/ResourceDownloadPlanner.hpp>
-#include <sirikata/ogre/resourceManager/AssetDownloadTask.hpp>
+#include <sirikata/mesh/AssetDownloadTask.hpp>
 #include <sirikata/ogre/Util.hpp>
 #include <sirikata/mesh/Meshdata.hpp>
 #include <sirikata/mesh/Billboard.hpp>
@@ -157,7 +157,7 @@ protected:
     struct Asset : public Liveness
     {
         Transfer::URI uri;
-        AssetDownloadTaskPtr downloadTask;
+        Mesh::AssetDownloadTaskPtr downloadTask;
         // Objects that want this asset to be loaded and are waiting for it
         ObjectSet waitingObjects;
         // Objects that are using this asset

@@ -244,7 +244,7 @@ void PriorityDownloadPlanner::commandGetData(
         Command::Array loadedResources = Command::Array();
         //priority
         double priority = -1;
-        AssetDownloadTask::ActiveDownloadMap::size_type stillToDownload = 0;
+        Mesh::AssetDownloadTask::ActiveDownloadMap::size_type stillToDownload = 0;
         //perform different operations depending on whether still downloading or not.
         if (assetMIter->second->downloadTask)
         {
@@ -684,8 +684,8 @@ void PriorityDownloadPlanner::downloadAsset(Asset* asset, Object* forObject) {
 
     bool is_aggregate = (forObject->proxy ? forObject->proxy->isAggregate() : false);
     asset->downloadTask =
-        AssetDownloadTask::construct(
-            asset->uri, getScene(), forObject->priority,
+        Mesh::AssetDownloadTask::construct(
+            asset->uri, getScene()->transferPool(), getScene(), forObject->priority,
             is_aggregate,
             // We need some indirection because this callback is invoked
             // with a lock on in AssetDownload task and triggers
@@ -952,13 +952,13 @@ void PriorityDownloadPlanner::loadDependentTextures(Asset* asset, bool usingDefa
     // we currently assume no dependencies for default
     if (usingDefault) return;
 
-    for(AssetDownloadTask::Dependencies::const_iterator tex_it = asset->downloadTask->dependencies().begin();
+    for(Mesh::AssetDownloadTask::Dependencies::const_iterator tex_it = asset->downloadTask->dependencies().begin();
         tex_it != asset->downloadTask->dependencies().end();
         tex_it++)
     {
         const Transfer::URI& uri = tex_it->first;
         const String& uri_str = uri.toString();
-        const AssetDownloadTask::ResourceData& tex_data = tex_it->second;
+        const Mesh::AssetDownloadTask::ResourceData& tex_data = tex_it->second;
 
         if (mActiveCDNArchive && asset->textureFingerprints->find(uri_str) == asset->textureFingerprints->end() ) {
             String id = tex_data.request->getIdentifier();

@@ -53,7 +53,7 @@ public:
 
     virtual v8::Handle<v8::Value> struct_getDistance(const Vector3d& distTo);
 
-    v8::Handle<v8::Value> loadMesh(JSContextStruct* ctx, v8::Handle<v8::Function> cb);
+    v8::Handle<v8::Value> loadMesh(JSContextStruct* ctx, v8::Handle<v8::Function> cb, bool loadFullAsset);
     v8::Handle<v8::Value> meshBounds();
     v8::Handle<v8::Value> untransformedMeshBounds();
     // NOTE: This the ray parameters are in *object* space.
@@ -78,7 +78,7 @@ protected:
 private:
 
     void eLoadMesh(
-        JSContextStruct* ctx,v8::Persistent<v8::Function>cb);
+        JSContextStruct* ctx,v8::Persistent<v8::Function>cb, bool loadFullAsset);
 
     void iFinishLoadMesh(
         Liveness::Token alive, Liveness::Token ctx_alive,

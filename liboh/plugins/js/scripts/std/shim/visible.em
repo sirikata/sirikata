@@ -203,8 +203,8 @@
                           );
 
      visible.prototype.__origLoadMesh = visible.prototype.loadMesh;
-     visible.prototype.loadMesh = function(cb) {
-         system.__loadVisibleMesh(this, cb);
+     visible.prototype.loadMesh = function(cb, full) {
+         system.__loadVisibleMesh(this, cb, full);
      };
      var __origMeshBounds = visible.prototype.meshBounds;
      var __origUntransformedMeshBounds = visible.prototype.untransformedMeshBounds;

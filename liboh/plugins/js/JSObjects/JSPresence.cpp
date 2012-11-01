@@ -656,7 +656,7 @@ v8::Handle<v8::Function> decodeCallbackArgument(const v8::Arguments& args, int32
 
 v8::Handle<v8::Value> loadMesh(const v8::Arguments& args)
 {
-    if (args.Length() != 2) // only tell about one, first should be system
+    if (args.Length() != 2 && args.Length() != 3) // only tell about one, first should be system
         return v8::ThrowException ( v8::Exception::Error(v8::String::New("Error calling presence.loadMesh.  Requires 1 argument: the callback to invoke when loading is complete.")));
 
     String errorMessage = "Error in loadMesh while decoding presence.";
@@ -671,7 +671,14 @@ v8::Handle<v8::Value> loadMesh(const v8::Arguments& args)
     if (cb.IsEmpty())
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid callback argument to presence.loadMesh.")));
 
-    return presstruct->loadMesh(sysstruct->getContext(), cb);
+    bool downloadFullAsset = false;
+    if (args.Length() >= 3) {
+        errorMessage = "Invalid downloadFullAsset argument.";
+        bool decoded = decodeBool(args[2], downloadFullAsset, errorMessage);
+        if (!decoded) return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid argument to presence.loadMesh.")));
+    }
+
+    return presstruct->loadMesh(sysstruct->getContext(), cb, downloadFullAsset);
 }
 
 v8::Handle<v8::Value> meshBounds(const v8::Arguments& args) {
