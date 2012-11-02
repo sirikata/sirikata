@@ -572,7 +572,6 @@ void JSObjectScriptManager::loadMesh(const Transfer::URI& uri, MeshLoadCallback 
         dl->start();
     }
     else {
-        SILOG(foo, fatal, "downloading entire asset");
         Mesh::AssetDownloadTaskPtr dl =
             Mesh::AssetDownloadTask::construct(
                 uri, mTransferPool, this, 1.0,
