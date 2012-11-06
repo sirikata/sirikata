@@ -1279,8 +1279,47 @@ void HostedObject::commandPresences(
         Mutex::scoped_lock locker(presenceDataMutex);
         for(PresenceDataMap::const_iterator presit = mPresenceData.begin(); presit != mPresenceData.end(); presit++) {
             Command::Object presdata;
-            // Should fill in basic presence info but it's a pain to serialize
-            // here (loc, orientation, etc).
+
+            Time t = mContext->recentSimTime();
+            TimedMotionVector3f pos(t, presit->second->requestLoc->location().extrapolate(t));
+            Command::Result resloc = Command::EmptyResult();
+            resloc.put("position.x", pos.position().x);
+            resloc.put("position.y", pos.position().y);
+            resloc.put("position.z", pos.position().z);
+            resloc.put("velocity.x", pos.velocity().x);
+            resloc.put("velocity.y", pos.velocity().y);
+            resloc.put("velocity.z", pos.velocity().z);
+            resloc.put("time", pos.updateTime().raw());
+            presdata["location"] = resloc;
+
+            TimedMotionQuaternion orient(t, presit->second->requestLoc->orientation().extrapolate(t));
+            Command::Result resorient = Command::EmptyResult();
+            resorient.put("position.x", orient.position().x);
+            resorient.put("position.y", orient.position().y);
+            resorient.put("position.z", orient.position().z);
+            resorient.put("position.w", orient.position().w);
+            resorient.put("velocity.x", orient.velocity().x);
+            resorient.put("velocity.y", orient.velocity().y);
+            resorient.put("velocity.z", orient.velocity().z);
+            resorient.put("velocity.w", orient.velocity().w);
+            resorient.put("time", orient.updateTime().raw());
+            presdata["orientation"] = resorient;
+
+            // Present the bounds info in a way the consumer can easily draw a bounding
+            // sphere, especially for single objects
+            AggregateBoundingInfo bnds = presit->second->requestLoc->bounds();
+            Command::Result resbnds = Command::EmptyResult();
+            resbnds.put("center.x", bnds.centerOffset.x);
+            resbnds.put("center.y", bnds.centerOffset.y);
+            resbnds.put("center.z", bnds.centerOffset.z);
+            resbnds.put("radius", bnds.fullRadius());
+            // But also provide the other info so a correct view of
+            // aggregates. Technically we only need one of these since fullRadius is the
+            // sum of the two, but this is clearer.
+            resbnds.put("centerBoundsRadius", bnds.centerBoundsRadius);
+            resbnds.put("maxObjectRadius", bnds.maxObjectRadius);
+            presdata["bounds"] = resbnds;
+
             presdata["mesh"] = presit->second->requestLoc->mesh().toString();
             presdata["physics"] = presit->second->requestLoc->physics();
             Command::Object proxy_data;
