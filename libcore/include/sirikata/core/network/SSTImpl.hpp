@@ -1742,8 +1742,10 @@ public:
             if (merge_first) {
                 // Could be pure overlap. Only need to do anything if this
                 // extends the starting point of the segment to be earlier
-                if (offset < mSegments.front().first)
+                if (offset < mSegments.front().first) {
                     mSegments.front().first = offset;
+                    mSegments.front().second += length;
+                }
             }
             else {
                 // No merge, just add a new one
