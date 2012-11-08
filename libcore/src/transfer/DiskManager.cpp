@@ -74,20 +74,38 @@ void DiskManager::ReadRequest::execute() {
     std::tr1::shared_ptr<DenseData> badResult;
 
     if(!fs::exists(mPath)) {
-        SILOG(transfer, warn, "File '" << mPath.file_string() << "' didn't exist in ReadRequest.");
+        SILOG(transfer, warn, "File '" << 
+#if BOOST_FILESYSTEM_VERSION<3
+              mPath.file_string() 
+#else
+              mPath.string() 
+#endif
+              << "' didn't exist in ReadRequest.");
         mCb(badResult);
         return;
     }
 
     if(!fs::is_regular_file(mPath)) {
-        SILOG(transfer, warn, "File '" << mPath.file_string() << "' was not a regular file in ReadRequest.");
+        SILOG(transfer, warn, "File '" << 
+#if BOOST_FILESYSTEM_VERSION<3
+              mPath.file_string() 
+#else
+              mPath.string() 
+#endif
+              << "' was not a regular file in ReadRequest.");
         mCb(badResult);
         return;
     }
 
     fs::ifstream file(mPath, fs::ifstream::in | fs::ifstream::binary);
     if(!file.is_open()) {
-        SILOG(transfer, warn, "File '" << mPath.file_string() << "' was not open in ReadRequest.");
+        SILOG(transfer, warn, "File '" << 
+#if BOOST_FILESYSTEM_VERSION<3
+              mPath.file_string() 
+#else
+              mPath.string() 
+#endif
+              << "' was not open in ReadRequest.");
         mCb(badResult);
         return;
     }
@@ -106,7 +124,13 @@ void DiskManager::ReadRequest::execute() {
     }
 
     if(file.bad() || file.fail()) {
-        SILOG(transfer, warn, "File '" << mPath.file_string() << "' got error while reading in ReadRequest.");
+        SILOG(transfer, warn, "File '" << 
+#if BOOST_FILESYSTEM_VERSION<3
+              mPath.file_string() 
+#else
+              mPath.string() 
+#endif
+              << "' got error while reading in ReadRequest.");
         mCb(badResult);
         return;
     }

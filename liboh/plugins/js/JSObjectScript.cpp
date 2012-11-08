@@ -1079,17 +1079,10 @@ v8::Handle<v8::Value> JSObjectScript::debug_fileWrite(String& strToWrite,String&
         baseDir / filename;
 
 
-    String splitval;
-// We need to use filesystem2 on Windows because boost 1.44 doesn't expose slash through the boost::filesystem namespace.
-#if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS
-    splitval += boost::filesystem2::slash<boost::filesystem::path>::value;
-#else
-    splitval += boost::filesystem::slash<boost::filesystem::path>::value;
-#endif
     std::vector<String> pathParts;
     boost::algorithm::split(
         pathParts,fullPath.string(),
-        boost::is_any_of(splitval.c_str()));
+        boost::is_any_of("/\\"));//FIXME do we want to allow writing files with backslash in them in unix filesystems?
 
     boost::filesystem::path partialPath("/");
     for (uint64 s= 0; s < pathParts.size() -1; ++s)
@@ -1755,7 +1748,11 @@ v8::Handle<v8::Value> JSObjectScript::absoluteImport(const boost::filesystem::pa
     String cached_js_file =
         (cache_dir /
             boost::filesystem::complete(full_filename.parent_path()).relative_path() /
-            (full_filename.filename() + ".js.cache")).string();
+            (full_filename.filename()
+#if BOOST_FILESYSTEM_VERSION>=3
+             .string()
+#endif
+             + ".js.cache")).string();
     String cached_contents;
     int64 cached_mtime;
     bool got_cached_js = false;

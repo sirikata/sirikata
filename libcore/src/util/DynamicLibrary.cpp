@@ -257,7 +257,12 @@ bool DynamicLibrary::isValidLibraryFilename() const {
     path bfs_path = mPath;
     // FIXME this should be bfs_path.leaf() in 1.35, bfs_path.filename() in
     // 1.37.  Instead, just do this manually.
-    String libfilename = bfs_path.empty() ? String() : *--bfs_path.end();
+    String libfilename;
+#if BOOST_FILESYSTEM_VERSION<3
+    libfilename = bfs_path.leaf();
+#else
+    libfilename = bfs_path.filename().string();
+#endif
 
     if (libfilename.substr(0, pref.size()) != pref)
         return false;
