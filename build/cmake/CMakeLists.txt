@@ -632,7 +632,7 @@ ADD_DEFINITIONS(${LIBPROX_EXTRA_DEFINITIONS})
 #ENDIF(NOT GLUT_FOUND)
 SET(GSL_ROOT ${PLATFORM_LIBS}/installed-gsl)
 FIND_PACKAGE(GSL)
-IF(GSL_FOUND)
+IF(GSL_FOUND AND NOT DISABLE_GSL)#we may wish to disable GSL even if it is present on the system
   SET(GSL_CXX_FLAGS "-DHAVE_GSL ${GSL_CXX_FLAGS}")
 ELSE()
   MESSAGE(STATUS "GSL was not found: Will single sample in center of region to approximate integral.")
