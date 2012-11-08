@@ -496,8 +496,17 @@ SET(Boost_LIBRARIES
   debug ${Boost_REGEX_LIBRARY_DEBUG} optimized ${Boost_REGEX_LIBRARY_RELEASE}
   debug ${Boost_IOSTREAMS_LIBRARY_DEBUG} optimized ${Boost_IOSTREAMS_LIBRARY_RELEASE}
   )
-# Make sure we use boost filesystem v2 if both v2 and v3 are available.
-ADD_DEFINITIONS(-DBOOST_FILESYSTEM_VERSION=2)
+
+# Make sure we use boost filesystem v2 if both v2 and v3 are available, otherwise use v3 only
+IF(Boost_MAJOR_VERSION LESS 2)
+  IF(Boost_MINOR_VERSION LESS 50)
+    ADD_DEFINITIONS(-DBOOST_FILESYSTEM_VERSION=2)#the v3 spec seems to have become more strict since v2 allowing for internationalization and requiring explicit calls to string(). Therefore use old boost filesystem for the older boost
+  ELSE()
+    ADD_DEFINITIONS(-DBOOST_FILESYSTEM_VERSION=3)#1.50 and greater removed the boost filesystem v2 compatibility layer
+  ENDIF()
+ELSE()
+  ADD_DEFINITIONS(-DBOOST_FILESYSTEM_VERSION=3)
+ENDIF()
 
 # dependency: zlib
 # We provide gzip support in HttpManager, which requires zlib. Only
