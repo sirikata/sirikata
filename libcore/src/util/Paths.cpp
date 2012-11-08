@@ -162,7 +162,11 @@ String Get(Key key) {
                   if (exe_dir_path.has_filename() && exe_dir_path.filename() == "Contents") {
                       exe_dir_path = exe_dir_path.parent_path();
                       if (exe_dir_path.has_filename()) {
-                          String app_dir_name = exe_dir_path.filename();
+                          String app_dir_name = exe_dir_path.filename()
+#if BOOST_FILESYSTEM_VERSION>=3
+			    .string()
+#endif
+			    ;
                           if (app_dir_name.substr(app_dir_name.size()-4, 4) == ".app")
                               return exe_dir_path.parent_path().string();
                       }
