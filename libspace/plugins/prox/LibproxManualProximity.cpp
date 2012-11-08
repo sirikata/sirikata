@@ -182,8 +182,8 @@ void LibproxManualProximity::onLocationUpdateFromServer(const ServerID sid, cons
     // just need to dispatch it to the right.
     ReplicatedServerDataMap::iterator rsit = mReplicatedServerDataMap.find(sid);
     if (rsit == mReplicatedServerDataMap.end()) return;
-
-    rsit->second.client->locUpdate(LocProtocolLocUpdate(update, NopTimeSynced()));
+    LocProtocolLocUpdate tmp(update, NopTimeSynced());//llvm based compilers need a temporary to avoid a copy constructor call to locUpdate
+    rsit->second.client->locUpdate(tmp);
 }
 
 // MessageRecipient Interface
