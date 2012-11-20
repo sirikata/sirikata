@@ -1407,6 +1407,7 @@ SET(SIRIKATA_CORE_SOURCES
         ${LIBCORE_SOURCE_DIR}/util/RegionWeightCalculator.cpp
         ${LIBCORE_SOURCE_DIR}/util/Liveness.cpp
         ${LIBCORE_SOURCE_DIR}/util/Paths.cpp
+        ${LIBCORE_SOURCE_DIR}/util/Singleton.cpp
         ${LIBCORE_SOURCE_DIR}/util/Md5.cpp
         ${LIBCORE_SOURCE_DIR}/util/UniqueID.cpp
         ${LIBCORE_SOURCE_DIR}/trace/BatchedBuffer.cpp

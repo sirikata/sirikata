@@ -38,20 +38,25 @@
 #include <boost/thread/locks.hpp>
 
 namespace Sirikata {
-
+SIRIKATA_EXPORT extern boost::mutex *sAutoSingletonInstanceMutex;
 template <class T> class AutoSingleton {
     static std::auto_ptr<T> sInstance;
-    static boost::mutex sInstanceMutex;
+
 public:
     static T&getSingleton() {
-        if (sInstance.get()==NULL)  {
+        if (sInstance.get()==NULL)  {            
+            if (!sAutoSingletonInstanceMutex) {//since static initialization and destruction happens before we turn on threads, this can happen
+                //without causing 2 of them to happen. We need to make this a pointer so that during 
+                // static initialization and destruction we won't have an uninitialized mutex
+                sAutoSingletonInstanceMutex = new boost::mutex();
+            }
             // Make sure multiple threads don't try to allocate at the same
             // time. This *doesn't* make Singletons thread safe, it just makes
             // allocation thread safe -- you can have multiple threads calling
             // getSingleton and be sure only one of them actually creates the
             // singleton, but destruction still needs to unique. There's no way
             // to make this truly thread-safe since we expose the raw reference.
-            boost::lock_guard<boost::mutex> lock(sInstanceMutex);
+            boost::lock_guard<boost::mutex> lock(*sAutoSingletonInstanceMutex);
             // Need to double check someone didn't beat us to it before we got
             // the lock
             if (sInstance.get() == NULL) {
@@ -78,9 +83,9 @@ public:
 
 }
 #ifdef _WIN32
-#define AUTO_SINGLETON_INSTANCE(ClassName) template<>std::auto_ptr<ClassName> Sirikata::AutoSingleton<ClassName>::sInstance; template<> boost::mutex Sirikata::AutoSingleton<ClassName>::sInstanceMutex
+#define AUTO_SINGLETON_INSTANCE(ClassName) template<>std::auto_ptr<ClassName> Sirikata::AutoSingleton<ClassName>::sInstance;
 #else
-#define AUTO_SINGLETON_INSTANCE(ClassName) template std::auto_ptr<ClassName> Sirikata::AutoSingleton<ClassName>::sInstance; template<>std::auto_ptr<ClassName>Sirikata::AutoSingleton<ClassName>::sInstance; template boost::mutex Sirikata::AutoSingleton<ClassName>::sInstanceMutex; template<> boost::mutex Sirikata::AutoSingleton<ClassName>::sInstanceMutex
+#define AUTO_SINGLETON_INSTANCE(ClassName) template std::auto_ptr<ClassName> Sirikata::AutoSingleton<ClassName>::sInstance; template<>std::auto_ptr<ClassName>Sirikata::AutoSingleton<ClassName>::sInstance;
 #endif
 
 #endif
