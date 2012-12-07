@@ -108,7 +108,8 @@ void MasterPintoServerQuerier::onPintoData(const String& data) {
         Sirikata::Protocol::Loc::BulkLocationUpdate bu = msg.loc_updates();
         for(int32 li = 0; li < bu.update_size(); li++) {
 	  //llvm-based compilers want a temporary variable to avoid a copy constructor call
-	  LocProtocolLocUpdate tmp(bu.update(li), NopTimeSynced());
+            NopTimeSynced nop_ts;
+            LocProtocolLocUpdate tmp(bu.update(li), nop_ts);
             // notify wants to only pass through values and tries to copy the
             // LocProtocolLocUpdate by default -- we need to jump through hoops and
             // specify the exact template types explicitly to make this work
