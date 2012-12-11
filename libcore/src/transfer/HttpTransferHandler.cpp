@@ -76,6 +76,9 @@ void HttpNameHandler::request_finished(std::tr1::shared_ptr<HttpManager::HttpRes
         HttpManager::ERR_TYPE error, const boost::system::error_code& boost_error,
         std::tr1::shared_ptr<MetadataRequest> request, NameCallback callback) {
 
+    mStats.resolved++;
+    mStats.bytesTransferred += (response->getBytesSent() + response->getBytesReceived());
+
     std::tr1::shared_ptr<RemoteFileMetadata> bad;
 
     if (error == Transfer::HttpManager::REQUEST_PARSING_FAILED) {
@@ -177,6 +180,7 @@ void HttpChunkHandler::get(std::tr1::shared_ptr<RemoteFileMetadata> file,
 void HttpChunkHandler::cache_check_callback(const SparseData* data, std::tr1::shared_ptr<RemoteFileMetadata> file,
             std::tr1::shared_ptr<Chunk> chunk, ChunkCallback callback) {
     if (data) {
+        mStats.downloaded++;
         std::tr1::shared_ptr<const DenseData> flattened = data->flatten();
         callback(flattened);
     } else {
@@ -204,6 +208,9 @@ void HttpChunkHandler::request_finished(std::tr1::shared_ptr<HttpManager::HttpRe
         HttpManager::ERR_TYPE error, const boost::system::error_code& boost_error,
         std::tr1::shared_ptr<RemoteFileMetadata> file, std::tr1::shared_ptr<Chunk> chunk,
         ChunkCallback callback) {
+
+    mStats.downloaded++;
+    mStats.bytesTransferred += (response->getBytesSent() + response->getBytesReceived());
 
     std::tr1::shared_ptr<DenseData> bad;
     std::string reqType = "file request";

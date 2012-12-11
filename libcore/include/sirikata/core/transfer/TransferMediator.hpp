@@ -173,6 +173,8 @@ class SIRIKATA_EXPORT TransferMediator
         return pool->getRequest();
     }
 
+    Context* mContext;
+
 	//Maps a client ID string to the PoolWorker class
 	typedef std::map<std::string, std::tr1::shared_ptr<PoolWorker> > PoolType;
 	//Stores the list of pools
@@ -202,6 +204,8 @@ class SIRIKATA_EXPORT TransferMediator
 
     void registerPool(TransferPoolPtr pool);
 
+    //Update statistics from the TransferHandlers
+    void updateStats();
 
     void commandListRequests(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
 public:

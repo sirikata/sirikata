@@ -7,6 +7,11 @@
 #include <sirikata/core/transfer/TransferHandlers.hpp>
 #include <sirikata/core/transfer/DiskManager.hpp>
 
+#include <sirikata/core/transfer/MeerkatTransferHandler.hpp>
+#include <sirikata/core/transfer/FileTransferHandler.hpp>
+#include <sirikata/core/transfer/HttpTransferHandler.hpp>
+#include <sirikata/core/transfer/DataTransferHandler.hpp>
+
 using namespace std;
 
 AUTO_SINGLETON_INSTANCE(Sirikata::Transfer::TransferMediator);
@@ -31,7 +36,9 @@ void TransferMediator::destroy() {
 	DiskManager::destroy();
 }
 
-TransferMediator::TransferMediator() {
+TransferMediator::TransferMediator()
+ : mContext(NULL)
+{
     mCleanup = false;
     mNumOutstanding = 0;
     mAggregationAlgorithm = new MaxPriorityAggregation();
@@ -45,8 +52,13 @@ TransferMediator::~TransferMediator() {
 }
 
 void TransferMediator::mediatorThread() {
+    uint32 its = 0;
     while(!mCleanup) {
         checkQueue();
+        // NOTE: This is tied specifically to the # of milliseconds below to
+        // give ~1sec granularity
+        if (its++ % 200 == 0)
+            updateStats();
 
         /**
            Ewen and I weren't able to identify why the below call caused a
@@ -149,6 +161,59 @@ void TransferMediator::checkQueue() {
     }
 
     lock.unlock();
+}
+
+
+void TransferMediator::updateStats() {
+    uint32 names_resolved =
+        MeerkatNameHandler::getSingleton().statsNamesResolved() +
+        FileNameHandler::getSingleton().statsNamesResolved() +
+        HttpNameHandler::getSingleton().statsNamesResolved() +
+        DataNameHandler::getSingleton().statsNamesResolved();
+    uint32 names_bytes_transferred =
+        MeerkatNameHandler::getSingleton().statsBytesTransferred() +
+        FileNameHandler::getSingleton().statsBytesTransferred() +
+        HttpNameHandler::getSingleton().statsBytesTransferred() +
+        DataNameHandler::getSingleton().statsBytesTransferred();
+
+    uint32 downloads =
+        MeerkatChunkHandler::getSingleton().statsChunksDownloaded() +
+        FileChunkHandler::getSingleton().statsChunksDownloaded() +
+        HttpChunkHandler::getSingleton().statsChunksDownloaded() +
+        DataChunkHandler::getSingleton().statsChunksDownloaded();
+    uint32 downloads_bytes_transferred =
+        MeerkatChunkHandler::getSingleton().statsBytesTransferred() +
+        FileChunkHandler::getSingleton().statsBytesTransferred() +
+        HttpChunkHandler::getSingleton().statsBytesTransferred() +
+        DataChunkHandler::getSingleton().statsBytesTransferred();
+
+    uint32 uploads =
+        MeerkatUploadHandler::getSingleton().statsFilesUploaded();
+    uint32 uploads_bytes_transferred =
+        MeerkatUploadHandler::getSingleton().statsBytesTransferred();
+
+    MeerkatNameHandler::getSingleton().statsReset();
+    FileNameHandler::getSingleton().statsReset();
+    HttpNameHandler::getSingleton().statsReset();
+    DataNameHandler::getSingleton().statsReset();
+    MeerkatChunkHandler::getSingleton().statsReset();
+    FileChunkHandler::getSingleton().statsReset();
+    HttpChunkHandler::getSingleton().statsReset();
+    DataChunkHandler::getSingleton().statsReset();
+    MeerkatUploadHandler::getSingleton().statsReset();
+
+    if (mContext != NULL &&
+        (names_resolved != 0 || names_bytes_transferred != 0 ||
+            downloads != 0 || downloads_bytes_transferred != 0 ||
+            uploads != 0 || uploads_bytes_transferred != 0))
+    {
+        SILOG(transfer-periodic-stats, insane,
+            "TRANSFER-STATS: " <<
+            names_resolved << " names, " << names_bytes_transferred << " names_bytes, " <<
+            downloads << " downloads, " << downloads_bytes_transferred << " downloads_bytes, " <<
+            uploads << " uploads, " << uploads_bytes_transferred << " uploads_bytes, " <<
+            (mContext->simTime()-Time::null()).microseconds() << " time");
+    }
 }
 
 
@@ -295,6 +360,7 @@ void TransferMediator::PoolWorker::run() {
 }
 
 void TransferMediator::registerContext(Context* ctx) {
+    mContext = ctx;
     if (ctx->commander()) {
         ctx->commander()->registerCommand(
             "transfer.mediator.requests.list",

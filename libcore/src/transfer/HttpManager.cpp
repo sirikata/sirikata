@@ -474,6 +474,7 @@ void HttpManager::handle_write_request(std::tr1::shared_ptr<TCPSocket> socket, s
 
     //Create a new response object
     std::tr1::shared_ptr<HttpResponse> respPtr(new HttpResponse());
+    respPtr->mBytesSent = req->req.size();
 
     //Initiate an empty DenseData
     std::tr1::shared_ptr<DenseData> emptyData(new DenseData(Range(true)));
@@ -521,6 +522,8 @@ void HttpManager::handle_read(std::tr1::shared_ptr<TCPSocket> socket, std::tr1::
         processQueue();
         return;
     }
+
+    respPtr->mBytesReceived += bytes_transferred;
 
     //Parse the data we just got back from the socket
     size_t nparsed = http_parser_execute(&(respPtr->mHttpParser), &(respPtr->mHttpSettings),

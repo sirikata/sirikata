@@ -61,6 +61,7 @@ void DataNameHandler::resolve(std::tr1::shared_ptr<MetadataRequest> request, Nam
                 file_size, chunkList, emptyHeaders)
     );
 
+    mStats.resolved++;
     HttpManager::getSingleton().postCallback(std::tr1::bind(callback, met), "DataNameHandler::resolve callback");
 }
 
@@ -98,6 +99,7 @@ void DataChunkHandler::get(std::tr1::shared_ptr<RemoteFileMetadata> file,
     FileHeaders emptyHeaders;
     DenseDataPtr fileContents(new DenseData(data.data()));
 
+    mStats.downloaded++;
     HttpManager::getSingleton().postCallback(std::tr1::bind(callback, fileContents), "DataChunkHandler::resolve callback");
 }
 
