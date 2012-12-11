@@ -202,11 +202,7 @@ void TransferMediator::updateStats() {
     DataChunkHandler::getSingleton().statsReset();
     MeerkatUploadHandler::getSingleton().statsReset();
 
-    if (mContext != NULL &&
-        (names_resolved != 0 || names_bytes_transferred != 0 ||
-            downloads != 0 || downloads_bytes_transferred != 0 ||
-            uploads != 0 || uploads_bytes_transferred != 0))
-    {
+    if (mContext != NULL) {
         SILOG(transfer-periodic-stats, insane,
             "TRANSFER-STATS: " <<
             names_resolved << " names, " << names_bytes_transferred << " names_bytes, " <<
