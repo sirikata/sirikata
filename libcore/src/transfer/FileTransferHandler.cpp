@@ -43,6 +43,8 @@ void FileNameHandler::resolve(std::tr1::shared_ptr<MetadataRequest> request, Nam
 void FileNameHandler::onReadFinished(std::tr1::shared_ptr<DenseData> fileContents,
         std::tr1::shared_ptr<MetadataRequest> request, NameCallback callback) {
 
+    mStats.resolved++;
+
     std::tr1::shared_ptr<RemoteFileMetadata> bad;
     if (!fileContents) {
         SILOG(transfer, error, "FileNameHandler couldn't find file '" << request->getURI() << "'");
@@ -110,6 +112,7 @@ void FileChunkHandler::get(std::tr1::shared_ptr<RemoteFileMetadata> file,
 void FileChunkHandler::cache_check_callback(const SparseData* data, std::tr1::shared_ptr<RemoteFileMetadata> file,
             std::tr1::shared_ptr<Chunk> chunk, ChunkCallback callback) {
     if (data) {
+        mStats.downloaded++;
         std::tr1::shared_ptr<const DenseData> flattened = data->flatten();
         callback(flattened);
     } else {
@@ -126,6 +129,8 @@ void FileChunkHandler::cache_check_callback(const SparseData* data, std::tr1::sh
 
 void FileChunkHandler::onReadFinished(std::tr1::shared_ptr<DenseData> fileContents, std::tr1::shared_ptr<RemoteFileMetadata> file,
         std::tr1::shared_ptr<Chunk> chunk, ChunkCallback callback) {
+
+    mStats.downloaded++;
 
     std::tr1::shared_ptr<DenseData> bad;
     if (!fileContents) {

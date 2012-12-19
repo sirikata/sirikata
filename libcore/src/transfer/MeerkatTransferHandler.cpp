@@ -88,6 +88,9 @@ void MeerkatNameHandler::request_finished(std::tr1::shared_ptr<HttpManager::Http
         HttpManager::ERR_TYPE error, const boost::system::error_code& boost_error,
         std::tr1::shared_ptr<MetadataRequest> request, NameCallback callback) {
 
+    mStats.resolved++;
+    mStats.bytesTransferred += (response->getBytesSent() + response->getBytesReceived());
+
     std::tr1::shared_ptr<RemoteFileMetadata> bad;
 
     if (error == Transfer::HttpManager::REQUEST_PARSING_FAILED) {
@@ -244,6 +247,8 @@ void MeerkatChunkHandler::get(std::tr1::shared_ptr<Chunk> chunk, ChunkCallback c
 void MeerkatChunkHandler::cache_check_callback(const SparseData* data, const URI& uri,
             std::tr1::shared_ptr<Chunk> chunk, ChunkCallback callback) {
     if (data) {
+        mStats.downloaded++;
+
         std::tr1::shared_ptr<const DenseData> flattened = data->flatten();
         callback(flattened);
     } else {
@@ -286,6 +291,9 @@ void MeerkatChunkHandler::request_finished(std::tr1::shared_ptr<HttpManager::Htt
         HttpManager::ERR_TYPE error, const boost::system::error_code& boost_error,
         const URI& uri, std::tr1::shared_ptr<Chunk> chunk,
         bool chunkReq, ChunkCallback callback) {
+
+    mStats.downloaded++;
+    mStats.bytesTransferred += (response->getBytesSent() + response->getBytesReceived());
 
     std::tr1::shared_ptr<DenseData> bad;
     std::string reqType = "file request";
@@ -497,6 +505,8 @@ void MeerkatUploadHandler::request_finished(std::tr1::shared_ptr<HttpManager::Ht
     HttpManager::ERR_TYPE error, const boost::system::error_code& boost_error,
     UploadRequestPtr request, UploadCallback callback) {
 
+    mStats.bytesTransferred += (response->getBytesSent() + response->getBytesReceived());
+
     Transfer::URI bad;
 
     if (error == Transfer::HttpManager::REQUEST_PARSING_FAILED) {
@@ -527,7 +537,7 @@ void MeerkatUploadHandler::request_finished(std::tr1::shared_ptr<HttpManager::Ht
         SILOG(transfer, error, "HTTP status code = " << response->getStatusCode() << " instead of 200 during an HTTP upload (" << request->getIdentifier() << ")");
         callback(bad);
         return;
-    }    
+    }
 
     DenseDataPtr response_data = response->getData();
 
@@ -595,6 +605,8 @@ void MeerkatUploadHandler::handleRequestStatusResult(
     int32 retries
 )
 {
+    mStats.bytesTransferred += (response->getBytesSent() + response->getBytesReceived());
+
     Transfer::URI bad;
 
     if (retries <= 0) {
@@ -670,8 +682,9 @@ void MeerkatUploadHandler::handleRequestStatusResult(
 	                     ") -- No path returned in upload response");
       callback(bad);
       return;
-    } 
+    }
     SILOG(transfer, detailed, "Upload succeeded and got path " << asset_path << " (" << request->getIdentifier() << ")");
+    mStats.uploaded++;
 
     // Construct the meerkat:// URL for this asset. We need server
     // info to ensure we specify the right server

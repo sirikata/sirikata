@@ -212,7 +212,8 @@ private:
         // notify wants to only pass through values and tries to copy the
         // LocProtocolLocUpdate by default -- we need to jump through hoops and
         // specify the exact template types explicitly to make this work
-	LocProtocolLocUpdate tmp(update, NopTimeSynced());//need to assign a temporary for llvm compilers
+        NopTimeSynced nop_ts;
+	LocProtocolLocUpdate tmp(update, nop_ts);//need to assign a temporary for llvm compilers
         notify<void(PintoServerQuerierListener::*)(const Sirikata::LocUpdate&), const LocProtocolLocUpdate&>(&PintoServerQuerierListener::onPintoServerLocUpdate, tmp);
     }
 

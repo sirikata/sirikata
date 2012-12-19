@@ -173,9 +173,16 @@ public:
         ssize_t mContentLength;
         unsigned short mStatusCode;
 
+        // Stats from underlying Http Request/Response. Note that BytesReceived
+        // is *not* the same as content length
+        uint32 mBytesSent;
+        uint32 mBytesReceived;
+
         HttpResponse()
             : mLastCallback(NONE), mHeaderComplete(false), mMessageComplete(false),
-              mGzip(false), mContentLength(0), mStatusCode(0) {}
+              mGzip(false), mContentLength(0), mStatusCode(0),
+              mBytesSent(0), mBytesReceived(0)
+        {}
     public:
         inline std::tr1::shared_ptr<DenseData> getData() { return mData; }
         inline const Headers& getHeaders() { return mHeaders; }
@@ -187,6 +194,8 @@ public:
         }
         inline ssize_t getContentLength() { return mContentLength; }
         inline unsigned short getStatusCode() { return mStatusCode; }
+        inline uint32 getBytesSent() const { return mBytesSent; }
+        inline uint32 getBytesReceived() const { return mBytesReceived; }
 
         friend class HttpManager;
     };
@@ -355,8 +364,8 @@ private:
     boost::mutex mRequestQueueLock;
 
     //TODO: should get these from settings
-    static const uint32 MAX_CONNECTIONS_PER_ENDPOINT = 8;  
-    static const uint32 MAX_TOTAL_CONNECTIONS = 40;  
+    static const uint32 MAX_CONNECTIONS_PER_ENDPOINT = 8;
+    static const uint32 MAX_TOTAL_CONNECTIONS = 40;
     static const uint32 SOCKET_BUFFER_SIZE = 10240;
 
     //Keeps track of the total number of connections currently open

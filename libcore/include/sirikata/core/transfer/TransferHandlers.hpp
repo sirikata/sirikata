@@ -63,6 +63,26 @@ public:
 	virtual ~NameHandler() {
 	}
 
+    uint32 statsNamesResolved() { return mStats.resolved; }
+    uint32 statsBytesTransferred() { return mStats.bytesTransferred; }
+    void statsReset() {
+        mStats.resolved = 0;
+        mStats.bytesTransferred = 0;
+    }
+protected:
+    struct Stats {
+        Stats()
+         : resolved(0),
+           bytesTransferred(0)
+        {}
+
+        // Number of name resolutions completed
+        AtomicValue<uint32> resolved;
+        // Bytes transferred
+        AtomicValue<uint32> bytesTransferred;
+    };
+    Stats mStats;
+
 };
 
 /*
@@ -82,6 +102,27 @@ public:
     virtual ~ChunkHandler() {
     }
 
+
+    uint32 statsChunksDownloaded() { return mStats.downloaded; }
+    uint32 statsBytesTransferred() { return mStats.bytesTransferred; }
+    void statsReset() {
+        mStats.downloaded = 0;
+        mStats.bytesTransferred = 0;
+    }
+protected:
+    struct Stats {
+        Stats()
+         : downloaded(0),
+           bytesTransferred(0)
+        {}
+
+        // Number of name resolutions completed
+        AtomicValue<uint32> downloaded;
+        // Bytes transferred
+        AtomicValue<uint32> bytesTransferred;
+    };
+    Stats mStats;
+
 };
 
 
@@ -100,6 +141,27 @@ public:
 
     virtual ~UploadHandler() {
     }
+
+
+    uint32 statsFilesUploaded() { return mStats.uploaded; }
+    uint32 statsBytesTransferred() { return mStats.bytesTransferred; }
+    void statsReset() {
+        mStats.uploaded = 0;
+        mStats.bytesTransferred = 0;
+    }
+protected:
+    struct Stats {
+        Stats()
+         : uploaded(0),
+           bytesTransferred(0)
+        {}
+
+        // Number of name resolutions completed
+        AtomicValue<uint32> uploaded;
+        // Bytes transferred
+        AtomicValue<uint32> bytesTransferred;
+    };
+    Stats mStats;
 
 };
 
