@@ -42,7 +42,7 @@ void InitSpaceOptions() {
         .addOption(new OptionValue(OPT_CONFIG_FILE,"space.cfg",Sirikata::OptionValueType<String>(),"Configuration file to load."))
 
         .addOption(new OptionValue(OPT_SPACE_PLUGINS,
-                "weight-exp,weight-sqr,weight-const,space-null,space-local,space-standard,space-prox,colladamodels,mesh-billboard,mesh-ply,common-filters,space-bulletphysics,space-environment"
+                "weight-exp,weight-sqr,weight-const,space-null,space-local,space-standard,space-prox,colladamodels,mesh-billboard,mesh-ply,common-filters,space-bulletphysics,space-environment,nvtt"
 #if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_LINUX
                 ",space-redis"
 #endif
