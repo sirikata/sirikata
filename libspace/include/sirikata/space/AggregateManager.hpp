@@ -40,6 +40,7 @@
 #include <sirikata/core/transfer/RemoteFileMetadata.hpp>
 #include <sirikata/core/transfer/TransferPool.hpp>
 #include <sirikata/core/transfer/TransferMediator.hpp>
+#include <sirikata/core/transfer/ResourceDownloadTask.hpp>
 
 #include <sirikata/space/LocationService.hpp>
 
@@ -54,8 +55,59 @@
 #include <sirikata/core/command/Command.hpp>
 
 #include <boost/thread/locks.hpp>
+#include <prox/rtree/RTreeCore.hpp>
+
+
+
 
 namespace Sirikata {
+
+class FaceContainer {
+public:
+  Vector3f v1;
+  Vector3f v2;
+  Vector3f v3;
+
+  FaceContainer(Vector3f& v1, Vector3f& v2, Vector3f& v3) {
+    this->v1 = v1;
+    this->v2 = v2;
+    this->v3 = v3;
+  }
+
+  FaceContainer() {
+  }
+
+  size_t hash() const {
+      size_t seed = 0;
+
+      size_t pos1Hash = v1.hash();
+      size_t pos2Hash = v2.hash();
+      size_t pos3Hash = v3.hash();
+
+      std::vector<size_t> facevecs;
+      seed = 0;
+      facevecs.push_back(pos1Hash);facevecs.push_back(pos2Hash);facevecs.push_back(pos3Hash);
+      sort(facevecs.begin(), facevecs.end());
+      boost::hash_combine(seed, facevecs[0]);
+      boost::hash_combine(seed, facevecs[1]);
+      boost::hash_combine(seed, facevecs[2]);
+
+      return seed;
+  }
+
+  bool operator==(const FaceContainer&other)const {
+        return v1 == other.v1 && v2==other.v2 && v3==other.v3;
+  }
+
+  class Hasher{
+  public:
+        size_t operator() (const FaceContainer& g) const {
+            return g.hash();
+        }
+  };
+
+};
+
 
 class SIRIKATA_SPACE_EXPORT AggregateManager : public LocationServiceListener {
 private:
@@ -67,6 +119,7 @@ private:
   Network::IOStrand* mAggregationStrands[MAX_NUM_GENERATION_THREADS];
   Network::IOWork* mIOWorks[MAX_NUM_GENERATION_THREADS];
 
+  
   typedef struct LocationInfo {
   private:
       boost::shared_mutex mutex;
@@ -123,8 +176,8 @@ private:
   class LocationServiceCache {
     public:
       LocationServiceCache() { }
-
-      std::tr1::shared_ptr<LocationInfo> getLocationInfo(const UUID& uuid) {
+      
+      std::tr1::shared_ptr<LocationInfo> getLocationInfo(const UUID& uuid) {        
         if (mLocMap.find(uuid) == mLocMap.end()){
           return std::tr1::shared_ptr<LocationInfo>();
         }
@@ -135,25 +188,25 @@ private:
       void insertLocationInfo(const UUID& uuid, std::tr1::shared_ptr<LocationInfo> locinfo) {
         mLocMap[uuid] = locinfo;
       }
-
+    
       void removeLocationInfo(const UUID& uuid) {
         mLocMap.erase(uuid);
       }
-
+    
     private:
       std::tr1::unordered_map<UUID, std::tr1::shared_ptr<LocationInfo> , UUID::Hasher> mLocMap;
   };
 
   LocationServiceCache mLocationServiceCache;
   boost::mutex mLocCacheMutex;
-  LocationService* mLoc;
+  LocationService* mLoc; 
 
   //Part of the LocationServiceListener interface.
   virtual void localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient,
-                              const AggregateBoundingInfo& bounds, const String& mesh, const String& physics,
-                                const String& zernike);
+                              const AggregateBoundingInfo& bounds, const String& mesh, const String& physics, 
+                                const String& zernike);  
   virtual void localObjectRemoved(const UUID& uuid, bool agg) ;
-  virtual void localLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval);
+  virtual void localLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval); 
   virtual void localOrientationUpdated(const UUID& uuid, bool agg, const TimedMotionQuaternion& newval);
   virtual void localBoundsUpdated(const UUID& uuid, bool agg, const AggregateBoundingInfo& newval) ;
   virtual void localMeshUpdated(const UUID& uuid, bool agg, const String& newval) ;
@@ -169,7 +222,11 @@ private:
   boost::mutex mModelsSystemMutex;
   ModelsSystem* mModelsSystem;
   Sirikata::Mesh::MeshSimplifier mMeshSimplifier;
+  boost::mutex mCenteringFilterMutex;
   Sirikata::Mesh::Filter* mCenteringFilter;
+
+  boost::mutex mSquashFilterMutex;
+  Sirikata::Mesh::Filter* mSquashFilter;
 
   struct AggregateObject;
   typedef std::tr1::shared_ptr<AggregateObject> AggregateObjectPtr;
@@ -220,25 +277,33 @@ private:
       mLastGenerateTime(Time::null()),
       mTreeLevel(0),  mNumObservers(0),
       mNumFailedGenerationAttempts(0),
+      geometricError(0), mSerializedSize(0),
       cdnBaseName(),
+      mAtlasPath(""),
       refreshTTL(Time::null())
     {
       mParentUUIDs.insert(parentUUID);
       mMeshdata = Mesh::MeshdataPtr();
       generatedLastRound = false;
       mDistance = 0.01;
+      mTriangleCount = 0;
     }
 
     uint16 mTreeLevel;
     uint32 mNumObservers;
     uint32 mNumFailedGenerationAttempts;
     double mDistance;  //MINIMUM distance at which this object could be part of a cut
-    std::vector<UUID> mLeaves;
+    uint32 mTriangleCount;
+    float64 geometricError;
+    uint32 mSerializedSize;
+    //std::tr1::unordered_set<std::tr1::shared_ptr<AggregateObject> > mLeaves;
 
+    boost::mutex mAtlasAndUploadMutex;
     // The basename returned by the CDN. This points at the entire asset
     // rather than the particular mesh filename. Should include a version
     // number. Used for refreshing TTLs.
     String cdnBaseName;
+    String mAtlasPath;
     // Time at which we should try to refresh the TTL, should be set
     // a bit less than the actual timeout.
     Time refreshTTL;
@@ -250,8 +315,11 @@ private:
   boost::mutex mAggregateObjectsMutex;
   typedef std::tr1::unordered_map<UUID, AggregateObjectPtr, UUID::Hasher > AggregateObjectsMap;
   AggregateObjectsMap mAggregateObjects;
-  Time mAggregateGenerationStartTime;
+  Time mAggregateGenerationStartTime;    
   std::tr1::unordered_map<UUID, AggregateObjectPtr, UUID::Hasher> mDirtyAggregateObjects;
+
+  boost::mutex mQueuedObjectsMutex;
+  std::tr1::unordered_map<UUID, std::pair<uint32,uint32>, UUID::Hasher> mQueuedObjects;
 
   boost::mutex mObjectsByPriorityLocks[MAX_NUM_GENERATION_THREADS];
   std::map<float, std::deque<AggregateObjectPtr > > mObjectsByPriority[MAX_NUM_GENERATION_THREADS];
@@ -259,8 +327,21 @@ private:
   //Variables related to downloading and in-memory caching meshes
   boost::mutex mMeshStoreMutex;
   std::tr1::unordered_map<String, Mesh::MeshdataPtr> mMeshStore;
+  std::map<int, String> mMeshStoreOrdering;
+  int mCurrentInsertionNumber;
+
+  std::tr1::unordered_map<String, Prox::ZernikeDescriptor> mMeshDescriptors;
   std::tr1::shared_ptr<Transfer::TransferPool> mTransferPool;
   Transfer::TransferMediator *mTransferMediator;
+  boost::mutex mResourceDownloadTasksMutex;
+  std::tr1::unordered_map<String, Transfer::ResourceDownloadTaskPtr> mResourceDownloadTasks;
+  bool mAtlasingNeeded;
+  uint32 mSizeOfSeenTextures;
+  std::tr1::unordered_set<String> mSeenTextureHashes;
+ 
+  boost::mutex mTextureNameToHashMapMutex;
+  std::tr1::unordered_map<String, String> mTextureNameToHashMap;
+  
   void addToInMemoryCache(const String& meshName, const Mesh::MeshdataPtr mdptr);
 
   //CDN upload-related variables
@@ -281,6 +362,7 @@ private:
   Network::IOStrand* mUploadStrands[MAX_NUM_UPLOAD_THREADS];
   Network::IOWork* mUploadWorks[MAX_NUM_UPLOAD_THREADS];
   void uploadThreadMain(uint8 i);
+  
 
   // Stats.
   // Raw number of aggregate updates that could cause regeneration,
@@ -317,8 +399,22 @@ private:
   void getLeaves(const std::vector<UUID>& mIndividualObjects);
   void addLeavesUpTree(UUID leaf_uuid, UUID uuid);
   bool isAggregate(const UUID& uuid);
+  float32 minimumDistanceForCut(AggregateObjectPtr aggObj);
+  void setAggregatesTriangleCount();
+  //void setChildrensTriangleCount(AggregateObjectPtr aggObj);
+  String serializeHashToURIMap(std::tr1::shared_ptr<std::tr1::unordered_map<String, std::vector<String> > > hashToURIMap);
+
+  //FIXME: meshDiff and mObservers are for experiemental puirposes only.
+  float meshDiff(const UUID& uuid, std::tr1::shared_ptr<Mesh::Meshdata> md1, std::tr1::shared_ptr<Mesh::Meshdata> md2);
+  std::set<UUID> mObservers;
 
 
+  void pca_get_rotate_matrix(Mesh::MeshdataPtr mesh, Matrix4x4f& rot_mat, Matrix4x4f& rot_mat_inv);
+
+  void getVertexAndFaceList(Mesh::MeshdataPtr md,
+                            std::tr1::unordered_set<Vector3f, Vector3f::Hasher>& positionVectors,
+                            std::tr1::unordered_set<FaceContainer, FaceContainer::Hasher>& faceSet
+                           );     
 
   //Function related to generating and updating aggregates.
   void updateChildrenTreeLevel(const UUID& uuid, uint16 treeLevel);
@@ -336,16 +432,24 @@ private:
       MISSING_CHILD_MESHES=6
   };
   uint32 generateAggregateMeshAsync(const UUID uuid, Time postTime, bool generateSiblings = true);
+  Mesh::MeshdataPtr generateAggregateMeshAsyncFromLeaves(const UUID uuid, Time postTime);
+
   void aggregationThreadMain(uint8 i);
   void updateAggregateLocMesh(UUID uuid, String mesh);
 
 
   //Functions related to uploading aggregates
-  void uploadAggregateMesh(Mesh::MeshdataPtr agg_mesh, AggregateObjectPtr aggObject,
-      std::tr1::unordered_map<String, String> textureSet, uint32 retryAttempt, Time uploadStartTime);
+  void uploadAggregateMesh(Mesh::MeshdataPtr agg_mesh,String atlas_name,
+                           std::tr1::shared_ptr<char> atlas_buffer,
+                           uint32 atlas_length,
+			   AggregateObjectPtr aggObject,
+                           std::tr1::unordered_map<String, String> textureSet, uint32 retryAttempt, Time uploadStartTime);
   // Helper that handles the upload callback and sets flags to let the request
   // from the aggregation thread to continue
   void handleUploadFinished(Transfer::UploadRequestPtr request, const Transfer::URI& path, Mesh::MeshdataPtr agg_mesh,
+			    String atlas_name,
+                            std::tr1::shared_ptr<char> atlas_buffer,
+                            uint32 atlas_length,
 			    AggregateObjectPtr aggObject, std::tr1::unordered_map<String, String> textureSet,
                             uint32 retryAttempt, const Time& uploadStartTime);
   // Look for any aggregates that need a keep-alive sent to the CDN
@@ -365,6 +469,8 @@ private:
 
   // Command handlers
   void commandStats(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
+  
+
 public:
 
   /** Create an AggregateManager.
@@ -417,6 +523,35 @@ public:
 
   void chunkFinished(Time t, const UUID uuid, const UUID child_uuid, std::string meshName, std::tr1::shared_ptr<Transfer::ChunkRequest> request,
                       std::tr1::shared_ptr<const Transfer::DenseData> response);
+
+  /*void textureMetadataFinished(String texname, Mesh::MeshdataPtr md, AggregateObjectPtr aggObj,
+                                          std::tr1::unordered_map<String, String> textureSet,
+                                          std::tr1::shared_ptr<std::tr1::unordered_map<String, int> > downloadedTexturesMap,
+                                          int retryAttempt,
+                                          std::tr1::shared_ptr<Transfer::MetadataRequest> request,
+                                          std::tr1::shared_ptr<Transfer::RemoteFileMetadata> response); */
+
+  void textureChunkFinished(String texname, Transfer::Fingerprint hashprint, uint32 offset, uint32 length, Mesh::MeshdataPtr agg_mesh, AggregateObjectPtr aggObj,
+                                          std::tr1::unordered_map<String, String> textureSet,
+                                          std::tr1::shared_ptr<std::tr1::unordered_map<String, int> > downloadedTexturesMap,
+                                          std::tr1::shared_ptr<std::tr1::unordered_map<String, std::vector<String> > > hashToURIMap,
+                                          int retryAttempt,
+                                          Transfer::ResourceDownloadTaskPtr dlPtr,
+					  std::tr1::shared_ptr<Transfer::TransferRequest> request,
+                                          std::tr1::shared_ptr<const Transfer::DenseData> response);
+  void textureDownloadedForCounting(String texname, uint32 retryAttempt,
+                                          std::tr1::shared_ptr<Transfer::MetadataRequest> request,
+                                          std::tr1::shared_ptr<Transfer::RemoteFileMetadata> response);
+
+  //FIXME:The following  lines are also for experimental purposes only.
+  //void showCutErrorSum(uint32);
+  float64 mErrorSum;
+  uint32 mErrorSequenceNumber;
+  int64 mSizeSum;
+  int32 mCutLength;
+  std::tr1::unordered_map<String, int64> mMeshSizeMap;
+  bool noMoreGeneration;
+
 
 
 };
