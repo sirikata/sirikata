@@ -378,7 +378,21 @@ void HostedObject::metadataDownloaded(OHConnectInfoPtr ocip,
                                     std::tr1::shared_ptr<Transfer::MetadataRequest> request,
                                     std::tr1::shared_ptr<Transfer::RemoteFileMetadata> response)
 {
-  if (response != NULL || retryCount >= 3) {
+  if (response == NULL && retryCount >= 3) {
+    String zernike="[";
+    ocip->zernike = zernike;
+    for (uint32 i = 0; i < 121; i++) {
+      if (i < 120)
+        zernike += "0, ";
+      else 
+        zernike += "0]";
+    }
+    mContext->mainStrand->post(std::tr1::bind(&HostedObject::objectHostConnectIndirect, this, ocip));
+    return;
+  }
+
+  if (response != NULL) {
+
     const Sirikata::Transfer::FileHeaders& headers = response->getHeaders();
 
     String zernike = "";
