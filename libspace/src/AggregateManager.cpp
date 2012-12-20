@@ -1394,19 +1394,18 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
     }
 
     String texfilename = substrUrl.substr(indexOfLastSlash+1);
-    if (texfilename != "atlas.jpg") {
+    if (url.find("tahirazim/apiupload/test_project_3") != url.npos ) {
       texFileNameToUrl[texfilename] = url;
     }
     else {
-      // Only require atlasing if at least one of the textures is
-      // not a CityEngine texture. HACK, because this assumes 
-      // all other textures are based on the progressive
-      // format.
+      // Only enable atlasing if at least one of the textures is
+      // not a CityEngine texture. HACKY, but it works for now...
       texFileNameToUrl[url]=url;
       doAtlasing= true;
     }
   }
-  
+
+
   // We should have all the textures in our textureSet since we looped through
   // all the materials, just fill in the list now.
   for (std::tr1::unordered_map<String, String>::iterator it = texFileNameToUrl.begin(); it != texFileNameToUrl.end(); it++)
