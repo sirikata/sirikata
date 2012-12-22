@@ -433,6 +433,16 @@ private:
   };
   uint32 generateAggregateMeshAsync(const UUID uuid, Time postTime, bool generateSiblings = true);
   Mesh::MeshdataPtr generateAggregateMeshAsyncFromLeaves(const UUID uuid, Time postTime);
+  uint32 checkLocAndMeshInfo(const UUID& uuid, std::vector<AggregateObjectPtr>& children,
+         std::tr1::unordered_map<UUID, std::tr1::shared_ptr<LocationInfo> , UUID::Hasher>& currentLocMap);
+  uint32 checkMeshesAvailable(const UUID& uuid, const Time& curTime, std::vector<AggregateObjectPtr>& children,
+                              std::tr1::unordered_map<UUID, std::tr1::shared_ptr<LocationInfo> , UUID::Hasher>& currentLocMap);
+  uint32 checkTextureHashesAvailable(std::vector<AggregateObjectPtr>& children,
+                                     std::tr1::unordered_map<String, String>& textureToHashMap);
+  void startDownloadsForAtlasing(const UUID& uuid, Mesh::MeshdataPtr agg_mesh, AggregateObjectPtr aggObject, String localMeshName,
+                                                 std::tr1::unordered_map<String, String>& textureSet,
+                                                 std::tr1::unordered_map<String, Mesh::MeshdataPtr>& textureToModelMap);
+  void replaceCityEngineTextures(Mesh::MeshdataPtr m) ;
   void deduplicateMeshes(std::vector<AggregateObjectPtr>& children, bool isLeafAggregate,
                        String* meshURIs, std::vector<Matrix4x4f>& replacementAlignmentTransforms);
 

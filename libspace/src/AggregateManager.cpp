@@ -867,54 +867,10 @@ void AggregateManager::deduplicateMeshes(std::vector<AggregateObjectPtr>& childr
   }
 }
 
-uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime, bool generateSiblings) {
-  Time curTime = Timer::now();
-
-  if (mSkipGenerate) {
-    mAggregatesGenerated++;
-    return GEN_SUCCESS;
-  }
-
-
-  boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
-  if (mAggregateObjects.find(uuid) == mAggregateObjects.end()) {
-    AGG_LOG(info, uuid.toString() <<" : not found in aggregate objects map" << "\n");
-
-    /*Returning true here because this aggregate is no longer valid, so it should be
-      removed from the list of aggregates whose meshes are pending. */
-    return GEN_SUCCESS;
-  }
-  std::tr1::shared_ptr<AggregateObject> aggObject = mAggregateObjects[uuid];
-  lock.unlock();
-
-  /*Check if it makes sense to generate the aggregates now. Has the a
-    aggregate been updated since the mesh generation command was posted?
-    Does LOC contain info about this aggregate and its children?
-    Are all the children's meshes available to generate the aggregate? */
-  if (postTime < aggObject->mLastGenerateTime) {
-    return NEWER_REQUEST;
-  }
-
-  if (postTime < mAggregateGenerationStartTime) {
-    return NEWER_REQUEST;
-  }
- 
-  std::tr1::unordered_map<UUID, std::tr1::shared_ptr<LocationInfo> , UUID::Hasher> currentLocMap;
-
-  std::tr1::shared_ptr<LocationInfo> locInfoForUUID = getCachedLocInfo(uuid);
-  /* Does LOC contain info about this aggregate and its children? */
-  if (!locInfoForUUID) {
-    return MISSING_LOC_INFO;
-  }
-  else {
-    currentLocMap[uuid] = locInfoForUUID;
-  }
-
-  std::vector<AggregateObjectPtr> children = aggObject->getChildrenCopy();
-                                                   //Set this to mLeaves if you want
-                                                   //to generate directly from the leaves of the tree
-
-  AGG_LOG(insane, aggObject->mTreeLevel << " : " << children.size() << " : treelvel : size");
+uint32 AggregateManager::checkLocAndMeshInfo(
+                       const UUID& uuid, std::vector<AggregateObjectPtr>& children,
+                       std::tr1::unordered_map<UUID, std::tr1::shared_ptr<LocationInfo> , UUID::Hasher>& currentLocMap) 
+{
   for (uint32 i= 0; i < children.size(); i++) {
     UUID child_uuid = children[i]->mUUID;
 
@@ -925,14 +881,19 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
     }
     currentLocMap[child_uuid] = locInfoForChildUUID;
 
-
     if (isAggregate(child_uuid) && locInfoForChildUUID->mesh() == "") {
       AGG_LOG(info,  "Not yet generated: " << child_uuid << " for " << uuid);
       return CHILDREN_NOT_YET_GEN;
     }
   }
 
-  /*Are the meshes of all the children available to generate the aggregate mesh? */
+  return 0;
+}
+
+uint32 AggregateManager::checkMeshesAvailable(const UUID& uuid, const Time& curTime, 
+                                              std::vector<AggregateObjectPtr>& children,
+                                              std::tr1::unordered_map<UUID, std::tr1::shared_ptr<LocationInfo> , UUID::Hasher>& currentLocMap) 
+{
   bool allMeshesAvailable = true;
   String missingChildMesh= "";
   for (uint32 i= 0; i < children.size(); i++) {
@@ -962,8 +923,8 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
           allMeshesAvailable = false;
           missingChildMesh=meshName;
 
-	  //Store an empty pointer in mMeshStore so that further transfer requests are
-	  //not made for the same meshname.
+          //Store an empty pointer in mMeshStore so that further transfer requests are
+          //not made for the same meshname.
           mMeshStore[meshName] = MeshdataPtr();
           AGG_LOG(insane, "Mesh not available: " << meshName << " : requested..\n");
         }
@@ -974,7 +935,6 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
         }
       }
       else {
- 
       }
     }
   }
@@ -983,26 +943,6 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
 
     return MISSING_CHILD_MESHES;
   }
-
-  /* OK to generate the mesh! Go! */
-  aggObject->mLastGenerateTime = curTime;
-  MeshdataPtr agg_mesh =  MeshdataPtr( new Meshdata() );
-  agg_mesh->globalTransform = Matrix4x4f::identity();
-  agg_mesh->hasAnimations = false;
-
-  Vector3f uuidPos = locInfoForUUID->currentPosition();
-  float64 posX = uuidPos.x;
-  float64 posY = uuidPos.y;
-  float64 posZ = uuidPos.z;
-
-
-  std::tr1::unordered_map<std::string, uint32> meshToStartIdxMapping;
-  std::tr1::unordered_map<std::string, uint32> meshToStartMaterialsIdxMapping;
-  std::tr1::unordered_map<std::string, uint32> meshToStartLightIdxMapping;
-  std::tr1::unordered_map<std::string, uint32> meshToStartNodeIdxMapping;
-
-  uint32 numAddedSubMeshGeometries = 0;
-  bool isLeafAggregate = true;
 
   // Make sure we've got all the Meshdatas
   for (uint32 i= 0; i < children.size(); i++) {
@@ -1013,8 +953,6 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
       continue;
     }
     MeshdataPtr m = mAggregateObjects[child_uuid]->mMeshdata;
-    if (isLeafAggregate && mAggregateObjects[child_uuid]->childrenSize() != 0)
-	isLeafAggregate = false;
 
     std::string meshName = currentLocMap[child_uuid]->mesh();
     if (!m && meshName != "") {
@@ -1025,17 +963,20 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
     }
   }
 
-  std::tr1::unordered_map<String, String> textureToHashMap;
+  return 0;
+}
 
+uint32 AggregateManager::checkTextureHashesAvailable(std::vector<AggregateObjectPtr>& children,
+                                                    std::tr1::unordered_map<String, String>& textureToHashMap) 
 
-  if (isLeafAggregate)
-  {
+{
     boost::mutex::scoped_lock textureToHashMapLock(mTextureNameToHashMapMutex);
     bool allTextureHashesAvailable = true;
+
+    boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
     for (uint32 i = 0; i < children.size(); i++) {
       UUID child_uuid = children[i]->mUUID;
 
-      boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
       if ( mAggregateObjects.find(child_uuid) == mAggregateObjects.end()) {
         continue;
       }
@@ -1046,7 +987,7 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
         if (textureToHashMap.find(m->textures[j]) != textureToHashMap.end())
           continue;
 
-        if (mTextureNameToHashMap.find(m->textures[j]) == mTextureNameToHashMap.end()) 
+        if (mTextureNameToHashMap.find(m->textures[j]) == mTextureNameToHashMap.end())
         {
           allTextureHashesAvailable = false;
           //std::cout << m->textures[j] << " : not available\n";
@@ -1066,84 +1007,92 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
       AGG_LOG(insane, "texture hash not available\n");
       return MISSING_CHILD_MESHES;
     }
-  }
 
-  String* meshURIs = new String[children.size()];
-  AGG_LOG(insane, children.size() << " : children.size()\n");
-  for (uint32 i=0; i<children.size(); i++) {
-    meshURIs[i] = currentLocMap[children[i]->mUUID]->mesh();
-  }
+    return 0;
+}
 
-  //do descriptor replacement.
-  std::vector<Matrix4x4f> replacementAlignmentTransforms;
-  deduplicateMeshes(children, isLeafAggregate, meshURIs, replacementAlignmentTransforms);
-
-  {
-    boost::mutex::scoped_lock textureToHashMapLock(mTextureNameToHashMapMutex);
-
-    for (std::tr1::unordered_map<String,String>::iterator it = textureToHashMap.begin(); 
-         it != textureToHashMap.end(); it++)
+void AggregateManager::startDownloadsForAtlasing(const UUID& uuid, MeshdataPtr agg_mesh, AggregateObjectPtr aggObject, String localMeshName,
+                                                 std::tr1::unordered_map<String, String>& textureSet,                                                 
+                                                 std::tr1::unordered_map<String, MeshdataPtr>& textureToModelMap) {
+    //Save the mesh to a temporary directory until textures are downloaded and atlased.
     {
-       //FIXME: This should get erased here, but elements added to the hashmap should
-       //have key = objectUUID+texturename instead of just texturename
-       //mTextureNameToHashMap.erase(it->first);
+      boost::mutex::scoped_lock modelSystemLock(mModelsSystemMutex);
+      boost::filesystem::create_directory( "/tmp/sirikata/"+uuid.toString()+".dir");
+      bool converted = mModelsSystem->convertVisual( agg_mesh, "colladamodels", "/tmp/sirikata/"+uuid.toString()+".dir/"+uuid.toString()+".dae");
     }
-  }
+    std::vector<ResourceDownloadTaskPtr> downloadTasks;
+    std::tr1::shared_ptr<std::tr1::unordered_map<String, int> > downloadedTexturesMap =
+                        std::tr1::shared_ptr<std::tr1::unordered_map<String, int> >(new std::tr1::unordered_map<String, int>());
+    std::tr1::shared_ptr<std::tr1::unordered_map<String, std::vector<String> > > hashToURIMap =
+                        std::tr1::shared_ptr<std::tr1::unordered_map<String, std::vector<String> > >(new std::tr1::unordered_map<String, std::vector<String> > () );
 
-  // And finally, when we do, perform the merge
+    //download the textures or their low-res (128x128) mipmaps, if available.
+    for(TextureList::iterator it = agg_mesh->textures.begin(); it != agg_mesh->textures.end(); it++) {
+            std::string texName = *it;
+            Transfer::URI texURI( texName );
+            MeshdataPtr md = textureToModelMap[texName];
 
-  // Tracks textures so we can fill in agg_mesh->textures when we're
-  // done copying data in. Also tracks mapping of texture filename ->
-  // original texture URL so we can tell the CDN to reuse that data.
-  std::tr1::unordered_map<String, String> textureSet;
- 
-  AGG_LOG(insane,  "FINALLY WE ARE READY! " << uuid << "\n");
-  AGG_LOG(insane, mTextureNameToHashMap.size() << " : mTextureNameToHashMap.size()\n");
-  AGG_LOG(insane, mMeshStore.size() << " : mMeshStore.size()\n");
+            ProgressiveMipmapMap::const_iterator findProgTex;
+            if (md->progressiveData) {
+              String lookupName = texName.substr(0,texName.find_last_of("/"));
+              AGG_LOG(insane, texName << " : " << lookupName << "\n");
+              lookupName = lookupName.substr(lookupName.find_last_of("/")+1);
+              findProgTex = md->progressiveData->mipmaps.find("./" + lookupName);
+              AGG_LOG(insane,  lookupName << " : lookupName\n");
+            }
 
-  std::tr1::unordered_map<String, MeshdataPtr> textureToModelMap;
-  for (uint32 i= 0; i < children.size(); i++) {
-    UUID child_uuid = children[i]->mUUID;
-    boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
-    if ( mAggregateObjects.find(child_uuid) == mAggregateObjects.end()) {
-      continue;
+            if (md->progressiveData && findProgTex != md->progressiveData->mipmaps.end()) {
+                AGG_LOG(insane, "findProgTex worked!\n");
+                const ProgressiveMipmaps& progMipmaps = findProgTex->second.mipmaps;
+                uint32 mipmapLevel = 0;
+                for ( ; mipmapLevel < progMipmaps.size(); mipmapLevel++) {
+                    if (progMipmaps.find(mipmapLevel)->second.width >= 1024 || progMipmaps.find(mipmapLevel)->second.height >= 1024) {
+                        break;
+                    }
+                }
+                if (mipmapLevel >= progMipmaps.size() ) mipmapLevel = progMipmaps.size() - 1;
+
+                uint32 offset = progMipmaps.find(mipmapLevel)->second.offset;
+                uint32 length = progMipmaps.find(mipmapLevel)->second.length;
+                Transfer::Fingerprint hash = findProgTex->second.archiveHash;
+
+                (*downloadedTexturesMap)[texName] = 0;
+                (*hashToURIMap)[hash.toString()].push_back(texName);
+
+                ResourceDownloadTaskPtr dl = ResourceDownloadTask::construct(
+                  Transfer::Chunk(hash, Transfer::Range(offset, length, Transfer::LENGTH)), mTransferPool,
+                  1.0,
+                  std::tr1::bind(&AggregateManager::textureChunkFinished, this, texName, hash, offset, length, agg_mesh, aggObject, textureSet, downloadedTexturesMap, hashToURIMap, 0, _1, _2, _3)
+                );
+                downloadTasks.push_back(dl);
+
+                AGG_LOG(insane,  "Requesting... :  " << texName <<  " with hash " << hash  << "\n");
+
+                boost::mutex::scoped_lock resourceDownloadLock(mResourceDownloadTasksMutex);
+                mResourceDownloadTasks[dl->getIdentifier()+" : " +localMeshName + " : " + aggObject->mUUID.toString()] = dl;
+            } else {
+                (*downloadedTexturesMap)[texName] = 0;
+                (*hashToURIMap)[texName].push_back(texName);
+                ResourceDownloadTaskPtr dl = ResourceDownloadTask::construct(
+                  texURI, mTransferPool,
+                  1.0,
+                  std::tr1::bind(&AggregateManager::textureChunkFinished, this, texName, Transfer::Fingerprint(), 0, 0, agg_mesh, aggObject, textureSet, downloadedTexturesMap, hashToURIMap, 0,  _1, _2, _3)
+               );
+               downloadTasks.push_back(dl);
+               AGG_LOG(insane,  "Requesting... :  " << texName << "\n");
+
+               boost::mutex::scoped_lock resourceDownloadLock(mResourceDownloadTasksMutex);
+               mResourceDownloadTasks[dl->getIdentifier() + " : " + localMeshName + " : " + aggObject->mUUID.toString()] = dl;
+            }
     }
-    //MeshdataPtr m = mAggregateObjects[child_uuid]->mMeshdata;
-    lock.unlock();
 
-    std::string meshName = meshURIs[i];
-    MeshdataPtr m = MeshdataPtr();
-    {
-      boost::mutex::scoped_lock lock(mMeshStoreMutex);
-      if (mMeshStore.find(meshName) != mMeshStore.end())
-        m = mMeshStore[meshName];
+    //Start off the download tasks.
+    for (uint32 i = 0; i < downloadTasks.size(); i++) {
+      downloadTasks[i]->start();
     }
-    if (!m || meshName == "") continue;
+}
 
-    //Compute the bounds for the child's mesh.
-    BoundingBox3f3f originalMeshBoundingBox = BoundingBox3f3f::null();
-    double originalMeshBoundsRadius=0;
-    ComputeBounds( m, &originalMeshBoundingBox, &originalMeshBoundsRadius);
-
-    // We me reuse more than one of the same mesh, e.g. the aggregate may have
-    // two identical trees that are at different locations. In that case,
-    // SubMeshGeometry, Textures, LightInfos, MaterialEffectInfos, and Nodes can
-    // all be shared, and can therefore reuse offsets.
-    // If necessary, add the offset in.
-    if ( meshToStartIdxMapping.find(meshName) == meshToStartIdxMapping.end()) {
-      meshToStartIdxMapping[ meshName ] = agg_mesh->geometry.size();
-      meshToStartMaterialsIdxMapping[ meshName ] = agg_mesh->materials.size();
-      meshToStartNodeIdxMapping[ meshName ] = agg_mesh->nodes.size();
-      meshToStartLightIdxMapping[ meshName ] = agg_mesh->lights.size();
-
-      // Copy SubMeshGeometries. We loop through so we can reset the numInstances
-      for(uint32 smgi = 0; smgi < m->geometry.size(); smgi++) {
-          SubMeshGeometry smg = m->geometry[smgi];
-
-          agg_mesh->geometry.push_back(smg);
-      }
-
-      //HACK: Replace texture with color in the CityEngine scene
+void AggregateManager::replaceCityEngineTextures(MeshdataPtr m) {
       for(MaterialEffectInfoList::iterator mat_it = m->materials.begin();
           mat_it != m->materials.end(); mat_it++)
       {
@@ -1201,9 +1150,175 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
           }
       }
 
+}
+
+uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime, bool generateSiblings) {
+  Time curTime = Timer::now();
+
+  if (mSkipGenerate) {
+    mAggregatesGenerated++;
+    return GEN_SUCCESS;
+  }
+
+  boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
+  if (mAggregateObjects.find(uuid) == mAggregateObjects.end()) {
+    AGG_LOG(info, uuid.toString() <<" : not found in aggregate objects map" << "\n");
+
+    /*Returning true here because this aggregate is no longer valid, so it should be
+      removed from the list of aggregates whose meshes are pending. */
+    return GEN_SUCCESS;
+  }
+  std::tr1::shared_ptr<AggregateObject> aggObject = mAggregateObjects[uuid];
+  lock.unlock();
+
+  /*Check if it makes sense to generate the aggregates now. Has the a
+    aggregate been updated since the mesh generation command was posted?
+    Does LOC contain info about this aggregate and its children?
+    Are all the children's meshes available to generate the aggregate? */
+  if (postTime < aggObject->mLastGenerateTime) {
+    return NEWER_REQUEST;
+  }
+  if (postTime < mAggregateGenerationStartTime) {
+    return NEWER_REQUEST;
+  }
+ 
+  std::tr1::unordered_map<UUID, std::tr1::shared_ptr<LocationInfo> , UUID::Hasher> currentLocMap;
+  std::tr1::shared_ptr<LocationInfo> locInfoForUUID = getCachedLocInfo(uuid);
+  /* Does LOC contain info about this aggregate and its children? */
+  if (!locInfoForUUID) {
+    return MISSING_LOC_INFO;
+  } 
+  else {
+    currentLocMap[uuid] = locInfoForUUID;
+  }
+
+  std::vector<AggregateObjectPtr> children = aggObject->getChildrenCopy();
+                                                   //Set this to mLeaves if you want
+                                                   //to generate directly from the leaves of the tree
+
+  AGG_LOG(insane, aggObject->mTreeLevel << " : " << children.size() << " : treelvel : size");
+  uint32 retval = checkLocAndMeshInfo(uuid, children, currentLocMap);
+  if (retval != 0)
+    return retval;
+
+  /*Are the meshes of all the children available to generate the aggregate mesh? */
+  retval = checkMeshesAvailable(uuid, curTime, children, currentLocMap);
+  if (retval != 0) 
+    return retval;
+
+  /* OK to generate the mesh! Go! */
+  aggObject->mLastGenerateTime = curTime;
+  MeshdataPtr agg_mesh =  MeshdataPtr( new Meshdata() );
+  agg_mesh->globalTransform = Matrix4x4f::identity();
+  agg_mesh->hasAnimations = false;
+
+  Vector3f uuidPos = locInfoForUUID->currentPosition();
+  float64 posX = uuidPos.x, posY = uuidPos.y, posZ = uuidPos.z;
+
+  std::tr1::unordered_map<std::string, uint32> meshToStartIdxMapping;
+  std::tr1::unordered_map<std::string, uint32> meshToStartMaterialsIdxMapping;
+  std::tr1::unordered_map<std::string, uint32> meshToStartLightIdxMapping;
+  std::tr1::unordered_map<std::string, uint32> meshToStartNodeIdxMapping;
+
+  bool isLeafAggregate = true;
+  //check if its a leaf aggregate
+  for (uint32 i= 0; isLeafAggregate && i < children.size(); i++) {
+    UUID child_uuid = children[i]->mUUID;
+    boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
+    if (mAggregateObjects.find(child_uuid) != mAggregateObjects.end() &&
+        mAggregateObjects[child_uuid]->childrenSize() != 0)
+    {
+	isLeafAggregate = false;
+    }
+  }
+
+  std::tr1::unordered_map<String, String> textureToHashMap;
+  if (isLeafAggregate)
+  {
+    retval = checkTextureHashesAvailable(children, textureToHashMap);
+    if (retval != 0)
+      return retval;
+  }
+
+  String* meshURIs = new String[children.size()];
+  AGG_LOG(insane, children.size() << " : children.size()\n");
+  for (uint32 i=0; i<children.size(); i++) {
+    meshURIs[i] = currentLocMap[children[i]->mUUID]->mesh();
+  }
+
+  //do descriptor replacement.
+  std::vector<Matrix4x4f> replacementAlignmentTransforms;
+  deduplicateMeshes(children, isLeafAggregate, meshURIs, replacementAlignmentTransforms);
+
+  {
+    boost::mutex::scoped_lock textureToHashMapLock(mTextureNameToHashMapMutex);
+
+    for (std::tr1::unordered_map<String,String>::iterator it = textureToHashMap.begin(); 
+         it != textureToHashMap.end(); it++)
+    {
+       //FIXME: This should get erased here, but elements added to the hashmap should
+       //have key = objectUUID+texturename instead of just texturename
+       //mTextureNameToHashMap.erase(it->first);
+    }
+  }
+
+  // And finally, when we do, perform the merge
+
+  // Tracks textures so we can fill in agg_mesh->textures when we're
+  // done copying data in. Also tracks mapping of texture filename ->
+  // original texture URL so we can tell the CDN to reuse that data.
+  std::tr1::unordered_map<String, String> textureSet;
+ 
+  AGG_LOG(insane,  "FINALLY WE ARE READY! " << uuid << "\n");
+  AGG_LOG(insane, mTextureNameToHashMap.size() << " : mTextureNameToHashMap.size()\n");
+  AGG_LOG(insane, mMeshStore.size() << " : mMeshStore.size()\n");
+
+  std::tr1::unordered_map<String, MeshdataPtr> textureToModelMap;
+  for (uint32 i= 0; i < children.size(); i++) {
+    UUID child_uuid = children[i]->mUUID;
+    boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
+    if ( mAggregateObjects.find(child_uuid) == mAggregateObjects.end()) {
+      continue;
+    }
+    lock.unlock();
+
+    std::string meshName = meshURIs[i];
+    MeshdataPtr m = MeshdataPtr();
+    {
+      boost::mutex::scoped_lock lock(mMeshStoreMutex);
+      if (mMeshStore.find(meshName) != mMeshStore.end())
+        m = mMeshStore[meshName];
+    }
+    if (!m || meshName == "") continue;
+
+    //Compute the bounds for the child's mesh.
+    BoundingBox3f3f originalMeshBoundingBox = BoundingBox3f3f::null();
+    double originalMeshBoundsRadius=0;
+    ComputeBounds( m, &originalMeshBoundingBox, &originalMeshBoundsRadius);
+
+    // We me reuse more than one of the same mesh, e.g. the aggregate may have
+    // two identical trees that are at different locations. In that case,
+    // SubMeshGeometry, Textures, LightInfos, MaterialEffectInfos, and Nodes can
+    // all be shared, and can therefore reuse offsets.
+    // If necessary, add the offset in.
+    if ( meshToStartIdxMapping.find(meshName) == meshToStartIdxMapping.end()) {
+      meshToStartIdxMapping[ meshName ] = agg_mesh->geometry.size();
+      meshToStartMaterialsIdxMapping[ meshName ] = agg_mesh->materials.size();
+      meshToStartNodeIdxMapping[ meshName ] = agg_mesh->nodes.size();
+      meshToStartLightIdxMapping[ meshName ] = agg_mesh->lights.size();
+
+      // Copy SubMeshGeometries. We loop through so we can reset the numInstances
+      for(uint32 smgi = 0; smgi < m->geometry.size(); smgi++) {
+          SubMeshGeometry smg = m->geometry[smgi];
+
+          agg_mesh->geometry.push_back(smg);
+      }
+
+      //HACK: Replace texture with color in the CityEngine scene
+      replaceCityEngineTextures(m);
       Prox::DescriptorReader* descriptorReader = Prox::DescriptorReader::getDescriptorReader();
       
-      // Replace texture with color
+      // Replace texture with color.
       for(MaterialEffectInfoList::iterator mat_it = m->materials.begin();
           false && mat_it != m->materials.end(); mat_it++)
       {
@@ -1478,82 +1593,7 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
   //doAtlasing = false;  //hack commented!
 
   if (agg_mesh->textures.size() > 0 && mAtlasingNeeded && doAtlasing) {
-    //Save the mesh to a temporary directory until textures are downloaded and atlased.
-    {
-      boost::mutex::scoped_lock modelSystemLock(mModelsSystemMutex);
-      boost::filesystem::create_directory( "/tmp/sirikata/"+uuid.toString()+".dir");
-      bool converted = mModelsSystem->convertVisual( agg_mesh, "colladamodels", "/tmp/sirikata/"+uuid.toString()+".dir/"+uuid.toString()+".dae");
-    }
-    std::vector<ResourceDownloadTaskPtr> downloadTasks;
-    std::tr1::shared_ptr<std::tr1::unordered_map<String, int> > downloadedTexturesMap =
-                        std::tr1::shared_ptr<std::tr1::unordered_map<String, int> >(new std::tr1::unordered_map<String, int>());
-    std::tr1::shared_ptr<std::tr1::unordered_map<String, std::vector<String> > > hashToURIMap = 
-                        std::tr1::shared_ptr<std::tr1::unordered_map<String, std::vector<String> > >(new std::tr1::unordered_map<String, std::vector<String> > () );
-
-    //download the textures or their low-res (128x128) mipmaps, if available.
-    for(TextureList::iterator it = agg_mesh->textures.begin(); it != agg_mesh->textures.end(); it++) {
-            std::string texName = *it;
-            Transfer::URI texURI( texName );
-	    MeshdataPtr md = textureToModelMap[texName];
-
-            ProgressiveMipmapMap::const_iterator findProgTex;
-            if (md->progressiveData) {
-              String lookupName = texName.substr(0,texName.find_last_of("/"));
-              AGG_LOG(insane, texName << " : " << lookupName << "\n");
-              lookupName = lookupName.substr(lookupName.find_last_of("/")+1);
-              findProgTex = md->progressiveData->mipmaps.find("./" + lookupName);
-              AGG_LOG(insane,  lookupName << " : lookupName\n");
-            }
-
-            if (md->progressiveData && findProgTex != md->progressiveData->mipmaps.end()) {
-		AGG_LOG(insane, "findProgTex worked!\n");
-                const ProgressiveMipmaps& progMipmaps = findProgTex->second.mipmaps;
-                uint32 mipmapLevel = 0;
-                for ( ; mipmapLevel < progMipmaps.size(); mipmapLevel++) {
-                    if (progMipmaps.find(mipmapLevel)->second.width >= 1024 || progMipmaps.find(mipmapLevel)->second.height >= 1024) {
-                        break;
-                    }
-                }
-		if (mipmapLevel >= progMipmaps.size() ) mipmapLevel = progMipmaps.size() - 1;
-
-                uint32 offset = progMipmaps.find(mipmapLevel)->second.offset;
-                uint32 length = progMipmaps.find(mipmapLevel)->second.length;
-                Transfer::Fingerprint hash = findProgTex->second.archiveHash;
-		
-                (*downloadedTexturesMap)[texName] = 0;
-                (*hashToURIMap)[hash.toString()].push_back(texName);
-		
-		ResourceDownloadTaskPtr dl = ResourceDownloadTask::construct(
-                  Transfer::Chunk(hash, Transfer::Range(offset, length, Transfer::LENGTH)), mTransferPool,
-                  1.0,
-                  std::tr1::bind(&AggregateManager::textureChunkFinished, this, texName, hash, offset, length, agg_mesh, aggObject, textureSet, downloadedTexturesMap, hashToURIMap, 0, _1, _2, _3)
-                );
-                downloadTasks.push_back(dl);
-              
-                AGG_LOG(insane,  "Requesting... :  " << texName <<  " with hash " << hash  << "\n");
-
-                boost::mutex::scoped_lock resourceDownloadLock(mResourceDownloadTasksMutex);
-                mResourceDownloadTasks[dl->getIdentifier()+" : " +localMeshName + " : " + aggObject->mUUID.toString()] = dl;
-            } else {
-		(*downloadedTexturesMap)[texName] = 0;
-                (*hashToURIMap)[texName].push_back(texName);
-                ResourceDownloadTaskPtr dl = ResourceDownloadTask::construct(
-                  texURI, mTransferPool,
-                  1.0,
-                  std::tr1::bind(&AggregateManager::textureChunkFinished, this, texName, Transfer::Fingerprint(), 0, 0, agg_mesh, aggObject, textureSet, downloadedTexturesMap, hashToURIMap, 0,  _1, _2, _3)
-               );
-               downloadTasks.push_back(dl);
-               AGG_LOG(insane,  "Requesting... :  " << texName << "\n");
-
-               boost::mutex::scoped_lock resourceDownloadLock(mResourceDownloadTasksMutex);
-               mResourceDownloadTasks[dl->getIdentifier() + " : " + localMeshName + " : " + aggObject->mUUID.toString()] = dl;
-            }
-    }
-
-    //Start off the download tasks.
-    for (uint32 i = 0; i < downloadTasks.size(); i++) {
-      downloadTasks[i]->start();
-    }
+    startDownloadsForAtlasing(uuid, agg_mesh, aggObject, localMeshName, textureSet, textureToModelMap);
   }
   else {
      //If the mesh has no texture, upload to the CDN and update LOC.
