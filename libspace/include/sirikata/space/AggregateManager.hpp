@@ -433,6 +433,9 @@ private:
   };
   uint32 generateAggregateMeshAsync(const UUID uuid, Time postTime, bool generateSiblings = true);
   Mesh::MeshdataPtr generateAggregateMeshAsyncFromLeaves(const UUID uuid, Time postTime);
+  void deduplicateMeshes(std::vector<AggregateObjectPtr>& children, bool isLeafAggregate,
+                       String* meshURIs, std::vector<Matrix4x4f>& replacementAlignmentTransforms);
+
 
   void aggregationThreadMain(uint8 i);
   void updateAggregateLocMesh(UUID uuid, String mesh);

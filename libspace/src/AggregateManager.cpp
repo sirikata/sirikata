@@ -783,6 +783,89 @@ void AggregateManager::generateAggregateMesh(const UUID& uuid, AggregateObjectPt
   }
 }
 
+void AggregateManager::deduplicateMeshes(std::vector<AggregateObjectPtr>& children, bool isLeafAggregate,
+                       String* meshURIs, std::vector<Matrix4x4f>& replacementAlignmentTransforms) 
+{
+  std::tr1::unordered_map<uint32, bool> replacedURI;
+  Prox::DescriptorReader* descriptorReader=Prox::DescriptorReader::getDescriptorReader();
+
+  for (uint32 i = 0; i < children.size(); i++) {
+    replacementAlignmentTransforms.push_back(Matrix4x4f::identity());
+  }
+
+  for (uint32 i=0; isLeafAggregate && i<children.size(); i++) {
+    if (meshURIs[i] == "") continue;
+
+    Prox::ZernikeDescriptor zd_i = descriptorReader->getZernikeDescriptor(meshURIs[i]);
+    Prox::ZernikeDescriptor td_i = descriptorReader->getTextureDescriptor(meshURIs[i]);
+
+    {
+      boost::mutex::scoped_lock lock(mMeshStoreMutex);
+
+      if (mMeshDescriptors.find(meshURIs[i]) != mMeshDescriptors.end()) {
+        zd_i = mMeshDescriptors[meshURIs[i]];
+        AGG_LOG(insane, meshURIs[i] << " : " << zd_i.toString() << " : Got zd 1");
+      }
+    }
+
+    if (zd_i.size() == 0 || td_i.size() == 0) {
+      AGG_LOG(debug, "Zernike Descriptor or Texture Descriptor invalid -- skipping mesh deduplication");
+      continue;
+    }
+
+    for (uint32 j = i+1; j<children.size(); j++) {
+      if (replacedURI.find(j) == replacedURI.end() || replacedURI[j] == false) {
+        if (meshURIs[j] == "" || meshURIs[j] == meshURIs[i]) continue;
+
+        Prox::ZernikeDescriptor zd_j = descriptorReader->getZernikeDescriptor(meshURIs[j]);
+        {
+          boost::mutex::scoped_lock lock(mMeshStoreMutex);
+
+          if (mMeshDescriptors.find(meshURIs[j]) != mMeshDescriptors.end()) {
+            zd_j = mMeshDescriptors[meshURIs[j]];
+            AGG_LOG(insane, meshURIs[j] << " : " << zd_j.toString() << " : Got zd 2\n");
+          }
+        }
+
+        AGG_LOG(insane, zd_i.toString() << "\t" << zd_j.toString() );
+        float64 zd_diff = zd_i.minus(zd_j).l2Norm();
+
+        if ( zd_diff < 0.01) {
+          Prox::ZernikeDescriptor td_j = descriptorReader->getTextureDescriptor(meshURIs[j]);
+
+          if (zd_j.size() == 0 || td_j.size() == 0) {
+            AGG_LOG(debug, "Zernike Descriptor or Texture Descriptor invalid -- skipping mesh deduplication");
+            continue;
+          }
+
+          float64 td_diff = td_j.minus(td_i).l1Norm();
+          if (td_diff < 250) {
+            boost::mutex::scoped_lock lock(mMeshStoreMutex);
+
+            if (mMeshStore.find(meshURIs[j]) == mMeshStore.end()) continue;
+            if (mMeshStore.find(meshURIs[i]) == mMeshStore.end()) continue;
+
+            if (!mMeshStore[meshURIs[j]]  || !mMeshStore[meshURIs[i]] ) continue;
+
+
+            Matrix4x4f xf1, xf1_inv;
+            pca_get_rotate_matrix(mMeshStore[meshURIs[j] ] , xf1, xf1_inv);
+            Matrix4x4f xf2, xf2_inv;
+            pca_get_rotate_matrix(mMeshStore[meshURIs[i] ], xf2, xf2_inv);
+
+            replacementAlignmentTransforms[j] = xf1_inv * xf2;
+
+            AGG_LOG(info, "Replacing " << meshURIs[j]  << " with " << meshURIs[i] << " -- " <<
+                         "zdiff: " << zd_diff << " , tdiff: "<< td_diff  << " : " <<replacementAlignmentTransforms[j] );
+
+            replacedURI[j] = true;
+            meshURIs[j] = meshURIs[i];
+          }
+        }
+      }
+    }
+  }
+}
 
 uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime, bool generateSiblings) {
   Time curTime = Timer::now();
@@ -984,7 +1067,6 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
       return MISSING_CHILD_MESHES;
     }
   }
-  
 
   String* meshURIs = new String[children.size()];
   AGG_LOG(insane, children.size() << " : children.size()\n");
@@ -992,89 +1074,9 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
     meshURIs[i] = currentLocMap[children[i]->mUUID]->mesh();
   }
 
-  //descriptor replacement
-  std::tr1::unordered_map<uint32, bool> replacedURI;
-  Prox::DescriptorReader* descriptorReader=Prox::DescriptorReader::getDescriptorReader();
-
+  //do descriptor replacement.
   std::vector<Matrix4x4f> replacementAlignmentTransforms;
-  for (uint32 i = 0; i < children.size(); i++) {
-    replacementAlignmentTransforms.push_back(Matrix4x4f::identity());
-  }
-
-  for (uint32 i=0; isLeafAggregate && i<children.size(); i++) {
-    if (meshURIs[i] == "") continue;
-
-    Prox::ZernikeDescriptor zd_i = descriptorReader->getZernikeDescriptor(meshURIs[i]);
-    Prox::ZernikeDescriptor td_i = descriptorReader->getTextureDescriptor(meshURIs[i]);
-
-    {
-      boost::mutex::scoped_lock lock(mMeshStoreMutex);
-
-      if (mMeshDescriptors.find(meshURIs[i]) != mMeshDescriptors.end()) {
-        zd_i = mMeshDescriptors[meshURIs[i]];
-        AGG_LOG(insane, meshURIs[i] << " : " << zd_i.toString() << " : Got zd 1");
-      }
-    }
-
-    if (zd_i.size() == 0 || td_i.size() == 0) {
-      AGG_LOG(debug, "Zernike Descriptor or Texture Descriptor invalid -- skipping mesh deduplication");
-      continue;
-    }
- 
-
-    for (uint32 j = i+1; j<children.size(); j++) {
-      if (replacedURI.find(j) == replacedURI.end() || replacedURI[j] == false) {
-        if (meshURIs[j] == "" || meshURIs[j] == meshURIs[i]) continue;
-
-        Prox::ZernikeDescriptor zd_j = descriptorReader->getZernikeDescriptor(meshURIs[j]);
-        {
-          boost::mutex::scoped_lock lock(mMeshStoreMutex);
-
-          if (mMeshDescriptors.find(meshURIs[j]) != mMeshDescriptors.end()) {
-            zd_j = mMeshDescriptors[meshURIs[j]];
-            AGG_LOG(insane, meshURIs[j] << " : " << zd_j.toString() << " : Got zd 2\n");
-          }
-        }
-
-        AGG_LOG(insane, zd_i.toString() << "\t" << zd_j.toString() );
-        float64 zd_diff = zd_i.minus(zd_j).l2Norm();
-
-        if ( zd_diff < 0.01) {
-          Prox::ZernikeDescriptor td_j = descriptorReader->getTextureDescriptor(meshURIs[j]);
-
-          if (zd_j.size() == 0 || td_j.size() == 0) {
-            AGG_LOG(debug, "Zernike Descriptor or Texture Descriptor invalid -- skipping mesh deduplication");
-            continue;
-          }
-
-          float64 td_diff = td_j.minus(td_i).l1Norm();
-          if (td_diff < 250) {
-            boost::mutex::scoped_lock lock(mMeshStoreMutex);
-
-            if (mMeshStore.find(meshURIs[j]) == mMeshStore.end()) continue;
-            if (mMeshStore.find(meshURIs[i]) == mMeshStore.end()) continue;
-
-            if (!mMeshStore[meshURIs[j]]  || !mMeshStore[meshURIs[i]] ) continue;
-
-
-            Matrix4x4f xf1, xf1_inv;
-            pca_get_rotate_matrix(mMeshStore[meshURIs[j] ] , xf1, xf1_inv);
-            Matrix4x4f xf2, xf2_inv;
-            pca_get_rotate_matrix(mMeshStore[meshURIs[i] ], xf2, xf2_inv);
-
-            replacementAlignmentTransforms[j] = xf1_inv * xf2;
-	
-            AGG_LOG(info, "Replacing " << meshURIs[j]  << " with " << meshURIs[i] << " -- " <<
-                         "zdiff: " << zd_diff << " , tdiff: "<< td_diff  << " : " <<replacementAlignmentTransforms[j] );
-             
-            replacedURI[j] = true;
-            meshURIs[j] = meshURIs[i];
-          }
-        }
-      }
-    }
-  } 
-  // end similar mesh replace 
+  deduplicateMeshes(children, isLeafAggregate, meshURIs, replacementAlignmentTransforms);
 
   {
     boost::mutex::scoped_lock textureToHashMapLock(mTextureNameToHashMapMutex);
