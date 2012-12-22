@@ -1012,10 +1012,16 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
 
       if (mMeshDescriptors.find(meshURIs[i]) != mMeshDescriptors.end()) {
         zd_i = mMeshDescriptors[meshURIs[i]];
-        //std::cout << meshURIs[i] << " : " << zd_i.toString() << " : Got zd 1\n";
+        AGG_LOG(insane, meshURIs[i] << " : " << zd_i.toString() << " : Got zd 1");
       }
     }
+
+    if (zd_i.size() == 0 || td_i.size() == 0) {
+      AGG_LOG(debug, "Zernike Descriptor or Texture Descriptor invalid -- skipping mesh deduplication");
+      continue;
+    }
  
+
     for (uint32 j = i+1; j<children.size(); j++) {
       if (replacedURI.find(j) == replacedURI.end() || replacedURI[j] == false) {
         if (meshURIs[j] == "" || meshURIs[j] == meshURIs[i]) continue;
@@ -1026,15 +1032,21 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
 
           if (mMeshDescriptors.find(meshURIs[j]) != mMeshDescriptors.end()) {
             zd_j = mMeshDescriptors[meshURIs[j]];
-            //std::cout << meshURIs[j] << " : " << zd_j.toString() << " : Got zd 2\n";
+            AGG_LOG(insane, meshURIs[j] << " : " << zd_j.toString() << " : Got zd 2\n");
           }
         }
 
-        //std::cout << zd_i.toString() << "\t" << zd_j.toString() << "\n";
+        AGG_LOG(insane, zd_i.toString() << "\t" << zd_j.toString() );
         float64 zd_diff = zd_i.minus(zd_j).l2Norm();
 
         if ( zd_diff < 0.01) {
           Prox::ZernikeDescriptor td_j = descriptorReader->getTextureDescriptor(meshURIs[j]);
+
+          if (zd_j.size() == 0 || td_j.size() == 0) {
+            AGG_LOG(debug, "Zernike Descriptor or Texture Descriptor invalid -- skipping mesh deduplication");
+            continue;
+          }
+
           float64 td_diff = td_j.minus(td_i).l1Norm();
           if (td_diff < 250) {
             boost::mutex::scoped_lock lock(mMeshStoreMutex);
@@ -1052,9 +1064,8 @@ uint32 AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTi
 
             replacementAlignmentTransforms[j] = xf1_inv * xf2;
 	
-
-            std::cout << "Replacing " << meshURIs[j]  << " with " << meshURIs[i] << " -- " <<
-                         "zdiff: " << zd_diff << " , tdiff: "<< td_diff  << " : " <<replacementAlignmentTransforms[j]  << "\n";
+            AGG_LOG(info, "Replacing " << meshURIs[j]  << " with " << meshURIs[i] << " -- " <<
+                         "zdiff: " << zd_diff << " , tdiff: "<< td_diff  << " : " <<replacementAlignmentTransforms[j] );
              
             replacedURI[j] = true;
             meshURIs[j] = meshURIs[i];
@@ -2464,17 +2475,6 @@ void AggregateManager::queueDirtyAggregates(Time postTime) {
       //getLeaves(individualObjects);
     }
  
-    /** Debugging code **
-    for (std::tr1::unordered_map<UUID, AggregateObjectPtr, UUID::Hasher >::iterator it = mAggregateObjects.begin();
-           it != mAggregateObjects.end() ; it++)
-    {
-      if (it->second->mTreeLevel == 0 || it->second->mTreeLevel == 1) {
-        std::cout << it->second->mLeaves.size() << " , "  << it->second->mTreeLevel
-                  <<  " : it->second->mLeaves.size()\n";
-      }
- 
-    } */
-    /**end debugging code; remove later **/
     lock.unlock();
 
     //Grab locks for all of the generation threads before proceeding.
