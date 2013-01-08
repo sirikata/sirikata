@@ -46,7 +46,7 @@ void InitSpaceOptions() {
 #if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_LINUX
                 ",space-redis"
 #endif
-                ",space-master-pinto",
+                ",space-master-pinto,space-mesh",
                 Sirikata::OptionValueType<String>(),"Plugin list to load."))
         .addOption(new OptionValue(OPT_SPACE_EXTRA_PLUGINS,"",Sirikata::OptionValueType<String>(),"Extra list of plugins to load. Useful for using existing defaults as well as some additional plugins."))
 
@@ -102,6 +102,7 @@ void InitSpaceOptions() {
         .addOption(new OptionValue(OPT_MODULES, "environment", Sirikata::OptionValueType< std::vector<String> >(), "Additional SpaceModules to load"))
 
 
+        .addOption(new OptionValue(OPT_AGGMGR, "mesh", Sirikata::OptionValueType<String>(), "AggregateManager type"))
         .addOption(new OptionValue(OPT_AGGMGR_HOSTNAME, "", Sirikata::OptionValueType<String>(), "AggregateManager upload hostname"))
         .addOption(new OptionValue(OPT_AGGMGR_SERVICE, "", Sirikata::OptionValueType<String>(), "AggregateManager upload service (port)"))
         .addOption(new OptionValue(OPT_AGGMGR_CONSUMER_KEY, "", Sirikata::OptionValueType<String>(), "AggregateManager upload OAuth consumer key"))
@@ -109,12 +110,6 @@ void InitSpaceOptions() {
         .addOption(new OptionValue(OPT_AGGMGR_ACCESS_KEY, "", Sirikata::OptionValueType<String>(), "AggregateManager upload OAuth access key"))
         .addOption(new OptionValue(OPT_AGGMGR_ACCESS_SECRET, "", Sirikata::OptionValueType<String>(), "AggregateManager upload OAuth access secret"))
         .addOption(new OptionValue(OPT_AGGMGR_USERNAME, "", Sirikata::OptionValueType<String>(), "AggregateManager upload CDN username"))
-        .addOption(new OptionValue(OPT_AGGMGR_LOCAL_PATH, "", Sirikata::OptionValueType<String>(), "Path to generate local, file:// URL meshes to for helpful testing"))
-        .addOption(new OptionValue(OPT_AGGMGR_LOCAL_URL_PREFIX, "", Sirikata::OptionValueType<String>(), "Prefix to append to locally saved meshes"))
-        .addOption(new OptionValue(OPT_AGGMGR_GEN_THREADS, "4", Sirikata::OptionValueType<uint16>(), "Number of AggregateManager mesh generation threads"))
-        .addOption(new OptionValue(OPT_AGGMGR_UPLOAD_THREADS, "8", Sirikata::OptionValueType<uint16>(), "Number of AggregateManager mesh upload threads"))
-        .addOption(new OptionValue(OPT_AGGMGR_SKIP_GENERATE, "false", Sirikata::OptionValueType<bool>(), "If true, skips generating but pretends it was always successful. Useful for testing without the overhead of generating aggregates."))
-        .addOption(new OptionValue(OPT_AGGMGR_SKIP_UPLOAD, "false", Sirikata::OptionValueType<bool>(), "If true, skips uploading but pretends it was always successful. Useful for testing without pushing data to the CDN."))
 
       ;
 }

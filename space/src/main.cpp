@@ -75,6 +75,8 @@
 #include <sirikata/core/odp/SST.hpp>
 #include <sirikata/core/ohdp/SST.hpp>
 
+#include <sirikata/core/transfer/TransferMediator.hpp>
+
 namespace {
 using namespace Sirikata;
 
@@ -303,12 +305,6 @@ int main(int argc, char** argv) {
     String aggmgr_access_key = GetOptionValue<String>(OPT_AGGMGR_ACCESS_KEY);
     String aggmgr_access_secret = GetOptionValue<String>(OPT_AGGMGR_ACCESS_SECRET);
     String aggmgr_username = GetOptionValue<String>(OPT_AGGMGR_USERNAME);
-    String aggmgr_local_path = GetOptionValue<String>(OPT_AGGMGR_LOCAL_PATH);
-    String aggmgr_local_url_prefix = GetOptionValue<String>(OPT_AGGMGR_LOCAL_URL_PREFIX);
-    uint16 aggmgr_gen_threads = GetOptionValue<uint16>(OPT_AGGMGR_GEN_THREADS);
-    uint16 aggmgr_upload_threads = GetOptionValue<uint16>(OPT_AGGMGR_UPLOAD_THREADS);
-    bool aggmgr_skip_gen = GetOptionValue<bool>(OPT_AGGMGR_SKIP_GENERATE);
-    bool aggmgr_skip_upload = GetOptionValue<bool>(OPT_AGGMGR_SKIP_UPLOAD);
     Transfer::OAuthParamsPtr aggmgr_oauth;
     // Currently you need to explicitly override hostname to enable upload
     if (!aggmgr_hostname.empty()&&
@@ -322,7 +318,8 @@ int main(int argc, char** argv) {
             )
         );
     }
-    AggregateManager* aggmgr = new AggregateManager(loc_service, aggmgr_oauth, aggmgr_username, aggmgr_local_path, aggmgr_local_url_prefix, aggmgr_gen_threads, aggmgr_upload_threads, aggmgr_skip_gen, aggmgr_skip_upload);
+    std::string aggmgr_type = GetOptionValue<String>(OPT_AGGMGR);
+    AggregateManager* aggmgr = AggregateManagerFactory::getSingleton().getConstructor(aggmgr_type)(loc_service, aggmgr_oauth, aggmgr_username);
 
     std::string prox_type = GetOptionValue<String>(OPT_PROX);
     std::string prox_options = GetOptionValue<String>(OPT_PROX_OPTIONS);
