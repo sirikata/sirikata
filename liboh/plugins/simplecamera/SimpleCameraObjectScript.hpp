@@ -55,6 +55,9 @@ public:
     virtual void updateAddressable();
     virtual void attachScript(const String&);
 
+    // ObjectScript Interface
+    virtual void handleObjectCommand(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
+
     // SessionEventListener Interface
     virtual void onConnected(SessionEventProviderPtr from, const SpaceObjectReference& name, int64 token);
     virtual void onDisconnected(SessionEventProviderPtr from, const SpaceObjectReference& name);

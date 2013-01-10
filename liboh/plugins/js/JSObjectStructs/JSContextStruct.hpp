@@ -97,7 +97,7 @@ struct JSContextStruct : public JSSuspendable, public Liveness
 
     v8::Handle<v8::Value> pushEvalContextScopeDirectory(const String& newDir);
     v8::Handle<v8::Value> popEvalContextScopeDirectory();
-    
+
     v8::Handle<v8::Value> storageBeginTransaction();
     v8::Handle<v8::Value> storageCommit(v8::Handle<v8::Function> cb);
     v8::Handle<v8::Value> storageWrite(const OH::Storage::Key& key, const String& toWrite, v8::Handle<v8::Function> cb);
@@ -226,6 +226,8 @@ struct JSContextStruct : public JSSuspendable, public Liveness
     v8::Handle<v8::Value> proxAddedHandlerCallallback(v8::Handle<v8::Function>cb);
     v8::Handle<v8::Value> proxRemovedHandlerCallallback(v8::Handle<v8::Function>cb);
 
+    v8::Handle<v8::Value> registerCommandHandler(v8::Handle<v8::Function>cb);
+
 
     v8::Handle<v8::Value> getAssociatedPresence();
 
@@ -237,6 +239,7 @@ struct JSContextStruct : public JSSuspendable, public Liveness
     v8::Persistent<v8::Function>proxAddedFunc;
     v8::Persistent<v8::Function>proxRemovedFunc;
 
+    v8::Persistent<v8::Function> commandHandlerFunc;
 
    /**
       The http request that was associated with this request failed. Execute

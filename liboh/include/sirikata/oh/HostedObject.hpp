@@ -319,6 +319,13 @@ public:
     // Commands
     void commandPresences(
         const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
+    // Tries to pass a command to the object script to be handled by the script
+    // and completes the handling by indicating success or failure. The command,
+    // with 'oh.objects.command' as the 'command' field, is passed to the
+    // script. Some scripts may not be setup to handle commands and some may not
+    // even have scripts, in which case the command will automatically fail.
+    void commandObjectCommand(
+        const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
 
   private:
     /// Private: Use "SelfWeakPtr<HostedObject>::construct(ObjectHost*)"

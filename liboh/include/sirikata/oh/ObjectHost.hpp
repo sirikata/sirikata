@@ -302,6 +302,9 @@ public:
     void commandCreateObject(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
     void commandDestroyObject(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
     void commandObjectPresences(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
+    // Pass a command request to an object script. If the script doesn't accept
+    // commands an error is returned.
+    void commandObjectCommand(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
     // Helper that gets the object a command is operating on. Returns errors for
     // you and a NULL pointer on failure.
     HostedObjectPtr getCommandObject(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);

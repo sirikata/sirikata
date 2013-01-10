@@ -926,6 +926,102 @@ void JSObjectScript::iSetRestoreScriptCallback(
 }
 
 
+
+void JSObjectScript::handleObjectCommand(const Sirikata::Command::Command& cmd, Sirikata::Command::Commander* cmdr, Sirikata::Command::CommandID cmdid) {
+    if (JSObjectScript::mCtx->stopped()) {
+        JSLOG(warn, "Ignoring object command after shutdown request.");
+        Command::Result result = Command::EmptyResult();
+        result.put("error", "Requested object is no longer alive.");
+        cmdr->result(cmdid, result);
+        return;
+    }
+
+    JSObjectScript::mCtx->objStrand->post(
+        std::tr1::bind(&EmersonScript::iHandleObjectCommand,this,
+            cmd, cmdr, cmdid, Liveness::livenessToken()),
+        "EmersonScript::iHandleObjectCommand"
+    );
+}
+
+void JSObjectScript::iHandleObjectCommand(const Sirikata::Command::Command& cmd, Sirikata::Command::Commander* cmdr, Sirikata::Command::CommandID cmdid, Liveness::Token alive) {
+    if (!alive) return;
+    Liveness::Lock locked(alive);
+    if (!locked) return;
+
+
+    if (JSObjectScript::mCtx->stopped()) {
+        JSLOG(warn, "Ignoring object command callback after shutdown request.");
+        return;
+    }
+
+    JSSCRIPT_SERIAL_CHECK();
+    while(!JSObjectScript::mCtx->initialized())
+    {}
+
+    v8::Locker locker (mCtx->mIsolate);
+    v8::Isolate::Scope iscope(JSObjectScript::mCtx->mIsolate);
+
+    std::map<uint32, JSContextStruct*>::iterator contIter;
+    for (contIter = mContStructMap.begin(); contIter != mContStructMap.end();
+         ++contIter)
+    {
+        JSContextStruct* jscont = contIter->second;
+
+        if (jscont->getIsSuspended() || jscont->getIsCleared())
+            return;
+
+        if (mEvalContextStack.empty())
+            assert(false);
+
+        //this entire pre-amble is gross.
+        EvalContext& ctx = mEvalContextStack.top();
+        EvalContext new_ctx(ctx,jscont);
+        ScopedEvalContext sec(this,new_ctx);
+        v8::HandleScope handle_scope;
+        v8::Context::Scope context_scope(jscont->mContext);
+
+        TryCatch try_catch;
+
+        int argc = 1;
+        // Hacky, but easiest way to get the full request into Emerson
+        namespace json = json_spirit;
+        String cmd_json = json::write(cmd);
+        v8::Handle<v8::Value> argv[1] = { v8::String::New(cmd_json.c_str(), cmd_json.size()) };
+
+        v8::Handle<v8::Value> script_result = invokeCallback(jscont, jscont->commandHandlerFunc, argc, argv);
+        if (!StringValidate(script_result)) {
+            Command::Result result = Command::EmptyResult();
+            result.put("error", "Object returned invalid result.");
+            cmdr->result(cmdid, result);
+        }
+        else {
+            String result_json = StringExtract(script_result);
+            Command::Result result = Command::EmptyResult();
+            if (!json::read(result_json, result)) {
+                Command::Result err_result = Command::EmptyResult();
+                err_result.put("error", "Object returned invalid result.");
+                cmdr->result(cmdid, err_result);
+            }
+            else {
+                cmdr->result(cmdid, result);
+            }
+        }
+
+        if (try_catch.HasCaught()) {
+            printException(try_catch);
+        }
+        postCallbackChecks();
+
+
+        if (JSObjectScript::mCtx->stopped())
+        {
+            JSLOG(warn, "Ignoring remaining object command callbacks after shutdown request.");
+            return;
+        }
+    }
+}
+
+
 v8::Handle<v8::Value> JSObjectScript::pushEvalContextScopeDirectory(
     const String& newDir)
 {
@@ -1318,7 +1414,7 @@ v8::Handle<v8::Value> JSObjectScript::internalEval(const String& em_script_str, 
                         }
                         else {
                             std::streamsize ncopied = boost::iostreams::copy(js_script_stream, temp_cache_file);
-                            if (ncopied == js_script_str.size()) copied = true;
+                            if (ncopied == (std::streamsize)js_script_str.size()) copied = true;
                         }
                     }
                     // And finally try to rename. We wrap this in

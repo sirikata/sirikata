@@ -31,6 +31,8 @@ struct JSSystemStruct
     v8::Handle<v8::Value> proxAddedHandlerCallallback(v8::Handle<v8::Function>cb);
     v8::Handle<v8::Value> proxRemovedHandlerCallallback(v8::Handle<v8::Function>cb);
 
+    v8::Handle<v8::Value> registerCommandHandler(v8::Handle<v8::Function>cb);
+
     //regular members
     v8::Handle<v8::Value> struct_canSendMessage();
     v8::Handle<v8::Value> struct_canRecvMessage();
@@ -40,7 +42,7 @@ struct JSSystemStruct
 
     v8::Handle<v8::Value> pushEvalContextScopeDirectory(const String& newDir);
     v8::Handle<v8::Value> popEvalContextScopeDirectory();
-    
+
     v8::Handle<v8::Value> checkResources();
     v8::Handle<v8::Value> struct_evalInGlobal(const String& native_contents, ScriptOrigin* sOrigin);
     v8::Handle<v8::Value> checkHeadless();

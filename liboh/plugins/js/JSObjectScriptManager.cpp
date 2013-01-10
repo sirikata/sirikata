@@ -336,6 +336,7 @@ void JSObjectScriptManager::createSystemTemplate(JSCtx* jsctx)
     jsctx->mSystemTemplate->Set(v8::String::New("set_script"),v8::FunctionTemplate::New(JSSystem::root_setScript));
     jsctx->mSystemTemplate->Set(v8::String::New("getScript"),v8::FunctionTemplate::New(JSSystem::root_getScript));
 
+    jsctx->mSystemTemplate->Set(v8::String::New("registerCommandHandler"),v8::FunctionTemplate::New(JSSystem::root_registerCommandHandler));
 }
 
 

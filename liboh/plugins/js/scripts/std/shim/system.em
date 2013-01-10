@@ -648,6 +648,26 @@ PresenceEntry.prototype.proxRemovedEvent = function (visibleObj,visTo)
           return baseSystem.getScript.apply(baseSystem,arguments);
       };
 
+     /** @function
+         Register a function to be invoked when an external command is sent to
+         the object. By default none is registered and such requests will be
+         ignored. This allows some external control or input.
+         @param {function} cb the callback to invoke, which should accept a
+         single object parameter containing the request and return an object
+         result.
+         @return nothing
+       */
+      system.registerCommandHandler = function(cb)
+      {
+          // A wrapped version takes care of the conversion to JSON to make
+          // translation to a native representation simpler.
+          var wrapped_cb = function(data) {
+              var result = cb(JSON.parse(data));
+              return JSON.stringify(result);
+          };
+          return baseSystem.registerCommandHandler.apply(baseSystem,[wrapped_cb]);
+      };
+
 
      /** Trigger an event handler. The handler will be added to the event queue
       *  and invoked later, i.e. on a different stack than the current one.

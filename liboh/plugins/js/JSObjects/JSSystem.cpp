@@ -1766,6 +1766,24 @@ v8::Handle<v8::Value> root_onPresenceDisconnected(const v8::Arguments& args)
 
 
 
+v8::Handle<v8::Value> root_registerCommandHandler(const v8::Arguments& args) {
+    if (args.Length() != 1)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error registering command handler requires one argument <function>")));
+
+    String errMsg = "Error decoding system struct when registering command handler. ";
+    JSSystemStruct* jssys  = JSSystemStruct::decodeSystemStruct(args.This(),errMsg);
+
+    if (jssys == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New( errMsg.c_str())));
+
+
+    v8::Handle<v8::Value> cbVal = args[0];
+    if (!cbVal -> IsFunction())
+        return v8::ThrowException( v8::Exception::Error(v8::String::New( "Error in register command handler.  First argument should be a function.")));
+
+    v8::Handle<v8::Function> cb = v8::Handle<v8::Function>::Cast(cbVal);
+    return jssys->registerCommandHandler(cb);
+}
 
 
 }//end jssystem namespace

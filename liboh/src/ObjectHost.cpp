@@ -115,6 +115,10 @@ ObjectHost::ObjectHost(ObjectHostContext* ctx, Network::IOService *ioServ, const
             mContext->mainStrand->wrap(std::tr1::bind(&ObjectHost::commandObjectPresences, this, _1, _2, _3))
         );
 
+        mContext->commander()->registerCommand(
+            "oh.objects.command",
+            mContext->mainStrand->wrap(std::tr1::bind(&ObjectHost::commandObjectCommand, this, _1, _2, _3))
+        );
     }
 
     mTransferMediator = &(Transfer::TransferMediator::getSingleton());
@@ -536,6 +540,13 @@ void ObjectHost::commandDestroyObject(const Command::Command& cmd, Command::Comm
     ho->destroy();
     result.put("success", true);
     cmdr->result(cmdid, result);
+}
+
+void ObjectHost::commandObjectCommand(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {
+    HostedObjectPtr ho = getCommandObject(cmd, cmdr, cmdid);
+    if (!ho) return;
+
+    ho->commandObjectCommand(cmd, cmdr, cmdid);
 }
 
 void ObjectHost::commandObjectPresences(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {

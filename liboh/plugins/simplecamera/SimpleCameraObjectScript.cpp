@@ -225,5 +225,11 @@ void SimpleCameraObjectScript::stableRotateAction(float dir, float amount)
     mParent->requestOrientationUpdate(mID.space(), mID.object(), neworient);
 }
 
+void SimpleCameraObjectScript::handleObjectCommand(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {
+    Command::Result result = Command::EmptyResult();
+    result.put("error", "SimpleCameraObjectScripts don't handle commands");
+    cmdr->result(cmdid, result);
+}
+
 } // namespace SimpleCamera
 } // namespace Sirikata

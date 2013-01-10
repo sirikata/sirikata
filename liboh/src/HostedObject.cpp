@@ -384,7 +384,7 @@ void HostedObject::metadataDownloaded(OHConnectInfoPtr ocip,
     for (uint32 i = 0; i < 121; i++) {
       if (i < 120)
         zernike += "0, ";
-      else 
+      else
         zernike += "0]";
     }
     mContext->mainStrand->post(std::tr1::bind(&HostedObject::objectHostConnectIndirect, this, ocip));
@@ -1345,6 +1345,21 @@ void HostedObject::commandPresences(
     }
 
     cmdr->result(cmdid, result);
+}
+
+void HostedObject::commandObjectCommand(
+    const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid)
+{
+    Command::Result result = Command::EmptyResult();
+
+    if (!mObjectScript) {
+        result.put("error", "This object has no script to handle the object command");
+        cmdr->result(cmdid, result);
+        return;
+    }
+
+    // It's the scripts responsibility now
+    mObjectScript->handleObjectCommand(cmd, cmdr, cmdid);
 }
 
 }
