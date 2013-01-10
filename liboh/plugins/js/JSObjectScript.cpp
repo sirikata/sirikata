@@ -988,6 +988,14 @@ void JSObjectScript::iHandleObjectCommand(const Sirikata::Command::Command& cmd,
         String cmd_json = json::write(cmd);
         v8::Handle<v8::Value> argv[1] = { v8::String::New(cmd_json.c_str(), cmd_json.size()) };
 
+        // If no handler has been specified, immediate error
+        if (jscont->commandHandlerFunc.IsEmpty()) {
+            Command::Result err_result = Command::EmptyResult();
+            err_result.put("error", "Object has not specified a command handler.");
+            cmdr->result(cmdid, err_result);
+            continue;
+        }
+
         v8::Handle<v8::Value> script_result = invokeCallback(jscont, jscont->commandHandlerFunc, argc, argv);
         if (!StringValidate(script_result)) {
             Command::Result result = Command::EmptyResult();
