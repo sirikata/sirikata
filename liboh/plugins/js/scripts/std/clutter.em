@@ -20,8 +20,26 @@ function() {
         return this._sim.invoke.apply(this._sim, arguments);
     };
 
-    ns.ClutterRenderer.prototype.help = function() {
-        return this.invoke('help');
+    var create_wrapped_fn = function(fn_name, invoke_name) {
+        if (invoke_name === undefined) invoke_name = fn_name;
+        ns.ClutterRenderer.prototype[fn_name] = function() {
+            var args = [invoke_name];
+            for (var i in arguments)
+                args.push(arguments[i]);
+            return this.invoke.apply(this, args);
+        };
     };
+
+    create_wrapped_fn('help');
+    create_wrapped_fn('actor_set_size');
+    create_wrapped_fn('actor_set_position');
+    create_wrapped_fn('actor_show');
+    create_wrapped_fn('actor_destroy');
+    create_wrapped_fn('rectangle_create');
+    create_wrapped_fn('rectangle_set_color');
+    create_wrapped_fn('text_create');
+    create_wrapped_fn('text_set_color');
+    create_wrapped_fn('text_set_text');
+    create_wrapped_fn('text_set_font');
 
 })();

@@ -7,11 +7,9 @@
 
 #include <sirikata/oh/Simulation.hpp>
 #include <sirikata/core/service/Context.hpp>
+#include <clutter/clutter.h>
 
 namespace Sirikata {
-
-class HostedObject;
-typedef std::tr1::shared_ptr<HostedObject> HostedObjectPtr;
 
 /** ClutterRenderer is a Clutter-based renderer for 2D worlds.
  */
@@ -34,7 +32,30 @@ private:
 
     void rendererThread();
 
+    // Invokable handlers
+    boost::any invoke_help(std::vector<boost::any>& params);
+    boost::any invoke_actor_set_position(std::vector<boost::any>& params);
+    boost::any invoke_actor_set_size(std::vector<boost::any>& params);
+    boost::any invoke_actor_show(std::vector<boost::any>& params);
+    boost::any invoke_actor_destroy(std::vector<boost::any>& params);
+    boost::any invoke_rectangle_create(std::vector<boost::any>& params);
+    boost::any invoke_rectangle_set_color(std::vector<boost::any>& params);
+    boost::any invoke_text_create(std::vector<boost::any>& params);
+    boost::any invoke_text_set_color(std::vector<boost::any>& params);
+    boost::any invoke_text_set_text(std::vector<boost::any>& params);
+    boost::any invoke_text_set_font(std::vector<boost::any>& params);
+
+    ClutterActor* get_actor_by_id(int actor_id);
+
     Thread* mRendererThread;
+    ClutterStage* mStage;
+
+    typedef std::tr1::unordered_map<String, std::tr1::function<boost::any(std::vector<boost::any>& params)> > InvokeHandlerMap;
+    InvokeHandlerMap mInvokeHandlers;
+
+    typedef std::tr1::unordered_map<int, ClutterActor*> ActorMap;
+    int mActorIDSource;
+    ActorMap mActors;
 };
 
 } // namespace Sirikata
