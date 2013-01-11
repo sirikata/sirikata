@@ -80,6 +80,8 @@ ClutterRenderer::ClutterRenderer()
 {
     // Register Invokable handlers
     mInvokeHandlers["help"] = std::tr1::bind(&ClutterRenderer::invoke_help, this, _1);
+    mInvokeHandlers["stage_set_size"] = std::tr1::bind(&ClutterRenderer::invoke_stage_set_size, this, _1);
+    mInvokeHandlers["stage_set_color"] = std::tr1::bind(&ClutterRenderer::invoke_stage_set_color, this, _1);
     mInvokeHandlers["actor_set_position"] = std::tr1::bind(&ClutterRenderer::invoke_actor_set_position, this, _1);
     mInvokeHandlers["actor_set_size"] = std::tr1::bind(&ClutterRenderer::invoke_actor_set_size, this, _1);
     mInvokeHandlers["actor_show"] = std::tr1::bind(&ClutterRenderer::invoke_actor_show, this, _1);
@@ -135,6 +137,19 @@ ClutterActor* ClutterRenderer::get_actor_by_id(int actor_id) {
     return mActors[actor_id];
 }
 
+
+namespace {
+// clutter_color_init isn't available on all versions of clutter
+void clutter_color_init_(ClutterColor* c, guint8 r, guint8 g, guint8 b, guint8 a) {
+    c->red = r;
+    c->green = g;
+    c->blue = b;
+    c->alpha = a;
+}
+}
+
+
+
 boost::any ClutterRenderer::invoke(std::vector<boost::any>& params) {
     // Decode the command. First argument is the "function name"
     if (params.empty() || !Invokable::anyIsString(params[0]))
@@ -150,6 +165,36 @@ boost::any ClutterRenderer::invoke(std::vector<boost::any>& params) {
 
 boost::any ClutterRenderer::invoke_help(std::vector<boost::any>& params) {
     return Invokable::asAny(String("ClutterRenderer is a 2D renderer for Clutter data associated with objects."));
+}
+
+boost::any ClutterRenderer::invoke_stage_set_size(std::vector<boost::any>& params) {
+    assert(params.size() == 2 &&
+        Invokable::anyIsNumeric(params[0]) && // x
+        Invokable::anyIsNumeric(params[1]) // y
+    );
+
+    SyncOpClosure* closure = new SyncOpClosure;
+    clutter_actor_set_size (CLUTTER_ACTOR(mStage), Invokable::anyAsNumeric(params[0]), Invokable::anyAsNumeric(params[1]));
+
+    closure->finish();
+
+    return Invokable::asAny(true);
+}
+
+boost::any ClutterRenderer::invoke_stage_set_color(std::vector<boost::any>& params) {
+    assert(params.size() == 3 &&
+        Invokable::anyIsNumeric(params[0]) && // r
+        Invokable::anyIsNumeric(params[1]) && // g
+        Invokable::anyIsNumeric(params[2]) // b
+    );
+
+    SyncOpClosure* closure = new SyncOpClosure;
+    ClutterColor color;
+    clutter_color_init_(&color, Invokable::anyAsNumeric(params[0]), Invokable::anyAsNumeric(params[1]), Invokable::anyAsNumeric(params[2]), 255);
+    clutter_stage_set_color(mStage, &color);
+    closure->finish();
+
+    return Invokable::asAny(true);
 }
 
 boost::any ClutterRenderer::invoke_actor_set_position(std::vector<boost::any>& params) {
@@ -226,16 +271,6 @@ boost::any ClutterRenderer::invoke_rectangle_create(std::vector<boost::any>& par
     mActors[actor_id] = rect;
 
     return Invokable::asAny(actor_id);
-}
-
-namespace {
-// clutter_color_init isn't available on all versions of clutter
-void clutter_color_init_(ClutterColor* c, guint8 r, guint8 g, guint8 b, guint8 a) {
-    c->red = r;
-    c->green = g;
-    c->blue = b;
-    c->alpha = a;
-}
 }
 
 boost::any ClutterRenderer::invoke_rectangle_set_color(std::vector<boost::any>& params) {

@@ -34,6 +34,8 @@ private:
 
     // Invokable handlers
     boost::any invoke_help(std::vector<boost::any>& params);
+    boost::any invoke_stage_set_size(std::vector<boost::any>& params);
+    boost::any invoke_stage_set_color(std::vector<boost::any>& params);
     boost::any invoke_actor_set_position(std::vector<boost::any>& params);
     boost::any invoke_actor_set_size(std::vector<boost::any>& params);
     boost::any invoke_actor_show(std::vector<boost::any>& params);

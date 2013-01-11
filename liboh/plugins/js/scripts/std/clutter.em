@@ -31,6 +31,8 @@ function() {
     };
 
     create_wrapped_fn('help');
+    create_wrapped_fn('stage_set_size');
+    create_wrapped_fn('stage_set_color');
     create_wrapped_fn('actor_set_size');
     create_wrapped_fn('actor_set_position');
     create_wrapped_fn('actor_show');
