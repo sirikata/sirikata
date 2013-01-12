@@ -171,6 +171,15 @@ struct JSPresenceStruct : public JSPositionListener,
     }
 
 private:
+    // JSVisibleDataEventListener Interface
+    virtual void visiblePositionChanged(JSVisibleData* data);
+    virtual void visibleVelocityChanged(JSVisibleData* data);
+    virtual void visibleOrientationChanged(JSVisibleData* data);
+    virtual void visibleOrientationVelChanged(JSVisibleData* data);
+    virtual void visibleScaleChanged(JSVisibleData* data);
+    virtual void visibleMeshChanged(JSVisibleData* data);
+    virtual void visiblePhysicsChanged(JSVisibleData* data);
+
     EmersonScript* mParent;
     uint32 mContID;
 

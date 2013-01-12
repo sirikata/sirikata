@@ -285,6 +285,128 @@ void EmersonScript::fireProxEvent(const SpaceObjectReference& localPresSporef,
 
 }
 
+void EmersonScript::invokeVisibleEventCallback(v8::Persistent<v8::Function> cb, JSContextStruct* jscont, JSVisibleStruct* jsvis) {
+    if (JSObjectScript::mCtx->stopped()) {
+        JSLOG(warn, "Ignoring visible event after shutdown request.");
+        return;
+    }
+
+    JSObjectScript::mCtx->objStrand->post(
+        std::tr1::bind(&EmersonScript::iInvokeVisibleEventCallback,this,
+            cb, jscont, jsvis, Liveness::livenessToken()),
+        "EmersonScript::iInvokeVisibleEventCallback"
+    );
+}
+
+void EmersonScript::iInvokeVisibleEventCallback(v8::Persistent<v8::Function> cb, JSContextStruct* jscont, JSVisibleStruct* jsvis, Liveness::Token alive) {
+    if (!alive) return;
+    Liveness::Lock locked(alive);
+    if (!locked) return;
+
+
+    if (JSObjectScript::mCtx->stopped()) {
+        JSLOG(warn, "Ignoring visible event callback after shutdown request.");
+        return;
+    }
+
+    JSSCRIPT_SERIAL_CHECK();
+    while(!JSObjectScript::mCtx->initialized())
+    {}
+
+    v8::Locker locker (mCtx->mIsolate);
+    v8::Isolate::Scope iscope(JSObjectScript::mCtx->mIsolate);
+
+    if (jscont->getIsSuspended() || jscont->getIsCleared())
+        return;
+
+    if (mEvalContextStack.empty())
+        assert(false);
+
+    //this entire pre-amble is gross.
+    EvalContext& ctx = mEvalContextStack.top();
+    EvalContext new_ctx(ctx,jscont);
+    ScopedEvalContext sec(this,new_ctx);
+    v8::HandleScope handle_scope;
+    v8::Context::Scope context_scope(jscont->mContext);
+
+    TryCatch try_catch;
+
+    int argc = 1;
+    //create an associated visible object in correct context
+    v8::Local<v8::Object> visiblePres =
+        createVisibleWeakPersistent(jsvis);
+    v8::Handle<v8::Value> argv[1] = { visiblePres };
+
+    // Ignore result
+    invokeCallback(jscont, cb, argc, argv);
+
+    if (try_catch.HasCaught()) {
+        printException(try_catch);
+    }
+    postCallbackChecks();
+}
+
+void EmersonScript::invokePresenceEventCallback(v8::Persistent<v8::Function> cb, JSContextStruct* jscont, JSPresenceStruct* jspres) {
+    if (JSObjectScript::mCtx->stopped()) {
+        JSLOG(warn, "Ignoring presence event after shutdown request.");
+        return;
+    }
+
+    JSObjectScript::mCtx->objStrand->post(
+        std::tr1::bind(&EmersonScript::iInvokePresenceEventCallback,this,
+            cb, jscont, jspres, Liveness::livenessToken()),
+        "EmersonScript::iInvokePresenceEventCallback"
+    );
+}
+
+void EmersonScript::iInvokePresenceEventCallback(v8::Persistent<v8::Function> cb, JSContextStruct* jscont, JSPresenceStruct* jspres, Liveness::Token alive) {
+    if (!alive) return;
+    Liveness::Lock locked(alive);
+    if (!locked) return;
+
+
+    if (JSObjectScript::mCtx->stopped()) {
+        JSLOG(warn, "Ignoring presence event callback after shutdown request.");
+        return;
+    }
+
+    JSSCRIPT_SERIAL_CHECK();
+    while(!JSObjectScript::mCtx->initialized())
+    {}
+
+    v8::Locker locker (mCtx->mIsolate);
+    v8::Isolate::Scope iscope(JSObjectScript::mCtx->mIsolate);
+
+    if (jscont->getIsSuspended() || jscont->getIsCleared())
+        return;
+
+    if (mEvalContextStack.empty())
+        assert(false);
+
+    //this entire pre-amble is gross.
+    EvalContext& ctx = mEvalContextStack.top();
+    EvalContext new_ctx(ctx,jscont);
+    ScopedEvalContext sec(this,new_ctx);
+    v8::HandleScope handle_scope;
+    v8::Context::Scope context_scope(jscont->mContext);
+
+    TryCatch try_catch;
+
+    int argc = 1;
+    //create an associated visible object in correct context
+    v8::Handle<v8::Value> js_pres = wrapPresence(jspres, &(jscont->mContext));
+    v8::Handle<v8::Value> argv[1] = { js_pres };
+
+    // Ignore result
+    invokeCallback(jscont, cb, argc, argv);
+
+    if (try_catch.HasCaught()) {
+        printException(try_catch);
+    }
+    postCallbackChecks();
+}
+
+
 boost::any EmersonScript::invokeInvokable(
     std::vector<boost::any>& params,v8::Persistent<v8::Function> function_)
 {
@@ -361,6 +483,8 @@ v8::Local<v8::Object> EmersonScript::createVisibleWeakPersistent(const SpaceObje
 v8::Local<v8::Object> EmersonScript::createVisibleWeakPersistent(JSVisibleStruct* jsvis)
 {
     EMERSCRIPT_SERIAL_CHECK();
+    jsvis->createWeakRef();
+
     v8::HandleScope handle_scope;
     v8::Local<v8::Object> returner = JSObjectScript::mCtx->mVisibleTemplate->GetFunction()->NewInstance();
     returner->SetInternalField(VISIBLE_JSVISIBLESTRUCT_FIELD,v8::External::New(jsvis));

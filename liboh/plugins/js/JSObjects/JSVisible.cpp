@@ -13,7 +13,7 @@
 #include "JSObjectsUtils.hpp"
 
 #include <sirikata/core/util/SpaceObjectReference.hpp>
-
+#include <boost/tr1/tuple.hpp>
 
 namespace Sirikata {
 namespace JS {
@@ -455,6 +455,83 @@ v8::Handle<v8::Value> unloadMesh(const v8::Arguments& args)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
 
     return visstruct->unloadMesh();
+}
+
+
+
+
+static std::tr1::tuple<JSVisibleStruct*, JSSystemStruct*, v8::Handle<v8::Function>, String> registerEventHandlerHelper(const v8::Arguments& args, const String& name) {
+    if (args.Length() != 2) {
+        String errmsg = String("Error calling visible.") + name + String(".  Requires 2 arguments: the system and the callback to invoke.");
+        return std::tr1::make_tuple((JSVisibleStruct*)NULL, (JSSystemStruct*)NULL, v8::Handle<v8::Function>(), errmsg);
+    }
+
+    String errorMessage = String("Error in visible.") + name + String(" while decoding visible.  ");
+    JSVisibleStruct* visstruct = JSVisibleStruct::decodeVisible(args.This(), errorMessage);
+    if (visstruct == NULL)
+        return std::tr1::make_tuple((JSVisibleStruct*)NULL, (JSSystemStruct*)NULL, v8::Handle<v8::Function>(), errorMessage);
+
+    errorMessage = String("Error decoding system in visible.") + name;
+    JSSystemStruct* sysstruct = JSSystemStruct::decodeSystemStruct(args[0], errorMessage);
+    if (visstruct == NULL)
+        return std::tr1::make_tuple((JSVisibleStruct*)NULL, (JSSystemStruct*)NULL, v8::Handle<v8::Function>(), errorMessage);
+
+    v8::Handle<v8::Function> cb = decodeCallbackArgument(args, 1);
+    if (cb.IsEmpty()) {
+        String errmsg = String("Invalid callback argument to visible.") + name + String(".");
+        return std::tr1::make_tuple((JSVisibleStruct*)NULL, (JSSystemStruct*)NULL, v8::Handle<v8::Function>(), errmsg);
+    }
+
+    return std::tr1::make_tuple(visstruct, sysstruct, cb, String());
+}
+
+v8::Handle<v8::Value> onPositionChanged(const v8::Arguments& args) {
+    JSVisibleStruct* visstruct; JSSystemStruct* sysstruct; v8::Handle<v8::Function> cb; String errmsg;
+    std::tr1::tie(visstruct, sysstruct, cb, errmsg) = registerEventHandlerHelper(args, "onPositionChanged");
+    if (visstruct == NULL) return v8::ThrowException( v8::Exception::Error(v8::String::New(errmsg.c_str())));
+    return visstruct->onPositionChanged(sysstruct->getContext(), cb);
+}
+
+v8::Handle<v8::Value> onVelocityChanged(const v8::Arguments& args) {
+    JSVisibleStruct* visstruct; JSSystemStruct* sysstruct; v8::Handle<v8::Function> cb; String errmsg;
+    std::tr1::tie(visstruct, sysstruct, cb, errmsg) = registerEventHandlerHelper(args, "onVelocityChanged");
+    if (visstruct == NULL) return v8::ThrowException( v8::Exception::Error(v8::String::New(errmsg.c_str())));
+    return visstruct->onVelocityChanged(sysstruct->getContext(), cb);
+}
+
+v8::Handle<v8::Value> onOrientationChanged(const v8::Arguments& args) {
+    JSVisibleStruct* visstruct; JSSystemStruct* sysstruct; v8::Handle<v8::Function> cb; String errmsg;
+    std::tr1::tie(visstruct, sysstruct, cb, errmsg) = registerEventHandlerHelper(args, "onOrientationChanged");
+    if (visstruct == NULL) return v8::ThrowException( v8::Exception::Error(v8::String::New(errmsg.c_str())));
+    return visstruct->onOrientationChanged(sysstruct->getContext(), cb);
+}
+
+v8::Handle<v8::Value> onOrientationVelChanged(const v8::Arguments& args) {
+    JSVisibleStruct* visstruct; JSSystemStruct* sysstruct; v8::Handle<v8::Function> cb; String errmsg;
+    std::tr1::tie(visstruct, sysstruct, cb, errmsg) = registerEventHandlerHelper(args, "onOrientationVelChanged");
+    if (visstruct == NULL) return v8::ThrowException( v8::Exception::Error(v8::String::New(errmsg.c_str())));
+    return visstruct->onOrientationVelChanged(sysstruct->getContext(), cb);
+}
+
+v8::Handle<v8::Value> onScaleChanged(const v8::Arguments& args) {
+    JSVisibleStruct* visstruct; JSSystemStruct* sysstruct; v8::Handle<v8::Function> cb; String errmsg;
+    std::tr1::tie(visstruct, sysstruct, cb, errmsg) = registerEventHandlerHelper(args, "onScaleChanged");
+    if (visstruct == NULL) return v8::ThrowException( v8::Exception::Error(v8::String::New(errmsg.c_str())));
+    return visstruct->onScaleChanged(sysstruct->getContext(), cb);
+}
+
+v8::Handle<v8::Value> onMeshChanged(const v8::Arguments& args) {
+    JSVisibleStruct* visstruct; JSSystemStruct* sysstruct; v8::Handle<v8::Function> cb; String errmsg;
+    std::tr1::tie(visstruct, sysstruct, cb, errmsg) = registerEventHandlerHelper(args, "onMeshChanged");
+    if (visstruct == NULL) return v8::ThrowException( v8::Exception::Error(v8::String::New(errmsg.c_str())));
+    return visstruct->onMeshChanged(sysstruct->getContext(), cb);
+}
+
+v8::Handle<v8::Value> onPhysicsChanged(const v8::Arguments& args) {
+    JSVisibleStruct* visstruct; JSSystemStruct* sysstruct; v8::Handle<v8::Function> cb; String errmsg;
+    std::tr1::tie(visstruct, sysstruct, cb, errmsg) = registerEventHandlerHelper(args, "onPhysicsChanged");
+    if (visstruct == NULL) return v8::ThrowException( v8::Exception::Error(v8::String::New(errmsg.c_str())));
+    return visstruct->onPhysicsChanged(sysstruct->getContext(), cb);
 }
 
 

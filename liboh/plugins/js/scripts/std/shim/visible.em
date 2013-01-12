@@ -108,6 +108,43 @@
       visible.prototype.getScale = function(){
       };
 
+
+      /** Register a function to be invoked if this visible's position changes.
+       *  @param {function} callback to invoke, taking one parameter, this visible
+       *  @returns {boolean} True if successful.
+       */
+      visible.prototype.onPositionChanged = function(cb) {};
+      /** Register a function to be invoked if this visible's velocity changes.
+       *  @param {function} callback to invoke, taking one parameter, this visible
+       *  @returns {boolean} True if successful.
+       */
+      visible.prototype.onVelocityChanged = function(cb) {};
+      /** Register a function to be invoked if this visible's orientation changes.
+       *  @param {function} callback to invoke, taking one parameter, this visible
+       *  @returns {boolean} True if successful.
+       */
+      visible.prototype.onOrientationChanged = function(cb) {};
+      /** Register a function to be invoked if this visible's orientation velocity changes.
+       *  @param {function} callback to invoke, taking one parameter, this visible
+       *  @returns {boolean} True if successful.
+       */
+      visible.prototype.onOrientationVelChanged = function(cb) {};
+      /** Register a function to be invoked if this visible's scale changes.
+       *  @param {function} callback to invoke, taking one parameter, this visible
+       *  @returns {boolean} True if successful.
+       */
+      visible.prototype.onScaleChanged = function(cb) {};
+      /** Register a function to be invoked if this visible's mesh changes.
+       *  @param {function} callback to invoke, taking one parameter, this visible
+       *  @returns {boolean} True if successful.
+       */
+      visible.prototype.onMeshChanged = function(cb) {};
+      /** Register a function to be invoked if this visible's physics settings changes.
+       *  @param {function} callback to invoke, taking one parameter, this visible
+       *  @returns {boolean} True if successful.
+       */
+      visible.prototype.onPhysicsChanged = function(cb) {};
+      
       /** Get a string representation of this visible -- a
        *  combination of the space and object identifiers which
        *  uniquely identify it.
@@ -216,6 +253,35 @@
      };
      visible.prototype.untransformedMeshBounds = function() {
          return decodeBBox(__origUntransformedMeshBounds.apply(this));
+     };
+
+     visible.prototype.__origOnPositionChanged = visible.prototype.onPositionChanged;
+     visible.prototype.onPositionChanged = function(cb, full) {
+         system.__visibleOnPositionChanged(this, cb);
+     };
+     visible.prototype.__origOnVelocityChanged = visible.prototype.onVelocityChanged;
+     visible.prototype.onVelocityChanged = function(cb, full) {
+         system.__visibleOnVelocityChanged(this, cb);
+     };
+     visible.prototype.__origOnOrientationChanged = visible.prototype.onOrientationChanged;
+     visible.prototype.onOrientationChanged = function(cb, full) {
+         system.__visibleOnOrientationChanged(this, cb);
+     };
+     visible.prototype.__origOnOrientationVelChanged = visible.prototype.onOrientationVelChanged;
+     visible.prototype.onOrientationVelChanged = function(cb, full) {
+         system.__visibleOnOrientationVelChanged(this, cb);
+     };
+     visible.prototype.__origOnScaleChanged = visible.prototype.onScaleChanged;
+     visible.prototype.onScaleChanged = function(cb, full) {
+         system.__visibleOnScaleChanged(this, cb);
+     };
+     visible.prototype.__origOnMeshChanged = visible.prototype.onMeshChanged;
+     visible.prototype.onMeshChanged = function(cb, full) {
+         system.__visibleOnMeshChanged(this, cb);
+     };
+     visible.prototype.__origOnPhysicsChanged = visible.prototype.onPhysicsChanged;
+     visible.prototype.onPhysicsChanged = function(cb, full) {
+         system.__visibleOnPhysicsChanged(this, cb);
      };
 
      // The basic raytrace is in *completely untransformed* mesh space, meaning

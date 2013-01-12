@@ -8,6 +8,7 @@
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/util/PresenceProperties.hpp>
 #include <sirikata/proxyobject/ProxyObject.hpp>
+#include <sirikata/core/util/ListenerProvider.hpp>
 
 namespace Sirikata{
 namespace JS{
@@ -26,6 +27,20 @@ public:
     virtual void removeVisibleData(JSVisibleData* data) = 0;
 };
 
+/** Tracks events, e.g. position or mesh changed. */
+class JSVisibleDataEventListener {
+public:
+    virtual ~JSVisibleDataEventListener() {}
+
+    virtual void visiblePositionChanged(JSVisibleData* data) = 0;
+    virtual void visibleVelocityChanged(JSVisibleData* data) = 0;
+    virtual void visibleOrientationChanged(JSVisibleData* data) = 0;
+    virtual void visibleOrientationVelChanged(JSVisibleData* data) = 0;
+    virtual void visibleScaleChanged(JSVisibleData* data) = 0;
+    virtual void visibleMeshChanged(JSVisibleData* data) = 0;
+    virtual void visiblePhysicsChanged(JSVisibleData* data) = 0;
+};
+
 /** JSVisibleData is the interface for accessing data about visibles. It is
  *  only an interface because we need to support regular operation (against
  *  ProxyObjects) and special cases (like during restoration, when we've stored
@@ -39,7 +54,10 @@ public:
  *  which case we'd just get an identifier) or just be the origin of a message
  *  (again, meaning only the ID will be valid).
  */
-class JSVisibleData : public virtual IPresencePropertiesRead {
+class JSVisibleData :
+        public virtual IPresencePropertiesRead,
+        public Provider<JSVisibleDataEventListener*>
+{
 public:
     JSVisibleData(JSVisibleDataListener* parent)
      : mParent(parent)
@@ -90,7 +108,11 @@ private:
 
 
 /** JSVisibleData that works from a ProxyObject. */
-class JSProxyVisibleData : public JSVisibleData {
+class JSProxyVisibleData :
+        public JSVisibleData,
+        PositionListener,
+        MeshListener
+{
 public:
     JSProxyVisibleData(JSVisibleDataListener* parent, ProxyObjectPtr from);
     virtual ~JSProxyVisibleData();
@@ -112,6 +134,15 @@ public:
 private:
     JSProxyVisibleData();
 
+    // PositionListener Interface
+    virtual void updateLocation (ProxyObjectPtr obj, const TimedMotionVector3f &newLocation, const TimedMotionQuaternion& newOrient, const AggregateBoundingInfo& newBounds, const SpaceObjectReference& sporef);
+    // MeshListener Interface
+    virtual void onSetMesh (ProxyObjectPtr proxy, Transfer::URI const& newMesh, const SpaceObjectReference& sporef);
+    virtual void onSetScale (ProxyObjectPtr proxy, float32 newScale,const SpaceObjectReference& sporef );
+    virtual void onSetPhysics (ProxyObjectPtr proxy, const String& phy,const SpaceObjectReference& sporef );
+    virtual void onSetIsAggregate (ProxyObjectPtr proxy, bool isAggregate, const SpaceObjectReference& sporef );
+
+
     ProxyObjectPtr proxy;
 };
 
@@ -126,6 +157,7 @@ typedef std::tr1::weak_ptr<JSAggregateVisibleData> JSAggregateVisibleDataWPtr;
 class JSAggregateVisibleData :
         public JSVisibleData,
         public JSVisibleDataListener,
+        JSVisibleDataEventListener,
         Noncopyable
 {
 public:
@@ -166,6 +198,15 @@ private:
     JSAggregateVisibleData();
 
     JSVisibleDataPtr getBestChild() const;
+
+    // JSVisibleDataEventListener Interface
+    virtual void visiblePositionChanged(JSVisibleData* data);
+    virtual void visibleVelocityChanged(JSVisibleData* data);
+    virtual void visibleOrientationChanged(JSVisibleData* data);
+    virtual void visibleOrientationVelChanged(JSVisibleData* data);
+    virtual void visibleScaleChanged(JSVisibleData* data);
+    virtual void visibleMeshChanged(JSVisibleData* data);
+    virtual void visiblePhysicsChanged(JSVisibleData* data);
 
     // Number of references to this JSVisibleData *by ProxyObjectPtrs*
     // (not by v8 objects). We use a slightly confusing setup to

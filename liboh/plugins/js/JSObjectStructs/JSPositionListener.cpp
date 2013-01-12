@@ -18,12 +18,15 @@ namespace JS {
 JSPositionListener::JSPositionListener(EmersonScript* parent, JSAggregateVisibleDataPtr _jpp, JSCtx* ctx)
  : mParentScript(parent),
    jpp(_jpp),
-   mCtx(ctx)
+   mCtx(ctx),
+   mEventCallbacks()
 {
+    jpp->addListener(this);
 }
 
 JSPositionListener::~JSPositionListener()
 {
+    jpp->removeListener(this);
 }
 
 v8::Handle<v8::Value> JSPositionListener::struct_getAllData()
@@ -392,6 +395,49 @@ v8::Handle<v8::Value> JSPositionListener::struct_getDistance(const Vector3d& dis
     return v8::Number::New(distVal);
 }
 
+
+
+v8::Handle<v8::Value> JSPositionListener::onPositionChanged(JSContextStruct* ctxstruct, v8::Handle<v8::Function> cb) {
+    if (!mEventCallbacks) mEventCallbacks = PositionListenerCallbacksPtr(new PositionListenerCallbacks());
+    mEventCallbacks->onPositionChanged = std::make_pair(ctxstruct, v8::Persistent<v8::Function>::New(cb));
+    return v8::Boolean::New(true);
+}
+
+v8::Handle<v8::Value> JSPositionListener::onVelocityChanged(JSContextStruct* ctxstruct, v8::Handle<v8::Function> cb) {
+    if (!mEventCallbacks) mEventCallbacks = PositionListenerCallbacksPtr(new PositionListenerCallbacks());
+    mEventCallbacks->onVelocityChanged = std::make_pair(ctxstruct, v8::Persistent<v8::Function>::New(cb));
+    return v8::Boolean::New(true);
+}
+
+v8::Handle<v8::Value> JSPositionListener::onOrientationChanged(JSContextStruct* ctxstruct, v8::Handle<v8::Function> cb) {
+    if (!mEventCallbacks) mEventCallbacks = PositionListenerCallbacksPtr(new PositionListenerCallbacks());
+    mEventCallbacks->onOrientationChanged = std::make_pair(ctxstruct, v8::Persistent<v8::Function>::New(cb));
+    return v8::Boolean::New(true);
+}
+
+v8::Handle<v8::Value> JSPositionListener::onOrientationVelChanged(JSContextStruct* ctxstruct, v8::Handle<v8::Function> cb) {
+    if (!mEventCallbacks) mEventCallbacks = PositionListenerCallbacksPtr(new PositionListenerCallbacks());
+    mEventCallbacks->onOrientationVelChanged = std::make_pair(ctxstruct, v8::Persistent<v8::Function>::New(cb));
+    return v8::Boolean::New(true);
+}
+
+v8::Handle<v8::Value> JSPositionListener::onScaleChanged(JSContextStruct* ctxstruct, v8::Handle<v8::Function> cb) {
+    if (!mEventCallbacks) mEventCallbacks = PositionListenerCallbacksPtr(new PositionListenerCallbacks());
+    mEventCallbacks->onScaleChanged = std::make_pair(ctxstruct, v8::Persistent<v8::Function>::New(cb));
+    return v8::Boolean::New(true);
+}
+
+v8::Handle<v8::Value> JSPositionListener::onMeshChanged(JSContextStruct* ctxstruct, v8::Handle<v8::Function> cb) {
+    if (!mEventCallbacks) mEventCallbacks = PositionListenerCallbacksPtr(new PositionListenerCallbacks());
+    mEventCallbacks->onMeshChanged = std::make_pair(ctxstruct, v8::Persistent<v8::Function>::New(cb));
+    return v8::Boolean::New(true);
+}
+
+v8::Handle<v8::Value> JSPositionListener::onPhysicsChanged(JSContextStruct* ctxstruct, v8::Handle<v8::Function> cb) {
+    if (!mEventCallbacks) mEventCallbacks = PositionListenerCallbacksPtr(new PositionListenerCallbacks());
+    mEventCallbacks->onPhysicsChanged = std::make_pair(ctxstruct, v8::Persistent<v8::Function>::New(cb));
+    return v8::Boolean::New(true);
+}
 
 } //namespace JS
 } //namespace Sirikata

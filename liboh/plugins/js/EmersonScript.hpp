@@ -153,6 +153,11 @@ public:
         JSVisibleStruct* jsvis, JSContextStruct* jscont, bool isGone);
 
 
+    // Invoke a callback for a visible event, e.g. it changed position,
+    void invokeVisibleEventCallback(v8::Persistent<v8::Function> cb, JSContextStruct* jscont, JSVisibleStruct* jsvis);
+    // Invoke a callback for a presence event, e.g. it changed position,
+    void invokePresenceEventCallback(v8::Persistent<v8::Function> cb, JSContextStruct* jscont, JSPresenceStruct* jspres);
+
 
 
     /** Returns true if this script is valid, i.e. if it was successfully loaded
@@ -455,6 +460,11 @@ private:
         std::vector<boost::any>& params,v8::Persistent<v8::Function> function_,
         Liveness::Token alive);
 
+    void iInvokeVisibleEventCallback(v8::Persistent<v8::Function> cb, JSContextStruct* jscont,
+        JSVisibleStruct* jsvis, Liveness::Token alive);
+
+    void iInvokePresenceEventCallback(v8::Persistent<v8::Function> cb, JSContextStruct* jscont,
+        JSPresenceStruct* jspres, Liveness::Token alive);
 
     //simname, sporef
     typedef std::vector< std::pair<String,SpaceObjectReference> > SimVec;

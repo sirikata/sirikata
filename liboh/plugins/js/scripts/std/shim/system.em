@@ -1563,6 +1563,29 @@ PresenceEntry.prototype.proxRemovedEvent = function (visibleObj,visTo)
          if (full !== undefined) args.push(full);
          vis.__origLoadMesh.apply(vis, args);
      };
+
+     // FIXME see note immediately above
+     system.__visibleOnPositionChanged = function(vis, cb) {
+         vis.__origOnPositionChanged.apply(vis, [baseSystem, cb]);
+     };
+     system.__visibleOnVelocityChanged = function(vis, cb) {
+         vis.__origOnVelocityChanged.apply(vis, [baseSystem, cb]);
+     };
+     system.__visibleOnOrientationChanged = function(vis, cb) {
+         vis.__origOnOrientationChanged.apply(vis, [baseSystem, cb]);
+     };
+     system.__visibleOnOrientationVelChanged = function(vis, cb) {
+         vis.__origOnOrientationVelChanged.apply(vis, [baseSystem, cb]);
+     };
+     system.__visibleOnScaleChanged = function(vis, cb) {
+         vis.__origOnScaleChanged.apply(vis, [baseSystem, cb]);
+     };
+     system.__visibleOnMeshChanged = function(vis, cb) {
+         vis.__origOnMeshChanged.apply(vis, [baseSystem, cb]);
+     };
+     system.__visibleOnPhysicsChanged = function(vis, cb) {
+         vis.__origOnPhysicsChanged.apply(vis, [baseSystem, cb]);
+     };
      
   })();
 

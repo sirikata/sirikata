@@ -42,6 +42,14 @@ v8::Handle<v8::Value> unloadMesh(const v8::Arguments& args);
 
 v8::Handle<v8::Value> getAnimationList(const v8::Arguments& args);
 
+v8::Handle<v8::Value> onPositionChanged(const v8::Arguments& args);
+v8::Handle<v8::Value> onVelocityChanged(const v8::Arguments& args);
+v8::Handle<v8::Value> onOrientationChanged(const v8::Arguments& args);
+v8::Handle<v8::Value> onOrientationVelChanged(const v8::Arguments& args);
+v8::Handle<v8::Value> onScaleChanged(const v8::Arguments& args);
+v8::Handle<v8::Value> onMeshChanged(const v8::Arguments& args);
+v8::Handle<v8::Value> onPhysicsChanged(const v8::Arguments& args);
+
 }//end jsvisible namespace
 }//end js namespace
 }//end sirikata

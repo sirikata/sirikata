@@ -11,7 +11,8 @@ namespace Sirikata {
 namespace JS {
 
 JSVisibleStruct::JSVisibleStruct(EmersonScript* parent, JSAggregateVisibleDataPtr addParams, JSCtx* ctx)
- : JSPositionListener(parent, addParams,ctx)
+ : JSPositionListener(parent, addParams,ctx),
+   mV8RefCount(0)
 {
 }
 
@@ -85,6 +86,9 @@ v8::Handle<v8::Value> JSVisibleStruct::printData()
 }
 
 
+void JSVisibleStruct::createWeakRef() {
+    mV8RefCount++;
+}
 
 void JSVisibleStruct::visibleWeakReferenceCleanup(v8::Persistent<v8::Value> containsVisStruct, void* otherArg)
 {
@@ -105,16 +109,56 @@ void JSVisibleStruct::visibleWeakReferenceCleanup(v8::Persistent<v8::Value> cont
     String err = "Potential error when cleaning up jsvisible.  Could not decode visible struct.";
     JSVisibleStruct* jsvis = JSVisibleStruct::decodeVisible(vis,err);
 
-    //jsvis now contains a pointer to a jsvisible struct, which we can now
-    //delete.
-    delete jsvis;
+    uint32 cur_ref_count = --(jsvis->mV8RefCount);
+    if (cur_ref_count == 0) {
+        JSLOG(insane,"Freeing memory for jsvisible.");
+        //jsvis now contains a pointer to a jsvisible struct, which we can now
+        //delete.
+        delete jsvis;
+    }
+
     vis->SetInternalField(VISIBLE_JSVISIBLESTRUCT_FIELD,v8::External::New(NULL));
     vis->SetInternalField(TYPEID_FIELD,v8::External::New(NULL));
 
-    JSLOG(insane,"Freeing memory for jsvisible.");
     containsVisStruct.Dispose();
 }
 
+
+// JSVisibleDataEventListener Interface
+void JSVisibleStruct::visiblePositionChanged(JSVisibleData* data) {
+    if (!mEventCallbacks || mEventCallbacks->onPositionChanged.second.IsEmpty()) return;
+    mParentScript->invokeVisibleEventCallback(mEventCallbacks->onPositionChanged.second, mEventCallbacks->onPositionChanged.first, this);
+}
+
+void JSVisibleStruct::visibleVelocityChanged(JSVisibleData* data) {
+    if (!mEventCallbacks || mEventCallbacks->onVelocityChanged.second.IsEmpty()) return;
+    mParentScript->invokeVisibleEventCallback(mEventCallbacks->onVelocityChanged.second, mEventCallbacks->onVelocityChanged.first, this);
+}
+
+void JSVisibleStruct::visibleOrientationChanged(JSVisibleData* data) {
+    if (!mEventCallbacks || mEventCallbacks->onOrientationChanged.second.IsEmpty()) return;
+    mParentScript->invokeVisibleEventCallback(mEventCallbacks->onOrientationChanged.second, mEventCallbacks->onOrientationChanged.first, this);
+}
+
+void JSVisibleStruct::visibleOrientationVelChanged(JSVisibleData* data) {
+    if (!mEventCallbacks || mEventCallbacks->onOrientationVelChanged.second.IsEmpty()) return;
+    mParentScript->invokeVisibleEventCallback(mEventCallbacks->onOrientationVelChanged.second, mEventCallbacks->onOrientationVelChanged.first, this);
+}
+
+void JSVisibleStruct::visibleScaleChanged(JSVisibleData* data) {
+    if (!mEventCallbacks || mEventCallbacks->onScaleChanged.second.IsEmpty()) return;
+    mParentScript->invokeVisibleEventCallback(mEventCallbacks->onScaleChanged.second, mEventCallbacks->onScaleChanged.first, this);
+}
+
+void JSVisibleStruct::visibleMeshChanged(JSVisibleData* data) {
+    if (!mEventCallbacks || mEventCallbacks->onMeshChanged.second.IsEmpty()) return;
+    mParentScript->invokeVisibleEventCallback(mEventCallbacks->onMeshChanged.second, mEventCallbacks->onMeshChanged.first, this);
+}
+
+void JSVisibleStruct::visiblePhysicsChanged(JSVisibleData* data) {
+    if (!mEventCallbacks || mEventCallbacks->onPhysicsChanged.second.IsEmpty()) return;
+    mParentScript->invokeVisibleEventCallback(mEventCallbacks->onPhysicsChanged.second, mEventCallbacks->onPhysicsChanged.first, this);
+}
 
 
 }//js namespace
