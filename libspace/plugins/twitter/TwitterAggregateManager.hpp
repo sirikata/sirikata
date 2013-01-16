@@ -27,7 +27,78 @@ class SIRIKATA_SPACE_EXPORT TwitterAggregateManager : public AggregateManager {
     virtual void generateAggregateMesh(const UUID& uuid, const Duration& delayFor = Duration::milliseconds(1.0f) );
 
   private:
+
     LocationService* mLoc;
+
+    // For access to all aggregate data structures
+    boost::recursive_mutex mAggregateMutex;
+    typedef boost::unique_lock<boost::recursive_mutex> Lock;
+
+    // Naming is a bit misleading -- tracks both aggregates and individual
+    // objects so the objects can be referenced and their state tracked.
+    struct AggregateObject;
+    typedef std::tr1::shared_ptr<AggregateObject> AggregateObjectPtr;
+    typedef std::set<AggregateObjectPtr> AggregateObjectSet;
+    typedef std::multiset<AggregateObjectPtr> AggregateObjectMultiSet;
+    struct AggregateObject {
+        AggregateObject(const UUID& uuid_, bool is_agg)
+         : uuid(uuid_),
+           parent(),
+           parents(),
+           children(),
+           aggregate(is_agg),
+           loc(),
+           mesh(),
+           dirty(false),
+           dirty_children(),
+           processing(false)
+        {}
+
+        // Tree structure
+        const UUID uuid;
+        AggregateObjectPtr parent;
+        // Leaf objects can have multiple parents (e.g. because of separate
+        // server query and object query trees in the older query processor and
+        // rebuilding trees in both implementations). Leaf objects also have
+        // other constraints (e.g. no aggregate generation). True aggregates
+        // will only use parent, leaves will only use parents.
+        AggregateObjectSet parents;
+        AggregateObjectSet children;
+
+        // Basic aggregate world state, cached from LocationService
+        bool aggregate;
+        TimedMotionVector3f loc;
+        String mesh;
+
+        // Aggregation state
+        bool dirty;
+        // Dirty children we're waiting for. This is a multiset because the set
+        // of dirty children has to be maintained while processing an aggregate
+        // (lest we prematurely add the parent to the ready list for
+        // processing), but the set of dirty children can change in the
+        // meantime, including marking the currently processing object dirty
+        // again and marking parents as dirty. When we need to remove something,
+        // we remove only one copy of it to keep the count accurate.
+        AggregateObjectMultiSet dirty_children;
+        bool processing; // Actively being processed by aggregation thread
+    };
+    // All aggregates
+    typedef std::tr1::unordered_map<UUID, AggregateObjectPtr, UUID::Hasher> AggregateObjectMap;
+    AggregateObjectMap mAggregates;
+    // Aggregates ready to start the generation process, i.e. have no children
+    // blocking them.
+    typedef std::deque<AggregateObjectPtr> AggregateQueue;
+    AggregateQueue mReadyAggregates;
+
+
+    enum { MAX_NUM_AGGREGATION_THREADS = 16 };
+    uint16 mNumAggregationThreads;
+    Thread* mAggregationThreads[MAX_NUM_AGGREGATION_THREADS];
+    Network::IOService* mAggregationService;
+    Network::IOWork* mAggregationWork;
+
+
+
 
     //Part of the LocationServiceListener interface.
     virtual void localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient,
@@ -49,6 +120,30 @@ class SIRIKATA_SPACE_EXPORT TwitterAggregateManager : public AggregateManager {
     // Command handlers
     void commandStats(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
 
+
+    // Returns true if an aggregate with the given ID currently exists.
+    bool aggregateExists(const UUID& uuid) const;
+    // Gets an aggregate object, or NULL if it doesn't exist
+    AggregateObjectPtr getAggregate(const UUID& uuid) const;
+    // Update the parent reference and membership in any queues of the parent if
+    // it's readiness is affected.
+    void setParent(AggregateObjectPtr child, AggregateObjectPtr parent);
+    // Ensure the given aggregate is not in the ready list
+    void ensureNotInReadyList(AggregateObjectPtr agg);
+    // Ensure the given aggregate has been added to the ready list
+    void ensureInReadyList(AggregateObjectPtr agg);
+    // Mark the given aggregate and all aggregates to the root as dirty. The
+    // second parameters indicates if the number of dirty children of the first
+    // aggregate should be increased, e.g. due to the addition of a dirty child,
+    // or not, e.g. due to removal of a child
+    void markDirtyToRoot(AggregateObjectPtr agg, AggregateObjectPtr new_dirty_child);
+
+
+
+    // Aggregation threads
+    void aggregationThreadMain();
+    // Grab ready aggregate from ready list and process it
+    void processAggregate();
 };
 
 } // namespace Sirikata
