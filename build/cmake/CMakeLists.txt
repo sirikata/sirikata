@@ -1951,6 +1951,7 @@ ${TEST_LIBCORE_SOURCE_DIR}/UUIDTest.hpp
 # cause backoff. It's very useful for doing basic testing (and
 # debugging) of SST, but we can't reasonably have it enabled by default.
 #${TEST_LIBCORE_SOURCE_DIR}/SSTTest.hpp
+${TEST_LIBCORE_SOURCE_DIR}/URLTest.hpp
 
 ${TEST_LIBMESH_SOURCE_DIR}/DeduplicationTest.hpp
 ${TEST_LIBMESH_SOURCE_DIR}/LightInfoTest.hpp
