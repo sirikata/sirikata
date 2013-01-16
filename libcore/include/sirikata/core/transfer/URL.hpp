@@ -421,30 +421,56 @@ inline std::ostream &operator<<(std::ostream &str, const URLContext &urlctx) {
 class URL {
 	URLContext mContext;
 	std::string mPath; // should have no slashes.
+    std::string mQuery;
+    std::string mFragment;
 
-	void findSlash(const std::string &url) {
-		std::string::size_type slash = url.rfind('/');
-		if (slash != std::string::npos) {
-			// FIXME: handle incomplete URLs correctly
-			if (slash > 0 && url[slash-1] == '/' && !(slash > 1 && url[slash-2] == '/')) {
-				// this is actually a hostname section... don't copy it into the filename.
-				// unless there were three slashes in a row.
-				mPath = std::string();
-				mContext.parse(url);
-			} else {
-				mPath = url.substr(slash+1);
-				mContext.parse(url.substr(0, slash+1));
-			}
-		} else {
-			std::string::size_type colon = url.find(':');
-			if (colon != std::string::npos) {
-				mPath = url.substr(colon+1);
-				mContext.parse(url.substr(0, colon+1));
-			} else {
-				mPath = url;
-			}
-		}
-	}
+    void parse(const std::string &url) {
+        // Work from end of possible URL formats, pulling off parts as
+        // we go. Track the current "end" of the string as we use up
+        // parts of the URL.
+        std::string::size_type url_end = url.size();
+        // The fragment identifier
+        std::string::size_type hash = url.rfind('#');
+        bool has_fragment = (hash != std::string::npos);
+        if (has_fragment) {
+            mFragment = url.substr(hash+1, url_end-hash);
+            url_end = hash-1;
+        }
+
+        std::string::size_type question = url.rfind('?', url_end-1);
+        bool has_query = (question != std::string::npos);
+        if (has_query) {
+            mQuery = url.substr(question+1, url_end-question);
+            url_end = question-1;
+        }
+
+        std::string::size_type slash = url.rfind('/', url_end-1);
+        bool has_path = (slash != std::string::npos);
+
+        // The "path", which is really just the single last filename
+        // part, and the context, which is the scheme, username, host,
+        // and the all but the filename portion of the path.
+        if (has_path) {
+            // FIXME: handle incomplete URLs correctly
+            if (slash > 0 && url[slash-1] == '/' && !(slash > 1 && url[slash-2] == '/')) {
+                // this is actually a hostname section... don't copy it into the filename.
+                // unless there were three slashes in a row.
+                mPath = std::string();
+                mContext.parse(url);
+            } else {
+                mPath = url.substr(slash+1, url_end-slash);
+                mContext.parse(url.substr(0, slash+1));
+            }
+        } else {
+            std::string::size_type colon = url.find(':');
+            if (colon != std::string::npos) {
+                mPath = url.substr(colon+1, url_end-colon);
+                mContext.parse(url.substr(0, colon+1));
+            } else {
+                mPath = url;
+            }
+        }
+    }
 public:
 	/// Default constructor--calls default constructor for URLContext as well.
 	explicit URL() {
@@ -458,7 +484,7 @@ public:
 	 */
 	URL(const URLContext &parentContext, const std::string &url)
 			: mContext(parentContext) {
-		findSlash(url);
+            parse(url);
 	}
 
 	/** Constructs an absolute URL. To be used when the securlty
@@ -467,7 +493,7 @@ public:
 	 * @param url   An absolute URL.
 	 */
 	explicit URL(const char *url) {
-		findSlash(url);
+            parse(url);
 	}
 
 	/** Constructs an absolute URL. To be used when the securlty
@@ -476,13 +502,13 @@ public:
 	 * @param url   An absolute URL.
 	 */
 	explicit URL(const std::string &url) {
-		findSlash(url);
+            parse(url);
 	}
 
 
     /** Constructs an absolute URL from a URI. */
     explicit URL(const URI& uri) {
-        findSlash(uri.toString());
+        parse(uri.toString());
     }
 
 	/** Gets the corresponding context, from which you can construct
@@ -531,6 +557,18 @@ public:
 		mPath = file;
 	}
 
+    /// Returns the query string part of the URL. Does not include the
+    /// initial ?
+    inline const std::string& query() const {
+        return mQuery;
+    }
+
+    /// Returns the fragment id part of the URL. Does not include the
+    /// initial #
+    inline const std::string& fragment() const {
+        return mFragment;
+    }
+
 	/** Returns an absolute path that represents this file, including
 	 * a slash at the beginning, and will include a slash at the end
 	 * only if filename() returns the empty string.
@@ -551,6 +589,13 @@ public:
 	 * Note that URLContext::toString does include the ending slash.
 	 */
 	inline std::string toString () const {
+            if (!mQuery.empty() && !mFragment.empty())
+		return mContext.toString() + mPath + "?" + mQuery  + "#" + mFragment;
+            else if (!mQuery.empty())
+		return mContext.toString() + mPath + "?" + mQuery;
+            else if (!mFragment.empty())
+		return mContext.toString() + mPath + "#" + mFragment;
+            else
 		return mContext.toString() + mPath;
 	}
 
@@ -583,7 +628,11 @@ public:
 
     struct Hasher {
         size_t operator() (const URL& url)const {
-            return std::tr1::hash<std::string>()(url.mPath);
+            size_t seed = 0;
+            boost::hash_combine(seed, std::tr1::hash<std::string>()(url.mPath));
+            boost::hash_combine(seed, std::tr1::hash<std::string>()(url.mQuery));
+            boost::hash_combine(seed, std::tr1::hash<std::string>()(url.mFragment));
+            return seed;
         }
     };
 };
