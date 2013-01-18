@@ -616,7 +616,7 @@ FIND_PACKAGE(SDL)
 #dependency: prox
 # This should turn all targets off since we just need the includes.
 SET(LIBPROX_BUILD_PROXSIM FALSE)
-SET(LIBPROX_RTREE_DATA "MAXSIZE")
+SET(LIBPROX_RTREE_DATA "MAXSIZE") # should have no effect, only for proxsim binaries
 SET(LIBPROX_RTREE_LIFT_CUTS FALSE)
 SET(LIBPROX_BUILD_DIR ${TOP_LEVEL}/externals/prox/build)
 SET(LIBPROX_BUILD_TESTS FALSE)

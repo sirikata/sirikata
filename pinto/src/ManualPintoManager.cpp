@@ -3,6 +3,8 @@
 // be found in the LICENSE file.
 
 #include "ManualPintoManager.hpp"
+#include "Options.hpp"
+#include <sirikata/core/options/CommonOptions.hpp>
 
 #include <sirikata/core/network/Message.hpp> // parse/serializePBJMessage
 #include "Protocol_Prox.pbj.hpp"
@@ -16,6 +18,9 @@
 
 #include <sirikata/core/command/Commander.hpp>
 
+// Provides QueryHandlerNodeDataType
+#include <sirikata/core/prox/QueryHandlerFactory.hpp>
+
 using namespace Sirikata::Network;
 
 #define PINTO_LOG(lvl, msg) SILOG(pinto,lvl,msg)
@@ -27,7 +32,10 @@ ManualPintoManager::ManualPintoManager(PintoContext* ctx)
    mLastTime(Time::null()),
    mDt(Duration::milliseconds((int64)1))
 {
-    mQueryHandler = new Prox::RTreeManualQueryHandler<ServerProxSimulationTraits>(10);
+    String handler_type = GetOptionValue<String>(OPT_PINTO_HANDLER_TYPE);
+    String handler_options = GetOptionValue<String>(OPT_PINTO_HANDLER_OPTIONS);
+    String handler_node_data = GetOptionValue<String>(OPT_PINTO_HANDLER_NODE_DATA);
+    mQueryHandler = ManualQueryHandlerFactory<ServerProxSimulationTraits>(handler_type, handler_options, handler_node_data);
     bool static_objects = false, replicated = false;
     mQueryHandler->setAggregateListener(this); // *Must* be before handler->initialize
     mQueryHandler->initialize(

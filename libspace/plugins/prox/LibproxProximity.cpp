@@ -106,12 +106,13 @@ LibproxProximity::LibproxProximity(SpaceContext* ctx, LocationService* locservic
     // Server Queries
     String server_handler_type = GetOptionValue<String>(OPT_PROX_SERVER_QUERY_HANDLER_TYPE);
     String server_handler_options = GetOptionValue<String>(OPT_PROX_SERVER_QUERY_HANDLER_OPTIONS);
+    String server_handler_node_data = GetOptionValue<String>(OPT_PROX_SERVER_QUERY_HANDLER_NODE_DATA);
     for(int i = 0; i < NUM_OBJECT_CLASSES; i++) {
         if (i >= mNumQueryHandlers) {
             mServerQueryHandler[i].handler = NULL;
             continue;
         }
-        mServerQueryHandler[i].handler = QueryHandlerFactory<ObjectProxSimulationTraits>(server_handler_type, server_handler_options);
+        mServerQueryHandler[i].handler = QueryHandlerFactory<ObjectProxSimulationTraits>(server_handler_type, server_handler_options, server_handler_node_data);
         mServerQueryHandler[i].handler->setAggregateListener(this); // *Must* be before handler->initialize
         bool server_static_objects = (mSeparateDynamicObjects && i == OBJECT_CLASS_STATIC);
         mServerQueryHandler[i].handler->initialize(
@@ -125,12 +126,13 @@ LibproxProximity::LibproxProximity(SpaceContext* ctx, LocationService* locservic
     // Object Queries
     String object_handler_type = GetOptionValue<String>(OPT_PROX_OBJECT_QUERY_HANDLER_TYPE);
     String object_handler_options = GetOptionValue<String>(OPT_PROX_OBJECT_QUERY_HANDLER_OPTIONS);
+    String object_handler_node_data = GetOptionValue<String>(OPT_PROX_OBJECT_QUERY_HANDLER_NODE_DATA);
     for(int i = 0; i < NUM_OBJECT_CLASSES; i++) {
         if (i >= mNumQueryHandlers) {
             mObjectQueryHandler[i].handler = NULL;
             continue;
         }
-        mObjectQueryHandler[i].handler = QueryHandlerFactory<ObjectProxSimulationTraits>(object_handler_type, object_handler_options);
+        mObjectQueryHandler[i].handler = QueryHandlerFactory<ObjectProxSimulationTraits>(object_handler_type, object_handler_options, object_handler_node_data);
         mObjectQueryHandler[i].handler->setAggregateListener(this); // *Must* be before handler->initialize
         bool object_static_objects = (mSeparateDynamicObjects && i == OBJECT_CLASS_STATIC);
         mObjectQueryHandler[i].handler->initialize(

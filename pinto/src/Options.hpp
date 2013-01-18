@@ -46,6 +46,7 @@
 
 #define OPT_PINTO_HANDLER_TYPE      "handler"
 #define OPT_PINTO_HANDLER_OPTIONS   "handler-options"
+#define OPT_PINTO_HANDLER_NODE_DATA "handler-node-data"
 
 namespace Sirikata {
 

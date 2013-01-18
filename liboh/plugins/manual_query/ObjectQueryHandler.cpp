@@ -462,8 +462,9 @@ void ObjectQueryHandler::handleCreatedReplicatedIndex(Liveness::Token alive, Pro
 
     String object_handler_type = GetOptionValue<String>(OPT_MANUAL_QUERY_HANDLER_TYPE);
     String object_handler_options = GetOptionValue<String>(OPT_MANUAL_QUERY_HANDLER_OPTIONS);
+    String object_handler_node_data = GetOptionValue<String>(OPT_MANUAL_QUERY_HANDLER_NODE_DATA);
 
-    ProxQueryHandler* handler = QueryHandlerFactory<ObjectProxSimulationTraits>(object_handler_type, object_handler_options, false);
+    ProxQueryHandler* handler = QueryHandlerFactory<ObjectProxSimulationTraits>(object_handler_type, object_handler_options, object_handler_node_data, false);
     // Aggregate listening -- really used to learn about queries
     // observing/no longer observing nodes in the tree so we know when to
     // coarsen/refine

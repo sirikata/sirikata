@@ -53,6 +53,7 @@ void InitPintoOptions() {
 
         .addOption(new OptionValue(OPT_PINTO_HANDLER_TYPE, "rtreecut", Sirikata::OptionValueType<String>(), "Type of libprox query handler to use for queries from servers."))
         .addOption(new OptionValue(OPT_PINTO_HANDLER_OPTIONS, "", Sirikata::OptionValueType<String>(), "Options for the query handler."))
+        .addOption(new OptionValue(OPT_PINTO_HANDLER_NODE_DATA, "maxsize", Sirikata::OptionValueType<String>(), "Per-node data, e.g. bounds, maxsize, similarmaxsize."))
         ;
 }
 
