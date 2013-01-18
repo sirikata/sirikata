@@ -9,6 +9,12 @@
 #include <sirikata/space/AggregateManager.hpp>
 
 #include <sirikata/core/command/Command.hpp>
+#include <sirikata/core/transfer/ResourceDownloadTask.hpp>
+#include <sirikata/core/transfer/HttpManager.hpp>
+#include <sirikata/core/transfer/URL.hpp>
+
+#include <sirikata/core/util/LRUCache.hpp>
+#include <json_spirit/json_spirit.h>
 
 namespace Sirikata {
 
@@ -29,6 +35,7 @@ class SIRIKATA_SPACE_EXPORT TwitterAggregateManager : public AggregateManager {
   private:
 
     LocationService* mLoc;
+    Transfer::OAuthParamsPtr mOAuth;
 
     // For access to all aggregate data structures
     boost::recursive_mutex mAggregateMutex;
@@ -85,10 +92,15 @@ class SIRIKATA_SPACE_EXPORT TwitterAggregateManager : public AggregateManager {
     // All aggregates
     typedef std::tr1::unordered_map<UUID, AggregateObjectPtr, UUID::Hasher> AggregateObjectMap;
     AggregateObjectMap mAggregates;
+    // Count of dirty aggregates (ready and not ready)
+    uint32 mDirtyAggregateCount;
     // Aggregates ready to start the generation process, i.e. have no children
     // blocking them.
     typedef std::deque<AggregateObjectPtr> AggregateQueue;
     AggregateQueue mReadyAggregates;
+
+
+    Transfer::TransferPoolPtr mTransferPool;
 
 
     enum { MAX_NUM_AGGREGATION_THREADS = 16 };
@@ -97,8 +109,11 @@ class SIRIKATA_SPACE_EXPORT TwitterAggregateManager : public AggregateManager {
     Network::IOService* mAggregationService;
     Network::IOWork* mAggregationWork;
 
-
-
+    typedef std::map<Transfer::URL, Transfer::DenseDataPtr> DataMap;
+    typedef std::tr1::shared_ptr<json_spirit::Value> JSONValuePtr;
+    typedef LRUCache<Transfer::URL, JSONValuePtr, Transfer::URL::Hasher> AggregateDataCache;
+    AggregateDataCache mAggregateDataCache;
+    boost::recursive_mutex mAggregateDataCacheMutex;
 
     //Part of the LocationServiceListener interface.
     virtual void localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient,
@@ -144,6 +159,23 @@ class SIRIKATA_SPACE_EXPORT TwitterAggregateManager : public AggregateManager {
     void aggregationThreadMain();
     // Grab ready aggregate from ready list and process it
     void processAggregate();
+
+    // Back in the main thread
+    void updateAggregateLocMesh(UUID uuid, String mesh);
+
+    // Other threads
+    void finishedDownload(
+        Transfer::URL data_url,
+        Transfer::ResourceDownloadTaskPtr taskptr, Transfer::TransferRequestPtr request,
+        Transfer::DenseDataPtr response, boost::mutex* mutex,
+        uint32* children_left, DataMap* children_data,
+        boost::condition_variable* all_children_ready);
+    void uploadFinished(
+        Transfer::HttpManager::HttpResponsePtr response,
+        Transfer::HttpManager::ERR_TYPE error,
+        const boost::system::error_code& boost_error,
+        boost::mutex* mutex, boost::condition_variable* upload_finished
+    );
 };
 
 } // namespace Sirikata

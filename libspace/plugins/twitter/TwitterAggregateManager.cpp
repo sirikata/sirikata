@@ -10,14 +10,24 @@
 
 #include <sirikata/core/network/IOWork.hpp>
 
+#include <sirikata/core/transfer/AggregatedTransferPool.hpp>
+
+#include <sirikata/core/util/Sha256.hpp>
+#include <sirikata/core/util/Random.hpp>
+
 #define AGG_LOG(lvl, msg) SILOG(aggregate-manager, lvl, msg)
 
 using namespace std::tr1::placeholders;
 
 namespace Sirikata {
 
+namespace json = json_spirit;
+
 TwitterAggregateManager::TwitterAggregateManager(LocationService* loc, Transfer::OAuthParamsPtr oauth, const String& username)
- :  mLoc(loc)
+ :  mLoc(loc),
+    mOAuth(oauth),
+    mDirtyAggregateCount(0),
+    mAggregateDataCache(1000, JSONValuePtr())
 {
     mLoc->addListener(this, true);
 
@@ -35,6 +45,7 @@ TwitterAggregateManager::TwitterAggregateManager(LocationService* loc, Transfer:
         );
     }
 
+    mTransferPool = Transfer::TransferMediator::getSingleton().registerClient<Transfer::AggregatedTransferPool>(String("TwitterAggregateManager"));
 
     // Start aggregation threads
     char id = '1';
@@ -126,10 +137,12 @@ void TwitterAggregateManager::removeChild(const UUID& uuid, const UUID& child_uu
     // Remove parent/children pointers
     if (agg->aggregate) {
         agg->parent = AggregateObjectPtr();
+        assert(parent->children.find(agg) != parent->children.end());
         parent->children.erase(agg);
     }
     else {
         agg->parents.erase(parent);
+        assert(parent->children.find(agg) != parent->children.end());
         parent->children.erase(agg);
     }
 }
@@ -192,6 +205,24 @@ void TwitterAggregateManager::localBoundsUpdated(const UUID& uuid, bool agg, con
 }
 
 void TwitterAggregateManager::localMeshUpdated(const UUID& uuid, bool agg, const String& newval) {
+    // We'll get updates about all objects, even if we triggered the update. We
+    // can ignore updates of aggregates since we'll have already updated the
+    // mesh url.
+    if (agg) return;
+
+    AGG_LOG(detailed, "localMeshUpdated: " << uuid);
+    Lock lck(mAggregateMutex);
+
+    AggregateObjectPtr aggobj = getAggregate(uuid);
+    // Sometimes these can come in after a removal due to posting between threads
+    if (!aggobj) return;
+    // Don't bother triggering anything unless we see a real change
+    if (aggobj->mesh == newval) return;
+
+    aggobj->mesh = newval;
+    // Mark dirty nodes. This is a leaf object which can have multiple parents.
+    for(AggregateObjectSet::const_iterator it = aggobj->parents.begin(); it != aggobj->parents.end(); it++)
+        markDirtyToRoot(*it, /* child isn't dirty, it just changed */ AggregateObjectPtr());
 }
 
 void TwitterAggregateManager::replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc,
@@ -246,6 +277,7 @@ void TwitterAggregateManager::setParent(AggregateObjectPtr child, AggregateObjec
     }
     else {
         child->parents.insert(parent);
+        parent->children.insert(child);
     }
     if (child->mesh != "" || child->dirty)
         markDirtyToRoot(parent, (child->dirty ? child : AggregateObjectPtr()));
@@ -289,6 +321,7 @@ void TwitterAggregateManager::markDirtyToRoot(AggregateObjectPtr agg, AggregateO
         just_marked = !(agg->dirty);
 
         agg->dirty = true;
+        if (just_marked) mDirtyAggregateCount++;
         child = agg;
         agg = agg->parent;
 
@@ -305,9 +338,33 @@ void TwitterAggregateManager::aggregationThreadMain() {
     mAggregationService->run();
 }
 
+namespace {
+// Return true if the service is a default value
+bool ServiceIsDefault(const String& s) {
+    if (!s.empty() && s != "http" && s != "80")
+        return false;
+    return true;
+}
+// Return empty if this is already empty or the default for this
+// service. Otherwise, return the old value
+String ServiceIfNotDefault(const String& s) {
+    if (!ServiceIsDefault(s))
+        return s;
+    return "80";
+}
+}
+
+
 void TwitterAggregateManager::processAggregate() {
+
     AggregateObjectPtr agg;
+    // Because other threads may be updating while we're processing an
+    // aggregate, we make copies of the data we need to process them.
     AggregateObjectSet parents;
+    typedef std::vector<Transfer::URL> DataURLList;
+    DataURLList child_data_urls;
+
+    Time started = Timer::now();
     {
         Lock lck(mAggregateMutex);
         AGG_LOG(insane, "Checking for ready aggregates: " << mReadyAggregates.size());
@@ -322,6 +379,7 @@ void TwitterAggregateManager::processAggregate() {
             assert(agg->dirty_children.empty());
             agg->processing = true;
             agg->dirty = false;
+            mDirtyAggregateCount--;
             ensureNotInReadyList(agg);
 
             // We need to record parents now while we have the lock. Because we
@@ -340,18 +398,148 @@ void TwitterAggregateManager::processAggregate() {
                 parents = agg->parents;
             }
 
-            AGG_LOG(detailed, "Processing aggregate " << agg->uuid);
+            AGG_LOG(detailed, "Processing aggregate " << agg->uuid << " with " << agg->children.size() << " children");
+
+            for(AggregateObjectSet::const_iterator child_it = agg->children.begin(); child_it != agg->children.end(); child_it++) {
+                if (!(*child_it)->mesh.empty())
+                    child_data_urls.push_back(Transfer::URL((*child_it)->mesh));
+            }
             break;
         }
     }
     if (!agg) return;
 
+    // Grab and parse all child data. These happen together in one step so we
+    // can cache parsed data.
+    typedef std::vector<JSONValuePtr> JSONList;
+    JSONList children_json;
+    {
+        std::vector<Transfer::ResourceDownloadTaskPtr> downloads;
+        boost::mutex mutex;
+        DataMap children_data;
+        uint32 children_left = 0;
+        boost::condition_variable all_children_ready;
+
+        {
+            boost::unique_lock<boost::mutex> lock(mutex);
+            for(DataURLList::const_iterator child_url_it = child_data_urls.begin(); child_url_it != child_data_urls.end(); child_url_it++) {
+                JSONValuePtr child_data;
+                {
+                    Lock lock(mAggregateDataCacheMutex);
+                    child_data = mAggregateDataCache.get(*child_url_it);
+                }
+                if (child_data) {
+                    children_json.push_back(child_data);
+                }
+                else {
+                    Transfer::ResourceDownloadTaskPtr req(
+                        Transfer::ResourceDownloadTask::construct(
+                            Transfer::URI(child_url_it->toString()), mTransferPool, 1.0,
+                            std::tr1::bind(&TwitterAggregateManager::finishedDownload, this, *child_url_it, _1, _2, _3, &mutex, &children_left, &children_data, &all_children_ready)
+                        )
+                    );
+                    downloads.push_back(req);
+                    req->start();
+                    children_left++;
+                }
+            }
+            while(children_left > 0)
+                all_children_ready.wait(lock);
+        }
+
+        // Parse data
+        for(DataMap::const_iterator data_it = children_data.begin(); data_it != children_data.end(); data_it++) {
+            std::string child_json((char*)data_it->second->begin(), data_it->second->size());
+            JSONValuePtr child_data(new json::Value());
+            if (!json::read(child_json, *child_data)) {
+                AGG_LOG(error, "Couldn't parse new environment: " << child_json);
+            }
+            else {
+                children_json.push_back(child_data);
+                Lock lock(mAggregateDataCacheMutex);
+                mAggregateDataCache.insert(data_it->first, child_data);
+            }
+        }
+    }
+
+    // TEMPORARY: Create a subset of the data
+    String aggregate_json_serialized;
+    {
+        json::Value agg_json = json::Object();
+        agg_json.put("tweets", json::Array());
+        json::Array& agg_tweets = agg_json.getArray("tweets");
+
+        uint32 total_tweet_count = 0;
+        for(JSONList::const_iterator data_it = children_json.begin(); data_it != children_json.end(); data_it++) {
+            const json::Array& child_tweets = (*data_it)->getArray("tweets");
+            total_tweet_count += child_tweets.size();
+        }
+        // Select random subset to cap the maximum number of tweets in an
+        // aggregate.
+        #define MAX_AGGREGATE_TWEETS 500
+        uint32 subset_tweet_count = std::min(total_tweet_count, (uint32)MAX_AGGREGATE_TWEETS);
+        float64 subset_tweet_frac = subset_tweet_count / (float64)total_tweet_count;
+
+        for(JSONList::const_iterator data_it = children_json.begin(); data_it != children_json.end(); data_it++) {
+            const json::Array& child_tweets = (*data_it)->getArray("tweets");
+            for(json::Array::const_iterator tw_it = child_tweets.begin(); tw_it != child_tweets.end(); tw_it++)
+                if (agg_tweets.size() < subset_tweet_count &&
+                    subset_tweet_frac < 1.0 && randFloat() <= subset_tweet_frac)
+                    agg_tweets.push_back(*tw_it);
+        }
+
+        aggregate_json_serialized = json::write(agg_json);
+    }
+
+    // URL to post to is based on the hash of the data.
+    String aggregate_hash = SHA256::computeDigest(aggregate_json_serialized).toString();
+
+    // Upload the new aggregate "mesh". FIXME this should really be using OAuth
+    // or something to secure it. We just use the oauth host/service settings
+    // currently
+    {
+        assert(!mOAuth->hostname.empty() && !mOAuth->service.empty());
+
+        boost::mutex mutex;
+        boost::condition_variable upload_finished;
+        boost::unique_lock<boost::mutex> lock(mutex);
+        // FIXME this sort of matches name + chunk approach, but there's not upload
+        // URL for a resource, so there's no way to extract all the info we would
+        // need. We need some other way of specifying that through the request,
+        // i.e. a more generic version of OAuthParams
+        Transfer::HttpManager::getSingleton().post(
+            Network::Address(Network::Address(mOAuth->hostname, mOAuth->service)),
+            String("/") + aggregate_hash, "text/json", aggregate_json_serialized,
+            std::tr1::bind(&TwitterAggregateManager::uploadFinished, this, _1, _2, _3, &mutex, &upload_finished)
+        );
+        // And wait for it to finish. No check of condition because this is one
+        // producer, one consumer.
+        upload_finished.wait(lock);
+    }
+
+    // New URL is just based on the the hash of the data
+    String new_url = "http://" + mOAuth->hostname + ":" + mOAuth->service + "/" + aggregate_hash;
+
+    // Update loc with the new mesh data
+    mLoc->context()->mainStrand->post(
+        std::tr1::bind(
+            &TwitterAggregateManager::updateAggregateLocMesh, this,
+            agg->uuid, new_url
+        ),
+        "TwitterAggregateManager::updateAggregateLocMesh"
+    );
 
     {
         // Mark as finished processing, clean, and add any parent(s) that now no
         // longer have dirty children
         Lock lck(mAggregateMutex);
-        AGG_LOG(detailed, "Finished processing aggregate " << agg->uuid);
+        Time finished = Timer::now();
+        AGG_LOG(detailed, "Finished processing aggregate " << agg->uuid << ", " << child_data_urls.size() << " children and " << (finished-started) << ". " << mDirtyAggregateCount << " more dirty aggregates remain.");
+
+        // We're going to get an update from loc eventually too, but we update
+        // this immediately because we could start processing the parent and we
+        // want this data up to date right away.
+        agg->mesh = new_url;
 
         agg->processing = false;
 
@@ -382,6 +570,38 @@ void TwitterAggregateManager::processAggregate() {
                     ensureInReadyList(*it);
             }
         }
+    }
+}
+
+void TwitterAggregateManager::finishedDownload(Transfer::URL data_url, Transfer::ResourceDownloadTaskPtr taskptr, Transfer::TransferRequestPtr request, Transfer::DenseDataPtr response, boost::mutex* mutex, uint32* children_left, DataMap* children_data, boost::condition_variable* all_children_ready) {
+    boost::unique_lock<boost::mutex> lock(*mutex);
+    // Currently we'll just ignore failures to get data. Not ideal, but should
+    // only hurt results slightly since it should be infrequent
+    if (response)
+        (*children_data)[data_url] = response;
+    (*children_left)--;
+    if (*children_left == 0)
+        all_children_ready->notify_one();
+}
+
+void TwitterAggregateManager::uploadFinished(
+        Transfer::HttpManager::HttpResponsePtr response,
+        Transfer::HttpManager::ERR_TYPE error,
+        const boost::system::error_code& boost_error,
+        boost::mutex* mutex, boost::condition_variable* upload_finished)
+{
+    if (!upload_finished) {
+        AGG_LOG(error, "Aggregate upload failed");
+    }
+
+    boost::unique_lock<boost::mutex> lock(*mutex);
+    upload_finished->notify_one();
+}
+
+
+void TwitterAggregateManager::updateAggregateLocMesh(UUID uuid, String mesh) {
+    if (mLoc->contains(uuid)) {
+        mLoc->updateLocalAggregateMesh(uuid, mesh);
     }
 }
 
