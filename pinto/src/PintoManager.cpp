@@ -9,7 +9,6 @@
 #include <sirikata/core/network/Message.hpp> // parse/serializePBJMessage
 #include "Protocol_MasterPinto.pbj.hpp"
 
-#include <sirikata/core/prox/QueryHandlerFactory.hpp>
 #include <sirikata/core/command/Commander.hpp>
 #include <boost/lexical_cast.hpp>
 
@@ -26,7 +25,8 @@ PintoManager::PintoManager(PintoContext* ctx)
 {
     String handler_type = GetOptionValue<String>(OPT_PINTO_HANDLER_TYPE);
     String handler_options = GetOptionValue<String>(OPT_PINTO_HANDLER_OPTIONS);
-    mQueryHandler = QueryHandlerFactory<ServerProxSimulationTraits>(handler_type, handler_options);
+    String handler_node_data = GetOptionValue<String>(OPT_PINTO_HANDLER_NODE_DATA);
+    mQueryHandler = ServerProxGeomQueryHandlerFactory.getConstructor(handler_type, handler_node_data)(handler_options, true);
     bool static_objects = false;
     mQueryHandler->initialize(
         mLocCache, mLocCache,

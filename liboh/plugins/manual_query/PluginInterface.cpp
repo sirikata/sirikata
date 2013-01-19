@@ -21,6 +21,7 @@ static void InitPluginOptions() {
 
         .addOption(new OptionValue(OPT_MANUAL_QUERY_HANDLER_TYPE, "rtreecutagg", Sirikata::OptionValueType<String>(), "Type of libprox query handler to use for object queries."))
         .addOption(new OptionValue(OPT_MANUAL_QUERY_HANDLER_OPTIONS, "", Sirikata::OptionValueType<String>(), "Options for the query handler."))
+        .addOption(new OptionValue(OPT_MANUAL_QUERY_HANDLER_NODE_DATA, "maxsize", Sirikata::OptionValueType<String>(), "Per-node data in query handler, e.g. bounds, maxsize, similarmaxsize."))
 
         ;
 }

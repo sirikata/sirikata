@@ -9,6 +9,8 @@
 #include <sirikata/core/util/MotionVector.hpp>
 #include <sirikata/core/util/UniqueID.hpp>
 
+#include <sirikata/pintoloc/QueryHandlerFactory.hpp>
+
 namespace Sirikata {
 
 class ProxSimulationTraits {
@@ -39,6 +41,10 @@ public:
     typedef ServerIDNull ObjectIDNullType;
     typedef ServerIDRandom ObjectIDRandomType;
 };
+
+// QueryHandlerFactory "singletons" for pinto binary
+extern GeomQueryHandlerFactory<ServerProxSimulationTraits> ServerProxGeomQueryHandlerFactory;
+extern ManualQueryHandlerFactory<ServerProxSimulationTraits> ServerProxManualQueryHandlerFactory;
 
 } // namespace Sirikata
 

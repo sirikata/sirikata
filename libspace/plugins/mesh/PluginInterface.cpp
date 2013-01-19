@@ -7,6 +7,7 @@
 
 #include "MeshAggregateManager.hpp"
 #include "Options.hpp"
+#include <sirikata/core/options/Options.hpp>
 
 static int space_mesh_plugin_refcount = 0;
 

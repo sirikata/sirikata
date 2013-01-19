@@ -19,6 +19,8 @@
 #include <sirikata/core/network/IOStrandImpl.hpp>
 #include <sirikata/core/ohdp/SST.hpp>
 
+#include <sirikata/pintoloc/QueryHandlerFactory.hpp>
+
 namespace Sirikata {
 
 #define PROXLOG(level,msg) SILOG(prox,level,msg)
@@ -32,6 +34,12 @@ LibproxManualProximity::LibproxManualProximity(SpaceContext* ctx, LocationServic
    mOHRequestsManager(ctx, mProxStrand),
    mLocalHandlerPoller(mProxStrand, std::tr1::bind(&LibproxManualProximity::tickQueryHandlers, this), "LibproxManualProximity ObjectHost Handler Poll", Duration::milliseconds((int64)100))
 {
+    String oh_handler_type = GetOptionValue<String>(OPT_PROX_OH_QUERY_HANDLER_TYPE);
+    String oh_handler_options = GetOptionValue<String>(OPT_PROX_OH_QUERY_HANDLER_OPTIONS);
+    String oh_handler_node_data = GetOptionValue<String>(OPT_PROX_OH_QUERY_HANDLER_NODE_DATA);
+    mQueryHandlerType = oh_handler_type;
+    mQueryHandlerOptions = oh_handler_options;
+    mQueryHandlerNodeDataType = oh_handler_node_data;
 
     // OH Queries
     for(int i = 0; i < NUM_OBJECT_CLASSES; i++) {
@@ -39,7 +47,8 @@ LibproxManualProximity::LibproxManualProximity(SpaceContext* ctx, LocationServic
             mLocalQueryHandler[i].handler = NULL;
             continue;
         }
-        mLocalQueryHandler[i].handler = new Prox::RTreeManualQueryHandler<ObjectProxSimulationTraits>(10);
+        mLocalQueryHandler[i].handler = ObjectProxManualQueryHandlerFactory.getConstructor(mQueryHandlerType, mQueryHandlerNodeDataType)(mQueryHandlerOptions, false);
+
         mLocalQueryHandler[i].handler->setAggregateListener(this); // *Must* be before handler->initialize
         bool object_static_objects = (mSeparateDynamicObjects && i == OBJECT_CLASS_STATIC);
         mLocalQueryHandler[i].handler->initialize(
@@ -906,7 +915,9 @@ void LibproxManualProximity::onCreatedReplicatedIndex(ReplicatedClient* client, 
     assert(replicated_data.client);
 
     assert(replicated_data.handlers.find(proxid) == replicated_data.handlers.end());
-    ProxQueryHandlerPtr new_handler(new Prox::RTreeManualQueryHandler<ObjectProxSimulationTraits>(10));
+    ProxQueryHandlerPtr new_handler(
+        ObjectProxManualQueryHandlerFactory.getConstructor(mQueryHandlerType, mQueryHandlerNodeDataType)(mQueryHandlerOptions, false)
+    );
     new_handler->setAggregateListener(this); // *Must* be before handler->initialize
     new_handler->initialize(
         loccache.get(), loccache.get(),

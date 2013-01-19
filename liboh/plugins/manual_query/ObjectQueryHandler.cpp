@@ -7,8 +7,6 @@
 #include "Options.hpp"
 #include <sirikata/core/options/CommonOptions.hpp>
 
-#include <sirikata/core/prox/QueryHandlerFactory.hpp>
-
 #include "Protocol_Prox.pbj.hpp"
 
 #include <sirikata/pintoloc/PresencePropertiesLocUpdate.hpp>
@@ -462,8 +460,9 @@ void ObjectQueryHandler::handleCreatedReplicatedIndex(Liveness::Token alive, Pro
 
     String object_handler_type = GetOptionValue<String>(OPT_MANUAL_QUERY_HANDLER_TYPE);
     String object_handler_options = GetOptionValue<String>(OPT_MANUAL_QUERY_HANDLER_OPTIONS);
+    String object_handler_node_data = GetOptionValue<String>(OPT_MANUAL_QUERY_HANDLER_NODE_DATA);
 
-    ProxQueryHandler* handler = QueryHandlerFactory<ObjectProxSimulationTraits>(object_handler_type, object_handler_options, false);
+    ProxQueryHandler* handler = ObjectProxGeomQueryHandlerFactory.getConstructor(object_handler_type, object_handler_node_data)(object_handler_options, false);
     // Aggregate listening -- really used to learn about queries
     // observing/no longer observing nodes in the tree so we know when to
     // coarsen/refine

@@ -34,6 +34,7 @@
 #include <sirikata/space/Platform.hpp>
 #include "MeshAggregateManager.hpp"
 #include "Options.hpp"
+#include <sirikata/core/options/CommonOptions.hpp>
 
 #include <sirikata/mesh/ModelsSystemFactory.hpp>
 #include <sirikata/mesh/Bounds.hpp>

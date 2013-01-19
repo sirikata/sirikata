@@ -201,6 +201,11 @@ private:
 
 
 
+    String mQueryHandlerType;
+    String mQueryHandlerOptions;
+    String mQueryHandlerNodeDataType;
+
+
     // The layout is complicated and nested here because we have many
     // layers -- queriers, space servers, indices, etc. First, we'll
     // start with how the replicated data and query handlers are

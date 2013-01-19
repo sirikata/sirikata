@@ -12,4 +12,8 @@ const ProxSimulationTraits::realType ProxSimulationTraits::InfiniteRadius = FLT_
 
 const ProxSimulationTraits::intType ProxSimulationTraits::InfiniteResults = INT_MAX;
 
+
+GeomQueryHandlerFactory<ServerProxSimulationTraits> ServerProxGeomQueryHandlerFactory;
+ManualQueryHandlerFactory<ServerProxSimulationTraits> ServerProxManualQueryHandlerFactory;
+
 } // namespace Sirikata
