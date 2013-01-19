@@ -36,7 +36,7 @@
 
 #include <algorithm>
 
-#include <sirikata/core/prox/QueryHandlerFactory.hpp>
+#include <sirikata/pintoloc/QueryHandlerFactory.hpp>
 
 #include <sirikata/core/odp/SST.hpp>
 
@@ -112,7 +112,7 @@ LibproxProximity::LibproxProximity(SpaceContext* ctx, LocationService* locservic
             mServerQueryHandler[i].handler = NULL;
             continue;
         }
-        mServerQueryHandler[i].handler = QueryHandlerFactory<ObjectProxSimulationTraits>(server_handler_type, server_handler_options, server_handler_node_data);
+        mServerQueryHandler[i].handler = ObjectProxGeomQueryHandlerFactory.getConstructor(server_handler_type, server_handler_node_data)(server_handler_options, true);
         mServerQueryHandler[i].handler->setAggregateListener(this); // *Must* be before handler->initialize
         bool server_static_objects = (mSeparateDynamicObjects && i == OBJECT_CLASS_STATIC);
         mServerQueryHandler[i].handler->initialize(
@@ -132,7 +132,7 @@ LibproxProximity::LibproxProximity(SpaceContext* ctx, LocationService* locservic
             mObjectQueryHandler[i].handler = NULL;
             continue;
         }
-        mObjectQueryHandler[i].handler = QueryHandlerFactory<ObjectProxSimulationTraits>(object_handler_type, object_handler_options, object_handler_node_data);
+        mObjectQueryHandler[i].handler = ObjectProxGeomQueryHandlerFactory.getConstructor(object_handler_type, object_handler_node_data)(object_handler_options, true);
         mObjectQueryHandler[i].handler->setAggregateListener(this); // *Must* be before handler->initialize
         bool object_static_objects = (mSeparateDynamicObjects && i == OBJECT_CLASS_STATIC);
         mObjectQueryHandler[i].handler->initialize(

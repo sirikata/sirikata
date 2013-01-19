@@ -18,8 +18,7 @@
 
 #include <sirikata/core/command/Commander.hpp>
 
-// Provides QueryHandlerNodeDataType
-#include <sirikata/core/prox/QueryHandlerFactory.hpp>
+#include <sirikata/pintoloc/QueryHandlerFactory.hpp>
 
 using namespace Sirikata::Network;
 
@@ -35,7 +34,7 @@ ManualPintoManager::ManualPintoManager(PintoContext* ctx)
     String handler_type = GetOptionValue<String>(OPT_PINTO_HANDLER_TYPE);
     String handler_options = GetOptionValue<String>(OPT_PINTO_HANDLER_OPTIONS);
     String handler_node_data = GetOptionValue<String>(OPT_PINTO_HANDLER_NODE_DATA);
-    mQueryHandler = ManualQueryHandlerFactory<ServerProxSimulationTraits>(handler_type, handler_options, handler_node_data);
+    mQueryHandler = ServerProxManualQueryHandlerFactory.getConstructor(handler_type, handler_node_data)(handler_options, false);
     bool static_objects = false, replicated = false;
     mQueryHandler->setAggregateListener(this); // *Must* be before handler->initialize
     mQueryHandler->initialize(

@@ -19,7 +19,7 @@
 #include <sirikata/core/network/IOStrandImpl.hpp>
 #include <sirikata/core/ohdp/SST.hpp>
 
-#include <sirikata/core/prox/QueryHandlerFactory.hpp>
+#include <sirikata/pintoloc/QueryHandlerFactory.hpp>
 
 namespace Sirikata {
 
@@ -47,7 +47,7 @@ LibproxManualProximity::LibproxManualProximity(SpaceContext* ctx, LocationServic
             mLocalQueryHandler[i].handler = NULL;
             continue;
         }
-        mLocalQueryHandler[i].handler = ManualQueryHandlerFactory<ObjectProxSimulationTraits>(mQueryHandlerType, mQueryHandlerOptions, mQueryHandlerNodeDataType);
+        mLocalQueryHandler[i].handler = ObjectProxManualQueryHandlerFactory.getConstructor(mQueryHandlerType, mQueryHandlerNodeDataType)(mQueryHandlerOptions, false);
 
         mLocalQueryHandler[i].handler->setAggregateListener(this); // *Must* be before handler->initialize
         bool object_static_objects = (mSeparateDynamicObjects && i == OBJECT_CLASS_STATIC);
@@ -916,7 +916,7 @@ void LibproxManualProximity::onCreatedReplicatedIndex(ReplicatedClient* client, 
 
     assert(replicated_data.handlers.find(proxid) == replicated_data.handlers.end());
     ProxQueryHandlerPtr new_handler(
-        ManualQueryHandlerFactory<ObjectProxSimulationTraits>(mQueryHandlerType, mQueryHandlerOptions, mQueryHandlerNodeDataType)
+        ObjectProxManualQueryHandlerFactory.getConstructor(mQueryHandlerType, mQueryHandlerNodeDataType)(mQueryHandlerOptions, false)
     );
     new_handler->setAggregateListener(this); // *Must* be before handler->initialize
     new_handler->initialize(

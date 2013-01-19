@@ -76,6 +76,8 @@ class FactoryImpl {
     }
     Ftype mNoop;
     String mDefault;
+protected:
+    typedef Ftype ConstructorType;
 public:
 	FactoryImpl():mNoop(std::tr1::bind(&FactoryImpl<T,Ftype>::staticNoop)){}
     bool unregisterConstructor(const String& name) {

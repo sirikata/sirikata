@@ -10,6 +10,8 @@
 #include <sirikata/core/util/MotionVector.hpp>
 #include <sirikata/core/util/UniqueID.hpp>
 
+#include <sirikata/pintoloc/QueryHandlerFactory.hpp>
+
 namespace Sirikata {
 
 class SIRIKATA_LIBPINTOLOC_EXPORT ProxSimulationTraits {
@@ -40,6 +42,11 @@ public:
     typedef ObjectReference::Null ObjectIDNullType;
     typedef ObjectReference::Random ObjectIDRandomType;
 };
+
+// QueryHandlerFactory "singletons" for object queries, stored in pintoloc and
+// shared by the space, oh plugins, etc.
+extern SIRIKATA_LIBPINTOLOC_EXPORT GeomQueryHandlerFactory<ObjectProxSimulationTraits> ObjectProxGeomQueryHandlerFactory;
+extern SIRIKATA_LIBPINTOLOC_EXPORT ManualQueryHandlerFactory<ObjectProxSimulationTraits> ObjectProxManualQueryHandlerFactory;
 
 } // namespace Sirikata
 
