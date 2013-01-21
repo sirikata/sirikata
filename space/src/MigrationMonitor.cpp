@@ -217,7 +217,7 @@ void MigrationMonitor::changeNextEventTime(ObjectInfo& objinfo, const Time& newt
 
 /** LocationServiceListener Interface. */
 
-  void MigrationMonitor::localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& phy, const String& zernike) {
+  void MigrationMonitor::localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& phy, const String& query_data) {
     mStrand->post(
         std::tr1::bind(&MigrationMonitor::handleLocalObjectAdded, this, uuid, loc, bounds),
         "MigrationMonitor::handleLocalObjectAdded"

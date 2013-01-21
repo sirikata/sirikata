@@ -76,6 +76,8 @@ struct LocationInfo {
     String mesh_copied_str;
     String physics_copied_str;
 
+    String query_data;
+
     bool local;
     bool aggregate;
 

@@ -2778,7 +2778,7 @@ void MeshAggregateManager::updateAggregateLocMesh(UUID uuid, String mesh) {
 void MeshAggregateManager::localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc,
                                                 const TimedMotionQuaternion& orient,
                                                 const AggregateBoundingInfo& bounds, const String& mesh, const String& physics,
-                                                const String& zernike)
+                                                const String& query_data)
 {
   boost::mutex::scoped_lock lock(mLocCacheMutex);
   mLocationServiceCache.insertLocationInfo(uuid, std::tr1::shared_ptr<LocationInfo>(
@@ -2830,7 +2830,7 @@ void MeshAggregateManager::localMeshUpdated(const UUID& uuid, bool agg, const St
 void MeshAggregateManager::replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc,
                                                 const TimedMotionQuaternion& orient,
                                                 const AggregateBoundingInfo& bounds, const String& mesh, const String& physics,
-                                                const String& zernike)
+                                                const String& query_data)
 {
   boost::mutex::scoped_lock lock(mLocCacheMutex);
   mLocationServiceCache.insertLocationInfo(uuid, std::tr1::shared_ptr<LocationInfo>(

@@ -61,7 +61,7 @@ void CBRLocationServiceCache::addPlaceholderImposter(
     const Vector3f& center_offset,
     const float32 center_bounds_radius,
     const float32 max_size,
-    const String& zernike,
+    const String& query_data,
     const String& mesh
 ) {
     TimedMotionVector3f loc(mLoc->context()->simTime(), MotionVector3f(center_offset, Vector3f(0,0,0)));
@@ -69,7 +69,7 @@ void CBRLocationServiceCache::addPlaceholderImposter(
     AggregateBoundingInfo bounds(Vector3f(0, 0, 0), center_bounds_radius, max_size);
     String phy;
     objectAdded(
-        uuid.getAsUUID(), true, true, loc, orient, bounds, mesh, phy, zernike
+        uuid.getAsUUID(), true, true, loc, orient, bounds, mesh, phy, query_data
     );
 }
 
@@ -136,15 +136,6 @@ TimedMotionVector3f CBRLocationServiceCache::location(const Iterator& id) {
     return it->second.location;
 }
 
-Prox::ZernikeDescriptor& CBRLocationServiceCache::zernikeDescriptor(const Iterator& id)  {
-  // NOTE: Only accesses via iterator, shouldn't need a lock
-  IteratorData* itdat = (IteratorData*)id.data;
-  ObjectDataMap::iterator it = itdat->it;
-  assert(it != mObjects.end());
-
-  return it->second.zernike;
-}
-
 String CBRLocationServiceCache::mesh(const Iterator& id)  {
   // NOTE: Only accesses via iterator, shouldn't need a lock
   IteratorData* itdat = (IteratorData*)id.data;
@@ -152,6 +143,15 @@ String CBRLocationServiceCache::mesh(const Iterator& id)  {
   assert(it != mObjects.end());
 
   return it->second.mesh;
+}
+
+String CBRLocationServiceCache::queryData(const Iterator& id)  {
+  // NOTE: Only accesses via iterator, shouldn't need a lock
+  IteratorData* itdat = (IteratorData*)id.data;
+  ObjectDataMap::iterator it = itdat->it;
+  assert(it != mObjects.end());
+
+  return it->second.query_data;
 }
 
 Vector3f CBRLocationServiceCache::centerOffset(const Iterator& id) {
@@ -242,6 +242,11 @@ String CBRLocationServiceCache::physics(const ObjectID& id) {
     return it->second.physics;
 }
 
+String CBRLocationServiceCache::queryData(const ObjectID& id) {
+    GET_OBJ_ENTRY(id);
+    return it->second.query_data;
+}
+
 
 const bool CBRLocationServiceCache::isAggregate(const ObjectID& id) {
     GET_OBJ_ENTRY(id);
@@ -249,8 +254,8 @@ const bool CBRLocationServiceCache::isAggregate(const ObjectID& id) {
 }
 
 
-void CBRLocationServiceCache::localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& phy, const String& zernike) {
-  objectAdded(uuid, true, agg, loc, orient, bounds, mesh, phy, zernike);
+void CBRLocationServiceCache::localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& phy, const String& query_data) {
+  objectAdded(uuid, true, agg, loc, orient, bounds, mesh, phy, query_data);
 }
 
 void CBRLocationServiceCache::localObjectRemoved(const UUID& uuid, bool agg) {
@@ -277,9 +282,13 @@ void CBRLocationServiceCache::localPhysicsUpdated(const UUID& uuid, bool agg, co
     physicsUpdated(uuid, agg, newval);
 }
 
-void CBRLocationServiceCache::replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& phy, const String& zernike) {
+void CBRLocationServiceCache::localQueryDataUpdated(const UUID& uuid, bool agg, const String& newval) {
+    queryDataUpdated(uuid, agg, newval);
+}
+
+void CBRLocationServiceCache::replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& phy, const String& query_data) {
     if (mWithReplicas)
-      objectAdded(uuid, false, false, loc, orient, bounds, mesh, phy, zernike);
+      objectAdded(uuid, false, false, loc, orient, bounds, mesh, phy, query_data);
 }
 
 void CBRLocationServiceCache::replicaObjectRemoved(const UUID& uuid) {
@@ -312,8 +321,13 @@ void CBRLocationServiceCache::replicaPhysicsUpdated(const UUID& uuid, const Stri
         physicsUpdated(uuid, false, newval);
 }
 
+void CBRLocationServiceCache::replicaQueryDataUpdated(const UUID& uuid, const String& newval) {
+    if (mWithReplicas)
+        queryDataUpdated(uuid, false, newval);
+}
 
-void CBRLocationServiceCache::objectAdded(const UUID& uuid, bool islocal, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& phy, const String& zernike) {
+
+void CBRLocationServiceCache::objectAdded(const UUID& uuid, bool islocal, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& phy, const String& query_data) {
     // This looks a bit odd compared to some other similar methods. We check for
     // and insert the object immediately because addPlaceholderImposter needs it
     // to occur immediately (because imposters need to be added so they can be
@@ -333,7 +347,7 @@ void CBRLocationServiceCache::objectAdded(const UUID& uuid, bool islocal, bool a
     data.bounds = bounds;
     data.mesh = mesh;
     data.physics = phy;
-    data.zernike = zernike;
+    data.query_data = query_data;
     data.isLocal = islocal;
     data.exists = true;
     data.tracking = 0;
@@ -527,6 +541,26 @@ void CBRLocationServiceCache::processPhysicsUpdated(const ObjectReference& uuid,
     if (it == mObjects.end()) return;
     String oldval = it->second.physics;
     it->second.physics = newval;
+}
+
+
+void CBRLocationServiceCache::queryDataUpdated(const UUID& uuid, bool agg, const String& newval) {
+    mStrand->post(
+        std::tr1::bind(
+            &CBRLocationServiceCache::processQueryDataUpdated, this,
+            ObjectReference(uuid), agg, newval
+        ),
+        "CBRLocationServiceCache::processQueryDataUpdated"
+    );
+}
+
+void CBRLocationServiceCache::processQueryDataUpdated(const ObjectReference& uuid, bool agg, const String& newval) {
+    Lock lck(mDataMutex);
+
+    ObjectDataMap::iterator it = mObjects.find(uuid);
+    if (it == mObjects.end()) return;
+    String oldval = it->second.query_data;
+    it->second.query_data = newval;
 }
 
 bool CBRLocationServiceCache::tryRemoveObject(ObjectDataMap::iterator& obj_it) {

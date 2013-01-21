@@ -36,7 +36,7 @@ void ReplicatedLocationServiceCache::addPlaceholderImposter(
     const Vector3f& center_offset,
     const float32 center_bounds_radius,
     const float32 max_size,
-    const String& zernike,
+    const String& query_data,
     const String& mesh
 ) {
     // We only deal with replicated trees, so you might expect this not to pop
@@ -157,9 +157,14 @@ String ReplicatedLocationServiceCache::mesh(const Iterator& id) {
     return it->second.props.mesh().toString();
 }
 
-Prox::ZernikeDescriptor& ReplicatedLocationServiceCache::zernikeDescriptor(const Iterator& id) {
-  return Prox::ZernikeDescriptor::null();
+String ReplicatedLocationServiceCache::queryData(const Iterator& id) {
+    // NOTE: Only accesses via iterator, shouldn't need a lock
+    IteratorData* itdat = (IteratorData*)id.data;
+    ObjectDataMap::iterator it = itdat->it;
+    assert(it != mObjects.end());
+    return it->second.query_data;
 }
+
 
 const ObjectReference& ReplicatedLocationServiceCache::iteratorID(const Iterator& id) {
     // NOTE: Only accesses via iterator, shouldn't need a lock
@@ -216,6 +221,11 @@ Transfer::URI ReplicatedLocationServiceCache::mesh(const ObjectID& id) {
 String ReplicatedLocationServiceCache::physics(const ObjectID& id) {
     GET_OBJ_ENTRY(id);
     return it->second.props.physics();
+}
+
+String ReplicatedLocationServiceCache::queryData(const ObjectID& id) {
+    GET_OBJ_ENTRY(id);
+    return it->second.query_data;
 }
 
 ObjectReference ReplicatedLocationServiceCache::parent(const ObjectID& id) {

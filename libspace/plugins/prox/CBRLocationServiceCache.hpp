@@ -35,7 +35,6 @@
 
 #include <sirikata/pintoloc/ExtendedLocationServiceCache.hpp>
 #include <prox/base/LocationServiceCache.hpp>
-#include <prox/base/ZernikeDescriptor.hpp>
 #include <sirikata/space/LocationService.hpp>
 #include <boost/thread.hpp>
 
@@ -69,7 +68,7 @@ public:
         const Vector3f& center_offset,
         const float32 center_bounds_radius,
         const float32 max_size,
-        const String& zernike,
+        const String& query_data,
         const String& mesh
     );
     virtual Iterator startTracking(const ObjectID& id);
@@ -85,8 +84,8 @@ public:
     virtual float32 centerBoundsRadius(const Iterator& id);
     virtual float32 maxSize(const Iterator& id);
     virtual bool isLocal(const Iterator& id);
-    Prox::ZernikeDescriptor& zernikeDescriptor(const Iterator& id);
     String mesh(const Iterator& id);
+    String queryData(const Iterator& id);
 
     virtual const ObjectReference& iteratorID(const Iterator& id);
 
@@ -100,26 +99,29 @@ public:
     AggregateBoundingInfo bounds(const ObjectID& id);
     Transfer::URI mesh(const ObjectID& id);
     String physics(const ObjectID& id);
+    String queryData(const ObjectID& id);
     virtual bool aggregate(const ObjectID& id) { return isAggregate(id); }
 
     const bool isAggregate(const ObjectID& id);
 
 
     /* LocationServiceListener members. */
-    virtual void localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics, const String& zernike);
+    virtual void localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics, const String& query_data);
     virtual void localObjectRemoved(const UUID& uuid, bool agg);
     virtual void localLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval);
     virtual void localOrientationUpdated(const UUID& uuid, bool agg, const TimedMotionQuaternion& newval);
     virtual void localBoundsUpdated(const UUID& uuid, bool agg, const AggregateBoundingInfo& newval);
     virtual void localMeshUpdated(const UUID& uuid, bool agg, const String& newval);
     virtual void localPhysicsUpdated(const UUID& uuid, bool agg, const String& newval);
-    virtual void replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics, const String& zernike);
+    virtual void localQueryDataUpdated(const UUID& uuid, bool agg, const String& newval);
+    virtual void replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics, const String& query_data);
     virtual void replicaObjectRemoved(const UUID& uuid);
     virtual void replicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval);
     virtual void replicaOrientationUpdated(const UUID& uuid, const TimedMotionQuaternion& newval);
     virtual void replicaBoundsUpdated(const UUID& uuid, const AggregateBoundingInfo& newval);
     virtual void replicaMeshUpdated(const UUID& uuid, const String& newval);
     virtual void replicaPhysicsUpdated(const UUID& uuid, const String& newval);
+    virtual void replicaQueryDataUpdated(const UUID& uuid, const String& newval);
 
 private:
     // Object data is only accessed in the prox thread (by libprox
@@ -133,7 +135,7 @@ private:
         bool isLocal;
         String mesh;
         String physics;
-        Prox::ZernikeDescriptor zernike;
+        String query_data;
         bool exists; // Exists, i.e. xObjectRemoved hasn't been called
         int16 tracking; // Ref count to support multiple users
         bool isAggregate;
@@ -141,13 +143,14 @@ private:
 
 
     // These generate and queue up updates from the main thread
-    void objectAdded(const UUID& uuid, bool islocal, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics, const String& zernike);
+    void objectAdded(const UUID& uuid, bool islocal, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics, const String& query_data);
     void objectRemoved(const UUID& uuid, bool agg);
     void locationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval);
     void orientationUpdated(const UUID& uuid, bool agg, const TimedMotionQuaternion& newval);
     void boundsUpdated(const UUID& uuid, bool agg, const AggregateBoundingInfo& newval);
     void meshUpdated(const UUID& uuid, bool agg, const String& newval);
     void physicsUpdated(const UUID& uuid, bool agg, const String& newval);
+    void queryDataUpdated(const UUID& uuid, bool agg, const String& newval);
 
     // These do the actual work for the LocationServiceListener methods.  Local versions always
     // call these, replica versions only call them if replica tracking is
@@ -161,6 +164,7 @@ private:
     void processBoundsUpdated(const ObjectReference& uuid, bool agg, const AggregateBoundingInfo& newval);
     void processMeshUpdated(const ObjectReference& uuid, bool agg, const String& newval);
     void processPhysicsUpdated(const ObjectReference& uuid, bool agg, const String& newval);
+    void processQueryDataUpdated(const ObjectReference& uuid, bool agg, const String& newval);
 
 
     CBRLocationServiceCache();

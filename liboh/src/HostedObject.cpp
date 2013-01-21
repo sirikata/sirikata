@@ -380,7 +380,7 @@ void HostedObject::metadataDownloaded(OHConnectInfoPtr ocip,
 {
   if (response == NULL && retryCount >= 3) {
     String zernike="[";
-    ocip->zernike = zernike;
+    ocip->query_data = zernike;
     for (uint32 i = 0; i < 121; i++) {
       if (i < 120)
         zernike += "0, ";
@@ -400,7 +400,7 @@ void HostedObject::metadataDownloaded(OHConnectInfoPtr ocip,
       zernike = (headers.find("Zernike"))->second;
     }
 
-    ocip->zernike = zernike;
+    ocip->query_data = zernike;
 
     mContext->mainStrand->post(std::tr1::bind(&HostedObject::objectHostConnectIndirect, this, ocip));
   }
@@ -415,7 +415,7 @@ bool HostedObject::objectHostConnect(const SpaceID spaceID,
         const String mesh,
         const String physics,
         const String query,
-        const String zernike,
+        const String query_data,
         const ObjectReference orefID,
         PresenceToken token)
 {
@@ -435,7 +435,7 @@ bool HostedObject::objectHostConnect(const SpaceID spaceID,
                            mesh,
                            physics,
                            query,
-                           zernike,
+                           query_data,
                            std::tr1::bind(&HostedObject::handleConnected, getWeakPtr(), mObjectHost, _1, _2, _3),
                            std::tr1::bind(&HostedObject::handleMigrated, getWeakPtr(), _1, _2, _3),
                            std::tr1::bind(&HostedObject::handleStreamCreated, getWeakPtr(), _1, _2, token),

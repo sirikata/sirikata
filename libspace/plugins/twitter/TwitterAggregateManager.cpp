@@ -162,7 +162,7 @@ void TwitterAggregateManager::generateAggregateMesh(const UUID& uuid, const Dura
 void TwitterAggregateManager::localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc,
                                                 const TimedMotionQuaternion& orient,
                                                 const AggregateBoundingInfo& bounds, const String& mesh, const String& physics,
-                                                const String& zernike)
+                                                const String& query_data)
 {
     if (!agg) {
         AGG_LOG(detailed, "localObjectAdded called: uuid=" << uuid);
@@ -228,7 +228,7 @@ void TwitterAggregateManager::localMeshUpdated(const UUID& uuid, bool agg, const
 void TwitterAggregateManager::replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc,
                                                 const TimedMotionQuaternion& orient,
                                                 const AggregateBoundingInfo& bounds, const String& mesh, const String& physics,
-                                                const String& zernike)
+                                                const String& query_data)
 {
 }
 

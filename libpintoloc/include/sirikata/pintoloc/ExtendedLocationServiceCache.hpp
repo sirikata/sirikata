@@ -39,6 +39,7 @@ public:
     virtual AggregateBoundingInfo bounds(const ObjectID& id) = 0;
     virtual Transfer::URI mesh(const ObjectID& id) = 0;
     virtual String physics(const ObjectID& id) = 0;
+    virtual String queryData(const ObjectID& id) = 0;
     virtual bool aggregate(const ObjectID& id) = 0;
 };
 

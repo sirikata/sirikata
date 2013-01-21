@@ -65,7 +65,7 @@ public:
         const Vector3f& center_offset,
         const float32 center_bounds_radius,
         const float32 max_size,
-        const String& zernike,
+        const String& query_data,
         const String& mesh
     );
 
@@ -81,8 +81,8 @@ public:
     virtual float32 centerBoundsRadius(const Iterator& id);
     virtual float32 maxSize(const Iterator& id);
     virtual bool isLocal(const Iterator& id);
-    Prox::ZernikeDescriptor& zernikeDescriptor(const Iterator& id);
     String mesh(const Iterator& id);
+    String queryData(const Iterator& id);
     bool aggregate(const Iterator& id);
 
     virtual const ObjectID& iteratorID(const Iterator& id);

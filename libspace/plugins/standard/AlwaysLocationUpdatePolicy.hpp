@@ -81,6 +81,7 @@ public:
     virtual void localBoundsUpdated(const UUID& uuid, bool agg, const AggregateBoundingInfo& newval);
     virtual void localMeshUpdated(const UUID& uuid, bool agg, const String& newval);
     virtual void localPhysicsUpdated(const UUID& uuid, bool agg, const String& newval);
+    virtual void localQueryDataUpdated(const UUID& uuid, bool agg, const String& newval);
 
     virtual void replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics);
     virtual void replicaObjectRemoved(const UUID& uuid);
@@ -89,6 +90,7 @@ public:
     virtual void replicaBoundsUpdated(const UUID& uuid, const AggregateBoundingInfo& newval);
     virtual void replicaMeshUpdated(const UUID& uuid, const String& newval);
     virtual void replicaPhysicsUpdated(const UUID& uuid, const String& newval);
+    virtual void replicaQueryDataUpdated(const UUID& uuid, const String& newval);
 
     virtual void service();
 
@@ -103,6 +105,7 @@ private:
         AggregateBoundingInfo bounds;
         String mesh;
         String physics;
+        String query_data;
     };
 
     typedef std::set<UUID> UUIDSet;
@@ -159,6 +162,12 @@ private:
     template<typename SubscriberType>
     struct SubscriberIndex {
         AlwaysLocationUpdatePolicy* parent;
+        // Some data (really just query_data) about objects is not useful in
+        // some cases, and could potentially be very wasteful to send --
+        // e.g. objects should really never need it, but we may need to send
+        // updates for it to other consumers, e.g. servers receiving replicated
+        // objects which they need to perform queries over.
+        const bool send_all_data;
         AtomicValue<uint32>& sent_count;
         typedef std::set<SubscriberType> SubscriberSet;
         typedef std::tr1::shared_ptr<SubscriberInfo> SubscriberInfoPtr;
@@ -169,8 +178,9 @@ private:
         typedef std::map<UUID, SubscriberSet*> ObjectSubscribersMap;
         ObjectSubscribersMap mObjectSubscribers;
 
-        SubscriberIndex(AlwaysLocationUpdatePolicy* p, AtomicValue<uint32>& _sent_count)
+        SubscriberIndex(AlwaysLocationUpdatePolicy* p, bool include_all_data, AtomicValue<uint32>& _sent_count)
          : parent(p),
+           send_all_data(include_all_data),
            sent_count(_sent_count)
         {
         }
@@ -342,6 +352,9 @@ private:
                 new_ui.mesh = locservice->mesh(uuid);
                 new_ui.orientation = locservice->orientation(uuid);
                 new_ui.physics = locservice->physics(uuid);
+                // Don't bother copying possibly big data if not necessary
+                if (send_all_data)
+                    new_ui.query_data = locservice->queryData(uuid);
                 sub_info->outstandingUpdates[uuid] = new_ui;
             }
             else
@@ -358,6 +371,7 @@ private:
         static void setUIBounds(UpdateInfo& ui, const AggregateBoundingInfo& newval) { ui.bounds = newval; }
         static void setUIMesh(UpdateInfo& ui, const String& newval) {ui.mesh = newval;}
         static void setUIPhysics(UpdateInfo& ui, const String& newval) {ui.physics = newval;}
+        static void setUIQueryData(UpdateInfo& ui, const String& newval) {ui.query_data = newval;}
 
         void locationUpdated(const UUID& uuid, const TimedMotionVector3f& newval, LocationService* locservice) {
             propertyUpdated(
@@ -391,6 +405,16 @@ private:
             propertyUpdated(
                 uuid, locservice,
                 std::tr1::bind(&setUIPhysics, std::tr1::placeholders::_1, newval)
+            );
+        }
+
+        void queryDataUpdated(const UUID& uuid, const String& newval, LocationService* locservice) {
+            // Don't bother copying possibly big data if not necessary
+            if (!send_all_data) return;
+
+            propertyUpdated(
+                uuid, locservice,
+                std::tr1::bind(&setUIQueryData, std::tr1::placeholders::_1, newval)
             );
         }
 
@@ -461,6 +485,9 @@ private:
 
                     update.set_mesh(up_it->second.mesh);
                     update.set_physics(up_it->second.physics);
+                    // Don't bother copying possibly big data if not necessary
+                    if (send_all_data)
+                        update.set_query_data(up_it->second.query_data);
 
                     // If we hit the limit for this update, try to send it out
                     if (bulk_update.update_size() > (int32)max_updates) {

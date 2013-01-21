@@ -6,7 +6,6 @@
 #define _SIRIKATA_LIBPINTO_REPLICATED_LOCATION_SERVICE_CACHE_HPP_
 
 #include <sirikata/pintoloc/ExtendedLocationServiceCache.hpp>
-#include <prox/base/ZernikeDescriptor.hpp>
 #include <sirikata/core/util/PresenceProperties.hpp>
 #include <sirikata/pintoloc/ReplicatedLocationUpdateListener.hpp>
 #include <boost/thread.hpp>
@@ -80,7 +79,7 @@ public:
         const Vector3f& center_offset,
         const float32 center_bounds_radius,
         const float32 max_size,
-        const String& zernike,
+        const String& query_data,
         const String& mesh
     );
 
@@ -98,7 +97,7 @@ public:
     virtual float32 maxSize(const Iterator& id);
     virtual bool isLocal(const Iterator& id);
     virtual String mesh(const Iterator& id);
-    virtual Prox::ZernikeDescriptor& zernikeDescriptor(const Iterator& id);
+    virtual String queryData(const Iterator& id);
 
     virtual const ObjectReference& iteratorID(const Iterator& id);
 
@@ -112,7 +111,8 @@ public:
     virtual TimedMotionQuaternion orientation(const ObjectID& id);
     virtual AggregateBoundingInfo bounds(const ObjectID& id);
     virtual Transfer::URI mesh(const ObjectID& id);
-    String virtual physics(const ObjectID& id);
+    virtual String physics(const ObjectID& id);
+    virtual String queryData(const ObjectID& id);
     ObjectReference parent(const ObjectID& id);
     virtual bool aggregate(const ObjectID& id);
     // And raw access to the underlying SequencedPresenceProperties
@@ -162,6 +162,7 @@ private:
         {}
 
         SequencedPresenceProperties props;
+        String query_data;
         uint64 epoch; // Only valid for presences
         bool aggregate;
         ObjectReference parent;

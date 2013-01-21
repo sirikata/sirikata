@@ -119,7 +119,15 @@ const String& StandardLocationService::physics(const UUID& uuid) {
     return locinfo.physics_copied_str;
 }
 
-  void StandardLocationService::addLocalObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bnds, const String& msh, const String& phy, const String& zernike) {
+const String& StandardLocationService::queryData(const UUID& uuid) {
+    LocationMap::iterator it = mLocations.find(uuid);
+    assert(it != mLocations.end());
+
+    LocationInfo& locinfo = it->second;
+    return locinfo.query_data;
+}
+
+  void StandardLocationService::addLocalObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bnds, const String& msh, const String& phy, const String& query_data) {
     LocationMap::iterator it = mLocations.find(uuid);
 
     // Add or update the information to the cache
@@ -140,6 +148,7 @@ const String& StandardLocationService::physics(const UUID& uuid) {
     locinfo.props.setBounds(bnds, 0);
     locinfo.props.setMesh(Transfer::URI(msh), 0);
     locinfo.props.setPhysics(phy, 0);
+    locinfo.query_data = query_data;
     locinfo.local = true;
     locinfo.aggregate = false;
 
@@ -148,7 +157,7 @@ const String& StandardLocationService::physics(const UUID& uuid) {
 
     // Add to the list of local objects
     CONTEXT_SPACETRACE(serverObjectEvent, mContext->id(), mContext->id(), uuid, true, loc);
-    notifyLocalObjectAdded(uuid, false, location(uuid), orientation(uuid), bounds(uuid), mesh(uuid), physics(uuid), zernike);
+    notifyLocalObjectAdded(uuid, false, location(uuid), orientation(uuid), bounds(uuid), mesh(uuid), physics(uuid), query_data);
 }
 
 void StandardLocationService::removeLocalObject(const UUID& uuid) {
@@ -168,7 +177,7 @@ void StandardLocationService::removeLocalObject(const UUID& uuid) {
     // automatically.
 }
 
-void StandardLocationService::addLocalAggregateObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bnds, const String& msh, const String& phy) {
+void StandardLocationService::addLocalAggregateObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bnds, const String& msh, const String& phy, const String& query_data) {
     // Aggregates get randomly assigned IDs -- if there's a conflict either we
     // got a true conflict (incredibly unlikely) or somebody (prox/query
     // handler) screwed up.
@@ -184,6 +193,7 @@ void StandardLocationService::addLocalAggregateObject(const UUID& uuid, const Ti
     locinfo.props.setBounds(bnds, 0);
     locinfo.props.setMesh(Transfer::URI(msh), 0);
     locinfo.props.setPhysics(phy, 0);
+    locinfo.query_data = query_data;
 
     locinfo.local = true;
     locinfo.aggregate = true;
@@ -237,8 +247,15 @@ void StandardLocationService::updateLocalAggregatePhysics(const UUID& uuid, cons
     loc_it->second.props.setPhysics(newval, 0);
     notifyLocalPhysicsUpdated( uuid, true, newval );
 }
+void StandardLocationService::updateLocalAggregateQueryData(const UUID& uuid, const String& newval) {
+    LocationMap::iterator loc_it = mLocations.find(uuid);
+    assert(loc_it != mLocations.end());
+    assert(loc_it->second.aggregate == true);
+    loc_it->second.query_data = newval;
+    notifyLocalQueryDataUpdated( uuid, true, newval );
+}
 
-void StandardLocationService::addReplicaObject(const Time& t, const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bnds, const String& msh, const String& phy, const String& zernike) {
+void StandardLocationService::addReplicaObject(const Time& t, const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bnds, const String& msh, const String& phy, const String& query_data) {
     // FIXME we should do checks on timestamps to decide which setting is "more" sane
     LocationMap::iterator it = mLocations.find(uuid);
 
@@ -252,6 +269,8 @@ void StandardLocationService::addReplicaObject(const Time& t, const UUID& uuid, 
             locinfo.props.setBounds(bnds, 0);
             locinfo.props.setMesh(Transfer::URI(msh), 0);
             locinfo.props.setPhysics(phy, 0);
+
+            locinfo.query_data = query_data;
 
             //local = false
             // FIXME should we notify location and bounds updated info?
@@ -267,13 +286,14 @@ void StandardLocationService::addReplicaObject(const Time& t, const UUID& uuid, 
         locinfo.props.setBounds(bnds, 0);
         locinfo.props.setMesh(Transfer::URI(msh), 0);
         locinfo.props.setPhysics(phy, 0);
+        locinfo.query_data = query_data;
         locinfo.local = false;
         locinfo.aggregate = agg;
         mLocations[uuid] = locinfo;
 
         // We only run this notification when the object actually is new
         CONTEXT_SPACETRACE(serverObjectEvent, 0, mContext->id(), uuid, true, loc); // FIXME add remote server ID
-        notifyReplicaObjectAdded(uuid, location(uuid), orientation(uuid), bounds(uuid), mesh(uuid), physics(uuid), zernike);
+        notifyReplicaObjectAdded(uuid, location(uuid), orientation(uuid), bounds(uuid), mesh(uuid), physics(uuid), query_data);
     }
 }
 
@@ -367,6 +387,13 @@ void StandardLocationService::receiveMessage(Message* msg) {
                 loc_it->second.props.setPhysics(newphy, epoch);
                 notifyReplicaPhysicsUpdated( update.object(), loc_it->second.props.physics() );
             }
+
+            if (update.has_query_data()) {
+                String newqd = update.query_data();
+                loc_it->second.query_data = newqd;
+                notifyReplicaQueryDataUpdated( update.object(), loc_it->second.query_data );
+            }
+
         }
     }
 
@@ -428,6 +455,12 @@ bool StandardLocationService::locationUpdate(UUID source, void* buffer, uint32 l
                 String newphy = request.physics();
                 loc_it->second.props.setPhysics(newphy, epoch);
                 notifyLocalPhysicsUpdated( source, loc_it->second.aggregate, loc_it->second.props.physics() );
+            }
+
+            if (request.has_query_data()) {
+                String newqd = request.query_data();
+                loc_it->second.query_data = newqd;
+                notifyLocalQueryDataUpdated( source, loc_it->second.aggregate, loc_it->second.query_data );
             }
 
         }

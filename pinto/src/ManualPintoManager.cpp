@@ -228,6 +228,10 @@ void ManualPintoManager::queryHasEvents(Query* query) {
             if (mesh.size() > 0)
                 addition.set_mesh(mesh);
 
+            const String& query_data = mLocCache->queryData(loccacheit);
+            if (query_data.size() > 0)
+                addition.set_query_data(query_data);
+
             // Either we set a parent, or, if we're adding the root node for
             // the first time (lone addition), we include tree
             // properties. Strictly speaking, these shouldn't be necessary,

@@ -38,21 +38,23 @@ class SIRIKATA_SPACE_EXPORT LocationServiceListener {
 public:
     virtual ~LocationServiceListener();
 
-    virtual void localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics, const String& zernike) {}
+    virtual void localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics, const String& query_data) {}
     virtual void localObjectRemoved(const UUID& uuid, bool agg) {}
     virtual void localLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval) {}
     virtual void localOrientationUpdated(const UUID& uuid, bool agg, const TimedMotionQuaternion& newval) {}
     virtual void localBoundsUpdated(const UUID& uuid, bool agg, const AggregateBoundingInfo& newval) {}
     virtual void localMeshUpdated(const UUID& uuid, bool agg, const String& newval) {}
     virtual void localPhysicsUpdated(const UUID& uuid, bool agg, const String& newval) {}
+    virtual void localQueryDataUpdated(const UUID& uuid, bool agg, const String& newval) {}
 
-    virtual void replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics, const String& zernike) {}
+    virtual void replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics, const String& query_data) {}
     virtual void replicaObjectRemoved(const UUID& uuid) {}
     virtual void replicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) {}
     virtual void replicaOrientationUpdated(const UUID& uuid, const TimedMotionQuaternion& newval) {}
     virtual void replicaBoundsUpdated(const UUID& uuid, const AggregateBoundingInfo& newval) {}
     virtual void replicaMeshUpdated(const UUID& uuid, const String& newval) {}
     virtual void replicaPhysicsUpdated(const UUID& uuid, const String& newval) {}
+    virtual void replicaQueryDataUpdated(const UUID& uuid, const String& newval) {}
 
     // Hooks for raw updates received by the LocationService
     virtual void onLocationUpdateFromServer(const ServerID sid, const Sirikata::Protocol::Loc::LocationUpdate& update) {}
@@ -215,9 +217,10 @@ public:
     virtual AggregateBoundingInfo bounds(const UUID& uuid) = 0;
     virtual const String& mesh(const UUID& uuid) = 0;
     virtual const String& physics(const UUID& uuid) = 0;
+    virtual const String& queryData(const UUID& uuid) = 0;
 
     /** Methods dealing with local objects. */
-    virtual void addLocalObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics, const String& zernike) = 0;
+    virtual void addLocalObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics, const String& query_data) = 0;
     virtual void removeLocalObject(const UUID& uuid) = 0;
 
     /** Aggregate objects are handled separately from other local objects.  All
@@ -228,16 +231,17 @@ public:
      *  normal objects. Proximity ignores them since it is the one that
      *  generates them.
      */
-    virtual void addLocalAggregateObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics) = 0;
+    virtual void addLocalAggregateObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics, const String& query_data) = 0;
     virtual void removeLocalAggregateObject(const UUID& uuid) = 0;
     virtual void updateLocalAggregateLocation(const UUID& uuid, const TimedMotionVector3f& newval) = 0;
     virtual void updateLocalAggregateOrientation(const UUID& uuid, const TimedMotionQuaternion& newval) = 0;
     virtual void updateLocalAggregateBounds(const UUID& uuid, const AggregateBoundingInfo& newval) = 0;
     virtual void updateLocalAggregateMesh(const UUID& uuid, const String& newval) = 0;
     virtual void updateLocalAggregatePhysics(const UUID& uuid, const String& newval) = 0;
+    virtual void updateLocalAggregateQueryData(const UUID& uuid, const String& newval) = 0;
 
     /** Methods dealing with replica objects. */
-    virtual void addReplicaObject(const Time& t, const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics, const String& zernike) = 0;
+    virtual void addReplicaObject(const Time& t, const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics, const String& query_data) = 0;
     virtual void removeReplicaObject(const Time& t, const UUID& uuid) = 0;
 
     /** Methods dealing with listeners. */
@@ -289,21 +293,23 @@ protected:
     virtual void poll();
     virtual void service() = 0;
 
-    void notifyLocalObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics, const String& zernike) const;
+    void notifyLocalObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics, const String& query_data) const;
     void notifyLocalObjectRemoved(const UUID& uuid, bool agg) const;
     void notifyLocalLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval) const;
     void notifyLocalOrientationUpdated(const UUID& uuid, bool agg, const TimedMotionQuaternion& newval) const;
     void notifyLocalBoundsUpdated(const UUID& uuid, bool agg, const AggregateBoundingInfo& newval) const;
     void notifyLocalMeshUpdated(const UUID& uuid, bool agg, const String& newval) const;
     void notifyLocalPhysicsUpdated(const UUID& uuid, bool agg, const String& newval) const;
+    void notifyLocalQueryDataUpdated(const UUID& uuid, bool agg, const String& newval) const;
 
-    void notifyReplicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics, const String& zernike) const;
+    void notifyReplicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics, const String& query_data) const;
     void notifyReplicaObjectRemoved(const UUID& uuid) const;
     void notifyReplicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) const;
     void notifyReplicaOrientationUpdated(const UUID& uuid, const TimedMotionQuaternion& newval) const;
     void notifyReplicaBoundsUpdated(const UUID& uuid, const AggregateBoundingInfo& newval) const;
     void notifyReplicaMeshUpdated(const UUID& uuid, const String& newval) const;
     void notifyReplicaPhysicsUpdated(const UUID& uuid, const String& newval) const;
+    void notifyReplicaQueryDataUpdated(const UUID& uuid, const String& newval) const;
 
     void notifyOnLocationUpdateFromServer(const ServerID sid, const Sirikata::Protocol::Loc::LocationUpdate& update);
 

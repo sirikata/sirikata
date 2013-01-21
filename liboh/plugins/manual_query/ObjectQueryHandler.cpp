@@ -569,6 +569,7 @@ void ObjectQueryHandler::generateObjectQueryEvents(Query* query) {
             Transfer::URI mesh = handler_data.loccache->mesh(objid);
             if (!mesh.empty())
                 addition.set_mesh(mesh.toString());
+            // No need for set_query_data since this is going to an object.
             String phy = handler_data.loccache->physics(objid);
             if (phy.size() > 0)
                 addition.set_physics(phy);

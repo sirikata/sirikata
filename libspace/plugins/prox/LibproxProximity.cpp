@@ -1049,6 +1049,9 @@ void LibproxProximity::generateServerQueryEvents(Query* query) {
                 const String& phy = mLocCache->physics(oobjid);
                 if (phy.size() > 0)
                     addition.set_physics(phy);
+                String qd = mLocCache->queryData(oobjid);
+                if (qd.size() > 0)
+                    addition.set_query_data(qd);
             }
             for(uint32 pidx = 0; pidx < evt.reparents().size(); pidx++) {
                 Sirikata::Protocol::Prox::INodeReparent reparent = event_results.add_reparent();
@@ -1185,6 +1188,7 @@ void LibproxProximity::generateObjectQueryEvents(Query* query, bool do_first) {
                 const String& phy = mLocCache->physics(oobjid);
                 if (phy.size() > 0)
                     addition.set_physics(phy);
+                // Do not include query_data for results going to objects
             }
             for(uint32 pidx = 0; pidx < evt.reparents().size(); pidx++) {
                 Sirikata::Protocol::Prox::INodeReparent reparent = event_results.add_reparent();

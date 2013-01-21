@@ -1305,6 +1305,9 @@ void LibproxManualProximity::queryHasEvents(ProxQuery* query) {
                 const String& phy = loccache->physics(oobjid);
                 if (phy.size() > 0)
                     addition.set_physics(phy);
+                String qd = loccache->queryData(oobjid);
+                if (qd.size() > 0)
+                    addition.set_query_data(qd);
 
                 // We should either include the parent ID, or if it's empty,
                 // then this is a root and we should include basic tree

@@ -199,7 +199,7 @@ public:
         const String& mesh,
         const String& physics,
         const String& query,
-        const String& zernike,
+        const String& query_data,
         ConnectedCallback connected_cb,
         MigratedCallback migrated_cb, StreamCreatedCallback stream_created_cb,
         DisconnectedCallback disconnected_cb

@@ -110,7 +110,7 @@ private:
       String query;
       ObjectReference orefID;
       int64 token;
-      String zernike;
+      String query_data;
       } OHConnectInfo;
     typedef std::tr1::shared_ptr<OHConnectInfo> OHConnectInfoPtr;
 
@@ -235,7 +235,7 @@ public:
 
     void objectHostConnectIndirect(OHConnectInfoPtr oci) {
       bool ret = objectHostConnect(oci->spaceID, oci->startingLocation, oci->meshBounds,
-                                   oci->mesh, oci->physics, oci->query, oci->zernike,
+                                   oci->mesh, oci->physics, oci->query, oci->query_data,
                                    oci->orefID, oci->token);
     }
 
@@ -248,7 +248,7 @@ public:
         const String mesh,
         const String physics,
         const String query,
-        const String zernike,
+        const String query_data,
         const ObjectReference orefID,
         PresenceToken token = DEFAULT_PRESENCE_TOKEN);
 

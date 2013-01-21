@@ -203,7 +203,7 @@ void LibproxProximityBase::stop() {
 
 
 
-void LibproxProximityBase::localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics, const String& zernike) {
+void LibproxProximityBase::localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics, const String& query_data) {
     updateObjectSize(uuid, bounds.fullRadius());
 }
 
@@ -639,8 +639,9 @@ void LibproxProximityBase::aggregateCreated(const ObjectReference& objid) {
             TimedMotionVector3f(mContext->simTime(), MotionVector3f()),
             TimedMotionQuaternion(mContext->simTime(), MotionQuaternion()),
             AggregateBoundingInfo(),
-            "",
-            ""
+            "", //mesh
+            "", //physics
+            "" // query_data
         ),
         "LocationService::addLocalAggregateObject"
     );
