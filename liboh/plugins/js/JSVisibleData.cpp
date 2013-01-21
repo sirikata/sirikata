@@ -52,9 +52,11 @@ const SpaceObjectReference& JSProxyVisibleData::observer() {
 }
 
 void JSProxyVisibleData::disable() {
-    proxy->PositionProvider::removeListener(this);
-    proxy->MeshProvider::removeListener(this);
-    proxy.reset();
+    if (proxy) {
+        proxy->PositionProvider::removeListener(this);
+        proxy->MeshProvider::removeListener(this);
+        proxy.reset();
+    }
     JSVisibleData::disable();
 }
 
