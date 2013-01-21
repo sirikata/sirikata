@@ -62,6 +62,7 @@ class ServerIDMap;
 class HostedObject;
 typedef std::tr1::weak_ptr<HostedObject> HostedObjectWPtr;
 typedef std::tr1::shared_ptr<HostedObject> HostedObjectPtr;
+class QueryDataLookup;
 
 typedef Provider< ConnectionEventListener* > ConnectionEventProvider;
 
@@ -78,7 +79,10 @@ class SIRIKATA_OH_EXPORT ObjectHost
       public SpaceNodeSessionManager, private SpaceNodeSessionListener,
       public ObjectNodeSessionProvider
 {
+  public:
+    typedef std::tr1::function<QueryDataLookup*()> QueryDataLookupConstructor;
 
+  private:
     ObjectHostContext* mContext;
 
     typedef std::tr1::unordered_map<SpaceID,SessionManager*,SpaceID::Hasher> SpaceSessionManagerMap;
@@ -91,6 +95,7 @@ class SIRIKATA_OH_EXPORT ObjectHost
     OH::Storage* mStorage;
     OH::PersistedObjectSet* mPersistentSet;
     OH::ObjectQueryProcessor* mQueryProcessor;
+    QueryDataLookupConstructor mQueryDataLookupConstructor;
 
     SpaceSessionManagerMap mSessionManagers;
 
@@ -181,6 +186,10 @@ public:
     // Get and set the storage backend to use for queries.
     void setQueryProcessor(OH::ObjectQueryProcessor* proc) { mQueryProcessor = proc; }
     OH::ObjectQueryProcessor* getQueryProcessor() { return mQueryProcessor; }
+
+    // Get and set the storage backend to use for persistent object storage.
+    void setQueryDataLookupConstructor(QueryDataLookupConstructor qdl) { mQueryDataLookupConstructor = qdl; }
+    QueryDataLookupConstructor getQueryDataLookupConstructor() { return mQueryDataLookupConstructor; }
 
     std::tr1::shared_ptr<Transfer::TransferPool> getTransferPool() { return mTransferPool; }
 

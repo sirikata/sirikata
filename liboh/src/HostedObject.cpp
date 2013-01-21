@@ -62,7 +62,21 @@
 
 #define HO_LOG(lvl,msg) SILOG(ho,lvl,msg);
 
+
+AUTO_SINGLETON_INSTANCE(Sirikata::QueryDataLookupFactory);
+
+
 namespace Sirikata {
+
+QueryDataLookup::~QueryDataLookup() {}
+
+QueryDataLookupFactory& QueryDataLookupFactory::getSingleton() {
+    return AutoSingleton<QueryDataLookupFactory>::getSingleton();
+}
+
+void QueryDataLookupFactory::destroy() {
+    AutoSingleton<QueryDataLookupFactory>::destroy();
+}
 
 
 
@@ -362,53 +376,6 @@ void HostedObject::initializeScript(const String& script_type, const String& arg
     }
 }
 
-bool HostedObject::downloadZernikeDescriptor(OHConnectInfoPtr ocip, uint8 n_retry)
-{
-  Transfer::TransferRequestPtr req(new Transfer::MetadataRequest( Transfer::URI(ocip->mesh), 1.0, std::tr1::bind(
-                                       &HostedObject::metadataDownloaded, this, ocip, n_retry,
-                                       std::tr1::placeholders::_1, std::tr1::placeholders::_2)));
-
-  mObjectHost->getTransferPool()->addRequest(req);
-
-  return true;
-}
-
-void HostedObject::metadataDownloaded(OHConnectInfoPtr ocip,
-                                    uint8 retryCount,
-                                    std::tr1::shared_ptr<Transfer::MetadataRequest> request,
-                                    std::tr1::shared_ptr<Transfer::RemoteFileMetadata> response)
-{
-  if (response == NULL && retryCount >= 3) {
-    String zernike="[";
-    ocip->query_data = zernike;
-    for (uint32 i = 0; i < 121; i++) {
-      if (i < 120)
-        zernike += "0, ";
-      else
-        zernike += "0]";
-    }
-    mContext->mainStrand->post(std::tr1::bind(&HostedObject::objectHostConnectIndirect, this, ocip));
-    return;
-  }
-
-  if (response != NULL) {
-
-    const Sirikata::Transfer::FileHeaders& headers = response->getHeaders();
-
-    String zernike = "";
-    if (headers.find("Zernike") != headers.end()) {
-      zernike = (headers.find("Zernike"))->second;
-    }
-
-    ocip->query_data = zernike;
-
-    mContext->mainStrand->post(std::tr1::bind(&HostedObject::objectHostConnectIndirect, this, ocip));
-  }
-  else if (retryCount < 3) {
-      downloadZernikeDescriptor(ocip, retryCount+1);
-  }
-}
-
 bool HostedObject::objectHostConnect(const SpaceID spaceID,
         const Location startingLocation,
         const BoundingSphere3f meshBounds,
@@ -465,11 +432,9 @@ bool HostedObject::connect(
     if (spaceID == SpaceID::null())
         return false;
 
-    // Download the Zernike descriptor from the CDN metadata first. Once that is done,
-    // connect() will be invoked on the object host to actually connect the object to the
-    // space.
-
-    if (mesh.find("meerkat:") == 0 && GetOptionValue<bool>("specify-zernike-descriptor")) {
+    // Download the query data first. Once that is done, connect() will be
+    // invoked on the object host to actually connect the object to the space.
+    if (mObjectHost->getQueryDataLookupConstructor()) {
         OHConnectInfoPtr ocip(new OHConnectInfo);
         ocip->spaceID=spaceID;
         ocip->startingLocation = startingLocation;
@@ -479,12 +444,22 @@ bool HostedObject::connect(
         ocip->query =query;
         ocip->orefID = orefID;
         ocip->token = token;
-        downloadZernikeDescriptor(ocip);
+
+        QueryDataLookup* query_data_lookup = mObjectHost->getQueryDataLookupConstructor()();
+        query_data_lookup->lookup(getSharedPtr(), ocip);
+
         return false;
     }
     else {
       return objectHostConnect(spaceID, startingLocation, meshBounds, mesh, physics, query, "", orefID, token);
     }
+}
+
+void HostedObject::objectHostConnectIndirect(HostedObjectPtr self, QueryDataLookup* lookup, OHConnectInfoPtr oci) {
+    bool ret = objectHostConnect(oci->spaceID, oci->startingLocation, oci->meshBounds,
+        oci->mesh, oci->physics, oci->query, oci->query_data,
+        oci->orefID, oci->token);
+    delete lookup;
 }
 
 void HostedObject::disconnectDeadPresence(ObjectHost* parentOH, const SpaceID& space, const ObjectReference& obj) {

@@ -56,7 +56,7 @@ void InitCPPOHOptions() {
 #if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_LINUX || SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_MAC
                 ",oh-cassandra"
 #endif
-                ",oh-simple-query,oh-manual-query,sdlaudio,oh-environment",
+                ",oh-simple-query,oh-manual-query,sdlaudio,oh-environment,oh-mesh",
                 Sirikata::OptionValueType<String>(),"Plugin list to load."))
         .addOption(new OptionValue(OPT_OH_EXTRA_PLUGINS,"",Sirikata::OptionValueType<String>(),"Extra list of plugins to load. Useful for using existing defaults as well as some additional plugins."))
         .addOption(new OptionValue(OPT_OH_PLUGIN_SEARCH_PATHS,"",Sirikata::OptionValueType<String>(),"Colon separated list of paths to search for plugins."))
@@ -86,10 +86,11 @@ void InitCPPOHOptions() {
         .addOption(new OptionValue(OPT_OBJECT_QUERY_PROCESSOR,"simple",OptionValueType<String>(),"Type of query processor to use for object queries."))
         .addOption(new OptionValue(OPT_OBJECT_QUERY_PROCESSOR_OPTS,"",OptionValueType<String>(),"Options to the query processor used for object queries."))
 
+        .addOption(new OptionValue(OPT_OBJECT_QUERY_DATA,"",OptionValueType<String>(),"Type of query data to lookup and provide with session requests, e.g. zernike"))
+
         .addOption(new OptionValue(OPT_DEFAULT_SCRIPT_TYPE,"js",OptionValueType<String>(),"If a script is not specified, this type will be instantiated automatically at object creation. If left blank, no script will be started."))
         .addOption(new OptionValue(OPT_DEFAULT_SCRIPT_OPTIONS,"",OptionValueType<String>(),"If a script is not specified, these options will be passed to the default script type."))
         .addOption(new OptionValue(OPT_DEFAULT_SCRIPT_CONTENTS,"system.import('std/default.em');",OptionValueType<String>(),"If a script is not specified, this script will be executed as the default."))
-        .addOption(new OptionValue("specify-zernike-descriptor","false",OptionValueType<bool>(),"Whether or not specify Zernike descriptors in connection requests."))
         ;
 }
 

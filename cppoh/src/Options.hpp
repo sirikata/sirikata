@@ -63,6 +63,8 @@
 #define OPT_OBJECT_QUERY_PROCESSOR       "oh.query-processor"
 #define OPT_OBJECT_QUERY_PROCESSOR_OPTS  "oh.query-processor.opts"
 
+#define OPT_OBJECT_QUERY_DATA       "oh.query-data"
+
 namespace Sirikata {
 
 void InitCPPOHOptions();

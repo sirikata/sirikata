@@ -92,6 +92,7 @@ class PerPresenceData;
 typedef std::tr1::weak_ptr<HostedObject> HostedObjectWPtr;
 typedef std::tr1::shared_ptr<HostedObject> HostedObjectPtr;
 
+class QueryDataLookup;
 
 class SIRIKATA_OH_EXPORT HostedObject
     : public VWObject,
@@ -100,6 +101,8 @@ class SIRIKATA_OH_EXPORT HostedObject
 private:
   struct PrivateCallbacks;
 
+    // Public to give access to OHConnectInfo to QueryDataLookup impls
+  public:
     typedef struct OHConnectInfo{
     public:
       SpaceID spaceID;
@@ -233,12 +236,8 @@ public:
         PresenceToken token = DEFAULT_PRESENCE_TOKEN);
 
 
-    void objectHostConnectIndirect(OHConnectInfoPtr oci) {
-      bool ret = objectHostConnect(oci->spaceID, oci->startingLocation, oci->meshBounds,
-                                   oci->mesh, oci->physics, oci->query, oci->query_data,
-                                   oci->orefID, oci->token);
-    }
-
+    // May be called asynchronously, self ptr ensures liveness.
+    void objectHostConnectIndirect(HostedObjectPtr self, QueryDataLookup* lookup, OHConnectInfoPtr oci);
 
 
     bool objectHostConnect(
@@ -251,14 +250,6 @@ public:
         const String query_data,
         const ObjectReference orefID,
         PresenceToken token = DEFAULT_PRESENCE_TOKEN);
-
-    bool downloadZernikeDescriptor(OHConnectInfoPtr ocip, uint8 n_retry=0);
-
-    void metadataDownloaded(
-        OHConnectInfoPtr ocip,
-        uint8 retryCount,
-        std::tr1::shared_ptr<Transfer::MetadataRequest> request,
-        std::tr1::shared_ptr<Transfer::RemoteFileMetadata> response);
 
 
     /// Disconnects from the given space by terminating the corresponding substream.
@@ -381,7 +372,31 @@ public:
     void updateLocUpdateRequest(const SpaceID& space, const ObjectReference& oref, const TimedMotionVector3f* const loc, const TimedMotionQuaternion* const orient, const BoundingSphere3f* const bounds, const String* const mesh, const String* const phy);
     void sendLocUpdateRequest(const SpaceID& space, const ObjectReference& oref);
 
+}; // class HostedObject
+
+
+class SIRIKATA_OH_EXPORT QueryDataLookup {
+public:
+    virtual ~QueryDataLookup();
+
+    /** Lookup query data for this object. Should invoke
+     *  HostedObject::objectHostConnectIndirect on the main thread when it has
+     *  filled in query_data, if it needs to. The callback may be invoked
+     *  immediately if the data can be filled in synchronously.
+     */
+    virtual void lookup(HostedObjectPtr ho, HostedObject::OHConnectInfoPtr ci) = 0;
 };
+
+class SIRIKATA_OH_EXPORT QueryDataLookupFactory
+    : public AutoSingleton<QueryDataLookupFactory>,
+      public Factory<QueryDataLookup*>
+{
+public:
+    static QueryDataLookupFactory& getSingleton();
+    static void destroy();
+};
+
+
 
 }
 
