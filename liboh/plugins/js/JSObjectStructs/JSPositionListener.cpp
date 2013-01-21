@@ -21,12 +21,14 @@ JSPositionListener::JSPositionListener(EmersonScript* parent, JSAggregateVisible
    mCtx(ctx),
    mEventCallbacks()
 {
-    jpp->addListener(this);
+    if (jpp)
+        jpp->addListener(this);
 }
 
 JSPositionListener::~JSPositionListener()
 {
-    jpp->removeListener(this);
+    if (jpp)
+        jpp->removeListener(this);
 }
 
 v8::Handle<v8::Value> JSPositionListener::struct_getAllData()

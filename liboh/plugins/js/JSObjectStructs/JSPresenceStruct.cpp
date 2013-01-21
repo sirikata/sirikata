@@ -248,6 +248,11 @@ void JSPresenceStruct::connect(const SpaceObjectReference& _sporef)
     // We need to update our JSVisibleDataPtr since before the connect we didn't even
     // know what our SpaceObjectReference would be.
     jpp = mParent->jsVisMan.getOrCreateVisible(_sporef);
+    // JSVisibleDataEventListener, matching call in JSPositionListener
+    // (where it happens when we have jpp properly at
+    // initialization). Listener removal should be handled by
+    // ~JSPositionListener.
+    jpp->addListener(this);
 
     v8::HandleScope handle_scope;
 
