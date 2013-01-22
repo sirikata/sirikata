@@ -445,7 +445,8 @@ bool HostedObject::connect(
         ocip->orefID = orefID;
         ocip->token = token;
 
-        QueryDataLookup* query_data_lookup = mObjectHost->getQueryDataLookupConstructor()();
+        const String& opts = mObjectHost->getQueryDataLookupConstructorOpts();
+        QueryDataLookup* query_data_lookup = mObjectHost->getQueryDataLookupConstructor()(opts);
         query_data_lookup->lookup(getSharedPtr(), ocip);
 
         return false;

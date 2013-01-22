@@ -11,7 +11,9 @@ using namespace Sirikata;
 
 namespace {
 
-QueryDataLookup* createZernikeQueryDataLookup() {
+QueryDataLookup* createZernikeQueryDataLookup(const String& opts) {
+    // Ignore options
+
     return new ZernikeQueryDataLookup();
 }
 

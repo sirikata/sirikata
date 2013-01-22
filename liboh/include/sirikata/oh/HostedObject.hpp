@@ -389,7 +389,7 @@ public:
 
 class SIRIKATA_OH_EXPORT QueryDataLookupFactory
     : public AutoSingleton<QueryDataLookupFactory>,
-      public Factory<QueryDataLookup*>
+      public Factory1<QueryDataLookup*, const String&>
 {
 public:
     static QueryDataLookupFactory& getSingleton();

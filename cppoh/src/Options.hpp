@@ -64,6 +64,7 @@
 #define OPT_OBJECT_QUERY_PROCESSOR_OPTS  "oh.query-processor.opts"
 
 #define OPT_OBJECT_QUERY_DATA       "oh.query-data"
+#define OPT_OBJECT_QUERY_DATA_OPTS  "oh.query-data.opts"
 
 namespace Sirikata {
 

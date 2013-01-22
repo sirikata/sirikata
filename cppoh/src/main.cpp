@@ -195,9 +195,10 @@ int main (int argc, char** argv) {
     oh->setQueryProcessor(obj_query_processor);
 
     String query_data_type = GetOptionValue<String>(OPT_OBJECT_QUERY_DATA);
+    String query_data_type_opts = GetOptionValue<String>(OPT_OBJECT_QUERY_DATA_OPTS);
     if (query_data_type != "") {
         assert(QueryDataLookupFactory::getSingleton().hasConstructor(query_data_type));
-        oh->setQueryDataLookupConstructor(QueryDataLookupFactory::getSingleton().getConstructor(query_data_type));
+        oh->setQueryDataLookupConstructor(QueryDataLookupFactory::getSingleton().getConstructor(query_data_type), query_data_type_opts);
     }
 
     ///////////Go go go!! start of simulation/////////////////////
