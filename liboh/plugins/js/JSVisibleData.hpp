@@ -128,6 +128,9 @@ public:
     virtual AggregateBoundingInfo bounds() const { return proxy->bounds(); }
     virtual Transfer::URI mesh() const { return proxy->mesh(); }
     virtual String physics() const { return proxy->physics(); }
+    // This is bogus, we don't expose this to JS (or even to proxies themselves)
+    // but the interface demands it
+    virtual String queryData() const { return String(""); }
     virtual bool isAggregate() const { return proxy->isAggregate(); }
     virtual ObjectReference parent() const { return proxy->parentAggregate(); }
 
@@ -181,6 +184,9 @@ public:
     virtual AggregateBoundingInfo bounds() const;
     virtual Transfer::URI mesh() const;
     virtual String physics() const;
+    // This is bogus, we don't expose this to JS (or even to proxies themselves)
+    // but the interface demands it
+    virtual String queryData() const { return String(""); }
     virtual bool isAggregate() const;
     virtual ObjectReference parent() const;
 

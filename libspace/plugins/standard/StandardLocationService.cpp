@@ -124,7 +124,8 @@ const String& StandardLocationService::queryData(const UUID& uuid) {
     assert(it != mLocations.end());
 
     LocationInfo& locinfo = it->second;
-    return locinfo.query_data;
+    locinfo.query_data_copied_str = locinfo.props.queryData();
+    return locinfo.query_data_copied_str;
 }
 
   void StandardLocationService::addLocalObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bnds, const String& msh, const String& phy, const String& query_data) {
@@ -148,7 +149,7 @@ const String& StandardLocationService::queryData(const UUID& uuid) {
     locinfo.props.setBounds(bnds, 0);
     locinfo.props.setMesh(Transfer::URI(msh), 0);
     locinfo.props.setPhysics(phy, 0);
-    locinfo.query_data = query_data;
+    locinfo.props.setQueryData(query_data, 0);
     locinfo.local = true;
     locinfo.aggregate = false;
 
@@ -193,7 +194,7 @@ void StandardLocationService::addLocalAggregateObject(const UUID& uuid, const Ti
     locinfo.props.setBounds(bnds, 0);
     locinfo.props.setMesh(Transfer::URI(msh), 0);
     locinfo.props.setPhysics(phy, 0);
-    locinfo.query_data = query_data;
+    locinfo.props.setQueryData(query_data, 0);
 
     locinfo.local = true;
     locinfo.aggregate = true;
@@ -251,7 +252,7 @@ void StandardLocationService::updateLocalAggregateQueryData(const UUID& uuid, co
     LocationMap::iterator loc_it = mLocations.find(uuid);
     assert(loc_it != mLocations.end());
     assert(loc_it->second.aggregate == true);
-    loc_it->second.query_data = newval;
+    loc_it->second.props.setQueryData(newval);
     notifyLocalQueryDataUpdated( uuid, true, newval );
 }
 
@@ -269,8 +270,7 @@ void StandardLocationService::addReplicaObject(const Time& t, const UUID& uuid, 
             locinfo.props.setBounds(bnds, 0);
             locinfo.props.setMesh(Transfer::URI(msh), 0);
             locinfo.props.setPhysics(phy, 0);
-
-            locinfo.query_data = query_data;
+            locinfo.props.setQueryData(query_data, 0);
 
             //local = false
             // FIXME should we notify location and bounds updated info?
@@ -286,7 +286,7 @@ void StandardLocationService::addReplicaObject(const Time& t, const UUID& uuid, 
         locinfo.props.setBounds(bnds, 0);
         locinfo.props.setMesh(Transfer::URI(msh), 0);
         locinfo.props.setPhysics(phy, 0);
-        locinfo.query_data = query_data;
+        locinfo.props.setQueryData(query_data, 0);
         locinfo.local = false;
         locinfo.aggregate = agg;
         mLocations[uuid] = locinfo;
@@ -390,8 +390,8 @@ void StandardLocationService::receiveMessage(Message* msg) {
 
             if (update.has_query_data()) {
                 String newqd = update.query_data();
-                loc_it->second.query_data = newqd;
-                notifyReplicaQueryDataUpdated( update.object(), loc_it->second.query_data );
+                loc_it->second.props.setQueryData(newqd, epoch);
+                notifyReplicaQueryDataUpdated( update.object(), loc_it->second.props.queryData() );
             }
 
         }
@@ -459,8 +459,8 @@ bool StandardLocationService::locationUpdate(UUID source, void* buffer, uint32 l
 
             if (request.has_query_data()) {
                 String newqd = request.query_data();
-                loc_it->second.query_data = newqd;
-                notifyLocalQueryDataUpdated( source, loc_it->second.aggregate, loc_it->second.query_data );
+                loc_it->second.props.setQueryData(newqd, epoch);
+                notifyLocalQueryDataUpdated( source, loc_it->second.aggregate, loc_it->second.props.queryData() );
             }
 
         }

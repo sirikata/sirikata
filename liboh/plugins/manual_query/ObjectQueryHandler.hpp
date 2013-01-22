@@ -88,6 +88,7 @@ public:
     virtual void onBoundsUpdated(ReplicatedLocationServiceCache* loccache, const ObjectReference& obj);
     virtual void onMeshUpdated(ReplicatedLocationServiceCache* loccache, const ObjectReference& obj);
     virtual void onPhysicsUpdated(ReplicatedLocationServiceCache* loccache, const ObjectReference& obj);
+    virtual void onQueryDataUpdated(ReplicatedLocationServiceCache* loccache, const ObjectReference& obj);
 
     // PROX Thread:
 

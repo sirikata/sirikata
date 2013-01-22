@@ -33,6 +33,7 @@ public:
     virtual void onBoundsUpdated(ReplicatedLocationServiceCache* loccache, const ObjectReference& obj) = 0;
     virtual void onMeshUpdated(ReplicatedLocationServiceCache* loccache, const ObjectReference& obj) = 0;
     virtual void onPhysicsUpdated(ReplicatedLocationServiceCache* loccache, const ObjectReference& obj) = 0;
+    virtual void onQueryDataUpdated(ReplicatedLocationServiceCache* loccache, const ObjectReference& obj) = 0;
 };
 
 typedef Provider<ReplicatedLocationUpdateListener*> ReplicatedLocationUpdateProvider;

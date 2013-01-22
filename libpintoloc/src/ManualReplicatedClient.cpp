@@ -324,7 +324,8 @@ void ReplicatedClient::handleProxUpdate(const Sirikata::Protocol::Prox::Proximit
             add.orientation(), add.orientation_seqno(),
             add.bounds(), add.bounds_seqno(),
             Transfer::URI(add.meshOrDefault()), add.mesh_seqno(),
-            add.physicsOrDefault(), add.physics_seqno()
+            add.physicsOrDefault(), add.physics_seqno(),
+            add.queryDataOrDefault(), add.query_data_seqno()
         );
 
         // Replay orphans
@@ -421,6 +422,8 @@ void applyLocUpdate(const ObjectReference& objid, ReplicatedLocationServiceCache
         loccache->meshUpdated(objid, Transfer::URI(lu.meshOrDefault()), lu.mesh_seqno());
     if (lu.has_physics())
         loccache->physicsUpdated(objid, lu.physicsOrDefault(), lu.physics_seqno());
+    if (lu.has_query_data())
+        loccache->queryDataUpdated(objid, lu.query_data(), lu.query_data_seqno());
 }
 }
 

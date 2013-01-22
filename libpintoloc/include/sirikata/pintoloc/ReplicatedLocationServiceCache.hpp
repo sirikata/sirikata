@@ -62,7 +62,8 @@ public:
         const TimedMotionQuaternion& orient, uint64 orient_seqno,
         const AggregateBoundingInfo& bounds, uint64 bounds_seqno,
         const Transfer::URI& mesh, uint64 mesh_seqno,
-        const String& physics, uint64 physics_seqno);
+        const String& physics, uint64 physics_seqno,
+        const String& query_data, uint64 query_data_seqno);
     void objectRemoved(const ObjectReference& uuid, bool temporary);
     void epochUpdated(const ObjectReference& uuid, const uint64 ep);
     void locationUpdated(const ObjectReference& uuid, const TimedMotionVector3f& newval, uint64 seqno);
@@ -70,6 +71,7 @@ public:
     void boundsUpdated(const ObjectReference& uuid, const AggregateBoundingInfo& newval, uint64 seqno);
     void meshUpdated(const ObjectReference& uuid, const Transfer::URI& newval, uint64 seqno);
     void physicsUpdated(const ObjectReference& uuid, const String& newval, uint64 seqno);
+    void queryDataUpdated(const ObjectReference& uuid, const String& newval, uint64 seqno);
     void parentUpdated(const ObjectReference& uuid, const ObjectReference& newval, uint64 seqno);
 
     /* LocationServiceCache members. */
@@ -138,6 +140,7 @@ private:
     void notifyOrientationUpdated(Liveness::Token alive_token, const ObjectReference& uuid);
     void notifyMeshUpdated(Liveness::Token alive_token, const ObjectReference& uuid);
     void notifyPhysicsUpdated(Liveness::Token alive_token, const ObjectReference& uuid);
+    void notifyQueryDataUpdated(Liveness::Token alive_token, const ObjectReference& uuid);
 
 
     ReplicatedLocationServiceCache();
@@ -162,7 +165,6 @@ private:
         {}
 
         SequencedPresenceProperties props;
-        String query_data;
         uint64 epoch; // Only valid for presences
         bool aggregate;
         ObjectReference parent;

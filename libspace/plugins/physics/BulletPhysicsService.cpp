@@ -248,7 +248,8 @@ const String& BulletPhysicsService::queryData(const UUID& uuid) {
     assert(it != mLocations.end());
 
     LocationInfo& locinfo = it->second;
-    return locinfo.query_data;
+    locinfo.query_data_copied_str = locinfo.props.queryData();
+    return locinfo.query_data_copied_str;
 }
 
 bool BulletPhysicsService::isFixed(const UUID& uuid) {
@@ -350,7 +351,7 @@ void BulletPhysicsService::getMeshCallback(Transfer::ResourceDownloadTaskPtr tas
     locinfo.props.setBounds(bnds, 0);
     locinfo.props.setMesh(Transfer::URI(msh), 0);
     locinfo.props.setPhysics(phy, 0);
-    locinfo.query_data = query_data;
+    locinfo.props.setQueryData(query_data, 0);
     locinfo.local = true;
     locinfo.aggregate = false;
 
@@ -581,7 +582,7 @@ void BulletPhysicsService::addLocalAggregateObject(const UUID& uuid, const Timed
     locinfo.props.setBounds(bnds, 0);
     locinfo.props.setMesh(Transfer::URI(msh), 0);
     locinfo.props.setPhysics(phy, 0);
-    locinfo.query_data = query_data;
+    locinfo.props.setQueryData(query_data);
     locinfo.local = true;
     locinfo.aggregate = true;
 
@@ -648,8 +649,8 @@ void BulletPhysicsService::updateLocalAggregateQueryData(const UUID& uuid, const
     LocationMap::iterator loc_it = mLocations.find(uuid);
     assert(loc_it != mLocations.end());
     assert(loc_it->second.aggregate == true);
-    String oldval = loc_it->second.query_data;
-    loc_it->second.query_data = newval;
+    String oldval = loc_it->second.props.queryData();
+    loc_it->second.props.setQueryData(newval);
     notifyLocalQueryDataUpdated( uuid, true, newval );
     // should not affect physics
 }
@@ -669,7 +670,7 @@ void BulletPhysicsService::addReplicaObject(const Time& t, const UUID& uuid, boo
             locinfo.props.setBounds(bnds, 0);
             locinfo.props.setMesh(Transfer::URI(msh), 0);
             locinfo.props.setPhysics(phy, 0);
-            locinfo.query_data = query_data;
+            locinfo.props.setQueryData(query_data, 0);
             //local = false
             // FIXME should we notify location and bounds updated info?
             updatePhysicsWorld(uuid);
@@ -684,7 +685,7 @@ void BulletPhysicsService::addReplicaObject(const Time& t, const UUID& uuid, boo
         locinfo.props.setBounds(bnds, 0);
         locinfo.props.setMesh(Transfer::URI(msh), 0);
         locinfo.props.setPhysics(phy, 0);
-        locinfo.query_data = query_data;
+        locinfo.props.setQueryData(query_data, 0);
         locinfo.local = false;
         locinfo.aggregate = agg;
         mLocations[uuid] = locinfo;
@@ -822,10 +823,10 @@ void BulletPhysicsService::receiveMessage(Message* msg) {
             }
 
             if (update.has_query_data()) {
-                String oldqd = loc_it->second.query_data;
+                String oldqd = loc_it->second.props.queryData();
                 String newqd = update.query_data();
-                loc_it->second.query_data = newqd;
-                notifyReplicaQueryDataUpdated( update.object(), loc_it->second.query_data);
+                loc_it->second.props.setQueryData(newqd, epoch);
+                notifyReplicaQueryDataUpdated( update.object(), loc_it->second.props.queryData());
             }
 
             if (updatePhysics)
@@ -937,10 +938,10 @@ bool BulletPhysicsService::locationUpdate(UUID source, void* buffer, uint32 leng
             }
 
             if (request.has_query_data()) {
-                String oldqd = loc_it->second.query_data;
+                String oldqd = loc_it->second.props.queryData();
                 String newqd = request.query_data();
-                loc_it->second.query_data = newqd;
-                notifyLocalQueryDataUpdated( source, loc_it->second.aggregate, loc_it->second.query_data );
+                loc_it->second.props.setQueryData(newqd);
+                notifyLocalQueryDataUpdated( source, loc_it->second.aggregate, loc_it->second.props.queryData() );
             }
 
             if (updatePhysics)

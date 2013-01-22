@@ -73,6 +73,11 @@ public:
     virtual String physics() const { return mUpdate.physics(); }
     virtual uint64 physics_seqno() const { return mUpdate.getUpdateSeqNo(SequencedPresenceProperties::LOC_PHYSICS_PART); }
 
+    // Query data
+    virtual bool has_query_data() const { return mHasPart[SequencedPresenceProperties::LOC_QUERY_DATA_PART]; }
+    virtual String query_data() const { return mUpdate.queryData(); }
+    virtual uint64 query_data_seqno() const { return mUpdate.getUpdateSeqNo(SequencedPresenceProperties::LOC_QUERY_DATA_PART); }
+
     virtual uint32 index_id_size() const { return mIndexIDs.size(); }
     virtual ProxIndexID index_id(int32 idx) const { return mIndexIDs[idx]; }
     virtual uint64 index_id_seqno() const { return mIndexIDsSeqno; }

@@ -440,6 +440,13 @@ void ObjectQueryHandler::onPhysicsUpdated(ReplicatedLocationServiceCache* loccac
     );
 }
 
+void ObjectQueryHandler::onQueryDataUpdated(ReplicatedLocationServiceCache* loccache, const ObjectReference& obj) {
+    mContext->mainStrand->post(
+        std::tr1::bind(&ObjectQueryHandler::handleNotifySubscribersLocUpdate, this, livenessToken(), loccache, obj),
+        "ObjectQueryHandler::handleNotifySubscribersLocUpdate"
+    );
+}
+
 
 // PROX Thread: Everything after this should only be called from within the prox thread.
 

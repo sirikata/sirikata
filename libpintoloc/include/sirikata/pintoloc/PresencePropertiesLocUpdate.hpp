@@ -64,6 +64,11 @@ public:
     virtual String physics() const { return mUpdate.physics(); }
     virtual uint64 physics_seqno() const { return mUpdate.getUpdateSeqNo(SequencedPresenceProperties::LOC_PHYSICS_PART); }
 
+    // Query data
+    virtual bool has_query_data() const { return true; }
+    virtual String query_data() const { return mUpdate.queryData(); }
+    virtual uint64 query_data_seqno() const { return mUpdate.getUpdateSeqNo(SequencedPresenceProperties::LOC_QUERY_DATA_PART); }
+
     // Prox IndexIDs
     virtual uint32 index_id_size() const { return 0; }
     virtual ProxIndexID index_id(int32 idx) const { assert(false && "Out of bounds index id"); return -1; }

@@ -97,8 +97,7 @@ private:
         // a String version within props. DO NOT use anywhere else.
         String mesh_copied_str;
         String physics_copied_str;
-
-        String query_data;
+        String query_data_copied_str;
 
         bool local;
         bool aggregate;

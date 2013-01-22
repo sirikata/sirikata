@@ -162,7 +162,7 @@ String ReplicatedLocationServiceCache::queryData(const Iterator& id) {
     IteratorData* itdat = (IteratorData*)id.data;
     ObjectDataMap::iterator it = itdat->it;
     assert(it != mObjects.end());
-    return it->second.query_data;
+    return it->second.props.queryData();
 }
 
 
@@ -225,7 +225,7 @@ String ReplicatedLocationServiceCache::physics(const ObjectID& id) {
 
 String ReplicatedLocationServiceCache::queryData(const ObjectID& id) {
     GET_OBJ_ENTRY(id);
-    return it->second.query_data;
+    return it->second.props.queryData();
 }
 
 ObjectReference ReplicatedLocationServiceCache::parent(const ObjectID& id) {
@@ -250,7 +250,8 @@ void ReplicatedLocationServiceCache::objectAdded(
     const TimedMotionQuaternion& orient, uint64 orient_seqno,
     const AggregateBoundingInfo& bounds, uint64 bounds_seqno,
     const Transfer::URI& mesh, uint64 mesh_seqno,
-    const String& physics, uint64 physics_seqno
+    const String& physics, uint64 physics_seqno,
+    const String& query_data, uint64 query_data_seqno
 ) {
     Lock lck(mMutex);
 
@@ -267,6 +268,7 @@ void ReplicatedLocationServiceCache::objectAdded(
     it->second.props.setBounds(bounds, bounds_seqno);
     it->second.props.setMesh(mesh, mesh_seqno);
     it->second.props.setPhysics(physics, physics_seqno);
+    it->second.props.setQueryData(query_data, query_data_seqno);
     it->second.aggregate = agg;
     it->second.parent = parent;
 
@@ -540,6 +542,37 @@ void ReplicatedLocationServiceCache::notifyPhysicsUpdated(Liveness::Token alive_
     Lock lck(mMutex);
 
     ReplicatedLocationUpdateProvider::notify(&ReplicatedLocationUpdateListener::onPhysicsUpdated, this, uuid);
+
+    ObjectDataMap::iterator obj_it = mObjects.find(uuid);
+    obj_it->second.tracking--;
+    tryRemoveObject(obj_it);
+}
+
+void ReplicatedLocationServiceCache::queryDataUpdated(const ObjectReference& uuid, const String& newval, uint64 seqno) {
+    Lock lck(mMutex);
+
+    ObjectDataMap::iterator it = mObjects.find(uuid);
+    if (it == mObjects.end()) return;
+    String oldval = it->second.props.queryData();
+    it->second.props.setQueryData(newval, seqno);
+
+    bool agg = it->second.aggregate;
+
+    it->second.tracking++;
+    mStrand->post(
+        std::tr1::bind(
+            &ReplicatedLocationServiceCache::notifyQueryDataUpdated, this, livenessToken(), uuid
+        )
+    );
+}
+
+void ReplicatedLocationServiceCache::notifyQueryDataUpdated(Liveness::Token alive_token, const ObjectReference& uuid) {
+    Liveness::Lock alive(alive_token);
+    if (!alive) return;
+
+    Lock lck(mMutex);
+
+    ReplicatedLocationUpdateProvider::notify(&ReplicatedLocationUpdateListener::onQueryDataUpdated, this, uuid);
 
     ObjectDataMap::iterator obj_it = mObjects.find(uuid);
     obj_it->second.tracking--;
