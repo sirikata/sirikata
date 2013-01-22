@@ -15,4 +15,9 @@
 #define OPT_TWAGGMGR_GEN_THREADS       "twaggmgr.gen-threads"
 #define OPT_TWAGGMGR_UPLOAD_THREADS    "twaggmgr.upload-threads"
 
+
+// Parameters for twitter bloom filters
+#define OPT_TWITTER_BLOOM_BUCKETS      "twitter.bloom.buckets"
+#define OPT_TWITTER_BLOOM_HASHES       "twitter.bloom.hashes"
+
 #endif //_SIRIKATA_SPACE_TWITTER_OPTIONS_HPP_

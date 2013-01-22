@@ -37,8 +37,16 @@ public:
 
     /** Serializes the bloom filter. */
     void serialize(String& output);
-    /** Deserialize a bloom filter. */
-    static TermBloomFilter deserialize(const String& input);
+    /** Deserialize a bloom filter. NOTE: This overwrites any existing entries. */
+    void deserialize(const String& input);
+
+
+    /** Merge another bloom filter into this one. This just bitwise ORs the two
+     *  filters, effectively updating this filter to include the terms from
+     *  both.
+     */
+    void mergeIn(const TermBloomFilter& rhs);
+
 private:
     TermBloomFilter(const String& serialized);
 

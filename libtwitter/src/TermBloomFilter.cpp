@@ -57,6 +57,16 @@ TermBloomFilter& TermBloomFilter::operator=(const TermBloomFilter& rhs) {
     return *this;
 }
 
+void TermBloomFilter::mergeIn(const TermBloomFilter& rhs) {
+    assert(mFilterBuckets == rhs.mFilterBuckets);
+    assert(mFilterBytes == rhs.mFilterBytes);
+    assert(mNumHashes == rhs.mNumHashes);
+    assert(mHashBytesLen == rhs.mHashBytesLen);
+
+    for(size_t i = 0; i < mFilterBytes; i++)
+        mFilter[i] = (mFilter[i] | rhs.mFilter[i]);
+}
+
 void TermBloomFilter::insert(const String& term) {
     MultiHashingState state;
     for(uint16 nhash = 0; nhash < mNumHashes; nhash++) {
@@ -86,15 +96,15 @@ void TermBloomFilter::serialize(String& output) {
     memcpy(outbuf, mFilter, mFilterBytes);
 }
 
-TermBloomFilter TermBloomFilter::deserialize(const String& input) {
+void TermBloomFilter::deserialize(const String& input) {
     char* inbuf = (char*)&input[0];
 
     uint32 buckets = ntohl(*((uint32*)inbuf)); inbuf += sizeof(uint32);
     uint32 nhashes = ntohs(*((uint16*)inbuf)); inbuf += sizeof(uint16);
-    TermBloomFilter result(buckets, nhashes);
-    assert(input.size() == (sizeof(uint32) + sizeof(uint16) + result.bytesSize()));
-    memcpy(result.mFilter, inbuf, result.mFilterBytes);
-    return result;
+    assert(buckets == mFilterBuckets);
+    assert(nhashes == mNumHashes);
+    assert(input.size() == (sizeof(uint32) + sizeof(uint16) + bytesSize()));
+    memcpy(mFilter, inbuf, mFilterBytes);
 }
 
 uint32 TermBloomFilter::computeMoreHashBits(MultiHashingState& state, const String& term) {

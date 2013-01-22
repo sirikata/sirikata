@@ -45,8 +45,10 @@ public:
 
 // QueryHandlerFactory "singletons" for object queries, stored in pintoloc and
 // shared by the space, oh plugins, etc.
-extern SIRIKATA_LIBPINTOLOC_EXPORT GeomQueryHandlerFactory<ObjectProxSimulationTraits> ObjectProxGeomQueryHandlerFactory;
-extern SIRIKATA_LIBPINTOLOC_EXPORT ManualQueryHandlerFactory<ObjectProxSimulationTraits> ObjectProxManualQueryHandlerFactory;
+typedef GeomQueryHandlerFactory<ObjectProxSimulationTraits> ObjectProxGeomQueryHandlerFactoryType;
+extern SIRIKATA_LIBPINTOLOC_EXPORT ObjectProxGeomQueryHandlerFactoryType ObjectProxGeomQueryHandlerFactory;
+typedef ManualQueryHandlerFactory<ObjectProxSimulationTraits> ObjectProxManualQueryHandlerFactoryType;
+extern SIRIKATA_LIBPINTOLOC_EXPORT ObjectProxManualQueryHandlerFactoryType ObjectProxManualQueryHandlerFactory;
 
 } // namespace Sirikata
 
