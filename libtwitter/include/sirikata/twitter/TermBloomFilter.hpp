@@ -23,8 +23,8 @@ public:
     TermBloomFilter(const TermBloomFilter& rhs);
     TermBloomFilter& operator=(const TermBloomFilter& rhs);
 
-    const uint32 size() { return mFilterBuckets; }
-    const uint16 hashes() { return mNumHashes; }
+    const uint32 size() const { return mFilterBuckets; }
+    const uint16 hashes() const { return mNumHashes; }
 
     /** Insert the term into the bloom filter, setting each of it's hash buckets
      *  to true.
@@ -33,10 +33,10 @@ public:
     /** Looks up the term in the bloom filter, returning true if it might have
      *  been inserted and false if it definitely has not.
      */
-    bool lookup(const String& term);
+    bool lookup(const String& term) const;
 
     /** Serializes the bloom filter. */
-    void serialize(String& output);
+    void serialize(String& output) const;
     /** Deserialize a bloom filter. NOTE: This overwrites any existing entries. */
     void deserialize(const String& input);
 
@@ -47,10 +47,15 @@ public:
      */
     void mergeIn(const TermBloomFilter& rhs);
 
+
+    /** Check that this bloom filter is a subset of the other, i.e. every bucket
+     *  marked in this filter is also marked in the other.
+     */
+    bool subsetOf(const TermBloomFilter& other) const;
 private:
     TermBloomFilter(const String& serialized);
 
-    const uint32 bytesSize() { return mFilterBytes; }
+    const uint32 bytesSize() const { return mFilterBytes; }
 
     // State tracked during multi-hashing. This allows us to
     // efficiently compute multiple hashes, and also, by storing it
@@ -73,7 +78,7 @@ private:
 
     // Get another hash value, possibly computing more underlying
     // large hash values if they are needed.
-    uint32 computeMoreHashBits(MultiHashingState& state, const String& term);
+    uint32 computeMoreHashBits(MultiHashingState& state, const String& term) const;
 
 
     // Note: it'd be great to just use something like boost::dynamic_bitset but

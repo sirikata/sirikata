@@ -7,7 +7,7 @@
 
 #define OPT_GROUP_TWITTER_TERM_BLOOM_FILTER    "twitter-term-bloom-filter"
 
-#define OPT_TWITTER_TERM_BLOOM_BUCKETS         "buckets"
-#define OPT_TWITTER_TERM_BLOOM_HASHES          "hashes"
+#define OPT_TWITTER_BLOOM_BUCKETS         "twitter.bloom.buckets"
+#define OPT_TWITTER_BLOOM_HASHES          "twitter.bloom.hashes"
 
 #endif //_SIRIKATA_OH_TWITTER_OPTIONS_HPP_

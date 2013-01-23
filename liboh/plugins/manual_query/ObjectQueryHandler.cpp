@@ -25,8 +25,13 @@ static SolidAngle NoUpdateSolidAngle = SolidAngle(0.f);
 // leaving it as is, because we don't actually have a new value.
 static uint32 NoUpdateMaxResults = ((uint32)INT_MAX)+1;
 
+static String NoUpdateCustomQueryString("BOGUSQUERY");
+
 namespace {
 
+// Returns true only if the query parses and at least one value is extracted so
+// that we can tell if this is really a traditional query or another
+// JSON-formatted custom query type
 bool parseQueryRequest(const String& query, SolidAngle* qangle_out, uint32* max_results_out) {
     if (query.empty())
         return false;
@@ -35,6 +40,13 @@ bool parseQueryRequest(const String& query, SolidAngle* qangle_out, uint32* max_
     json::Value parsed_query;
     if (!json::read(query, parsed_query))
         return false;
+
+    if ((!parsed_query.contains("angle") || !parsed_query.get("angle").isReal()) ||
+        (!parsed_query.contains("max_results") || !parsed_query.get("max_results").isInt()))
+    {
+        // Must contain at least one update
+        return false;
+    }
 
     *qangle_out = SolidAngle( parsed_query.getReal("angle", SolidAngle::MaxVal) );
     *max_results_out = parsed_query.getInt("max_results", 0);
@@ -110,23 +122,25 @@ void ObjectQueryHandler::updateQuery(HostedObjectPtr ho, const SpaceObjectRefere
     SolidAngle sa;
     uint32 max_results = 0;
     if (parseQueryRequest(params, &sa, &max_results))
-        updateQuery(ho, obj, sa, max_results);
+        updateQuery(ho, obj, sa, max_results, NoUpdateCustomQueryString);
+    else
+        updateQuery(ho, obj, NoUpdateSolidAngle, NoUpdateMaxResults, params);
 }
 
-void ObjectQueryHandler::updateQuery(HostedObjectPtr ho, const SpaceObjectReference& obj, SolidAngle sa, uint32 max_results) {
+void ObjectQueryHandler::updateQuery(HostedObjectPtr ho, const SpaceObjectReference& obj, SolidAngle sa, uint32 max_results, const String& custom_query_string) {
     // We don't use loc caches here becuase the querier might not be in
     // there yet
     SequencedPresencePropertiesPtr querier_props = ho->presenceRequestedLocation(obj);
     TimedMotionVector3f loc = querier_props->location();
     AggregateBoundingInfo bounds = querier_props->bounds();
     assert(bounds.singleObject());
-    updateQuery(obj.object(), loc, bounds.fullBounds(), sa, max_results);
+    updateQuery(obj.object(), loc, bounds.fullBounds(), sa, max_results, custom_query_string);
 }
 
-void ObjectQueryHandler::updateQuery(const ObjectReference& obj, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, SolidAngle sa, uint32 max_results) {
+void ObjectQueryHandler::updateQuery(const ObjectReference& obj, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, SolidAngle sa, uint32 max_results, const String& custom_query_string) {
     // Update the prox thread
     mProxStrand->post(
-        std::tr1::bind(&ObjectQueryHandler::handleUpdateObjectQuery, this, livenessToken(), obj, loc, bounds, sa, max_results),
+        std::tr1::bind(&ObjectQueryHandler::handleUpdateObjectQuery, this, livenessToken(), obj, loc, bounds, sa, max_results, custom_query_string),
         "ObjectQueryHandler::handleUpdateObjectQuery"
     );
 }
@@ -235,6 +249,8 @@ void ObjectQueryHandler::aggregateChildAdded(ProxAggregator* handler, const Obje
 void ObjectQueryHandler::aggregateChildRemoved(ProxAggregator* handler, const ObjectReference& objid, const ObjectReference& child, const Vector3f& bnds_center, const float32 bnds_center_radius, const float32 max_obj_size) {}
 
 void ObjectQueryHandler::aggregateBoundsUpdated(ProxAggregator* handler, const ObjectReference& objid, const Vector3f& bnds_center, const float32 bnds_center_radius, const float32 max_obj_size) {}
+
+void ObjectQueryHandler::aggregateQueryDataUpdated(ProxAggregator* handler, const ObjectReference& objid, const String& qd) {}
 
 void ObjectQueryHandler::aggregateDestroyed(ProxAggregator* handler, const ObjectReference& objid) {
     // Allow canceling of unobserved timeouts for this node
@@ -402,7 +418,7 @@ void ObjectQueryHandler::onEpochUpdated(ReplicatedLocationServiceCache* loccache
 }
 
 void ObjectQueryHandler::onLocationUpdated(ReplicatedLocationServiceCache* loccache, const ObjectReference& obj) {
-    updateQuery(obj, loccache->location(obj), loccache->bounds(obj).fullBounds(), NoUpdateSolidAngle, NoUpdateMaxResults);
+    updateQuery(obj, loccache->location(obj), loccache->bounds(obj).fullBounds(), NoUpdateSolidAngle, NoUpdateMaxResults, NoUpdateCustomQueryString);
 
     mContext->mainStrand->post(
         std::tr1::bind(&ObjectQueryHandler::handleNotifySubscribersLocUpdate, this, livenessToken(), loccache, obj),
@@ -418,7 +434,7 @@ void ObjectQueryHandler::onOrientationUpdated(ReplicatedLocationServiceCache* lo
 }
 
 void ObjectQueryHandler::onBoundsUpdated(ReplicatedLocationServiceCache* loccache, const ObjectReference& obj) {
-    updateQuery(obj, loccache->location(obj), loccache->bounds(obj).fullBounds(), NoUpdateSolidAngle, NoUpdateMaxResults);
+    updateQuery(obj, loccache->location(obj), loccache->bounds(obj).fullBounds(), NoUpdateSolidAngle, NoUpdateMaxResults, NoUpdateCustomQueryString);
 
     mContext->mainStrand->post(
         std::tr1::bind(&ObjectQueryHandler::handleNotifySubscribersLocUpdate, this, livenessToken(), loccache, obj),
@@ -493,7 +509,8 @@ void ObjectQueryHandler::handleCreatedReplicatedIndex(Liveness::Token alive, Pro
             // FIXME is loccache safe here? what if results for the object
             // haven't come in yet?
             query_props->loc, query_props->bounds,
-            query_props->angle, query_props->max_results
+            query_props->angle, query_props->max_results,
+            query_props->custom_query_string
         );
     }
 }
@@ -587,7 +604,7 @@ void ObjectQueryHandler::generateObjectQueryEvents(Query* query) {
                 // Need to unpack real ID from the UUID
                 ServerID leaf_server = (ServerID)objid.getAsUUID().asUInt32();
                 ObjectQueryDataPtr query_data = mObjectQueries[querier_id];
-                registerObjectQueryWithServer(querier_id, leaf_server, query_data->loc, query_data->bounds, query_data->angle, query_data->max_results);
+                registerObjectQueryWithServer(querier_id, leaf_server, query_data->loc, query_data->bounds, query_data->angle, query_data->max_results, query_data->custom_query_string);
             }
         }
         for(uint32 pidx = 0; pidx < evt.reparents().size(); pidx++) {
@@ -643,11 +660,16 @@ void ObjectQueryHandler::generateObjectQueryEvents(Query* query) {
     }
 }
 
-void ObjectQueryHandler::registerObjectQueryWithIndex(const ObjectReference& object, ProxIndexID index_id, ProxQueryHandler* handler, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const SolidAngle& angle, uint32 max_results) {
-    // We only add if we actually have all the necessary info, most importantly a real minimum angle.
-    // This is necessary because we get this update for all location updates, even those for objects
-    // which don't have subscriptions.
-    if (angle == NoUpdateSolidAngle) return;
+void ObjectQueryHandler::registerObjectQueryWithIndex(const ObjectReference& object, ProxIndexID index_id, ProxQueryHandler* handler, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const SolidAngle& angle, uint32 max_results, const String& custom_query_string) {
+    // We only want to register a query if we actually have all the necessary
+    // info. We sometimes might not because we get this update for all location
+    // updates, even those for objects which don't have subscriptions. For
+    // traditional queries, this meant most importantly that we had a real minimum
+    // angle. To support both traditional/custom queries, this condition depends
+    // on the type of query handler we have
+    if ((!handler->customQueryType() && angle == NoUpdateSolidAngle) ||
+        (handler->customQueryType() && (custom_query_string == NoUpdateCustomQueryString || custom_query_string.empty())))
+        return;
 
     BoundingSphere3f region(bounds.center(), 0);
     float ms = bounds.radius();
@@ -655,9 +677,16 @@ void ObjectQueryHandler::registerObjectQueryWithIndex(const ObjectReference& obj
 
     float32 query_dist = 0.f;//TODO(ewencp) enable getting query
                              //distance from parameters
-    Query* q = mObjectDistance ?
-        handler->registerQuery(loc, region, ms, SolidAngle::Min, query_dist) :
-        handler->registerQuery(loc, region, ms, angle);
+    Query* q;
+    if (handler->customQueryType()) {
+        assert(custom_query_string != NoUpdateCustomQueryString);
+        q = handler->registerCustomQuery(custom_query_string);
+    }
+    else {
+        q = mObjectDistance ?
+            handler->registerQuery(loc, region, ms, SolidAngle::Min, query_dist) :
+            handler->registerQuery(loc, region, ms, angle);
+    }
     if (max_results != NoUpdateMaxResults && max_results > 0)
         q->maxResults(max_results);
     query_data->queries[index_id] = q;
@@ -665,14 +694,14 @@ void ObjectQueryHandler::registerObjectQueryWithIndex(const ObjectReference& obj
     q->setEventListener(this);
 }
 
-void ObjectQueryHandler::registerObjectQueryWithServer(const ObjectReference& object, ServerID sid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const SolidAngle& angle, uint32 max_results) {
+void ObjectQueryHandler::registerObjectQueryWithServer(const ObjectReference& object, ServerID sid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const SolidAngle& angle, uint32 max_results, const String& custom_query_string) {
     // FIXME we don't currently have any index maintaining this information, so
     // we need to scan through all of them to find ones matching the ServerID
     for(ReplicatedIndexQueryHandlerMap::iterator it = mObjectQueryHandlers.begin(); it != mObjectQueryHandlers.end(); it++) {
         ProxIndexID prox_index_id = it->first;
         ReplicatedIndexQueryHandler& rep_index_query_handler = it->second;
         if (rep_index_query_handler.from != sid) continue;
-        registerObjectQueryWithIndex(object, prox_index_id, rep_index_query_handler.handler, loc, bounds, angle, max_results);
+        registerObjectQueryWithIndex(object, prox_index_id, rep_index_query_handler.handler, loc, bounds, angle, max_results, custom_query_string);
     }
 
     ObjectQueryDataPtr query_data = mObjectQueries[object];
@@ -704,7 +733,7 @@ void ObjectQueryHandler::unregisterObjectQueryWithServer(const ObjectReference& 
     query_data->servers.erase(sid);
 }
 
-void ObjectQueryHandler::handleUpdateObjectQuery(Liveness::Token alive, const ObjectReference& object, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const SolidAngle& angle, uint32 max_results) {
+void ObjectQueryHandler::handleUpdateObjectQuery(Liveness::Token alive, const ObjectReference& object, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const SolidAngle& angle, uint32 max_results, const String& custom_query_string) {
     if (!alive) return;
     Liveness::Lock lck(alive);
     if (!lck) return;
@@ -716,7 +745,7 @@ void ObjectQueryHandler::handleUpdateObjectQuery(Liveness::Token alive, const Ob
     // including reporting the update, if the user explicitly made a
     // change to query parameters since this will get called for all
     // objects triggering movement.
-    bool explicit_query_params_update = ((angle != NoUpdateSolidAngle) || (max_results != NoUpdateMaxResults));
+    bool explicit_query_params_update = ((angle != NoUpdateSolidAngle) || (max_results != NoUpdateMaxResults) || (custom_query_string != NoUpdateCustomQueryString));
     bool new_query = false;
 
     if (mObjectQueries.find(object) == mObjectQueries.end()) {
@@ -730,6 +759,8 @@ void ObjectQueryHandler::handleUpdateObjectQuery(Liveness::Token alive, const Ob
         query_props->bounds = bounds;
         query_props->angle = angle;
         query_props->max_results = max_results;
+        if (custom_query_string != NoUpdateCustomQueryString)
+            query_props->custom_query_string = custom_query_string;
         mObjectQueries[object] = query_props;
 
         new_query = true;
@@ -750,11 +781,13 @@ void ObjectQueryHandler::handleUpdateObjectQuery(Liveness::Token alive, const Ob
         query_data->angle = angle;
     if (max_results != NoUpdateMaxResults)
         query_data->max_results = max_results;
+    if (custom_query_string != NoUpdateCustomQueryString)
+        query_data->custom_query_string = custom_query_string;
 
     // If we've got a new query, start it at the root. If we already have a
     // registered query, just update all queries we have a record of.
     if (new_query) {
-        registerObjectQueryWithServer(object, NullServerID, loc, bounds, angle, max_results);
+        registerObjectQueryWithServer(object, NullServerID, loc, bounds, angle, max_results, custom_query_string);
     }
     else {
         for(IndexQueryMap::iterator index_query_it = query_data->queries.begin(); index_query_it != query_data->queries.end(); index_query_it++) {
@@ -766,6 +799,8 @@ void ObjectQueryHandler::handleUpdateObjectQuery(Liveness::Token alive, const Ob
                 query->angle(angle);
             if (max_results != NoUpdateMaxResults && max_results > 0)
                 query->maxResults(max_results);
+            if (custom_query_string != NoUpdateCustomQueryString)
+                query->customQuery(custom_query_string);
         }
     }
 }

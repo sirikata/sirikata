@@ -175,6 +175,10 @@ void PintoManagerBase::aggregateBoundsUpdated(ProxAggregator* handler, const Ser
     mLocCache->updateAggregateBounds(objid, AggregateBoundingInfo(Vector3f::zero(), bnds_center_radius, max_obj_size));
 }
 
+void PintoManagerBase::aggregateQueryDataUpdated(ProxAggregator* handler, const ServerID& objid, const String& extra_query_data) {
+    mLocCache->updateAggregateQueryData(objid, extra_query_data);
+}
+
 void PintoManagerBase::aggregateDestroyed(ProxAggregator* handler, const ServerID& objid) {
     mLocCache->removeAggregate(objid);
 }

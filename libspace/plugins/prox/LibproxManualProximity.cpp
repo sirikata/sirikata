@@ -414,6 +414,11 @@ void LibproxManualProximity::aggregateBoundsUpdated(ProxAggregator* handler, con
     LibproxProximityBase::aggregateBoundsUpdated(objid, bnds_center, AggregateBoundingInfo(Vector3f::zero(), bnds_center_radius, max_obj_size));
 }
 
+void LibproxManualProximity::aggregateQueryDataUpdated(ProxAggregator* handler, const ObjectReference& objid, const String& qd) {
+    if (static_cast<ProxQueryHandler*>(handler) != mLocalQueryHandler[OBJECT_CLASS_STATIC].handler) return;
+    LibproxProximityBase::aggregateQueryDataUpdated(objid, qd);
+}
+
 void LibproxManualProximity::aggregateDestroyed(ProxAggregator* handler, const ObjectReference& objid) {
     if (static_cast<ProxQueryHandler*>(handler) == mLocalQueryHandler[OBJECT_CLASS_STATIC].handler) {
         LibproxProximityBase::aggregateDestroyed(objid);

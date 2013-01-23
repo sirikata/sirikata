@@ -29,16 +29,16 @@ public:
 
     TermBloomFilterNodeData()
      : ThisBase(
-         GetOptionValue<uint32>(OPT_GROUP_TWITTER_TERM_BLOOM_FILTER, OPT_TWITTER_TERM_BLOOM_BUCKETS),
-         GetOptionValue<uint16>(OPT_GROUP_TWITTER_TERM_BLOOM_FILTER, OPT_TWITTER_TERM_BLOOM_HASHES)
+         GetOptionValue<uint32>(OPT_TWITTER_BLOOM_BUCKETS),
+         GetOptionValue<uint16>(OPT_TWITTER_BLOOM_HASHES)
      )
     {
     }
 
     TermBloomFilterNodeData(LocationServiceCacheType* loc, const LocCacheIterator& obj_id, const Time& t)
      : ThisBase(
-         GetOptionValue<uint32>(OPT_GROUP_TWITTER_TERM_BLOOM_FILTER, OPT_TWITTER_TERM_BLOOM_BUCKETS),
-         GetOptionValue<uint16>(OPT_GROUP_TWITTER_TERM_BLOOM_FILTER, OPT_TWITTER_TERM_BLOOM_HASHES),
+         GetOptionValue<uint32>(OPT_TWITTER_BLOOM_BUCKETS),
+         GetOptionValue<uint16>(OPT_TWITTER_BLOOM_HASHES),
          loc, obj_id, t
      )
     {

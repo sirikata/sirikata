@@ -62,6 +62,7 @@ protected:
     virtual void aggregateChildAdded(ProxAggregator* handler, const ServerID& objid, const ServerID& child, const Vector3f& bnds_center, const float32 bnds_center_radius, const float32 max_obj_size);
     virtual void aggregateChildRemoved(ProxAggregator* handler, const ServerID& objid, const ServerID& child, const Vector3f& bnds_center, const float32 bnds_center_radius, const float32 max_obj_size);
     virtual void aggregateBoundsUpdated(ProxAggregator* handler, const ServerID& objid, const Vector3f& bnds_center, const float32 bnds_center_radius, const float32 max_obj_size);
+    virtual void aggregateQueryDataUpdated(ProxAggregator* handler, const ServerID& objid, const String& extra_query_data);
     virtual void aggregateDestroyed(ProxAggregator* handler, const ServerID& objid);
     virtual void aggregateObserved(ProxAggregator* handler, const ServerID& objid, uint32 nobservers, uint32 nchildren);
 

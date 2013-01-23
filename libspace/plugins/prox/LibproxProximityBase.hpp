@@ -356,10 +356,12 @@ protected:
     virtual void aggregateChildAdded(const ObjectReference& objid, const ObjectReference& child, const Vector3f& pos, const AggregateBoundingInfo& bnds);
     virtual void aggregateChildRemoved(const ObjectReference& objid, const ObjectReference& child, const Vector3f& pos, const AggregateBoundingInfo& bnds);
     virtual void aggregateBoundsUpdated(const ObjectReference& objid, const Vector3f& pos, const AggregateBoundingInfo& bnds);
+    virtual void aggregateQueryDataUpdated(const ObjectReference& objid, const String& extra_query_data);
     virtual void aggregateDestroyed(const ObjectReference& objid);
     virtual void aggregateObserved(const ObjectReference& objid, uint32 nobservers, uint32 nchildren);
     // Helper for updating aggregates
     void updateAggregateLoc(const ObjectReference& objid, const Vector3f& pos, const AggregateBoundingInfo& bnds);
+    void updateAggregateQueryData(const ObjectReference& objid, const String& extra_query_data);
 
     // Command handlers
     virtual void commandProperties(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) = 0;

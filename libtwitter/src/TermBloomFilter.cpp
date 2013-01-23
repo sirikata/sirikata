@@ -14,6 +14,8 @@ TermBloomFilter::TermBloomFilter(uint32 buckets, uint16 hashes)
    mFilter(new unsigned char[mFilterBytes]),
    mNumHashes(hashes)
 {
+    memset(mFilter, 0, mFilterBytes);
+
     // Get number of required bits, buffer with extra 3 to make %
     // operation skew distribution less (instead of minimal coverage +
     // some overage, use more bits to get, e.g., 8x coverage + some
@@ -76,7 +78,7 @@ void TermBloomFilter::insert(const String& term) {
     }
 }
 
-bool TermBloomFilter::lookup(const String& term) {
+bool TermBloomFilter::lookup(const String& term) const {
     MultiHashingState state;
     for(uint16 nhash = 0; nhash < mNumHashes; nhash++) {
         uint32 hash_val = computeMoreHashBits(state, term) % mFilterBuckets;
@@ -87,7 +89,7 @@ bool TermBloomFilter::lookup(const String& term) {
     return true;
 }
 
-void TermBloomFilter::serialize(String& output) {
+void TermBloomFilter::serialize(String& output) const {
     output.resize(sizeof(uint32) + sizeof(uint16) + bytesSize());
     char* outbuf = &output[0];
 
@@ -107,7 +109,7 @@ void TermBloomFilter::deserialize(const String& input) {
     memcpy(mFilter, inbuf, mFilterBytes);
 }
 
-uint32 TermBloomFilter::computeMoreHashBits(MultiHashingState& state, const String& term) {
+uint32 TermBloomFilter::computeMoreHashBits(MultiHashingState& state, const String& term) const {
     uint32 result = 0;
 
     for(int i = 0; i < mHashBytesLen; i++) {
@@ -120,12 +122,21 @@ uint32 TermBloomFilter::computeMoreHashBits(MultiHashingState& state, const Stri
             memcpy(state.bytes, copied.raw_digest(), MD5_DIGEST_LENGTH);
             state.bytes_left = MD5_DIGEST_LENGTH;
         }
-        assert((result & (((uint32)state.bytes[MD5_DIGEST_LENGTH-state.bytes_left]) << (i*8))) == 0);
         result = result | (((uint32)state.bytes[MD5_DIGEST_LENGTH-state.bytes_left]) << (i*8));
         state.bytes_left--;
     }
 
     return result;
+}
+
+
+bool TermBloomFilter::subsetOf(const TermBloomFilter& other) const {
+    for(size_t i = 0; i < mFilterBytes; i++) {
+        // other must have at least the bits this does, so the intersection
+        // should equal this filters bits
+        if ((other.mFilter[i] & mFilter[i]) != mFilter[i]) return false;
+    }
+    return true;
 }
 
 

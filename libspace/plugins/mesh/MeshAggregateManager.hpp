@@ -27,7 +27,7 @@
 #include <sirikata/core/command/Command.hpp>
 
 #include <boost/thread/locks.hpp>
-#include <prox/rtree/RTreeCore.hpp>
+#include <prox/base/ZernikeDescriptor.hpp>
 
 
 

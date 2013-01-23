@@ -690,6 +690,16 @@ void LibproxProximityBase::aggregateBoundsUpdated(const ObjectReference& objid, 
     mAggregateManager->generateAggregateMesh(objid.getAsUUID(), Duration::seconds(300.0+rand()%300));
 }
 
+void LibproxProximityBase::aggregateQueryDataUpdated(const ObjectReference& objid, const String& extra_query_data) {
+    mContext->mainStrand->post(
+        std::tr1::bind(
+            &LibproxProximityBase::updateAggregateQueryData, this,
+            objid, extra_query_data
+        ),
+        "LibproxProximityBase::updateAggregateQueryData"
+    );
+}
+
 void LibproxProximityBase::aggregateDestroyed(const ObjectReference& objid) {
     mContext->mainStrand->post(
         std::tr1::bind(
@@ -763,6 +773,15 @@ void LibproxProximityBase::updateAggregateLoc(const ObjectReference& objid, cons
             objid_uuid,
             bnds
         );
+    }
+}
+
+void LibproxProximityBase::updateAggregateQueryData(const ObjectReference& objid, const String& extra_query_data) {
+    UUID objid_uuid = objid.getAsUUID();
+    if (mLocService->contains(objid_uuid) &&
+        (mLocService->queryData(objid_uuid) != extra_query_data))
+    {
+        mLocService->updateLocalAggregateQueryData(objid_uuid, extra_query_data);
     }
 }
 

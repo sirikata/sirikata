@@ -167,6 +167,16 @@ void PintoManagerLocationServiceCache::updateAggregateBounds(ServerID sid, const
     dat.maxSize = bnds.maxObjectRadius;
 }
 
+void PintoManagerLocationServiceCache::updateAggregateQueryData(ServerID sid, const String& qd) {
+    Lock lck(mMutex);
+
+    ServerMap::iterator it = mServers.find(sid);
+    assert( it != mServers.end() );
+    SpaceServerData& dat = it->second;
+
+    dat.query_data = qd;
+}
+
 void PintoManagerLocationServiceCache::removeAggregate(ServerID sid) {
     Lock lck(mMutex);
 
@@ -273,8 +283,9 @@ String PintoManagerLocationServiceCache::mesh(const Iterator& i) {
   return String("");
 }
 
-String PintoManagerLocationServiceCache::queryData(const Iterator& i) {
-  return String("");
+String PintoManagerLocationServiceCache::queryData(const Iterator& id) {
+    SpaceServerData& dat = EXTRACT_ITERATOR_DATA(id);
+    return dat.query_data;
 }
 
 bool PintoManagerLocationServiceCache::isLocal(const Iterator& id) {

@@ -512,6 +512,11 @@ void LibproxProximity::aggregateBoundsUpdated(ProxAggregator* handler, const Obj
     LibproxProximityBase::aggregateBoundsUpdated(objid, bnds_center, AggregateBoundingInfo(Vector3f::zero(), bnds_center_radius, max_obj_size));
 }
 
+void LibproxProximity::aggregateQueryDataUpdated(ProxAggregator* handler, const ObjectReference& objid, const String& qd) {
+    if (!static_cast<ProxQueryHandler*>(handler)->staticOnly()) return;
+    LibproxProximityBase::aggregateQueryDataUpdated(objid, qd);
+}
+
 void LibproxProximity::aggregateDestroyed(ProxAggregator* handler, const ObjectReference& objid) {
     if (!static_cast<ProxQueryHandler*>(handler)->staticOnly()) return;
     LibproxProximityBase::aggregateDestroyed(objid);
@@ -1290,6 +1295,7 @@ void LibproxProximity::handleUpdateServerQuery(const ServerID& server, const Tim
         if (it == mServerQueries[i].end()) {
             PROXLOG(debug,"Add server query from " << server << ", min angle " << angle.asFloat() << ", object class " << ObjectClassToString((ObjectClass)i) << " (loc: " << adjusted_loc.position() << ", region: " << region << ", max size: " << ms << ")");
 
+            // FIXME also support custom queries
             Query* q = mServerDistance ?
                 mServerQueryHandler[i].handler->registerQuery(adjusted_loc, region, ms, SolidAngle::Min, mDistanceQueryDistance) :
                 mServerQueryHandler[i].handler->registerQuery(adjusted_loc, region, ms, angle) ;
@@ -1404,6 +1410,7 @@ void LibproxProximity::handleUpdateObjectQuery(const UUID& object, const TimedMo
             // This is necessary because we get this update for all location updates, even those for objects
             // which don't have subscriptions.
             if (angle != NoUpdateSolidAngle) {
+                // FIXME also support custom queries
                 Query* q = mObjectDistance ?
                     mObjectQueryHandler[i].handler->registerQuery(loc, region, ms, SolidAngle::Min, mDistanceQueryDistance) :
                     mObjectQueryHandler[i].handler->registerQuery(loc, region, ms, angle);

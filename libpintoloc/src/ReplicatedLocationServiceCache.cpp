@@ -561,16 +561,20 @@ void ReplicatedLocationServiceCache::queryDataUpdated(const ObjectReference& uui
     it->second.tracking++;
     mStrand->post(
         std::tr1::bind(
-            &ReplicatedLocationServiceCache::notifyQueryDataUpdated, this, livenessToken(), uuid
+            &ReplicatedLocationServiceCache::notifyQueryDataUpdated, this, livenessToken(), uuid, oldval, newval
         )
     );
 }
 
-void ReplicatedLocationServiceCache::notifyQueryDataUpdated(Liveness::Token alive_token, const ObjectReference& uuid) {
+void ReplicatedLocationServiceCache::notifyQueryDataUpdated(Liveness::Token alive_token, const ObjectReference& uuid, const String& oldval, const String& newval) {
     Liveness::Lock alive(alive_token);
     if (!alive) return;
 
     Lock lck(mMutex);
+
+    for(ListenerSet::iterator listen_it = mListeners.begin(); listen_it != mListeners.end(); listen_it++) {
+        (*listen_it)->locationQueryDataUpdated(uuid, oldval, newval);
+    }
 
     ReplicatedLocationUpdateProvider::notify(&ReplicatedLocationUpdateListener::onQueryDataUpdated, this, uuid);
 

@@ -51,12 +51,13 @@
 #include <boost/filesystem.hpp>
 
 #include <sirikata/core/transfer/OAuthHttpManager.hpp>
-#include <prox/rtree/RTreeCore.hpp>
+#include <prox/base/ZernikeDescriptor.hpp>
 
 #include <sirikata/core/command/Commander.hpp>
 
 #include <boost/filesystem.hpp>
 
+#include <float.h>
 
 
 #if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS

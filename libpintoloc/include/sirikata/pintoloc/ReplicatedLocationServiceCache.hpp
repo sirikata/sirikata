@@ -140,7 +140,7 @@ private:
     void notifyOrientationUpdated(Liveness::Token alive_token, const ObjectReference& uuid);
     void notifyMeshUpdated(Liveness::Token alive_token, const ObjectReference& uuid);
     void notifyPhysicsUpdated(Liveness::Token alive_token, const ObjectReference& uuid);
-    void notifyQueryDataUpdated(Liveness::Token alive_token, const ObjectReference& uuid);
+    void notifyQueryDataUpdated(Liveness::Token alive_token, const ObjectReference& uuid, const String& oldval, const String& newval);
 
 
     ReplicatedLocationServiceCache();
