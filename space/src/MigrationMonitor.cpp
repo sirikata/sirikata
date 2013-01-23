@@ -97,8 +97,12 @@ void MigrationMonitor::service() {
 
         // NOTE: its possible the object wanders out of the region covered by *all* servers,
         // which is not properly handled by Loc yet.  Therefore we have secondary check which
-        // ensures the object has moved into *some other server's* region as well as out of ours.
-        if (!mCSeg->region().degenerate() && mCSeg->region().contains(obj_pos, 0.0f))
+        // ensures the object has moved into *some other server's* region as
+        // well as out of ours. It's also possible we just got this because we
+        // registered a bogus callback because we had to put this somehwere in
+        // the timeout queue. So also check that it is not, in fact, still in
+        // our region.
+        if (!mCSeg->region().degenerate() && mCSeg->region().contains(obj_pos, 0.0f) && !onThisServer(obj_pos))
             mCB(it->objid);
 
         // NOTE: Objects stay in the index until they are removed by an actual migration --
