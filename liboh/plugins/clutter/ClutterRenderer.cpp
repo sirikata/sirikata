@@ -205,9 +205,10 @@ boost::any ClutterRenderer::invoke_actor_set_position(std::vector<boost::any>& p
     );
     int actor_id = Invokable::anyAsNumeric(params[0]);
     ClutterActor* actor = get_actor_by_id(actor_id);
+    if (actor == NULL) return Invokable::asAny(false);
 
     SyncOpClosure* closure = new SyncOpClosure;
-    clutter_actor_set_position (get_actor_by_id(actor_id), Invokable::anyAsNumeric(params[1]), Invokable::anyAsNumeric(params[2]));
+    clutter_actor_set_position (actor, Invokable::anyAsNumeric(params[1]), Invokable::anyAsNumeric(params[2]));
     closure->finish();
 
     return Invokable::asAny(true);
@@ -221,6 +222,7 @@ boost::any ClutterRenderer::invoke_actor_set_size(std::vector<boost::any>& param
     );
     int actor_id = Invokable::anyAsNumeric(params[0]);
     ClutterActor* actor = get_actor_by_id(actor_id);
+    if (actor == NULL) return Invokable::asAny(false);
 
     SyncOpClosure* closure = new SyncOpClosure;
     clutter_actor_set_size (actor, Invokable::anyAsNumeric(params[1]), Invokable::anyAsNumeric(params[2]));
@@ -236,6 +238,7 @@ boost::any ClutterRenderer::invoke_actor_show(std::vector<boost::any>& params) {
     );
     int actor_id = Invokable::anyAsNumeric(params[0]);
     ClutterActor* actor = get_actor_by_id(actor_id);
+    if (actor == NULL) return Invokable::asAny(false);
 
     SyncOpClosure* closure = new SyncOpClosure;
     clutter_container_add_actor (CLUTTER_CONTAINER (mStage), actor);
@@ -251,6 +254,8 @@ boost::any ClutterRenderer::invoke_actor_destroy(std::vector<boost::any>& params
     );
     int actor_id = Invokable::anyAsNumeric(params[0]);
     ClutterActor* actor = get_actor_by_id(actor_id);
+    if (actor == NULL) return Invokable::asAny(false);
+
     mActors.erase(actor_id);
 
     SyncOpClosure* closure = new SyncOpClosure;
@@ -282,6 +287,7 @@ boost::any ClutterRenderer::invoke_rectangle_set_color(std::vector<boost::any>& 
     );
     int actor_id = Invokable::anyAsNumeric(params[0]);
     ClutterActor* actor = get_actor_by_id(actor_id);
+    if (actor == NULL) return Invokable::asAny(false);
 
     SyncOpClosure* closure = new SyncOpClosure;
     ClutterColor color;
@@ -314,6 +320,7 @@ boost::any ClutterRenderer::invoke_text_set_color(std::vector<boost::any>& param
     );
     int actor_id = Invokable::anyAsNumeric(params[0]);
     ClutterActor* actor = get_actor_by_id(actor_id);
+    if (actor == NULL) return Invokable::asAny(false);
 
     SyncOpClosure* closure = new SyncOpClosure;
     ClutterColor color;
@@ -331,6 +338,7 @@ boost::any ClutterRenderer::invoke_text_set_text(std::vector<boost::any>& params
     );
     int actor_id = Invokable::anyAsNumeric(params[0]);
     ClutterActor* actor = get_actor_by_id(actor_id);
+    if (actor == NULL) return Invokable::asAny(false);
     String new_text = Invokable::anyAsString(params[1]);
 
     SyncOpClosure* closure = new SyncOpClosure;
@@ -347,6 +355,8 @@ boost::any ClutterRenderer::invoke_text_set_font(std::vector<boost::any>& params
     );
     int actor_id = Invokable::anyAsNumeric(params[0]);
     ClutterActor* actor = get_actor_by_id(actor_id);
+    if (actor == NULL) return Invokable::asAny(false);
+
     String font_name = Invokable::anyAsString(params[1]);
 
     SyncOpClosure* closure = new SyncOpClosure;
