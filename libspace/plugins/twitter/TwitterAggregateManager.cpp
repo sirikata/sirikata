@@ -100,7 +100,16 @@ void TwitterAggregateManager::addChild(const UUID& uuid, const UUID& child_uuid)
     // disconnection before getting the addChild call). But this should only
     // happen with fast connect/disconnect so we're ignoring it for now.
     assert(aggregateExists(uuid));
-    assert(aggregateExists(child_uuid));
+    // If we got the addChild before the localObjectAdded call, then
+    // we need to fill in a bogus temporary for now so that we can at
+    // least setup the tree structure. However, this should only occur
+    // for leaf objects.
+    if (!aggregateExists(child_uuid)) {
+        mAggregates[child_uuid] = AggregateObjectPtr(new AggregateObject(child_uuid, false));
+        // We would need to fill in bogus data here except that we're
+        // setup ok with empty default values. We really only care
+        // about the "mesh" and an empty value is ok there.
+    }
 
     AggregateObjectPtr parent = getAggregate(uuid);
     AggregateObjectPtr agg = getAggregate(child_uuid);
@@ -166,11 +175,29 @@ void TwitterAggregateManager::localObjectAdded(const UUID& uuid, bool agg, const
 {
     if (!agg) {
         AGG_LOG(detailed, "localObjectAdded called: uuid=" << uuid);
-        AggregateObjectPtr new_agg(new AggregateObject(uuid, agg));
+        Lock lck(mAggregateMutex);
+        // We may have already had to create this if misordering of
+        // localObjectAdded and addChild occurred.
+        AggregateObjectPtr new_agg;
+        if (mAggregates.find(uuid) == mAggregates.end()) {
+            new_agg = AggregateObjectPtr(new AggregateObject(uuid, agg));
+            mAggregates[uuid] = new_agg;
+        }
+        else {
+            new_agg = mAggregates[uuid];
+            assert(new_agg->mesh == "");
+        }
         new_agg->loc = loc;
         new_agg->mesh = mesh;
-        Lock lck(mAggregateMutex);
-        mAggregates[uuid] = new_agg;
+
+        // If we already have any parents then this was added because
+        // of misordered addChild calls. Make sure we mark things
+        // dirty for recomputation of aggregates.
+        if (!new_agg->parents.empty()) {
+            for(AggregateObjectSet::const_iterator it = new_agg->parents.begin(); it != new_agg->parents.end(); it++)
+                markDirtyToRoot(*it, /* child isn't dirty, just a new
+                                      * leaf*/ AggregateObjectPtr());
+        }
     }
 }
 
