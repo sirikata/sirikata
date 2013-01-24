@@ -30,7 +30,8 @@ public:
         LOC_FIELD_ORIENTATION = 1 << 1,
         LOC_FIELD_BOUNDS = 1 << 2,
         LOC_FIELD_MESH = 1 << 3,
-        LOC_FIELD_PHYSICS = 1 << 4
+        LOC_FIELD_PHYSICS = 1 << 4,
+        LOC_FIELD_QUERY_DATA = 1 << 5
     };
 
     LocField updateFields;

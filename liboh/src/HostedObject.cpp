@@ -1071,21 +1071,39 @@ bool HostedObject::delegateODPPortSend(const ODP::Endpoint& source_ep, const ODP
 
 void HostedObject::requestLocationUpdate(const SpaceID& space, const ObjectReference& oref, const TimedMotionVector3f& loc)
 {
-    updateLocUpdateRequest(space, oref,&loc, NULL, NULL, NULL, NULL);
+    updateLocUpdateRequest(space, oref,&loc, NULL, NULL, NULL, NULL, NULL);
 }
 
 void HostedObject::requestOrientationUpdate(const SpaceID& space, const ObjectReference& oref, const TimedMotionQuaternion& orient) {
-    updateLocUpdateRequest(space, oref, NULL, &orient, NULL, NULL, NULL);
+    updateLocUpdateRequest(space, oref, NULL, &orient, NULL, NULL, NULL, NULL);
 }
 
 
 void HostedObject::requestBoundsUpdate(const SpaceID& space, const ObjectReference& oref, const BoundingSphere3f& bounds) {
-    updateLocUpdateRequest(space, oref,NULL, NULL, &bounds, NULL, NULL);
+    updateLocUpdateRequest(space, oref,NULL, NULL, &bounds, NULL, NULL, NULL);
 }
 
 void HostedObject::requestMeshUpdate(const SpaceID& space, const ObjectReference& oref, const String& mesh)
 {
-    updateLocUpdateRequest(space, oref, NULL, NULL, NULL, &mesh, NULL);
+    if (mObjectHost->getQueryDataLookupConstructor()) {
+        const String& opts = mObjectHost->getQueryDataLookupConstructorOpts();
+        QueryDataLookup* query_data_lookup = mObjectHost->getQueryDataLookupConstructor()(opts);
+        query_data_lookup->lookup(getSharedPtr(), space, oref, mesh);
+    }
+    else {
+        // No query data lookup constructor, so we can send the update directly
+        // without any extra query data
+        updateLocUpdateRequest(space, oref, NULL, NULL, NULL, &mesh, NULL, NULL);
+    }
+}
+
+void HostedObject::requestMeshUpdateAfterQueryDataLookup(HostedObjectPtr self, QueryDataLookup* lookup, const SpaceID& space, const ObjectReference& oref, const String& mesh, bool with_query_data, const String& query_data) {
+    if (with_query_data)
+        updateLocUpdateRequest(space, oref, NULL, NULL, NULL, &mesh, NULL, &query_data);
+    else
+        updateLocUpdateRequest(space, oref, NULL, NULL, NULL, &mesh, NULL, NULL);
+
+    delete lookup;
 }
 
 String HostedObject::requestQuery(const SpaceID& space, const ObjectReference& oref)
@@ -1103,7 +1121,7 @@ String HostedObject::requestQuery(const SpaceID& space, const ObjectReference& o
 
 void HostedObject::requestPhysicsUpdate(const SpaceID& space, const ObjectReference& oref, const String& phy)
 {
-    updateLocUpdateRequest(space, oref, NULL, NULL, NULL, NULL, &phy);
+    updateLocUpdateRequest(space, oref, NULL, NULL, NULL, NULL, &phy, NULL);
 }
 
 
@@ -1132,7 +1150,7 @@ void HostedObject::requestQueryRemoval(const SpaceID& space, const ObjectReferen
     requestQueryUpdate(space, oref, "");
 }
 
-void HostedObject::updateLocUpdateRequest(const SpaceID& space, const ObjectReference& oref, const TimedMotionVector3f* const loc, const TimedMotionQuaternion* const orient, const BoundingSphere3f* const bounds, const String* const mesh, const String* const phy) {
+void HostedObject::updateLocUpdateRequest(const SpaceID& space, const ObjectReference& oref, const TimedMotionVector3f* const loc, const TimedMotionQuaternion* const orient, const BoundingSphere3f* const bounds, const String* const mesh, const String* const phy, const String* query_data) {
 
     if (stopped()) {
         HO_LOG(detailed,"Ignoring loc update request after system stop.");
@@ -1153,6 +1171,7 @@ void HostedObject::updateLocUpdateRequest(const SpaceID& space, const ObjectRefe
         if (bounds != NULL) { pd.requestLoc->setBounds(AggregateBoundingInfo(*bounds)); pd.updateFields |= PerPresenceData::LOC_FIELD_BOUNDS; }
         if (mesh != NULL) { pd.requestLoc->setMesh(Transfer::URI(*mesh)); pd.updateFields |= PerPresenceData::LOC_FIELD_MESH; }
         if (phy != NULL) { pd.requestLoc->setPhysics(*phy); pd.updateFields |= PerPresenceData::LOC_FIELD_PHYSICS; }
+        if (query_data != NULL) { pd.requestLoc->setQueryData(*query_data); pd.updateFields |= PerPresenceData::LOC_FIELD_QUERY_DATA; }
 
         // Cancel the re-request timer if it was active
         pd.rerequestTimer->cancel();
@@ -1226,6 +1245,11 @@ void HostedObject::sendLocUpdateRequest(const SpaceID& space, const ObjectRefere
         loc_request.set_physics(pd.requestLoc->physics());
         // Save value but bump the epoch
         pd.requestLoc->setPhysics(pd.requestLoc->physics(), epoch);
+    }
+    if (pd.updateFields & PerPresenceData::LOC_FIELD_QUERY_DATA) {
+        loc_request.set_query_data(pd.requestLoc->queryData());
+        // Save value but bump the epoch
+        pd.requestLoc->setQueryData(pd.requestLoc->queryData(), epoch);
     }
 
     std::string payload = serializePBJMessage(container);

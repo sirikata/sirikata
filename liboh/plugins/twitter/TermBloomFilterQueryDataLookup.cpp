@@ -17,31 +17,47 @@ TermBloomFilterQueryDataLookup::TermBloomFilterQueryDataLookup(uint32 buckets, u
 
 void TermBloomFilterQueryDataLookup::lookup(HostedObjectPtr ho, HostedObject::OHConnectInfoPtr ci) {
     if (!ci->mesh.empty())
-        downloadTweetData(ho, ci);
+        downloadTweetData(ho, ci, SpaceID::null(), ObjectReference::null(), String());
     else
         ho->objectHostConnectIndirect(ho, this, ci);
 }
 
-void TermBloomFilterQueryDataLookup::downloadTweetData(HostedObjectPtr ho, HostedObject::OHConnectInfoPtr ocip, uint8 n_retry)
+void TermBloomFilterQueryDataLookup::lookup(HostedObjectPtr ho, const SpaceID& space, const ObjectReference& oref, const String& mesh) {
+    if (!mesh.empty())
+        downloadTweetData(ho, HostedObject::OHConnectInfoPtr(), space, oref, mesh);
+    else
+        ho->requestMeshUpdateAfterQueryDataLookup(ho, this, space, oref, mesh, true, String());
+}
+
+void TermBloomFilterQueryDataLookup::downloadTweetData(
+    HostedObjectPtr ho,
+    HostedObject::OHConnectInfoPtr ocip,
+    const SpaceID& space, const ObjectReference& oref, const String& mesh,
+    uint8 n_retry)
 {
     mResourceDownloadTask = Transfer::ResourceDownloadTaskPtr(
         Transfer::ResourceDownloadTask::construct(
-            Transfer::URI(ocip->mesh), ho->getObjectHost()->getTransferPool(), 1.0,
-            std::tr1::bind(&TermBloomFilterQueryDataLookup::finishedDownload, this, ho, ocip, _1, _2, _3)
+            Transfer::URI((ocip ? ocip->mesh : mesh)), ho->getObjectHost()->getTransferPool(), 1.0,
+            std::tr1::bind(&TermBloomFilterQueryDataLookup::finishedDownload, this, ho, ocip, space, oref, mesh, _1, _2, _3)
         )
     );
     mResourceDownloadTask->start();
 }
 
 void TermBloomFilterQueryDataLookup::finishedDownload(
-    HostedObjectPtr ho, HostedObject::OHConnectInfoPtr ocip,
+    HostedObjectPtr ho,
+    HostedObject::OHConnectInfoPtr ocip,
+    const SpaceID& space, const ObjectReference& oref, const String& mesh,
     Transfer::ResourceDownloadTaskPtr taskptr, Transfer::TransferRequestPtr request,
     Transfer::DenseDataPtr response)
 {
     if (!response) {
         // Failed to download. Leaving it empty will just use an empty filter
-        SILOG(term-bloom-filter, error, "Failed to parse tweet data from " << ocip->mesh << ". Leaving extra query data empty.");
-        ho->context()->mainStrand->post(std::tr1::bind(&HostedObject::objectHostConnectIndirect, ho.get(), ho, this, ocip));
+        SILOG(term-bloom-filter, error, "Failed to parse tweet data from " << (ocip ? ocip->mesh : mesh) << ". Leaving extra query data empty.");
+        if (ocip) // connect lookup
+            ho->context()->mainStrand->post(std::tr1::bind(&HostedObject::objectHostConnectIndirect, ho.get(), ho, this, ocip));
+        else // set mesh lookup
+            ho->requestMeshUpdateAfterQueryDataLookup(ho, this, space, oref, mesh, true, String());
         return;
     }
 
@@ -50,8 +66,11 @@ void TermBloomFilterQueryDataLookup::finishedDownload(
     json_spirit::Value tweet_data;
     if (!json_spirit::read(tweet_json, tweet_data)) {
         // Parsing failed, give up and leave this entry empty
-        SILOG(term-bloom-filter, error, "Failed to parse tweet data from " << ocip->mesh << ". Leaving extra query data empty.");
-        ho->context()->mainStrand->post(std::tr1::bind(&HostedObject::objectHostConnectIndirect, ho.get(), ho, this, ocip));
+        SILOG(term-bloom-filter, error, "Failed to parse tweet data from " << (ocip ? ocip->mesh : mesh) << ". Leaving extra query data empty.");
+        if (ocip) // connect lookup
+            ho->context()->mainStrand->post(std::tr1::bind(&HostedObject::objectHostConnectIndirect, ho.get(), ho, this, ocip));
+        else // set mesh lookup
+            ho->requestMeshUpdateAfterQueryDataLookup(ho, this, space, oref, mesh, true, String());
         return;
     }
 
@@ -76,11 +95,17 @@ void TermBloomFilterQueryDataLookup::finishedDownload(
         }
     }
 
-    // "Serialize" by using raw data in string
-    bf.serialize(ocip->query_data);
+    // "Serialize" by using raw data in string. A little confusing to support
+    // both connect and setMesh calls.
+    String set_mesh_query_data; // Only used for setMesh calls
+    String& serialize_to = (ocip ? ocip->query_data : set_mesh_query_data);
+    bf.serialize(serialize_to);
 
     // And let the OH know it can connect the object now
-    ho->context()->mainStrand->post(std::tr1::bind(&HostedObject::objectHostConnectIndirect, ho.get(), ho, this, ocip));
+    if (ocip) // connect lookup
+        ho->context()->mainStrand->post(std::tr1::bind(&HostedObject::objectHostConnectIndirect, ho.get(), ho, this, ocip));
+    else // set mesh lookup
+        ho->requestMeshUpdateAfterQueryDataLookup(ho, this, space, oref, mesh, true, set_mesh_query_data);
 }
 
 } // namespace Sirikata

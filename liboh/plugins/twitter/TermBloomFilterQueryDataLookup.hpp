@@ -16,12 +16,22 @@ public:
     virtual ~TermBloomFilterQueryDataLookup() {}
 
     virtual void lookup(HostedObjectPtr ho, HostedObject::OHConnectInfoPtr ci);
-
+    virtual void lookup(HostedObjectPtr ho, const SpaceID& space, const ObjectReference& oref, const String& mesh);
 private:
-    void downloadTweetData(HostedObjectPtr ho, HostedObject::OHConnectInfoPtr ocip, uint8 n_retry=0);
+    // To simplify the implementation, these internal methods take both a
+    // HostedObject::OHConnectInfoPtr and a SpaceID+ObjectReference+String. We
+    // can tell which type of lookup and which callback to invoke based on
+    // whether the OHConnectInfoPtr is valid
+    void downloadTweetData(
+        HostedObjectPtr ho,
+        HostedObject::OHConnectInfoPtr ocip,
+        const SpaceID& space, const ObjectReference& oref, const String& mesh,
+        uint8 n_retry=0);
 
     void finishedDownload(
-        HostedObjectPtr ho, HostedObject::OHConnectInfoPtr ocip,
+        HostedObjectPtr ho,
+        HostedObject::OHConnectInfoPtr ocip,
+        const SpaceID& space, const ObjectReference& oref, const String& mesh,
         Transfer::ResourceDownloadTaskPtr taskptr, Transfer::TransferRequestPtr request,
         Transfer::DenseDataPtr response);
 

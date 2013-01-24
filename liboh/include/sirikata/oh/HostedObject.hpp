@@ -293,6 +293,9 @@ public:
     virtual void requestOrientationUpdate(const SpaceID& space, const ObjectReference& oref, const TimedMotionQuaternion& orient);
     virtual void requestBoundsUpdate(const SpaceID& space, const ObjectReference& oref, const BoundingSphere3f& bounds);
     virtual void requestMeshUpdate(const SpaceID& space, const ObjectReference& oref, const String& mesh);
+    // This version is a callback used when looking up query data that is
+    // collected based on the mesh itself.
+    virtual void requestMeshUpdateAfterQueryDataLookup(HostedObjectPtr self, QueryDataLookup* lookup, const SpaceID& space, const ObjectReference& oref, const String& mesh, bool with_query_data, const String& query_data);
     virtual void requestPhysicsUpdate(const SpaceID& space, const ObjectReference& oref, const String& phy);
 
     virtual void requestQueryUpdate(const SpaceID& space, const ObjectReference& oref, const String& new_query);
@@ -369,7 +372,7 @@ public:
     ProxyObjectPtr createProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri, TimedMotionVector3f& tmv, TimedMotionQuaternion& tmvq, const AggregateBoundingInfo& bounds, const String& physics, const String& query, bool isAggregate, uint64 seqNo);
 
     // Helper for constructing and sending location update
-    void updateLocUpdateRequest(const SpaceID& space, const ObjectReference& oref, const TimedMotionVector3f* const loc, const TimedMotionQuaternion* const orient, const BoundingSphere3f* const bounds, const String* const mesh, const String* const phy);
+    void updateLocUpdateRequest(const SpaceID& space, const ObjectReference& oref, const TimedMotionVector3f* const loc, const TimedMotionQuaternion* const orient, const BoundingSphere3f* const bounds, const String* const mesh, const String* const phy, const String* query_data);
     void sendLocUpdateRequest(const SpaceID& space, const ObjectReference& oref);
 
 }; // class HostedObject
@@ -385,6 +388,11 @@ public:
      *  immediately if the data can be filled in synchronously.
      */
     virtual void lookup(HostedObjectPtr ho, HostedObject::OHConnectInfoPtr ci) = 0;
+    /** Lookup query data for this object based on mesh only. Should invoke
+     *  HostedObject::requestMeshUpdateAfterQueryDataLookup. That method uses locks, so
+     *  it can safely be invoked from any thread.
+     */
+    virtual void lookup(HostedObjectPtr ho, const SpaceID& space, const ObjectReference& oref, const String& mesh) = 0;
 };
 
 class SIRIKATA_OH_EXPORT QueryDataLookupFactory
