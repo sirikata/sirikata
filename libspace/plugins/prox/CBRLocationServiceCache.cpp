@@ -555,12 +555,22 @@ void CBRLocationServiceCache::queryDataUpdated(const UUID& uuid, bool agg, const
 }
 
 void CBRLocationServiceCache::processQueryDataUpdated(const ObjectReference& uuid, bool agg, const String& newval) {
-    Lock lck(mDataMutex);
+    String oldval;
+    {
+        Lock lck(mDataMutex);
 
-    ObjectDataMap::iterator it = mObjects.find(uuid);
-    if (it == mObjects.end()) return;
-    String oldval = it->second.query_data;
-    it->second.query_data = newval;
+        ObjectDataMap::iterator it = mObjects.find(uuid);
+        if (it == mObjects.end()) return;
+        oldval = it->second.query_data;
+        it->second.query_data = newval;
+    }
+
+    if (!agg) {
+        Lock lck(mListenerMutex);
+        for(ListenerSet::iterator listen_it = mListeners.begin(); listen_it != mListeners.end(); listen_it++) {
+            (*listen_it)->locationQueryDataUpdated(uuid, oldval, newval);
+        }
+    }
 }
 
 bool CBRLocationServiceCache::tryRemoveObject(ObjectDataMap::iterator& obj_it) {
