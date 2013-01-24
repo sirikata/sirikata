@@ -841,7 +841,10 @@ bool BulletPhysicsService::locationUpdate(UUID source, void* buffer, uint32 leng
     Sirikata::Protocol::Loc::Container loc_container;
     bool parse_success = loc_container.ParseFromString( String((char*) buffer, length) );
     if (!parse_success) {
-        LOG_INVALID_MESSAGE_BUFFER(standardloc, error, ((char*)buffer), length);
+        // Since we don't have framing on these, we can't really log this since
+        // some packets will require more than SST's 1000 byte default packet
+        // size and it would spam the console.
+        //LOG_INVALID_MESSAGE_BUFFER(BULLETLOGMODULE, error, ((char*)buffer), length);
         return false;
     }
 

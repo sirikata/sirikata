@@ -12,7 +12,8 @@
 
 namespace Sirikata {
 
-#define BULLETLOG(lvl, msg) SILOG(BulletPhysics, lvl, msg)
+#define BULLETLOGMODULE BulletPhysics
+#define BULLETLOG(lvl, msg) SILOG(BULLETLOGMODULE, lvl, msg)
 
 class SirikataMotionState;
 class BulletObject;
