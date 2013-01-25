@@ -61,7 +61,7 @@ public:
     typedef typename BaseQueryType::ID ID;
 
     // The only constructor -- you must specify a query term and region
-    TermRegionQuery(QueryHandlerType* parent, ID id, const String& raw_query_, const String& term_, Vector3 rmin, Vector3 rmax)
+    TermRegionQuery(QueryHandlerType* parent, ID id, const String& raw_query_, const String& term_, Vector3 rmin, Vector3 rmax, uint32 max_results_ = 100)
      // These are bogus parameters because we're not even going to use the
      // values here, only the data in the query string. This is just an artifact
      // of the hacked-on custom query strings
@@ -69,7 +69,8 @@ public:
        raw_query(raw_query_),
        term(term_),
        region_min(rmin),
-       region_max(rmax)
+       region_max(rmax),
+       max_results(max_results_)
     {
     }
 
@@ -92,6 +93,7 @@ public:
     String term;
     Vector3 region_min;
     Vector3 region_max;
+    uint32 max_results;
 };
 
 
@@ -103,8 +105,9 @@ namespace {
 bool parseQueryRequest(
     const String& query,
     bool* term_updated, String* term,
-    bool* region_updated, Vector3f* region_min, Vector3f* region_max
-) {
+    bool* region_updated, Vector3f* region_min, Vector3f* region_max,
+    bool* max_results_updated, uint32* max_results)
+{
     if (query.empty())
         return false;
 
@@ -115,6 +118,7 @@ bool parseQueryRequest(
 
     *term_updated = false;
     *region_updated = false;
+    *max_results_updated = false;
 
     if (parsed.contains("term") && parsed.get("term").isString()) {
         *term = parsed.getString("term");
@@ -145,6 +149,11 @@ bool parseQueryRequest(
         }
     }
 
+    if (parsed.contains("results") && parsed.get("results").isInt()) {
+        *max_results = parsed.getInt("results");
+        *max_results_updated = true;
+    }
+
     return true;
 }
 
@@ -154,12 +163,17 @@ bool checkTermRegion(
     // Query parameters
     const String& term,
     Vector3f region_min, Vector3f region_max,
+    float32 cur_min_radius, // current minimum to match target # results
     // Object/aggregate props
     const Twitter::TermBloomFilter& bloom,
     bool bloom_empty,
     BoundingSphere3f bnds)
 {
-    // FIXME include query term
+    // NOTE: This must be <= because the radius is set to the *exact*
+    // value to match the budget, but there may be a ton of objects
+    // matching this size. To ensure we're under budget, we have to
+    // fail anything at the same size as the minimum.
+    if (bnds.radius() <= cur_min_radius) return false;
 
     // Convert to bounding box for easy, though more conservative, overlap check
     Vector3f bnds_min = bnds.center() - Vector3f(bnds.radius(), bnds.radius(), bnds.radius());
@@ -167,15 +181,13 @@ bool checkTermRegion(
     bool in_region =
         (region_min.x <= bnds_max.x && region_min.y <= bnds_max.y) &&
         (region_max.x >= bnds_min.x && region_max.y >= bnds_min.y);
+    if (!in_region) return false;
     // Only evaluate bloom.lookup if in the region since it's much more
     // expensive to do all that hashing. FIXME Ideally we'd pre-hash the search
     // term... The empty term check let's us degrade to region query for
     // convenience, but generally shouldn't be used since it'll generate too
     // many results for large regions.
-    return
-        in_region &&
-        (term.empty() || bloom_empty || bloom.lookup(term))
-        ;
+    return (term.empty() || bloom_empty || bloom.lookup(term));
 }
 }
 
@@ -629,8 +641,9 @@ public:
         // Try parsing the updated
         String term;
         Vector3f region_min, region_max;
-        bool term_updated, region_updated;
-        bool parsed_success = parseQueryRequest(new_val, &term_updated, &term, &region_updated, &region_min, &region_max);
+        uint32 max_results;
+        bool term_updated, region_updated, max_results_updated;
+        bool parsed_success = parseQueryRequest(new_val, &term_updated, &term, &region_updated, &region_min, &region_max, &max_results_updated, &max_results);
         if (!parsed_success) {
             SILOG(term-region-query, error, "Got invalid query update.");
             return;
@@ -642,6 +655,8 @@ public:
             detailed_query->region_min = region_min;
             detailed_query->region_max = region_max;
         }
+        if (max_results_updated)
+            detailed_query->max_results = max_results;
     }
 
 
@@ -675,8 +690,11 @@ protected:
     virtual QueryType* registerCustomQuery(const String& query_arg) {
         String term;
         Vector3f region_min, region_max;
-        bool term_updated, region_updated;
-        bool parsed_success = parseQueryRequest(query_arg, &term_updated, &term, &region_updated, &region_min, &region_max);
+        uint32 max_results;
+        bool term_updated, region_updated, max_results_updated;
+        bool parsed_success = parseQueryRequest(query_arg, &term_updated, &term, &region_updated, &region_min, &region_max, &max_results_updated, &max_results);
+        // Check all but max_results for validity. Max results has a
+        // default value
         if (!parsed_success || !term_updated || !region_updated) {
             SILOG(term-region-query, error, "Got invalid initial query.");
             return NULL;
@@ -686,7 +704,7 @@ protected:
         //DetailedQueryType* q = new DetailedQueryType(this, mQueryIDSource++, "lol", Vector3(-129.02, 24.9, 0), Vector3(-58.71, 50.6, 0));
         // FIXME test data - quarter of US
         //DetailedQueryType* query = new DetailedQueryType(this, mQueryIDSource++, "lol", Vector3(-129.02, 24.9, 0), Vector3(-93.5, 37.5, 0));
-        DetailedQueryType* query = new DetailedQueryType(this, mQueryIDSource++, query_arg, term, region_min, region_max);
+        DetailedQueryType* query = new DetailedQueryType(this, mQueryIDSource++, query_arg, term, region_min, region_max, max_results_updated ? max_results : 100);
         QueryState* state = new QueryState(this, query, mRTree->root());
         mQueries[query] = state;
         query->addChangeListener(this);
@@ -771,7 +789,7 @@ private:
     public:
         bool updateSatisfies(const String& term, Vector3 region_min, Vector3 region_max) {
             satisfies = checkTermRegion(
-                term, region_min, region_max,
+                term, region_min, region_max, getParent()->mMinResultRadius,
                 rtnode->data().getBloomFilter(), rtnode->data().getBloomFilterEmpty(), rtnode->data().getBounds()
             );
             return satisfies;
@@ -779,6 +797,7 @@ private:
 
         using CutNodeBaseType::rtnode;
         using CutNodeBaseType::satisfies;
+        using CutNodeBaseType::getParent;
     };
 
     friend class Prox::CutBase<SimulationTraits, TermRegionQueryHandler, NodeData, Cut, CutNode<SimulationTraits> >;
@@ -813,12 +832,22 @@ private:
 
 
     public:
+        // Keep one extra parameter used by queries which is
+        // cut-specific and not a real part of the query: a minimum
+        // size of result which we can use to force the cut up or down
+        // the tree to try to match a specific number of results.
+        float32 mMinResultRadius;
+        int32 mMinResultRadiusRelaxDelayIts;
+#define MIN_RADIUS_RELAX_FACTOR 0.999
+#define MIN_RADIUS_RELAX_DELAY 250
 
         /** Regular constructor.  A new cut simply starts with the root node and
          *  immediately refines.
          */
         Cut(TermRegionQueryHandler* _parent, QueryType* _query, RTreeNodeType* root)
-         : CutBaseType(_parent, _query)
+         : CutBaseType(_parent, _query),
+           mMinResultRadius(0.f),
+           mMinResultRadiusRelaxDelayIts(0)
         {
             init(root);
             // Make sure we get events from initialization to the client
@@ -864,7 +893,7 @@ private:
             DetailedQueryType* dquery = detailedQuery();
             NodeData nd = node->childData(objidx, t);
             return checkTermRegion(
-                dquery->term, dquery->region_min, dquery->region_max,
+                dquery->term, dquery->region_min, dquery->region_max, mMinResultRadius,
                 nd.getBloomFilter(), nd.getBloomFilterEmpty(), nd.getBounds()
             );
         }
@@ -952,7 +981,12 @@ private:
             const String& query_term = dquery->term;
             Vector3 query_region_min = dquery->region_min;
             Vector3 query_region_max = dquery->region_max;
+            int32 query_max_results = dquery->max_results;
 
+            bool updated_min_size = false;
+            bool updated_min_size_in_loop = true;
+
+            uint32 initial_results_size = results.size();
             for(CutNodeListIterator it = nodes.begin(); it != nodes.end(); ) {
                 CutNode<SimulationTraits>* node = *it;
                 bool last_satisfies = node->satisfies;
@@ -1067,7 +1101,7 @@ private:
                             // node and expanding it back again.
                             bool parent_satisfies =
                                 checkTermRegion(
-                                    query_term, query_region_min, query_region_max,
+                                    query_term, query_region_min, query_region_max, mMinResultRadius,
                                     this_parent->data().getBloomFilter(), this_parent->data().getBloomFilterEmpty(), this_parent->data().getBounds()
                                 );
                             visited++;
@@ -1136,7 +1170,7 @@ private:
                         NodeData nd = node->rtnode->childData(i, t);
                         bool child_satisfies =
                             checkTermRegion(
-                                query_term, query_region_min, query_region_max,
+                                query_term, query_region_min, query_region_max, mMinResultRadius,
                                 nd.getBloomFilter(), nd.getBloomFilterEmpty(), nd.getBounds()
                             );
                         visited++;
@@ -1169,9 +1203,121 @@ private:
 
                     it++;
                 }
+
+                // Stop gap to limit how big the cut gets since we
+                // need to finish processing the cut without changing
+                // the query. In this case, we change the query, but
+                // make sure it's consistent with all the results
+                // we've computed so far -- by picking the minimum
+                // object in the results (less a little to make sure
+                // it continues to satisfy the query), we ensure
+                // everything higher in the tree (larger) continues to
+                // satisfy the query. We check a couple of conditions
+                // because this approach isn't perfect and can result
+                // in counterproductive updates if we always update
+                // when we see too many results
+                if ((int)results.size() >= query_max_results && // too big
+                    (results.size() > initial_results_size) &&  // and growing
+                    !updated_min_size_in_loop) // and we haven't set the min yet (if we
+                             // redo, can only get worse)
+                {
+                    float32 min_rad = FLT_MAX;
+                    for(CutNodeListIterator cit = nodes.begin(); cit != nodes.end(); cit++) {
+                        CutNode<SimulationTraits>* node = *cit;
+                        // We need to get results, not just elements
+                        // on the cut.
+                        if (inResults(node->rtnode->aggregateID())) {
+                            min_rad = std::min(min_rad, node->rtnode->data().getBounds().radius());
+                        }
+                        else {
+                            // Not in results, so children satisfy
+                            for(int i = 0; i < node->rtnode->size(); i++)
+                                min_rad = std::min(min_rad, node->rtnode->childData(i, t).getBounds().radius());
+                        }
+                        // Slightly smaller so smallest still
+                        // satisfies query
+                        mMinResultRadius = min_rad * MIN_RADIUS_RELAX_FACTOR;
+                        updated_min_size_in_loop = true;
+                    }
+                }
+            }
+
+            // If we reached our budget, immediately set a maximum
+            // size based on what we see in the cut so that we
+            // don't end up refining too much stuff. This will
+            // immediately affect whether nodes are marked as
+            // satisfying. We only do this if a) we haven't done
+            // it yet this round or b) we've increased in size yet
+            // still which means we're in danger of continuing to
+            // increase in size so updating again and setting a
+            // stricter budget is worth it.
+            //
+            // This is only done outside the loop currently because
+            // updating it effectively changes the query and that can
+            // cause the traversal to do bad things because whether a
+            // node satisfies the query will change while processing
+            // the cut.
+            //
+            // FIXME obviously this isn't really the best way to
+            // accomplish this -- it doesn't let us trade worse
+            // objects for better ones as the tree changes (we
+            // don't perform matching refine/coarsen if we're
+            // already at the budget), but this is much easier to
+            // fit into the current cut update scheme. It also
+            // responsive (acting upon too many results) rather
+            // than proactive (not letting too many results in the
+            // first place)....
+            if ((int)results.size() >= query_max_results && // too big
+                (results.size() > initial_results_size)) // and growing
+            {
+                std::vector<float32> radii;
+                for(CutNodeListIterator cit = nodes.begin(); cit != nodes.end(); cit++) {
+                    CutNode<SimulationTraits>* node = *cit;
+                    // We need to get results, not just elements
+                    // on the cut. Also, we don't want to get the
+                    // radii of the objects on the cut, we want to
+                    // get the radii of their parent since the
+                    // parents control the actual length ofthe
+                    // cut/results since there won't be any
+                    // coarsening until the parent doesn't satisfy
+                    // either.
+                    radii.push_back(
+                        node->rtnode->parent() != NULL ?
+                        node->rtnode->parent()->data().getBounds().radius() :
+                        node->rtnode->data().getBounds().radius());
+                }
+                // FIXME: this fails...
+                //assert(radii.size() == results.size());
+                std::sort(radii.begin(), radii.end());
+                // Want to keep the largest, which are at the end
+                // of the sorted list, so count backwards.
+                // FIXME something weird is going on where the #
+                // of radii doesn't match # of results, so we need
+                // some bounds checking
+                int offset = std::min(std::max((size_t)0, radii.size()-query_max_results+1), radii.size()-1);
+                mMinResultRadius = radii[offset];
+                //SILOG(term-region-query, fatal, "^ Updated min radius to " << mMinResultRadius << " " << results.size() << "  min: " << radii[0] << "  max: " << radii[radii.size()-1]);
+                mMinResultRadiusRelaxDelayIts = MIN_RADIUS_RELAX_DELAY;
+            }
+            else {
+                // If we're coming in under budget for the length of the
+                // cut, slowly let the minimum size slowly get smaller so
+                // that.
+                if (mMinResultRadiusRelaxDelayIts > 0) {
+                    mMinResultRadiusRelaxDelayIts--;
+                }
+                else {
+                    mMinResultRadius = mMinResultRadius * MIN_RADIUS_RELAX_FACTOR;
+                    //if (mMinResultRadius != 0) SILOG(term-region-query, fatal, "v Updated min radius to " << mMinResultRadius << " " << results.size());
+                }
             }
 
             validateCut();
+            // It would be nice to assert that we're always under budget:
+            // assert(results.size() <= query_max_results);
+            // but until we clean out entries when we have too many
+            // nodes, we can't do this because inserted objects can
+            // force themselves into the result set.
 
             query->pushEvents(events);
 
