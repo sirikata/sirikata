@@ -714,9 +714,14 @@ private:
 
     void updateObj(const ObjectID& obj_id, const Time& t) {
         typename ObjectSet::iterator it = mObjects.find(obj_id);
-        if (it == mObjects.end()) return;
+        if (it != mObjects.end()) {
+            mRTree->update(mObjects[obj_id], t);
+        }
 
-        mRTree->update(mObjects[obj_id], t);
+        typename ObjectSet::iterator nit = mNodes.find(obj_id);
+        if (nit != mNodes.end()) {
+            mRTree->updateNode(mNodes[obj_id], t);
+        }
     }
 
     void deleteObj(const ObjectID& obj_id, const Time& t, bool temporary) {
