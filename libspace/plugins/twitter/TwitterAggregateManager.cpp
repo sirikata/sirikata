@@ -584,6 +584,19 @@ void TwitterAggregateManager::processAggregate() {
         // is simple, when re-dirtied we will have double-incremented to account
         // for both times marked dirty.
         for(AggregateObjectSet::const_iterator it = parents.begin(); it != parents.end(); it++) {
+            // Because we can have multiple entries in dirty_children
+            // but can also have the tree moving around while we're
+            // processing, we can't assume parents still
+            // match. If this happens, a parent may have already been
+            // put in the queue and processed since they no longer see
+            // us as a dirty child.
+            if ((*it)->children.find(agg) == (*it)->children.end()) {
+                // We're no longer even a child. Our state should have
+                // been cleaned out of the parent and we no longer
+                // have an effect on it
+                continue;
+            }
+            // Otherwise, we should still be a dirty child
             assert((*it)->dirty);
             assert(!(*it)->dirty_children.empty());
             assert((*it)->dirty_children.find(agg) != (*it)->dirty_children.end());
