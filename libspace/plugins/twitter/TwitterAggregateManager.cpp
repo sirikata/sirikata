@@ -184,8 +184,12 @@ void TwitterAggregateManager::removeChild(const UUID& uuid, const UUID& child_uu
     assert( (agg->aggregate && agg->parent && agg->parent->uuid == uuid && agg->parent == parent) ||
         (!agg->aggregate && (agg->parents.find(parent) != agg->parents.end())) );
 
-    if (agg->dirty)
-        agg->parent->dirty_children.erase( agg->parent->dirty_children.find(agg) );
+    if (agg->dirty) {
+        // We may have queued it up as dirty multiple times. Make sure
+        // we clear them all out.
+        std::pair<AggregateObjectMultiSetIterator, AggregateObjectMultiSetIterator> range = agg->parent->dirty_children.equal_range(agg);
+        agg->parent->dirty_children.erase(range.first, range.second);
+    }
     // Parent is dirty no matter what due to removal.
     markDirtyToRoot(agg->parent, AggregateObjectPtr());
 

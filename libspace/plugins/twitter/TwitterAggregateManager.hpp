@@ -49,6 +49,7 @@ class SIRIKATA_SPACE_EXPORT TwitterAggregateManager : public AggregateManager {
     typedef std::tr1::shared_ptr<AggregateObject> AggregateObjectPtr;
     typedef std::set<AggregateObjectPtr> AggregateObjectSet;
     typedef std::multiset<AggregateObjectPtr> AggregateObjectMultiSet;
+    typedef AggregateObjectMultiSet::iterator AggregateObjectMultiSetIterator;
     struct AggregateObject {
         AggregateObject(const UUID& uuid_, bool is_agg)
          : uuid(uuid_),
