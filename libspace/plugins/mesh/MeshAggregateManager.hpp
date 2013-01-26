@@ -486,6 +486,9 @@ public:
 
   ~MeshAggregateManager();
 
+  void addLeafObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const Transfer::URI& mesh);
+  void removeLeafObject(const UUID& uuid);
+
   void addAggregate(const UUID& uuid);
 
   void removeAggregate(const UUID& uuid);

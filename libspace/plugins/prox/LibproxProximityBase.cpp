@@ -629,6 +629,28 @@ void LibproxProximityBase::handleDisconnectedServer(ServerID sid) {
 }
 
 
+void LibproxProximityBase::aggregateObjectCreated(const ObjectReference& objid) {
+    // No need to notify LocationService, only need to notify AggregateManager
+    // so it can reconstruct a sane tree. We pass information through because it
+    // may only be in the loccache, not in LocationService anymore.
+    bool tracking = mLocCache->startRefcountTracking(objid);
+    assert(tracking);
+    mAggregateManager->addLeafObject(
+        objid.getAsUUID(),
+        mLocCache->location(objid),
+        mLocCache->orientation(objid),
+        mLocCache->bounds(objid),
+        mLocCache->mesh(objid)
+    );
+    mLocCache->stopRefcountTracking(objid);
+}
+
+void LibproxProximityBase::aggregateObjectDestroyed(const ObjectReference& objid) {
+    // No need to notify LocationService, only need to notify AggregateManager
+    // so it can reconstruct a sane tree
+    mAggregateManager->removeLeafObject(objid.getAsUUID());
+}
+
 void LibproxProximityBase::aggregateCreated(const ObjectReference& objid) {
     // On addition, an "aggregate" will have no children, i.e. its zero sized.
 

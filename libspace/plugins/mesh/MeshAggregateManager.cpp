@@ -518,6 +518,12 @@ void MeshAggregateManager::uploadThreadMain(uint8 i) {
   mUploadServices[i]->run();
 }
 
+void MeshAggregateManager::addLeafObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const Transfer::URI& mesh) {
+}
+
+void MeshAggregateManager::removeLeafObject(const UUID& uuid) {
+}
+
 void MeshAggregateManager::addAggregate(const UUID& uuid) {
   AGG_LOG(detailed, "addAggregate called: uuid=" << uuid.toString() << "\n");
   mRawAggregateUpdates++;

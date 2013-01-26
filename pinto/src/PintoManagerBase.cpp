@@ -156,6 +156,15 @@ void PintoManagerBase::onDisconnected(Stream* stream) {
 
 
 // AggregateListener Interface
+
+void PintoManagerBase::aggregateObjectCreated(ProxAggregator* handler, const ServerID& objid) {
+    // LocCache already knows about individual objects, nothing to do
+}
+
+void PintoManagerBase::aggregateObjectDestroyed(ProxAggregator* handler, const ServerID& objid) {
+    // LocCache already knows about individual objects, nothing to do
+}
+
 void PintoManagerBase::aggregateCreated(ProxAggregator* handler, const ServerID& objid) {
     mLocCache->addAggregate(objid);
 }

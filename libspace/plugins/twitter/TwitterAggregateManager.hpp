@@ -25,6 +25,8 @@ class SIRIKATA_SPACE_EXPORT TwitterAggregateManager : public AggregateManager {
     TwitterAggregateManager(LocationService* loc, Transfer::OAuthParamsPtr oauth, const String& username);
     ~TwitterAggregateManager();
 
+    virtual void addLeafObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const Transfer::URI& mesh);
+    virtual void removeLeafObject(const UUID& uuid);
     virtual void addAggregate(const UUID& uuid);
     virtual void removeAggregate(const UUID& uuid);
     virtual void addChild(const UUID& uuid, const UUID& child_uuid) ;

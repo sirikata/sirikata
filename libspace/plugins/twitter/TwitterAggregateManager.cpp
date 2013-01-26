@@ -68,6 +68,52 @@ TwitterAggregateManager::~TwitterAggregateManager() {
     delete mAggregationService;
 }
 
+void TwitterAggregateManager::addLeafObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const Transfer::URI& mesh) {
+    AGG_LOG(detailed, "addLeafObject called: uuid=" << uuid);
+    Lock lck(mAggregateMutex);
+    // We may have already had to create this if misordering of
+    // localObjectAdded and addChild occurred.
+    AggregateObjectPtr new_agg;
+    if (mAggregates.find(uuid) == mAggregates.end()) {
+        new_agg = AggregateObjectPtr(new AggregateObject(uuid, false));
+        mAggregates[uuid] = new_agg;
+    }
+    else {
+        new_agg = mAggregates[uuid];
+        assert(new_agg->mesh == "");
+    }
+    new_agg->loc = loc;
+    new_agg->mesh = mesh.toString();
+
+    // If we already have any parents then this was added because
+    // of misordered addChild calls. Make sure we mark things
+    // dirty for recomputation of aggregates.
+    if (!new_agg->parents.empty()) {
+        for(AggregateObjectSet::const_iterator it = new_agg->parents.begin(); it != new_agg->parents.end(); it++)
+            markDirtyToRoot(*it, /* child isn't dirty, just a new
+                                  * leaf*/ AggregateObjectPtr());
+    }
+}
+
+void TwitterAggregateManager::removeLeafObject(const UUID& uuid) {
+    AGG_LOG(detailed, "removeLeafObject: " << uuid);
+
+    Lock lck(mAggregateMutex);
+
+    assert(aggregateExists(uuid));
+    AggregateObjectPtr agg = getAggregate(uuid);
+    assert(!agg->aggregate);
+
+    // This can happen before being removed as an aggregate because of a
+    // disconnection from the space. In that case, run removeChild for them
+    // even though another signal will come again.
+    if (agg->parents.empty()) {
+        while(!agg->parents.empty())
+            removeChild((*agg->parents.begin())->uuid, uuid);
+    }
+    mAggregates.erase(uuid);
+}
+
 void TwitterAggregateManager::addAggregate(const UUID& uuid) {
     AggregateObjectPtr agg(new AggregateObject(uuid, true));
 
@@ -173,53 +219,9 @@ void TwitterAggregateManager::localObjectAdded(const UUID& uuid, bool agg, const
                                                 const AggregateBoundingInfo& bounds, const String& mesh, const String& physics,
                                                 const String& query_data)
 {
-    if (!agg) {
-        AGG_LOG(detailed, "localObjectAdded called: uuid=" << uuid);
-        Lock lck(mAggregateMutex);
-        // We may have already had to create this if misordering of
-        // localObjectAdded and addChild occurred.
-        AggregateObjectPtr new_agg;
-        if (mAggregates.find(uuid) == mAggregates.end()) {
-            new_agg = AggregateObjectPtr(new AggregateObject(uuid, agg));
-            mAggregates[uuid] = new_agg;
-        }
-        else {
-            new_agg = mAggregates[uuid];
-            assert(new_agg->mesh == "");
-        }
-        new_agg->loc = loc;
-        new_agg->mesh = mesh;
-
-        // If we already have any parents then this was added because
-        // of misordered addChild calls. Make sure we mark things
-        // dirty for recomputation of aggregates.
-        if (!new_agg->parents.empty()) {
-            for(AggregateObjectSet::const_iterator it = new_agg->parents.begin(); it != new_agg->parents.end(); it++)
-                markDirtyToRoot(*it, /* child isn't dirty, just a new
-                                      * leaf*/ AggregateObjectPtr());
-        }
-    }
 }
 
 void TwitterAggregateManager::localObjectRemoved(const UUID& uuid, bool agg) {
-    if (!agg) {
-        AGG_LOG(detailed, "localObjectRemoved: " << uuid);
-
-        Lock lck(mAggregateMutex);
-
-        assert(aggregateExists(uuid));
-        AggregateObjectPtr agg = getAggregate(uuid);
-        assert(!agg->aggregate);
-
-        // This can happen before being removed as an aggregate because of a
-        // disconnection from the space. In that case, run removeChild for them
-        // even though another signal will come again.
-        if (agg->parents.empty()) {
-            while(!agg->parents.empty())
-                removeChild((*agg->parents.begin())->uuid, uuid);
-        }
-        mAggregates.erase(uuid);
-    }
 }
 
 void TwitterAggregateManager::localLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval) {
@@ -232,6 +234,9 @@ void TwitterAggregateManager::localBoundsUpdated(const UUID& uuid, bool agg, con
 }
 
 void TwitterAggregateManager::localMeshUpdated(const UUID& uuid, bool agg, const String& newval) {
+    // FIXME we should get these updates via AggregateManager
+    // (AggregateListener in libprox) interface...
+
     // We'll get updates about all objects, even if we triggered the update. We
     // can ignore updates of aggregates since we'll have already updated the
     // mesh url.

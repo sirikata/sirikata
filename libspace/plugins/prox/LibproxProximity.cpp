@@ -490,6 +490,16 @@ void LibproxProximity::receiveMigrationData(const UUID& obj, ServerID source_ser
 
 // AggregateListener Interface
 
+void LibproxProximity::aggregateObjectCreated(ProxAggregator* handler, const ObjectReference& objid) {
+    if (!static_cast<ProxQueryHandler*>(handler)->staticOnly()) return;
+    LibproxProximityBase::aggregateObjectCreated(objid);
+}
+
+void LibproxProximity::aggregateObjectDestroyed(ProxAggregator* handler, const ObjectReference& objid) {
+    if (!static_cast<ProxQueryHandler*>(handler)->staticOnly()) return;
+    LibproxProximityBase::aggregateObjectDestroyed(objid);
+}
+
 void LibproxProximity::aggregateCreated(ProxAggregator* handler, const ObjectReference& objid) {
     // We ignore aggregates built of dynamic objects, they aren't useful for
     // creating aggregate meshes

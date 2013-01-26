@@ -58,6 +58,8 @@ protected:
 
 
     // AggregateListener Interface
+    virtual void aggregateObjectCreated(ProxAggregator* handler, const ServerID& objid);
+    virtual void aggregateObjectDestroyed(ProxAggregator* handler, const ServerID& objid);
     virtual void aggregateCreated(ProxAggregator* handler, const ServerID& objid);
     virtual void aggregateChildAdded(ProxAggregator* handler, const ServerID& objid, const ServerID& child, const Vector3f& bnds_center, const float32 bnds_center_radius, const float32 max_obj_size);
     virtual void aggregateChildRemoved(ProxAggregator* handler, const ServerID& objid, const ServerID& child, const Vector3f& bnds_center, const float32 bnds_center_radius, const float32 max_obj_size);

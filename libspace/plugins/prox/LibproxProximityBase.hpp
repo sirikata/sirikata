@@ -352,6 +352,8 @@ protected:
     // and passing to AggregateManager, but you need to delegate to these
     // yourself since the AggregateListener interface depends on the type of
     // query/query handler being used.
+    virtual void aggregateObjectCreated(const ObjectReference& objid);
+    virtual void aggregateObjectDestroyed(const ObjectReference& objid);
     virtual void aggregateCreated(const ObjectReference& objid);
     virtual void aggregateChildAdded(const ObjectReference& objid, const ObjectReference& child, const Vector3f& pos, const AggregateBoundingInfo& bnds);
     virtual void aggregateChildRemoved(const ObjectReference& objid, const ObjectReference& child, const Vector3f& pos, const AggregateBoundingInfo& bnds);

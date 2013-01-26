@@ -242,6 +242,10 @@ void ObjectQueryHandler::queryHasEvents(Query* query) {
 // AggregateListener Interface
 // This class only uses this information to track observed nodes so we can
 // let the parent class know when to refine/coarsen the query with the server.
+void ObjectQueryHandler::aggregateObjectCreated(ProxAggregator* handler, const ObjectReference& objid) {}
+
+void ObjectQueryHandler::aggregateObjectDestroyed(ProxAggregator* handler, const ObjectReference& objid) {}
+
 void ObjectQueryHandler::aggregateCreated(ProxAggregator* handler, const ObjectReference& objid) {}
 
 void ObjectQueryHandler::aggregateChildAdded(ProxAggregator* handler, const ObjectReference& objid, const ObjectReference& child, const Vector3f& bnds_center, const float32 bnds_center_radius, const float32 max_obj_size) {}

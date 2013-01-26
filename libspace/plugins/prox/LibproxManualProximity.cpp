@@ -394,6 +394,16 @@ void LibproxManualProximity::updateServerQueryResults(ServerID sid, const Sirika
 // so that their info will be available to queriers. We only have two
 // local query handlers -- static and dynamic -- so we filter passing
 // along the call by just checking that one local static handler.
+void LibproxManualProximity::aggregateObjectCreated(ProxAggregator* handler, const ObjectReference& objid) {
+    if (static_cast<ProxQueryHandler*>(handler) != mLocalQueryHandler[OBJECT_CLASS_STATIC].handler) return;
+    LibproxProximityBase::aggregateObjectCreated(objid);
+}
+
+void LibproxManualProximity::aggregateObjectDestroyed(ProxAggregator* handler, const ObjectReference& objid) {
+    if (static_cast<ProxQueryHandler*>(handler) != mLocalQueryHandler[OBJECT_CLASS_STATIC].handler) return;
+    LibproxProximityBase::aggregateObjectDestroyed(objid);
+}
+
 void LibproxManualProximity::aggregateCreated(ProxAggregator* handler, const ObjectReference& objid) {
     if (static_cast<ProxQueryHandler*>(handler) != mLocalQueryHandler[OBJECT_CLASS_STATIC].handler) return;
     LibproxProximityBase::aggregateCreated(objid);
