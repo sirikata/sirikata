@@ -95,6 +95,7 @@ struct JSSystemStruct
     v8::Handle<v8::Value> debug_fileRead(String& filename);
 
     v8::Handle<v8::Value> httpRequest(Sirikata::Network::Address addr, Transfer::HttpManager::HTTP_METHOD method, String request, v8::Persistent<v8::Function> cb);
+    v8::Handle<v8::Value> httpGet(const Transfer::URL& url, v8::Persistent<v8::Function> cb);
 
 
     v8::Handle<v8::Value> struct_print(const String& msg);

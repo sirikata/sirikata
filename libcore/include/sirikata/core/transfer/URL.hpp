@@ -538,6 +538,11 @@ public:
 		return mContext.hostname();
 	}
 
+	/// Returns the hostname (or empty if there is none, same as context)
+	inline const std::string service() const {
+		return mContext.service();
+	}
+
 	/// Returns the username (or empty if there is none, same as context)
 	inline const std::string &username() const {
 		return mContext.username();

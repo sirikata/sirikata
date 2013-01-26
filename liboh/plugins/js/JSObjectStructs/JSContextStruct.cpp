@@ -61,6 +61,16 @@ v8::Handle<v8::Value> JSContextStruct::httpRequest(Sirikata::Network::Address ad
     return v8::Uint32::New(emerScript->getEmersonHttpPtr()->makeRequest(addr,method,request, cb, this));
 }
 
+v8::Handle<v8::Value> JSContextStruct::httpGet(const Transfer::URL& url, v8::Persistent<v8::Function> cb)
+{
+    EmersonScript* emerScript = dynamic_cast<EmersonScript*> (jsObjScript);
+    if (emerScript == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in httpRequest.  Cannot run headless while issuing an http request")));
+
+    return v8::Uint32::New(emerScript->getEmersonHttpPtr()->get(url, cb, this));
+}
+
+
 //EmersonHttpManager ensures that this is called from within objStrand
 void JSContextStruct::httpFail(v8::Persistent<v8::Function> cb,const String& failureReason )
 {

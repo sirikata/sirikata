@@ -269,6 +269,7 @@ void JSObjectScriptManager::createSystemTemplate(JSCtx* jsctx)
     jsctx->mSystemTemplate->Set(v8::String::New("import"), v8::FunctionTemplate::New(JSSystem::root_import));
 
     jsctx->mSystemTemplate->Set(v8::String::New("http"), v8::FunctionTemplate::New(JSSystem::root_http));
+    jsctx->mSystemTemplate->Set(v8::String::New("http_get"), v8::FunctionTemplate::New(JSSystem::root_http_get));
 
     jsctx->mSystemTemplate->Set(v8::String::New("storageBeginTransaction"),v8::FunctionTemplate::New(JSSystem::storageBeginTransaction));
     jsctx->mSystemTemplate->Set(v8::String::New("storageCommit"),v8::FunctionTemplate::New(JSSystem::storageCommit));

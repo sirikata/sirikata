@@ -61,6 +61,14 @@ v8::Handle<v8::Value> JSSystemStruct::httpRequest(Sirikata::Network::Address add
     return associatedContext->httpRequest(addr,method,request,cb);
 }
 
+v8::Handle<v8::Value> JSSystemStruct::httpGet(const Transfer::URL& url, v8::Persistent<v8::Function> cb) {
+    //first checks whether have capability to issue http request
+    if(! checkCurCtxtHasCapability(NULL,Capabilities::HTTP))
+        V8_EXCEPTION_CSTR("Error: you do not have the capability to issue an http commad.");
+
+    return associatedContext->httpGet(url, cb);
+}
+
 v8::Handle<v8::Value> JSSystemStruct::storageErase(const OH::Storage::Key& key, v8::Handle<v8::Function> cb)
 {
     return associatedContext->storageErase(key, cb);

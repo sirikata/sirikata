@@ -252,6 +252,13 @@ PresenceEntry.prototype.proxRemovedEvent = function (visibleObj,visTo)
          return baseSystem.http(type,url, headers, system.wrapCallbackForSelf(cb));
      };
 
+     // Newer, nicer API
+     system.http = {};
+     system.http.get = function(url, headers, cb)
+     {
+         return baseSystem.http_get(url, headers, system.wrapCallbackForSelf(cb));
+     };
+
      /**
       @ignore
       Necessary so that script messages will be evaluated in global object rather than from within scriptable.

@@ -378,6 +378,46 @@ v8::Handle<v8::Value> root_http(const v8::Arguments& args)
     return jssys->httpRequest(addr, httpCommType, reqParams, cb_persist);
 }
 
+/**
+   @param {String} url
+   @param {object} headers dictionary
+   @param {function} callback to execute on success or failure (first arg of
+   function is bool.  If success, bool is true, if fail, bool is false).
+   Success callbacks have a second arg that takes in an object with the
+   following fields:
+      respHeaders (string map).
+      contentLength (number).
+      status code (number).
+      data (string).
+ */
+v8::Handle<v8::Value> root_http_get(const v8::Arguments& args)
+{
+    if (args.Length() != 3)
+        return v8::ThrowException(v8::Exception::Error(v8::String::New("Error in http get.  Require 3 arguments")));
+
+    //system object
+    INLINE_SYSTEM_CONV_ERROR(args.This(),http,this,jssys);
+
+    //http command, get, head, etc.
+    INLINE_STR_CONV_ERROR(args[0], http, 1, urlStr);
+
+    Transfer::URL url(urlStr);
+    if (url.empty())
+        return v8::ThrowException(v8::Exception::Error(v8::String::New("Error in http get.  Could not decode URL.")));
+
+    // headers dictionary
+    // FIXME convert, decode, and pass along
+
+    //callback function.
+    if (! args[2]->IsFunction())
+        return v8::ThrowException(v8::Exception::Error(v8::String::New("Error in http get: callback must be a function")));
+
+    v8::Handle<v8::Function> cb = v8::Handle<v8::Function>::Cast(args[2]);
+    v8::Persistent<v8::Function> cb_persist = v8::Persistent<v8::Function>::New(cb);
+
+    return jssys->httpGet(url, cb_persist);
+}
+
 
 v8::Handle<v8::Value> storageWrite(const v8::Arguments& args)
 {
