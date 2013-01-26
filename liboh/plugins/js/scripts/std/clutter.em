@@ -33,6 +33,7 @@ function() {
     create_wrapped_fn('help');
     create_wrapped_fn('stage_set_size');
     create_wrapped_fn('stage_set_color');
+    create_wrapped_fn('stage_set_key_focus');
     create_wrapped_fn('actor_set_size');
     create_wrapped_fn('actor_set_position');
     create_wrapped_fn('actor_show');
@@ -42,6 +43,10 @@ function() {
     create_wrapped_fn('text_create');
     create_wrapped_fn('text_set_color');
     create_wrapped_fn('text_set_text');
+    create_wrapped_fn('text_get_text');
     create_wrapped_fn('text_set_font');
+    create_wrapped_fn('text_set_editable');
+    create_wrapped_fn('text_set_single_line');
+    create_wrapped_fn('text_on_activate');
 
 })();

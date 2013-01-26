@@ -82,6 +82,7 @@ ClutterRenderer::ClutterRenderer()
     mInvokeHandlers["help"] = std::tr1::bind(&ClutterRenderer::invoke_help, this, _1);
     mInvokeHandlers["stage_set_size"] = std::tr1::bind(&ClutterRenderer::invoke_stage_set_size, this, _1);
     mInvokeHandlers["stage_set_color"] = std::tr1::bind(&ClutterRenderer::invoke_stage_set_color, this, _1);
+    mInvokeHandlers["stage_set_key_focus"] = std::tr1::bind(&ClutterRenderer::invoke_stage_set_key_focus, this, _1);
     mInvokeHandlers["actor_set_position"] = std::tr1::bind(&ClutterRenderer::invoke_actor_set_position, this, _1);
     mInvokeHandlers["actor_set_size"] = std::tr1::bind(&ClutterRenderer::invoke_actor_set_size, this, _1);
     mInvokeHandlers["actor_show"] = std::tr1::bind(&ClutterRenderer::invoke_actor_show, this, _1);
@@ -91,7 +92,11 @@ ClutterRenderer::ClutterRenderer()
     mInvokeHandlers["text_create"] = std::tr1::bind(&ClutterRenderer::invoke_text_create, this, _1);
     mInvokeHandlers["text_set_color"] = std::tr1::bind(&ClutterRenderer::invoke_text_set_color, this, _1);
     mInvokeHandlers["text_set_text"] = std::tr1::bind(&ClutterRenderer::invoke_text_set_text, this, _1);
+    mInvokeHandlers["text_get_text"] = std::tr1::bind(&ClutterRenderer::invoke_text_get_text, this, _1);
     mInvokeHandlers["text_set_font"] = std::tr1::bind(&ClutterRenderer::invoke_text_set_font, this, _1);
+    mInvokeHandlers["text_set_editable"] = std::tr1::bind(&ClutterRenderer::invoke_text_set_editable, this, _1);
+    mInvokeHandlers["text_set_single_line"] = std::tr1::bind(&ClutterRenderer::invoke_text_set_single_line, this, _1);
+    mInvokeHandlers["text_on_activate"] = std::tr1::bind(&ClutterRenderer::invoke_text_on_activate, this, _1);
 }
 
 void ClutterRenderer::start() {
@@ -192,6 +197,22 @@ boost::any ClutterRenderer::invoke_stage_set_color(std::vector<boost::any>& para
     ClutterColor color;
     clutter_color_init_(&color, Invokable::anyAsNumeric(params[0]), Invokable::anyAsNumeric(params[1]), Invokable::anyAsNumeric(params[2]), 255);
     clutter_stage_set_color(mStage, &color);
+    closure->finish();
+
+    return Invokable::asAny(true);
+}
+
+boost::any ClutterRenderer::invoke_stage_set_key_focus(std::vector<boost::any>& params) {
+    assert(params.size() == 1 &&
+        Invokable::anyIsNumeric(params[0]) // actor
+    );
+    int actor_id = Invokable::anyAsNumeric(params[0]);
+    ClutterActor* actor = get_actor_by_id(actor_id);
+    if (actor == NULL) return Invokable::asAny(false);
+
+    SyncOpClosure* closure = new SyncOpClosure;
+    clutter_stage_set_key_focus (mStage, actor);
+
     closure->finish();
 
     return Invokable::asAny(true);
@@ -348,6 +369,21 @@ boost::any ClutterRenderer::invoke_text_set_text(std::vector<boost::any>& params
     return Invokable::asAny(true);
 }
 
+boost::any ClutterRenderer::invoke_text_get_text(std::vector<boost::any>& params) {
+    assert(params.size() == 1 &&
+        Invokable::anyIsNumeric(params[0])// actor_id
+    );
+    int actor_id = Invokable::anyAsNumeric(params[0]);
+    ClutterActor* actor = get_actor_by_id(actor_id);
+    if (actor == NULL) return Invokable::asAny(false);
+
+    SyncOpClosure* closure = new SyncOpClosure;
+    String text_text(clutter_text_get_text(CLUTTER_TEXT(actor)));
+    closure->finish();
+
+    return Invokable::asAny(text_text);
+}
+
 boost::any ClutterRenderer::invoke_text_set_font(std::vector<boost::any>& params) {
     assert(params.size() == 2 &&
         Invokable::anyIsNumeric(params[0]) && // actor_id
@@ -361,6 +397,65 @@ boost::any ClutterRenderer::invoke_text_set_font(std::vector<boost::any>& params
 
     SyncOpClosure* closure = new SyncOpClosure;
     clutter_text_set_font_name(CLUTTER_TEXT(actor), font_name.c_str());
+    closure->finish();
+
+    return Invokable::asAny(true);
+}
+
+boost::any ClutterRenderer::invoke_text_set_editable(std::vector<boost::any>& params) {
+    assert(params.size() == 2 &&
+        Invokable::anyIsNumeric(params[0]) && // actor_id
+        Invokable::anyIsBoolean(params[1]) // editable bool
+    );
+    int actor_id = Invokable::anyAsNumeric(params[0]);
+    ClutterActor* actor = get_actor_by_id(actor_id);
+    if (actor == NULL) return Invokable::asAny(false);
+
+    bool is_editable = Invokable::anyAsBoolean(params[1]);
+
+    SyncOpClosure* closure = new SyncOpClosure;
+    clutter_text_set_editable(CLUTTER_TEXT(actor), (is_editable ? TRUE : FALSE));
+    closure->finish();
+
+    return Invokable::asAny(true);
+}
+
+boost::any ClutterRenderer::invoke_text_set_single_line(std::vector<boost::any>& params) {
+    assert(params.size() == 2 &&
+        Invokable::anyIsNumeric(params[0]) && // actor_id
+        Invokable::anyIsBoolean(params[1]) // single line mode
+    );
+    int actor_id = Invokable::anyAsNumeric(params[0]);
+    ClutterActor* actor = get_actor_by_id(actor_id);
+    if (actor == NULL) return Invokable::asAny(false);
+
+    bool is_single_line = Invokable::anyAsBoolean(params[1]);
+
+    SyncOpClosure* closure = new SyncOpClosure;
+    clutter_text_set_single_line_mode(CLUTTER_TEXT(actor), (is_single_line ? TRUE : FALSE));
+    closure->finish();
+
+    return Invokable::asAny(true);
+}
+
+static void clutter_text_on_activate_cb(ClutterText* self, gpointer data) {
+    Invokable* cb = static_cast<Invokable*>(data);
+    cb->invoke();
+}
+
+boost::any ClutterRenderer::invoke_text_on_activate(std::vector<boost::any>& params) {
+    assert(params.size() == 2 &&
+        Invokable::anyIsNumeric(params[0]) && // actor_id
+        Invokable::anyIsInvokable(params[1]) // callback
+    );
+    int actor_id = Invokable::anyAsNumeric(params[0]);
+    ClutterActor* actor = get_actor_by_id(actor_id);
+    if (actor == NULL) return Invokable::asAny(false);
+
+    Invokable* cb = Invokable::anyAsInvokable(params[1]);
+
+    SyncOpClosure* closure = new SyncOpClosure;
+    g_signal_connect(G_OBJECT(actor), "activate", G_CALLBACK(clutter_text_on_activate_cb), cb);
     closure->finish();
 
     return Invokable::asAny(true);
