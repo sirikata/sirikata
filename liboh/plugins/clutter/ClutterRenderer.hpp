@@ -45,6 +45,8 @@ private:
     boost::any invoke_actor_on_mouse_enter(std::vector<boost::any>& params);
     boost::any invoke_actor_on_mouse_motion(std::vector<boost::any>& params);
     boost::any invoke_actor_on_mouse_leave(std::vector<boost::any>& params);
+    boost::any invoke_actor_on_mouse_press(std::vector<boost::any>& params);
+    boost::any invoke_actor_on_mouse_release(std::vector<boost::any>& params);
 
     boost::any invoke_rectangle_create(std::vector<boost::any>& params);
     boost::any invoke_rectangle_set_color(std::vector<boost::any>& params);
