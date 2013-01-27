@@ -778,6 +778,10 @@ void TwitterAggregateManager::processAggregate() {
         if (agg->dirty) {
             // Only need to set ourselves up no children have been dirtied.
             if (agg->dirty_children.empty()) {
+                // It could have been removed from the tree
+                if ((agg->aggregate && !agg->parent) || (!agg->aggregate && agg->parents.empty())) return;
+                // Otherwise, it better be in the ready list and then
+                // we can set it up for processing again
                 assert(std::find(mReadyAggregates.begin(), mReadyAggregates.end(), agg) != mReadyAggregates.end());
                 mAggregationService->post(std::tr1::bind(&TwitterAggregateManager::processAggregate, this));
             }
