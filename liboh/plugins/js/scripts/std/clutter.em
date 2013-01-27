@@ -31,15 +31,19 @@ function() {
     };
 
     create_wrapped_fn('help');
+    
     create_wrapped_fn('stage_set_size');
     create_wrapped_fn('stage_set_color');
     create_wrapped_fn('stage_set_key_focus');
+
     create_wrapped_fn('actor_set_size');
     create_wrapped_fn('actor_set_position');
     create_wrapped_fn('actor_show');
     create_wrapped_fn('actor_destroy');
+
     create_wrapped_fn('rectangle_create');
     create_wrapped_fn('rectangle_set_color');
+
     create_wrapped_fn('text_create');
     create_wrapped_fn('text_set_color');
     create_wrapped_fn('text_set_text');
@@ -48,5 +52,13 @@ function() {
     create_wrapped_fn('text_set_editable');
     create_wrapped_fn('text_set_single_line');
     create_wrapped_fn('text_on_activate');
+
+    create_wrapped_fn('texture_create_from_file');
+
+    create_wrapped_fn('circle_create');
+    create_wrapped_fn('circle_set_radius');
+    create_wrapped_fn('circle_set_fill_color');
+    create_wrapped_fn('circle_set_border_color');
+    create_wrapped_fn('circle_set_border_width');
 
 })();

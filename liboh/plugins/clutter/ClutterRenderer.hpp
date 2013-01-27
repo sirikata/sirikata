@@ -37,12 +37,15 @@ private:
     boost::any invoke_stage_set_size(std::vector<boost::any>& params);
     boost::any invoke_stage_set_color(std::vector<boost::any>& params);
     boost::any invoke_stage_set_key_focus(std::vector<boost::any>& params);
+
     boost::any invoke_actor_set_position(std::vector<boost::any>& params);
     boost::any invoke_actor_set_size(std::vector<boost::any>& params);
     boost::any invoke_actor_show(std::vector<boost::any>& params);
     boost::any invoke_actor_destroy(std::vector<boost::any>& params);
+
     boost::any invoke_rectangle_create(std::vector<boost::any>& params);
     boost::any invoke_rectangle_set_color(std::vector<boost::any>& params);
+
     boost::any invoke_text_create(std::vector<boost::any>& params);
     boost::any invoke_text_set_color(std::vector<boost::any>& params);
     boost::any invoke_text_set_text(std::vector<boost::any>& params);
@@ -51,6 +54,14 @@ private:
     boost::any invoke_text_set_editable(std::vector<boost::any>& params);
     boost::any invoke_text_set_single_line(std::vector<boost::any>& params);
     boost::any invoke_text_on_activate(std::vector<boost::any>& params);
+
+    boost::any invoke_texture_create_from_file(std::vector<boost::any>& params);
+
+    boost::any invoke_circle_create(std::vector<boost::any>& params);
+    boost::any invoke_circle_set_radius(std::vector<boost::any>& params);
+    boost::any invoke_circle_set_fill_color(std::vector<boost::any>& params);
+    boost::any invoke_circle_set_border_color(std::vector<boost::any>& params);
+    boost::any invoke_circle_set_border_width(std::vector<boost::any>& params);
 
     ClutterActor* get_actor_by_id(int actor_id);
 

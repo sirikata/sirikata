@@ -3,6 +3,7 @@
 // be found in the LICENSE file.
 
 #include "ClutterRenderer.hpp"
+#include "clutter-circle.hpp"
 
 #define TWLOG(level,msg) SILOG(clutter-renderer,level,msg)
 
@@ -29,11 +30,28 @@ struct SyncOpClosure {
     // simple.
     boost::unique_lock<boost::mutex> creator_lock;
 
+    // If you need something executed inside the clutter thread, you
+    // can wrap it up and pass it in. Instead of waiting for you to do
+    // your work while keeping clutter blocked, we'll execute your
+    // code for you
+    std::tr1::function<void()> work;
+
     // Sets up, then waits until other thread is ready for us to do processing
     SyncOpClosure()
      : done(false),
        deletable(false),
        creator_lock(mutex) // acquires lock
+    {
+        clutter_threads_add_idle(delayed_synchronous_op, this);
+        cond.wait(creator_lock);
+    }
+
+    // Sets up, then waits until other thread is ready for us to do processing
+    SyncOpClosure(std::tr1::function<void()> work_)
+     : done(false),
+       deletable(false),
+       creator_lock(mutex), // acquires lock
+       work(work_)
     {
         clutter_threads_add_idle(delayed_synchronous_op, this);
         cond.wait(creator_lock);
@@ -54,6 +72,9 @@ gboolean delayed_synchronous_op(gpointer data) {
     {
         // Wait until we see the other thread finish
         boost::unique_lock<boost::mutex> lock(closure->mutex);
+        // If they specified some work to do, do it for them
+        if (closure->work)
+            closure->work();
         // Indicate that the other thread can continue. In lock since this can't
         // proceed without other thread and it makes it simpler to ensure the other
         // thread gets the notification.
@@ -83,12 +104,15 @@ ClutterRenderer::ClutterRenderer()
     mInvokeHandlers["stage_set_size"] = std::tr1::bind(&ClutterRenderer::invoke_stage_set_size, this, _1);
     mInvokeHandlers["stage_set_color"] = std::tr1::bind(&ClutterRenderer::invoke_stage_set_color, this, _1);
     mInvokeHandlers["stage_set_key_focus"] = std::tr1::bind(&ClutterRenderer::invoke_stage_set_key_focus, this, _1);
+
     mInvokeHandlers["actor_set_position"] = std::tr1::bind(&ClutterRenderer::invoke_actor_set_position, this, _1);
     mInvokeHandlers["actor_set_size"] = std::tr1::bind(&ClutterRenderer::invoke_actor_set_size, this, _1);
     mInvokeHandlers["actor_show"] = std::tr1::bind(&ClutterRenderer::invoke_actor_show, this, _1);
     mInvokeHandlers["actor_destroy"] = std::tr1::bind(&ClutterRenderer::invoke_actor_destroy, this, _1);
+
     mInvokeHandlers["rectangle_create"] = std::tr1::bind(&ClutterRenderer::invoke_rectangle_create, this, _1);
     mInvokeHandlers["rectangle_set_color"] = std::tr1::bind(&ClutterRenderer::invoke_rectangle_set_color, this, _1);
+
     mInvokeHandlers["text_create"] = std::tr1::bind(&ClutterRenderer::invoke_text_create, this, _1);
     mInvokeHandlers["text_set_color"] = std::tr1::bind(&ClutterRenderer::invoke_text_set_color, this, _1);
     mInvokeHandlers["text_set_text"] = std::tr1::bind(&ClutterRenderer::invoke_text_set_text, this, _1);
@@ -97,6 +121,14 @@ ClutterRenderer::ClutterRenderer()
     mInvokeHandlers["text_set_editable"] = std::tr1::bind(&ClutterRenderer::invoke_text_set_editable, this, _1);
     mInvokeHandlers["text_set_single_line"] = std::tr1::bind(&ClutterRenderer::invoke_text_set_single_line, this, _1);
     mInvokeHandlers["text_on_activate"] = std::tr1::bind(&ClutterRenderer::invoke_text_on_activate, this, _1);
+
+    mInvokeHandlers["texture_create_from_file"] = std::tr1::bind(&ClutterRenderer::invoke_texture_create_from_file, this, _1);
+
+    mInvokeHandlers["circle_create"] = std::tr1::bind(&ClutterRenderer::invoke_circle_create, this, _1);
+    mInvokeHandlers["circle_set_radius"] = std::tr1::bind(&ClutterRenderer::invoke_circle_set_radius, this, _1);
+    mInvokeHandlers["circle_set_fill_color"] = std::tr1::bind(&ClutterRenderer::invoke_circle_set_fill_color, this, _1);
+    mInvokeHandlers["circle_set_border_color"] = std::tr1::bind(&ClutterRenderer::invoke_circle_set_border_color, this, _1);
+    mInvokeHandlers["circle_set_border_width"] = std::tr1::bind(&ClutterRenderer::invoke_circle_set_border_width, this, _1);
 }
 
 void ClutterRenderer::start() {
@@ -187,7 +219,7 @@ boost::any ClutterRenderer::invoke_stage_set_size(std::vector<boost::any>& param
 }
 
 boost::any ClutterRenderer::invoke_stage_set_color(std::vector<boost::any>& params) {
-    assert(params.size() == 3 &&
+    assert((params.size() == 3 || params.size() == 4) &&
         Invokable::anyIsNumeric(params[0]) && // r
         Invokable::anyIsNumeric(params[1]) && // g
         Invokable::anyIsNumeric(params[2]) // b
@@ -195,7 +227,7 @@ boost::any ClutterRenderer::invoke_stage_set_color(std::vector<boost::any>& para
 
     SyncOpClosure* closure = new SyncOpClosure;
     ClutterColor color;
-    clutter_color_init_(&color, Invokable::anyAsNumeric(params[0]), Invokable::anyAsNumeric(params[1]), Invokable::anyAsNumeric(params[2]), 255);
+    clutter_color_init_(&color, Invokable::anyAsNumeric(params[0]), Invokable::anyAsNumeric(params[1]), Invokable::anyAsNumeric(params[2]), (params.size() == 4 ? Invokable::anyAsNumeric(params[3]) : 255));
     clutter_stage_set_color(mStage, &color);
     closure->finish();
 
@@ -300,7 +332,7 @@ boost::any ClutterRenderer::invoke_rectangle_create(std::vector<boost::any>& par
 }
 
 boost::any ClutterRenderer::invoke_rectangle_set_color(std::vector<boost::any>& params) {
-    assert(params.size() == 4 &&
+    assert((params.size() == 4 || params.size() == 5) &&
         Invokable::anyIsNumeric(params[0]) && // actor_id
         Invokable::anyIsNumeric(params[1]) && // r
         Invokable::anyIsNumeric(params[2]) && // g
@@ -312,7 +344,7 @@ boost::any ClutterRenderer::invoke_rectangle_set_color(std::vector<boost::any>& 
 
     SyncOpClosure* closure = new SyncOpClosure;
     ClutterColor color;
-    clutter_color_init_(&color, Invokable::anyAsNumeric(params[1]), Invokable::anyAsNumeric(params[2]), Invokable::anyAsNumeric(params[3]), 255);
+    clutter_color_init_(&color, Invokable::anyAsNumeric(params[1]), Invokable::anyAsNumeric(params[2]), Invokable::anyAsNumeric(params[3]), (params.size() == 5 ? Invokable::anyAsNumeric(params[4]) : 255));
     clutter_rectangle_set_color(CLUTTER_RECTANGLE(actor), &color);
     closure->finish();
 
@@ -333,7 +365,7 @@ boost::any ClutterRenderer::invoke_text_create(std::vector<boost::any>& params) 
 }
 
 boost::any ClutterRenderer::invoke_text_set_color(std::vector<boost::any>& params) {
-    assert(params.size() == 4 &&
+    assert((params.size() == 4 || params.size() == 5) &&
         Invokable::anyIsNumeric(params[0]) && // actor_id
         Invokable::anyIsNumeric(params[1]) && // r
         Invokable::anyIsNumeric(params[2]) && // g
@@ -345,7 +377,7 @@ boost::any ClutterRenderer::invoke_text_set_color(std::vector<boost::any>& param
 
     SyncOpClosure* closure = new SyncOpClosure;
     ClutterColor color;
-    clutter_color_init_(&color, Invokable::anyAsNumeric(params[1]), Invokable::anyAsNumeric(params[2]), Invokable::anyAsNumeric(params[3]), 255);
+    clutter_color_init_(&color, Invokable::anyAsNumeric(params[1]), Invokable::anyAsNumeric(params[2]), Invokable::anyAsNumeric(params[3]), (params.size() == 5 ? Invokable::anyAsNumeric(params[4]) : 255));
     clutter_text_set_color(CLUTTER_TEXT(actor), &color);
     closure->finish();
 
@@ -461,5 +493,125 @@ boost::any ClutterRenderer::invoke_text_on_activate(std::vector<boost::any>& par
     return Invokable::asAny(true);
 }
 
+namespace {
+void allocate_texture(const String& fname, ClutterActor** texture, GError** error) {
+    *texture = clutter_texture_new_from_file(fname.c_str(), error);
+}
+}
+boost::any ClutterRenderer::invoke_texture_create_from_file(std::vector<boost::any>& params) {
+    assert(params.size() == 1 &&
+        Invokable::anyIsString(params[0]) // filename
+    );
+    String fname = Invokable::anyAsString(params[0]);
+
+    int actor_id = mActorIDSource++;
+
+    ClutterActor *texture;
+    GError* error = NULL;
+    SyncOpClosure* closure = new SyncOpClosure( std::tr1::bind(&allocate_texture, fname, &texture, &error) );
+    closure->finish();
+
+    if (texture == NULL) {
+        SILOG(clutter, error, "Error creating texture from " << fname << ": " << error->message);
+        g_error_free(error);
+        return Invokable::asAny(false);
+    }
+    mActors[actor_id] = texture;
+
+    return Invokable::asAny(actor_id);
+}
+
+
+
+boost::any ClutterRenderer::invoke_circle_create(std::vector<boost::any>& params) {
+    int actor_id = mActorIDSource++;
+
+    SyncOpClosure* closure = new SyncOpClosure;
+    ClutterActor *circle = clutter_circle_new();
+    clutter_circle_set_angle_start(CLUTTER_CIRCLE(circle), 0);
+    clutter_circle_set_angle_stop(CLUTTER_CIRCLE(circle), 360);
+    clutter_circle_set_border_width(CLUTTER_CIRCLE(circle), 1);
+    closure->finish();
+
+    mActors[actor_id] = circle;
+
+    return Invokable::asAny(actor_id);
+}
+
+boost::any ClutterRenderer::invoke_circle_set_radius(std::vector<boost::any>& params) {
+    assert(params.size() == 2 &&
+        Invokable::anyIsNumeric(params[0]) && // actor_id
+        Invokable::anyIsNumeric(params[1]) // radius
+    );
+    int actor_id = Invokable::anyAsNumeric(params[0]);
+    ClutterActor* actor = get_actor_by_id(actor_id);
+    if (actor == NULL) return Invokable::asAny(false);
+
+    float32 radius = Invokable::anyAsNumeric(params[1]);
+
+    SyncOpClosure* closure = new SyncOpClosure;
+    clutter_circle_set_radius(CLUTTER_CIRCLE(actor), (guint)radius);
+    closure->finish();
+
+    return Invokable::asAny(true);
+}
+
+boost::any ClutterRenderer::invoke_circle_set_fill_color(std::vector<boost::any>& params) {
+    assert((params.size() == 4 || params.size() == 5) &&
+        Invokable::anyIsNumeric(params[0]) && // actor_id
+        Invokable::anyIsNumeric(params[1]) && // r
+        Invokable::anyIsNumeric(params[2]) && // g
+        Invokable::anyIsNumeric(params[3]) // b
+    );
+    int actor_id = Invokable::anyAsNumeric(params[0]);
+    ClutterActor* actor = get_actor_by_id(actor_id);
+    if (actor == NULL) return Invokable::asAny(false);
+
+    SyncOpClosure* closure = new SyncOpClosure;
+    ClutterColor color;
+    clutter_color_init_(&color, Invokable::anyAsNumeric(params[1]), Invokable::anyAsNumeric(params[2]), Invokable::anyAsNumeric(params[3]), (params.size() == 5 ? Invokable::anyAsNumeric(params[4]) : 255));
+    clutter_circle_set_color(CLUTTER_CIRCLE(actor), &color);
+    closure->finish();
+
+    return Invokable::asAny(true);
+}
+
+boost::any ClutterRenderer::invoke_circle_set_border_color(std::vector<boost::any>& params) {
+    assert((params.size() == 4 || params.size() == 5) &&
+        Invokable::anyIsNumeric(params[0]) && // actor_id
+        Invokable::anyIsNumeric(params[1]) && // r
+        Invokable::anyIsNumeric(params[2]) && // g
+        Invokable::anyIsNumeric(params[3]) // b
+    );
+    int actor_id = Invokable::anyAsNumeric(params[0]);
+    ClutterActor* actor = get_actor_by_id(actor_id);
+    if (actor == NULL) return Invokable::asAny(false);
+
+    SyncOpClosure* closure = new SyncOpClosure;
+    ClutterColor color;
+    clutter_color_init_(&color, Invokable::anyAsNumeric(params[1]), Invokable::anyAsNumeric(params[2]), Invokable::anyAsNumeric(params[3]), (params.size() == 5 ? Invokable::anyAsNumeric(params[4]) : 255));
+    clutter_circle_set_border_color(CLUTTER_CIRCLE(actor), &color);
+    closure->finish();
+
+    return Invokable::asAny(true);
+}
+
+boost::any ClutterRenderer::invoke_circle_set_border_width(std::vector<boost::any>& params) {
+    assert(params.size() == 2 &&
+        Invokable::anyIsNumeric(params[0]) && // actor_id
+        Invokable::anyIsNumeric(params[1]) // border width
+    );
+    int actor_id = Invokable::anyAsNumeric(params[0]);
+    ClutterActor* actor = get_actor_by_id(actor_id);
+    if (actor == NULL) return Invokable::asAny(false);
+
+    float32 border_width = Invokable::anyAsNumeric(params[1]);
+
+    SyncOpClosure* closure = new SyncOpClosure;
+    clutter_circle_set_border_width(CLUTTER_CIRCLE(actor), (guint)border_width);
+    closure->finish();
+
+    return Invokable::asAny(true);
+}
 
 } // namespace Sirikata
