@@ -391,6 +391,119 @@ String ServiceIfNotDefault(const String& s) {
         return s;
     return "80";
 }
+
+typedef std::vector<String> StringList;
+typedef std::tr1::unordered_map<String, float32> TermFrequencyMap;
+struct TweetInfo;
+struct ClusterInfo;
+struct TweetInfo {
+    TweetInfo()
+     :cluster(NULL)
+    {}
+
+    StringList terms;
+
+    // Clustering info
+    ClusterInfo* cluster;
+};
+typedef std::vector<TweetInfo> TweetInfoList;
+typedef std::tr1::unordered_set<TweetInfo*> TweetInfoPtrSet;
+struct ClusterInfo {
+    TermFrequencyMap frequencies;
+    StringList top_terms;
+    TweetInfoPtrSet members;
+};
+typedef std::vector<ClusterInfo> ClusterInfoList;
+
+#define MAX_CLUSTER_ITS 1000
+#define NUM_TOP_TERMS   3
+#define NUM_CLUSTERS    3
+
+void init_clusters(ClusterInfoList& cluster_list, TweetInfoList& tweet_list) {
+    // Create clusters and just split the data between them arbitrarily
+    for(uint32 i = 0; i < NUM_CLUSTERS; i++)
+        cluster_list.push_back(ClusterInfo());
+    for(uint32 i = 0; i < tweet_list.size(); i++) {
+        cluster_list[i % NUM_CLUSTERS].members.insert(&tweet_list[i]);
+        tweet_list[i].cluster = &(cluster_list[i % NUM_CLUSTERS]);
+    }
+}
+
+void extract_popular_terms(ClusterInfo& cluster) {
+    // Can end up with empty clusters -- too few tweets or just because
+    // clustering naturally groups tweet into fewer than the max # of clusters
+    if (cluster.members.empty())
+        return;
+
+    // Raw counts
+    cluster.frequencies.clear();
+    for(TweetInfoPtrSet::iterator member_it = cluster.members.begin(); member_it != cluster.members.end(); member_it++) {
+        for(uint32 ti = 0; ti < (*member_it)->terms.size(); ti++) {
+            String& term = (*member_it)->terms[ti];
+            if (cluster.frequencies.find(term) == cluster.frequencies.end())
+                cluster.frequencies[term] = 1.f;
+            else
+                cluster.frequencies[term] += 1.f;
+        }
+    }
+    // Normalize by the number of tweets, giving a value something like the
+    // fraction of tweets the term appeared in. This is important for computing
+    // similarities later.
+    for(TermFrequencyMap::iterator it = cluster.frequencies.begin(); it != cluster.frequencies.end(); it++)
+        it->second = it->second / float32(cluster.members.size());
+
+    // Get sorted by inserting into a multimap by frequency
+    std::multimap<float32, String> inverted_term_counts;
+    for(TermFrequencyMap::iterator it = cluster.frequencies.begin(); it != cluster.frequencies.end(); it++)
+        inverted_term_counts.insert(std::make_pair(it->second, it->first));
+    // And grab the last N terms
+    while(inverted_term_counts.size() > NUM_TOP_TERMS)
+        inverted_term_counts.erase(inverted_term_counts.begin());
+    cluster.top_terms.clear();
+    for(std::multimap<float32, String>::iterator it = inverted_term_counts.begin(); it != inverted_term_counts.end(); it++)
+        cluster.top_terms.push_back(it->second);
+}
+
+void update_popular_terms(ClusterInfoList& cluster_list) {
+    for(uint32 i = 0; i < cluster_list.size(); i++)
+        extract_popular_terms(cluster_list[i]);
+}
+
+// Returns true if any membership changes occurred
+bool update_membership(ClusterInfoList& cluster_list, TweetInfoList& tweet_list) {
+    bool any_changed = false;
+    for(TweetInfoList::iterator tw_it = tweet_list.begin(); tw_it != tweet_list.end(); tw_it++) {
+        TweetInfo& tweet = *tw_it;
+
+        float32 best_score = 0.f;
+        ClusterInfo* best_cluster = NULL;
+        for(ClusterInfoList::iterator cl_it = cluster_list.begin(); cl_it != cluster_list.end(); cl_it++) {
+            ClusterInfo& cluster = *cl_it;
+            // Compute a value for this tweet in this cluster. Just scan through
+            // terms and look for any matches, adding the normalized frequency
+            // from the cluster.
+            float32 score = 0.f;
+            for(StringList::iterator term_it = tweet.terms.begin(); term_it != tweet.terms.end(); term_it++) {
+                if (cluster.frequencies.find(*term_it) == cluster.frequencies.end()) continue;
+                score += cluster.frequencies[*term_it];
+            }
+            if (best_cluster == NULL || score > best_score) {
+                best_score = score;
+                best_cluster = &cluster;
+            }
+        }
+
+        // Update pointers: tweet <--> cluster
+        assert(best_cluster != NULL);
+        any_changed = any_changed || (best_cluster != tweet.cluster);
+        if (tweet.cluster != NULL)
+            tweet.cluster->members.erase(&tweet);
+        tweet.cluster = best_cluster;
+        tweet.cluster->members.insert(&tweet);
+    }
+    return any_changed;
+}
+
 }
 
 
@@ -501,30 +614,84 @@ void TwitterAggregateManager::processAggregate() {
         }
     }
 
-    // TEMPORARY: Create a subset of the data
+    // Create the actual aggregate data
     String aggregate_json_serialized;
     {
+
         json::Value agg_json = json::Object();
-        agg_json.put("tweets", json::Array());
-        json::Array& agg_tweets = agg_json.getArray("tweets");
 
-        uint32 total_tweet_count = 0;
-        for(JSONList::const_iterator data_it = children_json.begin(); data_it != children_json.end(); data_it++) {
-            const json::Array& child_tweets = (*data_it)->getArray("tweets");
-            total_tweet_count += child_tweets.size();
+        // Clustering to determine
+        {
+            // Extract terms in more convenient form
+            TweetInfoList tweet_infos;
+            for(JSONList::const_iterator data_it = children_json.begin(); data_it != children_json.end(); data_it++) {
+                const json::Array& child_tweets = (*data_it)->getArray("tweets");
+                for(json::Array::const_iterator tw_it = child_tweets.begin(); tw_it != child_tweets.end(); tw_it++) {
+                    TweetInfo tweet;
+                    const json::Array& terms_list = tw_it->getArray("terms");
+                    for(json::Array::const_iterator term_it = terms_list.begin(); term_it != terms_list.end(); term_it++) {
+                        if (!term_it->isString()) continue;
+                        tweet.terms.push_back(term_it->getString());
+                    }
+                    tweet_infos.push_back(tweet);
+                }
+            }
+
+            ClusterInfoList clusters;
+            init_clusters(clusters, tweet_infos);
+            bool some_changed = true;
+            int it;
+            for(it = 0; some_changed && it < MAX_CLUSTER_ITS; it++) {
+                update_popular_terms(clusters);
+                some_changed = update_membership(clusters, tweet_infos);
+            }
+            // One last update of the terms
+            update_popular_terms(clusters);
+
+            AGG_LOG(fatal, "Finished clustering " << tweet_infos.size() << " tweets after " << it << " iterations");
+
+            agg_json.put("clusters", json::Array());
+            json::Array& agg_clusters = agg_json.getArray("clusters");
+            for(uint32 i = 0; i < clusters.size(); i++) {
+                if (clusters[i].members.empty()) continue;
+                json::Object obj;
+                json::Value cluster_json(obj);
+                json::Array terms_json;
+                for(StringList::iterator ti = clusters[i].top_terms.begin(); ti != clusters[i].top_terms.end(); ti++) {
+                    json::Object term_details_obj;
+                    json::Value term_details(term_details_obj);
+                    term_details.put("term", *ti);
+                    term_details.put("frequency", clusters[i].frequencies[*ti]);
+                    terms_json.push_back(term_details);
+                }
+                cluster_json.put("terms", terms_json);
+                agg_clusters.push_back(cluster_json);
+            }
         }
-        // Select random subset to cap the maximum number of tweets in an
-        // aggregate.
-        #define MAX_AGGREGATE_TWEETS 500
-        uint32 subset_tweet_count = std::min(total_tweet_count, (uint32)MAX_AGGREGATE_TWEETS);
-        float64 subset_tweet_frac = subset_tweet_count / (float64)total_tweet_count;
 
-        for(JSONList::const_iterator data_it = children_json.begin(); data_it != children_json.end(); data_it++) {
-            const json::Array& child_tweets = (*data_it)->getArray("tweets");
-            for(json::Array::const_iterator tw_it = child_tweets.begin(); tw_it != child_tweets.end(); tw_it++)
-                if (agg_tweets.size() < subset_tweet_count &&
-                    subset_tweet_frac < 1.0 && randFloat() <= subset_tweet_frac)
-                    agg_tweets.push_back(*tw_it);
+        // Select a random (representative) subset of the data
+        {
+            agg_json.put("tweets", json::Array());
+            json::Array& agg_tweets = agg_json.getArray("tweets");
+
+            uint32 total_tweet_count = 0;
+            for(JSONList::const_iterator data_it = children_json.begin(); data_it != children_json.end(); data_it++) {
+                const json::Array& child_tweets = (*data_it)->getArray("tweets");
+                total_tweet_count += child_tweets.size();
+            }
+            // Select random subset to cap the maximum number of tweets in an
+            // aggregate.
+#define MAX_AGGREGATE_TWEETS 500
+            uint32 subset_tweet_count = std::min(total_tweet_count, (uint32)MAX_AGGREGATE_TWEETS);
+            float64 subset_tweet_frac = subset_tweet_count / (float64)total_tweet_count;
+
+            for(JSONList::const_iterator data_it = children_json.begin(); data_it != children_json.end(); data_it++) {
+                const json::Array& child_tweets = (*data_it)->getArray("tweets");
+                for(json::Array::const_iterator tw_it = child_tweets.begin(); tw_it != child_tweets.end(); tw_it++)
+                    if (agg_tweets.size() < subset_tweet_count &&
+                        (subset_tweet_frac == 1.0 || randFloat() <= subset_tweet_frac))
+                        agg_tweets.push_back(*tw_it);
+            }
         }
 
         aggregate_json_serialized = json::write(agg_json);
