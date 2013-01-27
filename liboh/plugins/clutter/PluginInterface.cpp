@@ -18,9 +18,9 @@ Simulation* createClutterRenderer(
     HostedObjectPtr obj,
     const SpaceObjectReference& presenceid,
     const String& options,
-    Network::IOStrandPtr
+    Network::IOStrandPtr strand
 ) {
-    return new ClutterRenderer();
+    return new ClutterRenderer(strand);
 }
 
 }

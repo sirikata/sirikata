@@ -94,8 +94,9 @@ void ClutterRenderer::preinit() {
     clutter_threads_init();
 }
 
-ClutterRenderer::ClutterRenderer()
- : mRendererThread(NULL),
+ClutterRenderer::ClutterRenderer(Network::IOStrandPtr strand)
+ : mStrand(strand),
+   mRendererThread(NULL),
    mStage(NULL),
    mActorIDSource(1)
 {
@@ -109,6 +110,9 @@ ClutterRenderer::ClutterRenderer()
     mInvokeHandlers["actor_set_size"] = std::tr1::bind(&ClutterRenderer::invoke_actor_set_size, this, _1);
     mInvokeHandlers["actor_show"] = std::tr1::bind(&ClutterRenderer::invoke_actor_show, this, _1);
     mInvokeHandlers["actor_destroy"] = std::tr1::bind(&ClutterRenderer::invoke_actor_destroy, this, _1);
+    mInvokeHandlers["actor_on_mouse_enter"] = std::tr1::bind(&ClutterRenderer::invoke_actor_on_mouse_enter, this, _1);
+    mInvokeHandlers["actor_on_mouse_motion"] = std::tr1::bind(&ClutterRenderer::invoke_actor_on_mouse_motion, this, _1);
+    mInvokeHandlers["actor_on_mouse_leave"] = std::tr1::bind(&ClutterRenderer::invoke_actor_on_mouse_leave, this, _1);
 
     mInvokeHandlers["rectangle_create"] = std::tr1::bind(&ClutterRenderer::invoke_rectangle_create, this, _1);
     mInvokeHandlers["rectangle_set_color"] = std::tr1::bind(&ClutterRenderer::invoke_rectangle_set_color, this, _1);
@@ -318,6 +322,84 @@ boost::any ClutterRenderer::invoke_actor_destroy(std::vector<boost::any>& params
     return Invokable::asAny(true);
 }
 
+namespace {
+struct MouseEventData {
+    MouseEventData(Network::IOStrandPtr s, Invokable* c)
+     : strand(s), cb(c)
+    {}
+
+    Network::IOStrandPtr strand;
+    Invokable* cb;
+};
+void invokeInvokable(Invokable* cb) {
+    cb->invoke();
+}
+// FIXME leaking MouseEventDatas -- when can we safely clean up?
+gboolean clutter_mouse_event_cb(ClutterActor *actor, ClutterEvent *event, gpointer data) {
+    MouseEventData* md = static_cast<MouseEventData*>(data);
+    md->strand->post(std::tr1::bind(&invokeInvokable, md->cb));
+    return /*CLUTTER_EVENT_STOP*/ TRUE;
+}
+}
+
+boost::any ClutterRenderer::invoke_actor_on_mouse_enter(std::vector<boost::any>& params) {
+    assert(params.size() == 2 &&
+        Invokable::anyIsNumeric(params[0]) && // actor_id
+        Invokable::anyIsInvokable(params[1]) // callback
+    );
+    int actor_id = Invokable::anyAsNumeric(params[0]);
+    ClutterActor* actor = get_actor_by_id(actor_id);
+    if (actor == NULL) return Invokable::asAny(false);
+
+    Invokable* cb = Invokable::anyAsInvokable(params[1]);
+
+    SyncOpClosure* closure = new SyncOpClosure;
+    clutter_actor_set_reactive(actor, TRUE);
+    g_signal_connect(G_OBJECT(actor), "enter-event", G_CALLBACK(clutter_mouse_event_cb), new MouseEventData(mStrand, cb));
+    closure->finish();
+
+    return Invokable::asAny(true);
+}
+
+boost::any ClutterRenderer::invoke_actor_on_mouse_motion(std::vector<boost::any>& params) {
+    assert(params.size() == 2 &&
+        Invokable::anyIsNumeric(params[0]) && // actor_id
+        Invokable::anyIsInvokable(params[1]) // callback
+    );
+    int actor_id = Invokable::anyAsNumeric(params[0]);
+    ClutterActor* actor = get_actor_by_id(actor_id);
+    if (actor == NULL) return Invokable::asAny(false);
+
+    Invokable* cb = Invokable::anyAsInvokable(params[1]);
+
+    SyncOpClosure* closure = new SyncOpClosure;
+    clutter_actor_set_reactive(actor, TRUE);
+    g_signal_connect(G_OBJECT(actor), "motion-event", G_CALLBACK(clutter_mouse_event_cb), new MouseEventData(mStrand, cb));
+    closure->finish();
+
+    return Invokable::asAny(true);
+}
+
+boost::any ClutterRenderer::invoke_actor_on_mouse_leave(std::vector<boost::any>& params) {
+    assert(params.size() == 2 &&
+        Invokable::anyIsNumeric(params[0]) && // actor_id
+        Invokable::anyIsInvokable(params[1]) // callback
+    );
+    int actor_id = Invokable::anyAsNumeric(params[0]);
+    ClutterActor* actor = get_actor_by_id(actor_id);
+    if (actor == NULL) return Invokable::asAny(false);
+
+    Invokable* cb = Invokable::anyAsInvokable(params[1]);
+
+    SyncOpClosure* closure = new SyncOpClosure;
+    clutter_actor_set_reactive(actor, TRUE);
+    g_signal_connect(G_OBJECT(actor), "leave-event", G_CALLBACK(clutter_mouse_event_cb), new MouseEventData(mStrand, cb));
+    closure->finish();
+
+    return Invokable::asAny(true);
+}
+
+
 boost::any ClutterRenderer::invoke_rectangle_create(std::vector<boost::any>& params) {
     int actor_id = mActorIDSource++;
     ClutterColor default_color = { 0x00, 0x00, 0x00, 0xff };
@@ -470,9 +552,11 @@ boost::any ClutterRenderer::invoke_text_set_single_line(std::vector<boost::any>&
     return Invokable::asAny(true);
 }
 
-static void clutter_text_on_activate_cb(ClutterText* self, gpointer data) {
+namespace {
+void clutter_text_activate_cb(ClutterActor* self, gpointer data) {
     Invokable* cb = static_cast<Invokable*>(data);
     cb->invoke();
+}
 }
 
 boost::any ClutterRenderer::invoke_text_on_activate(std::vector<boost::any>& params) {
@@ -487,7 +571,7 @@ boost::any ClutterRenderer::invoke_text_on_activate(std::vector<boost::any>& par
     Invokable* cb = Invokable::anyAsInvokable(params[1]);
 
     SyncOpClosure* closure = new SyncOpClosure;
-    g_signal_connect(G_OBJECT(actor), "activate", G_CALLBACK(clutter_text_on_activate_cb), cb);
+    g_signal_connect(G_OBJECT(actor), "activate", G_CALLBACK(clutter_text_activate_cb), cb);
     closure->finish();
 
     return Invokable::asAny(true);

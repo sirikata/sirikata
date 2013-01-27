@@ -19,7 +19,7 @@ public:
     // threads don't cause any problems.
     static void preinit();
 
-    ClutterRenderer();
+    ClutterRenderer(Network::IOStrandPtr strand);
 
     // Service Interface
     virtual void start();
@@ -42,6 +42,9 @@ private:
     boost::any invoke_actor_set_size(std::vector<boost::any>& params);
     boost::any invoke_actor_show(std::vector<boost::any>& params);
     boost::any invoke_actor_destroy(std::vector<boost::any>& params);
+    boost::any invoke_actor_on_mouse_enter(std::vector<boost::any>& params);
+    boost::any invoke_actor_on_mouse_motion(std::vector<boost::any>& params);
+    boost::any invoke_actor_on_mouse_leave(std::vector<boost::any>& params);
 
     boost::any invoke_rectangle_create(std::vector<boost::any>& params);
     boost::any invoke_rectangle_set_color(std::vector<boost::any>& params);
@@ -64,6 +67,8 @@ private:
     boost::any invoke_circle_set_border_width(std::vector<boost::any>& params);
 
     ClutterActor* get_actor_by_id(int actor_id);
+
+    Network::IOStrandPtr mStrand;
 
     Thread* mRendererThread;
     ClutterStage* mStage;
