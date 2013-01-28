@@ -166,7 +166,6 @@ bool checkTermRegion(
     float32 cur_min_radius, // current minimum to match target # results
     // Object/aggregate props
     const Twitter::TermBloomFilter& bloom,
-    bool bloom_empty,
     BoundingSphere3f bnds)
 {
     if (term.empty()) return false;
@@ -796,7 +795,7 @@ private:
         bool updateSatisfies(const String& term, Vector3 region_min, Vector3 region_max) {
             satisfies = checkTermRegion(
                 term, region_min, region_max, getParent()->mMinResultRadius,
-                rtnode->data().getBloomFilter(), rtnode->data().getBloomFilterEmpty(), rtnode->data().getBounds()
+                rtnode->data().getBloomFilter(), rtnode->data().getBounds()
             );
             return satisfies;
         }
@@ -900,7 +899,7 @@ private:
             NodeData nd = node->childData(objidx, t);
             return checkTermRegion(
                 dquery->term, dquery->region_min, dquery->region_max, mMinResultRadius,
-                nd.getBloomFilter(), nd.getBloomFilterEmpty(), nd.getBounds()
+                nd.getBloomFilter(), nd.getBounds()
             );
         }
         bool includeAddition(ChangeReason act) const {
@@ -1108,7 +1107,7 @@ private:
                             bool parent_satisfies =
                                 checkTermRegion(
                                     query_term, query_region_min, query_region_max, mMinResultRadius,
-                                    this_parent->data().getBloomFilter(), this_parent->data().getBloomFilterEmpty(), this_parent->data().getBounds()
+                                    this_parent->data().getBloomFilter(), this_parent->data().getBounds()
                                 );
                             visited++;
                             if (!parent_satisfies) {
@@ -1177,7 +1176,7 @@ private:
                         bool child_satisfies =
                             checkTermRegion(
                                 query_term, query_region_min, query_region_max, mMinResultRadius,
-                                nd.getBloomFilter(), nd.getBloomFilterEmpty(), nd.getBounds()
+                                nd.getBloomFilter(), nd.getBounds()
                             );
                         visited++;
                         if (child_satisfies) {
