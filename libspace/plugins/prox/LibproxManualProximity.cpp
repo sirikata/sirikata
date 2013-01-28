@@ -426,7 +426,7 @@ void LibproxManualProximity::aggregateBoundsUpdated(ProxAggregator* handler, con
 
 void LibproxManualProximity::aggregateQueryDataUpdated(ProxAggregator* handler, const ObjectReference& objid, const String& qd) {
     if (static_cast<ProxQueryHandler*>(handler) != mLocalQueryHandler[OBJECT_CLASS_STATIC].handler) return;
-    LibproxProximityBase::aggregateQueryDataUpdated(objid, qd);
+    LibproxProximityBase::aggregateQueryDataUpdated(objid, qd, (handler->rootAggregateID() == objid));
 }
 
 void LibproxManualProximity::aggregateDestroyed(ProxAggregator* handler, const ObjectReference& objid) {

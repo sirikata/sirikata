@@ -712,7 +712,7 @@ void LibproxProximityBase::aggregateBoundsUpdated(const ObjectReference& objid, 
     mAggregateManager->generateAggregateMesh(objid.getAsUUID(), Duration::seconds(300.0+rand()%300));
 }
 
-void LibproxProximityBase::aggregateQueryDataUpdated(const ObjectReference& objid, const String& extra_query_data) {
+void LibproxProximityBase::aggregateQueryDataUpdated(const ObjectReference& objid, const String& extra_query_data, bool is_root) {
     mContext->mainStrand->post(
         std::tr1::bind(
             &LibproxProximityBase::updateAggregateQueryData, this,
@@ -720,6 +720,9 @@ void LibproxProximityBase::aggregateQueryDataUpdated(const ObjectReference& obji
         ),
         "LibproxProximityBase::updateAggregateQueryData"
     );
+    // If this is the root, notify top level pinto
+    if (is_root)
+        mServerQuerier->updateQueryData(extra_query_data);
 }
 
 void LibproxProximityBase::aggregateDestroyed(const ObjectReference& objid) {

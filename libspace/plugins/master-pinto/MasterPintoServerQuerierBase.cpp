@@ -25,7 +25,9 @@ MasterPintoServerQuerierBase::MasterPintoServerQuerierBase(SpaceContext* ctx, co
    mRegion(),
    mRegionDirty(true),
    mMaxRadius(0),
-   mMaxRadiusDirty(true)
+   mMaxRadiusDirty(true),
+   mQueryData(),
+   mQueryDataDirty(false)
 {
     OptionSet* optionsSet = OptionSet::getOptions("space_master_pinto",NULL);
     optionsSet->parse(params);
@@ -93,8 +95,18 @@ void MasterPintoServerQuerierBase::updateLargestObject(float max_radius) {
     );
 }
 
+void MasterPintoServerQuerierBase::updateQueryData(const String& qd) {
+    MP_LOG(debug, "Updating query data (length " << qd.size() << ")");
+    mQueryData = qd;
+    mQueryDataDirty = true;
+    mIOStrand->post(
+        std::tr1::bind(&MasterPintoServerQuerierBase::tryServerUpdate, this),
+        "MasterPintoServerQuerierBase::tryServerUpdate"
+    );
+}
+
 void MasterPintoServerQuerierBase::tryServerUpdate() {
-    if (!mRegionDirty && !mMaxRadiusDirty)
+    if (!mRegionDirty && !mMaxRadiusDirty && !mQueryDataDirty)
         return;
 
     if (!mConnected) {
@@ -120,6 +132,11 @@ void MasterPintoServerQuerierBase::tryServerUpdate() {
         mMaxRadiusDirty = false;
         Sirikata::Protocol::MasterPinto::ILargestObjectUpdate update = msg.mutable_largest();
         update.set_radius(mMaxRadius);
+    }
+
+    if (mQueryDataDirty) {
+        mQueryDataDirty = false;
+        msg.set_query_data(mQueryData);
     }
 
     String serialized = serializePBJMessage(msg);
