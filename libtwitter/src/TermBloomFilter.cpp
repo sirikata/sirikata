@@ -139,6 +139,15 @@ bool TermBloomFilter::subsetOf(const TermBloomFilter& other) const {
     return true;
 }
 
+uint32 TermBloomFilter::count() const {
+    // FIXME there's a much smarter more efficient way to count these
+    uint32 c = 0;
+    for(size_t i = 0; i < mFilterBytes; i++) {
+        for(int off = 0; off < 8; off++)
+            if ( ((mFilter[i] >> off) & 0x1) != 0) c++;
+    }
+    return c;
+}
 
 } // namespace Twitter
 } // namespace Sirikata

@@ -26,6 +26,9 @@ public:
     const uint32 size() const { return mFilterBuckets; }
     const uint16 hashes() const { return mNumHashes; }
 
+    /** Get the number of buckets set to 1. */
+    uint32 count() const;
+
     /** Insert the term into the bloom filter, setting each of it's hash buckets
      *  to true.
      */
