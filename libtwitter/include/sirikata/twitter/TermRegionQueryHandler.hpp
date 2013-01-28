@@ -662,6 +662,13 @@ public:
         }
         if (max_results_updated)
             detailed_query->max_results = max_results;
+
+        // Allow relaxation to start happening immediately in case
+        // this needs refinement
+        QueryMapIterator query_it = mQueries.find(detailed_query);
+        assert(query_it != mQueries.end());
+        QueryState* state = query_it->second;
+        state->cut->mMinResultRadiusRelaxDelayIts = 0;
     }
 
 
