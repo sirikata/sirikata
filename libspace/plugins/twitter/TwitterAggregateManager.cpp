@@ -789,7 +789,9 @@ void TwitterAggregateManager::processAggregate() {
         else {
             // Otherwise, we're good for now and can allow parent(s) to proceed.
             for(AggregateObjectSet::const_iterator it = parents.begin(); it != parents.end(); it++) {
-                if ((*it)->dirty_children.empty())
+                // Need to check dirty marker because relationships may have
+                // changed and it could have already been processed.
+                if ((*it)->dirty && (*it)->dirty_children.empty())
                     ensureInReadyList(*it);
             }
         }
