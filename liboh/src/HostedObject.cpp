@@ -1203,7 +1203,12 @@ void HostedObject::sendLocUpdateRequest(const SpaceID& space, const ObjectRefere
         return;
     }
 
-    assert(pd.updateFields != PerPresenceData::LOC_FIELD_NONE);
+    // We can get here and have no updates because requests can get
+    // coalesced if one of them needs to do an async lookup of query
+    // data for a mesh. However, we'll still get invoked twice. We can
+    // safely ignore this request.
+    if (pd.updateFields == PerPresenceData::LOC_FIELD_NONE) return;
+
     // Generate and send an update to Loc
     Protocol::Loc::Container container;
     Protocol::Loc::ILocationUpdateRequest loc_request = container.mutable_update_request();
