@@ -168,8 +168,6 @@ bool checkTermRegion(
     const Twitter::TermBloomFilter& bloom,
     BoundingSphere3f bnds)
 {
-    if (term.empty()) return false;
-
     // NOTE: This must be <= because the radius is set to the *exact*
     // value to match the budget, but there may be a ton of objects
     // matching this size. To ensure we're under budget, we have to
@@ -188,7 +186,7 @@ bool checkTermRegion(
     // term... The empty term check let's us degrade to region query for
     // convenience, but generally shouldn't be used since it'll generate too
     // many results for large regions.
-    return bloom.lookup(term);
+    return (term.empty() || bloom.lookup(term));
 }
 }
 
