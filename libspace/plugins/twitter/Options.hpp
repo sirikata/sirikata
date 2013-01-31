@@ -14,6 +14,7 @@
 #define OPT_TWAGGMGR_LOCAL_URL_PREFIX  "twaggmgr.local-url-prefix"
 #define OPT_TWAGGMGR_GEN_THREADS       "twaggmgr.gen-threads"
 #define OPT_TWAGGMGR_UPLOAD_THREADS    "twaggmgr.upload-threads"
+#define OPT_TWAGGMGR_BASELINE_DATA     "twaggmgr.baseline"
 
 
 // Parameters for twitter bloom filters

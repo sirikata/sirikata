@@ -35,9 +35,15 @@ class SIRIKATA_SPACE_EXPORT TwitterAggregateManager : public AggregateManager {
     virtual void generateAggregateMesh(const UUID& uuid, const Duration& delayFor = Duration::milliseconds(1.0f) );
 
   private:
+    typedef std::tr1::unordered_map<String, float64> TermFrequencyMap;
 
     LocationService* mLoc;
     Transfer::OAuthParamsPtr mOAuth;
+
+    // This is mutable since we load it in the constructor, but it's
+    // not lock protected because it never changes after loading
+    TermFrequencyMap mBaselineFrequencies;
+    float64 mMinBaselineFrequency;
 
     // For access to all aggregate data structures
     boost::recursive_mutex mAggregateMutex;
@@ -137,6 +143,9 @@ class SIRIKATA_SPACE_EXPORT TwitterAggregateManager : public AggregateManager {
 
     // Command handlers
     void commandStats(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
+
+
+    void loadBaselineData(const String& data_file);
 
 
     // Returns true if an aggregate with the given ID currently exists.

@@ -26,6 +26,7 @@ namespace json = json_spirit;
 TwitterAggregateManager::TwitterAggregateManager(LocationService* loc, Transfer::OAuthParamsPtr oauth, const String& username)
  :  mLoc(loc),
     mOAuth(oauth),
+    mMinBaselineFrequency(0),
     mDirtyAggregateCount(0),
     mAggregateDataCache(1000, JSONValuePtr())
 {
@@ -35,8 +36,12 @@ TwitterAggregateManager::TwitterAggregateManager(LocationService* loc, Transfer:
     String local_url_prefix = GetOptionValue<String>(OPT_TWAGGMGR_LOCAL_URL_PREFIX);
     uint16 n_gen_threads = GetOptionValue<uint16>(OPT_TWAGGMGR_GEN_THREADS);
     uint16 n_upload_threads = GetOptionValue<uint16>(OPT_TWAGGMGR_UPLOAD_THREADS);
+    String baseline_data_file = GetOptionValue<String>(OPT_TWAGGMGR_BASELINE_DATA);
     mNumAggregationThreads = n_gen_threads;
 
+    if (!baseline_data_file.empty()) {
+        loadBaselineData(baseline_data_file);
+    }
 
     if (mLoc->context()->commander()) {
         mLoc->context()->commander()->registerCommand(
@@ -66,6 +71,46 @@ TwitterAggregateManager::~TwitterAggregateManager() {
         delete mAggregationThreads[i];
     }
     delete mAggregationService;
+}
+
+void TwitterAggregateManager::loadBaselineData(const String& data_file) {
+    AGG_LOG(info, "Loading baseline data: " << data_file);
+
+    std::ifstream src_data(data_file.c_str());
+    if (!src_data) {
+        AGG_LOG(error, "Failed to load requested baseline data: " << data_file << ", proceeding with no baseline data.");
+        return;
+    }
+
+    json::Value freq_data;
+    if (!json::read(src_data, freq_data)) {
+        AGG_LOG(error, "Failed to load parse baseline data: " << data_file << ", proceeding with no baseline data.");
+        return;
+    }
+    if (!freq_data.isObject()) {
+        AGG_LOG(error, "Incorrect baseline data format: " << data_file << ", proceeding with no baseline data.");
+        return;
+    }
+
+    mMinBaselineFrequency = 1.0;
+    json::Object& freq_data_obj = freq_data.getObject();
+    for(json::Object::iterator it = freq_data_obj.begin(); it != freq_data_obj.end(); it++) {
+        if (!it->second.isReal()) {
+            AGG_LOG(warning, "Found value for term frequency that wasn't a Real.");
+            continue;
+        }
+        float64 val = it->second.getReal();
+        mBaselineFrequencies[it->first] = val;
+        mMinBaselineFrequency = std::min(mMinBaselineFrequency, val);
+    }
+    // Just in case we didn't get any good data, make sure we're in a
+    // good state
+    if (mBaselineFrequencies.empty()) {
+        AGG_LOG(error, "Loaded baseline file, but failed to extract any valid frequencies.");
+        mMinBaselineFrequency = 0;
+    }
+
+    AGG_LOG(info, "Finished loading baseline data: " << data_file);
 }
 
 void TwitterAggregateManager::addLeafObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const Transfer::URI& mesh) {
@@ -393,7 +438,7 @@ String ServiceIfNotDefault(const String& s) {
 }
 
 typedef std::vector<String> StringList;
-typedef std::tr1::unordered_map<String, float32> TermFrequencyMap;
+typedef std::tr1::unordered_map<String, float64> TermFrequencyMap;
 struct TweetInfo;
 struct ClusterInfo;
 struct TweetInfo {
@@ -429,7 +474,21 @@ void init_clusters(ClusterInfoList& cluster_list, TweetInfoList& tweet_list) {
     }
 }
 
-void extract_popular_terms(ClusterInfo& cluster) {
+float64 get_baseline_freq(const String& term, TermFrequencyMap& baseline_freq, float64 min_baseline_freq) {
+    // No baseline data available, leave everything at it's existing weight
+    if (baseline_freq.empty()) {
+        assert(min_baseline_freq == 0);
+        return 1;
+    }
+
+    TermFrequencyMap::iterator it = baseline_freq.find(term);
+    if (it != baseline_freq.end()) return it->second;
+    // If we can't find the term, it's less common than even the
+    // minimum. Use by half as a completely arbitrary guess.
+    return min_baseline_freq / 2;
+}
+
+void extract_popular_terms(ClusterInfo& cluster, TermFrequencyMap& baseline_freq, float64 min_baseline_freq) {
     // Can end up with empty clusters -- too few tweets or just because
     // clustering naturally groups tweet into fewer than the max # of clusters
     if (cluster.members.empty())
@@ -446,43 +505,50 @@ void extract_popular_terms(ClusterInfo& cluster) {
                 cluster.frequencies[term] += 1.f;
         }
     }
-    // Normalize by the number of tweets, giving a value something like the
-    // fraction of tweets the term appeared in. This is important for computing
-    // similarities later.
+
+    // Normalize out baseline frequencies so we weight common words
+    // significantly less and unusual words highly.
+    //
+    // Also, normalize by the number of tweets, giving a value
+    // something like the fraction of tweets the term appeared
+    // in. This is important for computing similarities later. It
+    // won't affect the upcoming calcluation since it's a constant.
+    float cluster_size = cluster.members.size();
     for(TermFrequencyMap::iterator it = cluster.frequencies.begin(); it != cluster.frequencies.end(); it++)
-        it->second = it->second / float32(cluster.members.size());
+        it->second = (it->second/get_baseline_freq(it->first, baseline_freq, min_baseline_freq)) / cluster_size;
+
 
     // Get sorted by inserting into a multimap by frequency
-    std::multimap<float32, String> inverted_term_counts;
+    std::multimap<float64, String> inverted_term_counts;
     for(TermFrequencyMap::iterator it = cluster.frequencies.begin(); it != cluster.frequencies.end(); it++)
         inverted_term_counts.insert(std::make_pair(it->second, it->first));
     // And grab the last N terms
     while(inverted_term_counts.size() > NUM_TOP_TERMS)
         inverted_term_counts.erase(inverted_term_counts.begin());
     cluster.top_terms.clear();
-    for(std::multimap<float32, String>::iterator it = inverted_term_counts.begin(); it != inverted_term_counts.end(); it++)
+    for(std::multimap<float64, String>::iterator it = inverted_term_counts.begin(); it != inverted_term_counts.end(); it++)
         cluster.top_terms.push_back(it->second);
 }
 
-void update_popular_terms(ClusterInfoList& cluster_list) {
+void update_popular_terms(ClusterInfoList& cluster_list, TermFrequencyMap& baseline_freq, float64 min_baseline_freq) {
     for(uint32 i = 0; i < cluster_list.size(); i++)
-        extract_popular_terms(cluster_list[i]);
+        extract_popular_terms(cluster_list[i], baseline_freq, min_baseline_freq);
 }
 
 // Returns true if any membership changes occurred
-bool update_membership(ClusterInfoList& cluster_list, TweetInfoList& tweet_list) {
+bool update_membership(ClusterInfoList& cluster_list, TweetInfoList& tweet_list, TermFrequencyMap& baseline_freq, float64 min_baseline_freq) {
     bool any_changed = false;
     for(TweetInfoList::iterator tw_it = tweet_list.begin(); tw_it != tweet_list.end(); tw_it++) {
         TweetInfo& tweet = *tw_it;
 
-        float32 best_score = 0.f;
+        float64 best_score = 0.f;
         ClusterInfo* best_cluster = NULL;
         for(ClusterInfoList::iterator cl_it = cluster_list.begin(); cl_it != cluster_list.end(); cl_it++) {
             ClusterInfo& cluster = *cl_it;
             // Compute a value for this tweet in this cluster. Just scan through
             // terms and look for any matches, adding the normalized frequency
             // from the cluster.
-            float32 score = 0.f;
+            float64 score = 0.f;
             for(StringList::iterator term_it = tweet.terms.begin(); term_it != tweet.terms.end(); term_it++) {
                 if (cluster.frequencies.find(*term_it) == cluster.frequencies.end()) continue;
                 score += cluster.frequencies[*term_it];
@@ -642,11 +708,11 @@ void TwitterAggregateManager::processAggregate() {
             bool some_changed = true;
             int it;
             for(it = 0; some_changed && it < MAX_CLUSTER_ITS; it++) {
-                update_popular_terms(clusters);
-                some_changed = update_membership(clusters, tweet_infos);
+                update_popular_terms(clusters, mBaselineFrequencies, mMinBaselineFrequency);
+                some_changed = update_membership(clusters, tweet_infos, mBaselineFrequencies, mMinBaselineFrequency);
             }
             // One last update of the terms
-            update_popular_terms(clusters);
+            update_popular_terms(clusters, mBaselineFrequencies, mMinBaselineFrequency);
 
             AGG_LOG(fatal, "Finished clustering " << tweet_infos.size() << " tweets after " << it << " iterations");
 

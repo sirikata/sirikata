@@ -22,6 +22,7 @@ static void InitPluginOptions() {
         .addOption(new OptionValue(OPT_TWAGGMGR_LOCAL_URL_PREFIX, "", Sirikata::OptionValueType<String>(), "Prefix to append to locally saved meshes"))
         .addOption(new OptionValue(OPT_TWAGGMGR_GEN_THREADS, "4", Sirikata::OptionValueType<uint16>(), "Number of AggregateManager mesh generation threads"))
         .addOption(new OptionValue(OPT_TWAGGMGR_UPLOAD_THREADS, "8", Sirikata::OptionValueType<uint16>(), "Number of AggregateManager mesh upload threads"))
+        .addOption(new OptionValue(OPT_TWAGGMGR_BASELINE_DATA, "", Sirikata::OptionValueType<String>(), "File to load baseline term frequency data from to use to reduce weight of common terms"))
         ;
 
     Sirikata::InitializeClassOptions ico(SIRIKATA_OPTIONS_MODULE, NULL,
