@@ -41,15 +41,19 @@ bool parseQueryRequest(const String& query, SolidAngle* qangle_out, uint32* max_
     if (!json::read(query, parsed_query))
         return false;
 
-    if ((!parsed_query.contains("angle") || !parsed_query.get("angle").isReal()) ||
+    // Must have at least one value, remaining get set to default
+    // values NOTE: Make sure you don't conflict with these parameter
+    // names since their presence will let this pass and use solid
+    // angle queries!
+    if ((!parsed_query.contains("angle") || !parsed_query.get("angle").isReal()) &&
         (!parsed_query.contains("max_results") || !parsed_query.get("max_results").isInt()))
     {
         // Must contain at least one update
         return false;
     }
 
-    *qangle_out = SolidAngle( parsed_query.getReal("angle", SolidAngle::MaxVal) );
-    *max_results_out = parsed_query.getInt("max_results", 0);
+    *qangle_out = SolidAngle( parsed_query.getReal("angle", NoUpdateSolidAngle.asFloat()) );
+    *max_results_out = parsed_query.getInt("max_results", (int)NoUpdateMaxResults);
 
     return true;
 }
@@ -761,8 +765,8 @@ void ObjectQueryHandler::handleUpdateObjectQuery(Liveness::Token alive, const Ob
         ObjectQueryDataPtr query_props(new ObjectQueryData());
         query_props->loc = loc;
         query_props->bounds = bounds;
-        query_props->angle = angle;
-        query_props->max_results = max_results;
+        query_props->angle = (angle != NoUpdateSolidAngle) ? angle : SolidAngle::Max;
+        query_props->max_results = (max_results != NoUpdateMaxResults) ? max_results : 100000;
         if (custom_query_string != NoUpdateCustomQueryString)
             query_props->custom_query_string = custom_query_string;
         mObjectQueries[object] = query_props;
