@@ -61,6 +61,7 @@ public:
      : mContext(ctx),
        mRegion(),
        mLargest(),
+       mQueryData(),
        mRootNodeID(UUID::random()),
        mSeqnoSource(1)
     {}
@@ -107,6 +108,14 @@ public:
         );
     }
 
+    virtual void updateQueryData(const String& qd) {
+        mQueryData = qd;
+        mContext->mainStrand->post(
+            std::tr1::bind(&LocalPintoServerQuerier::notifyLocUpdate, this)
+        );
+    }
+
+
     virtual void updateQuery(const String& update) {
     }
 
@@ -148,6 +157,8 @@ private:
             msg_bounds.set_center_bounds_radius( mRegion.toBoundingSphere().radius() );
             msg_bounds.set_max_object_size(mLargest);
 
+            addition.set_query_data(mQueryData);
+
             addition.set_type(Sirikata::Protocol::Prox::ObjectAddition::Aggregate);
         }
 
@@ -174,6 +185,8 @@ private:
             msg_bounds.set_center_offset( Vector3f(0,0,0) );
             msg_bounds.set_center_bounds_radius( mRegion.toBoundingSphere().radius() );
             msg_bounds.set_max_object_size(mLargest);
+
+            addition.set_query_data(mQueryData);
 
             addition.set_type(Sirikata::Protocol::Prox::ObjectAddition::Object);
             addition.set_parent(mRootNodeID);
@@ -209,6 +222,8 @@ private:
         msg_bounds.set_center_bounds_radius( mRegion.toBoundingSphere().radius() );
         msg_bounds.set_max_object_size(mLargest);
 
+        update.set_query_data(mQueryData);
+
         // notify wants to only pass through values and tries to copy the
         // LocProtocolLocUpdate by default -- we need to jump through hoops and
         // specify the exact template types explicitly to make this work
@@ -221,6 +236,7 @@ private:
     SpaceContext* mContext;
     BoundingBox3f3f mRegion;
     float32 mLargest;
+    String mQueryData;
     UUID mRootNodeID;
     uint64 mSeqnoSource;
 }; // PintoServerQuerier

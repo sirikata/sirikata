@@ -69,6 +69,7 @@ message PintoMessage {
     optional RegionIDUpdate server = 1;
     optional RegionUpdate region = 2;
     optional LargestObjectUpdate largest = 3;
+    optional bytes query_data = 6;
 
     // Removed. Do not use. Maintained so the field number is not reused.
     //optional QueryUpdate query = 4;

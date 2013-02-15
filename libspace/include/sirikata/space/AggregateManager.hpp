@@ -14,6 +14,8 @@ namespace Sirikata {
 class SIRIKATA_SPACE_EXPORT AggregateManager : public LocationServiceListener {
 
   public:
+    virtual void addLeafObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const Transfer::URI& mesh) = 0;
+    virtual void removeLeafObject(const UUID& uuid) = 0;
     virtual void addAggregate(const UUID& uuid) = 0;
     virtual void removeAggregate(const UUID& uuid) = 0;
     virtual void addChild(const UUID& uuid, const UUID& child_uuid) = 0;

@@ -252,6 +252,13 @@ PresenceEntry.prototype.proxRemovedEvent = function (visibleObj,visTo)
          return baseSystem.http(type,url, headers, system.wrapCallbackForSelf(cb));
      };
 
+     // Newer, nicer API
+     system.http = {};
+     system.http.get = function(url, headers, cb)
+     {
+         return baseSystem.http_get(url, headers, system.wrapCallbackForSelf(cb));
+     };
+
      /**
       @ignore
       Necessary so that script messages will be evaluated in global object rather than from within scriptable.
@@ -646,6 +653,26 @@ PresenceEntry.prototype.proxRemovedEvent = function (visibleObj,visTo)
       system.getScript = function()
       {
           return baseSystem.getScript.apply(baseSystem,arguments);
+      };
+
+     /** @function
+         Register a function to be invoked when an external command is sent to
+         the object. By default none is registered and such requests will be
+         ignored. This allows some external control or input.
+         @param {function} cb the callback to invoke, which should accept a
+         single object parameter containing the request and return an object
+         result.
+         @return nothing
+       */
+      system.registerCommandHandler = function(cb)
+      {
+          // A wrapped version takes care of the conversion to JSON to make
+          // translation to a native representation simpler.
+          var wrapped_cb = function(data) {
+              var result = cb(JSON.parse(data));
+              return JSON.stringify(result);
+          };
+          return baseSystem.registerCommandHandler.apply(baseSystem,[wrapped_cb]);
       };
 
 
@@ -1542,6 +1569,29 @@ PresenceEntry.prototype.proxRemovedEvent = function (visibleObj,visTo)
          var args = [baseSystem, cb];
          if (full !== undefined) args.push(full);
          vis.__origLoadMesh.apply(vis, args);
+     };
+
+     // FIXME see note immediately above
+     system.__visibleOnPositionChanged = function(vis, cb) {
+         vis.__origOnPositionChanged.apply(vis, [baseSystem, cb]);
+     };
+     system.__visibleOnVelocityChanged = function(vis, cb) {
+         vis.__origOnVelocityChanged.apply(vis, [baseSystem, cb]);
+     };
+     system.__visibleOnOrientationChanged = function(vis, cb) {
+         vis.__origOnOrientationChanged.apply(vis, [baseSystem, cb]);
+     };
+     system.__visibleOnOrientationVelChanged = function(vis, cb) {
+         vis.__origOnOrientationVelChanged.apply(vis, [baseSystem, cb]);
+     };
+     system.__visibleOnScaleChanged = function(vis, cb) {
+         vis.__origOnScaleChanged.apply(vis, [baseSystem, cb]);
+     };
+     system.__visibleOnMeshChanged = function(vis, cb) {
+         vis.__origOnMeshChanged.apply(vis, [baseSystem, cb]);
+     };
+     system.__visibleOnPhysicsChanged = function(vis, cb) {
+         vis.__origOnPhysicsChanged.apply(vis, [baseSystem, cb]);
      };
      
   })();

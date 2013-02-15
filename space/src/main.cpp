@@ -307,9 +307,10 @@ int main(int argc, char** argv) {
     String aggmgr_username = GetOptionValue<String>(OPT_AGGMGR_USERNAME);
     Transfer::OAuthParamsPtr aggmgr_oauth;
     // Currently you need to explicitly override hostname to enable upload
-    if (!aggmgr_hostname.empty()&&
-        !aggmgr_consumer_key.empty() && !aggmgr_consumer_secret.empty() &&
-        !aggmgr_access_key.empty() && !aggmgr_access_secret.empty()) {
+    if (!aggmgr_hostname.empty() //&&
+        //!aggmgr_consumer_key.empty() && !aggmgr_consumer_secret.empty() &&
+        //!aggmgr_access_key.empty() && !aggmgr_access_secret.empty()
+    ) {
         aggmgr_oauth = Transfer::OAuthParamsPtr(
             new Transfer::OAuthParams(
                 aggmgr_hostname, aggmgr_service,

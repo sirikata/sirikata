@@ -62,6 +62,7 @@ class ServerIDMap;
 class HostedObject;
 typedef std::tr1::weak_ptr<HostedObject> HostedObjectWPtr;
 typedef std::tr1::shared_ptr<HostedObject> HostedObjectPtr;
+class QueryDataLookup;
 
 typedef Provider< ConnectionEventListener* > ConnectionEventProvider;
 
@@ -78,7 +79,10 @@ class SIRIKATA_OH_EXPORT ObjectHost
       public SpaceNodeSessionManager, private SpaceNodeSessionListener,
       public ObjectNodeSessionProvider
 {
+  public:
+    typedef std::tr1::function<QueryDataLookup*(const String& opts)> QueryDataLookupConstructor;
 
+  private:
     ObjectHostContext* mContext;
 
     typedef std::tr1::unordered_map<SpaceID,SessionManager*,SpaceID::Hasher> SpaceSessionManagerMap;
@@ -91,6 +95,8 @@ class SIRIKATA_OH_EXPORT ObjectHost
     OH::Storage* mStorage;
     OH::PersistedObjectSet* mPersistentSet;
     OH::ObjectQueryProcessor* mQueryProcessor;
+    QueryDataLookupConstructor mQueryDataLookupConstructor;
+    String mQueryDataLookupConstructorOpts;
 
     SpaceSessionManagerMap mSessionManagers;
 
@@ -182,6 +188,11 @@ public:
     void setQueryProcessor(OH::ObjectQueryProcessor* proc) { mQueryProcessor = proc; }
     OH::ObjectQueryProcessor* getQueryProcessor() { return mQueryProcessor; }
 
+    // Get and set the storage backend to use for persistent object storage.
+    void setQueryDataLookupConstructor(QueryDataLookupConstructor qdl, const String& opts) { mQueryDataLookupConstructor = qdl; mQueryDataLookupConstructorOpts = opts; }
+    QueryDataLookupConstructor getQueryDataLookupConstructor() { return mQueryDataLookupConstructor; }
+    const String& getQueryDataLookupConstructorOpts() { return mQueryDataLookupConstructorOpts; }
+
     std::tr1::shared_ptr<Transfer::TransferPool> getTransferPool() { return mTransferPool; }
 
     // Primary HostedObject API
@@ -199,7 +210,7 @@ public:
         const String& mesh,
         const String& physics,
         const String& query,
-        const String& zernike,
+        const String& query_data,
         ConnectedCallback connected_cb,
         MigratedCallback migrated_cb, StreamCreatedCallback stream_created_cb,
         DisconnectedCallback disconnected_cb
@@ -302,6 +313,9 @@ public:
     void commandCreateObject(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
     void commandDestroyObject(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
     void commandObjectPresences(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
+    // Pass a command request to an object script. If the script doesn't accept
+    // commands an error is returned.
+    void commandObjectCommand(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
     // Helper that gets the object a command is operating on. Returns errors for
     // you and a NULL pointer on failure.
     HostedObjectPtr getCommandObject(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);

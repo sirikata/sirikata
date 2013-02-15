@@ -57,8 +57,16 @@ v8::Handle<v8::Value> JSSystemStruct::httpRequest(Sirikata::Network::Address add
     //first checks whether have capability to issue http request
     if(! checkCurCtxtHasCapability(NULL,Capabilities::HTTP))
         V8_EXCEPTION_CSTR("Error: you do not have the capability to issue an http commad.");
-    
+
     return associatedContext->httpRequest(addr,method,request,cb);
+}
+
+v8::Handle<v8::Value> JSSystemStruct::httpGet(const Transfer::URL& url, v8::Persistent<v8::Function> cb) {
+    //first checks whether have capability to issue http request
+    if(! checkCurCtxtHasCapability(NULL,Capabilities::HTTP))
+        V8_EXCEPTION_CSTR("Error: you do not have the capability to issue an http commad.");
+
+    return associatedContext->httpGet(url, cb);
 }
 
 v8::Handle<v8::Value> JSSystemStruct::storageErase(const OH::Storage::Key& key, v8::Handle<v8::Function> cb)
@@ -137,6 +145,11 @@ v8::Handle<v8::Value> JSSystemStruct::proxAddedHandlerCallallback(v8::Handle<v8:
 v8::Handle<v8::Value> JSSystemStruct::proxRemovedHandlerCallallback(v8::Handle<v8::Function>cb)
 {
     return associatedContext->proxRemovedHandlerCallallback(cb);
+}
+
+v8::Handle<v8::Value> JSSystemStruct::registerCommandHandler(v8::Handle<v8::Function>cb)
+{
+    return associatedContext->registerCommandHandler(cb);
 }
 
 
@@ -251,8 +264,8 @@ v8::Handle<v8::Value> JSSystemStruct::struct_createContext(JSPresenceStruct* jsp
     //first checks whether have capability to create a context.
     if(! checkCurCtxtHasCapability(NULL,Capabilities::CREATE_SANDBOX))
         V8_EXCEPTION_CSTR("Error: you do not have the capability to create a sandbox");
-    
-    
+
+
     //prevents scripter from escalating capabilities beyond those that he/she
     //already has
     stripCapEscalation(permNum,Capabilities::SEND_MESSAGE,jspres,"SEND_MESSAGE");
@@ -268,7 +281,7 @@ v8::Handle<v8::Value> JSSystemStruct::struct_createContext(JSPresenceStruct* jsp
     stripCapEscalation(permNum,Capabilities::HTTP,jspres,"HTTP");
     stripCapEscalation(permNum,Capabilities::MOVEMENT,jspres,"MOVEMENT");
     stripCapEscalation(permNum,Capabilities::MESH, jspres,"MESH");
-    
+
     return associatedContext->struct_createContext(jspres,canSendTo,permNum);
 }
 

@@ -156,6 +156,15 @@ void PintoManagerBase::onDisconnected(Stream* stream) {
 
 
 // AggregateListener Interface
+
+void PintoManagerBase::aggregateObjectCreated(ProxAggregator* handler, const ServerID& objid) {
+    // LocCache already knows about individual objects, nothing to do
+}
+
+void PintoManagerBase::aggregateObjectDestroyed(ProxAggregator* handler, const ServerID& objid) {
+    // LocCache already knows about individual objects, nothing to do
+}
+
 void PintoManagerBase::aggregateCreated(ProxAggregator* handler, const ServerID& objid) {
     mLocCache->addAggregate(objid);
 }
@@ -173,6 +182,10 @@ void PintoManagerBase::aggregateChildRemoved(ProxAggregator* handler, const Serv
 void PintoManagerBase::aggregateBoundsUpdated(ProxAggregator* handler, const ServerID& objid, const Vector3f& bnds_center, const float32 bnds_center_radius, const float32 max_obj_size) {
     mLocCache->updateAggregateLocation(objid, TimedMotionVector3f(Time::null(), MotionVector3f(bnds_center, Vector3f(0,0,0))));
     mLocCache->updateAggregateBounds(objid, AggregateBoundingInfo(Vector3f::zero(), bnds_center_radius, max_obj_size));
+}
+
+void PintoManagerBase::aggregateQueryDataUpdated(ProxAggregator* handler, const ServerID& objid, const String& extra_query_data) {
+    mLocCache->updateAggregateQueryData(objid, extra_query_data);
 }
 
 void PintoManagerBase::aggregateDestroyed(ProxAggregator* handler, const ServerID& objid) {

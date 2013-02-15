@@ -62,9 +62,9 @@ AlwaysLocationUpdatePolicy::AlwaysLocationUpdatePolicy(SpaceContext* ctx, const 
    mOHUpdatesPerSecond(0),
    mTimeSeriesObjectUpdatesName(String("space.server") + boost::lexical_cast<String>(ctx->id()) + ".loc.object_updates_per_second"),
    mObjectUpdatesPerSecond(0),
-   mServerSubscriptions(this, mServerUpdatesPerSecond),
-   mOHSubscriptions(this, mOHUpdatesPerSecond),
-   mObjectSubscriptions(this, mObjectUpdatesPerSecond)
+   mServerSubscriptions(this, /*include_all_data=*/true, mServerUpdatesPerSecond),
+   mOHSubscriptions(this, /*include_all_data=*/true, mOHUpdatesPerSecond),
+   mObjectSubscriptions(this, /*include_all_data=*/false, mObjectUpdatesPerSecond)
 {
     OptionSet* optionsSet = OptionSet::getOptions(ALWAYS_POLICY_OPTIONS,NULL);
     optionsSet->parse(args);
@@ -223,6 +223,12 @@ void AlwaysLocationUpdatePolicy::localPhysicsUpdated(const UUID& uuid, bool agg,
     mObjectSubscriptions.physicsUpdated(uuid, newval, mLocService);
 }
 
+void AlwaysLocationUpdatePolicy::localQueryDataUpdated(const UUID& uuid, bool agg, const String& newval) {
+    mServerSubscriptions.queryDataUpdated(uuid, newval, mLocService);
+    mOHSubscriptions.queryDataUpdated(uuid, newval, mLocService);
+    mObjectSubscriptions.queryDataUpdated(uuid, newval, mLocService);
+}
+
 
 void AlwaysLocationUpdatePolicy::replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics) {
     // Ignore, initial additions will be handled by a prox update
@@ -255,6 +261,11 @@ void AlwaysLocationUpdatePolicy::replicaMeshUpdated(const UUID& uuid, const Stri
 void AlwaysLocationUpdatePolicy::replicaPhysicsUpdated(const UUID& uuid, const String& newval) {
     mObjectSubscriptions.physicsUpdated(uuid, newval, mLocService);
     mOHSubscriptions.physicsUpdated(uuid, newval, mLocService);
+}
+
+void AlwaysLocationUpdatePolicy::replicaQueryDataUpdated(const UUID& uuid, const String& newval) {
+    mObjectSubscriptions.queryDataUpdated(uuid, newval, mLocService);
+    mOHSubscriptions.queryDataUpdated(uuid, newval, mLocService);
 }
 
 void AlwaysLocationUpdatePolicy::service() {

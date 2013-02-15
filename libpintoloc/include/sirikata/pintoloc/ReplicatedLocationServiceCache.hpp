@@ -6,7 +6,6 @@
 #define _SIRIKATA_LIBPINTO_REPLICATED_LOCATION_SERVICE_CACHE_HPP_
 
 #include <sirikata/pintoloc/ExtendedLocationServiceCache.hpp>
-#include <prox/base/ZernikeDescriptor.hpp>
 #include <sirikata/core/util/PresenceProperties.hpp>
 #include <sirikata/pintoloc/ReplicatedLocationUpdateListener.hpp>
 #include <boost/thread.hpp>
@@ -63,7 +62,8 @@ public:
         const TimedMotionQuaternion& orient, uint64 orient_seqno,
         const AggregateBoundingInfo& bounds, uint64 bounds_seqno,
         const Transfer::URI& mesh, uint64 mesh_seqno,
-        const String& physics, uint64 physics_seqno);
+        const String& physics, uint64 physics_seqno,
+        const String& query_data, uint64 query_data_seqno);
     void objectRemoved(const ObjectReference& uuid, bool temporary);
     void epochUpdated(const ObjectReference& uuid, const uint64 ep);
     void locationUpdated(const ObjectReference& uuid, const TimedMotionVector3f& newval, uint64 seqno);
@@ -71,6 +71,7 @@ public:
     void boundsUpdated(const ObjectReference& uuid, const AggregateBoundingInfo& newval, uint64 seqno);
     void meshUpdated(const ObjectReference& uuid, const Transfer::URI& newval, uint64 seqno);
     void physicsUpdated(const ObjectReference& uuid, const String& newval, uint64 seqno);
+    void queryDataUpdated(const ObjectReference& uuid, const String& newval, uint64 seqno);
     void parentUpdated(const ObjectReference& uuid, const ObjectReference& newval, uint64 seqno);
 
     /* LocationServiceCache members. */
@@ -80,7 +81,7 @@ public:
         const Vector3f& center_offset,
         const float32 center_bounds_radius,
         const float32 max_size,
-        const String& zernike,
+        const String& query_data,
         const String& mesh
     );
 
@@ -98,7 +99,7 @@ public:
     virtual float32 maxSize(const Iterator& id);
     virtual bool isLocal(const Iterator& id);
     virtual String mesh(const Iterator& id);
-    virtual Prox::ZernikeDescriptor& zernikeDescriptor(const Iterator& id);
+    virtual String queryData(const Iterator& id);
 
     virtual const ObjectReference& iteratorID(const Iterator& id);
 
@@ -112,7 +113,8 @@ public:
     virtual TimedMotionQuaternion orientation(const ObjectID& id);
     virtual AggregateBoundingInfo bounds(const ObjectID& id);
     virtual Transfer::URI mesh(const ObjectID& id);
-    String virtual physics(const ObjectID& id);
+    virtual String physics(const ObjectID& id);
+    virtual String queryData(const ObjectID& id);
     ObjectReference parent(const ObjectID& id);
     virtual bool aggregate(const ObjectID& id);
     // And raw access to the underlying SequencedPresenceProperties
@@ -138,6 +140,7 @@ private:
     void notifyOrientationUpdated(Liveness::Token alive_token, const ObjectReference& uuid);
     void notifyMeshUpdated(Liveness::Token alive_token, const ObjectReference& uuid);
     void notifyPhysicsUpdated(Liveness::Token alive_token, const ObjectReference& uuid);
+    void notifyQueryDataUpdated(Liveness::Token alive_token, const ObjectReference& uuid, const String& oldval, const String& newval);
 
 
     ReplicatedLocationServiceCache();

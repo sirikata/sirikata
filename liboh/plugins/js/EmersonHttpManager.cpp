@@ -21,8 +21,7 @@ EmersonHttpManager::EmersonHttpManager(JSCtx* ctx)
 EmersonHttpManager::~EmersonHttpManager()
 {}
 
-EmersonHttpManager::EmersonHttpToken EmersonHttpManager::makeRequest(Sirikata::Network::Address addr, Transfer::HttpManager::HTTP_METHOD method, std::string req,v8::Persistent<v8::Function> cb, JSContextStruct* jscont)
-{
+EmersonHttpManager::EmersonHttpToken EmersonHttpManager::setupRequestCallback(JSContextStruct* jscont, v8::Persistent<v8::Function> cb) {
     ++currentToken;
 
     //Log that jscont has issued a request associated with token current token.
@@ -35,13 +34,30 @@ EmersonHttpManager::EmersonHttpToken EmersonHttpManager::makeRequest(Sirikata::N
     if (managerLiveness == nullEmersonHttpPtr)
         managerLiveness = getSharedPtr();
 
-    //issue query, and have response callback to receiveHttpResponse
-    Transfer::HttpManager::getSingleton().makeRequest(addr,method,req,true,
-        std::tr1::bind(&EmersonHttpManager::receiveHttpResponse, this, currentToken, _1,_2,_3));
-
     return currentToken;
 }
 
+EmersonHttpManager::EmersonHttpToken EmersonHttpManager::makeRequest(Sirikata::Network::Address addr, Transfer::HttpManager::HTTP_METHOD method, std::string req,v8::Persistent<v8::Function> cb, JSContextStruct* jscont)
+{
+    EmersonHttpToken token = setupRequestCallback(jscont, cb);
+
+    //issue query, and have response callback to receiveHttpResponse
+    Transfer::HttpManager::getSingleton().makeRequest(addr,method,req,true,
+        std::tr1::bind(&EmersonHttpManager::receiveHttpResponse, this, token, _1,_2,_3));
+
+    return token;
+}
+
+EmersonHttpManager::EmersonHttpToken EmersonHttpManager::get(const Transfer::URL& url, v8::Persistent<v8::Function> cb, JSContextStruct* jscont) {
+    EmersonHttpToken token = setupRequestCallback(jscont, cb);
+
+    Network::Address addr(url.hostname(), url.service());
+    // FIXME query args, fragment, headers
+    Transfer::HttpManager::getSingleton().get(addr, url.fullpath(),
+        std::tr1::bind(&EmersonHttpManager::receiveHttpResponse, this, token, _1,_2,_3));
+
+    return token;
+}
 
 void EmersonHttpManager::deregisterContext(JSContextStruct* toDeregister)
 {

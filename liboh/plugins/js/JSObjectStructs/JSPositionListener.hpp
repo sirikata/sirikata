@@ -14,8 +14,26 @@ namespace JS {
 class JSVisibleData;
 class JSContextStruct;
 
+// Structure for tracking callbacks registered for events on a position
+// listener. We separate this for organization and so that we only use space for
+// it when it's needed since in most cases (i.e. most visibles), we won't have
+// anybody listening for any events.
+struct PositionListenerCallbacks {
+    typedef std::pair<JSContextStruct*, v8::Persistent<v8::Function> > PositionEventCallback;
+
+    PositionEventCallback onPositionChanged;
+    PositionEventCallback onVelocityChanged;
+    PositionEventCallback onOrientationChanged;
+    PositionEventCallback onOrientationVelChanged;
+    PositionEventCallback onScaleChanged;
+    PositionEventCallback onMeshChanged;
+    PositionEventCallback onPhysicsChanged;
+};
+typedef std::tr1::shared_ptr<PositionListenerCallbacks> PositionListenerCallbacksPtr;
+
+
 //note: only position and isConnected will actually set the flag of the watchable
-struct JSPositionListener : public Liveness
+struct JSPositionListener : public Liveness, JSVisibleDataEventListener
 {
     friend class JSSerializer;
     friend class JSVisibleStruct;
@@ -60,6 +78,14 @@ public:
     v8::Handle<v8::Value> raytrace(const Vector3f& mesh_ray_start, const Vector3f& mesh_ray_dir);
     v8::Handle<v8::Value> unloadMesh();
 
+    v8::Handle<v8::Value> onPositionChanged(JSContextStruct* ctxstruct, v8::Handle<v8::Function> cb);
+    v8::Handle<v8::Value> onVelocityChanged(JSContextStruct* ctxstruct, v8::Handle<v8::Function> cb);
+    v8::Handle<v8::Value> onOrientationChanged(JSContextStruct* ctxstruct, v8::Handle<v8::Function> cb);
+    v8::Handle<v8::Value> onOrientationVelChanged(JSContextStruct* ctxstruct, v8::Handle<v8::Function> cb);
+    v8::Handle<v8::Value> onScaleChanged(JSContextStruct* ctxstruct, v8::Handle<v8::Function> cb);
+    v8::Handle<v8::Value> onMeshChanged(JSContextStruct* ctxstruct, v8::Handle<v8::Function> cb);
+    v8::Handle<v8::Value> onPhysicsChanged(JSContextStruct* ctxstruct, v8::Handle<v8::Function> cb);
+
     //simple accessors for sporef fields
     SpaceObjectReference getSporef();
 
@@ -74,6 +100,8 @@ protected:
     // separate flags for whether we loaded it so we could do some refcounting.
     Mesh::VisualPtr mVisual;
     JSCtx* mCtx;
+
+    PositionListenerCallbacksPtr mEventCallbacks;
 
 private:
 
@@ -95,6 +123,8 @@ private:
     // Invoked after loading is complete, invokes callback if all necessary
     // components are still alive.
     void finishLoadMesh(Liveness::Token alive, Liveness::Token ctx_alive, JSContextStruct* ctx, v8::Persistent<v8::Function> cb, Mesh::VisualPtr data);
+
+    // JSVisibleDataEventListener Interface - deferred to implementations
 };
 
 

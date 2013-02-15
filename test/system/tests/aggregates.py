@@ -84,11 +84,11 @@ class GeneratesAggregatesTest(AggregatesTest):
         for x in range(25):
             response = self.createObject('oh', 'aggregationTests/object.em')
 
-        timeout = 10.0
+        timeout = 20.0
         num_agg = self.num_aggregates()
         gen_agg = self.generated_aggregates()
         while timeout > 0:
-            if num_agg > 0 and gen_agg > num_agg: break
+            if num_agg > 0 and gen_agg >= num_agg: break
             time.sleep(0.25)
             timeout -= 0.25
             num_agg = self.num_aggregates()

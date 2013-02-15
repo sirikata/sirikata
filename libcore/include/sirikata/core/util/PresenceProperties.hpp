@@ -27,6 +27,7 @@ public:
     virtual AggregateBoundingInfo bounds() const = 0;
     virtual Transfer::URI mesh() const = 0;
     virtual String physics() const = 0;
+    virtual String queryData() const = 0;
     virtual bool isAggregate() const = 0;
     virtual ObjectReference parent() const = 0;
 };
@@ -74,6 +75,9 @@ public:
     virtual String physics() const { return mPhysics; }
     virtual bool setPhysics(const String& p) { mPhysics = p; return true; }
 
+    virtual String queryData() const { return mQueryData; }
+    virtual bool setQueryData(const String& qd) { mQueryData = qd; return true; }
+
     virtual bool setIsAggregate(bool isAgg) { mIsAggregate = isAgg; return true; }
     virtual bool isAggregate() const { return mIsAggregate; }
 
@@ -85,6 +89,7 @@ protected:
     AggregateBoundingInfo mBounds;
     Transfer::URI mMesh;
     String mPhysics;
+    String mQueryData;
     bool mIsAggregate;
     ObjectReference mParent;
 };
@@ -102,9 +107,10 @@ public:
         LOC_BOUNDS_PART = 2,
         LOC_MESH_PART = 3,
         LOC_PHYSICS_PART = 4,
-        LOC_IS_AGG_PART = 5,
-        LOC_PARENT_PART = 6,
-        LOC_NUM_PART = 7
+        LOC_QUERY_DATA_PART = 5,
+        LOC_IS_AGG_PART = 6,
+        LOC_PARENT_PART = 7,
+        LOC_NUM_PART = 8
     };
 
     SequencedPresenceProperties()
@@ -170,6 +176,16 @@ public:
         return true;
     }
     bool setPhysics(const String& p) { return PresenceProperties::setPhysics(p); }
+
+    bool setQueryData(const String& qd, uint64 seqno) {
+        if (seqno < mUpdateSeqno[LOC_QUERY_DATA_PART])
+            return false;
+
+        mUpdateSeqno[LOC_QUERY_DATA_PART] = seqno;
+        mQueryData = qd;
+        return true;
+    }
+    bool setQueryData(const String& qd) { return PresenceProperties::setQueryData(qd); }
 
     bool setIsAggregate(bool isAgg, uint64 seqno) {
         if (seqno < mUpdateSeqno[LOC_IS_AGG_PART])

@@ -134,19 +134,22 @@ void JSTimerStruct::timerWeakReferenceCleanup(
  */
 void JSTimerStruct::noReference(const Liveness::Token& alive)
 {
+    if (!alive) return;
+    Liveness::Lock locked(alive);
+    if (!locked) return;
+
     v8::Locker locker (mCtx->mIsolate);
     v8::Isolate::Scope iscope(mCtx->mIsolate);
-    if (alive) {
-        killAfterFire = true;
 
-        if (noTimerWaiting)
+    killAfterFire = true;
+
+    if (noTimerWaiting)
+    {
+        //check if it's suspended and its context is suspended
+        if (!(getIsSuspended() && jsContStruct->getIsSuspended()))
         {
-            //check if it's suspended and its context is suspended
-            if (!(getIsSuspended() && jsContStruct->getIsSuspended()))
-            {
-                //can kill
-                clear();
-            }
+            //can kill
+            clear();
         }
     }
 }

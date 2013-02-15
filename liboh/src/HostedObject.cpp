@@ -62,7 +62,21 @@
 
 #define HO_LOG(lvl,msg) SILOG(ho,lvl,msg);
 
+
+AUTO_SINGLETON_INSTANCE(Sirikata::QueryDataLookupFactory);
+
+
 namespace Sirikata {
+
+QueryDataLookup::~QueryDataLookup() {}
+
+QueryDataLookupFactory& QueryDataLookupFactory::getSingleton() {
+    return AutoSingleton<QueryDataLookupFactory>::getSingleton();
+}
+
+void QueryDataLookupFactory::destroy() {
+    AutoSingleton<QueryDataLookupFactory>::destroy();
+}
 
 
 
@@ -362,60 +376,13 @@ void HostedObject::initializeScript(const String& script_type, const String& arg
     }
 }
 
-bool HostedObject::downloadZernikeDescriptor(OHConnectInfoPtr ocip, uint8 n_retry)
-{
-  Transfer::TransferRequestPtr req(new Transfer::MetadataRequest( Transfer::URI(ocip->mesh), 1.0, std::tr1::bind(
-                                       &HostedObject::metadataDownloaded, this, ocip, n_retry,
-                                       std::tr1::placeholders::_1, std::tr1::placeholders::_2)));
-
-  mObjectHost->getTransferPool()->addRequest(req);
-
-  return true;
-}
-
-void HostedObject::metadataDownloaded(OHConnectInfoPtr ocip,
-                                    uint8 retryCount,
-                                    std::tr1::shared_ptr<Transfer::MetadataRequest> request,
-                                    std::tr1::shared_ptr<Transfer::RemoteFileMetadata> response)
-{
-  if (response == NULL && retryCount >= 3) {
-    String zernike="[";
-    ocip->zernike = zernike;
-    for (uint32 i = 0; i < 121; i++) {
-      if (i < 120)
-        zernike += "0, ";
-      else 
-        zernike += "0]";
-    }
-    mContext->mainStrand->post(std::tr1::bind(&HostedObject::objectHostConnectIndirect, this, ocip));
-    return;
-  }
-
-  if (response != NULL) {
-
-    const Sirikata::Transfer::FileHeaders& headers = response->getHeaders();
-
-    String zernike = "";
-    if (headers.find("Zernike") != headers.end()) {
-      zernike = (headers.find("Zernike"))->second;
-    }
-
-    ocip->zernike = zernike;
-
-    mContext->mainStrand->post(std::tr1::bind(&HostedObject::objectHostConnectIndirect, this, ocip));
-  }
-  else if (retryCount < 3) {
-      downloadZernikeDescriptor(ocip, retryCount+1);
-  }
-}
-
 bool HostedObject::objectHostConnect(const SpaceID spaceID,
         const Location startingLocation,
         const BoundingSphere3f meshBounds,
         const String mesh,
         const String physics,
         const String query,
-        const String zernike,
+        const String query_data,
         const ObjectReference orefID,
         PresenceToken token)
 {
@@ -435,7 +402,7 @@ bool HostedObject::objectHostConnect(const SpaceID spaceID,
                            mesh,
                            physics,
                            query,
-                           zernike,
+                           query_data,
                            std::tr1::bind(&HostedObject::handleConnected, getWeakPtr(), mObjectHost, _1, _2, _3),
                            std::tr1::bind(&HostedObject::handleMigrated, getWeakPtr(), _1, _2, _3),
                            std::tr1::bind(&HostedObject::handleStreamCreated, getWeakPtr(), _1, _2, token),
@@ -465,11 +432,9 @@ bool HostedObject::connect(
     if (spaceID == SpaceID::null())
         return false;
 
-    // Download the Zernike descriptor from the CDN metadata first. Once that is done,
-    // connect() will be invoked on the object host to actually connect the object to the
-    // space.
-
-    if (mesh.find("meerkat:") == 0 && GetOptionValue<bool>("specify-zernike-descriptor")) {
+    // Download the query data first. Once that is done, connect() will be
+    // invoked on the object host to actually connect the object to the space.
+    if (mObjectHost->getQueryDataLookupConstructor()) {
         OHConnectInfoPtr ocip(new OHConnectInfo);
         ocip->spaceID=spaceID;
         ocip->startingLocation = startingLocation;
@@ -479,12 +444,23 @@ bool HostedObject::connect(
         ocip->query =query;
         ocip->orefID = orefID;
         ocip->token = token;
-        downloadZernikeDescriptor(ocip);
+
+        const String& opts = mObjectHost->getQueryDataLookupConstructorOpts();
+        QueryDataLookup* query_data_lookup = mObjectHost->getQueryDataLookupConstructor()(opts);
+        query_data_lookup->lookup(getSharedPtr(), ocip);
+
         return false;
     }
     else {
       return objectHostConnect(spaceID, startingLocation, meshBounds, mesh, physics, query, "", orefID, token);
     }
+}
+
+void HostedObject::objectHostConnectIndirect(HostedObjectPtr self, QueryDataLookup* lookup, OHConnectInfoPtr oci) {
+    bool ret = objectHostConnect(oci->spaceID, oci->startingLocation, oci->meshBounds,
+        oci->mesh, oci->physics, oci->query, oci->query_data,
+        oci->orefID, oci->token);
+    delete lookup;
 }
 
 void HostedObject::disconnectDeadPresence(ObjectHost* parentOH, const SpaceID& space, const ObjectReference& obj) {
@@ -1095,21 +1071,39 @@ bool HostedObject::delegateODPPortSend(const ODP::Endpoint& source_ep, const ODP
 
 void HostedObject::requestLocationUpdate(const SpaceID& space, const ObjectReference& oref, const TimedMotionVector3f& loc)
 {
-    updateLocUpdateRequest(space, oref,&loc, NULL, NULL, NULL, NULL);
+    updateLocUpdateRequest(space, oref,&loc, NULL, NULL, NULL, NULL, NULL);
 }
 
 void HostedObject::requestOrientationUpdate(const SpaceID& space, const ObjectReference& oref, const TimedMotionQuaternion& orient) {
-    updateLocUpdateRequest(space, oref, NULL, &orient, NULL, NULL, NULL);
+    updateLocUpdateRequest(space, oref, NULL, &orient, NULL, NULL, NULL, NULL);
 }
 
 
 void HostedObject::requestBoundsUpdate(const SpaceID& space, const ObjectReference& oref, const BoundingSphere3f& bounds) {
-    updateLocUpdateRequest(space, oref,NULL, NULL, &bounds, NULL, NULL);
+    updateLocUpdateRequest(space, oref,NULL, NULL, &bounds, NULL, NULL, NULL);
 }
 
 void HostedObject::requestMeshUpdate(const SpaceID& space, const ObjectReference& oref, const String& mesh)
 {
-    updateLocUpdateRequest(space, oref, NULL, NULL, NULL, &mesh, NULL);
+    if (mObjectHost->getQueryDataLookupConstructor()) {
+        const String& opts = mObjectHost->getQueryDataLookupConstructorOpts();
+        QueryDataLookup* query_data_lookup = mObjectHost->getQueryDataLookupConstructor()(opts);
+        query_data_lookup->lookup(getSharedPtr(), space, oref, mesh);
+    }
+    else {
+        // No query data lookup constructor, so we can send the update directly
+        // without any extra query data
+        updateLocUpdateRequest(space, oref, NULL, NULL, NULL, &mesh, NULL, NULL);
+    }
+}
+
+void HostedObject::requestMeshUpdateAfterQueryDataLookup(HostedObjectPtr self, QueryDataLookup* lookup, const SpaceID& space, const ObjectReference& oref, const String& mesh, bool with_query_data, const String& query_data) {
+    if (with_query_data)
+        updateLocUpdateRequest(space, oref, NULL, NULL, NULL, &mesh, NULL, &query_data);
+    else
+        updateLocUpdateRequest(space, oref, NULL, NULL, NULL, &mesh, NULL, NULL);
+
+    delete lookup;
 }
 
 String HostedObject::requestQuery(const SpaceID& space, const ObjectReference& oref)
@@ -1127,7 +1121,7 @@ String HostedObject::requestQuery(const SpaceID& space, const ObjectReference& o
 
 void HostedObject::requestPhysicsUpdate(const SpaceID& space, const ObjectReference& oref, const String& phy)
 {
-    updateLocUpdateRequest(space, oref, NULL, NULL, NULL, NULL, &phy);
+    updateLocUpdateRequest(space, oref, NULL, NULL, NULL, NULL, &phy, NULL);
 }
 
 
@@ -1156,7 +1150,7 @@ void HostedObject::requestQueryRemoval(const SpaceID& space, const ObjectReferen
     requestQueryUpdate(space, oref, "");
 }
 
-void HostedObject::updateLocUpdateRequest(const SpaceID& space, const ObjectReference& oref, const TimedMotionVector3f* const loc, const TimedMotionQuaternion* const orient, const BoundingSphere3f* const bounds, const String* const mesh, const String* const phy) {
+void HostedObject::updateLocUpdateRequest(const SpaceID& space, const ObjectReference& oref, const TimedMotionVector3f* const loc, const TimedMotionQuaternion* const orient, const BoundingSphere3f* const bounds, const String* const mesh, const String* const phy, const String* query_data) {
 
     if (stopped()) {
         HO_LOG(detailed,"Ignoring loc update request after system stop.");
@@ -1177,6 +1171,7 @@ void HostedObject::updateLocUpdateRequest(const SpaceID& space, const ObjectRefe
         if (bounds != NULL) { pd.requestLoc->setBounds(AggregateBoundingInfo(*bounds)); pd.updateFields |= PerPresenceData::LOC_FIELD_BOUNDS; }
         if (mesh != NULL) { pd.requestLoc->setMesh(Transfer::URI(*mesh)); pd.updateFields |= PerPresenceData::LOC_FIELD_MESH; }
         if (phy != NULL) { pd.requestLoc->setPhysics(*phy); pd.updateFields |= PerPresenceData::LOC_FIELD_PHYSICS; }
+        if (query_data != NULL) { pd.requestLoc->setQueryData(*query_data); pd.updateFields |= PerPresenceData::LOC_FIELD_QUERY_DATA; }
 
         // Cancel the re-request timer if it was active
         pd.rerequestTimer->cancel();
@@ -1208,7 +1203,12 @@ void HostedObject::sendLocUpdateRequest(const SpaceID& space, const ObjectRefere
         return;
     }
 
-    assert(pd.updateFields != PerPresenceData::LOC_FIELD_NONE);
+    // We can get here and have no updates because requests can get
+    // coalesced if one of them needs to do an async lookup of query
+    // data for a mesh. However, we'll still get invoked twice. We can
+    // safely ignore this request.
+    if (pd.updateFields == PerPresenceData::LOC_FIELD_NONE) return;
+
     // Generate and send an update to Loc
     Protocol::Loc::Container container;
     Protocol::Loc::ILocationUpdateRequest loc_request = container.mutable_update_request();
@@ -1250,6 +1250,11 @@ void HostedObject::sendLocUpdateRequest(const SpaceID& space, const ObjectRefere
         loc_request.set_physics(pd.requestLoc->physics());
         // Save value but bump the epoch
         pd.requestLoc->setPhysics(pd.requestLoc->physics(), epoch);
+    }
+    if (pd.updateFields & PerPresenceData::LOC_FIELD_QUERY_DATA) {
+        loc_request.set_query_data(pd.requestLoc->queryData());
+        // Save value but bump the epoch
+        pd.requestLoc->setQueryData(pd.requestLoc->queryData(), epoch);
     }
 
     std::string payload = serializePBJMessage(container);
@@ -1345,6 +1350,21 @@ void HostedObject::commandPresences(
     }
 
     cmdr->result(cmdid, result);
+}
+
+void HostedObject::commandObjectCommand(
+    const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid)
+{
+    Command::Result result = Command::EmptyResult();
+
+    if (!mObjectScript) {
+        result.put("error", "This object has no script to handle the object command");
+        cmdr->result(cmdid, result);
+        return;
+    }
+
+    // It's the scripts responsibility now
+    mObjectScript->handleObjectCommand(cmd, cmdr, cmdid);
 }
 
 }

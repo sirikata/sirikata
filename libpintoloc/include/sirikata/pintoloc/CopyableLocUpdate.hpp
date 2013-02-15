@@ -73,6 +73,11 @@ public:
     virtual String physics() const { return mUpdate.physics(); }
     virtual uint64 physics_seqno() const { return mUpdate.getUpdateSeqNo(SequencedPresenceProperties::LOC_PHYSICS_PART); }
 
+    // Query data
+    virtual bool has_query_data() const { return mHasPart[SequencedPresenceProperties::LOC_QUERY_DATA_PART]; }
+    virtual String query_data() const { return mUpdate.queryData(); }
+    virtual uint64 query_data_seqno() const { return mUpdate.getUpdateSeqNo(SequencedPresenceProperties::LOC_QUERY_DATA_PART); }
+
     virtual uint32 index_id_size() const { return mIndexIDs.size(); }
     virtual ProxIndexID index_id(int32 idx) const { return mIndexIDs[idx]; }
     virtual uint64 index_id_seqno() const { return mIndexIDsSeqno; }
@@ -87,6 +92,7 @@ private:
         mHasPart[SequencedPresenceProperties::LOC_BOUNDS_PART] = rhs.has_bounds();
         mHasPart[SequencedPresenceProperties::LOC_MESH_PART] = rhs.has_mesh();
         mHasPart[SequencedPresenceProperties::LOC_PHYSICS_PART] = rhs.has_physics();
+        mHasPart[SequencedPresenceProperties::LOC_QUERY_DATA_PART] = rhs.has_query_data();
 
         if (rhs.has_parent()) mUpdate.setParent(rhs.parent(), rhs.parent_seqno());
         if (rhs.has_location()) mUpdate.setLocation(rhs.location(), rhs.location_seqno());
@@ -94,6 +100,7 @@ private:
         if (rhs.has_bounds()) mUpdate.setBounds(rhs.bounds(), rhs.bounds_seqno());
         if (rhs.has_mesh()) mUpdate.setMesh(Transfer::URI(rhs.mesh()), rhs.mesh_seqno());
         if (rhs.has_physics()) mUpdate.setPhysics(rhs.physics(), rhs.physics_seqno());
+        if (rhs.has_query_data()) mUpdate.setQueryData(rhs.query_data(), rhs.query_data_seqno());
 
         mIndexIDs.reserve(rhs.index_id_size());
         for(uint32 i = 0; i < rhs.index_id_size(); i++)

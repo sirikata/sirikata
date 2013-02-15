@@ -203,7 +203,7 @@ void LibproxProximityBase::stop() {
 
 
 
-void LibproxProximityBase::localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics, const String& zernike) {
+void LibproxProximityBase::localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics, const String& query_data) {
     updateObjectSize(uuid, bounds.fullRadius());
 }
 
@@ -629,6 +629,28 @@ void LibproxProximityBase::handleDisconnectedServer(ServerID sid) {
 }
 
 
+void LibproxProximityBase::aggregateObjectCreated(const ObjectReference& objid) {
+    // No need to notify LocationService, only need to notify AggregateManager
+    // so it can reconstruct a sane tree. We pass information through because it
+    // may only be in the loccache, not in LocationService anymore.
+    bool tracking = mLocCache->startRefcountTracking(objid);
+    assert(tracking);
+    mAggregateManager->addLeafObject(
+        objid.getAsUUID(),
+        mLocCache->location(objid),
+        mLocCache->orientation(objid),
+        mLocCache->bounds(objid),
+        mLocCache->mesh(objid)
+    );
+    mLocCache->stopRefcountTracking(objid);
+}
+
+void LibproxProximityBase::aggregateObjectDestroyed(const ObjectReference& objid) {
+    // No need to notify LocationService, only need to notify AggregateManager
+    // so it can reconstruct a sane tree
+    mAggregateManager->removeLeafObject(objid.getAsUUID());
+}
+
 void LibproxProximityBase::aggregateCreated(const ObjectReference& objid) {
     // On addition, an "aggregate" will have no children, i.e. its zero sized.
 
@@ -639,8 +661,9 @@ void LibproxProximityBase::aggregateCreated(const ObjectReference& objid) {
             TimedMotionVector3f(mContext->simTime(), MotionVector3f()),
             TimedMotionQuaternion(mContext->simTime(), MotionQuaternion()),
             AggregateBoundingInfo(),
-            "",
-            ""
+            "", //mesh
+            "", //physics
+            "" // query_data
         ),
         "LocationService::addLocalAggregateObject"
     );
@@ -687,6 +710,19 @@ void LibproxProximityBase::aggregateBoundsUpdated(const ObjectReference& objid, 
     );
 
     mAggregateManager->generateAggregateMesh(objid.getAsUUID(), Duration::seconds(300.0+rand()%300));
+}
+
+void LibproxProximityBase::aggregateQueryDataUpdated(const ObjectReference& objid, const String& extra_query_data, bool is_root) {
+    mContext->mainStrand->post(
+        std::tr1::bind(
+            &LibproxProximityBase::updateAggregateQueryData, this,
+            objid, extra_query_data
+        ),
+        "LibproxProximityBase::updateAggregateQueryData"
+    );
+    // If this is the root, notify top level pinto
+    if (is_root)
+        mServerQuerier->updateQueryData(extra_query_data);
 }
 
 void LibproxProximityBase::aggregateDestroyed(const ObjectReference& objid) {
@@ -762,6 +798,15 @@ void LibproxProximityBase::updateAggregateLoc(const ObjectReference& objid, cons
             objid_uuid,
             bnds
         );
+    }
+}
+
+void LibproxProximityBase::updateAggregateQueryData(const ObjectReference& objid, const String& extra_query_data) {
+    UUID objid_uuid = objid.getAsUUID();
+    if (mLocService->contains(objid_uuid) &&
+        (mLocService->queryData(objid_uuid) != extra_query_data))
+    {
+        mLocService->updateLocalAggregateQueryData(objid_uuid, extra_query_data);
     }
 }
 

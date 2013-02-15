@@ -115,6 +115,10 @@ ObjectHost::ObjectHost(ObjectHostContext* ctx, Network::IOService *ioServ, const
             mContext->mainStrand->wrap(std::tr1::bind(&ObjectHost::commandObjectPresences, this, _1, _2, _3))
         );
 
+        mContext->commander()->registerCommand(
+            "oh.objects.command",
+            mContext->mainStrand->wrap(std::tr1::bind(&ObjectHost::commandObjectCommand, this, _1, _2, _3))
+        );
     }
 
     mTransferMediator = &(Transfer::TransferMediator::getSingleton());
@@ -231,7 +235,7 @@ bool ObjectHost::connect(
     const String& mesh,
     const String& phy,
     const String& query,
-    const String& zernike,
+    const String& query_data,
     ConnectedCallback connected_cb,
     MigratedCallback migrated_cb,
     StreamCreatedCallback stream_created_cb,
@@ -245,7 +249,7 @@ bool ObjectHost::connect(
 
     String filtered_query = mQueryProcessor->connectRequest(ho, sporef, query);
     return sm->connect(
-        sporef, loc, orient, bnds, mesh, phy, filtered_query, zernike,
+        sporef, loc, orient, bnds, mesh, phy, filtered_query, query_data,
         std::tr1::bind(&ObjectHost::wrappedConnectedCallback, this, HostedObjectWPtr(ho), _1, _2, _3, connected_cb),
         migrated_cb,
         std::tr1::bind(&ObjectHost::wrappedStreamCreatedCallback, this, HostedObjectWPtr(ho), _1, _2, stream_created_cb),
@@ -536,6 +540,13 @@ void ObjectHost::commandDestroyObject(const Command::Command& cmd, Command::Comm
     ho->destroy();
     result.put("success", true);
     cmdr->result(cmdid, result);
+}
+
+void ObjectHost::commandObjectCommand(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {
+    HostedObjectPtr ho = getCommandObject(cmd, cmdr, cmdid);
+    if (!ho) return;
+
+    ho->commandObjectCommand(cmd, cmdr, cmdid);
 }
 
 void ObjectHost::commandObjectPresences(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) {

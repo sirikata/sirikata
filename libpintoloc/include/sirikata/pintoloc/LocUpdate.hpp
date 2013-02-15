@@ -72,6 +72,12 @@ public:
     virtual uint64 physics_seqno() const = 0;
     String physicsOrDefault() const { return (has_physics() ? physics() : ""); }
 
+    // Query data
+    virtual bool has_query_data() const = 0;
+    virtual String query_data() const = 0;
+    virtual uint64 query_data_seqno() const = 0;
+    String queryDataOrDefault() const { return (has_query_data() ? query_data() : ""); }
+
     // IndexIds -- only apply to real protocol loc updates (or copies
     // of them)
     bool has_index_idx() const { return index_id_size() > 0; }

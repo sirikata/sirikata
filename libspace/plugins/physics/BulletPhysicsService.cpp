@@ -243,6 +243,15 @@ const String& BulletPhysicsService::physics(const UUID& uuid) {
     return locinfo.physics_copied_str;
 }
 
+const String& BulletPhysicsService::queryData(const UUID& uuid) {
+    LocationMap::iterator it = mLocations.find(uuid);
+    assert(it != mLocations.end());
+
+    LocationInfo& locinfo = it->second;
+    locinfo.query_data_copied_str = locinfo.props.queryData();
+    return locinfo.query_data_copied_str;
+}
+
 bool BulletPhysicsService::isFixed(const UUID& uuid) {
     LocationMap::iterator it = mLocations.find(uuid);
     assert(it != mLocations.end());
@@ -322,7 +331,7 @@ void BulletPhysicsService::getMeshCallback(Transfer::ResourceDownloadTaskPtr tas
     }
 }
 
-  void BulletPhysicsService::addLocalObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bnds, const String& msh, const String& phy, const String& zernike) {
+  void BulletPhysicsService::addLocalObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bnds, const String& msh, const String& phy, const String& query_data) {
     LocationMap::iterator it = mLocations.find(uuid);
 
     // Add or update the information to the cache
@@ -342,6 +351,7 @@ void BulletPhysicsService::getMeshCallback(Transfer::ResourceDownloadTaskPtr tas
     locinfo.props.setBounds(bnds, 0);
     locinfo.props.setMesh(Transfer::URI(msh), 0);
     locinfo.props.setPhysics(phy, 0);
+    locinfo.props.setQueryData(query_data, 0);
     locinfo.local = true;
     locinfo.aggregate = false;
 
@@ -350,7 +360,7 @@ void BulletPhysicsService::getMeshCallback(Transfer::ResourceDownloadTaskPtr tas
 
     // Add to the list of local objects
     CONTEXT_SPACETRACE(serverObjectEvent, mContext->id(), mContext->id(), uuid, true, loc);
-    notifyLocalObjectAdded(uuid, false, location(uuid), orientation(uuid), bounds(uuid), mesh(uuid), physics(uuid), zernike);
+    notifyLocalObjectAdded(uuid, false, location(uuid), orientation(uuid), bounds(uuid), mesh(uuid), physics(uuid), query_data);
 
     updatePhysicsWorld(uuid);
 }
@@ -557,7 +567,7 @@ void BulletPhysicsService::internalTickCallback() {
     }
 }
 
-void BulletPhysicsService::addLocalAggregateObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bnds, const String& msh, const String& phy) {
+void BulletPhysicsService::addLocalAggregateObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bnds, const String& msh, const String& phy, const String& query_data) {
     // Aggregates get randomly assigned IDs -- if there's a conflict either we
     // got a true conflict (incredibly unlikely) or somebody (prox/query
     // handler) screwed up.
@@ -572,11 +582,12 @@ void BulletPhysicsService::addLocalAggregateObject(const UUID& uuid, const Timed
     locinfo.props.setBounds(bnds, 0);
     locinfo.props.setMesh(Transfer::URI(msh), 0);
     locinfo.props.setPhysics(phy, 0);
+    locinfo.props.setQueryData(query_data);
     locinfo.local = true;
     locinfo.aggregate = true;
 
     // Add to the list of local objects
-    notifyLocalObjectAdded(uuid, true, location(uuid), orientation(uuid), bounds(uuid), mesh(uuid), physics(uuid), "");
+    notifyLocalObjectAdded(uuid, true, location(uuid), orientation(uuid), bounds(uuid), mesh(uuid), physics(uuid), query_data);
     updatePhysicsWorld(uuid);
 }
 
@@ -634,8 +645,18 @@ void BulletPhysicsService::updateLocalAggregatePhysics(const UUID& uuid, const S
     notifyLocalPhysicsUpdated( uuid, true, newval );
     if (oldval != newval) updatePhysicsWorld(uuid);
 }
+void BulletPhysicsService::updateLocalAggregateQueryData(const UUID& uuid, const String& newval) {
+    LocationMap::iterator loc_it = mLocations.find(uuid);
+    assert(loc_it != mLocations.end());
+    assert(loc_it->second.aggregate == true);
+    String oldval = loc_it->second.props.queryData();
+    loc_it->second.props.setQueryData(newval);
+    notifyLocalQueryDataUpdated( uuid, true, newval );
+    // should not affect physics
+}
 
-void BulletPhysicsService::addReplicaObject(const Time& t, const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bnds, const String& msh, const String& phy, const String& zernike) {
+
+void BulletPhysicsService::addReplicaObject(const Time& t, const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bnds, const String& msh, const String& phy, const String& query_data) {
     // FIXME we should do checks on timestamps to decide which setting is "more" sane
     LocationMap::iterator it = mLocations.find(uuid);
 
@@ -649,6 +670,7 @@ void BulletPhysicsService::addReplicaObject(const Time& t, const UUID& uuid, boo
             locinfo.props.setBounds(bnds, 0);
             locinfo.props.setMesh(Transfer::URI(msh), 0);
             locinfo.props.setPhysics(phy, 0);
+            locinfo.props.setQueryData(query_data, 0);
             //local = false
             // FIXME should we notify location and bounds updated info?
             updatePhysicsWorld(uuid);
@@ -663,13 +685,14 @@ void BulletPhysicsService::addReplicaObject(const Time& t, const UUID& uuid, boo
         locinfo.props.setBounds(bnds, 0);
         locinfo.props.setMesh(Transfer::URI(msh), 0);
         locinfo.props.setPhysics(phy, 0);
+        locinfo.props.setQueryData(query_data, 0);
         locinfo.local = false;
         locinfo.aggregate = agg;
         mLocations[uuid] = locinfo;
 
         // We only run this notification when the object actually is new
         CONTEXT_SPACETRACE(serverObjectEvent, 0, mContext->id(), uuid, true, loc); // FIXME add remote server ID
-        notifyReplicaObjectAdded(uuid, location(uuid), orientation(uuid), bounds(uuid), mesh(uuid), physics(uuid), zernike);
+        notifyReplicaObjectAdded(uuid, location(uuid), orientation(uuid), bounds(uuid), mesh(uuid), physics(uuid), query_data);
         updatePhysicsWorld(uuid);
     }
 }
@@ -799,6 +822,13 @@ void BulletPhysicsService::receiveMessage(Message* msg) {
                 if (oldphy != newphy) updatePhysics = true;
             }
 
+            if (update.has_query_data()) {
+                String oldqd = loc_it->second.props.queryData();
+                String newqd = update.query_data();
+                loc_it->second.props.setQueryData(newqd, epoch);
+                notifyReplicaQueryDataUpdated( update.object(), loc_it->second.props.queryData());
+            }
+
             if (updatePhysics)
                 updatePhysicsWorld(update.object());
         }
@@ -811,7 +841,10 @@ bool BulletPhysicsService::locationUpdate(UUID source, void* buffer, uint32 leng
     Sirikata::Protocol::Loc::Container loc_container;
     bool parse_success = loc_container.ParseFromString( String((char*) buffer, length) );
     if (!parse_success) {
-        LOG_INVALID_MESSAGE_BUFFER(standardloc, error, ((char*)buffer), length);
+        // Since we don't have framing on these, we can't really log this since
+        // some packets will require more than SST's 1000 byte default packet
+        // size and it would spam the console.
+        //LOG_INVALID_MESSAGE_BUFFER(BULLETLOGMODULE, error, ((char*)buffer), length);
         return false;
     }
 
@@ -905,6 +938,13 @@ bool BulletPhysicsService::locationUpdate(UUID source, void* buffer, uint32 leng
                 loc_it->second.props.setPhysics(newphy, epoch);
                 notifyLocalPhysicsUpdated( source, loc_it->second.aggregate, loc_it->second.props.physics() );
                 if (oldphy != newphy) updatePhysics = true;
+            }
+
+            if (request.has_query_data()) {
+                String oldqd = loc_it->second.props.queryData();
+                String newqd = request.query_data();
+                loc_it->second.props.setQueryData(newqd);
+                notifyLocalQueryDataUpdated( source, loc_it->second.aggregate, loc_it->second.props.queryData() );
             }
 
             if (updatePhysics)

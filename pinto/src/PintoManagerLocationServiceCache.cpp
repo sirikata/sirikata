@@ -167,6 +167,16 @@ void PintoManagerLocationServiceCache::updateAggregateBounds(ServerID sid, const
     dat.maxSize = bnds.maxObjectRadius;
 }
 
+void PintoManagerLocationServiceCache::updateAggregateQueryData(ServerID sid, const String& qd) {
+    Lock lck(mMutex);
+
+    ServerMap::iterator it = mServers.find(sid);
+    assert( it != mServers.end() );
+    SpaceServerData& dat = it->second;
+
+    dat.query_data = qd;
+}
+
 void PintoManagerLocationServiceCache::removeAggregate(ServerID sid) {
     Lock lck(mMutex);
 
@@ -185,7 +195,7 @@ void PintoManagerLocationServiceCache::addPlaceholderImposter(
     const Vector3f& center_offset,
     const float32 center_bounds_radius,
     const float32 max_size,
-    const String& zernike,
+    const String& query_data,
     const String& mesh
 ) {
     // We might get calls here if we have an aggregate listener registered, but
@@ -269,12 +279,13 @@ float32 PintoManagerLocationServiceCache::maxSize(const Iterator& id) {
     return dat.maxSize;
 }
 
-Prox::ZernikeDescriptor& PintoManagerLocationServiceCache::zernikeDescriptor(const Iterator& i) {
-  return Prox::ZernikeDescriptor::null();
-}
-
 String PintoManagerLocationServiceCache::mesh(const Iterator& i) {
   return String("");
+}
+
+String PintoManagerLocationServiceCache::queryData(const Iterator& id) {
+    SpaceServerData& dat = EXTRACT_ITERATOR_DATA(id);
+    return dat.query_data;
 }
 
 bool PintoManagerLocationServiceCache::isLocal(const Iterator& id) {

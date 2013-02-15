@@ -260,10 +260,10 @@ void LocationService::unsubscribe(const UUID& remote) {
 
 
 
-void LocationService::notifyLocalObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics, const String& zernike) const {
+void LocationService::notifyLocalObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics, const String& query_data) const {
     for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++)
         if (!agg || it->wantAggregates)
-          it->listener->localObjectAdded(uuid, agg, loc, orient, bounds, mesh, physics, zernike);
+          it->listener->localObjectAdded(uuid, agg, loc, orient, bounds, mesh, physics, query_data);
 }
 
 void LocationService::notifyLocalObjectRemoved(const UUID& uuid, bool agg) const {
@@ -304,10 +304,16 @@ void LocationService::notifyLocalPhysicsUpdated(const UUID& uuid, bool agg, cons
             it->listener->localPhysicsUpdated(uuid, agg, newval);
 }
 
-
-void LocationService::notifyReplicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics, const String& zernike) const {
+void LocationService::notifyLocalQueryDataUpdated(const UUID& uuid, bool agg, const String& newval) const {
     for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++)
-      it->listener->replicaObjectAdded(uuid, loc, orient, bounds, mesh, physics, zernike);
+        if (!agg || it->wantAggregates)
+            it->listener->localQueryDataUpdated(uuid, agg, newval);
+}
+
+
+void LocationService::notifyReplicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics, const String& query_data) const {
+    for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++)
+      it->listener->replicaObjectAdded(uuid, loc, orient, bounds, mesh, physics, query_data);
 }
 
 void LocationService::notifyReplicaObjectRemoved(const UUID& uuid) const {
@@ -338,6 +344,11 @@ void LocationService::notifyReplicaMeshUpdated(const UUID& uuid, const String& n
 void LocationService::notifyReplicaPhysicsUpdated(const UUID& uuid, const String& newval) const {
     for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++)
         it->listener->replicaPhysicsUpdated(uuid, newval);
+}
+
+void LocationService::notifyReplicaQueryDataUpdated(const UUID& uuid, const String& newval) const {
+    for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++)
+        it->listener->replicaQueryDataUpdated(uuid, newval);
 }
 
 void LocationService::notifyOnLocationUpdateFromServer(const ServerID sid, const Sirikata::Protocol::Loc::LocationUpdate& update) {

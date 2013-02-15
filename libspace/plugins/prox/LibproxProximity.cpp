@@ -490,6 +490,16 @@ void LibproxProximity::receiveMigrationData(const UUID& obj, ServerID source_ser
 
 // AggregateListener Interface
 
+void LibproxProximity::aggregateObjectCreated(ProxAggregator* handler, const ObjectReference& objid) {
+    if (!static_cast<ProxQueryHandler*>(handler)->staticOnly()) return;
+    LibproxProximityBase::aggregateObjectCreated(objid);
+}
+
+void LibproxProximity::aggregateObjectDestroyed(ProxAggregator* handler, const ObjectReference& objid) {
+    if (!static_cast<ProxQueryHandler*>(handler)->staticOnly()) return;
+    LibproxProximityBase::aggregateObjectDestroyed(objid);
+}
+
 void LibproxProximity::aggregateCreated(ProxAggregator* handler, const ObjectReference& objid) {
     // We ignore aggregates built of dynamic objects, they aren't useful for
     // creating aggregate meshes
@@ -510,6 +520,11 @@ void LibproxProximity::aggregateChildRemoved(ProxAggregator* handler, const Obje
 void LibproxProximity::aggregateBoundsUpdated(ProxAggregator* handler, const ObjectReference& objid, const Vector3f& bnds_center, const float32 bnds_center_radius, const float32 max_obj_size) {
     if (!static_cast<ProxQueryHandler*>(handler)->staticOnly()) return;
     LibproxProximityBase::aggregateBoundsUpdated(objid, bnds_center, AggregateBoundingInfo(Vector3f::zero(), bnds_center_radius, max_obj_size));
+}
+
+void LibproxProximity::aggregateQueryDataUpdated(ProxAggregator* handler, const ObjectReference& objid, const String& qd) {
+    if (!static_cast<ProxQueryHandler*>(handler)->staticOnly()) return;
+    LibproxProximityBase::aggregateQueryDataUpdated(objid, qd, (handler->rootAggregateID() == objid));
 }
 
 void LibproxProximity::aggregateDestroyed(ProxAggregator* handler, const ObjectReference& objid) {
@@ -1049,6 +1064,9 @@ void LibproxProximity::generateServerQueryEvents(Query* query) {
                 const String& phy = mLocCache->physics(oobjid);
                 if (phy.size() > 0)
                     addition.set_physics(phy);
+                String qd = mLocCache->queryData(oobjid);
+                if (qd.size() > 0)
+                    addition.set_query_data(qd);
             }
             for(uint32 pidx = 0; pidx < evt.reparents().size(); pidx++) {
                 Sirikata::Protocol::Prox::INodeReparent reparent = event_results.add_reparent();
@@ -1185,6 +1203,7 @@ void LibproxProximity::generateObjectQueryEvents(Query* query, bool do_first) {
                 const String& phy = mLocCache->physics(oobjid);
                 if (phy.size() > 0)
                     addition.set_physics(phy);
+                // Do not include query_data for results going to objects
             }
             for(uint32 pidx = 0; pidx < evt.reparents().size(); pidx++) {
                 Sirikata::Protocol::Prox::INodeReparent reparent = event_results.add_reparent();
@@ -1286,6 +1305,7 @@ void LibproxProximity::handleUpdateServerQuery(const ServerID& server, const Tim
         if (it == mServerQueries[i].end()) {
             PROXLOG(debug,"Add server query from " << server << ", min angle " << angle.asFloat() << ", object class " << ObjectClassToString((ObjectClass)i) << " (loc: " << adjusted_loc.position() << ", region: " << region << ", max size: " << ms << ")");
 
+            // FIXME also support custom queries
             Query* q = mServerDistance ?
                 mServerQueryHandler[i].handler->registerQuery(adjusted_loc, region, ms, SolidAngle::Min, mDistanceQueryDistance) :
                 mServerQueryHandler[i].handler->registerQuery(adjusted_loc, region, ms, angle) ;
@@ -1400,6 +1420,7 @@ void LibproxProximity::handleUpdateObjectQuery(const UUID& object, const TimedMo
             // This is necessary because we get this update for all location updates, even those for objects
             // which don't have subscriptions.
             if (angle != NoUpdateSolidAngle) {
+                // FIXME also support custom queries
                 Query* q = mObjectDistance ?
                     mObjectQueryHandler[i].handler->registerQuery(loc, region, ms, SolidAngle::Min, mDistanceQueryDistance) :
                     mObjectQueryHandler[i].handler->registerQuery(loc, region, ms, angle);

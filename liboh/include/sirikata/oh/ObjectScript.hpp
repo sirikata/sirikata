@@ -36,6 +36,7 @@
 #include <sirikata/core/util/Logging.hpp>
 #include <sirikata/proxyobject/ProxyObject.hpp>
 #include <sirikata/core/service/Service.hpp>
+#include <sirikata/core/command/Command.hpp>
 
 namespace Sirikata {
 
@@ -65,6 +66,14 @@ class SIRIKATA_OH_EXPORT ObjectScript : public Service {
       false otherwise.  Also processes the message it receives if can decode it.
      */
     virtual bool handleScriptCommRead(const SpaceObjectReference& src, const SpaceObjectReference& dst, const std::string& payload) { return true;};
+
+    /** Try to dispatch a command for the object to the script. This can require
+     *  registration of a handler by the script, so it may fail. Whether or not
+     *  it is successful, the implementation of this method should ensure it
+     *  calls the Commander::result() method to ensure a response is provided to
+     *  the requester.
+     */
+    virtual void handleObjectCommand(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid) = 0;
 
      virtual String scriptType() const { return scriptType_;}
      virtual String scriptOptions() const {return scriptOptions_;}

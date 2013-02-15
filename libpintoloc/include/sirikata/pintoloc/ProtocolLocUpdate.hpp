@@ -73,6 +73,11 @@ public:
     virtual String physics() const { return mUpdate.physics(); }
     virtual uint64 physics_seqno() const { return seqno(); }
 
+    // Query data
+    virtual bool has_query_data() const { return mUpdate.has_query_data(); }
+    virtual String query_data() const { return mUpdate.query_data(); }
+    virtual uint64 query_data_seqno() const { return seqno(); }
+
     virtual uint32 index_id_size() const { return mUpdate.index_id_size(); }
     virtual ProxIndexID index_id(int32 idx) const { return mUpdate.index_id(idx); }
     virtual uint64 index_id_seqno() const { return seqno(); }
@@ -161,6 +166,11 @@ public:
     virtual bool has_physics() const { return mUpdate.has_physics(); }
     virtual String physics() const { return mUpdate.physics(); }
     virtual uint64 physics_seqno() const { return seqno(); }
+
+    // Query data
+    virtual bool has_query_data() const { return mUpdate.has_query_data(); }
+    virtual String query_data() const { return mUpdate.query_data(); }
+    virtual uint64 query_data_seqno() const { return seqno(); }
 
     virtual uint32 index_id_size() const { return 0; }
     virtual ProxIndexID index_id(int32 idx) const { assert(false && "Out of bounds index id"); return -1; }

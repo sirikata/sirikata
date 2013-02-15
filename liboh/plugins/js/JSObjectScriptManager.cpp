@@ -269,6 +269,7 @@ void JSObjectScriptManager::createSystemTemplate(JSCtx* jsctx)
     jsctx->mSystemTemplate->Set(v8::String::New("import"), v8::FunctionTemplate::New(JSSystem::root_import));
 
     jsctx->mSystemTemplate->Set(v8::String::New("http"), v8::FunctionTemplate::New(JSSystem::root_http));
+    jsctx->mSystemTemplate->Set(v8::String::New("http_get"), v8::FunctionTemplate::New(JSSystem::root_http_get));
 
     jsctx->mSystemTemplate->Set(v8::String::New("storageBeginTransaction"),v8::FunctionTemplate::New(JSSystem::storageBeginTransaction));
     jsctx->mSystemTemplate->Set(v8::String::New("storageCommit"),v8::FunctionTemplate::New(JSSystem::storageCommit));
@@ -336,6 +337,7 @@ void JSObjectScriptManager::createSystemTemplate(JSCtx* jsctx)
     jsctx->mSystemTemplate->Set(v8::String::New("set_script"),v8::FunctionTemplate::New(JSSystem::root_setScript));
     jsctx->mSystemTemplate->Set(v8::String::New("getScript"),v8::FunctionTemplate::New(JSSystem::root_getScript));
 
+    jsctx->mSystemTemplate->Set(v8::String::New("registerCommandHandler"),v8::FunctionTemplate::New(JSSystem::root_registerCommandHandler));
 }
 
 
@@ -418,6 +420,14 @@ void JSObjectScriptManager::createVisibleTemplate(JSCtx* jsctx)
     //animations
     proto_t->Set(v8::String::New("getAnimationList"),v8::FunctionTemplate::New(JSVisible::getAnimationList));
 
+    // Events
+    proto_t->Set(v8::String::New("onPositionChanged"),v8::FunctionTemplate::New(JSVisible::onPositionChanged));
+    proto_t->Set(v8::String::New("onVelocityChanged"),v8::FunctionTemplate::New(JSVisible::onVelocityChanged));
+    proto_t->Set(v8::String::New("onOrientationChanged"),v8::FunctionTemplate::New(JSVisible::onOrientationChanged));
+    proto_t->Set(v8::String::New("onOrientationVelChanged"),v8::FunctionTemplate::New(JSVisible::onOrientationVelChanged));
+    proto_t->Set(v8::String::New("onScaleChanged"),v8::FunctionTemplate::New(JSVisible::onScaleChanged));
+    proto_t->Set(v8::String::New("onMeshChanged"),v8::FunctionTemplate::New(JSVisible::onMeshChanged));
+    proto_t->Set(v8::String::New("onPhysicsChanged"),v8::FunctionTemplate::New(JSVisible::onPhysicsChanged));
 
     proto_t->Set(v8::String::New("getAllData"), v8::FunctionTemplate::New(JSVisible::getAllData));
     proto_t->Set(v8::String::New("__getType"),v8::FunctionTemplate::New(JSVisible::getType));

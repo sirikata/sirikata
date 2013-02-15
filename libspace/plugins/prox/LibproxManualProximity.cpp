@@ -394,6 +394,16 @@ void LibproxManualProximity::updateServerQueryResults(ServerID sid, const Sirika
 // so that their info will be available to queriers. We only have two
 // local query handlers -- static and dynamic -- so we filter passing
 // along the call by just checking that one local static handler.
+void LibproxManualProximity::aggregateObjectCreated(ProxAggregator* handler, const ObjectReference& objid) {
+    if (static_cast<ProxQueryHandler*>(handler) != mLocalQueryHandler[OBJECT_CLASS_STATIC].handler) return;
+    LibproxProximityBase::aggregateObjectCreated(objid);
+}
+
+void LibproxManualProximity::aggregateObjectDestroyed(ProxAggregator* handler, const ObjectReference& objid) {
+    if (static_cast<ProxQueryHandler*>(handler) != mLocalQueryHandler[OBJECT_CLASS_STATIC].handler) return;
+    LibproxProximityBase::aggregateObjectDestroyed(objid);
+}
+
 void LibproxManualProximity::aggregateCreated(ProxAggregator* handler, const ObjectReference& objid) {
     if (static_cast<ProxQueryHandler*>(handler) != mLocalQueryHandler[OBJECT_CLASS_STATIC].handler) return;
     LibproxProximityBase::aggregateCreated(objid);
@@ -412,6 +422,11 @@ void LibproxManualProximity::aggregateChildRemoved(ProxAggregator* handler, cons
 void LibproxManualProximity::aggregateBoundsUpdated(ProxAggregator* handler, const ObjectReference& objid, const Vector3f& bnds_center, const float32 bnds_center_radius, const float32 max_obj_size) {
     if (static_cast<ProxQueryHandler*>(handler) != mLocalQueryHandler[OBJECT_CLASS_STATIC].handler) return;
     LibproxProximityBase::aggregateBoundsUpdated(objid, bnds_center, AggregateBoundingInfo(Vector3f::zero(), bnds_center_radius, max_obj_size));
+}
+
+void LibproxManualProximity::aggregateQueryDataUpdated(ProxAggregator* handler, const ObjectReference& objid, const String& qd) {
+    if (static_cast<ProxQueryHandler*>(handler) != mLocalQueryHandler[OBJECT_CLASS_STATIC].handler) return;
+    LibproxProximityBase::aggregateQueryDataUpdated(objid, qd, (handler->rootAggregateID() == objid));
 }
 
 void LibproxManualProximity::aggregateDestroyed(ProxAggregator* handler, const ObjectReference& objid) {
@@ -1305,6 +1320,9 @@ void LibproxManualProximity::queryHasEvents(ProxQuery* query) {
                 const String& phy = loccache->physics(oobjid);
                 if (phy.size() > 0)
                     addition.set_physics(phy);
+                String qd = loccache->queryData(oobjid);
+                if (qd.size() > 0)
+                    addition.set_query_data(qd);
 
                 // We should either include the parent ID, or if it's empty,
                 // then this is a root and we should include basic tree

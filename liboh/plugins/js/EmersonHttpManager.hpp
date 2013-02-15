@@ -7,6 +7,7 @@
 
 #include <map>
 #include <sirikata/core/transfer/HttpManager.hpp>
+#include <sirikata/core/transfer/URL.hpp>
 #include <v8.h>
 #include <sirikata/core/util/SelfWeakPtr.hpp>
 #include <sirikata/core/network/IOStrandImpl.hpp>
@@ -44,7 +45,6 @@ public:
      */
     void deregisterContext(JSContextStruct* toDeregister);
 
-
     /**
        Each request sent out is associated with a unique EmersonHttpToken taken
        from currentToken (currentToken is incremented as a result of this
@@ -65,6 +65,7 @@ public:
         Sirikata::Network::Address addr,Transfer::HttpManager::HTTP_METHOD method,
         std::string req,v8::Persistent<v8::Function> cb, JSContextStruct* jscont);
 
+    EmersonHttpToken get(const Transfer::URL& url, v8::Persistent<v8::Function> cb, JSContextStruct* jscont);
 
 private:
 
@@ -95,6 +96,8 @@ private:
      */
     TokenCBMap tokeCBMap;
 
+    // Helper for dispatching requests
+    EmersonHttpToken setupRequestCallback(JSContextStruct* jscont, v8::Persistent<v8::Function> cb);
 
     /**
        Whenever we issue an http request, we wrap this function as the

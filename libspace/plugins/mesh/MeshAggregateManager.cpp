@@ -51,12 +51,13 @@
 #include <boost/filesystem.hpp>
 
 #include <sirikata/core/transfer/OAuthHttpManager.hpp>
-#include <prox/rtree/RTreeCore.hpp>
+#include <prox/base/ZernikeDescriptor.hpp>
 
 #include <sirikata/core/command/Commander.hpp>
 
 #include <boost/filesystem.hpp>
 
+#include <float.h>
 
 
 #if SIRIKATA_PLATFORM == SIRIKATA_PLATFORM_WINDOWS
@@ -515,6 +516,12 @@ void MeshAggregateManager::aggregationThreadMain(uint8 i) {
 
 void MeshAggregateManager::uploadThreadMain(uint8 i) {
   mUploadServices[i]->run();
+}
+
+void MeshAggregateManager::addLeafObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const Transfer::URI& mesh) {
+}
+
+void MeshAggregateManager::removeLeafObject(const UUID& uuid) {
 }
 
 void MeshAggregateManager::addAggregate(const UUID& uuid) {
@@ -2778,7 +2785,7 @@ void MeshAggregateManager::updateAggregateLocMesh(UUID uuid, String mesh) {
 void MeshAggregateManager::localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc,
                                                 const TimedMotionQuaternion& orient,
                                                 const AggregateBoundingInfo& bounds, const String& mesh, const String& physics,
-                                                const String& zernike)
+                                                const String& query_data)
 {
   boost::mutex::scoped_lock lock(mLocCacheMutex);
   mLocationServiceCache.insertLocationInfo(uuid, std::tr1::shared_ptr<LocationInfo>(
@@ -2830,7 +2837,7 @@ void MeshAggregateManager::localMeshUpdated(const UUID& uuid, bool agg, const St
 void MeshAggregateManager::replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc,
                                                 const TimedMotionQuaternion& orient,
                                                 const AggregateBoundingInfo& bounds, const String& mesh, const String& physics,
-                                                const String& zernike)
+                                                const String& query_data)
 {
   boost::mutex::scoped_lock lock(mLocCacheMutex);
   mLocationServiceCache.insertLocationInfo(uuid, std::tr1::shared_ptr<LocationInfo>(

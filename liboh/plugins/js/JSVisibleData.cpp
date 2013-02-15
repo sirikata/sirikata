@@ -31,9 +31,15 @@ JSProxyVisibleData::JSProxyVisibleData(JSVisibleDataListener* parent, ProxyObjec
  : JSVisibleData(parent),
    proxy(from)
 {
+    proxy->PositionProvider::addListener(this);
+    proxy->MeshProvider::addListener(this);
 }
 
 JSProxyVisibleData::~JSProxyVisibleData() {
+    if (proxy) {
+        proxy->PositionProvider::removeListener(this);
+        proxy->MeshProvider::removeListener(this);
+    }
     clearFromParent();
 }
 
@@ -46,8 +52,39 @@ const SpaceObjectReference& JSProxyVisibleData::observer() {
 }
 
 void JSProxyVisibleData::disable() {
-    proxy.reset();
+    if (proxy) {
+        proxy->PositionProvider::removeListener(this);
+        proxy->MeshProvider::removeListener(this);
+        proxy.reset();
+    }
     JSVisibleData::disable();
+}
+
+// PositionListener Interface
+void JSProxyVisibleData::updateLocation(ProxyObjectPtr obj,
+    const TimedMotionVector3f &newLocation, const TimedMotionQuaternion& newOrient,
+    const AggregateBoundingInfo& newBounds, const SpaceObjectReference& sporef)
+{
+    // FIXME this interface doesn't let us tell exactly what's updated, so we
+    // have to send notifications for everything
+    notify(&JSVisibleDataEventListener::visiblePositionChanged, this);
+    notify(&JSVisibleDataEventListener::visibleVelocityChanged, this);
+    notify(&JSVisibleDataEventListener::visibleOrientationChanged, this);
+    notify(&JSVisibleDataEventListener::visibleOrientationVelChanged, this);
+    // scale handled by MeshListener interface
+}
+// MeshListener Interface
+void JSProxyVisibleData::onSetMesh(ProxyObjectPtr proxy, Transfer::URI const& newMesh, const SpaceObjectReference& sporef) {
+    notify(&JSVisibleDataEventListener::visibleMeshChanged, this);
+}
+void JSProxyVisibleData::onSetScale(ProxyObjectPtr proxy, float32 newScale,const SpaceObjectReference& sporef ) {
+    notify(&JSVisibleDataEventListener::visibleScaleChanged, this);
+}
+void JSProxyVisibleData::onSetPhysics(ProxyObjectPtr proxy, const String& phy,const SpaceObjectReference& sporef ) {
+    notify(&JSVisibleDataEventListener::visiblePhysicsChanged, this);
+}
+void JSProxyVisibleData::onSetIsAggregate(ProxyObjectPtr proxy, bool isAggregate, const SpaceObjectReference& sporef ) {
+    // Not exposed to VisibleDataEventListeners
 }
 
 
@@ -162,7 +199,9 @@ void JSAggregateVisibleData::updateFrom(ProxyObjectPtr proxy) {
         // Note that we currently pass in NULL so we don't get
         // notifications. We'd only get them upon clearing our children list in
         // the destructor anyway.
-        mChildren[proxy->getObjectReference()] = JSVisibleDataPtr(new JSProxyVisibleData(NULL, proxy));
+        JSVisibleDataPtr jsvisdata(new JSProxyVisibleData(NULL, proxy));
+        jsvisdata->addListener(this); // JSVisibleDataEventListener
+        mChildren[proxy->getObjectReference()] = jsvisdata;
     }
     mBest = proxy->getObjectReference();
 }
@@ -202,6 +241,34 @@ void JSAggregateVisibleData::disable() {
     Mutex::scoped_lock locker (childMutex);
     mChildren.clear();
     JSVisibleData::disable();
+}
+
+void JSAggregateVisibleData::visiblePositionChanged(JSVisibleData* data) {
+    notify(&JSVisibleDataEventListener::visiblePositionChanged, this);
+}
+
+void JSAggregateVisibleData::visibleVelocityChanged(JSVisibleData* data) {
+    notify(&JSVisibleDataEventListener::visibleVelocityChanged, this);
+}
+
+void JSAggregateVisibleData::visibleOrientationChanged(JSVisibleData* data) {
+    notify(&JSVisibleDataEventListener::visibleOrientationChanged, this);
+}
+
+void JSAggregateVisibleData::visibleOrientationVelChanged(JSVisibleData* data) {
+    notify(&JSVisibleDataEventListener::visibleOrientationVelChanged, this);
+}
+
+void JSAggregateVisibleData::visibleScaleChanged(JSVisibleData* data) {
+    notify(&JSVisibleDataEventListener::visibleScaleChanged, this);
+}
+
+void JSAggregateVisibleData::visibleMeshChanged(JSVisibleData* data) {
+    notify(&JSVisibleDataEventListener::visibleMeshChanged, this);
+}
+
+void JSAggregateVisibleData::visiblePhysicsChanged(JSVisibleData* data) {
+    notify(&JSVisibleDataEventListener::visiblePhysicsChanged, this);
 }
 
 } // namespace JS

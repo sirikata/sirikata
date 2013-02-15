@@ -248,6 +248,11 @@ void JSPresenceStruct::connect(const SpaceObjectReference& _sporef)
     // We need to update our JSVisibleDataPtr since before the connect we didn't even
     // know what our SpaceObjectReference would be.
     jpp = mParent->jsVisMan.getOrCreateVisible(_sporef);
+    // JSVisibleDataEventListener, matching call in JSPositionListener
+    // (where it happens when we have jpp properly at
+    // initialization). Listener removal should be handled by
+    // ~JSPositionListener.
+    jpp->addListener(this);
 
     v8::HandleScope handle_scope;
 
@@ -501,6 +506,39 @@ JSPresenceStruct* JSPresenceStruct::decodePresenceStruct(v8::Handle<v8::Value> t
     return returner;
 
 }
+
+
+
+// JSVisibleDataEventListener Interface
+void JSPresenceStruct::visiblePositionChanged(JSVisibleData* data) {
+    if (!mEventCallbacks || mEventCallbacks->onPositionChanged.second.IsEmpty()) return;
+    mParentScript->invokePresenceEventCallback(mEventCallbacks->onPositionChanged.second, mEventCallbacks->onPositionChanged.first, this);
+}
+void JSPresenceStruct::visibleVelocityChanged(JSVisibleData* data) {
+    if (!mEventCallbacks || mEventCallbacks->onVelocityChanged.second.IsEmpty()) return;
+    mParentScript->invokePresenceEventCallback(mEventCallbacks->onVelocityChanged.second, mEventCallbacks->onVelocityChanged.first, this);
+}
+void JSPresenceStruct::visibleOrientationChanged(JSVisibleData* data) {
+    if (!mEventCallbacks || mEventCallbacks->onOrientationChanged.second.IsEmpty()) return;
+    mParentScript->invokePresenceEventCallback(mEventCallbacks->onOrientationChanged.second, mEventCallbacks->onOrientationChanged.first, this);
+}
+void JSPresenceStruct::visibleOrientationVelChanged(JSVisibleData* data) {
+    if (!mEventCallbacks || mEventCallbacks->onOrientationVelChanged.second.IsEmpty()) return;
+    mParentScript->invokePresenceEventCallback(mEventCallbacks->onOrientationVelChanged.second, mEventCallbacks->onOrientationVelChanged.first, this);
+}
+void JSPresenceStruct::visibleScaleChanged(JSVisibleData* data) {
+    if (!mEventCallbacks || mEventCallbacks->onScaleChanged.second.IsEmpty()) return;
+    mParentScript->invokePresenceEventCallback(mEventCallbacks->onScaleChanged.second, mEventCallbacks->onScaleChanged.first, this);
+}
+void JSPresenceStruct::visibleMeshChanged(JSVisibleData* data) {
+    if (!mEventCallbacks || mEventCallbacks->onMeshChanged.second.IsEmpty()) return;
+    mParentScript->invokePresenceEventCallback(mEventCallbacks->onMeshChanged.second, mEventCallbacks->onMeshChanged.first, this);
+}
+void JSPresenceStruct::visiblePhysicsChanged(JSVisibleData* data) {
+    if (!mEventCallbacks || mEventCallbacks->onPhysicsChanged.second.IsEmpty()) return;
+    mParentScript->invokePresenceEventCallback(mEventCallbacks->onPhysicsChanged.second, mEventCallbacks->onPhysicsChanged.first, this);
+}
+
 
 
 } //namespace JS

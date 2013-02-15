@@ -77,7 +77,7 @@ void HttpNameHandler::request_finished(std::tr1::shared_ptr<HttpManager::HttpRes
         std::tr1::shared_ptr<MetadataRequest> request, NameCallback callback) {
 
     mStats.resolved++;
-    mStats.bytesTransferred += (response->getBytesSent() + response->getBytesReceived());
+    if (response) mStats.bytesTransferred += (response->getBytesSent() + response->getBytesReceived());
 
     std::tr1::shared_ptr<RemoteFileMetadata> bad;
 
@@ -210,7 +210,7 @@ void HttpChunkHandler::request_finished(std::tr1::shared_ptr<HttpManager::HttpRe
         ChunkCallback callback) {
 
     mStats.downloaded++;
-    mStats.bytesTransferred += (response->getBytesSent() + response->getBytesReceived());
+    if (response) mStats.bytesTransferred += (response->getBytesSent() + response->getBytesReceived());
 
     std::tr1::shared_ptr<DenseData> bad;
     std::string reqType = "file request";

@@ -88,6 +88,11 @@ public:
      */
     virtual void updateLargestObject(float max_radius) = 0;
 
+    /** Update this server's extra query data.
+     *  \param qd the serialized query data for the region
+     */
+    virtual void updateQueryData(const String& qd) = 0;
+
     /** Update query parameters with the server.
      *  \param update a string containing the data to send to the server as an update
      */

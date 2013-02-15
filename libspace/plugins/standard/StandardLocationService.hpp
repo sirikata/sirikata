@@ -60,19 +60,21 @@ public:
     virtual AggregateBoundingInfo bounds(const UUID& uuid);
     virtual const String& mesh(const UUID& uuid);
     virtual const String& physics(const UUID& uuid);
+    virtual const String& queryData(const UUID& uuid);
 
-  virtual void addLocalObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics, const String& zernike);
+  virtual void addLocalObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics, const String& query_data);
     virtual void removeLocalObject(const UUID& uuid);
 
-    virtual void addLocalAggregateObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics);
+    virtual void addLocalAggregateObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics, const String& query_data);
     virtual void removeLocalAggregateObject(const UUID& uuid);
     virtual void updateLocalAggregateLocation(const UUID& uuid, const TimedMotionVector3f& newval);
     virtual void updateLocalAggregateOrientation(const UUID& uuid, const TimedMotionQuaternion& newval);
     virtual void updateLocalAggregateBounds(const UUID& uuid, const AggregateBoundingInfo& newval);
     virtual void updateLocalAggregateMesh(const UUID& uuid, const String& newval);
     virtual void updateLocalAggregatePhysics(const UUID& uuid, const String& newval);
+    virtual void updateLocalAggregateQueryData(const UUID& uuid, const String& newval);
 
-    virtual void addReplicaObject(const Time& t, const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics, const String& zernike);
+    virtual void addReplicaObject(const Time& t, const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics, const String& query_data);
     virtual void removeReplicaObject(const Time& t, const UUID& uuid);
 
     virtual void receiveMessage(Message* msg);
@@ -95,6 +97,7 @@ private:
         // a String version within props. DO NOT use anywhere else.
         String mesh_copied_str;
         String physics_copied_str;
+        String query_data_copied_str;
 
         bool local;
         bool aggregate;

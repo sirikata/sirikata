@@ -175,7 +175,7 @@ public:
     JSObjectScriptManager* manager() const { return mManager; }
 
 
-
+    virtual void handleObjectCommand(const Sirikata::Command::Command&, Sirikata::Command::Commander*, Sirikata::Command::CommandID);
 
 
     //lkjs; note: will need to grab most recent context from stack.
@@ -446,6 +446,8 @@ protected:
 
     void iDelContext(JSContextStruct* toDel,Liveness::Token ctxLT);
 
+
+    void iHandleObjectCommand(const Sirikata::Command::Command& cmd, Sirikata::Command::Commander* cmdr, Sirikata::Command::CommandID cmdid, Liveness::Token ctxLT);
 };
 
 #define JSSCRIPT_SERIAL_CHECK()\

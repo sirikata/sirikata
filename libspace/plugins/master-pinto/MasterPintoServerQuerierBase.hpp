@@ -44,6 +44,7 @@ public:
     // PintoServerQuerier Interface
     virtual void updateRegion(const BoundingBox3f& region);
     virtual void updateLargestObject(float max_radius);
+    virtual void updateQueryData(const String& qd);
     virtual void updateQuery(const String& update) = 0;
 
 protected:
@@ -102,6 +103,8 @@ private:
     bool mRegionDirty;
     float32 mMaxRadius;
     bool mMaxRadiusDirty;
+    String mQueryData;
+    bool mQueryDataDirty;
 
     std::vector<String> mQueuedQueryUpdates;
 }; // MasterPintoServerQuerierBase

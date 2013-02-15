@@ -36,7 +36,7 @@ void ReplicatedLocationServiceCache::addPlaceholderImposter(
     const Vector3f& center_offset,
     const float32 center_bounds_radius,
     const float32 max_size,
-    const String& zernike,
+    const String& query_data,
     const String& mesh
 ) {
     // We only deal with replicated trees, so you might expect this not to pop
@@ -157,9 +157,14 @@ String ReplicatedLocationServiceCache::mesh(const Iterator& id) {
     return it->second.props.mesh().toString();
 }
 
-Prox::ZernikeDescriptor& ReplicatedLocationServiceCache::zernikeDescriptor(const Iterator& id) {
-  return Prox::ZernikeDescriptor::null();
+String ReplicatedLocationServiceCache::queryData(const Iterator& id) {
+    // NOTE: Only accesses via iterator, shouldn't need a lock
+    IteratorData* itdat = (IteratorData*)id.data;
+    ObjectDataMap::iterator it = itdat->it;
+    assert(it != mObjects.end());
+    return it->second.props.queryData();
 }
+
 
 const ObjectReference& ReplicatedLocationServiceCache::iteratorID(const Iterator& id) {
     // NOTE: Only accesses via iterator, shouldn't need a lock
@@ -218,6 +223,11 @@ String ReplicatedLocationServiceCache::physics(const ObjectID& id) {
     return it->second.props.physics();
 }
 
+String ReplicatedLocationServiceCache::queryData(const ObjectID& id) {
+    GET_OBJ_ENTRY(id);
+    return it->second.props.queryData();
+}
+
 ObjectReference ReplicatedLocationServiceCache::parent(const ObjectID& id) {
     GET_OBJ_ENTRY(id);
     return it->second.parent;
@@ -240,7 +250,8 @@ void ReplicatedLocationServiceCache::objectAdded(
     const TimedMotionQuaternion& orient, uint64 orient_seqno,
     const AggregateBoundingInfo& bounds, uint64 bounds_seqno,
     const Transfer::URI& mesh, uint64 mesh_seqno,
-    const String& physics, uint64 physics_seqno
+    const String& physics, uint64 physics_seqno,
+    const String& query_data, uint64 query_data_seqno
 ) {
     Lock lck(mMutex);
 
@@ -257,6 +268,7 @@ void ReplicatedLocationServiceCache::objectAdded(
     it->second.props.setBounds(bounds, bounds_seqno);
     it->second.props.setMesh(mesh, mesh_seqno);
     it->second.props.setPhysics(physics, physics_seqno);
+    it->second.props.setQueryData(query_data, query_data_seqno);
     it->second.aggregate = agg;
     it->second.parent = parent;
 
@@ -530,6 +542,41 @@ void ReplicatedLocationServiceCache::notifyPhysicsUpdated(Liveness::Token alive_
     Lock lck(mMutex);
 
     ReplicatedLocationUpdateProvider::notify(&ReplicatedLocationUpdateListener::onPhysicsUpdated, this, uuid);
+
+    ObjectDataMap::iterator obj_it = mObjects.find(uuid);
+    obj_it->second.tracking--;
+    tryRemoveObject(obj_it);
+}
+
+void ReplicatedLocationServiceCache::queryDataUpdated(const ObjectReference& uuid, const String& newval, uint64 seqno) {
+    Lock lck(mMutex);
+
+    ObjectDataMap::iterator it = mObjects.find(uuid);
+    if (it == mObjects.end()) return;
+    String oldval = it->second.props.queryData();
+    it->second.props.setQueryData(newval, seqno);
+
+    bool agg = it->second.aggregate;
+
+    it->second.tracking++;
+    mStrand->post(
+        std::tr1::bind(
+            &ReplicatedLocationServiceCache::notifyQueryDataUpdated, this, livenessToken(), uuid, oldval, newval
+        )
+    );
+}
+
+void ReplicatedLocationServiceCache::notifyQueryDataUpdated(Liveness::Token alive_token, const ObjectReference& uuid, const String& oldval, const String& newval) {
+    Liveness::Lock alive(alive_token);
+    if (!alive) return;
+
+    Lock lck(mMutex);
+
+    for(ListenerSet::iterator listen_it = mListeners.begin(); listen_it != mListeners.end(); listen_it++) {
+        (*listen_it)->locationQueryDataUpdated(uuid, oldval, newval);
+    }
+
+    ReplicatedLocationUpdateProvider::notify(&ReplicatedLocationUpdateListener::onQueryDataUpdated, this, uuid);
 
     ObjectDataMap::iterator obj_it = mObjects.find(uuid);
     obj_it->second.tracking--;

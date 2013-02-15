@@ -92,6 +92,7 @@ class PerPresenceData;
 typedef std::tr1::weak_ptr<HostedObject> HostedObjectWPtr;
 typedef std::tr1::shared_ptr<HostedObject> HostedObjectPtr;
 
+class QueryDataLookup;
 
 class SIRIKATA_OH_EXPORT HostedObject
     : public VWObject,
@@ -100,6 +101,8 @@ class SIRIKATA_OH_EXPORT HostedObject
 private:
   struct PrivateCallbacks;
 
+    // Public to give access to OHConnectInfo to QueryDataLookup impls
+  public:
     typedef struct OHConnectInfo{
     public:
       SpaceID spaceID;
@@ -110,7 +113,7 @@ private:
       String query;
       ObjectReference orefID;
       int64 token;
-      String zernike;
+      String query_data;
       } OHConnectInfo;
     typedef std::tr1::shared_ptr<OHConnectInfo> OHConnectInfoPtr;
 
@@ -233,12 +236,8 @@ public:
         PresenceToken token = DEFAULT_PRESENCE_TOKEN);
 
 
-    void objectHostConnectIndirect(OHConnectInfoPtr oci) {
-      bool ret = objectHostConnect(oci->spaceID, oci->startingLocation, oci->meshBounds,
-                                   oci->mesh, oci->physics, oci->query, oci->zernike,
-                                   oci->orefID, oci->token);
-    }
-
+    // May be called asynchronously, self ptr ensures liveness.
+    void objectHostConnectIndirect(HostedObjectPtr self, QueryDataLookup* lookup, OHConnectInfoPtr oci);
 
 
     bool objectHostConnect(
@@ -248,17 +247,9 @@ public:
         const String mesh,
         const String physics,
         const String query,
-        const String zernike,
+        const String query_data,
         const ObjectReference orefID,
         PresenceToken token = DEFAULT_PRESENCE_TOKEN);
-
-    bool downloadZernikeDescriptor(OHConnectInfoPtr ocip, uint8 n_retry=0);
-
-    void metadataDownloaded(
-        OHConnectInfoPtr ocip,
-        uint8 retryCount,
-        std::tr1::shared_ptr<Transfer::MetadataRequest> request,
-        std::tr1::shared_ptr<Transfer::RemoteFileMetadata> response);
 
 
     /// Disconnects from the given space by terminating the corresponding substream.
@@ -302,6 +293,9 @@ public:
     virtual void requestOrientationUpdate(const SpaceID& space, const ObjectReference& oref, const TimedMotionQuaternion& orient);
     virtual void requestBoundsUpdate(const SpaceID& space, const ObjectReference& oref, const BoundingSphere3f& bounds);
     virtual void requestMeshUpdate(const SpaceID& space, const ObjectReference& oref, const String& mesh);
+    // This version is a callback used when looking up query data that is
+    // collected based on the mesh itself.
+    virtual void requestMeshUpdateAfterQueryDataLookup(HostedObjectPtr self, QueryDataLookup* lookup, const SpaceID& space, const ObjectReference& oref, const String& mesh, bool with_query_data, const String& query_data);
     virtual void requestPhysicsUpdate(const SpaceID& space, const ObjectReference& oref, const String& phy);
 
     virtual void requestQueryUpdate(const SpaceID& space, const ObjectReference& oref, const String& new_query);
@@ -318,6 +312,13 @@ public:
 
     // Commands
     void commandPresences(
+        const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
+    // Tries to pass a command to the object script to be handled by the script
+    // and completes the handling by indicating success or failure. The command,
+    // with 'oh.objects.command' as the 'command' field, is passed to the
+    // script. Some scripts may not be setup to handle commands and some may not
+    // even have scripts, in which case the command will automatically fail.
+    void commandObjectCommand(
         const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
 
   private:
@@ -371,10 +372,39 @@ public:
     ProxyObjectPtr createProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri, TimedMotionVector3f& tmv, TimedMotionQuaternion& tmvq, const AggregateBoundingInfo& bounds, const String& physics, const String& query, bool isAggregate, uint64 seqNo);
 
     // Helper for constructing and sending location update
-    void updateLocUpdateRequest(const SpaceID& space, const ObjectReference& oref, const TimedMotionVector3f* const loc, const TimedMotionQuaternion* const orient, const BoundingSphere3f* const bounds, const String* const mesh, const String* const phy);
+    void updateLocUpdateRequest(const SpaceID& space, const ObjectReference& oref, const TimedMotionVector3f* const loc, const TimedMotionQuaternion* const orient, const BoundingSphere3f* const bounds, const String* const mesh, const String* const phy, const String* query_data);
     void sendLocUpdateRequest(const SpaceID& space, const ObjectReference& oref);
 
+}; // class HostedObject
+
+
+class SIRIKATA_OH_EXPORT QueryDataLookup {
+public:
+    virtual ~QueryDataLookup();
+
+    /** Lookup query data for this object. Should invoke
+     *  HostedObject::objectHostConnectIndirect on the main thread when it has
+     *  filled in query_data, if it needs to. The callback may be invoked
+     *  immediately if the data can be filled in synchronously.
+     */
+    virtual void lookup(HostedObjectPtr ho, HostedObject::OHConnectInfoPtr ci) = 0;
+    /** Lookup query data for this object based on mesh only. Should invoke
+     *  HostedObject::requestMeshUpdateAfterQueryDataLookup. That method uses locks, so
+     *  it can safely be invoked from any thread.
+     */
+    virtual void lookup(HostedObjectPtr ho, const SpaceID& space, const ObjectReference& oref, const String& mesh) = 0;
 };
+
+class SIRIKATA_OH_EXPORT QueryDataLookupFactory
+    : public AutoSingleton<QueryDataLookupFactory>,
+      public Factory1<QueryDataLookup*, const String&>
+{
+public:
+    static QueryDataLookupFactory& getSingleton();
+    static void destroy();
+};
+
+
 
 }
 

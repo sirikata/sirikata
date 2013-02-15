@@ -88,6 +88,7 @@ public:
     virtual void onBoundsUpdated(ReplicatedLocationServiceCache* loccache, const ObjectReference& obj);
     virtual void onMeshUpdated(ReplicatedLocationServiceCache* loccache, const ObjectReference& obj);
     virtual void onPhysicsUpdated(ReplicatedLocationServiceCache* loccache, const ObjectReference& obj);
+    virtual void onQueryDataUpdated(ReplicatedLocationServiceCache* loccache, const ObjectReference& obj);
 
     // PROX Thread:
 
@@ -98,10 +99,13 @@ public:
     void queryHasEvents(Query* query);
 
     // AggregateListener Interface
+    virtual void aggregateObjectCreated(ProxAggregator* handler, const ObjectReference& objid);
+    virtual void aggregateObjectDestroyed(ProxAggregator* handler, const ObjectReference& objid);
     virtual void aggregateCreated(ProxAggregator* handler, const ObjectReference& objid);
     virtual void aggregateChildAdded(ProxAggregator* handler, const ObjectReference& objid, const ObjectReference& child, const Vector3f& bnds_center, const float32 bnds_center_radius, const float32 max_obj_size);
     virtual void aggregateChildRemoved(ProxAggregator* handler, const ObjectReference& objid, const ObjectReference& child, const Vector3f& bnds_center, const float32 bnds_center_radius, const float32 max_obj_size);
     virtual void aggregateBoundsUpdated(ProxAggregator* handler, const ObjectReference& objid, const Vector3f& bnds_center, const float32 bnds_center_radius, const float32 max_obj_size);
+    virtual void aggregateQueryDataUpdated(ProxAggregator* handler, const ObjectReference& objid, const String& extra_query_data);
     virtual void aggregateDestroyed(ProxAggregator* handler, const ObjectReference& objid);
     virtual void aggregateObserved(ProxAggregator* handler, const ObjectReference& objid, uint32 nobservers, uint32 nchildren);
 
@@ -126,8 +130,8 @@ private:
     void handleNotifySubscribersLocUpdate(Liveness::Token alive, ReplicatedLocationServiceCache* loccache, const ObjectReference& oref);
 
     // Object queries
-    void updateQuery(HostedObjectPtr ho, const SpaceObjectReference& sporef, SolidAngle sa, uint32 max_results);
-    void updateQuery(const ObjectReference& obj, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, SolidAngle sa, uint32 max_results);
+    void updateQuery(HostedObjectPtr ho, const SpaceObjectReference& sporef, SolidAngle sa, uint32 max_results, const String& custom_query_string);
+    void updateQuery(const ObjectReference& obj, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, SolidAngle sa, uint32 max_results, const String& custom_query_string);
 
 
     // PROX Thread: These are utility methods which should only be called from the prox thread.
@@ -135,15 +139,15 @@ private:
     // Reusable utility for registering the query with a particular
     // index. Useful since we may need to register in different conditions --
     // new query, new index, index becomes relevant to query, etc.
-    void registerObjectQueryWithIndex(const ObjectReference& object, ProxIndexID index_id, ProxQueryHandler* handler, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const SolidAngle& angle, uint32 max_results);
+    void registerObjectQueryWithIndex(const ObjectReference& object, ProxIndexID index_id, ProxQueryHandler* handler, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const SolidAngle& angle, uint32 max_results, const String& custom_query_string);
     // Utility for registering query with all indices for a ServerID. This just
     // calls registerObjectQueryWithIndex for each index on the server.
-    void registerObjectQueryWithServer(const ObjectReference& object, ServerID sid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const SolidAngle& angle, uint32 max_results);
+    void registerObjectQueryWithServer(const ObjectReference& object, ServerID sid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const SolidAngle& angle, uint32 max_results, const String& custom_query_string);
     void unregisterObjectQueryWithIndex(const ObjectReference& object, ProxIndexID index_id);
     void unregisterObjectQueryWithServer(const ObjectReference& object, ServerID sid);
 
     // Events on queries/objects
-    void handleUpdateObjectQuery(Liveness::Token alive, const ObjectReference& object, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const SolidAngle& angle, uint32 max_results);
+    void handleUpdateObjectQuery(Liveness::Token alive, const ObjectReference& object, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const SolidAngle& angle, uint32 max_results, const String& custom_query_string);
     void handleRemoveObjectQuery(Liveness::Token alive, const ObjectReference& object, bool notify_main_thread);
     void handleDisconnectedObject(Liveness::Token alive, const ObjectReference& object);
 
@@ -158,6 +162,7 @@ private:
     struct ObjectQueryData {
         // We need to store the query parameters because a query may get
         // registered when no trees have been replicated yet.
+        String custom_query_string;
         TimedMotionVector3f loc;
         BoundingSphere3f bounds;
         SolidAngle angle;
