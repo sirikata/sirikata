@@ -65,13 +65,36 @@ float SolidAngle::asFloat() const {
 }
 
 SolidAngle SolidAngle::fromCenterRadius(const Vector3<float>& to_center, float radius) {
-    float to_center_len = to_center.length();
-    if (to_center_len <= radius)
+    float to_center_len_sq = to_center.lengthSquared();
+    float rad_sq = radius*radius;
+    if (to_center_len_sq <= rad_sq)
         return SolidAngle(MaxVal);
 
-    float sin_alpha = radius / to_center_len;
-    float cos_alpha = sqrtf(1 - sin_alpha*sin_alpha);
+    // This would be
+    //float sin_alpha = radius / to_center_len;
+    // but since we're going to square it anyway, we compute the squared version
+    // directly, saving us the square root above
+    float sin_alpha_sq = rad_sq / to_center_len_sq;
+    float cos_alpha = sqrtf(1 - sin_alpha_sq);
     return SolidAngle( 2.0f * Pi * (1.0f - cos_alpha) );
+}
+
+float SolidAngle::lessThanEqualDistanceSqRadius(float dist2, float radius) const {
+    // This works backwards from our value to an intermediate form, essentially
+    // doing the opposite of fromCenterRadius to avoid the expensive sqrt and
+    // length
+    float to_center_len_sq = dist2; // just an alias to match fromCenterRadius
+    float rad_sq = radius*radius;
+    if (to_center_len_sq <= rad_sq)
+        return MaxVal; // other is inside bounds so has full solid angle
+
+    float this_angle_frac = this->mSolidAngle / (2.0f * Pi);
+    float this_angle_invert_frac = (1.0f - this_angle_frac);
+    float invert_squared_frac = 1.0f - this_angle_invert_frac*this_angle_invert_frac;
+
+    if (invert_squared_frac * to_center_len_sq <= rad_sq)
+        return rad_sq / to_center_len_sq;
+    return -1;
 }
 
 float SolidAngle::maxDistance(float obj_radius) const {

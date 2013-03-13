@@ -75,6 +75,19 @@ public:
 
     float asFloat() const;
 
+    // Compares this solid angle to one generated at an offset + radius, where
+    // the offset is specified by distance^2. Allows more efficient comparison
+    // than computing real solid angle values.
+    //
+    // Returns a positive value if this solid angle is <= the solid angle
+    // computed from the given center offset and radius, and -1 if this solid
+    // angle is greater than the one that would be computed from the given
+    // center offset and radius. The odd interface allows us to both a) compare
+    // the values and b) return a value for the given bounds + radius that can
+    // be used for rating. Therefore, the positive return values must have the
+    // same sorted order as if the actual solid angle of the given parameters.
+    float lessThanEqualDistanceSqRadius(float dist2, float radius) const;
+
     /// Get the maximum distance from an object of the given radius that could
     /// result in this solid angle.  Effectively the inverse of fromCenterRadius.
     float maxDistance(float obj_radius) const;

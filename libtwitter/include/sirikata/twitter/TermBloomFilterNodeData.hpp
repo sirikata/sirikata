@@ -40,7 +40,7 @@ public:
     }
 
     TermBloomFilterNodeDataBase(uint32 buckets, uint16 hashes, LocationServiceCacheType* loc, const LocCacheIterator& obj_id, const Time& t)
-     : Prox::BoundingSphereDataBase<SimulationTraits, NodeData>(loc, obj_id, t),
+     : Prox::BoundingSphereDataBase<SimulationTraits, NodeData>(loc->worldRegion(obj_id, t)),
        mMaxRadius( loc->maxSize(obj_id) ),
        mFilter(buckets, hashes),
        mEmptyFilter(true)
