@@ -314,6 +314,12 @@ void ASIOReadBuffer::translateFixedBuffer(const MultiplexedSocketPtr &thus) {
                 if (mFixedBufferPos - currentFixedBufferPos < 2 + length) {
                     break;
                 }
+                if (type == 0x08) { // pp
+                    SILOG(network,error,"Should disconnect, right now nopping it");
+                    processError(&*thus,boost::asio::error::broken_pipe);
+                    return;
+                }
+
                 if (type == 0x09) { // ping
                     thus->receivePing(mWhichBuffer, MemoryReference(&mBuffer[currentFixedBufferPos + 2], length), false);
                 }
