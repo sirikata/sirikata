@@ -1123,7 +1123,8 @@ void LibproxProximity::generateObjectQueryEvents(Query* query, bool do_first) {
     // notification, waiting until we get out of the first tick to manually
     // trigger updates.
     bool is_first = (mObjectQueriesFirstIteration.find(query) != mObjectQueriesFirstIteration.end());
-    if (!do_first && is_first) return;
+    bool coalesce_first = GetOptionValue<bool>(OPT_PROX_COALESCE_FIRST);
+    if (coalesce_first && !do_first && is_first) return;
 
     uint32 max_count = GetOptionValue<uint32>(PROX_MAX_PER_RESULT);
 
@@ -1139,7 +1140,7 @@ void LibproxProximity::generateObjectQueryEvents(Query* query, bool do_first) {
         return;
     }
 
-    if (is_first) {
+    if (coalesce_first && is_first) {
         coalesceEvents(evts, 10);
         mObjectQueriesFirstIteration.erase(query);
     }

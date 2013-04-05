@@ -54,6 +54,8 @@ static void InitPluginOptions() {
 
         .addOption(new OptionValue(OPT_PROX_SPLIT_DYNAMIC, "true", Sirikata::OptionValueType<bool>(), "If true, separate query handlers will be used for static and dynamic objects."))
 
+        .addOption(new OptionValue(OPT_PROX_COALESCE_FIRST, "false", Sirikata::OptionValueType<bool>(), "If true, wait for all results from first query evaluation and coalesce them into a minimal set of results. Only applies to declarative queries (non-manual)."))
+
         .addOption(new OptionValue(OPT_PROX_QUERY_RANGE, "100", Sirikata::OptionValueType<float32>(), "The range of queries when using range queries instead of solid angle queries."))
 
         .addOption(new OptionValue(OPT_PROX_SERVER_QUERY_HANDLER_TYPE, "rtreecut", Sirikata::OptionValueType<String>(), "Type of libprox query handler to use for queries from servers."))

@@ -1064,6 +1064,9 @@ private:
                 bool satisfies = node->updateSatisfies(query_term, query_region_min, query_region_max);
                 visited++;
 
+                // Possibly flush events. Do this up here because some paths use continue;
+                if (events.size() >= LIBPROX_QUERY_MAX_QUEUED_EVENTS) query->pushEvents(events);
+
                 // If we went from satisfies -> not satisfies, we may need to
                 // clean up some results
                 if (last_satisfies && !satisfies) {
