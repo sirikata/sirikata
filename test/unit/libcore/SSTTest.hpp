@@ -428,6 +428,33 @@ public:
         TS_ASSERT(rsl.empty());
     }
 
+    // Insert simple range multiple times to ensure it still just has
+    // one proper entry, even if it's within the middle of the curren
+    // segment
+    void testReceivedSegmentListInsertRepeatedPartialInternal() {
+        ReceivedSegmentList rsl;
+        rsl.insert(100, 300);
+        rsl.insert(150, 50);
+        rsl.insert(200, 50);
+        rsl.insert(250, 50);
+        SegmentRange r = rsl.readyRange(0, 100);
+        TS_ASSERT_EQUALS(ReceivedSegmentList::StartByte(r), 0);
+        TS_ASSERT_EQUALS(ReceivedSegmentList::EndByte(r), 400);
+        TS_ASSERT(rsl.empty());
+    }
+
+    void testReceivedSegmentListMergeSegments() {
+        ReceivedSegmentList rsl;
+        rsl.insert(100, 100);
+        rsl.insert(300, 100);
+        rsl.insert(200, 100); // merges previous 2
+        SegmentRange r = rsl.readyRange(0, 100);
+        TS_ASSERT_EQUALS(ReceivedSegmentList::StartByte(r), 0);
+        TS_ASSERT_EQUALS(ReceivedSegmentList::EndByte(r), 400);
+        TS_ASSERT(rsl.empty());
+    }
+
+
 
 
 
