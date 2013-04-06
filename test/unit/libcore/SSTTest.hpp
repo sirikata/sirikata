@@ -271,6 +271,169 @@ public:
         waitForEventSet(conn_evts);
     }
 
+    typedef Sirikata::SST::ReceivedSegmentList ReceivedSegmentList;
+    typedef ReceivedSegmentList::SegmentRange SegmentRange;
+    // One insert + readyRange
+    void testReceivedSegmentListOne() {
+        ReceivedSegmentList rsl;
+        rsl.insert(100, 100);
+        SegmentRange r = rsl.readyRange(0, 100);
+        TS_ASSERT_EQUALS(ReceivedSegmentList::StartByte(r), 0);
+        TS_ASSERT_EQUALS(ReceivedSegmentList::EndByte(r), 200);
+    }
+
+    // Ordered insert + one readyRange extraction
+    void testReceivedSegmentListOrderedInsert() {
+        ReceivedSegmentList rsl;
+        rsl.insert(100, 100);
+        rsl.insert(200, 100);
+        rsl.insert(300, 100);
+        SegmentRange r = rsl.readyRange(0, 100);
+        TS_ASSERT_EQUALS(ReceivedSegmentList::StartByte(r), 0);
+        TS_ASSERT_EQUALS(ReceivedSegmentList::EndByte(r), 400);
+    }
+
+    // Ordered insert + one readyRange extraction
+    void testReceivedSegmentListOrderedInsertMultiple() {
+        ReceivedSegmentList rsl;
+        rsl.insert(100, 100);
+        rsl.insert(300, 100);
+        SegmentRange r = rsl.readyRange(0, 100);
+        TS_ASSERT_EQUALS(ReceivedSegmentList::StartByte(r), 0);
+        TS_ASSERT_EQUALS(ReceivedSegmentList::EndByte(r), 200);
+        r = rsl.readyRange(200, 100);
+        TS_ASSERT_EQUALS(ReceivedSegmentList::StartByte(r), 200);
+        TS_ASSERT_EQUALS(ReceivedSegmentList::EndByte(r), 400);
+    }
+
+
+    // Insert before first range in list and make sure we get valid result
+    void testReceivedSegmentListInsertBeforeFirst() {
+        ReceivedSegmentList rsl;
+        rsl.insert(200, 100);
+        rsl.insert(100, 100);
+        SegmentRange r = rsl.readyRange(0, 100);
+        TS_ASSERT_EQUALS(ReceivedSegmentList::StartByte(r), 0);
+        TS_ASSERT_EQUALS(ReceivedSegmentList::EndByte(r), 300);
+    }
+
+    // Insert before second (not first) range in list and make sure we get valid result
+    void testReceivedSegmentListInsertBeforeMiddle() {
+        ReceivedSegmentList rsl;
+        rsl.insert(100, 100);
+        rsl.insert(400, 100);
+        rsl.insert(300, 100);
+        SegmentRange r = rsl.readyRange(0, 100);
+        TS_ASSERT_EQUALS(ReceivedSegmentList::StartByte(r), 0);
+        TS_ASSERT_EQUALS(ReceivedSegmentList::EndByte(r), 200);
+        r = rsl.readyRange(200, 100);
+        TS_ASSERT_EQUALS(ReceivedSegmentList::StartByte(r), 200);
+        TS_ASSERT_EQUALS(ReceivedSegmentList::EndByte(r), 500);
+    }
+
+
+    // Insert after first range in list and make sure we get valid result
+    void testReceivedSegmentListInsertAfterFirst() {
+        ReceivedSegmentList rsl;
+        rsl.insert(100, 100);
+        rsl.insert(400, 100);
+        rsl.insert(200, 100);
+        SegmentRange r = rsl.readyRange(0, 100);
+        TS_ASSERT_EQUALS(ReceivedSegmentList::StartByte(r), 0);
+        TS_ASSERT_EQUALS(ReceivedSegmentList::EndByte(r), 300);
+        r = rsl.readyRange(300, 100);
+        TS_ASSERT_EQUALS(ReceivedSegmentList::StartByte(r), 300);
+        TS_ASSERT_EQUALS(ReceivedSegmentList::EndByte(r), 500);
+    }
+
+    // Insert after second (not first) range in list and make sure we get valid result
+    void testReceivedSegmentListInsertAfterMiddle() {
+        ReceivedSegmentList rsl;
+        rsl.insert(100, 100);
+        rsl.insert(300, 100);
+        rsl.insert(600, 100);
+        rsl.insert(400, 100);
+        SegmentRange r = rsl.readyRange(0, 100);
+        TS_ASSERT_EQUALS(ReceivedSegmentList::StartByte(r), 0);
+        TS_ASSERT_EQUALS(ReceivedSegmentList::EndByte(r), 200);
+        r = rsl.readyRange(200, 100);
+        TS_ASSERT_EQUALS(ReceivedSegmentList::StartByte(r), 200);
+        TS_ASSERT_EQUALS(ReceivedSegmentList::EndByte(r), 500);
+        r = rsl.readyRange(500, 100);
+        TS_ASSERT_EQUALS(ReceivedSegmentList::StartByte(r), 500);
+        TS_ASSERT_EQUALS(ReceivedSegmentList::EndByte(r), 700);
+    }
+
+
+    // Insert simple range multiple times to ensure it still just has one proper entry
+    void testReceivedSegmentListInsertRepeatedFirst() {
+        ReceivedSegmentList rsl;
+        rsl.insert(100, 100);
+        rsl.insert(100, 100);
+        SegmentRange r = rsl.readyRange(0, 100);
+        TS_ASSERT_EQUALS(ReceivedSegmentList::StartByte(r), 0);
+        TS_ASSERT_EQUALS(ReceivedSegmentList::EndByte(r), 200);
+        TS_ASSERT(rsl.empty());
+    }
+
+    // Insert simple range multiple times to ensure it still just has one proper entry
+    void testReceivedSegmentListInsertRepeatedFirstPartial() {
+        ReceivedSegmentList rsl;
+        rsl.insert(100, 200);
+        rsl.insert(100, 100);
+        rsl.insert(200, 100);
+        SegmentRange r = rsl.readyRange(0, 100);
+        TS_ASSERT_EQUALS(ReceivedSegmentList::StartByte(r), 0);
+        TS_ASSERT_EQUALS(ReceivedSegmentList::EndByte(r), 300);
+        TS_ASSERT(rsl.empty());
+    }
+
+
+    // Insert simple range multiple times to ensure it still just has one proper entry
+    void testReceivedSegmentListInsertRepeatedMiddle() {
+        ReceivedSegmentList rsl;
+        rsl.insert(100, 100);
+        rsl.insert(300, 100);
+        rsl.insert(500, 100);
+        rsl.insert(300, 100);
+        SegmentRange r = rsl.readyRange(0, 100);
+        TS_ASSERT_EQUALS(ReceivedSegmentList::StartByte(r), 0);
+        TS_ASSERT_EQUALS(ReceivedSegmentList::EndByte(r), 200);
+        r = rsl.readyRange(200, 100);
+        TS_ASSERT_EQUALS(ReceivedSegmentList::StartByte(r), 200);
+        TS_ASSERT_EQUALS(ReceivedSegmentList::EndByte(r), 400);
+        r = rsl.readyRange(400, 100);
+        TS_ASSERT_EQUALS(ReceivedSegmentList::StartByte(r), 400);
+        TS_ASSERT_EQUALS(ReceivedSegmentList::EndByte(r), 600);
+        TS_ASSERT(rsl.empty());
+    }
+
+    // Insert simple range multiple times to ensure it still just has one proper entry
+    void testReceivedSegmentListInsertRepeatedMiddlePartial() {
+        ReceivedSegmentList rsl;
+        rsl.insert(100, 100);
+        rsl.insert(300, 100);
+        rsl.insert(500, 100);
+        rsl.insert(300, 50);
+        rsl.insert(350, 50);
+        SegmentRange r = rsl.readyRange(0, 100);
+        TS_ASSERT_EQUALS(ReceivedSegmentList::StartByte(r), 0);
+        TS_ASSERT_EQUALS(ReceivedSegmentList::EndByte(r), 200);
+        r = rsl.readyRange(200, 100);
+        TS_ASSERT_EQUALS(ReceivedSegmentList::StartByte(r), 200);
+        TS_ASSERT_EQUALS(ReceivedSegmentList::EndByte(r), 400);
+        r = rsl.readyRange(400, 100);
+        TS_ASSERT_EQUALS(ReceivedSegmentList::StartByte(r), 400);
+        TS_ASSERT_EQUALS(ReceivedSegmentList::EndByte(r), 600);
+        TS_ASSERT(rsl.empty());
+    }
+
+
+
+
+
+
+
     // Allows testing different lengths
     void impl_testSendReceiveOneDirection(String* payload, Duration channel_delay, float32 channel_drop_rate, Duration timeout) {
         using std::tr1::placeholders::_1;

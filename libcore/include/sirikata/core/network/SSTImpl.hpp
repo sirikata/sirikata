@@ -1797,8 +1797,8 @@ public:
                 else if (merge_next) {
                     // Or only merge next. Need to use start from
                     // inserted segment and combine their lengths
-                    it->first = offset;
-                    it->second = (it->second + length);
+                    next_it->first = offset;
+                    next_it->second = (next_it->second + length);
                 }
                 else {
                     // No merging, just insert (before next_it).
@@ -1852,6 +1852,9 @@ public:
         return merged_ready;
     };
 
+    bool empty() const {
+        return mSegments.empty();
+    }
 private:
     // Lists/deques aren't particularly fast, but they let us muck with
     // the contents easily when we want to insert ranges we've
