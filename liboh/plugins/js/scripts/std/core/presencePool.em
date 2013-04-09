@@ -67,5 +67,5 @@ std.core.PresencePool.prototype.freeAll = function() {
 
 std.core.PresencePool.prototype.destroy = function() {
     for (var i = 0; i < this._presences.length; i++)
-        this._presences[i].discononect();
+        this._presences[i].disconnect();
 }

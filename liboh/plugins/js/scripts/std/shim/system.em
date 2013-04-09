@@ -1106,19 +1106,30 @@ PresenceEntry.prototype.proxRemovedEvent = function (visibleObj,visTo)
         system.createPresence = function (firstArg, callback, position, space)
         {
             var has_opts_var = (typeof(firstArg) == 'object');
-
             var sporef = undefined;
             var pos = undefined;
             var connectedCallback = this.__wrapPresConnCB(function(){  });
             var mesh = undefined;
             
-            if ((typeof(space) != 'undefined') && (space !== null))
-                sporef = util.identifier(space);
-            else if (has_opts_var && 'space' in firstArg)
-                sporef = util.identifier(firstArg['space']);
-            else if (system.self !== undefined)
-                sporef = util.identifier(system.self.getSpaceID());
-            else
+            if ((typeof(space) != 'undefined') && (space !== null)) {
+                if (has_opts_var && 'object' in firstArg) {
+                    sporef = util.identifier(space,firstArg['object']);
+                }else {
+                    sporef = util.identifier(space);
+                }
+            } else if (has_opts_var && 'space' in firstArg) {
+                if ('object' in firstArg) {
+                    sporef = util.identifier(firstArg['space'],firstArg['object']);
+                }else {
+                    sporef = util.identifier(firstArg['space']);
+                }
+            } else if (system.self !== undefined) {
+                if (has_opts_var && 'object' in firstArg) {
+                    sporef = util.identifier(system.self.getSpaceID(),firstArg['object']);
+                }else {
+                    sporef = util.identifier(system.self.getSpaceID());
+                }
+            } else
                 throw new Error('No space specified and system.self is not defined');
             
             if ((typeof(position) != 'undefined') && (position !== null))

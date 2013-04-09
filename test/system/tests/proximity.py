@@ -177,6 +177,27 @@ class MultipleSSManualConnectionTest(ConnectionTest, MultipleManualSS):
 
 
 
+class OIDRepeatConnectTest(ProximityTest):
+    after = [ OHObjectTest ]
+
+    def testBody(self):
+        response = self.createObject('oh', 'proximityTests/oidRepeatConnect.em');
+
+class OneSSOIDRepeatConnectTestKnownToFail(OIDRepeatConnectTest, OneSS):
+    pass
+
+#class OneSSOIDRepeatConnectTestKnownToFail(OIDRepeatConnectTest, OneManualSS):
+#    pass
+
+#class MultipleSSOIDRepeatConnectTestKnownToFail(OIDRepeatConnectTest, MultipleSS):
+#    pass
+
+#class MultipleSSManualOIDRepeatConnectTestKnownToFail(OIDRepeatConnectTest, MultipleManualSS):
+#    pass
+
+
+
+
 class BasicQueryTest(ProximityTest):
     after = [ OHObjectTest ]
 
