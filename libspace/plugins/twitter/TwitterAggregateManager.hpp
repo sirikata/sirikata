@@ -128,14 +128,14 @@ class SIRIKATA_SPACE_EXPORT TwitterAggregateManager : public AggregateManager {
     virtual void localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient,
         const AggregateBoundingInfo& bounds, const String& mesh, const String& physics,
         const String& query_data);
-    virtual void localObjectRemoved(const UUID& uuid, bool agg) ;
+    virtual LocationServiceListener::RemovalStatus localObjectRemoved(const UUID& uuid, bool agg, const LocationServiceListener::RemovalCallback&callback) ;
     virtual void localLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval);
     virtual void localOrientationUpdated(const UUID& uuid, bool agg, const TimedMotionQuaternion& newval);
     virtual void localBoundsUpdated(const UUID& uuid, bool agg, const AggregateBoundingInfo& newval) ;
     virtual void localMeshUpdated(const UUID& uuid, bool agg, const String& newval) ;
     virtual void replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient,
         const AggregateBoundingInfo& bounds, const String& mesh, const String& physics, const String& query_data);
-    virtual void replicaObjectRemoved(const UUID& uuid);
+    virtual LocationServiceListener::RemovalStatus replicaObjectRemoved(const UUID& uuid);
     virtual void replicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval);
     virtual void replicaOrientationUpdated(const UUID& uuid, const TimedMotionQuaternion& newval);
     virtual void replicaBoundsUpdated(const UUID& uuid, const AggregateBoundingInfo& newval);

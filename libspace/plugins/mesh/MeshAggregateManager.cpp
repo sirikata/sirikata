@@ -2792,9 +2792,13 @@ void MeshAggregateManager::localObjectAdded(const UUID& uuid, bool agg, const Ti
                                            new LocationInfo(loc.position(), bounds, orient.position(), mesh)));
 }
 
-void MeshAggregateManager::localObjectRemoved(const UUID& uuid, bool agg) {
-  boost::mutex::scoped_lock lock(mLocCacheMutex);
-  mLocationServiceCache.removeLocationInfo(uuid);
+LocationServiceListener::RemovalStatus MeshAggregateManager::localObjectRemoved(const UUID& uuid, bool agg, const LocationServiceListener::RemovalCallback &callback) {
+  {
+    boost::mutex::scoped_lock lock(mLocCacheMutex);
+    mLocationServiceCache.removeLocationInfo(uuid);
+  }
+  callback();
+  return LocationServiceListener::IMMEDIATE;
 }
 
 void MeshAggregateManager::localLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval) {
@@ -2844,9 +2848,10 @@ void MeshAggregateManager::replicaObjectAdded(const UUID& uuid, const TimedMotio
                                            new LocationInfo(loc.position(), bounds, orient.position(), mesh)));
 }
 
-void MeshAggregateManager::replicaObjectRemoved(const UUID& uuid) {
+LocationServiceListener::RemovalStatus MeshAggregateManager::replicaObjectRemoved(const UUID& uuid) {
   boost::mutex::scoped_lock lock(mLocCacheMutex);
   mLocationServiceCache.removeLocationInfo(uuid);
+  return LocationServiceListener::IMMEDIATE;
 }
 
 void MeshAggregateManager::replicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) {

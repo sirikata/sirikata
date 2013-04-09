@@ -315,7 +315,6 @@ void ASIOReadBuffer::translateFixedBuffer(const MultiplexedSocketPtr &thus) {
                     break;
                 }
                 if (type == 0x08) { // pp
-                    SILOG(network,error,"Should disconnect, right now nopping it");
                     processError(&*thus,boost::asio::error::broken_pipe);
                     return;
                 }

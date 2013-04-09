@@ -235,16 +235,18 @@ void MigrationMonitor::handleLocalObjectAdded(const UUID& uuid, const TimedMotio
     waitForNextEvent();
 }
 
-void MigrationMonitor::localObjectRemoved(const UUID& uuid, bool agg) {
+LocationServiceListener::RemovalStatus MigrationMonitor::localObjectRemoved(const UUID& uuid, bool agg, const LocationServiceListener::RemovalCallback &removalCallback) {
     mStrand->post(
-        std::tr1::bind(&MigrationMonitor::handleLocalObjectRemoved, this, uuid),
+        std::tr1::bind(&MigrationMonitor::handleLocalObjectRemoved, this, uuid, removalCallback),
         "MigrationMonitor::handleLocalObjectRemoved"
     );
+    return LocationServiceListener::DEFERRED;
 }
 
-void MigrationMonitor::handleLocalObjectRemoved(const UUID& uuid) {
+void MigrationMonitor::handleLocalObjectRemoved(const UUID& uuid, const LocationServiceListener::RemovalCallback& callback) {
     mObjectInfo.get<objid>().erase(uuid);
     waitForNextEvent();
+    callback();
 }
 
 void MigrationMonitor::localLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval) {

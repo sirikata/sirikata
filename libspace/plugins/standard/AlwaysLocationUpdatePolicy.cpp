@@ -189,8 +189,9 @@ void AlwaysLocationUpdatePolicy::localObjectAdded(const UUID& uuid, bool agg, co
     // Ignore, initial additions will be handled by a prox update
 }
 
-void AlwaysLocationUpdatePolicy::localObjectRemoved(const UUID& uuid, bool agg) {
-    // Ignore, removals will be handled by a prox update
+LocationServiceListener::RemovalStatus AlwaysLocationUpdatePolicy::localObjectRemoved(const UUID& uuid, bool agg, const LocationServiceListener::RemovalCallback&callback) {
+    callback();
+    return LocationServiceListener::IMMEDIATE;
 }
 
 void AlwaysLocationUpdatePolicy::localLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval) {
@@ -234,8 +235,9 @@ void AlwaysLocationUpdatePolicy::replicaObjectAdded(const UUID& uuid, const Time
     // Ignore, initial additions will be handled by a prox update
 }
 
-void AlwaysLocationUpdatePolicy::replicaObjectRemoved(const UUID& uuid) {
+LocationServiceListener::RemovalStatus AlwaysLocationUpdatePolicy::replicaObjectRemoved(const UUID& uuid) {
     // Ignore, removals will be handled by a prox update
+    return LocationServiceListener::IMMEDIATE;
 }
 
 void AlwaysLocationUpdatePolicy::replicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) {

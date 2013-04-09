@@ -80,10 +80,10 @@ public:
     virtual void onPintoServerLocUpdate(const LocUpdate& update);
 
     // LocationServiceListener Interface
-    virtual void localObjectRemoved(const UUID& uuid, bool agg);
+    virtual LocationServiceListener::RemovalStatus localObjectRemoved(const UUID& uuid, bool agg,const LocationServiceListener::RemovalCallback&);
     virtual void localLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval);
     virtual void localBoundsUpdated(const UUID& uuid, bool agg, const AggregateBoundingInfo& newval);
-    virtual void replicaObjectRemoved(const UUID& uuid);
+    virtual LocationServiceListener::RemovalStatus replicaObjectRemoved(const UUID& uuid);
     virtual void replicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval);
 
     // MessageRecipient Interface

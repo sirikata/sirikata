@@ -61,9 +61,9 @@ public:
     // LocationServiceListener Interface - Used for deciding when to switch
     // objects between static/dynamic, get raw loc updates from other
     // servers so they can be applied to the correct replicated indexes
-    virtual void localObjectRemoved(const UUID& uuid, bool agg);
+    virtual LocationServiceListener::RemovalStatus localObjectRemoved(const UUID& uuid, bool agg, const LocationServiceListener::RemovalCallback&callback);
     virtual void localLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval);
-    virtual void replicaObjectRemoved(const UUID& uuid);
+    virtual LocationServiceListener::RemovalStatus replicaObjectRemoved(const UUID& uuid);
     virtual void replicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval);
     virtual void onLocationUpdateFromServer(const ServerID sid, const Sirikata::Protocol::Loc::LocationUpdate& update);
 
@@ -72,7 +72,7 @@ public:
 
     // MigrationDataClient Interface
     virtual std::string migrationClientTag();
-    virtual std::string generateMigrationData(const UUID& obj, ServerID source_server, ServerID dest_server, const std::tr1::function<void()>&removeObjectQueryCallback);
+    virtual std::string generateMigrationData(const UUID& obj, ServerID source_server, ServerID dest_server, const LocationServiceListener::RemovalCallback&removeObjectQueryCallback);
     virtual void receiveMigrationData(const UUID& obj, ServerID source_server, ServerID dest_server, const std::string& data);
 
     // ObjectHostSessionListener Interface

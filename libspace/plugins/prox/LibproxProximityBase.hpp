@@ -33,7 +33,9 @@ public:
     // LocationServiceListener Interface - used here only to track
     // object sizes for top-level pinto
     virtual void localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics, const String& query_data);
-    virtual void localObjectRemoved(const UUID& uuid, bool agg);
+    static void nop(){}
+    ///subclasses count on this removal status to be IMMEDIATE
+    virtual LocationServiceListener::RemovalStatus localObjectRemoved(const UUID& uuid, bool agg, const LocationServiceListener::RemovalCallback&callback=&nop);
     virtual void localBoundsUpdated(const UUID& uuid, bool agg, const AggregateBoundingInfo& newval);
 
 protected:
@@ -343,7 +345,7 @@ protected:
     virtual void handleConnectedServer(ServerID sid);
     virtual void handleDisconnectedServer(ServerID sid);
 
-    void removeStaticObjectTimeout(const ObjectReference& objid);
+    void removeStaticObjectTimeout(const ObjectReference& objid, const LocationServiceListener::RemovalCallback&callback );
     virtual void trySwapHandlers(bool is_local, const ObjectReference& objid, bool is_static) = 0;
     void handleCheckObjectClass(bool is_local, const ObjectReference& objid, const TimedMotionVector3f& newval);
     void processExpiredStaticObjectTimeouts();

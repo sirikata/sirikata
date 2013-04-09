@@ -207,8 +207,11 @@ void LibproxProximityBase::localObjectAdded(const UUID& uuid, bool agg, const Ti
     updateObjectSize(uuid, bounds.fullRadius());
 }
 
-void LibproxProximityBase::localObjectRemoved(const UUID& uuid, bool agg) {
+LocationServiceListener::RemovalStatus LibproxProximityBase::localObjectRemoved(const UUID& uuid, bool agg, const std::tr1::function<void()>&callback) {
     removeObjectSize(uuid);
+    callback();//you must call this callback here in this function--subclasses count on this being immediate
+    
+    return LocationServiceListener::IMMEDIATE;
 }
 
 void LibproxProximityBase::localBoundsUpdated(const UUID& uuid, bool agg, const AggregateBoundingInfo& newval) {
@@ -742,11 +745,14 @@ void LibproxProximityBase::aggregateObserved(const ObjectReference& objid, uint3
 
 
 
-void LibproxProximityBase::removeStaticObjectTimeout(const ObjectReference& objid) {
+void LibproxProximityBase::removeStaticObjectTimeout(const ObjectReference& objid, const LocationServiceListener::RemovalCallback&callback) {
     StaticObjectsByID& by_id = mStaticObjectTimeouts.get<objid_tag>();
     StaticObjectsByID::iterator it = by_id.find(objid);
-    if (it == by_id.end()) return;
-    by_id.erase(it);
+    
+    if (it != by_id.end()) {
+        by_id.erase(it);
+    }
+    callback();
 }
 
 
@@ -773,11 +779,11 @@ void LibproxProximityBase::handleCheckObjectClass(bool is_local, const ObjectRef
     // after a delay
     if (!is_static) {
         trySwapHandlers(is_local, objid, is_static);
-        removeStaticObjectTimeout(objid);
+        removeStaticObjectTimeout(objid, &LibproxProximityBase::nop);
     }
     else {
         // Make sure previous entry is cleared out
-        removeStaticObjectTimeout(objid);
+        removeStaticObjectTimeout(objid, &LibproxProximityBase::nop);
         // And insert a new one
         mStaticObjectTimeouts.insert(StaticObjectTimeout(objid, mContext->recentSimTime() + mMoveToStaticDelay, is_local));
     }

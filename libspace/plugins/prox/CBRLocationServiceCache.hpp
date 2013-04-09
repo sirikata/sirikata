@@ -107,7 +107,7 @@ public:
 
     /* LocationServiceListener members. */
     virtual void localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics, const String& query_data);
-    virtual void localObjectRemoved(const UUID& uuid, bool agg);
+    virtual LocationServiceListener::RemovalStatus localObjectRemoved(const UUID& uuid, bool agg, const LocationServiceListener::RemovalCallback&callback);
     virtual void localLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval);
     virtual void localOrientationUpdated(const UUID& uuid, bool agg, const TimedMotionQuaternion& newval);
     virtual void localBoundsUpdated(const UUID& uuid, bool agg, const AggregateBoundingInfo& newval);
@@ -115,7 +115,7 @@ public:
     virtual void localPhysicsUpdated(const UUID& uuid, bool agg, const String& newval);
     virtual void localQueryDataUpdated(const UUID& uuid, bool agg, const String& newval);
     virtual void replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics, const String& query_data);
-    virtual void replicaObjectRemoved(const UUID& uuid);
+    virtual LocationServiceListener::RemovalStatus replicaObjectRemoved(const UUID& uuid);
     virtual void replicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval);
     virtual void replicaOrientationUpdated(const UUID& uuid, const TimedMotionQuaternion& newval);
     virtual void replicaBoundsUpdated(const UUID& uuid, const AggregateBoundingInfo& newval);
@@ -140,11 +140,11 @@ private:
         int16 tracking; // Ref count to support multiple users
         bool isAggregate;
     };
-
-
+    typedef std::multimap<ObjectReference,std::tr1::function<void()> > DeferredCallbackMap;
+    DeferredCallbackMap mDeferredCallbacks;
     // These generate and queue up updates from the main thread
     void objectAdded(const UUID& uuid, bool islocal, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics, const String& query_data);
-    void objectRemoved(const UUID& uuid, bool agg);
+    LocationServiceListener::RemovalStatus objectRemoved(const UUID& uuid, bool agg, const LocationServiceListener::RemovalCallback&callback);
     void locationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval);
     void orientationUpdated(const UUID& uuid, bool agg, const TimedMotionQuaternion& newval);
     void boundsUpdated(const UUID& uuid, bool agg, const AggregateBoundingInfo& newval);
@@ -158,7 +158,7 @@ private:
     // instead of processing directly in the methods above so that they don't
     // block any other work.
     void processObjectAdded(const ObjectReference& uuid, ObjectData data);
-    void processObjectRemoved(const ObjectReference& uuid, bool agg);
+    void processObjectRemoved(const ObjectReference& uuid, bool agg, std::tr1::function<void()>&callback);
     void processLocationUpdated(const ObjectReference& uuid, bool agg, const TimedMotionVector3f& newval);
     void processOrientationUpdated(const ObjectReference& uuid, bool agg, const TimedMotionQuaternion& newval);
     void processBoundsUpdated(const ObjectReference& uuid, bool agg, const AggregateBoundingInfo& newval);
@@ -188,7 +188,9 @@ private:
     ObjectDataMap mObjects;
     bool mWithReplicas;
 
-    bool tryRemoveObject(ObjectDataMap::iterator& obj_it);
+    bool tryRemoveObject(const ObjectReference & obj_id, ObjectDataMap::iterator& obj_it);
+    void addCallbackToObject(const ObjectReference & obj_id, const std::tr1::function<void()>&callback);
+    void callDeferredCallbacksForObject(const ObjectReference & obj_id);
 
     // Data contained in our Iterators. We maintain both the UUID and the
     // iterator because the iterator can become invalidated due to ordering of

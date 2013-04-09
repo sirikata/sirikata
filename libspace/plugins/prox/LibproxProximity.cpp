@@ -695,13 +695,16 @@ void LibproxProximity::queryHasEvents(Query* query) {
 // Note: LocationServiceListener interface is only used in order to get updates on objects which have
 // registered queries, allowing us to update those queries as appropriate.  All updating of objects
 // in the prox data structure happens via the LocationServiceCache
-void LibproxProximity::localObjectRemoved(const UUID& uuid, bool agg) {
-    LibproxProximityBase::localObjectRemoved(uuid, agg);
+LocationServiceListener::RemovalStatus LibproxProximity::localObjectRemoved(const UUID& uuid, bool agg, const LocationServiceListener::RemovalCallback &callback) {
+    LocationServiceListener::RemovalStatus rs = LibproxProximityBase::localObjectRemoved(uuid, agg);
+    assert(rs==LocationServiceListener::IMMEDIATE);//we don't split the callbacks at the moment..so assert the superclass does its thing immediately
+    //if the superclass changes we can change the design--but this is simpler and easier to read
 
     mProxStrand->post(
-        std::tr1::bind(&LibproxProximity::removeStaticObjectTimeout, this, ObjectReference(uuid)),
+        std::tr1::bind(&LibproxProximity::removeStaticObjectTimeout, this, ObjectReference(uuid),callback),
         "LibproxProximity::removeStaticObjectTimeout"
     );
+    return LocationServiceListener::DEFERRED;
 }
 void LibproxProximity::localLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval) {
     updateQuery(uuid, newval, mLocService->bounds(uuid).fullBounds(), NoUpdateSolidAngle, NoUpdateMaxResults);
@@ -712,11 +715,12 @@ void LibproxProximity::localBoundsUpdated(const UUID& uuid, bool agg, const Aggr
     LibproxProximityBase::localBoundsUpdated(uuid, agg, newval);
     updateQuery(uuid, mLocService->location(uuid), newval.fullBounds(), NoUpdateSolidAngle, NoUpdateMaxResults);
 }
-void LibproxProximity::replicaObjectRemoved(const UUID& uuid) {
+LocationServiceListener::RemovalStatus LibproxProximity::replicaObjectRemoved(const UUID& uuid) {
     mProxStrand->post(
-        std::tr1::bind(&LibproxProximity::removeStaticObjectTimeout, this, ObjectReference(uuid)),
+        std::tr1::bind(&LibproxProximity::removeStaticObjectTimeout, this, ObjectReference(uuid), &LibproxProximityBase::nop),
         "LibproxProximity::removeStaticObjectTimeout"
     );
+    return LocationServiceListener::DEFERRED;
 }
 void LibproxProximity::replicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) {
     if (mSeparateDynamicObjects)

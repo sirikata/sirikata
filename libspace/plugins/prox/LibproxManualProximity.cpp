@@ -159,22 +159,25 @@ void LibproxManualProximity::onPintoServerLocUpdate(const LocUpdate& update) {
 // Note: LocationServiceListener interface is only used in order to get updates on objects which have
 // registered queries, allowing us to update those queries as appropriate.  All updating of objects
 // in the prox data structure happens via the LocationServiceCache
-void LibproxManualProximity::localObjectRemoved(const UUID& uuid, bool agg) {
-    LibproxProximityBase::localObjectRemoved(uuid, agg);
+LocationServiceListener::RemovalStatus LibproxManualProximity::localObjectRemoved(const UUID& uuid, bool agg, const LocationServiceListener::RemovalCallback &callback) {
+    LocationServiceListener::RemovalStatus rs = LibproxProximityBase::localObjectRemoved(uuid, agg);
+    assert(rs==LocationServiceListener::IMMEDIATE);
     mProxStrand->post(
-        std::tr1::bind(&LibproxManualProximity::removeStaticObjectTimeout, this, ObjectReference(uuid)),
+        std::tr1::bind(&LibproxManualProximity::removeStaticObjectTimeout, this, ObjectReference(uuid), callback),
         "LibproxManualProximity::removeStaticObjectTimeout"
     );
+    return LocationServiceListener::DEFERRED;
 }
 void LibproxManualProximity::localLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval) {
     if (mSeparateDynamicObjects)
         checkObjectClass(true, uuid, newval);
 }
-void LibproxManualProximity::replicaObjectRemoved(const UUID& uuid) {
+LocationServiceListener::RemovalStatus LibproxManualProximity::replicaObjectRemoved(const UUID& uuid) {
     mProxStrand->post(
-        std::tr1::bind(&LibproxManualProximity::removeStaticObjectTimeout, this, ObjectReference(uuid)),
+        std::tr1::bind(&LibproxManualProximity::removeStaticObjectTimeout, this, ObjectReference(uuid), &nop),
         "LibproxManualProximity::removeStaticObjectTimeout"
     );
+    return LocationServiceListener::DEFERRED;
 }
 void LibproxManualProximity::replicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) {
     // State is already in the replicated loc cache + query tree, and

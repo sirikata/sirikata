@@ -70,12 +70,14 @@ private:
 
     /** LocationServiceListener Interface. */
   virtual void localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics, const String& query_data);
-    virtual void localObjectRemoved(const UUID& uuid, bool agg);
+    virtual LocationServiceListener::RemovalStatus localObjectRemoved(const UUID& uuid, bool agg, const LocationServiceListener::RemovalCallback&callback );
     virtual void localLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval);
 
     // Handlers for location events we care about.  These are handled in our internal strand
     void handleLocalObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const AggregateBoundingInfo& bounds);
-    void handleLocalObjectRemoved(const UUID& uuid);
+    void handleLocalObjectRemoved(const UUID& uuid, const LocationServiceListener::RemovalCallback& callback);
+    //doesn't do anything here: nopped out
+    LocationServiceListener::RemovalStatus replicaObjectRemoved(const UUID& uuid){return IMMEDIATE;}
     void handleLocalLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval);
 
     /** CoordinateSegmentation::Listener Interface. */

@@ -119,7 +119,7 @@ void CBRLocationServiceCache::stopRefcountTracking(const ObjectID& objid) {
         printf("Warning: stopped tracking untracked object\n");
     }
     it->second.tracking--;
-    tryRemoveObject(it);
+    tryRemoveObject(objid,it);
 }
 
 bool CBRLocationServiceCache::tracking(const ObjectReference& id) {
@@ -258,8 +258,8 @@ void CBRLocationServiceCache::localObjectAdded(const UUID& uuid, bool agg, const
   objectAdded(uuid, true, agg, loc, orient, bounds, mesh, phy, query_data);
 }
 
-void CBRLocationServiceCache::localObjectRemoved(const UUID& uuid, bool agg) {
-    objectRemoved(uuid, agg);
+LocationServiceListener::RemovalStatus CBRLocationServiceCache::localObjectRemoved(const UUID& uuid, bool agg, const LocationServiceListener::RemovalCallback&callback) {
+    return objectRemoved(uuid, agg, callback);
 }
 
 void CBRLocationServiceCache::localLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval) {
@@ -290,10 +290,16 @@ void CBRLocationServiceCache::replicaObjectAdded(const UUID& uuid, const TimedMo
     if (mWithReplicas)
       objectAdded(uuid, false, false, loc, orient, bounds, mesh, phy, query_data);
 }
-
-void CBRLocationServiceCache::replicaObjectRemoved(const UUID& uuid) {
+namespace {
+void nop(){}
+}
+LocationServiceListener::RemovalStatus CBRLocationServiceCache::replicaObjectRemoved(const UUID& uuid) {
+    
     if (mWithReplicas)
-        objectRemoved(uuid, false);
+        return objectRemoved(uuid, false, &nop);
+    else {
+        return LocationServiceListener::IMMEDIATE;
+    }
 }
 
 void CBRLocationServiceCache::replicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) {
@@ -388,41 +394,57 @@ void CBRLocationServiceCache::processObjectAdded(const ObjectReference& uuid, Ob
 
         ObjectDataMap::iterator data_it = mObjects.find(uuid);
         data_it->second.tracking--;
-        tryRemoveObject(data_it);
+        tryRemoveObject(uuid, data_it);
     }
 }
 
-void CBRLocationServiceCache::objectRemoved(const UUID& uuid, bool agg) {
-    Lock lck(mDataMutex);
-
-    ObjectDataMap::iterator data_it = mObjects.find(ObjectReference(uuid));
-    if (data_it == mObjects.end()) return;
-
-    assert(data_it->second.exists);
-    data_it->second.exists = false;
-
-    data_it->second.tracking++;
-    mStrand->post(
-        std::tr1::bind(
-            &CBRLocationServiceCache::processObjectRemoved, this,
-            ObjectReference(uuid), agg
-        ),
-        "CBRLocationServiceCache::processObjectRemoved"
-    );
+LocationServiceListener::RemovalStatus CBRLocationServiceCache::objectRemoved(const UUID& uuid, bool agg, const LocationServiceListener::RemovalCallback&callback) {
+    bool queuedCallback=false;
+    {
+        Lock lck(mDataMutex);
+        
+        ObjectDataMap::iterator data_it = mObjects.find(ObjectReference(uuid));
+        if (data_it != mObjects.end()) {
+            queuedCallback=true;
+        
+            assert(data_it->second.exists);
+            data_it->second.exists = false;
+            
+            data_it->second.tracking++;
+            mStrand->post(
+                std::tr1::bind(
+                    &CBRLocationServiceCache::processObjectRemoved, this,
+                    ObjectReference(uuid), agg, callback
+                    ),
+                "CBRLocationServiceCache::processObjectRemoved"
+                );
+        }
+    }
+    if (!queuedCallback) {//we don't want any locks during the callback
+        callback();
+        return LocationServiceListener::IMMEDIATE;
+    }
+    return LocationServiceListener::DEFERRED;
 }
 
-void CBRLocationServiceCache::processObjectRemoved(const ObjectReference& uuid, bool agg) {
+void CBRLocationServiceCache::processObjectRemoved(const ObjectReference& uuid, bool agg, std::tr1::function<void()>&callback) {
     if (!agg) {
         Lock lck(mListenerMutex);
         for(ListenerSet::iterator it = mListeners.begin(); it != mListeners.end(); it++)
             (*it)->locationDisconnected(uuid);
     }
-
+    bool successfullyRemoved=  false;
     {
         Lock lck(mDataMutex);
         ObjectDataMap::iterator data_it = mObjects.find(uuid);
         data_it->second.tracking--;
-        tryRemoveObject(data_it);
+        successfullyRemoved = tryRemoveObject(uuid, data_it);
+        if (!successfullyRemoved) {//need to do this while lock is held because it uses the iterator
+            addCallbackToObject(uuid,callback);
+        }
+    }
+    if (successfullyRemoved) {
+        callback();
     }
 }
 
@@ -572,12 +594,25 @@ void CBRLocationServiceCache::processQueryDataUpdated(const ObjectReference& uui
         }
     }
 }
+void CBRLocationServiceCache::addCallbackToObject(const ObjectReference&oid, const std::tr1::function<void()>&callback) {
+    mDeferredCallbacks.insert(DeferredCallbackMap::value_type(oid,callback));
+}
+void CBRLocationServiceCache::callDeferredCallbacksForObject(const ObjectReference &oid) {
+    std::pair<DeferredCallbackMap::iterator,DeferredCallbackMap::iterator> eqRange = mDeferredCallbacks.equal_range(oid);
+    for (DeferredCallbackMap::iterator i=eqRange.first;i!=eqRange.second;++i) {
+        SILOG(space,error,"xRemoving "<<oid<<" from object map");
+        i->second();
+    }
+    mDeferredCallbacks.erase(eqRange.first,eqRange.second);
+}
 
-bool CBRLocationServiceCache::tryRemoveObject(ObjectDataMap::iterator& obj_it) {
+bool CBRLocationServiceCache::tryRemoveObject(const ObjectReference &obj_id, ObjectDataMap::iterator& obj_it) {
     if (obj_it->second.tracking > 0  || obj_it->second.exists)
         return false;
-
+    ObjectReference tmp_oid(obj_id);
     mObjects.erase(obj_it);
+    callDeferredCallbacksForObject(tmp_oid);
+//  FIXME: process all saved objects' callbacks
     return true;
 }
 

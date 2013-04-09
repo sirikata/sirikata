@@ -273,7 +273,8 @@ void TwitterAggregateManager::localObjectAdded(const UUID& uuid, bool agg, const
 {
 }
 
-void TwitterAggregateManager::localObjectRemoved(const UUID& uuid, bool agg) {
+LocationServiceListener::RemovalStatus TwitterAggregateManager::localObjectRemoved(const UUID& uuid, bool agg, const LocationServiceListener::RemovalCallback&callback) {
+    LocationServiceListener::IMMEDIATE;
 }
 
 void TwitterAggregateManager::localLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval) {
@@ -316,7 +317,8 @@ void TwitterAggregateManager::replicaObjectAdded(const UUID& uuid, const TimedMo
 {
 }
 
-void TwitterAggregateManager::replicaObjectRemoved(const UUID& uuid) {
+LocationServiceListener::RemovalStatus TwitterAggregateManager::replicaObjectRemoved(const UUID& uuid) {
+    return LocationServiceListener::IMMEDIATE;
 }
 
 void TwitterAggregateManager::replicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) {

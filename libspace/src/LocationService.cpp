@@ -265,11 +265,47 @@ void LocationService::notifyLocalObjectAdded(const UUID& uuid, bool agg, const T
         if (!agg || it->wantAggregates)
           it->listener->localObjectAdded(uuid, agg, loc, orient, bounds, mesh, physics, query_data);
 }
-
-void LocationService::notifyLocalObjectRemoved(const UUID& uuid, bool agg) const {
-    for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++)
-        if (!agg || it->wantAggregates)
-            it->listener->localObjectRemoved(uuid, agg);
+class CallOnDestruct {
+    std::tr1::function<void()>mCallback;
+public:
+    CallOnDestruct(const std::tr1::function<void()>&callback):mCallback(callback) {}
+    static void nop(const std::tr1::shared_ptr<CallOnDestruct>&data){
+        if (!data)
+            SILOG(space,error,"Invalid data passed to COD nop");
+    };
+    ~CallOnDestruct() {
+        mCallback();
+    }    
+};
+void LocationService::notifyLocalObjectRemoved(const UUID& uuid, bool agg, const LocationServiceListener::RemovalCallback&callback) const {
+    bool hasCallbacked=false;
+    ListenerList::const_iterator begin = mListeners.begin();
+    LocationServiceListener::RemovalCallback oneToManyCallback;
+    std::tr1::shared_ptr<CallOnDestruct> originalCallbackCaller;
+    ListenerList::const_iterator it = begin;
+    while (it != mListeners.end()) {
+        ListenerList::const_iterator next = it;
+         ++next;
+         if (!agg || it->wantAggregates) {
+             hasCallbacked=true;
+             if (it==begin) {
+                 if (next==mListeners.end()) {//size == 1, can call the callback straight away
+                     it->listener->localObjectRemoved(uuid, agg, callback);
+                 }else {//many callbacks, need to refcount all of them and only deliver the callback when needed
+                     std::tr1::shared_ptr<CallOnDestruct> tmp(new CallOnDestruct(callback));
+                     originalCallbackCaller = tmp;
+                     oneToManyCallback=std::tr1::bind(&CallOnDestruct::nop,originalCallbackCaller);
+                     it->listener->localObjectRemoved(uuid, agg, oneToManyCallback);
+                 }
+             }else {
+                 it->listener->localObjectRemoved(uuid, agg, oneToManyCallback);
+             }
+         }
+         it=next;
+    }
+    if (!hasCallbacked) {
+        callback();
+    }
 }
 
 

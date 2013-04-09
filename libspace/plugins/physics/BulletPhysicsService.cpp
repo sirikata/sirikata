@@ -484,8 +484,7 @@ void BulletPhysicsService::removeLocalObject(const UUID& uuid, const std::tr1::f
 
     // Remove from the list of local objects
     CONTEXT_SPACETRACE(serverObjectEvent, mContext->id(), mContext->id(), uuid, false, TimedMotionVector3f());
-    notifyLocalObjectRemoved(uuid, false);
-    completeCallback();
+    notifyLocalObjectRemoved(uuid, false, completeCallback);
 }
 
 LocationInfo& BulletPhysicsService::info(const UUID& uuid) {
@@ -602,8 +601,7 @@ void BulletPhysicsService::removeLocalAggregateObject(const UUID& uuid, const st
     cleanupLocationInfo(locinfo);
     mLocations.erase(uuid);
 
-    notifyLocalObjectRemoved(uuid, true);
-    completeCallback();
+    notifyLocalObjectRemoved(uuid, true, completeCallback);
 }
 
 void BulletPhysicsService::updateLocalAggregateLocation(const UUID& uuid, const TimedMotionVector3f& newval) {

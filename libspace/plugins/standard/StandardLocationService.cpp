@@ -170,8 +170,7 @@ void StandardLocationService::removeLocalObject(const UUID& uuid, const std::tr1
 
     // Remove from the list of local objects
     CONTEXT_SPACETRACE(serverObjectEvent, mContext->id(), mContext->id(), uuid, false, TimedMotionVector3f());
-    notifyLocalObjectRemoved(uuid, false);
-    completeCallback();
+    notifyLocalObjectRemoved(uuid, false, completeCallback);
     // FIXME we might want to give a grace period where we generate a replica if one isn't already there,
     // instead of immediately removing all traces of the object.
     // However, this needs to be handled carefully, prefer updates from another server, and expire
@@ -210,8 +209,7 @@ void StandardLocationService::removeLocalAggregateObject(const UUID& uuid, const
     assert( mLocations[uuid].aggregate == true );
     mLocations.erase(uuid);
 
-    notifyLocalObjectRemoved(uuid, true);
-    completeCallback();
+    notifyLocalObjectRemoved(uuid, true, completeCallback);
 }
 
 void StandardLocationService::updateLocalAggregateLocation(const UUID& uuid, const TimedMotionVector3f& newval) {
