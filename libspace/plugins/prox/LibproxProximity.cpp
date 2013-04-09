@@ -458,13 +458,13 @@ std::string LibproxProximity::migrationClientTag() {
     return "prox";
 }
 
-std::string LibproxProximity::generateMigrationData(const UUID& obj, ServerID source_server, ServerID dest_server) {
+std::string LibproxProximity::generateMigrationData(const UUID& obj, ServerID source_server, ServerID dest_server, const std::tr1::function<void()> &removeCallback) {
     ObjectQueryAngleMap::iterator it = mObjectQueryAngles.find(obj);
     if (it == mObjectQueryAngles.end()) // no query registered, return nothing
         return std::string();
     else {
         SolidAngle query_angle = it->second;
-        removeQuery(obj);
+        removeQuery(obj, removeCallback);
 
         Sirikata::Protocol::Prox::ObjectMigrationData migr_data;
         migr_data.set_min_angle( query_angle.asFloat() );
@@ -601,7 +601,7 @@ void LibproxProximity::updateQuery(UUID obj, const TimedMotionVector3f& loc, con
         updateAggregateQuery();
 }
 
-void LibproxProximity::removeQuery(UUID obj) {
+void LibproxProximity::removeQuery(UUID obj, const std::tr1::function<void()>&callback) {
     // Update the main thread's record
     SolidAngle sa = mObjectQueryAngles[obj];
     mObjectQueryAngles.erase(obj);
@@ -610,7 +610,7 @@ void LibproxProximity::removeQuery(UUID obj) {
 
     // Update the prox thread
     mProxStrand->post(
-        std::tr1::bind(&LibproxProximity::handleRemoveObjectQuery, this, obj, true),
+        std::tr1::bind(&LibproxProximity::handleRemoveObjectQuery, this, obj, true, callback),
         "LibproxProximity::handleRemoveObjectQuery"
     );
 
@@ -1445,8 +1445,16 @@ void LibproxProximity::handleUpdateObjectQuery(const UUID& object, const TimedMo
         }
     }
 }
+namespace {
+void nop(){}
+std::tr1::function<void()>nopHolder=&nop;
+}
 
-void LibproxProximity::handleRemoveObjectQuery(const UUID& object, bool notify_main_thread) {
+void LibproxProximity::handleDisconnectedObject(const UUID& object) {
+    // Clear out query state if it exists
+    handleRemoveObjectQuery(object, false, std::tr1::function<void()>());
+}
+void LibproxProximity::handleRemoveObjectQuery(const UUID& object, bool notify_main_thread, const std::tr1::function<void()> &callback) {
     // Clear out queries
     for(int i = 0; i < NUM_OBJECT_CLASSES; i++) {
         if (mObjectQueryHandler[i].handler == NULL) continue;
@@ -1469,15 +1477,15 @@ void LibproxProximity::handleRemoveObjectQuery(const UUID& object, bool notify_m
         // There's no corresponding removeAllSeqNoPtr because we
         // should have erased it above.
         mContext->mainStrand->post(
-            std::tr1::bind(&LibproxProximity::handleRemoveAllObjectLocSubscription, this, object),
+            std::tr1::bind(&LibproxProximity::handleRemoveAllObjectLocSubscription, this, object, callback),
             "LibproxProximity::handleRemoveAllObjectLocSubscription"
         );
+    }else {
+        if (callback) {
+            PROXLOG(warn,"Remove object::" << object.toString()<<" must be in shutdown phase or otherwise future objects are getting let in too early");
+            callback();
+        }
     }
-}
-
-void LibproxProximity::handleDisconnectedObject(const UUID& object) {
-    // Clear out query state if it exists
-    handleRemoveObjectQuery(object, false);
 }
 
 bool LibproxProximity::handlerShouldHandleObject(bool is_static_handler, bool is_global_handler, const ObjectReference& obj_id, bool is_local, bool is_aggregate, const TimedMotionVector3f& pos, const BoundingSphere3f& region, float maxSize) {

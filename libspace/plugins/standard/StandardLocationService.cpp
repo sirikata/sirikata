@@ -161,7 +161,7 @@ const String& StandardLocationService::queryData(const UUID& uuid) {
     notifyLocalObjectAdded(uuid, false, location(uuid), orientation(uuid), bounds(uuid), mesh(uuid), physics(uuid), query_data);
 }
 
-void StandardLocationService::removeLocalObject(const UUID& uuid) {
+void StandardLocationService::removeLocalObject(const UUID& uuid, const std::tr1::function<void()>&completeCallback) {
     // Remove from mLocations, but save the cached state
     assert( mLocations.find(uuid) != mLocations.end() );
     assert( mLocations[uuid].local == true );
@@ -171,7 +171,7 @@ void StandardLocationService::removeLocalObject(const UUID& uuid) {
     // Remove from the list of local objects
     CONTEXT_SPACETRACE(serverObjectEvent, mContext->id(), mContext->id(), uuid, false, TimedMotionVector3f());
     notifyLocalObjectRemoved(uuid, false);
-
+    completeCallback();
     // FIXME we might want to give a grace period where we generate a replica if one isn't already there,
     // instead of immediately removing all traces of the object.
     // However, this needs to be handled carefully, prefer updates from another server, and expire
@@ -203,7 +203,7 @@ void StandardLocationService::addLocalAggregateObject(const UUID& uuid, const Ti
     notifyLocalObjectAdded(uuid, true, location(uuid), orientation(uuid), bounds(uuid), mesh(uuid), physics(uuid), "");
 }
 
-void StandardLocationService::removeLocalAggregateObject(const UUID& uuid) {
+void StandardLocationService::removeLocalAggregateObject(const UUID& uuid, const std::tr1::function<void()>&completeCallback) {
     // Remove from mLocations, but save the cached state
     assert( mLocations.find(uuid) != mLocations.end() );
     assert( mLocations[uuid].local == true );
@@ -211,6 +211,7 @@ void StandardLocationService::removeLocalAggregateObject(const UUID& uuid) {
     mLocations.erase(uuid);
 
     notifyLocalObjectRemoved(uuid, true);
+    completeCallback();
 }
 
 void StandardLocationService::updateLocalAggregateLocation(const UUID& uuid, const TimedMotionVector3f& newval) {

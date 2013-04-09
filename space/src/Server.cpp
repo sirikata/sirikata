@@ -174,7 +174,7 @@ void Server::newStream(int err, SST::Stream<SpaceObjectReference>::Ptr s) {
   // Otherwise, they have a complete session
   mObjectSessionManager->completeSession(objid, s);
 }
-
+static void nop(){}
 Server::~Server()
 {
     delete mMigrateServerMessageService;
@@ -187,9 +187,9 @@ Server::~Server()
         UUID obj_id = it->first;
 
         // Stop any proximity queries for this object
-        mProximity->removeQuery(obj_id);
+        mProximity->removeQuery(obj_id,&nop);
 
-        mLocationService->removeLocalObject(obj_id);
+        mLocationService->removeLocalObject(obj_id,&nop);
 
         // Stop Forwarder from delivering via this Object's
         // connection, destroy said connection
@@ -291,6 +291,27 @@ bool Server::isObjectConnected(const UUID& object_id) const {
 bool Server::isObjectConnecting(const UUID& object_id) const {
     return (mStoredConnectionData.find(object_id) != mStoredConnectionData.end());
 }
+bool Server::isObjectDisconnecting(const UUID& object_id) const {
+    boost::lock_guard<boost::mutex> lock(const_cast<boost::mutex&>(mRouteObjectMessageMutex));
+    return mDisconnectingObjects.find(object_id)!=mDisconnectingObjects.end();
+}
+void Server::markObjectDisconnecting(const UUID& object_id, int serviceCount) {
+    boost::lock_guard<boost::mutex> lock(mRouteObjectMessageMutex);
+    mDisconnectingObjects[object_id]=serviceCount;
+}
+
+void Server::markObjectDisconnectedCallback(UUID object){
+    boost::lock_guard<boost::mutex> lock(mRouteObjectMessageMutex);
+    DisconnectingObjectMap::iterator where = mDisconnectingObjects.find(object);
+    assert(where!=mDisconnectingObjects.end());
+    where->second--;
+    if (where->second<=0) {
+        SPACE_LOG(debug,"Object "<<object<<" no longer referenced by any spatial service");
+        assert(where->second==0);
+        mDisconnectingObjects.erase(where);
+    }
+}
+
 
 void Server::sendSessionMessageWithRetry(const ObjectHostConnectionID& conn, Sirikata::Protocol::Object::ObjectMessage* msg, const Duration& retry_rate) {
     bool sent = mObjectHostConnectionManager->send( conn, msg );
@@ -647,7 +668,9 @@ void Server::handleConnectAuthResponse(const ObjectHostConnectionID& oh_conn_id,
     // request. Alternatively, someone might just be trying to use the
     // same object ID.
     if (isObjectConnected(obj_id) || isObjectConnecting(obj_id)) {
+
         // Decide whether this is a conflict or a retry
+
         if  //was already connected, the same oh sending msg, and the same
             //session request id
             (isObjectConnected(obj_id) &&
@@ -677,6 +700,12 @@ void Server::handleConnectAuthResponse(const ObjectHostConnectionID& oh_conn_id,
         }
 
         return;
+    }else if (isObjectDisconnecting(obj_id)) {
+        SPACE_LOG(debug,"Object "<<obj_id<<" trying to connect but still referenced by spatial services ");
+        sendConnectError(oh_conn_id, obj_id, seqno);//the object is still being purged from our service tables
+        return;
+    }else {
+        SPACE_LOG(debug,"Object "<<obj_id<<" entering space");
     }
 
     // Update our oseg to show that we know that we have this object now. Also
@@ -851,14 +880,18 @@ void Server::handleDisconnect(UUID obj_id, ObjectConnection* conn, uint64 sessio
     if (conn->sessionID() != session_request_seqno) {
         SPACE_LOG(detailed, "Ignoring disconnection request for " << obj_id << " because session request ID " << session_request_seqno << " doesn't match the connection's session ID " << conn->sessionID() << ". This probably means an old disconnection request was retried.");
         return;
-    }
+    }   
+    std::tr1::function<void()> disconnectedCb = std::tr1::bind(&Server::markObjectDisconnectedCallback, this, obj_id);
+    int markObjectDisconnectingCallCount=2;
+    markObjectDisconnecting(obj_id, markObjectDisconnectingCallCount);
 
     mOSeg->removeObject(obj_id);
     mLocalForwarder->removeActiveConnection(obj_id);
-    mLocationService->removeLocalObject(obj_id);
+    mLocationService->removeLocalObject(obj_id, 
+                                        (markObjectDisconnectingCallCount--,disconnectedCb));//number of disconnectedCb needs to match markObjectDisconecting call count (in this case 2)
 
     // Register proximity query
-    mProximity->removeQuery(obj_id);
+    mProximity->removeQuery(obj_id,(markObjectDisconnectingCallCount--,disconnectedCb));//number of disconnectedCb needs to match markObjectDisconecting call count (in this case 2)
 
     mForwarder->removeObjectConnection(obj_id);
 
@@ -867,7 +900,7 @@ void Server::handleDisconnect(UUID obj_id, ObjectConnection* conn, uint64 sessio
 
     ObjectReference obj(obj_id);
     mObjectSessionManager->removeSession(obj);
-
+    assert(markObjectDisconnectingCallCount==0);//should be decremented every time we pass in a disconnectedCb
     delete conn;
 }
 
@@ -1082,10 +1115,13 @@ void Server::handleMigrationEvent(const UUID& obj_id) {
             String obj_query_data = mLocationService->queryData(obj_id);
             if (obj_query_data.size() > 0)
                 migrate_msg.set_query_data( obj_query_data );
+            std::tr1::function<void()> disconnectedCb = std::tr1::bind(&Server::markObjectDisconnectedCallback, this, obj_id);
+            int markObjectDisconnectingCallCount=2;
+            markObjectDisconnecting(obj_id, markObjectDisconnectingCallCount);
 
             // FIXME we should allow components to package up state here
             // FIXME we should generate these from some map instead of directly
-            std::string prox_data = mProximity->generateMigrationData(obj_id, mContext->id(), new_server_id);
+            std::string prox_data = mProximity->generateMigrationData(obj_id, mContext->id(), new_server_id,(markObjectDisconnectingCallCount--,disconnectedCb));
             if (!prox_data.empty()) {
                 Sirikata::Protocol::Migration::IMigrationClientData client_data = migrate_msg.add_client_data();
                 client_data.set_key( mProximity->migrationClientTag() );
@@ -1125,14 +1161,15 @@ void Server::handleMigrationEvent(const UUID& obj_id) {
 
 
             // Stop tracking the object locally
-            mLocationService->removeLocalObject(obj_id);
-
+            mLocationService->removeLocalObject(obj_id, (markObjectDisconnectingCallCount--,disconnectedCb));
             mLocalForwarder->removeActiveConnection(obj_id);
             mObjects.erase(obj_id);
             mContext->timeSeries->report(mTimeSeriesObjects, mObjects.size());
             ObjectReference obj(obj_id);
 
             mObjectSessionManager->removeSession(obj);
+
+            assert(markObjectDisconnectingCallCount==0);//should be decremented every time we pass in a disconnectedCb
         }
     }
 

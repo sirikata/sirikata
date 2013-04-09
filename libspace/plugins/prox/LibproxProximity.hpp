@@ -73,7 +73,7 @@ public:
     // Objects
     virtual void addQuery(UUID obj, SolidAngle sa, uint32 max_results);
     virtual void addQuery(UUID obj, const String& params);
-    virtual void removeQuery(UUID obj);
+    virtual void removeQuery(UUID obj, const std::tr1::function<void()>&callback);
 
     // PintoServerQuerierListener Interface
     virtual void onPintoServerResult(const Sirikata::Protocol::Prox::ProximityUpdate& update);
@@ -91,7 +91,7 @@ public:
 
     // MigrationDataClient Interface
     virtual std::string migrationClientTag();
-    virtual std::string generateMigrationData(const UUID& obj, ServerID source_server, ServerID dest_server);
+    virtual std::string generateMigrationData(const UUID& obj, ServerID source_server, ServerID dest_server, const std::tr1::function<void()>&removeObjectQueryCallback);
     virtual void receiveMigrationData(const UUID& obj, ServerID source_server, ServerID dest_server, const std::string& data);
 
 
@@ -163,7 +163,7 @@ private:
     virtual void handleDisconnectedServer(ServerID server);
 
     void handleUpdateObjectQuery(const UUID& object, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const SolidAngle& angle, uint32 max_results, SeqNoPtr seqno);
-    void handleRemoveObjectQuery(const UUID& object, bool notify_main_thread);
+    void handleRemoveObjectQuery(const UUID& object, bool notify_main_thread, const std::tr1::function<void()>&callback);
     void handleDisconnectedObject(const UUID& object);
 
     // Generate query events based on results collected from query handlers

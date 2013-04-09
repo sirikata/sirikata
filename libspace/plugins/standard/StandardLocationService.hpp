@@ -63,10 +63,10 @@ public:
     virtual const String& queryData(const UUID& uuid);
 
   virtual void addLocalObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics, const String& query_data);
-    virtual void removeLocalObject(const UUID& uuid);
+    virtual void removeLocalObject(const UUID& uuid, const std::tr1::function<void()>&completeCallback);
 
     virtual void addLocalAggregateObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics, const String& query_data);
-    virtual void removeLocalAggregateObject(const UUID& uuid);
+    virtual void removeLocalAggregateObject(const UUID& uuid, const std::tr1::function<void()>&completeCallback);
     virtual void updateLocalAggregateLocation(const UUID& uuid, const TimedMotionVector3f& newval);
     virtual void updateLocalAggregateOrientation(const UUID& uuid, const TimedMotionQuaternion& newval);
     virtual void updateLocalAggregateBounds(const UUID& uuid, const AggregateBoundingInfo& newval);

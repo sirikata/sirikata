@@ -223,12 +223,19 @@ private:
                                   // should actually use the connection, this is
                                   // only still a map to handle migrations
                                   // properly
+    typedef std::tr1::unordered_map<UUID,int,UUID::Hasher> DisconnectingObjectMap;
+    ///Maps UUID to a count of the number of services we need callbacks from: guarded by mRouteObjectMessageMutex
+    DisconnectingObjectMap mDisconnectingObjects;
+    bool isObjectDisconnecting(const UUID &object)const;
+    ///Other services end up calling this callback to mark an object as being disconnected. Bound by the handleDisconnect function which passes this to the service for the final disconnection call
+    void markObjectDisconnectedCallback(UUID object);
+    ///marks an object and needing callbacks from <serviceCount> subservices before it becomes truly disconnected
+    void markObjectDisconnecting(const UUID &object, int serviceCount);
+
     // Information to be able to respond to a migration request *from
     // the object*.
     typedef ObjectConnectionMap MigrationRequestMap;
     MigrationRequestMap mObjectsAwaitingMigration;
-
-
     typedef std::tr1::unordered_map<UUID, Sirikata::Protocol::Migration::MigrationMessage*, UUID::Hasher> ObjectMigrationMap;
     ObjectMigrationMap mObjectMigrations;
 
@@ -264,6 +271,7 @@ private:
 
     typedef std::map<UUID, StoredConnection> StoredConnectionMap;
     StoredConnectionMap  mStoredConnectionData;
+
     struct ConnectionIDObjectMessagePair{
         ObjectHostConnectionID conn_id;
         Sirikata::Protocol::Object::ObjectMessage* obj_msg;

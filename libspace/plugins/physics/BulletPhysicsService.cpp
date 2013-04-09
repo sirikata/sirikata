@@ -467,7 +467,7 @@ void BulletPhysicsService::cleanupLocationInfo(LocationInfo& locinfo) {
     }
 }
 
-void BulletPhysicsService::removeLocalObject(const UUID& uuid) {
+void BulletPhysicsService::removeLocalObject(const UUID& uuid, const std::tr1::function<void()>&completeCallback) {
     // Remove from mLocations, but save the cached state
     assert( mLocations.find(uuid) != mLocations.end() );
     assert( mLocations[uuid].local == true );
@@ -485,6 +485,7 @@ void BulletPhysicsService::removeLocalObject(const UUID& uuid) {
     // Remove from the list of local objects
     CONTEXT_SPACETRACE(serverObjectEvent, mContext->id(), mContext->id(), uuid, false, TimedMotionVector3f());
     notifyLocalObjectRemoved(uuid, false);
+    completeCallback();
 }
 
 LocationInfo& BulletPhysicsService::info(const UUID& uuid) {
@@ -591,7 +592,7 @@ void BulletPhysicsService::addLocalAggregateObject(const UUID& uuid, const Timed
     updatePhysicsWorld(uuid);
 }
 
-void BulletPhysicsService::removeLocalAggregateObject(const UUID& uuid) {
+void BulletPhysicsService::removeLocalAggregateObject(const UUID& uuid, const std::tr1::function<void()>&completeCallback) {
     // Remove from mLocations, but save the cached state
     assert( mLocations.find(uuid) != mLocations.end() );
     assert( mLocations[uuid].local == true );
@@ -602,6 +603,7 @@ void BulletPhysicsService::removeLocalAggregateObject(const UUID& uuid) {
     mLocations.erase(uuid);
 
     notifyLocalObjectRemoved(uuid, true);
+    completeCallback();
 }
 
 void BulletPhysicsService::updateLocalAggregateLocation(const UUID& uuid, const TimedMotionVector3f& newval) {

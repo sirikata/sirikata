@@ -52,7 +52,7 @@ public:
     /** Produce data for the migration of obj from source_server to
      *  dest_server.
      */
-    virtual std::string generateMigrationData(const UUID& obj, ServerID source_server, ServerID dest_server) = 0;
+    virtual std::string generateMigrationData(const UUID& obj, ServerID source_server, ServerID dest_server, const std::tr1::function<void()>&removeObjectCompleteCallback) = 0;
 
     /** Receive data for the migration of obj from source_server to
      *  dest_server.

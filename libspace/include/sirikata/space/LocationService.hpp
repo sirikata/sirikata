@@ -221,7 +221,7 @@ public:
 
     /** Methods dealing with local objects. */
     virtual void addLocalObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics, const String& query_data) = 0;
-    virtual void removeLocalObject(const UUID& uuid) = 0;
+    virtual void removeLocalObject(const UUID& uuid, const std::tr1::function<void()>&completeCallback) = 0;
 
     /** Aggregate objects are handled separately from other local objects.  All
      *  the information is tracked, but listeners are notified about them
@@ -232,7 +232,7 @@ public:
      *  generates them.
      */
     virtual void addLocalAggregateObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics, const String& query_data) = 0;
-    virtual void removeLocalAggregateObject(const UUID& uuid) = 0;
+    virtual void removeLocalAggregateObject(const UUID& uuid, const std::tr1::function<void()>&completeCallback) = 0;
     virtual void updateLocalAggregateLocation(const UUID& uuid, const TimedMotionVector3f& newval) = 0;
     virtual void updateLocalAggregateOrientation(const UUID& uuid, const TimedMotionQuaternion& newval) = 0;
     virtual void updateLocalAggregateBounds(const UUID& uuid, const AggregateBoundingInfo& newval) = 0;

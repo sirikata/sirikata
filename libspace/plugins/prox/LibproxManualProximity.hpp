@@ -49,7 +49,7 @@ public:
     // Objects
     virtual void addQuery(UUID obj, SolidAngle sa, uint32 max_results);
     virtual void addQuery(UUID obj, const String& params);
-    virtual void removeQuery(UUID obj);
+    virtual void removeQuery(UUID obj, const std::tr1::function<void()>&callback);
 
     // PollingService Interface
     virtual void poll();
@@ -72,7 +72,7 @@ public:
 
     // MigrationDataClient Interface
     virtual std::string migrationClientTag();
-    virtual std::string generateMigrationData(const UUID& obj, ServerID source_server, ServerID dest_server);
+    virtual std::string generateMigrationData(const UUID& obj, ServerID source_server, ServerID dest_server, const std::tr1::function<void()>&removeObjectQueryCallback);
     virtual void receiveMigrationData(const UUID& obj, ServerID source_server, ServerID dest_server, const std::string& data);
 
     // ObjectHostSessionListener Interface

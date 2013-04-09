@@ -78,14 +78,14 @@ class SIRIKATA_SPACE_EXPORT Proximity :
     // Objects
     virtual void addQuery(UUID obj, SolidAngle sa, uint32 max_results) = 0;
     virtual void addQuery(UUID obj, const String& params) = 0;
-    virtual void removeQuery(UUID obj) = 0;
+    virtual void removeQuery(UUID obj, const std::tr1::function<void()>&completeCallback) = 0;
 
     // PollingService Interface
     virtual void poll();
 
     // MigrationDataClient Interface
     virtual std::string migrationClientTag() = 0;
-    virtual std::string generateMigrationData(const UUID& obj, ServerID source_server, ServerID dest_server) = 0;
+    virtual std::string generateMigrationData(const UUID& obj, ServerID source_server, ServerID dest_server, const std::tr1::function<void()>&removeObjectCompleteCallback) = 0;
     virtual void receiveMigrationData(const UUID& obj, ServerID source_server, ServerID dest_server, const std::string& data) = 0;
 
     // ** These interfaces are stubbed out because you don't necessarily need to

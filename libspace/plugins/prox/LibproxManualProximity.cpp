@@ -133,7 +133,9 @@ void LibproxManualProximity::addQuery(UUID obj, const String& params) {
     // Ignored, this query handler only deals with ObjectHost queries
 }
 
-void LibproxManualProximity::removeQuery(UUID obj) {
+void LibproxManualProximity::removeQuery(UUID obj, const std::tr1::function<void()>&callback) {
+    PROXLOG(warn,"LibproxManualProximity only deals with ObjectHost queries, not " << obj.toString());    
+    callback();
     // Ignored, this query handler only deals with ObjectHost queries
 }
 
@@ -233,7 +235,9 @@ std::string LibproxManualProximity::migrationClientTag() {
     return "prox";
 }
 
-std::string LibproxManualProximity::generateMigrationData(const UUID& obj, ServerID source_server, ServerID dest_server) {
+std::string LibproxManualProximity::generateMigrationData(const UUID& obj, ServerID source_server, ServerID dest_server, const std::tr1::function<void()>&removeObjectQueryCallback) {
+    PROXLOG(warn,"LibproxManualProximity only deals with ObjectHost queries, not " << obj.toString());    
+    removeObjectQueryCallback();
     // There shouldn't be any object data to move since we only manage
     // ObjectHost queries
     return "";

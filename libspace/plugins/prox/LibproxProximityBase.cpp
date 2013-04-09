@@ -544,8 +544,9 @@ void LibproxProximityBase::handleRemoveObjectLocSubscriptionWithID(const UUID& s
     mLocService->unsubscribe(subscriber, observed, index_id);
 }
 
-void LibproxProximityBase::handleRemoveAllObjectLocSubscription(const UUID& subscriber) {
+void LibproxProximityBase::handleRemoveAllObjectLocSubscription(const UUID& subscriber, const std::tr1::function<void()>&callback) {
     mLocService->unsubscribe(subscriber);
+    callback();
 }
 
 void LibproxProximityBase::handleAddOHLocSubscription(const OHDP::NodeID& subscriber, const UUID& observed) {
@@ -724,11 +725,11 @@ void LibproxProximityBase::aggregateQueryDataUpdated(const ObjectReference& obji
     if (is_root)
         mServerQuerier->updateQueryData(extra_query_data);
 }
-
+static void nop(){}
 void LibproxProximityBase::aggregateDestroyed(const ObjectReference& objid) {
     mContext->mainStrand->post(
         std::tr1::bind(
-            &LocationService::removeLocalAggregateObject, mLocService, objid.getAsUUID()
+            &LocationService::removeLocalAggregateObject, mLocService, objid.getAsUUID(), &nop
         ),
         "LocationService::removeLocalAggregateObject"
     );

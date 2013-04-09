@@ -269,7 +269,7 @@ protected:
     void handleAddObjectLocSubscriptionWithID(const UUID& subscriber, const UUID& observed, ProxIndexID index_id);
     void handleRemoveObjectLocSubscription(const UUID& subscriber, const UUID& observed);
     void handleRemoveObjectLocSubscriptionWithID(const UUID& subscriber, const UUID& observed, ProxIndexID index_id);
-    void handleRemoveAllObjectLocSubscription(const UUID& subscriber);
+    void handleRemoveAllObjectLocSubscription(const UUID& subscriber, const std::tr1::function<void()>&removedCallback);
     void handleAddOHLocSubscription(const OHDP::NodeID& subscriber, const UUID& observed);
     void handleAddOHLocSubscriptionWithID(const OHDP::NodeID& subscriber, const UUID& observed, ProxIndexID index_id);
     void handleRemoveOHLocSubscription(const OHDP::NodeID& subscriber, const UUID& observed);
