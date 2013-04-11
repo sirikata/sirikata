@@ -330,6 +330,9 @@ public:
 
 };
 
+#define SST_BASE_CWND 10
+#define SST_BASE_SSTHRESH 32768
+
 template <class EndPointType>
 class SIRIKATA_EXPORT Connection {
   public:
@@ -384,6 +387,7 @@ private:
   boost::mutex mOutstandingSegmentsMutex;
 
   uint16 mCwnd;
+  uint16 mSSThresh;
   int64 mRTOMicroseconds; // RTO in microseconds
   bool mFirstRTO;
 
@@ -485,7 +489,7 @@ private:
       mState(CONNECTION_DISCONNECTED),
       mRemoteChannelID(0), mLocalChannelID(1), mTransmitSequenceNumber(1),
       mLastReceivedSequenceNumber(1),
-      mNumStreams(0), mCwnd(1), mRTOMicroseconds(2000000),
+      mNumStreams(0), mCwnd(SST_BASE_CWND), mSSThresh(SST_BASE_SSTHRESH), mRTOMicroseconds(2000000),
       mFirstRTO(true),  MAX_DATAGRAM_SIZE(1000), MAX_PAYLOAD_SIZE(1300),
       MAX_QUEUED_SEGMENTS(3000),
       CC_ALPHA(0.8), mLastTransmitTime(Time::null()),
@@ -702,11 +706,40 @@ private:
         // Otherwise, adjust the congestion window if we have
         // oustanding packets left.
         if (mOutstandingSegments.size() > 0) {
-            mCwnd /= 2;
-            if (mCwnd < 1)
-                mCwnd = 1;
+            // This is a non-standard approach, but since this is the only
+            // indication of drops we currently use, it balances between the two
+            // backoff approaches normally used. Normally on a retransmission
+            // timeout we would set ssthresh = cwnd / 2 and cwnd = base_cwnd
+            // on. However, we don't detect triple duplicate acks, where we
+            // would only do backoff of ssthresh = cwnd / 2 and cwnd =
+            // ssthresh. We need to have *some* indication of when to back off
+            // in which way, so we decide based on what kind of growth we're
+            // currently in -- we'll only fully back off if we detect a problem
+            // during slow start (but not the first one since that's expected to
+            // fail)
+            uint16 old_ssthresh = mSSThresh;
+            mSSThresh = std::max(mCwnd/2, SST_BASE_CWND*2);
+            if (mCwnd >= old_ssthresh || old_ssthresh == SST_BASE_SSTHRESH) {// linear growth, light back off
+                mCwnd = mSSThresh;
+                //SILOG(sst, insane, this << " RTO LINEAR - cwnd " << mCwnd << " ssthresh " << mSSThresh << "   state " << mState << " rto " << mRTOMicroseconds);
+            }
+            else {// slow start exponential growth, aggressive back off
+                mCwnd = SST_BASE_CWND;
+                //SILOG(sst, insane, this << " RTO SS - cwnd " << mCwnd << " ssthresh " << mSSThresh << "   state " << mState << " rto " << mRTOMicroseconds);
+            }
+
+            // Back off on the timeout as well since the congestion
+            // could cause additional delays. It should recover
+            // quickly if it really is lower still
+            if (mRTOMicroseconds < 20000000)
+                mRTOMicroseconds *= 2;
 
             mOutstandingSegments.clear();
+            // We can't just clear outstanding segments because we could have *a
+            // lot* queued up, and we need to get back to the dropped data. This
+            // isn't ideal since it affects all streams (which will all now see
+            // drops) but it gets the other stream back on track.
+            mQueuedSegments.clear();
         }
 
         // And if we have anything to send, put ourselves back into
@@ -993,8 +1026,15 @@ private:
 
           mOutstandingSegments.erase(it);
 
-          if (rand() % mCwnd == 0)
-            mCwnd += 1;
+          if (mCwnd <= mSSThresh) {
+              // Slow start exponential growth, bump for every acked packet
+              mCwnd += 1;
+          }
+          else {
+              // regular growth
+              if (rand() % mCwnd == 0)
+                  mCwnd += 1;
+          }
 
           // We freed up some space in the window. If we have
           // something left to send, trigger servicing.
@@ -1003,7 +1043,7 @@ private:
               scheduleConnectionService();
           }
 
-          break;
+          return;
         }
     }
   }
@@ -1013,6 +1053,7 @@ private:
     Sirikata::Protocol::SST::SSTStreamHeader* received_stream_msg =
                        new Sirikata::Protocol::SST::SSTStreamHeader();
     bool parsed = parsePBJMessage(received_stream_msg, received_channel_msg->payload());
+    if (!parsed) return false;
 
     // Easiest to default handled to true here since most of these are trivially
     // handled, they don't require any resources so as long as we look at them
@@ -1237,6 +1278,16 @@ private:
     if (mState == CONNECTION_PENDING_CONNECT) {
       mState = CONNECTION_CONNECTED;
 
+      // During connection, we don't allow the initial connection request packet
+      // out of the queued segments (normally once it has been sent and is in
+      // the outstanding packet list, it is removed from the queue). See the
+      // note in serviceConnection. Because of this, we still have it queued. To
+      // avoid retransmitting it, pop it off now.
+      // Sanity check that the front segment *is* the first packet (which must
+      // be the initial connection request).
+      assert(mQueuedSegments.front()->mChannelSequenceNumber == 1);
+      mQueuedSegments.pop_front();
+
       EndPoint<EndPointType> originalListeningEndPoint(mRemoteEndPoint.endPoint, mRemoteEndPoint.port);
 
       uint32* received_payload = (uint32*) received_msg->payload().data();
@@ -1264,15 +1315,37 @@ private:
 
       handled = true;
     }
-    else if (mState == CONNECTION_PENDING_RECEIVE_CONNECT) {
-      mState = CONNECTION_CONNECTED;
-      handled = true;
-    }
-    else if (mState == CONNECTION_CONNECTED) {
-      if (received_msg->payload().size() > 0)
-          handled = parsePacket(received_msg);
-      else
-          handled = true;
+    else if (mState == CONNECTION_PENDING_RECEIVE_CONNECT || mState == CONNECTION_CONNECTED) {
+        // Handle these two cases together because we may get reordering of the
+        // initial packets (after a channel is created, usually both the final
+        // connection setup packet and the first stream init are sent out right
+        // away, and can get reordered). By handling together, we ensure we get
+        // the stream marked as connected and handle any data which might be
+        // included.
+
+        // If we got any new packet, even if something got reordered, assume
+        // we're connected
+        if (mState == CONNECTION_PENDING_RECEIVE_CONNECT) {
+            mState = CONNECTION_CONNECTED;
+            handled = true;
+        }
+
+        if (received_msg->payload().size() > 0) {
+            handled = parsePacket(received_msg);
+        }
+        else {
+            // Need to ack still so the other side can clear out of their
+            // outstanding packet list
+            // FIXME this is a an ack packet and we'd leave it empty except that
+            // would create an infinite ack loop between the nodes with this
+            // code. Instead, fill in bogus data, which will get the ack
+            // processed, get passed to the other branch above, and be unhandled
+            // since it isn't parsed properly. Maybe do equivalent of
+            // sendAckPacket, but make it not depend on the stream?
+            const char* bogus_data = "XX";
+            sendData(bogus_data, 2, true, ack_seqno);
+            handled = true;
+        }
     }
 
     // We can only update the received seqno that we're going to ack if we
@@ -2562,6 +2635,7 @@ private:
 
     // And make sure we'll be able to ship the first buffer
     // immediately.
+    mTransmitWindowSize += mNumOutstandingBytes;
     if (!mQueuedBuffers.empty()) {
         StreamBufferPtr buffer = mQueuedBuffers.front();
         if (mTransmitWindowSize < buffer->mBufferLength)
@@ -2642,8 +2716,18 @@ private:
       // We can get data after we've already received it and moved our window
       // past it (e.g. retries), so we have to handle this carefully. A simple
       // case is if we've already moved past this entire packet.
-      if ((int64)(offset + len) <= mNextByteExpected)
+      if ((int64)(offset + len) <= mNextByteExpected) {
+          // We can't actually ignore these. We keep sending notices of the most
+          // recent used data. However, we don't use cumulative acks right now
+          // (we have no way to distinguish in the protocol),
+          // which means we could ack a few packets, and the first ack could get
+          // lost. The other side would never know it had been received and keep
+          // trying to resend it, and eventually not be able to make
+          // progress. Therefore, we have to re-ack. Fortunately, this currently
+          // seems to be a rare problem.
+          sendAckPacket(ack_seqno);
           return true;
+      }
 
       int64 offsetInBuffer = offset - mNextByteExpected;
       // Currently we shouldn't be resegmenting data, so we should either get an

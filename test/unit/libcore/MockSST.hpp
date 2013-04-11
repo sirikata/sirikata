@@ -69,6 +69,10 @@ public:
 
     void setDelay(Duration d) { mDelay = d; }
     void setDropRate(float32 d) { mDropRate = d; }
+    void setMaxOutstandingPackets(int32 d) {
+        mMaxOutstandingPackets = d;
+        mOutstandingPackets.clear();
+    }
 
     void listen(const ID& ep, ObjectMessagePort port, DatagramCallback cb) {
         // Just record this in our map, but also make sure we haven't already
@@ -89,6 +93,13 @@ public:
     void send(const ID& src, const ObjectMessagePort src_port, const ID dst, const ObjectMessagePort dst_port, void* payload, uint32 payload_size) {
         if (mDropRate > 0 && randFloat() < mDropRate)
             return;
+
+        if (mMaxOutstandingPackets > 0) {
+            if (mOutstandingPackets[src] > mMaxOutstandingPackets)  {
+                return;
+            }
+            mOutstandingPackets[src]++;
+        }
 
         // Simple deferment so we don't have recursive handling/sending here
         if (mDelay != Duration::zero())
@@ -120,6 +131,10 @@ public:
 
 private:
     void deliver(const ID& src, const ObjectMessagePort src_port, const ID dst, const ObjectMessagePort dst_port, String payload) {
+        if (mMaxOutstandingPackets > 0) {
+            mOutstandingPackets[src]--;
+        }
+
         if (mHandlers.find(dst) == mHandlers.end()) return;
         PortHandlerMap& handlers = mHandlers[dst];
         if (handlers.find(dst_port) == handlers.end()) return;
@@ -135,6 +150,10 @@ private:
     // Channel conditions
     Duration mDelay;
     float32 mDropRate;
+    int32 mMaxOutstandingPackets;
+
+    typedef std::map<ID, int32> OutstandingPacketsMap;
+    OutstandingPacketsMap mOutstandingPackets;
 };
 
 } // namespace Mock

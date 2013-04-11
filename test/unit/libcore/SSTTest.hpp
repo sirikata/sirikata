@@ -42,11 +42,17 @@ public:
     String _medium_payload;
     String _large_payload;
 
+// Still here for historical reasons, but we only use LOSSLESS with PACKET_LIMIT
+// to simulate congestion since consistent losses no matter the rate will always
+// cause poor behavior
 #define LOSSLESS 0.0
 #define LOSSY 0.1
 
 #define NODELAY_CHANNEL Duration::zero()
 #define SLOW_CHANNEL Duration::milliseconds(50)
+
+#define NO_PACKET_LIMIT 0
+#define PACKET_LIMIT 100
 
 #define SHORT_TIMEOUT Duration::seconds(5)
 #define LONG_TIMEOUT Duration::seconds(15)
@@ -64,7 +70,7 @@ public:
             _endpoints.push_back(Mock::ID(String(1, 'a' + i)));
 
         _small_payload = "this is the payload";
-#define MEDIUM_PAYLOAD_SIZE 1024*512
+#define MEDIUM_PAYLOAD_SIZE 1024*1024*20
         _medium_payload.resize(MEDIUM_PAYLOAD_SIZE);
         for(int i = 0; i < MEDIUM_PAYLOAD_SIZE; i++)
             _medium_payload[i] = ('a' + (i % 26));
@@ -166,7 +172,8 @@ public:
         TS_ASSERT_EQUALS(memcmp(data, (expected->c_str() + *read_so_far), size), 0);
         *read_so_far += size;
 
-        SILOG(test, detailed, "Read progress " << *read_so_far << " of " << expected->size() << " (" << (*read_so_far/(float32)expected->size())*100 << "%)");
+        if (rand() % 100 == 0)
+            SILOG(test, detailed, "Read progress " << *read_so_far << " of " << expected->size() << " (" << (*read_so_far/(float32)expected->size())*100 << "%)");
         if (*read_so_far == expected->size()) {
             // We're done
             _events.push(ep.toString() + " received expected");
@@ -462,7 +469,7 @@ public:
 
 
     // Allows testing different lengths
-    void impl_testSendReceiveOneDirection(String* payload, Duration channel_delay, float32 channel_drop_rate, Duration timeout) {
+    void impl_testSendReceiveOneDirection(String* payload, Duration channel_delay, float32 channel_drop_rate, int32 max_packets, Duration timeout) {
         using std::tr1::placeholders::_1;
         using std::tr1::placeholders::_2;
 
@@ -470,6 +477,7 @@ public:
 
         _mock_service->setDelay(channel_delay);
         _mock_service->setDropRate(channel_drop_rate);
+        _mock_service->setMaxOutstandingPackets(max_packets);
 
         // Test that send/receive works when only sending in one
         // direction
@@ -498,40 +506,40 @@ public:
     }
 
     void testSendReceiveOneDirection() {
-        impl_testSendReceiveOneDirection(&_small_payload, NODELAY_CHANNEL, LOSSLESS, SHORT_TIMEOUT);
+        impl_testSendReceiveOneDirection(&_small_payload, NODELAY_CHANNEL, LOSSLESS, NO_PACKET_LIMIT, SHORT_TIMEOUT);
     }
     void testSendReceiveOneDirectionLarge() {
         String payload = "";
-        impl_testSendReceiveOneDirection(&_large_payload, NODELAY_CHANNEL, LOSSLESS, LONG_TIMEOUT);
+        impl_testSendReceiveOneDirection(&_large_payload, NODELAY_CHANNEL, LOSSLESS, NO_PACKET_LIMIT, LONG_TIMEOUT);
     }
 
 
-    // Test over 50% lossy channel
+    // Test over "lossy" (i.e. congestible) channel
     void testSendReceiveOneDirectionLossy() {
-        impl_testSendReceiveOneDirection(&_small_payload, NODELAY_CHANNEL, LOSSY, LONG_TIMEOUT);
+        impl_testSendReceiveOneDirection(&_small_payload, NODELAY_CHANNEL, LOSSLESS, PACKET_LIMIT, LONG_TIMEOUT);
     }
     // Note medium payload. Large payload with lossy or slow
     // connections takes too long
     void testSendReceiveOneDirectionLargeLossy() {
         String payload = "";
-        impl_testSendReceiveOneDirection(&_medium_payload, NODELAY_CHANNEL, LOSSY, LONG_TIMEOUT);
+        impl_testSendReceiveOneDirection(&_medium_payload, NODELAY_CHANNEL, LOSSLESS, PACKET_LIMIT, LONG_TIMEOUT);
     }
 
     // Test over slow channel
     void testSendReceiveOneDirectionSlow() {
-        impl_testSendReceiveOneDirection(&_small_payload, SLOW_CHANNEL, LOSSLESS, SHORT_TIMEOUT);
+        impl_testSendReceiveOneDirection(&_small_payload, SLOW_CHANNEL, LOSSLESS, NO_PACKET_LIMIT, SHORT_TIMEOUT);
     }
     void testSendReceiveOneDirectionLargeSlow() {
         String payload = "";
-        impl_testSendReceiveOneDirection(&_large_payload, SLOW_CHANNEL, LOSSLESS, LONG_TIMEOUT);
+        impl_testSendReceiveOneDirection(&_large_payload, SLOW_CHANNEL, LOSSLESS, NO_PACKET_LIMIT, LONG_TIMEOUT);
     }
 
     // Test over slow, lossy channel
     void testSendReceiveOneDirectionSlowLossy() {
-        impl_testSendReceiveOneDirection(&_small_payload, SLOW_CHANNEL, LOSSY, LONG_TIMEOUT);
+        impl_testSendReceiveOneDirection(&_small_payload, SLOW_CHANNEL, LOSSLESS, PACKET_LIMIT, LONG_TIMEOUT);
     }
     void testSendReceiveOneDirectionLargeSlowLossy() {
         String payload = "";
-        impl_testSendReceiveOneDirection(&_medium_payload, SLOW_CHANNEL, LOSSY, LONG_TIMEOUT);
+        impl_testSendReceiveOneDirection(&_medium_payload, SLOW_CHANNEL, LOSSLESS, PACKET_LIMIT, LONG_TIMEOUT);
     }
 };
