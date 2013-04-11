@@ -274,7 +274,7 @@ void TwitterAggregateManager::localObjectAdded(const UUID& uuid, bool agg, const
 }
 
 LocationServiceListener::RemovalStatus TwitterAggregateManager::localObjectRemoved(const UUID& uuid, bool agg, const LocationServiceListener::RemovalCallback&callback) {
-    LocationServiceListener::IMMEDIATE;
+    return LocationServiceListener::IMMEDIATE;
 }
 
 void TwitterAggregateManager::localLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval) {
