@@ -757,7 +757,7 @@ void MeshAggregateManager::aggregateObserved(const UUID& objid, uint32 nobserver
     fflush(stdout);
 
     assert(nobservers < 2);
-    */
+
     std::cout << "Observed tree level " << aggObj->mTreeLevel << "_"
               << aggObj->mUUID  <<  " : nobservers=" <<  nobservers << "\n";
 
@@ -769,6 +769,7 @@ void MeshAggregateManager::aggregateObserved(const UUID& objid, uint32 nobserver
         if (*it != UUID::null()) std::cout << " parent "  << (*it)   << "\n";
       }
     }
+    */
   }
 }
 
