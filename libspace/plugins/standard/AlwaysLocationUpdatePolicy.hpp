@@ -95,24 +95,6 @@ public:
     virtual void service();
 
 private:
-    void handleServerSubscribe(ServerID remote, const UUID& uuid, SeqNoPtr seqno);
-    void handleServerIndexSubscribe(ServerID remote, const UUID& uuid, ProxIndexID index_id, SeqNoPtr seqno);
-    void handleServerUnsubscribe(ServerID remote, const UUID& uuid);
-    void handleServerIndexUnsubscribe(ServerID remote, const UUID& uuid, ProxIndexID index_id);
-    void handleServerCompleteUnsubscribe(ServerID remote, const std::tr1::function<void()>& cb);
-
-    void handleObjectHostSubscribe(const OHDP::NodeID& remote, const UUID& uuid);
-    void handleObjectHostIndexSubscribe(const OHDP::NodeID& remote, const UUID& uuid, ProxIndexID index_id);
-    void handleObjectHostUnsubscribe(const OHDP::NodeID& remote, const UUID& uuid);
-    void handleObjectHostIndexUnsubscribe(const OHDP::NodeID& remote, const UUID& uuid, ProxIndexID index_id);
-    void handleObjectHostCompleteUnsubscribe(const OHDP::NodeID& remote, const std::tr1::function<void()>& cb);
-
-    void handleObjectSubscribe(const UUID& remote, const UUID& uuid);
-    void handleObjectIndexSubscribe(const UUID& remote, const UUID& uuid, ProxIndexID index_id);
-    void handleObjectUnsubscribe(const UUID& remote, const UUID& uuid);
-    void handleObjectIndexUnsubscribe(const UUID& remote, const UUID& uuid, ProxIndexID index_id);
-    void handleObjectCompleteUnsubscribe(const UUID& remote, const std::tr1::function<void()>& cb);
-
     void reportStats();
 
 
@@ -196,10 +178,258 @@ private:
         typedef std::map<UUID, SubscriberSet*> ObjectSubscribersMap;
         ObjectSubscribersMap mObjectSubscribers;
 
+
+        // This is the small amount of cross-strand data that needs mutex
+        // protection. We hold this data here instead of purely in
+        // strand->post() calls so that if we quickly add then remove a
+        // subscription, we can clear it out without requiring any work in the
+        // main strand.
+        boost::mutex mSubscriberQueueMutex;
+        enum SubscriptionEventType {
+            SubscribeNormal,
+            SubscribeIndex,
+            UnsubscribeNormal,
+            UnsubscribeIndex,
+            UnsubscribeComplete
+        };
+        struct SubscriptionRequestInfo {
+            SubscriptionEventType type;
+            SubscriberType remote;
+            UUID uuid;
+            ProxIndexID index_id;
+            SeqNoPtr seqno;
+            std::tr1::function<void()> cb;
+
+            SubscriptionRequestInfo()
+            {}
+            SubscriptionRequestInfo(
+                SubscriptionEventType _type,
+                const SubscriberType& _remote,
+                const UUID& _uuid,
+                ProxIndexID _index_id,
+                SeqNoPtr _seqno,
+                std::tr1::function<void()> _cb
+            )
+             : type(_type),
+               remote(_remote),
+               uuid(_uuid),
+               index_id(_index_id),
+               seqno(_seqno),
+               cb(_cb)
+            {}
+        };
+        typedef std::map<ProxIndexID, SubscriptionRequestInfo> IndexSubscriptionInfoMap;
+        typedef std::map<UUID, IndexSubscriptionInfoMap> SubscriptionRequestInfoMap;
+        typedef std::map<SubscriberType, SubscriptionRequestInfoMap> SubscriberSubscriptionRequestInfoMap;
+        SubscriberSubscriptionRequestInfoMap mPendingSubscriptions;
+        // Also keep track of whether we have a task that's going to process
+        // subscriptions so we don't post() more tasks than necessary
+        bool mOutstandingSubscriptionTask;
+
+
+        // Local to thread, fast unsubscription process. Returns true if it was
+        // processed, false otherwise.
+        bool fastSubscription(const SubscriberType& remote, const UUID& uuid, ProxIndexID index_id) {
+            typename SubscriberSubscriptionRequestInfoMap::iterator subscriber_it = mPendingSubscriptions.find(remote);
+            if (subscriber_it == mPendingSubscriptions.end()) return false;
+            SubscriptionRequestInfoMap& srim = subscriber_it->second;
+            typename SubscriptionRequestInfoMap::iterator obj_it = srim.find(uuid);
+            if (obj_it == srim.end()) return false;
+            // In indexed mode, we need to find the right data. For unindexed
+            // mode, we'll have just been passed 0.
+            IndexSubscriptionInfoMap& isim = obj_it->second;
+            typename IndexSubscriptionInfoMap::iterator req_it = isim.find(index_id);
+            if (req_it == isim.end()) return false;
+            // At this point, it better really be an unsubscription request
+            assert(req_it->second.type == UnsubscribeNormal || req_it->second.type == UnsubscribeIndex);
+            isim.erase(req_it);
+            // Cascade cleanup if things emptied out
+            if (isim.empty())
+                srim.erase(obj_it);
+            if (srim.empty())
+                mPendingSubscriptions.erase(subscriber_it);
+            return true;
+        }
+
+        void submitSubscription(const SubscriberType& remote, const UUID& uuid) {
+            // The empty seqno gets filled in automatically when it's not passed
+            // in by looking it up for the subscriber.
+            submitSubscription(remote, uuid, SeqNoPtr());
+        }
+
+        void submitSubscription(const SubscriberType& remote, const UUID& uuid, SeqNoPtr seqno) {
+            boost::lock_guard<boost::mutex> lck(mSubscriberQueueMutex);
+            bool handled = fastSubscription(remote, uuid, (ProxIndexID)0);
+            if (handled) return;
+            // Otherwise, record a request and schedule processing
+            mPendingSubscriptions[remote][uuid][(ProxIndexID)0] = SubscriptionRequestInfo(
+                SubscribeNormal,
+                remote, uuid, (ProxIndexID)0, seqno, 0
+            );
+            scheduleSubscriptionProcessing();
+        }
+
+        void submitSubscription(const SubscriberType& remote, const UUID& uuid, ProxIndexID index_id) {
+            // The empty seqno gets filled in automatically when it's not passed
+            // in by looking it up for the subscriber.
+            submitSubscription(remote, uuid, index_id, SeqNoPtr());
+        }
+
+        void submitSubscription(const SubscriberType& remote, const UUID& uuid, ProxIndexID index_id, SeqNoPtr seqno) {
+            boost::lock_guard<boost::mutex> lck(mSubscriberQueueMutex);
+            bool handled = fastSubscription(remote, uuid, index_id);
+            if (handled) return;
+            // Otherwise, record a request and schedule processing
+            mPendingSubscriptions[remote][uuid][index_id] = SubscriptionRequestInfo(
+                SubscribeIndex,
+                remote, uuid, index_id, seqno, 0
+            );
+            scheduleSubscriptionProcessing();
+        }
+
+
+        // Local to thread, fast unsubscription process. Returns true if it was
+        // processed, false otherwise.
+        bool fastUnsubscription(const SubscriberType& remote, const UUID& uuid, ProxIndexID index_id) {
+            typename SubscriberSubscriptionRequestInfoMap::iterator subscriber_it = mPendingSubscriptions.find(remote);
+            if (subscriber_it == mPendingSubscriptions.end()) return false;
+            SubscriptionRequestInfoMap& srim = subscriber_it->second;
+            typename SubscriptionRequestInfoMap::iterator obj_it = srim.find(uuid);
+            if (obj_it == srim.end()) return false;
+            // In indexed mode, we need to find the right data. For unindexed
+            // mode, we'll have just been passed 0.
+            IndexSubscriptionInfoMap& isim = obj_it->second;
+            typename IndexSubscriptionInfoMap::iterator req_it = isim.find(index_id);
+            if (req_it == isim.end()) return false;
+            // At this point, it better really be a subscription request
+            assert(req_it->second.type == SubscribeNormal || req_it->second.type == SubscribeIndex);
+            isim.erase(req_it);
+            // Cascade cleanup if things emptied out
+            if (isim.empty())
+                srim.erase(obj_it);
+            if (srim.empty())
+                mPendingSubscriptions.erase(subscriber_it);
+            return true;
+        }
+
+        void submitUnsubscription(const SubscriberType& remote, const UUID& uuid) {
+            boost::lock_guard<boost::mutex> lck(mSubscriberQueueMutex);
+            bool handled = fastUnsubscription(remote, uuid, (ProxIndexID)0);
+            if (handled) return;
+            // Otherwise, record a request and schedule processing
+            mPendingSubscriptions[remote][uuid][(ProxIndexID)0] = SubscriptionRequestInfo(
+                UnsubscribeNormal,
+                remote, uuid, (ProxIndexID)0, SeqNoPtr(), 0
+            );
+            scheduleSubscriptionProcessing();
+        }
+
+        void submitUnsubscription(const SubscriberType& remote, const UUID& uuid, ProxIndexID index_id) {
+            boost::lock_guard<boost::mutex> lck(mSubscriberQueueMutex);
+            bool handled = fastUnsubscription(remote, uuid, (ProxIndexID)0);
+            if (handled) return;
+            // Otherwise, record a request and schedule processing
+            mPendingSubscriptions[remote][uuid][index_id] = SubscriptionRequestInfo(
+                UnsubscribeIndex,
+                remote, uuid, index_id, SeqNoPtr(), 0
+            );
+            scheduleSubscriptionProcessing();
+        }
+
+        void submitUnsubscription(const SubscriberType& remote, const std::tr1::function<void()>& cb) {
+            // Since this removes all subscriptions for this subscriber, we need
+            // to both remove from the pending queue *and* existing
+            // subscriptions. We can do so by removing all requests for this
+            // remote, then submitting one final complete removal request.
+
+            boost::lock_guard<boost::mutex> lck(mSubscriberQueueMutex);
+            mPendingSubscriptions.erase(remote);
+
+            mPendingSubscriptions[remote][UUID::null()][(ProxIndexID)0] = SubscriptionRequestInfo(
+                UnsubscribeComplete,
+                remote, UUID::null(), (ProxIndexID)0, SeqNoPtr(), cb
+            );
+            scheduleSubscriptionProcessing();
+        }
+
+
+        // Assumes mutex is held
+        void scheduleSubscriptionProcessing(bool force = false) {
+            // If we can't find a matching record, pass the request across the
+            // boundary
+            if (!mOutstandingSubscriptionTask || force) {
+                mOutstandingSubscriptionTask = true;
+                parent->mLocService->context()->mainStrand->post(
+                    std::tr1::bind(&SubscriberIndex::handleSubscriptionProcessing, this)
+                );
+            }
+        }
+
+        void handleSubscriptionProcessing() {
+            uint32 processed = 0;
+            while(processed < 20) {
+                // Extract data for processing
+                SubscriptionRequestInfo info;
+                {
+                    boost::lock_guard<boost::mutex> lck(mSubscriberQueueMutex);
+                    if (mPendingSubscriptions.empty()) {
+                        mOutstandingSubscriptionTask = false;
+                        return;
+                    }
+
+                    // This doesn't preserve ordering, but it shouldn't really
+                    // matter. Any add/remove subscription pairs should have
+                    // been processed, so there shouldn't be any ordering
+                    // constraints.
+                    typename SubscriberSubscriptionRequestInfoMap::iterator subscriber_it = mPendingSubscriptions.begin();
+                    SubscriptionRequestInfoMap& srim = subscriber_it->second;
+                    assert(!srim.empty());
+                    typename SubscriptionRequestInfoMap::iterator obj_it = srim.begin();
+                    IndexSubscriptionInfoMap& isim = obj_it->second;
+                    assert(!isim.empty());
+                    info = isim.begin()->second;
+                    isim.erase(isim.begin());
+                    // Cascade cleanup if things emptied out
+                    if (isim.empty())
+                        srim.erase(obj_it);
+                    if (srim.empty())
+                        mPendingSubscriptions.erase(subscriber_it);
+                }
+
+                switch(info.type) {
+                  case SubscribeNormal:
+                    subscribe(info.remote, info.uuid, info.seqno);
+                    break;
+                  case SubscribeIndex:
+                    subscribe(info.remote, info.uuid, info.index_id, info.seqno);
+                    break;
+                  case UnsubscribeNormal:
+                    unsubscribe(info.remote, info.uuid);
+                    break;
+                  case UnsubscribeIndex:
+                    unsubscribe(info.remote, info.uuid, info.index_id);
+                    break;
+                  case UnsubscribeComplete:
+                    unsubscribe(info.remote);
+                    break;
+                }
+                if (info.cb) info.cb();
+            }
+            // If we got out without returning, we have more to process
+            // (actually there is a small chance we're empty, but another
+            // callback doesn't hurt). Schedule more processing.
+            {
+                boost::lock_guard<boost::mutex> lck(mSubscriberQueueMutex);
+                scheduleSubscriptionProcessing(true);
+            }
+        }
+
+
         SubscriberIndex(AlwaysLocationUpdatePolicy* p, bool include_all_data, AtomicValue<uint32>& _sent_count)
          : parent(p),
            send_all_data(include_all_data),
-           sent_count(_sent_count)
+           sent_count(_sent_count),
+           mOutstandingSubscriptionTask(false)
         {
         }
 
@@ -221,6 +451,13 @@ private:
         }
 
         void subscribe(const SubscriberType& remote, const UUID& uuid, ProxIndexID* index_id, SeqNoPtr seqnoPtr) {
+            if (!parent->validSubscriber(remote) || !parent->mLocService->contains(uuid)) return;
+
+            // Sometimes we need to grab seqno's now because they come
+            // from sessions and need to be accessed in the main
+            // strand once we know the object is still around
+            seqnoPtr = parent->getSeqnoPtr(remote, seqnoPtr);
+
             // Make sure we have a record of this subscriber
             typename SubscriberMap::iterator sub_it = mSubscriptions.find(remote);
             if (sub_it == mSubscriptions.end()) {
@@ -562,6 +799,14 @@ private:
     bool trySend(const UUID& dest, const Sirikata::Protocol::Loc::BulkLocationUpdate& blu, const SubscriberInfoPtr& numOutstandingMessageCount);
     bool trySend(const OHDP::NodeID& dest, const Sirikata::Protocol::Loc::BulkLocationUpdate& blu, const SubscriberInfoPtr& numOutstandingMessageCount);
     bool trySend(const ServerID& dest, const Sirikata::Protocol::Loc::BulkLocationUpdate& blu, const SubscriberInfoPtr& numOutstandingMessageCount);
+
+
+
+    SeqNoPtr getSeqnoPtr(const ServerID& remote, SeqNoPtr existing);
+    SeqNoPtr getSeqnoPtr(const OHDP::NodeID& remote, SeqNoPtr existing);
+    SeqNoPtr getSeqnoPtr(const UUID& remote, SeqNoPtr existing);
+
+
     Poller mStatsPoller;
     Time mLastStatsTime;
     const String mTimeSeriesServerUpdatesName;
