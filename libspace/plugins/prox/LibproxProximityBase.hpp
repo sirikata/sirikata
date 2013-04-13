@@ -266,22 +266,6 @@ protected:
     void addObjectProxStreamInfo(ODPSST::StreamPtr);
     void addObjectHostProxStreamInfo(OHDPSST::StreamPtr);
 
-    // Handle various events in the main thread that are triggered in the prox thread
-    void handleAddObjectLocSubscription(const UUID& subscriber, const UUID& observed);
-    void handleAddObjectLocSubscriptionWithID(const UUID& subscriber, const UUID& observed, ProxIndexID index_id);
-    void handleRemoveObjectLocSubscription(const UUID& subscriber, const UUID& observed);
-    void handleRemoveObjectLocSubscriptionWithID(const UUID& subscriber, const UUID& observed, ProxIndexID index_id);
-    void handleRemoveAllObjectLocSubscription(const UUID& subscriber, const std::tr1::function<void()>&removedCallback);
-    void handleAddOHLocSubscription(const OHDP::NodeID& subscriber, const UUID& observed);
-    void handleAddOHLocSubscriptionWithID(const OHDP::NodeID& subscriber, const UUID& observed, ProxIndexID index_id);
-    void handleRemoveOHLocSubscription(const OHDP::NodeID& subscriber, const UUID& observed);
-    void handleRemoveOHLocSubscriptionWithID(const OHDP::NodeID& subscriber, const UUID& observed, ProxIndexID index_id);
-    void handleRemoveAllOHLocSubscription(const OHDP::NodeID& subscriber);
-    void handleAddServerLocSubscription(const ServerID& subscriber, const UUID& observed, SeqNoPtr seqPtr);
-    void handleAddServerLocSubscriptionWithID(const ServerID& subscriber, const UUID& observed, ProxIndexID index_id, SeqNoPtr seqPtr);
-    void handleRemoveServerLocSubscription(const ServerID& subscriber, const UUID& observed);
-    void handleRemoveServerLocSubscriptionWithID(const ServerID& subscriber, const UUID& observed, ProxIndexID index_id);
-    void handleRemoveAllServerLocSubscription(const ServerID& subscriber);
 
     // Takes care of switching objects between static/dynamic
     void checkObjectClass(bool is_local, const UUID& objid, const TimedMotionVector3f& newval);

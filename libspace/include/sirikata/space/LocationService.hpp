@@ -81,6 +81,10 @@ public:
     virtual void start() = 0;
     virtual void stop() = 0;
 
+    // Subscriptions
+    // NOTE: All of these should be callable from another strand (e.g. from the
+    // prox strand) but do their real work in the main strand (or locked)
+
     // Server subscriptions
 
     /** Subscribe remote for updates about uuid. This version implicitly assumes
@@ -114,7 +118,7 @@ public:
      */
     virtual void unsubscribe(ServerID remote, const UUID& uuid, ProxIndexID index_id) = 0;
     /** Unsubscribe remote for updates about all objects across all indices. */
-    virtual void unsubscribe(ServerID remote) = 0;
+    virtual void unsubscribe(ServerID remote, const std::tr1::function<void()>&callback) = 0;
 
 
 
@@ -145,7 +149,7 @@ public:
      */
     virtual void unsubscribe(const OHDP::NodeID& remote, const UUID& uuid, ProxIndexID index_id) = 0;
     /** Unsubscribe remote for updates about all objects across all indices. */
-    virtual void unsubscribe(const OHDP::NodeID& remote) = 0;
+    virtual void unsubscribe(const OHDP::NodeID& remote, const std::tr1::function<void()>&callback) = 0;
 
 
     // Object subscriptions
@@ -175,7 +179,7 @@ public:
      */
     virtual void unsubscribe(const UUID& remote, const UUID& uuid, ProxIndexID index_id) = 0;
     /** Unsubscribe remote for updates about all objects across all indices. */
-    virtual void unsubscribe(const UUID& remote) = 0;
+    virtual void unsubscribe(const UUID& remote, const std::tr1::function<void()>&callback) = 0;
 
     virtual void service() = 0;
 
@@ -259,7 +263,7 @@ public:
     virtual void unsubscribe(ServerID remote, const UUID& uuid);
     virtual void unsubscribe(ServerID remote, const UUID& uuid, ProxIndexID index_id);
     /** Unsubscripe the given server from all its location subscriptions. */
-    virtual void unsubscribe(ServerID remote);
+    virtual void unsubscribe(ServerID remote, const std::tr1::function<void()>&callback);
 
     /** Subscriptions for connected object hosts. */
     virtual void subscribe(const OHDP::NodeID& remote, const UUID& uuid);
@@ -267,7 +271,7 @@ public:
     virtual void unsubscribe(const OHDP::NodeID& remote, const UUID& uuid);
     virtual void unsubscribe(const OHDP::NodeID& remote, const UUID& uuid, ProxIndexID index_id);
     /** Unsubscripe the given object host from all its location subscriptions. */
-    virtual void unsubscribe(const OHDP::NodeID& remote);
+    virtual void unsubscribe(const OHDP::NodeID& remote, const std::tr1::function<void()>&callback);
 
     /** Subscriptions for local objects. */
     virtual void subscribe(const UUID& remote, const UUID& uuid);
@@ -275,7 +279,7 @@ public:
     virtual void unsubscribe(const UUID& remote, const UUID& uuid);
     virtual void unsubscribe(const UUID& remote, const UUID& uuid, ProxIndexID index_id);
     /** Unsubscripe the given server from all its location subscriptions. */
-    virtual void unsubscribe(const UUID& remote);
+    virtual void unsubscribe(const UUID& remote, const std::tr1::function<void()>&callback);
 
 
     /** MessageRecipient Interface. */

@@ -206,8 +206,8 @@ void LocationService::unsubscribe(ServerID remote, const UUID& uuid, ProxIndexID
     mUpdatePolicy->unsubscribe(remote, uuid, index_id);
 }
 
-void LocationService::unsubscribe(ServerID remote) {
-    mUpdatePolicy->unsubscribe(remote);
+void LocationService::unsubscribe(ServerID remote, const std::tr1::function<void()>&callback) {
+    mUpdatePolicy->unsubscribe(remote, callback);
 }
 
 
@@ -229,8 +229,8 @@ void LocationService::unsubscribe(const OHDP::NodeID& remote, const UUID& uuid, 
     mUpdatePolicy->unsubscribe(remote, uuid, index_id);
 }
 
-void LocationService::unsubscribe(const OHDP::NodeID& remote) {
-    mUpdatePolicy->unsubscribe(remote);
+void LocationService::unsubscribe(const OHDP::NodeID& remote, const std::tr1::function<void()>&callback) {
+    mUpdatePolicy->unsubscribe(remote, callback);
 }
 
 
@@ -253,8 +253,8 @@ void LocationService::unsubscribe(const UUID& remote, const UUID& uuid, ProxInde
     mUpdatePolicy->unsubscribe(remote, uuid, index_id);
 }
 
-void LocationService::unsubscribe(const UUID& remote) {
-    mUpdatePolicy->unsubscribe(remote);
+void LocationService::unsubscribe(const UUID& remote, const std::tr1::function<void()>&callback) {
+    mUpdatePolicy->unsubscribe(remote, callback);
 }
 
 
@@ -275,7 +275,7 @@ public:
     };
     ~CallOnDestruct() {
         mCallback();
-    }    
+    }
 };
 void LocationService::notifyLocalObjectRemoved(const UUID& uuid, bool agg, const LocationServiceListener::RemovalCallback&callback) const {
     bool hasCallbacked=false;

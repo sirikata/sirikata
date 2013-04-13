@@ -110,76 +110,174 @@ void AlwaysLocationUpdatePolicy::reportStats() {
 
 void AlwaysLocationUpdatePolicy::subscribe(ServerID remote, const UUID& uuid, SeqNoPtr seqnoPtr)
 {
-    if (validSubscriber(remote))
-        mServerSubscriptions.subscribe(remote, uuid, seqnoPtr);
+    mLocService->context()->mainStrand->post(
+        std::tr1::bind(&AlwaysLocationUpdatePolicy::handleServerSubscribe, this, remote, uuid, seqnoPtr),
+        "AlwaysLocationUpdatePolicy::handleServerSubscribe"
+    );
 }
+void AlwaysLocationUpdatePolicy::handleServerSubscribe(ServerID remote, const UUID& uuid, SeqNoPtr seqno) {
+    if (validSubscriber(remote) && mLocService->contains(uuid))
+        mServerSubscriptions.subscribe(remote, uuid, seqno);
+}
+
 
 void AlwaysLocationUpdatePolicy::subscribe(ServerID remote, const UUID& uuid, ProxIndexID index_id, SeqNoPtr seqnoPtr)
 {
-    if (validSubscriber(remote))
-        mServerSubscriptions.subscribe(remote, uuid, index_id, seqnoPtr);
+    mLocService->context()->mainStrand->post(
+        std::tr1::bind(&AlwaysLocationUpdatePolicy::handleServerIndexSubscribe, this, remote, uuid, index_id, seqnoPtr),
+        "AlwaysLocationUpdatePolicy::handleServerIndexSubscribe"
+    );
+}
+void AlwaysLocationUpdatePolicy::handleServerIndexSubscribe(ServerID remote, const UUID& uuid, ProxIndexID index_id, SeqNoPtr seqno) {
+    if (validSubscriber(remote) && mLocService->contains(uuid))
+        mServerSubscriptions.subscribe(remote, uuid, index_id, seqno);
 }
 
 void AlwaysLocationUpdatePolicy::unsubscribe(ServerID remote, const UUID& uuid) {
+    mLocService->context()->mainStrand->post(
+        std::tr1::bind(&AlwaysLocationUpdatePolicy::handleServerUnsubscribe, this, remote, uuid),
+        "AlwaysLocationUpdatePolicy::handleServerUnsubscribe"
+    );
+}
+void AlwaysLocationUpdatePolicy::handleServerUnsubscribe(ServerID remote, const UUID& uuid) {
     mServerSubscriptions.unsubscribe(remote, uuid);
 }
 
 void AlwaysLocationUpdatePolicy::unsubscribe(ServerID remote, const UUID& uuid, ProxIndexID index_id) {
+    mLocService->context()->mainStrand->post(
+        std::tr1::bind(&AlwaysLocationUpdatePolicy::handleServerIndexUnsubscribe, this, remote, uuid, index_id),
+        "AlwaysLocationUpdatePolicy::handleServerIndexUnsubscribe"
+    );
+}
+void AlwaysLocationUpdatePolicy::handleServerIndexUnsubscribe(ServerID remote, const UUID& uuid, ProxIndexID index_id) {
     mServerSubscriptions.unsubscribe(remote, uuid, index_id);
 }
 
-void AlwaysLocationUpdatePolicy::unsubscribe(ServerID remote) {
-    mServerSubscriptions.unsubscribe(remote);
+void AlwaysLocationUpdatePolicy::unsubscribe(ServerID remote, const std::tr1::function<void()>& cb) {
+    mLocService->context()->mainStrand->post(
+        std::tr1::bind(&AlwaysLocationUpdatePolicy::handleServerCompleteUnsubscribe, this, remote, cb),
+        "AlwaysLocationUpdatePolicy::handleServerCompleteUnsubscribe"
+    );
 }
+void AlwaysLocationUpdatePolicy::handleServerCompleteUnsubscribe(ServerID remote, const std::tr1::function<void()>& cb) {
+    mServerSubscriptions.unsubscribe(remote);
+    if (cb) cb();
+}
+
 
 
 // OH subscriptions
 
 void AlwaysLocationUpdatePolicy::subscribe(const OHDP::NodeID& remote, const UUID& uuid) {
-    if (validSubscriber(remote))
+    mLocService->context()->mainStrand->post(
+        std::tr1::bind(&AlwaysLocationUpdatePolicy::handleObjectHostSubscribe, this, remote, uuid),
+        "AlwaysLocationUpdatePolicy::handleObjectHostSubscribe"
+    );
+}
+void AlwaysLocationUpdatePolicy::handleObjectHostSubscribe(const OHDP::NodeID& remote, const UUID& uuid) {
+    if (validSubscriber(remote) && mLocService->contains(uuid))
         mOHSubscriptions.subscribe(remote, uuid, mLocService->context()->ohSessionManager()->getSession(remote)->seqNoPtr());
 }
 
 void AlwaysLocationUpdatePolicy::subscribe(const OHDP::NodeID& remote, const UUID& uuid, ProxIndexID index_id) {
-    if (validSubscriber(remote))
+    mLocService->context()->mainStrand->post(
+        std::tr1::bind(&AlwaysLocationUpdatePolicy::handleObjectHostIndexSubscribe, this, remote, uuid, index_id),
+        "AlwaysLocationUpdatePolicy::handleObjectHostIndexSubscribe"
+    );
+}
+void AlwaysLocationUpdatePolicy::handleObjectHostIndexSubscribe(const OHDP::NodeID& remote, const UUID& uuid, ProxIndexID index_id) {
+    if (validSubscriber(remote) && mLocService->contains(uuid))
         mOHSubscriptions.subscribe(remote, uuid, index_id, mLocService->context()->ohSessionManager()->getSession(remote)->seqNoPtr());
 }
 
 void AlwaysLocationUpdatePolicy::unsubscribe(const OHDP::NodeID& remote, const UUID& uuid) {
+    mLocService->context()->mainStrand->post(
+        std::tr1::bind(&AlwaysLocationUpdatePolicy::handleObjectHostUnsubscribe, this, remote, uuid),
+        "AlwaysLocationUpdatePolicy::handleObjectHostUnsubscribe"
+    );
+}
+void AlwaysLocationUpdatePolicy::handleObjectHostUnsubscribe(const OHDP::NodeID& remote, const UUID& uuid) {
     mOHSubscriptions.unsubscribe(remote, uuid);
 }
 
 void AlwaysLocationUpdatePolicy::unsubscribe(const OHDP::NodeID& remote, const UUID& uuid, ProxIndexID index_id) {
+    mLocService->context()->mainStrand->post(
+        std::tr1::bind(&AlwaysLocationUpdatePolicy::handleObjectHostIndexUnsubscribe, this, remote, uuid, index_id),
+        "AlwaysLocationUpdatePolicy::handleObjectHostIndexUnsubscribe"
+    );
+}
+void AlwaysLocationUpdatePolicy::handleObjectHostIndexUnsubscribe(const OHDP::NodeID& remote, const UUID& uuid, ProxIndexID index_id) {
     mOHSubscriptions.unsubscribe(remote, uuid, index_id);
 }
 
-void AlwaysLocationUpdatePolicy::unsubscribe(const OHDP::NodeID& remote) {
-    mOHSubscriptions.unsubscribe(remote);
+void AlwaysLocationUpdatePolicy::unsubscribe(const OHDP::NodeID& remote, const std::tr1::function<void()>& cb)
+{
+    mLocService->context()->mainStrand->post(
+        std::tr1::bind(&AlwaysLocationUpdatePolicy::handleObjectHostCompleteUnsubscribe, this, remote, cb),
+        "AlwaysLocationUpdatePolicy::handleObjectHostCompleteUnsubscribe"
+    );
 }
+void AlwaysLocationUpdatePolicy::handleObjectHostCompleteUnsubscribe(const OHDP::NodeID& remote, const std::tr1::function<void()>& cb) {
+    mOHSubscriptions.unsubscribe(remote);
+    if (cb) cb();
+}
+
+
 
 
 // Object subscriptions
 
 void AlwaysLocationUpdatePolicy::subscribe(const UUID& remote, const UUID& uuid) {
-    if (validSubscriber(remote))
+    mLocService->context()->mainStrand->post(
+        std::tr1::bind(&AlwaysLocationUpdatePolicy::handleObjectSubscribe, this, remote, uuid),
+        "AlwaysLocationUpdatePolicy::handleObjectSubscribe"
+    );
+}
+void AlwaysLocationUpdatePolicy::handleObjectSubscribe(const UUID& remote, const UUID& uuid) {
+    if (validSubscriber(remote) && mLocService->contains(uuid))
         mObjectSubscriptions.subscribe(remote, uuid, mLocService->context()->objectSessionManager()->getSession(ObjectReference(remote))->getSeqNoPtr());
 }
 
 void AlwaysLocationUpdatePolicy::subscribe(const UUID& remote, const UUID& uuid, ProxIndexID index_id) {
-    if (validSubscriber(remote))
+    mLocService->context()->mainStrand->post(
+        std::tr1::bind(&AlwaysLocationUpdatePolicy::handleObjectIndexSubscribe, this, remote, uuid, index_id),
+        "AlwaysLocationUpdatePolicy::handleObjectIndexSubscribe"
+    );
+}
+void AlwaysLocationUpdatePolicy::handleObjectIndexSubscribe(const UUID& remote, const UUID& uuid, ProxIndexID index_id) {
+    if (validSubscriber(remote) && mLocService->contains(uuid))
         mObjectSubscriptions.subscribe(remote, uuid, index_id, mLocService->context()->objectSessionManager()->getSession(ObjectReference(remote))->getSeqNoPtr());
 }
 
 void AlwaysLocationUpdatePolicy::unsubscribe(const UUID& remote, const UUID& uuid) {
+    mLocService->context()->mainStrand->post(
+        std::tr1::bind(&AlwaysLocationUpdatePolicy::handleObjectUnsubscribe, this, remote, uuid),
+        "AlwaysLocationUpdatePolicy::handleObjectUnsubscribe"
+    );
+}
+void AlwaysLocationUpdatePolicy::handleObjectUnsubscribe(const UUID& remote, const UUID& uuid) {
     mObjectSubscriptions.unsubscribe(remote, uuid);
 }
 
 void AlwaysLocationUpdatePolicy::unsubscribe(const UUID& remote, const UUID& uuid, ProxIndexID index_id) {
+    mLocService->context()->mainStrand->post(
+        std::tr1::bind(&AlwaysLocationUpdatePolicy::handleObjectIndexUnsubscribe, this, remote, uuid, index_id),
+        "AlwaysLocationUpdatePolicy::handleObjectIndexUnsubscribe"
+    );
+}
+void AlwaysLocationUpdatePolicy::handleObjectIndexUnsubscribe(const UUID& remote, const UUID& uuid, ProxIndexID index_id) {
     mObjectSubscriptions.unsubscribe(remote, uuid, index_id);
 }
 
-void AlwaysLocationUpdatePolicy::unsubscribe(const UUID& remote) {
+void AlwaysLocationUpdatePolicy::unsubscribe(const UUID& remote, const std::tr1::function<void()>& cb) {
+    mLocService->context()->mainStrand->post(
+        std::tr1::bind(&AlwaysLocationUpdatePolicy::handleObjectCompleteUnsubscribe, this, remote, cb),
+        "AlwaysLocationUpdatePolicy::handleObjectCompleteUnsubscribe"
+    );
+}
+void AlwaysLocationUpdatePolicy::handleObjectCompleteUnsubscribe(const UUID& remote, const std::tr1::function<void()>& cb) {
     mObjectSubscriptions.unsubscribe(remote);
+    if (cb) cb();
 }
 
 

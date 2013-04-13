@@ -210,7 +210,7 @@ void LibproxProximityBase::localObjectAdded(const UUID& uuid, bool agg, const Ti
 LocationServiceListener::RemovalStatus LibproxProximityBase::localObjectRemoved(const UUID& uuid, bool agg, const std::tr1::function<void()>&callback) {
     removeObjectSize(uuid);
     callback();//you must call this callback here in this function--subclasses count on this being immediate
-    
+
     return LocationServiceListener::IMMEDIATE;
 }
 
@@ -521,99 +521,6 @@ void LibproxProximityBase::addObjectHostProxStreamInfo(OHDPSST::Stream::Ptr strm
 
 
 
-void LibproxProximityBase::handleAddObjectLocSubscription(const UUID& subscriber, const UUID& observed) {
-    // We check the cache when we get the request, but also check it here since
-    // the observed object may have been removed between the request to add this
-    // subscription and its actual execution.
-    if (!mLocService->contains(observed)) return;
-
-    mLocService->subscribe(subscriber, observed);
-}
-
-void LibproxProximityBase::handleAddObjectLocSubscriptionWithID(const UUID& subscriber, const UUID& observed, ProxIndexID index_id) {
-    // We check the cache when we get the request, but also check it here since
-    // the observed object may have been removed between the request to add this
-    // subscription and its actual execution.
-    if (!mLocService->contains(observed)) return;
-
-    mLocService->subscribe(subscriber, observed, index_id);
-}
-
-void LibproxProximityBase::handleRemoveObjectLocSubscription(const UUID& subscriber, const UUID& observed) {
-    mLocService->unsubscribe(subscriber, observed);
-}
-
-void LibproxProximityBase::handleRemoveObjectLocSubscriptionWithID(const UUID& subscriber, const UUID& observed, ProxIndexID index_id) {
-    mLocService->unsubscribe(subscriber, observed, index_id);
-}
-
-void LibproxProximityBase::handleRemoveAllObjectLocSubscription(const UUID& subscriber, const std::tr1::function<void()>&callback) {
-    mLocService->unsubscribe(subscriber);
-    callback();
-}
-
-void LibproxProximityBase::handleAddOHLocSubscription(const OHDP::NodeID& subscriber, const UUID& observed) {
-    // We check the cache when we get the request, but also check it here since
-    // the observed object may have been removed between the request to add this
-    // subscription and its actual execution.
-    if (!mLocService->contains(observed)) return;
-
-    mLocService->subscribe(subscriber, observed);
-}
-
-void LibproxProximityBase::handleAddOHLocSubscriptionWithID(const OHDP::NodeID& subscriber, const UUID& observed, ProxIndexID index_id) {
-    // We check the cache when we get the request, but also check it here since
-    // the observed object may have been removed between the request to add this
-    // subscription and its actual execution.
-    if (!mLocService->contains(observed)) return;
-
-    mLocService->subscribe(subscriber, observed, index_id);
-}
-
-void LibproxProximityBase::handleRemoveOHLocSubscription(const OHDP::NodeID& subscriber, const UUID& observed) {
-    mLocService->unsubscribe(subscriber, observed);
-}
-
-void LibproxProximityBase::handleRemoveOHLocSubscriptionWithID(const OHDP::NodeID& subscriber, const UUID& observed, ProxIndexID index_id) {
-    mLocService->unsubscribe(subscriber, observed, index_id);
-}
-
-void LibproxProximityBase::handleRemoveAllOHLocSubscription(const OHDP::NodeID& subscriber) {
-    mLocService->unsubscribe(subscriber);
-}
-
-void LibproxProximityBase::handleAddServerLocSubscription(const ServerID& subscriber, const UUID& observed, SeqNoPtr seqPtr) {
-    // We check the cache when we get the request, but also check it here since
-    // the observed object may have been removed between the request to add this
-    // subscription and its actual execution.
-    if (!mLocService->contains(observed)) return;
-
-    mLocService->subscribe(subscriber, observed, seqPtr);
-}
-
-void LibproxProximityBase::handleAddServerLocSubscriptionWithID(const ServerID& subscriber, const UUID& observed, ProxIndexID index_id, SeqNoPtr seqPtr) {
-    // We check the cache when we get the request, but also check it here since
-    // the observed object may have been removed between the request to add this
-    // subscription and its actual execution.
-    if (!mLocService->contains(observed)) return;
-
-    mLocService->subscribe(subscriber, observed, index_id, seqPtr);
-}
-
-void LibproxProximityBase::handleRemoveServerLocSubscription(const ServerID& subscriber, const UUID& observed) {
-    mLocService->unsubscribe(subscriber, observed);
-}
-
-void LibproxProximityBase::handleRemoveServerLocSubscriptionWithID(const ServerID& subscriber, const UUID& observed, ProxIndexID index_id) {
-    mLocService->unsubscribe(subscriber, observed, index_id);
-}
-
-void LibproxProximityBase::handleRemoveAllServerLocSubscription(const ServerID& subscriber) {
-    mLocService->unsubscribe(subscriber);
-}
-
-
-
 void LibproxProximityBase::checkObjectClass(bool is_local, const UUID& objid, const TimedMotionVector3f& newval) {
     mProxStrand->post(
         std::tr1::bind(&LibproxProximityBase::handleCheckObjectClass, this, is_local, ObjectReference(objid), newval),
@@ -748,7 +655,7 @@ void LibproxProximityBase::aggregateObserved(const ObjectReference& objid, uint3
 void LibproxProximityBase::removeStaticObjectTimeout(const ObjectReference& objid, const LocationServiceListener::RemovalCallback&callback) {
     StaticObjectsByID& by_id = mStaticObjectTimeouts.get<objid_tag>();
     StaticObjectsByID::iterator it = by_id.find(objid);
-    
+
     if (it != by_id.end()) {
         by_id.erase(it);
     }

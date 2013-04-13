@@ -134,7 +134,7 @@ void LibproxManualProximity::addQuery(UUID obj, const String& params) {
 }
 
 void LibproxManualProximity::removeQuery(UUID obj, const std::tr1::function<void()>&callback) {
-    PROXLOG(warn,"LibproxManualProximity only deals with ObjectHost queries, not " << obj.toString());    
+    PROXLOG(warn,"LibproxManualProximity only deals with ObjectHost queries, not " << obj.toString());
     callback();
     // Ignored, this query handler only deals with ObjectHost queries
 }
@@ -239,7 +239,7 @@ std::string LibproxManualProximity::migrationClientTag() {
 }
 
 std::string LibproxManualProximity::generateMigrationData(const UUID& obj, ServerID source_server, ServerID dest_server, const std::tr1::function<void()>&removeObjectQueryCallback) {
-    PROXLOG(warn,"LibproxManualProximity only deals with ObjectHost queries, not " << obj.toString());    
+    PROXLOG(warn,"LibproxManualProximity only deals with ObjectHost queries, not " << obj.toString());
     removeObjectQueryCallback();
     // There shouldn't be any object data to move since we only manage
     // ObjectHost queries
@@ -859,11 +859,7 @@ void LibproxManualProximity::destroyQuery(const OHDP::NodeID& querier) {
     unregisterOHQueryWithServerHandlers(querier, mContext->id());
 
     eraseSeqNoInfo(querier);
-    mContext->mainStrand->post(
-        std::tr1::bind(&LibproxManualProximity::handleRemoveAllOHLocSubscription, this, querier),
-        "LibproxManualProximity::handleRemoveAllOHLocSubscription"
-    );
-
+    mLocService->unsubscribe(querier, std::tr1::function<void()>());
 }
 
 
@@ -1281,16 +1277,10 @@ void LibproxManualProximity::queryHasEvents(ProxQuery* query) {
                 count++;
 
                 if (qhandler_type == QUERY_HANDLER_TYPE_OH) {
-                    mContext->mainStrand->post(
-                        std::tr1::bind(&LibproxManualProximity::handleAddOHLocSubscriptionWithID, this, query_id, objid, evt.indexID()),
-                        "LibproxManualProximity::handleAddOHLocSubscription"
-                    );
+                    mLocService->subscribe(query_id, objid, evt.indexID());
                 }
                 else if (qhandler_type == QUERY_HANDLER_TYPE_SERVER) {
-                    mContext->mainStrand->post(
-                        std::tr1::bind(&LibproxManualProximity::handleAddServerLocSubscriptionWithID, this, server_query_id, objid, evt.indexID(), seqNoPtr),
-                        "LibproxManualProximity::handleAddServerLocSubscription"
-                    );
+                    mLocService->subscribe(server_query_id, objid, evt.indexID(), seqNoPtr);
                 }
 
                 Sirikata::Protocol::Prox::IObjectAddition addition = event_results.add_addition();
@@ -1410,16 +1400,10 @@ void LibproxManualProximity::queryHasEvents(ProxQuery* query) {
                 // subcription
 
                 if (qhandler_type == QUERY_HANDLER_TYPE_OH) {
-                    mContext->mainStrand->post(
-                        std::tr1::bind(&LibproxManualProximity::handleRemoveOHLocSubscriptionWithID, this, query_id, objid, evt.indexID()),
-                        "LibproxManualProximity::handleRemoveOHLocSubscription"
-                    );
+                    mLocService->unsubscribe(query_id, objid, evt.indexID());
                 }
                 else if (qhandler_type == QUERY_HANDLER_TYPE_SERVER) {
-                    mContext->mainStrand->post(
-                        std::tr1::bind(&LibproxManualProximity::handleRemoveServerLocSubscriptionWithID, this, server_query_id, objid, evt.indexID()),
-                        "LibproxManualProximity::handleRemoveServerLocSubscription"
-                    );
+                    mLocService->unsubscribe(server_query_id, objid, evt.indexID());
                 }
 
                 Sirikata::Protocol::Prox::IObjectRemoval removal = event_results.add_removal();

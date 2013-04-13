@@ -60,19 +60,19 @@ public:
     virtual void subscribe(ServerID remote, const UUID& uuid, ProxIndexID index_id, SeqNoPtr seqno);
     virtual void unsubscribe(ServerID remote, const UUID& uuid);
     virtual void unsubscribe(ServerID remote, const UUID& uuid, ProxIndexID index_id);
-    virtual void unsubscribe(ServerID remote);
+    virtual void unsubscribe(ServerID remote, const std::tr1::function<void()>& cb);
 
     virtual void subscribe(const OHDP::NodeID& remote, const UUID& uuid);
     virtual void subscribe(const OHDP::NodeID& remote, const UUID& uuid, ProxIndexID index_id);
     virtual void unsubscribe(const OHDP::NodeID& remote, const UUID& uuid);
     virtual void unsubscribe(const OHDP::NodeID& remote, const UUID& uuid, ProxIndexID index_id);
-    virtual void unsubscribe(const OHDP::NodeID& remote);
+    virtual void unsubscribe(const OHDP::NodeID& remote, const std::tr1::function<void()>& cb);
 
     virtual void subscribe(const UUID& remote, const UUID& uuid);
     virtual void subscribe(const UUID& remote, const UUID& uuid, ProxIndexID index_id);
     virtual void unsubscribe(const UUID& remote, const UUID& uuid);
     virtual void unsubscribe(const UUID& remote, const UUID& uuid, ProxIndexID index_id);
-    virtual void unsubscribe(const UUID& remote);
+    virtual void unsubscribe(const UUID& remote, const std::tr1::function<void()>& cb);
 
     virtual void localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const String& mesh, const String& physics);
     virtual LocationServiceListener::RemovalStatus localObjectRemoved(const UUID& uuid, bool agg, const LocationServiceListener::RemovalCallback&callback);
@@ -95,6 +95,24 @@ public:
     virtual void service();
 
 private:
+    void handleServerSubscribe(ServerID remote, const UUID& uuid, SeqNoPtr seqno);
+    void handleServerIndexSubscribe(ServerID remote, const UUID& uuid, ProxIndexID index_id, SeqNoPtr seqno);
+    void handleServerUnsubscribe(ServerID remote, const UUID& uuid);
+    void handleServerIndexUnsubscribe(ServerID remote, const UUID& uuid, ProxIndexID index_id);
+    void handleServerCompleteUnsubscribe(ServerID remote, const std::tr1::function<void()>& cb);
+
+    void handleObjectHostSubscribe(const OHDP::NodeID& remote, const UUID& uuid);
+    void handleObjectHostIndexSubscribe(const OHDP::NodeID& remote, const UUID& uuid, ProxIndexID index_id);
+    void handleObjectHostUnsubscribe(const OHDP::NodeID& remote, const UUID& uuid);
+    void handleObjectHostIndexUnsubscribe(const OHDP::NodeID& remote, const UUID& uuid, ProxIndexID index_id);
+    void handleObjectHostCompleteUnsubscribe(const OHDP::NodeID& remote, const std::tr1::function<void()>& cb);
+
+    void handleObjectSubscribe(const UUID& remote, const UUID& uuid);
+    void handleObjectIndexSubscribe(const UUID& remote, const UUID& uuid, ProxIndexID index_id);
+    void handleObjectUnsubscribe(const UUID& remote, const UUID& uuid);
+    void handleObjectIndexUnsubscribe(const UUID& remote, const UUID& uuid, ProxIndexID index_id);
+    void handleObjectCompleteUnsubscribe(const UUID& remote, const std::tr1::function<void()>& cb);
+
     void reportStats();
 
 

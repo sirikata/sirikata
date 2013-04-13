@@ -1033,10 +1033,7 @@ void LibproxProximity::generateServerQueryEvents(Query* query) {
                 assert(mLocCache->tracking(oobjid));
                 count++;
 
-                mContext->mainStrand->post(
-                    std::tr1::bind(&LibproxProximity::handleAddServerLocSubscription, this, sid, objid, seqNoPtr),
-                    "LibproxProximity::handleAddServerLocSubscription"
-                );
+                mLocService->subscribe(sid, objid, seqNoPtr);
 
                 Sirikata::Protocol::Prox::IObjectAddition addition = event_results.add_addition();
                 addition.set_object( objid );
@@ -1090,10 +1087,7 @@ void LibproxProximity::generateServerQueryEvents(Query* query) {
                 UUID objid = oobjid.getAsUUID();
                 count++;
 
-                mContext->mainStrand->post(
-                    std::tr1::bind(&LibproxProximity::handleRemoveServerLocSubscription, this, sid, objid),
-                    "LibproxProximity::handleRemoveServerLocSubscription"
-                );
+                mLocService->unsubscribe(sid, objid);
 
                 Sirikata::Protocol::Prox::IObjectRemoval removal = event_results.add_removal();
                 removal.set_object(objid);
@@ -1164,10 +1158,7 @@ void LibproxProximity::generateObjectQueryEvents(Query* query, bool do_first) {
                 assert(mLocCache->tracking(oobjid));
                 count++;
 
-                mContext->mainStrand->post(
-                    std::tr1::bind(&LibproxProximity::handleAddObjectLocSubscription, this, query_id, objid),
-                    "LibproxProximity::handleAddObjectLocSubscription"
-                );
+                mLocService->subscribe(query_id, objid);
 
                 Sirikata::Protocol::Prox::IObjectAddition addition = event_results.add_addition();
                 addition.set_object( objid );
@@ -1229,10 +1220,7 @@ void LibproxProximity::generateObjectQueryEvents(Query* query, bool do_first) {
                 count++;
                 // Clear out seqno and let main strand remove loc
                 // subcription
-                mContext->mainStrand->post(
-                    std::tr1::bind(&LibproxProximity::handleRemoveObjectLocSubscription, this, query_id, objid),
-                    "LibproxProximity::handleRemoveObjectLocSubscription"
-                );
+                mLocService->unsubscribe(query_id, objid);
 
                 Sirikata::Protocol::Prox::IObjectRemoval removal = event_results.add_removal();
                 removal.set_object( objid );
@@ -1352,10 +1340,7 @@ void LibproxProximity::handleRemoveServerQuery(const ServerID& server) {
     // Clear out sequence numbers
     eraseSeqNoInfo(server);
 
-    mContext->mainStrand->post(
-        std::tr1::bind(&LibproxProximity::handleRemoveAllServerLocSubscription, this, server),
-        "LibproxProximity::handleRemoveAllServerLocSubscription"
-    );
+    mLocService->unsubscribe(server, std::tr1::function<void()>());
 }
 
 
@@ -1480,10 +1465,7 @@ void LibproxProximity::handleRemoveObjectQuery(const UUID& object, bool notify_m
     if (notify_main_thread) {
         // There's no corresponding removeAllSeqNoPtr because we
         // should have erased it above.
-        mContext->mainStrand->post(
-            std::tr1::bind(&LibproxProximity::handleRemoveAllObjectLocSubscription, this, object, callback),
-            "LibproxProximity::handleRemoveAllObjectLocSubscription"
-        );
+        mLocService->unsubscribe(object, callback);
     }else {
         if (callback) {
             PROXLOG(warn,"Remove object::" << object.toString()<<" must be in shutdown phase or otherwise future objects are getting let in too early");
