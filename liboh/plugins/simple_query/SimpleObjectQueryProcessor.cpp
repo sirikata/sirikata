@@ -50,6 +50,7 @@ void SimpleObjectQueryProcessor::presenceConnectedStream(HostedObjectPtr ho, con
     mObjectStateMap[sporef] = ObjectStatePtr(new ObjectState(mContext, ho));;
 
     // And setup listeners for new data from the server
+    SILOG(ho-proxies-count, insane, "PROXIES-INFO BASE STREAM CREATED " << sporef << ", " << (mContext->simTime()-Time::null()).microseconds() << " time");
     strm->listenSubstream(OBJECT_PORT_PROXIMITY,
         std::tr1::bind(&SimpleObjectQueryProcessor::handleProximitySubstream, this,
             HostedObjectWPtr(ho), sporef, _1, _2
@@ -70,6 +71,7 @@ void SimpleObjectQueryProcessor::presenceDisconnected(HostedObjectPtr ho, const 
 // Proximity
 
 void SimpleObjectQueryProcessor::handleProximitySubstream(const HostedObjectWPtr& weakHO, const SpaceObjectReference& spaceobj, int err, SSTStreamPtr s) {
+    SILOG(ho-proxies-count, insane, "PROXIES-INFO PROX SUBSTREAM CREATED " << spaceobj << ", " << (mContext->simTime()-Time::null()).microseconds() << " time");
     String* prevdata = new String();
     s->registerReadCallback(
         std::tr1::bind(&SimpleObjectQueryProcessor::handleProximitySubstreamRead, this,

@@ -1016,7 +1016,7 @@ private:
           segment->mAckTime = Timer::now();
 
           if (mFirstRTO ) {
-	         mRTOMicroseconds = ((segment->mAckTime - segment->mTransmitTime).toMicroseconds()) ;
+	         mRTOMicroseconds = 10 * ((segment->mAckTime - segment->mTransmitTime).toMicroseconds()) ;
 	         mFirstRTO = false;
           }
           else {

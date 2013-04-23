@@ -86,6 +86,8 @@ void ManualObjectQueryProcessor::presenceConnected(HostedObjectPtr ho, const Spa
 }
 
 void ManualObjectQueryProcessor::presenceConnectedStream(HostedObjectPtr ho, const SpaceObjectReference& sporef, SSTStreamPtr strm) {
+    SILOG(ho-proxies-count, insane, "PROXIES-INFO BASE STREAM CREATED " << sporef << ", " << (mContext->simTime()-Time::null()).microseconds() << " time");
+
     // And possibly register the query
     ObjectStateMap::iterator obj_it = mObjectState.find(sporef);
     if (obj_it == mObjectState.end())
