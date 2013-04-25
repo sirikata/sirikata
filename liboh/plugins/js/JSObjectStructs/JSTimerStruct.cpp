@@ -148,8 +148,11 @@ void JSTimerStruct::noReference(const Liveness::Token& alive)
         //check if it's suspended and its context is suspended
         if (!(getIsSuspended() && jsContStruct->getIsSuspended()))
         {
-            //can kill
+            //can kill. Since we hold the lock above, mark ourselves as
+            //executing so the actual destruction will be deferred
+            amExecuting = true;
             clear();
+            amExecuting = false;
         }
     }
 }
