@@ -153,6 +153,7 @@ MeshdataPtr TextureAtlasFilter::apply(MeshdataPtr md) {
     typedef std::map<String, TexInfo> TexInfoMap;
     TexInfoMap tex_info;
 
+
     // We only know how to handle local files
     if (md->uri.size() < 7 || md->uri.substr(0, 7) != "file://") return md;
     String uri_dir = md->uri.substr(7);
@@ -238,7 +239,7 @@ MeshdataPtr TextureAtlasFilter::apply(MeshdataPtr md) {
     int ntextures_side = (int)(sqrtf((float)ntextures) + 1.f);
 
     // FIXME
-    uint32 atlas_element_width = 256, atlas_element_height = 256;
+    uint32 atlas_element_width = 64, atlas_element_height = 64;
 
     uint32 atlas_width = ntextures_side * atlas_element_width,
         atlas_height = ntextures_side * atlas_element_height;
@@ -252,6 +253,9 @@ MeshdataPtr TextureAtlasFilter::apply(MeshdataPtr md) {
         TexInfo& tex = tex_it->second;
         // Resize
         uint32 new_width = atlas_element_width, new_height = atlas_element_height; // FIXME
+        if (tex.orig_size.width() < atlas_element_width) new_width = tex.orig_size.width();
+        if (tex.orig_size.height() < atlas_element_height) new_height = tex.orig_size.height();
+
         FIBITMAP* resized = FreeImage_Rescale(tex.image, new_width, new_height, FILTER_LANCZOS3);
         // Copy into place
         int x_idx = idx % ntextures_side;
@@ -259,7 +263,7 @@ MeshdataPtr TextureAtlasFilter::apply(MeshdataPtr md) {
 
         Rect tex_sub_rect = Rect::fromBaseOffset(
             x_idx * atlas_element_width, y_idx * atlas_element_height,
-            atlas_element_width, atlas_element_height
+            new_width, new_height
         );
 
         tex.atlas_region = atlas_rect.region(tex_sub_rect);
@@ -308,7 +312,7 @@ MeshdataPtr TextureAtlasFilter::apply(MeshdataPtr md) {
                 // We stored up the correct material index to find it in the
                 // Meshdata in the tex_set_materials when we were sanity checking
                 // that there were no conflicts.
-                int mat_idx = tex_set_materials[tex_set_hash];
+                int mat_idx = tex_set_materials[tex_set_hash]; 
 
                 // Finally, having extracted all the material mapping info, we
                 // can loop through referenced indices and transform them.
@@ -323,18 +327,27 @@ MeshdataPtr TextureAtlasFilter::apply(MeshdataPtr md) {
                     TexInfo& final_tex_info = tex_info[real_tex.uri];
 
                     for(uint32 index_idx = 0; index_idx < prim.indices.size(); index_idx++) {
-                        int index = prim.indices[index_idx];
+                        int index = prim.indices[index_idx]; 
 
                         float new_u, new_v;
                         assert(tex_set.stride >= 2);
+                        float old_u = tex_set.uvs[index * tex_set.stride];
+                        float old_v = tex_set.uvs[index * tex_set.stride + 1];
+
+                        if (old_u > 1.f) {
+                          old_u = old_u - floor(old_u);
+                        }
+                        if (old_v > 1.f) old_v = old_v - floor(old_v);
+
                         final_tex_info.atlas_region.convert(
-                            tex_set.uvs[index * tex_set.stride],
-                            (1.f-tex_set.uvs[index * tex_set.stride + 1]), // inverted
+                            old_u,
+                            (1.f-old_v), // inverted
                                                                            // v coords
                             &new_u, &new_v);
                         new_uvs[ index * tex_set.stride ] = new_u;
                         new_uvs[ index * tex_set.stride + 1 ] = 1.f - new_v; // inverted
                                                                              // v coords
+
                     }
                 }
             }
