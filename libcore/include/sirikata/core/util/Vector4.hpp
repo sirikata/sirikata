@@ -208,6 +208,23 @@ public:
         os<<'<'<<x<<","<<y<<","<<z<<","<<w<<'>';
         return os.str();
     }
+
+    size_t hash() const {
+      size_t seed = 0;
+      boost::hash_combine(seed, x);
+      boost::hash_combine(seed, y);
+      boost::hash_combine(seed, z);
+      boost::hash_combine(seed, w);
+      
+      return seed;
+    }
+
+    class Hasher{public:
+        size_t operator() (const Vector4 &v) const {
+            return v.hash();
+        }
+    };
+
 };
 
 template<typename scalar> inline Vector4<scalar> operator *(scalar lhs, const Vector4<scalar> &rhs) {
