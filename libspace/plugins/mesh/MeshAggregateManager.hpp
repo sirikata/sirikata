@@ -207,11 +207,36 @@ private:
     std::set<UUID> mParentUUIDs;
   private:
       boost::mutex mChildrenMutex;
-      std::vector< std::tr1::shared_ptr<struct AggregateObject>  > mChildren;
+      std::vector<AggregateObjectPtr> mChildren;
   public:
       std::vector<AggregateObjectPtr> getChildrenCopy(){
           boost::mutex::scoped_lock lock(mChildrenMutex);
           return mChildren;
+      }
+      void getSuccessors(uint32 levelsDown, AggregateObjectPtr curNode, std::vector<AggregateObjectPtr>& successorsToFill) {
+          boost::mutex::scoped_lock lock(mChildrenMutex);
+
+          //If you've reached a point where the next level of children 
+          //are the ones requested...
+          if (levelsDown == 1 && mChildren.size() > 0) {
+            for (uint32 i=0; i < mChildren.size(); i++) {
+              successorsToFill.push_back(mChildren[i]);
+            }
+            return;
+          }
+           
+          //Otherwise, forward the request after decrementing 'levelsDown'
+          for (uint32 i=0; i < mChildren.size(); i++) {
+            mChildren[i]->getSuccessors(levelsDown-1, mChildren[i], successorsToFill);
+          }
+ 
+          //You would hit this case if the original 'levelsDown' parameter
+          //is larger than the depth of the subtree under the originally
+          //requesting node.
+          if (levelsDown >= 1 && mChildren.size() == 0) {
+              successorsToFill.push_back(curNode);
+          }
+
       }
       std::size_t childrenSize() {
           boost::mutex::scoped_lock lock(mChildrenMutex);
@@ -287,7 +312,7 @@ private:
   boost::mutex mAggregateObjectsMutex;
   typedef std::tr1::unordered_map<UUID, AggregateObjectPtr, UUID::Hasher > AggregateObjectsMap;
   AggregateObjectsMap mAggregateObjects;
-  Time mAggregateGenerationStartTime;
+  Time mAggregateGenerationStartTime;    
   std::tr1::unordered_map<UUID, AggregateObjectPtr, UUID::Hasher> mDirtyAggregateObjects;
 
   boost::mutex mQueuedObjectsMutex;
@@ -310,10 +335,10 @@ private:
   bool mAtlasingNeeded;
   uint32 mSizeOfSeenTextures;
   std::tr1::unordered_set<String> mSeenTextureHashes;
-
+ 
   boost::mutex mTextureNameToHashMapMutex;
   std::tr1::unordered_map<String, String> mTextureNameToHashMap;
-
+  
   void addToInMemoryCache(const String& meshName, const Mesh::MeshdataPtr mdptr);
 
   //CDN upload-related variables
@@ -334,7 +359,7 @@ private:
   Network::IOStrand* mUploadStrands[MAX_NUM_UPLOAD_THREADS];
   Network::IOWork* mUploadWorks[MAX_NUM_UPLOAD_THREADS];
   void uploadThreadMain(uint8 i);
-
+  
 
   // Stats.
   // Raw number of aggregate updates that could cause regeneration,
@@ -381,12 +406,12 @@ private:
   std::set<UUID> mObservers;
 
 
-  void pca_get_rotate_matrix(Mesh::MeshdataPtr mesh, Matrix4x4f& rot_mat, Matrix4x4f& rot_mat_inv);
+  void pca_get_rotate_matrix(Mesh::MeshdataPtr mesh, Matrix4x4f& rot_mat, Matrix4x4f& rot_mat_inv, Matrix4x4f& );
 
   void getVertexAndFaceList(Mesh::MeshdataPtr md,
                             std::tr1::unordered_set<Vector3f, Vector3f::Hasher>& positionVectors,
-                            std::tr1::unordered_set<FaceContainer, FaceContainer::Hasher>& faceSet
-                           );
+                            std::tr1::unordered_set<FaceContainer, FaceContainer::Hasher>& faceSet, Matrix4x4f&
+                           );     
 
   //Function related to generating and updating aggregates.
   void updateChildrenTreeLevel(const UUID& uuid, uint16 treeLevel);
@@ -408,15 +433,16 @@ private:
   uint32 checkLocAndMeshInfo(const UUID& uuid, std::vector<AggregateObjectPtr>& children,
          std::tr1::unordered_map<UUID, std::tr1::shared_ptr<LocationInfo> , UUID::Hasher>& currentLocMap);
   uint32 checkMeshesAvailable(const UUID& uuid, const Time& curTime, std::vector<AggregateObjectPtr>& children,
-                              std::tr1::unordered_map<UUID, std::tr1::shared_ptr<LocationInfo> , UUID::Hasher>& currentLocMap);
+                              std::tr1::unordered_map<UUID, std::tr1::shared_ptr<LocationInfo> , UUID::Hasher>& currentLocMap,std::tr1::unordered_map<String,Mesh::MeshdataPtr>& );
   uint32 checkTextureHashesAvailable(std::vector<AggregateObjectPtr>& children,
                                      std::tr1::unordered_map<String, String>& textureToHashMap);
   void startDownloadsForAtlasing(const UUID& uuid, Mesh::MeshdataPtr agg_mesh, AggregateObjectPtr aggObject, String localMeshName,
                                                  std::tr1::unordered_map<String, String>& textureSet,
                                                  std::tr1::unordered_map<String, Mesh::MeshdataPtr>& textureToModelMap);
   void replaceCityEngineTextures(Mesh::MeshdataPtr m) ;
-  void deduplicateMeshes(std::vector<AggregateObjectPtr>& children, bool isLeafAggregate,
-                       String* meshURIs, std::vector<Matrix4x4f>& replacementAlignmentTransforms);
+  void deduplicateMeshes(UUID aggregateUUID, std::vector<AggregateObjectPtr>& children, bool isLeafAggregate,
+                       String* meshURIs, std::vector<Matrix4x4f>& replacementAlignmentTransforms,
+                       std::tr1::unordered_map<UUID, std::tr1::shared_ptr<LocationInfo> , UUID::Hasher>& currentLocMap);
 
 
   void aggregationThreadMain(uint8 i);
@@ -454,11 +480,11 @@ private:
 
   // Command handlers
   void commandStats(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
-
+  
 
 public:
 
-  /** Create an AggregateManager.
+  /** Create an MeshAggregateManager.
    *
    *  \oauth OAuth upload parameters for the CDN. If omitted, uploads will not
    *         be attempted
@@ -485,6 +511,7 @@ public:
   MeshAggregateManager( LocationService* loc, Transfer::OAuthParamsPtr oauth, const String& username);
 
   ~MeshAggregateManager();
+
 
   void addLeafObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const AggregateBoundingInfo& bounds, const Transfer::URI& mesh);
   void removeLeafObject(const UUID& uuid);
@@ -541,9 +568,10 @@ public:
   bool noMoreGeneration;
 
 
-
 };
 
 }
+
+
 
 #endif
