@@ -805,6 +805,11 @@ void HostedObject::handleLocationUpdate(const SpaceObjectReference& observer, co
 
     SpaceObjectReference observed(observer.space(), ObjectReference(lu.object()));
     ProxyObjectPtr proxy_obj = proxy_manager->getProxyObject(observed);
+    // HACK
+    if (!proxy_obj) {
+        SILOG(ho, error, "Received location update for " << observed << " but don't have a proxy for it.");
+        return;
+    }
     assert(proxy_obj);
 
     this->processLocationUpdate( observer, proxy_obj, lu);

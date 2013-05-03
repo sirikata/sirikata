@@ -128,6 +128,14 @@ bool CBRLocationServiceCache::tracking(const ObjectReference& id) {
     return (mObjects.find(id) != mObjects.end());
 }
 
+bool CBRLocationServiceCache::alive(const ObjectReference& id) {
+    Lock lck(mDataMutex);
+
+    return (mObjects.find(id) != mObjects.end() &&
+        mObjects[id].exists > 0);
+}
+
+
 TimedMotionVector3f CBRLocationServiceCache::location(const Iterator& id) {
     // NOTE: Only accesses via iterator, shouldn't need a lock
     IteratorData* itdat = (IteratorData*)id.data;
@@ -355,7 +363,7 @@ void CBRLocationServiceCache::objectAdded(const UUID& uuid, bool islocal, bool a
     data.physics = phy;
     data.query_data = query_data;
     data.isLocal = islocal;
-    data.exists = true;
+    data.exists = 1;
     data.tracking = 0;
     data.isAggregate = agg;
 
@@ -363,7 +371,7 @@ void CBRLocationServiceCache::objectAdded(const UUID& uuid, bool islocal, bool a
         // Mark as exists. It's important we do this since it may be the only
         // thing that keeps this object alive as we may still be processing
         // removals in the other strand.
-        it->second.exists = true;
+        it->second.exists++;
     }
     else {
         mObjects[uuid_obj] = data;
@@ -371,22 +379,24 @@ void CBRLocationServiceCache::objectAdded(const UUID& uuid, bool islocal, bool a
     }
 
     it->second.tracking++;
+    bool trigger_addition_event = (it->second.exists == 1);
     mStrand->post(
         std::tr1::bind(
             &CBRLocationServiceCache::processObjectAdded, this,
-            ObjectReference(uuid), data
+            ObjectReference(uuid), data, trigger_addition_event
         ),
         "CBRLocationServiceCache::processObjectAdded"
     );
 }
 
-void CBRLocationServiceCache::processObjectAdded(const ObjectReference& uuid, ObjectData data) {
+void CBRLocationServiceCache::processObjectAdded(const ObjectReference& uuid, ObjectData data, bool trigger_addition_event) {
     // TODO(ewencp) at some point, we might want to (optionally) use aggregates
     // here, especially if we're reconstructing entire trees.
-    if (!data.isAggregate) {
+    if (trigger_addition_event && !data.isAggregate) {
         Lock lck(mListenerMutex);
-        for(ListenerSet::iterator it = mListeners.begin(); it != mListeners.end(); it++)
+        for(ListenerSet::iterator it = mListeners.begin(); it != mListeners.end(); it++) {
             (*it)->locationConnected(uuid, false, data.isLocal, data.location, data.bounds.centerBounds(), data.bounds.maxObjectRadius);
+        }
     }
 
     {
@@ -402,19 +412,20 @@ LocationServiceListener::RemovalStatus CBRLocationServiceCache::objectRemoved(co
     bool queuedCallback=false;
     {
         Lock lck(mDataMutex);
-        
+
         ObjectDataMap::iterator data_it = mObjects.find(ObjectReference(uuid));
         if (data_it != mObjects.end()) {
             queuedCallback=true;
-        
-            assert(data_it->second.exists);
-            data_it->second.exists = false;
-            
+
+            assert(data_it->second.exists > 0);
+            data_it->second.exists--;
+
             data_it->second.tracking++;
+            bool trigger_removal_event = (data_it->second.exists == 0);
             mStrand->post(
                 std::tr1::bind(
                     &CBRLocationServiceCache::processObjectRemoved, this,
-                    ObjectReference(uuid), agg, callback
+                    ObjectReference(uuid), agg, trigger_removal_event, callback
                     ),
                 "CBRLocationServiceCache::processObjectRemoved"
                 );
@@ -427,13 +438,13 @@ LocationServiceListener::RemovalStatus CBRLocationServiceCache::objectRemoved(co
     return LocationServiceListener::DEFERRED;
 }
 
-void CBRLocationServiceCache::processObjectRemoved(const ObjectReference& uuid, bool agg, std::tr1::function<void()>&callback) {
-    if (!agg) {
+void CBRLocationServiceCache::processObjectRemoved(const ObjectReference& uuid, bool agg, bool trigger_removal_event, std::tr1::function<void()>&callback) {
+    if (trigger_removal_event && !agg) {
         Lock lck(mListenerMutex);
         for(ListenerSet::iterator it = mListeners.begin(); it != mListeners.end(); it++)
             (*it)->locationDisconnected(uuid);
     }
-    bool successfullyRemoved=  false;
+    bool successfullyRemoved = false;
     {
         Lock lck(mDataMutex);
         ObjectDataMap::iterator data_it = mObjects.find(uuid);
@@ -607,7 +618,7 @@ void CBRLocationServiceCache::callDeferredCallbacksForObject(const ObjectReferen
 }
 
 bool CBRLocationServiceCache::tryRemoveObject(const ObjectReference &obj_id, ObjectDataMap::iterator& obj_it) {
-    if (obj_it->second.tracking > 0  || obj_it->second.exists)
+    if (obj_it->second.tracking > 0  || obj_it->second.exists > 0)
         return false;
     ObjectReference tmp_oid(obj_id);
     mObjects.erase(obj_it);

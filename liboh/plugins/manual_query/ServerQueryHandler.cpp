@@ -60,6 +60,7 @@ void ServerQueryHandler::onSpaceNodeSession(const OHDP::SpaceNodeID& id, OHDPSST
 }
 
 void ServerQueryHandler::onSpaceNodeSessionEnded(const OHDP::SpaceNodeID& id) {
+    QPLOG(detailed, "ServerQueryHandler::onSpaceNodeSessionEnded " << id);
     mServerQueries.erase(id);
     mParent->removedServerQuery(id);
 }

@@ -753,14 +753,25 @@ void LibproxProximity::tickQueryHandler(ProxQueryHandlerData qh[NUM_OBJECT_CLASS
     Time simT = mContext->simTime();
     for(int i = 0; i < NUM_OBJECT_CLASSES; i++) {
         if (qh[i].handler != NULL) {
-            for(ObjectIDSet::iterator it = qh[i].removals.begin(); it != qh[i].removals.end(); it++)
-                qh[i].handler->removeObject(*it, true);
+            for(ObjectIDSet::iterator it = qh[i].removals.begin(); it != qh[i].removals.end(); it++) {
+                // Have to be careful because we may have recorded a swap, but
+                // then migrated the object. It would be nice to have just
+                // cleaned these out, but just violating the abstraction and
+                // checking directly is easier for now.
+                if (mLocCache->alive(*it))
+                    qh[i].handler->removeObject(*it, true);
+                mLocCache->stopRefcountTracking(*it);
+            }
             qh[i].removals.clear();
 
             qh[i].handler->tick(simT);
 
-            for(ObjectIDSet::iterator it = qh[i].additions.begin(); it != qh[i].additions.end(); it++)
-                qh[i].handler->addObject(*it);
+            for(ObjectIDSet::iterator it = qh[i].additions.begin(); it != qh[i].additions.end(); it++) {
+                // See note above about migrations
+                if (mLocCache->alive(*it))
+                    qh[i].handler->addObject(*it);
+                mLocCache->stopRefcountTracking(*it);
+            }
             qh[i].additions.clear();
         }
     }
@@ -1514,7 +1525,9 @@ void LibproxProximity::handleCheckObjectClassForHandlers(const ObjectReference& 
     int swap_out = is_static ? OBJECT_CLASS_DYNAMIC : OBJECT_CLASS_STATIC;
     int swap_in = is_static ? OBJECT_CLASS_STATIC : OBJECT_CLASS_DYNAMIC;
     PROXLOG(debug, "Swapping " << objid.toString() << " from " << ObjectClassToString((ObjectClass)swap_out) << " to " << ObjectClassToString((ObjectClass)swap_in));
+    mLocCache->startRefcountTracking(objid);
     handlers[swap_out].removals.insert(objid);
+    mLocCache->startRefcountTracking(objid);
     handlers[swap_in].additions.insert(objid);
 }
 

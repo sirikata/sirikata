@@ -79,6 +79,8 @@ public:
     // ExtendLocationServiceCache
     virtual bool tracking(const ObjectID& id);
 
+    virtual bool alive(const ObjectID& id);
+
     virtual TimedMotionVector3f location(const Iterator& id);
     virtual Vector3f centerOffset(const Iterator& id);
     virtual float32 centerBoundsRadius(const Iterator& id);
@@ -136,7 +138,11 @@ private:
         String mesh;
         String physics;
         String query_data;
-        bool exists; // Exists, i.e. xObjectRemoved hasn't been called
+        int8 exists; // Exists, i.e. xObjectRemoved hasn't been called. Refcount
+                     // because we can have migration events on other servers
+                     // where the object moves from A -> B, but B notifies us of
+                     // the addition before A of the removal. The refcount
+                     // ensures we can handle these cases correctly
         int16 tracking; // Ref count to support multiple users
         bool isAggregate;
     };
@@ -157,8 +163,8 @@ private:
     // on. Although we now have to lock in these, we put them on the strand
     // instead of processing directly in the methods above so that they don't
     // block any other work.
-    void processObjectAdded(const ObjectReference& uuid, ObjectData data);
-    void processObjectRemoved(const ObjectReference& uuid, bool agg, std::tr1::function<void()>&callback);
+    void processObjectAdded(const ObjectReference& uuid, ObjectData data, bool trigger_addition_event);
+    void processObjectRemoved(const ObjectReference& uuid, bool agg, bool trigger_removal_event, std::tr1::function<void()>&callback);
     void processLocationUpdated(const ObjectReference& uuid, bool agg, const TimedMotionVector3f& newval);
     void processOrientationUpdated(const ObjectReference& uuid, bool agg, const TimedMotionQuaternion& newval);
     void processBoundsUpdated(const ObjectReference& uuid, bool agg, const AggregateBoundingInfo& newval);

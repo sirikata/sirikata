@@ -190,14 +190,17 @@ void ObjectHost::addServerIDMap(const SpaceID& space_id, ServerIDMap* sidmap) {
 }
 
 void ObjectHost::handleObjectConnected(const SpaceObjectReference& sporef_objid, ServerID server) {
+    OH_LOG(insane, "handleObjectConnected: " << sporef_objid.object() << " connected to " << sporef_objid.space() << "-" << server);
     ObjectNodeSessionProvider::notify(&ObjectNodeSessionListener::onObjectNodeSession, sporef_objid.space(), sporef_objid.object(), OHDP::NodeID(server));
 }
 
 void ObjectHost::handleObjectMigrated(const SpaceObjectReference& sporef_objid, ServerID from, ServerID to) {
+    OH_LOG(insane, "handleObjectMigrated: " << sporef_objid.object() << " migrated to " << sporef_objid.space() << "-  from " << from << " to " << to);
     ObjectNodeSessionProvider::notify(&ObjectNodeSessionListener::onObjectNodeSession, sporef_objid.space(), sporef_objid.object(), OHDP::NodeID(to));
 }
 
 void ObjectHost::handleObjectDisconnected(const SpaceObjectReference& sporef_objid, Disconnect::Code) {
+    OH_LOG(insane, "handleObjectDisconnected: " << sporef_objid.object() << " disconnected " << sporef_objid.space());
     ObjectNodeSessionProvider::notify(&ObjectNodeSessionListener::onObjectNodeSession, sporef_objid.space(), sporef_objid.object(), OHDP::NodeID::null());
 }
 

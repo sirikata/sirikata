@@ -527,14 +527,25 @@ void LibproxManualProximity::tickQueryHandlers() {
     Time simT = mContext->simTime();
     for(int i = 0; i < NUM_OBJECT_CLASSES; i++) {
         if (mLocalQueryHandler[i].handler != NULL) {
-            for(ObjectIDSet::iterator it = mLocalQueryHandler[i].removals.begin(); it != mLocalQueryHandler[i].removals.end(); it++)
-                mLocalQueryHandler[i].handler->removeObject(*it, true);
+            for(ObjectIDSet::iterator it = mLocalQueryHandler[i].removals.begin(); it != mLocalQueryHandler[i].removals.end(); it++) {
+                // Have to be careful because we may have recorded a swap, but
+                // then migrated the object. It would be nice to have just
+                // cleaned these out, but just violating the abstraction and
+                // checking directly is easier for now.
+                if (mLocCache->alive(*it))
+                    mLocalQueryHandler[i].handler->removeObject(*it, true);
+                mLocCache->stopRefcountTracking(*it);
+            }
             mLocalQueryHandler[i].removals.clear();
 
             mLocalQueryHandler[i].handler->tick(simT);
 
-            for(ObjectIDSet::iterator it = mLocalQueryHandler[i].additions.begin(); it != mLocalQueryHandler[i].additions.end(); it++)
-                mLocalQueryHandler[i].handler->addObject(*it);
+            for(ObjectIDSet::iterator it = mLocalQueryHandler[i].additions.begin(); it != mLocalQueryHandler[i].additions.end(); it++) {
+                // See note above about migrations
+                if (mLocCache->alive(*it))
+                    mLocalQueryHandler[i].handler->addObject(*it);
+                mLocCache->stopRefcountTracking(*it);
+            }
             mLocalQueryHandler[i].additions.clear();
         }
     }
@@ -545,14 +556,18 @@ void LibproxManualProximity::tickQueryHandlers() {
         ReplicatedIndexQueryHandlerMap& handlers = remote_server_it->second.handlers;
         for(ReplicatedIndexQueryHandlerMap::iterator handler_it = handlers.begin(); handler_it != handlers.end(); handler_it++) {
             Time simT = mContext->simTime();
-            for(ObjectIDSet::iterator it = handler_it->second.removals.begin(); it != handler_it->second.removals.end(); it++)
+            for(ObjectIDSet::iterator it = handler_it->second.removals.begin(); it != handler_it->second.removals.end(); it++) {
                 handler_it->second.handler->removeObject(*it, true);
+                mLocCache->stopRefcountTracking(*it);
+            }
             handler_it->second.removals.clear();
 
             handler_it->second.handler->tick(simT);
 
-            for(ObjectIDSet::iterator it = handler_it->second.additions.begin(); it != handler_it->second.additions.end(); it++)
+            for(ObjectIDSet::iterator it = handler_it->second.additions.begin(); it != handler_it->second.additions.end(); it++) {
                 handler_it->second.handler->addObject(*it);
+                mLocCache->stopRefcountTracking(*it);
+            }
             handler_it->second.additions.clear();
         }
     }
@@ -1039,12 +1054,12 @@ void LibproxManualProximity::unregisterOHQueryWithServerHandlers(const OHDP::Nod
         return;
     }
 
-
+    if (mReplicatedServerDataMap.find(queried_node) == mReplicatedServerDataMap.end()) return;
     assert(mReplicatedServerDataMap.find(queried_node) != mReplicatedServerDataMap.end());
     ReplicatedServerData& replicated_data = mReplicatedServerDataMap[queried_node];
 
     // Remove from the list of server queriers
-    assert(replicated_data.queriers.find(querier) != replicated_data.queriers.end());
+    //assert(replicated_data.queriers.find(querier) != replicated_data.queriers.end());
     replicated_data.queriers.erase(querier);
 
     // And remove all its individual index queries
@@ -1147,7 +1162,12 @@ void LibproxManualProximity::handleCheckObjectClassForHandlers(const ObjectRefer
     int swap_out = is_static ? OBJECT_CLASS_DYNAMIC : OBJECT_CLASS_STATIC;
     int swap_in = is_static ? OBJECT_CLASS_STATIC : OBJECT_CLASS_DYNAMIC;
     PROXLOG(debug, "Swapping " << objid.toString() << " from " << ObjectClassToString((ObjectClass)swap_out) << " to " << ObjectClassToString((ObjectClass)swap_in));
+    // Make sure we properly hold on to the object while transferring it, which
+    // can be an issue if the object migrates during this process. Mark once for
+    // each operation
+    mLocCache->startRefcountTracking(objid);
     handlers[swap_out].removals.insert(objid);
+    mLocCache->startRefcountTracking(objid);
     handlers[swap_in].additions.insert(objid);
 }
 
