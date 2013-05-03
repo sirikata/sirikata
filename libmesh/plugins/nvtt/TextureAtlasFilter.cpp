@@ -253,8 +253,20 @@ MeshdataPtr TextureAtlasFilter::apply(MeshdataPtr md) {
         TexInfo& tex = tex_it->second;
         // Resize
         uint32 new_width = atlas_element_width, new_height = atlas_element_height; // FIXME
-        if (tex.orig_size.width() < atlas_element_width) new_width = tex.orig_size.width();
-        if (tex.orig_size.height() < atlas_element_height) new_height = tex.orig_size.height();
+
+        if (tex.orig_size.width() < atlas_element_width && tex.orig_size.height() < atlas_element_height) {
+          new_width = tex.orig_size.width();
+          new_height = tex.orig_size.height();
+        }
+        else {
+          if (tex.orig_size.width() > tex.orig_size.height()) {
+            new_height = (tex.orig_size.height()*new_width)/tex.orig_size.width();
+          }
+          else {
+            new_width = (tex.orig_size.width()*new_height)/tex.orig_size.height();
+          }
+        }
+        
 
         FIBITMAP* resized = FreeImage_Rescale(tex.image, new_width, new_height, FILTER_LANCZOS3);
         // Copy into place
