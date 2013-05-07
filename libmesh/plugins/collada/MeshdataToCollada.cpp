@@ -67,6 +67,9 @@ const String PARAM_TYPE_WEIGHT = "WEIGHT";
   }
 
   String texfilename(String url) {
+      if (url.find("tahirazim/apiupload/test_project_3") == url.npos )
+        return url;
+
       size_t indexOfLastSlash = url.find_last_of('/');
       if (indexOfLastSlash == url.npos) {
         return url;
