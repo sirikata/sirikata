@@ -67,6 +67,9 @@ const String PARAM_TYPE_WEIGHT = "WEIGHT";
   }
 
   String texfilename(String url) {
+      if (url.find("tahirazim/apiupload/test_project_3") == url.npos )
+        return url;
+
       size_t indexOfLastSlash = url.find_last_of('/');
       if (indexOfLastSlash == url.npos) {
         return url;
@@ -122,8 +125,17 @@ const String PARAM_TYPE_WEIGHT = "WEIGHT";
       for (uint32 i=0; i < meshdata.materials.size(); i++) {
         //FIXME: this assumes all the texture URIs are the same in materials[i].textures
         if (meshdata.materials[i].textures.size() == 0) continue;
+ 
+        uint32 j = 0;
+        for (j = 0; j < meshdata.materials[i].textures.size(); j++) {
+          const MaterialEffectInfo::Texture& texture = meshdata.materials[i].textures[j];
+          if (!texture.uri.empty()) {
+            break;
+          }
+        }
+        if (j == meshdata.materials[i].textures.size()) j = 0;
 
-        const MaterialEffectInfo::Texture& texture = meshdata.materials[i].textures[0];
+        const MaterialEffectInfo::Texture& texture = meshdata.materials[i].textures[j];
 	String textureFileName = texfilename(texture.uri);
         if (textureURIToEffectIndexMap.find(textureFileName) != textureURIToEffectIndexMap.end() &&
             textureURIToEffectIndexMap[textureFileName] != (int32)i
@@ -159,6 +171,7 @@ const String PARAM_TYPE_WEIGHT = "WEIGHT";
         addInstanceEffect("#" + effectName + "-effect");
 
         closeMaterial();
+        
       }
 
       closeLibrary();
@@ -187,7 +200,6 @@ const String PARAM_TYPE_WEIGHT = "WEIGHT";
           //dealing with texture.
           for (uint32 j=0; j<meshdata.materials[i].textures.size(); j++) {
             const MaterialEffectInfo::Texture& texture = meshdata.materials[i].textures[j];
-
 
             COLLADASW::ColorOrTexture colorOrTexture;
             String colorEncoding = "";
@@ -516,8 +528,6 @@ const String PARAM_TYPE_WEIGHT = "WEIGHT";
         closeMesh();
         closeGeometry();
       }
-
-
 
       closeLibrary();
     }
