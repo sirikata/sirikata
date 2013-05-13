@@ -770,6 +770,7 @@ void MeshAggregateManager::aggregateObserved(const UUID& objid, uint32 nobserver
       //    "MeshAggregateManager::showCutErrorSum");
     }
 
+    /*
     std::cout << mErrorSum << " : new error\n";
     std::cout << mSizeSum << " : new size\n";
     fflush(stdout);
