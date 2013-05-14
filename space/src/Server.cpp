@@ -295,9 +295,15 @@ bool Server::isObjectDisconnecting(const UUID& object_id) const {
     boost::lock_guard<boost::mutex> lock(const_cast<boost::mutex&>(mRouteObjectMessageMutex));
     return mDisconnectingObjects.find(object_id)!=mDisconnectingObjects.end();
 }
-void Server::markObjectDisconnecting(const UUID& object_id, int serviceCount) {
+bool Server::markObjectDisconnecting(const UUID& object_id, int serviceCount) {
     boost::lock_guard<boost::mutex> lock(mRouteObjectMessageMutex);
-    mDisconnectingObjects[object_id]=serviceCount;
+    DisconnectingObjectMap::iterator where = mDisconnectingObjects.find(object_id);
+    if (where==mDisconnectingObjects.end()) {
+        mDisconnectingObjects[object_id]=serviceCount;
+        return true;
+    }else {
+        return false;
+    }
 }
 
 void Server::markObjectDisconnectedCallback(UUID object){
@@ -309,6 +315,8 @@ void Server::markObjectDisconnectedCallback(UUID object){
         SPACE_LOG(debug,"Object "<<object<<" no longer referenced by any spatial service");
         assert(where->second==0);
         mDisconnectingObjects.erase(where);
+    }else {
+        SPACE_LOG(debug,"Object "<<object<<" referenced by "<<where->second<<" spatial service");
     }
 }
 
@@ -318,7 +326,11 @@ void Server::sendSessionMessageWithRetry(const ObjectHostConnectionID& conn, Sir
     if (!sent) {
         // It's possible we failed due to disconnection, don't keep retrying in
         // that case
-        if (!mObjectHostConnectionManager->validConnection(conn)) return;
+        if (!mObjectHostConnectionManager->validConnection(conn)) {
+            //disconnect the offending object permanently
+            handleUniqueDisconnectWithDeletedObjectConnection(msg->dest_object());
+            return;
+        }
 
         mContext->mainStrand->post(
             retry_rate,
@@ -872,35 +884,57 @@ void Server::handleConnectAck(const ObjectHostConnectionID& oh_conn_id, const Si
     // idempotent so even if this is a repeat ack, we can redo this.
     mForwarder->enableObjectConnection(obj_id);
 }
+/**
+ * At this point we are sure that the request is not a duplicate disconnection attempt but a legitimate one 
+ * determined from checking the session number or determining the object
+ * connection is no longer existant 
+ */
+void Server::handleUniqueDisconnectWithDeletedObjectConnection(UUID obj_id) {
+    SPACE_LOG(debug,"Object "<<obj_id<<" exiting space");
+    
+    if (isObjectConnected(obj_id)) {
+        int markObjectDisconnectingCallCount=2;
+        if (!markObjectDisconnecting(obj_id, markObjectDisconnectingCallCount)) {
+            //object already disconnecting don't try again
+            return;
+        }
+
+        std::tr1::function<void()> disconnectedCb = std::tr1::bind(&Server::markObjectDisconnectedCallback, this, obj_id);
+        
+        mOSeg->removeObject(obj_id);
+        mLocalForwarder->removeActiveConnection(obj_id);
+        mLocationService->removeLocalObject(obj_id, 
+                                            (markObjectDisconnectingCallCount--,disconnectedCb));//number of disconnectedCb needs to match markObjectDisconecting call count (in this case 2)
+        
+        // Register proximity query
+        mProximity->removeQuery(obj_id,(markObjectDisconnectingCallCount--,disconnectedCb));//number of disconnectedCb needs to match markObjectDisconecting call count (in this case 2)
+        
+        mForwarder->removeObjectConnection(obj_id);
+        
+        mObjects.erase(obj_id);
+        // Num objects is reported by the caller
+        
+        ObjectReference obj(obj_id);
+        mObjectSessionManager->removeSession(obj);
+        assert(markObjectDisconnectingCallCount==0);//should be decremented every time we pass in a disconnectedCb
+    }else {
+        if (isObjectConnecting(obj_id)) {
+            SPACE_LOG(error,"I have no idea how to handle this");
+            assert(false);//lets assert for now so we can see if this issue ever is possible to arise. It may not be possible to have an object connection until you are connected,
+                          //in which case we would go to the top branch
+        }
+    }
+}
 
 // Note that the obj_id is intentionally not a const & so that we're sure it is
 // valid throughout this method.
 void Server::handleDisconnect(UUID obj_id, ObjectConnection* conn, uint64 session_request_seqno) {
     assert(conn->id() == obj_id);
     if (conn->sessionID() != session_request_seqno) {
-        SPACE_LOG(detailed, "Ignoring disconnection request for " << obj_id << " because session request ID " << session_request_seqno << " doesn't match the connection's session ID " << conn->sessionID() << ". This probably means an old disconnection request was retried.");
+        SPACE_LOG(debug, "Ignoring disconnection request for " << obj_id << " because session request ID " << session_request_seqno << " doesn't match the connection's session ID " << conn->sessionID() << ". This probably means an old disconnection request was retried.");
         return;
     }   
-    std::tr1::function<void()> disconnectedCb = std::tr1::bind(&Server::markObjectDisconnectedCallback, this, obj_id);
-    int markObjectDisconnectingCallCount=2;
-    markObjectDisconnecting(obj_id, markObjectDisconnectingCallCount);
-
-    mOSeg->removeObject(obj_id);
-    mLocalForwarder->removeActiveConnection(obj_id);
-    mLocationService->removeLocalObject(obj_id, 
-                                        (markObjectDisconnectingCallCount--,disconnectedCb));//number of disconnectedCb needs to match markObjectDisconecting call count (in this case 2)
-
-    // Register proximity query
-    mProximity->removeQuery(obj_id,(markObjectDisconnectingCallCount--,disconnectedCb));//number of disconnectedCb needs to match markObjectDisconecting call count (in this case 2)
-
-    mForwarder->removeObjectConnection(obj_id);
-
-    mObjects.erase(obj_id);
-    // Num objects is reported by the caller
-
-    ObjectReference obj(obj_id);
-    mObjectSessionManager->removeSession(obj);
-    assert(markObjectDisconnectingCallCount==0);//should be decremented every time we pass in a disconnectedCb
+    handleUniqueDisconnectWithDeletedObjectConnection(obj_id);
     delete conn;
 }
 

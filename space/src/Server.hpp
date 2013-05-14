@@ -175,7 +175,8 @@ private:
 
     // Handle a disconnection.
     void handleDisconnect(UUID obj_id, ObjectConnection* conn, uint64 session_request_seqno);
-
+    // handle a disconnection for an object that lots its object connection already (helper function for handleDisconnect)
+    void handleUniqueDisconnectWithDeletedObjectConnection(UUID obj_id);
     //finally deletes any object connections to obj_id
     void killObjectConnection(const UUID& obj_id);
 
@@ -229,8 +230,8 @@ private:
     bool isObjectDisconnecting(const UUID &object)const;
     ///Other services end up calling this callback to mark an object as being disconnected. Bound by the handleDisconnect function which passes this to the service for the final disconnection call
     void markObjectDisconnectedCallback(UUID object);
-    ///marks an object and needing callbacks from <serviceCount> subservices before it becomes truly disconnected
-    void markObjectDisconnecting(const UUID &object, int serviceCount);
+    ///marks an object and needing callbacks from <serviceCount> subservices before it becomes truly disconnected: if already disconnecting, return false
+    bool markObjectDisconnecting(const UUID &object, int serviceCount);
 
     // Information to be able to respond to a migration request *from
     // the object*.
