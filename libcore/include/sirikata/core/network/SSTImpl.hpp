@@ -1278,15 +1278,19 @@ private:
     if (mState == CONNECTION_PENDING_CONNECT) {
       mState = CONNECTION_CONNECTED;
 
-      // During connection, we don't allow the initial connection request packet
-      // out of the queued segments (normally once it has been sent and is in
-      // the outstanding packet list, it is removed from the queue). See the
-      // note in serviceConnection. Because of this, we still have it queued. To
-      // avoid retransmitting it, pop it off now.
-      // Sanity check that the front segment *is* the first packet (which must
-      // be the initial connection request).
-      assert(mQueuedSegments.front()->mChannelSequenceNumber == 1);
-      mQueuedSegments.pop_front();
+      if (mQueuedSegments.size() > 0) {
+        // During the connection phase, as long as there haven't been five failed retries, 
+        // we don't allow the initial connection request packet
+        // out of the queued segments (once it has been sent and is in
+        // the outstanding packet list, it is removed from the queue). See the
+        // note in serviceConnection. Because of this, we still have it queued. To
+        // avoid retransmitting it, pop it off now.
+        // Sanity check that the front segment *is* the first packet (which must
+        // be the initial connection request).
+
+        assert(mQueuedSegments.front()->mChannelSequenceNumber == 1);
+        mQueuedSegments.pop_front();
+      }
 
       EndPoint<EndPointType> originalListeningEndPoint(mRemoteEndPoint.endPoint, mRemoteEndPoint.port);
 
