@@ -731,6 +731,11 @@ void MeshAggregateManager::removeChild(const UUID& uuid, const UUID& child_uuid)
 }
 
 void MeshAggregateManager::aggregateObserved(const UUID& objid, uint32 nobservers, uint32 nchildren) {
+  return;
+
+  //The following code is only for experimental purposes: to measure the total
+  //size of all objects in a cut. So it's safe to return immediately.
+
   boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
 
   if (mAggregateObjects.find(objid) != mAggregateObjects.end()) {
