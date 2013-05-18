@@ -64,10 +64,11 @@
 #define snprintf _snprintf
 #endif
 
-//This is an estimate of the solid angle for one pixel on a 2560*1600 screen resolution;
-//Human Eye FOV = 4.17 sr, dividing that by (2560*1600).
-#define HUMAN_FOV  4.17
-#define ONE_PIXEL_SOLID_ANGLE (HUMAN_FOV/(2560.0*1600.0))
+//This is an estimate of the solid angle for one pixel on a 32" monitor at 2 feet,
+//with a resolution of 1080p.
+#define HUMAN_FOV  0.77
+#define ONE_PIXEL_SOLID_ANGLE (HUMAN_FOV/(1920*1080))
+#define FULL_SIZE_SCREENSHOT_SOLID_ANGLE (ONE_PIXEL_SOLID_ANGLE*512*384)
 #define TWO_PI (2.0*3.14159)
 
 #define AGG_LOG(lvl, msg) SILOG(aggregate-manager, lvl, msg)
@@ -77,6 +78,22 @@ using namespace Sirikata::Transfer;
 using namespace Sirikata::Mesh;
 
 namespace Sirikata {
+
+float solidAngleFromDistanceRadius(float32 distance, float32 radius) {
+
+    float to_center_len_sq = distance*distance;
+    float rad_sq = radius*radius;
+    if (to_center_len_sq <= rad_sq)
+        return 2.0*TWO_PI;
+
+    // This would be
+    //float sin_alpha = radius / to_center_len;
+    // but since we're going to square it anyway, we compute the squared version
+    // directly, saving us the square root above
+    float sin_alpha_sq = rad_sq / to_center_len_sq;
+    float cos_alpha = sqrtf(1 - sin_alpha_sq);
+    return ( TWO_PI * (1.0f - cos_alpha) );
+}
 
 Vector3f applyTransform(const Matrix4x4f& transform,
                         const Vector3f& v)
@@ -795,7 +812,6 @@ void MeshAggregateManager::aggregateObserved(const UUID& objid, uint32 nobserver
     }
     */
   }
-
 }
 
 void MeshAggregateManager::generateAggregateMesh(const UUID& uuid, const Duration& delayFor) {
@@ -833,6 +849,9 @@ void MeshAggregateManager::deduplicateMeshes(UUID aggregateUUID, std::vector<Agg
   std::tr1::unordered_map<uint32, bool> replacedURI;
   Prox::DescriptorReader* descriptorReader=Prox::DescriptorReader::getDescriptorReader();
   float32 aggregateUUIDRadius = (currentLocMap[aggregateUUID]->bounds().fullBounds()).radius();
+  SolidAngle maxSolidAngle(1.0);
+  uint32 maxDistance = maxSolidAngle.maxDistance(aggregateUUIDRadius);
+  Vector3f aggCenter = currentLocMap[aggregateUUID]->currentPosition();
 
   for (uint32 i=0; /*isLeafAggregate &&*/ i<children.size(); i++) {
     if (meshURIs[i] == "") continue;
@@ -858,6 +877,19 @@ void MeshAggregateManager::deduplicateMeshes(UUID aggregateUUID, std::vector<Agg
       if (replacedURI.find(j) == replacedURI.end() || replacedURI[j] == false) {
         if (meshURIs[j] == "" || meshURIs[j] == meshURIs[i]) continue;
 
+        UUID child_uuid = children[j]->mUUID;
+        float32 childUUIDRadius = (currentLocMap[child_uuid]->bounds().fullBounds()).radius();
+        Vector3f childCenter = currentLocMap[child_uuid]->currentPosition();
+        float32 aggToChildDistance = (childCenter - aggCenter).length();
+
+        float32 childSolidAngle = solidAngleFromDistanceRadius(maxDistance - aggToChildDistance, childUUIDRadius);
+
+        AGG_LOG(debug,  (maxDistance - aggToChildDistance)  << "maxDistance - aggToChildDistance");
+        AGG_LOG(debug, aggregateUUIDRadius << " agg_radius, " << childUUIDRadius << " childRadius, " <<  maxDistance << " maxDistance");
+        AGG_LOG(debug, childSolidAngle <<  " : childSolidAngle");
+ 
+        if (childSolidAngle > FULL_SIZE_SCREENSHOT_SOLID_ANGLE/4.0) continue;
+
         Prox::ZernikeDescriptor zd_j = descriptorReader->getZernikeDescriptor(meshURIs[j]);
         {
           boost::mutex::scoped_lock lock(mMeshStoreMutex);
@@ -868,19 +900,22 @@ void MeshAggregateManager::deduplicateMeshes(UUID aggregateUUID, std::vector<Agg
           }
         }
 
-        //continue;
-
         //AGG_LOG(insane, zd_i.toString() << "\t" << zd_j.toString() );
         float64 zd_diff = zd_i.minus(zd_j).l2Norm();
-        UUID child_uuid = children[j]->mUUID;
-        float32 childUUIDRadius = (currentLocMap[child_uuid]->bounds().fullBounds()).radius();
 
-        float32 childAreaRatio = (childUUIDRadius*childUUIDRadius/(aggregateUUIDRadius*aggregateUUIDRadius));
-
-        float32 zdiffThreshold = 0.00, tdiffThreshold = 100.0;
-        if (childAreaRatio < 0.0003){
-          zdiffThreshold = 0.01;
-          tdiffThreshold = 250;
+        float32 zdiffThreshold = 0.001, tdiffThreshold = 10.00;
+ 
+        if (childSolidAngle < FULL_SIZE_SCREENSHOT_SOLID_ANGLE/(4.0*4.0*4.0*4.0*4.0*4.0)) {
+          zdiffThreshold = 0.5;
+          tdiffThreshold = 500;
+        }
+        else if (childSolidAngle < FULL_SIZE_SCREENSHOT_SOLID_ANGLE/(4.0*4.0*4.0*4.0*4.0)) {
+          zdiffThreshold = 0.012;
+          tdiffThreshold = 350;
+        }
+        else if (childSolidAngle < FULL_SIZE_SCREENSHOT_SOLID_ANGLE/(4.0*4.0*4.0*4.0)) {
+          zdiffThreshold = 0.003;
+          tdiffThreshold = 50;
         }
 
         if ( zd_diff < zdiffThreshold) {
@@ -913,7 +948,7 @@ void MeshAggregateManager::deduplicateMeshes(UUID aggregateUUID, std::vector<Agg
             Matrix4x4f new_mat_test = xf1_inv * xf2;
 
             if (isMatrixIdentity(new_mat_test)) {
-              AGG_LOG(info, "Replacing " << meshURIs[j]  << " with " << meshURIs[i] << " -- " <<
+              AGG_LOG(info, "In " << aggregateUUID  << " Replacing " << meshURIs[j]  << " with " << meshURIs[i] << " -- " <<
                            "zdiff: " << zd_diff << " , tdiff: "<< td_diff  << " : " << alignmentTransform );
 
               replacementAlignmentTransforms[j] = alignmentTransform;
@@ -1125,7 +1160,7 @@ void MeshAggregateManager::startDownloadsForAtlasing(const UUID& uuid, MeshdataP
                 const ProgressiveMipmaps& progMipmaps = findProgTex->second.mipmaps;
                 uint32 mipmapLevel = 0;
                 for ( ; mipmapLevel < progMipmaps.size(); mipmapLevel++) {
-                    if (progMipmaps.find(mipmapLevel)->second.width >= 64 || progMipmaps.find(mipmapLevel)->second.height >= 64) {
+                    if (progMipmaps.find(mipmapLevel)->second.width >= 256 || progMipmaps.find(mipmapLevel)->second.height >= 256) {
                         break;
                     }
                 }
@@ -1352,7 +1387,7 @@ uint32 MeshAggregateManager::generateAggregateMeshAsync(const UUID uuid, Time po
     boost::mutex::scoped_lock textureToHashMapLock(mTextureNameToHashMapMutex);
 
     for (std::tr1::unordered_map<String,String>::iterator it = textureToHashMap.begin();
-         it != textureToHashMap.end(); it++)
+         it != textureToHashMap.end() && false; it++)
     {
        //FIXME: This should get erased here, but elements added to the hashmap should
        //have key = objectUUID+texturename instead of just texturename
@@ -1690,7 +1725,7 @@ uint32 MeshAggregateManager::generateAggregateMeshAsync(const UUID uuid, Time po
   //This block squashes geometry to get baseline results without any optimizations.
   // Doing the expansion is necessary for meshes higher up in tree, otherwise they
   //become too large!
-  if (averageVertices <= 75) {
+  if (averageVertices <= 75 ) {
     boost::mutex::scoped_lock squashLock(mSquashFilterMutex);
     Mesh::MutableFilterDataPtr input_data(new Mesh::FilterData);
     input_data->push_back(agg_mesh);
@@ -2581,7 +2616,7 @@ void MeshAggregateManager::chunkFinished(Time t, const UUID uuid, const UUID chi
 void MeshAggregateManager::addToInMemoryCache(const String& meshName, const MeshdataPtr mdptr) {
   boost::mutex::scoped_lock meshStoreLock(mMeshStoreMutex);
 
-  int MESHSTORESIZE=61000;
+  int MESHSTORESIZE=2000;
   //Store the mesh but keep the meshstore's size under control.
   if (   mMeshStore.size() > MESHSTORESIZE
       && mMeshStore.find(meshName) == mMeshStore.end())
