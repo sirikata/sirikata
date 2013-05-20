@@ -266,7 +266,6 @@ private:
     bool leaf;
     Time mLastGenerateTime;
     bool generatedLastRound;
-    Mesh::MeshdataPtr mMeshdata;
 
     AggregateObject(const UUID& uuid, const UUID& parentUUID, bool is_leaf) :
       mUUID(uuid),
@@ -280,7 +279,6 @@ private:
       refreshTTL(Time::null())
     {
       mParentUUIDs.insert(parentUUID);
-      mMeshdata = Mesh::MeshdataPtr();
       generatedLastRound = false;
       mDistance = 0.01;
       mTriangleCount = 0;
@@ -293,7 +291,6 @@ private:
     uint32 mTriangleCount;
     float64 geometricError;
     uint32 mSerializedSize;
-    //std::tr1::unordered_set<std::tr1::shared_ptr<AggregateObject> > mLeaves;
 
     boost::mutex mAtlasAndUploadMutex;
     // The basename returned by the CDN. This points at the entire asset
@@ -429,13 +426,21 @@ private:
       MISSING_CHILD_MESHES=6
   };
   uint32 generateAggregateMeshAsync(const UUID uuid, Time postTime, bool generateSiblings = true);
-  Mesh::MeshdataPtr generateAggregateMeshAsyncFromLeaves(const UUID uuid, Time postTime);
+
+
   uint32 checkLocAndMeshInfo(const UUID& uuid, std::vector<AggregateObjectPtr>& children,
          std::tr1::unordered_map<UUID, std::tr1::shared_ptr<LocationInfo> , UUID::Hasher>& currentLocMap);
-  uint32 checkMeshesAvailable(const UUID& uuid, const Time& curTime, std::vector<AggregateObjectPtr>& children,
-                              std::tr1::unordered_map<UUID, std::tr1::shared_ptr<LocationInfo> , UUID::Hasher>& currentLocMap,std::tr1::unordered_map<String,Mesh::MeshdataPtr>& );
+
+  uint32 checkMeshesAvailable(const UUID& uuid, const Time& curTime, 
+              std::vector<AggregateObjectPtr>& children,
+              std::tr1::unordered_map<UUID, std::tr1::shared_ptr<LocationInfo>, 
+              UUID::Hasher>& currentLocMap,std::tr1::unordered_map<String,Mesh::MeshdataPtr>& );
+
   uint32 checkTextureHashesAvailable(std::vector<AggregateObjectPtr>& children,
-                                     std::tr1::unordered_map<String, String>& textureToHashMap);
+         std::tr1::unordered_map<String, String>& textureToHashMap, 
+         std::tr1::unordered_map<UUID, std::tr1::shared_ptr<LocationInfo> , UUID::Hasher>& currentLocMap,
+         std::tr1::unordered_map<String,Mesh::MeshdataPtr>& localMeshStore);
+
   void startDownloadsForAtlasing(const UUID& uuid, Mesh::MeshdataPtr agg_mesh, AggregateObjectPtr aggObject, String localMeshName,
                                                  std::tr1::unordered_map<String, String>& textureSet,
                                                  std::tr1::unordered_map<String, Mesh::MeshdataPtr>& textureToModelMap);

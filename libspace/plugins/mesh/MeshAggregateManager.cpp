@@ -884,9 +884,9 @@ void MeshAggregateManager::deduplicateMeshes(UUID aggregateUUID, std::vector<Agg
 
         float32 childSolidAngle = solidAngleFromDistanceRadius(maxDistance - aggToChildDistance, childUUIDRadius);
 
-        AGG_LOG(debug,  (maxDistance - aggToChildDistance)  << "maxDistance - aggToChildDistance");
-        AGG_LOG(debug, aggregateUUIDRadius << " agg_radius, " << childUUIDRadius << " childRadius, " <<  maxDistance << " maxDistance");
-        AGG_LOG(debug, childSolidAngle <<  " : childSolidAngle");
+        AGG_LOG(insane,  (maxDistance - aggToChildDistance)  << "maxDistance - aggToChildDistance");
+        AGG_LOG(insane, aggregateUUIDRadius << " agg_radius, " << childUUIDRadius << " childRadius, " <<  maxDistance << " maxDistance");
+        AGG_LOG(insane, childSolidAngle <<  " : childSolidAngle");
  
         if (childSolidAngle > FULL_SIZE_SCREENSHOT_SOLID_ANGLE/4.0) continue;
 
@@ -1002,15 +1002,13 @@ uint32 MeshAggregateManager::checkMeshesAvailable(const UUID& uuid, const Time& 
     }
 
     std::string meshName = currentLocMap[child_uuid]->mesh();
-    Mesh::MeshdataPtr m = mAggregateObjects[child_uuid]->mMeshdata;
 
     if (localMeshStore.find(meshName) != localMeshStore.end())
       continue;
 
-    if (!m) {
-      //request a download or generation of the mesh
+    //request a download or generation of the mesh
 
-      if (meshName != "") {
+    if (meshName != "") {
         boost::mutex::scoped_lock meshStoreLock(mMeshStoreMutex);
         if (mMeshStore.find(meshName) == mMeshStore.end() )
         {
@@ -1038,15 +1036,11 @@ uint32 MeshAggregateManager::checkMeshesAvailable(const UUID& uuid, const Time& 
         else {
           localMeshStore[meshName] = mMeshStore[meshName];
         }
-      }
-      else {
-        AGG_LOG(insane,  "meshName is empty: " << uuid << " , " << child_uuid);
-      }
     }
     else {
-      localMeshStore[meshName] = m;
-      AGG_LOG(insane, "localMeshStore stored: " << uuid << " " << currentLocMap[child_uuid]->mesh());
+        AGG_LOG(insane,  "meshName is empty: " << uuid << " , " << child_uuid);
     }
+    
   }
   if (!allMeshesAvailable) {
     AGG_LOG(insane, missingChildMesh  << " --  mesh not available\n");
@@ -1054,31 +1048,13 @@ uint32 MeshAggregateManager::checkMeshesAvailable(const UUID& uuid, const Time& 
     return MISSING_CHILD_MESHES;
   }
 
-  // Make sure we've got all the Meshdatas
-  for (uint32 i= 0; i < children.size(); i++) {
-    UUID child_uuid = children[i]->mUUID;
-
-    boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
-    if ( mAggregateObjects.find(child_uuid) == mAggregateObjects.end()) {
-      continue;
-    }
-    MeshdataPtr m = mAggregateObjects[child_uuid]->mMeshdata;
-
-    std::string meshName = currentLocMap[child_uuid]->mesh();
-    if (!m && meshName != "") {
-        boost::mutex::scoped_lock meshStoreLock(mMeshStoreMutex);
-        if (mMeshStore.find(meshName) != mMeshStore.end()) {
-          mAggregateObjects[child_uuid]->mMeshdata = mMeshStore[meshName];
-        }
-    }
-  }
-
   return 0;
 }
 
 uint32 MeshAggregateManager::checkTextureHashesAvailable(std::vector<AggregateObjectPtr>& children,
-                                                    std::tr1::unordered_map<String, String>& textureToHashMap)
-
+         std::tr1::unordered_map<String, String>& textureToHashMap, 
+         std::tr1::unordered_map<UUID, std::tr1::shared_ptr<LocationInfo> , UUID::Hasher>& currentLocMap,
+         std::tr1::unordered_map<String,MeshdataPtr>& localMeshStore)
 {
     boost::mutex::scoped_lock textureToHashMapLock(mTextureNameToHashMapMutex);
     bool allTextureHashesAvailable = true;
@@ -1090,7 +1066,9 @@ uint32 MeshAggregateManager::checkTextureHashesAvailable(std::vector<AggregateOb
       if ( mAggregateObjects.find(child_uuid) == mAggregateObjects.end()) {
         continue;
       }
-      MeshdataPtr m = mAggregateObjects[child_uuid]->mMeshdata;
+
+      std::string meshName = currentLocMap[child_uuid]->mesh();
+      MeshdataPtr m = localMeshStore[meshName];      
       if (!m) continue;
 
       for (uint32 j = 0; j < m->textures.size(); j++) {
@@ -1325,8 +1303,8 @@ uint32 MeshAggregateManager::generateAggregateMeshAsync(const UUID uuid, Time po
 
   //FIXME: uncomment this to generate aggregates from two levels down instead
   //of one.
-  children.clear();
-  aggObject->getSuccessors(2, aggObject, children);
+  //children.clear();
+  //aggObject->getSuccessors(2, aggObject, children);
 
   //FIXME: the debug level should be insane, not info
   AGG_LOG(info, aggObject->mTreeLevel << "_" << aggObject->mUUID << " has children: ");
@@ -1363,7 +1341,7 @@ uint32 MeshAggregateManager::generateAggregateMeshAsync(const UUID uuid, Time po
   std::tr1::unordered_map<String, String> textureToHashMap;
   if (isLeafAggregate)
   {
-    retval = checkTextureHashesAvailable(children, textureToHashMap);
+    retval = checkTextureHashesAvailable(children, textureToHashMap, currentLocMap, localMeshStore);
     if (retval != 0)
       return retval;
   }
@@ -1380,7 +1358,6 @@ uint32 MeshAggregateManager::generateAggregateMeshAsync(const UUID uuid, Time po
     replacementAlignmentTransforms.push_back(Matrix4x4f::identity());
   }
 
-  //if (!isLeafAggregate)
   deduplicateMeshes(uuid, children, isLeafAggregate, meshURIs, replacementAlignmentTransforms, currentLocMap);
 
   {
@@ -1709,7 +1686,6 @@ uint32 MeshAggregateManager::generateAggregateMeshAsync(const UUID uuid, Time po
     // have multiple threads generating the same object at the same time due to
     // multiple requests going to different threads...
     if (mAggregateObjects.find(child_uuid) == mAggregateObjects.end()) continue;
-    mAggregateObjects[child_uuid]->mMeshdata = std::tr1::shared_ptr<Meshdata>();
   }
 
   //Find average number of vertices in the mesh;s geometries. If it's small, just squash!
@@ -2208,8 +2184,6 @@ void MeshAggregateManager::uploadAggregateMesh(Mesh::MeshdataPtr agg_mesh,
 
       addToInMemoryCache(cdnMeshName, agg_mesh);
 
-      //aggObject->mLeaves.clear();
-
       Duration upload_time = Timer::now() - uploadStartTime;
       {
         boost::mutex::scoped_lock modelSystemLock(mStatsMutex);
@@ -2350,6 +2324,18 @@ void MeshAggregateManager::uploadAggregateMesh(Mesh::MeshdataPtr agg_mesh,
         //system( cmdline.c_str()  );
       }
 
+      //Cache the newly generated aggregate mesh.
+      if (aggObject->mTreeLevel != 0) {
+        std::tr1::shared_ptr<Transfer::DenseData> uploaded_mesh1(new Transfer::DenseData(serialized));
+
+        boost::mutex::scoped_lock modelSystemLock(mModelsSystemMutex);
+
+        VisualPtr v = mModelsSystem->load(uploaded_mesh1);
+        MeshdataPtr md1 = std::tr1::dynamic_pointer_cast<Meshdata>(v);
+        addToInMemoryCache(cdnMeshName, md1);
+      }
+
+
       AGG_LOG(info, "2. Uploaded successfully: " << localMeshName << "\n");
 
       //Update loc
@@ -2363,18 +2349,6 @@ void MeshAggregateManager::uploadAggregateMesh(Mesh::MeshdataPtr agg_mesh,
 
       mAggregatesUploaded++;
 
-      //FIXME: HACK!
-      if (localMeshName.find("0_aggregate_mesh") == localMeshName.npos) {
-        std::tr1::shared_ptr<Transfer::DenseData> uploaded_mesh1(new Transfer::DenseData(serialized));
-
-        boost::mutex::scoped_lock modelSystemLock(mModelsSystemMutex);
-
-        VisualPtr v = mModelsSystem->load(uploaded_mesh1);
-        MeshdataPtr md1 = std::tr1::dynamic_pointer_cast<Meshdata>(v);
-        addToInMemoryCache(cdnMeshName, md1);
-      }
-
-      //aggObject->mLeaves.clear();
 
       Duration upload_time = Timer::now() - uploadStartTime;
       {
@@ -2499,10 +2473,7 @@ void MeshAggregateManager::handleUploadFinished(Transfer::UploadRequestPtr reque
       }
     }
 
-
     addToInMemoryCache(cdnMeshName, agg_mesh);
-    aggObject->mMeshdata = agg_mesh;
-    //aggObject->mLeaves.clear();
 
     Duration upload_time = Timer::now() - uploadStartTime;
     {
@@ -2557,9 +2528,6 @@ void MeshAggregateManager::metadataFinished(Time t, const UUID uuid, const UUID 
     MeshdataPtr m = std::tr1::shared_ptr<Meshdata>(new Meshdata);
     m->uri = meshName;
 
-    boost::mutex::scoped_lock aggregateObjectsLock(mAggregateObjectsMutex);
-    mAggregateObjects[child_uuid]->mMeshdata = m;
-    aggregateObjectsLock.unlock();
 
     addToInMemoryCache(request->getURI().toString(), m);
     AGG_LOG(warn, "Adding a fake mesh for " << meshName << " because it wasnt available on the CDN\n");
@@ -2573,8 +2541,6 @@ void MeshAggregateManager::chunkFinished(Time t, const UUID uuid, const UUID chi
     if (response != NULL) {
       //AGG_LOG(detailed, "Time spent downloading: " << (Timer::now() - t) << "\n");
 
-      boost::mutex::scoped_lock aggregateObjectsLock(mAggregateObjectsMutex);
-      if (mAggregateObjects[child_uuid]->mMeshdata == MeshdataPtr() ) {
 
         VisualPtr v;
         {
@@ -2593,14 +2559,9 @@ void MeshAggregateManager::chunkFinished(Time t, const UUID uuid, const UUID chi
         }
 
 
-        mAggregateObjects[child_uuid]->mMeshdata = m;
-
-        aggregateObjectsLock.unlock();
-
 	addToInMemoryCache(request->getURI().toString(), m);
 
 	AGG_LOG(detailed, "Stored mesh in mesh store for: " <<  request->getURI().toString() << "\n");
-      }
     }
     else {
       AGG_LOG(warn, "ChunkFinished fail... retrying\n");
@@ -2614,12 +2575,12 @@ void MeshAggregateManager::chunkFinished(Time t, const UUID uuid, const UUID chi
 }
 
 void MeshAggregateManager::addToInMemoryCache(const String& meshName, const MeshdataPtr mdptr) {
+  AGG_LOG(insane, mMeshStore.size() << " : mMeshStore.size()");
   boost::mutex::scoped_lock meshStoreLock(mMeshStoreMutex);
 
-  int MESHSTORESIZE=2000;
+  int MESHSTORESIZE=1000;
   //Store the mesh but keep the meshstore's size under control.
-  if (   mMeshStore.size() > MESHSTORESIZE
-      && mMeshStore.find(meshName) == mMeshStore.end())
+  if (   mMeshStore.size() > MESHSTORESIZE )
   {
     int countMeshes = 0;
     std::tr1::unordered_map<String, Mesh::MeshdataPtr>::iterator it = mMeshStore.begin();
@@ -2654,15 +2615,6 @@ void MeshAggregateManager::addLeavesUpTree(UUID leaf_uuid, UUID uuid) {
   if (!obj) return;
   std::tr1::shared_ptr<LocationInfo> locInfo = getCachedLocInfo(uuid);
   if (!locInfo) return;
-  /*if (mDirtyAggregateObjects.find(uuid) != mDirtyAggregateObjects.end()) {
-    float radius = locInfo->bounds.fullRadius();
-    float solid_angle = TWO_PI * (1-sqrt(1- pow(radius/obj->mDistance,2)));
-
-    if (solid_angle > ONE_PIXEL_SOLID_ANGLE) {
-      obj->mLeaves.insert(leaf_uuid);
-    }
-  }*/
-  //obj->mLeaves.insert(mAggregateObjects[leaf_uuid]);
 
   for (std::set<UUID>::iterator it = obj->mParentUUIDs.begin(); it != obj->mParentUUIDs.end(); it++) {
     addLeavesUpTree(leaf_uuid, *it);
