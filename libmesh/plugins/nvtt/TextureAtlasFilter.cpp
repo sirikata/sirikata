@@ -238,60 +238,114 @@ MeshdataPtr TextureAtlasFilter::apply(MeshdataPtr md) {
     int ntextures = tex_info.size();
     int ntextures_side = (int)(sqrtf((float)ntextures) + 1.f);
 
-    // FIXME
-    uint32 atlas_element_width = 64, atlas_element_height = 64;
-
-    uint32 atlas_width = ntextures_side * atlas_element_width,
-        atlas_height = ntextures_side * atlas_element_height;
-
-    FIBITMAP* atlas = FreeImage_Allocate(atlas_width, atlas_height, 32);
-
-    // Scale images to desired size, copy data into the target image
-    int idx = 0;
-    Rect atlas_rect = Rect::fromBaseOffset(0, 0, atlas_width, atlas_height);
+    // Figure out how large the overall atlas should be.
+    uint32 minHeight = 256, minWidth = 256;
+    uint32 maxRowWidth = 0, curRowWidth = 0, totalHeight = 0, curRowHeight = 0;
+    uint32 counter = 0;
     for(TexInfoMap::iterator tex_it = tex_info.begin(); tex_it != tex_info.end(); tex_it++) {
-        TexInfo& tex = tex_it->second;
-        // Resize
-        uint32 new_width = atlas_element_width, new_height = atlas_element_height; // FIXME
+      TexInfo& tex = tex_it->second;
+      if (counter % ntextures_side == 0) {
+        //New row starting... do some book-keeping.
+        if (curRowWidth > maxRowWidth) {
+          maxRowWidth = curRowWidth;
+        }
+        curRowWidth = 0;
+        totalHeight += curRowHeight;
+        curRowHeight = 0;
+      }
+      counter++;
 
-        if (tex.orig_size.width() < atlas_element_width && tex.orig_size.height() < atlas_element_height) {
-          new_width = tex.orig_size.width();
-          new_height = tex.orig_size.height();
-        }
-        else {
-          if (tex.orig_size.width() > tex.orig_size.height()) {
-            new_height = (tex.orig_size.height()*new_width)/tex.orig_size.width();
-          }
-          else {
-            new_width = (tex.orig_size.width()*new_height)/tex.orig_size.height();
-          }
-        }
+      float32 tex_width = tex.orig_size.width(), tex_height = tex.orig_size.height();
+      if (tex_width < minWidth && tex_height < minHeight) {
+        // Textures that are really small 
+        // should be enlarged, so that they can be indexed
+        // into more accurately.
+        tex_height = tex_height / tex_width * minWidth;
         
+        tex_width = minWidth;
+      }
+  
+      curRowWidth += tex_width;  
+      if (tex.orig_size.height() > curRowHeight)
+        curRowHeight = tex_height;
 
-        FIBITMAP* resized = FreeImage_Rescale(tex.image, new_width, new_height, FILTER_LANCZOS3);
-        // Copy into place
-        int x_idx = idx % ntextures_side;
-        int y_idx = idx / ntextures_side;
-
-        Rect tex_sub_rect = Rect::fromBaseOffset(
-            x_idx * atlas_element_width, y_idx * atlas_element_height,
-            new_width, new_height
-        );
-
-        tex.atlas_region = atlas_rect.region(tex_sub_rect);
-        FreeImage_Paste(atlas, resized, tex_sub_rect.min_x, tex_sub_rect.min_y, 256);
-
-        FreeImage_Unload(resized);
-        FreeImage_Unload(tex_it->second.image);
-        tex_it->second.image = NULL;
-
-        idx++;
     }
 
-    // Generate the texture atlas
+    if (curRowWidth > maxRowWidth) {
+      maxRowWidth = curRowWidth;
+    }
+    totalHeight += curRowHeight;
+
+    // OK, create the atlas!!
+    float32 atlas_width = maxRowWidth, atlas_height = totalHeight;
+
+    FIBITMAP* atlas = FreeImage_Allocate(atlas_width, atlas_height, 32);
+    
+    // The number of pixels we want per atlas. 32768 px at 8 bit RGBA
+    // corresponds to 128 KB of texture RAM,
+    // 65536 px corresponds to 256 KB of texture RAM and so on.
+    float32 scaled_atlas_pixels = 32768.0;
+    float32 largeFactor = 1.0;
+    if (atlas_width * atlas_height > scaled_atlas_pixels)
+      largeFactor = sqrtf(atlas_width * atlas_height/scaled_atlas_pixels);
+    
+    float32 scaled_atlas_width = atlas_width/largeFactor, 
+            scaled_atlas_height= atlas_height/largeFactor;
+    FIBITMAP* scaled_atlas = 
+              FreeImage_Allocate(scaled_atlas_width, scaled_atlas_height, 32);
+
+    uint32 xLoc = 0, yLoc = 0;
+    counter = 0;
+    curRowHeight = 0;
+    curRowWidth = 0;
+    Rect atlas_rect = Rect::fromBaseOffset(0, 0, atlas_width, atlas_height);
+    for(TexInfoMap::iterator tex_it = tex_info.begin(); tex_it != tex_info.end(); tex_it++) {
+      TexInfo& tex = tex_it->second;
+      if (counter % ntextures_side == 0) {
+        //Book-keeping for a new row.
+        xLoc = 0;
+        yLoc += curRowHeight;
+        curRowHeight = 0;
+        curRowWidth = 0;
+      }
+      counter++;
+
+      float32 tex_width = tex.orig_size.width(), tex_height = tex.orig_size.height();
+      if (tex_width < minWidth && tex_height < minHeight) {
+        // Textures that are really small 
+        // should be enlarged, so that they can be indexed
+        // into more accurately.
+        tex_height = tex_height / tex_width * minWidth;
+        tex_width = minWidth;
+      }
+
+      //copy the texture image into the atlas
+      FIBITMAP* resized = FreeImage_Rescale(tex.image, tex_width, tex_height, FILTER_LANCZOS3);
+
+      Rect tex_sub_rect = Rect::fromBaseOffset( xLoc, yLoc, tex_width, tex_height );
+      tex.atlas_region = atlas_rect.region(tex_sub_rect);
+      FreeImage_Paste(atlas, resized, tex_sub_rect.min_x, tex_sub_rect.min_y, 256);
+
+      FreeImage_Unload(resized);
+      FreeImage_Unload(tex_it->second.image);
+      tex_it->second.image = NULL;
+
+      //more book-keeping.
+      curRowWidth += tex_width;
+      if (tex.orig_size.height() > curRowHeight)
+        curRowHeight = tex_height;
+      xLoc = curRowWidth;
+    }
+
+    // Generate the final, scaled-to-fit-on-GPU-memory texture atlas
+    FIBITMAP* resized = FreeImage_Rescale(atlas, scaled_atlas_width, scaled_atlas_height, FILTER_LANCZOS3);
+    FreeImage_Paste(scaled_atlas, resized, 0, 0, 256);
+
     String atlas_url = uri_dir + file_name + ".atlas.png";
-    FreeImage_Save(FIF_PNG, atlas, atlas_url.c_str());
+    FreeImage_Save(FIF_PNG, scaled_atlas, atlas_url.c_str());
+    FreeImage_Unload(resized);
     FreeImage_Unload(atlas);
+    FreeImage_Unload(scaled_atlas);
 
     // Now we need to run through and fix up texture references and texture
     // coordinates
