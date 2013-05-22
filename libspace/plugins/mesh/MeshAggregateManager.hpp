@@ -280,14 +280,12 @@ private:
     {
       mParentUUIDs.insert(parentUUID);
       generatedLastRound = false;
-      mDistance = 0.01;
       mTriangleCount = 0;
     }
 
     uint16 mTreeLevel;
     uint32 mNumObservers;
     uint32 mNumFailedGenerationAttempts;
-    double mDistance;  //MINIMUM distance at which this object could be part of a cut
     uint32 mTriangleCount;
     float64 geometricError;
     uint32 mSerializedSize;
@@ -309,7 +307,9 @@ private:
   boost::mutex mAggregateObjectsMutex;
   typedef std::tr1::unordered_map<UUID, AggregateObjectPtr, UUID::Hasher > AggregateObjectsMap;
   AggregateObjectsMap mAggregateObjects;
-  Time mAggregateGenerationStartTime;    
+  Time mAggregateGenerationStartTime;
+
+  boost::mutex mDirtyAggregatesMutex;
   std::tr1::unordered_map<UUID, AggregateObjectPtr, UUID::Hasher> mDirtyAggregateObjects;
 
   boost::mutex mQueuedObjectsMutex;
@@ -428,6 +428,9 @@ private:
   uint32 generateAggregateMeshAsync(const UUID uuid, Time postTime, bool generateSiblings = true);
 
 
+  uint32 checkChildrenDirty(const UUID& uuid, 
+                            const std::vector<AggregateObjectPtr>& children);
+
   uint32 checkLocAndMeshInfo(const UUID& uuid, std::vector<AggregateObjectPtr>& children,
          std::tr1::unordered_map<UUID, std::tr1::shared_ptr<LocationInfo> , UUID::Hasher>& currentLocMap);
 
@@ -468,6 +471,8 @@ private:
                             uint32 atlas_length,
 			    AggregateObjectPtr aggObject, std::tr1::unordered_map<String, String> textureSet,
                             uint32 retryAttempt, const Time& uploadStartTime);
+
+  void uploadedSuccessfully(AggregateObjectPtr aggObject, const String& localMeshName);
   // Look for any aggregates that need a keep-alive sent to the CDN
   // and try to send them.
   void sendKeepAlives();

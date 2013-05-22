@@ -674,6 +674,7 @@ void MeshAggregateManager::addChild(const UUID& uuid, const UUID& child_uuid) {
 
   if (!agg->hasChild(child_uuid)) {
     boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
+    boost::mutex::scoped_lock dirtyAggregatesLock(mDirtyAggregatesMutex);
 
     if (mAggregateObjects.find(child_uuid) == mAggregateObjects.end()) {
         // TODO(ewencp,tazim) This alone clearly isn't right -- we'll
@@ -697,13 +698,14 @@ void MeshAggregateManager::addChild(const UUID& uuid, const UUID& child_uuid) {
     mAggregateGenerationStartTime = Timer::now();
 
     lock.unlock();
+    dirtyAggregatesLock.unlock();
 
     AGG_LOG(detailed, "addChild:  "  << uuid.toString() << " CHILD " << child_uuid.toString() << "\n");
     mRawAggregateUpdates++;
 
     if (mAggregationStrands[0]) {
       mAggregationStrands[0]->post(
-        Duration::seconds(60),
+        Duration::seconds(20),
         std::tr1::bind(&MeshAggregateManager::queueDirtyAggregates, this, mAggregateGenerationStartTime),
         "MeshAggregateManager::queueDirtyAggregates"
       );
@@ -732,7 +734,7 @@ void MeshAggregateManager::iRemoveChild(const UUID& uuid, const UUID& child_uuid
 
     if (mAggregationStrands[0]) {
       mAggregationStrands[0]->post(
-        Duration::seconds(60),
+        Duration::seconds(20),
         std::tr1::bind(&MeshAggregateManager::queueDirtyAggregates, this, mAggregateGenerationStartTime),
         "MeshAggregateManager::queueDirtyAggregates"
       );
@@ -743,6 +745,7 @@ void MeshAggregateManager::iRemoveChild(const UUID& uuid, const UUID& child_uuid
 
 void MeshAggregateManager::removeChild(const UUID& uuid, const UUID& child_uuid) {
   boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
+  boost::mutex::scoped_lock dirtyAggregatesLock(mDirtyAggregatesMutex);
 
   iRemoveChild(uuid, child_uuid);
 }
@@ -824,6 +827,8 @@ void MeshAggregateManager::generateAggregateMesh(const UUID& uuid, const Duratio
 }
 
 void MeshAggregateManager::generateAggregateMesh(const UUID& uuid, AggregateObjectPtr aggObject, const Duration& delayFor) {
+  boost::mutex::scoped_lock dirtyAggregatesLock(mDirtyAggregatesMutex);
+
   if (mModelsSystem == NULL) return;
   if (mDirtyAggregateObjects.find(uuid) != mDirtyAggregateObjects.end()) return;
 
@@ -835,7 +840,7 @@ void MeshAggregateManager::generateAggregateMesh(const UUID& uuid, AggregateObje
   if (mAggregationStrands[0]) {
     mAggregateGenerationStartTime = Timer::now();
     mAggregationStrands[0]->post(
-        Duration::seconds(60),
+        Duration::seconds(20),
         std::tr1::bind(&MeshAggregateManager::queueDirtyAggregates, this, mAggregateGenerationStartTime),
         "MeshAggregateManager::queueDirtyAggregates"
     );
@@ -960,6 +965,20 @@ void MeshAggregateManager::deduplicateMeshes(UUID aggregateUUID, std::vector<Agg
       }
     }
   }
+}
+
+uint32 MeshAggregateManager::checkChildrenDirty(const UUID& uuid, 
+                            const std::vector<AggregateObjectPtr>& children) 
+{
+  boost::mutex::scoped_lock dirtyAggregatesLock(mDirtyAggregatesMutex);
+
+  for (uint32 i = 0; i < children.size(); i++) {
+    if (mDirtyAggregateObjects.find(children[i]->mUUID) != mDirtyAggregateObjects.end())
+      return CHILDREN_NOT_YET_GEN;
+  }
+
+
+  return 0;
 }
 
 uint32 MeshAggregateManager::checkLocAndMeshInfo(
@@ -1313,8 +1332,13 @@ uint32 MeshAggregateManager::generateAggregateMeshAsync(const UUID uuid, Time po
   }
   AGG_LOG(insane, "END CHILDREN");
 
+  uint32 retval = checkChildrenDirty(uuid, children);
+  if (retval != 0) {
+    return retval;
+  }
+
   AGG_LOG(insane, aggObject->mTreeLevel << " : " << children.size() << " : treelvel : size");
-  uint32 retval = checkLocAndMeshInfo(uuid, children, currentLocMap);
+  retval = checkLocAndMeshInfo(uuid, children, currentLocMap);
   if (retval != 0)
     return retval;
 
@@ -2180,7 +2204,7 @@ void MeshAggregateManager::uploadAggregateMesh(Mesh::MeshdataPtr agg_mesh,
       );
 
       mAggregatesUploaded++;
-      AGG_LOG(info, "Uploaded successfully: " << localMeshName << "\n");
+      uploadedSuccessfully(aggObject, localMeshName);
 
       addToInMemoryCache(cdnMeshName, agg_mesh);
 
@@ -2335,8 +2359,7 @@ void MeshAggregateManager::uploadAggregateMesh(Mesh::MeshdataPtr agg_mesh,
         addToInMemoryCache(cdnMeshName, md1);
       }
 
-
-      AGG_LOG(info, "2. Uploaded successfully: " << localMeshName << "\n");
+      uploadedSuccessfully(aggObject, localMeshName);
 
       //Update loc
       mLoc->context()->mainStrand->post(
@@ -2455,7 +2478,9 @@ void MeshAggregateManager::handleUploadFinished(Transfer::UploadRequestPtr reque
     );
 
     mAggregatesUploaded++;
-    AGG_LOG(info, "Uploaded successfully: " << localMeshName);
+
+    uploadedSuccessfully(aggObject, localMeshName);
+
     AGG_LOG(insane,  "CDN mesh name is " << cdnMeshName);
     //FIXME: This assumes that atlasing always happens! Fix this!
     for (uint32 i = 0 ; i < agg_mesh->textures.size() && atlas_buffer; i++) {
@@ -2481,6 +2506,16 @@ void MeshAggregateManager::handleUploadFinished(Transfer::UploadRequestPtr reque
       mAggregateCumulativeUploadTime += upload_time;
     }
 }
+
+void MeshAggregateManager::uploadedSuccessfully(AggregateObjectPtr aggObject, 
+                                                const String& localMeshName) 
+{
+  AGG_LOG(info, "Uploaded successfully: " << localMeshName << "\n");
+  boost::mutex::scoped_lock dirtyAggregatesLock(mDirtyAggregatesMutex);
+  mDirtyAggregateObjects.erase(aggObject->mUUID);
+  AGG_LOG(insane, mDirtyAggregateObjects.size() << " : mDirtyAggregateObjects.size");
+}
+
 
 void MeshAggregateManager::metadataFinished(Time t, const UUID uuid, const UUID child_uuid, std::string meshName, uint8 attemptNo,
                                           std::tr1::shared_ptr<Transfer::MetadataRequest> request,
@@ -2633,48 +2668,6 @@ void MeshAggregateManager::queueDirtyAggregates(Time postTime) {
       return;
     }
 
-    boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
-    //Get the leaves that belong to each node.
-    std::vector<UUID> individualObjects;
-
-    if ( mDirtyAggregateObjects.size() > 0 ) {
-      for (std::tr1::unordered_map<UUID, AggregateObjectPtr, UUID::Hasher >::iterator it = mAggregateObjects.begin();
-           it != mAggregateObjects.end() ; it++)
-      {
-          std::tr1::shared_ptr<AggregateObject> aggObject = it->second;
-
-          if (aggObject->childrenSize() == 0) {
-            individualObjects.push_back(aggObject->mUUID);
-          }
-
-          if (mDirtyAggregateObjects.find(it->first) == mDirtyAggregateObjects.end()) {
-            continue;
-          }
-
-          float radius  = INT_MAX;
-          const std::vector<AggregateObjectPtr> children = aggObject->getChildrenCopy();
-          for (uint32 i=0; i < children.size(); i++) {
-            UUID& child_uuid = children[i]->mUUID;
-
-            std::tr1::shared_ptr<LocationInfo> locInfo = getCachedLocInfo(child_uuid);
-            if (!locInfo) continue;
-
-            float32 bnds_rad = locInfo->bounds().fullRadius();
-            if (bnds_rad < radius) {
-              radius = bnds_rad;
-            }
-          }
-
-          if (radius == INT_MAX) radius = 0;
-
-          aggObject->mDistance = 0.001 + minimumDistanceForCut(aggObject);
-      }
-
-      //getLeaves(individualObjects);
-    }
-
-    lock.unlock();
-
     //Grab locks for all of the generation threads before proceeding.
     uint8 i = 0;
     boost::mutex::scoped_lock queueLocks[MAX_NUM_GENERATION_THREADS];
@@ -2683,6 +2676,8 @@ void MeshAggregateManager::queueDirtyAggregates(Time postTime) {
     }
 
     boost::mutex::scoped_lock queuedObjectsLock(mQueuedObjectsMutex);
+    boost::mutex::scoped_lock dirtyAggregatesLock(mDirtyAggregatesMutex);
+ 
     i=0;
     //Add objects to generation queue, ordered by priority.
     for (std::tr1::unordered_map<UUID, AggregateObjectPtr, UUID::Hasher>::iterator it = mDirtyAggregateObjects.begin();
@@ -2731,7 +2726,7 @@ void MeshAggregateManager::queueDirtyAggregates(Time postTime) {
     }
 
     queuedObjectsLock.unlock();
-    mDirtyAggregateObjects.clear();
+    dirtyAggregatesLock.unlock();
 
     for (i = 0; i < mNumGenerationThreads; i++) {
       //setAggregatesTriangleCount();
@@ -2844,7 +2839,8 @@ void MeshAggregateManager::updateChildrenTreeLevel(const UUID& uuid, uint16 tree
 
 //Recursively add uuid and all nodes upto the root to the dirty aggregates map.
 void MeshAggregateManager::addDirtyAggregates(UUID uuid) {
-  //mAggregateObjectsMutex MUST be locked BEFORE calling this function.
+  // mAggregateObjectsMutex and mDirtyAggregatesMutex
+  // MUST be locked BEFORE calling this function.
   if (uuid != UUID::null() && mAggregateObjects.find(uuid) != mAggregateObjects.end() ) {
     std::tr1::shared_ptr<AggregateObject> aggObj = mAggregateObjects[uuid];
 
@@ -2907,7 +2903,7 @@ void MeshAggregateManager::removeStaleLeaves() {
 
   if (mAggregationStrands[0]) {
     mAggregationStrands[0]->post(
-      Duration::seconds(60),
+      Duration::seconds(40),
       std::tr1::bind(&MeshAggregateManager::removeStaleLeaves, this),
       "MeshAggregateManager::removeStaleLeaves"
     );
@@ -3218,6 +3214,7 @@ void MeshAggregateManager::commandStats(const Command::Command& cmd, Command::Co
     // We might be in the wrong thread (mDirtyAggregateObjects should only be
     // used in the  main strand), but worst case we'll just get incorrect
     // stats.
+    boost::mutex::scoped_lock dirtyAggregatesLock(mDirtyAggregatesMutex);
     waiting_count += mDirtyAggregateObjects.size();
     result.put("stats.waiting", waiting_count);
   }
