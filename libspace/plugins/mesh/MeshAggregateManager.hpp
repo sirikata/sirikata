@@ -266,6 +266,7 @@ private:
     bool leaf;
     Time mLastGenerateTime;
     bool generatedLastRound;
+    Time mAggregateGenerationStartTime;
 
     AggregateObject(const UUID& uuid, const UUID& parentUUID, bool is_leaf) :
       mUUID(uuid),
@@ -307,7 +308,6 @@ private:
   boost::mutex mAggregateObjectsMutex;
   typedef std::tr1::unordered_map<UUID, AggregateObjectPtr, UUID::Hasher > AggregateObjectsMap;
   AggregateObjectsMap mAggregateObjects;
-  Time mAggregateGenerationStartTime;
 
   boost::mutex mDirtyAggregatesMutex;
   std::tr1::unordered_map<UUID, AggregateObjectPtr, UUID::Hasher> mDirtyAggregateObjects;
@@ -322,6 +322,7 @@ private:
   boost::mutex mMeshStoreMutex;
   std::tr1::unordered_map<String, Mesh::MeshdataPtr> mMeshStore;
   std::map<int, String> mMeshStoreOrdering;
+  std::tr1::unordered_map<String, int> mMeshStoreOrderingReverse;
   int mCurrentInsertionNumber;
 
   std::tr1::unordered_map<String, Prox::ZernikeDescriptor> mMeshDescriptors;
@@ -337,6 +338,8 @@ private:
   std::tr1::unordered_map<String, String> mTextureNameToHashMap;
   
   void addToInMemoryCache(const String& meshName, const Mesh::MeshdataPtr mdptr);
+  Mesh::MeshdataPtr getMeshFromStore(const String& name);
+
 
   //CDN upload-related variables
   Transfer::OAuthParamsPtr mOAuth;
@@ -412,7 +415,7 @@ private:
 
   //Function related to generating and updating aggregates.
   void updateChildrenTreeLevel(const UUID& uuid, uint16 treeLevel);
-  void addDirtyAggregates(UUID uuid);
+  void addDirtyAggregates(UUID uuid, const Time& curTime);
   void queueDirtyAggregates(Time postTime);
   void generateMeshesFromQueue(uint8 i);
 
