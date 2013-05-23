@@ -3231,25 +3231,11 @@ void MeshAggregateManager::commandStats(const Command::Command& cmd, Command::Co
   }
 
   {
-    // Waiting count -- queued can count more (its how many requests went in,
-    // not necessarily how many are generated), so things won't necessarily
-    // match up with the counts coming out. Waiting counts how many items we
-    // have sitting in a queue for processing, and it'll drop to 0 when things
-    // settle down.
-    uint32 waiting_count = 0;
-    for (uint8 i = 0; i < mNumGenerationThreads; i++) {
-      boost::mutex::scoped_lock queueLock(mObjectsByPriorityLocks[i]);
-      for (std::map<float, std::deque<AggregateObjectPtr> >::iterator it =  mObjectsByPriority[i].begin();
-           it != mObjectsByPriority[i].end(); it++) {
-        waiting_count += it->second.size();
-      }
-    }
     // We might be in the wrong thread (mDirtyAggregateObjects should only be
     // used in the  main strand), but worst case we'll just get incorrect
     // stats.
     boost::mutex::scoped_lock dirtyAggregatesLock(mDirtyAggregatesMutex);
-    waiting_count += mDirtyAggregateObjects.size();
-    result.put("stats.waiting", waiting_count);
+    result.put("stats.waiting", mDirtyAggregateObjects.size());
   }
 
   cmdr->result(cmdid, result);
