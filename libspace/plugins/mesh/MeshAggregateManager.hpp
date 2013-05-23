@@ -216,7 +216,7 @@ private:
       void getSuccessors(uint32 levelsDown, AggregateObjectPtr curNode, std::vector<AggregateObjectPtr>& successorsToFill) {
           boost::mutex::scoped_lock lock(mChildrenMutex);
 
-          //If you've reached a point where the next level of children 
+          //If you've reached a point where the next level of children
           //are the ones requested...
           if (levelsDown == 1 && mChildren.size() > 0) {
             for (uint32 i=0; i < mChildren.size(); i++) {
@@ -224,12 +224,12 @@ private:
             }
             return;
           }
-           
+
           //Otherwise, forward the request after decrementing 'levelsDown'
           for (uint32 i=0; i < mChildren.size(); i++) {
             mChildren[i]->getSuccessors(levelsDown-1, mChildren[i], successorsToFill);
           }
- 
+
           //You would hit this case if the original 'levelsDown' parameter
           //is larger than the depth of the subtree under the originally
           //requesting node.
@@ -311,6 +311,12 @@ private:
 
   boost::mutex mDirtyAggregatesMutex;
   std::tr1::unordered_map<UUID, AggregateObjectPtr, UUID::Hasher> mDirtyAggregateObjects;
+  // Tracks currently uploading objects because the set of dirty and queued
+  // objects aren't enough to determine all stages (unqueued dirty, queued,
+  // generated but still uploading, and finished). Protected by the dirty
+  // aggregates lock because it's almost always modified when that lock is
+  // already taken.
+  std::tr1::unordered_set<UUID, UUID::Hasher> mUploadingObjects;
 
   boost::mutex mQueuedObjectsMutex;
   std::tr1::unordered_map<UUID, std::pair<uint32,uint32>, UUID::Hasher> mQueuedObjects;
@@ -333,10 +339,10 @@ private:
   bool mAtlasingNeeded;
   uint32 mSizeOfSeenTextures;
   std::tr1::unordered_set<String> mSeenTextureHashes;
- 
+
   boost::mutex mTextureNameToHashMapMutex;
   std::tr1::unordered_map<String, String> mTextureNameToHashMap;
-  
+
   void addToInMemoryCache(const String& meshName, const Mesh::MeshdataPtr mdptr);
   Mesh::MeshdataPtr getMeshFromStore(const String& name);
 
@@ -359,7 +365,7 @@ private:
   Network::IOStrand* mUploadStrands[MAX_NUM_UPLOAD_THREADS];
   Network::IOWork* mUploadWorks[MAX_NUM_UPLOAD_THREADS];
   void uploadThreadMain(uint8 i);
-  
+
 
   // Stats.
   // Raw number of aggregate updates that could cause regeneration,
@@ -411,7 +417,7 @@ private:
   void getVertexAndFaceList(Mesh::MeshdataPtr md,
                             std::tr1::unordered_set<Vector3f, Vector3f::Hasher>& positionVectors,
                             std::tr1::unordered_set<FaceContainer, FaceContainer::Hasher>& faceSet, Matrix4x4f&
-                           );     
+                           );
 
   //Function related to generating and updating aggregates.
   void updateChildrenTreeLevel(const UUID& uuid, uint16 treeLevel);
@@ -431,19 +437,19 @@ private:
   uint32 generateAggregateMeshAsync(const UUID uuid, Time postTime, bool generateSiblings = true);
 
 
-  uint32 checkChildrenDirty(const UUID& uuid, 
+  uint32 checkChildrenDirty(const UUID& uuid,
                             const std::vector<AggregateObjectPtr>& children);
 
   uint32 checkLocAndMeshInfo(const UUID& uuid, std::vector<AggregateObjectPtr>& children,
          std::tr1::unordered_map<UUID, std::tr1::shared_ptr<LocationInfo> , UUID::Hasher>& currentLocMap);
 
-  uint32 checkMeshesAvailable(const UUID& uuid, const Time& curTime, 
+  uint32 checkMeshesAvailable(const UUID& uuid, const Time& curTime,
               std::vector<AggregateObjectPtr>& children,
-              std::tr1::unordered_map<UUID, std::tr1::shared_ptr<LocationInfo>, 
+              std::tr1::unordered_map<UUID, std::tr1::shared_ptr<LocationInfo>,
               UUID::Hasher>& currentLocMap,std::tr1::unordered_map<String,Mesh::MeshdataPtr>& );
 
   uint32 checkTextureHashesAvailable(std::vector<AggregateObjectPtr>& children,
-         std::tr1::unordered_map<String, String>& textureToHashMap, 
+         std::tr1::unordered_map<String, String>& textureToHashMap,
          std::tr1::unordered_map<UUID, std::tr1::shared_ptr<LocationInfo> , UUID::Hasher>& currentLocMap,
          std::tr1::unordered_map<String,Mesh::MeshdataPtr>& localMeshStore);
 
@@ -493,7 +499,7 @@ private:
 
   // Command handlers
   void commandStats(const Command::Command& cmd, Command::Commander* cmdr, Command::CommandID cmdid);
-  
+
 
 public:
 

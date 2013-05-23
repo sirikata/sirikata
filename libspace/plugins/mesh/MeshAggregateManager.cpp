@@ -692,7 +692,7 @@ void MeshAggregateManager::addChild(const UUID& uuid, const UUID& child_uuid) {
     agg->addChild(mAggregateObjects[child_uuid]);
 
     updateChildrenTreeLevel(uuid, mAggregateObjects[uuid]->mTreeLevel);
- 
+
     Time curTime = Timer::now();
 
     addDirtyAggregates(child_uuid, curTime);
@@ -890,7 +890,7 @@ void MeshAggregateManager::deduplicateMeshes(UUID aggregateUUID, std::vector<Agg
         AGG_LOG(insane,  (maxDistance - aggToChildDistance)  << "maxDistance - aggToChildDistance");
         AGG_LOG(insane, aggregateUUIDRadius << " agg_radius, " << childUUIDRadius << " childRadius, " <<  maxDistance << " maxDistance");
         AGG_LOG(insane, childSolidAngle <<  " : childSolidAngle");
- 
+
         if (childSolidAngle > FULL_SIZE_SCREENSHOT_SOLID_ANGLE/4.0) continue;
 
         Prox::ZernikeDescriptor zd_j = descriptorReader->getZernikeDescriptor(meshURIs[j]);
@@ -907,7 +907,7 @@ void MeshAggregateManager::deduplicateMeshes(UUID aggregateUUID, std::vector<Agg
         float64 zd_diff = zd_i.minus(zd_j).l2Norm();
 
         float32 zdiffThreshold = 0.001, tdiffThreshold = 10.00;
- 
+
         if (childSolidAngle < FULL_SIZE_SCREENSHOT_SOLID_ANGLE/(4.0*4.0*4.0*4.0*4.0*4.0)) {
           zdiffThreshold = 0.5;
           tdiffThreshold = 500;
@@ -965,14 +965,14 @@ void MeshAggregateManager::deduplicateMeshes(UUID aggregateUUID, std::vector<Agg
   }
 }
 
-uint32 MeshAggregateManager::checkChildrenDirty(const UUID& uuid, 
-                            const std::vector<AggregateObjectPtr>& children) 
+uint32 MeshAggregateManager::checkChildrenDirty(const UUID& uuid,
+                            const std::vector<AggregateObjectPtr>& children)
 {
   boost::mutex::scoped_lock dirtyAggregatesLock(mDirtyAggregatesMutex);
 
   for (uint32 i = 0; i < children.size(); i++) {
     if (mDirtyAggregateObjects.find(children[i]->mUUID) != mDirtyAggregateObjects.end()) {
-      AGG_LOG(info, children[i]->mUUID << " dirty"); 
+      AGG_LOG(info, children[i]->mUUID << " dirty");
       return CHILDREN_NOT_YET_GEN;
     }
   }
@@ -1070,7 +1070,7 @@ uint32 MeshAggregateManager::checkMeshesAvailable(const UUID& uuid, const Time& 
 }
 
 uint32 MeshAggregateManager::checkTextureHashesAvailable(std::vector<AggregateObjectPtr>& children,
-         std::tr1::unordered_map<String, String>& textureToHashMap, 
+         std::tr1::unordered_map<String, String>& textureToHashMap,
          std::tr1::unordered_map<UUID, std::tr1::shared_ptr<LocationInfo> , UUID::Hasher>& currentLocMap,
          std::tr1::unordered_map<String,MeshdataPtr>& localMeshStore)
 {
@@ -1086,7 +1086,7 @@ uint32 MeshAggregateManager::checkTextureHashesAvailable(std::vector<AggregateOb
       }
 
       std::string meshName = currentLocMap[child_uuid]->mesh();
-      MeshdataPtr m = localMeshStore[meshName];      
+      MeshdataPtr m = localMeshStore[meshName];
       if (!m) continue;
 
       for (uint32 j = 0; j < m->textures.size(); j++) {
@@ -1756,7 +1756,10 @@ uint32 MeshAggregateManager::generateAggregateMeshAsync(const UUID uuid, Time po
 
   //uncomment to test performance with no atlasing!
   //doAtlasing = false;  //HACK commented!
-
+  {
+    boost::mutex::scoped_lock dirtyAggregatesLock(mDirtyAggregatesMutex);
+    mUploadingObjects.insert(uuid);
+  }
   if (agg_mesh->textures.size() > 0 && mAtlasingNeeded && doAtlasing) {
     startDownloadsForAtlasing(uuid, agg_mesh, aggObject, localMeshName, textureSet, textureToModelMap);
   }
@@ -2506,11 +2509,12 @@ void MeshAggregateManager::handleUploadFinished(Transfer::UploadRequestPtr reque
     }
 }
 
-void MeshAggregateManager::uploadedSuccessfully(AggregateObjectPtr aggObject, 
-                                                const String& localMeshName) 
+void MeshAggregateManager::uploadedSuccessfully(AggregateObjectPtr aggObject,
+                                                const String& localMeshName)
 {
   AGG_LOG(info, "Uploaded successfully: " << localMeshName << "\n");
   boost::mutex::scoped_lock dirtyAggregatesLock(mDirtyAggregatesMutex);
+  mUploadingObjects.erase(aggObject->mUUID);
   mDirtyAggregateObjects.erase(aggObject->mUUID);
   AGG_LOG(insane, mDirtyAggregateObjects.size() << " : mDirtyAggregateObjects.size");
 }
@@ -2640,7 +2644,7 @@ void MeshAggregateManager::addToInMemoryCache(const String& meshName, const Mesh
   mCurrentInsertionNumber++;
   mMeshStore[meshName] = mdptr;
 
-  if (mMeshStoreOrderingReverse.find(meshName) != mMeshStoreOrderingReverse.end()) 
+  if (mMeshStoreOrderingReverse.find(meshName) != mMeshStoreOrderingReverse.end())
     mMeshStoreOrdering.erase(mMeshStoreOrderingReverse[meshName]);
 
   mMeshStoreOrdering[mCurrentInsertionNumber]=meshName;
@@ -2652,7 +2656,7 @@ MeshdataPtr MeshAggregateManager::getMeshFromStore(const String& meshName) {
 
   if (mMeshStore.find(meshName) != mMeshStore.end()) {
 
-    if (mMeshStoreOrderingReverse.find(meshName) != mMeshStoreOrderingReverse.end()) 
+    if (mMeshStoreOrderingReverse.find(meshName) != mMeshStoreOrderingReverse.end())
       mMeshStoreOrdering.erase(mMeshStoreOrderingReverse[meshName]);
 
     mCurrentInsertionNumber++;
@@ -2698,7 +2702,7 @@ void MeshAggregateManager::queueDirtyAggregates(Time postTime) {
 
     boost::mutex::scoped_lock queuedObjectsLock(mQueuedObjectsMutex);
     boost::mutex::scoped_lock dirtyAggregatesLock(mDirtyAggregatesMutex);
- 
+
     i=0;
     //Add objects to generation queue, ordered by priority.
     for (std::tr1::unordered_map<UUID, AggregateObjectPtr, UUID::Hasher>::iterator it = mDirtyAggregateObjects.begin();
@@ -2710,8 +2714,22 @@ void MeshAggregateManager::queueDirtyAggregates(Time postTime) {
       }
       UUID uuid = aggObject->mUUID;
 
-      //Erase if this uuid is already queued.
-      if (mQueuedObjects.find(uuid) != mQueuedObjects.end()) {
+      // We can be in 3 states: not queued, queued but not generated, or
+      // generated and uploading.
+      bool currently_queued = mQueuedObjects.find(uuid) != mQueuedObjects.end();
+      bool currently_uploading = mUploadingObjects.find(uuid) != mUploadingObjects.end();
+
+      // If it's already uploading, we shouldn't enqueue it again. FIXME we
+      // don't have a way to detect if changes occurred during processing, so
+      // this will end up possibly ignoring some results. We'd need a dirty bit
+      // and only remove from mDirtyAggregateObjects after upload if the dirty
+      // bit was clear.
+      if (currently_uploading)
+        continue;
+
+      // If it's currently queued, erase the existing entry to and reenter it,
+      // making sure the priorities are correct.
+      if (currently_queued) {
         std::pair<uint32, uint32>& threadtreeLevelPair = mQueuedObjects[uuid];
 
         AGG_LOG(insane,  "Found existing uuid: " << uuid
@@ -2734,7 +2752,7 @@ void MeshAggregateManager::queueDirtyAggregates(Time postTime) {
 
       //Now queue it up!
       if (aggObject->mTreeLevel >= 0) {
-        mAggregatesQueued++;
+        if (!currently_queued) mAggregatesQueued++;
         mQueuedObjects[uuid] = std::pair<uint32,uint32>(i, aggObject->mTreeLevel);
 
         mObjectsByPriority[i][  aggObject->mTreeLevel ].push_back(aggObject);
@@ -2793,6 +2811,9 @@ void MeshAggregateManager::generateMeshesFromQueue(uint8 threadNumber) {
         if (returner==GEN_SUCCESS || aggObject->mNumFailedGenerationAttempts > 16) {
           boost::mutex::scoped_lock queuedObjectsLock(mQueuedObjectsMutex);
           mQueuedObjects.erase(aggObject->mUUID);
+          // Note that we've also inserted into mUploadingObjects in the mesh
+          // generation, but must do so there because it needs to occur before
+          // the upload request is sent out
           queuedObjectsLock.unlock();
 
           it->second.pop_front();
@@ -2812,9 +2833,9 @@ void MeshAggregateManager::generateMeshesFromQueue(uint8 threadNumber) {
 
           aggObject->mNumFailedGenerationAttempts = 0;
         }
-        else if (returner != CHILDREN_NOT_YET_GEN) { 
+        else if (returner != CHILDREN_NOT_YET_GEN) {
           aggObject->mNumFailedGenerationAttempts++;
-          numFailedAttempts = aggObject->mNumFailedGenerationAttempts; 
+          numFailedAttempts = aggObject->mNumFailedGenerationAttempts;
         }
 
         break;
