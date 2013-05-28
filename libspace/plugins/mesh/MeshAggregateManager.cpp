@@ -2863,7 +2863,7 @@ void MeshAggregateManager::generateMeshesFromQueue(uint8 threadNumber) {
       if (dur > Duration::microseconds(1.0)) {
         dur = dur + dur/2.0;
       }
-      AGG_LOG(info, aggObject->mUUID << " -- " << dur << " : next event duration\n");
+      AGG_LOG(insane, aggObject->mUUID << " -- " << dur << " : next event duration\n");
       mAggregationStrands[threadNumber]->post(
           dur,
           std::tr1::bind(&MeshAggregateManager::generateMeshesFromQueue, this, threadNumber),
