@@ -72,6 +72,11 @@ struct Rect {
 
     Region region(const Rect& subrect);
     Rect region(const Region& subreg);
+
+    void printString() {
+      std::cout << "(" << min_x << ", " << min_y << " ), (" << max_x << ", " << max_y << ")\n";
+    }
+
 };
 
 // Region is used to define a region of a Rect. It's values are always in the
@@ -111,6 +116,10 @@ struct Region {
         float v_o = min_y + v * height();
         *u_out = min_x + u * width();
         *v_out = min_y + v * height();
+    }
+
+    void printString() {
+      std::cout << "(" << min_x << ", " << min_y << " ), (" << max_x << ", " << max_y << ")\n";
     }
 };
 
@@ -212,6 +221,7 @@ MeshdataPtr TextureAtlasFilter::apply(MeshdataPtr md) {
     for(uint32 tex_i = 0; tex_i < md->textures.size(); tex_i++) {
         String tex_url = md->textures[tex_i];
         String texfile = uri_dir + tex_url;
+        std::cout << file_name << " " << tex_url << " " << texfile << " : ATLAS TEX_INFO\n";
 
         tex_info[tex_url] = TexInfo();
         tex_info[tex_url].url = tex_url;
@@ -279,8 +289,6 @@ MeshdataPtr TextureAtlasFilter::apply(MeshdataPtr md) {
     // OK, create the atlas!!
     float32 atlas_width = maxRowWidth, atlas_height = totalHeight;
 
-    FIBITMAP* atlas = FreeImage_Allocate(atlas_width, atlas_height, 32);
-    
     // The number of pixels we want per atlas. 32768 px at 8 bit RGBA
     // corresponds to 128 KB of texture RAM,
     // 65536 px corresponds to 256 KB of texture RAM and so on.
@@ -289,8 +297,8 @@ MeshdataPtr TextureAtlasFilter::apply(MeshdataPtr md) {
     if (atlas_width * atlas_height > scaled_atlas_pixels)
       largeFactor = sqrtf(atlas_width * atlas_height/scaled_atlas_pixels);
     
-    float32 scaled_atlas_width = atlas_width/largeFactor, 
-            scaled_atlas_height= atlas_height/largeFactor;
+    float32 scaled_atlas_width = ceil(atlas_width/largeFactor), 
+            scaled_atlas_height= ceil(atlas_height/largeFactor);
     FIBITMAP* scaled_atlas = 
               FreeImage_Allocate(scaled_atlas_width, scaled_atlas_height, 32);
 
@@ -298,7 +306,7 @@ MeshdataPtr TextureAtlasFilter::apply(MeshdataPtr md) {
     counter = 0;
     curRowHeight = 0;
     curRowWidth = 0;
-    Rect atlas_rect = Rect::fromBaseOffset(0, 0, atlas_width, atlas_height);
+    Rect atlas_rect = Rect::fromBaseOffset(0, 0, scaled_atlas_width, scaled_atlas_height);
     for(TexInfoMap::iterator tex_it = tex_info.begin(); tex_it != tex_info.end(); tex_it++) {
       TexInfo& tex = tex_it->second;
       if (counter % ntextures_side == 0) {
@@ -320,11 +328,14 @@ MeshdataPtr TextureAtlasFilter::apply(MeshdataPtr md) {
       }
 
       //copy the texture image into the atlas
-      FIBITMAP* resized = FreeImage_Rescale(tex.image, tex_width, tex_height, FILTER_LANCZOS3);
+      FIBITMAP* resized = FreeImage_Rescale(tex.image, tex_width/largeFactor, tex_height/largeFactor, FILTER_LANCZOS3);
 
-      Rect tex_sub_rect = Rect::fromBaseOffset( xLoc, yLoc, tex_width, tex_height );
+      Rect tex_sub_rect = Rect::fromBaseOffset( xLoc/largeFactor, yLoc/largeFactor, tex_width/largeFactor, tex_height/largeFactor );
       tex.atlas_region = atlas_rect.region(tex_sub_rect);
-      FreeImage_Paste(atlas, resized, tex_sub_rect.min_x, tex_sub_rect.min_y, 256);
+      std::cout << file_name; atlas_rect.printString();
+      std::cout << file_name; tex_sub_rect.printString();
+      std::cout << file_name; tex.atlas_region.printString();
+      FreeImage_Paste(scaled_atlas, resized, tex_sub_rect.min_x, tex_sub_rect.min_y, 256);
 
       FreeImage_Unload(resized);
       FreeImage_Unload(tex_it->second.image);
@@ -338,13 +349,9 @@ MeshdataPtr TextureAtlasFilter::apply(MeshdataPtr md) {
     }
 
     // Generate the final, scaled-to-fit-on-GPU-memory texture atlas
-    FIBITMAP* resized = FreeImage_Rescale(atlas, scaled_atlas_width, scaled_atlas_height, FILTER_LANCZOS3);
-    FreeImage_Paste(scaled_atlas, resized, 0, 0, 256);
 
     String atlas_url = uri_dir + file_name + ".atlas.png";
     FreeImage_Save(FIF_PNG, scaled_atlas, atlas_url.c_str());
-    FreeImage_Unload(resized);
-    FreeImage_Unload(atlas);
     FreeImage_Unload(scaled_atlas);
 
     // Now we need to run through and fix up texture references and texture
@@ -366,7 +373,8 @@ MeshdataPtr TextureAtlasFilter::apply(MeshdataPtr md) {
         // the coordinates.
         for(uint32 tex_set_idx = 0; tex_set_idx < submesh.texUVs.size(); tex_set_idx++) {
             SubMeshGeometry::TextureSet& tex_set = submesh.texUVs[tex_set_idx];
-            std::vector<float> new_uvs = tex_set.uvs;
+            std::vector<float> new_uvs; //= tex_set.uvs;
+            for (uint32 x=0; x < tex_set.uvs.size(); x++) new_uvs.push_back(0.32833283);
 
             // Each prim defines a material mapping, so we need to split the
             // texture coordinates up by prim.
@@ -389,7 +397,11 @@ MeshdataPtr TextureAtlasFilter::apply(MeshdataPtr md) {
                 // ensures we catch everything.
                 for(uint32 mat_tex_idx = 0; mat_tex_idx < mat.textures.size(); mat_tex_idx++) {
                     MaterialEffectInfo::Texture& real_tex = mat.textures[mat_tex_idx];
-                    if (tex_info.find(real_tex.uri) == tex_info.end()) continue;
+                    if (tex_info.find(real_tex.uri) == tex_info.end()) { 
+                      std::cout << file_name << " continuing: " << real_tex.uri << "\n";
+                      continue;
+                    }
+                    std::cout << file_name << " has " << real_tex.uri << "\n";
                     TexInfo& final_tex_info = tex_info[real_tex.uri];
 
                     for(uint32 index_idx = 0; index_idx < prim.indices.size(); index_idx++) {
@@ -410,10 +422,12 @@ MeshdataPtr TextureAtlasFilter::apply(MeshdataPtr md) {
                             (1.f-old_v), // inverted
                                                                            // v coords
                             &new_u, &new_v);
+                        std::cout << file_name; final_tex_info.atlas_region.printString(); 
+                        std::cout << file_name; std::cout << old_u << ", " << (1.0-old_v) << ": OLD\n";
+                        std::cout << file_name; std::cout << new_u << ", " << new_v << " : NEW\n";
                         new_uvs[ index * tex_set.stride ] = new_u;
                         new_uvs[ index * tex_set.stride + 1 ] = 1.f - new_v; // inverted
                                                                              // v coords
-
                     }
                 }
             }

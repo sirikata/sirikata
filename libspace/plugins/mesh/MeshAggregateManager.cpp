@@ -750,7 +750,7 @@ void MeshAggregateManager::removeChild(const UUID& uuid, const UUID& child_uuid)
 }
 
 void MeshAggregateManager::aggregateObserved(const UUID& objid, uint32 nobservers, uint32 nchildren) {
-  return;
+ return; 
 
   //The following code is only for experimental purposes: to measure the total
   //size of all objects in a cut. So it's safe to return immediately.
@@ -794,7 +794,7 @@ void MeshAggregateManager::aggregateObserved(const UUID& objid, uint32 nobserver
       //    "MeshAggregateManager::showCutErrorSum");
     }
 
-    /*
+    
     std::cout << mErrorSum << " : new error\n";
     std::cout << mSizeSum << " : new size\n";
     fflush(stdout);
@@ -804,7 +804,7 @@ void MeshAggregateManager::aggregateObserved(const UUID& objid, uint32 nobserver
     std::cout << "Observed tree level " << aggObj->mTreeLevel << "_"
               << aggObj->mUUID  <<  " : nobservers=" <<  nobservers << "\n";
 
-    if (aggObj->mParentUUIDs.begin() != aggObj->mParentUUIDs.end()) {
+    /*if (aggObj->mParentUUIDs.begin() != aggObj->mParentUUIDs.end()) {
 
       for (std::set<UUID>::iterator it = aggObj->mParentUUIDs.begin();
            it != aggObj->mParentUUIDs.end();  it++)
@@ -952,7 +952,8 @@ void MeshAggregateManager::deduplicateMeshes(UUID aggregateUUID, std::vector<Agg
 
             if (isMatrixIdentity(new_mat_test)) {
               AGG_LOG(info, "In " << aggregateUUID  << " Replacing " << meshURIs[j]  << " with " << meshURIs[i] << " -- " <<
-                           "zdiff: " << zd_diff << " , tdiff: "<< td_diff  << " : " << alignmentTransform );
+                           "zdiff: " << zd_diff << " , tdiff: "<< td_diff << " , csolidangle: " 
+                            << childSolidAngle  << " : " << alignmentTransform);
 
               replacementAlignmentTransforms[j] = alignmentTransform;
               replacedURI[j] = true;
@@ -1308,9 +1309,9 @@ uint32 MeshAggregateManager::generateAggregateMeshAsync(const UUID uuid, Time po
 
   bool isLeafAggregate = true;
   //check if its a leaf aggregate
+  lock.lock();
   for (uint32 i= 0; isLeafAggregate && i < children.size(); i++) {
     UUID child_uuid = children[i]->mUUID;
-    boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
     if (mAggregateObjects.find(child_uuid) != mAggregateObjects.end() &&
         mAggregateObjects[child_uuid]->childrenSize() != 0)
     {
@@ -1318,11 +1319,12 @@ uint32 MeshAggregateManager::generateAggregateMeshAsync(const UUID uuid, Time po
         break;
     }
   }
+  lock.unlock();
 
   //FIXME: uncomment this to generate aggregates from two levels down instead
   //of one.
-  //children.clear();
-  //aggObject->getSuccessors(2, aggObject, children);
+  children.clear();
+  aggObject->getSuccessors(3, aggObject, children);
 
   //FIXME: the debug level should be insane, not info
   AGG_LOG(info, aggObject->mTreeLevel << "_" << aggObject->mUUID << " has children: ");
@@ -1362,8 +1364,22 @@ uint32 MeshAggregateManager::generateAggregateMeshAsync(const UUID uuid, Time po
   std::tr1::unordered_map<std::string, uint32> meshToStartLightIdxMapping;
   std::tr1::unordered_map<std::string, uint32> meshToStartNodeIdxMapping;
 
+
+  bool hasIndividualObjectChildren = true;
+  lock.lock();
+  //check if its a leaf aggregate
+  for (uint32 i= 0; i < children.size(); i++) {
+    UUID child_uuid = children[i]->mUUID;
+    if (mAggregateObjects.find(child_uuid) != mAggregateObjects.end() &&
+        mAggregateObjects[child_uuid]->childrenSize() != 0)
+    {
+        hasIndividualObjectChildren = false;
+        break;
+    }
+  }
+  lock.unlock();
   std::tr1::unordered_map<String, String> textureToHashMap;
-  if (isLeafAggregate)
+  if (hasIndividualObjectChildren)
   {
     retval = checkTextureHashesAvailable(children, textureToHashMap, currentLocMap, localMeshStore);
     if (retval != 0)
@@ -1383,6 +1399,12 @@ uint32 MeshAggregateManager::generateAggregateMeshAsync(const UUID uuid, Time po
   }
 
   deduplicateMeshes(uuid, children, isLeafAggregate, meshURIs, replacementAlignmentTransforms, currentLocMap);
+
+  /*delete [] meshURIs;
+
+  uploadedSuccessfully(aggObject, uuid.toString() + ".dae");
+
+  return GEN_SUCCESS; */
 
   {
     boost::mutex::scoped_lock textureToHashMapLock(mTextureNameToHashMapMutex);
@@ -1699,6 +1721,34 @@ uint32 MeshAggregateManager::generateAggregateMeshAsync(const UUID uuid, Time po
       agg_mesh->textures.push_back( it->second );
       allTextures += it->second + " , ";
   }
+  for(MaterialEffectInfoList::iterator mat_it = agg_mesh->materials.begin(); 
+     mat_it != agg_mesh->materials.end(); mat_it++) {
+      for(MaterialEffectInfo::TextureList::iterator tex_it = mat_it->textures.begin(); 
+         tex_it != mat_it->textures.end(); tex_it++) {
+          if (!tex_it->uri.empty()) {
+            String url = tex_it->uri;
+
+	    size_t indexOfLastSlash = url.find_last_of('/');
+	    if (indexOfLastSlash == url.npos) {
+        	continue;
+	    }
+
+	    String substrUrl = url.substr(0, indexOfLastSlash);
+
+	    indexOfLastSlash = substrUrl.find_last_of('/');
+	    if (indexOfLastSlash == substrUrl.npos) {
+	        continue;
+	    }
+
+	    String texfilename = substrUrl.substr(indexOfLastSlash+1);
+            if (texFileNameToUrl.find(texfilename) != texFileNameToUrl.end()) {
+              tex_it->uri = texFileNameToUrl[texfilename];
+              std::cout << url << " " << tex_it->uri << ": REPLACING TEXTURE\n";
+            }
+	  }
+      }
+  }
+
 
   for (uint32 i= 0; i < children.size(); i++) {
     UUID child_uuid = children[i]->mUUID;
@@ -2109,7 +2159,7 @@ void MeshAggregateManager::textureDownloadedForCounting(String texname, uint32 r
       AGG_LOG(insane, mSeenTextureHashes.size() << " : mSeenTextureHashes.size()\n");
       if (!mAtlasingNeeded && (mSeenTextureHashes.size() > 128 || mSizeOfSeenTextures > 64*1048576)) {
         mAtlasingNeeded = true;
-        AGG_LOG(insane, "ATLASING NEEDED\n");
+        AGG_LOG(info, "ATLASING NEEDED\n");
       }
     }
     boost::mutex::scoped_lock mTextureNameToHashMapLock(mTextureNameToHashMapMutex);
@@ -2640,7 +2690,7 @@ void MeshAggregateManager::addToInMemoryCache(const String& meshName, const Mesh
     }
   }
 
-  AGG_LOG(insane, "Inserting to meshstore: " << meshName);
+  AGG_LOG(info, "Inserting to meshstore: " << meshName);
   mCurrentInsertionNumber++;
   mMeshStore[meshName] = mdptr;
 
@@ -2784,12 +2834,12 @@ void MeshAggregateManager::generateMeshesFromQueue(uint8 threadNumber) {
     boost::mutex::scoped_lock lock(mObjectsByPriorityLocks[threadNumber]);
     if (noMoreGeneration) return;
 
-
     //Generate the aggregates from the priority queue.
     Time curTime = (mObjectsByPriority[threadNumber].size() > 0) ? Timer::now() : Time::null();
     uint32 returner = NEWER_REQUEST;
     uint32 numFailedAttempts = 1;
     bool noObjectsToGenerate = true;
+    bool tooEarlyToGenerate = true;
     std::tr1::shared_ptr<AggregateObject> aggObject;
     for (std::map<float, std::deque<AggregateObjectPtr> >::reverse_iterator it =  mObjectsByPriority[threadNumber].rbegin();
          it != mObjectsByPriority[threadNumber].rend(); it++)
@@ -2799,12 +2849,13 @@ void MeshAggregateManager::generateMeshesFromQueue(uint8 threadNumber) {
         aggObject = it->second.front();
         numFailedAttempts = aggObject->mNumFailedGenerationAttempts;
 
-        AGG_LOG(insane,  "Top " << ((uint32)threadNumber) << " : " << aggObject->mTreeLevel << "_" << aggObject->mUUID << "\n");
+        //AGG_LOG(info,  "Top " << ((uint32)threadNumber) << " : " << aggObject->mTreeLevel << "_" << aggObject->mUUID <<  " -- curTime " << (curTime.raw()) << "-- aggObject->mAggregateGenerationStartTime : " << aggObject->mAggregateGenerationStartTime.raw()  );
 
         if (aggObject->generatedLastRound || curTime < aggObject->mAggregateGenerationStartTime){
           continue;
         }
 
+        tooEarlyToGenerate = false;
         returner=generateAggregateMeshAsync(aggObject->mUUID, curTime, false);
         AGG_LOG(insane, "returner: " << returner << " for " << aggObject->mUUID << "\n");
 
@@ -2855,15 +2906,17 @@ void MeshAggregateManager::generateMeshesFromQueue(uint8 threadNumber) {
         dur = Duration::milliseconds(500.0);
       }
       else { // need to back off for all other causes
-        dur = Duration::milliseconds(5.0*pow(2.f,(float)numFailedAttempts));
+        dur = Duration::milliseconds(250.0 + 5.0*pow(2.f,(float)numFailedAttempts));
       }
 
-      aggObject->mAggregateGenerationStartTime = curTime + dur;
+      if (!tooEarlyToGenerate) {
+        aggObject->mAggregateGenerationStartTime = curTime + dur;
+      }
 
       if (dur > Duration::microseconds(1.0)) {
         dur = dur + dur/2.0;
       }
-      AGG_LOG(insane, aggObject->mUUID << " -- " << dur << " : next event duration\n");
+      //AGG_LOG(info, aggObject->mUUID << " -- " << dur << " : next event duration");
       mAggregationStrands[threadNumber]->post(
           dur,
           std::tr1::bind(&MeshAggregateManager::generateMeshesFromQueue, this, threadNumber),
