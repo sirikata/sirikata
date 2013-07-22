@@ -94,11 +94,6 @@ template<typename EndpointType, typename StreamType>
 void LibproxProximityBase::ProxStreamInfo<EndpointType, StreamType>::requestProxSubstream(LibproxProximityBase* parent, Context* ctx, const EndpointType& ep, Ptr prox_stream) {
     using std::tr1::placeholders::_1;
 
-    // Always mark this up front. This keeps further requests from
-    // occuring since the first time this method is entered, even if
-    // the request is deferred, should eventually result in a stream.
-    prox_stream->iostream_requested = true;
-
     // We need to check for a valid session here. This can be necessary because
     // we may have gotten a base session, registered a query, gotten results,
     // started to try returning them and had to wait for the base stream to the
@@ -109,6 +104,12 @@ void LibproxProximityBase::ProxStreamInfo<EndpointType, StreamType>::requestProx
     // process in this unusual case of a very short lived connection to the
     // space.
     if (!parent->validSession(ep)) return;
+
+    // Always mark this up front. This keeps further requests from
+    // occuring since the first time this method is entered, even if
+    // the request is deferred, should eventually result in a stream.
+    prox_stream->iostream_requested = true;
+
 
     StreamTypePtr base_stream = parent->getBaseStream(ep);
     if (!base_stream) {
