@@ -650,6 +650,7 @@ void MeshSimplifier::simplify(Mesh::MeshdataPtr agg_mesh, int32 targetFaces) {
           geomsVertexToFacesMap[idx2].push_back(faceIndex);
           geomsVertexToFacesMap[idx3].push_back(faceIndex);
 
+          if (duplicateFaces.find(origface) != duplicateFaces.end()) continue;
 
           GeomPairContainer gpc1(i, idx, idx2, -1);
           GeomPairContainer gpc2(i, idx2, idx3, -1);
@@ -820,11 +821,12 @@ void MeshSimplifier::simplify(Mesh::MeshdataPtr agg_mesh, int32 targetFaces) {
           Qmat=transform.transpose()*Qmat*transform;
           positionQs[idx]+=Qmat;
           positionQs[idx3]+=Qmat;
-        }
+        } 
       }
     }
   }
 
+  //targetFaces = countFaces/2.0;
   SIMPLIFY_LOG(warn, "countFaces = " << countFaces);
   SIMPLIFY_LOG(warn, "targetFaces = " << targetFaces);
   if (targetFaces < countFaces) {
@@ -976,11 +978,6 @@ void MeshSimplifier::simplify(Mesh::MeshdataPtr agg_mesh, int32 targetFaces) {
           indices.push_back(counter+1);
           indices.push_back(counter+2);
           counter += 3;
-
-          /*std::cout << "Adding " <<  counter << "\n";
-          std::cout << "Adding " << curGeometry.positions[idx]
-                    << " " << curGeometry.positions[idx2] 
-                    << " " << curGeometry.positions[idx3] << "\n";*/
 
           positions.push_back(pos1);
           positions.push_back(pos2);
