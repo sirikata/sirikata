@@ -196,9 +196,8 @@ private:
   Sirikata::Mesh::MeshSimplifier mMeshSimplifier;
   boost::mutex mCenteringFilterMutex;
   Sirikata::Mesh::Filter* mCenteringFilter;
+ 
 
-  boost::mutex mSquashFilterMutex;
-  Sirikata::Mesh::Filter* mSquashFilter;
 
   struct AggregateObject;
   typedef std::tr1::shared_ptr<AggregateObject> AggregateObjectPtr;
@@ -418,6 +417,7 @@ private:
                             std::tr1::unordered_set<Vector3f, Vector3f::Hasher>& positionVectors,
                             std::tr1::unordered_set<FaceContainer, FaceContainer::Hasher>& faceSet, Matrix4x4f&
                            );
+  float32 computeSpatialCorrelation(); 
 
   //Function related to generating and updating aggregates.
   void updateChildrenTreeLevel(const UUID& uuid, uint16 treeLevel);
@@ -457,7 +457,7 @@ private:
                                                  std::tr1::unordered_map<String, String>& textureSet,
                                                  std::tr1::unordered_map<String, Mesh::MeshdataPtr>& textureToModelMap);
   void replaceCityEngineTextures(Mesh::MeshdataPtr m) ;
-  void deduplicateMeshes(UUID aggregateUUID, std::vector<AggregateObjectPtr>& children, bool isLeafAggregate,
+  void deduplicateMeshes(uint32 treelevel, UUID aggregateUUID, std::vector<AggregateObjectPtr>& children, bool isLeafAggregate,
                        String* meshURIs, std::vector<Matrix4x4f>& replacementAlignmentTransforms,
                        std::tr1::unordered_map<UUID, std::tr1::shared_ptr<LocationInfo> , UUID::Hasher>& currentLocMap);
 
