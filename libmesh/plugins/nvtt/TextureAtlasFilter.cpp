@@ -297,14 +297,11 @@ MeshdataPtr TextureAtlasFilter::apply(MeshdataPtr md) {
         tex_info[tex_url].orig_size = Rect::fromBaseOffset(0, 0, width, height);
     }
 
+    //Count how many times the UV-coords for each texture wrap-around.
     for(uint32 geo_idx = 0; geo_idx < md->geometry.size(); geo_idx++) {
-      // Each submesh has texUVs that need updating                                                      
       SubMeshGeometry& submesh = md->geometry[geo_idx];
 
-      // We need to modify each texture coordinate set in this geometry. We
-      // put this as the outer loop so we replace the entire uv set with a                                 
-      // new, filtered copy so we make sure we don't double-transform any of          
-      // the coordinates.                                                                                
+      // We need to iterate over each texture coordinate set in this geometry. 
       for(uint32 tex_set_idx = 0; tex_set_idx < submesh.texUVs.size(); tex_set_idx++) {
         SubMeshGeometry::TextureSet& tex_set = submesh.texUVs[tex_set_idx];
         std::vector<float> new_uvs = tex_set.uvs;
@@ -321,13 +318,9 @@ MeshdataPtr TextureAtlasFilter::apply(MeshdataPtr md) {
           // that there were no conflicts.
           int mat_idx = tex_set_materials[tex_set_hash];
 
-          // Finally, having extracted all the material mapping info, we                             
-          // can loop through referenced indices and transform them.                                 
           MaterialEffectInfo& mat = md->materials[mat_idx];
 
-          // Do transformation for each texture that has a URI. Some may                             
-          // be duplicates, some may not have a URI, but doing them all                              
-          // ensures we catch everything.                                                            
+          // Find the maximum and minimum UV-coord values for each texture.
           for(uint32 mat_tex_idx = 0; mat_tex_idx < mat.textures.size(); mat_tex_idx++) {
             MaterialEffectInfo::Texture& real_tex = mat.textures[mat_tex_idx];
             if (tex_info.find(real_tex.uri) == tex_info.end()) continue;
@@ -357,6 +350,7 @@ MeshdataPtr TextureAtlasFilter::apply(MeshdataPtr md) {
       }
     }
 
+    //Get all the colors referenced by the model
     std::vector<Vector4f> colorList;
     getColors(md, colorList);
 
