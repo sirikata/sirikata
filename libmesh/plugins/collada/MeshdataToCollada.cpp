@@ -119,59 +119,68 @@ const String PARAM_TYPE_WEIGHT = "WEIGHT";
 
     }
 
-    void exportMaterial(const Meshdata& meshdata, std::map<std::string, int>& textureURIToEffectIndexMap, std::map<int, int>& materialRedirectionMap) {
+    void exportMaterial(const Meshdata& meshdata, std::map<std::string, int>& textureURIToEffectIndexMap, std::map<int, int>& materialRedirectionMap, std::map<uint32, bool>& effectAddedMap) {
       openLibrary();
 
       for (uint32 i=0; i < meshdata.materials.size(); i++) {
         //FIXME: this assumes all the texture URIs are the same in materials[i].textures
-        if (meshdata.materials[i].textures.size() == 0) continue;
- 
-        uint32 j = 0;
+
+        if (effectAddedMap[i]) {
+	  char effectNameStr[256];
+	  sprintf(effectNameStr, "material%d", i);
+	  std::string effectName = effectNameStr;
+	  std::string materialName = effectName + "ID";
+	  openMaterial(materialName, COLLADABU::Utils::checkNCName(materialName) );
+	
+	  addInstanceEffect("#" + effectName + "-effect");
+	
+	  closeMaterial();
+        }
+
+        uint32 j = 0; 
         for (j = 0; j < meshdata.materials[i].textures.size(); j++) {
           const MaterialEffectInfo::Texture& texture = meshdata.materials[i].textures[j];
-          if (!texture.uri.empty()) {
-            break;
-          }
+	  if (!texture.uri.empty()) {
+	    break;
+	  }
+	}
+	if (j == meshdata.materials[i].textures.size() ) {
+	  j = 0;
+	}
+	else {
+          const MaterialEffectInfo::Texture& texture = meshdata.materials[i].textures[j];
+          String textureFileName = texfilename(texture.uri);
+
+	  materialRedirectionMap[i] = textureURIToEffectIndexMap[textureFileName];
+	  continue;
         }
-        if (j == meshdata.materials[i].textures.size()) j = 0;
 
-        const MaterialEffectInfo::Texture& texture = meshdata.materials[i].textures[j];
-	String textureFileName = texfilename(texture.uri);
-        if (textureURIToEffectIndexMap.find(textureFileName) != textureURIToEffectIndexMap.end() &&
-            textureURIToEffectIndexMap[textureFileName] != (int32)i
-           )
-          {
-            materialRedirectionMap[i] = textureURIToEffectIndexMap[textureFileName];
-            continue;
-          }
+        for (;j < meshdata.materials[i].textures.size(); j++) {
+          const MaterialEffectInfo::Texture& texture = meshdata.materials[i].textures[j];
+      	  String textureFileName = texfilename(texture.uri);
 
-        if (texture.uri == "") {
-          char colorEncodingStr[512];
-          sprintf(colorEncodingStr, "%f %f %f %f %d", texture.color.x, texture.color.y,
+          if (texture.uri == "") {
+            char colorEncodingStr[512];
+            sprintf(colorEncodingStr, "%f %f %f %f %d", texture.color.x, texture.color.y,
                    texture.color.z, texture.color.w, texture.affecting);
-          String colorEncoding = colorEncodingStr;
+            String colorEncoding = colorEncodingStr;
 
-          if (textureURIToEffectIndexMap.find(colorEncoding) != textureURIToEffectIndexMap.end() &&
+            if (textureURIToEffectIndexMap.find(colorEncoding) != textureURIToEffectIndexMap.end() &&
               textureURIToEffectIndexMap[colorEncoding] != (int32)i
-              )
+            )
             {
-              materialRedirectionMap[i] = textureURIToEffectIndexMap[colorEncoding];
+              if (materialRedirectionMap.find(i) == materialRedirectionMap.end()) {
+                materialRedirectionMap[i] = textureURIToEffectIndexMap[colorEncoding];
+              }
+ 
               continue;
             }
+          }
+
+          if (effectAddedMap[i]) {
+            materialRedirectionMap[i] = i;
+          }
         }
-
-
-        materialRedirectionMap[i] = i;
-        char effectNameStr[256];
-        sprintf(effectNameStr, "material%d", i);
-        std::string effectName = effectNameStr;
-        std::string materialName = effectName + "ID";
-        openMaterial(materialName, COLLADABU::Utils::checkNCName(materialName) );
-
-        addInstanceEffect("#" + effectName + "-effect");
-
-        closeMaterial();
-        
       }
 
       closeLibrary();
@@ -187,12 +196,14 @@ const String PARAM_TYPE_WEIGHT = "WEIGHT";
 
 
     void exportEffect(COLLADASW::StreamWriter*  streamWriter, const Meshdata& meshdata, std::map<String,int>& textureList,
-                      std::map<std::string, int>& textureURIToEffectIndexMap)
+                      std::map<std::string, int>& textureURIToEffectIndexMap,
+                      std::map<uint32, bool>& effectAddedMap)
     {
         openLibrary();
 
         for (uint32 i=0; i < meshdata.materials.size(); i++) {
           COLLADASW::EffectProfile effectProfile(streamWriter);
+          effectAddedMap[i] = false;
 
           bool effectProfileEmpty = true;
           bool effectHasDiffuse = false, effectHasSpecular = false, effectHasAmbient = false,
@@ -251,11 +262,9 @@ const String PARAM_TYPE_WEIGHT = "WEIGHT";
                  continue;
               }
 
-
               colorOrTexture = COLLADASW::ColorOrTexture( COLLADASW::Color(texture.color.x, texture.color.y,
                                                                            texture.color.z, texture.color.w));
             }
-
 
 
             switch(texture.affecting) {
@@ -316,13 +325,14 @@ const String PARAM_TYPE_WEIGHT = "WEIGHT";
 
             // Select the type of shader based on the affected channels and
             // possibly set a few extra parameters
-            if (effectHasSpecular) {
+            if (effectHasDiffuse) {
+                effectProfile.setShaderType(COLLADASW::EffectProfile::LAMBERT);
+            }
+            else if (effectHasSpecular) {
                 effectProfile.setShininess(meshdata.materials[i].shininess);
                 effectProfile.setReflectivity(meshdata.materials[i].reflectivity);
                 effectProfile.setShaderType(COLLADASW::EffectProfile::PHONG);
-            }
-            else if (effectHasDiffuse) {
-                effectProfile.setShaderType(COLLADASW::EffectProfile::LAMBERT);
+
             }
             else {
                 assert(effectHasEmission || effectHasOpacity || effectHasReflective || effectHasAmbient);
@@ -333,6 +343,7 @@ const String PARAM_TYPE_WEIGHT = "WEIGHT";
             addEffectProfile(effectProfile);
 
             closeEffect();
+            effectAddedMap[i] = true;
           }
           else {
 
@@ -1114,13 +1125,14 @@ int meshdataToCollada(const Meshdata& meshdata, const std::string& fileName) {
 
 
         std::map<std::string, int> textureURIToEffectIndexMap;
+        std::map<uint32, bool> effectAddedMap;
         EffectExporter effectExporter(&streamWriter);
-        effectExporter.exportEffect(&streamWriter, meshdata, texturesList, textureURIToEffectIndexMap);
+        effectExporter.exportEffect(&streamWriter, meshdata, texturesList, textureURIToEffectIndexMap, effectAddedMap);
 
 
         std::map<int, int> materialRedirectionMap;
         MaterialExporter materialExporter(&streamWriter);
-        materialExporter.exportMaterial( meshdata, textureURIToEffectIndexMap, materialRedirectionMap);
+        materialExporter.exportMaterial( meshdata, textureURIToEffectIndexMap, materialRedirectionMap, effectAddedMap);
 
 
         std::map<int,bool> addedGeometriesList;
