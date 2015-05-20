@@ -43,33 +43,37 @@
 
 class FileReader : public Sirikata::DecoderReader {
     FILE * fp;
-    std::vector<uint8_t> magic;
+    std::vector<uint8_t, Sirikata::JpegAllocator<uint8_t> > magic;
     unsigned int magicread;
 public:
-    FileReader(FILE * ff, const std::vector<uint8_t> &magi) : magic(magi){
+    FileReader(FILE * ff,
+               const std::vector<uint8_t, Sirikata::JpegAllocator<uint8_t> > &magi)
+            : magic(magi){
         fp = ff;
         magicread = 0;
     }
     std::pair<Sirikata::uint32, Sirikata::JpegError> Read(Sirikata::uint8*data, unsigned int size) {
         using namespace Sirikata;
         signed long nread = 0;
-        if (magicread < magic.length()) {
-            unsigned int amnt_to_copy = std::min((unsigned int)magic.length() + magicread, size);
+        if (magicread < magic.size()) {
+            unsigned int amnt_to_copy = std::min((unsigned int)magic.size() + magicread, size);
             memcpy(data, magic.data() + magicread, amnt_to_copy);
             magicread += size;
             nread += amnt_to_copy;
         }
         nread += fread(data + nread, 1, size - nread, fp);
         if (nread <= 0) {
-            return std::pair<Sirikata::uint32, JpegError>(0, JpegError("Short read"));
+            return std::pair<Sirikata::uint32, JpegError>(0, JpegError("Short read", magic.get_allocator()));
         }
         return std::pair<Sirikata::uint32, JpegError>(nread, JpegError::nil());
     }
 };
 class FileWriter : public Sirikata::DecoderWriter {
+    Sirikata::JpegAllocator<uint8_t> mAllocator;
     FILE * fp;
 public:
-    FileWriter(FILE * ff){
+    FileWriter(FILE * ff,
+               const Sirikata::JpegAllocator<uint8_t> &alloc): mAllocator(alloc){
         fp = ff;
     }
     void Close() {
@@ -80,7 +84,7 @@ public:
         using namespace Sirikata;
         signed long nwritten = fwrite(data, size, 1, fp);
         if (nwritten == 0) {
-            return std::pair<Sirikata::uint32, JpegError>(0, JpegError("Short write"));
+            return std::pair<Sirikata::uint32, JpegError>(0, JpegError("Short write", mAllocator));
         }
         return std::pair<Sirikata::uint32, JpegError>(size, JpegError::nil());
     }
@@ -113,8 +117,9 @@ int main(int argc, char **argv) {
     if (argc > 2) {
         output = fopen(argv[2], "wb");
     }
-    FileReader reader(input, std::vector<uint8_t>(magic, magic + 4));
-	FileWriter writer(output);
+    JpegAllocator<uint8_t> alloc;
+    FileReader reader(input, std::vector<uint8_t, JpegAllocator<uint8_t> >(magic, magic + 4, alloc));
+	FileWriter writer(output, alloc);
 
     bool coalesceYCr = false;
     bool coalesceYCb = false;
@@ -132,14 +137,14 @@ int main(int argc, char **argv) {
 	}
 
     if (isJpeg) {
-     	err = CompressJPEGtoARHC(reader, writer, componentCoalescing);   
+     	err = CompressJPEGtoARHC(reader, writer, componentCoalescing, alloc);   
     } else if (isXz){
-        err = Decompress7ZtoAny(reader, writer);
+        err = Decompress7ZtoAny(reader, writer, alloc);
     } else if (isArhc) {
-     	err = DecompressARHCtoJPEG(reader, writer);
+     	err = DecompressARHCtoJPEG(reader, writer, alloc);
     } else {
         assert(unknown);
-        err = CompressAnyto7Z(reader, writer);
+        err = CompressAnyto7Z(reader, writer, alloc);
     }
     if (err) {
         fprintf(stderr, "Error Encountered %s\n", err.what());

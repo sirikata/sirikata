@@ -42,10 +42,6 @@
 
 namespace Sirikata {
 
-// errShortHuffmanData means that an unexpected EOF occurred while decoding
-// Huffman data.
-JpegError errShortHuffmanData("short Huffman data");
-
 // ensureNBits reads bytes from the byte buffer to ensure that d.bits.n is at
 // least n. For best performance (avoiding function calls inside hot loops),
 // the caller is the one responsible for first checking that d.bits.n < n.
@@ -54,8 +50,8 @@ JpegError Decoder::ensureNBits(int32 n) {
 	while (true) {
 		uint8E cErr = d.readByteStuffedByte();
         if (cErr.second != JpegError::nil()) {
-			if (cErr.second == JpegError::errEOF()) {
-                return errShortHuffmanData;
+			if (cErr.second == JpegError::errEOF(mAllocator)) {
+                return JpegError::errShortHuffmanData(mAllocator);
 			}
 			return cErr.second;
 		}
@@ -120,7 +116,7 @@ JpegError Decoder::processDHT(int n) {
     Decoder &d = *this;
     while (n > 0) {
         if (n < 17) {
-            return JpegErrorFormatError("DHT has wrong length");
+            return JpegErrorFormatError("DHT has wrong length", mAllocator);
 		}
         {
             JpegError err;
@@ -130,11 +126,11 @@ JpegError Decoder::processDHT(int n) {
         }
         uint8 tc = d.tmp[0] >> 4;
 		if (tc > maxTc) {
-			return JpegErrorFormatError("bad Tc value");
+			return JpegErrorFormatError("bad Tc value", mAllocator);
 		}
         uint8 th = d.tmp[0] & 0x0f;
         if (th > maxTh || (th > 1 && !d.progressive)) {
-            return JpegErrorFormatError("bad Th value");
+            return JpegErrorFormatError("bad Th value", mAllocator);
 		}
         huffman &h = d.huff[tc][th];
 
@@ -148,14 +144,14 @@ JpegError Decoder::processDHT(int n) {
 			h.nCodes += nCodes[i];
 		}
 		if (h.nCodes == 0) {
-			return JpegErrorFormatError("Huffman table has zero length");
+			return JpegErrorFormatError("Huffman table has zero length", mAllocator);
 		}
 		if (h.nCodes > huffman::maxNCodes) {
-			return JpegErrorFormatError("Huffman table has excessive length");
+			return JpegErrorFormatError("Huffman table has excessive length", mAllocator);
 		}
 		n -= int(h.nCodes) + 17;
 		if (n < 0) {
-			return JpegErrorFormatError("DHT has wrong length");
+			return JpegErrorFormatError("DHT has wrong length", mAllocator);
 		}
         {
             JpegError err;
@@ -239,13 +235,13 @@ Decoder::uint8E Decoder::decodeHuffman(huffman *h, int32 zig, int component) {
 		return uint8E(uint8(unhuffmanValueErr.first), unhuffmanValueErr.second);
 	}
 	if (h->nCodes == 0) {
-        return uint8E(0, JpegErrorFormatError("uninitialized Huffman table"));
+        return uint8E(0, JpegErrorFormatError("uninitialized Huffman table", mAllocator));
 	}
 
 	if (d.bits.n < 8) {
         JpegError err;
 		if ((err = d.ensureNBits(8)) != JpegError::nil()) {
-			if (err != JpegError::errMissingFF00() && err != JpegError::errShortHuffmanData()) {
+			if (err != JpegError::errMissingFF00(mAllocator) && err != JpegError::errShortHuffmanData(mAllocator)) {
 				return uint8E(0, err);
 			}
 			// There are no more bytes of data in this segment, but we may still
@@ -309,7 +305,7 @@ slowPath:
 		}
 		code <<= 1;
 	}
-	return uint8E(0, JpegErrorFormatError("bad Huffman code"));
+	return uint8E(0, JpegErrorFormatError("bad Huffman code", mAllocator));
 }
 
 Decoder::uint8E Decoder::decodeBit() {

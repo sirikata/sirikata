@@ -36,30 +36,32 @@ class LosslessJpegTest : public CxxTest::TestSuite
 {
     class FileReader : public Sirikata::DecoderReader {
         FILE * fp;
+        Sirikata::JpegAllocator<char> mAllocator;
     public:
-        FileReader(FILE * ff){
+        FileReader(FILE * ff, const Sirikata::JpegAllocator<char> &alloc) : mAllocator(alloc) {
             fp = ff;
         }
         std::pair<Sirikata::uint32, Sirikata::JpegError> Read(Sirikata::uint8*data, unsigned int size) {
             using namespace Sirikata;
             signed long nread = fread(data, 1, size, fp);
             if (nread <= 0) {
-                return std::pair<Sirikata::uint32, JpegError>(0, JpegError::errEOF());
+                return std::pair<Sirikata::uint32, JpegError>(0, JpegError::errEOF(mAllocator));
             }
             return std::pair<Sirikata::uint32, JpegError>(nread, JpegError());
         }
     };
     class FileWriter : public Sirikata::DecoderWriter {
         FILE * fp;
+        Sirikata::JpegAllocator<char> mAllocator;
     public:
-        FileWriter(FILE * ff){
+        FileWriter(FILE * ff, const Sirikata::JpegAllocator<char> &alloc) : mAllocator(alloc) {
             fp = ff;
         }
         std::pair<Sirikata::uint32, Sirikata::JpegError> Write(const Sirikata::uint8*data, unsigned int size) {
             using namespace Sirikata;
             signed long nwritten = fwrite(data, size, 1, fp);
             if (nwritten == 0) {
-                return std::pair<Sirikata::uint32, JpegError>(0, JpegError("Short write"));
+                return std::pair<Sirikata::uint32, JpegError>(0, JpegError("Short write", mAllocator));
             }
             return std::pair<Sirikata::uint32, JpegError>(size, JpegError());
         }
@@ -71,7 +73,8 @@ class LosslessJpegTest : public CxxTest::TestSuite
     
 
 public:
-    size_t loadFile(const char *fileName, Sirikata::MemReadWriter&original) {
+    size_t loadFile(const char *fileName, Sirikata::MemReadWriter&original,
+                    const Sirikata::JpegAllocator<uint8_t> &alloc) {
         using namespace Sirikata;
         String collada_data_dir = Path::Get(Path::DIR_EXE);
         // Windows exes are one level deeper due to Debug or RelWithDebInfo
@@ -83,7 +86,8 @@ public:
         FILE * input = fopen(curFile.c_str(), "rb");
         TS_ASSERT_EQUALS(!input, false);
         fseek(input, 0, SEEK_END);
-        std::vector<uint8> inputData(ftell(input));
+        std::vector<uint8, JpegAllocator<uint8> > inputData(alloc);
+        inputData.resize(ftell(input));
         fseek(input, 0, SEEK_SET);
         if (!inputData.empty()) {
             fread(&inputData[0], inputData.size(), 1, input);
@@ -95,28 +99,30 @@ public:
     void testRoundTrip( void )
     {
         using namespace Sirikata;
-        MemReadWriter original;
-        loadFile("prism/texture0.jpg", original);
+        JpegAllocator<uint8_t> alloc;
+        MemReadWriter original(alloc);
+        loadFile("prism/texture0.jpg", original, alloc);
         uint8 componentCoalescing = Decoder::comp12coalesce;
-        MemReadWriter arhc;
-        JpegError err = Decode(original, arhc, componentCoalescing);
+        MemReadWriter arhc(alloc);
+        JpegError err = Decode(original, arhc, componentCoalescing, alloc);
         TS_ASSERT_EQUALS(err, JpegError());
-        MemReadWriter round;
-        err = Decode(arhc, round, componentCoalescing);
+        MemReadWriter round(alloc);
+        err = Decode(arhc, round, componentCoalescing, alloc);
         TS_ASSERT_EQUALS(err, JpegError());
         TS_ASSERT_EQUALS(original.buffer(), round.buffer());
     }
     void testCompressedRoundTrip( void )
     {
         using namespace Sirikata;
-        MemReadWriter original;
-        size_t inputDataSize = loadFile("prism/texture0.jpg", original);
+        JpegAllocator<uint8_t> alloc;
+        MemReadWriter original(alloc);
+        size_t inputDataSize = loadFile("prism/texture0.jpg", original, alloc);
         uint8 componentCoalescing = Decoder::comp12coalesce;
-        MemReadWriter arhc;
-        JpegError err = CompressJPEGtoARHC(original, arhc, componentCoalescing);
+        MemReadWriter arhc(alloc);
+        JpegError err = CompressJPEGtoARHC(original, arhc, componentCoalescing, alloc);
         TS_ASSERT_EQUALS(err, JpegError());
-        MemReadWriter round;
-        err = DecompressARHCtoJPEG(arhc, round);
+        MemReadWriter round(alloc);
+        err = DecompressARHCtoJPEG(arhc, round, alloc);
         TS_ASSERT_EQUALS(err, JpegError());
         TS_ASSERT_EQUALS(original.buffer(), round.buffer());
         TS_ASSERT_LESS_THAN(arhc.buffer().size(), inputDataSize * 9 / 10);
@@ -124,16 +130,17 @@ public:
     void testGenericCompressedRoundTrip( void )
     {
         using namespace Sirikata;
-        MemReadWriter original;
-        size_t inputDataSize = loadFile("prism/texture0.jpg", original);
-        MemReadWriter arhc;
-        JpegError err = CompressAnyto7Z(original, arhc);
+        JpegAllocator<uint8_t> alloc;
+        MemReadWriter original(alloc);
+        size_t inputDataSize = loadFile("prism/texture0.jpg", original, alloc);
+        MemReadWriter arhc(alloc);
+        JpegError err = CompressAnyto7Z(original, arhc, alloc);
         if (err != JpegError()) {
             fprintf(stderr, "7Z compression Error: %s\n", err.what());
         }
         TS_ASSERT_EQUALS(err, JpegError());
-        MemReadWriter round;
-        err = Decompress7ZtoAny(arhc, round);
+        MemReadWriter round(alloc);
+        err = Decompress7ZtoAny(arhc, round, alloc);
         TS_ASSERT_EQUALS(err, JpegError());
         TS_ASSERT_EQUALS(original.buffer(), round.buffer());
         TS_ASSERT_LESS_THAN(arhc.buffer().size(), inputDataSize * 99 / 100);

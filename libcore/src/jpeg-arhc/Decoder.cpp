@@ -42,36 +42,36 @@ namespace Sirikata {
 JpegError JpegError::nil(){
     return JpegError();
 }
-JpegError JpegError::errShortHuffmanData() {
-    return JpegError("Short huffman data");
+JpegError JpegError::errShortHuffmanData(const JpegAllocator<char>& alloc) {
+    return JpegError("Short huffman data", alloc);
 }
-JpegError JpegError::errEOF() {
-    return JpegError("End of file");
+JpegError JpegError::errEOF(const JpegAllocator<char>& alloc) {
+    return JpegError("End of file", alloc);
 }
 // errMissingFF00 means that readByteStuffedByte encountered an 0xff byte (a
 // marker byte) that wasn't the expected byte-stuffed sequence 0xff, 0x00.
-JpegError JpegError::errMissingFF00() {
-    return JpegErrorFormatError("missing 0xff00 sequence");
+JpegError JpegError::errMissingFF00(const JpegAllocator<char>& alloc) {
+    return JpegErrorFormatError("missing 0xff00 sequence", alloc );
 }
 
-template<class T> void appendByte(std::vector<T>&buffer, T item) {
+template<class T, class Al> void appendByte(std::vector<T, Al>&buffer, T item) {
     buffer.push_back(item);
 }
-template<class T> void append(std::vector<T>&buffer, const std::vector<T> &items) {
+template<class T, class Al> void append(std::vector<T, Al>&buffer, const std::vector<T, Al> &items) {
     buffer.insert(buffer.end(), items.begin(), items.end());
 }
-template<class T> void append(std::vector<T>&buffer,
-                              typename std::vector<T>::const_iterator begin,
-                              typename std::vector<T>::const_iterator end) {
+template<class T, class Al> void append(std::vector<T, Al>&buffer,
+                                        typename std::vector<T, Al>::const_iterator begin,
+                                        typename std::vector<T, Al>::const_iterator end) {
     buffer.insert(buffer.end(), begin, end);
 }
-template<class T> void appendData(std::vector<T>&buffer,
-                                  const T* data,
-                                  size_t size) {
+template<class T, class Al> void appendData(std::vector<T, Al>&buffer,
+                                            const T* data,
+                                            size_t size) {
     buffer.insert(buffer.end(), data,  data + size);
 }
 
-BitByteStream::BitByteStream() {
+BitByteStream::BitByteStream(const JpegAllocator<uint8>& alloc) : buffer(alloc) {
     bits = 0;
     nBits = 0;
     bitReadCursor = 0;
@@ -119,7 +119,7 @@ void BitByteStream::emitBits(uint32 bits, uint32 nBits, bool stuffZeros) {
 std::pair<uint32, JpegError> BitByteStream::scanBits(uint32 nBits, bool stuffZeros) {
     BitByteStream &b = *this;
     if (nBits > 16) {
-        return Decoder::uint32E(0, JpegError("Must have nBits < 16"));
+        return Decoder::uint32E(0, JpegError("Must have nBits < 16", buffer.get_allocator()));
     }
     if (nBits == 0) {
         return Decoder::int32E(0, JpegError::nil()); // don't read off the array since it may be empty or at its end
@@ -128,7 +128,7 @@ std::pair<uint32, JpegError> BitByteStream::scanBits(uint32 nBits, bool stuffZer
     if (int(byteAddress) >= b.buffer.size()) {
         char errMsg[1024] = {0};
         sprintf(errMsg, "Reading[%d] off the end of len(%lu) bit buffer", byteAddress, b.buffer.size());
-        return Decoder::uint32E(0, JpegError(errMsg));
+        return Decoder::uint32E(0, JpegError(errMsg, buffer.get_allocator()));
     }
     uint32 bitAddress = b.bitReadCursor - byteAddress*8;
     uint32 retval = 0;
@@ -153,7 +153,7 @@ std::pair<uint32, JpegError> BitByteStream::scanBits(uint32 nBits, bool stuffZer
     if (int(byteAddress) >= b.buffer.size()) {
         char errMsg[1024];
         sprintf(errMsg, "Reading[%d] off the end of len(%lu) bit buffer", byteAddress, b.buffer.size());
-        return Decoder::uint32E(0, JpegError(errMsg));
+        return Decoder::uint32E(0, JpegError(errMsg, buffer.get_allocator()));
     }
     b.bitReadCursor += remainingBitsInByte;
     nBits -= remainingBitsInByte;
@@ -168,13 +168,13 @@ std::pair<uint32, JpegError> BitByteStream::scanBits(uint32 nBits, bool stuffZer
             if (size_t(byteAddress)+1 >= b.buffer.size()) {
                 char errMsg[1024] = {0};
                 sprintf(errMsg, "Reading[%d] off the end of len(%lu) bit buffer", byteAddress, b.buffer.size());
-                return Decoder::uint32E(0, JpegError(errMsg));
+                return Decoder::uint32E(0, JpegError(errMsg, buffer.get_allocator()));
             }
             if (b.buffer[byteAddress+1] != 0x0) {
                 char errMsg[1024] = {0};
                 sprintf(errMsg, "Reading[%d] should be stuffed with 0 not %d",
                         byteAddress+1, b.buffer[byteAddress+1]);
-                return Decoder::uint32E(0, JpegError(errMsg));
+                return Decoder::uint32E(0, JpegError(errMsg, buffer.get_allocator()));
             }
             byteAddress++;
             b.bitReadCursor += 8;
@@ -188,7 +188,7 @@ std::pair<uint32, JpegError> BitByteStream::scanBits(uint32 nBits, bool stuffZer
     if (size_t(byteAddress)+1 >= b.buffer.size()) {
         char errMsg[1024] = {0};
         sprintf(errMsg, "Reading[%d] off the end of len(%lu) bit buffer", byteAddress + 1, b.buffer.size());
-        return Decoder::uint32E(0, JpegError(errMsg));
+        return Decoder::uint32E(0, JpegError(errMsg, buffer.get_allocator()));
     }
     retval <<= nBits;
     retval |= uint32(b.buffer[byteAddress+1] >> (8 - nBits));
@@ -198,13 +198,13 @@ std::pair<uint32, JpegError> BitByteStream::scanBits(uint32 nBits, bool stuffZer
         if (size_t(byteAddress)+2 >= b.buffer.size()) {
             char errMsg[1024] = {0};
             sprintf(errMsg, "Reading[%d] off the end of len(%lu) bit buffer", byteAddress + 2, b.buffer.size());
-            return Decoder::uint32E(0, JpegError(errMsg));
+            return Decoder::uint32E(0, JpegError(errMsg, buffer.get_allocator()));
         }
         if (b.buffer[byteAddress+2] != 0x0) {
             char errMsg[1024] = {0};
             sprintf(errMsg, "Reading[%d] should be stuffed with 0 not %d",
                     byteAddress+2, b.buffer[byteAddress+2]);
-            return Decoder::uint32E(retval, JpegError(errMsg));
+            return Decoder::uint32E(retval, JpegError(errMsg, buffer.get_allocator()));
         }
         byteAddress++;
         b.bitReadCursor += 8;
@@ -242,10 +242,10 @@ void BitByteStream::flushBits(bool stuffBits) {
     }
 }
 
-std::vector<uint8> streamLenToBE(uint32 streamLen) {
+std::vector<uint8, JpegAllocator<uint8> > streamLenToBE(uint32 streamLen, const JpegAllocator<uint8_t> & allocator) {
     uint8 retval[5] = {uint8(streamLen >> 24), uint8((streamLen >> 16) & 0xff),
                        uint8((streamLen >> 8) & 0xff), uint8(streamLen & 0xff), 0};
-    return std::vector<uint8>(retval, retval + 4);
+    return std::vector<uint8, JpegAllocator<uint8> >(retval, retval + 4, allocator);
 }
 uint32 bufferBEToStreamLength(uint8 *buf) {
     uint32 vectorLength = 0;
@@ -280,7 +280,7 @@ void Decoder::flush(DecoderWriter &w) {
     } else {
         d.bitbuffer.flushBits(false);
         uint32 bitStreamLen = d.bitbuffer.len();
-        std::vector<uint8> lengthHeader;
+        std::vector<uint8, JpegAllocator<uint8> > lengthHeader(mAllocator);
         lengthHeader.push_back('a');
         lengthHeader.push_back('r');
         lengthHeader.push_back('h');
@@ -288,9 +288,10 @@ void Decoder::flush(DecoderWriter &w) {
         // FIXME: deal with lzma headers
         appendData(lengthHeader, VERSION_INFORMATION, 2);
         appendByte(lengthHeader, d.componentCoalescing);
-        std::vector<uint8> originalFileSizeBE = streamLenToBE(d.extOriginalFileSize);
-        std::vector<uint8> extensionLength = streamLenToBE(uint32(originalFileSizeBE.size() +
-                                                                  d.extEndFileBuffer.size()));
+        std::vector<uint8, JpegAllocator<uint8> > originalFileSizeBE(streamLenToBE(d.extOriginalFileSize, mAllocator));
+        std::vector<uint8, JpegAllocator<uint8> > extensionLength(streamLenToBE(uint32(originalFileSizeBE.size() +
+                                                                                         d.extEndFileBuffer.size()),
+                                                                                mAllocator));
         if (extensionLength[0] == 0) { // only support 24 bit extension length
             appendByte(lengthHeader, (uint8)0x1); // end of buffer extension
             append(lengthHeader, extensionLength.begin() + 1, extensionLength.end());
@@ -299,11 +300,11 @@ void Decoder::flush(DecoderWriter &w) {
             append(lengthHeader, d.extEndFileBuffer.begin(), d.extEndFileBuffer.begin() + d.extEndFileBufferCursor);
         }
         appendByte(lengthHeader, (uint8)0); // end of extensions
-        append(lengthHeader, streamLenToBE(bitStreamLen));
+        append(lengthHeader, streamLenToBE(bitStreamLen, mAllocator));
         for (size_t index = 0; index < (sizeof(d.huffMultibuffer) / sizeof(d.huffMultibuffer[0])); ++index) {
             d.huffMultibuffer[index].flushBits(false);
             uint32 huffMultiStreamLen = d.huffMultibuffer[index].len();
-            append(lengthHeader, streamLenToBE(huffMultiStreamLen));
+            append(lengthHeader, streamLenToBE(huffMultiStreamLen, mAllocator));
         }
         //fmt.Printf("Length header = %x %d %x\n", lengthHeader, bitStreamLen, bitStreamLen)
         if (!lengthHeader.empty()) {
@@ -400,7 +401,7 @@ Decoder::uint8E Decoder::readByte() {
         }
     }
     if (d->bytes.i == d->bytes.j) {
-        return uint8E(0, JpegError::errEOF());
+        return uint8E(0, JpegError::errEOF(mAllocator));
     }
     uint8 x = d->bytes.buf[d->bytes.i];
     d->bytes.i++;
@@ -425,7 +426,7 @@ Decoder::uint8E Decoder::readByteStuffedByte() {
             return uint8E(x, JpegError::nil());
         }
         if (d.bytes.buf[d.bytes.i] != 0x00) {
-            return uint8E(0, JpegError::errMissingFF00());
+            return uint8E(0, JpegError::errMissingFF00(mAllocator));
         }
         uint8 zero = 0;
         d.appendByteToWriteBuffer(zero);
@@ -450,7 +451,7 @@ Decoder::uint8E Decoder::readByteStuffedByte() {
     }
     d.bytes.nUnreadable = 2;
     if (xErr.first != 0x00) {
-        return uint8E(0, JpegError::errMissingFF00());
+        return uint8E(0, JpegError::errMissingFF00(mAllocator));
     }
     return uint8E(0xff, JpegError::nil());
 }
@@ -530,7 +531,7 @@ JpegError Decoder::processSOF(int n) {
         d.nComp = nColorComponent;
         break;
     default:
-        return JpegErrorUnsupportedError("SOF has wrong length");
+        return JpegErrorUnsupportedError("SOF has wrong length", mAllocator);
     }
     JpegError err;
     if ((err = d.readFull(d.tmp, n)) != JpegError::nil()) {
@@ -538,12 +539,12 @@ JpegError Decoder::processSOF(int n) {
     }
     // We only support 8-bit precision.
     if (d.tmp[0] != 8) {
-        return JpegErrorUnsupportedError("precision");
+        return JpegErrorUnsupportedError("precision", mAllocator);
     }
     d.height = (int(d.tmp[1])<<8) + int(d.tmp[2]);
     d.width = (int(d.tmp[3])<<8) + int(d.tmp[4]);
     if (int(d.tmp[5]) != d.nComp) {
-        return JpegErrorUnsupportedError("SOF has wrong number of image components");
+        return JpegErrorUnsupportedError("SOF has wrong number of image components", mAllocator);
     }
     for (int i = 0; i < d.nComp; i++) {
         d.comp[i].c = d.tmp[6+3*i];
@@ -573,10 +574,10 @@ JpegError Decoder::processSOF(int n) {
         // values for the Cr and Cb components must be (1, 1).
         if (i == 0) {
             if (hv != 0x11 && hv != 0x21 && hv != 0x22 && hv != 0x12) {
-                return JpegErrorUnsupportedError("luma/chroma downsample ratio");
+                return JpegErrorUnsupportedError("luma/chroma downsample ratio", mAllocator);
             }
         } else if (hv != 0x11) {
-            return JpegErrorUnsupportedError("luma/chroma downsample ratio");
+            return JpegErrorUnsupportedError("luma/chroma downsample ratio", mAllocator);
         }
     }
     return JpegError::nil();
@@ -593,18 +594,18 @@ JpegError Decoder::processDQT(int n) {
         }
         uint8 pq = d.tmp[0] >> 4;
         if (pq != 0) {
-            return JpegErrorUnsupportedError("bad Pq value");
+            return JpegErrorUnsupportedError("bad Pq value", mAllocator);
         }
         uint8 tq = d.tmp[0] & 0x0f;
         if (tq > maxTq) {
-            return JpegErrorFormatError("bad Tq value");
+            return JpegErrorFormatError("bad Tq value", mAllocator);
         }
         for (int i = 0; i < JpegBlock::blockSize; ++i) {
             d.quant[tq][i] = int32(d.tmp[i+1]);
         }
     }
     if (n != 0) {
-        return JpegErrorFormatError("DQT has wrong length");
+        return JpegErrorFormatError("DQT has wrong length", mAllocator);
     }
     return JpegError::nil();
 }
@@ -613,7 +614,7 @@ JpegError Decoder::processDQT(int n) {
 JpegError Decoder::processDRI(int n) {
     Decoder &d = *this;
     if (n != 2) {
-        return JpegErrorFormatError("DRI has wrong length");
+        return JpegErrorFormatError("DRI has wrong length", mAllocator);
     }
     JpegError err;
     if ((err = d.readFull(d.tmp, 2)) != JpegError::nil()) {
@@ -662,7 +663,7 @@ JpegError Decoder::decode(DecoderReader &r, DecoderWriter &w, uint8 componentCoa
         }
         if (d.tmp[0] == 'h' && d.tmp[1] == 'c') {
         } else {
-            return JpegErrorFormatError("arhc header malformed");
+            return JpegErrorFormatError("arhc header malformed", mAllocator);
         }
         uint8 *versionExtension = d.tmp + 2;
         while (versionExtension[3] != 0) {
@@ -684,7 +685,7 @@ JpegError Decoder::decode(DecoderReader &r, DecoderWriter &w, uint8 componentCoa
                   case 1:
                     // end of file extension
                     d.extOriginalFileSize = bufferBEToStreamLength(&extension[0]);
-                    d.extEndFileBuffer = std::vector<uint8>(extension.begin() + 4, extension.end());
+                    d.extEndFileBuffer = std::vector<uint8, JpegAllocator<uint8> >(extension.begin() + 4, extension.end(), mAllocator);
                     d.extEndFileBufferCursor = 0;
                     break;
                   default:
@@ -744,7 +745,7 @@ JpegError Decoder::decode(DecoderReader &r, DecoderWriter &w, uint8 componentCoa
         d.wbuffer.appendByte(0xd8);
     }
     if (d.tmp[0] != 0xff || d.tmp[1] != soiMarker) {
-        return JpegErrorFormatError("missing SOI marker");
+        return JpegErrorFormatError("missing SOI marker", mAllocator);
     }
 
     // Process the remaining segments until the End Of Image marker.
@@ -828,7 +829,7 @@ JpegError Decoder::decode(DecoderReader &r, DecoderWriter &w, uint8 componentCoa
         int n = (int(d.tmp[0])<<8) + int(d.tmp[1]) - 2;
         if (n < 0) {
             //fmt.Printf("Short semgnet %d\n", n)
-            return JpegErrorFormatError("short segment length");
+            return JpegErrorFormatError("short segment length", mAllocator);
         }
 
         if (marker == sof0Marker || marker == sof2Marker) { // Start Of Frame.
@@ -846,7 +847,7 @@ JpegError Decoder::decode(DecoderReader &r, DecoderWriter &w, uint8 componentCoa
             err = d.ignore(n);
         } else {
             //fprintf(stderr, "UNKNOWN %x\n", marker);
-            err = JpegErrorUnsupportedError("unknown marker");
+            err = JpegErrorUnsupportedError("unknown marker", mAllocator);
         }
         if (err != nil) {
             return err;
@@ -873,34 +874,38 @@ bool DecodeIsARHC(const uint8* data, size_t size) {
 }
 
 // Decode reads a JPEG image from r and returns it as an image.Image.
-JpegError Decode(DecoderReader &r, DecoderWriter &w, uint8 componentCoalescing) {
-    Decoder d;
+JpegError Decode(DecoderReader &r, DecoderWriter &w, uint8 componentCoalescing, const JpegAllocator<uint8_t> &alloc) {
+    Decoder d(alloc);
     return d.decode(r, w, componentCoalescing);
 }
 // Decode reads a JPEG image from r and returns it as an image.Image.
-JpegError CompressJPEGtoARHC(DecoderReader &r, DecoderWriter &w, uint8 componentCoalescing) {
+JpegError CompressJPEGtoARHC(DecoderReader &r, DecoderWriter &w, uint8 componentCoalescing,
+                             const JpegAllocator<uint8_t> &alloc) {
     MagicNumberReplacementWriter magic(&w,
-                                       std::vector<uint8_t>(MAGIC_7Z, MAGIC_7Z + sizeof(MAGIC_7Z)),
-                                       std::vector<uint8_t>(MAGIC_ARHC, MAGIC_ARHC + sizeof(MAGIC_ARHC)));
-    DecoderCompressionWriter cw(&magic);
-    Decoder d;
+                                       std::vector<uint8_t, JpegAllocator<uint8_t> >(MAGIC_7Z, MAGIC_7Z + sizeof(MAGIC_7Z), alloc),
+                                       std::vector<uint8_t, JpegAllocator<uint8_t> >(MAGIC_ARHC, MAGIC_ARHC + sizeof(MAGIC_ARHC), alloc));
+    DecoderCompressionWriter cw(&magic, alloc);
+    Decoder d(alloc);
     return d.decode(r, cw, componentCoalescing);
 }
 // Decode reads a JPEG image from r and returns it as an image.Image.
-JpegError DecompressARHCtoJPEG(DecoderReader &r, DecoderWriter &w) {
+JpegError DecompressARHCtoJPEG(DecoderReader &r, DecoderWriter &w,
+                             const JpegAllocator<uint8_t> &alloc) {
     MagicNumberReplacementReader magic(&r,
-                                       std::vector<uint8_t>(MAGIC_ARHC, MAGIC_ARHC + sizeof(MAGIC_ARHC)),
-                                       std::vector<uint8_t>(MAGIC_7Z, MAGIC_7Z + sizeof(MAGIC_7Z)));
-    DecoderDecompressionReader cr(&magic);
-    Decoder d;
+                                       std::vector<uint8_t, JpegAllocator<uint8_t> >(MAGIC_ARHC, MAGIC_ARHC + sizeof(MAGIC_ARHC), alloc),
+                                       std::vector<uint8_t, JpegAllocator<uint8_t> >(MAGIC_7Z, MAGIC_7Z + sizeof(MAGIC_7Z), alloc));
+    DecoderDecompressionReader cr(&magic, alloc);
+    Decoder d(alloc);
     return d.decode(cr, w, 0);
 }
 
-static JpegError Copy(DecoderReader &r, DecoderWriter &w) {
-    std::vector<uint8> buffer(16384);
+static JpegError Copy(DecoderReader &r, DecoderWriter &w, const JpegAllocator<uint8> &alloc) {
+    std::vector<uint8, JpegAllocator<uint8> > buffer(alloc);
+    size_t bufferSize = 16384;
+    buffer.resize(bufferSize);
     std::pair<uint32, JpegError> ret;
     while (true) {
-        ret = r.Read(&buffer[0], 16384);
+        ret = r.Read(&buffer[0], bufferSize);
         if (ret.first == 0) {
             w.Close();
             return JpegError::nil();
@@ -914,7 +919,7 @@ static JpegError Copy(DecoderReader &r, DecoderWriter &w) {
         }
         if (ret.second != JpegError::nil()) {
             w.Close();
-            if (ret.second == JpegError::errEOF()) {
+            if (ret.second == JpegError::errEOF(alloc)) {
                 return JpegError::nil();
             }
             return ret.second;
@@ -923,13 +928,13 @@ static JpegError Copy(DecoderReader &r, DecoderWriter &w) {
 }
 
 // Decode reads a JPEG image from r and returns it as an image.Image.
-JpegError CompressAnyto7Z(DecoderReader &r, DecoderWriter &w) {
-    DecoderCompressionWriter cw(&w);
-    return Copy(r, cw);
+JpegError CompressAnyto7Z(DecoderReader &r, DecoderWriter &w, const JpegAllocator<uint8> &alloc) {
+    DecoderCompressionWriter cw(&w, alloc);
+    return Copy(r, cw, alloc);
 }
 // Decode reads a JPEG image from r and returns it as an image.Image.
-JpegError Decompress7ZtoAny(DecoderReader &r, DecoderWriter &w) {
-    DecoderDecompressionReader cr(&r);
-    return Copy(cr, w);
+JpegError Decompress7ZtoAny(DecoderReader &r, DecoderWriter &w, const JpegAllocator<uint8> &alloc) {
+    DecoderDecompressionReader cr(&r, alloc);
+    return Copy(cr, w, alloc);
 }
 }

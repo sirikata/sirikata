@@ -44,14 +44,17 @@
 namespace Sirikata {
 
 template<class T> class JpegAllocator {
-    void *(*custom_allocate)(void *opaque, size_t nmemb, size_t size);
-    void (*custom_deallocate)(void *opaque, void *ptr);
+    template<class U> friend class JpegAllocator;
+    typedef void *(CustomAllocate)(void *opaque, size_t nmemb, size_t size);
+    typedef void (CustomDeallocate)(void *opaque, void *ptr);
+    CustomAllocate *custom_allocate;
+    CustomDeallocate *custom_deallocate;
     void * opaque;
     static void *malloc_wrapper(void *opaque, size_t nmemb, size_t size) {
         return malloc(nmemb * size);
     }
     static void free_wrapper(void *opaque, void *ptr) {
-        return free(ptr);
+        free(ptr);
     }
 public:
     typedef size_t size_type;
@@ -61,11 +64,19 @@ public:
     typedef T& reference;
     typedef const T& const_reference;
     typedef T value_type;
-    
+    CustomAllocate* get_custom_allocate() {
+        return custom_allocate;
+    }
+    CustomDeallocate* get_custom_deallocate() {
+        return custom_deallocate;
+    }
+    void *get_custom_state() {
+        return opaque;
+    }
     ///starts up with malloc/free implementation
     JpegAllocator() throw() {
         custom_allocate = &malloc_wrapper;
-        custom_allocate = &free_wrapper;
+        custom_deallocate = &free_wrapper;
         opaque = NULL;
     }
     template <class U> struct rebind { typedef JpegAllocator<U> other; };
@@ -140,19 +151,21 @@ struct JpegBlock {
     }
 };
 class JpegError {
-    std::vector<char> mWhat;
+    std::vector<char, JpegAllocator<char> > mWhat;
     bool ok;
 public:
-    JpegError(const char * wh):mWhat(wh, wh + strlen(wh) + 1) {
+    JpegError(const char * wh, const JpegAllocator<char>&alloc):mWhat(wh, wh + strlen(wh) + 1, alloc) {
         ok = false;
     }
-    JpegError(const std::vector<char> msg):mWhat(msg) {
+    JpegError(const std::vector<char, JpegAllocator<char> > & msg,
+              const JpegAllocator<char>&alloc)
+            : mWhat(msg.begin(), msg.end(), alloc) {
         if (mWhat.empty() || mWhat.back() != '\0') {
             mWhat.push_back('\0');
         }
         ok = false;
     }
-    JpegError() {
+    JpegError() :mWhat() { // uses default allocator--but it won't allocate, so that's ok
         ok = true;
     }
     const char * what() const {
@@ -163,12 +176,12 @@ public:
         return !ok;
     }
     static JpegError nil();
-    static JpegError errEOF();
-    static JpegError errMissingFF00();
-    static JpegError errShortHuffmanData();
+    static JpegError errEOF(const JpegAllocator<char>&alloc);
+    static JpegError errMissingFF00(const JpegAllocator<char>&alloc);
+    static JpegError errShortHuffmanData(const JpegAllocator<char>&alloc);
 };
-#define JpegErrorUnsupportedError(s) JpegError("unsupported JPEG feature: " s)
-#define JpegErrorFormatError(s) JpegError("unsupported JPEG feature: " s)
+#define JpegErrorUnsupportedError(s, alloc) JpegError("unsupported JPEG feature: " s, alloc)
+#define JpegErrorFormatError(s, alloc) JpegError("unsupported JPEG feature: " s, alloc)
 
 
 // Component specification, specified in section B.2.2.
@@ -195,11 +208,11 @@ public:
 };
 
 class SIRIKATA_EXPORT MemReadWriter : public Sirikata::DecoderWriter, public Sirikata::DecoderReader {
-    std::vector<Sirikata::uint8> mBuffer;
+    std::vector<Sirikata::uint8, JpegAllocator<uint8_t> > mBuffer;
     size_t mReadCursor;
     size_t mWriteCursor;
   public:
-    MemReadWriter(){
+    MemReadWriter(const JpegAllocator<uint8_t> &alloc) : mBuffer(alloc){
         mReadCursor = 0;
         mWriteCursor = 0;
     }
@@ -207,10 +220,10 @@ class SIRIKATA_EXPORT MemReadWriter : public Sirikata::DecoderWriter, public Sir
     }
     virtual std::pair<Sirikata::uint32, Sirikata::JpegError> Write(const Sirikata::uint8*data, unsigned int size);
     virtual std::pair<Sirikata::uint32, Sirikata::JpegError> Read(Sirikata::uint8*data, unsigned int size);
-    std::vector<Sirikata::uint8> &buffer() {
+    std::vector<Sirikata::uint8, JpegAllocator<uint8_t> > &buffer() {
         return mBuffer;
     }
-    const std::vector<Sirikata::uint8> &buffer() const{
+    const std::vector<Sirikata::uint8, JpegAllocator<uint8_t> > &buffer() const{
         return mBuffer;
     }
 };
@@ -218,11 +231,11 @@ class SIRIKATA_EXPORT MemReadWriter : public Sirikata::DecoderWriter, public Sir
 
 
 struct SIRIKATA_EXPORT BitByteStream {
-    std::vector<uint8> buffer;
+    std::vector<uint8, JpegAllocator<uint8_t> > buffer;
 	uint32 bits;
 	uint8 nBits;
 	uint32 bitReadCursor;
-    BitByteStream();
+    BitByteStream(const JpegAllocator<uint8>&alloc=JpegAllocator<uint8>());
     void appendByte(uint8 x);
     void appendBytes(uint8*bytes, uint32 nBytes);
     void clear();
@@ -309,7 +322,19 @@ public:
     typedef std::pair<int32, JpegError> int32E;
     void flush(DecoderWriter &w);
     JpegError decode(DecoderReader &r, DecoderWriter &w, uint8 componentCoalescing);
-    Decoder() {
+    Decoder(const JpegAllocator<uint8_t>&customAlloc=JpegAllocator<uint8_t>())
+        : mAllocator(customAlloc),
+          wbuffer(customAlloc),
+          bitbuffer(customAlloc),
+          extEndFileBuffer(customAlloc) {
+        for (size_t i = 0; i < sizeof(progCoeffs) / sizeof(progCoeffs[0]); ++i) {
+            progCoeffs[i].~vector();
+            new(&progCoeffs[i])std::vector<uint8_t, JpegAllocator<uint8_t> >(customAlloc);
+        }
+        for (size_t i = 0; i < sizeof(huffMultibuffer) / sizeof(huffMultibuffer[0]); ++i) {
+            huffMultibuffer[i].~BitByteStream();
+            new(&huffMultibuffer[i])BitByteStream(customAlloc);
+        }
         r = NULL;
         width = height = 0;
         ri = 0;
@@ -326,6 +351,7 @@ public:
         extEndEncountered = false;
     }
 private:
+    JpegAllocator<uint8_t> mAllocator;
 	DecoderReader *r;
 	Bits bits;
 	// bytes is a byte buffer, similar to a bufio.Reader, except that it
@@ -352,7 +378,7 @@ private:
 	bool huffTransSect;   // are we in the huffman translation section of code
 	uint16 eobRun; // End-of-Band run, specified in section G.1.2.2.
 	component comp[nColorComponent];
-	std::vector<JpegBlock> progCoeffs[nColorComponent]; // Saved state between progressive-mode scans.
+	std::vector<JpegBlock, JpegAllocator<uint8_t> > progCoeffs[nColorComponent]; // Saved state between progressive-mode scans.
 	huffman huff[maxTc + 1][maxTh + 1];
 	JpegBlock quant[maxTq + 1]; // Quantization tables, in zig-zag order.
 	uint8 tmp[JpegBlock::blockSize + 1];
@@ -365,7 +391,7 @@ private:
 	// & 0x40 if comp[1] and comp[2] are coalesced
 	// & 0x80 if comp[0] and comp[2] are coalesced
 	uint32 extOriginalFileSize;
-    std::vector<uint8> extEndFileBuffer;
+    std::vector<uint8, JpegAllocator<uint8_t> > extEndFileBuffer;
 	uint32 extEndFileBufferCursor;
 	bool extEndEncountered;
 
@@ -414,11 +440,16 @@ private:
 };
 
 // Decode reads a JPEG image from r and returns it as an image.Image.
-SIRIKATA_FUNCTION_EXPORT JpegError Decode(DecoderReader &r, DecoderWriter &w, uint8 componentCoalescing);
-SIRIKATA_FUNCTION_EXPORT JpegError CompressJPEGtoARHC(DecoderReader &r, DecoderWriter &w, uint8 componentCoalescing);
-SIRIKATA_FUNCTION_EXPORT JpegError DecompressARHCtoJPEG(DecoderReader &r, DecoderWriter &w);
-SIRIKATA_FUNCTION_EXPORT JpegError CompressAnyto7Z(DecoderReader &r, DecoderWriter &w);
-SIRIKATA_FUNCTION_EXPORT JpegError Decompress7ZtoAny(DecoderReader &r, DecoderWriter &w);
+SIRIKATA_FUNCTION_EXPORT JpegError Decode(DecoderReader &r, DecoderWriter &w, uint8 componentCoalescing,
+                                          const JpegAllocator<uint8_t> &alloc);
+SIRIKATA_FUNCTION_EXPORT JpegError CompressJPEGtoARHC(DecoderReader &r, DecoderWriter &w, uint8 componentCoalescing,
+                                                      const JpegAllocator<uint8_t> &alloc);
+SIRIKATA_FUNCTION_EXPORT JpegError DecompressARHCtoJPEG(DecoderReader &r, DecoderWriter &w,
+                                                        const JpegAllocator<uint8_t> &alloc);
+SIRIKATA_FUNCTION_EXPORT JpegError CompressAnyto7Z(DecoderReader &r, DecoderWriter &w,
+                                                   const JpegAllocator<uint8_t> &alloc);
+SIRIKATA_FUNCTION_EXPORT JpegError Decompress7ZtoAny(DecoderReader &r, DecoderWriter &w,
+                                                     const JpegAllocator<uint8_t> &alloc);
 SIRIKATA_FUNCTION_EXPORT bool DecodeIs7z(const uint8* data, size_t size);
 SIRIKATA_FUNCTION_EXPORT bool DecodeIsARHC(const uint8* data, size_t size);
 

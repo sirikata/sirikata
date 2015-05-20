@@ -262,22 +262,24 @@ void HttpChunkHandler::request_finished(std::tr1::shared_ptr<HttpManager::HttpRe
 
     std::tr1::shared_ptr<DenseData> uncompressedFile = response->getData();
     if (is7z || isArhc) {
-        MemReadWriter input;
+        JpegAllocator<uint8_t> alloc;
+        MemReadWriter input(alloc);
         input.Write(response->getData()->data(), response->getData()->length());
-        MemReadWriter output;
+        MemReadWriter output(alloc);
         JpegError isDecompressOk = JpegError::nil();
         if (is7z) {
-            isDecompressOk = Decompress7ZtoAny(input, output);
+            isDecompressOk = Decompress7ZtoAny(input, output, alloc);
         }
         if (isArhc) {
-            isDecompressOk = DecompressARHCtoJPEG(input, output);
+            isDecompressOk = DecompressARHCtoJPEG(input, output, alloc);
         }
         if (isDecompressOk == JpegError::nil()) {
             std::tr1::shared_ptr<DenseData> uncData(new DenseData(Range(response->getData()->startbyte(),
                                                                         output.buffer().size(),
                                                                         Transfer::LENGTH,
                                                                         response->getData()->goesToEndOfFile()),
-                                                                  output.buffer()));
+                                                                  std::vector<uint8_t>(output.buffer().begin(),
+                                                                                    output.buffer().end())));
             uncompressedFile = uncData;
         }
     }
