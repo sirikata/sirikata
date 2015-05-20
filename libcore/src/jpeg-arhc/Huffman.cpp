@@ -120,7 +120,7 @@ JpegError Decoder::processDHT(int n) {
     Decoder &d = *this;
     while (n > 0) {
         if (n < 17) {
-            return FormatError("DHT has wrong length");
+            return JpegErrorFormatError("DHT has wrong length");
 		}
         {
             JpegError err;
@@ -130,11 +130,11 @@ JpegError Decoder::processDHT(int n) {
         }
         uint8 tc = d.tmp[0] >> 4;
 		if (tc > maxTc) {
-			return FormatError("bad Tc value");
+			return JpegErrorFormatError("bad Tc value");
 		}
         uint8 th = d.tmp[0] & 0x0f;
         if (th > maxTh || (th > 1 && !d.progressive)) {
-            return FormatError("bad Th value");
+            return JpegErrorFormatError("bad Th value");
 		}
         huffman &h = d.huff[tc][th];
 
@@ -148,14 +148,14 @@ JpegError Decoder::processDHT(int n) {
 			h.nCodes += nCodes[i];
 		}
 		if (h.nCodes == 0) {
-			return FormatError("Huffman table has zero length");
+			return JpegErrorFormatError("Huffman table has zero length");
 		}
 		if (h.nCodes > huffman::maxNCodes) {
-			return FormatError("Huffman table has excessive length");
+			return JpegErrorFormatError("Huffman table has excessive length");
 		}
 		n -= int(h.nCodes) + 17;
 		if (n < 0) {
-			return FormatError("DHT has wrong length");
+			return JpegErrorFormatError("DHT has wrong length");
 		}
         {
             JpegError err;
@@ -239,7 +239,7 @@ Decoder::uint8E Decoder::decodeHuffman(huffman *h, int32 zig, int component) {
 		return uint8E(uint8(unhuffmanValueErr.first), unhuffmanValueErr.second);
 	}
 	if (h->nCodes == 0) {
-        return uint8E(0, FormatError("uninitialized Huffman table"));
+        return uint8E(0, JpegErrorFormatError("uninitialized Huffman table"));
 	}
 
 	if (d.bits.n < 8) {
@@ -309,7 +309,7 @@ slowPath:
 		}
 		code <<= 1;
 	}
-	return uint8E(0, FormatError("bad Huffman code"));
+	return uint8E(0, JpegErrorFormatError("bad Huffman code"));
 }
 
 Decoder::uint8E Decoder::decodeBit() {

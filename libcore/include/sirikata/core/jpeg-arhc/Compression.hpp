@@ -5,10 +5,10 @@ namespace Sirikata {
 class SIRIKATA_EXPORT MagicNumberReplacementReader : public DecoderReader {
     uint32 mMagicNumbersReplaced;
     DecoderReader *mBase;
-    String mOriginalMagic;
-    String mNewMagic;
+    std::vector<uint8> mOriginalMagic;
+    std::vector<uint8> mNewMagic;
 public:
-    MagicNumberReplacementReader(DecoderReader *r, const String & originalMagic, const String& newMagic);
+    MagicNumberReplacementReader(DecoderReader *r, const std::vector<uint8_t>& originalMagic, const std::vector<uint8_t>& newMagic);
     virtual std::pair<uint32, JpegError> Read(uint8*data, unsigned int size);
     ~MagicNumberReplacementReader();
 };
@@ -16,10 +16,10 @@ public:
 class SIRIKATA_EXPORT MagicNumberReplacementWriter : public DecoderWriter {
     uint32 mMagicNumbersReplaced;
     DecoderWriter *mBase;
-    String mOriginalMagic;
-    String mNewMagic;
+    std::vector<uint8_t> mOriginalMagic;
+    std::vector<uint8_t> mNewMagic;
 public:
-    MagicNumberReplacementWriter(DecoderWriter *w, const String & originalMagic, const String& newMagic);
+    MagicNumberReplacementWriter(DecoderWriter *w, const std::vector<uint8_t> & originalMagic, const std::vector<uint8_t>& newMagic);
     virtual std::pair<uint32, JpegError> Write(const uint8*data, unsigned int size) ;
     virtual ~MagicNumberReplacementWriter();
     virtual void Close();

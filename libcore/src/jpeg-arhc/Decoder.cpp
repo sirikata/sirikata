@@ -48,16 +48,10 @@ JpegError JpegError::errShortHuffmanData() {
 JpegError JpegError::errEOF() {
     return JpegError("End of file");
 }
-JpegError UnsupportedError(const String& s) {
-    return JpegError("unsupported JPEG feature: " + s);
-}
-JpegError FormatError(const String& s) {
-    return JpegError("JPEG format errpr: " + s);
-}
 // errMissingFF00 means that readByteStuffedByte encountered an 0xff byte (a
 // marker byte) that wasn't the expected byte-stuffed sequence 0xff, 0x00.
 JpegError JpegError::errMissingFF00() {
-    return FormatError("missing 0xff00 sequence");
+    return JpegErrorFormatError("missing 0xff00 sequence");
 }
 
 template<class T> void appendByte(std::vector<T>&buffer, T item) {
@@ -536,7 +530,7 @@ JpegError Decoder::processSOF(int n) {
         d.nComp = nColorComponent;
         break;
     default:
-        return UnsupportedError("SOF has wrong length");
+        return JpegErrorUnsupportedError("SOF has wrong length");
     }
     JpegError err;
     if ((err = d.readFull(d.tmp, n)) != JpegError::nil()) {
@@ -544,12 +538,12 @@ JpegError Decoder::processSOF(int n) {
     }
     // We only support 8-bit precision.
     if (d.tmp[0] != 8) {
-        return UnsupportedError("precision");
+        return JpegErrorUnsupportedError("precision");
     }
     d.height = (int(d.tmp[1])<<8) + int(d.tmp[2]);
     d.width = (int(d.tmp[3])<<8) + int(d.tmp[4]);
     if (int(d.tmp[5]) != d.nComp) {
-        return UnsupportedError("SOF has wrong number of image components");
+        return JpegErrorUnsupportedError("SOF has wrong number of image components");
     }
     for (int i = 0; i < d.nComp; i++) {
         d.comp[i].c = d.tmp[6+3*i];
@@ -579,10 +573,10 @@ JpegError Decoder::processSOF(int n) {
         // values for the Cr and Cb components must be (1, 1).
         if (i == 0) {
             if (hv != 0x11 && hv != 0x21 && hv != 0x22 && hv != 0x12) {
-                return UnsupportedError("luma/chroma downsample ratio");
+                return JpegErrorUnsupportedError("luma/chroma downsample ratio");
             }
         } else if (hv != 0x11) {
-            return UnsupportedError("luma/chroma downsample ratio");
+            return JpegErrorUnsupportedError("luma/chroma downsample ratio");
         }
     }
     return JpegError::nil();
@@ -599,18 +593,18 @@ JpegError Decoder::processDQT(int n) {
         }
         uint8 pq = d.tmp[0] >> 4;
         if (pq != 0) {
-            return UnsupportedError("bad Pq value");
+            return JpegErrorUnsupportedError("bad Pq value");
         }
         uint8 tq = d.tmp[0] & 0x0f;
         if (tq > maxTq) {
-            return FormatError("bad Tq value");
+            return JpegErrorFormatError("bad Tq value");
         }
         for (int i = 0; i < JpegBlock::blockSize; ++i) {
             d.quant[tq][i] = int32(d.tmp[i+1]);
         }
     }
     if (n != 0) {
-        return FormatError("DQT has wrong length");
+        return JpegErrorFormatError("DQT has wrong length");
     }
     return JpegError::nil();
 }
@@ -619,7 +613,7 @@ JpegError Decoder::processDQT(int n) {
 JpegError Decoder::processDRI(int n) {
     Decoder &d = *this;
     if (n != 2) {
-        return FormatError("DRI has wrong length");
+        return JpegErrorFormatError("DRI has wrong length");
     }
     JpegError err;
     if ((err = d.readFull(d.tmp, 2)) != JpegError::nil()) {
@@ -668,7 +662,7 @@ JpegError Decoder::decode(DecoderReader &r, DecoderWriter &w, uint8 componentCoa
         }
         if (d.tmp[0] == 'h' && d.tmp[1] == 'c') {
         } else {
-            return FormatError("arhc header malformed");
+            return JpegErrorFormatError("arhc header malformed");
         }
         uint8 *versionExtension = d.tmp + 2;
         while (versionExtension[3] != 0) {
@@ -750,7 +744,7 @@ JpegError Decoder::decode(DecoderReader &r, DecoderWriter &w, uint8 componentCoa
         d.wbuffer.appendByte(0xd8);
     }
     if (d.tmp[0] != 0xff || d.tmp[1] != soiMarker) {
-        return FormatError("missing SOI marker");
+        return JpegErrorFormatError("missing SOI marker");
     }
 
     // Process the remaining segments until the End Of Image marker.
@@ -834,7 +828,7 @@ JpegError Decoder::decode(DecoderReader &r, DecoderWriter &w, uint8 componentCoa
         int n = (int(d.tmp[0])<<8) + int(d.tmp[1]) - 2;
         if (n < 0) {
             //fmt.Printf("Short semgnet %d\n", n)
-            return FormatError("short segment length");
+            return JpegErrorFormatError("short segment length");
         }
 
         if (marker == sof0Marker || marker == sof2Marker) { // Start Of Frame.
@@ -852,7 +846,7 @@ JpegError Decoder::decode(DecoderReader &r, DecoderWriter &w, uint8 componentCoa
             err = d.ignore(n);
         } else {
             //fprintf(stderr, "UNKNOWN %x\n", marker);
-            err = UnsupportedError("unknown marker");
+            err = JpegErrorUnsupportedError("unknown marker");
         }
         if (err != nil) {
             return err;
@@ -886,8 +880,8 @@ JpegError Decode(DecoderReader &r, DecoderWriter &w, uint8 componentCoalescing) 
 // Decode reads a JPEG image from r and returns it as an image.Image.
 JpegError CompressJPEGtoARHC(DecoderReader &r, DecoderWriter &w, uint8 componentCoalescing) {
     MagicNumberReplacementWriter magic(&w,
-                                       String((char*)MAGIC_7Z, sizeof(MAGIC_7Z)),
-                                       String((char*)MAGIC_ARHC, sizeof(MAGIC_ARHC)));
+                                       std::vector<uint8_t>(MAGIC_7Z, MAGIC_7Z + sizeof(MAGIC_7Z)),
+                                       std::vector<uint8_t>(MAGIC_ARHC, MAGIC_ARHC + sizeof(MAGIC_ARHC)));
     DecoderCompressionWriter cw(&magic);
     Decoder d;
     return d.decode(r, cw, componentCoalescing);
@@ -895,8 +889,8 @@ JpegError CompressJPEGtoARHC(DecoderReader &r, DecoderWriter &w, uint8 component
 // Decode reads a JPEG image from r and returns it as an image.Image.
 JpegError DecompressARHCtoJPEG(DecoderReader &r, DecoderWriter &w) {
     MagicNumberReplacementReader magic(&r,
-                                       String((char*)MAGIC_ARHC, sizeof(MAGIC_ARHC)),
-                                       String((char*)MAGIC_7Z, sizeof(MAGIC_7Z)));
+                                       std::vector<uint8_t>(MAGIC_ARHC, MAGIC_ARHC + sizeof(MAGIC_ARHC)),
+                                       std::vector<uint8_t>(MAGIC_7Z, MAGIC_7Z + sizeof(MAGIC_7Z)));
     DecoderDecompressionReader cr(&magic);
     Decoder d;
     return d.decode(cr, w, 0);

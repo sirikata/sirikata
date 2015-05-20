@@ -42,6 +42,86 @@
 #include "DecoderPlatform.hpp"
 #include "Huffman.hpp"
 namespace Sirikata {
+
+template<class T> class JpegAllocator {
+    void *(*custom_allocate)(void *opaque, size_t nmemb, size_t size);
+    void (*custom_deallocate)(void *opaque, void *ptr);
+    void * opaque;
+    static void *malloc_wrapper(void *opaque, size_t nmemb, size_t size) {
+        return malloc(nmemb * size);
+    }
+    static void free_wrapper(void *opaque, void *ptr) {
+        return free(ptr);
+    }
+public:
+    typedef size_t size_type;
+    typedef ptrdiff_t difference_type;
+    typedef T* pointer;
+    typedef const T* const_pointer;
+    typedef T& reference;
+    typedef const T& const_reference;
+    typedef T value_type;
+    
+    ///starts up with malloc/free implementation
+    JpegAllocator() throw() {
+        custom_allocate = &malloc_wrapper;
+        custom_allocate = &free_wrapper;
+        opaque = NULL;
+    }
+    template <class U> struct rebind { typedef JpegAllocator<U> other; };
+    JpegAllocator(const JpegAllocator&other)throw() {
+        custom_allocate = other.custom_allocate;
+        custom_deallocate = other.custom_deallocate;
+        opaque = other.opaque;
+    }
+    template <typename U> JpegAllocator(const JpegAllocator<U>&other) throw(){
+        custom_allocate = other.custom_allocate;
+        custom_deallocate = other.custom_deallocate;
+        opaque = other.opaque;
+    }
+    ~JpegAllocator()throw() {}
+
+     //this sets up the memory subsystem with the arg for this and all copied allocators
+    void setup_memory_subsystem(size_t arg,
+                                void *(custom_init)(size_t prealloc_size),
+                                void *(*custom_allocate)(void *opaque, size_t nmemb, size_t size),
+                                void (*custom_deallocate)(void *opaque, void *ptr)) {
+        this->opaque = custom_init(arg);
+        this->custom_allocate = custom_allocate;
+        this->custom_deallocate = custom_deallocate;
+    }
+    // this tears down all users of this memory subsystem
+    void teardown_memory_subsystem(void (*custom_deinit)(void *opaque)) {
+        (*custom_deinit)(opaque);
+        opaque = NULL;
+    }
+
+    pointer allocate(size_type s, void const * = 0) {
+        if (0 == s)
+            return NULL;
+        pointer temp = (pointer)(*custom_allocate)(opaque, 1, s * sizeof(T)); 
+        if (temp == NULL)
+            throw std::bad_alloc();
+        return temp;
+    }
+
+    void deallocate(pointer p, size_type) {
+        (*custom_deallocate)(opaque, p);
+    }
+
+    size_type max_size() const throw() { 
+        return std::numeric_limits<size_t>::max() / sizeof(T); 
+    }
+
+    void construct(pointer p, const T& val) {
+        new((void *)p) T(val);
+    }
+
+    void destroy(pointer p) {
+        p->~T();
+    }
+    
+};
 struct JpegBlock {
     enum {
         blockSize = 64
@@ -60,23 +140,24 @@ struct JpegBlock {
     }
 };
 class JpegError {
-    String mWhat;
+    std::vector<char> mWhat;
     bool ok;
 public:
-    JpegError(const String& wh) {
-        mWhat = wh;
+    JpegError(const char * wh):mWhat(wh, wh + strlen(wh) + 1) {
         ok = false;
     }
-    JpegError(const char * wh) {
-        mWhat = wh;
+    JpegError(const std::vector<char> msg):mWhat(msg) {
+        if (mWhat.empty() || mWhat.back() != '\0') {
+            mWhat.push_back('\0');
+        }
         ok = false;
     }
     JpegError() {
         ok = true;
     }
-    const char * what() {
+    const char * what() const {
         if (ok) return "";
-        return mWhat.c_str();
+        return &mWhat[0];
     }
     operator bool() {
         return !ok;
@@ -86,9 +167,8 @@ public:
     static JpegError errMissingFF00();
     static JpegError errShortHuffmanData();
 };
-JpegError FormatError(const String&s);
-
-JpegError UnsupportedError(const String&s);
+#define JpegErrorUnsupportedError(s) JpegError("unsupported JPEG feature: " s)
+#define JpegErrorFormatError(s) JpegError("unsupported JPEG feature: " s)
 
 
 // Component specification, specified in section B.2.2.

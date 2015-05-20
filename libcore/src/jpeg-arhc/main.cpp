@@ -39,27 +39,42 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
-#include "reader.h"
-class FileReader : public Sirikata::Reader {
+#include <sirikata/core/jpeg-arhc/Compression.hpp>
+
+class FileReader : public Sirikata::DecoderReader {
     FILE * fp;
+    std::vector<uint8_t> magic;
+    unsigned int magicread;
 public:
-    FileReader(FILE * ff){
+    FileReader(FILE * ff, const std::vector<uint8_t> &magi) : magic(magi){
         fp = ff;
+        magicread = 0;
     }
     std::pair<Sirikata::uint32, Sirikata::JpegError> Read(Sirikata::uint8*data, unsigned int size) {
         using namespace Sirikata;
-        signed long nread = fread(data, 1, size, fp);
+        signed long nread = 0;
+        if (magicread < magic.length()) {
+            unsigned int amnt_to_copy = std::min((unsigned int)magic.length() + magicread, size);
+            memcpy(data, magic.data() + magicread, amnt_to_copy);
+            magicread += size;
+            nread += amnt_to_copy;
+        }
+        nread += fread(data + nread, 1, size - nread, fp);
         if (nread <= 0) {
             return std::pair<Sirikata::uint32, JpegError>(0, JpegError("Short read"));
         }
-        return std::pair<Sirikata::uint32, JpegError>(nread, JpegError::nil);
+        return std::pair<Sirikata::uint32, JpegError>(nread, JpegError::nil());
     }
 };
-class FileWriter : public Sirikata::Writer {
+class FileWriter : public Sirikata::DecoderWriter {
     FILE * fp;
 public:
     FileWriter(FILE * ff){
         fp = ff;
+    }
+    void Close() {
+        fclose(fp);
+        fp = NULL;
     }
     std::pair<Sirikata::uint32, Sirikata::JpegError> Write(const Sirikata::uint8*data, unsigned int size) {
         using namespace Sirikata;
@@ -67,7 +82,7 @@ public:
         if (nwritten == 0) {
             return std::pair<Sirikata::uint32, JpegError>(0, JpegError("Short write"));
         }
-        return std::pair<Sirikata::uint32, JpegError>(size, JpegError::nil);
+        return std::pair<Sirikata::uint32, JpegError>(size, JpegError::nil());
     }
 };
 
@@ -75,13 +90,30 @@ int main(int argc, char **argv) {
     using namespace Sirikata;
     FILE * input = stdin;
     FILE * output = stdout;
+    unsigned char magic[5] = {0};
+    fread(magic, 4, 1, input);
+    fseek(input, 0, SEEK_SET);
+    bool unknown = true;
+    bool isArhc = false;
+    bool isXz = false;
+    bool isJpeg = false;
+    if (memcmp(magic, "ARHC", 4) == 0) {
+        isArhc = true;
+        unknown = false;
+    } else if (memcmp(magic + 1, "7zX", 3) == 0) {
+        isXz = true;
+        unknown = false;
+    } else if (magic[0] == 0xff && magic[1] == 0xd8) {
+        isJpeg = true;
+        unknown = false;
+    }
     if (argc > 1) {
         input = fopen(argv[1], "rb");
     }
     if (argc > 2) {
         output = fopen(argv[2], "wb");
     }
-    FileReader reader(input);
+    FileReader reader(input, std::vector<uint8_t>(magic, magic + 4));
 	FileWriter writer(output);
 
     bool coalesceYCr = false;
@@ -98,7 +130,17 @@ int main(int argc, char **argv) {
     if (coalesceCbCr) {
         componentCoalescing |= Decoder::comp12coalesce;
 	}
-	err = Decode(reader, writer, componentCoalescing);
+
+    if (isJpeg) {
+     	err = CompressJPEGtoARHC(reader, writer, componentCoalescing);   
+    } else if (isXz){
+        err = Decompress7ZtoAny(reader, writer);
+    } else if (isArhc) {
+     	err = DecompressARHCtoJPEG(reader, writer);
+    } else {
+        assert(unknown);
+        err = CompressAnyto7Z(reader, writer);
+    }
     if (err) {
         fprintf(stderr, "Error Encountered %s\n", err.what());
     }

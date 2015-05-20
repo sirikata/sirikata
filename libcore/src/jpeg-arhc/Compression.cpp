@@ -31,22 +31,24 @@ std::pair<Sirikata::uint32, Sirikata::JpegError> MemReadWriter::Read(Sirikata::u
 
 
 MagicNumberReplacementReader::MagicNumberReplacementReader(DecoderReader *r,
-                                                           const String& originalMagic, const String&newMagic) {
+                                                           const std::vector<uint8_t>& originalMagic, const std::vector<uint8_t>&newMagic) {
     mOriginalMagic = originalMagic;
     mNewMagic = newMagic;
     mBase = r;
     mMagicNumbersReplaced = 0;
-    assert(mOriginalMagic.length() == mNewMagic.length() && "Magic numbers must be the same length");
+    assert(mOriginalMagic.size() == mNewMagic.size() && "Magic numbers must be the same length");
 }
 std::pair<uint32, JpegError> MagicNumberReplacementReader::Read(uint8*data, unsigned int size){
     std::pair<uint32, JpegError> retval = mBase->Read(data, size);
     for (size_t off = 0;
-         mMagicNumbersReplaced < mOriginalMagic.length() && off < size;
+         mMagicNumbersReplaced < mOriginalMagic.size() && off < size;
          ++mMagicNumbersReplaced, ++off) {
         if (memcmp(data + off, mOriginalMagic.data() + mMagicNumbersReplaced, 1) != 0) {
-            retval.second = JpegError("Magic Number Mismatch: "
-                                      + String((char*)data, off + 1) + " != "
-                                      + mOriginalMagic.substr(mMagicNumbersReplaced));
+            const char * error_message = "Magic Number Mismatch: ";
+            std::vector<char> error_vec(error_message, error_message + strlen(error_message));
+            error_vec.insert(error_vec.end(), (char*)data, (char*)data + off + 1);
+            error_vec.insert(error_vec.end(), mOriginalMagic.begin() + mMagicNumbersReplaced, mOriginalMagic.end());
+            retval.second = JpegError(error_vec);
         }
         data[off] = mNewMagic[mMagicNumbersReplaced];
     }
@@ -57,18 +59,18 @@ MagicNumberReplacementReader::~MagicNumberReplacementReader(){
 }
 
 MagicNumberReplacementWriter::MagicNumberReplacementWriter(DecoderWriter *w,
-                                                           const String& originalMagic, const String&newMagic) {
+                                                           const std::vector<uint8>& originalMagic, const std::vector<uint8>&newMagic) {
     mOriginalMagic = originalMagic;
     mNewMagic = newMagic;
     mBase = w;
     mMagicNumbersReplaced = 0;
-    assert(mOriginalMagic.length() == mNewMagic.length() && "Magic numbers must be the same length");
+    assert(mOriginalMagic.size() == mNewMagic.size() && "Magic numbers must be the same length");
 }
 std::pair<uint32, JpegError> MagicNumberReplacementWriter::Write(const uint8*data, unsigned int size) {
-    if (mMagicNumbersReplaced < mOriginalMagic.length()) {
-        if (size > mOriginalMagic.length() - mMagicNumbersReplaced) {
+    if (mMagicNumbersReplaced < mOriginalMagic.size()) {
+        if (size > mOriginalMagic.size() - mMagicNumbersReplaced) {
             std::vector<uint8> replacedMagic(data, data + size);
-            for (size_t off = 0;mMagicNumbersReplaced < mOriginalMagic.length(); ++mMagicNumbersReplaced, ++off) {
+            for (size_t off = 0;mMagicNumbersReplaced < mOriginalMagic.size(); ++mMagicNumbersReplaced, ++off) {
                 assert(memcmp(mOriginalMagic.data() + mMagicNumbersReplaced, &replacedMagic[off], 1) == 0);
                 replacedMagic[off] = mNewMagic[mMagicNumbersReplaced];
             }
