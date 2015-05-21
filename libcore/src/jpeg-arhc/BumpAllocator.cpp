@@ -5,7 +5,6 @@
 #else
 #include <sirikata/core/util/AtomicTypes.hpp>
 #endif
-#include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/jpeg-arhc/DecoderPlatform.hpp>
 #include <sirikata/core/jpeg-arhc/BumpAllocator.hpp>
 namespace Sirikata {

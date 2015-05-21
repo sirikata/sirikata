@@ -49,14 +49,14 @@ void BitByteStream::appendBytes(uint8*bytes, uint32 nBytes) {
     buffer.insert(buffer.end(), bytes, bytes + nBytes);
 }
 
-std::pair<uint32, JpegError> BitByteStream::scanAlignedByte() {
+std::pair<uint8, JpegError> BitByteStream::scanAlignedByte() {
     assert((bitReadCursor&0x7) == 0);
     uint32 byteAddress = (bitReadCursor >> 3);
     bitReadCursor +=8;
     if(byteAddress >= buffer.size()) {
         return Decoder::uint32E(0, MakeJpegError("Reading off the end of byte buffer"));
     }
-    return Decoder::uint32E(buffer[byteAddress], JpegError::nil());
+    return Decoder::uint8E(buffer[byteAddress], JpegError::nil());
 }
 std::pair<uint32, JpegError> BitByteStream::scanBitsNoStuffedZeros(uint32 nBits) {
 
@@ -343,11 +343,8 @@ JpegError Decoder::processDHT(int n) {
         for (uint32 nBits = 0; nBits < huffman::maxCodeLength; nBits++) {
 			code <<= 1;
 			for (int32 j = 0; j < nCodes[nBits]; j++) {
-				uint32 encodingValue = 0;
-				encodingValue = nBits + 1;
-				encodingValue <<= 24;
-				encodingValue |= code;
-				h.huffmanLUTencoding[h.vals[x]] = encodingValue;
+				h.huffmanLUTencoding[h.vals[x]].bits = code;
+                h.huffmanLUTencoding[h.vals[x]].nBits = nBits + 1;
 				code++;
 				x++;
 			}
@@ -383,11 +380,11 @@ Decoder::uint8E Decoder::decodeHuffman(huffman *h, int32 zig, int component) {
 		assert(false && "HUFF TRANS SECT SHOULD BE SET");
 	}
 	if (d.arhc) { // here we just return the original value
-		uint32E unhuffmanValueErr = d.huffMultibuffer[zig+64*d.coalescedComponent(component)].scanAlignedByte();
+		uint8E unhuffmanValueErr = d.huffMultibuffer[zig+64*d.coalescedComponent(component)].scanAlignedByte();
 		// but we also need to write the huffman'd value to the array
 		//printf("Writing %x => %x to the output\n", unhuffmanValueErr.first, h.huffmanLUTencoding[unhuffmanValueErr.first])
-        uint32 hval = h->huffmanLUTencoding[unhuffmanValueErr.first];
-		d.wbuffer.emitBits(hval&0xffff, (hval >> 24), true);
+        huffman::RevLut hval = h->huffmanLUTencoding[unhuffmanValueErr.first];
+		d.wbuffer.emitBits(hval.bits, hval.nBits, true);
 		return uint8E(uint8(unhuffmanValueErr.first), unhuffmanValueErr.second);
 	}
 	if (h->nCodes == 0) {
@@ -416,15 +413,12 @@ Decoder::uint8E Decoder::decodeHuffman(huffman *h, int32 zig, int component) {
         uint32 v = 0;
         if ((v = h->lut[(d.bits.a >> uint32(d.bits.n-huffman::lutSize)) & 0xff]) != 0) {
             uint8 n = (v & 0xff) - 1;
-            uint32 reverseHuffmanLookupAssert = uint32(n);
-            reverseHuffmanLookupAssert <<= uint32(24);
-            reverseHuffmanLookupAssert |= ((d.bits.a >> (uint32(d.bits.n) - uint32(n))) &
+            huffman::RevLut reverseHuffmanLookupAssert;
+            reverseHuffmanLookupAssert.nBits = uint32(n);
+            reverseHuffmanLookupAssert.bits = ((d.bits.a >> (uint32(d.bits.n) - uint32(n))) &
                                            ((1 << n) - 1)); // only use that many bits as required from the accumulator
             // make sure our reverse encoding functions properly
-            if (h->huffmanLUTencoding[uint8(v>>8)] != reverseHuffmanLookupAssert) {
-                fprintf(stderr, "%d bits read as %x => %x =/=> %x\n",
-                        n, reverseHuffmanLookupAssert & 0xffffff,
-                        uint8(v>>8), h->huffmanLUTencoding[uint8(v >> 8)]);
+            if (h->huffmanLUTencoding[uint8(v>>8)].bits != reverseHuffmanLookupAssert.bits) {
                 assert(false && "incorrect bit reading from huffman");
             }
             //printf("%d bits read as %x => %x => %x\n",

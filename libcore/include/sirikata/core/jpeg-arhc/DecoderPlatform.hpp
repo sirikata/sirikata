@@ -1,7 +1,17 @@
+#ifdef __linux
+#define SIRIKATA_FUNCTION_EXPORT __attribute__ ((visibility("default")))
+#define SIRIKATA_EXPORT __attribute__ ((visibility("default")))
+#define SIRIKATA_PLUGIN_EXPORT __attribute__ ((visibility("default")))
+#else
+#include <sirikata/core/util/Platform.hpp>
+#endif
+
 #include <stdint.h>
+#include <stddef.h>
 #include <string>
 #include <vector>
 namespace Sirikata{
+
 typedef int64_t int64;
 typedef uint64_t uint64;
 typedef int32_t int32;

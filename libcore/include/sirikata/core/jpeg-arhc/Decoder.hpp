@@ -38,7 +38,7 @@
 //
 #include <string.h>
 #include <assert.h>
-#include <sirikata/core/util/Platform.hpp>
+//#include <sirikata/core/util/Platform.hpp>
 #include "DecoderPlatform.hpp"
 #include "Huffman.hpp"
 namespace Sirikata {
@@ -117,8 +117,10 @@ public:
         if (0 == s)
             return NULL;
         pointer temp = (pointer)(*custom_allocate)(opaque, 1, s * sizeof(T)); 
+#ifdef __EXCEPTIONS
         if (temp == NULL)
             throw std::bad_alloc();
+#endif
         return temp;
     }
 
@@ -127,7 +129,7 @@ public:
     }
 
     size_type max_size() const throw() { 
-        return std::numeric_limits<size_t>::max() / sizeof(T); 
+        return 0xffffffff / sizeof(T); 
     }
 
     void construct(pointer p, const T& val) {
@@ -265,7 +267,7 @@ struct SIRIKATA_EXPORT BitByteStream {
     void emitBits(uint16 bits, uint8 nBits, bool stuffZeros);
     std::pair<uint32, JpegError> scanBits(uint32 nBits, bool stuffZeros);
     std::pair<uint32, JpegError> scanBitsNoStuffedZeros(uint32 nBits);
-    std::pair<uint32, JpegError> scanAlignedByte();
+    std::pair<uint8, JpegError> scanAlignedByte();
     void pop();
     uint32 len() const;
     void flushBits(bool stuffBits);

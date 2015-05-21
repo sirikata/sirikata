@@ -41,7 +41,7 @@
 #include <assert.h>
 #include <sirikata/core/jpeg-arhc/Compression.hpp>
 #include <sirikata/core/jpeg-arhc/BumpAllocator.hpp>
-
+#include <sys/time.h>
 class FileReader : public Sirikata::DecoderReader {
     FILE * fp;
     std::vector<uint8_t, Sirikata::JpegAllocator<uint8_t> > magic;
@@ -142,7 +142,11 @@ int main(int argc, char **argv) {
     bool isArhc = false;
     bool isXz = false;
     bool isJpeg = false;
-    if (memcmp(magic, "ARHC", 4) == 0) {
+    int reps = 1;
+    if (memcmp(magic, "arhc", 4) == 0) {
+        isArhc = true;
+        uncompressed = true;
+    }else if (memcmp(magic, "ARHC", 4) == 0) {
         isArhc = true;
         unknown = false;
     } else if (memcmp(magic + 1, "7zX", 3) == 0) {
@@ -153,11 +157,12 @@ int main(int argc, char **argv) {
         unknown = false;
     }
     JpegAllocator<uint8_t> alloc;
+/*
     alloc.setup_memory_subsystem(1024 * 1024 * 1024,
                                  &BumpAllocatorInit,
                                  &BumpAllocatorMalloc,
                                  &BumpAllocatorFree);
-
+*/
     FileReader reader(input, std::vector<uint8_t, JpegAllocator<uint8_t> >(magic, magic + magic_size, alloc));
 
     std::vector<uint8_t, JpegAllocator<uint8_t> >buffered_input(alloc);
@@ -172,7 +177,6 @@ int main(int argc, char **argv) {
     }
 
     //FileReader&memory_input = reader;
-    MemReadWriter memory_output(alloc);
 	FileWriter writer(output, alloc);
     bool coalesceYCr = false;
     bool coalesceYCb = false;
@@ -191,24 +195,35 @@ int main(int argc, char **argv) {
 
     struct timeval tv_start;
     gettimeofday(&tv_start, NULL);
-    if (isJpeg && !force7z) {
-        if (uncompressed) {
-            err = Decode(memory_input, memory_output, componentCoalescing, alloc);   
+    MemReadWriter memory_output(alloc);
+    for (int rep = 0; rep < reps; ++rep) {
+        memory_output.buffer().clear();
+        if (isJpeg && !force7z) {
+            if (uncompressed) {
+                err = Decode(memory_input, memory_output, componentCoalescing, alloc);   
+            } else {
+                err = CompressJPEGtoARHC(memory_input, memory_output, level, componentCoalescing, alloc);   
+            }
+        } else if (isXz && !force7z){
+            err = Decompress7ZtoAny(memory_input, memory_output, alloc);
+        } else if (isArhc && !force7z) {
+            if (uncompressed) {
+                err = Decode(memory_input, memory_output, componentCoalescing, alloc);   
+            } else {
+                err = DecompressARHCtoJPEG(memory_input, memory_output, alloc);
+            }
         } else {
-            err = CompressJPEGtoARHC(memory_input, memory_output, level, componentCoalescing, alloc);   
+            assert(unknown || force7z);
+            err = CompressAnyto7Z(memory_input, memory_output, level, alloc);
         }
-    } else if (isXz && !force7z){
-        err = Decompress7ZtoAny(memory_input, memory_output, alloc);
-    } else if (isArhc && !force7z) {
-     	err = DecompressARHCtoJPEG(memory_input, memory_output, alloc);
-    } else {
-        assert(unknown || force7z);
-        err = CompressAnyto7Z(memory_input, memory_output, level, alloc);
+        memory_input.Close();
+        memory_output.Close();
     }
     struct timeval tv_end;
     gettimeofday(&tv_end, NULL);
     double time_taken = tv_end.tv_sec + .000001 * tv_end.tv_usec;
     time_taken -= tv_start.tv_sec + .000001 * tv_start.tv_usec;
+    time_taken /= reps;
     fprintf(stderr, "Time Taken, compression level %d time %.3f s size %d / %d %.1f%%\n",
             (int)level, time_taken, (int)memory_output.buffer().size(), (int)memory_input.buffer().size(), 
             100. * memory_output.buffer().size()/(double)memory_input.buffer().size());

@@ -37,7 +37,11 @@ struct huffman {
 	// Each value maps to a uint32 of which the 8 most significant bits hold the
 	// codeword size in bits and the 24 least significant bits hold the codeword.
 	// The maximum codeword size is 16 bits.
-	uint32 huffmanLUTencoding [256];
+    struct RevLut{
+        uint16 bits;
+        uint8 nBits;
+    };
+	RevLut huffmanLUTencoding [256];
     huffman() {
         memset(this, 0, sizeof(huffman));
     }
