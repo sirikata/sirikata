@@ -162,6 +162,9 @@ public:
     T read() const {
         return *(T*)getThisAlignedAddress(mMemory);
     }
+    T load() const {
+        return *(T*)getThisAlignedAddress(mMemory);
+    }
     T operator +=(const T&other) {
         return SizedAtomicValue<sizeof(T)>::add(getThisAlignedAddress(mMemory),other);
     }

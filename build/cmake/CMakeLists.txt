@@ -1381,6 +1381,7 @@ SET(SIRIKATA_CORE_SOURCES
         ${Protocol_PBJ_CPP_FILES}
         ${TRACE_PBJ_CPP_FILES}
 	${LIBCORE_SOURCE_DIR}/jpeg-arhc/Scan.cpp
+	${LIBCORE_SOURCE_DIR}/jpeg-arhc/BumpAllocator.cpp
 	${LIBCORE_SOURCE_DIR}/jpeg-arhc/Decoder.cpp
 	${LIBCORE_SOURCE_DIR}/jpeg-arhc/Compression.cpp
 	${LIBCORE_SOURCE_DIR}/jpeg-arhc/Huffman.cpp

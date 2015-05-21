@@ -32,6 +32,15 @@
 #include <cxxtest/TestSuite.h>
 #include <sirikata/core/util/Paths.hpp>
 #include <sirikata/core/jpeg-arhc/Decoder.hpp>
+#include <sirikata/core/jpeg-arhc/BumpAllocator.hpp>
+#ifdef __linux
+#include <sys/wait.h>
+#include <linux/seccomp.h>
+
+#include <sys/prctl.h>
+#include <sys/syscall.h>
+#endif
+
 class LosslessJpegTest : public CxxTest::TestSuite
 {
     class FileReader : public Sirikata::DecoderReader {
@@ -73,8 +82,19 @@ class LosslessJpegTest : public CxxTest::TestSuite
     
 
 public:
-    size_t loadFile(const char *fileName, Sirikata::MemReadWriter&original,
+    
+    size_t loadFileHelper(FILE *input, size_t input_size, Sirikata::MemReadWriter&original,
                     const Sirikata::JpegAllocator<uint8_t> &alloc) {
+        using namespace Sirikata;
+        std::vector<uint8, JpegAllocator<uint8> > inputData(alloc);
+        inputData.resize(input_size);
+        if (!inputData.empty()) {
+            fread(&inputData[0], inputData.size(), 1, input);
+            original.Write(&inputData[0], inputData.size());
+        }
+        return inputData.size();
+    }
+    std::pair<FILE *, size_t> getFileObjectAndSize(const char *fileName) {
         using namespace Sirikata;
         String collada_data_dir = Path::Get(Path::DIR_EXE);
         // Windows exes are one level deeper due to Debug or RelWithDebInfo
@@ -85,16 +105,22 @@ public:
         String curFile = collada_data_dir + fileName;
         FILE * input = fopen(curFile.c_str(), "rb");
         TS_ASSERT_EQUALS(!input, false);
-        fseek(input, 0, SEEK_END);
-        std::vector<uint8, JpegAllocator<uint8> > inputData(alloc);
-        inputData.resize(ftell(input));
-        fseek(input, 0, SEEK_SET);
-        if (!inputData.empty()) {
-            fread(&inputData[0], inputData.size(), 1, input);
-            original.Write(&inputData[0], inputData.size());
+        size_t input_size = 0;
+        if (input) {
+            fseek(input, 0, SEEK_END);
+            input_size = ftell(input);
+            fseek(input, 0, SEEK_SET);
         }
-        fclose(input);
-        return inputData.size();
+        return std::pair<FILE*, size_t>(input, input_size);
+    }
+
+    size_t loadFile(const char *fileName, Sirikata::MemReadWriter&original,
+                    const Sirikata::JpegAllocator<uint8_t> &alloc) {
+        std::pair<FILE*, size_t> input = getFileObjectAndSize(fileName);
+        size_t retval = loadFileHelper(input.first, input.second, original, alloc);
+        fclose(input.first);
+        return retval;
+
     }
     void testRoundTrip( void )
     {
@@ -111,10 +137,61 @@ public:
         TS_ASSERT_EQUALS(err, JpegError());
         TS_ASSERT_EQUALS(original.buffer(), round.buffer());
     }
+    void testBumpAllocator( void )
+    {
+        using namespace Sirikata;
+        TS_ASSERT_EQUALS(BumpAllocatorTest(), true);
+    }
     void testCompressedRoundTrip( void )
     {
         using namespace Sirikata;
         JpegAllocator<uint8_t> alloc;
+        compressedRoundTripHelper(alloc);
+    }
+    void testSeccompRoundTrip (void) {
+        pid_t pid;
+        int status = 1;
+        if ((pid = fork()) == 0) {
+            using namespace Sirikata;
+            JpegAllocator<uint8_t> alloc;
+            alloc.setup_memory_subsystem(256 * 1024 * 1024,
+                                         &BumpAllocatorInit,
+                                         &BumpAllocatorMalloc,
+                                         &BumpAllocatorFree);
+            
+            std::pair<FILE*, size_t> input_fp_size = getFileObjectAndSize("prism/texture0.jpg");
+            if (prctl(PR_SET_SECCOMP, SECCOMP_MODE_STRICT)) {
+                syscall(SYS_exit, 1); // SECCOMP not allowed
+            }
+            
+            MemReadWriter original(alloc);
+            size_t inputDataSize = loadFileHelper(input_fp_size.first, input_fp_size.second, original, alloc);
+
+            uint8 componentCoalescing = Decoder::comp12coalesce;
+            MemReadWriter arhc(alloc);
+            JpegError err = CompressJPEGtoARHC(original, arhc, componentCoalescing, alloc);
+            if (err != JpegError()) {
+                syscall(SYS_exit, 2);
+            }
+            MemReadWriter round(alloc);
+            err = DecompressARHCtoJPEG(arhc, round, alloc);
+            if (err != JpegError()) {
+                syscall(SYS_exit, 3);
+            }
+            if (original.buffer() != round.buffer()) {
+                syscall(SYS_exit, 4);
+            }
+            if (arhc.buffer().size() > inputDataSize * 9 / 10) {
+                syscall(SYS_exit, 5);
+            }
+            syscall(SYS_exit, 0);
+        }
+        waitpid(pid, &status, 0);
+        TS_ASSERT_EQUALS(0, status);
+    }
+    
+    void compressedRoundTripHelper(const Sirikata::JpegAllocator<uint8_t> &alloc) {
+        using namespace Sirikata;
         MemReadWriter original(alloc);
         size_t inputDataSize = loadFile("prism/texture0.jpg", original, alloc);
         uint8 componentCoalescing = Decoder::comp12coalesce;
@@ -127,10 +204,39 @@ public:
         TS_ASSERT_EQUALS(original.buffer(), round.buffer());
         TS_ASSERT_LESS_THAN(arhc.buffer().size(), inputDataSize * 9 / 10);
     }
-    void testGenericCompressedRoundTrip( void )
+
+    void testCompressedRoundTripBumpAllocator( void )
     {
+
         using namespace Sirikata;
         JpegAllocator<uint8_t> alloc;
+        alloc.setup_memory_subsystem(256 * 1024 * 1024,
+                                     &BumpAllocatorInit,
+                                     &BumpAllocatorMalloc,
+                                     &BumpAllocatorFree);
+        compressedRoundTripHelper(alloc);
+        alloc.teardown_memory_subsystem(&BumpAllocatorDestroy);
+    }
+
+    void testGenericCompressedRoundTripBumpAllocator( void )
+    {
+
+        using namespace Sirikata;
+        JpegAllocator<uint8_t> alloc;
+        alloc.setup_memory_subsystem(256 * 1024 * 1024,
+                                     &BumpAllocatorInit,
+                                     &BumpAllocatorMalloc,
+                                     &BumpAllocatorFree);
+        genericCompressedRoundTripHelper(alloc);
+        alloc.teardown_memory_subsystem(&BumpAllocatorDestroy);
+    }
+    void testGenericCompressedRoundTrip( void )
+    {
+        genericCompressedRoundTripHelper(Sirikata::JpegAllocator<uint8_t>());
+    }
+    void genericCompressedRoundTripHelper(const Sirikata::JpegAllocator<uint8_t> &alloc)
+    {
+        using namespace Sirikata;
         MemReadWriter original(alloc);
         size_t inputDataSize = loadFile("prism/texture0.jpg", original, alloc);
         MemReadWriter arhc(alloc);

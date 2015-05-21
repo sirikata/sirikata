@@ -57,6 +57,12 @@ template<class T> class JpegAllocator {
         free(ptr);
     }
 public:
+    template <class U> bool operator == (const JpegAllocator<U> &other) {
+        return custom_allocate == other.custom_allocate && custom_deallocate == other.custom_deallocate && opaque == other.opaque;
+    }
+    template <class U> bool operator != (const JpegAllocator<U> &other) {
+        return !((*this) == other);
+    }
     typedef size_t size_type;
     typedef ptrdiff_t difference_type;
     typedef T* pointer;

@@ -181,7 +181,7 @@ DecoderCompressionWriter::DecoderCompressionWriter(DecoderWriter *w,
     mLzmaAllocator.free = mAlloc.get_custom_deallocate();
     mLzmaAllocator.opaque = mAlloc.get_custom_state();
     mStream.allocator = &mLzmaAllocator;
-    lzma_ret ret = lzma_easy_encoder(&mStream, 9, LZMA_CHECK_CRC64);
+    lzma_ret ret = lzma_easy_encoder(&mStream, 4, LZMA_CHECK_CRC64);
 	mStream.next_in = NULL;
 	mStream.avail_in = 0;
     if (ret != LZMA_OK) {

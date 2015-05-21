@@ -40,6 +40,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <sirikata/core/jpeg-arhc/Compression.hpp>
+#include <sirikata/core/jpeg-arhc/BumpAllocator.hpp>
 
 class FileReader : public Sirikata::DecoderReader {
     FILE * fp;
@@ -92,6 +93,7 @@ public:
 
 int main(int argc, char **argv) {
     using namespace Sirikata;
+    assert(BumpAllocatorTest() && "Bump allocator test must pass");
     FILE * input = stdin;
     FILE * output = stdout;
     unsigned char magic[5] = {0};
