@@ -21,9 +21,12 @@ std::pair<Sirikata::uint32, Sirikata::JpegError> MemReadWriter::Read(Sirikata::u
     }
     mReadCursor += actualBytesRead;
     JpegError err = JpegError();
-    if (actualBytesRead != size) {
-        err = JpegError("Short read", mBuffer.get_allocator());
+    if (actualBytesRead == 0) {
+        err = JpegError::errEOF(mBuffer.get_allocator());
     }
+    //fprintf(stderr, "%d READ %02x%02x%02x%02x - %02x%02x%02x%02x\n", (uint32)actualBytesRead, data[0], data[1],data[2], data[3],
+    //        data[actualBytesRead-4],data[actualBytesRead-3],data[actualBytesRead-2],data[actualBytesRead-1]);
+
     std::pair<Sirikata::uint32, JpegError> retval(actualBytesRead, err);
     return retval;
 }
@@ -172,6 +175,7 @@ DecoderDecompressionReader::~DecoderDecompressionReader() {
 
 
 DecoderCompressionWriter::DecoderCompressionWriter(DecoderWriter *w,
+                                                   uint8_t compression_level,
                                                    const JpegAllocator<uint8_t> &alloc)
         : mAlloc(alloc) {
     mClosed = false;
@@ -181,7 +185,7 @@ DecoderCompressionWriter::DecoderCompressionWriter(DecoderWriter *w,
     mLzmaAllocator.free = mAlloc.get_custom_deallocate();
     mLzmaAllocator.opaque = mAlloc.get_custom_state();
     mStream.allocator = &mLzmaAllocator;
-    lzma_ret ret = lzma_easy_encoder(&mStream, 4, LZMA_CHECK_CRC64);
+    lzma_ret ret = lzma_easy_encoder(&mStream, compression_level, LZMA_CHECK_NONE);
 	mStream.next_in = NULL;
 	mStream.avail_in = 0;
     if (ret != LZMA_OK) {

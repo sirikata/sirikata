@@ -448,11 +448,13 @@ private:
 // Decode reads a JPEG image from r and returns it as an image.Image.
 SIRIKATA_FUNCTION_EXPORT JpegError Decode(DecoderReader &r, DecoderWriter &w, uint8 componentCoalescing,
                                           const JpegAllocator<uint8_t> &alloc);
-SIRIKATA_FUNCTION_EXPORT JpegError CompressJPEGtoARHC(DecoderReader &r, DecoderWriter &w, uint8 componentCoalescing,
+SIRIKATA_FUNCTION_EXPORT JpegError CompressJPEGtoARHC(DecoderReader &r, DecoderWriter &w,
+                                                      uint8 compression_level, uint8 componentCoalescing,
                                                       const JpegAllocator<uint8_t> &alloc);
 SIRIKATA_FUNCTION_EXPORT JpegError DecompressARHCtoJPEG(DecoderReader &r, DecoderWriter &w,
                                                         const JpegAllocator<uint8_t> &alloc);
 SIRIKATA_FUNCTION_EXPORT JpegError CompressAnyto7Z(DecoderReader &r, DecoderWriter &w,
+                                                   uint8 compression_level,
                                                    const JpegAllocator<uint8_t> &alloc);
 SIRIKATA_FUNCTION_EXPORT JpegError Decompress7ZtoAny(DecoderReader &r, DecoderWriter &w,
                                                      const JpegAllocator<uint8_t> &alloc);

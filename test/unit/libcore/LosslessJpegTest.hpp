@@ -154,7 +154,7 @@ public:
         if ((pid = fork()) == 0) {
             using namespace Sirikata;
             JpegAllocator<uint8_t> alloc;
-            alloc.setup_memory_subsystem(256 * 1024 * 1024,
+            alloc.setup_memory_subsystem(768 * 1024 * 1024,
                                          &BumpAllocatorInit,
                                          &BumpAllocatorMalloc,
                                          &BumpAllocatorFree);
@@ -169,7 +169,7 @@ public:
 
             uint8 componentCoalescing = Decoder::comp12coalesce;
             MemReadWriter arhc(alloc);
-            JpegError err = CompressJPEGtoARHC(original, arhc, componentCoalescing, alloc);
+            JpegError err = CompressJPEGtoARHC(original, arhc, 9, componentCoalescing, alloc);
             if (err != JpegError()) {
                 syscall(SYS_exit, 2);
             }
@@ -196,7 +196,7 @@ public:
         size_t inputDataSize = loadFile("prism/texture0.jpg", original, alloc);
         uint8 componentCoalescing = Decoder::comp12coalesce;
         MemReadWriter arhc(alloc);
-        JpegError err = CompressJPEGtoARHC(original, arhc, componentCoalescing, alloc);
+        JpegError err = CompressJPEGtoARHC(original, arhc, 9, componentCoalescing, alloc);
         TS_ASSERT_EQUALS(err, JpegError());
         MemReadWriter round(alloc);
         err = DecompressARHCtoJPEG(arhc, round, alloc);
@@ -210,7 +210,7 @@ public:
 
         using namespace Sirikata;
         JpegAllocator<uint8_t> alloc;
-        alloc.setup_memory_subsystem(256 * 1024 * 1024,
+        alloc.setup_memory_subsystem(768 * 1024 * 1024,
                                      &BumpAllocatorInit,
                                      &BumpAllocatorMalloc,
                                      &BumpAllocatorFree);
@@ -223,7 +223,7 @@ public:
 
         using namespace Sirikata;
         JpegAllocator<uint8_t> alloc;
-        alloc.setup_memory_subsystem(256 * 1024 * 1024,
+        alloc.setup_memory_subsystem(768 * 1024 * 1024,
                                      &BumpAllocatorInit,
                                      &BumpAllocatorMalloc,
                                      &BumpAllocatorFree);
@@ -240,7 +240,7 @@ public:
         MemReadWriter original(alloc);
         size_t inputDataSize = loadFile("prism/texture0.jpg", original, alloc);
         MemReadWriter arhc(alloc);
-        JpegError err = CompressAnyto7Z(original, arhc, alloc);
+        JpegError err = CompressAnyto7Z(original, arhc, 9, alloc);
         if (err != JpegError()) {
             fprintf(stderr, "7Z compression Error: %s\n", err.what());
         }

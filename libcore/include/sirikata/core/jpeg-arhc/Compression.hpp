@@ -48,7 +48,8 @@ class SIRIKATA_EXPORT DecoderCompressionWriter : public DecoderWriter {
     DecoderWriter *mBase;
     bool mClosed;
 public:
-    DecoderCompressionWriter(DecoderWriter *w, const JpegAllocator<uint8_t> &alloc);
+    // compresison level should be a value: 1 through 9
+    DecoderCompressionWriter(DecoderWriter *w, uint8_t compression_level, const JpegAllocator<uint8_t> &alloc);
     virtual std::pair<uint32, JpegError> Write(const uint8*data, unsigned int size) ;
     virtual ~DecoderCompressionWriter();
     virtual void Close();

@@ -63,10 +63,19 @@ public:
             nread += amnt_to_copy;
         }
         nread += fread(data + nread, 1, size - nread, fp);
+        //fprintf(stderr, "%d READ %02x%02x%02x%02x - %02x%02x%02x%02x\n", (int)nread, data[0], data[1],data[2], data[3],
+        //        data[nread-4],data[nread-3],data[nread-2],data[nread-1]);
         if (nread <= 0) {
             return std::pair<Sirikata::uint32, JpegError>(0, JpegError("Short read", magic.get_allocator()));
         }
         return std::pair<Sirikata::uint32, JpegError>(nread, JpegError::nil());
+    }
+    size_t length() {
+        size_t where = ftell(fp);
+        fseek(fp, 0, SEEK_END);
+        size_t retval = ftell(fp);
+        fseek(fp, where, SEEK_SET);
+        return retval;
     }
 };
 class FileWriter : public Sirikata::DecoderWriter {
@@ -96,9 +105,39 @@ int main(int argc, char **argv) {
     assert(BumpAllocatorTest() && "Bump allocator test must pass");
     FILE * input = stdin;
     FILE * output = stdout;
+    uint8 level = 9;
+    bool force7z = false;
+    bool uncompressed = false;
+    for (int i = 1; i < argc; ++i) {
+        bool found = false;
+        if (argv[i][0] == '-' && argv[i][1] >='0' && argv[i][1] <= '9' && argv[i][2] == '\0') {
+            level = argv[i][1] - '0';
+            found = true;
+        }
+        if (argv[i][0] == '-' && argv[i][1] == 'u' && argv[i][2] == '\0') {
+            uncompressed = true;
+            found = true;
+        }
+        if (argv[i][0] == '-' && argv[i][1] == 'x' && argv[i][2] == 'z' && argv[i][3] == '\0') {
+            force7z = true;
+            found = true;
+        }
+        if (found) {
+            for (int j = i; j < argc - 1; ++j) {
+                argv[j] = argv[j + 1];
+            }
+            --argc;
+            --i;
+        }
+    }
+    if (argc > 1) {
+        input = fopen(argv[1], "rb");
+    }
+    if (argc > 2) {
+        output = fopen(argv[2], "wb");
+    }
     unsigned char magic[5] = {0};
-    fread(magic, 4, 1, input);
-    fseek(input, 0, SEEK_SET);
+    size_t magic_size = fread(magic, 1, 4, input);
     bool unknown = true;
     bool isArhc = false;
     bool isXz = false;
@@ -113,16 +152,23 @@ int main(int argc, char **argv) {
         isJpeg = true;
         unknown = false;
     }
-    if (argc > 1) {
-        input = fopen(argv[1], "rb");
-    }
-    if (argc > 2) {
-        output = fopen(argv[2], "wb");
-    }
     JpegAllocator<uint8_t> alloc;
-    FileReader reader(input, std::vector<uint8_t, JpegAllocator<uint8_t> >(magic, magic + 4, alloc));
-	FileWriter writer(output, alloc);
+    FileReader reader(input, std::vector<uint8_t, JpegAllocator<uint8_t> >(magic, magic + magic_size, alloc));
 
+    std::vector<uint8_t, JpegAllocator<uint8_t> >buffered_input(alloc);
+    
+    buffered_input.resize(reader.length());
+    MemReadWriter memory_input(alloc);
+    if (!buffered_input.empty()) {
+        std::pair<uint32, JpegError> xerr = reader.Read(&buffered_input[0], buffered_input.size());
+        assert(xerr.second == JpegError());
+        assert(xerr.first == buffered_input.size());
+        memory_input.Write(&buffered_input[0], buffered_input.size());
+    }
+
+    //FileReader&memory_input = reader;
+    MemReadWriter memory_output(alloc);
+	FileWriter writer(output, alloc);
     bool coalesceYCr = false;
     bool coalesceYCb = false;
     bool coalesceCbCr = true;
@@ -138,15 +184,32 @@ int main(int argc, char **argv) {
         componentCoalescing |= Decoder::comp12coalesce;
 	}
 
-    if (isJpeg) {
-     	err = CompressJPEGtoARHC(reader, writer, componentCoalescing, alloc);   
-    } else if (isXz){
-        err = Decompress7ZtoAny(reader, writer, alloc);
-    } else if (isArhc) {
-     	err = DecompressARHCtoJPEG(reader, writer, alloc);
+    struct timeval tv_start;
+    gettimeofday(&tv_start, NULL);
+    if (isJpeg && !force7z) {
+        if (uncompressed) {
+            err = Decode(memory_input, memory_output, componentCoalescing, alloc);   
+        } else {
+            err = CompressJPEGtoARHC(memory_input, memory_output, level, componentCoalescing, alloc);   
+        }
+    } else if (isXz && !force7z){
+        err = Decompress7ZtoAny(memory_input, memory_output, alloc);
+    } else if (isArhc && !force7z) {
+     	err = DecompressARHCtoJPEG(memory_input, memory_output, alloc);
     } else {
-        assert(unknown);
-        err = CompressAnyto7Z(reader, writer, alloc);
+        assert(unknown || force7z);
+        err = CompressAnyto7Z(memory_input, memory_output, level, alloc);
+    }
+    struct timeval tv_end;
+    gettimeofday(&tv_end, NULL);
+    double time_taken = tv_end.tv_sec + .000001 * tv_end.tv_usec;
+    time_taken -= tv_start.tv_sec + .000001 * tv_start.tv_usec;
+    fprintf(stderr, "Time Taken, compression level %d time %.3f s size %d / %d %.1f%%\n",
+            (int)level, time_taken, (int)memory_output.buffer().size(), (int)memory_input.buffer().size(), 
+            100. * memory_output.buffer().size()/(double)memory_input.buffer().size());
+    if(!memory_output.buffer().empty()) {
+        writer.Write(&memory_output.buffer()[0],
+                     memory_output.buffer().size());
     }
     if (err) {
         fprintf(stderr, "Error Encountered %s\n", err.what());

@@ -879,12 +879,12 @@ JpegError Decode(DecoderReader &r, DecoderWriter &w, uint8 componentCoalescing, 
     return d.decode(r, w, componentCoalescing);
 }
 // Decode reads a JPEG image from r and returns it as an image.Image.
-JpegError CompressJPEGtoARHC(DecoderReader &r, DecoderWriter &w, uint8 componentCoalescing,
+JpegError CompressJPEGtoARHC(DecoderReader &r, DecoderWriter &w, uint8 compression_level, uint8 componentCoalescing,
                              const JpegAllocator<uint8_t> &alloc) {
     MagicNumberReplacementWriter magic(&w,
                                        std::vector<uint8_t, JpegAllocator<uint8_t> >(MAGIC_7Z, MAGIC_7Z + sizeof(MAGIC_7Z), alloc),
                                        std::vector<uint8_t, JpegAllocator<uint8_t> >(MAGIC_ARHC, MAGIC_ARHC + sizeof(MAGIC_ARHC), alloc));
-    DecoderCompressionWriter cw(&magic, alloc);
+    DecoderCompressionWriter cw(&magic, compression_level, alloc);
     Decoder d(alloc);
     return d.decode(r, cw, componentCoalescing);
 }
@@ -928,8 +928,8 @@ static JpegError Copy(DecoderReader &r, DecoderWriter &w, const JpegAllocator<ui
 }
 
 // Decode reads a JPEG image from r and returns it as an image.Image.
-JpegError CompressAnyto7Z(DecoderReader &r, DecoderWriter &w, const JpegAllocator<uint8> &alloc) {
-    DecoderCompressionWriter cw(&w, alloc);
+JpegError CompressAnyto7Z(DecoderReader &r, DecoderWriter &w, uint8 compression_level, const JpegAllocator<uint8> &alloc) {
+    DecoderCompressionWriter cw(&w, compression_level, alloc);
     return Copy(r, cw, alloc);
 }
 // Decode reads a JPEG image from r and returns it as an image.Image.
