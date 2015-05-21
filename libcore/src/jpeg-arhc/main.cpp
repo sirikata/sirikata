@@ -66,7 +66,7 @@ public:
         //fprintf(stderr, "%d READ %02x%02x%02x%02x - %02x%02x%02x%02x\n", (int)nread, data[0], data[1],data[2], data[3],
         //        data[nread-4],data[nread-3],data[nread-2],data[nread-1]);
         if (nread <= 0) {
-            return std::pair<Sirikata::uint32, JpegError>(0, JpegError("Short read", magic.get_allocator()));
+            return std::pair<Sirikata::uint32, JpegError>(0, MakeJpegError("Short read"));
         }
         return std::pair<Sirikata::uint32, JpegError>(nread, JpegError::nil());
     }
@@ -94,7 +94,7 @@ public:
         using namespace Sirikata;
         signed long nwritten = fwrite(data, size, 1, fp);
         if (nwritten == 0) {
-            return std::pair<Sirikata::uint32, JpegError>(0, JpegError("Short write", mAllocator));
+            return std::pair<Sirikata::uint32, JpegError>(0, MakeJpegError("Short write"));
         }
         return std::pair<Sirikata::uint32, JpegError>(size, JpegError::nil());
     }
@@ -153,6 +153,11 @@ int main(int argc, char **argv) {
         unknown = false;
     }
     JpegAllocator<uint8_t> alloc;
+    alloc.setup_memory_subsystem(1024 * 1024 * 1024,
+                                 &BumpAllocatorInit,
+                                 &BumpAllocatorMalloc,
+                                 &BumpAllocatorFree);
+
     FileReader reader(input, std::vector<uint8_t, JpegAllocator<uint8_t> >(magic, magic + magic_size, alloc));
 
     std::vector<uint8_t, JpegAllocator<uint8_t> >buffered_input(alloc);

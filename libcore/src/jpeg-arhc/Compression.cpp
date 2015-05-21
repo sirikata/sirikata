@@ -22,7 +22,7 @@ std::pair<Sirikata::uint32, Sirikata::JpegError> MemReadWriter::Read(Sirikata::u
     mReadCursor += actualBytesRead;
     JpegError err = JpegError();
     if (actualBytesRead == 0) {
-        err = JpegError::errEOF(mBuffer.get_allocator());
+        err = JpegError::errEOF();
     }
     //fprintf(stderr, "%d READ %02x%02x%02x%02x - %02x%02x%02x%02x\n", (uint32)actualBytesRead, data[0], data[1],data[2], data[3],
     //        data[actualBytesRead-4],data[actualBytesRead-3],data[actualBytesRead-2],data[actualBytesRead-1]);
@@ -47,12 +47,7 @@ std::pair<uint32, JpegError> MagicNumberReplacementReader::Read(uint8*data, unsi
          mMagicNumbersReplaced < mOriginalMagic.size() && off < size;
          ++mMagicNumbersReplaced, ++off) {
         if (memcmp(data + off, mOriginalMagic.data() + mMagicNumbersReplaced, 1) != 0) {
-            const char * error_message = "Magic Number Mismatch: ";
-            std::vector<char, JpegAllocator<char> > error_vec(error_message, error_message + strlen(error_message),
-                                                              mNewMagic.get_allocator());
-            error_vec.insert(error_vec.end(), (char*)data, (char*)data + off + 1);
-            error_vec.insert(error_vec.end(), mOriginalMagic.begin() + mMagicNumbersReplaced, mOriginalMagic.end());
-            retval.second = JpegError(error_vec, mNewMagic.get_allocator());
+            retval.second = MakeJpegError("Magic Number Mismatch");
         }
         data[off] = mNewMagic[mMagicNumbersReplaced];
     }
@@ -153,11 +148,11 @@ std::pair<uint32, JpegError> DecoderDecompressionReader::Read(uint8*data,
         if (ret != LZMA_OK) {
             switch(ret) {
               case LZMA_FORMAT_ERROR:
-                return std::pair<uint32, JpegError>(0, JpegError("Invalid XZ magic number", mAlloc));
+                return std::pair<uint32, JpegError>(0, MakeJpegError("Invalid XZ magic number"));
               case LZMA_DATA_ERROR:
               case LZMA_BUF_ERROR:
                 return std::pair<uint32, JpegError>(size - mStream.avail_out,
-                                                    JpegError("Corrupt xz file", mAlloc));
+                                                    MakeJpegError("Corrupt xz file"));
               case LZMA_MEM_ERROR:
                 assert(false && "Memory allocation failed");
                 break;
@@ -166,7 +161,7 @@ std::pair<uint32, JpegError> DecoderDecompressionReader::Read(uint8*data,
             }
         }
     }
-    return std::pair<uint32, JpegError>(0, JpegError("Unreachable", mAlloc));
+    return std::pair<uint32, JpegError>(0, MakeJpegError("Unreachable"));
 }
 
 DecoderDecompressionReader::~DecoderDecompressionReader() {

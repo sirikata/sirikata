@@ -42,6 +42,214 @@
 
 namespace Sirikata {
 
+void BitByteStream::appendByte(uint8 x) {
+    buffer.push_back(x);
+}
+void BitByteStream::appendBytes(uint8*bytes, uint32 nBytes) {
+    buffer.insert(buffer.end(), bytes, bytes + nBytes);
+}
+
+std::pair<uint32, JpegError> BitByteStream::scanAlignedByte() {
+    assert((bitReadCursor&0x7) == 0);
+    uint32 byteAddress = (bitReadCursor >> 3);
+    bitReadCursor +=8;
+    if(byteAddress >= buffer.size()) {
+        return Decoder::uint32E(0, MakeJpegError("Reading off the end of byte buffer"));
+    }
+    return Decoder::uint32E(buffer[byteAddress], JpegError::nil());
+}
+std::pair<uint32, JpegError> BitByteStream::scanBitsNoStuffedZeros(uint32 nBits) {
+
+    if (nBits == 0) {
+        return Decoder::int32E(0, JpegError::nil()); // don't read off the array since it may be empty or at its end
+    }
+    uint32 byteAddress = (this->bitReadCursor >> 3);
+    if (nBits > 16) {
+        assert(nBits <= 16);
+        return Decoder::uint32E(0, MakeJpegError("Must have nBits < 16"));
+    }
+    uint32 bitAddress = this->bitReadCursor - byteAddress*8;
+    if (int(byteAddress) + ((bitAddress + nBits - 1) >> 3) >= this->buffer.size()) {
+        return Decoder::uint32E(0, MakeJpegError("Reading off the end of bit buffer"));
+    }
+    uint32 retval = 0;
+    std::vector<uint8, JpegAllocator<uint8_t> >::const_iterator bufferPtr = this->buffer.begin() + byteAddress;
+    uint32 curByte = (*bufferPtr) & ((1 << (8 - bitAddress)) - 1);
+    retval |= uint32(curByte);
+    uint8 remainingBitsInByte = 8 - bitAddress;
+    if (remainingBitsInByte >= nBits) {
+        retval >>= remainingBitsInByte - nBits;
+        this->bitReadCursor += nBits;
+        return Decoder::uint32E(retval, JpegError::nil());
+    }
+    this->bitReadCursor += remainingBitsInByte;
+    nBits -= remainingBitsInByte;
+    if (nBits > 8) {
+        this->bitReadCursor += 8;
+        ++bufferPtr;
+        retval <<= 8;
+        retval |= uint32(*bufferPtr);
+        nBits -= 8;
+    }
+    retval <<= nBits;
+    retval |= uint32((*++bufferPtr) >> (8 - nBits));
+    this->bitReadCursor += nBits;
+    return Decoder::uint32E(retval, JpegError::nil());    
+}
+std::pair<uint32, JpegError> BitByteStream::scanBits(uint32 nBits, bool stuffZeros) {
+    BitByteStream &b = *this;
+    if (nBits > 16) {
+    }
+    if (nBits == 0) {
+        return Decoder::int32E(0, JpegError::nil()); // don't read off the array since it may be empty or at its end
+    }
+    uint32 byteAddress = b.bitReadCursor / 8;
+    if (int(byteAddress) >= b.buffer.size()) {
+        return Decoder::uint32E(0, MakeJpegError("Reading off the end of bit buffer"));
+    }
+    uint32 bitAddress = b.bitReadCursor - byteAddress*8;
+    uint32 retval = 0;
+    uint32 curByte = b.buffer[byteAddress] & ((1 << (8 - bitAddress)) - 1);
+    retval |= uint32(curByte);
+    uint8 remainingBitsInByte = 8 - bitAddress;
+    //fmt.Printf("Retval %x[%d].%d so far,  Remaining bits %d\n", retval, byteAddress,bitAddress,nBits)
+    if (remainingBitsInByte <= nBits && b.buffer[byteAddress] == 0xff && stuffZeros) {
+        if (b.buffer[byteAddress+1] != 0x0) {
+            assert(false && "Must be stuffed byte");
+        }
+        //fprintf(stderr, "Stuffed byte at %d\n", byteAddress)
+        byteAddress++;
+        b.bitReadCursor += 8;
+    }
+    if (remainingBitsInByte >= nBits) {
+        retval >>= remainingBitsInByte - nBits;
+        //fmt.Printf("Returning early after single byte read\n")
+        b.bitReadCursor += nBits;
+        return Decoder::uint32E(retval, JpegError::nil());
+    }
+    if (int(byteAddress) >= b.buffer.size()) {
+        return Decoder::uint32E(0, MakeJpegError("Reading off end of bit buffer"));
+    }
+    b.bitReadCursor += remainingBitsInByte;
+    nBits -= remainingBitsInByte;
+    if (nBits > 8) {
+        b.bitReadCursor += 8;
+        byteAddress += 1;
+        retval <<= 8;
+        retval |= uint32(b.buffer[byteAddress]);
+        nBits -= 8;
+        if (b.buffer[byteAddress] == 0xff && stuffZeros) {
+            //fprintf(stderr, "Second byte needs stuffing @ %d\n", byteAddress);
+            if (size_t(byteAddress)+1 >= b.buffer.size()) {
+                return Decoder::uint32E(0, MakeJpegError("Reading off end of bit buffer"));
+            }
+            if (b.buffer[byteAddress+1] != 0x0) {
+                return Decoder::uint32E(0, MakeJpegError("Reading should be stuffed with 0 not <item>"));
+            }
+            byteAddress++;
+            b.bitReadCursor += 8;
+        }
+    }
+
+    if (nBits > 8) {
+        assert(false &&"unreachable: we should have only 16 bits to grab");
+    }
+    //fmt.Printf("Pref Final things are %x going to read %x after shifting %d\n", retval, b.buffer[byteAddress + 1], nBits)
+    if (size_t(byteAddress)+1 >= b.buffer.size()) {
+        return Decoder::uint32E(0, MakeJpegError("Reading off end of bit buffer"));
+    }
+    retval <<= nBits;
+    retval |= uint32(b.buffer[byteAddress+1] >> (8 - nBits));
+    b.bitReadCursor += nBits;
+    //fprintf(stderr, "Final value %x\n", retval)
+    if (nBits == 8 && b.buffer[byteAddress+1] == 0xff && stuffZeros) {
+        if (size_t(byteAddress)+2 >= b.buffer.size()) {
+            return Decoder::uint32E(0, MakeJpegError("Reading off end of bit buffer"));
+        }
+        if (b.buffer[byteAddress+2] != 0x0) {
+            return Decoder::uint32E(retval, MakeJpegError("Reading should be stuffed with 0 not <item>"));
+        }
+        byteAddress++;
+        b.bitReadCursor += 8;
+    }
+    return Decoder::uint32E(retval, JpegError::nil());
+}
+
+
+void BitByteStream::emitBits(uint32 bits, uint32 nBits, bool stuffZeros) {
+    BitByteStream &b = *this;
+    nBits += uint32(b.nBits);
+    if (nBits > 32) {
+        assert(nBits <=32 && "emitBits only supports 32 at a time");
+        return;
+    }
+    bits <<= 32 - nBits;
+    bits |= b.bits;
+    uint8 bb = 0;
+    while (nBits >=8) {
+        bb = uint8(bits >> 24);
+        b.appendByte(bb);
+        if (bb == 0xff && stuffZeros) {
+            b.appendByte(0);
+        }
+        bits <<= 8;
+        nBits -= 8;
+    }
+    if(0)
+    switch (nBits) {
+      case 32:
+      case 31:
+      case 30:
+      case 29:
+      case 28:
+      case 27:
+      case 26:
+      case 25:
+        bb = uint8(bits >> 24);
+        b.appendByte(bb);
+        if (bb == 0xff && stuffZeros) {
+            b.appendByte(0);
+        }
+        bits <<= 8;
+        nBits -= 8;
+      case 24:
+      case 23:
+      case 22:
+      case 21:
+      case 20:
+      case 19:
+      case 18:
+      case 17:
+        bb = uint8(bits >> 24);
+        b.appendByte(bb);
+        if (bb == 0xff && stuffZeros) {
+            b.appendByte(0);
+        }
+        bits <<= 8;
+        nBits -= 8;
+      case 16:
+      case 15:
+      case 14:
+      case 13:
+      case 12:
+      case 11:
+      case 10:
+      case 9:
+      case 8:
+        bb = uint8(bits >> 24);
+        b.appendByte(bb);
+        if (bb == 0xff && stuffZeros) {
+            b.appendByte(0);
+        }
+        bits <<= 8;
+        nBits -= 8;
+      default:
+        break;
+    }
+    b.bits = bits;
+    b.nBits = uint8(nBits);
+}
+
 // ensureNBits reads bytes from the byte buffer to ensure that d.bits.n is at
 // least n. For best performance (avoiding function calls inside hot loops),
 // the caller is the one responsible for first checking that d.bits.n < n.
@@ -50,8 +258,8 @@ JpegError Decoder::ensureNBits(int32 n) {
 	while (true) {
 		uint8E cErr = d.readByteStuffedByte();
         if (cErr.second != JpegError::nil()) {
-			if (cErr.second == JpegError::errEOF(mAllocator)) {
-                return JpegError::errShortHuffmanData(mAllocator);
+			if (cErr.second == JpegError::errEOF()) {
+                return JpegError::errShortHuffmanData();
 			}
 			return cErr.second;
 		}
@@ -76,7 +284,7 @@ JpegError Decoder::ensureNBits(int32 n) {
 Decoder::int32E Decoder::receiveExtend(uint8 t) {
     Decoder &d = *this;
 	if (d.arhc) { // here we just return the original value
-		uint32E valErr = d.bitbuffer.scanBits(uint32(t), false);
+		uint32E valErr = d.bitbuffer.scanBitsNoStuffedZeros(uint32(t));
         d.wbuffer.emitBits(valErr.first, uint32(t), true);
         int32 s = (int32)(1) << t;
         int32 x = (int32)(valErr.first);
@@ -100,7 +308,7 @@ Decoder::int32E Decoder::receiveExtend(uint8 t) {
     int32 s = int32(1) << t;
     int32 x = int32(d.bits.a>>uint8(d.bits.n)) & (s - 1);
 	if (x > 65535) {
-		assert(false && "Cnanot decode more than 16 bits at a time");
+		assert(false && "Cannot decode more than 16 bits at a time");
 	}
 	//fmt.Printf("Writing raw %x (%d bits)\n", x, t)
 	d.bitbuffer.emitBits(uint32(x), uint32(t), false);
@@ -116,7 +324,7 @@ JpegError Decoder::processDHT(int n) {
     Decoder &d = *this;
     while (n > 0) {
         if (n < 17) {
-            return JpegErrorFormatError("DHT has wrong length", mAllocator);
+            return JpegErrorFormatError("DHT has wrong length");
 		}
         {
             JpegError err;
@@ -126,11 +334,11 @@ JpegError Decoder::processDHT(int n) {
         }
         uint8 tc = d.tmp[0] >> 4;
 		if (tc > maxTc) {
-			return JpegErrorFormatError("bad Tc value", mAllocator);
+			return JpegErrorFormatError("bad Tc value");
 		}
         uint8 th = d.tmp[0] & 0x0f;
         if (th > maxTh || (th > 1 && !d.progressive)) {
-            return JpegErrorFormatError("bad Th value", mAllocator);
+            return JpegErrorFormatError("bad Th value");
 		}
         huffman &h = d.huff[tc][th];
 
@@ -144,14 +352,14 @@ JpegError Decoder::processDHT(int n) {
 			h.nCodes += nCodes[i];
 		}
 		if (h.nCodes == 0) {
-			return JpegErrorFormatError("Huffman table has zero length", mAllocator);
+			return JpegErrorFormatError("Huffman table has zero length");
 		}
 		if (h.nCodes > huffman::maxNCodes) {
-			return JpegErrorFormatError("Huffman table has excessive length", mAllocator);
+			return JpegErrorFormatError("Huffman table has excessive length");
 		}
 		n -= int(h.nCodes) + 17;
 		if (n < 0) {
-			return JpegErrorFormatError("DHT has wrong length", mAllocator);
+			return JpegErrorFormatError("DHT has wrong length");
 		}
         {
             JpegError err;
@@ -227,7 +435,7 @@ Decoder::uint8E Decoder::decodeHuffman(huffman *h, int32 zig, int component) {
 		assert(false && "HUFF TRANS SECT SHOULD BE SET");
 	}
 	if (d.arhc) { // here we just return the original value
-		uint32E unhuffmanValueErr = d.huffMultibuffer[zig+64*d.coalescedComponent(component)].scanBits(8, false);
+		uint32E unhuffmanValueErr = d.huffMultibuffer[zig+64*d.coalescedComponent(component)].scanAlignedByte();
 		// but we also need to write the huffman'd value to the array
 		//printf("Writing %x => %x to the output\n", unhuffmanValueErr.first, h.huffmanLUTencoding[unhuffmanValueErr.first])
         uint32 hval = h->huffmanLUTencoding[unhuffmanValueErr.first];
@@ -235,13 +443,13 @@ Decoder::uint8E Decoder::decodeHuffman(huffman *h, int32 zig, int component) {
 		return uint8E(uint8(unhuffmanValueErr.first), unhuffmanValueErr.second);
 	}
 	if (h->nCodes == 0) {
-        return uint8E(0, JpegErrorFormatError("uninitialized Huffman table", mAllocator));
+        return uint8E(0, JpegErrorFormatError("uninitialized Huffman table"));
 	}
 
 	if (d.bits.n < 8) {
         JpegError err;
 		if ((err = d.ensureNBits(8)) != JpegError::nil()) {
-			if (err != JpegError::errMissingFF00(mAllocator) && err != JpegError::errShortHuffmanData(mAllocator)) {
+			if (err != JpegError::errMissingFF00() && err != JpegError::errShortHuffmanData()) {
 				return uint8E(0, err);
 			}
 			// There are no more bytes of data in this segment, but we may still
@@ -305,7 +513,7 @@ slowPath:
 		}
 		code <<= 1;
 	}
-	return uint8E(0, JpegErrorFormatError("bad Huffman code", mAllocator));
+	return uint8E(0, JpegErrorFormatError("bad Huffman code"));
 }
 
 Decoder::uint8E Decoder::decodeBit() {
@@ -316,7 +524,7 @@ Decoder::uint8E Decoder::decodeBit() {
 Decoder::uint32E Decoder::decodeBits(int32 n) {
     Decoder &d = *this;
 	if (d.arhc) { // here we just return the original value
-		uint32E valErr = d.bitbuffer.scanBits(uint32(n), false);
+		uint32E valErr = d.bitbuffer.scanBitsNoStuffedZeros(uint32(n));
 		d.wbuffer.emitBits(valErr.first, uint32(n), true);
 		return valErr;
 	}

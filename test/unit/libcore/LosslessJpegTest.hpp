@@ -54,7 +54,7 @@ class LosslessJpegTest : public CxxTest::TestSuite
             using namespace Sirikata;
             signed long nread = fread(data, 1, size, fp);
             if (nread <= 0) {
-                return std::pair<Sirikata::uint32, JpegError>(0, JpegError::errEOF(mAllocator));
+                return std::pair<Sirikata::uint32, JpegError>(0, JpegError::errEOF());
             }
             return std::pair<Sirikata::uint32, JpegError>(nread, JpegError());
         }
@@ -70,7 +70,7 @@ class LosslessJpegTest : public CxxTest::TestSuite
             using namespace Sirikata;
             signed long nwritten = fwrite(data, size, 1, fp);
             if (nwritten == 0) {
-                return std::pair<Sirikata::uint32, JpegError>(0, JpegError("Short write", mAllocator));
+                return std::pair<Sirikata::uint32, JpegError>(0, MakeJpegError("Short write"));
             }
             return std::pair<Sirikata::uint32, JpegError>(size, JpegError());
         }

@@ -39,21 +39,6 @@
 #include <sirikata/core/jpeg-arhc/Compression.hpp>
 namespace Sirikata {
 
-JpegError JpegError::nil(){
-    return JpegError();
-}
-JpegError JpegError::errShortHuffmanData(const JpegAllocator<char>& alloc) {
-    return JpegError("Short huffman data", alloc);
-}
-JpegError JpegError::errEOF(const JpegAllocator<char>& alloc) {
-    return JpegError("End of file", alloc);
-}
-// errMissingFF00 means that readByteStuffedByte encountered an 0xff byte (a
-// marker byte) that wasn't the expected byte-stuffed sequence 0xff, 0x00.
-JpegError JpegError::errMissingFF00(const JpegAllocator<char>& alloc) {
-    return JpegErrorFormatError("missing 0xff00 sequence", alloc );
-}
-
 template<class T, class Al> void appendByte(std::vector<T, Al>&buffer, T item) {
     buffer.push_back(item);
 }
@@ -70,17 +55,10 @@ template<class T, class Al> void appendData(std::vector<T, Al>&buffer,
                                             size_t size) {
     buffer.insert(buffer.end(), data,  data + size);
 }
-
 BitByteStream::BitByteStream(const JpegAllocator<uint8>& alloc) : buffer(alloc) {
     bits = 0;
     nBits = 0;
     bitReadCursor = 0;
-}
-void BitByteStream::appendByte(uint8 x) {
-    Sirikata::appendByte(buffer, x);
-}
-void BitByteStream::appendBytes(uint8*bytes, uint32 nBytes) {
-    appendData(buffer, bytes, nBytes);
 }
 
 void BitByteStream::clear() {
@@ -94,123 +72,6 @@ void BitByteStream::flushToWriter(DecoderWriter &w) {
     buffer.clear();
 }
 
-void BitByteStream::emitBits(uint32 bits, uint32 nBits, bool stuffZeros) {
-    BitByteStream &b = *this;
-    nBits += uint32(b.nBits);
-    bits <<= 32 - nBits;
-    bits |= b.bits;
-    while (nBits >= 8) {
-        uint8 bb = uint8(bits >> 24);
-        b.appendByte(bb);
-        //fprintf(stderr, "Appending byte: %x\n", bb)
-        if (bb == 0xff && stuffZeros) {
-            uint8 zero = 0;
-            //fmt.Printf("Appending stuffed zero: %x\n", zero)
-            b.appendByte(zero);
-        }
-        bits <<= 8;
-        nBits -= 8;
-    }
-    //fprintf(stderr, "Leftovers %d bits %x\n", nBits, bits)
-    b.bits = bits;
-    b.nBits = uint8(nBits);
-}
-
-std::pair<uint32, JpegError> BitByteStream::scanBits(uint32 nBits, bool stuffZeros) {
-    BitByteStream &b = *this;
-    if (nBits > 16) {
-        return Decoder::uint32E(0, JpegError("Must have nBits < 16", buffer.get_allocator()));
-    }
-    if (nBits == 0) {
-        return Decoder::int32E(0, JpegError::nil()); // don't read off the array since it may be empty or at its end
-    }
-    uint32 byteAddress = b.bitReadCursor / 8;
-    if (int(byteAddress) >= b.buffer.size()) {
-        char errMsg[1024] = {0};
-        sprintf(errMsg, "Reading[%d] off the end of len(%lu) bit buffer", byteAddress, b.buffer.size());
-        return Decoder::uint32E(0, JpegError(errMsg, buffer.get_allocator()));
-    }
-    uint32 bitAddress = b.bitReadCursor - byteAddress*8;
-    uint32 retval = 0;
-    uint32 curByte = b.buffer[byteAddress] & ((1 << (8 - bitAddress)) - 1);
-    retval |= uint32(curByte);
-    uint8 remainingBitsInByte = 8 - bitAddress;
-    //fmt.Printf("Retval %x[%d].%d so far,  Remaining bits %d\n", retval, byteAddress,bitAddress,nBits)
-    if (remainingBitsInByte <= nBits && b.buffer[byteAddress] == 0xff && stuffZeros) {
-        if (b.buffer[byteAddress+1] != 0x0) {
-            assert(false && "Must be stuffed byte");
-        }
-        //fprintf(stderr, "Stuffed byte at %d\n", byteAddress)
-        byteAddress++;
-        b.bitReadCursor += 8;
-    }
-    if (remainingBitsInByte >= nBits) {
-        retval >>= remainingBitsInByte - nBits;
-        //fmt.Printf("Returning early after single byte read\n")
-        b.bitReadCursor += nBits;
-        return Decoder::uint32E(retval, JpegError::nil());
-    }
-    if (int(byteAddress) >= b.buffer.size()) {
-        char errMsg[1024];
-        sprintf(errMsg, "Reading[%d] off the end of len(%lu) bit buffer", byteAddress, b.buffer.size());
-        return Decoder::uint32E(0, JpegError(errMsg, buffer.get_allocator()));
-    }
-    b.bitReadCursor += remainingBitsInByte;
-    nBits -= remainingBitsInByte;
-    if (nBits > 8) {
-        b.bitReadCursor += 8;
-        byteAddress += 1;
-        retval <<= 8;
-        retval |= uint32(b.buffer[byteAddress]);
-        nBits -= 8;
-        if (b.buffer[byteAddress] == 0xff && stuffZeros) {
-            //fprintf(stderr, "Second byte needs stuffing @ %d\n", byteAddress);
-            if (size_t(byteAddress)+1 >= b.buffer.size()) {
-                char errMsg[1024] = {0};
-                sprintf(errMsg, "Reading[%d] off the end of len(%lu) bit buffer", byteAddress, b.buffer.size());
-                return Decoder::uint32E(0, JpegError(errMsg, buffer.get_allocator()));
-            }
-            if (b.buffer[byteAddress+1] != 0x0) {
-                char errMsg[1024] = {0};
-                sprintf(errMsg, "Reading[%d] should be stuffed with 0 not %d",
-                        byteAddress+1, b.buffer[byteAddress+1]);
-                return Decoder::uint32E(0, JpegError(errMsg, buffer.get_allocator()));
-            }
-            byteAddress++;
-            b.bitReadCursor += 8;
-        }
-    }
-
-    if (nBits > 8) {
-        assert(false &&"unreachable: we should have only 16 bits to grab");
-    }
-    //fmt.Printf("Pref Final things are %x going to read %x after shifting %d\n", retval, b.buffer[byteAddress + 1], nBits)
-    if (size_t(byteAddress)+1 >= b.buffer.size()) {
-        char errMsg[1024] = {0};
-        sprintf(errMsg, "Reading[%d] off the end of len(%lu) bit buffer", byteAddress + 1, b.buffer.size());
-        return Decoder::uint32E(0, JpegError(errMsg, buffer.get_allocator()));
-    }
-    retval <<= nBits;
-    retval |= uint32(b.buffer[byteAddress+1] >> (8 - nBits));
-    b.bitReadCursor += nBits;
-    //fprintf(stderr, "Final value %x\n", retval)
-    if (nBits == 8 && b.buffer[byteAddress+1] == 0xff && stuffZeros) {
-        if (size_t(byteAddress)+2 >= b.buffer.size()) {
-            char errMsg[1024] = {0};
-            sprintf(errMsg, "Reading[%d] off the end of len(%lu) bit buffer", byteAddress + 2, b.buffer.size());
-            return Decoder::uint32E(0, JpegError(errMsg, buffer.get_allocator()));
-        }
-        if (b.buffer[byteAddress+2] != 0x0) {
-            char errMsg[1024] = {0};
-            sprintf(errMsg, "Reading[%d] should be stuffed with 0 not %d",
-                    byteAddress+2, b.buffer[byteAddress+2]);
-            return Decoder::uint32E(retval, JpegError(errMsg, buffer.get_allocator()));
-        }
-        byteAddress++;
-        b.bitReadCursor += 8;
-    }
-    return Decoder::uint32E(retval, JpegError::nil());
-}
 
 void BitByteStream::pop() {
     BitByteStream &b = *this;
@@ -401,7 +262,7 @@ Decoder::uint8E Decoder::readByte() {
         }
     }
     if (d->bytes.i == d->bytes.j) {
-        return uint8E(0, JpegError::errEOF(mAllocator));
+        return uint8E(0, JpegError::errEOF());
     }
     uint8 x = d->bytes.buf[d->bytes.i];
     d->bytes.i++;
@@ -426,7 +287,7 @@ Decoder::uint8E Decoder::readByteStuffedByte() {
             return uint8E(x, JpegError::nil());
         }
         if (d.bytes.buf[d.bytes.i] != 0x00) {
-            return uint8E(0, JpegError::errMissingFF00(mAllocator));
+            return uint8E(0, JpegError::errMissingFF00());
         }
         uint8 zero = 0;
         d.appendByteToWriteBuffer(zero);
@@ -451,7 +312,7 @@ Decoder::uint8E Decoder::readByteStuffedByte() {
     }
     d.bytes.nUnreadable = 2;
     if (xErr.first != 0x00) {
-        return uint8E(0, JpegError::errMissingFF00(mAllocator));
+        return uint8E(0, JpegError::errMissingFF00());
     }
     return uint8E(0xff, JpegError::nil());
 }
@@ -531,7 +392,7 @@ JpegError Decoder::processSOF(int n) {
         d.nComp = nColorComponent;
         break;
     default:
-        return JpegErrorUnsupportedError("SOF has wrong length", mAllocator);
+        return JpegErrorUnsupportedError("SOF has wrong length");
     }
     JpegError err;
     if ((err = d.readFull(d.tmp, n)) != JpegError::nil()) {
@@ -539,12 +400,12 @@ JpegError Decoder::processSOF(int n) {
     }
     // We only support 8-bit precision.
     if (d.tmp[0] != 8) {
-        return JpegErrorUnsupportedError("precision", mAllocator);
+        return JpegErrorUnsupportedError("precision");
     }
     d.height = (int(d.tmp[1])<<8) + int(d.tmp[2]);
     d.width = (int(d.tmp[3])<<8) + int(d.tmp[4]);
     if (int(d.tmp[5]) != d.nComp) {
-        return JpegErrorUnsupportedError("SOF has wrong number of image components", mAllocator);
+        return JpegErrorUnsupportedError("SOF has wrong number of image components");
     }
     for (int i = 0; i < d.nComp; i++) {
         d.comp[i].c = d.tmp[6+3*i];
@@ -574,10 +435,10 @@ JpegError Decoder::processSOF(int n) {
         // values for the Cr and Cb components must be (1, 1).
         if (i == 0) {
             if (hv != 0x11 && hv != 0x21 && hv != 0x22 && hv != 0x12) {
-                return JpegErrorUnsupportedError("luma/chroma downsample ratio", mAllocator);
+                return JpegErrorUnsupportedError("luma/chroma downsample ratio");
             }
         } else if (hv != 0x11) {
-            return JpegErrorUnsupportedError("luma/chroma downsample ratio", mAllocator);
+            return JpegErrorUnsupportedError("luma/chroma downsample ratio");
         }
     }
     return JpegError::nil();
@@ -594,18 +455,18 @@ JpegError Decoder::processDQT(int n) {
         }
         uint8 pq = d.tmp[0] >> 4;
         if (pq != 0) {
-            return JpegErrorUnsupportedError("bad Pq value", mAllocator);
+            return JpegErrorUnsupportedError("bad Pq value");
         }
         uint8 tq = d.tmp[0] & 0x0f;
         if (tq > maxTq) {
-            return JpegErrorFormatError("bad Tq value", mAllocator);
+            return JpegErrorFormatError("bad Tq value");
         }
         for (int i = 0; i < JpegBlock::blockSize; ++i) {
             d.quant[tq][i] = int32(d.tmp[i+1]);
         }
     }
     if (n != 0) {
-        return JpegErrorFormatError("DQT has wrong length", mAllocator);
+        return JpegErrorFormatError("DQT has wrong length");
     }
     return JpegError::nil();
 }
@@ -614,7 +475,7 @@ JpegError Decoder::processDQT(int n) {
 JpegError Decoder::processDRI(int n) {
     Decoder &d = *this;
     if (n != 2) {
-        return JpegErrorFormatError("DRI has wrong length", mAllocator);
+        return JpegErrorFormatError("DRI has wrong length");
     }
     JpegError err;
     if ((err = d.readFull(d.tmp, 2)) != JpegError::nil()) {
@@ -663,7 +524,7 @@ JpegError Decoder::decode(DecoderReader &r, DecoderWriter &w, uint8 componentCoa
         }
         if (d.tmp[0] == 'h' && d.tmp[1] == 'c') {
         } else {
-            return JpegErrorFormatError("arhc header malformed", mAllocator);
+            return JpegErrorFormatError("arhc header malformed");
         }
         uint8 *versionExtension = d.tmp + 2;
         while (versionExtension[3] != 0) {
@@ -745,7 +606,7 @@ JpegError Decoder::decode(DecoderReader &r, DecoderWriter &w, uint8 componentCoa
         d.wbuffer.appendByte(0xd8);
     }
     if (d.tmp[0] != 0xff || d.tmp[1] != soiMarker) {
-        return JpegErrorFormatError("missing SOI marker", mAllocator);
+        return JpegErrorFormatError("missing SOI marker");
     }
 
     // Process the remaining segments until the End Of Image marker.
@@ -829,7 +690,7 @@ JpegError Decoder::decode(DecoderReader &r, DecoderWriter &w, uint8 componentCoa
         int n = (int(d.tmp[0])<<8) + int(d.tmp[1]) - 2;
         if (n < 0) {
             //fmt.Printf("Short semgnet %d\n", n)
-            return JpegErrorFormatError("short segment length", mAllocator);
+            return JpegErrorFormatError("short segment length");
         }
 
         if (marker == sof0Marker || marker == sof2Marker) { // Start Of Frame.
@@ -847,7 +708,7 @@ JpegError Decoder::decode(DecoderReader &r, DecoderWriter &w, uint8 componentCoa
             err = d.ignore(n);
         } else {
             //fprintf(stderr, "UNKNOWN %x\n", marker);
-            err = JpegErrorUnsupportedError("unknown marker", mAllocator);
+            err = JpegErrorUnsupportedError("unknown marker");
         }
         if (err != nil) {
             return err;
@@ -919,7 +780,7 @@ static JpegError Copy(DecoderReader &r, DecoderWriter &w, const JpegAllocator<ui
         }
         if (ret.second != JpegError::nil()) {
             w.Close();
-            if (ret.second == JpegError::errEOF(alloc)) {
+            if (ret.second == JpegError::errEOF()) {
                 return JpegError::nil();
             }
             return ret.second;

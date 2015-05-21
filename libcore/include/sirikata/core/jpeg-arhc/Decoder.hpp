@@ -157,37 +157,51 @@ struct JpegBlock {
     }
 };
 class JpegError {
-    std::vector<char, JpegAllocator<char> > mWhat;
-    bool ok;
-public:
-    JpegError(const char * wh, const JpegAllocator<char>&alloc):mWhat(wh, wh + strlen(wh) + 1, alloc) {
-        ok = false;
+    const char *mWhat; // MUST be a literal error or NULL
+    explicit JpegError(const char * wh):mWhat(wh) {
     }
-    JpegError(const std::vector<char, JpegAllocator<char> > & msg,
-              const JpegAllocator<char>&alloc)
-            : mWhat(msg.begin(), msg.end(), alloc) {
-        if (mWhat.empty() || mWhat.back() != '\0') {
-            mWhat.push_back('\0');
-        }
-        ok = false;
+public:
+    static JpegError MakeFromStringLiteralOnlyCallFromMacro(const char*wh) {
+        return JpegError(wh);
     }
     JpegError() :mWhat() { // uses default allocator--but it won't allocate, so that's ok
-        ok = true;
+        mWhat = NULL;
+    }
+    bool operator ==(const JpegError&other) const {
+        if (other.mWhat == NULL) {
+            return mWhat == NULL;
+        }
+        if (mWhat == NULL) {
+            return false;
+        }
+        return strcmp(mWhat, other.mWhat) == 0;
+    }
+    bool operator !=(const JpegError&other) const {
+        return !((*this) == other);
     }
     const char * what() const {
-        if (ok) return "";
-        return &mWhat[0];
+        if (mWhat == NULL) return "";
+        return mWhat;
     }
     operator bool() {
-        return !ok;
+        return mWhat != NULL;
     }
-    static JpegError nil();
-    static JpegError errEOF(const JpegAllocator<char>&alloc);
-    static JpegError errMissingFF00(const JpegAllocator<char>&alloc);
-    static JpegError errShortHuffmanData(const JpegAllocator<char>&alloc);
+    static JpegError nil() {
+        return JpegError();
+    }
+    static JpegError errEOF() {
+        return JpegError("EOF");
+    }
+    static JpegError errMissingFF00() {
+        return JpegError("FF00");
+    }
+    static JpegError errShortHuffmanData(){
+        return JpegError("ShortHuffman");
+    }
 };
-#define JpegErrorUnsupportedError(s, alloc) JpegError("unsupported JPEG feature: " s, alloc)
-#define JpegErrorFormatError(s, alloc) JpegError("unsupported JPEG feature: " s, alloc)
+#define MakeJpegError(s) JpegError::MakeFromStringLiteralOnlyCallFromMacro("" s)
+#define JpegErrorUnsupportedError(s) MakeJpegError("unsupported JPEG feature: " s)
+#define JpegErrorFormatError(s) MakeJpegError("unsupported JPEG feature: " s)
 
 
 // Component specification, specified in section B.2.2.
@@ -248,6 +262,8 @@ struct SIRIKATA_EXPORT BitByteStream {
     void flushToWriter(DecoderWriter&);
     void emitBits(uint32 bits, uint32 nBits, bool stuffZeros);
     std::pair<uint32, JpegError> scanBits(uint32 nBits, bool stuffZeros);
+    std::pair<uint32, JpegError> scanBitsNoStuffedZeros(uint32 nBits);
+    std::pair<uint32, JpegError> scanAlignedByte();
     void pop();
     uint32 len() const;
     void flushBits(bool stuffBits);

@@ -48,10 +48,10 @@ struct TableSelector {
 JpegError Decoder::processSOS(int n) {
     Decoder &d = *this;
 	if (d.nComp == 0) {
-		return JpegErrorFormatError("missing SOF marker", mAllocator);
+		return JpegErrorFormatError("missing SOF marker");
 	}
 	if (n < 6 || 4+2*d.nComp < n || n%2 != 0) {
-        return JpegErrorFormatError("SOS has wrong length", mAllocator);
+        return JpegErrorFormatError("SOS has wrong length");
 	}
     JpegError err;
 	if ((err = d.readFull(d.tmp, n)) != JpegError::nil()) {
@@ -59,7 +59,7 @@ JpegError Decoder::processSOS(int n) {
 	}
 	int nComp = (int)(d.tmp[0]);
 	if (n != 4+2*nComp) {
-		return JpegErrorFormatError("SOS length inconsistent with number of components", mAllocator);
+		return JpegErrorFormatError("SOS length inconsistent with number of components");
 	}
 	TableSelector  scan[nColorComponent];
 	
@@ -73,16 +73,16 @@ JpegError Decoder::processSOS(int n) {
 			}
 		}
 		if (compIndex < 0) {
-			return JpegErrorFormatError("unknown component selector", mAllocator);
+			return JpegErrorFormatError("unknown component selector");
 		}
 		scan[i].compIndex = uint8(compIndex);
 		scan[i].td = d.tmp[2+2*i] >> 4;
 		if (scan[i].td > maxTh) {
-			return JpegErrorFormatError("bad Td value", mAllocator);
+			return JpegErrorFormatError("bad Td value");
 		}
 		scan[i].ta = d.tmp[2+2*i] & 0x0f;
 		if (scan[i].ta > maxTh) {
-			return JpegErrorFormatError("bad Ta value", mAllocator);
+			return JpegErrorFormatError("bad Ta value");
 		}
 	}
 
@@ -112,13 +112,13 @@ JpegError Decoder::processSOS(int n) {
 		ah = uint32(d.tmp[3+2*nComp] >> 4);
 		al = uint32(d.tmp[3+2*nComp] & 0x0f);
 		if ((zigStart == 0 && zigEnd != 0) || zigStart > zigEnd || JpegBlock::blockSize <= zigEnd) {
-			return JpegErrorFormatError("bad spectral selection bounds", mAllocator);
+			return JpegErrorFormatError("bad spectral selection bounds");
 		}
 		if (zigStart != 0 && nComp != 1) {
-			return JpegErrorFormatError("progressive AC coefficients for (more than one component", mAllocator);
+			return JpegErrorFormatError("progressive AC coefficients for (more than one component");
 		}
 		if (ah != 0 && ah != al+1) {
-			return JpegErrorFormatError("bad successive approximation values", mAllocator);
+			return JpegErrorFormatError("bad successive approximation values");
 		}
 	}
 
@@ -219,7 +219,7 @@ JpegError Decoder::processSOS(int n) {
 							}
 							if (valueErr.first > 16) {
                                 d.wbuffer.flushBits(true);
-								return JpegErrorUnsupportedError("excessive DC component", mAllocator);
+								return JpegErrorUnsupportedError("excessive DC component");
 							}
 							std::pair<int32, JpegError>dcDeltaErr = d.receiveExtend(valueErr.first);
 							if (dcDeltaErr.second != JpegError::nil()) {
@@ -343,7 +343,7 @@ JpegError Decoder::processSOS(int n) {
                 //fprintf(stderr, "Expected Restart marker %x\n", d.tmp);
                 if (d.tmp[0] != 0xff || d.tmp[1] != expectedRST) {
                     d.wbuffer.flushBits(true);
-                    return JpegErrorFormatError("bad RST marker", mAllocator);
+                    return JpegErrorFormatError("bad RST marker");
                 }
                 expectedRST++;
                 if (expectedRST == rst7Marker+1) {
@@ -417,7 +417,7 @@ JpegError Decoder::refine(JpegBlock* b, huffman* h, int32 zigStart, int32 zigEnd
                   }
               }
             } else {
-              return JpegErrorFormatError("unexpected Huffman code", mAllocator);
+              return JpegErrorFormatError("unexpected Huffman code");
 			}
 			int32E zigErr = d.refineNonZeroes(b, zig, zigEnd, int32(val0), delta);
 			if (zigErr.second != JpegError::nil()) {
@@ -425,7 +425,7 @@ JpegError Decoder::refine(JpegBlock* b, huffman* h, int32 zigStart, int32 zigEnd
 			}
             zig = zigErr.first;
 			if (zig > zigEnd) {
-				return JpegErrorFormatError("too many coefficients", mAllocator);
+				return JpegErrorFormatError("too many coefficients");
 			}
 			if (z != 0) {
                 (*b)[unzig()[zig]] = z;
