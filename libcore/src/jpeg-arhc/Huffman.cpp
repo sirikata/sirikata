@@ -176,78 +176,26 @@ std::pair<uint32, JpegError> BitByteStream::scanBits(uint32 nBits, bool stuffZer
 }
 
 
-void BitByteStream::emitBits(uint32 bits, uint32 nBits, bool stuffZeros) {
-    BitByteStream &b = *this;
-    nBits += uint32(b.nBits);
-    if (nBits > 32) {
-        assert(nBits <=32 && "emitBits only supports 32 at a time");
-        return;
-    }
+void BitByteStream::emitBits(uint16 input_bits, uint8 nBits, bool stuffZeros) {
+    uint32 bits = input_bits;
+    nBits += uint32(this->nBits);
     bits <<= 32 - nBits;
-    bits |= b.bits;
+    bits |= this->bits;
+    uint8_t bytesToAppend[8] = {0};
+    uint32_t bytesAppended = 0;
     uint8 bb = 0;
     while (nBits >=8) {
         bb = uint8(bits >> 24);
-        b.appendByte(bb);
+        bytesToAppend[bytesAppended++] = bb;
         if (bb == 0xff && stuffZeros) {
-            b.appendByte(0);
+            bytesToAppend[bytesAppended++] = 0;
         }
         bits <<= 8;
         nBits -= 8;
     }
-    if(0)
-    switch (nBits) {
-      case 32:
-      case 31:
-      case 30:
-      case 29:
-      case 28:
-      case 27:
-      case 26:
-      case 25:
-        bb = uint8(bits >> 24);
-        b.appendByte(bb);
-        if (bb == 0xff && stuffZeros) {
-            b.appendByte(0);
-        }
-        bits <<= 8;
-        nBits -= 8;
-      case 24:
-      case 23:
-      case 22:
-      case 21:
-      case 20:
-      case 19:
-      case 18:
-      case 17:
-        bb = uint8(bits >> 24);
-        b.appendByte(bb);
-        if (bb == 0xff && stuffZeros) {
-            b.appendByte(0);
-        }
-        bits <<= 8;
-        nBits -= 8;
-      case 16:
-      case 15:
-      case 14:
-      case 13:
-      case 12:
-      case 11:
-      case 10:
-      case 9:
-      case 8:
-        bb = uint8(bits >> 24);
-        b.appendByte(bb);
-        if (bb == 0xff && stuffZeros) {
-            b.appendByte(0);
-        }
-        bits <<= 8;
-        nBits -= 8;
-      default:
-        break;
-    }
-    b.bits = bits;
-    b.nBits = uint8(nBits);
+    buffer.insert(buffer.end(), bytesToAppend, bytesToAppend + bytesAppended);
+    this->bits = bits;
+    this->nBits = uint8(nBits);
 }
 
 // ensureNBits reads bytes from the byte buffer to ensure that d.bits.n is at

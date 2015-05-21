@@ -286,47 +286,6 @@ JpegError Decoder::processSOS(int n) {
 							continue;
 						}
 					}
-/*
-#if 0
-					// Dequantize, perform the inverse DCT and store the block to the image.
-					for (int zig = 0; zig < JpegBlock::blockSize; zig++) {
-						b[unzig()[zig]] *= qt[zig];
-					}
-					idct(&b);
-                    dst, stride := []byte(nil), 0)
-					if (d.nComp == nGrayComponent) {
-						dst, stride = d.img1.Pix[8*(by*d.img1.Stride+bx):], d.img1.Stride
-					} else {
-						switch compIndex {
-						case 0:
-							dst, stride = d.img3.Y[8*(by*d.img3.YStride+bx):], d.img3.YStride
-						case 1:
-							dst, stride = d.img3.Cb[8*(by*d.img3.CStride+bx):], d.img3.CStride
-						case 2:
-							dst, stride = d.img3.Cr[8*(by*d.img3.CStride+bx):], d.img3.CStride
-						default:
-                            d.wbuffer.flushBits(true);
-							return UnsupportedError("too many components")
-						}
-					}
-					// Level shift by +128, clip to [0, 255], and write to dst.
-					for (y := 0; y < 8; y++) {
-						y8 := y * 8
-						yStride := y * stride
-						for (x := 0; x < 8; x++) {
-							c := b[y8+x]
-							if (c < -128) {
-								c = 0
-							} else if (c > 127) {
-								c = 255
-							} else {
-								c += 128
-							}
-							dst[yStride+x] = uint8(c)
-						}
-					}
-#endif
-*/
 				} // for (j
 			} // for (i
             d.huffTransSect = false;
