@@ -1,7 +1,9 @@
 #include "Decoder.hpp"
 #include <lzma.h>
 namespace Sirikata {
-
+enum {
+    MAX_COMPRESSION_THREADS = 16  
+};
 class SIRIKATA_EXPORT MagicNumberReplacementReader : public DecoderReader {
     uint32 mMagicNumbersReplaced;
     DecoderReader *mBase;
@@ -54,4 +56,65 @@ public:
     virtual ~DecoderCompressionWriter();
     virtual void Close();
 };
+
+class ThreadContext;
+
+class SIRIKATA_EXPORT DecoderDecompressionMultireader : public DecoderReader {
+    ThreadContext * context;
+    uint32_t mComponentStart[MAX_COMPRESSION_THREADS]; // if for some reason we can't find the sig, start here
+    uint32_t mComponentEnd[MAX_COMPRESSION_THREADS];
+    int mNumSuccessfulComponents; // number of components (streams) that have been successfully extracted
+    int mNumComponents; // number of components (streams) to extract from this file
+    ThreadContext *mWorkers;
+    DecoderReader *mReader;
+    uint32_t mCurComponentSize;
+    uint32_t mCurComponentBytesScanned;
+    std::vector<uint8_t, JpegAllocator<uint8_t> > mBuffer; // holds the whole input file (necessary to thread it)
+    MemReadWriter mFallbackMemReader;
+    DecoderDecompressionReader *mFallbackDecompressionReader;
+    std::pair<uint32_t, JpegError> startDecompressionThreads();
+
+public:
+    DecoderDecompressionMultireader(DecoderReader *r, ThreadContext * workers, const JpegAllocator<uint8_t> &alloc);
+    virtual std::pair<uint32, JpegError> Read(uint8*data, unsigned int size);
+    virtual ~DecoderDecompressionMultireader();
+};
+class SIRIKATA_EXPORT DecoderCompressionMultiwriter : public DecoderWriter {
+    DecoderWriter *mWriter;
+    ThreadContext *mWorkers;
+    std::vector<uint8_t, JpegAllocator<uint8_t> > mBuffer;
+    int mCurWriteWorkerId;
+    int mNumWorkers;
+    int mCompressionLevel;
+    bool mClosed;
+    bool mReplace7zMagicARHC;
+    SizeEstimator *mSizeEstimate;
+public:
+    // compresison level should be a value: 1 through 9
+    DecoderCompressionMultiwriter(DecoderWriter *w, uint8_t compression_level, bool replace_magic,
+                                  ThreadContext *workers, const JpegAllocator<uint8_t> &alloc,
+                                  SizeEstimator *sizeEstimate); // can pass in NULL if you plan to set it later
+    void setEstimatedFileSize(SizeEstimator *sizeEstimate);
+    virtual std::pair<uint32, JpegError> Write(const uint8*data, unsigned int size) ;
+    virtual ~DecoderCompressionMultiwriter();
+    virtual void Close();
+};
+
+
+SIRIKATA_FUNCTION_EXPORT JpegError CompressAnyto7Z(DecoderReader &r, DecoderWriter &w,
+                                                   uint8 compression_level,
+                                                   const JpegAllocator<uint8_t> &alloc);
+SIRIKATA_FUNCTION_EXPORT JpegError Decompress7ZtoAny(DecoderReader &r, DecoderWriter &w,
+                                                     const JpegAllocator<uint8_t> &alloc);
+
+SIRIKATA_FUNCTION_EXPORT JpegError MultiCompressAnyto7Z(DecoderReader &r, DecoderWriter &w,
+                                                        uint8 compression_level,
+                                                        SizeEstimator *mSizeEstimate,
+                                                        int nThreads,
+                                                        const JpegAllocator<uint8_t> &alloc);
+SIRIKATA_FUNCTION_EXPORT JpegError MultiDecompress7ZtoAny(DecoderReader &r, DecoderWriter &w,
+                                                          int nThreads,
+                                                          const JpegAllocator<uint8_t> &alloc);
+
+
 }

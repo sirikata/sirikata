@@ -31,7 +31,7 @@
  */
 #include <cxxtest/TestSuite.h>
 #include <sirikata/core/util/Paths.hpp>
-#include <sirikata/core/jpeg-arhc/Decoder.hpp>
+#include <sirikata/core/jpeg-arhc/Compression.hpp>
 #include <sirikata/core/jpeg-arhc/BumpAllocator.hpp>
 #ifdef __linux
 #include <sys/wait.h>
@@ -250,5 +250,32 @@ public:
         TS_ASSERT_EQUALS(err, JpegError());
         TS_ASSERT_EQUALS(original.buffer(), round.buffer());
         TS_ASSERT_LESS_THAN(arhc.buffer().size(), inputDataSize * 99 / 100);
+    }
+    void testMultithreadedCompressedRoundTrip( void )
+    {
+        using namespace Sirikata;
+        Sirikata::JpegAllocator<uint8_t>alloc;
+        MemReadWriter original(alloc);
+        alloc.setup_memory_subsystem(1024 * 1024 * 1024,
+                                     &BumpAllocatorInit,
+                                     &BumpAllocatorMalloc,
+                                     &BumpAllocatorFree);
+        size_t inputDataSize = loadFile("prism/texture0.jpg", original, alloc);
+        MemReadWriter arhc(alloc);
+        ConstantSizeEstimator size_estimate = inputDataSize;
+        
+        JpegError err = MultiCompressAnyto7Z(original, arhc, 6, &size_estimate, 2, alloc);
+        if (err != JpegError()) {
+            fprintf(stderr, "7Z compression Error: %s\n", err.what());
+        }
+        TS_ASSERT_EQUALS(err, JpegError());
+        FILE * fp=fopen("/tmp/awful.xz","wb");
+        fwrite(&arhc.buffer()[0], arhc.buffer().size(), 1, fp);
+        fclose(fp);
+        MemReadWriter round(alloc);
+        err = MultiDecompress7ZtoAny(arhc, round, 2, alloc);
+        TS_ASSERT_EQUALS(err, JpegError());
+        TS_ASSERT_EQUALS(original.buffer(), round.buffer());
+        TS_ASSERT_LESS_THAN(arhc.buffer().size(), inputDataSize * (98 * 2 + 1) / 200);
     }
 };

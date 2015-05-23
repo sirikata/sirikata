@@ -97,6 +97,10 @@ void BitByteStream::pop() {
 uint32 BitByteStream::len()const {
     return uint32(buffer.size()) + uint32(nBits/8);
 }
+uint32 BitByteStream::estimatedByteSize()const {
+    return uint32(buffer.size()) + uint32(nBits/8) + uint32(nBits % 8 ? 1 : 0);
+}
+
 void BitByteStream::flushBits(bool stuffBits) {
     while (nBits > 0) {
         emitBits(1, 1, stuffBits);
@@ -120,6 +124,7 @@ uint32 bufferBEToStreamLength(uint8 *buf) {
 uint8 VERSION_INFORMATION[2] = {1, // major version
                                 0}; // minor version
 void Decoder::flush(DecoderWriter &w) {
+    mEstimatedSizeReady = true;
     Decoder &d = *this;
     if (d.arhc) {
         if (d.wbuffer.nBits > 0) {
@@ -497,8 +502,34 @@ public:
         w->Close();
     }
 };
+
+size_t Decoder::getEstimatedSize() const {
+    if (arhc) {
+        return wbuffer.estimatedByteSize();
+    } else {
+        size_t header_size = 6;
+        size_t size_size = sizeof(uint32_t);
+        size_t ext_size = extEndFileBuffer.size()
+            + 2* size_size // extension # + 24 bit size + file size
+            + 1; // end of extension marker
+        
+        size_t retval = header_size;
+        retval += ext_size;
+        retval += size_size + bitbuffer.estimatedByteSize();
+        for (size_t index = 0; index < sizeof(huffMultibuffer) / sizeof(huffMultibuffer[0]); ++index) {
+            retval += size_size + huffMultibuffer[index].estimatedByteSize();
+        }
+        return wbuffer.estimatedByteSize();
+    }
+}
+bool Decoder::estimatedSizeReady() const{
+    return mEstimatedSizeReady;
+}
+
+
 // decode reads a JPEG image from r and returns it as an image.Image.
 JpegError Decoder::decode(DecoderReader &r, DecoderWriter &w, uint8 componentCoalescing) {
+    mEstimatedSizeReady = false;
     Decoder &d = *this;
     JpegError nil =JpegError::nil();
     d.componentCoalescing = componentCoalescing;
@@ -760,42 +791,4 @@ JpegError DecompressARHCtoJPEG(DecoderReader &r, DecoderWriter &w,
     return d.decode(cr, w, 0);
 }
 
-static JpegError Copy(DecoderReader &r, DecoderWriter &w, const JpegAllocator<uint8> &alloc) {
-    std::vector<uint8, JpegAllocator<uint8> > buffer(alloc);
-    size_t bufferSize = 16384;
-    buffer.resize(bufferSize);
-    std::pair<uint32, JpegError> ret;
-    while (true) {
-        ret = r.Read(&buffer[0], bufferSize);
-        if (ret.first == 0) {
-            w.Close();
-            return JpegError::nil();
-        }
-        uint32 offset = 0;
-        std::pair<uint32, JpegError> wret = w.Write(&buffer[offset], ret.first - offset);
-        offset += wret.first;
-        if (wret.second != JpegError::nil()) {
-            w.Close();
-            return wret.second;
-        }
-        if (ret.second != JpegError::nil()) {
-            w.Close();
-            if (ret.second == JpegError::errEOF()) {
-                return JpegError::nil();
-            }
-            return ret.second;
-        }
-    }
-}
-
-// Decode reads a JPEG image from r and returns it as an image.Image.
-JpegError CompressAnyto7Z(DecoderReader &r, DecoderWriter &w, uint8 compression_level, const JpegAllocator<uint8> &alloc) {
-    DecoderCompressionWriter cw(&w, compression_level, alloc);
-    return Copy(r, cw, alloc);
-}
-// Decode reads a JPEG image from r and returns it as an image.Image.
-JpegError Decompress7ZtoAny(DecoderReader &r, DecoderWriter &w, const JpegAllocator<uint8> &alloc) {
-    DecoderDecompressionReader cr(&r, alloc);
-    return Copy(cr, w, alloc);
-}
 }

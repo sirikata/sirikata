@@ -242,6 +242,16 @@ class SIRIKATA_EXPORT MemReadWriter : public Sirikata::DecoderWriter, public Sir
         mReadCursor = 0;
         mWriteCursor = 0;
     }
+    void SwapIn(std::vector<Sirikata::uint8, JpegAllocator<uint8_t> > &buffer, size_t offset) {
+        mReadCursor = offset;
+        mWriteCursor = buffer.size();
+        buffer.swap(mBuffer);
+    }
+    void CopyIn(const std::vector<Sirikata::uint8, JpegAllocator<uint8_t> > &buffer, size_t offset) {
+        mReadCursor = offset;
+        mWriteCursor = buffer.size();
+        mBuffer = buffer;
+    }
     virtual std::pair<Sirikata::uint32, Sirikata::JpegError> Write(const Sirikata::uint8*data, unsigned int size);
     virtual std::pair<Sirikata::uint32, Sirikata::JpegError> Read(Sirikata::uint8*data, unsigned int size);
     std::vector<Sirikata::uint8, JpegAllocator<uint8_t> > &buffer() {
@@ -270,11 +280,32 @@ struct SIRIKATA_EXPORT BitByteStream {
     std::pair<uint8, JpegError> scanAlignedByte();
     void pop();
     uint32 len() const;
+    uint32 estimatedByteSize()const;
     void flushBits(bool stuffBits);
 };
-
-class SIRIKATA_EXPORT Decoder {
+class SIRIKATA_EXPORT SizeEstimator {
+  public:
+    virtual bool estimatedSizeReady() const = 0;
+    virtual size_t getEstimatedSize() const = 0;
+    virtual ~SizeEstimator(){}
+};
+class SIRIKATA_EXPORT ConstantSizeEstimator : public SizeEstimator {
+    size_t mSize;
 public:
+    ConstantSizeEstimator(size_t size) : mSize(size) {}
+    virtual bool estimatedSizeReady() const {
+        return true;
+    }
+    virtual size_t getEstimatedSize() const {
+        return mSize;
+    }
+};
+class SIRIKATA_EXPORT Decoder : public SizeEstimator {
+    bool mEstimatedSizeReady;
+public:
+    size_t getEstimatedSize() const;
+    bool estimatedSizeReady() const;
+    virtual ~Decoder(){}
     enum {
 
         dcTable = 0,
@@ -473,11 +504,8 @@ SIRIKATA_FUNCTION_EXPORT JpegError CompressJPEGtoARHC(DecoderReader &r, DecoderW
                                                       const JpegAllocator<uint8_t> &alloc);
 SIRIKATA_FUNCTION_EXPORT JpegError DecompressARHCtoJPEG(DecoderReader &r, DecoderWriter &w,
                                                         const JpegAllocator<uint8_t> &alloc);
-SIRIKATA_FUNCTION_EXPORT JpegError CompressAnyto7Z(DecoderReader &r, DecoderWriter &w,
-                                                   uint8 compression_level,
-                                                   const JpegAllocator<uint8_t> &alloc);
-SIRIKATA_FUNCTION_EXPORT JpegError Decompress7ZtoAny(DecoderReader &r, DecoderWriter &w,
-                                                     const JpegAllocator<uint8_t> &alloc);
+
+
 SIRIKATA_FUNCTION_EXPORT bool DecodeIs7z(const uint8* data, size_t size);
 SIRIKATA_FUNCTION_EXPORT bool DecodeIsARHC(const uint8* data, size_t size);
 
