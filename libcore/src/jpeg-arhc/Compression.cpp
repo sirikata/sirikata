@@ -86,6 +86,10 @@ class ThreadContext {
 
     int thread_input_read[MAX_COMPRESSION_THREADS];
     JpegAllocator<uint8_t> mAllocator;
+    // This helps test for the case that the decompressor
+    // runs into problems with an aligend, poorly placed 7zXZ in the file
+    // and needs to run in single threaded mode for that file
+    FaultInjectorXZ *mTestFaults;
 public:
     enum WorkType {
         TERM,
@@ -111,7 +115,7 @@ public:
 private:
     void compress(const std::vector<uint8_t, JpegAllocator<uint8_t> > &data,
                   int level,
-                  int output_fd) {
+                  int worker_id) {
         std::vector<uint8_t, JpegAllocator<uint8_t> > compressed_data(data.get_allocator());
         compressed_data.resize(lzma_stream_buffer_bound(data.size()) + THREAD_COMMAND_BUFFER_SIZE);
         lzma_allocator lzma_alloc;
@@ -129,7 +133,7 @@ private:
             compressed_data.resize(out_pos + THREAD_COMMAND_BUFFER_SIZE);
             compressed_data[0] = XZ_OK;
             uint32toLE(out_pos, &compressed_data[1]);
-            write_full(output_fd, &compressed_data[0], compressed_data.size());
+            write_full(thread_output_write[worker_id], &compressed_data[0], compressed_data.size());
         } else {
             assert(ret != LZMA_BUF_ERROR && "Buffer space should have been sufficient");
             assert(ret != LZMA_UNSUPPORTED_CHECK && "No check should be supported");
@@ -137,7 +141,7 @@ private:
             assert(ret != LZMA_MEM_ERROR && "Memory bug?");
             assert(ret != LZMA_DATA_ERROR && "Early Memory bug?");
             assert(ret != LZMA_PROG_ERROR && "Early LZMA bug?");
-            send_xz_fail(output_fd);
+            send_xz_fail(thread_output_write[worker_id]);
         }
     }
     void send_xz_fail(int output_fd) {
@@ -146,7 +150,7 @@ private:
         write_full(output_fd, failure_message, sizeof(failure_message));
     }
     void decompress(const std::vector<uint8_t, JpegAllocator<uint8_t> > &data,
-                    int output_fd) {
+                    int worker_id) {
         std::vector<uint8_t, JpegAllocator<uint8_t> > output_data(data.get_allocator());
         output_data.reserve(data.size()); // it should be at least as big as the input
         output_data.resize(THREAD_COMMAND_BUFFER_SIZE);
@@ -160,27 +164,31 @@ private:
         lzma_ret ret = lzma_stream_decoder(
 			&stream, UINT64_MAX, LZMA_CONCATENATED);
         if (ret != LZMA_OK) {
-            send_xz_fail(output_fd);
+            send_xz_fail(thread_output_write[worker_id]);
             return;
         }
         uint8_t buf[16384];
         stream.next_in = &data[0];
         stream.avail_in = data.size();
-        while(true) {
+        int decompress_counter = 0;
+        do {
             stream.next_out = buf;
             stream.avail_out = sizeof(buf);
             ret = lzma_code(&stream, LZMA_FINISH);
             output_data.insert(output_data.end(), buf, buf + sizeof(buf) - stream.avail_out);
+            if (mTestFaults && mTestFaults->shouldFault(decompress_counter, worker_id, num_threads)) {
+                ret = LZMA_DATA_ERROR;
+            }
             if (ret == LZMA_STREAM_END) {
                 break;
             } else if (ret != LZMA_OK) {
-                send_xz_fail(output_fd);
+                send_xz_fail(thread_output_write[worker_id]);
                 return;
             }
-        }
+        }while(++decompress_counter);
         output_data[0] = XZ_OK;
         uint32toLE(output_data.size() - THREAD_COMMAND_BUFFER_SIZE, &output_data[1]);
-        write_full(output_fd, &output_data[0], output_data.size());
+        write_full(thread_output_write[worker_id], &output_data[0], output_data.size());
     }
     void worker(size_t worker_id, JpegAllocator<uint8_t> alloc) {
         unsigned char command[THREAD_COMMAND_BUFFER_SIZE] = {0};
@@ -225,10 +233,10 @@ private:
               case COMPRESS7:
               case COMPRESS8:
               case COMPRESS9:
-                compress(command_data, command[0] - COMPRESS1 + 1, thread_output_write[worker_id]);
+                compress(command_data, command[0] - COMPRESS1 + 1, worker_id);
                 break;
               case DECOMPRESS:
-                decompress(command_data, thread_output_write[worker_id]);
+                decompress(command_data, worker_id);
                 break;
             }
         }
@@ -245,7 +253,7 @@ public:
         for (size_t i = 0; i < num_threads; ++i) {
             uint8_t deprivilege_command[THREAD_COMMAND_BUFFER_SIZE] = {TERM, 0, 0, 0, 0};
             write_full(thread_input_write[i], deprivilege_command, sizeof(deprivilege_command));
-        }        
+        }
         for (size_t i = 0; i < num_threads; ++i) {
             uint8_t return_buffer[THREAD_COMMAND_BUFFER_SIZE] = {0};
             read_full(thread_output_read[i], return_buffer, sizeof(return_buffer));
@@ -253,7 +261,8 @@ public:
             assert(LEtoUint32(return_buffer + 1) == 0);
         }
     }
-    ThreadContext(size_t num_threads, const JpegAllocator<uint8_t> & alloc) : mAllocator(alloc) {
+    ThreadContext(size_t num_threads, const JpegAllocator<uint8_t> & alloc, bool depriv, FaultInjectorXZ *faultInjection) : mAllocator(alloc) {
+        mTestFaults = faultInjection;
         memset(thread_output_write, 0, sizeof(thread_output_write));
         memset(thread_output_read, 0, sizeof(thread_output_read));
         memset(thread_input_write, 0, sizeof(thread_input_write));
@@ -278,16 +287,19 @@ public:
 #else
             Sirikata::Thread t("CompressionWorker", std::tr1::bind(&ThreadContext::worker, this, i, alloc));
 #endif
-            uint8_t deprivilege_command[THREAD_COMMAND_BUFFER_SIZE] = {DEPRIVILEGE, 0, 0, 0, 0};
+            uint8_t deprivilege_command[THREAD_COMMAND_BUFFER_SIZE] = {uint8(depriv?DEPRIVILEGE:PING), 0, 0, 0, 0};
             write_full(thread_input_write[i], deprivilege_command, sizeof(deprivilege_command));
             t.detach();
         }
         for (size_t i = 0; i < num_threads; ++i) {
             uint8_t return_buffer[THREAD_COMMAND_BUFFER_SIZE] = {0};
             read_full(thread_output_read[i], return_buffer, sizeof(return_buffer));
-            assert(return_buffer[0] == ACKDEPRIVILEGE);
+            assert(return_buffer[0] == uint8(depriv?ACKDEPRIVILEGE:PONG));
             assert(LEtoUint32(return_buffer + 1) == 0);
         }
+    }
+    const JpegAllocator<uint8_t> &get_allocator() const {
+        return mAllocator;
     }
 };
 
@@ -835,20 +847,38 @@ JpegError Decompress7ZtoAny(DecoderReader &r, DecoderWriter &w, const JpegAlloca
     DecoderDecompressionReader cr(&r, alloc);
     return Copy(cr, w, alloc);
 }
+namespace {
+ThreadContext *MakeThreadContextHelper(int nthreads, const JpegAllocator<uint8> &alloc, bool depriv, FaultInjectorXZ* fi) {
+    ThreadContext *retval = JpegAllocator<ThreadContext>(alloc).allocate(1);
+    new((void*)retval)ThreadContext(nthreads, alloc, depriv, fi); // inplace new
+    return retval;
+}
+}
 
-// Decode reads a JPEG image from r and returns it as an image.Image.
-JpegError MultiCompressAnyto7Z(DecoderReader &r, DecoderWriter &w, uint8 compression_level,
-                               SizeEstimator *sz, int nthreads, const JpegAllocator<uint8> &alloc) {
-    ThreadContext tc(nthreads, alloc);
-    DecoderCompressionMultiwriter cw(&w, compression_level, false, &tc, alloc, sz);
-    return Copy(r, cw, alloc);
+ThreadContext *MakeThreadContext(int nthreads, const JpegAllocator<uint8> &alloc) {
+    return MakeThreadContextHelper(nthreads, alloc, true, NULL);
+}
+
+ThreadContext *TestMakeThreadContext(int nthreads, const JpegAllocator<uint8> &alloc, bool depriv, FaultInjectorXZ* fi) {
+    return MakeThreadContextHelper(nthreads, alloc, depriv, fi);
+}
+
+void DestroyThreadContext(ThreadContext *tc) {
+    JpegAllocator<ThreadContext>(tc->get_allocator()).destroy(tc);
+    JpegAllocator<ThreadContext>(tc->get_allocator()).deallocate(tc, 1);
 }
 
 // Decode reads a JPEG image from r and returns it as an image.Image.
-JpegError MultiDecompress7ZtoAny(DecoderReader &r, DecoderWriter &w, int nthreads, const JpegAllocator<uint8> &alloc) {
-    ThreadContext tc(nthreads, alloc);
-    DecoderDecompressionMultireader cr(&r, &tc, alloc);
-    return Copy(cr, w, alloc);
+JpegError MultiCompressAnyto7Z(DecoderReader &r, DecoderWriter &w, uint8 compression_level,
+                               SizeEstimator *sz, ThreadContext *tc) {
+    DecoderCompressionMultiwriter cw(&w, compression_level, false, tc, tc->get_allocator(), sz);
+    return Copy(r, cw, tc->get_allocator());
+}
+
+// Decode reads a JPEG image from r and returns it as an image.Image.
+JpegError MultiDecompress7ZtoAny(DecoderReader &r, DecoderWriter &w, ThreadContext *tc) { 
+    DecoderDecompressionMultireader cr(&r, tc, tc->get_allocator());
+    return Copy(cr, w, tc->get_allocator());
 }
 
 }

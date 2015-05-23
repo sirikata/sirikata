@@ -100,6 +100,11 @@ public:
     virtual void Close();
 };
 
+class SIRIKATA_EXPORT FaultInjectorXZ {
+  public:
+    virtual bool shouldFault(int offset, int thread, int nThreads) = 0;
+    virtual ~FaultInjectorXZ(){}
+};
 
 SIRIKATA_FUNCTION_EXPORT JpegError CompressAnyto7Z(DecoderReader &r, DecoderWriter &w,
                                                    uint8 compression_level,
@@ -107,14 +112,16 @@ SIRIKATA_FUNCTION_EXPORT JpegError CompressAnyto7Z(DecoderReader &r, DecoderWrit
 SIRIKATA_FUNCTION_EXPORT JpegError Decompress7ZtoAny(DecoderReader &r, DecoderWriter &w,
                                                      const JpegAllocator<uint8_t> &alloc);
 
+SIRIKATA_FUNCTION_EXPORT ThreadContext* MakeThreadContext(int nThreads, const JpegAllocator<uint8_t> &alloc);
+SIRIKATA_FUNCTION_EXPORT void DestroyThreadContext(ThreadContext *);
+SIRIKATA_FUNCTION_EXPORT ThreadContext* TestMakeThreadContext(int nThreads, const JpegAllocator<uint8_t> &alloc, bool depriv, FaultInjectorXZ *fi);
+
 SIRIKATA_FUNCTION_EXPORT JpegError MultiCompressAnyto7Z(DecoderReader &r, DecoderWriter &w,
                                                         uint8 compression_level,
                                                         SizeEstimator *mSizeEstimate,
-                                                        int nThreads,
-                                                        const JpegAllocator<uint8_t> &alloc);
-SIRIKATA_FUNCTION_EXPORT JpegError MultiDecompress7ZtoAny(DecoderReader &r, DecoderWriter &w,
-                                                          int nThreads,
-                                                          const JpegAllocator<uint8_t> &alloc);
+                                                        ThreadContext *workers);
 
+SIRIKATA_FUNCTION_EXPORT JpegError MultiDecompress7ZtoAny(DecoderReader &r, DecoderWriter &w,
+                                                          ThreadContext *workers);
 
 }
