@@ -605,15 +605,17 @@ std::pair<uint32_t, JpegError> DecoderDecompressionMultireader::startDecompressi
         assert(sizeof(xzheader) == sizeof(arhcheader) && "The xz and arhc headers must be of same size");
         memcpy(&mBuffer[offset], xzheader, sizeof(xzheader));
     }
-    for (size_t i = offset + 4, ie = mBuffer.size() - 8; i < ie; i += 4) {
-        uint8_t * to_scan = &mBuffer[i];
-        if (memcmp(to_scan, xzheader, 6) == 0) {
-            assert (cur_component > 0 && "Code starts cur_component at 1 since 0 is covered by the start");
-            mComponentEnd[cur_component - 1] = i;
-            mComponentStart[cur_component] = i;
-            cur_component++;
-            if (cur_component >= num_threads) {
-                break;
+    if (num_threads > 1) {
+        for (size_t i = offset + 4, ie = mBuffer.size() - 8; i < ie; i += 4) {
+            uint8_t * to_scan = &mBuffer[i];
+            if (memcmp(to_scan, xzheader, 6) == 0) {
+                assert (cur_component > 0 && "Code starts cur_component at 1 since 0 is covered by the start");
+                mComponentEnd[cur_component - 1] = i;
+                mComponentStart[cur_component] = i;
+                cur_component++;
+                if (cur_component >= num_threads) {
+                    break;
+                }
             }
         }
     }
