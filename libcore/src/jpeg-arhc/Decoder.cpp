@@ -69,7 +69,6 @@ void BitByteStream::flushToWriter(DecoderWriter &w) {
     if (!buffer.empty()) {
         w.Write(&buffer[0], buffer.size());
     }
-    buffer.clear();
 }
 
 
@@ -124,7 +123,7 @@ uint32 bufferBEToStreamLength(uint8 *buf) {
 uint8 VERSION_INFORMATION[2] = {1, // major version
                                 0}; // minor version
 void Decoder::flush(DecoderWriter &w) {
-    mEstimatedSizeReady = true;
+    mEstimatedSizeState = ESTIMATED_SIZE_READY;
     Decoder &d = *this;
     if (d.arhc) {
         if (d.wbuffer.nBits > 0) {
@@ -504,32 +503,38 @@ public:
 };
 
 size_t Decoder::getEstimatedSize() const {
-    if (arhc) {
-        return wbuffer.estimatedByteSize();
-    } else {
+    if (mEstimatedSizeState == ESTIMATED_SIZE_READY && arhc) {
+        mEstimatedSize = wbuffer.estimatedByteSize();
+        mEstimatedSizeState = ESTIMATED_SIZE_CACHED;
+    } else if (mEstimatedSizeState == ESTIMATED_SIZE_READY) {
         size_t header_size = 6;
         size_t size_size = sizeof(uint32_t);
         size_t ext_size = extEndFileBuffer.size()
             + 2* size_size // extension # + 24 bit size + file size
             + 1; // end of extension marker
-        
         size_t retval = header_size;
         retval += ext_size;
         retval += size_size + bitbuffer.estimatedByteSize();
         for (size_t index = 0; index < sizeof(huffMultibuffer) / sizeof(huffMultibuffer[0]); ++index) {
             retval += size_size + huffMultibuffer[index].estimatedByteSize();
         }
-        return wbuffer.estimatedByteSize();
+        retval += wbuffer.estimatedByteSize();
+        mEstimatedSize = retval;
+        mEstimatedSizeState = ESTIMATED_SIZE_CACHED;
     }
+    if (mEstimatedSizeState == ESTIMATED_SIZE_CACHED) {
+        return mEstimatedSize;
+    }
+    return 0;
 }
 bool Decoder::estimatedSizeReady() const{
-    return mEstimatedSizeReady;
+    return mEstimatedSizeState != ESTIMATED_SIZE_UNREADY;
 }
 
 
 // decode reads a JPEG image from r and returns it as an image.Image.
 JpegError Decoder::decode(DecoderReader &r, DecoderWriter &w, uint8 componentCoalescing) {
-    mEstimatedSizeReady = false;
+    mEstimatedSizeState = ESTIMATED_SIZE_UNREADY;
     Decoder &d = *this;
     JpegError nil =JpegError::nil();
     d.componentCoalescing = componentCoalescing;

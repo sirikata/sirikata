@@ -189,6 +189,51 @@ public:
         waitpid(pid, &status, 0);
         TS_ASSERT_EQUALS(0, status);
     }
+
+
+    void testMultiSeccompARHC (void) {
+        pid_t pid;
+        int status = 1;
+        if ((pid = fork()) == 0) {
+            using namespace Sirikata;
+            JpegAllocator<uint8_t> alloc;
+            alloc.setup_memory_subsystem(2147483647,//4294967295,
+                                         &BumpAllocatorInit,
+                                         &BumpAllocatorMalloc,
+                                         &BumpAllocatorFree);
+            
+            std::pair<FILE*, size_t> input_fp_size = getFileObjectAndSize("prism/texture0.jpg");
+            ThreadContext * tc = MakeThreadContext(3, alloc);            
+            if (prctl(PR_SET_SECCOMP, SECCOMP_MODE_STRICT)) {
+                syscall(SYS_exit, 1); // SECCOMP not allowed
+            }
+            MemReadWriter original(alloc);
+            size_t inputDataSize = loadFileHelper(input_fp_size.first, input_fp_size.second, original, alloc);
+            
+            uint8 componentCoalescing = Decoder::comp12coalesce;
+            MemReadWriter arhc(alloc);
+            JpegError err = CompressJPEGtoARHCMulti(original, arhc, 6, componentCoalescing, tc);
+            if (err != JpegError()) {
+                syscall(SYS_exit, 2);
+            }
+            MemReadWriter round(alloc);
+            err = DecompressARHCtoJPEGMulti(arhc, round, tc);
+            DestroyThreadContext(tc);
+            if (err != JpegError()) {
+                syscall(SYS_exit, 3);
+            }
+            if (original.buffer() != round.buffer()) {
+                syscall(SYS_exit, 4);
+            }
+            if (arhc.buffer().size() > inputDataSize * 94 / 100) {
+                syscall(SYS_exit, 5);
+            }
+            syscall(SYS_exit, 0);
+       }
+       waitpid(pid, &status, 0);
+       TS_ASSERT_EQUALS(0, status);
+    }
+
     
     void compressedRoundTripHelper(const Sirikata::JpegAllocator<uint8_t> &alloc) {
         using namespace Sirikata;
@@ -278,6 +323,7 @@ public:
             TS_ASSERT_EQUALS(err, JpegError());
             MemReadWriter round(alloc);
             err = MultiDecompress7ZtoAny(arhc, round, tc);
+            DestroyThreadContext(tc);
             if (err != JpegError()) {
                 syscall(SYS_exit, 3);
             }
@@ -287,19 +333,47 @@ public:
             if (arhc.buffer().size() > inputDataSize * (98 * 2 +  1) / 200) {
                 syscall(SYS_exit, 5);
             }
-            DestroyThreadContext(tc);
             syscall(SYS_exit, 0);
         }
         waitpid(pid, &status, 0);
         TS_ASSERT_EQUALS(0, status);
 
     }
+    class SingleFaultInjector : public Sirikata::FaultInjectorXZ {
+        int faultingThread;
+        int faultingOffset;
+    public:
+        SingleFaultInjector(int offset, int thread) {
+            faultingOffset = offset;
+            faultingThread = thread;
+        }
+        bool shouldFault(int offset, int thread, int nThreads) {
+            return offset == faultingOffset && thread == faultingThread;
+        }
+    };
     void testMultithreadedCompressedRoundTrip( void )
+    {
+        SingleFaultInjector first(0,0);
+        helperMultithreadedCompressedRoundTrip(first, 8, 1.08);
+        SingleFaultInjector fi(0,1);
+        helperMultithreadedCompressedRoundTrip(fi, 4, 1.01);
+
+        SingleFaultInjector fiA(1,1);
+        helperMultithreadedCompressedRoundTrip(fiA, 3, .995);
+        SingleFaultInjector last2(0,1);
+        helperMultithreadedCompressedRoundTrip(fiA, 2, .985);
+
+        SingleFaultInjector last4(0,3);
+        helperMultithreadedCompressedRoundTrip(last4, 4, 1.01);
+        SingleFaultInjector last8(0,7);
+        helperMultithreadedCompressedRoundTrip(last8, 8, 1.08);
+    }
+    void helperMultithreadedCompressedRoundTrip( Sirikata::FaultInjectorXZ &fi, int nthreads, double ratio)
     {
         using namespace Sirikata;
         Sirikata::JpegAllocator<uint8_t>alloc;
         MemReadWriter original(alloc);
-        ThreadContext * tc = TestMakeThreadContext(2, alloc, false, NULL);
+        ThreadContext * tc = TestMakeThreadContext(nthreads, alloc, false, &fi);
         size_t inputDataSize = loadFile("prism/texture0.jpg", original, alloc);
         MemReadWriter arhc(alloc);
         ConstantSizeEstimator size_estimate = inputDataSize;
@@ -313,6 +387,6 @@ public:
         DestroyThreadContext(tc);
         TS_ASSERT_EQUALS(err, JpegError());
         TS_ASSERT_EQUALS(original.buffer(), round.buffer());
-        TS_ASSERT_LESS_THAN(arhc.buffer().size(), inputDataSize * (98 * 2 + 1) / 200);
+        TS_ASSERT_LESS_THAN(arhc.buffer().size(), (size_t)(inputDataSize * ratio));
     }
 };

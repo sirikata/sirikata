@@ -301,7 +301,12 @@ public:
     }
 };
 class SIRIKATA_EXPORT Decoder : public SizeEstimator {
-    bool mEstimatedSizeReady;
+    mutable size_t mEstimatedSize;
+    mutable enum {
+        ESTIMATED_SIZE_UNREADY,
+        ESTIMATED_SIZE_READY,
+        ESTIMATED_SIZE_CACHED
+    } mEstimatedSizeState;
 public:
     size_t getEstimatedSize() const;
     bool estimatedSizeReady() const;
@@ -384,6 +389,7 @@ public:
           wbuffer(customAlloc),
           bitbuffer(customAlloc),
           extEndFileBuffer(customAlloc) {
+        mEstimatedSizeState = ESTIMATED_SIZE_UNREADY;
         for (size_t i = 0; i < sizeof(progCoeffs) / sizeof(progCoeffs[0]); ++i) {
             progCoeffs[i].~vector();
             new(&progCoeffs[i])std::vector<uint8_t, JpegAllocator<uint8_t> >(customAlloc);
@@ -504,6 +510,13 @@ SIRIKATA_FUNCTION_EXPORT JpegError CompressJPEGtoARHC(DecoderReader &r, DecoderW
                                                       const JpegAllocator<uint8_t> &alloc);
 SIRIKATA_FUNCTION_EXPORT JpegError DecompressARHCtoJPEG(DecoderReader &r, DecoderWriter &w,
                                                         const JpegAllocator<uint8_t> &alloc);
+
+class ThreadContext;
+SIRIKATA_FUNCTION_EXPORT JpegError CompressJPEGtoARHCMulti(DecoderReader &r, DecoderWriter &w,
+                                                           uint8 compression_level, uint8 componentCoalescing,
+                                                           ThreadContext *tc);
+SIRIKATA_FUNCTION_EXPORT JpegError DecompressARHCtoJPEGMulti(DecoderReader &r, DecoderWriter &w,
+                                                             ThreadContext *tc);
 
 
 SIRIKATA_FUNCTION_EXPORT bool DecodeIs7z(const uint8* data, size_t size);

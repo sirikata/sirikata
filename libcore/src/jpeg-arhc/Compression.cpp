@@ -128,7 +128,7 @@ private:
                                                data.size(),
                                                &compressed_data[THREAD_COMMAND_BUFFER_SIZE],
                                                &out_pos,
-                                               compressed_data.size());
+                                               compressed_data.size() - THREAD_COMMAND_BUFFER_SIZE);
         if (ret == LZMA_OK) {
             compressed_data.resize(out_pos + THREAD_COMMAND_BUFFER_SIZE);
             compressed_data[0] = XZ_OK;
@@ -643,6 +643,36 @@ std::pair<uint32_t, JpegError> DecoderDecompressionMultireader::startDecompressi
     }
     return std::pair<uint32, JpegError>(0, JpegError::nil());
 }
+
+class DeferDrainJobs {
+    ThreadContext * mWorkers;
+    int mStartWorker;
+    int mEndWorker;
+public:
+    DeferDrainJobs(ThreadContext *tc, int start, int end) {
+        mWorkers = tc;
+        mStartWorker = start;
+        mEndWorker = end;
+    }
+    ~DeferDrainJobs() {
+        for (int i = mStartWorker; i < mEndWorker; ++i) {
+            uint8_t command_buffer[THREAD_COMMAND_BUFFER_SIZE] = {0};
+            read_full(mWorkers->thread_output_read[i], command_buffer, sizeof(command_buffer));
+            ssize_t reply_size = LEtoUint32(command_buffer + 1);
+            uint8_t discard[4096];
+            ssize_t num_read = 0;
+            while(num_read < reply_size) {
+                ssize_t cur_read = read(mWorkers->thread_output_read[i],
+                                        discard,
+                                        std::min(reply_size - num_read, (ssize_t)4096));
+                if (cur_read <= 0) {
+                    break;
+                }
+                num_read += cur_read;
+            }
+        }
+    }
+};
 std::pair<uint32, JpegError> DecoderDecompressionMultireader::Read(uint8*data,
                                                               unsigned int size) {
     if (mFallbackDecompressionReader) {
@@ -668,10 +698,11 @@ std::pair<uint32, JpegError> DecoderDecompressionMultireader::Read(uint8*data,
         read_full(mWorkers->thread_output_read[mNumSuccessfulComponents], command_buffer, sizeof(command_buffer));
         mCurComponentSize = LEtoUint32(command_buffer + 1);
         if (command_buffer[0] == ThreadContext::XZ_FAIL) {
-            // FIXME: DECOMPRESS IN PLACE (this could happen if there was a stray 4 byte aligned 7zXZ header around
+            // DECOMPRESS IN PLACE (this could happen if there was a stray 4 byte aligned 7zXZ header around
             mFallbackMemReader.SwapIn(mBuffer, mComponentStart[mNumSuccessfulComponents]);
             mFallbackDecompressionReader = JpegAllocator<DecoderDecompressionReader>(mBuffer.get_allocator()).allocate(1);
             new((void*)mFallbackDecompressionReader)DecoderDecompressionReader(&mFallbackMemReader, mBuffer.get_allocator()); // inplace new
+            DeferDrainJobs dj(mWorkers, mNumSuccessfulComponents + 1, mNumComponents);
             return mFallbackDecompressionReader->Read(data, size);            
         } else {
             assert(command_buffer[0] == ThreadContext::XZ_OK && "The decompressor must report either OK or fail");
@@ -724,11 +755,13 @@ std::pair<uint32, JpegError> DecoderCompressionMultiwriter::Write(const uint8*da
     size_t buffer_unique_num_bytes = (mBuffer.size() - THREAD_COMMAND_BUFFER_SIZE);
 
     while(mCurWriteWorkerId + 1 < mNumWorkers && size + buffer_unique_num_bytes >= write_to_each_worker) {        
+        assert(write_to_each_worker > buffer_unique_num_bytes && "we cannot have written more than our buffers' worth to this place");
+        uint32 amount_to_write = write_to_each_worker - buffer_unique_num_bytes;
         mBuffer.insert(mBuffer.end(),
                        data,
-                       data + write_to_each_worker - buffer_unique_num_bytes);
-        data += write_to_each_worker - buffer_unique_num_bytes;
-        size -= write_to_each_worker - buffer_unique_num_bytes;
+                       data + amount_to_write);
+        data += amount_to_write;
+        size -= amount_to_write;
         mBuffer[0] = ThreadContext::COMPRESS1 + mCompressionLevel - 1;
         uint32toLE(mBuffer.size() - THREAD_COMMAND_BUFFER_SIZE ,&mBuffer[1]);
         ssize_t retval = write_full(mWorkers->thread_input_write[mCurWriteWorkerId++],
@@ -775,7 +808,7 @@ void DecoderCompressionMultiwriter::Close() {
             if (status > offset) {
                 if (workerId == 0 && mReplace7zMagicARHC && read_so_far < sizeof(xzheader)) {
                     int headerindex = 0;
-                    for (int i = 0; i < status; ++i, ++headerindex) {
+                    for (int i = 0; headerindex < (int)sizeof(xzheader) && i < status; ++i, ++headerindex) {
                         assert(mBuffer[offset+read_so_far + i] == xzheader[headerindex]
                                && "must start with \\xfd7zXZ");
                         mBuffer[offset+read_so_far + i] = arhcheader[headerindex];
@@ -879,6 +912,21 @@ JpegError MultiCompressAnyto7Z(DecoderReader &r, DecoderWriter &w, uint8 compres
 JpegError MultiDecompress7ZtoAny(DecoderReader &r, DecoderWriter &w, ThreadContext *tc) { 
     DecoderDecompressionMultireader cr(&r, tc, tc->get_allocator());
     return Copy(cr, w, tc->get_allocator());
+}
+
+// Decode reads a JPEG image from r and returns it as an image.Image.
+JpegError CompressJPEGtoARHCMulti(DecoderReader &r, DecoderWriter &w, uint8 compression_level, uint8 componentCoalescing,
+                             ThreadContext *tc) {
+    Decoder d(tc->get_allocator());
+    DecoderCompressionMultiwriter cw(&w, compression_level, true, tc, tc->get_allocator(), &d);
+    return d.decode(r, cw, componentCoalescing);
+}
+// Decode reads a JPEG image from r and returns it as an image.Image.
+JpegError DecompressARHCtoJPEGMulti(DecoderReader &r, DecoderWriter &w,
+                             ThreadContext *tc) {
+    DecoderDecompressionMultireader cr(&r, tc, tc->get_allocator());
+    Decoder d(tc->get_allocator());
+    return d.decode(cr, w, 0);
 }
 
 }
