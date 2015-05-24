@@ -358,8 +358,15 @@ JpegError Decoder::readFull(uint8*p, uint32 pSize) {
 JpegError Decoder::ignore(uint32 n) {
     Decoder & d = *this;
     if (n > 0) {
-        std::vector<uint8> ignoreMe(n);
-        return d.readFull(&ignoreMe[0], ignoreMe.size());
+        uint8_t buffer[4096];
+        uint32 bytes_read = 0;
+        do {
+            JpegError err = d.readFull(buffer, std::min((uint32)sizeof(buffer), n - bytes_read));
+            bytes_read += sizeof(buffer);
+            if (err != JpegError::nil()) {
+                return err;
+            }
+        } while(bytes_read < n);
     }
     return JpegError::nil();
 }
@@ -569,7 +576,8 @@ JpegError Decoder::decode(DecoderReader &r, DecoderWriter &w, uint8 componentCoa
             if ((err = d.readFull(sizeBuf + 1, 3)) != nil) { // only 24 bits of size
                 return err;
             }
-            std::vector<uint8> extension(bufferBEToStreamLength(sizeBuf));
+            std::vector<uint8, JpegAllocator<uint8> > extension(d.mAllocator);
+            extension.resize(bufferBEToStreamLength(sizeBuf));
             if (!extension.empty()) {
                 if ((err = d.readFull(&extension[0], extension.size())) != nil) { // only 24 bits of size
                     return err;
@@ -618,12 +626,10 @@ JpegError Decoder::decode(DecoderReader &r, DecoderWriter &w, uint8 componentCoa
             }
             d.huffMultibuffer[index].buffer.resize(huffMultiStreamLen);
         }
-
-        std::vector<uint8> bitVector(bitVectorLength);
-        if (!bitVector.empty()) {
+        if (bitVectorLength) {
+            d.bitbuffer.buffer.resize(bitVectorLength);
             //fprintf(stderr, "Reading ARHC header of %d bytes\n", len(bitVector))
-            d.readFull(&bitVector[0], bitVector.size());
-            d.bitbuffer.appendBytes(&bitVector[0], bitVector.size());
+            d.readFull(&d.bitbuffer.buffer[0], bitVectorLength);
         }
 
         //fprintf(stderr, "Reading ARHC header of %d bytes\n", len(huffVector))
