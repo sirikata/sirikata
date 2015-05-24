@@ -605,25 +605,40 @@ std::pair<uint32_t, JpegError> DecoderDecompressionMultireader::startDecompressi
         assert(sizeof(xzheader) == sizeof(arhcheader) && "The xz and arhc headers must be of same size");
         memcpy(&mBuffer[offset], xzheader, sizeof(xzheader));
     }
-    if (num_threads > 1) {
-        for (size_t i = offset + 4, ie = mBuffer.size() - 8; i < ie; i += 4) {
-            uint8_t * to_scan = &mBuffer[i];
-            if (memcmp(to_scan, xzheader, 6) == 0) {
-                assert (cur_component > 0 && "Code starts cur_component at 1 since 0 is covered by the start");
-                mComponentEnd[cur_component - 1] = i;
-                mComponentStart[cur_component] = i;
-                cur_component++;
-                if (cur_component >= num_threads) {
-                    break;
-                }
+    for (size_t i = offset + 4, ie = mBuffer.size() - 8; i < ie; i += 4) {
+        uint8_t * to_scan = &mBuffer[i];
+        if (memcmp(to_scan, xzheader, 6) == 0) {
+            assert (cur_component > 0 && "Code starts cur_component at 1 since 0 is covered by the start");
+            mComponentEnd[cur_component - 1] = i;
+            mComponentStart[cur_component] = i;
+            cur_component++;
+            if (cur_component >= MAX_COMPRESSION_THREADS) {
+                break;
             }
         }
     }
-    if (!cur_component) {
-        ++cur_component; // if we didn't match the magic
+    mComponentEnd[cur_component - 1] = mBuffer.size();
+    for (int component = 0; component < cur_component; ++component) {
+        //fprintf(stderr, "Input components are: [%d - %d)\n", mComponentStart[component], mComponentEnd[component]);
+    }
+    int to_merge = cur_component - 1;
+    while (cur_component > num_threads) {
+        if (to_merge - 1 < 0) {
+            to_merge = cur_component - 1;
+        }
+        assert(to_merge - 1 >= 0);
+        //fprintf(stderr, "Merging: [%d - %d) and [%d - %d)\n", mComponentStart[to_merge-1], mComponentEnd[to_merge-1],mComponentStart[to_merge], mComponentEnd[to_merge]);
+        for (int j = to_merge; j < cur_component; ++j) {
+            mComponentEnd[j - 1] = mComponentEnd[j];
+            mComponentStart[j] = mComponentEnd[j - 1];
+        }
+        --cur_component;
+        to_merge -= 2;
+    }
+    for (int component = 0; component < cur_component; ++component) {
+        //fprintf(stderr, "Output components are: [%d - %d)\n", mComponentStart[component], mComponentEnd[component]);
     }
     mNumComponents = cur_component;
-    mComponentEnd[cur_component - 1] = mBuffer.size();
     for (int component = 0; component < cur_component; ++component) {
         assert(mComponentStart[component] >= sizeof(command_backup) && "component start will be beyond offset");
         // backup old bits
