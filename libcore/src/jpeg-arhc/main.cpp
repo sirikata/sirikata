@@ -178,12 +178,24 @@ int main(int argc, char **argv) {
     bool force7z = false;
     bool uncompressed = false;
     bool seccomp = false;
+    int reps = 1;
     for (int i = 1; i < argc; ++i) {
         bool found = false;
         if (argv[i][0] == '-' && tolower(argv[i][1]) == 's' && argv[i][2] == '\0') {
             seccomp = true;
             found = true;
         }
+
+        if (argv[i][0] == '-' && argv[i][1] == 'r' && argv[i][2] >='0' && argv[i][2] <= '9' && argv[i][3] == '\0') {
+            reps = argv[i][2] - '0';
+            found = true;
+        }
+ 
+        if (argv[i][0] == '-' && argv[i][1] == 'r' && argv[i][2] >='0' && argv[i][2] <= '9' && argv[i][3] >='0' && argv[i][3] <= '9' && argv[i][4] == '\0') {
+            reps = 10 * (argv[i][2] - '0') + (argv[i][3] - '0');
+            found = true;
+        }
+ 
 
         if (argv[i][0] == '-' && argv[i][1] >='0' && argv[i][1] <= '9' && argv[i][2] == '\0') {
             level = argv[i][1] - '0';
@@ -238,7 +250,6 @@ int main(int argc, char **argv) {
     bool isArhc = false;
     bool isXz = false;
     bool isJpeg = false;
-    int reps = 2;
     if (memcmp(magic, "arhc", 4) == 0) {
         isArhc = true;
         uncompressed = true;

@@ -427,7 +427,11 @@ Decoder::uint8E Decoder::decodeHuffman(huffman *h, int32 zig, int component) {
             d.bits.n -= int32(n);
             d.bits.m >>= n;
             uint8 appendedByte = uint8(v >> 8);
+#if 0
+            d.huffMultibuffer[zig+64*d.coalescedComponent(component)].appendByte(reverseHuffmanLookupAssert.bits);
+#else
             d.huffMultibuffer[zig+64*d.coalescedComponent(component)].appendByte(appendedByte);
+#endif
             return uint8E(uint8(v >> 8), JpegError::nil());
         }
     }
@@ -448,7 +452,15 @@ slowPath:
 		if (code <= h->maxCodes[i]) {
 			uint8 retval = h->vals[h->valsIndices[i]+code-h->minCodes[i]];
             uint8 appendedByte = uint8(retval);
+#if 0
+			d.huffMultibuffer[zig+64*d.coalescedComponent(component)].appendByte(code & 0xff);
+            if (code > 255) {
+                d.huffMultibuffer[zig+64*d.coalescedComponent(component)].appendByte((code & 0xff00) >> 8);
+            }
+            assert(code < 65536);
+#else
 			d.huffMultibuffer[zig+64*d.coalescedComponent(component)].appendByte(appendedByte);
+#endif
 			//printf("%d bits read as %x => %x => %x\n",
 			//    i + 1, code, retval, h.huffmanLUTencoding[retval])
             return uint8E(retval, JpegError::nil());
