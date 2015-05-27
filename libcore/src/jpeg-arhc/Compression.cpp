@@ -7,7 +7,9 @@
 #else
 #include <sirikata/core/util/Thread.hpp>
 #endif
-
+#ifdef HAS_LZHAM
+#include <lzham.h>
+#endif
 
 #ifdef __linux
 #include <sys/wait.h>
@@ -392,6 +394,237 @@ MagicNumberReplacementWriter::~MagicNumberReplacementWriter() {
 void MagicNumberReplacementWriter::Close() {
     mBase->Close();
 }
+#define LZHAMTEST_DEFAULT_DICT_SIZE 28
+#define LZHAM_HEADER_SIZE (5 + sizeof(uint64_t))
+
+namespace {
+lzham_decompress_params makeLZHAMDecodeParams() {
+    lzham_decompress_params params;
+    memset(&params, 0, sizeof(params));
+
+    params.m_struct_size = sizeof(lzham_decompress_params);
+    params.m_dict_size_log2 = LZHAMTEST_DEFAULT_DICT_SIZE;//LZHAM_MAX_DICT_SIZE_LOG2_X64;
+    return params;
+}
+
+lzham_compress_params makeLZHAMEncodeParams(int level) {
+    lzham_compress_params params;
+    memset(&params, 0, sizeof(params));
+
+    params.m_struct_size = sizeof(lzham_compress_params);
+    params.m_dict_size_log2 = LZHAMTEST_DEFAULT_DICT_SIZE;//LZHAM_MAX_DICT_SIZE_LOG2_X64;
+    switch(level) {
+      case 0:
+        params.m_level = LZHAM_COMP_LEVEL_FASTEST;
+        break;
+      case 1:
+      case 2:
+        params.m_level = LZHAM_COMP_LEVEL_FASTEST;
+        break;
+      case 3:
+      case 4:
+        params.m_level = LZHAM_COMP_LEVEL_DEFAULT;
+        break;
+      case 9:
+      case 8:
+      case 7:
+        params.m_level = LZHAM_COMP_LEVEL_UBER;
+        break;
+      case 5:
+      case 6:
+      default:
+        params.m_level = LZHAM_COMP_LEVEL_BETTER;
+    }
+    params.m_compress_flags = LZHAM_COMP_FLAG_DETERMINISTIC_PARSING;
+    params.m_max_helper_threads = 0;
+    return params;
+}
+}
+
+LZHAMDecompressionReader::LZHAMDecompressionReader(DecoderReader *r,
+                                                       const JpegAllocator<uint8_t> &alloc)
+        : mAlloc(alloc) {
+    mBase = r;
+    lzham_decompress_params p = makeLZHAMDecodeParams();
+    mLzham = lzham_decompress_init(&p);
+    mAvailIn = 0;
+    assert(mLzham && "the stream decoder had insufficient memory");
+};
+
+std::pair<uint32, JpegError> LZHAMDecompressionReader::Read(uint8*data,
+                                                              unsigned int size){
+    bool inputEof = false;
+    bool outputEof = false; // when we reach the end of one (of possibly many) concatted streams
+    size_t outAvail = size;
+    while(true) {
+        JpegError err = JpegError::nil();
+        lzma_action action = LZMA_RUN;
+        if (inputEof == false  && mAvailIn < sizeof(mReadBuffer) / 4) {
+            if (mAvailIn > 0) {
+                // guaranteed not to overlap since it will only be at
+                // most 1/8 the size of the buffer
+                memcpy(mReadBuffer,mReadBuffer + sizeof(mReadBuffer) - mAvailIn, mAvailIn);
+            }
+            std::pair<uint32, JpegError> bytesRead = mBase->Read(mReadBuffer + mAvailIn, sizeof(mReadBuffer) - mAvailIn);
+            mAvailIn += bytesRead.first;
+            err = bytesRead.second;
+            if (bytesRead.first == 0) {
+                inputEof = true;
+            }
+        }
+        if (outputEof && !inputEof) {
+            // gotta reset the lzham state
+            lzham_decompress_params p = makeLZHAMDecodeParams();
+            lzham_decompress_reinit((lzham_decompress_state_ptr)mLzham, &p);
+            outputEof = false;
+        }
+        size_t nread = mAvailIn;
+        size_t nwritten = outAvail;
+        lzham_decompress_status_t status = lzham_decompress(
+            (lzham_compress_state_ptr)mLzham,
+            mReadBuffer + sizeof(mReadBuffer) - mAvailIn, &nread,
+            data + size - outAvail, &nwritten,
+            inputEof);
+        mAvailIn -= nread;
+        outAvail -= nwritten;
+        if (status >= LZHAM_DECOMP_STATUS_FIRST_SUCCESS_OR_FAILURE_CODE) {
+            if (status == LZHAM_DECOMP_STATUS_SUCCESS) {
+                outputEof = true;//FIXME
+            }
+            if (status >= LZHAM_DECOMP_STATUS_FIRST_FAILURE_CODE) {
+                switch(status) {
+                  case LZHAM_DECOMP_STATUS_FAILED_INITIALIZING:
+                  case LZHAM_DECOMP_STATUS_FAILED_DEST_BUF_TOO_SMALL:
+                  case LZHAM_DECOMP_STATUS_FAILED_EXPECTED_MORE_RAW_BYTES:
+                  case LZHAM_DECOMP_STATUS_FAILED_BAD_CODE:
+                  case LZHAM_DECOMP_STATUS_FAILED_ADLER32:
+                  case LZHAM_DECOMP_STATUS_FAILED_BAD_RAW_BLOCK:
+                  case LZHAM_DECOMP_STATUS_FAILED_BAD_COMP_BLOCK_SYNC_CHECK:
+                  case LZHAM_DECOMP_STATUS_INVALID_PARAMETER:
+                  default:
+                return std::pair<uint32, JpegError>(size - outAvail, MakeJpegError("LZHAM error"));
+                }
+                break;
+            }
+        }
+        if (outAvail == 0 || (inputEof && outputEof)) {
+            unsigned int write_size = size - outAvail;
+            return std::pair<uint32, JpegError>(write_size,JpegError::nil());
+        }
+    }
+    assert(false);//FIXME
+    unsigned int write_size = size - outAvail;
+    return std::pair<uint32, JpegError>(write_size,JpegError::nil());
+    //return std::pair<uint32, JpegError>(0, MakeJpegError("Unreachable"));
+}
+
+LZHAMDecompressionReader::~LZHAMDecompressionReader() {
+    lzham_decompress_deinit((lzham_decompress_state_ptr)mLzham);
+}
+
+
+
+
+LZHAMCompressionWriter::LZHAMCompressionWriter(DecoderWriter *w,
+                                               uint8_t compression_level,
+                                               const JpegAllocator<uint8_t> &alloc)
+        : mAlloc(alloc) {
+    mClosed = false;
+    mBase = w;
+    lzham_compress_params p = makeLZHAMEncodeParams(compression_level);
+    mLzham = lzham_compress_init(&p);
+    assert(mLzham && "Problem with initialization");
+}
+
+
+void LZHAMCompressionWriter::Close(){
+    assert(!mClosed);
+    mClosed = true;
+    size_t written = 0;
+    size_t availOut = sizeof(mWriteBuffer);
+    while(true) {
+        size_t zero = 0;
+        memset(mWriteBuffer + sizeof(mWriteBuffer) - availOut, 0xff, availOut);
+        size_t nwritten = availOut;
+        lzham_compress_status_t ret = lzham_compress((lzham_compress_state_ptr)mLzham,
+                                                     NULL, &zero,
+                                                     mWriteBuffer + sizeof(mWriteBuffer) - availOut, &nwritten,
+                                                     true);
+        availOut -= nwritten;
+        written += sizeof(mWriteBuffer) - availOut;
+        if (ret == LZHAM_COMP_STATUS_HAS_MORE_OUTPUT) {
+            assert(availOut == 0);
+        }
+        if (availOut == 0 || ret == LZHAM_COMP_STATUS_SUCCESS) {
+            size_t write_size = sizeof(mWriteBuffer) - availOut;
+            if (write_size > 0) {
+                std::pair<uint32, JpegError> r = mBase->Write(mWriteBuffer, write_size);
+                if (r.second != JpegError::nil()) {
+                    return;
+                }
+                availOut = sizeof(mWriteBuffer);
+            }
+        }
+        if (ret == LZHAM_COMP_STATUS_NOT_FINISHED) {
+            continue;
+        } else if (ret == LZHAM_COMP_STATUS_HAS_MORE_OUTPUT) {
+            continue;
+        } else if (ret == LZHAM_COMP_STATUS_SUCCESS) {
+            return;
+        } else {
+            assert(ret != LZHAM_COMP_STATUS_FAILED && "Something went wrong");
+            assert(ret != LZHAM_COMP_STATUS_INVALID_PARAMETER && "Something went wrong with param");
+            assert(ret != LZHAM_COMP_STATUS_FAILED_INITIALIZING && "Something went wrong with init");
+            assert(false && "UNREACHABLE");
+            return;
+        }
+    }
+}
+
+std::pair<uint32, JpegError> LZHAMCompressionWriter::Write(const uint8*data,
+                                                             unsigned int size){
+    size_t availOut  = sizeof(mWriteBuffer);
+    size_t availIn = size;
+    std::pair<uint32, JpegError> retval (0, JpegError::nil());
+    while(availIn > 0) {
+        size_t nread = availIn; // this must be temporarily set to to
+                                // the bytes avail
+        size_t nwritten = availOut;
+        lzham_compress_status_t ret = lzham_compress((lzham_compress_state_ptr)mLzham,
+                                                     data + size - availIn, &nread,
+                                                     mWriteBuffer + sizeof(mWriteBuffer) - availOut, &nwritten,
+                                                     false);
+        availOut -= nwritten;
+        availIn -= nread;
+        if (ret == LZHAM_COMP_STATUS_NEEDS_MORE_INPUT) {
+            assert(availIn == 0);
+        }
+        if (availIn == 0 || availOut == 0) {
+            size_t write_size = sizeof(mWriteBuffer) - availOut;
+            if (write_size > 0) {
+                std::pair<uint32, JpegError> r = mBase->Write(mWriteBuffer, write_size);
+                availOut = sizeof(mWriteBuffer);
+                retval.first = size - availIn;
+                if (r.second != JpegError::nil()) {
+                    retval.second = r.second;
+                    return retval;
+                }
+            }
+        }
+        if (ret >= LZHAM_COMP_STATUS_FIRST_FAILURE_CODE) {
+            assert(false && "LZHAM COMPRESSION FAILED");
+        }
+    }
+    return std::pair<uint32, JpegError>(size - availIn, JpegError::nil());
+}
+
+LZHAMCompressionWriter::~LZHAMCompressionWriter() {
+    if (!mClosed) {
+        Close();
+    }
+    assert(mClosed);
+    lzham_compress_deinit((lzham_compress_state_ptr)mLzham);
+}
 
 
 DecoderDecompressionReader::DecoderDecompressionReader(DecoderReader *r,
@@ -421,7 +654,6 @@ DecoderDecompressionReader::DecoderDecompressionReader(DecoderReader *r,
         }
     }
 };
-
 
 std::pair<uint32, JpegError> DecoderDecompressionReader::Read(uint8*data,
                                                               unsigned int size){
@@ -897,6 +1129,19 @@ JpegError Decompress7ZtoAny(DecoderReader &r, DecoderWriter &w, const JpegAlloca
     DecoderDecompressionReader cr(&r, alloc);
     return Copy(cr, w, alloc);
 }
+
+
+// Decode reads a JPEG image from r and returns it as an image.Image.
+JpegError CompressAnytoLZHAM(DecoderReader &r, DecoderWriter &w, uint8 compression_level, const JpegAllocator<uint8> &alloc) {
+    LZHAMCompressionWriter cw(&w, compression_level, alloc);
+    return Copy(r, cw, alloc);
+}
+// Decode reads a JPEG image from r and returns it as an image.Image.
+JpegError DecompressLZHAMtoAny(DecoderReader &r, DecoderWriter &w, const JpegAllocator<uint8> &alloc) {
+    LZHAMDecompressionReader cr(&r, alloc);
+    return Copy(cr, w, alloc);
+}
+
 namespace {
 ThreadContext *MakeThreadContextHelper(int nthreads, const JpegAllocator<uint8> &alloc, bool depriv, FaultInjectorXZ* fi) {
     ThreadContext *retval = JpegAllocator<ThreadContext>(alloc).allocate(1);

@@ -178,11 +178,23 @@ int main(int argc, char **argv) {
     bool force7z = false;
     bool uncompressed = false;
     bool seccomp = false;
+    bool toLzham = false;
+    bool fromLzham = false;
     int reps = 1;
     for (int i = 1; i < argc; ++i) {
         bool found = false;
         if (argv[i][0] == '-' && tolower(argv[i][1]) == 's' && argv[i][2] == '\0') {
             seccomp = true;
+            found = true;
+        }
+
+        if (argv[i][0] == '-' && argv[i][1] == 'h' && argv[i][2] == 'a' && argv[i][3] == 'm' && argv[i][4] == '\0') {
+            toLzham = true;
+            found = true;
+        }
+
+        if (argv[i][0] == '-' && argv[i][1] == 'H' && argv[i][2] == 'A' && argv[i][3] == 'M' && argv[i][4] == '\0') {
+            fromLzham = true;
             found = true;
         }
 
@@ -248,6 +260,7 @@ int main(int argc, char **argv) {
     size_t magic_size = fread(magic, 1, 4, input);
     bool unknown = true;
     bool isArhc = false;
+    bool isLzham = fromLzham;
     bool isXz = false;
     bool isJpeg = false;
     if (memcmp(magic, "arhc", 4) == 0) {
@@ -255,6 +268,9 @@ int main(int argc, char **argv) {
         uncompressed = true;
     }else if (memcmp(magic, "ARHC", 4) == 0) {
         isArhc = true;
+        unknown = false;
+    }else if (memcmp(magic, "LZH0", 4) == 0) {
+        isLzham = true;
         unknown = false;
     } else if (memcmp(magic + 1, "7zX", 3) == 0) {
         isXz = true;
@@ -264,7 +280,7 @@ int main(int argc, char **argv) {
         unknown = false;
     }
     JpegAllocator<uint8_t> alloc;
-    if (seccomp || true) {
+    if (seccomp) { // FIXME drh <-- always set to true
         alloc.setup_memory_subsystem(2147483647,
                                      &BumpAllocatorInit,
                                      &BumpAllocatorMalloc,
@@ -337,7 +353,12 @@ int main(int argc, char **argv) {
         }
         for (int rep = 0; rep < reps; ++rep) {
             FDWriter memory_output(pipe_write[rep]);
-            if (isJpeg && !force7z) {
+            if (toLzham) {
+                CompressAnytoLZHAM(memory_input, memory_output, level, 
+alloc);
+            } else if (isLzham) {
+                DecompressLZHAMtoAny(memory_input, memory_output, alloc);
+            }else if (isJpeg && !force7z) {
                 if (uncompressed) {
                     err = Decode(memory_input, memory_output, componentCoalescing, alloc);   
                 } else {

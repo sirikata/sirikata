@@ -31,6 +31,33 @@ public:
     virtual void Close();
 };
 
+class SIRIKATA_EXPORT LZHAMDecompressionReader : public DecoderReader {
+    JpegAllocator<uint8_t> mAlloc;
+    unsigned char mReadBuffer[4 * 65536];
+    size_t mAvailIn;
+    void *mLzham;
+    DecoderReader *mBase;
+public:
+    LZHAMDecompressionReader(DecoderReader *r, const JpegAllocator<uint8_t> &alloc);
+    virtual std::pair<uint32, JpegError> Read(uint8*data, unsigned int size);
+    virtual ~LZHAMDecompressionReader();
+};
+
+class SIRIKATA_EXPORT LZHAMCompressionWriter : public DecoderWriter {
+    JpegAllocator<uint8_t> mAlloc;
+    unsigned char mWriteBuffer[4096];
+    void *mLzham;
+    DecoderWriter *mBase;
+    bool mClosed;
+public:
+    // compresison level should be a value: 1 through 9
+    LZHAMCompressionWriter(DecoderWriter *w, uint8_t compression_level, const JpegAllocator<uint8_t> &alloc);
+    virtual std::pair<uint32, JpegError> Write(const uint8*data, unsigned int size) ;
+    virtual ~LZHAMCompressionWriter();
+    virtual void Close();
+};
+
+
 class SIRIKATA_EXPORT DecoderDecompressionReader : public DecoderReader {
     JpegAllocator<uint8_t> mAlloc;
     unsigned char mReadBuffer[4096];
@@ -42,6 +69,7 @@ public:
     virtual std::pair<uint32, JpegError> Read(uint8*data, unsigned int size);
     virtual ~DecoderDecompressionReader();
 };
+
 class SIRIKATA_EXPORT DecoderCompressionWriter : public DecoderWriter {
     JpegAllocator<uint8_t> mAlloc;
     lzma_allocator mLzmaAllocator;
@@ -112,6 +140,12 @@ SIRIKATA_FUNCTION_EXPORT JpegError CompressAnyto7Z(DecoderReader &r, DecoderWrit
 SIRIKATA_FUNCTION_EXPORT JpegError Decompress7ZtoAny(DecoderReader &r, DecoderWriter &w,
                                                      const JpegAllocator<uint8_t> &alloc);
 
+SIRIKATA_FUNCTION_EXPORT JpegError CompressAnytoLZHAM(DecoderReader &r, DecoderWriter &w,
+                                                   uint8 compression_level,
+                                                   const JpegAllocator<uint8_t> &alloc);
+SIRIKATA_FUNCTION_EXPORT JpegError DecompressLZHAMtoAny(DecoderReader &r, DecoderWriter &w,
+                                                     const JpegAllocator<uint8_t> &alloc);
+
 SIRIKATA_FUNCTION_EXPORT ThreadContext* MakeThreadContext(int nThreads, const JpegAllocator<uint8_t> &alloc);
 SIRIKATA_FUNCTION_EXPORT void DestroyThreadContext(ThreadContext *);
 SIRIKATA_FUNCTION_EXPORT ThreadContext* TestMakeThreadContext(int nThreads, const JpegAllocator<uint8_t> &alloc, bool depriv, FaultInjectorXZ *fi);
@@ -123,5 +157,15 @@ SIRIKATA_FUNCTION_EXPORT JpegError MultiCompressAnyto7Z(DecoderReader &r, Decode
 
 SIRIKATA_FUNCTION_EXPORT JpegError MultiDecompress7ZtoAny(DecoderReader &r, DecoderWriter &w,
                                                           ThreadContext *workers);
+
+/*
+SIRIKATA_FUNCTION_EXPORT JpegError MultiCompressAnytoLZHAM(DecoderReader &r, DecoderWriter &w,
+                                                        uint8 compression_level,
+                                                        SizeEstimator *mSizeEstimate,
+                                                        ThreadContext *workers);
+
+SIRIKATA_FUNCTION_EXPORT JpegError MultiDecompressLZHAMtoAny(DecoderReader &r, DecoderWriter &w,
+                                                             ThreadContext *workers);
+*/
 
 }
