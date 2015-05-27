@@ -449,6 +449,7 @@ LZHAMDecompressionReader::LZHAMDecompressionReader(DecoderReader *r,
     mLzham = lzham_decompress_init(&p);
     mAvailIn = 0;
     assert(mLzham && "the stream decoder had insufficient memory");
+    mReadOffset = mReadBuffer;
 };
 
 std::pair<uint32, JpegError> LZHAMDecompressionReader::Read(uint8*data,
@@ -459,13 +460,18 @@ std::pair<uint32, JpegError> LZHAMDecompressionReader::Read(uint8*data,
     while(true) {
         JpegError err = JpegError::nil();
         lzma_action action = LZMA_RUN;
-        if (inputEof == false  && mAvailIn < sizeof(mReadBuffer) / 4) {
-            if (mAvailIn > 0) {
+        if (inputEof == false  && mAvailIn < sizeof(mReadBuffer) / 8) {
+            if (mAvailIn == 0) {
+                mReadOffset = mReadBuffer;
+            } else if (mReadOffset - mReadBuffer> sizeof(mReadBuffer) * 3 / 4) {
                 // guaranteed not to overlap since it will only be at
                 // most 1/8 the size of the buffer
-                memcpy(mReadBuffer,mReadBuffer + sizeof(mReadBuffer) - mAvailIn, mAvailIn);
+                memcpy(mReadBuffer, mReadOffset, mAvailIn);
+                mReadOffset = mReadBuffer;
             }
-            std::pair<uint32, JpegError> bytesRead = mBase->Read(mReadBuffer + mAvailIn, sizeof(mReadBuffer) - mAvailIn);
+            size_t toRead = sizeof(mReadBuffer) - (mReadOffset + mAvailIn - mReadBuffer);
+            assert(toRead > 0);
+            std::pair<uint32, JpegError> bytesRead = mBase->Read(mReadOffset + mAvailIn, toRead);
             mAvailIn += bytesRead.first;
             err = bytesRead.second;
             if (bytesRead.first == 0) {
@@ -482,9 +488,10 @@ std::pair<uint32, JpegError> LZHAMDecompressionReader::Read(uint8*data,
         size_t nwritten = outAvail;
         lzham_decompress_status_t status = lzham_decompress(
             (lzham_compress_state_ptr)mLzham,
-            mReadBuffer + sizeof(mReadBuffer) - mAvailIn, &nread,
+            mReadOffset, &nread,
             data + size - outAvail, &nwritten,
             inputEof);
+        mReadOffset += nread;
         mAvailIn -= nread;
         outAvail -= nwritten;
         if (status >= LZHAM_DECOMP_STATUS_FIRST_SUCCESS_OR_FAILURE_CODE) {

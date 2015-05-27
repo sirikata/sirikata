@@ -34,6 +34,7 @@ public:
 class SIRIKATA_EXPORT LZHAMDecompressionReader : public DecoderReader {
     JpegAllocator<uint8_t> mAlloc;
     unsigned char mReadBuffer[4 * 65536];
+    unsigned char *mReadOffset;
     size_t mAvailIn;
     void *mLzham;
     DecoderReader *mBase;
