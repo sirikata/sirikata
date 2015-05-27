@@ -155,9 +155,12 @@ public:
             using namespace Sirikata;
             JpegAllocator<uint8_t> alloc;
             alloc.setup_memory_subsystem(768 * 1024 * 1024,
+                                         1,
                                          &BumpAllocatorInit,
                                          &BumpAllocatorMalloc,
-                                         &BumpAllocatorFree);
+                                         &BumpAllocatorFree,
+                                         &BumpAllocatorRealloc,
+                                         &BumpAllocatorMsize);
             
             std::pair<FILE*, size_t> input_fp_size = getFileObjectAndSize("prism/texture0.jpg");
             if (prctl(PR_SET_SECCOMP, SECCOMP_MODE_STRICT)) {
@@ -198,9 +201,12 @@ public:
             using namespace Sirikata;
             JpegAllocator<uint8_t> alloc;
             alloc.setup_memory_subsystem(2147483647,//4294967295,
+                                         16,
                                          &BumpAllocatorInit,
                                          &BumpAllocatorMalloc,
-                                         &BumpAllocatorFree);
+                                         &BumpAllocatorFree,
+                                         &BumpAllocatorRealloc,
+                                         &BumpAllocatorMsize);
             
             std::pair<FILE*, size_t> input_fp_size = getFileObjectAndSize("prism/texture0.jpg");
             ThreadContext * tc = MakeThreadContext(3, alloc);            
@@ -255,10 +261,13 @@ public:
 
         using namespace Sirikata;
         JpegAllocator<uint8_t> alloc;
-        alloc.setup_memory_subsystem(768 * 1024 * 1024,
+        alloc.setup_memory_subsystem(768 * 1024 * 1024,//4294967295,
+                                     16,
                                      &BumpAllocatorInit,
                                      &BumpAllocatorMalloc,
-                                     &BumpAllocatorFree);
+                                     &BumpAllocatorFree,
+                                     &BumpAllocatorRealloc,
+                                     &BumpAllocatorMsize);
         compressedRoundTripHelper(alloc);
         alloc.teardown_memory_subsystem(&BumpAllocatorDestroy);
     }
@@ -268,10 +277,13 @@ public:
 
         using namespace Sirikata;
         JpegAllocator<uint8_t> alloc;
-        alloc.setup_memory_subsystem(768 * 1024 * 1024,
+        alloc.setup_memory_subsystem(768 * 1024 * 1024,//4294967295,
+                                     16,
                                      &BumpAllocatorInit,
                                      &BumpAllocatorMalloc,
-                                     &BumpAllocatorFree);
+                                     &BumpAllocatorFree,
+                                     &BumpAllocatorRealloc,
+                                     &BumpAllocatorMsize);
         genericCompressedRoundTripHelper(alloc);
         alloc.teardown_memory_subsystem(&BumpAllocatorDestroy);
     }
@@ -304,10 +316,13 @@ public:
         if ((pid = fork()) == 0) {
             Sirikata::JpegAllocator<uint8_t>alloc;
             MemReadWriter original(alloc);
-            alloc.setup_memory_subsystem(1024 * 1024 * 1024,
-                                         &BumpAllocatorInit,
-                                         &BumpAllocatorMalloc,
-                                         &BumpAllocatorFree);
+        alloc.setup_memory_subsystem(1024 * 1024 * 1024,//4294967295,
+                                     16,
+                                     &BumpAllocatorInit,
+                                     &BumpAllocatorMalloc,
+                                     &BumpAllocatorFree,
+                                     &BumpAllocatorRealloc,
+                                     &BumpAllocatorMsize);
             size_t inputDataSize = loadFile("prism/texture0.jpg", original, alloc);
             ConstantSizeEstimator size_estimate = inputDataSize;
             MemReadWriter arhc(alloc);

@@ -282,9 +282,12 @@ int main(int argc, char **argv) {
     JpegAllocator<uint8_t> alloc;
     if (seccomp) { // FIXME drh <-- always set to true
         alloc.setup_memory_subsystem(2147483647,
+                                     2 * sizeof(size_t),
                                      &BumpAllocatorInit,
                                      &BumpAllocatorMalloc,
-                                     &BumpAllocatorFree);
+                                     &BumpAllocatorFree,
+                                     &BumpAllocatorRealloc,
+                                     &BumpAllocatorMsize);
     }
     FileReader reader(input, std::vector<uint8_t, JpegAllocator<uint8_t> >(magic, magic + magic_size, alloc));
 

@@ -47,8 +47,13 @@ template<class T> class JpegAllocator {
     template<class U> friend class JpegAllocator;
     typedef void *(CustomAllocate)(void *opaque, size_t nmemb, size_t size);
     typedef void (CustomDeallocate)(void *opaque, void *ptr);
+    // the required functions for lzham (note the requirement of opaque ptr at the end)
+    typedef void *(CustomReallocate)(void * ptr, size_t size, size_t *actualSize, unsigned int movable, void *opaque);
+    typedef size_t (CustomMsize)(void * ptr, void *opaque);
     CustomAllocate *custom_allocate;
     CustomDeallocate *custom_deallocate;
+    CustomReallocate *custom_reallocate;
+    CustomMsize *custom_msize;
     void * opaque;
     static void *malloc_wrapper(void *opaque, size_t nmemb, size_t size) {
         return malloc(nmemb * size);
@@ -76,6 +81,12 @@ public:
     CustomDeallocate* get_custom_deallocate() {
         return custom_deallocate;
     }
+    CustomReallocate* get_custom_reallocate() {
+        return custom_reallocate;
+    }
+    CustomMsize* get_custom_msize() {
+        return custom_msize;
+    }
     void *get_custom_state() {
         return opaque;
     }
@@ -83,27 +94,36 @@ public:
     JpegAllocator() throw() {
         custom_allocate = &malloc_wrapper;
         custom_deallocate = &free_wrapper;
+        custom_reallocate = NULL;
+        custom_msize = NULL;
         opaque = NULL;
     }
     template <class U> struct rebind { typedef JpegAllocator<U> other; };
     JpegAllocator(const JpegAllocator&other)throw() {
         custom_allocate = other.custom_allocate;
         custom_deallocate = other.custom_deallocate;
+        custom_reallocate = other.custom_reallocate;
+        custom_msize = other.custom_msize;
         opaque = other.opaque;
     }
     template <typename U> JpegAllocator(const JpegAllocator<U>&other) throw(){
         custom_allocate = other.custom_allocate;
         custom_deallocate = other.custom_deallocate;
+        custom_reallocate = other.custom_reallocate;
+        custom_msize = other.custom_msize;
         opaque = other.opaque;
     }
     ~JpegAllocator()throw() {}
 
      //this sets up the memory subsystem with the arg for this and all copied allocators
     void setup_memory_subsystem(size_t arg,
-                                void *(custom_init)(size_t prealloc_size),
-                                void *(*custom_allocate)(void *opaque, size_t nmemb, size_t size),
-                                void (*custom_deallocate)(void *opaque, void *ptr)) {
-        this->opaque = custom_init(arg);
+                                unsigned char alignment,
+                                void *(custom_init)(size_t prealloc_size, unsigned char alignment),
+                                CustomAllocate *custom_allocate,
+                                CustomDeallocate *custom_deallocate,
+                                CustomReallocate *custom_reallocate,
+                                CustomMsize *custom_msize) {
+        this->opaque = custom_init(arg, alignment);
         this->custom_allocate = custom_allocate;
         this->custom_deallocate = custom_deallocate;
     }
