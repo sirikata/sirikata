@@ -280,7 +280,7 @@ int main(int argc, char **argv) {
         unknown = false;
     }
     JpegAllocator<uint8_t> alloc;
-    if (seccomp) { // FIXME drh <-- always set to true
+    if (true||seccomp) { // FIXME drh <-- always set to true
         alloc.setup_memory_subsystem(2147483647,
                                      2 * sizeof(size_t),
                                      &BumpAllocatorInit,

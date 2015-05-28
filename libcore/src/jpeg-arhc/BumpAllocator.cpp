@@ -56,13 +56,14 @@ public:
         if (ptr && !movable) {
             return NULL;
         }
-        if (ptr) {
-            this->free(ptr);
-        }
         size_t amount_requested = amount + sizeof(size_t); // amount + size of amount
         if ((amount_requested & (alignment - 1)) != 0) {
             amount_requested += alignment - (amount_requested & (alignment - 1));
         }        
+        if (allocated.load() + amount_requested > max) {
+            return NULL;
+        }
+
         size_t offset = (allocated += amount_requested);
         if (offset > max) {
             //allocated -= amount; // FIXME <-- can this help?
@@ -75,6 +76,10 @@ public:
         memcpy(data_start + offset - amount_requested, &amount_returned, sizeof(size_t));
         uint8* retval = data_start + offset - amount_returned;
         assert(((size_t)retval & (alignment - 1)) == 0);
+        if (ptr) {
+            memcpy(retval, ptr, std::min(amount, ptr_actual_size));
+            this->free(ptr);
+        }
         return retval;
     }
     void free(void *ptr) {

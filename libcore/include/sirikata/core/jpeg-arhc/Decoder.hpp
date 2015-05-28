@@ -75,19 +75,19 @@ public:
     typedef T& reference;
     typedef const T& const_reference;
     typedef T value_type;
-    CustomAllocate* get_custom_allocate() {
+    CustomAllocate* get_custom_allocate() const{
         return custom_allocate;
     }
-    CustomDeallocate* get_custom_deallocate() {
+    CustomDeallocate* get_custom_deallocate() const{
         return custom_deallocate;
     }
-    CustomReallocate* get_custom_reallocate() {
+    CustomReallocate* get_custom_reallocate() const{
         return custom_reallocate;
     }
-    CustomMsize* get_custom_msize() {
+    CustomMsize* get_custom_msize() const{
         return custom_msize;
     }
-    void *get_custom_state() {
+    void *get_custom_state() const {
         return opaque;
     }
     ///starts up with malloc/free implementation
@@ -126,6 +126,8 @@ public:
         this->opaque = custom_init(arg, alignment);
         this->custom_allocate = custom_allocate;
         this->custom_deallocate = custom_deallocate;
+        this->custom_reallocate = custom_reallocate;
+        this->custom_msize = custom_msize;
     }
     // this tears down all users of this memory subsystem
     void teardown_memory_subsystem(void (*custom_deinit)(void *opaque)) {

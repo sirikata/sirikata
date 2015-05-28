@@ -394,7 +394,8 @@ MagicNumberReplacementWriter::~MagicNumberReplacementWriter() {
 void MagicNumberReplacementWriter::Close() {
     mBase->Close();
 }
-#define LZHAMTEST_DEFAULT_DICT_SIZE 28
+//#define LZHAMTEST_DEFAULT_DICT_SIZE 28
+#define LZHAMTEST_DEFAULT_DICT_SIZE 20
 
 
 namespace {
@@ -454,6 +455,11 @@ LZHAMDecompressionReader::LZHAMDecompressionReader(DecoderReader *r,
     mAvailIn = 0;
     mReadOffset = mReadBuffer;
     memset(mHeader, 0xff, sizeof(mHeader));
+    if (alloc.get_custom_reallocate() && alloc.get_custom_msize()) {
+        lzham_set_memory_callbacks(alloc.get_custom_reallocate(),
+                                   alloc.get_custom_msize(),
+                                   alloc.get_custom_state());
+    }
 };
 
 std::pair<uint32, JpegError> LZHAMDecompressionReader::Read(uint8*data,
@@ -566,6 +572,11 @@ LZHAMCompressionWriter::LZHAMCompressionWriter(DecoderWriter *w,
                                                uint8_t compression_level,
                                                const JpegAllocator<uint8_t> &alloc)
     : mWriteBuffer(alloc) {
+    if (alloc.get_custom_reallocate() && alloc.get_custom_msize()) {
+        lzham_set_memory_callbacks(alloc.get_custom_reallocate(),
+                                   alloc.get_custom_msize(),
+                                   alloc.get_custom_state());
+    }
     mClosed = false;
     mBase = w;
     lzham_compress_params p = makeLZHAMEncodeParams(compression_level);
