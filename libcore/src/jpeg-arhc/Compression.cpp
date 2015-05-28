@@ -395,16 +395,20 @@ void MagicNumberReplacementWriter::Close() {
     mBase->Close();
 }
 #define LZHAMTEST_DEFAULT_DICT_SIZE 28
-#define LZHAM_HEADER_SIZE (5 + sizeof(uint64_t))
+
 
 namespace {
-lzham_decompress_params makeLZHAMDecodeParams() {
-    lzham_decompress_params params;
-    memset(&params, 0, sizeof(params));
-
-    params.m_struct_size = sizeof(lzham_decompress_params);
-    params.m_dict_size_log2 = LZHAMTEST_DEFAULT_DICT_SIZE;//LZHAM_MAX_DICT_SIZE_LOG2_X64;
-    return params;
+std::pair<lzham_decompress_params, JpegError> makeLZHAMDecodeParams(uint8 header[LZHAM0_HEADER_SIZE]) {
+    std::pair<lzham_decompress_params, JpegError> retval;
+    retval.second = JpegError::nil();
+    memset(&retval.first, 0, sizeof(retval.first));
+    if (memcmp(header, "LZH0", 4)) {
+        retval.second = MakeJpegError("LZHAM Header Error");
+    } else {
+        retval.first.m_struct_size = sizeof(lzham_decompress_params);
+        retval.first.m_dict_size_log2 = header[4];
+    }
+    return retval;
 }
 
 lzham_compress_params makeLZHAMEncodeParams(int level) {
@@ -445,15 +449,16 @@ LZHAMDecompressionReader::LZHAMDecompressionReader(DecoderReader *r,
                                                        const JpegAllocator<uint8_t> &alloc)
         : mAlloc(alloc) {
     mBase = r;
-    lzham_decompress_params p = makeLZHAMDecodeParams();
-    mLzham = lzham_decompress_init(&p);
+    mHeaderBytesRead = 0;
+    mLzham = NULL;
     mAvailIn = 0;
-    assert(mLzham && "the stream decoder had insufficient memory");
     mReadOffset = mReadBuffer;
+    memset(mHeader, 0xff, sizeof(mHeader));
 };
 
 std::pair<uint32, JpegError> LZHAMDecompressionReader::Read(uint8*data,
                                                               unsigned int size){
+    
     bool inputEof = false;
     bool outputEof = false; // when we reach the end of one (of possibly many) concatted streams
     size_t outAvail = size;
@@ -480,9 +485,32 @@ std::pair<uint32, JpegError> LZHAMDecompressionReader::Read(uint8*data,
         }
         if (outputEof && !inputEof) {
             // gotta reset the lzham state
-            lzham_decompress_params p = makeLZHAMDecodeParams();
-            lzham_decompress_reinit((lzham_decompress_state_ptr)mLzham, &p);
+            mHeaderBytesRead = 0;
             outputEof = false;
+        }
+        if (mHeaderBytesRead < LZHAM0_HEADER_SIZE) {
+            if (mHeaderBytesRead + mAvailIn <= LZHAM0_HEADER_SIZE) {
+                memcpy(mHeader + mHeaderBytesRead, mReadOffset, mAvailIn);
+                mHeaderBytesRead += mAvailIn;
+                mAvailIn = 0;
+            } else {
+                memcpy(mHeader + mHeaderBytesRead, mReadOffset, LZHAM0_HEADER_SIZE - mHeaderBytesRead);
+                mAvailIn -= LZHAM0_HEADER_SIZE - mHeaderBytesRead;
+                mReadOffset += LZHAM0_HEADER_SIZE - mHeaderBytesRead;
+                mHeaderBytesRead = LZHAM0_HEADER_SIZE;
+            }
+            if (mHeaderBytesRead == LZHAM0_HEADER_SIZE) {
+                std::pair<lzham_decompress_params, JpegError> p = makeLZHAMDecodeParams(mHeader);
+                if (p.second != JpegError::nil()) {
+                    return std::pair<uint32, JpegError>(0, p.second);
+                }
+                if (mLzham == NULL) {
+                    mLzham = lzham_decompress_init(&p.first);
+                } else {
+                    lzham_decompress_reinit((lzham_decompress_state_ptr)mLzham, &p.first);
+                }
+                assert(mLzham && "the stream decoder had insufficient memory");
+            }
         }
         size_t nread = mAvailIn;
         size_t nwritten = outAvail;
@@ -496,7 +524,7 @@ std::pair<uint32, JpegError> LZHAMDecompressionReader::Read(uint8*data,
         outAvail -= nwritten;
         if (status >= LZHAM_DECOMP_STATUS_FIRST_SUCCESS_OR_FAILURE_CODE) {
             if (status == LZHAM_DECOMP_STATUS_SUCCESS) {
-                outputEof = true;//FIXME
+                outputEof = true;
             }
             if (status >= LZHAM_DECOMP_STATUS_FIRST_FAILURE_CODE) {
                 switch(status) {
@@ -509,7 +537,7 @@ std::pair<uint32, JpegError> LZHAMDecompressionReader::Read(uint8*data,
                   case LZHAM_DECOMP_STATUS_FAILED_BAD_COMP_BLOCK_SYNC_CHECK:
                   case LZHAM_DECOMP_STATUS_INVALID_PARAMETER:
                   default:
-                return std::pair<uint32, JpegError>(size - outAvail, MakeJpegError("LZHAM error"));
+                    return std::pair<uint32, JpegError>(size - outAvail, MakeJpegError("LZHAM error"));
                 }
                 break;
             }
@@ -526,7 +554,9 @@ std::pair<uint32, JpegError> LZHAMDecompressionReader::Read(uint8*data,
 }
 
 LZHAMDecompressionReader::~LZHAMDecompressionReader() {
-    lzham_decompress_deinit((lzham_decompress_state_ptr)mLzham);
+    if (mLzham) {
+        lzham_decompress_deinit((lzham_decompress_state_ptr)mLzham);
+    }
 }
 
 
@@ -535,41 +565,63 @@ LZHAMDecompressionReader::~LZHAMDecompressionReader() {
 LZHAMCompressionWriter::LZHAMCompressionWriter(DecoderWriter *w,
                                                uint8_t compression_level,
                                                const JpegAllocator<uint8_t> &alloc)
-        : mAlloc(alloc) {
+    : mWriteBuffer(alloc) {
     mClosed = false;
     mBase = w;
     lzham_compress_params p = makeLZHAMEncodeParams(compression_level);
+    mDictSizeLog2 = p.m_dict_size_log2;
     mLzham = lzham_compress_init(&p);
     assert(mLzham && "Problem with initialization");
+    size_t defaultStartBufferSize = 1024 - LZHAM0_HEADER_SIZE;
+    mAvailOut = defaultStartBufferSize;
+    mWriteBuffer.resize(mAvailOut + LZHAM0_HEADER_SIZE);
+    mBytesWritten = 0;
 }
 
+
+void writeLZHAMHeader(uint8 * output, uint8 dictSize, uint32 fileSize) {
+    output[0] = 'L';
+    output[1] = 'Z';
+    output[2] = 'H';
+    output[3] = '0';
+    output[4] = dictSize;
+    output[5] = fileSize & 0xff;
+    output[6] = (fileSize >> 8) & 0xff;
+    output[7] = (fileSize >> 16) & 0xff;
+    output[8] = (fileSize >> 24) & 0xff;
+    output[9] = 0;
+    output[10] = 0;
+    output[11] = 0;
+    output[12] = 0;
+    
+}
 
 void LZHAMCompressionWriter::Close(){
     assert(!mClosed);
     mClosed = true;
-    size_t written = 0;
-    size_t availOut = sizeof(mWriteBuffer);
+    //assert((mBytesWritten >> 24) == 0 && "Expect a small item to compress");
+    writeLZHAMHeader(&mWriteBuffer[0], mDictSizeLog2, mBytesWritten);
+    std::pair<uint32, JpegError> r = mBase->Write(&mWriteBuffer[0], mWriteBuffer.size() - mAvailOut);
+    if (r.second != JpegError::nil()) {
+        return; // ERROR
+    }
+    if (mWriteBuffer.size() < 4 * 65536) {
+        mWriteBuffer.resize(4 * 65536);
+    }
     while(true) {
         size_t zero = 0;
-        memset(mWriteBuffer + sizeof(mWriteBuffer) - availOut, 0xff, availOut);
-        size_t nwritten = availOut;
+        size_t nwritten = mWriteBuffer.size();
         lzham_compress_status_t ret = lzham_compress((lzham_compress_state_ptr)mLzham,
                                                      NULL, &zero,
-                                                     mWriteBuffer + sizeof(mWriteBuffer) - availOut, &nwritten,
+                                                     &mWriteBuffer[0], &nwritten,
                                                      true);
-        availOut -= nwritten;
-        written += sizeof(mWriteBuffer) - availOut;
         if (ret == LZHAM_COMP_STATUS_HAS_MORE_OUTPUT) {
-            assert(availOut == 0);
+            assert(nwritten == mWriteBuffer.size());
         }
-        if (availOut == 0 || ret == LZHAM_COMP_STATUS_SUCCESS) {
-            size_t write_size = sizeof(mWriteBuffer) - availOut;
-            if (write_size > 0) {
-                std::pair<uint32, JpegError> r = mBase->Write(mWriteBuffer, write_size);
-                if (r.second != JpegError::nil()) {
-                    return;
-                }
-                availOut = sizeof(mWriteBuffer);
+        if (nwritten > 0) {
+            std::pair<uint32, JpegError> r = mBase->Write(&mWriteBuffer[0], nwritten);
+            if (r.second != JpegError::nil()) {
+                return;
             }
         }
         if (ret == LZHAM_COMP_STATUS_NOT_FINISHED) {
@@ -590,33 +642,25 @@ void LZHAMCompressionWriter::Close(){
 
 std::pair<uint32, JpegError> LZHAMCompressionWriter::Write(const uint8*data,
                                                              unsigned int size){
-    size_t availOut  = sizeof(mWriteBuffer);
     size_t availIn = size;
     std::pair<uint32, JpegError> retval (0, JpegError::nil());
+    mBytesWritten += size;
     while(availIn > 0) {
+        if (mAvailOut == 0) {
+            mAvailOut += mWriteBuffer.size();
+            mWriteBuffer.resize(mWriteBuffer.size() * 2);
+        }
         size_t nread = availIn; // this must be temporarily set to to
                                 // the bytes avail
-        size_t nwritten = availOut;
+        size_t nwritten = mAvailOut;
         lzham_compress_status_t ret = lzham_compress((lzham_compress_state_ptr)mLzham,
                                                      data + size - availIn, &nread,
-                                                     mWriteBuffer + sizeof(mWriteBuffer) - availOut, &nwritten,
+                                                     &mWriteBuffer[0] + mWriteBuffer.size() - mAvailOut, &nwritten,
                                                      false);
-        availOut -= nwritten;
+        mAvailOut -= nwritten;
         availIn -= nread;
         if (ret == LZHAM_COMP_STATUS_NEEDS_MORE_INPUT) {
             assert(availIn == 0);
-        }
-        if (availIn == 0 || availOut == 0) {
-            size_t write_size = sizeof(mWriteBuffer) - availOut;
-            if (write_size > 0) {
-                std::pair<uint32, JpegError> r = mBase->Write(mWriteBuffer, write_size);
-                availOut = sizeof(mWriteBuffer);
-                retval.first = size - availIn;
-                if (r.second != JpegError::nil()) {
-                    retval.second = r.second;
-                    return retval;
-                }
-            }
         }
         if (ret >= LZHAM_COMP_STATUS_FIRST_FAILURE_CODE) {
             assert(false && "LZHAM COMPRESSION FAILED");

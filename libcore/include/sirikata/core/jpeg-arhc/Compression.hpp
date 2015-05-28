@@ -16,6 +16,7 @@ public:
     virtual std::pair<uint32, JpegError> Read(uint8*data, unsigned int size);
     ~MagicNumberReplacementReader();
 };
+#define LZHAM0_HEADER_SIZE (5 + sizeof(uint64_t))
 
 class SIRIKATA_EXPORT MagicNumberReplacementWriter : public DecoderWriter {
     uint32 mMagicNumbersReplaced;
@@ -38,6 +39,8 @@ class SIRIKATA_EXPORT LZHAMDecompressionReader : public DecoderReader {
     size_t mAvailIn;
     void *mLzham;
     DecoderReader *mBase;
+    uint8_t mHeader[LZHAM0_HEADER_SIZE];
+    unsigned int mHeaderBytesRead;
 public:
     LZHAMDecompressionReader(DecoderReader *r, const JpegAllocator<uint8_t> &alloc);
     virtual std::pair<uint32, JpegError> Read(uint8*data, unsigned int size);
@@ -45,10 +48,12 @@ public:
 };
 
 class SIRIKATA_EXPORT LZHAMCompressionWriter : public DecoderWriter {
-    JpegAllocator<uint8_t> mAlloc;
-    unsigned char mWriteBuffer[4096];
+    std::vector<uint8_t, JpegAllocator<uint8_t> > mWriteBuffer;
+    size_t mAvailOut;
     void *mLzham;
     DecoderWriter *mBase;
+    size_t mBytesWritten;
+    uint8_t mDictSizeLog2;    
     bool mClosed;
 public:
     // compresison level should be a value: 1 through 9
