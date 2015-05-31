@@ -150,6 +150,7 @@ JpegError Decoder::processSOS(int n) {
 			for (int i = 0; i < nComp; i++) {
                 uint8 compIndex = scan[i].compIndex;
                 JpegBlock *qt = &d.quant[d.comp[compIndex].tq];
+                (void) qt;
 				for (int j = 0; j < d.comp[compIndex].h*d.comp[compIndex].v; j++) {
 					// The blocks are traversed one MCU at a time. For (4:2:0 chroma
 					// subsampling, there are four Y 8x8 blocks in every 16x16 MCU.

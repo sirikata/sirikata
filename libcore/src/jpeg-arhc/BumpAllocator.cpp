@@ -154,6 +154,7 @@ bool BumpAllocatorTest() {
         ok = ok && alloc.amount_free() == 256 + sizeof(size_t) * 2;
         //fprintf(stderr, "Checking free = 256 : %d\n", ok);
         void * d = alloc.alloc(128);
+        (void)d;
         ok = ok && alloc.amount_free() == 128 + sizeof(size_t);
         //fprintf(stderr, "Checking free = 128 : %d\n", ok);
 #endif
@@ -185,6 +186,7 @@ bool BumpAllocatorTest() {
         ok = ok && alloc.amount_free() == 256 + sizeof(size_t) * 4;
         //fprintf(stderr, "Checking free = 256 : %d\n", ok);
         void * d = alloc.alloc(128);
+        (void) d;
         ok = ok && alloc.amount_free() == 128 + sizeof(size_t) * 2;
         //fprintf(stderr, "Checking free = 128 : %d\n", ok);
 #endif

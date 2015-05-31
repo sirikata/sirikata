@@ -109,11 +109,11 @@ void writeARHCHeaderCharacterFromLzham(uint8_t *character,
                                        int headerindex,
                                        uint8_t original_header[LZHAM0_HEADER_SIZE]) {
     original_header[headerindex] = *character;
-    if (headerindex < sizeof(lzham_fixed_header)) {
+    if (headerindex < (int)sizeof(lzham_fixed_header)) {
         assert(*character == lzham_fixed_header[headerindex]
                && "must start with LZHAM");
     }
-    if (headerindex < sizeof(arhclzhamheader)) {
+    if (headerindex < (int)sizeof(arhclzhamheader)) {
         *character = arhclzhamheader[headerindex];
     } else if (headerindex == sizeof(arhclzhamheader)) {
         *character = original_header[sizeof(lzham_fixed_header)]; // dictionary size
@@ -696,11 +696,10 @@ std::pair<uint32, JpegError> LZHAMDecompressionReader::Read(uint8*data,
     size_t outAvail = size;
     while(true) {
         JpegError err = JpegError::nil();
-        lzma_action action = LZMA_RUN;
         if (inputEof == false  && mAvailIn < sizeof(mReadBuffer) / 8) {
             if (mAvailIn == 0) {
                 mReadOffset = mReadBuffer;
-            } else if (mReadOffset - mReadBuffer> sizeof(mReadBuffer) * 3 / 4) {
+            } else if (mReadOffset - mReadBuffer > (int)sizeof(mReadBuffer) * 3 / 4) {
                 // guaranteed not to overlap since it will only be at
                 // most 1/8 the size of the buffer
                 memcpy(mReadBuffer, mReadOffset, mAvailIn);
@@ -1368,7 +1367,6 @@ void DecoderCompressionMultiwriter::Close() {
         int offset = THREAD_COMMAND_BUFFER_SIZE;
         size_t read_so_far = 0;
         size_t worker_goal = 0;
-        size_t worker_progress = 0;
         while (true) {
             ssize_t status = read_at_least(mWorkers->thread_output_read[workerId],
                                            &mBuffer[0],
@@ -1388,7 +1386,7 @@ void DecoderCompressionMultiwriter::Close() {
                     if (mDoLzham) {
                         if (read_so_far < LZHAM0_HEADER_SIZE) {
                             int headerindex = 0;
-                            for (int i = 0; headerindex < LZHAM0_HEADER_SIZE && i < status; ++i, ++headerindex) {
+                            for (int i = 0; headerindex < (int)LZHAM0_HEADER_SIZE && i < (int)status; ++i, ++headerindex) {
                                 writeARHCHeaderCharacterFromLzham(&mBuffer[offset + read_so_far + i], 
                                                                   headerindex,
                                                                   mOrigLzhamHeader);

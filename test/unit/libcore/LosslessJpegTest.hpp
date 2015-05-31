@@ -193,8 +193,15 @@ public:
         TS_ASSERT_EQUALS(0, status);
     }
 
-
-    void testMultiSeccompARHC (void) {
+    void testMultiSeccompARHC ( void )
+    {
+        helperMultiSeccompARHC(false);        
+    }
+    void testMultiLZHAMSeccompARHC ( void )
+    {
+        helperMultiSeccompARHC(true);
+    }
+    void helperMultiSeccompARHC (bool lzham) {
         pid_t pid;
         int status = 1;
         if ((pid = fork()) == 0) {
@@ -208,7 +215,7 @@ public:
                                          &BumpAllocatorRealloc,
                                          &BumpAllocatorMsize);
             
-            std::pair<FILE*, size_t> input_fp_size = getFileObjectAndSize("prism/texture0.jpg");
+            std::pair<FILE*, size_t> input_fp_size = getFileObjectAndSize("pikachu/atlas.jpg");
             ThreadContext * tc = MakeThreadContext(3, alloc);            
             if (prctl(PR_SET_SECCOMP, SECCOMP_MODE_STRICT)) {
                 syscall(SYS_exit, 1); // SECCOMP not allowed
@@ -218,7 +225,7 @@ public:
             
             uint8 componentCoalescing = Decoder::comp12coalesce;
             MemReadWriter arhc(alloc);
-            JpegError err = CompressJPEGtoARHCMulti(original, arhc, 6, componentCoalescing, tc);
+            JpegError err = CompressJPEGtoARHCMulti(original, arhc, 6, componentCoalescing, lzham, tc);
             if (err != JpegError()) {
                 syscall(SYS_exit, 2);
             }
@@ -308,7 +315,15 @@ public:
         TS_ASSERT_EQUALS(original.buffer(), round.buffer());
         TS_ASSERT_LESS_THAN(arhc.buffer().size(), inputDataSize * 99 / 100);
     }
-    void testMultithreadedCompressedIntegration( void ) // makes sure the real functions work
+    void testMultithreadedCompressedIntegration( bool use_lzham ) // makes sure the real functions work
+    {
+        helperMultithreadedCompressedIntegration(false);
+    }
+    void testMultithreadedCompressedLZHAMIntegration( bool use_lzham ) // makes sure the real functions work
+    {
+        helperMultithreadedCompressedIntegration(true);
+    }
+    void helperMultithreadedCompressedIntegration( bool use_lzham ) // makes sure the real functions work
     {
         using namespace Sirikata;
         pid_t pid;
@@ -331,7 +346,7 @@ public:
                 syscall(SYS_exit, 1);
             }
 
-            JpegError err = MultiCompressAnyto7Z(original, arhc, 6, &size_estimate, tc);
+            JpegError err = MultiCompressAnyto7Z(original, arhc, 6, use_lzham, &size_estimate, tc);
             if (err != JpegError()) {
                 syscall(SYS_exit, 2);
             }
@@ -383,7 +398,27 @@ public:
         SingleFaultInjector last8(0,7);
         helperMultithreadedCompressedRoundTrip(last8, 8, 1.08);
     }
-    void helperMultithreadedCompressedRoundTrip( Sirikata::FaultInjectorXZ &fi, int nthreads, double ratio)
+
+
+    void testMultithreadedCompressedRoundTripLZHAM( void )
+    {
+        SingleFaultInjector first(0,0);
+        helperMultithreadedCompressedRoundTrip(first, 8, 1.08, true);
+        SingleFaultInjector fi(0,1);
+        helperMultithreadedCompressedRoundTrip(fi, 4, 1.01, true);
+
+        SingleFaultInjector fiA(1,1);
+        helperMultithreadedCompressedRoundTrip(fiA, 3, .995, true);
+        SingleFaultInjector last2(0,1);
+        helperMultithreadedCompressedRoundTrip(fiA, 2, .985, true);
+
+        SingleFaultInjector last4(0,3);
+        helperMultithreadedCompressedRoundTrip(last4, 4, 1.01, true);
+        SingleFaultInjector last8(0,7);
+        helperMultithreadedCompressedRoundTrip(last8, 8, 1.08, true);
+    }
+
+    void helperMultithreadedCompressedRoundTrip( Sirikata::FaultInjectorXZ &fi, int nthreads, double ratio, bool lzham = false)
     {
         using namespace Sirikata;
         Sirikata::JpegAllocator<uint8_t>alloc;
@@ -392,7 +427,7 @@ public:
         size_t inputDataSize = loadFile("prism/texture0.jpg", original, alloc);
         MemReadWriter arhc(alloc);
         ConstantSizeEstimator size_estimate = inputDataSize;
-        JpegError err = MultiCompressAnyto7Z(original, arhc, 6, &size_estimate, tc);
+        JpegError err = MultiCompressAnyto7Z(original, arhc, 6, lzham, &size_estimate, tc);
         if (err != JpegError()) {
             fprintf(stderr, "7Z compression Error: %s\n", err.what());
         }
