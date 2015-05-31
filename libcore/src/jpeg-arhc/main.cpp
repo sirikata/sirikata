@@ -192,12 +192,12 @@ int main(int argc, char **argv) {
             toLzham = true;
             found = true;
         }
-
+/*
         if (argv[i][0] == '-' && argv[i][1] == 'H' && argv[i][2] == 'A' && argv[i][3] == 'M' && argv[i][4] == '\0') {
             fromLzham = true;
             found = true;
         }
-
+*/
         if (argv[i][0] == '-' && argv[i][1] == 'r' && argv[i][2] >='0' && argv[i][2] <= '9' && argv[i][3] == '\0') {
             reps = argv[i][2] - '0';
             found = true;
@@ -281,7 +281,7 @@ int main(int argc, char **argv) {
     }
     JpegAllocator<uint8_t> alloc;
     if (true||seccomp) { // FIXME drh <-- always set to true
-        alloc.setup_memory_subsystem(2147483647,
+        alloc.setup_memory_subsystem(2147483647U * 2U,
                                      2 * sizeof(size_t),
                                      &BumpAllocatorInit,
                                      &BumpAllocatorMalloc,
@@ -348,7 +348,7 @@ int main(int argc, char **argv) {
         pthread_create(&copy_thread, NULL, &copy_input, (char*)0 + pipe_read[reps - 1]);
     }
     if ((!seccomp) || (pid = fork()) == 0) {
-        ThreadContext *ctx = TestMakeThreadContext(num_threads, alloc, seccomp, NULL);
+        ThreadContext *ctx = TestMakeThreadContext(num_threads, alloc, seccomp, NULL, true);
         if (seccomp) {
             if (prctl(PR_SET_SECCOMP, SECCOMP_MODE_STRICT)) {
                 syscall(SYS_exit, 1); // SECCOMP not allowed
@@ -356,19 +356,15 @@ int main(int argc, char **argv) {
         }
         for (int rep = 0; rep < reps; ++rep) {
             FDWriter memory_output(pipe_write[rep]);
-            if (toLzham) {
-                CompressAnytoLZHAM(memory_input, memory_output, level, 
-alloc);
-            } else if (isLzham) {
-                DecompressLZHAMtoAny(memory_input, memory_output, alloc);
-            }else if (isJpeg && !force7z) {
+            if (isJpeg && !force7z) {
                 if (uncompressed) {
                     err = Decode(memory_input, memory_output, componentCoalescing, alloc);   
                 } else {
-                    err = CompressJPEGtoARHCMulti(memory_input, memory_output, level, componentCoalescing, ctx);
+                    err = CompressJPEGtoARHCMulti(memory_input, memory_output, level, componentCoalescing, toLzham, ctx);
                 }
-            } else if (isXz && !force7z){
+            } else if ((isXz || isLzham) && !force7z){
                 err = MultiDecompress7ZtoAny(memory_input, memory_output, ctx);
+                //DecompressLZHAMtoAny(memory_input, memory_output, alloc);
             } else if (isArhc && !force7z) {
                 if (uncompressed) {
                     err = Decode(memory_input, memory_output, componentCoalescing, alloc);
@@ -378,7 +374,7 @@ alloc);
             } else {
                 assert(unknown || force7z);
                 ConstantSizeEstimator cse(memory_input.buffer().size());
-                err = MultiCompressAnyto7Z(memory_input, memory_output, level, &cse, ctx);
+                err = MultiCompressAnyto7Z(memory_input, memory_output, level, toLzham, &cse, ctx);
             }
             memory_input.Close();
             memory_output.Close();

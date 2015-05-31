@@ -20,6 +20,8 @@
 #endif
 
 #define THREAD_COMMAND_BUFFER_SIZE 5
+//#define LZHAMTEST_DEFAULT_DICT_SIZE 28
+#define LZHAMTEST_DEFAULT_DICT_SIZE 24
 
 
 static ssize_t read_at_least(int fd, void *buf, size_t size, size_t at_least) {
@@ -64,7 +66,7 @@ static ssize_t write_full(int fd, const void *buf, size_t size) {
 
 namespace Sirikata {
 
-uint32 LEtoUint32(uint8*buffer) {
+uint32 LEtoUint32(const uint8*buffer) {
     uint32 retval = buffer[3];
     retval <<=8;
     retval |= buffer[2];
@@ -81,12 +83,81 @@ void uint32toLE(uint32 value, uint8*retval) {
     retval[2] = uint8((value >> 16) & 0xff);
     retval[3] = uint8((value >> 24) & 0xff);
 }
+static const unsigned char lzham_fixed_header[] = {'L','Z','H','0'};
+static const unsigned char xzheader[6] = { 0xFD, '7', 'z', 'X', 'Z', 0x00 };
+static const unsigned char arhcheader[6] = { 'A', 'R', 'H', 'C', 0x01, 0x00 };
+static const unsigned char arhclzhamheader[6] = { 'A', 'R', 'H', 'C', 0x01, 0x01 };
 
+void writeLZHAMHeader(uint8 * output, uint8 dictSize, uint32 fileSize) {
+    output[0] = lzham_fixed_header[0];
+    output[1] = lzham_fixed_header[1];
+    output[2] = lzham_fixed_header[2];
+    output[3] = lzham_fixed_header[3];
+    output[4] = dictSize;
+    output[5] = fileSize & 0xff;
+    output[6] = (fileSize >> 8) & 0xff;
+    output[7] = (fileSize >> 16) & 0xff;
+    output[8] = (fileSize >> 24) & 0xff;
+    output[9] = 0;
+    output[10] = 0;
+    output[11] = 0;
+    output[12] = 0;
+    
+}
+
+void writeARHCHeaderCharacterFromLzham(uint8_t *character,
+                                       int headerindex,
+                                       uint8_t original_header[LZHAM0_HEADER_SIZE]) {
+    original_header[headerindex] = *character;
+    if (headerindex < sizeof(lzham_fixed_header)) {
+        assert(*character == lzham_fixed_header[headerindex]
+               && "must start with LZHAM");
+    }
+    if (headerindex < sizeof(arhclzhamheader)) {
+        *character = arhclzhamheader[headerindex];
+    } else if (headerindex == sizeof(arhclzhamheader)) {
+        *character = original_header[sizeof(lzham_fixed_header)]; // dictionary size
+    } else {
+        assert(sizeof(lzham_fixed_header) + headerindex - sizeof(arhclzhamheader) < LZHAM0_HEADER_SIZE);
+        *character = original_header[sizeof(lzham_fixed_header) + headerindex - sizeof(arhclzhamheader)]; // LE file size
+    }
+}
+
+void arhcToLzhamHeader(uint8_t buffer[LZHAM0_HEADER_SIZE]) {
+    assert(sizeof(lzham_fixed_header) < LZHAM0_HEADER_SIZE);
+    memcpy(buffer, lzham_fixed_header, sizeof(lzham_fixed_header));
+    buffer[sizeof(lzham_fixed_header)] = buffer[sizeof(arhclzhamheader)]; // dictionary size
+    size_t i;
+    for (i = sizeof(arhclzhamheader) + 1; i < LZHAM0_HEADER_SIZE; ++i) {
+        assert(sizeof(lzham_fixed_header) + i - sizeof(arhclzhamheader) < LZHAM0_HEADER_SIZE);
+        buffer[sizeof(lzham_fixed_header) + i - sizeof(arhclzhamheader)] = buffer[i];
+    }
+    for (size_t j = sizeof(lzham_fixed_header) + i - sizeof(arhclzhamheader); j < LZHAM0_HEADER_SIZE; ++j) {
+        buffer[j] = 0;
+    }
+}
+
+namespace {
+std::pair<lzham_decompress_params, JpegError> makeLZHAMDecodeParams(const uint8 header[LZHAM0_HEADER_SIZE]) {
+    std::pair<lzham_decompress_params, JpegError> retval;
+    retval.second = JpegError::nil();
+    memset(&retval.first, 0, sizeof(retval.first));
+    if (memcmp(header, "LZH0", 4)) {
+        retval.second = MakeJpegError("LZHAM Header Error");
+    } else {
+        retval.first.m_struct_size = sizeof(lzham_decompress_params);
+        retval.first.m_dict_size_log2 = header[4];
+    }
+    return retval;
+}
+}
 
 class ThreadContext {
     int thread_output_write[MAX_COMPRESSION_THREADS];
 
     int thread_input_read[MAX_COMPRESSION_THREADS];
+    lzham_compress_state_ptr mLzhamCompressState[MAX_COMPRESSION_THREADS];
+    lzham_decompress_state_ptr mLzhamDecompressState[MAX_COMPRESSION_THREADS];
     JpegAllocator<uint8_t> mAllocator;
     // This helps test for the case that the decompressor
     // runs into problems with an aligend, poorly placed 7zXZ in the file
@@ -111,6 +182,11 @@ public:
         COMPRESS8,
         COMPRESS9,
         DECOMPRESS,
+        LZHAMCOMPRESS0,
+        LZHAMCOMPRESS1,
+        LZHAMCOMPRESS2,
+        LZHAMCOMPRESS3,
+        LZHAMCOMPRESS4,
         XZ_OK,
         XZ_FAIL
     };
@@ -145,6 +221,111 @@ private:
             assert(ret != LZMA_PROG_ERROR && "Early LZMA bug?");
             send_xz_fail(thread_output_write[worker_id]);
         }
+    }
+    void compressLZHAM(const std::vector<uint8_t, JpegAllocator<uint8_t> > &data,
+                  int level,
+                  int worker_id) {
+        std::vector<uint8_t, JpegAllocator<uint8_t> > compressed_data(data.get_allocator());
+        compressed_data.resize(lzham_z_compressBound(data.size()) + LZHAM0_HEADER_SIZE - THREAD_COMMAND_BUFFER_SIZE);
+        size_t out_read = compressed_data.size() - LZHAM0_HEADER_SIZE - THREAD_COMMAND_BUFFER_SIZE;
+        size_t in_read = data.size();
+        lzham_compress_status_t ret = LZHAM_COMP_STATUS_NOT_FINISHED;
+        size_t ooffset = LZHAM0_HEADER_SIZE + THREAD_COMMAND_BUFFER_SIZE;
+        size_t ioffset = 0;
+        do {
+            ret = lzham_compress(mLzhamCompressState[worker_id],
+                                 &data[ioffset], &in_read,
+                                 &compressed_data[ooffset], &out_read,
+                                 true);
+            ioffset += in_read;
+            in_read = data.size() - ioffset;
+            ooffset += out_read;
+            out_read = compressed_data.size() - ooffset;
+        } while(ret == LZHAM_COMP_STATUS_NOT_FINISHED);
+        if (ret == LZHAM_COMP_STATUS_SUCCESS) {
+            compressed_data.resize(ooffset);
+            compressed_data[0] = XZ_OK;
+            uint32toLE(ooffset - THREAD_COMMAND_BUFFER_SIZE, &compressed_data[1]);
+            writeLZHAMHeader(&compressed_data[THREAD_COMMAND_BUFFER_SIZE], LZHAMTEST_DEFAULT_DICT_SIZE, data.size());
+            write_full(thread_output_write[worker_id], &compressed_data[0], compressed_data.size());
+        } else {
+            assert(ret != LZHAM_COMP_STATUS_OUTPUT_BUF_TOO_SMALL && "Output buf too small");
+            assert(ret != LZHAM_COMP_STATUS_INVALID_PARAMETER && "Invalid parameter");
+            assert(ret != LZHAM_COMP_STATUS_FAILED_INITIALIZING && "Comp status failed to initialize");
+            assert(ret != LZHAM_COMP_STATUS_FAILED && "Comp status failed");
+            assert(ret != LZHAM_COMP_STATUS_NOT_FINISHED && "Comp status not finished");
+            assert(ret != LZHAM_COMP_STATUS_NEEDS_MORE_INPUT && "Comp status needs more input");
+            assert(ret != LZHAM_COMP_STATUS_HAS_MORE_OUTPUT && "Comp status needs more output room");
+            assert("Unreachable");
+            send_xz_fail(thread_output_write[worker_id]);
+        }
+    }
+
+    void decompressLZHAM(const std::vector<uint8_t, JpegAllocator<uint8_t> > &data,
+                          int worker_id) {
+        std::vector<uint8_t, JpegAllocator<uint8_t> > decompressed_data(data.get_allocator());
+        decompressed_data.resize(THREAD_COMMAND_BUFFER_SIZE); // save room to return the buffer headers
+        uint32 inputDataOffset = 0;
+        while(true) {
+            std::pair<lzham_decompress_params, JpegError> p = makeLZHAMDecodeParams(&data[inputDataOffset]);
+            if (p.second != JpegError::nil()) {
+                send_xz_fail(thread_output_write[worker_id]);                
+                return;
+            }
+            p.first.m_decompress_flags = LZHAM_DECOMP_FLAG_OUTPUT_UNBUFFERED;
+            uint32 outputDataSize = LEtoUint32(&data[inputDataOffset + 5]);
+            uint32 outputDataOffset = decompressed_data.size();
+            decompressed_data.resize(outputDataSize + outputDataOffset);
+            if (mLzhamDecompressState[worker_id] == NULL) {
+                mLzhamDecompressState[worker_id] = lzham_decompress_init(&p.first);
+            } else{
+                mLzhamDecompressState[worker_id] = lzham_decompress_reinit(mLzhamDecompressState[worker_id], &p.first);
+            }
+
+            inputDataOffset += LZHAM0_HEADER_SIZE;
+
+            size_t in_read = data.size() - inputDataOffset;
+            size_t out_write = outputDataSize;
+            lzham_decompress_status_t ret;
+            do {
+                ret = lzham_decompress(mLzhamDecompressState[worker_id],
+                                      &data[inputDataOffset], &in_read,
+                                      &decompressed_data[outputDataOffset], &out_write,
+                                      true);
+                inputDataOffset += in_read;
+                outputDataOffset += out_write;
+                outputDataSize -= out_write;
+                in_read = data.size() - inputDataOffset;
+                out_write = outputDataSize;
+            } while (ret == LZHAM_DECOMP_STATUS_NOT_FINISHED);
+            if (ret != LZHAM_DECOMP_STATUS_SUCCESS) {
+                assert(ret != LZHAM_DECOMP_STATUS_NOT_FINISHED && "Status not finished");
+
+                assert(ret != LZHAM_DECOMP_STATUS_HAS_MORE_OUTPUT && "Has more output");
+
+                assert(ret != LZHAM_DECOMP_STATUS_NEEDS_MORE_INPUT && "Needs more input");
+
+                assert(ret != LZHAM_DECOMP_STATUS_FAILED_INITIALIZING && "Failed initializing");
+                assert(ret != LZHAM_DECOMP_STATUS_FAILED_DEST_BUF_TOO_SMALL && "Dest buf too small");
+                assert(ret != LZHAM_DECOMP_STATUS_FAILED_EXPECTED_MORE_RAW_BYTES && "Expected more raw bytes");
+                assert(ret != LZHAM_DECOMP_STATUS_FAILED_BAD_CODE && "bad code");
+                assert(ret != LZHAM_DECOMP_STATUS_FAILED_ADLER32 && "failed adler32");
+                assert(ret != LZHAM_DECOMP_STATUS_FAILED_BAD_RAW_BLOCK && "bad raw block");
+                assert(ret != LZHAM_DECOMP_STATUS_FAILED_BAD_COMP_BLOCK_SYNC_CHECK && "Bad comp sync check");
+                assert(ret != LZHAM_DECOMP_STATUS_FAILED_BAD_ZLIB_HEADER && "Bad zlib header");
+                assert(ret != LZHAM_DECOMP_STATUS_FAILED_NEED_SEED_BYTES && "Need seed");
+                assert(ret != LZHAM_DECOMP_STATUS_FAILED_BAD_SEED_BYTES && "Bad seed");
+                assert(ret != LZHAM_DECOMP_STATUS_FAILED_BAD_SYNC_BLOCK && "Bad sync block");
+                assert(ret != LZHAM_DECOMP_STATUS_INVALID_PARAMETER && "Invalid parameter");
+                return;
+            }
+            if (inputDataOffset == data.size()) {
+                break;
+            }
+        }
+        decompressed_data[0] = XZ_OK;
+        uint32toLE(decompressed_data.size() - THREAD_COMMAND_BUFFER_SIZE, &decompressed_data[1]);
+        write_full(thread_output_write[worker_id], &decompressed_data[0], decompressed_data.size());
     }
     void send_xz_fail(int output_fd) {
         uint8 failure_message[THREAD_COMMAND_BUFFER_SIZE] = {0};
@@ -193,6 +374,28 @@ private:
         write_full(thread_output_write[worker_id], &output_data[0], output_data.size());
     }
     void worker(size_t worker_id, JpegAllocator<uint8_t> alloc) {
+        if (0){
+            if (mAllocator.get_custom_reallocate() && mAllocator.get_custom_msize()) {
+                lzham_set_memory_callbacks(mAllocator.get_custom_reallocate(),
+                                           mAllocator.get_custom_msize(),
+                                           mAllocator.get_custom_state());
+            }
+
+            lzham_decompress_params p;
+            memset(&p, 0, sizeof(p));
+            p.m_struct_size = sizeof(lzham_decompress_params);
+            p.m_dict_size_log2 = LZHAMTEST_DEFAULT_DICT_SIZE;
+            p.m_decompress_flags = LZHAM_DECOMP_FLAG_OUTPUT_UNBUFFERED;
+            mLzhamDecompressState[worker_id] = lzham_decompress_init(&p);
+
+            lzham_compress_params q;
+            memset(&q, 0, sizeof(q));
+            q.m_struct_size = sizeof(lzham_compress_params);
+            q.m_dict_size_log2 = LZHAMTEST_DEFAULT_DICT_SIZE;
+
+            mLzhamCompressState[worker_id] = lzham_compress_init(&q);
+
+        }
         unsigned char command[THREAD_COMMAND_BUFFER_SIZE] = {0};
         std::vector<uint8_t, JpegAllocator<uint8_t> > command_data(alloc);
         while (read_full(thread_input_read[worker_id], command, sizeof(command)) == sizeof(command)) {
@@ -238,8 +441,21 @@ private:
                 compress(command_data, command[0] - COMPRESS1 + 1, worker_id);
                 break;
               case DECOMPRESS:
-                decompress(command_data, worker_id);
+                if (command_data.size() > LZHAM0_HEADER_SIZE
+                    && makeLZHAMDecodeParams(&command_data[0]).second == JpegError::nil()) {
+                    decompressLZHAM(command_data, worker_id);
+                } else {
+                    decompress(command_data, worker_id);
+                }
                 break;
+              case LZHAMCOMPRESS0:
+              case LZHAMCOMPRESS1:
+              case LZHAMCOMPRESS2:
+              case LZHAMCOMPRESS3:
+              case LZHAMCOMPRESS4:
+                compressLZHAM(command_data, command[0] - LZHAMCOMPRESS0, worker_id);
+                break;
+                
             }
         }
         
@@ -265,6 +481,8 @@ public:
     }
     ThreadContext(size_t num_threads, const JpegAllocator<uint8_t> & alloc, bool depriv, FaultInjectorXZ *faultInjection) : mAllocator(alloc) {
         mTestFaults = faultInjection;
+        memset(mLzhamDecompressState, 0, sizeof(mLzhamDecompressState));
+        memset(mLzhamCompressState, 0, sizeof(mLzhamCompressState));
         memset(thread_output_write, 0, sizeof(thread_output_write));
         memset(thread_output_read, 0, sizeof(thread_output_read));
         memset(thread_input_write, 0, sizeof(thread_input_write));
@@ -300,11 +518,35 @@ public:
             assert(LEtoUint32(return_buffer + 1) == 0);
         }
     }
+    void initializeLzham(int nthreads) {
+        if (mAllocator.get_custom_reallocate() && mAllocator.get_custom_msize()) {
+            lzham_set_memory_callbacks(mAllocator.get_custom_reallocate(),
+                                       mAllocator.get_custom_msize(),
+                                       mAllocator.get_custom_state());
+        }
+ 
+        for (int worker_id = 0; worker_id < nthreads; ++worker_id) {
+
+            lzham_decompress_params p;
+            memset(&p, 0, sizeof(p));
+            p.m_struct_size = sizeof(lzham_decompress_params);
+            p.m_dict_size_log2 = LZHAMTEST_DEFAULT_DICT_SIZE;
+            p.m_decompress_flags = LZHAM_DECOMP_FLAG_OUTPUT_UNBUFFERED;
+            mLzhamDecompressState[worker_id] = lzham_decompress_init(&p);
+
+            lzham_compress_params q;
+            memset(&q, 0, sizeof(q));
+            q.m_struct_size = sizeof(lzham_compress_params);
+            q.m_dict_size_log2 = LZHAMTEST_DEFAULT_DICT_SIZE;
+
+            mLzhamCompressState[worker_id] = lzham_compress_init(&q);
+        }
+
+    }
     const JpegAllocator<uint8_t> &get_allocator() const {
         return mAllocator;
     }
 };
-
 
 
 std::pair<Sirikata::uint32, Sirikata::JpegError> MemReadWriter::Write(const Sirikata::uint8*data, unsigned int size) {
@@ -394,23 +636,8 @@ MagicNumberReplacementWriter::~MagicNumberReplacementWriter() {
 void MagicNumberReplacementWriter::Close() {
     mBase->Close();
 }
-//#define LZHAMTEST_DEFAULT_DICT_SIZE 28
-#define LZHAMTEST_DEFAULT_DICT_SIZE 20
 
 
-namespace {
-std::pair<lzham_decompress_params, JpegError> makeLZHAMDecodeParams(uint8 header[LZHAM0_HEADER_SIZE]) {
-    std::pair<lzham_decompress_params, JpegError> retval;
-    retval.second = JpegError::nil();
-    memset(&retval.first, 0, sizeof(retval.first));
-    if (memcmp(header, "LZH0", 4)) {
-        retval.second = MakeJpegError("LZHAM Header Error");
-    } else {
-        retval.first.m_struct_size = sizeof(lzham_decompress_params);
-        retval.first.m_dict_size_log2 = header[4];
-    }
-    return retval;
-}
 
 lzham_compress_params makeLZHAMEncodeParams(int level) {
     lzham_compress_params params;
@@ -424,7 +651,7 @@ lzham_compress_params makeLZHAMEncodeParams(int level) {
         break;
       case 1:
       case 2:
-        params.m_level = LZHAM_COMP_LEVEL_FASTEST;
+        params.m_level = LZHAM_COMP_LEVEL_FASTER;
         break;
       case 3:
       case 4:
@@ -443,7 +670,6 @@ lzham_compress_params makeLZHAMEncodeParams(int level) {
     params.m_compress_flags = LZHAM_COMP_FLAG_DETERMINISTIC_PARSING;
     params.m_max_helper_threads = 0;
     return params;
-}
 }
 
 LZHAMDecompressionReader::LZHAMDecompressionReader(DecoderReader *r,
@@ -513,7 +739,7 @@ std::pair<uint32, JpegError> LZHAMDecompressionReader::Read(uint8*data,
                 if (mLzham == NULL) {
                     mLzham = lzham_decompress_init(&p.first);
                 } else {
-                    lzham_decompress_reinit((lzham_decompress_state_ptr)mLzham, &p.first);
+                    mLzham = lzham_decompress_reinit((lzham_decompress_state_ptr)mLzham, &p.first);
                 }
                 assert(mLzham && "the stream decoder had insufficient memory");
             }
@@ -590,22 +816,6 @@ LZHAMCompressionWriter::LZHAMCompressionWriter(DecoderWriter *w,
 }
 
 
-void writeLZHAMHeader(uint8 * output, uint8 dictSize, uint32 fileSize) {
-    output[0] = 'L';
-    output[1] = 'Z';
-    output[2] = 'H';
-    output[3] = '0';
-    output[4] = dictSize;
-    output[5] = fileSize & 0xff;
-    output[6] = (fileSize >> 8) & 0xff;
-    output[7] = (fileSize >> 16) & 0xff;
-    output[8] = (fileSize >> 24) & 0xff;
-    output[9] = 0;
-    output[10] = 0;
-    output[11] = 0;
-    output[12] = 0;
-    
-}
 
 void LZHAMCompressionWriter::Close(){
     assert(!mClosed);
@@ -863,9 +1073,18 @@ DecoderDecompressionMultireader::DecoderDecompressionMultireader(DecoderReader *
     memset(mComponentStart, 0, sizeof(mComponentStart));
     memset(mComponentEnd, 0, sizeof(mComponentEnd));
     mFallbackDecompressionReader = NULL;
+    mDoLzham = false;
 };
-static const unsigned char xzheader[6] = { 0xFD, '7', 'z', 'X', 'Z', 0x00 };
-static const unsigned char arhcheader[6] = { 'A', 'R', 'H', 'C', 0x01, 0x00 };
+
+size_t findLzhamStart(const std::vector<uint8_t, JpegAllocator<uint8_t> > &buffer,
+                      size_t search_start) {
+    for (size_t i = search_start - 4, j = 0; i > 0 && j <= 8; --i, ++j) {
+        if (memcmp(&buffer[i], lzham_fixed_header, sizeof(lzham_fixed_header)) == 0) {
+            return i;
+        }
+    }
+    return 0;
+}
 
 std::pair<uint32_t, JpegError> DecoderDecompressionMultireader::startDecompressionThreads() {
     uint8_t command_backup[THREAD_COMMAND_BUFFER_SIZE] = {0};
@@ -892,14 +1111,41 @@ std::pair<uint32_t, JpegError> DecoderDecompressionMultireader::startDecompressi
     mComponentStart[0] = offset; // sets things up for the comm
     int num_threads = (int)mWorkers->numThreads();
     int cur_component = 1; // 0th component always starts at zero
-    if (mBuffer.size() < offset + sizeof(xzheader) + 8) {
+    if (mBuffer.size() < offset + std::max(sizeof(xzheader) + 8, LZHAM0_HEADER_SIZE)) {
         return std::pair<uint32, JpegError>(0, JpegError::errEOF());
     }
     if (memcmp(&mBuffer[offset], arhcheader, sizeof(arhcheader)) == 0) {
         assert(sizeof(xzheader) == sizeof(arhcheader) && "The xz and arhc headers must be of same size");
         memcpy(&mBuffer[offset], xzheader, sizeof(xzheader));
     }
-    for (size_t i = offset + 4, ie = mBuffer.size() - 8; i < ie; i += 4) {
+    bool is_arhc_lzham = (memcmp(&mBuffer[offset], arhclzhamheader, sizeof(arhclzhamheader)) == 0);
+    bool is_lzham = (memcmp(&mBuffer[offset], lzham_fixed_header, sizeof(lzham_fixed_header)) == 0);
+    if (is_arhc_lzham || is_lzham) {
+        if (is_arhc_lzham) {
+            arhcToLzhamHeader(&mBuffer[offset]);
+        }
+        for (size_t i = offset + 0x10, ie = mBuffer.size() - 8; i < ie; i += 4) {
+            uint8_t * to_scan = &mBuffer[i];
+            uint8_t zero[4] = {0, 0, 0, 0};
+            if (memcmp(to_scan, zero, 2) == 0) {
+                if (memcmp(to_scan, zero, 4) == 0
+                    || memcmp(to_scan + 1, zero, 4) == 0
+                    || memcmp(to_scan + 2, zero, 4) == 0
+                    || memcmp(to_scan + 3, zero, 4) == 0) {
+                    size_t where = findLzhamStart(mBuffer, i); //returns 0 on failure
+                    if (where > 0) {
+                        assert (cur_component > 0 && "Code starts cur_component at 1 since 0 is covered by the start");
+                        mComponentEnd[cur_component - 1] = where;
+                        mComponentStart[cur_component] = where;
+                        cur_component++;
+                        if (cur_component >= MAX_COMPRESSION_THREADS) {
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    } else for (size_t i = offset + 4, ie = mBuffer.size() - 8; i < ie; i += 4) {
         uint8_t * to_scan = &mBuffer[i];
         if (memcmp(to_scan, xzheader, 6) == 0) {
             assert (cur_component > 0 && "Code starts cur_component at 1 since 0 is covered by the start");
@@ -1011,8 +1257,13 @@ std::pair<uint32, JpegError> DecoderDecompressionMultireader::Read(uint8*data,
         if (command_buffer[0] == ThreadContext::XZ_FAIL) {
             // DECOMPRESS IN PLACE (this could happen if there was a stray 4 byte aligned 7zXZ header around
             mFallbackMemReader.SwapIn(mBuffer, mComponentStart[mNumSuccessfulComponents]);
-            mFallbackDecompressionReader = JpegAllocator<DecoderDecompressionReader>(mBuffer.get_allocator()).allocate(1);
-            new((void*)mFallbackDecompressionReader)DecoderDecompressionReader(&mFallbackMemReader, mBuffer.get_allocator()); // inplace new
+            if (mDoLzham) {
+                mFallbackDecompressionReader = JpegAllocator<LZHAMDecompressionReader>(mBuffer.get_allocator()).allocate(1);
+                new((void*)mFallbackDecompressionReader)LZHAMDecompressionReader(&mFallbackMemReader, mBuffer.get_allocator()); // inplace new
+            } else {
+                mFallbackDecompressionReader = JpegAllocator<DecoderDecompressionReader>(mBuffer.get_allocator()).allocate(1);
+                new((void*)mFallbackDecompressionReader)DecoderDecompressionReader(&mFallbackMemReader, mBuffer.get_allocator()); // inplace new
+            }
             DeferDrainJobs dj(mWorkers, mNumSuccessfulComponents + 1, mNumComponents);
             return mFallbackDecompressionReader->Read(data, size);            
         } else {
@@ -1030,8 +1281,13 @@ std::pair<uint32, JpegError> DecoderDecompressionMultireader::Read(uint8*data,
 
 DecoderDecompressionMultireader::~DecoderDecompressionMultireader() {
     if (mFallbackDecompressionReader) {
-        JpegAllocator<DecoderDecompressionReader>(mBuffer.get_allocator()).destroy(mFallbackDecompressionReader);
-        JpegAllocator<DecoderDecompressionReader>(mBuffer.get_allocator()).deallocate(mFallbackDecompressionReader, 1);
+        if (mDoLzham) {
+            JpegAllocator<LZHAMDecompressionReader>(mBuffer.get_allocator()).destroy((LZHAMDecompressionReader*)mFallbackDecompressionReader);
+            JpegAllocator<LZHAMDecompressionReader>(mBuffer.get_allocator()).deallocate((LZHAMDecompressionReader*)mFallbackDecompressionReader, 1);
+        } else {
+            JpegAllocator<DecoderDecompressionReader>(mBuffer.get_allocator()).destroy((DecoderDecompressionReader*)mFallbackDecompressionReader);
+            JpegAllocator<DecoderDecompressionReader>(mBuffer.get_allocator()).deallocate((DecoderDecompressionReader*)mFallbackDecompressionReader, 1);
+        }
         mFallbackDecompressionReader = NULL;
     }
 }
@@ -1040,11 +1296,13 @@ DecoderDecompressionMultireader::~DecoderDecompressionMultireader() {
 DecoderCompressionMultiwriter::DecoderCompressionMultiwriter(DecoderWriter *w,
                                                              uint8_t compression_level,
                                                              bool replaceMagicWithARHC,
+                                                             bool do_lzham,
                                                              ThreadContext *workers, 
                                                              const JpegAllocator<uint8_t> &alloc,
                                                              SizeEstimator * estimator)
        : mWorkers(workers), mBuffer(alloc) {
     mReplace7zMagicARHC = replaceMagicWithARHC;
+    mDoLzham = do_lzham;
     mCompressionLevel = compression_level;
     mSizeEstimate = estimator;
     mClosed = false;
@@ -1073,7 +1331,11 @@ std::pair<uint32, JpegError> DecoderCompressionMultiwriter::Write(const uint8*da
                        data + amount_to_write);
         data += amount_to_write;
         size -= amount_to_write;
-        mBuffer[0] = ThreadContext::COMPRESS1 + mCompressionLevel - 1;
+        if(mDoLzham) {
+            mBuffer[0] = ThreadContext::LZHAMCOMPRESS0 + std::min(mCompressionLevel - 1, 4);
+        } else {
+            mBuffer[0] = ThreadContext::COMPRESS1 + mCompressionLevel - 1;
+        }
         uint32toLE(mBuffer.size() - THREAD_COMMAND_BUFFER_SIZE ,&mBuffer[1]);
         ssize_t retval = write_full(mWorkers->thread_input_write[mCurWriteWorkerId++],
                                     &mBuffer[0],
@@ -1087,7 +1349,11 @@ std::pair<uint32, JpegError> DecoderCompressionMultiwriter::Write(const uint8*da
 }
 
 void DecoderCompressionMultiwriter::Close() {
-    mBuffer[0] = ThreadContext::COMPRESS1 + mCompressionLevel - 1;
+    if(mDoLzham) {
+        mBuffer[0] = ThreadContext::LZHAMCOMPRESS0 + std::min(mCompressionLevel - 1, 4);
+    } else {
+        mBuffer[0] = ThreadContext::COMPRESS1 + mCompressionLevel - 1;
+    }
     uint32toLE(mBuffer.size() - THREAD_COMMAND_BUFFER_SIZE ,&mBuffer[1]);
     ssize_t retval = write_full(mWorkers->thread_input_write[mCurWriteWorkerId++],
                                 &mBuffer[0],
@@ -1117,12 +1383,24 @@ void DecoderCompressionMultiwriter::Close() {
                 worker_goal = LEtoUint32(&mBuffer[1]);
             }
             if (status > offset) {
-                if (workerId == 0 && mReplace7zMagicARHC && read_so_far < sizeof(xzheader)) {
-                    int headerindex = 0;
-                    for (int i = 0; headerindex < (int)sizeof(xzheader) && i < status; ++i, ++headerindex) {
-                        assert(mBuffer[offset+read_so_far + i] == xzheader[headerindex]
-                               && "must start with \\xfd7zXZ");
-                        mBuffer[offset+read_so_far + i] = arhcheader[headerindex];
+                if (workerId == 0 && mReplace7zMagicARHC && read_so_far < std::max(LZHAM0_HEADER_SIZE,
+                                                                                   sizeof(xzheader))) {
+                    if (mDoLzham) {
+                        if (read_so_far < LZHAM0_HEADER_SIZE) {
+                            int headerindex = 0;
+                            for (int i = 0; headerindex < LZHAM0_HEADER_SIZE && i < status; ++i, ++headerindex) {
+                                writeARHCHeaderCharacterFromLzham(&mBuffer[offset + read_so_far + i], 
+                                                                  headerindex,
+                                                                  mOrigLzhamHeader);
+                            }       
+                        }
+                    } else if (read_so_far < sizeof(xzheader)) {
+                        int headerindex = 0;
+                        for (int i = 0; headerindex < (int)sizeof(xzheader) && i < status; ++i, ++headerindex) {
+                            assert(mBuffer[offset+read_so_far + i] == xzheader[headerindex]
+                                   && "must start with \\xfd7zXZ");
+                            mBuffer[offset+read_so_far + i] = arhcheader[headerindex];
+                        }
                     }
                 }
                 mWriter->Write(&mBuffer[offset],
@@ -1135,7 +1413,7 @@ void DecoderCompressionMultiwriter::Close() {
                 break;
             }
         }
-        if (read_so_far & 0x3) { // unaligned magic
+        if ((read_so_far & 0x3) && !mDoLzham) { // unaligned magic
             uint8 zeros[4] = {0};
             mWriter->Write(zeros, 4 - (read_so_far & 0x3)); // lets make it aligned (I think it is required to be so)
             // if not, we'd only lose out in parallelism, not correctness
@@ -1205,19 +1483,22 @@ JpegError DecompressLZHAMtoAny(DecoderReader &r, DecoderWriter &w, const JpegAll
 }
 
 namespace {
-ThreadContext *MakeThreadContextHelper(int nthreads, const JpegAllocator<uint8> &alloc, bool depriv, FaultInjectorXZ* fi) {
+ThreadContext *MakeThreadContextHelper(int nthreads, const JpegAllocator<uint8> &alloc, bool depriv, FaultInjectorXZ* fi, bool lzham) {
     ThreadContext *retval = JpegAllocator<ThreadContext>(alloc).allocate(1);
     new((void*)retval)ThreadContext(nthreads, alloc, depriv, fi); // inplace new
+    if (lzham) {
+        retval->initializeLzham(nthreads);
+    }
     return retval;
 }
 }
 
-ThreadContext *MakeThreadContext(int nthreads, const JpegAllocator<uint8> &alloc) {
-    return MakeThreadContextHelper(nthreads, alloc, true, NULL);
+ThreadContext *MakeThreadContext(int nthreads, const JpegAllocator<uint8> &alloc, bool lzham) {
+    return MakeThreadContextHelper(nthreads, alloc, true, NULL, lzham);
 }
 
-ThreadContext *TestMakeThreadContext(int nthreads, const JpegAllocator<uint8> &alloc, bool depriv, FaultInjectorXZ* fi) {
-    return MakeThreadContextHelper(nthreads, alloc, depriv, fi);
+ThreadContext *TestMakeThreadContext(int nthreads, const JpegAllocator<uint8> &alloc, bool depriv, FaultInjectorXZ* fi, bool lzham) {
+    return MakeThreadContextHelper(nthreads, alloc, depriv, fi, lzham);
 }
 
 void DestroyThreadContext(ThreadContext *tc) {
@@ -1227,8 +1508,9 @@ void DestroyThreadContext(ThreadContext *tc) {
 
 // Decode reads a JPEG image from r and returns it as an image.Image.
 JpegError MultiCompressAnyto7Z(DecoderReader &r, DecoderWriter &w, uint8 compression_level,
+                               bool do_lzham,
                                SizeEstimator *sz, ThreadContext *tc) {
-    DecoderCompressionMultiwriter cw(&w, compression_level, false, tc, tc->get_allocator(), sz);
+    DecoderCompressionMultiwriter cw(&w, compression_level, false, do_lzham, tc, tc->get_allocator(), sz);
     return Copy(r, cw, tc->get_allocator());
 }
 
@@ -1240,9 +1522,10 @@ JpegError MultiDecompress7ZtoAny(DecoderReader &r, DecoderWriter &w, ThreadConte
 
 // Decode reads a JPEG image from r and returns it as an image.Image.
 JpegError CompressJPEGtoARHCMulti(DecoderReader &r, DecoderWriter &w, uint8 compression_level, uint8 componentCoalescing,
-                             ThreadContext *tc) {
+                                  bool do_lzham,
+                                  ThreadContext *tc) {
     Decoder d(tc->get_allocator());
-    DecoderCompressionMultiwriter cw(&w, compression_level, true, tc, tc->get_allocator(), &d);
+    DecoderCompressionMultiwriter cw(&w, compression_level, true, do_lzham, tc, tc->get_allocator(), &d);
     return d.decode(r, cw, componentCoalescing);
 }
 // Decode reads a JPEG image from r and returns it as an image.Image.

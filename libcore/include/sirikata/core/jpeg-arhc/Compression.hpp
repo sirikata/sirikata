@@ -105,9 +105,9 @@ class SIRIKATA_EXPORT DecoderDecompressionMultireader : public DecoderReader {
     uint32_t mCurComponentBytesScanned;
     std::vector<uint8_t, JpegAllocator<uint8_t> > mBuffer; // holds the whole input file (necessary to thread it)
     MemReadWriter mFallbackMemReader;
-    DecoderDecompressionReader *mFallbackDecompressionReader;
+    DecoderReader *mFallbackDecompressionReader;
     std::pair<uint32_t, JpegError> startDecompressionThreads();
-
+    bool mDoLzham;
 public:
     DecoderDecompressionMultireader(DecoderReader *r, ThreadContext * workers, const JpegAllocator<uint8_t> &alloc);
     virtual std::pair<uint32, JpegError> Read(uint8*data, unsigned int size);
@@ -123,9 +123,13 @@ class SIRIKATA_EXPORT DecoderCompressionMultiwriter : public DecoderWriter {
     bool mClosed;
     bool mReplace7zMagicARHC;
     SizeEstimator *mSizeEstimate;
+    uint8_t mOrigLzhamHeader[LZHAM0_HEADER_SIZE];
+
+    bool mDoLzham;
+
 public:
     // compresison level should be a value: 1 through 9
-    DecoderCompressionMultiwriter(DecoderWriter *w, uint8_t compression_level, bool replace_magic,
+    DecoderCompressionMultiwriter(DecoderWriter *w, uint8_t compression_level, bool replace_magic, bool do_lzham,
                                   ThreadContext *workers, const JpegAllocator<uint8_t> &alloc,
                                   SizeEstimator *sizeEstimate); // can pass in NULL if you plan to set it later
     void setEstimatedFileSize(SizeEstimator *sizeEstimate);
@@ -140,6 +144,7 @@ class SIRIKATA_EXPORT FaultInjectorXZ {
     virtual ~FaultInjectorXZ(){}
 };
 
+
 SIRIKATA_FUNCTION_EXPORT JpegError CompressAnyto7Z(DecoderReader &r, DecoderWriter &w,
                                                    uint8 compression_level,
                                                    const JpegAllocator<uint8_t> &alloc);
@@ -152,12 +157,14 @@ SIRIKATA_FUNCTION_EXPORT JpegError CompressAnytoLZHAM(DecoderReader &r, DecoderW
 SIRIKATA_FUNCTION_EXPORT JpegError DecompressLZHAMtoAny(DecoderReader &r, DecoderWriter &w,
                                                      const JpegAllocator<uint8_t> &alloc);
 
-SIRIKATA_FUNCTION_EXPORT ThreadContext* MakeThreadContext(int nThreads, const JpegAllocator<uint8_t> &alloc);
+SIRIKATA_FUNCTION_EXPORT ThreadContext* MakeThreadContext(int nThreads, const JpegAllocator<uint8_t> &alloc, bool enable_lzham = true);
 SIRIKATA_FUNCTION_EXPORT void DestroyThreadContext(ThreadContext *);
-SIRIKATA_FUNCTION_EXPORT ThreadContext* TestMakeThreadContext(int nThreads, const JpegAllocator<uint8_t> &alloc, bool depriv, FaultInjectorXZ *fi);
+SIRIKATA_FUNCTION_EXPORT ThreadContext* TestMakeThreadContext(int nThreads, const JpegAllocator<uint8_t> &alloc,
+                                                              bool depriv, FaultInjectorXZ *fi, bool enable_lzham = true);
 
 SIRIKATA_FUNCTION_EXPORT JpegError MultiCompressAnyto7Z(DecoderReader &r, DecoderWriter &w,
                                                         uint8 compression_level,
+                                                        bool do_lzham,
                                                         SizeEstimator *mSizeEstimate,
                                                         ThreadContext *workers);
 

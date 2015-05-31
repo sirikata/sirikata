@@ -536,6 +536,7 @@ SIRIKATA_FUNCTION_EXPORT JpegError DecompressARHCtoJPEG(DecoderReader &r, Decode
 class ThreadContext;
 SIRIKATA_FUNCTION_EXPORT JpegError CompressJPEGtoARHCMulti(DecoderReader &r, DecoderWriter &w,
                                                            uint8 compression_level, uint8 componentCoalescing,
+                                                           bool do_lzham,
                                                            ThreadContext *tc);
 SIRIKATA_FUNCTION_EXPORT JpegError DecompressARHCtoJPEGMulti(DecoderReader &r, DecoderWriter &w,
                                                              ThreadContext *tc);
