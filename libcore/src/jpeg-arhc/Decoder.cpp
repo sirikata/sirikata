@@ -1,4 +1,4 @@
-/*  Sirikata Jpeg Texture Transfer Test Suite -- Texture Transfer management system
+/*  Sirikata Jpeg Texture Transfer -- Texture Transfer management system
  *  main.cpp
  *
  *  Copyright (c) 2015, Daniel Reiter Horn
