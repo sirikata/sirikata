@@ -32,7 +32,9 @@
 #include <cxxtest/TestSuite.h>
 #include <sirikata/core/util/Paths.hpp>
 #include <sirikata/core/jpeg-arhc/Compression.hpp>
+#include <sirikata/core/jpeg-arhc/Decoder.hpp>
 #include <sirikata/core/jpeg-arhc/BumpAllocator.hpp>
+#include <sirikata/core/jpeg-arhc/MultiCompression.hpp>
 #ifdef __linux
 #include <sys/wait.h>
 #include <linux/seccomp.h>

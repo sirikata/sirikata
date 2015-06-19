@@ -39,8 +39,11 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <assert.h>
 #include <sirikata/core/jpeg-arhc/Compression.hpp>
+#include <sirikata/core/jpeg-arhc/MultiCompression.hpp>
+#include <sirikata/core/jpeg-arhc/Decoder.hpp>
 #include <sirikata/core/jpeg-arhc/BumpAllocator.hpp>
 #include <sys/time.h>
 #include <sys/syscall.h>

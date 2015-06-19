@@ -12,6 +12,7 @@
 #include <sirikata/core/options/Options.hpp>
 #include <sirikata/core/options/CommonOptions.hpp>
 #include <sirikata/core/jpeg-arhc/Compression.hpp>
+#include <sirikata/core/jpeg-arhc/Decoder.hpp>
 #include <boost/bind.hpp>
 #include <sirikata/core/transfer/HttpTransferHandler.hpp>
 #include <sirikata/core/transfer/URL.hpp>

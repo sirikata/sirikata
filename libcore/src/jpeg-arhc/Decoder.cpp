@@ -37,6 +37,7 @@
 //
 #include <stdio.h>
 #include <sirikata/core/jpeg-arhc/Compression.hpp>
+#include <sirikata/core/jpeg-arhc/Decoder.hpp>
 namespace Sirikata {
 
 template<class T, class Al> void appendByte(std::vector<T, Al>&buffer, T item) {

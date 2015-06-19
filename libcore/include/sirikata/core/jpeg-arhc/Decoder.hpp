@@ -41,128 +41,10 @@
 //#include <sirikata/core/util/Platform.hpp>
 #include "DecoderPlatform.hpp"
 #include "Huffman.hpp"
+#include "Reader.hpp"
+#include "SizeEstimator.hpp"
 namespace Sirikata {
 
-template<class T> class JpegAllocator {
-    template<class U> friend class JpegAllocator;
-    typedef void *(CustomAllocate)(void *opaque, size_t nmemb, size_t size);
-    typedef void (CustomDeallocate)(void *opaque, void *ptr);
-    // the required functions for lzham (note the requirement of opaque ptr at the end)
-    typedef void *(CustomReallocate)(void * ptr, size_t size, size_t *actualSize, unsigned int movable, void *opaque);
-    typedef size_t (CustomMsize)(void * ptr, void *opaque);
-    CustomAllocate *custom_allocate;
-    CustomDeallocate *custom_deallocate;
-    CustomReallocate *custom_reallocate;
-    CustomMsize *custom_msize;
-    void * opaque;
-    static void *malloc_wrapper(void *opaque, size_t nmemb, size_t size) {
-        return malloc(nmemb * size);
-    }
-    static void free_wrapper(void *opaque, void *ptr) {
-        free(ptr);
-    }
-public:
-    template <class U> bool operator == (const JpegAllocator<U> &other) {
-        return custom_allocate == other.custom_allocate && custom_deallocate == other.custom_deallocate && opaque == other.opaque;
-    }
-    template <class U> bool operator != (const JpegAllocator<U> &other) {
-        return !((*this) == other);
-    }
-    typedef size_t size_type;
-    typedef ptrdiff_t difference_type;
-    typedef T* pointer;
-    typedef const T* const_pointer;
-    typedef T& reference;
-    typedef const T& const_reference;
-    typedef T value_type;
-    CustomAllocate* get_custom_allocate() const{
-        return custom_allocate;
-    }
-    CustomDeallocate* get_custom_deallocate() const{
-        return custom_deallocate;
-    }
-    CustomReallocate* get_custom_reallocate() const{
-        return custom_reallocate;
-    }
-    CustomMsize* get_custom_msize() const{
-        return custom_msize;
-    }
-    void *get_custom_state() const {
-        return opaque;
-    }
-    ///starts up with malloc/free implementation
-    JpegAllocator() throw() {
-        custom_allocate = &malloc_wrapper;
-        custom_deallocate = &free_wrapper;
-        custom_reallocate = NULL;
-        custom_msize = NULL;
-        opaque = NULL;
-    }
-    template <class U> struct rebind { typedef JpegAllocator<U> other; };
-    JpegAllocator(const JpegAllocator&other)throw() {
-        custom_allocate = other.custom_allocate;
-        custom_deallocate = other.custom_deallocate;
-        custom_reallocate = other.custom_reallocate;
-        custom_msize = other.custom_msize;
-        opaque = other.opaque;
-    }
-    template <typename U> JpegAllocator(const JpegAllocator<U>&other) throw(){
-        custom_allocate = other.custom_allocate;
-        custom_deallocate = other.custom_deallocate;
-        custom_reallocate = other.custom_reallocate;
-        custom_msize = other.custom_msize;
-        opaque = other.opaque;
-    }
-    ~JpegAllocator()throw() {}
-
-     //this sets up the memory subsystem with the arg for this and all copied allocators
-    void setup_memory_subsystem(size_t arg,
-                                unsigned char alignment,
-                                void *(custom_init)(size_t prealloc_size, unsigned char alignment),
-                                CustomAllocate *custom_allocate,
-                                CustomDeallocate *custom_deallocate,
-                                CustomReallocate *custom_reallocate,
-                                CustomMsize *custom_msize) {
-        this->opaque = custom_init(arg, alignment);
-        this->custom_allocate = custom_allocate;
-        this->custom_deallocate = custom_deallocate;
-        this->custom_reallocate = custom_reallocate;
-        this->custom_msize = custom_msize;
-    }
-    // this tears down all users of this memory subsystem
-    void teardown_memory_subsystem(void (*custom_deinit)(void *opaque)) {
-        (*custom_deinit)(opaque);
-        opaque = NULL;
-    }
-
-    pointer allocate(size_type s, void const * = 0) {
-        if (0 == s)
-            return NULL;
-        pointer temp = (pointer)(*custom_allocate)(opaque, 1, s * sizeof(T)); 
-#ifdef __EXCEPTIONS
-        if (temp == NULL)
-            throw std::bad_alloc();
-#endif
-        return temp;
-    }
-
-    void deallocate(pointer p, size_type) {
-        (*custom_deallocate)(opaque, p);
-    }
-
-    size_type max_size() const throw() { 
-        return 0xffffffff / sizeof(T); 
-    }
-
-    void construct(pointer p, const T& val) {
-        new((void *)p) T(val);
-    }
-
-    void destroy(pointer p) {
-        p->~T();
-    }
-    
-};
 struct JpegBlock {
     enum {
         blockSize = 64
@@ -180,52 +62,6 @@ struct JpegBlock {
         return block[offset];
     }
 };
-class JpegError {
-    explicit JpegError(const char * wh):mWhat(ERR_MISC) {
-    }
-public:
-    enum ErrorMessage{
-        NO_ERROR,
-        ERR_EOF,
-        ERR_FF00,
-        ERR_SHORT_HUFFMAN,
-        ERR_MISC
-    } mWhat;
-    static JpegError MakeFromStringLiteralOnlyCallFromMacro(const char*wh) {
-        return JpegError(ERR_MISC, ERR_MISC);
-    }
-    explicit JpegError(ErrorMessage err, ErrorMessage err2):mWhat(err) {
-
-    }
-    JpegError() :mWhat() { // uses default allocator--but it won't allocate, so that's ok
-        mWhat = NO_ERROR;
-    }
-    const char * what() const {
-        if (mWhat == NO_ERROR) return "";
-        if (mWhat == ERR_EOF) return "EOF";
-        if (mWhat == ERR_FF00) return "MissingFF00";
-        if (mWhat == ERR_SHORT_HUFFMAN) return "ShortHuffman";
-        return "MiscError";
-    }
-    operator bool() {
-        return mWhat != NO_ERROR;
-    }
-    static JpegError nil() {
-        return JpegError();
-    }
-    static JpegError errEOF() {
-        return JpegError(ERR_EOF,ERR_EOF);
-    }
-    static JpegError errMissingFF00() {
-        return JpegError(ERR_FF00, ERR_FF00);
-    }
-    static JpegError errShortHuffmanData(){
-        return JpegError(ERR_SHORT_HUFFMAN, ERR_SHORT_HUFFMAN);
-    }
-};
-#define MakeJpegError(s) JpegError::MakeFromStringLiteralOnlyCallFromMacro("" s)
-#define JpegErrorUnsupportedError(s) MakeJpegError("unsupported JPEG feature: " s)
-#define JpegErrorFormatError(s) MakeJpegError("unsupported JPEG feature: " s)
 
 
 // Component specification, specified in section B.2.2.
@@ -238,52 +74,6 @@ struct SIRIKATA_EXPORT component {
         memset(this, 0, sizeof(component));
     }
 };
-
-class SIRIKATA_EXPORT DecoderReader {
-public:
-    virtual std::pair<uint32, JpegError> Read(uint8*data, unsigned int size) = 0;
-    virtual ~DecoderReader(){}
-};
-class SIRIKATA_EXPORT DecoderWriter {
-public:
-    virtual std::pair<uint32, JpegError> Write(const uint8*data, unsigned int size) = 0;
-    virtual void Close() = 0;
-    virtual ~DecoderWriter(){}
-};
-
-class SIRIKATA_EXPORT MemReadWriter : public Sirikata::DecoderWriter, public Sirikata::DecoderReader {
-    std::vector<Sirikata::uint8, JpegAllocator<uint8_t> > mBuffer;
-    size_t mReadCursor;
-    size_t mWriteCursor;
-  public:
-    MemReadWriter(const JpegAllocator<uint8_t> &alloc) : mBuffer(alloc){
-        mReadCursor = 0;
-        mWriteCursor = 0;
-    }
-    void Close() {
-        mReadCursor = 0;
-        mWriteCursor = 0;
-    }
-    void SwapIn(std::vector<Sirikata::uint8, JpegAllocator<uint8_t> > &buffer, size_t offset) {
-        mReadCursor = offset;
-        mWriteCursor = buffer.size();
-        buffer.swap(mBuffer);
-    }
-    void CopyIn(const std::vector<Sirikata::uint8, JpegAllocator<uint8_t> > &buffer, size_t offset) {
-        mReadCursor = offset;
-        mWriteCursor = buffer.size();
-        mBuffer = buffer;
-    }
-    virtual std::pair<Sirikata::uint32, Sirikata::JpegError> Write(const Sirikata::uint8*data, unsigned int size);
-    virtual std::pair<Sirikata::uint32, Sirikata::JpegError> Read(Sirikata::uint8*data, unsigned int size);
-    std::vector<Sirikata::uint8, JpegAllocator<uint8_t> > &buffer() {
-        return mBuffer;
-    }
-    const std::vector<Sirikata::uint8, JpegAllocator<uint8_t> > &buffer() const{
-        return mBuffer;
-    }
-};
-
 
 
 struct SIRIKATA_EXPORT BitByteStream {
@@ -305,23 +95,7 @@ struct SIRIKATA_EXPORT BitByteStream {
     uint32 estimatedByteSize()const;
     void flushBits(bool stuffBits);
 };
-class SIRIKATA_EXPORT SizeEstimator {
-  public:
-    virtual bool estimatedSizeReady() const = 0;
-    virtual size_t getEstimatedSize() const = 0;
-    virtual ~SizeEstimator(){}
-};
-class SIRIKATA_EXPORT ConstantSizeEstimator : public SizeEstimator {
-    size_t mSize;
-public:
-    ConstantSizeEstimator(size_t size) : mSize(size) {}
-    virtual bool estimatedSizeReady() const {
-        return true;
-    }
-    virtual size_t getEstimatedSize() const {
-        return mSize;
-    }
-};
+
 class SIRIKATA_EXPORT Decoder : public SizeEstimator {
     mutable size_t mEstimatedSize;
     mutable enum {

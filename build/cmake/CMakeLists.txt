@@ -1402,6 +1402,7 @@ SET(SIRIKATA_CORE_SOURCES
 	${LIBCORE_SOURCE_DIR}/jpeg-arhc/BumpAllocator.cpp
 	${LIBCORE_SOURCE_DIR}/jpeg-arhc/Decoder.cpp
 	${LIBCORE_SOURCE_DIR}/jpeg-arhc/Compression.cpp
+	${LIBCORE_SOURCE_DIR}/jpeg-arhc/MultiCompression.cpp
 	${LIBCORE_SOURCE_DIR}/jpeg-arhc/Huffman.cpp
     ${TOP_LEVEL}/externals/http-parser/http_parser.c
 	${LIBCORE_SOURCE_DIR}/transfer/DataURI.cpp
