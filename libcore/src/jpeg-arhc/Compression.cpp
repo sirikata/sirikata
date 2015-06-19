@@ -30,7 +30,7 @@
 #include <string.h>
 
 #include <sirikata/core/jpeg-arhc/Compression.hpp>
-#include <sirikata/core/jpeg-arhc/MultiCompression.hpp>
+
 #include <lzma.h>
 #if __GXX_EXPERIMENTAL_CXX0X__ || __cplusplus > 199711L
 #include <thread>
@@ -100,7 +100,7 @@ void writeLZHAMHeader(uint8 * output, uint8 dictSize, uint32 fileSize) {
 }
 
 
-
+#ifdef HAS_LZHAM
 std::pair<lzham_decompress_params, JpegError> makeLZHAMDecodeParams(const uint8 header[LZHAM0_HEADER_SIZE]) {
     std::pair<lzham_decompress_params, JpegError> retval;
     retval.second = JpegError::nil();
@@ -113,7 +113,7 @@ std::pair<lzham_decompress_params, JpegError> makeLZHAMDecodeParams(const uint8 
     }
     return retval;
 }
-
+#endif
 
 std::pair<Sirikata::uint32, Sirikata::JpegError> MemReadWriter::Write(const Sirikata::uint8*data, unsigned int size) {
     using namespace Sirikata;
@@ -204,7 +204,7 @@ void MagicNumberReplacementWriter::Close() {
 }
 
 
-
+#ifdef HAS_LZHAM
 lzham_compress_params makeLZHAMEncodeParams(int level) {
     lzham_compress_params params;
     memset(&params, 0, sizeof(params));
@@ -462,6 +462,7 @@ LZHAMCompressionWriter::~LZHAMCompressionWriter() {
     assert(mClosed);
     lzham_compress_deinit((lzham_compress_state_ptr)mLzham);
 }
+#endif
 
 
 DecoderDecompressionReader::DecoderDecompressionReader(DecoderReader *r,
@@ -490,7 +491,7 @@ DecoderDecompressionReader::DecoderDecompressionReader(DecoderReader *r,
             assert(ret == LZMA_OK && "the stream decoder was not initialized properly");
         }
     }
-};
+}
 
 std::pair<uint32, JpegError> DecoderDecompressionReader::Read(uint8*data,
                                                               unsigned int size){

@@ -32,7 +32,7 @@
 namespace Sirikata {
 
 class JpegError {
-    explicit JpegError(const char * wh):mWhat(ERR_MISC) {
+    explicit JpegError(const char * ):mWhat(ERR_MISC) {
     }
 public:
     enum ErrorMessage{
@@ -42,10 +42,10 @@ public:
         ERR_SHORT_HUFFMAN,
         ERR_MISC
     } mWhat;
-    static JpegError MakeFromStringLiteralOnlyCallFromMacro(const char*wh) {
+    static JpegError MakeFromStringLiteralOnlyCallFromMacro(const char*) {
         return JpegError(ERR_MISC, ERR_MISC);
     }
-    explicit JpegError(ErrorMessage err, ErrorMessage err2):mWhat(err) {
+    explicit JpegError(ErrorMessage err, ErrorMessage ):mWhat(err) {
 
     }
     JpegError() :mWhat() { // uses default allocator--but it won't allocate, so that's ok
