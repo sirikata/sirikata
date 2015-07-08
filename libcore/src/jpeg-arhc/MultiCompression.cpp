@@ -702,7 +702,7 @@ std::pair<uint32, JpegError> DecoderDecompressionMultireader::Read(uint8*data,
                 new((void*)mFallbackDecompressionReader)LZHAMDecompressionReader(&mFallbackMemReader, mBuffer.get_allocator()); // inplace new
             } else {
                 mFallbackDecompressionReader = JpegAllocator<DecoderDecompressionReader>(mBuffer.get_allocator()).allocate(1);
-                new((void*)mFallbackDecompressionReader)DecoderDecompressionReader(&mFallbackMemReader, mBuffer.get_allocator()); // inplace new
+                new((void*)mFallbackDecompressionReader)DecoderDecompressionReader(&mFallbackMemReader, true, mBuffer.get_allocator()); // inplace new
             }
             DeferDrainJobs dj(mWorkers, mNumSuccessfulComponents + 1, mNumComponents);
             return mFallbackDecompressionReader->Read(data, size);            

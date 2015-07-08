@@ -798,7 +798,7 @@ JpegError DecompressARHCtoJPEG(DecoderReader &r, DecoderWriter &w,
     MagicNumberReplacementReader magic(&r,
                                        std::vector<uint8_t, JpegAllocator<uint8_t> >(MAGIC_ARHC, MAGIC_ARHC + sizeof(MAGIC_ARHC), alloc),
                                        std::vector<uint8_t, JpegAllocator<uint8_t> >(MAGIC_7Z, MAGIC_7Z + sizeof(MAGIC_7Z), alloc));
-    DecoderDecompressionReader cr(&magic, alloc);
+    DecoderDecompressionReader cr(&magic, true, alloc);
     Decoder d(alloc);
     return d.decode(cr, w, 0);
 }

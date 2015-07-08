@@ -466,8 +466,11 @@ LZHAMCompressionWriter::~LZHAMCompressionWriter() {
 
 
 DecoderDecompressionReader::DecoderDecompressionReader(DecoderReader *r,
+                                                       bool concatenated,
                                                        const JpegAllocator<uint8_t> &alloc)
         : mAlloc(alloc) {
+    mClosed = false;
+    mStreamEndEncountered = false;
     mBase = r;
     mStream = LZMA_STREAM_INIT;
     mLzmaAllocator.alloc = mAlloc.get_custom_allocate();
@@ -476,7 +479,7 @@ DecoderDecompressionReader::DecoderDecompressionReader(DecoderReader *r,
     mStream.allocator = &mLzmaAllocator;
 
     lzma_ret ret = lzma_stream_decoder(
-			&mStream, UINT64_MAX, LZMA_CONCATENATED);
+        &mStream, UINT64_MAX, concatenated ? LZMA_CONCATENATED : 0);
 	mStream.next_in = NULL;
 	mStream.avail_in = 0;
     if (ret != LZMA_OK) {
@@ -511,6 +514,9 @@ std::pair<uint32, JpegError> DecoderDecompressionReader::Read(uint8*data,
         }
         lzma_ret ret = lzma_code(&mStream, action);
         if (mStream.avail_out == 0 || ret == LZMA_STREAM_END) {
+            if (ret == LZMA_STREAM_END) {
+                mStreamEndEncountered = true;
+            }
             unsigned int write_size = size - mStream.avail_out;
             return std::pair<uint32, JpegError>(write_size,JpegError::nil());
 /*                                                (ret == LZMA_STREAM_END
@@ -535,9 +541,14 @@ std::pair<uint32, JpegError> DecoderDecompressionReader::Read(uint8*data,
     }
     return std::pair<uint32, JpegError>(0, MakeJpegError("Unreachable"));
 }
-
+void DecoderDecompressionReader::Close() {
+    if (!mClosed) {
+        lzma_end(&mStream);
+    }
+    mClosed = true;
+}
 DecoderDecompressionReader::~DecoderDecompressionReader() {
-    lzma_end(&mStream);
+    Close();
 }
 
 
@@ -665,10 +676,9 @@ JpegError CompressAnyto7Z(DecoderReader &r, DecoderWriter &w, uint8 compression_
 }
 // Decode reads a JPEG image from r and returns it as an image.Image.
 JpegError Decompress7ZtoAny(DecoderReader &r, DecoderWriter &w, const JpegAllocator<uint8> &alloc) {
-    DecoderDecompressionReader cr(&r, alloc);
+    DecoderDecompressionReader cr(&r, true, alloc);
     return Copy(cr, w, alloc);
 }
-
 
 // Decode reads a JPEG image from r and returns it as an image.Image.
 JpegError CompressAnytoLZHAM(DecoderReader &r, DecoderWriter &w, uint8 compression_level, const JpegAllocator<uint8> &alloc) {

@@ -61,6 +61,7 @@ public:
 };
 
 class SIRIKATA_EXPORT LZHAMDecompressionReader : public DecoderReader {
+ protected:
     JpegAllocator<uint8_t> mAlloc;
     unsigned char mReadBuffer[4 * 65536];
     unsigned char *mReadOffset;
@@ -93,15 +94,19 @@ public:
 
 
 class SIRIKATA_EXPORT DecoderDecompressionReader : public DecoderReader {
+protected:
     JpegAllocator<uint8_t> mAlloc;
     unsigned char mReadBuffer[4096];
     lzma_allocator mLzmaAllocator;
     lzma_stream mStream;
     DecoderReader *mBase;
+    bool mClosed;
+    bool mStreamEndEncountered;
 public:
-    DecoderDecompressionReader(DecoderReader *r, const JpegAllocator<uint8_t> &alloc);
+    DecoderDecompressionReader(DecoderReader *r, bool concatenated, const JpegAllocator<uint8_t> &alloc);
     virtual std::pair<uint32, JpegError> Read(uint8*data, unsigned int size);
     virtual ~DecoderDecompressionReader();
+    void Close();
 };
 
 class SIRIKATA_EXPORT DecoderCompressionWriter : public DecoderWriter {
