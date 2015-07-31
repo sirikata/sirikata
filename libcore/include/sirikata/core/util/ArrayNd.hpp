@@ -1,5 +1,5 @@
-/*  Sirikata Utilities -- Sirikata Synchronization Utilities
- *  Array.hpp
+/*  Sirikata Utilities -- Sirikata Array Utilities
+ *  ArrayNd.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
