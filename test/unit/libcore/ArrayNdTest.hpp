@@ -6,6 +6,37 @@ class ArrayNdTest : public CxxTest::TestSuite
         (void)i;
     }
 public:
+    struct SetNeg5 {
+        void operator()(int &i) const{
+            i = 5;
+        }
+    };
+    struct Sum {
+        mutable uint64_t total;
+        Sum() {
+            total = 0;
+        }
+        void operator()(const int &i) const{
+            total += i;
+        }
+    };
+    void testMemset() {
+        using namespace Sirikata;
+        Array7d<int, 1,3,2,5,4,6,16> a7d;
+
+        a7d.foreach(SetNeg5());
+        assert(a7d.at(0, 2, 1, 3, 2, 0, 0) == 5);
+        assert(a7d.at(0, 2, 1, 3, 2, 1, 0) == 5);
+        a7d.at(0, 2, 1, 3, 2, 1).memset(0x7f);
+        assert(a7d.at(0, 2, 1, 3, 2, 1, 0) == 0x7f7f7f7f);
+        assert(a7d.at(0, 2, 1, 3, 2, 1, 1) == 0x7f7f7f7f);
+        assert(a7d.at(0, 2, 1, 3, 2, 1, 15) == 0x7f7f7f7f);
+        assert(a7d.at(0, 2, 1, 3, 2, 0, 0) == 5); // check it only affected the slice
+        Sum s;
+        a7d.foreach(s);
+        assert(s.total == 34225051808ULL);
+    }
+
     void testSetAt() {
         using namespace Sirikata;
         AlignedArray7d<unsigned char, 1,3,2,5,4,6,16> aligned7d;
@@ -35,6 +66,9 @@ public:
             a7.at(0).at(0).at(0).at(0).at(0).at(0).at(0) = 47;
             assert(a7.at(0,0,0,0,0,0,0) == 47);
         }
+        assert(a7.size()[0] == 1);
+        assert(a7.size()[1] == 3);
+        assert(a7.size()[6] == 16);
         podtest(4, a7);
         
     }
