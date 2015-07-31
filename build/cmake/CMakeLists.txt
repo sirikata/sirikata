@@ -1513,6 +1513,7 @@ ELSE()
  ${LIBCORE_INCLUDE_DIR}/sirikata/core/options/OptionValue.hpp
  ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/Any.hpp
  ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/Array.hpp
+ ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/ArrayNd.hpp
  ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/BoundingBox.hpp
  ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/BoundingSphere.hpp
  ${LIBCORE_INCLUDE_DIR}/sirikata/core/util/Factory.hpp
@@ -1979,6 +1980,7 @@ ${TEST_LIBCORE_SOURCE_DIR}/TransferTest.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/LosslessJpegTest.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/CompressionTest.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/ArithmeticCodingTest.hpp
+${TEST_LIBCORE_SOURCE_DIR}/ArrayNdTest.hpp
 #${TEST_LIBCORE_SOURCE_DIR}/TransferUploadTest.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/AnyTest.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/AtomicTest.hpp
