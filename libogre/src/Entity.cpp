@@ -432,6 +432,7 @@ void Entity::loadMesh(Mesh::MeshdataPtr meshdata, const String& meshname, const 
    
 
     mAnimationList = animations;
+    if (mMeshName.find("aggregate_mesh") != mMeshName.npos) mIsAggregate = true;
 
     if (!ogreHasAsset(meshname)) {
         SILOG(ogre, error, "Requested load of asset that hasn't been loaded into Ogre (" << meshname << ")");

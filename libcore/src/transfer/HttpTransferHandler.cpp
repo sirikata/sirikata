@@ -11,11 +11,12 @@
 #include <sirikata/core/transfer/RemoteFileMetadata.hpp>
 #include <sirikata/core/options/Options.hpp>
 #include <sirikata/core/options/CommonOptions.hpp>
+#include <sirikata/core/jpeg-arhc/Compression.hpp>
+#include <sirikata/core/jpeg-arhc/Decoder.hpp>
 #include <boost/bind.hpp>
 #include <sirikata/core/transfer/HttpTransferHandler.hpp>
 #include <sirikata/core/transfer/URL.hpp>
 #include <boost/lexical_cast.hpp>
-
 AUTO_SINGLETON_INSTANCE(Sirikata::Transfer::HttpNameHandler);
 AUTO_SINGLETON_INSTANCE(Sirikata::Transfer::HttpChunkHandler);
 
@@ -251,11 +252,43 @@ void HttpChunkHandler::request_finished(std::tr1::shared_ptr<HttpManager::HttpRe
         callback(bad);
         return;
     }
+    bool is7z = false;
+    bool isArhc = false;
+    if (response->getData()->length()) {
+        is7z = DecodeIs7z(response->getData()->data(),
+                          response->getData()->length());
+        isArhc = DecodeIsARHC(response->getData()->data(),
+                              response->getData()->length());
+    }
+
+    std::tr1::shared_ptr<DenseData> uncompressedFile = response->getData();
+    if (is7z || isArhc) {
+        JpegAllocator<uint8_t> alloc;
+        MemReadWriter input(alloc);
+        input.Write(response->getData()->data(), response->getData()->length());
+        MemReadWriter output(alloc);
+        JpegError isDecompressOk = JpegError::nil();
+        if (is7z) {
+            isDecompressOk = Decompress7ZtoAny(input, output, alloc);
+        }
+        if (isArhc) {
+            isDecompressOk = DecompressARHCtoJPEG(input, output, alloc);
+        }
+        if (isDecompressOk == JpegError::nil()) {
+            std::tr1::shared_ptr<DenseData> uncData(new DenseData(Range(response->getData()->startbyte(),
+                                                                        output.buffer().size(),
+                                                                        Transfer::LENGTH,
+                                                                        response->getData()->goesToEndOfFile()),
+                                                                  std::vector<uint8_t>(output.buffer().begin(),
+                                                                                    output.buffer().end())));
+            uncompressedFile = uncData;
+        }
+    }
 
     SILOG(transfer, detailed, "about to call addToCache with fingerprint ID = " << file->getFingerprint().convertToHexString());
-    SharedChunkCache::getSingleton().getCache()->addToCache(file->getFingerprint(), response->getData());
+    SharedChunkCache::getSingleton().getCache()->addToCache(file->getFingerprint(), uncompressedFile);
 
-    callback(response->getData());
+    callback(uncompressedFile);
     SILOG(transfer, detailed, "done http chunk handler request_finished");
 }
 
