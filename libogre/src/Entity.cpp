@@ -428,6 +428,8 @@ void Entity::loadMesh(Mesh::MeshdataPtr meshdata, const String& meshname, const 
 {
     beginLoad();
     mMeshName = meshdata->uri;    
+    if (mMeshName.find("aggregate_mesh") != mMeshName.npos) mIsAggregate = true;
+   
 
     mAnimationList = animations;
 
@@ -450,7 +452,7 @@ void Entity::loadMesh(Mesh::MeshdataPtr meshdata, const String& meshname, const 
         return;
     }
 
-    SILOG(ogre,detailed,"Bounding box: " << new_entity->getBoundingBox());
+    SILOG(ogre,warn,"Bounding box: " << meshname << " : "  << new_entity->getBoundingBox());
 
     unsigned int num_subentities=new_entity->getNumSubEntities();
     SHA256 random_seed=SHA256::computeDigest(id());
@@ -487,7 +489,8 @@ void Entity::loadMesh(Mesh::MeshdataPtr meshdata, const String& meshname, const 
       Vector4f offsetFromCenter = meshdata->globalTransform.getCol(3);
       offsetFromCenter = offsetFromCenter * -1.f;      
       Vector3d aggregateOffset = Vector3d(offsetFromCenter.x, offsetFromCenter.y, offsetFromCenter.z);
-      
+ 
+     
       setOgrePosition(getOgrePosition() + aggregateOffset);
       mAggregateOffset = aggregateOffset;
     }
@@ -583,7 +586,7 @@ void Entity::unloadBillboard() {
 
 void Entity::setSelected(bool selected) {
       mSceneNode->showBoundingBox(selected);
-      SILOG(ogre,detailed,  "Selected mesh: " << mMeshName << " with radius: " << getRadius()  << " at position " <<  getOgrePosition() );
+      SILOG(ogre,error,  "Selected mesh: " << mMeshName << " with radius: " << getRadius()  << " at position " <<  getOgrePosition() );
 }
 
 const std::vector<String> Entity::getAnimationList() {
