@@ -176,6 +176,22 @@ uint32 countFaces(MeshdataPtr agg_mesh) {
   return numFaces;
 }
 
+BoundingBox3f transformBoundingBox(Matrix4x4f mat, BoundingBox3f& bbox) {
+  Vector3f min = bbox.min();
+  Vector3f max = bbox.max();
+
+  Vector4f v1(min.x, min.y, min.z, 1);
+  Vector4f v2(max.x, max.y, max.z, 1);
+
+  v1 = mat * v1;
+  v2 = mat * v2;
+
+  min = Vector3f(v1.x, v1.y, v1.z);
+  max = Vector3f(v2.x, v2.y, v2.z);
+
+  return BoundingBox3f(min, max);
+}
+
 
 float solidAngleFromDistanceRadius(float32 distance, float32 radius) {
 
@@ -1213,7 +1229,7 @@ uint32 MeshAggregateManager::checkTextureHashesAvailable(std::vector<AggregateOb
       }
     }
     if (!allTextureHashesAvailable) {
-      AGG_LOG(insane, "texture hash not available\n");
+      AGG_LOG(debug, "texture hash not available\n");
       return MISSING_CHILD_MESHES;
     }
 
@@ -1483,12 +1499,12 @@ uint32 MeshAggregateManager::generateAggregateMeshAsync(const UUID uuid, Time po
   }
   lock.unlock();
   std::tr1::unordered_map<String, String> textureToHashMap;
-  if (hasIndividualObjectChildren && !mAtlasingNeeded)
+  /*if (hasIndividualObjectChildren && !mAtlasingNeeded)
   {
     retval = checkTextureHashesAvailable(children, textureToHashMap, currentLocMap, localMeshStore);
     if (retval != 0)
       return retval;
-  }
+  }*/
 
   String* meshURIs = new String[children.size()];
   AGG_LOG(insane, children.size() << " : children.size()\n");
@@ -1528,6 +1544,8 @@ uint32 MeshAggregateManager::generateAggregateMeshAsync(const UUID uuid, Time po
   AGG_LOG(insane, mMeshStore.size() << " : mMeshStore.size()\n");
 
   std::tr1::unordered_map<String, MeshdataPtr> textureToModelMap;
+  std::map<int, BoundingBox3f> instanceToBBoxMap;
+
   for (uint32 i= 0; i < children.size(); i++) {
     UUID child_uuid = children[i]->mUUID;
     boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
@@ -1753,6 +1771,8 @@ uint32 MeshAggregateManager::generateAggregateMeshAsync(const UUID uuid, Time po
       // some may end up conflicting). For now, we just flatten these by
       // creating a new root node.
 
+      instanceToBBoxMap[geom_node_idx] = transformBoundingBox(trs * replacementAlignmentTransforms[i], originalMeshBoundingBox);
+
       agg_mesh->nodes.push_back( Node(trs * replacementAlignmentTransforms[i] * orig_geo_inst_xform) );
 
       agg_mesh->rootNodes.push_back(geom_node_idx);
@@ -1875,7 +1895,8 @@ uint32 MeshAggregateManager::generateAggregateMeshAsync(const UUID uuid, Time po
   // Doing the expansion is necessary for meshes higher up in tree, otherwise they
   //become too large!
 
-  if (countFaces(agg_mesh) > 10000) {
+  int NUM_SIMPLIFIED_FACES=1500;
+  if (countFaces(agg_mesh) > NUM_SIMPLIFIED_FACES) {
     if (averageVertices <= 40) {
       std::vector<String> names_and_args;
       names_and_args.push_back("squash-instanced-geometry"); names_and_args.push_back("");
@@ -1890,7 +1911,7 @@ uint32 MeshAggregateManager::generateAggregateMeshAsync(const UUID uuid, Time po
       delete squashFilter;
     }
     //Simplify the mesh...
-    mMeshSimplifier.simplify(agg_mesh, 10000);
+    mMeshSimplifier.simplify(agg_mesh, NUM_SIMPLIFIED_FACES, instanceToBBoxMap);
   }
 
   AGG_LOG(insane, agg_mesh->nodes.size() << " -- " << agg_mesh->rootNodes.size() << " nodes");

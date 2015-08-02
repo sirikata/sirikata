@@ -73,10 +73,21 @@ private:
 
   } QSlimStruct;
 
+  bool okToApplyStochastic(float totalInstances, 
+			   std::tr1::unordered_map<uint32, uint32>& submeshInstanceCount,
+			   std::map<int, BoundingBox3f>& instanceToBBoxMap) ;
+  bool applyStochastic(float totalInstances, 
+		       Mesh::MeshdataPtr agg_mesh,
+		       int32 targetFaces,
+		       std::tr1::unordered_map<uint32, uint32>& submeshInstanceCount,
+		       std::tr1::unordered_map<int, std::tr1::unordered_map<int,int>  >& vertexMapping1,
+		       std::map<int, BoundingBox3f>& instanceToBBoxMap
+		       );
 
 public:
 
   void simplify(Mesh::MeshdataPtr agg_mesh, int32 numFacesLeft);
+  void simplify(Mesh::MeshdataPtr agg_mesh, int32 numFacesLeft, std::map<int, BoundingBox3f>& instanceToBBoxMap);
 
 
 };
