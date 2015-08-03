@@ -1978,6 +1978,7 @@ SET(BENCH_SOURCES
 SET(CXXTESTSources
 ${TEST_LIBCORE_SOURCE_DIR}/TransferTest.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/LosslessJpegTest.hpp
+${TEST_LIBCORE_SOURCE_DIR}/MuxReadWriterTest.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/CompressionTest.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/ArithmeticCodingTest.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/ArrayNdTest.hpp
