@@ -86,6 +86,9 @@ class SIRIKATA_EXPORT MuxReader {
             std::vector<uint8_t, JpegAllocator<uint8_t> >::iterator first = incomingBuffer.begin(), last = incomingBuffer.end();
             do {
                 stream_id = 0xf & *first;
+                if (stream_id >= MAX_STREAM_ID) {
+                    return JpegError::errShortHuffmanData();
+                }
                 uint8_t flags = 0xf & (*first >> 4);
                 ++first;
                 uint32_t len = 0;
@@ -103,6 +106,7 @@ class SIRIKATA_EXPORT MuxReader {
                             len = (*first) + 0x100 * (uint16_t)len_buf[0];
                         }
                         first = last;
+                        ++len;
                     } else {
                         len = *first;
                         ++first;
@@ -139,6 +143,10 @@ class SIRIKATA_EXPORT MuxReader {
                     }
                 } else {
                     size_t remainingBytes = len - bodyBytesRead;
+                    ptrdiff_t nonzero = mBuffer[stream_id].size();
+                    if (nonzero<0) {
+                        assert(false&&"EMPTY");
+                    }
                     if (mOffset[stream_id] == mBuffer[stream_id].size()) {
                         mOffset[stream_id] = first - incomingBuffer.begin();
                         mBuffer[stream_id].swap(incomingBuffer);
@@ -184,18 +192,21 @@ class SIRIKATA_EXPORT MuxWriter {
 public:
     enum {MAX_STREAM_ID = MuxReader::MAX_STREAM_ID};
     enum {MIN_OFFSET = 3};
+    enum {MAX_BUFFER_LAG = 65537};
     std::vector<uint8_t, JpegAllocator<uint8_t> > mBuffer[MAX_STREAM_ID];
     uint32_t mOffset[MAX_STREAM_ID];
     uint32_t mFlushed[MAX_STREAM_ID];
-    uint32_t mUrgency;
+    uint32_t mTotalWritten;
+    uint32_t mLowWaterMark[MAX_STREAM_ID];
     MuxWriter(Writer* writer, const JpegAllocator<uint8_t> &alloc)
         : mWriter(writer) {
         for (uint8_t i = 0; i < MAX_STREAM_ID; ++i) { // assign a better allocator
             mBuffer[i] = std::vector<uint8_t, JpegAllocator<uint8_t> >(alloc);
             mOffset[i] = 0;
             mFlushed[i] = 0;
+            mLowWaterMark[i] = 0;
         }
-        mUrgency = 0;
+        mTotalWritten = 0;
     }
     uint32_t highWaterMark(uint32_t flushed) {
         if (flushed & 0xffffc000) {
@@ -225,6 +236,7 @@ public:
             assert((retval.first == toWrite + MIN_OFFSET || retval.second != JpegError::nil())
                    && "Writers must write full");
             if (retval.second == JpegError::nil()) {
+                mTotalWritten += toWrite;
                 mFlushed[stream_id] += toWrite;
                 mOffset[stream_id] += toWrite;
                 toBeFlushed -= toWrite;
@@ -234,9 +246,7 @@ public:
         }while(toBeFlushed > 0);
         mOffset[stream_id] = MIN_OFFSET;
         mBuffer[stream_id].resize(MIN_OFFSET);
-        if (mUrgency & (1 << stream_id)) {
-            mUrgency -= (1 << stream_id);
-        }
+        mLowWaterMark[stream_id] = mTotalWritten;
         return retval.second;
     }
 
@@ -278,6 +288,7 @@ public:
             if (retval.first != len + 1) {
                 return retval.second;
             }
+            mTotalWritten += len;
             mFlushed[stream_id] += len;
             mOffset[stream_id] += len;
             if (mOffset[stream_id] > 65539) {
@@ -291,35 +302,30 @@ public:
                 mOffset[stream_id] = MIN_OFFSET;
             }
         }
+        uint32_t delta = mBuffer[stream_id].size() - mOffset[stream_id];
+        if (delta > mTotalWritten) {
+            mLowWaterMark[stream_id] = 0;
+        } else {
+            // we're already delta behind the ground truth
+            mLowWaterMark[stream_id] = mTotalWritten - delta;
+        }
         return retval.second;
     }
     JpegError flush(uint8_t stream_id, uint32_t highWaterMark) {
         JpegError retval = JpegError::nil();
         for (uint8_t i= 0; i < MAX_STREAM_ID; ++i) {
             uint32_t toBeFlushed = mBuffer[i].size() - mOffset[i];
-            if (!toBeFlushed) {
+            if (i == stream_id || !toBeFlushed) {
                 continue;
             }
-            if (i == stream_id) {
-                if (mUrgency & (1 << i)) {
-                    mUrgency -= (1 << i);
-                }
-                retval = flushPartial(i, toBeFlushed);
-                continue;
-            }
-            bool isUrgent = (mUrgency & (1 << i)) ? true: false;
+            bool isUrgent = mTotalWritten - mLowWaterMark[i] > MAX_BUFFER_LAG;
             if (toBeFlushed < 256) {
                 if (isUrgent) {
                     // we need to flush what we have
                     retval = flushFull(i, toBeFlushed);
-                    mUrgency -= (1 << i);
-                } else {
-                    mUrgency |= (1 << i);
+                    assert(mTotalWritten == mLowWaterMark[i]);
                 }
             } else {
-                if (isUrgent) {
-                    mUrgency -= (1 << i);
-                }
                 if (isUrgent && toBeFlushed < 4096) {
                     retval = flushFull(i, toBeFlushed);
                 } else {
@@ -327,6 +333,8 @@ public:
                 }
             }
         }
+        uint32_t toBeFlushed = mBuffer[stream_id].size() - mOffset[stream_id];
+        retval = flushPartial(stream_id, toBeFlushed);
         return retval;
     }
     std::pair<uint32, JpegError> Write(uint8_t stream_id, const uint8*data, unsigned int size) {

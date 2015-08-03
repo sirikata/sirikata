@@ -3,7 +3,28 @@
 class MuxReadWriterTest : public CxxTest::TestSuite
 {
 public:
-
+    class LazyReaderWrapper : public Sirikata::DecoderReader{
+        Sirikata::DecoderReader *dr;
+        uint32_t mState;
+    public:
+        LazyReaderWrapper(Sirikata::DecoderReader *r) {
+            dr = r;
+            mState = 0;
+        }
+        std::pair<uint32_t, Sirikata::JpegError> Read(uint8_t *data, uint32_t size) {
+            ++mState;
+            if (mState%4 == 0) {
+                size = 1;
+            } else if (mState%4 == 1) {
+                size = std::min(size, 2U);
+            } else if (mState %4 == 2) {
+                size = std::min(size, 2U);
+            } else if (mState %4 == 3) {
+                size = std::min(size, 1U);
+            }
+            return dr->Read(data, size);
+        }
+    };
     void setupTestData(std::vector<uint8_t> *testData, size_t num_items) {
         for(size_t j = 0; j < num_items; ++j) {
             for (size_t i = 0; i + 3 < testData[j].size(); i += 4) {
@@ -33,20 +54,24 @@ public:
             }
         }
     }
-    
     void testEof() {
+        EofHelper(true);
+        EofHelper(false);
+    }
+    void EofHelper(bool useLazyWrapper) {
         std::vector<uint8_t> testData[4];
         uint32_t progress[sizeof(testData) / sizeof(testData[0])] = {0};
         const uint32_t a0 = 2, a1 = 257, b0 = 2, b1 = 4097,
             c0 = 256, c1 = 16385, d0 = 2, d1 = 32768, e0 = 256, e1 = 65537, f1 = 65536;
         const uint32_t maxtesty = a1 + b1 + c1 + d1 + e1 + f1;
-        testData[0].resize(256);
+        testData[0].resize(260 + 258);
         testData[1].resize(maxtesty);
         setupTestData(testData, sizeof(testData)/sizeof(testData[0]));
         using namespace Sirikata;
         JpegAllocator<uint8_t> alloc;
         MemReadWriter rw(alloc);
-        MuxReader reader(&rw, alloc);
+        LazyReaderWrapper lrw(&rw);
+        MuxReader reader(useLazyWrapper ? (DecoderReader*)&lrw : (DecoderReader*)&rw, alloc);
         MuxWriter writer(&rw, alloc);
         writer.Write(1, &testData[1][0], a1);
         writer.Write(0, &testData[0][0], a0);
@@ -107,6 +132,10 @@ public:
 
     }
     void testRoundtrip() {
+        RoundtripHelper(true);
+        RoundtripHelper(false);
+    }
+    void RoundtripHelper(bool useLazyWrapper) {
         std::vector<uint8_t> testData[4];
         std::vector<uint8_t> roundTrip[sizeof(testData) / sizeof(testData[0])];
         uint32_t progress[sizeof(testData) / sizeof(testData[0])] = {0};
@@ -123,7 +152,8 @@ public:
         using namespace Sirikata;
         JpegAllocator<uint8_t> alloc;
         MemReadWriter rw(alloc);
-        MuxReader reader(&rw, alloc);
+        LazyReaderWrapper lrw(&rw);
+        MuxReader reader(useLazyWrapper ? (DecoderReader*)&lrw : (DecoderReader*)&rw, alloc);
         MuxWriter writer(&rw, alloc);
         srand(1023);
         
