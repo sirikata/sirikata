@@ -55,7 +55,7 @@ public:
         assert(a7.at(0, 2, 1, 3, 2, 1, 0) == 5);
         a7.at(0, 2, 1, 3, 2, 1, 1) = 8;
         assert(a7.at(0, 2, 1, 3, 2, 1, 1) == 8);
-        Slice1d<unsigned char, 16> s = a7.at(0, 2, 1, 3, 2, 1);
+        Array1d<unsigned char, 16>::Slice s = a7.at(0, 2, 1, 3, 2, 1);
         s.at(1) = 16;
         assert(a7.at(0, 2, 1, 3, 2, 1, 1) == 16);
         s.at(0) = 6;
