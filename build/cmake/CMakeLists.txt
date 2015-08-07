@@ -1402,6 +1402,7 @@ SET(SIRIKATA_CORE_SOURCES
 	${LIBCORE_SOURCE_DIR}/jpeg-arhc/BumpAllocator.cpp
 	${LIBCORE_SOURCE_DIR}/jpeg-arhc/Decoder.cpp
 	${LIBCORE_SOURCE_DIR}/jpeg-arhc/Compression.cpp
+	${LIBCORE_SOURCE_DIR}/jpeg-arhc/Zlib0.cpp
 	${LIBCORE_SOURCE_DIR}/jpeg-arhc/ArithmeticCoder.cpp
 	${LIBCORE_SOURCE_DIR}/jpeg-arhc/MultiCompression.cpp
 	${LIBCORE_SOURCE_DIR}/jpeg-arhc/Huffman.cpp
@@ -1980,6 +1981,7 @@ ${TEST_LIBCORE_SOURCE_DIR}/TransferTest.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/LosslessJpegTest.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/MuxReadWriterTest.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/CompressionTest.hpp
+${TEST_LIBCORE_SOURCE_DIR}/Zlib0Test.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/ArithmeticCodingTest.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/ArrayNdTest.hpp
 #${TEST_LIBCORE_SOURCE_DIR}/TransferUploadTest.hpp

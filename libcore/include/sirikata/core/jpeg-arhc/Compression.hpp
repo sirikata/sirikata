@@ -124,6 +124,7 @@ public:
     virtual void Close();
 };
 
+
 SIRIKATA_FUNCTION_EXPORT void writeLZHAMHeader(uint8 * output, uint8 dictSize, uint32 fileSize);
 
 SIRIKATA_FUNCTION_EXPORT JpegError CompressAnyto7Z(DecoderReader &r, DecoderWriter &w,
