@@ -31,17 +31,104 @@ namespace Sirikata {
 uint32_t adler32(uint32_t adler, uint8_t *buf, uint32_t len);
 
 Zlib0Writer::Zlib0Writer(DecoderWriter * stream, int level){
-    assert(0);
+    mBase = stream;
+    mAllocBytesLeft = 0;
+    mWritten = 0;
+    mCompressed = 0;
+    mClosed = false;
+    mAdler32 = adler32(0, NULL, 0);
+    assert(level == 0 && "Only support stored/raw/literal zlib");
+    mFileSize = 0;
 }
+
 std::pair<uint32, JpegError> Zlib0Writer::Write(const uint8*data, unsigned int size) {
-    assert(0);
+    assert(mWritten + size<= mFilsSize);
+    if (mClosed || mWritten == mFileSize) {
+        return std::pair<uint32, JpegError>(0, JpegError::errEOF());
+    }
+    if (mWritten == 0) {
+        std::pair<uint32, JpegError> retval = writeHeader();
+        if (retval.second != JpegError::nil()) {
+            retval.first = 0;
+            return retval;
+        }
+    }
+    std::pair<uint32, JpegError> retval(0, JpegError::nil());
+    if (mBilledBytesLeft) { // we've already said we'll write these bytes...lets actually write them
+        unsigned int toWrite = std::min(size, (unsigned int)mBilledBytesLeft);
+        retval = stream->Write(data, toWrite);
+        if (retval.second.error != JpegError::nil()) {
+            mWritten += retval.first;
+            mCompressed += retval.first;
+            return retval;
+        }
+        mBilledBytesLeft -= toWrite;
+        mWritten += toWrite;
+        mCompressed += toWrite;
+        size -= toWrite;
+        data += toWrite;
+    }
+    while (size) {
+        uint8_t buffer[(1<<16) + 1 + 4];
+        const uint16_t max_size = 65535;
+        if (mWritten + max_size >= mFileSize) {
+            buffer[0] = 0x1; // last block
+            mBilledBytesLeft = mFileSize - mWritten;
+        } else {
+            buffer[0] = 0x0;
+            mBilledBytesLeft = max_size;
+        }
+        buffer[1] = mBilledBytesLeft & 0xff;
+        buffer[2] = (mBilledBytesLeft >> 8) & 0xff;
+        buffer[3] = (~buffer[1]) & 0xff;
+        buffer[4] = (~buffer[2]) & 0xff;
+        uint32_t toSend = 5;
+        uint32_t toWrite = std::min(mBilledBytesLeft, size);
+        memcpy(buffer + toSend, data, toWrite);
+        toSend += toWrite;
+        std::pair<uint32, JpegError> retval2 = stream->Write(buffer, toSend);
+        if (retval2.second != JpegError::nil()) {
+            if (retval2.first > toSend - toWrite) {
+                retval.first += retval2.first - (toSend - toWrite);
+                mWritten += retval2.first - (toSend - toWrite);
+                mCompressed += retval2.first;
+            }
+            retval.second = retval2.second;
+            return retval;
+        }
+        mWritten += toWrite;
+        mCompressed += toSend;
+        size -= size;
+        data += size;
+        retval.first += toWrite;
+    }
+    return retval;
 }
+
 Zlib0Writer::~Zlib0Writer() {
-    assert(0);
+    if (!mClosed) {
+        Close();
+    }
+}
+std::pair<uint32_t, JpegError> Zlib0Writer::writeHeader() {
+    unsigned int desired_checksum = 31;
+    const uint8_t buf[2] = {0x78, (desired_checksum - (0x78 << 8) % desired_checksum)};
+    return mStream->Write(buf, sizeof(buf));
 }
 /// writes the adler32 sum
 void Zlib0Writer::Close() {
-
+    assert(mWritten == mFileSize && "Must have written as much as promised");
+    uint8_t adler[4] = {mAdler32 & 0xff,
+                        (mAdler32 >> 8) & 0xff,
+                        (mAdler32 >> 16) & 0xff,
+                        (mAdler32 >> 24) & 0xff};
+    std::pair<uint32, JpegError> retval3 = mStream->Write(adler, 4);
+    if (retval3.second != JpegError::nil()) {
+        retval.second = retval3.second; // not able to close down the stream
+        return retval;
+    }
+    mClosed = true;
+    mStream->Close();
 }
 size_t Zlib0Writer::getCompressedSize(size_t originalSize) {
     assert(0);

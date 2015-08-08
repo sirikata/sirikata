@@ -34,16 +34,19 @@ namespace Sirikata {
  */
 class SIRIKATA_EXPORT Zlib0Writer : public DecoderReader {
     DecoderWriter *mBase;
+    // currently the system only works for a preconceived filesize
+    size_t mFileSize;
     size_t mWritten;
     size_t mCompressed;
     uint32_t mAdler32; // adler32 sum
-    enum {
-        BUFFER_SIZE=16384 // or should this be 65536 or 4096?
-    };
-    uint8_t mBuffer[BUFFER_SIZE];
-    uint32_t mBufferCapacity;
+    bool mClosed;
+    uint16_t mBilledBytesLeft; // how many bytes are left in this block
+    void writeHeader();
   public:
     Zlib0Writer(DecoderWriter * stream, int level);
+    void setFullFileSize(size_t size) {
+        mFileSize = size;
+    }
     virtual std::pair<uint32, JpegError> Write(const uint8*data, unsigned int size);
     virtual ~Zlib0Writer();
     /// writes the adler32 sum
