@@ -472,7 +472,8 @@ DecoderDecompressionReader::DecoderDecompressionReader(DecoderReader *r,
     mClosed = false;
     mStreamEndEncountered = false;
     mBase = r;
-    mStream = LZMA_STREAM_INIT;
+    lzma_stream tmp = LZMA_STREAM_INIT;
+    mStream = tmp;
     mLzmaAllocator.alloc = mAlloc.get_custom_allocate();
     mLzmaAllocator.free = mAlloc.get_custom_deallocate();
     mLzmaAllocator.opaque = mAlloc.get_custom_state();
@@ -558,7 +559,8 @@ DecoderCompressionWriter::DecoderCompressionWriter(DecoderWriter *w,
         : mAlloc(alloc) {
     mClosed = false;
     mBase = w;
-    mStream = LZMA_STREAM_INIT;
+    lzma_stream tmp = LZMA_STREAM_INIT;
+    mStream = tmp;
     mLzmaAllocator.alloc = mAlloc.get_custom_allocate();
     mLzmaAllocator.free = mAlloc.get_custom_deallocate();
     mLzmaAllocator.opaque = mAlloc.get_custom_state();
