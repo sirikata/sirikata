@@ -32,7 +32,7 @@ uint32_t adler32(uint32_t adler, uint8_t *buf, uint32_t len);
 
 Zlib0Writer::Zlib0Writer(DecoderWriter * stream, int level){
     mBase = stream;
-    mAllocBytesLeft = 0;
+    mBilledBytesLeft = 0;
     mWritten = 0;
     mCompressed = 0;
     mClosed = false;
@@ -42,7 +42,7 @@ Zlib0Writer::Zlib0Writer(DecoderWriter * stream, int level){
 }
 
 std::pair<uint32, JpegError> Zlib0Writer::Write(const uint8*data, unsigned int size) {
-    assert(mWritten + size<= mFilsSize);
+    assert(mWritten + size <= mFileSize);
     if (mClosed || mWritten == mFileSize) {
         return std::pair<uint32, JpegError>(0, JpegError::errEOF());
     }
@@ -56,8 +56,8 @@ std::pair<uint32, JpegError> Zlib0Writer::Write(const uint8*data, unsigned int s
     std::pair<uint32, JpegError> retval(0, JpegError::nil());
     if (mBilledBytesLeft) { // we've already said we'll write these bytes...lets actually write them
         unsigned int toWrite = std::min(size, (unsigned int)mBilledBytesLeft);
-        retval = stream->Write(data, toWrite);
-        if (retval.second.error != JpegError::nil()) {
+        retval = mBase->Write(data, toWrite);
+        if (retval.second != JpegError::nil()) {
             mWritten += retval.first;
             mCompressed += retval.first;
             return retval;
@@ -83,10 +83,10 @@ std::pair<uint32, JpegError> Zlib0Writer::Write(const uint8*data, unsigned int s
         buffer[3] = (~buffer[1]) & 0xff;
         buffer[4] = (~buffer[2]) & 0xff;
         uint32_t toSend = 5;
-        uint32_t toWrite = std::min(mBilledBytesLeft, size);
+        uint32_t toWrite = std::min((unsigned int)mBilledBytesLeft, size);
         memcpy(buffer + toSend, data, toWrite);
         toSend += toWrite;
-        std::pair<uint32, JpegError> retval2 = stream->Write(buffer, toSend);
+        std::pair<uint32, JpegError> retval2 = mBase->Write(buffer, toSend);
         if (retval2.second != JpegError::nil()) {
             if (retval2.first > toSend - toWrite) {
                 retval.first += retval2.first - (toSend - toWrite);
@@ -110,10 +110,10 @@ Zlib0Writer::~Zlib0Writer() {
         Close();
     }
 }
+const unsigned int desired_checksum = 31;
+static const uint8_t zlibHeader[2] = {0x78, (desired_checksum - (0x78 << 8) % desired_checksum)};
 std::pair<uint32_t, JpegError> Zlib0Writer::writeHeader() {
-    unsigned int desired_checksum = 31;
-    const uint8_t buf[2] = {0x78, (desired_checksum - (0x78 << 8) % desired_checksum)};
-    return mStream->Write(buf, sizeof(buf));
+    return mBase->Write(zlibHeader, sizeof(zlibHeader));
 }
 /// writes the adler32 sum
 void Zlib0Writer::Close() {
@@ -122,17 +122,19 @@ void Zlib0Writer::Close() {
                         (mAdler32 >> 8) & 0xff,
                         (mAdler32 >> 16) & 0xff,
                         (mAdler32 >> 24) & 0xff};
-    std::pair<uint32, JpegError> retval3 = mStream->Write(adler, 4);
-    if (retval3.second != JpegError::nil()) {
-        retval.second = retval3.second; // not able to close down the stream
-        return retval;
+    std::pair<uint32, JpegError> retval = mBase->Write(adler, 4);
+    if (retval.second != JpegError::nil()) {
+        return;
     }
     mClosed = true;
-    mStream->Close();
+    mBase->Close();
 }
 size_t Zlib0Writer::getCompressedSize(size_t originalSize) {
-    assert(0);
-    return 0;
+    size_t fullSize = sizeof(zlibHeader);
+    size_t numPackets = originalSize /= 65535 + (originalSize % 65535 ? 1 : 0);
+    fullSize += numPackets * 5;
+    fullSize += 4;// adler32
+    return fullSize;
 }
 
 
