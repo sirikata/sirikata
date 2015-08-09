@@ -1977,11 +1977,11 @@ SET(BENCH_SOURCES
 
 #test source files
 SET(CXXTESTSources
-${TEST_LIBCORE_SOURCE_DIR}/TransferTest.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/LosslessJpegTest.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/MuxReadWriterTest.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/CompressionTest.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/Zlib0Test.hpp
+${TEST_LIBCORE_SOURCE_DIR}/BufferedIOTest.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/ArithmeticCodingTest.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/ArrayNdTest.hpp
 #${TEST_LIBCORE_SOURCE_DIR}/TransferUploadTest.hpp
@@ -1999,6 +1999,7 @@ ${TEST_LIBCORE_SOURCE_DIR}/QuaternionTest.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/TCPSSTCloseTest.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/TCPSSTConnectTest.hpp
 #${TEST_LIBCORE_SOURCE_DIR}/ThreadSafeQueueTest.hpp
+${TEST_LIBCORE_SOURCE_DIR}/TransferTest.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/TR1Test.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/Vector3Test.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/BoundingBoxTest.hpp

@@ -41,7 +41,7 @@ class SIRIKATA_EXPORT Zlib0Writer : public DecoderReader {
     uint32_t mAdler32; // adler32 sum
     bool mClosed;
     uint16_t mBilledBytesLeft; // how many bytes are left in this block
-    void writeHeader();
+    std::pair<uint32, JpegError> writeHeader();
   public:
     Zlib0Writer(DecoderWriter * stream, int level);
     void setFullFileSize(size_t size) {
