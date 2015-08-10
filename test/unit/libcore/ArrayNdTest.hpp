@@ -66,6 +66,10 @@ public:
             a7.at(0).at(0).at(0).at(0).at(0).at(0).at(0) = 47;
             assert(a7.at(0,0,0,0,0,0,0) == 47);
         }
+        Array1d<unsigned char, 11>::Slice subs = s.slice<3,14>();
+        for (size_t subi = 0; subi < 11; ++subi) {
+            assert(s.at(subi + 3) == subs.at(subi));
+        }
         assert(a7.size()[0] == 1);
         assert(a7.size()[1] == 3);
         assert(a7.size()[6] == 16);

@@ -68,7 +68,7 @@ public:
 };
 
 template<class T, uint32_t s0> struct ArrayBaseType1d {
-    typedef T Array[s0];
+    typedef T Array[s0 ? s0 : 1];
 };
 template<class T, uint32_t s0, uint32_t s1> struct ArrayBaseType2d {
     typedef T Array[s0][s1];
@@ -121,6 +121,23 @@ template <class T,
     const T& operator[](uint32_t i0) const {
         assert(i0 < s0);
         return IsReference::dereference(data)[i0];
+    }
+    template <uint32_t start, uint32_t end> typename Array1d<T, end - start>::Slice slice() {
+        uint8_t assert_slice_legal[end > s0 ? -1 : 1];
+        uint8_t assert_slice_start_legal[end < start ? -1 : 1];
+        (void)assert_slice_legal;
+        (void)assert_slice_start_legal;
+        const typename Array1d<T, end-start>::Slice retval = {(typename Array1d<T, end-start>::Slice::IsReference::ArrayType)&IsReference::dereference(data)[start]};
+        return retval;
+    }
+
+    template <uint32_t start, uint32_t end> const typename Array1d<T, end - start>::Slice slice() const{
+        uint8_t assert_slice_legal[end > s0 ? -1 : 1];
+        uint8_t assert_slice_start_legal[end < start ? -1 : 1];
+        (void)assert_slice_legal;
+        (void)assert_slice_start_legal;
+        const typename Array1d<T, end-start>::Slice retval = {(typename Array1d<T, end-start>::Slice::IsReference::ArrayType)&IsReference::dereference(data)[start]};
+        return retval;
     }
     void memset(uint8_t val) {
         std::memset(data, val, sizeof(Array));
