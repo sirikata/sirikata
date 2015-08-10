@@ -36,8 +36,25 @@
 class Zlib0Test : public CxxTest::TestSuite
 {
 public:
-    void testNothing( void ) {
-
+    void testShortString( void ) {
+        using namespace Sirikata;
+        JpegAllocator<uint8_t>alloc;
+        {
+            MemReadWriter base(alloc);
+            {
+                Zlib0Writer wr(&base, 0);
+                wr.setFullFileSize(7);
+                wr.Write((uint8_t*)"HELLOTE",7);
+                wr.Close();
+                uint8_t gold[] = {0x78, 0x01, // magic
+                                  0x01, // block type
+                                  0x07, 0x00, 0xf8, 0xff, //size
+                                  0x48, 0x45, 0x4c, 0x4c, 0x4f, 0x54, 0x45, // payload
+                                  0x08, 0x23, 0x02, 0x0e}; // adler32
+                TS_ASSERT_EQUALS(base.buffer().size(), sizeof(gold));
+                TS_ASSERT(memcmp(gold, &base.buffer()[0], sizeof(gold)) == 0);
+            }
+        }
     }
 
 };

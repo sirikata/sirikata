@@ -32,7 +32,7 @@ namespace Sirikata {
  * Writes a zlib compression stream given an input
  * Currently only supports nop mode
  */
-class SIRIKATA_EXPORT Zlib0Writer : public DecoderReader {
+class SIRIKATA_EXPORT Zlib0Writer : public DecoderWriter {
     DecoderWriter *mBase;
     // currently the system only works for a preconceived filesize
     size_t mFileSize;
