@@ -26,6 +26,7 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+#include <assert.h>
 #include <sirikata/core/jpeg-arhc/Zlib0.hpp>
 namespace Sirikata {
 uint32_t adler32(uint32_t adler, const uint8_t *buf, uint32_t len);
@@ -119,10 +120,10 @@ std::pair<uint32_t, JpegError> Zlib0Writer::writeHeader() {
 /// writes the adler32 sum
 void Zlib0Writer::Close() {
     assert(mWritten == mFileSize && "Must have written as much as promised");
-    uint8_t adler[4] = {(mAdler32 >> 24) & 0xff,
-                        (mAdler32 >> 16) & 0xff,
-                        (mAdler32 >> 8) & 0xff,
-                        mAdler32 & 0xff};
+    uint8_t adler[4] = {static_cast<uint8_t>((mAdler32 >> 24) & 0xff),
+                        static_cast<uint8_t>((mAdler32 >> 16) & 0xff),
+                        static_cast<uint8_t>((mAdler32 >> 8) & 0xff),
+                        static_cast<uint8_t>(mAdler32 & 0xff)};
     std::pair<uint32, JpegError> retval = mBase->Write(adler, 4);
     if (retval.second != JpegError::nil()) {
         return;
