@@ -28,7 +28,7 @@
  */
 #include <sirikata/core/jpeg-arhc/Zlib0.hpp>
 namespace Sirikata {
-uint32_t adler32(uint32_t adler, uint8_t *buf, uint32_t len);
+uint32_t adler32(uint32_t adler, const uint8_t *buf, uint32_t len);
 
 Zlib0Writer::Zlib0Writer(DecoderWriter * stream, int level){
     mBase = stream;
@@ -43,6 +43,7 @@ Zlib0Writer::Zlib0Writer(DecoderWriter * stream, int level){
 
 std::pair<uint32, JpegError> Zlib0Writer::Write(const uint8*data, unsigned int size) {
     assert(mWritten + size <= mFileSize);
+    mAdler32 = adler32(mAdler32, data, size);
     if (mClosed || mWritten == mFileSize) {
         return std::pair<uint32, JpegError>(0, JpegError::errEOF());
     }
@@ -118,10 +119,10 @@ std::pair<uint32_t, JpegError> Zlib0Writer::writeHeader() {
 /// writes the adler32 sum
 void Zlib0Writer::Close() {
     assert(mWritten == mFileSize && "Must have written as much as promised");
-    uint8_t adler[4] = {mAdler32 & 0xff,
-                        (mAdler32 >> 8) & 0xff,
+    uint8_t adler[4] = {(mAdler32 >> 24) & 0xff,
                         (mAdler32 >> 16) & 0xff,
-                        (mAdler32 >> 24) & 0xff};
+                        (mAdler32 >> 8) & 0xff,
+                        mAdler32 & 0xff};
     std::pair<uint32, JpegError> retval = mBase->Write(adler, 4);
     if (retval.second != JpegError::nil()) {
         return;
@@ -184,7 +185,7 @@ size_t Zlib0Writer::getCompressedSize(size_t originalSize) {
 #  define MOD4(a) a %= BASE
 #endif
 
-uint32_t adler32(uint32_t adler, uint8_t *buf, uint32_t len) {
+uint32_t adler32(uint32_t adler, const uint8_t *buf, uint32_t len) {
     unsigned long sum2;
     unsigned n;
 

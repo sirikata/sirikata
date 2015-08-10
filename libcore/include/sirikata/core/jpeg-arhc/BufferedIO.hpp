@@ -10,7 +10,8 @@ template<uint32_t bufferSize> class BufferedReader : DecoderReader {
         return mBuffer + bufferSize;
     }
 public:
-    BufferedReader() {
+    BufferedReader(DecoderReader *base) {
+        mBase = base;
         mOffset = end();
     }
     std::pair<uint32, JpegError> Read(uint8*data, unsigned int size) {
@@ -49,21 +50,24 @@ template<uint32_t bufferSize>class BufferedWriter {
         return mBase->Write(data, size);
     }
 public:
-    BufferedWriter() {
+    BufferedWriter(DecoderWriter *base) {
+        mBase = base;
         mOffset = mBuffer;
     }
     std::pair<uint32, JpegError> Write(const uint8*data, unsigned int size) {
         if (size > bufferSize) {
             std::pair<uint32, JpegError> retval = WriteFull(mBuffer, mOffset - mBuffer);
+            mOffset = mBuffer;
             if (retval.second != JpegError::nil()) {
                 return std::pair<uint32, JpegError>(0, retval.second);
             }
             return WriteFull(data, size);
         }
         uint32 origSize = size;
-        uint32 bytesLeft = mOffset - mBuffer;
+        uint32 bytesLeft = bufferSize - (mOffset - mBuffer);
         uint32 toWrite = std::min(size, bytesLeft);
         memcpy(mOffset, data, toWrite);
+        mOffset += toWrite;
         if (toWrite == bytesLeft) {
             std::pair<uint32, JpegError> retval = WriteFull(mBuffer, bufferSize);
             if (retval.second != JpegError::nil()) {
@@ -87,6 +91,7 @@ public:
     virtual void Close(){
         if (mOffset != mBuffer) {
             std::pair<uint32, JpegError> retval = WriteFull(mBuffer, mOffset - mBuffer);
+            (void)retval;
             mOffset = mBuffer;
         }
     }
