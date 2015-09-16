@@ -22,7 +22,8 @@ public:
     };
     void testMemset() {
         using namespace Sirikata;
-        Array7d<int, 1,3,2,5,4,6,16> a7d;
+        {
+        Array7d<int, 1,3,2,5,4,6,16,RoundToPow2> a7d;
 
         a7d.foreach(SetNeg5());
         assert(a7d.at(0, 2, 1, 3, 2, 0, 0) == 5);
@@ -35,6 +36,22 @@ public:
         Sum s;
         a7d.foreach(s);
         assert(s.total == 34225051808ULL);
+        }
+        using namespace Sirikata;
+        Array7d<int, 1,3,2,5,4,6,16,DontRoundPow2> a7d;
+
+        a7d.foreach(SetNeg5());
+        assert(a7d.at(0, 2, 1, 3, 2, 0, 0) == 5);
+        assert(a7d.at(0, 2, 1, 3, 2, 1, 0) == 5);
+        a7d.at(0, 2, 1, 3, 2, 1).memset(0x7f);
+        assert(a7d.at(0, 2, 1, 3, 2, 1, 0) == 0x7f7f7f7f);
+        assert(a7d.at(0, 2, 1, 3, 2, 1, 1) == 0x7f7f7f7f);
+        assert(a7d.at(0, 2, 1, 3, 2, 1, 15) == 0x7f7f7f7f);
+        assert(a7d.at(0, 2, 1, 3, 2, 0, 0) == 5); // check it only affected the slice
+        Sum s;
+        a7d.foreach(s);
+        assert(s.total == 34225051808ULL);
+
     }
 
     void testSetAt() {
@@ -45,7 +62,7 @@ public:
         size_t offset = d - (uint8_t*)0;
         assert(0 == (offset & 15) && "Must have alignment");
         assert(aligned7d.at(0, 2, 1, 3, 2, 1, 0) == 4);
-        Array7d<unsigned char, 1,3,2,5,3,3,16> a7;
+        Array7d<unsigned char, 1,3,2,5,3,3,16, RoundToPow2> a7;
         uint8_t* d2 =&a7.at(0, 2, 1, 3, 2, 1, 0);
         *d2 = 5;
         offset = d2 - (uint8_t*)0;
@@ -55,7 +72,7 @@ public:
         assert(a7.at(0, 2, 1, 3, 2, 1, 0) == 5);
         a7.at(0, 2, 1, 3, 2, 1, 1) = 8;
         assert(a7.at(0, 2, 1, 3, 2, 1, 1) == 8);
-        Array1d<unsigned char, 16>::Slice s = a7.at(0, 2, 1, 3, 2, 1);
+        Array1d<unsigned char, 16, RoundToPow2>::Slice s = a7.at(0, 2, 1, 3, 2, 1);
         s.at(1) = 16;
         assert(a7.at(0, 2, 1, 3, 2, 1, 1) == 16);
         s.at(0) = 6;
@@ -66,7 +83,7 @@ public:
             a7.at(0).at(0).at(0).at(0).at(0).at(0).at(0) = 47;
             assert(a7.at(0,0,0,0,0,0,0) == 47);
         }
-        Array1d<unsigned char, 11>::Slice subs = s.slice<3,14>();
+        Array1d<unsigned char, 11, RoundToPow2>::Slice subs = s.slice<3,14>();
         for (size_t subi = 0; subi < 11; ++subi) {
             assert(s.at(subi + 3) == subs.at(subi));
         }
