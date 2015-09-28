@@ -161,7 +161,7 @@ template <class T,
                                                ShouldRoundPow2>::Slice slice(const StartEnd&range) const {
         return slice<StartEnd::START, StartEnd::END>();
     }
-    template <uint32 kstart, uint32 kend> typename Array1d<T, kend - kstart,
+    template <uint32_t kstart, uint32_t kend> typename Array1d<T, kend - kstart,
                                                            ShouldRoundPow2>::Slice slice() {
             uint8_t assert_slice_legal[kend > s0 ? -1 : 1];
             uint8_t assert_slice_start_legal[kend < kstart ? -1 : 1];

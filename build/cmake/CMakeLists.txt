@@ -1400,6 +1400,7 @@ SET(SIRIKATA_CORE_SOURCES
         ${TRACE_PBJ_CPP_FILES}
 	${LIBCORE_SOURCE_DIR}/jpeg-arhc/Scan.cpp
 	${LIBCORE_SOURCE_DIR}/jpeg-arhc/BumpAllocator.cpp
+	${LIBCORE_SOURCE_DIR}/jpeg-arhc/MemMgrAllocator.cpp
 	${LIBCORE_SOURCE_DIR}/jpeg-arhc/Decoder.cpp
 	${LIBCORE_SOURCE_DIR}/jpeg-arhc/Compression.cpp
 	${LIBCORE_SOURCE_DIR}/jpeg-arhc/Zlib0.cpp
@@ -1977,6 +1978,7 @@ SET(BENCH_SOURCES
 
 #test source files
 SET(CXXTESTSources
+${TEST_LIBCORE_SOURCE_DIR}/MemMgrAllocatorTest.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/LosslessJpegTest.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/MuxReadWriterTest.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/CompressionTest.hpp
