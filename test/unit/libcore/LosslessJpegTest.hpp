@@ -34,6 +34,7 @@
 #include <sirikata/core/jpeg-arhc/Compression.hpp>
 #include <sirikata/core/jpeg-arhc/Decoder.hpp>
 #include <sirikata/core/jpeg-arhc/BumpAllocator.hpp>
+#include <sirikata/core/jpeg-arhc/MemMgrAllocator.hpp>
 #include <sirikata/core/jpeg-arhc/MultiCompression.hpp>
 #ifdef __linux
 #include <sys/wait.h>
@@ -158,11 +159,11 @@ public:
             JpegAllocator<uint8_t> alloc;
             alloc.setup_memory_subsystem(768 * 1024 * 1024,
                                          1,
-                                         &BumpAllocatorInit,
-                                         &BumpAllocatorMalloc,
-                                         &BumpAllocatorFree,
-                                         &BumpAllocatorRealloc,
-                                         &BumpAllocatorMsize);
+                                         &MemMgrAllocatorInit,
+                                         &MemMgrAllocatorMalloc,
+                                         &MemMgrAllocatorFree,
+                                         &MemMgrAllocatorRealloc,
+                                         &MemMgrAllocatorMsize);
             
             std::pair<FILE*, size_t> input_fp_size = getFileObjectAndSize("prism/texture0.jpg");
             if (prctl(PR_SET_SECCOMP, SECCOMP_MODE_STRICT)) {
@@ -216,7 +217,7 @@ public:
                                          &BumpAllocatorFree,
                                          &BumpAllocatorRealloc,
                                          &BumpAllocatorMsize);
-            
+
             std::pair<FILE*, size_t> input_fp_size = getFileObjectAndSize("pikachu/atlas.jpg");
             ThreadContext * tc = MakeThreadContext(3, alloc);            
             if (prctl(PR_SET_SECCOMP, SECCOMP_MODE_STRICT)) {
@@ -279,6 +280,21 @@ public:
                                      &BumpAllocatorMsize);
         compressedRoundTripHelper(alloc);
         alloc.teardown_memory_subsystem(&BumpAllocatorDestroy);
+    }
+    void testCompressedRoundTripMemMgrAllocator( void )
+    {
+
+        using namespace Sirikata;
+        JpegAllocator<uint8_t> alloc;
+        alloc.setup_memory_subsystem(768 * 1024 * 1024,//4294967295,
+                                     16,
+                                     &MemMgrAllocatorInit,
+                                     &MemMgrAllocatorMalloc,
+                                     &MemMgrAllocatorFree,
+                                     &MemMgrAllocatorRealloc,
+                                     &MemMgrAllocatorMsize);
+        compressedRoundTripHelper(alloc);
+        alloc.teardown_memory_subsystem(&MemMgrAllocatorDestroy);
     }
 
 };

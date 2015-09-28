@@ -333,7 +333,7 @@ void MemMgrAllocatorFree (void *opaque, void *ptr) {
     memmgr_free(ptr);
 }
 void * MemMgrAllocatorInit(size_t prealloc_size, unsigned char alignment) {
-    assert(alignment == sizeof(mem_header_union::Align));
+    assert(alignment <= sizeof(mem_header_union::Align));
     memmgr_init(prealloc_size, 256);
     return memmgr_alloc(1);
 }
