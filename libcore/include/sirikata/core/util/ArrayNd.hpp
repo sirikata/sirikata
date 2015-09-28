@@ -181,6 +181,17 @@ template <class T,
         return retval;
     }
 
+    template <uint32_t new_size> typename Array1d<T, new_size,
+        ShouldRoundPow2>::Slice dynslice(uint32_t start) {
+        uint8_t assert_slice_size_legal[new_size > s0 ? -1 : 1];
+        (void)assert_slice_size_legal;
+        assert(start + new_size <= s0 && "slice must fit within original array");
+        const typename Array1d<T, new_size, ShouldRoundPow2>::Slice retval
+            = {(typename Array1d<T, new_size, ShouldRoundPow2>::Slice::IsReference::ArrayType)
+                &IsReference::dereference(data)[start]};
+        return retval;
+    }
+          
     void memset(uint8_t val) {
         std::memset(data, val, sizeof(Array));
     }
@@ -209,7 +220,7 @@ template <class T,
 };
 
 template <class T,
-          uint32_t s0, uint32_t s1, class ShouldRoundPow2,
+          uint32_t s0, uint32_t s1, class ShouldRoundPow2 = DontRoundPow2,
           class IsReferenceType=DirectType<ArrayBaseType2d<T,
                                                            s0,
                                                            s1,
@@ -303,7 +314,7 @@ template <class T,
 
 template <class T,
           uint32_t s0, uint32_t s1, uint32_t s2,
-          class ShouldRoundPow2,
+          class ShouldRoundPow2 = DontRoundPow2,
           class IsReferenceType=DirectType<ArrayBaseType3d<T,s0,s1,s2,ShouldRoundPow2> > > struct Array3d {
     typedef typename ArrayBaseType3d<T,s0,s1,s2,ShouldRoundPow2>::Array Array;
     typedef IsReferenceType IsReference;
@@ -400,7 +411,7 @@ template <class T,
 template <class T,
           uint32_t s0, uint32_t s1, uint32_t s2,
           uint32_t s3,
-          class ShouldRoundPow2,
+          class ShouldRoundPow2 = DontRoundPow2,
           class IsReferenceType=DirectType<ArrayBaseType4d<T,s0,s1,s2,s3,ShouldRoundPow2> > > struct Array4d {
     typedef typename ArrayBaseType4d<T,s0,s1,s2,s3,ShouldRoundPow2>::Array Array;
     typedef Array4d<T, s0, s1, s2, s3,ShouldRoundPow2, ReferenceType<ArrayBaseType4d<T, s0, s1, s2, s3,ShouldRoundPow2> > > Slice;
@@ -525,7 +536,7 @@ template <class T,
 template <class T,
           uint32_t s0, uint32_t s1, uint32_t s2,
           uint32_t s3, uint32_t s4,
-          class ShouldRoundPow2,
+          class ShouldRoundPow2 = DontRoundPow2,
           class IsReferenceType=DirectType<ArrayBaseType5d<T,s0,s1,s2,s3,s4,ShouldRoundPow2> > > struct Array5d {
     typedef typename ArrayBaseType5d<T,s0,s1,s2,s3,s4,ShouldRoundPow2>::Array Array;
     typedef IsReferenceType IsReference;
@@ -665,7 +676,7 @@ template <class T,
 
 template <class T,
           uint32_t s0, uint32_t s1, uint32_t s2,
-          uint32_t s3, uint32_t s4, uint32_t s5,class ShouldRoundPow2,
+          uint32_t s3, uint32_t s4, uint32_t s5,class ShouldRoundPow2 = DontRoundPow2,
           class IsReferenceType=DirectType<ArrayBaseType6d<T,s0,s1,s2,s3,s4,s5,ShouldRoundPow2> > > struct Array6d {
     typedef typename ArrayBaseType6d<T,s0,s1,s2,s3,s4,s5,ShouldRoundPow2>::Array Array;
     typedef IsReferenceType IsReference;
@@ -836,7 +847,7 @@ template <class T,
 template <class T,
           uint32_t s0, uint32_t s1, uint32_t s2,
           uint32_t s3, uint32_t s4, uint32_t s5,
-          uint32_t s6, class ShouldRoundPow2,
+          uint32_t s6, class ShouldRoundPow2 = DontRoundPow2,
           class IsReferenceType=DirectType<ArrayBaseType7d<T,s0,s1,s2,s3,s4,s5,s6,
                                                            ShouldRoundPow2> > > struct Array7d {
     typedef typename ArrayBaseType7d<T,s0,s1,s2,s3,s4,s5,s6,ShouldRoundPow2>::Array Array;
