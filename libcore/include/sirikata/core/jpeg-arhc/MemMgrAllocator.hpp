@@ -35,11 +35,10 @@
  */
 
 namespace Sirikata {
-
 // Initialize the memory manager. This function should be called
 // exactly once per thread that wishes to allocate memory
 //
-SIRIKATA_FUNCTION_EXPORT void memmgr_init(size_t size, size_t min_pool_alloc_quantas = 256);
+SIRIKATA_FUNCTION_EXPORT void memmgr_init(size_t main_thread_size, size_t worker_thread_size, size_t num_workers, size_t min_pool_alloc_quantas = 256);
 
 // Uninitialize the memory manager. This function should be called
 // exactly once per thread that exits
@@ -62,7 +61,7 @@ SIRIKATA_FUNCTION_EXPORT void memmgr_print_stats();
 namespace Sirikata {
 SIRIKATA_FUNCTION_EXPORT void *MemMgrAllocatorMalloc(void *opaque, size_t nmemb, size_t size);
 SIRIKATA_FUNCTION_EXPORT void MemMgrAllocatorFree (void *opaque, void *ptr);
-SIRIKATA_FUNCTION_EXPORT void * MemMgrAllocatorInit(size_t prealloc_size, unsigned char alignment);
+SIRIKATA_FUNCTION_EXPORT void * MemMgrAllocatorInit(size_t prealloc_size, size_t worker_size, size_t num_workers, unsigned char alignment);
 SIRIKATA_FUNCTION_EXPORT void MemMgrAllocatorDestroy(void *opaque);
 SIRIKATA_FUNCTION_EXPORT void* MemMgrAllocatorRealloc(void * ptr, size_t size, size_t *actualSize, unsigned int movable, void *opaque);
 SIRIKATA_FUNCTION_EXPORT size_t MemMgrAllocatorMsize(void * ptr, void *opaque);

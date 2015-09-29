@@ -60,7 +60,7 @@ class MemMgrAllocatorTest : public CxxTest::TestSuite
     int integration() {
         using namespace Sirikata;
         std::map<char *, size_t> *allocated = NULL;
-        memmgr_init(128 * 1024 * 1024);
+
         allocated = new std::map<char *, size_t>;
         srand(10420);
         for (size_t i = 0; i < 16384; ++i) {
@@ -92,14 +92,12 @@ class MemMgrAllocatorTest : public CxxTest::TestSuite
             allocated->erase(allocated->begin());
         }
         delete allocated;
-        memmgr_destroy();
         return 0;
     }
     void unit() {
         using namespace Sirikata;
         uint8_t *p[30] = {0};
         int i;
-        memmgr_init(8 * 1024, 16);
         // Each header uses 8 bytes, so this allocates
         // 3 * (2048 + 8) = 6168 bytes, leaving us
         // with 8192 - 6168 = 2024
@@ -152,11 +150,23 @@ class MemMgrAllocatorTest : public CxxTest::TestSuite
         }
         
         memmgr_print_stats();
-        memmgr_destroy();
     }
 public:
+    void testSimpleIntegration( void ) {
+        using namespace Sirikata;
+        memmgr_init(128 * 1024 * 1024, 0, 0);
+        int retval = integration();
+        if (retval == 0) {
+            printf("OK\n");
+        }
+        TS_ASSERT_EQUALS(retval, 0);
+        memmgr_destroy();
+        memmgr_destroy(); // make sure this is idempotent
+        memmgr_destroy();
+    }
     void testIntegration( void ) {
         using namespace Sirikata;
+        memmgr_init(128 * 1024 * 1024, 128 * 1024 * 1024, 4);
 #if __cplusplus <= 199711L
         Thread a("A", std::tr1::bind(&MemMgrAllocatorTest::integration, this));
         Thread b("B", std::tr1::bind(&MemMgrAllocatorTest::integration, this));
@@ -176,10 +186,12 @@ public:
         if (retval == 0) {
             printf("OK\n");
         }
-        
+        TS_ASSERT_EQUALS(retval, 0);
+        memmgr_destroy();
     }
     void testUnit ( void ) {
         using namespace Sirikata;
+        memmgr_init(8 * 1024, 8 * 1024, 4, 16);
 #if __cplusplus <= 199711L
         Thread a("A", std::tr1::bind(&MemMgrAllocatorTest::unit, this));
         Thread b("B", std::tr1::bind(&MemMgrAllocatorTest::unit, this));
@@ -196,6 +208,7 @@ public:
         b.join();
         c.join();
         d.join();
+        memmgr_destroy();
         printf("OK\n");
     }
 };

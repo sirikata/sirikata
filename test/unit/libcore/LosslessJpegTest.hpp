@@ -151,6 +151,12 @@ public:
         JpegAllocator<uint8_t> alloc;
         compressedRoundTripHelper(alloc);
     }
+    static void* placeholder1(size_t max, uint8_t) {
+        return Sirikata::MemMgrAllocatorInit(max, 0, 0, 1);
+    }
+    static void* placeholder4(size_t max, uint8_t) {
+        return Sirikata::MemMgrAllocatorInit(max, max/4, 4, 1);
+    }
     void testSeccompRoundTrip (void) {
         pid_t pid;
         int status = 1;
@@ -159,7 +165,7 @@ public:
             JpegAllocator<uint8_t> alloc;
             alloc.setup_memory_subsystem(768 * 1024 * 1024,
                                          1,
-                                         &MemMgrAllocatorInit,
+                                         &placeholder1,
                                          &MemMgrAllocatorMalloc,
                                          &MemMgrAllocatorFree,
                                          &MemMgrAllocatorRealloc,
@@ -210,14 +216,23 @@ public:
         if ((pid = fork()) == 0) {
             using namespace Sirikata;
             JpegAllocator<uint8_t> alloc;
-            alloc.setup_memory_subsystem(2147483647,//4294967295,
-                                         16,
-                                         &BumpAllocatorInit,
-                                         &BumpAllocatorMalloc,
-                                         &BumpAllocatorFree,
-                                         &BumpAllocatorRealloc,
-                                         &BumpAllocatorMsize);
-
+            if (!lzham) {
+            alloc.setup_memory_subsystem(2147483647 / 4,
+                                     16,
+                                     &placeholder4,
+                                     &MemMgrAllocatorMalloc,
+                                     &MemMgrAllocatorFree,
+                                     &MemMgrAllocatorRealloc,
+                                     &MemMgrAllocatorMsize);
+            } else {
+                alloc.setup_memory_subsystem(2147483647,//4294967295,
+                                             16,
+                                             &BumpAllocatorInit,
+                                             &BumpAllocatorMalloc,
+                                             &BumpAllocatorFree,
+                                             &BumpAllocatorRealloc,
+                                             &BumpAllocatorMsize);
+            }
             std::pair<FILE*, size_t> input_fp_size = getFileObjectAndSize("pikachu/atlas.jpg");
             ThreadContext * tc = MakeThreadContext(3, alloc);            
             if (prctl(PR_SET_SECCOMP, SECCOMP_MODE_STRICT)) {
@@ -288,7 +303,7 @@ public:
         JpegAllocator<uint8_t> alloc;
         alloc.setup_memory_subsystem(768 * 1024 * 1024,//4294967295,
                                      16,
-                                     &MemMgrAllocatorInit,
+                                     &placeholder1,
                                      &MemMgrAllocatorMalloc,
                                      &MemMgrAllocatorFree,
                                      &MemMgrAllocatorRealloc,

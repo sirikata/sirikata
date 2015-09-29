@@ -36,7 +36,10 @@
 #include <sys/mman.h>
 #include <sirikata/core/jpeg-arhc/MemMgrAllocator.hpp>
 #if __cplusplus <= 199711L
+#include <sirikata/core/util/AtomicTypes.hpp>
 #define thread_local __thread
+#else
+#include <atomic>
 #endif
 
 namespace Sirikata {
@@ -60,15 +63,9 @@ union mem_header_union
 };
 
 typedef union mem_header_union mem_header_t;
+size_t min_pool_alloc_quantas = 256;
 
 struct MemMgrState {
-    size_t min_pool_alloc_quantas; 
-    size_t pool_size;
-#ifdef MEMMGR_POOL_SIZE
-    uint8_t pool[MEMMGR_POOL_SIZE];
-#else
-    uint8_t *pool;
-#endif
     mem_header_t base;
 // Start of free list
 //
@@ -78,47 +75,87 @@ struct MemMgrState {
     size_t pool_free_pos;
 // Static pool for new allocations
 //
+    uint8_t *pool;
+    size_t pool_size;
 };
-thread_local MemMgrState memmgr = {
-    256
-#ifdef MEMMGR_POOL_SIZE
-    ,MEMMGR_POOL_SIZE
-    ,{}
+size_t  memmgr_num_memmgrs = 0;
+MemMgrState *memmgrs = NULL;
+size_t memmgr_bytes_allocated = 0;
+
+thread_local int memmgr_thread_id_plus_one = 0;
+#if __cplusplus <= 199711L
+AtomicValue<int> memmgr_allocated_threads((0));
 #else
-    ,0
-    ,0
+std::atomic<int> memmgr_allocated_threads((0));
 #endif
-    ,{{0,0}}
-    ,0
-    ,0
-};
-
-
-void memmgr_destroy() {
-#ifndef MEMMGR_POOL_SIZE
-    munmap(memmgr.pool, memmgr.pool_size);
-#endif
-    memset(&memmgr, 0, sizeof(MemMgrState));
+MemMgrState& get_local_memmgr(){
+    int id = memmgr_thread_id_plus_one;
+    if (!id) {
+        memmgr_thread_id_plus_one = id = ++memmgr_allocated_threads;
+        if (id > (int)memmgr_num_memmgrs) {
+            assert(false && "Too many threads have requested access to memory-managers:"
+                   "init with higher thread count");
+            exit(1);
+        }
+    }
+    return memmgrs[id - 1];
 }
-void memmgr_init(size_t pool_size, size_t min_pool_alloc_quantas)
-{
+/// caution: need to call this once per thread
+void memmgr_destroy() {
+    memmgr_thread_id_plus_one = 0; // only clears this thread
+    if (memmgrs) {
+        munmap(memmgrs, memmgr_bytes_allocated);
+    }
+    memmgr_bytes_allocated = 0;
+    memmgr_num_memmgrs = 0;
+    memmgrs = NULL;
+    int last = 0;
+    if (memmgr_allocated_threads.load()) {
+        while ((last = --memmgr_allocated_threads) > 0) { // there needed to be at least one
+        }
+        while (last < 0) {
+            ++memmgr_allocated_threads; // this shouldn't hit
+        }
+    }
+}
+void setup_memmgr(MemMgrState& memmgr, uint8_t *data, size_t size) {
     memset(&memmgr, 0, sizeof(MemMgrState));
     memmgr.base.s.next = 0;
     memmgr.base.s.size = 0;
     memmgr.freep = 0;
     memmgr.pool_free_pos = 0;
-#ifdef MEMMGR_POOL_SIZE
-    memmgr.pool_size = MEMMGR_POOL_SIZE;
-#else
-    memmgr.pool = (uint8_t*)mmap(NULL, pool_size, PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANON, -1, 0);
-
-    memmgr.pool_size = pool_size;
-#endif
+    memmgr.pool = data;
+    memmgr.pool_size = size;
+}
+void memmgr_init(size_t main_thread_pool_size, size_t worker_thread_pool_size, size_t num_workers, size_t x_min_pool_alloc_quantas)
+{
+    min_pool_alloc_quantas = x_min_pool_alloc_quantas;
+    memmgr_num_memmgrs = num_workers + 1;
+    
+    size_t pool_overhead_size = sizeof(MemMgrState) * (1 + num_workers);
+    size_t total_size = pool_overhead_size + main_thread_pool_size + worker_thread_pool_size * num_workers;
+    uint8_t * data = (uint8_t*)mmap(NULL, total_size, PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANON, -1, 0);
+    memmgrs = (MemMgrState*)data;
+    memmgr_bytes_allocated = pool_overhead_size + main_thread_pool_size + worker_thread_pool_size * num_workers;
+    data += pool_overhead_size;
+    setup_memmgr(memmgrs[0], data, main_thread_pool_size);
+    data += main_thread_pool_size;
+    for (int i = 0; i < (int)num_workers; ++i) {
+        setup_memmgr(memmgrs[i + 1],
+                     data,
+                     worker_thread_pool_size);
+        data += worker_thread_pool_size;
+    }
+    assert(data - (uint8_t*)memmgrs == total_size);
+    MemMgrState & main_thread_state = get_local_memmgr();
+    (void)main_thread_state;
+    assert(main_thread_state.pool_size == main_thread_pool_size);
 }
 
 
 void memmgr_print_stats()
 {
+    MemMgrState& memmgr = get_local_memmgr();
     #ifdef DEBUG_MEMMGR_SUPPORT_STATS
     mem_header_t* p;
 
@@ -163,14 +200,14 @@ void memmgr_print_stats()
 }
 
 
-static mem_header_t* get_mem_from_pool(size_t nquantas)
+static mem_header_t* get_mem_from_pool(MemMgrState& memmgr, size_t nquantas)
 {
     size_t total_req_size;
 
     mem_header_t* h;
 
-    if (nquantas < memmgr.min_pool_alloc_quantas)
-            nquantas = memmgr.min_pool_alloc_quantas;
+    if (nquantas < min_pool_alloc_quantas)
+            nquantas = min_pool_alloc_quantas;
 
     total_req_size = nquantas * sizeof(mem_header_t);
 
@@ -200,6 +237,7 @@ static mem_header_t* get_mem_from_pool(size_t nquantas)
 //
 void* memmgr_alloc(size_t nuint8_ts)
 {
+    MemMgrState& memmgr = get_local_memmgr();
     mem_header_t* p;
     mem_header_t* prevp;
 
@@ -250,11 +288,15 @@ void* memmgr_alloc(size_t nuint8_ts)
         //
         else if (p == memmgr.freep)
         {
-            if ((p = get_mem_from_pool(nquantas)) == 0)
+            if ((p = get_mem_from_pool(memmgr, nquantas)) == 0)
             {
                 #ifdef DEBUG_MEMMGR_FATAL
                 printf("!! Memory allocation failed !!\n");
                 #endif
+#ifdef MEMMGR_EXIT_OOM
+                exit(38);
+#endif
+
                 return 0;
             }
         }
@@ -269,6 +311,7 @@ void* memmgr_alloc(size_t nuint8_ts)
 //
 void memmgr_free(void* ap)
 {
+    MemMgrState& memmgr = get_local_memmgr();
     if ((uint8_t*)ap >= memmgr.pool + memmgr.pool_size
         || (uint8_t*)ap < memmgr.pool) {
         // illegal address or on another thread.
@@ -332,9 +375,9 @@ void *MemMgrAllocatorMalloc(void *opaque, size_t nmemb, size_t size) {
 void MemMgrAllocatorFree (void *opaque, void *ptr) {
     memmgr_free(ptr);
 }
-void * MemMgrAllocatorInit(size_t prealloc_size, unsigned char alignment) {
+void * MemMgrAllocatorInit(size_t prealloc_size, size_t worker_size, size_t num_workers, unsigned char alignment) {
     assert(alignment <= sizeof(mem_header_union::Align));
-    memmgr_init(prealloc_size, 256);
+    memmgr_init(prealloc_size, worker_size, num_workers, 256);
     return memmgr_alloc(1);
 }
 void MemMgrAllocatorDestroy(void *opaque) {
