@@ -36,12 +36,23 @@
 #else
 #include <thread>
 #endif
+
+bool iszero(const void * data, size_t size) {
+    char value = 0;
+    const char * cdata = (const char*)data;
+    for (size_t i = 0; i != size; ++i) {
+        value |= cdata[i];
+    }
+    return !value;
+}
 class MemMgrAllocatorTest : public CxxTest::TestSuite
 {
     void * wrapped_alloc(size_t size) {
         using namespace Sirikata;
         TS_ASSERT_EQUALS((size & (sizeof(void*) - 1)), 0);
         void ** retval = (void**)memmgr_alloc(size);
+        TS_ASSERT(iszero(retval, size));
+        memset(retval, 0xff, size);
         size/=sizeof(void*);
         for (size_t i= 0; i < size;++i) {
             retval[i] = retval;
@@ -105,12 +116,18 @@ class MemMgrAllocatorTest : public CxxTest::TestSuite
         for (i = 0; i < 3; ++i)
         {
             p[i] = (uint8_t*)memmgr_alloc(2048);
+            TS_ASSERT(iszero(p[i], 2048));
+            memset(p[i], 0xff, 2048);
+
             TS_ASSERT(p[i]);
         }
         
         // Allocate all the remaining memory
         //
         p[4] = (uint8_t*)memmgr_alloc(sizeof(void*) == 4 ? 2016 : 1984);
+        TS_ASSERT(iszero(p[4], sizeof(void*) == 4 ? 2016 : 1984));
+        memset(p[4], 0xff, sizeof(void*) == 4 ? 2016 : 1984);
+
         TS_ASSERT(p[4]);
         
         // Nothing left...
@@ -133,6 +150,9 @@ class MemMgrAllocatorTest : public CxxTest::TestSuite
         for (i = 10; i < (sizeof(void*) == 4 ? 28 : 26); ++i)
         {
             p[i] = (byte*)memmgr_alloc(100);
+            TS_ASSERT(iszero(p[i], 100));
+            memset(p[i], 0xff, 100);
+
             TS_ASSERT(p[i]);
         }
         

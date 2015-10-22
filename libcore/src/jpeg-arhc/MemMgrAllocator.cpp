@@ -35,7 +35,7 @@
  */
 #include <sys/mman.h>
 #include <sirikata/core/jpeg-arhc/MemMgrAllocator.hpp>
-#if __cplusplus <= 199711L
+#if defined(__APPLE__) || __cplusplus <= 199711L
 #include <sirikata/core/util/AtomicTypes.hpp>
 #define thread_local __thread
 #else
@@ -134,7 +134,12 @@ void memmgr_init(size_t main_thread_pool_size, size_t worker_thread_pool_size, s
     
     size_t pool_overhead_size = sizeof(MemMgrState) * (1 + num_workers);
     size_t total_size = pool_overhead_size + main_thread_pool_size + worker_thread_pool_size * num_workers;
-    uint8_t * data = (uint8_t*)mmap(NULL, total_size, PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANON, -1, 0);
+    uint8_t * data = NULL;
+#if defined(USE_MMAP) && defined(__linux) // only linux guarantees all zeros
+    data = (uint8_t*)mmap(NULL, total_size, PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
+#else // lets favor the standard calloc for now
+    data = (uint8_t*)calloc(total_size, 1);
+#endif
     memmgrs = (MemMgrState*)data;
     memmgr_bytes_allocated = pool_overhead_size + main_thread_pool_size + worker_thread_pool_size * num_workers;
     data += pool_overhead_size;
@@ -277,7 +282,7 @@ void* memmgr_alloc(size_t nuint8_ts)
             }
 
             memmgr.freep = prevp;
-            return (void*) (p + 1);
+            return memset((p + 1), 0, nuint8_ts); // this makes sure we always return zero'd data
         }
         // Reached end of free list ?
         // Try to allocate the block from the memmgr.pool. If that succeeds,
