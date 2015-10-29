@@ -22,13 +22,12 @@ SET(LZHAM_LIBRARIES)
 IF(LZHAM_ROOT)
   SET(SEARCH_PATHS
     ${LZHAM_ROOT}/
-    ${LZHAM_ROOT}/include
     ${SEARCH_PATHS}
     )
 ENDIF()
 
 FIND_PATH(LZHAM_INCLUDE_DIRS
-  NAMES lzham.h
+  NAMES include/lzham.h
   PATHS ${SEARCH_PATHS}
   NO_DEFAULT_PATH)
 IF(NOT LZHAM_INCLUDE_DIRS)  # now look in system locations

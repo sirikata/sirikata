@@ -40,7 +40,7 @@
 #include <sirikata/core/util/Thread.hpp>
 #endif
 #ifdef HAS_LZHAM
-#include <lzham.h>
+#include <include/lzham.h>
 #endif
 
 #ifdef __linux
@@ -724,32 +724,7 @@ DecoderCompressionWriter::~DecoderCompressionWriter() {
 
 
 
-JpegError Copy(DecoderReader &r, DecoderWriter &w, const JpegAllocator<uint8> &alloc) {
-    std::vector<uint8, JpegAllocator<uint8> > buffer(alloc);
-    size_t bufferSize = 16384;
-    buffer.resize(bufferSize);
-    std::pair<uint32, JpegError> ret;
-    while (true) {
-        ret = r.Read(&buffer[0], bufferSize);
-        if (ret.first == 0) {
-            w.Close();
-            return JpegError::nil();
-        }
-        uint32 offset = 0;
-        std::pair<uint32, JpegError> wret = w.Write(&buffer[offset], ret.first - offset);
-        if (wret.second != JpegError::nil()) {
-            w.Close();
-            return wret.second;
-        }
-        if (ret.second != JpegError::nil()) {
-            w.Close();
-            if (ret.second == JpegError::errEOF()) {
-                return JpegError::nil();
-            }
-            return ret.second;
-        }
-    }
-}
+
 
 
 // Decode reads a JPEG image from r and returns it as an image.Image.

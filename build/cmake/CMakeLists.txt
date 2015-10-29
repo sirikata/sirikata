@@ -586,6 +586,13 @@ ELSE()
   MESSAGE(STATUS "XZ was not found.")
 ENDIF()
 
+FIND_PACKAGE(ZLIB)
+IF(ZLIB_FOUND)
+  ADD_DEFINITIONS(-DHAS_ZLIB)
+ELSE()
+  MESSAGE(STATUS "ZLIB was not found.")
+ENDIF()
+
 
 
 IF(NOT LZHAM_ROOT)
@@ -1403,6 +1410,7 @@ SET(SIRIKATA_CORE_SOURCES
 	${LIBCORE_SOURCE_DIR}/jpeg-arhc/MemMgrAllocator.cpp
 	${LIBCORE_SOURCE_DIR}/jpeg-arhc/Decoder.cpp
 	${LIBCORE_SOURCE_DIR}/jpeg-arhc/Compression.cpp
+	${LIBCORE_SOURCE_DIR}/jpeg-arhc/ZlibCompression.cpp
 	${LIBCORE_SOURCE_DIR}/jpeg-arhc/Zlib0.cpp
 	${LIBCORE_SOURCE_DIR}/jpeg-arhc/ArithmeticCoder.cpp
 	${LIBCORE_SOURCE_DIR}/jpeg-arhc/MultiCompression.cpp
@@ -1982,6 +1990,7 @@ ${TEST_LIBCORE_SOURCE_DIR}/MemMgrAllocatorTest.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/LosslessJpegTest.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/MuxReadWriterTest.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/CompressionTest.hpp
+${TEST_LIBCORE_SOURCE_DIR}/CompressionZlibTest.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/Zlib0Test.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/BufferedIOTest.hpp
 ${TEST_LIBCORE_SOURCE_DIR}/ArithmeticCodingTest.hpp

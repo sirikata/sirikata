@@ -42,7 +42,7 @@
 #include <sirikata/core/util/Thread.hpp>
 #endif
 #ifdef HAS_LZHAM
-#include <lzham.h>
+#include <include/lzham.h>
 #endif
 
 #ifdef __linux
