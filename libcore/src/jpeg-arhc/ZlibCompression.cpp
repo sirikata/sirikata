@@ -1,5 +1,5 @@
 /*  Sirikata Jpeg Texture Transfer -- Texture Transfer management system
- *  ZlibCompress.cpp
+ *  ZlibCompression.cpp
  *
  *  Copyright (c) 2015, Daniel Reiter Horn
  *  All rights reserved.
