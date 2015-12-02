@@ -41,15 +41,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <sirikata/core/jpeg-arhc/Seccomp.hpp>
 #include <sirikata/core/jpeg-arhc/Compression.hpp>
 #include <sirikata/core/jpeg-arhc/MultiCompression.hpp>
 #include <sirikata/core/jpeg-arhc/Decoder.hpp>
 #include <sirikata/core/jpeg-arhc/BumpAllocator.hpp>
 #include <sys/time.h>
-#include <sys/syscall.h>
-#include <linux/seccomp.h>
-
-#include <sys/prctl.h>
 #include <sys/wait.h>
 #include <thread>
 #include <atomic>
@@ -353,9 +350,9 @@ int main(int argc, char **argv) {
     if ((!seccomp) || (pid = fork()) == 0) {
         ThreadContext *ctx = TestMakeThreadContext(num_threads, alloc, seccomp, NULL, true);
         if (seccomp) {
-            if (prctl(PR_SET_SECCOMP, SECCOMP_MODE_STRICT)) {
-                syscall(SYS_exit, 1); // SECCOMP not allowed
-            }            
+            if (!installStrictSyscallFilter(true)) {
+                exit(1); // SECCOMP not allowed
+            }
         }
         for (int rep = 0; rep < reps; ++rep) {
             FDWriter memory_output(pipe_write[rep]);

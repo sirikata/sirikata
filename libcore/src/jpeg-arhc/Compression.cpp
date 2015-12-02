@@ -43,13 +43,6 @@
 #include <include/lzham.h>
 #endif
 
-#ifdef __linux
-#include <sys/wait.h>
-#include <linux/seccomp.h>
-
-#include <sys/prctl.h>
-#include <sys/syscall.h>
-#endif
 
 #define THREAD_COMMAND_BUFFER_SIZE 5
 //#define LZHAMTEST_DEFAULT_DICT_SIZE 28

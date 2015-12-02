@@ -1414,6 +1414,7 @@ SET(SIRIKATA_CORE_SOURCES
 	${LIBCORE_SOURCE_DIR}/jpeg-arhc/Zlib0.cpp
 	${LIBCORE_SOURCE_DIR}/jpeg-arhc/ArithmeticCoder.cpp
 	${LIBCORE_SOURCE_DIR}/jpeg-arhc/MultiCompression.cpp
+	${LIBCORE_SOURCE_DIR}/jpeg-arhc/Seccomp.cpp
 	${LIBCORE_SOURCE_DIR}/jpeg-arhc/Huffman.cpp
     ${TOP_LEVEL}/externals/http-parser/http_parser.c
 	${LIBCORE_SOURCE_DIR}/transfer/DataURI.cpp

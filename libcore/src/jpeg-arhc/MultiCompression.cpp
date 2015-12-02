@@ -28,7 +28,7 @@
  */
 #include <assert.h>
 #include <string.h>
-
+#include <sirikata/core/jpeg-arhc/Seccomp.hpp>
 #include <sirikata/core/jpeg-arhc/Compression.hpp>
 #include <sirikata/core/jpeg-arhc/MultiCompression.hpp>
 #include <sirikata/core/jpeg-arhc/Decoder.hpp>
@@ -45,19 +45,11 @@
 #include <include/lzham.h>
 #endif
 
-#ifdef __linux
-#include <sys/wait.h>
-#include <linux/seccomp.h>
-
-#include <sys/prctl.h>
-#include <sys/syscall.h>
-#endif
-
 #define THREAD_COMMAND_BUFFER_SIZE 5
 //#define LZHAMTEST_DEFAULT_DICT_SIZE 28
 #define LZHAMTEST_DEFAULT_DICT_SIZE 24
 #include <sirikata/core/jpeg-arhc/ThreadContext.hpp>
-
+#include <sys/syscall.h>
 // 3 headers also defined in Compression.cpp
 static const unsigned char lzham_fixed_header[] = {'L','Z','H','0'};
 static const unsigned char xzheader[6] = { 0xFD, '7', 'z', 'X', 'Z', 0x00 };
@@ -352,12 +344,9 @@ void ThreadContext::worker(size_t worker_id, JpegAllocator<uint8_t> alloc) {
               case DEPRIVILEGE:
                 memset(command, 0, sizeof(command));
                 command[0] = NACKDEPRIVILEGE;
-#ifdef __linux
-                if (prctl(PR_SET_SECCOMP, SECCOMP_MODE_STRICT)) {
-                    syscall(SYS_exit, 1); // SECCOMP not allowed
+                if (installStrictSyscallFilter(true)) {
+                    command[0] = ACKDEPRIVILEGE;
                 }
-                command[0] = ACKDEPRIVILEGE;
-#endif
                 write_full(thread_output_write[worker_id], command, sizeof(command));
                 break;
               case COMPRESS1:
